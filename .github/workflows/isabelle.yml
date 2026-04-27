@@ -1,0 +1,83 @@
+# Batch-check the Goblint_Formalization session (same command as local: isabelle build -d . …).
+# Uses official Linux x86_64 bundle; caches install + ~/.isabelle heaps between runs.
+
+name: Isabelle
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build session
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Isabelle app bundle
+        id: cache-isabelle
+        uses: actions/cache@v4
+        with:
+          path: Isabelle2025-2
+          key: isabelle-dist-2025-2-linux-x86_64-v1
+
+      - name: Download Isabelle2025-2 (Linux)
+        if: steps.cache-isabelle.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/isabelle.tar.gz \
+            'https://www.cl.cam.ac.uk/Research/HVG/Isabelle/dist/Isabelle2025-2_linux.tar.gz'
+          tar -xzf /tmp/isabelle.tar.gz -C "${GITHUB_WORKSPACE}"
+          rm -f /tmp/isabelle.tar.gz
+
+      - name: Cache Poly/ML heaps (~/.isabelle)
+        uses: actions/cache@v4
+        with:
+          path: ~/.isabelle
+          key: >-
+            isabelle-heaps-${{ runner.os }}-2025-2-${{ hashFiles('ROOT', 'src/**/*.thy') }}
+
+      - name: Add Isabelle to PATH
+        run: echo "${GITHUB_WORKSPACE}/Isabelle2025-2/bin" >> "$GITHUB_PATH"
+
+      - name: Build Goblint_Formalization
+        run: |
+          set -euo pipefail
+          isabelle version
+          # Match repo ROOT + session name; -j 2 suits default ubuntu-latest runners.
+          isabelle build -j 2 -v -d . Goblint_Formalization
+
+  proof-debt:
+    name: Proof debt (informational)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan theory sources (git grep — no Isabelle needed)
+        run: |
+          set +e
+          cd "${GITHUB_WORKSPACE}"
+          echo "sorry (occurrences):"
+          git grep -n '\bsorry\b' -- src/ || echo "(none)"
+          echo ""
+          echo "oops:"
+          git grep -n '\boops\b' -- src/ || echo "(none)"
+          echo ""
+          echo "inline ML_command / ML_val:"
+          git grep -n -E '\<(ML_command|ML_val)\>' -- src/ || echo "(none)"
+          exit 0
