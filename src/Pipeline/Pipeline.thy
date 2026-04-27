@@ -106,6 +106,31 @@ theorem sign_pipeline_sound:
                      (cfg_exit (to_cfg c)))"
   sorry
 
+text \<open>
+  Proof scaffold: reduce \texttt{sign\_pipeline\_sound} to \texttt{pipeline\_sound}
+  at \texttt{sign\_analysis\_config}. Discharge transfer soundness from Sign TF lemmas (Phase I);
+  initial state from @{const sign_of_int} / @{const gamma_sign}.
+\<close>
+
+lemma sign_pipeline_sound_scaffold:
+  assumes runs: "big_step (c, s) t"
+    and tf_ok: "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
+    and init_ok: "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
+  shows "t : sign_domain.gamma_state
+             (run_analysis (sign_analysis_config s) c (cfg_exit (to_cfg c)))"
+proof -
+  show ?thesis
+    sorry (* pipeline_sound [OF tf_ok init_ok runs], gamma_state coercion Sign vs abstract_domain *)
+qed
+
+lemma sign_analysis_init_in_gamma_stub:
+  "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
+  sorry (* per-variable: s x \<in> gamma_sign (sign_of_int (s x)) *)
+
+lemma sign_analysis_tf_sound_stub:
+  "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
+  sorry (* Phase I: assign_sign, assume_sign, assume_not_sign *)
+
 (* ── Interval Analysis Pipeline ──────────────────────────────── *)
 (*
   Concrete analysis using the Interval domain.
