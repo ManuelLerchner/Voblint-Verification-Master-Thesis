@@ -1,41 +1,89 @@
 theory Goblint_Formalization
   imports
-    "HOL-IMP.Com"
-    "HOL-IMP.Big_Step"
+    (* ── Language ──────────────────────────────────────────── *)
+    IMP2_Syntax
+    IMP2_Semantics
+    IMP2_Collecting
+    (* ── Control-Flow Graph ────────────────────────────────── *)
+    CFG_Def
+    IMP2_to_CFG
+    CFG_Collecting
+    (* ── Abstract Domains ──────────────────────────────────── *)
+    Abstract_Domain
+    Sign_Domain
+    Interval_Domain
+    (* ── Equation System ───────────────────────────────────── *)
+    Constraint_System
+    Constraint_System_Sound
+    (* ── Solver ─────────────────────────────────────────────── *)
+    TD_Interface
+    TD_Soundness
+    (* ── Full Pipeline ──────────────────────────────────────── *)
+    Pipeline
+    Result_Mapping
 begin
 
-(* ---------------------------------------------------------------
-   HOL-IMP provides (from ~/Isabelle2025-2/src/HOL/IMP/):
-     Com.thy          -- IMP syntax: com datatype (SKIP, Assign, Seq, If, While)
-     AExp/BExp.thy    -- arithmetic/boolean expressions + aval/bval
-     Big_Step.thy     -- big-step operational semantics  (c, s) => t
-     Small_Step.thy   -- small-step semantics
-     ACom.thy         -- annotated commands (for analysis results)
-     Abs_Int*.thy     -- abstract interpretation framework
-     Complete_Lattice.thy -- complete lattice + lfp/gfp (basis of AI)
-   --------------------------------------------------------------- *)
+(*
+  Goblint Formalization -- Top Level.
 
+  Master's thesis at TUM: prove the complete Goblint static analysis pipeline.
+  Supervisors: Alexandra Gra{\ss}, Michael Schwarz.
 
-(* --- Example program: in-place variable swap using a temp --- *)
+  Pipeline:
+    IMP2 AST
+      [IMP2_Syntax, IMP2_Semantics, IMP2_Collecting]
+    --(to_cfg)-->
+      CFG
+      [CFG_Def, IMP2_to_CFG, CFG_Collecting]
+    --(rhs)-->
+      Equation System  (per abstract domain)
+      [Domains/*, Equations/Constraint_System*]
+    --(td_solve)-->
+      Fixed-Point Environment
+      [Solver/TD_Interface, Solver/TD_Soundness]
+    --(gamma)-->
+      Sound Overapproximation / Annotated Program
+      [Pipeline/Pipeline, Pipeline/Result_Mapping]
 
-definition swap_prog :: com where
-  "swap_prog = (''tmp'' ::= V ''x'';; ''x'' ::= V ''y'';; ''y'' ::= V ''tmp'')"
+  Every proof is currently deferred (sorry).
+  Fill in leaves first; propagate upward.
 
+  Abstract domains:
+    Sign      -- Tier 1 (finite lattice, no widening)  [Domains/Sign_Domain]
+    Interval  -- Tier 2 (widening required)            [Domains/Interval_Domain]
+    Octagon   -- Tier 3 stretch goal                   [TODO]
+*)
 
-(* The program always terminates. Proved by constructing the derivation
-   with a schematic final state (rule exI makes ?t fresh/schematic). *)
-lemma swap_terminates: "EX t. big_step (swap_prog, s) t"
-  unfolding swap_prog_def
+(* ── Smoke Test: IMP2 Syntax and Semantics ─────────────────────
+   Verify that the basic machinery type-checks. *)
+
+definition example_swap :: com where
+  "example_swap =
+     (''tmp'' ::= V ''x'' ;;
+      ''x''   ::= V ''y'' ;;
+      ''y''   ::= V ''tmp'')"
+
+lemma example_swap_terminates: "EX t. big_step (example_swap, s) t"
+  unfolding example_swap_def
   apply (rule exI)
-  apply (rule Seq, rule Seq, rule Assign, rule Assign, simp, rule Assign)
+  apply (rule big_step.Seq, rule big_step.Seq,
+         rule big_step.Assign, rule big_step.Assign,
+         rule big_step.Assign)
   done
 
-(* If the program terminates at t, then x and y are swapped.
-   Proved by case analysis on the big-step derivation. *)
-lemma swap_swaps:
-  assumes h: "big_step (swap_prog, s) t"
-  shows "t ''x'' = s ''y'' & t ''y'' = s ''x''"
-  using h unfolding swap_prog_def
+lemma example_swap_correct:
+  "big_step (example_swap, s) t ==> t ''x'' = s ''y'' & t ''y'' = s ''x''"
+  unfolding example_swap_def
   by (auto elim!: big_step.cases)
+
+(* ── Top-Level Soundness Theorem (Sign Domain) ─────────────────
+   Entry point for the thesis main result. *)
+
+theorem goblint_sign_sound:
+  "big_step (c, s) t
+   ==>  t : sign_domain.gamma_state
+              (run_analysis (sign_analysis_config s) c
+                 (cfg_exit (to_cfg c)))"
+  by (rule sign_pipeline_sound)
 
 end
