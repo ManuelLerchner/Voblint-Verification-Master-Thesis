@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Machine-specific shim — edit for your environment.
+#
+# WSL: delegates to the Windows Java bundled with Isabelle via WSL interop.
+# Adjust the path to match your Isabelle installation and Windows username.
+#
+# Alternatively, point to a native Linux JDK if available:
+#   exec /usr/lib/jvm/java-21-openjdk-amd64/bin/java "$@"
+
+exec /mnt/c/Users/Manue/Documents/Isabelle2024/Isabelle2024/contrib/jdk-21.0.3/x86_64-windows/bin/java.exe "$@"

@@ -2,3 +2,6 @@
 *.log
 .isabelle/
 __pycache__/
+
+# AutoCorrode I/R daemon — cloned by setup.sh, not tracked here
+ir-repo/

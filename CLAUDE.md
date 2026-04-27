@@ -34,13 +34,20 @@ src/
   Domains/                    ← abstract domain instances (to be created)
 ```
 
-## Isabelle MCP
+## Isabelle MCP daemon
 
-The I/R daemon lives in `~/goblint-formalization-kb/isabelle-mcp/`.
-Start it from there: `./isabelle-mcp/start-ir.sh`
+First-time setup (once after cloning):
+```bash
+./setup.sh        # sparse-clones AutoCorrode I/R into ir-repo/
+```
 
-It then listens on `http://localhost:9148/mcp` — the `.mcp.json` here connects to it.
+Start the daemon before opening Claude Code:
+```bash
+./start-ir.sh     # listens on http://localhost:9148/mcp, token: isabelle-local
+```
+
 Restart Claude Code after starting the daemon so it picks up the MCP server.
+`jdk-shim/bin/java` is a WSL shim — edit the path for your machine if needed.
 
 ## Knowledge base
 
