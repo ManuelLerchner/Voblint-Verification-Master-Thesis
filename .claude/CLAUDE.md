@@ -37,6 +37,18 @@ Then connect, init a REPL, and step through proofs.
 - **monoD**: use `monoD[OF mono h]` not `using mono by (rule monoD)`.
 - **Named assumptions**: `assume surj: "surj f"`, not `from "surj f"`.
 - **Biconditional**: use `=` not `<->` in Isar propositions.
+- **Multi-line strings in MCP**: write all Isar on ONE LINE per `step` call — multi-line breaks in `isar_text` cause parse errors.
+
+## HOL-IMP specifics
+
+- **Import**: `"HOL-IMP.Com"`, `"HOL-IMP.Big_Step"`, etc. Load with `load_theory "HOL-IMP.Com"` in REPL.
+- **Session ROOT**: use `= "HOL-IMP" +` not `= HOL +`.
+- **Big-step notation**: `big_step (c, s) t` not `(c, s) => t` — `=>` is the type arrow, which conflicts.
+- **Execution proofs**: for `big_step (c, s) ?t` with schematic final state, use `apply (rule exI)` first to make `?t` fresh, then apply `Seq`/`Assign`/etc.
+- **Correctness proofs**: state `big_step (c, s) t ==> property t` and prove with `auto elim!: big_step.cases`.
+- **`rule Assign`** only works when the target state is SCHEMATIC — it cannot unify against concrete state expressions (like `s(''x'' := 5)`) because `aval` is unevaluated. Use `exI` first.
+- **IMP2 (AFP)**: not installed. Not needed — `HOL-IMP.Abs_Int*` already has the abstract interpretation framework for the thesis.
+- **`schematic_lemma`**: not available as a step command. Use `lemma` + `rule exI` instead.
 
 ## Development loop
 
