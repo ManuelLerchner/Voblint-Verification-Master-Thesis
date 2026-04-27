@@ -3,10 +3,35 @@
 ## Session start
 
 1. Read `CLAUDE.md` — project goal, locked decisions, folder layout
-2. `mcp__isabelle-ir__connect(token="isabelle-local")` — connect to daemon
-3. Check which theories exist: `ls src/`
+2. Check which theories exist: `ls src/`
+3. Batch-check compilation: `isabelle build -d . Goblint_Formalization`
+4. Optionally connect MCP for interactive proof work (see below)
 
-## Isabelle MCP workflow
+## Two modes: batch build vs. interactive MCP
+
+### Batch build (use for: checking everything compiles, catching type errors)
+```bash
+/Applications/Isabelle2025-2.app/bin/isabelle build -d . Goblint_Formalization
+```
+Reports all type errors and syntax problems across all theories.
+Requires `options [quick_and_dirty]` in ROOT to allow `sorry`.
+
+### Isabelle MCP (use for: interactive sledgehammer, finding theorems, stepping through proofs)
+```bash
+./start-ir.sh   # starts daemon on HOL session (NOT the project session)
+```
+
+**Critical limitation**: `start-ir.sh` runs `--session HOL`. This means:
+- `load_theory "HOL-IMP.Com"` works
+- `load_theory "Goblint_Formalization.CFG_Def"` does NOT — the project session is unknown to the daemon
+- To work on project theories interactively, load their imports manually in HOL-IMP context, or rebuild after changing `start-ir.sh` to `--session Goblint_Formalization` (requires `isabelle build` to complete first)
+
+**Workflow when using MCP for a specific theory:**
+1. Run `isabelle build` first to confirm it compiles
+2. Start daemon, connect
+3. `load_theory "HOL-IMP.Big_Step"` etc. for dependencies
+4. Use `init_from_document` or `step` with the relevant Isar commands
+5. Use `sledgehammer` on specific subgoals
 
 Load tool schemas before first use (deferred loading):
 ```
@@ -14,8 +39,6 @@ ToolSearch("select:mcp__isabelle-ir__connect")
 ToolSearch("select:mcp__isabelle-ir__init,mcp__isabelle-ir__step,mcp__isabelle-ir__state,mcp__isabelle-ir__back")
 ToolSearch("select:mcp__isabelle-ir__sledgehammer,mcp__isabelle-ir__find_theorems,mcp__isabelle-ir__load_theory")
 ```
-
-Then connect, init a REPL, and step through proofs.
 
 ## ASCII symbols — mandatory
 
