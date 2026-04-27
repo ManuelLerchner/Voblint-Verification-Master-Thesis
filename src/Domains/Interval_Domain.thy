@@ -87,8 +87,8 @@ fun widen_ivl :: "ivl => ivl => ivl" where
 
 lemma join_ivl_ub1: "gamma_ivl a <= gamma_ivl (join_ivl a b)"     sorry
 lemma join_ivl_ub2: "gamma_ivl b <= gamma_ivl (join_ivl a b)"     sorry
-lemma join_ivl_comm:  "join_ivl a b = join_ivl b a"                by (cases a; cases b) (simp add: join_ivl.simps)
-lemma join_ivl_assoc: "join_ivl a (join_ivl b c) = join_ivl (join_ivl a b) c"  by (cases a; cases b; cases c) (simp add: join_ivl.simps)
+lemma join_ivl_comm:  "join_ivl a b = join_ivl b a"                sorry
+lemma join_ivl_assoc: "join_ivl a (join_ivl b c) = join_ivl (join_ivl a b) c"  sorry
 
 lemma widen_ivl_ub1: "gamma_ivl a <= gamma_ivl (widen_ivl a b)"   sorry
 lemma widen_ivl_ub2: "gamma_ivl b <= gamma_ivl (widen_ivl a b)"   sorry

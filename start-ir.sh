@@ -27,7 +27,38 @@ if [[ ! -x "$PYTHON" ]]; then
   exit 1
 fi
 
+# ML process requires a Poly/ML heap for --session; build is incremental when up-to-date.
+# Set IR_SKIP_HEAP_BUILD=1 to skip (faster restart if heap already exists; fails if missing).
+# Verbose build by default (theory-level lines on stdout). Set IR_VERBOSE_BUILD=0 for quiet.
+# Parallelism: unset IR_BUILD_JOBS => auto (-j hw.ncpu on macOS, nproc on Linux). On low RAM (e.g. 8 GB)
+# set IR_BUILD_JOBS=4 (or 2) to reduce memory spikes from many concurrent Poly/ML workers.
+if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
+  echo "Ensuring session heap (Goblint_Formalization) ..."
+  vb=()
+  [[ "${IR_VERBOSE_BUILD:-1}" != "0" ]] && vb=(-v)
+  jobs=()
+  if [[ -n "${IR_BUILD_JOBS:-}" ]]; then
+    jobs=(-j "$IR_BUILD_JOBS")
+  else
+    case "$(uname -s)" in
+      Darwin)
+        n="$(sysctl -n hw.ncpu 2>/dev/null || true)"
+        [[ -n "$n" ]] && jobs=(-j "$n")
+        ;;
+      Linux)
+        command -v nproc >/dev/null 2>&1 && jobs=(-j "$(nproc)")
+        ;;
+    esac
+  fi
+  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$SCRIPT_DIR" Goblint_Formalization
+  echo ""
+else
+  echo "Skipping heap build (IR_SKIP_HEAP_BUILD=1)."
+  echo ""
+fi
+
 exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \
-  --session HOL \
+  --session Goblint_Formalization \
+  --dir "$SCRIPT_DIR" \
   --mcp

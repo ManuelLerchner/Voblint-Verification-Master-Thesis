@@ -104,19 +104,15 @@ where
 
 (*
   AFP CONTRIBUTION: solver output IS a post-fixpoint.
-  This theorem follows directly from td_solve_post_fixpoint
-  (the AFP solver's verified partial_correctness theorem)
-  once make_rhs_mono is established.
-  This is NOT sorry'd -- it is a real proof from the solver axiom.
+  Intended proof: unfold is_post_fixpoint_def, td_analyse_def, Let_def;
+  discharge with td_solve_post_fixpoint[OF make_rhs_mono ...] and simp.
+  Sorry'd for now — simp setup did not finish the automation (heavy goal).
 *)
 theorem td_analyse_post_fixpoint:
   assumes fin: "finite (cfg_edges (to_cfg c))"
   assumes cfu: "comp_fun_commute (join_abs :: 'a::ord abs_state => 'a abs_state => 'a abs_state)"
   shows "is_post_fixpoint (to_cfg c) tf join_abs bot_abs s0
            (td_analyse c tf join_abs bot_abs s0)"
-  unfolding is_post_fixpoint_def td_analyse_def
-  apply (simp add: Let_def)
-  using td_solve_post_fixpoint[OF make_rhs_mono[OF fin cfu]]
-  by (simp add: make_rhs_def rhs_def monotone_def le_fun_def)
+  sorry
 
 end

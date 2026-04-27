@@ -79,6 +79,18 @@ where
           base  = if v = cfg_entry g then insert s0 vals else vals
       in  abs_join_set join_abs bot_abs base)"
 
+definition is_post_fixpoint ::
+    "cfg
+     => ('a::ord domain_transfer)
+     => ('a abs_state => 'a abs_state => 'a abs_state)
+     => 'a abs_state
+     => 'a abs_state
+     => (pp => 'a abs_state)
+     => bool"
+where
+  "is_post_fixpoint g tf join_abs bot_abs s0 env =
+     (ALL v. rhs g tf join_abs bot_abs s0 env v <= env v)"
+
 (* ── Monotonicity of rhs ──────────────────────────────────────── *)
 (*
   The RHS is monotone in the environment: if env1 <= env2 pointwise

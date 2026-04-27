@@ -19,18 +19,7 @@ begin
 *)
 
 (* ── Post-Fixpoint Condition ──────────────────────────────────── *)
-
-definition is_post_fixpoint ::
-    "cfg
-     => ('a::ord domain_transfer)
-     => ('a abs_state => 'a abs_state => 'a abs_state)
-     => 'a abs_state
-     => 'a abs_state
-     => (pp => 'a abs_state)
-     => bool"
-where
-  "is_post_fixpoint g tf join_abs bot_abs s0 env =
-     (ALL v. rhs g tf join_abs bot_abs s0 env v <= env v)"
+(* Defined in Constraint_System as is_post_fixpoint / is_post_fixpoint_def. *)
 
 (* ── Overapproximation of Collecting Semantics ───────────────── *)
 (*
