@@ -1,0 +1,4 @@
+*.heap
+*.log
+.isabelle/
+__pycache__/
