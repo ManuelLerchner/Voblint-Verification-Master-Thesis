@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IR="$SCRIPT_DIR/ir-repo/ir/repl.py"
 
 # Locate Isabelle binary
-ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"
+ISABELLE="${ISABELLE:-/Applications/Isabelle2025-2.app/bin/isabelle}"
 
 if [[ ! -x "$ISABELLE" ]]; then
   echo "ERROR: Isabelle not found at '$ISABELLE'"
@@ -21,7 +21,13 @@ echo "Starting I/R MCP server on http://localhost:9148/mcp ..."
 echo "Auth token: isabelle-local  (fixed via IR_AUTH_TOKEN)"
 echo ""
 
-exec env IR_AUTH_TOKEN=isabelle-local python3 "$IR" \
+PYTHON="${SCRIPT_DIR}/.venv/bin/python3"
+if [[ ! -x "$PYTHON" ]]; then
+  echo "ERROR: venv not found. Run ./setup.sh first."
+  exit 1
+fi
+
+exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \
   --session HOL \
   --mcp

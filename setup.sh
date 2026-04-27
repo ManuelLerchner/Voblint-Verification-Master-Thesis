@@ -23,8 +23,9 @@ git clone \
 git -C "$IR_REPO" sparse-checkout set ir
 git -C "$IR_REPO" checkout
 
-echo "Installing Python requirements ..."
-pip3 install -r "$IR_REPO/ir/requirements.txt"
+echo "Installing Python requirements into venv ..."
+python3 -m venv "$SCRIPT_DIR/.venv"
+"$SCRIPT_DIR/.venv/bin/pip" install -r "$IR_REPO/ir/requirements.txt"
 
 echo ""
 echo "Done. Start the daemon with:  ./start-ir.sh"
