@@ -3,5 +3,18 @@
 .isabelle/
 __pycache__/
 
+# Python venv (created by ./setup.sh)
+.venv/
+
+# Isabelle editor backups
+*.thy~
+
+# Local OS / IDE noise
+.DS_Store
+.claude/settings.local.json
+
+# Optional machine-local JDK shim (see jdk-shim/README.md)
+jdk-shim/bin/java
+
 # AutoCorrode I/R daemon — cloned by setup.sh, not tracked here
 ir-repo/
