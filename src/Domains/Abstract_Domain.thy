@@ -25,7 +25,7 @@ type_synonym 'a abs_state = "vname => 'a"
 (* ── Abstract Domain Locale ───────────────────────────────────── *)
 
 locale abstract_domain =
-  fixes gamma    :: "'a::ord => int set"         (* per-value concretization *)
+  fixes gamma    :: "'a::{ord,bot} => int set"   (* per-value concretization *)
   fixes bot      :: "'a"                         (* bottom = empty           *)
   fixes join_op  :: "'a => 'a => 'a"             (* sound upper bound        *)
   fixes widen    :: "'a => 'a => 'a"             (* widening for termination *)

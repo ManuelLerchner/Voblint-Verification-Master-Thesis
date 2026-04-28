@@ -51,6 +51,12 @@ definition less_ivl :: "ivl => ivl => bool" where
 instance ..
 end
 
+instantiation ivl :: bot begin
+definition bot_ivl :: ivl where
+  "bot_ivl = Ivl PlusInf MinInf"
+instance ..
+end
+
 definition ivl_bot :: ivl where
   "ivl_bot = Ivl PlusInf MinInf"   (* empty: l > u *)
 

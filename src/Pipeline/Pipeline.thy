@@ -28,7 +28,7 @@ begin
 *)
 
 definition domain_transfer_sound ::
-    "('a::ord => int set)
+    "('a::{ord,bot} => int set)
      => 'a domain_transfer
      => bool"
 where
@@ -48,7 +48,7 @@ where
     - the initial abstract state
 *)
 
-record ('a::ord) analysis_config =
+record 'a analysis_config =
   ac_join     :: "'a abs_state => 'a abs_state => 'a abs_state"
   ac_bot      :: "'a abs_state"
   ac_gamma    :: "'a => int set"
@@ -58,7 +58,7 @@ record ('a::ord) analysis_config =
 (* ── Run the Pipeline ─────────────────────────────────────────── *)
 
 definition run_analysis ::
-    "('a::ord) analysis_config => com => pp => 'a abs_state"
+    "('a::{ord,bot}) analysis_config => com => pp => 'a abs_state"
 where
   "run_analysis cfg c =
      td_analyse c

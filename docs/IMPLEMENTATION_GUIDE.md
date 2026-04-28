@@ -1,5 +1,7 @@
 # Implementation guide — Goblint formalization
 
+See also: `docs/PROOF_OVERVIEW.md` for a theorem-first high-level map (types, key lemmas, and proof chain).
+
 Step-by-step proof development order, dependencies, and **rough effort** estimates. Treat durations as **order-of-magnitude** for one thesis student working **part-time** (~12–20 h/week). Full-time compresses proportionally.
 
 **Convention:** Finish earlier phases before leaning on lemmas from later ones. Replace `sorry` bottom-up unless noted.
@@ -20,11 +22,11 @@ Effort tags: **S** ≈ days–1 week · **M** ≈ 1–3 weeks · **L** ≈ 1–3
 
 ```mermaid
 flowchart LR
-  S["Concrete runs\n(big_step)"]
-  Col["Collecting sem.\nIMP2 / CFG"]
-  Eq["Equation sys.\n(rhs, post_fp)"]
-  Sol["TD solver\n(td_analyse)"]
-  Sound["Sound w.r.t.\nγ"]
+  S["Concrete Runs<br/>(big_step)"]
+  Col["Collecting Semantics<br/>(IMP2 / CFG)"]
+  Eq["Equation System<br/>(rhs, post_fp)"]
+  Sol["TD Solver<br/>(td_analyse)"]
+  Sound["Soundness w.r.t.<br/>gamma"]
   S --> Col
   Col --> Eq
   Eq --> Sol
@@ -35,17 +37,17 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  A["Phase A — Foundations"]
-  B["Phase B — IMP2 collecting"]
-  C["Phase C — CFG / compile"]
-  D["Phase D — CFG collecting + cfg_path"]
-  E["Phase E — rhs mono"]
-  F["Phase F — post_fixpoint_sound"]
-  G["Phase G — AFP TD solver"]
-  H["Phase H — TD_Soundness"]
-  I["Phase I — Sign domain"]
-  K["Phase K — Pipeline"]
-  J["Phase J — Interval stretch"]
+  A["Phase A: Foundations"]
+  B["Phase B: IMP2 Collecting"]
+  C["Phase C: CFG / Compile"]
+  D["Phase D: CFG Collecting + cfg_path"]
+  E["Phase E: rhs_mono"]
+  F["Phase F: post_fixpoint_sound"]
+  G["Phase G: AFP TD Solver Bridge"]
+  H["Phase H: TD_Soundness"]
+  I["Phase I: Sign Domain"]
+  K["Phase K: Pipeline"]
+  J["Phase J: Interval (Stretch)"]
 
   A --> B
   A --> C
@@ -59,7 +61,7 @@ flowchart TD
   I --> H
   I --> K
   H --> K
-  J -.->|"stretch"| K
+  J -. stretch .-> K
 ```
 
 ---
@@ -151,13 +153,14 @@ flowchart TD
 
 ## Phase G — Solver connection (`Solver/TD_Interface`)
 
-**Goal:** Replace axiom stub with AFP **`TD_plain`**; prove **`make_rhs_mono`** ⇒ **`td_analyse_post_fixpoint`**.
+**Goal:** Use AFP **`TD_plain`** directly via strategy trees; prove bridge
+**`make_rhs_tree` ↔ `make_rhs`**, then derive **`td_analyse_post_fixpoint`**.
 
 | Step | Tasks | Effort |
 |------|--------|--------|
 | G1 | AFP install + session path in `ROOT` / components | infra | **S** |
-| G2 | **`td_analyse_post_fixpoint`** real proof (automation may need iteration) | **M** |
-| G3 | Keep **`td_solve`** axiom only until AFP available; document fallback | **S** |
+| G2 | Prove helper bridge lemmas (`rhs_tree_fold_*`, list-of-preds, correspondence) | **M** |
+| G3 | Derive **`td_analyse_post_fixpoint`** from AFP partial correctness + correspondence | **M** |
 
 **Rough calendar:** **2–8 weeks** (blocked on AFP + Phase E).
 
@@ -265,7 +268,7 @@ Parallelize **reading/writing** and **small runnable examples** (`Goblint_Formal
 
 So you **instantiate** a new analysis by:
 
-1. Defining a type `'a` with **`ord`**, **`gamma`**, **`join`**, **`widen`**, **`bot`**.  
+1. Defining a type `'a` with class constraints **`{ord, bot}`**, plus **`gamma`**, **`join`**, **`widen`**.  
 2. Proving **`interpretation ... abstract_domain`** (your semilattice / γ axioms).  
 3. Defining **transfer functions** and proving **`domain_transfer_sound`**-style assumptions.  
 4. Building an **`analysis_config`** (like **`sign_analysis_config`** / **`ivl_analysis_config`**).

@@ -50,6 +50,12 @@ definition less_sign    :: "sign => sign => bool" where "(a::sign) <  b = (sign_
 instance ..
 end
 
+(* bot instance: required so abs_state = vname => sign has bot, enabling AFP mlup *)
+instantiation sign :: bot begin
+definition "bot_sign = SBot"
+instance ..
+end
+
 (* ── Join (Least Upper Bound) ─────────────────────────────────── *)
 
 fun join_sign :: "sign => sign => sign" where
