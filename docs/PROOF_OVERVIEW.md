@@ -69,6 +69,19 @@ In formula-style summary:
   - `'a domain_transfer`
   - fields: `tf_assign`, `tf_assume`, `tf_assume_not`
 
+### Domain locale design: semantic (gamma-based) axioms
+
+`abstract_domain` uses **semantic axioms** (`gamma a ⊆ gamma (join_op a b)`, etc.) rather than
+syntactic order axioms (`x ⊑ x ⊔ y`). This is intentional:
+
+- For soundness (`t ∈ gamma_state(env exit)`), gamma upper-bound properties are what you need directly.
+- No meet, top, or order axioms required in the generic locale.
+- Narrowing not in the locale — only needed for precision, not soundness.
+- Widening termination is domain-specific (sign: trivially terminates; interval: separate proof).
+
+Graß 2024 (master's thesis) confirms at the solver level: join-semilattice + `narrowing_ge`
+suffices for partial correctness of the warrowing TD. The semantic approach here is even simpler.
+
 ## Constraint system side
 
 - `rhs :: cfg => 'a domain_transfer => ... => (pp => 'a abs_state) => pp => 'a abs_state`
