@@ -151,6 +151,45 @@ flowchart TD
 
 ---
 
+## Priority ordering within phases (updated assessment)
+
+After a full read of all theory files, the three highest-risk / highest-value lemmas are:
+
+**1. `make_rhs_tree_correspondence` (TD_Interface.thy:87) — prove first.**
+The function-style RHS ↔ AFP strategy-tree traversal equivalence. This is the highest-risk
+lemma in the sketch. It requires:
+- `Finite_Set.fold` + `comp_fun_commute join_state` for order-independence
+- `SOME xs. distinct xs ∧ set xs = preds` (nondeterministic predecessor ordering)
+  — the traversal result must be independent of which list is chosen
+If this lemma is hard or requires interface changes to how `make_rhs_tree` is defined,
+it surfaces an architectural problem before the rest of the chain is built.
+Prove this before any other phase G/H work.
+
+**2. `post_fixpoint_sound` (Constraint_System_Sound.thy:36) — second.**
+Any post-fixpoint of `rhs` overapproximates `cfg_collect`. Key move: `cfg_collect` is the
+`lfp` of `collect_pp`, so `lfp_lowerbound` applies — but only once you show that `env`
+(a post-fixpoint) satisfies the same monotone equation as `collect_pp`, which requires
+transfer-function soundness to go from the `rhs` post-fixpoint condition to the `collect_pp`
+equation. This proof is structurally clear but requires careful setup of the lfp argument.
+
+**3. `cfg_collect_exit_eq_collect` (CFG_Collecting.thy:67) — third.**
+CFG-lfp collecting = IMP2 big-step collecting at exit. `compile`'s pp allocation is correct
+and consistent with `annotate` (verified). The hard part is the While/back-edge case: showing
+that every CFG path `head →* exit` corresponds to a unique big-step WhileTrue/WhileFalse
+derivation. Needs a `cfg_path` inductive relation first (Phase D1).
+
+**Routine sorries (any order, no surprises):**
+- `big_step_determ`, `collect_SKIP/Assign/Seq/If` — textbook inductions
+- `sign_le_antisym/trans`, `join_sign_ub1/ub2/least` — 5-element enum, `cases a; cases b`
+- `gamma_ivl_bot/top`, `join_ivl/widen_ivl` lemmas — interval case splits
+- `gamma_state_*` in Abstract_Domain — unfold + pointwise
+- `compile_fresh`, `compile_ge`, `compile_entry_ne_exit` — induction on compile
+
+**Result_Mapping.thy: do NOT invest until supervisor discussion.**
+`annotation_sound` is currently unprovable. See §Known Design Issues below.
+
+---
+
 ## Phase G — Solver connection (`Solver/TD_Interface`)
 
 **Goal:** Use AFP **`TD_plain`** directly via strategy trees; prove bridge
@@ -351,6 +390,70 @@ You can add **`lemma swap_sign_sound:`** … for **`example_swap`** once the gen
 | Phase D too large | Narrow language (IMP), narrow command classes, or weaken theorem temporarily with explicit hypotheses |
 | AFP friction | Early **`isabelle build`** with AFP on CI runner |
 | Proof creep | Freeze feature set; **Sign-only** thesis core |
+| `make_rhs_tree_correspondence` fails | Redesign `make_rhs_tree` to use a list (not SOME) for predecessors |
+
+---
+
+## Known Design Issues
+
+### `Result_Mapping.thy`: `annotation_sound` is currently unprovable
+
+**Root cause:** `acom_pre` returns the EXIT-pp abstract state for leaf nodes, but `annotation_sound` expects it to be a *pre*-condition.
+
+**Detailed explanation:**
+
+`annotate` stores the abstract state at the EXIT program point for each command:
+```
+annotate (x ::= a) result n  =  (AAssign x a (result (n+1)), n+2)
+                                                ^^^^^^^^^
+                                            exit pp state
+```
+
+`acom_pre` then extracts this as the "pre-condition":
+```isabelle
+fun acom_pre where
+  "acom_pre (AAssign _ _ q) = q"   (* q is the EXIT state — wrong! *)
+```
+
+So `annotation_sound` becomes:
+```
+s ∈ gamma_state q  →  big_step (x ::= a, s) t  →  t ∈ gamma_state q
+```
+which expands to:
+```
+s ∈ gamma_state q  →  t = s(x := aval a s)  →  s(x := aval a s) ∈ gamma_state q
+```
+This says `q` is **closed under the assignment** — which is NOT guaranteed.
+`q` is the abstract state AFTER the assignment (the effect of `tf_assign`).
+If `q = {x ↦ SPos}` (sign domain), and `s` satisfies it (`s x > 0`),
+then `s(x := -1)` does NOT satisfy `q`. The assignment can leave `q`.
+
+**The correct pre-condition** for `x ::= a` is the abstract state at the ENTRY pp (`n`), 
+i.e., `result n` — not `result (n+1)`.
+
+**Why `acom_pre` for ASeq/AIf is also wrong:**
+```isabelle
+"acom_pre (ASeq c1 _) = acom_pre c1"
+"acom_pre (AIf _ c1 _ _) = acom_pre c1"
+```
+These recurse into `c1`, which eventually bottoms out at a leaf returning an exit state.
+So the pre-condition of a sequence is the exit state of its first command's leaf — also wrong.
+
+**Two possible fixes:**
+
+1. **Store entry-pp state in leaf annotations:**
+   Change `ASkip "pre" "post"` and `AAssign vname aexp "pre" "post"`.
+   Update `annotate` to store `result n` (entry) and `result (n+1)` (exit).
+   `acom_pre` returns the first field; `acom_post` returns the second.
+
+2. **Abandon `acom_pre` / annotation soundness, use post-fixpoint directly:**
+   The thesis main result (`pipeline_sound`) does NOT need `annotation_sound` — it uses
+   `exit_sound` directly. `Result_Mapping.thy` is an OPTIONAL narrative layer.
+   If the `acom` annotation story is dropped (or deferred), the core theorem chain
+   (Phases A–K without K2) is still complete and thesis-sufficient.
+
+**Recommendation:** Defer `Result_Mapping.thy` entirely until supervisor discussion.
+The `pipeline_sound` → `sign_pipeline_sound` → `goblint_sign_sound` chain does not depend on it.
 
 ---
 
