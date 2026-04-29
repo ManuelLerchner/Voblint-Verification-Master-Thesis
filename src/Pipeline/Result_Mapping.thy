@@ -3,22 +3,42 @@ theory Result_Mapping
 begin
 
 (*
-  Result Mapping -- From Solver Output to Annotated Program.
+  Result Mapping -- From Solver Output to Program Invariants.
 
-  After running the analysis, the solver output is an environment
+  After running the analysis the solver returns:
     sigma :: pp => 'a abs_state
-  mapping each program point to an abstract state.
+  mapping each CFG program point to an abstract state.
 
-  This theory defines how to:
-    1. Extract the invariant at any program point (entry, exit, or arbitrary).
-    2. Build an annotated program where each command is decorated with the
-       inferred invariant (using IMP's ACom-style annotation).
-    3. State the soundness of the annotation: the annotation is an
-       invariant in the sense of Hoare logic overapproximation.
+  ── DESIGN STATUS ────────────────────────────────────────────────────────────
+  There are four ways to present this result.  See docs/PROOF_OVERVIEW.md §"Result mapping"
+  for full discussion.
 
-  Connection point: HOL-IMP.ACom defines annotated commands; we may
-  adopt that structure or define our own.
-  TODO: decide with supervisors.
+  Option 1 (exit only — already in Pipeline.thy):
+    big_step (c,s) t  →  t ∈ gamma_state (run_analysis cfg c (cfg_exit (to_cfg c)))
+
+  Option 2 (point-map, RECOMMENDED — zero extra proof cost):
+    big_step (c,s) t  →  ∀ v. cfg_reach (to_cfg c) {s} v ⊆ gamma_state (run_analysis cfg c v)
+    Falls out directly from post_fixpoint_sound + td_analyse_post_fixpoint.
+    This is what supervisors asked for in meeting 2.
+
+  Option 3 (acom annotation — what this file currently attempts, BROKEN):
+    Annotate each command with entry/exit abstract states; prove Hoare-style
+      s ∈ gamma_state(pre)  →  big_step(c,s) t  →  t ∈ gamma_state(post)
+    CURRENT BUG: acom_pre returns the EXIT-pp abstract state for ASkip/AAssign
+    (because annotate only stores one state per leaf, the exit state).
+    annotation_sound is UNPROVABLE as stated: for AAssign x a q the proof would
+    require  s ∈ gamma_state q  →  s(x := aval a s) ∈ gamma_state q, i.e. q is
+    closed under the assignment — false in general.
+    FIX: store both entry and exit abstract states in ASkip/AAssign.
+    TODO: decide with supervisors before fixing.
+
+  Option 4 (Nipkow vc style — overkill, see Abs_Int_ITP2012):
+    Define VCs from annotation; prove analysis satisfies VCs; derive soundness.
+
+  ── RECOMMENDATION ──────────────────────────────────────────────────────────
+  Implement Option 2 in Pipeline.thy (it's free).
+  Leave this file as a sketch/placeholder until supervisors confirm they want Option 3.
+  Do NOT invest in fixing acom_pre / annotation_sound before that discussion.
 *)
 
 (* ── Analysis Result Type ─────────────────────────────────────── *)

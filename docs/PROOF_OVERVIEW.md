@@ -28,6 +28,87 @@ We prove the end-to-end bridge from program semantics to solver result soundness
 
 ---
 
+## Result mapping: how to present the solver output
+
+The solver returns `pp => 'a abs_state` — a map from CFG program points to abstract states.
+There are four ways to state what this means for the program. Choose ONE before investing
+in proof work; the choice is low-cost to make but expensive to change mid-proof.
+
+### Option 1 — Exit-state soundness only (current `pipeline_sound`)
+
+```isabelle
+theorem pipeline_sound:
+  big_step (c, s) t  →  t ∈ gamma_state (run_analysis cfg c (cfg_exit (to_cfg c)))
+```
+
+Minimum viable. Already stated in `Pipeline.thy`. No annotation layer needed.
+The exit abstract state is a sound post-condition for the entire program.
+
+### Option 2 — Point-map invariant predicate (RECOMMENDED)
+
+```isabelle
+theorem analysis_invariant_sound:
+  big_step (c, s) t  →
+    ∀ v. cfg_reach (to_cfg c) {s} v ⊆ gamma_state (run_analysis cfg c v)
+```
+
+Falls out for free from `post_fixpoint_sound` + `td_analyse_post_fixpoint` — zero extra
+proof work beyond what the pipeline already requires.  Exit soundness (Option 1) is the
+`v = cfg_exit` special case.  This is what the supervisor suggested in meeting 2 as the
+"point-map soundness predicate: ∀ p. collect_sem_at c p ⊆ γ(mlup σ p)".
+
+**This is the recommended default.**
+
+### Option 3 — Fixed `acom` annotation (Nipkow style, needs supervisor sign-off)
+
+Annotate every command with the abstract state at its entry AND exit program point:
+
+```isabelle
+datatype 'a acom =
+    ASkip   "'a abs_state" "'a abs_state"
+  | AAssign vname aexp "'a abs_state" "'a abs_state"
+  | ASeq    "'a acom" "'a acom"
+  | AIf     bexp "'a acom" "'a acom" "'a abs_state" "'a abs_state"
+  | AWhile  bexp "'a abs_state" "'a acom" "'a abs_state"
+
+theorem annotation_sound:
+  s ∈ gamma_state (acom_pre ac)  →  big_step (c, s) t  →  t ∈ gamma_state (acom_post ac)
+```
+
+The current `Result_Mapping.thy` is broken: `acom_pre` returns the EXIT state for leaf nodes
+(ASkip, AAssign), making `annotation_sound` unprovable for assignments (would require q to
+be closed under x := a, which doesn't hold in general).  Fix: store both entry and exit
+abstract states in leaf nodes so `acom_pre` has the correct value to return.
+
+More work than Option 2, but gives the analysis result in the form of a valid Hoare
+annotation that can be read off the program text.  Ask supervisors before implementing.
+
+### Option 4 — Verification conditions (HOL-IMP `Abs_Int_ITP2012` style)
+
+Define verification conditions (VCs) from the annotated program; prove the analysis satisfies
+all VCs; derive soundness from VC satisfaction.  Decouples analysis correctness from
+annotation soundness.  This is Nipkow's approach in AFP `Abs_Int_ITP2012`.
+
+Adds a VC machinery layer.  Probably overkill given that Option 2 already provides the
+invariant statement directly.
+
+---
+
+### Decision guide
+
+| Want to say | Use |
+|---|---|
+| "final output state is sound" | Option 1 |
+| "abstract state at every pp is a sound invariant" (supervisor request) | Option 2 |
+| "analysis produces a valid Hoare annotation" | Option 3 |
+| "analysis satisfies Nipkow-style VCs" | Option 4 |
+
+**Current status**: `Result_Mapping.thy` implements a broken attempt at Option 3.
+Recommended path: implement Option 2 first (free from existing lemmas), then discuss
+Option 3 with supervisors.
+
+---
+
 ## 2) Core theorem chain (big picture)
 
 Target shape:

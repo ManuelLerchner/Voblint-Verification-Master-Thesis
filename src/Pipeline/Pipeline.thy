@@ -153,4 +153,38 @@ theorem ivl_pipeline_sound:
                      (cfg_exit (to_cfg c)))"
   sorry
 
+(* ── Option 2: Point-Map Invariant (Recommended Presentation) ── *)
+(*
+  Stronger than pipeline_sound: the abstract state at EVERY program point
+  is a sound invariant, not just at the exit.
+
+  This falls out for free from post_fixpoint_sound + td_analyse_post_fixpoint:
+    td_analyse_post_fixpoint  →  is_post_fixpoint ... (run_analysis cfg c)
+    post_fixpoint_sound       →  ∀v. cfg_reach g {s} v ⊆ gamma_state (env v)
+  Exit soundness (pipeline_sound) is the v = cfg_exit special case.
+
+  This is what supervisors requested in meeting 2:
+    "point-map soundness predicate: ∀ p. collect_sem_at c p ⊆ γ(mlup σ p)"
+*)
+
+theorem pipeline_invariant_sound:
+  assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
+  assumes s_in_gamma: "s : abstract_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
+  assumes terminates: "big_step (c, s) t"
+  shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
+                    abstract_domain.gamma_state (ac_gamma cfg)
+                      (run_analysis cfg c v)"
+  sorry
+  (* Proof: pipeline_invariant_sound follows from:
+       (1) td_analyse_post_fixpoint  (Phase G)
+       (2) post_fixpoint_sound       (Phase F)
+     Exit soundness is the v = cfg_exit corollary. *)
+
+theorem sign_pipeline_invariant_sound:
+  assumes "big_step (c, s) t"
+  shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
+                    sign_domain.gamma_state
+                      (run_analysis (sign_analysis_config s) c v)"
+  sorry
+
 end
