@@ -16,7 +16,7 @@ begin
 (* ── Collecting Semantics (exit-reachable states) ─────────────── *)
 
 definition collect :: "com => state set => state set" where
-  "collect c S = {t. \<exists>s\<in>S. big_step (c, s) t}"
+  "collect c S = {t. \<exists>s\<in>S. (c,s) \<Rightarrow> t}"
 
 (* ── Point-Wise Collecting via Induction on com ──────────────────
    Equivalent characterisation used in soundness proofs. *)
@@ -32,7 +32,7 @@ lemma collect_Assign:
 lemma collect_Seq:
   "collect (c1 ;; c2) S = collect c2 (collect c1 S)"
   unfolding collect_def
-  by (auto elim!: big_step_SeqE intro!: Seq)
+  by (auto elim!: SeqE intro!: Seq)
 
 lemma collect_If:
   "collect (IF b THEN c1 ELSE c2) S =
