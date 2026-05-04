@@ -87,8 +87,8 @@ The thesis contribution divides into:
 |---|---|---|---|
 | `td_analyse_post_fixpoint` | **proved** | trivial | follows from `make_rhs_mono` + AFP axiom |
 | `join_sign_comm`, `join_sign_assoc` | **proved** | easy | case splits on datatype |
-| `big_step_determ` | sorry | easy | induction on big_step |
-| `collect_SKIP/Assign/Seq/If` | sorry | easy | unfold + big_step cases |
+| `big_step_determ` | **proved** | easy | HOL-IMP-style `blast+` after `inductive_cases` |
+| `collect_SKIP/Assign/Seq/If` | **proved** | easy | unfold + big_step / `fastforce` |
 | `compile_fresh`, `compile_finite`, `compile_entry_ne_exit` | sorry | medium | induction on `compile` |
 | `collect_While` | sorry | medium-hard | lfp + big_step |
 | `collect_pp_mono` | sorry | medium | monotonicity of lfp argument |
@@ -127,3 +127,115 @@ Restart Claude Code after `./start-ir.sh`.
 ## Knowledge base
 
 Research notes, supervisor meetings, concept articles: `~/goblint-formalization-kb/`.
+
+**Novelty / related work (relevant vs already covered, what rests on the CFG bridge):**  
+`~/goblint-formalization-kb/wiki/research/novelty-not-covered-positioning.md`
+
+---
+
+## Agent workflow (Claude Code, MCP, Isabelle)
+
+*Merged from `.claude/CLAUDE.md` — this file is the single source of truth; root `CLAUDE.md` and `.claude/*.md` symlink here for Cursor / Claude / other agents.*
+
+### Session start
+
+1. Read **`AGENTS.md`** (this file) — project goal, locked decisions, folder layout
+2. Check which theories exist: `ls src/`
+3. Batch-check compilation: `isabelle build -d <afp> -D . Goblint_Formalization` (see `ROOT` for AFP path)
+4. Optionally connect MCP for interactive proof work (see below)
+
+### Two modes: batch build vs. interactive MCP
+
+#### Batch build (checking the whole session)
+
+```bash
+isabelle build -d <path-to-AFP>/Top_Down_Solver -D . Goblint_Formalization
+```
+
+(Adjust Isabelle binary path for your install, e.g. `~/Isabelle2025-2/bin/isabelle`.)
+
+Requires `options [quick_and_dirty]` in `ROOT` to allow `sorry`.
+
+#### Isabelle MCP (interactive)
+
+```bash
+./start-ir.sh   # starts daemon on HOL session (see script for session name)
+```
+
+**Limitation:** if the daemon uses `--session HOL` only, loading project theories may require loading imports manually or switching the daemon session to `Goblint_Formalization` after a successful full build.
+
+**Workflow:** run `isabelle build` first → start daemon → `load_theory` for dependencies → `step` / `sledgehammer` on subgoals.
+
+Load tool schemas before first MCP use (example):
+
+```
+ToolSearch("select:mcp__isabelle-ir__connect")
+ToolSearch("select:mcp__isabelle-ir__init,mcp__isabelle-ir__step,mcp__isabelle-ir__state,mcp__isabelle-ir__back")
+ToolSearch("select:mcp__isabelle-ir__sledgehammer,mcp__isabelle-ir__find_theorems,mcp__isabelle-ir__load_theory")
+```
+
+### ASCII symbols — mandatory (when writing Isabelle in chat)
+
+| Write | Meaning |
+|---|---|
+| `:` | ∈ (NOT `::`) |
+| `~:` | ∉ |
+| `=>` | ⇒ (metalogic arrow in chat; in theories use `\<Longrightarrow>` / `==>` as appropriate) |
+| `-->` | ⟶ |
+| `~` | ¬ |
+| `&` / `\|` | ∧ / ∨ |
+| `!`/`ALL` | ∀ |
+| `?`/`EX` | ∃ |
+| `::` | type annotation only |
+
+### Proof pitfalls
+
+- **Simp loops**: never put `hy: f y = {x. P (f x)}` in simp set — use `subst hy` once then `simp add: mem_Collect_eq`.
+- **monoD**: use `monoD[OF mono h]` not `using mono by (rule monoD)`.
+- **Named assumptions**: `assume surj: "surj f"`, not `from "surj f"`.
+- **Biconditional**: use `=` not `<->` in Isar propositions.
+- **Multi-line strings in MCP**: write all Isar on **one line** per `step` call when the MCP API rejects newlines.
+
+### Isabelle type / syntax pitfalls (project-specific)
+
+**Inside quoted strings `"..."` — NOT comments:** `(* ... *)` inside type strings is parsed as HOL.
+
+**`fun` patterns:** numeral literals cannot be patterns; avoid `inv` as a pattern name (clash with `Hilbert_Choice.inv`).
+
+**Bounded quantifiers:** `ALL j >= n.` is invalid — use `ALL j. n <= j --> ...`.
+
+**Free variables in axioms:** names like `rhs` may clash with imported constants — rename (e.g. `rhsfn`).
+
+**Sorts:** `abs_state = vname => 'a` needs `'a::ord` where pointwise `<=` is used; align with `abstract_domain` locale.
+
+**`instantiation`:** must follow the `datatype` / `typedecl` it instantiates.
+
+**Imports:** theories using `to_cfg`, `domain_transfer`, locales — keep import closure consistent (see `IMP2_to_CFG`, `Constraint_System`, interpretations in domain theories).
+
+### HOL-IMP / IMP2 semantics
+
+- Import HOL-IMP material with `"HOL-IMP.Com"`, `"HOL-IMP.Big_Step"`, etc.
+- Session parent in `ROOT`: `= "HOL-IMP" +` (not bare `HOL +`).
+- **Big-step:** this repo uses HOL-IMP-style infix **`(c,s) \<Rightarrow> t`** in `IMP2_Semantics.thy` (same term as `big_step (c,s) t`).
+- **Execution proofs:** for schematic final states, often `apply (rule exI)` (or `exI`) before `Assign` / `Seq` intros.
+- **`rule Assign`:** needs schematic target state in some setups; use `exI` first when unification fails on concrete stores.
+- **AFP `IMP2` (Lammich):** not the same as this repo’s minimal **IMP2** frontend — disambiguate in prose (see KB [[concepts/imp-language]] / [[concepts/imp2]]).
+- **`schematic_lemma`:** not always available in MCP step commands — use `lemma` + `exI` pattern.
+- **`sorry` in batch build:** needs `quick_and_dirty` in `ROOT`.
+
+### Abstract domain architecture (reminder)
+
+- `abstract_domain` locale: `join_comm`, `join_assoc` → `comp_fun_commute` for folds
+- `td_analyse_post_fixpoint`: real proof from `make_rhs_mono` + AFP post-fixpoint
+- AFP install: replace `axiomatization` stub in `TD_Interface.thy` with `interpretation TD_plain ...` when ready
+
+### Development loop
+
+1. Draft lemma with `sorry` to check the statement type-checks
+2. `sledgehammer` on subgoals (time-bounded)
+3. Fill proofs; structured Isar when automation fails
+4. Commit when a top-level lemma closes
+
+### Commit style
+
+`feat(proof): <what was proved>` — e.g. `feat(proof): soundness of sign addition`
