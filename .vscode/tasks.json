@@ -1,0 +1,76 @@
+{
+  // Default build: Ctrl+Shift+B, or Command Palette → "Tasks: Run Build Task"
+  // Paths: .vscode/settings.json (goblint.isabelleExecutable, goblint.afpTopDownSolverDir)
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Isabelle: build Goblint_Formalization",
+      "type": "shell",
+      "command": "${config:goblint.isabelleExecutable}",
+      "args": [
+        "build",
+        "-d",
+        "${config:goblint.afpTopDownSolverDir}",
+        "-D",
+        "${workspaceFolder}",
+        "Goblint_Formalization"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Isabelle: build HOL-IMP (parent session)",
+      "type": "shell",
+      "command": "${config:goblint.isabelleExecutable}",
+      "args": ["build", "HOL-IMP"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Isabelle: build Goblint_Formalization (clean first)",
+      "type": "shell",
+      "command": "${config:goblint.isabelleExecutable}",
+      "args": [
+        "build",
+        "-c",
+        "-d",
+        "${config:goblint.afpTopDownSolverDir}",
+        "-D",
+        "${workspaceFolder}",
+        "Goblint_Formalization"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
