@@ -6,6 +6,7 @@ theory Goblint_Formalization
     IMP2_Collecting
     (* ── Control-Flow Graph ────────────────────────────────── *)
     CFG_Def
+    CFG_Path
     IMP2_to_CFG
     CFG_Collecting
     (* ── Abstract Domains ──────────────────────────────────── *)

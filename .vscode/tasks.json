@@ -1,5 +1,7 @@
 {
   // Default build: Ctrl+Shift+B, or Command Palette → "Tasks: Run Build Task"
+  // Isabelle editor: Command Palette → "Tasks: Run Task" → "Isabelle: launch Isabelle/VSCode …"
+  // WSL2 white/frozen window: launch tasks pass --disable-gpu + LIBGL_ALWAYS_SOFTWARE=1
   // Paths: .vscode/settings.json (goblint.isabelleExecutable, goblint.afpTopDownSolverDir)
   "version": "2.0.0",
   "tasks": [
@@ -64,6 +66,71 @@
         "cwd": "${workspaceFolder}"
       },
       "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Isabelle: launch Isabelle/VSCode (bundled editor)",
+      "type": "shell",
+      "command": "${config:goblint.isabelleExecutable}",
+      "args": [
+        "vscode",
+        "-d",
+        "${config:goblint.afpTopDownSolverDir}",
+        "-d",
+        "${workspaceFolder}",
+        "-R",
+        "Goblint_Formalization",
+        "${workspaceFolder}",
+        "--",
+        "--disable-gpu",
+        "--disable-gpu-compositing"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "LIBGL_ALWAYS_SOFTWARE": "1"
+        }
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Isabelle: launch Isabelle/VSCode (no heap rebuild)",
+      "type": "shell",
+      "command": "${config:goblint.isabelleExecutable}",
+      "args": [
+        "vscode",
+        "-n",
+        "-d",
+        "${config:goblint.afpTopDownSolverDir}",
+        "-d",
+        "${workspaceFolder}",
+        "-l",
+        "Goblint_Formalization",
+        "${workspaceFolder}",
+        "--",
+        "--disable-gpu",
+        "--disable-gpu-compositing"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "LIBGL_ALWAYS_SOFTWARE": "1"
+        }
+      },
+      "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "shared",

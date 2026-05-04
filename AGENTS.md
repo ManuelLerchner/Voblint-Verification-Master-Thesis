@@ -41,6 +41,7 @@ src/
     IMP2_Collecting.thy               ← collecting semantics (concrete gold standard)
   CFG/
     CFG_Def.thy                       ← pp, edge_action, cfg record
+    CFG_Path.thy                      ← cfg_path inductive predicate + lemma library (see §CFG Path Infrastructure)
     IMP2_to_CFG.thy                   ← compile :: com => nat => (nat*pp*pp*edges)
     CFG_Collecting.thy                ← CFG collecting sem + bridge to IMP2
   Domains/
@@ -100,13 +101,45 @@ The thesis contribution divides into:
 
 Fill in roughly in order: easy → medium → hard.
 
-## Critical TODO before `post_fixpoint_sound`
+## CFG Path Infrastructure
 
-Define a `cfg_path` inductive predicate in `CFG_Collecting.thy`:
-```
+**File:** `src/CFG/CFG_Path.thy` (imports `CFG_Def`, imported by `CFG_Collecting`)
+
+**Pattern source:** FormalSSA (Ullrich/Lohner) — see KB article:
+`~/goblint-formalization-kb/wiki/concepts/isabelle-proof-engineering.md`
+
+The file provides three layers:
+
+### 1. Core inductive predicate
+```isabelle
 inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool"
+  (* records edge actions along the path — needed for transfer-fn composition *)
 ```
-Without this, `cfg_collect_exit_eq_collect` has no proof structure.
+
+### 2. Reachability abbreviation + notation
+```isabelle
+abbreviation cfg_reaches :: "cfg => pp => pp => bool" ("_ \<turnstile> _ \<rightarrow>* _")
+```
+
+### 3. Lemma library (attribute discipline from FormalSSA Pattern 2)
+| Lemma | Attribute | Purpose |
+|---|---|---|
+| `cfg_reaches_refl` | `[intro, simp]` | `g |- v ->* v` |
+| `cfg_reaches_step` | `[intro]` | edge → extend reachability |
+| `cfg_reaches_trans` | `[intro]` | chain paths |
+| `cfg_path_cases` | `[consumes 1, case_names empty step]` | named case split |
+| `cfg_path_induct` | `[consumes 1, case_names empty step]` | structured induction |
+| `cfg_entry_reachable` | `[intro, simp]` | entry always reachable |
+
+### 4. Transfer function composition
+```isabelle
+fun path_collect :: "(edge_action * pp) list => state set => state set"
+```
+Composes `edge_collect` along a path — the bridge between `cfg_path` and `post_fixpoint_sound`.
+
+**Why `(edge_action * pp)` not just `pp list`**: unlike FormalSSA (which needs only node
+topology for SSA), our soundness proofs need to know *which action* was taken on each step
+to compose transfer functions.
 
 ## Open questions (need supervisor sign-off)
 
