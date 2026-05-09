@@ -131,7 +131,7 @@ lemma aval_sign_sound:
 (* ── Abstract Assume ─────────────────────────────────────────── *)
 
 fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
-    "assume_sign (Less (V x) (N n)) sigma = (if n = 0 then sigma(x := SBot) else sigma)"
+    "assume_sign (Less (V x) (N n)) sigma = (if n = 0 then sigma(x := SNeg) else sigma)"
   | "assume_sign _                  sigma = sigma"
 
 fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where

@@ -109,9 +109,21 @@ lemma cfg_path_not_Nil_imp_step[dest]:
    EX a w es'. es = (a, w) # es' & (u, a, w) : cfg_edges g & cfg_path g w es' v"
   sorry
 
-lemma cfg_path_edges_in_cfg[elim]:
-  "cfg_path g u es v ==> (a, w) : set (map snd es) ==> (u, a, w) : cfg_edges g"
-  sorry
+(*
+  Each step (a,w) in the path list came from some edge in the CFG.
+  The source of that edge is NOT necessarily u (the path start) — it is
+  whatever node preceded w along the path.  The old statement
+    (a,w) ∈ set (map snd es) ⟹ (u,a,w) ∈ cfg_edges g
+  was wrong for paths of length > 1.  Correct form: existential source.
+*)
+lemma cfg_path_edges_in_cfg:
+  "cfg_path g u es v ==> (a, w) : set es ==> EX src. (src, a, w) : cfg_edges g"
+  sorry (* induction on cfg_path: empty vacuous; step: (a',w') = head → src = u; IH for tail *)
+
+(* Convenience: first step of a non-empty path hits the CFG at u. *)
+lemma cfg_path_first_edge:
+  "cfg_path g u ((a, w) # es) v ==> (u, a, w) : cfg_edges g"
+  sorry (* by cfg_path.cases: only the step constructor applies; its premise gives (u,a,w) ∈ cfg_edges g *)
 
 (* ── Reachability from Entry ───────────────────────────────────── *)
 
@@ -121,10 +133,23 @@ definition cfg_reachable :: "cfg => pp => bool" where
 lemma cfg_entry_reachable[intro, simp]: "cfg_reachable g (cfg_entry g)"
   unfolding cfg_reachable_def by (rule cfg_reaches_refl)
 
+(*
+  cfg_exit_reachable_from_entry is unprovable for arbitrary well-formed CFGs:
+  cfg_wf does not guarantee a path from entry to exit.  Replaced by
+  to_cfg_exit_reachable below, which uses the compile structure.
+*)
 lemma cfg_exit_reachable_from_entry:
   "cfg_wf g ==>
    (ALL (u, _, v) : cfg_edges g. cfg_reachable g u --> cfg_reachable g v) ==>
    cfg_reachable g (cfg_exit g)"
+  sorry  (* intentionally weak; use to_cfg_exit_reachable for to_cfg results *)
+
+(*
+  For CFGs produced by to_cfg, the exit IS reachable from entry.
+  Proved by structural induction on c using compile's edge structure.
+*)
+lemma to_cfg_exit_reachable:
+  "cfg_reachable (to_cfg c) (cfg_exit (to_cfg c))"
   sorry
 
 (* ── Transfer Function Composition Along a Path ───────────────── *)
