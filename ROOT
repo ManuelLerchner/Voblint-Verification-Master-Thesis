@@ -3,6 +3,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
   options [quick_and_dirty]
   sessions
     Top_Down_Solver
+    TD
   directories
     "IMP2"
     "CFG"
