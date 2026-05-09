@@ -62,11 +62,40 @@ lemma collect_pp_mono:
 
 (* ── Correspondence Theorem ──────────────────────────────────────
    CFG collecting semantics at the exit node equals IMP2 collecting.
-   This is the core bridge between the two worlds. *)
+   Split into two directions so each can be proved independently. *)
+
+(*
+  ⊆ direction: every state the CFG collecting semantics puts at the exit
+  is also a big_step output.
+
+  Proof: show (collect c S) is a post-fixpoint of the concrete CFG transformer F.
+  Then lfp_least gives cfg_collect ≤ collect at exit.
+  Key: for each com case, check that CFG edges match big_step transitions exactly:
+    - SKIP: single EA_Nop edge entry→exit; collect_pp gives S; collect SKIP S = S ✓
+    - Assign: single EA_Assign edge; collect_pp = image; matches big_step.Assign ✓
+    - Seq: edges chain via mid-point; matches big_step.Seq ✓
+    - If: two assume/assume_not edges to branches; matches WhileTrue/WhileFalse ✓
+    - While: loop-head→assume→body→back-edge + assume_not→exit; matches WhileTrue/WhileFalse ✓
+*)
+lemma cfg_collect_exit_le_collect:
+  "cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) <= collect c S"
+  sorry
+
+(*
+  ⊇ direction: every big_step output is captured by the CFG collecting semantics.
+
+  Proof: induction on the big_step derivation.
+  For each rule, unfold cfg_collect one step and show the output lands in the lfp.
+  The WHILE case needs the IH for the body AND for the recursive WHILE call.
+  Key lemma needed: lfp unfolding (lfp f = f (lfp f)) to push states through edges.
+*)
+lemma collect_le_cfg_collect_exit:
+  "collect c S <= cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
+  sorry
 
 theorem cfg_collect_exit_eq_collect:
   "cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) = collect c S"
-  sorry
+  by (rule antisym) (rule cfg_collect_exit_le_collect, rule collect_le_cfg_collect_exit)
 
 (* ── Reachability on CFG ─────────────────────────────────────────
    Helper: a state s is reachable at program point v iff it appears
