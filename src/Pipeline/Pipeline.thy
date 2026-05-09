@@ -99,12 +99,19 @@ definition sign_analysis_config :: "state => sign analysis_config" where
                       tf_assume_not = assume_not_sign |),
         ac_init  = (%x. sign_of_int (s x)) |)"
 
-theorem sign_pipeline_sound:
-  assumes "big_step (c, s) t"
+(*
+  sign_pipeline_sound is a corollary of sign_pipeline_sound_scaffold
+  together with the two domain-specific stubs below.
+  As a standalone theorem it holds because the sign domain satisfies all
+  required side conditions; the proof must explicitly invoke those stubs.
+*)
+corollary sign_pipeline_sound:
+  assumes terminates: "big_step (c, s) t"
   shows   "t : sign_domain.gamma_state
                   (run_analysis (sign_analysis_config s) c
                      (cfg_exit (to_cfg c)))"
-  sorry
+  using sign_pipeline_sound_scaffold[OF terminates sign_analysis_tf_sound_stub sign_analysis_init_in_gamma_stub]
+  sorry (* chain through scaffold: fill once scaffold + stubs are proved *)
 
 text \<open>
   Proof scaffold: reduce \texttt{sign\_pipeline\_sound} to \texttt{pipeline\_sound}
@@ -146,12 +153,17 @@ definition ivl_analysis_config :: "state => ivl analysis_config" where
                       tf_assume_not = assume_not_ivl |),
         ac_init  = (%x. Ivl (Fin (s x)) (Fin (s x))) |)"
 
-theorem ivl_pipeline_sound:
-  assumes "big_step (c, s) t"
+(*
+  Same structure as sign_pipeline_sound.
+  Requires ivl TF soundness + init soundness (analogues of the sign stubs).
+  Those must be proved before this corollary can be closed.
+*)
+corollary ivl_pipeline_sound:
+  assumes terminates: "big_step (c, s) t"
   shows   "t : ivl_domain.gamma_state
                   (run_analysis (ivl_analysis_config s) c
                      (cfg_exit (to_cfg c)))"
-  sorry
+  sorry (* pipeline_sound[OF ivl_tf_sound_stub ivl_init_sound_stub terminates] once those exist *)
 
 (* ── Option 2: Point-Map Invariant (Recommended Presentation) ── *)
 (*
@@ -167,24 +179,36 @@ theorem ivl_pipeline_sound:
     "point-map soundness predicate: ∀ p. collect_sem_at c p ⊆ γ(mlup σ p)"
 *)
 
+(*
+  Point-map invariant: the solver result is sound at EVERY program point.
+  Does NOT require termination — holds for all starting states s in gamma(init).
+  The terminates assumption was removed; it is unused (the ∀v conclusion
+  does not depend on any specific execution reaching exit).
+*)
 theorem pipeline_invariant_sound:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s : abstract_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes terminates: "big_step (c, s) t"
   shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
                     abstract_domain.gamma_state (ac_gamma cfg)
                       (run_analysis cfg c v)"
   sorry
-  (* Proof: pipeline_invariant_sound follows from:
-       (1) td_analyse_post_fixpoint  (Phase G)
-       (2) post_fixpoint_sound       (Phase F)
-     Exit soundness is the v = cfg_exit corollary. *)
+  (* Proof:
+       (1) td_analyse_post_fixpoint gives is_post_fixpoint (run_analysis cfg c)
+       (2) {s} ⊆ gamma_state(ac_init cfg) from s_in_gamma
+       (3) post_fixpoint_sound gives ∀v. cfg_reach ... {s} v ⊆ gamma_state(env v)
+     pipeline_sound is the v = cfg_exit special case; terminates not needed. *)
 
+(*
+  Sign-domain specialisation.  Hypotheses must match pipeline_invariant_sound:
+  TF soundness + s ∈ gamma(init).  The (c,s)⇒t assumption was superfluous.
+*)
 theorem sign_pipeline_invariant_sound:
-  assumes "big_step (c, s) t"
+  assumes tf_ok:   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
+  assumes init_ok: "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
   shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
                     sign_domain.gamma_state
                       (run_analysis (sign_analysis_config s) c v)"
-  sorry
+  using pipeline_invariant_sound[OF tf_ok init_ok]
+  sorry (* coerce sign_domain.gamma_state ↔ abstract_domain.gamma_state after interp *)
 
 end

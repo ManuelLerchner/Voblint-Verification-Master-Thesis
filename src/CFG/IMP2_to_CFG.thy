@@ -105,4 +105,16 @@ lemma to_cfg_finite: "finite (cfg_edges (to_cfg c))"
   unfolding to_cfg_def
   by (simp add: Let_def split: prod.splits) (meson compile_finite)
 
+(*
+  to_cfg always produces a well-formed CFG:
+    - entry ≠ exit (compile_entry_ne_exit)
+    - finite edges (to_cfg_finite)
+    - all edge endpoints are valid nodes (compile_fresh)
+  Stated as a lemma so downstream proofs can use cfg_wf without
+  re-deriving it inline from compile properties each time.
+*)
+lemma to_cfg_wf: "cfg_wf (to_cfg c)"
+  unfolding cfg_wf_def to_cfg_def
+  sorry (* by compile_entry_ne_exit + to_cfg_finite + compile_fresh node-bound *)
+
 end
