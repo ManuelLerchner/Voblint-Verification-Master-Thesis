@@ -37,14 +37,14 @@ begin
 lemma collect_pp_abstract_sound:
   assumes post_fp: "is_post_fixpoint g tf join_state bot_state s0 env"
   assumes tf_sound_assign:
-    "ALL x a sigma. ALL s : gamma_state sigma.
-       s(x := aval a s) : gamma_state (tf_assign tf x a sigma)"
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
   assumes tf_sound_assume:
-    "ALL b sigma. ALL s : gamma_state sigma. bval b s
-       --> s : gamma_state (tf_assume tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
   assumes tf_sound_assume_not:
-    "ALL b sigma. ALL s : gamma_state sigma. ~ bval b s
-       --> s : gamma_state (tf_assume_not tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   shows
     "collect_pp g (\<lambda>v. gamma_state (env v)) v <= gamma_state (env v)"
   sorry
@@ -53,16 +53,16 @@ lemma post_fixpoint_sound:
   assumes post_fp: "is_post_fixpoint g tf join_state bot_state s0 env"
   assumes S_sound: "S <= gamma_state s0"
   assumes tf_sound_assign:
-    "ALL x a sigma. ALL s : gamma_state sigma.
-       s(x := aval a s) : gamma_state (tf_assign tf x a sigma)"
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
   assumes tf_sound_assume:
-    "ALL b sigma. ALL s : gamma_state sigma. bval b s
-       --> s : gamma_state (tf_assume tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
   assumes tf_sound_assume_not:
-    "ALL b sigma. ALL s : gamma_state sigma. ~ bval b s
-       --> s : gamma_state (tf_assume_not tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   shows
-    "ALL v. cfg_reach g S v <= gamma_state (env v)"
+    "\<forall>v. cfg_reach g S v <= gamma_state (env v)"
   sorry
 
 end
@@ -79,21 +79,21 @@ corollary exit_sound:
   assumes post_fp: "is_post_fixpoint (to_cfg c) tf join_state bot_state s0 env"
   assumes S_sound: "S <= gamma_state s0"   (* was missing; needed by post_fixpoint_sound *)
   assumes tf_sound_assign:
-    "ALL x a sigma. ALL s : gamma_state sigma.
-       s(x := aval a s) : gamma_state (tf_assign tf x a sigma)"
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
   assumes tf_sound_assume:
-    "ALL b sigma. ALL s : gamma_state sigma. bval b s
-       --> s : gamma_state (tf_assume tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
   assumes tf_sound_assume_not:
-    "ALL b sigma. ALL s : gamma_state sigma. ~ bval b s
-       --> s : gamma_state (tf_assume_not tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   assumes s_in_S: "s : S"
   assumes terminates: "big_step (c, s) t"
   shows   "t : gamma_state (env (cfg_exit (to_cfg c)))"
   sorry
-  (* Proof: post_fixpoint_sound + S_sound gives ∀v. cfg_reach g S v ⊆ gamma_state(env v).
-     collect_While + collect_le_cfg_collect_exit give t ∈ cfg_reach g S exit.
-     Conclude t ∈ gamma_state(env exit). *)
+  (* Proof: post_fixpoint_sound + S_sound gives \<forall>v. cfg_reach g S v ⊆ gamma_state(env v).
+     collect_While + collect_le_cfg_collect_exit give t \<in> cfg_reach g S exit.
+     Conclude t \<in> gamma_state(env exit). *)
 
 end
 

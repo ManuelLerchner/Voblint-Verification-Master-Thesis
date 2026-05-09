@@ -24,14 +24,14 @@ begin
 
 theorem td_solver_sound:
   assumes tf_sound_assign:
-    "ALL x a sigma. ALL s : gamma_state sigma.
-       s(x := aval a s) : gamma_state (tf_assign tf x a sigma)"
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
   assumes tf_sound_assume:
-    "ALL b sigma. ALL s : gamma_state sigma. bval b s
-       --> s : gamma_state (tf_assume tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
   assumes tf_sound_assume_not:
-    "ALL b sigma. ALL s : gamma_state sigma. ~ bval b s
-       --> s : gamma_state (tf_assume_not tf b sigma)"
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   assumes s0_sound:
     "s : gamma_state s0"
   assumes terminates:

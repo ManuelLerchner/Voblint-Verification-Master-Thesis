@@ -14,20 +14,20 @@ begin
   for full discussion.
 
   Option 1 (exit only — already in Pipeline.thy):
-    big_step (c,s) t  →  t ∈ gamma_state (run_analysis cfg c (cfg_exit (to_cfg c)))
+    big_step (c,s) t  →  t \<in> gamma_state (run_analysis cfg c (cfg_exit (to_cfg c)))
 
   Option 2 (point-map, RECOMMENDED — zero extra proof cost):
-    big_step (c,s) t  →  ∀ v. cfg_reach (to_cfg c) {s} v ⊆ gamma_state (run_analysis cfg c v)
+    big_step (c,s) t  →  \<forall> v. cfg_reach (to_cfg c) {s} v ⊆ gamma_state (run_analysis cfg c v)
     Falls out directly from post_fixpoint_sound + td_analyse_post_fixpoint.
     This is what supervisors asked for in meeting 2.
 
   Option 3 (acom annotation — what this file currently attempts, BROKEN):
     Annotate each command with entry/exit abstract states; prove Hoare-style
-      s ∈ gamma_state(pre)  →  big_step(c,s) t  →  t ∈ gamma_state(post)
+      s \<in> gamma_state(pre)  →  big_step(c,s) t  →  t \<in> gamma_state(post)
     CURRENT BUG: acom_pre returns the EXIT-pp abstract state for ASkip/AAssign
     (because annotate only stores one state per leaf, the exit state).
     annotation_sound is UNPROVABLE as stated: for AAssign x a q the proof would
-    require  s ∈ gamma_state q  →  s(x := aval a s) ∈ gamma_state q, i.e. q is
+    require  s \<in> gamma_state q  →  s(x := aval a s) \<in> gamma_state q, i.e. q is
     closed under the assignment — false in general.
     FIX: store both entry and exit abstract states in ASkip/AAssign.
     TODO: decide with supervisors before fixing.

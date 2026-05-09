@@ -71,15 +71,15 @@ definition to_cfg :: "com => cfg" where
 
 lemma compile_fresh:
   "compile c n = (n', en, ex, E)
-   ==>  (ALL (u, _, v) : E. u < n'  &  v < n')
-        &  en < n'  &  ex < n'  &  n <= n'"
+   ==>  (\<forall>(u, _, v) \<in> E. u < n'  \<and>  v < n')
+        \<and>  en < n'  \<and>  ex < n'  \<and>  n <= n'"
   sorry
 
 (* All allocated pp's are >= n (nothing reuses old counters). *)
 lemma compile_ge:
   "compile c n = (n', en, ex, E)
-   ==>  (ALL (u, _, v) : E. u >= n  &  v >= n)
-        &  en >= n  &  ex >= n"
+   ==>  (\<forall>(u, _, v) \<in> E. u >= n  \<and>  v >= n)
+        \<and>  en >= n  \<and>  ex >= n"
   sorry
 
 (* ── Structural Correctness Statements ───────────────────────── *)
@@ -93,7 +93,7 @@ lemma compile_ge:
 *)
 
 lemma compile_entry_ne_exit:
-  "compile c n = (n', en, ex, E)  ==>  en ~= ex"
+  "compile c n = (n', en, ex, E)  ==>  en \<noteq> ex"
   sorry
 
 (* Every CFG produced by compile has finitely many edges (programs are finite). *)
@@ -107,7 +107,7 @@ lemma to_cfg_finite: "finite (cfg_edges (to_cfg c))"
 
 (*
   to_cfg always produces a well-formed CFG:
-    - entry ≠ exit (compile_entry_ne_exit)
+    - entry \<noteq> exit (compile_entry_ne_exit)
     - finite edges (to_cfg_finite)
     - all edge endpoints are valid nodes (compile_fresh)
   Stated as a lemma so downstream proofs can use cfg_wf without

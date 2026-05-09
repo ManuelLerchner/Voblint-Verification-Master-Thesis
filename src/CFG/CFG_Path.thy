@@ -51,7 +51,7 @@ inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool" where
 *)
 
 abbreviation cfg_reaches :: "cfg => pp => pp => bool" ("_ \<turnstile> _ \<rightarrow>* _" [50,0,50] 80) where
-  "cfg_reaches g u v == (EX es. cfg_path g u es v)"
+  "cfg_reaches g u v == (\<exists>es. cfg_path g u es v)"
 
 (* ── Intro Lemmas ──────────────────────────────────────────────── *)
 
@@ -105,25 +105,25 @@ lemma cfg_path_induct[consumes 1, case_names empty step]:
 (* ── Elim / Simp Lemmas ────────────────────────────────────────── *)
 
 lemma cfg_path_not_Nil_imp_step[dest]:
-  "cfg_path g u es v ==> es ~= [] ==>
-   EX a w es'. es = (a, w) # es' & (u, a, w) : cfg_edges g & cfg_path g w es' v"
+  "cfg_path g u es v ==> es \<noteq> [] ==>
+   \<exists>a w es'. es = (a, w) # es' \<and> (u, a, w) \<in> cfg_edges g \<and> cfg_path g w es' v"
   sorry
 
 (*
   Each step (a,w) in the path list came from some edge in the CFG.
   The source of that edge is NOT necessarily u (the path start) — it is
   whatever node preceded w along the path.  The old statement
-    (a,w) ∈ set (map snd es) ⟹ (u,a,w) ∈ cfg_edges g
+    (a,w) \<in> set (map snd es) ⟹ (u,a,w) \<in> cfg_edges g
   was wrong for paths of length > 1.  Correct form: existential source.
 *)
 lemma cfg_path_edges_in_cfg:
-  "cfg_path g u es v ==> (a, w) : set es ==> EX src. (src, a, w) : cfg_edges g"
+  "cfg_path g u es v ==> (a, w) : set es ==> \<exists>src. (src, a, w) \<in> cfg_edges g"
   sorry (* induction on cfg_path: empty vacuous; step: (a',w') = head → src = u; IH for tail *)
 
 (* Convenience: first step of a non-empty path hits the CFG at u. *)
 lemma cfg_path_first_edge:
   "cfg_path g u ((a, w) # es) v ==> (u, a, w) : cfg_edges g"
-  sorry (* by cfg_path.cases: only the step constructor applies; its premise gives (u,a,w) ∈ cfg_edges g *)
+  sorry (* by cfg_path.cases: only the step constructor applies; its premise gives (u,a,w) \<in> cfg_edges g *)
 
 (* ── Reachability from Entry ───────────────────────────────────── *)
 
@@ -140,7 +140,7 @@ lemma cfg_entry_reachable[intro, simp]: "cfg_reachable g (cfg_entry g)"
 *)
 lemma cfg_exit_reachable_from_entry:
   "cfg_wf g ==>
-   (ALL (u, _, v) : cfg_edges g. cfg_reachable g u --> cfg_reachable g v) ==>
+   (\<forall>(u, _, v) \<in> cfg_edges g. cfg_reachable g u \<longrightarrow> cfg_reachable g v) ==>
    cfg_reachable g (cfg_exit g)"
   sorry  (* intentionally weak; use to_cfg_exit_reachable for to_cfg results *)
 

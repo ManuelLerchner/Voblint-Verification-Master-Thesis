@@ -33,16 +33,16 @@ begin
   Pipeline:
     IMP2 AST
       [IMP2_Syntax, IMP2_Semantics, IMP2_Collecting]
-    --(to_cfg)-->
+    --(to_cfg)\<longrightarrow>
       CFG
       [CFG_Def, IMP2_to_CFG, CFG_Collecting]
-    --(rhs)-->
+    --(rhs)\<longrightarrow>
       Equation System  (per abstract domain)
       [Domains/*, Equations/Constraint_System*]
-    --(td_solve)-->
+    --(td_solve)\<longrightarrow>
       Fixed-Point Environment
       [Solver/TD_Interface, Solver/TD_Soundness]
-    --(gamma)-->
+    --(gamma)\<longrightarrow>
       Sound Overapproximation / Annotated Program
       [Pipeline/Pipeline, Pipeline/Result_Mapping]
 
@@ -64,7 +64,7 @@ definition example_swap :: com where
       ''x''   ::= V ''y'' ;;
       ''y''   ::= V ''tmp'')"
 
-lemma example_swap_terminates: "EX t. big_step (example_swap, s) t"
+lemma example_swap_terminates: "\<exists>t. big_step (example_swap, s) t"
   unfolding example_swap_def
   apply (rule exI)
   apply (rule big_step.Seq, rule big_step.Seq,
@@ -73,7 +73,7 @@ lemma example_swap_terminates: "EX t. big_step (example_swap, s) t"
   done
 
 lemma example_swap_correct:
-  "big_step (example_swap, s) t ==> t ''x'' = s ''y'' & t ''y'' = s ''x''"
+  "big_step (example_swap, s) t ==> t ''x'' = s ''y'' \<and> t ''y'' = s ''x''"
   unfolding example_swap_def
   by (auto elim!: big_step.cases)
 

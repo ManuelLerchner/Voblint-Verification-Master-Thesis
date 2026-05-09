@@ -7,7 +7,7 @@ begin
 lemma knaster_tarski:
   fixes f :: "'a::complete_lattice => 'a"
   assumes mono: "mono f"
-  shows "EX x. f x = x"
+  shows "\<exists>x. f x = x"
 proof -
   let ?a = "Inf {x. f x <= x}"
   have fa_le: "f ?a <= ?a"
@@ -29,7 +29,7 @@ proof -
 qed
 
 (* Cantor's diagonal argument: no function 'a => 'a set is surjective. *)
-theorem cantor: "~ surj (f :: 'a => 'a set)"
+theorem cantor: "\<not> surj (f :: 'a => 'a set)"
 proof
   assume surj: "surj f"
   obtain y where hy: "f y = {x. x ~: f x}"

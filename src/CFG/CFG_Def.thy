@@ -55,8 +55,8 @@ definition successors :: "cfg => pp => (pp * edge_action) set" where
 (* ── Well-Formedness ──────────────────────────────────────────── *)
 
 definition cfg_wf :: "cfg => bool" where
-  "cfg_wf g = (cfg_entry g ~= cfg_exit g
-               & finite (cfg_edges g)
-               & (ALL (u, _, v) : cfg_edges g. u : cfg_nodes g & v : cfg_nodes g))"
+  "cfg_wf g = (cfg_entry g \<noteq> cfg_exit g
+               \<and> finite (cfg_edges g)
+               \<and> (\<forall>(u, _, v) \<in> cfg_edges g. u \<in> cfg_nodes g \<and> v \<in> cfg_nodes g))"
 
 end

@@ -52,7 +52,7 @@ begin
 (* ── Lifted Concretization to Abstract States ─────────────────── *)
 
 definition gamma_state :: "'a abs_state => state set" where
-  "gamma_state sigma = {s. ALL x. s x : gamma (sigma x)}"
+  "gamma_state sigma = {s. \<forall>x. s x \<in> gamma (sigma x)}"
 
 (* ── Pointwise Lift of bot, join, widen to abs_state ──────────── *)
 
@@ -91,7 +91,7 @@ lemma gamma_join_sound:
 
 (* Every element in a finite set is below the fold-join over that set (w.r.t. gamma).
    Needed for collect_pp_abstract_sound: each incoming abstract value x satisfies
-   gamma x ⊆ gamma (abs_join_set join_op bot S) when x ∈ S. *)
+   gamma x ⊆ gamma (abs_join_set join_op bot S) when x \<in> S. *)
 lemma gamma_abs_join_set_ub:
   "finite S ==> x : S ==> gamma x <= gamma (Finite_Set.fold join_op bot S)"
   sorry

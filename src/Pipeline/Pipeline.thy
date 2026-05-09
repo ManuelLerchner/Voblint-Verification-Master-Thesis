@@ -7,10 +7,10 @@ begin
 
   This theory assembles the complete end-to-end pipeline:
 
-    IMP2 source  --[to_cfg]-->  CFG
-                 --[rhs]------>  Constraint System
-                 --[td_solve]->  Fixed-Point Environment
-                 --[gamma]---->  State-Set Overapproximation
+    IMP2 source  --[to_cfg]\<longrightarrow>  CFG
+                 --[rhs]-----\<longrightarrow>  Constraint System
+                 --[td_solve]\<longrightarrow>  Fixed-Point Environment
+                 --[gamma]---\<longrightarrow>  State-Set Overapproximation
 
   The pipeline is parameterised over an abstract domain.
   Concrete instantiations for Sign and Interval are provided below.
@@ -33,12 +33,12 @@ definition domain_transfer_sound ::
      => bool"
 where
   "domain_transfer_sound gamma tf =
-     ((ALL x a sigma. ALL s : abstract_domain.gamma_state gamma sigma.
-         s(x := aval a s) : abstract_domain.gamma_state gamma (tf_assign tf x a sigma))
-      & (ALL b sigma. ALL s : abstract_domain.gamma_state gamma sigma. bval b s
-           --> s : abstract_domain.gamma_state gamma (tf_assume tf b sigma))
-      & (ALL b sigma. ALL s : abstract_domain.gamma_state gamma sigma. ~ bval b s
-           --> s : abstract_domain.gamma_state gamma (tf_assume_not tf b sigma)))"
+     ((\<forall>x a sigma. \<forall>s \<in> abstract_domain.gamma_state gamma sigma.
+         s(x := aval a s) \<in> abstract_domain.gamma_state gamma (tf_assign tf x a sigma))
+      \<and> (\<forall>b sigma. \<forall>s \<in> abstract_domain.gamma_state gamma sigma. bval b s
+           \<longrightarrow> s \<in> abstract_domain.gamma_state gamma (tf_assume tf b sigma))
+      \<and> (\<forall>b sigma. \<forall>s \<in> abstract_domain.gamma_state gamma sigma. \<not> bval b s
+           \<longrightarrow> s \<in> abstract_domain.gamma_state gamma (tf_assume_not tf b sigma)))"
 
 (* ── Generic Pipeline Record ──────────────────────────────────── *)
 (*
@@ -167,40 +167,40 @@ corollary ivl_pipeline_sound:
 
   This falls out for free from post_fixpoint_sound + td_analyse_post_fixpoint:
     td_analyse_post_fixpoint  →  is_post_fixpoint ... (run_analysis cfg c)
-    post_fixpoint_sound       →  ∀v. cfg_reach g {s} v ⊆ gamma_state (env v)
+    post_fixpoint_sound       →  \<forall>v. cfg_reach g {s} v ⊆ gamma_state (env v)
   Exit soundness (pipeline_sound) is the v = cfg_exit special case.
 
   This is what supervisors requested in meeting 2:
-    "point-map soundness predicate: ∀ p. collect_sem_at c p ⊆ γ(mlup σ p)"
+    "point-map soundness predicate: \<forall> p. collect_sem_at c p ⊆ γ(mlup σ p)"
 *)
 
 (*
   Point-map invariant: the solver result is sound at EVERY program point.
   Does NOT require termination — holds for all starting states s in gamma(init).
-  The terminates assumption was removed; it is unused (the ∀v conclusion
+  The terminates assumption was removed; it is unused (the \<forall>v conclusion
   does not depend on any specific execution reaching exit).
 *)
 theorem pipeline_invariant_sound:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s : abstract_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
+  shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
                     abstract_domain.gamma_state (ac_gamma cfg)
                       (run_analysis cfg c v)"
   sorry
   (* Proof:
        (1) td_analyse_post_fixpoint gives is_post_fixpoint (run_analysis cfg c)
        (2) {s} ⊆ gamma_state(ac_init cfg) from s_in_gamma
-       (3) post_fixpoint_sound gives ∀v. cfg_reach ... {s} v ⊆ gamma_state(env v)
+       (3) post_fixpoint_sound gives \<forall>v. cfg_reach ... {s} v ⊆ gamma_state(env v)
      pipeline_sound is the v = cfg_exit special case; terminates not needed. *)
 
 (*
   Sign-domain specialisation.  Hypotheses must match pipeline_invariant_sound:
-  TF soundness + s ∈ gamma(init).  The (c,s)⇒t assumption was superfluous.
+  TF soundness + s \<in> gamma(init).  The (c,s)⇒t assumption was superfluous.
 *)
 theorem sign_pipeline_invariant_sound:
   assumes tf_ok:   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
   assumes init_ok: "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
-  shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
+  shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
                     sign_domain.gamma_state
                       (run_analysis (sign_analysis_config s) c v)"
   sorry (* BY pipeline_invariant_sound[OF tf_ok init_ok'] once init_ok matches abstract_domain.gamma_state *)

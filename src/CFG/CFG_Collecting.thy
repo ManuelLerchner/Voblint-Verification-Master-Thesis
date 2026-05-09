@@ -17,7 +17,7 @@ fun edge_collect :: "edge_action => state set => state set" where
     "edge_collect EA_Nop          S = S"
   | "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s : S}"
   | "edge_collect (EA_Assume b)    S = {s : S. bval b s}"
-  | "edge_collect (EA_AssumeNot b) S = {s : S. ~ bval b s}"
+  | "edge_collect (EA_AssumeNot b) S = {s : S. \<not> bval b s}"
 
 (* Lived in CFG_Path.thy but must follow edge_collect (no import cycle). *)
 fun path_collect :: "(edge_action * pp) list => state set => state set" where

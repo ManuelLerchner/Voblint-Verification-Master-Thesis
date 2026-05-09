@@ -21,8 +21,8 @@ fun aval :: "aexp => state => int" where
 
 fun bval :: "bexp => state => bool" where
     "bval (Bc v)      _  = v"
-  | "bval (Not b)     s  = (~ bval b s)"
-  | "bval (And b1 b2) s  = (bval b1 s & bval b2 s)"
+  |     "bval (Not b)     s  = (\<not> bval b s)"
+    | "bval (And b1 b2) s  = (bval b1 s \<and> bval b2 s)"
   | "bval (Or  b1 b2) s  = (bval b1 s | bval b2 s)"
   | "bval (Less a b)  s  = (aval a s < aval b s)"
   | "bval (Eq   a b)  s  = (aval a s = aval b s)"

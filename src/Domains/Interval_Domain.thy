@@ -45,9 +45,9 @@ datatype ivl = Ivl eint eint   (* Ivl l u = [l, u] *)
 
 instantiation ivl :: ord begin
 definition less_eq_ivl :: "ivl => ivl => bool" where
-  "(a::ivl) <= b = (case (a, b) of (Ivl l1 u1, Ivl l2 u2) => eint_le l2 l1 & eint_le u1 u2)"
+  "(a::ivl) <= b = (case (a, b) of (Ivl l1 u1, Ivl l2 u2) => eint_le l2 l1 \<and> eint_le u1 u2)"
 definition less_ivl :: "ivl => ivl => bool" where
-  "(a::ivl) < b = (a <= b & ~ b <= a)"
+  "(a::ivl) < b = (a <= b \<and> \<not> b <= a)"
 instance ..
 end
 
@@ -87,7 +87,7 @@ definition ivl_top :: ivl where
 (* ── Concretization ───────────────────────────────────────────── *)
 
 fun gamma_ivl :: "ivl => int set" where
-    "gamma_ivl (Ivl l u) = {n. eint_le l (Fin n) & eint_le (Fin n) u}"
+    "gamma_ivl (Ivl l u) = {n. eint_le l (Fin n) \<and> eint_le (Fin n) u}"
 
 lemma gamma_ivl_bot: "gamma_ivl ivl_bot = {}"
   sorry
@@ -128,8 +128,8 @@ lemma widen_ivl_ub2: "gamma_ivl b <= gamma_ivl (widen_ivl a b)"   sorry
 
 (* Widening termination: every widen-ascending chain stabilises. *)
 lemma widen_ivl_terminates:
-  assumes "ALL i. widen_ivl (f i) (f (Suc i)) = f (Suc i)"
-  shows "EX n. ALL j. n <= j --> f j = f n"
+  assumes "\<forall>i. widen_ivl (f i) (f (Suc i)) = f (Suc i)"
+  shows "\<exists>n. \<forall>j. n <= j \<longrightarrow> f j = f n"
   sorry
 
 (* ── Abstract Domain Instantiation ───────────────────────────── *)
@@ -160,7 +160,7 @@ fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
 
 (* Soundness of abstract arithmetic *)
 lemma aval_ivl_sound:
-  "(ALL x. s x : gamma_ivl (sigma x))
+  "(\<forall>x. s x \<in> gamma_ivl (sigma x))
    ==>  aval a s : gamma_ivl (aval_ivl a sigma)"
   sorry
 

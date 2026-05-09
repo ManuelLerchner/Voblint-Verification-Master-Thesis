@@ -64,7 +64,7 @@ lemma sign_widening_precise:
   Widening chains for sign are well-founded because sign is a finite lattice
   (height 3: SBot < SNeg/SZero/SPos < STop). Any ascending chain terminates.
 *)
-lemma sign_wf_widening_chains: "wf {(x, y :: sign). x ≠ y ∧ x = widen_sign y x}"
+lemma sign_wf_widening_chains: "wf {(x, y :: sign). x \<noteq> y \<and> x = widen_sign y x}"
   sorry
 
 (*
@@ -103,7 +103,7 @@ definition m_ivl :: "ivl ⇒ nat" where
      (case u of PlusInf ⇒ 0 | MinInf ⇒ 0 | Fin _ ⇒ 1))"
 
 lemma ivl_wf_widening_chains:
-  "wf {(x, y :: ivl). x ≠ y ∧ x = widen_ivl y x}"
+  "wf {(x, y :: ivl). x \<noteq> y \<and> x = widen_ivl y x}"
   sorry
 
 (*

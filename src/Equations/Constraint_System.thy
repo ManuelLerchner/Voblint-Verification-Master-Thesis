@@ -89,7 +89,7 @@ definition is_post_fixpoint ::
      => bool"
 where
   "is_post_fixpoint g tf join_abs bot_abs s0 env =
-     (ALL v. rhs g tf join_abs bot_abs s0 env v <= env v)"
+     (\<forall>v. rhs g tf join_abs bot_abs s0 env v <= env v)"
 
 (* ── Monotonicity of rhs ──────────────────────────────────────── *)
 (*
@@ -109,7 +109,7 @@ where
 lemma rhs_mono:
   assumes fin: "finite (cfg_edges g)"
   assumes cfu: "comp_fun_commute (join_abs :: 'a::ord abs_state => 'a abs_state => 'a abs_state)"
-  assumes env_le: "ALL v. env1 v <= env2 v"
+  assumes env_le: "\<forall>v. env1 v <= env2 v"
   shows "rhs g tf join_abs bot_abs s0 env1 v <= rhs g tf join_abs bot_abs s0 env2 v"
   sorry
 

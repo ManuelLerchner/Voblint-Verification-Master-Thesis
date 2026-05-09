@@ -46,7 +46,7 @@ lemma gamma_sign_mono: "sign_le s t ==> gamma_sign s <= gamma_sign t"  sorry
 
 instantiation sign :: ord begin
 definition less_eq_sign :: "sign => sign => bool" where "(a::sign) <= b = sign_le a b"
-definition less_sign    :: "sign => sign => bool" where "(a::sign) <  b = (sign_le a b & ~ sign_le b a)"
+definition less_sign    :: "sign => sign => bool" where "(a::sign) <  b = (sign_le a b \<and> \<not> sign_le b a)"
 instance ..
 end
 
@@ -124,7 +124,7 @@ fun aval_sign :: "aexp => (vname => sign) => sign" where
   | "aval_sign (Times a b) sigma = sign_times (aval_sign a sigma) (aval_sign b sigma)"
 
 lemma aval_sign_sound:
-  "(ALL x. s x : gamma_sign (sigma x))
+  "(\<forall>x. s x \<in> gamma_sign (sigma x))
    ==>  aval a s : gamma_sign (aval_sign a sigma)"
   sorry
 
@@ -162,7 +162,7 @@ lemma assume_sign_sound:
   sorry
 
 lemma assume_not_sign_sound:
-  "s : sign_domain.gamma_state sigma ==> ~ bval b s
+  "s : sign_domain.gamma_state sigma ==> \<not> bval b s
    ==> s : sign_domain.gamma_state (assume_not_sign b sigma)"
   sorry
 
