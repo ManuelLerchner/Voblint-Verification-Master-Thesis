@@ -57,13 +57,13 @@ definition gamma_state :: "'a abs_state => state set" where
 (* ── Pointwise Lift of bot, join, widen to abs_state ──────────── *)
 
 definition bot_state :: "'a abs_state" where
-  "bot_state = (%_. bot)"
+  "bot_state = (\<lambda>_. bot)"
 
 definition join_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
-  "join_state sigma1 sigma2 = (%x. join_op (sigma1 x) (sigma2 x))"
+  "join_state sigma1 sigma2 = (\<lambda>x. join_op (sigma1 x) (sigma2 x))"
 
 definition widen_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
-  "widen_state sigma1 sigma2 = (%x. widen (sigma1 x) (sigma2 x))"
+  "widen_state sigma1 sigma2 = (\<lambda>x. widen (sigma1 x) (sigma2 x))"
 
 (* ── comp_fun_commute for join_op (from comm + assoc) ─────────── *)
 (*

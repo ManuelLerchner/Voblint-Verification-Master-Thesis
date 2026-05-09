@@ -97,7 +97,7 @@ definition sign_analysis_config :: "state => sign analysis_config" where
         ac_tf    = (| tf_assign    = assign_sign,
                       tf_assume    = assume_sign,
                       tf_assume_not = assume_not_sign |),
-        ac_init  = (%x. sign_of_int (s x)) |)"
+        ac_init  = (\<lambda>x. sign_of_int (s x)) |)"
 
 text \<open>
   Scaffold: reduce sign pipeline soundness to the generic pipeline theorem at
@@ -146,7 +146,7 @@ definition ivl_analysis_config :: "state => ivl analysis_config" where
         ac_tf    = (| tf_assign    = assign_ivl,
                       tf_assume    = assume_ivl,
                       tf_assume_not = assume_not_ivl |),
-        ac_init  = (%x. Ivl (Fin (s x)) (Fin (s x))) |)"
+        ac_init  = (\<lambda>x. Ivl (Fin (s x)) (Fin (s x))) |)"
 
 (*
   Same structure as sign_pipeline_sound.

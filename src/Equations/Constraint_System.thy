@@ -75,7 +75,7 @@ definition rhs ::
 where
   "rhs g tf join_abs bot_abs s0 env v =
      (let preds = {(u, a) | u a. (u, a, v) : cfg_edges g};
-          vals  = image (%( u, a). apply_tf tf a (env u)) preds;
+          vals  = image (\<lambda>(u, a). apply_tf tf a (env u)) preds;
           base  = if v = cfg_entry g then insert s0 vals else vals
       in  abs_join_set join_abs bot_abs base)"
 

@@ -61,7 +61,7 @@ definition collect_pp :: "cfg => cenv => pp => state set" where
 
 definition cfg_collect :: "cfg => state set => cenv" where
   "cfg_collect g S =
-     lfp (%rho v.
+     lfp (\<lambda>rho v.
             if v = cfg_entry g then S Un collect_pp g rho v
             else collect_pp g rho v)"
 
@@ -69,7 +69,7 @@ definition cfg_collect :: "cfg => state set => cenv" where
    Required for lfp to be well-defined. *)
 
 lemma collect_pp_mono:
-  "mono (%rho. collect_pp g rho v)"
+  "mono (\<lambda>rho. collect_pp g rho v)"
   sorry
 
 (* ── Correspondence Theorem ──────────────────────────────────────

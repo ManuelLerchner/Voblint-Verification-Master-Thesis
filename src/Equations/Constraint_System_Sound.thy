@@ -46,7 +46,7 @@ lemma collect_pp_abstract_sound:
     "ALL b sigma. ALL s : gamma_state sigma. ~ bval b s
        --> s : gamma_state (tf_assume_not tf b sigma)"
   shows
-    "collect_pp g (%v. gamma_state (env v)) v <= gamma_state (env v)"
+    "collect_pp g (\<lambda>v. gamma_state (env v)) v <= gamma_state (env v)"
   sorry
 
 lemma post_fixpoint_sound:

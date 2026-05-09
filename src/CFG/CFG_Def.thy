@@ -44,7 +44,7 @@ record cfg =
 
 definition cfg_nodes :: "cfg => pp set" where
   "cfg_nodes g = {cfg_entry g, cfg_exit g}
-                 Un Union ((%( u, _, v). {u, v}) ` cfg_edges g)"
+                 Un Union ((\<lambda>(u, _, v). {u, v}) ` cfg_edges g)"
 
 definition predecessors :: "cfg => pp => (pp * edge_action) set" where
   "predecessors g v = {(u, a) | u a. (u, a, v) : cfg_edges g}"
