@@ -43,11 +43,32 @@ git submodule update --init --recursive
 
 ## Build
 
-From repository root:
+Prerequisites: **Isabelle/HOL** (e.g. install from [isabelle.in.tum.de](https://isabelle.in.tum.de/)) and a checkout of the Archive of Formal Proofs session **Top_Down_Solver** (or point `-d` at your local AFP tree that contains it).
+
+From the **repository root** (the directory that contains `ROOT`):
 
 ```bash
-isabelle build -D .
+isabelle build -o quick_and_dirty \
+  -d /path/to/afp-entries/Top_Down_Solver \
+  -d . \
+  -b Goblint_Formalization
 ```
+
+Example if Isabelle lives in your home directory and the AFP entry is next to this knowledge base:
+
+```bash
+cd /path/to/goblint-formalization
+"$HOME/Isabelle2025-2/bin/isabelle" build -o quick_and_dirty \
+  -d "$HOME/goblint-formalization-kb/raw/repos/afp-entries/Top_Down_Solver" \
+  -d . \
+  -b Goblint_Formalization
+```
+
+- **`-d` (first)**: session root for **Top_Down_Solver** (must contain a `ROOT` with that session).
+- **`-d` (second)**: this repository (must contain the top-level `ROOT` for `Goblint_Formalization`). Use **`.`** only if your shell is already in that directory; otherwise pass the absolute path to the repo.
+- **`-o quick_and_dirty`**: matches the session option in `ROOT` and allows `sorry` while proofs are in progress.
+
+The main session is **`Goblint_Formalization`**. The vendor session **TD** (for `TD_Total.thy` / warrowing track) is **not** in the default session list; it needs an extra AFP dependency (**Root_Balanced_Tree**). See the comment in `ROOT` for how to re-enable it.
 
 ## Isabelle MCP / IR helper
 
