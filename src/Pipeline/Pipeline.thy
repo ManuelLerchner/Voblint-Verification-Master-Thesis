@@ -99,25 +99,19 @@ definition sign_analysis_config :: "state => sign analysis_config" where
                       tf_assume_not = assume_not_sign |),
         ac_init  = (%x. sign_of_int (s x)) |)"
 
-(*
-  sign_pipeline_sound is a corollary of sign_pipeline_sound_scaffold
-  together with the two domain-specific stubs below.
-  As a standalone theorem it holds because the sign domain satisfies all
-  required side conditions; the proof must explicitly invoke those stubs.
-*)
-corollary sign_pipeline_sound:
-  assumes terminates: "big_step (c, s) t"
-  shows   "t : sign_domain.gamma_state
-                  (run_analysis (sign_analysis_config s) c
-                     (cfg_exit (to_cfg c)))"
-  using sign_pipeline_sound_scaffold[OF terminates sign_analysis_tf_sound_stub sign_analysis_init_in_gamma_stub]
-  sorry (* chain through scaffold: fill once scaffold + stubs are proved *)
-
 text \<open>
-  Proof scaffold: reduce \texttt{sign\_pipeline\_sound} to \texttt{pipeline\_sound}
-  at \texttt{sign\_analysis\_config}. Discharge transfer soundness from Sign TF lemmas (Phase I);
-  initial state from @{const sign_of_int} / @{const gamma_sign}.
+  Scaffold: reduce sign pipeline soundness to the generic pipeline theorem at
+  @{const sign_analysis_config}; discharge Sign TF lemmas (Phase I) and
+  @{const sign_of_int} / @{const gamma_sign} for the initial state.
 \<close>
+
+lemma sign_analysis_init_in_gamma_stub:
+  "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
+  sorry (* per-variable: s x \<in> gamma_sign (sign_of_int (s x)) *)
+
+lemma sign_analysis_tf_sound_stub:
+  "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
+  sorry (* Phase I: assign_sign, assume_sign, assume_not_sign *)
 
 lemma sign_pipeline_sound_scaffold:
   assumes runs: "big_step (c, s) t"
@@ -130,13 +124,14 @@ proof -
     sorry (* pipeline_sound [OF tf_ok init_ok runs], gamma_state coercion Sign vs abstract_domain *)
 qed
 
-lemma sign_analysis_init_in_gamma_stub:
-  "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
-  sorry (* per-variable: s x \<in> gamma_sign (sign_of_int (s x)) *)
-
-lemma sign_analysis_tf_sound_stub:
-  "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
-  sorry (* Phase I: assign_sign, assume_sign, assume_not_sign *)
+(* Corollary of scaffold + stubs once lemmas exist. *)
+corollary sign_pipeline_sound:
+  assumes terminates: "big_step (c, s) t"
+  shows   "t : sign_domain.gamma_state
+                  (run_analysis (sign_analysis_config s) c
+                     (cfg_exit (to_cfg c)))"
+  using sign_pipeline_sound_scaffold[OF terminates sign_analysis_tf_sound_stub sign_analysis_init_in_gamma_stub]
+  sorry
 
 (* ── Interval Analysis Pipeline ──────────────────────────────── *)
 (*
@@ -208,7 +203,6 @@ theorem sign_pipeline_invariant_sound:
   shows   "ALL v. cfg_reach (to_cfg c) {s} v <=
                     sign_domain.gamma_state
                       (run_analysis (sign_analysis_config s) c v)"
-  using pipeline_invariant_sound[OF tf_ok init_ok]
-  sorry (* coerce sign_domain.gamma_state ↔ abstract_domain.gamma_state after interp *)
+  sorry (* BY pipeline_invariant_sound[OF tf_ok init_ok'] once init_ok matches abstract_domain.gamma_state *)
 
 end

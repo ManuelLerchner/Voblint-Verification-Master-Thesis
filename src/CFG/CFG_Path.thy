@@ -152,22 +152,4 @@ lemma to_cfg_exit_reachable:
   "cfg_reachable (to_cfg c) (cfg_exit (to_cfg c))"
   sorry
 
-(* ── Transfer Function Composition Along a Path ───────────────── *)
-
-(*
-  Compose edge_collect along a path to get the overall state transformer.
-  Used in post_fixpoint_sound to relate rho(u) to rho(v) via path steps.
-*)
-
-fun path_collect :: "(edge_action * pp) list => state set => state set" where
-  "path_collect [] S = S"
-| "path_collect ((a, _) # es) S = path_collect es (edge_collect a S)"
-
-lemma path_collect_empty[simp]: "path_collect [] S = S"
-  by simp
-
-lemma path_collect_mono:
-  "S \<subseteq> T ==> path_collect es S \<subseteq> path_collect es T"
-  sorry
-
 end

@@ -33,20 +33,7 @@ begin
 context abstract_domain
 begin
 
-(*
-  Step lemma for the lfp_least argument in post_fixpoint_sound.
-
-  If every predecessor u is already covered (gamma_state(env u) ⊇ concrete states),
-  and transfer functions are sound, and env is a post-fixpoint,
-  then one more step of collect_pp stays inside gamma_state(env v).
-
-  Proof sketch:
-    collect_pp g (λv. gamma_state(env v)) v
-      = ∪{edge_collect a (gamma_state(env u)) | (u,a,v) ∈ g}
-      ⊆ ∪{gamma_state(apply_tf tf a (env u)) | (u,a,v) ∈ g}   (* tf_sound per action *)
-      ⊆ gamma_state(abs_join_set join_state bot_state {...})      (* gamma mono + join *)
-      ⊆ gamma_state(env v)                                        (* is_post_fixpoint + gamma mono *)
-*)
+(* Step lemma for collect_pp abstract soundness; proof deferred. *)
 lemma collect_pp_abstract_sound:
   assumes post_fp: "is_post_fixpoint g tf join_state bot_state s0 env"
   assumes tf_sound_assign:
@@ -62,7 +49,7 @@ lemma collect_pp_abstract_sound:
     "collect_pp g (%v. gamma_state (env v)) v <= gamma_state (env v)"
   sorry
 
-theorem post_fixpoint_sound:
+lemma post_fixpoint_sound:
   assumes post_fp: "is_post_fixpoint g tf join_state bot_state s0 env"
   assumes S_sound: "S <= gamma_state s0"
   assumes tf_sound_assign:
@@ -76,15 +63,6 @@ theorem post_fixpoint_sound:
        --> s : gamma_state (tf_assume_not tf b sigma)"
   shows
     "ALL v. cfg_reach g S v <= gamma_state (env v)"
-  (* Proof: define rho* v = gamma_state(env v).
-     Show rho* is a post-fixpoint of the concrete collecting transformer F:
-       F(rho*)(entry) = S ∪ collect_pp g rho* entry
-                      ⊆ gamma_state s0 ∪ gamma_state(env entry)   [S_sound + collect_pp_abstract_sound]
-                      ⊆ gamma_state(env entry)                     [s0 ≤ rhs ≤ env at entry]
-       F(rho*)(v)     = collect_pp g rho* v
-                      ⊆ gamma_state(env v)                         [collect_pp_abstract_sound]
-     Then lfp_least gives cfg_collect g S ≤ rho* pointwise.
-     Since cfg_reach g S = cfg_collect g S, done. *)
   sorry
 
 end
