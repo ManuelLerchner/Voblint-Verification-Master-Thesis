@@ -42,6 +42,11 @@ locale abstract_domain =
   (* Semilattice axioms: required for fold-based join over sets to be order-independent. *)
   assumes join_comm:  "join_op a b = join_op b a"
   assumes join_assoc: "join_op a (join_op b c) = join_op (join_op a b) c"
+  (* Monotonicity of gamma w.r.t. the abstract order.
+     Needed for post_fixpoint_sound: from apply_tf ... ≤ env v (is_post_fixpoint)
+     we conclude gamma(apply_tf ...) ⊆ gamma(env v). *)
+  assumes gamma_mono:
+    "a <= b ==> gamma a <= gamma b"
 begin
 
 (* ── Lifted Concretization to Abstract States ─────────────────── *)
@@ -78,6 +83,18 @@ lemma join_state_comp_fun_commute: "comp_fun_commute join_state"
   by (metis join_assoc join_comm)
 
 (* ── Key Properties of the Lifted Operations ─────────────────── *)
+
+(* Gamma is sound w.r.t. join: the concrete join of two sets fits inside gamma of their join. *)
+lemma gamma_join_sound:
+  "gamma a Un gamma b <= gamma (join_op a b)"
+  using gamma_join_ub1 gamma_join_ub2 by blast
+
+(* Every element in a finite set is below the fold-join over that set (w.r.t. gamma).
+   Needed for collect_pp_abstract_sound: each incoming abstract value x satisfies
+   gamma x ⊆ gamma (abs_join_set join_op bot S) when x ∈ S. *)
+lemma gamma_abs_join_set_ub:
+  "finite S ==> x : S ==> gamma x <= gamma (Finite_Set.fold join_op bot S)"
+  sorry
 
 lemma gamma_state_bot:
   "gamma_state bot_state = {}"

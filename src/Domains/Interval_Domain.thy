@@ -91,6 +91,12 @@ fun widen_ivl :: "ivl => ivl => ivl" where
        Ivl (if eint_le l1 l2 then l1 else MinInf)
            (if eint_le u2 u1 then u1 else PlusInf)"
 
+lemma gamma_ivl_mono:
+  "a <= b ==> gamma_ivl a <= gamma_ivl b"
+  (* a ≤ b means Ivl l2 u2 ≤ Ivl l1 u1, i.e. l1 tighter on left, u1 tighter on right.
+     Concretely: [l1,u1] ⊆ [l2,u2]. Proof by cases on a and b, unfolding less_eq_ivl. *)
+  sorry
+
 lemma join_ivl_ub1: "gamma_ivl a <= gamma_ivl (join_ivl a b)"     sorry
 lemma join_ivl_ub2: "gamma_ivl b <= gamma_ivl (join_ivl a b)"     sorry
 lemma join_ivl_comm:  "join_ivl a b = join_ivl b a"                sorry
