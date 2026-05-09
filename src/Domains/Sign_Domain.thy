@@ -141,27 +141,39 @@ interpretation sign_domain:
   abstract_domain gamma_sign SBot join_sign widen_sign
   sorry
 
-(* Typeclass instances required by TD solver interface *)
+(* ── Typeclass Instances (required by TD solver interface) ────── *)
 
-instantiation sign :: bot begin
-definition "bot_sign = SBot"
-instance ..
-end
+(* sign :: bot already defined above (bot_sign = SBot) *)
 
 instantiation sign :: equal begin
 definition "equal_sign (a :: sign) b = (a = b)"
 instance by (intro_classes) (simp add: equal_sign_def)
 end
 
+(* sign :: ord already defined above (less_eq_sign = sign_le).
+   sign :: order proves the three order axioms from sign_le lemmas. *)
 instantiation sign :: order begin
-definition "less_eq_sign = sign_le"
-definition "less_sign (a :: sign) b = (sign_le a b ∧ ¬ sign_le b a)"
-instance sorry
+instance
+proof intro_classes
+  fix a :: sign show "a ≤ a" by (simp add: less_eq_sign_def sign_le_refl)
+next
+  fix a b :: sign show "a < b = (a ≤ b ∧ ¬ b ≤ a)" by (simp add: less_sign_def less_eq_sign_def)
+next
+  fix a b :: sign assume "a ≤ b" "b ≤ a"
+  thus "a = b" by (simp add: less_eq_sign_def, rule sign_le_antisym, assumption+)
+next
+  fix a b c :: sign assume "a ≤ b" "b ≤ c"
+  thus "a ≤ c" by (simp add: less_eq_sign_def, rule sign_le_trans, assumption+)
+qed
 end
 
+(* sign :: order_bot: bot = SBot is ≤ every sign element *)
 instantiation sign :: order_bot begin
-definition "bot_sign_order = SBot"
-instance sorry
+instance
+proof intro_classes
+  fix a :: sign show "⊥ ≤ (a :: sign)"
+    by (simp add: less_eq_sign_def bot_sign_def sign_le.simps)
+qed
 end
 
 lemma assume_sign_sound:
