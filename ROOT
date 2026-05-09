@@ -13,4 +13,5 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Pipeline"
   theories
     Goblint_Formalization
+    TD_Total
     Scratch

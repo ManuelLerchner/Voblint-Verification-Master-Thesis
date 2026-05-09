@@ -141,6 +141,29 @@ interpretation sign_domain:
   abstract_domain gamma_sign SBot join_sign widen_sign
   sorry
 
+(* Typeclass instances required by TD solver interface *)
+
+instantiation sign :: bot begin
+definition "bot_sign = SBot"
+instance ..
+end
+
+instantiation sign :: equal begin
+definition "equal_sign (a :: sign) b = (a = b)"
+instance by (intro_classes) (simp add: equal_sign_def)
+end
+
+instantiation sign :: order begin
+definition "less_eq_sign = sign_le"
+definition "less_sign (a :: sign) b = (sign_le a b ∧ ¬ sign_le b a)"
+instance sorry
+end
+
+instantiation sign :: order_bot begin
+definition "bot_sign_order = SBot"
+instance sorry
+end
+
 lemma assume_sign_sound:
   "s : sign_domain.gamma_state sigma ==> bval b s
    ==> s : sign_domain.gamma_state (assume_sign b sigma)"

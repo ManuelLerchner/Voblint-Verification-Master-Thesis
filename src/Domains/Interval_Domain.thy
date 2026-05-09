@@ -51,6 +51,22 @@ definition less_ivl :: "ivl => ivl => bool" where
 instance ..
 end
 
+(* Full order instance — needed for TD solver interface *)
+instantiation ivl :: order begin
+instance sorry
+end
+
+(* equal instance — needed for TD solver interface *)
+instantiation ivl :: equal begin
+definition "equal_ivl (a :: ivl) b = (a = b)"
+instance by (intro_classes) (simp add: equal_ivl_def)
+end
+
+(* order_bot instance *)
+instantiation ivl :: order_bot begin
+instance sorry
+end
+
 instantiation ivl :: bot begin
 definition bot_ivl :: ivl where
   "bot_ivl = Ivl PlusInf MinInf"
