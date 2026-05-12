@@ -1,0 +1,31 @@
+name: Isabelle Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Init td-verification submodule
+        run: git submodule update --init vendor/td-verification
+
+      - name: Build Goblint_Formalization
+        run: |
+          docker run --rm \
+            -v "$(pwd):/home/isabelle/project:rw" \
+            makarius/isabelle:Isabelle2025-2 \
+            build \
+              -d /home/isabelle/project/afp-vendor/thys \
+              -d /home/isabelle/project/vendor/td-verification \
+              -D /home/isabelle/project \
+              Goblint_Formalization
