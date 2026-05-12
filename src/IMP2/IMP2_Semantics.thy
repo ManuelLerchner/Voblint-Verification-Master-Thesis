@@ -50,6 +50,8 @@ declare big_step.intros [intro]
 
 text \<open>Split tuple in the induction schema (HOL-IMP \<open>big_step_induct\<close>).\<close>
 
+declare big_step.intros [intro]
+
 lemmas big_step_induct = big_step.induct[split_format(complete)]
 
 subsection \<open>Rule inversion\<close>

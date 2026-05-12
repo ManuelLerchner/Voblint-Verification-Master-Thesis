@@ -1,5 +1,5 @@
 theory Scratch
-  imports Main
+  imports Main 
 begin
 
 (* Knaster-Tarski: every monotone function on a complete lattice has a fixed point.

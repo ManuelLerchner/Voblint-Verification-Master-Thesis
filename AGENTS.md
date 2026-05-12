@@ -3,15 +3,22 @@
 Master's thesis at TUM: prove the **complete Goblint static analysis pipeline** in Isabelle/HOL.
 Supervisors: Alexandra Graß, Michael Schwarz.
 
+## Latest meeting
+
+Research notes + supervisor meetings live in the KB: `~/goblint-formalization-kb/wiki/meetings/`.
+Run `ls ~/goblint-formalization-kb/wiki/meetings/ | sort | tail -1` to find the most recent note.
+
+**Meeting 2 reframe (2026-04-20)**: thesis goal expanded from "formalize domains" to **prove the complete analysis pipeline end-to-end**. Domain instances become *demonstrations* of the pipeline, not the main artifact.
+
 ## Goal
 
 Verify the pipeline:
-**IMP2 AST → CFG → equation system → TD solver → sound annotated result**.
+**IMP AST → (CFG?) → equation system → TD solver → sound result mapped back to program**.
 
 The AFP `Top_Down_Solver` (Stade et al., CAV 2024) is already verified — the gap is:
-1. IMP2 syntax + operational semantics + collecting semantics
-2. IMP2 → CFG translation + correctness
-3. CFG → equation system + soundness (post-fixpoint overapproximates collecting sem.)
+1. IMP syntax + operational semantics + collecting semantics
+2. (CFG intermediate — decision open, see below)
+3. AST/CFG → equation system + soundness (post-fixpoint overapproximates collecting sem.)
 4. Abstract domain instances (sign, interval; octagon stretch)
 5. Mapping solver output back to annotated program
 
@@ -20,13 +27,24 @@ The AFP `Top_Down_Solver` (Stade et al., CAV 2024) is already verified — the g
 | | |
 |---|---|
 | Proof assistant | Isabelle/HOL |
-| Source language | **IMP2** (custom; richer than IMP: adds Minus, Times, Or, Eq) |
-| Intermediate repr. | **CFG** (program points = nat; edges labeled with edge_action) |
+| Source language | **IMP primary** (bare HOL-IMP); IMP2 only if supervisors request |
 | Solver | AFP `Top_Down_Solver` (install from AFP; stub in Solver/TD_Interface.thy) |
 | Solver interface | `rhs :: pp => (pp => abs_state) => abs_state` (monotone) |
-| Domains tier 1 | Sign (finite lattice, no widening) |
+| Domains tier 1 | Sign (finite lattice, no widening) — confirm locale instantiates |
 | Domains tier 2 | Interval (widening required) |
-| Domains tier 3 | Octagon (stretch goal) |
+| Domains tier 3 | Octagon (stretch goal; aligns with Schwarz SAS 2023) |
+
+## Open decisions (need supervisor sign-off)
+
+| | |
+|---|---|
+| CFG intermediate | AST → eqsys directly, or AST → CFG → eqsys? |
+| Result mapping | Annotated commands (`acom`) vs. point-map soundness predicate? |
+| Pipeline bridge | Single pipeline-level Galois connection vs. chain of per-stage soundness lemmas? |
+| IMP vs IMP2 | Keep bare IMP or use IMP2 if CFG bridge requires it? |
+| Scope | Prove Sign end-to-end first; defer Interval/widening to stretch goal? |
+
+> **Note**: current `src/` code uses IMP2 + CFG (pre-reframe). These files remain valid as a prototype; the above decisions govern the *thesis artifact*.
 
 ## Source structure
 
@@ -140,14 +158,6 @@ Composes `edge_collect` along a path — the bridge between `cfg_path` and `post
 **Why `(edge_action * pp)` not just `pp list`**: unlike FormalSSA (which needs only node
 topology for SSA), our soundness proofs need to know *which action* was taken on each step
 to compose transfer functions.
-
-## Open questions (need supervisor sign-off)
-
-- CFG intermediate: keep, or go direct AST → equation system?
-- Result mapping: ACom annotation (current approach) vs. point-map soundness predicate?
-- IMP2 vs. IMP: keep IMP2 or fall back to bare IMP if CFG bridge is too hard?
-- AFP TD_warrow_mono (total correctness via widening): needed for Interval?
-- Scope: prove Sign end-to-end first; defer Interval/widening to stretch goal?
 
 ## Isabelle MCP daemon
 

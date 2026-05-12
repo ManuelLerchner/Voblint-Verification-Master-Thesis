@@ -16,6 +16,7 @@ theory Goblint_Formalization
     (* ── Equation System ───────────────────────────────────── *)
     Constraint_System
     Constraint_System_Sound
+    Direct_Equations
     (* ── Solver ─────────────────────────────────────────────── *)
     TD_Interface
     TD_Soundness
@@ -30,21 +31,17 @@ begin
   Master's thesis at TUM: prove the complete Goblint static analysis pipeline.
   Supervisors: Alexandra Gra{\ss}, Michael Schwarz.
 
-  Pipeline:
-    IMP2 AST
-      [IMP2_Syntax, IMP2_Semantics, IMP2_Collecting]
-    --(to_cfg)\<longrightarrow>
-      CFG
-      [CFG_Def, IMP2_to_CFG, CFG_Collecting]
-    --(rhs)\<longrightarrow>
-      Equation System  (per abstract domain)
-      [Domains/*, Equations/Constraint_System*]
-    --(td_solve)\<longrightarrow>
-      Fixed-Point Environment
-      [Solver/TD_Interface, Solver/TD_Soundness]
-    --(gamma)\<longrightarrow>
-      Sound Overapproximation / Annotated Program
-      [Pipeline/Pipeline, Pipeline/Result_Mapping]
+  Pipeline (two routes — both proved equivalent):
+
+  Route A — CFG-mediated:
+    AST  --(compile)-->  CFG  --(rhs/make_rhs_tree)-->  Equations  --(TD)-->  Result
+    [IMP2_*, CFG_*, Constraint_System, TD_Interface]
+
+  Route B — Direct (no CFG record):
+    AST  --(predecessors_of/direct_tree)-->  Equations  --(TD)-->  Result
+    [Direct_Equations]
+
+  Equivalence theorem: direct_eq_cfg_analyse (Direct_Equations.thy)
 
   Every proof is currently deferred (sorry).
   Fill in leaves first; propagate upward.

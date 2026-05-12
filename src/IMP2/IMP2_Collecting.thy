@@ -36,7 +36,7 @@ lemma collect_Seq:
 
 lemma collect_If:
   "collect (IF b THEN c1 ELSE c2) S =
-     collect c1 {s : S. bval b s} Un collect c2 {s : S. \<not> bval b s}"
+     collect c1 {s : S. bval b s} \<union> collect c2 {s : S. \<not> bval b s}"
   unfolding collect_def
   by (fastforce simp: big_step_If_iff intro: IfTrue IfFalse)
 
