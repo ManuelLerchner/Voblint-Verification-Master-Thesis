@@ -33,12 +33,12 @@ definition domain_transfer_sound ::
      => bool"
 where
   "domain_transfer_sound gamma tf =
-     ((\<forall>x a sigma. \<forall>s \<in> abstract_domain.gamma_state gamma sigma.
-         s(x := aval a s) \<in> abstract_domain.gamma_state gamma (tf_assign tf x a sigma))
-      \<and> (\<forall>b sigma. \<forall>s \<in> abstract_domain.gamma_state gamma sigma. bval b s
-           \<longrightarrow> s \<in> abstract_domain.gamma_state gamma (tf_assume tf b sigma))
-      \<and> (\<forall>b sigma. \<forall>s \<in> abstract_domain.gamma_state gamma sigma. \<not> bval b s
-           \<longrightarrow> s \<in> abstract_domain.gamma_state gamma (tf_assume_not tf b sigma)))"
+     ((\<forall>x a sigma. \<forall>s \<in> sound_domain.gamma_state gamma sigma.
+         s(x := aval a s) \<in> sound_domain.gamma_state gamma (tf_assign tf x a sigma))
+      \<and> (\<forall>b sigma. \<forall>s \<in> sound_domain.gamma_state gamma sigma. bval b s
+           \<longrightarrow> s \<in> sound_domain.gamma_state gamma (tf_assume tf b sigma))
+      \<and> (\<forall>b sigma. \<forall>s \<in> sound_domain.gamma_state gamma sigma. \<not> bval b s
+           \<longrightarrow> s \<in> sound_domain.gamma_state gamma (tf_assume_not tf b sigma)))"
 
 (* ── Generic Pipeline Record ──────────────────────────────────── *)
 (*
@@ -78,9 +78,9 @@ where
 
 theorem pipeline_sound:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
-  assumes s_in_gamma: "s : abstract_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
+  assumes s_in_gamma: "s : sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
   assumes terminates: "big_step (c, s) t"
-  shows   "t : abstract_domain.gamma_state (ac_gamma cfg)
+  shows   "t : sound_domain.gamma_state (ac_gamma cfg)
                   (run_analysis cfg c (cfg_exit (to_cfg c)))"
   sorry
 
@@ -182,9 +182,9 @@ corollary ivl_pipeline_sound:
 *)
 theorem pipeline_invariant_sound:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
-  assumes s_in_gamma: "s : abstract_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
+  assumes s_in_gamma: "s : sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
   shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
-                    abstract_domain.gamma_state (ac_gamma cfg)
+                    sound_domain.gamma_state (ac_gamma cfg)
                       (run_analysis cfg c v)"
   sorry
   (* Proof:
@@ -203,6 +203,6 @@ theorem sign_pipeline_invariant_sound:
   shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
                     sign_domain.gamma_state
                       (run_analysis (sign_analysis_config s) c v)"
-  sorry (* BY pipeline_invariant_sound[OF tf_ok init_ok'] once init_ok matches abstract_domain.gamma_state *)
+  sorry (* BY pipeline_invariant_sound[OF tf_ok init_ok'] once init_ok matches sound_domain.gamma_state *)
 
 end

@@ -30,7 +30,7 @@ begin
   Then by minimality of lfp, env >= cfg_collect.
 *)
 
-context abstract_domain
+context sound_domain
 begin
 
 (* Step lemma for collect_pp abstract soundness; proof deferred. *)
@@ -67,7 +67,7 @@ lemma post_fixpoint_sound:
 
 end
 
-context abstract_domain
+context sound_domain
 begin
 
 (* ── Corollary: Exit-Point Soundness ─────────────────────────── *)

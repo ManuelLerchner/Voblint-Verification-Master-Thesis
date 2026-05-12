@@ -147,10 +147,10 @@ fun acom_pre :: "'a acom => 'a abs_state" where
   | "acom_pre (AWhile _ invs _ _) = invs"
 
 theorem annotation_sound:
-  assumes pre:        "s : abstract_domain.gamma_state gamma (acom_pre ac)"
+  assumes pre:        "s : sound_domain.gamma_state gamma (acom_pre ac)"
   assumes terminates: "big_step (c, s) t"
   assumes annotated:  "ac = annotate_prog c cfg"
-  shows   "t : abstract_domain.gamma_state gamma (acom_post ac)"
+  shows   "t : sound_domain.gamma_state gamma (acom_post ac)"
   sorry
 
 end

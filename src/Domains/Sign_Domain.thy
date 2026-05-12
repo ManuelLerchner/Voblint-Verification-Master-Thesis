@@ -138,7 +138,7 @@ fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
   "assume_not_sign _ sigma = sigma"   (* conservative: no refinement *)
 
 interpretation sign_domain:
-  abstract_domain gamma_sign SBot join_sign widen_sign
+  abstract_domain gamma_sign join_sign widen_sign
   sorry
 
 (* ── Typeclass Instances (required by TD solver interface) ────── *)

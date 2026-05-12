@@ -135,7 +135,7 @@ lemma widen_ivl_terminates:
 (* ── Abstract Domain Instantiation ───────────────────────────── *)
 
 interpretation ivl_domain:
-  abstract_domain gamma_ivl ivl_bot join_ivl widen_ivl
+  abstract_domain gamma_ivl join_ivl widen_ivl
   sorry
 
 (* ── Transfer Functions (stubs) ──────────────────────────────── *)
