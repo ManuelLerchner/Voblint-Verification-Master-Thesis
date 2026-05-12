@@ -14,10 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: false
-
-      - name: Init td-verification submodule
-        run: git submodule update --init vendor/td-verification
+          submodules: true
 
       - name: Build Goblint_Formalization
         run: |
