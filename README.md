@@ -2,25 +2,26 @@
 
 Machine-checked Isabelle/HOL formalization of the Goblint static-analysis pipeline:
 
-`IMP2 program -> CFG -> equation system -> AFP Top_Down_Solver -> sound abstract result`
+`IMP program -> CFG -> equation system -> TD solver (vendor/td-verification) -> sound abstract result`
 
-This repository is the code/proof artifact for the thesis work on connecting domain-level abstract interpretation proofs to the verified AFP top-down solver.
+This repository is the code/proof artifact for the master's thesis on formalizing the complete Goblint static-analysis pipeline in Isabelle/HOL.
 
 ## What This Repository Contains
 
-- `src/IMP2/`: IMP2 syntax and semantics
-- `src/CFG/`: CFG model, compiler from IMP2 to CFG, and CFG collecting semantics
+- `src/IMP2/`: IMP syntax and semantics (`store` = `vname => int`)
+- `src/CFG/`: CFG model, compiler from IMP to CFG, and CFG collecting semantics
 - `src/Equations/`: Constraint/equation-system construction and soundness layer
-- `src/Solver/`: AFP solver bridge (`Top_Down_Solver`) and solver soundness composition
+- `src/Solver/`: TD solver bridge (`vendor/td-verification`) and solver soundness composition
 - `src/Pipeline/`: End-to-end pipeline theorems and result mapping
-- `docs/`: Project documentation (`IMPLEMENTATION_GUIDE.md`, `PROOF_OVERVIEW.md`)
+- `docs/`: Project documentation
 
-## Existing Verified Dependencies
+## Verified Dependencies
 
-- Isabelle session parent: `HOL-IMP`
-- AFP session dependency: `Top_Down_Solver`
-
-The repository now uses AFP's strategy-tree interface directly for solver integration.
+| Dependency | Source | Role |
+|---|---|---|
+| `HOL-IMP` | Isabelle distribution | session parent; IMP syntax/semantics base |
+| `TD` (TD_plain, Basics, …) | `vendor/td-verification` submodule | verified top-down solver |
+| `Root_Balanced_Tree` | AFP | transitive dep of TD session |
 
 ## Knowledge Base Submodule
 
@@ -43,32 +44,35 @@ git submodule update --init --recursive
 
 ## Build
 
-Prerequisites: **Isabelle/HOL** (e.g. install from [isabelle.in.tum.de](https://isabelle.in.tum.de/)) and a checkout of the Archive of Formal Proofs session **Top_Down_Solver** (or point `-d` at your local AFP tree that contains it).
+### Prerequisites
 
-From the **repository root** (the directory that contains `ROOT`):
+- **Isabelle/HOL** — download from [isabelle.in.tum.de](https://isabelle.in.tum.de/)
+- **AFP** — the Archive of Formal Proofs (needed for `Root_Balanced_Tree`, a transitive dependency of the TD solver). Clone or download from [isa-afp.org](https://www.isa-afp.org/download/).
+- **Submodules** — populate after cloning (see above); `vendor/td-verification` provides the `TD` solver session.
 
-```bash
-isabelle build -o quick_and_dirty \
-  -d /path/to/afp-entries/Top_Down_Solver \
-  -d . \
-  -b Goblint_Formalization
-```
+### Exact build command
 
-Example if Isabelle lives in your home directory and the AFP entry is next to this knowledge base:
+From the **repository root** (the directory containing `ROOT`):
 
 ```bash
-cd /path/to/goblint-formalization
-"$HOME/Isabelle2025-2/bin/isabelle" build -o quick_and_dirty \
-  -d "$HOME/goblint-formalization-kb/raw/repos/afp-entries/Top_Down_Solver" \
-  -d . \
-  -b Goblint_Formalization
+isabelle build \
+  -d ~/afp/thys \
+  -d vendor/td-verification \
+  -D . \
+  Goblint_Formalization
 ```
 
-- **`-d` (first)**: session root for **Top_Down_Solver** (must contain a `ROOT` with that session).
-- **`-d` (second)**: this repository (must contain the top-level `ROOT` for `Goblint_Formalization`). Use **`.`** only if your shell is already in that directory; otherwise pass the absolute path to the repo.
-- **`-o quick_and_dirty`**: matches the session option in `ROOT` and allows `sorry` while proofs are in progress.
+Substitute `~/afp/thys` with the path to your AFP checkout's `thys/` directory.
 
-The main session is **`Goblint_Formalization`**. The vendor session **TD** (for `TD_Total.thy` / warrowing track) is **not** in the default session list; it needs an extra AFP dependency (**Root_Balanced_Tree**). See the comment in `ROOT` for how to re-enable it.
+The `quick_and_dirty` option is already set in `ROOT` (allows `sorry` during proof development).
+
+### Session dependencies
+
+| `-d` path | Provides session | Used for |
+|---|---|---|
+| `~/afp/thys` | `Root_Balanced_Tree` | transitive dep of TD solver |
+| `vendor/td-verification` | `TD` | top-down solver (`TD_plain`, `strategy_tree`, …) |
+| `.` (implicit via `-D`) | `Goblint_Formalization` | this project |
 
 ## Isabelle MCP / IR helper
 

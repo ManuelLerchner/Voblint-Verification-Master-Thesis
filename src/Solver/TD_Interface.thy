@@ -1,5 +1,5 @@
 theory TD_Interface
-  imports Constraint_System CFG_Collecting "Top_Down_Solver.TD_plain"
+  imports Constraint_System CFG_Collecting "TD.TD_plain"
 begin
 
 (*
@@ -72,7 +72,7 @@ lemma lookup_bot_env_map[simp]:
   by simp
 
 lemma rhs_tree_fold_traverse_env_map:
-  "traverse_rhs (rhs_tree_fold tf join_abs acc ps) (env_map env)
+  "traverse_rhs (rhs_tree_fold tf join_abs acc ps) (env_map (env :: pp => 'a::{ord,bot} abs_state))
      = fold (\<lambda>(u,a) st. join_abs st (apply_tf tf a (env u))) ps acc"
   sorry
 
@@ -85,8 +85,8 @@ lemma make_rhs_tree_preds_list:
 
 lemma make_rhs_tree_correspondence:
   assumes fin: "finite (cfg_edges g)"
-  assumes cfu: "comp_fun_commute (join_abs :: 'a::ord abs_state => 'a abs_state => 'a abs_state)"
-  shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map env)
+  assumes cfu: "comp_fun_commute (join_abs :: 'a::{ord,bot} abs_state => 'a abs_state => 'a abs_state)"
+  shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map (env :: pp => 'a abs_state))
        = make_rhs g tf join_abs bot_abs s0 v env"
   sorry
 

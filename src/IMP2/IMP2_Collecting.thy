@@ -15,7 +15,7 @@ begin
 
 (* ── Collecting Semantics (exit-reachable states) ─────────────── *)
 
-definition collect :: "com => state set => state set" where
+definition collect :: "com => store set => store set" where
   "collect c S = {t. \<exists>s\<in>S. (c,s) \<Rightarrow> t}"
 
 (* ── Point-Wise Collecting via Induction on com ──────────────────
@@ -51,10 +51,10 @@ lemma collect_mono:
   (Plain "collect = lfp F" is false when the loop diverges: then collect = \<emptyset> but S \<subseteq> lfp F.)
 *)
 lemma while_collect_mono:
-  "mono (\<lambda>T::state set. S \<union> collect c {s \<in> T. bval b s})"
+  "mono (\<lambda>T::store set. S \<union> collect c {s \<in> T. bval b s})"
   unfolding mono_def
 proof (intro allI impI)
-  fix x y :: "state set"
+  fix x y :: "store set"
   assume "x \<subseteq> y"
   then have "{s \<in> x. bval b s} \<subseteq> {s \<in> y. bval b s}"
     by auto

@@ -12,12 +12,12 @@ begin
     gamma   : concretization map  'a => int set
 
   For program analysis, individual variable values are abstracted by
-  'a, and a full abstract program state is  vname => 'a.
-  The concretization is lifted pointwise to state sets.
+  'a, and a full abstract program store is  vname => 'a.
+  The concretization is lifted pointwise to store sets.
 *)
 
 (* ── Abstract State Type (global synonym, parameterised) ────────
-   An abstract state maps each variable to an abstract value.
+   An abstract store maps each variable to an abstract value.
    Defined outside the locale so it is available theory-wide. *)
 
 type_synonym 'a abs_state = "vname => 'a"
@@ -51,7 +51,7 @@ begin
 
 (* ── Lifted Concretization to Abstract States ─────────────────── *)
 
-definition gamma_state :: "'a abs_state => state set" where
+definition gamma_state :: "'a abs_state => store set" where
   "gamma_state sigma = {s. \<forall>x. s x \<in> gamma (sigma x)}"
 
 (* ── Pointwise Lift of bot, join, widen to abs_state ──────────── *)

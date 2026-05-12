@@ -17,7 +17,7 @@ begin
 
   Top-level soundness theorem:
     For any domain D with verified transfer functions, if program c is run
-    from initial state s (with s in gamma(sigma_0) for some initial abstraction
+    from initial store s (with s in gamma(sigma_0) for some initial abstraction
     sigma_0), and c terminates in t, then t in gamma(sigma_exit).
 *)
 
@@ -45,7 +45,7 @@ where
   Bundle everything needed to run an analysis:
     - the abstract domain operations
     - the transfer functions
-    - the initial abstract state
+    - the initial abstract store
 *)
 
 record 'a analysis_config =
@@ -71,7 +71,7 @@ where
 (*
   The main theorem of the thesis:
     If the transfer functions in cfg are sound with respect to gamma,
-    and the initial concrete state s is in gamma(ac_init cfg),
+    and the initial concrete store s is in gamma(ac_init cfg),
     and program c terminates in t,
     then t is in gamma(run_analysis cfg c (exit of c)).
 *)
@@ -89,7 +89,7 @@ theorem pipeline_sound:
   Concrete analysis using the Sign domain.
 *)
 
-definition sign_analysis_config :: "state => sign analysis_config" where
+definition sign_analysis_config :: "store => sign analysis_config" where
   "sign_analysis_config s =
      (| ac_join  = sign_domain.join_state,
         ac_bot   = sign_domain.bot_state,
@@ -102,7 +102,7 @@ definition sign_analysis_config :: "state => sign analysis_config" where
 text \<open>
   Scaffold: reduce sign pipeline soundness to the generic pipeline theorem at
   @{const sign_analysis_config}; discharge Sign TF lemmas (Phase I) and
-  @{const sign_of_int} / @{const gamma_sign} for the initial state.
+  @{const sign_of_int} / @{const gamma_sign} for the initial store.
 \<close>
 
 lemma sign_analysis_init_in_gamma_stub:
@@ -138,7 +138,7 @@ corollary sign_pipeline_sound:
   Concrete analysis using the Interval domain.
 *)
 
-definition ivl_analysis_config :: "state => ivl analysis_config" where
+definition ivl_analysis_config :: "store => ivl analysis_config" where
   "ivl_analysis_config s =
      (| ac_join  = ivl_domain.join_state,
         ac_bot   = ivl_domain.bot_state,
@@ -162,7 +162,7 @@ corollary ivl_pipeline_sound:
 
 (* ── Option 2: Point-Map Invariant (Recommended Presentation) ── *)
 (*
-  Stronger than pipeline_sound: the abstract state at EVERY program point
+  Stronger than pipeline_sound: the abstract store at EVERY program point
   is a sound invariant, not just at the exit.
 
   This falls out for free from post_fixpoint_sound + td_analyse_post_fixpoint:

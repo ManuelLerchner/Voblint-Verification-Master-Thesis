@@ -13,14 +13,14 @@ begin
 
 (* ── Per-Edge Transfer Function on State Sets ─────────────────── *)
 
-fun edge_collect :: "edge_action => state set => state set" where
+fun edge_collect :: "edge_action => store set => store set" where
     "edge_collect EA_Nop          S = S"
   | "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s : S}"
   | "edge_collect (EA_Assume b)    S = {s : S. bval b s}"
   | "edge_collect (EA_AssumeNot b) S = {s : S. \<not> bval b s}"
 
 (* Lived in CFG_Path.thy but must follow edge_collect (no import cycle). *)
-fun path_collect :: "(edge_action * pp) list => state set => state set" where
+fun path_collect :: "(edge_action * pp) list => store set => store set" where
   "path_collect [] S = S"
 | "path_collect ((a, _) # es) S = path_collect es (edge_collect a S)"
 
@@ -38,9 +38,9 @@ lemma path_collect_mono:
   initial set.
 *)
 
-type_synonym cenv = "pp => state set"
+type_synonym cenv = "pp => store set"
 
-definition cenv_join :: "pp => cenv set => state set" where
+definition cenv_join :: "pp => cenv set => store set" where
   "cenv_join v envs = Union {rho v | rho. rho : envs}"
 
 (* ── Collecting Transformer for One Program Point ─────────────── *)
@@ -49,17 +49,17 @@ definition cenv_join :: "pp => cenv set => state set" where
   This is the single-step "push" of states through each incoming edge.
 *)
 
-definition collect_pp :: "cfg => cenv => pp => state set" where
+definition collect_pp :: "cfg => cenv => pp => store set" where
   "collect_pp g rho v =
      Union {edge_collect a (rho u) | u a. (u, a, v) : cfg_edges g}"
 
 (* ── Least Fixpoint (Collecting Semantics over CFG) ───────────── *)
 (*
-  Given an initial state set S at the entry, the CFG collecting semantics
+  Given an initial store set S at the entry, the CFG collecting semantics
   is the least fixpoint of the monotone transformer collect_pp.
 *)
 
-definition cfg_collect :: "cfg => state set => cenv" where
+definition cfg_collect :: "cfg => store set => cenv" where
   "cfg_collect g S =
      lfp (\<lambda>rho v.
             if v = cfg_entry g then S Un collect_pp g rho v
@@ -77,7 +77,7 @@ lemma collect_pp_mono:
    Split into two directions so each can be proved independently. *)
 
 (*
-  ⊆ direction: every state the CFG collecting semantics puts at the exit
+  ⊆ direction: every store the CFG collecting semantics puts at the exit
   is also a big_step output.
 
   Proof: show (collect c S) is a post-fixpoint of the concrete CFG transformer F.
@@ -110,10 +110,10 @@ theorem cfg_collect_exit_eq_collect:
   by (rule antisym) (rule cfg_collect_exit_le_collect, rule collect_le_cfg_collect_exit)
 
 (* ── Reachability on CFG ─────────────────────────────────────────
-   Helper: a state s is reachable at program point v iff it appears
+   Helper: a store s is reachable at program point v iff it appears
    in cfg_collect. Used in soundness proofs. *)
 
-definition cfg_reach :: "cfg => state set => pp => state set" where
+definition cfg_reach :: "cfg => store set => pp => store set" where
   "cfg_reach g S = cfg_collect g S"
 
 lemma cfg_reach_entry:

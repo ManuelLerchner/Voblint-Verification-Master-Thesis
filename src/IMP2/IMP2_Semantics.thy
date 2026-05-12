@@ -12,14 +12,14 @@ begin
 
 (* ── Expression Evaluation ────────────────────────────────────── *)
 
-fun aval :: "aexp => state => int" where
+fun aval :: "aexp => store => int" where
     "aval (N n)       _  = n"
   | "aval (V x)       s  = s x"
   | "aval (Plus  a b) s  = aval a s + aval b s"
   | "aval (Minus a b) s  = aval a s - aval b s"
   | "aval (Times a b) s  = aval a s * aval b s"
 
-fun bval :: "bexp => state => bool" where
+fun bval :: "bexp => store => bool" where
     "bval (Bc v)      _  = v"
   |     "bval (Not b)     s  = (\<not> bval b s)"
     | "bval (And b1 b2) s  = (bval b1 s \<and> bval b2 s)"
@@ -32,7 +32,7 @@ fun bval :: "bexp => state => bool" where
 text \<open>Same rule structure as HOL-IMP.Big\_Step; first parameter is a pair.\<close>
 
 inductive
-  big_step :: "com \<times> state \<Rightarrow> state \<Rightarrow> bool" (infix "\<Rightarrow>" 55)
+  big_step :: "com \<times> store \<Rightarrow> store \<Rightarrow> bool" (infix "\<Rightarrow>" 55)
 where
   Skip: "(SKIP,s) \<Rightarrow> s"
 | Assign: "(x ::= a,s) \<Rightarrow> s(x := aval a s)"
@@ -102,7 +102,7 @@ qed
 subsection \<open>Command equivalence\<close>
 
 text \<open>
-  Commands \<open>c\<close> and \<open>c'\<close> are equivalent when, from any start state \<open>s\<close>,
+  Commands \<open>c\<close> and \<open>c'\<close> are equivalent when, from any start store \<open>s\<close>,
   they have the same terminating outcomes \<open>t\<close> (HOL-IMP.Big\_Step).
 \<close>
 

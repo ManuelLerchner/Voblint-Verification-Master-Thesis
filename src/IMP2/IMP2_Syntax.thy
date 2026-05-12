@@ -15,7 +15,7 @@ begin
 *)
 
 type_synonym vname = string
-type_synonym state  = "vname => int"
+type_synonym store  = "vname => int"
 
 (* ── Arithmetic Expressions ───────────────────────────────────── *)
 
