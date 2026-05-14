@@ -28,6 +28,8 @@ fi
 echo "Using Isabelle: $ISABELLE"
 echo "Starting I/R MCP server on http://localhost:9148/mcp ..."
 echo "Auth token: isabelle-local  (fixed via IR_AUTH_TOKEN)"
+echo "MCP streamable-http requires Accept: application/json, text/event-stream (see .cursor/mcp.json)."
+echo "Quick probe: curl -sS -m 2 -H \"Authorization: Bearer isabelle-local\" -H \"Accept: application/json, text/event-stream\" http://127.0.0.1:9148/mcp"
 echo ""
 
 PYTHON="${SCRIPT_DIR}/.venv/bin/python3"
@@ -65,6 +67,10 @@ else
   echo "Skipping heap build (IR_SKIP_HEAP_BUILD=1)."
   echo ""
 fi
+
+echo "When MCP is running, leave this window alone: the %> prompt is the I/R console;"
+echo "accidental keys (or Ctrl+C) can cancel input or shut down MCP (Uvicorn) while clients are connected."
+echo ""
 
 exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \

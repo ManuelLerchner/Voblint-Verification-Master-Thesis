@@ -11,6 +11,7 @@ Practical findings from working on this repo (CFG collecting semantics, monotoni
 
 ## Isabelle MCP (I/R)
 
+- **Two ports:** **`http://localhost:9148/mcp`** is the **MCP HTTP** endpoint (Cursor `mcp.json` `url`). The MCP tool **`connect`** opens **TCP** to **`127.0.0.1:9147`** (the I/R REPL). Call **`connect`** with **`port: 0`** or omit `port` (defaults to 9147). Do **not** pass **9148** to `connect` — that port speaks HTTP, not the REPL auth protocol.
 - **Connect** first (`connect` with token, e.g. `isabelle-local` from `start-ir.sh`).
 - After **editing theories on disk**, call **`load_theory`** on the changed theory so the REPL matches the file (the heap may lag otherwise).
 - **`init`** creates a REPL with an explicit import list; use fully qualified theory names (e.g. `Goblint_Formalization.CFG_Collecting`).

@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pipeline Walkthrough — IMP to Sound Sign Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-elev: #161922;
+    --bg-card: #1b1f2a;
+    --border: #2a2f3d;
+    --fg: #e6e9ef;
+    --fg-dim: #a9b1c2;
+    --fg-mute: #6f7891;
+    --accent: #7aa2f7;
+    --accent-2: #bb9af7;
+    --accent-3: #9ece6a;
+    --accent-4: #e0af68;
+    --accent-5: #f7768e;
+    --code-bg: #11141c;
+    --shadow: 0 1px 0 rgba(255,255,255,0.03), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafafa;
+      --bg-elev: #ffffff;
+      --bg-card: #ffffff;
+      --border: #e5e7eb;
+      --fg: #1f2328;
+      --fg-dim: #5b6472;
+      --fg-mute: #8b94a3;
+      --accent: #3b66c4;
+      --accent-2: #8957e5;
+      --accent-3: #1a7f37;
+      --accent-4: #9a6700;
+      --accent-5: #cf222e;
+      --code-bg: #f6f8fa;
+      --shadow: 0 1px 0 rgba(0,0,0,0.02), 0 8px 24px rgba(0,0,0,0.06);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.6; }
+  code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } nav.toc { position: static !important; height: auto !important; } }
+
+  nav.toc {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--bg-elev); border-right: 1px solid var(--border);
+    padding: 28px 20px; font-size: 14px;
+  }
+  nav.toc h1 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-mute); margin: 0 0 12px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc a { color: var(--fg-dim); text-decoration: none; display: block; padding: 6px 10px; border-radius: 6px; border-left: 2px solid transparent; }
+  nav.toc a:hover { background: var(--bg-card); color: var(--fg); }
+  nav.toc a.active { color: var(--accent); border-left-color: var(--accent); background: var(--bg-card); }
+  nav.toc .num { color: var(--fg-mute); margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  main { padding: 48px 56px 120px; max-width: 1080px; }
+  @media (max-width: 720px) { main { padding: 24px 16px 80px; } }
+
+  header.hero { padding-bottom: 28px; border-bottom: 1px solid var(--border); margin-bottom: 36px; }
+  header.hero .tag { display: inline-block; font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--fg-mute); margin-bottom: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+  header.hero h1 { font-size: 36px; line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.02em; }
+  header.hero p { color: var(--fg-dim); margin: 0; max-width: 70ch; }
+
+  section.stage { margin: 56px 0; }
+  section.stage > h2 { font-size: 24px; margin: 0 0 8px; display: flex; align-items: baseline; gap: 14px; letter-spacing: -0.01em; }
+  section.stage > h2 .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 28px; border-radius: 6px; background: var(--bg-card);
+    color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    border: 1px solid var(--border);
+  }
+  section.stage > .lede { color: var(--fg-dim); margin: 0 0 24px; }
+
+  h3 { margin: 28px 0 10px; font-size: 17px; letter-spacing: -0.005em; }
+  h4 { margin: 18px 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-mute); }
+
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; box-shadow: var(--shadow); margin: 16px 0;
+  }
+  .card.tight { padding: 14px 18px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.55;
+  }
+  code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 0.92em; }
+  pre code { background: transparent; border: none; padding: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--fg-mute); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  tr:last-child td { border-bottom: none; }
+
+  .lemma-list { list-style: none; padding: 0; margin: 8px 0; }
+  .lemma-list li { padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--bg-card); border-radius: 0 8px 8px 0; margin: 6px 0; }
+  .lemma-list li .name { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 600; }
+  .lemma-list li .name.key { color: var(--accent-3); }
+  .lemma-list li.key { border-left-color: var(--accent-3); }
+
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--bg-card); border: 1px solid var(--border); font-size: 11px; color: var(--fg-mute); text-transform: uppercase; letter-spacing: 0.06em; margin-left: 8px; }
+  .pill.key { color: var(--accent-3); border-color: var(--accent-3); }
+
+  .callout { border-left: 3px solid var(--accent-4); background: var(--bg-card); border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 14px 0; }
+  .callout .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-4); font-weight: 700; margin-bottom: 4px; }
+
+  .lemma-stmt {
+    border: 1px solid var(--border); border-left: 3px solid var(--accent-2);
+    background: var(--bg-card); border-radius: 0 10px 10px 0;
+    padding: 14px 18px; margin: 16px 0;
+  }
+  .lemma-stmt .lemma-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+  .lemma-stmt .lemma-id { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-2); font-weight: 700; letter-spacing: 0.04em; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; }
+  .lemma-stmt .lemma-title { font-size: 14px; font-weight: 600; color: var(--fg); }
+  .lemma-stmt .lemma-body {
+    font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.85;
+    color: var(--fg); margin: 0; padding: 4px 0 2px;
+    white-space: pre-wrap; word-break: normal; overflow-wrap: break-word;
+    tab-size: 2;
+  }
+  .lemma-stmt .lemma-body em { font-style: normal; color: var(--fg-mute); }                          /* comments / notes */
+  .lemma-stmt .lemma-body b  { font-weight: 600; color: var(--accent); }                              /* function / lemma names */
+  .lemma-stmt .lemma-body u  { text-decoration: none; color: var(--accent-3); font-weight: 600; }     /* operators we want to pop: ⟹ ⊆ ⊔ ≤ = */
+  .lemma-stmt .lemma-body s  { text-decoration: none; color: var(--accent-4); font-weight: 600; }     /* keywords: SKIP IF WHILE lfp etc */
+  .lemma-stmt .lemma-body i  { font-style: normal; color: var(--accent-2); }                          /* meta vars: σ env s₀ γ */
+  .lemma-stmt.key { border-left-color: var(--accent-3); }
+  .lemma-stmt.key .lemma-id { color: var(--accent-3); border-color: var(--accent-3); }
+
+  .step { margin: 28px 0; }
+  .step-head { display: flex; align-items: baseline; gap: 12px; margin: 0 0 6px; }
+  .step-head .step-num { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); border: 1px solid var(--border); padding: 3px 9px; border-radius: 999px; }
+  .step-head h3 { margin: 0; font-size: 18px; }
+  .step .step-conc { color: var(--fg-dim); margin: 8px 0 4px; }
+
+  .chain {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7;
+    white-space: pre; overflow-x: auto; margin: 16px 0;
+  }
+
+  .def-card {
+    border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    background: var(--bg-card); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin: 16px 0;
+  }
+  .def-card > h3 { margin: 0 0 4px; font-size: 16px; }
+  .def-card > .sub { color: var(--fg-mute); font-size: 13px; margin: 0 0 12px; font-family: 'JetBrains Mono', monospace; }
+  .def-block {
+    font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.85;
+    color: var(--fg); white-space: pre-wrap; margin: 10px 0; padding: 10px 14px;
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .def-block em { font-style: normal; color: var(--fg-mute); }
+  .def-block b  { font-weight: 600; color: var(--accent); }
+  .def-block u  { text-decoration: none; color: var(--accent-3); font-weight: 600; }
+  .def-block s  { text-decoration: none; color: var(--accent-4); font-weight: 600; }
+  .def-block i  { font-style: normal; color: var(--accent-2); }
+
+  .mermaid { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin: 16px 0; overflow-x: auto; text-align: center; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--fg-mute); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>Stages</h1>
+    <ol>
+      <li><a href="#stage-0"><span class="num">0</span>Running example</a></li>
+      <li><a href="#stage-flow"><span class="num">→</span>Top-level flow</a></li>
+      <li><a href="#stage-1"><span class="num">1</span>Syntax &amp; semantics</a></li>
+      <li><a href="#stage-2"><span class="num">2</span>IMP → CFG</a></li>
+      <li><a href="#stage-3"><span class="num">3</span>Sign domain</a></li>
+      <li><a href="#stage-4"><span class="num">4</span>Equation system</a></li>
+      <li><a href="#stage-5"><span class="num">5</span>Solver bridge</a></li>
+      <li><a href="#stage-6"><span class="num">6</span>End-to-end pipeline</a></li>
+      <li><a href="#definitions"><span class="num">§</span>Definitions glossary</a></li>
+      <li><a href="#narrative"><span class="num">∎</span>Soundness narrative</a></li>
+      <li><a href="#recap"><span class="num">★</span>Lemma spine</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="tag">Goblint Formalization · Walkthrough</span>
+      <h1>IMP source to sound sign-analysis result</h1>
+      <p>One example program traced through every layer of the verified pipeline — from concrete big-step semantics, via the CFG and the equation system, into the AFP-verified Top-Down solver, and back to a sound abstract invariant on the source AST. Each stage names the relevant functions and highlights the core lemmas that make the chain correct.</p>
+    </header>
+
+    <!-- STAGE 0 -->
+    <section class="stage" id="stage-0">
+      <h2><span class="badge">00</span>Running example</h2>
+      <p class="lede">A tiny program we will follow all the way to the end.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Program <code>c</code></h4>
+<pre><code>x ::= N 1;;
+WHILE Less (N 0) (V x) DO
+  x ::= Plus (V x) (N (-1))</code></pre>
+        </div>
+        <div class="card">
+          <h4>Initial concrete store <code>s</code></h4>
+<pre><code>s = (λ_. 0)</code></pre>
+          <p>Concrete big-step terminates with <code>t x = 0</code>.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="label">Target theorem</div>
+<pre><code>t ∈ sign_domain.gamma_state
+      (run_analysis (sign_analysis_config s) c
+        (cfg_exit (to_cfg c)))</code></pre>
+        <p>i.e. the abstract value of <code>x</code> at the program exit is in <code>{SZero, STop}</code>, so its concretization contains <code>0</code>.</p>
+      </div>
+    </section>
+
+    <!-- TOP LEVEL FLOW -->
+    <section class="stage" id="stage-flow">
+      <h2><span class="badge">→</span>Top-level flow</h2>
+      <p class="lede">How the artifacts of each stage connect into a single soundness statement.</p>
+      <div class="mermaid">
+flowchart TD
+  A["IMP source<br/>com · aexp · bexp"] -->|to_cfg| B["CFG<br/>pp · edge_action · edges"]
+  B -->|rhs · make_rhs| C["Equation system<br/>is_post_fixpoint"]
+  C -->|td_analyse · AFP solver| D["Post-fixpoint env<br/>pp ⇒ abs_state"]
+  D -->|post_fixpoint_sound| E["γ_state env v ⊇ cfg_collect g s v"]
+  E -->|cfg_collect_exit_eq_collect| F["γ_state env exit ⊇ collect c s"]
+  F -->|big_step ⟹ t ∈ collect| G["t ∈ γ_state run_analysis …"]
+  D -.->|annotate| H["acom annotated AST<br/>per-point invariants"]
+      </div>
+    </section>
+
+    <!-- STAGE 1 -->
+    <section class="stage" id="stage-1">
+      <h2><span class="badge">01</span>Syntax &amp; concrete semantics</h2>
+      <p class="lede"><code>src/IMP2/</code> — the ground truth we want to over-approximate.</p>
+
+      <table>
+        <thead><tr><th>File / definition</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">IMP2_Syntax.thy :: datatype com / aexp / bexp</td><td>Abstract syntax.</td></tr>
+          <tr><td class="mono">IMP2_Semantics.thy :: fun aval, fun bval</td><td>Expression evaluation.</td></tr>
+          <tr><td class="mono">IMP2_Semantics.thy :: inductive big_step ((c,s) ⇒ t)</td><td>Concrete big-step semantics.</td></tr>
+          <tr><td class="mono">IMP2_Collecting.thy :: definition collect</td><td><code>com ⇒ store set ⇒ store set</code>, lifts <code>big_step</code> to sets.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Core lemmas</h4>
+      <ul class="lemma-list">
+        <li><span class="name">big_step_determ</span> — concrete semantics is deterministic.</li>
+        <li><span class="name">collect_SKIP / Assign / Seq / If / While</span> — compositional shape of <code>collect</code>.</li>
+        <li><span class="name">collect_mono</span>, <span class="name">while_collect_mono</span> — monotone in the input set.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="label">Example</div>
+        <p><code>collect c {s}</code> is the singleton containing the unique terminating store <code>t</code> with <code>t x = 0</code>. Anything that over-approximates <code>collect c {s}</code> must contain this <code>t</code>.</p>
+      </div>
+    </section>
+
+    <!-- STAGE 2 -->
+    <section class="stage" id="stage-2">
+      <h2><span class="badge">02</span>IMP → CFG</h2>
+      <p class="lede"><code>src/CFG/</code> — translate the AST into a finite labeled graph, prove the two views agree at the exit.</p>
+
+      <h3>2a · CFG model <span class="pill">CFG_Def.thy</span></h3>
+<pre><code>datatype edge_action = EA_Nop | EA_Assign vname aexp | EA_Assume bexp | EA_AssumeNot bexp
+record cfg = cfg_entry :: pp, cfg_exit :: pp, cfg_edges :: (pp × edge_action × pp) set
+definition predecessors, successors, cfg_wf</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">finite_predecessors</span> — needed so predecessor joins are well-defined <code>Finite_Set.fold</code>s.</li>
+      </ul>
+
+      <h3>2b · Compilation <span class="pill">IMP2_to_CFG.thy</span></h3>
+<pre><code>fun compile :: com ⇒ nat ⇒ nat × pp × pp × (pp × edge_action × pp) set
+definition to_cfg :: com ⇒ cfg</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">compile_fresh</span> — emitted node ids stay above the fresh counter.</li>
+        <li><span class="name">compile_ge</span> — fresh counter only grows.</li>
+        <li><span class="name">compile_entry_ne_exit</span> — entry and exit nodes are distinct.</li>
+        <li><span class="name">compile_finite ⇒ to_cfg_finite</span> — edge set is finite (used everywhere downstream).</li>
+        <li><span class="name">to_cfg_wf</span> — compiled CFGs satisfy <code>cfg_wf</code>.</li>
+      </ul>
+
+      <h3>2c · Paths &amp; CFG collecting semantics <span class="pill">CFG_Path / CFG_Collecting</span></h3>
+<pre><code>inductive cfg_path :: cfg ⇒ pp ⇒ (edge_action × pp) list ⇒ pp ⇒ bool
+fun edge_collect, path_collect
+definition cfg_collect :: cfg ⇒ store set ⇒ (pp ⇒ store set)</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">edge_collect_mono</span>, <span class="name">path_collect_mono(_strong)</span></li>
+        <li><span class="name">collect_pp_mono</span> — CFG collecting monotone in input set.</li>
+        <li class="key"><span class="name key">cfg_collect_exit_eq_collect</span> <span class="pill key">bridge</span> — IMP ↔ CFG correctness link: CFG collecting at the exit equals AST <code>collect</code>.</li>
+      </ul>
+
+      <h4>Example CFG for our program</h4>
+      <div class="mermaid">
+flowchart LR
+  p0(("p0 = entry"))
+  p1(("p1"))
+  p2(("p2 (loop head)"))
+  p3(("p3"))
+  p4(("p4"))
+  p5(("p5 = exit"))
+  p0 -- "EA_Assign x (N 1)" --> p1
+  p1 -- "EA_Nop" --> p2
+  p2 -- "EA_Assume (0 &lt; x)" --> p3
+  p3 -- "EA_Assign x (x + (-1))" --> p4
+  p4 -- "EA_Nop" --> p2
+  p2 -- "EA_AssumeNot (0 &lt; x)" --> p5
+      </div>
+      <p class="mono">cfg_collect (to_cfg c) {s} p5 = collect c {s} = { (λv. if v=x then 0 else 0) }</p>
+    </section>
+
+    <!-- STAGE 3 -->
+    <section class="stage" id="stage-3">
+      <h2><span class="badge">03</span>Abstract domain — Sign</h2>
+      <p class="lede"><code>src/Domains/</code> — a sound Galois connection plus per-action transfer functions.</p>
+
+      <h3>3a · Generic interface <span class="pill">Abstract_Domain.thy</span></h3>
+<pre><code>locale sound_domain =
+  fixes gamma, join_op, bot_abs, ...
+  assumes gamma_join_ub1, gamma_join_ub2, ...
+type_synonym 'a abs_state = vname ⇒ 'a
+definition gamma_state, bot_state, join_state</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">gamma_join_ub1 / ub2</span> — join is a sound upper bound concretely.</li>
+        <li><span class="name">join_comp_fun_commute</span>, <span class="name">join_state_comp_fun_commute</span> — required so <code>Finite_Set.fold</code> is order-independent.</li>
+        <li><span class="name">gamma_state_mono</span>, <span class="name">gamma_state_join_ub1/ub2</span>, <span class="name">gamma_state_bot</span> — pointwise lifting.</li>
+        <li><span class="name">gamma_abs_join_set_ub</span>, <span class="name">join_fold_ge</span> — soundness of predecessor join.</li>
+      </ul>
+
+      <h3>3b · Sign instance <span class="pill">Sign_Domain.thy</span></h3>
+<pre><code>datatype sign = SBot | SNeg | SZero | SPos | STop
+fun gamma_sign, sign_le, join_sign
+fun sign_plus, sign_minus, sign_times
+fun aval_sign :: aexp ⇒ (vname ⇒ sign) ⇒ sign</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">sign_le_refl / antisym / trans</span> — partial order on signs.</li>
+        <li><span class="name">join_sign_ub1/ub2/least/comm/assoc</span> — lattice laws on <code>join_sign</code>.</li>
+        <li><span class="name">gamma_sign_mono</span> — Galois monotonicity.</li>
+        <li><span class="name">sign_plus_sound</span>, <span class="name">sign_minus_sound</span>, <span class="name">sign_times_sound</span> ⇒ <span class="name">aval_sign_sound</span>.</li>
+        <li><span class="name">assign_sign_sound</span>, <span class="name">assume_sign_sound</span>, <span class="name">assume_not_sign_sound</span> — transfer-function soundness.</li>
+      </ul>
+
+      <h4>Sign lattice</h4>
+      <div class="mermaid">
+flowchart BT
+  SBot --> SNeg
+  SBot --> SZero
+  SBot --> SPos
+  SNeg --> STop
+  SZero --> STop
+  SPos --> STop
+      </div>
+
+      <div class="callout">
+        <div class="label">Example carry-through</div>
+        <ul>
+          <li>After <code>x ::= N 1</code>: <code>σ₁ = (λv. if v=x then SPos else STop)</code>.</li>
+          <li>One iteration: <code>sign_plus SPos SNeg = STop</code>.</li>
+          <li>Loop-head join: <code>SPos ⊔ STop = STop</code>.</li>
+          <li>After <code>EA_AssumeNot (0 &lt; x)</code> exit gets <code>x ↦ STop</code>; <code>0 ∈ γ_sign STop = UNIV</code>. Sound (loose).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- STAGE 4 -->
+    <section class="stage" id="stage-4">
+      <h2><span class="badge">04</span>Equation system</h2>
+      <p class="lede"><code>src/Equations/</code> — package transfer functions into a monotone right-hand side and prove post-fixpoints over-approximate.</p>
+
+      <h3>Constraint_System.thy</h3>
+<pre><code>record 'a domain_transfer =
+  tf_assign     :: vname ⇒ aexp ⇒ 'a abs_state ⇒ 'a abs_state
+  tf_assume     :: bexp  ⇒ 'a abs_state ⇒ 'a abs_state
+  tf_assume_not :: bexp  ⇒ 'a abs_state ⇒ 'a abs_state
+
+fun apply_tf       :: 'a domain_transfer ⇒ edge_action ⇒ 'a abs_state ⇒ 'a abs_state
+definition abs_join_set
+definition rhs              -- join over predecessors of apply_tf(action)(env u),
+                            --   plus s0 at the entry node
+
+definition is_post_fixpoint g tf join bot s0 env  ≡  ∀v. rhs ... env v ≤ env v</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">abs_join_set_empty</span>, <span class="name">mem_image_le_fold</span> — fold infrastructure.</li>
+        <li><span class="name">rhs_no_predecessors_not_entry</span>, <span class="name">rhs_entry_no_predecessors</span> — boundary cases.</li>
+        <li><span class="name">fold_join_image_mono</span> — fold monotone in its image.</li>
+        <li class="key"><span class="name key">rhs_mono</span> <span class="pill key">key</span> — <code>rhs</code> is monotone in <code>env</code> (prerequisite for the TD solver).</li>
+      </ul>
+
+      <h3>Constraint_System_Sound.thy</h3>
+      <ul class="lemma-list">
+        <li><span class="name">collect_pp_abstract_sound</span> — pointwise: post-fixpoint envs over-approximate <code>cfg_collect</code> at every node.</li>
+        <li class="key"><span class="name key">post_fixpoint_sound</span> <span class="pill key">central</span></li>
+      </ul>
+<pre><code>theorem post_fixpoint_sound:
+  is_post_fixpoint g tf join_state bot_state s0 env
+  ⟹  s ∈ gamma_state s0
+  ⟹  cfg_collect g {s} v ⊆ gamma_state (env v)</code></pre>
+
+      <div class="callout">
+        <div class="label">Example</div>
+        <p>The env <code>p1 ↦ x:SPos</code>, <code>p2 ↦ x:STop</code>, <code>p3 ↦ x:STop</code>, <code>p4 ↦ x:SNeg</code>, <code>p5 ↦ x:STop</code> is a post-fixpoint of <code>rhs</code>. By <code>post_fixpoint_sound</code>, <code>γ_state (env p5) ⊇ collect c {s} ⊇ {t}</code>. So <code>t x = 0 ∈ γ_sign STop</code>. ✓</p>
+      </div>
+    </section>
+
+    <!-- STAGE 5 -->
+    <section class="stage" id="stage-5">
+      <h2><span class="badge">05</span>Top-down solver bridge</h2>
+      <p class="lede"><code>src/Solver/</code> — wrap <code>rhs</code> in the form the AFP solver expects, and import its post-fixpoint guarantee.</p>
+
+      <h3>TD_Interface.thy</h3>
+<pre><code>definition make_rhs g tf join bot s0 v env = rhs g tf join bot s0 env v
+fun rhs_tree_fold           -- monadic rhs in the AFP Answer/Query monad
+definition make_rhs_tree
+definition env_map, lookup_bot</code></pre>
+      <ul class="lemma-list">
+        <li><span class="name">make_rhs_mono</span> — packaged monotonicity (uses <code>rhs_mono</code>).</li>
+        <li class="key"><span class="name key">make_rhs_tree_correspondence</span> <span class="pill key">bridge</span> — monadic <code>make_rhs_tree</code> equals <code>make_rhs</code> after traversing the env.</li>
+        <li><span class="name">make_rhs_tree_correspondence_not_entry_no_predecessors</span> — boundary case of the above.</li>
+        <li><span class="name">rhs_eq_fold_join_sorted_predecessors</span>, <span class="name">fold_join_apply_edges_eq_fold_join_over_map</span> — set-fold ↔ list-fold.</li>
+        <li><span class="name">part_solutionD</span> — extract partial-solution facts from the solver result.</li>
+      </ul>
+
+      <h3>TD_Soundness.thy</h3>
+<pre><code>theorem td_solver_sound          -- generic: solver result ⇒ collecting overapprox
+theorem sign_analysis_sound      -- instantiation for Sign
+theorem interval_analysis_sound  -- instantiation for Interval</code></pre>
+
+      <h3>TD_Total.thy <span class="pill">termination</span></h3>
+      <ul class="lemma-list">
+        <li><span class="name">sign_widening_precise</span>, <span class="name">sign_wf_widening_chains</span>, <span class="name">sign_is_mono_eq</span> — well-founded chains; monotone widening.</li>
+        <li><span class="name">ivl_widening_precise</span>, <span class="name">ivl_wf_widening_chains</span>, <span class="name">ivl_narrowing_le</span>, <span class="name">ivl_is_mono_eq</span> — interval analogues.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="label">From the AFP</div>
+        <p><span class="mono">td_analyse_post_fixpoint</span> — the AFP-verified solver returns a value satisfying <code>is_post_fixpoint</code>.</p>
+      </div>
+    </section>
+
+    <!-- STAGE 6 -->
+    <section class="stage" id="stage-6">
+      <h2><span class="badge">06</span>End-to-end pipeline</h2>
+      <p class="lede"><code>src/Pipeline/</code> — compose the prior stages into one statement, then specialize to Sign and project the result back onto the AST.</p>
+
+      <h3>Pipeline.thy</h3>
+<pre><code>definition domain_transfer_sound gamma tf
+record 'a analysis_config = ac_join, ac_bot, ac_gamma, ac_tf, ac_init
+
+definition run_analysis cfg c =
+  td_analyse c (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg)
+
+theorem pipeline_sound:
+  assumes domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)
+      and s ∈ γ_state (ac_init cfg)
+      and big_step (c,s) t
+  shows   t ∈ γ_state (run_analysis cfg c (cfg_exit (to_cfg c)))</code></pre>
+
+      <h4>Proof chain</h4>
+      <div class="mermaid">
+flowchart TD
+  S1["td_analyse_post_fixpoint<br/>(AFP, via make_rhs_tree_correspondence + make_rhs_mono)"]
+  S2["is_post_fixpoint (run_analysis cfg c)"]
+  S3["γ_state(env v) ⊇ cfg_collect (to_cfg c) {s} v<br/>at every v"]
+  S4["γ_state(env (cfg_exit ...)) ⊇ collect c {s}"]
+  S5["t ∈ γ_state(run_analysis cfg c (cfg_exit (to_cfg c)))"]
+  S1 --> S2
+  S2 -->|post_fixpoint_sound| S3
+  S3 -->|cfg_collect_exit_eq_collect| S4
+  S4 -->|big_step ⟹ t ∈ collect| S5
+      </div>
+
+      <h3>Sign instantiation</h3>
+<pre><code>definition sign_analysis_config s
+
+corollary sign_pipeline_sound:
+  big_step (c,s) t ⟹
+  t ∈ sign_domain.gamma_state
+        (run_analysis (sign_analysis_config s) c (cfg_exit (to_cfg c)))</code></pre>
+
+      <h3>Result_Mapping.thy <span class="pill">back to the AST</span></h3>
+<pre><code>datatype 'a acom            -- AST annotated with abstract states
+fun annotate                -- walks com, decorates each program point
+definition annotate_prog
+fun acom_pre, acom_post
+theorem annotation_sound    -- annotation is a sound invariant at every program point</code></pre>
+      <p><code>pipeline_invariant_sound</code> / <code>sign_pipeline_invariant_sound</code> strengthen <code>pipeline_sound</code> from "sound at exit" to "sound at every program point" by routing <code>post_fixpoint_sound</code> pointwise rather than only at <code>cfg_exit</code>.</p>
+    </section>
+
+    <!-- DEFINITIONS -->
+    <section class="stage" id="definitions">
+      <h2><span class="badge">§</span>Definitions glossary</h2>
+      <p class="lede">All supporting definitions the soundness narrative relies on, grouped by layer. Mathematical form; file names in parentheses point to the Isabelle source.</p>
+
+      <div class="def-card">
+        <h3>Concrete world</h3>
+        <p class="sub">src/IMP2/</p>
+        <div class="def-block"><em>-- expression evaluation</em>
+<b>aval</b> : aexp ⇒ store ⇒ int
+<b>bval</b> : bexp ⇒ store ⇒ bool
+
+<em>-- big-step relation (inductive)</em>
+(c, s) ⇒ t
+
+<em>-- collecting semantics: lift big-step to sets of stores</em>
+<b>collect</b> c S   <u>≡</u>   { t  |  ∃ s <u>∈</u> S.  (c, s) ⇒ t }</div>
+      </div>
+
+      <div class="def-card">
+        <h3>CFG layer — graph structure</h3>
+        <p class="sub">src/CFG/CFG_Def.thy</p>
+        <div class="def-block"><em>type_synonym</em>  <i>pp</i>  <u>=</u>  nat
+
+<em>datatype</em>  <i>edge_action</i>  <u>=</u>  <s>EA_Nop</s>
+                       |  <s>EA_Assign</s>    vname aexp
+                       |  <s>EA_Assume</s>     bexp
+                       |  <s>EA_AssumeNot</s>  bexp
+
+<em>record</em>  <i>cfg</i>  <u>=</u>  <i>cfg_entry</i> :: <i>pp</i>
+              <i>cfg_exit</i>  :: <i>pp</i>
+              <i>cfg_edges</i> :: (<i>pp</i> × <i>edge_action</i> × <i>pp</i>) set
+
+<b>cfg_nodes</b>     g   <u>≡</u>   { <i>cfg_entry</i> g, <i>cfg_exit</i> g }
+                  ∪ { u | (u,_,_) <u>∈</u> <i>cfg_edges</i> g }
+                  ∪ { v | (_,_,v) <u>∈</u> <i>cfg_edges</i> g }
+<b>predecessors</b>  g v <u>≡</u>   { (u, a)  |  (u, a, v) <u>∈</u> <i>cfg_edges</i> g }
+<b>successors</b>    g u <u>≡</u>   { (a, v)  |  (u, a, v) <u>∈</u> <i>cfg_edges</i> g }
+
+<em>-- the only structural assumption used downstream</em>
+<b>cfg_wf</b> g  <u>≡</u>   <i>cfg_entry</i> g  ≠  <i>cfg_exit</i> g
+          <em>∧</em>  <b>finite</b> (<i>cfg_edges</i> g)
+          <em>∧</em>  ∀ (u, _, v) <u>∈</u> <i>cfg_edges</i> g.  u <u>∈</u> <b>cfg_nodes</b> g  ∧  v <u>∈</u> <b>cfg_nodes</b> g</div>
+      </div>
+
+      <div class="def-card">
+        <h3>CFG layer — concrete transformers</h3>
+        <p class="sub">src/CFG/CFG_Collecting.thy · src/CFG/CFG_Path.thy</p>
+        <div class="def-block"><em>-- per-edge concrete action over store sets</em>
+<b>edge_collect</b> <s>EA_Nop</s>           S   <u>=</u>   S
+<b>edge_collect</b> (<s>EA_Assign</s> x a)   S   <u>=</u>   { s(x <u>:=</u> <b>aval</b> a s) | s <u>∈</u> S }
+<b>edge_collect</b> (<s>EA_Assume</s> b)     S   <u>=</u>   { s <u>∈</u> S |     <b>bval</b> b s }
+<b>edge_collect</b> (<s>EA_AssumeNot</s> b)  S   <u>=</u>   { s <u>∈</u> S |  ¬  <b>bval</b> b s }
+
+<em>-- compose along a recorded edge-action list</em>
+<b>path_collect</b> []              S   <u>=</u>   S
+<b>path_collect</b> ((a, _) <em>#</em> es)   S   <u>=</u>   <b>path_collect</b> es (<b>edge_collect</b> a S)
+
+<em>-- paths in the CFG, with their action labels remembered</em>
+<em>inductive</em>  <b>cfg_path</b> g u es v <em>where</em>
+   <s>empty</s> :   <b>cfg_path</b> g v [] v
+   <s>step</s>  :   (u, a, w) <u>∈</u> <i>cfg_edges</i> g  ∧  <b>cfg_path</b> g w es v
+              <u>⟹</u>  <b>cfg_path</b> g u ((a, w) <em>#</em> es) v
+
+g ⊢ u →* v   <u>≡</u>   ∃ es.  <b>cfg_path</b> g u es v          <em>-- reachability</em></div>
+      </div>
+
+      <div class="def-card">
+        <h3>CFG layer — collecting semantics</h3>
+        <p class="sub">src/CFG/CFG_Collecting.thy</p>
+        <div class="def-block"><em>-- one-step "push" through every incoming edge</em>
+<b>collect_pp</b> g ρ v   <u>≡</u>   ⋃ { <b>edge_collect</b> a (ρ u)  |  (u, a, v) <u>∈</u> <i>cfg_edges</i> g }
+
+<em>-- collecting semantics as a least fixpoint of single-step push,</em>
+<em>-- with the initial set S injected at the entry node</em>
+<b>cfg_collect</b> g S    <u>≡</u>   <s>lfp</s> ( λρ v.  <em>if</em>  v <u>=</u> <i>cfg_entry</i> g
+                                <em>then</em>   S ∪ <b>collect_pp</b> g ρ v
+                                <em>else</em>        <b>collect_pp</b> g ρ v )</div>
+      </div>
+
+      <div class="def-card">
+        <h3>Abstract domain</h3>
+        <p class="sub">src/Domains/Abstract_Domain.thy</p>
+        <div class="def-block"><em>type_synonym</em>  'a <i>abs_state</i>  <u>=</u>  vname ⇒ 'a
+
+<em>-- The minimum a domain must satisfy for soundness to hold.</em>
+<em>locale</em>  <b>sound_domain</b>  <em>fixes</em>
+   <i>γ</i>  : 'a ⇒ int set
+   (<u>⊔</u>) : 'a ⇒ 'a ⇒ 'a
+<em>assumes</em>
+   (D1)   <i>γ</i> ⊥  <u>=</u>  ∅
+   (D2)   a <u>≤</u> b   <u>⟹</u>   <i>γ</i> a  <u>⊆</u>  <i>γ</i> b
+   (D3)   a <u>≤</u> a <u>⊔</u> b   ∧   b <u>≤</u> a <u>⊔</u> b
+   (D4)   a <u>⊔</u> b  <u>=</u>  b <u>⊔</u> a
+   (D5)   a <u>⊔</u> (b <u>⊔</u> c)  <u>=</u>  (a <u>⊔</u> b) <u>⊔</u> c
+
+<em>-- pointwise lifting to states</em>
+<b>γ_state</b> <i>σ</i>    <u>≡</u>   { s  |  ∀ x.  s x <u>∈</u> <i>γ</i> (<i>σ</i> x) }
+<b>bot_state</b>    <u>≡</u>   (λ_. ⊥)
+(<i>σ₁</i> <u>⊔</u> <i>σ₂</i>)    <u>≡</u>   (λx. <i>σ₁</i> x <u>⊔</u> <i>σ₂</i> x)                  <em>-- = join_state</em>
+
+<em>Note:</em>  <b>comp_fun_commute</b> (<u>⊔</u>) follows from (D4)+(D5).
+This is what makes  <b>Finite_Set.fold</b> (<u>⊔</u>) ⊥  order-independent on finite sets.</div>
+      </div>
+
+      <div class="def-card">
+        <h3>Equation system</h3>
+        <p class="sub">src/Equations/Constraint_System.thy</p>
+        <div class="def-block"><em>record</em>  'a <i>domain_transfer</i>  <u>=</u>
+   <i>tf_assign</i>     :: vname ⇒ aexp ⇒ 'a <i>abs_state</i> ⇒ 'a <i>abs_state</i>
+   <i>tf_assume</i>     :: bexp  ⇒ 'a <i>abs_state</i> ⇒ 'a <i>abs_state</i>
+   <i>tf_assume_not</i> :: bexp  ⇒ 'a <i>abs_state</i> ⇒ 'a <i>abs_state</i>
+
+<b>apply_tf</b> tf <s>EA_Nop</s>           <i>σ</i>   <u>=</u>   <i>σ</i>
+<b>apply_tf</b> tf (<s>EA_Assign</s> x a)   <i>σ</i>   <u>=</u>   <i>tf_assign</i> tf x a <i>σ</i>
+<b>apply_tf</b> tf (<s>EA_Assume</s> b)     <i>σ</i>   <u>=</u>   <i>tf_assume</i> tf b <i>σ</i>
+<b>apply_tf</b> tf (<s>EA_AssumeNot</s> b)  <i>σ</i>   <u>=</u>   <i>tf_assume_not</i> tf b <i>σ</i>
+
+<em>-- finite fold of the abstract join over a set of abstract states</em>
+<b>abs_join_set</b> (<u>⊔</u>) ⊥ S   <u>≡</u>   <b>Finite_Set.fold</b> (<u>⊔</u>) ⊥ S
+
+<em>-- right-hand side of the constraint system at node v</em>
+<b>rhs</b> g tf (<u>⊔</u>) ⊥ <i>s₀</i> <i>env</i> v   <u>≡</u>
+   <em>let</em>  preds <u>=</u> <b>predecessors</b> g v
+        vals  <u>=</u> { <b>apply_tf</b> tf a (<i>env</i> u)  |  (u, a) <u>∈</u> preds }
+        base  <u>=</u> <em>if</em> v <u>=</u> <i>cfg_entry</i> g <em>then</em> insert <i>s₀</i> vals <em>else</em> vals
+   <em>in</em>   <b>abs_join_set</b> (<u>⊔</u>) ⊥ base
+
+<b>is_post_fixpoint</b> g tf (<u>⊔</u>) ⊥ <i>s₀</i> <i>env</i>   <u>≡</u>   ∀v.  <b>rhs</b> g tf (<u>⊔</u>) ⊥ <i>s₀</i> <i>env</i> v  <u>≤</u>  <i>env</i> v</div>
+      </div>
+
+      <div class="def-card">
+        <h3>Solver bridge</h3>
+        <p class="sub">src/Solver/TD_Interface.thy</p>
+        <div class="def-block"><em>-- argument-reordered rhs, so the AFP solver can curry it</em>
+<b>make_rhs</b> g tf (<u>⊔</u>) ⊥ <i>s₀</i> v <i>env</i>   <u>≡</u>   <b>rhs</b> g tf (<u>⊔</u>) ⊥ <i>s₀</i> <i>env</i> v
+
+<em>-- the same function in the AFP solver's Answer/Query monad</em>
+<b>make_rhs_tree</b> g tf (<u>⊔</u>) ⊥ <i>s₀</i> v   :  Tree <i>pp</i> ('a <i>abs_state</i>)
+<b>env_map</b> η                          :  <i>pp</i> ⇀ 'a <i>abs_state</i>           <em>-- env as a partial map</em>
+<b>lookup_bot</b> m x                     <u>≡</u>   <em>case</em> m x <em>of</em> None ⇒ ⊥ | Some d ⇒ d
+
+<em>-- AFP delivery: td_analyse returns an env satisfying is_post_fixpoint</em>
+<b>td_analyse</b> c tf (<u>⊔</u>) ⊥ <i>s₀</i>   :  <i>pp</i> ⇒ 'a <i>abs_state</i></div>
+      </div>
+
+      <div class="def-card">
+        <h3>Pipeline</h3>
+        <p class="sub">src/Pipeline/Pipeline.thy</p>
+        <div class="def-block"><em>record</em>  'a <i>analysis_config</i>  <u>=</u>
+   <i>ac_join</i>   :: 'a <i>abs_state</i> ⇒ 'a <i>abs_state</i> ⇒ 'a <i>abs_state</i>
+   <i>ac_bot</i>    :: 'a <i>abs_state</i>
+   <i>ac_gamma</i>  :: 'a ⇒ int set
+   <i>ac_tf</i>     :: 'a <i>domain_transfer</i>
+   <i>ac_init</i>   :: 'a <i>abs_state</i>
+
+<b>run_analysis</b> cfg c   <u>≡</u>   <b>td_analyse</b> c (<i>ac_tf</i> cfg) (<i>ac_join</i> cfg) (<i>ac_bot</i> cfg) (<i>ac_init</i> cfg)
+
+<em>-- The exact hypothesis we need on the transfer functions.</em>
+<em>-- This is L11 packaged for the pipeline theorem.</em>
+<b>domain_transfer_sound</b> <i>γ</i> tf   <u>≡</u>
+    (∀ x a <i>σ</i>.  ∀ s <u>∈</u> <b>γ_state</b> <i>σ</i>.   s(x <u>:=</u> <b>aval</b> a s)  <u>∈</u>  <b>γ_state</b> (<i>tf_assign</i> tf x a <i>σ</i>))
+  ∧ (∀ b   <i>σ</i>.  ∀ s <u>∈</u> <b>γ_state</b> <i>σ</i>.    <b>bval</b> b s   <u>⟹</u>   s <u>∈</u> <b>γ_state</b> (<i>tf_assume</i> tf b <i>σ</i>))
+  ∧ (∀ b   <i>σ</i>.  ∀ s <u>∈</u> <b>γ_state</b> <i>σ</i>.  ¬ <b>bval</b> b s   <u>⟹</u>   s <u>∈</u> <b>γ_state</b> (<i>tf_assume_not</i> tf b <i>σ</i>))</div>
+      </div>
+
+      <div class="def-card">
+        <h3>Result mapping</h3>
+        <p class="sub">src/Pipeline/Result_Mapping.thy</p>
+        <div class="def-block"><em>type_synonym</em>  'a <i>analysis_result</i>  <u>=</u>  <i>pp</i> ⇒ 'a <i>abs_state</i>
+
+<b>invariant_at</b>  : <i>analysis_result</i> ⇒ <i>pp</i> ⇒ <i>abs_state</i>              <em>-- lookup</em>
+<b>entry_invariant</b>, <b>exit_invariant</b>   <em>-- at cfg_entry / cfg_exit</em>
+
+<em>datatype</em>  'a <i>acom</i>  <u>=</u>  ...                                  <em>-- AST decorated with abs_state at every point</em>
+<b>annotate</b>       : com ⇒ <i>analysis_result</i> ⇒ 'a <i>acom</i>
+<b>annotate_prog</b>  : decorate the whole program
+<b>acom_pre</b>, <b>acom_post</b>  : invariants at the start / end of each subcommand</div>
+      </div>
+    </section>
+
+    <!-- NARRATIVE -->
+    <section class="stage" id="narrative">
+      <h2><span class="badge">∎</span>End-to-end soundness — narrative</h2>
+      <p class="lede">Each lemma stated abstractly (math form, no Isabelle escapes), in the order in which the soundness argument actually uses them. The final sub-section composes them into one chain.</p>
+
+      <div class="card tight">
+        <h4>Notation</h4>
+        <ul>
+          <li><code>c</code> — IMP program; <code>s</code> — initial concrete store; <code>t</code> — concrete final store.</li>
+          <li><code>g = to_cfg c</code> — compiled CFG; <code>pp</code> — program points.</li>
+          <li><code>D</code> — abstract domain (think <code>sign</code>); <code>γ</code> — concretization; <code>γ_state : (vname ⇒ D) ⇒ store set</code>.</li>
+          <li><code>tf</code> — transfer functions (<code>tf_assign</code>, <code>tf_assume</code>, <code>tf_assume_not</code>); <code>apply_tf a</code> — per-edge action <code>a</code>.</li>
+          <li><code>env : pp ⇒ (vname ⇒ D)</code> — abstract environment computed by the solver.</li>
+          <li><code>s₀ : (vname ⇒ D)</code> — initial abstract state at the CFG entry.</li>
+        </ul>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="step">
+        <div class="step-head"><span class="step-num">Step 1</span><h3>Concrete semantics is the ground truth</h3></div>
+        <p>Standard big-step semantics, lifted to sets of stores.</p>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L1</span><span class="lemma-title">Determinism of big-step</span></div>
+          <div class="lemma-body">(c, s) ⇒ t₁  ∧  (c, s) ⇒ t₂  <u>⟹</u>  t₁ <u>=</u> t₂</div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L2</span><span class="lemma-title">Compositional shape of <code>collect</code></span></div>
+          <div class="lemma-body"><b>collect</b> <s>SKIP</s> S             <u>=</u>  S
+<b>collect</b> (x <s>::=</s> a) S        <u>=</u>  { s(x <u>:=</u> <b>aval</b> a s)  |  s ∈ S }
+<b>collect</b> (c₁ <s>;;</s> c₂) S       <u>=</u>  <b>collect</b> c₂ (<b>collect</b> c₁ S)
+<b>collect</b> (<s>IF</s> b <s>…</s>) S         <u>=</u>  <b>collect</b> c₁ (S ∩ <i>⟦b⟧</i>)  ∪  <b>collect</b> c₂ (S ∩ <i>⟦¬b⟧</i>)
+<b>collect</b> (<s>WHILE</s> b <s>DO</s> c) S   <u>=</u>  <s>lfp</s> F     <em>where</em>  F X <u>=</u> (S ∪ <b>collect</b> c (X ∩ <i>⟦b⟧</i>)) ∩ <i>⟦¬b⟧</i></div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L3</span><span class="lemma-title">Monotonicity of <code>collect</code></span></div>
+          <div class="lemma-body">S <u>⊆</u> S'  <u>⟹</u>  <b>collect</b> c S <u>⊆</u> <b>collect</b> c S'</div>
+        </div>
+
+        <p class="step-conc"><strong>Consequence used downstream.</strong> If <code>(c, s) ⇒ t</code> then <code>t ∈ collect c {s}</code>. This is the only fact about the concrete world that the rest of the chain needs.</p>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <div class="step-head"><span class="step-num">Step 2</span><h3>Replace AST reasoning with CFG reasoning</h3></div>
+        <p><code>to_cfg c</code> produces a finite CFG whose collecting semantics matches the AST collecting semantics at the exit node.</p>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L4</span><span class="lemma-title">Well-formed compilation</span></div>
+          <div class="lemma-body"><b>finite</b> (<i>cfg_edges</i> g)
+<b>cfg_wf</b> g
+<i>cfg_entry</i> g  ≠  <i>cfg_exit</i> g</div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L5</span><span class="lemma-title">Monotonicity of CFG collecting</span></div>
+          <div class="lemma-body">S <u>⊆</u> S'   <u>⟹</u>   <b>cfg_collect</b> g S v  <u>⊆</u>  <b>cfg_collect</b> g S' v       <em>for every v</em></div>
+        </div>
+
+        <div class="lemma-stmt key">
+          <div class="lemma-head"><span class="lemma-id">L6</span><span class="lemma-title">IMP ↔ CFG bridge</span></div>
+          <div class="lemma-body"><b>cfg_collect</b> (<b>to_cfg</b> c) S (<i>cfg_exit</i> (<b>to_cfg</b> c))   <u>=</u>   <b>collect</b> c S</div>
+        </div>
+
+        <p class="step-conc"><strong>Consequence used downstream.</strong> Soundness at the CFG exit transports verbatim back to soundness on the AST.</p>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <div class="step-head"><span class="step-num">Step 3</span><h3>Abstract domain over-approximates concrete operations</h3></div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L7</span><span class="lemma-title">Galois monotonicity</span></div>
+          <div class="lemma-body">a <u>≤</u> b        <u>⟹</u>   <i>γ</i> a  <u>⊆</u>  <i>γ</i> b
+<i>σ₁</i> <u>≤</u> <i>σ₂</i>      <u>⟹</u>   <b>γ_state</b> <i>σ₁</i>  <u>⊆</u>  <b>γ_state</b> <i>σ₂</i></div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L8</span><span class="lemma-title">Join is a sound upper bound</span></div>
+          <div class="lemma-body"><i>γ</i> a          <u>⊆</u>  <i>γ</i> (a <u>⊔</u> b)
+<i>γ</i> b          <u>⊆</u>  <i>γ</i> (a <u>⊔</u> b)
+<b>γ_state</b> <i>σ₁</i>  <u>⊆</u>  <b>γ_state</b> (<i>σ₁</i> <u>⊔</u> <i>σ₂</i>)     <em>(and symmetric)</em></div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L9</span><span class="lemma-title">Lattice laws on the abstract join</span></div>
+          <div class="lemma-body"><b>comp_fun_commute</b> (<u>⊔</u>)             <em>— commutativity + associativity</em>
+
+<em>Consequence:</em>  <b>Finite_Set.fold</b> (<u>⊔</u>) bot  is well-defined and order-independent.</div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L10</span><span class="lemma-title">Soundness of arithmetic</span></div>
+          <div class="lemma-body">s <u>∈</u> <b>γ_state</b> <i>σ</i>   <u>⟹</u>   <b>aval</b> a s  <u>∈</u>  <i>γ</i> (<b>aval_abs</b> a <i>σ</i>)
+
+<em>For Sign:</em>  <b>sign_plus</b> / <b>sign_minus</b> / <b>sign_times</b> soundness  ⟹  <b>aval_sign_sound</b>.</div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L11</span><span class="lemma-title">Soundness of edge transfer</span></div>
+          <div class="lemma-body"><em>For each action a:</em>
+   s <u>∈</u> <b>γ_state</b> <i>σ</i>   <u>⟹</u>   <b>edge_collect</b> a {s}  <u>⊆</u>  <b>γ_state</b> (<b>apply_tf</b> tf a <i>σ</i>)
+
+<em>For Sign:</em>  <b>assign_sign_sound</b>, <b>assume_sign_sound</b>, <b>assume_not_sign_sound</b>.</div>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="step">
+        <div class="step-head"><span class="step-num">Step 4</span><h3>Lift edge soundness to the constraint system</h3></div>
+        <p>At each node, the equation system performs a join over predecessors of the transferred abstract states.</p>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L12</span><span class="lemma-title">Right-hand side definition</span></div>
+          <div class="lemma-body"><b>rhs</b> g tf <u>⊔</u> bot <i>s₀</i> <i>env</i> v   <u>=</u>
+     ⨆ { <b>apply_tf</b> tf a (<i>env</i> u)   |   (u, a, v) <u>∈</u> <i>edges</i> }
+   <u>⊔</u>  (<em>if</em> v <u>=</u> <i>cfg_entry</i> g <em>then</em> <i>s₀</i> <em>else</em> bot)</div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L13</span><span class="lemma-title">Monotonicity of <code>rhs</code></span></div>
+          <div class="lemma-body"><i>env₁</i> <u>≤</u> <i>env₂</i>   <u>⟹</u>   <b>rhs</b> … <i>env₁</i> v  <u>≤</u>  <b>rhs</b> … <i>env₂</i> v       <em>for every v</em>
+
+<em>Requires:</em>
+   <b>finite</b> (<i>cfg_edges</i> g)
+   <b>comp_fun_commute</b> (<u>⊔</u>)
+   join-ub + join-least + join-monotone
+   <b>apply_tf</b> tf a  monotone in its state argument</div>
+        </div>
+
+        <div class="lemma-stmt key">
+          <div class="lemma-head"><span class="lemma-id">L14</span><span class="lemma-title">Post-fixpoint ⟹ pointwise over-approximation <span class="pill key">heart</span></span></div>
+          <div class="lemma-body"><b>is_post_fixpoint</b> <i>env</i>   <u>≡</u>   ∀v. <b>rhs</b> … <i>env</i> v <u>≤</u> <i>env</i> v
+
+<b>is_post_fixpoint</b> <i>env</i>   ∧   s <u>∈</u> <b>γ_state</b> <i>s₀</i>
+   <u>⟹</u>   <b>cfg_collect</b> g {s} v  <u>⊆</u>  <b>γ_state</b> (<i>env</i> v)        <em>for every v</em></div>
+        </div>
+
+        <p class="step-conc">Proof of L14 is by induction along paths in the CFG, using L5, L8, L11, L13.</p>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="step">
+        <div class="step-head"><span class="step-num">Step 5</span><h3>Hand the equation system to the AFP Top-Down Solver</h3></div>
+        <p>The AFP solver consumes a right-hand side in monadic <em>Answer / Query</em> form. We show our <code>rhs</code> fits that interface, and we get the post-fixpoint guarantee in return.</p>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L15</span><span class="lemma-title">Solver-compatible repackaging</span></div>
+          <div class="lemma-body"><b>make_rhs</b> g tf <u>⊔</u> bot <i>s₀</i> v <i>env</i>   <u>=</u>   <b>rhs</b> g tf <u>⊔</u> bot <i>s₀</i> <i>env</i> v       <em>(argument reorder)</em></div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L16</span><span class="lemma-title">Monadic ↔ direct correspondence</span></div>
+          <div class="lemma-body"><b>traverse</b> (<b>make_rhs_tree</b> g tf … v) (<b>env_map</b> η)   <u>=</u>   <b>make_rhs</b> g tf … v η       <em>for every η</em></div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L17</span><span class="lemma-title">Monotonicity of the packaged rhs</span></div>
+          <div class="lemma-body"><b>monotone</b> (<u>≤</u>) (<u>≤</u>) (<b>make_rhs</b> g tf <u>⊔</u> bot <i>s₀</i> v)       <em>(direct consequence of L13)</em></div>
+        </div>
+
+        <div class="lemma-stmt key">
+          <div class="lemma-head"><span class="lemma-id">L18</span><span class="lemma-title">AFP guarantee <span class="pill key">imported</span></span></div>
+          <div class="lemma-body"><b>td_analyse</b> c tf <u>⊔</u> bot <i>s₀</i>   <u>=</u>   <i>env</i>
+   <u>⟹</u>   ∀v.  <b>rhs</b> … <i>env</i> v  <u>≤</u>  <i>env</i> v</div>
+        </div>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="step">
+        <div class="step-head"><span class="step-num">Step 6</span><h3>Compose into end-to-end soundness</h3></div>
+
+        <div class="lemma-stmt key">
+          <div class="lemma-head"><span class="lemma-id">L19</span><span class="lemma-title">Generic pipeline soundness <span class="pill key">main</span></span></div>
+          <div class="lemma-body"><em>Assume:</em>
+   (1)  <b>domain_transfer_sound</b> <i>γ</i> tf                <em>— packaged L11</em>
+   (2)  s <u>∈</u> <b>γ_state</b> <i>s₀</i>                            <em>— initial covered</em>
+   (3)  (c, s) ⇒ t                                <em>— program terminates</em>
+
+<em>Then:</em>
+   t  <u>∈</u>  <b>γ_state</b> (<b>run_analysis</b> cfg c (<i>cfg_exit</i> (<b>to_cfg</b> c)))</div>
+        </div>
+
+        <h4>The composition chain</h4>
+        <div class="chain">                              (L18)  AFP solver
+                        run_analysis is a post-fixpoint
+                                    ↓
+                            (L14)  post_fixpoint_sound
+      cfg_collect (to_cfg c) {s} v  ⊆  γ_state (env v)     for every v
+                                    ↓   specialize  v := cfg_exit (to_cfg c)
+                            (L6)   bridge lemma
+              collect c {s}  ⊆  γ_state (env (cfg_exit ...))
+                                    ↓   (c, s) ⇒ t  ⟹  t ∈ collect c {s}
+              t  ∈  γ_state (run_analysis cfg c (cfg_exit (to_cfg c)))</div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L20</span><span class="lemma-title">Sign instantiation</span></div>
+          <div class="lemma-body"><em>Specialize L19 with:</em>
+   D   <u>=</u>  <b>sign</b>
+   <i>γ</i>   <u>=</u>  <b>gamma_sign</b>
+   tf  <u>=</u>  (<b>assign_sign</b>, <b>assume_sign</b>, <b>assume_not_sign</b>)
+   <i>s₀</i>  <u>=</u>  λx. <b>sign_of_int</b> (s x)
+
+(1) discharged by Sign transfer-function soundness  <em>(Sign half of L11)</em>
+(2) reduces to  s x <u>∈</u> <b>γ_sign</b> (<b>sign_of_int</b> (s x))   <em>— trivial</em></div>
+        </div>
+
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">L21</span><span class="lemma-title">Per-point invariant strengthening</span></div>
+          <div class="lemma-body"><em>Drop the specialization</em>  v := <i>cfg_exit</i> g  <em>in the chain:</em>
+   <b>cfg_collect</b> g {s} v   <u>⊆</u>   <b>γ_state</b> (<i>env</i> v)          <em>for every v</em>
+
+Pulled back along the AST via <b>annotate</b>, this gives sound
+abstract invariants at every program point  →  <b>annotation_sound</b>.</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="label">Summary in one paragraph</div>
+        <p>The AFP solver guarantees a post-fixpoint of our equation system (L15–L18). A post-fixpoint over-approximates the CFG collecting semantics at every node (L14), because at every node the right-hand side is monotone (L13) and built from sound edge transfers (L11) joined by a sound abstract join (L8) using a lattice that makes folds well-defined (L9). At the exit, CFG collecting equals AST collecting (L6), and the AST collecting captures every concrete terminating store (L2). Therefore the abstract value at the exit concretizes to a superset of <code>{ t | (c, s) ⇒ t }</code>. Specializing the domain to <code>sign</code> (L20) and the program point to any <code>v</code> (L21) yields the two end-user statements <code>sign_pipeline_sound</code> and <code>annotation_sound</code>.</p>
+      </div>
+    </section>
+
+    <!-- RECAP -->
+    <section class="stage" id="recap">
+      <h2><span class="badge">★</span>Lemma spine</h2>
+      <p class="lede">The chain of lemmas that, end to end, give us soundness.</p>
+
+      <div class="mermaid">
+flowchart TD
+  L1["IMP concrete<br/>big_step_determ · collect_* · collect_mono"] --> L2
+  L2["CFG collecting<br/>cfg_collect_exit_eq_collect · collect_pp_mono · edge/path mono"] --> L3
+  L3["Abstract domain (Sign)<br/>gamma_state_mono · sign_le_* · join_sign_*<br/>aval_sign_sound · assign/assume_sign_sound"] --> L4
+  L4["Equation system<br/>rhs_mono · collect_pp_abstract_sound · post_fixpoint_sound"] --> L5
+  L5["Solver bridge<br/>make_rhs_mono · make_rhs_tree_correspondence<br/>td_analyse_post_fixpoint (AFP)"] --> L6
+  L6["Pipeline<br/>pipeline_sound · sign_pipeline_sound · annotation_sound"]
+      </div>
+
+      <table>
+        <thead><tr><th>Level</th><th>Key fact</th></tr></thead>
+        <tbody>
+          <tr><td>IMP concrete</td><td><code>collect</code> compositional, monotone, deterministic.</td></tr>
+          <tr><td>CFG collecting</td><td>Matches <code>collect</code> at the exit node.</td></tr>
+          <tr><td>Abstract domain (Sign)</td><td>Sound Galois connection + sound transfer functions.</td></tr>
+          <tr><td>Equations</td><td><code>rhs</code> monotone; post-fixpoint ⇒ over-approximation.</td></tr>
+          <tr><td>Solver bridge</td><td><code>make_rhs_tree</code> ↔ <code>make_rhs</code>; AFP returns a post-fixpoint.</td></tr>
+          <tr><td>Pipeline</td><td>Exit soundness, then per-point soundness via annotation.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Goblint Formalization · pipeline walkthrough · generated companion to <code>docs/PIPELINE_WALKTHROUGH.md</code>.
+    </footer>
+  </main>
+</div>
+
+<script>
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: prefersDark ? 'dark' : 'default',
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', htmlLabels: true, padding: 12 },
+    themeVariables: prefersDark
+      ? { fontFamily: 'Inter, system-ui, sans-serif', primaryColor: '#1b1f2a', primaryTextColor: '#e6e9ef', primaryBorderColor: '#7aa2f7', lineColor: '#a9b1c2', tertiaryColor: '#161922' }
+      : { fontFamily: 'Inter, system-ui, sans-serif' }
+  });
+
+  // active TOC link on scroll
+  const sections = Array.from(document.querySelectorAll('section.stage, header.hero'));
+  const links = Array.from(document.querySelectorAll('nav.toc a'));
+  const byId = id => links.find(a => a.getAttribute('href') === '#' + id);
+  const onScroll = () => {
+    const y = window.scrollY + 120;
+    let current = null;
+    for (const s of sections) { if (s.offsetTop <= y) current = s.id; }
+    links.forEach(a => a.classList.remove('active'));
+    if (current) { const a = byId(current); if (a) a.classList.add('active'); }
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+</body>
+</html>
