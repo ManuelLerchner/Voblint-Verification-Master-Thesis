@@ -66,13 +66,28 @@ Substitute `~/afp/thys` with the path to your AFP checkout's `thys/` directory.
 
 The `quick_and_dirty` option is already set in `ROOT` (allows `sorry` during proof development).
 
+### Isabelle/jEdit
+
+`isabelle jedit` does **not** accept `isabelle build`’s `-D DIR` (for jEdit, `-D` is only for JVM properties like `-Dfoo=bar`). Use **`-d`** for each session root that supplies a `ROOT`.
+
+From the repository root:
+
+```bash
+isabelle jedit \
+  -d ~/afp/thys \
+  -d vendor/td-verification \
+  -d .
+```
+
+Adjust `~/afp/thys` to your AFP `thys/` directory. The final `-d .` registers this repo’s `ROOT` (same role as `build`’s `-D .` for the project session). Then open a theory from `src/` (for example `Goblint_Formalization.thy`) and pick the `Goblint_Formalization` logic session in jEdit if prompted.
+
 ### Session dependencies
 
 | `-d` path | Provides session | Used for |
 |---|---|---|
 | `~/afp/thys` | `Root_Balanced_Tree` | transitive dep of TD solver |
 | `vendor/td-verification` | `TD` | top-down solver (`TD_plain`, `strategy_tree`, …) |
-| `.` (implicit via `-D`) | `Goblint_Formalization` | this project |
+| `.` (`build`’s `-D .`, or `jedit`’s `-d .`) | `Goblint_Formalization` | this project |
 
 ## Isabelle MCP / IR helper
 

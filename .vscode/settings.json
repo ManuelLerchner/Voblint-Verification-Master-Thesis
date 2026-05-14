@@ -1,4 +1,5 @@
 {
   "goblint.isabelleExecutable": "${env:HOME}/Isabelle2025-2/bin/isabelle",
+  "goblint.afpThysDir": "${env:HOME}/afp/thys",
   "goblint.afpTopDownSolverDir": "${workspaceFolder}/../goblint-formalization-kb/raw/repos/afp-entries/Top_Down_Solver"
 }
