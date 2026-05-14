@@ -1,5 +1,5 @@
 theory Sign_Domain
-  imports Abstract_Domain Constraint_System
+  imports Abstract_Domain Constraint_System IMP2_Semantics
 begin
 
 (*
@@ -40,9 +40,21 @@ fun sign_le :: "sign => sign => bool" where
   | "sign_le _     _     = False"
 
 lemma sign_le_refl:    "sign_le s s"                              by (cases s) simp_all
-lemma sign_le_antisym: "sign_le s t ==> sign_le t s ==> s = t"   sorry
-lemma sign_le_trans:   "sign_le s t ==> sign_le t u ==> sign_le s u"  sorry
-lemma gamma_sign_mono: "sign_le s t ==> gamma_sign s <= gamma_sign t"  sorry
+
+lemma sign_le_antisym:
+  assumes st: "sign_le s t" and ts: "sign_le t s"
+  shows "s = t"
+  using st ts by (cases s; cases t; simp)
+
+lemma sign_le_trans:
+  assumes st: "sign_le s t" and tu: "sign_le t u"
+  shows "sign_le s u"
+  using st tu by (cases s; cases t; cases u; simp)
+
+lemma gamma_sign_mono:
+  assumes st: "sign_le s t"
+  shows "gamma_sign s <= gamma_sign t"
+  using st by (cases s; cases t; auto simp: gamma_sign.simps)
 
 instantiation sign :: ord begin
 definition less_eq_sign :: "sign => sign => bool" where "(a::sign) <= b = sign_le a b"
@@ -79,9 +91,14 @@ fun join_sign :: "sign => sign => sign" where
   | "join_sign SPos SPos  = SPos"
   | "join_sign _    _     = STop"
 
-lemma join_sign_ub1:   "sign_le a (join_sign a b)"                    sorry
-lemma join_sign_ub2:   "sign_le b (join_sign a b)"                    sorry
-lemma join_sign_least: "sign_le a c ==> sign_le b c ==> sign_le (join_sign a b) c"  sorry
+lemma join_sign_ub1: "sign_le a (join_sign a b)"
+  by (cases a; cases b; simp add: join_sign.simps)
+
+lemma join_sign_ub2: "sign_le b (join_sign a b)"
+  by (cases a; cases b; simp add: join_sign.simps)
+
+lemma join_sign_least: "sign_le a c ==> sign_le b c ==> sign_le (join_sign a b) c"
+  by (cases a; cases b; cases c; simp add: join_sign.simps)
 lemma join_sign_comm:  "join_sign a b = join_sign b a"                 by (cases a; cases b) simp_all
 lemma join_sign_assoc: "join_sign a (join_sign b c) = join_sign (join_sign a b) c"  by (cases a; cases b; cases c) simp_all
 
@@ -134,10 +151,25 @@ fun aval_sign :: "aexp => (vname => sign) => sign" where
   | "aval_sign (Minus a b) sigma = sign_minus (aval_sign a sigma) (aval_sign b sigma)"
   | "aval_sign (Times a b) sigma = sign_times (aval_sign a sigma) (aval_sign b sigma)"
 
+lemma sign_plus_sound:
+  assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
+  shows "i + j \<in> gamma_sign (sign_plus a b)"
+  using assms by (cases a; cases b; auto simp: gamma_sign.simps)
+
+lemma sign_minus_sound:
+  assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
+  shows "i - j \<in> gamma_sign (sign_minus a b)"
+  using assms by (cases a; cases b; auto simp: gamma_sign.simps)
+
+lemma sign_times_sound:
+  assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
+  shows "i * j \<in> gamma_sign (sign_times a b)"
+  using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg)
+
 lemma aval_sign_sound:
   "(\<forall>x. s x \<in> gamma_sign (sigma x))
-   ==>  aval a s : gamma_sign (aval_sign a sigma)"
-  sorry
+   \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a sigma)"
+  by (induction a arbitrary: s sigma; simp add: aval.simps aval_sign.simps sign_plus_sound sign_minus_sound sign_times_sound)
 
 (* ── Abstract Assume ─────────────────────────────────────────── *)
 
@@ -148,9 +180,39 @@ fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
 fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
   "assume_not_sign _ sigma = sigma"   (* conservative: no refinement *)
 
-interpretation sign_domain:
-  abstract_domain gamma_sign join_sign widen_sign
-  sorry
+interpretation sign_domain: abstract_domain gamma_sign join_sign widen_sign
+proof unfold_locales
+  fix a b :: sign
+  show "gamma_sign bot = {}" unfolding bot_sign_def by simp
+next
+  fix a b :: sign
+  assume "a \<le> b"
+  then show "gamma_sign a \<subseteq> gamma_sign b"
+    unfolding less_eq_sign_def by (rule gamma_sign_mono)
+next
+  fix a b :: sign
+  show "a \<le> join_sign a b"
+    unfolding less_eq_sign_def by (rule join_sign_ub1)
+next
+  fix a b :: sign
+  show "b \<le> join_sign a b"
+    unfolding less_eq_sign_def by (rule join_sign_ub2)
+next
+  fix a b :: sign
+  show "join_sign a b = join_sign b a" by (rule join_sign_comm)
+next
+  fix a b c :: sign
+  show "join_sign a (join_sign b c) = join_sign (join_sign a b) c"
+    by (rule join_sign_assoc)
+next
+  fix a b :: sign
+  show "gamma_sign a \<subseteq> gamma_sign (widen_sign a b)"
+    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub1 less_eq_sign_def)
+next
+  fix a b :: sign
+  show "gamma_sign b \<subseteq> gamma_sign (widen_sign a b)"
+    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
+qed
 
 (* ── Typeclass Instances (required by TD solver interface) ────── *)
 
@@ -160,22 +222,68 @@ interpretation sign_domain:
 
 (* sign :: ord already defined above (less_eq_sign = sign_le). *)
 instantiation sign :: order begin
-instance sorry (* discharge via sign_le_refl / sign_le_antisym / sign_le_trans once proved *)
+instance proof
+  fix x y :: sign
+  assume "x \<le> y" "y \<le> x"
+  then show "x = y"
+    unfolding less_eq_sign_def by (blast intro: sign_le_antisym)
+qed
 end
 
 instantiation sign :: order_bot begin
-instance sorry
+instance proof
+  fix x :: sign
+  show "bot \<le> x"
+    unfolding less_eq_sign_def bot_sign_def by simp
+qed
 end
 
+lemma assume_sign_default:
+  "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_sign b sigma = sigma"
+proof (cases b rule: bexp.exhaust)
+  case (Less a1 a2)
+  assume H: "\<not> (\<exists>x n. b = Less (V x) (N n))" and bL: "b = Less a1 a2"
+  with H have "\<nexists>x n. a1 = V x \<and> a2 = N n" by auto
+  then show ?thesis unfolding bL
+    by (cases a1 rule: aexp.exhaust; cases a2 rule: aexp.exhaust; simp add: assume_sign.simps)
+qed (simp_all add: assume_sign.simps)
+
 lemma assume_sign_sound:
-  "s : sign_domain.gamma_state sigma ==> bval b s
-   ==> s : sign_domain.gamma_state (assume_sign b sigma)"
-  sorry
+  assumes gs: "s \<in> sign_domain.gamma_state sigma" and b: "bval b s"
+  shows "s \<in> sign_domain.gamma_state (assume_sign b sigma)"
+proof (cases "\<exists>x n. b = Less (V x) (N n)")
+  case False
+  with assume_sign_default have "assume_sign b sigma = sigma"
+    by blast
+  with gs show ?thesis by simp
+next
+  case True
+  then obtain x n where bn: "b = Less (V x) (N n)" by blast
+  have xv: "s x < n"
+    using b bn by simp
+  show ?thesis
+  proof (cases "n = 0")
+    case True
+    with bn have "assume_sign b sigma = sigma(x := SNeg)"
+      by (simp add: assume_sign.simps)
+    moreover have "s x \<in> gamma_sign SNeg"
+      using xv True by simp
+    moreover have "\<And>y. y \<noteq> x \<Longrightarrow> s y \<in> gamma_sign (sigma y)"
+      using gs unfolding sign_domain.gamma_state_def by simp
+    ultimately show ?thesis
+      unfolding sign_domain.gamma_state_def by simp
+  next
+    case False
+    with bn have "assume_sign b sigma = sigma"
+      by (simp add: assume_sign.simps False)
+    with gs show ?thesis by simp
+  qed
+qed
 
 lemma assume_not_sign_sound:
-  "s : sign_domain.gamma_state sigma ==> \<not> bval b s
-   ==> s : sign_domain.gamma_state (assume_not_sign b sigma)"
-  sorry
+  "s \<in> sign_domain.gamma_state sigma \<Longrightarrow> \<not> bval b s
+   \<Longrightarrow> s \<in> sign_domain.gamma_state (assume_not_sign b sigma)"
+  unfolding assume_not_sign.simps by simp
 
 (* ── Abstract Assignment ─────────────────────────────────────── *)
 
@@ -185,9 +293,22 @@ where
   "assign_sign x a sigma = sigma(x := aval_sign a sigma)"
 
 lemma assign_sign_sound:
-  "s : sign_domain.gamma_state sigma
-   ==>  s(x := aval a s) : sign_domain.gamma_state (assign_sign x a sigma)"
-  sorry
+  assumes gs: "s \<in> sign_domain.gamma_state sigma"
+  shows "s(x := aval a s) \<in> sign_domain.gamma_state (assign_sign x a sigma)"
+  unfolding assign_sign_def sign_domain.gamma_state_def
+proof safe
+  fix y
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (sigma z)"
+    unfolding sign_domain.gamma_state_def by simp
+  show "(s(x := aval a s)) y \<in> gamma_sign ((sigma(x := aval_sign a sigma)) y)"
+  proof (cases "y = x")
+    case True
+    with V show ?thesis by (simp add: aval_sign_sound)
+  next
+    case False
+    with V show ?thesis by simp
+  qed
+qed
 
 (* ── Abstract Domain Instantiation ───────────────────────────── *)
 
