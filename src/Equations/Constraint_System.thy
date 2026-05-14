@@ -79,6 +79,34 @@ where
           base  = if v = cfg_entry g then insert s0 vals else vals
       in  abs_join_set join_abs bot_abs base)"
 
+lemma abs_join_set_empty [simp]:
+  "abs_join_set join_abs bot_abs {} = bot_abs"
+  unfolding abs_join_set_def by simp
+
+lemma rhs_no_predecessors_not_entry:
+  assumes "v \<noteq> cfg_entry g"
+  assumes "\<And>u a. (u, a, v) \<notin> cfg_edges g"
+  shows "rhs g tf join_abs bot_abs s0 env v = bot_abs"
+proof -
+  have "{(u, a). (u, a, v) \<in> cfg_edges g} = {}"
+    using assms(2) by blast
+  then have "rhs g tf join_abs bot_abs s0 env v = abs_join_set join_abs bot_abs {}"
+    unfolding rhs_def by (simp add: Let_def assms(1))
+  then show ?thesis
+    by simp
+qed
+
+lemma rhs_entry_no_predecessors:
+  assumes "v = cfg_entry g"
+  assumes "\<And>u a. (u, a, v) \<notin> cfg_edges g"
+  shows "rhs g tf join_abs bot_abs s0 env v = abs_join_set join_abs bot_abs {s0}"
+proof -
+  have "{(u, a). (u, a, v) \<in> cfg_edges g} = {}"
+    using assms(2) by blast
+  then show ?thesis
+    unfolding rhs_def using assms(1) by (simp add: Let_def)
+qed
+
 definition is_post_fixpoint ::
     "cfg
      => ('a::ord domain_transfer)

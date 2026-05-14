@@ -116,7 +116,7 @@ where
 (* ── Top-Level Annotation ─────────────────────────────────────── *)
 
 definition annotate_prog ::
-    "com => ('a::{ord,bot}) analysis_config => 'a acom"
+    "com => ('a::{preorder,bot}) analysis_config => 'a acom"
 where
   "annotate_prog c cfg =
      fst (annotate c (run_analysis cfg c) 0)"

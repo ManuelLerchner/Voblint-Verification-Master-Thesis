@@ -50,6 +50,17 @@ definition less_sign    :: "sign => sign => bool" where "(a::sign) <  b = (sign_
 instance ..
 end
 
+instance sign :: preorder
+proof
+  fix x y z :: sign
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_sign_def less_eq_sign_def by simp
+  show "x \<le> x"
+    by (simp add: less_eq_sign_def sign_le_refl)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    unfolding less_eq_sign_def by (rule sign_le_trans)
+qed
+
 (* bot instance: required so abs_state = vname => sign has bot, enabling AFP mlup *)
 instantiation sign :: bot begin
 definition "bot_sign = SBot"

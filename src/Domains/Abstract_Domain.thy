@@ -32,7 +32,7 @@ type_synonym 'a abs_state = "vname => 'a"
    It does NOT require widening — soundness is independent of termination. *)
 
 locale sound_domain =
-  fixes gamma   :: "'a::{ord,bot} => int set"
+  fixes gamma   :: "'a::{preorder,bot} => int set"
   fixes join_op :: "'a => 'a => 'a"
   assumes gamma_bot:
     "gamma bot = {}"
@@ -80,6 +80,9 @@ lemma join_state_comp_fun_commute: "comp_fun_commute join_state"
   apply (unfold_locales)
   apply (simp add: fun_eq_iff join_state_def)
   by (metis join_assoc join_comm)
+
+lemma join_state_comm: "join_state s1 s2 = join_state s2 s1"
+  unfolding join_state_def by (simp add: fun_eq_iff join_comm)
 
 (* ── Key Properties ──────────────────────────────────────────── *)
 

@@ -28,7 +28,7 @@ begin
 *)
 
 definition domain_transfer_sound ::
-    "('a::{ord,bot} => int set)
+    "('a::{preorder,bot} => int set)
      => 'a domain_transfer
      => bool"
 where
@@ -58,7 +58,7 @@ record 'a analysis_config =
 (* ── Run the Pipeline ─────────────────────────────────────────── *)
 
 definition run_analysis ::
-    "('a::{ord,bot}) analysis_config => com => pp => 'a abs_state"
+    "('a::{preorder,bot}) analysis_config => com => pp => 'a abs_state"
 where
   "run_analysis cfg c =
      td_analyse c

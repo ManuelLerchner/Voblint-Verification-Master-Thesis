@@ -7,6 +7,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IR="$SCRIPT_DIR/ir-repo/ir/repl.py"
 
+# Session "TD" (theory TD.TD_plain) — vendor submodule ROOT
+TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$SCRIPT_DIR/vendor/td-verification}"
+if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
+  echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)."
+  echo "  Run: git submodule update --init vendor/td-verification"
+  echo "  Or set TD_COMPONENT_DIR to the directory containing session TD's ROOT."
+  exit 1
+fi
+
 # Locate Isabelle binary
 ISABELLE="${ISABELLE:-/Applications/Isabelle2025-2.app/bin/isabelle}"
 
@@ -50,7 +59,7 @@ if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
         ;;
     esac
   fi
-  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$SCRIPT_DIR" Goblint_Formalization
+  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$SCRIPT_DIR" Goblint_Formalization
   echo ""
 else
   echo "Skipping heap build (IR_SKIP_HEAP_BUILD=1)."
@@ -60,5 +69,6 @@ fi
 exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \
   --session Goblint_Formalization \
+  --dir "$TD_COMPONENT_DIR" \
   --dir "$SCRIPT_DIR" \
   --mcp

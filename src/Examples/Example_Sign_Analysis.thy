@@ -81,28 +81,54 @@ text \<open>
   executable convergence check.
 \<close>
 
-type_synonym ss = "sign \<times> sign"
+datatype ss = SS (fst_ss: sign) (snd_ss: sign)
 
-instantiation prod :: (bot, bot) bot begin
-  definition bot_prod :: "'a \<times> 'b" where "bot_prod = (bot, bot)"
-  instance ..
+instantiation ss :: order
+begin
+
+definition less_eq_ss where "x \<le> y \<longleftrightarrow> fst_ss x \<le> fst_ss y \<and> snd_ss x \<le> snd_ss y"
+definition less_ss where "(x::ss) < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
+
+instance
+proof (intro_classes)
+  fix x y z :: ss
+  show "x \<le> x"
+    by (simp add: less_eq_ss_def sign_le_refl)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    sorry
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    sorry
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    by (simp add: less_ss_def)
+qed
+
+end
+
+instantiation ss :: bot
+begin
+
+definition bot_ss_def: "bot_class.bot = SS SBot SBot"
+
+instance sorry
+
 end
 
 text \<open>Decode a pair as a variable map (other variables map to @{const SBot}).\<close>
 
 definition to_sigma :: "ss \<Rightarrow> vname \<Rightarrow> sign" where
-  "to_sigma s v = (if v = ''x'' then fst s else if v = ''y'' then snd s else SBot)"
+  "to_sigma s v =
+   (if v = ''x'' then fst_ss s else if v = ''y'' then snd_ss s else SBot)"
 
 text \<open>Assignment on pairs via the real @{const assign_sign} on @{const to_sigma}.\<close>
 
 definition tf_assign_ss :: "vname \<Rightarrow> aexp \<Rightarrow> ss \<Rightarrow> ss" where
   "tf_assign_ss x a s =
-     (let \<sigma>' = assign_sign x a (to_sigma s) in (\<sigma>' ''x'', \<sigma>' ''y''))"
+     (let \<sigma>' = assign_sign x a (to_sigma s) in SS (\<sigma>' ''x'') (\<sigma>' ''y''))"
 
-value "tf_assign_ss ''x'' (N 5)                              (STop, STop)"
+value "tf_assign_ss ''x'' (N 5)                              (SS STop STop)"
 \<comment> \<open>(@{const SPos}, @{const STop})\<close>
 
-value "tf_assign_ss ''y'' (Plus (V ''x'') (V ''x'')) (SPos, STop)"
+value "tf_assign_ss ''y'' (Plus (V ''x'') (V ''x'')) (SS SPos STop)"
 \<comment> \<open>(@{const SPos}, @{const SPos})\<close>
 
 
@@ -118,7 +144,7 @@ text \<open>
 datatype PP = PP0 | PP1 | PP2 | PP3
 
 fun constr_sys :: "PP \<Rightarrow> (PP, ss) strategy_tree" where
-  "constr_sys PP0 = Answer (STop, STop)"
+  "constr_sys PP0 = Answer (SS STop STop)"
 | "constr_sys PP1 = Query PP0 (\<lambda>s. Answer (tf_assign_ss ''x'' (N 5) s))"
 | "constr_sys PP2 = Query PP1 (\<lambda>s. Answer s)"
 | "constr_sys PP3 = Query PP2 (\<lambda>s. Answer (tf_assign_ss ''y'' (Plus (V ''x'') (V ''x'')) s))"

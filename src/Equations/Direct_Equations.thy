@@ -220,7 +220,7 @@ definition direct_tree ::
 where
   "direct_tree c n tf join_abs bot_abs s0 v =
      (let preds = predecessors_of c n v;
-          ps    = SOME xs. distinct xs \<and> set xs = preds;
+          ps = (if finite preds then sorted_list_of_set preds else []);
           acc0  = if v = n then join_abs bot_abs s0 else bot_abs
       in  rhs_tree_fold tf join_abs acc0 ps)"
 

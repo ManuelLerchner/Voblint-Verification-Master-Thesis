@@ -36,18 +36,30 @@ theorem td_solver_sound:
     "s : gamma_state s0"
   assumes terminates:
     "big_step (c, s) t"
+  (* Solver bridge (see TD_Interface.td_analyse_post_fixpoint): CFG finiteness,
+     idempotent fold-join, TD termination domain, and whole-CFG reachability. *)
+  assumes fin_cfg: "finite (cfg_edges (to_cfg c))"
+  assumes join_state_cfi:
+    "comp_fun_idem (join_state :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom (make_rhs_tree (to_cfg c) tf join_state bot_state s0)
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach (make_rhs_tree (to_cfg c) tf join_state bot_state s0)
+                    (TD_plain_Interp_solve (make_rhs_tree (to_cfg c) tf join_state bot_state s0)
+                      (cfg_entry (to_cfg c)))
+                    (cfg_entry (to_cfg c))"
   shows
     "t : gamma_state ((td_analyse c tf join_state bot_state s0)
                        (cfg_exit (to_cfg c)))"
 proof -
-  (* TODO: restore  by (rule td_analyse_post_fixpoint)  once fast enough *)
   have post_fp: "is_post_fixpoint (to_cfg c) tf join_state bot_state s0
                    (td_analyse c tf join_state bot_state s0)"
-    sorry
+    by (rule td_analyse_post_fixpoint[OF fin_cfg join_state_cfi join_state_comm
+          td_solve_dom td_cfg_in_reach])
   show ?thesis
-    using post_fp tf_sound_assign tf_sound_assume tf_sound_assume_not
-          s0_sound terminates
-    sorry
+    by (rule exit_sound[OF post_fp order.refl tf_sound_assign tf_sound_assume
+          tf_sound_assume_not s0_sound terminates])
 qed
 
 end

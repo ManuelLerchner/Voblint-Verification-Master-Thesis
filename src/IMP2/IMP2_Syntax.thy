@@ -1,5 +1,5 @@
 theory IMP2_Syntax
-  imports Main
+  imports Main "HOL-Library.Countable"
 begin
 
 (*
@@ -44,5 +44,68 @@ datatype com =
   | Seq    com   com             ("_ ;; _"   [60,  61]  60)
   | If     bexp  com  com        ("IF _ THEN _ ELSE _"   [0, 0, 61] 61)
   | While  bexp  com             ("WHILE _ DO _"         [0, 61]    61)
+
+(* Countability and a fixed linear order (pull-back from @{const to_nat}) —
+   used for @{const sorted_list_of_set} on finite predecessor sets in the CFG. *)
+
+instance aexp :: countable
+  by countable_datatype
+
+instance bexp :: countable
+  by countable_datatype
+
+instantiation aexp :: linorder
+begin
+
+definition less_eq_aexp_def:
+  "((\<le>) :: aexp \<Rightarrow> aexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x \<le> to_nat y"
+
+definition less_aexp_def:
+  "((<) :: aexp \<Rightarrow> aexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
+
+instance
+proof (intro_classes)
+  fix x y z :: aexp
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_aexp_def less_eq_aexp_def
+    using linorder_not_le by force
+  show "x \<le> x"
+    by (simp add: less_eq_aexp_def)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    by (simp add: less_eq_aexp_def order_trans)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    by (simp add: less_eq_aexp_def to_nat_split)
+  show "x \<le> y \<or> y \<le> x"
+    by (simp add: less_eq_aexp_def linear)
+qed
+
+end
+
+instantiation bexp :: linorder
+begin
+
+definition less_eq_bexp_def:
+  "((\<le>) :: bexp \<Rightarrow> bexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x \<le> to_nat y"
+
+definition less_bexp_def:
+  "((<) :: bexp \<Rightarrow> bexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
+
+instance
+proof (intro_classes)
+  fix x y z :: bexp
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_bexp_def less_eq_bexp_def
+    using linorder_not_le by force
+  show "x \<le> x"
+    by (simp add: less_eq_bexp_def)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    by (simp add: less_eq_bexp_def order_trans)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    by (simp add: less_eq_bexp_def to_nat_split)
+  show "x \<le> y \<or> y \<le> x"
+    by (simp add: less_eq_bexp_def linear)
+qed
+
+end
 
 end
