@@ -1,5 +1,5 @@
 theory CFG_Def
-  imports IMP2_Syntax
+  imports IMP2_Syntax "HOL-Library.Countable"
 begin
 
 (*
@@ -32,6 +32,36 @@ datatype edge_action =
   | EA_Assign   vname aexp
   | EA_Assume   bexp
   | EA_AssumeNot bexp
+
+instance edge_action :: countable
+  by countable_datatype
+
+instantiation edge_action :: linorder
+begin
+
+definition less_eq_edge_action_def:
+  "((\<le>) :: edge_action \<Rightarrow> edge_action \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x \<le> to_nat y"
+
+definition less_edge_action_def:
+  "((<) :: edge_action \<Rightarrow> edge_action \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
+
+instance
+proof (intro_classes)
+  fix x y z :: edge_action
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_edge_action_def less_eq_edge_action_def
+    using linorder_not_le by force
+  show "x \<le> x"
+    by (simp add: less_eq_edge_action_def)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    by (simp add: less_eq_edge_action_def order_trans)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    by (simp add: less_eq_edge_action_def to_nat_split)
+  show "x \<le> y \<or> y \<le> x"
+    by (simp add: less_eq_edge_action_def linear)
+qed
+
+end
 
 (* ── CFG Record ───────────────────────────────────────────────── *)
 

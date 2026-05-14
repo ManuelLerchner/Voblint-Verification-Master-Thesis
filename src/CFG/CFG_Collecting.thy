@@ -16,8 +16,25 @@ begin
 fun edge_collect :: "edge_action => store set => store set" where
     "edge_collect EA_Nop          S = S"
   | "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s : S}"
-  | "edge_collect (EA_Assume b)    S = {s : S. bval b s}"
-  | "edge_collect (EA_AssumeNot b) S = {s : S. \<not> bval b s}"
+  | "edge_collect (EA_Assume b)    S = Collect (\<lambda>s. s \<in> S \<and> bval b s)"
+  | "edge_collect (EA_AssumeNot b) S = Collect (\<lambda>s. s \<in> S \<and> \<not> bval b s)"
+
+lemma edge_collect_mono:
+  assumes "S \<subseteq> T"
+  shows "edge_collect a S \<subseteq> edge_collect a T"
+proof (cases a)
+  case EA_Nop
+  with assms show ?thesis by simp
+next
+  case (EA_Assign x1 a1)
+  with assms show ?thesis by auto
+next
+  case (EA_Assume b)
+  with assms show ?thesis by (auto simp add: subset_iff mem_Collect_eq)
+next
+  case (EA_AssumeNot b)
+  with assms show ?thesis by (auto simp add: subset_iff mem_Collect_eq)
+qed
 
 (* Lived in CFG_Path.thy but must follow edge_collect (no import cycle). *)
 fun path_collect :: "(edge_action * pp) list => store set => store set" where
@@ -27,9 +44,29 @@ fun path_collect :: "(edge_action * pp) list => store set => store set" where
 lemma path_collect_empty[simp]: "path_collect [] S = S"
   by simp
 
+lemma path_collect_mono_strong:
+  "S \<subseteq> T \<Longrightarrow> path_collect es S \<subseteq> path_collect es T"
+proof (induction es arbitrary: S T)
+  case Nil
+  assume le: "S \<subseteq> T"
+  show "path_collect [] S \<subseteq> path_collect [] T"
+    unfolding path_collect.simps using le by blast
+next
+  case (Cons e es)
+  assume le: "S \<subseteq> T"
+  obtain a p where ep: "e = (a, p)" by (cases e) auto
+  have sub_edge: "edge_collect a S \<subseteq> edge_collect a T"
+    by (rule edge_collect_mono[OF le])
+  have step: "path_collect es (edge_collect a S) \<subseteq> path_collect es (edge_collect a T)"
+    by (rule Cons.IH[OF sub_edge])
+  show "path_collect (e # es) S \<subseteq> path_collect (e # es) T"
+    unfolding path_collect.simps using ep step by simp
+qed
+
 lemma path_collect_mono:
-  "S \<subseteq> T ==> path_collect es S \<subseteq> path_collect es T"
-  sorry
+  assumes subset: "S \<subseteq> T"
+  shows "path_collect es S \<subseteq> path_collect es T"
+  by (rule path_collect_mono_strong[OF subset])
 
 (* ── CFG Collecting Environment ───────────────────────────────── *)
 (*
@@ -70,7 +107,16 @@ definition cfg_collect :: "cfg => store set => cenv" where
 
 lemma collect_pp_mono:
   "mono (\<lambda>rho. collect_pp g rho v)"
-  sorry
+proof (rule monoI)
+  fix rho1 rho2 :: cenv
+  assume le: "rho1 \<le> rho2"
+  have ru: "\<And>u. rho1 u \<subseteq> rho2 u"
+    using le by (simp add: le_fun_def)
+  have edge: "\<And>u a. (u, a, v) \<in> cfg_edges g \<Longrightarrow> edge_collect a (rho1 u) \<subseteq> edge_collect a (rho2 u)"
+    by (meson ru edge_collect_mono)
+  show "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
+    unfolding collect_pp_def using edge by blast
+qed
 
 (* ── Correspondence Theorem ──────────────────────────────────────
    CFG collecting semantics at the exit node equals IMP2 collecting.
