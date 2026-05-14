@@ -91,6 +91,8 @@ Adjust `~/afp/thys` to your AFP `thys/` directory. The final `-d .` registers th
 
 ## Isabelle MCP / IR helper
 
+Agent-oriented tips (Sledgehammer, `metis` pitfalls, induction gotchas, MCP tool list): **`docs/ISABELLE_AGENT_NOTES.md`**.
+
 Use the existing scripts:
 
 ```bash
@@ -100,6 +102,7 @@ Use the existing scripts:
 
 ## Suggested Reading Order
 
-1. `docs/PROOF_OVERVIEW.md` (theorem chain, key types, key lemmas)
-2. `docs/IMPLEMENTATION_GUIDE.md` (phase plan and dependency order)
-3. `src/Goblint_Formalization.thy` (top-level imports/session entry)
+1. `docs/ISABELLE_AGENT_NOTES.md` (MCP + Sledgehammer workflow, common proof traps in this repo)
+2. `docs/PROOF_OVERVIEW.md` (theorem chain, key types, key lemmas)
+3. `docs/IMPLEMENTATION_GUIDE.md` (phase plan and dependency order)
+4. `src/Goblint_Formalization.thy` (top-level imports/session entry)

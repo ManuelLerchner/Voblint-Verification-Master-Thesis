@@ -110,7 +110,7 @@ The thesis contribution divides into:
 | `collect_SKIP/Assign/Seq/If` | **proved** | easy | unfold + big_step / `fastforce` |
 | `compile_fresh`, `compile_finite`, `compile_entry_ne_exit` | sorry | medium | induction on `compile` |
 | `collect_While` | sorry | medium-hard | lfp + big_step |
-| `collect_pp_mono` | sorry | medium | monotonicity of lfp argument |
+| `collect_pp_mono` | **proved** | medium | monotonicity of `collect_pp` in `rho` (`CFG_Collecting.thy`) |
 | `sign_le` lattice laws, `gamma_sign_mono` | sorry | easy | case splits |
 | `aval_sign_sound`, `assign_sign_sound` | sorry | easy | induction on aexp |
 | `make_rhs_mono` | sorry | medium | fold monotonicity; depends on `tf` being monotone |
@@ -167,6 +167,8 @@ to compose transfer functions.
 ```
 Restart Claude Code after `./start-ir.sh`.
 
+**Agent tips (Sledgehammer, MCP, Isar traps):** see **`docs/ISABELLE_AGENT_NOTES.md`** in this repository.
+
 ## Knowledge base
 
 Research notes, supervisor meetings, concept articles: `~/goblint-formalization-kb/`.
@@ -182,7 +184,7 @@ Research notes, supervisor meetings, concept articles: `~/goblint-formalization-
 
 ### Session start
 
-1. Read **`AGENTS.md`** (this file) — project goal, locked decisions, folder layout
+1. Read **`AGENTS.md`** (this file) — project goal, locked decisions, folder layout; skim **`docs/ISABELLE_AGENT_NOTES.md`** for Isabelle/MCP/Sledgehammer workflow
 2. Check which theories exist: `ls src/`
 3. Batch-check compilation: `isabelle build -d <afp> -D . Goblint_Formalization` (see `ROOT` for AFP path)
 4. Optionally connect MCP for interactive proof work (see below)
@@ -275,7 +277,7 @@ ToolSearch("select:mcp__isabelle-ir__sledgehammer,mcp__isabelle-ir__find_theorem
 ### Development loop
 
 1. Draft lemma with `sorry` to check the statement type-checks
-2. `sledgehammer` on subgoals (time-bounded)
+2. `sledgehammer` on subgoals (time-bounded); see **`docs/ISABELLE_AGENT_NOTES.md`** for MCP + tactic choice
 3. Fill proofs; structured Isar when automation fails
 4. Commit when a top-level lemma closes
 
