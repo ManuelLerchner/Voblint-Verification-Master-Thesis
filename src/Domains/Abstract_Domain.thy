@@ -36,17 +36,25 @@ locale sound_domain =
   fixes join_op :: "'a => 'a => 'a"
   assumes gamma_bot:
     "gamma bot = {}"
-  assumes gamma_join_ub1:
-    "gamma a <= gamma (join_op a b)"
-  assumes gamma_join_ub2:
-    "gamma b <= gamma (join_op a b)"
   assumes gamma_mono:
     "a <= b ==> gamma a <= gamma b"
+  assumes join_ub1:
+    "a <= join_op a b"
+  assumes join_ub2:
+    "b <= join_op a b"
   assumes join_comm:
     "join_op a b = join_op b a"
   assumes join_assoc:
     "join_op a (join_op b c) = join_op (join_op a b) c"
 begin
+
+(* ── Derived gamma-join bounds (from join_ub + gamma_mono) ─── *)
+
+lemma gamma_join_ub1: "gamma a <= gamma (join_op a b)"
+  by (rule gamma_mono[OF join_ub1])
+
+lemma gamma_join_ub2: "gamma b <= gamma (join_op a b)"
+  by (rule gamma_mono[OF join_ub2])
 
 (* ── Lifted Concretization ───────────────────────────────────── *)
 
