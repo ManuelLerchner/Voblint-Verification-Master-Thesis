@@ -10,6 +10,8 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Equations"
     "Solver"
     "Pipeline"
+    "Examples"
   theories
     Goblint_Formalization
     Scratch
+    Example_Sign_Analysis
