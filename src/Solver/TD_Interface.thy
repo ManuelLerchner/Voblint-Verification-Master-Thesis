@@ -26,11 +26,25 @@ where
 
 lemma make_rhs_mono:
   assumes fin: "finite (cfg_edges g)"
-  assumes cfu: "comp_fun_commute (join_abs :: 'a::ord abs_state => 'a abs_state => 'a abs_state)"
-  shows "monotone (<=) (<=) (make_rhs g tf join_abs bot_abs s0 v)"
-  unfolding monotone_def make_rhs_def
-  using rhs_mono[OF fin cfu]
-  by (simp add: le_fun_def)
+  assumes cfu: "comp_fun_commute (join_abs :: 'a::preorder abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  assumes join_ub1: "\<And>x y::'a abs_state. x \<le> join_abs x y"
+  assumes join_ub2: "\<And>x y::'a abs_state. y \<le> join_abs x y"
+  assumes join_mono:
+      "\<And>x1 y1 x2 y2::'a abs_state. x1 \<le> y1 \<Longrightarrow> x2 \<le> y2 \<Longrightarrow> join_abs x1 x2 \<le> join_abs y1 y2"
+  assumes join_least:
+      "\<And>x y z::'a abs_state. x \<le> z \<Longrightarrow> y \<le> z \<Longrightarrow> join_abs x y \<le> z"
+  assumes tf_mono:
+      "\<And>a \<sigma>1 \<sigma>2::'a abs_state. \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> apply_tf tf a \<sigma>1 \<le> apply_tf tf a \<sigma>2"
+  shows "monotone (\<le>) (\<le>) (make_rhs g tf join_abs bot_abs s0 v)"
+proof (rule monotoneI)
+  fix env1 env2 :: "pp \<Rightarrow> 'a abs_state"
+  assume "env1 \<le> env2"
+  then have env_le: "\<forall>v. env1 v \<le> env2 v"
+    by (simp add: le_fun_def)
+  show "make_rhs g tf join_abs bot_abs s0 v env1 \<le> make_rhs g tf join_abs bot_abs s0 v env2"
+    unfolding make_rhs_def
+    by (rule rhs_mono[OF fin cfu join_ub1 join_ub2 join_mono join_least tf_mono env_le])
+qed
 
 (* -- Strategy-tree bridge to AFP TD_plain -- *)
 

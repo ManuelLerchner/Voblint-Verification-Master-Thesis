@@ -92,9 +92,52 @@ lemma gamma_join_sound:
 
 (* Each element of a finite set is below the fold-join over that set.
    Needed for collect_pp_abstract_sound. *)
+
+lemma join_fold_ge:
+  assumes "finite S" and "x \<in> S"
+  shows "x \<le> Finite_Set.fold join_op bot S"
+proof -
+  have aux: "finite S \<Longrightarrow> \<forall>y\<in>S. y \<le> Finite_Set.fold join_op bot S"
+  proof (induct S rule: finite_induct)
+    case empty
+    show ?case by simp
+  next
+    case (insert a F)
+    interpret j: comp_fun_commute join_op
+      by (rule join_comp_fun_commute)
+    have fold_ins: "Finite_Set.fold join_op bot (insert a F) =
+        join_op a (Finite_Set.fold join_op bot F)"
+      using insert.hyps by (simp add: j.fold_insert)
+    have IH: "\<forall>y\<in>F. y \<le> Finite_Set.fold join_op bot F"
+      using insert.hyps(3) by blast
+ 
+    show "\<forall>y\<in>insert a F. y \<le> Finite_Set.fold join_op bot (insert a F)"
+      unfolding fold_ins
+    proof (intro ballI)
+      fix y
+      assume "y \<in> insert a F"
+      then consider "y = a" | "y \<in> F" by blast
+      then show "y \<le> join_op a (Finite_Set.fold join_op bot F)"
+      proof cases
+        case 1
+        then show ?thesis
+          by (simp add: join_ub1)
+      next
+        case 2
+        then have "y \<le> Finite_Set.fold join_op bot F"
+          using IH by simp
+        also have "\<dots> \<le> join_op a (Finite_Set.fold join_op bot F)"
+          by (rule join_ub2)
+        finally show ?thesis .
+      qed
+    qed
+  qed
+  from assms aux show ?thesis by simp
+qed
+
 lemma gamma_abs_join_set_ub:
   "finite S ==> x \<in> S ==> gamma x <= gamma (Finite_Set.fold join_op bot S)"
-  sorry
+  using gamma_mono join_fold_ge by auto
 
 lemma gamma_state_mono:
   "sigma1 <= sigma2 ==> gamma_state sigma1 <= gamma_state sigma2"
@@ -103,15 +146,17 @@ lemma gamma_state_mono:
 
 lemma gamma_state_bot:
   "gamma_state bot_state = {}"
-  sorry
+  unfolding gamma_state_def bot_state_def using gamma_bot by auto
 
 lemma gamma_state_join_ub1:
   "gamma_state sigma1 <= gamma_state (join_state sigma1 sigma2)"
-  sorry
+  unfolding gamma_state_def join_state_def
+  using gamma_join_ub1 by blast
 
 lemma gamma_state_join_ub2:
   "gamma_state sigma2 <= gamma_state (join_state sigma1 sigma2)"
-  sorry
+  unfolding gamma_state_def join_state_def
+  using gamma_join_ub2 by blast
 
 end
 

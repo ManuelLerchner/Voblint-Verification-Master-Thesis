@@ -79,6 +79,16 @@ definition cfg_nodes :: "cfg => pp set" where
 definition predecessors :: "cfg => pp => (pp * edge_action) set" where
   "predecessors g v = {(u, a) | u a. (u, a, v) : cfg_edges g}"
 
+lemma finite_predecessors:
+  assumes "finite (cfg_edges g)"
+  shows "finite (predecessors g v)"
+proof -
+  have "predecessors g v \<subseteq> (\<lambda>e :: pp \<times> edge_action \<times> pp. (fst e, fst (snd e))) ` cfg_edges g"
+    unfolding predecessors_def by force
+  then show ?thesis
+    using assms finite_subset finite_imageI by blast
+qed
+
 definition successors :: "cfg => pp => (pp * edge_action) set" where
   "successors g u = {(w, a) | w a. (u, a, w) : cfg_edges g}"
 
