@@ -1,4 +1,4 @@
-Compressing manually since the skill runner failed.
+<!-- markdownlint-disable-file MD025 -->
 
 # AGENTS.md
 
@@ -229,7 +229,27 @@ Load MCP tool schemas via `ToolSearch` before first use (see `docs/ISABELLE_AGEN
 4. Try automation
 5. Split helpers if needed
 6. Replace `sorry`
-7. Commit only when top-level theorem closes
+7. Commit only when top-level theorem closed
+
+# Isabelle MCP workflow
+
+1. `isabelle build …` until the session is green.  
+2. Start MCP, `load_theory`, `init` a small REPL.  
+3. Copy the **subgoal** into a scratch `lemma` / `apply` sequence in `step`; run **`sledgehammer`**.  
+4. Paste back **`blast`/`auto`/`meson`** first; use **`metis`** only if checked and fast in batch.  
+5. If automation fails, write 5–15 lines of Isar and move on.
+
+---
+
+From the **repository root** (the directory containing `ROOT`):
+
+```bash
+isabelle build \
+  -d ~/afp/thys \
+  -d vendor/td-verification \
+  -D . \
+  Goblint_Formalization
+```
 
 ---
 

@@ -74,7 +74,12 @@ record cfg =
 
 definition cfg_nodes :: "cfg => pp set" where
   "cfg_nodes g = {cfg_entry g, cfg_exit g}
-                 Un Union ((\<lambda>(u, _, v). {u, v}) ` cfg_edges g)"
+                 Un Union ((\<lambda>e. {fst e, snd (snd e)}) ` cfg_edges g)"
+
+lemma cfg_edge_endpoints_in_cfg_nodes:
+  assumes e: "(u, av) \<in> cfg_edges g"
+  shows "u \<in> cfg_nodes g \<and> snd av \<in> cfg_nodes g"
+  unfolding cfg_nodes_def using e by force
 
 definition predecessors :: "cfg => pp => (pp * edge_action) set" where
   "predecessors g v = {(u, a) | u a. (u, a, v) : cfg_edges g}"
@@ -97,6 +102,6 @@ definition successors :: "cfg => pp => (pp * edge_action) set" where
 definition cfg_wf :: "cfg => bool" where
   "cfg_wf g = (cfg_entry g \<noteq> cfg_exit g
                \<and> finite (cfg_edges g)
-               \<and> (\<forall>(u, _, v) \<in> cfg_edges g. u \<in> cfg_nodes g \<and> v \<in> cfg_nodes g))"
+               \<and> (\<forall>e \<in> cfg_edges g. fst e \<in> cfg_nodes g \<and> snd (snd e) \<in> cfg_nodes g))"
 
 end
