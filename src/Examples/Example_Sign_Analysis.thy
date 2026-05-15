@@ -95,9 +95,11 @@ proof (intro_classes)
   show "x \<le> x"
     by (simp add: less_eq_ss_def sign_le_refl)
   show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
-    sorry
+    by (meson less_eq_ss_def order.trans)
+  
   show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
-    sorry
+    by (simp add: less_eq_ss_def order_class.order_eq_iff ss.expand)
+ 
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
     by (simp add: less_ss_def)
 qed
@@ -109,7 +111,7 @@ begin
 
 definition bot_ss_def: "bot_class.bot = SS SBot SBot"
 
-instance sorry
+instance ..
 
 end
 
