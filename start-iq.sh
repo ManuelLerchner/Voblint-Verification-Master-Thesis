@@ -25,6 +25,15 @@ if [[ ! -f "$JAR" ]]; then
   exit 1
 fi
 
+# Session "TD" lives in the vendored td-verification submodule; jEdit must
+# see it to load Goblint_Formalization. Matches start-ir.sh.
+TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$SCRIPT_DIR/vendor/td-verification}"
+if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
+  echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)." >&2
+  echo "  Run: git submodule update --init vendor/td-verification" >&2
+  exit 1
+fi
+
 # Match the token in .mcp.json
 export IQ_AUTH_TOKEN="${IQ_AUTH_TOKEN:-isabelle-local}"
 
@@ -40,4 +49,4 @@ echo "Once the splash clears, agent can call mcp__isabelle-iq__authenticate"
 echo "with token='$IQ_AUTH_TOKEN'."
 echo
 
-exec "$ISABELLE" jedit -d "$SCRIPT_DIR" "$@"
+exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$SCRIPT_DIR" "$@"
