@@ -257,6 +257,61 @@ Flow: build → server up → `connect` → `load_theory` → `init` → `step` 
 
 ---
 
+## MCP (Isabelle/Q jEdit plugin — `isabelle-iq`)
+
+**Optional / opportunistic.** I/Q is the AWS Labs Scala plugin for
+Isabelle/jEdit that exposes the same I/R REPL **plus** document-aware tools
+(diagnostics, sorry positions, structured edits, command-state inspection).
+Vendored alongside I/R in `ir-repo/iq/`. Use I/Q when jEdit is open;
+otherwise stay on I/R.
+
+### One-time install
+
+```bash
+./setup-iq.sh      # builds ir-repo/iq/, installs JAR to ~/.isabelle/.../jedit/jars/
+```
+
+### Per-session start
+
+```bash
+./start-iq.sh      # launches Isabelle/jEdit; plugin auto-binds 127.0.0.1:8765
+```
+
+The token is pinned to `isabelle-local` via `IQ_AUTH_TOKEN`, matching the
+`isabelle-iq` entry in `.mcp.json`. Allowed read/write roots are restricted
+to the repo root.
+
+### When to prefer I/Q over I/R
+
+| Task | Prefer |
+|---|---|
+| Quick batch tactic try-out, headless work | I/R |
+| Auditing a sorry inventory across a file | I/Q (`get_sorry_positions`) |
+| Reading errors/warnings from a slow batch build | I/Q (`get_diagnostics`) |
+| Editing a `.thy` and staying in sync with the heap | I/Q (`write_file` is doc-aware) |
+| Inspecting proof state at a specific command offset | I/Q (`get_command_info`) |
+| Non-invasive Isar trial without persisting | I/Q (`explore`) |
+
+I/Q internally forks its own I/R, so running both servers simultaneously is
+fine but the I/R port :9148 only carries the headless daemon — I/Q's REPL
+lives on :8765.
+
+### I/Q standing rules
+
+* `authenticate` once per connection with token `isabelle-local`. Required
+  before any tool except `tools/list` / `initialize` / `ping`.
+* `write_file` modes: `str_replace`, `insert`, line-replace. Prefer
+  `str_replace` over blind overwrite — keeps the jEdit document model
+  consistent.
+* `explore` ≠ `step`. `explore` tries an Isar candidate **without**
+  persisting it to any REPL/document; `repl_step` commits.
+* If you edit a `.thy` outside I/Q (e.g. via `Edit` tool) → call
+  `open_file` then `save_file` once to resync jEdit.
+* When jEdit is **not running**, all `isabelle-iq` calls return errors
+  immediately. Fall back to `isabelle-ir`.
+
+---
+
 # Isabelle proof pitfalls
 
 ## Avoid

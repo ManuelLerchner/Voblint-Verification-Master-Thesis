@@ -296,6 +296,13 @@ lemma compile_Seq_0:
   shows "compile (c1 ;; c2) 0 = (n2, en1, ex2, E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2)"
   using assms by (simp add: compile.simps Let_def)
 
+lemma compile_While_0:
+  assumes "compile c 1 = (n1, en1, ex1, E1)"
+  shows "compile (WHILE b DO c) 0 =
+         (Suc n1, (0::pp), n1,
+          {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)})"
+  using assms by (simp add: compile.simps Let_def)
+
 lemma cfg_edges_entry_exit_Seq:
   assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
@@ -459,41 +466,46 @@ proof -
   finally show ?thesis .
 qed
 
+lemma path_sound_cfg_collect_aux:
+  assumes p: "cfg_path g u es v"
+  shows "path_collect es (cfg_collect g S u) \<subseteq> cfg_collect g S v"
+proof (insert p, induction es arbitrary: u v)
+  case Nil
+  then have "u = v" by (cases rule: cfg_path.cases) simp_all
+  then show ?case by simp
+next
+  case (Cons e es')
+  assume p: "cfg_path g u (e # es') v"
+  obtain a w where ew: "e = (a, w)" by (cases e) auto
+  from p ew obtain ed: "(u, a, w) \<in> cfg_edges g" and p2: "cfg_path g w es' v"
+    by (cases rule: cfg_path.cases) auto
+  have step_edge: "edge_collect a (cfg_collect g S u) \<subseteq> cfg_collect g S w"
+    by (rule cfg_collect_step[OF ed])
+  have IH: "path_collect es' (cfg_collect g S w) \<subseteq> cfg_collect g S v"
+    by (rule Cons.IH[OF p2])
+  have "path_collect es' (edge_collect a (cfg_collect g S u))
+        \<subseteq> path_collect es' (cfg_collect g S w)"
+    by (rule path_collect_mono_strong[OF step_edge])
+  also have "\<dots> \<subseteq> cfg_collect g S v"
+    by (rule IH)
+  finally show ?case unfolding ew path_collect.simps .
+qed
+
 lemma path_sound_cfg_collect:
   assumes es: "cfg_path g (cfg_entry g) es v"
   shows "path_collect es S \<subseteq> cfg_collect g S v"
-  using assms
-proof (induction es arbitrary: v S rule: list.induct)
-  case Nil
-  then have v: "v = cfg_entry g"
-    by (cases rule: cfg_path.cases) auto
-  have "S \<subseteq> cfg_collect g S (cfg_entry g)"
+proof -
+  have ent: "S \<subseteq> cfg_collect g S (cfg_entry g)"
   proof -
     have "cfg_collect g S (cfg_entry g) = cfg_collect_F g S (cfg_collect g S) (cfg_entry g)"
       using cfg_collect_lfp_unfold by simp
     then show ?thesis unfolding cfg_collect_F_def by auto
   qed
-  then show ?case unfolding v path_collect.simps by auto
-next
-  case (Cons e es)
-  obtain a w where ep: "e = (a, w)" by (cases e) auto
-  from Cons.prems ep obtain e1: "(cfg_entry g, a, w) : cfg_edges g"
-    and p: "cfg_path g w es v"
-    by (cases rule: cfg_path.cases) auto
-  have sub: "path_collect es (edge_collect a S) \<subseteq> cfg_collect g S v"
-    apply(auto)
-    sorry
-
-  have step: "edge_collect a S \<subseteq> cfg_collect g S w"
-  proof (rule order_trans)
-    show "edge_collect a S \<subseteq> edge_collect a (cfg_collect g S (cfg_entry g))"
-      by (metis UnCI cfg_collect_F_def cfg_collect_lfp_unfold edge_collect_mono subsetI)
-  
-    show "edge_collect a (cfg_collect g S (cfg_entry g)) \<subseteq> cfg_collect g S w"
-      using cfg_collect_step[OF e1] by simp
-  qed
-  show ?case
-    unfolding ep path_collect.simps using sub step by auto
+  have "path_collect es S \<subseteq> path_collect es (cfg_collect g S (cfg_entry g))"
+    by (rule path_collect_mono_strong[OF ent])
+  also have "\<dots> \<subseteq> cfg_collect g S v"
+    by (rule path_sound_cfg_collect_aux[OF es])
+  finally show ?thesis .
 qed
 
 (* big-step execution yields a CFG path to exit (converse of compile_path_big_step). *)
@@ -501,7 +513,7 @@ lemma big_step_cfg_path:
   assumes "(c, s) \<Rightarrow> t" and  "s \<in> S" 
   shows "\<exists>es. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))
             \<and> t \<in> path_collect es {s}"
-using assms proof (induction "(c,s)" "t" arbitrary: s rule: big_step.induct)
+using assms(1) proof (induction "(c,s)" "t" arbitrary: c s t rule: big_step.induct)
   case Skip
   obtain n' en ex E where comp: "compile SKIP 0 = (n', en, ex, E)"
     and en: "cfg_entry (to_cfg SKIP) = en"
@@ -511,7 +523,7 @@ using assms proof (induction "(c,s)" "t" arbitrary: s rule: big_step.induct)
   from comp have en0: "en = 0" and ex1: "ex = 1" and Eeq: "E = {(0, EA_Nop, 1)}"
     by auto
   show ?case
-    using E Eeq Skip.hyps en en0 ex ex1 by fastforce
+    using E Eeq en en0 ex ex1 assms(2) by fastforce
 
 next
   case (Assign x a)
@@ -524,7 +536,7 @@ next
     by auto
   show ?case
     apply (rule exI[where x = "[(EA_Assign x a, 1)]"])
-    using Assign.hyps E Eeq en0 ex1 en ex by auto
+    using E Eeq en0 ex1 en ex assms(2) by auto
   
 next
   case (Seq c1 c2 s s' t)
@@ -538,8 +550,30 @@ next
   case (IfFalse b s c1 c2 t)
   show ?case sorry
 next
-  case (WhileFalse b s c)
-  show ?case sorry
+  case (WhileFalse b s c1)
+  (* Avoid shadowing outer schematic command c from the lemma conclusion. *)
+  obtain n' en ex E where comp: "compile (WHILE b DO c1) 0 = (n', en, ex, E)"
+    and enG: "cfg_entry (to_cfg (WHILE b DO c1)) = en"
+    and exG: "cfg_exit (to_cfg (WHILE b DO c1)) = ex"
+    and EG: "cfg_edges (to_cfg (WHILE b DO c1)) = E"
+    by (rule to_cfg_compile)
+  obtain n1 en1 ex1 E1 where sub: "compile c1 1 = (n1, en1, ex1, E1)"
+    by (cases "compile c1 1") auto
+  from sub have comp_shape: "compile (WHILE b DO c1) 0 =
+      (Suc n1, 0, n1, {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)})"
+    by (rule compile_While_0)
+  with comp have ens: "n' = Suc n1" "en = 0" "ex = n1"
+    and Eeq: "E = {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)}"
+    by simp_all
+  have edge: "(en, EA_AssumeNot b, ex) \<in> cfg_edges (to_cfg (WHILE b DO c1))"
+    using ens Eeq EG by simp
+  have path: "cfg_path (to_cfg (WHILE b DO c1)) en [(EA_AssumeNot b, ex)] ex"
+    by (rule cfg_path.step[OF edge cfg_path.empty])
+  have mem: "s \<in> path_collect [(EA_AssumeNot b, ex)] {s}"
+    using WhileFalse.hyps(1) by (simp add: path_collect.simps)
+  show ?case
+    apply (rule exI[where x = "[(EA_AssumeNot b, ex)]"])
+    using path mem enG exG by simp
 next
   case (WhileTrue b s c t s')
   show ?case sorry
