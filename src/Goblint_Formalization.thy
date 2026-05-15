@@ -22,7 +22,6 @@ theory Goblint_Formalization
     TD_Soundness
     (* ── Full Pipeline ──────────────────────────────────────── *)
     Pipeline
-    Result_Mapping
 begin
 
 (*
