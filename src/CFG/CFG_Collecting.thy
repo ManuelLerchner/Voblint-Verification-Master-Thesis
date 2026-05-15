@@ -296,6 +296,137 @@ lemma compile_Seq_0:
   shows "compile (c1 ;; c2) 0 = (n2, en1, ex2, E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2)"
   using assms by (simp add: compile.simps Let_def)
 
+lemma cfg_edges_entry_exit_Seq:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "cfg_edges (to_cfg (c1 ;; c2)) = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+    and "cfg_entry (to_cfg (c1 ;; c2)) = en1"
+    and "cfg_exit (to_cfg (c1 ;; c2)) = ex2"
+proof -
+  define E12 where "E12 = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+  from c1 c2 have cmp: "compile (c1 ;; c2) 0 = (n2, en1, ex2, E12)"
+    unfolding E12_def by (rule compile_Seq_0)
+  show "cfg_edges (to_cfg (c1 ;; c2)) = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+    unfolding to_cfg_def E12_def[symmetric] cmp by simp
+  show "cfg_entry (to_cfg (c1 ;; c2)) = en1"
+    unfolding to_cfg_def cmp by simp
+  show "cfg_exit (to_cfg (c1 ;; c2)) = ex2"
+    unfolding to_cfg_def cmp by simp
+qed
+
+lemma cfg_path_mono_edges:
+  assumes sub: "cfg_edges g \<subseteq> cfg_edges h"
+    and p: "cfg_path g u es v"
+  shows "cfg_path h u es v"
+  using p sub by (induction rule: cfg_path.induct) (auto intro: cfg_path.intros subsetD)
+
+lemma cfg_edges_compile_Seq_E1_subset:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "E1 \<subseteq> cfg_edges (to_cfg (c1 ;; c2))"
+proof -
+  have HG: "cfg_edges (to_cfg (c1 ;; c2)) = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+    by (fact cfg_edges_entry_exit_Seq(1)[OF c1 c2])
+  then show ?thesis unfolding HG by blast
+qed
+
+lemma cfg_edges_compile_Seq_E2_subset:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "E2 \<subseteq> cfg_edges (to_cfg (c1 ;; c2))"
+proof -
+  have HG: "cfg_edges (to_cfg (c1 ;; c2)) = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+    by (fact cfg_edges_entry_exit_Seq(1)[OF c1 c2])
+  then show ?thesis unfolding HG by blast
+qed
+
+lemma seq_comp_entry_ne_exit:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "en1 \<noteq> ex2"
+proof -
+  define E12 where "E12 = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+  from assms have "compile (c1 ;; c2) 0 = (n2, en1, ex2, E12)"
+    unfolding E12_def by (rule compile_Seq_0)
+  from compile_entry_ne_exit[OF this] show ?thesis by simp
+qed
+
+lemma Seq_edge_cross_bridge:
+  fixes E1 E2 :: "(pp \<times> edge_action \<times> pp) set"
+    and u v n1 ex1 en2 :: pp
+    and a :: edge_action
+  assumes bd1: "\<forall>e \<in> E1. fst e < n1 \<and> snd (snd e) < n1"
+    and ge2: "\<forall>e \<in> E2. n1 \<le> fst e"
+    and e: "(u, a, v) \<in> E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+    and lt_u: "u < n1" and ge_v: "n1 \<le> v"
+  shows "(u, a, v) = (ex1, EA_Nop, en2)"
+proof -
+  have not_E1: "(u, a, v) \<notin> E1"
+  proof
+    assume H: "(u, a, v) \<in> E1"
+    with bd1 have "snd (snd (u, a, v)) < n1" by blast
+    hence "v < n1" by simp
+    with ge_v show False by simp
+  qed
+  have not_E2: "(u, a, v) \<notin> E2"
+ using ge2 lt_u by fastforce
+  from e not_E1 not_E2 show ?thesis by simp
+qed
+
+lemma mem_path_collect_from_set:
+  "t \<in> path_collect es M \<Longrightarrow> \<exists>m\<in>M. t \<in> path_collect es {m}"
+proof (induction es arbitrary: M t)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons e es)
+  obtain a w where ew: "e = (a, w)" by (cases e) auto
+  obtain M' where M': "M' = edge_collect a M" by simp
+  from Cons.prems ew obtain t': "t \<in> path_collect es M'"
+    using M' path_collect.simps(2) by blast
+  from Cons.IH[OF this] obtain m where m: "m \<in> M'" and tm: "t \<in> path_collect es {m}"
+    by blast
+  from m have "m \<in> edge_collect a M"
+    using M' by auto
+
+  then obtain m0 where m0: "m0 \<in> M" and mm: "m \<in> edge_collect a {m0}"
+    by (cases a) (auto simp: mem_Collect_eq)
+  have "t \<in> path_collect (e # es) {m0}"
+    unfolding ew path_collect.simps mm tm
+    using mm path_collect_member tm by blast
+  with m0 show ?case by blast
+qed
+
+lemma path_collect_via_append:
+  assumes "t \<in> path_collect (es1 @ es2) {s}"
+  shows "\<exists>mid. mid \<in> path_collect es1 {s} \<and> t \<in> path_collect es2 {mid}"
+proof -
+  have "t \<in> path_collect es2 (path_collect es1 {s})"
+    using assms by (simp only: path_collect_append)
+  from mem_path_collect_from_set[OF this] obtain mid where
+    "mid \<in> path_collect es1 {s}" and TM: "t \<in> path_collect es2 {mid}" by blast
+  then show ?thesis using TM by blast
+qed
+
+lemma Seq_en2_ge_n1:
+  assumes c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "en2 \<ge> n1"
+proof -
+  from compile_ge[OF c2] show ?thesis by simp
+qed
+
+lemma cfg_path_Seq_split:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+    and en_lt: "en < n1"
+  defines "G \<equiv> to_cfg (c1 ;; c2)"
+      and E12: "E12 \<equiv> E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+  assumes p: "cfg_path G en es ex2"
+  shows "\<exists>es1 es2. es = es1 @ ((EA_Nop, en2) # es2) \<and>
+         cfg_path G en es1 ex1 \<and> cfg_path G en2 es2 ex2"
+  (* TODO: Peel the unique NOP bridge using compile freshness (E1 < n1 \<le> fst E2) *)
+  sorry
+
 lemma cfg_collect_step:
   assumes e: "(u, a, v) : cfg_edges g"
   shows "edge_collect a (cfg_collect g S u) \<subseteq> cfg_collect g S v"
