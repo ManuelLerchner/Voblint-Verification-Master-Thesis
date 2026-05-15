@@ -87,25 +87,13 @@ lemma rhs_no_predecessors_not_entry:
   assumes "v \<noteq> cfg_entry g"
   assumes "\<And>u a. (u, a, v) \<notin> cfg_edges g"
   shows "rhs g tf join_abs bot_abs s0 env v = bot_abs"
-proof -
-  have "{(u, a). (u, a, v) \<in> cfg_edges g} = {}"
-    using assms(2) by blast
-  then have "rhs g tf join_abs bot_abs s0 env v = abs_join_set join_abs bot_abs {}"
-    unfolding rhs_def by (simp add: Let_def assms(1))
-  then show ?thesis
-    by simp
-qed
+  unfolding rhs_def using assms by (simp add: Let_def)
 
 lemma rhs_entry_no_predecessors:
   assumes "v = cfg_entry g"
   assumes "\<And>u a. (u, a, v) \<notin> cfg_edges g"
   shows "rhs g tf join_abs bot_abs s0 env v = abs_join_set join_abs bot_abs {s0}"
-proof -
-  have "{(u, a). (u, a, v) \<in> cfg_edges g} = {}"
-    using assms(2) by blast
-  then show ?thesis
-    unfolding rhs_def using assms(1) by (simp add: Let_def)
-qed
+  unfolding rhs_def using assms by (simp add: Let_def)
 
 definition is_post_fixpoint ::
     "cfg
@@ -283,7 +271,7 @@ next
         unfolding L Rimg
       proof (rule order_trans[OF foldf1])
         show "j (f2 p) (Finite_Set.fold j z (f2 ` F)) \<le> Finite_Set.fold j z (insert (f2 p) (f2 ` F))"
-          by (metis Rfold Rimg insert.hyps jc.fold_insert order_refl)
+          by (simp only: Rimg[symmetric] Rfold[symmetric] order_refl)
       qed
     qed
   next
