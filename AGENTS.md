@@ -148,6 +148,16 @@ AFP proves:
 
 ---
 
+# Proof phases
+
+Concrete execution plan with ordered working steps, exit criteria per
+phase, and full `sorry` inventory: see [`docs/PROOF_PHASES.md`](docs/PROOF_PHASES.md).
+
+Big-picture proof chain and result-mapping options: see
+[`docs/PROOF_OVERVIEW.md`](docs/PROOF_OVERVIEW.md).
+
+---
+
 # CFG path infrastructure
 
 Core predicate:
@@ -174,14 +184,76 @@ fun path_collect ::
 isabelle build -D . Goblint_Formalization
 ```
 
-## MCP
+## MCP (Isabelle/REPL — `isabelle-ir`)
 
-```bash
-./start-ir.sh
-```
+The Isabelle MCP server (I/R) is the **primary** way to develop proofs. Do not
+edit `.thy` files blind — drive Isar through MCP and verify each step.
 
-Flow: build → start MCP → load theories → prove interactively.
-Load MCP tool schemas via `ToolSearch` before first use (see `docs/ISABELLE_AGENT_NOTES.md`).
+### Preflight (every fresh session)
+
+1. **Server config visible to Claude Code.** Project-scope MCP is declared in
+   **`.mcp.json` at repo root** (not `.cursor/mcp.json` — that is Cursor only):
+
+   ```json
+   {
+     "mcpServers": {
+       "isabelle-ir": {
+         "type": "http",
+         "url": "http://localhost:9148/mcp",
+         "headers": {
+           "Authorization": "Bearer isabelle-local",
+           "Accept": "application/json, text/event-stream"
+         }
+       }
+     }
+   }
+   ```
+
+   Also requires `.claude/settings.local.json` →
+   `"enabledMcpjsonServers": ["isabelle-ir"]`.
+
+2. **Server running.** Probe:
+
+   ```bash
+   curl -sS -m 2 -X POST \
+     -H 'Authorization: Bearer isabelle-local' \
+     -H 'Accept: application/json, text/event-stream' \
+     -H 'Content-Type: application/json' \
+     http://127.0.0.1:9148/mcp -d '{}'
+   ```
+
+   Non-empty JSON-RPC reply ⇒ up. If down: `./start-ir.sh` (user-run).
+
+3. **Load tool schemas.** MCP tools are deferred. First Isabelle action:
+
+   ```
+   ToolSearch select:mcp__isabelle-ir__connect,
+              mcp__isabelle-ir__step,
+              mcp__isabelle-ir__sledgehammer,
+              mcp__isabelle-ir__find_theorems,
+              mcp__isabelle-ir__load_theory,
+              mcp__isabelle-ir__init,
+              mcp__isabelle-ir__theories,
+              mcp__isabelle-ir__source
+   ```
+
+4. **Authenticate.** Call `mcp__isabelle-ir__connect` with `token=isabelle-local`
+   (omit `port`; default 9147). All other tools fail until `connect` succeeded.
+
+### Standing rules
+
+* After editing a `.thy` on disk → `load_theory(<fully.qualified.name>)` to
+  re-sync; the heap lags otherwise.
+* `init` uses fully-qualified imports, e.g.
+  `Goblint_Formalization.CFG_Collecting`.
+* `step` — **one Isar line per call**. Newlines often rejected.
+* Sledgehammer timeout ≤ 15s. Prefer reported `by blast/auto/meson` over `metis`
+  /`smt` (faster batch rebuild, fewer surprise dependencies).
+* `nitpick` is not a separate MCP tool — invoke it via `step` as
+  `lemma … nitpick [timeout = 5] oops`.
+
+Flow: build → server up → `connect` → `load_theory` → `init` → `step` /
+`sledgehammer`. See `docs/ISABELLE_AGENT_NOTES.md` for traps.
 
 ---
 
@@ -233,11 +305,18 @@ Load MCP tool schemas via `ToolSearch` before first use (see `docs/ISABELLE_AGEN
 
 # Isabelle MCP workflow
 
-1. `isabelle build …` until the session is green.  
-2. Start MCP, `load_theory`, `init` a small REPL.  
-3. Copy the **subgoal** into a scratch `lemma` / `apply` sequence in `step`; run **`sledgehammer`**.  
-4. Paste back **`blast`/`auto`/`meson`** first; use **`metis`** only if checked and fast in batch.  
-5. If automation fails, write 5–15 lines of Isar and move on.
+Per proof attempt (assumes preflight from `# Isabelle workflow / MCP` done):
+
+1. `isabelle build …` until the session is green.
+2. `mcp__isabelle-ir__load_theory` the changed theory; `mcp__isabelle-ir__init`
+   a small REPL (unique name, fully-qualified imports).
+3. Copy the **subgoal** into a scratch `lemma` / `apply` sequence via
+   `mcp__isabelle-ir__step`; run `mcp__isabelle-ir__sledgehammer` (≤ 15s).
+4. Paste back `blast` / `auto` / `meson` first; `metis` only if it reconstructs
+   fast in batch.
+5. If automation fails, write 5–15 lines of Isar and move on; extract a helper
+   lemma if the same shape recurs.
+6. Mirror the working `step` sequence into the `.thy` file; rebuild to confirm.
 
 ---
 
@@ -258,3 +337,110 @@ isabelle build \
 ```text
 feat(proof): <description>
 ```
+
+---
+
+# Autoformalization pitfalls (Kappelmann et al., arXiv 2604.15713, 2026)
+
+Audit checklist before marking a theorem "done". Distilled from a Claude-Opus-4.6
++ Isabelle/Q case study with three ~2000-line `sorry`-free formalizations. These
+are the failure modes that survive batch-build and only surface on review.
+
+## 1. Locale-ordering hazard
+
+Never state `assumes P c` in a locale before `c` is defined. The assumption can
+be instantiated with arbitrary terms and a contradiction derived from it. Define
+the constant first, then prove `P c` as a lemma, then introduce the locale that
+fixes `c` and the proven assumption.
+
+## 2. Instantiation-gap check
+
+Theorems proved inside an abstraction locale (`locale TD_abstract = ...`) are
+useless unless instantiated to the concrete object (the actual `make_rhs`, the
+actual sign domain). After each `theorem` inside an abstract locale, write the
+concrete corollary with `interpretation` / `[where ...]` and surface it as a
+named lemma. Missing instantiations are the most common silent gap.
+
+## 3. False-abstraction audit
+
+If a definition or locale parameterises over an order, enumeration, or strategy,
+either *prove* abstraction (the result is invariant under the parameter) or
+remove the parameter. Don't claim generality you don't have. Persisted across
+multiple review rounds in the case study despite explicit feedback.
+
+## 4. Definition–statement alignment
+
+Re-read each theorem statement against the paper / `docs/PROOF_OVERVIEW.md`
+wording. Drifts to watch for:
+
+* theorem references the algorithm's *internal annotation set* instead of its
+  *output*;
+* `coverageTest`-style operational notion smuggled in where the declarative
+  notion was intended;
+* well-typedness condition on the free variables of an abstraction silently
+  dropped.
+
+These are the bugs the proof assistant *cannot* catch.
+
+## 5. Structured Isar over object-level quantifiers
+
+Prefer
+
+```isabelle
+lemma foo:
+  fixes x :: nat
+  assumes "P x"
+  shows   "Q x"
+```
+
+over
+
+```isabelle
+lemma foo: "∀x. P x ⟶ Q x"
+```
+
+Structured form is reusable via `[where x = …]` / `[OF ...]`; object-level form
+forces every caller to instantiate via `spec` first.
+
+## 6. Persistent `NOTES.md`
+
+Keep a `NOTES.md` (or `docs/AGENT_NOTES.md`) listing: current sorry inventory,
+locked design decisions, partial lemmas in progress, recent failed approaches.
+The agent reads it at session start to recover from context compaction. Update
+it before each commit.
+
+## 7. Use Sledgehammer — really
+
+The case-study agent silently bypassed Sledgehammer and reverted to manual
+proof search. Default: try `sledgehammer` first on every non-trivial subgoal.
+Paste back `blast` / `auto` / `meson`; use `metis` only if fast in batch.
+
+## 8. Generalization-via-hint recipe
+
+When a proof feels ad hoc or duplicates AFP material, *don't* grind it out.
+Hand the agent a reduction to an existing generic theory and ask it to reprove:
+
+* harder TD/warrowing termination → existing AFP fixpoint / well-founded order
+  entries;
+* minimal-annotation-style covering arguments → AFP independence systems /
+  matroids;
+* locale-hierarchy design questions → AFP `Order.Lattice_Prelims`, `HOL-Algebra`.
+
+The Kappelmann generalization run cost $11–$93 and a few hours of human time
+to replace ad hoc proofs with proofs on top of a standard generic theory.
+
+## 9. Internal review before "done"
+
+After producing a chunk of theorems, run a two-stage internal review:
+
+1. **Self-review**: read every new definition and theorem; check items 1–5.
+2. **Simulated peer-review**: imagine a hostile reviewer; what would they
+   challenge?
+
+Catches some logical issues. Does **not** replace human review — items 1, 3, 4
+slip through the agent's own reviews in the case study.
+
+## 10. One commit per closed top-level theorem
+
+Don't commit a closed sub-lemma while its parent is still `sorry`. The review
+discipline above runs per top-level theorem; partial commits break it.

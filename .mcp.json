@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "isabelle-ir": {
+      "type": "http",
+      "url": "http://localhost:9148/mcp",
+      "headers": {
+        "Authorization": "Bearer isabelle-local",
+        "Accept": "application/json, text/event-stream"
+      }
+    }
+  }
+}
