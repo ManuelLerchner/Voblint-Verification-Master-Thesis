@@ -107,11 +107,14 @@ text \<open>
 
 lemma sign_analysis_init_in_gamma_stub:
   "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
-  sorry (* per-variable: s x \<in> gamma_sign (sign_of_int (s x)) *)
+  unfolding sign_analysis_config_def sign_domain.gamma_state_def
+  by (simp add: sign_of_int_gamma)
 
 lemma sign_analysis_tf_sound_stub:
   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
-  sorry (* Phase I: assign_sign, assume_sign, assume_not_sign *)
+  unfolding domain_transfer_sound_def sign_analysis_config_def
+  by (simp add: assign_sign_sound assume_sign_sound)
+
 
 lemma sign_pipeline_sound_scaffold:
   assumes runs: "big_step (c, s) t"
@@ -121,8 +124,9 @@ lemma sign_pipeline_sound_scaffold:
              (run_analysis (sign_analysis_config s) c (cfg_exit (to_cfg c)))"
 proof -
   show ?thesis
-    sorry (* pipeline_sound [OF tf_ok init_ok runs], gamma_state coercion Sign vs abstract_domain *)
-qed
+    by (metis analysis_config.select_convs(1,2,4) init_ok run_analysis_def runs sign_analysis_config_def
+        sign_analysis_sound sign_tf_def)
+   qed
 
 (* Corollary of scaffold + stubs once lemmas exist. *)
 corollary sign_pipeline_sound:
@@ -203,6 +207,8 @@ theorem sign_pipeline_invariant_sound:
   shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
                     sign_domain.gamma_state
                       (run_analysis (sign_analysis_config s) c v)"
-  sorry (* BY pipeline_invariant_sound[OF tf_ok init_ok'] once init_ok matches sound_domain.gamma_state *)
-
+  using assms
+  by (metis analysis_config.ext_inject analysis_config.surjective pipeline_invariant_sound
+      sign_analysis_config_def) 
+ 
 end

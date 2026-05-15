@@ -144,6 +144,9 @@ fun sign_times :: "sign => sign => sign" where
 fun sign_of_int :: "int => sign" where
   "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
 
+lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
+  by (auto simp: sign_of_int.simps gamma_sign.simps split: if_splits)
+
 fun aval_sign :: "aexp => (vname => sign) => sign" where
     "aval_sign (N n)       sigma = sign_of_int n"
   | "aval_sign (V x)       sigma = sigma x"
@@ -213,6 +216,10 @@ next
   show "gamma_sign b \<subseteq> gamma_sign (widen_sign a b)"
     unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
 qed
+
+lemma sign_gamma_state_conv:
+  "(s : sign_domain.gamma_state sigma) = (s : sound_domain.gamma_state gamma_sign sigma)"
+  unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
 
 (* ── Typeclass Instances (required by TD solver interface) ────── *)
 

@@ -56,15 +56,39 @@ abbreviation cfg_reaches :: "cfg => pp => pp => bool" ("_ \<turnstile> _ \<right
 (* ── Intro Lemmas ──────────────────────────────────────────────── *)
 
 lemma cfg_reaches_refl[intro, simp]: "g \<turnstile> v \<rightarrow>* v"
-  sorry
+  by (rule exI, rule cfg_path.empty)
 
 lemma cfg_reaches_step[intro]:
   "(u, a, w) : cfg_edges g ==> g \<turnstile> w \<rightarrow>* v ==> g \<turnstile> u \<rightarrow>* v"
-  sorry
+proof -
+  assume e: "(u, a, w) : cfg_edges g" and r: "g \<turnstile> w \<rightarrow>* v"
+  from r obtain es where p: "cfg_path g w es v" ..
+  show "g \<turnstile> u \<rightarrow>* v"
+    by (rule exI, rule cfg_path.step[OF e p])
+qed
+
+lemma cfg_path_append:
+  "cfg_path g u es1 v ==> cfg_path g v es2 w ==> cfg_path g u (es1 @ es2) w"
+proof (induction es1 arbitrary: u)
+  case Nil
+  then have "u = v"
+    by (cases rule: cfg_path.cases) auto
+  then show ?case using Nil.prems(2) by simp
+next
+  case (Cons e es1)
+  obtain a w_tgt where e': "e = (a, w_tgt)" by (cases e) auto
+  from Cons.prems(1) e' obtain e1: "(u, a, w_tgt) : cfg_edges g" and p1: "cfg_path g w_tgt es1 v"
+    by (cases rule: cfg_path.cases) auto
+  from Cons.IH[OF p1] Cons.prems(2) have p: "cfg_path g w_tgt (es1 @ es2) w" by simp
+  show ?case
+    unfolding e'
+    by (simp add: cfg_path.step e1 p)  
+qed
 
 lemma cfg_reaches_trans[intro]:
   "g \<turnstile> u \<rightarrow>* v ==> g \<turnstile> v \<rightarrow>* w ==> g \<turnstile> u \<rightarrow>* w"
-  sorry
+  using cfg_path_append by blast
+ 
 
 (* ── Cases Lemma (Pattern 4) ───────────────────────────────────── *)
 
@@ -81,7 +105,7 @@ lemma cfg_path_cases[consumes 1, case_names empty step]:
       "es = (a, w) # es'"
       "(u, a, w) : cfg_edges g"
       "cfg_path g w es' v"
-  sorry
+  using assms by (cases rule: cfg_path.cases) auto
 
 (* ── Induction Rule (Pattern 4) ────────────────────────────────── *)
 
@@ -100,14 +124,16 @@ lemma cfg_path_induct[consumes 1, case_names empty step]:
                     P g w es v ==>
                     P g u ((a, w) # es) v"
   shows "P g u es v"
-  sorry
+  using assms  apply (induction rule: cfg_path.induct)
+  by(auto)
+ 
 
 (* ── Elim / Simp Lemmas ────────────────────────────────────────── *)
 
 lemma cfg_path_not_Nil_imp_step[dest]:
   "cfg_path g u es v ==> es \<noteq> [] ==>
    \<exists>a w es'. es = (a, w) # es' \<and> (u, a, w) \<in> cfg_edges g \<and> cfg_path g w es' v"
-  sorry
+  by (erule cfg_path.cases) auto
 
 (*
   Each step (a,w) in the path list came from some edge in the CFG.
@@ -118,12 +144,15 @@ lemma cfg_path_not_Nil_imp_step[dest]:
 *)
 lemma cfg_path_edges_in_cfg:
   "cfg_path g u es v ==> (a, w) : set es ==> \<exists>src. (src, a, w) \<in> cfg_edges g"
-  sorry (* induction on cfg_path: empty vacuous; step: (a',w') = head → src = u; IH for tail *)
+  apply (induction rule: cfg_path.induct)
+  by(auto)
+
+ 
 
 (* Convenience: first step of a non-empty path hits the CFG at u. *)
 lemma cfg_path_first_edge:
   "cfg_path g u ((a, w) # es) v ==> (u, a, w) : cfg_edges g"
-  sorry (* by cfg_path.cases: only the step constructor applies; its premise gives (u,a,w) \<in> cfg_edges g *)
+  by (erule cfg_path.cases) auto
 
 (* ── Reachability from Entry ───────────────────────────────────── *)
 
