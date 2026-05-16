@@ -615,31 +615,271 @@ next
   
 next
   case (Seq c1 s1 t2 c2 t3)
+  from Seq.hyps(2) obtain es1 where
+        p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+    and t2in: "t2 \<in> path_collect es1 {s1}"
+    by blast
+  from Seq.hyps(4) obtain es2 where
+        p2: "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
+    and t3in: "t3 \<in> path_collect es2 {t2}"
+    by blast
 
-  obtain es1 where " cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))
-            \<and> t2 \<in> path_collect es1 {s1}"
-    using Seq.hyps(2) Seq.prems by auto
+  obtain n1 en1 ex1 E1 where
+        c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and en1_eq: "cfg_entry (to_cfg c1) = en1"
+    and ex1_eq: "cfg_exit  (to_cfg c1) = ex1"
+    and E1_eq:  "cfg_edges (to_cfg c1) = E1"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where
+        c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and en20_eq: "cfg_entry (to_cfg c2) = en20"
+    and ex20_eq: "cfg_exit  (to_cfg c2) = ex20"
+    and E20_eq:  "cfg_edges (to_cfg c2) = E20"
+    by (rule to_cfg_compile)
 
+  have c2_n1: "compile c2 n1 = (n20 + n1, en20 + n1, ex20 + n1, offset_edges n1 E20)"
+    using compile_from_0_offsets[OF c2_0] by simp
 
- 
-    obtain es2 where "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2)) \<and> t3 \<in> path_collect es2 {t2}"
-      using Seq.hyps(4) by blast
+  have Eseq:   "cfg_edges (to_cfg (c1 ;; c2)) =
+                E1 \<union> {(ex1, EA_Nop, en20 + n1)} \<union> offset_edges n1 E20"
+    and en_seq: "cfg_entry (to_cfg (c1 ;; c2)) = en1"
+    and ex_seq: "cfg_exit  (to_cfg (c1 ;; c2)) = ex20 + n1"
+    using cfg_edges_entry_exit_Seq[OF c1 c2_n1] by auto
 
- (* not sure if that is right? *)
-    let ?ess = "es1 @ es2"
+  (* Lift c1 path into compound graph. *)
+  from p1 en1_eq ex1_eq have p1': "cfg_path (to_cfg c1) en1 es1 ex1" by simp
+  have sub1: "cfg_edges (to_cfg c1) \<subseteq> cfg_edges (to_cfg (c1 ;; c2))"
+    unfolding E1_eq Eseq by blast
+  have P1: "cfg_path (to_cfg (c1 ;; c2)) en1 es1 ex1"
+    by (rule cfg_path_mono_edges[OF sub1 p1'])
 
-     
- 
-     show ?case 
- 
-    sorry
-  
+  (* Lift c2 path via pp-shift by n1, then mono into compound. *)
+  have toc2_eq: "to_cfg c2 = \<lparr>cfg_entry = en20, cfg_exit = ex20, cfg_edges = E20\<rparr>"
+    unfolding to_cfg_def using c2_0 by (simp add: Let_def)
+  from p2 en20_eq ex20_eq have p2': "cfg_path (to_cfg c2) en20 es2 ex20" by simp
+  hence p2_rec: "cfg_path \<lparr>cfg_entry = en20, cfg_exit = ex20, cfg_edges = E20\<rparr>
+                            en20 es2 ex20"
+    using toc2_eq by simp
+  let ?es2k = "offset_path n1 es2"
+  have p2k: "cfg_path \<lparr>cfg_entry = en20 + n1, cfg_exit = ex20 + n1,
+                       cfg_edges = offset_edges n1 E20\<rparr>
+                      (en20 + n1) ?es2k (ex20 + n1)"
+    by (rule cfg_path_offset[OF p2_rec])
+  have sub2: "cfg_edges \<lparr>cfg_entry = en20 + n1, cfg_exit = ex20 + n1,
+                         cfg_edges = offset_edges n1 E20\<rparr>
+              \<subseteq> cfg_edges (to_cfg (c1 ;; c2))"
+    unfolding Eseq by simp blast
+  have P2: "cfg_path (to_cfg (c1 ;; c2)) (en20 + n1) ?es2k (ex20 + n1)"
+    by (rule cfg_path_mono_edges[OF sub2 p2k])
+
+  (* Glue edge ex1 -[Nop]-> en20+n1. *)
+  have glue_edge: "(ex1, EA_Nop, en20 + n1) \<in> cfg_edges (to_cfg (c1 ;; c2))"
+    unfolding Eseq by blast
+  have glue: "cfg_path (to_cfg (c1 ;; c2)) ex1 [(EA_Nop, en20 + n1)] (en20 + n1)"
+    by (rule cfg_path.step[OF glue_edge cfg_path.empty])
+
+  (* Concatenate full path. *)
+  have step1: "cfg_path (to_cfg (c1 ;; c2)) en1 (es1 @ [(EA_Nop, en20 + n1)]) (en20 + n1)"
+    by (rule cfg_path_append[OF P1 glue])
+  let ?es = "es1 @ [(EA_Nop, en20 + n1)] @ ?es2k"
+  have path: "cfg_path (to_cfg (c1 ;; c2)) en1 ?es (ex20 + n1)"
+    using cfg_path_append[OF step1 P2] by simp
+
+  (* Collect side: t3 lands in path_collect of full path. *)
+  have t3_in: "t3 \<in> path_collect ?es {s1}"
+  proof -
+    have a: "{t2} \<subseteq> path_collect es1 {s1}" using t2in by simp
+    have b: "path_collect es2 {t2} \<subseteq> path_collect es2 (path_collect es1 {s1})"
+      by (rule path_collect_mono[OF a])
+    from t3in b have t3_step: "t3 \<in> path_collect es2 (path_collect es1 {s1})" by blast
+    have eq: "path_collect ?es {s1} = path_collect es2 (path_collect es1 {s1})"
+      using path_collect_nop_append[of es1 "en20 + n1" ?es2k "{s1}"] by simp
+    show ?thesis using t3_step eq by simp
+  qed
+
+  show ?case
+    using path t3_in en_seq ex_seq by metis
 next
-  case (IfTrue b s c1 c2 t)
-  show ?case  sorry
+  case (IfTrue b s c1 t c2)
+  from IfTrue.hyps(3) obtain es1 where
+        p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+    and tin: "t \<in> path_collect es1 {s}"
+    by blast
+  obtain n10 en10 ex10 E10 where
+        c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
+    and en10_eq: "cfg_entry (to_cfg c1) = en10"
+    and ex10_eq: "cfg_exit  (to_cfg c1) = ex10"
+    and E10_eq:  "cfg_edges (to_cfg c1) = E10"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where
+        c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    by (rule to_cfg_compile)
+
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1_0, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2_0, of "n10 + 1"] by simp
+
+  have Eif:   "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+               {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, en20 + (n10 + 1))}
+               \<union> offset_edges 1 E10
+               \<union> offset_edges (n10 + 1) E20
+               \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
+                  (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
+    and en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    and ex_if: "cfg_exit  (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
+
+  (* Lift c1 path via offset 1, mono into compound *)
+  have toc1_rec: "to_cfg c1 = \<lparr>cfg_entry = en10, cfg_exit = ex10, cfg_edges = E10\<rparr>"
+    unfolding to_cfg_def using c1_0 by (simp add: Let_def)
+  from p1 en10_eq ex10_eq have p1': "cfg_path (to_cfg c1) en10 es1 ex10" by simp
+  hence p1_rec: "cfg_path \<lparr>cfg_entry = en10, cfg_exit = ex10, cfg_edges = E10\<rparr> en10 es1 ex10"
+    using toc1_rec by simp
+  let ?es1k = "offset_path 1 es1"
+  have p1k: "cfg_path \<lparr>cfg_entry = en10 + 1, cfg_exit = ex10 + 1, cfg_edges = offset_edges 1 E10\<rparr>
+                      (en10 + 1) ?es1k (ex10 + 1)"
+    by (rule cfg_path_offset[OF p1_rec])
+  have sub1: "cfg_edges \<lparr>cfg_entry = en10 + 1, cfg_exit = ex10 + 1, cfg_edges = offset_edges 1 E10\<rparr>
+              \<subseteq> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    unfolding Eif by simp blast
+  have P1: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (en10 + 1) ?es1k (ex10 + 1)"
+    by (rule cfg_path_mono_edges[OF sub1 p1k])
+
+  (* Pre/post glue edges *)
+  have pre_edge: "(0, EA_Assume b, en10 + 1) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    unfolding Eif by blast
+  have pre: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 [(EA_Assume b, en10 + 1)] (en10 + 1)"
+    by (rule cfg_path.step[OF pre_edge cfg_path.empty])
+
+  have post_edge: "(ex10 + 1, EA_Nop, n20 + (n10 + 1)) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    unfolding Eif by blast
+  have post: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (ex10 + 1)
+                       [(EA_Nop, n20 + (n10 + 1))] (n20 + (n10 + 1))"
+    by (rule cfg_path.step[OF post_edge cfg_path.empty])
+
+  let ?es = "[(EA_Assume b, en10 + 1)] @ ?es1k @ [(EA_Nop, n20 + (n10 + 1))]"
+  have mid: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (en10 + 1)
+                      (?es1k @ [(EA_Nop, n20 + (n10 + 1))]) (n20 + (n10 + 1))"
+    by (rule cfg_path_append[OF P1 post])
+  have path: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 ?es (n20 + (n10 + 1))"
+    using cfg_path_append[OF pre mid] by simp
+
+  (* Collect side *)
+  have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
+    using IfTrue.hyps(1) by auto
+  have eq_es: "path_collect ?es {s} = path_collect es1 {s}"
+  proof -
+    have "path_collect ?es {s}
+          = path_collect (?es1k @ [(EA_Nop, n20 + (n10 + 1))])
+                         (path_collect [(EA_Assume b, en10 + 1)] {s})"
+      by (simp add: path_collect_append)
+    also have "\<dots> = path_collect (?es1k @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
+      using eq_head by simp
+    also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))] (path_collect ?es1k {s})"
+      by (rule path_collect_append)
+    also have "\<dots> = path_collect ?es1k {s}" by simp
+    also have "\<dots> = path_collect es1 {s}" by simp
+    finally show ?thesis .
+  qed
+  have t_in: "t \<in> path_collect ?es {s}"
+    using tin eq_es by simp
+
+  show ?case
+    using path t_in en_if ex_if by metis
 next
-  case (IfFalse b s c1 c2 t)
-  show ?case sorry
+  case (IfFalse b s c2 t c1)
+  from IfFalse.hyps(3) obtain es2 where
+        p2: "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
+    and tin: "t \<in> path_collect es2 {s}"
+    by blast
+  obtain n10 en10 ex10 E10 where
+        c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where
+        c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and en20_eq: "cfg_entry (to_cfg c2) = en20"
+    and ex20_eq: "cfg_exit  (to_cfg c2) = ex20"
+    and E20_eq:  "cfg_edges (to_cfg c2) = E20"
+    by (rule to_cfg_compile)
+
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1_0, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2_0, of "n10 + 1"] by simp
+
+  have Eif:   "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+               {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, en20 + (n10 + 1))}
+               \<union> offset_edges 1 E10
+               \<union> offset_edges (n10 + 1) E20
+               \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
+                  (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
+    and en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    and ex_if: "cfg_exit  (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
+
+  (* Lift c2 path via offset n10+1, mono into compound *)
+  have toc2_rec: "to_cfg c2 = \<lparr>cfg_entry = en20, cfg_exit = ex20, cfg_edges = E20\<rparr>"
+    unfolding to_cfg_def using c2_0 by (simp add: Let_def)
+  from p2 en20_eq ex20_eq have p2': "cfg_path (to_cfg c2) en20 es2 ex20" by simp
+  hence p2_rec: "cfg_path \<lparr>cfg_entry = en20, cfg_exit = ex20, cfg_edges = E20\<rparr> en20 es2 ex20"
+    using toc2_rec by simp
+  let ?es2k = "offset_path (n10 + 1) es2"
+  have p2k: "cfg_path \<lparr>cfg_entry = en20 + (n10 + 1), cfg_exit = ex20 + (n10 + 1),
+                       cfg_edges = offset_edges (n10 + 1) E20\<rparr>
+                      (en20 + (n10 + 1)) ?es2k (ex20 + (n10 + 1))"
+    by (rule cfg_path_offset[OF p2_rec])
+  have sub2: "cfg_edges \<lparr>cfg_entry = en20 + (n10 + 1), cfg_exit = ex20 + (n10 + 1),
+                         cfg_edges = offset_edges (n10 + 1) E20\<rparr>
+              \<subseteq> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    unfolding Eif by simp blast
+  have P2: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (en20 + (n10 + 1)) ?es2k (ex20 + (n10 + 1))"
+    by (rule cfg_path_mono_edges[OF sub2 p2k])
+
+  (* Pre/post glue edges *)
+  have pre_edge: "(0, EA_AssumeNot b, en20 + (n10 + 1)) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    unfolding Eif by blast
+  have pre: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0
+                      [(EA_AssumeNot b, en20 + (n10 + 1))] (en20 + (n10 + 1))"
+    by (rule cfg_path.step[OF pre_edge cfg_path.empty])
+
+  have post_edge: "(ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1)) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    unfolding Eif by blast
+  have post: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (ex20 + (n10 + 1))
+                       [(EA_Nop, n20 + (n10 + 1))] (n20 + (n10 + 1))"
+    by (rule cfg_path.step[OF post_edge cfg_path.empty])
+
+  let ?es = "[(EA_AssumeNot b, en20 + (n10 + 1))] @ ?es2k @ [(EA_Nop, n20 + (n10 + 1))]"
+  have mid: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (en20 + (n10 + 1))
+                      (?es2k @ [(EA_Nop, n20 + (n10 + 1))]) (n20 + (n10 + 1))"
+    by (rule cfg_path_append[OF P2 post])
+  have path: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 ?es (n20 + (n10 + 1))"
+    using cfg_path_append[OF pre mid] by simp
+
+  (* Collect side *)
+  have eq_head: "path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s} = {s}"
+    using IfFalse.hyps(1) by auto
+  have eq_es: "path_collect ?es {s} = path_collect es2 {s}"
+  proof -
+    have "path_collect ?es {s}
+          = path_collect (?es2k @ [(EA_Nop, n20 + (n10 + 1))])
+                         (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+      by (simp add: path_collect_append)
+    also have "\<dots> = path_collect (?es2k @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
+      using eq_head by simp
+    also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))] (path_collect ?es2k {s})"
+      by (rule path_collect_append)
+    also have "\<dots> = path_collect ?es2k {s}" by simp
+    also have "\<dots> = path_collect es2 {s}" by simp
+    finally show ?thesis .
+  qed
+  have t_in: "t \<in> path_collect ?es {s}"
+    using tin eq_es by simp
+
+  show ?case
+    using path t_in en_if ex_if by metis
 next
   case (WhileFalse b s c1)
   (* Avoid shadowing outer schematic command c from the lemma conclusion. *)
@@ -668,8 +908,104 @@ next
     by auto
    
 next
-  case (WhileTrue b s c t s')
-  show ?case sorry
+  case (WhileTrue b s c1 s' s'')
+  from WhileTrue.hyps(3) obtain es1 where
+        p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+    and s'_in: "s' \<in> path_collect es1 {s}"
+    by blast
+  from WhileTrue.hyps(5) obtain es2 where
+        p2: "cfg_path (to_cfg (WHILE b DO c1))
+                      (cfg_entry (to_cfg (WHILE b DO c1))) es2
+                      (cfg_exit  (to_cfg (WHILE b DO c1)))"
+    and s''_in: "s'' \<in> path_collect es2 {s'}"
+    by blast
+
+  obtain n10 en10 ex10 E10 where
+        c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
+    and en10_eq: "cfg_entry (to_cfg c1) = en10"
+    and ex10_eq: "cfg_exit  (to_cfg c1) = ex10"
+    and E10_eq:  "cfg_edges (to_cfg c1) = E10"
+    by (rule to_cfg_compile)
+
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1_0, of 1] by simp
+
+  have Ew:    "cfg_edges (to_cfg (WHILE b DO c1)) =
+               {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+               \<union> offset_edges 1 E10
+               \<union> {(ex10 + 1, EA_Nop, 0)}"
+    and en_w: "cfg_entry (to_cfg (WHILE b DO c1)) = 0"
+    and ex_w: "cfg_exit  (to_cfg (WHILE b DO c1)) = n10 + 1"
+    using cfg_edges_entry_exit_While[OF c1_1] by auto
+
+  (* Lift body path via offset 1, mono into compound *)
+  have toc1_rec: "to_cfg c1 = \<lparr>cfg_entry = en10, cfg_exit = ex10, cfg_edges = E10\<rparr>"
+    unfolding to_cfg_def using c1_0 by (simp add: Let_def)
+  from p1 en10_eq ex10_eq have p1': "cfg_path (to_cfg c1) en10 es1 ex10" by simp
+  hence p1_rec: "cfg_path \<lparr>cfg_entry = en10, cfg_exit = ex10, cfg_edges = E10\<rparr> en10 es1 ex10"
+    using toc1_rec by simp
+  let ?es1k = "offset_path 1 es1"
+  have p1k: "cfg_path \<lparr>cfg_entry = en10 + 1, cfg_exit = ex10 + 1, cfg_edges = offset_edges 1 E10\<rparr>
+                      (en10 + 1) ?es1k (ex10 + 1)"
+    by (rule cfg_path_offset[OF p1_rec])
+  have sub1: "cfg_edges \<lparr>cfg_entry = en10 + 1, cfg_exit = ex10 + 1, cfg_edges = offset_edges 1 E10\<rparr>
+              \<subseteq> cfg_edges (to_cfg (WHILE b DO c1))"
+    unfolding Ew by simp blast
+  have P1: "cfg_path (to_cfg (WHILE b DO c1)) (en10 + 1) ?es1k (ex10 + 1)"
+    by (rule cfg_path_mono_edges[OF sub1 p1k])
+
+  (* Glue edges: head -> body entry, body exit -> head *)
+  have head_edge: "(0, EA_Assume b, en10 + 1) \<in> cfg_edges (to_cfg (WHILE b DO c1))"
+    unfolding Ew by blast
+  have head: "cfg_path (to_cfg (WHILE b DO c1)) 0 [(EA_Assume b, en10 + 1)] (en10 + 1)"
+    by (rule cfg_path.step[OF head_edge cfg_path.empty])
+
+  have back_e: "(ex10 + 1, EA_Nop, 0) \<in> cfg_edges (to_cfg (WHILE b DO c1))"
+    unfolding Ew by blast
+  have back_p: "cfg_path (to_cfg (WHILE b DO c1)) (ex10 + 1) [(EA_Nop, 0)] (0::pp)"
+    by (rule cfg_path.step[OF back_e cfg_path.empty])
+
+  (* Recursive WHILE path: rebind via en_w/ex_w *)
+  from p2 en_w ex_w have p2': "cfg_path (to_cfg (WHILE b DO c1)) 0 es2 (n10 + 1)" by simp
+
+  (* Concatenate: head; ?es1k; back; es2 *)
+  let ?es = "[(EA_Assume b, en10 + 1)] @ ?es1k @ [(EA_Nop, 0)] @ es2"
+  have stepA: "cfg_path (to_cfg (WHILE b DO c1)) (en10 + 1) (?es1k @ [(EA_Nop, 0)]) (0::pp)"
+    by (rule cfg_path_append[OF P1 back_p])
+  have stepB: "cfg_path (to_cfg (WHILE b DO c1)) (en10 + 1) (?es1k @ [(EA_Nop, 0)] @ es2) (n10 + 1)"
+    using cfg_path_append[OF stepA p2'] by simp
+  have path: "cfg_path (to_cfg (WHILE b DO c1)) 0 ?es (n10 + 1)"
+    using cfg_path_append[OF head stepB] by simp
+
+  (* Collect side *)
+  have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
+    using WhileTrue.hyps(1) by auto
+  have s''_in_chain: "s'' \<in> path_collect ?es {s}"
+  proof -
+    have eq_all: "path_collect ?es {s} = path_collect es2 (path_collect es1 {s})"
+    proof -
+      have "path_collect ?es {s}
+            = path_collect (?es1k @ [(EA_Nop, 0)] @ es2)
+                           (path_collect [(EA_Assume b, en10 + 1)] {s})"
+        by (simp add: path_collect_append)
+      also have "\<dots> = path_collect (?es1k @ [(EA_Nop, 0)] @ es2) {s}"
+        using eq_head by simp
+      also have "\<dots> = path_collect es2
+                                  (path_collect [(EA_Nop, 0)] (path_collect ?es1k {s}))"
+        by (simp add: path_collect_append)
+      also have "\<dots> = path_collect es2 (path_collect ?es1k {s})" by simp
+      also have "\<dots> = path_collect es2 (path_collect es1 {s})" by simp
+      finally show ?thesis .
+    qed
+    have a: "{s'} \<subseteq> path_collect es1 {s}" using s'_in by simp
+    have b: "path_collect es2 {s'} \<subseteq> path_collect es2 (path_collect es1 {s})"
+      by (rule path_collect_mono[OF a])
+    from s''_in b have "s'' \<in> path_collect es2 (path_collect es1 {s})" by blast
+    thus ?thesis using eq_all by simp
+  qed
+
+  show ?case
+    using path s''_in_chain en_w ex_w by metis
 qed
 
 (* CFG path from entry to exit implies big-step execution. *)
