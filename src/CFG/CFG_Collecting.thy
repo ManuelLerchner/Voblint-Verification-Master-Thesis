@@ -44,6 +44,18 @@ fun path_collect :: "(edge_action * pp) list => store set => store set" where
 lemma path_collect_empty[simp]: "path_collect [] S = S"
   by simp
 
+lemma edge_collect_empty_set[simp]: "edge_collect a {} = {}"
+  by (cases a) auto
+
+lemma path_collect_empty_set[simp]: "path_collect es {} = {}"
+proof (induction es)
+  case Nil show ?case by simp
+next
+  case (Cons e es)
+  obtain a w where ep: "e = (a, w)" by (cases e) auto
+  show ?case unfolding ep path_collect.simps by (simp add: Cons.IH)
+qed
+
 lemma path_collect_mono_strong:
   "S \<subseteq> T \<Longrightarrow> path_collect es S \<subseteq> path_collect es T"
 proof (induction es arbitrary: S T)
@@ -647,6 +659,479 @@ next
       using bridge tl_eq by simp
     show ?thesis
       using list_eq p1 p2 hd_eq by blast
+  qed
+qed
+
+(*
+  Edge classification in `to_cfg (IF b THEN c1 ELSE c2)` by source pp.
+  Compound layout (compile c1 at 1, compile c2 at n10+1):
+    pp 0          : entry, source of two pre-edges (Assume / AssumeNot)
+    [1, n10+1)    : c1 region (offset_edges 1 E10 + source of c1-post bridge)
+    [n10+1, n2)   : c2 region (offset_edges (n10+1) E20 + source of c2-post bridge)
+    pp n2 = n20+(n10+1) : exit, sink (no outgoing edges)
+*)
+
+lemma compound_If_edge_src_c1:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and edge: "(u, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and u_in: "1 \<le> u" and u_lt: "u < n10 + 1"
+  shows "(u, a, w) \<in> offset_edges 1 E10 \<or>
+         (u = ex10 + 1 \<and> a = EA_Nop \<and> w = n20 + (n10 + 1))"
+proof -
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2, of "n10 + 1"] by simp
+  have Eif: "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, en20 + (n10 + 1))}
+             \<union> offset_edges 1 E10
+             \<union> offset_edges (n10 + 1) E20
+             \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
+                (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by simp
+  from compile_ge[OF c2_n] have E2_src_ge: "\<forall>e \<in> offset_edges (n10 + 1) E20. n10 + 1 \<le> fst e"
+    by simp
+  from compile_ge[OF c2_n] have ex2n_ge: "n10 + 1 \<le> ex20 + (n10 + 1)" by simp
+  show ?thesis
+    using edge u_in u_lt Eif E2_src_ge ex2n_ge by force
+qed
+
+lemma compound_If_edge_src_c2:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and edge: "(u, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and u_in: "n10 + 1 \<le> u" and u_lt: "u < n20 + (n10 + 1)"
+  shows "(u, a, w) \<in> offset_edges (n10 + 1) E20 \<or>
+         (u = ex20 + (n10 + 1) \<and> a = EA_Nop \<and> w = n20 + (n10 + 1))"
+proof -
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2, of "n10 + 1"] by simp
+  have Eif: "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, en20 + (n10 + 1))}
+             \<union> offset_edges 1 E10
+             \<union> offset_edges (n10 + 1) E20
+             \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
+                (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by simp
+  from compile_fresh[OF c1_1] have E1_src_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1"
+    by simp
+  from compile_fresh[OF c1_1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
+  show ?thesis
+    using edge u_in u_lt Eif E1_src_lt ex1_lt by force
+qed
+
+(* The compound If exit pp n2 has no outgoing edges (it is a sink). *)
+lemma compound_If_no_source_n2:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+  shows "\<not> (\<exists>a w. (n20 + (n10 + 1), a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2)))"
+proof -
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2, of "n10 + 1"] by simp
+  have Eif: "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, en20 + (n10 + 1))}
+             \<union> offset_edges 1 E10
+             \<union> offset_edges (n10 + 1) E20
+             \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
+                (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by simp
+  from compile_fresh[OF c1_1] have E1_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1" by simp
+  from compile_fresh[OF c2_n] have E2_lt: "\<forall>e \<in> offset_edges (n10 + 1) E20. fst e < n20 + (n10 + 1)"
+    by simp
+  from compile_fresh[OF c1_1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
+  from compile_fresh[OF c2_n] have ex2_lt: "ex20 + (n10 + 1) < n20 + (n10 + 1)" by simp
+  show ?thesis
+    using Eif E1_lt E2_lt ex1_lt ex2_lt by force
+qed
+
+(*
+  A path from u in c1's region (1 \<le> u < n10+1) to v in c1's region in the
+  if-compound stays in c1's region.  Step list is offset_path 1 of a path
+  in to_cfg c1.
+*)
+lemma cfg_path_If_in_c1:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) u es v"
+    and u_in: "1 \<le> u" and u_lt: "u < n10 + 1"
+    and v_lt: "v < n10 + 1"
+  shows "\<exists>es'. es = offset_path 1 es' \<and> cfg_path (to_cfg c1) (u - 1) es' (v - 1)"
+  using p u_in u_lt
+proof (induction es arbitrary: u)
+  case Nil
+  from Nil(1) have "u = v" by (cases rule: cfg_path.cases) simp_all
+  hence "cfg_path (to_cfg c1) (u - 1) [] (v - 1)" by (simp add: cfg_path.empty)
+  thus ?case by (rule_tac x = "[]" in exI) simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and ps: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) w tl v"
+    by (cases rule: cfg_path.cases) auto
+  from compound_If_edge_src_c1[OF c1 c2 e_compound Cons.prems(2) Cons.prems(3)]
+  consider (E1) "(u, a, w) \<in> offset_edges 1 E10"
+         | (bridge) "u = ex10 + 1" "a = EA_Nop" "w = n20 + (n10 + 1)"
+    by auto
+  thus ?case
+  proof cases
+    case E1
+    from E1 obtain u0 w0 where decomp: "u = u0 + 1" "w = w0 + 1" "(u0, a, w0) \<in> E10"
+      unfolding offset_edges_def by auto
+    have w_in: "1 \<le> w" using decomp(2) by simp
+    have w_lt: "w < n10 + 1"
+      using compile_fresh[OF c1] decomp(2,3) by force
+    from Cons.IH[OF ps w_in w_lt] obtain es' where
+          tl_eq: "tl = offset_path 1 es'"
+      and pe1: "cfg_path (to_cfg c1) (w - 1) es' (v - 1)"
+      by auto
+    have toc1_edges: "cfg_edges (to_cfg c1) = E10"
+      unfolding to_cfg_def using c1 by (simp add: Let_def)
+    have edge_c1: "(u - 1, a, w - 1) \<in> cfg_edges (to_cfg c1)"
+      using toc1_edges decomp by simp
+    let ?es'_full = "(a, w - 1) # es'"
+    have p_full: "cfg_path (to_cfg c1) (u - 1) ?es'_full (v - 1)"
+      by (rule cfg_path.step[OF edge_c1 pe1])
+    have list_eq: "(a, w) # tl = offset_path 1 ?es'_full"
+      using tl_eq decomp(2) by simp
+    show ?thesis
+      using p_full list_eq hd_eq by (rule_tac x = "?es'_full" in exI) simp
+  next
+    case bridge
+    (* Path continues from w = n2.  But n2 is a sink, so the tail cannot proceed. *)
+    have w_eq: "w = n20 + (n10 + 1)" using bridge(3) .
+    have tl_empty_or_bad: "tl = [] \<and> w = v"
+    proof (cases tl)
+      case Nil
+      from ps Nil have "w = v" by (cases rule: cfg_path.cases) simp_all
+      thus ?thesis using Nil by simp
+    next
+      case (Cons hd' tl')
+      obtain a' w' where hd'_eq: "hd' = (a', w')" by (cases hd') auto
+      from ps Cons hd'_eq obtain
+            e_next: "(w, a', w') \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+        by (cases rule: cfg_path.cases) auto
+      from e_next w_eq compound_If_no_source_n2[OF c1 c2] have False by blast
+      thus ?thesis ..
+    qed
+    from tl_empty_or_bad have "w = v" by simp
+    from this v_lt w_eq have False by simp
+    thus ?thesis ..
+  qed
+qed
+
+lemma cfg_path_If_in_c2:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) u es v"
+    and u_in: "n10 + 1 \<le> u" and u_lt: "u < n20 + (n10 + 1)"
+    and v_lt: "v < n20 + (n10 + 1)"
+  shows "\<exists>es'. es = offset_path (n10 + 1) es' \<and>
+                cfg_path (to_cfg c2) (u - (n10 + 1)) es' (v - (n10 + 1))"
+  using p u_in u_lt
+proof (induction es arbitrary: u)
+  case Nil
+  from Nil(1) have "u = v" by (cases rule: cfg_path.cases) simp_all
+  hence "cfg_path (to_cfg c2) (u - (n10 + 1)) [] (v - (n10 + 1))" by (simp add: cfg_path.empty)
+  thus ?case by (rule_tac x = "[]" in exI) simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and ps: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) w tl v"
+    by (cases rule: cfg_path.cases) auto
+  from compound_If_edge_src_c2[OF c1 c2 e_compound Cons.prems(2) Cons.prems(3)]
+  consider (E2) "(u, a, w) \<in> offset_edges (n10 + 1) E20"
+         | (bridge) "u = ex20 + (n10 + 1)" "a = EA_Nop" "w = n20 + (n10 + 1)"
+    by auto
+  thus ?case
+  proof cases
+    case E2
+    from E2 obtain u0 w0 where
+          decomp: "u = u0 + (n10 + 1)" "w = w0 + (n10 + 1)" "(u0, a, w0) \<in> E20"
+      unfolding offset_edges_def by auto
+    have w_in: "n10 + 1 \<le> w" using decomp(2) by simp
+    have w_lt: "w < n20 + (n10 + 1)"
+      using compile_fresh[OF c2] decomp(2,3) by force
+    from Cons.IH[OF ps w_in w_lt] obtain es' where
+          tl_eq: "tl = offset_path (n10 + 1) es'"
+      and pe2: "cfg_path (to_cfg c2) (w - (n10 + 1)) es' (v - (n10 + 1))"
+      by auto
+    have toc2_edges: "cfg_edges (to_cfg c2) = E20"
+      unfolding to_cfg_def using c2 by (simp add: Let_def)
+    have edge_c2: "(u - (n10 + 1), a, w - (n10 + 1)) \<in> cfg_edges (to_cfg c2)"
+      using toc2_edges decomp by simp
+    let ?es'_full = "(a, w - (n10 + 1)) # es'"
+    have p_full: "cfg_path (to_cfg c2) (u - (n10 + 1)) ?es'_full (v - (n10 + 1))"
+      by (rule cfg_path.step[OF edge_c2 pe2])
+    have list_eq: "(a, w) # tl = offset_path (n10 + 1) ?es'_full"
+      using tl_eq decomp(2) by simp
+    show ?thesis
+      using p_full list_eq hd_eq by (rule_tac x = "?es'_full" in exI) simp
+  next
+    case bridge
+    have w_eq: "w = n20 + (n10 + 1)" using bridge(3) .
+    have tl_eq_v: "w = v"
+    proof (cases tl)
+      case Nil
+      from ps Nil have "w = v" by (cases rule: cfg_path.cases) simp_all
+      thus ?thesis by simp
+    next
+      case (Cons hd' tl')
+      obtain a' w' where hd'_eq: "hd' = (a', w')" by (cases hd') auto
+      from ps Cons hd'_eq obtain
+            e_next: "(w, a', w') \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+        by (cases rule: cfg_path.cases) auto
+      from e_next w_eq compound_If_no_source_n2[OF c1 c2] have False by blast
+      thus ?thesis ..
+    qed
+    from tl_eq_v v_lt w_eq have False by simp
+    thus ?thesis ..
+  qed
+qed
+
+(*
+  A compound-If path from u in c1's region to the compound exit n2 factors
+  uniquely as (offset_path 1 of a c1 path u-1 \<to> ex10) followed by the
+  c1-post Nop bridge to n2.  Variant: cfg_path_If_factor_c2 for c2 side.
+*)
+lemma cfg_path_If_factor_c1:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) u es (n20 + (n10 + 1))"
+    and u_in: "1 \<le> u" and u_lt: "u < n10 + 1"
+  shows "\<exists>es'. es = offset_path 1 es' @ [(EA_Nop, n20 + (n10 + 1))] \<and>
+                cfg_path (to_cfg c1) (u - 1) es' ex10"
+  using p u_in u_lt
+proof (induction es arbitrary: u)
+  case Nil
+  from Nil(1) have "u = n20 + (n10 + 1)" by (cases rule: cfg_path.cases) simp_all
+  with Nil.prems(3) show ?case by simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and ps: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) w tl (n20 + (n10 + 1))"
+    by (cases rule: cfg_path.cases) auto
+  from compound_If_edge_src_c1[OF c1 c2 e_compound Cons.prems(2) Cons.prems(3)]
+  consider (E1) "(u, a, w) \<in> offset_edges 1 E10"
+         | (bridge) "u = ex10 + 1" "a = EA_Nop" "w = n20 + (n10 + 1)"
+    by auto
+  thus ?case
+  proof cases
+    case E1
+    from E1 obtain u0 w0 where decomp: "u = u0 + 1" "w = w0 + 1" "(u0, a, w0) \<in> E10"
+      unfolding offset_edges_def by auto
+    have w_in: "1 \<le> w" using decomp(2) by simp
+    have w_lt: "w < n10 + 1"
+      using compile_fresh[OF c1] decomp(2,3) by force
+    from Cons.IH[OF ps w_in w_lt] obtain es' where
+          tl_eq: "tl = offset_path 1 es' @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pe1: "cfg_path (to_cfg c1) (w - 1) es' ex10"
+      by auto
+    have toc1_edges: "cfg_edges (to_cfg c1) = E10"
+      unfolding to_cfg_def using c1 by (simp add: Let_def)
+    have edge_c1: "(u - 1, a, w - 1) \<in> cfg_edges (to_cfg c1)"
+      using toc1_edges decomp by simp
+    let ?es'_full = "(a, w - 1) # es'"
+    have p_full: "cfg_path (to_cfg c1) (u - 1) ?es'_full ex10"
+      by (rule cfg_path.step[OF edge_c1 pe1])
+    have list_eq: "(a, w) # tl = offset_path 1 ?es'_full @ [(EA_Nop, n20 + (n10 + 1))]"
+      using tl_eq decomp(2) by simp
+    show ?thesis using p_full list_eq hd_eq by (rule_tac x = "?es'_full" in exI) simp
+  next
+    case bridge
+    have w_n2: "w = n20 + (n10 + 1)" using bridge(3) .
+    have tl_empty: "tl = []"
+    proof (rule ccontr)
+      assume "tl \<noteq> []"
+      then obtain hd' tl' where tl_cons: "tl = hd' # tl'" by (cases tl) auto
+      obtain a' w' where hd'_eq: "hd' = (a', w')" by (cases hd') auto
+      from ps tl_cons hd'_eq obtain
+            e_next: "(w, a', w') \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+        by (cases rule: cfg_path.cases) auto
+      from e_next w_n2 compound_If_no_source_n2[OF c1 c2] show False by blast
+    qed
+    have empty_p: "cfg_path (to_cfg c1) (u - 1) [] ex10"
+      using bridge(1) by (simp add: cfg_path.empty)
+    have list_eq: "(a, w) # tl = offset_path 1 [] @ [(EA_Nop, n20 + (n10 + 1))]"
+      using bridge tl_empty by simp
+    show ?thesis using list_eq empty_p hd_eq by (rule_tac x = "[]" in exI) simp
+  qed
+qed
+
+lemma cfg_path_If_factor_c2:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) u es (n20 + (n10 + 1))"
+    and u_in: "n10 + 1 \<le> u" and u_lt: "u < n20 + (n10 + 1)"
+  shows "\<exists>es'. es = offset_path (n10 + 1) es' @ [(EA_Nop, n20 + (n10 + 1))] \<and>
+                cfg_path (to_cfg c2) (u - (n10 + 1)) es' ex20"
+  using p u_in u_lt
+proof (induction es arbitrary: u)
+  case Nil
+  from Nil(1) have "u = n20 + (n10 + 1)" by (cases rule: cfg_path.cases) simp_all
+  with Nil.prems(3) show ?case by simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and ps: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) w tl (n20 + (n10 + 1))"
+    by (cases rule: cfg_path.cases) auto
+  from compound_If_edge_src_c2[OF c1 c2 e_compound Cons.prems(2) Cons.prems(3)]
+  consider (E2) "(u, a, w) \<in> offset_edges (n10 + 1) E20"
+         | (bridge) "u = ex20 + (n10 + 1)" "a = EA_Nop" "w = n20 + (n10 + 1)"
+    by auto
+  thus ?case
+  proof cases
+    case E2
+    from E2 obtain u0 w0 where
+          decomp: "u = u0 + (n10 + 1)" "w = w0 + (n10 + 1)" "(u0, a, w0) \<in> E20"
+      unfolding offset_edges_def by auto
+    have w_in: "n10 + 1 \<le> w" using decomp(2) by simp
+    have w_lt: "w < n20 + (n10 + 1)"
+      using compile_fresh[OF c2] decomp(2,3) by force
+    from Cons.IH[OF ps w_in w_lt] obtain es' where
+          tl_eq: "tl = offset_path (n10 + 1) es' @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pe2: "cfg_path (to_cfg c2) (w - (n10 + 1)) es' ex20"
+      by auto
+    have toc2_edges: "cfg_edges (to_cfg c2) = E20"
+      unfolding to_cfg_def using c2 by (simp add: Let_def)
+    have edge_c2: "(u - (n10 + 1), a, w - (n10 + 1)) \<in> cfg_edges (to_cfg c2)"
+      using toc2_edges decomp by simp
+    let ?es'_full = "(a, w - (n10 + 1)) # es'"
+    have p_full: "cfg_path (to_cfg c2) (u - (n10 + 1)) ?es'_full ex20"
+      by (rule cfg_path.step[OF edge_c2 pe2])
+    have list_eq: "(a, w) # tl = offset_path (n10 + 1) ?es'_full @ [(EA_Nop, n20 + (n10 + 1))]"
+      using tl_eq decomp(2) by simp
+    show ?thesis using p_full list_eq hd_eq by (rule_tac x = "?es'_full" in exI) simp
+  next
+    case bridge
+    have w_n2: "w = n20 + (n10 + 1)" using bridge(3) .
+    have tl_empty: "tl = []"
+    proof (rule ccontr)
+      assume "tl \<noteq> []"
+      then obtain hd' tl' where tl_cons: "tl = hd' # tl'" by (cases tl) auto
+      obtain a' w' where hd'_eq: "hd' = (a', w')" by (cases hd') auto
+      from ps tl_cons hd'_eq obtain
+            e_next: "(w, a', w') \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+        by (cases rule: cfg_path.cases) auto
+      from e_next w_n2 compound_If_no_source_n2[OF c1 c2] show False by blast
+    qed
+    have empty_p: "cfg_path (to_cfg c2) (u - (n10 + 1)) [] ex20"
+      using bridge(1) by (simp add: cfg_path.empty)
+    have list_eq: "(a, w) # tl = offset_path (n10 + 1) [] @ [(EA_Nop, n20 + (n10 + 1))]"
+      using bridge tl_empty by simp
+    show ?thesis using list_eq empty_p hd_eq by (rule_tac x = "[]" in exI) simp
+  qed
+qed
+
+(*
+  Strong If path split.  A path in to_cfg (IF b THEN c1 ELSE c2) from
+  the compound entry 0 to the compound exit n2 begins with one of the
+  two pre-edges (Assume b / AssumeNot b) and ends with the matching
+  post-Nop bridge.
+*)
+lemma cfg_path_If_split:
+  assumes c1: "compile c1 0 = (n10, en10, ex10, E10)"
+    and c2: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))"
+  shows "(\<exists>es1. es = (EA_Assume b, en10 + 1)
+                     # offset_path 1 es1
+                     @ [(EA_Nop, n20 + (n10 + 1))]
+              \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+       \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1))
+                     # offset_path (n10 + 1) es2
+                     @ [(EA_Nop, n20 + (n10 + 1))]
+              \<and> cfg_path (to_cfg c2) en20 es2 ex20)"
+proof -
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2, of "n10 + 1"] by simp
+  have Eif: "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, en20 + (n10 + 1))}
+             \<union> offset_edges 1 E10
+             \<union> offset_edges (n10 + 1) E20
+             \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
+                (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by simp
+
+  have es_ne: "es \<noteq> []"
+  proof (rule ccontr)
+    assume "\<not> es \<noteq> []"
+    hence "es = []" by simp
+    with p have "0 = n20 + (n10 + 1)" by (cases rule: cfg_path.cases) simp_all
+    thus False by simp
+  qed
+  then obtain hd tl where es_cons: "es = hd # tl" by (cases es) auto
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from p es_cons hd_eq obtain
+        e_first: "(0, a, w) \<in> cfg_edges (to_cfg (IF b THEN c1 ELSE c2))"
+    and ps: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) w tl (n20 + (n10 + 1))"
+    by (cases rule: cfg_path.cases) auto
+
+  from compile_fresh[OF c1] have ex10_lt: "ex10 < n10" by simp
+  from compile_fresh[OF c2_n] have ex2n_lt: "ex20 + (n10 + 1) < n20 + (n10 + 1)" by simp
+  from compile_ge[OF c1_1] have en1_in_c1: "1 \<le> en10 + 1 \<and> en10 + 1 \<le> n10 + 1"
+    using compile_fresh[OF c1_1] by simp
+  from compile_ge[OF c2_n] have en2n_ge: "n10 + 1 \<le> en20 + (n10 + 1)" by simp
+
+  (* By edge classification at source 0: only two pre-edges have source 0. *)
+  have e_cases:
+    "(a = EA_Assume b \<and> w = en10 + 1) \<or> (a = EA_AssumeNot b \<and> w = en20 + (n10 + 1))"
+  proof -
+    have b1: "\<And>x ay y. (x, ay, y) \<in> offset_edges 1 E10 \<Longrightarrow> 1 \<le> x"
+      using compile_ge[OF c1_1] by force
+    have b2: "\<And>x ay y. (x, ay, y) \<in> offset_edges (n10 + 1) E20 \<Longrightarrow> n10 + 1 \<le> x"
+      using compile_ge[OF c2_n] by force
+    show ?thesis
+      using e_first Eif b1 b2 en2n_ge by force
+  qed
+  
+  thus ?thesis
+  proof
+    assume A: "a = EA_Assume b \<and> w = en10 + 1"
+    hence w_eq: "w = en10 + 1" and a_eq: "a = EA_Assume b" by auto
+    from compile_fresh[OF c1_1] have w_in: "1 \<le> w" "w < n10 + 1" using w_eq by auto
+    from cfg_path_If_factor_c1[OF c1 c2 ps w_in(1) w_in(2)] obtain es1 where
+          tl_eq: "tl = offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pc1: "cfg_path (to_cfg c1) (w - 1) es1 ex10"
+      by blast
+    have w_minus: "w - 1 = en10" using w_eq by simp
+    from pc1 w_minus have pc1': "cfg_path (to_cfg c1) en10 es1 ex10" by simp
+    have es_eq:
+      "es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
+      using es_cons hd_eq a_eq w_eq tl_eq by simp
+    show ?thesis using es_eq pc1' by blast
+  next
+    assume A: "a = EA_AssumeNot b \<and> w = en20 + (n10 + 1)"
+    hence w_eq: "w = en20 + (n10 + 1)" and a_eq: "a = EA_AssumeNot b" by auto
+    from compile_ge[OF c2_n] compile_fresh[OF c2_n]
+      have w_in: "n10 + 1 \<le> w" "w < n20 + (n10 + 1)" using w_eq by auto
+    from cfg_path_If_factor_c2[OF c1 c2 ps w_in(1) w_in(2)] obtain es2 where
+          tl_eq: "tl = offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pc2: "cfg_path (to_cfg c2) (w - (n10 + 1)) es2 ex20"
+      by blast
+    have w_minus: "w - (n10 + 1) = en20" using w_eq by simp
+    from pc2 w_minus have pc2': "cfg_path (to_cfg c2) en20 es2 ex20" by simp
+    have es_eq:
+      "es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2
+             @ [(EA_Nop, n20 + (n10 + 1))]"
+      using es_cons hd_eq a_eq w_eq tl_eq by simp
+    show ?thesis using es_eq pc2' by blast
   qed
 qed
 
@@ -1255,7 +1740,126 @@ next
     using step1 step2 big_step.Seq by blast
 next
   case (If b c1 c2)
-  show ?case sorry
+  obtain n10 en10 ex10 E10 where
+        c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
+    and en10_eq: "cfg_entry (to_cfg c1) = en10"
+    and ex10_eq: "cfg_exit  (to_cfg c1) = ex10"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where
+        c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and en20_eq: "cfg_entry (to_cfg c2) = en20"
+    and ex20_eq: "cfg_exit  (to_cfg c2) = ex20"
+    by (rule to_cfg_compile)
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1_0, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2_0, of "n10 + 1"] by simp
+  have en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    and ex_if: "cfg_exit  (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
+  from If.prems(1) en_if ex_if
+    have p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))" by simp
+
+  from cfg_path_If_split[OF c1_0 c2_0 p]
+  have split_or:
+    "(\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
+                \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+   \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
+                \<and> cfg_path (to_cfg c2) en20 es2 ex20)" .
+
+  show ?case
+  proof (rule disjE[OF split_or])
+    assume "\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
+                  \<and> cfg_path (to_cfg c1) en10 es1 ex10"
+    then obtain es1 where
+          es_eq: "es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pc1: "cfg_path (to_cfg c1) en10 es1 ex10"
+      by blast
+    have collect_chain:
+      "path_collect es {s} = path_collect es1 {x \<in> {s}. bval b x}"
+    proof -
+      have "path_collect es {s}
+            = path_collect (offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (path_collect [(EA_Assume b, en10 + 1)] {s})"
+        unfolding es_eq by (simp add: path_collect_append)
+      also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))]
+                                    (path_collect (offset_path 1 es1)
+                                                  (path_collect [(EA_Assume b, en10 + 1)] {s}))"
+        by (simp add: path_collect_append)
+      also have "\<dots> = path_collect (offset_path 1 es1)
+                                    (path_collect [(EA_Assume b, en10 + 1)] {s})"
+        by simp
+      also have "\<dots> = path_collect es1 (path_collect [(EA_Assume b, en10 + 1)] {s})"
+        by simp
+      also have "\<dots> = path_collect es1 {x \<in> {s}. bval b x}"
+        by simp
+      finally show ?thesis .
+    qed
+    have bv: "bval b s"
+    proof (rule ccontr)
+      assume nb: "\<not> bval b s"
+      have empty_filter: "{x \<in> {s}. bval b x} = {}" using nb by auto
+      have "path_collect es {s} = path_collect es1 {}"
+        using collect_chain empty_filter
+        by argo
+      hence "path_collect es {s} = {}" by simp
+      with If.prems(3) show False by simp
+    qed
+    hence filter_eq: "{x \<in> {s}. bval b x} = {s}" by auto
+    from If.prems(3) collect_chain filter_eq
+      have t_in: "t \<in> path_collect es1 {s}" by simp
+    from pc1 en10_eq ex10_eq
+      have p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))" by simp
+    have step1: "(c1, s) \<Rightarrow> t"
+      using If.IH(1)[OF p1 singletonI t_in] .
+    show ?thesis using bv step1 big_step.IfTrue by blast
+  next
+    assume "\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
+                  \<and> cfg_path (to_cfg c2) en20 es2 ex20"
+    then obtain es2 where
+          es_eq: "es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pc2: "cfg_path (to_cfg c2) en20 es2 ex20"
+      by blast
+    have collect_chain:
+      "path_collect es {s} = path_collect es2 {x \<in> {s}. \<not> bval b x}"
+    proof -
+      have "path_collect es {s}
+            = path_collect (offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+        unfolding es_eq by (simp add: path_collect_append)
+      also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))]
+                                    (path_collect (offset_path (n10 + 1) es2)
+                                                  (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s}))"
+        by (simp add: path_collect_append)
+      also have "\<dots> = path_collect (offset_path (n10 + 1) es2)
+                                    (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+        by simp
+      also have "\<dots> = path_collect es2 (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+        by simp
+      also have "\<dots> = path_collect es2 {x \<in> {s}. \<not> bval b x}"
+        by simp
+      finally show ?thesis .
+    qed
+    have nbv: "\<not> bval b s"
+    proof (rule ccontr)
+      assume "\<not> \<not> bval b s"
+      hence bv: "bval b s" by simp
+      have empty_filter: "{x \<in> {s}. \<not> bval b x} = {}" using bv by auto
+      have "path_collect es {s} = path_collect es2 {}"
+        using collect_chain empty_filter by presburger
+      hence "path_collect es {s} = {}" by simp
+      with If.prems(3) show False by simp
+    qed
+    hence filter_eq: "{x \<in> {s}. \<not> bval b x} = {s}" by auto
+    from If.prems(3) collect_chain filter_eq
+      have t_in: "t \<in> path_collect es2 {s}" by simp
+    from pc2 en20_eq ex20_eq
+      have p2: "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))" by simp
+    have step2: "(c2, s) \<Rightarrow> t"
+      using If.IH(2)[OF p2 singletonI t_in] .
+    show ?thesis using nbv step2 big_step.IfFalse by blast
+  qed
 next
   case (While b c)
   show ?case sorry

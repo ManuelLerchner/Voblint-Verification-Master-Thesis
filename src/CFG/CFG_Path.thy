@@ -257,6 +257,51 @@ next
     using e_unshifted ih ku by (simp add: cfg_path.step)
 qed
 
+(*
+  cfg_path_split_last: a non-empty path factors as
+    (path u \<to> mid) @ [(a, v)]
+  where (mid, a, v) is the last edge.  Used to peel the trailing Nop
+  bridge in If / While CFG paths.
+*)
+lemma cfg_path_split_last:
+  assumes p: "cfg_path G u es v"
+    and ne: "es \<noteq> []"
+  shows "\<exists>es' mid a. es = es' @ [(a, v)] \<and>
+                     cfg_path G u es' mid \<and>
+                     (mid, a, v) \<in> cfg_edges G"
+  using p ne
+proof (induction es arbitrary: u)
+  case Nil
+  thus ?case by simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e: "(u, a, w) \<in> cfg_edges G"
+    and ps: "cfg_path G w tl v"
+    by (cases rule: cfg_path.cases) auto
+  show ?case
+  proof (cases "tl = []")
+    case True
+    from ps True have wv: "w = v" by (cases rule: cfg_path.cases) auto
+    have es_eq: "(a, w) # tl = [] @ [(a, v)]" using True wv by simp
+    have empty_p: "cfg_path G u [] u" by (rule cfg_path.empty)
+    have e_uv: "(u, a, v) \<in> cfg_edges G" using e wv by simp
+    show ?thesis using es_eq empty_p e_uv hd_eq by blast
+  next
+    case False
+    from Cons.IH[OF ps False] obtain es' mid a' where
+          tl_eq: "tl = es' @ [(a', v)]"
+      and ps': "cfg_path G w es' mid"
+      and last_e: "(mid, a', v) \<in> cfg_edges G"
+      by blast
+    have full: "cfg_path G u ((a, w) # es') mid"
+      by (rule cfg_path.step[OF e ps'])
+    have list_eq: "(a, w) # tl = ((a, w) # es') @ [(a', v)]" using tl_eq by simp
+    show ?thesis using list_eq full last_e hd_eq by blast
+  qed
+qed
+
 (* ── Reachability from Entry ───────────────────────────────────── *)
 
 definition cfg_reachable :: "cfg => pp => bool" where
