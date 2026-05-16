@@ -310,23 +310,4 @@ definition cfg_reachable :: "cfg => pp => bool" where
 lemma cfg_entry_reachable[intro, simp]: "cfg_reachable g (cfg_entry g)"
   unfolding cfg_reachable_def by (rule cfg_reaches_refl)
 
-(*
-  cfg_exit_reachable_from_entry is unprovable for arbitrary well-formed CFGs:
-  cfg_wf does not guarantee a path from entry to exit.  Replaced by
-  to_cfg_exit_reachable below, which uses the compile structure.
-*)
-lemma cfg_exit_reachable_from_entry:
-  "cfg_wf g ==>
-   (\<forall>(u, _, v) \<in> cfg_edges g. cfg_reachable g u \<longrightarrow> cfg_reachable g v) ==>
-   cfg_reachable g (cfg_exit g)"
-  sorry  (* intentionally weak; use to_cfg_exit_reachable for to_cfg results *)
-
-(*
-  For CFGs produced by to_cfg, the exit IS reachable from entry.
-  Proved by structural induction on c using compile's edge structure.
-*)
-lemma to_cfg_exit_reachable:
-  "cfg_reachable (to_cfg c) (cfg_exit (to_cfg c))"
-  sorry
-
 end

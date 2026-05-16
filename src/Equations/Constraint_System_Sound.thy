@@ -92,8 +92,8 @@ corollary exit_sound:
   shows   "t : gamma_state (env (cfg_exit (to_cfg c)))"
   sorry
   (* Proof: post_fixpoint_sound + S_sound gives \<forall>v. cfg_reach g S v ⊆ gamma_state(env v).
-     collect_While + collect_le_cfg_collect_exit give t \<in> cfg_reach g S exit.
-     Conclude t \<in> gamma_state(env exit). *)
+     big_step + collect_le_cfg_collect_exit + cfg_collect_exit_eq_collect give
+     t \<in> cfg_reach g S exit. Conclude t \<in> gamma_state(env exit). *)
 
 end
 

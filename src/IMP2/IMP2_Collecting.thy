@@ -64,9 +64,4 @@ proof (intro allI impI)
     by blast
 qed
 
-lemma collect_While:
-  "collect (WHILE b DO c) S =
-     {u \<in> lfp (\<lambda>T. S \<union> collect c {s \<in> T. bval b s}). \<not> bval b u}"
-  sorry
-
 end
