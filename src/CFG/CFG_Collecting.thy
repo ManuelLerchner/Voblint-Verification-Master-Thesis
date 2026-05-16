@@ -68,6 +68,24 @@ lemma path_collect_mono:
   shows "path_collect es S \<subseteq> path_collect es T"
   by (rule path_collect_mono_strong[OF subset])
 
+(*
+  path_collect only inspects edge actions; the pp component of each
+  step is discarded.  Hence shifting pp's via offset_path is invisible
+  to path_collect.  Used to glue an IH path (lifted via cfg_path_offset)
+  back into the surrounding compound graph's collecting argument.
+*)
+lemma path_collect_offset_path[simp]:
+  "path_collect (offset_path k es) S = path_collect es S"
+proof (induction es arbitrary: S)
+  case Nil
+  show ?case by simp
+next
+  case (Cons e es)
+  obtain a p where ep: "e = (a, p)" by (cases e) auto
+  show ?case
+    unfolding ep offset_path_Cons path_collect.simps using Cons by simp
+qed
+
 lemma path_collect_append:
   "path_collect (es1 @ es2) S = path_collect es2 (path_collect es1 S)"
 proof (induction es1 arbitrary: S)
@@ -296,11 +314,20 @@ lemma compile_Seq_0:
   shows "compile (c1 ;; c2) 0 = (n2, en1, ex2, E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2)"
   using assms by (simp add: compile.simps Let_def)
 
-lemma compile_While_0:
+lemma compile_While_0: 
   assumes "compile c 1 = (n1, en1, ex1, E1)"
   shows "compile (WHILE b DO c) 0 =
          (Suc n1, (0::pp), n1,
           {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)})"
+  using assms by (simp add: compile.simps Let_def)
+
+lemma compile_If_0:
+  assumes c1: "compile c1 1 = (n1, en1, ex1, E1)"
+    and   c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "compile (IF b THEN c1 ELSE c2) 0 =
+         (n2 + 1, (0::pp), n2,
+          {(0, EA_Assume b, en1), (0, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
+          \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)})"
   using assms by (simp add: compile.simps Let_def)
 
 lemma cfg_edges_entry_exit_Seq:
@@ -318,6 +345,48 @@ proof -
   show "cfg_entry (to_cfg (c1 ;; c2)) = en1"
     unfolding to_cfg_def cmp by simp
   show "cfg_exit (to_cfg (c1 ;; c2)) = ex2"
+    unfolding to_cfg_def cmp by simp
+qed
+
+lemma cfg_edges_entry_exit_If:
+  assumes c1: "compile c1 1 = (n1, en1, ex1, E1)"
+    and   c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+  shows "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+         {(0, EA_Assume b, en1), (0, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
+         \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
+    and "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    and "cfg_exit  (to_cfg (IF b THEN c1 ELSE c2)) = n2"
+proof -
+  define EI where "EI = {(0, EA_Assume b, en1), (0, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
+                       \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
+  from c1 c2 have cmp: "compile (IF b THEN c1 ELSE c2) 0 = (n2 + 1, 0, n2, EI)"
+    unfolding EI_def by (rule compile_If_0)
+  show "cfg_edges (to_cfg (IF b THEN c1 ELSE c2)) =
+        {(0, EA_Assume b, en1), (0, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
+        \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
+    unfolding to_cfg_def EI_def[symmetric] cmp by simp
+  show "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    unfolding to_cfg_def cmp by simp
+  show "cfg_exit  (to_cfg (IF b THEN c1 ELSE c2)) = n2"
+    unfolding to_cfg_def cmp by simp
+qed
+
+lemma cfg_edges_entry_exit_While:
+  assumes c: "compile c 1 = (n1, en1, ex1, E1)"
+  shows "cfg_edges (to_cfg (WHILE b DO c)) =
+         {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)}"
+    and "cfg_entry (to_cfg (WHILE b DO c)) = 0"
+    and "cfg_exit  (to_cfg (WHILE b DO c)) = n1"
+proof -
+  define EW where "EW = {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)}"
+  from c have cmp: "compile (WHILE b DO c) 0 = (Suc n1, 0, n1, EW)"
+    unfolding EW_def by (rule compile_While_0)
+  show "cfg_edges (to_cfg (WHILE b DO c)) =
+        {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)}"
+    unfolding to_cfg_def EW_def[symmetric] cmp by simp
+  show "cfg_entry (to_cfg (WHILE b DO c)) = 0"
+    unfolding to_cfg_def cmp by simp
+  show "cfg_exit  (to_cfg (WHILE b DO c)) = n1"
     unfolding to_cfg_def cmp by simp
 qed
 
@@ -489,7 +558,7 @@ next
   also have "\<dots> \<subseteq> cfg_collect g S v"
     by (rule IH)
   finally show ?case unfolding ew path_collect.simps .
-qed
+qed  
 
 lemma path_sound_cfg_collect:
   assumes es: "cfg_path g (cfg_entry g) es v"

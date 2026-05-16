@@ -154,6 +154,61 @@ lemma cfg_path_first_edge:
   "cfg_path g u ((a, w) # es) v ==> (u, a, w) : cfg_edges g"
   by (erule cfg_path.cases) auto
 
+(* ── Offset Paths ──────────────────────────────────────────────── *)
+
+(*
+  offset_path k es shifts every pp in the step list by k.
+  Useful for lifting an IH path on `to_cfg c` (compile c 0) into a
+  larger compound CFG where c was compiled at some n > 0.
+  Since path_collect ignores the pp component, the collect output is
+  invariant under this shift (see path_collect_offset_path).
+*)
+
+definition offset_path :: "nat => (edge_action * pp) list => (edge_action * pp) list" where
+  "offset_path k es = map (\<lambda>(a, p). (a, p + k)) es"
+
+lemma offset_path_Nil[simp]: "offset_path k [] = []"
+  unfolding offset_path_def by simp
+
+lemma offset_path_Cons[simp]:
+  "offset_path k ((a, p) # es) = (a, p + k) # offset_path k es"
+  unfolding offset_path_def by simp
+
+lemma offset_path_append[simp]:
+  "offset_path k (es1 @ es2) = offset_path k es1 @ offset_path k es2"
+  unfolding offset_path_def by simp
+
+(*
+  cfg_path_offset: a path in a graph G lifts to a path in the
+  pp-shifted graph (offset_edges k G), with start/end shifted by k
+  and the step list shifted via offset_path.
+*)
+lemma cfg_path_offset:
+  assumes "cfg_path \<lparr>cfg_entry = ent, cfg_exit = ex, cfg_edges = E\<rparr> u es v"
+  shows "cfg_path \<lparr>cfg_entry = ent + k, cfg_exit = ex + k, cfg_edges = offset_edges k E\<rparr>
+                  (u + k) (offset_path k es) (v + k)"
+  using assms
+proof (induction "\<lparr>cfg_entry = ent, cfg_exit = ex, cfg_edges = E\<rparr>" u es v rule: cfg_path.induct)
+  case (empty w)
+  show ?case by (simp add: cfg_path.empty)
+next
+  case (step u a w es v)
+  have e: "(u, a, w) \<in> E"
+    using step.hyps(1) by simp
+  have e': "(u + k, a, w + k) \<in> offset_edges k E"
+    using e in_offset_edges_iff by metis
+  show ?case
+    by (simp add: cfg_path.step e' step.hyps(3))
+qed
+
+(*
+  Path lift along an edge-set inclusion that's witnessed via offset.
+  In Seq/If/While, the sub-command c was compiled at offset n>0, so
+  its edges are `offset_edges n (cfg_edges (to_cfg c))`.  Combine
+  cfg_path_offset with cfg_path_mono_edges (in CFG_Collecting) to
+  drop the IH path into the compound graph.
+*)
+
 (* ── Reachability from Entry ───────────────────────────────────── *)
 
 definition cfg_reachable :: "cfg => pp => bool" where
