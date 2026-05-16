@@ -57,7 +57,7 @@ flowchart TD
 ### Core lemmas
 
 - `big_step_determ` — concrete semantics is deterministic.
-- `collect_SKIP`, `collect_Assign`, `collect_Seq`, `collect_If`, `collect_While` — compositional shape of `collect`.
+- `collect_SKIP`, `collect_Assign`, `collect_Seq`, `collect_If` — compositional shape of `collect` (while handled via `big_step` in the CFG bridge).
 - `collect_mono`, `while_collect_mono` — `collect` is monotone in its input set.
 
 ### Example
@@ -116,6 +116,9 @@ theorem cfg_collect_exit_eq_collect:
 
 This is the IMP ↔ CFG correctness link: reasoning about `collect c S` on the
 source equals reasoning about the CFG collecting semantics at the exit.
+
+**Status:** proved in `CFG_Collecting.thy` (no `sorry` in `src/IMP2/` or `src/CFG/`).
+See `docs/html/IMP_CFG_WALKTHROUGH.html`.
 
 ### Example CFG for our program
 
