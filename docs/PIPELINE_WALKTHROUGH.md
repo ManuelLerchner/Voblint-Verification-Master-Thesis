@@ -32,6 +32,47 @@ i.e. the abstract value computed for `x` at the program exit is in
 
 ## Top-Level Flow
 
+### Proof status (done vs. open)
+
+Bridge **#1** (IMP ↔ CFG collecting at exit) is proved; abstract interpretation +
+TD solver composition is still open. See also `docs/PROOF_OVERVIEW.md`.
+
+```mermaid
+flowchart TD
+  subgraph done ["Done — sorry-free in src/IMP2 + src/CFG"]
+    BS["big_step (c,s) ⇒ t"]
+    COL["collect c S"]
+    CC["cfg_collect (to_cfg c) S exit"]
+    EQ["cfg_collect_exit_eq_collect"]
+    BS --> COL
+    COL --- EQ
+    CC --- EQ
+  end
+
+  subgraph open ["Still open — sorry in Equations / Solver / Pipeline"]
+    RHS["rhs / is_post_fixpoint env"]
+    ABS["post_fixpoint_sound"]
+    TD["td_analyse_post_fixpoint (AFP)"]
+    PS["pipeline_sound / sign_pipeline_sound"]
+  end
+
+  subgraph abs ["Abstract layer — per domain (Sign, …)"]
+    GAMMA["γ_state (env v)"]
+    TF["assign / assume transfer soundness"]
+  end
+
+  CC --> ABS
+  RHS --> ABS
+  TF --> ABS
+  ABS --> GAMMA
+  TD --> RHS
+  PS --> TD
+  PS --> EQ
+  PS --> BS
+```
+
+### Artifact flow (stages)
+
 ```mermaid
 flowchart TD
   A["IMP source<br/>com · aexp · bexp"] -->|to_cfg| B["CFG<br/>pp · edge_action · edges"]

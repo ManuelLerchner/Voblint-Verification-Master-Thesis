@@ -111,6 +111,52 @@ Option 3 with supervisors.
 
 ## 2) Core theorem chain (big picture)
 
+### Proof status (what is done vs. open)
+
+Bridge **#1** (IMP collecting = CFG collecting at exit) is proved with no `sorry` in
+`src/IMP2/` or `src/CFG/`. Bridge **#2** (abstract post-fixpoint over-approximates
+`cfg_collect`) and the TD solver glue are still open.
+
+```mermaid
+flowchart TD
+  subgraph done ["Done — sorry-free in src/IMP2 + src/CFG"]
+    BS["big_step (c,s) ⇒ t"]
+    COL["collect c S"]
+    CC["cfg_collect (to_cfg c) S exit"]
+    EQ["cfg_collect_exit_eq_collect"]
+    BS --> COL
+    COL --- EQ
+    CC --- EQ
+  end
+
+  subgraph open ["Still open — sorry in Equations / Solver / Pipeline"]
+    RHS["rhs / is_post_fixpoint env"]
+    ABS["post_fixpoint_sound"]
+    TD["td_analyse_post_fixpoint (AFP)"]
+    PS["pipeline_sound / sign_pipeline_sound"]
+  end
+
+  subgraph abs ["Abstract layer — per domain (Sign, …)"]
+    GAMMA["γ_state (env v)"]
+    TF["assign / assume transfer soundness"]
+  end
+
+  CC --> ABS
+  RHS --> ABS
+  TF --> ABS
+  ABS --> GAMMA
+  TD --> RHS
+  PS --> TD
+  PS --> EQ
+  PS --> BS
+```
+
+**How to read it.** Concrete execution flows down the left (done). The equation system
+mirrors `collect_pp` on the same `to_cfg c` graph: `rhs` + post-fixpoint gives
+`cfg_reach ⊆ γ ∘ env` (open). The AFP top-down solver is meant to produce that
+post-fixpoint (`td_analyse`). `exit_sound` closes the loop using
+`cfg_collect_exit_eq_collect` so exit soundness talks about `collect` / `big_step`.
+
 Target shape:
 
 1. Concrete run:

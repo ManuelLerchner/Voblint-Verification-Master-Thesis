@@ -106,7 +106,7 @@ text \<open>
   PP0 @{text \<open>--[x := 5]-->\<close>} PP1 @{text \<open>--[nop]-->\<close>} PP2 @{text \<open>--[y := x+1]-->\<close>} PP3 (exit).
 \<close>
 
-value "compile colsorrylecting_example_prog 0"
+value "compile collecting_example_prog 0"
 value "cfg_entry (to_cfg collecting_example_prog)"
 value "cfg_exit  (to_cfg collecting_example_prog)"
 value "cfg_edges (to_cfg collecting_example_prog)"
