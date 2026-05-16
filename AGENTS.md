@@ -128,6 +128,9 @@ AFP proves:
 * `big_step_determ`
 * basic collecting semantics lemmas (`collect_SKIP/Assign/Seq/If`)
 * `collect_pp_mono`
+* `big_step_cfg_path` — every big-step yields a CFG path from entry to
+  exit (all 7 cases closed); plus the compound-CFG path-lift
+  infrastructure it depends on
 
 ## Medium difficulty (sorry)
 
@@ -174,7 +177,24 @@ fun path_collect ::
   "(edge_action * pp) list => state set => state set"
 ```
 
----
+## Compound-CFG path lifts
+
+IH paths for sub-commands live in `to_cfg c_sub = compile c_sub 0`, but
+compound goals need paths in `to_cfg (… c_sub …)` where `c_sub` was
+compiled at some offset `k > 0` — so all pp's are shifted by `k`. The
+plumbing for that shift is in place:
+
+* shift a path through `offset_edges k`: `cfg_path_offset`
+* `path_collect` ignores pp's, so the shift is invisible to the
+  collect side: `path_collect_offset_path [simp]`
+* read compound entry / exit / edges off a single bundle:
+  `cfg_edges_entry_exit_{Seq,If,While}`
+* drop a sub-path into a supergraph by edge subset:
+  `cfg_path_mono_edges`
+
+`big_step_cfg_path` in `CFG_Collecting.thy` is the worked example. The
+`compile_path_big_step` converse still has sorries on Seq / If / While
+and follows the symmetric pattern.
 
 # Isabelle workflow
 
@@ -184,10 +204,24 @@ fun path_collect ::
 isabelle build -D . Goblint_Formalization
 ```
 
+A clean Goblint_Formalization build is ~15 s on this machine. That is
+fast enough to use as the inner loop when the work is *known-shape*
+— adding a new lemma whose proof you've already sketched, or
+patching the case bodies of an induction whose helper lemmas already
+exist. Edit → build → fix → build, one change per build, scales
+fine and avoids MCP setup overhead. Reach for the MCP only when you
+actually need to explore (try a `sledgehammer`, inspect a proof state,
+hunt for the right rewrite).
+
 ## MCP (Isabelle/REPL — `isabelle-ir`)
 
-The Isabelle MCP server (I/R) is the **primary** way to develop proofs. Do not
-edit `.thy` files blind — drive Isar through MCP and verify each step.
+Use the Isabelle MCP server (I/R) when developing a proof *requires*
+interactive feedback: `sledgehammer`, `find_theorems`, inspecting a
+goal mid-`apply`, deciding which simp lemma to use. For mechanical
+work (filling in cases of an induction whose helper lemmas exist,
+extending a known-good calc chain), batch build is usually faster.
+Do not edit `.thy` files blind — verify *somehow*, either by build or
+by MCP.
 
 ### Preflight (every fresh session)
 
@@ -335,6 +369,15 @@ lives on :8765.
 * avoid `inv` as pattern name (clashes with `Hilbert_Choice.inv`)
 * `ALL j >= n.` invalid — use `ALL j. n <= j --> ...`
 * free variable names like `rhs` may clash with imported constants — rename
+* Avoid Isar keywords as `have` / `obtain` labels — `back`, `prefer`,
+  `defer`, `then`, `with`, `also`, `finally`. `back` is especially nasty:
+  produces an outer-syntax error "proposition expected, end-of-input"
+  pointing past the offending line.
+* `induction … rule: big_step.induct` case patterns bind names in the
+  *textual* order of variables in the rule, which is **not** the rule's
+  conclusion order. Wrong order surfaces as a type-clash (e.g. a "store"
+  name typed as `com`). For HOL-IMP IfTrue / IfFalse / WhileTrue, the
+  conclusion's variable order is misleading — read the rule body.
 
 ---
 
