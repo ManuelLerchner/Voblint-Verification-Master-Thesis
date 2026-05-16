@@ -513,7 +513,7 @@ lemma big_step_cfg_path:
   assumes "(c, s) \<Rightarrow> t" and  "s \<in> S" 
   shows "\<exists>es. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))
             \<and> t \<in> path_collect es {s}"
-using assms(1) proof (induction "(c,s)" "t" arbitrary: c s t rule: big_step.induct)
+using assms proof (induction "(c,s)" "t" arbitrary: c s S rule: big_step.induct)
   case Skip
   obtain n' en ex E where comp: "compile SKIP 0 = (n', en, ex, E)"
     and en: "cfg_entry (to_cfg SKIP) = en"
@@ -523,7 +523,10 @@ using assms(1) proof (induction "(c,s)" "t" arbitrary: c s t rule: big_step.indu
   from comp have en0: "en = 0" and ex1: "ex = 1" and Eeq: "E = {(0, EA_Nop, 1)}"
     by auto
   show ?case
-    using E Eeq en en0 ex ex1 assms(2) by fastforce
+    by (metis E Eeq cfg_path.step edge_collect.simps(1) empty en en0 ex ex1 insertI1 path_collect.simps(2)
+        path_collect_empty)
+   
+    
 
 next
   case (Assign x a)
@@ -536,11 +539,30 @@ next
     by auto
   show ?case
     apply (rule exI[where x = "[(EA_Assign x a, 1)]"])
-    using E Eeq en0 ex1 en ex assms(2) by auto
+    using E Eeq en0 ex1 en ex assms(2)
+    by (simp add: cfg_path.step empty)
+   
+  
   
 next
-  case (Seq c1 c2 s s' t)
-  show ?case 
+  case (Seq c1 s1 t2 c2 t3)
+
+  obtain es1 where " cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))
+            \<and> t2 \<in> path_collect es1 {s1}"
+    using Seq.hyps(2) Seq.prems by auto
+
+
+ 
+    obtain es2 where "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2)) \<and> t3 \<in> path_collect es2 {t2}"
+      using Seq.hyps(4) by blast
+
+ (* not sure if that is right? *)
+    let ?ess = "es1 @ es2"
+
+     
+ 
+     show ?case 
+ 
     sorry
   
 next
@@ -573,7 +595,9 @@ next
     using WhileFalse.hyps(1) by (simp add: path_collect.simps)
   show ?case
     apply (rule exI[where x = "[(EA_AssumeNot b, ex)]"])
-    using path mem enG exG by simp
+    using path mem enG exG
+    by auto
+   
 next
   case (WhileTrue b s c t s')
   show ?case sorry

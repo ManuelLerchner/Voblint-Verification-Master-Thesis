@@ -70,6 +70,49 @@ record cfg =
   cfg_exit  :: pp
   cfg_edges :: "(pp * edge_action * pp) set"
 
+(* Affine shift along program points — compile c (n+k) is compile c n with all pp+k. *)
+
+definition offset_edges :: "nat \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> edge_action \<times> pp) set" where
+  "offset_edges k E = (\<lambda>(u,a,v). (u + k, a, v + k)) ` E"
+
+definition cfg_offset :: "nat \<Rightarrow> cfg \<Rightarrow> cfg" where
+  "cfg_offset k g = \<lparr> cfg_entry = cfg_entry g + k, cfg_exit = cfg_exit g + k,
+                      cfg_edges = offset_edges k (cfg_edges g) \<rparr>"
+
+lemma offset_edges_Un[simp]:
+  "offset_edges k (A \<union> B) = offset_edges k A \<union> offset_edges k B"
+  unfolding offset_edges_def by force
+
+lemma offset_edges_triple_union[simp]:
+  "offset_edges k (E1 \<union> {(u, a, v)} \<union> E2) =
+   offset_edges k E1 \<union> {(u + k, a, v + k)} \<union> offset_edges k E2"
+  unfolding offset_edges_def by force
+
+lemma offset_edges_insert_union_twice:
+  "insert (u + k::nat, a, v + k) (offset_edges k E1 \<union> offset_edges k E2) =
+   offset_edges k (insert (u, a, v) (E1 \<union> E2))"
+proof -
+  have eq: "insert (u, a, v) (E1 \<union> E2) = E1 \<union> {(u, a, v)} \<union> E2"
+    by blast
+  show ?thesis
+    unfolding eq offset_edges_def
+    by force
+qed
+
+lemma offset_edges_insert_shift:
+  "offset_edges k (insert ((u::nat), a, (v::nat)) S) =
+   insert (u + k, a, v + k) (offset_edges k S)"
+  unfolding offset_edges_def
+  by (simp add: image_insert split: prod.split)
+
+lemma in_offset_edges_iff:
+  "((u + k::nat, a, v + k) \<in> offset_edges k E) \<longleftrightarrow> (u, a, v) \<in> E"
+  unfolding offset_edges_def by (force simp: prod_eq_iff)
+
+lemma finite_offset_edges:
+  assumes "finite E" shows "finite (offset_edges k E)"
+  unfolding offset_edges_def using assms by simp
+
 (* ── Derived Notions ──────────────────────────────────────────── *)
 
 definition cfg_nodes :: "cfg => pp set" where

@@ -296,6 +296,171 @@ next
     done
 qed
 
+(* Shifting the fresh-program-point baseline by k shifts every allocated pp uniformly. *)
+
+lemma compile_SKIP_add_offset:
+  assumes H: "compile SKIP n = (n', en, ex, E)"
+  shows "compile SKIP (n + k) = (n' + k, en + k, ex + k, offset_edges k E)"
+  using assms
+proof -
+  have rhs: "compile SKIP n = (n + 2, n, n + 1, {(n, EA_Nop, n + 1)})"
+    by (simp add: compile.simps)
+  from H rhs have eq: "(n', en, ex, E) = (n + 2, n, n + 1, {(n, EA_Nop, n + 1)})"
+    by presburger
+  from eq show ?thesis
+    by (simp add: compile.simps offset_edges_def)
+qed
+
+lemma compile_Assign_add_offset:
+  assumes H: "compile (x ::= a) n = (n', en, ex, E)"
+  shows "compile (x ::= a) (n + k) = (n' + k, en + k, ex + k, offset_edges k E)"
+proof -
+  have rhs: "compile (x ::= a) n = (n + 2, n, n + 1, {(n, EA_Assign x a, n + 1)})"
+    by (simp add: compile.simps)
+  from H rhs have eq: "(n', en, ex, E) = (n + 2, n, n + 1, {(n, EA_Assign x a, n + 1)})"
+    by presburger
+  from eq show ?thesis
+    by (simp add: compile.simps offset_edges_def)
+qed
+
+lemma compile_add_offset:
+  fixes c :: com and n k n' en ex E
+  assumes cmp: "compile c n = (n', en, ex, E)"
+  shows "compile c (n + k) = (n' + k, en + k, ex + k, offset_edges k E)"
+  using cmp
+using assms proof (induct c arbitrary: n n' en ex E rule: com.induct)
+  case SKIP
+  then show ?case
+    using compile_SKIP_add_offset by blast
+next
+  case (Assign x a)
+  then show ?case
+    using compile_Assign_add_offset by presburger 
+next
+  case (Seq c1 c2)
+  then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
+    c1: "compile c1 n = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+    and n': "n' = n2" and en: "en = en1" and ex: "ex = ex2"
+    and E: "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
+    by (simp add: compile.simps Let_def split: prod.splits)
+
+  obtain n1k en1k ex1k E1k where c1k: "compile c1 (n + k) = (n1k, en1k, ex1k, E1k)"
+    by (cases "compile c1 (n + k)") auto
+  from Seq.hyps(1)[OF c1] c1k have c12: "compile c1 (n + k) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)"
+    using c1 by blast
+     
+
+  obtain n2k en2k ex2k E2k where c2k: "compile c2 (n1 + k) = (n2k, en2k, ex2k, E2k)"
+    by (cases "compile c2 (n1 + k)") auto
+  from Seq.hyps(2)[OF c2] c2k have c22: "compile c2 (n1 + k) = (n2 + k, en2 + k, ex2 + k, offset_edges k E2)"
+    using c2 by blast
+  
+
+  show ?case
+  proof -
+    have "compile (c1 ;; c2) (n + k) =
+        (let (n1a, en1a, ex1a, E1a) = compile c1 (n + k);
+             (n2a, en2a, ex2a, E2a) = compile c2 n1a
+        in (n2a, en1a, ex2a, E1a \<union> {(ex1a, EA_Nop, en2a)} \<union> E2a))"
+      by (simp only: compile.simps)
+    also have "\<dots> = (n2 + k, en1 + k, ex2 + k,
+        offset_edges k E1 \<union> {(ex1 + k, EA_Nop, en2 + k)} \<union> offset_edges k E2)"
+      by (simp add: Let_def c12 c22)
+    also have "\<dots> =
+        (n2 + k, en1 + k, ex2 + k, offset_edges k (E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2))"
+      by (simp add: offset_edges_insert_union_twice)
+    finally show ?case unfolding n' en ex E .
+  qed
+next
+  case (If b c1 c2)
+  then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
+    c1: "compile c1 (n + 1) = (n1, en1, ex1, E1)"
+    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
+    and n': "n' = n2 + 1"
+    and en: "en = n"
+    and ex: "ex = n2"
+    and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
+           \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
+    apply (simp)
+    by (smt (verit, ccfv_threshold) Pair_inject case_prod_unfold prod.collapse)
+     
+
+
+  obtain n1k en1k ex1k E1k where ck1: "compile c1 (n + k + 1) = (n1k, en1k, ex1k, E1k)"
+    by (cases "compile c1 (n + k + 1)") auto
+  from If.hyps(1)[OF c1] ck1 have ofs1:
+    "n1k = n1 + k" "en1k = en1 + k" "ex1k = ex1 + k" "E1k = offset_edges k E1"
+    using c1 by auto
+    
+  obtain n2k en2k ex2k E2k where ck2: "compile c2 (n1 + k) = (n2k, en2k, ex2k, E2k)"
+    using prod_cases4 by blast
+ 
+    
+ 
+  from If.hyps(2)[OF c2] ck2 ofs1 have ofs2:
+    "n2k = n2 + k" "en2k = en2 + k" "ex2k = ex2 + k" "E2k = offset_edges k E2"
+    by (auto simp add: c2)
+
+ 
+
+  show ?case
+  proof -
+    have lhs: "compile (IF b THEN c1 ELSE c2) (n + k) =
+        (let (na1, ena1, exa1, Ea1) = compile c1 (n + k + 1);
+             (na2, ena2, exa2, Ea2) = compile c2 na1
+         in (na2 + 1, n + k, na2,
+             {(n + k, EA_Assume b, ena1), (n + k, EA_AssumeNot b, ena2)}
+             \<union> Ea1 \<union> Ea2 \<union> {(exa1, EA_Nop, na2), (exa2, EA_Nop, na2)}))"
+      apply (auto simp add: compile.simps split:prod.splits)
+      by metis
+    have ck1': "compile c1 (n + k + 1) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)"
+      using ck1 ofs1(1,2,3,4) by blast
+ 
+    have ck2': "compile c2 (n1 + k) = (n2 + k, en2 + k, ex2 + k, offset_edges k E2)"
+      using ck2 ofs2(1,2,3,4) by fastforce
+      
+    show ?thesis
+      unfolding lhs n' en ex E
+      using  ck1' ck2'    apply(simp)
+      using offset_edges_Un offset_edges_insert_shift by presburger
+  
+  qed
+next
+  case (While b c)
+  then obtain n1 en1 ex1 E1 where
+    c: "compile c (n + 1) = (n1, en1, ex1, E1)"
+    and n': "n' = n1 + 1"
+    and en: "en = n"
+    and ex: "ex = n1"
+    and E:
+    "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, n)}"
+    by (smt (verit, del_insts) Pair_inject case_prod_unfold compile.simps(5) prod.collapse)
+  
+  obtain n1k en1k ex1k E1k where ck: "compile c (n + k + 1) = (n1k, en1k, ex1k, E1k)"
+    by (cases "compile c (n + k + 1)") auto
+  have ofs:
+    "n1k = n1 + k" "en1k = en1 + k" "ex1k = ex1 + k" "E1k = offset_edges k E1"
+    using While.hyps c ck apply fastforce +
+  done
+
+  show ?case
+    unfolding compile.simps Let_def n' en ex E ofs
+    unfolding offset_edges_def
+    apply( auto)
+    using ck offset_edges_def ofs(1,2,3,4) by auto
+qed
+
+lemma compile_add_nat:
+  "\<lbrakk>compile c (n'::nat) = (n'e, en, ex, E); n'' = n' + k\<rbrakk>
+   \<Longrightarrow> compile c n'' = (n'e + k, en + k, ex + k, offset_edges k E)"
+  using compile_add_offset[where n=n'] by simp
+
+lemma compile_from_0_offsets:
+  assumes "compile c 0 = (n0, en0, ex0, E0)"
+  shows "compile c k = (n0 + k, en0 + k, ex0 + k, offset_edges k E0)"
+  using compile_add_offset[OF assms, of k] by simp
+
 (* ── Structural Correctness Statements ───────────────────────── *)
 (*
   The key correctness property:
