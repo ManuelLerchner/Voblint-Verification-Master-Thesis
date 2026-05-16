@@ -11,7 +11,8 @@ Snapshot after closing `cfg_collect_exit_eq_collect` (May 2026). The CFG-collect
 | dropped `compile_path_big_step_while_rest`; fused into `compile_path_big_step` |     96 | 2,278 | one fewer exported lemma, removes universal-body API trap |
 | dropped dead helpers `cfg_path_If_in_c1`, `cfg_path_If_in_c2`                 |    146 | 2,132 | zero use sites |
 | dropped dead Seq helpers (`cfg_edges_compile_Seq_E{1,2}_subset`, `seq_comp_entry_ne_exit`, `Seq_edge_cross_bridge`, `path_collect_via_append`, `Seq_en2_ge_n1`) |   71 | 2,061 | zero use sites |
-| **subtotal** |   **335** | **2,061** | item 1 + dead-sweep done |
+| factored `cfg_path_singleton_edge` lemma; rewrote SKIP/Assign cases of both direction proofs |  -12 | 2,073 | net +12 LOC (new helper) but replaces 4 giant `metis` blocks with clean Isar |
+| **subtotal** |   **323** | **2,073** | item 1 + dead-sweep + SKIP/Assign cleanup done |
 
 ---
 

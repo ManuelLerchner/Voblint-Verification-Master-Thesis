@@ -294,6 +294,37 @@ lemma to_cfg_compile:
   unfolding to_cfg_def
   by (cases "compile c 0") (auto simp: Let_def)
 
+(* A path through a graph with a single edge u0 -a0-> v0 (with u0 ≠ v0)
+   is forced to be [(a0, v0)].  Used by the SKIP / Assign cases of the
+   collecting-semantics bridges. *)
+lemma cfg_path_singleton_edge:
+  assumes E: "cfg_edges g = {(u0, a0, v0)}"
+    and ne: "u0 \<noteq> v0"
+    and p: "cfg_path g u0 es v0"
+  shows "es = [(a0, v0)]"
+proof (cases es)
+  case Nil
+  with p ne show ?thesis by (auto elim: cfg_path.cases)
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons hd_eq p obtain
+        edge: "(u0, a, w) \<in> cfg_edges g"
+    and p_tl: "cfg_path g w tl v0"
+    by (auto elim: cfg_path.cases)
+  from edge E have aw: "a = a0" "w = v0" by auto
+  have "tl = []"
+  proof (rule ccontr)
+    assume "tl \<noteq> []"
+    then obtain hd' tl' where tl_eq: "tl = hd' # tl'" by (cases tl) auto
+    obtain a' w' where hd'_eq: "hd' = (a', w')" by (cases hd') auto
+    from p_tl tl_eq hd'_eq aw(2) obtain edge': "(v0, a', w') \<in> cfg_edges g"
+      by (auto elim: cfg_path.cases)
+    from edge' E ne show False by auto
+  qed
+  with Cons hd_eq aw show ?thesis by simp
+qed
+
 lemma path_collect_member:
   "x \<in> path_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> path_collect es {s})"
 proof (induction es arbitrary: S x)
@@ -1236,11 +1267,10 @@ using assms proof (induction "(c,s)" "t" arbitrary: c s S rule: big_step.induct)
     and ex: "cfg_exit (to_cfg SKIP) = ex"
     and E: "cfg_edges (to_cfg SKIP) = E"
     by (rule to_cfg_compile)
-  from comp have en0: "en = 0" and ex1: "ex = 1" and Eeq: "E = {(0, EA_Nop, 1)}"
-    by auto
-  show ?case
-    by (metis E Eeq cfg_path.step edge_collect.simps(1) empty en en0 ex ex1 insertI1 path_collect.simps(2)
-        path_collect_empty)
+  from comp have en_ex: "en = 0" "ex = 1" "E = {(0, EA_Nop, 1)}" by auto
+  have p: "cfg_path (to_cfg SKIP) en [(EA_Nop, 1)] ex"
+    using en_ex E by (auto intro: cfg_path.step cfg_path.empty)
+  show ?case using p en ex by auto
 next
   case (Assign x a)
   obtain n' en ex E where comp: "compile (x ::= a) 0 = (n', en, ex, E)"
@@ -1248,15 +1278,10 @@ next
     and ex: "cfg_exit (to_cfg (x ::= a)) = ex"
     and E: "cfg_edges (to_cfg (x ::= a)) = E"
     by (rule to_cfg_compile)
-  from comp have en0: "en = 0" and ex1: "ex = 1" and Eeq: "E = {(0, EA_Assign x a, 1)}"
-    by auto
-  show ?case
-    apply (rule exI[where x = "[(EA_Assign x a, 1)]"])
-    using E Eeq en0 ex1 en ex assms(2)
-    by (simp add: cfg_path.step empty)
-   
-  
-  
+  from comp have en_ex: "en = 0" "ex = 1" "E = {(0, EA_Assign x a, 1)}" by auto
+  have p: "cfg_path (to_cfg (x ::= a)) en [(EA_Assign x a, 1)] ex"
+    using en_ex E by (auto intro: cfg_path.step cfg_path.empty)
+  show ?case using p en ex by auto
 next
   case (Seq c1 s1 t2 c2 t3)
   from Seq.hyps(2) obtain es1 where
@@ -1666,20 +1691,12 @@ proof (induction c arbitrary: es s t S rule: com.induct)
     and ex: "cfg_exit (to_cfg SKIP) = ex"
     and E: "cfg_edges (to_cfg SKIP) = E"
     by (rule to_cfg_compile)
-  from comp have en_ex: "en = 0" "ex = 1" "E = {(0, EA_Nop, 1)}"
-    by(auto)
-  from es en ex E en_ex have "es = [(EA_Nop, 1)]"
-    apply(simp)
-    by (metis SKIP.prems(1) cfg_path.cases[of "to_cfg SKIP" ex _ ex]
-        cfg_path.cases[of "to_cfg SKIP" en es ex] n_not_Suc_n[of en]
-        prod.inject[of ex "(_, _)" en "(EA_Nop, ex)"] prod.inject[of EA_Nop ex]
-        prod.inject[of en "(_, _)" en "(EA_Nop, ex)"] singletonD[of "(ex, _, _)" "(en, EA_Nop, ex)"]
-        singletonD[of "(en, _, _)" "(en, EA_Nop, ex)"])
-
- 
-  show ?case
-    using SKIP.prems(3) `es = [(EA_Nop, 1)]` by auto
-    
+  from comp have en_ex: "en = 0" "ex = 1" "E = {(0, EA_Nop, 1)}" by auto
+  with E have edges: "cfg_edges (to_cfg SKIP) = {(0, EA_Nop, 1)}" by simp
+  from SKIP.prems(1) en ex en_ex have p: "cfg_path (to_cfg SKIP) 0 es 1" by simp
+  have es_eq: "es = [(EA_Nop, 1)]"
+    by (rule cfg_path_singleton_edge[OF edges _ p]) simp
+  with SKIP.prems(3) show ?case by auto
 next
   case (Assign x a)
   obtain n' en ex E where comp: "compile (x ::= a) 0 = (n', en, ex, E)"
@@ -1687,18 +1704,13 @@ next
     and ex: "cfg_exit (to_cfg (x ::= a)) = ex"
     and E: "cfg_edges (to_cfg (x ::= a)) = E"
     by (rule to_cfg_compile)
-  from comp have en_ex: "en = 0" "ex = 1" "E = {(0, EA_Assign x a, 1)}"
-      apply(auto)
-    done 
-   
-  from es en ex E en_ex have "es = [(EA_Assign x a, 1)]"
-    apply(simp)
-    by (metis Assign.prems(1) Pair_inject cfg_path.cases n_not_Suc_n singletonD)
-  
-  from t s en_ex es have "t = s(x := aval a s)"
-    apply(auto)
-    using Assign.prems(3) `es = [(EA_Assign x a, 1)]` by auto
-  show ?case using Assign `t = s(x := aval a s)` by blast
+  from comp have en_ex: "en = 0" "ex = 1" "E = {(0, EA_Assign x a, 1)}" by auto
+  with E have edges: "cfg_edges (to_cfg (x ::= a)) = {(0, EA_Assign x a, 1)}" by simp
+  from Assign.prems(1) en ex en_ex have p: "cfg_path (to_cfg (x ::= a)) 0 es 1" by simp
+  have es_eq: "es = [(EA_Assign x a, 1)]"
+    by (rule cfg_path_singleton_edge[OF edges _ p]) simp
+  with Assign.prems(3) have teq: "t = s(x := aval a s)" by auto
+  show ?case unfolding teq by (rule big_step.Assign)
 next
   case (Seq c1 c2)
   obtain n1 en1 ex1 E1 where
