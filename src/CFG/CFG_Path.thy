@@ -209,6 +209,54 @@ qed
   drop the IH path into the compound graph.
 *)
 
+(*
+  unoffset_path k es strips k from every pp in es.
+  Converse direction of offset_path.
+*)
+definition unoffset_path :: "nat => (edge_action * pp) list => (edge_action * pp) list" where
+  "unoffset_path k es = map (\<lambda>(a, p). (a, p - k)) es"
+
+lemma unoffset_path_Nil[simp]: "unoffset_path k [] = []"
+  unfolding unoffset_path_def by simp
+
+lemma unoffset_path_Cons[simp]:
+  "unoffset_path k ((a, p) # es) = (a, p - k) # unoffset_path k es"
+  unfolding unoffset_path_def by simp
+
+(*
+  cfg_path_offset_back: a path through offset_edges k E with start ≥ k
+  lifts back to a path through E.  Endpoint is automatically ≥ k
+  because every edge in offset_edges k E lands at some p ≥ k.
+*)
+lemma cfg_path_offset_back:
+  fixes E :: "(pp \<times> edge_action \<times> pp) set"
+  assumes p: "cfg_path G u es v"
+    and   E_eq: "cfg_edges G = offset_edges k E"
+    and   u_ge: "k \<le> u"
+  shows "cfg_path \<lparr>cfg_entry = 0, cfg_exit = 0, cfg_edges = E\<rparr>
+                  (u - k) (unoffset_path k es) (v - k)"
+  using p E_eq u_ge
+proof (induction rule: cfg_path.induct)
+  case (empty g w)
+  show ?case by (simp add: cfg_path.empty)
+next
+  case (step u a w g es v)
+  have e_off: "(u, a, w) \<in> offset_edges k E"
+    using step.hyps(1) step.prems(1) by simp
+  from e_off obtain u0 w0 where
+        decomp: "u = u0 + k" "w = w0 + k" "(u0, a, w0) \<in> E"
+    unfolding offset_edges_def by auto
+  have ku: "k \<le> u" using step.prems(2) .
+  have kw: "k \<le> w" using decomp(2) by simp
+  have e_unshifted: "(u - k, a, w - k) \<in> E"
+    using decomp by simp
+  have ih: "cfg_path \<lparr>cfg_entry = 0, cfg_exit = 0, cfg_edges = E\<rparr>
+                    (w - k) (unoffset_path k es) (v - k)"
+    using step.IH[OF step.prems(1) kw] .
+  show ?case
+    using e_unshifted ih ku by (simp add: cfg_path.step)
+qed
+
 (* ── Reachability from Entry ───────────────────────────────────── *)
 
 definition cfg_reachable :: "cfg => pp => bool" where

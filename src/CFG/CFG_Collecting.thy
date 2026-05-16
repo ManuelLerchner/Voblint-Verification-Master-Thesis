@@ -491,17 +491,164 @@ proof -
   from compile_ge[OF c2] show ?thesis by simp
 qed
 
+(*
+  Edge classification in `to_cfg (c1 ;; c2)`.  By compile_fresh / compile_ge:
+  - E1 edges have both endpoints < n1
+  - the bridge (ex1, EA_Nop, en20+n1) has source ex1 < n1
+  - offset_edges n1 E20 has all endpoints \<ge> n1
+  So an edge's source decides which subset it belongs to.
+*)
+
+lemma compound_Seq_edge_src_ge_n1:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and edge: "(u, a, w) \<in> cfg_edges (to_cfg (c1 ;; c2))"
+    and u_ge: "n1 \<le> u"
+  shows "(u, a, w) \<in> offset_edges n1 E20"
+proof -
+  have c2_n: "compile c2 n1 = (n20 + n1, en20 + n1, ex20 + n1, offset_edges n1 E20)"
+    using compile_from_0_offsets[OF c2_0, of n1] by simp
+  have Eseq: "cfg_edges (to_cfg (c1 ;; c2)) =
+              E1 \<union> {(ex1, EA_Nop, en20 + n1)} \<union> offset_edges n1 E20"
+    using cfg_edges_entry_exit_Seq[OF c1 c2_n] by simp
+  from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> E1. fst e < n1" by simp
+  from compile_fresh[OF c1] have ex1_lt: "ex1 < n1" by simp
+  show ?thesis
+    using edge u_ge Eseq E1_src_lt ex1_lt by force
+qed
+
+lemma compound_Seq_edge_src_lt_n1:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and edge: "(u, a, w) \<in> cfg_edges (to_cfg (c1 ;; c2))"
+    and u_lt: "u < n1"
+  shows "(u, a, w) \<in> E1 \<or> (u = ex1 \<and> a = EA_Nop \<and> w = en20 + n1)"
+proof -
+  have c2_n: "compile c2 n1 = (n20 + n1, en20 + n1, ex20 + n1, offset_edges n1 E20)"
+    using compile_from_0_offsets[OF c2_0, of n1] by simp
+  have Eseq: "cfg_edges (to_cfg (c1 ;; c2)) =
+              E1 \<union> {(ex1, EA_Nop, en20 + n1)} \<union> offset_edges n1 E20"
+    using cfg_edges_entry_exit_Seq[OF c1 c2_n] by simp
+  from compile_ge[OF c2_n] have E2_src_ge: "\<forall>e \<in> offset_edges n1 E20. n1 \<le> fst e" by simp
+  show ?thesis
+    using edge u_lt Eseq E2_src_ge by force
+qed
+
+(*
+  A compound-Seq path starting at u \<ge> n1 stays in the c2 region; its
+  step list is the offset_path of a path in to_cfg c2.
+*)
+lemma cfg_path_Seq_in_c2:
+  assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
+    and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (c1 ;; c2)) u es v"
+    and u_ge: "n1 \<le> u"
+  shows "\<exists>es'. es = offset_path n1 es' \<and>
+                cfg_path (to_cfg c2) (u - n1) es' (v - n1)"
+  using p u_ge
+proof (induction es arbitrary: u)
+  case Nil
+  from Nil(1) have "u = v" by (cases rule: cfg_path.cases) simp_all
+  hence "cfg_path (to_cfg c2) (u - n1) [] (v - n1)" by (simp add: cfg_path.empty)
+  thus ?case by (rule_tac x = "[]" in exI) simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, a, w) \<in> cfg_edges (to_cfg (c1 ;; c2))"
+    and ps: "cfg_path (to_cfg (c1 ;; c2)) w tl v"
+    by (cases rule: cfg_path.cases) auto
+  have e_off: "(u, a, w) \<in> offset_edges n1 E20"
+    using compound_Seq_edge_src_ge_n1[OF c1 c2_0 e_compound Cons.prems(2)] .
+  from e_off obtain u0 w0 where
+        decomp: "u = u0 + n1" "w = w0 + n1" "(u0, a, w0) \<in> E20"
+    unfolding offset_edges_def by auto
+  have kw: "n1 \<le> w" using decomp(2) by simp
+  from Cons.IH[OF ps kw] obtain es' where
+        es_eq: "tl = offset_path n1 es'"
+    and pe2: "cfg_path (to_cfg c2) (w - n1) es' (v - n1)"
+    by auto
+  have toc2_edges: "cfg_edges (to_cfg c2) = E20"
+    unfolding to_cfg_def using c2_0 by (simp add: Let_def)
+  have edge_c2: "(u - n1, a, w - n1) \<in> cfg_edges (to_cfg c2)"
+    using toc2_edges decomp by simp
+  let ?es'_full = "(a, w - n1) # es'"
+  have p_full: "cfg_path (to_cfg c2) (u - n1) ?es'_full (v - n1)"
+    by (rule cfg_path.step[OF edge_c2 pe2])
+  have list_eq: "(a, w) # tl = offset_path n1 ?es'_full"
+    using es_eq decomp(2) by simp
+  show ?case
+    using p_full list_eq hd_eq by (rule_tac x = "?es'_full" in exI) simp
+qed
+
+(*
+  Strong Seq path split.  A path in to_cfg (c1;;c2) starting at u < n1
+  and ending at the compound exit factors uniquely through the bridge
+  (ex1, EA_Nop, en20+n1) into a path in to_cfg c1 (u \<to> ex1) and a
+  path in to_cfg c2 (en20 \<to> ex20), with the c2-part shifted via
+  offset_path n1.
+*)
 lemma cfg_path_Seq_split:
   assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
-    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
-    and en_lt: "en < n1"
-  defines "G \<equiv> to_cfg (c1 ;; c2)"
-      and E12: "E12 \<equiv> E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
-  assumes p: "cfg_path G en es ex2"
-  shows "\<exists>es1 es2. es = es1 @ ((EA_Nop, en2) # es2) \<and>
-         cfg_path G en es1 ex1 \<and> cfg_path G en2 es2 ex2"
-  (* TODO: Peel the unique NOP bridge using compile freshness (E1 < n1 \<le> fst E2) *)
-  sorry
+    and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and p: "cfg_path (to_cfg (c1 ;; c2)) u es (ex20 + n1)"
+    and u_lt: "u < n1"
+  shows "\<exists>es1 es2.
+           es = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2 \<and>
+           cfg_path (to_cfg c1) u es1 ex1 \<and>
+           cfg_path (to_cfg c2) en20 es2 ex20"
+  using p u_lt
+proof (induction es arbitrary: u)
+  case Nil
+  from Nil(1) have eq: "u = ex20 + n1" by (cases rule: cfg_path.cases) simp_all
+  with Nil.prems(2) show ?case by simp
+next
+  case (Cons hd tl)
+  obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, a, w) \<in> cfg_edges (to_cfg (c1 ;; c2))"
+    and ps: "cfg_path (to_cfg (c1 ;; c2)) w tl (ex20 + n1)"
+    by (cases rule: cfg_path.cases) auto
+  from compound_Seq_edge_src_lt_n1[OF c1 c2_0 e_compound Cons.prems(2)]
+  consider (E1) "(u, a, w) \<in> E1" | (bridge) "u = ex1" "a = EA_Nop" "w = en20 + n1"
+    by auto
+  thus ?case
+  proof cases
+    case E1
+    from compile_fresh[OF c1] E1 have w_lt: "w < n1" by auto
+    from Cons.IH[OF ps w_lt] obtain es1 es2 where
+          tl_eq: "tl = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2"
+      and p1: "cfg_path (to_cfg c1) w es1 ex1"
+      and p2: "cfg_path (to_cfg c2) en20 es2 ex20"
+      by blast
+    have toc1_edges: "cfg_edges (to_cfg c1) = E1"
+      unfolding to_cfg_def using c1 by (simp add: Let_def)
+    have edge_c1: "(u, a, w) \<in> cfg_edges (to_cfg c1)" using E1 toc1_edges by simp
+    let ?es1_full = "(a, w) # es1"
+    have p1_full: "cfg_path (to_cfg c1) u ?es1_full ex1"
+      by (rule cfg_path.step[OF edge_c1 p1])
+    have list_eq: "(a, w) # tl = ?es1_full @ (EA_Nop, en20 + n1) # offset_path n1 es2"
+      using tl_eq by simp
+    show ?thesis
+      using list_eq p1_full p2 hd_eq by blast
+  next
+    case bridge
+    have w_ge: "n1 \<le> w" using bridge(3) by simp
+    from cfg_path_Seq_in_c2[OF c1 c2_0 ps w_ge] obtain es' where
+          tl_eq: "tl = offset_path n1 es'"
+      and pe2: "cfg_path (to_cfg c2) (w - n1) es' ((ex20 + n1) - n1)"
+      by auto
+    have wn: "w - n1 = en20" using bridge(3) by simp
+    have exn: "(ex20 + n1) - n1 = ex20" by simp
+    have p2: "cfg_path (to_cfg c2) en20 es' ex20" using pe2 wn exn by simp
+    have p1: "cfg_path (to_cfg c1) u [] ex1"
+      using bridge(1) by (simp add: cfg_path.empty)
+    have list_eq: "(a, w) # tl = [] @ (EA_Nop, en20 + n1) # offset_path n1 es'"
+      using bridge tl_eq by simp
+    show ?thesis
+      using list_eq p1 p2 hd_eq by blast
+  qed
+qed
 
 lemma cfg_collect_step:
   assumes e: "(u, a, v) : cfg_edges g"
@@ -1057,8 +1204,55 @@ next
   show ?case using Assign `t = s(x := aval a s)` by blast
 next
   case (Seq c1 c2)
-    show ?case 
-      sorry
+  obtain n1 en1 ex1 E1 where
+        c1_0: "compile c1 0 = (n1, en1, ex1, E1)"
+    and en1_eq: "cfg_entry (to_cfg c1) = en1"
+    and ex1_eq: "cfg_exit  (to_cfg c1) = ex1"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where
+        c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    and en20_eq: "cfg_entry (to_cfg c2) = en20"
+    and ex20_eq: "cfg_exit  (to_cfg c2) = ex20"
+    by (rule to_cfg_compile)
+  have c2_n: "compile c2 n1 = (n20 + n1, en20 + n1, ex20 + n1, offset_edges n1 E20)"
+    using compile_from_0_offsets[OF c2_0, of n1] by simp
+  have en_seq: "cfg_entry (to_cfg (c1 ;; c2)) = en1"
+    and ex_seq: "cfg_exit  (to_cfg (c1 ;; c2)) = ex20 + n1"
+    using cfg_edges_entry_exit_Seq[OF c1_0 c2_n] by auto
+  from Seq.prems(1) en_seq ex_seq
+    have p: "cfg_path (to_cfg (c1 ;; c2)) en1 es (ex20 + n1)" by simp
+  have en1_lt: "en1 < n1" using compile_fresh[OF c1_0] by simp
+  from cfg_path_Seq_split[OF c1_0 c2_0 p en1_lt] obtain es1 es2 where
+        es_split: "es = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2"
+    and p1: "cfg_path (to_cfg c1) en1 es1 ex1"
+    and p2: "cfg_path (to_cfg c2) en20 es2 ex20"
+    by blast
+  from p1 en1_eq ex1_eq
+    have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))" by simp
+  from p2 en20_eq ex20_eq
+    have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))" by simp
+
+  have collect_eq: "path_collect es {s} = path_collect es2 (path_collect es1 {s})"
+  proof -
+    have "path_collect es {s}
+          = path_collect ((EA_Nop, en20 + n1) # offset_path n1 es2) (path_collect es1 {s})"
+      unfolding es_split by (rule path_collect_append)
+    also have "\<dots> = path_collect (offset_path n1 es2) (path_collect es1 {s})" by simp
+    also have "\<dots> = path_collect es2 (path_collect es1 {s})" by simp
+    finally show ?thesis .
+  qed
+  from Seq.prems(3) collect_eq have t_in: "t \<in> path_collect es2 (path_collect es1 {s})" by simp
+  from t_in obtain s2 where
+        s2_in: "s2 \<in> path_collect es1 {s}"
+    and t_in2: "t \<in> path_collect es2 {s2}"
+    using path_collect_member by meson
+
+  have step1: "(c1, s) \<Rightarrow> s2"
+    using Seq.IH(1)[OF p1' singletonI s2_in] .
+  have step2: "(c2, s2) \<Rightarrow> t"
+    using Seq.IH(2)[OF p2' singletonI t_in2] .
+  show ?case
+    using step1 step2 big_step.Seq by blast
 next
   case (If b c1 c2)
   show ?case sorry
