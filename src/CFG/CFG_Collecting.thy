@@ -1135,6 +1135,238 @@ proof -
   qed
 qed
 
+(* ── WHILE compound paths (for compile_path_big_step) ───────── *)
+
+lemma compound_While_edge_src_body:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and edge: "(u, aa, w) \<in> cfg_edges (to_cfg (WHILE b DO c))"
+    and u_ge: "1 \<le> u" and u_lt: "u < n10 + 1"
+  shows "(u, aa, w) \<in> offset_edges 1 E10 \<or> (u = ex10 + 1 \<and> aa = EA_Nop \<and> w = 0)"
+proof -
+  have Ew: "cfg_edges (to_cfg (WHILE b DO c)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+             \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
+    using cfg_edges_entry_exit_While[OF c1] by simp
+  show ?thesis
+    using edge u_ge u_lt Ew by force
+qed
+
+lemma compound_While_edge_into_exit:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and e: "(mid, aa, v) \<in> cfg_edges (to_cfg (WHILE b DO c))"
+    and v: "v = n10 + 1"
+  shows "mid = 0 \<and> aa = EA_AssumeNot b"
+proof -
+  have Ew: "cfg_edges (to_cfg (WHILE b DO c)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+             \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
+    using cfg_edges_entry_exit_While[OF c1] by simp
+  from compile_fresh[OF c0] have E10_bd: "\<forall>e \<in> E10. snd (snd e) < n10" by simp
+  have off_no: "\<And>x ay y. (x, ay, y) \<in> offset_edges 1 E10 \<Longrightarrow> y \<le> n10"
+    using E10_bd unfolding offset_edges_def by force
+  from compile_fresh[OF c0] have "en10 < n10" by simp
+  hence assume_b_ne: "en10 + 1 \<noteq> n10 + 1" by simp
+  show ?thesis
+    using e v Ew off_no assume_b_ne by force
+qed
+
+(* The compound While exit pp n10+1 has no outgoing edges (it is a sink). *)
+lemma compound_While_no_source_n1:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+  shows "\<not> (\<exists>a w. (n10 + 1, a, w) \<in> cfg_edges (to_cfg (WHILE b DO c)))"
+proof -
+  have Ew: "cfg_edges (to_cfg (WHILE b DO c)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+             \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
+    using cfg_edges_entry_exit_While[OF c1] by simp
+  from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1"
+    by simp
+  from compile_fresh[OF c1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
+  show ?thesis
+    using Ew E1_src_lt ex1_lt by force
+qed
+
+lemma compound_While_edges_from_zero:
+  assumes c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and e: "(0, a, w) \<in> cfg_edges (to_cfg (WHILE b DO c))"
+  shows "a = EA_Assume b \<and> w = en10 + 1 \<or> a = EA_AssumeNot b \<and> w = n10 + 1"
+proof -
+  have Ew: "cfg_edges (to_cfg (WHILE b DO c)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+             \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
+    using cfg_edges_entry_exit_While[OF c1] by simp
+  from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1"
+    by simp
+  from compile_fresh[OF c1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
+  show ?thesis
+    using e Ew E1_src_lt ex1_lt 
+    apply(auto)
+       apply (metis One_nat_def c1 compile_ge fst_conv not_one_le_zero)+
+    done
+qed
+
+lemma cfg_path_While_split_trailing_exit:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and p: "cfg_path (to_cfg (WHILE b DO c)) 0 es (n10 + 1)"
+    and ne: "es \<noteq> []"
+  shows "\<exists>es_pre. es = es_pre @ [(EA_AssumeNot b, n10 + 1)]
+          \<and> cfg_path (to_cfg (WHILE b DO c)) 0 es_pre 0"
+proof -
+  from cfg_path_split_last[OF p ne] obtain es_pre mid aa where
+        spl: "es = es_pre @ [(aa, n10 + 1)]"
+    and p_pre: "cfg_path (to_cfg (WHILE b DO c)) 0 es_pre mid"
+    and last_e: "(mid, aa, n10 + 1) \<in> cfg_edges (to_cfg (WHILE b DO c))"
+    by blast
+  from compound_While_edge_into_exit[OF c0 c1 last_e] have mid_aa: "mid = 0 \<and> aa = EA_AssumeNot b"
+    by simp
+  show ?thesis
+    using spl p_pre mid_aa by blast
+qed
+
+lemma cfg_path_While_loop_first_edge:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and p: "cfg_path (to_cfg (WHILE b DO c)) 0 es (0 :: pp)"
+    and ne: "es \<noteq> []"
+  obtains tl where "es = (EA_Assume b, en10 + 1) # tl"
+    and "cfg_path (to_cfg (WHILE b DO c)) (en10 + 1) tl 0"
+proof -
+  obtain aa w tl where es_eq: "es = (aa, w) # tl"
+    using ne p by auto
+    
+  from p es_eq obtain
+        e0: "(0, aa, w) \<in> cfg_edges (to_cfg (WHILE b DO c))"
+    and ps: "cfg_path (to_cfg (WHILE b DO c)) w tl 0"
+    by (cases rule: cfg_path.cases) auto
+  have Ew: "cfg_edges (to_cfg (WHILE b DO c)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+             \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
+    using cfg_edges_entry_exit_While[OF c1] by simp
+  have not_assume_not: "\<not> (aa = EA_AssumeNot b \<and> w = n10 + 1)"
+  proof
+    assume H: "aa = EA_AssumeNot b \<and> w = n10 + 1"
+    with ps have "cfg_path (to_cfg (WHILE b DO c)) (n10 + 1) tl 0" by simp
+    moreover have "\<not> cfg_path (to_cfg (WHILE b DO c)) (n10 + 1) tl 0"
+    proof (cases tl)
+      case Nil
+      with calculation show ?thesis
+        by (cases rule: cfg_path.cases) simp_all
+    next
+      case (Cons hd tls)
+      obtain a' w' where hd_eq: "hd = (a', w')" by (cases hd) auto
+      from calculation Cons hd_eq obtain
+            eN: "(n10 + 1, a', w') \<in> cfg_edges (to_cfg (WHILE b DO c))"
+        by (cases rule: cfg_path.cases) auto
+      from compound_While_no_source_n1[OF c0 c1] show ?thesis
+        using eN by blast
+    qed
+    ultimately show False by simp
+  qed
+  from e0 compound_While_edges_from_zero[OF c1] not_assume_not
+  have aw: "aa = EA_Assume b \<and> w = en10 + 1"
+    by auto
+  from es_eq aw ps that show thesis by simp
+qed
+
+lemma cfg_path_While_u_body_to_zero_split:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and u_ge: "1 \<le> u" and u_lt: "u < n10 + 1"
+    and p: "cfg_path (to_cfg (WHILE b DO c)) u es (0 :: pp)"
+  shows "\<exists>es_body es_rest.
+      es = offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest
+      \<and> cfg_path (to_cfg c) (u - 1) es_body ex10
+      \<and> cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+  using p u_ge u_lt
+proof (induction es arbitrary: u)
+  case Nil
+  then have "u = (0::pp)" by (cases rule: cfg_path.cases) simp_all
+  with Nil.prems(2) show ?case by simp
+next
+  case (Cons hd tl)
+  obtain aa w where hd_eq: "hd = (aa, w)" by (cases hd) auto
+  from Cons.prems(1) hd_eq obtain
+        e_compound: "(u, aa, w) \<in> cfg_edges (to_cfg (WHILE b DO c))"
+    and ps: "cfg_path (to_cfg (WHILE b DO c)) w tl 0"
+    by (cases rule: cfg_path.cases) auto
+  from compound_While_edge_src_body[OF c0 c1 e_compound Cons.prems(2) Cons.prems(3)]
+  consider (body) "(u, aa, w) \<in> offset_edges 1 E10"
+         | (backa) "u = ex10 + 1" "aa = EA_Nop" "w = 0"
+    by auto
+  thus ?case
+  proof cases
+    case body
+    from body obtain u0 w0 where
+          decomp: "u = u0 + 1" "w = w0 + 1" "(u0, aa, w0) \<in> E10"
+      unfolding offset_edges_def by auto
+    have w_ge: "1 \<le> w"
+    proof -
+      have "0 \<le> u0" by simp
+      thus ?thesis using decomp(2) by simp
+    qed
+    have w_lt: "w < n10 + 1"
+      using compile_fresh[OF c0] decomp(1,3)
+      using decomp(2) by auto  
+    from Cons.IH[OF ps w_ge w_lt] obtain es_body es_rest where
+          tl_eq: "tl = offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest"
+      and pe1: "cfg_path (to_cfg c) (w - 1) es_body ex10"
+      and p0: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+      by blast
+    have toc_edges: "cfg_edges (to_cfg c) = E10"
+      unfolding to_cfg_def using c0 by (simp add: Let_def)
+    have edge_c1: "(u - 1, aa, w - 1) \<in> cfg_edges (to_cfg c)"
+      using toc_edges decomp by simp
+    let ?esb = "(aa, w - 1) # es_body"
+    have p_body: "cfg_path (to_cfg c) (u - 1) ?esb ex10"
+      by (rule cfg_path.step[OF edge_c1 pe1])
+    have list_eq: "(aa, w) # tl = offset_path 1 ?esb @ [(EA_Nop, 0)] @ es_rest"
+      using tl_eq decomp(2) by simp
+    show ?thesis
+      using list_eq p_body p0 hd_eq by blast
+  next
+    case backa
+    have p_body: "cfg_path (to_cfg c) (u - 1) [] ex10"
+      using backa(1) by (simp add: cfg_path.empty)
+    have list_eq: "(aa, w) # tl = offset_path 1 [] @ [(EA_Nop, 0)] @ tl"
+      using backa by simp
+    show ?thesis
+      using list_eq p_body ps hd_eq
+      using backa(3) by blast 
+  qed
+qed
+
+lemma cfg_path_While_loop_peel:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and p: "cfg_path (to_cfg (WHILE b DO c)) 0 es (0 :: pp)"
+    and ne: "es \<noteq> []"
+  shows "\<exists>es_body es_rest.
+      es = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest
+      \<and> cfg_path (to_cfg c) en10 es_body ex10
+      \<and> cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+proof -
+  from cfg_path_While_loop_first_edge[OF c0 c1 p ne] obtain tl where
+        es_eq: "es = (EA_Assume b, en10 + 1) # tl"
+    and p_tl: "cfg_path (to_cfg (WHILE b DO c)) (en10 + 1) tl 0"
+    by blast
+  from compile_fresh[OF c0] have en_lt: "en10 < n10" by simp
+  hence u_ge: "1 \<le> en10 + 1" by simp
+  have u_lt: "en10 + 1 < n10 + 1" using en_lt by simp
+  from cfg_path_While_u_body_to_zero_split[OF c0 c1 u_ge u_lt p_tl] obtain es_body es_rest where
+        tl_eq: "tl = offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest"
+    and pc: "cfg_path (to_cfg c) en10 es_body ex10"
+    and pr: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+    by(auto)
+  have es_full: "es = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest"
+    using es_eq tl_eq by simp
+  show ?thesis
+    using es_full pc pr by blast
+qed
+
 lemma cfg_collect_step:
   assumes e: "(u, a, v) : cfg_edges g"
   shows "edge_collect a (cfg_collect g S u) \<subseteq> cfg_collect g S v"
@@ -1226,9 +1458,6 @@ using assms proof (induction "(c,s)" "t" arbitrary: c s S rule: big_step.induct)
   show ?case
     by (metis E Eeq cfg_path.step edge_collect.simps(1) empty en en0 ex ex1 insertI1 path_collect.simps(2)
         path_collect_empty)
-   
-    
-
 next
   case (Assign x a)
   obtain n' en ex E where comp: "compile (x ::= a) 0 = (n', en, ex, E)"
@@ -1640,6 +1869,120 @@ next
     using path s''_in_chain en_w ex_w by metis
 qed
 
+lemma cfg_path_While_loop_peel_length:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and p: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+    and ne: "es_rest \<noteq> []"
+  shows "\<exists>es_body es_rest'.
+    es_rest = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest'
+    \<and> cfg_path (to_cfg c) en10 es_body ex10
+    \<and> cfg_path (to_cfg (WHILE b DO c)) 0 es_rest' 0
+    \<and> length es_rest' < length es_rest"
+proof -
+  from cfg_path_While_loop_peel[OF c0 c1 p ne] obtain es_body es_rest' where
+        peel_eq: "es_rest = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest'"
+    and pc: "cfg_path (to_cfg c) en10 es_body ex10"
+    and p_tail: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest' 0"
+    by blast
+  have len: "length es_rest' < length es_rest"
+    unfolding peel_eq by simp
+  show ?thesis
+    using peel_eq pc p_tail len by (intro exI conjI)
+qed
+
+lemma compile_path_big_step_while_rest:
+  assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and c1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    and p_rest: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+    and body: "\<And>es_body S s''. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es_body (cfg_exit (to_cfg c))
+                 \<Longrightarrow> s'' \<in> path_collect es_body {S}
+                 \<Longrightarrow> (c, S) \<Rightarrow> s''"
+    and t: "t \<in> path_collect (es_rest @ [(EA_AssumeNot b, n10 + 1)]) {s'}"
+    and nb: "\<not> bval b t"
+  shows "(WHILE b DO c, s') \<Rightarrow> t"
+proof -
+  have main:
+    "cfg_path (to_cfg (WHILE b DO c)) 0 ER 0
+     \<Longrightarrow> T \<in> path_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S}
+     \<Longrightarrow> \<not> bval b T
+     \<Longrightarrow> (WHILE b DO c, S) \<Rightarrow> T"
+    for ER S T
+  proof (induction "length ER" arbitrary: ER S T rule: less_induct)
+    case less
+    note IH = less.hyps
+    note p_rest = less.prems(1)
+    note t = less.prems(2)
+    note nb = less.prems(3)
+    show ?case
+    proof (cases ER)
+      case Nil
+      show ?thesis
+        using t nb Nil by (auto simp: path_collect_append big_step.WhileFalse)
+    next
+      case (Cons hd tl)
+      have ne: "ER \<noteq> []" using Cons by simp
+      from cfg_path_While_loop_peel_length[OF c0 c1 p_rest ne] obtain es_body ER' where
+            peel_eq: "ER = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ ER'"
+        and pc: "cfg_path (to_cfg c) en10 es_body ex10"
+        and p_tail: "cfg_path (to_cfg (WHILE b DO c)) 0 ER' 0"
+        and len: "length ER' < length ER"
+        by blast
+      obtain n' en ex E where
+            c0': "compile c 0 = (n', en, ex, E)"
+        and en_eq: "cfg_entry (to_cfg c) = en"
+        and ex_eq: "cfg_exit (to_cfg c) = ex"
+        by (rule to_cfg_compile)
+      from c0 c0' have en10_eq: "en10 = en" and ex10_eq: "ex10 = ex" by auto
+      from pc en10_eq ex10_eq en_eq ex_eq have p_body:
+            "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es_body (cfg_exit (to_cfg c))"
+        by simp
+      show ?thesis
+      proof (cases "bval b S")
+        case False
+        have head_empty: "path_collect [(EA_Assume b, en10 + 1)] {S} = {}"
+          using False by auto
+        have er_empty: "path_collect ER {S} = {}"
+          unfolding peel_eq
+          using head_empty path_collect_append path_collect_empty_set by presburger
+        have all_empty: "path_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S} = {}"
+          by (simp add: path_collect_append er_empty path_collect_empty_set)
+        from t all_empty show ?thesis by simp
+      next
+        case True
+        have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {S} = {S}"
+          using True by auto
+        have collect_tail: "path_collect ER {S} =
+              path_collect ER' (path_collect es_body {S})"
+        proof -
+          have "path_collect ER {S} =
+                path_collect ER' (path_collect [(EA_Nop, 0)]
+                  (path_collect (offset_path 1 es_body)
+                    (path_collect [(EA_Assume b, en10 + 1)] {S})))"
+            unfolding peel_eq by (simp add: path_collect_append)
+          also have "\<dots> = path_collect ER' (path_collect es_body {S})"
+            using eq_head by simp
+          finally show ?thesis .
+        qed
+        from t collect_tail have t_chain:
+              "T \<in> path_collect ER' (path_collect es_body {S})"
+          by (simp add: path_collect_append)
+        obtain s'' where s''_in: "s'' \<in> path_collect es_body {S}"
+          and t_in': "T \<in> path_collect ER' {s''}"
+          using mem_path_collect_from_set[OF t_chain] by blast
+        have step_body': "(c, S) \<Rightarrow> s''"
+          using body[OF p_body s''_in] .
+        have t_in_tail: "T \<in> path_collect (ER' @ [(EA_AssumeNot b, n10 + 1)]) {s''}"
+          using t_in' nb by (simp add: path_collect_append)
+        have step_tail: "(WHILE b DO c, s'') \<Rightarrow> T"
+          using IH[OF len p_tail t_in_tail nb] .
+        show ?thesis using True step_body' step_tail by (simp add: big_step.WhileTrue)
+      qed
+    qed
+  qed
+  from main[OF p_rest t nb] show ?thesis .
+qed
+
 (* CFG path from entry to exit implies big-step execution. *)
 lemma compile_path_big_step:
   assumes es: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
@@ -1862,7 +2205,119 @@ next
   qed
 next
   case (While b c)
-  show ?case sorry
+  obtain n10 en10 ex10 E10 where
+        c0: "compile c 0 = (n10, en10, ex10, E10)"
+    and en0_eq: "cfg_entry (to_cfg c) = en10"
+    and ex0_eq: "cfg_exit  (to_cfg c) = ex10"
+    by (rule to_cfg_compile)
+  have c1_1: "compile c 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c0, of 1] by simp
+  obtain nW enW exW EW where
+        compW: "compile (WHILE b DO c) 0 = (nW, enW, exW, EW)"
+    and enW_eq: "cfg_entry (to_cfg (WHILE b DO c)) = enW"
+    and exW_eq: "cfg_exit  (to_cfg (WHILE b DO c)) = exW"
+    by (rule to_cfg_compile)
+  have Ew: "cfg_edges (to_cfg (WHILE b DO c)) =
+             {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
+             \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
+    and en_w: "cfg_entry (to_cfg (WHILE b DO c)) = 0"
+    and ex_w: "cfg_exit  (to_cfg (WHILE b DO c)) = n10 + 1"
+    using cfg_edges_entry_exit_While[OF c1_1] by auto
+  from While.prems(1) en_w ex_w
+    have p: "cfg_path (to_cfg (WHILE b DO c)) 0 es (n10 + 1)" by simp
+  from compile_entry_ne_exit[OF compW] have "enW \<noteq> exW" .
+  from en_w enW_eq ex_w exW_eq have "enW = 0" "exW = n10 + 1" by simp_all
+  with `enW \<noteq> exW` have exit_ne: "0 \<noteq> n10 + 1" by simp
+  have es_ne: "es \<noteq> []"
+  proof (rule ccontr)
+    assume "\<not> es \<noteq> []"
+    hence "es = []" by simp
+    with p have "0 = n10 + 1" by (cases rule: cfg_path.cases) simp_all
+    with exit_ne show False by simp
+  qed
+  from cfg_path_While_split_trailing_exit[OF c0 c1_1 p es_ne] obtain es_pre where
+        es_decomp: "es = es_pre @ [(EA_AssumeNot b, n10 + 1)]"
+    and p_pre: "cfg_path (to_cfg (WHILE b DO c)) 0 es_pre 0"
+    by blast
+  have collect_es: "path_collect es {s} =
+        {w \<in> path_collect es_pre {s}. \<not> bval b w}"
+  proof -
+    have "path_collect es {s} =
+          path_collect [(EA_AssumeNot b, n10 + 1)] (path_collect es_pre {s})"
+      unfolding es_decomp by (simp add: path_collect_append)
+    also have "\<dots> = {w \<in> path_collect es_pre {s}. \<not> bval b w}" by simp
+    finally show ?thesis .
+  qed
+  from While.prems(3) collect_es have nb_t: "\<not> bval b t"
+    and t_in_pre: "t \<in> path_collect es_pre {s}" by auto
+  show ?case
+  proof (cases "es_pre = []")
+    case True
+    with p_pre have "t \<in> path_collect [] {s}" using t_in_pre by simp
+    hence "t = s" by simp
+    with True collect_es While.prems(3) nb_t have "\<not> bval b s" by simp
+    thus ?thesis using `t = s` big_step.WhileFalse by blast
+  next
+    case False
+    from cfg_path_While_loop_peel[OF c0 c1_1 p_pre False] obtain es_body es_rest where
+          es_pre_eq: "es_pre = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ es_rest"
+      and pc_body: "cfg_path (to_cfg c) en10 es_body ex10"
+      and p_rest: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
+      by blast
+    have bs: "bval b s"
+    proof (rule ccontr)
+      assume nb: "\<not> bval b s"
+      have "path_collect [(EA_Assume b, en10 + 1)] {s} = {}" using nb by simp
+      hence "path_collect es_pre {s} = {}"
+        unfolding es_pre_eq
+        using path_collect_append path_collect_empty_set by presburger 
+      with t_in_pre show False by simp
+    qed
+    have collect_pre: "path_collect es_pre {s} = path_collect es_rest (path_collect es_body {s})"
+    proof -
+      have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
+        using bs by auto
+      have "path_collect es_pre {s} =
+            path_collect es_rest (path_collect [(EA_Nop, 0)]
+              (path_collect (offset_path 1 es_body)
+                (path_collect [(EA_Assume b, en10 + 1)] {s})))"
+        unfolding es_pre_eq by (simp add: path_collect_append)
+      also have "\<dots> = path_collect es_rest (path_collect (offset_path 1 es_body)
+                (path_collect [(EA_Assume b, en10 + 1)] {s}))"
+        by simp
+      also have "\<dots> = path_collect es_rest (path_collect (offset_path 1 es_body) {s})"
+        using eq_head by simp
+      also have "\<dots> = path_collect es_rest (path_collect es_body {s})"
+        by simp
+      finally show ?thesis .
+    qed
+    from t_in_pre collect_pre have t_in_chain: "t \<in> path_collect es_rest (path_collect es_body {s})"
+      by simp
+    obtain s' where
+          s'_in: "s' \<in> path_collect es_body {s}"
+      and t_in_rest: "t \<in> path_collect es_rest {s'}"
+      using mem_path_collect_from_set t_in_chain by blast
+   
+    from pc_body en0_eq ex0_eq
+      have p_body': "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es_body (cfg_exit (to_cfg c))"
+      by simp
+    have step_body: "(c, s) \<Rightarrow> s'"
+      using While.IH(1)[OF p_body' singletonI s'_in] .
+    have t_in_exit_path: "t \<in> path_collect (es_rest @ [(EA_AssumeNot b, n10 + 1)]) {s'}"
+    proof -
+      have "path_collect (es_rest @ [(EA_AssumeNot b, n10 + 1)]) {s'} =
+            {w \<in> path_collect es_rest {s'}. \<not> bval b w}"
+        by (simp add: path_collect_append)
+      with t_in_rest nb_t show ?thesis by auto
+    qed
+    have step_while: "(WHILE b DO c, s') \<Rightarrow> t"
+    proof (rule compile_path_big_step_while_rest[OF c0 c1_1 p_rest _ t_in_exit_path nb_t])      show "\<And>es_body S s''. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es_body (cfg_exit (to_cfg c))
+            \<Longrightarrow> s'' \<in> path_collect es_body {S} \<Longrightarrow> (c, S) \<Rightarrow> s''"
+        using While.IH(1)[OF _ singletonI] by blast
+    qed
+    show ?thesis
+      using bs step_body step_while big_step.WhileTrue by blast
+  qed
 qed
 
 (* ── Correspondence Theorem ──────────────────────────────────────
