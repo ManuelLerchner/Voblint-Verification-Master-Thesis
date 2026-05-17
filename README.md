@@ -4,21 +4,61 @@ Goblint Formalization
 Abstract
 --------
 
-Machine-checked Isabelle/HOL formalization of *abstract interpretation* for a
-small imperative language. We model IMP, compile it into a control-flow graph,
-derive a constraint system over an abstract domain (Sign, Interval, ...), and
-solve it with the verified top-down solver of stilscher/td-verification. The
-end-to-end theorem connects the concrete collecting semantics of an IMP program
-to the abstract result returned by the solver, giving a soundness statement for
-the full analysis pipeline -- a formal counterpart to the Goblint static
-analyzer.
+We formalize the Goblint analysis pipeline from IMP through CFG compilation and
+a constraint system to the verified top-down solver of
+[stilscher/td-verification](https://github.com/stilscher/td-verification), and
+prove that **any abstract domain** satisfying our locale and transfer obligations
+yields a solver result that soundly over-approximates concrete collecting
+semantics; sign analysis is a fully discharged instance.
 
-```
-IMP program -> CFG -> abstract eq. system -> TD solver -> sound abstract result
+### Pipeline (overview)
+
+Solid arrows: compilation and analysis steps. Dotted arrows: proved soundness links.
+
+```mermaid
+flowchart LR
+  IMP["IMP"]
+  CFG["CFG"]
+  EQ["eq. system"]
+  TD["TD solver"]
+  OUT["γ ∘ env"]
+
+  IMP -->|compile| CFG
+  CFG -->|make RHS| EQ
+  EQ -->|td_analyse| TD
+  TD --> OUT
+
+  IMP -.->|big-step sound| CFG
+  CFG -.->|post-fixpoint sound| OUT
 ```
 
-This repository is the code/proof artifact for the master's thesis on
-formalizing the Goblint static-analysis pipeline in Isabelle/HOL.
+| Link            | Lemma / idea                                                                         |
+| --------------- | ------------------------------------------------------------------------------------ |
+| IMP ↔ CFG       | `cfg_collect_exit_eq_collect` — AST collecting = CFG collecting at exit              |
+| CFG → abstract  | `post_fixpoint_sound` — post-fixpoint of `rhs` over-approximates `cfg_collect`       |
+| eq. system → TD | `td_analyse_post_fixpoint` — vendored solver returns a post-fixpoint                 |
+| End-to-end      | `pipeline_sound` / `pipeline_invariant_sound` (generic); `goblint_sign_sound` (sign) |
+
+Where abstract interpretation is in the proof
+-------------------------------------------
+
+The equation system is not validated by a separate “code generator correctness”
+theorem. We **define** `rhs` as the abstract analogue of CFG collecting, then
+prove that **every post-fixpoint** over-approximates concrete reachability.
+
+|                      | Concrete (collecting)                    | Abstract interpretation                                          |
+| -------------------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| One edge             | `edge_collect a` on store sets           | `apply_tf tf a` on `abs_state`                                   |
+| One program point    | `collect_pp` — join of predecessor edges | `rhs` — join of `apply_tf` images                                |
+| Global               | `cfg_collect` (least fixpoint)           | `env` with `is_post_fixpoint`                                    |
+| Link                 | (definition)                             | `edge_collect (γ σ) ⊆ γ (apply_tf … σ)` — **transfer soundness** |
+| Main soundness lemma |                                          | `post_fixpoint_sound`: `cfg_collect ⊆ γ ∘ env`                   |
+
+So **abstract interpretation is the `rhs` / `γ` / `join` / `apply_tf` layer**.
+`make_rhs` / `make_rhs_tree` spell out the equations; `td_analyse` (TD solver)
+returns an `env` that satisfies them; `post_fixpoint_sound` shows that solution
+is sound w.r.t. `cfg_collect`. IMP enters via `collect` and
+`cfg_collect_exit_eq_collect`.
 
 Requirements
 ------------
@@ -110,14 +150,15 @@ repository and the vendored tree is never tracked.
 Documentation
 -------------
 
-| Document | Contents |
-| -------- | -------- |
-| `docs/PIPELINE_AT_A_GLANCE.md` | What changed when sign pipeline closed (diagram + stack) |
-| `docs/PROOF_OVERVIEW.md` | Theorem chain, key types and lemmas |
-| `docs/PROOF_PHASES.md` | Proof status, sorry inventory, remaining work |
-| `docs/PIPELINE_WALKTHROUGH.md` | Stage-by-stage walkthrough with examples |
+| Document                       | Contents                                                |
+| ------------------------------ | ------------------------------------------------------- |
+| `docs/PIPELINE_AT_A_GLANCE.md` | Thesis goal, AI vs collecting, status, theorem stack    |
+| `docs/HOL_IMP_COMPARISON.md`   | vs HOL-IMP `Abs_*`: workflow, domain theory tradeoffs   |
+| `docs/PROOF_OVERVIEW.md`       | Theorem chain, key types and lemmas                     |
+| `docs/PROOF_PHASES.md`         | Proof status, sorry inventory, remaining work           |
+| `docs/PIPELINE_WALKTHROUGH.md` | Stage-by-stage walkthrough with examples                |
 | `docs/PROOF_SIMPLIFICATION.md` | CFG_Collecting refactor playbook (optional maintenance) |
-| `docs/html/` | HTML renderings of the walkthroughs (may lag `.md`) |
+| `docs/html/`                   | HTML renderings of the walkthroughs (may lag `.md`)     |
 
 Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./setup.sh`, `./start-ir.sh`.
 
@@ -134,8 +175,8 @@ from Human Hints*](https://arxiv.org/abs/2604.15713) (arXiv:2604.15713, 2026);
 see their §6.1 for the Isabelle/Q technical setup and `AGENTS.md` here for
 project-specific conventions.
 
-| Script | Role |
-| ------ | ---- |
-| `./setup-iq.sh` | Build and install the I/Q jEdit plugin (vendored under `ir-repo/iq/`) |
-| `./start-iq.sh` | Launch Isabelle/jEdit with I/Q listening on port 8765 |
+| Script                         | Role                                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `./setup-iq.sh`                | Build and install the I/Q jEdit plugin (vendored under `ir-repo/iq/`)                                    |
+| `./start-iq.sh`                | Launch Isabelle/jEdit with I/Q listening on port 8765                                                    |
 | `./setup.sh` / `./start-ir.sh` | Headless [Isabelle/R](https://github.com/awslabs/AutoCorrode/tree/main/ir) MCP when jEdit is not running |
