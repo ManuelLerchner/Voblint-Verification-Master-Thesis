@@ -3,65 +3,115 @@ theory IMP2_Collecting
 begin
 
 (*
-  IMP2 -- Collecting Semantics.
+  Collecting Semantics for IMP2.
 
-  The collecting semantics is the "gold standard" against which the
-  abstract analysis is proved sound.  For each command c and input set S,
-  collect c S is the set of all states that c can produce from some s in S.
+  For each command c and input set S, `collect c S` is the set of all
+  states c can produce from some s ∈ S.
 
-  For the pipeline correctness proof the key object is:
-    reach c s0  =  set of states reachable at the exit of c starting from s0
+  Key fact for WHILE:
+    lfp of  T ↦ S ∪ collect c {s ∈ T. bval b s}
+  characterises loop-head-reachable states; exit states add ¬bval b.
+
+  Note: collect (WHILE b DO c) S ≠ lfp F in general —
+  diverging runs contribute to lfp but not to collect.
 *)
 
-(* ── Collecting Semantics (exit-reachable states) ─────────────── *)
+(* ── Definition ──────────────────────────────────────────────────── *)
 
-definition collect :: "com => store set => store set" where
-  "collect c S = {t. \<exists>s\<in>S. (c,s) \<Rightarrow> t}"
+definition collect :: "com \<Rightarrow> store set \<Rightarrow> store set" where
+  "collect c S = {t. \<exists>s \<in> S. (c, s) \<Rightarrow> t}"
 
-(* ── Point-Wise Collecting via Induction on com ──────────────────
-   Equivalent characterisation used in soundness proofs. *)
 
-lemma collect_SKIP:
-  "collect SKIP S = S"
-  unfolding collect_def by (auto intro: Skip elim: big_step.cases)
+(* ── Start State lemmas ───────────────────────────────────────────── *)
 
-lemma collect_Assign:
-  "collect (x ::= a) S = {s(x := aval a s) | s. s : S}"
-  unfolding collect_def by (auto intro: Assign elim: big_step.cases)
+lemma collect_empty [simp]:
+  "collect c {} = {}"
+  unfolding collect_def by simp
 
-lemma collect_Seq:
-  "collect (c1 ;; c2) S = collect c2 (collect c1 S)"
-  unfolding collect_def
-  by (auto elim!: SeqE intro!: Seq)
-
-lemma collect_If:
-  "collect (IF b THEN c1 ELSE c2) S =
-     collect c1 {s : S. bval b s} \<union> collect c2 {s : S. \<not> bval b s}"
-  unfolding collect_def
-  by (fastforce simp: big_step_If_iff intro: IfTrue IfFalse)
-
-(* Monotonicity: larger input sets produce larger output sets. *)
-lemma collect_mono:
-  "S <= T  ==>  collect c S <= collect c T"
+lemma collect_union [simp]:
+  "collect c (S \<union> T) = collect c S \<union> collect c T"
   unfolding collect_def by blast
 
-(*
-  Loop heads reachable from S satisfy  F(T) = S \<union> collect c {s\<in>T. bval b s}.
-  Exit states of the loop are exactly those reachable heads where the guard is false.
-  (Plain "collect = lfp F" is false when the loop diverges: then collect = \<emptyset> but S \<subseteq> lfp F.)
-*)
-lemma while_collect_mono:
-  "mono (\<lambda>T::store set. S \<union> collect c {s \<in> T. bval b s})"
-  unfolding mono_def
-proof (intro allI impI)
-  fix x y :: "store set"
-  assume "x \<subseteq> y"
-  then have "{s \<in> x. bval b s} \<subseteq> {s \<in> y. bval b s}"
-    by auto
-  then have "collect c {s \<in> x. bval b s} \<subseteq> collect c {s \<in> y. bval b s}"
-    by (rule collect_mono)
-  then show "S \<union> collect c {s \<in> x. bval b s} \<subseteq> S \<union> collect c {s \<in> y. bval b s}"
+lemma collect_insert:
+  "collect c (insert s S) = collect c {s} \<union> collect c S"
+  unfolding collect_def by blast
+
+lemma collect_mono:
+  "S \<subseteq> T \<Longrightarrow> collect c S \<subseteq> collect c T"
+  unfolding collect_def by blast
+
+(* ── Structural lemmas ───────────────────────────────────────────── *)
+
+
+lemma collect_SKIP [simp]:
+  "collect SKIP S = S"
+  unfolding collect_def by blast
+
+lemma collect_Assign [simp]:
+  "collect (x ::= a) S = {s(x := aval a s) | s. s \<in> S}"
+  unfolding collect_def by blast
+
+lemma collect_Seq[simp]:
+  "collect (c1 ;; c2) S = collect c2 (collect c1 S)"
+  unfolding collect_def by blast
+
+lemma collect_If[simp]:
+  "collect (IF b THEN c1 ELSE c2) S =
+     collect c1 {s \<in> S. bval b s} \<union> collect c2 {s \<in> S. \<not> bval b s}"
+  unfolding collect_def by auto
+
+
+(* ── WHILE: fixpoint characterisation ───────────────────────────── *)
+
+definition while_fun :: "bexp \<Rightarrow> com \<Rightarrow> store set \<Rightarrow> store set \<Rightarrow> store set" where
+  "while_fun b c S T = S \<union> collect c {s \<in> T. bval b s}"
+
+lemma while_fun_mono:
+  "mono (while_fun b c S)"
+  unfolding mono_def while_fun_def collect_def by auto
+
+(* ⊆ direction: loop execution stays in lfp and exits with ¬b *)
+lemma while_preserves_lfp:
+  "\<lbrakk> (WHILE b DO c, s) \<Rightarrow> t; s \<in> lfp (while_fun b c S) \<rbrakk>
+   \<Longrightarrow> t \<in> lfp (while_fun b c S) \<and> \<not> bval b t"
+proof (induction "WHILE b DO c" s t rule: big_step_induct)
+  case (WhileFalse s) then show ?case by simp
+next
+  case (WhileTrue s s' t)
+  then have "s' \<in> lfp (while_fun b c S)"
+    by (smt (verit, ccfv_threshold) IMP2_Collecting.collect_def UnCI lfp_unfold mem_Collect_eq
+        while_fun_def while_fun_mono) 
+  then show ?case
+    by (simp add: WhileTrue.hyps(5))  
+qed
+
+(* ⊇ direction: every lfp exit state is reachable from some s₀ ∈ S *)
+lemma while_lfp_exit_collect:
+  "\<lbrakk> x \<in> lfp (while_fun b c S); \<not> bval b x \<rbrakk>
+   \<Longrightarrow> \<exists>s \<in> S. (WHILE b DO c, s) \<Rightarrow> x"
+proof -
+  assume x_lfp : "x \<in> lfp (while_fun b c S)"
+  assume nbx   : "\<not> bval b x"
+  let ?Q = "{y. \<forall>t. (WHILE b DO c, y) \<Rightarrow> t
+                 \<longrightarrow> (\<exists>s\<^sub>0 \<in> S. (WHILE b DO c, s\<^sub>0) \<Rightarrow> t)}"
+  have "lfp (while_fun b c S) \<subseteq> ?Q"
+    apply(rule lfp_lowerbound)
+    apply(auto)
+    using IMP2_Collecting.collect_def while_fun_def by auto
+
+  with x_lfp nbx show ?thesis
     by blast
 qed
+
+lemma collect_While:
+  "collect (WHILE b DO c) S = {t \<in> lfp (while_fun b c S). \<not> bval b t}"
+  unfolding collect_def 
+  apply(auto)
+  apply (metis (no_types, lifting) UnCI lfp_unfold while_fun_def while_fun_mono
+      while_preserves_lfp)
+  apply (metis (no_types, lifting) UnCI lfp_unfold while_fun_def while_fun_mono
+      while_preserves_lfp)
+  by (simp add: while_lfp_exit_collect)
+ 
 
 end
