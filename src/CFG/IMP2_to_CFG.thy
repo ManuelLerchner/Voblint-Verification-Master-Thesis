@@ -298,31 +298,6 @@ qed
 
 (* Shifting the fresh-program-point baseline by k shifts every allocated pp uniformly. *)
 
-lemma compile_SKIP_add_offset:
-  assumes H: "compile SKIP n = (n', en, ex, E)"
-  shows "compile SKIP (n + k) = (n' + k, en + k, ex + k, offset_edges k E)"
-  using assms
-proof -
-  have rhs: "compile SKIP n = (n + 2, n, n + 1, {(n, EA_Nop, n + 1)})"
-    by (simp add: compile.simps)
-  from H rhs have eq: "(n', en, ex, E) = (n + 2, n, n + 1, {(n, EA_Nop, n + 1)})"
-    by presburger
-  from eq show ?thesis
-    by (simp add: compile.simps offset_edges_def)
-qed
-
-lemma compile_Assign_add_offset:
-  assumes H: "compile (x ::= a) n = (n', en, ex, E)"
-  shows "compile (x ::= a) (n + k) = (n' + k, en + k, ex + k, offset_edges k E)"
-proof -
-  have rhs: "compile (x ::= a) n = (n + 2, n, n + 1, {(n, EA_Assign x a, n + 1)})"
-    by (simp add: compile.simps)
-  from H rhs have eq: "(n', en, ex, E) = (n + 2, n, n + 1, {(n, EA_Assign x a, n + 1)})"
-    by presburger
-  from eq show ?thesis
-    by (simp add: compile.simps offset_edges_def)
-qed
-
 lemma compile_add_offset:
   fixes c :: com and n k n' en ex E
   assumes cmp: "compile c n = (n', en, ex, E)"
@@ -331,11 +306,11 @@ lemma compile_add_offset:
 using assms proof (induct c arbitrary: n n' en ex E rule: com.induct)
   case SKIP
   then show ?case
-    using compile_SKIP_add_offset by blast
+    by (force simp: compile.simps offset_edges_def)
 next
   case (Assign x a)
   then show ?case
-    using compile_Assign_add_offset by presburger 
+    by (force simp: compile.simps offset_edges_def)
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
@@ -451,11 +426,6 @@ next
     apply( auto)
     using ck offset_edges_def ofs(1,2,3,4) by auto
 qed
-
-lemma compile_add_nat:
-  "\<lbrakk>compile c (n'::nat) = (n'e, en, ex, E); n'' = n' + k\<rbrakk>
-   \<Longrightarrow> compile c n'' = (n'e + k, en + k, ex + k, offset_edges k E)"
-  using compile_add_offset[where n=n'] by simp
 
 lemma compile_from_0_offsets:
   assumes "compile c 0 = (n0, en0, ex0, E0)"
@@ -573,35 +543,5 @@ lemma to_cfg_finite: "finite (cfg_edges (to_cfg c))"
   unfolding to_cfg_def
   by (simp add: Let_def split: prod.splits) (meson compile_finite)
 
-(*
-  to_cfg always produces a well-formed CFG:
-    - entry \<noteq> exit (compile_entry_ne_exit)
-    - finite edges (to_cfg_finite)
-    - all edge endpoints are valid nodes (compile_fresh)
-  Stated as a lemma so downstream proofs can use cfg_wf without
-  re-deriving it inline from compile properties each time.
-*)
-lemma to_cfg_wf: "cfg_wf (to_cfg c)"
-proof -
-  obtain n' en ex E where comp: "compile c 0 = (n', en, ex, E)"
-    by (cases "compile c 0") auto
-  have enex: "en \<noteq> ex"
-    by (rule compile_entry_ne_exit[OF comp])
-  have ne: "cfg_entry (to_cfg c) \<noteq> cfg_exit (to_cfg c)"
-    unfolding to_cfg_def using comp enex by (simp add: Let_def split: prod.splits)
-  have fin: "finite (cfg_edges (to_cfg c))"
-    by (rule to_cfg_finite)
-  have ball_nodes: "\<forall>e\<in>cfg_edges (to_cfg c). fst e \<in> cfg_nodes (to_cfg c) \<and> snd (snd e) \<in> cfg_nodes (to_cfg c)"
-  proof (rule ballI)
-    fix e assume e: "e \<in> cfg_edges (to_cfg c)"
-    show "fst e \<in> cfg_nodes (to_cfg c) \<and> snd (snd e) \<in> cfg_nodes (to_cfg c)"
-    proof (rule cfg_edge_endpoints_in_cfg_nodes)
-      show "(fst e, snd e) \<in> cfg_edges (to_cfg c)"
-        using e by (simp only: prod.collapse)
-    qed
-  qed
-  show ?thesis
-    unfolding cfg_wf_def using ne fin ball_nodes by simp
-qed
 
 end

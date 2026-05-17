@@ -171,7 +171,7 @@ corollary ivl_pipeline_sound:
 
   This falls out for free from post_fixpoint_sound + td_analyse_post_fixpoint:
     td_analyse_post_fixpoint  →  is_post_fixpoint ... (run_analysis cfg c)
-    post_fixpoint_sound       →  \<forall>v. cfg_reach g {s} v ⊆ gamma_state (env v)
+    post_fixpoint_sound       →  \<forall>v. cfg_collect g {s} v ⊆ gamma_state (env v)
   Exit soundness (pipeline_sound) is the v = cfg_exit special case.
 
   This is what supervisors requested in meeting 2:
@@ -187,14 +187,14 @@ corollary ivl_pipeline_sound:
 theorem pipeline_invariant_sound:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s : sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
+  shows   "\<forall>v. cfg_collect (to_cfg c) {s} v <=
                     sound_domain.gamma_state (ac_gamma cfg)
                       (run_analysis cfg c v)"
   sorry
   (* Proof:
        (1) td_analyse_post_fixpoint gives is_post_fixpoint (run_analysis cfg c)
        (2) {s} ⊆ gamma_state(ac_init cfg) from s_in_gamma
-       (3) post_fixpoint_sound gives \<forall>v. cfg_reach ... {s} v ⊆ gamma_state(env v)
+       (3) post_fixpoint_sound gives \<forall>v. cfg_collect ... {s} v ⊆ gamma_state(env v)
      pipeline_sound is the v = cfg_exit special case; terminates not needed. *)
 
 (*
@@ -204,7 +204,7 @@ theorem pipeline_invariant_sound:
 theorem sign_pipeline_invariant_sound:
   assumes tf_ok:   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
   assumes init_ok: "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
-  shows   "\<forall>v. cfg_reach (to_cfg c) {s} v <=
+  shows   "\<forall>v. cfg_collect (to_cfg c) {s} v <=
                     sign_domain.gamma_state
                       (run_analysis (sign_analysis_config s) c v)"
   using assms

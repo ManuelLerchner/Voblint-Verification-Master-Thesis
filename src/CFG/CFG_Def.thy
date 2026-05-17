@@ -62,19 +62,9 @@ record cfg =
 definition offset_edges :: "nat \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> edge_action \<times> pp) set" where
   "offset_edges k E = (\<lambda>(u,a,v). (u + k, a, v + k)) ` E"
 
-definition cfg_offset :: "nat \<Rightarrow> cfg \<Rightarrow> cfg" where
-  "cfg_offset k g = \<lparr> cfg_entry = cfg_entry g + k, cfg_exit = cfg_exit g + k,
-                      cfg_edges = offset_edges k (cfg_edges g) \<rparr>"
-
 lemma offset_edges_Un[simp]:
   "offset_edges k (A \<union> B) = offset_edges k A \<union> offset_edges k B"
   unfolding offset_edges_def by force
-
-lemma offset_edges_insert_union:
-  "insert (u + k::nat, a, v + k) (offset_edges k E1) =
-   offset_edges k (insert (u, a, v) (E1))"
-  using offset_edges_Un offset_edges_def by auto
-
 
 lemma offset_edges_insert_shift:
   "offset_edges k (insert ((u::nat), a, (v::nat)) S) =
@@ -86,26 +76,10 @@ lemma in_offset_edges_iff:
   "((u + k::nat, a, v + k) \<in> offset_edges k E) \<longleftrightarrow> (u, a, v) \<in> E"
   unfolding offset_edges_def by (force simp: prod_eq_iff)
 
-lemma finite_offset_edges:
-  assumes "finite E" shows "finite (offset_edges k E)"
-  unfolding offset_edges_def using assms by simp
-
-(* \<midarrow>\<midarrow> Derived Notions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-
-definition cfg_nodes :: "cfg => pp set" where
-  "cfg_nodes g = {cfg_entry g, cfg_exit g}
-                 Un Union ((\<lambda>e. {fst e, snd (snd e)}) ` cfg_edges g)"
-
-lemma cfg_edge_endpoints_in_cfg_nodes:
-  assumes e: "(u, av) \<in> cfg_edges g"
-  shows "u \<in> cfg_nodes g \<and> snd av \<in> cfg_nodes g"
-  unfolding cfg_nodes_def using e by force
+(* \<midarrow>\<midarrow> Derived Notions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition predecessors :: "cfg => pp => (pp * edge_action) set" where
   "predecessors g v = {(u, a) | u a. (u, a, v) : cfg_edges g}"
-
-definition successors :: "cfg => pp => (pp * edge_action) set" where
-  "successors g u = {(w, a) | w a. (u, a, w) : cfg_edges g}"
 
 lemma finite_predecessors:
   assumes "finite (cfg_edges g)"
@@ -116,22 +90,5 @@ proof -
   then show ?thesis
     using assms finite_subset finite_imageI by blast
 qed
-
-lemma finite_successors:
-  assumes "finite (cfg_edges g)"
-  shows "finite (successors g v)"
-proof -
-  have "successors g v \<subseteq> (\<lambda>e :: pp \<times> edge_action \<times> pp. ( snd (snd e), fst (snd e))) ` cfg_edges g"
-    unfolding successors_def by force
-  then show ?thesis
-    using assms finite_subset finite_imageI by blast
-qed 
-
-(* \<midarrow>\<midarrow> Well-Formedness \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-
-definition cfg_wf :: "cfg => bool" where
-  "cfg_wf g = (cfg_entry g \<noteq> cfg_exit g
-               \<and> finite (cfg_edges g)
-               \<and> (\<forall>e \<in> cfg_edges g. fst e \<in> cfg_nodes g \<and> snd (snd e) \<in> cfg_nodes g))"
 
 end

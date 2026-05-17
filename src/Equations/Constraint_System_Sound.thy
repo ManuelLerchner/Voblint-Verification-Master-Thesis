@@ -62,7 +62,7 @@ lemma post_fixpoint_sound:
     "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   shows
-    "\<forall>v. cfg_reach g S v <= gamma_state (env v)"
+    "\<forall>v. cfg_collect g S v <= gamma_state (env v)"
   sorry
 
 end
@@ -91,9 +91,9 @@ corollary exit_sound:
   assumes terminates: "big_step (c, s) t"
   shows   "t : gamma_state (env (cfg_exit (to_cfg c)))"
   sorry
-  (* Proof: post_fixpoint_sound + S_sound gives \<forall>v. cfg_reach g S v ⊆ gamma_state(env v).
+  (* Proof: post_fixpoint_sound + S_sound gives \<forall>v. cfg_collect g S v ⊆ gamma_state(env v).
      big_step + collect_le_cfg_collect_exit + cfg_collect_exit_eq_collect give
-     t \<in> cfg_reach g S exit. Conclude t \<in> gamma_state(env exit). *)
+     t \<in> cfg_collect g S exit. Conclude t \<in> gamma_state(env exit). *)
 
 end
 

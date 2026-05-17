@@ -75,32 +75,6 @@ lemma cfg_reaches_trans[intro]:
  
  
 
-(* \<midarrow>\<midarrow> Elim / Simp Lemmas \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-
-lemma cfg_path_not_Nil_imp_step[dest]:
-  "cfg_path g u es v ==> es \<noteq> [] ==>
-   \<exists>a w es'. es = (a, w) # es' \<and> (u, a, w) \<in> cfg_edges g \<and> cfg_path g w es' v"
-  by auto
-
-(*
-  Each step (a,w) in the path list came from some edge in the CFG.
-  The source of that edge is NOT necessarily u (the path start) — it is
-  whatever node preceded w along the path.  The old statement
-    (a,w) \<in> set (map snd es) \<Longrightarrow> (u,a,w) \<in> cfg_edges g
-  was wrong for paths of length > 1.  Correct form: existential source.
-*)
-lemma cfg_path_edges_in_cfg:
-  "cfg_path g u es v ==> (a, w) : set es ==> \<exists>src. (src, a, w) \<in> cfg_edges g"
-  apply (induction rule: cfg_path.induct)
-  by(auto)
-
- 
-
-(* Convenience: first step of a non-empty path hits the CFG at u. *)
-lemma cfg_path_first_edge:
-  "cfg_path g u ((a, w) # es) v ==> (u, a, w) : cfg_edges g"
-  by (erule cfg_path.cases) auto
-
 (* \<midarrow>\<midarrow> Offset Paths \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 (*
@@ -238,13 +212,5 @@ next
     show ?thesis using list_eq full last_e hd_eq by blast
   qed
 qed
-
-(* \<midarrow>\<midarrow> Reachability from Entry \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-
-definition cfg_reachable :: "cfg => pp => bool" where
-  "cfg_reachable g v = (g \<turnstile> cfg_entry g \<rightarrow>* v)"
-
-lemma cfg_entry_reachable[intro, simp]: "cfg_reachable g (cfg_entry g)"
-  unfolding cfg_reachable_def by (rule cfg_reaches_refl)
 
 end

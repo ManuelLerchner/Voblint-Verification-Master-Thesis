@@ -63,10 +63,6 @@ inductive_cases SeqE[elim!]: "(c1 ;; c2, s1) \<Rightarrow> s3"
 inductive_cases IfE[elim!]: "(IF b THEN c1 ELSE c2, s) \<Rightarrow> t"
 inductive_cases WhileE[elim]: "(WHILE b DO c, s) \<Rightarrow> t"
 
-text \<open>Alias for older proofs that referenced \<open>big_step_SeqE\<close>.\<close>
-
-lemmas big_step_SeqE = SeqE
-
 text \<open>Executable big-step via the predicate compiler (HOL-IMP.Big\_Step).\<close>
 
 code_pred big_step .

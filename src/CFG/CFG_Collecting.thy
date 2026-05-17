@@ -1965,24 +1965,4 @@ theorem cfg_collect_exit_eq_collect:
   "cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) = collect c S"
   by (rule antisym) (rule cfg_collect_exit_le_collect, rule collect_le_cfg_collect_exit)
 
-(* \<midarrow>\<midarrow> Reachability on CFG \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>
-   Helper: a store s is reachable at program point v iff it appears
-   in cfg_collect. Used in soundness proofs. *)
-
-definition cfg_reach :: "cfg => store set => pp => store set" where
-  "cfg_reach g S = cfg_collect g S"
-
-lemma cfg_reach_entry:
-  "S <= cfg_reach (to_cfg c) S (cfg_entry (to_cfg c))"
-proof -
-  let ?g = "to_cfg c"
-  have eq: "cfg_collect ?g S (cfg_entry ?g) =
-            cfg_collect_F ?g S (cfg_collect ?g S) (cfg_entry ?g)"
-    using cfg_collect_lfp_unfold[of ?g S] by simp
-  have sub: "S \<subseteq> cfg_collect_F ?g S (cfg_collect ?g S) (cfg_entry ?g)"
-    unfolding cfg_collect_F_def by simp
-  show ?thesis
-    unfolding cfg_reach_def using eq sub by simp
-qed
-
 end
