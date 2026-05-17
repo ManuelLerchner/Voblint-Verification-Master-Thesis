@@ -14,11 +14,11 @@ begin
   The equation system over a CFG is in Equations/Constraint_System.thy.
 *)
 
-(* ── Program Points ───────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Program Points \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 type_synonym pp = nat
 
-(* ── Edge Actions ─────────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Edge Actions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
   Each edge carries one of:
     EA_Nop          -- unconditional edge (no state change)
@@ -46,24 +46,11 @@ definition less_edge_action_def:
   "((<) :: edge_action \<Rightarrow> edge_action \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
 
 instance
-proof (intro_classes)
-  fix x y z :: edge_action
-  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
-    unfolding less_edge_action_def less_eq_edge_action_def
-    using linorder_not_le by force
-  show "x \<le> x"
-    by (simp add: less_eq_edge_action_def)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
-    by (simp add: less_eq_edge_action_def order_trans)
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
-    by (simp add: less_eq_edge_action_def to_nat_split)
-  show "x \<le> y \<or> y \<le> x"
-    by (simp add: less_eq_edge_action_def linear)
-qed
-
+  apply (intro_classes)
+  unfolding less_edge_action_def less_eq_edge_action_def by auto
 end
 
-(* ── CFG Record ───────────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> CFG Record \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 record cfg =
   cfg_entry :: pp
@@ -83,27 +70,17 @@ lemma offset_edges_Un[simp]:
   "offset_edges k (A \<union> B) = offset_edges k A \<union> offset_edges k B"
   unfolding offset_edges_def by force
 
-lemma offset_edges_triple_union[simp]:
-  "offset_edges k (E1 \<union> {(u, a, v)} \<union> E2) =
-   offset_edges k E1 \<union> {(u + k, a, v + k)} \<union> offset_edges k E2"
-  unfolding offset_edges_def by force
+lemma offset_edges_insert_union:
+  "insert (u + k::nat, a, v + k) (offset_edges k E1) =
+   offset_edges k (insert (u, a, v) (E1))"
+  using offset_edges_Un offset_edges_def by auto
 
-lemma offset_edges_insert_union_twice:
-  "insert (u + k::nat, a, v + k) (offset_edges k E1 \<union> offset_edges k E2) =
-   offset_edges k (insert (u, a, v) (E1 \<union> E2))"
-proof -
-  have eq: "insert (u, a, v) (E1 \<union> E2) = E1 \<union> {(u, a, v)} \<union> E2"
-    by blast
-  show ?thesis
-    unfolding eq offset_edges_def
-    by force
-qed
 
 lemma offset_edges_insert_shift:
   "offset_edges k (insert ((u::nat), a, (v::nat)) S) =
    insert (u + k, a, v + k) (offset_edges k S)"
   unfolding offset_edges_def
-  by (simp add: image_insert split: prod.split)
+  by auto
 
 lemma in_offset_edges_iff:
   "((u + k::nat, a, v + k) \<in> offset_edges k E) \<longleftrightarrow> (u, a, v) \<in> E"
@@ -113,7 +90,7 @@ lemma finite_offset_edges:
   assumes "finite E" shows "finite (offset_edges k E)"
   unfolding offset_edges_def using assms by simp
 
-(* ── Derived Notions ──────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Derived Notions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition cfg_nodes :: "cfg => pp set" where
   "cfg_nodes g = {cfg_entry g, cfg_exit g}
@@ -127,6 +104,9 @@ lemma cfg_edge_endpoints_in_cfg_nodes:
 definition predecessors :: "cfg => pp => (pp * edge_action) set" where
   "predecessors g v = {(u, a) | u a. (u, a, v) : cfg_edges g}"
 
+definition successors :: "cfg => pp => (pp * edge_action) set" where
+  "successors g u = {(w, a) | w a. (u, a, w) : cfg_edges g}"
+
 lemma finite_predecessors:
   assumes "finite (cfg_edges g)"
   shows "finite (predecessors g v)"
@@ -137,10 +117,17 @@ proof -
     using assms finite_subset finite_imageI by blast
 qed
 
-definition successors :: "cfg => pp => (pp * edge_action) set" where
-  "successors g u = {(w, a) | w a. (u, a, w) : cfg_edges g}"
+lemma finite_successors:
+  assumes "finite (cfg_edges g)"
+  shows "finite (successors g v)"
+proof -
+  have "successors g v \<subseteq> (\<lambda>e :: pp \<times> edge_action \<times> pp. ( snd (snd e), fst (snd e))) ` cfg_edges g"
+    unfolding successors_def by force
+  then show ?thesis
+    using assms finite_subset finite_imageI by blast
+qed 
 
-(* ── Well-Formedness ──────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Well-Formedness \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition cfg_wf :: "cfg => bool" where
   "cfg_wf g = (cfg_entry g \<noteq> cfg_exit g
