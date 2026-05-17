@@ -9,6 +9,7 @@ theory Goblint_Formalization
     CFG_Path
     IMP2_to_CFG
     CFG_Collecting
+    CFG_GraphViz
     (* ── Abstract Domains ──────────────────────────────────── *)
     Abstract_Domain
     Sign_Domain
