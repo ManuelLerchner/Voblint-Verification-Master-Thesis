@@ -1,83 +1,51 @@
-# Isabelle / MCP notes for agents
+# Isabelle / MCP notes
 
-Practical findings from working on this repo (CFG collecting semantics, monotonicity lemmas, Cursor Isabelle MCP). Use together with `AGENTS.md` and `README.md`.
+Companion to `AGENTS.md`. Project-specific traps only.
 
-## Batch build
+## Build
 
-- Session **`TD`** comes from **`vendor/td-verification`** (see `start-ir.sh`). Build from the repo root with **both** `-d` paths, for example:
-  - `isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization`
-- Do **not** point `-d` only at `.../Top_Down_Solver` unless your `ROOT` actually imports that session name; this project’s `ROOT` imports **`TD`** from the vendor tree.
-- **`sorry`** requires `options [quick_and_dirty]` in `ROOT` (already set).
+```bash
+isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+```
 
-## Isabelle MCP (I/R)
+- Solver session is **`TD`** from `vendor/td-verification` (not a separate AFP `Top_Down_Solver` path).
+- `sorry` in batch needs `options [quick_and_dirty]` in `ROOT`.
+- Run `make vendor` before the first build if `vendor/td-verification` is missing.
 
-- **Two ports:** **`http://localhost:9148/mcp`** is the **MCP HTTP** endpoint (Cursor `mcp.json` `url`). The MCP tool **`connect`** opens **TCP** to **`127.0.0.1:9147`** (the I/R REPL). Call **`connect`** with **`port: 0`** or omit `port` (defaults to 9147). Do **not** pass **9148** to `connect` — that port speaks HTTP, not the REPL auth protocol.
-- **Connect** first (`connect` with token, e.g. `isabelle-local` from `start-ir.sh`).
-- After **editing theories on disk**, call **`load_theory`** on the changed theory so the REPL matches the file (the heap may lag otherwise).
-- **`init`** creates a REPL with an explicit import list; use fully qualified theory names (e.g. `Goblint_Formalization.CFG_Collecting`).
-- **`step`**: prefer **one line of Isar per call** if the server rejects newlines.
-- **ASCII in `step` text**: the MCP server may normalize escapes; when in doubt, use Isabelle’s `\<...>` spellings consistent with your `.thy` files.
+## MCP (I/R)
 
-### Which tools exist
+- HTTP MCP: `localhost:9148`; REPL `connect` uses TCP **`9147`** (not 9148).
+- After disk edits: `load_theory` with fully qualified names (`Goblint_Formalization.CFG_Collecting`).
+- `step`: one Isar line per call.
+- Prefer `blast` / `auto` / `meson` from sledgehammer; verify `metis` with a full build.
 
-| Tool | Role |
-|------|------|
-| `sledgehammer` | ATP on **current** proof state; default timeout 15s is enough for most subgoals. |
-| `find_theorems` | Search library / loaded theories. |
-| `step` | Run Isar commands (including **`nitpick`** as an ordinary command in theory text). |
+## Sledgehammer
 
-There is **no separate MCP tool named `nitpick`**. To run Nitpick, use **`step`** with something like `lemma ... nitpick [timeout = 5] oops` (or inside a proof).
+1. Shrink the goal first (`unfolding`, `monoI`, controlled `simp`) — ATP rarely closes huge goals in one shot.
+2. Prefer `by auto` / `blast` / `fastforce` / `simp` over `metis`/`smt` for batch speed and maintainability.
+3. **`metis` caution:** reconstruction can be very slow in `isabelle build` and may pull surprising lemmas. Always run a full session build after pasting `metis`; fall back to Isar or `meson`/`blast` with explicit `simp`/`intro`/`dest` if stuck.
+4. Keep timeout ≤ 15s unless debugging interactively.
 
-## Sledgehammer: how to use it well
+## Isar traps
 
-1. **Shrink the goal first**  
-   `unfolding` definitions, `apply (rule monoI)`, `simp` (controlled) — Sledgehammer rarely closes huge first-order goals in one shot.
+- Edit `.thy` via I/Q `write_file`, not host `Read`/`Write` (jEdit buffer drift).
+- ASCII symbols in `.thy` only (`\<Longrightarrow>`, not `⟹`) — batch rejects Unicode.
+- **`obtain` + `show`:** if Isabelle reports “Result contains obtained parameters”, use `have` for intermediate facts; only the final case goal uses `show`.
+- **`induction … arbitrary: S T` with named `assumes`:** the assumption may become a meta-implication not in the case context. Use an object implication `S ⊆ T ⟹ …` with `assume le: "S ⊆ T"` in cases, or derive `⋀u. rho1 u ⊆ rho2 u` from `rho1 ≤ rho2` via `le_fun_def`.
+- Set comprehensions: `{s ∈ S. P s}` plus `fix s` can clash; prefer `fix x` in `subsetI` or `Collect (λs. s ∈ S ∧ P s)` with `mem_Collect_eq`.
+- `path_collect` heads are `(edge_action * pp)` pairs — `cases`/`obtain` before `simp`.
+- `induction … rule: big_step.induct`: case order follows the rule text, not the conclusion.
 
-2. **Prefer light tactics from the menu**  
-   When Sledgehammer reports `by auto`, `by blast`, `by fastforce`, or `by simp`, those are usually **better for the repo** than `metis`/`smt`: faster batch rebuilds, smaller proof terms, easier maintenance.
+## CFG-specific lemmas
 
-3. **`metis` caution**  
-   A reported `metis` proof can (a) **reconstruct very slowly** in `isabelle build`, (b) pull in **surprising lemmas** that happen to unify. Always run a **full session build** after pasting a `metis` proof. If the build hangs or the proof looks unrelated, fall back to structured Isar or `meson`/`blast` with explicit `simp`/`intro`/`dest`.
+- **`edge_collect_mono`:** monotonicity in the state-set argument; `subset_iff`, `mem_Collect_eq`, or `meson` after pointwise `rho1 u ⊆ rho2 u`.
+- **`collect_pp_mono`:** unfold `collect_pp_def`, pointwise `cenv` order (`le_fun_def`), then `edge_collect_mono` and a Union step (`blast` once the `⋀u a.` helper is named).
 
-4. **Timeouts**  
-   Keep Sledgehammer at the recommended **≤ 15s** unless you are debugging interactively; long runs rarely beat “one more `unfold` + blast”.
+## Workflow
 
-5. **Induction + Sledgehammer**  
-   For `induction … arbitrary: …`, Sledgehammer often finds `apply simp` **per subgoal**; you still need the right **induction rule** and sometimes a **manual `Cons` case** (e.g. product types in `fun` equations).
+1. `isabelle build …` until green (or expected sorries only).
+2. MCP: `load_theory`, small REPL `init`.
+3. Trial tactics in `step` / `explore`; paste `blast`/`auto`/`meson` first.
+4. If automation fails, 5–15 lines of structured Isar; hoist hard subgoals as lemmas.
 
-## Isar proof engineering (concrete traps)
-
-### `obtain` and `show`
-
-If Isabelle reports **“Result contains obtained parameters”**, you likely used **`show`** for an intermediate fact that still mentions the obtained locals. Use **`have`** for the intermediate step, then a **single** final `show` for the case goal.
-
-### `induction` with `arbitrary: S T` and named `assumes`
-
-With `proof (induction es arbitrary: S T)` and a lemma of the form `assumes "S ⊆ T" shows …`, the induction may turn the assumption into a **meta-implication** `S ⊆ T ⟹ …` where the outer `assumes` name is **not** in the case context. Fixes that work:
-
-- State the strong lemma as an **object implication** `S ⊆ T ⟹ …` and use `assume le: "S ⊆ T"` inside the `Nil` case, or  
-- Derive **`have ru: ⋀u. rho1 u ⊆ rho2 u`** from `rho1 ≤ rho2` via `le_fun_def` and reuse it (good for `mono` proofs).
-
-### Set comprehension and bound variables
-
-- `{s ∈ S. P s}` plus `fix s` in a proof can cause awkward parsing / clashes. Prefer **`fix x`** in `subsetI` proofs, or use **`Collect (λs. s ∈ S ∧ P s)`** and `mem_Collect_eq` / `auto simp: …` for stable automation.
-- Mixing **`:`** and **`∈`** for membership: pretty-printing may show `∈` while your script uses `:``; if `simp` stalls, align with `Collect` + `mem_Collect_eq` or unfold the `fun` equation explicitly.
-
-### `path_collect` and products
-
-`path_collect` is defined on **`(edge_action * pp) # es`**, not on an arbitrary cons unless you know the head is a pair. Proofs often need **`obtain a p where e = (a, p)`** (or `cases e`) before `simp`/`auto` can apply the rewrite rule.
-
-## Project-specific lemmas (memory)
-
-- **`edge_collect_mono`**: monotonicity w.r.t. the **state set** argument; assume / Collect cases benefit from `subset_iff`, `mem_Collect_eq`, or `meson` after pointwise `rho1 u ⊆ rho2 u`.
-- **`collect_pp_mono`**: `mono (λrho. collect_pp g rho v)` — unfold `collect_pp_def`, use pointwise order on `cenv` (`le_fun_def`), then `edge_collect_mono` and a **Union** / membership step (`blast` works well once the `⋀u a.` helper is named).
-
-## Suggested workflow
-
-1. `isabelle build …` until the session is green.  
-2. Start MCP, `load_theory`, `init` a small REPL.  
-3. Copy the **subgoal** into a scratch `lemma` / `apply` sequence in `step`; run **`sledgehammer`**.  
-4. Paste back **`blast`/`auto`/`meson`** first; use **`metis`** only if checked and fast in batch.  
-5. If automation fails, write 5–15 lines of Isar and move on.
-
-These notes are **not** a substitute for the knowledge base (`~/goblint-formalization-kb/`) or AFP documentation; they record agent-time sinks we hit in this repository.
+CFG maintenance ideas: `docs/PROOF_SIMPLIFICATION.md`.

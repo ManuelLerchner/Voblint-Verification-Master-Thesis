@@ -11,11 +11,9 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Solver"
     "Pipeline"
     "Examples"
-    "attempt2"
   theories
     Goblint_Formalization
     Scratch
     Example_Sign_Analysis
     Example_CFG_Collecting_Equiv
     Example_GraphViz
-    Attempt2_Step0

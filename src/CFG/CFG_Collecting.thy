@@ -1,5 +1,5 @@
 theory CFG_Collecting
-  imports IMP2_to_CFG IMP2_Collecting CFG_Path Goblint_Formalization.Attempt2_Step0
+  imports IMP2_to_CFG IMP2_Collecting CFG_Path
 begin
 
 (*

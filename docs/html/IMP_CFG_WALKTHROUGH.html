@@ -46,8 +46,9 @@
           <code>cfg_collect_exit_eq_collect</code> is fully proved in <code>CFG_Collecting.thy</code>.
           Optional lemmas that were previously placeholders (<code>collect_While</code>, exit-reachability helpers)
           were removed rather than left as <code>sorry</code> — they are not needed on the critical path.
-          Downstream gaps (equation system, solver bridge, pipeline) still use <code>sorry</code>; see
-          <code>docs/PROOF_PHASES.md</code>.</p>
+          The <strong>sign</strong> pipeline through equations, solver, and
+          <code>goblint_sign_sound</code> is closed. Interval stretch and optional paths
+          still use <code>sorry</code> — see <code>docs/PROOF_PHASES.md</code>.</p>
       </div>
     </header>
 
@@ -503,14 +504,14 @@ flowchart TD
 
       <div class="callout">
         <div class="label">After this theorem</div>
-        <p>The equation system in <code>src/Equations/</code> talks about <code>cfg_collect</code> (and its abstract version). Proving <code>post_fixpoint_sound</code> (still <code>sorry</code>) would show any solver result over-approximates <code>cfg_collect</code> at every node; specialising to the exit node and applying the <strong>proved</strong> <code>cfg_collect_exit_eq_collect</code> yields soundness w.r.t. <code>collect c S</code> and concrete <code>big_step</code>.</p>
+        <p>The equation system in <code>src/Equations/</code> talks about <code>cfg_collect</code> (and its abstract version). <code>post_fixpoint_sound</code> is proved in <code>Constraint_System_Sound.thy</code>; composed with the TD solver and <code>cfg_collect_exit_eq_collect</code>, this yields <code>goblint_sign_sound</code> for the sign domain.</p>
       </div>
     </section>
 
     <!-- LEMMA INDEX -->
     <section class="stage" id="lemma-index">
       <h2><span class="badge">★</span>Lemma index by file</h2>
-      <p class="lede">All lemmas below are proved with no <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>. Downstream pipeline gaps live in <code>Equations/</code>, <code>Solver/</code>, <code>Pipeline/</code> — see <code>docs/PROOF_PHASES.md</code>.</p>
+      <p class="lede">All lemmas below are proved with no <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>. Sign pipeline composition is closed; remaining <code>sorry</code>s are interval stretch / optional — see <code>docs/PROOF_PHASES.md</code>.</p>
 
       <table>
         <thead><tr><th>File</th><th>Lemma</th><th>Why it matters</th></tr></thead>

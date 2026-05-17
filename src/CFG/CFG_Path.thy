@@ -9,9 +9,8 @@ begin
   Adapted from: https://github.com/lohner/FormalSSA (Ullrich & Lohner, Isabelle2016)
                 "Verified Construction of Static Single-Assignment Form"
                 SSA_CFG.thy / Graph_path.thy — path2 + lemma library.
-  See wiki: ~/goblint-formalization-kb/wiki/concepts/isabelle-proof-engineering.md
-            Pattern 1 (inductive path), Pattern 2 (attribute discipline),
-            Pattern 4 (derived _cases / _induct lemmas).
+  Pattern 1: inductive path; Pattern 2: attribute discipline;
+            Pattern 4: derived _cases / _induct lemmas.
 
   Why this file exists:
     post_fixpoint_sound and cfg_collect_exit_eq_collect both need to reason

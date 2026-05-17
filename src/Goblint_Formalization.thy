@@ -41,10 +41,10 @@ begin
     AST  --(predecessors_of/direct_tree)-->  Equations  --(TD)-->  Result
     [Direct_Equations]
 
-  Equivalence theorem: direct_eq_cfg_analyse (Direct_Equations.thy)
+  Equivalence theorem: direct_eq_cfg_analyse (Direct_Equations.thy, still open)
 
-  Every proof is currently deferred (sorry).
-  Fill in leaves first; propagate upward.
+  Sign pipeline: closed (goblint_sign_sound).
+  Interval / Direct_Equations / TD_Total: stretch or alternate paths (sorry).
 
   Abstract domains:
     Sign      -- Tier 1 (finite lattice, no widening)  [Domains/Sign_Domain]

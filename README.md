@@ -76,13 +76,13 @@ Repository layout
 │   ├── Equations/        constraint system + soundness layer
 │   ├── Solver/           bridge to the verified top-down solver
 │   ├── Domains/          abstract domains (Sign, Interval, ...)
-│   ├── Pipeline/         end-to-end pipeline theorems and result mapping
+│   ├── Pipeline/         end-to-end pipeline theorems
 │   ├── Examples/         concrete instantiations and worked examples
 │   └── Goblint_Formalization.thy   top-level session entry
 ├── vendor/
 │   ├── td-verification/             fetched by `make vendor` (gitignored)
 │   └── td-verification.patch        local fixes to the vendored TD solver
-├── docs/                 design notes, proof phases, agent notes
+├── docs/                 proof overview, phases, walkthroughs
 ├── Makefile              build entry points (vendor, build, jedit, clean)
 └── ROOT                  Isabelle session definition
 ```
@@ -110,39 +110,15 @@ maintaining a long-lived submodule fork-pin: the diff is reviewable in this
 repository and the vendored tree is never tracked.
 
 
-Knowledge-base submodule
-------------------------
+Documentation
+-------------
 
-The thesis/research wiki is included as a git submodule:
+| Document | Contents |
+| -------- | -------- |
+| `docs/PROOF_OVERVIEW.md` | Theorem chain, key types and lemmas |
+| `docs/PROOF_PHASES.md` | Proof status, sorry inventory, remaining work |
+| `docs/PIPELINE_WALKTHROUGH.md` | Stage-by-stage walkthrough with examples |
+| `docs/PROOF_SIMPLIFICATION.md` | CFG_Collecting refactor playbook (optional maintenance) |
+| `docs/html/` | HTML renderings of the walkthroughs (may lag `.md`) |
 
-- `goblint-formalization-kb/` -- [ManuelLerchner/goblint-formalization-kb](https://github.com/ManuelLerchner/goblint-formalization-kb)
-
-Clone with submodules:
-```
-git clone --recurse-submodules https://github.com/ManuelLerchner/goblint-formalization.git
-```
-If already cloned:
-```
-git submodule update --init --recursive
-```
-
-
-Agent / MCP helpers
--------------------
-
-Sledgehammer tips, `metis` pitfalls, induction gotchas, and the MCP tool
-list are documented in `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap scripts:
-
-```
-./setup.sh
-./start-ir.sh
-```
-
-
-Suggested reading order
------------------------
-
-1. `docs/ISABELLE_AGENT_NOTES.md` -- MCP + Sledgehammer workflow, proof traps.
-2. `docs/PROOF_OVERVIEW.md` -- theorem chain, key types, key lemmas.
-3. `docs/IMPLEMENTATION_GUIDE.md` -- phase plan and dependency order.
-4. `src/Goblint_Formalization.thy` -- top-level imports / session entry.
+Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./setup.sh`, `./start-ir.sh`.

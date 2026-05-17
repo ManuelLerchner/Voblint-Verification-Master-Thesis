@@ -20,7 +20,7 @@ begin
   The equation system is represented as an RHS function:
     rhs :: pp => (pp => D abs_state) => D abs_state
 
-  This is the format expected by the Top_Down_Solver locale.
+  This is the format expected by the TD_plain locale.
 
   All transfer functions are parameterised over the domain via a locale
   so the same equation-system construction works for Sign, Interval, etc.

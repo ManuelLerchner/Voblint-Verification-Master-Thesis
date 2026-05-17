@@ -34,41 +34,19 @@ i.e. the abstract value computed for `x` at the program exit is in
 
 ### Proof status (done vs. open)
 
-Bridge **#1** (IMP ↔ CFG collecting at exit) is proved; abstract interpretation +
-TD solver composition is still open. See also `docs/PROOF_OVERVIEW.md`.
+**Sign pipeline:** closed (`goblint_sign_sound`). **Interval / optional paths:** open
+sorries — see `docs/PROOF_PHASES.md`. Overview: `docs/PROOF_OVERVIEW.md`.
 
 ```mermaid
 flowchart TD
-  subgraph done ["Done — sorry-free in src/IMP2 + src/CFG"]
+  subgraph done ["Done — sign end-to-end"]
     BS["big_step (c,s) ⇒ t"]
-    COL["collect c S"]
-    CC["cfg_collect (to_cfg c) S exit"]
+    COL["collect / cfg_collect"]
     EQ["cfg_collect_exit_eq_collect"]
-    BS --> COL
-    COL --- EQ
-    CC --- EQ
+    ABS["post_fixpoint_sound / exit_sound"]
+    PS["pipeline_sound / goblint_sign_sound"]
+    BS --> COL --> EQ --> ABS --> PS
   end
-
-  subgraph open ["Still open — sorry in Equations / Solver / Pipeline"]
-    RHS["rhs / is_post_fixpoint env"]
-    ABS["post_fixpoint_sound"]
-    TD["td_analyse_post_fixpoint (AFP)"]
-    PS["pipeline_sound / sign_pipeline_sound"]
-  end
-
-  subgraph abs ["Abstract layer — per domain (Sign, …)"]
-    GAMMA["γ_state (env v)"]
-    TF["assign / assume transfer soundness"]
-  end
-
-  CC --> ABS
-  RHS --> ABS
-  TF --> ABS
-  ABS --> GAMMA
-  TD --> RHS
-  PS --> TD
-  PS --> EQ
-  PS --> BS
 ```
 
 ### Artifact flow (stages)
@@ -77,11 +55,11 @@ flowchart TD
 flowchart TD
   A["IMP source<br/>com · aexp · bexp"] -->|to_cfg| B["CFG<br/>pp · edge_action · edges"]
   B -->|rhs · make_rhs| C["Equation system<br/>is_post_fixpoint"]
-  C -->|td_analyse · AFP solver| D["Post-fixpoint env<br/>pp ⇒ abs_state"]
+  C -->|td_analyse · TD solver| D["Post-fixpoint env<br/>pp ⇒ abs_state"]
   D -->|post_fixpoint_sound| E["γ_state env v ⊇ cfg_collect g s v"]
   E -->|cfg_collect_exit_eq_collect| F["γ_state env exit ⊇ collect c s"]
-  F -->|big_step ⟹ t ∈ collect| G["t ∈ γ_state run_analysis …"]
-  D -.->|annotate| H["acom annotated AST<br/>per-point invariants"]
+  F -->|big_step ⟹ t ∈ collect| G["goblint_sign_sound"]
+  D -.->|every v| H["sign_pipeline_invariant_sound<br/>point-map at all pp"]
 ```
 
 ---
@@ -290,7 +268,7 @@ An env mapping `p1 ↦ x:SPos`, `p2 ↦ x:STop`, `p3 ↦ x:STop`, `p4 ↦ x:SNeg
 
 ```isabelle
 definition make_rhs g tf join bot s0 v env = rhs g tf join bot s0 env v
-fun rhs_tree_fold        -- monadic rhs in the AFP Answer/Query monad
+fun rhs_tree_fold        -- monadic rhs in the TD Answer/Query monad
 definition make_rhs_tree
 definition env_map, lookup_bot
 ```
@@ -298,9 +276,9 @@ definition env_map, lookup_bot
 #### Core lemmas
 - `make_rhs_mono` — packaged monotonicity (uses `rhs_mono`).
 - `make_rhs_tree_correspondence`, `make_rhs_tree_correspondence_not_entry_no_predecessors`
-  — the monadic rhs (tree form expected by the AFP solver) equals `make_rhs`
-  after traversing the env. This lets us hand `make_rhs_tree` to
-  `Top_Down_Solver` and read back `make_rhs`.
+  — the monadic rhs (tree form expected by the TD solver) equals `make_rhs`
+  after traversing the env. This lets us hand `make_rhs_tree` to the
+  vendored `TD` session and read back `make_rhs`.
 - `rhs_eq_fold_join_sorted_predecessors`, `fold_join_apply_edges_eq_fold_join_over_map`
   — equate the set-fold formulation with the list-fold the solver uses.
 - `part_solutionD` — extract that the solver returns a partial solution.
@@ -315,15 +293,15 @@ theorem interval_analysis_sound  -- instantiation for Interval
 
 ### `TD_Total.thy`
 
-Termination/total-correctness obligations for the AFP solver:
+Termination/total-correctness obligations for the TD solver (optional stretch):
 
 - `sign_widening_precise`, `sign_wf_widening_chains`, `sign_is_mono_eq` — sign chains are well-founded; widening is monotone.
 - Interval analogues: `ivl_widening_precise`, `ivl_wf_widening_chains`,
   `ivl_narrowing_le`, `ivl_is_mono_eq`.
 
-### AFP imports
+### TD imports
 
-`td_analyse_post_fixpoint` — the AFP-verified solver returns a value
+`td_analyse_post_fixpoint` — the vendored `TD_plain` solver returns a value
 satisfying `is_post_fixpoint`.
 
 ---
@@ -350,7 +328,7 @@ theorem pipeline_sound:
 
 ```mermaid
 flowchart TD
-  S1["td_analyse_post_fixpoint<br/>(AFP, via make_rhs_tree_correspondence + make_rhs_mono)"]
+  S1["td_analyse_post_fixpoint<br/>(TD, via make_rhs_tree_correspondence + make_rhs_mono)"]
   S2["is_post_fixpoint (run_analysis cfg c)"]
   S3["γ_state(env v) ⊇ cfg_collect (to_cfg c) {s} v<br/>at every v"]
   S4["γ_state(env (cfg_exit ...)) ⊇ collect c {s}"]
@@ -366,25 +344,19 @@ flowchart TD
 ```isabelle
 definition sign_analysis_config s
 
-corollary sign_pipeline_sound:
+theorem goblint_sign_sound:           -- Goblint_Formalization.thy (top-level)
   big_step (c,s) t ⟹
   t ∈ sign_domain.gamma_state
         (run_analysis (sign_analysis_config s) c (cfg_exit (to_cfg c)))
+
+lemma sign_pipeline_sound_scaffold:   -- Pipeline.thy (exit, via sign_analysis_sound)
+
+theorem sign_pipeline_invariant_sound:  -- Pipeline.thy (every program point)
+  cfg_collect (to_cfg c) {s} v ⊆ γ_state (run_analysis … v)
 ```
 
-### `Result_Mapping.thy` — read result back onto the AST
-
-```isabelle
-datatype 'a acom            -- AST annotated with abstract states
-fun annotate                -- walks com and decorates each program point
-definition annotate_prog
-fun acom_pre, acom_post
-theorem annotation_sound    -- annotation is a sound invariant at every program point
-```
-
-`pipeline_invariant_sound` / `sign_pipeline_invariant_sound` strengthen
-`pipeline_sound` from "sound at exit" to "sound at every program point" by
-routing `post_fixpoint_sound` pointwise rather than only at `cfg_exit`.
+`pipeline_invariant_sound` is the generic point-map theorem; exit soundness
+(`pipeline_sound` / `goblint_sign_sound`) is the `v = cfg_exit` special case.
 
 ---
 
@@ -518,15 +490,15 @@ is_post_fixpoint g tf (⊔) ⊥ s₀ env  ≡  ∀v. rhs g tf (⊔) ⊥ s₀ env
 ### Solver bridge (`src/Solver/`)
 
 ```text
--- argument-reordered rhs, so the AFP solver can curry it
+-- argument-reordered rhs, so the TD solver can curry it
 make_rhs g tf (⊔) ⊥ s₀ v env  ≡  rhs g tf (⊔) ⊥ s₀ env v
 
--- the same function expressed in the AFP solver's Answer/Query monad
+-- the same function expressed in the TD solver's Answer/Query monad
 make_rhs_tree g tf (⊔) ⊥ s₀ v  : Tree pp ('a abs_state)
 env_map η                       : pp ⇀ 'a abs_state    -- env as a partial map
 lookup_bot m x                  ≡  case m x of None ⇒ ⊥  | Some d ⇒ d
 
--- AFP delivery: td_analyse returns an env satisfying is_post_fixpoint
+-- TD delivery: td_analyse returns an env satisfying is_post_fixpoint
 td_analyse c tf (⊔) ⊥ s₀  : pp ⇒ 'a abs_state
 ```
 
@@ -548,20 +520,6 @@ domain_transfer_sound γ tf  ≡
    (∀ x a σ.  ∀ s ∈ γ_state σ.   s(x := aval a s)  ∈  γ_state (tf_assign tf x a σ))
  ∧ (∀ b   σ.  ∀ s ∈ γ_state σ.   bval b s          ⟹  s ∈ γ_state (tf_assume tf b σ))
  ∧ (∀ b   σ.  ∀ s ∈ γ_state σ.  ¬ bval b s          ⟹  s ∈ γ_state (tf_assume_not tf b σ))
-```
-
-### Result mapping (`src/Pipeline/Result_Mapping.thy`)
-
-```text
-type_synonym 'a analysis_result = pp ⇒ 'a abs_state
-
-invariant_at  : 'a analysis_result ⇒ pp ⇒ 'a abs_state    -- lookup
-entry_invariant, exit_invariant   : at cfg_entry / cfg_exit
-
-datatype 'a acom = ...                       -- AST decorated with abs_state at every point
-annotate      : com ⇒ analysis_result ⇒ 'a acom
-annotate_prog : decorate the whole program
-acom_pre, acom_post : the invariants at the start / end of each subcommand
 ```
 
 ---
@@ -675,9 +633,9 @@ any solution that satisfies the equation system at every node is an
 over-approximation everywhere, not just at the exit. The proof is by
 induction along paths in the CFG, using (L5), (L8), (L11), (L13).
 
-### Step 5 — Hand the equation system to the AFP Top-Down Solver
+### Step 5 — Hand the equation system to the TD Top-Down Solver
 
-The AFP solver `Top_Down_Solver` is parametric in a right-hand-side
+The vendored `TD` solver (`TD_plain`) is parametric in a right-hand-side
 function expressed in a monadic *Answer/Query* form. We must show our `rhs`
 fits its interface, and we get a post-fixpoint guarantee in return.
 
@@ -687,15 +645,15 @@ fits its interface, and we get a post-fixpoint guarantee in return.
 
 > **(L16) Monadic ↔ direct correspondence.**
 > `traverse (make_rhs_tree g tf … v) (env_map η) = make_rhs g tf … v η`
-> for every η. The monadic tree form is what the AFP solver consumes; the
+> for every η. The monadic tree form is what the TD solver consumes; the
 > direct form is what (L13)–(L14) reason about.
 
 > **(L17) Monotonicity of the packaged rhs.**
 > `monotone (≤) (≤) (make_rhs g tf join bot s₀ v)`. Direct consequence of
 > (L13).
 
-> **(L18) AFP guarantee.**
-> The AFP-verified `td_analyse` returns an environment satisfying
+> **(L18) TD guarantee.**
+> The vendored `TD_plain` `td_analyse` returns an environment satisfying
 > `is_post_fixpoint`. Stated abstractly:
 > `td_analyse c tf join bot s₀ = env  ⟹  ∀v. rhs … env v ≤ env v`.
 
@@ -712,7 +670,7 @@ fits its interface, and we get a post-fixpoint guarantee in return.
 The proof composes the previous steps in a single chain:
 
 ```text
-                                   (L18) AFP solver
+                                   (L18) TD solver
                               run_analysis is a post-fixpoint
                                           ↓
                                   (L14) post_fixpoint_sound
@@ -732,15 +690,13 @@ The proof composes the previous steps in a single chain:
 > reduces to `s x ∈ γ_sign (sign_of_int (s x))`, which is trivial.
 
 > **(L21) Per-point invariant strengthening.**
-> Drop the specialization `v := cfg_exit g` in the chain above: the result
-> `cfg_collect g {s} v ⊆ γ_state (env v)` holds for every `v`. Pulled back
-> along the AST via the `annotate` function, this gives a sound abstract
-> invariant at every program point of the source program (theorem
-> `annotation_sound`).
+> The same post-fixpoint argument holds at every `v`, yielding
+> `sign_pipeline_invariant_sound` (point-map form). Exit soundness is the
+> `v = cfg_exit` case.
 
 ### Summary in one paragraph
 
-The AFP solver guarantees a post-fixpoint of our equation system (L15–L18).
+The vendored TD solver guarantees a post-fixpoint of our equation system (L15–L18).
 A post-fixpoint over-approximates the CFG collecting semantics at every
 node (L14), because at every node the right-hand side is monotone (L13)
 and built from sound edge transfers (L11) joined by a sound abstract join
@@ -748,8 +704,8 @@ and built from sound edge transfers (L11) joined by a sound abstract join
 collecting equals AST collecting (L6), and the AST collecting captures
 every concrete terminating store (L2). Therefore the abstract value at the
 exit concretizes to a superset of `{ t | (c, s) ⇒ t }`. Specializing the
-domain to `sign` (L20) and the program point to any `v` (L21) yields the
-two end-user statements `sign_pipeline_sound` and `annotation_sound`.
+domain to `sign` (L20) gives `goblint_sign_sound`; at every program point,
+`sign_pipeline_invariant_sound`.
 
 ---
 
@@ -761,8 +717,8 @@ flowchart TD
   L2["cfg_collect_exit_eq_collect<br/>collect_pp_mono<br/>edge/path mono"] --> L3
   L3["gamma_state_mono / _join_ub / _bot<br/>sign_le_*, join_sign_*<br/>aval_sign_sound<br/>assign/assume_sign_sound"] --> L4
   L4["rhs_mono<br/>collect_pp_abstract_sound<br/>post_fixpoint_sound"] --> L5
-  L5["make_rhs_mono<br/>make_rhs_tree_correspondence<br/>td_analyse_post_fixpoint (AFP)"] --> L6
-  L6["pipeline_sound<br/>sign_pipeline_sound<br/>annotation_sound"]
+  L5["make_rhs_mono<br/>make_rhs_tree_correspondence<br/>td_analyse_post_fixpoint (TD)"] --> L6
+  L6["pipeline_sound<br/>goblint_sign_sound<br/>sign_pipeline_invariant_sound"]
 ```
 
 | Level                  | Key fact                                           |
@@ -771,5 +727,5 @@ flowchart TD
 | CFG collecting         | matches `collect` at exit                          |
 | Abstract domain (Sign) | sound Galois connection + transfer functions       |
 | Equations              | `rhs` monotone; post-fixpoint ⇒ over-approximation |
-| Solver bridge          | `make_rhs_tree` ↔ `make_rhs`; AFP returns p.f.p.   |
-| Pipeline               | exit-soundness, then per-point soundness           |
+| Solver bridge          | `make_rhs_tree` ↔ `make_rhs`; TD returns p.f.p.    |
+| Pipeline               | exit + per-point soundness (sign closed)           |

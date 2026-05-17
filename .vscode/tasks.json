@@ -2,7 +2,8 @@
   // Default build: Ctrl+Shift+B, or Command Palette → "Tasks: Run Build Task"
   // Isabelle editor: Command Palette → "Tasks: Run Task" → "Isabelle: launch Isabelle/VSCode …"
   // WSL2 white/frozen window: launch tasks pass --disable-gpu + LIBGL_ALWAYS_SOFTWARE=1
-  // Paths: .vscode/settings.json (goblint.isabelleExecutable, goblint.afpTopDownSolverDir)
+  // Paths: .vscode/settings.json (goblint.isabelleExecutable, goblint.afpThysDir, goblint.tdDir)
+  // Run `make vendor` once so vendor/td-verification exists.
   "version": "2.0.0",
   "tasks": [
     {
@@ -12,7 +13,9 @@
       "args": [
         "build",
         "-d",
-        "${config:goblint.afpTopDownSolverDir}",
+        "${config:goblint.afpThysDir}",
+        "-d",
+        "${config:goblint.tdDir}",
         "-D",
         "${workspaceFolder}",
         "Goblint_Formalization"
@@ -57,7 +60,9 @@
         "build",
         "-c",
         "-d",
-        "${config:goblint.afpTopDownSolverDir}",
+        "${config:goblint.afpThysDir}",
+        "-d",
+        "${config:goblint.tdDir}",
         "-D",
         "${workspaceFolder}",
         "Goblint_Formalization"
@@ -81,7 +86,9 @@
       "args": [
         "vscode",
         "-d",
-        "${config:goblint.afpTopDownSolverDir}",
+        "${config:goblint.afpThysDir}",
+        "-d",
+        "${config:goblint.tdDir}",
         "-d",
         "${workspaceFolder}",
         "-R",
@@ -114,7 +121,9 @@
         "vscode",
         "-n",
         "-d",
-        "${config:goblint.afpTopDownSolverDir}",
+        "${config:goblint.afpThysDir}",
+        "-d",
+        "${config:goblint.tdDir}",
         "-d",
         "${workspaceFolder}",
         "-l",

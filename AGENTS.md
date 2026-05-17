@@ -17,9 +17,9 @@ You are a formal proof engineer working with Isabelle/jEdit. Your work is surgic
 
 # Project goal
 
-`IMP AST → (CFG) → equation system → Top_Down_Solver → sound abstract result → mapped back`.
+`IMP AST → (CFG) → equation system → TD solver → sound abstract result → mapped back`.
 
-AFP `Top_Down_Solver` already verified. To prove: IMP collecting semantics, CFG layer, eqsys soundness, abstract domains (Sign → Interval → Octagon), result mapping.
+Vendored `TD` solver (stilscher/td-verification) already verified. To prove: IMP collecting semantics, CFG layer, eqsys soundness, abstract domains (Sign → Interval → Octagon), pipeline composition.
 
 ---
 
@@ -28,13 +28,13 @@ AFP `Top_Down_Solver` already verified. To prove: IMP collecting semantics, CFG 
 | Topic            | Decision                                      |
 | ---------------- | --------------------------------------------- |
 | Assistant        | Isabelle/HOL, HOL-IMP                         |
-| Solver           | AFP `Top_Down_Solver`                         |
+| Solver           | vendored `TD` (td-verification)               |
 | Solver interface | `rhs :: pp => (pp => abs_state) => abs_state` |
 | Domains          | Sign → Interval → Octagon (stretch)           |
 | Joins            | `Finite_Set.fold` (needs comm + assoc, finite edges) |
 | Order            | `'a::ord` pointwise on states                 |
 
-Open: direct AST→eqsys vs CFG layer; `acom` vs map; global vs staged Galois; IMP vs IMP2.
+Open: direct AST→eqsys (`Direct_Equations`) vs CFG layer; interval stretch; IMP vs IMP2.
 
 ---
 
@@ -48,7 +48,6 @@ src/Equations/   constraint systems + soundness
 src/Examples/    executable sign analysis
 src/Solver/      TD solver interface, TD_Total.thy
 src/Pipeline/    end-to-end
-src/attempt2/    scratch — ignore
 ```
 
 Plans: `docs/PROOF_PHASES.md` (steps, exit criteria, sorry inventory). `docs/PROOF_OVERVIEW.md` (big picture).
@@ -193,15 +192,6 @@ Traps: `docs/ISABELLE_AGENT_NOTES.md`.
 5. Split helpers when complexity grows.
 6. Replace `sorry`.
 7. Final `isabelle build` to confirm.
-8. Commit only when top-level theorem closed.
-
----
-
-# Commit format
-
-`feat(proof): <description>` — imperative, no period.
-
-One commit per closed top-level theorem. Don't commit a closed sub-lemma while its parent is still `sorry`.
 
 ---
 
@@ -214,8 +204,8 @@ Run before declaring a theorem done. These survive batch-build.
 3. **False abstraction.** Parameters over orders/enumerations/strategies must be either *proven* invariant or removed. Don't claim generality you don't have.
 4. **Definition–statement drift.** Re-read statements vs `docs/PROOF_OVERVIEW.md`. Watch: theorem about *internal annotations* vs *output*; operational `coverageTest` smuggled into declarative claim; dropped well-typedness condition. Proof assistant can't catch these.
 5. **Structured Isar over `∀x. P x ⟶ Q x`.** Use `fixes x assumes "P x" shows "Q x"`. Reusable via `[where x=…]` / `[OF …]`.
-6. **Persistent notes.** Keep `docs/AGENT_NOTES.md` (sorry inventory, locked decisions, in-progress lemmas, failed approaches). Recovers from context compaction. Update before each commit.
-7. **Use sledgehammer — really.** Default: try `sledgehammer` first on every non-trivial subgoal. Paste back `blast`/`auto`/`meson`; `metis` only if reconstructs fast.
-8. **Generalisation via hint.** Ad-hoc proofs duplicating AFP material → reduce to existing generic theory (AFP fixpoint / well-founded; independence systems / matroids; `Order.Lattice_Prelims`, `HOL-Algebra`).
-9. **Two-stage review before done.** (a) Self-review items 1–5. (b) Simulated hostile peer review. Does not replace human review — 1, 3, 4 slip through agent reviews.
-10. **One commit per closed top-level theorem.** Partial commits break the review discipline.
+6. **Use sledgehammer — really.** Default: try `sledgehammer` first on every non-trivial subgoal. Paste back `blast`/`auto`/`meson`; `metis` only if reconstructs fast.
+7. **Generalisation via hint.** Ad-hoc proofs duplicating AFP material → reduce to existing generic theory (AFP fixpoint / well-founded; independence systems / matroids; `Order.Lattice_Prelims`, `HOL-Algebra`).
+8. **Two-stage review before done.** (a) Self-review items 1–5. (b) Simulated hostile peer review. Does not replace human review — 1, 3, 4 slip through agent reviews.
+
+Proof status lives in `docs/PROOF_PHASES.md` (sorry inventory) — do not duplicate lemma lists in this file.
