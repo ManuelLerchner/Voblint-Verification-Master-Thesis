@@ -94,11 +94,14 @@ proof -
   assume nbx   : "\<not> bval b x"
   let ?Q = "{y. \<forall>t. (WHILE b DO c, y) \<Rightarrow> t
                  \<longrightarrow> (\<exists>s\<^sub>0 \<in> S. (WHILE b DO c, s\<^sub>0) \<Rightarrow> t)}"
-  have "lfp (while_fun b c S) \<subseteq> ?Q"
-    apply(rule lfp_lowerbound)
-    apply(auto)
-    using IMP2_Collecting.collect_def while_fun_def by auto
 
+  have "while_fun b c S ?Q \<subseteq> ?Q"
+    unfolding while_fun_def apply(auto)
+    using IMP2_Collecting.collect_def by auto
+
+  then have "lfp (while_fun b c S) \<subseteq> ?Q"
+    using lfp_lowerbound by blast
+   
   with x_lfp nbx show ?thesis
     by blast
 qed
