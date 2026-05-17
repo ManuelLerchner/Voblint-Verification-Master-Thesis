@@ -3,6 +3,7 @@ Goblint Formalization
 
 Abstract
 --------
+
 Machine-checked Isabelle/HOL formalization of *abstract interpretation* for a
 small imperative language. We model IMP, compile it into a control-flow graph,
 derive a constraint system over an abstract domain (Sign, Interval, ...), and
@@ -19,7 +20,6 @@ IMP program -> CFG -> abstract eq. system -> TD solver -> sound abstract result
 This repository is the code/proof artifact for the master's thesis on
 formalizing the Goblint static-analysis pipeline in Isabelle/HOL.
 
-
 Requirements
 ------------
 
@@ -29,7 +29,6 @@ Requirements
   the build needs the `thys/` directory (transitive dependency
   `Root_Balanced_Tree`).
 - GNU `make`, `git`, and standard POSIX tools.
-
 
 Build instructions
 ------------------
@@ -44,6 +43,7 @@ provided `Makefile` targets:
 
 - `make build` (default): runs the Isabelle formalization, depends on `vendor`.
   Equivalent to:
+
   ```
   isabelle build -d $(AFP) -d vendor/td-verification -D . Goblint_Formalization
   ```
@@ -57,13 +57,13 @@ provided `Makefile` targets:
 - `make clean`: removes vendored sources and the built session heap.
 
 Example:
+
 ```
 make AFP=/path/to/afp/thys build
 ```
 
 The `quick_and_dirty` option is set in `ROOT`, so `sorry` placeholders are
 permitted during proof development.
-
 
 Repository layout
 -----------------
@@ -87,7 +87,6 @@ Repository layout
 └── ROOT                  Isabelle session definition
 ```
 
-
 Verified dependencies
 ---------------------
 
@@ -96,7 +95,6 @@ Verified dependencies
 | `HOL-IMP`                        | Isabelle distribution                                   | session parent; IMP syntax/semantics base |
 | `TD` (`TD_plain`, `Basics`, ...) | vendored from `stilscher/td-verification` + local patch | verified top-down solver                  |
 | `Root_Balanced_Tree`             | AFP                                                     | transitive dep of TD session              |
-
 
 Vendoring the TD solver
 -----------------------
@@ -109,12 +107,12 @@ clones the pinned upstream commit and applies the patch on demand. This avoids
 maintaining a long-lived submodule fork-pin: the diff is reviewable in this
 repository and the vendored tree is never tracked.
 
-
 Documentation
 -------------
 
 | Document | Contents |
 | -------- | -------- |
+| `docs/PIPELINE_AT_A_GLANCE.md` | What changed when sign pipeline closed (diagram + stack) |
 | `docs/PROOF_OVERVIEW.md` | Theorem chain, key types and lemmas |
 | `docs/PROOF_PHASES.md` | Proof status, sorry inventory, remaining work |
 | `docs/PIPELINE_WALKTHROUGH.md` | Stage-by-stage walkthrough with examples |
@@ -122,3 +120,22 @@ Documentation
 | `docs/html/` | HTML renderings of the walkthroughs (may lag `.md`) |
 
 Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./setup.sh`, `./start-ir.sh`.
+
+Agent-assisted development (Isabelle/Q)
+---------------------------------------
+
+Proof development in this repository also experiments with
+[Isabelle/Q](https://github.com/awslabs/AutoCorrode/tree/main/iq) (I/Q), an MCP
+server for Isabelle/jEdit that lets coding agents edit theories, query proof
+states, run Sledgehammer, and explore tactics interactively. The setup follows
+the autoformalization workflow described by Kevin Kappelmann et al. in
+[*Just Type It in Isabelle! AI Agents Drafting, Mechanizing, and Generalizing
+from Human Hints*](https://arxiv.org/abs/2604.15713) (arXiv:2604.15713, 2026);
+see their §6.1 for the Isabelle/Q technical setup and `AGENTS.md` here for
+project-specific conventions.
+
+| Script | Role |
+| ------ | ---- |
+| `./setup-iq.sh` | Build and install the I/Q jEdit plugin (vendored under `ir-repo/iq/`) |
+| `./start-iq.sh` | Launch Isabelle/jEdit with I/Q listening on port 8765 |
+| `./setup.sh` / `./start-ir.sh` | Headless [Isabelle/R](https://github.com/awslabs/AutoCorrode/tree/main/ir) MCP when jEdit is not running |
