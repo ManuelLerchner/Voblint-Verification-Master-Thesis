@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Clone the AutoCorrode I/R MCP server (sparse checkout — ir/ only).
+# Clone the AutoCorrode I/R MCP server (sparse checkout ir/ only).
 # Run once after cloning this repo, before start-ir.sh.
 
 set -euo pipefail

@@ -1,4 +1,4 @@
-# Pipeline Walkthrough — IMP to Sound Sign Analysis
+# Pipeline Walkthrough IMP to Sound Sign Analysis
 
 This document follows one example program from IMP source, through CFG
 compilation, the equation system, the Top-Down solver, and back to a sound
@@ -7,7 +7,7 @@ core lemmas that make the whole chain correct.
 
 ---
 
-## Stage 0 — Running Example
+## Stage 0 Running Example
 
 ```text
 Program c:                              Initial concrete store s:
@@ -35,11 +35,11 @@ i.e. the abstract value computed for `x` at the program exit is in
 ### Proof status (done vs. open)
 
 **Sign pipeline:** closed (`goblint_sign_sound`). **Interval / optional paths:** open
-sorries — see `docs/PROOF_PHASES.md`. Overview: `docs/PROOF_OVERVIEW.md`.
+sorries see `docs/PROOF_PHASES.md`. Overview: `docs/PROOF_OVERVIEW.md`.
 
 ```mermaid
 flowchart TD
-  subgraph done ["Done — sign end-to-end"]
+  subgraph done ["Done sign end-to-end"]
     BS["big_step (c,s) ⇒ t"]
     COL["collect / cfg_collect"]
     EQ["cfg_collect_exit_eq_collect"]
@@ -64,20 +64,20 @@ flowchart TD
 
 ---
 
-## Stage 1 — Syntax and Concrete Semantics (`src/IMP2/`)
+## Stage 1 Syntax and Concrete Semantics (`src/IMP2/`)
 
-| File / definition                                        | Role                                                       |
-| -------------------------------------------------------- | ---------------------------------------------------------- |
-| `IMP2_Syntax.thy` :: `datatype com / aexp / bexp`        | Abstract syntax of the language.                           |
-| `IMP2_Semantics.thy` :: `fun aval`, `fun bval`           | Expression evaluation.                                     |
-| `IMP2_Semantics.thy` :: `inductive big_step ((c,s) ⇒ t)` | Concrete big-step semantics.                               |
-| `IMP2_Collecting.thy` :: `definition collect`            | Collecting semantics: `com ⇒ store set ⇒ store set`.       |
+| File / definition                                        | Role                                                 |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| `IMP2_Syntax.thy` :: `datatype com / aexp / bexp`        | Abstract syntax of the language.                     |
+| `IMP2_Semantics.thy` :: `fun aval`, `fun bval`           | Expression evaluation.                               |
+| `IMP2_Semantics.thy` :: `inductive big_step ((c,s) ⇒ t)` | Concrete big-step semantics.                         |
+| `IMP2_Collecting.thy` :: `definition collect`            | Collecting semantics: `com ⇒ store set ⇒ store set`. |
 
 ### Core lemmas
 
-- `big_step_determ` — concrete semantics is deterministic.
-- `collect_SKIP`, `collect_Assign`, `collect_Seq`, `collect_If` — compositional shape of `collect` (while handled via `big_step` in the CFG bridge).
-- `collect_mono`, `while_collect_mono` — `collect` is monotone in its input set.
+- `big_step_determ` concrete semantics is deterministic.
+- `collect_SKIP`, `collect_Assign`, `collect_Seq`, `collect_If` compositional shape of `collect` (while handled via `big_step` in the CFG bridge).
+- `collect_mono`, `while_collect_mono` `collect` is monotone in its input set.
 
 ### Example
 
@@ -87,7 +87,7 @@ this `t`.
 
 ---
 
-## Stage 2 — IMP to CFG (`src/CFG/`)
+## Stage 2 IMP to CFG (`src/CFG/`)
 
 ### 2a. CFG model (`CFG_Def.thy`)
 
@@ -97,7 +97,7 @@ record cfg = cfg_entry :: pp, cfg_exit :: pp, cfg_edges :: (pp × edge_action ×
 definition predecessors, successors, cfg_wf
 ```
 
-**Lemma.** `finite_predecessors` — needed so that joins over predecessor sets
+**Lemma.** `finite_predecessors` needed so that joins over predecessor sets
 are well-defined `Finite_Set.fold`s.
 
 ### 2b. Compilation (`IMP2_to_CFG.thy`)
@@ -108,11 +108,11 @@ definition to_cfg :: "com ⇒ cfg"
 ```
 
 #### Core lemmas
-- `compile_fresh` — emitted node ids stay above the fresh counter.
-- `compile_ge` — fresh counter only grows.
-- `compile_entry_ne_exit` — entry and exit nodes are distinct.
-- `compile_finite` ⇒ `to_cfg_finite` — the edge set is finite (used everywhere downstream for folds).
-- `to_cfg_wf` — compiled CFGs satisfy `cfg_wf`.
+- `compile_fresh` emitted node ids stay above the fresh counter.
+- `compile_ge` fresh counter only grows.
+- `compile_entry_ne_exit` entry and exit nodes are distinct.
+- `compile_finite` ⇒ `to_cfg_finite` the edge set is finite (used everywhere downstream for folds).
+- `to_cfg_wf` compiled CFGs satisfy `cfg_wf`.
 
 ### 2c. CFG paths and collecting semantics
 
@@ -124,7 +124,7 @@ definition cfg_collect :: "cfg ⇒ store set ⇒ (pp ⇒ store set)"
 
 #### Core lemmas
 - `edge_collect_mono`, `path_collect_mono`, `path_collect_mono_strong`.
-- `collect_pp_mono` — CFG collecting is monotone in the input set.
+- `collect_pp_mono` CFG collecting is monotone in the input set.
 - `cfg_collect_exit_le_collect` and `collect_le_cfg_collect_exit` combine into
   the bridge theorem:
 
@@ -161,7 +161,7 @@ Concrete: `cfg_collect (to_cfg c) {s} p5 = collect c {s} = { (λv. if v=x then 0
 
 ---
 
-## Stage 3 — Abstract Domain (Sign) (`src/Domains/`)
+## Stage 3 Abstract Domain (Sign) (`src/Domains/`)
 
 ### 3a. Generic interface (`Abstract_Domain.thy`)
 
@@ -175,10 +175,10 @@ definition gamma_state, bot_state, join_state
 ```
 
 #### Core lemmas (locale-level)
-- `gamma_join_ub1`, `gamma_join_ub2` — join is a sound upper bound concretely.
-- `join_comp_fun_commute`, `join_state_comp_fun_commute` — needed so `Finite_Set.fold` is order-independent.
-- `gamma_state_mono`, `gamma_state_join_ub1/ub2`, `gamma_state_bot` — pointwise lifting.
-- `gamma_abs_join_set_ub`, `join_fold_ge` — soundness of the predecessor join.
+- `gamma_join_ub1`, `gamma_join_ub2` join is a sound upper bound concretely.
+- `join_comp_fun_commute`, `join_state_comp_fun_commute` needed so `Finite_Set.fold` is order-independent.
+- `gamma_state_mono`, `gamma_state_join_ub1/ub2`, `gamma_state_bot` pointwise lifting.
+- `gamma_abs_join_set_ub`, `join_fold_ge` soundness of the predecessor join.
 
 ### 3b. Sign instance (`Sign_Domain.thy`)
 
@@ -215,11 +215,11 @@ flowchart BT
 - Join at loop head: `SPos ⊔ STop = STop`.
 - After `EA_AssumeNot (0 < x)` from the loop head, the exit abstract state has
   `x ↦ STop`. Since `0 ∈ γ_sign STop = UNIV`, the exit invariant is sound
-  (loose, but sound — that is the price of the Sign domain).
+  (loose, but sound that is the price of the Sign domain).
 
 ---
 
-## Stage 4 — Equation System (`src/Equations/`)
+## Stage 4 Equation System (`src/Equations/`)
 
 ### `Constraint_System.thy`
 
@@ -237,15 +237,15 @@ definition is_post_fixpoint g tf join bot s0 env  ≡  ∀v. rhs ... env v ≤ e
 ```
 
 #### Core lemmas
-- `abs_join_set_empty`, `mem_image_le_fold` — fold infrastructure.
-- `rhs_no_predecessors_not_entry`, `rhs_entry_no_predecessors` — boundary cases.
-- `fold_join_image_mono` — fold is monotone in its image.
-- `rhs_mono` — `rhs` is monotone in `env` (key prerequisite for the TD solver).
+- `abs_join_set_empty`, `mem_image_le_fold` fold infrastructure.
+- `rhs_no_predecessors_not_entry`, `rhs_entry_no_predecessors` boundary cases.
+- `fold_join_image_mono` fold is monotone in its image.
+- `rhs_mono` `rhs` is monotone in `env` (key prerequisite for the TD solver).
 
 ### `Constraint_System_Sound.thy`
 
-- `collect_pp_abstract_sound` — pointwise: post-fixpoint envs over-approximate `cfg_collect` at every node.
-- `post_fixpoint_sound` — central soundness theorem:
+- `collect_pp_abstract_sound` pointwise: post-fixpoint envs over-approximate `cfg_collect` at every node.
+- `post_fixpoint_sound` central soundness theorem:
 
 ```isabelle
 theorem post_fixpoint_sound:
@@ -262,7 +262,7 @@ An env mapping `p1 ↦ x:SPos`, `p2 ↦ x:STop`, `p3 ↦ x:STop`, `p4 ↦ x:SNeg
 
 ---
 
-## Stage 5 — Top-Down Solver Bridge (`src/Solver/`)
+## Stage 5 Top-Down Solver Bridge (`src/Solver/`)
 
 ### `TD_Interface.thy`
 
@@ -274,14 +274,14 @@ definition env_map, lookup_bot
 ```
 
 #### Core lemmas
-- `make_rhs_mono` — packaged monotonicity (uses `rhs_mono`).
+- `make_rhs_mono` packaged monotonicity (uses `rhs_mono`).
 - `make_rhs_tree_correspondence`, `make_rhs_tree_correspondence_not_entry_no_predecessors`
-  — the monadic rhs (tree form expected by the TD solver) equals `make_rhs`
+  the monadic rhs (tree form expected by the TD solver) equals `make_rhs`
   after traversing the env. This lets us hand `make_rhs_tree` to the
   vendored `TD` session and read back `make_rhs`.
 - `rhs_eq_fold_join_sorted_predecessors`, `fold_join_apply_edges_eq_fold_join_over_map`
-  — equate the set-fold formulation with the list-fold the solver uses.
-- `part_solutionD` — extract that the solver returns a partial solution.
+  equate the set-fold formulation with the list-fold the solver uses.
+- `part_solutionD` extract that the solver returns a partial solution.
 
 ### `TD_Soundness.thy`
 
@@ -295,18 +295,18 @@ theorem interval_analysis_sound  -- instantiation for Interval
 
 Termination/total-correctness obligations for the TD solver (optional stretch):
 
-- `sign_widening_precise`, `sign_wf_widening_chains`, `sign_is_mono_eq` — sign chains are well-founded; widening is monotone.
+- `sign_widening_precise`, `sign_wf_widening_chains`, `sign_is_mono_eq` sign chains are well-founded; widening is monotone.
 - Interval analogues: `ivl_widening_precise`, `ivl_wf_widening_chains`,
   `ivl_narrowing_le`, `ivl_is_mono_eq`.
 
 ### TD imports
 
-`td_analyse_post_fixpoint` — the vendored `TD_plain` solver returns a value
+`td_analyse_post_fixpoint` the vendored `TD_plain` solver returns a value
 satisfying `is_post_fixpoint`.
 
 ---
 
-## Stage 6 — End-to-End Pipeline (`src/Pipeline/`)
+## Stage 6 End-to-End Pipeline (`src/Pipeline/`)
 
 ### `Pipeline.thy`
 
@@ -524,7 +524,7 @@ domain_transfer_sound γ tf  ≡
 
 ---
 
-## End-to-End Soundness — Step-by-Step Narrative
+## End-to-End Soundness Step-by-Step Narrative
 
 This section walks the soundness argument in order, stating each lemma
 abstractly (as a mathematical statement, independent of its Isabelle name) and
@@ -532,16 +532,16 @@ showing how the next step consumes the previous one.
 
 Notation used below:
 
-- `c` — IMP program, `s` — initial concrete store, `t` — concrete final store.
-- `g = to_cfg c` — compiled CFG; `pp` — program points.
-- `D` — abstract domain (think `sign`); `γ` — concretization;
-  `γ_state : (vname ⇒ D) ⇒ store set` — pointwise lift.
-- `tf` — transfer functions (`tf_assign`, `tf_assume`, `tf_assume_not`);
-  `apply_tf a` — the per-edge action `a`.
-- `env : pp ⇒ (vname ⇒ D)` — abstract environment computed by the solver.
-- `s0 : (vname ⇒ D)` — initial abstract state at the CFG entry.
+- `c` IMP program, `s` initial concrete store, `t` concrete final store.
+- `g = to_cfg c` compiled CFG; `pp` program points.
+- `D` abstract domain (think `sign`); `γ` concretization;
+  `γ_state : (vname ⇒ D) ⇒ store set` pointwise lift.
+- `tf` transfer functions (`tf_assign`, `tf_assume`, `tf_assume_not`);
+  `apply_tf a` the per-edge action `a`.
+- `env : pp ⇒ (vname ⇒ D)` abstract environment computed by the solver.
+- `s0 : (vname ⇒ D)` initial abstract state at the CFG entry.
 
-### Step 1 — Concrete semantics is the ground truth
+### Step 1 Concrete semantics is the ground truth
 
 We use the standard big-step semantics, lifted to sets of stores.
 
@@ -562,7 +562,7 @@ We use the standard big-step semantics, lifted to sets of stores.
 This is the only fact about the concrete world that the rest of the chain
 needs.
 
-### Step 2 — Replace AST reasoning with CFG reasoning
+### Step 2 Replace AST reasoning with CFG reasoning
 
 `to_cfg c` produces a finite CFG whose collecting semantics matches the AST
 collecting semantics at the exit node.
@@ -573,7 +573,7 @@ collecting semantics at the exit node.
 > **(L5) Monotonicity of CFG collecting.**
 > `S ⊆ S' ⟹ cfg_collect g S v ⊆ cfg_collect g S' v` for every `v`.
 
-> **(L6) IMP ↔ CFG bridge — *the* link to the source.**
+> **(L6) IMP ↔ CFG bridge *the* link to the source.**
 > `cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) = collect c S`.
 
 **Consequence used downstream.** Soundness at the CFG exit transports
@@ -581,7 +581,7 @@ verbatim back to soundness on the AST: if `γ_state (env (cfg_exit g)) ⊇
 cfg_collect g {s} (cfg_exit g)`, then `γ_state (env (cfg_exit g)) ⊇
 collect c {s}`.
 
-### Step 3 — Abstract domain over-approximates concrete operations
+### Step 3 Abstract domain over-approximates concrete operations
 
 `γ` lifts pointwise to states; the join and the transfer functions must be
 sound with respect to `γ`.
@@ -593,7 +593,7 @@ sound with respect to `γ`.
 > `γ a ⊆ γ (a ⊔ b)` and `γ b ⊆ γ (a ⊔ b)`; pointwise on states likewise.
 
 > **(L9) Lattice laws on the abstract join (Sign instance).**
-> `⊔` is commutative, associative, idempotent — i.e. `comp_fun_commute join`.
+> `⊔` is commutative, associative, idempotent i.e. `comp_fun_commute join`.
 > This is what makes `Finite_Set.fold join bot` well-defined: order
 > independent.
 
@@ -607,7 +607,7 @@ sound with respect to `γ`.
 > Concretely: `assign_sign_sound`, `assume_sign_sound`,
 > `assume_not_sign_sound`.
 
-### Step 4 — Lift edge soundness to the constraint system
+### Step 4 Lift edge soundness to the constraint system
 
 The equation system places, at each node, a join over predecessors of the
 transferred abstract states.
@@ -633,7 +633,7 @@ any solution that satisfies the equation system at every node is an
 over-approximation everywhere, not just at the exit. The proof is by
 induction along paths in the CFG, using (L5), (L8), (L11), (L13).
 
-### Step 5 — Hand the equation system to the TD Top-Down Solver
+### Step 5 Hand the equation system to the TD Top-Down Solver
 
 The vendored `TD` solver (`TD_plain`) is parametric in a right-hand-side
 function expressed in a monadic *Answer/Query* form. We must show our `rhs`
@@ -657,7 +657,7 @@ fits its interface, and we get a post-fixpoint guarantee in return.
 > `is_post_fixpoint`. Stated abstractly:
 > `td_analyse c tf join bot s₀ = env  ⟹  ∀v. rhs … env v ≤ env v`.
 
-### Step 6 — Compose into end-to-end soundness
+### Step 6 Compose into end-to-end soundness
 
 > **(L19) Generic pipeline soundness.**
 > Assume:
@@ -709,7 +709,7 @@ domain to `sign` (L20) gives `goblint_sign_sound`; at every program point,
 
 ---
 
-## Recap — Core Lemma Spine
+## Recap Core Lemma Spine
 
 ```mermaid
 flowchart TD

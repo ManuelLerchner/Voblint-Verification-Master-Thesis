@@ -1,33 +1,33 @@
 # Proof Simplification Notes
 
-Snapshot after closing `cfg_collect_exit_eq_collect` (May 2026). The CFG-collecting layer works but `CFG_Collecting.thy` is 2,396 lines — most of that weight is in two long directions and three nearly-parallel compound splitters. Below are concrete simplification opportunities, ranked by likely payoff vs. risk.
+Snapshot after closing `cfg_collect_exit_eq_collect` (May 2026). The CFG-collecting layer works but `CFG_Collecting.thy` is 2,396 lines most of that weight is in two long directions and three nearly-parallel compound splitters. Below are concrete simplification opportunities, ranked by likely payoff vs. risk.
 
 ## Progress log
 
-| Pass | LOC saved | Resulting size | Notes |
-|------|----------:|----------------|-------|
-| baseline                                                                      |     -- | 2,396 | after closing equivalence |
-| dropped `cfg_path_While_loop_peel_length` wrapper (trivial)                   |     22 | 2,374 | inlined `length` derivation |
-| dropped `compile_path_big_step_while_rest`; fused into `compile_path_big_step` |     96 | 2,278 | one fewer exported lemma, removes universal-body API trap |
-| dropped dead helpers `cfg_path_If_in_c1`, `cfg_path_If_in_c2`                 |    146 | 2,132 | zero use sites |
-| dropped dead Seq helpers (`cfg_edges_compile_Seq_E{1,2}_subset`, `seq_comp_entry_ne_exit`, `Seq_edge_cross_bridge`, `path_collect_via_append`, `Seq_en2_ge_n1`) |   71 | 2,061 | zero use sites |
-| factored `cfg_path_singleton_edge` lemma; rewrote SKIP/Assign cases of both direction proofs |  -12 | 2,073 | net +12 LOC (new helper) but replaces 4 giant `metis` blocks with clean Isar |
-| **subtotal** |   **323** | **2,073** | item 1 + dead-sweep + SKIP/Assign cleanup done |
+| Pass                                                                                                                                                            | LOC saved | Resulting size | Notes                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------: | -------------- | ---------------------------------------------------------------------------- |
+| baseline                                                                                                                                                        |        -- | 2,396          | after closing equivalence                                                    |
+| dropped `cfg_path_While_loop_peel_length` wrapper (trivial)                                                                                                     |        22 | 2,374          | inlined `length` derivation                                                  |
+| dropped `compile_path_big_step_while_rest`; fused into `compile_path_big_step`                                                                                  |        96 | 2,278          | one fewer exported lemma, removes universal-body API trap                    |
+| dropped dead helpers `cfg_path_If_in_c1`, `cfg_path_If_in_c2`                                                                                                   |       146 | 2,132          | zero use sites                                                               |
+| dropped dead Seq helpers (`cfg_edges_compile_Seq_E{1,2}_subset`, `seq_comp_entry_ne_exit`, `Seq_edge_cross_bridge`, `path_collect_via_append`, `Seq_en2_ge_n1`) |        71 | 2,061          | zero use sites                                                               |
+| factored `cfg_path_singleton_edge` lemma; rewrote SKIP/Assign cases of both direction proofs                                                                    |       -12 | 2,073          | net +12 LOC (new helper) but replaces 4 giant `metis` blocks with clean Isar |
+| **subtotal**                                                                                                                                                    |   **323** | **2,073**      | item 1 + dead-sweep + SKIP/Assign cleanup done                               |
 
 ---
 
 ## Size audit
 
-| Lemma                                  | Lines | Role                              |
-|----------------------------------------|------:|-----------------------------------|
-| `big_step_cfg_path`                    |   427 | big-step → exists CFG path        |
-| `compile_path_big_step`                |   340 | CFG path → big-step               |
-| `cfg_path_If_split`                    |    94 | If compound path splitter         |
-| `compile_path_big_step_while_rest`     |    93 | helper: loop iterations           |
-| `cfg_path_If_in_c2` / `_c1`            |  ~75  | If sub-path lifters               |
-| `cfg_path_If_factor_c2` / `_c1`        |  ~70  | If sub-path factorers             |
-| `cfg_path_Seq_split` / `_in_c2`        |  ~70  | Seq splitter/lifter               |
-| `cfg_path_While_u_body_to_zero_split`  |    67 | While splitter                    |
+| Lemma                                 | Lines | Role                       |
+| ------------------------------------- | ----: | -------------------------- |
+| `big_step_cfg_path`                   |   427 | big-step → exists CFG path |
+| `compile_path_big_step`               |   340 | CFG path → big-step        |
+| `cfg_path_If_split`                   |    94 | If compound path splitter  |
+| `compile_path_big_step_while_rest`    |    93 | helper: loop iterations    |
+| `cfg_path_If_in_c2` / `_c1`           |   ~75 | If sub-path lifters        |
+| `cfg_path_If_factor_c2` / `_c1`       |   ~70 | If sub-path factorers      |
+| `cfg_path_Seq_split` / `_in_c2`       |   ~70 | Seq splitter/lifter        |
+| `cfg_path_While_u_body_to_zero_split` |    67 | While splitter             |
 
 ~1,500 of the 2,396 lines are these structurally similar proofs.
 
@@ -38,7 +38,7 @@ Snapshot after closing `cfg_collect_exit_eq_collect` (May 2026). The CFG-collect
 ### 1. **Drop `compile_path_big_step_while_rest`; merge into `compile_path_big_step`**
 *Payoff: ~100 lines, removes a subtle universal-body API trap.*
 
-The helper exists only because the `compile_path_big_step` `While` case needs path-length induction. After the May-2026 fix the body assumption is universal over the start state — i.e. the helper is essentially a second copy of the `While` IH. Rewrite the top-level proof's induction to:
+The helper exists only because the `compile_path_big_step` `While` case needs path-length induction. After the May-2026 fix the body assumption is universal over the start state i.e. the helper is essentially a second copy of the `While` IH. Rewrite the top-level proof's induction to:
 
 ```isabelle
 proof (induction "(c, length es)" arbitrary: c es s t S rule: ...)
@@ -113,12 +113,12 @@ The `Skip` and `Assign` cases each manually unfold `compile` and `cfg_path.cases
 
 ## Suggested order
 
-1. **Item 1** (drop `_while_rest`) — local, isolated, immediate.
-2. **Item 5** (`edge_collect` cleanup) — small mechanical pass.
-3. **Item 3** (edge-step bridge file) — enables 2 and 6.
-4. **Item 6** (Skip/Assign trims) — falls out from 3.
-5. **Item 2** (compound `_iff` lemmas) — biggest payoff, biggest churn. Do per construct: Seq first (simplest), then If, then While.
-6. **Item 4** (`cfg_collect = cfg_path_collect` global) — last; touches downstream.
+1. **Item 1** (drop `_while_rest`) local, isolated, immediate.
+2. **Item 5** (`edge_collect` cleanup) small mechanical pass.
+3. **Item 3** (edge-step bridge file) enables 2 and 6.
+4. **Item 6** (Skip/Assign trims) falls out from 3.
+5. **Item 2** (compound `_iff` lemmas) biggest payoff, biggest churn. Do per construct: Seq first (simplest), then If, then While.
+6. **Item 4** (`cfg_collect = cfg_path_collect` global) last; touches downstream.
 
 Each item is independent enough to commit on its own. Do not bundle.
 
@@ -128,4 +128,4 @@ Each item is independent enough to commit on its own. Do not bundle.
 
 - Item 2 risks introducing a spurious `iff` that holds only in one direction (e.g., uniqueness of decomposition). Smoke-test by proving the existing splitter lemmas as one-line corollaries.
 - Item 4 risks subtle changes in simp-rule firing order downstream. Keep the old lemmas as aliases for one commit cycle.
-- Item 6 (and 3) require sledgehammer / `metis` re-discovery on small goals after refactor — budget time.
+- Item 6 (and 3) require sledgehammer / `metis` re-discovery on small goals after refactor budget time.

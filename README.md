@@ -34,9 +34,9 @@ flowchart LR
 
 | Link            | Lemma / idea                                                                         |
 | --------------- | ------------------------------------------------------------------------------------ |
-| IMP ↔ CFG       | `cfg_collect_exit_eq_collect` — AST collecting = CFG collecting at exit              |
-| CFG → abstract  | `post_fixpoint_sound` — post-fixpoint of `rhs` over-approximates `cfg_collect`       |
-| eq. system → TD | `td_analyse_post_fixpoint` — vendored solver returns a post-fixpoint                 |
+| IMP ↔ CFG       | `cfg_collect_exit_eq_collect` AST collecting = CFG collecting at exit                |
+| CFG → abstract  | `post_fixpoint_sound` post-fixpoint of `rhs` over-approximates `cfg_collect`         |
+| eq. system → TD | `td_analyse_post_fixpoint` vendored solver returns a post-fixpoint                   |
 | End-to-end      | `pipeline_sound` / `pipeline_invariant_sound` (generic); `goblint_sign_sound` (sign) |
 
 Where abstract interpretation is in the proof
@@ -46,13 +46,13 @@ The equation system is not validated by a separate “code generator correctness
 theorem. We **define** `rhs` as the abstract analogue of CFG collecting, then
 prove that **every post-fixpoint** over-approximates concrete reachability.
 
-|                      | Concrete (collecting)                    | Abstract interpretation                                          |
-| -------------------- | ---------------------------------------- | ---------------------------------------------------------------- |
-| One edge             | `edge_collect a` on store sets           | `apply_tf tf a` on `abs_state`                                   |
-| One program point    | `collect_pp` — join of predecessor edges | `rhs` — join of `apply_tf` images                                |
-| Global               | `cfg_collect` (least fixpoint)           | `env` with `is_post_fixpoint`                                    |
-| Link                 | (definition)                             | `edge_collect (γ σ) ⊆ γ (apply_tf … σ)` — **transfer soundness** |
-| Main soundness lemma |                                          | `post_fixpoint_sound`: `cfg_collect ⊆ γ ∘ env`                   |
+|                      | Concrete (collecting)                  | Abstract interpretation                                        |
+| -------------------- | -------------------------------------- | -------------------------------------------------------------- |
+| One edge             | `edge_collect a` on store sets         | `apply_tf tf a` on `abs_state`                                 |
+| One program point    | `collect_pp` join of predecessor edges | `rhs` join of `apply_tf` images                                |
+| Global               | `cfg_collect` (least fixpoint)         | `env` with `is_post_fixpoint`                                  |
+| Link                 | (definition)                           | `edge_collect (γ σ) ⊆ γ (apply_tf … σ)` **transfer soundness** |
+| Main soundness lemma |                                        | `post_fixpoint_sound`: `cfg_collect ⊆ γ ∘ env`                 |
 
 So **abstract interpretation is the `rhs` / `γ` / `join` / `apply_tf` layer**.
 `make_rhs` / `make_rhs_tree` spell out the equations; `td_analyse` (TD solver)
@@ -78,7 +78,7 @@ provided `Makefile` targets:
 
 - `make vendor`: clones [stilscher/td-verification](https://github.com/stilscher/td-verification)
   into `vendor/td-verification`, checks out the pinned upstream commit, and
-  applies `vendor/td-verification.patch` (Isabelle2025 compatibility — uses
+  applies `vendor/td-verification.patch` (Isabelle2025 compatibility uses
   `Set.remove_eq` in place of `remove_def`, see the patch for details).
 
 - `make build` (default): runs the Isabelle formalization, depends on `vendor`.

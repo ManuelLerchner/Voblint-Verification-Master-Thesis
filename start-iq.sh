@@ -49,7 +49,7 @@ echo "Once the splash clears, agent can call mcp__isabelle-iq__authenticate"
 echo "with token='$IQ_AUTH_TOKEN'."
 echo
 
-# iq session (Isar_Explore.thy) — enables MCP `explore` query='proof'.
+# iq session (Isar_Explore.thy) enables MCP `explore` query='proof'.
 IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$SCRIPT_DIR/ir-repo/iq}"
 
 exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$IQ_COMPONENT_DIR" -d "$SCRIPT_DIR" "$@"

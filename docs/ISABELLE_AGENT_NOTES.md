@@ -21,7 +21,7 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalizatio
 
 ## Sledgehammer
 
-1. Shrink the goal first (`unfolding`, `monoI`, controlled `simp`) — ATP rarely closes huge goals in one shot.
+1. Shrink the goal first (`unfolding`, `monoI`, controlled `simp`) ATP rarely closes huge goals in one shot.
 2. Prefer `by auto` / `blast` / `fastforce` / `simp` over `metis`/`smt` for batch speed and maintainability.
 3. **`metis` caution:** reconstruction can be very slow in `isabelle build` and may pull surprising lemmas. Always run a full session build after pasting `metis`; fall back to Isar or `meson`/`blast` with explicit `simp`/`intro`/`dest` if stuck.
 4. Keep timeout ≤ 15s unless debugging interactively.
@@ -29,11 +29,11 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalizatio
 ## Isar traps
 
 - Edit `.thy` via I/Q `write_file`, not host `Read`/`Write` (jEdit buffer drift).
-- ASCII symbols in `.thy` only (`\<Longrightarrow>`, not `⟹`) — batch rejects Unicode.
+- ASCII symbols in `.thy` only (`\<Longrightarrow>`, not `⟹`) batch rejects Unicode.
 - **`obtain` + `show`:** if Isabelle reports “Result contains obtained parameters”, use `have` for intermediate facts; only the final case goal uses `show`.
 - **`induction … arbitrary: S T` with named `assumes`:** the assumption may become a meta-implication not in the case context. Use an object implication `S ⊆ T ⟹ …` with `assume le: "S ⊆ T"` in cases, or derive `⋀u. rho1 u ⊆ rho2 u` from `rho1 ≤ rho2` via `le_fun_def`.
 - Set comprehensions: `{s ∈ S. P s}` plus `fix s` can clash; prefer `fix x` in `subsetI` or `Collect (λs. s ∈ S ∧ P s)` with `mem_Collect_eq`.
-- `path_collect` heads are `(edge_action * pp)` pairs — `cases`/`obtain` before `simp`.
+- `path_collect` heads are `(edge_action * pp)` pairs `cases`/`obtain` before `simp`.
 - `induction … rule: big_step.induct`: case order follows the rule text, not the conclusion.
 
 ## CFG-specific lemmas

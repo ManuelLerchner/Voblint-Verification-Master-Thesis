@@ -9,11 +9,11 @@ repository contributes, and how the main lemmas connect.
 
 ## External vs. repository
 
-| Layer | Source |
-| ----- | ------ |
-| IMP-style syntax / big-step patterns | Isabelle `HOL-IMP` |
-| Top-down solver algorithm | Vendored `TD` session (`vendor/td-verification`, `TD_plain`) |
-| IMP2 semantics, CFG, equations, domains, pipeline | This repository |
+| Layer                                             | Source                                                       |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| IMP-style syntax / big-step patterns              | Isabelle `HOL-IMP`                                           |
+| Top-down solver algorithm                         | Vendored `TD` session (`vendor/td-verification`, `TD_plain`) |
+| IMP2 semantics, CFG, equations, domains, pipeline | This repository                                              |
 
 ---
 
@@ -43,7 +43,7 @@ See [Design decisions](#design-decisions) for why AST annotation (`acom`) was dr
 
 ```mermaid
 flowchart TD
-  subgraph done ["Done — sign chain"]
+  subgraph done ["Done sign chain"]
     BS["big_step"]
     COL["collect / cfg_collect"]
     EQ["cfg_collect_exit_eq_collect"]
@@ -51,7 +51,7 @@ flowchart TD
     PS["pipeline_sound / goblint_sign_sound"]
     BS --> COL --> EQ --> ABS --> PS
   end
-  subgraph open ["Open — stretch / optional"]
+  subgraph open ["Open stretch / optional"]
     IVL["Interval domain + ivl_pipeline_sound"]
     DIR["Direct_Equations alternate path"]
     TOT["TD_Total widening termination"]
@@ -62,11 +62,11 @@ flowchart TD
 
 ## Key types
 
-- `com` — IMP2 commands; `cfg` with `cfg_entry`, `cfg_exit`, `cfg_edges`
-- `pp = nat` — program points
-- `'a abs_state = vname => 'a`; `'a domain_transfer` — assign / assume / assume-not
-- `rhs`, `is_post_fixpoint` — constraint system (`Constraint_System.thy`)
-- `make_rhs_tree`, `td_analyse` — solver bridge (`TD_Interface.thy`)
+- `com` IMP2 commands; `cfg` with `cfg_entry`, `cfg_exit`, `cfg_edges`
+- `pp = nat` program points
+- `'a abs_state = vname => 'a`; `'a domain_transfer` assign / assume / assume-not
+- `rhs`, `is_post_fixpoint` constraint system (`Constraint_System.thy`)
+- `make_rhs_tree`, `td_analyse` solver bridge (`TD_Interface.thy`)
 
 Domains use **semantic** γ-axioms in `abstract_domain` (soundness-oriented, not
 full syntactic lattice laws in the generic locale).
@@ -75,13 +75,13 @@ full syntactic lattice laws in the generic locale).
 
 ## Lemma spine (by stage)
 
-| Stage | File(s) | Main facts |
-| ----- | ------- | ---------- |
-| IMP2 | `IMP2_Semantics`, `IMP2_Collecting` | `big_step`, `collect` |
-| CFG | `IMP2_to_CFG`, `CFG_Collecting`, `CFG_Path` | `to_cfg`, `cfg_collect`, `cfg_collect_exit_eq_collect` |
-| Equations | `Constraint_System`, `Constraint_System_Sound` | `rhs_mono`, `post_fixpoint_sound`, `exit_sound` |
-| Solver | `TD_Interface`, `TD_Soundness` | `make_rhs_tree_correspondence`, `td_analyse_post_fixpoint`, `sign_analysis_sound` (interval: sorry) |
-| Pipeline | `Pipeline.thy` | `pipeline_invariant_sound`, `pipeline_sound`, sign corollaries |
+| Stage     | File(s)                                        | Main facts                                                                                          |
+| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| IMP2      | `IMP2_Semantics`, `IMP2_Collecting`            | `big_step`, `collect`                                                                               |
+| CFG       | `IMP2_to_CFG`, `CFG_Collecting`, `CFG_Path`    | `to_cfg`, `cfg_collect`, `cfg_collect_exit_eq_collect`                                              |
+| Equations | `Constraint_System`, `Constraint_System_Sound` | `rhs_mono`, `post_fixpoint_sound`, `exit_sound`                                                     |
+| Solver    | `TD_Interface`, `TD_Soundness`                 | `make_rhs_tree_correspondence`, `td_analyse_post_fixpoint`, `sign_analysis_sound` (interval: sorry) |
+| Pipeline  | `Pipeline.thy`                                 | `pipeline_invariant_sound`, `pipeline_sound`, sign corollaries                                      |
 
 ---
 
@@ -90,12 +90,12 @@ full syntactic lattice laws in the generic locale).
 The pipeline is **domain-agnostic in structure**: the same CFG, `rhs`, and
 `td_analyse` hook apply once a domain fits the interfaces.
 
-| Mechanism | Role |
-| --------- | ---- |
+| Mechanism                | Role                                                         |
+| ------------------------ | ------------------------------------------------------------ |
 | `abstract_domain` locale | `gamma`, `bot`, `join`, `widening` + soundness-oriented laws |
-| `domain_transfer` | per-edge `tf_assign` / `tf_assume` / `tf_assume_not` |
-| `rhs` / `make_rhs_tree` | constraint system over the compiled CFG |
-| `analysis_config` | bundles join, bot, gamma, tf, init for `run_analysis` |
+| `domain_transfer`        | per-edge `tf_assign` / `tf_assume` / `tf_assume_not`         |
+| `rhs` / `make_rhs_tree`  | constraint system over the compiled CFG                      |
+| `analysis_config`        | bundles join, bot, gamma, tf, init for `run_analysis`        |
 
 To add a domain (Sign was the template; Interval is the stretch goal):
 
@@ -120,9 +120,9 @@ Exotic edge kinds need extending `edge_action` and the compiler, not only a new 
 The sign end-to-end theorem is proved, but still assumes the AFP solver succeeds on the
 generated strategy tree:
 
-- **`comp_fun_idem join_state`** — join is commutative, associative, idempotent (finite fold).
-- **`TD_plain.solve_dom … (cfg_entry …)`** — the query point is in the solver domain.
-- **`cfg_in_reach`** — every reachable unknown in the tree is solved relative to entry.
+- **`comp_fun_idem join_state`** join is commutative, associative, idempotent (finite fold).
+- **`TD_plain.solve_dom … (cfg_entry …)`** the query point is in the solver domain.
+- **`cfg_in_reach`** every reachable unknown in the tree is solved relative to entry.
 
 These are the same obligations as in `td_solver_sound`: the **semantic soundness chain**
 (collecting → post-fixpoint → γ) is closed; **operational** “the solver terminates and
@@ -144,7 +144,7 @@ post-fixpoint argument.
 
 An earlier sketch (`Result_Mapping` / `acom`) stored the **exit** abstract state at leaf
 commands and read it back as the “pre” condition. For `x := a`, that required the entry
-store’s abstract state to be **closed under the assignment** — false in general (e.g.
+store’s abstract state to be **closed under the assignment** false in general (e.g.
 sign `x > 0` before assign does not imply `x > 0` after `x := -1`). Fixing it needs
 entry+exit pairs on every node (Nipkow-style annotations). The main theorem uses
 `exit_sound` and the point-map predicate directly; annotation on the AST is optional
@@ -154,9 +154,9 @@ narrative only and was removed from the codebase.
 
 ## Proof vs example
 
-| Style | Meaning |
-| ----- | ------- |
-| **Generic** (`goblint_sign_sound`, `pipeline_sound`) | All programs; TD hypotheses explicit |
+| Style                                                          | Meaning                                       |
+| -------------------------------------------------------------- | --------------------------------------------- |
+| **Generic** (`goblint_sign_sound`, `pipeline_sound`)           | All programs; TD hypotheses explicit          |
 | **Concrete** (`example_swap_*` in `Goblint_Formalization.thy`) | One program; operational semantics only today |
 
 A future `lemma swap_sign_sound` would instantiate the generic theorem for `example_swap`;
