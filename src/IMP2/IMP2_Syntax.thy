@@ -17,7 +17,7 @@ begin
 type_synonym vname = string
 type_synonym store  = "vname => int"
 
-(* ── Arithmetic Expressions ───────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Arithmetic Expressions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 datatype aexp =
     N     int                    (* integer literal         *)
@@ -26,7 +26,7 @@ datatype aexp =
   | Minus aexp aexp              (* a - b                   *)
   | Times aexp aexp              (* a * b                   *)
 
-(* ── Boolean Expressions ──────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Boolean Expressions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 datatype bexp =
     Bc    bool                   (* boolean constant        *)
@@ -36,7 +36,7 @@ datatype bexp =
   | Less  aexp aexp              (* a < b                   *)
   | Eq    aexp aexp              (* a = b                   *)
 
-(* ── Commands ─────────────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Commands \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 datatype com =
     SKIP
@@ -64,21 +64,8 @@ definition less_aexp_def:
   "((<) :: aexp \<Rightarrow> aexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
 
 instance
-proof (intro_classes)
-  fix x y z :: aexp
-  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
-    unfolding less_aexp_def less_eq_aexp_def
-    using linorder_not_le by force
-  show "x \<le> x"
-    by (simp add: less_eq_aexp_def)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
-    by (simp add: less_eq_aexp_def order_trans)
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
-    by (simp add: less_eq_aexp_def to_nat_split)
-  show "x \<le> y \<or> y \<le> x"
-    by (simp add: less_eq_aexp_def linear)
-qed
-
+  apply (intro_classes)
+  by(auto simp add: less_aexp_def less_eq_aexp_def)
 end
 
 instantiation bexp :: linorder
@@ -91,21 +78,8 @@ definition less_bexp_def:
   "((<) :: bexp \<Rightarrow> bexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
 
 instance
-proof (intro_classes)
-  fix x y z :: bexp
-  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
-    unfolding less_bexp_def less_eq_bexp_def
-    using linorder_not_le by force
-  show "x \<le> x"
-    by (simp add: less_eq_bexp_def)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
-    by (simp add: less_eq_bexp_def order_trans)
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
-    by (simp add: less_eq_bexp_def to_nat_split)
-  show "x \<le> y \<or> y \<le> x"
-    by (simp add: less_eq_bexp_def linear)
-qed
-
+  apply (intro_classes)
+  by(auto simp add: less_bexp_def less_eq_bexp_def)
 end
 
 end
