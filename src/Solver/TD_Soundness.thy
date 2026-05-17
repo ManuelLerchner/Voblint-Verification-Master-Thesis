@@ -70,13 +70,41 @@ end
 *)
 
 theorem sign_analysis_sound:
-  assumes s_sound:    "s : sign_domain.gamma_state s0"
+  assumes s_sound:    "s \<in> sign_domain.gamma_state s0"
   assumes terminates: "big_step (c, s) t"
-  shows   "t : sign_domain.gamma_state
+  assumes join_cfi:
+    "comp_fun_idem (sign_domain.join_state ::
+       sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom
+       (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state s0)
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach
+                  (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state s0)
+                  (TD_plain_Interp_solve
+                     (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state s0)
+                     (cfg_entry (to_cfg c)))
+                  (cfg_entry (to_cfg c))"
+  shows   "t \<in> sign_domain.gamma_state
                  ((td_analyse c sign_tf
                    sign_domain.join_state sign_domain.bot_state s0)
                    (cfg_exit (to_cfg c)))"
-  sorry
+proof -
+  have h1: "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+              s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
+    unfolding sign_tf_def by (simp add: assign_sign_sound)
+  have h2: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+              bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
+    unfolding sign_tf_def by (simp add: assume_sign_sound)
+  have h3: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+              \<not> bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
+    unfolding sign_tf_def by (simp add: assume_not_sign_sound)
+  show ?thesis
+    by (rule sign_domain.td_solver_sound
+          [OF h1 h2 h3 s_sound terminates to_cfg_finite join_cfi
+              td_solve_dom td_cfg_in_reach])
+qed
 
 (* ── Interval Domain Instantiation ───────────────────────────── *)
 

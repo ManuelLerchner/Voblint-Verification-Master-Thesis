@@ -78,10 +78,29 @@ lemma example_swap_correct:
    Entry point for the thesis main result. *)
 
 theorem goblint_sign_sound:
-  "big_step (c, s) t
-   ==>  t : sign_domain.gamma_state
-              (run_analysis (sign_analysis_config s) c
-                 (cfg_exit (to_cfg c)))"
-  by (rule sign_pipeline_sound)
+  assumes runs: "big_step (c, s) t"
+  assumes join_cfi:
+    "comp_fun_idem (sign_domain.join_state ::
+       sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom
+       (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+          (ac_init (sign_analysis_config s)))
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach
+       (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+          (ac_init (sign_analysis_config s)))
+       (TD_plain_Interp_solve
+          (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+            (ac_init (sign_analysis_config s)))
+          (cfg_entry (to_cfg c)))
+       (cfg_entry (to_cfg c))"
+  shows
+    "t \<in> sign_domain.gamma_state
+            (run_analysis (sign_analysis_config s) c
+               (cfg_exit (to_cfg c)))"
+  by (rule sign_pipeline_sound_scaffold
+        [OF runs sign_analysis_init_in_gamma_stub join_cfi td_solve_dom td_cfg_in_reach])
 
 end

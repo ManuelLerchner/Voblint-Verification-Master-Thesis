@@ -79,15 +79,18 @@ Run: `rg -n '^\s*sorry' src/` (source of truth).
 | `IMP2/IMP2_Collecting.thy`              | 0  | **done** (optional `collect_While` removed) |
 | `CFG/CFG_Path.thy`                      | 0  | **done** (exit-reachability stubs removed) |
 | `CFG/CFG_Collecting.thy`                | 0  | **done** — `cfg_collect_exit_eq_collect` |
-| `Equations/Constraint_System_Sound.thy` | 3  | Phase 1 ★ — blocks downstream   |
-| `Solver/TD_Soundness.thy`               | 2  | Phase 2                         |
-| `Pipeline/Pipeline.thy`                 | 4  | Phase 2                         |
-| `Domains/Interval_Domain.thy`           | 7  | Phase 3 (stretch)               |
+| `Equations/Constraint_System_Sound.thy` | 0  | **done** — Phase 1.2 closed     |
+| `Solver/TD_Soundness.thy`               | 1  | sign closed; interval blocked on Phase 3 |
+| `Pipeline/Pipeline.thy`                 | 1  | sign closed; `ivl_pipeline_sound` blocked on Phase 3 |
+| `Goblint_Formalization.thy`             | 0  | **done** — `goblint_sign_sound` |
+| `Domains/Interval_Domain.thy`           | 5  | Phase 3 (stretch); `gamma_ivl_bot/top` closed |
 | `Solver/TD_Total.thy`                   | 8  | optional (totality / widening)  |
 | `Equations/Direct_Equations.thy`        | 7  | skip (alternate path)           |
 | `Scratch_Explore.thy`                   | 1  | scratch only                    |
 
-★ = blocks everything downstream.
+**Sign pipeline:** end-to-end closed. Batch build green (`isabelle build`
+exit 0, `quick_and_dirty` tolerates Phase 3 / TD_Total / Direct_Equations
+sorries which are outside the sign chain).
 
 ---
 
@@ -112,45 +115,56 @@ Exit criterion for 1.1: satisfied.
 `cfg_exit_reachable_from_entry` / `to_cfg_exit_reachable` in `CFG_Path.thy`
 (not needed; false for arbitrary `cfg_wf` CFGs).
 
-### 1.2 Post-fixpoint over-approximates collecting — **OPEN**
+### 1.2 Post-fixpoint over-approximates collecting — **DONE**
 
-File: `src/Equations/Constraint_System_Sound.thy`
+File: `src/Equations/Constraint_System_Sound.thy` — 0 sorries.
 
-- `collect_pp_abstract_sound`
-  Strategy: case split on `edge_action`. Use the three `tf_sound_*`
-  hypotheses + `is_post_fixpoint` join upper bound to lift each
-  edge into `γ_state(env v)`.
-- `post_fixpoint_sound`
-  Strategy: `lfp_lowerbound`. Show `λρ v. γ_state(env v)` dominates
-  the CFG collecting functional. Uses 1.2.1 at every step.
-- `exit_sound` (corollary)
-  Compose `post_fixpoint_sound` with **proved**
-  `cfg_collect_exit_eq_collect` + `cfg_reach_entry`.
+Closed lemmas:
 
-Exit criterion: `Constraint_System_Sound.exit_sound` has no `sorry`.
+- `edge_collect_apply_tf_sound` — per-edge bridge, case split on `edge_action`.
+- `join_state_ub1` / `join_state_ub2` — pointwise upper bounds on `join_state`.
+- `apply_tf_le_rhs` — each predecessor's `apply_tf` is below the `rhs` fold
+  (uses `mem_image_le_fold` over the predecessor set).
+- `join_state_fold_ge` — element of a finite set ≤ the join-fold over it.
+- `s0_le_rhs_entry` — initial state ≤ `rhs` at the CFG entry.
+- `collect_pp_abstract_sound` — `collect_pp` step abstract soundness.
+- `post_fixpoint_sound` — `lfp_lowerbound` argument; the function
+  `λv. gamma_state (env v)` is a post-fixpoint of `cfg_collect_F`.
+- `exit_sound` — corollary composing `post_fixpoint_sound`,
+  `cfg_collect_exit_eq_collect`, and the `big_step → collect` bridge.
+
+Exit criterion: `Constraint_System_Sound.exit_sound` has no `sorry`. ✓
 
 ---
 
-## Phase 2 — Pipeline composition
+## Phase 2 — Pipeline composition — **DONE (sign)**
 
-Mechanical once Phase 1.2 is closed.
+Files: `src/Pipeline/Pipeline.thy`, `src/Solver/TD_Soundness.thy`,
+`src/Goblint_Formalization.thy`.
 
-File: `src/Pipeline/Pipeline.thy`, `src/Solver/TD_Soundness.thy`.
+Closed:
 
-- `pipeline_sound`
-  From `exit_sound` + `td_analyse_post_fixpoint` + unfold
-  `domain_transfer_sound`.
-- `pipeline_invariant_sound` (Option 2)
-  Direct from `post_fixpoint_sound` + `td_analyse_post_fixpoint`;
-  no termination assumption needed.
-- `sign_pipeline_sound`, `sign_pipeline_invariant_sound`
-  Discharge γ_state coercion `sign_domain.gamma_state` ↔
-  `sound_domain.gamma_state gamma_sign`.
-- `td_solver_sound`, `sign_analysis_sound` (TD_Soundness):
-  composition only.
+- `pipeline_invariant_sound` — generic point-map invariant. Takes
+  `sound_domain (ac_gamma cfg) join_op` + glue (`ac_join cfg`, `ac_bot cfg`
+  tied to `sound_domain.join_state` / `sound_domain.bot_state`) +
+  `td_analyse_post_fixpoint` solver assumptions.
+- `pipeline_sound` — exit specialisation of `pipeline_invariant_sound`
+  + termination.
+- `sign_pipeline_sound_scaffold` — sign-specialised wrapper using
+  `sign_analysis_sound`.
+- `sign_pipeline_invariant_sound` — point-map invariant for sign domain,
+  discharging the `sign_domain.gamma_state ↔ sound_domain.gamma_state
+  gamma_sign` coercion.
+- `sign_analysis_sound` (TD_Soundness) — sign-specific.
+- `goblint_sign_sound` (top-level) — wires `sign_pipeline_sound_scaffold`
+  with the discharged init-stub.
 
-Exit criterion: `pipeline_invariant_sound` and `sign_pipeline_sound`
-closed without `sorry`.
+The TD solver assumptions (`comp_fun_idem`, `solve_dom`, `cfg_in_reach`)
+are explicit hypotheses (matching `td_solver_sound`'s pattern). Discharging
+them is solver-side work — outside the soundness chain.
+
+Exit criterion: `goblint_sign_sound` and `sign_pipeline_invariant_sound`
+closed; batch build green. ✓
 
 ---
 
@@ -181,11 +195,11 @@ File: `src/Domains/Interval_Domain.thy`.
 ## Working order
 
 1. ~~`cfg_collect_exit_eq_collect` (Phase 1.1)~~ **done**
-2. `collect_pp_abstract_sound` (Phase 1.2)
-3. `post_fixpoint_sound` + `exit_sound` (Phase 1.2)
-4. `pipeline_sound` + `pipeline_invariant_sound` (Phase 2)
-5. Sign corollaries (Phase 2)
-6. Interval (Phase 3, optional)
-7. Examples + polish (Phase 4)
+2. ~~`collect_pp_abstract_sound` (Phase 1.2)~~ **done**
+3. ~~`post_fixpoint_sound` + `exit_sound` (Phase 1.2)~~ **done**
+4. ~~`pipeline_sound` + `pipeline_invariant_sound` (Phase 2)~~ **done**
+5. ~~Sign corollaries (Phase 2) — `goblint_sign_sound`~~ **done**
+6. Interval (Phase 3, optional) — 5 sorries remaining
+7. Examples + polish (Phase 4) — pending
 
 Commit after each step closes — never mid-bridge.

@@ -90,10 +90,10 @@ fun gamma_ivl :: "ivl => int set" where
     "gamma_ivl (Ivl l u) = {n. eint_le l (Fin n) \<and> eint_le (Fin n) u}"
 
 lemma gamma_ivl_bot: "gamma_ivl ivl_bot = {}"
-  sorry
+  unfolding ivl_bot_def by auto
 
 lemma gamma_ivl_top: "gamma_ivl ivl_top = UNIV"
-  sorry
+  unfolding ivl_top_def by auto
 
 (* ── Join and Widening ────────────────────────────────────────── *)
 
