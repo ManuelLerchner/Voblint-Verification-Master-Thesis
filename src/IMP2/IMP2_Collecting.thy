@@ -6,23 +6,23 @@ begin
   Collecting Semantics for IMP2.
 
   For each command c and input set S, `collect c S` is the set of all
-  states c can produce from some s ∈ S.
+  states c can produce from some s \<in> S.
 
   Key fact for WHILE:
-    lfp of  T ↦ S ∪ collect c {s ∈ T. bval b s}
-  characterises loop-head-reachable states; exit states add ¬bval b.
+    lfp of  T \<mapsto> S \<union> collect c {s \<in> T. bval b s}
+  characterises loop-head-reachable states; exit states add \<not>bval b.
 
-  Note: collect (WHILE b DO c) S ≠ lfp F in general —
+  Note: collect (WHILE b DO c) S \<noteq> lfp F in general —
   diverging runs contribute to lfp but not to collect.
 *)
 
-(* ── Definition ──────────────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Definition \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition collect :: "com \<Rightarrow> store set \<Rightarrow> store set" where
   "collect c S = {t. \<exists>s \<in> S. (c, s) \<Rightarrow> t}"
 
 
-(* ── Start State lemmas ───────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Start State lemmas \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 lemma collect_empty [simp]:
   "collect c {} = {}"
@@ -40,7 +40,7 @@ lemma collect_mono:
   "S \<subseteq> T \<Longrightarrow> collect c S \<subseteq> collect c T"
   unfolding collect_def by blast
 
-(* ── Structural lemmas ───────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Structural lemmas \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 
 lemma collect_SKIP [simp]:
@@ -61,7 +61,7 @@ lemma collect_If[simp]:
   unfolding collect_def by auto
 
 
-(* ── WHILE: fixpoint characterisation ───────────────────────────── *)
+(* \<midarrow>\<midarrow> WHILE: fixpoint characterisation \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition while_fun :: "bexp \<Rightarrow> com \<Rightarrow> store set \<Rightarrow> store set \<Rightarrow> store set" where
   "while_fun b c S T = S \<union> collect c {s \<in> T. bval b s}"
@@ -70,7 +70,7 @@ lemma while_fun_mono:
   "mono (while_fun b c S)"
   unfolding mono_def while_fun_def collect_def by auto
 
-(* ⊆ direction: loop execution stays in lfp and exits with ¬b *)
+(* \<subseteq> direction: loop execution stays in lfp and exits with \<not>b *)
 lemma while_preserves_lfp:
   "\<lbrakk> (WHILE b DO c, s) \<Rightarrow> t; s \<in> lfp (while_fun b c S) \<rbrakk>
    \<Longrightarrow> t \<in> lfp (while_fun b c S) \<and> \<not> bval b t"
@@ -85,7 +85,7 @@ next
     by (simp add: WhileTrue.hyps(5))  
 qed
 
-(* ⊇ direction: every lfp exit state is reachable from some s₀ ∈ S *)
+(* \<supseteq> direction: every lfp exit state is reachable from some s₀ \<in> S *)
 lemma while_lfp_exit_collect:
   "\<lbrakk> x \<in> lfp (while_fun b c S); \<not> bval b x \<rbrakk>
    \<Longrightarrow> \<exists>s \<in> S. (WHILE b DO c, s) \<Rightarrow> x"

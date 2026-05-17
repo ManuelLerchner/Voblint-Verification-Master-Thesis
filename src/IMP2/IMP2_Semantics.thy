@@ -10,7 +10,7 @@ begin
   constructors; IMP2 only extends aexp/bexp).
 *)
 
-(* ── Expression Evaluation ────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Expression Evaluation \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun aval :: "aexp => store => int" where
     "aval (N n)       _  = n"
@@ -27,7 +27,7 @@ fun bval :: "bexp => store => bool" where
   | "bval (Less a b)  s  = (aval a s < aval b s)"
   | "bval (Eq   a b)  s  = (aval a s = aval b s)"
 
-(* ── Big-Step Semantics (HOL-IMP style) ────────────────────────── *)
+(* \<midarrow>\<midarrow> Big-Step Semantics (HOL-IMP style) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 text \<open>Same rule structure as HOL-IMP.Big\_Step; first parameter is a pair.\<close>
 
