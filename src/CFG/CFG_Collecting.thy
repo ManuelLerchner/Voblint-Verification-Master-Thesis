@@ -11,7 +11,7 @@ begin
   Equations/Constraint_System_Sound.thy.
 *)
 
-(* ── Per-Edge Transfer Function on State Sets ─────────────────── *)
+(* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun edge_collect :: "edge_action => store set => store set" where
     "edge_collect EA_Nop          S = S"
@@ -19,98 +19,53 @@ fun edge_collect :: "edge_action => store set => store set" where
   | "edge_collect (EA_Assume b)    S = Collect (\<lambda>s. s \<in> S \<and> bval b s)"
   | "edge_collect (EA_AssumeNot b) S = Collect (\<lambda>s. s \<in> S \<and> \<not> bval b s)"
 
-lemma edge_collect_mono:
-  assumes "S \<subseteq> T"
-  shows "edge_collect a S \<subseteq> edge_collect a T"
-proof (cases a)
-  case EA_Nop
-  with assms show ?thesis by simp
-next
-  case (EA_Assign x1 a1)
-  with assms show ?thesis by auto
-next
-  case (EA_Assume b)
-  with assms show ?thesis by (auto simp add: subset_iff mem_Collect_eq)
-next
-  case (EA_AssumeNot b)
-  with assms show ?thesis by (auto simp add: subset_iff mem_Collect_eq)
-qed
-
-(* Lived in CFG_Path.thy but must follow edge_collect (no import cycle). *)
-fun path_collect :: "(edge_action * pp) list => store set => store set" where
-  "path_collect [] S = S"
-| "path_collect ((a, _) # es) S = path_collect es (edge_collect a S)"
-
-lemma path_collect_empty[simp]: "path_collect [] S = S"
-  by simp
-
 lemma edge_collect_empty_set[simp]: "edge_collect a {} = {}"
   by (cases a) auto
 
-lemma path_collect_empty_set[simp]: "path_collect es {} = {}"
-proof (induction es)
-  case Nil show ?case by simp
-next
-  case (Cons e es)
-  obtain a w where ep: "e = (a, w)" by (cases e) auto
-  show ?case unfolding ep path_collect.simps by (simp add: Cons.IH)
-qed
+lemma edge_collect_mono:
+  assumes "S \<subseteq> T"
+  shows "edge_collect a S \<subseteq> edge_collect a T"
+  using assms  apply (cases a)
+  by(auto)
 
-lemma path_collect_mono_strong:
-  "S \<subseteq> T \<Longrightarrow> path_collect es S \<subseteq> path_collect es T"
-proof (induction es arbitrary: S T)
-  case Nil
-  assume le: "S \<subseteq> T"
-  show "path_collect [] S \<subseteq> path_collect [] T"
-    unfolding path_collect.simps using le by blast
-next
-  case (Cons e es)
-  assume le: "S \<subseteq> T"
-  obtain a p where ep: "e = (a, p)" by (cases e) auto
-  have sub_edge: "edge_collect a S \<subseteq> edge_collect a T"
-    by (rule edge_collect_mono[OF le])
-  have step: "path_collect es (edge_collect a S) \<subseteq> path_collect es (edge_collect a T)"
-    by (rule Cons.IH[OF sub_edge])
-  show "path_collect (e # es) S \<subseteq> path_collect (e # es) T"
-    unfolding path_collect.simps using ep step by simp
-qed
-
-lemma path_collect_mono:
-  assumes subset: "S \<subseteq> T"
-  shows "path_collect es S \<subseteq> path_collect es T"
-  by (rule path_collect_mono_strong[OF subset])
+(* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 (*
-  path_collect only inspects edge actions; the pp component of each
-  step is discarded.  Hence shifting pp's via offset_path is invisible
-  to path_collect.  Used to glue an IH path (lifted via cfg_path_offset)
-  back into the surrounding compound graph's collecting argument.
+  edges_collect aggregates the resulting state after walking along a list of edges
+  and running edge_collect each time
 *)
-lemma path_collect_offset_path[simp]:
-  "path_collect (offset_path k es) S = path_collect es S"
-proof (induction es arbitrary: S)
-  case Nil
-  show ?case by simp
-next
-  case (Cons e es)
-  obtain a p where ep: "e = (a, p)" by (cases e) auto
-  show ?case
-    unfolding ep offset_path_Cons path_collect.simps using Cons by simp
-qed
+fun edges_collect :: "(edge_action * pp) list => store set => store set" where
+  "edges_collect [] S = S"
+| "edges_collect ((a, _) # es) S = edges_collect es (edge_collect a S)"
 
-lemma path_collect_append:
-  "path_collect (es1 @ es2) S = path_collect es2 (path_collect es1 S)"
-proof (induction es1 arbitrary: S)
-  case Nil
-  show ?case by simp
-next
-  case (Cons e es1)
-  obtain a p where ep: "e = (a, p)" by (cases e) auto
-  show ?case
-    unfolding ep path_collect.simps using Cons.IH by simp
-qed
 
-(* ── CFG Collecting Environment ───────────────────────────────── *)
+lemma edges_collect_empty_set[simp]: "edges_collect es {} = {}"
+  apply (induction es)
+  by(auto)
+
+lemma edges_collect_mono_strong:
+  "S \<subseteq> T \<Longrightarrow> edges_collect es S \<subseteq> edges_collect es T"
+  apply (induction es arbitrary: S T)
+  apply(auto)
+  by (meson edge_collect_mono in_mono)
+
+lemma edges_collect_append:
+  "edges_collect (es1 @ es2) S = edges_collect es2 (edges_collect es1 S)"
+  apply (induction es1 arbitrary: S)
+  by auto
+
+(*
+  edges_collect only inspects edge actions; the pp component of each
+  step is discarded.  Hence shifting pp's via offset_path is invisible
+  to edges_collect.
+*)
+lemma edges_collect_offset_path[simp]:
+  "edges_collect (offset_path k es) S = edges_collect es S"
+  apply (induction es arbitrary: S)
+  by(auto)
+
+
+(* \<midarrow>\<midarrow> CFG Collecting Environment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
   A collecting environment maps each program point to the set of states
   that can appear there during any execution starting from some fixed
@@ -119,10 +74,8 @@ qed
 
 type_synonym cenv = "pp => store set"
 
-definition cenv_join :: "pp => cenv set => store set" where
-  "cenv_join v envs = Union {rho v | rho. rho : envs}"
 
-(* ── Collecting Transformer for One Program Point ─────────────── *)
+(* \<midarrow>\<midarrow> Collecting Transformer for One Program Point \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
   collect_pp g rho v = join of edge_collect(a)(rho u) over all (u,a,v) in g.
   This is the single-step "push" of states through each incoming edge.
@@ -132,7 +85,7 @@ definition collect_pp :: "cfg => cenv => pp => store set" where
   "collect_pp g rho v =
      Union {edge_collect a (rho u) | u a. (u, a, v) : cfg_edges g}"
 
-(* ── Least Fixpoint (Collecting Semantics over CFG) ───────────── *)
+(* \<midarrow>\<midarrow> Least Fixpoint (Collecting Semantics over CFG) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
   Given an initial store set S at the entry, the CFG collecting semantics
   is the least fixpoint of the monotone transformer collect_pp.
@@ -146,11 +99,7 @@ definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
 definition cfg_collect :: "cfg => store set => cenv" where
   "cfg_collect g S = lfp (cfg_collect_F g S)"
 
-lemma cfg_collect_def':
-  "cfg_collect g S = lfp (cfg_collect_F g S)"
-  unfolding cfg_collect_def by simp
-
-(* ── Monotonicity of collect_pp ──────────────────────────────────
+(* \<midarrow>\<midarrow> Monotonicity of collect_pp \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>
    Required for lfp to be well-defined. *)
 
 lemma collect_pp_mono:
@@ -158,12 +107,12 @@ lemma collect_pp_mono:
 proof (rule monoI)
   fix rho1 rho2 :: cenv
   assume le: "rho1 \<le> rho2"
-  have ru: "\<And>u. rho1 u \<subseteq> rho2 u"
-    using le by (simp add: le_fun_def)
+  then have ru: "\<And>u. rho1 u \<subseteq> rho2 u"
+    by (simp add: le_fun_def)
   have edge: "\<And>u a. (u, a, v) \<in> cfg_edges g \<Longrightarrow> edge_collect a (rho1 u) \<subseteq> edge_collect a (rho2 u)"
     by (meson ru edge_collect_mono)
-  show "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
-    unfolding collect_pp_def using edge by blast
+  then show "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
+    unfolding collect_pp_def by blast
 qed
 
 lemma cfg_collect_F_mono:
@@ -173,117 +122,83 @@ proof (rule monoI)
   assume le: "rho1 \<le> rho2"
   show "cfg_collect_F g S rho1 \<le> cfg_collect_F g S rho2"
     unfolding cfg_collect_F_def le_fun_def
-  proof (intro allI)
-    fix v
-    show "(if v = cfg_entry g then S Un collect_pp g rho1 v else collect_pp g rho1 v)
-          \<subseteq> (if v = cfg_entry g then S Un collect_pp g rho2 v else collect_pp g rho2 v)"
-    proof (cases "v = cfg_entry g")
-      case True
-      have "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
-        using le collect_pp_mono monoD by blast
-      then show ?thesis
-        using True by auto
-    next
-      case False
-      have "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
-        using le collect_pp_mono monoD by blast
-      then show ?thesis
-        using False by auto
-    qed
-  qed
+    using collect_pp_mono le monotoneD by fastforce
 qed
 
 lemma cfg_collect_lfp_unfold:
   "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
-  unfolding cfg_collect_def'
-  using lfp_unfold[OF cfg_collect_F_mono, symmetric] by simp
+  unfolding cfg_collect_def
+  by (simp add: cfg_collect_F_mono def_lfp_unfold)
 
 (* Path-based collecting environment (for cfg_collect_exit_le_collect). *)
-definition cfg_path_collect :: "cfg => store set => pp => store set" where
-  "cfg_path_collect g S v =
-     (\<Union>es\<in>{es. cfg_path g (cfg_entry g) es v}. path_collect es S)"
+definition cfg_edges_collect :: "cfg => store set => pp => store set" where
+  "cfg_edges_collect g S v =
+     (\<Union>es\<in>{es. cfg_path g (cfg_entry g) es v}. edges_collect es S)"
 
 lemma edge_collect_member:
   "x \<in> edge_collect a S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edge_collect a {s})"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by auto
-next
-  case (EA_Assign x1 a1)
-  then show ?thesis by auto
-next
-  case (EA_Assume b)
-  then show ?thesis by (auto simp: mem_Collect_eq)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis by (auto simp: mem_Collect_eq)
-qed
+  apply(cases a)
+  by(auto)
+
 
 (* One CFG step extends path-based collecting. *)
-lemma cfg_path_collect_step:
+lemma cfg_edges_collect_step:
   assumes e: "(u, a, v) : cfg_edges g"
-  shows "edge_collect a (cfg_path_collect g S u) \<subseteq> cfg_path_collect g S v"
-proof (rule subsetI)
+  shows "edge_collect a (cfg_edges_collect g S u) \<subseteq> cfg_edges_collect g S v"
+proof
   fix x
-  assume x: "x \<in> edge_collect a (cfg_path_collect g S u)"
+  assume x: "x \<in> edge_collect a (cfg_edges_collect g S u)"
   then obtain es where es: "cfg_path g (cfg_entry g) es u"
-    and x: "x \<in> edge_collect a (path_collect es S)"
-    unfolding cfg_path_collect_def
+    and x: "x \<in> edge_collect a (edges_collect es S)"
+    unfolding cfg_edges_collect_def
     by (smt (verit) UN_iff edge_collect_member mem_Collect_eq)
     
-  then obtain s where s: "s \<in> path_collect es S"
+  then obtain s where s: "s \<in> edges_collect es S"
     and x: "x \<in> edge_collect a {s}"
     using edge_collect_member
     by meson 
+
   have p: "cfg_path g u [(a, v)] v"
     by (rule cfg_path.step[OF e cfg_path.empty])
   have es': "cfg_path g (cfg_entry g) (es @ [(a, v)]) v"
     by (rule cfg_path_append[OF es p])
-  have "x \<in> path_collect (es @ [(a, v)]) S"
-    using x s unfolding path_collect_append path_collect.simps
+  have "x \<in> edges_collect (es @ [(a, v)]) S"
+    using x s unfolding edges_collect_append edges_collect.simps
     using edge_collect_member by blast 
  
-  then show "x \<in> cfg_path_collect g S v"
-    unfolding cfg_path_collect_def using es' by auto
+  then show "x \<in> cfg_edges_collect g S v"
+    unfolding cfg_edges_collect_def using es' by auto
 qed
 
-lemma cfg_path_collect_entry:
-  "S \<subseteq> cfg_path_collect g S (cfg_entry g)"
-proof (rule subsetI)
-  fix s
-  assume s: "s \<in> S"
-  have "cfg_path g (cfg_entry g) [] (cfg_entry g)"
-    by (rule cfg_path.empty)
-  then show "s \<in> cfg_path_collect g S (cfg_entry g)"
-    unfolding cfg_path_collect_def using s by auto
-qed
-
+lemma cfg_edges_collect_entry:
+  "S \<subseteq> cfg_edges_collect g S (cfg_entry g)"
+  unfolding cfg_edges_collect_def by(auto)
+ 
 (*
-  Post-fixpoint: cfg_path_collect satisfies cfg_collect_F.
-  Proof via path_collect_append + cfg_path_append; one line per edge action.
+  Post-fixpoint: cfg_edges_collect satisfies cfg_collect_F.
+  Proof via edges_collect_append + cfg_path_append; one line per edge action.
 *)
-lemma cfg_path_collect_post:
-  "cfg_collect_F g S (cfg_path_collect g S) v \<subseteq> cfg_path_collect g S v"
+lemma cfg_edges_collect_post:
+  "cfg_collect_F g S (cfg_edges_collect g S) v \<subseteq> cfg_edges_collect g S v"
   unfolding cfg_collect_F_def
-  apply(cases "v = cfg_entry g")
   apply(auto)
-  using cfg_path_collect_entry apply blast
-  using cfg_path_collect_step collect_pp_def apply fastforce
-  using cfg_path_collect_step collect_pp_def by fastforce
+  using cfg_edges_collect_entry apply blast
+  using cfg_edges_collect_step collect_pp_def apply fastforce
+  using cfg_edges_collect_step collect_pp_def by fastforce
 
 
-lemma cfg_collect_le_path_collect:
-  "cfg_collect g S v \<subseteq> cfg_path_collect g S v"
+lemma cfg_collect_le_edges_collect:
+  "cfg_collect g S v \<subseteq> cfg_edges_collect g S v"
 proof -
-  have pf: "cfg_collect_F g S (cfg_path_collect g S) \<le> cfg_path_collect g S"
-    unfolding le_fun_def using cfg_path_collect_post by simp
-  have "lfp (cfg_collect_F g S) \<le> cfg_path_collect g S"
+  have pf: "cfg_collect_F g S (cfg_edges_collect g S) \<le> cfg_edges_collect g S"
+    unfolding le_fun_def using cfg_edges_collect_post by simp
+  have "lfp (cfg_collect_F g S) \<le> cfg_edges_collect g S"
     using pf cfg_collect_F_mono lfp_lowerbound by blast
   then show ?thesis
-    unfolding cfg_collect_def' le_fun_def by simp
+    unfolding cfg_collect_def le_fun_def by simp
 qed
 
-(* ── to_cfg / compile alignment ───────────────────────────────── *)
+(* \<midarrow>\<midarrow> to_cfg / compile alignment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 lemma to_cfg_compile:
   obtains n' en ex E where
@@ -294,7 +209,7 @@ lemma to_cfg_compile:
   unfolding to_cfg_def
   by (cases "compile c 0") (auto simp: Let_def)
 
-(* A path through a graph with a single edge u0 -a0-> v0 (with u0 ≠ v0)
+(* A path through a graph with a single edge u0 -a0-> v0 (with u0 \<noteq> v0)
    is forced to be [(a0, v0)].  Used by the SKIP / Assign cases of the
    collecting-semantics bridges. *)
 lemma cfg_path_singleton_edge:
@@ -325,8 +240,8 @@ next
   with Cons hd_eq aw show ?thesis by simp
 qed
 
-lemma path_collect_member:
-  "x \<in> path_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> path_collect es {s})"
+lemma edges_collect_member:
+  "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
 proof (induction es arbitrary: S x)
   case Nil
   then show ?case by auto
@@ -335,20 +250,20 @@ next
   obtain a p where ep: "e = (a, p)" by (cases e) auto
   show ?case
     apply(auto)
-    apply (metis edge_collect_member ep local.Cons path_collect.simps(2))
-    by (meson empty_subsetI insert_subset path_collect_mono_strong subsetD)
+    apply (metis edge_collect_member ep local.Cons edges_collect.simps(2))
+    by (meson empty_subsetI insert_subset edges_collect_mono_strong subsetD)
 qed
 
-lemma path_collect_nop_append:
-  "path_collect (es1 @ [(EA_Nop, w)] @ es2) S = path_collect es2 (path_collect es1 S)"
+lemma edges_collect_nop_append:
+  "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
 proof (induction es1 arbitrary: S)
   case Nil
-  show ?case by (simp add: path_collect_append)
+  show ?case by (simp add: edges_collect_append)
 next
   case (Cons e es1)
   obtain a p where ep: "e = (a, p)" by (cases e) auto
   show ?case
-    unfolding ep path_collect.simps path_collect_append Cons by simp
+    unfolding ep edges_collect.simps edges_collect_append Cons by simp
 qed
 
 lemma compile_Seq_0:
@@ -439,8 +354,8 @@ lemma cfg_path_mono_edges:
   shows "cfg_path h u es v"
   using p sub by (induction rule: cfg_path.induct) (auto intro: cfg_path.intros subsetD)
 
-lemma mem_path_collect_from_set:
-  "t \<in> path_collect es M \<Longrightarrow> \<exists>m\<in>M. t \<in> path_collect es {m}"
+lemma mem_edges_collect_from_set:
+  "t \<in> edges_collect es M \<Longrightarrow> \<exists>m\<in>M. t \<in> edges_collect es {m}"
 proof (induction es arbitrary: M t)
   case Nil
   then show ?case by simp
@@ -448,18 +363,18 @@ next
   case (Cons e es)
   obtain a w where ew: "e = (a, w)" by (cases e) auto
   obtain M' where M': "M' = edge_collect a M" by simp
-  from Cons.prems ew obtain t': "t \<in> path_collect es M'"
-    using M' path_collect.simps(2) by blast
-  from Cons.IH[OF this] obtain m where m: "m \<in> M'" and tm: "t \<in> path_collect es {m}"
+  from Cons.prems ew obtain t': "t \<in> edges_collect es M'"
+    using M' edges_collect.simps(2) by blast
+  from Cons.IH[OF this] obtain m where m: "m \<in> M'" and tm: "t \<in> edges_collect es {m}"
     by blast
   from m have "m \<in> edge_collect a M"
     using M' by auto
 
   then obtain m0 where m0: "m0 \<in> M" and mm: "m \<in> edge_collect a {m0}"
     by (cases a) (auto simp: mem_Collect_eq)
-  have "t \<in> path_collect (e # es) {m0}"
-    unfolding ew path_collect.simps mm tm
-    using mm path_collect_member tm by blast
+  have "t \<in> edges_collect (e # es) {m0}"
+    unfolding ew edges_collect.simps mm tm
+    using mm edges_collect_member tm by blast
   with m0 show ?case by blast
 qed
 
@@ -949,7 +864,7 @@ proof -
   qed
 qed
 
-(* ── WHILE compound paths (for compile_path_big_step) ───────── *)
+(* \<midarrow>\<midarrow> WHILE compound paths (for compile_path_big_step) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 lemma compound_While_edge_src_body:
   assumes c0: "compile c 0 = (n10, en10, ex10, E10)"
@@ -1215,7 +1130,7 @@ qed
 
 lemma path_sound_cfg_collect_aux:
   assumes p: "cfg_path g u es v"
-  shows "path_collect es (cfg_collect g S u) \<subseteq> cfg_collect g S v"
+  shows "edges_collect es (cfg_collect g S u) \<subseteq> cfg_collect g S v"
 proof (insert p, induction es arbitrary: u v)
   case Nil
   then have "u = v" by (cases rule: cfg_path.cases) simp_all
@@ -1228,19 +1143,19 @@ next
     by (cases rule: cfg_path.cases) auto
   have step_edge: "edge_collect a (cfg_collect g S u) \<subseteq> cfg_collect g S w"
     by (rule cfg_collect_step[OF ed])
-  have IH: "path_collect es' (cfg_collect g S w) \<subseteq> cfg_collect g S v"
+  have IH: "edges_collect es' (cfg_collect g S w) \<subseteq> cfg_collect g S v"
     by (rule Cons.IH[OF p2])
-  have "path_collect es' (edge_collect a (cfg_collect g S u))
-        \<subseteq> path_collect es' (cfg_collect g S w)"
-    by (rule path_collect_mono_strong[OF step_edge])
+  have "edges_collect es' (edge_collect a (cfg_collect g S u))
+        \<subseteq> edges_collect es' (cfg_collect g S w)"
+    by (rule edges_collect_mono_strong[OF step_edge])
   also have "\<dots> \<subseteq> cfg_collect g S v"
     by (rule IH)
-  finally show ?case unfolding ew path_collect.simps .
+  finally show ?case unfolding ew edges_collect.simps .
 qed  
 
 lemma path_sound_cfg_collect:
   assumes es: "cfg_path g (cfg_entry g) es v"
-  shows "path_collect es S \<subseteq> cfg_collect g S v"
+  shows "edges_collect es S \<subseteq> cfg_collect g S v"
 proof -
   have ent: "S \<subseteq> cfg_collect g S (cfg_entry g)"
   proof -
@@ -1248,8 +1163,8 @@ proof -
       using cfg_collect_lfp_unfold by simp
     then show ?thesis unfolding cfg_collect_F_def by auto
   qed
-  have "path_collect es S \<subseteq> path_collect es (cfg_collect g S (cfg_entry g))"
-    by (rule path_collect_mono_strong[OF ent])
+  have "edges_collect es S \<subseteq> edges_collect es (cfg_collect g S (cfg_entry g))"
+    by (rule edges_collect_mono_strong[OF ent])
   also have "\<dots> \<subseteq> cfg_collect g S v"
     by (rule path_sound_cfg_collect_aux[OF es])
   finally show ?thesis .
@@ -1259,7 +1174,7 @@ qed
 lemma big_step_cfg_path:
   assumes "(c, s) \<Rightarrow> t" and  "s \<in> S" 
   shows "\<exists>es. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))
-            \<and> t \<in> path_collect es {s}"
+            \<and> t \<in> edges_collect es {s}"
 using assms proof (induction "(c,s)" "t" arbitrary: c s S rule: big_step.induct)
   case Skip
   obtain n' en ex E where comp: "compile SKIP 0 = (n', en, ex, E)"
@@ -1286,11 +1201,11 @@ next
   case (Seq c1 s1 t2 c2 t3)
   from Seq.hyps(2) obtain es1 where
         p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
-    and t2in: "t2 \<in> path_collect es1 {s1}"
+    and t2in: "t2 \<in> edges_collect es1 {s1}"
     by blast
   from Seq.hyps(4) obtain es2 where
         p2: "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
-    and t3in: "t3 \<in> path_collect es2 {t2}"
+    and t3in: "t3 \<in> edges_collect es2 {t2}"
     by blast
 
   obtain n1 en1 ex1 E1 where
@@ -1354,15 +1269,15 @@ next
   have path: "cfg_path (to_cfg (c1 ;; c2)) en1 ?es (ex20 + n1)"
     using cfg_path_append[OF step1 P2] by simp
 
-  (* Collect side: t3 lands in path_collect of full path. *)
-  have t3_in: "t3 \<in> path_collect ?es {s1}"
+  (* Collect side: t3 lands in edges_collect of full path. *)
+  have t3_in: "t3 \<in> edges_collect ?es {s1}"
   proof -
-    have a: "{t2} \<subseteq> path_collect es1 {s1}" using t2in by simp
-    have b: "path_collect es2 {t2} \<subseteq> path_collect es2 (path_collect es1 {s1})"
-      by (rule path_collect_mono[OF a])
-    from t3in b have t3_step: "t3 \<in> path_collect es2 (path_collect es1 {s1})" by blast
-    have eq: "path_collect ?es {s1} = path_collect es2 (path_collect es1 {s1})"
-      using path_collect_nop_append[of es1 "en20 + n1" ?es2k "{s1}"] by simp
+    have a: "{t2} \<subseteq> edges_collect es1 {s1}" using t2in by simp
+    have b: "edges_collect es2 {t2} \<subseteq> edges_collect es2 (edges_collect es1 {s1})"
+      using a edges_collect_mono_strong by presburger
+    from t3in b have t3_step: "t3 \<in> edges_collect es2 (edges_collect es1 {s1})" by blast
+    have eq: "edges_collect ?es {s1} = edges_collect es2 (edges_collect es1 {s1})"
+      using edges_collect_nop_append[of es1 "en20 + n1" ?es2k "{s1}"] by simp
     show ?thesis using t3_step eq by simp
   qed
 
@@ -1372,7 +1287,7 @@ next
   case (IfTrue b s c1 t c2)
   from IfTrue.hyps(3) obtain es1 where
         p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
-    and tin: "t \<in> path_collect es1 {s}"
+    and tin: "t \<in> edges_collect es1 {s}"
     by blast
   obtain n10 en10 ex10 E10 where
         c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
@@ -1436,23 +1351,23 @@ next
     using cfg_path_append[OF pre mid] by simp
 
   (* Collect side *)
-  have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
+  have eq_head: "edges_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
     using IfTrue.hyps(1) by auto
-  have eq_es: "path_collect ?es {s} = path_collect es1 {s}"
+  have eq_es: "edges_collect ?es {s} = edges_collect es1 {s}"
   proof -
-    have "path_collect ?es {s}
-          = path_collect (?es1k @ [(EA_Nop, n20 + (n10 + 1))])
-                         (path_collect [(EA_Assume b, en10 + 1)] {s})"
-      by (simp add: path_collect_append)
-    also have "\<dots> = path_collect (?es1k @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
+    have "edges_collect ?es {s}
+          = edges_collect (?es1k @ [(EA_Nop, n20 + (n10 + 1))])
+                         (edges_collect [(EA_Assume b, en10 + 1)] {s})"
+      by (simp add: edges_collect_append)
+    also have "\<dots> = edges_collect (?es1k @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
       using eq_head by simp
-    also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))] (path_collect ?es1k {s})"
-      by (rule path_collect_append)
-    also have "\<dots> = path_collect ?es1k {s}" by simp
-    also have "\<dots> = path_collect es1 {s}" by simp
+    also have "\<dots> = edges_collect [(EA_Nop, n20 + (n10 + 1))] (edges_collect ?es1k {s})"
+      by (rule edges_collect_append)
+    also have "\<dots> = edges_collect ?es1k {s}" by simp
+    also have "\<dots> = edges_collect es1 {s}" by simp
     finally show ?thesis .
   qed
-  have t_in: "t \<in> path_collect ?es {s}"
+  have t_in: "t \<in> edges_collect ?es {s}"
     using tin eq_es by simp
 
   show ?case
@@ -1461,7 +1376,7 @@ next
   case (IfFalse b s c2 t c1)
   from IfFalse.hyps(3) obtain es2 where
         p2: "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
-    and tin: "t \<in> path_collect es2 {s}"
+    and tin: "t \<in> edges_collect es2 {s}"
     by blast
   obtain n10 en10 ex10 E10 where
         c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
@@ -1528,23 +1443,23 @@ next
     using cfg_path_append[OF pre mid] by simp
 
   (* Collect side *)
-  have eq_head: "path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s} = {s}"
+  have eq_head: "edges_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s} = {s}"
     using IfFalse.hyps(1) by auto
-  have eq_es: "path_collect ?es {s} = path_collect es2 {s}"
+  have eq_es: "edges_collect ?es {s} = edges_collect es2 {s}"
   proof -
-    have "path_collect ?es {s}
-          = path_collect (?es2k @ [(EA_Nop, n20 + (n10 + 1))])
-                         (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
-      by (simp add: path_collect_append)
-    also have "\<dots> = path_collect (?es2k @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
+    have "edges_collect ?es {s}
+          = edges_collect (?es2k @ [(EA_Nop, n20 + (n10 + 1))])
+                         (edges_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+      by (simp add: edges_collect_append)
+    also have "\<dots> = edges_collect (?es2k @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
       using eq_head by simp
-    also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))] (path_collect ?es2k {s})"
-      by (rule path_collect_append)
-    also have "\<dots> = path_collect ?es2k {s}" by simp
-    also have "\<dots> = path_collect es2 {s}" by simp
+    also have "\<dots> = edges_collect [(EA_Nop, n20 + (n10 + 1))] (edges_collect ?es2k {s})"
+      by (rule edges_collect_append)
+    also have "\<dots> = edges_collect ?es2k {s}" by simp
+    also have "\<dots> = edges_collect es2 {s}" by simp
     finally show ?thesis .
   qed
-  have t_in: "t \<in> path_collect ?es {s}"
+  have t_in: "t \<in> edges_collect ?es {s}"
     using tin eq_es by simp
 
   show ?case
@@ -1569,8 +1484,8 @@ next
     using ens Eeq EG by simp
   have path: "cfg_path (to_cfg (WHILE b DO c1)) en [(EA_AssumeNot b, ex)] ex"
     by (rule cfg_path.step[OF edge cfg_path.empty])
-  have mem: "s \<in> path_collect [(EA_AssumeNot b, ex)] {s}"
-    using WhileFalse.hyps(1) by (simp add: path_collect.simps)
+  have mem: "s \<in> edges_collect [(EA_AssumeNot b, ex)] {s}"
+    using WhileFalse.hyps(1) by (simp add: edges_collect.simps)
   show ?case
     apply (rule exI[where x = "[(EA_AssumeNot b, ex)]"])
     using path mem enG exG
@@ -1580,13 +1495,13 @@ next
   case (WhileTrue b s c1 s' s'')
   from WhileTrue.hyps(3) obtain es1 where
         p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
-    and s'_in: "s' \<in> path_collect es1 {s}"
+    and s'_in: "s' \<in> edges_collect es1 {s}"
     by blast
   from WhileTrue.hyps(5) obtain es2 where
         p2: "cfg_path (to_cfg (WHILE b DO c1))
                       (cfg_entry (to_cfg (WHILE b DO c1))) es2
                       (cfg_exit  (to_cfg (WHILE b DO c1)))"
-    and s''_in: "s'' \<in> path_collect es2 {s'}"
+    and s''_in: "s'' \<in> edges_collect es2 {s'}"
     by blast
 
   obtain n10 en10 ex10 E10 where
@@ -1647,29 +1562,29 @@ next
     using cfg_path_append[OF head stepB] by simp
 
   (* Collect side *)
-  have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
+  have eq_head: "edges_collect [(EA_Assume b, en10 + 1)] {s} = {s}"
     using WhileTrue.hyps(1) by auto
-  have s''_in_chain: "s'' \<in> path_collect ?es {s}"
+  have s''_in_chain: "s'' \<in> edges_collect ?es {s}"
   proof -
-    have eq_all: "path_collect ?es {s} = path_collect es2 (path_collect es1 {s})"
+    have eq_all: "edges_collect ?es {s} = edges_collect es2 (edges_collect es1 {s})"
     proof -
-      have "path_collect ?es {s}
-            = path_collect (?es1k @ [(EA_Nop, 0)] @ es2)
-                           (path_collect [(EA_Assume b, en10 + 1)] {s})"
-        by (simp add: path_collect_append)
-      also have "\<dots> = path_collect (?es1k @ [(EA_Nop, 0)] @ es2) {s}"
+      have "edges_collect ?es {s}
+            = edges_collect (?es1k @ [(EA_Nop, 0)] @ es2)
+                           (edges_collect [(EA_Assume b, en10 + 1)] {s})"
+        by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect (?es1k @ [(EA_Nop, 0)] @ es2) {s}"
         using eq_head by simp
-      also have "\<dots> = path_collect es2
-                                  (path_collect [(EA_Nop, 0)] (path_collect ?es1k {s}))"
-        by (simp add: path_collect_append)
-      also have "\<dots> = path_collect es2 (path_collect ?es1k {s})" by simp
-      also have "\<dots> = path_collect es2 (path_collect es1 {s})" by simp
+      also have "\<dots> = edges_collect es2
+                                  (edges_collect [(EA_Nop, 0)] (edges_collect ?es1k {s}))"
+        by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect es2 (edges_collect ?es1k {s})" by simp
+      also have "\<dots> = edges_collect es2 (edges_collect es1 {s})" by simp
       finally show ?thesis .
     qed
-    have a: "{s'} \<subseteq> path_collect es1 {s}" using s'_in by simp
-    have b: "path_collect es2 {s'} \<subseteq> path_collect es2 (path_collect es1 {s})"
-      by (rule path_collect_mono[OF a])
-    from s''_in b have "s'' \<in> path_collect es2 (path_collect es1 {s})" by blast
+    have a: "{s'} \<subseteq> edges_collect es1 {s}" using s'_in by simp
+    have b: "edges_collect es2 {s'} \<subseteq> edges_collect es2 (edges_collect es1 {s})"
+      using a edges_collect_mono_strong by auto
+    from s''_in b have "s'' \<in> edges_collect es2 (edges_collect es1 {s})" by blast
     thus ?thesis using eq_all by simp
   qed
 
@@ -1681,7 +1596,7 @@ qed
 lemma compile_path_big_step:
   assumes es: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
     and s: "s \<in> S"
-    and t: "t \<in> path_collect es {s}"
+    and t: "t \<in> edges_collect es {s}"
   shows "(c, s) \<Rightarrow> t"
   using assms
 proof (induction c arbitrary: es s t S rule: com.induct)
@@ -1741,20 +1656,20 @@ next
   from p2 en20_eq ex20_eq
     have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))" by simp
 
-  have collect_eq: "path_collect es {s} = path_collect es2 (path_collect es1 {s})"
+  have collect_eq: "edges_collect es {s} = edges_collect es2 (edges_collect es1 {s})"
   proof -
-    have "path_collect es {s}
-          = path_collect ((EA_Nop, en20 + n1) # offset_path n1 es2) (path_collect es1 {s})"
-      unfolding es_split by (rule path_collect_append)
-    also have "\<dots> = path_collect (offset_path n1 es2) (path_collect es1 {s})" by simp
-    also have "\<dots> = path_collect es2 (path_collect es1 {s})" by simp
+    have "edges_collect es {s}
+          = edges_collect ((EA_Nop, en20 + n1) # offset_path n1 es2) (edges_collect es1 {s})"
+      unfolding es_split by (rule edges_collect_append)
+    also have "\<dots> = edges_collect (offset_path n1 es2) (edges_collect es1 {s})" by simp
+    also have "\<dots> = edges_collect es2 (edges_collect es1 {s})" by simp
     finally show ?thesis .
   qed
-  from Seq.prems(3) collect_eq have t_in: "t \<in> path_collect es2 (path_collect es1 {s})" by simp
+  from Seq.prems(3) collect_eq have t_in: "t \<in> edges_collect es2 (edges_collect es1 {s})" by simp
   from t_in obtain s2 where
-        s2_in: "s2 \<in> path_collect es1 {s}"
-    and t_in2: "t \<in> path_collect es2 {s2}"
-    using path_collect_member by meson
+        s2_in: "s2 \<in> edges_collect es1 {s}"
+    and t_in2: "t \<in> edges_collect es2 {s2}"
+    using edges_collect_member by meson
 
   have step1: "(c1, s) \<Rightarrow> s2"
     using Seq.IH(1)[OF p1' singletonI s2_in] .
@@ -1801,22 +1716,22 @@ next
       and pc1: "cfg_path (to_cfg c1) en10 es1 ex10"
       by blast
     have collect_chain:
-      "path_collect es {s} = path_collect es1 {x \<in> {s}. bval b x}"
+      "edges_collect es {s} = edges_collect es1 {x \<in> {s}. bval b x}"
     proof -
-      have "path_collect es {s}
-            = path_collect (offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))])
-                           (path_collect [(EA_Assume b, en10 + 1)] {s})"
-        unfolding es_eq by (simp add: path_collect_append)
-      also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))]
-                                    (path_collect (offset_path 1 es1)
-                                                  (path_collect [(EA_Assume b, en10 + 1)] {s}))"
-        by (simp add: path_collect_append)
-      also have "\<dots> = path_collect (offset_path 1 es1)
-                                    (path_collect [(EA_Assume b, en10 + 1)] {s})"
+      have "edges_collect es {s}
+            = edges_collect (offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (edges_collect [(EA_Assume b, en10 + 1)] {s})"
+        unfolding es_eq by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect [(EA_Nop, n20 + (n10 + 1))]
+                                    (edges_collect (offset_path 1 es1)
+                                                  (edges_collect [(EA_Assume b, en10 + 1)] {s}))"
+        by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect (offset_path 1 es1)
+                                    (edges_collect [(EA_Assume b, en10 + 1)] {s})"
         by simp
-      also have "\<dots> = path_collect es1 (path_collect [(EA_Assume b, en10 + 1)] {s})"
+      also have "\<dots> = edges_collect es1 (edges_collect [(EA_Assume b, en10 + 1)] {s})"
         by simp
-      also have "\<dots> = path_collect es1 {x \<in> {s}. bval b x}"
+      also have "\<dots> = edges_collect es1 {x \<in> {s}. bval b x}"
         by simp
       finally show ?thesis .
     qed
@@ -1824,15 +1739,15 @@ next
     proof (rule ccontr)
       assume nb: "\<not> bval b s"
       have empty_filter: "{x \<in> {s}. bval b x} = {}" using nb by auto
-      have "path_collect es {s} = path_collect es1 {}"
+      have "edges_collect es {s} = edges_collect es1 {}"
         using collect_chain empty_filter
         by argo
-      hence "path_collect es {s} = {}" by simp
+      hence "edges_collect es {s} = {}" by simp
       with If.prems(3) show False by simp
     qed
     hence filter_eq: "{x \<in> {s}. bval b x} = {s}" by auto
     from If.prems(3) collect_chain filter_eq
-      have t_in: "t \<in> path_collect es1 {s}" by simp
+      have t_in: "t \<in> edges_collect es1 {s}" by simp
     from pc1 en10_eq ex10_eq
       have p1: "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))" by simp
     have step1: "(c1, s) \<Rightarrow> t"
@@ -1846,22 +1761,22 @@ next
       and pc2: "cfg_path (to_cfg c2) en20 es2 ex20"
       by blast
     have collect_chain:
-      "path_collect es {s} = path_collect es2 {x \<in> {s}. \<not> bval b x}"
+      "edges_collect es {s} = edges_collect es2 {x \<in> {s}. \<not> bval b x}"
     proof -
-      have "path_collect es {s}
-            = path_collect (offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))])
-                           (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
-        unfolding es_eq by (simp add: path_collect_append)
-      also have "\<dots> = path_collect [(EA_Nop, n20 + (n10 + 1))]
-                                    (path_collect (offset_path (n10 + 1) es2)
-                                                  (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s}))"
-        by (simp add: path_collect_append)
-      also have "\<dots> = path_collect (offset_path (n10 + 1) es2)
-                                    (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+      have "edges_collect es {s}
+            = edges_collect (offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (edges_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+        unfolding es_eq by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect [(EA_Nop, n20 + (n10 + 1))]
+                                    (edges_collect (offset_path (n10 + 1) es2)
+                                                  (edges_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s}))"
+        by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect (offset_path (n10 + 1) es2)
+                                    (edges_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
         by simp
-      also have "\<dots> = path_collect es2 (path_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
+      also have "\<dots> = edges_collect es2 (edges_collect [(EA_AssumeNot b, en20 + (n10 + 1))] {s})"
         by simp
-      also have "\<dots> = path_collect es2 {x \<in> {s}. \<not> bval b x}"
+      also have "\<dots> = edges_collect es2 {x \<in> {s}. \<not> bval b x}"
         by simp
       finally show ?thesis .
     qed
@@ -1870,14 +1785,14 @@ next
       assume "\<not> \<not> bval b s"
       hence bv: "bval b s" by simp
       have empty_filter: "{x \<in> {s}. \<not> bval b x} = {}" using bv by auto
-      have "path_collect es {s} = path_collect es2 {}"
+      have "edges_collect es {s} = edges_collect es2 {}"
         using collect_chain empty_filter by presburger
-      hence "path_collect es {s} = {}" by simp
+      hence "edges_collect es {s} = {}" by simp
       with If.prems(3) show False by simp
     qed
     hence filter_eq: "{x \<in> {s}. \<not> bval b x} = {s}" by auto
     from If.prems(3) collect_chain filter_eq
-      have t_in: "t \<in> path_collect es2 {s}" by simp
+      have t_in: "t \<in> edges_collect es2 {s}" by simp
     from pc2 en20_eq ex20_eq
       have p2: "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))" by simp
     have step2: "(c2, s) \<Rightarrow> t"
@@ -1919,17 +1834,17 @@ next
         es_decomp: "es = es_pre @ [(EA_AssumeNot b, n10 + 1)]"
     and p_pre: "cfg_path (to_cfg (WHILE b DO c)) 0 es_pre 0"
     by blast
-  have t_full: "t \<in> path_collect (es_pre @ [(EA_AssumeNot b, n10 + 1)]) {s}"
+  have t_full: "t \<in> edges_collect (es_pre @ [(EA_AssumeNot b, n10 + 1)]) {s}"
     using While.prems(3) es_decomp by simp
   have nb_t: "\<not> bval b t"
-    using t_full by (auto simp: path_collect_append)
+    using t_full by (auto simp: edges_collect_append)
   have body_univ:
     "\<And>es_body S0 s''. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es_body (cfg_exit (to_cfg c))
-       \<Longrightarrow> s'' \<in> path_collect es_body {S0} \<Longrightarrow> (c, S0) \<Rightarrow> s''"
+       \<Longrightarrow> s'' \<in> edges_collect es_body {S0} \<Longrightarrow> (c, S0) \<Rightarrow> s''"
     using While.IH(1)[OF _ singletonI] by blast
   have main:
     "cfg_path (to_cfg (WHILE b DO c)) 0 ER 0
-     \<Longrightarrow> T \<in> path_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S0}
+     \<Longrightarrow> T \<in> edges_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S0}
      \<Longrightarrow> \<not> bval b T
      \<Longrightarrow> (WHILE b DO c, S0) \<Rightarrow> T"
     for ER S0 T
@@ -1941,7 +1856,7 @@ next
     proof (cases ER)
       case Nil
       show ?thesis
-        using t_R nb_R Nil by (auto simp: path_collect_append big_step.WhileFalse)
+        using t_R nb_R Nil by (auto simp: edges_collect_append big_step.WhileFalse)
     next
       case (Cons hd tl)
       have ne: "ER \<noteq> []" using Cons by simp
@@ -1957,37 +1872,37 @@ next
       show ?thesis
       proof (cases "bval b S0")
         case False
-        have head_empty: "path_collect [(EA_Assume b, en10 + 1)] {S0} = {}"
+        have head_empty: "edges_collect [(EA_Assume b, en10 + 1)] {S0} = {}"
           using False by auto
-        have er_empty: "path_collect ER {S0} = {}"
+        have er_empty: "edges_collect ER {S0} = {}"
           unfolding peel_eq
-          using head_empty path_collect_append path_collect_empty_set by presburger
-        have all_empty: "path_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S0} = {}"
-          by (simp add: path_collect_append er_empty path_collect_empty_set)
+          using head_empty edges_collect_append edges_collect_empty_set by presburger
+        have all_empty: "edges_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S0} = {}"
+          by (simp add: edges_collect_append er_empty edges_collect_empty_set)
         from t_R all_empty show ?thesis by simp
       next
         case True
-        have eq_head: "path_collect [(EA_Assume b, en10 + 1)] {S0} = {S0}"
+        have eq_head: "edges_collect [(EA_Assume b, en10 + 1)] {S0} = {S0}"
           using True by auto
-        have collect_tail: "path_collect ER {S0} = path_collect ER' (path_collect es_body {S0})"
+        have collect_tail: "edges_collect ER {S0} = edges_collect ER' (edges_collect es_body {S0})"
         proof -
-          have "path_collect ER {S0} = path_collect ER' (path_collect [(EA_Nop, 0)]
-                  (path_collect (offset_path 1 es_body)
-                    (path_collect [(EA_Assume b, en10 + 1)] {S0})))"
-            unfolding peel_eq by (simp add: path_collect_append)
-          also have "\<dots> = path_collect ER' (path_collect es_body {S0})"
+          have "edges_collect ER {S0} = edges_collect ER' (edges_collect [(EA_Nop, 0)]
+                  (edges_collect (offset_path 1 es_body)
+                    (edges_collect [(EA_Assume b, en10 + 1)] {S0})))"
+            unfolding peel_eq by (simp add: edges_collect_append)
+          also have "\<dots> = edges_collect ER' (edges_collect es_body {S0})"
             using eq_head by simp
           finally show ?thesis .
         qed
         from t_R collect_tail have t_chain:
-              "T \<in> path_collect ER' (path_collect es_body {S0})"
-          by (simp add: path_collect_append)
-        obtain s'' where s''_in: "s'' \<in> path_collect es_body {S0}"
-          and t_in': "T \<in> path_collect ER' {s''}"
-          using mem_path_collect_from_set[OF t_chain] by blast
+              "T \<in> edges_collect ER' (edges_collect es_body {S0})"
+          by (simp add: edges_collect_append)
+        obtain s'' where s''_in: "s'' \<in> edges_collect es_body {S0}"
+          and t_in': "T \<in> edges_collect ER' {s''}"
+          using mem_edges_collect_from_set[OF t_chain] by blast
         have step_body: "(c, S0) \<Rightarrow> s''" using body_univ[OF p_body s''_in] .
-        have t_in_tail: "T \<in> path_collect (ER' @ [(EA_AssumeNot b, n10 + 1)]) {s''}"
-          using t_in' nb_R by (simp add: path_collect_append)
+        have t_in_tail: "T \<in> edges_collect (ER' @ [(EA_AssumeNot b, n10 + 1)]) {s''}"
+          using t_in' nb_R by (simp add: edges_collect_append)
         have step_tail: "(WHILE b DO c, s'') \<Rightarrow> T"
           using IH[OF len p_tail t_in_tail nb_R] .
         show ?thesis using True step_body step_tail by (simp add: big_step.WhileTrue)
@@ -1997,21 +1912,21 @@ next
   from main[OF p_pre t_full nb_t] show ?case .
 qed
 
-(* ── Correspondence Theorem ──────────────────────────────────────
+(* \<midarrow>\<midarrow> Correspondence Theorem \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>
    CFG collecting semantics at the exit node equals IMP2 collecting.
    Split into two directions so each can be proved independently. *)
 
-lemma cfg_path_collect_exit_le_collect:
-  "cfg_path_collect (to_cfg c) S (cfg_exit (to_cfg c)) <= collect c S"
-proof (unfold cfg_path_collect_def collect_def, rule subsetI)
+lemma cfg_edges_collect_exit_le_collect:
+  "cfg_edges_collect (to_cfg c) S (cfg_exit (to_cfg c)) <= collect c S"
+proof (unfold cfg_edges_collect_def collect_def, rule subsetI)
   fix t
   assume t: "t \<in> (\<Union>es\<in>{es. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))}.
-                  path_collect es S)"
+                  edges_collect es S)"
   then obtain es where es: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
-    and t: "t \<in> path_collect es S"
+    and t: "t \<in> edges_collect es S"
     by auto
-  then obtain s where s: "s \<in> S" and t: "t \<in> path_collect es {s}"
-    by (meson path_collect_member)
+  then obtain s where s: "s \<in> S" and t: "t \<in> edges_collect es {s}"
+    by (meson edges_collect_member)
  
   show "t \<in> {t. \<exists>s\<in>S. (c, s) \<Rightarrow> t}"
     using compile_path_big_step[OF es s t] 
@@ -2020,11 +1935,11 @@ qed
 
 lemma cfg_collect_exit_le_collect:
   "cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) <= collect c S"
-  using cfg_collect_le_path_collect cfg_path_collect_exit_le_collect
+  using cfg_collect_le_edges_collect cfg_edges_collect_exit_le_collect
   by (rule order_trans)
 
 (*
-  ⊇ direction: every big_step output is captured by the CFG collecting semantics.
+  \<supseteq> direction: every big_step output is captured by the CFG collecting semantics.
 
   Proof: induction on the big_step derivation.
   For each rule, unfold cfg_collect one step and show the output lands in the lfp.
@@ -2039,18 +1954,18 @@ proof (rule subsetI)
   then obtain s where s: "s \<in> S" and st: "(c, s) \<Rightarrow> t"
     unfolding collect_def by auto
   obtain es where es: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
-    and pt: "t \<in> path_collect es {s}"
+    and pt: "t \<in> edges_collect es {s}"
     using big_step_cfg_path st by blast
   show "t \<in> cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
     using path_sound_cfg_collect[OF es] pt
-    by (meson empty_subsetI insert_subset path_collect_mono_strong s subsetD) 
+    by (meson empty_subsetI insert_subset edges_collect_mono_strong s subsetD) 
 qed
 
 theorem cfg_collect_exit_eq_collect:
   "cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) = collect c S"
   by (rule antisym) (rule cfg_collect_exit_le_collect, rule collect_le_cfg_collect_exit)
 
-(* ── Reachability on CFG ─────────────────────────────────────────
+(* \<midarrow>\<midarrow> Reachability on CFG \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>
    Helper: a store s is reachable at program point v iff it appears
    in cfg_collect. Used in soundness proofs. *)
 

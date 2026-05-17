@@ -369,7 +369,7 @@ next
       by (simp add: Let_def c12 c22)
     also have "\<dots> =
         (n2 + k, en1 + k, ex2 + k, offset_edges k (E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2))"
-      by (simp add: offset_edges_insert_union_twice)
+      by (simp add: offset_edges_insert_shift)
     finally show ?case unfolding n' en ex E .
   qed
 next
@@ -423,7 +423,8 @@ next
     show ?thesis
       unfolding lhs n' en ex E
       using  ck1' ck2'    apply(simp)
-      using offset_edges_Un offset_edges_insert_shift by presburger
+      by (simp add: offset_edges_insert_shift)
+      
   
   qed
 next
