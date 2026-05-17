@@ -42,7 +42,7 @@ lemma finite_pp3[simp]: "finite (UNIV :: pp3 set)"
 *)
 
 (*
-  Sign Domain — Track B obligations
+  Sign Domain Track B obligations
   -----------------------------------
   Needed beyond Track A:
     S1.9:  instantiation sign :: order
@@ -76,7 +76,7 @@ lemma sign_is_mono_eq:
   sorry
 
 (*
-  Interval Domain — Track B obligations
+  Interval Domain Track B obligations
   ----------------------------------------
   Beyond Track A, need I1.13–I1.16 and B3.7–B3.8.
 *)
@@ -85,8 +85,8 @@ lemma sign_is_mono_eq:
   widening_precise for ivl:
     b ≤ a means Ivl l2 u2 ≤ Ivl l1 u1, i.e. l1 ≤ l2 (left tighter) and u2 ≤ u1 (right tighter).
     widen_ivl (Ivl l1 u1) (Ivl l2 u2):
-      left:  if l1 ≤ l2 then l1 else MinInf  — since l1 ≤ l2, result = l1
-      right: if u2 ≤ u1 then u1 else PlusInf — since u2 ≤ u1, result = u1
+      left:  if l1 ≤ l2 then l1 else MinInf  since l1 ≤ l2, result = l1
+      right: if u2 ≤ u1 then u1 else PlusInf since u2 ≤ u1, result = u1
     So widen_ivl a b = Ivl l1 u1 = a. QED (4 cases on eint constructors).
 *)
 lemma ivl_widening_precise:

@@ -139,7 +139,7 @@ lemma SOME_distinct_list_if_set_empty:
   shows "(SOME xs :: 'a list. distinct xs \<and> set xs = P) = []"
   unfolding hp by (rule SOME_list_distinct_set_empty_eq_Nil)
 
-(* Special case: no edges into v and v is not the entry — tree is Answer bot, same as rhs. *)
+(* Special case: no edges into v and v is not the entry tree is Answer bot, same as rhs. *)
 lemma make_rhs_tree_eq_Answer_bot_if_no_preds_not_entry:
   assumes not_e: "v \<noteq> cfg_entry g"
   assumes no_in: "\<And>u a. (u, a, v) \<notin> cfg_edges g"

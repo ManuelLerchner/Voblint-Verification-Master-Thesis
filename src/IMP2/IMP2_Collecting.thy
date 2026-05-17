@@ -12,7 +12,7 @@ begin
     lfp of  T \<mapsto> S \<union> collect c {s \<in> T. bval b s}
   characterises loop-head-reachable states; exit states add \<not>bval b.
 
-  Note: collect (WHILE b DO c) S \<noteq> lfp F in general —
+  Note: collect (WHILE b DO c) S \<noteq> lfp F in general
   diverging runs contribute to lfp but not to collect.
 *)
 

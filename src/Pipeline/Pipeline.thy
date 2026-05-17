@@ -77,7 +77,7 @@ where
 *)
 
 (* pipeline_sound is the cfg_exit specialisation of pipeline_invariant_sound
-   plus termination — proven below the invariant theorem. *)
+   plus termination proven below the invariant theorem. *)
 
 (* ── Sign Analysis Pipeline ───────────────────────────────────── *)
 (*
@@ -186,7 +186,7 @@ corollary ivl_pipeline_sound:
 
 (*
   Point-map invariant: the solver result is sound at EVERY program point.
-  Does NOT require termination — holds for all starting states s in gamma(init).
+  Does NOT require termination holds for all starting states s in gamma(init).
   The terminates assumption was removed; it is unused (the \<forall>v conclusion
   does not depend on any specific execution reaching exit).
 *)

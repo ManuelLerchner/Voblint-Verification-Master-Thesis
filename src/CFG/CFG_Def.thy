@@ -57,7 +57,7 @@ record cfg =
   cfg_exit  :: pp
   cfg_edges :: "(pp * edge_action * pp) set"
 
-(* Affine shift along program points — compile c (n+k) is compile c n with all pp+k. *)
+(* Affine shift along program points compile c (n+k) is compile c n with all pp+k. *)
 
 definition offset_edges :: "nat \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> edge_action \<times> pp) set" where
   "offset_edges k E = (\<lambda>(u,a,v). (u + k, a, v + k)) ` E"

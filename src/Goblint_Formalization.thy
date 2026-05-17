@@ -31,13 +31,13 @@ begin
   Master's thesis at TUM: prove the complete Goblint static analysis pipeline.
   Supervisors: Alexandra Gra{\ss}, Michael Schwarz.
 
-  Pipeline (two routes — both proved equivalent):
+  Pipeline (two routes both proved equivalent):
 
-  Route A — CFG-mediated:
+  Route A CFG-mediated:
     AST  --(compile)-->  CFG  --(rhs/make_rhs_tree)-->  Equations  --(TD)-->  Result
     [IMP2_*, CFG_*, Constraint_System, TD_Interface]
 
-  Route B — Direct (no CFG record):
+  Route B Direct (no CFG record):
     AST  --(predecessors_of/direct_tree)-->  Equations  --(TD)-->  Result
     [Direct_Equations]
 

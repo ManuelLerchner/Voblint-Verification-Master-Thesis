@@ -71,7 +71,7 @@ lemma eint_le_trans: "eint_le x y \<Longrightarrow> eint_le y z \<Longrightarrow
   by (cases x; cases y; cases z) simp_all
 
 instantiation ivl :: order begin
-instance sorry (* use eint_le_refl / eint_le_antisym / eint_le_trans — lemmas above *)
+instance sorry (* use eint_le_refl / eint_le_antisym / eint_le_trans lemmas above *)
 end
 
 instantiation ivl :: order_bot begin

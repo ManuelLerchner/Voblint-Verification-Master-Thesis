@@ -29,7 +29,7 @@ type_synonym 'a abs_state = "vname => 'a"
      - join_op: sound upper bound (for RHS fold over predecessor edges)
 
    This locale is sufficient for post_fixpoint_sound.
-   It does NOT require widening — soundness is independent of termination. *)
+   It does NOT require widening soundness is independent of termination. *)
 
 locale sound_domain =
   fixes gamma   :: "'a::{preorder,bot} => int set"

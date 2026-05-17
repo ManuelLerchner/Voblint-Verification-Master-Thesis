@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pipeline Walkthrough — IMP to Sound Sign Analysis</title>
+<title>Pipeline Walkthrough IMP to Sound Sign Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -34,7 +34,7 @@
     <header class="hero">
       <span class="tag">Goblint Formalization · Walkthrough</span>
       <h1>IMP source to sound sign-analysis result</h1>
-      <p>One example program traced through every layer of the verified pipeline — from concrete big-step semantics, via the CFG and the equation system, through the vendored TD top-down solver, to <code>goblint_sign_sound</code>. Each stage names the relevant functions and highlights the core lemmas that make the chain correct.</p>
+      <p>One example program traced through every layer of the verified pipeline from concrete big-step semantics, via the CFG and the equation system, through the vendored TD top-down solver, to <code>goblint_sign_sound</code>. Each stage names the relevant functions and highlights the core lemmas that make the chain correct.</p>
     </header>
 
     <!-- STAGE 0 -->
@@ -68,12 +68,12 @@ WHILE Less (N 0) (V x) DO
     <!-- TOP LEVEL FLOW -->
     <section class="stage" id="stage-flow">
       <h2><span class="badge">→</span>Top-level flow</h2>
-      <p class="lede">How the artifacts of each stage connect into a single soundness statement. <strong>Sign pipeline closed</strong> (<code>goblint_sign_sound</code>). Interval / optional paths still have <code>sorry</code> — see <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
+      <p class="lede">How the artifacts of each stage connect into a single soundness statement. <strong>Sign pipeline closed</strong> (<code>goblint_sign_sound</code>). Interval / optional paths still have <code>sorry</code> see <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
 
       <h3>Proof status (sign end-to-end)</h3>
       <div class="mermaid">
 flowchart TD
-  subgraph done ["Done — sign end-to-end"]
+  subgraph done ["Done sign end-to-end"]
     BS["big_step (c,s) ⇒ t"]
     COL["collect / cfg_collect"]
     EQ["cfg_collect_exit_eq_collect"]
@@ -99,7 +99,7 @@ flowchart TD
     <!-- STAGE 1 -->
     <section class="stage" id="stage-1">
       <h2><span class="badge">01</span>Syntax &amp; concrete semantics</h2>
-      <p class="lede"><code>src/IMP2/</code> — the ground truth we want to over-approximate.</p>
+      <p class="lede"><code>src/IMP2/</code> the ground truth we want to over-approximate.</p>
 
       <table>
         <thead><tr><th>File / definition</th><th>Role</th></tr></thead>
@@ -113,9 +113,9 @@ flowchart TD
 
       <h4>Core lemmas</h4>
       <ul class="lemma-list">
-        <li><span class="name">big_step_determ</span> — concrete semantics is deterministic.</li>
-        <li><span class="name">collect_SKIP / Assign / Seq / If / While</span> — compositional shape of <code>collect</code>.</li>
-        <li><span class="name">collect_mono</span>, <span class="name">while_collect_mono</span> — monotone in the input set.</li>
+        <li><span class="name">big_step_determ</span> concrete semantics is deterministic.</li>
+        <li><span class="name">collect_SKIP / Assign / Seq / If / While</span> compositional shape of <code>collect</code>.</li>
+        <li><span class="name">collect_mono</span>, <span class="name">while_collect_mono</span> monotone in the input set.</li>
       </ul>
 
       <div class="callout">
@@ -127,25 +127,25 @@ flowchart TD
     <!-- STAGE 2 -->
     <section class="stage" id="stage-2">
       <h2><span class="badge">02</span>IMP → CFG</h2>
-      <p class="lede"><code>src/CFG/</code> — translate the AST into a finite labeled graph, prove the two views agree at the exit. <strong>Bridge proved</strong> (<code>cfg_collect_exit_eq_collect</code>, no <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>) — <a href="IMP_CFG_WALKTHROUGH.html">deep dive</a>.</p>
+      <p class="lede"><code>src/CFG/</code> translate the AST into a finite labeled graph, prove the two views agree at the exit. <strong>Bridge proved</strong> (<code>cfg_collect_exit_eq_collect</code>, no <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>) <a href="IMP_CFG_WALKTHROUGH.html">deep dive</a>.</p>
 
       <h3>2a · CFG model <span class="pill">CFG_Def.thy</span></h3>
 <pre><code>datatype edge_action = EA_Nop | EA_Assign vname aexp | EA_Assume bexp | EA_AssumeNot bexp
 record cfg = cfg_entry :: pp, cfg_exit :: pp, cfg_edges :: (pp × edge_action × pp) set
 definition predecessors, successors, cfg_wf</code></pre>
       <ul class="lemma-list">
-        <li><span class="name">finite_predecessors</span> — needed so predecessor joins are well-defined <code>Finite_Set.fold</code>s.</li>
+        <li><span class="name">finite_predecessors</span> needed so predecessor joins are well-defined <code>Finite_Set.fold</code>s.</li>
       </ul>
 
       <h3>2b · Compilation <span class="pill">IMP2_to_CFG.thy</span></h3>
 <pre><code>fun compile :: com ⇒ nat ⇒ nat × pp × pp × (pp × edge_action × pp) set
 definition to_cfg :: com ⇒ cfg</code></pre>
       <ul class="lemma-list">
-        <li><span class="name">compile_fresh</span> — emitted node ids stay above the fresh counter.</li>
-        <li><span class="name">compile_ge</span> — fresh counter only grows.</li>
-        <li><span class="name">compile_entry_ne_exit</span> — entry and exit nodes are distinct.</li>
-        <li><span class="name">compile_finite ⇒ to_cfg_finite</span> — edge set is finite (used everywhere downstream).</li>
-        <li><span class="name">to_cfg_wf</span> — compiled CFGs satisfy <code>cfg_wf</code>.</li>
+        <li><span class="name">compile_fresh</span> emitted node ids stay above the fresh counter.</li>
+        <li><span class="name">compile_ge</span> fresh counter only grows.</li>
+        <li><span class="name">compile_entry_ne_exit</span> entry and exit nodes are distinct.</li>
+        <li><span class="name">compile_finite ⇒ to_cfg_finite</span> edge set is finite (used everywhere downstream).</li>
+        <li><span class="name">to_cfg_wf</span> compiled CFGs satisfy <code>cfg_wf</code>.</li>
       </ul>
 
       <h3>2c · Paths &amp; CFG collecting semantics <span class="pill">CFG_Path / CFG_Collecting</span></h3>
@@ -154,8 +154,8 @@ fun edge_collect, path_collect
 definition cfg_collect :: cfg ⇒ store set ⇒ (pp ⇒ store set)</code></pre>
       <ul class="lemma-list">
         <li><span class="name">edge_collect_mono</span>, <span class="name">path_collect_mono(_strong)</span></li>
-        <li><span class="name">collect_pp_mono</span> — CFG collecting monotone in input set.</li>
-        <li class="key"><span class="name key">cfg_collect_exit_eq_collect</span> <span class="pill key">bridge</span> — IMP ↔ CFG correctness link: CFG collecting at the exit equals AST <code>collect</code>.</li>
+        <li><span class="name">collect_pp_mono</span> CFG collecting monotone in input set.</li>
+        <li class="key"><span class="name key">cfg_collect_exit_eq_collect</span> <span class="pill key">bridge</span> IMP ↔ CFG correctness link: CFG collecting at the exit equals AST <code>collect</code>.</li>
       </ul>
 
       <h4>Example CFG for our program</h4>
@@ -179,8 +179,8 @@ flowchart LR
 
     <!-- STAGE 3 -->
     <section class="stage" id="stage-3">
-      <h2><span class="badge">03</span>Abstract domain — Sign</h2>
-      <p class="lede"><code>src/Domains/</code> — a sound Galois connection plus per-action transfer functions.</p>
+      <h2><span class="badge">03</span>Abstract domain Sign</h2>
+      <p class="lede"><code>src/Domains/</code> a sound Galois connection plus per-action transfer functions.</p>
 
       <h3>3a · Generic interface <span class="pill">Abstract_Domain.thy</span></h3>
 <pre><code>locale sound_domain =
@@ -189,10 +189,10 @@ flowchart LR
 type_synonym 'a abs_state = vname ⇒ 'a
 definition gamma_state, bot_state, join_state</code></pre>
       <ul class="lemma-list">
-        <li><span class="name">gamma_join_ub1 / ub2</span> — join is a sound upper bound concretely.</li>
-        <li><span class="name">join_comp_fun_commute</span>, <span class="name">join_state_comp_fun_commute</span> — required so <code>Finite_Set.fold</code> is order-independent.</li>
-        <li><span class="name">gamma_state_mono</span>, <span class="name">gamma_state_join_ub1/ub2</span>, <span class="name">gamma_state_bot</span> — pointwise lifting.</li>
-        <li><span class="name">gamma_abs_join_set_ub</span>, <span class="name">join_fold_ge</span> — soundness of predecessor join.</li>
+        <li><span class="name">gamma_join_ub1 / ub2</span> join is a sound upper bound concretely.</li>
+        <li><span class="name">join_comp_fun_commute</span>, <span class="name">join_state_comp_fun_commute</span> required so <code>Finite_Set.fold</code> is order-independent.</li>
+        <li><span class="name">gamma_state_mono</span>, <span class="name">gamma_state_join_ub1/ub2</span>, <span class="name">gamma_state_bot</span> pointwise lifting.</li>
+        <li><span class="name">gamma_abs_join_set_ub</span>, <span class="name">join_fold_ge</span> soundness of predecessor join.</li>
       </ul>
 
       <h3>3b · Sign instance <span class="pill">Sign_Domain.thy</span></h3>
@@ -201,11 +201,11 @@ fun gamma_sign, sign_le, join_sign
 fun sign_plus, sign_minus, sign_times
 fun aval_sign :: aexp ⇒ (vname ⇒ sign) ⇒ sign</code></pre>
       <ul class="lemma-list">
-        <li><span class="name">sign_le_refl / antisym / trans</span> — partial order on signs.</li>
-        <li><span class="name">join_sign_ub1/ub2/least/comm/assoc</span> — lattice laws on <code>join_sign</code>.</li>
-        <li><span class="name">gamma_sign_mono</span> — Galois monotonicity.</li>
+        <li><span class="name">sign_le_refl / antisym / trans</span> partial order on signs.</li>
+        <li><span class="name">join_sign_ub1/ub2/least/comm/assoc</span> lattice laws on <code>join_sign</code>.</li>
+        <li><span class="name">gamma_sign_mono</span> Galois monotonicity.</li>
         <li><span class="name">sign_plus_sound</span>, <span class="name">sign_minus_sound</span>, <span class="name">sign_times_sound</span> ⇒ <span class="name">aval_sign_sound</span>.</li>
-        <li><span class="name">assign_sign_sound</span>, <span class="name">assume_sign_sound</span>, <span class="name">assume_not_sign_sound</span> — transfer-function soundness.</li>
+        <li><span class="name">assign_sign_sound</span>, <span class="name">assume_sign_sound</span>, <span class="name">assume_not_sign_sound</span> transfer-function soundness.</li>
       </ul>
 
       <h4>Sign lattice</h4>
@@ -233,7 +233,7 @@ flowchart BT
     <!-- STAGE 4 -->
     <section class="stage" id="stage-4">
       <h2><span class="badge">04</span>Equation system</h2>
-      <p class="lede"><code>src/Equations/</code> — package transfer functions into a monotone right-hand side and prove post-fixpoints over-approximate.</p>
+      <p class="lede"><code>src/Equations/</code> package transfer functions into a monotone right-hand side and prove post-fixpoints over-approximate.</p>
 
       <h3>Constraint_System.thy</h3>
 <pre><code>record 'a domain_transfer =
@@ -248,15 +248,15 @@ definition rhs              -- join over predecessors of apply_tf(action)(env u)
 
 definition is_post_fixpoint g tf join bot s0 env  ≡  ∀v. rhs ... env v ≤ env v</code></pre>
       <ul class="lemma-list">
-        <li><span class="name">abs_join_set_empty</span>, <span class="name">mem_image_le_fold</span> — fold infrastructure.</li>
-        <li><span class="name">rhs_no_predecessors_not_entry</span>, <span class="name">rhs_entry_no_predecessors</span> — boundary cases.</li>
-        <li><span class="name">fold_join_image_mono</span> — fold monotone in its image.</li>
-        <li class="key"><span class="name key">rhs_mono</span> <span class="pill key">key</span> — <code>rhs</code> is monotone in <code>env</code> (prerequisite for the TD solver).</li>
+        <li><span class="name">abs_join_set_empty</span>, <span class="name">mem_image_le_fold</span> fold infrastructure.</li>
+        <li><span class="name">rhs_no_predecessors_not_entry</span>, <span class="name">rhs_entry_no_predecessors</span> boundary cases.</li>
+        <li><span class="name">fold_join_image_mono</span> fold monotone in its image.</li>
+        <li class="key"><span class="name key">rhs_mono</span> <span class="pill key">key</span> <code>rhs</code> is monotone in <code>env</code> (prerequisite for the TD solver).</li>
       </ul>
 
       <h3>Constraint_System_Sound.thy</h3>
       <ul class="lemma-list">
-        <li><span class="name">collect_pp_abstract_sound</span> — pointwise: post-fixpoint envs over-approximate <code>cfg_collect</code> at every node.</li>
+        <li><span class="name">collect_pp_abstract_sound</span> pointwise: post-fixpoint envs over-approximate <code>cfg_collect</code> at every node.</li>
         <li class="key"><span class="name key">post_fixpoint_sound</span> <span class="pill key">central</span></li>
       </ul>
 <pre><code>theorem post_fixpoint_sound:
@@ -273,7 +273,7 @@ definition is_post_fixpoint g tf join bot s0 env  ≡  ∀v. rhs ... env v ≤ e
     <!-- STAGE 5 -->
     <section class="stage" id="stage-5">
       <h2><span class="badge">05</span>Top-down solver bridge</h2>
-      <p class="lede"><code>src/Solver/</code> — wrap <code>rhs</code> in the form the vendored TD solver expects, and import its post-fixpoint guarantee.</p>
+      <p class="lede"><code>src/Solver/</code> wrap <code>rhs</code> in the form the vendored TD solver expects, and import its post-fixpoint guarantee.</p>
 
       <h3>TD_Interface.thy</h3>
 <pre><code>definition make_rhs g tf join bot s0 v env = rhs g tf join bot s0 env v
@@ -281,11 +281,11 @@ fun rhs_tree_fold           -- monadic rhs in the TD Answer/Query monad
 definition make_rhs_tree
 definition env_map, lookup_bot</code></pre>
       <ul class="lemma-list">
-        <li><span class="name">make_rhs_mono</span> — packaged monotonicity (uses <code>rhs_mono</code>).</li>
-        <li class="key"><span class="name key">make_rhs_tree_correspondence</span> <span class="pill key">bridge</span> — monadic <code>make_rhs_tree</code> equals <code>make_rhs</code> after traversing the env.</li>
-        <li><span class="name">make_rhs_tree_correspondence_not_entry_no_predecessors</span> — boundary case of the above.</li>
-        <li><span class="name">rhs_eq_fold_join_sorted_predecessors</span>, <span class="name">fold_join_apply_edges_eq_fold_join_over_map</span> — set-fold ↔ list-fold.</li>
-        <li><span class="name">part_solutionD</span> — extract partial-solution facts from the solver result.</li>
+        <li><span class="name">make_rhs_mono</span> packaged monotonicity (uses <code>rhs_mono</code>).</li>
+        <li class="key"><span class="name key">make_rhs_tree_correspondence</span> <span class="pill key">bridge</span> monadic <code>make_rhs_tree</code> equals <code>make_rhs</code> after traversing the env.</li>
+        <li><span class="name">make_rhs_tree_correspondence_not_entry_no_predecessors</span> boundary case of the above.</li>
+        <li><span class="name">rhs_eq_fold_join_sorted_predecessors</span>, <span class="name">fold_join_apply_edges_eq_fold_join_over_map</span> set-fold ↔ list-fold.</li>
+        <li><span class="name">part_solutionD</span> extract partial-solution facts from the solver result.</li>
       </ul>
 
       <h3>TD_Soundness.thy</h3>
@@ -295,20 +295,20 @@ theorem interval_analysis_sound  -- instantiation for Interval</code></pre>
 
       <h3>TD_Total.thy <span class="pill">termination</span></h3>
       <ul class="lemma-list">
-        <li><span class="name">sign_widening_precise</span>, <span class="name">sign_wf_widening_chains</span>, <span class="name">sign_is_mono_eq</span> — well-founded chains; monotone widening.</li>
-        <li><span class="name">ivl_widening_precise</span>, <span class="name">ivl_wf_widening_chains</span>, <span class="name">ivl_narrowing_le</span>, <span class="name">ivl_is_mono_eq</span> — interval analogues.</li>
+        <li><span class="name">sign_widening_precise</span>, <span class="name">sign_wf_widening_chains</span>, <span class="name">sign_is_mono_eq</span> well-founded chains; monotone widening.</li>
+        <li><span class="name">ivl_widening_precise</span>, <span class="name">ivl_wf_widening_chains</span>, <span class="name">ivl_narrowing_le</span>, <span class="name">ivl_is_mono_eq</span> interval analogues.</li>
       </ul>
 
       <div class="callout">
         <div class="label">From TD</div>
-        <p><span class="mono">td_analyse_post_fixpoint</span> — the vendored <code>TD_plain</code> solver returns a value satisfying <code>is_post_fixpoint</code>.</p>
+        <p><span class="mono">td_analyse_post_fixpoint</span> the vendored <code>TD_plain</code> solver returns a value satisfying <code>is_post_fixpoint</code>.</p>
       </div>
     </section>
 
     <!-- STAGE 6 -->
     <section class="stage" id="stage-6">
       <h2><span class="badge">06</span>End-to-end pipeline</h2>
-      <p class="lede"><code>src/Pipeline/</code> — compose the prior stages into exit and point-map soundness; top-level sign result in <code>Goblint_Formalization.thy</code>.</p>
+      <p class="lede"><code>src/Pipeline/</code> compose the prior stages into exit and point-map soundness; top-level sign result in <code>Goblint_Formalization.thy</code>.</p>
 
       <h3>Pipeline.thy</h3>
 <pre><code>definition domain_transfer_sound gamma tf
@@ -372,7 +372,7 @@ theorem sign_pipeline_invariant_sound:  -- every program point
       </div>
 
       <div class="def-card">
-        <h3>CFG layer — graph structure</h3>
+        <h3>CFG layer graph structure</h3>
         <p class="sub">src/CFG/CFG_Def.thy</p>
         <div class="def-block"><em>type_synonym</em>  <i>pp</i>  <u>=</u>  nat
 
@@ -398,7 +398,7 @@ theorem sign_pipeline_invariant_sound:  -- every program point
       </div>
 
       <div class="def-card">
-        <h3>CFG layer — concrete transformers</h3>
+        <h3>CFG layer concrete transformers</h3>
         <p class="sub">src/CFG/CFG_Collecting.thy · src/CFG/CFG_Path.thy</p>
         <div class="def-block"><em>-- per-edge concrete action over store sets</em>
 <b>edge_collect</b> <s>EA_Nop</s>           S   <u>=</u>   S
@@ -420,7 +420,7 @@ g ⊢ u →* v   <u>≡</u>   ∃ es.  <b>cfg_path</b> g u es v          <em>-- 
       </div>
 
       <div class="def-card">
-        <h3>CFG layer — collecting semantics</h3>
+        <h3>CFG layer collecting semantics</h3>
         <p class="sub">src/CFG/CFG_Collecting.thy</p>
         <div class="def-block"><em>-- one-step "push" through every incoming edge</em>
 <b>collect_pp</b> g ρ v   <u>≡</u>   ⋃ { <b>edge_collect</b> a (ρ u)  |  (u, a, v) <u>∈</u> <i>cfg_edges</i> g }
@@ -522,18 +522,18 @@ This is what makes  <b>Finite_Set.fold</b> (<u>⊔</u>) ⊥  order-independent o
 
     <!-- NARRATIVE -->
     <section class="stage" id="narrative">
-      <h2><span class="badge">∎</span>End-to-end soundness — narrative</h2>
+      <h2><span class="badge">∎</span>End-to-end soundness narrative</h2>
       <p class="lede">Each lemma stated abstractly (math form, no Isabelle escapes), in the order in which the soundness argument actually uses them. The final sub-section composes them into one chain.</p>
 
       <div class="card tight">
         <h4>Notation</h4>
         <ul>
-          <li><code>c</code> — IMP program; <code>s</code> — initial concrete store; <code>t</code> — concrete final store.</li>
-          <li><code>g = to_cfg c</code> — compiled CFG; <code>pp</code> — program points.</li>
-          <li><code>D</code> — abstract domain (think <code>sign</code>); <code>γ</code> — concretization; <code>γ_state : (vname ⇒ D) ⇒ store set</code>.</li>
-          <li><code>tf</code> — transfer functions (<code>tf_assign</code>, <code>tf_assume</code>, <code>tf_assume_not</code>); <code>apply_tf a</code> — per-edge action <code>a</code>.</li>
-          <li><code>env : pp ⇒ (vname ⇒ D)</code> — abstract environment computed by the solver.</li>
-          <li><code>s₀ : (vname ⇒ D)</code> — initial abstract state at the CFG entry.</li>
+          <li><code>c</code> IMP program; <code>s</code> initial concrete store; <code>t</code> concrete final store.</li>
+          <li><code>g = to_cfg c</code> compiled CFG; <code>pp</code> program points.</li>
+          <li><code>D</code> abstract domain (think <code>sign</code>); <code>γ</code> concretization; <code>γ_state : (vname ⇒ D) ⇒ store set</code>.</li>
+          <li><code>tf</code> transfer functions (<code>tf_assign</code>, <code>tf_assume</code>, <code>tf_assume_not</code>); <code>apply_tf a</code> per-edge action <code>a</code>.</li>
+          <li><code>env : pp ⇒ (vname ⇒ D)</code> abstract environment computed by the solver.</li>
+          <li><code>s₀ : (vname ⇒ D)</code> initial abstract state at the CFG entry.</li>
         </ul>
       </div>
 

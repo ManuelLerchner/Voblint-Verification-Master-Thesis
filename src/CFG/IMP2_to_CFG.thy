@@ -120,7 +120,7 @@ next
     using n' by linarith
 qed
 
-(* Split \<forall> over A \<union> {a} \<union> B — keeps automation on tiny goals (no deep blast on big unions). *)
+(* Split \<forall> over A \<union> {a} \<union> B keeps automation on tiny goals (no deep blast on big unions). *)
 lemma ball_union3:
   fixes P :: "'a \<Rightarrow> bool"
   assumes "\<forall>e\<in>A. P e" and "P a" and "\<forall>e\<in>B. P e"

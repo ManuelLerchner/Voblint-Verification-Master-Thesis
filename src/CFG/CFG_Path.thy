@@ -8,7 +8,7 @@ begin
   Pattern: inductive path + derived notation + intro/elim/simp lemma library.
   Adapted from: https://github.com/lohner/FormalSSA (Ullrich & Lohner, Isabelle2016)
                 "Verified Construction of Static Single-Assignment Form"
-                SSA_CFG.thy / Graph_path.thy — path2 + lemma library.
+                SSA_CFG.thy / Graph_path.thy path2 + lemma library.
   Pattern 1: inductive path; Pattern 2: attribute discipline;
             Pattern 4: derived _cases / _induct lemmas.
 

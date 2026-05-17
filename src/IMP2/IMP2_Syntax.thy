@@ -45,7 +45,7 @@ datatype com =
   | If     bexp  com  com        ("IF _ THEN _ ELSE _"   [0, 0, 61] 61)
   | While  bexp  com             ("WHILE _ DO _"         [0, 61]    61)
 
-(* Countability and a fixed linear order (pull-back from @{const to_nat}) —
+(* Countability and a fixed linear order (pull-back from @{const to_nat})
    used for @{const sorted_list_of_set} on finite predecessor sets in the CFG. *)
 
 instance aexp :: countable

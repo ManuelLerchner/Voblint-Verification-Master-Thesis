@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>IMP &amp; CFG Walkthrough — Syntax, Compilation, Equivalence</title>
+<title>IMP &amp; CFG Walkthrough Syntax, Compilation, Equivalence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -45,10 +45,10 @@
         <p><strong>No <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>.</strong> Bridge theorem
           <code>cfg_collect_exit_eq_collect</code> is fully proved in <code>CFG_Collecting.thy</code>.
           Optional lemmas that were previously placeholders (<code>collect_While</code>, exit-reachability helpers)
-          were removed rather than left as <code>sorry</code> — they are not needed on the critical path.
+          were removed rather than left as <code>sorry</code> they are not needed on the critical path.
           The <strong>sign</strong> pipeline through equations, solver, and
           <code>goblint_sign_sound</code> is closed. Interval stretch and optional paths
-          still use <code>sorry</code> — see <code>docs/PROOF_PHASES.md</code>.</p>
+          still use <code>sorry</code> see <code>docs/PROOF_PHASES.md</code>.</p>
       </div>
     </header>
 
@@ -101,7 +101,7 @@ flowchart LR
     <!-- IMP SYNTAX -->
     <section class="stage" id="imp-syntax">
       <h2><span class="badge">01</span>IMP2 syntax</h2>
-      <p class="lede"><code>src/IMP2/IMP2_Syntax.thy</code> — self-contained AST (extends classic IMP with richer expressions).</p>
+      <p class="lede"><code>src/IMP2/IMP2_Syntax.thy</code> self-contained AST (extends classic IMP with richer expressions).</p>
 
       <div class="def-card">
         <h3>Stores and names</h3>
@@ -142,7 +142,7 @@ WHILE b DO c</code></pre>
     <!-- IMP SEMANTICS -->
     <section class="stage" id="imp-sem">
       <h2><span class="badge">02</span>Big-step operational semantics</h2>
-      <p class="lede"><code>src/IMP2/IMP2_Semantics.thy</code> — evaluation of expressions and commands.</p>
+      <p class="lede"><code>src/IMP2/IMP2_Semantics.thy</code> evaluation of expressions and commands.</p>
 
       <div class="def-card">
         <h3><code>aval</code> / <code>bval</code></h3>
@@ -152,7 +152,7 @@ WHILE b DO c</code></pre>
 
       <div class="def-card">
         <h3><code>big_step</code></h3>
-        <p class="sub">inductive (c,s) ⇒ t — infix matches HOL-IMP.Big_Step</p>
+        <p class="sub">inductive (c,s) ⇒ t infix matches HOL-IMP.Big_Step</p>
         <table>
           <thead><tr><th>Rule</th><th>Meaning</th></tr></thead>
           <tbody>
@@ -168,17 +168,17 @@ WHILE b DO c</code></pre>
 
       <h4>Proved lemmas (why they matter)</h4>
       <ul class="lemma-list">
-        <li><span class="name">skip_simp</span>, <span class="name">assign_simp</span> — characterise single-command executions; used in inversion proofs.</li>
-        <li><span class="name">big_step_If_iff</span> — <code>collect_If</code> splits on the guard without duplicating case analysis.</li>
-        <li class="key"><span class="name key">big_step_determ</span> — at most one final store per <code>(c,s)</code>; concrete runs are unique when they exist.</li>
-        <li><span class="name">sim_*</span> family — command similarity (<code>c ~ c'</code>); auxiliary material for program transformations (not on the main equivalence path).</li>
+        <li><span class="name">skip_simp</span>, <span class="name">assign_simp</span> characterise single-command executions; used in inversion proofs.</li>
+        <li><span class="name">big_step_If_iff</span> <code>collect_If</code> splits on the guard without duplicating case analysis.</li>
+        <li class="key"><span class="name key">big_step_determ</span> at most one final store per <code>(c,s)</code>; concrete runs are unique when they exist.</li>
+        <li><span class="name">sim_*</span> family command similarity (<code>c ~ c'</code>); auxiliary material for program transformations (not on the main equivalence path).</li>
       </ul>
     </section>
 
     <!-- IMP COLLECTING -->
     <section class="stage" id="imp-collect">
       <h2><span class="badge">03</span>Collecting semantics on the AST</h2>
-      <p class="lede"><code>src/IMP2/IMP2_Collecting.thy</code> — lift big-step to sets of stores.</p>
+      <p class="lede"><code>src/IMP2/IMP2_Collecting.thy</code> lift big-step to sets of stores.</p>
 
       <div class="def-card">
         <h3><code>collect</code></h3>
@@ -189,12 +189,12 @@ WHILE b DO c</code></pre>
 
       <h4>Compositional lemmas (proved)</h4>
       <ul class="lemma-list">
-        <li><span class="name">collect_SKIP</span> — <code>collect SKIP S = S</code>.</li>
-        <li><span class="name">collect_Assign</span> — image of assignment over <code>S</code>.</li>
-        <li><span class="name">collect_Seq</span> — <code>collect (c1;;c2) S = collect c2 (collect c1 S)</code>; sequential composition as function composition on sets.</li>
-        <li><span class="name">collect_If</span> — partition <code>S</code> by <code>bval b</code>, union the two branches.</li>
-        <li><span class="name">collect_mono</span> — larger input ⇒ larger output; needed for fixpoint reasoning on loops and for abstract soundness.</li>
-        <li><span class="name">while_collect_mono</span> — the loop body’s one-step transformer is monotone; prerequisite for <code>lfp</code> characterisations.</li>
+        <li><span class="name">collect_SKIP</span> <code>collect SKIP S = S</code>.</li>
+        <li><span class="name">collect_Assign</span> image of assignment over <code>S</code>.</li>
+        <li><span class="name">collect_Seq</span> <code>collect (c1;;c2) S = collect c2 (collect c1 S)</code>; sequential composition as function composition on sets.</li>
+        <li><span class="name">collect_If</span> partition <code>S</code> by <code>bval b</code>, union the two branches.</li>
+        <li><span class="name">collect_mono</span> larger input ⇒ larger output; needed for fixpoint reasoning on loops and for abstract soundness.</li>
+        <li><span class="name">while_collect_mono</span> the loop body’s one-step transformer is monotone; prerequisite for <code>lfp</code> characterisations.</li>
       </ul>
 
       <p>While-loops in the bridge proof use induction on <code>big_step</code> (<code>big_step_cfg_path</code>), not a separate <code>collect_While</code> lemma (removed from the codebase).</p>
@@ -210,7 +210,7 @@ s = (λ_. 0)   -- all variables 0</code></pre>
     <!-- CFG MODEL -->
     <section class="stage" id="cfg-model">
       <h2><span class="badge">04</span>CFG model</h2>
-      <p class="lede"><code>src/CFG/CFG_Def.thy</code> — programs as finite labelled graphs.</p>
+      <p class="lede"><code>src/CFG/CFG_Def.thy</code> programs as finite labelled graphs.</p>
 
       <div class="def-card">
         <h3>Program points and edge actions</h3>
@@ -245,24 +245,24 @@ s = (λ_. 0)   -- all variables 0</code></pre>
 
       <h4>Proved lemmas</h4>
       <ul class="lemma-list">
-        <li><span class="name">finite_predecessors</span> — from finite <code>cfg_edges</code>; enables <code>Finite_Set.fold</code> in the solver layer.</li>
-        <li><span class="name">offset_edges_*</span> — algebraic laws for shifting edge sets when gluing compiled fragments.</li>
-        <li><span class="name">cfg_edge_endpoints_in_cfg_nodes</span> — well-formedness helper for <code>to_cfg_wf</code>.</li>
+        <li><span class="name">finite_predecessors</span> from finite <code>cfg_edges</code>; enables <code>Finite_Set.fold</code> in the solver layer.</li>
+        <li><span class="name">offset_edges_*</span> algebraic laws for shifting edge sets when gluing compiled fragments.</li>
+        <li><span class="name">cfg_edge_endpoints_in_cfg_nodes</span> well-formedness helper for <code>to_cfg_wf</code>.</li>
       </ul>
     </section>
 
     <!-- COMPILATION -->
     <section class="stage" id="compile">
       <h2><span class="badge">05</span>Compilation: IMP → CFG</h2>
-      <p class="lede"><code>src/CFG/IMP2_to_CFG.thy</code> — structured translation with a fresh program-point counter.</p>
+      <p class="lede"><code>src/CFG/IMP2_to_CFG.thy</code> structured translation with a fresh program-point counter.</p>
 
       <div class="def-card">
         <h3><code>compile c n</code></h3>
         <p class="sub">returns (n', entry, exit, edges)</p>
         <ul>
-          <li><code>n</code> — first free program-point id (all allocated ids lie in <code>[n, n')</code>).</li>
-          <li><code>entry</code>, <code>exit</code> — unique entry/exit of command <code>c</code>'s subgraph.</li>
-          <li><code>edges</code> — labelled edges for this command only (glue edges added at composition sites).</li>
+          <li><code>n</code> first free program-point id (all allocated ids lie in <code>[n, n')</code>).</li>
+          <li><code>entry</code>, <code>exit</code> unique entry/exit of command <code>c</code>'s subgraph.</li>
+          <li><code>edges</code> labelled edges for this command only (glue edges added at composition sites).</li>
         </ul>
         <p><code>to_cfg c</code> wraps <code>compile c 0</code> into a <code>cfg</code> record with global entry/exit and edge set.</p>
       </div>
@@ -342,25 +342,25 @@ flowchart TD
 
       <h4>Compilation infrastructure lemmas (proved)</h4>
       <ul class="lemma-list">
-        <li><span class="name">compile_fresh</span> — allocated nodes stay ≥ counter; disjoint subgraphs when composing.</li>
-        <li><span class="name">compile_ge</span> — counter monotone; supports induction on command size.</li>
-        <li><span class="name">compile_entry_ne_exit</span> — every command has distinct entry/exit (needed for <code>cfg_wf</code>).</li>
-        <li><span class="name">compile_finite</span> → <span class="name">to_cfg_finite</span> — finite edge set for folds and fixpoints.</li>
-        <li><span class="name">to_cfg_wf</span> — compiled graphs are well-formed.</li>
-        <li><span class="name">compile_add_offset</span>, <span class="name">compile_from_0_offsets</span> — shifting lemmas for nested compilation at <code>n &gt; 0</code> (Seq/If/While proofs in <code>CFG_Collecting</code>).</li>
-        <li><span class="name">to_cfg_compile</span> — exposes the quadruple behind <code>to_cfg c</code> for case splits.</li>
+        <li><span class="name">compile_fresh</span> allocated nodes stay ≥ counter; disjoint subgraphs when composing.</li>
+        <li><span class="name">compile_ge</span> counter monotone; supports induction on command size.</li>
+        <li><span class="name">compile_entry_ne_exit</span> every command has distinct entry/exit (needed for <code>cfg_wf</code>).</li>
+        <li><span class="name">compile_finite</span> → <span class="name">to_cfg_finite</span> finite edge set for folds and fixpoints.</li>
+        <li><span class="name">to_cfg_wf</span> compiled graphs are well-formed.</li>
+        <li><span class="name">compile_add_offset</span>, <span class="name">compile_from_0_offsets</span> shifting lemmas for nested compilation at <code>n &gt; 0</code> (Seq/If/While proofs in <code>CFG_Collecting</code>).</li>
+        <li><span class="name">to_cfg_compile</span> exposes the quadruple behind <code>to_cfg c</code> for case splits.</li>
       </ul>
     </section>
 
     <!-- CFG PATH -->
     <section class="stage" id="cfg-path">
       <h2><span class="badge">06</span>CFG paths</h2>
-      <p class="lede"><code>src/CFG/CFG_Path.thy</code> — labelled paths, not just reachability on nodes.</p>
+      <p class="lede"><code>src/CFG/CFG_Path.thy</code> labelled paths, not just reachability on nodes.</p>
 
       <div class="def-card">
         <h3><code>cfg_path g u es v</code></h3>
         <p>Inductive predicate: from <code>u</code> to <code>v</code> following edges in <code>g</code>, recording each step as <code>(edge_action, next_pp)</code> in list <code>es</code>. Empty list = stay at <code>u</code>; cons = take one edge then continue.</p>
-        <p>Abbreviation <code>g ⊢ u →* v</code> (<code>cfg_reaches</code>) — existence of some path list.</p>
+        <p>Abbreviation <code>g ⊢ u →* v</code> (<code>cfg_reaches</code>) existence of some path list.</p>
       </div>
 
       <h4>Why labelled paths?</h4>
@@ -368,11 +368,11 @@ flowchart TD
 
       <h4>Proved lemmas (selected)</h4>
       <ul class="lemma-list">
-        <li><span class="name">cfg_path_append</span> — concatenate paths; used everywhere in Seq/If/While splitting.</li>
-        <li><span class="name">cfg_path_cases</span> / <span class="name">cfg_path_induct</span> — disciplined inversion and induction (FormalSSA-style library).</li>
-        <li><span class="name">offset_path</span>, <span class="name">cfg_path_offset</span> — paths commute with shifting pp ids; sub-CFG paths lift to compound graphs.</li>
-        <li><span class="name">cfg_path_split_last</span> — peel last step; used in While loop reasoning.</li>
-        <li><span class="name">cfg_entry_reachable</span> — entry is reachable; used in path-soundness proofs.</li>
+        <li><span class="name">cfg_path_append</span> concatenate paths; used everywhere in Seq/If/While splitting.</li>
+        <li><span class="name">cfg_path_cases</span> / <span class="name">cfg_path_induct</span> disciplined inversion and induction (FormalSSA-style library).</li>
+        <li><span class="name">offset_path</span>, <span class="name">cfg_path_offset</span> paths commute with shifting pp ids; sub-CFG paths lift to compound graphs.</li>
+        <li><span class="name">cfg_path_split_last</span> peel last step; used in While loop reasoning.</li>
+        <li><span class="name">cfg_entry_reachable</span> entry is reachable; used in path-soundness proofs.</li>
       </ul>
       <p>Former placeholders <code>cfg_exit_reachable_from_entry</code> and <code>to_cfg_exit_reachable</code> were removed from <code>CFG_Path.thy</code> (not needed for the bridge; general exit reachability is false for arbitrary <code>cfg_wf</code> graphs).</p>
     </section>
@@ -380,7 +380,7 @@ flowchart TD
     <!-- CFG COLLECTING -->
     <section class="stage" id="cfg-collect">
       <h2><span class="badge">07</span>CFG collecting semantics</h2>
-      <p class="lede"><code>src/CFG/CFG_Collecting.thy</code> — fixpoint over program points, plus path-based characterisation.</p>
+      <p class="lede"><code>src/CFG/CFG_Collecting.thy</code> fixpoint over program points, plus path-based characterisation.</p>
 
       <h4>Edge and path collectors</h4>
       <div class="def-card">
@@ -389,7 +389,7 @@ flowchart TD
           <thead><tr><th>Action</th><th>Effect on set <code>S</code></th></tr></thead>
           <tbody>
             <tr><td><code>EA_Nop</code></td><td><code>S</code> unchanged</td></tr>
-            <tr><td><code>EA_Assign x a</code></td><td><code>{s(x := aval a s) | s ∈ S}</code> — mirrors <code>collect_Assign</code></td></tr>
+            <tr><td><code>EA_Assign x a</code></td><td><code>{s(x := aval a s) | s ∈ S}</code> mirrors <code>collect_Assign</code></td></tr>
             <tr><td><code>EA_Assume b</code></td><td>filter <code>bval b s</code></td></tr>
             <tr><td><code>EA_AssumeNot b</code></td><td>filter <code>¬ bval b s</code></td></tr>
           </tbody>
@@ -399,7 +399,7 @@ flowchart TD
       <div class="def-card">
         <h3><code>path_collect es S</code></h3>
         <p class="sub">fold edge_collect along es; pp components in steps are ignored</p>
-        <p><code>path_collect_offset_path</code> proves shifting node labels does not change collected stores — the formal justification that offset compilation is invisible to semantics.</p>
+        <p><code>path_collect_offset_path</code> proves shifting node labels does not change collected stores the formal justification that offset compilation is invisible to semantics.</p>
       </div>
 
       <h4>Fixpoint formulation</h4>
@@ -416,31 +416,31 @@ cfg_collect g S = lfp (cfg_collect_F g S)     -- cenv = pp ⇒ store set</code><
         <h3><code>cfg_path_collect g S v</code></h3>
 <pre><code>⋃ { path_collect es S
   | es. cfg_path g (cfg_entry g) es v }</code></pre>
-        <p>Union over all entry-to-<code>v</code> paths — often easier for one-step inclusion proofs than unfolding <code>lfp</code>.</p>
+        <p>Union over all entry-to-<code>v</code> paths often easier for one-step inclusion proofs than unfolding <code>lfp</code>.</p>
       </div>
 
       <h4>Monotonicity &amp; fixpoint lemmas (proved)</h4>
       <ul class="lemma-list">
-        <li><span class="name">edge_collect_mono</span>, <span class="name">path_collect_mono(_strong)</span> — needed for <code>lfp</code> existence and soundness transfers.</li>
-        <li><span class="name">collect_pp_mono</span>, <span class="name">cfg_collect_F_mono</span> — transformer monotone in environment <code>ρ</code>.</li>
-        <li><span class="name">cfg_collect_lfp_unfold</span> — <code>cfg_collect = cfg_collect_F (cfg_collect)</code>.</li>
-        <li><span class="name">cfg_path_collect_step</span>, <span class="name">cfg_path_collect_post</span> — path collector is a post-fixpoint of <code>cfg_collect_F</code>.</li>
-        <li><span class="name">cfg_collect_le_path_collect</span> — fixpoint below path union; links <code>cfg_collect</code> to paths.</li>
-        <li><span class="name">cfg_collect_step</span>, <span class="name">path_sound_cfg_collect</span> — push states along one path inside the fixpoint.</li>
+        <li><span class="name">edge_collect_mono</span>, <span class="name">path_collect_mono(_strong)</span> needed for <code>lfp</code> existence and soundness transfers.</li>
+        <li><span class="name">collect_pp_mono</span>, <span class="name">cfg_collect_F_mono</span> transformer monotone in environment <code>ρ</code>.</li>
+        <li><span class="name">cfg_collect_lfp_unfold</span> <code>cfg_collect = cfg_collect_F (cfg_collect)</code>.</li>
+        <li><span class="name">cfg_path_collect_step</span>, <span class="name">cfg_path_collect_post</span> path collector is a post-fixpoint of <code>cfg_collect_F</code>.</li>
+        <li><span class="name">cfg_collect_le_path_collect</span> fixpoint below path union; links <code>cfg_collect</code> to paths.</li>
+        <li><span class="name">cfg_collect_step</span>, <span class="name">path_sound_cfg_collect</span> push states along one path inside the fixpoint.</li>
       </ul>
 
       <h4>Compound-command path lemmas (proved)</h4>
       <p>Large library splitting paths through compiled <code>Seq</code>, <code>If</code>, <code>While</code> into sub-command paths (often at offset 0 inside the sub-graph). Examples:</p>
       <ul class="lemma-list">
         <li><span class="name">cfg_path_Seq_split</span>, <span class="name">cfg_path_If_split</span>, <span class="name">cfg_path_While_loop_peel</span></li>
-        <li><span class="name">compile_Seq_0</span>, <span class="name">compile_If_0</span>, <span class="name">compile_While_0</span> — shape of <code>compile</code> at counter 0.</li>
+        <li><span class="name">compile_Seq_0</span>, <span class="name">compile_If_0</span>, <span class="name">compile_While_0</span> shape of <code>compile</code> at counter 0.</li>
       </ul>
       <p>These are the bureaucratic heart of <code>big_step_cfg_path</code>: each big-step rule must construct a concrete path through the corresponding CFG pattern.</p>
     </section>
 
     <!-- BRIDGE -->
     <section class="stage" id="bridge">
-      <h2><span class="badge">08</span>Equivalence bridge — lemma by lemma</h2>
+      <h2><span class="badge">08</span>Equivalence bridge lemma by lemma</h2>
       <p class="lede">How the main theorem is assembled, and what each milestone contributes.</p>
 
       <div class="mermaid">
@@ -511,7 +511,7 @@ flowchart TD
     <!-- LEMMA INDEX -->
     <section class="stage" id="lemma-index">
       <h2><span class="badge">★</span>Lemma index by file</h2>
-      <p class="lede">All lemmas below are proved with no <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>. Sign pipeline composition is closed; remaining <code>sorry</code>s are interval stretch / optional — see <code>docs/PROOF_PHASES.md</code>.</p>
+      <p class="lede">All lemmas below are proved with no <code>sorry</code> in <code>src/IMP2/</code> or <code>src/CFG/</code>. Sign pipeline composition is closed; remaining <code>sorry</code>s are interval stretch / optional see <code>docs/PROOF_PHASES.md</code>.</p>
 
       <table>
         <thead><tr><th>File</th><th>Lemma</th><th>Why it matters</th></tr></thead>
@@ -525,7 +525,7 @@ flowchart TD
           <tr><td>CFG_Collecting</td><td><code>edge/path_collect_mono</code></td><td>Fixpoint well-defined; abstract lifts later.</td></tr>
           <tr><td>CFG_Collecting</td><td><code>compile_path_big_step</code></td><td>CFG paths simulate IMP (soundness direction 1).</td></tr>
           <tr><td>CFG_Collecting</td><td><code>big_step_cfg_path</code></td><td>IMP runs induce CFG paths (completeness direction 2).</td></tr>
-          <tr><td>CFG_Collecting</td><td><code>cfg_collect_exit_eq_collect</code></td><td><strong>Main bridge</strong> — AST and CFG collecting agree at exit.</td></tr>
+          <tr><td>CFG_Collecting</td><td><code>cfg_collect_exit_eq_collect</code></td><td><strong>Main bridge</strong> AST and CFG collecting agree at exit.</td></tr>
         </tbody>
       </table>
     </section>

@@ -3,7 +3,7 @@ theory Direct_Equations
 begin
 
 (*
-  Direct Equation System — AST \<rightarrow> equations, no CFG intermediate.
+  Direct Equation System AST \<rightarrow> equations, no CFG intermediate.
 
   Alternative to the CFG-based route:
     CFG route:  compile c n  \<rightarrow>  cfg record  \<rightarrow>  rhs via cfg_edges
