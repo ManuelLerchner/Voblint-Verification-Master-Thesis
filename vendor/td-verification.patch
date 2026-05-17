@@ -1,0 +1,87 @@
+From c213df34e4982ff371a4a6e71f0cc7e5cfedd40c Mon Sep 17 00:00:00 2001
+From: Manuel Lerchner <manuel.lerchner1111@gmail.com>
+Date: Fri, 15 May 2026 03:26:59 +0200
+Subject: [PATCH] fix(proof): use Set.remove_eq instead of remove_def
+
+Aligns TD theories with current Isabelle where simp prefers Set.remove_eq.
+
+Co-authored-by: Cursor <cursoragent@cursor.com>
+---
+ TD_warrow.thy         | 4 ++--
+ TD_wn_post.thy        | 6 +++---
+ TD_wn_post_wo_opt.thy | 8 ++++----
+ 3 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/TD_warrow.thy b/TD_warrow.thy
+index f4a693e..75f6f31 100644
+--- a/TD_warrow.thy
++++ b/TD_warrow.thy
+@@ -458,10 +458,10 @@ next
+       case True
+       have "iterate x state = (d_new, state1\<lparr>called := called state1 - {x}, point := point state1 - {x}\<rparr>)"
+         using eval iterate.psimps[folded dom_defs, OF Iterate(1)] True False d_new_def
+-        by (auto simp: remove_def)
++        by (auto simp: Set.remove_eq)
+       moreover have "solve_rec_c (I (x, state))
+           = Some (d_new, state1\<lparr>called := called state1 - {x}, point := point state1 - {x}\<rparr>)"
+-        using eval False True d_new_def by (auto simp: remove_def)
++        using eval False True d_new_def by (auto simp: Set.remove_eq)
+       ultimately show ?thesis unfolding solve_rec_c_dom_def by simp
+     next
+       case False
+diff --git a/TD_wn_post.thy b/TD_wn_post.thy
+index af973ac..87c886d 100644
+--- a/TD_wn_post.thy
++++ b/TD_wn_post.thy
+@@ -1816,9 +1816,9 @@ next
+     have A: "(x \<in> Set.remove x c\<^sub>w \<longrightarrow> x \<notin> post1 - stabl2) \<and> (x \<in> insert x c\<^sub>n \<longrightarrow> x \<in> post1)"
+       using \<open>x \<in> post1\<close> by simp
+     have B: "post_invariant (Set.remove x c\<^sub>w \<union> insert x c\<^sub>n - {x}) (\<sigma>1(x \<mapsto> mlup \<sigma>1 x \<Delta> xd1)) infl2 stabl2"
+-      using pinv1' by (simp add: Un_Diff remove_def)
++      using pinv1' by (simp add: Un_Diff Set.remove_eq)
+     have C: "points_inv (p1 - {x}) (Set.remove x c\<^sub>w \<union> insert x c\<^sub>n - {x}) infl2"
+-      using points_inv1 by (simp add: Un_Diff remove_def)
++      using points_inv1 by (simp add: Un_Diff Set.remove_eq)
+     have D: "narrowing_inv (Set.remove x c\<^sub>w - {x}) (\<sigma>1(x \<mapsto> mlup \<sigma>1 x \<Delta> xd1)) infl2 stabl2 pinfl1 post1"
+       using nar_inv1 by auto
+     have E: "Set.remove x c\<^sub>w \<inter> insert x c\<^sub>n = {}" using called_dist by auto
+@@ -1833,7 +1833,7 @@ next
+         W_Fixpoint(10) A B C D _ _ E F, of "(infl1, stabl1, p1, \<sigma>1, pinfl1, post1)"
+         "(stabl1, p1, \<sigma>1, pinfl1, post1)" "(p1, \<sigma>1, pinfl1, post1)" "(\<sigma>1, pinfl1, post1)"
+         "(pinfl1, post1)", simplified] W_Fixpoint(2-3) \<open>x \<in> p1\<close> \<open>x \<in> post1\<close>
+-      unfolding update_rel_def by (simp add: Un_Diff remove_def)
++      unfolding update_rel_def by (simp add: Un_Diff Set.remove_eq)
+ 
+     show ?thesis using IH IH2
+     proof (intro conjI, goal_cases)
+diff --git a/TD_wn_post_wo_opt.thy b/TD_wn_post_wo_opt.thy
+index 52343dc..62a39cd 100644
+--- a/TD_wn_post_wo_opt.thy
++++ b/TD_wn_post_wo_opt.thy
+@@ -1592,11 +1592,11 @@ next
+     have A: "(x \<in> Set.remove x c\<^sub>w \<longrightarrow> x \<notin> post1 - stabl2) \<and> (x \<in> insert x c\<^sub>n \<longrightarrow> x \<in> post1)"
+       using \<open>x \<in> post1\<close> by simp
+     have B: "post_invariant (Set.remove x c\<^sub>w \<union> insert x c\<^sub>n - {x}) \<sigma>1 infl2 stabl2"
+-      using pinv1' by (simp add: Un_Diff remove_def)
++      using pinv1' by (simp add: Un_Diff Set.remove_eq)
+     have C: "points_inv (p1 - {x}) (Set.remove x c\<^sub>w \<union> insert x c\<^sub>n - {x}) infl2"
+-      using points_inv1 by (simp add: Un_Diff remove_def)
++      using points_inv1 by (simp add: Un_Diff Set.remove_eq)
+     have D: "narrowing_inv (Set.remove x c\<^sub>w - {x}) \<sigma>1 infl2 stabl2 pinfl1 post1"
+-      using nar_inv1 by (simp add: Un_Diff remove_def)
++      using nar_inv1 by (simp add: Un_Diff Set.remove_eq)
+     have E: "Set.remove x c\<^sub>w \<inter> insert x c\<^sub>n = {}" using called_dist by auto
+     have F: "x \<in> Set.remove x c\<^sub>w \<union> insert x c\<^sub>n" by blast
+     have IH2: "post_invariant ((c\<^sub>w \<union> c\<^sub>n) - {x}) \<sigma>' infl' stabl' \<and> stabl2 \<subseteq> stabl' \<and>
+@@ -1609,7 +1609,7 @@ next
+         W_Fixpoint(9) A B C D _ _ E F, of xd1 "(infl1, stabl1, p1, \<sigma>1, pinfl1, post1)"
+         "(stabl1, p1, \<sigma>1, pinfl1, post1)" "(p1, \<sigma>1, pinfl1, post1)" "(\<sigma>1, pinfl1, post1)"
+         "(pinfl1, post1)", simplified] W_Fixpoint(2-3) \<open>x \<in> p1\<close> \<open>x \<in> post1\<close>
+-      by (simp add: Un_Diff remove_def)
++      by (simp add: Un_Diff Set.remove_eq)
+ 
+     show ?thesis using IH IH2
+     proof (intro conjI, goal_cases)
+-- 
+2.54.0
+
