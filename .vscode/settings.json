@@ -1,5 +1,0 @@
-{
-  "goblint.isabelleExecutable": "${env:HOME}/Isabelle2025-2/bin/isabelle",
-  "goblint.afpThysDir": "${env:HOME}/afp/thys",
-  "goblint.tdDir": "${workspaceFolder}/vendor/td-verification"
-}

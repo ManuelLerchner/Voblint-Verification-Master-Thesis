@@ -1,6 +1,8 @@
 *.heap
 *.log
 .isabelle/
+.cursor/
+.vscode/
 __pycache__/
 
 # Python venv (created by ./setup.sh)
