@@ -13,31 +13,47 @@ semantics; sign analysis is a fully discharged instance.
 
 ### Pipeline (overview)
 
-Solid arrows: compilation and analysis steps. Dotted arrows: proved soundness links.
+Solid arrows: compilation and analysis steps. Dotted arrows: proved soundness
+bridges. Dashed red arrows: bridges still missing (open problems; see
+`docs/OPEN_PROBLEMS.md`).
 
 ```mermaid
 flowchart LR
-  IMP["IMP"]
-  CFG["CFG"]
-  EQ["eq. system"]
-  TD["TD solver"]
-  OUT["γ ∘ env"]
+  BS["big_step"]
+  COL["collect"]
+  CC["cfg_collect"]
+  PFP["env (post-fixpoint)"]
+  TD["TD solver output"]
+  TERM["TD terminates"]
+  IVL["interval domain"]
 
-  IMP -->|compile| CFG
-  CFG -->|make RHS| EQ
-  EQ -->|td_analyse| TD
-  TD --> OUT
+  BS -->|B1| COL
+  COL -->|B2| CC
+  CC -->|B3| PFP
+  PFP -->|B4| TD
 
-  IMP -.->|big-step sound| CFG
-  CFG -.->|post-fixpoint sound| OUT
+  CC -.->|"B5: cfg_in_reach (P2)"| TD
+  PFP -.->|"B6: comp_fun_idem (P3)"| TD
+  TD -.->|"B7: TD_plain.solve_dom (P1, gated on P5)"| TERM
+  IVL -.->|"B8: widening termination (P6/P7)"| TERM
+
+  linkStyle 4,5,6,7 stroke:#c62828,stroke-dasharray: 4 3
 ```
 
-| Link            | Lemma / idea                                                                         |
-| --------------- | ------------------------------------------------------------------------------------ |
-| IMP ↔ CFG       | `cfg_collect_exit_eq_collect` AST collecting = CFG collecting at exit                |
-| CFG → abstract  | `post_fixpoint_sound` post-fixpoint of `rhs` over-approximates `cfg_collect`         |
-| eq. system → TD | `td_analyse_post_fixpoint` vendored solver returns a post-fixpoint                   |
-| End-to-end      | `pipeline_sound` / `pipeline_invariant_sound` (generic); `goblint_sign_sound` (sign) |
+| Bridge | Lemma / obligation                                            | Status              |
+| ------ | ------------------------------------------------------------- | ------------------- |
+| B1     | `big_step ⇒ collect` (definition of `collect`)                | **done**            |
+| B2     | `cfg_collect_exit_eq_collect` — AST collecting = CFG at exit  | **done**            |
+| B3     | `post_fixpoint_sound` — post-fixpoint over-approximates       | **done**            |
+| B4     | `td_analyse_post_fixpoint` — TD output is a post-fixpoint     | **done**            |
+| B5     | `cfg_in_reach (to_cfg c)` — CFG shape ⇒ solver reach-set      | **missing** (P2)    |
+| B6     | `sound_domain ⇒ comp_fun_idem join_state`                     | **missing** (P3)    |
+| B7     | `TD_plain.solve_dom` on compiled CFG — termination            | **missing** (P1/P5) |
+| B8     | `widen_ivl` axioms + wf widening chains                       | **missing** (P6/P7) |
+
+End-to-end theorems: `pipeline_sound` / `pipeline_invariant_sound` (generic,
+chains B1–B4, carries B5/B6/B7 as assumptions); `goblint_sign_sound` (sign
+instance). For the open bridges see `docs/OPEN_PROBLEMS.md`.
 
 Where abstract interpretation is in the proof
 -------------------------------------------
@@ -59,6 +75,72 @@ So **abstract interpretation is the `rhs` / `γ` / `join` / `apply_tf` layer**.
 returns an `env` that satisfies them; `post_fixpoint_sound` shows that solution
 is sound w.r.t. `cfg_collect`. IMP enters via `collect` and
 `cfg_collect_exit_eq_collect`.
+
+Adding a new abstract domain
+----------------------------
+
+To plug a new analysis into the pipeline, a user supplies an abstract value
+type and a transfer bundle, then discharges a handful of obligations. The
+parametric `pipeline_sound` does the rest. Sign (`src/Domains/Sign_Domain.thy`)
+is the worked reference.
+
+```mermaid
+flowchart TD
+  subgraph U ["User supplies"]
+    T["abstract value type 'a"]
+    G["gamma :: 'a => int set"]
+    TF["transfer bundle:<br/>tf_assign / tf_assume / tf_assume_not"]
+    INIT["initial abstract state ac_init"]
+  end
+
+  subgraph I ["Instance work (per domain)"]
+    LAT["instantiation:<br/>'a :: bounded_semilattice_sup_bot<br/>(gives bot, sup, ord)"]
+    SD["interpretation sound_domain gamma<br/>obligations: gamma_bot, gamma_mono"]
+    DTS["lemma domain_transfer_sound:<br/>each tf preserves gamma"]
+    AC["definition my_analysis_config:<br/>bundles gamma, join, bot, tf, init"]
+    INITg["lemma: s ∈ gamma_state (ac_init my_cfg)"]
+  end
+
+  subgraph F ["Framework provides (proved once)"]
+    PS["pipeline_sound[OF ...]<br/>--&gt; concrete ⊆ gamma . env"]
+  end
+
+  T --> LAT --> SD
+  G --> SD
+  TF --> DTS
+  G --> DTS
+  T --> AC
+  G --> AC
+  TF --> AC
+  INIT --> AC
+  INIT --> INITg
+  G --> INITg
+  SD --> PS
+  DTS --> PS
+  AC --> PS
+  INITg --> PS
+
+  style U fill:#e3f2fd
+  style I fill:#fff3e0
+  style F fill:#e8f5e9
+```
+
+Concretely, the user writes:
+
+| Step | What                                                                                       | Reference (sign)                                              |
+| ---- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 1    | Declare abstract value type and its lattice instance                                       | `Sign_Domain.thy` — `datatype sign`, `instantiation` blocks   |
+| 2    | Define `gamma_<dom>` and prove `gamma_bot`, `gamma_mono`                                   | `Sign_Domain.thy:54` (`gamma_sign_mono`)                      |
+| 3    | `interpretation <dom>_domain: sound_domain gamma_<dom>` (or `abstract_domain` with widen)  | `Sign_Domain.thy:229`                                         |
+| 4    | Define `tf_assign`, `tf_assume`, `tf_assume_not` and prove `domain_transfer_sound`          | `assign_sign_sound`, `assume_sign_sound`                      |
+| 5    | Bundle as `analysis_config`                                                                | `Pipeline.thy:87` (`sign_analysis_config`)                    |
+| 6    | Show `s \<in> gamma_state (ac_init my_cfg)` for the initial store                          | `Pipeline.thy:103` (`sign_analysis_init_in_gamma_stub`)       |
+| 7    | Apply `pipeline_sound[OF ...]`                                                             | `Goblint_Formalization.thy:80` (`goblint_sign_sound`)         |
+
+The pipeline still carries three TD-side assumptions (`comp_fun_idem`,
+`solve_dom`, `cfg_in_reach`) the user must currently discharge. These are
+open problems P1-P3 in `docs/OPEN_PROBLEMS.md`; bridges B5/B6 would lift
+them off the user.
 
 Requirements
 ------------
@@ -152,7 +234,7 @@ Documentation
 
 | Document                       | Contents                                                |
 | ------------------------------ | ------------------------------------------------------- |
-| `docs/PIPELINE_AT_A_GLANCE.md` | Thesis goal, AI vs collecting, status, theorem stack    |
+| `docs/OPEN_PROBLEMS.md`        | Bridges B1-B8, problem catalogue, handoff notes         |
 | `docs/HOL_IMP_COMPARISON.md`   | vs HOL-IMP `Abs_*`: workflow, domain theory tradeoffs   |
 | `docs/PROOF_OVERVIEW.md`       | Theorem chain, key types and lemmas                     |
 | `docs/PROOF_PHASES.md`         | Proof status, sorry inventory, remaining work           |
