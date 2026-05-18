@@ -15,5 +15,6 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Goblint_Formalization
     Scratch
     Example_Sign_Analysis
+    Example_Interval_Analysis
     Example_CFG_Collecting_Equiv
     Example_GraphViz
