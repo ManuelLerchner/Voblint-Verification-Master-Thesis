@@ -97,7 +97,7 @@ next
     case False
     then have "x \<in> F" using insert.prems by simp
     then have "x \<le> Finite_Set.fold (\<squnion>) bot F" by (rule insert.hyps(3))
-    then show ?thesis using fold_ins by simp
+    then show ?thesis using fold_ins le_supI2 by metis
   qed
 qed
 

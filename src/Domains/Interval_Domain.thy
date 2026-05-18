@@ -1,5 +1,5 @@
 theory Interval_Domain
-  imports Abstract_Domain Constraint_System
+  imports Abstract_Domain Constraint_System IMP2_Semantics
 begin
 
 (*
@@ -184,30 +184,186 @@ fun widen_ivl :: "ivl => ivl => ivl" where
            (if eint_le u2 u1 then u1 else PlusInf)"
 
 lemma gamma_ivl_mono:
-  "a <= b ==> gamma_ivl a <= gamma_ivl b"
-  (* a ≤ b means Ivl l2 u2 ≤ Ivl l1 u1, i.e. l1 tighter on left, u1 tighter on right.
-     Concretely: [l1,u1] ⊆ [l2,u2]. Proof by cases on a and b, unfolding less_eq_ivl. *)
-  sorry
+  "a \<le> b \<Longrightarrow> gamma_ivl a \<subseteq> gamma_ivl b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2" and ab: "a \<le> b"
+  from ab have le: "eint_le l2 l1" "eint_le u1 u2"
+    unfolding less_eq_ivl_def \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close> by simp_all
+  show "gamma_ivl a \<subseteq> gamma_ivl b"
+    unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
+    using le by (auto intro: eint_le_trans)
+qed
 
-lemma join_ivl_ub1: "gamma_ivl a <= gamma_ivl (join_ivl a b)"     sorry
-lemma join_ivl_ub2: "gamma_ivl b <= gamma_ivl (join_ivl a b)"     sorry
-lemma join_ivl_comm:  "join_ivl a b = join_ivl b a"                sorry
-lemma join_ivl_assoc: "join_ivl a (join_ivl b c) = join_ivl (join_ivl a b) c"  sorry
+lemma join_ivl_ub1: "gamma_ivl a \<subseteq> gamma_ivl (join_ivl a b)"
+  using gamma_ivl_mono join_ivl_le_ub1[unfolded sup_ivl_def[symmetric]]
+  by (metis sup_ivl_def)
 
-lemma widen_ivl_ub1: "gamma_ivl a <= gamma_ivl (widen_ivl a b)"   sorry
-lemma widen_ivl_ub2: "gamma_ivl b <= gamma_ivl (widen_ivl a b)"   sorry
+lemma join_ivl_ub2: "gamma_ivl b \<subseteq> gamma_ivl (join_ivl a b)"
+  using gamma_ivl_mono join_ivl_le_ub2[unfolded sup_ivl_def[symmetric]]
+  by (metis sup_ivl_def)
 
-(* Widening termination: every widen-ascending chain stabilises. *)
+lemma join_ivl_comm:  "join_ivl a b = join_ivl b a"
+  using sup_commute by (metis sup_ivl_def)
+
+lemma join_ivl_assoc: "join_ivl a (join_ivl b c) = join_ivl (join_ivl a b) c"
+  using sup_assoc by (metis sup_ivl_def)
+
+lemma a_le_widen_ivl: "(a :: ivl) \<le> widen_ivl a b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  then show "a \<le> widen_ivl a b"
+    unfolding less_eq_ivl_def by (auto simp: eint_le_refl)
+qed
+
+lemma b_le_widen_ivl: "(b :: ivl) \<le> widen_ivl a b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  then show "b \<le> widen_ivl a b"
+    unfolding less_eq_ivl_def
+    using eint_le_linear[of l1 l2] eint_le_linear[of u2 u1]
+    by auto
+qed
+
+lemma widen_ivl_ub1: "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl a b)"
+  using gamma_ivl_mono a_le_widen_ivl by blast
+
+lemma widen_ivl_ub2: "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl a b)"
+  using gamma_ivl_mono b_le_widen_ivl by blast
+
+(* Widening termination: every widen-ascending chain stabilises.
+   At each step each bound either stays or jumps to MinInf/PlusInf, so the
+   chain takes values in at most 4 distinct intervals. Once a bound hits
+   the infinite end it remains there. After at most 2 transitions the chain
+   is constant. *)
 lemma widen_ivl_terminates:
   assumes "\<forall>i. widen_ivl (f i) (f (Suc i)) = f (Suc i)"
-  shows "\<exists>n. \<forall>j. n <= j \<longrightarrow> f j = f n"
-  sorry
+  shows "\<exists>n. \<forall>j. n \<le> j \<longrightarrow> f j = f n"
+proof -
+  define lb where "lb i = (case f i of Ivl l _ \<Rightarrow> l)" for i
+  define ub where "ub i = (case f i of Ivl _ u \<Rightarrow> u)" for i
+  have f_eq: "f i = Ivl (lb i) (ub i)" for i
+    unfolding lb_def ub_def by (cases "f i") simp
+  have step:
+    "lb (Suc i) = lb i \<or> lb (Suc i) = MinInf"
+    "ub (Suc i) = ub i \<or> ub (Suc i) = PlusInf"
+    for i
+  proof -
+    have "widen_ivl (Ivl (lb i) (ub i)) (Ivl (lb (Suc i)) (ub (Suc i)))
+          = Ivl (lb (Suc i)) (ub (Suc i))"
+      using assms[rule_format, of i] f_eq[of i] f_eq[of "Suc i"] by simp
+    then have eqs:
+      "lb (Suc i) = (if eint_le (lb i) (lb (Suc i)) then lb i else MinInf)"
+      "ub (Suc i) = (if eint_le (ub (Suc i)) (ub i) then ub i else PlusInf)"
+      by simp_all
+    from eqs(1) show "lb (Suc i) = lb i \<or> lb (Suc i) = MinInf"
+      by (auto split: if_splits)
+    from eqs(2) show "ub (Suc i) = ub i \<or> ub (Suc i) = PlusInf"
+      by (auto split: if_splits)
+  qed
+  have lb_stay: "lb i = MinInf \<Longrightarrow> lb (Suc i) = MinInf" for i
+    using step(1) by metis
+  have ub_stay: "ub i = PlusInf \<Longrightarrow> ub (Suc i) = PlusInf" for i
+    using step(2) by metis
+  have lb_stay_le: "lb i = MinInf \<Longrightarrow> i \<le> j \<Longrightarrow> lb j = MinInf" for i j
+  proof (induct j)
+    case 0 thus ?case by simp
+  next
+    case (Suc j) thus ?case using lb_stay le_SucE by metis
+  qed
+  have ub_stay_le: "ub i = PlusInf \<Longrightarrow> i \<le> j \<Longrightarrow> ub j = PlusInf" for i j
+  proof (induct j)
+    case 0 thus ?case by simp
+  next
+    case (Suc j) thus ?case using ub_stay le_SucE by metis
+  qed
+  (* If lb never hits MinInf it is constant; symmetric for ub. *)
+  have lb_const_if_no_MinInf:
+    "(\<forall>k. lb k \<noteq> MinInf) \<Longrightarrow> lb j = lb 0" for j
+  proof (induct j)
+    case 0 thus ?case by simp
+  next
+    case (Suc j) thus ?case using step(1)[of j] by auto
+  qed
+  have ub_const_if_no_PlusInf:
+    "(\<forall>k. ub k \<noteq> PlusInf) \<Longrightarrow> ub j = ub 0" for j
+  proof (induct j)
+    case 0 thus ?case by simp
+  next
+    case (Suc j) thus ?case using step(2)[of j] by auto
+  qed
+  obtain nl where nl: "\<forall>j \<ge> nl. lb j = lb nl"
+  proof (cases "\<exists>k. lb k = MinInf")
+    case True
+    then obtain k where "lb k = MinInf" by blast
+    then have "\<forall>j \<ge> k. lb j = MinInf" using lb_stay_le by blast
+    then have "\<forall>j \<ge> k. lb j = lb k" using \<open>lb k = MinInf\<close> by simp
+    then show ?thesis by (rule that)
+  next
+    case False
+    then have "\<forall>k. lb k \<noteq> MinInf" by blast
+    then have "\<forall>j. lb j = lb 0" using lb_const_if_no_MinInf by blast
+    then have "\<forall>j \<ge> 0. lb j = lb 0" by blast
+    then show ?thesis by (rule that)
+  qed
+  obtain nu where nu: "\<forall>j \<ge> nu. ub j = ub nu"
+  proof (cases "\<exists>k. ub k = PlusInf")
+    case True
+    then obtain k where "ub k = PlusInf" by blast
+    then have "\<forall>j \<ge> k. ub j = PlusInf" using ub_stay_le by blast
+    then have "\<forall>j \<ge> k. ub j = ub k" using \<open>ub k = PlusInf\<close> by simp
+    then show ?thesis by (rule that)
+  next
+    case False
+    then have "\<forall>k. ub k \<noteq> PlusInf" by blast
+    then have "\<forall>j. ub j = ub 0" using ub_const_if_no_PlusInf by blast
+    then have "\<forall>j \<ge> 0. ub j = ub 0" by blast
+    then show ?thesis by (rule that)
+  qed
+  let ?n = "max nl nu"
+  have "\<forall>j. ?n \<le> j \<longrightarrow> f j = f ?n"
+  proof (intro allI impI)
+    fix j assume jn: "?n \<le> j"
+    have lb_eq: "lb j = lb ?n"
+    proof -
+      from jn have "nl \<le> j" "nl \<le> ?n" by auto
+      then have "lb j = lb nl" "lb ?n = lb nl"
+        using nl by blast+
+      then show ?thesis by simp
+    qed
+    have ub_eq: "ub j = ub ?n"
+    proof -
+      from jn have "nu \<le> j" "nu \<le> ?n" by auto
+      then have "ub j = ub nu" "ub ?n = ub nu"
+        using nu by blast+
+      then show ?thesis by simp
+    qed
+    show "f j = f ?n"
+      using f_eq[of j] f_eq[of ?n] lb_eq ub_eq by simp
+  qed
+  then show ?thesis by blast
+qed
 
 (* ── Abstract Domain Instantiation ───────────────────────────── *)
 
 interpretation ivl_domain:
   abstract_domain gamma_ivl widen_ivl
-  sorry
+proof (unfold_locales)
+  show "gamma_ivl bot = {}"
+    unfolding bot_ivl_def by auto
+next
+  fix a b :: ivl
+  assume "a \<le> b"
+  then show "gamma_ivl a \<subseteq> gamma_ivl b" by (rule gamma_ivl_mono)
+next
+  fix a b :: ivl
+  show "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl a b)" by (rule widen_ivl_ub1)
+next
+  fix a b :: ivl
+  show "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl a b)" by (rule widen_ivl_ub2)
+qed
 
 (* ── Transfer Functions (stubs) ──────────────────────────────── *)
 
@@ -229,11 +385,33 @@ fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
   | "aval_ivl (Minus a b) sigma = ivl_minus (aval_ivl a sigma) (aval_ivl b sigma)"
   | "aval_ivl (Times a b) sigma = ivl_times (aval_ivl a sigma) (aval_ivl b sigma)"
 
-(* Soundness of abstract arithmetic *)
+(* Soundness of abstract arithmetic.
+   Arithmetic ops are top-stubs (Ivl MinInf PlusInf = UNIV) so soundness is
+   trivial on Plus/Minus/Times. N n yields the singleton {n}; V x uses the
+   pointwise concretisation hypothesis. *)
 lemma aval_ivl_sound:
   "(\<forall>x. s x \<in> gamma_ivl (sigma x))
-   ==>  aval a s : gamma_ivl (aval_ivl a sigma)"
-  sorry
+   \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a sigma)"
+proof (induction a)
+  case (N n) thus ?case by (simp add: aval.simps)
+next
+  case (V x) thus ?case by (simp add: aval.simps)
+next
+  case (Plus a1 a2)
+  show ?case
+    using aval_ivl.simps(3)[of a1 a2 sigma]
+    by (cases "aval_ivl a1 sigma"; cases "aval_ivl a2 sigma") simp_all
+next
+  case (Minus a1 a2)
+  show ?case
+    using aval_ivl.simps(4)[of a1 a2 sigma]
+    by (cases "aval_ivl a1 sigma"; cases "aval_ivl a2 sigma") simp_all
+next
+  case (Times a1 a2)
+  show ?case
+    using aval_ivl.simps(5)[of a1 a2 sigma]
+    by (cases "aval_ivl a1 sigma"; cases "aval_ivl a2 sigma") simp_all
+qed
 
 (* Abstract assume: interval-based branch refinement *)
 fun assume_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
@@ -248,9 +426,10 @@ where
   "assign_ivl x a sigma = sigma(x := aval_ivl a sigma)"
 
 lemma assign_ivl_sound:
-  "s : ivl_domain.gamma_state sigma
-   ==>  s(x := aval a s) : ivl_domain.gamma_state (assign_ivl x a sigma)"
-  sorry
+  "s \<in> ivl_domain.gamma_state sigma
+   \<Longrightarrow> s(x := aval a s) \<in> ivl_domain.gamma_state (assign_ivl x a sigma)"
+  unfolding ivl_domain.gamma_state_def assign_ivl_def
+  by (auto simp: aval_ivl_sound)
 
 (* ── Bundled Transfer Functions ──────────────────────────────── *)
 
