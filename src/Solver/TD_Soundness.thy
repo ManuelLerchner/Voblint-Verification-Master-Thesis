@@ -33,29 +33,27 @@ theorem td_solver_sound:
     "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   assumes s0_sound:
-    "s : gamma_state s0"
+    "s \<in> gamma_state s0"
   assumes terminates:
     "big_step (c, s) t"
-  (* Solver bridge (see TD_Interface.td_analyse_post_fixpoint): CFG finiteness,
-     idempotent fold-join, TD termination domain, and whole-CFG reachability. *)
   assumes fin_cfg: "finite (cfg_edges (to_cfg c))"
-  assumes join_state_cfi:
-    "comp_fun_idem (join_state :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  assumes sup_cfi:
+    "comp_fun_idem ((\<squnion>) :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes td_solve_dom:
-    "TD_plain.solve_dom (make_rhs_tree (to_cfg c) tf join_state bot_state s0)
+    "TD_plain.solve_dom (make_rhs_tree (to_cfg c) tf (\<squnion>) bot s0)
        (cfg_entry (to_cfg c))"
   assumes td_cfg_in_reach:
-    "\<And>v::pp. v \<in> reach (make_rhs_tree (to_cfg c) tf join_state bot_state s0)
-                    (TD_plain_Interp_solve (make_rhs_tree (to_cfg c) tf join_state bot_state s0)
+    "\<And>v::pp. v \<in> reach (make_rhs_tree (to_cfg c) tf (\<squnion>) bot s0)
+                    (TD_plain_Interp_solve (make_rhs_tree (to_cfg c) tf (\<squnion>) bot s0)
                       (cfg_entry (to_cfg c)))
                     (cfg_entry (to_cfg c))"
   shows
-    "t : gamma_state ((td_analyse c tf join_state bot_state s0)
+    "t \<in> gamma_state ((td_analyse c tf (\<squnion>) bot s0)
                        (cfg_exit (to_cfg c)))"
 proof -
-  have post_fp: "is_post_fixpoint (to_cfg c) tf join_state bot_state s0
-                   (td_analyse c tf join_state bot_state s0)"
-    by (rule td_analyse_post_fixpoint[OF fin_cfg join_state_cfi join_state_comm
+  have post_fp: "is_post_fixpoint (to_cfg c) tf (\<squnion>) bot s0
+                   (td_analyse c tf (\<squnion>) bot s0)"
+    by (rule td_analyse_post_fixpoint[OF fin_cfg sup_cfi sup_commute
           td_solve_dom td_cfg_in_reach])
   show ?thesis
     by (rule exit_sound[OF post_fp order.refl tf_sound_assign tf_sound_assume
@@ -65,30 +63,26 @@ qed
 end
 
 (* ── Sign Domain Instantiation ────────────────────────────────── *)
-(*
-  Concrete instantiation of the soundness theorem for the Sign domain.
-*)
 
 theorem sign_analysis_sound:
   assumes s_sound:    "s \<in> sign_domain.gamma_state s0"
   assumes terminates: "big_step (c, s) t"
-  assumes join_cfi:
-    "comp_fun_idem (sign_domain.join_state ::
+  assumes sup_cfi:
+    "comp_fun_idem ((\<squnion>) ::
        sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
-       (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state s0)
+       (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot s0)
        (cfg_entry (to_cfg c))"
   assumes td_cfg_in_reach:
     "\<And>v::pp. v \<in> reach
-                  (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state s0)
+                  (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot s0)
                   (TD_plain_Interp_solve
-                     (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state s0)
+                     (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot s0)
                      (cfg_entry (to_cfg c)))
                   (cfg_entry (to_cfg c))"
   shows   "t \<in> sign_domain.gamma_state
-                 ((td_analyse c sign_tf
-                   sign_domain.join_state sign_domain.bot_state s0)
+                 ((td_analyse c sign_tf (\<squnion>) bot s0)
                    (cfg_exit (to_cfg c)))"
 proof -
   have h1: "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
@@ -102,19 +96,46 @@ proof -
     unfolding sign_tf_def by (simp add: assume_not_sign_sound)
   show ?thesis
     by (rule sign_domain.td_solver_sound
-          [OF h1 h2 h3 s_sound terminates to_cfg_finite join_cfi
+          [OF h1 h2 h3 s_sound terminates to_cfg_finite sup_cfi
               td_solve_dom td_cfg_in_reach])
 qed
 
 (* ── Interval Domain Instantiation ───────────────────────────── *)
 
 theorem interval_analysis_sound:
-  assumes s_sound:    "s : ivl_domain.gamma_state s0"
+  assumes s_sound:    "s \<in> ivl_domain.gamma_state s0"
   assumes terminates: "big_step (c, s) t"
-  shows   "t : ivl_domain.gamma_state
-                 ((td_analyse c ivl_tf
-                   ivl_domain.join_state ivl_domain.bot_state s0)
+  assumes sup_cfi:
+    "comp_fun_idem ((\<squnion>) ::
+       ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom
+       (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot s0)
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach
+                  (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot s0)
+                  (TD_plain_Interp_solve
+                     (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot s0)
+                     (cfg_entry (to_cfg c)))
+                  (cfg_entry (to_cfg c))"
+  shows   "t \<in> ivl_domain.gamma_state
+                 ((td_analyse c ivl_tf (\<squnion>) bot s0)
                    (cfg_exit (to_cfg c)))"
-  sorry
+proof -
+  have h1: "\<forall>x a sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
+              s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
+    unfolding ivl_tf_def by (simp add: assign_ivl_sound)
+  have h2: "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
+              bval b s \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
+    unfolding ivl_tf_def by simp
+  have h3: "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
+              \<not> bval b s \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
+    unfolding ivl_tf_def by simp
+  show ?thesis
+    by (rule ivl_domain.td_solver_sound
+          [OF h1 h2 h3 s_sound terminates to_cfg_finite sup_cfi
+              td_solve_dom td_cfg_in_reach])
+qed
 
 end

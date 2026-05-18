@@ -28,9 +28,15 @@ subsection \<open>Real pipeline (type-checked)\<close>
 text \<open>Same @{const td_analyse} / @{const make_rhs_tree} stack as the rest of the
   session; @{command term} checks the composition without executing it.\<close>
 
-term "td_analyse example_prog sign_tf sign_domain.join_state sign_domain.bot_state (\<lambda>_. STop) (cfg_exit (to_cfg example_prog))"
+term "td_analyse example_prog sign_tf
+        ((\<squnion>) :: sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)
+        (bot :: sign abs_state)
+        (\<lambda>_. STop) (cfg_exit (to_cfg example_prog))"
 
-term "make_rhs_tree (to_cfg example_prog) sign_tf sign_domain.join_state sign_domain.bot_state (\<lambda>_. STop) (cfg_exit (to_cfg example_prog))"
+term "make_rhs_tree (to_cfg example_prog) sign_tf
+        ((\<squnion>) :: sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)
+        (bot :: sign abs_state)
+        (\<lambda>_. STop) (cfg_exit (to_cfg example_prog))"
 
 text \<open>\<^verbatim>\<open>x := 5;
 y := x + x\<close>\<close>

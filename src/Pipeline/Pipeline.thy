@@ -86,8 +86,8 @@ where
 
 definition sign_analysis_config :: "store => sign analysis_config" where
   "sign_analysis_config s =
-     (| ac_join  = sign_domain.join_state,
-        ac_bot   = sign_domain.bot_state,
+     (| ac_join  = ((\<squnion>) :: sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state),
+        ac_bot   = (bot :: sign abs_state),
         ac_gamma = gamma_sign,
         ac_tf    = (| tf_assign    = assign_sign,
                       tf_assume    = assume_sign,
@@ -115,19 +115,19 @@ lemma sign_pipeline_sound_scaffold:
   assumes runs: "big_step (c, s) t"
     and init_ok: "s \<in> sign_domain.gamma_state (ac_init (sign_analysis_config s))"
     and join_cfi:
-      "comp_fun_idem (sign_domain.join_state ::
+      "comp_fun_idem ((\<squnion>) ::
          sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
     and td_solve_dom:
       "TD_plain.solve_dom
-         (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+         (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
             (ac_init (sign_analysis_config s)))
          (cfg_entry (to_cfg c))"
     and td_cfg_in_reach:
       "\<And>v::pp. v \<in> reach
-         (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+         (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
             (ac_init (sign_analysis_config s)))
          (TD_plain_Interp_solve
-            (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+            (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
               (ac_init (sign_analysis_config s)))
             (cfg_entry (to_cfg c)))
          (cfg_entry (to_cfg c))"
@@ -135,7 +135,7 @@ lemma sign_pipeline_sound_scaffold:
              (run_analysis (sign_analysis_config s) c (cfg_exit (to_cfg c)))"
 proof -
   have run_eq: "run_analysis (sign_analysis_config s) c
-    = td_analyse c sign_tf sign_domain.join_state sign_domain.bot_state
+    = td_analyse c sign_tf (\<squnion>) bot
                     (ac_init (sign_analysis_config s))"
     unfolding run_analysis_def sign_analysis_config_def sign_tf_def by simp
   show ?thesis
@@ -150,8 +150,8 @@ qed
 
 definition ivl_analysis_config :: "store => ivl analysis_config" where
   "ivl_analysis_config s =
-     (| ac_join  = ivl_domain.join_state,
-        ac_bot   = ivl_domain.bot_state,
+     (| ac_join  = ((\<squnion>) :: ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state),
+        ac_bot   = (bot :: ivl abs_state),
         ac_gamma = gamma_ivl,
         ac_tf    = (| tf_assign    = assign_ivl,
                       tf_assume    = assume_ivl,
@@ -163,12 +163,44 @@ definition ivl_analysis_config :: "store => ivl analysis_config" where
   Requires ivl TF soundness + init soundness (analogues of the sign stubs).
   Those must be proved before this corollary can be closed.
 *)
+lemma ivl_analysis_init_in_gamma_stub:
+  "s \<in> ivl_domain.gamma_state (ac_init (ivl_analysis_config s))"
+  unfolding ivl_analysis_config_def ivl_domain.gamma_state_def
+  by (simp add: eint_le_refl)
+
 corollary ivl_pipeline_sound:
-  assumes terminates: "big_step (c, s) t"
-  shows   "t : ivl_domain.gamma_state
+  assumes runs: "big_step (c, s) t"
+    and join_cfi:
+      "comp_fun_idem ((\<squnion>) ::
+         ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
+    and td_solve_dom:
+      "TD_plain.solve_dom
+         (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
+            (ac_init (ivl_analysis_config s)))
+         (cfg_entry (to_cfg c))"
+    and td_cfg_in_reach:
+      "\<And>v::pp. v \<in> reach
+         (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
+            (ac_init (ivl_analysis_config s)))
+         (TD_plain_Interp_solve
+            (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
+              (ac_init (ivl_analysis_config s)))
+            (cfg_entry (to_cfg c)))
+         (cfg_entry (to_cfg c))"
+  shows   "t \<in> ivl_domain.gamma_state
                   (run_analysis (ivl_analysis_config s) c
                      (cfg_exit (to_cfg c)))"
-  sorry (* pipeline_sound[OF ivl_tf_sound_stub ivl_init_sound_stub terminates] once those exist *)
+proof -
+  have run_eq: "run_analysis (ivl_analysis_config s) c
+    = td_analyse c ivl_tf (\<squnion>) bot
+                    (ac_init (ivl_analysis_config s))"
+    unfolding run_analysis_def ivl_analysis_config_def ivl_tf_def by simp
+  show ?thesis
+    unfolding run_eq
+    by (rule interval_analysis_sound
+          [OF ivl_analysis_init_in_gamma_stub runs join_cfi
+              td_solve_dom td_cfg_in_reach])
+qed
 
 (* ── Option 2: Point-Map Invariant (Recommended Presentation) ── *)
 (*
@@ -215,10 +247,10 @@ theorem pipeline_invariant_sound:
 proof -
   interpret sd: sound_domain "ac_gamma cfg"
     using sound .
-  have join_eq': "ac_join cfg = sd.join_state"
-    unfolding sd.join_state_def using join_eq by simp
-  have bot_eq':  "ac_bot cfg = sd.bot_state"
-    unfolding sd.bot_state_def using bot_eq by simp
+  have join_eq': "ac_join cfg = ((\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _)"
+    unfolding sup_fun_def using join_eq by simp
+  have bot_eq':  "ac_bot cfg = (bot :: 'a abs_state)"
+    unfolding bot_fun_def using bot_eq by simp
   have join_sym: "\<And>x y. ac_join cfg x y = ac_join cfg y x"
     unfolding join_eq using sup_commute by (auto simp: fun_eq_iff)
   have pfp: "is_post_fixpoint (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg)
@@ -226,7 +258,7 @@ proof -
     unfolding run_analysis_def
     by (rule td_analyse_post_fixpoint[OF to_cfg_finite cfi join_sym
               td_solve_dom td_cfg_in_reach])
-  have pfp': "is_post_fixpoint (to_cfg c) (ac_tf cfg) sd.join_state sd.bot_state
+  have pfp': "is_post_fixpoint (to_cfg c) (ac_tf cfg) (\<squnion>) bot
               (ac_init cfg) (run_analysis cfg c)"
     using pfp join_eq' bot_eq' by simp
   have S_sub: "{s} \<le> sd.gamma_state (ac_init cfg)"
@@ -317,9 +349,9 @@ proof -
     unfolding ge by (rule sign_domain.sound_domain_axioms)
   have je: "ac_join (sign_analysis_config s)
             = (\<lambda>s1 s2 x. s1 x \<squnion> s2 x)"
-    unfolding sign_analysis_config_def sign_domain.join_state_def by simp
+    unfolding sign_analysis_config_def sup_fun_def by simp
   have be: "ac_bot (sign_analysis_config s) = (\<lambda>_. bot)"
-    unfolding sign_analysis_config_def sign_domain.bot_state_def by simp
+    unfolding sign_analysis_config_def by (simp add: bot_fun_def)
   have gs_eq: "sign_domain.gamma_state
              = sound_domain.gamma_state (ac_gamma (sign_analysis_config s))"
     unfolding ge sign_domain.gamma_state_def sound_domain.gamma_state_def[OF sound[unfolded ge]]

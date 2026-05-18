@@ -80,19 +80,19 @@ lemma example_swap_correct:
 theorem goblint_sign_sound:
   assumes runs: "big_step (c, s) t"
   assumes join_cfi:
-    "comp_fun_idem (sign_domain.join_state ::
+    "comp_fun_idem ((\<squnion>) ::
        sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
-       (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+       (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
           (ac_init (sign_analysis_config s)))
        (cfg_entry (to_cfg c))"
   assumes td_cfg_in_reach:
     "\<And>v::pp. v \<in> reach
-       (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+       (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
           (ac_init (sign_analysis_config s)))
        (TD_plain_Interp_solve
-          (make_rhs_tree (to_cfg c) sign_tf sign_domain.join_state sign_domain.bot_state
+          (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
             (ac_init (sign_analysis_config s)))
           (cfg_entry (to_cfg c)))
        (cfg_entry (to_cfg c))"
