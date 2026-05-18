@@ -69,10 +69,10 @@ qed
 
 (* join_state pointwise upper-bound lemmas. *)
 lemma join_state_ub1: "sigma1 \<le> join_state sigma1 sigma2"
-  unfolding join_state_def le_fun_def by (simp add: join_ub1)
+  unfolding join_state_def le_fun_def by (simp add: sup_ge1)
 
 lemma join_state_ub2: "sigma2 \<le> join_state sigma1 sigma2"
-  unfolding join_state_def le_fun_def by (simp add: join_ub2)
+  unfolding join_state_def le_fun_def by (simp add: sup_ge2)
 
 (* Each predecessor's tf-image is below the rhs join.
    Uses mem_image_le_fold over the predecessor set. *)

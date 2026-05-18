@@ -70,12 +70,36 @@ lemma eint_le_antisym: "eint_le x y \<Longrightarrow> eint_le y x \<Longrightarr
 lemma eint_le_trans: "eint_le x y \<Longrightarrow> eint_le y z \<Longrightarrow> eint_le x z"
   by (cases x; cases y; cases z) simp_all
 
+lemma eint_le_PlusInf [simp]: "eint_le x PlusInf"
+  by (cases x) simp_all
+
+lemma eint_le_MinInf_left [simp]: "eint_le MinInf x"
+  by simp
+
+lemma eint_le_linear: "eint_le x y \<or> eint_le y x"
+  by (cases x; cases y) auto
+
 instantiation ivl :: order begin
-instance sorry (* use eint_le_refl / eint_le_antisym / eint_le_trans lemmas above *)
+instance proof
+  fix x y z :: ivl
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_ivl_def by simp
+  show "x \<le> x"
+    unfolding less_eq_ivl_def by (cases x) (simp add: eint_le_refl)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    unfolding less_eq_ivl_def by (cases x; cases y; cases z) (auto intro: eint_le_trans)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    unfolding less_eq_ivl_def by (cases x; cases y) (auto intro: eint_le_antisym)
+qed
 end
 
 instantiation ivl :: order_bot begin
-instance sorry
+instance proof
+  fix x :: ivl
+  show "bot \<le> x"
+    unfolding less_eq_ivl_def bot_ivl_def
+    by (cases x) simp
+qed
 end
 
 definition ivl_bot :: ivl where
@@ -101,6 +125,53 @@ fun join_ivl :: "ivl => ivl => ivl" where
     "join_ivl (Ivl l1 u1) (Ivl l2 u2) =
        Ivl (if eint_le l1 l2 then l1 else l2)
            (if eint_le u2 u1 then u1 else u2)"
+
+lemma join_ivl_le_ub1: "(a :: ivl) \<le> join_ivl a b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  then show "a \<le> join_ivl a b"
+    unfolding less_eq_ivl_def
+    using eint_le_linear[of l1 l2] eint_le_linear[of u1 u2]
+    by (auto simp: eint_le_refl)
+qed
+
+lemma join_ivl_le_ub2: "(b :: ivl) \<le> join_ivl a b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  then show "b \<le> join_ivl a b"
+    unfolding less_eq_ivl_def
+    using eint_le_linear[of l1 l2] eint_le_linear[of u1 u2]
+    by (auto simp: eint_le_refl)
+qed
+
+lemma join_ivl_le_least:
+  "(a :: ivl) \<le> c \<Longrightarrow> b \<le> c \<Longrightarrow> join_ivl a b \<le> c"
+proof (cases a; cases b; cases c)
+  fix l1 u1 l2 u2 l3 u3 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2" "c = Ivl l3 u3"
+    and "a \<le> c" "b \<le> c"
+  then show "join_ivl a b \<le> c"
+    unfolding less_eq_ivl_def by auto
+qed
+
+instantiation ivl :: sup begin
+definition sup_ivl :: "ivl => ivl => ivl" where
+  "sup_ivl = join_ivl"
+instance ..
+end
+
+instance ivl :: semilattice_sup
+proof
+  fix x y z :: ivl
+  show "x \<le> x \<squnion> y" unfolding sup_ivl_def by (rule join_ivl_le_ub1)
+  show "y \<le> x \<squnion> y" unfolding sup_ivl_def by (rule join_ivl_le_ub2)
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x"
+    unfolding sup_ivl_def by (rule join_ivl_le_least)
+qed
+
+instance ivl :: bounded_semilattice_sup_bot ..
 
 (*
   Standard interval widening: keep l if l decreased, else push to -inf;
@@ -135,7 +206,7 @@ lemma widen_ivl_terminates:
 (* ── Abstract Domain Instantiation ───────────────────────────── *)
 
 interpretation ivl_domain:
-  abstract_domain gamma_ivl join_ivl widen_ivl
+  abstract_domain gamma_ivl widen_ivl
   sorry
 
 (* ── Transfer Functions (stubs) ──────────────────────────────── *)

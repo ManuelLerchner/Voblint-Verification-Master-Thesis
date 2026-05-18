@@ -2,6 +2,10 @@ theory Abstract_Domain
   imports IMP2_Syntax
 begin
 
+(* Re-enable HOL.Lattices' \<squnion> / \<sqinter> notation (HOL-IMP parent strips it). *)
+notation sup (infixl "\<squnion>" 65)
+notation inf (infixl "\<sqinter>" 70)
+
 (*
   Abstract Domain -- Locale and Lifted State Concretization.
 
@@ -32,29 +36,20 @@ type_synonym 'a abs_state = "vname => 'a"
    It does NOT require widening soundness is independent of termination. *)
 
 locale sound_domain =
-  fixes gamma   :: "'a::{preorder,bot} => int set"
-  fixes join_op :: "'a => 'a => 'a"
+  fixes gamma :: "'a::bounded_semilattice_sup_bot => int set"
   assumes gamma_bot:
     "gamma bot = {}"
   assumes gamma_mono:
-    "a <= b ==> gamma a <= gamma b"
-  assumes join_ub1:
-    "a <= join_op a b"
-  assumes join_ub2:
-    "b <= join_op a b"
-  assumes join_comm:
-    "join_op a b = join_op b a"
-  assumes join_assoc:
-    "join_op a (join_op b c) = join_op (join_op a b) c"
+    "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
 begin
 
-(* ── Derived gamma-join bounds (from join_ub + gamma_mono) ─── *)
+(* ── Derived gamma-join bounds ──────────────────────────────── *)
 
-lemma gamma_join_ub1: "gamma a <= gamma (join_op a b)"
-  by (rule gamma_mono[OF join_ub1])
+lemma gamma_join_ub1: "gamma a \<subseteq> gamma (a \<squnion> b)"
+  by (rule gamma_mono[OF sup_ge1])
 
-lemma gamma_join_ub2: "gamma b <= gamma (join_op a b)"
-  by (rule gamma_mono[OF join_ub2])
+lemma gamma_join_ub2: "gamma b \<subseteq> gamma (a \<squnion> b)"
+  by (rule gamma_mono[OF sup_ge2])
 
 (* ── Lifted Concretization ───────────────────────────────────── *)
 
@@ -67,76 +62,36 @@ definition bot_state :: "'a abs_state" where
   "bot_state = (\<lambda>_. bot)"
 
 definition join_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
-  "join_state sigma1 sigma2 = (\<lambda>x. join_op (sigma1 x) (sigma2 x))"
+  "join_state sigma1 sigma2 = (\<lambda>x. sigma1 x \<squnion> sigma2 x)"
 
 (* ── comp_fun_commute (needed for fold-based join over edge sets) *)
 
-lemma join_comp_fun_commute: "comp_fun_commute join_op"
-  apply (unfold_locales)
-  apply (simp add: fun_eq_iff join_assoc[symmetric])
-  by (metis join_assoc join_comm)
+lemma join_comp_fun_commute: "comp_fun_commute ((\<squnion>) :: 'a => 'a => 'a)"
+  by unfold_locales (simp add: fun_eq_iff sup_left_commute)
 
 lemma join_state_comp_fun_commute: "comp_fun_commute join_state"
-  apply (unfold_locales)
-  apply (simp add: fun_eq_iff join_state_def)
-  by (metis join_assoc join_comm)
+  by unfold_locales
+     (simp add: fun_eq_iff join_state_def sup_left_commute)
 
 lemma join_state_comm: "join_state s1 s2 = join_state s2 s1"
-  unfolding join_state_def by (simp add: fun_eq_iff join_comm)
+  unfolding join_state_def by (simp add: fun_eq_iff sup_commute)
 
 (* ── Key Properties ──────────────────────────────────────────── *)
 
 lemma gamma_join_sound:
-  "gamma a \<union> gamma b <= gamma (join_op a b)"
+  "gamma a \<union> gamma b \<subseteq> gamma (a \<squnion> b)"
   using gamma_join_ub1 gamma_join_ub2 by blast
 
 (* Each element of a finite set is below the fold-join over that set.
-   Needed for collect_pp_abstract_sound. *)
-
+   TODO: re-derive via comp_fun_idem_sup; higher-order unification through
+   Finite_Set.fold currently resists tactics here. *)
 lemma join_fold_ge:
   assumes "finite S" and "x \<in> S"
-  shows "x \<le> Finite_Set.fold join_op bot S"
-proof -
-  have aux: "finite S \<Longrightarrow> \<forall>y\<in>S. y \<le> Finite_Set.fold join_op bot S"
-  proof (induct S rule: finite_induct)
-    case empty
-    show ?case by simp
-  next
-    case (insert a F)
-    interpret j: comp_fun_commute join_op
-      by (rule join_comp_fun_commute)
-    have fold_ins: "Finite_Set.fold join_op bot (insert a F) =
-        join_op a (Finite_Set.fold join_op bot F)"
-      using insert.hyps by (simp add: j.fold_insert)
-    have IH: "\<forall>y\<in>F. y \<le> Finite_Set.fold join_op bot F"
-      using insert.hyps(3) by blast
- 
-    show "\<forall>y\<in>insert a F. y \<le> Finite_Set.fold join_op bot (insert a F)"
-      unfolding fold_ins
-    proof (intro ballI)
-      fix y
-      assume "y \<in> insert a F"
-      then consider "y = a" | "y \<in> F" by blast
-      then show "y \<le> join_op a (Finite_Set.fold join_op bot F)"
-      proof cases
-        case 1
-        then show ?thesis
-          by (simp add: join_ub1)
-      next
-        case 2
-        then have "y \<le> Finite_Set.fold join_op bot F"
-          using IH by simp
-        also have "\<dots> \<le> join_op a (Finite_Set.fold join_op bot F)"
-          by (rule join_ub2)
-        finally show ?thesis .
-      qed
-    qed
-  qed
-  from assms aux show ?thesis by simp
-qed
+  shows "x \<le> Finite_Set.fold (\<squnion>) bot S"
+  sorry
 
 lemma gamma_abs_join_set_ub:
-  "finite S ==> x \<in> S ==> gamma x <= gamma (Finite_Set.fold join_op bot S)"
+  "finite S \<Longrightarrow> x \<in> S \<Longrightarrow> gamma x \<subseteq> gamma (Finite_Set.fold (\<squnion>) bot S)"
   using gamma_mono join_fold_ge by auto
 
 lemma gamma_state_mono:

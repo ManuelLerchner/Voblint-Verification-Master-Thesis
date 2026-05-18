@@ -91,7 +91,7 @@ lemma mlup_env_map[simp]:
   unfolding mlup_def env_map_def by simp
 
 lemma rhs_tree_fold_traverse_env_map:
-  fixes env :: "pp \<Rightarrow> ('a::{preorder,bot}) abs_state"
+  fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
   shows "traverse_rhs (rhs_tree_fold tf join_abs acc ps) (env_map env)
      = fold (\<lambda>(u,a) st. join_abs st (apply_tf tf a (env u))) ps acc"
 proof (induct ps arbitrary: acc)
@@ -153,7 +153,7 @@ proof -
 qed
 
 lemma make_rhs_tree_correspondence_not_entry_no_predecessors:
-  fixes env :: "pp \<Rightarrow> ('a::{preorder,bot}) abs_state"
+  fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
   assumes not_e: "v \<noteq> cfg_entry g"
   assumes no_in: "\<And>u a. (u, a, v) \<notin> cfg_edges g"
   shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map env) =
@@ -199,7 +199,7 @@ qed
 
 lemma rhs_eq_fold_join_sorted_predecessors:
   fixes g v tf join_abs bot_abs s0
-  fixes env :: "pp \<Rightarrow> ('a::{preorder,bot}) abs_state"
+  fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
   assumes fin: "finite (cfg_edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
@@ -273,7 +273,7 @@ proof -
 qed
 
 lemma fold_join_abs_swap_edge_steps:
-  fixes join_abs :: "'a::{preorder,bot} abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  fixes join_abs :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and tf :: "'a domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
@@ -329,7 +329,7 @@ lemma make_rhs_tree_ps_if_finite:
 
 lemma make_rhs_tree_correspondence:
   assumes fin: "finite (cfg_edges g)"
-  assumes cfi: "comp_fun_idem (join_abs :: 'a::{preorder,bot} abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  assumes cfi: "comp_fun_idem (join_abs :: 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
   shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map (env :: pp \<Rightarrow> 'a abs_state)) =
          make_rhs g tf join_abs bot_abs s0 v env"
@@ -354,26 +354,26 @@ proof -
 qed
 
 lemma mlup_env_map_of_mlup:
-  fixes \<sigma> :: "(pp, ('a::{preorder,bot}) abs_state) map"
+  fixes \<sigma> :: "(pp, ('a::bounded_semilattice_sup_bot) abs_state) map"
   shows "mlup (env_map (\<lambda>w. mlup \<sigma> w)) x = mlup \<sigma> x"
   by (simp add: mlup_env_map)
 
 lemma lookup_bot_mlup:
-  fixes \<sigma> :: "(pp, ('a::{preorder,bot}) abs_state) map"
+  fixes \<sigma> :: "(pp, ('a::bounded_semilattice_sup_bot) abs_state) map"
   shows "lookup_bot \<sigma> x = mlup \<sigma> x"
   unfolding lookup_bot_def mlup_def by (cases "\<sigma> x") simp_all
 
 lemma traverse_rhs_mlup_eq:
-  fixes t :: "(pp, ('a::{preorder,bot}) abs_state) strategy_tree"
-    and \<sigma> \<sigma>' :: "(pp, ('a::{preorder,bot}) abs_state) map"
+  fixes t :: "(pp, ('a::bounded_semilattice_sup_bot) abs_state) strategy_tree"
+    and \<sigma> \<sigma>' :: "(pp, ('a::bounded_semilattice_sup_bot) abs_state) map"
   assumes mlup_ag: "\<And>z. mlup \<sigma> z = mlup \<sigma>' z"
   shows "traverse_rhs t \<sigma> = traverse_rhs t \<sigma>'"
   apply (rule solution_sufficient_t)
   using mlup_ag by simp
 
 lemma rhs_make_rhs_tree_traverse_mlup:
-  fixes g :: cfg and tf :: "'a::{preorder,bot} domain_transfer"
-    and join_abs bot_abs s0 v and \<sigma> :: "(pp, ('a::{preorder,bot}) abs_state) map"
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and join_abs bot_abs s0 v and \<sigma> :: "(pp, ('a::bounded_semilattice_sup_bot) abs_state) map"
   assumes fin: "finite (cfg_edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
@@ -425,7 +425,7 @@ where
 theorem td_analyse_post_fixpoint:
   fixes c tf join_abs bot_abs s0
   assumes fin: "finite (cfg_edges (to_cfg c))"
-  assumes cfi: "comp_fun_idem (join_abs :: 'a::{preorder,bot} abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  assumes cfi: "comp_fun_idem (join_abs :: 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
   assumes solve_dom:
     "TD_plain.solve_dom (make_rhs_tree (to_cfg c) tf join_abs bot_abs s0) (cfg_entry (to_cfg c))"

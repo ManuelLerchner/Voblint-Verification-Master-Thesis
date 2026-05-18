@@ -183,51 +183,10 @@ fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
 fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
   "assume_not_sign _ sigma = sigma"   (* conservative: no refinement *)
 
-interpretation sign_domain: abstract_domain gamma_sign join_sign widen_sign
-proof unfold_locales
-  fix a b :: sign
-  show "gamma_sign bot = {}" unfolding bot_sign_def by simp
-next
-  fix a b :: sign
-  assume "a \<le> b"
-  then show "gamma_sign a \<subseteq> gamma_sign b"
-    unfolding less_eq_sign_def by (rule gamma_sign_mono)
-next
-  fix a b :: sign
-  show "a \<le> join_sign a b"
-    unfolding less_eq_sign_def by (rule join_sign_ub1)
-next
-  fix a b :: sign
-  show "b \<le> join_sign a b"
-    unfolding less_eq_sign_def by (rule join_sign_ub2)
-next
-  fix a b :: sign
-  show "join_sign a b = join_sign b a" by (rule join_sign_comm)
-next
-  fix a b c :: sign
-  show "join_sign a (join_sign b c) = join_sign (join_sign a b) c"
-    by (rule join_sign_assoc)
-next
-  fix a b :: sign
-  show "gamma_sign a \<subseteq> gamma_sign (widen_sign a b)"
-    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub1 less_eq_sign_def)
-next
-  fix a b :: sign
-  show "gamma_sign b \<subseteq> gamma_sign (widen_sign a b)"
-    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
-qed
+(* ── Typeclass Instances ──────────────────────────────────────
+   Hoisted above the abstract_domain interpretation because the
+   sound_domain locale's class constraint is bounded_semilattice_sup_bot. *)
 
-lemma sign_gamma_state_conv:
-  "(s : sign_domain.gamma_state sigma) = (s : sound_domain.gamma_state gamma_sign sigma)"
-  unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
-
-(* ── Typeclass Instances (required by TD solver interface) ────── *)
-
-(* sign :: bot already defined above (bot_sign = SBot) *)
-
-(* equal comes from datatype sign (no separate instantiation). *)
-
-(* sign :: ord already defined above (less_eq_sign = sign_le). *)
 instantiation sign :: order begin
 instance proof
   fix x y :: sign
@@ -244,6 +203,50 @@ instance proof
     unfolding less_eq_sign_def bot_sign_def by simp
 qed
 end
+
+instantiation sign :: sup begin
+definition sup_sign :: "sign => sign => sign" where
+  "sup_sign = join_sign"
+instance ..
+end
+
+instance sign :: semilattice_sup
+proof
+  fix x y z :: sign
+  show "x \<le> x \<squnion> y"
+    unfolding sup_sign_def less_eq_sign_def by (rule join_sign_ub1)
+  show "y \<le> x \<squnion> y"
+    unfolding sup_sign_def less_eq_sign_def by (rule join_sign_ub2)
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x"
+    unfolding sup_sign_def less_eq_sign_def by (rule join_sign_least)
+qed
+
+(* sign in order_bot + semilattice_sup -> bounded_semilattice_sup_bot for free *)
+instance sign :: bounded_semilattice_sup_bot ..
+
+(* ── Abstract Domain Interpretation ─────────────────────────── *)
+
+interpretation sign_domain: abstract_domain gamma_sign widen_sign
+proof unfold_locales
+  show "gamma_sign bot = {}" unfolding bot_sign_def by simp
+next
+  fix a b :: sign
+  assume "a \<le> b"
+  then show "gamma_sign a \<subseteq> gamma_sign b"
+    unfolding less_eq_sign_def by (rule gamma_sign_mono)
+next
+  fix a b :: sign
+  show "gamma_sign a \<subseteq> gamma_sign (widen_sign a b)"
+    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub1 less_eq_sign_def)
+next
+  fix a b :: sign
+  show "gamma_sign b \<subseteq> gamma_sign (widen_sign a b)"
+    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
+qed
+
+lemma sign_gamma_state_conv:
+  "(s : sign_domain.gamma_state sigma) = (s : sound_domain.gamma_state gamma_sign sigma)"
+  unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
 
 lemma assume_sign_default:
   "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_sign b sigma = sigma"

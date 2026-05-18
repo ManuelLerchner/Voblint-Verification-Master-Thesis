@@ -28,7 +28,7 @@ begin
 *)
 
 definition domain_transfer_sound ::
-    "('a::{preorder,bot} => int set)
+    "('a::bounded_semilattice_sup_bot => int set)
      => 'a domain_transfer
      => bool"
 where
@@ -58,7 +58,7 @@ record 'a analysis_config =
 (* ── Run the Pipeline ─────────────────────────────────────────── *)
 
 definition run_analysis ::
-    "('a::{preorder,bot}) analysis_config => com => pp => 'a abs_state"
+    "('a::bounded_semilattice_sup_bot) analysis_config => com => pp => 'a abs_state"
 where
   "run_analysis cfg c =
      td_analyse c
@@ -191,9 +191,9 @@ corollary ivl_pipeline_sound:
   does not depend on any specific execution reaching exit).
 *)
 theorem pipeline_invariant_sound:
-  fixes cfg :: "'a::{preorder,bot} analysis_config"
-  assumes sound:      "sound_domain (ac_gamma cfg) join_op"
-  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. join_op (s1 x) (s2 x))"
+  fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
+  assumes sound:      "sound_domain (ac_gamma cfg)"
+  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. s1 x \<squnion> s2 x)"
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
@@ -213,14 +213,14 @@ theorem pipeline_invariant_sound:
                     sound_domain.gamma_state (ac_gamma cfg)
                       (run_analysis cfg c v)"
 proof -
-  interpret sd: sound_domain "ac_gamma cfg" join_op
+  interpret sd: sound_domain "ac_gamma cfg"
     using sound .
   have join_eq': "ac_join cfg = sd.join_state"
     unfolding sd.join_state_def using join_eq by simp
   have bot_eq':  "ac_bot cfg = sd.bot_state"
     unfolding sd.bot_state_def using bot_eq by simp
   have join_sym: "\<And>x y. ac_join cfg x y = ac_join cfg y x"
-    unfolding join_eq using sd.join_comm by (auto simp: fun_eq_iff)
+    unfolding join_eq using sup_commute by (auto simp: fun_eq_iff)
   have pfp: "is_post_fixpoint (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg)
               (ac_init cfg) (run_analysis cfg c)"
     unfolding run_analysis_def
@@ -246,9 +246,9 @@ qed
 
 (* ── Pipeline Soundness (Generic, exit specialisation) ────────── *)
 theorem pipeline_sound:
-  fixes cfg :: "'a::{preorder,bot} analysis_config"
-  assumes sound:      "sound_domain (ac_gamma cfg) join_op"
-  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. join_op (s1 x) (s2 x))"
+  fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
+  assumes sound:      "sound_domain (ac_gamma cfg)"
+  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. s1 x \<squnion> s2 x)"
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
@@ -313,10 +313,10 @@ theorem sign_pipeline_invariant_sound:
 proof -
   have ge: "ac_gamma (sign_analysis_config s) = gamma_sign"
     unfolding sign_analysis_config_def by simp
-  have sound: "sound_domain (ac_gamma (sign_analysis_config s)) join_sign"
+  have sound: "sound_domain (ac_gamma (sign_analysis_config s))"
     unfolding ge by (rule sign_domain.sound_domain_axioms)
   have je: "ac_join (sign_analysis_config s)
-            = (\<lambda>s1 s2 x. join_sign (s1 x) (s2 x))"
+            = (\<lambda>s1 s2 x. s1 x \<squnion> s2 x)"
     unfolding sign_analysis_config_def sign_domain.join_state_def by simp
   have be: "ac_bot (sign_analysis_config s) = (\<lambda>_. bot)"
     unfolding sign_analysis_config_def sign_domain.bot_state_def by simp
