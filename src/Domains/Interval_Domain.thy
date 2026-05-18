@@ -365,18 +365,121 @@ next
   show "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl a b)" by (rule widen_ivl_ub2)
 qed
 
-(* ── Transfer Functions (stubs) ──────────────────────────────── *)
+(* ── Transfer Functions ──────────────────────────────────────── *)
 
-(* Abstract arithmetic: conservative stubs (TODO: precise implementations) *)
+(* Precise eint addition. The two pathological combinations
+   (MinInf + PlusInf and PlusInf + MinInf) are unreachable from non-empty
+   intervals, so any total assignment is sound; we pick MinInf / PlusInf. *)
+fun eint_plus :: "eint => eint => eint" where
+    "eint_plus (Fin n)   (Fin m)   = Fin (n + m)"
+  | "eint_plus (Fin _)   MinInf    = MinInf"
+  | "eint_plus (Fin _)   PlusInf   = PlusInf"
+  | "eint_plus MinInf    MinInf    = MinInf"
+  | "eint_plus MinInf    (Fin _)   = MinInf"
+  | "eint_plus MinInf    PlusInf   = MinInf"
+  | "eint_plus PlusInf   MinInf    = PlusInf"
+  | "eint_plus PlusInf   (Fin _)   = PlusInf"
+  | "eint_plus PlusInf   PlusInf   = PlusInf"
+
+(* Precise eint subtraction. Same unreachable-edge handling. *)
+fun eint_minus :: "eint => eint => eint" where
+    "eint_minus (Fin n)   (Fin m)   = Fin (n - m)"
+  | "eint_minus (Fin _)   MinInf    = PlusInf"
+  | "eint_minus (Fin _)   PlusInf   = MinInf"
+  | "eint_minus MinInf    MinInf    = MinInf"
+  | "eint_minus MinInf    (Fin _)   = MinInf"
+  | "eint_minus MinInf    PlusInf   = MinInf"
+  | "eint_minus PlusInf   MinInf    = PlusInf"
+  | "eint_minus PlusInf   (Fin _)   = PlusInf"
+  | "eint_minus PlusInf   PlusInf   = PlusInf"
 
 fun ivl_plus :: "ivl => ivl => ivl" where
-    "ivl_plus  (Ivl l1 u1) (Ivl l2 u2) = Ivl MinInf PlusInf"
+    "ivl_plus  (Ivl l1 u1) (Ivl l2 u2) =
+       Ivl (eint_plus l1 l2) (eint_plus u1 u2)"
 
 fun ivl_minus :: "ivl => ivl => ivl" where
-    "ivl_minus (Ivl l1 u1) (Ivl l2 u2) = Ivl MinInf PlusInf"
+    "ivl_minus (Ivl l1 u1) (Ivl l2 u2) =
+       Ivl (eint_minus l1 u2) (eint_minus u1 l2)"
 
+(* Precise interval multiplication for finite bounds.
+   When any bound is infinite (MinInf or PlusInf) we fall back to top, since
+   precise treatment requires sign-dependent corner reasoning that is much
+   more involved with the extended-integer arithmetic. *)
 fun ivl_times :: "ivl => ivl => ivl" where
-    "ivl_times (Ivl l1 u1) (Ivl l2 u2) = Ivl MinInf PlusInf"
+    "ivl_times (Ivl (Fin l1) (Fin u1)) (Ivl (Fin l2) (Fin u2)) =
+       Ivl (Fin (min (l1*l2) (min (l1*u2) (min (u1*l2) (u1*u2)))))
+           (Fin (max (l1*l2) (max (l1*u2) (max (u1*l2) (u1*u2))))) "
+  | "ivl_times _ _ = Ivl MinInf PlusInf"
+
+(* ── Soundness of abstract arithmetic ─────────────────────────── *)
+
+lemma ivl_plus_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "i + j \<in> gamma_ivl (ivl_plus a b)"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  with assms have bnds:
+    "eint_le l1 (Fin i)" "eint_le (Fin i) u1"
+    "eint_le l2 (Fin j)" "eint_le (Fin j) u2"
+    by auto
+  show "i + j \<in> gamma_ivl (ivl_plus a b)"
+    unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
+    using bnds
+    by (cases l1; cases l2; cases u1; cases u2) auto
+qed
+
+lemma ivl_minus_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "i - j \<in> gamma_ivl (ivl_minus a b)"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  with assms have bnds:
+    "eint_le l1 (Fin i)" "eint_le (Fin i) u1"
+    "eint_le l2 (Fin j)" "eint_le (Fin j) u2"
+    by auto
+  show "i - j \<in> gamma_ivl (ivl_minus a b)"
+    unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
+    using bnds
+    by (cases l1; cases l2; cases u1; cases u2) auto
+qed
+
+(* Corner-bound principle for the all-finite case. *)
+lemma int_mult_in_corners_lo:
+  fixes l1 u1 l2 u2 i j :: int
+  assumes "l1 \<le> i" "i \<le> u1" "l2 \<le> j" "j \<le> u2"
+  shows "min (l1*l2) (min (l1*u2) (min (u1*l2) (u1*u2))) \<le> i * j"
+  using assms
+  by (smt (verit) mult_left_mono mult_right_mono
+                   mult_left_mono_neg mult_right_mono_neg min_def)
+
+lemma int_mult_in_corners_hi:
+  fixes l1 u1 l2 u2 i j :: int
+  assumes "l1 \<le> i" "i \<le> u1" "l2 \<le> j" "j \<le> u2"
+  shows "i * j \<le> max (l1*l2) (max (l1*u2) (max (u1*l2) (u1*u2)))"
+  using assms
+  by (smt (verit) mult_left_mono mult_right_mono
+                   mult_left_mono_neg mult_right_mono_neg max_def)
+
+lemma ivl_times_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "i * j \<in> gamma_ivl (ivl_times a b)"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume ab: "a = Ivl l1 u1" "b = Ivl l2 u2"
+  show "i * j \<in> gamma_ivl (ivl_times a b)"
+  proof (cases l1; cases u1; cases l2; cases u2)
+    fix n1 m1 n2 m2 :: int
+    assume fin: "l1 = Fin n1" "u1 = Fin m1" "l2 = Fin n2" "u2 = Fin m2"
+    from assms ab fin have bnds:
+      "n1 \<le> i" "i \<le> m1" "n2 \<le> j" "j \<le> m2" by auto
+    show "i * j \<in> gamma_ivl (ivl_times a b)"
+      unfolding ab fin
+      using int_mult_in_corners_lo[OF bnds] int_mult_in_corners_hi[OF bnds]
+      by simp
+  qed (auto simp: ab)
+qed
 
 fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
     "aval_ivl (N n)       sigma = Ivl (Fin n) (Fin n)"
@@ -385,33 +488,13 @@ fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
   | "aval_ivl (Minus a b) sigma = ivl_minus (aval_ivl a sigma) (aval_ivl b sigma)"
   | "aval_ivl (Times a b) sigma = ivl_times (aval_ivl a sigma) (aval_ivl b sigma)"
 
-(* Soundness of abstract arithmetic.
-   Arithmetic ops are top-stubs (Ivl MinInf PlusInf = UNIV) so soundness is
-   trivial on Plus/Minus/Times. N n yields the singleton {n}; V x uses the
-   pointwise concretisation hypothesis. *)
+(* Soundness of abstract arithmetic. *)
 lemma aval_ivl_sound:
   "(\<forall>x. s x \<in> gamma_ivl (sigma x))
    \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a sigma)"
-proof (induction a)
-  case (N n) thus ?case by (simp add: aval.simps)
-next
-  case (V x) thus ?case by (simp add: aval.simps)
-next
-  case (Plus a1 a2)
-  show ?case
-    using aval_ivl.simps(3)[of a1 a2 sigma]
-    by (cases "aval_ivl a1 sigma"; cases "aval_ivl a2 sigma") simp_all
-next
-  case (Minus a1 a2)
-  show ?case
-    using aval_ivl.simps(4)[of a1 a2 sigma]
-    by (cases "aval_ivl a1 sigma"; cases "aval_ivl a2 sigma") simp_all
-next
-  case (Times a1 a2)
-  show ?case
-    using aval_ivl.simps(5)[of a1 a2 sigma]
-    by (cases "aval_ivl a1 sigma"; cases "aval_ivl a2 sigma") simp_all
-qed
+  by (induction a;
+      simp add: aval.simps aval_ivl.simps
+                ivl_plus_sound ivl_minus_sound ivl_times_sound)
 
 (* Abstract assume: interval-based branch refinement *)
 fun assume_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
