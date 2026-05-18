@@ -34,7 +34,11 @@ Vendored `TD` solver (stilscher/td-verification) already verified. To prove: IMP
 | Joins            | `Finite_Set.fold` (needs comm + assoc, finite edges) |
 | Order            | `'a::ord` pointwise on states                        |
 
-Open: direct AST→eqsys (`Direct_Equations`) vs CFG layer; interval stretch; IMP vs IMP2.
+Open: IMP vs IMP2 (long-term language scope only — current code is IMP2).
+
+Decided since v0: CFG layer wins (`Direct_Equations` quarantined as P10, off-path); interval stretch in progress on the issue tracker.
+
+**Live roadmap and backlog: `docs/ROADMAP.md` + [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).** Issues, dependencies, per-phase status, and Blazy-2013-inspired extensions live there, not in this file.
 
 ---
 

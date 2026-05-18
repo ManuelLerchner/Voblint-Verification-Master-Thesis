@@ -4,6 +4,7 @@ High-level map of the thesis formalization: what is proved elsewhere, what this
 repository contributes, and how the main lemmas connect.
 
 **Status detail and sorry counts:** `docs/PROOF_PHASES.md`.
+**Live roadmap and backlog:** `docs/ROADMAP.md` → [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).
 
 ---
 

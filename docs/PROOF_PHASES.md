@@ -2,6 +2,7 @@
 
 Execution status and sorry inventory. Overview: `docs/PROOF_OVERVIEW.md`.
 Walkthrough: `docs/PIPELINE_WALKTHROUGH.md` (HTML copies under `docs/html/` may lag).
+Roadmap and live backlog: `docs/ROADMAP.md`.
 
 ---
 
@@ -59,17 +60,21 @@ verified solver actually returns a post-fixpoint on this CFG. See `PROOF_OVERVIE
 
 ---
 
-## Phase 3 Interval stretch (optional)
+## Phase 3+ Beyond sign — see roadmap
 
-Follow the domain recipe in `PROOF_OVERVIEW.md` § Adding a domain:
+Active work (interval pipeline, backward transformers, reduced product, total
+correctness, octagon, executable demos, thesis writeup) is tracked on
+**[GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8)** with
+explicit dependency arrows via `blockedBy`. Filter by label:
 
-1. Close `Interval_Domain.thy` sorries (join laws, `gamma_ivl_*`, transfer soundness).
-2. Discharge interval stubs in `Pipeline.thy` / `TD_Soundness.thy` (`ivl_pipeline_sound`,
-   `interval_analysis_sound`).
-3. Reuse Phase 2 templates no new bridge lemmas if the generic pipeline stays unchanged.
+```bash
+gh issue list --state open --label phase:stretch
+gh issue list --state open --label source:blazy-2013
+```
 
-`Interval_Domain.thy`: lattice laws, transfer soundness, then instantiate Phase 2
-template for `ivl_pipeline_sound` / `interval_analysis_sound`.
+Architectural directions (no issue numbers — they drift): `docs/ROADMAP.md`.
+The historical "Phase 3 / Phase 4" linear sequencing is superseded by the issue
+DAG.
 
 ---
 

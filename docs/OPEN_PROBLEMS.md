@@ -1,12 +1,17 @@
 # Open problems and handoffs
 
-Unfinished pieces in the formalization. Source of truth for live sorries:
+Catalogue of repo-level problems with stable file:line refs (P1–P10). For *new
+work and Blazy-2013-inspired extensions*, see `docs/ROADMAP.md` + [GitHub
+Project 8](https://github.com/users/ManuelLerchner/projects/8) — those entries
+live on the issue tracker, not in this file.
+
+Source of truth for live sorries:
 
 ```bash
 rg -n '^\s*sorry' src/ | rg -v '\.thy~'
 ```
 
-Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`.
+Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`, `docs/ROADMAP.md`.
 
 ---
 
