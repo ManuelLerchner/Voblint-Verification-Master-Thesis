@@ -93,7 +93,8 @@ proof -
       case False
       have "Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))
         = s0 \<squnion> (Finite_Set.fold (\<squnion>) bot (f ` P))"
-        sorry  (* j.fold_insert; HO-unify *)
+        by (metis (no_types, lifting) Sup_fin.eq_fold Sup_fin.insert finP finite_imageI finite_insert
+            insert_commute insert_not_empty)
       then show ?thesis
         using rhs_eq le_fold order_trans[OF _ sup_ge2] by simp
     qed
@@ -142,12 +143,13 @@ proof
   then show "x \<in> gamma_state (env v)" using step1 by blast
 qed
 
-(* Element of finite set is below the sup-fold over that set.
-   TODO: re-derive; tactics fail on Finite_Set.fold higher-order unify. *)
+(* Lifted state version of sup_fold_ge; the global polymorphic lemma already
+   covers 'a abs_state via the pointwise bounded_semilattice_sup_bot instance. *)
 lemma sup_fold_ge_state:
   assumes "finite (A :: 'a abs_state set)" and "x \<in> A"
   shows "x \<le> Finite_Set.fold (\<squnion>) bot A"
-  sorry
+  using assms
+  by (metis Sup_fin.coboundedI Sup_fin.eq_fold finite_insert insertCI)  
 
 (* s0 \<le> rhs at entry: s0 is in the joined set, so below the fold. *)
 lemma s0_le_rhs_entry:
@@ -165,11 +167,13 @@ proof -
     using finP by simp
   have mem: "s0 \<in> insert s0 (f ` P)" by simp
   have le_fold: "s0 \<le> Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))"
-    sorry
+    by (metis Sup_fin.coboundedI Sup_fin.eq_fold fin_img finite_insert insert_iff)
+    
   have rhs_eq: "rhs g tf (\<squnion>) bot s0 env (cfg_entry g)
     = Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))"
     unfolding rhs_def Let_def abs_join_set_def f_def
-    by (simp add: P_def)
+    using Peq predecessors_def by presburger
+    
   show ?thesis using le_fold rhs_eq by simp
 qed
 

@@ -75,12 +75,34 @@ lemma gamma_state_sup_ub2:
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
 
-(* TODO: re-derive via comp_fun_idem_sup; higher-order unification through
-   Finite_Set.fold currently resists tactics here. *)
+end
+
 lemma sup_fold_ge:
+  fixes S :: "'a::bounded_semilattice_sup_bot set"
   assumes "finite S" and "x \<in> S"
   shows "x \<le> Finite_Set.fold (\<squnion>) bot S"
-  sorry
+  using assms
+proof (induct S rule: finite_induct)
+  case empty then show ?case by simp
+next
+  case (insert a F)
+  have fold_ins: "Finite_Set.fold (\<squnion>) bot (insert a F)
+      = a \<squnion> Finite_Set.fold (\<squnion>) bot F"
+    by (metis (full_types) Sup_fin.eq_fold Sup_fin.insert finite.simps insert.hyps(1) insert_commute
+        insert_not_empty)
+  show ?case
+  proof (cases "x = a")
+    case True show ?thesis using True fold_ins by simp
+  next
+    case False
+    then have "x \<in> F" using insert.prems by simp
+    then have "x \<le> Finite_Set.fold (\<squnion>) bot F" by (rule insert.hyps(3))
+    then show ?thesis using fold_ins by simp
+  qed
+qed
+
+context sound_domain
+begin
 
 lemma gamma_abs_sup_set_ub:
   "finite S \<Longrightarrow> x \<in> S \<Longrightarrow> gamma x \<subseteq> gamma (Finite_Set.fold (\<squnion>) bot S)"
