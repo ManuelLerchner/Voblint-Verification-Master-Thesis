@@ -58,7 +58,7 @@ value "compile example_prog 0"
 
 value "cfg_entry (to_cfg example_prog)"   \<comment> \<open>0\<close>
 value "cfg_exit  (to_cfg example_prog)"   \<comment> \<open>3\<close>
-value "cfg_edges (to_cfg example_prog)"
+value "edges (to_cfg example_prog)"
 
 
 subsection \<open>Sign Transfer Functions --- Spot Checks\<close>

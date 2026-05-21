@@ -63,7 +63,14 @@ flowchart TD
 
 ## Key types
 
-- `com` IMP2 commands; `cfg` with `cfg_entry`, `cfg_exit`, `cfg_edges`
+- `com` IMP2 commands
+- `cfg` : **record-extension** of `Dijkstra_Shortest_Path.Graph.graph` adding
+  `cfg_entry` / `cfg_exit`. Inherits `nodes` / `edges` selectors and the
+  `valid_graph` locale's path API (`is_path_split`, `path_split_vertex`, ...).
+  Build via the smart constructor `mk_cfg en ex E` (auto-computes `nodes`).
+- Label-erased `cfg_step` interprets `Timed_Automata.Graphs.Graph_Defs` for
+  reachability (`cfg_reach.reaches`, tied to `cfg_path` via `cfg_reach_iff_cfg_path`).
+  See `docs/AFP_GRAPH_MIGRATION.md`.
 - `pp = nat` program points
 - `'a abs_state = vname => 'a`; `'a domain_transfer` assign / assume / assume-not
 - `rhs`, `is_post_fixpoint` constraint system (`Constraint_System.thy`)
@@ -79,7 +86,7 @@ full syntactic lattice laws in the generic locale).
 | Stage     | File(s)                                        | Main facts                                                                                          |
 | --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | IMP2      | `IMP2_Semantics`, `IMP2_Collecting`            | `big_step`, `collect`                                                                               |
-| CFG       | `IMP2_to_CFG`, `CFG_Collecting`, `CFG_Path`    | `to_cfg`, `cfg_collect`, `cfg_collect_exit_eq_collect`                                              |
+| CFG       | `IMP2_to_CFG`, `CFG_Collecting`, `CFG_Path`, `CFG_Reach` | `to_cfg`, `cfg_collect`, `cfg_collect_exit_eq_collect`, `cfg_path_iff_is_path`, `cfg_reach_iff_cfg_path` |
 | Equations | `Constraint_System`, `Constraint_System_Sound` | `rhs_mono`, `post_fixpoint_sound`, `exit_sound`                                                     |
 | Solver    | `TD_Interface`, `TD_Soundness`                 | `make_rhs_tree_correspondence`, `td_analyse_post_fixpoint`, `sign_analysis_sound` (interval: sorry) |
 | Pipeline  | `Pipeline.thy`                                 | `pipeline_invariant_sound`, `pipeline_sound`, sign corollaries                                      |

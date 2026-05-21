@@ -25,7 +25,7 @@ where
      rhs g tf join_abs bot_abs s0 env v"
 
 lemma make_rhs_mono:
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes cfu: "comp_fun_commute (join_abs :: 'a::preorder abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_ub1: "\<And>x y::'a abs_state. x \<le> join_abs x y"
   assumes join_ub2: "\<And>x y::'a abs_state. y \<le> join_abs x y"
@@ -69,7 +69,7 @@ definition make_rhs_tree ::
      => (pp, 'a abs_state) strategy_tree"
 where
   "make_rhs_tree g tf join_abs bot_abs s0 v =
-     (let preds = ({(u,a). (u,a,v) \<in> cfg_edges g} :: (pp \<times> edge_action) set);
+     (let preds = ({(u,a). (u,a,v) \<in> edges g} :: (pp \<times> edge_action) set);
           ps = (if finite preds then sorted_list_of_set preds else []);
           acc0 = (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)
       in rhs_tree_fold tf join_abs acc0 ps)"
@@ -142,10 +142,10 @@ lemma SOME_distinct_list_if_set_empty:
 (* Special case: no edges into v and v is not the entry tree is Answer bot, same as rhs. *)
 lemma make_rhs_tree_eq_Answer_bot_if_no_preds_not_entry:
   assumes not_e: "v \<noteq> cfg_entry g"
-  assumes no_in: "\<And>u a. (u, a, v) \<notin> cfg_edges g"
+  assumes no_in: "\<And>u a. (u, a, v) \<notin> edges g"
   shows "make_rhs_tree g tf join_abs bot_abs s0 v = Answer bot_abs"
 proof -
-  have bar: "{(u,a). (u,a,v) \<in> cfg_edges g} = {}"
+  have bar: "{(u,a). (u,a,v) \<in> edges g} = {}"
     using no_in by blast
   show ?thesis
     unfolding make_rhs_tree_def Let_def using bar not_e
@@ -155,7 +155,7 @@ qed
 lemma make_rhs_tree_correspondence_not_entry_no_predecessors:
   fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
   assumes not_e: "v \<noteq> cfg_entry g"
-  assumes no_in: "\<And>u a. (u, a, v) \<notin> cfg_edges g"
+  assumes no_in: "\<And>u a. (u, a, v) \<notin> edges g"
   shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map env) =
          make_rhs g tf join_abs bot_abs s0 v env"
 proof -
@@ -168,12 +168,12 @@ proof -
 qed
 
 lemma finite_predecessor_pairs:
-  assumes fin: "finite (cfg_edges g)"
-  shows "finite {(u,a). (u,a,v) \<in> cfg_edges g}"
+  assumes fin: "finite (edges g)"
+  shows "finite {(u,a). (u,a,v) \<in> edges g}"
 proof (rule finite_subset)
-  show "{(u,a). (u,a,v) \<in> cfg_edges g} \<subseteq> (\<lambda>(u, a, w). (u, a)) ` cfg_edges g"
+  show "{(u,a). (u,a,v) \<in> edges g} \<subseteq> (\<lambda>(u, a, w). (u, a)) ` edges g"
     by force
-  show "finite ((\<lambda>(u, a, w). (u, a)) ` cfg_edges g)"
+  show "finite ((\<lambda>(u, a, w). (u, a)) ` edges g)"
     by (simp add: fin)
 qed
 
@@ -200,10 +200,10 @@ qed
 lemma rhs_eq_fold_join_sorted_predecessors:
   fixes g v tf join_abs bot_abs s0
   fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
-  defines "preds \<equiv> {(u,a). (u,a,v) \<in> cfg_edges g}"
+  defines "preds \<equiv> {(u,a). (u,a,v) \<in> edges g}"
   defines "ps \<equiv> sorted_list_of_set preds"
   defines "F \<equiv> (\<lambda>(u,a). apply_tf tf a (env u))"
   defines "vals \<equiv> F ` preds"
@@ -214,7 +214,7 @@ proof -
   interpret j: comp_fun_idem join_abs
     by (fact cfi)
   have fin_preds: "finite preds"
-    unfolding preds_def using fin finite_predecessor_pairs by blast
+    unfolding preds_def by (rule finite_predecessor_pairs[OF fin])
   have dist: "distinct ps" and setps: "set ps = preds"
     unfolding ps_def using fin_preds by simp_all
   have vals_eq: "vals = set (map F ps)"
@@ -301,17 +301,17 @@ next
 qed
 
 lemma make_rhs_tree_preds_list:
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   obtains ps where
     "distinct ps" and
-    "set ps = {(u,a). (u,a,v) \<in> cfg_edges g}"
+    "set ps = {(u,a). (u,a,v) \<in> edges g}"
 proof -
-  let ?S = "{(u,a). (u,a,v) \<in> cfg_edges g}"
+  let ?S = "{(u,a). (u,a,v) \<in> edges g}"
   have "finite ?S"
   proof (rule finite_subset)
-    show "?S \<subseteq> (\<lambda>(u, a, w). (u, a)) ` cfg_edges g"
+    show "?S \<subseteq> (\<lambda>(u, a, w). (u, a)) ` edges g"
       by force
-    show "finite ((\<lambda>(u, a, w). (u, a)) ` cfg_edges g)"
+    show "finite ((\<lambda>(u, a, w). (u, a)) ` edges g)"
       by (simp add: fin)
   qed
   from finite_distinct_list[OF this] obtain ps where "distinct ps" and "set ps = ?S"
@@ -321,30 +321,30 @@ proof -
 qed
 
 lemma make_rhs_tree_ps_if_finite:
-  assumes fin: "finite (cfg_edges g)"
-  shows "(let preds = ({(u,a). (u,a,v) \<in> cfg_edges g} :: (pp \<times> edge_action) set) in
+  assumes fin: "finite (edges g)"
+  shows "(let preds = ({(u,a). (u,a,v) \<in> edges g} :: (pp \<times> edge_action) set) in
           if finite preds then sorted_list_of_set preds else []) =
-         sorted_list_of_set {(u,a). (u,a,v) \<in> cfg_edges g}"
+         sorted_list_of_set {(u,a). (u,a,v) \<in> edges g}"
   by (simp add: finite_predecessor_pairs[OF fin])
 
 lemma make_rhs_tree_correspondence:
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
   shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map (env :: pp \<Rightarrow> 'a abs_state)) =
          make_rhs g tf join_abs bot_abs s0 v env"
 proof -
-  have fin_preds: "finite {(u,a). (u,a,v) \<in> cfg_edges g}"
+  have fin_preds: "finite {(u,a). (u,a,v) \<in> edges g}"
     by (rule finite_predecessor_pairs[OF fin])
   have "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map env) =
         fold (\<lambda>(u,a) st. join_abs st (apply_tf tf a (env u)))
-             (sorted_list_of_set {(u,a). (u,a,v) \<in> cfg_edges g})
+             (sorted_list_of_set {(u,a). (u,a,v) \<in> edges g})
              (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
     unfolding make_rhs_tree_def Let_def make_rhs_tree_ps_if_finite[OF fin]
     by (simp add: fin_preds rhs_tree_fold_traverse_env_map)
   also have "\<dots> =
         fold (\<lambda>(u,a) acc. join_abs (apply_tf tf a (env u)) acc)
-             (sorted_list_of_set {(u,a). (u,a,v) \<in> cfg_edges g})
+             (sorted_list_of_set {(u,a). (u,a,v) \<in> edges g})
              (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
     by (rule fold_join_abs_swap_edge_steps[OF join_sym])
   also have "\<dots> = rhs g tf join_abs bot_abs s0 env v"
@@ -374,7 +374,7 @@ lemma traverse_rhs_mlup_eq:
 lemma rhs_make_rhs_tree_traverse_mlup:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and join_abs bot_abs s0 v and \<sigma> :: "(pp, ('a::bounded_semilattice_sup_bot) abs_state) map"
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
   shows "rhs g tf join_abs bot_abs s0 (\<lambda>w. mlup \<sigma> w) v =
@@ -424,7 +424,7 @@ where
 *)
 theorem td_analyse_post_fixpoint:
   fixes c tf join_abs bot_abs s0
-  assumes fin: "finite (cfg_edges (to_cfg c))"
+  assumes fin: "finite (edges (to_cfg c))"
   assumes cfi: "comp_fun_idem (join_abs :: 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
   assumes solve_dom:
@@ -442,7 +442,7 @@ proof (unfold is_post_fixpoint_def td_analyse_def, intro allI)
   define T where "T = make_rhs_tree g tf join_abs bot_abs s0"
   define v0 where "v0 = cfg_entry g"
   define \<sigma> where "\<sigma> = TD_plain_Interp_solve T v0"
-  have fin_g: "finite (cfg_edges g)"
+  have fin_g: "finite (edges g)"
     unfolding g_def using fin by simp
   have psol: "part_solution T v0 \<sigma> (reach T \<sigma> v0)"
   proof (rule TD_plain_Interp.partial_correctness)

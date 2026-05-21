@@ -52,7 +52,7 @@ fun apply_tf :: "'a domain_transfer
 (*
   Fold join_abs over a finite set of abstract states.
   Requires comp_fun_commute join_abs for the result to be order-independent.
-  Finiteness of the predecessor set follows from finite (cfg_edges g).
+  Finiteness of the predecessor set follows from finite (edges g).
 *)
 
 definition abs_join_set ::
@@ -74,7 +74,7 @@ definition rhs ::
      => 'a abs_state"
 where
   "rhs g tf join_abs bot_abs s0 env v =
-     (let preds = {(u, a) | u a. (u, a, v) : cfg_edges g};
+     (let preds = {(u, a) | u a. (u, a, v) : edges g};
           vals  = image (\<lambda>(u, a). apply_tf tf a (env u)) preds;
           base  = if v = cfg_entry g then insert s0 vals else vals
       in  abs_join_set join_abs bot_abs base)"
@@ -85,13 +85,13 @@ lemma abs_join_set_empty [simp]:
 
 lemma rhs_no_predecessors_not_entry:
   assumes "v \<noteq> cfg_entry g"
-  assumes "\<And>u a. (u, a, v) \<notin> cfg_edges g"
+  assumes "\<And>u a. (u, a, v) \<notin> edges g"
   shows "rhs g tf join_abs bot_abs s0 env v = bot_abs"
   unfolding rhs_def using assms by (simp add: Let_def)
 
 lemma rhs_entry_no_predecessors:
   assumes "v = cfg_entry g"
-  assumes "\<And>u a. (u, a, v) \<notin> cfg_edges g"
+  assumes "\<And>u a. (u, a, v) \<notin> edges g"
   shows "rhs g tf join_abs bot_abs s0 env v = abs_join_set join_abs bot_abs {s0}"
   unfolding rhs_def using assms by (simp add: Let_def)
 
@@ -312,7 +312,7 @@ qed
 
 lemma rhs_mono:
   fixes env1 env2 :: "pp \<Rightarrow> 'a::preorder abs_state"
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes cfu: "comp_fun_commute (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_ub1: "\<And>x y. x \<le> join_abs x y"
   assumes join_ub2: "\<And>x y. y \<le> join_abs x y"
@@ -326,7 +326,7 @@ lemma rhs_mono:
   shows "rhs g tf join_abs bot_abs s0 env1 v \<le> rhs g tf join_abs bot_abs s0 env2 v"
 proof -
   define P :: "(pp \<times> edge_action) set"
-    where "P = {(u, a). (u, a, v) \<in> cfg_edges g}"
+    where "P = {(u, a). (u, a, v) \<in> edges g}"
   have "P = predecessors g v"
     by (simp add: P_def predecessors_def)
   then have finP: "finite P"

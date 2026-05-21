@@ -6,7 +6,7 @@ begin
   Direct Equation System AST \<rightarrow> equations, no CFG intermediate.
 
   Alternative to the CFG-based route:
-    CFG route:  compile c n  \<rightarrow>  cfg record  \<rightarrow>  rhs via cfg_edges
+    CFG route:  compile c n  \<rightarrow>  cfg record  \<rightarrow>  rhs via edges
     Direct:     predecessors_of c n v        \<rightarrow>  rhs directly
 
   The label allocation scheme mirrors compile exactly (same entry/exit
@@ -146,7 +146,7 @@ lemma predecessors_eq_compile:
 (*
   direct_rhs c n  is the RHS function for the direct approach.
   Formula is identical to rhs in Constraint_System.thy, but
-  uses predecessors_of instead of cfg_edges.
+  uses predecessors_of instead of edges.
 *)
 
 definition direct_rhs ::
@@ -174,7 +174,7 @@ where
 theorem direct_rhs_eq_cfg_rhs:
   assumes comp: "compile c n = (n', en, ex, E)"
   shows "direct_rhs c n tf join_abs bot_abs s0 env v
-       = rhs (\<lparr>cfg_entry = en, cfg_exit = ex, cfg_edges = E\<rparr>)
+       = rhs ((mk_cfg en ex E))
              tf join_abs bot_abs s0 env v"
   (*
     Both definitions reduce to abs_join_set over the same set of values.
@@ -234,7 +234,7 @@ lemma direct_tree_eq_make_rhs_tree:
   assumes comp: "compile c n = (n', en, ex, E)"
   shows "direct_tree c n tf join_abs bot_abs s0 v
        = make_rhs_tree
-           (\<lparr>cfg_entry = en, cfg_exit = ex, cfg_edges = E\<rparr>)
+           ((mk_cfg en ex E))
            tf join_abs bot_abs s0 v"
   sorry
 
@@ -269,7 +269,7 @@ theorem direct_eq_cfg_analyse:
     Proof sketch:
     1. Obtain (n', en, ex, E) = compile c 0.
     2. compile_entry  gives en = 0;
-       to_cfg_def     gives to_cfg c = \<lparr>cfg_entry=0, cfg_exit=ex, cfg_edges=E\<rparr>.
+       to_cfg_def     gives to_cfg c = (mk_cfg 0 ex E).
     3. direct_tree_eq_make_rhs_tree gives
          direct_tree c 0 ... = make_rhs_tree (to_cfg c) ...
     4. Both definitions use TD_plain_Interp_solve on equal trees at point 0 = cfg_entry.

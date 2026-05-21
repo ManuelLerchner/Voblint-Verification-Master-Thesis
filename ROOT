@@ -3,6 +3,8 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
   options [quick_and_dirty]
   sessions
     TD
+    "Dijkstra_Shortest_Path"
+    "Timed_Automata"
   directories
     "IMP2"
     "CFG"

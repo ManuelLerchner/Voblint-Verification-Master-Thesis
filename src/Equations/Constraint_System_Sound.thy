@@ -58,12 +58,12 @@ qed
 (* Each predecessor's tf-image is below the rhs join.
    Uses mem_image_le_fold over the predecessor set. *)
 lemma apply_tf_le_rhs:
-  assumes fin: "finite (cfg_edges g)"
-  assumes uav: "(u, a, v) \<in> cfg_edges g"
+  assumes fin: "finite (edges g)"
+  assumes uav: "(u, a, v) \<in> edges g"
   shows "apply_tf tf a (env u) \<le> rhs g tf (\<squnion>) bot s0 env v"
 proof -
   define P :: "(pp \<times> edge_action) set"
-    where "P = {(u', a'). (u', a', v) \<in> cfg_edges g}"
+    where "P = {(u', a'). (u', a', v) \<in> edges g}"
   have Peq: "P = predecessors g v"
     by (simp add: P_def predecessors_def)
   have finP: "finite P"
@@ -110,7 +110,7 @@ qed
 
 (* Step lemma for collect_pp abstract soundness. *)
 lemma collect_pp_abstract_sound:
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes tf_sound_assign:
     "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
@@ -126,7 +126,7 @@ lemma collect_pp_abstract_sound:
 proof
   fix x
   assume "x \<in> collect_pp g (\<lambda>v. gamma_state (env v)) v"
-  then obtain u a where uav: "(u, a, v) \<in> cfg_edges g"
+  then obtain u a where uav: "(u, a, v) \<in> edges g"
     and xin: "x \<in> edge_collect a (gamma_state (env u))"
     unfolding collect_pp_def by blast
   have step1: "x \<in> gamma_state (apply_tf tf a (env u))"
@@ -153,11 +153,11 @@ lemma sup_fold_ge_state:
 
 (* s0 \<le> rhs at entry: s0 is in the joined set, so below the fold. *)
 lemma s0_le_rhs_entry:
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   shows "s0 \<le> rhs g tf (\<squnion>) bot s0 env (cfg_entry g)"
 proof -
   define P :: "(pp \<times> edge_action) set"
-    where "P = {(u', a'). (u', a', cfg_entry g) \<in> cfg_edges g}"
+    where "P = {(u', a'). (u', a', cfg_entry g) \<in> edges g}"
   have Peq: "P = predecessors g (cfg_entry g)"
     by (simp add: P_def predecessors_def)
   have finP: "finite P"
@@ -178,7 +178,7 @@ proof -
 qed
 
 lemma post_fixpoint_sound:
-  assumes fin: "finite (cfg_edges g)"
+  assumes fin: "finite (edges g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
   assumes tf_sound_assign:
@@ -248,7 +248,7 @@ corollary exit_sound:
   assumes terminates: "big_step (c, s) t"
   shows   "t \<in> gamma_state (env (cfg_exit (to_cfg c)))"
 proof -
-  have fin: "finite (cfg_edges (to_cfg c))"
+  have fin: "finite (edges (to_cfg c))"
     by (rule to_cfg_finite)
   have pfp: "\<forall>v. cfg_collect (to_cfg c) S v \<le> gamma_state (env v)"
     by (rule post_fixpoint_sound[OF fin post_fp S_sound

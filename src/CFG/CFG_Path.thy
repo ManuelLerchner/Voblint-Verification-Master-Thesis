@@ -39,7 +39,7 @@ begin
 
 inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool" where
   empty[intro]: "cfg_path g v [] v"
-| step[intro]:  "(u, a, w) : cfg_edges g ==> cfg_path g w es v
+| step[intro]:  "(u, a, w) : edges g ==> cfg_path g w es v
                  ==> cfg_path g u ((a, w) # es) v"
 
 inductive_cases stepE[elim]: "cfg_path g u es v"
@@ -60,7 +60,7 @@ lemma cfg_reaches_refl[intro, simp]: "g \<turnstile> v \<rightarrow>* v"
   by auto
 
 lemma cfg_reaches_step[intro]:
-  "(u, a, w) : cfg_edges g ==> g \<turnstile> w \<rightarrow>* v ==> g \<turnstile> u \<rightarrow>* v"
+  "(u, a, w) : edges g ==> g \<turnstile> w \<rightarrow>* v ==> g \<turnstile> u \<rightarrow>* v"
   by auto
 
 lemma cfg_path_append:
@@ -104,17 +104,17 @@ lemma offset_path_append[simp]:
   and the step list shifted via offset_path.
 *)
 lemma cfg_path_offset:
-  assumes "cfg_path \<lparr>cfg_entry = ent, cfg_exit = ex, cfg_edges = E\<rparr> u es v"
-  shows "cfg_path \<lparr>cfg_entry = ent + k, cfg_exit = ex + k, cfg_edges = offset_edges k E\<rparr>
+  assumes "cfg_path (mk_cfg ent ex E) u es v"
+  shows "cfg_path (mk_cfg (ent + k) (ex + k) (offset_edges k E))
                   (u + k) (offset_path k es) (v + k)"
   using assms
-  apply (induction "\<lparr>cfg_entry = ent, cfg_exit = ex, cfg_edges = E\<rparr>" u es v rule: cfg_path.induct)
+  apply (induction "(mk_cfg ent ex E)" u es v rule: cfg_path.induct)
   by(auto simp add: cfg_path.step in_offset_edges_iff)
  
 (*
   Path lift along an edge-set inclusion that's witnessed via offset.
   In Seq/If/While, the sub-command c was compiled at offset n>0, so
-  its edges are `offset_edges n (cfg_edges (to_cfg c))`.  Combine
+  its edges are `offset_edges n (edges (to_cfg c))`.  Combine
   cfg_path_offset with cfg_path_mono_edges (in CFG_Collecting) to
   drop the IH path into the compound graph.
 *)
@@ -141,9 +141,9 @@ lemma unoffset_path_Cons[simp]:
 lemma cfg_path_offset_back:
   fixes E :: "(pp \<times> edge_action \<times> pp) set"
   assumes p: "cfg_path G u es v"
-    and   E_eq: "cfg_edges G = offset_edges k E"
+    and   E_eq: "edges G = offset_edges k E"
     and   u_ge: "k \<le> u"
-  shows "cfg_path \<lparr>cfg_entry = 0, cfg_exit = 0, cfg_edges = E\<rparr>
+  shows "cfg_path (mk_cfg 0 0 E)
                   (u - k) (unoffset_path k es) (v - k)"
   using p E_eq u_ge
 proof (induction rule: cfg_path.induct)
@@ -160,7 +160,7 @@ next
   have kw: "k \<le> w" using decomp(2) by simp
   have e_unshifted: "(u - k, a, w - k) \<in> E"
     using decomp by simp
-  have ih: "cfg_path \<lparr>cfg_entry = 0, cfg_exit = 0, cfg_edges = E\<rparr>
+  have ih: "cfg_path (mk_cfg 0 0 E)
                     (w - k) (unoffset_path k es) (v - k)"
     using step.IH[OF step.prems(1) kw] .
   show ?case
@@ -178,7 +178,7 @@ lemma cfg_path_split_last:
     and ne: "es \<noteq> []"
   shows "\<exists>es' mid a. es = es' @ [(a, v)] \<and>
                      cfg_path G u es' mid \<and>
-                     (mid, a, v) \<in> cfg_edges G"
+                     (mid, a, v) \<in> edges G"
   using p ne
 proof (induction es arbitrary: u)
   case Nil
@@ -187,7 +187,7 @@ next
   case (Cons hd tl)
   obtain a w where hd_eq: "hd = (a, w)" by (cases hd) auto
   from Cons.prems(1) hd_eq obtain
-        e: "(u, a, w) \<in> cfg_edges G"
+        e: "(u, a, w) \<in> edges G"
     and ps: "cfg_path G w tl v"
     by (cases rule: cfg_path.cases) auto
   show ?case
@@ -196,14 +196,14 @@ next
     from ps True have wv: "w = v" by (cases rule: cfg_path.cases) auto
     have es_eq: "(a, w) # tl = [] @ [(a, v)]" using True wv by simp
     have empty_p: "cfg_path G u [] u" by (rule cfg_path.empty)
-    have e_uv: "(u, a, v) \<in> cfg_edges G" using e wv by simp
+    have e_uv: "(u, a, v) \<in> edges G" using e wv by simp
     show ?thesis using es_eq empty_p e_uv hd_eq by blast
   next
     case False
     from Cons.IH[OF ps False] obtain es' mid a' where
           tl_eq: "tl = es' @ [(a', v)]"
       and ps': "cfg_path G w es' mid"
-      and last_e: "(mid, a', v) \<in> cfg_edges G"
+      and last_e: "(mid, a', v) \<in> edges G"
       by blast
     have full: "cfg_path G u ((a, w) # es') mid"
       by (rule cfg_path.step[OF e ps'])

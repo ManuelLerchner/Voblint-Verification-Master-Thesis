@@ -36,7 +36,7 @@ theorem td_solver_sound:
     "s \<in> gamma_state s0"
   assumes terminates:
     "big_step (c, s) t"
-  assumes fin_cfg: "finite (cfg_edges (to_cfg c))"
+  assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes td_solve_dom:

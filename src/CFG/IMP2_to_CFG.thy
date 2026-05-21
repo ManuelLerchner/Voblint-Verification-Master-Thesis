@@ -65,7 +65,7 @@ where
 definition to_cfg :: "com => cfg" where
   "to_cfg c =
      (let (_, en, ex, E) = compile c 0
-      in  (| cfg_entry = en, cfg_exit = ex, cfg_edges = E |))"
+      in  mk_cfg en ex E)"
 
 (* ── Freshness: Allocated pp's Are Disjoint From Counter ──────── *)
 
@@ -539,7 +539,7 @@ next
     unfolding E using While.hyps[OF c] by simp
 qed
 
-lemma to_cfg_finite: "finite (cfg_edges (to_cfg c))"
+lemma to_cfg_finite: "finite (edges (to_cfg c))"
   unfolding to_cfg_def
   by (simp add: Let_def split: prod.splits) (meson compile_finite)
 

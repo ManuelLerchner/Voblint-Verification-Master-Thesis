@@ -1,5 +1,21 @@
 # AFP Graph Library Migration Plan
 
+**Status:** Phases 0-4 landed 2026-05-22 (Option B locale-interp), then **promoted to Option A carrier change** the same day. Build green; sorry count unchanged (16).
+
+**Option A landed (carrier change, 2026-05-22):** the original plan deferred carrier change in favour of locale interpretation (Option B). On review, the Option B `cfg_as_dgraph` projection had **zero call sites** outside its own simp lemmas — pure overhead with no payoff. Promoted to Option A:
+
+```isabelle
+record cfg = "(pp, edge_action) graph" +
+  cfg_entry :: pp
+  cfg_exit  :: pp
+```
+
+`cfg` is now genuinely a `graph` by record extension. `cfg_edges c` becomes `edges c` everywhere (mass rename through 12 files, ~98 sites). Smart constructor `mk_cfg en ex E` auto-populates `nodes` so `valid_graph (graph.truncate (mk_cfg en ex E))` holds by construction. The bridge lemma `cfg_collect_exit_eq_collect` survived intact. One proof in `TD_Interface.thy` had to be tightened from `using ... by blast` to `by (rule ...[OF ...])` because `blast` could not unify through the inherited selector.
+
+**Phase 3 scope correction (2026-05-22):** the original plan claimed Phase 3 would discharge `td_cfg_in_reach` via `cfg_reach.reaches_trans`. On audit, `td_cfg_in_reach` refers to the **TD solver's internal strategy-tree `reach` set**, not CFG-edge reachability. The two notions are unrelated; discharging the premise needs solver-layer reasoning (TD iteration covers all CFG points), not a graph-interp bridge. Phase 3 therefore landed in reduced form: `CFG_Reach.thy` exposes the `Graph_Defs` interp + `cfg_reach_iff_cfg_path` and is available for any future caller, but the `td_cfg_in_reach` assumption in `Pipeline.thy` remains. Reopen as a separate solver-layer ticket if desired.
+
+**Library naming correction (2026-05-22):** Wimmer's `TA_Graphs.Graph_Defs` is informal shorthand from the `archive-of-graph-formalizations` survey. The actual AFP location is session `Timed_Automata`, theory `Graphs`, locale `Graph_Defs`. ROOT references `Timed_Automata` (not the non-existent `TA_Graphs` session).
+
 **Decision:** 2026-05-22 (meeting 3 §C/§D + KB `wiki/research/graph-library-evaluation.md`).
 **Goal:** stop hand-rolling path algebra in `src/CFG/CFG_Path.thy`. Reuse mature AFP graph libraries via locale interpretation instead of carrier change.
 **Non-goal:** changing the CFG carrier type, redoing the bridge lemma `cfg_collect_exit_eq_collect`, or touching the solver / domain layers.

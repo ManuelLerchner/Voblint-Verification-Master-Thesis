@@ -78,7 +78,7 @@ definition to_graphviz :: "cfg \<Rightarrow> string" where
             @ '' [shape=doublecircle,color=red,label=''
             @ dq @ ''exit pp''  @ string_of_nat (cfg_exit g)  @ dq
             @ ''];'' @ nl
-     @ concat (sorted_list_of_set (edge_to_dot ` cfg_edges g))
+     @ concat (sorted_list_of_set (edge_to_dot ` edges g))
      @ ''}'' @ nl"
 
 (*
