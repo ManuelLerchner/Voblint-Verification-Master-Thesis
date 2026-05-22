@@ -7,7 +7,6 @@ theory Goblint_Formalization
     (* ── Control-Flow Graph ────────────────────────────────── *)
     CFG_Def
     CFG_Path
-    CFG_Reach
     IMP2_to_CFG
     CFG_Collecting
     CFG_GraphViz

@@ -100,10 +100,30 @@ Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textua
 Build command (from repo root):
 
 ```bash
-isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
 ```
 
+Always pass `-v` so per-theory progress streams live. With warm AFP heaps a clean Goblint_Formalization session finishes in ~10-20s.
+
 `sorry` in batch needs `options [quick_and_dirty]` in `ROOT`.
+
+### Build timeout policy
+
+**If the build runs > 40s with warm heaps, assume an infinite loop or a slow `metis`/`smt` reconstruction, not slow compilation.** Top culprits, in order:
+
+* **`metis` / `smt` blow-up** — sledgehammer-suggested `metis [...]` calls that run fast interactively but balloon in batch. Most common cause of build hangs in this repo.
+* `simp` / `auto` / `fastforce` rewriting in both directions.
+* A recursive `lemma [simp]` declaration.
+* A freshly added congruence / `[intro]` rule that triggers nontermination.
+
+Diagnosis:
+
+1. Don't wait it out — kill the build.
+2. Check the streaming `-v` output (or `Monitor` on the task file). The last `Running <Theory> ...` line names the file that hangs; the next silent gap is the stuck command.
+3. If `-v` output is ambiguous, rerun with `isabelle build -v -v ...` (extra `-v` shows per-command timings) or open the theory in I/Q and step to the offending lemma.
+4. Fix: bound the automation (`simp only:`, narrow `auto simp: ...` lemma set), undo the bad `[simp]`/`[intro]` attribute, or split the proof.
+
+Never bump the build timeout to mask a hang — that hides a real regression and rots into a multi-minute baseline.
 
 ## ASCII-only `.thy` sources
 
