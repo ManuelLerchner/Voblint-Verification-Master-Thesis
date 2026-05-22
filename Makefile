@@ -48,7 +48,7 @@ clean:
 # Fast-forward vendor/autocorrode to upstream main, reapply autocorrode.patch,
 # stage the bump. After this, review `git diff` and commit the submodule pointer.
 update-autocorrode:
-	@test -e $(AC_DIR)/.git || { echo "ERROR: $(AC_DIR) not initialized. Run ./setup.sh first."; exit 1; }
+	@test -e $(AC_DIR)/.git || { echo "ERROR: $(AC_DIR) not initialized. Run ./scripts/setup.sh first."; exit 1; }
 	git submodule update --remote --merge $(AC_DIR)
 	@if [ -s $(AC_PATCH) ]; then \
 	  if git -C $(AC_DIR) apply --check $(CURDIR)/$(AC_PATCH) 2>/dev/null; then \

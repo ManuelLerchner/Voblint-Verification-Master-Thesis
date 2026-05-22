@@ -5,10 +5,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IR="$SCRIPT_DIR/vendor/autocorrode/ir/repl.py"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+IR="$REPO_ROOT/vendor/autocorrode/ir/repl.py"
 
 # Session "TD" (theory TD.TD_plain) vendor submodule ROOT
-TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$SCRIPT_DIR/vendor/td-verification}"
+TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$REPO_ROOT/vendor/td-verification}"
 if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
   echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)."
   echo "  Run: git submodule update --init vendor/td-verification"
@@ -32,9 +33,9 @@ echo "MCP streamable-http requires Accept: application/json, text/event-stream (
 echo "Quick probe: curl -sS -m 2 -H \"Authorization: Bearer isabelle-local\" -H \"Accept: application/json, text/event-stream\" http://127.0.0.1:9148/mcp"
 echo ""
 
-PYTHON="${SCRIPT_DIR}/.venv/bin/python3"
+PYTHON="${REPO_ROOT}/.venv/bin/python3"
 if [[ ! -x "$PYTHON" ]]; then
-  echo "ERROR: venv not found. Run ./setup.sh first."
+  echo "ERROR: venv not found. Run ./scripts/setup.sh first."
   exit 1
 fi
 
@@ -61,7 +62,7 @@ if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
         ;;
     esac
   fi
-  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$SCRIPT_DIR" Goblint_Formalization
+  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" Goblint_Formalization
   echo ""
 else
   echo "Skipping heap build (IR_SKIP_HEAP_BUILD=1)."
@@ -76,5 +77,5 @@ exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" 
   --isabelle "$ISABELLE" \
   --session Goblint_Formalization \
   --dir "$TD_COMPONENT_DIR" \
-  --dir "$SCRIPT_DIR" \
+  --dir "$REPO_ROOT" \
   --mcp

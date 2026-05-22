@@ -4,11 +4,12 @@
 # token is pinned via IQ_AUTH_TOKEN so the .mcp.json `isabelle-iq` entry
 # matches.
 #
-# Requires `./setup-iq.sh` to have been run at least once.
+# Requires `./scripts/setup.sh` to have been run at least once.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 export ISABELLE_HOME="${ISABELLE_HOME:-/Applications/Isabelle2025-2.app}"
 ISABELLE="${ISABELLE:-$ISABELLE_HOME/bin/isabelle}"
@@ -21,13 +22,13 @@ fi
 JAR="$HOME/.isabelle/Isabelle2025-2/jedit/jars/iq_plugin.jar"
 if [[ ! -f "$JAR" ]]; then
   echo "ERROR: I/Q plugin JAR not installed at '$JAR'." >&2
-  echo "  Run: ./setup-iq.sh" >&2
+  echo "  Run: ./scripts/setup.sh" >&2
   exit 1
 fi
 
 # Session "TD" lives in the vendored td-verification submodule; jEdit must
 # see it to load Goblint_Formalization. Matches start-ir.sh.
-TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$SCRIPT_DIR/vendor/td-verification}"
+TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$REPO_ROOT/vendor/td-verification}"
 if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
   echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)." >&2
   echo "  Run: git submodule update --init vendor/td-verification" >&2
@@ -38,8 +39,8 @@ fi
 export IQ_AUTH_TOKEN="${IQ_AUTH_TOKEN:-isabelle-local}"
 
 # Constrain I/Q's read/write reach to the proof repo
-export IQ_MCP_ALLOWED_ROOTS="${IQ_MCP_ALLOWED_ROOTS:-$SCRIPT_DIR}"
-export IQ_MCP_ALLOWED_READ_ROOTS="${IQ_MCP_ALLOWED_READ_ROOTS:-$SCRIPT_DIR}"
+export IQ_MCP_ALLOWED_ROOTS="${IQ_MCP_ALLOWED_ROOTS:-$REPO_ROOT}"
+export IQ_MCP_ALLOWED_READ_ROOTS="${IQ_MCP_ALLOWED_READ_ROOTS:-$REPO_ROOT}"
 
 echo "Starting Isabelle/jEdit with I/Q (token=$IQ_AUTH_TOKEN, port=8765)..."
 echo "  Allowed roots: $IQ_MCP_ALLOWED_ROOTS"
@@ -50,6 +51,6 @@ echo "with token='$IQ_AUTH_TOKEN'."
 echo
 
 # iq session (Isar_Explore.thy) enables MCP `explore` query='proof'.
-IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$SCRIPT_DIR/vendor/autocorrode/iq}"
+IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$REPO_ROOT/vendor/autocorrode/iq}"
 
-exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$IQ_COMPONENT_DIR" -d "$SCRIPT_DIR" "$@"
+exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$IQ_COMPONENT_DIR" -d "$REPO_ROOT" "$@"

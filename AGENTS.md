@@ -158,11 +158,11 @@ Two servers vendored. Config in `.mcp.json` + `.claude/settings.local.json` (`en
 | `isabelle-iq` | 8765 | jEdit running doc-aware: diagnostics, sorry positions, `explore`, `get_context_info`, structured edits. **Preferred.** |
 | `isabelle-ir` | 9148 | jEdit not running headless REPL: `step`, `sledgehammer`, `find_theorems`.                                              |
 
-Start: `./start-iq.sh` (full I/Q + REPL) or `./start-ir.sh` (REPL only).
+Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/start-iq.sh` (jEdit + I/Q only), or `./scripts/start-ir.sh` (headless REPL only).
 
 ## Preflight (per session)
 
-1. Probe server up. If down → ask user to run `./start-iq.sh` / `./start-ir.sh`.
+1. Probe server up. If down → ask user to run `./scripts/start-both.sh` (or `./scripts/start-iq.sh` / `./scripts/start-ir.sh`).
 2. Load tool schemas via `ToolSearch select:mcp__isabelle-iq__authenticate,…` (or `…ir__connect,…`).
 3. `authenticate` (I/Q) or `connect` (I/R) with `token=isabelle-local`. All other calls fail until authenticated.
 

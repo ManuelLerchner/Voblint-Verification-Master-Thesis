@@ -242,7 +242,7 @@ Documentation
 | `docs/PROOF_SIMPLIFICATION.md` | CFG_Collecting refactor playbook (optional maintenance) |
 | `docs/html/`                   | HTML renderings of the walkthroughs (may lag `.md`)     |
 
-Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./setup.sh`, `./start-ir.sh`.
+Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./scripts/setup.sh`, `./scripts/start-ir.sh`.
 
 Agent-assisted development (Isabelle/Q)
 ---------------------------------------
@@ -257,8 +257,9 @@ from Human Hints*](https://arxiv.org/abs/2604.15713) (arXiv:2604.15713, 2026);
 see their §6.1 for the Isabelle/Q technical setup and `AGENTS.md` here for
 project-specific conventions.
 
-| Script                         | Role                                                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `./setup-iq.sh`                | Build and install the I/Q jEdit plugin (vendored under `vendor/autocorrode/iq/`)                         |
-| `./start-iq.sh`                | Launch Isabelle/jEdit with I/Q listening on port 8765                                                    |
-| `./setup.sh` / `./start-ir.sh` | Headless [Isabelle/R](https://github.com/awslabs/AutoCorrode/tree/main/ir) MCP when jEdit is not running |
+| Script                                  | Role                                                                                                     |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `./scripts/setup.sh`                    | One-shot bootstrap: submodules, venv, I/Q jEdit plugin (skip with `--no-iq`)                             |
+| `./scripts/start-iq.sh`                 | Launch Isabelle/jEdit with I/Q listening on port 8765                                                    |
+| `./scripts/start-ir.sh`                 | Headless [Isabelle/R](https://github.com/awslabs/AutoCorrode/tree/main/ir) MCP on port 9148              |
+| `./scripts/start-both.sh`               | Start I/R in background + I/Q in foreground; Ctrl+C tears down both                                      |
