@@ -11,8 +11,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_DIR="$SCRIPT_DIR/vendor/autocorrode"
 PATCH="$SCRIPT_DIR/vendor/autocorrode.patch"
 
-echo "Initializing vendor/autocorrode submodule ..."
-git -C "$SCRIPT_DIR" submodule update --init vendor/autocorrode
+echo "Initializing submodules ..."
+git -C "$SCRIPT_DIR" submodule update --init vendor/autocorrode vendor/td-verification
+
+echo "Applying td-verification patch (via make vendor) ..."
+make -C "$SCRIPT_DIR" vendor
 
 echo "Configuring sparse-checkout (ir/, iq/) ..."
 git -C "$AC_DIR" sparse-checkout init --cone

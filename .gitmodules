@@ -2,3 +2,6 @@
 	path = vendor/autocorrode
 	url = https://github.com/awslabs/AutoCorrode
 	branch = main
+[submodule "td-verification"]
+	path = vendor/td-verification
+	url = https://github.com/stilscher/td-verification

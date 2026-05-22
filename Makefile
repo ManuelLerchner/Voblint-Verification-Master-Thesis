@@ -2,27 +2,31 @@ ISABELLE        ?= isabelle
 AFP             ?= $(HOME)/afp/thys
 SESSION         := Goblint_Formalization
 
-TD_URL          := https://github.com/stilscher/td-verification
-TD_COMMIT       := af78761e62c28bf299863b5735c32b7c2cfcd93e
 TD_DIR          := vendor/td-verification
 TD_PATCH        := vendor/td-verification.patch
 
 AC_DIR          := vendor/autocorrode
 AC_PATCH        := vendor/autocorrode.patch
 
-.PHONY: all vendor build jedit clean-vendor clean update-autocorrode refresh-autocorrode-patch
+.PHONY: all vendor build jedit clean clean-vendor update-autocorrode refresh-autocorrode-patch refresh-td-patch
 
 all: build
 
-# Fetch upstream TD solver, pin to TD_COMMIT, apply local patch.
-$(TD_DIR)/.patched:
-	@test ! -d $(TD_DIR) || { echo "ERROR: $(TD_DIR) exists. Run 'make clean-vendor' first."; exit 1; }
-	git clone $(TD_URL) $(TD_DIR)
-	cd $(TD_DIR) && git checkout $(TD_COMMIT)
-	cd $(TD_DIR) && git apply ../td-verification.patch
-	touch $@
-
-vendor: $(TD_DIR)/.patched
+# Initialize the td-verification submodule (pinned via the superproject
+# gitlink) and apply our local patch on top. Idempotent.
+vendor:
+	@test -e $(TD_DIR)/.git || git submodule update --init $(TD_DIR)
+	@if [ -s $(TD_PATCH) ]; then \
+	  if git -C $(TD_DIR) apply --check $(CURDIR)/$(TD_PATCH) 2>/dev/null; then \
+	    git -C $(TD_DIR) apply $(CURDIR)/$(TD_PATCH); \
+	    echo "Applied $(TD_PATCH)."; \
+	  elif git -C $(TD_DIR) apply --check --reverse $(CURDIR)/$(TD_PATCH) 2>/dev/null; then \
+	    : ; \
+	  else \
+	    echo "ERROR: $(TD_PATCH) does not apply cleanly to $(TD_DIR)."; \
+	    exit 1; \
+	  fi; \
+	fi
 
 # Build the project session. Depends on vendored TD solver.
 build: vendor
@@ -33,10 +37,12 @@ build: vendor
 jedit: vendor
 	$(ISABELLE) jedit -d $(AFP) -d $(TD_DIR) -d .
 
+# Discard local TD patch + working-tree edits (the submodule itself stays
+# initialized; rerun `make vendor` to reapply the patch).
 clean-vendor:
-	rm -rf $(TD_DIR)
+	git -C $(TD_DIR) reset --hard HEAD
 
-clean: clean-vendor
+clean:
 	$(ISABELLE) build -n -c -d $(AFP) -D . $(SESSION) ||:
 
 # Fast-forward vendor/autocorrode to upstream main, reapply autocorrode.patch,
@@ -60,3 +66,8 @@ update-autocorrode:
 refresh-autocorrode-patch:
 	git -C $(AC_DIR) --no-pager diff > $(AC_PATCH)
 	@echo "Wrote $(AC_PATCH) ($$(wc -l < $(AC_PATCH)) lines). Review with: git diff -- $(AC_PATCH)"
+
+# Same, for td-verification.
+refresh-td-patch:
+	git -C $(TD_DIR) --no-pager diff > $(TD_PATCH)
+	@echo "Wrote $(TD_PATCH) ($$(wc -l < $(TD_PATCH)) lines). Review with: git diff -- $(TD_PATCH)"
