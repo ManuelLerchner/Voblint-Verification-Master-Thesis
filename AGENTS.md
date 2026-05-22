@@ -147,6 +147,14 @@ Never bump the build timeout to mask a hang — that hides a real regression and
 
 Unicode in comments is fine. Pre-commit hook (`.git/hooks/pre-commit` → `scripts/check_isabelle_ascii.py`) blocks commits with non-ASCII outside comments.
 
+**I/Q normalises tokens to unicode on write.** Even when you pass ASCII forms (`\<lambda>`, `\<open>`) in `write_file`, I/Q's editor may serialise them back as `λ`, `‹`. After any `write_file` to a `.thy` source, normalise to ASCII and re-sync the buffer:
+
+```bash
+python3 scripts/normalize_isabelle_ascii.py <file>
+```
+
+then `open_file` again so jEdit picks up the normalised content. Skipping this step means the file looks fine in I/Q but fails the batch build.
+
 ---
 
 # MCP servers

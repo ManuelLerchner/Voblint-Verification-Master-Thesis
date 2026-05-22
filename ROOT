@@ -19,3 +19,4 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Example_Interval_Analysis
     Example_CFG_Collecting_Equiv
     Example_GraphViz
+    Example_NonTerminating_Safe
