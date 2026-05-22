@@ -266,7 +266,10 @@ proof (cases b rule: bexp.exhaust)
   assume H: "\<not> (\<exists>x n. b = Less (V x) (N n))" and bL: "b = Less a1 a2"
   with H have "\<nexists>x n. a1 = V x \<and> a2 = N n" by auto
   then show ?thesis unfolding bL
-    by (cases a1 rule: aexp.exhaust; cases a2 rule: aexp.exhaust; simp add: assume_sign.simps)
+    apply(cases a1;cases a2)
+    apply(auto)
+    apply (metis AExp.aval.elims assume_sign.simps(6,7))
+    by (metis assume_sign.simps(11,12) aval_sign_hol.elims)
 qed (simp_all add: assume_sign.simps)
 
 lemma assume_sign_sound:
