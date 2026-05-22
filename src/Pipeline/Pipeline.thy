@@ -313,6 +313,56 @@ proof -
     show ?thesis by blast
 qed
 
+(* -- Pipeline Soundness (Per-pp, path-based) -----------------------------
+
+   Per-program-point soundness without any big-step assumption.
+
+   Statement: at every program point v reachable via a CFG path from the
+   entry, every store t obtainable from {s} along that path is concretized
+   by the analyzer's abstract value at v.
+
+   This is the small-step-flavoured top-level result of the migration:
+     * no `(c, s) ⇒ t` premise;
+     * holds at intermediate program points, not just the exit;
+     * direct consequence of `pipeline_invariant_sound` +
+       `path_sound_cfg_collect` (no new structural lemma needed thanks
+       to Phase 2a's `cfg_collect_eq_cfg_edges_collect`).
+
+   The exit-only big-step theorem `pipeline_sound` remains available as a
+   one-line corollary via `small_step_big_step_eq`.
+*)
+theorem pipeline_sound_path:
+  fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
+  assumes sound:      "sound_domain (ac_gamma cfg)"
+  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. s1 x \<squnion> s2 x)"
+  assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
+  assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
+  assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
+  assumes cfi:        "comp_fun_idem (ac_join cfg)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom
+       (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach
+       (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
+       (TD_plain_Interp_solve
+          (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
+          (cfg_entry (to_cfg c)))
+       (cfg_entry (to_cfg c))"
+  assumes path:     "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v"
+  assumes sigma_in: "t \<in> edges_collect es {s}"
+  shows "t \<in> sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg c v)"
+proof -
+  have inv: "\<forall>v. cfg_collect (to_cfg c) {s} v \<le>
+                  sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg c v)"
+    by (rule pipeline_invariant_sound[OF sound join_eq bot_eq tf_sound s_in_gamma
+              cfi td_solve_dom td_cfg_in_reach])
+  have sigma_in_collect: "t \<in> cfg_collect (to_cfg c) {s} v"
+    using path_sound_cfg_collect[OF path] sigma_in by blast
+  from inv[rule_format, of v] sigma_in_collect show ?thesis by blast
+qed
+
 (*
   Sign-domain specialisation.  Hypotheses must match pipeline_invariant_sound:
   TF soundness + s \<in> gamma(init).  The (c,s)⇒t assumption was superfluous.
