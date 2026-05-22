@@ -115,6 +115,22 @@ lemma collect_While:
   apply (metis (no_types, lifting) UnCI lfp_unfold while_fun_def while_fun_mono
       while_preserves_lfp)
   by (simp add: while_lfp_exit_collect)
- 
+
+
+(* -- Small-step characterisation -------------------------------------
+
+   `collect` is defined in big-step terms (exit-states reachable from S).
+   The small-step counterpart says: `t \<in> collect c S` iff the small-step
+   trace `(c, s) \<rightarrow>* (SKIP, t)` for some `s \<in> S`.
+
+   Used by the small-step soundness chain to swap perspectives between
+   the big-step specification (`(c, s) \<Rightarrow> t`) and the operational small-step
+   view (`(c, s) \<rightarrow>* (SKIP, t)`).  Direct rewrite of `small_step_big_step_eq`
+   under the existential. *)
+
+lemma collect_small_step:
+  "collect c S = {t. \<exists>s \<in> S. (c, s) \<rightarrow>* (SKIP, t)}"
+  unfolding collect_def using small_step_big_step_eq by blast
+
 
 end

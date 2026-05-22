@@ -1170,6 +1170,29 @@ proof -
   finally show ?thesis .
 qed
 
+(* Per-pp lfp <-> path-based equality.
+
+   Both formulations of CFG collecting agree at every program point, not
+   just the exit.  Used by the small-step pipeline soundness chain:
+   `pipeline_invariant_sound` is stated in lfp form (`cfg_collect`); the
+   small-step bridge talks about CFG paths (= `cfg_edges_collect`). *)
+theorem cfg_collect_eq_cfg_edges_collect:
+  "cfg_collect g S v = cfg_edges_collect g S v"
+proof (rule order_antisym)
+  show "cfg_collect g S v \<subseteq> cfg_edges_collect g S v"
+    by (rule cfg_collect_le_edges_collect)
+  show "cfg_edges_collect g S v \<subseteq> cfg_collect g S v"
+  proof
+    fix x assume "x \<in> cfg_edges_collect g S v"
+    then obtain es where
+      es: "cfg_path g (cfg_entry g) es v" and
+      x:  "x \<in> edges_collect es S"
+      unfolding cfg_edges_collect_def by blast
+    from path_sound_cfg_collect[OF es] x
+    show "x \<in> cfg_collect g S v" by blast
+  qed
+qed
+
 (* big-step execution yields a CFG path to exit (converse of compile_path_big_step). *)
 lemma big_step_cfg_path:
   assumes "(c, s) \<Rightarrow> t" and  "s \<in> S" 
