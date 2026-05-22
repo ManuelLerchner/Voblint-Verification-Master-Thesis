@@ -30,16 +30,26 @@ definition string_of_int :: "int \<Rightarrow> string" where
 
 (* -- IMP2 expressions to strings ----------------------------------- *)
 
+fun string_of_aexp_hol :: "AExp.aexp \<Rightarrow> string" where
+  "string_of_aexp_hol (AExp.N n)      = string_of_int n"
+| "string_of_aexp_hol (AExp.V x)      = x"
+| "string_of_aexp_hol (AExp.Plus a b) = ''('' @ string_of_aexp_hol a @ ''+'' @ string_of_aexp_hol b @ '')''"
+
 fun string_of_aexp :: "aexp \<Rightarrow> string" where
-  "string_of_aexp (N n)         = string_of_int n"
-| "string_of_aexp (V x)         = x"
+  "string_of_aexp (BaseN a)     = string_of_aexp_hol a"
 | "string_of_aexp (Plus  a b)   = ''('' @ string_of_aexp a @ ''+'' @ string_of_aexp b @ '')''"
 | "string_of_aexp (Minus a b)   = ''('' @ string_of_aexp a @ ''-'' @ string_of_aexp b @ '')''"
 | "string_of_aexp (Times a b)   = ''('' @ string_of_aexp a @ ''*'' @ string_of_aexp b @ '')''"
 
+fun string_of_bexp_hol :: "BExp.bexp \<Rightarrow> string" where
+  "string_of_bexp_hol (BExp.Bc True)    = ''true''"
+| "string_of_bexp_hol (BExp.Bc False)   = ''false''"
+| "string_of_bexp_hol (BExp.Not b)      = ''!('' @ string_of_bexp_hol b @ '')''"
+| "string_of_bexp_hol (BExp.And b1 b2)  = ''('' @ string_of_bexp_hol b1 @ ''&&'' @ string_of_bexp_hol b2 @ '')''"
+| "string_of_bexp_hol (BExp.Less a1 a2) = string_of_aexp_hol a1 @ ''<'' @ string_of_aexp_hol a2"
+
 fun string_of_bexp :: "bexp \<Rightarrow> string" where
-  "string_of_bexp (Bc True)     = ''true''"
-| "string_of_bexp (Bc False)    = ''false''"
+  "string_of_bexp (BaseB b)     = string_of_bexp_hol b"
 | "string_of_bexp (Not b)       = ''!('' @ string_of_bexp b @ '')''"
 | "string_of_bexp (And b1 b2)   = ''('' @ string_of_bexp b1 @ ''&&'' @ string_of_bexp b2 @ '')''"
 | "string_of_bexp (Or  b1 b2)   = ''('' @ string_of_bexp b1 @ ''||'' @ string_of_bexp b2 @ '')''"

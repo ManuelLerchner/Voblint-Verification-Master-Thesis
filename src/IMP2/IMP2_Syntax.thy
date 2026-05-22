@@ -1,42 +1,58 @@
 theory IMP2_Syntax
-  imports Main "HOL-Library.Countable"
+  imports Main "HOL-Library.Countable" HOL_IMP_Countable
 begin
 
 (*
   IMP2 -- Source Language Syntax.
 
-  A simple imperative language extending the HOL-IMP baseline:
-    aexp:  adds Minus, Times  (IMP only has Plus)
-    bexp:  adds Or, Eq        (IMP only has And, Less)
-    com:   same structure as IMP (SKIP, Assign, Seq, If, While)
+  Design (Approach 1c from docs/IMP_SYNTAX_NIPKOW_EXTENSION.md):
+  We wrap Nipkow's HOL-IMP.AExp/BExp via leaf constructors BaseN/BaseB
+  and keep compound constructors (Plus, Not, And, Or, Less) plus our
+  extensions (Minus, Times, Or, Eq) as native constructors of our own
+  datatype. Nipkow's Plus/And/Less/Not are typed over Nipkow's own
+  datatypes, so we cannot express "Plus over our extended aexp" inside
+  the Base wrap; those compound shared constructors are therefore
+  native here too.
 
-  We define IMP2 from scratch (not importing HOL-IMP.Com) so the
-  CFG-based pipeline is self-contained and notation is unambiguous.
+  Reuse payoff (small): for the leaf forms N, V, Bc the abbreviations
+  bind to BaseN/BaseB wraps of Nipkow constructors, and the wrapped
+  cases of aval/bval delegate to AExp.aval/BExp.bval.
+
+  Cost: abbreviations N, V, Bc do not unfold in pattern matches; any
+  fun/case clause that splits on a leaf must spell BaseN (AExp.N _) etc.
 *)
 
-type_synonym vname = string
-type_synonym store  = "vname => int"
+(* vname comes from HOL-IMP.AExp (= string); kept as a re-affirmation. *)
+type_synonym store = "vname => int"
 
-(* \<midarrow>\<midarrow> Arithmetic Expressions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+(* -- Arithmetic Expressions ---------------------------------------- *)
 
 datatype aexp =
-    N     int                    (* integer literal         *)
-  | V     vname                  (* variable read           *)
-  | Plus  aexp aexp              (* a + b                   *)
-  | Minus aexp aexp              (* a - b                   *)
-  | Times aexp aexp              (* a * b                   *)
+    BaseN "AExp.aexp"          (* literal / variable / Nipkow Plus subtree *)
+  | Plus  aexp aexp            (* a + b over our (extended) aexp           *)
+  | Minus aexp aexp            (* a - b   (extension)                      *)
+  | Times aexp aexp            (* a * b   (extension)                      *)
 
-(* \<midarrow>\<midarrow> Boolean Expressions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+abbreviation N :: "int \<Rightarrow> aexp"
+  where "N n \<equiv> BaseN (AExp.N n)"
+
+abbreviation V :: "vname \<Rightarrow> aexp"
+  where "V x \<equiv> BaseN (AExp.V x)"
+
+(* -- Boolean Expressions -------------------------------------------- *)
 
 datatype bexp =
-    Bc    bool                   (* boolean constant        *)
-  | Not   bexp                   (* negation                *)
-  | And   bexp bexp              (* conjunction             *)
-  | Or    bexp bexp              (* disjunction             *)
-  | Less  aexp aexp              (* a < b                   *)
-  | Eq    aexp aexp              (* a = b                   *)
+    BaseB "BExp.bexp"          (* boolean constant via Nipkow              *)
+  | Not   bexp
+  | And   bexp bexp
+  | Or    bexp bexp            (* (extension)                              *)
+  | Less  aexp aexp
+  | Eq    aexp aexp            (* (extension)                              *)
 
-(* \<midarrow>\<midarrow> Commands \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+abbreviation Bc :: "bool \<Rightarrow> bexp"
+  where "Bc v \<equiv> BaseB (BExp.Bc v)"
+
+(* -- Commands ------------------------------------------------------- *)
 
 datatype com =
     SKIP
@@ -46,7 +62,11 @@ datatype com =
   | While  bexp  com             ("WHILE _ DO _"         [0, 61]    61)
 
 (* Countability and a fixed linear order (pull-back from @{const to_nat})
-   used for @{const sorted_list_of_set} on finite predecessor sets in the CFG. *)
+   used for @{const sorted_list_of_set} on finite predecessor sets in the CFG.
+
+   AExp.aexp / BExp.bexp instances live in HOL_IMP_Countable to avoid the
+   arity_countable_aexp / arity_countable_bexp name clash that would arise
+   declaring both Nipkow and our wrapped types in the same theory. *)
 
 instance aexp :: countable
   by countable_datatype
@@ -83,3 +103,4 @@ instance
 end
 
 end
+

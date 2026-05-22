@@ -147,12 +147,16 @@ fun sign_of_int :: "int => sign" where
 lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
   by (auto simp: sign_of_int.simps gamma_sign.simps split: if_splits)
 
+fun aval_sign_hol :: "AExp.aexp => (vname => sign) => sign" where
+    "aval_sign_hol (AExp.N n)      sigma = sign_of_int n"
+  | "aval_sign_hol (AExp.V x)      sigma = sigma x"
+  | "aval_sign_hol (AExp.Plus a b) sigma = sign_plus (aval_sign_hol a sigma) (aval_sign_hol b sigma)"
+
 fun aval_sign :: "aexp => (vname => sign) => sign" where
-    "aval_sign (N n)       sigma = sign_of_int n"
-  | "aval_sign (V x)       sigma = sigma x"
-  | "aval_sign (Plus  a b) sigma = sign_plus  (aval_sign a sigma) (aval_sign b sigma)"
-  | "aval_sign (Minus a b) sigma = sign_minus (aval_sign a sigma) (aval_sign b sigma)"
-  | "aval_sign (Times a b) sigma = sign_times (aval_sign a sigma) (aval_sign b sigma)"
+    "aval_sign (BaseN a)    sigma = aval_sign_hol a sigma"
+  | "aval_sign (Plus  a b)  sigma = sign_plus  (aval_sign a sigma) (aval_sign b sigma)"
+  | "aval_sign (Minus a b)  sigma = sign_minus (aval_sign a sigma) (aval_sign b sigma)"
+  | "aval_sign (Times a b)  sigma = sign_times (aval_sign a sigma) (aval_sign b sigma)"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
@@ -169,10 +173,17 @@ lemma sign_times_sound:
   shows "i * j \<in> gamma_sign (sign_times a b)"
   using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg)
 
+lemma aval_sign_hol_sound:
+  "(\<forall>x. s x \<in> gamma_sign (sigma x))
+   \<Longrightarrow> AExp.aval a s \<in> gamma_sign (aval_sign_hol a sigma)"
+  by (induction a arbitrary: s sigma; simp add: sign_of_int_gamma sign_plus_sound)
+
 lemma aval_sign_sound:
   "(\<forall>x. s x \<in> gamma_sign (sigma x))
    \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a sigma)"
-  by (induction a arbitrary: s sigma; simp add: aval.simps aval_sign.simps sign_plus_sound sign_minus_sound sign_times_sound)
+  by (induction a arbitrary: s sigma;
+      simp add: aval.simps aval_sign.simps aval_sign_hol_sound
+                sign_plus_sound sign_minus_sound sign_times_sound)
 
 (* ── Abstract Assume ─────────────────────────────────────────── *)
 

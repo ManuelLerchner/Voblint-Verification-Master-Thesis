@@ -481,19 +481,28 @@ proof (cases a; cases b)
   qed (auto simp: ab)
 qed
 
+fun aval_ivl_hol :: "AExp.aexp => (vname => ivl) => ivl" where
+    "aval_ivl_hol (AExp.N n)      sigma = Ivl (Fin n) (Fin n)"
+  | "aval_ivl_hol (AExp.V x)      sigma = sigma x"
+  | "aval_ivl_hol (AExp.Plus a b) sigma = ivl_plus (aval_ivl_hol a sigma) (aval_ivl_hol b sigma)"
+
 fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
-    "aval_ivl (N n)       sigma = Ivl (Fin n) (Fin n)"
-  | "aval_ivl (V x)       sigma = sigma x"
-  | "aval_ivl (Plus  a b) sigma = ivl_plus  (aval_ivl a sigma) (aval_ivl b sigma)"
-  | "aval_ivl (Minus a b) sigma = ivl_minus (aval_ivl a sigma) (aval_ivl b sigma)"
-  | "aval_ivl (Times a b) sigma = ivl_times (aval_ivl a sigma) (aval_ivl b sigma)"
+    "aval_ivl (BaseN a)    sigma = aval_ivl_hol a sigma"
+  | "aval_ivl (Plus  a b)  sigma = ivl_plus  (aval_ivl a sigma) (aval_ivl b sigma)"
+  | "aval_ivl (Minus a b)  sigma = ivl_minus (aval_ivl a sigma) (aval_ivl b sigma)"
+  | "aval_ivl (Times a b)  sigma = ivl_times (aval_ivl a sigma) (aval_ivl b sigma)"
 
 (* Soundness of abstract arithmetic. *)
+lemma aval_ivl_hol_sound:
+  "(\<forall>x. s x \<in> gamma_ivl (sigma x))
+   \<Longrightarrow> AExp.aval a s \<in> gamma_ivl (aval_ivl_hol a sigma)"
+  by (induction a; simp add: ivl_plus_sound)
+
 lemma aval_ivl_sound:
   "(\<forall>x. s x \<in> gamma_ivl (sigma x))
    \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a sigma)"
   by (induction a;
-      simp add: aval.simps aval_ivl.simps
+      simp add: aval.simps aval_ivl.simps aval_ivl_hol_sound
                 ivl_plus_sound ivl_minus_sound ivl_times_sound)
 
 (* Abstract assume: interval-based branch refinement *)
