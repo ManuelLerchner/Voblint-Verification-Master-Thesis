@@ -36,14 +36,14 @@ lemma collecting_example_big_step:
   unfolding collecting_example_prog_def collecting_example_s0_def collecting_example_t_def
 proof (rule Seq)
   show "(''x'' ::= N 5, \<lambda>_. 0) \<Rightarrow> (\<lambda>_. 0)(''x'' := 5)"
-    by (metis AExp.aval.simps(1) Assign IMP2_Semantics.aval.simps(1))
+    by (metis AExp.aval.simps(1) big_step.Assign IMP2_Semantics.aval.simps(1))
 next
   show "(''y'' ::= Plus (V ''x'') (N 1), (\<lambda>_. 0)(''x'' := 5)) \<Rightarrow> (\<lambda>_. 0)(''x'' := 5, ''y'' := 6)"
   proof -
     have h: "(\<lambda>_. 0)(''x'' := 5, ''y'' := 6) =
              ((\<lambda>_. 0)(''x'' := 5))(''y'' := aval (Plus (V ''x'') (N 1)) ((\<lambda>_. 0)(''x'' := 5)))"
       by simp
-    show ?thesis by (subst h) (rule Assign)
+    show ?thesis by (subst h) (rule big_step.Assign)
   qed
 qed
 
