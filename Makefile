@@ -54,6 +54,8 @@ update-autocorrode:
 	  if git -C $(AC_DIR) apply --check $(CURDIR)/$(AC_PATCH) 2>/dev/null; then \
 	    git -C $(AC_DIR) apply $(CURDIR)/$(AC_PATCH); \
 	    echo "Patch reapplied. Review and run: git add $(AC_DIR) && git commit"; \
+	  elif git -C $(AC_DIR) apply --check --reverse $(CURDIR)/$(AC_PATCH) 2>/dev/null; then \
+	    echo "Patch already applied to $(AC_DIR); nothing to do."; \
 	  else \
 	    echo "WARNING: $(AC_PATCH) no longer applies cleanly to new upstream."; \
 	    echo "  Resolve manually, then run: make refresh-autocorrode-patch"; \
