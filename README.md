@@ -259,6 +259,6 @@ project-specific conventions.
 
 | Script                         | Role                                                                                                     |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `./setup-iq.sh`                | Build and install the I/Q jEdit plugin (vendored under `ir-repo/iq/`)                                    |
+| `./setup-iq.sh`                | Build and install the I/Q jEdit plugin (vendored under `vendor/autocorrode/iq/`)                         |
 | `./start-iq.sh`                | Launch Isabelle/jEdit with I/Q listening on port 8765                                                    |
 | `./setup.sh` / `./start-ir.sh` | Headless [Isabelle/R](https://github.com/awslabs/AutoCorrode/tree/main/ir) MCP when jEdit is not running |

@@ -50,6 +50,6 @@ echo "with token='$IQ_AUTH_TOKEN'."
 echo
 
 # iq session (Isar_Explore.thy) enables MCP `explore` query='proof'.
-IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$SCRIPT_DIR/ir-repo/iq}"
+IQ_COMPONENT_DIR="${IQ_COMPONENT_DIR:-$SCRIPT_DIR/vendor/autocorrode/iq}"
 
 exec "$ISABELLE" jedit -d "$TD_COMPONENT_DIR" -d "$IQ_COMPONENT_DIR" -d "$SCRIPT_DIR" "$@"

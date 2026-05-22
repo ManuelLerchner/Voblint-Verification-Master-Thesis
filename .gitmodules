@@ -1,0 +1,4 @@
+[submodule "autocorrode"]
+	path = vendor/autocorrode
+	url = https://github.com/awslabs/AutoCorrode
+	branch = main

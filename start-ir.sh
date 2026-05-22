@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IR="$SCRIPT_DIR/ir-repo/ir/repl.py"
+IR="$SCRIPT_DIR/vendor/autocorrode/ir/repl.py"
 
 # Session "TD" (theory TD.TD_plain) vendor submodule ROOT
 TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$SCRIPT_DIR/vendor/td-verification}"

@@ -15,11 +15,5 @@ __pycache__/
 .DS_Store
 .claude/settings.local.json
 
-# Optional machine-local JDK shim (see jdk-shim/README.md)
-jdk-shim/bin/java
-
-# AutoCorrode I/R daemon cloned by setup.sh, not tracked here
-ir-repo/
-
 # Vendored TD solver fetched + patched by `make vendor`
 vendor/td-verification/
