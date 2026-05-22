@@ -1,8 +1,36 @@
 # Small-Step Migration Plan
 
+**Status (2026-05-22): LANDED.** Migration complete on branch `small-step-migration` (commits `40e6708` … `47ec351`). Build green. Per-pp soundness is native via `pipeline_sound_path`; both big-step and small-step exit corollaries derive from it.
+
 **Decision:** 2026-05-19 (meeting 3 §E + KB `wiki/concepts/semantics-style-tradeoffs.md`).
 **Goal:** replace big-step IMP semantics with HOL-IMP-style small-step. Re-key collecting on `(pp, σ)` configurations. Make per-program-point soundness the **native** statement of the pipeline.
 **Non-goal:** changing the solver interface, the abstract domains, or the CFG representation. Only the IMP-side concrete semantics and the IMP↔CFG bridge change.
+
+## Landed state (summary table)
+
+| Phase | Plan deliverable | Status | Commit |
+|---|---|---|---|
+| 0 | branch + `pre-small-step` tag | ✅ | — |
+| 1 | `small_step` alongside `big_step` + `small_step_big_step_eq` | ✅ | `40e6708` |
+| 2a | per-pp lfp ↔ path bridge `cfg_collect_eq_cfg_edges_collect`; `collect_small_step` | ✅ | `ef91a6a` |
+| 2b | `resid_pp`/`at_pp` + small-step `collect_at` keyed on pp | ⏭ skipped — `cfg_path` is the lingua franca |
+| 3 | `pipeline_sound_path` (per-pp, path-based, no big-step premise) | ✅ | `f86603d` |
+| 4 | non-terminating example `Example_NonTerminating_Safe.thy` | ✅ | `47ec351` |
+| 5a | big-step `pipeline_sound` rewritten as corollary of path theorem | ✅ | (this commit) |
+| 5b | small-step exit corollary `pipeline_sound_small_step` | ✅ | (this commit) |
+| 5c | prune `WHILE compound paths` scaffolding | ⏭ kept (load-bearing for big-step corollary) |
+| 6 | KB sync | ⏭ separate repo, see `~/goblint-formalization-kb/wiki/log.md` |
+
+## Top-level theorems after migration
+
+| Theorem | Premise | Scope |
+|---|---|---|
+| `pipeline_sound_path` | `cfg_path entry es v` + `t ∈ edges_collect es {s}` | **Canonical**, per-pp |
+| `pipeline_sound` | `(c, s) \<Rightarrow> t` (big-step) | Exit corollary, Hoare-friendly |
+| `pipeline_sound_small_step` | `(c, s) \<rightarrow>* (SKIP, t)` | Exit corollary, operational |
+| `pipeline_invariant_sound` | none beyond solver/TF | `∀v. cfg_collect ⊆ γ(σ v)` lfp form |
+
+`small_step` lives alongside `big_step` in `IMP2_Semantics.thy`; the bridge `small_step_big_step_eq` connects them. The `WHILE compound paths` scaffolding in `CFG_Collecting.thy:867` remains in place: it backs `big_step_cfg_path` / `compile_path_big_step`, which back the big-step `pipeline_sound` corollary.
 
 See also:
 - `~/goblint-formalization-kb/wiki/concepts/semantics-style-tradeoffs.md` — full rationale + worked div-by-zero example

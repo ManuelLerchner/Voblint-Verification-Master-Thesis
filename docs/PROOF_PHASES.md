@@ -8,10 +8,22 @@ Roadmap and live backlog: `docs/ROADMAP.md`.
 
 ## Target theorems
 
-**Exit (main):** `big_step (c, s) t` implies `t ∈ γ_state (σ (cfg_exit (to_cfg c)))`.
+**Canonical (path-based, per-pp):** `cfg_path (to_cfg c) (cfg_entry ...) es v` and
+`t ∈ edges_collect es {s}` imply `t ∈ γ_state (σ v)` — at every CFG-reachable pp,
+no big-step premise. Proved as `Pipeline.pipeline_sound_path` (`f86603d`).
 
-**Point-map (strong):** `∀ v. cfg_reach (to_cfg c) {s} v ⊆ γ_state (σ v)` proved for
-sign via `sign_pipeline_invariant_sound`.
+**Big-step exit corollary:** `(c, s) ⇒ t` implies `t ∈ γ_state (σ (cfg_exit (to_cfg c)))`.
+Proved as `Pipeline.pipeline_sound`, now derived from `pipeline_sound_path` via `big_step_cfg_path`.
+
+**Small-step exit corollary:** `(c, s) →* (SKIP, t)` implies `t ∈ γ_state (σ (cfg_exit (to_cfg c)))`.
+Proved as `Pipeline.pipeline_sound_small_step`, derived from `pipeline_sound` via `small_step_big_step_eq`.
+
+**Point-map invariant (lfp form):** `∀ v. cfg_collect (to_cfg c) {s} v ⊆ γ_state (σ v)` —
+proved unconditionally for sign via `sign_pipeline_invariant_sound`.
+
+**Non-terminating safety showcase:** `Example_NonTerminating_Safe.thy` — instantiates
+`pipeline_sound_path` on `x := 10; while True do skip` to show intermediate-pp safety
+is expressible (and provable) despite the program never reaching a big-step result.
 
 ---
 

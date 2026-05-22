@@ -48,6 +48,18 @@ Issue numbers are deliberately omitted — they go stale. The directions remain 
 
 Bridges B1–B4 from `docs/OPEN_PROBLEMS.md` are proved. The sign-domain pipeline is closed end-to-end (`goblint_sign_sound`) modulo three named TD hypotheses (P1/P2/P3). Discharging P2 and P3 is on the core track; P1 is gated on P5 (finite `pp` type) and is a legitimate open assumption for a partial-correctness thesis.
 
+### Small-step migration (landed 2026-05-22)
+
+Plan: `docs/SMALL_STEP_MIGRATION.md`. Branch: `small-step-migration`. Build green.
+
+Three top-level soundness theorems now live in `Pipeline.thy`:
+
+- **`pipeline_sound_path`** (canonical): per-pp, path-based, no big-step premise. Holds at intermediate program points of non-terminating programs.
+- **`pipeline_sound`**: big-step exit corollary, derived from `pipeline_sound_path` via `big_step_cfg_path`. Hoare-style consumers unchanged.
+- **`pipeline_sound_small_step`**: small-step exit corollary, derived via `small_step_big_step_eq`.
+
+The operational `small_step` predicate (`IMP2_Semantics.thy`) lives alongside `big_step`; `small_step_big_step_eq` bridges them. `Example_NonTerminating_Safe.thy` showcases per-pp safety on `x := 10; while True do skip` — provable via `pipeline_sound_path` but vacuous under the big-step formulation. KB sync ( `~/git/goblint-formalization-kb/wiki/concepts/semantics-style-tradeoffs.md`, `decisions.md`, `log.md`) lives in the KB repo.
+
 ### Domain stretch
 
 Interval is the next instance. Octagon is the relational stretch. Both fit the existing `sound_domain` / `abstract_domain` locale chain. **Interval pipeline is the architectural template**: once instantiated, octagon and any further domains follow the same scaffold provided the `vname ⇒ 'a abs_state` pointwise lifting is adequate. For domains where it is not (e.g. octagons over DBMs), see "Two-layer split" below.
