@@ -27,6 +27,31 @@ definition nonterm_prog :: com where
   "nonterm_prog \<equiv> (''x'' ::= N 10) ;; WHILE (Bc True) DO SKIP"
 
 
+subsection \<open>The program does not terminate\<close>
+
+text \<open>
+  \<open>WHILE (Bc True) DO SKIP\<close> has no big-step derivation.  Induction on the
+  derivation with the program pattern fixed at induction time reduces to
+  two cases:
+  \<^item> \<open>WhileFalse\<close>: contradicts \<open>bval (Bc True) s = True\<close>;
+  \<^item> \<open>WhileTrue\<close>: body is \<open>SKIP\<close>, so the recursive call is on the same
+    program and the induction hypothesis closes the case.
+\<close>
+
+lemma while_true_skip_diverges:
+  "(WHILE (Bc True) DO SKIP, s) \<Rightarrow> t \<Longrightarrow> False"
+proof (induction "WHILE (Bc True) DO SKIP" s t rule: big_step_induct)
+  case (WhileFalse s)     then show ?case by simp
+next
+  case (WhileTrue s s' t) then show ?case by simp
+qed
+
+lemma nonterm_prog_no_big_step:
+  "\<not> ((nonterm_prog, s) \<Rightarrow> t)"
+  unfolding nonterm_prog_def
+  using while_true_skip_diverges by blast
+
+
 subsection \<open>Intermediate-point safety via the path-based theorem\<close>
 
 text \<open>
@@ -45,7 +70,7 @@ theorem nonterm_safe_at_every_pp:
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
   assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
-    "TD_plain.solve_domnonterm_prog
+    "TD_plain.solve_dom
        (make_rhs_tree (to_cfg nonterm_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
        (cfg_entry (to_cfg nonterm_prog))"
   assumes td_cfg_in_reach:
