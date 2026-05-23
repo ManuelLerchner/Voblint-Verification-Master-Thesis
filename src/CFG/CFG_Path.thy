@@ -13,7 +13,7 @@ begin
             Pattern 4: derived _cases / _induct lemmas.
 
   Why this file exists:
-    post_fixpoint_sound and cfg_collect_exit_eq_collect both need to reason
+    post_fixpoint_sound and cfg_collect path lemmas both need to reason
     about sequences of edges from the entry to an arbitrary program point.
     Without an inductive path predicate, every reachability argument requires
     raw list induction and manual invariant re-establishment at each step.

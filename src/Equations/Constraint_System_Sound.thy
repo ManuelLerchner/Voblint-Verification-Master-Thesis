@@ -252,11 +252,11 @@ proof -
   have pfp: "\<forall>v. cfg_collect (to_cfg c) S v \<le> gamma_state (env v)"
     by (rule post_fixpoint_sound[OF fin post_fp S_sound
             tf_sound_assign tf_sound_assume tf_sound_assume_not])
-  have t_in_collect_S: "t \<in> collect c S"
-    using terminates s_in_S
-    unfolding runs_to_def cfg_collect_exit_eq_collect collect_def by blast
-  then have t_in_cfg: "t \<in> cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
-    by (simp add: cfg_collect_exit_eq_collect)
+  have t_in_sing: "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+    using terminates unfolding runs_to_def .
+  have t_in_cfg: "t \<in> cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
+    using t_in_sing s_in_S cfg_collect_mono_S[of "{s}" S "to_cfg c"]
+    by (auto simp: le_fun_def)
   from pfp[rule_format, of "cfg_exit (to_cfg c)"] t_in_cfg
     show ?thesis by blast
 qed
