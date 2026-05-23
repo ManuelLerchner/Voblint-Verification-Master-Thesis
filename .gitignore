@@ -1,16 +1,21 @@
 *.heap
 *.log
+
+# Isabelle
 .isabelle/
-.cursor/
-.vscode/
-__pycache__/
-
-# Python venv (created by ./setup.sh)
-.venv/
-
-# Isabelle editor backups
+*.thy#
 *.thy~
 
-# Local OS / IDE noise
+# IDEs / editors
+.cursor/
+.vscode/
+
+# Python
+__pycache__/
+.venv/
+
+# Local OS files
 .DS_Store
+
+# Local tool settings
 .claude/settings.local.json
