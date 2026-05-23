@@ -436,10 +436,10 @@ lemma compile_from_0_offsets:
 (*
   The key correctness property:
   If compile c n = (n', en, ex, E), then for any two states s and t,
-    big_step (c, s) t
+    runs_to c s t
   iff
     there exists a CFG path from en to ex in E that transforms s to t.
-  Proved in CFG_Collecting.thy.
+  Characterised by cfg_collect / path_sound in CFG_Collecting.thy.
 *)
 
 lemma compile_entry_lt_exit:

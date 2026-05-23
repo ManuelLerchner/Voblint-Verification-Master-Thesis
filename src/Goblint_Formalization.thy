@@ -3,8 +3,7 @@ theory Goblint_Formalization
     (* ── Language ──────────────────────────────────────────── *)
     IMP2_Syntax
     IMP2_SmallStep
-    IMP2_Collecting
-    (* ── Control-Flow Graph ────────────────────────────────── *)
+    (* ── Control-Flow Graph (cfg_collect, runs_to, collect) ── *)
     CFG_Def
     CFG_Path
     IMP2_to_CFG

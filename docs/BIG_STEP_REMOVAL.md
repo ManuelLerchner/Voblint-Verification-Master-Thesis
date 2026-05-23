@@ -119,23 +119,24 @@ Each deletion: `make`, confirm nothing else used it. If something does, restore 
 
 **Exit:** ~580 LOC removed from `CFG_Collecting.thy`; `make` green.
 
-### Phase 4 — redefine `collect` or remove it (½ day)
+### Phase 4 — redefine `collect` or remove it (½ day) — **landed**
 
-Two sub-options:
+**Landed (2026-05-23):** deleted `IMP2_Collecting.thy`; `runs_to` and `collect` live in `CFG_Collecting.thy`.
 
-**4a (keep `collect` as convenience):**
 ```isabelle
-definition collect :: "com ⇒ store set ⇒ store set" where
-  "collect c S = cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
+definition runs_to :: "com => store => store => bool" where
+  "runs_to c s t == t : cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+
+definition collect :: "com => store set => store set" where
+  "collect c S = {t. EX s : S. runs_to c s t}"
 ```
-Structural lemmas (`collect_Seq`, `collect_If`, `collect_While`) re-proved via existing CFG decomposition (`cfg_edges_entry_exit_Seq/If/While` + `compile_*_0`). `collect_small_step` becomes a small-step characterisation of `cfg_collect` at exit — likely provable via existing path lemmas, may be deletable if no consumer.
 
-**4b (delete `collect` entirely):**
-Every consumer talks directly about `cfg_collect`. Less convenience for source-level reading, more uniformity.
+**Not** `collect c S = cfg_collect (to_cfg c) S (cfg_exit …)` — seeding the whole set `S` at entry at once is not the same as “may start from some `s ∈ S`” (union of singleton `runs_to`). The latter matches the old big-step `collect`; the former broke `mem_collect_iff_runs_to`.
 
-**Lean 4a** for one session; if the structural lemmas don't fall out cleanly from CFG decomposition (`while_lfp_exit_collect`-equivalent is the risk), drop to 4b. Either way, `IMP2_Collecting.thy` shrinks dramatically (current `while_preserves_lfp` proof uses big-step induction — gone).
+- Soundness chain uses **`runs_to` only** (`Pipeline`, `TD_Soundness`, `Constraint_System_Sound`).
+- **`collect`** is optional AST-level convenience; basic lemmas (`collect_empty`, `collect_mono`, `runs_to_iff_mem_collect`) are definitional.
 
-**Exit:** `IMP2_Collecting.thy` either redefined against `cfg_collect` (4a) or deleted (4b); build green.
+**Exit:** `IMP2_Collecting.thy` deleted; build green.
 
 ### Phase 5 — delete big-step (½ day)
 

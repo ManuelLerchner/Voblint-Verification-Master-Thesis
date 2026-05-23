@@ -1,14 +1,13 @@
 theory CFG_Collecting
-  imports IMP2_to_CFG IMP2_Collecting CFG_Path
+  imports IMP2_to_CFG CFG_Path
 begin
 
 (*
-  CFG -- Collecting Semantics.
+  CFG collecting semantics and source-level surface.
 
-  Defines the collecting semantics directly on the CFG as the canonical
-  fixpoint of the transfer functions over edges, then proves it agrees
-  with path-based collecting (cfg_edges_collect).  Used in
-  Equations/Constraint_System_Sound.thy via runs_to.
+  Core spec: cfg_collect (per-pp lfp) and cfg_edges_collect (paths).
+  Source-level names for consumers: runs_to, collect (exit-projected cfg_collect).
+  Soundness chain uses runs_to (Constraint_System_Sound, Pipeline, TD_Soundness).
 *)
 
 (* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
@@ -939,18 +938,33 @@ proof (rule order_antisym)
   qed
 qed
 
-(* ── Source-level run predicate ────────────────────────────────────────────────────────── *)
+(* ── Source-level collecting (exit projection) ─────────────────────────────────────────── *)
 
 text \<open>
-  \<open>runs_to c s t\<close> is the source-level surface for ``\<open>c\<close> can produce \<open>t\<close> from \<open>s\<close>''.
-  Definitionally, this is exit-projected \<open>cfg_collect\<close> with singleton input \<open>{s}\<close>;
-  consumers unfold \<open>runs_to_def\<close> to reach the analyzer-side fixpoint.
-
-  Replaces the big-step predicate \<open>(c,s) \<Rightarrow> t\<close> in downstream soundness
-  statements.  See \<open>docs/BIG_STEP_REMOVAL.md\<close>.
+  \<open>runs_to c s t\<close>: exit-reachable from singleton input \<open>{s}\<close>.
+  \<open>collect c S\<close> unions that over \<open>S\<close>.  See \<open>docs/BIG_STEP_REMOVAL.md\<close>.
 \<close>
 
 definition runs_to :: "com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "runs_to c s t \<longleftrightarrow> t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+
+definition collect :: "com \<Rightarrow> store set \<Rightarrow> store set" where
+  "collect c S = {t. \<exists>s\<in>S. runs_to c s t}"
+
+lemma mem_collect_iff_runs_to:
+  "t \<in> collect c S \<longleftrightarrow> (\<exists>s\<in>S. runs_to c s t)"
+  unfolding collect_def by blast
+
+lemma runs_to_iff_mem_collect:
+  "runs_to c s t \<longleftrightarrow> t \<in> collect c {s}"
+  unfolding collect_def by auto
+
+lemma collect_empty [simp]:
+  "collect c {} = {}"
+  unfolding collect_def by auto
+
+lemma collect_mono:
+  "S \<subseteq> T \<Longrightarrow> collect c S \<subseteq> collect c T"
+  unfolding collect_def by blast
 
 end
