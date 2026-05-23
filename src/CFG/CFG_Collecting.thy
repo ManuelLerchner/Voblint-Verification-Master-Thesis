@@ -1984,4 +1984,24 @@ theorem cfg_collect_exit_eq_collect:
   "cfg_collect (to_cfg c) S (cfg_exit (to_cfg c)) = collect c S"
   by (rule antisym) (rule cfg_collect_exit_le_collect, rule collect_le_cfg_collect_exit)
 
+
+(* ── Source-level run predicate ────────────────────────────────────────────────────────── *)
+
+text \<open>
+  \<open>runs_to c s t\<close> is the source-level surface for ``\<open>c\<close> can produce \<open>t\<close> from \<open>s\<close>''.
+  Definitionally, this is exit-projected \<open>cfg_collect\<close> with singleton input \<open>{s}\<close>;
+  consumers unfold \<open>runs_to_def\<close> to reach the analyzer-side fixpoint.
+
+  Replaces the big-step predicate \<open>(c,s) \<Rightarrow> t\<close> in downstream soundness
+  statements.  See \<open>docs/BIG_STEP_REMOVAL.md\<close>.
+\<close>
+
+definition runs_to :: "com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "runs_to c s t \<longleftrightarrow> t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+
+lemma runs_to_iff_big_step:
+  "runs_to c s t \<longleftrightarrow> (c, s) \<Rightarrow> t"
+  unfolding runs_to_def cfg_collect_exit_eq_collect collect_def
+  by blast
+
 end

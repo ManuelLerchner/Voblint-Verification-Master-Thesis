@@ -35,7 +35,7 @@ theorem td_solver_sound:
   assumes s0_sound:
     "s \<in> gamma_state s0"
   assumes terminates:
-    "big_step (c, s) t"
+    "runs_to c s t"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
@@ -66,7 +66,7 @@ end
 
 theorem sign_analysis_sound:
   assumes s_sound:    "s \<in> sign_domain.gamma_state s0"
-  assumes terminates: "big_step (c, s) t"
+  assumes terminates: "runs_to c s t"
   assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) ::
        sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
@@ -104,7 +104,7 @@ qed
 
 theorem interval_analysis_sound:
   assumes s_sound:    "s \<in> ivl_domain.gamma_state s0"
-  assumes terminates: "big_step (c, s) t"
+  assumes terminates: "runs_to c s t"
   assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) ::
        ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"

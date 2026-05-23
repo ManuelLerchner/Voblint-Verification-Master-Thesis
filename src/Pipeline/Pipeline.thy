@@ -112,7 +112,7 @@ lemma sign_analysis_tf_sound_stub:
 
 
 lemma sign_pipeline_sound_scaffold:
-  assumes runs: "big_step (c, s) t"
+  assumes runs: "runs_to c s t"
     and init_ok: "s \<in> sign_domain.gamma_state (ac_init (sign_analysis_config s))"
     and join_cfi:
       "comp_fun_idem ((\<squnion>) ::
@@ -169,7 +169,7 @@ lemma ivl_analysis_init_in_gamma_stub:
   by (simp add: eint_le_refl)
 
 corollary ivl_pipeline_sound:
-  assumes runs: "big_step (c, s) t"
+  assumes runs: "runs_to c s t"
     and join_cfi:
       "comp_fun_idem ((\<squnion>) ::
          ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
@@ -326,14 +326,15 @@ proof -
 qed
 
 
-(* -- Pipeline Soundness (Big-step exit corollary) -------------------------
+(* -- Pipeline Soundness (runs_to exit corollary) --------------------------
 
-   Reconstructs the original big-step soundness statement as a corollary
-   of `pipeline_sound_path` via `big_step_cfg_path`. Kept for consumers
-   that prefer the `(c,s) \<Rightarrow> t` formulation (Hoare-style specs,
-   code-extraction demos).
+   Source-level run-shape corollary of pipeline_invariant_sound: if c runs
+   from s to t, the analyzer's exit env covers t. Definitionally a
+   one-line rewrite: runs_to is exit-projected cfg_collect with singleton
+   input. Kept as a convenience for consumers that want the source-level
+   ``c runs s to t'' framing without unfolding the CFG.
 *)
-theorem pipeline_sound:
+theorem pipeline_sound_runs_to:
   fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
   assumes sound:      "sound_domain (ac_gamma cfg)"
   assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. s1 x \<squnion> s2 x)"
@@ -352,55 +353,15 @@ theorem pipeline_sound:
           (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
           (cfg_entry (to_cfg c)))
        (cfg_entry (to_cfg c))"
-  assumes terminates: "(c, s) \<Rightarrow> t"
+  assumes terminates: "runs_to c s t"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg)
                   (run_analysis cfg c (cfg_exit (to_cfg c)))"
 proof -
-  obtain es where
-    es:   "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))" and
-    t_in: "t \<in> edges_collect es {s}"
-    using big_step_cfg_path[OF terminates, of "{s}"] by auto
-  show ?thesis
-    by (rule pipeline_sound_path[OF sound join_eq bot_eq tf_sound s_in_gamma
-              cfi td_solve_dom td_cfg_in_reach es t_in])
-qed
-
-
-(* -- Pipeline Soundness (Small-step exit corollary) -----------------------
-
-   Small-step formulation of the exit soundness: replace the big-step
-   premise `(c, s) \<Rightarrow> t` by the small-step trace `(c, s) \<rightarrow>* (SKIP, t)`.
-
-   Derivation is a one-line rewrite via `small_step_big_step_eq`. Useful
-   when downstream proofs are themselves operational/small-step.
-*)
-theorem pipeline_sound_small_step:
-  fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
-  assumes sound:      "sound_domain (ac_gamma cfg)"
-  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. s1 x \<squnion> s2 x)"
-  assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
-  assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
-  assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
-  assumes td_solve_dom:
-    "TD_plain.solve_dom
-       (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-       (cfg_entry (to_cfg c))"
-  assumes td_cfg_in_reach:
-    "\<And>v::pp. v \<in> reach
-       (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-       (TD_plain_Interp_solve
-          (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-          (cfg_entry (to_cfg c)))
-       (cfg_entry (to_cfg c))"
-  assumes reaches: "(c, s) \<rightarrow>* (SKIP, t)"
-  shows "t \<in> sound_domain.gamma_state (ac_gamma cfg)
-                  (run_analysis cfg c (cfg_exit (to_cfg c)))"
-proof -
-  from reaches small_step_big_step_eq have bs: "(c, s) \<Rightarrow> t" by blast
-  show ?thesis
-    by (rule pipeline_sound[OF sound join_eq bot_eq tf_sound s_in_gamma
-              cfi td_solve_dom td_cfg_in_reach bs])
+  have t_in: "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+    using terminates unfolding runs_to_def .
+  from pipeline_invariant_sound[OF sound join_eq bot_eq tf_sound s_in_gamma cfi
+        td_solve_dom td_cfg_in_reach, rule_format, of "cfg_exit (to_cfg c)"] t_in
+  show ?thesis by blast
 qed
 
 (*

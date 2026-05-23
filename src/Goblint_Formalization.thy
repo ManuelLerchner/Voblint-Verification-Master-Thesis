@@ -78,7 +78,7 @@ lemma example_swap_correct:
    Entry point for the thesis main result. *)
 
 theorem goblint_sign_sound:
-  assumes runs: "big_step (c, s) t"
+  assumes runs: "runs_to c s t"
   assumes join_cfi:
     "comp_fun_idem ((\<squnion>) ::
        sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
