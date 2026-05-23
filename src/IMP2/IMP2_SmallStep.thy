@@ -117,4 +117,40 @@ corollary while_true_incr_no_finish:
   "\<not> ((WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t))"
   using while_true_incr_star_not_skip by auto
 
+
+subsection \<open>Small-step star inversions by command shape\<close>
+
+text \<open>
+  Inversion principles for the small-step reflexive-transitive closure,
+  grouped by the shape of the source command.  Used by the
+  \<open>small_step \<rightarrow> runs_to\<close> reverse bridge.
+\<close>
+
+lemma star_SKIP_eq:
+  "(SKIP, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> s = t"
+  apply(induction "(SKIP, s)" " (SKIP, t)" rule:star.induct)
+  by(auto)
+  
+lemma star_Assign_eq:
+  "(x ::= a, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> t = s(x := aval a s)"
+  apply(induction "(x ::= a, s)" " (SKIP, t)" rule:star.induct)
+  using star_SKIP_eq by blast
+
+lemma star_If_split:
+  "(IF b THEN c1 ELSE c2, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
+   (bval b s \<and> (c1, s) \<rightarrow>* (SKIP, t)) \<or> (\<not> bval b s \<and> (c2, s) \<rightarrow>* (SKIP, t))"
+  apply(induction "(IF b THEN c1 ELSE c2, s)" " (SKIP, t)" rule:star.induct)
+  by(auto)
+  
+lemma star_While_split:
+  "(WHILE b DO c, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
+   (\<not> bval b s \<and> s = t) \<or>
+   (\<exists>s'. bval b s \<and> (c, s) \<rightarrow>* (SKIP, s') \<and> (WHILE b DO c, s') \<rightarrow>* (SKIP, t))"
+  apply(induction "(WHILE b DO c, s)" " (SKIP, t)" rule:star.induct)
+  apply(auto)
+  apply (metis WhileSE star_If_split star_SKIP_eq)
+  apply (metis WhileSE seq_star_finish star_If_split)
+  by (metis WhileSE seq_star_finish star_If_split star_SKIP_eq)
+ 
+
 end
