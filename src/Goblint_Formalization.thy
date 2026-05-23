@@ -2,7 +2,7 @@ theory Goblint_Formalization
   imports
     (* ── Language ──────────────────────────────────────────── *)
     IMP2_Syntax
-    IMP2_Semantics
+    IMP2_SmallStep
     IMP2_Collecting
     (* ── Control-Flow Graph ────────────────────────────────── *)
     CFG_Def

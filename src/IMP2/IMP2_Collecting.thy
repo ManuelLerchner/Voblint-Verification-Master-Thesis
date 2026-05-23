@@ -1,5 +1,5 @@
 theory IMP2_Collecting
-  imports IMP2_Semantics
+  imports IMP2_SmallStep
 begin
 
 (*

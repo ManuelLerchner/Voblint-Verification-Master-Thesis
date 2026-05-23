@@ -1,5 +1,5 @@
 theory Interval_Domain
-  imports Abstract_Domain Constraint_System IMP2_Semantics
+  imports Abstract_Domain Constraint_System IMP2_SmallStep
 begin
 
 (*

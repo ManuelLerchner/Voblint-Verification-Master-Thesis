@@ -1,5 +1,5 @@
 theory IMP2_to_CFG
-  imports CFG_Def IMP2_Semantics
+  imports CFG_Def IMP2_SmallStep
 begin
 
 (*
