@@ -14,12 +14,11 @@ text \<open>
   conclusion is vacuously discharged --- we learn nothing about the
   analyzer's output at intermediate program points.
 
-  The path-based variant \<open>pipeline_sound_path\<close>, added by the small-step
-  migration (docs/SMALL\_STEP\_MIGRATION.md), drops the big-step premise.
-  Its conclusion holds at every program point \<open>v\<close> reachable via a CFG
-  path from the entry --- in particular at the program point right after
-  \<open>''x'' ::= N 10\<close>, even though the program never returns from the
-  trailing infinite loop.
+  The path-based variant \<open>pipeline_sound_path\<close> drops the termination
+  premise.  Its conclusion holds at every program point \<open>v\<close> reachable
+  via a CFG path from the entry --- in particular at the program point
+  right after \<open>''x'' ::= N 10\<close>, even though the program never returns
+  from the trailing infinite loop.
 \<close>
 
 
@@ -61,7 +60,7 @@ text \<open>
   Despite the absence of a terminating run, soundness at every CFG-reachable
   program point is expressible and provable: it follows directly from
   \<open>pipeline_sound_path\<close> by instantiation at \<^const>\<open>nonterm_prog\<close>.
-  The proof carries no big-step assumption.
+  The proof carries no termination assumption.
 \<close>
 
 theorem nonterm_safe_at_every_pp:
@@ -130,22 +129,9 @@ definition incr_loop_prog :: com where
 subsection \<open>The program does not terminate\<close>
 
 text \<open>
-  Same divergence pattern as \<open>while_true_skip_diverges\<close>, but the body
-  is \<open>''x'' ::= Plus (V ''x'') (N 1)\<close> rather than \<open>SKIP\<close>.  The body
-  terminates each iteration (it is a single assignment), so the
-  \<open>WhileTrue\<close> case still produces a recursive big-step derivation on
-  the same  WHILE command --- just at a different state
-  (\<open>s' = s(''x'' := s ''x'' + 1)\<close>).  Because the induction generalises
-  over \<open>s\<close>, the induction hypothesis applies directly to that recursive
-  call and closes the case.
-
-  Structure: induct with the command pattern pinned and \<open>s\<close>, \<open>t\<close>
-  schematic.  Two cases survive after \<open>com.distinct\<close> rules out the
-  others:
-  \<^item> \<open>WhileFalse\<close>: contradicts \<open>bval (Bc True) s = True\<close>;
-  \<^item> \<open>WhileTrue\<close>: the assignment body always reduces, then the
-    induction hypothesis on the recursive WHILE derivation
-    yields \<open>False\<close>.
+  Same divergence pattern as \<open>while_true_skip_no_finish\<close>, but the body
+  is \<open>''x'' ::= Plus (V ''x'') (N 1)\<close> rather than \<open>SKIP\<close>.  Reuses the
+  small-step suffix invariant from \<open>IMP2_SmallStep\<close>.
 \<close>
 
 lemma while_true_incr_no_finish:

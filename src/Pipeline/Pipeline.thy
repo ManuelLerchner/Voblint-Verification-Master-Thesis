@@ -278,20 +278,16 @@ qed
 
 (* -- Pipeline Soundness (Per-pp, path-based) -----------------------------
 
-   Per-program-point soundness without any big-step assumption.
+   Per-program-point soundness, the canonical top-level result.
 
    Statement: at every program point v reachable via a CFG path from the
    entry, every store t obtainable from {s} along that path is concretized
-   by the analyzer's abstract value at v.
+   by the analyzer's abstract value at v.  No termination premise; holds
+   at intermediate program points, not just the exit.  Direct consequence
+   of `pipeline_invariant_sound` + `path_sound_cfg_collect`.
 
-   This is the canonical small-step-flavoured top-level result:
-     * no `(c, s) \<Rightarrow> t` premise;
-     * holds at intermediate program points, not just the exit;
-     * direct consequence of `pipeline_invariant_sound` +
-       `path_sound_cfg_collect`.
-
-   The big-step `pipeline_sound` and the small-step `pipeline_sound_small_step`
-   are derived as exit-only corollaries below.
+   `pipeline_sound_runs_to` below is the exit-only corollary for consumers
+   that want the source-level ``c runs s to t'' framing.
 *)
 theorem pipeline_sound_path:
   fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"

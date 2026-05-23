@@ -1605,13 +1605,13 @@ proof -
 qed
 
 
-paragraph \<open>Big-step-shaped intro rules for \<open>runs_to\<close>\<close>
+paragraph \<open>Structured intro rules for \<open>runs_to\<close>\<close>
 
 text \<open>
   Each rule constructs an explicit CFG path on \<open>to_cfg c\<close> and feeds it
   to \<open>path_imp_runs_to\<close>.  Together they form an "evaluation algebra"
-  that mirrors the big-step rules \<^emph>\<open>against the published
-  \<open>cfg_collect\<close>-based spec\<close>, without needing big-step itself.
+  over the \<open>cfg_collect\<close>-based spec --- one intro rule per command
+  shape, composing to derive terminating runs at the spec level.
 \<close>
 
 lemma runs_to_Skip:
@@ -2035,8 +2035,8 @@ qed
 paragraph \<open>Internal evaluation predicate (proof helper)\<close>
 
 text \<open>
-  \<open>terminates_to\<close> mirrors big-step evaluation but is internal to this
-  proof.  It exists solely as an inductive scaffold for the
+  \<open>terminates_to\<close> is a structured operational predicate, internal to
+  this proof.  It exists solely as an inductive scaffold for the
   \<open>small_step \<rightarrow> runs_to\<close> bridge: it provides a rule-induction principle
   that lets us peel WHILE iterations without external well-founded
   induction.  No client of \<open>CFG_Collecting\<close> uses it.

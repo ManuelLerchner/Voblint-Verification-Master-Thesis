@@ -1,8 +1,8 @@
 # Big-Step Removal Plan
 
-**Status:** proposed (2026-05-23).
+**Status:** landed (2026-05-24). Branch `big-step-removal`; all 7 phases complete.
 **Predecessor:** `SMALL_STEP_MIGRATION.md` (landed 2026-05-22). That migration made small-step the operational basis and `pipeline_sound_small_step` the canonical theorem, but **kept big-step** as the spec-side predicate per Phase 5.
-**This plan revisits that decision.** Goal: drop `big_step` entirely; `cfg_collect` is the spec, small-step is the operational view.
+**This plan revisited that decision** and dropped `big_step` entirely. `cfg_collect` is the spec; `runs_to` is its exit projection; small-step is the operational view.
 
 ## Why revisit Phase 5
 

@@ -11,7 +11,7 @@
     "isabelle-iq": {
       "type": "stdio",
       "command": "python3",
-      "args": ["/Users/manuellerchner/git/goblint-formalization/vendor/autocorrode/iq/iq_bridge.py"],
+      "args": ["vendor/autocorrode/iq/iq_bridge.py"],
       "env": {
         "IQ_AUTH_TOKEN": "isabelle-local",
         "IQ_MCP_BRIDGE_HOST": "127.0.0.1",
