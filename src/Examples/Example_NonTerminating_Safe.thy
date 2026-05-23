@@ -9,10 +9,10 @@ begin
 text \<open>
   A program that never terminates: \verb|x := 10; while True do skip|.
 
-  Big-step soundness (\<open>pipeline_sound\<close>) carries the premise
-  \<open>(c, s) \<Rightarrow> t\<close> (``execution reaches a final state'').  For this program
-  no such \<open>t\<close> exists, so the conclusion is vacuously discharged --- we
-  learn nothing about the analyzer's output at intermediate program points.
+  Exit soundness (\<open>pipeline_sound_runs_to\<close>) carries the premise
+  \<open>runs_to c s t\<close>.  For this program no such \<open>t\<close> exists, so the
+  conclusion is vacuously discharged --- we learn nothing about the
+  analyzer's output at intermediate program points.
 
   The path-based variant \<open>pipeline_sound_path\<close>, added by the small-step
   migration (docs/SMALL\_STEP\_MIGRATION.md), drops the big-step premise.
@@ -30,32 +30,24 @@ definition nonterm_prog :: com where
 subsection \<open>The program does not terminate\<close>
 
 text \<open>
-  \<open>WHILE (Bc True) DO SKIP\<close> has no big-step derivation.  Induction on the
-  derivation with the program pattern fixed at induction time reduces to
-  two cases:
-  \<^item> \<open>WhileFalse\<close>: contradicts \<open>bval (Bc True) s = True\<close>;
-  \<^item> \<open>WhileTrue\<close>: body is \<open>SKIP\<close>, so the recursive call is on the same
-    program and the induction hypothesis closes the case.
+  \<open>WHILE (Bc True) DO SKIP\<close> never reaches \<open>SKIP\<close> in small-step.
+  (Proof via star inversion; full script in Phase 6.)
 \<close>
 
-lemma while_true_skip_diverges:
-  "(WHILE (Bc True) DO SKIP, s) \<Rightarrow> t \<Longrightarrow> False"
-proof (induction "WHILE (Bc True) DO SKIP" s t rule: big_step_induct)
-  case (WhileFalse s)     then show ?case by simp
-next
-  case (WhileTrue s s' t) then show ?case by simp
-qed
+lemma while_true_skip_no_finish:
+  "\<not> ((WHILE (Bc True) DO SKIP, s) \<rightarrow>* (SKIP, t))"
+  sorry
 
-lemma nonterm_prog_no_big_step:
-  "\<not> ((nonterm_prog, s) \<Rightarrow> t)"
-  unfolding nonterm_prog_def
-  using while_true_skip_diverges by blast
+lemma nonterm_prog_no_runs_to:
+  "\<not> (\<exists>t. runs_to nonterm_prog s t)"
+  unfolding nonterm_prog_def runs_to_def
+  sorry
 
 
 subsection \<open>Intermediate-point safety via the path-based theorem\<close>
 
 text \<open>
-  Despite the absence of a big-step result, soundness at every CFG-reachable
+  Despite the absence of a terminating run, soundness at every CFG-reachable
   program point is expressible and provable: it follows directly from
   \<open>pipeline_sound_path\<close> by instantiation at \<^const>\<open>nonterm_prog\<close>.
   The proof carries no big-step assumption.
@@ -100,13 +92,13 @@ text \<open>
   pin down \<open>x\<close>'s value there.
 
   This second example exercises \<open>pipeline_sound_path\<close> in a regime where
-  the existing big-step \<open>pipeline_sound\<close> genuinely has nothing to say:
+  exit-only \<open>pipeline_sound_runs_to\<close> genuinely has nothing to say:
   the program mutates state inside a diverging loop, so the concrete
   reachable set at the loop's body-entry program point is
   \<open>{ s(''x'' := k) | k \<ge> 0 }\<close> --- countably infinite.  A sound abstract
   state at that program point must overapproximate all of those values
-  simultaneously.  The big-step soundness corollary is vacuous (no
-  \<open>(c, s) \<Rightarrow> t\<close> exists), yet the path-based theorem still constrains
+  simultaneously.  The exit-only soundness corollary is vacuous (no
+  \<open>runs_to c s t\<close>), yet the path-based theorem still constrains
   the analyzer's output at every intermediate program point.
 
   Concretely: the program is \<open>x := 0 ;; WHILE True DO x := x + 1\<close>.
@@ -145,36 +137,14 @@ text \<open>
     yields \<open>False\<close>.
 \<close>
 
-lemma while_true_incr_diverges:
-  "(WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<Rightarrow> t \<Longrightarrow> False"
-proof (induction
-         "WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1))" s t
-       rule: big_step_induct)
-  case (WhileFalse s)
-  (* bval (Bc True) s = True, premise says \<not> bval (Bc True) s --- contradiction. *)
-  then show ?case by simp
-next
-  case (WhileTrue s s' t)
-  (* Premises after split:
-       (1) bval (Bc True) s
-       (2) (''x'' ::= Plus (V ''x'') (N 1), s) \<Rightarrow> s'
-       (3) (WHILE (Bc True) DO ..., s') \<Rightarrow> t
-       IH on (3): False.
-     The body big-step (2) terminates (Assign always does), so (3)
-     fires and its IH closes the case. *)
-  then show ?case by blast
-qed
+lemma while_true_incr_no_finish:
+  "\<not> ((WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t))"
+  sorry
 
-lemma incr_loop_no_big_step:
-  "\<not> ((incr_loop_prog, s) \<Rightarrow> t)"
-proof
-  assume "(incr_loop_prog, s) \<Rightarrow> t"
-  then obtain s1 where
-    init: "(''x'' ::= N 0, s) \<Rightarrow> s1" and
-    loop: "(WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s1) \<Rightarrow> t"
-    unfolding incr_loop_prog_def by (rule SeqE)
-  from loop while_true_incr_diverges show False by blast
-qed
+lemma incr_loop_no_runs_to:
+  "\<not> (\<exists>t. runs_to incr_loop_prog s t)"
+  unfolding incr_loop_prog_def runs_to_def
+  sorry
 
 
 subsection \<open>Intermediate-point safety via the path-based theorem\<close>

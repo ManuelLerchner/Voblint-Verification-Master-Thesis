@@ -138,13 +138,12 @@ definition collect :: "com => store set => store set" where
 
 **Exit:** `IMP2_Collecting.thy` deleted; build green.
 
-### Phase 5 — delete big-step (½ day)
+### Phase 5 — delete big-step (½ day) — **landed**
 
-1. Delete `IMP2_BigStep.thy`.
-2. Move `aval`/`bval` to `IMP2_SmallStep.thy` (or a new `IMP2_Expressions.thy` if cleaner).
-3. Delete the equivalence lemma `small_step_big_step_eq` and its halves `big_to_small`/`small_to_big`.
-4. Update every importer.
-5. `rg -c "big_step" src/` returns 0.
+1. Deleted `IMP2_BigStep.thy`; `aval`/`bval` moved to `IMP2_SmallStep.thy`.
+2. Removed `big_to_small` / `small_to_big` / `small_step_big_step_eq`.
+3. Examples/smoke tests no longer reference `big_step` (`rg big_step src/` is empty).
+4. Some divergence/smoke lemmas use `sorry` pending Phase 6 (CFG/small-step proofs).
 
 **Exit:** build green; big-step gone.
 

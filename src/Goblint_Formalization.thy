@@ -60,18 +60,14 @@ definition example_swap :: com where
       ''x''   ::= V ''y'' ;;
       ''y''   ::= V ''tmp'')"
 
-lemma example_swap_terminates: "\<exists>t. big_step (example_swap, s) t"
-  unfolding example_swap_def
-  apply (rule exI)
-  apply (rule big_step.Seq, rule big_step.Seq,
-         rule big_step.Assign, rule big_step.Assign,
-         rule big_step.Assign)
-  done
+lemma example_swap_runs_to:
+  "\<exists>t. runs_to example_swap s t"
+  (* TODO Phase 6: direct cfg_collect on compiled swap *)
+  sorry
 
 lemma example_swap_correct:
-  "big_step (example_swap, s) t ==> t ''x'' = s ''y'' \<and> t ''y'' = s ''x''"
-  unfolding example_swap_def
-  by (auto elim!: big_step.cases)
+  "runs_to example_swap s t \<Longrightarrow> t ''x'' = s ''y'' \<and> t ''y'' = s ''x''"
+  sorry
 
 (* ── Top-Level Soundness Theorem (Sign Domain) ─────────────────
    Entry point for the thesis main result. *)

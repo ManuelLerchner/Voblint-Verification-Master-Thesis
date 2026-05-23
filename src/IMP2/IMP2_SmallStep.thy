@@ -1,13 +1,31 @@
 theory IMP2_SmallStep
-  imports IMP2_BigStep "HOL-IMP.Star"
+  imports IMP2_Syntax "HOL-IMP.Star"
 begin
 
 (*
-  IMP2 -- Small-Step Operational Semantics.
+  IMP2 -- expression evaluation and small-step operational semantics.
 
-  Small-step transitions over our extended IMP. Mirrors HOL-IMP.Small\_Step;
-  rules are the standard ones, reusing our `aval`/`bval`.
+  Small-step rules mirror HOL-IMP.Small_Step; aval/bval evaluate the
+  IMP2 expression extensions (delegating BaseN/BaseB to Nipkow).
 *)
+
+(* -- Expression Evaluation -------------------------------------- *)
+
+fun aval :: "aexp => store => int" where
+    "aval (BaseN a)   s  = AExp.aval a s"
+  | "aval (Plus  a b) s  = aval a s + aval b s"
+  | "aval (Minus a b) s  = aval a s - aval b s"
+  | "aval (Times a b) s  = aval a s * aval b s"
+
+fun bval :: "bexp => store => bool" where
+    "bval (BaseB b)   s  = BExp.bval b s"
+  | "bval (Not b)     s  = (\<not> bval b s)"
+  | "bval (And b1 b2) s  = (bval b1 s \<and> bval b2 s)"
+  | "bval (Or  b1 b2) s  = (bval b1 s \<or> bval b2 s)"
+  | "bval (Less a b)  s  = (aval a s < aval b s)"
+  | "bval (Eq   a b)  s  = (aval a s = aval b s)"
+
+(* -- Small-Step Semantics --------------------------------------- *)
 
 inductive
   small_step :: "com \<times> store \<Rightarrow> com \<times> store \<Rightarrow> bool" (infix "\<rightarrow>" 55)
@@ -44,58 +62,5 @@ lemma small_step_deterministic:
   apply (induction arbitrary: cs'' rule: small_step.induct)
   apply blast+
   done
-
-
-subsection \<open>Equivalence with big-step\<close>
-
-lemma star_seq2:
-  "(c1, s) \<rightarrow>* (c1', s') \<Longrightarrow> (c1 ;; c2, s) \<rightarrow>* (c1' ;; c2, s')"
-proof (induction rule: star_induct)
-  case refl thus ?case by simp
-next
-  case step
-  thus ?case by (metis Seq2 star.step)
-qed
-
-lemma seq_comp:
-  "\<lbrakk> (c1, s1) \<rightarrow>* (SKIP, s2); (c2, s2) \<rightarrow>* (SKIP, s3) \<rbrakk>
-   \<Longrightarrow> (c1 ;; c2, s1) \<rightarrow>* (SKIP, s3)"
-  by (blast intro: star.step star_seq2 star_trans)
-
-lemma big_to_small:
-  "cs \<Rightarrow> t \<Longrightarrow> cs \<rightarrow>* (SKIP, t)"
-proof (induction rule: big_step.induct)
-  case Skip show ?case by simp
-next
-  case Assign show ?case by blast
-next
-  case Seq thus ?case by (blast intro: seq_comp)
-next
-  case IfTrue thus ?case by (blast intro: star.step)
-next
-  case IfFalse thus ?case by (blast intro: star.step)
-next
-  case WhileFalse thus ?case
-    by (metis star.step star_step1 small_step.IfFalse small_step.While)
-next
-  case WhileTrue thus ?case
-    by (metis While seq_comp small_step.IfTrue star.step[of small_step])
-qed
-
-lemma small1_big_continue:
-  "cs \<rightarrow> cs' \<Longrightarrow> cs' \<Rightarrow> t \<Longrightarrow> cs \<Rightarrow> t"
-  apply (induction arbitrary: t rule: small_step.induct)
-  apply auto
-  done
-
-lemma small_to_big:
-  "cs \<rightarrow>* (SKIP, t) \<Longrightarrow> cs \<Rightarrow> t"
-  apply (induction cs "(SKIP, t)" rule: star.induct)
-  apply (auto intro: small1_big_continue)
-  done
-
-theorem small_step_big_step_eq:
-  "cs \<Rightarrow> t \<longleftrightarrow> cs \<rightarrow>* (SKIP, t)"
-  by (metis big_to_small small_to_big)
 
 end
