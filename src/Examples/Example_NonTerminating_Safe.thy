@@ -36,12 +36,23 @@ text \<open>
 
 lemma while_true_skip_no_finish:
   "\<not> ((WHILE (Bc True) DO SKIP, s) \<rightarrow>* (SKIP, t))"
-  sorry
+  by (fact IMP2_SmallStep.while_true_skip_no_finish)
+
 
 lemma nonterm_prog_no_runs_to:
   "\<not> (\<exists>t. runs_to nonterm_prog s t)"
-  unfolding nonterm_prog_def runs_to_def
-  sorry
+proof clarify
+  fix t assume "runs_to nonterm_prog s t"
+  then have "(nonterm_prog, s) \<rightarrow>* (SKIP, t)"
+    by (rule runs_to_small_step)
+  then have star: "((''x'' ::= N 10) ;; WHILE (Bc True) DO SKIP, s) \<rightarrow>* (SKIP, t)"
+    by (simp add: nonterm_prog_def)
+  from seq_star_finish[OF star] obtain s2 where
+        "(''x'' ::= N 10, s) \<rightarrow>* (SKIP, s2)"
+    and w: "(WHILE (Bc True) DO SKIP, s2) \<rightarrow>* (SKIP, t)"
+    by blast
+  from w while_true_skip_no_finish show False by simp
+qed
 
 
 subsection \<open>Intermediate-point safety via the path-based theorem\<close>
@@ -139,12 +150,22 @@ text \<open>
 
 lemma while_true_incr_no_finish:
   "\<not> ((WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t))"
-  sorry
+  by (fact IMP2_SmallStep.while_true_incr_no_finish)
 
 lemma incr_loop_no_runs_to:
   "\<not> (\<exists>t. runs_to incr_loop_prog s t)"
-  unfolding incr_loop_prog_def runs_to_def
-  sorry
+proof clarify
+  fix t assume "runs_to incr_loop_prog s t"
+  then have "(incr_loop_prog, s) \<rightarrow>* (SKIP, t)"
+    by (rule runs_to_small_step)
+  then have star: "((''x'' ::= N 0) ;; WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t)"
+    by (simp add: incr_loop_prog_def)
+  from seq_star_finish[OF star] obtain s2 where
+        "(''x'' ::= N 0, s) \<rightarrow>* (SKIP, s2)"
+    and w: "(WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s2) \<rightarrow>* (SKIP, t)"
+    by blast
+  from w while_true_incr_no_finish show False by simp
+qed
 
 
 subsection \<open>Intermediate-point safety via the path-based theorem\<close>

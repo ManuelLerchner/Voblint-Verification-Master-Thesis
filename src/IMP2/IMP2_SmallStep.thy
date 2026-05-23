@@ -63,4 +63,58 @@ lemma small_step_deterministic:
   apply blast+
   done
 
+subsection \<open>Sequencing and divergence\<close>
+
+lemma star_seq2:
+  "(c1, s) \<rightarrow>* (c1', s') \<Longrightarrow> (c1 ;; c2, s) \<rightarrow>* (c1' ;; c2, s')"
+proof (induction rule: star_induct)
+  case refl thus ?case by simp
+next
+  case step
+  thus ?case by (metis Seq2 star.step)
+qed
+
+lemma seq_comp:
+  "\<lbrakk> (c1, s1) \<rightarrow>* (SKIP, s2); (c2, s2) \<rightarrow>* (SKIP, s3) \<rbrakk>
+   \<Longrightarrow> (c1 ;; c2, s1) \<rightarrow>* (SKIP, s3)"
+  by (blast intro: star.step star_seq2 star_trans)
+
+lemma seq_star_finish:
+  "(c1 ;; c2, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
+   (\<exists>s2. (c1, s) \<rightarrow>* (SKIP, s2) \<and> (c2, s2) \<rightarrow>* (SKIP, t))"
+  apply (induction "(c1 ;; c2, s)" "(SKIP, t)" arbitrary: c1 c2 s t rule: star.induct)
+  apply auto
+  by (metis (no_types, lifting) SeqSE prod.inject star.refl star.step)
+
+
+definition wt_suffix :: "com \<Rightarrow> com \<Rightarrow> bool" where
+  "wt_suffix body c \<equiv>
+     c = WHILE (Bc True) DO body
+   \<or> c = IF (Bc True) THEN body ;; WHILE (Bc True) DO body ELSE SKIP
+   \<or> (\<exists> c'. c = c' ;; WHILE (Bc True) DO body)"
+
+lemma wt_suffix_step:
+  "wt_suffix body c \<Longrightarrow> (c, s) \<rightarrow> (c', s') \<Longrightarrow> wt_suffix body c'"
+  unfolding wt_suffix_def
+  by (auto)
+
+lemma wt_suffix_steps:
+  "(c, s) \<rightarrow>* (c', t) \<Longrightarrow> wt_suffix body c \<Longrightarrow> wt_suffix body c'"
+  apply (induction "(c,s)" "(c',t)" arbitrary: c s rule: star.induct)
+  apply(auto)
+  using wt_suffix_step by blast
+
+lemma while_true_skip_no_finish:
+  "\<not> ((WHILE (Bc True) DO a, s) \<rightarrow>* (SKIP, t))"
+  by (meson com.distinct(3,5,7) wt_suffix_def wt_suffix_steps)
+ 
+
+corollary while_true_incr_star_not_skip:
+  "\<not> (WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t)"
+  using while_true_skip_no_finish by blast
+
+corollary while_true_incr_no_finish:
+  "\<not> ((WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t))"
+  using while_true_incr_star_not_skip by auto
+
 end
