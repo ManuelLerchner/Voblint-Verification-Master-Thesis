@@ -48,8 +48,18 @@ text \<open>
 
 lemma collecting_example_runs_to:
   "runs_to collecting_example_prog collecting_example_s0 collecting_example_t"
-  (* TODO Phase 6: close via direct cfg_collect computation *)
-  sorry
+proof -
+  let ?s1 = "collecting_example_s0(''x'' := 5)"
+  have step1: "(''x'' ::= N 5, collecting_example_s0) \<rightarrow>* (SKIP, ?s1)"
+    by (auto intro: star.step)
+  have step2: "(''y'' ::= Plus (V ''x'') (N 1), ?s1) \<rightarrow>* (SKIP, collecting_example_t)"
+    unfolding collecting_example_t_def
+    by (auto intro: star.step)
+  have "(collecting_example_prog, collecting_example_s0) \<rightarrow>* (SKIP, collecting_example_t)"
+    unfolding collecting_example_prog_def
+    using seq_comp[OF step1 step2] .
+  thus ?thesis by (rule small_step_runs_to)
+qed
 
 corollary collecting_example_in_cfg_collect:
   "collecting_example_t \<in> cfg_collect cfg {collecting_example_s0} (cfg_exit cfg)"

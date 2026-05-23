@@ -62,12 +62,50 @@ definition example_swap :: com where
 
 lemma example_swap_runs_to:
   "\<exists>t. runs_to example_swap s t"
-  (* TODO Phase 6: direct cfg_collect on compiled swap *)
-  sorry
+proof -
+  let ?s1 = "s(''tmp'' := s ''x'')"
+  let ?s2 = "?s1(''x'' := ?s1 ''y'')"
+  let ?s3 = "?s2(''y'' := ?s2 ''tmp'')"
+  have e1: "(''tmp'' ::= V ''x'', s) \<rightarrow>* (SKIP, ?s1)"
+    by (auto intro: star.step)
+  have e2: "(''x'' ::= V ''y'', ?s1) \<rightarrow>* (SKIP, ?s2)"
+    by (auto intro: star.step)
+  have e3: "(''y'' ::= V ''tmp'', ?s2) \<rightarrow>* (SKIP, ?s3)"
+    by (auto intro: star.step)
+  have e12: "(''tmp'' ::= V ''x'' ;; ''x'' ::= V ''y'', s) \<rightarrow>* (SKIP, ?s2)"
+    using seq_comp[OF e1 e2] .
+  have e123: "(example_swap, s) \<rightarrow>* (SKIP, ?s3)"
+    unfolding example_swap_def
+    using seq_comp[OF e12 e3] .
+  hence "runs_to example_swap s ?s3" by (rule small_step_runs_to)
+  thus ?thesis by blast
+qed
 
 lemma example_swap_correct:
   "runs_to example_swap s t \<Longrightarrow> t ''x'' = s ''y'' \<and> t ''y'' = s ''x''"
-  sorry
+proof -
+  assume "runs_to example_swap s t"
+  hence star: "(example_swap, s) \<rightarrow>* (SKIP, t)" by (rule runs_to_small_step)
+  then have star':
+    "(''tmp'' ::= V ''x'' ;; ''x'' ::= V ''y'' ;; ''y'' ::= V ''tmp'', s) \<rightarrow>* (SKIP, t)"
+    unfolding example_swap_def .
+  from seq_star_finish[OF star'] obtain s2 where
+        s12_step: "(''tmp'' ::= V ''x'' ;; ''x'' ::= V ''y'', s) \<rightarrow>* (SKIP, s2)"
+    and rest2:  "(''y'' ::= V ''tmp'', s2) \<rightarrow>* (SKIP, t)"
+    by blast
+  from seq_star_finish[OF s12_step] obtain s1 where
+        s1_step: "(''tmp'' ::= V ''x'', s) \<rightarrow>* (SKIP, s1)"
+    and s2_step: "(''x'' ::= V ''y'', s1) \<rightarrow>* (SKIP, s2)"
+    by blast
+  from s1_step have s1_eq: "s1 = s(''tmp'' := s ''x'')"
+    using star_Assign_eq by fastforce
+  from s2_step have s2_eq: "s2 = s1(''x'' := s1 ''y'')"
+    using star_Assign_eq by fastforce
+  from rest2 have t_eq: "t = s2(''y'' := s2 ''tmp'')"
+    using star_Assign_eq by fastforce
+  show "t ''x'' = s ''y'' \<and> t ''y'' = s ''x''"
+    using t_eq s2_eq s1_eq by simp
+qed
 
 (* ── Top-Level Soundness Theorem (Sign Domain) ─────────────────
    Entry point for the thesis main result. *)
