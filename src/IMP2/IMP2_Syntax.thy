@@ -102,5 +102,15 @@ instance
   by(auto simp add: less_bexp_def less_eq_bexp_def)
 end
 
+(* -- Short-name printing for clashing constructors --------------------
+   Nipkow's HOL-IMP defines AExp.aexp.Plus and BExp.bexp.Bc, which clash
+   with our IMP2_Syntax.aexp.Plus and the IMP2_Syntax.Bc abbreviation.
+   Without these hides, Isabelle prints fully-qualified names in goals
+   (e.g. "IMP2_Syntax.aexp.Plus", "IMP2_Syntax.Bc"), cluttering proof
+   state and presentation extracts. `(open)` keeps the Nipkow versions
+   reachable via the fully qualified path (AExp.Plus, BExp.Bc) for any
+   code that delegates to Nipkow's aval/bval. *)
+hide_const (open) AExp.Plus BExp.Bc
+
 end
 
