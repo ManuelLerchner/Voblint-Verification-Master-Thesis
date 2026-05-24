@@ -18,7 +18,8 @@ begin
   Canonical soundness: pipeline_invariant_sound / pipeline_sound_path
   (cfg_collect at every pp; no termination premise).
 
-  Exit corollary pipeline_sound_runs_to: runs_to c s t implies t in gamma at exit.
+  Exit corollary pipeline_sound_runs_to: cfg_collect at exit implies t in gamma.
+  Source-level runs_to framing: runs_to_def or sign_pipeline_sound / goblint_sign_sound.
 *)
 
 (* ── Transfer-Function Soundness Bundle ──────────────────────── *)
@@ -286,11 +287,10 @@ qed
 
 (* -- Pipeline Soundness (runs_to exit corollary) --------------------------
 
-   Source-level run-shape corollary of pipeline_invariant_sound: if c runs
-   from s to t, the analyzer's exit env covers t. Definitionally a
-   one-line rewrite: runs_to is exit-projected cfg_collect with singleton
-   input. Kept as a convenience for consumers that want the source-level
-   ``c runs s to t'' framing without unfolding the CFG.
+   Exit corollary of pipeline_invariant_sound: membership in cfg_collect at
+   exit implies the analyzer's exit env covers t. Primary spec premise
+   (not runs_to). For runs_to c s t use runs_to_def once, or the
+   sign/interval pipeline lemmas that keep runs_to for examples.
 *)
 theorem pipeline_sound_runs_to:
   fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
@@ -311,16 +311,40 @@ theorem pipeline_sound_runs_to:
           (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
           (cfg_entry (to_cfg c)))
        (cfg_entry (to_cfg c))"
-  assumes terminates: "runs_to c s t"
+  assumes exit_in_collect:
+    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg)
                   (run_analysis cfg c (cfg_exit (to_cfg c)))"
-proof -
-  have t_in: "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-    using terminates unfolding runs_to_def .
-  from pipeline_invariant_sound[OF sound join_eq bot_eq tf_sound s_in_gamma cfi
-        td_solve_dom td_cfg_in_reach, rule_format, of "cfg_exit (to_cfg c)"] t_in
-  show ?thesis by blast
-qed
+  using exit_in_collect pipeline_invariant_sound[OF sound join_eq bot_eq tf_sound
+          s_in_gamma cfi td_solve_dom td_cfg_in_reach, rule_format,
+          of "cfg_exit (to_cfg c)"]
+  by blast
+
+corollary pipeline_sound_runs_to_runs:
+  fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
+  assumes sound:      "sound_domain (ac_gamma cfg)"
+  assumes join_eq:    "ac_join cfg = (\<lambda>s1 s2. \<lambda>x. s1 x \<squnion> s2 x)"
+  assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
+  assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
+  assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
+  assumes cfi:        "comp_fun_idem (ac_join cfg)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom
+       (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach
+       (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
+       (TD_plain_Interp_solve
+          (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
+          (cfg_entry (to_cfg c)))
+       (cfg_entry (to_cfg c))"
+  assumes runs: "runs_to c s t"
+  shows "t \<in> sound_domain.gamma_state (ac_gamma cfg)
+                  (run_analysis cfg c (cfg_exit (to_cfg c)))"
+  using runs runs_to_def pipeline_sound_runs_to[OF sound join_eq bot_eq tf_sound s_in_gamma
+          cfi td_solve_dom td_cfg_in_reach]
+  by blast
 
 theorem sign_pipeline_invariant_sound:
   assumes tf_ok:   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"

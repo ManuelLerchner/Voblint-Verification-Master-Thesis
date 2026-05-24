@@ -11,9 +11,9 @@
 >
 > **Current architecture:** `docs/PROOF_OVERVIEW.md`.
 
-**Status:** Phases 0–3 partial + Phase 4 partial landed; Phase 5 docs mostly synced;
-Phase 6–7 optional. `edges_collect_append [simp]` and `to_cfg_simps` bundle deferred
-(batch loop / syntax).
+**Status:** Phases 0–3 partial, 4 partial, **5–6 landed** on branch (2026-05-24).
+Phase 7 optional. Deferred automation: `edges_collect_append [simp]`, `to_cfg_simps`
+bundle (batch loop / syntax).
 **Branch:** `post-migration-cleanup`.
 **KB mirror:** [`goblint-formalization-kb` → `wiki/concepts/spec-architecture.md`](https://github.com/ManuelLerchner/goblint-formalization-kb/blob/main/wiki/concepts/spec-architecture.md) (locked architecture + thesis sentence).
 **Predecessor:** [`BIG_STEP_REMOVAL.md`](BIG_STEP_REMOVAL.md) (landed 2026-05-24 on `main`). With big-step gone, the residual cost is file layout, an oversized `CFG_Collecting.thy`, and proof boilerplate that automation should absorb. This plan trims ~900 LOC and aligns the API with the long-term architecture below.
@@ -445,6 +445,19 @@ Not required for architecture lock. See `docs/PROOF_SIMPLIFICATION.md` §2 (reba
 6. Compound-shape proof LOC drops by ≥ 50% on average **if fallback**; option (c) removes the intro rules entirely.
 7. Apply-script count ≤ 5 session-wide.
 8. `docs/PROOF_OVERVIEW.md`, `docs/PROOF_PHASES.md`, `docs/OPEN_PROBLEMS.md`, `PROOF_SIMPLIFICATION.md`, `CLAUDE.md` reflect the new layout and thesis sentence.
+
+## Landed outcomes (branch `post-migration-cleanup`, 2026-05-24)
+
+| Phase | Outcome |
+| --- | --- |
+| 0–2 | Baseline; deleted `Direct_Equations`, `TD_Total`, `collect` API; CFG split into 5 theories + umbrella |
+| 3 partial | `terminates_to` removed; `small_step_preserves_runs_to` direct; seven `runs_to_*` intro rules **kept** |
+| 4 partial | `cfg_path_NilE`/`ConsE`, `to_cfg_mk`, `cfg_path_sub_offset_into`, `edges_collect_memberE`; some apply→`by` |
+| 5 | `PROOF_OVERVIEW`, `PROOF_PHASES`, `OPEN_PROBLEMS`, `PROOF_SIMPLIFICATION` rebased on small-step + split |
+| 6 | `exit_sound` / `TD_Soundness` already `cfg_collect` at exit; `pipeline_sound_runs_to` primary premise `cfg_collect`; `pipeline_sound_runs_to_runs` for `runs_to` |
+| 7 | Not on branch — file GitHub issue or follow-up |
+
+---
 
 ## Non-goals
 

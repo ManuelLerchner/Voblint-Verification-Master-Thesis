@@ -52,7 +52,17 @@ examples only — re-run the command after changes).
 
 ### Collecting and equations
 
-- `cfg_collect` / `cfg_edges_collect` / path–lfp alignment (CFG collecting layer; see `CFG_Collecting.thy` umbrella).
+- `cfg_collect` / `cfg_edges_collect` / path–lfp alignment (CFG collecting layer).
+
+**CFG collecting files** (import chain; umbrella `CFG_Collecting.thy`):
+
+| File | Role |
+| --- | --- |
+| `CFG_Edges_Collect.thy` | `edge_collect`, `edges_collect`, `cfg_collect` lfp |
+| `CFG_Collecting_Core.thy` | `cfg_edges_collect`, path↔lfp bridge |
+| `CFG_Compound_Paths.thy` | Seq/If/While path structure |
+| `CFG_Path_Bridge.thy` | `compile_path_small_step`, path soundness |
+| `CFG_Runs_To_Bridge.thy` | `runs_to_def`, small-step ↔ `cfg_collect` |
 - `post_fixpoint_sound`, `exit_sound` (`Constraint_System_Sound.thy`).
 - `td_analyse_post_fixpoint`, `sign_analysis_sound` (`TD_Interface`, `TD_Soundness`).
 
@@ -75,7 +85,8 @@ Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects
 
 - Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`, `comp_fun_idem`).
 - **Interval / octagon** domains and executability.
-- Optional **CFG file split** and thinning the internal `runs_to_*` / `terminates_to` bridge.
+- Optional **Phase 3 full**: delete internal `runs_to_*` intro rules (~400 LOC in `CFG_Runs_To_Bridge.thy`; `terminates_to` already removed).
+- Optional **compound `cfg_path_*_iff`** (`docs/PROOF_SIMPLIFICATION.md` §2).
 - Remove **`quick_and_dirty`** from `ROOT` when the session is sorry-free by policy.
 
 ```bash

@@ -1,6 +1,19 @@
 # Proof Simplification Notes
 
-Snapshot after closing `cfg_collect_exit_eq_collect` (May 2026). The CFG-collecting layer works but `CFG_Collecting.thy` is 2,396 lines most of that weight is in two long directions and three nearly-parallel compound splitters. Below are concrete simplification opportunities, ranked by likely payoff vs. risk.
+**Rebased 2026-05-24 (small-step migration).** The monolithic `CFG_Collecting.thy` is
+split across `CFG_Edges_Collect` … `CFG_Runs_To_Bridge` (umbrella `CFG_Collecting.thy`).
+Forward bridge: **`compile_path_small_step`** (CFG path → small-step star). Big-step
+`compile_path_big_step` / `big_step_cfg_path` are **gone**. Reverse bridge: direct
+`small_step_preserves_runs_to`; optional follow-up is deleting the seven `runs_to_*`
+intro rules (Phase 3 full in `docs/POST_MIGRATION_CLEANUP.md`).
+
+The notes below still describe compound-path duplication (~900 LOC in
+`CFG_Compound_Paths.thy`); targets are unchanged but line numbers refer to the **old**
+monolith unless updated per file.
+
+---
+
+Snapshot after closing `cfg_collect_exit_eq_collect` (May 2026). The CFG-collecting layer works but the compound block is still heavy: two long directions and three nearly-parallel compound splitters. Below are concrete simplification opportunities, ranked by likely payoff vs. risk.
 
 ## Progress log
 

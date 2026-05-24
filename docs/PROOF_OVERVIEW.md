@@ -102,7 +102,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | Stage | File(s) | Main facts |
 | --- | --- | --- |
 | IMP2 | `IMP2_Syntax`, `IMP2_SmallStep` | `aval`, `bval`, `small_step`, `runs_to_iff_small_step` |
-| CFG | `IMP2_to_CFG`, `CFG_Collecting` (+ split), `CFG_Path` | `to_cfg`, `cfg_collect`, `runs_to_def`, `compile_path_small_step` |
+| CFG | `IMP2_to_CFG`, `CFG_Path`, `CFG_Edges_Collect` … `CFG_Runs_To_Bridge` (umbrella `CFG_Collecting`) | `to_cfg`, `cfg_collect`, `runs_to_def`, `compile_path_small_step` |
 | Equations | `Constraint_System`, `Constraint_System_Sound` | `rhs_mono`, `post_fixpoint_sound`, `exit_sound` |
 | Solver | `TD_Interface`, `TD_Soundness` | `td_analyse_post_fixpoint`, `sign_analysis_sound`, `interval_analysis_sound` |
 | Pipeline | `Pipeline.thy` | `pipeline_invariant_sound`, `pipeline_sound_path`, `pipeline_sound_runs_to`, sign/interval corollaries |
