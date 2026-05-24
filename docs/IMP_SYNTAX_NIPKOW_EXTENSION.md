@@ -196,7 +196,8 @@ Recorded for the day this becomes worth doing.
 - `com` datatype — already isomorphic to `HOL-IMP.Com`; Meeting 3 §B confirmed only `aexp`/`bexp` extend.
 - Big-step `(c, s) \<Rightarrow> t` semantics — owned by small-step migration.
 - Constructor names `N`, `V`, `Plus`, `Bc`, `Not`, `And`, `Less` — deliberately identical to Nipkow already; just not formally connected.
-- `instance aexp :: countable`, `instance aexp :: linorder` — keep; needed for `sorted_list_of_set` in the CFG.
+- `instance aexp :: countable`, `instance bexp :: countable` — keep (countability only; no `linorder` on AST).
+- `edge_action :: linorder` in `CFG_Def` — implementation order for `cfg_edges_list` / `predecessor_list` (TD bridge), not language semantics.
 
 ---
 

@@ -1,5 +1,6 @@
 theory CFG_Def
-  imports IMP2_Syntax "HOL-Library.Countable" "Dijkstra_Shortest_Path.Graph"
+  imports IMP2_Syntax "HOL-Library.Countable" "HOL-Library.Product_Lexorder"
+          "Dijkstra_Shortest_Path.Graph"
 begin
 
 (*
@@ -42,6 +43,8 @@ datatype edge_action =
 instance edge_action :: countable
   by countable_datatype
 
+(* Implementation order for @{const cfg_edges_list} / @{const predecessor_list}
+   (TD strategy trees), not part of the IMP2 semantics. *)
 instantiation edge_action :: linorder
 begin
 
@@ -117,6 +120,68 @@ proof -
     unfolding predecessors_def by force
   then show ?thesis
     using assms finite_subset finite_imageI by blast
+qed
+
+(* Stable edge enumeration for the TD bridge: sort by (source, action, target). *)
+
+definition cfg_edges_list :: "cfg \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where
+  "cfg_edges_list g =
+     (if finite (edges g) then sorted_list_of_set (edges g) else [])"
+
+definition predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
+  "predecessor_list g v =
+     map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g))"
+
+lemma set_cfg_edges_list[simp]:
+  assumes "finite (edges g)"
+  shows "set (cfg_edges_list g) = edges g"
+  unfolding cfg_edges_list_def using assms by simp
+
+lemma distinct_cfg_edges_list[simp]:
+  assumes "finite (edges g)"
+  shows "distinct (cfg_edges_list g)"
+  unfolding cfg_edges_list_def using assms by simp
+
+lemma set_predecessor_list[simp]:
+  assumes "finite (edges g)"
+  shows "set (predecessor_list g v) = predecessors g v"
+proof -
+  show ?thesis
+    unfolding predecessor_list_def predecessors_def
+    using assms set_cfg_edges_list[OF assms]
+    by (force simp: image_iff)
+qed
+
+lemma distinct_predecessor_list[simp]:
+  assumes "finite (edges g)"
+  shows "distinct (predecessor_list g v)"
+proof -
+  have dist_filt: "distinct (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g))"
+    using distinct_filter distinct_cfg_edges_list assms by simp
+  have inj: "inj_on (\<lambda>(u, a, w). (u, a)) (set (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g)))"
+    by (auto simp: inj_on_def)
+  show ?thesis
+    unfolding predecessor_list_def distinct_map
+    using dist_filt inj by simp
+qed
+
+lemma predecessor_list_Nil_if_no_in:
+  assumes "\<And>u a. (u, a, v) \<notin> edges g"
+  shows "predecessor_list g v = []"
+proof -
+  have "filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g) = []"
+  proof (cases "finite (edges g)")
+    case True
+    then show ?thesis
+      using assms set_cfg_edges_list[OF True]
+      by (force simp: cfg_edges_list_def filter_empty_conv)
+  next
+    case False
+    then show ?thesis
+      by (simp add: cfg_edges_list_def)
+  qed
+  then show ?thesis
+    unfolding predecessor_list_def by simp
 qed
 
 end

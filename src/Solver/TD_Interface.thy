@@ -1,5 +1,5 @@
 theory TD_Interface
-  imports Constraint_System CFG_Collecting "HOL-Library.Product_Lexorder" "TD.TD_plain"
+  imports Constraint_System CFG_Collecting "TD.TD_plain"
 begin
 
 (*
@@ -69,10 +69,8 @@ definition make_rhs_tree ::
      => (pp, 'a abs_state) strategy_tree"
 where
   "make_rhs_tree g tf join_abs bot_abs s0 v =
-     (let preds = ({(u,a). (u,a,v) \<in> edges g} :: (pp \<times> edge_action) set);
-          ps = (if finite preds then sorted_list_of_set preds else []);
-          acc0 = (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)
-      in rhs_tree_fold tf join_abs acc0 ps)"
+     (let acc0 = (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)
+      in rhs_tree_fold tf join_abs acc0 (predecessor_list g v))"
 
 definition env_map :: "(pp => 'a abs_state) => (pp, 'a abs_state) map" where
   "env_map env = (\<lambda>x. Some (env x))"
@@ -144,13 +142,9 @@ lemma make_rhs_tree_eq_Answer_bot_if_no_preds_not_entry:
   assumes not_e: "v \<noteq> cfg_entry g"
   assumes no_in: "\<And>u a. (u, a, v) \<notin> edges g"
   shows "make_rhs_tree g tf join_abs bot_abs s0 v = Answer bot_abs"
-proof -
-  have bar: "{(u,a). (u,a,v) \<in> edges g} = {}"
-    using no_in by blast
-  show ?thesis
-    unfolding make_rhs_tree_def Let_def using bar not_e
-    by simp
-qed
+  unfolding make_rhs_tree_def Let_def
+  using no_in not_e predecessor_list_Nil_if_no_in
+  by simp
 
 lemma make_rhs_tree_correspondence_not_entry_no_predecessors:
   fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
@@ -197,14 +191,15 @@ next
   finally show ?case .
 qed
 
-lemma rhs_eq_fold_join_sorted_predecessors:
+lemma rhs_eq_fold_predecessors:
   fixes g v tf join_abs bot_abs s0
   fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
   assumes fin: "finite (edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
+  assumes dist: "distinct ps"
+  assumes setps: "set ps = {(u,a). (u,a,v) \<in> edges g}"
   defines "preds \<equiv> {(u,a). (u,a,v) \<in> edges g}"
-  defines "ps \<equiv> sorted_list_of_set preds"
   defines "F \<equiv> (\<lambda>(u,a). apply_tf tf a (env u))"
   defines "vals \<equiv> F ` preds"
   defines "acc0 \<equiv> (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
@@ -215,10 +210,10 @@ proof -
     by (fact cfi)
   have fin_preds: "finite preds"
     unfolding preds_def by (rule finite_predecessor_pairs[OF fin])
-  have dist: "distinct ps" and setps: "set ps = preds"
-    unfolding ps_def using fin_preds by simp_all
+  have setps': "set ps = preds"
+    unfolding preds_def using setps by simp
   have vals_eq: "vals = set (map F ps)"
-    unfolding vals_def using setps by simp
+    unfolding vals_def using setps' by simp
   have fold_map:
     "fold (\<lambda>(u,a) acc. join_abs (apply_tf tf a (env u)) acc) ps acc0 =
      fold (\<lambda>x acc. join_abs x acc) (map F ps) acc0"
@@ -253,7 +248,7 @@ proof -
     also have "\<dots> = fold (\<lambda>(u,a) acc. join_abs (apply_tf tf a (env u)) acc) ps acc0"
       by (simp add: fold_map[symmetric])
     finally show ?thesis
-      unfolding rhsv abs_join_set_def ps_def by simp
+      unfolding rhsv abs_join_set_def by simp
   next
     case False
     then have ne: "v \<noteq> cfg_entry g"
@@ -268,8 +263,27 @@ proof -
     also have "\<dots> = fold (\<lambda>(u,a) acc. join_abs (apply_tf tf a (env u)) acc) ps acc0"
       by (simp add: fold_map[symmetric])
     finally show ?thesis
-      unfolding rhsv abs_join_set_def ps_def by simp
+      unfolding rhsv abs_join_set_def by simp
   qed
+qed
+
+lemma rhs_eq_fold_predecessor_list:
+  fixes g v tf join_abs bot_abs s0
+  fixes env :: "pp \<Rightarrow> ('a::bounded_semilattice_sup_bot) abs_state"
+  assumes fin: "finite (edges g)"
+  assumes cfi: "comp_fun_idem (join_abs :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  assumes join_sym: "\<And>x y. join_abs x y = join_abs y x"
+  shows "rhs g tf join_abs bot_abs s0 env v =
+         fold (\<lambda>(u,a) acc. join_abs (apply_tf tf a (env u)) acc)
+              (predecessor_list g v)
+              (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
+proof -
+  have setps: "set (predecessor_list g v) = {(u,a). (u,a,v) \<in> edges g}"
+    using set_predecessor_list[OF fin] unfolding predecessors_def by auto
+  show ?thesis
+    using rhs_eq_fold_predecessors[OF fin cfi join_sym
+        distinct_predecessor_list[OF fin] setps]
+    by simp
 qed
 
 lemma fold_join_abs_swap_edge_steps:
@@ -300,33 +314,6 @@ next
   finally show ?case .
 qed
 
-lemma make_rhs_tree_preds_list:
-  assumes fin: "finite (edges g)"
-  obtains ps where
-    "distinct ps" and
-    "set ps = {(u,a). (u,a,v) \<in> edges g}"
-proof -
-  let ?S = "{(u,a). (u,a,v) \<in> edges g}"
-  have "finite ?S"
-  proof (rule finite_subset)
-    show "?S \<subseteq> (\<lambda>(u, a, w). (u, a)) ` edges g"
-      by force
-    show "finite ((\<lambda>(u, a, w). (u, a)) ` edges g)"
-      by (simp add: fin)
-  qed
-  from finite_distinct_list[OF this] obtain ps where "distinct ps" and "set ps = ?S"
-    by blast
-  then show thesis
-    by (intro that)
-qed
-
-lemma make_rhs_tree_ps_if_finite:
-  assumes fin: "finite (edges g)"
-  shows "(let preds = ({(u,a). (u,a,v) \<in> edges g} :: (pp \<times> edge_action) set) in
-          if finite preds then sorted_list_of_set preds else []) =
-         sorted_list_of_set {(u,a). (u,a,v) \<in> edges g}"
-  by (simp add: finite_predecessor_pairs[OF fin])
-
 lemma make_rhs_tree_correspondence:
   assumes fin: "finite (edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
@@ -334,21 +321,19 @@ lemma make_rhs_tree_correspondence:
   shows "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map (env :: pp \<Rightarrow> 'a abs_state)) =
          make_rhs g tf join_abs bot_abs s0 v env"
 proof -
-  have fin_preds: "finite {(u,a). (u,a,v) \<in> edges g}"
-    by (rule finite_predecessor_pairs[OF fin])
   have "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 v) (env_map env) =
         fold (\<lambda>(u,a) st. join_abs st (apply_tf tf a (env u)))
-             (sorted_list_of_set {(u,a). (u,a,v) \<in> edges g})
+             (predecessor_list g v)
              (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
-    unfolding make_rhs_tree_def Let_def make_rhs_tree_ps_if_finite[OF fin]
-    by (simp add: fin_preds rhs_tree_fold_traverse_env_map)
+    unfolding make_rhs_tree_def Let_def
+    by (simp add: rhs_tree_fold_traverse_env_map)
   also have "\<dots> =
         fold (\<lambda>(u,a) acc. join_abs (apply_tf tf a (env u)) acc)
-             (sorted_list_of_set {(u,a). (u,a,v) \<in> edges g})
+             (predecessor_list g v)
              (if v = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
     by (rule fold_join_abs_swap_edge_steps[OF join_sym])
   also have "\<dots> = rhs g tf join_abs bot_abs s0 env v"
-    by (simp add: rhs_eq_fold_join_sorted_predecessors[OF fin cfi join_sym])
+    by (simp add: rhs_eq_fold_predecessor_list[OF fin cfi join_sym])
   finally show ?thesis
     unfolding make_rhs_def by (simp split: if_splits)
 qed

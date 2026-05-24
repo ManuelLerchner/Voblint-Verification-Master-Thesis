@@ -61,40 +61,11 @@ datatype com =
   | If     bexp  com  com        ("IF _ THEN _ ELSE _"   [0, 0, 61] 61)
   | While  bexp  com             ("WHILE _ DO _"         [0, 61]    61)
 
-(* Linear orders for @{const sorted_list_of_set} in the TD solver (not part of the spec). *)
 instance aexp :: countable
   by countable_datatype
 
 instance bexp :: countable
   by countable_datatype
-
-instantiation aexp :: linorder
-begin
-
-definition less_eq_aexp_def:
-  "((\<le>) :: aexp \<Rightarrow> aexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x \<le> to_nat y"
-
-definition less_aexp_def:
-  "((<) :: aexp \<Rightarrow> aexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
-
-instance
-  apply (intro_classes)
-  by(auto simp add: less_aexp_def less_eq_aexp_def)
-end
-
-instantiation bexp :: linorder
-begin
-
-definition less_eq_bexp_def:
-  "((\<le>) :: bexp \<Rightarrow> bexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x \<le> to_nat y"
-
-definition less_bexp_def:
-  "((<) :: bexp \<Rightarrow> bexp \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
-
-instance
-  apply (intro_classes)
-  by(auto simp add: less_bexp_def less_eq_bexp_def)
-end
 
 (* -- Short-name printing for clashing constructors --------------------
    Nipkow's HOL-IMP defines AExp.aexp.Plus and BExp.bexp.Bc, which clash

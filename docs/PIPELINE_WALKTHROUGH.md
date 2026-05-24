@@ -281,8 +281,9 @@ definition env_map, lookup_bot
   the monadic rhs (tree form expected by the TD solver) equals `make_rhs`
   after traversing the env. This lets us hand `make_rhs_tree` to the
   vendored `TD` session and read back `make_rhs`.
-- `rhs_eq_fold_join_sorted_predecessors`, `fold_join_apply_edges_eq_fold_join_over_map`
-  equate the set-fold formulation with the list-fold the solver uses.
+- `rhs_eq_fold_predecessors`, `rhs_eq_fold_predecessor_list`,
+  `fold_join_apply_edges_eq_fold_join_over_map` equate the set-fold formulation
+  with `predecessor_list` (stable edge order from `cfg_edges_list`).
 - `part_solutionD` extract that the solver returns a partial solution.
 
 ### `TD_Soundness.thy`

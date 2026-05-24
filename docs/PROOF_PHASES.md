@@ -106,6 +106,6 @@ gh issue list --state open --label phase:stretch
 
 | Risk | Mitigation |
 | --- | --- |
-| `make_rhs_tree` / predecessor `SOME` order | Join must be commutative + idempotent; see `Constraint_System.thy` |
+| `make_rhs_tree` / `predecessor_list` order | Join must be commutative + idempotent; see `Constraint_System.thy` |
 | Doc drift vs `.thy` names | Prefer `rg '^(lemma\|theorem)' src/` over hand-maintained lists |
 | Session / AFP drift | Fixed build command in `AGENTS.md` / `CLAUDE.md` |
