@@ -45,14 +45,14 @@ Decided since v0: CFG layer wins (`Direct_Equations` quarantined as P10, off-pat
 # Repository layout
 
 ```
-src/IMP2/        syntax + semantics + collecting
-src/CFG/         CFG core (Def, Path, IMP2_to_CFG, …)
-src/CFG/Collecting/  collecting semantics (import CFG_Runs_To_Bridge for full chain)
-src/Domains/     abstract domains
-src/Equations/   constraint systems + soundness
-src/Examples/    executable sign analysis
-src/Solver/      TD solver interface, TD_Total.thy
-src/Pipeline/    end-to-end
+src/               README.md — session map
+src/IMP2/          syntax + small-step (README)
+src/CFG/           CFG core (README); Collecting/ — cfg_collect (README)
+src/Domains/       abstract domains (README)
+src/Equations/     constraint systems + soundness (README)
+src/Examples/      executable demos (README)
+src/Solver/        TD solver bridge (README)
+src/Pipeline/      end-to-end soundness (README)
 ```
 
 Plans: `docs/PROOF_PHASES.md` (steps, exit criteria, sorry inventory). `docs/PROOF_OVERVIEW.md` (big picture).
