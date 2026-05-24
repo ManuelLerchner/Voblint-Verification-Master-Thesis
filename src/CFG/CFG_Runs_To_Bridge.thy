@@ -75,12 +75,233 @@ proof -
   thus ?thesis unfolding cfg_edges_collect_def by blast
 qed
 
+lemma runs_to_SKIP_eq_imp:
+  "runs_to SKIP s t \<Longrightarrow> t = s"
+proof -
+  assume rt: "runs_to SKIP s t"
+  from runs_to_imp_path[OF rt] obtain es where
+        p: "cfg_path (to_cfg SKIP) (cfg_entry (to_cfg SKIP)) es (cfg_exit (to_cfg SKIP))"
+    and t_in: "t \<in> edges_collect es {s}"
+    by blast
+  have E: "edges (to_cfg SKIP) = {(0, EA_Nop, 1)}"
+    and en: "cfg_entry (to_cfg SKIP) = 0" and ex: "cfg_exit (to_cfg SKIP) = 1"
+    by (auto simp: to_cfg_def Let_def)
+  from p en ex have p': "cfg_path (to_cfg SKIP) 0 es 1" by simp
+  have es_eq: "es = [(EA_Nop, 1)]"
+    by (rule cfg_path_singleton_edge[OF E _ p']) simp
+  from t_in es_eq show "t = s" by simp
+qed
+
+lemma runs_to_SeqE:
+  assumes "runs_to (c1 ;; c2) s t"
+  shows "\<exists>s2. runs_to c1 s s2 \<and> runs_to c2 s2 t"
+proof -
+  from assms obtain es where
+        p: "cfg_path (to_cfg (c1 ;; c2)) (cfg_entry (to_cfg (c1 ;; c2))) es
+             (cfg_exit (to_cfg (c1 ;; c2)))"
+    and t_in: "t \<in> edges_collect es {s}"
+    using runs_to_imp_path by blast
+  obtain n1 en1 ex1 E1 where
+        c1_0: "compile c1 0 = (n1, en1, ex1, E1)"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where
+        c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    by (rule to_cfg_compile)
+  have c2_n: "compile c2 n1 =
+              (n20 + n1, en20 + n1, ex20 + n1, offset_edges n1 E20)"
+    using compile_from_0_offsets[OF c2_0, of n1] by simp
+  have en_seq: "cfg_entry (to_cfg (c1 ;; c2)) = en1"
+    and ex_comp: "cfg_exit (to_cfg (c1 ;; c2)) = ex20 + n1"
+    using cfg_edges_entry_exit_Seq[OF c1_0 c2_n] by auto
+  have u_lt: "en1 < n1" using compile_fresh[OF c1_0] by simp
+  from cfg_path_Seq_split[OF c1_0 c2_0 p[unfolded en_seq ex_comp] u_lt]
+  obtain es1 es2 where
+        es_eq: "es = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2"
+    and p1: "cfg_path (to_cfg c1) en1 es1 ex1"
+    and p2: "cfg_path (to_cfg c2) en20 es2 ex20"
+    by blast
+  have collect_eq: "edges_collect es {s} = edges_collect es2 (edges_collect es1 {s})"
+    unfolding es_eq by (simp add: edges_collect_append)
+  from t_in collect_eq have t_in': "t \<in> edges_collect es2 (edges_collect es1 {s})"
+    by simp
+  from t_in' obtain s2 where
+        s2_in: "s2 \<in> edges_collect es1 {s}"
+    and t_in2: "t \<in> edges_collect es2 {s2}"
+    by (rule edges_collect_memberE)
+  have en1_cfg: "cfg_entry (to_cfg c1) = en1" and ex1_cfg: "cfg_exit (to_cfg c1) = ex1"
+    unfolding to_cfg_def using c1_0 by (auto simp: Let_def split: prod.splits)
+  have en20_cfg: "cfg_entry (to_cfg c2) = en20" and ex20_cfg: "cfg_exit (to_cfg c2) = ex20"
+    unfolding to_cfg_def using c2_0 by (auto simp: Let_def split: prod.splits)
+  have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+    using p1 en1_cfg ex1_cfg by simp
+  have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
+    using p2 en20_cfg ex20_cfg by simp
+  show ?thesis
+    using path_imp_runs_to[OF p1' s2_in] path_imp_runs_to[OF p2' t_in2] by blast
+qed
+
+lemma runs_to_IfTrueE:
+  assumes rt: "runs_to (IF b THEN c1 ELSE c2) s t" and bv: "bval b s"
+  shows "runs_to c1 s t"
+proof -
+  from rt obtain es where
+        p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) es
+             (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
+    and t_in: "t \<in> edges_collect es {s}"
+    using runs_to_imp_path by blast
+  obtain n10 en10 ex10 E10 where c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    by (rule to_cfg_compile)
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1_0, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2_0, of "n10 + 1"] by simp
+  have en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    and ex_if: "cfg_exit (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
+  from p en_if ex_if have p_if: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))"
+    by simp
+  from cfg_path_If_split[OF c1_0 c2_0 p_if] have split_or:
+    "(\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
+                \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+   \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
+                \<and> cfg_path (to_cfg c2) en20 es2 ex20)" .
+  show ?thesis
+  proof (rule disjE[OF split_or])
+    assume "\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
+                  \<and> cfg_path (to_cfg c1) en10 es1 ex10"
+    then obtain es1 where
+          es_eq: "es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pc1: "cfg_path (to_cfg c1) en10 es1 ex10"
+      by blast
+    have filt: "edge_collect (EA_Assume b) {s} = {s}"
+      using bv by auto
+    have collect: "edges_collect es {s} = edges_collect es1 {s}"
+    proof -
+      have "edges_collect es {s}
+            = edges_collect (offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (edge_collect (EA_Assume b) {s})"
+        unfolding es_eq by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect (offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
+        using filt by simp
+      also have "\<dots> = edges_collect es1 {s}"
+        using edges_collect_nop_append by force 
+      finally show ?thesis .
+    qed
+    from t_in collect have t_in1: "t \<in> edges_collect es1 {s}" by simp
+    have en10_cfg: "cfg_entry (to_cfg c1) = en10" and ex10_cfg: "cfg_exit (to_cfg c1) = ex10"
+      unfolding to_cfg_def using c1_0 by (auto simp: Let_def split: prod.splits)
+    have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+      using pc1 en10_cfg ex10_cfg by simp
+    show ?thesis using path_imp_runs_to[OF p1' t_in1] .
+  next
+    assume "\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
+                  \<and> cfg_path (to_cfg c2) en20 es2 ex20"
+    then obtain es2 where
+          es_eq: "es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
+      by blast
+    have filt: "edge_collect (EA_AssumeNot b) {s} = {}"
+      using bv by auto
+    have "edges_collect es {s} = {}"
+    proof -
+      have "edges_collect es {s}
+            = edges_collect (offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (edge_collect (EA_AssumeNot b) {s})"
+        unfolding es_eq by (simp add: edges_collect_append)
+      also have "\<dots> = {}" using filt
+        using edges_collect_empty_set by presburger 
+      finally show ?thesis .
+    qed
+    with t_in show ?thesis by simp
+  qed
+qed
+
+lemma runs_to_IfFalseE:
+  assumes rt: "runs_to (IF b THEN c1 ELSE c2) s t" and nbv: "\<not> bval b s"
+  shows "runs_to c2 s t"
+proof -
+  from rt obtain es where
+        p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) es
+             (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
+    and t_in: "t \<in> edges_collect es {s}"
+    using runs_to_imp_path by blast
+  obtain n10 en10 ex10 E10 where c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
+    by (rule to_cfg_compile)
+  obtain n20 en20 ex20 E20 where c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
+    by (rule to_cfg_compile)
+  have c1_1: "compile c1 1 = (n10 + 1, en10 + 1, ex10 + 1, offset_edges 1 E10)"
+    using compile_from_0_offsets[OF c1_0, of 1] by simp
+  have c2_n: "compile c2 (n10 + 1) =
+              (n20 + (n10 + 1), en20 + (n10 + 1), ex20 + (n10 + 1), offset_edges (n10 + 1) E20)"
+    using compile_from_0_offsets[OF c2_0, of "n10 + 1"] by simp
+  have en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
+    and ex_if: "cfg_exit (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
+    using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
+  from p en_if ex_if have p_if: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))"
+    by simp
+  from cfg_path_If_split[OF c1_0 c2_0 p_if] have split_or:
+    "(\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
+                \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+   \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
+                \<and> cfg_path (to_cfg c2) en20 es2 ex20)" .
+  show ?thesis
+  proof (rule disjE[OF split_or])
+    assume "\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
+                  \<and> cfg_path (to_cfg c1) en10 es1 ex10"
+    then obtain es1 where
+          es_eq: "es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
+      by blast
+    have filt: "edge_collect (EA_Assume b) {s} = {}"
+      using nbv by auto
+    have "edges_collect es {s} = {}"
+    proof -
+      have "edges_collect es {s}
+            = edges_collect (offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (edge_collect (EA_Assume b) {s})"
+        unfolding es_eq by (simp add: edges_collect_append)
+      also have "\<dots> = {}" using filt
+        using edges_collect_empty_set by presburger 
+      finally show ?thesis .
+    qed
+    with t_in show ?thesis by simp
+  next
+    assume "\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
+                  \<and> cfg_path (to_cfg c2) en20 es2 ex20"
+    then obtain es2 where
+          es_eq: "es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
+      and pc2: "cfg_path (to_cfg c2) en20 es2 ex20"
+      by blast
+    have filt: "edge_collect (EA_AssumeNot b) {s} = {s}"
+      using nbv by auto
+    have collect: "edges_collect es {s} = edges_collect es2 {s}"
+    proof -
+      have "edges_collect es {s}
+            = edges_collect (offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))])
+                           (edge_collect (EA_AssumeNot b) {s})"
+        unfolding es_eq by (simp add: edges_collect_append)
+      also have "\<dots> = edges_collect (offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]) {s}"
+        using filt by simp
+      also have "\<dots> = edges_collect es2 {s}"
+        by (simp add: edges_collect_append) 
+      finally show ?thesis .
+    qed
+    from t_in collect have t_in2: "t \<in> edges_collect es2 {s}" by simp
+    have en20_cfg: "cfg_entry (to_cfg c2) = en20" and ex20_cfg: "cfg_exit (to_cfg c2) = ex20"
+      unfolding to_cfg_def using c2_0 by (auto simp: Let_def split: prod.splits)
+    have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
+      using pc2 en20_cfg ex20_cfg by simp
+    show ?thesis using path_imp_runs_to[OF p2' t_in2] .
+  qed
+qed
+
 
 paragraph \<open>Internal path lemmas for \<open>runs_to\<close>\<close>
 
 text \<open>
   Build a CFG path on \<open>to_cfg c\<close> and apply \<open>path_imp_runs_to\<close>.
-  Used only for the \<open>small_step_runs_to\<close> proof.
+  Forward construction; used by \<open>small_step_preserves_runs_to\<close>.
 \<close>
 
 lemma runs_to_Skip:
@@ -501,101 +722,68 @@ proof -
 qed
 
 
-paragraph \<open>Internal evaluation predicate (proof helper)\<close>
+paragraph \<open>Direct reverse bridge\<close>
 
-text \<open>
-  \<open>terminates_to\<close> is an internal inductive helper for the
-  \<open>small_step \<rightarrow> runs_to\<close> bridge (not exported semantics).
-\<close>
-
-inductive terminates_to :: "com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  TSkip:    "terminates_to SKIP s s"
-| TAssign:  "terminates_to (x ::= a) s (s(x := aval a s))"
-| TSeq:     "terminates_to c1 s s2 \<Longrightarrow> terminates_to c2 s2 t
-             \<Longrightarrow> terminates_to (c1 ;; c2) s t"
-| TIfTrue:  "bval b s \<Longrightarrow> terminates_to c1 s t
-             \<Longrightarrow> terminates_to (IF b THEN c1 ELSE c2) s t"
-| TIfFalse: "\<not> bval b s \<Longrightarrow> terminates_to c2 s t
-             \<Longrightarrow> terminates_to (IF b THEN c1 ELSE c2) s t"
-| TWhileF:  "\<not> bval b s \<Longrightarrow> terminates_to (WHILE b DO c) s s"
-| TWhileT:  "bval b s \<Longrightarrow> terminates_to c s s'
-             \<Longrightarrow> terminates_to (WHILE b DO c) s' t
-             \<Longrightarrow> terminates_to (WHILE b DO c) s t"
-
-lemma small1_terminates_continue:
-  "(c, s) \<rightarrow> (c', s') \<Longrightarrow> terminates_to c' s' t \<Longrightarrow> terminates_to c s t"
+lemma small_step_preserves_runs_to:
+  "(c, s) \<rightarrow> (c', s') \<Longrightarrow> runs_to c' s' t \<Longrightarrow> runs_to c s t"
 proof (induction c s c' s' arbitrary: t rule: small_step_induct)
   case (Assign x a s)
-  hence "t = s(x := aval a s)" by (auto elim!: terminates_to.cases)
-  thus ?case by (metis TAssign)
+  show ?case
+  proof -
+    from Assign.prems have eq: "t = s(x := aval a s)"
+      using runs_to_small_step star_SKIP_eq by blast
+
+    from runs_to_Assign show "runs_to (x ::= a) s t"
+      by (simp only: eq)
+  qed
 next
-  case (Seq1 c2 s) thus ?case by (auto intro: TSeq TSkip)
+  case (Seq1 c2 s) thus ?case by (auto intro: runs_to_Seq runs_to_Skip)
 next
   case (Seq2 c1 s c1' s' c2)
   from Seq2.prems obtain s2 where
-        a: "terminates_to c1' s' s2" and b: "terminates_to c2 s2 t"
-    using terminates_to.cases by force
-  from Seq2.IH[OF a] b show ?case by (auto intro: TSeq)
+        a: "runs_to c1' s' s2" and b: "runs_to c2 s2 t"
+    using runs_to_SeqE by blast
+  from Seq2.IH[OF a] have "runs_to c1 s s2" .
+  thus ?case using runs_to_Seq[OF _ b] by simp
 next
-  case (IfTrue b s c1 c2) thus ?case by (auto intro: TIfTrue)
+  case (IfTrue b s c1 c2) thus ?case by (auto intro: runs_to_IfTrue)
 next
-  case (IfFalse b s c1 c2) thus ?case by (auto intro: TIfFalse)
+  case (IfFalse b s c1 c2) thus ?case by (auto intro: runs_to_IfFalse)
 next
   case (While b c s)
   from While.prems show ?case
-  proof (cases rule: terminates_to.cases)
-    case TIfTrue
-    then obtain s' where bv: "bval b s"
-                     and bd: "terminates_to c s s'"
-                     and wh: "terminates_to (WHILE b DO c) s' t"
-      using terminates_to.cases by force
-    show ?thesis using TWhileT[OF bv bd wh] .
+  proof (cases "bval b s")
+    case True
+    from runs_to_IfTrueE[OF While.prems True] have seq_rt: "runs_to (c ;; WHILE b DO c) s t" .
+    from seq_rt obtain s2 where bd: "runs_to c s s2" and wh: "runs_to (WHILE b DO c) s2 t"
+      using runs_to_SeqE by blast
+    show ?thesis using True bd wh by (rule runs_to_WhileTrue)
   next
-    case TIfFalse
-    then have nbv: "\<not> bval b s" and sk: "terminates_to SKIP s t" by auto
-    from sk have "t = s" by (auto elim: terminates_to.cases)
-    thus ?thesis using nbv TWhileF by auto
+    case False
+    from runs_to_IfFalseE[OF While.prems False] have skip_rt: "runs_to SKIP s t" .
+    have eq: "t = s"
+      using runs_to_small_step skip_rt star_SKIP_eq by blast 
+    show ?thesis using runs_to_WhileFalse[OF False] eq by simp
   qed
 qed
 
-lemma small_step_imp_terminates_to:
-  "(c, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> terminates_to c s t"
+lemma small_step_imp_runs_to:
+  "(c, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> runs_to c s t"
 proof (induction "(c, s)" "(SKIP, t)" arbitrary: c s rule: star.induct)
-  case refl thus ?case by (auto intro: TSkip)
+  case refl thus ?case by (auto intro: runs_to_Skip)
 next
   case (step y)
   obtain c' s' where y_eq: "y = (c', s')" by (cases y)
-  with step have "(c, s) \<rightarrow> (c', s')" by simp
-  moreover have "terminates_to c' s' t"
-    using step y_eq by simp
-  ultimately show ?case
-    using small1_terminates_continue by blast
+  with step have st: "(c, s) \<rightarrow> (c', s')" and ih: "runs_to c' s' t"
+    by simp_all
+  show ?case using small_step_preserves_runs_to[OF st ih] .
 qed
-
-lemma terminates_to_imp_runs_to:
-  "terminates_to c s t \<Longrightarrow> runs_to c s t"
-proof (induction rule: terminates_to.induct)
-  case (TSkip s) thus ?case by (rule runs_to_Skip)
-next
-  case (TAssign x a s) thus ?case by (rule runs_to_Assign)
-next
-  case (TSeq c1 s s2 c2 t) thus ?case using runs_to_Seq by blast
-next
-  case (TIfTrue b s c1 t c2) thus ?case using runs_to_IfTrue by blast
-next
-  case (TIfFalse b s c2 t c1) thus ?case using runs_to_IfFalse by blast
-next
-  case (TWhileF b s c) thus ?case by (rule runs_to_WhileFalse)
-next
-  case (TWhileT b s c s' t) thus ?case using runs_to_WhileTrue by blast
-qed
-
 
 paragraph \<open>Main reverse bridge\<close>
 
 theorem small_step_runs_to:
   "(c, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> runs_to c s t"
-  using small_step_imp_terminates_to terminates_to_imp_runs_to by blast
+  by (rule small_step_imp_runs_to)
 
 text \<open>
   Combined biconditional surface for downstream consumers.

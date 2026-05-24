@@ -29,6 +29,11 @@ next
     by (meson empty_subsetI insert_subset edges_collect_mono_strong subsetD)
 qed
 
+lemma edges_collect_memberE:
+  assumes "x \<in> edges_collect es S"
+  obtains s where "s \<in> S" and "x \<in> edges_collect es {s}"
+  using assms edges_collect_member by blast
+
 lemma edges_collect_nop_append:
   "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
 proof (induction es1 arbitrary: S)
