@@ -40,11 +40,11 @@ jobs:
         with:
           submodules: false
 
+      - name: Install git and make
+        run: apt-get update -qq && apt-get install -y -qq git make > /dev/null
+
       - name: Initialize td-verification submodule
         run: git submodule update --init --depth 1 vendor/td-verification
-
-      - name: Install build tools
-        run: apt-get update -qq && apt-get install -y -qq make > /dev/null
 
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action
