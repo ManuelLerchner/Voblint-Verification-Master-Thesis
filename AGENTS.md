@@ -46,7 +46,8 @@ Decided since v0: CFG layer wins (`Direct_Equations` quarantined as P10, off-pat
 
 ```
 src/IMP2/        syntax + semantics + collecting
-src/CFG/         CFG + paths + CFG collecting
+src/CFG/         CFG core (Def, Path, IMP2_to_CFG, …)
+src/CFG/Collecting/  collecting semantics (import CFG_Runs_To_Bridge for full chain)
 src/Domains/     abstract domains
 src/Equations/   constraint systems + soundness
 src/Examples/    executable sign analysis
@@ -73,7 +74,7 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # CFG path infrastructure
 
-`cfg_path` carries actions (needed for transfer-fn composition); `path_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `path_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the collecting layer (`CFG_Edges_Collect` … `CFG_Runs_To_Bridge`, umbrella `CFG_Collecting.thy`) for the small-step ↔ `cfg_collect` bridge.
+`cfg_path` carries actions (needed for transfer-fn composition); `path_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `path_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the collecting layer in `src/CFG/Collecting/` (`CFG_Edges_Collect` … `CFG_Runs_To_Bridge`; import `CFG_Runs_To_Bridge` for the full chain) for the small-step ↔ `cfg_collect` bridge.
 
 **Thesis sentence:** Soundness is stated against CFG collecting semantics at **every** program point (`cfg_collect`). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IMP runs correspond to exit reachability (`runs_to` / small-step to `SKIP`); partial and non-terminating behaviour is covered by the path-based theorem without a final store.
 
@@ -183,7 +184,7 @@ Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/star
   * Recovery if you slipped and used `Edit`: re-issue the same change via I/Q `write_file str_replace` to sync the buffer.
 * I/Q `write_file`: prefer `str_replace` over `line`/`insert` minimal diff keeps the doc model consistent.
 * I/R: after `.thy` edit → `load_theory(<FQN>)` to re-sync heap.
-* I/R `init` uses fully-qualified imports, e.g. `Goblint_Formalization.CFG_Collecting`.
+* I/R `init` uses fully-qualified imports, e.g. `Goblint_Formalization.CFG_Runs_To_Bridge`.
 * I/R `step` one Isar line per call.
 * `sledgehammer` timeout ≤ 15s. Paste back `blast` / `auto` / `meson`. `metis`/`smt` only if fast in batch.
 * `nitpick` via `step`: `lemma … nitpick [timeout=5] oops`.

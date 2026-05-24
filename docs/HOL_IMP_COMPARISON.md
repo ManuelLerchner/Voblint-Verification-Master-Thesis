@@ -183,7 +183,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 | ----------------------- | ---------------------------------------------------------------- |
 | HOL-IMP-style big-step  | `IMP2_Semantics.thy` (same rule structure as `HOL-IMP.Big_Step`) |
 | Collecting on AST       | `IMP2_Collecting.thy`                                            |
-| CFG collecting + bridge | `CFG_Collecting.thy`                                             |
+| CFG collecting + bridge | `src/CFG/Collecting/` (`CFG_Runs_To_Bridge.thy` entry)           |
 | Minimal domain locale   | `Domains/Abstract_Domain.thy`                                    |
 | Sign instantiation      | `Domains/Sign_Domain.thy`                                        |
 | Interval + HOL-IMP note | `Domains/Interval_Domain.thy` (comment on `Abs_Int2_ivl`)        |

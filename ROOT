@@ -7,6 +7,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
   directories
     "IMP2"
     "CFG"
+    "CFG/Collecting"
     "Domains"
     "Equations"
     "Solver"

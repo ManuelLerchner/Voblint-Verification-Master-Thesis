@@ -439,7 +439,7 @@ lemma compile_from_0_offsets:
     runs_to c s t
   iff
     there exists a CFG path from en to ex in E that transforms s to t.
-  Characterised by cfg_collect / path_sound in CFG_Collecting.thy.
+  Characterised by cfg_collect / path_sound in CFG_Runs_To_Bridge.thy.
 *)
 
 lemma compile_entry_lt_exit:

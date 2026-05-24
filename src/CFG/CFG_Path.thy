@@ -117,7 +117,7 @@ lemma cfg_path_offset:
   Path lift along an edge-set inclusion that's witnessed via offset.
   In Seq/If/While, the sub-command c was compiled at offset n>0, so
   its edges are `offset_edges n (edges (to_cfg c))`.  Combine
-  cfg_path_offset with cfg_path_mono_edges (in CFG_Collecting) to
+  cfg_path_offset with cfg_path_mono_edges (in CFG_Collecting/) to
   drop the IH path into the compound graph.
 *)
 

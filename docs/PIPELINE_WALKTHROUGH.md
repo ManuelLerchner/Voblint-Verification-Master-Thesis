@@ -138,7 +138,7 @@ theorem cfg_collect_exit_eq_collect:
 This is the IMP ↔ CFG correctness link: reasoning about `collect c S` on the
 source equals reasoning about the CFG collecting semantics at the exit.
 
-**Status:** proved in `CFG_Collecting.thy` (no `sorry` in `src/IMP2/` or `src/CFG/`).
+**Status:** proved in `src/CFG/Collecting/` (no `sorry` in `src/IMP2/` or `src/CFG/`).
 See `docs/html/IMP_CFG_WALKTHROUGH.html`.
 
 ### Example CFG for our program

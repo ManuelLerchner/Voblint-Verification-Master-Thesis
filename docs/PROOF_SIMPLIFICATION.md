@@ -1,7 +1,7 @@
 # Proof Simplification Notes
 
 **Rebased 2026-05-24 (small-step migration).** The monolithic `CFG_Collecting.thy` is
-split across `CFG_Edges_Collect` … `CFG_Runs_To_Bridge` (umbrella `CFG_Collecting.thy`).
+split across `CFG_Edges_Collect` … `CFG_Runs_To_Bridge` (import `CFG_Runs_To_Bridge` for the full chain).
 Forward bridge: **`compile_path_small_step`** (CFG path → small-step star). Big-step
 `compile_path_big_step` / `big_step_cfg_path` are **gone**. Reverse bridge: direct
 `small_step_preserves_runs_to`; optional follow-up is deleting the seven `runs_to_*`

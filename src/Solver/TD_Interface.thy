@@ -1,5 +1,5 @@
 theory TD_Interface
-  imports Constraint_System CFG_Collecting "TD.TD_plain"
+  imports Constraint_System CFG_Runs_To_Bridge "TD.TD_plain"
 begin
 
 (*

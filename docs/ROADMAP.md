@@ -55,7 +55,7 @@ hypotheses (P1/P2/P3).
 - **Spec:** `cfg_collect` at every program point; `runs_to` is exit-projected sugar.
 - **Canonical soundness:** `pipeline_invariant_sound`, `pipeline_sound_path` (no termination premise).
 - **Exit corollaries:** `pipeline_sound_runs_to`, `sign_pipeline_sound`, `goblint_sign_sound`.
-- **Operational:** `small_step` in `IMP2_SmallStep.thy`; `runs_to_iff_small_step` in `CFG_Collecting.thy`.
+- **Operational:** `small_step` in `IMP2_SmallStep.thy`; `runs_to_iff_small_step` in `CFG_Runs_To_Bridge.thy`.
 - **Showcase:** `Example_NonTerminating_Safe.thy` — per-pp safety without a terminating run.
 
 ### Domain stretch

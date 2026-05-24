@@ -7,7 +7,7 @@ theory Goblint_Formalization
     CFG_Def
     CFG_Path
     IMP2_to_CFG
-    CFG_Collecting
+    CFG_Runs_To_Bridge
     CFG_GraphViz
     (* ── Abstract Domains ──────────────────────────────────── *)
     Abstract_Domain

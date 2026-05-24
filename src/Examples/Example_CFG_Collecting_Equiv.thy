@@ -3,7 +3,7 @@ section \<open>Example: CFG collecting semantics at a concrete program\<close>
 text \<open>\label{sec:example-cfg-collecting}\<close>
 
 theory Example_CFG_Collecting_Equiv
-  imports CFG_Collecting
+  imports CFG_Runs_To_Bridge
 begin
 
 text \<open>

@@ -1,5 +1,5 @@
 theory Constraint_System_Sound
-  imports Constraint_System CFG_Collecting
+  imports Constraint_System CFG_Runs_To_Bridge
 begin
 
 (*
