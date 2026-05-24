@@ -177,7 +177,7 @@ next
   from t_in obtain s2 where
         s2_in: "s2 \<in> edges_collect es1 {s}"
     and t_in2: "t \<in> edges_collect es2 {s2}"
-    using edges_collect_member by meson
+    by (rule edges_collect_memberE)
 
   have step1: "(c1, s) \<rightarrow>* (SKIP, s2)"
     using Seq.IH(1)[OF p1' singletonI s2_in] .
@@ -422,7 +422,8 @@ next
       qed
     qed
   qed
-  from main[OF p_pre t_full nb_t] show ?case .
+  from main[OF p_pre t_full nb_t] show ?case
+    by blast 
 qed
 
 end

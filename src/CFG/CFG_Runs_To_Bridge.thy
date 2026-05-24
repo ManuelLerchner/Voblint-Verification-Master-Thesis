@@ -188,7 +188,8 @@ proof -
         using filt by simp
       also have "\<dots> = edges_collect es1 {s}"
         using edges_collect_nop_append by force 
-      finally show ?thesis .
+      ultimately show ?thesis
+        by blast 
     qed
     from t_in collect have t_in1: "t \<in> edges_collect es1 {s}" by simp
     have en10_cfg: "cfg_entry (to_cfg c1) = en10" and ex10_cfg: "cfg_exit (to_cfg c1) = ex10"
@@ -372,13 +373,8 @@ proof -
     by blast
 
   have es1_in_compound: "cfg_path (to_cfg (c1 ;; c2)) en1 es1 ex1"
-  proof (rule cfg_path_mono_edges)
-    show "edges (to_cfg c1) \<subseteq> edges (to_cfg (c1 ;; c2))"
-      using E1_eq Eseq by blast
-    show "cfg_path (to_cfg c1) en1 es1 ex1"
-      using es1_path en1_eq ex1_eq by simp
-  qed
-
+    using E1_eq Eseq en1_eq es1_path local.ex1_eq order_trans by blast
+     
   have bridge: "cfg_path (to_cfg (c1 ;; c2)) ex1 [(EA_Nop, en20 + n1)] (en20 + n1)"
     using Eseq by (auto intro: cfg_path.intros)
 
@@ -444,10 +440,6 @@ proof -
     and t_in1: "t \<in> edges_collect es1 {s}"
     by blast
 
-  have toc1: "to_cfg c1 = mk_cfg en10 ex10 E10"
-    using c1_0 by (simp add: to_cfg_def)
-  have es1_in_mk: "cfg_path (mk_cfg en10 ex10 E10) en10 es1 ex10"
-    using es1_path en10_eq ex10_eq toc1 by simp
   have es1_in_compound: "cfg_path (to_cfg (IF b THEN c1 ELSE c2))
                                    (en10 + 1) (offset_path 1 es1) (ex10 + 1)"
     by (rule cfg_path_sub_offset_into[OF c1_0 es1_path[unfolded en10_eq ex10_eq]]) (auto simp: Eif)
@@ -519,10 +511,6 @@ proof -
     and t_in2: "t \<in> edges_collect es2 {s}"
     by blast
 
-  have toc2: "to_cfg c2 = mk_cfg en20 ex20 E20"
-    using c2_0 by (simp add: to_cfg_def)
-  have es2_in_mk: "cfg_path (mk_cfg en20 ex20 E20) en20 es2 ex20"
-    using es2_path en20_eq ex20_eq toc2 by simp
   have es2_in_compound: "cfg_path (to_cfg (IF b THEN c1 ELSE c2))
                                    (en20 + (n10 + 1)) (offset_path (n10 + 1) es2)
                                    (ex20 + (n10 + 1))"
@@ -622,10 +610,6 @@ proof -
     and t_in_rest: "t \<in> edges_collect es_rest {s'}"
     by blast
 
-  have toc: "to_cfg c = mk_cfg en0 ex0 E0"
-    using c_0 by (simp add: to_cfg_def)
-  have body_in_mk: "cfg_path (mk_cfg en0 ex0 E0) en0 es_body ex0"
-    using body_path en0_eq ex0_eq toc by simp
   have body_in_compound: "cfg_path (to_cfg (WHILE b DO c)) (en0 + 1) (offset_path 1 es_body)
                                     (ex0 + 1)"
     by (rule cfg_path_sub_offset_into[OF c_0 body_path[unfolded en0_eq ex0_eq]]) (auto simp: Ew)

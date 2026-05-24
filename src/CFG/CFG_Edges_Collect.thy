@@ -18,8 +18,7 @@ lemma edge_collect_empty_set[simp]: "edge_collect a {} = {}"
 lemma edge_collect_mono:
   assumes "S \<subseteq> T"
   shows "edge_collect a S \<subseteq> edge_collect a T"
-  using assms  apply (cases a)
-  by(auto)
+  using assms by (cases a) auto
 
 (*
   edges_collect aggregates the resulting state after walking along a list of edges
@@ -31,19 +30,21 @@ fun edges_collect :: "(edge_action * pp) list => store set => store set" where
 
 
 lemma edges_collect_empty_set[simp]: "edges_collect es {} = {}"
-  apply (induction es)
-  by(auto)
+  by (induction es) auto
 
 lemma edges_collect_mono_strong:
   "S \<subseteq> T \<Longrightarrow> edges_collect es S \<subseteq> edges_collect es T"
-  apply (induction es arbitrary: S T)
-  apply(auto)
-  by (meson edge_collect_mono in_mono)
+proof (induction es arbitrary: S T)
+  case Nil then show ?case by simp
+next
+  case (Cons e es)
+  obtain a w where ep: "e = (a, w)" by (cases e)
+  show ?case using Cons ep edge_collect_mono by auto
+qed
 
 lemma edges_collect_append:
   "edges_collect (es1 @ es2) S = edges_collect es2 (edges_collect es1 S)"
-  apply (induction es1 arbitrary: S)
-  by auto
+  by (induction es1 arbitrary: S) auto
 
 (*
   edges_collect only inspects edge actions; the pp component of each
@@ -52,8 +53,7 @@ lemma edges_collect_append:
 *)
 lemma edges_collect_offset_path[simp]:
   "edges_collect (offset_path k es) S = edges_collect es S"
-  apply (induction es arbitrary: S)
-  by(auto)
+  by (induction es arbitrary: S) (auto simp: offset_path_def)
 
 
 (* \<midarrow>\<midarrow> CFG Collecting Environment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
