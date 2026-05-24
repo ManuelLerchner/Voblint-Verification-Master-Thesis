@@ -382,25 +382,8 @@ proof -
   have bridge: "cfg_path (to_cfg (c1 ;; c2)) ex1 [(EA_Nop, en20 + n1)] (en20 + n1)"
     using Eseq by (auto intro: cfg_path.intros)
 
-  have es2_offset_path: "cfg_path (mk_cfg (en20 + n1) (ex20 + n1) (offset_edges n1 E20))
-                                  (en20 + n1) (offset_path n1 es2) (ex20 + n1)"
-  proof -
-    have toc2: "to_cfg c2 = mk_cfg en20 ex20 E20"
-      using c2_0 by (simp add: to_cfg_def)
-    have "cfg_path (mk_cfg en20 ex20 E20) en20 es2 ex20"
-      using es2_path en20_eq ex20_eq toc2 by simp
-    from cfg_path_offset[OF this, of n1]
-    show ?thesis by simp
-  qed
   have es2_in_compound: "cfg_path (to_cfg (c1 ;; c2)) (en20 + n1) (offset_path n1 es2) (ex20 + n1)"
-  proof (rule cfg_path_mono_edges)
-    show "edges (mk_cfg (en20 + n1) (ex20 + n1) (offset_edges n1 E20))
-            \<subseteq> edges (to_cfg (c1 ;; c2))"
-      using Eseq by auto
-    show "cfg_path (mk_cfg (en20 + n1) (ex20 + n1) (offset_edges n1 E20))
-                   (en20 + n1) (offset_path n1 es2) (ex20 + n1)"
-      using es2_offset_path .
-  qed
+    by (rule cfg_path_sub_offset_into[OF c2_0 es2_path[unfolded en20_eq ex20_eq]]) (auto simp: Eseq)
 
   let ?es = "es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2"
   have full_path: "cfg_path (to_cfg (c1 ;; c2)) en1 ?es (ex20 + n1)"
@@ -465,19 +448,9 @@ proof -
     using c1_0 by (simp add: to_cfg_def)
   have es1_in_mk: "cfg_path (mk_cfg en10 ex10 E10) en10 es1 ex10"
     using es1_path en10_eq ex10_eq toc1 by simp
-  from cfg_path_offset[OF es1_in_mk, of 1]
-  have es1_offset: "cfg_path (mk_cfg (en10 + 1) (ex10 + 1) (offset_edges 1 E10))
-                              (en10 + 1) (offset_path 1 es1) (ex10 + 1)" by simp
   have es1_in_compound: "cfg_path (to_cfg (IF b THEN c1 ELSE c2))
                                    (en10 + 1) (offset_path 1 es1) (ex10 + 1)"
-  proof (rule cfg_path_mono_edges)
-    show "edges (mk_cfg (en10 + 1) (ex10 + 1) (offset_edges 1 E10))
-            \<subseteq> edges (to_cfg (IF b THEN c1 ELSE c2))"
-      using Eif by auto
-    show "cfg_path (mk_cfg (en10 + 1) (ex10 + 1) (offset_edges 1 E10))
-                   (en10 + 1) (offset_path 1 es1) (ex10 + 1)"
-      using es1_offset .
-  qed
+    by (rule cfg_path_sub_offset_into[OF c1_0 es1_path[unfolded en10_eq ex10_eq]]) (auto simp: Eif)
 
   have head: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 [(EA_Assume b, en10 + 1)] (en10 + 1)"
     using Eif by (auto intro: cfg_path.intros)
@@ -550,22 +523,10 @@ proof -
     using c2_0 by (simp add: to_cfg_def)
   have es2_in_mk: "cfg_path (mk_cfg en20 ex20 E20) en20 es2 ex20"
     using es2_path en20_eq ex20_eq toc2 by simp
-  from cfg_path_offset[OF es2_in_mk, of "n10 + 1"]
-  have es2_offset: "cfg_path (mk_cfg (en20 + (n10 + 1)) (ex20 + (n10 + 1))
-                                      (offset_edges (n10 + 1) E20))
-                              (en20 + (n10 + 1)) (offset_path (n10 + 1) es2)
-                              (ex20 + (n10 + 1))" by simp
   have es2_in_compound: "cfg_path (to_cfg (IF b THEN c1 ELSE c2))
                                    (en20 + (n10 + 1)) (offset_path (n10 + 1) es2)
                                    (ex20 + (n10 + 1))"
-  proof (rule cfg_path_mono_edges)
-    show "edges (mk_cfg (en20 + (n10 + 1)) (ex20 + (n10 + 1)) (offset_edges (n10 + 1) E20))
-            \<subseteq> edges (to_cfg (IF b THEN c1 ELSE c2))"
-      using Eif by auto
-    show "cfg_path (mk_cfg (en20 + (n10 + 1)) (ex20 + (n10 + 1)) (offset_edges (n10 + 1) E20))
-                   (en20 + (n10 + 1)) (offset_path (n10 + 1) es2) (ex20 + (n10 + 1))"
-      using es2_offset .
-  qed
+    by (rule cfg_path_sub_offset_into[OF c2_0 es2_path[unfolded en20_eq ex20_eq]]) (auto simp: Eif)
 
   have head: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0
                         [(EA_AssumeNot b, en20 + (n10 + 1))] (en20 + (n10 + 1))"
@@ -665,19 +626,9 @@ proof -
     using c_0 by (simp add: to_cfg_def)
   have body_in_mk: "cfg_path (mk_cfg en0 ex0 E0) en0 es_body ex0"
     using body_path en0_eq ex0_eq toc by simp
-  from cfg_path_offset[OF body_in_mk, of 1]
-  have body_offset: "cfg_path (mk_cfg (en0 + 1) (ex0 + 1) (offset_edges 1 E0))
-                               (en0 + 1) (offset_path 1 es_body) (ex0 + 1)" by simp
   have body_in_compound: "cfg_path (to_cfg (WHILE b DO c)) (en0 + 1) (offset_path 1 es_body)
                                     (ex0 + 1)"
-  proof (rule cfg_path_mono_edges)
-    show "edges (mk_cfg (en0 + 1) (ex0 + 1) (offset_edges 1 E0))
-            \<subseteq> edges (to_cfg (WHILE b DO c))"
-      using Ew by auto
-    show "cfg_path (mk_cfg (en0 + 1) (ex0 + 1) (offset_edges 1 E0))
-                   (en0 + 1) (offset_path 1 es_body) (ex0 + 1)"
-      using body_offset .
-  qed
+    by (rule cfg_path_sub_offset_into[OF c_0 body_path[unfolded en0_eq ex0_eq]]) (auto simp: Ew)
 
   have head: "cfg_path (to_cfg (WHILE b DO c)) 0 [(EA_Assume b, en0 + 1)] (en0 + 1)"
     using Ew by (auto intro: cfg_path.intros)

@@ -2,14 +2,14 @@
 
 > **Landed 2026-05-24** on branch `post-migration-cleanup`. Prior items (deleted
 > `Direct_Equations`, `TD_Total`, AST `collect`, premise rephrasing to `cfg_collect`)
-> were already on `main`. This pass: **CFG_Collecting split**, automation attrs,
-> docs sync. **Phase 3 option (c): fallback** — reverse bridge unchanged
-> (`terminates_to` + `runs_to_*` intro rules kept in `CFG_Runs_To_Bridge.thy`).
+> were already on `main`. This pass: **CFG_Collecting split**, **Phase 3 partial
+> option (c)** (`terminates_to` removed; direct `small_step_preserves_runs_to`;
+> `runs_to_*` intro rules kept), Phase 4 automation in progress.
 > **HOL_IMP_Countable:** kept separate (arity-fact clash if folded into `IMP2_Syntax`).
 >
 > **Current architecture:** `docs/PROOF_OVERVIEW.md`.
 
-**Status:** landed (2026-05-24); Phase 3 = fallback; Phase 7 optional follow-up.
+**Status:** Phases 0–3 partial landed; Phase 4 in progress; Phase 7 optional follow-up.
 **Branch:** `post-migration-cleanup`.
 **KB mirror:** [`goblint-formalization-kb` → `wiki/concepts/spec-architecture.md`](https://github.com/ManuelLerchner/goblint-formalization-kb/blob/main/wiki/concepts/spec-architecture.md) (locked architecture + thesis sentence).
 **Predecessor:** [`BIG_STEP_REMOVAL.md`](BIG_STEP_REMOVAL.md) (landed 2026-05-24 on `main`). With big-step gone, the residual cost is file layout, an oversized `CFG_Collecting.thy`, and proof boilerplate that automation should absorb. This plan trims ~900 LOC and aligns the API with the long-term architecture below.

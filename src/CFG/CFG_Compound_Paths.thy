@@ -15,6 +15,11 @@ lemma to_cfg_compile:
   unfolding to_cfg_def
   by (cases "compile c 0") (auto simp: Let_def)
 
+lemma to_cfg_mk:
+  assumes "compile c 0 = (n, en, ex, E)"
+  shows "to_cfg c = mk_cfg en ex E"
+  using assms by (simp add: to_cfg_def Let_def split: prod.splits)
+
 lemma edges_collect_member:
   "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
 proof (induction es arbitrary: S x)
@@ -128,11 +133,23 @@ proof -
     unfolding to_cfg_def cmp by simp
 qed
 
-lemma cfg_path_mono_edges:
+lemma cfg_path_mono_edges[intro]:
   assumes sub: "edges g \<subseteq> edges h"
     and p: "cfg_path g u es v"
   shows "cfg_path h u es v"
   using p sub by (induction rule: cfg_path.induct) (auto intro: cfg_path.intros subsetD)
+
+lemma cfg_path_sub_offset_into:
+  assumes c0: "compile c 0 = (n, en, ex, E)"
+    and p: "cfg_path (to_cfg c) en es ex"
+    and sub: "edges (mk_cfg (en + k) (ex + k) (offset_edges k E)) \<subseteq> edges g"
+  shows "cfg_path g (en + k) (offset_path k es) (ex + k)"
+proof -
+  have p_off: "cfg_path (mk_cfg (en + k) (ex + k) (offset_edges k E))
+                      (en + k) (offset_path k es) (ex + k)"
+    using cfg_path_offset[OF p[unfolded to_cfg_mk[OF c0]]] .
+  show ?thesis by (rule cfg_path_mono_edges[OF sub p_off])
+qed
 
 lemma mem_edges_collect_from_set:
   "t \<in> edges_collect es M \<Longrightarrow> \<exists>m\<in>M. t \<in> edges_collect es {m}"
