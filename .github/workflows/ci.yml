@@ -35,9 +35,22 @@ jobs:
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
         with:
-          token: ${{ github.token }}
           fetch-depth: 1
-          submodules: true
+          submodules: false
+
+      # GITHUB_TOKEN cannot clone other private repos (the td-verification fork).
+      # Add a classic PAT with "repo" scope as secret SUBMODULES_TOKEN.
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          if [ -z "$SUBMODULES_TOKEN" ]; then
+            echo "::error title=Missing SUBMODULES_TOKEN::Create a classic PAT (repo scope) and add it as repository secret SUBMODULES_TOKEN so CI can clone the private td-verification fork."
+            exit 1
+          fi
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
 
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action

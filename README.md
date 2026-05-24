@@ -232,6 +232,9 @@ The top-down solver lives upstream at
 This repository vendors it via submodule
 [`ManuelLerchner/td-verification`](https://github.com/ManuelLerchner/td-verification)
 (a private fork of upstream, for CI and local access).
+GitHub Actions cannot clone that fork with the default `GITHUB_TOKEN`; add a
+**classic PAT** with `repo` scope as repository secret **`SUBMODULES_TOKEN`**
+(Settings → Secrets and variables → Actions), or make the fork public.
 A small local change is needed for Isabelle2025 compatibility, kept as a
 plain `git`-format patch in `vendor/td-verification.patch`. The Makefile
 clones the pinned upstream commit and applies the patch on demand. This avoids
