@@ -156,6 +156,61 @@ proof (cases a; cases b; cases c)
     unfolding less_eq_ivl_def by auto
 qed
 
+fun meet_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "meet_ivl (Ivl l1 u1) (Ivl l2 u2) =
+     Ivl (if eint_le l2 l1 then l1 else l2)
+         (if eint_le u1 u2 then u1 else u2)"
+
+lemma eint_le_lb1_le_max:
+  fixes l1 l2 :: eint
+  shows "eint_le l1 (if eint_le l2 l1 then l1 else l2)"
+  using eint_le_linear[of l2 l1] by (auto intro: eint_le_refl)
+
+lemma eint_le_lb2_le_max:
+  fixes l1 l2 :: eint
+  shows "eint_le l2 (if eint_le l2 l1 then l1 else l2)"
+  using eint_le_linear[of l2 l1] by (auto intro: eint_le_refl)
+
+lemma eint_le_min_le_u1:
+  fixes u1 u2 :: eint
+  shows "eint_le (if eint_le u1 u2 then u1 else u2) u1"
+  using eint_le_linear[of u1 u2] by (auto intro: eint_le_refl)
+
+lemma eint_le_min_le_u2:
+  fixes u1 u2 :: eint
+  shows "eint_le (if eint_le u1 u2 then u1 else u2) u2"
+  using eint_le_linear[of u1 u2] by (auto intro: eint_le_refl)
+
+lemma meet_ivl_le1: "meet_ivl a b \<le> a"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  show ?thesis
+    unfolding meet_ivl.simps \<open>a = _\<close> \<open>b = _\<close> less_eq_ivl_def
+    using eint_le_lb1_le_max[of l1 l2] eint_le_min_le_u1[of u1 u2] by auto
+qed
+
+lemma meet_ivl_le2: "meet_ivl a b \<le> b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2"
+  show ?thesis
+    unfolding meet_ivl.simps \<open>a = _\<close> \<open>b = _\<close> less_eq_ivl_def
+    using eint_le_lb2_le_max[of l1 l2] eint_le_min_le_u2[of u1 u2]
+    by (auto intro: eint_le_refl)
+qed
+
+lemma meet_ivl_le_greatest:
+  "z \<le> a \<Longrightarrow> z \<le> b \<Longrightarrow> z \<le> meet_ivl a b"
+proof (cases a; cases b; cases z)
+  fix l1 u1 l2 u2 lz uz :: eint
+  assume "a = Ivl l1 u1" "b = Ivl l2 u2" "z = Ivl lz uz"
+    and z_a: "z \<le> a" and z_b: "z \<le> b"
+  show ?thesis
+    unfolding meet_ivl.simps \<open>a = _\<close> \<open>b = _\<close> \<open>z = _\<close> less_eq_ivl_def
+    using z_a z_b by (auto simp: \<open>a = _\<close> \<open>b = _\<close> \<open>z = _\<close> less_eq_ivl_def)
+qed
+
 instantiation ivl :: sup begin
 definition sup_ivl :: "ivl => ivl => ivl" where
   "sup_ivl = join_ivl"
@@ -173,6 +228,26 @@ qed
 
 instance ivl :: bounded_semilattice_sup_bot ..
 
+instantiation ivl :: inf begin
+
+definition inf_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "inf_ivl = meet_ivl"
+
+instance ..
+end
+
+instance ivl :: semilattice_inf
+proof
+  fix x y z :: ivl
+  show "x \<sqinter> y \<le> x" unfolding inf_ivl_def by (rule meet_ivl_le1)
+  show "x \<sqinter> y \<le> y" unfolding inf_ivl_def by (rule meet_ivl_le2)
+  show "z \<le> x \<Longrightarrow> z \<le> y \<Longrightarrow> z \<le> x \<sqinter> y"
+    unfolding inf_ivl_def by (rule meet_ivl_le_greatest)
+qed
+
+instance ivl :: lattice ..
+
+instance ivl :: bounded_lattice_bot ..
 (*
   Standard interval widening: keep l if l decreased, else push to -inf;
   keep u if u increased, else push to +inf.
@@ -227,6 +302,13 @@ proof (cases a; cases b)
     by auto
 qed
 
+lemma sup_le_widen_ivl: "(a :: ivl) \<squnion> b \<le> widen_ivl a b"
+  unfolding sup_ivl_def by (rule join_ivl_le_least[OF a_le_widen_ivl b_le_widen_ivl])
+
+lemma widen_ivl_id:
+  assumes "b \<le> a"
+  shows "widen_ivl a b = a"
+  using assms by (cases a; cases b) (auto simp: less_eq_ivl_def widen_ivl.simps)
 lemma widen_ivl_ub1: "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl a b)"
   using gamma_ivl_mono a_le_widen_ivl by blast
 

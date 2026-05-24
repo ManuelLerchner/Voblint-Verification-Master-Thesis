@@ -82,23 +82,47 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # Workflow: MCP first, build to verify
 
-**Default: I/Q (or I/R) for any development.** Read state before editing. Use `explore` to trial-run tactics. Build only to confirm closed work or refresh the heap.
+**Default: I/Q (or I/R) for any development.** Read state before editing. Use `explore` to trial-run tactics. **Do not run `isabelle build` while iterating** — build only when the user asks, or at the end of a closed slice of work you are declaring done.
 
-Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textual edits compile against a different goal than you reasoned about. Read state, then edit.
+Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textual edits compile against a different goal than you reasoned about. Read state, then edit. Full-session batch build is slow, hides which command failed, and tempts disk/buffer drift when used as a debug loop.
+
+## Hard rules (agents)
+
+| Do | Don't |
+| --- | --- |
+| `open_file` → `get_diagnostics` / `get_command_info` on the theory you touch | `isabelle build` after every edit or to “see if it compiles” |
+| `explore` / `get_context_info` before non-trivial proof changes | Host `Read`/`Edit`/`Write` on tracked `.thy` files |
+| `write_file` → `save_file` → `normalize_isabelle_ascii.py` → `open_file` | Assume I/Q buffer == on-disk file without `save_file` |
+| One failing command at a time via I/Q diagnostics | Full rebuild to locate a failure I/Q already names by line |
+| Batch build once: user request, CI, or **all** touched theories green in I/Q | Batch build as substitute for `get_diagnostics` / `explore` |
+
+**If I/Q is up:** debugging a proof or syntax error = I/Q only, until `get_diagnostics` (scope=file, severity=error) is empty on every file you changed.
+
+**If I/Q is down:** say so and ask for `./scripts/start-both.sh` (or `./scripts/start-ir.sh`); use I/R `repl_edit` — still no full build as first resort.
+
+## I/Q loop (per edit)
+
+1. `open_file` (view the theory you edit).
+2. `write_file` (`str_replace`, small diff).
+3. `save_file` on that path.
+4. `python3 scripts/normalize_isabelle_ascii.py <file>` then `open_file` again.
+5. `get_diagnostics` (or `get_command_info` on the edited line range).
+6. If proof work: `explore` on the failing command; repeat from step 2.
 
 ## I/Q recommended pattern (AutoCorrode iq/README)
 
 **Good:** inspect state often (`get_context_info`, `get_command_info`); `explore` before mutating; small proofs; ask current subgoal often; `get_proof_blocks` for scope reads.
 
-**Bad:** blind `sledgehammer`; one-shot huge scripts; rewriting without state inspection; back-to-back `write_file`s without re-reading goal.
+**Bad:** blind `sledgehammer`; one-shot huge scripts; rewriting without state inspection; back-to-back `write_file`s without re-reading goal; **`isabelle build` mid-task**.
 
-**Strongly prefer:** `explore`, `get_context_info`, `get_proof_blocks` over direct file edits.
+**Strongly prefer:** `explore`, `get_context_info`, `get_proof_blocks` over direct file edits or batch build.
 
 ## When build is appropriate
 
-* Final verification of a closed top-level theorem.
-* Heap refresh after large structural change.
-* CI / commit gate.
+* User explicitly asks for a build / CI check.
+* Final verification after **all** edited theories report no errors in I/Q.
+* Heap refresh after large structural change (imports, session `ROOT`, new theory entry).
+* Commit gate (CI).
 
 Build command (from repo root):
 

@@ -20,6 +20,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     TD_WN_Interface
     Example_Sign_Analysis
     Example_Interval_Analysis
+    Example_Interval_Widen
     Example_CFG_Collecting_Equiv
     Example_GraphViz
     Example_NonTerminating_Safe
