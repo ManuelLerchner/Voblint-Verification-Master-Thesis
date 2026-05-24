@@ -73,7 +73,9 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # CFG path infrastructure
 
-`cfg_path` carries actions (needed for transfer-fn composition); `path_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `path_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and `src/CFG/CFG_Collecting.thy` for the big-step ↔ CFG bridge.
+`cfg_path` carries actions (needed for transfer-fn composition); `path_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `path_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the collecting layer (`CFG_Edges_Collect` … `CFG_Runs_To_Bridge`, umbrella `CFG_Collecting.thy`) for the small-step ↔ `cfg_collect` bridge.
+
+**Thesis sentence:** Soundness is stated against CFG collecting semantics at **every** program point (`cfg_collect`). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IMP runs correspond to exit reachability (`runs_to` / small-step to `SKIP`); partial and non-terminating behaviour is covered by the path-based theorem without a final store.
 
 ---
 

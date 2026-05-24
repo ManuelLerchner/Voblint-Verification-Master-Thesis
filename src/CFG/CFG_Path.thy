@@ -44,6 +44,9 @@ inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool" where
 
 inductive_cases stepE[elim]: "cfg_path g u es v"
 
+inductive_cases cfg_path_NilE[elim!]: "cfg_path g v [] u"
+inductive_cases cfg_path_ConsE[elim]: "cfg_path g v ((a, w) # es) u"
+
 (* \<midarrow>\<midarrow> Reachability Abbreviation + Notation \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 (*
@@ -63,7 +66,7 @@ lemma cfg_reaches_step[intro]:
   "(u, a, w) : edges g ==> g \<turnstile> w \<rightarrow>* v ==> g \<turnstile> u \<rightarrow>* v"
   by auto
 
-lemma cfg_path_append:
+lemma cfg_path_append[intro]:
   "cfg_path g u es1 v ==> cfg_path g v es2 w ==> cfg_path g u (es1 @ es2) w"
   apply (induction es1 arbitrary: u)
   by(auto)

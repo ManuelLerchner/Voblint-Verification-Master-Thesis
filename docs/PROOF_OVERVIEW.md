@@ -21,7 +21,9 @@ repository contributes, and how the main lemmas connect.
 ## Specification and soundness
 
 **Collecting spec:** `cfg_collect (to_cfg c) S v` — least fixpoint of one-step
-collecting over the compiled CFG (`CFG_Collecting.thy`).
+collecting over the compiled CFG (umbrella `CFG_Collecting.thy`; implementation
+split across `CFG_Edges_Collect`, `CFG_Collecting_Core`, `CFG_Compound_Paths`,
+`CFG_Path_Bridge`, `CFG_Runs_To_Bridge`).
 
 **Path form:** `cfg_path` + `edges_collect` (`cfg_edges_collect`); linked to the
 lfp by `cfg_collect_eq_cfg_edges_collect`.
@@ -30,7 +32,7 @@ lfp by `cfg_collect_eq_cfg_edges_collect`.
 `cfg_exit (to_cfg c)` (`runs_to_def`). Not a second operational semantics.
 
 **Operational link:** `runs_to_iff_small_step` — terminating small-step star to
-`SKIP` iff `runs_to` (`IMP2_SmallStep.thy` + reverse bridge in `CFG_Collecting.thy`).
+`SKIP` iff `runs_to` (`IMP2_SmallStep.thy` + reverse bridge in `CFG_Runs_To_Bridge.thy`).
 
 **Canonical analyzer soundness** (no termination premise):
 
@@ -100,7 +102,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | Stage | File(s) | Main facts |
 | --- | --- | --- |
 | IMP2 | `IMP2_Syntax`, `IMP2_SmallStep` | `aval`, `bval`, `small_step`, `runs_to_iff_small_step` |
-| CFG | `IMP2_to_CFG`, `CFG_Collecting`, `CFG_Path` | `to_cfg`, `cfg_collect`, `runs_to_def`, `compile_path_small_step` |
+| CFG | `IMP2_to_CFG`, `CFG_Collecting` (+ split), `CFG_Path` | `to_cfg`, `cfg_collect`, `runs_to_def`, `compile_path_small_step` |
 | Equations | `Constraint_System`, `Constraint_System_Sound` | `rhs_mono`, `post_fixpoint_sound`, `exit_sound` |
 | Solver | `TD_Interface`, `TD_Soundness` | `td_analyse_post_fixpoint`, `sign_analysis_sound`, `interval_analysis_sound` |
 | Pipeline | `Pipeline.thy` | `pipeline_invariant_sound`, `pipeline_sound_path`, `pipeline_sound_runs_to`, sign/interval corollaries |

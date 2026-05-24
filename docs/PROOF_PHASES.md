@@ -18,7 +18,7 @@ Roadmap: `docs/ROADMAP.md`.
 **Exit corollary:** `runs_to c s t` (equivalently `t ∈ cfg_collect … exit`) implies
 `t ∈ γ_state (σ (cfg_exit (to_cfg c)))`. `Pipeline.pipeline_sound_runs_to`.
 
-**Small-step link:** `runs_to_iff_small_step` in `CFG_Collecting.thy`.
+**Small-step link:** `runs_to_iff_small_step` in `CFG_Runs_To_Bridge.thy` (via `CFG_Collecting` umbrella).
 
 **Sign end-to-end:** `goblint_sign_sound` in `Goblint_Formalization.thy`.
 
@@ -52,7 +52,7 @@ examples only — re-run the command after changes).
 
 ### Collecting and equations
 
-- `cfg_collect` / `cfg_edges_collect` / path–lfp alignment (`CFG_Collecting.thy`).
+- `cfg_collect` / `cfg_edges_collect` / path–lfp alignment (CFG collecting layer; see `CFG_Collecting.thy` umbrella).
 - `post_fixpoint_sound`, `exit_sound` (`Constraint_System_Sound.thy`).
 - `td_analyse_post_fixpoint`, `sign_analysis_sound` (`TD_Interface`, `TD_Soundness`).
 
