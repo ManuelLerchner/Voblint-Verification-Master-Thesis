@@ -453,7 +453,7 @@ Not required for architecture lock. See `docs/PROOF_SIMPLIFICATION.md` §2 (reba
 | --- | --- |
 | 0–2 | Baseline; deleted `Direct_Equations`, `TD_Total`, `collect` API; CFG split into 5 theories + umbrella |
 | 3 full | `terminates_to` removed; seven `runs_to_*` intro rules deleted; `path_collect_imp_runs_to_*` + preserve via iff; elim rules use `cfg_path_*_iff` |
-| 4 partial | `cfg_path_NilE`/`ConsE`, `to_cfg_mk`, `to_cfg_simps`, `edges_collect_append [simp]`, `cfg_path_sub_offset_into`, `edges_collect_memberE`; Path_Bridge iff rewire |
+| 4 partial | `cfg_path_NilE`/`ConsE`, `to_cfg_mk`, `to_cfg_of_compile_0`, `to_cfg_simps`, `edges_collect_append [simp]`, `cfg_path_sub_offset_into`, `edges_collect_memberE`; Path_Bridge iff rewire; IMP2_SmallStep apply→`by` on star inversions |
 | 5 | `PROOF_OVERVIEW`, `PROOF_PHASES`, `OPEN_PROBLEMS`, `PROOF_SIMPLIFICATION` rebased on small-step + split |
 | 6 | `exit_sound` / `TD_Soundness` already `cfg_collect` at exit; `pipeline_sound_runs_to` primary premise `cfg_collect`; `pipeline_sound_runs_to_runs` for `runs_to` |
 | 7 | `cfg_path_Seq_iff`, `cfg_path_If_iff`, `cfg_path_While_exit_iff`, `cfg_path_While_loop_iff` in `CFG_Compound_Paths.thy` |

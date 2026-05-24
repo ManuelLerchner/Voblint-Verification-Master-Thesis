@@ -59,9 +59,7 @@ subsection \<open>Small-step is deterministic\<close>
 
 lemma small_step_deterministic:
   "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
-  apply (induction arbitrary: cs'' rule: small_step.induct)
-  apply blast+
-  done
+  by (induction arbitrary: cs'' rule: small_step.induct) blast+
 
 subsection \<open>Sequencing and divergence\<close>
 
@@ -82,10 +80,8 @@ lemma seq_comp:
 lemma seq_star_finish:
   "(c1 ;; c2, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
    (\<exists>s2. (c1, s) \<rightarrow>* (SKIP, s2) \<and> (c2, s2) \<rightarrow>* (SKIP, t))"
-  apply (induction "(c1 ;; c2, s)" "(SKIP, t)" arbitrary: c1 c2 s t rule: star.induct)
-  apply auto
-  by (metis (no_types, lifting) SeqSE prod.inject star.refl star.step)
-
+  by (induction "(c1 ;; c2, s)" "(SKIP, t)" arbitrary: c1 c2 s t rule: star.induct)
+     (auto, metis (no_types, lifting) SeqSE prod.inject star.refl star.step)
 
 definition wt_suffix :: "com \<Rightarrow> com \<Rightarrow> bool" where
   "wt_suffix body c \<equiv>
@@ -96,13 +92,12 @@ definition wt_suffix :: "com \<Rightarrow> com \<Rightarrow> bool" where
 lemma wt_suffix_step:
   "wt_suffix body c \<Longrightarrow> (c, s) \<rightarrow> (c', s') \<Longrightarrow> wt_suffix body c'"
   unfolding wt_suffix_def
-  by (auto)
+  by auto
 
 lemma wt_suffix_steps:
   "(c, s) \<rightarrow>* (c', t) \<Longrightarrow> wt_suffix body c \<Longrightarrow> wt_suffix body c'"
-  apply (induction "(c,s)" "(c',t)" arbitrary: c s rule: star.induct)
-  apply(auto)
-  using wt_suffix_step by blast
+  by (induction "(c,s)" "(c',t)" arbitrary: c s rule: star.induct)
+     (auto intro: wt_suffix_step)
 
 lemma while_true_skip_no_finish:
   "\<not> ((WHILE (Bc True) DO a, s) \<rightarrow>* (SKIP, t))"
@@ -128,29 +123,26 @@ text \<open>
 
 lemma star_SKIP_eq:
   "(SKIP, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> s = t"
-  apply(induction "(SKIP, s)" " (SKIP, t)" rule:star.induct)
-  by(auto)
-  
+  by (induction "(SKIP, s)" "(SKIP, t)" rule: star.induct) auto
+
 lemma star_Assign_eq:
   "(x ::= a, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> t = s(x := aval a s)"
-  apply(induction "(x ::= a, s)" " (SKIP, t)" rule:star.induct)
+  apply (induction "(x ::= a, s)" "(SKIP, t)" rule: star.induct)
   using star_SKIP_eq by blast
 
 lemma star_If_split:
   "(IF b THEN c1 ELSE c2, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
    (bval b s \<and> (c1, s) \<rightarrow>* (SKIP, t)) \<or> (\<not> bval b s \<and> (c2, s) \<rightarrow>* (SKIP, t))"
-  apply(induction "(IF b THEN c1 ELSE c2, s)" " (SKIP, t)" rule:star.induct)
-  by(auto)
-  
+  by (induction "(IF b THEN c1 ELSE c2, s)" "(SKIP, t)" rule: star.induct) auto
+
 lemma star_While_split:
   "(WHILE b DO c, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
    (\<not> bval b s \<and> s = t) \<or>
    (\<exists>s'. bval b s \<and> (c, s) \<rightarrow>* (SKIP, s') \<and> (WHILE b DO c, s') \<rightarrow>* (SKIP, t))"
-  apply(induction "(WHILE b DO c, s)" " (SKIP, t)" rule:star.induct)
-  apply(auto)
-  apply (metis WhileSE star_If_split star_SKIP_eq)
-  apply (metis WhileSE seq_star_finish star_If_split)
-  by (metis WhileSE seq_star_finish star_If_split star_SKIP_eq)
+  by (induction "(WHILE b DO c, s)" "(SKIP, t)" rule: star.induct)
+     (auto, metis WhileSE star_If_split star_SKIP_eq,
+      metis WhileSE seq_star_finish star_If_split,
+      metis WhileSE seq_star_finish star_If_split star_SKIP_eq)
  
 
 end

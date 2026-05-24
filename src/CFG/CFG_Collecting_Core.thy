@@ -52,7 +52,7 @@ lemma cfg_edges_collect_entry:
 lemma cfg_edges_collect_post:
   "cfg_collect_F g S (cfg_edges_collect g S) v \<subseteq> cfg_edges_collect g S v"
   unfolding cfg_collect_F_def
-  apply(auto)
+  apply auto
   using cfg_edges_collect_entry apply blast
   using cfg_edges_collect_step collect_pp_def apply fastforce
   using cfg_edges_collect_step collect_pp_def by fastforce

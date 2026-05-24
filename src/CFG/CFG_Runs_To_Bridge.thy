@@ -128,9 +128,9 @@ proof -
     and t_in2: "t \<in> edges_collect es2 {s2}"
     by (rule edges_collect_memberE)
   have en1_cfg: "cfg_entry (to_cfg c1) = en1" and ex1_cfg: "cfg_exit (to_cfg c1) = ex1"
-    unfolding to_cfg_def using c1_0 by (auto simp: Let_def split: prod.splits)
+    using to_cfg_of_compile_0[OF c1_0] by auto
   have en20_cfg: "cfg_entry (to_cfg c2) = en20" and ex20_cfg: "cfg_exit (to_cfg c2) = ex20"
-    unfolding to_cfg_def using c2_0 by (auto simp: Let_def split: prod.splits)
+    using to_cfg_of_compile_0[OF c2_0] by auto
   have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
     using p1 en1_cfg ex1_cfg by simp
   have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
@@ -192,7 +192,7 @@ proof -
     qed
     from t_in collect have t_in1: "t \<in> edges_collect es1 {s}" by simp
     have en10_cfg: "cfg_entry (to_cfg c1) = en10" and ex10_cfg: "cfg_exit (to_cfg c1) = ex10"
-      unfolding to_cfg_def using c1_0 by (auto simp: Let_def split: prod.splits)
+      using to_cfg_of_compile_0[OF c1_0] by auto
     have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
       using pc1 en10_cfg ex10_cfg by simp
     show ?thesis using path_imp_runs_to[OF p1' t_in1] .
@@ -289,7 +289,7 @@ proof -
     qed
     from t_in collect have t_in2: "t \<in> edges_collect es2 {s}" by simp
     have en20_cfg: "cfg_entry (to_cfg c2) = en20" and ex20_cfg: "cfg_exit (to_cfg c2) = ex20"
-      unfolding to_cfg_def using c2_0 by (auto simp: Let_def split: prod.splits)
+      using to_cfg_of_compile_0[OF c2_0] by auto
     have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
       using pc2 en20_cfg ex20_cfg by simp
     show ?thesis using path_imp_runs_to[OF p2' t_in2] .

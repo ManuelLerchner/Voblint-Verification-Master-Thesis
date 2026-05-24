@@ -85,7 +85,7 @@ Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects
 
 - Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`, `comp_fun_idem`).
 - **Interval / octagon** domains and executability.
-- Remaining **Phase 4** automation (`inductive_cases`, path-lifting combinators, apply→`by` sweep).
+- Remaining **Phase 4** automation (`IMP2_to_CFG` apply scripts, path-lifting combinators).
 - Remove **`quick_and_dirty`** from `ROOT` when the session is sorry-free by policy.
 
 ```bash

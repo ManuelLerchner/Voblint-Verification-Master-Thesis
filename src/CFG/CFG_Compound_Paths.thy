@@ -6,21 +6,25 @@ begin
 
 (* \<midarrow>\<midarrow> to_cfg / compile alignment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
-lemma to_cfg_compile:
-  obtains n' en ex E where
-    "compile c 0 = (n', en, ex, E)"
-    "cfg_entry (to_cfg c) = en"
-    "cfg_exit (to_cfg c) = ex"
-    "edges (to_cfg c) = E"
-  unfolding to_cfg_def
-  by (cases "compile c 0") (auto simp: Let_def)
-
 lemma to_cfg_mk:
   assumes "compile c 0 = (n, en, ex, E)"
   shows "to_cfg c = mk_cfg en ex E"
   using assms by (simp add: to_cfg_def Let_def split: prod.splits)
 
 lemmas to_cfg_simps = to_cfg_mk to_cfg_def Let_def cfg_entry_mk_cfg cfg_exit_mk_cfg edges_mk_cfg
+
+lemma to_cfg_of_compile_0:
+  assumes "compile c 0 = (n, en, ex, E)"
+  shows "cfg_entry (to_cfg c) = en" and "cfg_exit (to_cfg c) = ex" and "edges (to_cfg c) = E"
+  using assms to_cfg_mk by (auto simp: cfg_entry_mk_cfg cfg_exit_mk_cfg edges_mk_cfg)
+
+lemma to_cfg_compile:
+  obtains n' en ex E where
+    "compile c 0 = (n', en, ex, E)"
+    "cfg_entry (to_cfg c) = en"
+    "cfg_exit (to_cfg c) = ex"
+    "edges (to_cfg c) = E"
+  by (cases "compile c 0") (auto simp: to_cfg_simps)
 
 lemma edges_collect_member:
   "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
@@ -30,10 +34,8 @@ proof (induction es arbitrary: S x)
 next
   case (Cons e es)
   obtain a p where ep: "e = (a, p)" by (cases e) auto
-  show ?case
-    apply(auto)
-    apply (metis edge_collect_member ep local.Cons edges_collect.simps(2))
-    by (meson empty_subsetI insert_subset edges_collect_mono_strong subsetD)
+  show ?case unfolding ep
+    by (metis edge_collect_member edges_collect.simps(2) local.Cons)
 qed
 
 lemma edges_collect_memberE:
@@ -86,11 +88,11 @@ proof -
   from c1 c2 have cmp: "compile (c1 ;; c2) 0 = (n2, en1, ex2, E12)"
     unfolding E12_def by (rule compile_Seq_0)
   show "edges (to_cfg (c1 ;; c2)) = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
-    unfolding to_cfg_def E12_def[symmetric] cmp by simp
+    using cmp unfolding E12_def by (simp add: to_cfg_simps)
   show "cfg_entry (to_cfg (c1 ;; c2)) = en1"
-    unfolding to_cfg_def cmp by simp
+    using cmp by (simp add: to_cfg_simps)
   show "cfg_exit (to_cfg (c1 ;; c2)) = ex2"
-    unfolding to_cfg_def cmp by simp
+    using cmp by (simp add: to_cfg_simps)
 qed
 
 lemma cfg_edges_entry_exit_If:
@@ -109,11 +111,11 @@ proof -
   show "edges (to_cfg (IF b THEN c1 ELSE c2)) =
         {(0, EA_Assume b, en1), (0, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
         \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
-    unfolding to_cfg_def EI_def[symmetric] cmp by simp
+    using cmp unfolding EI_def by (simp add: to_cfg_simps)
   show "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
-    unfolding to_cfg_def cmp by simp
+    using cmp by (simp add: to_cfg_simps)
   show "cfg_exit  (to_cfg (IF b THEN c1 ELSE c2)) = n2"
-    unfolding to_cfg_def cmp by simp
+    using cmp by (simp add: to_cfg_simps)
 qed
 
 lemma cfg_edges_entry_exit_While:
@@ -128,11 +130,11 @@ proof -
     unfolding EW_def by (rule compile_While_0)
   show "edges (to_cfg (WHILE b DO c)) =
         {(0, EA_Assume b, en1), (0, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, 0)}"
-    unfolding to_cfg_def EW_def[symmetric] cmp by simp
+    using cmp unfolding EW_def by (simp add: to_cfg_simps)
   show "cfg_entry (to_cfg (WHILE b DO c)) = 0"
-    unfolding to_cfg_def cmp by simp
+    using cmp by (simp add: to_cfg_simps)
   show "cfg_exit  (to_cfg (WHILE b DO c)) = n1"
-    unfolding to_cfg_def cmp by simp
+    using cmp by (simp add: to_cfg_simps)
 qed
 
 lemma cfg_path_mono_edges[intro]:
@@ -255,7 +257,7 @@ next
     and pe2: "cfg_path (to_cfg c2) (w - n1) es' (v - n1)"
     by auto
   have toc2_edges: "edges (to_cfg c2) = E20"
-    unfolding to_cfg_def using c2_0 by (simp add: Let_def)
+    using c2_0 by (simp add: to_cfg_simps)
   have edge_c2: "(u - n1, a, w - n1) \<in> edges (to_cfg c2)"
     using toc2_edges decomp by simp
   let ?es'_full = "(a, w - n1) # es'"
@@ -308,7 +310,7 @@ next
       and p2: "cfg_path (to_cfg c2) en20 es2 ex20"
       by blast
     have toc1_edges: "edges (to_cfg c1) = E1"
-      unfolding to_cfg_def using c1 by (simp add: Let_def)
+      using c1 by (simp add: to_cfg_simps)
     have edge_c1: "(u, a, w) \<in> edges (to_cfg c1)" using E1 toc1_edges by simp
     let ?es1_full = "(a, w) # es1"
     have p1_full: "cfg_path (to_cfg c1) u ?es1_full ex1"
@@ -516,7 +518,7 @@ next
       and pe1: "cfg_path (to_cfg c1) (w - 1) es' ex10"
       by auto
     have toc1_edges: "edges (to_cfg c1) = E10"
-      unfolding to_cfg_def using c1 by (simp add: Let_def)
+      using c1 by (simp add: to_cfg_simps)
     have edge_c1: "(u - 1, a, w - 1) \<in> edges (to_cfg c1)"
       using toc1_edges decomp by simp
     let ?es'_full = "(a, w - 1) # es'"
@@ -583,7 +585,7 @@ next
       and pe2: "cfg_path (to_cfg c2) (w - (n10 + 1)) es' ex20"
       by auto
     have toc2_edges: "edges (to_cfg c2) = E20"
-      unfolding to_cfg_def using c2 by (simp add: Let_def)
+      using c2 by (simp add: to_cfg_simps)
     have edge_c2: "(u - (n10 + 1), a, w - (n10 + 1)) \<in> edges (to_cfg c2)"
       using toc2_edges decomp by simp
     let ?es'_full = "(a, w - (n10 + 1)) # es'"
@@ -920,7 +922,7 @@ next
       and p0: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest 0"
       by blast
     have toc_edges: "edges (to_cfg c) = E10"
-      unfolding to_cfg_def using c0 by (simp add: Let_def)
+      using c0 by (simp add: to_cfg_simps)
     have edge_c1: "(u - 1, aa, w - 1) \<in> edges (to_cfg c)"
       using toc_edges decomp by simp
     let ?esb = "(aa, w - 1) # es_body"
