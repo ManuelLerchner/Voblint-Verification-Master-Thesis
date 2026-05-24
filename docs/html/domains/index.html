@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Abstract Domains Walkthrough Sign, Interval, and Soundness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../walkthrough.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>Sections</h1>
+    <ol>
+      <li><a href="#overview"><span class="num">∎</span>Overview</a></li>
+      <li><a href="#locales-gamma"><span class="num">1</span>Locales &amp; gamma_state</a></li>
+      <li><a href="#sign-domain"><span class="num">2</span>Sign domain</a></li>
+      <li><a href="#interval-domain"><span class="num">3</span>Interval domain</a></li>
+      <li><a href="#layering"><span class="num">→</span>Layering diagram</a></li>
+      <li><a href="#transfer-soundness"><span class="num">4</span>Transfer soundness</a></li>
+      <li><a href="#links"><span class="num">§</span>Equations &amp; pipeline</a></li>
+    </ol>
+    <p class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></p>
+    <p class="toc-crosslink"><a href="../pipeline/index.html">Full pipeline</a></p>
+    <p class="toc-crosslink"><a href="../equations/index.html">Equations →</a></p>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="tag">Goblint Formalization · Abstract Domains</span>
+      <h1>Sign and interval abstract domains</h1>
+      <p>
+        <code>src/Domains/</code> defines the shared abstract-domain interface
+        (<code>sound_domain</code>, <code>abstract_domain</code>, lifted
+        <code>gamma_state</code>) and two concrete instantiations: sign (finite lattice,
+        closed in the pipeline) and interval (widening for loops, stretch still open).
+        Per-edge transfers are bundled as <code>sign_tf</code> / <code>ivl_tf</code>; the
+        <code>domain_transfer</code> record itself lives in
+        <a href="../equations/index.html">Equations/Constraint_System.thy</a>.
+      </p>
+    </header>
+
+    <!-- OVERVIEW -->
+    <section class="stage" id="overview">
+      <h2><span class="badge">∎</span>Overview</h2>
+      <p class="lede">
+        Abstract domains over-approximate sets of concrete stores. The analyzer never
+        reasons about individual integers at a program point; it tracks abstract values per
+        variable and uses sound join and transfer functions when the equation system is solved.
+      </p>
+
+      <table>
+        <thead><tr><th>Theory</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">Abstract_Domain.thy</td>
+            <td>
+              Locales <code>sound_domain</code> and <code>abstract_domain</code>;
+              type synonym <code>'a abs_state = vname ⇒ 'a</code>;
+              <code>gamma_state</code>; join-fold lemmas for finite predecessor sets.
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">Sign_Domain.thy</td>
+            <td>
+              Finite sign lattice (<code>SBot</code> … <code>STop</code>),
+              <code>gamma_sign</code>, <code>assign_sign</code> / <code>assume_sign</code>,
+              <code>sign_tf</code>, <code>interpretation sign_domain: abstract_domain</code>.
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">Interval_Domain.thy</td>
+            <td>
+              Interval lattice with <code>widen_ivl</code>, <code>gamma_ivl</code>,
+              interval transfers, <code>ivl_tf</code>;
+              <code>interpretation ivl_domain: abstract_domain</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="label">Downstream consumers</div>
+        <p>
+          <a href="../equations/index.html">Equations/Constraint_System.thy</a> builds
+          <code>rhs</code> from a CFG, a <code>domain_transfer</code>, join, and bot.
+          <a href="../pipeline/index.html">Pipeline/Pipeline.thy</a> packages configs
+          (<code>sign_analysis_config</code>, <code>ivl_analysis_config</code>), proves
+          <code>domain_transfer_sound</code>, and connects to TD solver soundness
+          (<code>sign_pipeline_sound</code>, <code>goblint_sign_sound</code>).
+        </p>
+      </div>
+
+      <div class="callout" style="border-color: var(--accent-4)">
+        <div class="label">Stretch goal (not in tree)</div>
+        <p>
+          <strong>Octagon domain</strong> is planned (Sign → Interval → Octagon) but has no
+          theory file yet. The layering diagram below shows only what is checked in today.
+        </p>
+      </div>
+    </section>
+
+    <!-- LOCALES & GAMMA -->
+    <section class="stage" id="locales-gamma">
+      <h2><span class="badge">01</span>Locales &amp; gamma_state</h2>
+      <p class="lede">
+        From <code>Abstract_Domain.thy</code>: every domain provides concretization,
+        bottom, and a sound join; widening is optional at the locale level.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4><code>sound_domain</code></h4>
+          <p>Parameter <code>gamma :: 'a ⇒ int set</code> with axioms:</p>
+          <ul>
+            <li><code>gamma bot = {}</code></li>
+            <li><code>a ≤ b ⟹ gamma a ⊆ gamma b</code> (monotone concretization)</li>
+          </ul>
+          <p>
+            Derived: <code>gamma_sup_sound</code>, lifted
+            <code>gamma_state</code>, and <code>gamma_abs_sup_set_ub</code> for folding
+            joins over finite edge sets (used by equation-system soundness).
+          </p>
+        </div>
+        <div class="card">
+          <h4><code>abstract_domain</code></h4>
+          <p>Extends <code>sound_domain</code> with <code>widen :: 'a ⇒ 'a ⇒ 'a</code>:</p>
+          <ul>
+            <li><code>gamma a ⊆ gamma (widen a b)</code></li>
+            <li><code>gamma b ⊆ gamma (widen a b)</code></li>
+          </ul>
+          <p>
+            Needed when the domain has infinite ascending chains (intervals). Finite domains
+            (sign) set <code>widen = join</code>; widening axioms follow from join soundness.
+          </p>
+        </div>
+      </div>
+
+      <h3>Lifted state concretization</h3>
+<pre><code>type_synonym 'a abs_state = "vname => 'a"
+
+definition gamma_state :: "'a abs_state => store set" where
+  "gamma_state sigma = {s. ∀x. s x ∈ gamma (sigma x)}"</code></pre>
+      <p>
+        Pointwise <code>bot</code> and <code>⊔</code> on <code>abs_state</code> come from HOL’s
+        <code>fun</code> instances for semilattices—no separate lifted-bot definition.
+        Pipeline theorems phrase soundness as
+        <code>t ∈ D.gamma_state (run_analysis …)</code>.
+      </p>
+
+      <h4>Key lemmas (interface layer)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">gamma_state_mono</span> — abstract order on states lifts to set inclusion.</li>
+        <li><span class="name">gamma_state_bot</span> — bottom abstract state concretizes to ∅.</li>
+        <li><span class="name">gamma_state_sup_ub1/2</span> — join over-approximates each operand state-set.</li>
+        <li><span class="name">sup_fold_ge</span> / <span class="name">gamma_abs_sup_set_ub</span> — finite join fold is sound for RHS construction.</li>
+      </ul>
+    </section>
+
+    <!-- SIGN -->
+    <section class="stage" id="sign-domain">
+      <h2><span class="badge">02</span>Sign domain</h2>
+      <p class="lede">
+        <code>Sign_Domain.thy</code> — first concrete domain; finite lattice, no non-trivial widening.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Abstract values</h4>
+<pre><code>datatype sign = SBot | SNeg | SZero | SPos | STop</code></pre>
+        </div>
+        <div class="card">
+          <h4>Concretization <code>gamma_sign</code></h4>
+          <table>
+            <tbody>
+              <tr><td class="mono">SBot</td><td>∅</td></tr>
+              <tr><td class="mono">SNeg</td><td>{n. n &lt; 0}</td></tr>
+              <tr><td class="mono">SZero</td><td>{0}</td></tr>
+              <tr><td class="mono">SPos</td><td>{n. n &gt; 0}</td></tr>
+              <tr><td class="mono">STop</td><td>UNIV</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p>
+        Imports: <code>Abstract_Domain</code>, <code>Constraint_System</code> (for the
+        <code>sign domain_transfer</code> type), <code>IMP2_SmallStep</code> (expression helpers).
+        Instance: <code>sign :: bounded_semilattice_sup_bot</code> with join = least upper bound in the sign lattice.
+      </p>
+
+<pre><code>interpretation sign_domain: abstract_domain gamma_sign widen_sign
+  (* widen_sign a b = join_sign a b — finite domain *)
+
+definition sign_tf :: "sign domain_transfer" where
+  "sign_tf = (| tf_assign      = assign_sign,
+                 tf_assume      = assume_sign,
+                 tf_assume_not  = assume_not_sign |)"</code></pre>
+
+      <h4>Per-action soundness (proved in Sign_Domain)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">assign_sign_sound</span> — assignment refines <code>gamma_state</code> correctly.</li>
+        <li><span class="name">assume_sign_sound</span> / <span class="name">assume_not_sign_sound</span> — assume edges preserve stores satisfying the guard.</li>
+        <li><span class="name">sign_gamma_state_conv</span> — <code>sign_domain.gamma_state</code> = <code>sound_domain.gamma_state gamma_sign</code>.</li>
+      </ul>
+
+      <div class="callout done">
+        <div class="label">Pipeline status</div>
+        <p>
+          Sign transfers are wired through
+          <code>sign_analysis_config</code> in Pipeline.thy; end-to-end
+          <code>goblint_sign_sound</code> is closed. See
+          <a href="../pipeline/index.html">pipeline walkthrough</a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- INTERVAL -->
+    <section class="stage" id="interval-domain">
+      <h2><span class="badge">03</span>Interval domain</h2>
+      <p class="lede">
+        <code>Interval_Domain.thy</code> — Tier-2 domain with proper widening on loops.
+      </p>
+
+      <p>
+        Intervals use extended bounds (<code>eint</code>: <code>MinInf</code>, <code>Fin n</code>,
+        <code>PlusInf</code>) so unbounded intervals are representable. Concretization
+        <code>gamma_ivl</code> maps <code>Ivl l u</code> to integer sets (empty when <code>l &gt; u</code>).
+      </p>
+
+<pre><code>interpretation ivl_domain: abstract_domain gamma_ivl widen_ivl
+
+definition ivl_tf :: "ivl domain_transfer" where
+  "ivl_tf = (| tf_assign      = assign_ivl,
+                 tf_assume      = assume_ivl,
+                 tf_assume_not  = assume_not_ivl |)"</code></pre>
+
+      <p>
+        Like sign, interval theory imports <code>Constraint_System</code> only to declare
+        <code>ivl_tf</code> as a <code>domain_transfer</code> record—the record definition is not
+        duplicated here.
+      </p>
+
+      <h4>Widening</h4>
+      <p>
+        <code>widen_ivl</code> extrapolates bounds so ascending chains in loop headers stabilize.
+        <code>widen_state</code> (from <code>abstract_domain</code>) applies widening pointwise on
+        <code>ivl abs_state</code>. TD solver termination for intervals relies on this plus
+        the widen locale axioms.
+      </p>
+
+      <div class="callout" style="border-color: var(--accent-4)">
+        <div class="label">Proof status</div>
+        <p>
+          Sign end-to-end is closed (<code>goblint_sign_sound</code>). Interval packaging
+          (<code>ivl_pipeline_sound</code>) is proved in <code>Pipeline.thy</code>; see
+          <a href="../../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a> for stretch goals and open items.
+        </p>
+      </div>
+    </section>
+
+    <!-- LAYERING -->
+    <section class="stage" id="layering">
+      <h2><span class="badge">→</span>Layering diagram</h2>
+      <p class="lede">
+        How theories depend on each other and where the transfer record sits.
+        Dashed node = planned, not in the repository tree.
+      </p>
+
+      <div class="mermaid">
+flowchart TB
+  subgraph imp2 ["IMP2"]
+    SYN["IMP2_Syntax"]
+  end
+
+  AD["Abstract_Domain.thy<br/>sound_domain · abstract_domain<br/>gamma_state · abs_state"]
+
+  subgraph domains ["src/Domains/ (in tree)"]
+    SD["Sign_Domain.thy<br/>gamma_sign · sign_tf"]
+    ID["Interval_Domain.thy<br/>gamma_ivl · widen_ivl · ivl_tf"]
+  end
+
+  CS["Constraint_System.thy<br/>record domain_transfer<br/>apply_tf · rhs"]
+
+  PL["Pipeline.thy<br/>domain_transfer_sound<br/>sign_analysis_config · ivl_analysis_config"]
+
+  OCT["Octagon domain<br/>(stretch — not in tree)"]
+
+  SYN --> AD
+  AD --> SD
+  AD --> ID
+  CS --> SD
+  CS --> ID
+  AD --> CS
+  SD --> PL
+  ID --> PL
+  CS --> PL
+
+  AD -.->|"future"| OCT
+  OCT -.-> CS
+
+  style OCT stroke-dasharray: 5 5
+  style OCT fill:transparent
+      </div>
+
+      <p>
+        <strong>Important:</strong> <code>Sign_Domain</code> and <code>Interval_Domain</code>
+        import <code>Constraint_System</code> for the <code>'a domain_transfer</code> type used by
+        <code>sign_tf</code> / <code>ivl_tf</code>, not because transfers are defined in Domains.
+        <code>Constraint_System</code> itself imports <code>Abstract_Domain</code> for
+        <code>abs_state</code> and the domain class expected by <code>rhs</code>.
+      </p>
+    </section>
+
+    <!-- TRANSFER SOUNDNESS -->
+    <section class="stage" id="transfer-soundness">
+      <h2><span class="badge">04</span>Transfer soundness</h2>
+      <p class="lede">
+        Single-edge transfers must map abstract stores to larger concrete set over-approximations.
+      </p>
+
+      <h3><code>domain_transfer</code> (Equations layer)</h3>
+      <p>Defined in <a href="../equations/index.html">Constraint_System.thy</a>:</p>
+<pre><code>record 'a domain_transfer =
+  tf_assign     :: "vname => aexp => ('a abs_state) => ('a abs_state)"
+  tf_assume     :: "bexp  => ('a abs_state) => ('a abs_state)"
+  tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
+
+fun apply_tf :: "'a domain_transfer => edge_action => ..."</code></pre>
+      <p>
+        <code>rhs</code> folds <code>apply_tf tf a</code> over predecessor edges and joins with
+        <code>⊔</code>. The equation-system soundness proof assumes transfers satisfy the
+        gamma-state conditions bundled below.
+      </p>
+
+      <h3><code>domain_transfer_sound</code> (Pipeline layer)</h3>
+      <p>Defined in <code>Pipeline.thy</code> — packages the three standard conditions:</p>
+<pre><code>domain_transfer_sound gamma tf ⟷
+  (∀ assign: stores in γ_state sigma stay in γ_state after tf_assign)
+  ∧ (∀ assume b:  bval b s ⟹ s ∈ γ_state (tf_assume tf b sigma))
+  ∧ (∀ assume ¬b: ¬bval b s ⟹ s ∈ γ_state (tf_assume_not tf b sigma))</code></pre>
+
+      <table>
+        <thead><tr><th>Lemma / config</th><th>Location</th><th>Content</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">sign_tf_sound</td>
+            <td>Pipeline.thy</td>
+            <td><code>domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))</code> — from sign assign/assume lemmas.</td>
+          </tr>
+          <tr>
+            <td class="mono">sign_analysis_config</td>
+            <td>Pipeline.thy</td>
+            <td>Join = <code>⊔</code>, bot, <code>gamma_sign</code>, embedded transfer record, init <code>λx. sign_of_int (s x)</code>.</td>
+          </tr>
+          <tr>
+            <td class="mono">ivl_analysis_config</td>
+            <td>Pipeline.thy</td>
+            <td>Same shape for intervals; init maps concrete store to interval per variable.</td>
+          </tr>
+          <tr>
+            <td class="mono">sign_init_in_gamma</td>
+            <td>Pipeline.thy</td>
+            <td>Concrete initial store lies in <code>γ_state</code> of configured init.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Soundness chain (sign, closed)</h4>
+      <div class="mermaid">
+flowchart LR
+  A["assign_sign_sound<br/>assume_sign_sound"] --> B["sign_tf_sound<br/>(domain_transfer_sound)"]
+  B --> C["edge_collect_apply_tf_sound<br/>Constraint_System_Sound"]
+  C --> D["post_fixpoint_sound"]
+  D --> E["pipeline_sound_path<br/>goblint_sign_sound"]
+      </div>
+    </section>
+
+    <!-- LINKS -->
+    <section class="stage" id="links">
+      <h2><span class="badge">§</span>Equations &amp; pipeline</h2>
+      <p class="lede">Continue the story in the layers that consume abstract domains.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4><a href="../equations/index.html">Equation system walkthrough</a></h4>
+          <p>
+            <code>domain_transfer</code>, <code>apply_tf</code>, <code>rhs</code>,
+            <code>is_post_fixpoint</code>, and soundness
+            <code>post_fixpoint_sound</code> relative to <code>cfg_collect</code>.
+            TD tree: <a href="../solver/index.html"><code>make_rhs_tree</code></a>.
+          </p>
+          <p class="mono">src/Equations/</p>
+        </div>
+        <div class="card">
+          <h4><a href="../pipeline/index.html">Pipeline walkthrough</a></h4>
+          <p>
+            <code>analysis_config</code>, <code>run_analysis</code>, TD solver hook,
+            <code>sign_pipeline_sound</code> / <code>goblint_sign_sound</code>, and the CFG
+            collecting semantics link at every program point.
+          </p>
+          <p class="mono">src/Pipeline/Pipeline.thy</p>
+        </div>
+      </div>
+
+      <h4>Related source README</h4>
+      <p>
+        Module map and file roles:
+        <code>src/Domains/README.md</code> ·
+        <code>src/Equations/README.md</code> ·
+        <code>src/Pipeline/README.md</code>
+      </p>
+    </section>
+  </main>
+</div>
+<script src="../walkthrough.js"></script>
+</body>
+</html>

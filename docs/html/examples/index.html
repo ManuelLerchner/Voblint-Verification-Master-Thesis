@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Examples Walkthrough — Goblint Formalization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../walkthrough.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>Sections</h1>
+    <ol>
+      <li><a href="#overview"><span class="num">§</span>Overview</a></li>
+      <li><a href="#example-table"><span class="num">⊞</span>Example table</a></li>
+      <li><a href="#example-sign"><span class="num">1</span>Sign analysis</a></li>
+      <li><a href="#example-interval"><span class="num">2</span>Interval analysis</a></li>
+      <li><a href="#example-cfg-collecting"><span class="num">3</span>CFG collecting</a></li>
+      <li><a href="#example-graphviz"><span class="num">4</span>Graphviz CFG</a></li>
+      <li><a href="#example-nonterminating"><span class="num">5</span>Non-terminating</a></li>
+      <li><a href="#how-to-build"><span class="num">⚙</span>How to build</a></li>
+      <li><a href="#related-links"><span class="num">→</span>Related docs</a></li>
+      <li class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></li>
+      <li class="toc-crosslink"><a href="../pipeline/index.html">Pipeline →</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero" id="overview">
+      <span class="tag">Goblint Formalization · Examples</span>
+      <h1>Executable examples off the proof spine</h1>
+      <p>
+        Theories under <code>src/Examples/</code> are smoke tests and small demonstrations:
+        code generation, sanity checks on collecting vs paths, runnable abstract analyses,
+        and CFG visualization. They live in the same Isabelle session as the main formalization
+        but are <strong>not</strong> imported by <code>Goblint_Formalization.thy</code> — the
+        verified soundness chain does not depend on them.
+      </p>
+    </header>
+
+    <section class="stage" id="example-table">
+      <h2><span class="badge">⊞</span>Example theories at a glance</h2>
+      <p class="lede">
+        All five are listed in <code>ROOT</code> under session
+        <code>Goblint_Formalization</code> (<code>directories "Examples"</code>). You can
+        build the full session or stop at a single example theory (see
+        <a href="#how-to-build">How to build</a>).
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Theory</th>
+            <th>Imports (direct)</th>
+            <th>Demonstrates</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono"><a href="#example-sign">Example_Sign_Analysis</a></td>
+            <td class="mono">Sign_Domain, IMP2_to_CFG, TD_Interface</td>
+            <td>Runnable sign analysis: CFG compile, transfer-fn spot checks, <code>TD_plain_Interp_solve</code> on a pair abstract state.</td>
+          </tr>
+          <tr>
+            <td class="mono"><a href="#example-interval">Example_Interval_Analysis</a></td>
+            <td class="mono">Interval_Domain, IMP2_to_CFG, TD_Interface</td>
+            <td>Same toy program with interval domain; tight <code>[5,5]</code> / <code>[10,10]</code> results; executable TD on a pair type.</td>
+          </tr>
+          <tr>
+            <td class="mono"><a href="#example-cfg-collecting">Example_CFG_Collecting_Equiv</a></td>
+            <td class="mono">CFG_Runs_To_Bridge</td>
+            <td><code>cfg_collect</code> at exit after a concrete small-step run; <code>runs_to</code> vs collecting semantics on a fixed program.</td>
+          </tr>
+          <tr>
+            <td class="mono"><a href="#example-graphviz">Example_GraphViz</a></td>
+            <td class="mono">CFG_GraphViz, IMP2_to_CFG</td>
+            <td>Graphviz DOT strings for straight-line, branch, loop, and nested programs via <code>to_graphviz</code>.</td>
+          </tr>
+          <tr>
+            <td class="mono"><a href="#example-nonterminating">Example_NonTerminating_Safe</a></td>
+            <td class="mono">Pipeline</td>
+            <td>Why exit-only <code>pipeline_sound_runs_to</code> is vacuous on diverging programs; <code>pipeline_sound_path</code> still gives per-pp safety.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="label">Not on the core proof spine</div>
+        <p>
+          <code>Goblint_Formalization.thy</code> imports IMP2, CFG, domains, equations, TD bridge,
+          and <code>Pipeline</code> — not the example theories. Examples reuse those layers for
+          <code>value</code> / <code>term</code> checks and pedagogy; closing the main theorems
+          does not require processing them.
+        </p>
+      </div>
+    </section>
+
+    <section class="stage" id="example-sign">
+      <h2><span class="badge">01</span>Example_Sign_Analysis</h2>
+      <p class="lede">Sign analysis of a two-assignment IMP2 program.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Program</h4>
+<pre><code>x := 5;
+y := x + x</code></pre>
+        </div>
+        <div class="card">
+          <h4>Imports</h4>
+          <ul>
+            <li><span class="mono">Sign_Domain</span> — sign abstract values and transfer functions</li>
+            <li><span class="mono">IMP2_to_CFG</span> — <code>to_cfg</code>, <code>compile</code></li>
+            <li><span class="mono">TD_Interface</span> — <code>td_analyse</code>, <code>make_rhs_tree</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <h4>What it demonstrates</h4>
+      <ul>
+        <li><strong>Type-checked pipeline stack</strong> — <code>term</code> for <code>td_analyse</code> and <code>make_rhs_tree</code> on the real sign domain (same API as proofs).</li>
+        <li><strong>CFG inspection</strong> — <code>value</code> on <code>compile</code>, entry/exit program points, and edge sets.</li>
+        <li><strong>Transfer-function spot checks</strong> — <code>aval_sign</code>, <code>assign_sign</code> on small states.</li>
+        <li><strong>Executable TD solve</strong> — projects <code>sign abs_state</code> to datatype <code>ss</code> (pair) so the AFP refined solver can compare answers; hand-built strategy trees mirror the CFG; <code>TD_plain_Interp_solve</code> at exit and entry.</li>
+      </ul>
+
+      <p class="fg-dim" style="color: var(--fg-mute); font-size: 0.92rem;">
+        Note: full <code>value</code> on arbitrary <code>vname ⇒ sign</code> maps is not generated — Isabelle lacks executable equality on function types. The pair encoding is the standard workaround (see theory header).
+      </p>
+
+      <p>Source: <code>src/Examples/Example_Sign_Analysis.thy</code></p>
+    </section>
+
+    <section class="stage" id="example-interval">
+      <h2><span class="badge">02</span>Example_Interval_Analysis</h2>
+      <p class="lede">Interval analysis on the same toy program as the sign example.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Program</h4>
+<pre><code>x := 5;
+y := x + x</code></pre>
+          <p>Expected: <code>x ∈ [5,5]</code>, <code>y ∈ [10,10]</code> at exit.</p>
+        </div>
+        <div class="card">
+          <h4>Imports</h4>
+          <ul>
+            <li><span class="mono">Interval_Domain</span> — interval lattice and <code>ivl_tf</code></li>
+            <li><span class="mono">IMP2_to_CFG</span></li>
+            <li><span class="mono">TD_Interface</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <h4>What it demonstrates</h4>
+      <ul>
+        <li><strong>Interval transfer spot checks</strong> — <code>aval_ivl</code>, <code>assign_ivl</code> yielding singleton intervals where precision allows.</li>
+        <li><strong>Same pipeline wiring</strong> — <code>term</code> for <code>td_analyse</code> with <code>ivl_tf</code> and interval join/bot/init.</li>
+        <li><strong>Executable solve on <code>iss</code></strong> — pair type <code>iss</code> with order/bot instances, strategy trees, and <code>TD_plain_Interp_solve</code> (parallel structure to the sign example).</li>
+      </ul>
+
+      <p>Source: <code>src/Examples/Example_Interval_Analysis.thy</code></p>
+    </section>
+
+    <section class="stage" id="example-cfg-collecting">
+      <h2><span class="badge">03</span>Example_CFG_Collecting_Equiv</h2>
+      <p class="lede">CFG collecting semantics on a concrete terminating program.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Program</h4>
+<pre><code>x := 5;
+y := x + 1</code></pre>
+          <p>Exit store: <code>{x ↦ 5, y ↦ 6}</code> from initial <code>λ_. 0</code>.</p>
+        </div>
+        <div class="card">
+          <h4>Imports</h4>
+          <ul>
+            <li><span class="mono">CFG_Runs_To_Bridge</span> — small-step ↔ <code>cfg_collect</code>, <code>runs_to_def</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <h4>What it demonstrates</h4>
+      <ul>
+        <li><strong>Operational → collecting bridge</strong> — small-step star to <code>SKIP</code>, then <code>small_step_runs_to</code> for <code>runs_to</code>.</li>
+        <li><strong>Exit membership in <code>cfg_collect</code></strong> — corollary that the final store lies in collecting semantics at <code>cfg_exit</code>.</li>
+        <li><strong>Compiled CFG shape</strong> — <code>value</code> on <code>to_cfg</code> (PP0–PP3 with assign/nop edges).</li>
+      </ul>
+
+      <p>
+        This is a sanity check on the CFG collecting layer used in the main soundness story
+        (<a href="../cfg/collecting/index.html">CFG collecting walkthrough</a>), not a separate proof obligation.
+      </p>
+
+      <p>Source: <code>src/Examples/Example_CFG_Collecting_Equiv.thy</code></p>
+    </section>
+
+    <section class="stage" id="example-graphviz">
+      <h2><span class="badge">04</span>Example_GraphViz</h2>
+      <p class="lede">Visual CFG dumps for small IMP2 programs.</p>
+
+      <div class="card">
+        <h4>Imports</h4>
+        <ul>
+          <li><span class="mono">CFG_GraphViz</span> — <code>to_graphviz</code> code generation</li>
+          <li><span class="mono">IMP2_to_CFG</span> — <code>to_cfg</code></li>
+        </ul>
+      </div>
+
+      <h4>What it demonstrates</h4>
+      <ul>
+        <li><strong>Four sample programs</strong> — straight-line, absolute-value <code>if</code>, countdown <code>while</code>, nested loop with branch.</li>
+        <li><strong>ML block output</strong> — <code>writeln_dot</code> prints DOT to the Isabelle output panel / build log; paste into any Graphviz renderer.</li>
+        <li><strong>Extensibility</strong> — add a <code>definition</code> and one <code>writeln_dot</code> line in the ML section at the bottom of the theory.</li>
+      </ul>
+
+      <p>Source: <code>src/Examples/Example_GraphViz.thy</code></p>
+    </section>
+
+    <section class="stage" id="example-nonterminating">
+      <h2><span class="badge">05</span>Example_NonTerminating_Safe</h2>
+      <p class="lede">Per-program-point soundness when the program never finishes.</p>
+
+      <div class="card">
+        <h4>Imports</h4>
+        <ul>
+          <li><span class="mono">Pipeline</span> — <code>pipeline_sound_runs_to</code>, <code>pipeline_sound_path</code>, <code>run_analysis</code></li>
+        </ul>
+      </div>
+
+      <h4>What it demonstrates</h4>
+      <ul>
+        <li>
+          <strong>Non-terminating run, vacuous exit soundness</strong> —
+          <code>x := 10; while True do skip</code>: proves no <code>runs_to</code>, so
+          <code>pipeline_sound_runs_to</code> conclusion is empty (premise never holds).
+        </li>
+        <li>
+          <strong>Path-based soundness still applies</strong> —
+          <code>nonterm_safe_at_every_pp</code> instantiates <code>pipeline_sound_path</code>
+          at every CFG-reachable program point (e.g. right after the assignment).
+        </li>
+        <li>
+          <strong>Diverging loop with state mutation</strong> —
+          <code>x := 0; while True do x := x + 1</code>: countably infinite reachable stores
+          at the loop body; exit-only theorem still vacuous; path theorem constrains abstract
+          states at interior points (domain-parametric).
+        </li>
+      </ul>
+
+      <p>
+        Connects to the pipeline narrative:
+        <a href="../pipeline/index.html#lemma-spine">soundness narrative</a> and
+        <code>pipeline_sound_path</code> in <code>src/Pipeline/Pipeline.thy</code>.
+      </p>
+
+      <p>Source: <code>src/Examples/Example_NonTerminating_Safe.thy</code></p>
+    </section>
+
+    <section class="stage" id="how-to-build">
+      <h2><span class="badge">⚙</span>How to build</h2>
+      <p class="lede">
+        From the repository root. Examples share session
+        <code>Goblint_Formalization</code> with the main theories; AFP and vendored TD paths
+        match the project default.
+      </p>
+
+      <h4>Full session (all theories including examples)</h4>
+<pre><code>isabelle build -v \
+  -d ~/afp/thys \
+  -d vendor/td-verification \
+  -D . \
+  Goblint_Formalization</code></pre>
+
+      <h4>Single example theory (faster incremental check)</h4>
+      <p>
+        Use <code>-e THEORY</code> to build only what is needed up to that theory name
+        (as listed in <code>ROOT</code>):
+      </p>
+<pre><code>isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
+  -e Example_Sign_Analysis Goblint_Formalization
+
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
+  -e Example_Interval_Analysis Goblint_Formalization
+
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
+  -e Example_CFG_Collecting_Equiv Goblint_Formalization
+
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
+  -e Example_GraphViz Goblint_Formalization
+
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
+  -e Example_NonTerminating_Safe Goblint_Formalization</code></pre>
+
+      <div class="callout">
+        <div class="label">Interactive development</div>
+        <p>
+          Open any example in jEdit / Isabelle/jEdit with session
+          <code>Goblint_Formalization</code> and run <code>value</code> / ML blocks locally.
+          <code>Example_GraphViz</code> prints DOT during build; sign/interval examples print
+          solver results in the output panel.
+        </p>
+      </div>
+
+      <p>
+        Session map: <code>src/Examples/README.md</code> · entry list:
+        <code>ROOT</code> (theories block, lines 16–22).
+      </p>
+    </section>
+
+    <section class="stage" id="related-links">
+      <h2><span class="badge">→</span>Related documentation</h2>
+      <p class="lede">Where examples sit relative to the verified pipeline and CFG layer.</p>
+
+      <table>
+        <thead>
+          <tr><th>Topic</th><th>Link</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>End-to-end pipeline (sign soundness)</td>
+            <td><a href="../pipeline/index.html">pipeline walkthrough</a></td>
+          </tr>
+          <tr>
+            <td>IMP syntax, CFG compile, <code>cfg_collect</code></td>
+            <td><a href="../imp2/index.html">IMP2</a> · <a href="../cfg/index.html">CFG</a> · <a href="../cfg/collecting/index.html">Collecting</a></td>
+          </tr>
+          <tr>
+            <td>Examples README (theory roles)</td>
+            <td><code>src/Examples/README.md</code></td>
+          </tr>
+          <tr>
+            <td>Proof phases &amp; sorry inventory</td>
+            <td><code>docs/PROOF_PHASES.md</code></td>
+          </tr>
+          <tr>
+            <td>Big-picture architecture</td>
+            <td><code>docs/PROOF_OVERVIEW.md</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Goblint Formalization · examples walkthrough ·
+      <a href="../pipeline/index.html">pipeline</a> ·
+      <a href="../cfg/collecting/index.html">Collecting</a> ·
+      <code>src/Examples/</code>
+    </footer>
+  </main>
+</div>
+
+<script src="../walkthrough.js"></script>
+</body>
+</html>

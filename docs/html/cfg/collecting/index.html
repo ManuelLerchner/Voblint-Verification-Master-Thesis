@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CFG Collecting Semantics Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../walkthrough.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>Sections</h1>
+    <ol>
+      <li><a href="#overview"><span class="num">∎</span>Overview</a></li>
+      <li><a href="#import-chain"><span class="num">1</span>Import chain</a></li>
+      <li><a href="#per-theory"><span class="num">2</span>Per-theory roles</a></li>
+      <li><a href="#spec-spine"><span class="num">3</span>Specification spine</a></li>
+      <li><a href="#small-step-bridge"><span class="num">4</span>Small-step bridge</a></li>
+      <li><a href="#downstream"><span class="num">5</span>Downstream</a></li>
+      <li><a href="#lemma-spine"><span class="num">★</span>Lemma spine</a></li>
+    </ol>
+    <p class="toc-crosslink"><a href="../../index.html">← Session map</a></p>
+    <p class="toc-crosslink"><a href="../index.html">← CFG core</a></p>
+    <p class="toc-crosslink"><a href="../../imp2/index.html">IMP2 layer</a></p>
+    <p class="toc-crosslink"><a href="../../pipeline/index.html">Pipeline walkthrough</a></p>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="tag">Goblint Formalization · CFG / Collecting</span>
+      <h1>CFG collecting semantics</h1>
+      <p>
+        Operational collecting specification on the compiled CFG: least fixpoint
+        <code>cfg_collect</code> at every program point, path-based characterisation
+        <code>cfg_edges_collect</code>, and exit projection <code>runs_to</code> with
+        small-step equivalence. Sources live in
+        <code>src/CFG/Collecting/</code>; import
+        <strong><code>CFG_Runs_To_Bridge</code></strong> for the full chain.
+      </p>
+      <div class="callout done" style="margin-top:20px">
+        <div class="label">Public entry</div>
+        <p>
+          There is <strong>no</strong> umbrella <code>CFG_Collecting.thy</code> (removed).
+          Session theories and downstream proofs import
+          <code>Goblint_Formalization.CFG_Runs_To_Bridge</code>, which re-exports the
+          five-theory chain below. Core graph and path infrastructure remain in
+          <code>src/CFG/</code> — see the <a href="../index.html">CFG core walkthrough</a>.
+        </p>
+      </div>
+    </header>
+
+    <!-- OVERVIEW -->
+    <section class="stage" id="overview">
+      <h2><span class="badge">∎</span>Overview</h2>
+      <p class="lede">
+        Given a compiled graph <code>g</code> and initial store set <code>S</code> at entry,
+        collecting semantics answers: <em>which stores can appear at program point</em>
+        <code>v</code> along some valid control-flow path?
+      </p>
+
+      <div class="grid-2">
+        <div class="def-card">
+          <h3>Fixpoint view (canonical)</h3>
+          <p>
+            <code>cfg_collect g S v</code> — least fixpoint of monotone transformer
+            <code>cfg_collect_F</code> over environments <code>cenv = pp ⇒ store set</code>.
+            Defined in <code>CFG_Edges_Collect.thy</code>.
+          </p>
+        </div>
+        <div class="def-card">
+          <h3>Path view (equivalent)</h3>
+          <p>
+            <code>cfg_edges_collect g S v</code> — union of
+            <code>edges_collect es S</code> over all entry-to-<code>v</code> labelled paths
+            <code>es</code>. Defined in <code>CFG_Collecting_Core.thy</code>; equality at
+            every <code>v</code> in <code>CFG_Path_Bridge.thy</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="label">Thesis sentence</div>
+        <p>
+          Analyzer soundness is stated against <strong><code>cfg_collect</code> at every
+          program point</strong>, not only at exit. The equation-system post-fixpoint
+          over-approximates that semantics pointwise; see
+          <a href="../../equations/index.html">equations layer</a> (<code>post_fixpoint_sound</code>)
+          (<code>post_fixpoint_sound</code>, <code>pipeline_invariant_sound</code>).
+          Terminating runs correspond to exit membership via
+          <code>runs_to</code>; partial and non-terminating behaviour is covered by the
+          path-based formulation without requiring a final store.
+        </p>
+      </div>
+
+      <div class="mermaid">
+flowchart TB
+  subgraph collect ["Collecting layer (src/CFG/Collecting/)"]
+    EC["CFG_Edges_Collect<br/>cfg_collect · edge_collect"]
+    CC["CFG_Collecting_Core<br/>cfg_edges_collect"]
+    CP["CFG_Compound_Paths<br/>Seq / If / While paths"]
+    PB["CFG_Path_Bridge<br/>cfg_collect = cfg_edges_collect"]
+    RT["CFG_Runs_To_Bridge<br/>runs_to · small_step"]
+    EC --> CC --> CP --> PB --> RT
+  end
+  subgraph core ["CFG core (src/CFG/)"]
+    PATH["CFG_Path · cfg_path"]
+    COMP["IMP2_to_CFG · to_cfg"]
+  end
+  COMP --> EC
+  PATH --> EC
+      </div>
+    </section>
+
+    <!-- IMPORT CHAIN -->
+    <section class="stage" id="import-chain">
+      <h2><span class="badge">01</span>Import chain</h2>
+      <p class="lede">
+        Theories must be imported in dependency order. Only
+        <code>CFG_Runs_To_Bridge</code> is intended as the public surface for consumers.
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>Order</th><th>Theory</th><th>Imports</th><th>Exports (main)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>CFG_Edges_Collect</code></td>
+            <td><code>IMP2_to_CFG</code>, <code>CFG_Path</code></td>
+            <td><code>edge_collect</code>, <code>edges_collect</code>, <code>collect_pp</code>, <code>cfg_collect_F</code>, <strong><code>cfg_collect</code></strong></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>CFG_Collecting_Core</code></td>
+            <td><code>CFG_Edges_Collect</code></td>
+            <td><strong><code>cfg_edges_collect</code></strong>, <code>cfg_collect_le_edges_collect</code></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>CFG_Compound_Paths</code></td>
+            <td><code>CFG_Collecting_Core</code></td>
+            <td>Seq / If / While path splits, <code>compile_*_0</code>, offset lemmas</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>CFG_Path_Bridge</code></td>
+            <td><code>CFG_Compound_Paths</code></td>
+            <td><strong><code>cfg_collect_eq_cfg_edges_collect</code></strong>, <code>compile_path_small_step</code></td>
+          </tr>
+          <tr class="key">
+            <td>5</td>
+            <td><code>CFG_Runs_To_Bridge</code></td>
+            <td><code>CFG_Path_Bridge</code></td>
+            <td><code>runs_to</code>, <code>runs_to_iff_small_step</code>, reverse small-step bridge</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="sub" style="margin-top:1rem">
+        Also imported by: <code>Goblint_Formalization</code>,
+        <code>Constraint_System_Sound</code>, <code>TD_Interface</code>,
+        <code>Example_CFG_Collecting_Equiv</code>.
+      </p>
+
+      <div class="mermaid">
+flowchart LR
+  EC["Edges_Collect"] --> CC["Collecting_Core"]
+  CC --> CP["Compound_Paths"]
+  CP --> PB["Path_Bridge"]
+  PB --> RT["Runs_To_Bridge"]
+      </div>
+    </section>
+
+    <!-- PER-THEORY -->
+    <section class="stage" id="per-theory">
+      <h2><span class="badge">02</span>Per-theory roles</h2>
+      <p class="lede">What each file contributes to the proof library.</p>
+
+      <div class="def-card">
+        <h3><code>CFG_Edges_Collect.thy</code> — fixpoint engine</h3>
+        <p>Per-edge transfer on store sets and the collecting fixpoint.</p>
+        <table>
+          <thead><tr><th>Action</th><th><code>edge_collect a S</code></th></tr></thead>
+          <tbody>
+            <tr><td><code>EA_Nop</code></td><td><code>S</code></td></tr>
+            <tr><td><code>EA_Assign x a</code></td><td><code>{s(x := aval a s) | s ∈ S}</code></td></tr>
+            <tr><td><code>EA_Assume b</code></td><td>filter <code>bval b s</code></td></tr>
+            <tr><td><code>EA_AssumeNot b</code></td><td>filter <code>¬ bval b s</code></td></tr>
+          </tbody>
+        </table>
+<pre><code>edges_collect es S     -- fold edge_collect along labelled path es
+
+collect_pp g ρ v = ⋃ { edge_collect a (ρ u) | (u,a,v) ∈ edges g }
+
+cfg_collect_F g S ρ v =
+  if v = cfg_entry g then S ∪ collect_pp g ρ v
+  else collect_pp g ρ v
+
+cfg_collect g S = lfp (cfg_collect_F g S)</code></pre>
+        <p>Monotonicity lemmas (<code>collect_pp_mono</code>, <code>cfg_collect_F_mono</code>,
+          <code>cfg_collect_lfp_unfold</code>, <code>cfg_collect_mono_S</code>) justify
+          <code>lfp</code> and downstream soundness transfers.</p>
+      </div>
+
+      <div class="def-card">
+        <h3><code>CFG_Collecting_Core.thy</code> — path union before compound splitting</h3>
+<pre><code>cfg_edges_collect g S v =
+  ⋃ { edges_collect es S | es. cfg_path g (cfg_entry g) es v }</code></pre>
+        <p>
+          One-step extension <code>cfg_edges_collect_step</code> and post-fixpoint
+          <code>cfg_edges_collect_post</code> show the path collector sits above
+          <code>cfg_collect_F</code>. Lemma <code>cfg_collect_le_edges_collect</code>:
+          fixpoint ⊆ path side (first half of the equivalence proof).
+        </p>
+      </div>
+
+      <div class="def-card">
+        <h3><code>CFG_Compound_Paths.thy</code> — bureaucratic path algebra</h3>
+        <p>
+          Large library for paths through compiled <code>Seq</code>, <code>If</code>,
+          <code>While</code>: splitting (<code>cfg_path_Seq_split</code>,
+          <code>cfg_path_If_split</code>, <code>cfg_path_While_loop_peel</code>),
+          offset shifting (<code>edges_collect_offset_path</code>), and
+          <code>compile_Seq_0</code> / <code>compile_If_0</code> / <code>compile_While_0</code>
+          for case splits on <code>to_cfg c</code>.
+        </p>
+      </div>
+
+      <div class="def-card">
+        <h3><code>CFG_Path_Bridge.thy</code> — lfp ↔ paths ↔ small-step (forward)</h3>
+        <ul class="lemma-list">
+          <li><span class="name">cfg_collect_step</span>, <span class="name">path_sound_cfg_collect</span> — push stores along paths inside the fixpoint.</li>
+          <li><span class="name key">cfg_collect_eq_cfg_edges_collect</span> — <strong>at every <code>v</code></strong>, not just exit.</li>
+          <li><span class="name">compile_path_small_step</span> — path + membership ⇒ <code>(c,s) →* (SKIP,t)</code>.</li>
+        </ul>
+      </div>
+
+      <div class="def-card">
+        <h3><code>CFG_Runs_To_Bridge.thy</code> — public entry, exit sugar, reverse bridge</h3>
+        <p>
+          File header documents the intended import surface. Defines
+          <code>runs_to</code> and proves small-step biconditional plus command-structure
+          elimination lemmas used when relating paths to IMP execution.
+        </p>
+      </div>
+    </section>
+
+    <!-- SPEC SPINE -->
+    <section class="stage" id="spec-spine">
+      <h2><span class="badge">03</span>Specification spine</h2>
+      <p class="lede">Three equivalent ways to read “what stores are possible?” — one canonical for soundness.</p>
+
+      <div class="mermaid">
+flowchart LR
+  LFP["cfg_collect g S v<br/>(lfp · every pp)"]
+  PATH["cfg_edges_collect g S v<br/>(paths · every pp)"]
+  EXIT["runs_to c s t<br/>(exit sugar)"]
+  SS["(c,s) →* (SKIP,t)<br/>(small-step)"]
+  LFP <-->|"cfg_collect_eq_cfg_edges_collect"| PATH
+  EXIT -->|"runs_to_def"| LFP
+  EXIT <-->|"runs_to_iff_small_step"| SS
+  PATH -.->|"at cfg_exit only"| EXIT
+      </div>
+
+      <div class="lemma-stmt key">
+        <div class="lemma-head">
+          <span class="lemma-id">CANONICAL</span>
+          <span class="lemma-title">cfg_collect at every program point</span>
+          <span class="pill key">soundness</span>
+        </div>
+        <pre class="lemma-body">cfg_collect g S v    -- cenv = pp ⇒ store set;  v ranges over all pp in g</pre>
+        <p class="lemma-note">
+          Pipeline invariant (<code>pipeline_invariant_sound</code>):
+          <code>cfg_collect (to_cfg c) {s} v ⊆ γ_state (run_analysis … v)</code>
+          for all <code>v</code>. Constraint-system soundness
+          (<code>post_fixpoint_sound</code>) is proved against this formulation via
+          <code>cfg_collect_F</code> / <code>collect_pp</code>.
+        </p>
+      </div>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head">
+          <span class="lemma-id">CFG_Path_Bridge.thy</span>
+          <span class="lemma-title">cfg_collect_eq_cfg_edges_collect</span>
+        </div>
+        <pre class="lemma-body">cfg_collect g S v = cfg_edges_collect g S v</pre>
+        <p class="lemma-note">
+          Bridges the fixpoint used in equation soundness to the path union used in
+          small-step and compound-command proofs. Comment in theory notes both sides are
+          needed: pipeline states invariant in lfp form; small-step bridge talks CFG paths.
+        </p>
+      </div>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head">
+          <span class="lemma-id">CFG_Runs_To_Bridge.thy</span>
+          <span class="lemma-title">runs_to_def</span>
+        </div>
+        <pre class="lemma-body">runs_to c s t ⟷ t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))</pre>
+        <p class="lemma-note">
+          <strong>Definitional abbreviation</strong> — not a second operational semantics.
+          Text in theory: exit membership in <code>cfg_collect</code>, packaged for
+          source-level consumers (<code>sign_pipeline_sound</code>, examples).
+        </p>
+      </div>
+    </section>
+
+    <!-- SMALL-STEP BRIDGE -->
+    <section class="stage" id="small-step-bridge">
+      <h2><span class="badge">04</span>Small-step bridge</h2>
+      <p class="lede">Link exit collecting to IMP2 small-step termination to <code>SKIP</code>.</p>
+
+      <div class="lemma-stmt key">
+        <div class="lemma-head">
+          <span class="lemma-id">THEOREM</span>
+          <span class="lemma-title">runs_to_iff_small_step</span>
+          <span class="pill key">biconditional</span>
+        </div>
+        <pre class="lemma-body">runs_to c s t ⟷ (c, s) →* (SKIP, t)</pre>
+        <p class="lemma-note">
+          Combined from <code>runs_to_small_step</code> (forward) and
+          <code>small_step_runs_to</code> (reverse). Forward direction typically chains
+          <code>cfg_collect_eq_cfg_edges_collect</code> with path membership and
+          <code>compile_path_small_step</code>; reverse builds a CFG path from small-step
+          execution (large command-case library in this file).
+        </p>
+      </div>
+
+      <div class="callout">
+        <div class="label">Proof flow (exit)</div>
+        <ul>
+          <li><strong>runs_to → small-step:</strong> unfold <code>runs_to_def</code>, rewrite with path equality, extract path from <code>cfg_edges_collect</code>, apply <code>compile_path_small_step</code>.</li>
+          <li><strong>small-step → runs_to:</strong> induction on <code>(c,s) →* (SKIP,t)</code>; construct <code>cfg_path</code> and show store in <code>edges_collect</code>; lift to <code>cfg_collect</code> at exit.</li>
+        </ul>
+      </div>
+
+      <div class="mermaid">
+sequenceDiagram
+  participant SS as small_step
+  participant RT as runs_to
+  participant CC as cfg_collect exit
+  participant CE as cfg_edges_collect exit
+  SS->>RT: small_step_runs_to
+  RT->>CC: runs_to_def
+  CC->>CE: cfg_collect_eq_cfg_edges_collect
+  CE->>SS: compile_path_small_step
+      </div>
+
+      <p>
+        Partial / non-terminating programs: soundness at interior points does not require
+        <code>runs_to</code> or reachability of <code>SKIP</code>. The path predicate
+        <code>cfg_path</code> covers any finite prefix of execution visible at some
+        <code>v</code>.
+      </p>
+    </section>
+
+    <!-- DOWNSTREAM -->
+    <section class="stage" id="downstream">
+      <h2><span class="badge">05</span>Downstream</h2>
+      <p class="lede">How collecting semantics feeds the analyzer soundness chain.</p>
+
+      <div class="def-card">
+        <h3><code>Equations/Constraint_System_Sound.thy</code></h3>
+        <p>Imports <code>CFG_Runs_To_Bridge</code>. Main results:</p>
+        <ul class="lemma-list">
+          <li><span class="name key">post_fixpoint_sound</span> — any abstract post-fixpoint <code>env</code> pointwise over-approximates <code>cfg_collect g S</code> at <strong>every</strong> <code>v</code>.</li>
+          <li><span class="name">exit_sound</span> — corollary at <code>cfg_exit</code>; concrete store in <code>γ_state (env exit)</code>.</li>
+        </ul>
+<pre><code>-- strategy (from theory header):
+-- 1. post-fixpoint characterization
+-- 2. show cfg_collect_F (γ ∘ env) ≤ γ ∘ env  →  lfp ≤ γ ∘ env
+-- 3. conclude concrete membership at each v</code></pre>
+      </div>
+
+      <div class="def-card">
+        <h3><code>Pipeline/Pipeline.thy</code></h3>
+        <ul class="lemma-list">
+          <li><span class="name key">pipeline_invariant_sound</span> — end-to-end: TD solver result ⊇ <code>cfg_collect</code> at every <code>v</code>.</li>
+          <li><span class="name">sign_pipeline_sound</span> / <span class="name">sign_pipeline_invariant_sound</span> — sign-domain instances.</li>
+        </ul>
+        <p>
+          Full composition diagram:
+          <a href="../../pipeline/index.html">pipeline walkthrough</a>.
+        </p>
+      </div>
+
+      <div class="mermaid">
+flowchart LR
+  CC["cfg_collect<br/>(every pp)"]
+  CS["Constraint_System<br/>post-fixpoint"]
+  TD["TD solver"]
+  PL["Pipeline.thy"]
+  CC --> CS
+  CS --> TD
+  TD --> PL
+      </div>
+    </section>
+
+    <!-- LEMMA SPINE -->
+    <section class="stage" id="lemma-spine">
+      <h2><span class="badge">★</span>Lemma spine</h2>
+      <p class="lede">Dependency-ordered milestones inside <code>src/CFG/Collecting/</code>.</p>
+
+      <table>
+        <thead>
+          <tr><th>Stage</th><th>Lemma</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Monotonicity</td><td><code>cfg_collect_F_mono</code>, <code>cfg_collect_lfp_unfold</code></td><td>Well-defined <code>lfp</code></td></tr>
+          <tr><td>Path ⊆ lfp</td><td><code>cfg_edges_collect_post</code>, <code>cfg_collect_le_edges_collect</code></td><td>Path collector is above <code>cfg_collect_F</code></td></tr>
+          <tr><td>lfp ⊆ path</td><td><code>cfg_collect_step</code>, <code>path_sound_cfg_collect</code></td><td>Stores along paths stay inside fixpoint</td></tr>
+          <tr class="key"><td>Equivalence</td><td><code>cfg_collect_eq_cfg_edges_collect</code></td><td>lfp = path union at all <code>v</code></td></tr>
+          <tr><td>Forward SS</td><td><code>compile_path_small_step</code></td><td>CFG path ⇒ small-step</td></tr>
+          <tr><td>Exit def</td><td><code>runs_to_def</code>, <code>runs_toD</code></td><td>Package exit membership</td></tr>
+          <tr class="key"><td>Exit ↔ SS</td><td><code>runs_to_iff_small_step</code></td><td>Operational link for consumers</td></tr>
+          <tr><td>Abstract sound</td><td><code>post_fixpoint_sound</code> (Equations)</td><td>env ⊇ <code>cfg_collect</code></td></tr>
+          <tr class="key"><td>End-to-end</td><td><code>pipeline_invariant_sound</code> (Pipeline)</td><td>Analysis ⊇ <code>cfg_collect</code></td></tr>
+        </tbody>
+      </table>
+
+      <h4>Compound paths (selected, <code>CFG_Compound_Paths.thy</code>)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">cfg_path_Seq_split</span>, <span class="name">cfg_path_If_iff</span>, <span class="name">cfg_path_While_exit_iff</span></li>
+        <li><span class="name">to_cfg_compile</span> — <code>CFG_Compound_Paths.thy</code></li>
+        <li><span class="name">edges_collect_offset_path</span> — <code>CFG_Edges_Collect.thy</code> (offsets invisible to <code>edges_collect</code>)</li>
+      </ul>
+
+      <h4>Related (outside Collecting/)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">cfg_path</span>, <span class="name">cfg_path_append</span>, <span class="name">offset_path</span> — <a href="../index.html">CFG core</a> (<code>CFG_Path.thy</code>).</li>
+        <li><span class="name">to_cfg</span>, compile lemmas — <code>IMP2_to_CFG.thy</code>.</li>
+      </ul>
+    </section>
+
+    <footer class="page-footer">
+      <p>
+        Source of truth: <code>src/CFG/Collecting/README.md</code> and the
+        <code>.thy</code> files. Live <code>sorry</code> inventory:
+        <code>rg -n '^\s*sorry' src/</code>.
+      </p>
+    </footer>
+  </main>
+</div>
+<script src="../../walkthrough.js"></script>
+</body>
+</html>

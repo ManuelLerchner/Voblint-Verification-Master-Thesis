@@ -173,6 +173,11 @@ provided `Makefile` targets:
 - `make jedit`: launches Isabelle/jEdit with the correct session roots
   pre-loaded.
 
+- `make html`: builds browser info (`-o browser_info`) and copies it to
+  `docs/html/isabelle/index.html` for offline browsing (same mechanism as the
+  [Isabelle library HTML pages](https://stackoverflow.com/questions/17833567/how-to-generate-html-version-of-isabelle-theory);
+  see `docs/html/README.md`).
+
 - `make clean-vendor`: removes `vendor/td-verification/` (re-fetched on next
   `make vendor`).
 
@@ -238,9 +243,8 @@ Documentation
 | `docs/HOL_IMP_COMPARISON.md`   | vs HOL-IMP `Abs_*`: workflow, domain theory tradeoffs   |
 | `docs/PROOF_OVERVIEW.md`       | Theorem chain, key types and lemmas                     |
 | `docs/PROOF_PHASES.md`         | Proof status, sorry inventory, remaining work           |
-| `docs/PIPELINE_WALKTHROUGH.md` | Stage-by-stage walkthrough with examples                |
-| `docs/PROOF_SIMPLIFICATION.md` | CFG_Collecting refactor playbook (optional maintenance) |
-| `docs/html/`                   | HTML renderings of the walkthroughs (may lag `.md`)     |
+| `docs/html/`                   | Per-layer HTML walkthroughs (`docs/html/index.html` hub) |
+| `docs/html/`                   | Per-layer HTML walkthroughs (`index.html` hub; may lag `.md`) |
 
 Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./scripts/setup.sh`, `./scripts/start-ir.sh`.
 

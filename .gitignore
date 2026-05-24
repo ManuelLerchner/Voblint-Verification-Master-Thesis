@@ -3,6 +3,7 @@
 
 # Isabelle
 .isabelle/
+docs/html/isabelle/
 *.thy#
 *.thy~
 

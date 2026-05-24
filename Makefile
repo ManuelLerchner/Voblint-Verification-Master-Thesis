@@ -1,6 +1,9 @@
 ISABELLE        ?= isabelle
 AFP             ?= $(HOME)/afp/thys
 SESSION         := Goblint_Formalization
+ISABELLE_HOME_USER ?= $(shell $(ISABELLE) getenv -b ISABELLE_HOME_USER 2>/dev/null)
+BROWSER_INFO_SRC := $(ISABELLE_HOME_USER)/browser_info/Unsorted/$(SESSION)
+HTML_DIR        := docs/html/isabelle
 
 TD_DIR          := vendor/td-verification
 TD_PATCH        := vendor/td-verification.patch
@@ -8,7 +11,7 @@ TD_PATCH        := vendor/td-verification.patch
 AC_DIR          := vendor/autocorrode
 AC_PATCH        := vendor/autocorrode.patch
 
-.PHONY: all vendor build jedit clean clean-vendor update-autocorrode refresh-autocorrode-patch refresh-td-patch
+.PHONY: all vendor build html jedit clean clean-vendor update-autocorrode refresh-autocorrode-patch refresh-td-patch
 
 all: build
 
@@ -32,6 +35,19 @@ vendor:
 build: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
 	$(ISABELLE) build -d $(AFP) -d $(TD_DIR) -D . $(SESSION)
+
+# HTML browser info for all session theories (see Isabelle System Manual, browser_info).
+# Output is copied to $(HTML_DIR)/ for a repo-local entry point; Isabelle also keeps a
+# copy under $(BROWSER_INFO_SRC)/. See https://stackoverflow.com/questions/17833567/
+html: vendor
+	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
+	@test -n "$(ISABELLE_HOME_USER)" || { echo "ERROR: could not resolve ISABELLE_HOME_USER."; exit 1; }
+	$(ISABELLE) build -d $(AFP) -d $(TD_DIR) -D . -o browser_info -v $(SESSION)
+	@test -d "$(BROWSER_INFO_SRC)" || { echo "ERROR: browser_info missing at $(BROWSER_INFO_SRC)"; exit 1; }
+	rm -rf "$(HTML_DIR)"
+	mkdir -p "$(HTML_DIR)"
+	cp -R "$(BROWSER_INFO_SRC)/." "$(HTML_DIR)/"
+	@echo "Open $(HTML_DIR)/index.html (session theories; includes transitive imports)."
 
 # Launch jEdit with the right session roots loaded.
 jedit: vendor

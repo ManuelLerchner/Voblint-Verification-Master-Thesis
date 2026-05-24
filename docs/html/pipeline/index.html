@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>End-to-end pipeline — Goblint Formalization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../walkthrough.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>Pipeline</h1>
+    <ol>
+      <li><a href="#running-example"><span class="num">0</span>Running example</a></li>
+      <li><a href="#top-level-flow"><span class="num">→</span>Top-level flow</a></li>
+      <li><a href="#invariant-soundness"><span class="num">1</span>Invariant soundness</a></li>
+      <li><a href="#path-soundness"><span class="num">2</span>Path soundness</a></li>
+      <li><a href="#exit-corollaries"><span class="num">3</span>Exit corollaries</a></li>
+      <li><a href="#goblint-sign-sound"><span class="num">4</span>goblint_sign_sound</a></li>
+      <li><a href="#cross-links"><span class="num">↗</span>Layer walkthroughs</a></li>
+      <li><a href="#lemma-spine"><span class="num">★</span>Lemma spine</a></li>
+    </ol>
+    <h1 style="margin-top: 28px">Layers</h1>
+    <ol>
+      <li class="toc-crosslink"><a href="../index.html">Walkthrough hub</a></li>
+      <li class="toc-crosslink"><a href="../imp2/">IMP2 syntax &amp; small-step</a></li>
+      <li class="toc-crosslink"><a href="../cfg/">CFG core &amp; compilation</a></li>
+      <li class="toc-crosslink"><a href="../cfg/collecting/">CFG collecting &amp; runs_to</a></li>
+      <li class="toc-crosslink"><a href="../domains/">Abstract domains</a></li>
+      <li class="toc-crosslink"><a href="../equations/">Equation system</a></li>
+      <li class="toc-crosslink"><a href="../solver/">TD solver bridge</a></li>
+      <li class="toc-crosslink"><a href="../examples/">Executable examples</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="tag">Goblint Formalization · Main narrative</span>
+      <h1>End-to-end analyzer pipeline</h1>
+      <p>
+        How IMP2 source becomes a sound abstract result: compile to a CFG, build
+        constraint right-hand sides, run the vendored top-down solver, and show that
+        the post-fixpoint <em>γ</em>-concretization over-approximates
+        <code>cfg_collect</code> at <strong>every</strong> program point — not only at exit.
+        The collecting semantics is the specification; <code>runs_to</code> is exit sugar linked to
+        small-step termination.
+      </p>
+      <pre><code>x ::= N 1;;
+WHILE Less (N 0) (V x) DO
+  x ::= Plus (V x) (N (-1))</code></pre>
+      <p style="margin-top: 12px">
+        Initial store <code>s = (λ_. 0)</code>; small-step execution terminates with
+        <code>t x = 0</code>. The sign abstract exit for <code>x</code> must concretize to a set
+        containing <code>0</code> — the headline theorem <code>goblint_sign_sound</code> (closed).
+      </p>
+    </header>
+
+    <!-- RUNNING EXAMPLE -->
+    <section class="stage" id="running-example">
+      <h2><span class="badge">00</span>Running example</h2>
+      <p class="lede">
+        One program traced through the full chain. Operational reading uses
+        <code>small_step</code> (<code>(c,s) → … → (SKIP, t)</code>); the formal spec uses
+        <code>cfg_collect</code> and <code>runs_to</code>.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Program <code>c</code></h4>
+<pre><code>x ::= N 1;;
+WHILE Less (N 0) (V x) DO
+  x ::= Plus (V x) (N (-1))</code></pre>
+        </div>
+        <div class="card">
+          <h4>Concrete execution</h4>
+<pre><code>s = (λ_. 0)
+-- small_step star terminates -->
+t x = 0</code></pre>
+          <p>
+            <code>runs_to c s t</code> holds (definitional: membership in
+            <code>cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))</code>).
+            Bridge: <code>runs_to_iff_small_step</code> in
+            <code>CFG_Runs_To_Bridge.thy</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout done">
+        <div class="label">Target (sign, exit)</div>
+<pre><code>t ∈ sign_domain.gamma_state
+      (run_analysis (sign_analysis_config s) c
+         (cfg_exit (to_cfg c)))</code></pre>
+        <p>
+          So the abstract sign at exit for <code>x</code> is in
+          <code>{SZero, STop}</code> — its concretization contains <code>0</code>.
+          Proved as <code>goblint_sign_sound</code> via <code>sign_pipeline_sound</code>.
+        </p>
+      </div>
+
+      <h3>What the analyzer computes</h3>
+      <table>
+        <thead><tr><th>Stage</th><th>Artifact</th><th>On the example</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Compile</td>
+            <td class="mono">g = to_cfg c</td>
+            <td>Finite CFG with assign/assume edges for init and loop</td>
+          </tr>
+          <tr>
+            <td>Collect (spec)</td>
+            <td class="mono">cfg_collect g {s} v</td>
+            <td>At exit: stores with <code>x ↦ 0</code> (here a singleton)</td>
+          </tr>
+          <tr>
+            <td>Analyse</td>
+            <td class="mono">run_analysis (sign_analysis_config s) c v</td>
+            <td>Post-fixpoint env from <code>td_analyse</code> on <code>make_rhs_tree</code></td>
+          </tr>
+          <tr>
+            <td>Soundness</td>
+            <td class="mono">cfg_collect … v ⊆ γ(env v)</td>
+            <td>Every reachable <code>v</code>; exit is <code>v = cfg_exit g</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- TOP-LEVEL FLOW -->
+    <section class="stage" id="top-level-flow">
+      <h2><span class="badge">→</span>Top-level flow</h2>
+      <p class="lede">
+        Artifact pipeline and where the main theorems sit.
+        <strong>Sign end-to-end is closed</strong> (<code>goblint_sign_sound</code>).
+        Interval stretch may still carry <code>sorry</code> — see
+        <a href="../../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.
+        Big picture: <a href="../../PROOF_OVERVIEW.md"><code>docs/PROOF_OVERVIEW.md</code></a>.
+      </p>
+
+      <h3>Artifact flow</h3>
+      <div class="mermaid">
+flowchart LR
+  IMP2["IMP2<br/>com · small_step"]
+  CFG["CFG<br/>to_cfg · cfg_collect"]
+  EQ["Equations<br/>rhs · make_rhs_tree"]
+  TD["Solver<br/>td_analyse · TD_plain"]
+  GAM["Result<br/>γ ∘ run_analysis"]
+  IMP2 -->|to_cfg| CFG
+  CFG -->|rhs| EQ
+  EQ -->|td_analyse| TD
+  TD -->|gamma_state| GAM
+      </div>
+      <p>
+        <code>run_analysis cfg c v</code> is <code>td_analyse c (ac_tf cfg) … (ac_init cfg)</code>
+        specialised to an <code>analysis_config</code> (sign or interval).
+        Soundness compares <strong>CFG collecting</strong> to <strong>γ of the computed env</strong> —
+        not to a separate big-step semantics.
+      </p>
+
+      <h3>Specification vs analysis vs soundness</h3>
+      <div class="mermaid">
+flowchart TD
+  subgraph spec ["Specification"]
+    CC["cfg_collect / cfg_path"]
+    RT["runs_to (exit projection)"]
+    SS["small_step star to SKIP"]
+    SS ---|"runs_to_iff_small_step"| RT
+    RT ---|"runs_to_def"| CC
+  end
+  subgraph analysis ["Analysis"]
+    RHS["rhs / make_rhs_tree"]
+    TD["td_analyse"]
+    PFP["is_post_fixpoint"]
+    RHS --> TD --> PFP
+  end
+  subgraph sound ["Soundness (Pipeline.thy)"]
+    INV["pipeline_invariant_sound"]
+    PATH["pipeline_sound_path"]
+    EXIT["pipeline_sound_runs_to · sign_pipeline_sound"]
+    INV --> PATH
+    INV --> EXIT
+  end
+  CC --> PFP
+  PFP --> INV
+      </div>
+
+      <h3>Main theorems (quick map)</h3>
+      <table>
+        <thead><tr><th>Theorem</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">pipeline_invariant_sound</td>
+            <td>Canonical: ∀ reachable <code>v</code>, <code>cfg_collect … v ⊆ γ(run_analysis … v)</code></td>
+          </tr>
+          <tr>
+            <td class="mono">pipeline_sound_path</td>
+            <td>Along any <code>cfg_path</code>, stores in <code>edges_collect</code> are covered — <strong>no termination premise</strong></td>
+          </tr>
+          <tr>
+            <td class="mono">pipeline_sound_runs_to</td>
+            <td>Exit: <code>t ∈ cfg_collect … exit</code> ⇒ <code>t ∈ γ(env exit)</code></td>
+          </tr>
+          <tr>
+            <td class="mono">pipeline_sound_runs_to_runs</td>
+            <td>Same, premise <code>runs_to c s t</code> (unfold <code>runs_to_def</code>)</td>
+          </tr>
+          <tr>
+            <td class="mono">sign_pipeline_sound</td>
+            <td>Sign-domain exit corollary from <code>runs_to</code></td>
+          </tr>
+          <tr>
+            <td class="mono">goblint_sign_sound</td>
+            <td>Top-level thesis entry in <code>Goblint_Formalization.thy</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- INVARIANT SOUNDNESS -->
+    <section class="stage" id="invariant-soundness">
+      <h2><span class="badge">01</span>Invariant soundness</h2>
+      <p class="lede">
+        <code>pipeline_invariant_sound</code> in <code>src/Pipeline/Pipeline.thy</code> —
+        the primary end-to-end statement. Point-map soundness at <em>every</em> program point;
+        exit-only results are corollaries.
+      </p>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">pipeline_invariant_sound</span></div>
+        <div class="lemma-body">
+<pre><code>∀ v. cfg_collect (to_cfg c) {s} v
+      ≤ γ_state (run_analysis cfg c v)</code></pre>
+          <p>
+            Assumes a generic <code>analysis_config</code>:
+            <code>sound_domain (ac_gamma cfg)</code>,
+            <code>domain_transfer_sound</code> for edge transformers,
+            initial store in γ of <code>ac_init cfg</code>,
+            idempotent join (for <code>Finite_Set.fold</code>),
+            <code>join_eq</code> / <code>bot_eq</code> matching <code>ac_join</code> / <code>ac_bot</code>,
+            and TD solver hypotheses (<code>TD_plain.solve_dom</code>, <code>td_cfg_in_reach</code>).
+          </p>
+        </div>
+      </div>
+
+      <h3>Proof spine (inside the lemma)</h3>
+      <div class="chain">
+        (1) <b>td_analyse_post_fixpoint</b> — vendored TD yields <code>is_post_fixpoint</code> on <code>to_cfg c</code><br>
+        (2) <b>post_fixpoint_sound</b> — post-fixpoint ⊆ γ ∘ env at every <code>v</code> w.r.t. <code>cfg_collect</code><br>
+        (3) Pointwise transfer soundness + monotone <code>rhs</code> (packaged in <code>domain_transfer_sound</code>)
+      </div>
+
+      <ul class="lemma-list">
+        <li><span class="name">td_analyse_post_fixpoint</span> <span class="pill">TD_Interface.thy</span> solver output is a post-fixpoint of the constraint system.</li>
+        <li class="key"><span class="name key">post_fixpoint_sound</span> <span class="pill key">Constraint_System_Sound.thy</span> post-fixpoint over-approximates <code>cfg_collect</code>.</li>
+        <li><span class="name">sign_pipeline_invariant_sound</span> sign instantiation of the invariant (same file).</li>
+      </ul>
+
+      <div class="callout">
+        <div class="label">Design choice</div>
+        <p>
+          Earlier AST-only exit annotations cannot express assignment soundness in general.
+          The CFG + post-fixpoint story is the main theorem; see
+          <code>docs/PROOF_OVERVIEW.md</code> (“Why not AST annotations”).
+        </p>
+      </div>
+    </section>
+
+    <!-- PATH SOUNDNESS -->
+    <section class="stage" id="path-soundness">
+      <h2><span class="badge">02</span>Path soundness</h2>
+      <p class="lede">
+        <code>pipeline_sound_path</code> — soundness along any CFG path, including non-terminating
+        programs at intermediate points (<code>Example_NonTerminating_Safe.thy</code>).
+      </p>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">pipeline_sound_path</span></div>
+        <div class="lemma-body">
+<pre><code>cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v
+⟹ t ∈ edges_collect es {s}
+⟹ t ∈ γ_state (run_analysis cfg c v)</code></pre>
+          <p>
+            Direct consequence of <code>pipeline_invariant_sound</code> and
+            <code>path_sound_cfg_collect</code> (<code>CFG_Path_Bridge.thy</code>):
+            path-collected stores sit inside <code>cfg_collect</code> at <code>v</code>.
+          </p>
+        </div>
+      </div>
+
+      <h3>Path infrastructure</h3>
+      <table>
+        <thead><tr><th>Concept</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">cfg_path</td><td><code>CFG_Path.thy</code> — paths carry <code>edge_action</code> lists</td></tr>
+          <tr><td class="mono">edges_collect</td><td>Fold of <code>edge_collect</code> along actions</td></tr>
+          <tr><td class="mono">cfg_collect_eq_cfg_edges_collect</td><td>Links LFP <code>cfg_collect</code> to path-shaped collecting</td></tr>
+          <tr><td class="mono">path_sound_cfg_collect</td><td>Path stores ⊆ <code>cfg_collect</code> at destination <code>v</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout done">
+        <div class="label">Non-termination</div>
+        <p>
+          If a loop never exits, <code>runs_to</code> gives no conclusion — but
+          <code>pipeline_sound_path</code> still bounds stores reachable <em>inside</em> the loop
+          (e.g. <code>x = 10</code> after <code>x := 10; while True do skip</code>).
+        </p>
+      </div>
+    </section>
+
+    <!-- EXIT COROLLARIES -->
+    <section class="stage" id="exit-corollaries">
+      <h2><span class="badge">03</span>Exit corollaries</h2>
+      <p class="lede">
+        For consumers that want “program runs <code>s</code> to <code>t</code>” wording:
+        specialize the invariant to <code>v = cfg_exit (to_cfg c)</code>.
+        Primary spec premise is membership in <code>cfg_collect</code> at exit, not a separate operational rule.
+      </p>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head"><span class="lemma-id">Def</span><span class="lemma-title">runs_to</span> <span class="pill">CFG_Runs_To_Bridge.thy</span></div>
+        <div class="lemma-body">
+<pre><code>runs_to c s t  ⟺
+  t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))</code></pre>
+          <p>Not a second semantics — exit projection of <code>cfg_collect</code>.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">pipeline_sound_runs_to</span></div>
+          <div class="lemma-body">
+<pre><code>t ∈ cfg_collect (to_cfg c) {s}
+      (cfg_exit (to_cfg c))
+⟹ t ∈ γ_state (run_analysis cfg c
+      (cfg_exit (to_cfg c)))</code></pre>
+          </div>
+        </div>
+        <div class="lemma-stmt">
+          <div class="lemma-head"><span class="lemma-id">Cor</span><span class="lemma-title">pipeline_sound_runs_to_runs</span></div>
+          <div class="lemma-body">
+<pre><code>runs_to c s t
+⟹ t ∈ γ_state (run_analysis cfg c
+      (cfg_exit (to_cfg c)))</code></pre>
+            <p>One-line unfold via <code>runs_to_def</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Operational link (terminating runs)</h3>
+      <ul class="lemma-list">
+        <li class="key"><span class="name key">runs_to_iff_small_step</span> <code>(c,s) →* (SKIP,t)</code> iff <code>runs_to c s t</code>.</li>
+        <li><span class="name">small_step_runs_to</span> forward: star to <code>SKIP</code> ⇒ <code>runs_to</code>.</li>
+        <li><span class="name">runs_to_small_step</span> reverse: <code>runs_to</code> ⇒ star to <code>SKIP</code>.</li>
+      </ul>
+      <p>
+        On the running example: prove termination with small-step rules in IMP2, then apply
+        exit corollaries — or use <code>cfg_collect</code> directly as the soundness premise.
+      </p>
+
+      <h3>Domain exit corollaries</h3>
+      <table>
+        <thead><tr><th>Lemma</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">sign_pipeline_sound</td><td>Closed (sign transfers + pipeline)</td></tr>
+          <tr><td class="mono">ivl_pipeline_sound</td><td>Interval TF lemmas closed; check <a href="../../PROOF_PHASES.md">PROOF_PHASES.md</a> for remaining sorries in stretch goals</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- GOBLINT SIGN SOUND -->
+    <section class="stage" id="goblint-sign-sound">
+      <h2><span class="badge">04</span>goblint_sign_sound</h2>
+      <p class="lede">
+        Top-level thesis entry point in <code>src/Goblint_Formalization.thy</code>.
+        Sign pipeline <strong>closed</strong> — instantiates generic pipeline lemmas with
+        <code>sign_analysis_config</code> and proved sign transfer functions.
+      </p>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">goblint_sign_sound</span> <span class="pill key">Goblint_Formalization.thy</span></div>
+        <div class="lemma-body">
+<pre><code>runs_to c s t
+⟹ TD_plain.solve_dom … (cfg_entry (to_cfg c))
+⟹ td_cfg_in_reach …
+⟹ comp_fun_idem join on sign abs_state
+⟹ t ∈ sign_domain.gamma_state
+      (run_analysis (sign_analysis_config s) c
+         (cfg_exit (to_cfg c)))</code></pre>
+          <p>Proof: <code>by (rule sign_pipeline_sound …)</code>.</p>
+        </div>
+      </div>
+
+      <h3>What is proved vs assumed</h3>
+      <table>
+        <thead><tr><th>Discharged in repo</th><th>Explicit TD hypotheses</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>
+              <code>sound_domain</code> for sign;
+              <code>sign_tf_sound</code> / <code>domain_transfer_sound</code>;
+              <code>s ∈ γ(ac_init (sign_analysis_config s))</code>;
+              <code>sign_pipeline_sound</code> → <code>sign_analysis_sound</code> → <code>td_solver_sound</code>
+            </td>
+            <td>
+              <code>comp_fun_idem (⊔)</code> on sign join;
+              <code>TD_plain.solve_dom</code> on the generated <code>make_rhs_tree</code>;
+              <code>td_cfg_in_reach</code> — every reachable unknown solved from entry
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        TD hypotheses are operational (“solver covers this CFG”), not gaps in
+        <code>post_fixpoint_sound</code>. See
+        <a href="../../PROOF_OVERVIEW.md#td-hypotheses-on-goblint_sign_sound">PROOF_OVERVIEW</a>.
+      </p>
+
+      <h3>End-to-end chain (sign, exit)</h3>
+      <div class="chain">
+        t ∈ cfg_collect (to_cfg c) {s} (cfg_exit …)     <em>— spec, or runs_to c s t</em><br>
+          ⊆ γ_state (env (cfg_exit …))                 <em>— post_fixpoint_sound + td_analyse_post_fixpoint</em><br>
+        env = td_analyse c sign_tf join bot init       <em>— TD_Interface + TD_plain</em><br>
+        ⇒ goblint_sign_sound
+      </div>
+
+      <div class="callout done">
+        <div class="label">Running example conclusion</div>
+        <p>
+          For <code>s = λ_. 0</code> and terminating <code>t</code> with <code>t x = 0</code>,
+          the sign analysis at exit puts <code>x</code> in <code>{SZero, STop}</code>, so
+          <code>0 ∈ γ_sign …</code> — matching the concrete final value.
+        </p>
+      </div>
+    </section>
+
+    <!-- CROSS-LINKS -->
+    <section class="stage" id="cross-links">
+      <h2><span class="badge">↗</span>Layer walkthroughs</h2>
+      <p class="lede">
+        Each layer has its own HTML page with definitions, lemmas, and layer-local examples.
+        This pipeline page is the glue; drill down for full detail.
+      </p>
+
+      <table>
+        <thead><tr><th>Layer</th><th>Walkthrough</th><th>Theory entry</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>IMP2</td>
+            <td><a href="../imp2/">imp2/</a></td>
+            <td class="mono">IMP2_Syntax · IMP2_SmallStep</td>
+          </tr>
+          <tr>
+            <td>CFG core</td>
+            <td><a href="../cfg/">cfg/</a></td>
+            <td class="mono">CFG_Def · IMP2_to_CFG · CFG_Path</td>
+          </tr>
+          <tr>
+            <td>CFG collecting</td>
+            <td><a href="../cfg/collecting/">cfg/collecting/</a></td>
+            <td class="mono">CFG_Collecting · CFG_Runs_To_Bridge</td>
+          </tr>
+          <tr>
+            <td>Domains</td>
+            <td><a href="../domains/">domains/</a></td>
+            <td class="mono">Abstract_Domain · Sign_Domain · Interval_Domain</td>
+          </tr>
+          <tr>
+            <td>Equations</td>
+            <td><a href="../equations/">equations/</a></td>
+            <td class="mono">Constraint_System · Constraint_System_Sound</td>
+          </tr>
+          <tr>
+            <td>Solver</td>
+            <td><a href="../solver/">solver/</a></td>
+            <td class="mono">TD_Interface · TD_Soundness</td>
+          </tr>
+          <tr>
+            <td>Examples</td>
+            <td><a href="../examples/">examples/</a></td>
+            <td class="mono">Example_Sign_Analysis · Example_NonTerminating_Safe</td>
+          </tr>
+          <tr>
+            <td>Pipeline (here)</td>
+            <td><a href="./">pipeline/</a></td>
+            <td class="mono">Pipeline.thy · Goblint_Formalization.thy</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Layer detail: <a href="../imp2/index.html">IMP2</a>,
+        <a href="../cfg/index.html">CFG</a>,
+        <a href="../cfg/collecting/index.html">Collecting</a>.
+        Proof status: <a href="../../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.
+      </p>
+    </section>
+
+    <!-- LEMMA SPINE -->
+    <section class="stage" id="lemma-spine">
+      <h2><span class="badge">★</span>Lemma spine</h2>
+      <p class="lede">
+        Dependency order from concrete semantics to <code>goblint_sign_sound</code>.
+        No <code>big_step</code> in the soundness chain — collecting spec is
+        <code>cfg_collect</code>.
+      </p>
+
+      <div class="mermaid">
+flowchart TD
+  L1["IMP2 small-step<br/>small_step · runs_to_iff_small_step"]
+  L2["CFG collecting<br/>cfg_collect · cfg_path · path_sound_cfg_collect"]
+  L3["Abstract domain Sign<br/>gamma_sign · assign/assume_sign_sound"]
+  L4["Equations<br/>rhs_mono · post_fixpoint_sound"]
+  L5["Solver bridge<br/>make_rhs_tree · td_analyse_post_fixpoint"]
+  L6["Pipeline<br/>pipeline_invariant_sound · pipeline_sound_path"]
+  L7["Exit + sign<br/>pipeline_sound_runs_to · sign_pipeline_sound · goblint_sign_sound"]
+  L1 --> L2 --> L4
+  L3 --> L4
+  L4 --> L5 --> L6 --> L7
+      </div>
+
+      <table>
+        <thead><tr><th>Level</th><th>Key fact</th><th>Feeds pipeline</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>IMP2 operational</td>
+            <td><code>runs_to_iff_small_step</code> — human termination proofs</td>
+            <td>Premise <code>runs_to c s t</code> for exit corollaries</td>
+          </tr>
+          <tr>
+            <td>CFG collecting (spec)</td>
+            <td><code>cfg_collect</code> LFP; <code>cfg_collect_eq_cfg_edges_collect</code></td>
+            <td>Right-hand side of all soundness statements</td>
+          </tr>
+          <tr>
+            <td>Sign domain</td>
+            <td><code>sound_domain</code> + <code>domain_transfer_sound</code> for <code>sign_tf</code></td>
+            <td><code>post_fixpoint_sound</code> edge cases</td>
+          </tr>
+          <tr>
+            <td>Equations</td>
+            <td><code>is_post_fixpoint</code> ⇒ over-approximates <code>cfg_collect</code></td>
+            <td><code>pipeline_invariant_sound</code> core</td>
+          </tr>
+          <tr>
+            <td>TD solver</td>
+            <td><code>td_analyse</code> yields post-fixpoint on reachable tree</td>
+            <td>Connects analysis to equations</td>
+          </tr>
+          <tr>
+            <td>Pipeline</td>
+            <td>Point-map + path + exit theorems; sign closed at top</td>
+            <td><code>goblint_sign_sound</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Theorem reference (Pipeline.thy)</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Premise highlight</th><th>Conclusion</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">pipeline_invariant_sound</td>
+            <td>TD solves tree; domain sound</td>
+            <td>∀<code>v</code>. <code>cfg_collect ⊆ γ ∘ run_analysis</code></td>
+          </tr>
+          <tr>
+            <td class="mono">pipeline_sound_path</td>
+            <td><code>cfg_path</code> + <code>t ∈ edges_collect es {s}</code></td>
+            <td><code>t ∈ γ(run_analysis … v)</code></td>
+          </tr>
+          <tr>
+            <td class="mono">pipeline_sound_runs_to</td>
+            <td><code>t ∈ cfg_collect … exit</code></td>
+            <td><code>t ∈ γ … exit</code></td>
+          </tr>
+          <tr>
+            <td class="mono">pipeline_sound_runs_to_runs</td>
+            <td><code>runs_to c s t</code></td>
+            <td><code>t ∈ γ … exit</code></td>
+          </tr>
+          <tr>
+            <td class="mono">sign_pipeline_sound</td>
+            <td><code>runs_to</code> + sign config + TD hyps</td>
+            <td>sign <code>γ</code> at exit</td>
+          </tr>
+          <tr>
+            <td class="mono">goblint_sign_sound</td>
+            <td>same (exported)</td>
+            <td>thesis headline</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Goblint Formalization ·
+      <code>src/Pipeline/README.md</code> ·
+      <a href="../../PROOF_OVERVIEW.md">Proof overview</a> ·
+      <a href="../../PROOF_PHASES.md">Proof phases / sorry inventory</a> ·
+      <a href="../index.html">Walkthrough hub</a>
+    </footer>
+  </main>
+</div>
+
+<script src="../walkthrough.js"></script>
+</body>
+</html>

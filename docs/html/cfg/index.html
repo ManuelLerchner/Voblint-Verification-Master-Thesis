@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CFG Core Walkthrough — Graphs, Paths, Compilation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../walkthrough.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>Sections</h1>
+    <ol>
+      <li><a href="#overview"><span class="num">∎</span>Overview</a></li>
+      <li><a href="#cfg-record"><span class="num">1</span>CFG record</a></li>
+      <li><a href="#paths-offsets"><span class="num">2</span>Paths &amp; offsets</a></li>
+      <li><a href="#compilation"><span class="num">3</span>Compilation</a></li>
+      <li><a href="#graphviz"><span class="num">4</span>GraphViz</a></li>
+      <li><a href="#collecting-pointer"><span class="num">5</span>Collecting</a></li>
+      <li><a href="#lemma-spine"><span class="num">★</span>Lemma spine</a></li>
+    </ol>
+    <p class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></p>
+    <p class="toc-crosslink"><a href="collecting/index.html">CFG collecting semantics →</a></p>
+    <p class="toc-crosslink"><a href="../imp2/index.html">IMP2 layer</a></p>
+    <p class="toc-crosslink"><a href="../pipeline/index.html">Full pipeline</a></p>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="tag">Goblint Formalization · CFG core</span>
+      <h1>Control-flow graphs: definition, paths, compilation</h1>
+      <p>
+        The <code>src/CFG/</code> core layer (excluding collecting internals): programs as labelled graphs
+        over program points, structural compilation from IMP2, and path infrastructure with offset shifting
+        for nested subgraphs. Store folding and the small-step bridge live in
+        <a href="collecting/index.html"><code>Collecting/</code></a>.
+      </p>
+      <div class="callout done" style="margin-top:20px">
+        <div class="label">Scope of this page</div>
+        <p><strong>Theories:</strong> <code>CFG_Def</code>, <code>CFG_Path</code>, <code>IMP2_to_CFG</code>, <code>CFG_GraphViz</code>.
+          No <code>sorry</code> in these files. Downstream soundness uses
+          <code>cfg_path</code> + <code>edges_collect</code> (not a separate <code>path_collect</code>).</p>
+      </div>
+    </header>
+
+    <!-- OVERVIEW -->
+    <section class="stage" id="overview">
+      <h2><span class="badge">∎</span>Overview</h2>
+      <p class="lede">
+        IMP2 commands compile to a finite labelled graph; proofs reason about labelled paths
+        <code>cfg_path</code> from <code>cfg_entry</code> to any program point.
+      </p>
+
+      <div class="mermaid">
+flowchart LR
+  subgraph imp2 ["IMP2"]
+    C["com c"]
+  end
+  subgraph core ["CFG core (this page)"]
+    TC["to_cfg c"]
+    G["cfg: entry, exit, edges"]
+    P["cfg_path g u es v"]
+    C --> TC --> G --> P
+  end
+  subgraph coll ["Collecting/ (see sibling walkthrough)"]
+    EC["edges_collect on step lists"]
+    CC["cfg_collect fixpoint"]
+    P --> EC --> CC
+  end
+      </div>
+
+      <table>
+        <thead><tr><th>Theory</th><th>Delivers</th></tr></thead>
+        <tbody>
+          <tr><td><code>CFG_Def.thy</code></td><td><code>cfg</code>, <code>pp</code>, <code>edge_action</code>, <code>mk_cfg</code>, <code>offset_edges</code></td></tr>
+          <tr><td><code>CFG_Path.thy</code></td><td><code>cfg_path</code>, <code>offset_path</code>, <code>cfg_path_offset</code></td></tr>
+          <tr><td><code>IMP2_to_CFG.thy</code></td><td><code>compile</code>, <code>to_cfg</code>, freshness and offset lemmas</td></tr>
+          <tr><td><code>CFG_GraphViz.thy</code></td><td>DOT export for inspection (tooling, not on the proof critical path)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="label">Thesis hook</div>
+        <p>
+          Soundness is stated against <strong>CFG collecting semantics at every program point</strong>
+          (<code>cfg_collect</code> in <code>Collecting/</code>). The analyzer’s post-fixpoint soundly
+          over-approximates that semantics. The core layer supplies the graph and path vocabulary
+          the collecting and equation proofs share.
+        </p>
+      </div>
+    </section>
+
+    <!-- CFG RECORD -->
+    <section class="stage" id="cfg-record">
+      <h2><span class="badge">01</span>CFG record</h2>
+      <p class="lede"><code>src/CFG/CFG_Def.thy</code> — programs as directed graphs with labelled edges.</p>
+
+      <div class="def-card">
+        <h3>Program points</h3>
+        <p class="sub">type_synonym pp = nat</p>
+        <p>Fresh naturals allocated during <code>compile</code>. Each command’s subgraph occupies a disjoint interval
+          <code>[n, n')</code> of the counter.</p>
+      </div>
+
+      <div class="def-card">
+        <h3>Edge actions</h3>
+        <p class="sub">datatype edge_action</p>
+<pre><code>EA_Nop
+| EA_Assign   vname aexp    -- s(x := aval a s)
+| EA_Assume   bexp          -- keep states with bval b s
+| EA_AssumeNot bexp         -- keep states with ¬ bval b s</code></pre>
+        <p>Branching in <code>IF</code> / <code>WHILE</code> becomes assumption edges (store filters), not extra control-flow syntax.</p>
+      </div>
+
+      <div class="def-card">
+        <h3>CFG record (AFP graph extension)</h3>
+<pre><code>record cfg = "(pp, edge_action) graph" +
+  cfg_entry :: pp
+  cfg_exit  :: pp
+
+definition mk_cfg :: "pp => pp => (pp * edge_action * pp) set => cfg"
+  -- auto-computes nodes so valid_graph holds</code></pre>
+        <p>Selectors <code>nodes g</code> and <code>edges g</code> come from AFP
+          <code>Dijkstra_Shortest_Path.Graph</code>. Prefer <code>mk_cfg en ex E</code> over manual record construction.</p>
+      </div>
+
+      <h4>Derived API (selected)</h4>
+      <table>
+        <thead><tr><th>Name</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>cfg_entry g</code> / <code>cfg_exit g</code></td><td>Unique entry and exit program points.</td></tr>
+          <tr><td><code>edges g</code></td><td>Set of triples <code>(u, a, v)</code>: from <code>u</code> to <code>v</code> performing action <code>a</code>.</td></tr>
+          <tr><td><code>predecessors g v</code></td><td>Incoming labelled edges; finite when <code>edges g</code> is finite (<code>finite_predecessors</code>).</td></tr>
+          <tr><td><code>predecessor_list g v</code></td><td>Sorted list view for <code>Finite_Set.fold</code> in the equation system.</td></tr>
+          <tr><td><code>offset_edges k E</code></td><td>Affine shift: every endpoint in <code>E</code> is incremented by <code>k</code> (actions unchanged).</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Core lemmas</h4>
+      <ul class="lemma-list">
+        <li><span class="name">mk_cfg_valid_graph</span> — smart constructor yields a valid AFP graph.</li>
+        <li><span class="name">finite_predecessors</span> — enables finite joins in <code>Equations/</code>.</li>
+        <li><span class="name">offset_edges_Un</span>, <span class="name">in_offset_edges_iff</span> — algebraic laws for shifted edge sets.</li>
+      </ul>
+    </section>
+
+    <!-- PATHS & OFFSETS -->
+    <section class="stage" id="paths-offsets">
+      <h2><span class="badge">02</span>Paths &amp; offsets</h2>
+      <p class="lede"><code>src/CFG/CFG_Path.thy</code> — inductive labelled paths (FormalSSA-style library).</p>
+
+      <div class="def-card">
+        <h3><code>cfg_path g u es v</code></h3>
+        <p>There is a walk from <code>u</code> to <code>v</code> in <code>g</code>, recording each step as
+          <code>(edge_action, next_pp)</code> in list <code>es</code>.</p>
+<pre><code>inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool" where
+  empty: "cfg_path g v [] v"
+| step:  "(u, a, w) : edges g ==> cfg_path g w es v
+          ==> cfg_path g u ((a, w) # es) v"
+
+abbreviation cfg_reaches :: "cfg => pp => pp => bool"  ("_ |- _ -->* _")
+  -- exists es. cfg_path g u es v</code></pre>
+        <p>Edge actions are stored on the path because transfer-function composition (equation soundness and
+          <code>edges_collect</code> in Collecting/) must know which action fired at each step.</p>
+      </div>
+
+      <div class="mermaid">
+flowchart LR
+  u(("u"))
+  w(("w"))
+  v(("v"))
+  u -- "(a, w)" --> w
+  w -- "es …" --> v
+      </div>
+
+      <h4>Offset infrastructure</h4>
+      <p>When <code>compile c n</code> runs at <code>n &gt; 0</code>, the subgraph is the <code>n = 0</code> shape with all
+        program points shifted. Paths lift and lower through the same offset.</p>
+
+      <table>
+        <thead><tr><th>Definition</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>offset_path k es</code></td><td>Map each <code>(a, p)</code> to <code>(a, p + k)</code> in the step list.</td></tr>
+          <tr><td><code>unoffset_path k es</code></td><td>Inverse: strip <code>k</code> from every target pp in <code>es</code>.</td></tr>
+          <tr><td><code>offset_edges k E</code></td><td>Shift all edge endpoints in <code>E</code> (defined in <code>CFG_Def</code>).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head">
+          <span class="lemma-id">LEMMA</span>
+          <span class="lemma-title">cfg_path_offset</span>
+        </div>
+<pre class="lemma-body">cfg_path (mk_cfg ent ex E) u es v
+  ==> cfg_path (mk_cfg (ent + k) (ex + k) (offset_edges k E))
+              (u + k) (offset_path k es) (v + k)</pre>
+        <p class="lemma-note">Forward: paths in the unshifted subgraph lift to the compound graph built with
+          <code>offset_edges</code>. Used heavily in <code>Collecting/CFG_Compound_Paths.thy</code> for Seq / If / While.</p>
+      </div>
+
+      <div class="lemma-stmt">
+        <div class="lemma-head">
+          <span class="lemma-id">LEMMA</span>
+          <span class="lemma-title">cfg_path_offset_back</span>
+        </div>
+        <p class="lemma-note">Converse under <code>u, v ≥ k</code> and <code>edges G = offset_edges k E</code>:
+          a path through the shifted graph projects to a path in the source edge set via <code>unoffset_path</code>.</p>
+      </div>
+
+      <h4>Path algebra (selected)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">cfg_path_append</span> — concatenate step lists; backbone of compound-command proofs.</li>
+        <li><span class="name">cfg_reaches_trans</span> — reachability is transitive.</li>
+        <li><span class="name">cfg_path_split_last</span> — peel the final step (While loop reasoning).</li>
+        <li><span class="name">offset_path_append</span> — offsets commute with list append.</li>
+      </ul>
+    </section>
+
+    <!-- COMPILATION -->
+    <section class="stage" id="compilation">
+      <h2><span class="badge">03</span>Compilation</h2>
+      <p class="lede"><code>src/CFG/IMP2_to_CFG.thy</code> — structural translation with a fresh program-point counter.</p>
+
+      <div class="def-card">
+        <h3><code>compile c n</code> and <code>to_cfg c</code></h3>
+        <p class="sub">compile returns (n', entry, exit, edges)</p>
+        <ul>
+          <li><code>n</code> — first free pp id; all allocated ids lie in <code>[n, n')</code>.</li>
+          <li><code>entry</code>, <code>exit</code> — unique entry/exit of command <code>c</code>'s subgraph.</li>
+          <li><code>edges</code> — labelled edges for <code>c</code> only (glue edges at composition sites).</li>
+        </ul>
+<pre><code>definition to_cfg :: "com => cfg" where
+  "to_cfg c =
+     (let (_, en, ex, E) = compile c 0
+      in  mk_cfg en ex E)"</code></pre>
+        <p>Global entry/exit: <code>cfg_entry (to_cfg c)</code>, <code>cfg_exit (to_cfg c)</code>.</p>
+      </div>
+
+      <div class="mermaid">
+flowchart TD
+  subgraph skip ["SKIP"]
+    s0(("n")) -- EA_Nop --> s1(("n+1"))
+  end
+  subgraph assign ["x ::= a"]
+    a0(("n")) -- "EA_Assign x a" --> a1(("n+1"))
+  end
+  subgraph seq ["c1 ;; c2"]
+    e1["c1 entry"] --> x1["c1 …"] --> ex1["c1 exit"]
+    ex1 -- EA_Nop --> e2["c2 entry"] --> x2["c2 …"] --> ex2["c2 exit"]
+  end
+  subgraph ifc ["IF b THEN c1 ELSE c2"]
+    en(("entry"))
+    en -- "EA_Assume b" --> b1["c1"]
+    en -- "EA_AssumeNot b" --> b2["c2"]
+    b1 -- EA_Nop --> xn(("exit"))
+    b2 -- EA_Nop --> xn
+  end
+  subgraph wh ["WHILE b DO c"]
+    head(("head"))
+    head -- "EA_Assume b" --> body["body"]
+    body -- EA_Nop --> head
+    head -- "EA_AssumeNot b" --> ex(("exit"))
+  end
+      </div>
+
+      <h4>Compilation lemmas (proved)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">compile_fresh</span> — allocated nodes stay ≥ counter; disjoint subgraphs when composing.</li>
+        <li><span class="name">compile_ge</span> — counter monotone; supports induction on command size.</li>
+        <li><span class="name">compile_entry_ne_exit</span> — every command has distinct entry and exit.</li>
+        <li><span class="name">compile_finite</span>, <span class="name">to_cfg_finite</span> — finite edge sets for fixpoints and folds.</li>
+        <li><span class="name">compile_add_offset</span>, <span class="name">compile_from_0_offsets</span> —
+          <code>compile c (n + k)</code> is <code>compile c n</code> with pp and edges shifted by <code>offset_edges k</code>.</li>
+        <li><span class="name">to_cfg_compile</span> — exposes the quadruple behind <code>to_cfg c</code> for case splits.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="label">Nested compile at offset k &gt; 0</div>
+        <p>
+          Sub-commands compiled inside Seq / If / While appear as
+          <code>offset_edges k (edges (to_cfg c))</code> in the parent graph.
+          Path proofs combine <code>cfg_path_offset</code> with edge-set monotonicity lemmas in
+          <code>Collecting/CFG_Compound_Paths.thy</code> — not repeated here.
+        </p>
+      </div>
+    </section>
+
+    <!-- GRAPHVIZ -->
+    <section class="stage" id="graphviz">
+      <h2><span class="badge">04</span>GraphViz</h2>
+      <p class="lede"><code>src/CFG/CFG_GraphViz.thy</code> — pretty-print a <code>cfg</code> as Graphviz DOT (tooling only).</p>
+
+      <div class="def-card">
+        <h3>Interactive inspection</h3>
+        <p>Render compiled graphs in jEdit or paste DOT into an online viewer (e.g.
+          <a href="https://dreampuf.github.io/GraphvizOnline/" rel="noopener">GraphvizOnline</a>).</p>
+<pre><code>ML_val &lt;open&gt;CFG_GraphViz.writeln_dot (to_cfg my_program)&lt;close&gt;</code></pre>
+        <p>Concrete examples: <code>src/Examples/Example_GraphViz.thy</code>. Node labels use pp ids;
+          edge labels show <code>EA_Assign</code>, <code>EA_Assume</code>, etc., as strings.</p>
+      </div>
+
+      <p>This theory is <strong>not imported</strong> by collecting semantics, the equation system, or the pipeline
+        soundness chain — it exists to debug and communicate CFG shape.</p>
+    </section>
+
+    <!-- COLLECTING POINTER -->
+    <section class="stage" id="collecting-pointer">
+      <h2><span class="badge">05</span>Collecting pointer</h2>
+      <p class="lede">Store-level semantics on top of the core graph — documented separately.</p>
+
+      <p>
+        Path store folding is <strong><code>edges_collect</code></strong> in
+        <code>Collecting/CFG_Edges_Collect.thy</code>: fold <code>edge_collect</code> along a
+        <code>cfg_path</code> step list. The least fixpoint <code>cfg_collect</code> and the bridge to IMP2
+        small-step / big-step live under <code>src/CFG/Collecting/</code>.
+      </p>
+
+      <table>
+        <thead><tr><th>Want</th><th>Go to</th></tr></thead>
+        <tbody>
+          <tr><td>Full collecting walkthrough</td><td><a href="collecting/index.html"><code>collecting/index.html</code></a></td></tr>
+          <tr><td>Public import for the proved chain</td><td><code>CFG_Runs_To_Bridge.thy</code></td></tr>
+          <tr><td>Path ↔ fixpoint equivalence</td><td><code>CFG_Path_Bridge.thy</code> (<code>cfg_collect_eq_cfg_edges_collect</code>)</td></tr>
+          <tr><td>Exit projection <code>runs_to</code></td><td><code>CFG_Runs_To_Bridge.thy</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout done">
+        <div class="label">What stays on this page</div>
+        <ul>
+          <li>Graph shape: <code>to_cfg</code>, <code>cfg_entry</code>, <code>cfg_exit</code>, edge actions.</li>
+          <li>Path predicate: <code>cfg_path</code>, offsets: <code>offset_path</code>, <code>cfg_path_offset</code>, <code>offset_edges</code>.</li>
+          <li>What moves to Collecting/: <code>edge_collect</code>, <code>edges_collect</code>, <code>cfg_collect</code>, <code>runs_to</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- LEMMA SPINE -->
+    <section class="stage" id="lemma-spine">
+      <h2><span class="badge">★</span>Lemma spine</h2>
+      <p class="lede">Core CFG lemmas by file — all proved, no <code>sorry</code> in these theories.</p>
+
+      <table>
+        <thead><tr><th>File</th><th>Lemma</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td>CFG_Def</td><td><code>mk_cfg_valid_graph</code></td><td>Well-formed AFP graph from any edge set + endpoints.</td></tr>
+          <tr><td>CFG_Def</td><td><code>finite_predecessors</code></td><td>Finite incoming edges → finite <code>Finite_Set.fold</code> in eqsys.</td></tr>
+          <tr><td>CFG_Def</td><td><code>in_offset_edges_iff</code></td><td>Characterise membership in shifted edge sets.</td></tr>
+          <tr><td>CFG_Path</td><td><code>cfg_path_append</code></td><td>Glue path segments (Seq, branch joins, loop bodies).</td></tr>
+          <tr><td>CFG_Path</td><td><code>cfg_path_offset</code> / <code>cfg_path_offset_back</code></td><td>Paths commute with pp shifting for nested compile.</td></tr>
+          <tr><td>IMP2_to_CFG</td><td><code>compile_add_offset</code></td><td><code>compile c (n+k)</code> = shifted <code>compile c n</code>.</td></tr>
+          <tr><td>IMP2_to_CFG</td><td><code>to_cfg_finite</code></td><td>Compiled graphs have finite <code>edges</code>.</td></tr>
+          <tr><td><a href="collecting/index.html">Collecting</a></td><td><code>to_cfg_compile</code></td><td>Case-split <code>to_cfg c</code> (<code>CFG_Compound_Paths.thy</code>).</td></tr>
+          <tr><td>Collecting/</td><td><code>cfg_collect_eq_cfg_edges_collect</code></td><td>Fixpoint = path folding (see collecting walkthrough).</td></tr>
+          <tr><td>Collecting/</td><td><code>runs_to_iff_small_step</code></td><td>Exit reachability ↔ IMP2 small-step to <code>SKIP</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="label">Downstream</div>
+        <p>
+          <code>Equations/Constraint_System_Sound.thy</code> relates abstract post-fixpoints to
+          <code>cfg_collect</code> using the same <code>cfg_path</code> vocabulary.
+          End-to-end sign soundness: <a href="../pipeline/index.html">pipeline walkthrough</a>.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      Goblint Formalization · CFG core walkthrough ·
+      <a href="../index.html">hub</a> ·
+      <a href="collecting/index.html">collecting</a> ·
+      sources under <code>src/CFG/</code> (excluding <code>Collecting/</code> internals).
+    </footer>
+  </main>
+</div>
+
+<script src="../walkthrough.js"></script>
+</body>
+</html>

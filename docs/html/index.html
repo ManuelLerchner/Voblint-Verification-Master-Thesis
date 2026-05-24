@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Goblint Formalization — Documentation Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="walkthrough.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <h1>On this page</h1>
+    <ol>
+      <li><a href="#hub"><span class="num">◎</span>Overview</a></li>
+      <li><a href="#layers"><span class="num">§</span>Layer walkthroughs</a></li>
+      <li><a href="#flow"><span class="num">→</span>End-to-end flow</a></li>
+      <li><a href="#docs"><span class="num">∎</span>Markdown docs</a></li>
+    </ol>
+    <p class="toc-crosslink"><a href="pipeline/index.html">Main narrative: pipeline →</a></p>
+  </nav>
+
+  <main>
+    <header class="hero" id="hub">
+      <span class="tag">Goblint Formalization</span>
+      <h1>Verified static analysis pipeline</h1>
+      <p>
+        Interactive walkthroughs for each layer of the Isabelle/HOL formalization:
+        IMP2 source and small-step semantics, CFG compilation and collecting semantics,
+        abstract domains, equation systems, the vendored TD solver, and end-to-end
+        soundness (<code>goblint_sign_sound</code>).
+      </p>
+    </header>
+
+    <section class="stage" id="layers">
+      <h2><span class="badge">§</span>Layer walkthroughs</h2>
+      <p class="lede">One page per <code>src/</code> folder, aligned with the README in each directory.</p>
+
+      <div class="grid-2">
+        <a class="card card-link" href="pipeline/index.html">
+          <h4>Pipeline <span class="pill">start here</span></h4>
+          <p>Full story: running example, artifact flow, invariant / path / exit soundness, <code>goblint_sign_sound</code>.</p>
+        </a>
+        <a class="card card-link" href="imp2/index.html">
+          <h4>IMP2</h4>
+          <p>Syntax, <code>aval</code>/<code>bval</code>, small-step <code>→</code> / <code>→*</code>.</p>
+        </a>
+        <a class="card card-link" href="cfg/index.html">
+          <h4>CFG (core)</h4>
+          <p><code>to_cfg</code>, <code>cfg_path</code>, offsets, Graphviz.</p>
+        </a>
+        <a class="card card-link" href="cfg/collecting/index.html">
+          <h4>CFG Collecting</h4>
+          <p><code>cfg_collect</code>, paths, <code>runs_to</code>, small-step bridge.</p>
+        </a>
+        <a class="card card-link" href="domains/index.html">
+          <h4>Domains</h4>
+          <p>Locales, sign and interval lattices, transfer functions.</p>
+        </a>
+        <a class="card card-link" href="equations/index.html">
+          <h4>Equations</h4>
+          <p><code>rhs</code>, post-fixpoint, soundness vs collecting.</p>
+        </a>
+        <a class="card card-link" href="solver/index.html">
+          <h4>Solver (TD)</h4>
+          <p><code>td_analyse</code>, vendored TD session, domain instantiations.</p>
+        </a>
+        <a class="card card-link" href="examples/index.html">
+          <h4>Examples</h4>
+          <p>Executable demos and sanity checks off the proof spine.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="stage" id="flow">
+      <h2><span class="badge">→</span>End-to-end flow</h2>
+      <p class="lede">How the layers connect in the verified sign pipeline (collecting spec at every program point).</p>
+      <div class="mermaid">
+flowchart LR
+  IMP2["IMP2"] --> CFG["CFG"]
+  CFG --> COL["Collecting"]
+  COL --> EQ["Equations"]
+  DOM["Domains"] --> EQ
+  EQ --> TD["Solver"]
+  TD --> PL["Pipeline"]
+  PL -.-> EX["Examples<br/>(ROOT only)"]
+      </div>
+      <p class="muted">Sign end-to-end is closed (<code>goblint_sign_sound</code>). Examples are not imported by <code>Goblint_Formalization.thy</code>. Sorry inventory: <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
+    </section>
+
+    <section class="stage" id="docs">
+      <h2><span class="badge">∎</span>Markdown documentation</h2>
+      <ul>
+        <li><a href="../PROOF_OVERVIEW.md"><code>PROOF_OVERVIEW.md</code></a> — theorem map and specification</li>
+        <li><a href="../PROOF_PHASES.md"><code>PROOF_PHASES.md</code></a> — phases and sorry inventory</li>
+        <li><a href="../ROADMAP.md"><code>ROADMAP.md</code></a> — backlog and milestones</li>
+      </ul>
+    </section>
+
+    <footer class="page-footer">
+      Goblint Formalization · static HTML · shared <code>walkthrough.css</code>
+    </footer>
+  </main>
+</div>
+<script src="walkthrough.js"></script>
+</body>
+</html>

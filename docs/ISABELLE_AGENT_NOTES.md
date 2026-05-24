@@ -48,4 +48,4 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalizatio
 3. Trial tactics in `step` / `explore`; paste `blast`/`auto`/`meson` first.
 4. If automation fails, 5–15 lines of structured Isar; hoist hard subgoals as lemmas.
 
-CFG maintenance ideas: `docs/PROOF_SIMPLIFICATION.md`.
+CFG maintenance: `docs/html/cfg/collecting/index.html` and `src/CFG/Collecting/README.md`.
