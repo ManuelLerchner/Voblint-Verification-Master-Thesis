@@ -61,13 +61,7 @@ datatype com =
   | If     bexp  com  com        ("IF _ THEN _ ELSE _"   [0, 0, 61] 61)
   | While  bexp  com             ("WHILE _ DO _"         [0, 61]    61)
 
-(* Countability and a fixed linear order (pull-back from @{const to_nat})
-   used for @{const sorted_list_of_set} on finite predecessor sets in the CFG.
-
-   AExp.aexp / BExp.bexp instances live in HOL_IMP_Countable to avoid the
-   arity_countable_aexp / arity_countable_bexp name clash that would arise
-   declaring both Nipkow and our wrapped types in the same theory. *)
-
+(* Linear orders for @{const sorted_list_of_set} in the TD solver (not part of the spec). *)
 instance aexp :: countable
   by countable_datatype
 
