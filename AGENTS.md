@@ -19,7 +19,9 @@ You are a formal proof engineer working with Isabelle/jEdit. Your work is surgic
 
 `IMP AST → (CFG) → equation system → TD solver → sound abstract result → mapped back`.
 
-Vendored `TD` solver (stilscher/td-verification) already verified. To prove: IMP collecting semantics, CFG layer, eqsys soundness, abstract domains (Sign → Interval → Octagon), pipeline composition.
+Vendored `TD` solver (stilscher/td-verification) already verified. Proved: CFG
+collecting semantics (`cfg_collect`), CFG layer, eqsys soundness, abstract domains
+(Sign → Interval → Octagon stretch), pipeline composition.
 
 ---
 
@@ -36,7 +38,7 @@ Vendored `TD` solver (stilscher/td-verification) already verified. To prove: IMP
 
 Open: IMP vs IMP2 (long-term language scope only — current code is IMP2).
 
-Decided since v0: CFG layer wins (`Direct_Equations` quarantined as P10, off-path); interval stretch in progress on the issue tracker.
+Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); interval stretch in progress on the issue tracker.
 
 **Live roadmap and backlog: `docs/ROADMAP.md` + [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).** Issues, dependencies, per-phase status, and Blazy-2013-inspired extensions live there, not in this file.
 
@@ -74,7 +76,7 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # CFG path infrastructure
 
-`cfg_path` carries actions (needed for transfer-fn composition); `path_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `path_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the collecting layer in `src/CFG/Collecting/` (`CFG_Edges_Collect` … `CFG_Runs_To_Bridge`; import `CFG_Runs_To_Bridge` for the full chain) for the small-step ↔ `cfg_collect` bridge.
+`cfg_path` carries actions (needed for transfer-fn composition); `edges_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `edges_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the collecting layer in `src/CFG/Collecting/` (`CFG_Edges_Collect` … `CFG_Runs_To_Bridge`; import `CFG_Runs_To_Bridge` for the full chain) for the small-step ↔ `cfg_collect` bridge.
 
 **Thesis sentence:** Soundness is stated against CFG collecting semantics at **every** program point (`cfg_collect`). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IMP runs correspond to exit reachability (`runs_to` / small-step to `SKIP`); partial and non-terminating behaviour is covered by the path-based theorem without a final store.
 
@@ -213,7 +215,7 @@ Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/star
 * `sledgehammer` timeout ≤ 15s. Paste back `blast` / `auto` / `meson`. `metis`/`smt` only if fast in batch.
 * `nitpick` via `step`: `lemma … nitpick [timeout=5] oops`.
 * `explore` ≠ `repl_step`. `explore` does not persist; `repl_step` commits.
-* `explore query='proof'` needs `Isar_Explore` imported. Scratch file: `src/Scratch_Explore.thy` (imports `"iq.Isar_Explore"`). Session-qualified `src/` lives in session `Goblint_Formalization`, so unqualified `Isar_Explore` resolves wrong. `sledgehammer` / `find_theorems` queries don't need the import.
+* `explore query='proof'` needs `Isar_Explore` imported. Session-qualified `src/` lives in session `Goblint_Formalization`, so unqualified `Isar_Explore` resolves wrong. `sledgehammer` / `find_theorems` queries don't need the import.
 
 Traps: `docs/ISABELLE_AGENT_NOTES.md`.
 

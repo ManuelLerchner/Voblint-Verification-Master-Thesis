@@ -20,5 +20,5 @@ inclusion in `gamma_state`; `exit_sound` is the exit-projected corollary.
 `Constraint_System_Sound` → `Constraint_System`, `CFG_Runs_To_Bridge` (not a separate
 `CFG_Collecting` theory).
 
-**Downstream:** `Solver/TD_Interface.thy` — `make_rhs_tree`, `td_analyse`,
-`td_analyse_post_fixpoint` (TD session `TD_plain`).
+**Downstream:** `Solver/TD_CFG_Core.thy` — `make_rhs_tree`; `Solver/TD_Interface.thy` —
+`td_analyse`, `td_analyse_post_fixpoint` (TD session `TD_plain`).

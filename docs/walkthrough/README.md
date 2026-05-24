@@ -41,8 +41,10 @@ make html
 ```
 
 Runs `isabelle build … -o browser_info` on session `Goblint_Formalization` and
-copies the result to [`../html/`](../html/) (gitignored). Open `../html/index.html`
-after a local build. CI deploys `docs/html/` to GitHub Pages on push to `main`.
+copies the result to [`../html/`](../html/) (gitignored). Open
+[`../html/isabelle/index.html`](../html/isabelle/index.html) after a local build.
+CI deploys `docs/html/` to GitHub Pages on push to `main` (Isabelle browser info
+only — not this walkthrough tree).
 
 ## Maintenance
 

@@ -48,7 +48,7 @@ html: vendor
 	mkdir -p "$(HTML_DIR)"
 	cp -R "$(BROWSER_INFO_SRC)/." "$(HTML_DIR)/"
 	touch "$(HTML_DIR)/.nojekyll"
-	@echo "Open $(HTML_DIR)/index.html (session theories; includes transitive imports)."
+	@echo "Open $(HTML_DIR)/isabelle/index.html (session theories; includes transitive imports)."
 
 # Launch jEdit with the right session roots loaded.
 jedit: vendor

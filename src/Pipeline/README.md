@@ -16,7 +16,7 @@ IMP2 → `to_cfg` → `rhs` / `td_analyse` → concretization — stated against
 | `pipeline_sound_path` | Along any `cfg_path`, stores in `edges_collect` are covered |
 | `pipeline_sound_runs_to` | Exit corollary from `t ∈ cfg_collect … (cfg_exit …)` |
 | `pipeline_sound_runs_to_runs` | Same, with `runs_to c s t` as premise |
-| `sign_pipeline_sound` / `ivl_pipeline_sound` | Sign and interval exit corollaries (from `runs_to`) |
+| `sign_pipeline_sound` / `ivl_pipeline_sound` | Sign and interval exit corollaries (`lemma`/`corollary`; premise `runs_to`) |
 
 **Imports:** `TD_Soundness`, `Sign_Domain`, `Interval_Domain`.
 

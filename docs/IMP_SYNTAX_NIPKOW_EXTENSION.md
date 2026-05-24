@@ -1,5 +1,11 @@
 # IMP Syntax → Nipkow Extension Plan
 
+> **Status (2026-05):** **Approach 1c implemented** in `src/IMP2/IMP2_Syntax.thy`
+> (hybrid `BaseN`/`BaseB` wrap over HOL-IMP leaf forms + native compound/ext
+> constructors). Semantics in `IMP2_SmallStep.thy`. The sections below record
+> the original decision process; Approach 2 (`to_hol_imp_aexp` projection) was
+> not pursued.
+
 **Decision pointer:** Meeting 3 §B (KB `wiki/meetings/2026-05-18-meeting3.md`) — supervisor (Alexandra) suggested extending Nipkow's HOL-IMP via nested constructor wrap + `abbreviation` sugar rather than redeclaring `aexp` / `bexp` from scratch.
 **Goal:** stop redeclaring `aexp` / `bexp` in `src/IMP2/IMP2_Syntax.thy`. Reuse `HOL-IMP.AExp` / `HOL-IMP.BExp` directly; extend with our additional constructors (`Minus`, `Times`, `Or`, `Eq`).
 **Non-goal:** changing `com` (already structurally identical to `HOL-IMP.Com`), changing semantics, replacing big-step (separate doc), or adopting AFP `IMP2` (different beast — see Rejected).
@@ -14,9 +20,30 @@ See also:
 
 ---
 
-## Current state
+## Current state (implemented: Approach 1c)
 
-`src/IMP2/IMP2_Syntax.thy` redeclares **from scratch**:
+`src/IMP2/IMP2_Syntax.thy` uses a **hybrid wrap** (see file header comment):
+
+- Leaf forms `N`, `V`, `Bc` abbreviate `BaseN` / `BaseB` wraps over HOL-IMP
+  `AExp` / `BExp`.
+- Shared compound constructors (`Plus`, `Not`, `And`, `Less`) and extensions
+  (`Minus`, `Times`, `Or`, `Eq`) are **native** IMP2 constructors (Nipkow's
+  compound forms are typed over Nipkow datatypes, so they cannot express
+  "Plus over our extended aexp" inside the wrap alone).
+- `com` remains native and structurally identical to `HOL-IMP.Com`.
+- `aval` / `bval` live in `IMP2_SmallStep.thy`; wrapped leaf cases delegate to
+  `AExp.aval` / `BExp.bval`.
+
+Trade-off documented in the theory: abbreviations `N`, `V`, `Bc` do not unfold
+in pattern matches — leaf cases must spell `BaseN (AExp.N _)` etc.
+
+---
+
+## Original plan (pre-implementation snapshot)
+
+The following described the **from-scratch** syntax before Approach 1c landed:
+
+`src/IMP2/IMP2_Syntax.thy` redeclared **from scratch**:
 
 ```isabelle
 datatype aexp =
@@ -38,11 +65,10 @@ datatype com = SKIP | Assign vname aexp | Seq com com
              | If bexp com com | While bexp com
 ```
 
-with `aval` / `bval` redefined in `IMP2_Semantics.thy` to match.
+with `aval` / `bval` in `IMP2_SmallStep.thy` (formerly planned as `IMP2_Semantics.thy`).
 
-Comment in the file states: *"We define IMP2 from scratch (not importing HOL-IMP.Com) so the CFG-based pipeline is self-contained and notation is unambiguous."*
-
-That justification is weak after Meeting 3 §B. AFP-reuse stance now: import + interpret/extend over redeclaration.
+Comment that was removed from the file stated: *"We define IMP2 from scratch (not importing HOL-IMP.Com)…"*
+That justification was weak after Meeting 3 §B. AFP-reuse stance: import + interpret/extend over redeclaration — **now partially realized via Approach 1c.**
 
 ---
 

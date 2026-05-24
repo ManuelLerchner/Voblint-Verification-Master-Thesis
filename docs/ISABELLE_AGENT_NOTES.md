@@ -33,7 +33,7 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalizatio
 - **`obtain` + `show`:** if Isabelle reports “Result contains obtained parameters”, use `have` for intermediate facts; only the final case goal uses `show`.
 - **`induction … arbitrary: S T` with named `assumes`:** the assumption may become a meta-implication not in the case context. Use an object implication `S ⊆ T ⟹ …` with `assume le: "S ⊆ T"` in cases, or derive `⋀u. rho1 u ⊆ rho2 u` from `rho1 ≤ rho2` via `le_fun_def`.
 - Set comprehensions: `{s ∈ S. P s}` plus `fix s` can clash; prefer `fix x` in `subsetI` or `Collect (λs. s ∈ S ∧ P s)` with `mem_Collect_eq`.
-- `path_collect` heads are `(edge_action * pp)` pairs `cases`/`obtain` before `simp`.
+- `edges_collect` / `cfg_path` heads are `(edge_action * pp)` pairs — `cases`/`obtain` before `simp`.
 - `induction … rule: big_step.induct`: case order follows the rule text, not the conclusion.
 
 ## CFG-specific lemmas

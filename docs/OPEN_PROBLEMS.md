@@ -93,7 +93,7 @@ See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explic
 
 ### P4 / P7 — interval domain
 
-Sign chain is closed. Interval uses the same pipeline theorems with `ivl_pipeline_sound`.
+Sign chain proved (`goblint_sign_sound`; carries P1–P3). Interval uses the same pipeline theorems with `ivl_pipeline_sound`.
 
 ### P6 — TD total correctness
 

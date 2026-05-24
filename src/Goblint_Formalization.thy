@@ -31,12 +31,12 @@ begin
 
   Pipeline (cfg_collect spec):
     AST  --(compile/to_cfg)-->  CFG  --(rhs/make_rhs_tree)-->  Equations  --(TD)-->  Result
-    [IMP2_*, CFG_*, Constraint_System, TD_Interface, Pipeline]
+    [IMP2_*, CFG_*, Constraint_System, TD_CFG_Core, TD_Interface, Pipeline]
 
   Canonical soundness: pipeline_invariant_sound, pipeline_sound_path.
   Exit sugar: runs_to (runs_to_def); goblint_sign_sound for sign domain.
 
-  Sign pipeline: closed (goblint_sign_sound).
+  Sign pipeline: proved (goblint_sign_sound; carries P1-P3 TD assumptions).
   Interval: ivl_pipeline_sound (stretch packaging).
 
   Abstract domains:

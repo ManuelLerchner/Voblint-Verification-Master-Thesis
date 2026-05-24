@@ -6,7 +6,7 @@ characterisation `cfg_edges_collect`, and exit projection `runs_to` with small-s
 equivalence.
 
 **Import:** `CFG_Runs_To_Bridge` pulls in the full chain below (also imported by
-`Goblint_Formalization`, `Constraint_System_Sound`, `TD_Interface`,
+`Goblint_Formalization`, `Constraint_System_Sound`, `TD_CFG_Core`,
 `Example_CFG_Collecting_Equiv`).
 
 **Theories (dependency order)**
@@ -17,7 +17,7 @@ equivalence.
 | `CFG_Collecting_Core.thy` | `cfg_edges_collect`; `cfg_collect` ⊑ path side (`cfg_collect_le_edges_collect`) |
 | `CFG_Compound_Paths.thy` | Seq / If / While path structure and offsets |
 | `CFG_Path_Bridge.thy` | `cfg_collect_eq_cfg_edges_collect`, `compile_path_small_step` |
-| `CFG_Runs_To_Bridge.thy` | `runs_to`, `runs_to_iff_small_step`, reverse small-step bridge (public entry) |
+| `CFG_Runs_To_Bridge.thy` | `runs_to`, `runs_to_iff_small_step` (biconditional small-step bridge; public entry) |
 
 **Specification spine**
 

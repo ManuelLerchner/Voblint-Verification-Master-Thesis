@@ -2,7 +2,7 @@
 
 Execution status and sorry inventory. Overview: `docs/PROOF_OVERVIEW.md`.
 Walkthrough: per-layer HTML under `docs/walkthrough/` (hub: `docs/walkthrough/index.html`; main narrative: `docs/walkthrough/pipeline/index.html`).
-Isabelle browser info: `make html` → `docs/html/index.html` (GitHub Pages on `main`).
+Isabelle browser info: `make html` → `docs/html/isabelle/index.html` (GitHub Pages on `main`).
 Roadmap: `docs/ROADMAP.md`.
 
 ---
@@ -44,9 +44,7 @@ examples only — re-run the command after changes).
 | --- | --- |
 | `IMP2/`, `CFG/`, `Equations/Constraint_System_Sound.thy` | Collecting ↔ post-fixpoint bridges closed |
 | `Goblint_Formalization.thy`, sign pipeline | `goblint_sign_sound` closed |
-| `Solver/TD_Soundness.thy`, `Pipeline.thy`, `Interval_Domain.thy` | Interval packaging — verify with `rg` |
-| `Scratch_Explore.thy` | MCP scratch only; not in session build |
-
+| `Solver/TD_Soundness.thy`, `Pipeline.thy`, `Interval_Domain.thy` | Interval packaging closed (0 sorries) |
 ---
 
 ## Completed milestones

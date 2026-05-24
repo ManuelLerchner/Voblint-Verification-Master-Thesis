@@ -9,7 +9,8 @@ a constraint system to the verified top-down solver of
 [stilscher/td-verification](https://github.com/stilscher/td-verification), and
 prove that **any abstract domain** satisfying our locale and transfer obligations
 yields a solver result that soundly over-approximates concrete collecting
-semantics; sign analysis is a fully discharged instance.
+semantics; sign analysis is the primary worked instance (`goblint_sign_sound`),
+modulo three TD-side assumptions (P1–P3; see `docs/OPEN_PROBLEMS.md`).
 
 ### Pipeline (overview)
 
@@ -19,41 +20,38 @@ bridges. Dashed red arrows: bridges still missing (open problems; see
 
 ```mermaid
 flowchart LR
-  BS["big_step"]
-  COL["collect"]
+  SS["small_step / runs_to"]
   CC["cfg_collect"]
   PFP["env (post-fixpoint)"]
   TD["TD solver output"]
   TERM["TD terminates"]
-  IVL["interval domain"]
+  IVL["interval + widen"]
 
-  BS -->|B1| COL
-  COL -->|B2| CC
+  SS -->|"operational link"| CC
   CC -->|B3| PFP
   PFP -->|B4| TD
 
-  CC -.->|"B5: cfg_in_reach (P2)"| TD
+  CC -.->|"B5: td_cfg_in_reach (P2)"| TD
   PFP -.->|"B6: comp_fun_idem (P3)"| TD
-  TD -.->|"B7: TD_plain.solve_dom (P1, gated on P5)"| TERM
-  IVL -.->|"B8: widening termination (P6/P7)"| TERM
+  TD -.->|"B7: TD_plain.solve_dom (P1, gated P5)"| TERM
+  IVL -.->|"B8: widen + totality (P6/P7)"| TERM
 
-  linkStyle 4,5,6,7 stroke:#c62828,stroke-dasharray: 4 3
+  linkStyle 3,4,5,6 stroke:#c62828,stroke-dasharray: 4 3
 ```
 
 | Bridge | Lemma / obligation                                            | Status              |
 | ------ | ------------------------------------------------------------- | ------------------- |
-| B1     | `big_step ⇒ collect` (definition of `collect`)                | **done**            |
-| B2     | `cfg_collect_exit_eq_collect` — AST collecting = CFG at exit  | **done**            |
 | B3     | `post_fixpoint_sound` — post-fixpoint over-approximates       | **done**            |
 | B4     | `td_analyse_post_fixpoint` — TD output is a post-fixpoint     | **done**            |
-| B5     | `cfg_in_reach (to_cfg c)` — CFG shape ⇒ solver reach-set      | **missing** (P2)    |
-| B6     | `sound_domain ⇒ comp_fun_idem join_state`                     | **missing** (P3)    |
+| B5     | `td_cfg_in_reach` — solver tree covers reachable CFG nodes    | **missing** (P2)    |
+| B6     | `comp_fun_idem (ac_join cfg)` on finite predecessor joins     | **missing** (P3)    |
 | B7     | `TD_plain.solve_dom` on compiled CFG — termination            | **missing** (P1/P5) |
-| B8     | `widen_ivl` axioms + wf widening chains                       | **missing** (P6/P7) |
+| B8     | Interval widening + TD totality integration                   | **stretch** (P6/P7) |
 
-End-to-end theorems: `pipeline_sound` / `pipeline_invariant_sound` (generic,
-chains B1–B4, carries B5/B6/B7 as assumptions); `goblint_sign_sound` (sign
-instance). For the open bridges see `docs/OPEN_PROBLEMS.md`.
+Operational link: `runs_to_iff_small_step` connects small-step termination to
+exit `cfg_collect`. End-to-end theorems: `pipeline_invariant_sound`,
+`pipeline_sound_path`, `pipeline_sound_runs_to` (generic; carry B5–B7 as
+assumptions); `goblint_sign_sound` (sign instance). See `docs/OPEN_PROBLEMS.md`.
 
 Where abstract interpretation is in the proof
 -------------------------------------------
@@ -73,16 +71,16 @@ prove that **every post-fixpoint** over-approximates concrete reachability.
 So **abstract interpretation is the `rhs` / `γ` / `join` / `apply_tf` layer**.
 `make_rhs` / `make_rhs_tree` spell out the equations; `td_analyse` (TD solver)
 returns an `env` that satisfies them; `post_fixpoint_sound` shows that solution
-is sound w.r.t. `cfg_collect`. IMP enters via `collect` and
-`cfg_collect_exit_eq_collect`.
+is sound w.r.t. `cfg_collect`. IMP enters via small-step semantics and CFG
+compilation; exit behaviour is `runs_to` / `runs_to_iff_small_step`.
 
 Adding a new abstract domain
 ----------------------------
 
 To plug a new analysis into the pipeline, a user supplies an abstract value
 type and a transfer bundle, then discharges a handful of obligations. The
-parametric `pipeline_sound` does the rest. Sign (`src/Domains/Sign_Domain.thy`)
-is the worked reference.
+parametric `pipeline_invariant_sound` / `pipeline_sound_path` do the rest. Sign
+(`src/Domains/Sign_Domain.thy`) is the worked reference.
 
 ```mermaid
 flowchart TD
@@ -102,7 +100,7 @@ flowchart TD
   end
 
   subgraph F ["Framework provides (proved once)"]
-    PS["pipeline_sound[OF ...]<br/>--&gt; concrete ⊆ gamma . env"]
+    PS["pipeline_invariant_sound[OF ...]<br/>--&gt; cfg_collect ⊆ gamma . env"]
   end
 
   T --> LAT --> SD
@@ -130,16 +128,16 @@ Concretely, the user writes:
 | Step | What                                                                                       | Reference (sign)                                              |
 | ---- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | 1    | Declare abstract value type and its lattice instance                                       | `Sign_Domain.thy` — `datatype sign`, `instantiation` blocks   |
-| 2    | Define `gamma_<dom>` and prove `gamma_bot`, `gamma_mono`                                   | `Sign_Domain.thy:54` (`gamma_sign_mono`)                      |
-| 3    | `interpretation <dom>_domain: sound_domain gamma_<dom>` (or `abstract_domain` with widen)  | `Sign_Domain.thy:229`                                         |
+| 2    | Define `gamma_<dom>` and prove `gamma_bot`, `gamma_mono`                                   | `Sign_Domain.thy` (`gamma_sign_mono`)                         |
+| 3    | `interpretation <dom>_domain: abstract_domain gamma_<dom> widen_<dom>`                    | `Sign_Domain.thy` (`interpretation sign_domain`)              |
 | 4    | Define `tf_assign`, `tf_assume`, `tf_assume_not` and prove `domain_transfer_sound`          | `assign_sign_sound`, `assume_sign_sound`                      |
-| 5    | Bundle as `analysis_config`                                                                | `Pipeline.thy:87` (`sign_analysis_config`)                    |
-| 6    | Show `s \<in> gamma_state (ac_init my_cfg)` for the initial store                          | `Pipeline.thy:103` (`sign_analysis_init_in_gamma_stub`)       |
-| 7    | Apply `pipeline_sound[OF ...]`                                                             | `Goblint_Formalization.thy:80` (`goblint_sign_sound`)         |
+| 5    | Bundle as `analysis_config`                                                                | `Pipeline.thy` (`sign_analysis_config`)                       |
+| 6    | Show `s \<in> gamma_state (ac_init my_cfg)` for the initial store                          | `Pipeline.thy` (`sign_init_in_gamma`)                         |
+| 7    | Apply `pipeline_invariant_sound` / `sign_pipeline_sound`                                   | `Goblint_Formalization.thy` (`goblint_sign_sound`)            |
 
 The pipeline still carries three TD-side assumptions (`comp_fun_idem`,
-`solve_dom`, `cfg_in_reach`) the user must currently discharge. These are
-open problems P1-P3 in `docs/OPEN_PROBLEMS.md`; bridges B5/B6 would lift
+`TD_plain.solve_dom`, `td_cfg_in_reach`) the user must currently discharge. These are
+open problems P1–P3 in `docs/OPEN_PROBLEMS.md`; bridges B5–B7 would lift
 them off the user.
 
 Requirements
@@ -158,10 +156,10 @@ Build instructions
 Set `AFP` to your AFP `thys/` directory (default `~/afp/thys`) and use the
 provided `Makefile` targets:
 
-- `make vendor`: clones [stilscher/td-verification](https://github.com/stilscher/td-verification)
-  into `vendor/td-verification`, checks out the pinned upstream commit, and
-  applies `vendor/td-verification.patch` (Isabelle2025 compatibility uses
-  `Set.remove_eq` in place of `remove_def`, see the patch for details).
+- `make vendor`: initializes the `vendor/td-verification` git submodule (pinned
+  via the superproject gitlink), then applies `vendor/td-verification.patch`
+  (Isabelle2025 compatibility uses `Set.remove_eq` in place of `remove_def`,
+  see the patch for details).
 
 - `make build` (default): runs the Isabelle formalization, depends on `vendor`.
   Equivalent to:
@@ -174,7 +172,8 @@ provided `Makefile` targets:
   pre-loaded.
 
 - `make html`: builds Isabelle browser info (`-o browser_info`) and copies it to
-  `docs/html/index.html` for offline browsing (gitignored; same mechanism as the
+  `docs/html/` (gitignored; entry point `docs/html/isabelle/index.html`; same
+  mechanism as the
   [Isabelle library HTML pages](https://stackoverflow.com/questions/17833567/how-to-generate-html-version-of-isabelle-theory)).
   CI deploys `docs/html/` to GitHub Pages on push to `main`. Handwritten layer
   walkthroughs live under `docs/walkthrough/` (repo only, not on the site).
@@ -199,17 +198,19 @@ Repository layout
 ```
 .
 ├── src/
-│   ├── IMP2/             IMP syntax and big-step semantics
-│   ├── CFG/              CFG definition, IMP-to-CFG compiler, CFG collecting
+│   ├── IMP2/             IMP syntax and small-step semantics
+│   ├── CFG/              CFG definition, paths, IMP-to-CFG compiler
+│   │   └── Collecting/   cfg_collect, runs_to, small-step bridge
 │   ├── Equations/        constraint system + soundness layer
-│   ├── Solver/           bridge to the verified top-down solver
+│   ├── Solver/           TD solver bridge (plain + widen/WN interfaces)
 │   ├── Domains/          abstract domains (Sign, Interval, ...)
 │   ├── Pipeline/         end-to-end pipeline theorems
 │   ├── Examples/         concrete instantiations and worked examples
 │   └── Goblint_Formalization.thy   top-level session entry
 ├── vendor/
-│   ├── td-verification/             fetched by `make vendor` (gitignored)
-│   └── td-verification.patch        local fixes to the vendored TD solver
+│   ├── td-verification/             git submodule (init via `make vendor`)
+│   ├── td-verification.patch        local Isabelle2025 compatibility patch
+│   └── autocorrode/                 I/Q and I/R MCP (via `./scripts/setup.sh`)
 ├── docs/                 proof overview, phases; walkthroughs + generated HTML
 ├── Makefile              build entry points (vendor, build, jedit, clean)
 └── ROOT                  Isabelle session definition
@@ -222,7 +223,11 @@ Verified dependencies
 | -------------------------------- | ------------------------------------------------------- | ----------------------------------------- |
 | `HOL-IMP`                        | Isabelle distribution                                   | session parent; IMP syntax/semantics base |
 | `TD` (`TD_plain`, `Basics`, ...) | vendored from `stilscher/td-verification` + local patch | verified top-down solver                  |
+| `Dijkstra_Shortest_Path`         | AFP                                                     | CFG graph type (`CFG_Def.thy`)            |
 | `Root_Balanced_Tree`             | AFP                                                     | transitive dep of TD session              |
+
+Also built as separate `ROOT` theories: `TD_CFG_Core`, `TD_Widen_Interface`,
+`TD_WN_Interface`, and the `Example_*` targets.
 
 Vendoring the TD solver
 -----------------------
@@ -236,22 +241,21 @@ GitHub Actions cannot clone that fork with the default `GITHUB_TOKEN`; add a
 **classic PAT** with `repo` scope as repository secret **`SUBMODULES_TOKEN`**
 (Settings → Secrets and variables → Actions), or make the fork public.
 A small local change is needed for Isabelle2025 compatibility, kept as a
-plain `git`-format patch in `vendor/td-verification.patch`. The Makefile
-clones the pinned upstream commit and applies the patch on demand. This avoids
-maintaining a long-lived submodule fork-pin: the diff is reviewable in this
-repository and the vendored tree is never tracked.
+plain `git`-format patch in `vendor/td-verification.patch`. Run `make vendor`
+to initialize the submodule and apply the patch (idempotent). The patch diff is
+reviewable in this repository; the submodule gitlink pins the upstream commit.
 
 Documentation
 -------------
 
 | Document                       | Contents                                                |
 | ------------------------------ | ------------------------------------------------------- |
-| `docs/OPEN_PROBLEMS.md`        | Bridges B1-B8, problem catalogue, handoff notes         |
+| `docs/OPEN_PROBLEMS.md`        | Bridges B3–B8, problem catalogue, handoff notes         |
 | `docs/HOL_IMP_COMPARISON.md`   | vs HOL-IMP `Abs_*`: workflow, domain theory tradeoffs   |
 | `docs/PROOF_OVERVIEW.md`       | Theorem chain, key types and lemmas                     |
 | `docs/PROOF_PHASES.md`         | Proof status, sorry inventory, remaining work           |
 | `docs/walkthrough/`            | Per-layer HTML walkthroughs (`index.html` hub; not on GitHub Pages) |
-| `docs/html/`                   | Isabelle browser info (`make html`; gitignored; GitHub Pages on `main`) |
+| `docs/html/`                   | Isabelle browser info (`make html`; entry `isabelle/index.html`; gitignored; GitHub Pages on `main`) |
 
 Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./scripts/setup.sh`, `./scripts/start-ir.sh`.
 

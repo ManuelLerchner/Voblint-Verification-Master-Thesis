@@ -20,7 +20,7 @@ IMP2 → CFG (+ Collecting) → Equations → Solver (TD) → Pipeline → Examp
 | [`CFG/Collecting/`](CFG/Collecting/) | [README](CFG/Collecting/README.md) | Collecting semantics (`cfg_collect`, `runs_to`) |
 | [`Domains/`](Domains/) | [README](Domains/README.md) | Abstract domains (sign, interval, shared locale) |
 | [`Equations/`](Equations/) | [README](Equations/README.md) | CFG → equation system + fixpoint soundness |
-| [`Solver/`](Solver/) | [README](Solver/README.md) | TD solver bridge and per-domain solver soundness |
+| [`Solver/`](Solver/) | [README](Solver/README.md) | TD solver bridge (`TD_CFG_Core`, plain + widen/WN interfaces) |
 | [`Pipeline/`](Pipeline/) | [README](Pipeline/README.md) | End-to-end soundness (invariant + path + exit) |
 | [`Examples/`](Examples/) | [README](Examples/README.md) | Executable checks and demonstrations |
 

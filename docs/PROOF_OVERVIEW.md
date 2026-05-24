@@ -44,7 +44,8 @@ lfp by `cfg_collect_eq_cfg_edges_collect`.
 
 - `pipeline_sound_runs_to` — from `runs_to` at exit.
 - `sign_pipeline_sound` / `goblint_sign_sound` — sign domain instantiation.
-- `ivl_pipeline_sound` — interval domain (same shape; interval TF lemmas closed).
+- `ivl_pipeline_sound` — interval domain (same shape; assign TF lemmas closed;
+  assume transformers are forward identity stubs — sound but imprecise).
 
 ```mermaid
 flowchart TD

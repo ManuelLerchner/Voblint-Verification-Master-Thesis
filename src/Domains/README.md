@@ -13,8 +13,9 @@
 | `Interval_Domain.thy` | Interval lattice, `ivl_tf`, widening (`widen_ivl`), interval transfers |
 
 **Layering:** `Sign_Domain` and `Interval_Domain` import `Constraint_System` (for the
-`'a domain_transfer` type used by `sign_tf` / `ivl_tf`). The `domain_transfer` record
-is defined in `Equations/Constraint_System.thy`.
+`'a domain_transfer` type used by `sign_tf` / `ivl_tf`) and `IMP2_SmallStep` (for
+`aval` / `bval` in transfer proofs). The `domain_transfer` record is defined in
+`Equations/Constraint_System.thy`.
 
 **Key concepts:** `gamma` / `gamma_state`, `bot`, join (⊔); per-action soundness lemmas
 (e.g. assign/assume). The bundle `domain_transfer_sound` is defined in

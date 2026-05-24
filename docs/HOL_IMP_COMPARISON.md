@@ -26,13 +26,13 @@ computes the abstract result.
 
 | Aspect                         | HOL-IMP `Abs_*`                                                                                     | This repository                                                                                         |
 | ------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Source language**            | Standard IMP (`Com`)                                                                                | IMP2 (extended `aexp`/`bexp`; defined separately)                                                       |
+| **Source language**            | Standard IMP (`Com`)                                                                                | IMP2 (extended `aexp`/`bexp`; hybrid wrap over HOL-IMP)                                                   |
 | **Program shape for analysis** | **`acom`** : annotated command tree (`SKIP {S}`, `IF … THEN {P1} C1 …`)                             | Plain **`com`** + compiled **`cfg`** (`cfg_entry`, `cfg_exit`, `cfg_edges`)                             |
 | **Collecting semantics**       | `CS c = lfp c (step UNIV)` on **annotated commands**; `step` pushes **store sets** through the tree | **`cfg_collect`** on CFG program points; path form `cfg_edges_collect`; exit sugar **`runs_to`** |
 | **Abstract analysis**          | `AI c = pfp (step' ⊤) (bot c)` : Kleene iteration **on the same `acom` shape**                      | `rhs` / `make_rhs_tree` on CFG; **`td_analyse`** (vendored TD solver) → `env :: pp ⇒ abs_state`         |
 | **Main soundness theorem**     | `AI_correct`: `AI c = Some C ⟹ CS c ≤ γ_c C`                                                        | **`pipeline_invariant_sound`** / **`pipeline_sound_path`**: `cfg_collect ⊆ γ ∘ env`; exit via **`pipeline_sound_runs_to`** |
 | **Solver**                     | Built-in **`pfp`** / `while_option` in Isabelle                                                     | **Separate verified session** (`TD`); we prove `td_analyse_post_fixpoint`                               |
-| **CFG / equation system**      | None : control flow is implicit in recursive `Step` / `step'`                                       | **Central** : matches Goblint compile → eqsys → solve. `cfg` extends AFP `Dijkstra_Shortest_Path.Graph`; reachability via `Timed_Automata.Graphs.Graph_Defs` |
+| **CFG / equation system**      | None : control flow is implicit in recursive `Step` / `step'`                                       | **Central** : matches Goblint compile → eqsys → solve. `cfg` extends AFP `Dijkstra_Shortest_Path.Graph` |
 | **Intervals / widening**       | Worked out in-session (`Abs_Int2_ivl`, `Abs_Int3`)                                                  | Started (`Interval_Domain.thy`); stretch goal; code notes possible reuse of `Abs_Int2_ivl`              |
 | **“Run analysis”**             | `AI` + `show_acom` inside Isabelle                                                                  | `run_analysis` / `td_analyse`; full `value` on maps still limited (`Example_Sign_Analysis.thy`)         |
 
@@ -78,13 +78,13 @@ refines **`cfg_collect`**; computation = **`td_analyse`** (verified externally).
 
 | Once (generic)                                                                                  | Per domain                                                                                     |
 | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `pipeline_invariant_sound`, `pipeline_sound`, `post_fixpoint_sound`, `td_analyse_post_fixpoint` | `interpretation … abstract_domain` (or `sound_domain` axioms)                                  |
+| `pipeline_invariant_sound`, `pipeline_sound_path`, `post_fixpoint_sound`, `td_analyse_post_fixpoint` | `interpretation … abstract_domain` (or `sound_domain` axioms)                                  |
 | CFG bridge, TD interface                                                                        | **`domain_transfer_sound`** (assign / assume / assume-not on CFG edges)                        |
 |                                                                                                 | `analysis_config` + init in γ (`s ∈ γ_state (ac_init cfg)`)                                    |
 |                                                                                                 | TD instantiation: `comp_fun_idem`, `solve_dom`, `cfg_in_reach` on `make_rhs_tree (to_cfg c) …` |
 
 You do **not** re-prove the pipeline chain per domain; you discharge obligations and
-apply `pipeline_sound[OF …]` (as in `goblint_sign_sound`).
+apply `pipeline_invariant_sound` / `sign_pipeline_sound` (as in `goblint_sign_sound`).
 
 HOL-IMP does **not** separate edge transfer functions : assignment and guards are
 wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
@@ -107,7 +107,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 - **`sound_domain` locale** (`Abstract_Domain.thy`): γ, `join_op`, bot; axioms
   `gamma_bot`, `gamma_mono`, join upper bounds, commutativity, associativity.
 - **`abs_state = vname => 'a`** globally; joins lifted pointwise (`join_state`).
-- **`abstract_domain`** extends with **widening** (for `TD_Total` / interval stretch).
+- **`abstract_domain`** extends with **widening** (for interval stretch / `TD_Widen_Interface`).
 - **`domain_transfer`** record + **`domain_transfer_sound`** : edge transformers
   separate from the locale.
 - Soundness theorems need only **semantic** over-approximation (γ-monotone join,
@@ -117,7 +117,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 
 | Benefit                                     | Why it matters here                                                                                   |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Smaller proof obligations for soundness** | `post_fixpoint_sound` / `pipeline_sound` do not need ⊓, ⊤, or `st` quotient theory.                   |
+| **Smaller proof obligations for soundness** | `post_fixpoint_sound` / `pipeline_invariant_sound` do not need ⊓, ⊤, or `st` quotient theory.                   |
 | **Alignment with TD solver API**            | TD expects `join`, `bot`, optional `widen` on **`abs_state` maps** : same shape as `analysis_config`. |
 | **Goblint-shaped edges**                    | Transfer bundle matches CFG `edge_action`; not forced into Nipkow’s `Step` on `acom`.                 |
 | **Independent of IMP syntax details**       | No `acom` annotations, no `strip`/`annotate`/`asize` bookkeeping.                                     |
@@ -128,7 +128,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 | Potential gain                      | Detail                                                                                                                                                              |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Reuse of proved interval domain** | `Abs_Int2_ivl` has interval arithmetic, order, and γ lemmas. Adapting `eint` + quotient `ivl` to our `Fin` intervals could shorten `Interval_Domain.thy`.           |
-| **Widening/narrowing theory**       | `Abs_Int3` proves widening axioms and iteration termination for `ivl`. Directly relevant to `TD_Total.thy` / interval sorries (P6/P7 in `OPEN_PROBLEMS.md`).        |
+| **Widening/narrowing theory**       | `Abs_Int3` proves widening axioms and iteration termination for `ivl`. Relevant to interval stretch (P6/P7 in `OPEN_PROBLEMS.md`; `widen_ivl_terminates` proved in-tree).        |
 | **Meet (⊓) for precision**          | `Val_lattice_gamma` gives γ(`a1 ⊓ a2`) = γ(a1) ∩ γ(a2). Useful for backward refinement; our forward-only pipeline does not require meet for soundness.              |
 | **Executable abstract stores**      | Quotient `st` + `fun_rep` is tuned for code generation. Would help with the P9 (executable end-to-end) story.                                                       |
 | **Backward / invariant reasoning**  | `Abs_Int2` inverse operators give assume-refinement that we currently encode only via forward `tf_assume` / `tf_assume_not`.                                        |
@@ -145,12 +145,12 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 ### Pragmatic recommendation
 
 - **Keep `sound_domain` + `domain_transfer_sound`** for the main thesis chain
-  (CFG → eqsys → TD → `pipeline_sound`).
+  (CFG → eqsys → TD → `pipeline_invariant_sound`).
 - **Cherry-pick from HOL-IMP** where it saves proof effort:
   - interval value operations and γ-lemmas from `Abs_Int2_ivl` (with a thin
     mapping layer), rather than re-proving interval arithmetic from scratch;
-  - widening laws from `Abs_Int3` when finishing `TD_Total` / interval
-    instantiation.
+  - widening laws from `Abs_Int3` when finishing interval widening integration
+    (`TD_Widen_Interface` / P6–P7).
 - **Do not** replace the CFG pipeline with `acom` + `AI` unless the thesis
   explicitly claims equivalence to the textbook presentation : that would be a
   different formalization goal (annotation-centric vs Goblint-centric).
@@ -163,7 +163,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 | --------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | **Granularity**       | One annotated command: information at **every annotation index** on the AST | **Program points** on the CFG (`pp = nat`)                                  |
 | **Exit vs point-map** | Soundness compares whole `CS c` to `γ_c C` on the tree                      | **`pipeline_invariant_sound`**: every reachable `v`; exit is `v = cfg_exit` |
-| **While loops**       | Fixpoint inside `step` on `acom`                                            | `cfg_collect` fixpoint + optional `collect` lfp characterisation on AST     |
+| **While loops**       | Fixpoint inside `step` on `acom`                                            | `cfg_collect` fixpoint on the compiled CFG                                  |
 
 ---
 
@@ -181,8 +181,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 
 | Topic                   | Location                                                         |
 | ----------------------- | ---------------------------------------------------------------- |
-| HOL-IMP-style big-step  | `IMP2_Semantics.thy` (same rule structure as `HOL-IMP.Big_Step`) |
-| Collecting on AST       | `IMP2_Collecting.thy`                                            |
+| Small-step semantics    | `src/IMP2/IMP2_SmallStep.thy` (mirrors `HOL-IMP.Small_Step`)     |
 | CFG collecting + bridge | `src/CFG/Collecting/` (`CFG_Runs_To_Bridge.thy` entry)           |
 | Minimal domain locale   | `Domains/Abstract_Domain.thy`                                    |
 | Sign instantiation      | `Domains/Sign_Domain.thy`                                        |
