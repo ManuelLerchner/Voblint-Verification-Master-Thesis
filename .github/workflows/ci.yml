@@ -55,16 +55,17 @@ jobs:
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action
 
-      - name: Build Goblint_Formalization and HTML docs
+      - name: Build Goblint Formalization and HTML docs
         env:
           AFP_COMPONENT_BASE: ${{ env.AFP_COMPONENT_BASE }}
         run: |
           docker run --rm --user root \
+            --entrypoint /bin/bash \
             --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
             --workdir "$GITHUB_WORKSPACE" \
             --env AFP_COMPONENT_BASE \
             makarius/isabelle:Isabelle2025-2 \
-            bash -ec '
+            -ec '
               apt-get update -qq && apt-get install -y -qq git make > /dev/null
               ISABELLE=/home/isabelle/Isabelle/bin/isabelle
               make vendor
