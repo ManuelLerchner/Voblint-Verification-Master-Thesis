@@ -101,7 +101,7 @@ proof (rule monoI)
   then have ru: "\<And>u. rho1 u \<subseteq> rho2 u"
     by (simp add: le_fun_def)
   have edge: "\<And>u a. (u, a, v) \<in> edges g \<Longrightarrow> edge_collect a (rho1 u) \<subseteq> edge_collect a (rho2 u)"
-    by (meson ru edge_collect_mono)
+    using ru edge_collect_mono by auto
   then show "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
     unfolding collect_pp_def by blast
 qed

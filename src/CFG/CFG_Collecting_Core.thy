@@ -11,8 +11,7 @@ definition cfg_edges_collect :: "cfg => store set => pp => store set" where
 
 lemma edge_collect_member:
   "x \<in> edge_collect a S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edge_collect a {s})"
-  apply(cases a)
-  by(auto)
+  by (cases a) auto
 
 
 (* One CFG step extends path-based collecting. *)
@@ -25,12 +24,10 @@ proof
   then obtain es where es: "cfg_path g (cfg_entry g) es u"
     and x: "x \<in> edge_collect a (edges_collect es S)"
     unfolding cfg_edges_collect_def
-    by (smt (verit) UN_iff edge_collect_member mem_Collect_eq)
-    
+    by (smt (verit, ccfv_threshold) UN_iff edge_collect_member mem_Collect_eq)
   then obtain s where s: "s \<in> edges_collect es S"
     and x: "x \<in> edge_collect a {s}"
-    using edge_collect_member
-    by meson 
+    using edge_collect_member by blast 
 
   have p: "cfg_path g u [(a, v)] v"
     by (rule cfg_path.step[OF e cfg_path.empty])

@@ -8,31 +8,12 @@ lemma cfg_collect_step:
   assumes e: "(u, a, v) : edges g"
   shows "edge_collect a (cfg_collect g S u) \<subseteq> cfg_collect g S v"
 proof -
-  have "collect_pp g (cfg_collect g S) v = cfg_collect_F g S (cfg_collect g S) v"
-    if "v \<noteq> cfg_entry g"
-    unfolding that cfg_collect_F_def 
-    apply(auto)
-    by (simp add: that)
+  have lfp: "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
+    using cfg_collect_lfp_unfold by presburger
   have "edge_collect a (cfg_collect g S u) \<subseteq> collect_pp g (cfg_collect g S) v"
     unfolding collect_pp_def using e by blast
   also have "collect_pp g (cfg_collect g S) v \<subseteq> cfg_collect g S v"
-  proof (cases "v = cfg_entry g")
-    case True
-    have "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
-      using cfg_collect_lfp_unfold by simp
-    then show ?thesis unfolding True cfg_collect_F_def 
-      apply(auto)
-      by (metis UnCI)
-  next
-    case False
-    have ne: "v \<noteq> cfg_entry g" using False by simp
-    have "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
-      using cfg_collect_lfp_unfold by simp
-    then show ?thesis unfolding ne cfg_collect_F_def 
-      apply(auto)
-
-      by (metis ne)
-  qed
+    by (metis UnCI cfg_collect_F_def lfp subsetI)
   finally show ?thesis .
 qed
 

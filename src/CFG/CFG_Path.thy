@@ -68,8 +68,7 @@ lemma cfg_reaches_step[intro]:
 
 lemma cfg_path_append[intro]:
   "cfg_path g u es1 v ==> cfg_path g v es2 w ==> cfg_path g u (es1 @ es2) w"
-  apply (induction es1 arbitrary: u)
-  by(auto)
+  by (induction es1 arbitrary: u) auto
 
 lemma cfg_reaches_trans[intro]:
   "g \<turnstile> u \<rightarrow>* v ==> g \<turnstile> v \<rightarrow>* w ==> g \<turnstile> u \<rightarrow>* w"
@@ -111,8 +110,8 @@ lemma cfg_path_offset:
   shows "cfg_path (mk_cfg (ent + k) (ex + k) (offset_edges k E))
                   (u + k) (offset_path k es) (v + k)"
   using assms
-  apply (induction "(mk_cfg ent ex E)" u es v rule: cfg_path.induct)
-  by(auto simp add: cfg_path.step in_offset_edges_iff)
+  by (induction "(mk_cfg ent ex E)" u es v rule: cfg_path.induct)
+     (auto simp add: cfg_path.step in_offset_edges_iff)
  
 (*
   Path lift along an edge-set inclusion that's witnessed via offset.
