@@ -15,6 +15,9 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Examples"
   theories
     Goblint_Formalization
+    TD_CFG_Core
+    TD_Widen_Interface
+    TD_WN_Interface
     Example_Sign_Analysis
     Example_Interval_Analysis
     Example_CFG_Collecting_Equiv
