@@ -5,5 +5,5 @@
 	ignore = dirty
 [submodule "td-verification"]
 	path = vendor/td-verification
-	url = https://github.com/stilscher/td-verification
+	url = https://github.com/ManuelLerchner/td-verification
 	ignore = dirty

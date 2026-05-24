@@ -23,8 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Check Isabelle ASCII-only sources
         run: |
@@ -40,7 +38,13 @@ jobs:
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Initialize td-verification submodule
+        run: git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Install build tools
+        run: apt-get update -qq && apt-get install -y -qq make > /dev/null
 
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action

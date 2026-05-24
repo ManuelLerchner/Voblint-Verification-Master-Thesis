@@ -229,6 +229,9 @@ Vendoring the TD solver
 
 The top-down solver lives upstream at
 [stilscher/td-verification](https://github.com/stilscher/td-verification).
+This repository vendors it via submodule
+[`ManuelLerchner/td-verification`](https://github.com/ManuelLerchner/td-verification)
+(a private fork of upstream, for CI and local access).
 A small local change is needed for Isabelle2025 compatibility, kept as a
 plain `git`-format patch in `vendor/td-verification.patch`. The Makefile
 clones the pinned upstream commit and applies the patch on demand. This avoids
