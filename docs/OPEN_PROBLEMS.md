@@ -1,9 +1,7 @@
 # Open problems and handoffs
 
 Catalogue of repo-level problems with stable file:line refs (P1–P10). For *new
-work and Blazy-2013-inspired extensions*, see `docs/ROADMAP.md` + [GitHub
-Project 8](https://github.com/users/ManuelLerchner/projects/8) — those entries
-live on the issue tracker, not in this file.
+work and extensions*, see `docs/ROADMAP.md` + [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).
 
 Source of truth for live sorries:
 
@@ -11,67 +9,73 @@ Source of truth for live sorries:
 rg -n '^\s*sorry' src/ | rg -v '\.thy~'
 ```
 
-Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`, `docs/ROADMAP.md`.
+Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`, `docs/PROOF_OVERVIEW.md`.
 
 ---
 
 ## Bridges in the soundness chain
 
 ```
-big_step --B1--> collect --B2--> cfg_collect --B3--> gamma . env <--B4-- TD output
-                                       .                                    ^
-                                       .                 [B5 cfg_in_reach]--+
-                                       .                 [B6 comp_fun_idem]-+
-                                       .                 [B7 TD terminates]-+
-                                       interval ----------[B8 widening] ----+
+cfg_collect (spec at each pp)
+       |
+       |  post_fixpoint_sound (B3)
+       v
+gamma_state (env v)  <-----  td_analyse output (B4)
+       ^
+       |  [P1 solve_dom] [P2 td_cfg_in_reach] [P3 comp_fun_idem]
+       |
+   TD_plain solver
 ```
 
-| Bridge | Statement                                                                       | Where                                                | Status                           | Drops    |
-| ------ | ------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------- | -------- |
-| B1     | `big_step (c,s) t ==> t \<in> collect c {s}`                                    | `IMP2/IMP2_Collecting.thy` (definitional)            | done                             | -        |
-| B2     | `t \<in> collect c {s} <-> t \<in> cfg_collect (to_cfg c) {s} (cfg_exit ...)`   | `CFG/CFG_Collecting.thy` (`cfg_collect_exit_eq_collect`) | done                         | -        |
-| B3     | `is_post_fixpoint env ==> \<forall>v. cfg_collect g {s} v \<subseteq> gamma_state (env v)` | `Equations/Constraint_System_Sound.thy:226` | done                             | -        |
-| B4     | TD solver output satisfies `is_post_fixpoint`                                   | `Solver/TD_Interface.thy:425`                        | done (modulo B5/B6/B7 as hyps)   | -        |
-| B5     | `cfg_in_reach (to_cfg c)` for every CFG pp                                      | not yet stated                                       | missing                          | P2       |
-| B6     | `sound_domain ==> comp_fun_idem join_state`                                     | not yet stated                                       | missing                          | P3       |
-| B7     | `TD_plain.solve_dom T (cfg_entry (to_cfg c))` for compiled CFG                  | requires P5 first                                    | missing                          | P1       |
-| B8     | `widen_ivl` UB + wf widening chains + narrowing                                 | `Domains/Interval_Domain.thy`, `Solver/TD_Total.thy` | missing                          | P6 / P7  |
+| Bridge | Statement | Where | Status |
+| --- | --- | --- | --- |
+| B3 | `is_post_fixpoint env ==> ∀v. cfg_collect g S v ⊆ gamma_state (env v)` | `Constraint_System_Sound.thy` | done |
+| B4 | `td_analyse` output is a post-fixpoint | `TD_Interface.thy` | done (modulo P1–P3 as hyps) |
+| B5 | `td_cfg_in_reach` — solver covers reachable tree nodes | `Pipeline.thy` assumptions | open (P2) |
+| B6 | `comp_fun_idem (ac_join cfg)` | `Pipeline.thy` assumptions | open (P3) |
+| B7 | `TD_plain.solve_dom … (cfg_entry …)` | `Pipeline.thy` assumptions | open (P1) |
+| B8 | Interval widening + termination | `Interval_Domain.thy` | stretch (P6/P7) |
 
-Optional, off the critical path:
+**Exit link:** `runs_to c s t` is definitional exit `cfg_collect` (`runs_to_def`).
+`exit_sound` uses `exit_in_collect` / `cfg_collect` at exit, not big-step.
 
-| Bridge | Statement                                                          | Status                                                |
-| ------ | ------------------------------------------------------------------ | ----------------------------------------------------- |
-| B-alt  | AST-direct eqsys = CFG-via eqsys (`direct_rhs_eq_cfg_rhs`)         | partial (`Direct_Equations.thy`); see P10             |
-| B-hol  | HOL-IMP `Abs_Int2_ivl` mapped onto our interval domain             | not started; see `docs/HOL_IMP_COMPARISON.md`         |
+**Operational link:** `runs_to_iff_small_step` connects small-step termination to `runs_to`.
 
-B1-B4 are the soundness chain and are proved. B5-B8 are what remains.
-`pipeline_sound` as it stands today carries B5/B6/B7 as named assumptions.
+Optional / removed from main path:
+
+| Item | Status |
+| --- | --- |
+| `Direct_Equations.thy` | **deleted** — was alternate AST path (P10 abandoned) |
+| `TD_Total.thy` | **deleted** — was orphan totality track (P6) |
+| HOL-IMP `Abs_Int2_ivl` reuse | not started; see `HOL_IMP_COMPARISON.md` |
+
+`pipeline_invariant_sound` / `pipeline_sound_path` carry P1–P3 as named assumptions.
 
 ---
 
 ## Problem catalogue
 
-| ID  | Problem                                                                | Files                                                                  | Why it blocks                                                                                                                              | Needed for                                                                |
-| --- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| P1  | `TD_plain.solve_dom` is an assumption on `pipeline_sound`              | `src/Pipeline/Pipeline.thy:201`, `src/Solver/TD_Interface.thy:430`     | Theorem reads "if TD terminates on this program then the result is sound". User has to discharge solver termination per program.           | Cleaner main theorem; total correctness. Gated on P5.                     |
-| P2  | `cfg_in_reach` is an assumption on `pipeline_sound`                    | `src/Pipeline/Pipeline.thy:205`                                        | Every CFG pp lies in the solver's reach-set from entry. True by construction of `to_cfg`, not proved.                                      | Drops one assumption from the main theorem.                               |
-| P3  | `comp_fun_idem (ac_join cfg)` is an assumption on `pipeline_sound`     | `src/Pipeline/Pipeline.thy:200`                                        | TD interface needs join to be commutative + idempotent in the fold sense. Currently a user obligation.                                     | Drops another assumption; user only supplies `sound_domain` axioms.       |
-| P4  | Interval-domain soundness sorries (5)                                  | `src/Domains/Interval_Domain.thy:119,133,139,165,182`                  | No `sound_domain` interpretation for interval -> no `pipeline_sound[OF ...]` corollary for interval. Sign is the only worked example.      | Second domain end-to-end (partial correctness).                           |
-| P5  | `pp = nat` vs `TD_warrow_mono_term`'s `finite (UNIV :: 'x set)`        | `src/CFG/CFG_Def.thy:19`, `vendor/td-verification/TD_warrow.thy:3251`  | Termination locale demands type-level finiteness. `nat` is infinite even when `to_cfg c` uses finitely many of its values.                 | Generic termination claim.                                                |
-| P6  | TD termination obligations sorry                                       | `src/Solver/TD_Total.thy:61,68,76,94,107,121,130,138`                  | `widening_precise` / `wf widening_chains` / `is_mono_eq` / `mono_deps` / `narrowing_le` open. No `TD_warrow_mono_term` interpretation.     | Total correctness. Gated on P5.                                           |
-| P7  | Widening soundness sorries                                             | `src/Domains/Interval_Domain.thy:126,127,130`                          | `widen_ivl_ub1/ub2` and `widen_ivl_terminates` open. Blocks `abstract_domain` interpretation for interval (used only by termination).      | Interval termination track. Feeds P6.                                     |
-| P8  | `ROOT` runs with `options [quick_and_dirty]`                           | `ROOT`                                                                 | Batch build "passes" while ignoring sorries in imported stretch theories. Build cannot claim sorry-free.                                   | Sorry-free build of the thesis core.                                      |
-| P9  | Executable end-to-end is limited                                       | `src/Examples/Example_Sign_Analysis.thy:159`                           | `value` on the full output map only works for tiny finite domains; no code generation for interval.                                        | Running the verified analyser on a real program inside Isabelle.          |
-| P10 | `Direct_Equations.thy` partially sorry                                 | `src/Equations/Direct_Equations.thy:58,62,142,186,199,239,278`         | Alternate AST->eqsys path. Not on the thesis pipeline.                                                                                     | Only if the thesis claims AST-direct = CFG-via equivalence.               |
+| ID | Problem | Files | Why it blocks | Needed for |
+| --- | --- | --- | --- | --- |
+| P1 | `TD_plain.solve_dom` assumed | `Pipeline.thy`, `TD_Interface.thy` | "If TD terminates, result is sound" | Cleaner main theorem; total correctness (gated on P5) |
+| P2 | `td_cfg_in_reach` assumed | `Pipeline.thy` | Solver tree reach vs CFG pp reach | Drop one assumption |
+| P3 | `comp_fun_idem (ac_join cfg)` assumed | `Pipeline.thy` | Finite fold needs commutative idempotent join | Drop user obligation |
+| P4 | Interval domain stretch | `Interval_Domain.thy` | Second domain end-to-end packaging | Interval thesis example |
+| P5 | `pp = nat` vs TD `finite UNIV` | `CFG_Def.thy`, vendored TD | Termination locale type finiteness | Generic termination claim |
+| P6 | TD total correctness | was `TD_Total.thy` | **file removed**; reopen if totality returns | Total correctness |
+| P7 | Widening soundness | `Interval_Domain.thy` | Feeds termination track | Interval + widening |
+| P8 | `quick_and_dirty` in `ROOT` | `ROOT` | Batch ignores sorries in stretch | Sorry-free core session |
+| P9 | Executable end-to-end limited | `Example_Sign_Analysis.thy` | `value` on full maps only for finite domains | In-Isabelle execution |
+| P10 | `Direct_Equations` | was `Equations/Direct_Equations.thy` | **deleted** — CFG path is the only route | — |
 
 ---
 
 ## Per-problem notes
 
-### P1 / P2 / P3 — assumptions on `pipeline_sound`
+### P1 / P2 / P3 — assumptions on pipeline theorems
 
-`pipeline_sound` (`Pipeline.thy:248-269`) currently carries three TD-side
-assumptions:
+`pipeline_invariant_sound`, `pipeline_sound_path`, and `pipeline_sound_runs_to`
+carry three TD-side assumptions:
 
 ```isabelle
 assumes cfi:             "comp_fun_idem (ac_join cfg)"   -- P3
@@ -79,64 +83,36 @@ assumes td_solve_dom:    "TD_plain.solve_dom ..."        -- P1
 assumes td_cfg_in_reach: "\<And>v. v \<in> reach ..."    -- P2
 ```
 
-P2 is a CFG-shape lemma (every emitted pp is path-reachable from `cfg_entry`,
-plus the corresponding TD reach lemma — check `vendor/td-verification/TD_plain.thy`
-for prior art before re-proving).
-
-P3 should be derivable from the `sound_domain` axioms (`join_comm`,
-`join_assoc`, and idempotence). State once as
-`sound_domain.join_state_comp_fun_idem` and use it inside the pipeline.
-
-P1 is gated on P5 (the termination locale requires a finite pp type).
+P2: CFG-shape + solver reach — check `TD_plain` for prior art.
+P3: should follow from `sound_domain` join laws once packaged as a lemma.
+P1: gated on P5 for generic termination.
 
 ### P5 — type-level finiteness
 
-Vendored locale `TD_warrow_mono_term` requires `finite (UNIV :: 'x set)`.
-`pp = nat` makes that false regardless of how many nodes `to_cfg c` actually
-uses, because the locale axiom is about the type's universe, not the used set.
-
-| Route                                            | Effect on stack                                                                                                              |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| (a) Stack parameterised on `'pp::finite`         | Every theorem from `CFG_Def` upward gets a type parameter. `to_cfg` becomes `'pp::finite cfg`. User picks the concrete type. |
-| (b) Per-program datatype generator               | Tactic that takes a `com`, emits `datatype pp_c = ...`, produces `to_cfg_fin c :: pp_c cfg`.                                 |
-| (c) Rewrite vendored TD termination on set-level | Modify `vendor/td-verification/TD_warrow.thy` to take a `finite_dom :: 'x set` instead of `finite UNIV`.                     |
-
-(c) voids the "vendored, untouched" property of the TD solver. (a) and (b) are
-large refactors. For a thesis defending partial correctness, leaving P1 as an
-explicit assumption is a defensible position.
+See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explicit.
 
 ### P4 / P7 — interval domain
 
-Two halves of the same gap. P4 alone is enough for "interval as second worked
-example, partial correctness". P7 is only needed if also tackling P6.
+Sign chain is closed. Interval uses the same pipeline theorems with `ivl_pipeline_sound`.
 
 ### P6 — TD total correctness
 
-Cannot be attempted before P5: `TD_warrow_mono_term` does not type-check over
-`pp = nat`.
+`TD_Total.thy` removed from the tree. Reintroduce only if P5 is resolved and totality is in scope.
 
 ### P8 — session hygiene
 
-Split into two sessions: `Goblint_Formalization_Core` (no stretch, no
-`quick_and_dirty`) imports IMP2/CFG/Equations/Sign/Pipeline only;
-`Goblint_Formalization_Stretch` keeps the current behaviour for interval /
-direct / total.
+Split core vs stretch sessions when sorry-free core is policy.
 
-### P10 — `Direct_Equations`
+### P10 — Direct_Equations
 
-Quarantine candidate: alternate AST -> eqsys design from before the CFG path
-was settled. Either finish the equivalence theorems or drop from `ROOT`
-imports.
+**Abandoned.** File deleted; `Goblint_Formalization` imports CFG route only.
 
 ---
 
 ## Where to start
 
-1. Re-run `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`; counts above may have drifted.
-2. Read `docs/HOL_IMP_COMPARISON.md` for how this differs from textbook AI.
-3. Open `src/Pipeline/Pipeline.thy:193` (`pipeline_invariant_sound`) and
-   `Pipeline.thy:248` (`pipeline_sound`) — these are the main theorems; the
-   listed assumptions are P1/P2/P3.
-4. P3 is the cheapest concrete win. P8 is the cheapest cosmetic win.
-5. Follow `CLAUDE.md` workflow: MCP-first (I/Q `write_file` + `explore`),
-   `isabelle build` only to confirm. ASCII-only in `.thy`.
+1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
+2. `docs/PROOF_OVERVIEW.md` — current theorem names
+3. `src/Pipeline/Pipeline.thy` — `pipeline_invariant_sound`, `pipeline_sound_path`
+4. P3 lemma packaging is a cheap win; P8 is cosmetic
+5. MCP-first workflow: `AGENTS.md`

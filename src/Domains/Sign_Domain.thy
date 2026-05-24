@@ -12,8 +12,7 @@ begin
     Pos  -- strictly positive  {n | n > 0}
     Top  -- all integers       UNIV
 
-  Finite lattice, no widening needed (every chain terminates immediately).
-  Used as the Tier-1 scaffold domain to validate the full pipeline.
+  Finite lattice; first concrete domain in the pipeline (no widening).
 *)
 
 (* ── Sign Datatype ────────────────────────────────────────────── *)

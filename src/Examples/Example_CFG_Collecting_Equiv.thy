@@ -11,9 +11,8 @@ text \<open>
   After ``\<open>x := 5; y := x + 1\<close>'' the exit pp of the compiled graph
   contains the store \<open>{x = 5, y = 6}\<close>.
 
-  Since \<^const>\<open>cfg_collect\<close> is the spec the analyzer is sound against
-  (see \<^const>\<open>runs_to\<close>), this doubles as a sanity check on the CFG
-  construction + fixpoint.
+  \<^const>\<open>cfg_collect\<close> is the collecting spec; exit \<^const>\<open>runs_to\<close>
+  abbreviates membership in \<^const>\<open>cfg_collect\<close> at the exit pp.
 \<close>
 
 (* \<midarrow>\<midarrow> Program and stores \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
@@ -41,9 +40,8 @@ value cfg
 subsection \<open>Exit-point collecting\<close>
 
 text \<open>
-  The exit point of \<^term>\<open>cfg\<close> contains \<^term>\<open>collecting_example_t\<close>.
-  Stated against \<^const>\<open>runs_to\<close>, the source-level surface of CFG
-  exit reachability.
+  Exit store \<^term>\<open>collecting_example_t\<close> is in \<^const>\<open>cfg_collect\<close> at the exit pp
+  (stated below as \<^const>\<open>runs_to\<close> for readability).
 \<close>
 
 lemma collecting_example_runs_to:

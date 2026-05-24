@@ -14,7 +14,6 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Examples"
   theories
     Goblint_Formalization
-    Scratch
     Example_Sign_Analysis
     Example_Interval_Analysis
     Example_CFG_Collecting_Equiv

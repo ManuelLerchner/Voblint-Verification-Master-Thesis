@@ -6,8 +6,10 @@ begin
   CFG collecting semantics and source-level surface.
 
   Core spec: cfg_collect (per-pp lfp) and cfg_edges_collect (paths).
-  Source-level names for consumers: runs_to, collect (exit-projected cfg_collect).
-  Soundness chain uses runs_to (Constraint_System_Sound, Pipeline, TD_Soundness).
+  Canonical soundness uses cfg_collect at every program point (Pipeline).
+
+  runs_to c s t is definitional exit sugar (runs_to_def), not a second
+  operational semantics. Small-step is linked via runs_to_iff_small_step.
 *)
 
 (* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
@@ -26,8 +28,6 @@ lemma edge_collect_mono:
   shows "edge_collect a S \<subseteq> edge_collect a T"
   using assms  apply (cases a)
   by(auto)
-
-(* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 (*
   edges_collect aggregates the resulting state after walking along a list of edges
@@ -1521,35 +1521,23 @@ next
   from main[OF p_pre t_full nb_t] show ?case .
 qed
 
-(* ── Source-level collecting (exit projection) ─────────────────────────────────────────── *)
+(* ── Exit projection (source-level sugar) ─────────────────────────────────────────── *)
 
 text \<open>
-  \<open>runs_to c s t\<close>: exit-reachable from singleton input \<open>{s}\<close>.
-  \<open>collect c S\<close> unions that over \<open>S\<close>.  See \<open>docs/BIG_STEP_REMOVAL.md\<close>.
+  \<open>runs_to c s t\<close> abbreviates exit membership in \<open>cfg_collect\<close>
+  (\<open>runs_to_def\<close>).  Not an inductive operational semantics.
 \<close>
 
 definition runs_to :: "com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "runs_to c s t \<longleftrightarrow> t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
 
-definition collect :: "com \<Rightarrow> store set \<Rightarrow> store set" where
-  "collect c S = {t. \<exists>s\<in>S. runs_to c s t}"
+lemma runs_toD[elim]:
+  "runs_to c s t \<Longrightarrow> t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+  unfolding runs_to_def by simp
 
-lemma mem_collect_iff_runs_to:
-  "t \<in> collect c S \<longleftrightarrow> (\<exists>s\<in>S. runs_to c s t)"
-  unfolding collect_def by blast
-
-lemma runs_to_iff_mem_collect:
-  "runs_to c s t \<longleftrightarrow> t \<in> collect c {s}"
-  unfolding collect_def by auto
-
-lemma collect_empty [simp]:
-  "collect c {} = {}"
-  unfolding collect_def by auto
-
-lemma collect_mono:
-  "S \<subseteq> T \<Longrightarrow> collect c S \<subseteq> collect c T"
-  unfolding collect_def by blast
-
+lemma cfg_collect_exit_runs_to[intro]:
+  "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c)) \<Longrightarrow> runs_to c s t"
+  unfolding runs_to_def by simp
 
 lemma runs_to_small_step:
   "runs_to c s t \<Longrightarrow> (c, s) \<rightarrow>* (SKIP, t)"
@@ -1605,13 +1593,11 @@ proof -
 qed
 
 
-paragraph \<open>Structured intro rules for \<open>runs_to\<close>\<close>
+paragraph \<open>Internal path lemmas for \<open>runs_to\<close>\<close>
 
 text \<open>
-  Each rule constructs an explicit CFG path on \<open>to_cfg c\<close> and feeds it
-  to \<open>path_imp_runs_to\<close>.  Together they form an "evaluation algebra"
-  over the \<open>cfg_collect\<close>-based spec --- one intro rule per command
-  shape, composing to derive terminating runs at the spec level.
+  Build a CFG path on \<open>to_cfg c\<close> and apply \<open>path_imp_runs_to\<close>.
+  Used only for the \<open>small_step_runs_to\<close> proof.
 \<close>
 
 lemma runs_to_Skip:
@@ -2035,11 +2021,8 @@ qed
 paragraph \<open>Internal evaluation predicate (proof helper)\<close>
 
 text \<open>
-  \<open>terminates_to\<close> is a structured operational predicate, internal to
-  this proof.  It exists solely as an inductive scaffold for the
-  \<open>small_step \<rightarrow> runs_to\<close> bridge: it provides a rule-induction principle
-  that lets us peel WHILE iterations without external well-founded
-  induction.  No client of \<open>CFG_Collecting\<close> uses it.
+  \<open>terminates_to\<close> is an internal inductive helper for the
+  \<open>small_step \<rightarrow> runs_to\<close> bridge (not exported semantics).
 \<close>
 
 inductive terminates_to :: "com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where

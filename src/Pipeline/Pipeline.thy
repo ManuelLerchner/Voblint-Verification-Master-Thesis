@@ -15,10 +15,10 @@ begin
   The pipeline is parameterised over an abstract domain.
   Concrete instantiations for Sign and Interval are provided below.
 
-  Top-level soundness theorem:
-    For any domain D with verified transfer functions, if program c is run
-    from initial store s (with s in gamma(sigma_0) for some initial abstraction
-    sigma_0), and c terminates in t, then t in gamma(sigma_exit).
+  Canonical soundness: pipeline_invariant_sound / pipeline_sound_path
+  (cfg_collect at every pp; no termination premise).
+
+  Exit corollary pipeline_sound_runs_to: runs_to c s t implies t in gamma at exit.
 *)
 
 (* ── Transfer-Function Soundness Bundle ──────────────────────── *)
@@ -67,17 +67,8 @@ where
        (ac_bot cfg)
        (ac_init cfg)"
 
-(* ── Pipeline Soundness (Generic) ────────────────────────────── *)
-(*
-  The main theorem of the thesis:
-    If the transfer functions in cfg are sound with respect to gamma,
-    and the initial concrete store s is in gamma(ac_init cfg),
-    and program c terminates in t,
-    then t is in gamma(run_analysis cfg c (exit of c)).
-*)
-
-(* pipeline_sound is the cfg_exit specialisation of pipeline_invariant_sound
-   plus termination proven below the invariant theorem. *)
+(* Canonical: pipeline_invariant_sound, pipeline_sound_path;
+   exit corollary: pipeline_sound_runs_to. *)
 
 (* ── Sign Analysis Pipeline ───────────────────────────────────── *)
 (*
@@ -94,24 +85,18 @@ definition sign_analysis_config :: "store => sign analysis_config" where
                       tf_assume_not = assume_not_sign |),
         ac_init  = (\<lambda>x. sign_of_int (s x)) |)"
 
-text \<open>
-  Scaffold: reduce sign pipeline soundness to the generic pipeline theorem at
-  @{const sign_analysis_config}; discharge Sign TF lemmas (Phase I) and
-  @{const sign_of_int} / @{const gamma_sign} for the initial store.
-\<close>
-
-lemma sign_analysis_init_in_gamma_stub:
+lemma sign_init_in_gamma:
   "s : sign_domain.gamma_state (ac_init (sign_analysis_config s))"
   unfolding sign_analysis_config_def sign_domain.gamma_state_def
   by (simp add: sign_of_int_gamma)
 
-lemma sign_analysis_tf_sound_stub:
+lemma sign_tf_sound:
   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
   unfolding domain_transfer_sound_def sign_analysis_config_def
   by (simp add: assign_sign_sound assume_sign_sound)
 
 
-lemma sign_pipeline_sound_scaffold:
+lemma sign_pipeline_sound:
   assumes runs: "runs_to c s t"
     and init_ok: "s \<in> sign_domain.gamma_state (ac_init (sign_analysis_config s))"
     and join_cfi:
@@ -140,7 +125,8 @@ proof -
     unfolding run_analysis_def sign_analysis_config_def sign_tf_def by simp
   show ?thesis
     unfolding run_eq
-    by (rule sign_analysis_sound[OF init_ok runs join_cfi td_solve_dom td_cfg_in_reach])
+    using runs_toD[OF runs]
+    by (rule sign_analysis_sound[OF init_ok _ join_cfi td_solve_dom td_cfg_in_reach])
 qed
 
 (* ── Interval Analysis Pipeline ──────────────────────────────── *)
@@ -158,12 +144,7 @@ definition ivl_analysis_config :: "store => ivl analysis_config" where
                       tf_assume_not = assume_not_ivl |),
         ac_init  = (\<lambda>x. Ivl (Fin (s x)) (Fin (s x))) |)"
 
-(*
-  Same structure as sign_pipeline_sound.
-  Requires ivl TF soundness + init soundness (analogues of the sign stubs).
-  Those must be proved before this corollary can be closed.
-*)
-lemma ivl_analysis_init_in_gamma_stub:
+lemma ivl_init_in_gamma:
   "s \<in> ivl_domain.gamma_state (ac_init (ivl_analysis_config s))"
   unfolding ivl_analysis_config_def ivl_domain.gamma_state_def
   by (simp add: eint_le_refl)
@@ -197,31 +178,12 @@ proof -
     unfolding run_analysis_def ivl_analysis_config_def ivl_tf_def by simp
   show ?thesis
     unfolding run_eq
+    using runs_toD[OF runs]
     by (rule interval_analysis_sound
-          [OF ivl_analysis_init_in_gamma_stub runs join_cfi
-              td_solve_dom td_cfg_in_reach])
+          [OF ivl_init_in_gamma _ join_cfi td_solve_dom td_cfg_in_reach])
 qed
 
-(* ── Option 2: Point-Map Invariant (Recommended Presentation) ── *)
-(*
-  Stronger than pipeline_sound: the abstract store at EVERY program point
-  is a sound invariant, not just at the exit.
-
-  This falls out for free from post_fixpoint_sound + td_analyse_post_fixpoint:
-    td_analyse_post_fixpoint  \<rightarrow>  is_post_fixpoint ... (run_analysis cfg c)
-    post_fixpoint_sound       \<rightarrow>  \<forall>v. cfg_collect g {s} v \<subseteq> gamma_state (env v)
-  Exit soundness (pipeline_sound) is the v = cfg_exit special case.
-
-  This is what supervisors requested in meeting 2:
-    "point-map soundness predicate: \<forall> p. collect_sem_at c p \<subseteq> \<gamma>(mlup \<sigma> p)"
-*)
-
-(*
-  Point-map invariant: the solver result is sound at EVERY program point.
-  Does NOT require termination holds for all starting states s in gamma(init).
-  The terminates assumption was removed; it is unused (the \<forall>v conclusion
-  does not depend on any specific execution reaching exit).
-*)
+(* Point-map invariant (post_fixpoint_sound + td_analyse_post_fixpoint). *)
 theorem pipeline_invariant_sound:
   fixes cfg :: "'a::bounded_semilattice_sup_bot analysis_config"
   assumes sound:      "sound_domain (ac_gamma cfg)"
@@ -360,10 +322,6 @@ proof -
   show ?thesis by blast
 qed
 
-(*
-  Sign-domain specialisation.  Hypotheses must match pipeline_invariant_sound:
-  TF soundness + s \<in> gamma(init).  The (c,s)\<Rightarrow>t assumption was superfluous.
-*)
 theorem sign_pipeline_invariant_sound:
   assumes tf_ok:   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
   assumes init_ok: "s \<in> sign_domain.gamma_state (ac_init (sign_analysis_config s))"

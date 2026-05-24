@@ -5,6 +5,10 @@ compilation, the equation system, the Top-Down solver, and back to a sound
 abstract result. Each stage names the functions involved and highlights the
 core lemmas that make the whole chain correct.
 
+**Current names:** collecting spec = `cfg_collect`; exit sugar = `runs_to`;
+canonical soundness = `pipeline_invariant_sound` / `pipeline_sound_path`;
+sign end-to-end = `goblint_sign_sound`. Overview: `docs/PROOF_OVERVIEW.md`.
+
 ---
 
 ## Stage 0 Running Example
@@ -16,7 +20,8 @@ Program c:                              Initial concrete store s:
     x ::= Plus (V x) (N (-1))
 ```
 
-The concrete big-step semantics terminates with `t x = 0`.
+Small-step execution terminates with final store `t` where `t x = 0`
+(`runs_to c s t` / `cfg_collect` at exit).
 
 **Target.** Prove
 
@@ -40,12 +45,10 @@ sorries see `docs/PROOF_PHASES.md`. Overview: `docs/PROOF_OVERVIEW.md`.
 ```mermaid
 flowchart TD
   subgraph done ["Done sign end-to-end"]
-    BS["big_step (c,s) ⇒ t"]
-    COL["collect / cfg_collect"]
-    EQ["cfg_collect_exit_eq_collect"]
+    CC["cfg_collect / runs_to at exit"]
     ABS["post_fixpoint_sound / exit_sound"]
-    PS["pipeline_sound / goblint_sign_sound"]
-    BS --> COL --> EQ --> ABS --> PS
+    PS["pipeline_sound_runs_to / goblint_sign_sound"]
+    CC --> ABS --> PS
   end
 ```
 
@@ -57,9 +60,8 @@ flowchart TD
   B -->|rhs · make_rhs| C["Equation system<br/>is_post_fixpoint"]
   C -->|td_analyse · TD solver| D["Post-fixpoint env<br/>pp ⇒ abs_state"]
   D -->|post_fixpoint_sound| E["γ_state env v ⊇ cfg_collect g s v"]
-  E -->|cfg_collect_exit_eq_collect| F["γ_state env exit ⊇ collect c s"]
-  F -->|big_step ⟹ t ∈ collect| G["goblint_sign_sound"]
-  D -.->|every v| H["sign_pipeline_invariant_sound<br/>point-map at all pp"]
+  E -->|v = cfg_exit, runs_to| G["goblint_sign_sound"]
+  D -.->|every v| H["pipeline_invariant_sound<br/>point-map at all pp"]
 ```
 
 ---

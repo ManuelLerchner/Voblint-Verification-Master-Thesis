@@ -3,7 +3,7 @@ theory Goblint_Formalization
     (* ── Language ──────────────────────────────────────────── *)
     IMP2_Syntax
     IMP2_SmallStep
-    (* ── Control-Flow Graph (cfg_collect, runs_to, collect) ── *)
+    (* ── Control-Flow Graph (cfg_collect, runs_to) ── *)
     CFG_Def
     CFG_Path
     IMP2_to_CFG
@@ -16,7 +16,6 @@ theory Goblint_Formalization
     (* ── Equation System ───────────────────────────────────── *)
     Constraint_System
     Constraint_System_Sound
-    Direct_Equations
     (* ── Solver ─────────────────────────────────────────────── *)
     TD_Interface
     TD_Soundness
@@ -30,20 +29,15 @@ begin
   Master's thesis at TUM: prove the complete Goblint static analysis pipeline.
   Supervisors: Alexandra Gra{\ss}, Michael Schwarz.
 
-  Pipeline (two routes both proved equivalent):
+  Pipeline (cfg_collect spec):
+    AST  --(compile/to_cfg)-->  CFG  --(rhs/make_rhs_tree)-->  Equations  --(TD)-->  Result
+    [IMP2_*, CFG_*, Constraint_System, TD_Interface, Pipeline]
 
-  Route A CFG-mediated:
-    AST  --(compile)-->  CFG  --(rhs/make_rhs_tree)-->  Equations  --(TD)-->  Result
-    [IMP2_*, CFG_*, Constraint_System, TD_Interface]
-
-  Route B Direct (no CFG record):
-    AST  --(predecessors_of/direct_tree)-->  Equations  --(TD)-->  Result
-    [Direct_Equations]
-
-  Equivalence theorem: direct_eq_cfg_analyse (Direct_Equations.thy, still open)
+  Canonical soundness: pipeline_invariant_sound, pipeline_sound_path.
+  Exit sugar: runs_to (runs_to_def); goblint_sign_sound for sign domain.
 
   Sign pipeline: closed (goblint_sign_sound).
-  Interval / Direct_Equations / TD_Total: stretch or alternate paths (sorry).
+  Interval: ivl_pipeline_sound (stretch packaging).
 
   Abstract domains:
     Sign      -- Tier 1 (finite lattice, no widening)  [Domains/Sign_Domain]
@@ -133,7 +127,7 @@ theorem goblint_sign_sound:
     "t \<in> sign_domain.gamma_state
             (run_analysis (sign_analysis_config s) c
                (cfg_exit (to_cfg c)))"
-  by (rule sign_pipeline_sound_scaffold
-        [OF runs sign_analysis_init_in_gamma_stub join_cfi td_solve_dom td_cfg_in_reach])
+  by (rule sign_pipeline_sound
+        [OF runs sign_init_in_gamma join_cfi td_solve_dom td_cfg_in_reach])
 
 end

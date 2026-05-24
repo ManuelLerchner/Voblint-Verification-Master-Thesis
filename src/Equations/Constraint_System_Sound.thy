@@ -244,7 +244,8 @@ corollary exit_sound:
   assumes tf_sound_assume_not:
     "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"  assumes s_in_S: "s \<in> S"
-  assumes terminates: "runs_to c s t"
+  assumes exit_in_collect:
+    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
   shows   "t \<in> gamma_state (env (cfg_exit (to_cfg c)))"
 proof -
   have fin: "finite (edges (to_cfg c))"
@@ -253,8 +254,8 @@ proof -
     by (rule post_fixpoint_sound[OF fin post_fp S_sound
             tf_sound_assign tf_sound_assume tf_sound_assume_not])
   have t_in_sing: "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-    using terminates unfolding runs_to_def .
-  have t_in_cfg: "t \<in> cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
+    using exit_in_collect .
+have t_in_cfg: "t \<in> cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
     using t_in_sing s_in_S cfg_collect_mono_S[of "{s}" S "to_cfg c"]
     by (auto simp: le_fun_def)
   from pfp[rule_format, of "cfg_exit (to_cfg c)"] t_in_cfg

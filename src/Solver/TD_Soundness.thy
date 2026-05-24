@@ -9,9 +9,9 @@ begin
     (1)  TD solver produces a post-fixpoint         (TD_Interface.td_analyse_post_fixpoint)
     (2)  Post-fixpoints overapproximate reachability (Constraint_System_Sound.post_fixpoint_sound)
 
-  to obtain the central soundness result:
+  to obtain exit-point soundness:
 
-    If s0 is in gamma(env_entry), and c terminates with output t,
+    If s0 is in gamma(env_entry) and t is in cfg_collect at the exit,
     then t is in gamma(env_exit).
 
   where env = td_analyse c tf ...
@@ -34,8 +34,8 @@ theorem td_solver_sound:
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
   assumes s0_sound:
     "s \<in> gamma_state s0"
-  assumes terminates:
-    "runs_to c s t"
+  assumes exit_in_collect:
+    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) :: 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
@@ -57,7 +57,7 @@ proof -
           td_solve_dom td_cfg_in_reach])
   show ?thesis
     by (rule exit_sound[OF post_fp order.refl tf_sound_assign tf_sound_assume
-          tf_sound_assume_not s0_sound terminates])
+          tf_sound_assume_not s0_sound exit_in_collect])
 qed
 
 end
@@ -66,8 +66,9 @@ end
 
 theorem sign_analysis_sound:
   assumes s_sound:    "s \<in> sign_domain.gamma_state s0"
-  assumes terminates: "runs_to c s t"
-  assumes sup_cfi:
+  assumes exit_in_collect:
+    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) ::
        sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
   assumes td_solve_dom:
@@ -96,7 +97,7 @@ proof -
     unfolding sign_tf_def by (simp add: assume_not_sign_sound)
   show ?thesis
     by (rule sign_domain.td_solver_sound
-          [OF h1 h2 h3 s_sound terminates to_cfg_finite sup_cfi
+          [OF h1 h2 h3 s_sound exit_in_collect to_cfg_finite sup_cfi
               td_solve_dom td_cfg_in_reach])
 qed
 
@@ -104,8 +105,9 @@ qed
 
 theorem interval_analysis_sound:
   assumes s_sound:    "s \<in> ivl_domain.gamma_state s0"
-  assumes terminates: "runs_to c s t"
-  assumes sup_cfi:
+  assumes exit_in_collect:
+    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
+assumes sup_cfi:
     "comp_fun_idem ((\<squnion>) ::
        ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
   assumes td_solve_dom:
@@ -134,7 +136,7 @@ proof -
     unfolding ivl_tf_def by simp
   show ?thesis
     by (rule ivl_domain.td_solver_sound
-          [OF h1 h2 h3 s_sound terminates to_cfg_finite sup_cfi
+          [OF h1 h2 h3 s_sound exit_in_collect to_cfg_finite sup_cfi
               td_solve_dom td_cfg_in_reach])
 qed
 

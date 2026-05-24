@@ -9,8 +9,6 @@ See also:
 - `~/goblint-formalization-kb/wiki/concepts/imp-language.md` — Datatype extension caveat
 - `~/goblint-formalization-kb/wiki/concepts/imp2.md` — why we don't adopt AFP `IMP2` wholesale (naming collision, no soundness payoff)
 - `~/goblint-formalization-kb/wiki/research/graph-library-evaluation.md` — parallel AFP-reuse case (graph libraries)
-- `docs/AFP_GRAPH_MIGRATION.md` — sibling migration, independent
-- `docs/SMALL_STEP_MIGRATION.md` — sibling migration, independent
 - Nipkow `HOL-IMP.AExp` — `datatype aexp = N int | V vname | Plus aexp aexp`; `aval`
 - Nipkow `HOL-IMP.BExp` — `datatype bexp = Bc bool | Not bexp | And bexp bexp | Less aexp aexp`; `bval`
 
@@ -118,9 +116,8 @@ Rejected by Meeting 3 §B. AFP `IMP2` carries arrays, `PScope`, `Assign-Locals`,
 
 **Rationale.** Meeting 3 §B verdict was *"Stay on the current extended-HOL-IMP for now; eventual move toward a Nipkow-IMP extension (open: own further extension vs. partial AFP-IMP2 adoption — Alexandra's nested-constructor route is the realistic path)."* Approach 1's abbreviation-doesn't-unfold cost is real and falls on already-closed proofs (bridge, sign chain). Approach 2 codifies the correspondence + locks the AFP-reuse stance at the documentation layer without paying the rewrite cost.
 
-**Trigger to revisit Approach 1.** Land Approach 1 only when we are touching `IMP2_Syntax` / `IMP2_Semantics` anyway:
+**Trigger to revisit Approach 1.** Land Approach 1 only when we are touching `IMP2_Syntax` / `IMP2_SmallStep` anyway:
 
-- Concurrent with the small-step migration (`docs/SMALL_STEP_MIGRATION.md`) — `IMP2_Semantics` is rewritten there regardless.
 - When adding the interval domain (`Domains/Interval_Domain` already exists but is partial) — new transfer functions touch shared call sites.
 - When adopting AFP `IMP2` arrays (if Octagon / relational stretch goal materialises).
 
@@ -219,6 +216,4 @@ Recorded for the day this becomes worth doing.
 - Approach 1 (nested constructor wrap) — phase plan sketched, deferred to next syntax-touching migration.
 - Adopting AFP `IMP2` — rejected by Meeting 3 §B; tracked in `wiki/concepts/imp2.md`.
 - `com` extension (e.g. arrays, procedures) — no current driver.
-- Renaming `src/IMP2/` (Phase 2 option A) — handled via README callout for now.
-- Small-step migration — `docs/SMALL_STEP_MIGRATION.md`.
-- Graph library migration — `docs/AFP_GRAPH_MIGRATION.md`.
+- Renaming `src/IMP2/` — handled via README callout for now.

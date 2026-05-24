@@ -54,7 +54,7 @@ value "compile example_prog 0"
 (*  (4, 0, 3,
      {(0, EA_Assign ''x'' (N 5), 1),
       (1, EA_Nop, 2),
-      (2, EA_Assign ''y'' (Plus (V ''x'') (V ''x'')), 3)})  *)
+      (2, EA_Assign ''y'' (Plus (V ''x'') (N 1)), 3)})  *)
 
 value "cfg_entry (to_cfg example_prog)"   \<comment> \<open>0\<close>
 value "cfg_exit  (to_cfg example_prog)"   \<comment> \<open>3\<close>

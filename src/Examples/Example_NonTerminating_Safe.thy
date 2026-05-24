@@ -29,8 +29,8 @@ definition nonterm_prog :: com where
 subsection \<open>The program does not terminate\<close>
 
 text \<open>
-  \<open>WHILE (Bc True) DO SKIP\<close> never reaches \<open>SKIP\<close> in small-step.
-  (Proof via star inversion; full script in Phase 6.)
+  \<open>WHILE (Bc True) DO SKIP\<close> never reaches \<open>SKIP\<close> in small-step
+  (see @{thm IMP2_SmallStep.while_true_skip_no_finish}).
 \<close>
 
 lemma while_true_skip_no_finish:

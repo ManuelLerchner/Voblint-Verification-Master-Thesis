@@ -44,21 +44,19 @@ Dependency arrows live on the issues themselves (GitHub's native `blockedBy`/`bl
 
 Issue numbers are deliberately omitted — they go stale. The directions remain even as individual issues open, close, or get renamed.
 
-### Core soundness chain (Phase 1+2 — done in code)
+### Core soundness chain (done in code)
 
-Bridges B1–B4 from `docs/OPEN_PROBLEMS.md` are proved. The sign-domain pipeline is closed end-to-end (`goblint_sign_sound`) modulo three named TD hypotheses (P1/P2/P3). Discharging P2 and P3 is on the core track; P1 is gated on P5 (finite `pp` type) and is a legitimate open assumption for a partial-correctness thesis.
+Collecting spec + post-fixpoint + TD bridge (B3–B4 in `docs/OPEN_PROBLEMS.md`) are proved.
+Sign pipeline is closed end-to-end (`goblint_sign_sound`) modulo three named TD
+hypotheses (P1/P2/P3).
 
-### Small-step migration (landed 2026-05-22)
+### Semantics and pipeline (current)
 
-Plan: `docs/SMALL_STEP_MIGRATION.md`. Branch: `small-step-migration`. Build green.
-
-Three top-level soundness theorems now live in `Pipeline.thy`:
-
-- **`pipeline_sound_path`** (canonical): per-pp, path-based, no big-step premise. Holds at intermediate program points of non-terminating programs.
-- **`pipeline_sound`**: big-step exit corollary, derived from `pipeline_sound_path` via `big_step_cfg_path`. Hoare-style consumers unchanged.
-- **`pipeline_sound_small_step`**: small-step exit corollary, derived via `small_step_big_step_eq`.
-
-The operational `small_step` predicate (`IMP2_Semantics.thy`) lives alongside `big_step`; `small_step_big_step_eq` bridges them. `Example_NonTerminating_Safe.thy` showcases per-pp safety on `x := 10; while True do skip` — provable via `pipeline_sound_path` but vacuous under the big-step formulation. KB sync ( `~/git/goblint-formalization-kb/wiki/concepts/semantics-style-tradeoffs.md`, `decisions.md`, `log.md`) lives in the KB repo.
+- **Spec:** `cfg_collect` at every program point; `runs_to` is exit-projected sugar.
+- **Canonical soundness:** `pipeline_invariant_sound`, `pipeline_sound_path` (no termination premise).
+- **Exit corollaries:** `pipeline_sound_runs_to`, `sign_pipeline_sound`, `goblint_sign_sound`.
+- **Operational:** `small_step` in `IMP2_SmallStep.thy`; `runs_to_iff_small_step` in `CFG_Collecting.thy`.
+- **Showcase:** `Example_NonTerminating_Safe.thy` — per-pp safety without a terminating run.
 
 ### Domain stretch
 
