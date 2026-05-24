@@ -35,10 +35,9 @@ jobs:
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
         with:
-          submodules: false
-
-      - name: Initialize td-verification submodule
-        run: git submodule update --init --depth 1 vendor/td-verification
+          token: ${{ github.token }}
+          fetch-depth: 1
+          submodules: true
 
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action
