@@ -13,7 +13,7 @@
 | Live sorry inventory | `rg -n '^\s*sorry' src/ \| rg -v '\.thy~'` |
 | All declared lemmas/theorems | `rg -n '^(lemma\|theorem) ' src/` |
 | Soundness chain narrative | `docs/PROOF_OVERVIEW.md` |
-| Per-stage workflow | `docs/html/index.html` (layer walkthroughs) |
+| Per-stage workflow | `docs/walkthrough/index.html` (layer walkthroughs) |
 | Catalogued repo problems (P1–P10) by file:line | `docs/OPEN_PROBLEMS.md` |
 | HOL-IMP differences | `docs/HOL_IMP_COMPARISON.md` |
 | Comparison to Blazy/Pichardie/Verasco | KB: `~/git/goblint-formalization-kb/wiki/concepts/blazy-2013-value-analysis.md` and `wiki/concepts/verasco.md` |
@@ -129,7 +129,7 @@ Gated on P5 (vendored `TD_warrow_mono_term` demands `finite (UNIV :: 'pp set)`).
 
 ### Thesis writeup
 
-`docs/PROOF_OVERVIEW.md` and `docs/html/pipeline/index.html` are the prose-level pipeline-narrative sources. The thesis chapter lifts from them; cross-references to `.thy` files are by file path, not by lemma name (those drift; `rg` finds them).
+`docs/PROOF_OVERVIEW.md` and `docs/walkthrough/pipeline/index.html` are the prose-level pipeline-narrative sources. The thesis chapter lifts from them; cross-references to `.thy` files are by file path, not by lemma name (those drift; `rg` finds them).
 
 ---
 

@@ -1,7 +1,8 @@
 # Proof status
 
 Execution status and sorry inventory. Overview: `docs/PROOF_OVERVIEW.md`.
-Walkthrough: per-layer HTML under `docs/html/` (hub: `docs/html/index.html`; main narrative: `docs/html/pipeline/index.html`).
+Walkthrough: per-layer HTML under `docs/walkthrough/` (hub: `docs/walkthrough/index.html`; main narrative: `docs/walkthrough/pipeline/index.html`).
+Isabelle browser info: `make html` → `docs/html/index.html` (GitHub Pages on `main`).
 Roadmap: `docs/ROADMAP.md`.
 
 ---
@@ -98,7 +99,7 @@ gh issue list --state open --label phase:stretch
 
 1. After lemma changes: `rg -n '^\s*sorry' src/` and update the table above.
 2. Batch verify: `isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization`
-3. Refresh the matching `docs/html/<layer>/index.html` and `src/<layer>/README.md` when a layer changes materially.
+3. Refresh the matching `docs/walkthrough/<layer>/index.html` and `src/<layer>/README.md` when a layer changes materially.
 
 ---
 

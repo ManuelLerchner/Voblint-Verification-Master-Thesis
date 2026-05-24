@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: MIT
+
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-isabelle-ascii:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check Isabelle ASCII-only sources
+        run: |
+          find src -name '*.thy' -print0 | xargs -0 python3 scripts/check_isabelle_ascii.py
+
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+
+    steps:
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+
+      - name: Build Goblint_Formalization and HTML docs
+        run: |
+          make vendor
+          make html AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+
+      - name: Upload GitHub Pages site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-docs
+          path: docs/html
+          retention-days: 1
+
+  deploy-pages:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: html-docs
+          path: docs/html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

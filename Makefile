@@ -3,7 +3,7 @@ AFP             ?= $(HOME)/afp/thys
 SESSION         := Goblint_Formalization
 ISABELLE_HOME_USER ?= $(shell $(ISABELLE) getenv -b ISABELLE_HOME_USER 2>/dev/null)
 BROWSER_INFO_SRC := $(ISABELLE_HOME_USER)/browser_info/Unsorted/$(SESSION)
-HTML_DIR        := docs/html/isabelle
+HTML_DIR        := docs/html
 
 TD_DIR          := vendor/td-verification
 TD_PATCH        := vendor/td-verification.patch
@@ -47,6 +47,7 @@ html: vendor
 	rm -rf "$(HTML_DIR)"
 	mkdir -p "$(HTML_DIR)"
 	cp -R "$(BROWSER_INFO_SRC)/." "$(HTML_DIR)/"
+	touch "$(HTML_DIR)/.nojekyll"
 	@echo "Open $(HTML_DIR)/index.html (session theories; includes transitive imports)."
 
 # Launch jEdit with the right session roots loaded.

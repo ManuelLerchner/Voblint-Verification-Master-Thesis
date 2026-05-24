@@ -1,9 +1,10 @@
 # HTML walkthroughs
 
 Static documentation for the Goblint formalization. One page per `src/` layer,
-plus a hub and shared assets.
+plus a hub and shared assets. **Committed in the repo; not deployed to GitHub
+Pages** (the site is Isabelle browser info from `make html` → `docs/html/`).
 
-**Open in a browser:** start at [`index.html`](index.html), or go directly to
+**Open locally:** start at [`index.html`](index.html), or go directly to
 [`pipeline/index.html`](pipeline/index.html) for the main end-to-end narrative.
 
 ## Layout
@@ -31,7 +32,7 @@ plus a hub and shared assets.
 - [`../PROOF_PHASES.md`](../PROOF_PHASES.md) — phases and sorry inventory
 - [`../../src/*/README.md`](../../src/README.md) — per-folder summaries in the repo
 
-## Isabelle session browser info (generated)
+## Isabelle session browser info (generated, GitHub Pages)
 
 From the repo root:
 
@@ -40,12 +41,8 @@ make html
 ```
 
 Runs `isabelle build … -o browser_info` on session `Goblint_Formalization` and
-copies the result to [`isabelle/index.html`](isabelle/index.html) (gitignored).
-Isabelle also keeps a copy under
-`$ISABELLE_HOME_USER/browser_info/Unsorted/Goblint_Formalization/`. The HTML
-lists all session theories, including transitive imports (HOL, TD, AFP), not
-only files under `src/`. Same mechanism as the
-[Isabelle library HTML pages](https://stackoverflow.com/questions/17833567/how-to-generate-html-version-of-isabelle-theory).
+copies the result to [`../html/`](../html/) (gitignored). Open `../html/index.html`
+after a local build. CI deploys `docs/html/` to GitHub Pages on push to `main`.
 
 ## Maintenance
 

@@ -173,10 +173,11 @@ provided `Makefile` targets:
 - `make jedit`: launches Isabelle/jEdit with the correct session roots
   pre-loaded.
 
-- `make html`: builds browser info (`-o browser_info`) and copies it to
-  `docs/html/isabelle/index.html` for offline browsing (same mechanism as the
-  [Isabelle library HTML pages](https://stackoverflow.com/questions/17833567/how-to-generate-html-version-of-isabelle-theory);
-  see `docs/html/README.md`).
+- `make html`: builds Isabelle browser info (`-o browser_info`) and copies it to
+  `docs/html/index.html` for offline browsing (gitignored; same mechanism as the
+  [Isabelle library HTML pages](https://stackoverflow.com/questions/17833567/how-to-generate-html-version-of-isabelle-theory)).
+  CI deploys `docs/html/` to GitHub Pages on push to `main`. Handwritten layer
+  walkthroughs live under `docs/walkthrough/` (repo only, not on the site).
 
 - `make clean-vendor`: removes `vendor/td-verification/` (re-fetched on next
   `make vendor`).
@@ -209,7 +210,7 @@ Repository layout
 ├── vendor/
 │   ├── td-verification/             fetched by `make vendor` (gitignored)
 │   └── td-verification.patch        local fixes to the vendored TD solver
-├── docs/                 proof overview, phases, walkthroughs
+├── docs/                 proof overview, phases; walkthroughs + generated HTML
 ├── Makefile              build entry points (vendor, build, jedit, clean)
 └── ROOT                  Isabelle session definition
 ```
@@ -243,8 +244,8 @@ Documentation
 | `docs/HOL_IMP_COMPARISON.md`   | vs HOL-IMP `Abs_*`: workflow, domain theory tradeoffs   |
 | `docs/PROOF_OVERVIEW.md`       | Theorem chain, key types and lemmas                     |
 | `docs/PROOF_PHASES.md`         | Proof status, sorry inventory, remaining work           |
-| `docs/html/`                   | Per-layer HTML walkthroughs (`docs/html/index.html` hub) |
-| `docs/html/`                   | Per-layer HTML walkthroughs (`index.html` hub; may lag `.md`) |
+| `docs/walkthrough/`            | Per-layer HTML walkthroughs (`index.html` hub; not on GitHub Pages) |
+| `docs/html/`                   | Isabelle browser info (`make html`; gitignored; GitHub Pages on `main`) |
 
 Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./scripts/setup.sh`, `./scripts/start-ir.sh`.
 

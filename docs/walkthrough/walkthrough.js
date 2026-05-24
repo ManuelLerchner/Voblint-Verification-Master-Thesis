@@ -1,5 +1,5 @@
 /**
- * Shared init for docs/html walkthrough pages:
+ * Shared init for docs/walkthrough walkthrough pages:
  * - Mermaid (theme follows prefers-color-scheme)
  * - TOC scroll-spy (only in-page # anchors)
  */
