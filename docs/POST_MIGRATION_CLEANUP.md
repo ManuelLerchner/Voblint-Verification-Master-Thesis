@@ -2,18 +2,19 @@
 
 > **Landed 2026-05-24** on branch `post-migration-cleanup`. Prior items (deleted
 > `Direct_Equations`, `TD_Total`, AST `collect`, premise rephrasing to `cfg_collect`)
-> were already on `main`. This pass: **CFG_Collecting split**, **Phase 3 partial
-> option (c)** (`terminates_to` removed; direct `small_step_preserves_runs_to`;
-> `runs_to_*` intro rules kept), **Phase 4 partial** (`to_cfg_mk`,
-> `cfg_path_sub_offset_into`, `edges_collect_memberE`, `cfg_path_NilE`/`ConsE`,
-> apply→`by` in Path / Collecting_Core / Edges_Collect / Path_Bridge).
+> were already on `main`. This pass: **CFG_Collecting split**, **Phase 3 option (c) full**
+> (`terminates_to` + seven `runs_to_*` intro rules removed; `path_collect_imp_runs_to_*`
+> + `small_step_preserves_runs_to` via Phase-7 iff), **Phase 4 partial** (`to_cfg_mk`,
+> `to_cfg_simps`, `edges_collect_append [simp]`, `cfg_path_sub_offset_into`,
+> `edges_collect_memberE`, `cfg_path_NilE`/`ConsE`, Path_Bridge iff rewire),
+> **Phase 7** (`cfg_path_Seq_iff`, `If_iff`, `While_exit_iff`, `While_loop_iff`).
 > **HOL_IMP_Countable:** kept separate (arity-fact clash if folded into `IMP2_Syntax`).
 >
 > **Current architecture:** `docs/PROOF_OVERVIEW.md`.
 
-**Status:** Phases 0–3 partial, 4 partial, **5–6 landed** on branch (2026-05-24).
-Phase 7 optional. Deferred automation: `edges_collect_append [simp]`, `to_cfg_simps`
-bundle (batch loop / syntax).
+**Status:** Phases 0–3 full, 4 partial, **5–7 landed** on branch (2026-05-24).
+Split/one-way lemmas (`cfg_path_Seq_split`, etc.) remain as infrastructure for iff proofs;
+consumers (`CFG_Path_Bridge`, elim rules in `CFG_Runs_To_Bridge`) use `cfg_path_*_iff`.
 **Branch:** `post-migration-cleanup`.
 **KB mirror:** [`goblint-formalization-kb` → `wiki/concepts/spec-architecture.md`](https://github.com/ManuelLerchner/goblint-formalization-kb/blob/main/wiki/concepts/spec-architecture.md) (locked architecture + thesis sentence).
 **Predecessor:** [`BIG_STEP_REMOVAL.md`](BIG_STEP_REMOVAL.md) (landed 2026-05-24 on `main`). With big-step gone, the residual cost is file layout, an oversized `CFG_Collecting.thy`, and proof boilerplate that automation should absorb. This plan trims ~900 LOC and aligns the API with the long-term architecture below.
@@ -451,11 +452,11 @@ Not required for architecture lock. See `docs/PROOF_SIMPLIFICATION.md` §2 (reba
 | Phase | Outcome |
 | --- | --- |
 | 0–2 | Baseline; deleted `Direct_Equations`, `TD_Total`, `collect` API; CFG split into 5 theories + umbrella |
-| 3 partial | `terminates_to` removed; `small_step_preserves_runs_to` direct; seven `runs_to_*` intro rules **kept** |
-| 4 partial | `cfg_path_NilE`/`ConsE`, `to_cfg_mk`, `cfg_path_sub_offset_into`, `edges_collect_memberE`; some apply→`by` |
+| 3 full | `terminates_to` removed; seven `runs_to_*` intro rules deleted; `path_collect_imp_runs_to_*` + preserve via iff; elim rules use `cfg_path_*_iff` |
+| 4 partial | `cfg_path_NilE`/`ConsE`, `to_cfg_mk`, `to_cfg_simps`, `edges_collect_append [simp]`, `cfg_path_sub_offset_into`, `edges_collect_memberE`; Path_Bridge iff rewire |
 | 5 | `PROOF_OVERVIEW`, `PROOF_PHASES`, `OPEN_PROBLEMS`, `PROOF_SIMPLIFICATION` rebased on small-step + split |
 | 6 | `exit_sound` / `TD_Soundness` already `cfg_collect` at exit; `pipeline_sound_runs_to` primary premise `cfg_collect`; `pipeline_sound_runs_to_runs` for `runs_to` |
-| 7 | Not on branch — file GitHub issue or follow-up |
+| 7 | `cfg_path_Seq_iff`, `cfg_path_If_iff`, `cfg_path_While_exit_iff`, `cfg_path_While_loop_iff` in `CFG_Compound_Paths.thy` |
 
 ---
 

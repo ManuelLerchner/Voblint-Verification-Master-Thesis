@@ -134,8 +134,7 @@ next
     using cfg_edges_entry_exit_Seq[OF c1_0 c2_n] by auto
   from Seq.prems(1) en_seq ex_seq
     have p: "cfg_path (to_cfg (c1 ;; c2)) en1 es (ex20 + n1)" by simp
-  have en1_lt: "en1 < n1" using compile_fresh[OF c1_0] by simp
-  from cfg_path_Seq_split[OF c1_0 c2_0 p en1_lt] obtain es1 es2 where
+  from cfg_path_Seq_iff[OF c1_0 c2_0, THEN iffD1, OF p] obtain es1 es2 where
         es_split: "es = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2"
     and p1: "cfg_path (to_cfg c1) en1 es1 ex1"
     and p2: "cfg_path (to_cfg c2) en20 es2 ex20"
@@ -189,8 +188,7 @@ next
   from If.prems(1) en_if ex_if
     have p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))" by simp
 
-  from cfg_path_If_split[OF c1_0 c2_0 p]
-  have split_or:
+  from cfg_path_If_iff[OF c1_0 c2_0, THEN iffD1, OF p] have split_or:
     "(\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
                 \<and> cfg_path (to_cfg c1) en10 es1 ex10)
    \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
@@ -312,16 +310,7 @@ next
     using cfg_edges_entry_exit_While[OF c1_1] by auto
   from While.prems(1) en_w ex_w
     have p: "cfg_path (to_cfg (WHILE b DO c)) 0 es (n10 + 1)" by simp
-  from compile_entry_ne_exit[OF compW] have "enW \<noteq> exW" .
-  from en_w enW_eq ex_w exW_eq have "enW = 0" "exW = n10 + 1" by simp_all
-  with `enW \<noteq> exW` have exit_ne: "0 \<noteq> n10 + 1" by simp
-  have es_ne: "es \<noteq> []"
-  proof (rule ccontr)
-    assume "\<not> es \<noteq> []"
-    hence "es = []" by simp
-    with p have "0 = n10 + 1" by (cases rule: cfg_path.cases) simp_all
-    with exit_ne show False by simp
-  qed  from cfg_path_While_split_trailing_exit[OF c0 c1_1 p es_ne] obtain es_pre where
+  from cfg_path_While_exit_iff[OF c0 c1_1, THEN iffD1, OF p] obtain es_pre where
         es_decomp: "es = es_pre @ [(EA_AssumeNot b, n10 + 1)]"
     and p_pre: "cfg_path (to_cfg (WHILE b DO c)) 0 es_pre 0"
     by blast
@@ -353,11 +342,17 @@ next
     next
       case (Cons hd tl)
       have ne: "ER \<noteq> []" using Cons by simp
-      from cfg_path_While_loop_peel[OF c0 c1_1 p_R ne] obtain es_body ER' where
+      from cfg_path_While_loop_iff[OF c0 c1_1, THEN iffD1, OF p_R]
+        have loop_decomp: "ER = [] \<or> (\<exists>es_body ER'.
+              ER = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ ER'
+              \<and> cfg_path (to_cfg c) en10 es_body ex10
+              \<and> cfg_path (to_cfg (WHILE b DO c)) 0 ER' 0)"
+        by blast
+      from loop_decomp ne obtain es_body ER' where
             peel_eq: "ER = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ ER'"
         and pc: "cfg_path (to_cfg c) en10 es_body ex10"
         and p_tail: "cfg_path (to_cfg (WHILE b DO c)) 0 ER' 0"
-        by blast
+        by auto
       have len: "length ER' < length ER" unfolding peel_eq by simp
       from pc en0_eq ex0_eq have p_body:
             "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es_body (cfg_exit (to_cfg c))"
@@ -368,11 +363,17 @@ next
         have head_empty: "edges_collect [(EA_Assume b, en10 + 1)] {S0} = {}"
           using False by auto
         have er_empty: "edges_collect ER {S0} = {}"
-          unfolding peel_eq
-          using head_empty edges_collect_append edges_collect_empty_set by presburger
+        proof -
+          have step1: "edges_collect ER {S0}
+                = edges_collect (offset_path 1 es_body @ [(EA_Nop, 0)] @ ER')
+                    (edges_collect [(EA_Assume b, en10 + 1)] {S0})"
+            unfolding peel_eq by (rule edges_collect_append)
+          show ?thesis by (metis step1 head_empty edges_collect_empty_set)
+        qed
         have all_empty: "edges_collect (ER @ [(EA_AssumeNot b, n10 + 1)]) {S0} = {}"
           by (simp add: edges_collect_append er_empty edges_collect_empty_set)
-        from t_R all_empty show ?thesis by simp
+        from t_R all_empty show ?thesis
+          by blast
       next
         case True
         have eq_head: "edges_collect [(EA_Assume b, en10 + 1)] {S0} = {S0}"

@@ -20,6 +20,8 @@ lemma to_cfg_mk:
   shows "to_cfg c = mk_cfg en ex E"
   using assms by (simp add: to_cfg_def Let_def split: prod.splits)
 
+lemmas to_cfg_simps = to_cfg_mk to_cfg_def Let_def cfg_entry_mk_cfg cfg_exit_mk_cfg edges_mk_cfg
+
 lemma edges_collect_member:
   "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
 proof (induction es arbitrary: S x)

@@ -42,7 +42,7 @@ next
   show ?case using Cons ep edge_collect_mono by auto
 qed
 
-lemma edges_collect_append:
+lemma edges_collect_append[simp]:
   "edges_collect (es1 @ es2) S = edges_collect es2 (edges_collect es1 S)"
   by (induction es1 arbitrary: S) auto
 

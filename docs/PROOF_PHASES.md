@@ -85,8 +85,7 @@ Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects
 
 - Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`, `comp_fun_idem`).
 - **Interval / octagon** domains and executability.
-- Optional **Phase 3 full**: delete internal `runs_to_*` intro rules (~400 LOC in `CFG_Runs_To_Bridge.thy`; `terminates_to` already removed).
-- Optional **compound `cfg_path_*_iff`** (`docs/PROOF_SIMPLIFICATION.md` §2).
+- Remaining **Phase 4** automation (`inductive_cases`, path-lifting combinators, apply→`by` sweep).
 - Remove **`quick_and_dirty`** from `ROOT` when the session is sorry-free by policy.
 
 ```bash
