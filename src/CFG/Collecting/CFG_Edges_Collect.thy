@@ -20,6 +20,10 @@ lemma edge_collect_mono:
   shows "edge_collect a S \<subseteq> edge_collect a T"
   using assms by (cases a) auto
 
+lemma edge_collect_member:
+  "x \<in> edge_collect a S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edge_collect a {s})"
+  by (cases a) auto
+
 (*
   edges_collect aggregates the resulting state after walking along a list of edges
   and running edge_collect each time
@@ -42,9 +46,38 @@ next
   show ?case using Cons ep edge_collect_mono by auto
 qed
 
+lemma edges_collect_member:
+  "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
+proof (induction es arbitrary: S x)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons e es)
+  obtain a p where ep: "e = (a, p)" by (cases e) auto
+  show ?case unfolding ep
+    by (metis edge_collect_member edges_collect.simps(2) local.Cons)
+qed
+
+lemma edges_collect_memberE:
+  assumes "x \<in> edges_collect es S"
+  obtains s where "s \<in> S" and "x \<in> edges_collect es {s}"
+  using assms edges_collect_member by blast
+
 lemma edges_collect_append[simp]:
   "edges_collect (es1 @ es2) S = edges_collect es2 (edges_collect es1 S)"
   by (induction es1 arbitrary: S) auto
+
+lemma edges_collect_nop_append:
+  "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
+proof (induction es1 arbitrary: S)
+  case Nil
+  show ?case by (simp add: edges_collect_append)
+next
+  case (Cons e es1)
+  obtain a p where ep: "e = (a, p)" by (cases e) auto
+  show ?case
+    unfolding ep edges_collect.simps edges_collect_append Cons by simp
+qed
 
 (*
   edges_collect only inspects edge actions; the pp component of each

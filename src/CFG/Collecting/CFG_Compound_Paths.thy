@@ -26,35 +26,6 @@ lemma to_cfg_compile:
     "edges (to_cfg c) = E"
   by (cases "compile c 0") (auto simp: to_cfg_simps)
 
-lemma edges_collect_member:
-  "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
-proof (induction es arbitrary: S x)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons e es)
-  obtain a p where ep: "e = (a, p)" by (cases e) auto
-  show ?case unfolding ep
-    by (metis edge_collect_member edges_collect.simps(2) local.Cons)
-qed
-
-lemma edges_collect_memberE:
-  assumes "x \<in> edges_collect es S"
-  obtains s where "s \<in> S" and "x \<in> edges_collect es {s}"
-  using assms edges_collect_member by blast
-
-lemma edges_collect_nop_append:
-  "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
-proof (induction es1 arbitrary: S)
-  case Nil
-  show ?case by (simp add: edges_collect_append)
-next
-  case (Cons e es1)
-  obtain a p where ep: "e = (a, p)" by (cases e) auto
-  show ?case
-    unfolding ep edges_collect.simps edges_collect_append Cons by simp
-qed
-
 lemma compile_Seq_0:
   assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"

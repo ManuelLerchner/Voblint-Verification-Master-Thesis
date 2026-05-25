@@ -9,11 +9,6 @@ definition cfg_edges_collect :: "cfg => store set => pp => store set" where
   "cfg_edges_collect g S v =
      (\<Union>es\<in>{es. cfg_path g (cfg_entry g) es v}. edges_collect es S)"
 
-lemma edge_collect_member:
-  "x \<in> edge_collect a S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edge_collect a {s})"
-  by (cases a) auto
-
-
 (* One CFG step extends path-based collecting. *)
 lemma cfg_edges_collect_step:
   assumes e: "(u, a, v) : edges g"
