@@ -53,26 +53,15 @@ next
     by (metis edge_collect_member edges_collect.simps(2) local.Cons)
 qed
 
-lemma edges_collect_memberE:
+lemma edges_collect_memberE[elim]:
   assumes "x \<in> edges_collect es S"
   obtains s where "s \<in> S" and "x \<in> edges_collect es {s}"
   using assms edges_collect_member by blast
 
 lemma edges_collect_append[simp]:
   "edges_collect (es1 @ es2) S = edges_collect es2 (edges_collect es1 S)"
-  by (induction es1 arbitrary: S) auto
-
-lemma edges_collect_nop_append:
-  "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
-proof (induction es1 arbitrary: S)
-  case Nil
-  show ?case by (simp add: edges_collect_append)
-next
-  case (Cons e es1)
-  obtain a p where ep: "e = (a, p)" by (cases e) auto
-  show ?case
-    unfolding ep edges_collect.simps edges_collect_append Cons by simp
-qed
+  apply (induction es1 arbitrary: S)
+  by auto
 
 (*
   edges_collect only inspects edge actions; the pp component of each
@@ -102,7 +91,7 @@ type_synonym cenv = "pp => store set"
 
 definition collect_pp :: "cfg => cenv => pp => store set" where
   "collect_pp g rho v =
-     Union {edge_collect a (rho u) | u a. (u, a, v) : edges g}"
+     \<Union>{edge_collect a (rho u) | u a. (u, a, v) : edges g}"
 
 (* \<midarrow>\<midarrow> Least Fixpoint (Collecting Semantics over CFG) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
@@ -110,10 +99,10 @@ definition collect_pp :: "cfg => cenv => pp => store set" where
   is the least fixpoint of the monotone transformer collect_pp.
 *)
 
+
 definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
   "cfg_collect_F g S rho v =
-     (if v = cfg_entry g then S Un collect_pp g rho v
-      else collect_pp g rho v)"
+     (if v = cfg_entry g then S else {}) \<union> collect_pp g rho v"
 
 definition cfg_collect :: "cfg => store set => cenv" where
   "cfg_collect g S = lfp (cfg_collect_F g S)"
@@ -123,15 +112,15 @@ definition cfg_collect :: "cfg => store set => cenv" where
 
 lemma collect_pp_mono:
   "mono (\<lambda>rho. collect_pp g rho v)"
-proof (rule monoI)
+proof
   fix rho1 rho2 :: cenv
-  assume le: "rho1 \<le> rho2"
-  then have ru: "\<And>u. rho1 u \<subseteq> rho2 u"
+  assume "rho1 \<le> rho2"
+  then have "\<forall>u. rho1 u \<subseteq> rho2 u"
     by (simp add: le_fun_def)
-  have edge: "\<And>u a. (u, a, v) \<in> edges g \<Longrightarrow> edge_collect a (rho1 u) \<subseteq> edge_collect a (rho2 u)"
-    using ru edge_collect_mono by auto
+  then have edge: "\<forall>a u. edge_collect a (rho1 u) \<subseteq> edge_collect a (rho2 u)"
+    using edge_collect_mono by auto
   then show "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
-    unfolding collect_pp_def by blast
+    unfolding collect_pp_def by auto
 qed
 
 lemma cfg_collect_F_mono:
@@ -139,15 +128,10 @@ lemma cfg_collect_F_mono:
 proof (rule monoI)
   fix rho1 rho2 :: cenv
   assume le: "rho1 \<le> rho2"
-  show "cfg_collect_F g S rho1 \<le> cfg_collect_F g S rho2"
+  then show "cfg_collect_F g S rho1 \<le> cfg_collect_F g S rho2"
     unfolding cfg_collect_F_def le_fun_def
     using collect_pp_mono le monotoneD by fastforce
 qed
-
-lemma cfg_collect_lfp_unfold:
-  "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
-  unfolding cfg_collect_def
-  by (simp add: cfg_collect_F_mono def_lfp_unfold)
 
 lemma cfg_collect_F_mono_S:
   "S \<subseteq> S' \<Longrightarrow> cfg_collect_F g S rho \<le> cfg_collect_F g S' rho"
@@ -157,6 +141,11 @@ lemma cfg_collect_mono_S:
   "S \<subseteq> S' \<Longrightarrow> cfg_collect g S \<le> cfg_collect g S'"
   unfolding cfg_collect_def
   by (rule lfp_mono) (rule cfg_collect_F_mono_S)
+
+lemma cfg_collect_lfp_unfold:
+  "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
+  unfolding cfg_collect_def
+  by (simp add: cfg_collect_F_mono def_lfp_unfold)
 
 
 end

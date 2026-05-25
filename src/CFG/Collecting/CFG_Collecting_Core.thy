@@ -22,12 +22,12 @@ proof
     by (smt (verit, ccfv_threshold) UN_iff edge_collect_member mem_Collect_eq)
   then obtain s where s: "s \<in> edges_collect es S"
     and x: "x \<in> edge_collect a {s}"
-    using edge_collect_member by metis 
+    using edge_collect_member by blast
 
   have p: "g \<turnstile> u \<longrightarrow>\<^bsub>[(a, v)]\<^esub> v"
-    by (rule cfg_path.step[OF e cfg_path.empty])
+    by (simp add: cfg_path.step e empty)
   have es': "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>(es @ [(a, v)])\<^esub> v"
-    by (rule cfg_path_append[OF es p])
+    using es p by blast
   have "x \<in> edges_collect (es @ [(a, v)]) S"
     using x s unfolding edges_collect_append edges_collect.simps
     using edge_collect_member by blast 
@@ -46,11 +46,14 @@ lemma cfg_edges_collect_entry:
 *)
 lemma cfg_edges_collect_post:
   "cfg_collect_F g S (cfg_edges_collect g S) v \<subseteq> cfg_edges_collect g S v"
-  unfolding cfg_collect_F_def
-  apply auto
-  using cfg_edges_collect_entry apply blast
-  using cfg_edges_collect_step collect_pp_def apply fastforce
-  using cfg_edges_collect_step collect_pp_def by fastforce
+proof -
+  have entry: "(if v = cfg_entry g then S else {}) \<subseteq> cfg_edges_collect g S v"
+    using cfg_edges_collect_entry by auto
+  have step: "collect_pp g (cfg_edges_collect g S) v \<subseteq> cfg_edges_collect g S v"
+    unfolding collect_pp_def using cfg_edges_collect_step by blast
+  from entry step show ?thesis
+    unfolding cfg_collect_F_def by blast
+qed
 
  
 lemma cfg_collect_le_edges_collect:
