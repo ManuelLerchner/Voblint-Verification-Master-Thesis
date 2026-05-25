@@ -55,8 +55,9 @@ definition less_edge_action_def:
   "((<) :: edge_action \<Rightarrow> edge_action \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
 
 instance
-  apply (intro_classes)
-  unfolding less_edge_action_def less_eq_edge_action_def by auto
+  apply (standard, goal_cases)
+  unfolding less_eq_edge_action_def less_edge_action_def by(auto)
+
 end
 
 (* \<midarrow>\<midarrow> CFG Record (extension of AFP graph) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
@@ -65,28 +66,20 @@ record cfg = "(pp, edge_action) graph" +
   cfg_entry :: pp
   cfg_exit  :: pp
 
-(* Smart constructor: auto-computes the node set so valid_graph holds. *)
-definition compute_nodes :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> pp set" where
-  "compute_nodes en ex E = {en, ex} \<union> fst ` E \<union> (snd \<circ> snd) ` E"
+(* \<midarrow>\<midarrow> CFG Construction ) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition mk_cfg :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> cfg" where
-  "mk_cfg en ex E =
-     \<lparr> nodes = compute_nodes en ex E, edges = E, cfg_entry = en, cfg_exit = ex \<rparr>"
+  "mk_cfg entry exit E =
+     \<lparr> nodes =({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E),
+       edges = E,
+       cfg_entry = entry,
+       cfg_exit = exit
+     \<rparr>"
 
-lemma edges_mk_cfg[simp]: "edges (mk_cfg en ex E) = E"
-  by (simp add: mk_cfg_def)
-
-lemma nodes_mk_cfg[simp]: "nodes (mk_cfg en ex E) = compute_nodes en ex E"
-  by (simp add: mk_cfg_def)
-
-lemma cfg_entry_mk_cfg[simp]: "cfg_entry (mk_cfg en ex E) = en"
-  by (simp add: mk_cfg_def)
-
-lemma cfg_exit_mk_cfg[simp]: "cfg_exit (mk_cfg en ex E) = ex"
-  by (simp add: mk_cfg_def)
+declare mk_cfg_def[simp]
 
 lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E))"
-  by unfold_locales (force simp: mk_cfg_def compute_nodes_def graph.defs)+
+  unfolding valid_graph_def graph.truncate_def mk_cfg_def by force
 
 (* Affine shift along program points compile c (n+k) is compile c n with all pp+k. *)
 
@@ -100,8 +93,7 @@ lemma offset_edges_Un[simp]:
 lemma offset_edges_insert_shift:
   "offset_edges k (insert ((u::nat), a, (v::nat)) S) =
    insert (u + k, a, v + k) (offset_edges k S)"
-  unfolding offset_edges_def
-  by auto
+  unfolding offset_edges_def by auto
 
 lemma in_offset_edges_iff:
   "((u + k::nat, a, v + k) \<in> offset_edges k E) \<longleftrightarrow> (u, a, v) \<in> E"
@@ -115,7 +107,7 @@ definition predecessors :: "cfg => pp => (pp * edge_action) set" where
 lemma finite_predecessors:
   assumes "finite (edges g)"
   shows "finite (predecessors g v)"
-proof -
+proof  -
   have "predecessors g v \<subseteq> (\<lambda>e :: pp \<times> edge_action \<times> pp. (fst e, fst (snd e))) ` edges g"
     unfolding predecessors_def by force
   then show ?thesis

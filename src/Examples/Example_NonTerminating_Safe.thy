@@ -28,15 +28,32 @@ definition nonterm_prog :: com where
 
 subsection \<open>The program does not terminate\<close>
 
-text \<open>
-  \<open>WHILE (Bc True) DO SKIP\<close> never reaches \<open>SKIP\<close> in small-step
-  (see @{thm IMP2_SmallStep.while_true_skip_no_finish}).
-\<close>
+
+definition wt_suffix :: "com \<Rightarrow> com \<Rightarrow> bool" where
+  "wt_suffix body c \<equiv>
+     c = WHILE (Bc True) DO body
+   \<or> c = IF (Bc True) THEN body ;; WHILE (Bc True) DO body ELSE SKIP
+   \<or> (\<exists> c'. c = c' ;; WHILE (Bc True) DO body)"
+
+lemma wt_suffix_step:
+  "wt_suffix body c \<Longrightarrow> (c, s) \<rightarrow> (c', s') \<Longrightarrow> wt_suffix body c'"
+  unfolding wt_suffix_def
+  by auto
+
+lemma wt_suffix_steps:
+  "(c, s) \<rightarrow>* (c', t) \<Longrightarrow> wt_suffix body c \<Longrightarrow> wt_suffix body c'"
+  by (induction "(c,s)" "(c',t)" arbitrary: c s rule: star.induct)
+     (auto intro: wt_suffix_step)
 
 lemma while_true_skip_no_finish:
-  "\<not> ((WHILE (Bc True) DO SKIP, s) \<rightarrow>* (SKIP, t))"
-  by (fact IMP2_SmallStep.while_true_skip_no_finish)
+  "\<not> ((WHILE (Bc True) DO a, s) \<rightarrow>* (SKIP, t))"
+  by (meson com.distinct(3,5,7) wt_suffix_def wt_suffix_steps)
+ 
 
+text \<open>
+  \<open>WHILE (Bc True) DO SKIP\<close> never reaches \<open>SKIP\<close> in small-step
+  (see @{thm while_true_skip_no_finish}).
+\<close>
 
 lemma nonterm_prog_no_runs_to:
   "\<not> (\<exists>t. runs_to nonterm_prog s t)"
@@ -134,9 +151,6 @@ text \<open>
   small-step suffix invariant from \<open>IMP2_SmallStep\<close>.
 \<close>
 
-lemma while_true_incr_no_finish:
-  "\<not> ((WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t))"
-  by (fact IMP2_SmallStep.while_true_incr_no_finish)
 
 lemma incr_loop_no_runs_to:
   "\<not> (\<exists>t. runs_to incr_loop_prog s t)"
@@ -150,7 +164,8 @@ proof clarify
         "(''x'' ::= N 0, s) \<rightarrow>* (SKIP, s2)"
     and w: "(WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s2) \<rightarrow>* (SKIP, t)"
     by blast
-  from w while_true_incr_no_finish show False by simp
+  from w show False
+    by (simp add: while_true_skip_no_finish)
 qed
 
 

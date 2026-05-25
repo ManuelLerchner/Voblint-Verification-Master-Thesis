@@ -11,12 +11,12 @@ lemma to_cfg_mk:
   shows "to_cfg c = mk_cfg en ex E"
   using assms by (simp add: to_cfg_def Let_def split: prod.splits)
 
-lemmas to_cfg_simps = to_cfg_mk to_cfg_def Let_def cfg_entry_mk_cfg cfg_exit_mk_cfg edges_mk_cfg
+lemmas to_cfg_simps = to_cfg_mk to_cfg_def Let_def
 
 lemma to_cfg_of_compile_0:
   assumes "compile c 0 = (n, en, ex, E)"
   shows "cfg_entry (to_cfg c) = en" and "cfg_exit (to_cfg c) = ex" and "edges (to_cfg c) = E"
-  using assms to_cfg_mk by (auto simp: cfg_entry_mk_cfg cfg_exit_mk_cfg edges_mk_cfg)
+  using assms to_cfg_mk by auto
 
 lemma to_cfg_compile:
   obtains n' en ex E where
@@ -199,7 +199,7 @@ proof -
   have Eseq: "edges (to_cfg (c1 ;; c2)) =
               E1 \<union> {(ex1, EA_Nop, en20 + n1)} \<union> offset_edges n1 E20"
     using cfg_edges_entry_exit_Seq[OF c1 c2_n] by simp
-  from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> E1. fst e < n1" by simp
+  from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> E1. fst e < n1" by fastforce
   from compile_fresh[OF c1] have ex1_lt: "ex1 < n1" by simp
   show ?thesis
     using edge u_ge Eseq E1_src_lt ex1_lt by force
@@ -443,7 +443,7 @@ proof -
                 (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
     using cfg_edges_entry_exit_If[OF c1_1 c2_n] by simp
   from compile_fresh[OF c1_1] have E1_src_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1"
-    by simp
+    by fastforce
   from compile_fresh[OF c1_1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
   show ?thesis
     using edge u_in u_lt Eif E1_src_lt ex1_lt by force
@@ -467,9 +467,9 @@ proof -
              \<union> {(ex10 + 1, EA_Nop, n20 + (n10 + 1)),
                 (ex20 + (n10 + 1), EA_Nop, n20 + (n10 + 1))}"
     using cfg_edges_entry_exit_If[OF c1_1 c2_n] by simp
-  from compile_fresh[OF c1_1] have E1_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1" by simp
+  from compile_fresh[OF c1_1] have E1_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1" by fastforce
   from compile_fresh[OF c2_n] have E2_lt: "\<forall>e \<in> offset_edges (n10 + 1) E20. fst e < n20 + (n10 + 1)"
-    by simp
+    by fastforce
   from compile_fresh[OF c1_1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
   from compile_fresh[OF c2_n] have ex2_lt: "ex20 + (n10 + 1) < n20 + (n10 + 1)" by simp
   show ?thesis
@@ -676,7 +676,8 @@ proof -
     have b2: "\<And>x ay y. (x, ay, y) \<in> offset_edges (n10 + 1) E20 \<Longrightarrow> n10 + 1 \<le> x"
       using compile_ge[OF c2_n] by force
     show ?thesis
-      using e_first Eif b1 b2 en2n_ge by force
+      using e_first Eif b1 b2 en2n_ge
+      by fastforce
   qed
   
   thus ?thesis
@@ -768,7 +769,7 @@ proof -
              {(0, EA_Assume b, en10 + 1), (0, EA_AssumeNot b, n10 + 1)}
              \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
     using cfg_edges_entry_exit_While[OF c1] by simp
-  from compile_fresh[OF c0] have E10_bd: "\<forall>e \<in> E10. snd (snd e) < n10" by simp
+  from compile_fresh[OF c0] have E10_bd: "\<forall>e \<in> E10. snd (snd e) < n10" by fastforce
   have off_no: "\<And>x ay y. (x, ay, y) \<in> offset_edges 1 E10 \<Longrightarrow> y \<le> n10"
     using E10_bd unfolding offset_edges_def by force
   from compile_fresh[OF c0] have "en10 < n10" by simp
@@ -788,7 +789,7 @@ proof -
              \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
     using cfg_edges_entry_exit_While[OF c1] by simp
   from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1"
-    by simp
+    by fastforce
   from compile_fresh[OF c1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
   show ?thesis
     using Ew E1_src_lt ex1_lt by force
@@ -804,7 +805,7 @@ proof -
              \<union> offset_edges 1 E10 \<union> {(ex10 + 1, EA_Nop, 0)}"
     using cfg_edges_entry_exit_While[OF c1] by simp
   from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> offset_edges 1 E10. fst e < n10 + 1"
-    by simp
+    by fastforce
   from compile_fresh[OF c1] have ex1_lt: "ex10 + 1 < n10 + 1" by simp
   show ?thesis
     using e Ew E1_src_lt ex1_lt 

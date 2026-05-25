@@ -51,6 +51,7 @@ inductive_cases SeqSE[elim]:     "(c1 ;; c2, s) \<rightarrow> ct"
 inductive_cases IfSE[elim!]:     "(IF b THEN c1 ELSE c2, s) \<rightarrow> ct"
 inductive_cases WhileSE[elim]:   "(WHILE b DO c, s) \<rightarrow> ct"
 
+
 text \<open>Executable small-step via the predicate compiler.\<close>
 
 code_pred small_step .
@@ -66,53 +67,40 @@ subsection \<open>Sequencing and divergence\<close>
 lemma star_seq2:
   "(c1, s) \<rightarrow>* (c1', s') \<Longrightarrow> (c1 ;; c2, s) \<rightarrow>* (c1' ;; c2, s')"
 proof (induction rule: star_induct)
-  case refl thus ?case by simp
+  case (refl a b)
+  show ?case by simp
 next
-  case step
-  thus ?case by (metis Seq2 star.step)
+  case (step a1 b1 a2 b2 a3 b3)
+  from step.hyps(1) have "(a1 ;; c2, b1) \<rightarrow> (a2 ;; c2, b2)"
+    by (rule Seq2)
+  with step.IH show ?case
+    by (meson star.step)
 qed
 
 lemma seq_comp:
   "\<lbrakk> (c1, s1) \<rightarrow>* (SKIP, s2); (c2, s2) \<rightarrow>* (SKIP, s3) \<rbrakk>
    \<Longrightarrow> (c1 ;; c2, s1) \<rightarrow>* (SKIP, s3)"
-  by (blast intro: star.step star_seq2 star_trans)
+  by(blast intro: star.step star_seq2 star_trans)
 
 lemma seq_star_finish:
-  "(c1 ;; c2, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
-   (\<exists>s2. (c1, s) \<rightarrow>* (SKIP, s2) \<and> (c2, s2) \<rightarrow>* (SKIP, t))"
-  by (induction "(c1 ;; c2, s)" "(SKIP, t)" arbitrary: c1 c2 s t rule: star.induct)
-     (auto, metis (no_types, lifting) SeqSE prod.inject star.refl star.step)
-
-definition wt_suffix :: "com \<Rightarrow> com \<Rightarrow> bool" where
-  "wt_suffix body c \<equiv>
-     c = WHILE (Bc True) DO body
-   \<or> c = IF (Bc True) THEN body ;; WHILE (Bc True) DO body ELSE SKIP
-   \<or> (\<exists> c'. c = c' ;; WHILE (Bc True) DO body)"
-
-lemma wt_suffix_step:
-  "wt_suffix body c \<Longrightarrow> (c, s) \<rightarrow> (c', s') \<Longrightarrow> wt_suffix body c'"
-  unfolding wt_suffix_def
-  by auto
-
-lemma wt_suffix_steps:
-  "(c, s) \<rightarrow>* (c', t) \<Longrightarrow> wt_suffix body c \<Longrightarrow> wt_suffix body c'"
-  by (induction "(c,s)" "(c',t)" arbitrary: c s rule: star.induct)
-     (auto intro: wt_suffix_step)
-
-lemma while_true_skip_no_finish:
-  "\<not> ((WHILE (Bc True) DO a, s) \<rightarrow>* (SKIP, t))"
-  by (meson com.distinct(3,5,7) wt_suffix_def wt_suffix_steps)
- 
-
-corollary while_true_incr_star_not_skip:
-  "\<not> (WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t)"
-  using while_true_skip_no_finish by blast
-
-corollary while_true_incr_no_finish:
-  "\<not> ((WHILE (Bc True) DO (''x'' ::= Plus (V ''x'') (N 1)), s) \<rightarrow>* (SKIP, t))"
-  using while_true_incr_star_not_skip by auto
-
-
+  assumes "(c1 ;; c2, s) \<rightarrow>* (SKIP, t)"
+  shows "\<exists>s2. (c1, s) \<rightarrow>* (SKIP, s2) \<and> (c2, s2) \<rightarrow>* (SKIP, t)"
+  using assms
+proof (induction "(c1 ;; c2, s)" "(SKIP, t)" arbitrary: c1 s rule: star.induct)
+  case (step y)
+  from step.hyps(1) show ?case
+  proof cases
+    case Seq1
+    with step.hyps(2) show ?thesis by auto
+  next
+    case (Seq2 c1' s')
+    with step.hyps obtain s2 where
+      "(c1', s') \<rightarrow>* (SKIP, s2)" "(c2, s2) \<rightarrow>* (SKIP, t)"
+      by blast
+    with Seq2 show ?thesis by (meson star.step)
+  qed
+qed
+  
 subsection \<open>Small-step star inversions by command shape\<close>
 
 text \<open>
@@ -121,28 +109,60 @@ text \<open>
   \<open>small_step \<rightarrow> runs_to\<close> reverse bridge.
 \<close>
 
-lemma star_SKIP_eq:
-  "(SKIP, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> s = t"
-  by (induction "(SKIP, s)" "(SKIP, t)" rule: star.induct) auto
+lemma star_SKIP_eq[dest]:
+  assumes "(SKIP, s) \<rightarrow>* (SKIP, t)"
+  shows "s = t"
+  using assms
+proof (induction "(SKIP, s)" "(SKIP, t)" rule: star.induct)
+  case refl
+  then show ?case by simp
+next
+  case (step y)
+  from step.hyps(1) show ?case by blast
+qed
 
-lemma star_Assign_eq:
-  "(x ::= a, s) \<rightarrow>* (SKIP, t) \<Longrightarrow> t = s(x := aval a s)"
-  apply (induction "(x ::= a, s)" "(SKIP, t)" rule: star.induct)
-  using star_SKIP_eq by blast
+lemma star_Assign_eq[dest]:
+  assumes "(x ::= a, s) \<rightarrow>* (SKIP, t)"
+  shows "t = s(x := aval a s)"
+  using assms
+proof (induction "(x ::= a, s)" "(SKIP, t)" rule: star.induct)
+  case (step y)
+  from step.hyps(1) have "y = (SKIP, s(x := aval a s))" by auto
+  with step.hyps(2) show ?case by auto
+qed
 
-lemma star_If_split:
-  "(IF b THEN c1 ELSE c2, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
-   (bval b s \<and> (c1, s) \<rightarrow>* (SKIP, t)) \<or> (\<not> bval b s \<and> (c2, s) \<rightarrow>* (SKIP, t))"
-  by (induction "(IF b THEN c1 ELSE c2, s)" "(SKIP, t)" rule: star.induct) auto
+lemma star_If_cases:
+  assumes "(IF b THEN c1 ELSE c2, s) \<rightarrow>* (SKIP, t)"
+  shows "(bval b s \<and> (c1, s) \<rightarrow>* (SKIP, t))
+       \<or> (\<not> bval b s \<and> (c2, s) \<rightarrow>* (SKIP, t))"
+  using assms
+proof (induction "(IF b THEN c1 ELSE c2, s)" "(SKIP, t)" rule: star.induct)
+  case (step y)
+  from step.hyps(1) step.hyps(2) show ?case by auto
+qed
 
-lemma star_While_split:
-  "(WHILE b DO c, s) \<rightarrow>* (SKIP, t) \<Longrightarrow>
-   (\<not> bval b s \<and> s = t) \<or>
-   (\<exists>s'. bval b s \<and> (c, s) \<rightarrow>* (SKIP, s') \<and> (WHILE b DO c, s') \<rightarrow>* (SKIP, t))"
-  by (induction "(WHILE b DO c, s)" "(SKIP, t)" rule: star.induct)
-     (auto, metis WhileSE star_If_split star_SKIP_eq,
-      metis WhileSE seq_star_finish star_If_split,
-      metis WhileSE seq_star_finish star_If_split star_SKIP_eq)
- 
+lemma star_While_cases:
+  assumes "(WHILE b DO c, s) \<rightarrow>* (SKIP, t)"
+  shows "(\<not> bval b s \<and> s = t)
+       \<or> (\<exists>s'. bval b s \<and> (c, s) \<rightarrow>* (SKIP, s') \<and> (WHILE b DO c, s') \<rightarrow>* (SKIP, t))"
+  using assms
+proof (induction "(WHILE b DO c, s)" "(SKIP, t)" arbitrary: s rule: star.induct)
+  case (step y s)
+  from step.hyps(1) have y: "y = (IF b THEN c ;; WHILE b DO c ELSE SKIP, s)"
+    by (auto)
+  with step.hyps(2) have
+    "(IF b THEN c ;; WHILE b DO c ELSE SKIP, s) \<rightarrow>* (SKIP, t)" by simp
+  from star_If_cases[OF this] show ?case
+  proof
+    assume "bval b s \<and> (c ;; WHILE b DO c, s) \<rightarrow>* (SKIP, t)"
+    then obtain s' where
+      "bval b s" "(c, s) \<rightarrow>* (SKIP, s')" "(WHILE b DO c, s') \<rightarrow>* (SKIP, t)"
+      using seq_star_finish by blast
+    then show ?case by blast
+  next
+    assume "\<not> bval b s \<and> (SKIP, s) \<rightarrow>* (SKIP, t)"
+    then show ?case using star_SKIP_eq by blast
+  qed
+qed
 
 end

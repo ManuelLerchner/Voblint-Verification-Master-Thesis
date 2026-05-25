@@ -23,7 +23,7 @@ begin
                      head -[AssumeNot b]-> exit
 *)
 
-(* ── Compile Function ─────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Compile Function \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun compile :: "com => nat => nat * pp * pp * (pp * edge_action * pp) set"
 where
@@ -60,163 +60,102 @@ where
              Un E1
              Un {(ex1, EA_Nop, head)}))"
 
-(* ── Top-Level Wrapper ────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Top-Level Wrapper \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition to_cfg :: "com => cfg" where
   "to_cfg c =
      (let (_, en, ex, E) = compile c 0
       in  mk_cfg en ex E)"
 
-(* ── Freshness: Allocated pp's Are Disjoint From Counter ──────── *)
+(* \<midarrow>\<midarrow> Freshness: Allocated pp's Are Disjoint From Counter \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+
 
 lemma compile_counter_mono:
   "compile c n = (n', en, ex, E) \<Longrightarrow> n < n'"
-proof (induct c arbitrary: n n' en ex E rule: com.induct)
-  case SKIP
-  then show ?case
-    using SKIP.prems by (fastforce simp add: compile.simps)
-next
-  case (Assign x a)
-  then show ?case
-    using Assign.prems by (fastforce simp add: compile.simps)
-next
-  case (Seq c1 c2)
-  from Seq.prems obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
-    c1: "compile c1 n = (n1, en1, ex1, E1)"
-    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
-    and n': "n' = n2"
-    by (simp add: compile.simps Let_def split: prod.splits)
-  have "n < n1"
-    using Seq.hyps(1)[OF c1] .
-  also have "n1 < n2"
-    using Seq.hyps(2)[OF c2] .
-  finally show ?case
-    using n' by simp
-next
-  case (If b c1 c2)
-  from If.prems obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
-    c1: "compile c1 (n + 1) = (n1, en1, ex1, E1)"
-    and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
-    and n': "n' = n2 + 1"
-    by (simp add: compile.simps Let_def split: prod.splits)
-  have "n + 1 < n1"
-    using If.hyps(1)[OF c1] by simp
-  then have "n < n1"
-    by simp
-  also have "n1 < n2"
-    using If.hyps(2)[OF c2] .
-  finally have "n < n2" .
-  then show ?case
-    using n' by simp
-next
-  case (While b c)
-  from While.prems obtain n1 en1 ex1 E1 where
-    c: "compile c (n + 1) = (n1, en1, ex1, E1)"
-    and n': "n' = n1 + 1"
-    by (simp add: compile.simps Let_def split: prod.splits)
-  have "n + 1 < n1"
-    using While.hyps[OF c] by simp
-  then show ?case
-    using n' by linarith
-qed
-
-(* Split \<forall> over A \<union> {a} \<union> B keeps automation on tiny goals (no deep blast on big unions). *)
-lemma ball_union3:
-  fixes P :: "'a \<Rightarrow> bool"
-  assumes "\<forall>e\<in>A. P e" and "P a" and "\<forall>e\<in>B. P e"
-  shows "\<forall>e\<in>A \<union> {a} \<union> B. P e"
-  using assms by auto
+  apply (induction c arbitrary: n n' en ex E rule: com.induct)
+  by(fastforce split:prod.splits) +
 
 lemma compile_fresh:
   "compile c n = (n', en, ex, E) \<Longrightarrow>
-   (\<forall>e \<in> E. fst e < n' \<and> snd (snd e) < n') \<and> en < n' \<and> ex < n' \<and> n \<le> n'"
-proof (induct c arbitrary: n n' en ex E rule: com.induct)
+    (\<forall>u a w. (u, a, w) \<in> E \<longrightarrow> u < n' \<and> w < n') \<and> en < n' \<and> ex < n' \<and> n \<le> n'"
+proof (induction arbitrary: n n' en ex E rule: com.induct)
   case SKIP
-  show ?case
-    using SKIP.prems by (fastforce simp add: compile.simps)
+  then show ?case by auto
 next
   case (Assign x a)
-  show ?case
-    using Assign.prems by (fastforce simp add: compile.simps)
+  then show ?case by auto
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
-    c1: "compile c1 n = (n1, en1, ex1, E1)"
+        c1: "compile c1 n = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and n': "n' = n2" and en: "en = en1" and ex: "ex = ex2"
     and E: "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
-    by (simp add: compile.simps Let_def split: prod.splits)
+    by(auto split:prod.splits)
+  
   have IH1: "(\<forall>e\<in>E1. fst e < n1 \<and> snd (snd e) < n1) \<and> en1 < n1 \<and> ex1 < n1 \<and> n \<le> n1"
-    using Seq.hyps(1)[OF c1] .
-  have IH2: "(\<forall>e\<in>E2. fst e < n2 \<and> snd (snd e) < n2) \<and> en2 < n2 \<and> ex2 < n2 \<and> n1 \<le> n2"
-    using Seq.hyps(2)[OF c2] .
-  have n1n2: "n1 < n2"
-    using compile_counter_mono[OF c2] .
-  show ?case
-    unfolding en ex E n' using IH1 IH2 n1n2
-    by auto
+    by (metis Seq.IH(1) c1 prod.exhaust_sel)
+   
+  moreover have IH2: "(\<forall>e\<in>E2. fst e < n2 \<and> snd (snd e) < n2) \<and> en2 < n2 \<and> ex2 < n2 \<and> n1 \<le> n2"
+    by (metis Seq.IH(2) c2 prod.exhaust_sel)
+    
+  moreover have n1n2: "n1 < n2"
+    using c2 compile_counter_mono by auto
+    
+  ultimately show ?case
+    using E en ex n' by auto
 next
   case (If b c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
     c1: "compile c1 (n + 1) = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and n': "n' = n2 + 1"
-    by (simp add: compile.simps Let_def split: prod.splits)
-  from If.prems have en: "en = n" and ex: "ex = n2"
-    using c1 c2 by (auto split: prod.splits)
-
-  have E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
+    and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
           \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
-    using If.prems c1 c2 by (auto split: prod.splits)
+    by(auto split:prod.splits)
+
+  have en: "en = n" and ex: "ex = n2"
+    using If.prems c1 c2 by (auto)
 
   have IH1: "(\<forall>e\<in>E1. fst e < n1 \<and> snd (snd e) < n1) \<and> en1 < n1 \<and> ex1 < n1 \<and> n + 1 \<le> n1"
-    using If.hyps(1)[OF c1] .
-  have IH2: "(\<forall>e\<in>E2. fst e < n2 \<and> snd (snd e) < n2) \<and> en2 < n2 \<and> ex2 < n2 \<and> n1 \<le> n2"
-    using If.hyps(2)[OF c2] .
-  have "n < n2"
-  proof -
-    have "n + 1 < n1"
-      using compile_counter_mono[OF c1] by simp
-    moreover have "n1 < n2"
-      using compile_counter_mono[OF c2] by simp
-    ultimately show ?thesis
-      by linarith
-  qed
-  then have "n < n'" "n2 < n'"
-    unfolding n' by simp_all
-  show ?case
-    unfolding en ex E n' using IH1 IH2 \<open>n < n'\<close> \<open>n2 < n'\<close>
-    by auto
+    by (metis If.IH(1) c1 prod.exhaust_sel)
+ 
+  moreover have IH2: "(\<forall>e\<in>E2. fst e < n2 \<and> snd (snd e) < n2) \<and> en2 < n2 \<and> ex2 < n2 \<and> n1 \<le> n2"
+    by (metis If.IH(2) c2 prod.exhaust_sel)
+
+  moreover have "n < n' \<and> n2 < n'"
+    using calculation(1,2) n' by linarith
+  
+  ultimately show ?case
+    using E en ex n' by auto
 next
   case (While b c)
   then obtain n1 en1 ex1 E1 where
     c: "compile c (n + 1) = (n1, en1, ex1, E1)"
     and n': "n' = n1 + 1" and en: "en = n" and ex: "ex = n1"
     and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, n)}"
-    apply (auto)
-    by (smt (verit) Pair_inject case_prod_unfold prod.collapse)
-
+    by(fastforce split:prod.splits)
+  
   have IH: "(\<forall>e\<in>E1. fst e < n1 \<and> snd (snd e) < n1) \<and> en1 < n1 \<and> ex1 < n1 \<and> n + 1 \<le> n1"
-    using While.hyps[OF c] .
-  have "n < n1"
-    using compile_counter_mono[OF c] by simp
-  show ?case
-    unfolding en ex E n' using IH \<open>n < n1\<close>
-    by auto
+    by (metis While.IH(1) c prod.exhaust_sel)
+
+  moreover have "n < n1"
+    using IH by auto
+
+  ultimately show ?case
+   using E en ex n' by auto
 qed
 
 (* All allocated pp's are >= n (nothing reuses old counters). *)
 lemma compile_ge:
   "compile c n = (n', en, ex, E) \<Longrightarrow>
    (\<forall>e \<in> E. fst e \<ge> n \<and> snd (snd e) \<ge> n) \<and> en \<ge> n \<and> ex \<ge> n"
-proof (induct c arbitrary: n n' en ex E rule: com.induct)
+proof (induction c arbitrary: n n' en ex E rule: com.induct)
   case SKIP
-  show ?case
-    using SKIP.prems by (fastforce simp add: compile.simps)
+  then show ?case by auto
 next
   case (Assign x a)
-  show ?case
-    using Assign.prems by (fastforce simp add: compile.simps)
+  then show ?case by auto
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
@@ -224,34 +163,19 @@ next
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and n': "n' = n2" and en: "en = en1" and ex: "ex = ex2"
     and E: "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
-    by (simp add: compile.simps Let_def split: prod.splits)
-  have IH1: "(\<forall>e\<in>E1. n \<le> fst e \<and> n \<le> snd (snd e)) \<and> n \<le> en1 \<and> n \<le> ex1"
-    using Seq.hyps(1)[OF c1] by simp
-  have IH2: "(\<forall>e\<in>E2. n1 \<le> fst e \<and> n1 \<le> snd (snd e)) \<and> n1 \<le> en2 \<and> n1 \<le> ex2"
-    using Seq.hyps(2)[OF c2] by simp
-  have nn1: "n \<le> n1"
-    using compile_counter_mono[OF c1] by linarith
-  have ballE: "\<forall>e\<in>E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2. n \<le> fst e \<and> n \<le> snd (snd e)"
-  proof (rule ball_union3)
-    show "\<forall>e\<in>E1. n \<le> fst e \<and> n \<le> snd (snd e)"
-      using IH1 by simp
-  next
-    show "n \<le> fst (ex1, EA_Nop, en2) \<and> n \<le> snd (snd (ex1, EA_Nop, en2))"
-      using IH1 IH2 nn1 by simp
-  next
-    show "\<forall>e\<in>E2. n \<le> fst e \<and> n \<le> snd (snd e)"
-    proof (rule ballI)
-      fix e assume "e \<in> E2"
-      have ge1: "n1 \<le> fst e" and ge2: "n1 \<le> snd (snd e)"
-        using IH2 \<open>e \<in> E2\<close> by simp_all
-      with nn1 show "n \<le> fst e \<and> n \<le> snd (snd e)"
-        by linarith
+    by (auto simp add:split: prod.splits)
 
-    qed
-  qed
-  show ?case
-    unfolding en ex E n' using ballE IH1 IH2 nn1
-    by (simp add: order.trans)
+  have IH1: "(\<forall>e\<in>E1. n \<le> fst e \<and> n \<le> snd (snd e)) \<and> n \<le> en1 \<and> n \<le> ex1"
+     by (metis Seq.IH(1) c1)
+  moreover have IH2: "(\<forall>e\<in>E2. n1 \<le> fst e \<and> n1 \<le> snd (snd e)) \<and> n1 \<le> en2 \<and> n1 \<le> ex2"
+     by (metis Seq.IH(2) c2)
+  moreover have nn1: "n \<le> n1"
+    using c1 compile_fresh by auto
+  moreover have ballE: "\<forall>e\<in>E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2. n \<le> fst e \<and> n \<le> snd (snd e)"
+    using IH1 IH2 nn1 by fastforce
+ 
+  ultimately show ?case
+    using E en ex n' by auto
 next
   case (If b c1 c2)
   from If.prems obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
@@ -263,21 +187,22 @@ next
     by (fastforce split: prod.splits)
 
   have IH1: "(\<forall>e\<in>E1. n + 1 \<le> fst e \<and> n + 1 \<le> snd (snd e)) \<and> n + 1 \<le> en1 \<and> n + 1 \<le> ex1"
-    using If.hyps(1)[OF c1] by simp
-  have IH2: "(\<forall>e\<in>E2. n1 \<le> fst e \<and> n1 \<le> snd (snd e)) \<and> n1 \<le> en2 \<and> n1 \<le> ex2"
-    using If.hyps(2)[OF c2] by simp
-  show ?case
-    unfolding en ex E n' using IH1 IH2
-    apply (auto)
-    apply (metis If.prems Suc_eq_plus1 compile_counter_mono less_Suc_eq_le n')
-         apply (meson c1 compile_fresh dual_order.trans le_add1)
-    apply (metis If.prems Suc_eq_plus1 compile_counter_mono less_Suc_eq_le n')
-       apply (meson c1 compile_fresh dual_order.trans le_add1)
-    apply (metis (no_types, opaque_lifting) Suc_eq_plus1_left Suc_leD add.commute c1 compile_fresh
-        dual_order.trans split_pairs2)
-    apply (metis (no_types, lifting) c1 compile_fresh dual_order.trans le_add1 snd_conv)
-    apply (metis If.prems Suc_eq_plus1 compile_counter_mono less_Suc_eq_le n')
-    done
+      by (metis If.IH(1) c1)
+  moreover have IH2: "(\<forall>e\<in>E2. n1 \<le> fst e \<and> n1 \<le> snd (snd e)) \<and> n1 \<le> en2 \<and> n1 \<le> ex2"
+    by (metis If.IH(2) c2)
+
+  moreover have nn1: "n \<le> n1"
+    using c1 compile_counter_mono by fastforce
+
+  moreover have ballE: "\<forall>e\<in>E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2. n \<le> fst e \<and> n \<le> snd (snd e)"
+    using IH1 IH2 nn1 by fastforce
+
+  moreover have n1_le_n2: "n1 \<le> n2"
+    using c2 compile_fresh by auto  
+
+  ultimately show ?case
+  using E en ex n' by auto
+  
 next
   case (While b c)
   then obtain n1 en1 ex1 E1 where
@@ -286,14 +211,21 @@ next
     and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, n)}"
     by (fastforce split: prod.splits)
 
-  have IH: "(\<forall>e\<in>E1. n + 1 \<le> fst e \<and> n + 1 \<le> snd (snd e)) \<and> n + 1 \<le> en1 \<and> n + 1 \<le> ex1"
-    using While.hyps[OF c] by simp
-  show ?case
-    unfolding en ex E n' using IH
-    apply (auto)
-    apply (meson add_le_imp_le_right c compile_fresh trans_le_add1)
-    apply (meson add_le_imp_le_right c compile_fresh trans_le_add1)
-    done
+  have n': "n' = n1 + 1" and en: "en = n" and ex: "ex = n1"
+    using While.prems c by auto
+
+moreover have IH: "\<forall>e\<in>E1. fst e \<ge> n + 1 \<and> snd (snd e) \<ge> n + 1"
+  using While.IH c by blast
+
+  moreover have  "en1 \<ge> n + 1 \<and> ex1 \<ge> n + 1"
+    using While.IH c by blast
+  moreover have n_le_n1: "n < n1"
+   by (meson c compile_fresh less_iff_succ_less_eq)
+ 
+  
+  ultimately show ?case
+  using E en ex n' by auto
+
 qed
 
 (* Shifting the fresh-program-point baseline by k shifts every allocated pp uniformly. *)
@@ -303,14 +235,12 @@ lemma compile_add_offset:
   assumes cmp: "compile c n = (n', en, ex, E)"
   shows "compile c (n + k) = (n' + k, en + k, ex + k, offset_edges k E)"
   using cmp
-using assms proof (induct c arbitrary: n n' en ex E rule: com.induct)
+proof (induct c arbitrary: n n' en ex E rule: com.induct)
   case SKIP
-  then show ?case
-    by (force simp: compile.simps offset_edges_def)
+  then show ?case by (auto simp: offset_edges_insert_shift offset_edges_def)
 next
   case (Assign x a)
-  then show ?case
-    by (force simp: compile.simps offset_edges_def)
+  then show ?case by (auto simp: offset_edges_insert_shift offset_edges_def)
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
@@ -318,35 +248,14 @@ next
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and n': "n' = n2" and en: "en = en1" and ex: "ex = ex2"
     and E: "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
-    by (simp add: compile.simps Let_def split: prod.splits)
-
-  obtain n1k en1k ex1k E1k where c1k: "compile c1 (n + k) = (n1k, en1k, ex1k, E1k)"
-    by (cases "compile c1 (n + k)") auto
-  from Seq.hyps(1)[OF c1] c1k have c12: "compile c1 (n + k) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)"
-    using c1 by blast
-     
-
-  obtain n2k en2k ex2k E2k where c2k: "compile c2 (n1 + k) = (n2k, en2k, ex2k, E2k)"
-    by (cases "compile c2 (n1 + k)") auto
-  from Seq.hyps(2)[OF c2] c2k have c22: "compile c2 (n1 + k) = (n2 + k, en2 + k, ex2 + k, offset_edges k E2)"
-    using c2 by blast
-  
-
+    by (auto split: prod.splits)
+  from Seq.hyps(1)[OF c1] have c1k:
+    "compile c1 (n + k) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)" .
+  from Seq.hyps(2)[OF c2] have c2k:
+    "compile c2 (n1 + k) = (n2 + k, en2 + k, ex2 + k, offset_edges k E2)" .
   show ?case
-  proof -
-    have "compile (c1 ;; c2) (n + k) =
-        (let (n1a, en1a, ex1a, E1a) = compile c1 (n + k);
-             (n2a, en2a, ex2a, E2a) = compile c2 n1a
-        in (n2a, en1a, ex2a, E1a \<union> {(ex1a, EA_Nop, en2a)} \<union> E2a))"
-      by (simp only: compile.simps)
-    also have "\<dots> = (n2 + k, en1 + k, ex2 + k,
-        offset_edges k E1 \<union> {(ex1 + k, EA_Nop, en2 + k)} \<union> offset_edges k E2)"
-      by (simp add: Let_def c12 c22)
-    also have "\<dots> =
-        (n2 + k, en1 + k, ex2 + k, offset_edges k (E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2))"
-      by (simp add: offset_edges_insert_shift)
-    finally show ?case unfolding n' en ex E .
-  qed
+    using c1k c2k unfolding n' en ex E
+    by (simp add: Let_def offset_edges_insert_shift)
 next
   case (If b c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
@@ -357,51 +266,15 @@ next
     and ex: "ex = n2"
     and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
            \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
-    apply (simp)
-    by (smt (verit, ccfv_threshold) Pair_inject case_prod_unfold prod.collapse)
-     
-
-
-  obtain n1k en1k ex1k E1k where ck1: "compile c1 (n + k + 1) = (n1k, en1k, ex1k, E1k)"
-    by (cases "compile c1 (n + k + 1)") auto
-  from If.hyps(1)[OF c1] ck1 have ofs1:
-    "n1k = n1 + k" "en1k = en1 + k" "ex1k = ex1 + k" "E1k = offset_edges k E1"
-    using c1 by auto
-    
-  obtain n2k en2k ex2k E2k where ck2: "compile c2 (n1 + k) = (n2k, en2k, ex2k, E2k)"
-    using prod_cases4 by blast
- 
-    
- 
-  from If.hyps(2)[OF c2] ck2 ofs1 have ofs2:
-    "n2k = n2 + k" "en2k = en2 + k" "ex2k = ex2 + k" "E2k = offset_edges k E2"
-    by (auto simp add: c2)
-
- 
-
+    by (fastforce split: prod.splits)
+  from If.hyps(1)[OF c1] have c1k:
+    "compile c1 (n + k + 1) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)"
+    by (simp add: add.assoc add.commute)
+  from If.hyps(2)[OF c2] have c2k:
+    "compile c2 (n1 + k) = (n2 + k, en2 + k, ex2 + k, offset_edges k E2)" .
   show ?case
-  proof -
-    have lhs: "compile (IF b THEN c1 ELSE c2) (n + k) =
-        (let (na1, ena1, exa1, Ea1) = compile c1 (n + k + 1);
-             (na2, ena2, exa2, Ea2) = compile c2 na1
-         in (na2 + 1, n + k, na2,
-             {(n + k, EA_Assume b, ena1), (n + k, EA_AssumeNot b, ena2)}
-             \<union> Ea1 \<union> Ea2 \<union> {(exa1, EA_Nop, na2), (exa2, EA_Nop, na2)}))"
-      apply (auto simp add: compile.simps split:prod.splits)
-      by metis
-    have ck1': "compile c1 (n + k + 1) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)"
-      using ck1 ofs1(1,2,3,4) by blast
- 
-    have ck2': "compile c2 (n1 + k) = (n2 + k, en2 + k, ex2 + k, offset_edges k E2)"
-      using ck2 ofs2(1,2,3,4) by fastforce
-      
-    show ?thesis
-      unfolding lhs n' en ex E
-      using  ck1' ck2'    apply(simp)
-      by (simp add: offset_edges_insert_shift)
-      
-  
-  qed
+    using c1k c2k unfolding n' en ex E
+    by (simp add: Let_def offset_edges_insert_shift)
 next
   case (While b c)
   then obtain n1 en1 ex1 E1 where
@@ -412,19 +285,12 @@ next
     and E:
     "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, n)}"
     by (smt (verit, del_insts) Pair_inject case_prod_unfold compile.simps(5) prod.collapse)
-  
-  obtain n1k en1k ex1k E1k where ck: "compile c (n + k + 1) = (n1k, en1k, ex1k, E1k)"
-    by (cases "compile c (n + k + 1)") auto
-  have ofs:
-    "n1k = n1 + k" "en1k = en1 + k" "ex1k = ex1 + k" "E1k = offset_edges k E1"
-    using While.hyps c ck apply fastforce +
-  done
-
+  from While.hyps[OF c] have ck:
+    "compile c (n + k + 1) = (n1 + k, en1 + k, ex1 + k, offset_edges k E1)"
+    by (simp add: add.assoc add.commute)
   show ?case
-    unfolding compile.simps Let_def n' en ex E ofs
-    unfolding offset_edges_def
-    apply( auto)
-    using ck offset_edges_def ofs(1,2,3,4) by auto
+    using ck unfolding n' en ex E
+    by (simp add: Let_def offset_edges_insert_shift)
 qed
 
 lemma compile_from_0_offsets:
@@ -432,7 +298,7 @@ lemma compile_from_0_offsets:
   shows "compile c k = (n0 + k, en0 + k, ex0 + k, offset_edges k E0)"
   using compile_add_offset[OF assms, of k] by simp
 
-(* ── Structural Correctness Statements ───────────────────────── *)
+(* \<midarrow>\<midarrow> Structural Correctness Statements \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
   The key correctness property:
   If compile c n = (n', en, ex, E), then for any two states s and t,
@@ -447,18 +313,18 @@ lemma compile_entry_lt_exit:
 proof (induct c arbitrary: n n' en ex E rule: com.induct)
   case SKIP
   show ?case
-    using SKIP.prems by (fastforce simp add: compile.simps)
+    using SKIP.prems by fastforce
 next
   case (Assign x a)
   show ?case
-    using Assign.prems by (fastforce simp add: compile.simps)
+    using Assign.prems by fastforce
 next
   case (Seq c1 c2)
   from Seq.prems obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
     c1: "compile c1 n = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and n': "n' = n2" and en: "en = en1" and ex: "ex = ex2"
-    by (simp add: compile.simps Let_def split: prod.splits)
+    by (simp add: Let_def split: prod.splits)
   have "en1 < n1"
     using compile_fresh[OF c1] by auto
   moreover have "n1 \<le> ex2"
@@ -471,7 +337,7 @@ next
     c1: "compile c1 (n + 1) = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and n': "n' = n2 + 1"
-    by (simp add: compile.simps Let_def split: prod.splits)
+    by (simp add: Let_def split: prod.splits)
   from If.prems n' have en: "en = n" and ex: "ex = n2"
     by (auto split: prod.splits)
 
@@ -488,7 +354,7 @@ next
   from While.prems obtain n1 en1 ex1 E1 where
     c: "compile c (n + 1) = (n1, en1, ex1, E1)"
     and en: "en = n" and ex: "ex = n1"
-    by (simp add: compile.simps Let_def split: prod.splits)
+    by (simp add: Let_def split: prod.splits)
   have "n + 1 < n1"
     using compile_counter_mono[OF c] by simp
   then show ?case
@@ -505,18 +371,18 @@ lemma compile_finite:
 proof (induct c arbitrary: n n' en ex E rule: com.induct)
   case SKIP
   show ?case
-    using SKIP.prems by (fastforce simp add: compile.simps)
+    using SKIP.prems by fastforce
 next
   case (Assign x a)
   show ?case
-    using Assign.prems by (fastforce simp add: compile.simps)
+    using Assign.prems by fastforce
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 n2 en2 ex2 E2 where
     c1: "compile c1 n = (n1, en1, ex1, E1)"
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and E: "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2"
-    by (simp add: compile.simps Let_def split: prod.splits)
+    by (simp add: Let_def split: prod.splits)
   show ?case
     unfolding E using Seq.hyps(1)[OF c1] Seq.hyps(2)[OF c2] by simp
 next
@@ -526,7 +392,7 @@ next
     and c2: "compile c2 n1 = (n2, en2, ex2, E2)"
     and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
           \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
-    by (simp add: compile.simps Let_def split: prod.splits) blast
+    by (simp add: Let_def split: prod.splits) blast
   show ?case
     unfolding E using If.hyps(1)[OF c1] If.hyps(2)[OF c2] by simp
 next
@@ -534,7 +400,7 @@ next
   then obtain n1 en1 ex1 E1 where
     c: "compile c (n + 1) = (n1, en1, ex1, E1)"
     and E: "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1 \<union> {(ex1, EA_Nop, n)}"
-    by (simp add: compile.simps Let_def split: prod.splits) blast
+    by (simp add: Let_def split: prod.splits) blast
   show ?case
     unfolding E using While.hyps[OF c] by simp
 qed

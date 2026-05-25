@@ -27,7 +27,7 @@ proof
     by (smt (verit, ccfv_threshold) UN_iff edge_collect_member mem_Collect_eq)
   then obtain s where s: "s \<in> edges_collect es S"
     and x: "x \<in> edge_collect a {s}"
-    using edge_collect_member by blast 
+    using edge_collect_member by metis 
 
   have p: "cfg_path g u [(a, v)] v"
     by (rule cfg_path.step[OF e cfg_path.empty])
@@ -57,7 +57,7 @@ lemma cfg_edges_collect_post:
   using cfg_edges_collect_step collect_pp_def apply fastforce
   using cfg_edges_collect_step collect_pp_def by fastforce
 
-
+ 
 lemma cfg_collect_le_edges_collect:
   "cfg_collect g S v \<subseteq> cfg_edges_collect g S v"
 proof -
