@@ -5,7 +5,7 @@ begin
 (*
   CFG collecting layer — import this theory for the full chain.
 
-  Core spec: cfg_collect (per-pp lfp) and cfg_edges_collect (paths).
+  Core spec: cfg_collect (per-pp lfp) and cfg_collect_paths (paths).
   Canonical soundness uses cfg_collect at every program point (Pipeline).
 
   runs_to c s t is definitional exit sugar (runs_to_def), not a second
@@ -42,12 +42,12 @@ proof -
     by (simp add: runs_to_def)  
   let ?g = "to_cfg c"
   let ?v = "cfg_exit ?g"
-  from cfg_collect_eq_cfg_edges_collect[of ?g "{s}" ?v] t_in
-  have t_in': "t \<in> cfg_edges_collect ?g {s} ?v" by simp
+  from cfg_collect_eq_cfg_collect_paths[of ?g "{s}" ?v] t_in
+  have t_in': "t \<in> cfg_collect_paths ?g {s} ?v" by simp
   then obtain es where
         path: "?g \<turnstile> (cfg_entry ?g) \<longrightarrow>\<^bsub>es\<^esub> ?v"
     and t: "t \<in> edges_collect es {s}"
-    unfolding cfg_edges_collect_def by blast
+    unfolding cfg_collect_paths_def by blast
   show "(c, s) \<rightarrow>* (SKIP, t)"
     using compile_path_small_step path t by blast 
 qed
@@ -60,7 +60,7 @@ text \<open>
   trace \<open>(c, s) \<rightarrow>* (SKIP, t)\<close> we construct an explicit CFG path from
   the entry to the exit of \<open>to_cfg c\<close> whose \<open>edges_collect\<close> contains
   \<open>t\<close>.  Path membership is then transferred to \<open>cfg_collect\<close> via
-  \<open>cfg_collect_eq_cfg_edges_collect\<close>, yielding \<open>runs_to c s t\<close>.
+  \<open>cfg_collect_eq_cfg_collect_paths\<close>, yielding \<open>runs_to c s t\<close>.
 \<close>
 
 lemma path_imp_runs_to:
@@ -68,10 +68,10 @@ lemma path_imp_runs_to:
     and t: "t \<in> edges_collect es {s}"
   shows "runs_to c s t"
 proof -
-  have "t \<in> cfg_edges_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-    using p t unfolding cfg_edges_collect_def by blast
+  have "t \<in> cfg_collect_paths (to_cfg c) {s} (cfg_exit (to_cfg c))"
+    using p t unfolding cfg_collect_paths_def by blast
   hence "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-    using cfg_collect_eq_cfg_edges_collect by simp
+    using cfg_collect_eq_cfg_collect_paths by simp
   thus ?thesis unfolding runs_to_def .
 qed
 
@@ -82,9 +82,9 @@ lemma runs_to_imp_path:
 proof -
   from assms have "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
     unfolding runs_to_def .
-  hence "t \<in> cfg_edges_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-    using cfg_collect_eq_cfg_edges_collect by simp
-  thus ?thesis unfolding cfg_edges_collect_def by blast
+  hence "t \<in> cfg_collect_paths (to_cfg c) {s} (cfg_exit (to_cfg c))"
+    using cfg_collect_eq_cfg_collect_paths by simp
+  thus ?thesis unfolding cfg_collect_paths_def by blast
 qed
 
 lemma runs_to_SKIP_eq_imp:
