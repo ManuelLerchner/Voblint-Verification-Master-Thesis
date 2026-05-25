@@ -7,7 +7,7 @@ begin
 (* Path-based collecting environment. *)
 definition cfg_edges_collect :: "cfg => store set => pp => store set" where
   "cfg_edges_collect g S v =
-     (\<Union>es\<in>{es. cfg_path g (cfg_entry g) es v}. edges_collect es S)"
+     (\<Union>es\<in>{es. g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v}. edges_collect es S)"
 
 (* One CFG step extends path-based collecting. *)
 lemma cfg_edges_collect_step:
@@ -16,7 +16,7 @@ lemma cfg_edges_collect_step:
 proof
   fix x
   assume x: "x \<in> edge_collect a (cfg_edges_collect g S u)"
-  then obtain es where es: "cfg_path g (cfg_entry g) es u"
+  then obtain es where es: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> u"
     and x: "x \<in> edge_collect a (edges_collect es S)"
     unfolding cfg_edges_collect_def
     by (smt (verit, ccfv_threshold) UN_iff edge_collect_member mem_Collect_eq)
@@ -24,9 +24,9 @@ proof
     and x: "x \<in> edge_collect a {s}"
     using edge_collect_member by metis 
 
-  have p: "cfg_path g u [(a, v)] v"
+  have p: "g \<turnstile> u \<longrightarrow>\<^bsub>[(a, v)]\<^esub> v"
     by (rule cfg_path.step[OF e cfg_path.empty])
-  have es': "cfg_path g (cfg_entry g) (es @ [(a, v)]) v"
+  have es': "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>(es @ [(a, v)])\<^esub> v"
     by (rule cfg_path_append[OF es p])
   have "x \<in> edges_collect (es @ [(a, v)]) S"
     using x s unfolding edges_collect_append edges_collect.simps

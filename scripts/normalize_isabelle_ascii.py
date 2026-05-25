@@ -62,6 +62,13 @@ REPL = {
     "·": r"\<cdot>",
     "∘": r"\<circ>",
     "∧": r"\<and>",
+    "⊢": r"\<turnstile>",
+    "⋃": r"\<Union>",
+    "⋂": r"\<Inter>",
+    "⇘": r"\<^bsub>",
+    "⇙": r"\<^esub>",
+    "⇗": r"\<^bsup>",
+    "⇖": r"\<^esup>",
 }
 
 

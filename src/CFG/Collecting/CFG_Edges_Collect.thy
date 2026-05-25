@@ -7,10 +7,10 @@ begin
 (* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun edge_collect :: "edge_action => store set => store set" where
-    "edge_collect EA_Nop          S = S"
-  | "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s : S}"
-  | "edge_collect (EA_Assume b)    S = Collect (\<lambda>s. s \<in> S \<and> bval b s)"
-  | "edge_collect (EA_AssumeNot b) S = Collect (\<lambda>s. s \<in> S \<and> \<not> bval b s)"
+    "edge_collect EA_Nop           S = S"
+  | "edge_collect (EA_Assign x a)  S = {s(x := aval a s) | s. s : S}"
+  | "edge_collect (EA_Assume b)    S = {s. s \<in> S \<and>  bval b s}"
+  | "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not>bval b s}"
 
 lemma edge_collect_empty_set[simp]: "edge_collect a {} = {}"
   by (cases a) auto
@@ -38,14 +38,9 @@ lemma edges_collect_empty_set[simp]: "edges_collect es {} = {}"
 
 lemma edges_collect_mono_strong:
   "S \<subseteq> T \<Longrightarrow> edges_collect es S \<subseteq> edges_collect es T"
-proof (induction es arbitrary: S T)
-  case Nil then show ?case by simp
-next
-  case (Cons e es)
-  obtain a w where ep: "e = (a, w)" by (cases e)
-  show ?case using Cons ep edge_collect_mono by auto
-qed
-
+  apply (induction es S arbitrary: T rule:edges_collect.induct)
+  by (auto simp add: edge_collect_mono)
+ 
 lemma edges_collect_member:
   "x \<in> edges_collect es S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edges_collect es {s})"
 proof (induction es arbitrary: S x)

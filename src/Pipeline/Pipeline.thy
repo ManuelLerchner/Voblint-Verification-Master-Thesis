@@ -271,7 +271,7 @@ theorem pipeline_sound_path:
           (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
           (cfg_entry (to_cfg c)))
        (cfg_entry (to_cfg c))"
-  assumes path:     "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v"
+  assumes path:     "(to_cfg c) \<turnstile> (cfg_entry (to_cfg c)) \<longrightarrow>\<^bsub>es\<^esub> v"
   assumes t_in:     "t \<in> edges_collect es {s}"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg c v)"
 proof -

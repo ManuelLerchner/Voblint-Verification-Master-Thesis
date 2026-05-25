@@ -39,6 +39,13 @@ REPL = {
     "⟧": r"\<rbrakk>",
     "↦": r"\<mapsto>",
     "∷": r"::",
+    "⊢": r"\<turnstile>",
+    "⋃": r"\<Union>",
+    "⋂": r"\<Inter>",
+    "⇘": r"\<^bsub>",
+    "⇙": r"\<^esub>",
+    "⇗": r"\<^bsup>",
+    "⇖": r"\<^esup>",
 }
 
 # Strip Isabelle (* ... *) comments (non-nested approximation) before scanning.

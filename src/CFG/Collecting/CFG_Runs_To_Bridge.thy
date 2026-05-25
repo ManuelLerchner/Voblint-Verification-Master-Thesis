@@ -45,7 +45,7 @@ proof -
   from cfg_collect_eq_cfg_edges_collect[of ?g "{s}" ?v] t_in
   have t_in': "t \<in> cfg_edges_collect ?g {s} ?v" by simp
   then obtain es where
-        path: "cfg_path ?g (cfg_entry ?g) es ?v"
+        path: "?g \<turnstile> (cfg_entry ?g) \<longrightarrow>\<^bsub>es\<^esub> ?v"
     and t: "t \<in> edges_collect es {s}"
     unfolding cfg_edges_collect_def by blast
   show "(c, s) \<rightarrow>* (SKIP, t)"
@@ -64,7 +64,7 @@ text \<open>
 \<close>
 
 lemma path_imp_runs_to:
-  assumes p: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
+  assumes p: "(to_cfg c) \<turnstile> (cfg_entry (to_cfg c)) \<longrightarrow>\<^bsub>es\<^esub> (cfg_exit (to_cfg c))"
     and t: "t \<in> edges_collect es {s}"
   shows "runs_to c s t"
 proof -
@@ -77,7 +77,7 @@ qed
 
 lemma runs_to_imp_path:
   assumes "runs_to c s t"
-  shows "\<exists>es. cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))
+  shows "\<exists>es. (to_cfg c) \<turnstile> (cfg_entry (to_cfg c)) \<longrightarrow>\<^bsub>es\<^esub> (cfg_exit (to_cfg c))
               \<and> t \<in> edges_collect es {s}"
 proof -
   from assms have "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
@@ -92,13 +92,13 @@ lemma runs_to_SKIP_eq_imp:
 proof -
   assume rt: "runs_to SKIP s t"
   from runs_to_imp_path[OF rt] obtain es where
-        p: "cfg_path (to_cfg SKIP) (cfg_entry (to_cfg SKIP)) es (cfg_exit (to_cfg SKIP))"
+        p: "(to_cfg SKIP) \<turnstile> (cfg_entry (to_cfg SKIP)) \<longrightarrow>\<^bsub>es\<^esub> (cfg_exit (to_cfg SKIP))"
     and t_in: "t \<in> edges_collect es {s}"
     by blast
   have E: "edges (to_cfg SKIP) = {(0, EA_Nop, 1)}"
     and en: "cfg_entry (to_cfg SKIP) = 0" and ex: "cfg_exit (to_cfg SKIP) = 1"
     by (auto simp: to_cfg_def Let_def)
-  from p en ex have p': "cfg_path (to_cfg SKIP) 0 es 1" by simp
+  from p en ex have p': "(to_cfg SKIP) \<turnstile> 0 \<longrightarrow>\<^bsub>es\<^esub> 1" by simp
   have es_eq: "es = [(EA_Nop, 1)]"
     by (rule cfg_path_singleton_edge[OF E _ p']) simp
   from t_in es_eq show "t = s" by simp
@@ -109,8 +109,7 @@ lemma runs_to_SeqE:
   shows "\<exists>s2. runs_to c1 s s2 \<and> runs_to c2 s2 t"
 proof -
   from assms obtain es where
-        p: "cfg_path (to_cfg (c1 ;; c2)) (cfg_entry (to_cfg (c1 ;; c2))) es
-             (cfg_exit (to_cfg (c1 ;; c2)))"
+        p: "(to_cfg (c1 ;; c2)) \<turnstile> (cfg_entry (to_cfg (c1 ;; c2))) \<longrightarrow>\<^bsub>es\<^esub> (cfg_exit (to_cfg (c1 ;; c2)))"
     and t_in: "t \<in> edges_collect es {s}"
     using runs_to_imp_path by blast
   obtain n1 en1 ex1 E1 where
@@ -128,8 +127,8 @@ proof -
   from cfg_path_Seq_iff[OF c1_0 c2_0, THEN iffD1, OF p[unfolded en_seq ex_comp]]
   obtain es1 es2 where
         es_eq: "es = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2"
-    and p1: "cfg_path (to_cfg c1) en1 es1 ex1"
-    and p2: "cfg_path (to_cfg c2) en20 es2 ex20"
+    and p1: "(to_cfg c1) \<turnstile> en1 \<longrightarrow>\<^bsub>es1\<^esub> ex1"
+    and p2: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     by blast
   have collect_eq: "edges_collect es {s} = edges_collect es2 (edges_collect es1 {s})"
     unfolding es_eq by (simp add: edges_collect_append)
@@ -143,9 +142,9 @@ proof -
     using to_cfg_of_compile_0[OF c1_0] by auto
   have en20_cfg: "cfg_entry (to_cfg c2) = en20" and ex20_cfg: "cfg_exit (to_cfg c2) = ex20"
     using to_cfg_of_compile_0[OF c2_0] by auto
-  have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+  have p1': "(to_cfg c1) \<turnstile> (cfg_entry (to_cfg c1)) \<longrightarrow>\<^bsub>es1\<^esub> (cfg_exit (to_cfg c1))"
     using p1 en1_cfg ex1_cfg by simp
-  have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
+  have p2': "(to_cfg c2) \<turnstile> (cfg_entry (to_cfg c2)) \<longrightarrow>\<^bsub>es2\<^esub> (cfg_exit (to_cfg c2))"
     using p2 en20_cfg ex20_cfg by simp
   show ?thesis
     using path_imp_runs_to[OF p1' s2_in] path_imp_runs_to[OF p2' t_in2] by blast
@@ -156,8 +155,7 @@ lemma runs_to_IfTrueE:
   shows "runs_to c1 s t"
 proof -
   from rt obtain es where
-        p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) es
-             (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
+        p: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) \<longrightarrow>\<^bsub>es\<^esub> (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
     and t_in: "t \<in> edges_collect es {s}"
     using runs_to_imp_path by blast
   obtain n10 en10 ex10 E10 where c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
@@ -172,20 +170,20 @@ proof -
   have en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
     and ex_if: "cfg_exit (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
     using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
-  from p en_if ex_if have p_if: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))"
+  from p en_if ex_if have p_if: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> 0 \<longrightarrow>\<^bsub>es\<^esub> (n20 + (n10 + 1))"
     by simp
   from cfg_path_If_iff[OF c1_0 c2_0, THEN iffD1, OF p_if] have split_or:
     "(\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
-                \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+                \<and> (to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10)
    \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
-                \<and> cfg_path (to_cfg c2) en20 es2 ex20)" .
+                \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20)" .
   show ?thesis
   proof (rule disjE[OF split_or])
     assume "\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
-                  \<and> cfg_path (to_cfg c1) en10 es1 ex10"
+                  \<and> (to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10"
     then obtain es1 where
           es_eq: "es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
-      and pc1: "cfg_path (to_cfg c1) en10 es1 ex10"
+      and pc1: "(to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10"
       by blast
     have filt: "edge_collect (EA_Assume b) {s} = {s}"
       using bv by auto
@@ -205,12 +203,12 @@ proof -
     from t_in collect have t_in1: "t \<in> edges_collect es1 {s}" by simp
     have en10_cfg: "cfg_entry (to_cfg c1) = en10" and ex10_cfg: "cfg_exit (to_cfg c1) = ex10"
       using to_cfg_of_compile_0[OF c1_0] by auto
-    have p1': "cfg_path (to_cfg c1) (cfg_entry (to_cfg c1)) es1 (cfg_exit (to_cfg c1))"
+    have p1': "(to_cfg c1) \<turnstile> (cfg_entry (to_cfg c1)) \<longrightarrow>\<^bsub>es1\<^esub> (cfg_exit (to_cfg c1))"
       using pc1 en10_cfg ex10_cfg by simp
     show ?thesis using path_imp_runs_to[OF p1' t_in1] .
   next
     assume "\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
-                  \<and> cfg_path (to_cfg c2) en20 es2 ex20"
+                  \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     then obtain es2 where
           es_eq: "es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
       by blast
@@ -235,8 +233,7 @@ lemma runs_to_IfFalseE:
   shows "runs_to c2 s t"
 proof -
   from rt obtain es where
-        p: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) es
-             (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
+        p: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) \<longrightarrow>\<^bsub>es\<^esub> (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
     and t_in: "t \<in> edges_collect es {s}"
     using runs_to_imp_path by blast
   obtain n10 en10 ex10 E10 where c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
@@ -251,17 +248,17 @@ proof -
   have en_if: "cfg_entry (to_cfg (IF b THEN c1 ELSE c2)) = 0"
     and ex_if: "cfg_exit (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
     using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
-  from p en_if ex_if have p_if: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 es (n20 + (n10 + 1))"
+  from p en_if ex_if have p_if: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> 0 \<longrightarrow>\<^bsub>es\<^esub> (n20 + (n10 + 1))"
     by simp
   from cfg_path_If_iff[OF c1_0 c2_0, THEN iffD1, OF p_if] have split_or:
     "(\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
-                \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+                \<and> (to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10)
    \<or> (\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
-                \<and> cfg_path (to_cfg c2) en20 es2 ex20)" .
+                \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20)" .
   show ?thesis
   proof (rule disjE[OF split_or])
     assume "\<exists>es1. es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]
-                  \<and> cfg_path (to_cfg c1) en10 es1 ex10"
+                  \<and> (to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10"
     then obtain es1 where
           es_eq: "es = (EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
       by blast
@@ -280,10 +277,10 @@ proof -
     with t_in show ?thesis by simp
   next
     assume "\<exists>es2. es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
-                  \<and> cfg_path (to_cfg c2) en20 es2 ex20"
+                  \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     then obtain es2 where
           es_eq: "es = (EA_AssumeNot b, en20 + (n10 + 1)) # offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
-      and pc2: "cfg_path (to_cfg c2) en20 es2 ex20"
+      and pc2: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
       by blast
     have filt: "edge_collect (EA_AssumeNot b) {s} = {s}"
       using nbv by auto
@@ -302,7 +299,7 @@ proof -
     from t_in collect have t_in2: "t \<in> edges_collect es2 {s}" by simp
     have en20_cfg: "cfg_entry (to_cfg c2) = en20" and ex20_cfg: "cfg_exit (to_cfg c2) = ex20"
       using to_cfg_of_compile_0[OF c2_0] by auto
-    have p2': "cfg_path (to_cfg c2) (cfg_entry (to_cfg c2)) es2 (cfg_exit (to_cfg c2))"
+    have p2': "(to_cfg c2) \<turnstile> (cfg_entry (to_cfg c2)) \<longrightarrow>\<^bsub>es2\<^esub> (cfg_exit (to_cfg c2))"
       using pc2 en20_cfg ex20_cfg by simp
     show ?thesis using path_imp_runs_to[OF p2' t_in2] .
   qed
@@ -318,8 +315,7 @@ text \<open>
 
 lemma runs_to_skip: "runs_to SKIP s s"
 proof -
-  have p: "cfg_path (to_cfg SKIP) (cfg_entry (to_cfg SKIP))
-                  [(EA_Nop, cfg_exit (to_cfg SKIP))] (cfg_exit (to_cfg SKIP))"
+  have p: "(to_cfg SKIP) \<turnstile> (cfg_entry (to_cfg SKIP)) \<longrightarrow>\<^bsub>[(EA_Nop, cfg_exit (to_cfg SKIP))]\<^esub> (cfg_exit (to_cfg SKIP))"
     by (auto simp: to_cfg_def Let_def intro: cfg_path.intros)
   show ?thesis using path_imp_runs_to[OF p] by simp
 qed
@@ -327,9 +323,9 @@ qed
 lemma path_collect_imp_runs_to_Seq:
   assumes c1_0: "compile c1 0 = (n1, en1, ex1, E1)"
     and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
-    and es1_path: "cfg_path (to_cfg c1) en1 es1 ex1"
+    and es1_path: "(to_cfg c1) \<turnstile> en1 \<longrightarrow>\<^bsub>es1\<^esub> ex1"
     and s2_in: "s2 \<in> edges_collect es1 {s}"
-    and es2_path: "cfg_path (to_cfg c2) en20 es2 ex20"
+    and es2_path: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     and t_in: "t \<in> edges_collect es2 {s2}"
   shows "runs_to (c1 ;; c2) s t"
 proof -
@@ -339,15 +335,14 @@ proof -
   have en_seq: "cfg_entry (to_cfg (c1 ;; c2)) = en1"
     and ex_seq: "cfg_exit (to_cfg (c1 ;; c2)) = ex20 + n1"
     using cfg_edges_entry_exit_Seq[OF c1_0 c2_n] by auto
-  have path_mid: "cfg_path (to_cfg (c1 ;; c2)) en1 ?es (ex20 + n1)"
+  have path_mid: "(to_cfg (c1 ;; c2)) \<turnstile> en1 \<longrightarrow>\<^bsub>?es\<^esub> (ex20 + n1)"
   proof (rule cfg_path_Seq_iff[OF c1_0 c2_0, THEN iffD2])
     show "\<exists>es1 es2. ?es = es1 @ (EA_Nop, en20 + n1) # offset_path n1 es2
-          \<and> cfg_path (to_cfg c1) en1 es1 ex1
-          \<and> cfg_path (to_cfg c2) en20 es2 ex20"
+          \<and> (to_cfg c1) \<turnstile> en1 \<longrightarrow>\<^bsub>es1\<^esub> ex1
+          \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
       using es1_path es2_path by blast
   qed
-  have full_path: "cfg_path (to_cfg (c1 ;; c2)) (cfg_entry (to_cfg (c1 ;; c2))) ?es
-                              (cfg_exit (to_cfg (c1 ;; c2)))"
+  have full_path: "(to_cfg (c1 ;; c2)) \<turnstile> (cfg_entry (to_cfg (c1 ;; c2))) \<longrightarrow>\<^bsub>?es\<^esub> (cfg_exit (to_cfg (c1 ;; c2)))"
     using path_mid en_seq ex_seq by simp
   have collect_eq: "edges_collect ?es {s} = edges_collect es2 (edges_collect es1 {s})"
   proof -
@@ -372,7 +367,7 @@ lemma path_collect_imp_runs_to_IfTrue:
   assumes c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
     and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
     and bv: "bval b s"
-    and es1_path: "cfg_path (to_cfg c1) en10 es1 ex10"
+    and es1_path: "(to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10"
     and t_in1: "t \<in> edges_collect es1 {s}"
   shows "runs_to (IF b THEN c1 ELSE c2) s t"
 proof -
@@ -385,19 +380,17 @@ proof -
     and ex_if: "cfg_exit (to_cfg (IF b THEN c1 ELSE c2)) = n20 + (n10 + 1)"
     using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
   let ?es = "(EA_Assume b, en10 + 1) # offset_path 1 es1 @ [(EA_Nop, n20 + (n10 + 1))]"
-  have path_mid: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 ?es (n20 + (n10 + 1))"
+  have path_mid: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> 0 \<longrightarrow>\<^bsub>?es\<^esub> (n20 + (n10 + 1))"
   proof (rule cfg_path_If_iff[OF c1_0 c2_0, THEN iffD2])
     show "((\<exists>es1. ?es = (EA_Assume b, en10 + 1) # offset_path 1 es1
                         @ [(EA_Nop, n20 + (n10 + 1))]
-                    \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+                    \<and> (to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10)
           \<or> (\<exists>es2. ?es = (EA_AssumeNot b, en20 + (n10 + 1)) #
                         offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
-                    \<and> cfg_path (to_cfg c2) en20 es2 ex20))"
+                    \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20))"
       by (rule disjI1) (rule_tac x = es1 in exI, use es1_path in auto)
   qed
-  have full_path: "cfg_path (to_cfg (IF b THEN c1 ELSE c2))
-                              (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) ?es
-                              (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
+  have full_path: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) \<longrightarrow>\<^bsub>?es\<^esub> (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
     using path_mid en_if ex_if by simp
   have collect_eq: "edges_collect ?es {s} = edges_collect es1 {s}"
   proof -
@@ -418,7 +411,7 @@ lemma path_collect_imp_runs_to_IfFalse:
   assumes c1_0: "compile c1 0 = (n10, en10, ex10, E10)"
     and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
     and nbv: "\<not> bval b s"
-    and es2_path: "cfg_path (to_cfg c2) en20 es2 ex20"
+    and es2_path: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     and t_in2: "t \<in> edges_collect es2 {s}"
   shows "runs_to (IF b THEN c1 ELSE c2) s t"
 proof -
@@ -432,19 +425,17 @@ proof -
     using cfg_edges_entry_exit_If[OF c1_1 c2_n] by auto
   let ?es = "(EA_AssumeNot b, en20 + (n10 + 1)) #
              offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]"
-  have path_mid: "cfg_path (to_cfg (IF b THEN c1 ELSE c2)) 0 ?es (n20 + (n10 + 1))"
+  have path_mid: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> 0 \<longrightarrow>\<^bsub>?es\<^esub> (n20 + (n10 + 1))"
   proof (rule cfg_path_If_iff[OF c1_0 c2_0, THEN iffD2])
     show "((\<exists>es1. ?es = (EA_Assume b, en10 + 1) # offset_path 1 es1
                         @ [(EA_Nop, n20 + (n10 + 1))]
-                    \<and> cfg_path (to_cfg c1) en10 es1 ex10)
+                    \<and> (to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10)
           \<or> (\<exists>es2. ?es = (EA_AssumeNot b, en20 + (n10 + 1)) #
                         offset_path (n10 + 1) es2 @ [(EA_Nop, n20 + (n10 + 1))]
-                    \<and> cfg_path (to_cfg c2) en20 es2 ex20))"
+                    \<and> (to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20))"
       by (rule disjI2) (rule_tac x = es2 in exI, use es2_path in auto)
   qed
-  have full_path: "cfg_path (to_cfg (IF b THEN c1 ELSE c2))
-                              (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) ?es
-                              (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
+  have full_path: "(to_cfg (IF b THEN c1 ELSE c2)) \<turnstile> (cfg_entry (to_cfg (IF b THEN c1 ELSE c2))) \<longrightarrow>\<^bsub>?es\<^esub> (cfg_exit (to_cfg (IF b THEN c1 ELSE c2)))"
     using path_mid en_if ex_if by simp
   have collect_eq: "edges_collect ?es {s} = edges_collect es2 {s}"
   proof -
@@ -476,8 +467,7 @@ proof -
     and ex_w: "cfg_exit (to_cfg (WHILE b DO c)) = n0 + 1"
     using cfg_edges_entry_exit_While[OF c_1] by auto
   let ?es = "[(EA_AssumeNot b, n0 + 1)]"
-  have path: "cfg_path (to_cfg (WHILE b DO c)) (cfg_entry (to_cfg (WHILE b DO c))) ?es
-                         (cfg_exit (to_cfg (WHILE b DO c)))"
+  have path: "(to_cfg (WHILE b DO c)) \<turnstile> (cfg_entry (to_cfg (WHILE b DO c))) \<longrightarrow>\<^bsub>?es\<^esub> (cfg_exit (to_cfg (WHILE b DO c)))"
     using Ew en_w ex_w by (auto intro: cfg_path.intros)
   have t: "s \<in> edges_collect ?es {s}" using nbv by simp
   show ?thesis using path_imp_runs_to[OF path t] .
@@ -486,9 +476,9 @@ qed
 lemma path_collect_imp_runs_to_WhileTrue:
   assumes c_0: "compile c 0 = (n0, en0, ex0, E0)"
     and bv: "bval b s"
-    and body_path: "cfg_path (to_cfg c) en0 es_body ex0"
+    and body_path: "(to_cfg c) \<turnstile> en0 \<longrightarrow>\<^bsub>es_body\<^esub> ex0"
     and s'_in: "s' \<in> edges_collect es_body {s}"
-    and rest_path: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest (n0 + 1)"
+    and rest_path: "(to_cfg (WHILE b DO c)) \<turnstile> 0 \<longrightarrow>\<^bsub>es_rest\<^esub> (n0 + 1)"
     and t_in_rest: "t \<in> edges_collect es_rest {s'}"
   shows "runs_to (WHILE b DO c) s t"
 proof -
@@ -500,19 +490,17 @@ proof -
     and en_w: "cfg_entry (to_cfg (WHILE b DO c)) = 0"
     and ex_w: "cfg_exit (to_cfg (WHILE b DO c)) = n0 + 1"
     using cfg_edges_entry_exit_While[OF c_1] by auto
-  have body_in: "cfg_path (to_cfg (WHILE b DO c)) (en0 + 1) (offset_path 1 es_body) (ex0 + 1)"
+  have body_in: "(to_cfg (WHILE b DO c)) \<turnstile> (en0 + 1) \<longrightarrow>\<^bsub>(offset_path 1 es_body)\<^esub> (ex0 + 1)"
     by (rule cfg_path_sub_offset_into[OF c_0 body_path]) (auto simp: Ew)
-  have head: "cfg_path (to_cfg (WHILE b DO c)) 0 [(EA_Assume b, en0 + 1)] (en0 + 1)"
+  have head: "(to_cfg (WHILE b DO c)) \<turnstile> 0 \<longrightarrow>\<^bsub>[(EA_Assume b, en0 + 1)]\<^esub> (en0 + 1)"
     using Ew by (auto intro: cfg_path.intros)
-  have loopback: "cfg_path (to_cfg (WHILE b DO c)) (ex0 + 1) [(EA_Nop, 0)] 0"
+  have loopback: "(to_cfg (WHILE b DO c)) \<turnstile> (ex0 + 1) \<longrightarrow>\<^bsub>[(EA_Nop, 0)]\<^esub> 0"
     using Ew by (auto intro: cfg_path.intros)
   let ?es = "(EA_Assume b, en0 + 1) # offset_path 1 es_body @ (EA_Nop, 0) # es_rest"
-  have path_mid: "cfg_path (to_cfg (WHILE b DO c)) 0 ?es (n0 + 1)"
+  have path_mid: "(to_cfg (WHILE b DO c)) \<turnstile> 0 \<longrightarrow>\<^bsub>?es\<^esub> (n0 + 1)"
     using cfg_path_append[OF cfg_path_append[OF cfg_path_append[OF head body_in] loopback] rest_path]
     by simp
-  have full_path: "cfg_path (to_cfg (WHILE b DO c))
-                              (cfg_entry (to_cfg (WHILE b DO c))) ?es
-                              (cfg_exit (to_cfg (WHILE b DO c)))"
+  have full_path: "(to_cfg (WHILE b DO c)) \<turnstile> (cfg_entry (to_cfg (WHILE b DO c))) \<longrightarrow>\<^bsub>?es\<^esub> (cfg_exit (to_cfg (WHILE b DO c)))"
     using path_mid en_w ex_w by simp
   have filt: "edge_collect (EA_Assume b) {s} = {s}" using bv by auto
   have collect_eq: "edges_collect ?es {s} = edges_collect es_rest (edges_collect es_body {s})"
@@ -546,9 +534,7 @@ proof (induction c s c' s' arbitrary: t rule: small_step_induct)
     from Assign.prems have eq: "t = s(x := aval a s)"
       using runs_to_small_step star_SKIP_eq by blast
 
-    have p: "cfg_path (to_cfg (x ::= a)) (cfg_entry (to_cfg (x ::= a)))
-                  [(EA_Assign x a, cfg_exit (to_cfg (x ::= a)))]
-                  (cfg_exit (to_cfg (x ::= a)))"
+    have p: "(to_cfg (x ::= a)) \<turnstile> (cfg_entry (to_cfg (x ::= a))) \<longrightarrow>\<^bsub>[(EA_Assign x a, cfg_exit (to_cfg (x ::= a)))]\<^esub> (cfg_exit (to_cfg (x ::= a)))"
       by (auto simp: to_cfg_def Let_def intro: cfg_path.intros)
     show "runs_to (x ::= a) s t"
       using path_imp_runs_to[OF p] eq by simp
@@ -565,11 +551,11 @@ next
       and en20_eq: "cfg_entry (to_cfg c2) = en20" and ex20_eq: "cfg_exit (to_cfg c2) = ex20"
       by (rule to_cfg_compile)
     from runs_to_imp_path[OF runs_to_skip] obtain es1 where
-          es1_path: "cfg_path (to_cfg SKIP) en1 es1 ex1"
+          es1_path: "(to_cfg SKIP) \<turnstile> en1 \<longrightarrow>\<^bsub>es1\<^esub> ex1"
       and s_in: "s \<in> edges_collect es1 {s}"
       by (simp add: en1_eq ex1_eq) blast
     from runs_to_imp_path[OF rt2] obtain es2 where
-          es2_path: "cfg_path (to_cfg c2) en20 es2 ex20"
+          es2_path: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
       and t_in: "t \<in> edges_collect es2 {s}"
       by (simp add: en20_eq ex20_eq) blast
     show "runs_to (SKIP ;; c2) s t"
@@ -588,11 +574,11 @@ next
     and en20_eq: "cfg_entry (to_cfg c2) = en20" and ex20_eq: "cfg_exit (to_cfg c2) = ex20"
     by (rule to_cfg_compile)
   from runs_to_imp_path[OF rt1] obtain es1 where
-        es1_path: "cfg_path (to_cfg c1) en1 es1 ex1"
+        es1_path: "(to_cfg c1) \<turnstile> en1 \<longrightarrow>\<^bsub>es1\<^esub> ex1"
     and s2_in: "s2 \<in> edges_collect es1 {s}"
     by (simp add: en1_eq ex1_eq) blast
   from runs_to_imp_path[OF b] obtain es2 where
-        es2_path: "cfg_path (to_cfg c2) en20 es2 ex20"
+        es2_path: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     and t_in: "t \<in> edges_collect es2 {s2}"
     by (simp add: en20_eq ex20_eq) blast
   show ?case
@@ -606,7 +592,7 @@ next
   obtain n20 en20 ex20 E20 where c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
     by (rule to_cfg_compile)
   from runs_to_imp_path[OF rt] obtain es1 where
-        es1_path: "cfg_path (to_cfg c1) en10 es1 ex10"
+        es1_path: "(to_cfg c1) \<turnstile> en10 \<longrightarrow>\<^bsub>es1\<^esub> ex10"
     and t_in1: "t \<in> edges_collect es1 {s}"
     by (simp add: en10_eq ex10_eq) blast
   show "runs_to (IF b THEN c1 ELSE c2) s t"
@@ -620,7 +606,7 @@ next
     and en20_eq: "cfg_entry (to_cfg c2) = en20" and ex20_eq: "cfg_exit (to_cfg c2) = ex20"
     by (rule to_cfg_compile)
   from runs_to_imp_path[OF rt] obtain es2 where
-        es2_path: "cfg_path (to_cfg c2) en20 es2 ex20"
+        es2_path: "(to_cfg c2) \<turnstile> en20 \<longrightarrow>\<^bsub>es2\<^esub> ex20"
     and t_in2: "t \<in> edges_collect es2 {s}"
     by (simp add: en20_eq ex20_eq) blast
   show "runs_to (IF b THEN c1 ELSE c2) s t"
@@ -642,11 +628,11 @@ next
       and ex_w: "cfg_exit (to_cfg (WHILE b DO c)) = n0 + 1"
       using cfg_edges_entry_exit_While[OF c_1] by auto
     from runs_to_imp_path[OF bd] obtain es_body where
-          body_path: "cfg_path (to_cfg c) en0 es_body ex0"
+          body_path: "(to_cfg c) \<turnstile> en0 \<longrightarrow>\<^bsub>es_body\<^esub> ex0"
       and s2_in: "s2 \<in> edges_collect es_body {s}"
       by (simp add: en0_eq ex0_eq) blast
     from runs_to_imp_path[OF wh] obtain es_rest where
-          rest_path: "cfg_path (to_cfg (WHILE b DO c)) 0 es_rest (n0 + 1)"
+          rest_path: "(to_cfg (WHILE b DO c)) \<turnstile> 0 \<longrightarrow>\<^bsub>es_rest\<^esub> (n0 + 1)"
       and t_in_rest: "t \<in> edges_collect es_rest {s2}"
       by (simp add: en_w ex_w) blast
     show ?thesis
