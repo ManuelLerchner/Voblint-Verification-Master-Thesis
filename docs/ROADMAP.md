@@ -15,6 +15,7 @@
 | Soundness chain narrative | `docs/PROOF_OVERVIEW.md` |
 | Per-stage workflow | `docs/walkthrough/index.html` (layer walkthroughs) |
 | Catalogued repo problems (P1–P10) by file:line | `docs/OPEN_PROBLEMS.md` |
+| CFG representation decision | `docs/cfg-representation.md` |
 | HOL-IMP differences | `docs/HOL_IMP_COMPARISON.md` |
 | Comparison to Blazy/Pichardie/Verasco | KB: `~/git/goblint-formalization-kb/wiki/concepts/blazy-2013-value-analysis.md` and `wiki/concepts/verasco.md` |
 

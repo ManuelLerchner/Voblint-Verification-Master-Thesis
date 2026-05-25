@@ -60,11 +60,11 @@ Optional / removed from main path:
 | P1 | `TD_plain.solve_dom` assumed | `Pipeline.thy`, `TD_Interface.thy` | "If TD terminates, result is sound" | Cleaner main theorem; total correctness (gated on P5) |
 | P2 | `td_cfg_in_reach` assumed | `Pipeline.thy` | Solver tree reach vs CFG pp reach | Drop one assumption |
 | P3 | `comp_fun_idem (ac_join cfg)` assumed | `Pipeline.thy` | Finite fold needs commutative idempotent join | Drop user obligation |
-| P4 | Interval domain stretch | `Interval_Domain.thy` | Second domain end-to-end packaging | Interval thesis example |
+| P4 | Interval domain stretch | `Interval_Domain.thy` | ~~Second domain~~ | **done** — `ivl_pipeline_sound`, `goblint_interval_sound`; still carries P1–P3 |
 | P5 | `pp = nat` vs TD `finite UNIV` | `CFG_Def.thy`, vendored TD | Termination locale type finiteness | Generic termination claim |
 | P6 | TD total correctness | was `TD_Total.thy` | **file removed**; reopen if totality returns | Total correctness |
 | P7 | Widening soundness | `Interval_Domain.thy` | Feeds termination track | Interval + widening |
-| P8 | `quick_and_dirty` in `ROOT` | `ROOT` | Batch ignores sorries in stretch | Sorry-free core session |
+| P8 | `quick_and_dirty` in `ROOT` | `ROOT` | ~~Batch ignores sorries~~ | **done** — removed; optional Core/Stretch session split remains |
 | P9 | Executable end-to-end limited | `Example_Sign_Analysis.thy` | `value` on full maps only for finite domains | In-Isabelle execution |
 | P10 | `Direct_Equations` | was `Equations/Direct_Equations.thy` | **deleted** — CFG path is the only route | — |
 

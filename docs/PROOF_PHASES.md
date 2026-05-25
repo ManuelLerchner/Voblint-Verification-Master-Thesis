@@ -36,9 +36,8 @@ Source of truth:
 rg -n '^\s*sorry' src/ | rg -v '\.thy~'
 ```
 
-As of last full-session build: **0 sorries** on the main chain under
-`options [quick_and_dirty]` in `ROOT` (stretch theories may still use `oops` in
-examples only — re-run the command after changes).
+As of last full-session build: **0 sorries** on the main chain (`ROOT` no longer
+uses `quick_and_dirty`; re-run the command after changes).
 
 | Area | Notes |
 | --- | --- |
@@ -85,7 +84,7 @@ Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects
 - Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`, `comp_fun_idem`).
 - **Interval / octagon** domains and executability.
 - Remaining **Phase 4** automation (`IMP2_to_CFG` apply scripts, path-lifting combinators).
-- Remove **`quick_and_dirty`** from `ROOT` when the session is sorry-free by policy.
+- **`quick_and_dirty`** removed from `ROOT` (2026-05). Optional: split `Goblint_Formalization_Core` session ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).
 
 ```bash
 gh issue list --state open --label phase:stretch

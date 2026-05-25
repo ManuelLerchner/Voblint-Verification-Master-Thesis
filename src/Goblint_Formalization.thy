@@ -37,7 +37,7 @@ begin
   Exit sugar: runs_to (runs_to_def); goblint_sign_sound for sign domain.
 
   Sign pipeline: proved (goblint_sign_sound; carries P1-P3 TD assumptions).
-  Interval: ivl_pipeline_sound (stretch packaging).
+  Interval: ivl_pipeline_sound, goblint_interval_sound (same P1-P3 as sign).
 
   Abstract domains:
     Sign      -- Tier 1 (finite lattice, no widening)  [Domains/Sign_Domain]
@@ -129,5 +129,31 @@ theorem goblint_sign_sound:
                (cfg_exit (to_cfg c)))"
   by (rule sign_pipeline_sound
         [OF runs sign_init_in_gamma join_cfi td_solve_dom td_cfg_in_reach])
+
+theorem goblint_interval_sound:
+  assumes runs: "runs_to c s t"
+  assumes join_cfi:
+    "comp_fun_idem ((\<squnion>) ::
+       ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom
+       (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
+          (ac_init (ivl_analysis_config s)))
+       (cfg_entry (to_cfg c))"
+  assumes td_cfg_in_reach:
+    "\<And>v::pp. v \<in> reach
+       (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
+          (ac_init (ivl_analysis_config s)))
+       (TD_plain_Interp_solve
+          (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
+            (ac_init (ivl_analysis_config s)))
+          (cfg_entry (to_cfg c)))
+       (cfg_entry (to_cfg c))"
+  shows
+    "t \<in> ivl_domain.gamma_state
+            (run_analysis (ivl_analysis_config s) c
+               (cfg_exit (to_cfg c)))"
+  by (rule ivl_pipeline_sound
+        [OF runs join_cfi td_solve_dom td_cfg_in_reach])
 
 end

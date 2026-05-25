@@ -10,7 +10,8 @@ a constraint system to the verified top-down solver of
 prove that **any abstract domain** satisfying our locale and transfer obligations
 yields a solver result that soundly over-approximates concrete collecting
 semantics; sign analysis is the primary worked instance (`goblint_sign_sound`),
-modulo three TD-side assumptions (P1–P3; see `docs/OPEN_PROBLEMS.md`).
+modulo three TD-side assumptions (P1–P3; see `docs/OPEN_PROBLEMS.md`). Interval
+instance: `goblint_interval_sound` (same hypotheses).
 
 ### Pipeline (overview)
 
