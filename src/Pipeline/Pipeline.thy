@@ -100,9 +100,6 @@ lemma sign_tf_sound:
 lemma sign_pipeline_sound:
   assumes runs: "runs_to c s t"
     and init_ok: "s \<in> sign_domain.gamma_state (ac_init (sign_analysis_config s))"
-    and join_cfi:
-      "comp_fun_idem ((\<squnion>) ::
-         sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
     and td_solve_dom:
       "TD_plain.solve_dom
          (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
@@ -127,7 +124,7 @@ proof -
   show ?thesis
     unfolding run_eq
     using runs_toD[OF runs]
-    by (rule sign_analysis_sound[OF init_ok _ join_cfi td_solve_dom td_cfg_in_reach])
+    by (rule sign_analysis_sound[OF init_ok _ td_solve_dom td_cfg_in_reach])
 qed
 
 (* ── Interval Analysis Pipeline ──────────────────────────────── *)
@@ -152,9 +149,6 @@ lemma ivl_init_in_gamma:
 
 corollary ivl_pipeline_sound:
   assumes runs: "runs_to c s t"
-    and join_cfi:
-      "comp_fun_idem ((\<squnion>) ::
-         ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
     and td_solve_dom:
       "TD_plain.solve_dom
          (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
@@ -181,7 +175,7 @@ proof -
     unfolding run_eq
     using runs_toD[OF runs]
     by (rule interval_analysis_sound
-          [OF ivl_init_in_gamma _ join_cfi td_solve_dom td_cfg_in_reach])
+          [OF ivl_init_in_gamma _ td_solve_dom td_cfg_in_reach])
 qed
 
 (* Point-map invariant (post_fixpoint_sound + td_analyse_post_fixpoint). *)
@@ -192,7 +186,6 @@ theorem pipeline_invariant_sound:
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
@@ -209,11 +202,12 @@ theorem pipeline_invariant_sound:
                       (run_analysis cfg c v)"
 proof -
   interpret sd: sound_domain "ac_gamma cfg"
-    using sound .
-  have join_eq': "ac_join cfg = ((\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _)"
+    using sound .  have join_eq': "ac_join cfg = ((\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _)"
     unfolding sup_fun_def using join_eq by simp
   have bot_eq':  "ac_bot cfg = (bot :: 'a abs_state)"
     unfolding bot_fun_def using bot_eq by simp
+  have cfi: "comp_fun_idem (ac_join cfg)"
+    unfolding join_eq' by (rule join_state_comp_fun_idem)
   have join_sym: "\<And>x y. ac_join cfg x y = ac_join cfg y x"
     unfolding join_eq using sup_commute by (auto simp: fun_eq_iff)
   have pfp: "is_post_fixpoint (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg)
@@ -259,7 +253,6 @@ theorem pipeline_sound_path:
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
@@ -278,7 +271,7 @@ proof -
   have inv: "\<forall>v. cfg_collect (to_cfg c) {s} v \<le>
                   sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg c v)"
     by (rule pipeline_invariant_sound[OF sound join_eq bot_eq tf_sound s_in_gamma
-              cfi td_solve_dom td_cfg_in_reach])
+              td_solve_dom td_cfg_in_reach])
   have t_in_cfg: "t \<in> cfg_collect (to_cfg c) {s} v"
     using path_sound_cfg_collect[OF path] t_in by blast
   from inv[rule_format, of v] t_in_cfg show ?thesis by blast
@@ -299,7 +292,6 @@ theorem pipeline_sound_runs_to:
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
@@ -316,7 +308,7 @@ theorem pipeline_sound_runs_to:
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg)
                   (run_analysis cfg c (cfg_exit (to_cfg c)))"
   using exit_in_collect pipeline_invariant_sound[OF sound join_eq bot_eq tf_sound
-          s_in_gamma cfi td_solve_dom td_cfg_in_reach, rule_format,
+          s_in_gamma td_solve_dom td_cfg_in_reach, rule_format,
           of "cfg_exit (to_cfg c)"]
   by blast
 
@@ -327,7 +319,6 @@ corollary pipeline_sound_runs_to_runs:
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
@@ -343,14 +334,12 @@ corollary pipeline_sound_runs_to_runs:
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg)
                   (run_analysis cfg c (cfg_exit (to_cfg c)))"
   using runs runs_to_def pipeline_sound_runs_to[OF sound join_eq bot_eq tf_sound s_in_gamma
-          cfi td_solve_dom td_cfg_in_reach]
+          td_solve_dom td_cfg_in_reach]
   by blast
 
 theorem sign_pipeline_invariant_sound:
   assumes tf_ok:   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
   assumes init_ok: "s \<in> sign_domain.gamma_state (ac_init (sign_analysis_config s))"
-  assumes cfi:     "comp_fun_idem (ac_join (sign_analysis_config s)
-                      :: sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) (ac_tf (sign_analysis_config s))
@@ -395,7 +384,7 @@ proof -
              sound_domain.gamma_state (ac_gamma (sign_analysis_config s))
                 (run_analysis (sign_analysis_config s) c v)"
     by (rule pipeline_invariant_sound[OF sound je be tf_ok' init_ok'
-              cfi td_solve_dom td_cfg_in_reach])
+              td_solve_dom td_cfg_in_reach])
   show ?thesis using inv by (simp add: gs_eq)
 qed
 

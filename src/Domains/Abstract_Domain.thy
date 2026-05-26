@@ -28,6 +28,15 @@ lemma comp_fun_commute_sup:
   "comp_fun_commute ((\<squnion>) :: 'a::semilattice_sup \<Rightarrow> 'a \<Rightarrow> 'a)"
   by unfold_locales (simp add: fun_eq_iff sup_left_commute)
 
+(* P3 discharge: pointwise sup on abs_state is comp_fun_idem.  Follows from
+   the standard `comp_fun_idem_sup` because (vname => 'a) inherits
+   semilattice_sup pointwise from 'a.  Used downstream to drop the
+   `comp_fun_idem (ac_join cfg)` assumption from pipeline theorems. *)
+lemma join_state_comp_fun_idem:
+  "comp_fun_idem ((\<squnion>) ::
+     'a::semilattice_sup abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
+  by (rule comp_fun_idem_sup)
+
 locale sound_domain =
   fixes gamma :: "'a::bounded_semilattice_sup_bot => int set"
   assumes gamma_bot:

@@ -106,9 +106,6 @@ qed
 
 theorem goblint_sign_sound:
   assumes runs: "runs_to c s t"
-  assumes join_cfi:
-    "comp_fun_idem ((\<squnion>) ::
-       sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
@@ -128,13 +125,10 @@ theorem goblint_sign_sound:
             (run_analysis (sign_analysis_config s) c
                (cfg_exit (to_cfg c)))"
   by (rule sign_pipeline_sound
-        [OF runs sign_init_in_gamma join_cfi td_solve_dom td_cfg_in_reach])
+        [OF runs sign_init_in_gamma td_solve_dom td_cfg_in_reach])
 
 theorem goblint_interval_sound:
   assumes runs: "runs_to c s t"
-  assumes join_cfi:
-    "comp_fun_idem ((\<squnion>) ::
-       ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
@@ -154,6 +148,6 @@ theorem goblint_interval_sound:
             (run_analysis (ivl_analysis_config s) c
                (cfg_exit (to_cfg c)))"
   by (rule ivl_pipeline_sound
-        [OF runs join_cfi td_solve_dom td_cfg_in_reach])
+        [OF runs td_solve_dom td_cfg_in_reach])
 
 end

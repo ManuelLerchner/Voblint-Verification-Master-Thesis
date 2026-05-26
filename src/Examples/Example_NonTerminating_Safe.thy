@@ -87,7 +87,6 @@ theorem nonterm_safe_at_every_pp:
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg nonterm_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
@@ -103,7 +102,7 @@ theorem nonterm_safe_at_every_pp:
   assumes t_in:     "t \<in> edges_collect es {s}"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg nonterm_prog v)"
   by (rule pipeline_sound_path[OF sound join_eq bot_eq tf_sound s_in_gamma
-            cfi td_solve_dom td_cfg_in_reach path t_in])
+            td_solve_dom td_cfg_in_reach path t_in])
 
 
 section \<open>Example: Diverging Program With Mutating State\<close>
@@ -198,7 +197,6 @@ theorem incr_loop_safe_at_every_pp:
   assumes bot_eq:     "ac_bot cfg = (\<lambda>_. bot)"
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
-  assumes cfi:        "comp_fun_idem (ac_join cfg)"
   assumes td_solve_dom:
     "TD_plain.solve_dom
        (make_rhs_tree (to_cfg incr_loop_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
@@ -214,7 +212,7 @@ theorem incr_loop_safe_at_every_pp:
   assumes t_in:     "t \<in> edges_collect es {s}"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg incr_loop_prog v)"
   by (rule pipeline_sound_path[OF sound join_eq bot_eq tf_sound s_in_gamma
-            cfi td_solve_dom td_cfg_in_reach path t_in])
+            td_solve_dom td_cfg_in_reach path t_in])
 
 
 text \<open>
