@@ -47,17 +47,29 @@ Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); 
 # Repository layout
 
 ```
-src/               README.md — session map
-src/IMP2/          syntax + small-step (README)
-src/CFG/           CFG core (README); Collecting/ — cfg_collect (README)
-src/Domains/       abstract domains (README)
-src/Equations/     constraint systems + soundness (README)
-src/Examples/      executable demos (README)
-src/Solver/        TD solver bridge (README)
-src/Pipeline/      end-to-end soundness (README)
+src/                       README.md — session map
+src/IMP2/                  syntax + small-step (README)
+src/CFG/                   CFG core (README); Collecting/ — cfg_collect (README)
+src/Domains/               abstract domains (README)
+src/Equations/             constraint systems + soundness (README)
+src/Examples/              executable demos (README)
+src/Solver/                TD solver bridge (README)
+src/Pipeline/              end-to-end soundness (README)
+vendor/td-verification/    TD solver (AFP session `TD`, submodule)
+vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
 ```
 
-Plans: `docs/PROOF_PHASES.md` (steps, exit criteria, sorry inventory). `docs/PROOF_OVERVIEW.md` (big picture).
+`ROOT` session `Goblint_Formalization` parent `HOL-IMP`, pulls sessions `TD` + `Dijkstra_Shortest_Path`. Top-level theories: `Goblint_Formalization`, `TD_CFG_Core`, `TD_Widen_Interface`, `TD_WN_Interface`, plus `Example_*` (`Sign_Analysis`, `Interval_Analysis`, `Interval_Widen`, `CFG_Collecting_Equiv`, `GraphViz`, `NonTerminating_Safe`).
+
+Docs:
+
+* `docs/PROOF_PHASES.md` — steps, exit criteria, sorry inventory
+* `docs/PROOF_OVERVIEW.md` — big picture
+* `docs/ROADMAP.md` — live backlog (mirrors GitHub Project 8)
+* `docs/NEXT_STEPS.md`, `docs/OPEN_PROBLEMS.md` — short-horizon + open items
+* `docs/HOL_IMP_COMPARISON.md`, `docs/IMP_SYNTAX_NIPKOW_EXTENSION.md`, `docs/cfg-representation.md` — design references
+* `docs/ISABELLE_AGENT_NOTES.md` — MCP / Isabelle traps
+* `docs/walkthrough/`, `docs/html/` — generated artifacts
 
 ---
 
