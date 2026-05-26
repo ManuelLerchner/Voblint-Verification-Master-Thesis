@@ -27,7 +27,7 @@ begin
   Goblint Formalization -- Top Level.
 
   Master's thesis at TUM: prove the complete Goblint static analysis pipeline.
-  Supervisors: Alexandra Gra{\ss}, Michael Schwarz.
+  Supervisor: Alexandra Gra{\ss}.
 
   Pipeline (cfg_collect spec):
     AST  --(compile/to_cfg)-->  CFG  --(rhs/make_rhs_tree)-->  Equations  --(TD)-->  Result

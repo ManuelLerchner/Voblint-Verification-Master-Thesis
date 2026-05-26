@@ -27,7 +27,7 @@ begin
   We use an option-like type: None = infinity / -infinity.
   Or alternatively use the HOL-IMP approach with  ivl = Ivl int int.
   For now: use int for bounds with a separate "unbounded" flag.
-  TODO: pick concrete representation after discussion with supervisors.
+  TODO: pick concrete representation after discussion with supervisor.
 *)
 
 datatype eint = MinInf | Fin int | PlusInf
