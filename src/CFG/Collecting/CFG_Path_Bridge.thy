@@ -310,7 +310,7 @@ next
     using cfg_edges_entry_exit_While[OF c1_1] by auto
   from While.prems(1) en_w ex_w
     have p: "(to_cfg (WHILE b DO c)) \<turnstile> 0 \<longrightarrow>\<^bsub>es\<^esub> (n10 + 1)" by simp
-  from cfg_path_While_exit_iff[OF c0 c1_1, THEN iffD1, OF p] obtain es_pre where
+  from cfg_path_While_exit_iff[OF c0, THEN iffD1, OF p] obtain es_pre where
         es_decomp: "es = es_pre @ [(EA_AssumeNot b, n10 + 1)]"
     and p_pre: "(to_cfg (WHILE b DO c)) \<turnstile> 0 \<longrightarrow>\<^bsub>es_pre\<^esub> 0"
     by blast
@@ -342,7 +342,7 @@ next
     next
       case (Cons hd tl)
       have ne: "ER \<noteq> []" using Cons by simp
-      from cfg_path_While_loop_iff[OF c0 c1_1, THEN iffD1, OF p_R]
+      from cfg_path_While_loop_iff[OF c0, THEN iffD1, OF p_R]
         have loop_decomp: "ER = [] \<or> (\<exists>es_body ER'.
               ER = [(EA_Assume b, en10 + 1)] @ offset_path 1 es_body @ [(EA_Nop, 0)] @ ER'
               \<and> (to_cfg c) \<turnstile> en10 \<longrightarrow>\<^bsub>es_body\<^esub> ex10

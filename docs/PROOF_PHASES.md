@@ -78,6 +78,8 @@ uses `quick_and_dirty`; re-run the command after changes).
 
 ## Open / stretch (see roadmap)
 
+**Work plan:** `docs/NEXT_STEPS.md`.
+
 Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8)** and
 `docs/OPEN_PROBLEMS.md` (P1–P10 catalogue):
 

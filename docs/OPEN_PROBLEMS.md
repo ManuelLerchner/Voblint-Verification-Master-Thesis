@@ -111,8 +111,10 @@ Split core vs stretch sessions when sorry-free core is policy.
 
 ## Where to start
 
+**Session plan:** `docs/NEXT_STEPS.md` (tomorrow: issue #7 / P3).
+
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
 3. `src/Pipeline/Pipeline.thy` — `pipeline_invariant_sound`, `pipeline_sound_path`
-4. P3 lemma packaging is a cheap win; P8 is cosmetic
+4. P3 lemma packaging is a cheap win ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7)); P8 session split is cosmetic ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13))
 5. MCP-first workflow: `AGENTS.md`

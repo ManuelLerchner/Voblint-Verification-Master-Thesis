@@ -11,6 +11,7 @@
 | Open work items, dependencies, status | **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8)** |
 | Active issues, labels, milestones | `gh issue list --state open` |
 | Live sorry inventory | `rg -n '^\s*sorry' src/ \| rg -v '\.thy~'` |
+| **Next session / week plan** | `docs/NEXT_STEPS.md` |
 | All declared lemmas/theorems | `rg -n '^(lemma\|theorem) ' src/` |
 | Soundness chain narrative | `docs/PROOF_OVERVIEW.md` |
 | Per-stage workflow | `docs/walkthrough/index.html` (layer walkthroughs) |
