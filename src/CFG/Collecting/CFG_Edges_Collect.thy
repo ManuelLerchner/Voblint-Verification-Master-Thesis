@@ -63,6 +63,41 @@ lemma edges_collect_append[simp]:
   apply (induction es1 arbitrary: S)
   by auto
 
+lemma edges_collect_nop_append:
+  "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
+proof (induction es1 arbitrary: S)
+  case Nil
+  show ?case by (simp add: edges_collect_append)
+next
+  case (Cons e es1)
+  obtain a p where ep: "e = (a, p)" by (cases e) auto
+  show ?case
+    unfolding ep edges_collect.simps edges_collect_append Cons by simp
+qed
+
+lemma mem_edges_collect_from_set:
+  "t \<in> edges_collect es M \<Longrightarrow> \<exists>m\<in>M. t \<in> edges_collect es {m}"
+proof (induction es arbitrary: M t)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons e es)
+  obtain a w where ew: "e = (a, w)" by (cases e) auto
+  obtain M' where M': "M' = edge_collect a M" by simp
+  from Cons.prems ew obtain t': "t \<in> edges_collect es M'"
+    using M' edges_collect.simps(2) by blast
+  from Cons.IH[OF this] obtain m where m: "m \<in> M'" and tm: "t \<in> edges_collect es {m}"
+    by blast
+  from m have "m \<in> edge_collect a M"
+    using M' by auto
+  then obtain m0 where m0: "m0 \<in> M" and mm: "m \<in> edge_collect a {m0}"
+    by (cases a) (auto simp: mem_Collect_eq)
+  have "t \<in> edges_collect (e # es) {m0}"
+    unfolding ew edges_collect.simps mm tm
+    using mm edges_collect_member tm by blast
+  with m0 show ?case by blast
+qed
+
 (*
   edges_collect only inspects edge actions; the pp component of each
   step is discarded.  Hence shifting pp's via offset_path is invisible

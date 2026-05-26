@@ -153,22 +153,22 @@ lemma cfg_path_no_out_empty:
 
 lemma compound_Seq_edge_src_ge_n1:
   assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
-    and c2_0: "compile c2 0 = (n2, en2, ex2, E2)"
+    and c2_0: "compile c2 0 = (n20, en20, ex20, E20)"
     and edge: "(u, a, w) \<in> edges (to_cfg (c1 ;; c2))"
     and u_ge: "n1 \<le> u"
-  shows "(u, a, w) \<in> offset_edges n1 E2"
-  using assms
+  shows "(u, a, w) \<in> offset_edges n1 E20"
 proof -
-  have c2_n: "compile c2 n1 = (n2 + n1, en2 + n1, ex2 + n1, offset_edges n1 E2)"
+  have c2_n: "compile c2 n1 = (n20 + n1, en20 + n1, ex20 + n1, offset_edges n1 E20)"
     using compile_from_0_offsets[OF c2_0, of n1] by simp
   have Eseq: "edges (to_cfg (c1 ;; c2)) =
-              E1 \<union> {(ex1, EA_Nop, en2 + n1)} \<union> offset_edges n1 E2"
+              E1 \<union> {(ex1, EA_Nop, en20 + n1)} \<union> offset_edges n1 E20"
     using cfg_edges_entry_exit_Seq[OF c1 c2_n] by simp
   from compile_fresh[OF c1] have E1_src_lt: "\<forall>e \<in> E1. fst e < n1" by fastforce
   from compile_fresh[OF c1] have ex1_lt: "ex1 < n1" by simp
   show ?thesis
     using edge u_ge Eseq E1_src_lt ex1_lt by force
 qed
+
 
 lemma compound_Seq_edge_src_lt_n1:
   assumes c1: "compile c1 0 = (n1, en1, ex1, E1)"
@@ -678,7 +678,8 @@ proof -
   have not_assume_not: "\<not> (aa = EA_AssumeNot b \<and> w = n10 + 1)"
   proof
     assume H: "aa = EA_AssumeNot b \<and> w = n10 + 1"
-    with ps have sink_path: "(to_cfg (WHILE b DO c)) \<turnstile> (n10 + 1) \<longrightarrow>\<^bsub>tl\<^esub> 0" by simp    from cfg_path_no_out_empty[OF sink_path compound_While_no_source_n1[OF c0]]
+    with ps have sink_path: "(to_cfg (WHILE b DO c)) \<turnstile> (n10 + 1) \<longrightarrow>\<^bsub>tl\<^esub> 0" by simp
+    from cfg_path_no_out_empty[OF sink_path compound_While_no_source_n1[OF c0]]
     show False by simp
   qed
   from e0 compound_While_edges_from_zero[OF c0] not_assume_not
@@ -716,11 +717,7 @@ next
     from body obtain u0 w0 where
           decomp: "u = u0 + 1" "w = w0 + 1" "(u0, aa, w0) \<in> E10"
       unfolding offset_edges_def by auto
-    have w_ge: "1 \<le> w"
-    proof -
-      have "0 \<le> u0" by simp
-      thus ?thesis using decomp(2) by simp
-    qed
+    have w_ge: "1 \<le> w" using decomp(2) by simp
     have w_lt: "w < n10 + 1"
       using compile_fresh[OF c0] decomp(1,3)
       using decomp(2) by auto  

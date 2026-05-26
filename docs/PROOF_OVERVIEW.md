@@ -16,6 +16,29 @@ repository contributes, and how the main lemmas connect.
 | Top-down solver algorithm | Vendored `TD` session (`vendor/td-verification`, `TD_plain`) |
 | IMP2 syntax, small-step, CFG, equations, domains, pipeline | This repository |
 
+### Scope honesty: pipeline axis, not framework axis
+
+This repository is on the **pipeline / domain-instance axis** of the
+Goblint formalisation effort: IMP AST → CFG → equation system → AFP plain
+TD solver → pointwise sound abstract result, with sign + interval domain
+instances. It deliberately does **not** model the *framework* Goblint
+actually uses — Seidl, Vojdani, Erhard, Schwarz, *Mixed Flow-Sensitive
+Static Analysis: Engineering Modularity* (FM 2026 tutorial, LNCS 15557,
+open access), realised in OCaml as `GlobConstrSys` /
+`DemandGlobConstrSys` in `src/constraint/constrSys.ml`. The 11
+structural extensions missing here (locals/globals split, side-effects,
+per-unknown domains, contexts, digests, update rules, `demand`, queries,
+`sync` events, multi-analysis sum/product, context-set tracking on
+globals) are listed in `src/Equations/README.md`.
+
+The directly adjacent verified-solver work is **Tilscher, Graß, Schwarz,
+Seidl, *Verifying a Solver for Mixed Flow-Sensitive Analyses* (NASA FM
+2026)**. Supervisor Graß is co-author. Division of labour and the
+question whether the thesis can sit *on top of* their formalisation is a
+meeting-4 agenda item (see the KB at
+`~/git/goblint-formalization-kb/wiki/meetings/2026-06-01-meeting4-prep.md`,
+talking point #6).
+
 ---
 
 ## Specification and soundness
