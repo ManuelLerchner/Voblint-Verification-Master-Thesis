@@ -55,8 +55,12 @@ proof -
     unfolding cfg_collect_F_def by blast
 qed
 
- 
-lemma cfg_collect_le_paths:
+
+(* Soundness: The fixed-point collecting semantics (lfp) is a 
+   sound over-approximation of the path-based semantics. 
+   Every state inferred by the fixpoint is reachable via some path.
+*)
+theorem cfg_collect_le_paths:
   "cfg_collect g S v \<subseteq> cfg_collect_paths g S v"
 proof -
   have pf: "cfg_collect_F g S (cfg_collect_paths g S) \<le> cfg_collect_paths g S"
@@ -65,6 +69,28 @@ proof -
     using pf cfg_collect_F_mono lfp_lowerbound by blast
   then show ?thesis
     unfolding cfg_collect_def le_fun_def by simp
+qed
+
+
+(*
+ "cfg_collect g S v" never claims a state is reachable unless it truly is (Soundness),
+  and if it finds a "suspect" state, there is an exact evidence trail (Witness) that leads to it.
+*)
+theorem cfg_collect_witness:
+  assumes "s \<in> cfg_collect g S v"
+  obtains es where "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v" and "s \<in> edges_collect es S"
+proof -
+  (* Use soundness theorem to move from LFP to Path-based set *)
+  have "s \<in> cfg_collect_paths g S v"
+    using assms cfg_collect_le_paths by blast
+    
+  have "s \<in> (\<Union>es\<in>{es. g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v}. edges_collect es S)"
+    using `s \<in> cfg_collect_paths g S v` unfolding cfg_collect_paths_def by simp
+    
+  then obtain es where "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v" and "s \<in> edges_collect es S"
+    by auto
+    
+  then show ?thesis using that by auto 
 qed
 
 end
