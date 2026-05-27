@@ -19,8 +19,8 @@ walkthrough.
 
 | # | Task | Where | Effort | Issue | Status |
 | --- | --- | --- | --- | --- | --- |
-| A1 | Discharge **P3** `comp_fun_idem (ac_join cfg)` from `sound_domain` join laws | `Domains/Abstract_Domain.thy` — new lemma `join_state_comp_fun_idem`; drop `cfi` / `join_cfi` in `Pipeline.thy`, `Goblint_Formalization.thy` | 1–2 sessions | #7 | ⏳ start |
-| A2 | Discharge **P2** `td_cfg_in_reach` via CFG reachability | likely import `TA_Graphs.Graph_Defs`; bridge to `cfg_in_reach` | ~1 week | #8 | blocked on A1 |
+| A1 | Discharge **P3** `comp_fun_idem (ac_join cfg)` from `sound_domain` join laws | `Domains/Abstract_Domain.thy` — new lemma `join_state_comp_fun_idem`; drop `cfi` / `join_cfi` in `Pipeline.thy`, `Goblint_Formalization.thy` | 1–2 sessions | #7 | ✅ done 2026-05-27 (commit `1c119d3`) |
+| A2 | Discharge **P2** `td_cfg_in_reach` | not a lemma bridge — structural finding: `reach T sigma entry = {entry}` for any forward-equation CFG, assumption unconditionally false. Options in `OPEN_PROBLEMS.md` §"P2 finding (2026-05-27)" | structural; >>1 week | #8 | ⚠️ blocked on meeting 4 verdict; recommend Fix B (per-pp solve) |
 | A3 | Thesis prose — sign + interval chapters | `docs/walkthrough/` → thesis PDF | parallel | #17 | ongoing |
 | A4 | Executability — full `run_analysis` map | `Examples/`, `code_datatype`/`code_unfold` pragmas | optional | #16 | defer |
 | A5 | Session split core vs stretch | `ROOT`, import refactor (`TD_Soundness` / `Pipeline`) | optional | #13 | defer |
@@ -95,13 +95,17 @@ Post-meeting 4: patch `wiki/research/procedures-extension-feasibility.md`
 
 ## Order of operations
 
-1. **A1** (P3 packaging) — independent of meeting 4. Start now.
-2. **B3 pre-check** (vendor `TD_plain_s` interface grep) — gates B3
+1. **A1** (P3 packaging) — ✅ done 2026-05-27 (commit `1c119d3`).
+2. **A2** (P2 reachability) — ⚠️ structural finding 2026-05-27.
+   `td_cfg_in_reach` unconditionally false for forward-equation CFGs.
+   See `OPEN_PROBLEMS.md` §"P2 finding". Surfaced for meeting 4. No
+   code change pending until supervisor verdict.
+3. **B3 pre-check** (vendor `TD_plain_s` interface grep) — gates B3
    feasibility, zero cost.
-3. **B1** (structural unknown split) — cheap, unconditional adopt before
+4. **B1** (structural unknown split) — cheap, unconditional adopt before
    meeting 4 so the "shape matches `GlobConstrSys`" framing is concrete.
-4. **A2** (P2 reachability) — after A1 lands.
-5. Meeting 4 verdict → either continue A3 (write up) or branch B2/B3.
+5. Meeting 4 verdict → A3 (write up), A2 repair direction (Fix A/B),
+   and Track B scope decided together. P2 fix and B3 may merge.
 
 ---
 
