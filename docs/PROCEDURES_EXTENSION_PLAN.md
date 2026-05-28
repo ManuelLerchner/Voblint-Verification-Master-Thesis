@@ -147,6 +147,17 @@ extended object (mechanical), **N** = genuinely new proof.
 |---|---|---|---|
 | SO1 | `make_rhs_tree_side` well-formed; `TD_side.solve_dom` ⟹ `part_solution` instantiates CE4's premise | R' | mirror of `td_analyse_post_fixpoint`; solver itself already verified |
 
+**P2 fold-in (do not copy the `cfg_entry`-rooted shape).** The current pipeline's
+`td_cfg_in_reach` premise is *false* (see "P2 finding" in `OPEN_PROBLEMS.md`): the
+forward RHS rooted at `cfg_entry` reaches only the entry. SO1 must adopt **Fix B
+(per-pp solve)** — `td_analyse_side c … v ≡ lookup_bot (Interp_solve_side (make_rhs_tree_side …) v) v`
+— so the local in-reach premise is `reach.base` (trivially `v ∈ reach … v`). Note
+the in-reach obligation widens over the bipartite `'x + 'g` unknown set: **global
+summary unknowns are populated by `Side`, not by CFG predecessor edges**, so their
+coverage is a *data-dependency* fact threaded through CE4, not a CFG side condition.
+Budget this into CE4; SO1's "solver already verified" covers the solver, not the
+pipeline's discharge of in-reach.
+
 ### Pipeline / domain layer
 
 | ID | Statement | Kind | Notes |
@@ -197,6 +208,275 @@ solver consumed as-is for Stage B.
 - **NASA FM 2026 overlap.** Stage B's solver layer is the Tilscher–Graß–Schwarz–Seidl
   artifact. Coordinate scope/attribution with Alex before committing (see KB
   `meetings/2026-06-01-meeting4-prep` §6).
+
+---
+
+## 9. Exact lemmas, hand-proofs, and examples
+
+This section pins down the Stage B mathematics precisely enough to start writing
+`.thy` files, with informal correctness arguments for every non-trivial claim.
+
+**Design refinement up front (important).** Working the proofs through shows that
+the *monovariant, flow-sensitive-globals* scope (S1–S4) does **not** need the
+side-effecting solver. It needs exactly one new ingredient over the current plain
+pipeline: a **binary `combine` edge**. The merge at procedure entry is just an
+ordinary predecessor join; recursion is just a cycle the plain TD fixpoint already
+handles. `TD_side`/`Side` becomes necessary only when globals are made
+*flow-insensitive sinks* (written from anywhere, à la Goblint) or when contexts are
+created dynamically (context-sensitivity). See §9.7. The plan below is therefore
+stated for the **plain-TD + binary-combine** route, which is strictly lower-risk
+than the `post_fixpoint_sound_side` route in §6 and keeps the verified `TD_plain`.
+
+### 9.1 Precise semantic model
+
+Fix a program partition `is_global :: vname ⇒ bool` (globals `G`, locals `L`,
+disjoint, `L ∪ G = vname`). A program is `π :: pname ⇀ com` with `finite (dom π)`;
+`com` gains `Call pname`.
+
+```isabelle
+definition enter :: "store ⇒ store" where
+  "enter s = (λx. if is_global x then s x else 0)"          (* globals pass in; locals reset *)
+
+definition combine :: "store ⇒ store ⇒ store" where
+  "combine s t = (λx. if is_global x then t x else s x)"     (* callee globals; caller locals *)
+```
+
+Big-step, program-relative (`enter`/`combine` are the only call-boundary logic):
+
+```
+              π p = Some body      π ⊢ ⟨body, enter s⟩ ⇓ t
+(PCall)       ─────────────────────────────────────────────
+                       π ⊢ ⟨Call p, s⟩ ⇓ combine s t
+```
+
+plus the usual SKIP/Assign/Seq/If/While rules threading `π`. Recursion needs no
+explicit stack: the caller state `s` is captured in the `PCall` premise and reused
+by `combine` in its conclusion, so each activation restores its own locals. The
+inductive definition is well-founded on derivation height.
+
+**Why this is exactly S1–S4.** No parameters/returns (S1): the only data crossing
+the boundary is the global slice (`enter` keeps `G`, `combine` returns `G`).
+Locals caller-private (S4): `combine` takes `L` from the caller's pre-call `s`, so
+whatever the callee did to the shared `L` cells is discarded. Globals are
+flow-sensitive *inside* a body (threaded normally) and only summarised at the
+boundary — that is the monovariant cut (S2). Recursion (S3) is free.
+
+### 9.2 Interprocedural collecting semantics
+
+Whole-program CFG `G_π`: each body compiled once to its sub-CFG (entry `en_p`,
+exit `ex_p`); a call site is a node `c` with return node `r`; wiring is
+
+- one **enter edge** `(c, EA_Enter, en_p)` per call site, and
+- one **combine triple** `(c, ex_p, r) ∈ combines G_π` per call site.
+
+Collecting environment `C :: node ⇒ store set` is `lfp F` where `F C v` is the
+union of:
+
+```
+  {s0}                                  if v = main_entry            (* seed *)
+  edge_collect a (C u)                  for each intra/enter edge (u,a,v)
+  { combine s t | s ∈ C c, t ∈ C ex }   for each (c, ex, v) ∈ combines
+```
+
+with `edge_collect EA_Enter X = enter ` X` (image of `enter`). Monotone ⇒ `lfp`
+exists. Note `C r` pairs **any** `s ∈ C c` with **any** `t ∈ C ex` — including
+mismatched caller/return pairs. That deliberate over-approximation *is*
+monovariance (see Example 3).
+
+### 9.3 Constraint encoding (abstract)
+
+```isabelle
+definition enter_abs :: "'a abs_state ⇒ 'a abs_state" where
+  "enter_abs σ = (λx. if is_global x then σ x else ⊤)"      (* locals unknown ⇒ ⊤ *)
+
+definition combine_abs :: "'a abs_state ⇒ 'a abs_state ⇒ 'a abs_state" where
+  "combine_abs σc σe = (λx. if is_global x then σe x else σc x)"
+```
+
+`edge_action` gains `EA_Enter` with `apply_tf tf EA_Enter σ = enter_abs σ`
+(the callee identity is the edge *target*, not a payload). The generalized RHS:
+
+```isabelle
+rhs_ip g tf join bot s0 env v =
+  abs_join_set join bot (
+        { apply_tf tf a (env u) | (u,a,v) ∈ edges g }                 (* intra + enter *)
+      ∪ { combine_abs (env c) (env e) | (c,e,v) ∈ combines g }        (* combine into v *)
+      ∪ (if v = cfg_entry g then {s0} else {}) )
+
+is_post_fixpoint_ip g tf join bot s0 env  ≡  (∀v. rhs_ip g tf join bot s0 env v ≤ env v)
+```
+
+The merge at `en_p` is automatic: `en_p`'s only predecessors are the enter edges
+`(c, EA_Enter, en_p)`, so `rhs_ip … en_p = ⨆_c enter_abs (env c)`. No `Side`.
+
+### 9.4 The exact lemma list
+
+| ID | Statement | Reuses |
+|---|---|---|
+| **L-enter** | `s ∈ γ_state σ ⟹ enter s ∈ γ_state (enter_abs σ)` | pointwise γ |
+| **L-comb** | `s ∈ γ_state σc ⟹ t ∈ γ_state σe ⟹ combine s t ∈ γ_state (combine_abs σc σe)` | pointwise γ |
+| **L-enter-mono** / **L-comb-mono** | `enter_abs`, `combine_abs` monotone (combine in both args) | trivial |
+| **L-mono'** | `rhs_ip` monotone in `env` (extends `rhs_mono`) | `rhs_mono` + above |
+| **L-edge≤rhs** | each combine contribution `≤ rhs_ip … v` (extends `apply_tf_le_rhs`) | `apply_tf_le_rhs` |
+| **L-sound'** (**CE4**) | `finite` + `is_post_fixpoint_ip` + `S ≤ γ s0` + tf/enter/combine soundness ⟹ `∀v. C v ≤ γ_state (env v)` | `post_fixpoint_sound` |
+| **L-adeq** (**SE4**) | balanced operational reachability ⊆ `C` (`π ⊢ ⟨_,s⟩ ⇓ t` ⟹ `t ∈ C(exit)`) | `cfg_collect_paths` adequacy |
+| **L-fin** | `finite (edges G_π) ∧ finite (combines G_π)` | `compile_finite`, `compile_add_offset` |
+| **L-td'** | per-pp solve rooted at `v` ⟹ post-fixpoint on `reach(v)` ⟹ soundness at `v` (see §9.8 — **not** a global `is_post_fixpoint_ip`) | `td_analyse_post_fixpoint`, P2 fix |
+
+Only **L-sound'** and **L-adeq** carry real proof weight; the rest are mechanical
+or direct extensions. `make_rhs_tree_ip` emits a plain multi-`Query` tree for
+combine nodes — `QueryL c (λdc. QueryL e (λde. Answer (combine_abs dc de)))` — so
+**the solver stays `TD_plain`**; only the tree builder changes.
+
+### 9.5 Hand-proofs
+
+**L-comb (combine soundness).** Let `s ∈ γ_state σc`, `t ∈ γ_state σe`, fix `x`.
+γ_state is pointwise: `s ∈ γ_state σ ⟺ ∀y. s y ∈ γ (σ y)`.
+▸ If `x` global: `combine s t x = t x ∈ γ (σe x) = γ (combine_abs σc σe x)`.
+▸ If `x` local: `combine s t x = s x ∈ γ (σc x) = γ (combine_abs σc σe x)`.
+So `combine s t ∈ γ_state (combine_abs σc σe)`. ∎ (L-enter is the same shape; on
+locals the obligation is `enter s x = 0 ∈ γ ⊤`, true.)
+
+**L-sound' (abstract soundness, CE4).** Identical strategy to `post_fixpoint_sound`:
+show `γ_state ∘ env` is an `F`-pre-fixpoint, then `lfp_lowerbound` gives
+`C = lfp F ≤ γ_state ∘ env`. Per node `v`, `F (γ_state∘env) v` is a union; each
+piece must sit inside `γ_state (env v)`:
+▸ *seed*: `{s0} ⊆ γ_state (env main_entry)` since `S ≤ γ s0 ≤ γ_state (env entry)`
+  (entry post-fixpoint, as in `s0_le_rhs_entry`).
+▸ *intra/enter edge* `(u,a,v)`: `edge_collect a (γ_state (env u)) ⊆
+  γ_state (apply_tf a (env u))` (per-edge soundness; the `EA_Enter` case is L-enter)
+  `⊆ γ_state (env v)` because `apply_tf a (env u) ≤ rhs_ip … v ≤ env v` (L-edge≤rhs +
+  post-fixpoint + `γ_state` monotone).
+▸ *combine* `(c,e,v)`: for `s ∈ γ_state(env c)`, `t ∈ γ_state(env e)`,
+  `combine s t ∈ γ_state (combine_abs (env c)(env e))` (L-comb)
+  `⊆ γ_state (env v)` since `combine_abs (env c)(env e) ≤ rhs_ip … v ≤ env v`.
+Union of pieces each `⊆ γ_state(env v)` ⇒ `F(γ_state∘env) v ⊆ γ_state(env v)`. ∎
+The combine case is the *only* structural novelty over the current proof, and it is
+the binary mirror of the existing unary edge case.
+
+**L-adeq (operational adequacy, SE4).** Induction on the height of `π ⊢ ⟨c,s⟩ ⇓ t`.
+The only non-routine case is `PCall` on `Call p` at call node with caller state `s`:
+▸ by the prefix reasoning (IH up to the call) `s ∈ C(call_node c)`;
+▸ `enter s ∈ enter ` (C c) = edge_collect EA_Enter (C c) ⊆ C(en_p)` by `F`'s enter
+  clause — the merge absorbs this caller, however many others contribute;
+▸ the callee sub-derivation `π ⊢ ⟨body, enter s⟩ ⇓ t` has smaller height; apply the
+  *intraprocedural* adequacy of the body's sub-CFG seeded at `C(en_p)` (the present
+  repo's `cfg_collect_paths` argument, reused verbatim on the sub-CFG) to get
+  `t ∈ C(ex_p)`;
+▸ then `combine s t ∈ {combine s' t' | s'∈C c, t'∈C ex_p} ⊆ C(r)` by `F`'s combine
+  clause, using `s ∈ C c` and `t ∈ C ex_p`.
+So the post-call state lands in `C(r)`. ∎
+**Crux:** soundness survives the monovariant merge precisely because the *matched*
+pair `(s,t)` from one activation is a *member* of the all-pairs set the analysis
+keeps — over-approximation never drops the real pair. Recursion is unproblematic:
+the induction is on derivation height, not on call depth.
+
+### 9.6 Worked examples
+
+**Example 1 — non-recursive, global effect, locals preserved.**
+```
+global g;   proc inc() { g := g + 1; }
+main() { local x;  x := 5;  inc();  inc(); }
+```
+Sign analysis. At the two call nodes `c1,c2`: `x = +`, and `g` whatever sign holds.
+`en_inc = enter_abs(env c1) ⊔ enter_abs(env c2)` keeps the global `g`, sets local
+`x` to ⊤. Body: `g := g+1`. At each return, `combine_abs` takes `g` from `ex_inc`
+and `x` from the call node ⇒ `x` stays `+` across both calls (locals never leaked
+into the callee). Demonstrates `combine = caller-locals ⊕ callee-globals` and that
+the call is *not* a `SKIP`: `g` genuinely changes.
+
+**Example 2 — recursion (inlining is impossible).**
+```
+global n, r;   proc fac() { if (n > 0) { r := r*n; n := n-1; fac(); } }
+main() { n := 4; r := 1; fac(); }
+```
+Interval analysis with widening. The call graph has a self-loop `fac → fac`, so the
+whole-program CFG has a cycle `en_fac → (body) → c_rec → en_fac` and a combine
+`(c_rec, ex_fac, r_rec)`. There is **no** finite inlining. The TD fixpoint iterates:
+`en_fac` starts as the merge of the initial enter (`n=[4,4]`) and the recursive
+enter; after the guard `n>0` and `n := n-1` the recursive contribution lowers the
+bound, the merge climbs, widening sends `n` to `[-∞,4]`, the guard `n>0` refines the
+in-body value to `[1,4]`. Converges to a sound summary with **no** call-depth bound —
+exactly the "Fixpunkt über alle Summaries" claim. The verified `TD_plain` computes
+this; the only assumption is the existing `solve_dom` (termination/descent), unchanged.
+
+**Example 3 — monovariant precision loss (soundness ≠ precision).**
+```
+global g;   proc id() { }                       (* no-op on g *)
+main() { local b; if (b) { g := 1; id(); A: } else { g := -1; id(); B: } }
+```
+Sign analysis. Call nodes carry `g=+` (then-branch) and `g=-` (else-branch). Both
+enter edges feed the *one* shared `en_id`, so `en_id` sees `g = + ⊔ - = ⊤`, and
+`ex_id` carries `g=⊤`. At `A:` and `B:`, `combine_abs` takes `g` from the shared
+`ex_id` ⇒ both see `g=⊤`, even though the matched truth is `g=+` at `A` and `g=-` at
+`B`. Inlining (or context-sensitivity) would keep them apart. This is the
+all-pairs over-approximation of §9.2 made visible — sound (L-sound'/L-adeq still
+hold), just imprecise. It is the honest content of "kontext-insensitiv, sonst
+werden die Beweise extrem schwierig".
+
+### 9.7 Plain-TD vs. `TD_side` — what each scope actually needs
+
+| Scope | Merge mechanism | Combine mechanism | Solver |
+|---|---|---|---|
+| **This plan (S1–S4): monovariant, flow-sensitive globals** | predecessor join at `en_p` over `EA_Enter` edges | **binary combine edge** `(c,ex,r)` | **`TD_plain`** (multi-`Query` tree; verified, unchanged) |
+| Flow-**insensitive** globals (true sinks, written anywhere — Goblint-style) | `Side g d` accumulation into a global unknown | `QueryG` of the global summary | **`TD_side`** (`Basics_side`) |
+| Context-**sensitive** (call-strings / functional / Context Gas) | per-context entry unknowns created on the fly | per-context return query | `TD_side` + context lifter (P4) |
+
+So §6's `post_fixpoint_sound_side` / `TD_side` route is **not** required for the
+thesis-scoped target — it is the *next* axis (flow-insensitive globals or
+context-sensitivity), and should be presented as future work alongside Stage C.
+The recommended thesis path is therefore: **Stage A** (smoke-test, unified store) →
+**Stage B via plain TD + binary combine** (L-sound' + L-adeq are the two real
+proofs) → defer `TD_side` to the flow-insensitive/context-sensitive extension.
+
+This also retires the §8 risk "CE4 = `post_fixpoint_sound_side`": the binary-combine
+`L-sound'` is a direct extension of the existing `post_fixpoint_sound` (one extra
+union case), not a bridge to a new solver's `eq_equal_sides_subsumed` invariant.
+
+### 9.8 Interaction with P2 (the `reach` root) — per-pp solve is mandatory
+
+The proof repo's P2 finding (`docs/OPEN_PROBLEMS.md`, commit `87027e9`) changes the
+shape of L-td', and procedures make the point sharper.
+
+**The finding.** `make_rhs_tree` is *forward* dataflow: each node's RHS `Query`s its
+CFG **predecessors**, so `dep T σ v` = predecessors of `v` and
+`reach T σ x` = the **backward cone** of `x` (all CFG-ancestors). Hence
+`reach T σ (cfg_entry) = {cfg_entry}` (entry has no ancestors), and the old
+pipeline hypothesis `∀v. v ∈ reach(entry)` is **structurally false** for any
+multi-pp program — not a missing lemma.
+
+**Why exit-rooting (the tempting "Fix A") is wrong.** Rooting the solve at `cfg_exit`
+gives `reach = ` backward cone of exit = nodes that *forward-reach* exit. For a
+**diverging** program the loop body never reaches exit, so it falls outside the cone
+— exit-rooting reproduces the vacuity for exactly the divergence examples
+(`nonterm_prog`, `incr_loop_prog`) the small-step migration was built to handle.
+
+**Fix B (per-pp solve) — adopted.** Root the solve at the queried node `v`. Then
+`v ∈ reach T σ_v v` by `reach.base`, trivially, with no CFG-connectivity proof;
+soundness at `v` localizes to `v`'s backward cone (the only nodes whose equations
+feed `cfg_collect` at `v`). Cost: a per-pp termination hypothesis (`solve_dom`
+rooted at `v`) instead of one global one. So L-td' is per-pp, and L-sound' is
+consumed in **localized** form (post-fixpoint on `reach(v)` ⟹ soundness at `v`),
+never as a global `∀v` post-fixpoint.
+
+**Procedures interaction.**
+- The new `dep` edges are: a return node `r` queries `{call c, callee-exit ex_p}`;
+  `en_p` queries **all** its call sites. Backward cones become interprocedural and,
+  under recursion, cyclic. Under per-pp solve this needs no new argument:
+  `v ∈ reach(v)` holds regardless, and soundness at `v` needs the post-fixpoint only
+  on `v`'s (interprocedural) backward cone, which the per-`v` solve provides.
+- Procedures make exit-rooting **doubly** wrong: diverging recursion (Example 2)
+  never returns to `main`'s exit, so it is outside exit's backward cone — the same
+  vacuity as diverging loops. **Per-pp is the single uniform mechanism for both
+  loop- and recursion-divergence.**
+- The per-`v` `solve_dom` over a recursive (cyclic) backward cone is discharged by
+  the same termination/widening story as P1/P5 — recursion adds no new solver
+  obligation beyond what loops already require.
+
+**Net effect on the lemma set.** L-enter, L-comb, L-adeq, and the structural combine
+case of L-sound' are untouched. Only L-td' (and how L-sound' is *consumed*) takes
+the per-pp shape — and that is shared verbatim with the single-procedure pipeline's
+P2 resolution. Procedures inherit the P2 fix; they do not enlarge it.
 
 ---
 
