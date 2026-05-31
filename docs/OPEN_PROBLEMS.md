@@ -32,7 +32,7 @@ gamma_state (env v)  <-----  td_analyse output (B4)
 | B3 | `is_post_fixpoint env ==> ∀v. cfg_collect g S v ⊆ gamma_state (env v)` | `Constraint_System_Sound.thy` | done |
 | B4 | `td_analyse` output is a post-fixpoint | `TD_Interface.thy` | done (modulo P1–P3 as hyps) |
 | B5 | `td_cfg_in_reach` — solver covers reachable tree nodes | `Pipeline.thy` assumptions | open (P2) |
-| B6 | `comp_fun_idem (ac_join cfg)` | `Pipeline.thy` assumptions | open (P3) |
+| B6 | `comp_fun_idem (ac_join cfg)` | `Pipeline.thy` assumptions | **done** (P3 — `join_state_comp_fun_idem`) |
 | B7 | `TD_plain.solve_dom … (cfg_entry …)` | `Pipeline.thy` assumptions | open (P1) |
 | B8 | Interval widening + termination | `Interval_Domain.thy` | stretch (P6/P7) |
 
@@ -248,10 +248,10 @@ Split core vs stretch sessions when sorry-free core is policy.
 
 ## Where to start
 
-**Session plan:** `docs/NEXT_STEPS.md` (tomorrow: issue #7 / P3).
+**Session plan:** `docs/NEXT_STEPS.md` (tomorrow: issue #8 / P2 — `td_cfg_in_reach`).
 
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
 3. `src/Pipeline/Pipeline.thy` — `pipeline_invariant_sound`, `pipeline_sound_path`
-4. P3 lemma packaging is a cheap win ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7)); P8 session split is cosmetic ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13))
+4. P3 is closed ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7) done); current priority is P2 `td_cfg_in_reach` ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)); P8 session split is cosmetic ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13))
 5. MCP-first workflow: `AGENTS.md`

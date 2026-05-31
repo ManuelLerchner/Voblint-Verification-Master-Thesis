@@ -15,11 +15,10 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 
 **Still on main theorems**
 
-Three TD side conditions (P1–P3), documented in `docs/OPEN_PROBLEMS.md`:
+Two TD side conditions (P1–P2), documented in `docs/OPEN_PROBLEMS.md`:
 
 | ID | Assumption | Issue |
 | --- | --- | --- |
-| P3 | `comp_fun_idem (ac_join cfg)` | [#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7) |
 | P2 | `td_cfg_in_reach` | [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8) |
 | P1 | `TD_plain.solve_dom` | [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14) (total correctness / finite `pp`) |
 
@@ -27,22 +26,22 @@ Three TD side conditions (P1–P3), documented in `docs/OPEN_PROBLEMS.md`:
 
 ## Tomorrow — start here
 
-**Primary: [#7 — Discharge P3](https://github.com/ManuelLerchner/goblint-formalization/issues/7)**  
-Derive `comp_fun_idem` from `sound_domain` join laws instead of assuming it on
-`pipeline_invariant_sound` / `goblint_*_sound`.
+**Primary: [#8 — Discharge P2 (`td_cfg_in_reach`)](https://github.com/ManuelLerchner/goblint-formalization/issues/8)**  
+Fix the structural inconsistency in the TD reach hypothesis (see P2 finding in `docs/OPEN_PROBLEMS.md`).
+Recommended approach: Fix B (per-pp solve), making `reach.base` trivially discharge the hypothesis.
 
 Why first:
 
-- Listed in `OPEN_PROBLEMS.md` as the **cheap win** (packaging, not new mathematics).
-- Removes one explicit assumption from the headline theorems.
-- Typically 1–2 focused sessions; good momentum before reachability (P2).
+- P3 (`comp_fun_idem`) is closed via `join_state_comp_fun_idem` ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7) done).
+- P2 is the next open hypothesis; fixing it removes the vacuous soundness issue.
+- Fix B is a focused refactor of `td_analyse` and the pipeline statement shape.
 
 **First hour**
 
-1. I/Q: `open_file` `src/Domains/Abstract_Domain.thy` — join laws, `comp_fun_idem_sup`.
-2. `explore` goal: pointwise `comp_fun_idem` on `'a abs_state` from `sound_domain`.
-3. New lemma (e.g. `join_state_comp_fun_idem`); use in `Pipeline.thy` / `Goblint_Formalization.thy`.
-4. Drop `cfi` / `join_cfi` assumptions where the lemma applies.
+1. I/Q: `open_file` `src/Solver/TD_Interface.thy` — `td_analyse`, `td_analyse_post_fixpoint`.
+2. Review P2 finding in `docs/OPEN_PROBLEMS.md` — Fix B recommendation.
+3. Redefine `td_analyse` as per-pp solve; update pipeline theorems to per-pp `solve_dom`.
+4. Verify `reach.base` discharges `td_cfg_in_reach` trivially.
 
 **Fallback (no proof progress)**
 
@@ -55,11 +54,10 @@ Why first:
 
 | Priority | Goal | Issue | Payoff |
 | --- | --- | --- | --- |
-| 1 | Drop **P3** | **#7** | Cleaner main theorems |
-| 2 | Drop **P2** | **#8** | Second assumption gone; CFG reachability + TD `reach` |
-| 3 | **Thesis writing** | **#17** | Bridges documented in walkthrough; PDF still open |
-| 4 | Executability | **#16** | Per-pp `value` works; full `run_analysis` map still open |
-| 5 | Session split | **#13** | Core vs Stretch — needs `TD_Soundness` / `Pipeline` import refactor |
+| 1 | Drop **P2** | **#8** | Second assumption gone; CFG reachability + TD `reach` |
+| 2 | **Thesis writing** | **#17** | Bridges documented in walkthrough; PDF still open |
+| 3 | Executability | **#16** | Per-pp `value` works; full `run_analysis` map still open |
+| 4 | Session split | **#13** | Core vs Stretch — needs `TD_Soundness` / `Pipeline` import refactor |
 
 **Defer unless scope expands**
 

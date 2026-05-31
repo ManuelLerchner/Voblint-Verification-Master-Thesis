@@ -116,7 +116,7 @@ End-to-end: `goblint_sign_sound` (`Goblint_Formalization.thy`) from `sign_pipeli
 - `pp = nat` — program points
 - `'a abs_state = vname => 'a`; `'a domain_transfer` — assign / assume / assume-not
 - `rhs`, `is_post_fixpoint` — constraint system (`Constraint_System.thy`)
-- `make_rhs_tree`, `td_analyse` — solver bridge (`TD_Interface.thy`)
+- `make_rhs_tree` — solver bridge (`TD_CFG_Core.thy`); `td_analyse`, `td_analyse_post_fixpoint` — solver bridge (`TD_Interface.thy`)
 
 Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 

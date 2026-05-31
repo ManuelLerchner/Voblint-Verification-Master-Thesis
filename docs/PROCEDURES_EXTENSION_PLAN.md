@@ -8,6 +8,15 @@ information flow with simplifying assumptions on `enter`/`combine`.
 
 KB companion: `~/git/goblint-formalization-kb/wiki/research/procedures-extension-feasibility.md`.
 
+> **⚠️ Read §9 first — it supersedes §1–§8 for the thesis scope.** Working the proofs
+> through (§9) showed the monovariant, flow-sensitive-globals scope needs **plain
+> `TD_plain` + a binary `combine` edge**, *not* the side-effecting `TD_side` solver.
+> The genuinely-new proof is **`L-sound'` / `is_post_fixpoint_ip`** (§9.x), **not**
+> `post_fixpoint_sound_side`. §1–§8 (the `TD_side`/`Side`/`post_fixpoint_sound_side`
+> route, incl. the §6 core-lemma table and SO1 note) remain accurate only for the
+> **future flow-insensitive-globals / context-sensitive axis**. For the recommended
+> path, go straight to §9.
+
 ---
 
 ## 1. What "enter/exit" should actually be
@@ -147,7 +156,10 @@ extended object (mechanical), **N** = genuinely new proof.
 |---|---|---|---|
 | SO1 | `make_rhs_tree_side` well-formed; `TD_side.solve_dom` ⟹ `part_solution` instantiates CE4's premise | R' | mirror of `td_analyse_post_fixpoint`; solver itself already verified |
 
-**P2 fold-in (do not copy the `cfg_entry`-rooted shape).** The current pipeline's
+**P2 fold-in (do not copy the `cfg_entry`-rooted shape).** *(Bipartite-`'x+'g` /
+`make_rhs_tree_side` form below applies to the `TD_side` future axis. For the §9
+plain-TD route, the same P2 fix lands on `make_rhs_tree_ip` / `td_analyse_ip` — see
+§9.)* The current pipeline's
 `td_cfg_in_reach` premise is *false* (see "P2 finding" in `OPEN_PROBLEMS.md`): the
 forward RHS rooted at `cfg_entry` reaches only the entry. SO1 must adopt **Fix B
 (per-pp solve)** — `td_analyse_side c … v ≡ lookup_bot (Interp_solve_side (make_rhs_tree_side …) v) v`

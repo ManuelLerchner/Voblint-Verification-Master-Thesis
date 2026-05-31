@@ -83,7 +83,7 @@ uses `quick_and_dirty`; re-run the command after changes).
 Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8)** and
 `docs/OPEN_PROBLEMS.md` (P1–P10 catalogue):
 
-- Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`, `comp_fun_idem`).
+- Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`).
 - **Interval / octagon** domains and executability.
 - Remaining **Phase 4** automation (`IMP2_to_CFG` apply scripts, path-lifting combinators).
 - **`quick_and_dirty`** removed from `ROOT` (2026-05). Optional: split `Goblint_Formalization_Core` session ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).

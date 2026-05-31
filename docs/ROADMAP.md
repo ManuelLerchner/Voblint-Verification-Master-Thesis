@@ -49,8 +49,8 @@ Issue numbers are deliberately omitted — they go stale. The directions remain 
 ### Core soundness chain (done in code)
 
 Collecting spec + post-fixpoint + TD bridge (B3–B4 in `docs/OPEN_PROBLEMS.md`) are proved.
-Sign pipeline is closed end-to-end (`goblint_sign_sound`) modulo three named TD
-hypotheses (P1/P2/P3).
+Sign pipeline is closed end-to-end (`goblint_sign_sound`) modulo two named TD
+hypotheses (P1/P2).
 
 ### Semantics and pipeline (current)
 

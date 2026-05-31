@@ -160,7 +160,7 @@ Doing it standalone now = pure cost.
 
 ### Phase 1 — provenance comments + `to_hol_imp_aexp` projection (½ day)
 
-**Touches:** `src/IMP2/IMP2_Syntax.thy`, `src/IMP2/IMP2_Semantics.thy`.
+**Touches:** `src/IMP2/IMP2_Syntax.thy`, `src/IMP2/IMP2_SmallStep.thy`.
 
 1. Add `imports "HOL-IMP.AExp" "HOL-IMP.BExp"` to `IMP2_Syntax.thy` (alongside existing imports).
 2. Add structural-correspondence `text` block citing Nipkow.
@@ -210,7 +210,7 @@ Recorded for the day this becomes worth doing.
 | File | Change | Net LOC |
 |---|---|---|
 | `src/IMP2/IMP2_Syntax.thy` | + `HOL-IMP.AExp` / `BExp` imports; comment block rewrite | +~15 |
-| `src/IMP2/IMP2_Semantics.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
+| `src/IMP2/IMP2_SmallStep.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
 | `src/IMP2/README.md` | New — naming-collision callout | +~20 |
 | `~/goblint-formalization-kb/wiki/log.md` | Append entry | +1 |
 | `~/goblint-formalization-kb/wiki/concepts/imp-language.md` | Cross-link to agreement lemma | +1 line |

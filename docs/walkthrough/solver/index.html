@@ -55,9 +55,17 @@
         <thead><tr><th>Theory</th><th>Role</th></tr></thead>
         <tbody>
           <tr>
+            <td class="mono">TD_CFG_Core.thy</td>
+            <td>
+              <code>make_rhs_tree</code>, <code>rhs_tree_fold</code>,
+              <code>make_rhs_mono</code>; core bridge between the CFG predecessor
+              structure and TD strategy trees.
+            </td>
+          </tr>
+          <tr>
             <td class="mono">TD_Interface.thy</td>
             <td>
-              <code>make_rhs_tree</code>, <code>td_analyse</code>,
+              <code>td_analyse</code>,
               <code>td_analyse_post_fixpoint</code>; imports
               <code>TD.TD_plain</code>.
             </td>
@@ -76,7 +84,7 @@
       <div class="mermaid">
 flowchart LR
   RHS["rhs / is_post_fixpoint<br/>Constraint_System"]
-  TREE["make_rhs_tree<br/>TD_Interface"]
+  TREE["make_rhs_tree<br/>TD_CFG_Core"]
   TD["TD_plain_Interp_solve<br/>vendor TD session"]
   ENV["td_analyse<br/>pp ⇒ abs_state"]
   SOUND["td_solver_sound<br/>TD_Soundness"]
@@ -142,7 +150,7 @@ flowchart LR
           <span class="name">cfg_in_reach</span> (reach side condition): every program
           point <code>v</code> lies in
           <code>reach T (TD_plain_Interp_solve T v0) v0</code> from the CFG entry.
-          Typically discharged from compile-time CFG shape for whole-program analysis.
+          Open hypothesis (P2): structural property of the TD solver's internal reach set; not automatically dischargeable from CFG shape.
         </li>
       </ul>
 
@@ -395,8 +403,12 @@ flowchart TD
             <td class="mono">rhs · rhs_mono · is_post_fixpoint · post_fixpoint_sound · exit_sound</td>
           </tr>
           <tr>
+            <td>TD_CFG_Core</td>
+            <td class="mono">make_rhs_tree · make_rhs_mono · rhs_tree_fold · make_rhs_tree_correspondence</td>
+          </tr>
+          <tr>
             <td>TD_Interface</td>
-            <td class="mono">make_rhs_tree · td_analyse · make_rhs_tree_correspondence · td_analyse_post_fixpoint</td>
+            <td class="mono">td_analyse · td_analyse_post_fixpoint</td>
           </tr>
           <tr>
             <td>TD_Soundness</td>
