@@ -24,6 +24,7 @@
     </ol>
     <p class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></p>
     <p class="toc-crosslink"><a href="../cfg/collecting/index.html">CFG collecting</a></p>
+    <p class="toc-crosslink"><a href="../running-example/index.html">Running example trace</a></p>
     <p class="toc-crosslink"><a href="../solver/index.html">Solver →</a></p>
   </nav>
 
@@ -45,9 +46,21 @@
           <thead><tr><th>File</th><th>Role</th></tr></thead>
           <tbody>
             <tr><td class="mono">Constraint_System.thy</td><td><code>domain_transfer</code>, <code>apply_tf</code>, <code>rhs</code>, <code>is_post_fixpoint</code>, <code>rhs_mono</code></td></tr>
-            <tr><td class="mono">Constraint_System_Sound.thy</td><td><code>collect_pp_abstract_sound</code>, <code>post_fixpoint_sound</code>, <code>exit_sound</code></td></tr>
+            <tr><td class="mono">Constraint_System_Sound.thy</td><td><code>post_fixpoint_sound_at</code>, <code>post_fixpoint_sound</code>, <code>exit_sound</code>, <code>apply_tf_le_rhs</code></td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example · Program A</div>
+        <p>
+          <code>post_fixpoint_sound_at</code> instantiates to
+          <code>cfg_collect (to_cfg collecting_example_prog) {s₀} v ⊆ γ(env v)</code>
+          for every pp <code>v</code> — at exit, concrete <code>t</code> lies in
+          <code>γ(env exit)</code>.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../running-example/index.html#step-eq">Lemma trace (step 5) →</a>
+        </p>
       </div>
     </header>
 
@@ -171,6 +184,10 @@ flowchart TB
           <span class="lemma-id">DEF</span>
           <span class="lemma-title">rhs</span>
         </div>
+        <p class="lemma-desc">
+          One-step abstract update at node <code>v</code>: join the images of all predecessor edges
+          (plus the initial abstract state at entry), using the domain’s join and transfers.
+        </p>
 <pre class="lemma-body">rhs g tf join_abs bot_abs s0 env v =
   let preds = {(u, a) | u a. (u, a, v) ∈ edges g};
       vals  = image (λ(u, a). apply_tf tf a (env u)) preds;
@@ -184,11 +201,18 @@ flowchart TB
 
       <h4>Supporting lemmas (construction)</h4>
       <ul class="lemma-list">
-        <li><span class="name">abs_join_set_empty</span> — join of empty set is <code>bot</code>.</li>
-        <li><span class="name">rhs_no_predecessors_not_entry</span> — non-entry with no preds ⇒ <code>bot</code>.</li>
-        <li><span class="name">rhs_entry_no_predecessors</span> — entry with no preds ⇒ join of <code>{s0}</code>.</li>
-        <li><span class="name">mem_image_le_fold</span>, <span class="name">fold_join_image_mono</span> — fold infrastructure.</li>
-        <li class="key"><span class="name key">rhs_mono</span> <span class="pill key">solver prerequisite</span> — <code>rhs</code> monotone in <code>env</code> pointwise.</li>
+        <li><span class="name">abs_join_set_empty</span>
+          <span class="lemma-desc">Joining an empty set of abstract values yields ⊥.</span></li>
+        <li><span class="name">rhs_no_predecessors_not_entry</span>
+          <span class="lemma-desc">Isolated non-entry node with no predecessors gets ⊥ from <code>rhs</code>.</span></li>
+        <li><span class="name">rhs_entry_no_predecessors</span>
+          <span class="lemma-desc">Entry with no predecessors still seeds <code>s0</code> into the join.</span></li>
+        <li><span class="name">mem_image_le_fold</span>
+          <span class="lemma-desc">Each element in the image is below the finite join fold.</span></li>
+        <li><span class="name">fold_join_image_mono</span>
+          <span class="lemma-desc">Enlarging the set being joined enlarges the fold result (monotonicity).</span></li>
+        <li class="key"><span class="name key">rhs_mono</span> <span class="pill key">solver prerequisite</span>
+          <span class="lemma-desc"><code>rhs</code> is monotone in the environment pointwise — required by TD theory.</span></li>
       </ul>
     </section>
 
@@ -206,10 +230,14 @@ flowchart TB
           <span class="lemma-title">is_post_fixpoint</span>
           <span class="pill key">predicate</span>
         </div>
+        <p class="lemma-desc">
+          An environment is a <em>post-fixpoint</em> when each node’s stored abstract value is at
+          least as informative as applying one rhs step — the solver aims to produce such an <code>env</code>.
+        </p>
 <pre class="lemma-body">is_post_fixpoint g tf join_abs bot_abs s0 env  ≡
   ∀v. rhs g tf join_abs bot_abs s0 env v ≤ env v</pre>
         <p class="lemma-note">
-          Read: for all nodes <code>v</code>, the rhs join over predecessor transfer images
+          Equivalently: for all nodes <code>v</code>, the rhs join over predecessor transfer images
           (plus <code>s0</code> at entry) is <strong>below or equal to</strong> the stored
           abstract value <code>env v</code> in the abstract order. Equivalently,
           <code>env</code> is a post-fixpoint of the one-step operator
@@ -258,12 +286,12 @@ flowchart LR
 
       <h3>Proof spine (inside the file)</h3>
       <ol>
-        <li><code>edge_collect_apply_tf_sound</code> — concrete edge collecting factors through <code>apply_tf</code>.</li>
-        <li><code>apply_tf_le_rhs</code> — each predecessor image sits below the rhs join at <code>v</code>.</li>
-        <li><code>collect_pp_abstract_sound</code> — one step of <code>collect_pp</code> through abstract <code>env</code>.</li>
-        <li><code>s0_le_rhs_entry</code> — initial abstract state below rhs at entry.</li>
-        <li><code>post_fixpoint_sound</code> — lift to <code>cfg_collect</code> via least fixpoint.</li>
-        <li><code>exit_sound</code> — corollary projecting to the CFG exit node only.</li>
+        <li><code>edge_collect_apply_tf_sound</code> — one concrete edge step is sound w.r.t. <code>apply_tf</code>.</li>
+        <li><code>apply_tf_le_rhs</code> — each predecessor’s transfer image is below the rhs join at <code>v</code>.</li>
+        <li><code>collect_pp_abstract_sound</code> — one collecting fixpoint step stays inside γ(<code>env v</code>).</li>
+        <li><code>s0_le_rhs_entry</code> — initial abstract <code>s0</code> is below rhs at entry.</li>
+        <li><code>post_fixpoint_sound_at</code> / <code>post_fixpoint_sound</code> — lift to full <code>cfg_collect</code> via lfp.</li>
+        <li><code>exit_sound</code> — specialise to the exit program point only.</li>
       </ol>
 
       <div class="lemma-stmt">
@@ -271,22 +299,44 @@ flowchart LR
           <span class="lemma-id">LEMMA</span>
           <span class="lemma-title">collect_pp_abstract_sound</span>
         </div>
+        <p class="lemma-desc">
+          One step of the collecting fixpoint operator cannot produce stores outside γ of the
+          abstract environment at that program point.
+        </p>
 <pre class="lemma-body">is_post_fixpoint g tf (⊔) bot s0 env
 ⟹ collect_pp g (λv. gamma_state (env v)) v ⊆ gamma_state (env v)</pre>
-        <p class="lemma-note">Pointwise step: one layer of collecting semantics stays inside the concretisation of <code>env v</code>.</p>
+      </div>
+
+      <div class="lemma-stmt key">
+        <div class="lemma-head">
+          <span class="lemma-id">THEOREM</span>
+          <span class="lemma-title">post_fixpoint_sound_at</span>
+          <span class="pill key">one program point</span>
+        </div>
+        <p class="lemma-desc">
+          Local version used by the TD bridge: path-shaped rhs/step facts at a single
+          <code>v₀</code> suffice to bound <code>cfg_collect</code> at <code>v₀</code>.
+        </p>
+<pre class="lemma-body">… rhs_le · step_le · transfer soundness …
+⟹ cfg_collect g S v0 ≤ gamma_state (env v0)</pre>
+        <p class="lemma-note">Full statement in <code>Constraint_System_Sound.thy</code>; see solver walkthrough.</p>
       </div>
 
       <div class="lemma-stmt key">
         <div class="lemma-head">
           <span class="lemma-id">THEOREM</span>
           <span class="lemma-title">post_fixpoint_sound</span>
-          <span class="pill key">per program point</span>
+          <span class="pill key">all program points</span>
         </div>
+        <p class="lemma-desc">
+          A global post-fixpoint environment soundly over-approximates collecting semantics
+          everywhere on the graph.
+        </p>
 <pre class="lemma-body">is_post_fixpoint g tf (⊔) bot s0 env
 ⟹ S ≤ gamma_state s0
 ⟹ ∀v. cfg_collect g S v ≤ gamma_state (env v)</pre>
         <p class="lemma-note">
-          <strong>Main result.</strong> At <em>every</em> program point <code>v</code>, the abstract
+          At <em>every</em> program point <code>v</code>, the abstract
           value <code>env v</code> soundly over-approximates all stores reachable in collecting
           semantics from initial set <code>S</code>. Uses <code>cfg_collect_def</code> and
           <code>lfp_lowerbound</code> from the CFG collecting theory imported via
@@ -300,6 +350,10 @@ flowchart LR
           <span class="lemma-title">exit_sound</span>
           <span class="pill">exit only</span>
         </div>
+        <p class="lemma-desc">
+          Specialise global soundness to the exit node: any concrete final store in collecting
+          semantics at exit lies in γ of <code>env</code> at exit.
+        </p>
 <pre class="lemma-body">is_post_fixpoint (to_cfg c) tf (⊔) bot s0 env
 ⟹ t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))
 ⟹ t ∈ gamma_state (env (cfg_exit (to_cfg c)))</pre>
@@ -313,8 +367,9 @@ flowchart LR
       <div class="callout">
         <div class="label">Per-pp vs exit-only</div>
         <ul>
-          <li><strong><code>post_fixpoint_sound</code></strong> — universal over all <code>v ∈ pp</code>; needed for point-map / invariant soundness in <code>Pipeline.thy</code>.</li>
-          <li><strong><code>exit_sound</code></strong> — only the exit program point; enough for “terminating store in <code>collect c {s}</code>” style top-level theorems.</li>
+          <li><strong><code>post_fixpoint_sound_at</code></strong> — one program point with path-shaped <code>step_le</code>; used by <code>TD_Soundness</code> (TD supplies rhs/step via <code>td_env_at_path_step_le</code>).</li>
+          <li><strong><code>post_fixpoint_sound</code></strong> — global <code>is_post_fixpoint</code> over all <code>v</code>; still available when you have a full post-fixpoint map.</li>
+          <li><strong><code>exit_sound</code></strong> — exit node only; exit corollaries and <code>td_solver_sound</code>.</li>
         </ul>
       </div>
     </section>
@@ -323,39 +378,41 @@ flowchart LR
     <section class="stage" id="td-bridge">
       <h2><span class="badge">04</span>TD bridge</h2>
       <p class="lede">
-        <code>src/Solver/TD_Interface.thy</code> compiles <code>rhs</code> into a TD
-        <code>rhs_tree</code>, runs <code>td_analyse</code>, and proves the result satisfies
-        <code>is_post_fixpoint</code>.
+        <code>src/Solver/</code> compiles <code>rhs</code> into a TD <code>rhs_tree</code>, runs per-pp
+        <code>td_analyse c … v0</code>, and proves collecting soundness at <code>v0</code> via
+        <code>post_fixpoint_sound_at</code> (not a global <code>is_post_fixpoint</code> on the whole map).
       </p>
 
       <div class="mermaid">
 flowchart LR
   RHS["rhs g tf join bot s0 env v"]
-  TREE["make_rhs_tree g tf join bot s0 v"]
-  TD["TD_plain.solve_dom …"]
-  ENV["td_analyse … env"]
-  PFP["is_post_fixpoint … env"]
+  TREE["make_rhs_tree · td_env_at v0"]
+  TD["TD_plain.solve_dom at v0"]
+  COL["td_analyse_collect_sound_at"]
+  PFA["post_fixpoint_sound_at"]
   RHS -->|"make_rhs_tree_correspondence"| TREE
-  TREE --> TD --> ENV --> PFP
-  PFP -->|"post_fixpoint_sound"| SND["cfg_collect soundness"]
+  TREE --> TD --> COL
+  PFA --> COL
+  COL --> SND["cfg_collect ≤ γ at v0"]
       </div>
 
       <table>
         <thead><tr><th>Definition / theorem</th><th>File</th></tr></thead>
         <tbody>
           <tr><td class="mono">make_rhs_tree</td><td>Monadic rhs tree per node (TD session format).</td></tr>
-          <tr><td class="mono">td_analyse</td><td>Run TD solver on compiled CFG; return <code>pp ⇒ abs_state</code>.</td></tr>
-          <tr><td class="mono">td_analyse_post_fixpoint</td><td>Solver output satisfies <code>is_post_fixpoint</code> on reachable nodes.</td></tr>
-          <tr><td class="mono">make_rhs_tree_correspondence</td><td>Traversing the tree with <code>env</code> equals <code>rhs … env v</code>.</td></tr>
+          <tr><td class="mono">td_analyse · td_env_at</td><td>Per-pp solve rooted at queried <code>v0</code>.</td></tr>
+          <tr><td class="mono">post_fixpoint_sound_at</td><td>Local rhs/step premises ⇒ <code>cfg_collect g S v0 ≤ γ(env v0)</code>.</td></tr>
+          <tr><td class="mono">td_analyse_collect_sound_at</td><td>TD partial solution + path from entry ⇒ collecting soundness at <code>v0</code>.</td></tr>
+          <tr><td class="mono">make_rhs_tree_correspondence</td><td>Tree traverse with <code>env</code> equals <code>rhs … env v</code>.</td></tr>
         </tbody>
       </table>
 
       <p>
         Full solver-side lemma list and TD_plain wiring:
         <a href="../solver/index.html"><strong>solver walkthrough</strong></a>.
-        End-to-end sign soundness composes
-        <code>td_analyse_post_fixpoint</code> with <code>post_fixpoint_sound</code> and pipeline corollaries in
-        <a href="../pipeline/index.html">pipeline walkthrough</a>.
+        <code>Pipeline.thy</code> instantiates
+        <code>td_analyse_collect_sound</code> at every <code>v</code> (Fix B; P2 <code>td_cfg_in_reach</code> removed).
+        See <a href="../pipeline/index.html">pipeline walkthrough</a>.
       </p>
     </section>
 
@@ -393,16 +450,17 @@ flowchart BT
       </div>
 
       <table>
-        <thead><tr><th>Lemma</th><th>Kind</th><th>Role</th></tr></thead>
+        <thead><tr><th>Lemma</th><th>Kind</th><th>In words</th></tr></thead>
         <tbody>
-          <tr><td class="mono">domain_transfer / apply_tf / rhs / is_post_fixpoint</td><td>def</td><td>Equation system</td></tr>
-          <tr><td class="mono">rhs_mono</td><td>lemma</td><td>Monotonicity for TD</td></tr>
-          <tr><td class="mono">edge_collect_apply_tf_sound</td><td>lemma</td><td>Edge soundness</td></tr>
-          <tr><td class="mono">apply_tf_le_rhs</td><td>lemma</td><td>Predecessor image ≤ rhs join</td></tr>
-          <tr><td class="mono">collect_pp_abstract_sound</td><td>lemma</td><td>One collecting step</td></tr>
-          <tr><td class="mono">post_fixpoint_sound</td><td>theorem</td><td>∀v · cfg_collect ≤ γ(env v)</td></tr>
-          <tr><td class="mono">exit_sound</td><td>corollary</td><td>Exit node only</td></tr>
-          <tr><td class="mono">make_rhs_tree · td_analyse_post_fixpoint</td><td>def / thm</td><td><a href="../solver/index.html">Solver/</a></td></tr>
+          <tr><td class="mono">domain_transfer / apply_tf / rhs / is_post_fixpoint</td><td>def</td><td>Syntax of the equation system and post-fixpoint predicate.</td></tr>
+          <tr><td class="mono">rhs_mono</td><td>lemma</td><td><code>rhs</code> grows when the environment grows — TD needs this.</td></tr>
+          <tr><td class="mono">edge_collect_apply_tf_sound</td><td>lemma</td><td>Concrete stores after one edge stay in γ of transfer applied to predecessor abstract state.</td></tr>
+          <tr><td class="mono">apply_tf_le_rhs</td><td>lemma</td><td>Single-edge image is below the full rhs join at the target node.</td></tr>
+          <tr><td class="mono">collect_pp_abstract_sound</td><td>lemma</td><td>One step of collecting fixpoint operator respects abstract <code>env</code>.</td></tr>
+          <tr><td class="mono">post_fixpoint_sound_at</td><td>lemma</td><td>Local rhs/step facts at <code>v₀</code> ⇒ collecting ⊆ γ at <code>v₀</code>.</td></tr>
+          <tr><td class="mono">post_fixpoint_sound</td><td>theorem</td><td>Global post-fixpoint ⇒ collecting ⊆ γ at every <code>v</code>.</td></tr>
+          <tr><td class="mono">exit_sound</td><td>corollary</td><td>Final store in collecting at exit ∈ γ at exit.</td></tr>
+          <tr><td class="mono">td_analyse_collect_sound_at</td><td>theorem</td><td>TD’s answer at <code>v₀</code> is sound (<a href="../solver/index.html">Solver</a>).</td></tr>
         </tbody>
       </table>
 

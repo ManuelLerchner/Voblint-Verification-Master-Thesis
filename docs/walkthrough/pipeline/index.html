@@ -16,6 +16,7 @@
     <h1>Pipeline</h1>
     <ol>
       <li><a href="#running-example"><span class="num">0</span>Running example</a></li>
+      <li class="toc-crosslink"><a href="../running-example/index.html">★ Lemma-by-lemma trace</a></li>
       <li><a href="#top-level-flow"><span class="num">→</span>Top-level flow</a></li>
       <li><a href="#invariant-soundness"><span class="num">1</span>Invariant soundness</a></li>
       <li><a href="#path-soundness"><span class="num">2</span>Path soundness</a></li>
@@ -57,6 +58,15 @@ WHILE Less (N 0) (V x) DO
         <code>t x = 0</code>. The sign abstract exit for <code>x</code> must concretize to a set
         containing <code>0</code> — the headline theorem <code>goblint_sign_sound</code> (closed).
       </p>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Lemma trace</div>
+        <p>
+          Program B is the pipeline headline; Programs A and C (swap) are traced with
+          Isabelle excerpts on the
+          <a href="../running-example/index.html">running-example page</a>.
+          Each layer walkthrough has an “Running example” callout linking back.
+        </p>
+      </div>
     </header>
 
     <!-- RUNNING EXAMPLE -->
@@ -66,6 +76,10 @@ WHILE Less (N 0) (V x) DO
         One program traced through the full chain. Operational reading uses
         <code>small_step</code> (<code>(c,s) → … → (SKIP, t)</code>); the formal spec uses
         <code>cfg_collect</code> and <code>runs_to</code>.
+        For the same program (and a straight-line companion) with
+        <strong>named lemmas at each layer</strong>, see
+        <a href="../running-example/index.html">Running example — lemma trace</a>
+        (Isabelle snippets for Programs A–C; per-layer callouts on each walkthrough page).
       </p>
 
       <div class="grid-2">
@@ -118,7 +132,7 @@ t x = 0</code></pre>
           <tr>
             <td>Analyse</td>
             <td class="mono">run_analysis (sign_analysis_config s) c v</td>
-            <td>Post-fixpoint env from <code>td_analyse</code> on <code>make_rhs_tree</code></td>
+            <td>Per-pp <code>td_analyse … v</code> on <code>make_rhs_tree</code></td>
           </tr>
           <tr>
             <td>Soundness</td>
@@ -135,8 +149,8 @@ t x = 0</code></pre>
       <p class="lede">
         Artifact pipeline and where the main theorems sit.
         <strong>Sign end-to-end is closed</strong> (<code>goblint_sign_sound</code>).
-        Interval stretch may still carry <code>sorry</code> — see
-        <a href="../../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.
+        Interval pipeline is also closed (<code>goblint_interval_sound</code>); same P1
+        <code>solve_dom</code> assumption as sign.
         Big picture: <a href="../../PROOF_OVERVIEW.md"><code>docs/PROOF_OVERVIEW.md</code></a>.
       </p>
 
@@ -172,9 +186,9 @@ flowchart TD
   end
   subgraph analysis ["Analysis"]
     RHS["rhs / make_rhs_tree"]
-    TD["td_analyse"]
-    PFP["is_post_fixpoint"]
-    RHS --> TD --> PFP
+    TD["td_analyse (per pp)"]
+    COL["td_analyse_collect_sound_at"]
+    RHS --> TD --> COL
   end
   subgraph sound ["Soundness (Pipeline.thy)"]
     INV["pipeline_invariant_sound"]
@@ -183,37 +197,37 @@ flowchart TD
     INV --> PATH
     INV --> EXIT
   end
-  CC --> PFP
-  PFP --> INV
+  CC --> COL
+  COL --> INV
       </div>
 
       <h3>Main theorems (quick map)</h3>
       <table>
-        <thead><tr><th>Theorem</th><th>Role</th></tr></thead>
+        <thead><tr><th>Theorem</th><th>In words</th></tr></thead>
         <tbody>
           <tr>
             <td class="mono">pipeline_invariant_sound</td>
-            <td>Canonical: ∀ reachable <code>v</code>, <code>cfg_collect … v ⊆ γ(run_analysis … v)</code></td>
+            <td>Collecting semantics ⊆ γ of analysis, at <strong>every</strong> program point.</td>
           </tr>
           <tr>
             <td class="mono">pipeline_sound_path</td>
-            <td>Along any <code>cfg_path</code>, stores in <code>edges_collect</code> are covered — <strong>no termination premise</strong></td>
+            <td>Stores along any CFG path are covered by the abstract state at the path end (no termination needed).</td>
           </tr>
           <tr>
             <td class="mono">pipeline_sound_runs_to</td>
-            <td>Exit: <code>t ∈ cfg_collect … exit</code> ⇒ <code>t ∈ γ(env exit)</code></td>
+            <td>If <code>t</code> is in collecting semantics at exit, <code>t</code> is in γ at exit.</td>
           </tr>
           <tr>
             <td class="mono">pipeline_sound_runs_to_runs</td>
-            <td>Same, premise <code>runs_to c s t</code> (unfold <code>runs_to_def</code>)</td>
+            <td>Same, with premise <code>runs_to c s t</code> instead of raw <code>cfg_collect</code>.</td>
           </tr>
           <tr>
             <td class="mono">sign_pipeline_sound</td>
-            <td>Sign-domain exit corollary from <code>runs_to</code></td>
+            <td>Sign instantiation of exit soundness from <code>runs_to</code>.</td>
           </tr>
           <tr>
             <td class="mono">goblint_sign_sound</td>
-            <td>Top-level thesis entry in <code>Goblint_Formalization.thy</code></td>
+            <td>Exported thesis theorem: terminating run ⇒ concrete exit store in sign γ at exit.</td>
           </tr>
         </tbody>
       </table>
@@ -230,32 +244,38 @@ flowchart TD
 
       <div class="lemma-stmt">
         <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">pipeline_invariant_sound</span></div>
-        <div class="lemma-body">
-<pre><code>∀ v. cfg_collect (to_cfg c) {s} v
+        <p class="lemma-desc">
+          <strong>Main soundness theorem.</strong> At every program point, every concrete store
+          allowed by CFG collecting semantics is also contained in the concretization of the
+          analyzer’s abstract state at that point.
+        </p>
+<pre class="lemma-body"><code>∀ v. cfg_collect (to_cfg c) {s} v
       ≤ γ_state (run_analysis cfg c v)</code></pre>
-          <p>
+        <p class="lemma-note">
             Assumes a generic <code>analysis_config</code>:
             <code>sound_domain (ac_gamma cfg)</code>,
             <code>domain_transfer_sound</code> for edge transformers,
             initial store in γ of <code>ac_init cfg</code>,
             idempotent join (for <code>Finite_Set.fold</code>),
             <code>join_eq</code> / <code>bot_eq</code> matching <code>ac_join</code> / <code>ac_bot</code>,
-            and TD solver hypotheses (<code>TD_plain.solve_dom</code>, <code>td_cfg_in_reach</code>).
-          </p>
-        </div>
+            and TD solver hypothesis <code>⋀v. TD_plain.solve_dom (make_rhs_tree …) v</code> (P1).
+        </p>
       </div>
 
       <h3>Proof spine (inside the lemma)</h3>
       <div class="chain">
-        (1) <b>td_analyse_post_fixpoint</b> — vendored TD yields <code>is_post_fixpoint</code> on <code>to_cfg c</code><br>
-        (2) <b>post_fixpoint_sound</b> — post-fixpoint ⊆ γ ∘ env at every <code>v</code> w.r.t. <code>cfg_collect</code><br>
+        (1) <b>td_analyse_collect_sound_at</b> — per-pp TD result ⊆ γ at queried <code>v</code> (<code>TD_Soundness.thy</code>)<br>
+        (2) <b>post_fixpoint_sound_at</b> — path-shaped rhs/step premises ⇒ <code>cfg_collect</code> at <code>v</code><br>
         (3) Pointwise transfer soundness + monotone <code>rhs</code> (packaged in <code>domain_transfer_sound</code>)
       </div>
 
       <ul class="lemma-list">
-        <li><span class="name">td_analyse_post_fixpoint</span> <span class="pill">TD_Interface.thy</span> solver output is a post-fixpoint of the constraint system.</li>
-        <li class="key"><span class="name key">post_fixpoint_sound</span> <span class="pill key">Constraint_System_Sound.thy</span> post-fixpoint over-approximates <code>cfg_collect</code>.</li>
-        <li><span class="name">sign_pipeline_invariant_sound</span> sign instantiation of the invariant (same file).</li>
+        <li><span class="name">td_analyse_collect_sound_at</span> <span class="pill">TD_Soundness.thy</span>
+          <span class="lemma-desc">The TD solver’s result at a queried point over-approximates collecting semantics there.</span></li>
+        <li class="key"><span class="name key">post_fixpoint_sound_at</span> <span class="pill key">Constraint_System_Sound.thy</span>
+          <span class="lemma-desc">If the abstract environment satisfies the one-step rhs inequality at <code>v</code>, then <code>cfg_collect</code> at <code>v</code> stays inside γ.</span></li>
+        <li><span class="name">sign_pipeline_invariant_sound</span>
+          <span class="lemma-desc">Same invariant theorem with sign domain configuration and transfers plugged in.</span></li>
       </ul>
 
       <div class="callout">
@@ -278,26 +298,29 @@ flowchart TD
 
       <div class="lemma-stmt">
         <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">pipeline_sound_path</span></div>
-        <div class="lemma-body">
-<pre><code>cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v
+        <p class="lemma-desc">
+          Along any CFG path from entry, if a concrete store arises by folding edge transfers along
+          that path, the analyzer’s abstract state at the path’s end concretizes to a set that
+          contains it — <strong>without</strong> assuming the program terminates.
+        </p>
+<pre class="lemma-body"><code>cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v
 ⟹ t ∈ edges_collect es {s}
 ⟹ t ∈ γ_state (run_analysis cfg c v)</code></pre>
-          <p>
-            Direct consequence of <code>pipeline_invariant_sound</code> and
+        <p class="lemma-note">
+            Follows from <code>pipeline_invariant_sound</code> and
             <code>path_sound_cfg_collect</code> (<code>CFG_Path_Bridge.thy</code>):
             path-collected stores sit inside <code>cfg_collect</code> at <code>v</code>.
-          </p>
-        </div>
+        </p>
       </div>
 
       <h3>Path infrastructure</h3>
       <table>
-        <thead><tr><th>Concept</th><th>Where</th></tr></thead>
+        <thead><tr><th>Concept</th><th>In words</th></tr></thead>
         <tbody>
-          <tr><td class="mono">cfg_path</td><td><code>CFG_Path.thy</code> — paths carry <code>edge_action</code> lists</td></tr>
-          <tr><td class="mono">edges_collect</td><td>Fold of <code>edge_collect</code> along actions</td></tr>
-          <tr><td class="mono">cfg_collect_eq_cfg_edges_collect</td><td>Links LFP <code>cfg_collect</code> to path-shaped collecting</td></tr>
-          <tr><td class="mono">path_sound_cfg_collect</td><td>Path stores ⊆ <code>cfg_collect</code> at destination <code>v</code></td></tr>
+          <tr><td class="mono">cfg_path</td><td>Labelled walk from entry recording each <code>edge_action</code> (<code>CFG_Path.thy</code>).</td></tr>
+          <tr><td class="mono">edges_collect</td><td>Apply edge transfers along a path’s action list to a store set.</td></tr>
+          <tr><td class="mono">cfg_collect_eq_cfg_edges_collect</td><td>Global fixpoint collecting equals union over all paths to <code>v</code>.</td></tr>
+          <tr><td class="mono">path_sound_cfg_collect</td><td>Path-folded stores are contained in <code>cfg_collect</code> at the path end.</td></tr>
         </tbody>
       </table>
 
@@ -307,6 +330,9 @@ flowchart TD
           If a loop never exits, <code>runs_to</code> gives no conclusion — but
           <code>pipeline_sound_path</code> still bounds stores reachable <em>inside</em> the loop
           (e.g. <code>x = 10</code> after <code>x := 10; while True do skip</code>).
+          See the
+          <a href="../examples/index.html#nonterm-diagram">exit vs path diagram</a>
+          (<code>Example_NonTerminating_Safe</code>).
         </p>
       </div>
     </section>
@@ -322,39 +348,46 @@ flowchart TD
 
       <div class="lemma-stmt">
         <div class="lemma-head"><span class="lemma-id">Def</span><span class="lemma-title">runs_to</span> <span class="pill">CFG_Runs_To_Bridge.thy</span></div>
-        <div class="lemma-body">
-<pre><code>runs_to c s t  ⟺
+        <p class="lemma-desc">
+          “The program can finish at store <code>t</code>” means: <code>t</code> appears in the
+          collecting set at the compiled CFG’s exit node — not a separate big-step rule.
+        </p>
+<pre class="lemma-body"><code>runs_to c s t  ⟺
   t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))</code></pre>
-          <p>Not a second semantics — exit projection of <code>cfg_collect</code>.</p>
-        </div>
       </div>
 
       <div class="grid-2">
         <div class="lemma-stmt">
           <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">pipeline_sound_runs_to</span></div>
-          <div class="lemma-body">
-<pre><code>t ∈ cfg_collect (to_cfg c) {s}
+          <p class="lemma-desc">
+            Exit-only soundness: any concrete final store in the collecting semantics at exit is
+            covered by the abstract analysis at the exit program point.
+          </p>
+<pre class="lemma-body"><code>t ∈ cfg_collect (to_cfg c) {s}
       (cfg_exit (to_cfg c))
 ⟹ t ∈ γ_state (run_analysis cfg c
       (cfg_exit (to_cfg c)))</code></pre>
-          </div>
         </div>
         <div class="lemma-stmt">
           <div class="lemma-head"><span class="lemma-id">Cor</span><span class="lemma-title">pipeline_sound_runs_to_runs</span></div>
-          <div class="lemma-body">
-<pre><code>runs_to c s t
+          <p class="lemma-desc">
+            Same as above, but the premise is phrased with <code>runs_to</code> for IMP2 consumers
+            who proved small-step termination to <code>SKIP</code>.
+          </p>
+<pre class="lemma-body"><code>runs_to c s t
 ⟹ t ∈ γ_state (run_analysis cfg c
       (cfg_exit (to_cfg c)))</code></pre>
-            <p>One-line unfold via <code>runs_to_def</code>.</p>
-          </div>
         </div>
       </div>
 
       <h3>Operational link (terminating runs)</h3>
       <ul class="lemma-list">
-        <li class="key"><span class="name key">runs_to_iff_small_step</span> <code>(c,s) →* (SKIP,t)</code> iff <code>runs_to c s t</code>.</li>
-        <li><span class="name">small_step_runs_to</span> forward: star to <code>SKIP</code> ⇒ <code>runs_to</code>.</li>
-        <li><span class="name">runs_to_small_step</span> reverse: <code>runs_to</code> ⇒ star to <code>SKIP</code>.</li>
+        <li class="key"><span class="name key">runs_to_iff_small_step</span>
+          <span class="lemma-desc">Terminating small-step execution to <code>SKIP</code> is equivalent to exit collecting membership.</span></li>
+        <li><span class="name">small_step_runs_to</span>
+          <span class="lemma-desc">Forward: build <code>runs_to</code> from a small-step star (used in examples).</span></li>
+        <li><span class="name">runs_to_small_step</span>
+          <span class="lemma-desc">Reverse: unpack <code>runs_to</code> into an operational execution trace.</span></li>
       </ul>
       <p>
         On the running example: prove termination with small-step rules in IMP2, then apply
@@ -363,10 +396,10 @@ flowchart TD
 
       <h3>Domain exit corollaries</h3>
       <table>
-        <thead><tr><th>Lemma</th><th>Status</th></tr></thead>
+        <thead><tr><th>Lemma</th><th>In words</th></tr></thead>
         <tbody>
-          <tr><td class="mono">sign_pipeline_sound</td><td>Closed (sign transfers + pipeline)</td></tr>
-          <tr><td class="mono">ivl_pipeline_sound</td><td>Interval TF lemmas closed; check <a href="../../PROOF_PHASES.md">PROOF_PHASES.md</a> for remaining sorries in stretch goals</td></tr>
+          <tr><td class="mono">sign_pipeline_sound</td><td>Closed: <code>runs_to</code> ⇒ exit store in sign γ of <code>run_analysis</code> at exit.</td></tr>
+          <tr><td class="mono">ivl_pipeline_sound</td><td>Closed: same for interval domain (<code>goblint_interval_sound</code> at top level).</td></tr>
         </tbody>
       </table>
     </section>
@@ -382,16 +415,17 @@ flowchart TD
 
       <div class="lemma-stmt">
         <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">goblint_sign_sound</span> <span class="pill key">Goblint_Formalization.thy</span></div>
-        <div class="lemma-body">
-<pre><code>runs_to c s t
-⟹ TD_plain.solve_dom … (cfg_entry (to_cfg c))
-⟹ td_cfg_in_reach …
-⟹ comp_fun_idem join on sign abs_state
+        <p class="lemma-desc">
+          <strong>Thesis headline (sign).</strong> If the program terminates from <code>s</code> to
+          <code>t</code> and the TD solver finishes on the compiled CFG, then the sign analysis at
+          exit concretizes to a set that contains <code>t</code>.
+        </p>
+<pre class="lemma-body"><code>runs_to c s t
+⟹ ⋀v. TD_plain.solve_dom (make_rhs_tree … sign_tf …) v
 ⟹ t ∈ sign_domain.gamma_state
       (run_analysis (sign_analysis_config s) c
          (cfg_exit (to_cfg c)))</code></pre>
-          <p>Proof: <code>by (rule sign_pipeline_sound …)</code>.</p>
-        </div>
+        <p class="lemma-note">Proof: <code>by (rule sign_pipeline_sound …)</code>.</p>
       </div>
 
       <h3>What is proved vs assumed</h3>
@@ -406,9 +440,7 @@ flowchart TD
               <code>sign_pipeline_sound</code> → <code>sign_analysis_sound</code> → <code>td_solver_sound</code>
             </td>
             <td>
-              <code>comp_fun_idem (⊔)</code> on sign join;
-              <code>TD_plain.solve_dom</code> on the generated <code>make_rhs_tree</code>;
-              <code>td_cfg_in_reach</code> — every reachable unknown solved from entry
+              <code>⋀v. TD_plain.solve_dom</code> on the generated <code>make_rhs_tree</code> (P1 — operational termination of per-pp solve)
             </td>
           </tr>
         </tbody>
@@ -422,8 +454,8 @@ flowchart TD
       <h3>End-to-end chain (sign, exit)</h3>
       <div class="chain">
         t ∈ cfg_collect (to_cfg c) {s} (cfg_exit …)     <em>— spec, or runs_to c s t</em><br>
-          ⊆ γ_state (env (cfg_exit …))                 <em>— post_fixpoint_sound + td_analyse_post_fixpoint</em><br>
-        env = td_analyse c sign_tf join bot init       <em>— TD_Interface + TD_plain</em><br>
+          ⊆ γ_state (td_analyse … (cfg_exit …))        <em>— td_analyse_collect_sound_at at exit</em><br>
+        run_analysis = td_analyse ∘ sign_analysis_config <em>— Pipeline + TD_Interface</em><br>
         ⇒ goblint_sign_sound
       </div>
 
@@ -514,7 +546,7 @@ flowchart TD
   L2["CFG collecting<br/>cfg_collect · cfg_path · path_sound_cfg_collect"]
   L3["Abstract domain Sign<br/>gamma_sign · assign/assume_sign_sound"]
   L4["Equations<br/>rhs_mono · post_fixpoint_sound"]
-  L5["Solver bridge<br/>make_rhs_tree · td_analyse_post_fixpoint"]
+  L5["Solver bridge<br/>td_analyse_collect_sound_at"]
   L6["Pipeline<br/>pipeline_invariant_sound · pipeline_sound_path"]
   L7["Exit + sign<br/>pipeline_sound_runs_to · sign_pipeline_sound · goblint_sign_sound"]
   L1 --> L2 --> L4
@@ -527,70 +559,70 @@ flowchart TD
         <tbody>
           <tr>
             <td>IMP2 operational</td>
-            <td><code>runs_to_iff_small_step</code> — human termination proofs</td>
-            <td>Premise <code>runs_to c s t</code> for exit corollaries</td>
+            <td><code>runs_to_iff_small_step</code></td>
+            <td>Prove termination in IMP2, then use exit corollaries via <code>runs_to</code>.</td>
           </tr>
           <tr>
             <td>CFG collecting (spec)</td>
-            <td><code>cfg_collect</code> LFP; <code>cfg_collect_eq_cfg_edges_collect</code></td>
-            <td>Right-hand side of all soundness statements</td>
+            <td><code>cfg_collect</code> + path equivalence</td>
+            <td>What “reachable stores” means — right-hand side of soundness.</td>
           </tr>
           <tr>
             <td>Sign domain</td>
-            <td><code>sound_domain</code> + <code>domain_transfer_sound</code> for <code>sign_tf</code></td>
-            <td><code>post_fixpoint_sound</code> edge cases</td>
+            <td><code>sign_tf_sound</code> / transfer lemmas</td>
+            <td>Edge transfers are sound for sign γ.</td>
           </tr>
           <tr>
             <td>Equations</td>
-            <td><code>is_post_fixpoint</code> ⇒ over-approximates <code>cfg_collect</code></td>
-            <td><code>pipeline_invariant_sound</code> core</td>
+            <td><code>post_fixpoint_sound</code></td>
+            <td>Abstract post-fixpoint over-approximates collecting.</td>
           </tr>
           <tr>
             <td>TD solver</td>
-            <td><code>td_analyse</code> yields post-fixpoint on reachable tree</td>
-            <td>Connects analysis to equations</td>
+            <td><code>td_analyse_collect_sound_at</code></td>
+            <td>TD output is a sound post-fixpoint witness at each queried <code>v</code>.</td>
           </tr>
           <tr>
             <td>Pipeline</td>
-            <td>Point-map + path + exit theorems; sign closed at top</td>
-            <td><code>goblint_sign_sound</code></td>
+            <td><code>pipeline_invariant_sound</code> + exit/path corollaries</td>
+            <td>Composes layers; <code>goblint_sign_sound</code> is the exported sign headline.</td>
           </tr>
         </tbody>
       </table>
 
       <h3>Theorem reference (Pipeline.thy)</h3>
       <table>
-        <thead><tr><th>Name</th><th>Premise highlight</th><th>Conclusion</th></tr></thead>
+        <thead><tr><th>Name</th><th>Premise (idea)</th><th>Conclusion (idea)</th></tr></thead>
         <tbody>
           <tr>
             <td class="mono">pipeline_invariant_sound</td>
-            <td>TD solves tree; domain sound</td>
-            <td>∀<code>v</code>. <code>cfg_collect ⊆ γ ∘ run_analysis</code></td>
+            <td>Domain transfers sound; initial store in γ; TD <code>solve_dom</code> at each <code>v</code></td>
+            <td>Pointwise: collecting ⊆ γ of <code>run_analysis</code></td>
           </tr>
           <tr>
             <td class="mono">pipeline_sound_path</td>
-            <td><code>cfg_path</code> + <code>t ∈ edges_collect es {s}</code></td>
-            <td><code>t ∈ γ(run_analysis … v)</code></td>
+            <td>Valid <code>cfg_path</code> and <code>t</code> on that path from <code>{s}</code></td>
+            <td><code>t</code> in γ of analysis at path end</td>
           </tr>
           <tr>
             <td class="mono">pipeline_sound_runs_to</td>
-            <td><code>t ∈ cfg_collect … exit</code></td>
-            <td><code>t ∈ γ … exit</code></td>
+            <td><code>t</code> in collecting at exit</td>
+            <td><code>t</code> in γ at exit</td>
           </tr>
           <tr>
             <td class="mono">pipeline_sound_runs_to_runs</td>
             <td><code>runs_to c s t</code></td>
-            <td><code>t ∈ γ … exit</code></td>
+            <td><code>t</code> in γ at exit</td>
           </tr>
           <tr>
             <td class="mono">sign_pipeline_sound</td>
-            <td><code>runs_to</code> + sign config + TD hyps</td>
-            <td>sign <code>γ</code> at exit</td>
+            <td><code>runs_to</code> + sign <code>analysis_config</code> + TD hyps</td>
+            <td><code>t ∈ γ_sign</code> of sign analysis at exit</td>
           </tr>
           <tr>
             <td class="mono">goblint_sign_sound</td>
-            <td>same (exported)</td>
-            <td>thesis headline</td>
+            <td>As <code>sign_pipeline_sound</code> (top-level export)</td>
+            <td>Thesis sign soundness statement</td>
           </tr>
         </tbody>
       </table>

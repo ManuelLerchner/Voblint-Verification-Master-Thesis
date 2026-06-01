@@ -12,7 +12,9 @@ Pages** (the site is Isabelle browser info from `make html` → `docs/html/`).
 | Path | Topic |
 | --- | --- |
 | [`index.html`](index.html) | Hub — links to all layers |
-| [`pipeline/index.html`](pipeline/index.html) | End-to-end soundness, running example |
+| [`pipeline/index.html`](pipeline/index.html) | End-to-end soundness, countdown running example |
+| [`running-example/index.html`](running-example/index.html) | Lemma trace A/B/C + snippets; `.lemma-desc` on core lemmas |
+| [`examples/index.html#nonterm-diagram`](examples/index.html#nonterm-diagram) | Exit vs path soundness (non-terminating program) |
 | [`imp2/index.html`](imp2/index.html) | Syntax and small-step semantics |
 | [`cfg/index.html`](cfg/index.html) | CFG core (def, paths, `to_cfg`) |
 | [`cfg/collecting/index.html`](cfg/collecting/index.html) | `cfg_collect`, `runs_to`, bridges |
@@ -23,7 +25,7 @@ Pages** (the site is Isabelle browser info from `make html` → `docs/html/`).
 
 ## Shared assets
 
-- [`walkthrough.css`](walkthrough.css) — layout, cards, tables, mermaid containers
+- [`walkthrough.css`](walkthrough.css) — layout, cards, tables, mermaid; `.lemma-desc` on core lemmas
 - [`walkthrough.js`](walkthrough.js) — mermaid init, TOC scroll-spy
 
 ## Markdown companions

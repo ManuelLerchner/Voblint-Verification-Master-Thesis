@@ -26,6 +26,7 @@
     <p class="toc-crosslink"><a href="../../index.html">← Session map</a></p>
     <p class="toc-crosslink"><a href="../index.html">← CFG core</a></p>
     <p class="toc-crosslink"><a href="../../imp2/index.html">IMP2 layer</a></p>
+    <p class="toc-crosslink"><a href="../../running-example/index.html">Running example trace</a></p>
     <p class="toc-crosslink"><a href="../../pipeline/index.html">Pipeline walkthrough</a></p>
   </nav>
 
@@ -49,6 +50,19 @@
           <code>Goblint_Formalization.CFG_Runs_To_Bridge</code>, which re-exports the
           five-theory chain below. Core graph and path infrastructure remain in
           <code>src/CFG/</code> — see the <a href="../index.html">CFG core walkthrough</a>.
+        </p>
+      </div>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example · Program A</div>
+        <p>
+          Exit store <code>t = {x ↦ 5, y ↦ 6}</code> satisfies
+          <code>collecting_example_t ∈ cfg_collect cfg {s₀} (cfg_exit cfg)</code>
+          via <code>collecting_example_in_cfg_collect</code> (unfolds <code>runs_to_def</code>).
+          Program C uses the same <code>runs_to</code> / <code>small_step_runs_to</code> bridge.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../../running-example/index.html#step-collect">Lemma trace (step 3) →</a>
+          · <a href="../../running-example/index.html#trace-c">Program C →</a>
         </p>
       </div>
     </header>
@@ -88,8 +102,9 @@
           Analyzer soundness is stated against <strong><code>cfg_collect</code> at every
           program point</strong>, not only at exit. The equation-system post-fixpoint
           over-approximates that semantics pointwise; see
-          <a href="../../equations/index.html">equations layer</a> (<code>post_fixpoint_sound</code>)
-          (<code>post_fixpoint_sound</code>, <code>pipeline_invariant_sound</code>).
+          <a href="../../equations/index.html">equations layer</a>
+          (<code>post_fixpoint_sound_at</code>, <code>post_fixpoint_sound</code>,
+          <code>pipeline_invariant_sound</code>).
           Terminating runs correspond to exit membership via
           <code>runs_to</code>; partial and non-terminating behaviour is covered by the
           path-based formulation without requiring a final store.
@@ -234,9 +249,14 @@ cfg_collect g S = lfp (cfg_collect_F g S)</code></pre>
       <div class="def-card">
         <h3><code>CFG_Path_Bridge.thy</code> — lfp ↔ paths ↔ small-step (forward)</h3>
         <ul class="lemma-list">
-          <li><span class="name">cfg_collect_step</span>, <span class="name">path_sound_cfg_collect</span> — push stores along paths inside the fixpoint.</li>
-          <li><span class="name key">cfg_collect_eq_cfg_edges_collect</span> — <strong>at every <code>v</code></strong>, not just exit.</li>
-          <li><span class="name">compile_path_small_step</span> — path + membership ⇒ <code>(c,s) →* (SKIP,t)</code>.</li>
+          <li><span class="name">cfg_collect_step</span>
+            <span class="lemma-desc">One layer of the collecting fixpoint operator stays below the path-union collector.</span></li>
+          <li><span class="name">path_sound_cfg_collect</span>
+            <span class="lemma-desc">Stores obtained by folding a single CFG path lie inside <code>cfg_collect</code> at the path end.</span></li>
+          <li class="key"><span class="name key">cfg_collect_eq_cfg_edges_collect</span>
+            <span class="lemma-desc">Fixpoint and path-union definitions agree at <strong>every</strong> program point, not only at exit.</span></li>
+          <li><span class="name">compile_path_small_step</span>
+            <span class="lemma-desc">If a store is on a compiled CFG path to exit, the source command small-steps to <code>SKIP</code> with that store.</span></li>
         </ul>
       </div>
 
@@ -273,6 +293,10 @@ flowchart LR
           <span class="lemma-title">cfg_collect at every program point</span>
           <span class="pill key">soundness</span>
         </div>
+        <p class="lemma-desc">
+          The operational specification: least fixpoint of “propagate store sets along CFG edges”.
+          Returns the set of concrete stores reachable at program point <code>v</code> from initial set <code>S</code>.
+        </p>
         <pre class="lemma-body">cfg_collect g S v    -- cenv = pp ⇒ store set;  v ranges over all pp in g</pre>
         <p class="lemma-note">
           Pipeline invariant (<code>pipeline_invariant_sound</code>):
@@ -288,6 +312,10 @@ flowchart LR
           <span class="lemma-id">CFG_Path_Bridge.thy</span>
           <span class="lemma-title">cfg_collect_eq_cfg_edges_collect</span>
         </div>
+        <p class="lemma-desc">
+          Fixpoint collecting equals “union over all entry-to-<code>v</code> paths” — lets proofs
+          reason with paths while soundness uses the lfp definition.
+        </p>
         <pre class="lemma-body">cfg_collect g S v = cfg_edges_collect g S v</pre>
         <p class="lemma-note">
           Bridges the fixpoint used in equation soundness to the path union used in
@@ -301,6 +329,9 @@ flowchart LR
           <span class="lemma-id">CFG_Runs_To_Bridge.thy</span>
           <span class="lemma-title">runs_to_def</span>
         </div>
+        <p class="lemma-desc">
+          “Program finishes at <code>t</code>” abbreviates: <code>t</code> is in the collecting set at the compiled exit.
+        </p>
         <pre class="lemma-body">runs_to c s t ⟷ t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))</pre>
         <p class="lemma-note">
           <strong>Definitional abbreviation</strong> — not a second operational semantics.
@@ -321,6 +352,10 @@ flowchart LR
           <span class="lemma-title">runs_to_iff_small_step</span>
           <span class="pill key">biconditional</span>
         </div>
+        <p class="lemma-desc">
+          IMP2 small-step termination to <code>SKIP</code> matches exit collecting membership —
+          the link between “run the program by hand” and the analyzer’s specification.
+        </p>
         <pre class="lemma-body">runs_to c s t ⟷ (c, s) →* (SKIP, t)</pre>
         <p class="lemma-note">
           Combined from <code>runs_to_small_step</code> (forward) and
@@ -368,8 +403,10 @@ sequenceDiagram
         <h3><code>Equations/Constraint_System_Sound.thy</code></h3>
         <p>Imports <code>CFG_Runs_To_Bridge</code>. Main results:</p>
         <ul class="lemma-list">
-          <li><span class="name key">post_fixpoint_sound</span> — any abstract post-fixpoint <code>env</code> pointwise over-approximates <code>cfg_collect g S</code> at <strong>every</strong> <code>v</code>.</li>
-          <li><span class="name">exit_sound</span> — corollary at <code>cfg_exit</code>; concrete store in <code>γ_state (env exit)</code>.</li>
+          <li class="key"><span class="name key">post_fixpoint_sound</span>
+            <span class="lemma-desc">Abstract post-fixpoint <code>env</code> pointwise over-approximates <code>cfg_collect</code> at every <code>v</code>.</span></li>
+          <li><span class="name">exit_sound</span>
+            <span class="lemma-desc">Specialise to exit: concrete final store in collecting at exit ∈ γ(<code>env exit</code>).</span></li>
         </ul>
 <pre><code>-- strategy (from theory header):
 -- 1. post-fixpoint characterization
@@ -380,8 +417,12 @@ sequenceDiagram
       <div class="def-card">
         <h3><code>Pipeline/Pipeline.thy</code></h3>
         <ul class="lemma-list">
-          <li><span class="name key">pipeline_invariant_sound</span> — end-to-end: TD solver result ⊇ <code>cfg_collect</code> at every <code>v</code>.</li>
-          <li><span class="name">sign_pipeline_sound</span> / <span class="name">sign_pipeline_invariant_sound</span> — sign-domain instances.</li>
+          <li class="key"><span class="name key">pipeline_invariant_sound</span>
+            <span class="lemma-desc">TD analysis ⊇ collecting semantics at every program point (generic config).</span></li>
+          <li><span class="name">sign_pipeline_invariant_sound</span>
+            <span class="lemma-desc">Same invariant with sign domain wired in.</span></li>
+          <li><span class="name">sign_pipeline_sound</span>
+            <span class="lemma-desc">Exit corollary for sign: <code>runs_to</code> ⇒ final store in sign γ at exit.</span></li>
         </ul>
         <p>
           Full composition diagram:
@@ -408,32 +449,45 @@ flowchart LR
 
       <table>
         <thead>
-          <tr><th>Stage</th><th>Lemma</th><th>Role</th></tr>
+          <tr><th>Stage</th><th>Lemma</th><th>In words</th></tr>
         </thead>
         <tbody>
-          <tr><td>Monotonicity</td><td><code>cfg_collect_F_mono</code>, <code>cfg_collect_lfp_unfold</code></td><td>Well-defined <code>lfp</code></td></tr>
-          <tr><td>Path ⊆ lfp</td><td><code>cfg_edges_collect_post</code>, <code>cfg_collect_le_edges_collect</code></td><td>Path collector is above <code>cfg_collect_F</code></td></tr>
-          <tr><td>lfp ⊆ path</td><td><code>cfg_collect_step</code>, <code>path_sound_cfg_collect</code></td><td>Stores along paths stay inside fixpoint</td></tr>
-          <tr class="key"><td>Equivalence</td><td><code>cfg_collect_eq_cfg_edges_collect</code></td><td>lfp = path union at all <code>v</code></td></tr>
-          <tr><td>Forward SS</td><td><code>compile_path_small_step</code></td><td>CFG path ⇒ small-step</td></tr>
-          <tr><td>Exit def</td><td><code>runs_to_def</code>, <code>runs_toD</code></td><td>Package exit membership</td></tr>
-          <tr class="key"><td>Exit ↔ SS</td><td><code>runs_to_iff_small_step</code></td><td>Operational link for consumers</td></tr>
-          <tr><td>Abstract sound</td><td><code>post_fixpoint_sound</code> (Equations)</td><td>env ⊇ <code>cfg_collect</code></td></tr>
-          <tr class="key"><td>End-to-end</td><td><code>pipeline_invariant_sound</code> (Pipeline)</td><td>Analysis ⊇ <code>cfg_collect</code></td></tr>
+          <tr><td>Monotonicity</td><td><code>cfg_collect_F_mono</code>, <code>cfg_collect_lfp_unfold</code></td><td>The collecting transformer is monotone, so the least fixpoint is well-defined.</td></tr>
+          <tr><td>Path ⊆ lfp</td><td><code>cfg_edges_collect_post</code>, <code>cfg_collect_le_edges_collect</code></td><td>Path-shaped collecting sits above one step of the fixpoint operator.</td></tr>
+          <tr><td>lfp ⊆ path</td><td><code>cfg_collect_step</code>, <code>path_sound_cfg_collect</code></td><td>Anything reachable on a path is already in the fixpoint at that pp.</td></tr>
+          <tr class="key"><td>Equivalence</td><td><code>cfg_collect_eq_cfg_edges_collect</code></td><td>Fixpoint semantics equals “union over all paths” at every <code>v</code>.</td></tr>
+          <tr><td>Forward SS</td><td><code>compile_path_small_step</code></td><td>Membership on a compiled path implies a small-step run to <code>SKIP</code>.</td></tr>
+          <tr><td>Exit def</td><td><code>runs_to_def</code>, <code>runs_toD</code></td><td><code>runs_to</code> means exit membership in <code>cfg_collect</code>.</td></tr>
+          <tr class="key"><td>Exit ↔ SS</td><td><code>runs_to_iff_small_step</code></td><td>Terminating operational runs ↔ exit collecting membership.</td></tr>
+          <tr><td>Abstract sound</td><td><code>post_fixpoint_sound</code> (Equations)</td><td>Abstract post-fixpoint over-approximates collecting everywhere.</td></tr>
+          <tr class="key"><td>End-to-end</td><td><code>pipeline_invariant_sound</code> (Pipeline)</td><td>Analyzer result over-approximates collecting at every pp.</td></tr>
         </tbody>
       </table>
 
       <h4>Compound paths (selected, <code>CFG_Compound_Paths.thy</code>)</h4>
       <ul class="lemma-list">
-        <li><span class="name">cfg_path_Seq_split</span>, <span class="name">cfg_path_If_iff</span>, <span class="name">cfg_path_While_exit_iff</span></li>
-        <li><span class="name">to_cfg_compile</span> — <code>CFG_Compound_Paths.thy</code></li>
-        <li><span class="name">edges_collect_offset_path</span> — <code>CFG_Edges_Collect.thy</code> (offsets invisible to <code>edges_collect</code>)</li>
+        <li><span class="name">cfg_path_Seq_split</span>
+          <span class="lemma-desc">A path through <code>c1 ;; c2</code> splits into paths through each part (with glue).</span></li>
+        <li><span class="name">cfg_path_If_iff</span>
+          <span class="lemma-desc">Paths through conditionals match taken-branch paths plus assume edges.</span></li>
+        <li><span class="name">cfg_path_While_exit_iff</span>
+          <span class="lemma-desc">Paths to loop exit decompose into loop iterations and the final assume-not edge.</span></li>
+        <li><span class="name">to_cfg_compile</span>
+          <span class="lemma-desc">Exposes <code>compile c 0</code> quadruple for case splits on <code>to_cfg c</code>.</span></li>
+        <li><span class="name">edges_collect_offset_path</span>
+          <span class="lemma-desc">Shifting a path’s pp labels does not change which stores <code>edges_collect</code> produces.</span></li>
       </ul>
 
       <h4>Related (outside Collecting/)</h4>
       <ul class="lemma-list">
-        <li><span class="name">cfg_path</span>, <span class="name">cfg_path_append</span>, <span class="name">offset_path</span> — <a href="../index.html">CFG core</a> (<code>CFG_Path.thy</code>).</li>
-        <li><span class="name">to_cfg</span>, compile lemmas — <code>IMP2_to_CFG.thy</code>.</li>
+        <li><span class="name">cfg_path</span>
+          <span class="lemma-desc">Inductive labelled walks on the CFG (<a href="../index.html">CFG core</a>).</span></li>
+        <li><span class="name">cfg_path_append</span>
+          <span class="lemma-desc">Concatenate path step lists — used when gluing subgraphs.</span></li>
+        <li><span class="name">offset_path</span>
+          <span class="lemma-desc">Shift every target pp in a path by <code>k</code>.</span></li>
+        <li><span class="name">to_cfg</span> / compile lemmas
+          <span class="lemma-desc">IMP2 → CFG graph (<code>IMP2_to_CFG.thy</code>).</span></li>
       </ul>
     </section>
 

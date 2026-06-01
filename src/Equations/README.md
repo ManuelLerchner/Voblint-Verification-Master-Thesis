@@ -9,7 +9,7 @@ that any post-fixpoint soundly over-approximates collecting semantics `cfg_colle
 | File | Role |
 | --- | --- |
 | `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `is_post_fixpoint`, `rhs_mono` |
-| `Constraint_System_Sound.thy` | `collect_pp_abstract_sound`, `post_fixpoint_sound`, `exit_sound` |
+| `Constraint_System_Sound.thy` | `post_fixpoint_sound_at`, `post_fixpoint_sound`, `exit_sound`, `apply_tf_le_rhs` |
 
 **Key concepts:** One equation per program point (join over predecessor edges).
 `is_post_fixpoint g tf join bot s0 env` means `∀v. rhs g tf join bot s0 env v ≤ env v`
@@ -21,7 +21,8 @@ inclusion in `gamma_state`; `exit_sound` is the exit-projected corollary.
 `CFG_Collecting` theory).
 
 **Downstream:** `Solver/TD_CFG_Core.thy` — `make_rhs_tree`; `Solver/TD_Interface.thy` —
-`td_analyse`, `td_analyse_post_fixpoint` (TD session `TD_plain`).
+per-pp `td_analyse`, `td_env_at`; `Solver/TD_Soundness.thy` —
+`td_analyse_collect_sound_at` (via `post_fixpoint_sound_at` + TD session `TD_plain`).
 
 ## Scope vs. Goblint's actual framework
 

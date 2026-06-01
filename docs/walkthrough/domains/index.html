@@ -24,6 +24,7 @@
       <li><a href="#links"><span class="num">§</span>Equations &amp; pipeline</a></li>
     </ol>
     <p class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></p>
+    <p class="toc-crosslink"><a href="../running-example/index.html">Running example trace</a></p>
     <p class="toc-crosslink"><a href="../pipeline/index.html">Full pipeline</a></p>
     <p class="toc-crosslink"><a href="../equations/index.html">Equations →</a></p>
   </nav>
@@ -41,6 +42,18 @@
         <code>domain_transfer</code> record itself lives in
         <a href="../equations/index.html">Equations/Constraint_System.thy</a>.
       </p>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example · Program A</div>
+        <p>
+          On assign edges: <code>assign_sign</code> / <code>aval_sign</code> give
+          <code>x ↦ SPos</code>, <code>y ↦ SPos</code> for the straight-line program;
+          executable <code>value</code> checks in <code>Example_Sign_Analysis.thy</code>.
+          Program B (countdown) uses <code>assume_sign_sound</code> on the loop guard.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../running-example/index.html#step-domain">Lemma trace (step 4) →</a>
+        </p>
+      </div>
     </header>
 
     <!-- OVERVIEW -->
@@ -153,10 +166,14 @@ definition gamma_state :: "'a abs_state => store set" where
 
       <h4>Key lemmas (interface layer)</h4>
       <ul class="lemma-list">
-        <li><span class="name">gamma_state_mono</span> — abstract order on states lifts to set inclusion.</li>
-        <li><span class="name">gamma_state_bot</span> — bottom abstract state concretizes to ∅.</li>
-        <li><span class="name">gamma_state_sup_ub1/2</span> — join over-approximates each operand state-set.</li>
-        <li><span class="name">sup_fold_ge</span> / <span class="name">gamma_abs_sup_set_ub</span> — finite join fold is sound for RHS construction.</li>
+        <li><span class="name">gamma_state_mono</span>
+          <span class="lemma-desc">More precise abstract states (in ≤) yield smaller or equal concretizations.</span></li>
+        <li><span class="name">gamma_state_bot</span>
+          <span class="lemma-desc">⊥ abstract state means “no concrete store” at that point.</span></li>
+        <li><span class="name">gamma_state_sup_ub1/2</span>
+          <span class="lemma-desc">Joining abstract states covers both operand store-sets.</span></li>
+        <li><span class="name">sup_fold_ge</span> / <span class="name">gamma_abs_sup_set_ub</span>
+          <span class="lemma-desc">Finite predecessor joins used in <code>rhs</code> remain sound.</span></li>
       </ul>
     </section>
 
@@ -202,9 +219,14 @@ definition sign_tf :: "sign domain_transfer" where
 
       <h4>Per-action soundness (proved in Sign_Domain)</h4>
       <ul class="lemma-list">
-        <li><span class="name">assign_sign_sound</span> — assignment refines <code>gamma_state</code> correctly.</li>
-        <li><span class="name">assume_sign_sound</span> / <span class="name">assume_not_sign_sound</span> — assume edges preserve stores satisfying the guard.</li>
-        <li><span class="name">sign_gamma_state_conv</span> — <code>sign_domain.gamma_state</code> = <code>sound_domain.gamma_state gamma_sign</code>.</li>
+        <li><span class="name">assign_sign_sound</span>
+          <span class="lemma-desc">If a concrete store is in γ before an assignment, the store after executing that assignment on the concrete level is still in γ after <code>assign_sign</code>.</span></li>
+        <li><span class="name">assume_sign_sound</span>
+          <span class="lemma-desc">Assume-true edge: concrete stores satisfying the guard remain in γ.</span></li>
+        <li><span class="name">assume_not_sign_sound</span>
+          <span class="lemma-desc">Assume-false edge: concrete stores falsifying the guard remain in γ.</span></li>
+        <li><span class="name">sign_gamma_state_conv</span>
+          <span class="lemma-desc">Sign locale’s <code>gamma_state</code> matches the generic lifted definition.</span></li>
       </ul>
 
       <div class="callout done">
@@ -243,6 +265,16 @@ definition ivl_tf :: "ivl domain_transfer" where
         <code>ivl_tf</code> as a <code>domain_transfer</code> record—the record definition is not
         duplicated here.
       </p>
+
+      <h4>Interval transfer lemmas (proved)</h4>
+      <ul class="lemma-list">
+        <li><span class="name">aval_ivl_sound</span>
+          <span class="lemma-desc">Expression evaluation over-approximates concrete integer results.</span></li>
+        <li><span class="name">assign_ivl_sound</span>
+          <span class="lemma-desc">Assignment transfers preserve interval concretization.</span></li>
+        <li><span class="name">assume_ivl</span> / <span class="name">assume_not_ivl</span>
+          <span class="lemma-desc">Currently identity on state (narrowing TODO); soundness uses generic transfer axioms in pipeline proofs.</span></li>
+      </ul>
 
       <h4>Widening</h4>
       <p>

@@ -483,11 +483,28 @@ tr:last-child td {
   color: var(--accent-2);
 }
 
+.lemma-stmt .lemma-desc {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg);
+  margin: 0 0 12px;
+}
+
 .lemma-stmt .lemma-note {
   font-family: "Inter", system-ui, sans-serif;
   font-size: 14px;
   color: var(--fg-dim);
   margin-top: 10px;
+}
+
+.lemma-list li .lemma-desc {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .lemma-stmt.key {
@@ -674,4 +691,51 @@ a.card-link p {
 .muted {
   color: var(--fg-mute);
   font-size: 14px;
+}
+
+/* Running-example trace: repo Isabelle excerpts */
+.callout.running-ex {
+  border-left: 3px solid var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 8%, var(--bg-card));
+}
+
+.callout.running-ex .label {
+  color: var(--accent-2);
+}
+
+.thy-snippet {
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.thy-snippet .thy-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  padding: 10px 14px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--fg-mute);
+  background: var(--code-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.thy-snippet .thy-cap strong {
+  color: var(--accent-4);
+  font-weight: 600;
+}
+
+.thy-snippet pre {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  background: var(--code-bg);
+  border: none;
+  border-radius: 0;
+  overflow-x: auto;
 }

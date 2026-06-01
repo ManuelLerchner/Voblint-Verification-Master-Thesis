@@ -31,7 +31,7 @@ computes the abstract result.
 | **Collecting semantics**       | `CS c = lfp c (step UNIV)` on **annotated commands**; `step` pushes **store sets** through the tree | **`cfg_collect`** on CFG program points; path form `cfg_edges_collect`; exit sugar **`runs_to`** |
 | **Abstract analysis**          | `AI c = pfp (step' ⊤) (bot c)` : Kleene iteration **on the same `acom` shape**                      | `rhs` / `make_rhs_tree` on CFG; **`td_analyse`** (vendored TD solver) → `env :: pp ⇒ abs_state`         |
 | **Main soundness theorem**     | `AI_correct`: `AI c = Some C ⟹ CS c ≤ γ_c C`                                                        | **`pipeline_invariant_sound`** / **`pipeline_sound_path`**: `cfg_collect ⊆ γ ∘ env`; exit via **`pipeline_sound_runs_to`** |
-| **Solver**                     | Built-in **`pfp`** / `while_option` in Isabelle                                                     | **Separate verified session** (`TD`); we prove `td_analyse_post_fixpoint`                               |
+| **Solver**                     | Built-in **`pfp`** / `while_option` in Isabelle                                                     | **Separate verified session** (`TD`); we prove `td_analyse_collect_sound_at` (per-pp, Fix B)           |
 | **CFG / equation system**      | None : control flow is implicit in recursive `Step` / `step'`                                       | **Central** : matches Goblint compile → eqsys → solve. `cfg` extends AFP `Dijkstra_Shortest_Path.Graph` |
 | **Intervals / widening**       | Worked out in-session (`Abs_Int2_ivl`, `Abs_Int3`)                                                  | Started (`Interval_Domain.thy`); stretch goal; code notes possible reuse of `Abs_Int2_ivl`              |
 | **“Run analysis”**             | `AI` + `show_acom` inside Isabelle                                                                  | `run_analysis` / `td_analyse`; full `value` on maps still limited (`Example_Sign_Analysis.thy`)         |
@@ -78,10 +78,10 @@ refines **`cfg_collect`**; computation = **`td_analyse`** (verified externally).
 
 | Once (generic)                                                                                  | Per domain                                                                                     |
 | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `pipeline_invariant_sound`, `pipeline_sound_path`, `post_fixpoint_sound`, `td_analyse_post_fixpoint` | `interpretation … abstract_domain` (or `sound_domain` axioms)                                  |
+| `pipeline_invariant_sound`, `pipeline_sound_path`, `post_fixpoint_sound`, `post_fixpoint_sound_at`, `td_analyse_collect_sound_at` | `interpretation … abstract_domain` (or `sound_domain` axioms) |
 | CFG bridge, TD interface                                                                        | **`domain_transfer_sound`** (assign / assume / assume-not on CFG edges)                        |
 |                                                                                                 | `analysis_config` + init in γ (`s ∈ γ_state (ac_init cfg)`)                                    |
-|                                                                                                 | TD instantiation: `comp_fun_idem`, `solve_dom`, `cfg_in_reach` on `make_rhs_tree (to_cfg c) …` |
+|                                                                                                 | TD: `⋀v. TD_plain.solve_dom` on `make_rhs_tree (to_cfg c) …` (P1 only; P2 removed)            |
 
 You do **not** re-prove the pipeline chain per domain; you discharge obligations and
 apply `pipeline_invariant_sound` / `sign_pipeline_sound` (as in `goblint_sign_sound`).

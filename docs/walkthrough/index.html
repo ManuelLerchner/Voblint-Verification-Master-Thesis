@@ -17,10 +17,12 @@
     <ol>
       <li><a href="#hub"><span class="num">◎</span>Overview</a></li>
       <li><a href="#layers"><span class="num">§</span>Layer walkthroughs</a></li>
+      <li><a href="running-example/index.html"><span class="num">★</span>Running example (lemmas)</a></li>
       <li><a href="#flow"><span class="num">→</span>End-to-end flow</a></li>
       <li><a href="#docs"><span class="num">∎</span>Markdown docs</a></li>
     </ol>
     <p class="toc-crosslink"><a href="pipeline/index.html">Main narrative: pipeline →</a></p>
+    <p class="toc-crosslink"><a href="running-example/index.html">Lemma trace: running example →</a></p>
   </nav>
 
   <main>
@@ -42,7 +44,11 @@
       <div class="grid-2">
         <a class="card card-link" href="pipeline/index.html">
           <h4>Pipeline <span class="pill">start here</span></h4>
-          <p>Full story: running example, artifact flow, invariant / path / exit soundness, <code>goblint_sign_sound</code>.</p>
+          <p>Full story: artifact flow, invariant / path / exit soundness, <code>goblint_sign_sound</code>.</p>
+        </a>
+        <a class="card card-link" href="running-example/index.html">
+          <h4>Running example <span class="pill">lemma trace</span></h4>
+          <p>Programs A/B/C with repo Isabelle snippets and per-layer “On Program A” callouts.</p>
         </a>
         <a class="card card-link" href="imp2/index.html">
           <h4>IMP2</h4>
@@ -66,7 +72,7 @@
         </a>
         <a class="card card-link" href="solver/index.html">
           <h4>Solver (TD)</h4>
-          <p><code>td_analyse</code>, vendored TD session, domain instantiations.</p>
+          <p>Per-pp <code>td_analyse</code>, <code>td_analyse_collect_sound_at</code>, TD session.</p>
         </a>
         <a class="card card-link" href="examples/index.html">
           <h4>Examples</h4>
@@ -88,7 +94,7 @@ flowchart LR
   TD --> PL["Pipeline"]
   PL -.-> EX["Examples<br/>(ROOT only)"]
       </div>
-      <p class="muted">Sign end-to-end is closed (<code>goblint_sign_sound</code>). Examples are not imported by <code>Goblint_Formalization.thy</code>. Sorry inventory: <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
+      <p class="muted">Sign and interval end-to-end are closed; top-level theorems assume P1 (<code>⋀v. TD_plain.solve_dom … v</code>) only. Examples are not imported by <code>Goblint_Formalization.thy</code>. Status: <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
     </section>
 
     <section class="stage" id="docs">

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../walkthrough.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -19,11 +20,14 @@
       <li><a href="#example-sign"><span class="num">1</span>Sign analysis</a></li>
       <li><a href="#example-interval"><span class="num">2</span>Interval analysis</a></li>
       <li><a href="#example-cfg-collecting"><span class="num">3</span>CFG collecting</a></li>
-      <li><a href="#example-graphviz"><span class="num">4</span>Graphviz CFG</a></li>
-      <li><a href="#example-nonterminating"><span class="num">5</span>Non-terminating</a></li>
+      <li><a href="#example-swap"><span class="num">4</span>Swap (top-level)</a></li>
+      <li><a href="#example-graphviz"><span class="num">5</span>Graphviz CFG</a></li>
+      <li><a href="#example-nonterminating"><span class="num">6</span>Non-terminating</a></li>
+      <li><a href="#nonterm-diagram"><span class="num">↳</span>Exit vs path diagram</a></li>
       <li><a href="#how-to-build"><span class="num">⚙</span>How to build</a></li>
       <li><a href="#related-links"><span class="num">→</span>Related docs</a></li>
       <li class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></li>
+      <li class="toc-crosslink"><a href="../running-example/index.html">Running example trace</a></li>
       <li class="toc-crosslink"><a href="../pipeline/index.html">Pipeline →</a></li>
     </ol>
   </nav>
@@ -39,6 +43,20 @@
         but are <strong>not</strong> imported by <code>Goblint_Formalization.thy</code> — the
         verified soundness chain does not depend on them.
       </p>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example map</div>
+        <p>
+          <strong>Program A</strong> — <code>Example_CFG_Collecting_Equiv</code> (collecting) and
+          sign/interval demos (<code>x:=5; y:=x+x</code> or <code>+1</code>).
+          <strong>Program B</strong> — countdown loop in
+          <a href="../pipeline/index.html#running-example">pipeline walkthrough</a>.
+          <strong>Program C</strong> — <code>example_swap_*</code> in
+          <code>Goblint_Formalization.thy</code>.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../running-example/index.html">Full lemma-by-lemma trace →</a>
+        </p>
+      </div>
     </header>
 
     <section class="stage" id="example-table">
@@ -195,11 +213,41 @@ y := x + 1</code></pre>
         (<a href="../cfg/collecting/index.html">CFG collecting walkthrough</a>), not a separate proof obligation.
       </p>
 
-      <p>Source: <code>src/Examples/Example_CFG_Collecting_Equiv.thy</code></p>
+      <p>Source: <code>src/Examples/Example_CFG_Collecting_Equiv.thy</code> ·
+        <a href="../running-example/index.html#trace-a">Program A trace</a></p>
+    </section>
+
+    <section class="stage" id="example-swap">
+      <h2><span class="badge">04</span>Top-level swap (<code>Goblint_Formalization.thy</code>)</h2>
+      <p class="lede">
+        Not under <code>src/Examples/</code> — smoke-test lemmas in the session entry theory.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Program</h4>
+<pre><code>tmp := x;
+x := y;
+y := tmp</code></pre>
+        </div>
+        <div class="card">
+          <h4>Lemmas</h4>
+          <ul>
+            <li><span class="mono">example_swap_runs_to</span> — ∃<code>t</code>. <code>runs_to …</code></li>
+            <li><span class="mono">example_swap_correct</span> — swaps <code>x</code> and <code>y</code> at exit</li>
+          </ul>
+        </div>
+      </div>
+
+      <p>
+        Full proof excerpts and lemma list:
+        <a href="../running-example/index.html#trace-c">Running example · Program C</a>.
+      </p>
+      <p>Source: <code>src/Goblint_Formalization.thy</code> (lines 51–102)</p>
     </section>
 
     <section class="stage" id="example-graphviz">
-      <h2><span class="badge">04</span>Example_GraphViz</h2>
+      <h2><span class="badge">05</span>Example_GraphViz</h2>
       <p class="lede">Visual CFG dumps for small IMP2 programs.</p>
 
       <div class="card">
@@ -221,7 +269,7 @@ y := x + 1</code></pre>
     </section>
 
     <section class="stage" id="example-nonterminating">
-      <h2><span class="badge">05</span>Example_NonTerminating_Safe</h2>
+      <h2><span class="badge">06</span>Example_NonTerminating_Safe</h2>
       <p class="lede">Per-program-point soundness when the program never finishes.</p>
 
       <div class="card">
@@ -229,6 +277,36 @@ y := x + 1</code></pre>
         <ul>
           <li><span class="mono">Pipeline</span> — <code>pipeline_sound_runs_to</code>, <code>pipeline_sound_path</code>, <code>run_analysis</code></li>
         </ul>
+      </div>
+
+      <h4 id="nonterm-diagram">Exit vs path soundness</h4>
+      <p class="muted">
+        <code>nonterm_prog = x := 10;; while True do skip</code> — compiled CFG
+        (entry 0, exit 5; loop head at pp 2). No run reaches exit, but interior
+        points are still covered by <code>pipeline_sound_path</code>.
+      </p>
+      <div class="mermaid">
+flowchart TB
+  subgraph cfg ["CFG shape"]
+    direction TB
+    N0(("0 entry")) -->|"x := 10"| N1(("1 after assign"))
+    N1 -->|nop| N2(("2 loop head"))
+    N2 -->|"assume True"| N3(("3 skip"))
+    N3 -->|nop| N4(("4"))
+    N4 -->|nop back| N2
+    N2 -.->|"assume_not → exit 5"| N5(("5 exit never taken"))
+  end
+  subgraph runs ["runs_to / pipeline_sound_runs_to"]
+    R0["∃t. runs_to?"]
+    R0 --> R1["No — while True never finishes"]
+    R1 --> R2["Exit theorem premise false → vacuous"]
+  end
+  subgraph path ["pipeline_sound_path"]
+    P1["Reachable pp 1: concrete x = 10"]
+    P1 --> P2["t ∈ γ(run_analysis … 1)"]
+    P2 --> P3["Proved: nonterm_safe_at_every_pp"]
+  end
+  N1 -.-> P1
       </div>
 
       <h4>What it demonstrates</h4>
@@ -320,6 +398,10 @@ isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
           <tr><th>Topic</th><th>Link</th></tr>
         </thead>
         <tbody>
+          <tr>
+            <td>Running examples A / B / C (lemma trace)</td>
+            <td><a href="../running-example/index.html">running-example</a></td>
+          </tr>
           <tr>
             <td>End-to-end pipeline (sign soundness)</td>
             <td><a href="../pipeline/index.html">pipeline walkthrough</a></td>

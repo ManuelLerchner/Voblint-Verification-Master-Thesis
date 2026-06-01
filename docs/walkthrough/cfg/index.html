@@ -26,6 +26,7 @@
     <p class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></p>
     <p class="toc-crosslink"><a href="collecting/index.html">CFG collecting semantics →</a></p>
     <p class="toc-crosslink"><a href="../imp2/index.html">IMP2 layer</a></p>
+    <p class="toc-crosslink"><a href="../running-example/index.html">Running example trace</a></p>
     <p class="toc-crosslink"><a href="../pipeline/index.html">Full pipeline</a></p>
   </nav>
 
@@ -44,6 +45,18 @@
         <p><strong>Theories:</strong> <code>CFG_Def</code>, <code>CFG_Path</code>, <code>IMP2_to_CFG</code>, <code>CFG_GraphViz</code>.
           No <code>sorry</code> in these files. Downstream soundness uses
           <code>cfg_path</code> + <code>edges_collect</code> (not a separate <code>path_collect</code>).</p>
+      </div>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example · Program A</div>
+        <p>
+          <code>cfg = to_cfg collecting_example_prog</code> — straight-line graph
+          PP0→PP1→PP2→PP3 with assign and <code>EA_Nop</code> splice edges.
+          Inspect with <code>value cfg</code> in <code>Example_CFG_Collecting_Equiv.thy</code>
+          or <code>value "compile example_prog 0"</code> in <code>Example_Sign_Analysis.thy</code>.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../running-example/index.html#step-cfg">Lemma trace (step 2) →</a>
+        </p>
       </div>
     </header>
 
@@ -142,9 +155,14 @@ definition mk_cfg :: "pp => pp => (pp * edge_action * pp) set => cfg"
 
       <h4>Core lemmas</h4>
       <ul class="lemma-list">
-        <li><span class="name">mk_cfg_valid_graph</span> — smart constructor yields a valid AFP graph.</li>
-        <li><span class="name">finite_predecessors</span> — enables finite joins in <code>Equations/</code>.</li>
-        <li><span class="name">offset_edges_Un</span>, <span class="name">in_offset_edges_iff</span> — algebraic laws for shifted edge sets.</li>
+        <li><span class="name">mk_cfg_valid_graph</span>
+          <span class="lemma-desc">Building a <code>cfg</code> from entry, exit, and edges always yields a well-formed graph.</span></li>
+        <li><span class="name">finite_predecessors</span>
+          <span class="lemma-desc">Finite incoming edges at each pp — needed for <code>Finite_Set.fold</code> in <code>rhs</code>.</span></li>
+        <li><span class="name">offset_edges_Un</span>
+          <span class="lemma-desc">Union of shifted edge sets shifts each component.</span></li>
+        <li><span class="name">in_offset_edges_iff</span>
+          <span class="lemma-desc">Membership in <code>offset_edges k E</code> iff the unshifted triple is in <code>E</code>.</span></li>
       </ul>
     </section>
 
@@ -195,11 +213,14 @@ flowchart LR
           <span class="lemma-id">LEMMA</span>
           <span class="lemma-title">cfg_path_offset</span>
         </div>
+        <p class="lemma-desc">
+          Paths in a sub-CFG (compiled at offset 0) lift to paths in the parent graph after
+          shifting program points and edge endpoints by <code>k</code>.
+        </p>
 <pre class="lemma-body">cfg_path (mk_cfg ent ex E) u es v
   ==> cfg_path (mk_cfg (ent + k) (ex + k) (offset_edges k E))
               (u + k) (offset_path k es) (v + k)</pre>
-        <p class="lemma-note">Forward: paths in the unshifted subgraph lift to the compound graph built with
-          <code>offset_edges</code>. Used heavily in <code>Collecting/CFG_Compound_Paths.thy</code> for Seq / If / While.</p>
+        <p class="lemma-note">Used in <code>CFG_Compound_Paths.thy</code> for Seq / If / While compilation proofs.</p>
       </div>
 
       <div class="lemma-stmt">
@@ -207,16 +228,24 @@ flowchart LR
           <span class="lemma-id">LEMMA</span>
           <span class="lemma-title">cfg_path_offset_back</span>
         </div>
-        <p class="lemma-note">Converse under <code>u, v ≥ k</code> and <code>edges G = offset_edges k E</code>:
-          a path through the shifted graph projects to a path in the source edge set via <code>unoffset_path</code>.</p>
+        <p class="lemma-desc">
+          Conversely, a path in the shifted compound graph that stays above offset <code>k</code>
+          projects to a path in the original sub-edge set.
+        </p>
+        <p class="lemma-note">Requires <code>u, v ≥ k</code> and <code>edges G = offset_edges k E</code>;
+          uses <code>unoffset_path</code>.</p>
       </div>
 
       <h4>Path algebra (selected)</h4>
       <ul class="lemma-list">
-        <li><span class="name">cfg_path_append</span> — concatenate step lists; backbone of compound-command proofs.</li>
-        <li><span class="name">cfg_reaches_trans</span> — reachability is transitive.</li>
-        <li><span class="name">cfg_path_split_last</span> — peel the final step (While loop reasoning).</li>
-        <li><span class="name">offset_path_append</span> — offsets commute with list append.</li>
+        <li><span class="name">cfg_path_append</span>
+          <span class="lemma-desc">If there is a path <code>u → w</code> and <code>w → v</code>, their step lists form a path <code>u → v</code>.</span></li>
+        <li><span class="name">cfg_reaches_trans</span>
+          <span class="lemma-desc">Reachability in the CFG is transitive.</span></li>
+        <li><span class="name">cfg_path_split_last</span>
+          <span class="lemma-desc">Decompose a non-empty path into a prefix path and one final edge (loop proofs).</span></li>
+        <li><span class="name">offset_path_append</span>
+          <span class="lemma-desc"><code>offset_path k</code> distributes over appending step lists.</span></li>
       </ul>
     </section>
 
@@ -269,13 +298,20 @@ flowchart TD
 
       <h4>Compilation lemmas (proved)</h4>
       <ul class="lemma-list">
-        <li><span class="name">compile_fresh</span> — allocated nodes stay ≥ counter; disjoint subgraphs when composing.</li>
-        <li><span class="name">compile_ge</span> — counter monotone; supports induction on command size.</li>
-        <li><span class="name">compile_entry_ne_exit</span> — every command has distinct entry and exit.</li>
-        <li><span class="name">compile_finite</span>, <span class="name">to_cfg_finite</span> — finite edge sets for fixpoints and folds.</li>
-        <li><span class="name">compile_add_offset</span>, <span class="name">compile_from_0_offsets</span> —
-          <code>compile c (n + k)</code> is <code>compile c n</code> with pp and edges shifted by <code>offset_edges k</code>.</li>
-        <li><span class="name">to_cfg_compile</span> — exposes the quadruple behind <code>to_cfg c</code> for case splits.</li>
+        <li><span class="name">compile_fresh</span>
+          <span class="lemma-desc">All pps allocated by <code>compile</code> are fresh relative to the start counter.</span></li>
+        <li><span class="name">compile_ge</span>
+          <span class="lemma-desc">The counter strictly increases — supports induction on command structure.</span></li>
+        <li><span class="name">compile_entry_ne_exit</span>
+          <span class="lemma-desc">Every compiled command subgraph has distinct entry and exit nodes.</span></li>
+        <li><span class="name">compile_finite</span>
+          <span class="lemma-desc">Each compile produces finitely many edges.</span></li>
+        <li><span class="name">to_cfg_finite</span>
+          <span class="lemma-desc"><code>to_cfg c</code> has finite <code>edges</code> — enables collecting lfp and folds.</span></li>
+        <li><span class="name">compile_add_offset</span> / <span class="name">compile_from_0_offsets</span>
+          <span class="lemma-desc"><code>compile c (n+k)</code> is <code>compile c n</code> with all pps and edges shifted by <code>k</code>.</span></li>
+        <li><span class="name">to_cfg_compile</span>
+          <span class="lemma-desc">Rewrite <code>to_cfg c</code> as the <code>compile c 0</code> quadruple for proofs.</span></li>
       </ul>
 
       <div class="callout">

@@ -10,7 +10,8 @@ a constraint system to the verified top-down solver of
 prove that **any abstract domain** satisfying our locale and transfer obligations
 yields a solver result that soundly over-approximates concrete collecting
 semantics; sign analysis is the primary worked instance (`goblint_sign_sound`),
-modulo three TD-side assumptions (P1–P3; see `docs/OPEN_PROBLEMS.md`). Interval
+modulo TD termination hypothesis P1 (`⋀v. TD_plain.solve_dom`; see
+`docs/OPEN_PROBLEMS.md`). Interval
 instance: `goblint_interval_sound` (same hypotheses).
 
 ### Pipeline (overview)
@@ -30,29 +31,26 @@ flowchart LR
 
   SS -->|"operational link"| CC
   CC -->|B3| PFP
-  PFP -->|B4| TD
-
-  CC -.->|"B5: td_cfg_in_reach (P2)"| TD
-  PFP -.->|"B6: comp_fun_idem (P3)"| TD
-  TD -.->|"B7: TD_plain.solve_dom (P1, gated P5)"| TERM
+  PFP -->|"B4: td_analyse_collect_sound_at"| TD
+  TD -.->|"B7: solve_dom (P1)"| TERM
   IVL -.->|"B8: widen + totality (P6/P7)"| TERM
 
-  linkStyle 3,4,5,6 stroke:#c62828,stroke-dasharray: 4 3
+  linkStyle 4,5 stroke:#c62828,stroke-dasharray: 4 3
 ```
 
 | Bridge | Lemma / obligation                                            | Status              |
 | ------ | ------------------------------------------------------------- | ------------------- |
-| B3     | `post_fixpoint_sound` — post-fixpoint over-approximates       | **done**            |
-| B4     | `td_analyse_post_fixpoint` — TD output is a post-fixpoint     | **done**            |
-| B5     | `td_cfg_in_reach` — solver tree covers reachable CFG nodes    | **missing** (P2)    |
-| B6     | `comp_fun_idem (ac_join cfg)` on finite predecessor joins     | **missing** (P3)    |
-| B7     | `TD_plain.solve_dom` on compiled CFG — termination            | **missing** (P1/P5) |
+| B3     | `post_fixpoint_sound` / `post_fixpoint_sound_at` — over-approximates `cfg_collect` | **done** |
+| B4     | `td_analyse_collect_sound_at` — per-pp TD result sound at `v` | **done** (Fix B, #8) |
+| ~~B5~~ | ~~`td_cfg_in_reach`~~ (P2)                                    | **removed** 2026-06-01 |
+| ~~B6~~ | ~~`comp_fun_idem`~~ (P3)                                      | **done** (`join_state_comp_fun_idem`) |
+| B7     | `⋀v. TD_plain.solve_dom` — per-pp solver termination          | **open** (P1)       |
 | B8     | Interval widening + TD totality integration                   | **stretch** (P6/P7) |
 
 Operational link: `runs_to_iff_small_step` connects small-step termination to
 exit `cfg_collect`. End-to-end theorems: `pipeline_invariant_sound`,
-`pipeline_sound_path`, `pipeline_sound_runs_to` (generic; carry B5–B7 as
-assumptions); `goblint_sign_sound` (sign instance). See `docs/OPEN_PROBLEMS.md`.
+`pipeline_sound_path`, `pipeline_sound_runs_to` (generic; carry P1 `solve_dom`); `goblint_sign_sound`
+(sign instance). See `docs/OPEN_PROBLEMS.md`.
 
 Where abstract interpretation is in the proof
 -------------------------------------------
@@ -70,9 +68,9 @@ prove that **every post-fixpoint** over-approximates concrete reachability.
 | Main soundness lemma |                                        | `post_fixpoint_sound`: `cfg_collect ⊆ γ ∘ env`                 |
 
 So **abstract interpretation is the `rhs` / `γ` / `join` / `apply_tf` layer**.
-`make_rhs` / `make_rhs_tree` spell out the equations; `td_analyse` (TD solver)
-returns an `env` that satisfies them; `post_fixpoint_sound` shows that solution
-is sound w.r.t. `cfg_collect`. IMP enters via small-step semantics and CFG
+`make_rhs` / `make_rhs_tree` spell out the equations; per-pp `td_analyse c … v`
+runs the TD solver; `td_analyse_collect_sound_at` + `post_fixpoint_sound_at`
+show the result is sound w.r.t. `cfg_collect` at `v`. IMP enters via small-step semantics and CFG
 compilation; exit behaviour is `runs_to` / `runs_to_iff_small_step`.
 
 Adding a new abstract domain
@@ -136,10 +134,10 @@ Concretely, the user writes:
 | 6    | Show `s \<in> gamma_state (ac_init my_cfg)` for the initial store                          | `Pipeline.thy` (`sign_init_in_gamma`)                         |
 | 7    | Apply `pipeline_invariant_sound` / `sign_pipeline_sound`                                   | `Goblint_Formalization.thy` (`goblint_sign_sound`)            |
 
-The pipeline still carries three TD-side assumptions (`comp_fun_idem`,
-`TD_plain.solve_dom`, `td_cfg_in_reach`) the user must currently discharge. These are
-open problems P1–P3 in `docs/OPEN_PROBLEMS.md`; bridges B5–B7 would lift
-them off the user.
+The pipeline carries one TD-side assumption the user must discharge:
+`⋀v. TD_plain.solve_dom (make_rhs_tree …) v` (P1). P2 (`td_cfg_in_reach`) was
+removed with per-pp solve (Fix B); P3 (`comp_fun_idem`) is proved in-repo. See
+`docs/OPEN_PROBLEMS.md`.
 
 Requirements
 ------------

@@ -154,7 +154,7 @@ extended object (mechanical), **N** = genuinely new proof.
 
 | ID | Statement | Kind | Notes |
 |---|---|---|---|
-| SO1 | `make_rhs_tree_side` well-formed; `TD_side.solve_dom` ⟹ `part_solution` instantiates CE4's premise | R' | mirror of `td_analyse_post_fixpoint`; solver itself already verified |
+| SO1 | `make_rhs_tree_side` well-formed; `TD_side.solve_dom` ⟹ `part_solution` instantiates CE4's premise | R' | mirror of `td_analyse_collect_sound_at`; solver itself already verified |
 
 **P2 fold-in (do not copy the `cfg_entry`-rooted shape).** *(Bipartite-`'x+'g` /
 `make_rhs_tree_side` form below applies to the `TD_side` future axis. For the §9
@@ -333,7 +333,7 @@ The merge at `en_p` is automatic: `en_p`'s only predecessors are the enter edges
 | **L-sound'** (**CE4**) | `finite` + `is_post_fixpoint_ip` + `S ≤ γ s0` + tf/enter/combine soundness ⟹ `∀v. C v ≤ γ_state (env v)` | `post_fixpoint_sound` |
 | **L-adeq** (**SE4**) | balanced operational reachability ⊆ `C` (`π ⊢ ⟨_,s⟩ ⇓ t` ⟹ `t ∈ C(exit)`) | `cfg_collect_paths` adequacy |
 | **L-fin** | `finite (edges G_π) ∧ finite (combines G_π)` | `compile_finite`, `compile_add_offset` |
-| **L-td'** | per-pp solve rooted at `v` ⟹ post-fixpoint on `reach(v)` ⟹ soundness at `v` (see §9.8 — **not** a global `is_post_fixpoint_ip`) | `td_analyse_post_fixpoint`, P2 fix |
+| **L-td'** | per-pp solve rooted at `v` ⟹ soundness at `v` (see §9.8 — **not** a global `is_post_fixpoint_ip`) | **done** — `td_analyse_collect_sound_at` (Fix B, 2026-06-01) |
 
 Only **L-sound'** and **L-adeq** carry real proof weight; the rest are mechanical
 or direct extensions. `make_rhs_tree_ip` emits a plain multi-`Query` tree for

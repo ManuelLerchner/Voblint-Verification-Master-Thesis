@@ -25,6 +25,7 @@
     <p class="toc-crosslink"><a href="../index.html">← All stages hub</a></p>
     <p class="toc-crosslink"><a href="../cfg/index.html">CFG layer →</a></p>
     <p class="toc-crosslink"><a href="../cfg/collecting/index.html">CFG collecting →</a></p>
+    <p class="toc-crosslink"><a href="../running-example/index.html">Running example trace</a></p>
     <p class="toc-crosslink"><a href="../pipeline/index.html">Full pipeline</a></p>
   </nav>
 
@@ -47,6 +48,21 @@
           Terminating runs are linked to CFG exit reachability via
           <code>runs_to_iff_small_step</code> in
           <code>CFG/Collecting/CFG_Runs_To_Bridge.thy</code>, not in this folder.</p>
+      </div>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example · Program A &amp; C</div>
+        <p>
+          <strong>Program A</strong> (<code>x := 5; y := x + 1</code>): compose
+          <code>star.step</code> and <code>seq_comp</code>, then apply
+          <code>small_step_runs_to</code> (<code>collecting_example_runs_to</code>).
+          <strong>Program C</strong> (swap): <code>example_swap_runs_to</code> and
+          <code>example_swap_correct</code> via <code>runs_to_small_step</code> and
+          <code>star_Assign_eq</code>.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../running-example/index.html#step-imp2">Lemma trace (step 1) →</a>
+          · <a href="../running-example/index.html#trace-c">Program C →</a>
+        </p>
       </div>
     </header>
 
@@ -315,6 +331,10 @@ where "x →* y ≡ star small_step x y"</code></pre>
           <span class="lemma-title">runs_to_iff_small_step</span>
           <span class="pill key">CFG/Collecting</span>
         </div>
+        <p class="lemma-desc">
+          A program terminates operationally iff its final store is in collecting semantics at
+          exit — bridges IMP2 proofs to the CFG-based specification.
+        </p>
 <pre class="lemma-body">runs_to c s t  ⟺  (c, s) →* (SKIP, t)</pre>
         <p class="lemma-note">
           Not proved in <code>src/IMP2/</code>. Import
@@ -341,29 +361,29 @@ where "x →* y ≡ star small_step x y"</code></pre>
         <thead>
           <tr>
             <th>Lemma</th>
-            <th>Role</th>
+            <th>In words</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td><code>small_step_deterministic</code></td>
-            <td>At most one successor configuration per step</td>
+            <td>From a given <code>(c,s)</code> there is at most one one-step successor.</td>
           </tr>
           <tr>
             <td><code>star_seq2</code> / <code>seq_comp</code> / <code>seq_star_finish</code></td>
-            <td>Sequential composition under <code>→*</code></td>
+            <td>Sequential commands compose: stars through <code>c1</code> then <code>c2</code> form a star for <code>c1;;c2</code>.</td>
           </tr>
           <tr>
             <td><code>while_true_skip_no_finish</code></td>
-            <td>Diverging <code>while True</code> never reaches <code>SKIP</code></td>
+            <td><code>while True do skip</code> never reaches <code>SKIP</code> — used in non-termination examples.</td>
           </tr>
           <tr>
             <td><code>star_SKIP_eq</code> / <code>star_Assign_eq</code></td>
-            <td>Star inversions for atomic commands</td>
+            <td>Characterise stars through <code>SKIP</code> and assignments as explicit store updates.</td>
           </tr>
           <tr>
             <td><code>star_If_split</code> / <code>star_While_split</code></td>
-            <td>Star inversions for control flow; used by CFG bridge proofs</td>
+            <td>Decompose stars through <code>if</code> and <code>while</code> for CFG bridge proofs.</td>
           </tr>
         </tbody>
       </table>

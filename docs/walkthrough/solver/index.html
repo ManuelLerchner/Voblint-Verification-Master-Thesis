@@ -23,6 +23,7 @@
       <li><a href="#pipeline-link"><span class="num">5</span>Pipeline link</a></li>
       <li><a href="#lemma-spine"><span class="num">★</span>Lemma spine</a></li>
       <li class="toc-crosslink"><a href="../index.html">← Walkthrough hub</a></li>
+      <li class="toc-crosslink"><a href="../running-example/index.html">Running example trace</a></li>
       <li class="toc-crosslink"><a href="../pipeline/index.html">Full pipeline →</a></li>
       <li class="toc-crosslink"><a href="../equations/index.html">Equations →</a></li>
     </ol>
@@ -34,13 +35,26 @@
       <h1>TD solver bridge</h1>
       <p>
         This layer connects our function-style equation system
-        (<code>rhs</code>, <code>is_post_fixpoint</code> in
-        <code>src/Equations/</code>) to the vendored AFP top-down solver, proves
-        that <code>td_analyse</code> returns a post-fixpoint, and lifts that to
-        collecting-semantics soundness per abstract domain. Algorithm correctness
-        lives in the external TD session; here we state interface assumptions and
-        wire the result into <code>Constraint_System_Sound</code>.
+        (<code>rhs</code> in <code>src/Equations/</code>) to the vendored AFP
+        top-down solver. Per-program-point <code>td_analyse c … v</code> is
+        proved sound against <code>cfg_collect</code> via
+        <code>post_fixpoint_sound_at</code> and <code>td_env_at_path_step_le</code>.
+        Algorithm correctness lives in the external TD session; the only open
+        operational hypothesis is P1 (<code>⋀v. TD_plain.solve_dom … v</code>).
       </p>
+      <div class="callout running-ex" style="margin-top:20px">
+        <div class="label">Running example · Program A</div>
+        <p>
+          <code>td_analyse_collect_sound_at</code> yields
+          <code>cfg_collect … v ⊆ γ(td_analyse … v)</code> at each queried pp.
+          <code>Example_Sign_Analysis.thy</code> <code>term</code>-checks
+          <code>td_analyse</code> / <code>make_rhs_tree</code> on a toy CFG; P1
+          (<code>solve_dom</code>) is still assumed for the closed pipeline theorem.
+        </p>
+        <p class="muted" style="margin:8px 0 0">
+          <a href="../running-example/index.html#step-td">Lemma trace (step 6) →</a>
+        </p>
+      </div>
     </header>
 
     <section class="stage" id="overview">
@@ -65,14 +79,15 @@
           <tr>
             <td class="mono">TD_Interface.thy</td>
             <td>
-              <code>td_analyse</code>,
-              <code>td_analyse_post_fixpoint</code>; imports
-              <code>TD.TD_plain</code>.
+              Per-pp <code>td_analyse</code>, <code>td_env_at</code>,
+              <code>td_analyse_eq_env_at</code>; imports <code>TD.TD_plain</code>.
             </td>
           </tr>
           <tr>
             <td class="mono">TD_Soundness.thy</td>
             <td>
+              <code>td_analyse_collect_sound_at</code>,
+              <code>td_analyse_collect_sound</code>,
               <code>td_solver_sound</code>,
               <code>sign_analysis_sound</code>,
               <code>interval_analysis_sound</code>.
@@ -89,16 +104,17 @@ flowchart LR
   ENV["td_analyse<br/>pp ⇒ abs_state"]
   SOUND["td_solver_sound<br/>TD_Soundness"]
   RHS --> TREE --> TD --> ENV
-  ENV -->|"td_analyse_post_fixpoint"| RHS
+  ENV -->|"td_analyse_collect_sound_at"| SND2["post_fixpoint_sound_at"]
   ENV --> SOUND
+  SND2 --> PFS
       </div>
 
       <div class="callout">
         <div class="label">What we prove vs import</div>
         <ul>
-          <li><strong>Imported:</strong> TD algorithm returns a partial solution on the reach set from the queried entry (<code>TD_plain.partial_correctness</code>).</li>
-          <li><strong>Proved here:</strong> That solution read back as <code>td_analyse</code> satisfies <code>is_post_fixpoint</code> for our <code>rhs</code>, via <code>make_rhs_tree_correspondence</code>.</li>
-          <li><strong>Proved downstream:</strong> Post-fixpoints over-approximate <code>cfg_collect</code> (<code>post_fixpoint_sound</code>, <code>exit_sound</code>).</li>
+          <li><strong>Imported:</strong> TD returns a partial solution on the reach set from the queried root <code>v0</code> (<code>TD_plain.partial_correctness</code>).</li>
+          <li><strong>Proved here (Fix B):</strong> Per-pp <code>td_analyse c … v</code> solves at <code>v</code>; <code>td_analyse_collect_sound_at</code> links solver env to <code>cfg_collect</code> at that <code>v</code> via <code>td_env_at_path_step_le</code> and <code>post_fixpoint_sound_at</code>.</li>
+          <li><strong>Proved downstream:</strong> Pipeline point-map / path / exit corollaries; top-level <code>goblint_sign_sound</code> / <code>goblint_interval_sound</code>.</li>
         </ul>
       </div>
     </section>
@@ -136,21 +152,16 @@ flowchart LR
 
       <h3>Assumptions we discharge per program</h3>
       <p>
-        TD correctness is imported; our proofs assume the strategy forest for the
-        whole program is well-formed for TD's solver:
+        TD algorithm correctness is imported. Pipeline and top-level theorems assume:
       </p>
       <ul class="lemma-list">
         <li>
           <span class="name">TD_plain.solve_dom</span>
-          on <code>make_rhs_tree (to_cfg c) tf join bot s0</code> at
-          <code>cfg_entry (to_cfg c)</code> — the TD dominance side condition for
-          the entry-rooted forest.
+          <span class="lemma-desc">P1: the TD engine must terminate when solving from each program point <code>v</code> on this CFG’s rhs tree (operational hypothesis, not a proof gap in equations).</span>
         </li>
         <li>
-          <span class="name">cfg_in_reach</span> (reach side condition): every program
-          point <code>v</code> lies in
-          <code>reach T (TD_plain_Interp_solve T v0) v0</code> from the CFG entry.
-          Open hypothesis (P2): structural property of the TD solver's internal reach set; not automatically dischargeable from CFG shape.
+          <span class="name">P2 closed (2026-06-01)</span>
+          <span class="lemma-desc">Former reachability hypothesis <code>td_cfg_in_reach</code> removed — per-pp solve makes queried <code>v</code> reachable in the strategy tree by construction.</span>
         </li>
       </ul>
 
@@ -227,57 +238,65 @@ definition td_analyse c tf join bot s0 v =
 
       <h4>Correspondence lemmas (selected)</h4>
       <ul class="lemma-list">
-        <li><span class="name">make_rhs_mono</span> — monotone wrapper for TD proofs.</li>
-        <li><span class="name">rhs_tree_fold_traverse_env_map</span> — fold semantics vs environment traversal.</li>
-        <li class="key"><span class="name key">make_rhs_tree_correspondence</span> <span class="pill key">key</span> — TD tree evaluation matches <code>make_rhs</code> / predecessor fold of <code>rhs</code>.</li>
-        <li><span class="name">rhs_eq_fold_predecessor_list</span> — <code>rhs</code> as join of predecessor transfers.</li>
-        <li><span class="name">part_solutionD</span> — extract facts from TD's <code>part_solution</code>.</li>
+        <li><span class="name">make_rhs_mono</span>
+          <span class="lemma-desc">Monotonicity of the rhs wrapper — required by TD’s theory.</span></li>
+        <li><span class="name">rhs_tree_fold_traverse_env_map</span>
+          <span class="lemma-desc">Strategy-tree fold agrees with environment-based traversal.</span></li>
+        <li class="key"><span class="name key">make_rhs_tree_correspondence</span> <span class="pill key">key</span>
+          <span class="lemma-desc">Evaluating the TD tree at <code>v</code> equals applying <code>rhs</code> at <code>v</code> — the main bridge lemma.</span></li>
+        <li><span class="name">rhs_eq_fold_predecessor_list</span>
+          <span class="lemma-desc"><code>rhs</code> is formally a join over predecessor edge transfers.</span></li>
+        <li><span class="name">part_solutionD</span>
+          <span class="lemma-desc">Extract inequalities from TD’s partial solution certificate.</span></li>
       </ul>
     </section>
 
     <section class="stage" id="post-fixpoint-proof">
-      <h2><span class="badge">3</span>Post-fixpoint proof</h2>
+      <h2><span class="badge">3</span>Per-pp collecting soundness</h2>
       <p class="lede">
-        Main deliverable of the interface layer: solver output satisfies our
-        equational post-fixpoint predicate.
+        Main deliverable of <code>TD_Soundness.thy</code>: at each queried program point
+        <code>v0</code>, <code>td_analyse</code> over-approximates <code>cfg_collect</code>.
       </p>
 
       <div class="callout">
         <div class="label">Target theorem</div>
-<pre><code>theorem td_analyse_post_fixpoint:
-  assumes fin: "finite (edges (to_cfg c))"
-  assumes cfi: "comp_fun_idem join_abs"
-  assumes join_sym: "⋀x y. join_abs x y = join_abs y x"
-  assumes solve_dom:
-    "TD_plain.solve_dom (make_rhs_tree (to_cfg c) tf join_abs bot_abs s0)
-       (cfg_entry (to_cfg c))"
-  assumes cfg_in_reach: "⋀v. v ∈ reach … (cfg_entry (to_cfg c))"
-  shows "is_post_fixpoint (to_cfg c) tf join_abs bot_abs s0
-           (td_analyse c tf join_abs bot_abs s0)"</code></pre>
+        <p class="lemma-desc" style="margin-bottom:12px">
+          <strong><code>td_analyse_collect_sound_at</code></strong> — At the queried program point
+          <code>v₀</code>, the TD solver’s abstract answer over-approximates CFG collecting
+          semantics for stores reachable from <code>S</code>.
+        </p>
+<pre><code>theorem td_analyse_collect_sound_at:
+  assumes entry_path:
+    "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom (make_rhs_tree (to_cfg c) tf (⊔) bot s0) v0"
+  shows "cfg_collect (to_cfg c) S v0
+         ≤ gamma_state (td_analyse c tf (⊔) bot s0 v0)"</code></pre>
         <p>
-          Where <code>is_post_fixpoint g tf join bot s0 env</code> means
-          <code>∀v. rhs g tf join bot s0 env v ≤ env v</code>
-          (<code>Constraint_System.thy</code>).
+          Uses locale <code>td_cfg_plain_solver</code>, <code>td_env_at v0</code>,
+          path-local <code>td_env_at_path_step_le</code>, and
+          <code>post_fixpoint_sound_at</code> from <code>Constraint_System_Sound.thy</code>
+          (not global <code>is_post_fixpoint</code> on the whole map).
         </p>
       </div>
 
       <h3>Proof idea</h3>
       <ol>
-        <li>Run <code>TD_plain_Interp_solve</code> on the entry-rooted strategy forest.</li>
-        <li>Import <code>TD_plain.partial_correctness</code>: partial solution on the reach set from entry.</li>
-        <li>At each <code>v ∈ reach …</code>, use <code>make_rhs_tree_correspondence</code> to relate TD's <code>eq T v σ</code> to our predecessor-fold RHS.</li>
-        <li>Read values back through <code>lookup_bot</code> / <code>td_analyse_def</code> to obtain <code>is_post_fixpoint</code>.</li>
+        <li><code>td_analyse c … v0 = td_env_at v0 v0</code> (<code>td_analyse_eq_env_at</code>).</li>
+        <li>Run TD at root <code>v0</code>; import <code>TD_plain.partial_correctness</code> on <code>reach … v0</code>.</li>
+        <li><code>td_env_at_rhs_le</code> / <code>td_env_at_path_step_le</code> from partial solution + <code>eq_le_mlup_imp_rhs_le</code>.</li>
+        <li><code>post_fixpoint_sound_at</code> at <code>v0</code> with path-shaped <code>step_le</code>.</li>
       </ol>
 
       <div class="mermaid">
 flowchart TD
-  PC["TD_plain.partial_correctness<br/>(imported)"]
-  CORR["make_rhs_tree_correspondence"]
-  PF["td_analyse_post_fixpoint<br/>is_post_fixpoint (td_analyse …)"]
-  PFS["post_fixpoint_sound<br/>Constraint_System_Sound"]
-  PC --> PF
-  CORR --> PF
-  PF --> PFS
+  PC["TD_plain.partial_correctness"]
+  PATH["td_env_at_path_step_le"]
+  PFA["post_fixpoint_sound_at"]
+  COL["td_analyse_collect_sound_at"]
+  PC --> COL
+  PATH --> COL
+  PFA --> COL
       </div>
     </section>
 
@@ -289,31 +308,34 @@ flowchart TD
       </p>
 
       <h3>Generic (abstract locale)</h3>
+      <p class="lemma-desc">
+        <strong><code>td_solver_sound</code></strong> — Exit collecting membership implies the
+        concrete final store is in γ of <code>td_analyse</code> at exit (any domain satisfying
+        the transfer axioms).
+      </p>
 <pre><code>theorem td_solver_sound:
   assumes tf_sound_assign / tf_sound_assume / tf_sound_assume_not
   assumes s0_sound: "s ∈ gamma_state s0"
   assumes exit_in_collect:
     "t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-  assumes fin_cfg, sup_cfi, td_solve_dom, td_cfg_in_reach
+  assumes fin_cfg, entry_path, td_solve_dom: "⋀v. TD_plain.solve_dom … v"
   shows "t ∈ gamma_state (td_analyse c tf (⊔) bot s0 (cfg_exit (to_cfg c)))"</code></pre>
       <p>
-        Proof: <code>td_analyse_post_fixpoint</code> then
-        <code>exit_sound</code> from <code>Constraint_System_Sound</code>.
+        Proof: <code>td_analyse_collect_sound_at</code> at exit
+        (<code>cfg_path</code> entry → exit) with singleton store <code>{s}</code>.
       </p>
 
       <h3>Domain instantiations</h3>
       <table>
-        <thead><tr><th>Theorem</th><th>Domain</th><th>Transfer facts used</th></tr></thead>
+        <thead><tr><th>Theorem</th><th>In words</th></tr></thead>
         <tbody>
           <tr>
             <td class="mono">sign_analysis_sound</td>
-            <td>Sign</td>
-            <td><code>assign_sign_sound</code>, <code>assume_sign_sound</code>, <code>assume_not_sign_sound</code></td>
+            <td><code>td_solver_sound</code> for sign transfers: exit collecting ⇒ final store in sign γ at exit.</td>
           </tr>
           <tr>
             <td class="mono">interval_analysis_sound</td>
-            <td>Interval</td>
-            <td><code>assign_ivl_sound</code>, assume lemmas for <code>ivl_tf</code></td>
+            <td>Same for interval domain and <code>ivl_tf</code>.</td>
           </tr>
         </tbody>
       </table>
@@ -321,10 +343,9 @@ flowchart TD
       <div class="callout">
         <div class="label">Premise shape</div>
         <p>
-          Both instantiations still assume <code>TD_plain.solve_dom</code> and the
-          reach inclusion <code>td_cfg_in_reach</code> on
-          <code>make_rhs_tree (to_cfg c) sign_tf/ivl_tf …</code>. Initial-store
-          soundness is <code>s ∈ gamma_state s0</code> (sign or interval locale).
+          Both instantiations assume <code>⋀v. TD_plain.solve_dom (make_rhs_tree …) v</code>
+          and a <code>cfg_path</code> from entry to exit. Initial-store soundness is
+          <code>s ∈ gamma_state s0</code>. No <code>td_cfg_in_reach</code> (P2 closed).
         </p>
       </div>
     </section>
@@ -385,14 +406,15 @@ flowchart TD
   E2["post_fixpoint_sound · exit_sound<br/>Constraint_System_Sound"]
   I1["make_rhs_mono"]
   I2["make_rhs_tree_correspondence"]
-  I3["td_analyse_post_fixpoint"]
+  I3["td_env_at* · td_analyse_eq_env_at"]
+  S0["td_analyse_collect_sound_at"]
   S1["td_solver_sound"]
   S2["sign_analysis_sound · interval_analysis_sound"]
   P1["sign_pipeline_sound · pipeline_invariant_sound"]
   E1 --> I1 --> I2 --> I3
-  I3 --> E2
-  I3 --> S1 --> S2 --> P1
-  E2 --> S1
+  I3 --> S0
+  E2 --> S0
+  S0 --> S1 --> S2 --> P1
       </div>
 
       <table>
@@ -408,11 +430,11 @@ flowchart TD
           </tr>
           <tr>
             <td>TD_Interface</td>
-            <td class="mono">td_analyse · td_analyse_post_fixpoint</td>
+            <td class="mono">td_analyse · td_env_at · td_analyse_eq_env_at</td>
           </tr>
           <tr>
             <td>TD_Soundness</td>
-            <td class="mono">td_solver_sound · sign_analysis_sound · interval_analysis_sound</td>
+            <td class="mono">td_analyse_collect_sound_at · td_solver_sound · sign/interval_analysis_sound</td>
           </tr>
           <tr>
             <td>Pipeline</td>
@@ -427,17 +449,20 @@ flowchart TD
 
       <h4>Full TD_Interface lemma list</h4>
       <ul class="lemma-list">
-        <li>make_rhs_mono</li>
-        <li>lookup_bot_env_map · mlup_env_map</li>
-        <li>rhs_tree_fold_traverse_env_map</li>
-        <li>make_rhs_tree_eq_Answer_bot_if_no_preds_not_entry</li>
-        <li>make_rhs_tree_correspondence_not_entry_no_predecessors</li>
-        <li>rhs_eq_fold_predecessors · rhs_eq_fold_predecessor_list</li>
-        <li>fold_join_abs_swap_edge_steps</li>
-        <li>make_rhs_tree_correspondence</li>
-        <li>traverse_rhs_mlup_eq · rhs_make_rhs_tree_traverse_mlup</li>
-        <li>part_solutionD</li>
-        <li>td_analyse_post_fixpoint</li>
+        <li><span class="name">make_rhs_mono</span><span class="lemma-desc">Monotone wrapper for TD’s rhs interpretation.</span></li>
+        <li><span class="name">lookup_bot_env_map</span> · <span class="name">mlup_env_map</span><span class="lemma-desc">Convert between function environments and TD partial maps; ⊥ outside domain.</span></li>
+        <li><span class="name">rhs_tree_fold_traverse_env_map</span><span class="lemma-desc">Tree fold semantics matches environment traversal.</span></li>
+        <li><span class="name">make_rhs_tree_eq_Answer_bot_if_no_preds_not_entry</span><span class="lemma-desc">Isolated non-entry nodes get ⊥ in the strategy tree.</span></li>
+        <li><span class="name">make_rhs_tree_correspondence_not_entry_no_predecessors</span><span class="lemma-desc">Base case of tree–rhs correspondence.</span></li>
+        <li><span class="name">rhs_eq_fold_predecessors</span> · <span class="name">rhs_eq_fold_predecessor_list</span><span class="lemma-desc"><code>rhs</code> as a join over listed predecessor transfers.</span></li>
+        <li><span class="name">fold_join_abs_swap_edge_steps</span><span class="lemma-desc">Commute join with folding edge steps (proof plumbing).</span></li>
+        <li class="key"><span class="name key">make_rhs_tree_correspondence</span><span class="lemma-desc">Evaluating the TD tree at <code>v</code> equals <code>rhs … v</code>.</span></li>
+        <li><span class="name">traverse_rhs_mlup_eq</span> · <span class="name">rhs_make_rhs_tree_traverse_mlup</span><span class="lemma-desc">MLUP traversal equals rhs on the reach set.</span></li>
+        <li><span class="name">part_solutionD</span><span class="lemma-desc">Extract inequalities from TD partial solution certificate.</span></li>
+        <li><span class="name">td_env_at_rhs_le</span><span class="lemma-desc">TD environment at <code>v</code> is ≥ rhs applied to predecessor envs.</span></li>
+        <li class="key"><span class="name key">td_env_at_path_step_le</span><span class="lemma-desc">Along CFG paths in the solve tree, env steps respect rhs/transfer order.</span></li>
+        <li><span class="name">td_analyse_eq_env_at</span><span class="lemma-desc"><code>td_analyse c … v</code> returns the environment value TD computed at <code>v</code>.</span></li>
+        <li class="key"><span class="name key">td_analyse_collect_sound_at</span> · <span class="name">td_analyse_collect_sound</span><span class="lemma-desc">Per-pp and global collecting soundness of TD output.</span></li>
       </ul>
     </section>
 
