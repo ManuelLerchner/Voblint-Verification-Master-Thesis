@@ -88,21 +88,13 @@ theorem nonterm_safe_at_every_pp:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
   assumes td_solve_dom:
-    "TD_plain.solve_dom
-       (make_rhs_tree (to_cfg nonterm_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-       (cfg_entry (to_cfg nonterm_prog))"
-  assumes td_cfg_in_reach:
-    "\<And>v::pp. v \<in> reach
-       (make_rhs_tree (to_cfg nonterm_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-       (TD_plain_Interp_solve
-          (make_rhs_tree (to_cfg nonterm_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-          (cfg_entry (to_cfg nonterm_prog)))
-       (cfg_entry (to_cfg nonterm_prog))"
-  assumes path:     "(to_cfg nonterm_prog) \<turnstile> (cfg_entry (to_cfg nonterm_prog)) \<longrightarrow>\<^bsub>es\<^esub> v"
+    "\<And>v. TD_plain.solve_dom
+       (make_rhs_tree (to_cfg nonterm_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg)) v"
+  assumes path:     "cfg_path (to_cfg nonterm_prog) (cfg_entry (to_cfg nonterm_prog)) es v"
   assumes t_in:     "t \<in> edges_collect es {s}"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg nonterm_prog v)"
   by (rule pipeline_sound_path[OF sound join_eq bot_eq tf_sound s_in_gamma
-            td_solve_dom td_cfg_in_reach path t_in])
+            td_solve_dom path t_in])
 
 
 section \<open>Example: Diverging Program With Mutating State\<close>
@@ -198,21 +190,13 @@ theorem incr_loop_safe_at_every_pp:
   assumes tf_sound:   "domain_transfer_sound (ac_gamma cfg) (ac_tf cfg)"
   assumes s_in_gamma: "s \<in> sound_domain.gamma_state (ac_gamma cfg) (ac_init cfg)"
   assumes td_solve_dom:
-    "TD_plain.solve_dom
-       (make_rhs_tree (to_cfg incr_loop_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-       (cfg_entry (to_cfg incr_loop_prog))"
-  assumes td_cfg_in_reach:
-    "\<And>v::pp. v \<in> reach
-       (make_rhs_tree (to_cfg incr_loop_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-       (TD_plain_Interp_solve
-          (make_rhs_tree (to_cfg incr_loop_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg))
-          (cfg_entry (to_cfg incr_loop_prog)))
-       (cfg_entry (to_cfg incr_loop_prog))"
-  assumes path:     "(to_cfg incr_loop_prog) \<turnstile> (cfg_entry (to_cfg incr_loop_prog)) \<longrightarrow>\<^bsub>es\<^esub> v"
+    "\<And>v. TD_plain.solve_dom
+       (make_rhs_tree (to_cfg incr_loop_prog) (ac_tf cfg) (ac_join cfg) (ac_bot cfg) (ac_init cfg)) v"
+  assumes path:     "cfg_path (to_cfg incr_loop_prog) (cfg_entry (to_cfg incr_loop_prog)) es v"
   assumes t_in:     "t \<in> edges_collect es {s}"
   shows "t \<in> sound_domain.gamma_state (ac_gamma cfg) (run_analysis cfg incr_loop_prog v)"
   by (rule pipeline_sound_path[OF sound join_eq bot_eq tf_sound s_in_gamma
-            td_solve_dom td_cfg_in_reach path t_in])
+            td_solve_dom path t_in])
 
 
 text \<open>

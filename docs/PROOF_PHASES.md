@@ -62,12 +62,20 @@ uses `quick_and_dirty`; re-run the command after changes).
 | `CFG_Path_Bridge.thy` | `compile_path_small_step`, path soundness |
 | `CFG_Runs_To_Bridge.thy` | `runs_to_def`, small-step ↔ `cfg_collect` |
 - `post_fixpoint_sound`, `exit_sound` (`Constraint_System_Sound.thy`).
-- `td_analyse_post_fixpoint`, `sign_analysis_sound` (`TD_Interface`, `TD_Soundness`).
+- `td_analyse_collect_sound_at`, `td_analyse_collect_sound`, `td_solver_sound` (`TD_Soundness.thy`).
 
-### Pipeline (sign)
+### TD soundness migration — Fix B (2026-06-01)
+
+- Per-pp `td_analyse`: each call solves at the queried node; `td_cfg_in_reach` removed (was structurally false for multi-pp programs).
+- `td_analyse_collect_sound_at`: per-pp soundness via path induction using `td_env_at_path_step_le` (no global post-fixpoint needed).
+- `td_analyse_collect_sound`: all-pp corollary (requires `∀v. solve_dom`).
+- **P2 closed** ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8) done). Only P1 (`solve_dom`) remains explicit.
+
+### Pipeline (sign + interval)
 
 - `pipeline_invariant_sound`, `pipeline_sound_path`, `pipeline_sound_runs_to`.
 - `sign_pipeline_sound`, `sign_pipeline_invariant_sound`, `goblint_sign_sound`.
+- `goblint_interval_sound` (interval end-to-end).
 
 ### Semantics cleanup (landed)
 
@@ -83,10 +91,10 @@ uses `quick_and_dirty`; re-run the command after changes).
 Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8)** and
 `docs/OPEN_PROBLEMS.md` (P1–P10 catalogue):
 
-- Discharge or document **TD hypotheses** (`solve_dom`, `td_cfg_in_reach`).
+- Discharge or document **`solve_dom`** (P1 — last TD hypothesis; [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14)).
 - **Interval / octagon** domains and executability.
 - Remaining **Phase 4** automation (`IMP2_to_CFG` apply scripts, path-lifting combinators).
-- **`quick_and_dirty`** removed from `ROOT` (2026-05). Optional: split `Goblint_Formalization_Core` session ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).
+- Optional: split `Goblint_Formalization_Core` session ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).
 
 ```bash
 gh issue list --state open --label phase:stretch

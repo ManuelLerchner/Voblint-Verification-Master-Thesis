@@ -107,47 +107,27 @@ qed
 theorem goblint_sign_sound:
   assumes runs: "runs_to c s t"
   assumes td_solve_dom:
-    "TD_plain.solve_dom
+    "\<And>v. TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
-          (ac_init (sign_analysis_config s)))
-       (cfg_entry (to_cfg c))"
-  assumes td_cfg_in_reach:
-    "\<And>v::pp. v \<in> reach
-       (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
-          (ac_init (sign_analysis_config s)))
-       (TD_plain_Interp_solve
-          (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot
-            (ac_init (sign_analysis_config s)))
-          (cfg_entry (to_cfg c)))
-       (cfg_entry (to_cfg c))"
+          (ac_init (sign_analysis_config s))) v"
   shows
     "t \<in> sign_domain.gamma_state
             (run_analysis (sign_analysis_config s) c
                (cfg_exit (to_cfg c)))"
   by (rule sign_pipeline_sound
-        [OF runs sign_init_in_gamma td_solve_dom td_cfg_in_reach])
+        [OF runs sign_init_in_gamma td_solve_dom])
 
 theorem goblint_interval_sound:
   assumes runs: "runs_to c s t"
   assumes td_solve_dom:
-    "TD_plain.solve_dom
+    "\<And>v. TD_plain.solve_dom
        (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
-          (ac_init (ivl_analysis_config s)))
-       (cfg_entry (to_cfg c))"
-  assumes td_cfg_in_reach:
-    "\<And>v::pp. v \<in> reach
-       (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
-          (ac_init (ivl_analysis_config s)))
-       (TD_plain_Interp_solve
-          (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot
-            (ac_init (ivl_analysis_config s)))
-          (cfg_entry (to_cfg c)))
-       (cfg_entry (to_cfg c))"
+          (ac_init (ivl_analysis_config s))) v"
   shows
     "t \<in> ivl_domain.gamma_state
             (run_analysis (ivl_analysis_config s) c
                (cfg_exit (to_cfg c)))"
   by (rule ivl_pipeline_sound
-        [OF runs td_solve_dom td_cfg_in_reach])
+        [OF runs td_solve_dom])
 
 end

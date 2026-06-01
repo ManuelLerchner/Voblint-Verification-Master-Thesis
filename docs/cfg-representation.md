@@ -18,9 +18,9 @@ This repo uses **labelled edge triples** `(pp × edge_action × pp) set` in `src
 | **Triple set** | `(pp × edge_action × pp) set` | **On edge** | **Yes (current)** |
 | Adjacency matrix | Floyd–Warshall style | Optional | Overkill for sparse CFGs |
 
-## Reachability (optional import)
+## Reachability
 
-`TA_Graphs` relational `reaches` could discharge TD `td_cfg_in_reach` (P2) if we project labelled triples to `'pp ⇒ 'pp ⇒ bool`. Not started; tracked as [issue #8](https://github.com/ManuelLerchner/goblint-formalization/issues/8).
+CFG reachability for soundness uses `cfg_path` / `cfg_path_node_in_reach` in `src/CFG/` and `src/Solver/TD_CFG_Core.thy`. The former TD hypothesis `td_cfg_in_reach` (P2) was removed in favour of per-pp solve (Fix B); closed [issue #8](https://github.com/ManuelLerchner/goblint-formalization/issues/8).
 
 ## KB
 

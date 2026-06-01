@@ -20,7 +20,7 @@ walkthrough.
 | # | Task | Where | Effort | Issue | Status |
 | --- | --- | --- | --- | --- | --- |
 | A1 | Discharge **P3** `comp_fun_idem (ac_join cfg)` from `sound_domain` join laws | `Domains/Abstract_Domain.thy` — new lemma `join_state_comp_fun_idem`; drop `cfi` / `join_cfi` in `Pipeline.thy`, `Goblint_Formalization.thy` | 1–2 sessions | #7 | ✅ done 2026-05-27 (commit `1c119d3`) |
-| A2 | Discharge **P2** `td_cfg_in_reach` | not a lemma bridge — structural finding: `reach T sigma entry = {entry}` for any forward-equation CFG, assumption unconditionally false. Options in `OPEN_PROBLEMS.md` §"P2 finding (2026-05-27)" | structural; >>1 week | #8 | ⚠️ blocked on meeting 4 verdict; recommend Fix B (per-pp solve) |
+| A2 | Discharge **P2** `td_cfg_in_reach` | Fix B (per-pp `td_analyse`, `td_analyse_collect_sound_at`) | done 2026-06-01 | #8 | ✅ closed |
 | A3 | Thesis prose — sign + interval chapters | `docs/walkthrough/` → thesis PDF | parallel | #17 | ongoing |
 | A4 | Executability — full `run_analysis` map | `Examples/`, `code_datatype`/`code_unfold` pragmas | optional | #16 | defer |
 | A5 | Session split core vs stretch | `ROOT`, import refactor (`TD_Soundness` / `Pipeline`) | optional | #13 | defer |

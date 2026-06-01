@@ -22,18 +22,18 @@ cfg_collect (spec at each pp)
        v
 gamma_state (env v)  <-----  td_analyse output (B4)
        ^
-       |  [P1 solve_dom] [P2 td_cfg_in_reach] [P3 comp_fun_idem]
+       |  [P1 solve_dom per pp] [P3 comp_fun_idem]
        |
-   TD_plain solver
+   TD_plain solver (per-pp root at v)
 ```
 
 | Bridge | Statement | Where | Status |
 | --- | --- | --- | --- |
 | B3 | `is_post_fixpoint env ==> ∀v. cfg_collect g S v ⊆ gamma_state (env v)` | `Constraint_System_Sound.thy` | done |
-| B4 | `td_analyse` output is a post-fixpoint | `TD_Interface.thy` | done (modulo P1–P3 as hyps) |
-| B5 | `td_cfg_in_reach` — solver covers reachable tree nodes | `Pipeline.thy` assumptions | open (P2) |
+| B4 | per-pp `td_analyse` sound w.r.t. `cfg_collect` at queried `v` | `TD_Soundness.thy` (`td_analyse_collect_sound_at`) | done (modulo P1 as hyp) |
+| B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` | **done** (P2 — [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)) |
 | B6 | `comp_fun_idem (ac_join cfg)` | `Pipeline.thy` assumptions | **done** (P3 — `join_state_comp_fun_idem`) |
-| B7 | `TD_plain.solve_dom … (cfg_entry …)` | `Pipeline.thy` assumptions | open (P1) |
+| B7 | `TD_plain.solve_dom … v` for each queried `v` | `Pipeline.thy` assumptions | open (P1) |
 | B8 | Interval widening + termination | `Interval_Domain.thy` | stretch (P6/P7) |
 
 **Exit link:** `runs_to c s t` is definitional exit `cfg_collect` (`runs_to_def`).
@@ -49,7 +49,7 @@ Optional / removed from main path:
 | `TD_Total.thy` | **deleted** — was orphan totality track (P6) |
 | HOL-IMP `Abs_Int2_ivl` reuse | not started; see `HOL_IMP_COMPARISON.md` |
 
-`pipeline_invariant_sound` / `pipeline_sound_path` carry P1–P3 as named assumptions.
+`pipeline_invariant_sound` / `pipeline_sound_path` carry **P1** (`∀v. solve_dom`) as the only TD hypothesis; P3 is discharged.
 
 ---
 
@@ -58,7 +58,7 @@ Optional / removed from main path:
 | ID | Problem | Files | Why it blocks | Needed for |
 | --- | --- | --- | --- | --- |
 | P1 | `TD_plain.solve_dom` assumed | `Pipeline.thy`, `TD_Interface.thy` | "If TD terminates, result is sound" | Cleaner main theorem; total correctness (gated on P5) |
-| P2 | `td_cfg_in_reach` assumed (**structural, false in current shape**) | `Pipeline.thy` | Solver reach from entry = `{entry}` only; assumption false. See P2 finding below | Real (non-vacuous) soundness |
+| P2 | ~~`td_cfg_in_reach`~~ | was `Pipeline.thy` | **done** 2026-06-01 — Fix B (per-pp solve); hypothesis removed ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)) | Real (non-vacuous) soundness |
 | P3 | `comp_fun_idem (ac_join cfg)` assumed | `Pipeline.thy` | Finite fold needs commutative idempotent join | **done** 2026-05-27; lemma `join_state_comp_fun_idem` |
 | P4 | Interval domain stretch | `Interval_Domain.thy` | ~~Second domain~~ | **done** — `ivl_pipeline_sound`, `goblint_interval_sound`; still carries P1–P3 |
 | P5 | `pp = nat` vs TD `finite UNIV` | `CFG_Def.thy`, vendored TD | Termination locale type finiteness | Generic termination claim |
@@ -72,23 +72,22 @@ Optional / removed from main path:
 
 ## Per-problem notes
 
-### P1 / P2 / P3 — assumptions on pipeline theorems
+### P1 / P3 — assumptions on pipeline theorems
 
 `pipeline_invariant_sound`, `pipeline_sound_path`, and `pipeline_sound_runs_to`
-carry these TD-side assumptions:
+carry:
 
 ```isabelle
-assumes td_solve_dom:    "TD_plain.solve_dom ..."        -- P1
-assumes td_cfg_in_reach: "\<And>v. v \<in> reach ..."    -- P2
+assumes td_solve_dom: "\<And>v. TD_plain.solve_dom (make_rhs_tree ...) v"  -- P1
 ```
 
 P3 discharged 2026-05-27 via `join_state_comp_fun_idem`
-(`Abstract_Domain.thy`); see commit `1c119d3`. Top-level theorems
-now carry only P1, P2.
+(`Abstract_Domain.thy`); see commit `1c119d3`.
 
 P1 is gated on P5 for generic termination.
 
-P2: see finding below — **not** a simple lemma bridge.
+**P2 (closed 2026-06-01):** Fix B — per-pp `td_analyse`, `td_analyse_collect_sound_at`
+via `td_env_at_path_step_le`; `td_cfg_in_reach` removed from all theorems. See finding below (historical).
 
 ### P2 finding (2026-05-27) — structural inconsistency
 
@@ -219,10 +218,9 @@ fold P2 into the B3 refactor rather than fix it standalone first.
 
 #### Status
 
-Surfaced for meeting 4 (2026-06-01). See
-`wiki/meetings/2026-06-01-meeting4-prep.md`. No code change pending —
-existing pipeline theorems left as-is until the supervisor verdict on
-A2 strategy and Track B scope.
+**Closed 2026-06-01** — Fix B implemented ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)):
+`TD_Interface.thy`, `TD_Soundness.thy`, `Pipeline.thy`, `Constraint_System_Sound.thy`
+(`post_fixpoint_sound_at`). Historical analysis above kept for thesis / meeting notes.
 
 ### P5 — type-level finiteness
 
@@ -230,7 +228,7 @@ See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explic
 
 ### P4 / P7 — interval domain
 
-Sign chain proved (`goblint_sign_sound`; carries P1–P3). Interval uses the same pipeline theorems with `ivl_pipeline_sound`.
+Sign chain proved (`goblint_sign_sound`; carries P1 only). Interval: `goblint_interval_sound` (same pipeline, P1 only).
 
 ### P6 — TD total correctness
 
@@ -248,10 +246,10 @@ Split core vs stretch sessions when sorry-free core is policy.
 
 ## Where to start
 
-**Session plan:** `docs/NEXT_STEPS.md` (tomorrow: issue #8 / P2 — `td_cfg_in_reach`).
+**Session plan:** `docs/NEXT_STEPS.md` (thesis write-up [#17](https://github.com/ManuelLerchner/goblint-formalization/issues/17) or P1 [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14)).
 
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
 3. `src/Pipeline/Pipeline.thy` — `pipeline_invariant_sound`, `pipeline_sound_path`
-4. P3 is closed ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7) done); current priority is P2 `td_cfg_in_reach` ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)); P8 session split is cosmetic ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13))
+4. P2 closed ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)); P3 closed ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7)); open TD hyp: P1 only
 5. MCP-first workflow: `AGENTS.md`

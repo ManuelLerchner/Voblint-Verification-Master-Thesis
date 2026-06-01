@@ -50,7 +50,7 @@ Issue numbers are deliberately omitted — they go stale. The directions remain 
 
 Collecting spec + post-fixpoint + TD bridge (B3–B4 in `docs/OPEN_PROBLEMS.md`) are proved.
 Sign pipeline is closed end-to-end (`goblint_sign_sound`) modulo two named TD
-hypotheses (P1/P2).
+hypotheses (P1 only; P2 closed via per-pp solve).
 
 ### Semantics and pipeline (current)
 

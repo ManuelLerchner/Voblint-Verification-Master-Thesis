@@ -376,7 +376,31 @@ proof -
   finally show ?thesis ..
 qed
 
-(* -- CFG + strategy forest (shared by all TD backends) -- *)
+
+lemma dep_rhs_tree_fold:
+  shows "(u, a) \<in> set ps \<Longrightarrow> u \<in> dep_aux \<sigma> (rhs_tree_fold tf join_abs acc ps)"
+  by (induct ps arbitrary: acc; auto simp: rhs_tree_fold.simps dep_aux.simps split: prod.splits)
+
+lemma dep_make_rhs_tree_pred:
+  assumes fin: "finite (edges g)"
+  assumes pred: "(u, a) \<in> predecessors g w"
+  shows "u \<in> dep (\<lambda>v. make_rhs_tree g tf join_abs bot_abs s0 v) \<sigma> w"
+proof -
+  have mem: "(u, a) \<in> set (predecessor_list g w)"
+    using pred fin by (auto simp: predecessors_def set_predecessor_list)
+  have "u \<in> dep_aux \<sigma> (make_rhs_tree g tf join_abs bot_abs s0 w)"
+    unfolding make_rhs_tree_def Let_def dep_def
+    by (metis dep_rhs_tree_fold mem)
+  then show ?thesis unfolding dep_def by simp
+qed
+
+lemma dep_make_rhs_tree_edge:
+  assumes fin: "finite (edges g)"
+  assumes ed: "(u, a, w) \<in> edges g"
+  shows "u \<in> dep (\<lambda>v. make_rhs_tree g tf join_abs bot_abs s0 v) \<sigma> w"
+  using dep_make_rhs_tree_pred[OF fin, unfolded predecessors_def] ed by auto
+
+
 
 lemma eq_le_mlup_imp_rhs_le:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -433,6 +457,27 @@ proof (intro allI)
   qed
 qed
 
+lemma cfg_path_node_in_reach_tree:
+  assumes fin: "finite (edges g)"
+    and path: "cfg_path g u es v0"
+  shows "u \<in> reach (\<lambda>v. make_rhs_tree g tf join_abs bot_abs s0 v) \<sigma> v0"
+proof (insert path, induction es arbitrary: u)
+  case Nil
+  then have "u = v0" by (cases rule: cfg_path.cases) simp_all
+  then show ?case by (simp add: reach.base)
+next
+  case (Cons e es')
+  assume p: "cfg_path g u (e # es') v0"
+  obtain a w where ew: "e = (a, w)" by (cases e) auto
+  from p ew obtain ed: "(u, a, w) \<in> edges g" and p2: "cfg_path g w es' v0"
+    by (cases rule: cfg_path.cases) auto
+  have w_reach: "w \<in> reach (\<lambda>v. make_rhs_tree g tf join_abs bot_abs s0 v) \<sigma> v0"
+    by (rule Cons.IH[OF p2])
+  have u_dep: "u \<in> dep (\<lambda>v. make_rhs_tree g tf join_abs bot_abs s0 v) \<sigma> w"
+    using dep_make_rhs_tree_edge[OF fin ed] .
+  show ?case using reach.step[OF w_reach u_dep] .
+qed
+
 locale td_cfg_core =
   fixes g :: cfg and
   tf :: "'a::bounded_semilattice_sup_bot domain_transfer" and
@@ -458,6 +503,17 @@ lemma cfg_env_post_fixpoint:
   shows "is_post_fixpoint g tf join_abs bot_abs s0 env"
   using cfg_env_post_fixpoint[where T=cfg_T, OF cfg_T_eq fin cfi join_sym env_def eq_le]
   by simp
+
+lemma cfg_path_node_in_reach:
+  fixes \<sigma> :: "(pp, 'a abs_state) map" and v0 u :: pp
+  assumes fin: "finite (edges g)"
+  assumes path: "cfg_path g u es v0"
+  shows "u \<in> reach cfg_T \<sigma> v0"
+proof -
+  have main: "u \<in> reach (\<lambda>v. make_rhs_tree g tf join_abs bot_abs s0 v) \<sigma> v0"
+    using cfg_path_node_in_reach_tree[OF fin path] .
+  show ?thesis unfolding cfg_T_def using main by simp
+qed
 
 end
 

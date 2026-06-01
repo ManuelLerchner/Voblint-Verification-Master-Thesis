@@ -18,46 +18,10 @@ begin
   constraint system back to concrete program behaviour.
 *)
 
-context sound_domain
-begin
-
-(* Per-edge soundness: edge_collect on concretisation factors through
-   apply_tf in the abstract domain. *)
-lemma edge_collect_apply_tf_sound:
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  shows
-    "edge_collect a (gamma_state sigma) \<subseteq> gamma_state (apply_tf tf a sigma)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by simp
-next
-  case (EA_Assign x ax)
-  show ?thesis
-    unfolding EA_Assign apply_tf.simps edge_collect.simps
-    using tf_sound_assign by blast
-next
-  case (EA_Assume b)
-  show ?thesis
-    unfolding EA_Assume apply_tf.simps edge_collect.simps
-    using tf_sound_assume by blast
-next
-  case (EA_AssumeNot b)
-  show ?thesis
-    unfolding EA_AssumeNot apply_tf.simps edge_collect.simps
-    using tf_sound_assume_not by blast
-qed
-
-(* Each predecessor's tf-image is below the rhs join.
-   Uses mem_image_le_fold over the predecessor set. *)
+(* Global rhs-step lemmas (no gamma needed). *)
 lemma apply_tf_le_rhs:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes uav: "(u, a, v) \<in> edges g"
   shows "apply_tf tf a (env u) \<le> rhs g tf (\<squnion>) bot s0 env v"
@@ -108,6 +72,68 @@ proof -
   qed
 qed
 
+lemma s0_le_rhs_entry:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  assumes fin: "finite (edges g)"
+  shows "s0 \<le> rhs g tf (\<squnion>) bot s0 env (cfg_entry g)"
+proof -
+  define P :: "(pp \<times> edge_action) set"
+    where "P = {(u', a'). (u', a', cfg_entry g) \<in> edges g}"
+  have Peq: "P = predecessors g (cfg_entry g)"
+    by (simp add: P_def predecessors_def)
+  have finP: "finite P"
+    using Peq fin by (simp add: finite_predecessors)
+  define f where "f \<equiv> \<lambda>(u', a'). apply_tf tf a' (env u')"
+  have fin_img: "finite (insert s0 (f ` P))"
+    using finP by simp
+  have mem: "s0 \<in> insert s0 (f ` P)" by simp
+  have le_fold: "s0 \<le> Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))"
+    by (metis Sup_fin.coboundedI Sup_fin.eq_fold fin_img finite_insert insert_iff)
+  have rhs_eq: "rhs g tf (\<squnion>) bot s0 env (cfg_entry g)
+    = Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))"
+    unfolding rhs_def Let_def abs_join_set_def f_def
+    using Peq predecessors_def by presburger
+  show ?thesis using le_fold rhs_eq by simp
+qed
+
+context sound_domain
+begin
+
+(* Per-edge soundness: edge_collect on concretisation factors through
+   apply_tf in the abstract domain. *)
+lemma edge_collect_apply_tf_sound:
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  shows
+    "edge_collect a (gamma_state sigma) \<subseteq> gamma_state (apply_tf tf a sigma)"
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by simp
+next
+  case (EA_Assign x ax)
+  show ?thesis
+    unfolding EA_Assign apply_tf.simps edge_collect.simps
+    using tf_sound_assign by blast
+next
+  case (EA_Assume b)
+  show ?thesis
+    unfolding EA_Assume apply_tf.simps edge_collect.simps
+    using tf_sound_assume by blast
+next
+  case (EA_AssumeNot b)
+  show ?thesis
+    unfolding EA_AssumeNot apply_tf.simps edge_collect.simps
+    using tf_sound_assume_not by blast
+qed
+
 (* Step lemma for collect_pp abstract soundness. *)
 lemma collect_pp_abstract_sound:
   assumes fin: "finite (edges g)"
@@ -139,8 +165,166 @@ proof
   have "apply_tf tf a (env u) \<le> env v"
     using le_rhs le_env by (rule order_trans)
   then have "gamma_state (apply_tf tf a (env u)) \<subseteq> gamma_state (env v)"
+    by (rule gamma_state_mono)  then show "x \<in> gamma_state (env v)" using step1 by blast
+qed
+
+(* Per-pp variant: only the queried node's rhs bound is needed. *)
+lemma collect_pp_abstract_sound_rhs_le:
+  assumes fin: "finite (edges g)"
+  assumes rhs_le: "rhs g tf (\<squnion>) bot s0 env v \<le> env v"
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  shows
+    "collect_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
+proof
+  fix x
+  assume "x \<in> collect_pp g (\<lambda>v. gamma_state (env v)) v"
+  then obtain u a where uav: "(u, a, v) \<in> edges g"
+    and xin: "x \<in> edge_collect a (gamma_state (env u))"
+    unfolding collect_pp_def by blast
+  have step1: "x \<in> gamma_state (apply_tf tf a (env u))"
+    using edge_collect_apply_tf_sound[OF tf_sound_assign tf_sound_assume tf_sound_assume_not] xin
+    by blast
+  have le_rhs: "apply_tf tf a (env u) \<le> rhs g tf (\<squnion>) bot s0 env v"
+    by (rule apply_tf_le_rhs[OF fin uav])
+  have le_env: "rhs g tf (\<squnion>) bot s0 env v \<le> env v"
+    using rhs_le by simp
+  have "apply_tf tf a (env u) \<le> env v"
+    using le_rhs le_env by (rule order_trans)
+  then have "gamma_state (apply_tf tf a (env u)) \<subseteq> gamma_state (env v)"
     by (rule gamma_state_mono)
   then show "x \<in> gamma_state (env v)" using step1 by blast
+qed
+
+lemma edges_collect_gamma_path_aux:
+  assumes fin: "finite (edges g)"  assumes path: "g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+  assumes step_le:
+    "\<And>x b y es'. g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v \<Longrightarrow> apply_tf tf b (env x) \<le> env y"
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  shows "edges_collect es (gamma_state (env u)) \<subseteq> gamma_state (env v)"
+proof (insert path step_le, induction es arbitrary: u)
+  case Nil
+  then have uv: "u = v" by (cases rule: cfg_path.cases) simp_all
+  then show ?case by simp
+next
+  case (Cons e es')
+  assume p: "g \<turnstile> u \<longrightarrow>\<^bsub>(e # es')\<^esub> v"
+  obtain a w where ew: "e = (a, w)" by (cases e) auto
+  from p ew obtain ed: "(u, a, w) \<in> edges g" and p2: "g \<turnstile> w \<longrightarrow>\<^bsub>es'\<^esub> v"
+    by (cases rule: cfg_path.cases) auto
+  have step_g: "edge_collect a (gamma_state (env u)) \<subseteq> gamma_state (env w)"
+  proof
+    fix x
+    assume xin: "x \<in> edge_collect a (gamma_state (env u))"
+    then obtain s where s: "s \<in> gamma_state (env u)" and xin': "x \<in> edge_collect a {s}"
+      using edge_collect_member by blast    have tf_le: "apply_tf tf a (env u) \<le> env w"
+      using step_le[OF p[unfolded ew]] .
+    have s_in: "{s} \<subseteq> gamma_state (env u)" using s by simp
+    have ec_sub: "edge_collect a {s} \<subseteq> gamma_state (apply_tf tf a (env u))"
+      using edge_collect_apply_tf_sound[OF tf_sound_assign tf_sound_assume tf_sound_assume_not] s
+        edge_collect_mono[OF s_in] subset_trans by blast
+    have step1: "x \<in> gamma_state (apply_tf tf a (env u))"
+      using xin' ec_sub by blast
+    show "x \<in> gamma_state (env w)"
+      using gamma_state_mono[OF tf_le] step1 by blast
+  qed
+  have IH: "edges_collect es' (gamma_state (env w)) \<subseteq> gamma_state (env v)"
+    by (rule Cons.IH[OF p2 step_le])
+  have "edges_collect es' (edge_collect a (gamma_state (env u))) \<subseteq> gamma_state (env v)"
+  proof (rule subset_trans[OF _ IH])
+    show "edges_collect es' (edge_collect a (gamma_state (env u)))
+          \<subseteq> edges_collect es' (gamma_state (env w))"
+      by (rule edges_collect_mono_strong[OF step_g])
+  qed
+  then show ?case unfolding ew edges_collect.simps .
+qed
+
+lemma edges_collect_gamma_path:
+  assumes fin: "finite (edges g)"  assumes path: "g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+  assumes step_le:
+    "\<And>x b y es'. g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v \<Longrightarrow> apply_tf tf b (env x) \<le> env y"
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes u_gamma: "T \<subseteq> gamma_state (env u)"
+  shows "edges_collect es T \<subseteq> gamma_state (env v)"
+proof -
+  have mono: "edges_collect es T \<subseteq> edges_collect es (gamma_state (env u))"
+    by (rule edges_collect_mono_strong[OF u_gamma])
+  also have "\<dots> \<subseteq> gamma_state (env v)"
+    by (rule edges_collect_gamma_path_aux[OF fin path step_le tf_sound_assign
+          tf_sound_assume tf_sound_assume_not])
+  finally show ?thesis .
+qed
+
+lemma post_fixpoint_sound_at:
+  assumes fin: "finite (edges g)"
+  assumes rhs_le: "rhs g tf (\<squnion>) bot s0 env v0 \<le> env v0"  assumes step_le:
+    "\<And>u a w es'. g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es'\<^esub> v0 \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+  assumes S_sound: "S \<le> gamma_state s0"
+  assumes entry_le: "s0 \<le> env (cfg_entry g)"
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  shows "cfg_collect g S v0 \<le> gamma_state (env v0)"
+proof -
+  have paths: "cfg_collect g S v0 \<subseteq> cfg_collect_paths g S v0"
+    by (rule cfg_collect_le_paths)
+  show ?thesis
+  proof
+    fix t
+    assume "t \<in> cfg_collect g S v0"
+    with paths have "t \<in> cfg_collect_paths g S v0" by blast
+    then obtain path_es where path_es: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>path_es\<^esub> v0"
+      and t_in: "t \<in> edges_collect path_es S"
+      unfolding cfg_collect_paths_def by blast
+    have S_env: "S \<subseteq> gamma_state (env (cfg_entry g))"
+      using S_sound entry_le gamma_state_mono by blast
+    have gamma_le: "edges_collect path_es S \<subseteq> gamma_state (env v0)"
+    proof (rule edges_collect_gamma_path)
+      show "finite (edges g)" by fact
+      show "g \<turnstile> cfg_entry g \<longrightarrow>\<^bsub>path_es\<^esub> v0" using path_es .      show "\<And>x b y es'. g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v0 \<Longrightarrow> apply_tf tf b (env x) \<le> env y"
+        by (fact step_le)
+      show "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+            s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+        using tf_sound_assign by simp
+      show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+            \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+        using tf_sound_assume by simp
+      show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+            \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+        using tf_sound_assume_not by simp
+      show "S \<subseteq> gamma_state (env (cfg_entry g))" using S_env .
+    qed
+    show "t \<in> gamma_state (env v0)" using gamma_le t_in by blast
+  qed
 qed
 
 (* Lifted state version of sup_fold_ge; the global polymorphic lemma already
@@ -150,32 +334,6 @@ lemma sup_fold_ge_state:
   shows "x \<le> Finite_Set.fold (\<squnion>) bot A"
   using assms
   by (metis Sup_fin.coboundedI Sup_fin.eq_fold finite_insert insertCI)  
-
-(* s0 \<le> rhs at entry: s0 is in the joined set, so below the fold. *)
-lemma s0_le_rhs_entry:
-  assumes fin: "finite (edges g)"
-  shows "s0 \<le> rhs g tf (\<squnion>) bot s0 env (cfg_entry g)"
-proof -
-  define P :: "(pp \<times> edge_action) set"
-    where "P = {(u', a'). (u', a', cfg_entry g) \<in> edges g}"
-  have Peq: "P = predecessors g (cfg_entry g)"
-    by (simp add: P_def predecessors_def)
-  have finP: "finite P"
-    using Peq fin by (simp add: finite_predecessors)
-  define f where "f \<equiv> \<lambda>(u', a'). apply_tf tf a' (env u')"
-  have fin_img: "finite (insert s0 (f ` P))"
-    using finP by simp
-  have mem: "s0 \<in> insert s0 (f ` P)" by simp
-  have le_fold: "s0 \<le> Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))"
-    by (metis Sup_fin.coboundedI Sup_fin.eq_fold fin_img finite_insert insert_iff)
-    
-  have rhs_eq: "rhs g tf (\<squnion>) bot s0 env (cfg_entry g)
-    = Finite_Set.fold (\<squnion>) bot (insert s0 (f ` P))"
-    unfolding rhs_def Let_def abs_join_set_def f_def
-    using Peq predecessors_def by presburger
-    
-  show ?thesis using le_fold rhs_eq by simp
-qed
 
 lemma post_fixpoint_sound:
   assumes fin: "finite (edges g)"

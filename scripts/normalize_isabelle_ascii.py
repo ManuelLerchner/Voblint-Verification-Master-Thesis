@@ -27,6 +27,7 @@ REPL = {
     "⟹": r"\<Longrightarrow>",
     "⇒": r"\<Rightarrow>",
     "⟶": r"\<longrightarrow>",
+    "\u290f": r"\<longlongrightarrow>",  # I/Q CFG path arrow (RIGHTWARDS ARROW WITH TIP DOWNWARDS)
     "⟷": r"\<longleftrightarrow>",
     "↔": r"\<leftrightarrow>",
     "→": r"\<rightarrow>",

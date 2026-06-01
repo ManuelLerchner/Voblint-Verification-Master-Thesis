@@ -1,6 +1,6 @@
 # Next steps
 
-Short-term work plan (updated 2026-05). Issues: `gh issue list --state open`.
+Short-term work plan (updated 2026-06). Issues: `gh issue list --state open`.
 Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 
 ---
@@ -12,41 +12,33 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 - Full soundness chain: collecting semantics → post-fixpoint → TD → pipeline.
 - Sign + interval end-to-end: `goblint_sign_sound`, `goblint_interval_sound`.
 - **0 sorries** in `src/`; batch build without `quick_and_dirty` in `ROOT`.
+- **P2 closed** (Fix B, 2026-06-01): `td_cfg_in_reach` removed; per-pp `td_analyse`; `td_analyse_collect_sound_at` proved via path induction.
 
 **Still on main theorems**
 
-Two TD side conditions (P1–P2), documented in `docs/OPEN_PROBLEMS.md`:
+One TD side condition remains (P1), documented in `docs/OPEN_PROBLEMS.md`:
 
-| ID | Assumption | Issue |
-| --- | --- | --- |
-| P2 | `td_cfg_in_reach` | [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8) |
-| P1 | `TD_plain.solve_dom` | [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14) (total correctness / finite `pp`) |
+| ID | Assumption | Issue | Status |
+| --- | --- | --- | --- |
+| P2 | `td_cfg_in_reach` | [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8) | ✅ closed |
+| P1 | `TD_plain.solve_dom` | [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14) | open |
 
 ---
 
-## Tomorrow — start here
+## Now — start here
 
-**Primary: [#8 — Discharge P2 (`td_cfg_in_reach`)](https://github.com/ManuelLerchner/goblint-formalization/issues/8)**  
-Fix the structural inconsistency in the TD reach hypothesis (see P2 finding in `docs/OPEN_PROBLEMS.md`).
-Recommended approach: Fix B (per-pp solve), making `reach.base` trivially discharge the hypothesis.
+**Primary: [#17 — Thesis writing](https://github.com/ManuelLerchner/goblint-formalization/issues/17)**
 
-Why first:
+The soundness chain is complete. Only `solve_dom` (P1) remains as an explicit hypothesis — a defensible thesis stance. Write up.
 
-- P3 (`comp_fun_idem`) is closed via `join_state_comp_fun_idem` ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7) done).
-- P2 is the next open hypothesis; fixing it removes the vacuous soundness issue.
-- Fix B is a focused refactor of `td_analyse` and the pipeline statement shape.
+**Alternative: [#14 — P1 `solve_dom` total correctness](https://github.com/ManuelLerchner/goblint-formalization/issues/14)**
 
-**First hour**
+Prove termination of the per-pp TD solver (finite `pp`, well-founded recursion). Closes the last TD hypothesis.
 
-1. I/Q: `open_file` `src/Solver/TD_Interface.thy` — `td_analyse`, `td_analyse_post_fixpoint`.
-2. Review P2 finding in `docs/OPEN_PROBLEMS.md` — Fix B recommendation.
-3. Redefine `td_analyse` as per-pp solve; update pipeline theorems to per-pp `solve_dom`.
-4. Verify `reach.base` discharges `td_cfg_in_reach` trivially.
+**Fallback**
 
-**Fallback (no proof progress)**
-
-- Thesis prose from `docs/walkthrough/` (interval instance mirrors sign).
-- Or executability polish ([#16](https://github.com/ManuelLerchner/goblint-formalization/issues/16)).
+- Executability polish ([#16](https://github.com/ManuelLerchner/goblint-formalization/issues/16)).
+- Session split ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).
 
 ---
 
@@ -54,8 +46,8 @@ Why first:
 
 | Priority | Goal | Issue | Payoff |
 | --- | --- | --- | --- |
-| 1 | Drop **P2** | **#8** | Second assumption gone; CFG reachability + TD `reach` |
-| 2 | **Thesis writing** | **#17** | Bridges documented in walkthrough; PDF still open |
+| 1 | **Thesis writing** | **#17** | All core lemmas proved; write-up is the blocker |
+| 2 | P1 `solve_dom` | **#14** | Last TD hypothesis; closes the chain fully |
 | 3 | Executability | **#16** | Per-pp `value` works; full `run_analysis` map still open |
 | 4 | Session split | **#13** | Core vs Stretch — needs `TD_Soundness` / `Pipeline` import refactor |
 
@@ -69,8 +61,8 @@ Why first:
 ## Suggested week
 
 ```text
-Day 1–2:  #7 (P3), then #8 (P2) if P3 closes cleanly
-Parallel:  thesis prose (sign + interval) from docs/walkthrough
+Day 1–2:  Thesis prose (sign + interval soundness chapters) from docs/walkthrough
+Parallel:  #14 (solve_dom total correctness) — closes last TD hypothesis
 Later:     #16 (demos) OR #13 (session split) — one of, not both
 Stretch:   #11 (backward transformers) only if interval precision is thesis-critical
 ```
@@ -79,9 +71,9 @@ Stretch:   #11 (backward transformers) only if interval precision is thesis-crit
 
 ## Thesis milestone (next “done” slice)
 
-> Sign + interval soundness with **at most one** explicit TD hypothesis (ideally only `solve_dom`), plus one thesis chapter per domain.
+> Sign + interval soundness with **only `solve_dom`** as explicit TD hypothesis, plus one thesis chapter per domain.
 
-Sequence: **#7 → #8 → write-up**. Treat **#14** as optional stretch.
+#7, #8 done. Remaining: **#14 → write-up**. Treat **#14** as optional stretch if `solve_dom` is explicitly stated in the thesis.
 
 ---
 

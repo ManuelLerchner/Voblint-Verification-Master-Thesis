@@ -116,7 +116,7 @@ End-to-end: `goblint_sign_sound` (`Goblint_Formalization.thy`) from `sign_pipeli
 - `pp = nat` — program points
 - `'a abs_state = vname => 'a`; `'a domain_transfer` — assign / assume / assume-not
 - `rhs`, `is_post_fixpoint` — constraint system (`Constraint_System.thy`)
-- `make_rhs_tree` — solver bridge (`TD_CFG_Core.thy`); `td_analyse`, `td_analyse_post_fixpoint` — solver bridge (`TD_Interface.thy`)
+- `make_rhs_tree` — solver bridge (`TD_CFG_Core.thy`); per-pp `td_analyse`, `td_env_at` — solver bridge (`TD_Interface.thy`, `TD_Soundness.thy`)
 
 Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 
@@ -129,7 +129,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | IMP2 | `IMP2_Syntax`, `IMP2_SmallStep` | `aval`, `bval`, `small_step`, `runs_to_iff_small_step` |
 | CFG | `IMP2_to_CFG`, `CFG_Path`, `CFG_Edges_Collect` … `CFG_Runs_To_Bridge` | `to_cfg`, `cfg_collect`, `runs_to_def`, `compile_path_small_step` |
 | Equations | `Constraint_System`, `Constraint_System_Sound` | `rhs_mono`, `post_fixpoint_sound`, `exit_sound` |
-| Solver | `TD_Interface`, `TD_Soundness` | `td_analyse_post_fixpoint`, `sign_analysis_sound`, `interval_analysis_sound` |
+| Solver | `TD_Interface`, `TD_Soundness` | `td_analyse_collect_sound_at`, `td_solver_sound`, `sign_analysis_sound`, `interval_analysis_sound` |
 | Pipeline | `Pipeline.thy` | `pipeline_invariant_sound`, `pipeline_sound_path`, `pipeline_sound_runs_to`, sign/interval corollaries |
 
 ---
@@ -149,14 +149,14 @@ Same CFG, `rhs`, and `td_analyse` once the domain fits the interfaces:
 
 ## TD hypotheses on `goblint_sign_sound`
 
-The sign end-to-end theorem still assumes the AFP solver succeeds on the generated tree:
+The sign end-to-end theorem assumes the AFP solver terminates at each queried program point:
 
-- **`comp_fun_idem join`** on the domain join.
-- **`TD_plain.solve_dom … (cfg_entry …)`** — query in solver domain.
-- **`td_cfg_in_reach`** — every reachable unknown in the strategy tree is solved from entry.
+- **`∀v. TD_plain.solve_dom (make_rhs_tree …) v`** (P1) — per-pp solve rooted at `v` (Fix B, 2026-06-01).
 
-These are operational obligations (solver covers the CFG), not gaps in
-`post_fixpoint_sound` or `exit_sound`.
+`comp_fun_idem` on join is proved (`join_state_comp_fun_idem`). **`td_cfg_in_reach` was removed** (P2 closed, [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)).
+
+These are operational obligations on the vendored solver, not gaps in
+`post_fixpoint_sound_at` / `td_analyse_collect_sound_at`.
 
 ---
 
