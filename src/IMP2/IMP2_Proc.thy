@@ -132,4 +132,48 @@ proof -
   with eq show ?thesis by simp
 qed
 
+(* -- Terminating runs ----------------------------------------------- *)
+
+(* A run of c from store s terminates in t when it reaches PSKIP with an empty
+   frame stack. *)
+definition pruns_to :: "proc_table \<Rightarrow> pcom \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "pruns_to pi c s t = psteps pi (c, s, []) (PSKIP, t, [])"
+
+lemma pruns_to_skip: "pruns_to pi PSKIP s s"
+  unfolding pruns_to_def by (rule star.refl)
+
+(* A write to a global commits: combining over a global update keeps the new
+   value (dual to combine_after_local_assign). *)
+lemma combine_after_global_assign:
+  assumes "is_global x"
+  shows "<s | s(x := v)> = s(x := v)"
+  using assms by (rule_tac ext) auto
+
+(* A procedure call runs the callee body and commits its writes to globals,
+   while the caller's locals are restored.  Here the body increments the global
+   ''Gx'', and the increment persists in the returned store. *)
+lemma pcall_global_increment:
+  assumes p: "pi ''p'' = Some (PAssign ''Gx'' (Plus (V ''Gx'') (N 1)))"
+  shows "pruns_to pi (PCall ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+proof -
+  let ?body = "PAssign ''Gx'' (Plus (V ''Gx'') (N 1))"
+  let ?v = "aval (Plus (V ''Gx'') (N 1)) s"
+  have g: "is_global ''Gx''" by (simp add: is_global_def)
+  have a: "pstep pi (PCall ''p'', s, []) (PSeq ?body PRestore, s, [s])"
+    using p by (blast intro: PCall)
+  have b: "pstep pi (PSeq ?body PRestore, s, [s])
+                    (PSeq PSKIP PRestore, s(''Gx'' := ?v), [s])"
+    by (rule PSeq2[OF PAssign])
+  have c: "pstep pi (PSeq PSKIP PRestore, s(''Gx'' := ?v), [s])
+                    (PRestore, s(''Gx'' := ?v), [s])"
+    by (rule PSeq1)
+  have d: "pstep pi (PRestore, s(''Gx'' := ?v), [s]) (PSKIP, <s | s(''Gx'' := ?v)>, [])"
+    by (rule PRestore)
+  have eq: "<s | s(''Gx'' := ?v)> = s(''Gx'' := s ''Gx'' + 1)"
+    using combine_after_global_assign[OF g] by simp
+  have "psteps pi (PCall ''p'', s, []) (PSKIP, <s | s(''Gx'' := ?v)>, [])"
+    using a b c d by (meson star.refl star.step)
+  with eq show ?thesis unfolding pruns_to_def by simp
+qed
+
 end
