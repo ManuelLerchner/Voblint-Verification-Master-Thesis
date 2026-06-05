@@ -214,4 +214,26 @@ lemma psteps_PSeq2:
    \<Longrightarrow> star (pstep pi) (PSeq c1 c2, s, frs) (PSeq c1' c2, s', frs')"
   using psteps_PSeq2_cfg[where X = "(c1, s, frs)" and Y = "(c1', s', frs')"] by simp
 
+(* -- Structural composition of terminating runs ---------------------- *)
+
+(* Running c1 to s2 then c2 to t is a run of the sequence. *)
+lemma pruns_to_PSeq:
+  assumes "pruns_to pi c1 s s2" and "pruns_to pi c2 s2 t"
+  shows "pruns_to pi (PSeq c1 c2) s t"
+proof -
+  from assms(1) have a: "star (pstep pi) (PSeq c1 c2, s, []) (PSeq PSKIP c2, s2, [])"
+    unfolding pruns_to_def by (rule psteps_PSeq2)
+  have b: "pstep pi (PSeq PSKIP c2, s2, []) (c2, s2, [])" by (rule PSeq1)
+  from a b assms(2) show ?thesis
+    unfolding pruns_to_def by (meson star.step star_trans)
+qed
+
+lemma pruns_to_PIfTrue:
+  "bval b s \<Longrightarrow> pruns_to pi c1 s t \<Longrightarrow> pruns_to pi (PIf b c1 c2) s t"
+  unfolding pruns_to_def by (meson PIfTrue star.step)
+
+lemma pruns_to_PIfFalse:
+  "\<not> bval b s \<Longrightarrow> pruns_to pi c2 s t \<Longrightarrow> pruns_to pi (PIf b c1 c2) s t"
+  unfolding pruns_to_def by (meson PIfFalse star.step)
+
 end
