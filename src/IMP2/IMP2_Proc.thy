@@ -1,0 +1,135 @@
+theory IMP2_Proc
+  imports IMP2_SmallStep IMP2_Globals
+begin
+
+(*
+  Procedure-extended command language `pcom` with a frame-stack small-step
+  semantics, defined separately from the scalar command type `com`.
+
+  Procedures are parameterless (PCall p); parameters are passed via globals.
+  PScope and PCall both save the caller's locals on entry and restore them on
+  exit via combine_states (globals from the callee's final store, locals from
+  the saved frame).
+
+  The restore boundary is made explicit by the runtime-only marker PRestore:
+  the frame stack alone cannot locate a scope's end inside a PSeq, so entry
+  rewrites `PScope c` to `PSeq c PRestore` (frame pushed) and PRestore performs
+  the pop.  PRestore never appears in source programs.
+*)
+
+datatype pcom =
+    PSKIP
+  | PAssign vname aexp
+  | PSeq    pcom pcom
+  | PIf     bexp pcom pcom
+  | PWhile  bexp pcom
+  | PScope  pcom          (* local scope: save locals, restore on exit       *)
+  | PCall   pname         (* call parameterless procedure from the table     *)
+  | PRestore              (* runtime-only: pop a frame, restore caller locals *)
+
+(* Procedure table: names to bodies. *)
+type_synonym proc_table = "pname \<Rightarrow> pcom option"
+
+(* Runtime frame: the caller's store, whose locals are restored on return. *)
+type_synonym frame = store
+
+(* -- Frame-stack small-step ----------------------------------------- *)
+
+inductive
+  pstep :: "proc_table \<Rightarrow> pcom \<times> store \<times> frame list
+                       \<Rightarrow> pcom \<times> store \<times> frame list \<Rightarrow> bool"
+  for pi :: proc_table
+where
+  PAssign:  "pstep pi (PAssign x a, s, frs) (PSKIP, s(x := aval a s), frs)"
+| PSeq1:    "pstep pi (PSeq PSKIP c2, s, frs) (c2, s, frs)"
+| PSeq2:    "pstep pi (c1, s, frs) (c1', s', frs')
+             \<Longrightarrow> pstep pi (PSeq c1 c2, s, frs) (PSeq c1' c2, s', frs')"
+| PIfTrue:  "bval b s \<Longrightarrow> pstep pi (PIf b c1 c2, s, frs) (c1, s, frs)"
+| PIfFalse: "\<not> bval b s \<Longrightarrow> pstep pi (PIf b c1 c2, s, frs) (c2, s, frs)"
+| PWhile:   "pstep pi (PWhile b c, s, frs)
+                      (PIf b (PSeq c (PWhile b c)) PSKIP, s, frs)"
+| PScope:   "pstep pi (PScope c, s, frs) (PSeq c PRestore, s, s # frs)"
+| PCall:    "pi p = Some c
+             \<Longrightarrow> pstep pi (PCall p, s, frs) (PSeq c PRestore, s, s # frs)"
+| PRestore: "pstep pi (PRestore, s, fr # frs) (PSKIP, <fr|s>, frs)"
+
+abbreviation
+  psteps :: "proc_table \<Rightarrow> pcom \<times> store \<times> frame list
+                        \<Rightarrow> pcom \<times> store \<times> frame list \<Rightarrow> bool"
+where "psteps pi x y \<equiv> star (pstep pi) x y"
+
+declare pstep.intros [simp, intro]
+
+inductive_cases PSkipSE[elim!]:    "pstep pi (PSKIP, s, frs) cfg"
+inductive_cases PAssignSE[elim!]:  "pstep pi (PAssign x a, s, frs) cfg"
+inductive_cases PSeqSE[elim]:      "pstep pi (PSeq c1 c2, s, frs) cfg"
+inductive_cases PIfSE[elim!]:      "pstep pi (PIf b c1 c2, s, frs) cfg"
+inductive_cases PWhileSE[elim!]:   "pstep pi (PWhile b c, s, frs) cfg"
+inductive_cases PScopeSE[elim!]:   "pstep pi (PScope c, s, frs) cfg"
+inductive_cases PCallSE[elim]:     "pstep pi (PCall p, s, frs) cfg"
+inductive_cases PRestoreSE[elim!]: "pstep pi (PRestore, s, frs) cfg"
+
+(* -- The semantics is deterministic --------------------------------- *)
+
+lemma pstep_deterministic:
+  "pstep pi cs cs' \<Longrightarrow> pstep pi cs cs'' \<Longrightarrow> cs'' = cs'"
+proof (induction arbitrary: cs'' rule: pstep.induct)
+  case (PAssign x a s frs) then show ?case by blast
+next
+  case (PSeq1 c2 s frs) then show ?case by (blast elim: PSeqSE)
+next
+  case (PSeq2 c1 s frs c1' s' frs' c2)
+  from PSeq2.prems PSeq2.hyps obtain c1'' s'' frs'' where
+    cs'': "cs'' = (PSeq c1'' c2, s'', frs'')" and
+    step: "pstep pi (c1, s, frs) (c1'', s'', frs'')"
+    by (auto elim: PSeqSE)
+  from PSeq2.IH[OF step] cs'' show ?case by simp
+next
+  case (PIfTrue b s c1 c2 frs) then show ?case by blast
+next
+  case (PIfFalse b s c1 c2 frs) then show ?case by blast
+next
+  case (PWhile b c s frs) then show ?case by blast
+next
+  case (PScope c s frs) then show ?case by blast
+next
+  case (PCall p c s frs) then show ?case by (auto elim: PCallSE)
+next
+  case (PRestore s fr frs) then show ?case by auto
+qed
+
+(* -- Frame mechanism: a scope restores locals, commits globals ------ *)
+
+text \<open>
+  Validation of the frame mechanism.  Assigning a local variable inside a
+  scope has no net effect on the store: the body's write is undone by the
+  restore (locals come from the saved frame), so the run returns to the
+  starting store.
+\<close>
+
+lemma combine_after_local_assign:
+  assumes "\<not> is_global x"
+  shows "<s | s(x := v)> = s"
+  using assms by (rule_tac ext) auto
+
+lemma scope_local_assign_noop:
+  assumes "\<not> is_global x"
+  shows "psteps pi (PScope (PAssign x a), s, []) (PSKIP, s, [])"
+proof -
+  have eq: "<s | s(x := aval a s)> = s"
+    by (rule combine_after_local_assign[OF assms])
+  let ?s1 = "s(x := aval a s)"
+  have a: "pstep pi (PScope (PAssign x a), s, []) (PSeq (PAssign x a) PRestore, s, [s])"
+    by (rule PScope)
+  have b: "pstep pi (PSeq (PAssign x a) PRestore, s, [s]) (PSeq PSKIP PRestore, ?s1, [s])"
+    by (rule PSeq2[OF PAssign])
+  have c: "pstep pi (PSeq PSKIP PRestore, ?s1, [s]) (PRestore, ?s1, [s])"
+    by (rule PSeq1)
+  have d: "pstep pi (PRestore, ?s1, [s]) (PSKIP, <s | ?s1>, [])"
+    by (rule PRestore)
+  have "psteps pi (PScope (PAssign x a), s, []) (PSKIP, <s | ?s1>, [])"
+    using a b c d by (meson star.refl star.step)
+  with eq show ?thesis by simp
+qed
+
+end

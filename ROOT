@@ -14,6 +14,10 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Examples"
   theories
     Goblint_Formalization
+    IMP2_Globals
+    IMP2_Proc
+    CFG_Trace_Collect
+    Trace_Soundness
     TD_CFG_Core
     TD_Widen_Interface
     TD_WN_Interface
@@ -23,3 +27,4 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Example_CFG_Collecting_Equiv
     Example_GraphViz
     Example_NonTerminating_Safe
+    Example_Trace_NonTerminating
