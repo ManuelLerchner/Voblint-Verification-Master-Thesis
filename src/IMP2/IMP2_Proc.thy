@@ -142,6 +142,17 @@ definition pruns_to :: "proc_table \<Rightarrow> pcom \<Rightarrow> store \<Righ
 lemma pruns_to_skip: "pruns_to pi PSKIP s s"
   unfolding pruns_to_def by (rule star.refl)
 
+(* PSKIP is a normal form: no step leaves it (for any frame stack). *)
+lemma pstep_PSKIP_stuck: "\<not> pstep pi (PSKIP, s, frs) cs"
+  by (auto elim: PSkipSE)
+
+lemma pruns_to_assign: "pruns_to pi (PAssign x a) s (s(x := aval a s))"
+proof -
+  have "pstep pi (PAssign x a, s, []) (PSKIP, s(x := aval a s), [])"
+    by (rule PAssign)
+  thus ?thesis unfolding pruns_to_def by (meson star.refl star.step)
+qed
+
 (* A write to a global commits: combining over a global update keeps the new
    value (dual to combine_after_local_assign). *)
 lemma combine_after_global_assign:
