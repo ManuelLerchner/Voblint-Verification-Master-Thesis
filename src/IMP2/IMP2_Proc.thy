@@ -236,4 +236,27 @@ lemma pruns_to_PIfFalse:
   "\<not> bval b s \<Longrightarrow> pruns_to pi c2 s t \<Longrightarrow> pruns_to pi (PIf b c1 c2) s t"
   unfolding pruns_to_def by (meson PIfFalse star.step)
 
+(* A false guard exits the loop with the store unchanged. *)
+lemma pruns_to_PWhileFalse:
+  "\<not> bval b s \<Longrightarrow> pruns_to pi (PWhile b c) s s"
+  unfolding pruns_to_def by (meson PWhile PIfFalse star.refl star.step)
+
+(* A true guard runs the body then re-enters the loop. *)
+lemma pruns_to_PWhileTrue:
+  assumes b:    "bval b s"
+      and body: "pruns_to pi c s s2"
+      and rest: "pruns_to pi (PWhile b c) s2 t"
+  shows "pruns_to pi (PWhile b c) s t"
+proof -
+  have seq: "pruns_to pi (PSeq c (PWhile b c)) s t"
+    using body rest by (rule pruns_to_PSeq)
+  have w: "pstep pi (PWhile b c, s, [])
+                    (PIf b (PSeq c (PWhile b c)) PSKIP, s, [])"
+    by (rule PWhile)
+  have i: "pstep pi (PIf b (PSeq c (PWhile b c)) PSKIP, s, [])
+                    (PSeq c (PWhile b c), s, [])"
+    using b by (rule PIfTrue)
+  from w i seq show ?thesis unfolding pruns_to_def by (meson star.step)
+qed
+
 end
