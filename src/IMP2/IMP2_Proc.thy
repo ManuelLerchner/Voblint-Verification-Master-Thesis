@@ -187,4 +187,31 @@ proof -
   with eq show ?thesis unfolding pruns_to_def by simp
 qed
 
+(* -- Sequencing lifts through the small-step --------------------------- *)
+
+(* Reducing the first component of a sequence mirrors reducing it alone, with
+   the frame stack threaded unchanged.  (Frame-aware analogue of star_seq2.) *)
+lemma psteps_PSeq2_cfg:
+  assumes "star (pstep pi) X Y"
+  shows "star (pstep pi)
+           (PSeq (fst X) c2, fst (snd X), snd (snd X))
+           (PSeq (fst Y) c2, fst (snd Y), snd (snd Y))"
+  using assms
+proof (induction rule: star.induct)
+  case (refl a)
+  show ?case by (rule star.refl)
+next
+  case (step a b c)
+  obtain ca sa fa where a: "a = (ca, sa, fa)" by (cases a) auto
+  obtain cb sb fb where b: "b = (cb, sb, fb)" by (cases b) auto
+  from step.hyps(1) a b have "pstep pi (ca, sa, fa) (cb, sb, fb)" by simp
+  hence "pstep pi (PSeq ca c2, sa, fa) (PSeq cb c2, sb, fb)" by (rule PSeq2)
+  with step.IH a b show ?case by (auto intro: star.step)
+qed
+
+lemma psteps_PSeq2:
+  "star (pstep pi) (c1, s, frs) (c1', s', frs')
+   \<Longrightarrow> star (pstep pi) (PSeq c1 c2, s, frs) (PSeq c1' c2, s', frs')"
+  using psteps_PSeq2_cfg[where X = "(c1, s, frs)" and Y = "(c1', s', frs')"] by simp
+
 end

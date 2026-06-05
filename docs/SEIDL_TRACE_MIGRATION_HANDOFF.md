@@ -58,9 +58,26 @@ KB companion (read these for *why*, not just *what*):
 > frame-stack route (`com`/`pcom` are never declared countable; adding
 > constructors doesn't touch `edge_action`). **Step 0 skipped.**
 >
-> **Remaining for M1:** wire `pcom` through the CFG translation (call/return
-> edges), then collecting + pipeline, for an end-to-end procedural example.
+> **Remaining for M1:** wire `pcom` through the CFG translation, then
+> collecting + pipeline, for an end-to-end procedural example.
 > **Then:** M3 (TD_side globals), M4 (digests).
+>
+> **Second plan correction (verified).** A flat `EA_Combine` CFG edge for
+> procedure return is **not soundly abstractable** in the current domain
+> framework. Its concrete locals-forgetting semantics (`locals -> top`) needs a
+> top element, but the domains are `bounded_semilattice_sup_bot` (`Domains/
+> Abstract_Domain.thy`) -- `sup`/`bot` only, **no `top`**. So the interprocedural
+> combine cannot live on a flat CFG edge: the sound combine must keep the
+> *caller's* abstract state (no top needed), which requires caller context --
+> i.e. the constraint system reading the call-site state (side-effecting /
+> TD_side, Phase 3) or the trace foundation (Phase 4), not `edge_action`.
+> Conclusion: do **not** add `EA_Enter`/`EA_Combine` to `edge_action`; handle
+> call/return at the constraint-system / trace layer instead.
+>
+> Procedure operational substrate so far (`IMP2_Proc.thy`, green): pstep
+> determinism, `pruns_to` (+ skip/assign), `pstep_PSKIP_stuck`,
+> `combine_after_{local,global}_assign`, `pcall_global_increment`,
+> `psteps_PSeq2` (sequencing lifts through the frame-stack step).
 
 ---
 
