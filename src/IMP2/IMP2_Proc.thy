@@ -259,4 +259,51 @@ proof -
   from w i seq show ?thesis unfolding pruns_to_def by (meson star.step)
 qed
 
+(* -- Determinism of terminating runs --------------------------------- *)
+
+(* A deterministic relation reaches at most one normal form. *)
+lemma pstep_star_determ:
+  "star (pstep pi) a b \<Longrightarrow> star (pstep pi) a c \<Longrightarrow>
+   (\<And>x. \<not> pstep pi b x) \<Longrightarrow> (\<And>x. \<not> pstep pi c x) \<Longrightarrow> b = c"
+proof (induction arbitrary: c rule: star.induct)
+  case (refl a)
+  from refl.prems(1) show ?case
+  proof (cases rule: star.cases)
+    case refl
+    then show ?thesis by simp
+  next
+    case (step d)
+    then have "pstep pi a d" by auto
+    with refl.prems(2) show ?thesis by blast
+  qed
+next
+  case (step a a' b)
+  note outer_step = step.hyps(1) and outer_ih = step.IH
+    and nb = step.prems(2) and nc = step.prems(3)
+  from step.prems(1) show ?case
+  proof (cases rule: star.cases)
+    case refl
+    with outer_step nc show ?thesis by blast
+  next
+    case (step d)
+    then have ad: "pstep pi a d" and dc: "star (pstep pi) d c" by auto
+    from pstep_deterministic[OF outer_step ad] have da: "d = a'" .
+    have "star (pstep pi) a' c" using dc da by simp
+    from outer_ih[OF this nb nc] show ?thesis .
+  qed
+qed
+
+(* Hence a run is functional: the terminating result is unique. *)
+lemma pruns_to_determ:
+  assumes "pruns_to pi c s t" and "pruns_to pi c s t'"
+  shows "t = t'"
+proof -
+  from assms have s1: "star (pstep pi) (c, s, []) (PSKIP, t, [])"
+              and s2: "star (pstep pi) (c, s, []) (PSKIP, t', [])"
+    unfolding pruns_to_def by auto
+  have nb: "\<And>x. \<not> pstep pi (PSKIP, t, []) x" by (rule pstep_PSKIP_stuck)
+  have nc: "\<And>x. \<not> pstep pi (PSKIP, t', []) x" by (rule pstep_PSKIP_stuck)
+  from pstep_star_determ[OF s1 s2 nb nc] show ?thesis by simp
+qed
+
 end
