@@ -138,6 +138,12 @@ Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textua
 * Heap refresh after large structural change (imports, session `ROOT`, new theory entry).
 * Commit gate (CI).
 
+## Claiming work done
+
+**Never claim a proof is fixed based on the I/Q interactive checker alone.** Interactive passes diverge from batch silently. The gate is a clean `isabelle build` output — show the user the green build log before declaring done.
+
+After any `write_file`, re-read the file from disk (or re-run `get_diagnostics`) to confirm the edit persisted. Buffer-sync lag and `save_file` timeouts have caused phantom fixes; verify the disk state before proceeding.
+
 Build command (from repo root):
 
 ```bash
@@ -282,3 +288,15 @@ Run before declaring a theorem done. These survive batch-build.
 8. **Two-stage review before done.** (a) Self-review items 1–5. (b) Simulated hostile peer review. Does not replace human review 1, 3, 4 slip through agent reviews.
 
 Proof status lives in `docs/PROOF_PHASES.md` (sorry inventory) do not duplicate lemma lists in this file.
+
+---
+
+# Accuracy & Verification
+
+**Never assert facts about analyzer behavior, paper contents, or proof correctness without first verifying against the repo or source.** Flag uncertainty explicitly ("I believe X — verify against `src/Y`") rather than stating it as fact.
+
+Specific cases that require a source lookup before claiming:
+* "inherits correctness" or "soundness follows from …"
+* Quoted paper passages or attributed claims
+* "Real analyzers also …" statements about GobLint behavior
+* Whether a particular lemma or definition exists in a given theory

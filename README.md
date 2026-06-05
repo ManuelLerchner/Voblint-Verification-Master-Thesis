@@ -1,5 +1,8 @@
-Goblint Formalization
-=====================
+Voblint
+=======
+
+> **Voblint: Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL**
+> Master's thesis. Manuel Lerchner, TUM Informatics 2, supervised by Alexandra Graß.
 
 Abstract
 --------
