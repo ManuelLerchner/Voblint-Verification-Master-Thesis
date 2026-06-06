@@ -77,7 +77,34 @@ KB companion (read these for *why*, not just *what*):
 > Procedure operational substrate so far (`IMP2_Proc.thy`, green): pstep
 > determinism, `pruns_to` (+ skip/assign), `pstep_PSKIP_stuck`,
 > `combine_after_{local,global}_assign`, `pcall_global_increment`,
-> `psteps_PSeq2` (sequencing lifts through the frame-stack step).
+> `psteps_PSeq2` (sequencing lifts through the frame-stack step), plus
+> `pruns_to` composition for seq/if/while and `pruns_to_determ`
+> (runs are input/output functional).
+
+> **Phase 3 started (green): side-effecting constraint construction.**
+> `src/Solver/TD_Side_CFG.thy` builds the `'l + 'g` side-effecting constraint
+> system on the vendored `TD_side` solver:
+>
+> - `restrict_local` / `restrict_global` split an abstract state by `is_global`
+>   (`restrict_local_global_join` recovers the original).
+> - `side_rhs_fold` / `make_side_rhs_tree`: per program point a strategy tree
+>   that `QueryL`s each predecessor's local state, `QueryG`s the single global
+>   unknown, applies the edge transfer, then `Side`-contributes the global
+>   component and flows the local component on.
+> - `side_cfg_T`: the resulting `eqsT` (local unknowns = program points; one
+>   global unknown of type `unit`).
+>
+> This is the construction only. **Remaining for M3 (soundness):** the vendor
+> exposes a concrete solver via `interpretation TD_side: TD_side_opt False T`
+> (`vendor/td-verification/TD_side_upd_rule.thy:26`), whose
+> `least_partial_post_solution` turns `TD_side.solve_dom (side_cfg_T ...) v`
+> into a least post-solution `sigma` of `side_cfg_T` (the analog of how
+> `TD_plain_Interp` is used in `src/Solver/TD_Soundness.thy`). The open work is
+> the soundness bridge: relate that post-solution `sigma` (locals at each pp
+> from the local unknowns, globals from the one global unknown via
+> `restrict_global`/`Side`) to the CFG collecting semantics, i.e. an
+> `'l + 'g` analog of `td_analyse_collect_sound`. This is a large dedicated
+> proof; do not introduce `sorry` skeletons (the spine is sorry-free).
 
 ---
 
