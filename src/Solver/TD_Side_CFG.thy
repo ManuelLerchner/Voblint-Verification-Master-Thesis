@@ -32,12 +32,14 @@ lemma restrict_local_global_join:
 lemma restrict_local_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> restrict_local (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
      \<le> restrict_local sigma2"
-  unfolding restrict_local_def le_fun_def by (rule ext) auto
+  unfolding restrict_local_def le_fun_def
+  by (auto dest: le_funD simp: bot_least)
 
 lemma restrict_global_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> restrict_global (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
      \<le> restrict_global sigma2"
-  unfolding restrict_global_def le_fun_def by (rule ext) auto
+  unfolding restrict_global_def le_fun_def
+  by (auto dest: le_funD simp: bot_least)
 
 (* Strategy tree for one program point: fold the incoming edges into a
    QueryL / QueryG / Side chain. *)
@@ -123,6 +125,54 @@ where
      side_glob tf join sigma ps
        \<squnion> restrict_global (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ()))))"
 (* Monotonicity in the queried assignment (join = \<squnion>). *)
+
+lemma join_abs_state_left_mono:
+  fixes join :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and acc1 acc2 s :: "'a abs_state"
+  assumes join_mono:
+    "\<And>s1 s1' s2 s2'. s1 \<le> s1' \<Longrightarrow> s2 \<le> s2'
+     \<Longrightarrow> join s1 s2 \<le> join s1' s2'"
+  assumes acc_le: "acc1 \<le> acc2"
+  shows "join acc1 s \<le> join acc2 s"
+  by (rule join_mono[OF acc_le order_refl])
+
+lemma join_abs_state_right_mono:
+  fixes join :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and s acc1 acc2 :: "'a abs_state"
+  assumes join_mono:
+    "\<And>s1 s1' s2 s2'. s1 \<le> s1' \<Longrightarrow> s2 \<le> s2'
+     \<Longrightarrow> join s1 s2 \<le> join s1' s2'"
+  assumes acc_le: "acc1 \<le> acc2"
+  shows "join s acc1 \<le> join s acc2"
+  by (rule join_mono[OF order_refl acc_le])
+
+lemma side_acc_mono_acc:
+  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and join :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sigma :: "pp + unit \<Rightarrow> 'a abs_state"
+    and acc1 acc2 :: "'a abs_state"
+  assumes join_mono:
+    "\<And>s1 s1' s2 s2'. s1 \<le> s1' \<Longrightarrow> s2 \<le> s2'
+     \<Longrightarrow> join s1 s2 \<le> join s1' s2'"
+  shows "acc1 \<le> acc2 \<Longrightarrow> side_acc tf join acc1 sigma ps \<le> side_acc tf join acc2 sigma ps"
+proof (induction ps arbitrary: acc1 acc2)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons ua ps)
+  obtain u a where ua: "ua = (u, a)" by (cases ua)
+  define acc1' acc2' where
+    "acc1' = join acc1 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))" and
+    "acc2' = join acc2 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))"
+  have acc1'_le_acc2': "acc1' \<le> acc2'"
+    unfolding acc1'_def acc2'_def
+    by (rule join_abs_state_left_mono[OF join_mono Cons.prems])
+  have inner: "side_acc tf join acc1' sigma ps \<le> side_acc tf join acc2' sigma ps"
+    by (rule Cons.IH[OF acc1'_le_acc2'])
+  then show ?case
+    using inner unfolding ua acc1'_def acc2'_def side_acc.simps by simp
+qed
+
 lemma side_acc_mono:
   fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and join :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -143,6 +193,9 @@ next
   define su1 su2 where
     "su1 = join (sigma1 (Inl u)) (sigma1 (Inr ()))" and
     "su2 = join (sigma2 (Inl u)) (sigma2 (Inr ()))"
+  define acc1 acc2 where
+    "acc1 = join acc (restrict_local (apply_tf tf a su1))" and
+    "acc2 = join acc (restrict_local (apply_tf tf a su2))"
   have su_le: "su1 \<le> su2"
     using join_mono sigma_le unfolding su1_def su2_def le_fun_def by auto
   have tf_le: "apply_tf tf a su1 \<le> apply_tf tf a su2"
@@ -150,10 +203,21 @@ next
   have loc_le: "restrict_local (apply_tf tf a su1)
                  \<le> restrict_local (apply_tf tf a su2)"
     by (rule restrict_local_mono[OF tf_le])
-  have acc_le: "join acc (restrict_local (apply_tf tf a su1))
-                 \<le> join acc (restrict_local (apply_tf tf a su2))"
-    by (rule join_mono[OF order_refl loc_le])
-  show ?case unfolding ua using Cons.IH[OF acc_le] by (simp only: side_acc.simps)
+  have acc1_le_acc2: "acc1 \<le> acc2"
+    unfolding acc1_def acc2_def
+    by (rule join_abs_state_right_mono[OF join_mono loc_le])
+  have step1: "side_acc tf join acc1 sigma1 ps \<le> side_acc tf join acc1 sigma2 ps"
+    by (rule Cons.IH)
+  have step2: "side_acc tf join acc1 sigma2 ps \<le> side_acc tf join acc2 sigma2 ps"
+    by (rule side_acc_mono_acc[OF join_mono acc1_le_acc2])
+  have step1': "side_acc tf join (join acc (restrict_local (apply_tf tf a (join (sigma1 (Inl u)) (sigma1 (Inr ())))))) sigma1 ps
+              \<le> side_acc tf join (join acc (restrict_local (apply_tf tf a (join (sigma1 (Inl u)) (sigma1 (Inr ())))))) sigma2 ps"
+    using step1 unfolding acc1_def su1_def by simp
+  have step2': "side_acc tf join (join acc (restrict_local (apply_tf tf a (join (sigma1 (Inl u)) (sigma1 (Inr ())))))) sigma2 ps
+              \<le> side_acc tf join (join acc (restrict_local (apply_tf tf a (join (sigma2 (Inl u)) (sigma2 (Inr ())))))) sigma2 ps"
+    using step2 unfolding acc1_def acc2_def su1_def su2_def by simp
+  show ?case unfolding ua side_acc.simps
+    by (rule order_trans[OF step1' step2'])
 qed
 
 lemma side_acc_mono_sup:
@@ -163,8 +227,7 @@ lemma side_acc_mono_sup:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   assumes sigma_le: "sigma1 \<le> sigma2"
   shows "side_acc tf (\<squnion>) acc sigma1 ps \<le> side_acc tf (\<squnion>) acc sigma2 ps"
-  using side_acc_mono[OF tf_mono _ sigma_le, where join="(\<squnion>)"]
-  by (simp add: sup_mono)
+  by (rule side_acc_mono[OF tf_mono sup_mono sigma_le])
 
 lemma side_glob_mono:
   fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -191,8 +254,9 @@ next
   have glob_le: "restrict_global (apply_tf tf a su1)
                   \<le> restrict_global (apply_tf tf a su2)"
     by (rule restrict_global_mono[OF tf_mono[OF su_le]])
-  show ?case unfolding ua
-    using sup_mono[OF Cons.IH glob_le] by (simp only: side_glob.simps)
+  show ?case unfolding ua su1_def su2_def
+    using sup_mono[OF Cons.IH glob_le]
+    by (metis side_glob.simps(2) su1_def su2_def)
 qed
 
 lemma side_glob_mono_sup:
@@ -202,7 +266,23 @@ lemma side_glob_mono_sup:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   assumes sigma_le: "sigma1 \<le> sigma2"
   shows "side_glob tf (\<squnion>) sigma1 ps \<le> side_glob tf (\<squnion>) sigma2 ps"
-  by (rule side_glob_mono[OF tf_mono _ sigma_le, where join="(\<squnion>)"])
+  by (rule side_glob_mono[OF tf_mono sup_mono sigma_le])
+
+(* acc in side_rhs_fold does not affect dep_aux. *)
+lemma dep_aux_side_rhs_fold_acc_indep:
+  "dep_aux sigma (side_rhs_fold tf join acc1 ps)
+   = dep_aux sigma (side_rhs_fold tf join acc2 ps)"
+proof (induction ps arbitrary: acc1 acc2)
+  case Nil
+  show ?case by simp
+next
+  case (Cons ua ps)
+  obtain u a where ua: "ua = (u, a)" by (cases ua)
+  show ?case unfolding ua side_rhs_fold.simps dep_aux.simps Let_def
+    using Cons.IH[of "join acc1 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))"
+                  "join acc2 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))"]
+    by simp
+qed
 
 (* Dependencies of side_rhs_fold trees depend only on the edge list, not sigma. *)
 lemma dep_aux_side_rhs_fold_indep:
@@ -214,7 +294,23 @@ proof (induction ps arbitrary: acc sigma1 sigma2)
 next
   case (Cons ua ps)
   obtain u a where ua: "ua = (u, a)" by (cases ua)
-  show ?case unfolding ua by (simp add: Cons.IH)
+  define acc1 acc2 where
+    "acc1 = join acc (restrict_local (apply_tf tf a (join (sigma1 (Inl u)) (sigma1 (Inr ())))))" and
+    "acc2 = join acc (restrict_local (apply_tf tf a (join (sigma2 (Inl u)) (sigma2 (Inr ())))))"
+  have inner: "dep_aux sigma1 (side_rhs_fold tf join acc1 ps)
+              = dep_aux sigma2 (side_rhs_fold tf join acc2 ps)"
+  proof -
+    have "dep_aux sigma1 (side_rhs_fold tf join acc1 ps)
+          = dep_aux sigma1 (side_rhs_fold tf join acc ps)"
+      by (rule dep_aux_side_rhs_fold_acc_indep[symmetric])
+    also have "... = dep_aux sigma2 (side_rhs_fold tf join acc ps)"
+      by (rule Cons.IH)
+    also have "... = dep_aux sigma2 (side_rhs_fold tf join acc2 ps)"
+      by (rule dep_aux_side_rhs_fold_acc_indep)
+    finally show ?thesis .
+  qed
+  show ?case unfolding ua side_rhs_fold.simps dep_aux.simps Let_def
+    using inner unfolding acc1_def acc2_def by simp
 qed
 
 
@@ -251,10 +347,8 @@ lemma side_cfg_T_is_mono_eq:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   shows "is_mono_eq (side_cfg_T g tf (\<squnion>) bot0 s0)"
   unfolding is_mono_eq_def side_cfg_T_def
-  apply clarify
-  apply (subst eq_side_cfg_T)
-  apply (rule side_acc_mono_sup[OF tf_mono])
-  by simp
+  by (simp add: make_side_rhs_tree_def side_acc_mono_sup tf_mono traverse_side_rhs_fold)
+ 
 
 lemma side_cfg_T_mono_sides:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -264,12 +358,12 @@ lemma side_cfg_T_mono_sides:
   shows "mono_sides (side_cfg_T g tf (\<squnion>) bot0 s0)"
   unfolding mono_sides_def side_cfg_T_def make_side_rhs_tree_def Let_def
   apply clarify
+  apply (rename_tac w sigma1 sigma2)
   apply (rule le_funI)
   apply (case_tac x rule: sum.exhaust)
    apply (simp add: sides_side_rhs_fold_Inl)
-  apply (simp add: sides_side_rhs_fold_Inr)
-  apply (rule side_glob_mono_sup[OF tf_mono])
-  apply simp
+  apply (simp add: sides_side_rhs_fold_Inr side_glob_mono_sup[OF tf_mono])
+  done
 
 lemma side_cfg_T_mono_deps:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -427,6 +521,136 @@ proof -
   finally show ?thesis unfolding side_env_def .
 qed
 
+(* -- Dependency / reachability (solver stable set) ------------------- *)
+
+lemma dep_side_rhs_fold:
+  assumes mem: "(u, a) \<in> set ps"
+  shows "Inl u \<in> dep_aux sigma (side_rhs_fold tf join acc ps)"
+  using assms
+proof (induction ps arbitrary: acc)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons ua ps)
+  obtain u0 a0 where ua: "ua = (u0, a0)" by (cases ua)
+  show ?case
+  proof (cases "ua = (u, a)")
+    case True
+    then show ?thesis unfolding ua by auto
+  next
+    case False
+    have mem_ps: "(u, a) \<in> set ps" using Cons.prems ua False by auto
+    then show ?thesis unfolding ua side_rhs_fold.simps dep_aux.simps Let_def
+      using Cons.IH by auto
+  qed
+qed
+
+lemma dep_side_rhs_tree_pred:
+  assumes fin: "finite (edges g)"
+  assumes pred: "(u, a) \<in> predecessors g w"
+  shows "u \<in> dep\<^sub>L (side_cfg_T g tf join bot0 s0) sigma w"
+proof -
+  have mem: "(u, a) \<in> set (predecessor_list g w)"
+    using pred fin by (auto simp: predecessors_def set_predecessor_list)
+  have "Inl u \<in> dep_aux sigma (make_side_rhs_tree g tf join bot0 s0 w)"
+    unfolding make_side_rhs_tree_def Let_def
+    by (metis dep_side_rhs_fold mem)
+  thus ?thesis unfolding side_cfg_T_def dep\<^sub>L_def dep_def by simp
+qed
+
+lemma dep_side_rhs_tree_edge:
+  assumes fin: "finite (edges g)"
+  assumes ed: "(u, a, w) \<in> edges g"
+  shows "u \<in> dep\<^sub>L (side_cfg_T g tf join bot0 s0) sigma w"
+  using dep_side_rhs_tree_pred[OF fin, unfolded predecessors_def] ed by auto
+
+lemma trans_dep\<^sub>L_step_in:
+  fixes T :: "(pp, unit, 'd::order_bot) eqsT"
+  assumes "y \<in> dep\<^sub>L T sigma x"
+  shows "y \<in> trans_dep\<^sub>L T sigma x"
+  using assms by blast
+
+lemma trans_dep\<^sub>L_trans:
+  fixes T :: "(pp, unit, 'd::order_bot) eqsT"
+  assumes "y \<in> trans_dep\<^sub>L T sigma x"
+    and "z \<in> dep\<^sub>L T sigma y"
+  shows "z \<in> trans_dep\<^sub>L T sigma x"
+  by (metis Nitpick.tranclp_unfold assms(1,2) mem_Collect_eq tranclp.trancl_into_trancl)
+ 
+
+lemma cfg_path_node_in_trans_dep_side:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state" and sigma :: "pp + unit \<Rightarrow> 'a abs_state"
+    and w v0 :: pp and es :: "(edge_action * pp) list"
+  assumes fin: "finite (edges g)"
+  assumes path: "g \<turnstile> w \<longrightarrow>\<^bsub>es\<^esub> v0"
+  assumes w_ne: "w \<noteq> v0"
+  shows "w \<in> trans_dep\<^sub>L (side_cfg_T g tf (\<squnion>) bot0 s0) sigma v0"
+proof (cases "w = v0")
+  case True
+  with w_ne show ?thesis by simp
+next
+  case False
+  show ?thesis using path False
+  proof (induction es arbitrary: w)
+    case Nil
+    then show ?case using cfg_path_ne_nil by auto
+  next
+    case (Cons e es')
+    obtain a w' where ew: "e = (a, w')" by (cases e) auto
+    have path': "g \<turnstile> w \<longrightarrow>\<^bsub>(a, w') # es'\<^esub> v0"
+      using path Cons ew by simp
+    have ed: "(w, a, w') \<in> edges g"
+      by (rule cfg_path_ConsD_edge[OF path'])
+    have p2: "g \<turnstile> w' \<longrightarrow>\<^bsub>es'\<^esub> v0"
+      by (rule cfg_path_ConsD_rest[OF path'])
+    have w_dep: "w \<in> dep\<^sub>L (side_cfg_T g tf (\<lambda>a b c. a c \<squnion> b c) bot0 s0) sigma w'"
+      using dep_side_rhs_tree_edge[OF fin ed] by blast
+    show ?case
+    proof (cases "w' = v0")
+      case True
+      show ?thesis
+        using w_dep trans_dep\<^sub>L_step_in True
+        by (auto simp: side_cfg_T_def fun_eq_iff)
+    next
+      case False
+      have w'_in: "w' \<in> trans_dep\<^sub>L (side_cfg_T g tf (\<lambda>a b c. a c \<squnion> b c) bot0 s0) sigma v0"
+        using Cons.IH[OF p2 False] by (simp add: side_cfg_T_def fun_eq_iff)
+      show ?thesis
+        using w_dep w'_in trans_dep\<^sub>L_trans
+        by (auto simp: side_cfg_T_def fun_eq_iff)
+    qed
+  qed
+qed
+
+
+
+lemma side_vars_on_query_path:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state" and sigma :: "pp + unit \<Rightarrow> 'a abs_state"
+    and v0 w :: pp and vars :: "pp set"
+  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v0 sigma vars"
+  assumes fin: "finite (edges g)"
+  assumes suffix: "g \<turnstile> w \<longrightarrow>\<^bsub>es\<^esub> v0"
+  shows "w \<in> vars"
+proof (cases "w = v0")
+  case True
+  then show ?thesis using pp by auto
+next
+  case False
+  have "w \<in> trans_dep\<^sub>L (side_cfg_T g tf (\<squnion>) bot0 s0) sigma v0"
+    using cfg_path_node_in_trans_dep_side[OF fin suffix False] by simp
+  moreover have "trans_dep\<^sub>L (side_cfg_T g tf (\<squnion>) bot0 s0) sigma v0 \<subseteq> vars"
+    using part_post_solution_implies_trans_dep_subsumed[OF pp] by simp
+  ultimately show ?thesis by blast
+qed
+
+lemma cfg_path_entry_step_target:
+  assumes step: "g \<turnstile> x \<longrightarrow>\<^bsub>(a, w) # es'\<^esub> v"
+  assumes prefix: "g \<turnstile> cfg_entry g \<longrightarrow>\<^bsub>es1\<^esub> x"
+  shows "g \<turnstile> cfg_entry g \<longrightarrow>\<^bsub>es1 @ [(a, w)]\<^esub> w"
+  using cfg_path_on_path_step[OF prefix step] .
+
 (* -- Collecting soundness of a side-effecting post-solution (M3) ------ *)
 
 context sound_domain
@@ -456,8 +680,7 @@ theorem side_collect_sound_path:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
-  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
-  assumes vars_reach: "\<And>u es w. g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> w \<Longrightarrow> w \<in> vars"
+  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
   assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
@@ -471,8 +694,10 @@ proof -
     assume p: "g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v"
     obtain edge where edge: "(x, b, y) \<in> edges g"
       using p by (cases rule: cfg_stepE) auto
+    have y_suf: "g \<turnstile> y \<longrightarrow>\<^bsub>es'\<^esub> v"
+      using p by (cases rule: cfg_stepE) auto
     have y_in: "y \<in> vars"
-      using cfg_path_step_target[OF p] vars_reach by blast
+      using side_vars_on_query_path[OF pp fin y_suf] by simp
     show "apply_tf tf b (side_env sigma x) \<le> side_env sigma y"
       by (rule apply_tf_combined_le[OF pp y_in edge fin])
   qed
@@ -500,8 +725,7 @@ corollary side_collect_sound_at:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
-  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
-  assumes vars_reach: "\<And>u es w. g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> w \<Longrightarrow> w \<in> vars"
+  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
   assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
@@ -519,7 +743,7 @@ proof -
       unfolding cfg_collect_paths_def by blast
     show "t \<in> gamma_state (side_env sigma v)"
       by (rule side_collect_sound_path[OF tf_sound_assign tf_sound_assume
-            tf_sound_assume_not pp vars_reach fin entry path_es t_in])
+            tf_sound_assume_not pp fin entry path_es t_in])
   qed
 qed
 

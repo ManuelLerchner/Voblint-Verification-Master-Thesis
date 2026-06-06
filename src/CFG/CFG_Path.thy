@@ -24,13 +24,38 @@ inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool"
                 ==> g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v"
 
 inductive_cases cfg_emptyE[elim!]: "g \<turnstile> v \<longrightarrow>\<^bsub>[]\<^esub> u"
+
+lemma cfg_path_emptyD:
+  "g \<turnstile> u \<longrightarrow>\<^bsub>[]\<^esub> v \<Longrightarrow> u = v"
+  by (auto elim: cfg_emptyE)
+
 inductive_cases cfg_stepE[elim]: "g \<turnstile> v \<longrightarrow>\<^bsub>es\<^esub> u"
+
+lemma cfg_path_ConsD_edge:
+  "g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v \<Longrightarrow> (u, a, w) \<in> edges g"
+  by (cases rule: cfg_stepE) auto
+
+lemma cfg_path_ConsD_rest:
+  "g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v \<Longrightarrow> g \<turnstile> w \<longrightarrow>\<^bsub>es\<^esub> v"
+  by (cases rule: cfg_stepE) auto
+
+lemma cfg_path_ne_nil:
+  assumes path: "g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+    and u_ne: "u \<noteq> v"
+  shows "es \<noteq> []"
+  using assms cfg_path_emptyD by auto
 
 
 lemma cfg_path_append[intro]:
   "g \<turnstile> u \<longrightarrow>\<^bsub>es1\<^esub> v ==> g \<turnstile> v \<longrightarrow>\<^bsub>es2\<^esub> w ==> g \<turnstile> u \<longrightarrow>\<^bsub>es1 @ es2\<^esub> w"
   apply (induction es1 arbitrary: u) 
   by(auto)
+
+lemma cfg_path_suffix_to_query:
+  assumes prefix: "g \<turnstile> p \<longrightarrow>\<^bsub>esx\<^esub> x"
+  assumes suffix: "g \<turnstile> x \<longrightarrow>\<^bsub>es'\<^esub> v0"
+  shows "g \<turnstile> p \<longrightarrow>\<^bsub>esx @ es'\<^esub> v0"
+  using cfg_path_append[OF prefix suffix] .
 
 (* First step of a non-empty path reaches its intermediate target. *)
 lemma cfg_path_step_target:

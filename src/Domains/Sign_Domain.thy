@@ -15,11 +15,11 @@ begin
   Finite lattice; first concrete domain in the pipeline (no widening).
 *)
 
-(* ── Sign Datatype ────────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Sign Datatype \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 datatype sign = SBot | SNeg | SZero | SPos | STop
 
-(* ── Concretization ───────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Concretization \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun gamma_sign :: "sign => int set" where
     "gamma_sign SBot  = {}"
@@ -28,7 +28,7 @@ fun gamma_sign :: "sign => int set" where
   | "gamma_sign SPos  = {n. n > 0}"
   | "gamma_sign STop  = UNIV"
 
-(* ── Partial Order ────────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Partial Order \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun sign_le :: "sign => sign => bool" where
     "sign_le SBot  _     = True"
@@ -78,7 +78,7 @@ definition "bot_sign = SBot"
 instance ..
 end
 
-(* ── Join (Least Upper Bound) ─────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Join (Least Upper Bound) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun join_sign :: "sign => sign => sign" where
     "join_sign SBot b     = b"
@@ -101,12 +101,12 @@ lemma join_sign_least: "sign_le a c ==> sign_le b c ==> sign_le (join_sign a b) 
 lemma join_sign_comm:  "join_sign a b = join_sign b a"                 by (cases a; cases b) simp_all
 lemma join_sign_assoc: "join_sign a (join_sign b c) = join_sign (join_sign a b) c"  by (cases a; cases b; cases c) simp_all
 
-(* ── Widening (identity for finite domain: widen = join) ────── *)
+(* \<midarrow>\<midarrow> Widening (identity for finite domain: widen = join) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition widen_sign :: "sign => sign => sign" where
   "widen_sign a b = join_sign a b"
 
-(* ── Abstract Arithmetic Operations ──────────────────────────── *)
+(* \<midarrow>\<midarrow> Abstract Arithmetic Operations \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 (*
   Define helpers first so aval_sign can call them.
 *)
@@ -184,7 +184,7 @@ lemma aval_sign_sound:
       simp add: aval.simps aval_sign.simps aval_sign_hol_sound
                 sign_plus_sound sign_minus_sound sign_times_sound)
 
-(* ── Abstract Assume ─────────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Abstract Assume \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
     "assume_sign (Less (V x) (N n)) sigma = (if n = 0 then sigma(x := SNeg) else sigma)"
@@ -193,7 +193,7 @@ fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
 fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
   "assume_not_sign _ sigma = sigma"   (* conservative: no refinement *)
 
-(* ── Typeclass Instances ──────────────────────────────────────
+(* \<midarrow>\<midarrow> Typeclass Instances \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>
    Hoisted above the abstract_domain interpretation because the
    sound_domain locale's class constraint is bounded_semilattice_sup_bot. *)
 
@@ -234,7 +234,7 @@ qed
 (* sign in order_bot + semilattice_sup -> bounded_semilattice_sup_bot for free *)
 instance sign :: bounded_semilattice_sup_bot ..
 
-(* ── Abstract Domain Interpretation ─────────────────────────── *)
+(* \<midarrow>\<midarrow> Abstract Domain Interpretation \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 interpretation sign_domain: abstract_domain gamma_sign widen_sign
 proof unfold_locales
@@ -308,7 +308,7 @@ lemma assume_not_sign_sound:
    \<Longrightarrow> s \<in> sign_domain.gamma_state (assume_not_sign b sigma)"
   unfolding assume_not_sign.simps by simp
 
-(* ── Abstract Assignment ─────────────────────────────────────── *)
+(* \<midarrow>\<midarrow> Abstract Assignment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition assign_sign ::
     "vname => aexp => (vname => sign) => (vname => sign)"
@@ -333,13 +333,81 @@ proof safe
   qed
 qed
 
-(* ── Abstract Domain Instantiation ───────────────────────────── *)
+(* \<midarrow>\<midarrow> Abstract Domain Instantiation \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
-(* ── Bundled Transfer Functions ──────────────────────────────── *)
+(* \<midarrow>\<midarrow> Bundled Transfer Functions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition sign_tf :: "sign domain_transfer" where
   "sign_tf = (| tf_assign     = assign_sign,
                 tf_assume     = assume_sign,
                 tf_assume_not = assume_not_sign |)"
+
+lemma sign_plus_mono1:
+  "a1 \<le> a2 \<Longrightarrow> sign_plus a1 b \<le> sign_plus a2 b"
+  unfolding less_eq_sign_def
+  by (cases a1; cases a2; cases b; simp)
+
+lemma sign_plus_mono2:
+  "b1 \<le> b2 \<Longrightarrow> sign_plus a b1 \<le> sign_plus a b2"
+  unfolding less_eq_sign_def
+  by (cases a; cases b1; cases b2; simp)
+
+lemma sign_minus_mono1:
+  "a1 \<le> a2 \<Longrightarrow> sign_minus a1 b \<le> sign_minus a2 b"
+  unfolding less_eq_sign_def
+  by (cases a1; cases a2; cases b; simp)
+
+lemma sign_minus_mono2:
+  "b1 \<le> b2 \<Longrightarrow> sign_minus a b1 \<le> sign_minus a b2"
+  unfolding less_eq_sign_def
+  by (cases a; cases b1; cases b2; simp)
+
+lemma sign_times_mono1:
+  "a1 \<le> a2 \<Longrightarrow> sign_times a1 b \<le> sign_times a2 b"
+  unfolding less_eq_sign_def
+  by (cases a1; cases a2; cases b; simp)
+
+lemma sign_times_mono2:
+  "b1 \<le> b2 \<Longrightarrow> sign_times a b1 \<le> sign_times a b2"
+  unfolding less_eq_sign_def
+  by (cases a; cases b1; cases b2; simp)
+
+lemma sign_plus_combine_mono:
+  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> sign_plus a1 b1 \<le> sign_plus a2 b2"
+  by (meson order.trans sign_plus_mono1 sign_plus_mono2)
+
+lemma aval_sign_hol_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> aval_sign_hol a sigma1 \<le> aval_sign_hol a sigma2"
+  apply (induction a arbitrary: sigma1 sigma2)
+  by(auto simp add: sign_plus_combine_mono le_funD)
+ 
+
+lemma aval_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> aval_sign a sigma1 \<le> aval_sign a sigma2"
+  apply (induction a arbitrary: sigma1 sigma2)
+  apply(auto simp add: sign_plus_combine_mono aval_sign_hol_mono)
+  apply (meson order.trans sign_minus_mono1 sign_minus_mono2)
+  by (meson dual_order.trans sign_times_mono1 sign_times_mono2)
+
+lemma assign_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
+  by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
+ 
+lemma assume_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> assume_sign b sigma1 \<le> assume_sign b sigma2"
+proof (induction b arbitrary: sigma1 sigma2)
+  case (Less a1 a2)
+  then show ?case
+    unfolding le_fun_def
+    apply(auto)
+    by (smt (verit, best) assume_sign.simps(1) assume_sign_default fun_upd_other fun_upd_same
+        order_class.order_eq_iff)
+qed auto
+
+
+lemma sign_tf_mono:
+  "s1 \<le> s2 \<Longrightarrow> apply_tf sign_tf a s1 \<le> apply_tf sign_tf a s2"
+  apply (cases a)
+  by (auto simp: sign_tf_def assign_sign_mono assume_sign_mono)
 
 end

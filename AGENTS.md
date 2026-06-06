@@ -159,6 +159,7 @@ Always pass `-v` so per-theory progress streams live. With warm AFP heaps a clea
 **If the build runs > 40s with warm heaps, assume an infinite loop or a slow `metis`/`smt` reconstruction, not slow compilation.** Top culprits, in order:
 
 * **`metis` / `smt` blow-up** — sledgehammer-suggested `metis [...]` calls that run fast interactively but balloon in batch. Most common cause of build hangs in this repo.
+* **`auto` + `elim!` on inductive case rules** — path predicates, grammars, and other large `inductive` libraries; often fine in I/Q, loops in batch.
 * `simp` / `auto` / `fastforce` rewriting in both directions.
 * A recursive `lemma [simp]` declaration.
 * A freshly added congruence / `[intro]` rule that triggers nontermination.
@@ -171,6 +172,34 @@ Diagnosis:
 4. Fix: bound the automation (`simp only:`, narrow `auto simp: ...` lemma set), undo the bad `[simp]`/`[intro]` attribute, or split the proof.
 
 Never bump the build timeout to mask a hang — that hides a real regression and rots into a multi-minute baseline.
+
+### Batch-friendly proof habits
+
+Patterns that keep iteration in I/Q and batch as a one-shot gate:
+
+**Workflow**
+
+* **I/Q inner loop, batch outer gate.** Debug one failing command via `get_diagnostics` / `explore`. Run `isabelle build` once when every touched theory is file-clean — not after each tactic change.
+* **I/Q is not completion.** Interactive checking can mark a step finished while subgoals remain, or accept bogus intro rules. Treat empty file diagnostics as “ready for batch”, not “proved”.
+* **Batch is completion.** Show a green `-v` log before calling work done.
+
+**Automation that batch tolerates**
+
+* Prefer **small, named case-split or decomposition lemmas** + `by (rule …)` / `cases rule: …` over `auto elim!: …` on inductive predicates.
+* Prefer **bounded** tactics: `simp only: …`, `auto simp: …` with an explicit lemma set — not unbounded `simp` / `auto` on large imported rule sets.
+* Prefer **structured Isar** (`proof (rule …)` with explicit `show` subgoals) over long `[OF …]` chains when facts must line up exactly.
+* When a subgoal resists one line of automation, **hoist a helper lemma** — do not widen `auto`/`simp` to force it.
+
+**Locale and constant shapes**
+
+* Theorems inside locales use locale-qualified constants; callers outside often need the **same global shape** the target lemma expects.
+* Before `theorem_callee[OF …]`, check whether premises use **interpretation-local** names vs **fully applied global** names — mismatch fails `OF` even when the mathematics is the same.
+* Surface **concrete corollaries** (global definitions, one-line expansion lemmas, or an `interpretation` block) at locale boundaries instead of repeating fragile unfolds at every use site.
+
+**Sledgehammer in batch**
+
+* Default paste-back: `blast`, `auto`, `meson`.
+* `metis` / `smt` only after batch confirms they finish quickly — they are a leading hang source.
 
 ## ASCII-only `.thy` sources
 

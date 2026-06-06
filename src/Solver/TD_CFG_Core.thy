@@ -377,6 +377,118 @@ proof -
 qed
 
 
+lemma dep_aux_rhs_tree_fold_acc_indep:
+  "dep_aux sigma (rhs_tree_fold tf join_abs acc1 ps)
+   = dep_aux sigma (rhs_tree_fold tf join_abs acc2 ps)"
+proof (induction ps arbitrary: acc1 acc2)
+  case Nil
+  show ?case by simp
+next
+  case (Cons p ps)
+  obtain u a where p: "p = (u, a)" by (cases p) auto
+  show ?case unfolding p rhs_tree_fold.simps dep_aux.simps
+    using Cons.IH[of "join_abs acc1 (apply_tf tf a (mlup sigma u))"
+                    "join_abs acc2 (apply_tf tf a (mlup sigma u))"]
+    by simp
+qed
+
+lemma dep_rhs_tree_fold_map_le:
+  assumes map_le: "sigma1 \<sqsubseteq>\<^sub>m sigma2"
+  shows "dep_aux sigma1 (rhs_tree_fold tf join_abs acc ps)
+       \<subseteq> dep_aux sigma2 (rhs_tree_fold tf join_abs acc ps)"
+  using map_le
+proof (induction ps arbitrary: acc)
+  case Nil
+  show ?case by simp
+next
+  case (Cons p ps)
+  obtain u a where p: "p = (u, a)" by (cases p) auto
+  show ?case unfolding p rhs_tree_fold.simps dep_aux.simps
+  proof -
+    have inner:
+        "dep_aux sigma1 (rhs_tree_fold tf join_abs
+            (join_abs acc (apply_tf tf a (mlup sigma1 u))) ps)
+          \<subseteq> dep_aux sigma2 (rhs_tree_fold tf join_abs
+            (join_abs acc (apply_tf tf a (mlup sigma2 u))) ps)"
+    proof -
+      have "dep_aux sigma1 (rhs_tree_fold tf join_abs
+              (join_abs acc (apply_tf tf a (mlup sigma1 u))) ps)
+            = dep_aux sigma1 (rhs_tree_fold tf join_abs acc ps)"
+        by (rule dep_aux_rhs_tree_fold_acc_indep)
+      also have "\<dots> \<subseteq> dep_aux sigma2 (rhs_tree_fold tf join_abs acc ps)"
+        by (rule Cons.IH[OF map_le])
+      also have "\<dots> = dep_aux sigma2 (rhs_tree_fold tf join_abs
+              (join_abs acc (apply_tf tf a (mlup sigma2 u))) ps)"
+        by (rule dep_aux_rhs_tree_fold_acc_indep[symmetric])
+      finally show ?thesis .
+    qed
+    show "insert u (dep_aux sigma1 (rhs_tree_fold tf join_abs
+            (join_abs acc (apply_tf tf a (mlup sigma1 u))) ps))
+          \<subseteq> insert u (dep_aux sigma2 (rhs_tree_fold tf join_abs
+            (join_abs acc (apply_tf tf a (mlup sigma2 u))) ps))"
+      using inner by auto
+  qed
+qed
+
+lemma make_rhs_tree_is_mono_eq:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and join_abs bot_abs s0
+  assumes fin: "finite (edges g)"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes join_is_sup: "join_abs = (\<squnion>)"
+  shows "is_mono_eq (\<lambda>w. make_rhs_tree g tf join_abs bot_abs s0 w)"
+proof (unfold is_mono_eq_def eq_def, clarify)
+  fix x :: pp and sigma1 sigma2 :: "(pp, 'a abs_state) map"
+  assume map_le: "sigma1 \<sqsubseteq>\<^sub>m sigma2"
+  have env_le: "\<forall>w. mlup sigma1 w \<le> mlup sigma2 w"
+  proof (rule allI)
+    fix w
+    show "mlup sigma1 w \<le> mlup sigma2 w"
+      by (rule spec, fact map_le)
+  qed
+  have cfi: "comp_fun_idem join_abs" unfolding join_is_sup by (fact comp_fun_idem_sup)
+  have join_sym: "\<And>s1 s2. join_abs s1 s2 = join_abs s2 s1"
+    unfolding join_is_sup by (simp add: sup_commute)
+  have cfu: "comp_fun_commute join_abs"
+    unfolding join_is_sup by (fact comp_fun_commute_sup)
+  have join_ub1: "\<And>x y. x \<le> join_abs x y"
+    unfolding join_is_sup by (simp add: sup_ge1)
+  have join_ub2: "\<And>x y. y \<le> join_abs x y"
+    unfolding join_is_sup by (simp add: sup_ge2)
+  have join_mono:
+      "\<And>x1 y1 x2 y2. x1 \<le> y1 \<Longrightarrow> x2 \<le> y2 \<Longrightarrow> join_abs x1 x2 \<le> join_abs y1 y2"
+    unfolding join_is_sup by (rule sup_mono)
+  have join_least: "\<And>x y z. x \<le> z \<Longrightarrow> y \<le> z \<Longrightarrow> join_abs x y \<le> z"
+    unfolding join_is_sup by (simp add: sup_least)
+  have le_rhs: "rhs g tf join_abs bot_abs s0 (\<lambda>w. mlup sigma1 w) x
+    \<le> rhs g tf join_abs bot_abs s0 (\<lambda>w. mlup sigma2 w) x"
+    by (rule rhs_mono[OF fin cfu join_ub1 join_ub2 join_mono join_least tf_mono env_le])
+  show "traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 x) sigma1
+    \<le> traverse_rhs (make_rhs_tree g tf join_abs bot_abs s0 x) sigma2"
+    using rhs_make_rhs_tree_traverse_mlup[where \<sigma>=sigma1 and v=x, OF fin cfi join_sym]
+      rhs_make_rhs_tree_traverse_mlup[where \<sigma>=sigma2 and v=x, OF fin cfi join_sym]
+      le_rhs by simp
+qed
+
+lemma make_rhs_tree_mono_deps:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and join_abs bot_abs s0
+  shows "mono_deps (\<lambda>w. make_rhs_tree g tf join_abs bot_abs s0 w)"
+  unfolding mono_deps_def dep_def make_rhs_tree_def Let_def
+proof (intro allI impI)
+  fix x :: pp and sigma1 sigma2 :: "(pp, 'a abs_state) map"
+  assume map_le: "sigma1 \<sqsubseteq>\<^sub>m sigma2"
+  show "dep_aux sigma1 (rhs_tree_fold tf join_abs
+          (if x = cfg_entry g then join_abs bot_abs s0 else bot_abs)
+          (predecessor_list g x))
+        \<subseteq> dep_aux sigma2 (rhs_tree_fold tf join_abs
+          (if x = cfg_entry g then join_abs bot_abs s0 else bot_abs)
+          (predecessor_list g x))"
+    by (rule dep_rhs_tree_fold_map_le[OF map_le])
+qed
+
+
 lemma dep_rhs_tree_fold:
   shows "(u, a) \<in> set ps \<Longrightarrow> u \<in> dep_aux \<sigma> (rhs_tree_fold tf join_abs acc ps)"
   by (induct ps arbitrary: acc; auto simp: rhs_tree_fold.simps dep_aux.simps split: prod.splits)
@@ -514,6 +626,20 @@ proof -
     using cfg_path_node_in_reach_tree[OF fin path] .
   show ?thesis unfolding cfg_T_def using main by simp
 qed
+
+lemma cfg_T_is_mono_eq:
+  assumes fin: "finite (edges g)"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes join_is_sup: "join_abs = (\<squnion>)"
+  shows "is_mono_eq cfg_T"
+  using make_rhs_tree_is_mono_eq[OF fin tf_mono join_is_sup]
+  unfolding cfg_T_def by simp
+
+lemma cfg_T_mono_deps:
+  shows "mono_deps cfg_T"
+  unfolding cfg_T_def
+  by (rule make_rhs_tree_mono_deps)
 
 end
 
