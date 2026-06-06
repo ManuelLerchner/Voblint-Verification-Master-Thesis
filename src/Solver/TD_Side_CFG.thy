@@ -137,4 +137,39 @@ next
   show ?case unfolding x using Cons.IH by (simp add: Let_def)
 qed
 
+(* -- Post-solution in usable form ------------------------------------ *)
+
+(* Joining the local restriction of A with the global restriction of B is the
+   abstract combine: locals from A, globals from B. *)
+lemma restrict_combine:
+  "restrict_local A \<squnion> restrict_global B = (\<lambda>x. if is_global x then B x else A x)"
+  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
+
+(* A post-solution of side_cfg_T bounds, at every program point in scope, the
+   local fold by the local unknown and the global contribution by the single
+   global unknown. *)
+lemma side_post_solution_le_local:
+  assumes "part_post_solution (side_cfg_T g tf join bot0 s0) x sigma vars"
+      and "v \<in> vars"
+  shows "side_acc tf join
+           (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0)
+           sigma (predecessor_list g v) \<le> sigma (Inl v)"
+proof -
+  from assms have "eq (side_cfg_T g tf join bot0 s0) v sigma \<le> sigma (Inl v)" by auto
+  thus ?thesis by (simp add: eq_side_cfg_T)
+qed
+
+lemma side_post_solution_le_global:
+  assumes "part_post_solution (side_cfg_T g tf join bot0 s0) x sigma vars"
+      and "v \<in> vars"
+  shows "side_glob tf join sigma (predecessor_list g v) \<le> sigma (Inr ())"
+proof -
+  from assms have "sides_of_rhs (side_cfg_T g tf join bot0 s0 v) sigma \<le> sigma" by auto
+  hence "sides_of_rhs (side_cfg_T g tf join bot0 s0 v) sigma (Inr ()) \<le> sigma (Inr ())"
+    by (simp add: le_fun_def)
+  thus ?thesis
+    unfolding side_cfg_T_def make_side_rhs_tree_def
+    by (simp add: sides_side_rhs_fold_Inr)
+qed
+
 end
