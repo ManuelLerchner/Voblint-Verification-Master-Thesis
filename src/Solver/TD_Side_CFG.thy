@@ -101,4 +101,40 @@ lemma eq_side_cfg_T:
   unfolding side_cfg_T_def make_side_rhs_tree_def
   by (simp add: traverse_side_rhs_fold Let_def)
 
+(* The global contribution: the join over incoming edges of the global part of
+   each transferred state.  (Independent of the local accumulator.) *)
+fun side_glob ::
+  "'a::bounded_semilattice_sup_bot domain_transfer
+   => ('a abs_state => 'a abs_state => 'a abs_state)
+   => (pp + unit => 'a abs_state) => (pp * edge_action) list => 'a abs_state"
+where
+  "side_glob tf join sigma [] = bot"
+| "side_glob tf join sigma ((u, a) # ps) =
+     side_glob tf join sigma ps
+       \<squnion> restrict_global (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ()))))"
+
+(* sides_of_rhs of the fold: all contributions land in the single global slot
+   Inr (); the local slots receive nothing. *)
+lemma sides_side_rhs_fold_Inr:
+  "sides_of_rhs (side_rhs_fold tf join acc ps) sigma (Inr ()) = side_glob tf join sigma ps"
+proof (induction ps arbitrary: acc)
+  case Nil
+  show ?case by simp
+next
+  case (Cons x ps)
+  obtain u a where x: "x = (u, a)" by (cases x)
+  show ?case unfolding x using Cons.IH by (simp add: Let_def)
+qed
+
+lemma sides_side_rhs_fold_Inl:
+  "sides_of_rhs (side_rhs_fold tf join acc ps) sigma (Inl u) = bot"
+proof (induction ps arbitrary: acc)
+  case Nil
+  show ?case by simp
+next
+  case (Cons x ps)
+  obtain w a where x: "x = (w, a)" by (cases x)
+  show ?case unfolding x using Cons.IH by (simp add: Let_def)
+qed
+
 end
