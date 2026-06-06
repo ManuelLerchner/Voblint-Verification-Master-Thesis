@@ -249,4 +249,39 @@ next
   qed
 qed
 
+(* -- Edge step: the combined env is closed under each edge transfer -- *)
+
+(* The abstract state combined from the local unknown at v and the single
+   global unknown. *)
+definition side_env ::
+  "(pp + unit => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
+  "side_env sigma v = sigma (Inl v) \<squnion> sigma (Inr ())"
+
+(* For any CFG edge (u, a, v), a post-solution's combined env at u, transferred
+   along a, is below the combined env at v.  This is the per-edge inductive step
+   of the collecting-soundness bridge. *)
+lemma apply_tf_combined_le:
+  assumes pp:  "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
+      and v:   "v \<in> vars"
+      and e:   "(u, a, v) \<in> edges g"
+      and fin: "finite (edges g)"
+  shows "apply_tf tf a (side_env sigma u) \<le> side_env sigma v"
+proof -
+  have mem: "(u, a) \<in> set (predecessor_list g v)"
+    using e by (simp add: set_predecessor_list[OF fin] predecessors_def)
+  have loc: "restrict_local (apply_tf tf a (side_env sigma u)) \<le> sigma (Inl v)"
+    using restrict_local_le_side_acc[OF mem] side_post_solution_le_local[OF pp v]
+    unfolding side_env_def by (rule order_trans)
+  have glob: "restrict_global (apply_tf tf a (side_env sigma u)) \<le> sigma (Inr ())"
+    using restrict_global_le_side_glob[OF mem] side_post_solution_le_global[OF pp v]
+    unfolding side_env_def by (rule order_trans)
+  have "apply_tf tf a (side_env sigma u)
+        = restrict_local (apply_tf tf a (side_env sigma u))
+          \<squnion> restrict_global (apply_tf tf a (side_env sigma u))"
+    by (rule restrict_local_global_join[symmetric])
+  also have "\<dots> \<le> sigma (Inl v) \<squnion> sigma (Inr ())"
+    using loc glob by (rule sup_mono)
+  finally show ?thesis unfolding side_env_def .
+qed
+
 end
