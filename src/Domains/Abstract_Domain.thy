@@ -22,6 +22,10 @@ notation inf (infixl "\<sqinter>" 70)
 
 type_synonym 'a abs_state = "vname => 'a"
 
+(* HOL ships fun :: (type, bounded_lattice) bounded_lattice but not this
+   weaker pointwise instance; abs_state needs it for TD_side part_post_solution. *)
+instance "fun" :: (type, bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
+
 (* Helper exposed globally: sup over any semilattice_sup is comp_fun_commute.
    Available to downstream proofs that thread mem_image_le_fold etc. *)
 lemma comp_fun_commute_sup:

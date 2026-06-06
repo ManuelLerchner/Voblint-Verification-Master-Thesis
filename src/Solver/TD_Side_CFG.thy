@@ -1,5 +1,5 @@
 theory TD_Side_CFG
-  imports Constraint_System IMP2_Globals "TD.TD_side"
+  imports Constraint_System_Sound IMP2_Globals "TD.TD_side"
 begin
 
 (*
@@ -283,5 +283,100 @@ proof -
     using loc glob by (rule sup_mono)
   finally show ?thesis unfolding side_env_def .
 qed
+
+(* -- Collecting soundness of a side-effecting post-solution (M3) ------ *)
+
+context sound_domain
+begin
+
+(*
+  The combined env of a side_cfg_T post-solution soundly over-approximates the
+  CFG collecting semantics at every program point reachable from the entry:
+  along any path, the stores collected from S stay within the concretisation of
+  the combined env.  Globals are tracked flow-insensitively (one global unknown,
+  joined across all points), locals flow-sensitively.
+
+  Assumptions: transfer-function soundness (assign/assume/assume-not); sigma is a
+  partial post-solution over vars covering all program points; the initial set S
+  is covered by the combined env at the entry.
+*)
+theorem side_collect_sound_path:
+  fixes tf :: "'a domain_transfer"
+    and sigma :: "pp + unit => 'a abs_state"
+    and bot0 s0 :: "'a abs_state"
+  assumes tf_sound_assign:
+    "\<forall>x a sg. \<forall>s \<in> gamma_state sg.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sg)"
+  assumes tf_sound_assume:
+    "\<forall>b sg. \<forall>s \<in> gamma_state sg. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sg)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
+  assumes allvars: "\<And>w. w \<in> vars"
+  assumes fin: "finite (edges g)"
+  assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
+  assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
+  assumes t_in: "t \<in> edges_collect es S"
+  shows "t \<in> gamma_state (side_env sigma v)"
+proof -
+  have step_le: "\<And>x b y es'. g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v \<Longrightarrow> apply_tf tf b (side_env sigma x) \<le> side_env sigma y"
+  proof -
+    fix x b y es'
+    assume p: "g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v"
+    obtain edge where edge: "(x, b, y) \<in> edges g"
+      using p by (cases rule: cfg_stepE) auto
+    show "apply_tf tf b (side_env sigma x) \<le> side_env sigma y"
+      by (rule apply_tf_combined_le[OF pp allvars edge fin])
+  qed
+  have collect: "edges_collect es (gamma_state (side_env sigma (cfg_entry g)))
+                 \<subseteq> gamma_state (side_env sigma v)"
+    by (rule edges_collect_gamma_path_aux[OF fin path step_le tf_sound_assign
+          tf_sound_assume tf_sound_assume_not])
+  have "edges_collect es S
+        \<subseteq> edges_collect es (gamma_state (side_env sigma (cfg_entry g)))"
+    by (rule edges_collect_mono_strong[OF entry])
+  thus ?thesis using collect t_in by blast
+qed
+
+(* Subset form: any store collected at v lies in the side env at v. *)
+corollary side_collect_sound_at:
+  fixes tf :: "'a domain_transfer"
+    and sigma :: "pp + unit => 'a abs_state"
+    and bot0 s0 :: "'a abs_state"
+  assumes tf_sound_assign:
+    "\<forall>x a sg. \<forall>s \<in> gamma_state sg.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sg)"
+  assumes tf_sound_assume:
+    "\<forall>b sg. \<forall>s \<in> gamma_state sg. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sg)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
+  assumes allvars: "\<And>w. w \<in> vars"
+  assumes fin: "finite (edges g)"
+  assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
+  assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
+  shows "cfg_collect g S v \<le> gamma_state (side_env sigma v)"
+proof -
+  have paths: "cfg_collect g S v \<subseteq> cfg_collect_paths g S v"
+    by (rule cfg_collect_le_paths)
+  show ?thesis
+  proof
+    fix t
+    assume "t \<in> cfg_collect g S v"
+    with paths have "t \<in> cfg_collect_paths g S v" by blast
+    then obtain path_es where path_es: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>path_es\<^esub> v"
+      and t_in: "t \<in> edges_collect path_es S"
+      unfolding cfg_collect_paths_def by blast
+    show "t \<in> gamma_state (side_env sigma v)"
+      by (rule side_collect_sound_path[OF tf_sound_assign tf_sound_assume
+            tf_sound_assume_not pp allvars fin entry path_es t_in])
+  qed
+qed
+
+end
 
 end

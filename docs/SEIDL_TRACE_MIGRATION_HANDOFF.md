@@ -105,18 +105,17 @@ KB companion (read these for *why*, not just *what*):
 > - `side_post_solution_le_local` / `_le_global` -- from a `part_post_solution`
 >   of `side_cfg_T`, the two per-pp bounds: `side_acc ... <= sigma (Inl v)` and
 >   `side_glob ... <= sigma (Inr ())`.
+> - `apply_tf_combined_le` -- per-edge closure of the combined env.
+> - **`side_collect_sound_path` / `side_collect_sound_at` (M3)** -- a
+>   `part_post_solution` combined env soundly over-approximates `cfg_collect`
+>   (path member and subset forms).
 >
-> **Remaining for M3 (the soundness induction).** The vendor exposes a concrete
-> solver `interpretation TD_side: TD_side_opt False T`
-> (`vendor/td-verification/TD_side_upd_rule.thy:26`), whose
-> `least_partial_post_solution` turns `TD_side.solve_dom (side_cfg_T ...) v`
-> into a `part_post_solution sigma` -- feed it to the two `_le_*` lemmas above.
-> The open proof: the combined env `v |-> sigma (Inl v) | sigma (Inr ())`
-> (via `restrict_combine`) is a post-fixpoint of the CFG collecting transformer,
-> hence `cfg_collect g {s} v <= gamma_state (combined v)` using
-> `domain_transfer_sound` (the `'l + 'g` analog of `td_analyse_collect_sound`).
-> This is the one large dedicated proof left for M3; everything feeding it is
-> in place. Do not introduce `sorry` skeletons (the spine is sorry-free).
+> **Remaining for solver wiring (not yet M4).** Instantiate
+> `TD_side_mono.least_partial_post_solution` for `side_cfg_T` (needs
+> `is_mono_eq` / `mono_sides` / `mono_deps` on the side trees) to obtain
+> `part_post_solution` from `TD_side.solve` without assuming it. Then connect
+> entry coverage `S <= gamma_state (side_env sigma (cfg_entry g))` from the
+> solver initial state. **M4** (precise trace-combine) is still open.
 
 ---
 
