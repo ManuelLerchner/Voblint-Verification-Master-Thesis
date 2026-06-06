@@ -94,17 +94,29 @@ KB companion (read these for *why*, not just *what*):
 > - `side_cfg_T`: the resulting `eqsT` (local unknowns = program points; one
 >   global unknown of type `unit`).
 >
-> This is the construction only. **Remaining for M3 (soundness):** the vendor
-> exposes a concrete solver via `interpretation TD_side: TD_side_opt False T`
+> The denotation + post-fixpoint of `side_cfg_T` are now proved (all green):
+>
+> - `side_acc` / `traverse_side_rhs_fold` / `eq_side_cfg_T` -- `eq` of the tree
+>   is the local fold over predecessors.
+> - `side_glob` / `sides_side_rhs_fold_{Inr,Inl}` -- the `Side` contributions
+>   land entirely in the one global slot `Inr ()`.
+> - `restrict_combine` -- `restrict_local A | restrict_global B` = abstract
+>   combine.
+> - `side_post_solution_le_local` / `_le_global` -- from a `part_post_solution`
+>   of `side_cfg_T`, the two per-pp bounds: `side_acc ... <= sigma (Inl v)` and
+>   `side_glob ... <= sigma (Inr ())`.
+>
+> **Remaining for M3 (the soundness induction).** The vendor exposes a concrete
+> solver `interpretation TD_side: TD_side_opt False T`
 > (`vendor/td-verification/TD_side_upd_rule.thy:26`), whose
 > `least_partial_post_solution` turns `TD_side.solve_dom (side_cfg_T ...) v`
-> into a least post-solution `sigma` of `side_cfg_T` (the analog of how
-> `TD_plain_Interp` is used in `src/Solver/TD_Soundness.thy`). The open work is
-> the soundness bridge: relate that post-solution `sigma` (locals at each pp
-> from the local unknowns, globals from the one global unknown via
-> `restrict_global`/`Side`) to the CFG collecting semantics, i.e. an
-> `'l + 'g` analog of `td_analyse_collect_sound`. This is a large dedicated
-> proof; do not introduce `sorry` skeletons (the spine is sorry-free).
+> into a `part_post_solution sigma` -- feed it to the two `_le_*` lemmas above.
+> The open proof: the combined env `v |-> sigma (Inl v) | sigma (Inr ())`
+> (via `restrict_combine`) is a post-fixpoint of the CFG collecting transformer,
+> hence `cfg_collect g {s} v <= gamma_state (combined v)` using
+> `domain_transfer_sound` (the `'l + 'g` analog of `td_analyse_collect_sound`).
+> This is the one large dedicated proof left for M3; everything feeding it is
+> in place. Do not introduce `sorry` skeletons (the spine is sorry-free).
 
 ---
 
