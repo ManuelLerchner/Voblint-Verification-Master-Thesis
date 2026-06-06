@@ -63,4 +63,42 @@ definition side_cfg_T ::
 where
   "side_cfg_T g tf join bot0 s0 = make_side_rhs_tree g tf join bot0 s0"
 
+(* -- Denotation of the strategy tree --------------------------------- *)
+
+(* The local value computed by traversing the tree: a left fold over the
+   incoming edges, each contributing the local part of its transferred state
+   (the predecessor's local value joined with the global value). *)
+fun side_acc ::
+  "'a::bounded_semilattice_sup_bot domain_transfer
+   => ('a abs_state => 'a abs_state => 'a abs_state)
+   => 'a abs_state => (pp + unit => 'a abs_state)
+   => (pp * edge_action) list => 'a abs_state"
+where
+  "side_acc tf join acc sigma [] = acc"
+| "side_acc tf join acc sigma ((u, a) # ps) =
+     side_acc tf join
+       (join acc (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ()))))))
+       sigma ps"
+
+(* traverse_rhs (= eq) of the fold is exactly side_acc: QueryL/QueryG resolve
+   through sigma, Side is ignored by the answer traversal. *)
+lemma traverse_side_rhs_fold:
+  "traverse_rhs (side_rhs_fold tf join acc ps) sigma = side_acc tf join acc sigma ps"
+proof (induction ps arbitrary: acc)
+  case Nil
+  show ?case by simp
+next
+  case (Cons x ps)
+  obtain u a where x: "x = (u, a)" by (cases x)
+  show ?case unfolding x using Cons.IH by (simp add: Let_def)
+qed
+
+lemma eq_side_cfg_T:
+  "eq (side_cfg_T g tf join bot0 s0) v sigma =
+     side_acc tf join
+       (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0)
+       sigma (predecessor_list g v)"
+  unfolding side_cfg_T_def make_side_rhs_tree_def
+  by (simp add: traverse_side_rhs_fold Let_def)
+
 end
