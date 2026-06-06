@@ -32,6 +32,24 @@ lemma cfg_path_append[intro]:
   apply (induction es1 arbitrary: u) 
   by(auto)
 
+(* First step of a non-empty path reaches its intermediate target. *)
+lemma cfg_path_step_target:
+  assumes path: "g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v"
+  shows "g \<turnstile> u \<longrightarrow>\<^bsub>[(a, w)]\<^esub> w"
+proof (rule cfg_path.step)
+  show "(u, a, w) \<in> edges g"
+    using path by (cases rule: cfg_stepE) auto
+  show "g \<turnstile> w \<longrightarrow>\<^bsub>[]\<^esub> w"
+    by (rule cfg_path.empty)
+qed
+
+(* If x lies on a path from p to v and takes one step toward v, so does w. *)
+lemma cfg_path_on_path_step:
+  assumes prefix: "g \<turnstile> p \<longrightarrow>\<^bsub>esx\<^esub> x"
+  assumes step: "g \<turnstile> x \<longrightarrow>\<^bsub>(a, w) # es'\<^esub> v"
+  shows "g \<turnstile> p \<longrightarrow>\<^bsub>esx @ [(a, w)]\<^esub> w"
+  using cfg_path_append[OF prefix cfg_path_step_target[OF step]] by simp
+
 (* \<midarrow>\<midarrow> Offset Paths \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
 definition offset_path :: "nat => (edge_action * pp) list => (edge_action * pp) list" where

@@ -18,6 +18,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     IMP2_Proc
     TD_Side_CFG
     TD_Side_Interface
+    TD_Side_Soundness
     CFG_Trace_Collect
     Trace_Soundness
     TD_CFG_Core

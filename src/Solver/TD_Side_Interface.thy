@@ -85,6 +85,13 @@ lemma side_entry_in_stabl:
   shows "cfg_entry g \<in> side_stabl_at (cfg_entry g)"
   using side_query_in_stabl[OF dom] by simp
 
+(* Discharge the pp assumption of TD_Side_Soundness from a successful solve. *)
+lemma side_solver_part_post_at_entry:
+  assumes dom: "side.solve_dom (cfg_entry g)"
+  shows "part_post_solution cfg_side_T (cfg_entry g) (side_sigma_at (cfg_entry g))
+           (side_stabl_at (cfg_entry g))"
+  using side_part_post_solution_at[OF dom] by simp
+
 end
 
 (* Executable-facing name: combined abstract env at each pp (entry query). *)

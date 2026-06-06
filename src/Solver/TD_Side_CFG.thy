@@ -314,21 +314,24 @@ theorem side_collect_sound_path:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
-  assumes allvars: "\<And>w. w \<in> vars"
+  assumes vars_reach: "\<And>u es w. g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> w \<Longrightarrow> w \<in> vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
   assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
   assumes t_in: "t \<in> edges_collect es S"
   shows "t \<in> gamma_state (side_env sigma v)"
 proof -
-  have step_le: "\<And>x b y es'. g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v \<Longrightarrow> apply_tf tf b (side_env sigma x) \<le> side_env sigma y"
+  have step_le: "\<And>x b y es'. g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v
+     \<Longrightarrow> apply_tf tf b (side_env sigma x) \<le> side_env sigma y"
   proof -
     fix x b y es'
     assume p: "g \<turnstile> x \<longrightarrow>\<^bsub>(b, y) # es'\<^esub> v"
     obtain edge where edge: "(x, b, y) \<in> edges g"
       using p by (cases rule: cfg_stepE) auto
+    have y_in: "y \<in> vars"
+      using cfg_path_step_target[OF p] vars_reach by blast
     show "apply_tf tf b (side_env sigma x) \<le> side_env sigma y"
-      by (rule apply_tf_combined_le[OF pp allvars edge fin])
+      by (rule apply_tf_combined_le[OF pp y_in edge fin])
   qed
   have collect: "edges_collect es (gamma_state (side_env sigma (cfg_entry g)))
                  \<subseteq> gamma_state (side_env sigma v)"
@@ -355,7 +358,7 @@ corollary side_collect_sound_at:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) x sigma vars"
-  assumes allvars: "\<And>w. w \<in> vars"
+  assumes vars_reach: "\<And>u es w. g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> w \<Longrightarrow> w \<in> vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
   assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
@@ -373,7 +376,7 @@ proof -
       unfolding cfg_collect_paths_def by blast
     show "t \<in> gamma_state (side_env sigma v)"
       by (rule side_collect_sound_path[OF tf_sound_assign tf_sound_assume
-            tf_sound_assume_not pp allvars fin entry path_es t_in])
+            tf_sound_assume_not pp vars_reach fin entry path_es t_in])
   qed
 qed
 
