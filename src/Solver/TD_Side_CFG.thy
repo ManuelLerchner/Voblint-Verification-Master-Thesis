@@ -29,6 +29,16 @@ lemma restrict_local_global_join:
   "restrict_local sigma \<squnion> restrict_global sigma = sigma"
   unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
 
+lemma restrict_local_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> restrict_local (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
+     \<le> restrict_local sigma2"
+  unfolding restrict_local_def le_fun_def by (rule ext) auto
+
+lemma restrict_global_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> restrict_global (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
+     \<le> restrict_global sigma2"
+  unfolding restrict_global_def le_fun_def by (rule ext) auto
+
 (* Strategy tree for one program point: fold the incoming edges into a
    QueryL / QueryG / Side chain. *)
 fun side_rhs_fold ::
@@ -112,6 +122,101 @@ where
 | "side_glob tf join sigma ((u, a) # ps) =
      side_glob tf join sigma ps
        \<squnion> restrict_global (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ()))))"
+(* Monotonicity in the queried assignment (join = \<squnion>). *)
+lemma side_acc_mono:
+  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and join :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes join_mono:
+    "\<And>s1 s1' s2 s2'. s1 \<le> s1' \<Longrightarrow> s2 \<le> s2'
+     \<Longrightarrow> join s1 s2 \<le> join s1' s2'"
+  assumes sigma_le: "sigma1 \<le> sigma2"
+  shows "side_acc tf join acc sigma1 ps \<le> side_acc tf join acc sigma2 ps"
+proof (induction ps arbitrary: acc)
+  case Nil
+  show ?case by simp
+next
+  case (Cons ua ps)
+  obtain u a where ua: "ua = (u, a)" by (cases ua)
+  define su1 su2 where
+    "su1 = join (sigma1 (Inl u)) (sigma1 (Inr ()))" and
+    "su2 = join (sigma2 (Inl u)) (sigma2 (Inr ()))"
+  have su_le: "su1 \<le> su2"
+    using join_mono sigma_le unfolding su1_def su2_def le_fun_def by auto
+  have tf_le: "apply_tf tf a su1 \<le> apply_tf tf a su2"
+    by (rule tf_mono[OF su_le])
+  have loc_le: "restrict_local (apply_tf tf a su1)
+                 \<le> restrict_local (apply_tf tf a su2)"
+    by (rule restrict_local_mono[OF tf_le])
+  have acc_le: "join acc (restrict_local (apply_tf tf a su1))
+                 \<le> join acc (restrict_local (apply_tf tf a su2))"
+    by (rule join_mono[OF order_refl loc_le])
+  show ?case unfolding ua using Cons.IH[OF acc_le] by (simp only: side_acc.simps)
+qed
+
+lemma side_acc_mono_sup:
+  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes sigma_le: "sigma1 \<le> sigma2"
+  shows "side_acc tf (\<squnion>) acc sigma1 ps \<le> side_acc tf (\<squnion>) acc sigma2 ps"
+  using side_acc_mono[OF tf_mono _ sigma_le, where join="(\<squnion>)"]
+  by (simp add: sup_mono)
+
+lemma side_glob_mono:
+  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and join :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes join_mono:
+    "\<And>s1 s1' s2 s2'. s1 \<le> s1' \<Longrightarrow> s2 \<le> s2'
+     \<Longrightarrow> join s1 s2 \<le> join s1' s2'"
+  assumes sigma_le: "sigma1 \<le> sigma2"
+  shows "side_glob tf join sigma1 ps \<le> side_glob tf join sigma2 ps"
+proof (induction ps)
+  case Nil
+  show ?case by simp
+next
+  case (Cons ua ps)
+  obtain u a where ua: "ua = (u, a)" by (cases ua)
+  define su1 su2 where
+    "su1 = join (sigma1 (Inl u)) (sigma1 (Inr ()))" and
+    "su2 = join (sigma2 (Inl u)) (sigma2 (Inr ()))"
+  have su_le: "su1 \<le> su2"
+    using join_mono sigma_le unfolding su1_def su2_def le_fun_def by auto
+  have glob_le: "restrict_global (apply_tf tf a su1)
+                  \<le> restrict_global (apply_tf tf a su2)"
+    by (rule restrict_global_mono[OF tf_mono[OF su_le]])
+  show ?case unfolding ua
+    using sup_mono[OF Cons.IH glob_le] by (simp only: side_glob.simps)
+qed
+
+lemma side_glob_mono_sup:
+  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes sigma_le: "sigma1 \<le> sigma2"
+  shows "side_glob tf (\<squnion>) sigma1 ps \<le> side_glob tf (\<squnion>) sigma2 ps"
+  by (rule side_glob_mono[OF tf_mono _ sigma_le, where join="(\<squnion>)"])
+
+(* Dependencies of side_rhs_fold trees depend only on the edge list, not sigma. *)
+lemma dep_aux_side_rhs_fold_indep:
+  "dep_aux sigma1 (side_rhs_fold tf join acc ps)
+   = dep_aux sigma2 (side_rhs_fold tf join acc ps)"
+proof (induction ps arbitrary: acc sigma1 sigma2)
+  case Nil
+  show ?case by simp
+next
+  case (Cons ua ps)
+  obtain u a where ua: "ua = (u, a)" by (cases ua)
+  show ?case unfolding ua by (simp add: Cons.IH)
+qed
+
 
 (* sides_of_rhs of the fold: all contributions land in the single global slot
    Inr (); the local slots receive nothing. *)
@@ -136,6 +241,44 @@ next
   obtain w a where x: "x = (w, a)" by (cases x)
   show ?case unfolding x using Cons.IH by (simp add: Let_def)
 qed
+
+(* -- Monotonicity of side_cfg_T (TD_side solver precondition) ---------- *)
+
+lemma side_cfg_T_is_mono_eq:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  shows "is_mono_eq (side_cfg_T g tf (\<squnion>) bot0 s0)"
+  unfolding is_mono_eq_def side_cfg_T_def
+  apply clarify
+  apply (subst eq_side_cfg_T)
+  apply (rule side_acc_mono_sup[OF tf_mono])
+  by simp
+
+lemma side_cfg_T_mono_sides:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  shows "mono_sides (side_cfg_T g tf (\<squnion>) bot0 s0)"
+  unfolding mono_sides_def side_cfg_T_def make_side_rhs_tree_def Let_def
+  apply clarify
+  apply (rule le_funI)
+  apply (case_tac x rule: sum.exhaust)
+   apply (simp add: sides_side_rhs_fold_Inl)
+  apply (simp add: sides_side_rhs_fold_Inr)
+  apply (rule side_glob_mono_sup[OF tf_mono])
+  apply simp
+
+lemma side_cfg_T_mono_deps:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state"
+  shows "mono_deps (side_cfg_T g tf (\<squnion>) bot0 s0)"
+  unfolding mono_deps_def side_cfg_T_def make_side_rhs_tree_def Let_def dep_def
+  apply clarify
+  apply (subst (asm) dep_aux_side_rhs_fold_indep)
+  by simp
 
 (* -- Post-solution in usable form ------------------------------------ *)
 

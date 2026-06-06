@@ -8,18 +8,16 @@ begin
   Mirrors TD_Interface for the plain solver: package side_cfg_T as cfg_side_T,
   run TD_side_mono.solve, read back sigma / stabl, expose side_env_at.
 
-  Monotonicity of the strategy trees (is_mono_eq / mono_sides / mono_deps) is
-  assumed at locale level -- same pattern as TD_WN_Interface passing mono to
-  partial_correctness.  Proving these for side_cfg_T is future work.
+  Monotonicity of side_cfg_T is derived from transfer-function monotonicity
+  (side_cfg_T_is_mono_eq / _mono_sides / _mono_deps in TD_Side_CFG).
 *)
 
 locale td_cfg_side_solver =
   fixes g :: cfg and
   tf :: "'a::bounded_semilattice_sup_bot domain_transfer" and
   bot0 s0 :: "'a abs_state"
-  assumes mono_eq: "is_mono_eq (side_cfg_T g tf (\<squnion>) bot0 s0)"
-  assumes mono_sides: "mono_sides (side_cfg_T g tf (\<squnion>) bot0 s0)"
-  assumes mono_deps: "mono_deps (side_cfg_T g tf (\<squnion>) bot0 s0)"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
 begin
 
 definition cfg_side_T :: "(pp, unit, 'a abs_state) eqsT"
@@ -31,9 +29,12 @@ lemma cfg_side_T_eq[simp]:
 
 interpretation side: TD_side_mono cfg_side_T
 proof (unfold_locales)
-  show "is_mono_eq cfg_side_T" unfolding cfg_side_T_def by (fact mono_eq)
-  show "mono_sides cfg_side_T" unfolding cfg_side_T_def by (fact mono_sides)
-  show "mono_deps cfg_side_T" unfolding cfg_side_T_def by (fact mono_deps)
+  show "is_mono_eq cfg_side_T" unfolding cfg_side_T_def
+    by (rule side_cfg_T_is_mono_eq[OF tf_mono])
+  show "mono_sides cfg_side_T" unfolding cfg_side_T_def
+    by (rule side_cfg_T_mono_sides[OF tf_mono])
+  show "mono_deps cfg_side_T" unfolding cfg_side_T_def
+    by (rule side_cfg_T_mono_deps)
 qed
 
 (* Solver output at query node x: stable set and combined unknown assignment. *)
@@ -109,17 +110,13 @@ where
 lemma side_analyse_eq_env_at:
   fixes prog and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and bot0 s0 :: "'a abs_state" and v :: pp
-  assumes mono_eq:
-    "is_mono_eq (side_cfg_T (to_cfg prog) tf (\<squnion>) bot0 s0)"
-  assumes mono_sides:
-    "mono_sides (side_cfg_T (to_cfg prog) tf (\<squnion>) bot0 s0)"
-  assumes mono_deps:
-    "mono_deps (side_cfg_T (to_cfg prog) tf (\<squnion>) bot0 s0)"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   shows "side_analyse prog tf bot0 s0 v =
          td_cfg_side_solver.side_env_at (to_cfg prog) tf bot0 s0 (cfg_entry (to_cfg prog)) v"
 proof -
   interpret side: td_cfg_side_solver "to_cfg prog" tf bot0 s0
-    using mono_eq mono_sides mono_deps by unfold_locales
+    using tf_mono by unfold_locales
   show ?thesis
     unfolding side_analyse_def side.side_env_entry_def side.side_env_at_def by simp
 qed
