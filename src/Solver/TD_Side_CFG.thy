@@ -172,4 +172,81 @@ proof -
     by (simp add: sides_side_rhs_fold_Inr)
 qed
 
+(* -- Fold upper bounds (join = sup) ---------------------------------- *)
+
+lemma side_acc_ge_acc:
+  "acc \<le> side_acc tf (\<squnion>) acc sigma ps"
+proof (induction ps arbitrary: acc)
+  case Nil show ?case by simp
+next
+  case (Cons x ps)
+  obtain u a where x: "x = (u, a)" by (cases x)
+  have "acc \<le> side_acc tf (\<squnion>)
+          (acc \<squnion> restrict_local (apply_tf tf a (sigma (Inl u) \<squnion> sigma (Inr ())))) sigma ps"
+    by (meson Cons.IH sup_ge1 order_trans)
+  then show ?case unfolding x by (simp only: side_acc.simps)
+qed
+
+(* Each incoming edge's local contribution is below the local fold. *)
+lemma restrict_local_le_side_acc:
+  "(u, a) \<in> set ps \<Longrightarrow>
+   restrict_local (apply_tf tf a (sigma (Inl u) \<squnion> sigma (Inr ())))
+     \<le> side_acc tf (\<squnion>) acc sigma ps"
+proof (induction ps arbitrary: acc)
+  case Nil thus ?case by simp
+next
+  case (Cons x ps)
+  obtain w b where x: "x = (w, b)" by (cases x)
+  from Cons.prems x consider (hd) "(u, a) = (w, b)" | (tl) "(u, a) \<in> set ps" by auto
+  then show ?case
+  proof cases
+    case hd
+    then have uw: "u = w" and ab: "a = b" by auto
+    have "restrict_local (apply_tf tf b (sigma (Inl w) \<squnion> sigma (Inr ())))
+          \<le> side_acc tf (\<squnion>)
+               (acc \<squnion> restrict_local (apply_tf tf b (sigma (Inl w) \<squnion> sigma (Inr ()))))
+               sigma ps"
+      using side_acc_ge_acc sup_ge2 order_trans by blast
+    thus ?thesis unfolding x uw ab by (simp only: side_acc.simps)
+  next
+    case tl
+    have "restrict_local (apply_tf tf a (sigma (Inl u) \<squnion> sigma (Inr ())))
+          \<le> side_acc tf (\<squnion>)
+               (acc \<squnion> restrict_local (apply_tf tf b (sigma (Inl w) \<squnion> sigma (Inr ()))))
+               sigma ps"
+      by (rule Cons.IH[OF tl])
+    thus ?thesis unfolding x by (simp only: side_acc.simps)
+  qed
+qed
+
+(* Each incoming edge's global contribution is below the global join. *)
+lemma restrict_global_le_side_glob:
+  "(u, a) \<in> set ps \<Longrightarrow>
+   restrict_global (apply_tf tf a (sigma (Inl u) \<squnion> sigma (Inr ())))
+     \<le> side_glob tf (\<squnion>) sigma ps"
+proof (induction ps)
+  case Nil thus ?case by simp
+next
+  case (Cons x ps)
+  obtain w b where x: "x = (w, b)" by (cases x)
+  from Cons.prems x consider (hd) "(u, a) = (w, b)" | (tl) "(u, a) \<in> set ps" by auto
+  then show ?case
+  proof cases
+    case hd
+    then have uw: "u = w" and ab: "a = b" by auto
+    have "restrict_global (apply_tf tf b (sigma (Inl w) \<squnion> sigma (Inr ())))
+          \<le> side_glob tf (\<squnion>) sigma ps
+               \<squnion> restrict_global (apply_tf tf b (sigma (Inl w) \<squnion> sigma (Inr ())))"
+      by (rule sup_ge2)
+    thus ?thesis unfolding x uw ab by (simp only: side_glob.simps)
+  next
+    case tl
+    have "restrict_global (apply_tf tf a (sigma (Inl u) \<squnion> sigma (Inr ())))
+          \<le> side_glob tf (\<squnion>) sigma ps
+               \<squnion> restrict_global (apply_tf tf b (sigma (Inl w) \<squnion> sigma (Inr ())))"
+      using Cons.IH[OF tl] by (rule le_supI1)
+    thus ?thesis unfolding x by (simp only: side_glob.simps)
+  qed
+qed
+
 end
