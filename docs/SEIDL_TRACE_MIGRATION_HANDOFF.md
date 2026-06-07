@@ -1,9 +1,9 @@
 # Handoff — Start the Seidl Trace Migration
 
 Pick-up doc for the **trace-semantics pivot** in this repo. Read this top-to-bottom
-once. **New work:** start at **§9 (M1 — procedures)**. **Historical gate:** §3
-(Phase 0 / M0, complete on `trace-spike`). The deep reasoning lives in the KB; this
-doc is the actionable extract.
+once. **New work:** start at **§9 (merge / M4)** — M1 procedures are **done** on
+`trace-spike`. **Historical gate:** §3 (Phase 0 / M0). The deep reasoning lives in
+the KB; this doc is the actionable extract.
 
 KB companion (read these for *why*, not just *what*):
 
@@ -128,24 +128,42 @@ KB companion (read these for *why*, not just *what*):
 >   `part_post_solution` combined env soundly over-approximates `cfg_collect`
 >   (path member and subset forms).
 >
-> **M4** (precise trace-combine / digest-indexed globals) is still open — blocked
-> on M1 (interprocedural collecting must exist first).
+> **M4** (precise trace-combine / digest-indexed globals) is still open — M1
+> collecting now exists; M4 is unblocked (§9 slice 5).
+
+> **M1 slice 4 exit (green, 2026-06-07, branch `trace-spike`).** Non-recursive
+> procedural witness end-to-end, sorry-free, full `isabelle build`:
+>
+> - `src/CFG/IMP2_Proc_to_CFG.thy` — `compile_prog`, enter edges + combine triples (CE1).
+> - `src/CFG/Collecting/CFG_Collect_IP.thy` — `cfg_collect_ip` (interprocedural collecting).
+> - `src/CFG/Collecting/CFG_Collect_IP_Adeq.thy` — L-adeq (`pruns_to_ip`, `pcall_global_increment`).
+> - `src/Solver/TD_CFG_IP_Core.thy` — `make_rhs_tree_ip`, `ip_rhs_tree`, combine queries on plain TD.
+> - `src/Solver/TD_IP_Soundness.thy` — `post_fixpoint_sound_at_ip`, `ip_sign_analysis_sound`.
+> - `src/Examples/Example_Proc_Global.thy` — `inc_pi` / single `PCall ''p''`; sign via `td_analyse_ip`.
+> - `src/Examples/Example_Side_Global.thy` — M3 witness (TD_side on G-prefixed globals).
+> - `ROOT` — registers `TD_IP_Soundness`, `Example_Proc_Global`, `Example_Side_Global`.
+>
+> Design notes for the IP example: initial state `(λ_. STop)` (not `bot`); return
+> semantics via **combine triples** at the exit PP, not edge-only paths.
+>
+> **Next:** merge `trace-spike` → `main` (§5 gate met); then **M4** (§9 slice 5).
+> Optional: recursive Example 2 (factorial), interval IP example.
 
 ---
 
-## Milestone checklist (branch `trace-spike`, 2026-06-06)
+## Milestone checklist (branch `trace-spike`, updated 2026-06-07)
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
 | **M0** — lift lemma | **Done** | `CFG_Trace_Collect.thy` |
 | **M2** — trace soundness via `alpha_last` | **Done** | `Trace_Soundness.thy`, `Example_Trace_NonTerminating.thy` |
 | **M3** — TD_side theory + solver soundness | **Done** | `TD_Side_CFG` / `Interface` / `Soundness` |
-| **M3 witness** — concrete global example | **Open** | Optional; §9 slice 0 |
-| **M1** — procedures end-to-end | **Open** | **Current focus** — §9 slices 1–4 |
-| **M4** — globals over traces (digests) | **Open** | After M0 + M3 + M1 collecting |
+| **M3 witness** — concrete global example | **Done** | `Example_Side_Global.thy` |
+| **M1** — procedures end-to-end | **Done** | §9 slices 1–4; `Example_Proc_Global.thy` |
+| **M4** — globals over traces (digests) | **Open** | **Current focus** — §9 slice 5 |
 
-Migration is **not finished**. Work stays on `trace-spike` until M1 (+ witness) is
-green; merge to `main` only after a full-session build gate (§5).
+Migration is **not finished** (M4 remains). M1 exit is met on `trace-spike`; merge
+to `main` is the recommended next integration step (§5 build gate passed 2026-06-07).
 
 ---
 
@@ -346,12 +364,12 @@ Phase 0/2 (trace + lift) ────┘            ▲
 - **M0** — `lift` proves (Phase 0). **Done.**
 - **M2** — all existing examples pass via `alpha_last`, sorry-free (Phase 2). **Done**
   (additive; spine untouched).
-- **M3** — flow-insensitive globals via TD_side (Phase 3). **Proofs done;** witness
-  example optional (§9 slice 0).
+- **M3** — flow-insensitive globals via TD_side (Phase 3). **Done** (proofs +
+  `Example_Side_Global.thy` witness).
 - **M1** — IMP2 procedural example analyzes end-to-end, state-based, sorry-free
-  (Phase 1). **← current focus** (§9).
-- **M4** — history-sensitive global read proved sound (Phase 4). **Open** — thesis
-  payoff; needs M1 collecting + trace foundation.
+  (Phase 1). **Done** (`Example_Proc_Global.thy`, 2026-06-07).
+- **M4** — history-sensitive global read proved sound (Phase 4). **← current focus**
+  (§9 slice 5); M1 collecting + trace foundation are in place.
 
 After M0, Phase 2 generalizes the spike across the rest of `CFG/Collecting/*` and lifts
 the domain interface through `alpha_last` — full file list in
@@ -359,34 +377,29 @@ the domain interface through `alpha_last` — full file list in
 
 ## 8. First action (historical — M0 complete)
 
-M0 gate passed on `trace-spike`. **Start at §9** for the current slice.
+M0 gate passed on `trace-spike`. M1 slice 4 passed 2026-06-07. **Start at §9**
+for merge / M4.
 
 ---
 
-## 9. Next steps — M1 (procedures through CFG + collecting)
+## 9. Next steps — M1 done; merge and M4
 
 **Companion:** `docs/PROCEDURES_EXTENSION_PLAN.md` §9 (thesis-scoped interprocedural
 plan; CE1–CE4 lemma names). The two layers compose:
 
 | Layer | Mechanism | Status |
 | --- | --- | --- |
-| Flow-insensitive **global variables** (`Gx`, …) | `TD_side` + `restrict_local` / `restrict_global` | M3 proofs **done** |
-| **Call/return** (locals preserved, globals merged) | `combine_states` / `restrict_combine` + combine triples | M1 **next** |
+| Flow-insensitive **global variables** (`Gx`, …) | `TD_side` + `restrict_local` / `restrict_global` | M3 **done** (`Example_Side_Global`) |
+| **Call/return** (locals preserved, globals merged) | `combine_states` / `restrict_combine` + combine triples | M1 **done** (`Example_Proc_Global`) |
 
-Do **not** reopen: countability deletion (§4 Step 0), flat `EA_Combine` edges,
-merging `trace-spike` before M1 slice 2 is green.
+Do **not** reopen: countability deletion (§4 Step 0), flat `EA_Combine` edges.
 
-### Slice 0 — M3 witness (optional, ~half day)
+### Slice 0 — M3 witness — **Done**
 
-Close the last M3 gap without touching procedures:
+- `src/Examples/Example_Side_Global.thy` — plain `com` with G-prefixed assigns;
+  `side_sign_analysis_sound` discharged. Registered in `ROOT`.
 
-- Add `src/Examples/Example_Side_Global.thy` — plain `com` with G-prefixed assigns,
-  discharge `side_sign_analysis_sound` (or interval analogue).
-- Register in `ROOT` if new top-level theory.
-
-Validates the committed TD_side stack on a runnable program before the larger M1 push.
-
-### Slice 1 — `compile_prog` (CE1, additive)
+### Slice 1 — `compile_prog` (CE1, additive) — **Done**
 
 New theory; **do not rewrite** `IMP2_to_CFG.thy` / `to_cfg` (spine stays green).
 
@@ -406,7 +419,9 @@ New theory; **do not rewrite** `IMP2_to_CFG.thy` / `to_cfg` (spine stays green).
 
 **Do not** prove soundness in this slice.
 
-### Slice 2 — interprocedural collecting
+Delivered in `src/CFG/IMP2_Proc_to_CFG.thy`.
+
+### Slice 2 — interprocedural collecting — **Done**
 
 **File:** `src/CFG/Collecting/CFG_Collect_IP.thy` (or locale in a sibling).
 
@@ -426,7 +441,9 @@ Reuse `combine_states` from `IMP2_Globals.thy`.
 (`pruns_to` ⟹ member of `cfg_collect_ip` at return sites) — **L-adeq** shape from
 §9.4. Path-based version can follow the existing `cfg_collect_paths` skeleton.
 
-### Slice 3 — abstract RHS + soundness (L-sound')
+Delivered in `CFG_Collect_IP.thy` + `CFG_Collect_IP_Adeq.thy`.
+
+### Slice 3 — abstract RHS + soundness (L-sound') — **Done**
 
 Wire combine into the constraint system. Two compatible routes (pick one per slice;
 both may coexist):
@@ -442,7 +459,10 @@ both may coexist):
 case over existing `post_fixpoint_sound`), per-pp L-td' (already Fix B:
 `td_analyse_collect_sound_at` / `side_analyse_collect_sound_at_solver`).
 
-### Slice 4 — first end-to-end example (M1 exit)
+Route taken: plain TD + `rhs_ip` (`TD_CFG_IP_Core`, `TD_IP_Soundness`,
+`Constraint_System_IP_Sound.thy`).
+
+### Slice 4 — first end-to-end example (M1 exit) — **Done**
 
 **Example 1** from `PROCEDURES_EXTENSION_PLAN.md` §9.6 (non-recursive, global effect,
 locals preserved):
@@ -452,35 +472,40 @@ global Gx;   proc inc() { Gx := Gx + 1; }
 main() { local x;  x := 5;  inc();  inc(); }
 ```
 
-Operational witness already in `IMP2_Proc.thy` (`pcall_global_increment`). M1 exit
-requires: `compile_prog` green, collecting + sign (or interval) analysis sound at
-return points, **sorry-free** full build.
+Operational witness in `IMP2_Proc.thy` (`pcall_global_increment`) + adequacy in
+`CFG_Collect_IP_Adeq.thy`. Soundness: `proc_global_sign_analysis` in
+`Example_Proc_Global.thy` via `td_analyse_ip`. Batch green 2026-06-07.
 
-**Then:** recursive Example 2 (factorial) — same machinery, widening unchanged.
+**Optional follow-up:** recursive Example 2 (factorial) — same machinery, widening
+unchanged.
 
-### Slice 5 — M4 (defer until M1 green)
+### Slice 5 — M4 — **Current focus**
 
 History-sensitive globals over **reaching traces** (digest-indexed join). Requires
 interprocedural `cfg_collect_ip` (or trace-collect analogue) so the property is
-statable. Do not start before M0 + M3 + M1 collecting exist (§6).
+statable. Prerequisites M0 + M3 + M1 collecting are in place (§6).
 
 ### What not to do next
 
 | Skip | Reason |
 | --- | --- |
-| M4 digests | Blocked on M1 collecting |
 | Delete countability | Breaks TD solver |
 | Flat `EA_Combine` on edges | Binary combine; needs caller context |
-| Merge `trace-spike` → `main` | Wait for M1 slice 4 green |
 | Destructive Phase 2 spine rewrite | M2 already closed additively via `alpha_last` |
 
-### Suggested file touch list (M1)
+**Recommended next integration step:** merge `trace-spike` → `main` (M1 slice 4
+green; §5 gate passed 2026-06-07).
+
+### M1 file map (delivered)
 
 ```
-src/CFG/IMP2_Proc_to_CFG.thy          -- compile_prog; enter + combines (CE1)
-src/CFG/Collecting/CFG_Collect_IP.thy -- cfg_collect_ip + adequacy (L-adeq)
-src/Solver/…                          -- rhs_ip or side+combine (L-sound')
-src/Examples/Example_Proc_Global.thy  -- §9.6 Example 1 (M1 exit)
-src/Examples/Example_Side_Global.thy  -- optional M3 witness (slice 0)
-ROOT                                  -- register new top-level theories
+src/CFG/IMP2_Proc_to_CFG.thy           -- compile_prog; enter + combines (CE1)
+src/CFG/Collecting/CFG_Collect_IP.thy  -- cfg_collect_ip
+src/CFG/Collecting/CFG_Collect_IP_Adeq.thy -- L-adeq witness
+src/Equations/Constraint_System_IP_Sound.thy -- IP constraint soundness
+src/Solver/TD_CFG_IP_Core.thy          -- make_rhs_tree_ip / rhs_ip bridge
+src/Solver/TD_IP_Soundness.thy         -- post_fixpoint_sound_at_ip
+src/Examples/Example_Proc_Global.thy   -- §9.6 Example 1 (M1 exit)
+src/Examples/Example_Side_Global.thy   -- M3 witness (slice 0)
+ROOT                                   -- TD_IP_Soundness, Example_* registered
 ```

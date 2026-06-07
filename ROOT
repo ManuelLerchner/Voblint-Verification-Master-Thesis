@@ -35,5 +35,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Example_GraphViz
     Example_Proc_GraphViz
     Example_Side_Global
+    TD_IP_Soundness
+    Example_Proc_Global
     Example_NonTerminating_Safe
     Example_Trace_NonTerminating

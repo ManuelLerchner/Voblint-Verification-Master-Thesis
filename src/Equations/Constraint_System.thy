@@ -498,7 +498,7 @@ next
     apply(auto simp add: abs_join_set_le_superset fin_cv fin_fv)
     by (meson Un_upper1 abs_join_set_le_superset fin_cv fin_fv finite.insertI finite_UnI
         insert_mono)
-  
+
 qed
 
 (*

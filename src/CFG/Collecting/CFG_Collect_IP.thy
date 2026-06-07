@@ -172,5 +172,129 @@ proof
     using x step cfg_collect_ip_post by blast
 qed
 
+(* -- Witness-based paths (edge + combine) -------------------------------- *)
+
+inductive ip_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" for g where
+  entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> ip_witness g S v s"
+  | edge: "(u, a, v) \<in> edges g \<Longrightarrow> ip_witness g S u s \<Longrightarrow>
+           t \<in> edge_collect a {s} \<Longrightarrow> ip_witness g S v t"
+  | combine: "(c, ex, v) \<in> combines g \<Longrightarrow> ip_witness g S c s \<Longrightarrow>
+             ip_witness g S ex t \<Longrightarrow> ip_witness g S v (combine_states s t)"
+
+definition cfg_collect_ip_paths :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> store set" where
+  "cfg_collect_ip_paths g S v = {s. ip_witness g S v s}"
+
+lemma cfg_collect_ip_paths_entry:
+  "S \<subseteq> cfg_collect_ip_paths g S (cfg_entry g)"
+  unfolding cfg_collect_ip_paths_def using ip_witness.entry by blast
+
+lemma cfg_collect_ip_paths_edge:
+  assumes e: "(u, a, v) \<in> edges g"
+  shows "edge_collect a (cfg_collect_ip_paths g S u) \<subseteq> cfg_collect_ip_paths g S v"
+proof
+  fix x
+  assume x: "x \<in> edge_collect a (cfg_collect_ip_paths g S u)"
+  then obtain st where st: "st \<in> cfg_collect_ip_paths g S u" and x: "x \<in> edge_collect a {st}"
+    using edge_collect_member by blast
+  have wit: "ip_witness g S u st"
+    using st unfolding cfg_collect_ip_paths_def by simp
+  show "x \<in> cfg_collect_ip_paths g S v"
+    unfolding cfg_collect_ip_paths_def using ip_witness.edge[OF e wit x] by auto
+qed
+
+lemma cfg_collect_ip_paths_combine:
+  assumes h: "(c, ex, v) \<in> combines g"
+  shows "{combine_states s t | s t.
+           s \<in> cfg_collect_ip_paths g S c \<and> t \<in> cfg_collect_ip_paths g S ex}
+         \<subseteq> cfg_collect_ip_paths g S v"
+proof
+  fix x
+  assume x: "x \<in> {combine_states s t | s t.
+                    s \<in> cfg_collect_ip_paths g S c \<and> t \<in> cfg_collect_ip_paths g S ex}"
+  then obtain s t where
+        sc: "ip_witness g S c s" and te: "ip_witness g S ex t"
+    and x: "x = combine_states s t"
+    unfolding cfg_collect_ip_paths_def by blast
+  show "x \<in> cfg_collect_ip_paths g S v"
+    unfolding cfg_collect_ip_paths_def using ip_witness.combine[OF h sc te] x by auto
+qed
+
+lemma cfg_collect_ip_paths_post:
+  "cfg_collect_ip_F g S (cfg_collect_ip_paths g S) v \<subseteq> cfg_collect_ip_paths g S v"
+proof -
+  have entry: "(if v = cfg_entry g then S else {}) \<subseteq> cfg_collect_ip_paths g S v"
+    using cfg_collect_ip_paths_entry by auto
+  have step: "collect_pp g (cfg_collect_ip_paths g S) v \<subseteq> cfg_collect_ip_paths g S v"
+    unfolding collect_pp_def using cfg_collect_ip_paths_edge by blast
+  have comb: "collect_combine_pp g (cfg_collect_ip_paths g S) v \<subseteq> cfg_collect_ip_paths g S v"
+  proof
+    fix x
+    assume xin: "x \<in> collect_combine_pp g (cfg_collect_ip_paths g S) v"
+    from xin obtain c ex s t where h: "(c, ex, v) \<in> combines g"
+      and st: "s \<in> cfg_collect_ip_paths g S c" "t \<in> cfg_collect_ip_paths g S ex"
+      and x: "x = combine_states s t"
+      unfolding collect_combine_pp_def by auto
+    show "x \<in> cfg_collect_ip_paths g S v"
+      using cfg_collect_ip_paths_combine[OF h] st x by (auto simp: cfg_collect_ip_paths_def)
+  qed
+  show ?thesis
+    unfolding cfg_collect_ip_F_def using entry step comb by auto
+qed
+
+lemma cfg_collect_ip_le_paths:
+  "cfg_collect_ip g S v \<subseteq> cfg_collect_ip_paths g S v"
+proof -
+  have pf: "cfg_collect_ip_F g S (cfg_collect_ip_paths g S) \<le> cfg_collect_ip_paths g S"
+    unfolding le_fun_def using cfg_collect_ip_paths_post by simp
+  have "lfp (cfg_collect_ip_F g S) \<le> cfg_collect_ip_paths g S"
+    using pf cfg_collect_ip_F_mono lfp_lowerbound by blast
+  then show ?thesis
+    unfolding cfg_collect_ip_def le_fun_def by simp
+qed
+
+lemma ip_witness_in_cfg_collect_ip:
+  assumes wit: "ip_witness g S v s"
+  shows "s \<in> cfg_collect_ip g S v"
+proof -
+  from wit show ?thesis
+  proof (induction rule: ip_witness.induct)
+    case (entry vp sto Sa)
+    have "sto \<in> cfg_collect_ip_F g Sa (cfg_collect_ip g Sa) vp"
+      unfolding cfg_collect_ip_F_def using entry by auto
+    then show ?case using cfg_collect_ip_post by blast
+  next
+    case (edge u a v Sa sto t)
+    have ih: "sto \<in> cfg_collect_ip g Sa u" using edge.IH by simp
+    have "t \<in> edge_collect a (cfg_collect_ip g Sa u)"
+    proof -
+      have sub: "{sto} \<subseteq> cfg_collect_ip g Sa u" using ih by simp
+      have mono: "edge_collect a {sto} \<subseteq> edge_collect a (cfg_collect_ip g Sa u)"
+        using edge_collect_mono[OF sub] .
+      show ?thesis using edge(3) mono by auto
+    qed
+    have "t \<in> collect_pp g (cfg_collect_ip g Sa) v"
+      unfolding collect_pp_def using edge(1) \<open>t \<in> edge_collect a (cfg_collect_ip g Sa u)\<close> by auto
+    have "t \<in> cfg_collect_ip_F g Sa (cfg_collect_ip g Sa) v"
+      unfolding cfg_collect_ip_F_def using \<open>t \<in> collect_pp g (cfg_collect_ip g Sa) v\<close> by auto
+    then show ?case using cfg_collect_ip_post by blast
+  next
+    case (combine c ex v Sa sto t)
+    have "combine_states sto t \<in> collect_combine_pp g (cfg_collect_ip g Sa) v"
+      using collect_combine_pp_member[OF combine(1) refl combine.IH(1) combine.IH(2)] .
+    have "combine_states sto t \<in> cfg_collect_ip_F g Sa (cfg_collect_ip g Sa) v"
+      unfolding cfg_collect_ip_F_def using \<open>combine_states sto t \<in> collect_combine_pp g (cfg_collect_ip g Sa) v\<close>
+      by auto
+    then show ?case using cfg_collect_ip_post by blast
+  qed
+qed
+
+lemma cfg_collect_ip_paths_le:
+  "cfg_collect_ip_paths g S v \<subseteq> cfg_collect_ip g S v"
+  unfolding cfg_collect_ip_paths_def using ip_witness_in_cfg_collect_ip by auto
+
+lemma cfg_collect_ip_eq_paths:
+  "cfg_collect_ip g S v = cfg_collect_ip_paths g S v"
+  using cfg_collect_ip_le_paths cfg_collect_ip_paths_le by (rule antisym)
+
 
 end

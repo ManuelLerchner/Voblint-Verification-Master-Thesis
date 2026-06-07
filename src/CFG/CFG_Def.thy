@@ -202,4 +202,70 @@ proof -
     unfolding predecessor_list_def by simp
 qed
 
+(* Stable combine enumeration for the interprocedural TD bridge. *)
+
+definition cfg_combines_list :: "cfg \<Rightarrow> (pp \<times> pp \<times> pp) list" where
+  "cfg_combines_list g =
+     (if finite (combines g) then sorted_list_of_set (combines g) else [])"
+
+definition combine_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) list" where
+  "combine_predecessor_list g v =
+     map (\<lambda>(c, e, ret). (c, e))
+       (filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g))"
+
+lemma set_cfg_combines_list[simp]:
+  assumes "finite (combines g)"
+  shows "set (cfg_combines_list g) = combines g"
+  unfolding cfg_combines_list_def using assms by simp
+
+lemma distinct_cfg_combines_list[simp]:
+  assumes "finite (combines g)"
+  shows "distinct (cfg_combines_list g)"
+  unfolding cfg_combines_list_def using assms by simp
+
+lemma set_combine_predecessor_list[simp]:
+  assumes "finite (combines g)"
+  shows "set (combine_predecessor_list g v) = combine_predecessors g v"
+proof -
+  show ?thesis
+    unfolding combine_predecessor_list_def combine_predecessors_def
+    using assms set_cfg_combines_list[OF assms]
+    by (force simp: image_iff)
+qed
+
+lemma distinct_combine_predecessor_list[simp]:
+  assumes "finite (combines g)"
+  shows "distinct (combine_predecessor_list g v)"
+proof -
+  have dist_filt:
+      "distinct (filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g))"
+    using distinct_filter distinct_cfg_combines_list assms by simp
+  have inj:
+      "inj_on (\<lambda>(c, e, ret). (c, e))
+        (set (filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g)))"
+    by (auto simp: inj_on_def)
+  show ?thesis
+    unfolding combine_predecessor_list_def distinct_map
+    using dist_filt inj by simp
+qed
+
+lemma combine_predecessor_list_Nil_if_no_in:
+  assumes "\<And>c e. (c, e, v) \<notin> combines g"
+  shows "combine_predecessor_list g v = []"
+proof -
+  have "filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g) = []"
+  proof (cases "finite (combines g)")
+    case True
+    then show ?thesis
+      using assms set_cfg_combines_list[OF True]
+      by (force simp: cfg_combines_list_def filter_empty_conv)
+  next
+    case False
+    then show ?thesis
+      by (simp add: cfg_combines_list_def)
+  qed
+  then show ?thesis
+    unfolding combine_predecessor_list_def by simp
+qed
+
 end

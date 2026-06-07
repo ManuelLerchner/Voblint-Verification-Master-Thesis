@@ -314,6 +314,71 @@ next
   finally show ?case .
 qed
 
+lemma comp_fun_idem_fold_union:
+  fixes f :: "'a::bounded_semilattice_sup_bot abs_state => 'a abs_state => 'a abs_state"
+  assumes cfi: "comp_fun_idem f"
+  assumes finA: "finite A" and finB: "finite B"
+  shows "Finite_Set.fold f z (A Un B) = Finite_Set.fold f (Finite_Set.fold f z A) B"
+proof -
+  interpret j: comp_fun_idem f by (fact cfi)
+  from finB show ?thesis
+  proof (induct arbitrary: z)
+    case empty
+    show ?case by simp
+  next
+    case (insert x F)
+    then have xF: "x \<notin> F" by simp
+    show ?case
+    proof (cases "x \<in> A")
+      case False
+      have step1:
+        "Finite_Set.fold f z (A Un insert x F) =
+         f x (Finite_Set.fold f (Finite_Set.fold f z A) F)"
+        using insert False xF finA
+        by fastforce
+      also have "... = Finite_Set.fold f (Finite_Set.fold f z A) (insert x F)"
+        using insert False finA xF
+        using j.fold_insert_idem by presburger
+      finally show ?thesis .
+    next
+      case True
+      have lhs: "Finite_Set.fold f z (A Un insert x F) = Finite_Set.fold f z (A Un F)"
+        by (simp add: True insert_absorb)
+      also have "... = Finite_Set.fold f (Finite_Set.fold f z A) F"
+        using insert by simp
+      also have "... = Finite_Set.fold f (Finite_Set.fold f z A) (insert x F)"
+        using insert True finA xF
+        using calculation by fastforce
+      finally show ?thesis unfolding lhs .
+    qed
+  qed
+qed
+
+lemma abs_join_set_union:
+  fixes f :: "'a::bounded_semilattice_sup_bot abs_state => 'a abs_state => 'a abs_state"
+  assumes cfi: "comp_fun_idem f"
+  assumes finA: "finite A" and finB: "finite B"
+  shows "abs_join_set f (abs_join_set f z A) B = abs_join_set f z (A Un B)"
+  unfolding abs_join_set_def
+  by (rule comp_fun_idem_fold_union[OF cfi finA finB, symmetric])
+
+lemma abs_join_set_insert_union:
+  fixes f :: "'a::bounded_semilattice_sup_bot abs_state => 'a abs_state => 'a abs_state"
+  fixes s0 :: "'a abs_state" and A B :: "'a abs_state set"
+  assumes cfi: "comp_fun_idem f"
+  assumes finA: "finite A" and finB: "finite B"
+  assumes s0A: "s0 \<notin> A" and s0B: "s0 \<notin> B"
+  shows "abs_join_set f bot (insert s0 (A Un B)) =
+         abs_join_set f (abs_join_set f bot (insert s0 A)) B"
+proof -
+  have eq: "insert s0 (A Un B) = insert s0 A Un B"
+    using s0A s0B by auto
+  show ?thesis
+    unfolding abs_join_set_def eq
+    by (meson cfi comp_fun_idem_fold_union finA finB finite.insertI)
+qed
+
+
 lemma make_rhs_tree_correspondence:
   assumes fin: "finite (edges g)"
   assumes cfi: "comp_fun_idem (join_abs :: 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"

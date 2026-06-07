@@ -157,6 +157,126 @@ proof -
   finally show ?thesis .
 qed
 
+lemma ip_witness_gamma:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state" and S :: "store set"
+  assumes fin: "finite (edges g)"
+  assumes finC: "finite (combines g)"
+  assumes step_le:
+    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+  assumes combine_le:
+    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
+       combine_abs (env c) (env ex) \<le> env ret"
+  assumes entry_le: "s0 \<le> env (cfg_entry g)"
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes tf_sound_enter:
+    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+       enter_state s \<in> gamma_state (tf_enter tf sigma)"
+  shows "S \<le> gamma_state s0 \<Longrightarrow> ip_witness g S v st \<Longrightarrow> st \<in> gamma_state (env v)"
+proof -
+  assume S_le: "S \<le> gamma_state s0" and wit: "ip_witness g S v st"
+  from wit S_le show "st \<in> gamma_state (env v)"
+  proof (induction rule: ip_witness.induct)
+    case (entry v s Sa)
+    show ?case using S_le entry_le gamma_state_mono entry by blast
+  next
+    case (edge u a v S s t)
+    have s_g: "s \<in> gamma_state (env u)" using edge by simp
+    have t_ec: "t \<in> edge_collect a {s}" using edge by simp
+    have step1: "t \<in> gamma_state (apply_tf tf a (env u))"
+    proof -
+      have sub: "{s} \<subseteq> gamma_state (env u)" using s_g by simp
+      have ec: "edge_collect a (gamma_state (env u))
+        \<subseteq> gamma_state (apply_tf tf a (env u))"
+        using edge_collect_apply_tf_sound[OF tf_sound_assign tf_sound_assume
+          tf_sound_assume_not tf_sound_enter] by blast
+      have "edge_collect a {s} \<subseteq> edge_collect a (gamma_state (env u))"
+        using edge_collect_mono[OF sub] by blast
+      thus ?thesis using t_ec ec by blast
+    qed
+    show ?case using gamma_state_mono[OF step_le[OF edge(1)]] step1 by blast
+  next
+    case (combine c ex v S s t)
+    have sc: "s \<in> gamma_state (env c)" and tc: "t \<in> gamma_state (env ex)"
+      apply (auto simp add: combine.IH(1) combine.prems)
+      by (simp add: combine.IH(2) combine.prems)
+    have step: "combine_states s t \<in> gamma_state (combine_abs (env c) (env ex))"
+      using combine_states_sound[OF sc tc] by simp
+    show ?case using gamma_state_mono[OF combine_le[OF combine(1)]] step by blast
+  qed
+qed
+
+lemma post_fixpoint_sound_at_ip:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state" and v0 :: pp
+    and S :: "store set"
+  assumes fin: "finite (edges g)"
+  assumes finC: "finite (combines g)"
+  assumes S_sound: "S \<le> gamma_state s0"
+  assumes step_le:
+    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+  assumes combine_le:
+    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
+       combine_abs (env c) (env ex) \<le> env ret"
+  assumes entry_le: "s0 \<le> env (cfg_entry g)"
+  assumes tf_sound_assign:
+    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes tf_sound_enter:
+    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+       enter_state s \<in> gamma_state (tf_enter tf sigma)"
+  shows "cfg_collect_ip g S v0 \<le> gamma_state (env v0)"
+proof -
+  have paths: "cfg_collect_ip g S v0 \<subseteq> cfg_collect_ip_paths g S v0"
+    by (rule cfg_collect_ip_le_paths)
+  show ?thesis
+  proof
+    fix t
+    assume "t \<in> cfg_collect_ip g S v0"
+    with paths have wit: "ip_witness g S v0 t"
+      unfolding cfg_collect_ip_paths_def by auto
+    show "t \<in> gamma_state (env v0)"
+    proof (rule ip_witness_gamma)
+      show "finite (edges g)" by (rule fin)
+      show "finite (combines g)" by (rule finC)
+      show "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+        by (rule step_le)
+      show "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
+          combine_abs (env c) (env ex) \<le> env ret"
+        by (rule combine_le)
+      show "s0 \<le> env (cfg_entry g)" by (rule entry_le)
+      show "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+          s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+        by (rule tf_sound_assign)
+      show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+          \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+        by (rule tf_sound_assume)
+      show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+          \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+        by (rule tf_sound_assume_not)
+      show "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+          enter_state s \<in> gamma_state (tf_enter tf sigma)"
+        by (rule tf_sound_enter)
+      show "S \<le> gamma_state s0" by (rule S_sound)
+      show "ip_witness g S v0 t" by (rule wit)
+    qed
+  qed
+qed
+
 theorem post_fixpoint_sound_ip:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
