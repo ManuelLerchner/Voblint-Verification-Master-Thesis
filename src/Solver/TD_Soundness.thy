@@ -28,6 +28,9 @@ theorem td_analyse_collect_sound_at:
   assumes tf_sound_assume_not:
     "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes tf_sound_enter:
+    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes S_sub: "S \<le> gamma_state s0"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes entry_path: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0"
@@ -68,7 +71,7 @@ proof -
   show ?thesis
     unfolding env_def td_analyse_eq_env_at
     using S_sub entry_le env_def fin_cfg post_fixpoint_sound_at rhs_le step_le tf_sound_assign
-      tf_sound_assume tf_sound_assume_not by blast
+      tf_sound_assume tf_sound_assume_not tf_sound_enter by blast
 qed
 
 theorem td_analyse_collect_sound:
@@ -81,6 +84,9 @@ theorem td_analyse_collect_sound:
   assumes tf_sound_assume_not:
     "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes tf_sound_enter:
+    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes S_sub: "S \<le> gamma_state s0"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes entry_reachable:
@@ -97,7 +103,7 @@ proof (intro allI)
   show "cfg_collect (to_cfg c) S v
         \<le> gamma_state (td_analyse c tf (\<squnion>) bot s0 v)"
     by (rule td_analyse_collect_sound_at[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not S_sub fin_cfg entry_path td_solve_dom])
+          tf_sound_assume_not tf_sound_enter S_sub fin_cfg entry_path td_solve_dom])
 qed
 
 theorem td_solver_sound:
@@ -110,6 +116,9 @@ theorem td_solver_sound:
   assumes tf_sound_assume_not:
     "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes tf_sound_enter:
+    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes s0_sound: "s \<in> gamma_state s0"
   assumes exit_in_collect:
     "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
@@ -127,7 +136,7 @@ proof -
   have collect: "cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))
     \<le> gamma_state (td_analyse c tf (\<squnion>) bot s0 (cfg_exit (to_cfg c)))"
     by (rule td_analyse_collect_sound_at[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not S_sub fin_cfg entry_path td_solve_dom])
+          tf_sound_assume_not tf_sound_enter S_sub fin_cfg entry_path td_solve_dom])
   show ?thesis using collect exit_in_collect by blast
 qed
 end
@@ -157,9 +166,12 @@ proof -
   have h3: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
               \<not> bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
     unfolding sign_tf_def by (simp add: assume_not_sign_sound)
+  have h4: "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+              enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
+    unfolding sign_tf_def by (simp add: enter_sign_sound)
   show ?thesis
     by (rule sign_domain.td_solver_sound
-          [OF h1 h2 h3 s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
+          [OF h1 h2 h3 h4 s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
 qed
 
 (* ── Interval Domain Instantiation ───────────────────────────── *)
@@ -187,9 +199,12 @@ proof -
   have h3: "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
               \<not> bval b s \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
     unfolding ivl_tf_def by simp
+  have h4: "\<forall>sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
+              enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
+    unfolding ivl_tf_def by (simp add: enter_ivl_sound)
   show ?thesis
     by (rule ivl_domain.td_solver_sound
-          [OF h1 h2 h3 s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
+          [OF h1 h2 h3 h4 s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
 qed
 
 end

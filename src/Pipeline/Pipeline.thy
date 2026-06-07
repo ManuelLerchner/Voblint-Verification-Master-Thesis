@@ -39,7 +39,9 @@ where
       \<and> (\<forall>b sigma. \<forall>s \<in> sound_domain.gamma_state gamma sigma. bval b s
            \<longrightarrow> s \<in> sound_domain.gamma_state gamma (tf_assume tf b sigma))
       \<and> (\<forall>b sigma. \<forall>s \<in> sound_domain.gamma_state gamma sigma. \<not> bval b s
-           \<longrightarrow> s \<in> sound_domain.gamma_state gamma (tf_assume_not tf b sigma)))"
+           \<longrightarrow> s \<in> sound_domain.gamma_state gamma (tf_assume_not tf b sigma))
+      \<and> (\<forall>sigma. \<forall>s \<in> sound_domain.gamma_state gamma sigma.
+           enter_state s \<in> sound_domain.gamma_state gamma (tf_enter tf sigma)))"
 
 (* ── Generic Pipeline Record ──────────────────────────────────── *)
 (*
@@ -83,7 +85,8 @@ definition sign_analysis_config :: "store => sign analysis_config" where
         ac_gamma = gamma_sign,
         ac_tf    = (| tf_assign    = assign_sign,
                       tf_assume    = assume_sign,
-                      tf_assume_not = assume_not_sign |),
+                      tf_assume_not = assume_not_sign,
+                      tf_enter     = enter_sign |),
         ac_init  = (\<lambda>x. sign_of_int (s x)) |)"
 
 lemma sign_init_in_gamma:
@@ -94,7 +97,7 @@ lemma sign_init_in_gamma:
 lemma sign_tf_sound:
   "domain_transfer_sound gamma_sign (ac_tf (sign_analysis_config s))"
   unfolding domain_transfer_sound_def sign_analysis_config_def
-  by (simp add: assign_sign_sound assume_sign_sound)
+  by (auto simp: assign_sign_sound assume_sign_sound assume_not_sign_sound enter_sign_sound)
 
 
 lemma sign_pipeline_sound:
@@ -133,7 +136,8 @@ definition ivl_analysis_config :: "store => ivl analysis_config" where
         ac_gamma = gamma_ivl,
         ac_tf    = (| tf_assign    = assign_ivl,
                       tf_assume    = assume_ivl,
-                      tf_assume_not = assume_not_ivl |),
+                      tf_assume_not = assume_not_ivl,
+                      tf_enter     = enter_ivl |),
         ac_init  = (\<lambda>x. Ivl (Fin (s x)) (Fin (s x))) |)"
 
 lemma ivl_init_in_gamma:
@@ -189,8 +193,10 @@ proof -
       sa(x := aval a sa) \<in> sd.gamma_state (tf_assign (ac_tf cfg) x a sigma)"
     and tb: "\<forall>b sigma. \<forall>sa \<in> sd.gamma_state sigma. bval b sa
       \<longrightarrow> sa \<in> sd.gamma_state (tf_assume (ac_tf cfg) b sigma)"
-    and tn: "\<forall>b sigma. \<forall>sa \<in> sd.gamma_state sigma. \<not> bval b sa
-      \<longrightarrow> sa \<in> sd.gamma_state (tf_assume_not (ac_tf cfg) b sigma)"
+    and tn: "\<forall>b sigma. \<forall>s \<in> sd.gamma_state sigma. \<not> bval b s
+      \<longrightarrow> s \<in> sd.gamma_state (tf_assume_not (ac_tf cfg) b sigma)"
+    and te: "\<forall>sigma. \<forall>s \<in> sd.gamma_state sigma.
+      enter_state s \<in> sd.gamma_state (tf_enter (ac_tf cfg) sigma)"
     unfolding domain_transfer_sound_def by auto
   have je: "ac_join cfg = ((\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _)"
     unfolding sup_fun_def using join_eq by simp
@@ -204,7 +210,7 @@ proof -
     using s_in_gamma by auto
   show ?thesis
     unfolding run_analysis_def je be
-    by (rule sd.td_analyse_collect_sound[OF ta tb tn S_sub to_cfg_finite entry_reachable dom'])
+    by (rule sd.td_analyse_collect_sound[OF ta tb tn te S_sub to_cfg_finite entry_reachable dom'])
 qed
 (* -- Pipeline Soundness (Per-pp, path-based) -----------------------------
 
@@ -241,6 +247,8 @@ proof -
       \<longrightarrow> s \<in> sd.gamma_state (tf_assume (ac_tf cfg) b sigma)"
     and tn: "\<forall>b sigma. \<forall>s \<in> sd.gamma_state sigma. \<not> bval b s
       \<longrightarrow> s \<in> sd.gamma_state (tf_assume_not (ac_tf cfg) b sigma)"
+    and te: "\<forall>sigma. \<forall>s \<in> sd.gamma_state sigma.
+      enter_state s \<in> sd.gamma_state (tf_enter (ac_tf cfg) sigma)"
     unfolding domain_transfer_sound_def by auto
   have je: "ac_join cfg = ((\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _)"
     unfolding sup_fun_def using join_eq by simp
@@ -253,7 +261,7 @@ proof -
   have collect: "cfg_collect (to_cfg c) {s} v
     \<le> sd.gamma_state (run_analysis cfg c v)"
     unfolding run_analysis_def je be
-    by (rule sd.td_analyse_collect_sound_at[OF ta tb tn S_sub to_cfg_finite path dom'])
+    by (rule sd.td_analyse_collect_sound_at[OF ta tb tn te S_sub to_cfg_finite path dom'])
   have t_in_cfg: "t \<in> cfg_collect (to_cfg c) {s} v"
     using path_sound_cfg_collect[OF path] t_in by blast
   show ?thesis using collect t_in_cfg by blast
@@ -291,6 +299,8 @@ proof -
       \<longrightarrow> s \<in> sd.gamma_state (tf_assume (ac_tf cfg) b sigma)"
     and tn: "\<forall>b sigma. \<forall>s \<in> sd.gamma_state sigma. \<not> bval b s
       \<longrightarrow> s \<in> sd.gamma_state (tf_assume_not (ac_tf cfg) b sigma)"
+    and te: "\<forall>sigma. \<forall>s \<in> sd.gamma_state sigma.
+      enter_state s \<in> sd.gamma_state (tf_enter (ac_tf cfg) sigma)"
     unfolding domain_transfer_sound_def by auto
   have je: "ac_join cfg = ((\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _)"
     unfolding sup_fun_def using join_eq by simp
@@ -309,7 +319,7 @@ proof -
   have collect: "cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))
     \<le> sd.gamma_state (run_analysis cfg c (cfg_exit (to_cfg c)))"
     unfolding run_analysis_def je be
-    by (rule sd.td_analyse_collect_sound_at[OF ta tb tn S_sub to_cfg_finite entry_path dom'])
+    by (rule sd.td_analyse_collect_sound_at[OF ta tb tn te S_sub to_cfg_finite entry_path dom'])
   show ?thesis using collect exit_in_collect by blast
 qed
 

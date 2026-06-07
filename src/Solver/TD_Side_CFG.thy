@@ -680,6 +680,9 @@ theorem side_collect_sound_path:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
@@ -704,7 +707,7 @@ proof -
   have collect: "edges_collect es (gamma_state (side_env sigma (cfg_entry g)))
                  \<subseteq> gamma_state (side_env sigma v)"
     by (rule edges_collect_gamma_path_aux[OF fin path step_le tf_sound_assign
-          tf_sound_assume tf_sound_assume_not])
+          tf_sound_assume tf_sound_assume_not tf_sound_enter])
   have "edges_collect es S
         \<subseteq> edges_collect es (gamma_state (side_env sigma (cfg_entry g)))"
     by (rule edges_collect_mono_strong[OF entry])
@@ -725,6 +728,9 @@ corollary side_collect_sound_at:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
@@ -743,7 +749,7 @@ proof -
       unfolding cfg_collect_paths_def by blast
     show "t \<in> gamma_state (side_env sigma v)"
       by (rule side_collect_sound_path[OF tf_sound_assign tf_sound_assume
-            tf_sound_assume_not pp fin entry path_es t_in])
+            tf_sound_assume_not tf_sound_enter pp fin entry path_es t_in])
   qed
 qed
 

@@ -1,5 +1,5 @@
 theory CFG_Edges_Collect
-  imports IMP2_to_CFG CFG_Path
+  imports IMP2_to_CFG CFG_Path IMP2_Globals
 begin
 
 (* Per-edge and path-based store-set collecting (edges_collect fold). *)
@@ -11,6 +11,7 @@ fun edge_collect :: "edge_action => store set => store set" where
   | "edge_collect (EA_Assign x a)  S = {s(x := aval a s) | s. s : S}"
   | "edge_collect (EA_Assume b)    S = {s. s \<in> S \<and>  bval b s}"
   | "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not>bval b s}"
+  | "edge_collect EA_Enter           S = enter_state ` S"
 
 lemma edge_collect_empty_set[simp]: "edge_collect a {} = {}"
   by (cases a) auto

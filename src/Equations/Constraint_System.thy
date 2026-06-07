@@ -36,6 +36,7 @@ record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)"
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
+  tf_enter     :: "('a abs_state) => ('a abs_state)"
 
 (* ── Apply Transfer Function to One Edge ─────────────────────── *)
 
@@ -47,6 +48,7 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Assign x a)     sigma = tf_assign tf x a sigma"
   | "apply_tf tf (EA_Assume b)       sigma = tf_assume tf b sigma"
   | "apply_tf tf (EA_AssumeNot b)    sigma = tf_assume_not tf b sigma"
+  | "apply_tf tf EA_Enter            sigma = tf_enter tf sigma"
 
 (* ── Abstract Join over a Set ─────────────────────────────────── *)
 (*

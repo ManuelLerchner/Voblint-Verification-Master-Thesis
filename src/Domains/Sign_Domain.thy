@@ -1,5 +1,5 @@
 theory Sign_Domain
-  imports Abstract_Domain Constraint_System IMP2_SmallStep
+  imports Abstract_Domain Constraint_System IMP2_SmallStep IMP2_Globals
 begin
 
 (*
@@ -307,6 +307,10 @@ lemma assume_not_sign_sound:
   "s \<in> sign_domain.gamma_state sigma \<Longrightarrow> \<not> bval b s
    \<Longrightarrow> s \<in> sign_domain.gamma_state (assume_not_sign b sigma)"
   unfolding assume_not_sign.simps by simp
+lemma assume_not_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_sign b sigma1 \<le> assume_not_sign b sigma2"
+  by (simp add: assume_not_sign.simps)
+
 
 (* \<midarrow>\<midarrow> Abstract Assignment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
@@ -337,10 +341,44 @@ qed
 
 (* \<midarrow>\<midarrow> Bundled Transfer Functions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
+(* Procedure entry: keep globals, reset locals to Top (unknown). *)
+definition enter_sign :: "sign abs_state => sign abs_state" where
+  "enter_sign sigma = (\<lambda>x. if is_global x then sigma x else STop)"
+
+lemma enter_sign_sound:
+  assumes gs: "s \<in> sign_domain.gamma_state sigma"
+  shows "enter_state s \<in> sign_domain.gamma_state (enter_sign sigma)"
+proof -
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (sigma z)"
+    unfolding sign_domain.gamma_state_def by simp
+  show ?thesis
+    unfolding sign_domain.gamma_state_def enter_sign_def
+    by (intro CollectI allI; cases "is_global x";
+        auto simp: enter_state_def V gamma_sign.simps)
+qed
+
+lemma enter_sign_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_sign s1 \<le> enter_sign s2"
+proof (rule le_funI)
+  fix x
+  show "enter_sign s1 x \<le> enter_sign s2 x"
+  proof (cases "is_global x")
+    assume g: "is_global x"
+    from assms have "s1 x \<le> s2 x" by (simp add: le_funD)
+    thus ?thesis using g unfolding enter_sign_def less_eq_sign_def by simp
+  next
+    assume "\<not> is_global x"
+    thus ?thesis unfolding enter_sign_def less_eq_sign_def
+      by (simp add: sign_le_refl)
+  qed
+qed
+
 definition sign_tf :: "sign domain_transfer" where
   "sign_tf = (| tf_assign     = assign_sign,
                 tf_assume     = assume_sign,
-                tf_assume_not = assume_not_sign |)"
+                tf_assume_not = assume_not_sign,
+                tf_enter      = enter_sign |)"
 
 lemma sign_plus_mono1:
   "a1 \<le> a2 \<Longrightarrow> sign_plus a1 b \<le> sign_plus a2 b"
@@ -408,6 +446,7 @@ qed auto
 lemma sign_tf_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf sign_tf a s1 \<le> apply_tf sign_tf a s2"
   apply (cases a)
-  by (auto simp: sign_tf_def assign_sign_mono assume_sign_mono)
+  by (auto simp: sign_tf_def assign_sign_mono assume_sign_mono assume_not_sign_mono
+           enter_sign_mono)
 
 end

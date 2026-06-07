@@ -1,8 +1,9 @@
 # Handoff — Start the Seidl Trace Migration
 
-Pick-up doc for an agent starting the **trace-semantics pivot** in this repo. Read
-this top-to-bottom once, then start at **§3 (Phase 0 — the gate)**. The deep
-reasoning lives in the KB; this doc is the actionable extract.
+Pick-up doc for the **trace-semantics pivot** in this repo. Read this top-to-bottom
+once. **New work:** start at **§9 (M1 — procedures)**. **Historical gate:** §3
+(Phase 0 / M0, complete on `trace-spike`). The deep reasoning lives in the KB; this
+doc is the actionable extract.
 
 KB companion (read these for *why*, not just *what*):
 
@@ -15,6 +16,7 @@ KB companion (read these for *why*, not just *what*):
 - `~/git/goblint-formalization-kb/wiki/concepts/imp2.md` — §"Why vendor-trim" (Phase 1).
 - `~/git/goblint-formalization-kb/wiki/research/architecture-decisions.md` — the AD
   ledger. **Respect locked ADs; do not flip them — see §6.**
+- `docs/PROCEDURES_EXTENSION_PLAN.md` — interprocedural CE1–CE4, §9 thesis path (M1).
 
 > Status when written (2026-06-05): planning complete, **no proof-repo code changed
 > yet**. Branch `main` is sorry-free. This doc is the first executable step.
@@ -58,9 +60,21 @@ KB companion (read these for *why*, not just *what*):
 > frame-stack route (`com`/`pcom` are never declared countable; adding
 > constructors doesn't touch `edge_action`). **Step 0 skipped.**
 >
-> **Remaining for M1:** wire `pcom` through the CFG translation, then
-> collecting + pipeline, for an end-to-end procedural example.
-> **Then:** M3 (TD_side globals), M4 (digests).
+> **M3 solver wiring (green, 2026-06-06).** The handoff's "remaining for solver
+> wiring" block is **closed** on `trace-spike`:
+>
+> - `src/Solver/TD_Side_Interface.thy` — `td_cfg_side_solver` locale; mono derived
+>   from `tf_mono`; `side_part_post_solution_at` via `least_partial_post_solution`;
+>   `side_analyse` / `side_env_at`.
+> - `src/Solver/TD_Side_Soundness.thy` — `side_analyse_collect_sound_at_solver`,
+>   `side_analyse_collect_sound_solver`, `side_solver_sound`, `side_sign_analysis_sound`
+>   (entry coverage discharged from `s0` + `restrict_global s0 = bot`).
+>
+> **M3 witness still open:** no `Example_*` yet exercises `side_analyse` on a program
+> with G-prefixed globals (optional quick win — see §9 slice 0).
+>
+> **Next milestone: M1** — wire `pcom` through CFG translation + interprocedural
+> collecting + analysis. **Then:** M4 (digests / trace-combine). See §9.
 >
 > **Second plan correction (verified).** A flat `EA_Combine` CFG edge for
 > procedure return is **not soundly abstractable** in the current domain
@@ -71,8 +85,12 @@ KB companion (read these for *why*, not just *what*):
 > *caller's* abstract state (no top needed), which requires caller context --
 > i.e. the constraint system reading the call-site state (side-effecting /
 > TD_side, Phase 3) or the trace foundation (Phase 4), not `edge_action`.
-> Conclusion: do **not** add `EA_Enter`/`EA_Combine` to `edge_action`; handle
-> call/return at the constraint-system / trace layer instead.
+> Conclusion: do **not** add `EA_Combine` as a flat unary `edge_action` (binary
+> combine needs two sources). **Enter** may appear as a unary edge (`EA_Enter`) with
+> `enter_abs`; **return** uses **combine triples** `(call, proc_exit, return)` plus a
+> multi-`Query` RHS (see `docs/PROCEDURES_EXTENSION_PLAN.md` §9.2–§9.4), not a flat
+> combine edge. Abstract combine at call boundaries reuses `restrict_combine` /
+> `combine_states` (already in `TD_Side_CFG.thy` / `IMP2_Globals.thy`).
 >
 > Procedure operational substrate so far (`IMP2_Proc.thy`, green): pstep
 > determinism, `pruns_to` (+ skip/assign), `pstep_PSKIP_stuck`,
@@ -110,12 +128,24 @@ KB companion (read these for *why*, not just *what*):
 >   `part_post_solution` combined env soundly over-approximates `cfg_collect`
 >   (path member and subset forms).
 >
-> **Remaining for solver wiring (not yet M4).** Instantiate
-> `TD_side_mono.least_partial_post_solution` for `side_cfg_T` (needs
-> `is_mono_eq` / `mono_sides` / `mono_deps` on the side trees) to obtain
-> `part_post_solution` from `TD_side.solve` without assuming it. Then connect
-> entry coverage `S <= gamma_state (side_env sigma (cfg_entry g))` from the
-> solver initial state. **M4** (precise trace-combine) is still open.
+> **M4** (precise trace-combine / digest-indexed globals) is still open — blocked
+> on M1 (interprocedural collecting must exist first).
+
+---
+
+## Milestone checklist (branch `trace-spike`, 2026-06-06)
+
+| Milestone | Status | Notes |
+| --- | --- | --- |
+| **M0** — lift lemma | **Done** | `CFG_Trace_Collect.thy` |
+| **M2** — trace soundness via `alpha_last` | **Done** | `Trace_Soundness.thy`, `Example_Trace_NonTerminating.thy` |
+| **M3** — TD_side theory + solver soundness | **Done** | `TD_Side_CFG` / `Interface` / `Soundness` |
+| **M3 witness** — concrete global example | **Open** | Optional; §9 slice 0 |
+| **M1** — procedures end-to-end | **Open** | **Current focus** — §9 slices 1–4 |
+| **M4** — globals over traces (digests) | **Open** | After M0 + M3 + M1 collecting |
+
+Migration is **not finished**. Work stays on `trace-spike` until M1 (+ witness) is
+green; merge to `main` only after a full-session build gate (§5).
 
 ---
 
@@ -216,12 +246,10 @@ alternative was weighed and rejected (it gives a precision-less ⊤-everywhere a
 evaluator unless you rebuild a deep embedding by hand) — see the KB §"Considered &
 rejected — full import" before reopening this.
 
-**Step 0 — delete countability first.** Its only consumers are the `to_nat`-derived
-order on `edge_action` (`src/CFG/CFG_Def.thy:63`) and `code_pred small_step`
-(executability) — neither is soundness. Remove the `instance ... :: countable`
-declarations, the `to_nat`-based `<=`/`<` on `edge_action`, and `code_pred`. This
-unblocks free experimentation; deep expressions hand countability back for free later
-if wanted.
+**Step 0 — delete countability first. ~~SUPERSEDED — do not do.~~** Verified on
+`trace-spike`: the `edge_action` linorder (from countability) is load-bearing for
+`cfg_edges_list` → `predecessor_list` → TD solver core. Removing it breaks the
+solver and is unnecessary for the additive `pcom` route. See progress block above.
 
 **Keep (unchanged):** deep `aexp`/`bexp`, `store = vname => int`, the small-step shape,
 `runs_to`, and the whole CFG/collecting/domain/soundness spine.
@@ -315,18 +343,144 @@ Phase 0/2 (trace + lift) ────┘            ▲
         (THE GATE) ───────────────────────┘
 ```
 
-- **M0** — `lift` proves (Phase 0). *Go/no-go for the whole pivot.* ← **your first target**
-- **M1** — IMP2 procedural example analyzes, state-based, sorry-free (Phase 1).
-- **M2** — all existing examples pass via `alpha_last`, sorry-free (Phase 2). The hard one.
-- **M3** — first monovariant global, flow-insensitive via TD_side (Phase 3).
-- **M4** — a history-sensitive global read proved sound (Phase 4). The thesis payoff.
+- **M0** — `lift` proves (Phase 0). **Done.**
+- **M2** — all existing examples pass via `alpha_last`, sorry-free (Phase 2). **Done**
+  (additive; spine untouched).
+- **M3** — flow-insensitive globals via TD_side (Phase 3). **Proofs done;** witness
+  example optional (§9 slice 0).
+- **M1** — IMP2 procedural example analyzes end-to-end, state-based, sorry-free
+  (Phase 1). **← current focus** (§9).
+- **M4** — history-sensitive global read proved sound (Phase 4). **Open** — thesis
+  payoff; needs M1 collecting + trace foundation.
 
 After M0, Phase 2 generalizes the spike across the rest of `CFG/Collecting/*` and lifts
 the domain interface through `alpha_last` — full file list in
 `seidl-pivot-migration-plan.md` §"Phase 2".
 
-## 8. First action
+## 8. First action (historical — M0 complete)
 
-Create branch `trace-spike`, copy `CFG_Edges_Collect.thy`'s fold into a trace-valued
-sibling, and attempt **`lift`**. Report green or the obstacle. Nothing else starts
-until M0.
+M0 gate passed on `trace-spike`. **Start at §9** for the current slice.
+
+---
+
+## 9. Next steps — M1 (procedures through CFG + collecting)
+
+**Companion:** `docs/PROCEDURES_EXTENSION_PLAN.md` §9 (thesis-scoped interprocedural
+plan; CE1–CE4 lemma names). The two layers compose:
+
+| Layer | Mechanism | Status |
+| --- | --- | --- |
+| Flow-insensitive **global variables** (`Gx`, …) | `TD_side` + `restrict_local` / `restrict_global` | M3 proofs **done** |
+| **Call/return** (locals preserved, globals merged) | `combine_states` / `restrict_combine` + combine triples | M1 **next** |
+
+Do **not** reopen: countability deletion (§4 Step 0), flat `EA_Combine` edges,
+merging `trace-spike` before M1 slice 2 is green.
+
+### Slice 0 — M3 witness (optional, ~half day)
+
+Close the last M3 gap without touching procedures:
+
+- Add `src/Examples/Example_Side_Global.thy` — plain `com` with G-prefixed assigns,
+  discharge `side_sign_analysis_sound` (or interval analogue).
+- Register in `ROOT` if new top-level theory.
+
+Validates the committed TD_side stack on a runnable program before the larger M1 push.
+
+### Slice 1 — `compile_prog` (CE1, additive)
+
+New theory; **do not rewrite** `IMP2_to_CFG.thy` / `to_cfg` (spine stays green).
+
+**File:** `src/CFG/IMP2_Proc_to_CFG.thy` (name flexible).
+
+**Input:** `proc_table` + main `pcom`.
+
+**Output:** whole-program `cfg` plus auxiliary relations:
+
+- one sub-CFG per procedure body (reuse `compile` pattern from `IMP2_to_CFG.thy`);
+- **enter edges** `(call_site, EA_Enter, proc_entry)` per call site;
+- **combine triples** `(call_site, proc_exit, return_site) ∈ combines g` — **not**
+  a flat `edge_action` (see plan correction above).
+
+**First proof targets:** freshness, counter monotonicity, `finite (edges g)`,
+`finite (combines g)` — mirror existing `compile_*` lemmas.
+
+**Do not** prove soundness in this slice.
+
+### Slice 2 — interprocedural collecting
+
+**File:** `src/CFG/Collecting/CFG_Collect_IP.thy` (or locale in a sibling).
+
+Extend collecting with a combine clause (concrete semantics from
+`PROCEDURES_EXTENSION_PLAN.md` §9.2):
+
+```
+cfg_collect_ip g S v = lfp F  where
+  F C v = … edge_collect on intra/enter edges …
+        ∪ { combine_states s t | (c, ex, v) ∈ combines g, s ∈ C c, t ∈ C ex }
+        ∪ (if v = entry then S else {})
+```
+
+Reuse `combine_states` from `IMP2_Globals.thy`.
+
+**First proof target:** operational adequacy for the non-recursive example
+(`pruns_to` ⟹ member of `cfg_collect_ip` at return sites) — **L-adeq** shape from
+§9.4. Path-based version can follow the existing `cfg_collect_paths` skeleton.
+
+### Slice 3 — abstract RHS + soundness (L-sound')
+
+Wire combine into the constraint system. Two compatible routes (pick one per slice;
+both may coexist):
+
+1. **Plain TD + `rhs_ip`** — `make_rhs_tree` emits multi-`Query` at combine nodes;
+   `combine_abs` = `restrict_combine` on abstract states. See §9.3–§9.4 in the
+   procedures plan. Extends existing `TD_CFG_Core` / `post_fixpoint_sound`.
+2. **TD_side at intra edges + combine queries** — reuse M3 trees for flow-sensitive
+   locals/globals inside bodies; combine nodes pull call-site + callee-exit via
+   `QueryL`/`QueryG`.
+
+**Load-bearing lemmas:** L-enter, L-comb (pointwise γ), L-sound' (one new union
+case over existing `post_fixpoint_sound`), per-pp L-td' (already Fix B:
+`td_analyse_collect_sound_at` / `side_analyse_collect_sound_at_solver`).
+
+### Slice 4 — first end-to-end example (M1 exit)
+
+**Example 1** from `PROCEDURES_EXTENSION_PLAN.md` §9.6 (non-recursive, global effect,
+locals preserved):
+
+```
+global Gx;   proc inc() { Gx := Gx + 1; }
+main() { local x;  x := 5;  inc();  inc(); }
+```
+
+Operational witness already in `IMP2_Proc.thy` (`pcall_global_increment`). M1 exit
+requires: `compile_prog` green, collecting + sign (or interval) analysis sound at
+return points, **sorry-free** full build.
+
+**Then:** recursive Example 2 (factorial) — same machinery, widening unchanged.
+
+### Slice 5 — M4 (defer until M1 green)
+
+History-sensitive globals over **reaching traces** (digest-indexed join). Requires
+interprocedural `cfg_collect_ip` (or trace-collect analogue) so the property is
+statable. Do not start before M0 + M3 + M1 collecting exist (§6).
+
+### What not to do next
+
+| Skip | Reason |
+| --- | --- |
+| M4 digests | Blocked on M1 collecting |
+| Delete countability | Breaks TD solver |
+| Flat `EA_Combine` on edges | Binary combine; needs caller context |
+| Merge `trace-spike` → `main` | Wait for M1 slice 4 green |
+| Destructive Phase 2 spine rewrite | M2 already closed additively via `alpha_last` |
+
+### Suggested file touch list (M1)
+
+```
+src/CFG/IMP2_Proc_to_CFG.thy          -- compile_prog; enter + combines (CE1)
+src/CFG/Collecting/CFG_Collect_IP.thy -- cfg_collect_ip + adequacy (L-adeq)
+src/Solver/…                          -- rhs_ip or side+combine (L-sound')
+src/Examples/Example_Proc_Global.thy  -- §9.6 Example 1 (M1 exit)
+src/Examples/Example_Side_Global.thy  -- optional M3 witness (slice 0)
+ROOT                                  -- register new top-level theories
+```

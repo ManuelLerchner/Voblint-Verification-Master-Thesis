@@ -38,7 +38,8 @@ datatype edge_action =
     EA_Nop
   | EA_Assign   vname aexp
   | EA_Assume   bexp
-  | EA_AssumeNot bexp
+  |     EA_AssumeNot bexp
+  | EA_Enter                    (* call/scope entry: reset locals, keep globals *)
 
 instance edge_action :: countable
   by countable_datatype
@@ -65,18 +66,29 @@ end
 record cfg = "(pp, edge_action) graph" +
   cfg_entry :: pp
   cfg_exit  :: pp
+  combines  :: "(pp * pp * pp) set"   (* (call, callee_exit, return) triples *)
 
 (* \<midarrow>\<midarrow> CFG Construction ) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
-definition mk_cfg :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> cfg" where
-  "mk_cfg entry exit E =
-     \<lparr> nodes =({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E),
+definition mk_ip_cfg ::
+  "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> pp \<times> pp) set \<Rightarrow> cfg" where
+  "mk_ip_cfg entry exit E C =
+     \<lparr> nodes = ({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E
+                  \<union> fst ` C \<union> (fst \<circ> snd) ` C \<union> (snd \<circ> snd) ` C),
        edges = E,
        cfg_entry = entry,
-       cfg_exit = exit
+       cfg_exit = exit,
+       combines = C
      \<rparr>"
 
-declare mk_cfg_def[simp]
+definition mk_cfg :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> cfg" where
+  "mk_cfg entry exit E = mk_ip_cfg entry exit E {}"
+
+declare mk_cfg_def[simp] mk_ip_cfg_def[simp]
+
+lemma mk_cfg_combines_empty[simp]:
+  "combines (mk_cfg en ex E) = {}"
+  by (simp add: mk_cfg_def)
 
 lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E))"
   unfolding valid_graph_def graph.truncate_def mk_cfg_def by force

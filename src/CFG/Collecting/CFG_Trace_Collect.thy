@@ -1,5 +1,5 @@
 theory CFG_Trace_Collect
-  imports CFG_Collecting_Core
+  imports CFG_Collecting_Core IMP2_Globals
 begin
 
 (*
@@ -26,6 +26,7 @@ fun edge_step :: "edge_action => store => store option" where
   | "edge_step (EA_Assign x a)  s = Some (s(x := aval a s))"
   | "edge_step (EA_Assume b)    s = (if bval b s then Some s else None)"
   | "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
+  | "edge_step EA_Enter           s = Some (enter_state s)"
 
 (* edge_collect on a singleton agrees with edge_step, viewed as an option-set. *)
 lemma edge_collect_single:

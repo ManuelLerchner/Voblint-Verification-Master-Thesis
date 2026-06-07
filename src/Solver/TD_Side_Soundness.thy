@@ -26,12 +26,15 @@ theorem side_collect_sound_at_pp:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes fin_cfg: "finite (edges g)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes entry_cov: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
   assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
   shows "cfg_collect g S v \<le> gamma_state (side_env sigma v)"
-  using side_collect_sound_at[OF tf_sound_assign tf_sound_assume tf_sound_assume_not
+  using side_collect_sound_at[OF tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter
     pp fin_cfg entry_cov path] .
 
 theorem side_analyse_collect_sound_at:
@@ -46,6 +49,9 @@ theorem side_analyse_collect_sound_at:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes pp:
     "part_post_solution (side_cfg_T (to_cfg c) tf (\<squnion>) bot0 s0) v0
@@ -77,7 +83,7 @@ proof -
   proof (rule order_trans)
     show "cfg_collect (to_cfg c) S v0 \<le> gamma_state (side_env sigma v0)"
       using side_collect_sound_at_pp[OF tf_sound_assign tf_sound_assume
-            tf_sound_assume_not fin_g pp' entry path']
+            tf_sound_assume_not tf_sound_enter fin_g pp' entry path']
       unfolding g_def by simp
     show "gamma_state (side_env sigma v0) \<le> gamma_state (side_analyse c tf bot0 s0 v0)"
       unfolding side_analyse_def side_env_def sigma_def g_def
@@ -98,6 +104,9 @@ theorem side_analyse_collect_sound:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes pp:
     "\<And>v. part_post_solution (side_cfg_T (to_cfg c) tf (\<squnion>) bot0 s0) v
@@ -119,7 +128,7 @@ proof (intro allI)
   show "cfg_collect (to_cfg c) S v
         \<le> gamma_state (side_analyse c tf bot0 s0 v)"
     by (rule side_analyse_collect_sound_at[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not fin_cfg pp entry_cov entry_path])
+          tf_sound_assume_not tf_sound_enter fin_cfg pp entry_cov entry_path])
 qed
 
 theorem side_analyse_collect_sound_at_solver:
@@ -134,6 +143,9 @@ theorem side_analyse_collect_sound_at_solver:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes tf_mono:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   assumes fin_cfg: "finite (edges (to_cfg c))"  assumes entry_path: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0"
@@ -203,6 +215,9 @@ proof -
       using tf_sound_assume .
     show "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
       using tf_sound_assume_not .
+    show "\<forall>sg. \<forall>s \<in> gamma_state sg.
+          enter_state s \<in> gamma_state (tf_enter tf sg)"
+      using tf_sound_enter .
     show "finite (edges (to_cfg c))" using fin_cfg .
     show "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0" using entry_path .
   qed
@@ -220,6 +235,9 @@ theorem side_analyse_collect_sound_solver:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes tf_mono:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   assumes fin_cfg: "finite (edges (to_cfg c))"
@@ -239,7 +257,7 @@ proof (intro allI)
   show "cfg_collect (to_cfg c) S v
         \<le> gamma_state (side_analyse c tf bot0 s0 v)"
     by (rule side_analyse_collect_sound_at_solver[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_mono fin_cfg entry_path side_solve_dom S_sub
+          tf_sound_assume_not tf_sound_enter tf_mono fin_cfg entry_path side_solve_dom S_sub
           s0_global_bot])
 qed
 
@@ -255,6 +273,9 @@ theorem side_solver_sound:
   assumes tf_sound_assume_not:
     "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+  assumes tf_sound_enter:
+    "\<forall>sg. \<forall>s \<in> gamma_state sg.
+       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes tf_mono:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   assumes s0_sound: "s \<in> gamma_state s0"
@@ -272,7 +293,7 @@ proof -
   have collect: "cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))
     \<le> gamma_state (side_analyse c tf bot0 s0 (cfg_exit (to_cfg c)))"
     by (rule side_analyse_collect_sound_at_solver[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_mono fin_cfg entry_path side_solve_dom S_sub
+          tf_sound_assume_not tf_sound_enter tf_mono fin_cfg entry_path side_solve_dom S_sub
           s0_global_bot])
   show ?thesis using collect exit_in_collect by blast
 qed
@@ -304,9 +325,12 @@ proof -
   have h3: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
               \<not> bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
     unfolding sign_tf_def by (simp add: assume_not_sign_sound)
+  have h4: "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+              enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
+    unfolding sign_tf_def by (simp add: enter_sign_sound)
   show ?thesis
     by (rule sign_domain.side_solver_sound
-          [OF h1 h2 h3 sign_tf_mono s_sound exit_in_collect fin_cfg entry_path
+          [OF h1 h2 h3 h4 sign_tf_mono s_sound exit_in_collect fin_cfg entry_path
             side_solve_dom s0_global_bot])
 qed
 

@@ -28,6 +28,10 @@ lemma combine_query [simp]:
   "<s|t> n = (if is_global n then t n else s n)"
   unfolding combine_states_def by simp
 
+(* Concrete call/scope entry: globals from s, locals reset to 0. *)
+definition enter_state :: "store \<Rightarrow> store" where
+  "enter_state s = (\<lambda>n. if is_global n then s n else 0)"
+
 (* Combining a store with itself is a no-op. *)
 lemma combine_collapse [simp]:
   "<s|s> = s"
