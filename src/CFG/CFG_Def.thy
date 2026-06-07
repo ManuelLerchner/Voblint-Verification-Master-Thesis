@@ -126,6 +126,20 @@ proof  -
     using assms finite_subset finite_imageI by blast
 qed
 
+definition combine_predecessors :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) set" where
+  "combine_predecessors g v = {(c, e) | c e. (c, e, v) \<in> combines g}"
+
+lemma finite_combine_predecessors:
+  assumes "finite (combines g)"
+  shows "finite (combine_predecessors g v)"
+proof -
+  have "combine_predecessors g v
+        \<subseteq> (\<lambda>t :: pp \<times> pp \<times> pp. (fst t, fst (snd t))) ` combines g"
+    unfolding combine_predecessors_def by force
+  then show ?thesis
+    using assms finite_subset finite_imageI by blast
+qed
+
 (* Stable edge enumeration for the TD bridge: sort by (source, action, target). *)
 
 definition cfg_edges_list :: "cfg \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where

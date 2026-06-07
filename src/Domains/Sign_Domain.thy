@@ -374,6 +374,23 @@ proof (rule le_funI)
   qed
 qed
 
+definition combine_sign :: "sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state" where
+  "combine_sign = combine_abs"
+
+lemma combine_sign_sound:
+  assumes gs: "s \<in> sign_domain.gamma_state sigma_c"
+      and ge: "t \<in> sign_domain.gamma_state sigma_e"
+  shows "combine_states s t \<in> sign_domain.gamma_state (combine_sign sigma_c sigma_e)"
+proof -
+  from gs have Vc: "\<forall>z. s z \<in> gamma_sign (sigma_c z)"
+    unfolding sign_domain.gamma_state_def by simp
+  from ge have Ve: "\<forall>z. t z \<in> gamma_sign (sigma_e z)"
+    unfolding sign_domain.gamma_state_def by simp
+  show ?thesis
+    unfolding sign_domain.gamma_state_def combine_sign_def combine_abs_def combine_states_def
+    by (intro CollectI allI; cases "is_global x"; auto simp: Vc Ve gamma_sign.simps)
+qed
+
 definition sign_tf :: "sign domain_transfer" where
   "sign_tf = (| tf_assign     = assign_sign,
                 tf_assume     = assume_sign,

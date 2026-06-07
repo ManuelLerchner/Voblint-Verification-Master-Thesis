@@ -1,5 +1,5 @@
 theory Constraint_System
-  imports CFG_Def Abstract_Domain
+  imports CFG_Def Abstract_Domain IMP2_Globals
 begin
 
 (*
@@ -398,11 +398,115 @@ proof -
       using \<open>v \<noteq> cfg_entry g\<close> by simp
   qed
 qed
+(* -- Interprocedural RHS (M1 slice 3) -------------------------------- *)
+
+definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "combine_abs sc se = (\<lambda>x. if is_global x then se x else sc x)"
+
+definition rhs_ip ::
+    "cfg
+     \<Rightarrow> 'a domain_transfer
+     \<Rightarrow> ('a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+     \<Rightarrow> 'a abs_state
+     \<Rightarrow> 'a abs_state
+     \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
+     \<Rightarrow> pp
+     \<Rightarrow> 'a abs_state"
+where
+  "rhs_ip g tf join_abs bot_abs s0 env v =
+     (let edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u))
+                          {(u, a) | u a. (u, a, v) \<in> edges g};
+          comb_vals = image (\<lambda>(c, e). combine_abs (env c) (env e))
+                          {(c, e) | c e. (c, e, v) \<in> combines g};
+          base = if v = cfg_entry g
+                 then insert s0 (edge_vals \<union> comb_vals)
+                 else edge_vals \<union> comb_vals
+      in  abs_join_set join_abs bot_abs base)"
+
+definition is_post_fixpoint_ip ::
+    "cfg
+     \<Rightarrow> ('a::ord domain_transfer)
+     \<Rightarrow> ('a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
+     \<Rightarrow> 'a abs_state
+     \<Rightarrow> 'a abs_state
+     \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
+     \<Rightarrow> bool"
+where
+  "is_post_fixpoint_ip g tf join_abs bot_abs s0 env =
+     (\<forall>v. rhs_ip g tf join_abs bot_abs s0 env v \<le> env v)"
+
+lemma rhs_ip_eq_rhs_if_no_combines:
+  assumes "combines g = {}"
+  shows "rhs_ip g tf join_abs bot_abs s0 env v = rhs g tf join_abs bot_abs s0 env v"
+  unfolding rhs_ip_def rhs_def using assms by (simp add: Let_def)
+
+lemma sup_fold_ge_state:
+  assumes "finite (A :: 'a::bounded_semilattice_sup_bot abs_state set)"
+    and "x \<in> A"
+  shows "x \<le> Finite_Set.fold (\<squnion>) bot A"
+  using assms
+  by (metis Sup_fin.coboundedI Sup_fin.eq_fold finite_insert insertCI)
+
+lemma fold_bot_le_superset:
+  fixes X Y :: "'a::bounded_semilattice_sup_bot abs_state set"
+  assumes finY: "finite Y"
+  assumes sub: "X \<subseteq> Y"
+  shows "Finite_Set.fold (\<squnion>) bot X \<le> Finite_Set.fold (\<squnion>) bot Y"
+  by (metis (no_types, lifting) ext Sup_fin.eq_fold Sup_fin.insert Sup_fin.subset finY finite_subset
+      fold_empty sub sup.absorb_iff2 sup.commute sup_bot_left)
+
+lemma abs_join_set_le_superset:
+  fixes X Y :: "'a::bounded_semilattice_sup_bot abs_state set"
+  assumes finY: "finite Y"
+  assumes sub: "X \<subseteq> Y"
+  shows "abs_join_set (\<squnion>) bot X \<le> abs_join_set (\<squnion>) bot Y"
+  unfolding abs_join_set_def
+  by (simp add: finY fold_bot_le_superset sub)
+
+lemma rhs_le_rhs_ip:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state" and v :: pp
+  assumes finE: "finite (edges g)"
+  assumes finC: "finite (combines g)"
+  shows "rhs g tf (\<squnion>) bot s0 env v
+        \<le> rhs_ip g tf (\<squnion>) bot s0 env v"
+proof (cases "combines g = {}")
+  case True
+  then show ?thesis
+    unfolding rhs_ip_eq_rhs_if_no_combines[OF True] by (simp)
+next
+  case False
+  define P where "P = predecessors g v"
+  define C where "C = combine_predecessors g v"
+  define fv where "fv = image (\<lambda>(u, a). apply_tf tf a (env u)) P"
+  define cv where "cv = image (\<lambda>(c, e). combine_abs (env c) (env e)) C"
+  have finP: "finite P"
+    using finE by (simp add: P_def finite_predecessors)
+  have finCv: "finite C"
+    using finC by (simp add: C_def finite_combine_predecessors)
+  have fin_fv: "finite fv" and fin_cv: "finite cv"
+    using finP finCv unfolding fv_def cv_def by auto
+  have rhs_eq: "rhs g tf (\<squnion>) bot s0 env v =
+    abs_join_set (\<squnion>) bot (if v = cfg_entry g then insert s0 fv else fv)"
+    unfolding rhs_def Let_def abs_join_set_def P_def fv_def predecessors_def by simp
+  have ip_eq: "rhs_ip g tf (\<squnion>) bot s0 env v =
+    abs_join_set (\<squnion>) bot (if v = cfg_entry g then insert s0 (fv \<union> cv) else fv \<union> cv)"
+    unfolding rhs_ip_def Let_def abs_join_set_def P_def C_def fv_def cv_def
+      combine_predecessors_def
+    using predecessors_def by presburger  
+  show ?thesis unfolding rhs_eq ip_eq
+    apply(auto simp add: abs_join_set_le_superset fin_cv fin_fv)
+    by (meson Un_upper1 abs_join_set_le_superset fin_cv fin_fv finite.insertI finite_UnI
+        insert_mono)
+  
+qed
+
 (*
   Key soundness statement for the constraint system:
   If env is a post-fixpoint (env v <= rhs ... env v for all v),
   then env overapproximates the CFG collecting semantics.
   Proved in Constraint_System_Sound.thy.
+  Interprocedural variant: Constraint_System_IP_Sound.thy.
 *)
 
 end
