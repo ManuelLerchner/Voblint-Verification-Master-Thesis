@@ -24,6 +24,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     CFG_Collect_IP
     CFG_Collect_IP_Adeq
     CFG_Collect_Unified
+    CFG_Trace_Collect_IP
     Constraint_System_IP_Sound
     Trace_Soundness
     TD_CFG_Core
