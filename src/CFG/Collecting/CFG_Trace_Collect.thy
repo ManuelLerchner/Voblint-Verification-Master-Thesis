@@ -134,4 +134,72 @@ next
     unfolding alpha_last_def cfg_collect_trace_def using es s et xl by auto
 qed
 
+(* -- M3.5 polish: globals frame lemma ------------------------------------- *)
+(*
+  A global variable that is never assigned along a trace keeps its initial
+  value.  This makes the M4 reading precise at the source: an unwritten global
+  reads back exactly what it started with.  edge_step preserves any global x
+  that the edge does not assign (assignments to other variables, assume/nop, and
+  EA_Enter all leave globals untouched -- enter_state keeps globals and zeroes
+  only locals).  Lifted along a path: if the CFG never assigns x, every reaching
+  trace ends with x at its start value.
+*)
+lemma edge_step_preserves_global:
+  assumes "is_global x"
+  assumes "\<forall>e. a \<noteq> EA_Assign x e"
+  assumes "edge_step a s = Some s'"
+  shows "s' x = s x"
+  using assms by (cases a) (auto simp: enter_state_def split: if_splits)
+
+lemma edges_trace_global_frame:
+  assumes "is_global x"
+  assumes "\<forall>(a, p) \<in> set es. \<forall>e. a \<noteq> EA_Assign x e"
+  assumes "edges_trace es s = Some tr"
+  shows "(last tr) x = s x"
+  using assms
+proof (induction es arbitrary: s tr)
+  case Nil
+  then have "tr = [s]" by auto
+  then show ?case by simp
+next
+  case (Cons ap es)
+  obtain a p where ap: "ap = (a, p)" by (cases ap)
+  from Cons.prems(3) ap obtain s' where
+      step: "edge_step a s = Some s'" and
+      rest: "edges_trace es s' = Some (tl tr)" and
+      hdtr: "tr = s # tl tr"
+    by (auto split: option.splits)
+  have notx: "\<forall>e. a \<noteq> EA_Assign x e" using Cons.prems(2) ap by simp
+  have tail: "\<forall>(a, p) \<in> set es. \<forall>e. a \<noteq> EA_Assign x e"
+    using Cons.prems(2) ap by simp
+  have s'x: "s' x = s x"
+    by (rule edge_step_preserves_global[OF Cons.prems(1) notx step])
+  have nn: "tl tr \<noteq> []" using rest edges_trace_nonempty by blast
+  have lt: "last tr = last (tl tr)" using hdtr nn by (metis last_ConsR)
+  have "last tr x = s' x" using lt Cons.IH[OF Cons.prems(1) tail rest] by simp
+  then show ?case using s'x by simp
+qed
+
+lemma cfg_path_actions_in_edges:
+  assumes "g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+  shows "\<forall>(a, w) \<in> set es. \<exists>u'. (u', a, w) \<in> edges g"
+  using assms by (induction rule: cfg_path.induct) auto
+
+corollary cfg_collect_trace_global_frame:
+  assumes glob: "is_global x"
+  assumes unwritten: "\<forall>(u, a, w) \<in> edges g. \<forall>e. a \<noteq> EA_Assign x e"
+  assumes tr: "tr \<in> cfg_collect_trace g S v"
+  shows "\<exists>s \<in> S. (last tr) x = s x"
+proof -
+  from tr obtain es s where
+      path: "g \<turnstile> cfg_entry g \<longrightarrow>\<^bsub>es\<^esub> v" and s: "s \<in> S"
+      and et: "edges_trace es s = Some tr"
+    unfolding cfg_collect_trace_def by auto
+  have nowrite: "\<forall>(a, p) \<in> set es. \<forall>e. a \<noteq> EA_Assign x e"
+    using cfg_path_actions_in_edges[OF path] unwritten by fastforce
+  have "(last tr) x = s x"
+    by (rule edges_trace_global_frame[OF glob nowrite et])
+  thus ?thesis using s by blast
+qed
+
 end
