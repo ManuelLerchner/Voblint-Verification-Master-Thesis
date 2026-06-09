@@ -189,16 +189,38 @@ KB companion (read these for *why*, not just *what*):
 | **M1** — procedures end-to-end | **Done** | §9 slices 1–4; `Example_Proc_Global.thy` |
 | **U1–U4** — unified analysis migration | **Done** (2026-06-09) | `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` |
 | **M3.5** — interprocedural **trace** bridge | **Done** (core) | projection lemma green; `CFG_Trace_Collect_IP.thy` |
-| **M4** — globals over traces | **Soundness done** | `reaching_global_read_sound`; digest *precision* remains |
+| **M4** — globals over traces | **Done** (soundness + precision) | `reaching_global_read_sound` + digest layer; `Example_Trace_Digest_Precision.thy` |
 
-Migration is **substantially complete**: the unified-analysis consolidation (U1–U4),
-the M3.5 interprocedural-trace projection, and the **M4 soundness core**
+Migration is **complete**: the unified-analysis consolidation (U1–U4),
+the M3.5 interprocedural-trace projection, the **M4 soundness core**
 (`reaching_global_read_sound` — any variable's value over any reaching
-interprocedural trace is in `gamma (env v x)`) are all green on `trace-spike`.
-The remaining frontier is M4 **precision**: digest-indexed (context-sensitive)
-summaries that keep callers apart, refining `cfg_collect_trace_ip`'s combine via a
-digest hook on the unified collecting locale (it only shrinks the trace set, so
-`reaching_global_read_sound` is preserved). (§5 build gate passed 2026-06-09.)
+interprocedural trace is in `gamma (env v x)`), AND the **M4 precision layer**
+are all green (full `isabelle build`, 2026-06-09).
+
+**M4 precision — landed (3 stages):**
+
+- **A — soundness preservation.** `ip_trace_witness_d` adds a digest/compatibility
+  premise (`cmp (dg tau) (dg rho)`) to the combine rule;
+  `cfg_collect_trace_ip_d_subset` proves the refined trace set is a SUBSET of the
+  unrefined one, so `reaching_global_read_sound_d` carries the M4 core over with
+  the same `env` at zero soundness cost. (`CFG_Trace_Collect_IP.thy`,
+  `Trace_IP_Analysis_Sound.thy`.)
+- **B — digest-indexed analyzer contract.** `digest_env_sound` (per-(pp,digest)
+  over-approximation of `reaching_compat`), `digest_read_sound` (the
+  history-sensitive read), and `flat_env_is_digest_sound` (the existing
+  flow-insensitive analyzer is the trivial constant-in-d digest env — no
+  instantiation gap). (`Trace_IP_Analysis_Sound.thy`.)
+- **C — strict-precision witness.** `Example_Trace_Digest_Precision.thy`: an
+  edge-less 2-store CFG (`x = 1` / `x = -1`); `flat_forces_top` shows ANY sound
+  flat sign env reads `x` as all of `ZZ`, while `digest_beats_flat` exhibits a
+  digest-indexed env that is globally sound (`digest_env_sound_concrete`) AND
+  reads `x` as `SPos = {n. n > 0} \<subset> ZZ`. History-indexed globals: sound and
+  strictly tighter on a concrete program.
+
+Open follow-ons (not blocking): M3.5 Slice 1 (action-labelled traces for "last
+preceding *write*"), Slice 4 (single-context equality witness), and a non-trivial
+*concurrent* digest (lockset) — IMP2 has no concurrency model, so that needs a
+semantics extension.
 
 > **Progress (2026-06-09) — consolidation + M3.5 projection green.**
 > Full `isabelle build` sorry-free. New theories: `CFG_Collect_Unified` (U1),

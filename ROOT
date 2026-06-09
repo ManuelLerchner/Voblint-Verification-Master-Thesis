@@ -47,3 +47,4 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Example_Proc_Global
     Example_NonTerminating_Safe
     Example_Trace_NonTerminating
+    Example_Trace_Digest_Precision

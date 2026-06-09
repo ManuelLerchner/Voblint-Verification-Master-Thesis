@@ -119,4 +119,52 @@ theorem alpha_last_cfg_collect_trace_ip_le:
   unfolding alpha_last_def cfg_collect_trace_ip_def
   using ip_trace_witness_last_in_cfg_collect_ip by auto
 
+
+(* -- M4 precision: digest-refined interprocedural trace collecting ---------- *)
+(*
+  A digest abstracts a trace's history (calling context, lockset, ...).  The
+  digest-refined witness adds ONE premise to the combine rule: the caller and
+  callee digests must be COMPATIBLE (cmp).  Every other rule is unchanged, so the
+  refined trace set is a SUBSET of the unrefined one (cfg_collect_trace_ip_d_subset).
+  Soundness therefore carries over verbatim (reaching_global_read_sound_d in
+  Trace_IP_Analysis_Sound) -- the digest hook only SHRINKS the trace set.  This
+  mechanizes the "combine_at digest hook preserves soundness" claim M4 precision
+  rests on; choosing a concrete digest + proving strictly tighter reads is the
+  precision payoff (Example_Trace_Digest_Precision).
+*)
+inductive ip_trace_witness_d ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool"
+  for dg :: "trace \<Rightarrow> 'd" and cmp :: "'d \<Rightarrow> 'd \<Rightarrow> bool" and g S where
+  entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> ip_trace_witness_d dg cmp g S v [s]"
+| edge: "(u, a, v) \<in> edges g \<Longrightarrow> ip_trace_witness_d dg cmp g S u tr
+         \<Longrightarrow> edge_step a (last tr) = Some s'
+         \<Longrightarrow> ip_trace_witness_d dg cmp g S v (tr @ [s'])"
+| combine: "(c, ex, v) \<in> combines g \<Longrightarrow> ip_trace_witness_d dg cmp g S c tau
+            \<Longrightarrow> ip_trace_witness_d dg cmp g S ex rho
+            \<Longrightarrow> hd rho = enter_state (last tau)
+            \<Longrightarrow> cmp (dg tau) (dg rho)
+            \<Longrightarrow> ip_trace_witness_d dg cmp g S v
+                  (tau @ rho @ [combine_states (last tau) (last rho)])"
+
+definition cfg_collect_trace_ip_d ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
+  "cfg_collect_trace_ip_d dg cmp g S v = {tr. ip_trace_witness_d dg cmp g S v tr}"
+
+lemma ip_trace_witness_d_imp:
+  "ip_trace_witness_d dg cmp g S v tr \<Longrightarrow> ip_trace_witness g S v tr"
+  by (induction rule: ip_trace_witness_d.induct) (auto intro: ip_trace_witness.intros)
+
+theorem cfg_collect_trace_ip_d_subset:
+  "cfg_collect_trace_ip_d dg cmp g S v \<subseteq> cfg_collect_trace_ip g S v"
+  unfolding cfg_collect_trace_ip_d_def cfg_collect_trace_ip_def
+  using ip_trace_witness_d_imp by blast
+
+(* Reader-side digest filter: the traces reaching v whose digest is compatible
+   with the reading digest d.  The precise (history-sensitive) global read joins
+   only over reaching_compat, not over all reaching traces. *)
+definition reaching_compat ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
+  "reaching_compat dg cmp d g S v = {tr \<in> cfg_collect_trace_ip g S v. cmp (dg tr) d}"
+
+
 end

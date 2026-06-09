@@ -77,6 +77,86 @@ proof -
   thus ?thesis unfolding gamma_state_def by blast
 qed
 
+
+(*
+  M4 precision corollary: soundness of the digest-REFINED reaching-trace read.
+  cfg_collect_trace_ip_d (any digest dg, any compatibility cmp) is a subset of
+  cfg_collect_trace_ip (cfg_collect_trace_ip_d_subset), so the M4 soundness core
+  transfers unchanged: the SAME analysis env soundly over-approximates every
+  digest-restricted reaching trace.  The digest hook buys precision at zero
+  soundness cost.
+*)
+theorem reaching_global_read_sound_d:
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  assumes fin: "finite (edges g)"
+  assumes finC: "finite (combines g)"
+  assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
+  assumes S_sound: "S \<le> gamma_state s0"
+  assumes tr: "tr \<in> cfg_collect_trace_ip_d dg cmp g S v"
+  shows "(last tr) x \<in> gamma (env v x)"
+proof -
+  have "tr \<in> cfg_collect_trace_ip g S v"
+    using tr cfg_collect_trace_ip_d_subset by blast
+  thus ?thesis
+    using reaching_global_read_sound[OF fin finC post_fp S_sound] by blast
+qed
+
+(*
+  M4 precision -- the digest-INDEXED analyzer contract.
+
+  A digest-indexed env  envd :: pp => 'd => 'a abs_state  assigns each
+  (program point, reader-digest) pair its own abstract state.  It is sound when,
+  at every point and digest, it over-approximates exactly the reaching traces
+  compatible with that digest (reaching_compat).  digest_read_sound is then the
+  history-sensitive global read: a reader holding digest d sees only the values
+  produced along digest-compatible traces.  flat_env_is_digest_sound shows the
+  existing (flow-insensitive) analyzer is the trivial constant-in-d
+  digest-indexed env -- so the contract is realizable with no instantiation gap;
+  precision is the freedom to pick a TIGHTER envd
+  (see Example_Trace_Digest_Precision).
+*)
+definition digest_env_sound ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set
+     \<Rightarrow> (pp \<Rightarrow> 'd \<Rightarrow> 'a abs_state) \<Rightarrow> bool" where
+  "digest_env_sound dg cmp g S envd =
+     (\<forall>d v. alpha_last (reaching_compat dg cmp d g S v) \<le> gamma_state (envd v d))"
+
+theorem digest_read_sound:
+  fixes envd :: "pp \<Rightarrow> 'd \<Rightarrow> 'a abs_state"
+  assumes snd: "digest_env_sound dg cmp g S envd"
+  assumes tr: "tr \<in> cfg_collect_trace_ip g S v"
+  assumes cm: "cmp (dg tr) d"
+  shows "(last tr) x \<in> gamma (envd v d x)"
+proof -
+  have "tr \<in> reaching_compat dg cmp d g S v"
+    using tr cm unfolding reaching_compat_def by blast
+  hence "last tr \<in> alpha_last (reaching_compat dg cmp d g S v)"
+    unfolding alpha_last_def by blast
+  with snd have "last tr \<in> gamma_state (envd v d)"
+    unfolding digest_env_sound_def by blast
+  thus ?thesis unfolding gamma_state_def by blast
+qed
+
+theorem flat_env_is_digest_sound:
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  assumes fin: "finite (edges g)"
+  assumes finC: "finite (combines g)"
+  assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
+  assumes S_sound: "S \<le> gamma_state s0"
+  shows "digest_env_sound dg cmp g S (\<lambda>v d. env v)"
+  unfolding digest_env_sound_def
+proof (intro allI)
+  fix d v
+  have "reaching_compat dg cmp d g S v \<subseteq> cfg_collect_trace_ip g S v"
+    unfolding reaching_compat_def by blast
+  hence "alpha_last (reaching_compat dg cmp d g S v) \<le> alpha_last (cfg_collect_trace_ip g S v)"
+    unfolding alpha_last_def by blast
+  also have "... \<le> gamma_state (env v)"
+    by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound])
+  finally show "alpha_last (reaching_compat dg cmp d g S v) \<le> gamma_state ((\<lambda>v d. env v) v d)"
+    by simp
+qed
+
 end
 
 end
