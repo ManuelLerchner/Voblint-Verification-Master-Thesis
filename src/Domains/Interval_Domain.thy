@@ -623,20 +623,44 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_assume_not = assume_not_ivl,
                tf_enter      = enter_ivl |)"
 
+lemma ivl_gamma_state_conv:
+  "(s : ivl_domain.gamma_state sigma) = (s : sound_domain.gamma_state gamma_ivl sigma)"
+  unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by simp
+
+lemma ivl_tf_sound_assign:
+  "\<forall>x a sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
+     st(x := aval a st) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
+  unfolding ivl_tf_def by (simp add: assign_ivl_sound)
+
+lemma ivl_tf_sound_assume:
+  "\<forall>b sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
+     bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
+  unfolding ivl_tf_def by simp
+
+lemma ivl_tf_sound_assume_not:
+  "\<forall>b sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
+     \<not> bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
+  unfolding ivl_tf_def by simp
+
+lemma ivl_tf_sound_enter:
+  "\<forall>sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
+     enter_state st \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
+  unfolding ivl_tf_def by (simp add: enter_ivl_sound)
+
 interpretation ivl_sound_tf: sound_transfer gamma_ivl ivl_tf
 proof unfold_locales
   show "\<forall>x a sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
        s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
-    unfolding ivl_tf_def by (simp add: assign_ivl_sound)
+    by (rule ivl_tf_sound_assign)
   show "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma. bval b s
        \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
-    unfolding ivl_tf_def by simp
+    by (rule ivl_tf_sound_assume)
   show "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma. \<not> bval b s
        \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
-    unfolding ivl_tf_def by simp
+    by (rule ivl_tf_sound_assume_not)
   show "\<forall>sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
        enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
-    unfolding ivl_tf_def by (simp add: enter_ivl_sound)
+    by (rule ivl_tf_sound_enter)
 qed
 
 end

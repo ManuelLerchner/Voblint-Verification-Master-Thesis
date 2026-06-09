@@ -1,5 +1,5 @@
 theory TD_Soundness
-  imports TD_Interface Constraint_System_Sound Sign_Domain Interval_Domain
+  imports TD_Interface Constraint_System_Sound
 begin
 
 (*
@@ -103,40 +103,6 @@ qed
 
 end
 
-(* -- Sign Domain Instantiation --------------------------------- *)
-
-theorem sign_analysis_sound:
-  assumes s_sound:    "s \<in> sign_domain.gamma_state s0"
-  assumes exit_in_collect:
-    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-  assumes fin_cfg: "finite (edges (to_cfg c))"
-  assumes entry_path:
-    "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
-  assumes td_solve_dom:
-    "\<And>v. TD_plain.solve_dom
-       (make_rhs_tree (to_cfg c) sign_tf (\<squnion>) bot s0) v"
-  shows   "t \<in> sign_domain.gamma_state
-((td_analyse c sign_tf (\<squnion>) bot s0)
-                   (cfg_exit (to_cfg c)))"
-  by (rule sign_sound_tf.td_solver_sound
-        [OF s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
-
-(* -- Interval Domain Instantiation ------------------------------ *)
-
-theorem interval_analysis_sound:
-  assumes s_sound:    "s \<in> ivl_domain.gamma_state s0"
-  assumes exit_in_collect:
-    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-  assumes fin_cfg: "finite (edges (to_cfg c))"
-  assumes entry_path:
-    "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
-  assumes td_solve_dom:
-    "\<And>v. TD_plain.solve_dom
-       (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot s0) v"
-  shows   "t \<in> ivl_domain.gamma_state
-((td_analyse c ivl_tf (\<squnion>) bot s0)
-                   (cfg_exit (to_cfg c)))"
-  by (rule ivl_sound_tf.td_solver_sound
-        [OF s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
+(* Domain instantiations: Domains/Sign_Soundness.thy, Domains/Interval_Soundness.thy *)
 
 end

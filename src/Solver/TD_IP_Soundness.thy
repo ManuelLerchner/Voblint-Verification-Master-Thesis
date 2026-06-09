@@ -1,5 +1,5 @@
 theory TD_IP_Soundness
-  imports TD_Interface Constraint_System_IP_Sound Sign_Domain CFG_Collect_IP_Adeq
+  imports TD_Interface Constraint_System_IP_Sound CFG_Collect_IP_Adeq
 begin
 
 context sound_transfer
@@ -151,39 +151,6 @@ qed
 
 end
 
-(* -- Sign Domain Instantiation --------------------------------- *)
-
-theorem ip_sign_analysis_sound:
-  fixes pi ps main and s t :: store and s0 :: "sign abs_state"
-  assumes s_sound: "s \<in> sign_domain.gamma_state s0"
-  assumes collect_exit:
-    "t \<in> cfg_collect_ip (compile_prog pi ps main) {s}
-       (cfg_exit (compile_prog pi ps main))"
-  assumes fin_cfg: "finite (edges (compile_prog pi ps main))"
-  assumes fin_comb: "finite (combines (compile_prog pi ps main))"
-  assumes td_solve_dom:
-    "TD_plain.solve_dom (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-       (cfg_exit (compile_prog pi ps main))"
-  assumes edge_reach:
-    "\<And>u a w. (u, a, w) \<in> edges (compile_prog pi ps main)
-       \<Longrightarrow> w \<in> reach (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-         (TD_plain_Interp_solve (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-           (cfg_exit (compile_prog pi ps main))) (cfg_exit (compile_prog pi ps main))"
-  assumes combine_reach:
-    "\<And>c ex w. (c, ex, w) \<in> combines (compile_prog pi ps main)
-       \<Longrightarrow> w \<in> reach (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-         (TD_plain_Interp_solve (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-           (cfg_exit (compile_prog pi ps main))) (cfg_exit (compile_prog pi ps main))"
-  assumes entry_reach:
-    "cfg_entry (compile_prog pi ps main)
-     \<in> reach (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-       (TD_plain_Interp_solve (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
-         (cfg_exit (compile_prog pi ps main))) (cfg_exit (compile_prog pi ps main))"
-  shows "t \<in> sign_domain.gamma_state
-       (td_analyse_ip pi ps main sign_tf (\<squnion>) bot s0
-         (cfg_exit (compile_prog pi ps main)))"
-  by (rule sign_sound_tf.ip_sign_analysis_sound
-        [OF s_sound collect_exit fin_cfg fin_comb td_solve_dom
-          edge_reach combine_reach entry_reach])
+(* Domain instantiation: Domains/Sign_IP_Soundness.thy *)
 
 end

@@ -1,7 +1,7 @@
 section \<open>Example: TD\_side Sign Analysis on a Global Assign\<close>
 
 theory Example_Side_Global
-  imports TD_Side_Soundness CFG_Runs_To_Bridge
+  imports Sign_Side_Soundness CFG_Runs_To_Bridge
 begin
 
 text \<open>

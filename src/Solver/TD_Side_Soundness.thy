@@ -1,5 +1,5 @@
 theory TD_Side_Soundness
-  imports TD_Side_Interface Constraint_System_Sound Sign_Domain
+  imports TD_Side_Interface Constraint_System_Sound
 begin
 
 (*
@@ -319,38 +319,6 @@ qed
 
 end
 
-(* -- Sign Domain Instantiation ----------------------------------- *)
-
-theorem side_sign_analysis_sound:
-  fixes c :: com and s t :: store and es :: "(edge_action * pp) list"
-  assumes s_sound: "s \<in> sign_domain.gamma_state s0"
-  assumes exit_in_collect:
-    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-  assumes fin_cfg: "finite (edges (to_cfg c))"
-  assumes entry_path:
-    "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
-  assumes side_solve_dom:
-    "side_cfg_solve_dom (to_cfg c) sign_tf bot s0 (cfg_exit (to_cfg c))"
-  assumes s0_global_bot: "restrict_global s0 = bot"
-  shows "t \<in> sign_domain.gamma_state
-       (side_analyse c sign_tf bot s0 (cfg_exit (to_cfg c)))"
-proof -
-  have h1: "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
-    by (rule sign_tf_sound_assign)
-  have h2: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
-    by (rule sign_tf_sound_assume)
-  have h3: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              \<not> bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
-    by (rule sign_tf_sound_assume_not)
-  have h4: "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
-    by (rule sign_tf_sound_enter)
-  show ?thesis
-    by (rule sign_domain.side_solver_sound
-          [OF h1 h2 h3 h4 sign_tf_mono s_sound exit_in_collect fin_cfg entry_path
-            side_solve_dom s0_global_bot])
-qed
+(* Domain instantiation: Domains/Sign_Side_Soundness.thy *)
 
 end

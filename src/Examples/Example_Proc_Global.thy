@@ -1,7 +1,7 @@
 section \<open>Example: TD\_IP Sign Analysis on a Single Global Increment Call\<close>
 
 theory Example_Proc_Global
-  imports TD_IP_Soundness CFG_Collect_IP_Adeq
+  imports Sign_IP_Soundness CFG_Collect_IP_Adeq
 begin
 
 text \<open>
