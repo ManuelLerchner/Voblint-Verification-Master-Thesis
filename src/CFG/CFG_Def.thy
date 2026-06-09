@@ -38,7 +38,8 @@ datatype edge_action =
     EA_Nop
   | EA_Assign   vname aexp
   | EA_Assume   bexp
-  | EA_AssumeNot bexp
+  |     EA_AssumeNot bexp
+  | EA_Enter                    (* call/scope entry: reset locals, keep globals *)
 
 instance edge_action :: countable
   by countable_datatype
@@ -65,18 +66,29 @@ end
 record cfg = "(pp, edge_action) graph" +
   cfg_entry :: pp
   cfg_exit  :: pp
+  combines  :: "(pp * pp * pp) set"   (* (call, callee_exit, return) triples *)
 
 (* \<midarrow>\<midarrow> CFG Construction ) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
 
-definition mk_cfg :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> cfg" where
-  "mk_cfg entry exit E =
-     \<lparr> nodes =({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E),
+definition mk_ip_cfg ::
+  "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> pp \<times> pp) set \<Rightarrow> cfg" where
+  "mk_ip_cfg entry exit E C =
+     \<lparr> nodes = ({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E
+                  \<union> fst ` C \<union> (fst \<circ> snd) ` C \<union> (snd \<circ> snd) ` C),
        edges = E,
        cfg_entry = entry,
-       cfg_exit = exit
+       cfg_exit = exit,
+       combines = C
      \<rparr>"
 
-declare mk_cfg_def[simp]
+definition mk_cfg :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> cfg" where
+  "mk_cfg entry exit E = mk_ip_cfg entry exit E {}"
+
+declare mk_cfg_def[simp] mk_ip_cfg_def[simp]
+
+lemma mk_cfg_combines_empty[simp]:
+  "combines (mk_cfg en ex E) = {}"
+  by (simp add: mk_cfg_def)
 
 lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E))"
   unfolding valid_graph_def graph.truncate_def mk_cfg_def by force
@@ -110,6 +122,20 @@ lemma finite_predecessors:
 proof  -
   have "predecessors g v \<subseteq> (\<lambda>e :: pp \<times> edge_action \<times> pp. (fst e, fst (snd e))) ` edges g"
     unfolding predecessors_def by force
+  then show ?thesis
+    using assms finite_subset finite_imageI by blast
+qed
+
+definition combine_predecessors :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) set" where
+  "combine_predecessors g v = {(c, e) | c e. (c, e, v) \<in> combines g}"
+
+lemma finite_combine_predecessors:
+  assumes "finite (combines g)"
+  shows "finite (combine_predecessors g v)"
+proof -
+  have "combine_predecessors g v
+        \<subseteq> (\<lambda>t :: pp \<times> pp \<times> pp. (fst t, fst (snd t))) ` combines g"
+    unfolding combine_predecessors_def by force
   then show ?thesis
     using assms finite_subset finite_imageI by blast
 qed
@@ -174,6 +200,72 @@ proof -
   qed
   then show ?thesis
     unfolding predecessor_list_def by simp
+qed
+
+(* Stable combine enumeration for the interprocedural TD bridge. *)
+
+definition cfg_combines_list :: "cfg \<Rightarrow> (pp \<times> pp \<times> pp) list" where
+  "cfg_combines_list g =
+     (if finite (combines g) then sorted_list_of_set (combines g) else [])"
+
+definition combine_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) list" where
+  "combine_predecessor_list g v =
+     map (\<lambda>(c, e, ret). (c, e))
+       (filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g))"
+
+lemma set_cfg_combines_list[simp]:
+  assumes "finite (combines g)"
+  shows "set (cfg_combines_list g) = combines g"
+  unfolding cfg_combines_list_def using assms by simp
+
+lemma distinct_cfg_combines_list[simp]:
+  assumes "finite (combines g)"
+  shows "distinct (cfg_combines_list g)"
+  unfolding cfg_combines_list_def using assms by simp
+
+lemma set_combine_predecessor_list[simp]:
+  assumes "finite (combines g)"
+  shows "set (combine_predecessor_list g v) = combine_predecessors g v"
+proof -
+  show ?thesis
+    unfolding combine_predecessor_list_def combine_predecessors_def
+    using assms set_cfg_combines_list[OF assms]
+    by (force simp: image_iff)
+qed
+
+lemma distinct_combine_predecessor_list[simp]:
+  assumes "finite (combines g)"
+  shows "distinct (combine_predecessor_list g v)"
+proof -
+  have dist_filt:
+      "distinct (filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g))"
+    using distinct_filter distinct_cfg_combines_list assms by simp
+  have inj:
+      "inj_on (\<lambda>(c, e, ret). (c, e))
+        (set (filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g)))"
+    by (auto simp: inj_on_def)
+  show ?thesis
+    unfolding combine_predecessor_list_def distinct_map
+    using dist_filt inj by simp
+qed
+
+lemma combine_predecessor_list_Nil_if_no_in:
+  assumes "\<And>c e. (c, e, v) \<notin> combines g"
+  shows "combine_predecessor_list g v = []"
+proof -
+  have "filter (\<lambda>(c, e, ret). ret = v) (cfg_combines_list g) = []"
+  proof (cases "finite (combines g)")
+    case True
+    then show ?thesis
+      using assms set_cfg_combines_list[OF True]
+      by (force simp: cfg_combines_list_def filter_empty_conv)
+  next
+    case False
+    then show ?thesis
+      by (simp add: cfg_combines_list_def)
+  qed
+  then show ?thesis
+    unfolding combine_predecessor_list_def by simp
 qed
 
 end

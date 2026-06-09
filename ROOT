@@ -14,6 +14,21 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Examples"
   theories
     Goblint_Formalization
+    IMP2_Globals
+    IMP2_Proc
+    IMP2_Proc_to_CFG
+    TD_Side_CFG
+    TD_Side_Interface
+    TD_Side_Soundness
+    CFG_Trace_Collect
+    CFG_Collect_IP
+    CFG_Collect_IP_Adeq
+    CFG_Collect_Unified
+    CFG_Trace_Collect_IP
+    Constraint_System_IP_Sound
+    Analysis_Sound
+    Trace_IP_Analysis_Sound
+    Trace_Soundness
     TD_CFG_Core
     TD_Widen_Interface
     TD_WN_Interface
@@ -22,4 +37,9 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Example_Interval_Widen
     Example_CFG_Collecting_Equiv
     Example_GraphViz
+    Example_Proc_GraphViz
+    Example_Side_Global
+    TD_IP_Soundness
+    Example_Proc_Global
     Example_NonTerminating_Safe
+    Example_Trace_NonTerminating

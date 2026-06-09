@@ -1,5 +1,5 @@
 theory Interval_Domain
-  imports Abstract_Domain Constraint_System IMP2_SmallStep
+  imports Abstract_Domain Constraint_System IMP2_SmallStep IMP2_Globals
 begin
 
 (*
@@ -607,9 +607,20 @@ lemma assign_ivl_sound:
 
 (* ── Bundled Transfer Functions ──────────────────────────────── *)
 
+(* Procedure entry: keep globals, reset locals to full interval. *)
+definition enter_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
+  "enter_ivl sigma = (\<lambda>x. if is_global x then sigma x else Ivl MinInf PlusInf)"
+
+lemma enter_ivl_sound:
+  assumes "s \<in> ivl_domain.gamma_state sigma"
+  shows "enter_state s \<in> ivl_domain.gamma_state (enter_ivl sigma)"
+  using assms unfolding ivl_domain.gamma_state_def enter_ivl_def enter_state_def
+  by (intro CollectI allI) (auto simp: gamma_ivl.simps)
+
 definition ivl_tf :: "ivl domain_transfer" where
   "ivl_tf = (| tf_assign     = assign_ivl,
                tf_assume     = assume_ivl,
-               tf_assume_not = assume_not_ivl |)"
+               tf_assume_not = assume_not_ivl,
+               tf_enter      = enter_ivl |)"
 
 end

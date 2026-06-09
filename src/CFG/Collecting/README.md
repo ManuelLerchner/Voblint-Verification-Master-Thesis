@@ -15,6 +15,7 @@ equivalence.
 | ------------------------- | --------------------------------------------------------------------------------------- |
 | `CFG_Edges_Collect.thy`   | `edge_collect`, `edges_collect`, `cfg_collect` (lfp); imports `IMP2_to_CFG`, `CFG_Path` |
 | `CFG_Collecting_Core.thy` | `cfg_collect_paths`; `cfg_collect` ⊑ path side (`cfg_collect_le_paths`)                 |
+| `CFG_Collect_IP.thy`      | `cfg_collect_ip` — interprocedural collecting (`combines` + `combine_states`)           |
 | `CFG_Compound_Paths.thy`  | Seq / If / While path structure and offsets                                             |
 | `CFG_Path_Bridge.thy`     | `cfg_collect_eq_cfg_collect_paths`, `compile_path_small_step`                           |
 | `CFG_Runs_To_Bridge.thy`  | `runs_to`, `runs_to_iff_small_step` (biconditional small-step bridge; public entry)     |
