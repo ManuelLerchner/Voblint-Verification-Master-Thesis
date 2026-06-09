@@ -22,35 +22,21 @@ begin
   forking a new soundness chain.  M4 itself is NOT implemented here.
 *)
 
-context sound_domain
+context sound_transfer
 begin
 
 theorem trace_ip_analysis_sound:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   shows "alpha_last (cfg_collect_trace_ip g S v) \<le> gamma_state (env v)"
 proof -
   have proj: "alpha_last (cfg_collect_trace_ip g S v) \<le> cfg_collect_ip g S v"
     by (rule alpha_last_cfg_collect_trace_ip_le)
   have st: "cfg_collect_ip g S v \<le> gamma_state (env v)"
-    by (rule unified_post_fixpoint_sound_ip[OF fin finC post_fp S_sound
-          tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter])
+    by (rule unified_post_fixpoint_sound_ip[OF fin finC post_fp S_sound])
   from proj st show ?thesis by (rule subset_trans)
 qed
 
@@ -75,32 +61,18 @@ qed
   preserved unchanged.  That precision refinement is future work.
 *)
 theorem reaching_global_read_sound:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes tr: "tr \<in> cfg_collect_trace_ip g S v"
   shows "(last tr) x \<in> gamma (env v x)"
 proof -
   have mem: "last tr \<in> alpha_last (cfg_collect_trace_ip g S v)"
     using tr unfolding alpha_last_def by blast
   have le: "alpha_last (cfg_collect_trace_ip g S v) \<le> gamma_state (env v)"
-    by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound
-          tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter])
+    by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound])
   from mem le have "last tr \<in> gamma_state (env v)" by blast
   thus ?thesis unfolding gamma_state_def by blast
 qed

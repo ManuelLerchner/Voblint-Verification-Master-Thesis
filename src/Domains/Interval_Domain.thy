@@ -623,4 +623,20 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_assume_not = assume_not_ivl,
                tf_enter      = enter_ivl |)"
 
+interpretation ivl_sound_tf: sound_transfer gamma_ivl ivl_tf
+proof unfold_locales
+  show "\<forall>x a sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
+       s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
+    unfolding ivl_tf_def by (simp add: assign_ivl_sound)
+  show "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
+    unfolding ivl_tf_def by simp
+  show "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
+    unfolding ivl_tf_def by simp
+  show "\<forall>sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
+       enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
+    unfolding ivl_tf_def by (simp add: enter_ivl_sound)
+qed
+
 end

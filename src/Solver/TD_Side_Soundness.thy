@@ -34,8 +34,24 @@ theorem side_collect_sound_at_pp:
   assumes entry_cov: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
   assumes path: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
   shows "cfg_collect g S v \<le> gamma_state (side_env sigma v)"
-  using side_collect_sound_at[OF tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter
-    pp fin_cfg entry_cov path] .
+proof -
+  interpret st: sound_transfer gamma tf
+  proof unfold_locales
+    show "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
+         s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+      using tf_sound_assign by simp
+    show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
+         \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+      using tf_sound_assume by simp
+    show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+         \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+      using tf_sound_assume_not by simp
+    show "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+         enter_state s \<in> gamma_state (tf_enter tf sigma)"
+      using tf_sound_enter by simp
+  qed
+  show ?thesis using st.side_collect_sound_at[OF pp fin_cfg entry_cov path] .
+qed
 
 theorem side_analyse_collect_sound_at:
   fixes c :: com and tf :: "'a domain_transfer" and bot0 s0 :: "'a abs_state"
@@ -209,17 +225,20 @@ proof -
           (side_env (td_cfg_side_solver.side_sigma_at (to_cfg c) tf bot0 s0 v0)
                     (cfg_entry (to_cfg c)))"
       using entry_cov unfolding g_def by simp
-    show "\<forall>x a sg. \<forall>s \<in> gamma_state sg. s(x := aval a s) \<in> gamma_state (tf_assign tf x a sg)"
+    show "finite (edges (to_cfg c))" using fin_cfg .
+    show "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0" using entry_path .
+    show "\<forall>x a sg. \<forall>s \<in> gamma_state sg.
+          s(x := aval a s) \<in> gamma_state (tf_assign tf x a sg)"
       using tf_sound_assign .
-    show "\<forall>b sg. \<forall>s \<in> gamma_state sg. bval b s \<longrightarrow> s \<in> gamma_state (tf_assume tf b sg)"
+    show "\<forall>b sg. \<forall>s \<in> gamma_state sg. bval b s
+          \<longrightarrow> s \<in> gamma_state (tf_assume tf b sg)"
       using tf_sound_assume .
-    show "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
+    show "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
+          \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
       using tf_sound_assume_not .
     show "\<forall>sg. \<forall>s \<in> gamma_state sg.
           enter_state s \<in> gamma_state (tf_enter tf sg)"
       using tf_sound_enter .
-    show "finite (edges (to_cfg c))" using fin_cfg .
-    show "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0" using entry_path .
   qed
 qed
 
@@ -318,16 +337,16 @@ theorem side_sign_analysis_sound:
 proof -
   have h1: "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
               s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
-    unfolding sign_tf_def by (simp add: assign_sign_sound)
+    by (rule sign_tf_sound_assign)
   have h2: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
               bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
-    unfolding sign_tf_def by (simp add: assume_sign_sound)
+    by (rule sign_tf_sound_assume)
   have h3: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
               \<not> bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
-    unfolding sign_tf_def by (simp add: assume_not_sign_sound)
+    by (rule sign_tf_sound_assume_not)
   have h4: "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
               enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
-    unfolding sign_tf_def by (simp add: enter_sign_sound)
+    by (rule sign_tf_sound_enter)
   show ?thesis
     by (rule sign_domain.side_solver_sound
           [OF h1 h2 h3 h4 sign_tf_mono s_sound exit_in_collect fin_cfg entry_path

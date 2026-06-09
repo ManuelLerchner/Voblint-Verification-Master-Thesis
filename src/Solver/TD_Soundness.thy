@@ -14,23 +14,11 @@ begin
 
 (* -- Combined Soundness ───────────────────────────────────────── *)
 
-context sound_domain
+context sound_transfer
 begin
 
 theorem td_analyse_collect_sound_at:
   fixes v0
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes S_sub: "S \<le> gamma_state s0"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes entry_path: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es v0"
@@ -70,23 +58,10 @@ proof -
     by (simp add: env_def)
   show ?thesis
     unfolding env_def td_analyse_eq_env_at
-    using S_sub entry_le env_def fin_cfg post_fixpoint_sound_at rhs_le step_le tf_sound_assign
-      tf_sound_assume tf_sound_assume_not tf_sound_enter by blast
+    using S_sub entry_le env_def fin_cfg post_fixpoint_sound_at rhs_le step_le by blast
 qed
 
 theorem td_analyse_collect_sound:
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes S_sub: "S \<le> gamma_state s0"
   assumes fin_cfg: "finite (edges (to_cfg c))"
   assumes entry_reachable:
@@ -102,23 +77,10 @@ proof (intro allI)
     using entry_reachable by blast
   show "cfg_collect (to_cfg c) S v
         \<le> gamma_state (td_analyse c tf (\<squnion>) bot s0 v)"
-    by (rule td_analyse_collect_sound_at[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_sound_enter S_sub fin_cfg entry_path td_solve_dom])
+    by (rule td_analyse_collect_sound_at[OF S_sub fin_cfg entry_path td_solve_dom])
 qed
 
 theorem td_solver_sound:
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes s0_sound: "s \<in> gamma_state s0"
   assumes exit_in_collect:
     "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
@@ -135,13 +97,13 @@ proof -
     using s0_sound by auto
   have collect: "cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))
     \<le> gamma_state (td_analyse c tf (\<squnion>) bot s0 (cfg_exit (to_cfg c)))"
-    by (rule td_analyse_collect_sound_at[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_sound_enter S_sub fin_cfg entry_path td_solve_dom])
+    by (rule td_analyse_collect_sound_at[OF S_sub fin_cfg entry_path td_solve_dom])
   show ?thesis using collect exit_in_collect by blast
 qed
+
 end
 
-(* ── Sign Domain Instantiation ────────────────────────────────── *)
+(* -- Sign Domain Instantiation --------------------------------- *)
 
 theorem sign_analysis_sound:
   assumes s_sound:    "s \<in> sign_domain.gamma_state s0"
@@ -156,25 +118,10 @@ theorem sign_analysis_sound:
   shows   "t \<in> sign_domain.gamma_state
 ((td_analyse c sign_tf (\<squnion>) bot s0)
                    (cfg_exit (to_cfg c)))"
-proof -
-  have h1: "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
-    unfolding sign_tf_def by (simp add: assign_sign_sound)
-  have h2: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
-    unfolding sign_tf_def by (simp add: assume_sign_sound)
-  have h3: "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              \<not> bval b s \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
-    unfolding sign_tf_def by (simp add: assume_not_sign_sound)
-  have h4: "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-              enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
-    unfolding sign_tf_def by (simp add: enter_sign_sound)
-  show ?thesis
-    by (rule sign_domain.td_solver_sound
-          [OF h1 h2 h3 h4 s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
-qed
+  by (rule sign_sound_tf.td_solver_sound
+        [OF s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
 
-(* ── Interval Domain Instantiation ───────────────────────────── *)
+(* -- Interval Domain Instantiation ------------------------------ *)
 
 theorem interval_analysis_sound:
   assumes s_sound:    "s \<in> ivl_domain.gamma_state s0"
@@ -189,22 +136,7 @@ theorem interval_analysis_sound:
   shows   "t \<in> ivl_domain.gamma_state
 ((td_analyse c ivl_tf (\<squnion>) bot s0)
                    (cfg_exit (to_cfg c)))"
-proof -
-  have h1: "\<forall>x a sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
-              s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
-    unfolding ivl_tf_def by (simp add: assign_ivl_sound)
-  have h2: "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
-              bval b s \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
-    unfolding ivl_tf_def by simp
-  have h3: "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
-              \<not> bval b s \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
-    unfolding ivl_tf_def by simp
-  have h4: "\<forall>sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
-              enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
-    unfolding ivl_tf_def by (simp add: enter_ivl_sound)
-  show ?thesis
-    by (rule ivl_domain.td_solver_sound
-          [OF h1 h2 h3 h4 s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
-qed
+  by (rule ivl_sound_tf.td_solver_sound
+        [OF s_sound exit_in_collect fin_cfg entry_path td_solve_dom])
 
 end

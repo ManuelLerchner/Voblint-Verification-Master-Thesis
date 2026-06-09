@@ -653,7 +653,7 @@ lemma cfg_path_entry_step_target:
 
 (* -- Collecting soundness of a side-effecting post-solution (M3) ------ *)
 
-context sound_domain
+context sound_transfer
 begin
 
 (*
@@ -663,26 +663,12 @@ begin
   the combined env.  Globals are tracked flow-insensitively (one global unknown,
   joined across all points), locals flow-sensitively.
 
-  Assumptions: transfer-function soundness (assign/assume/assume-not); sigma is a
-  partial post-solution over vars covering all program points; the initial set S
-  is covered by the combined env at the entry.
+  Assumptions: sigma is a partial post-solution over vars covering all program
+  points; the initial set S is covered by the combined env at the entry.
 *)
 theorem side_collect_sound_path:
-  fixes tf :: "'a domain_transfer"
-    and sigma :: "pp + unit => 'a abs_state"
+  fixes sigma :: "pp + unit => 'a abs_state"
     and bot0 s0 :: "'a abs_state"
-  assumes tf_sound_assign:
-    "\<forall>x a sg. \<forall>s \<in> gamma_state sg.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sg)"
-  assumes tf_sound_assume:
-    "\<forall>b sg. \<forall>s \<in> gamma_state sg. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sg)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
-  assumes tf_sound_enter:
-    "\<forall>sg. \<forall>s \<in> gamma_state sg.
-       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
@@ -706,8 +692,7 @@ proof -
   qed
   have collect: "edges_collect es (gamma_state (side_env sigma (cfg_entry g)))
                  \<subseteq> gamma_state (side_env sigma v)"
-    by (rule edges_collect_gamma_path_aux[OF fin path step_le tf_sound_assign
-          tf_sound_assume tf_sound_assume_not tf_sound_enter])
+    by (rule edges_collect_gamma_path_aux[OF fin path step_le])
   have "edges_collect es S
         \<subseteq> edges_collect es (gamma_state (side_env sigma (cfg_entry g)))"
     by (rule edges_collect_mono_strong[OF entry])
@@ -716,21 +701,8 @@ qed
 
 (* Subset form: any store collected at v lies in the side env at v. *)
 corollary side_collect_sound_at:
-  fixes tf :: "'a domain_transfer"
-    and sigma :: "pp + unit => 'a abs_state"
+  fixes sigma :: "pp + unit => 'a abs_state"
     and bot0 s0 :: "'a abs_state"
-  assumes tf_sound_assign:
-    "\<forall>x a sg. \<forall>s \<in> gamma_state sg.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sg)"
-  assumes tf_sound_assume:
-    "\<forall>b sg. \<forall>s \<in> gamma_state sg. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sg)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sg. \<forall>s \<in> gamma_state sg. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sg)"
-  assumes tf_sound_enter:
-    "\<forall>sg. \<forall>s \<in> gamma_state sg.
-       enter_state s \<in> gamma_state (tf_enter tf sg)"
   assumes pp: "part_post_solution (side_cfg_T g tf (\<squnion>) bot0 s0) v sigma vars"
   assumes fin: "finite (edges g)"
   assumes entry: "S \<subseteq> gamma_state (side_env sigma (cfg_entry g))"
@@ -748,8 +720,7 @@ proof -
       and t_in: "t \<in> edges_collect path_es S"
       unfolding cfg_collect_paths_def by blast
     show "t \<in> gamma_state (side_env sigma v)"
-      by (rule side_collect_sound_path[OF tf_sound_assign tf_sound_assume
-            tf_sound_assume_not tf_sound_enter pp fin entry path_es t_in])
+      by (rule side_collect_sound_path[OF pp fin entry path_es t_in])
   qed
 qed
 

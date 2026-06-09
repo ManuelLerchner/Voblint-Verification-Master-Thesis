@@ -1,5 +1,5 @@
 theory Constraint_System
-  imports CFG_Def Abstract_Domain IMP2_Globals
+  imports CFG_Def Abstract_Domain IMP2_Globals IMP2_SmallStep
 begin
 
 (*
@@ -508,5 +508,27 @@ qed
   Proved in Constraint_System_Sound.thy.
   Interprocedural variant: Constraint_System_IP_Sound.thy.
 *)
+
+(*
+  Sound transfer function: a domain_transfer tf that soundly over-approximates
+  the concrete edge actions w.r.t. a sound_domain's concretization.  Bundles the
+  four per-action soundness obligations (assign / assume / assume-not / enter)
+  that previously threaded through every soundness theorem as explicit
+  assumptions.  Concrete domains discharge these once via `interpretation`.
+*)
+locale sound_transfer = sound_domain +
+  fixes tf :: "'a domain_transfer"
+  assumes tf_sound_assign:
+    "\<forall>x (a::aexp) sigma. \<forall>s \<in> gamma_state sigma.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+  assumes tf_sound_assume:
+    "\<forall>(b::bexp) sigma. \<forall>s \<in> gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+  assumes tf_sound_assume_not:
+    "\<forall>(b::bexp) sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+  assumes tf_sound_enter:
+    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
+       enter_state s \<in> gamma_state (tf_enter tf sigma)"
 
 end

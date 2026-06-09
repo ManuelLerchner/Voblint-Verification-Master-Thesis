@@ -2,23 +2,11 @@ theory TD_IP_Soundness
   imports TD_Interface Constraint_System_IP_Sound Sign_Domain CFG_Collect_IP_Adeq
 begin
 
-context sound_domain
+context sound_transfer
 begin
 
 theorem td_analyse_ip_collect_sound_at:
   fixes pi ps main v0
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   assumes S_sub: "S \<le> gamma_state s0"
   assumes fin_cfg: "finite (edges (compile_prog pi ps main))"
   assumes fin_comb: "finite (combines (compile_prog pi ps main))"
@@ -116,18 +104,6 @@ proof -
         combine_abs (env c) (env ex) \<le> env ret"
       by (rule combine_le)
     show "s0 \<le> env (cfg_entry g)" by (rule entry_le)
-    show "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-        s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-      by (rule tf_sound_assign)
-    show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-        \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-      by (rule tf_sound_assume)
-    show "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-        \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-      by (rule tf_sound_assume_not)
-    show "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-        enter_state s \<in> gamma_state (tf_enter tf sigma)"
-      by (rule tf_sound_enter)
   qed
   show ?thesis
     using collect_le by (simp add: env_def g_def td_analyse_ip_eq_env_at)
@@ -135,18 +111,6 @@ qed
 
 theorem ip_sign_analysis_sound:
   fixes pi ps main and s t :: store and s0 :: "'a abs_state"
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>st \<in> gamma_state sigma.
-       st(x := aval a st) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>st \<in> gamma_state sigma. bval b st
-       \<longrightarrow> st \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>st \<in> gamma_state sigma. \<not> bval b st
-       \<longrightarrow> st \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>st \<in> gamma_state sigma.
-       enter_state st \<in> gamma_state (tf_enter tf sigma)"
   assumes s_sound: "s \<in> gamma_state s0"
   assumes collect_exit:
     "t \<in> cfg_collect_ip (compile_prog pi ps main) {s}
@@ -180,12 +144,46 @@ proof -
     "cfg_collect_ip (compile_prog pi ps main) {s} (cfg_exit (compile_prog pi ps main))
      \<le> gamma_state (td_analyse_ip pi ps main tf (\<squnion>) bot s0
          (cfg_exit (compile_prog pi ps main)))"
-    by (rule td_analyse_ip_collect_sound_at[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_sound_enter S_sub fin_cfg fin_comb td_solve_dom
+    by (rule td_analyse_ip_collect_sound_at[OF S_sub fin_cfg fin_comb td_solve_dom
           edge_reach combine_reach entry_reach])
   show ?thesis using collect collect_exit by blast
 qed
 
 end
+
+(* -- Sign Domain Instantiation --------------------------------- *)
+
+theorem ip_sign_analysis_sound:
+  fixes pi ps main and s t :: store and s0 :: "sign abs_state"
+  assumes s_sound: "s \<in> sign_domain.gamma_state s0"
+  assumes collect_exit:
+    "t \<in> cfg_collect_ip (compile_prog pi ps main) {s}
+       (cfg_exit (compile_prog pi ps main))"
+  assumes fin_cfg: "finite (edges (compile_prog pi ps main))"
+  assumes fin_comb: "finite (combines (compile_prog pi ps main))"
+  assumes td_solve_dom:
+    "TD_plain.solve_dom (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+       (cfg_exit (compile_prog pi ps main))"
+  assumes edge_reach:
+    "\<And>u a w. (u, a, w) \<in> edges (compile_prog pi ps main)
+       \<Longrightarrow> w \<in> reach (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+         (TD_plain_Interp_solve (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+           (cfg_exit (compile_prog pi ps main))) (cfg_exit (compile_prog pi ps main))"
+  assumes combine_reach:
+    "\<And>c ex w. (c, ex, w) \<in> combines (compile_prog pi ps main)
+       \<Longrightarrow> w \<in> reach (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+         (TD_plain_Interp_solve (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+           (cfg_exit (compile_prog pi ps main))) (cfg_exit (compile_prog pi ps main))"
+  assumes entry_reach:
+    "cfg_entry (compile_prog pi ps main)
+     \<in> reach (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+       (TD_plain_Interp_solve (make_rhs_tree_ip (compile_prog pi ps main) sign_tf (\<squnion>) bot s0)
+         (cfg_exit (compile_prog pi ps main))) (cfg_exit (compile_prog pi ps main))"
+  shows "t \<in> sign_domain.gamma_state
+       (td_analyse_ip pi ps main sign_tf (\<squnion>) bot s0
+         (cfg_exit (compile_prog pi ps main)))"
+  by (rule sign_sound_tf.ip_sign_analysis_sound
+        [OF s_sound collect_exit fin_cfg fin_comb td_solve_dom
+          edge_reach combine_reach entry_reach])
 
 end

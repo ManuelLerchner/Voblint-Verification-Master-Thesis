@@ -28,34 +28,20 @@ lemma (in collecting) collect_post_fixpoint_sound:
   shows "collect g S v \<le> B v"
   using collect_lowerbound[OF assms] by (auto simp: le_fun_def)
 
-context sound_domain
+context sound_transfer
 begin
 
 (* -- Intra-procedural soundness via the engine ---------------------------- *)
 
 lemma unified_post_fixpoint_sound:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   shows "cfg_collect g S v \<le> gamma_state (env v)"
 proof -
   have coll_le: "\<And>v. collect_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
-    by (rule collect_pp_abstract_sound[OF fin post_fp
-          tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter])
+    by (rule collect_pp_abstract_sound[OF fin post_fp])
   have s0_le_env: "s0 \<le> env (cfg_entry g)"
     using s0_le_rhs_entry[OF fin]
           post_fp[unfolded is_post_fixpoint_def, rule_format, of "cfg_entry g"]
@@ -77,32 +63,17 @@ qed
 (* -- Interprocedural soundness via the engine ----------------------------- *)
 
 lemma unified_post_fixpoint_sound_ip:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes tf_sound_assign:
-    "\<forall>x a sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
-  assumes tf_sound_assume:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
-  assumes tf_sound_assume_not:
-    "\<forall>b sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
-  assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
   shows "cfg_collect_ip g S v \<le> gamma_state (env v)"
 proof -
   have coll_le: "\<And>v. collect_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
-    by (rule collect_pp_abstract_sound_ip[OF fin finC post_fp
-          tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter])
+    by (rule collect_pp_abstract_sound_ip[OF fin finC post_fp])
   have comb_le: "\<And>v. collect_combine_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
-    by (rule collect_combine_pp_abstract_sound[OF fin finC post_fp
-          tf_sound_assign tf_sound_assume tf_sound_assume_not tf_sound_enter])
+    by (rule collect_combine_pp_abstract_sound[OF fin finC post_fp])
   have s0_le_env: "s0 \<le> env (cfg_entry g)"
     using s0_le_rhs_ip_entry[OF fin finC]
           post_fp[unfolded is_post_fixpoint_ip_def, rule_format, of "cfg_entry g"]

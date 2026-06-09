@@ -423,6 +423,22 @@ lemma sign_tf_sound_enter:
      enter_state st \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
+interpretation sign_sound_tf: sound_transfer gamma_sign sign_tf
+proof unfold_locales
+  show "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+       s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
+    by (rule sign_tf_sound_assign)
+  show "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma. bval b s
+       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
+    by (rule sign_tf_sound_assume)
+  show "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma. \<not> bval b s
+       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
+    by (rule sign_tf_sound_assume_not)
+  show "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
+       enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
+    by (rule sign_tf_sound_enter)
+qed
+
 lemma sign_plus_mono1:
   "a1 \<le> a2 \<Longrightarrow> sign_plus a1 b \<le> sign_plus a2 b"
   unfolding less_eq_sign_def
