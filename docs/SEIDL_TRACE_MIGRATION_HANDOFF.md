@@ -1,9 +1,11 @@
 # Handoff — Start the Seidl Trace Migration
 
 Pick-up doc for the **trace-semantics pivot** in this repo. Read this top-to-bottom
-once. **New work:** start at **§9 (merge / M4)** — M1 procedures are **done** on
-`trace-spike`. **Historical gate:** §3 (Phase 0 / M0). The deep reasoning lives in
-the KB; this doc is the actionable extract.
+once. **New work:** **consolidate first** (`docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`,
+U1–U2), then execute **M3.5 — the interprocedural trace bridge**
+(`docs/M3_5_INTERPROC_TRACE_HANDOFF.md`), the prerequisite for M4. M0/M2/M3/M1 are
+**done** on `trace-spike`. **Historical gate:** §3 (Phase 0 / M0). The deep reasoning
+lives in the KB; this doc is the actionable extract.
 
 KB companion (read these for *why*, not just *what*):
 
@@ -17,9 +19,33 @@ KB companion (read these for *why*, not just *what*):
 - `~/git/goblint-formalization-kb/wiki/research/architecture-decisions.md` — the AD
   ledger. **Respect locked ADs; do not flip them — see §6.**
 - `docs/PROCEDURES_EXTENSION_PLAN.md` — interprocedural CE1–CE4, §9 thesis path (M1).
+- `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` — **follow-on migration** (consolidate
+  parallel stacks before M4); KB: `unified-analysis-migration-plan.md`.
 
 > Status when written (2026-06-05): planning complete, **no proof-repo code changed
 > yet**. Branch `main` is sorry-free. This doc is the first executable step.
+
+> **Status update (2026-06-09) — next milestone is M3.5, consolidate-first.** KB review
+> (`~/git/goblint-formalization-kb`, meeting 5 + Cousot TCS 2002 read) surfaced that the
+> trace work is **intraprocedural** (`cfg_collect_trace`, `trace = store list`) and the
+> procedures are **state-based** (`cfg_collect_ip`, `combine_states`). Their product —
+> the **interprocedural trace collecting** (`enter`/`combine` *on traces*) — is the
+> missing piece and M4's real prerequisite. Tracked as **M3.5**; scoped handoff in
+> **`docs/M3_5_INTERPROC_TRACE_HANDOFF.md`**.
+>
+> **Sequencing decision (Manuel, 2026-06-09): consolidate first.** Do
+> `UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` U1–U2 *before* M3.5, so the trace-IP collecting
+> lands as a `collecting_trace` **interpretation** of the one locale, not a fifth
+> parallel stack.
+>
+> **Trace type — decided against Cousot (TCS 2002 §3–5).** A trace is a **state
+> sequence** ($\Sigma$ = config); actions are an optional enrichment. `store list`
+> (action-free) was enough for the `last`-only lift lemma; M3.5 enriches to the
+> **action-labelled** form `(edge_action × store) list` so the global read (M4) can find
+> the **last preceding write**. Composition is **junction** (overlap the shared boundary
+> state), not raw concatenation; `cfg_collect_trace_ip` is an `lfp` of the shape
+> `base ∪ (step ⌢ X)` — the same skeleton as `cfg_collect_paths`. KB:
+> `wiki/concepts/trace-semantics.md` §Representation.
 
 > **Progress update (2026-06-06, branch `trace-spike`).** M0 + the Phase 2
 > soundness layer are **green** (full `isabelle build`, sorry-free):
@@ -146,8 +172,9 @@ KB companion (read these for *why*, not just *what*):
 > Design notes for the IP example: initial state `(λ_. STop)` (not `bot`); return
 > semantics via **combine triples** at the exit PP, not edge-only paths.
 >
-> **Next:** merge `trace-spike` → `main` (§5 gate met); then **M4** (§9 slice 5).
-> Optional: recursive Example 2 (factorial), interval IP example.
+> **Next:** merge `trace-spike` → `main` (§5 gate met); then **unified analysis
+> migration** (`docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`, recommended before M4);
+> then **M4** (§9 slice 5). Optional: recursive Example 2 (factorial), interval IP example.
 
 ---
 
@@ -160,10 +187,13 @@ KB companion (read these for *why*, not just *what*):
 | **M3** — TD_side theory + solver soundness | **Done** | `TD_Side_CFG` / `Interface` / `Soundness` |
 | **M3 witness** — concrete global example | **Done** | `Example_Side_Global.thy` |
 | **M1** — procedures end-to-end | **Done** | §9 slices 1–4; `Example_Proc_Global.thy` |
-| **M4** — globals over traces (digests) | **Open** | **Current focus** — §9 slice 5 |
+| **M3.5** — interprocedural **trace** bridge | **Open** | **Next** — `docs/M3_5_INTERPROC_TRACE_HANDOFF.md`; consolidate-first |
+| **M4** — globals over traces (digests) | **Open** | needs M3.5 — §9 slice 5 |
 
-Migration is **not finished** (M4 remains). M1 exit is met on `trace-spike`; merge
-to `main` is the recommended next integration step (§5 build gate passed 2026-06-07).
+Migration is **not finished** (M3.5 + M4 remain). M1 exit is met on `trace-spike`. The
+recommended path: **unified analysis migration** (`docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`,
+U1–U2) → **M3.5** (`docs/M3_5_INTERPROC_TRACE_HANDOFF.md`) → M4. (§5 build gate passed
+2026-06-07.)
 
 ---
 
@@ -479,11 +509,16 @@ Operational witness in `IMP2_Proc.thy` (`pcall_global_increment`) + adequacy in
 **Optional follow-up:** recursive Example 2 (factorial) — same machinery, widening
 unchanged.
 
-### Slice 5 — M4 — **Current focus**
+### Slice 5 — M4 — **after M3.5** (and unified migration)
 
-History-sensitive globals over **reaching traces** (digest-indexed join). Requires
-interprocedural `cfg_collect_ip` (or trace-collect analogue) so the property is
-statable. Prerequisites M0 + M3 + M1 collecting are in place (§6).
+History-sensitive globals over **reaching traces** (digest-indexed join). Requires the
+**interprocedural _trace_ collecting** `cfg_collect_trace_ip` — that is **M3.5**
+(`docs/M3_5_INTERPROC_TRACE_HANDOFF.md`), not the state-based `cfg_collect_ip` — so the
+"last preceding write over reaching traces" property is even statable. Prerequisites
+M0 + M3 + M1 collecting are in place; **M3.5 is the missing one (§6).**
+
+**Sequence:** `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` (U1–U2) → M3.5 → M4, so each
+lands as a locale interpretation, not a fifth parallel stack.
 
 ### What not to do next
 
@@ -493,8 +528,9 @@ statable. Prerequisites M0 + M3 + M1 collecting are in place (§6).
 | Flat `EA_Combine` on edges | Binary combine; needs caller context |
 | Destructive Phase 2 spine rewrite | M2 already closed additively via `alpha_last` |
 
-**Recommended next integration step:** merge `trace-spike` → `main` (M1 slice 4
-green; §5 gate passed 2026-06-07).
+**Recommended next integration step:** consolidate (`UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`
+U1–U2), then **M3.5** (`M3_5_INTERPROC_TRACE_HANDOFF.md`). Merging `trace-spike` → `main`
+is optional and orthogonal (M1 slice 4 green; §5 gate passed 2026-06-07).
 
 ### M1 file map (delivered)
 
