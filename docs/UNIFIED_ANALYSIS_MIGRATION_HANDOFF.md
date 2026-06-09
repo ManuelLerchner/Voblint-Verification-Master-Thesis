@@ -14,6 +14,30 @@ KB companion:
 > are green on `trace-spike`; this migration is the recommended **next structural
 > step** before M4 or a large merge.
 
+> **Status update (2026-06-09) — U1–U4 done, green.** Executed on `trace-spike`,
+> full `isabelle build` sorry-free:
+>
+> - **U1** — `src/CFG/Collecting/CFG_Collect_Unified.thy`: `collecting` locale
+>   parameterised by a `combine_at` hook; `F`/`collect` lfp skeleton (mono,
+>   unfold, post, entry, `collect_lowerbound`, per-edge step) proved once.
+>   `intra` (`combine_at = {}`) and `ip` (`collect_combine_pp`) interpretations
+>   recover `cfg_collect` / `cfg_collect_ip` via `intra_collect_eq` /
+>   `ip_collect_eq`.
+> - **U2** — `src/Equations/Analysis_Sound.thy`: `collect_post_fixpoint_sound`
+>   (the lfp→gamma engine, in the locale) + `unified_post_fixpoint_sound[_ip]`
+>   (in `sound_domain`) re-derive intra/IP soundness through the single engine.
+>   A new `combine_at` (M4 digests) gets soundness the same way.
+> - **U3** — `Sign_Domain.thy` `sign_tf_sound_{assign,assume,assume_not,enter}`
+>   bundle; `Example_Proc_Global` cites it instead of re-proving `h1`–`h4`.
+> - **U4** — `src/Pipeline/Trace_IP_Analysis_Sound.thy` `trace_ip_analysis_sound`:
+>   `alpha_last (cfg_collect_trace_ip g S v) \<le> gamma_state (env v)`, composing
+>   M3.5's projection with U2's IP soundness. `alpha_last` is the
+>   soundness-preserving morphism — the M4 extension point.
+>
+> U0 (audit) folded into U1/U2 design (the duplication was the shared `lfp(F)`
+> skeleton + the `gamma`-post-fixpoint finish, both now factored). M4 (digests)
+> is the remaining open frontier; its locale extension point is proved (U4).
+
 ---
 
 ## 1. Problem in one paragraph
@@ -165,14 +189,14 @@ only: program AST, `compile_*` facts, reach/discharge lemmas, `td_solve_dom`.
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
-| **U0** — duplication audit | Open | Slice U0 |
-| **U1** — collecting locale | Open | Intra + IP instances |
-| **U2** — soundness locale | Open | Plain + side + IP corollaries |
-| **U3** — thin examples | Open | Shared TF lemmas |
-| **U4** — trace overlay | Open | Blocks clean M4 start |
+| **U0** — duplication audit | **Done** | folded into U1/U2 design |
+| **U1** — collecting locale | **Done** | `CFG_Collect_Unified.thy`; intra + IP |
+| **U2** — soundness locale | **Done** | `Analysis_Sound.thy`; intra/IP via one engine |
+| **U3** — thin examples | **Done** | `sign_tf_sound_*` bundle; `Example_Proc_Global` thinned |
+| **U4** — trace overlay | **Done** | `Trace_IP_Analysis_Sound.thy`; `trace_ip_analysis_sound` |
 
-**Recommended gate before M4:** U1 + U2 green (collecting + soundness unified).
-U3 can run in parallel with merge to `main`.
+**Gate before M4 met:** U1–U4 green (collecting + soundness unified, trace overlay
+morphism proved). M4 (digests) extends `combine_at` on the unified locale.
 
 ---
 

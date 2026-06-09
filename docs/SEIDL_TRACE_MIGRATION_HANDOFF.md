@@ -187,13 +187,30 @@ KB companion (read these for *why*, not just *what*):
 | **M3** — TD_side theory + solver soundness | **Done** | `TD_Side_CFG` / `Interface` / `Soundness` |
 | **M3 witness** — concrete global example | **Done** | `Example_Side_Global.thy` |
 | **M1** — procedures end-to-end | **Done** | §9 slices 1–4; `Example_Proc_Global.thy` |
-| **M3.5** — interprocedural **trace** bridge | **Open** | **Next** — `docs/M3_5_INTERPROC_TRACE_HANDOFF.md`; consolidate-first |
-| **M4** — globals over traces (digests) | **Open** | needs M3.5 — §9 slice 5 |
+| **U1–U4** — unified analysis migration | **Done** (2026-06-09) | `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` |
+| **M3.5** — interprocedural **trace** bridge | **Done** (core) | projection lemma green; `CFG_Trace_Collect_IP.thy` |
+| **M4** — globals over traces (digests) | **Open** | needs M3.5 Slice 1 (action-labelled trace) — §9 slice 5 |
 
-Migration is **not finished** (M3.5 + M4 remain). M1 exit is met on `trace-spike`. The
-recommended path: **unified analysis migration** (`docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`,
-U1–U2) → **M3.5** (`docs/M3_5_INTERPROC_TRACE_HANDOFF.md`) → M4. (§5 build gate passed
-2026-06-07.)
+Migration is **substantially complete**: the unified-analysis consolidation (U1–U4)
+and the M3.5 interprocedural-trace projection are green on `trace-spike`. **M4**
+(history-sensitive globals over reaching traces / digests) is the remaining
+research frontier; its locale extension point is proved (U4
+`trace_ip_analysis_sound`). (§5 build gate passed 2026-06-09.)
+
+> **Progress (2026-06-09) — consolidation + M3.5 projection green.**
+> Full `isabelle build` sorry-free. New theories: `CFG_Collect_Unified` (U1),
+> `Analysis_Sound` (U2), `Trace_IP_Analysis_Sound` (U4), `CFG_Trace_Collect_IP`
+> (M3.5). M3.5 milestone:
+> `alpha_last (cfg_collect_trace_ip g S v) \<subseteq> cfg_collect_ip g S v`
+> (`ip_trace_witness`; enter = edge step, combine = junction splice with
+> `combine_states` restore). Composed to analyzer soundness over interprocedural
+> trace semantics in `trace_ip_analysis_sound`.
+>
+> **Remaining for M4:** (a) M3.5 Slice 1 — enrich `trace` to
+> `(edge_action \<times> store) list` so "last preceding write to a global" is statable
+> (re-close `lift`); (b) M3.5 Slice 4 — single-context equality witness on
+> `Example_Proc_Global` (adequacy / reverse inclusion); (c) the digest-indexed
+> global-read transfer + its soundness below the U4 projection.
 
 ---
 

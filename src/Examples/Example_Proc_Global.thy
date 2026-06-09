@@ -202,18 +202,8 @@ proof -
        (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
     using runs unfolding pruns_to_ip_def
     by (metis singleton_store_def)
-  have h1: "\<forall>x a sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-              st(x := aval a st) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
-    unfolding sign_tf_def by (simp add: assign_sign_sound)
-  have h2: "\<forall>b sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-              bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
-    unfolding sign_tf_def by (simp add: assume_sign_sound)
-  have h3: "\<forall>b sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-              \<not> bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
-    unfolding sign_tf_def by (simp add: assume_not_sign_sound)
-  have h4: "\<forall>sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-              enter_state st \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
-    unfolding sign_tf_def by (simp add: enter_sign_sound)
+  note h1 = sign_tf_sound_assign and h2 = sign_tf_sound_assume
+       and h3 = sign_tf_sound_assume_not and h4 = sign_tf_sound_enter
   show ?thesis
     by (rule sign_domain.ip_sign_analysis_sound[OF h1 h2 h3 h4 proc_global_s0_gamma
           collect_exit compile_prog_inc_finite compile_prog_inc_finite_combines td_solve_dom

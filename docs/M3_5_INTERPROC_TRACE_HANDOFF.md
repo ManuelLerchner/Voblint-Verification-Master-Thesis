@@ -17,8 +17,18 @@ KB companions (read for *why*):
 - `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` — **do U1–U2 first** (see §2); U4 is the trace-overlay hook M3.5 fills.
 - `docs/SEIDL_TRACE_MIGRATION_HANDOFF.md` — parent pivot status (M0–M3 + M1 done).
 
-> Status (2026-06-09): planned, not started. Branch `trace-spike`. Sequencing decided
-> (Manuel): **consolidate first, then M3.5.**
+> Status (2026-06-09): **Slices 2–3 done, green.** Branch `trace-spike`.
+> Consolidation U1–U4 landed first (see `UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`),
+> then M3.5: `src/CFG/Collecting/CFG_Trace_Collect_IP.thy` defines
+> `cfg_collect_trace_ip` (`ip_trace_witness`: entry / edge / junction-combine) and
+> proves the milestone projection
+> `alpha_last (cfg_collect_trace_ip g S v) \<subseteq> cfg_collect_ip g S v`
+> (`alpha_last_cfg_collect_trace_ip_le`). Composed to analyzer soundness over the
+> interprocedural trace semantics in `Trace_IP_Analysis_Sound.thy`
+> (`trace_ip_analysis_sound`, U4). Built on the unified `collecting` locale
+> (`cfg_collect_ip = ip.collect`), not a fifth parallel stack. **Open:** Slice 1
+> (enrich `trace` to action-labelled for M4), Slice 4 (single-context equality
+> witness). Full `isabelle build` sorry-free.
 
 ---
 

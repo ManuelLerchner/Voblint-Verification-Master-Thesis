@@ -397,6 +397,32 @@ definition sign_tf :: "sign domain_transfer" where
                 tf_assume_not = assume_not_sign,
                 tf_enter      = enter_sign |)"
 
+(*
+  U3 (unified-analysis migration): the four transfer-function soundness facts
+  for the sign domain, bundled once so example theories cite them instead of
+  re-proving the same h1-h4 blocks.  These are the tf_sound_* premises of
+  unified_post_fixpoint_sound[_ip] / the per-solver soundness theorems.
+*)
+lemma sign_tf_sound_assign:
+  "\<forall>x a sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
+     st(x := aval a st) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
+  unfolding sign_tf_def by (simp add: assign_sign_sound)
+
+lemma sign_tf_sound_assume:
+  "\<forall>b sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
+     bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
+  unfolding sign_tf_def by (simp add: assume_sign_sound)
+
+lemma sign_tf_sound_assume_not:
+  "\<forall>b sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
+     \<not> bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
+  unfolding sign_tf_def by (simp add: assume_not_sign_sound)
+
+lemma sign_tf_sound_enter:
+  "\<forall>sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
+     enter_state st \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
+  unfolding sign_tf_def by (simp add: enter_sign_sound)
+
 lemma sign_plus_mono1:
   "a1 \<le> a2 \<Longrightarrow> sign_plus a1 b \<le> sign_plus a2 b"
   unfolding less_eq_sign_def
