@@ -39,20 +39,11 @@ theorem side_global_sign_analysis:
        (side_analyse side_global_prog sign_tf bot side_global_s0
          (cfg_exit (to_cfg side_global_prog)))"
 proof -
-  from runs_to_imp_path[OF runs] obtain es where
-    path: "cfg_path (to_cfg side_global_prog) (cfg_entry (to_cfg side_global_prog)) es
-            (cfg_exit (to_cfg side_global_prog))"
-    by blast
   show ?thesis
   proof (rule side_sign_analysis_sound)
     show "t \<in> cfg_collect (to_cfg side_global_prog) {s}
                     (cfg_exit (to_cfg side_global_prog))"
       using side_global_runs_to_exit[OF runs] .
-    show "finite (edges (to_cfg side_global_prog))"
-      by (rule side_global_prog_finite)
-    show "cfg_path (to_cfg side_global_prog) (cfg_entry (to_cfg side_global_prog)) es
-          (cfg_exit (to_cfg side_global_prog))"
-      using path .
     show "side_cfg_solve_dom (to_cfg side_global_prog) sign_tf bot side_global_s0
           (cfg_exit (to_cfg side_global_prog))"
       using side_solve_dom .

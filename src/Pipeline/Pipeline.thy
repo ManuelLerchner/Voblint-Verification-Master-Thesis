@@ -182,16 +182,10 @@ proof -
   have run_eq: "run_analysis (ivl_analysis_config s) c
     = td_analyse c ivl_tf (\<squnion>) bot
                     (ac_init (ivl_analysis_config s))"
-    unfolding run_analysis_def ivl_analysis_config_def ivl_tf_def by simp
-  from runs_to_imp_path[OF runs] obtain es where
-    entry_path: "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
-    and _: "t \<in> edges_collect es {s}"
-    by blast
-  show ?thesis
+    unfolding run_analysis_def ivl_analysis_config_def ivl_tf_def by simp  show ?thesis
     unfolding run_eq
     using runs_toD[OF runs]
-    by (rule interval_analysis_sound
-          [OF ivl_init_in_gamma _ to_cfg_finite entry_path td_solve_dom])
+    by (rule interval_analysis_sound[OF ivl_init_in_gamma _ td_solve_dom])
 qed
 
 (* Point-map invariant (td_analyse_collect_sound, Fix B per-pp). *)

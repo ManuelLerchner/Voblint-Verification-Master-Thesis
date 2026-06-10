@@ -185,6 +185,17 @@ lemma proc_global_entry_reach:
   unfolding make_rhs_tree_ip_inc_g_fn_cong compile_prog_inc_entry compile_prog_inc_exit
   by simp
 
+(* Single well-formedness obligation for the collapsed headline. *)
+lemma proc_global_node_reach:
+  fixes \<sigma> :: "(pp, sign abs_state) map"
+  assumes "v = cfg_entry (compile_prog inc_pi [''p''] (PCall ''p''))
+           \<or> (\<exists>u a. (u, a, v) \<in> edges (compile_prog inc_pi [''p''] (PCall ''p'')))
+           \<or> (\<exists>c e. (c, e, v) \<in> combines (compile_prog inc_pi [''p''] (PCall ''p'')))"
+  shows "v \<in> reach (make_rhs_tree_ip (compile_prog inc_pi [''p''] (PCall ''p'')) sign_tf (\<squnion>) bot proc_global_s0) \<sigma>
+     (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
+  using assms proc_global_entry_reach proc_global_edge_reach proc_global_combine_reach
+  by blast
+
 theorem proc_global_sign_analysis:
   fixes s t :: store
   assumes runs: "pruns_to_ip inc_pi [''p''] (PCall ''p'') s t"
@@ -203,9 +214,8 @@ proof -
     using runs unfolding pruns_to_ip_def
     by (metis singleton_store_def)
   show ?thesis
-    by (rule ip_sign_analysis_sound[OF proc_global_s0_gamma collect_exit
-          compile_prog_inc_finite compile_prog_inc_finite_combines td_solve_dom
-          proc_global_edge_reach proc_global_combine_reach proc_global_entry_reach])
+    by (rule ip_sign_analysis_sound[OF proc_global_s0_gamma collect_exit td_solve_dom
+          proc_global_node_reach])
 qed
 
 end
