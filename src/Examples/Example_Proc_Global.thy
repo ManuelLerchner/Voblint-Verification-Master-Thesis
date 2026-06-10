@@ -148,54 +148,6 @@ proof -
   show ?thesis using assms r0 r1 r2 r3 by auto
 qed
 
-lemma proc_global_combine_reach:
-  fixes \<sigma> :: "(pp, sign abs_state) map"
-  assumes uce: "(c, ex, w) \<in> combines (compile_prog inc_pi [''p''] (PCall ''p''))"
-  shows "w \<in> reach (make_rhs_tree_ip (compile_prog inc_pi [''p''] (PCall ''p'')) sign_tf (\<squnion>) bot proc_global_s0) \<sigma>
-     (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
-proof -
-  have w_eq: "w = cfg_exit (compile_prog inc_pi [''p''] (PCall ''p''))"
-    using uce compile_prog_inc_combines compile_prog_inc_exit by auto
-  have w_set: "w \<in> {0, 1, 2, 3}" by (simp add: w_eq compile_prog_inc_exit)
-  show ?thesis
-    using inc_g_reach_at_exit[OF w_set, of sign_tf "(\<squnion>)" bot proc_global_s0 \<sigma>]
-    unfolding make_rhs_tree_ip_inc_g_fn_cong compile_prog_inc_exit by simp
-qed
-
-lemma proc_global_edge_reach:
-  fixes \<sigma> :: "(pp, sign abs_state) map"
-  assumes ed: "(u, a, w) \<in> edges (compile_prog inc_pi [''p''] (PCall ''p''))"
-  shows "w \<in> reach (make_rhs_tree_ip (compile_prog inc_pi [''p''] (PCall ''p'')) sign_tf (\<squnion>) bot proc_global_s0) \<sigma>
-     (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
-proof -
-  have w_set: "w \<in> {0, 1, 2, 3}"
-    using ed compile_prog_inc_edges compile_prog_inc_exit compile_prog_inc_structure
-    by auto
-  show ?thesis
-    using inc_g_reach_at_exit[OF w_set, of sign_tf "(\<squnion>)" bot proc_global_s0 \<sigma>]
-    unfolding make_rhs_tree_ip_inc_g_fn_cong compile_prog_inc_exit by simp
-qed
-
-lemma proc_global_entry_reach:
-  fixes \<sigma> :: "(pp, sign abs_state) map"
-  shows "cfg_entry (compile_prog inc_pi [''p''] (PCall ''p''))
-     \<in> reach (make_rhs_tree_ip (compile_prog inc_pi [''p''] (PCall ''p'')) sign_tf (\<squnion>) bot proc_global_s0) \<sigma>
-       (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
-  using inc_g_reach_at_exit[of _ sign_tf "(\<squnion>)" bot proc_global_s0 \<sigma>]
-  unfolding make_rhs_tree_ip_inc_g_fn_cong compile_prog_inc_entry compile_prog_inc_exit
-  by simp
-
-(* Single well-formedness obligation for the collapsed headline. *)
-lemma proc_global_node_reach:
-  fixes \<sigma> :: "(pp, sign abs_state) map"
-  assumes "v = cfg_entry (compile_prog inc_pi [''p''] (PCall ''p''))
-           \<or> (\<exists>u a. (u, a, v) \<in> edges (compile_prog inc_pi [''p''] (PCall ''p'')))
-           \<or> (\<exists>c e. (c, e, v) \<in> combines (compile_prog inc_pi [''p''] (PCall ''p'')))"
-  shows "v \<in> reach (make_rhs_tree_ip (compile_prog inc_pi [''p''] (PCall ''p'')) sign_tf (\<squnion>) bot proc_global_s0) \<sigma>
-     (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
-  using assms proc_global_entry_reach proc_global_edge_reach proc_global_combine_reach
-  by blast
-
 theorem proc_global_sign_analysis:
   fixes s t :: store
   assumes runs: "pruns_to_ip inc_pi [''p''] (PCall ''p'') s t"
@@ -214,8 +166,7 @@ proof -
     using runs unfolding pruns_to_ip_def
     by (metis singleton_store_def)
   show ?thesis
-    by (rule ip_sign_analysis_sound[OF proc_global_s0_gamma collect_exit td_solve_dom
-          proc_global_node_reach])
+    by (rule ip_sign_analysis_sound[OF proc_global_s0_gamma collect_exit td_solve_dom])
 qed
 
 end

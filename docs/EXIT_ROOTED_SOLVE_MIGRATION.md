@@ -184,40 +184,36 @@ to its exit (`WHILE` via the unconditional `EA_AssumeNot` edge), lifting sub-pat
 with `cfg_path_mono_edges` and composing with `cfg_path_append`. Convert path-form
 to the `reach` form the core theorem wants with `cfg_path_node_in_reach`.
 
-**Interprocedural case — trio collapsed to one hypothesis (DONE).**
+**Interprocedural case — hypothesis-free (DONE).**
 `Sign_IP_Soundness.ip_sign_analysis_sound` previously carried three verbose
-`reach`-from-`cfg_exit` obligations (`edge_reach`, `combine_reach`, `entry_reach`).
-These are now a single well-formedness hypothesis `node_reach_exit` — "every
-formally-reachable source node (entry, every edge target, every combine/return
-target) lies in the demand-driven cone queried at the exit" — exactly the paper's
-condition. The former trio is derived from it internally; `Example_Proc_Global`
-discharges the single obligation via `proc_global_node_reach`.
+`reach`-from-`cfg_exit` obligations (`edge_reach`, `combine_reach`, `entry_reach`),
+later collapsed to a single `node_reach_exit` well-formedness hypothesis. Both are
+now gone: the headline takes only `s_sound`, `collect_exit`, and `td_solve_dom`
+(see below). `Example_Proc_Global.proc_global_sign_analysis` no longer discharges
+any reach obligation.
 
-**`node_reach_exit` cannot be discharged — it is a *necessary* hypothesis
-(refutable), not an unproven lemma.** `compile_prog` (`IMP2_Proc_to_CFG.thy`) builds
-`mk_ip_cfg main_en main_ex (E_proc \<union> E_main) (C_proc \<union> C_main)`, where
-`compile_procs_list` merely unions every procedure's edges/combines into the graph.
-A procedure connects forward to the rest *only* via a combine `(call, ex_p, ret)`
-emitted at a `PCall` site. So a procedure in `ps` that is never called has body
-nodes that are edge-targets (hence in `node_reach_exit`'s premise) yet have no
-edge-or-combine path to `cfg_exit`.
+**`node_reach_exit` is now fully discharged by dead-procedure pruning
+(`src/CFG/CFG_Prune.thy`); the headline carries no well-formedness hypothesis.**
+The obstruction was the dead procedure: `compile_prog` (`IMP2_Proc_to_CFG.thy`)
+unions every procedure's edges/combines into the graph via `compile_procs_list`,
+so a procedure in `ps` that is never called has body nodes that are edge-targets
+yet cannot reach `cfg_exit` (e.g. `pi p = Some PSKIP`, `ps = [p]`, `main = PSKIP`:
+the body edge `(en_p, EA_Nop, ex_p)` lands in `E_proc`, nothing references `ex_p`).
 
-Concrete refutation: `pi p = Some PSKIP`, `ps = [p]`, `main = PSKIP`. The body edge
-`(en_p, EA_Nop, ex_p)` lands in `E_proc`; nothing calls `p`, so no combine
-references `ex_p`; `cfg_exit` is main's exit. Then `ex_p` is an edge-target (premise
-holds) but `ex_p \<notin> reach(cfg_exit)` (conclusion fails). Hence `node_reach_exit`
-is *false* for ill-formed (dead-procedure) `compile_prog` and is genuinely
-necessary — this is precisely the CFG well-formedness condition the paper assumes
-("every program point, even when semantically unreachable, can be formally reached
-from `s_g`, and `r_g` can be reached from `v`") rather than proves.
-
-The only routes to elimination are (a) restrict to programs with no dead procedures
-(an *extra* hypothesis — no net reduction), or (b) refactor the generic
-`TD_IP_Soundness.ip_sign_analysis_sound` so its `reach` obligations range only over
-the backward cone of `cfg_exit` (cone-edges/combines), not all edges/combines — then
-the dead-procedure nodes fall outside scope and the residual is auto-dischargeable
-by a cone-restricted induction. (b) is the real follow-up; until then the single
-`node_reach_exit` is the minimal, necessary well-formedness hypothesis.
+Resolution (option (b), realised via a concrete prune): the solver still runs on
+the full `compile_prog` graph, but the collecting value *at the exit* depends only
+on the backward cone of the exit. `CFG_Prune` defines `ip_reaches` / `cone` /
+`prune_cfg` (cone-restricted graph) and proves the frame lemma
+`cfg_collect_ip g S (cfg_exit g) \<subseteq> cfg_collect_ip (prune_cfg g) S (cfg_exit g)`
+(`cfg_collect_ip_prune_exit`, an `ip_witness` transport: every exit-witness stays
+inside the cone). Every edge/combine of `prune_cfg g` then has its target in the
+cone, so the residual `reach` obligations are discharged from
+`ip_reaches_imp_reach` against the *unpruned* solver — no solver-side frame needed.
+The single remaining structural fact, "main's entry reaches main's exit"
+(`compile_prog_entry_ip_reaches_exit`), is proved by induction over `compile_pcom`
+(PCall's call→return is one combine hop). `TD_IP_Soundness`'s
+`td_analyse_ip_collect_sound_at_exit_pruned` assembles these; the generic and Sign
+headlines (`ip_sign_analysis_sound`) drop the trio / `node_reach_exit` entirely.
 
 ### Step 2 — sign exit-rooted (plain), unblocked
 
