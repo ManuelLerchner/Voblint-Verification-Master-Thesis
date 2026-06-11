@@ -45,9 +45,10 @@ definition make_side_rhs_tree_ip ::
    => (pp, unit, 'a abs_state) strategy_tree"
 where
   "make_side_rhs_tree_ip g tf join bot0 s0 v =
-     (let acc0 = (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0)
-      in side_rhs_fold_ip tf join acc0
-           (predecessor_list g v) (combine_predecessor_list g v))"
+     (let acc0 = (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0);
+          t    = side_rhs_fold_ip tf join acc0
+                   (predecessor_list g v) (combine_predecessor_list g v)
+      in if v = cfg_entry g then Side () (restrict_global s0) t else t)"
 
 definition side_cfg_T_ip ::
   "cfg => 'a::bounded_semilattice_sup_bot domain_transfer
@@ -410,6 +411,49 @@ next
   show ?case unfolding x using Cons.IH by (simp add: Let_def)
 qed
 
+(* The entry node additionally seeds the initial globals into the single global
+   unknown via its wrapping Side ();  every other node is the bare fold. *)
+lemma sides_make_side_rhs_tree_ip_Inr:
+  "sides_of_rhs (make_side_rhs_tree_ip g tf join bot0 s0 v) sigma (Inr ())
+   = side_glob_ip tf join sigma (predecessor_list g v) (combine_predecessor_list g v)
+      \<squnion> (if v = cfg_entry g then restrict_global s0 else bot)"
+proof (cases "v = cfg_entry g")
+  case True
+  show ?thesis unfolding make_side_rhs_tree_ip_def Let_def
+    using True by (simp add: sides_side_rhs_fold_ip_Inr Let_def)
+next
+  case False
+  show ?thesis unfolding make_side_rhs_tree_ip_def Let_def
+    using False by (simp add: sides_side_rhs_fold_ip_Inr Let_def)
+qed
+
+lemma sides_make_side_rhs_tree_ip_Inl:
+  "sides_of_rhs (make_side_rhs_tree_ip g tf join bot0 s0 v) sigma (Inl u) = bot"
+proof (cases "v = cfg_entry g")
+  case True
+  show ?thesis unfolding make_side_rhs_tree_ip_def Let_def
+    using True by (simp add: sides_side_rhs_fold_ip_Inl Let_def)
+next
+  case False
+  show ?thesis unfolding make_side_rhs_tree_ip_def Let_def
+    using False by (simp add: sides_side_rhs_fold_ip_Inl Let_def)
+qed
+
+(* The wrapping Side () is invisible to dep_aux, so dependencies are still the
+   fold's -- in particular independent of sigma. *)
+lemma dep_aux_make_side_rhs_tree_ip:
+  "dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 v)
+   = dep_aux sigma (side_rhs_fold_ip tf join
+        (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0)
+        (predecessor_list g v) (combine_predecessor_list g v))"
+proof (cases "v = cfg_entry g")
+  case True
+  show ?thesis unfolding make_side_rhs_tree_ip_def Let_def using True by simp
+next
+  case False
+  show ?thesis unfolding make_side_rhs_tree_ip_def Let_def using False by simp
+qed
+
 (* -- Solver preconditions for TD_side --------------------------------- *)
 
 lemma side_cfg_T_ip_is_mono_eq:
@@ -427,21 +471,44 @@ lemma side_cfg_T_ip_mono_sides:
   assumes tf_mono:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
   shows "mono_sides (side_cfg_T_ip g tf (\<squnion>) bot0 s0)"
-  unfolding mono_sides_def side_cfg_T_ip_def make_side_rhs_tree_ip_def Let_def
-  apply clarify
-  apply (rename_tac w sigma1 sigma2)
-  apply (rule le_funI)
-  apply (case_tac x rule: sum.exhaust)
-   apply (simp add: sides_side_rhs_fold_ip_Inl)
-  apply (simp add: sides_side_rhs_fold_ip_Inr side_glob_ip_mono_sup[OF tf_mono])
-  done
+proof (unfold mono_sides_def, intro allI impI)
+  fix w :: pp and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
+  assume le: "sigma1 \<le> sigma2"
+  show "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 w) sigma1
+        \<le> sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 w) sigma2"
+  proof (rule le_funI)
+    fix x :: "pp + unit"
+    show "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 w) sigma1 x
+          \<le> sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 w) sigma2 x"
+    proof (cases x)
+      case (Inl b)
+      thus ?thesis
+        unfolding side_cfg_T_ip_def by (simp add: sides_make_side_rhs_tree_ip_Inl)
+    next
+      case (Inr b)
+      have e1: "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 w) sigma1 x
+                = side_glob_ip tf (\<squnion>) sigma1
+                    (predecessor_list g w) (combine_predecessor_list g w)
+                  \<squnion> (if w = cfg_entry g then restrict_global s0 else bot)"
+        unfolding side_cfg_T_ip_def Inr by (simp add: sides_make_side_rhs_tree_ip_Inr)
+      have e2: "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 w) sigma2 x
+                = side_glob_ip tf (\<squnion>) sigma2
+                    (predecessor_list g w) (combine_predecessor_list g w)
+                  \<squnion> (if w = cfg_entry g then restrict_global s0 else bot)"
+        unfolding side_cfg_T_ip_def Inr by (simp add: sides_make_side_rhs_tree_ip_Inr)
+      show ?thesis unfolding e1 e2
+        by (rule sup_mono[OF side_glob_ip_mono_sup[OF tf_mono le] order_refl])
+    qed
+  qed
+qed
 
 lemma side_cfg_T_ip_mono_deps:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and bot0 s0 :: "'a abs_state"
   shows "mono_deps (side_cfg_T_ip g tf (\<squnion>) bot0 s0)"
-  unfolding mono_deps_def side_cfg_T_ip_def make_side_rhs_tree_ip_def Let_def dep_def
+  unfolding mono_deps_def side_cfg_T_ip_def dep_def
   apply clarify
+  apply (simp only: dep_aux_make_side_rhs_tree_ip)
   apply (subst (asm) dep_aux_side_rhs_fold_ip_indep)
   by simp
 
@@ -468,11 +535,13 @@ lemma side_post_solution_le_global_ip:
          \<le> sigma (Inr ())"
 proof -
   from assms have "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 v) sigma \<le> sigma" by auto
-  hence "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 v) sigma (Inr ()) \<le> sigma (Inr ())"
+  hence le: "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 v) sigma (Inr ()) \<le> sigma (Inr ())"
     by (simp add: le_fun_def)
-  thus ?thesis
-    unfolding side_cfg_T_ip_def make_side_rhs_tree_ip_def Let_def
-    by (simp add: sides_side_rhs_fold_ip_Inr)
+  have "side_glob_ip tf (\<squnion>) sigma (predecessor_list g v) (combine_predecessor_list g v)
+        \<le> sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 v) sigma (Inr ())"
+    unfolding side_cfg_T_ip_def
+    by (simp add: sides_make_side_rhs_tree_ip_Inr)
+  thus ?thesis using le by (rule order_trans)
 qed
 
 (* -- Fold upper bounds (join = sup) ----------------------------------- *)
@@ -833,7 +902,7 @@ proof -
   have mem: "(u, a) \<in> set (predecessor_list g w)"
     using ed fin by (auto simp: predecessors_def set_predecessor_list)
   have "Inl u \<in> dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 w)"
-    unfolding make_side_rhs_tree_ip_def Let_def
+    unfolding dep_aux_make_side_rhs_tree_ip
     by (rule Inl_dep_aux_side_rhs_fold_ip_edge[OF mem])
   thus ?thesis unfolding side_cfg_T_ip_def dep\<^sub>L_def dep_def by simp
 qed
@@ -848,22 +917,46 @@ proof -
   have mem: "(c, ex) \<in> set (combine_predecessor_list g w)"
     using ce finC by (simp add: combine_predecessors_def)
   have dc: "Inl c \<in> dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 w)"
-    unfolding make_side_rhs_tree_ip_def Let_def
+    unfolding dep_aux_make_side_rhs_tree_ip
     by (rule Inl_dep_aux_side_rhs_fold_ip_call[OF mem])
   have de: "Inl ex \<in> dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 w)"
-    unfolding make_side_rhs_tree_ip_def Let_def
+    unfolding dep_aux_make_side_rhs_tree_ip
     by (rule Inl_dep_aux_side_rhs_fold_ip_exit[OF mem])
   show ?thesis using dc de unfolding side_cfg_T_ip_def dep\<^sub>L_def dep_def by simp
 qed
 
-(* -- Entry coverage from a globals-free initial state ----------------- *)
+(* -- Entry coverage from an arbitrary initial state ------------------- *)
 
-(* At the entry point the local fold seeds restrict_local s0; if s0 carries no
-   globals then s0 itself is below the combined env at the entry. *)
+(* The entry node's wrapping Side () contributes restrict_global s0 to the
+   single global unknown, so the initial globals are below it in any
+   post-solution. *)
+lemma restrict_global_s0_le_global_ip:
+  assumes pp: "part_post_solution (side_cfg_T_ip g tf (\<squnion>) bot0 s0) x sigma vars"
+      and entry_in: "cfg_entry g \<in> vars"
+  shows "restrict_global s0 \<le> sigma (Inr ())"
+proof -
+  from pp entry_in have "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 (cfg_entry g)) sigma \<le> sigma"
+    by auto
+  hence le: "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 (cfg_entry g)) sigma (Inr ())
+             \<le> sigma (Inr ())"
+    by (simp add: le_fun_def)
+  have "restrict_global s0
+        \<le> side_glob_ip tf (\<squnion>) sigma
+             (predecessor_list g (cfg_entry g)) (combine_predecessor_list g (cfg_entry g))
+           \<squnion> restrict_global s0"
+    by (rule sup_ge2)
+  also have "... = sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) bot0 s0 (cfg_entry g)) sigma (Inr ())"
+    unfolding side_cfg_T_ip_def by (simp add: sides_make_side_rhs_tree_ip_Inr)
+  also have "... \<le> sigma (Inr ())" by (rule le)
+  finally show ?thesis .
+qed
+
+(* At the entry point the local fold seeds restrict_local s0 and the wrapping
+   Side () seeds restrict_global s0, so s0 itself is below the combined env at
+   the entry -- for an arbitrary initial state, no globals-free hypothesis. *)
 lemma s0_le_side_env_entry_ip:
   assumes pp: "part_post_solution (side_cfg_T_ip g tf (\<squnion>) bot s0) v0 sigma vars"
   assumes entry_in: "cfg_entry g \<in> vars"
-  assumes glob: "restrict_global s0 = bot"
   shows "s0 \<le> side_env sigma (cfg_entry g)"
 proof -
   have acc_le: "side_acc_ip tf (\<squnion>) (bot \<squnion> restrict_local s0) sigma
@@ -876,13 +969,13 @@ proof -
     by (rule side_acc_ip_ge_acc)
   also have "... \<le> sigma (Inl (cfg_entry g))" by (rule acc_le)
   finally have rl: "restrict_local s0 \<le> sigma (Inl (cfg_entry g))" .
-  have s0_eq: "s0 = restrict_local s0"
-  proof -
-    have "s0 = restrict_local s0 \<squnion> restrict_global s0"
-      by (rule restrict_local_global_join[symmetric])
-    thus ?thesis using glob by simp
-  qed
-  show ?thesis using rl s0_eq unfolding side_env_def by (simp add: le_supI1)
+  have rg: "restrict_global s0 \<le> sigma (Inr ())"
+    by (rule restrict_global_s0_le_global_ip[OF pp entry_in])
+  have "s0 = restrict_local s0 \<squnion> restrict_global s0"
+    by (rule restrict_local_global_join[symmetric])
+  also have "... \<le> sigma (Inl (cfg_entry g)) \<squnion> sigma (Inr ())"
+    using rl rg by (rule sup_mono)
+  finally show ?thesis unfolding side_env_def .
 qed
 
 end

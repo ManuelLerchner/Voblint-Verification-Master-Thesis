@@ -195,7 +195,8 @@ qed
   Executable-facing soundness: run the side TD solver on the compiled program,
   read back the combined env (side_analyse_ip), and over-approximate the IP
   collecting semantics at the program exit.  The entry condition is discharged
-  from a globals-free initial state (restrict_global s0 = bot).  Mirrors
+  from an arbitrary initial state s0 (the entry seeds both its locals and its
+  globals).  Mirrors
   TD_IP_Soundness.td_analyse_ip_collect_sound_at_exit_pruned for the side solver.
 *)
 theorem side_analyse_ip_collect_sound_exit_pruned:
@@ -204,7 +205,6 @@ theorem side_analyse_ip_collect_sound_exit_pruned:
   assumes dom: "side_cfg_ip_solve_dom (compile_prog pi ps main) tf bot s0
                   (cfg_exit (compile_prog pi ps main))"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes glob: "restrict_global s0 = bot"
   shows "cfg_collect_ip (compile_prog pi ps main) S (cfg_exit (compile_prog pi ps main))
          \<le> gamma_state (side_analyse_ip pi ps main tf bot s0
               (cfg_exit (compile_prog pi ps main)))"
@@ -226,7 +226,7 @@ proof -
   have entry_in: "cfg_entry g \<in> ip.side_stabl_at v0"
     by (rule side_ip_cone_in_vars[OF pp fin finC entry_reach])
   have entry_le: "s0 \<le> side_env sigma (cfg_entry g)"
-    by (rule s0_le_side_env_entry_ip[OF pp entry_in glob])
+    by (rule s0_le_side_env_entry_ip[OF pp entry_in])
   have entry_cov: "S \<le> gamma_state (side_env sigma (cfg_entry g))"
     using S_sound gamma_state_mono[OF entry_le] by blast
   have collect: "cfg_collect_ip g S (cfg_exit g) \<le> gamma_state (side_env sigma (cfg_exit g))"

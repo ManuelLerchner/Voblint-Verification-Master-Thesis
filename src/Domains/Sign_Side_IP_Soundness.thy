@@ -14,7 +14,6 @@ theorem side_ip_sign_analysis_sound:
   assumes side_solve_dom:
     "side_cfg_ip_solve_dom (compile_prog pi ps main) sign_tf bot s0
        (cfg_exit (compile_prog pi ps main))"
-  assumes s0_global_bot: "restrict_global s0 = bot"
   shows "t \<in> sign_domain.gamma_state
        (side_analyse_ip pi ps main sign_tf bot s0
          (cfg_exit (compile_prog pi ps main)))"
@@ -28,7 +27,7 @@ proof -
          (side_analyse_ip pi ps main sign_tf bot s0
            (cfg_exit (compile_prog pi ps main)))"
     by (rule sound_transfer.side_analyse_ip_collect_sound_exit_pruned
-          [OF sign_sound_tf.sound_transfer_axioms sign_tf_mono side_solve_dom gs s0_global_bot])
+          [OF sign_sound_tf.sound_transfer_axioms sign_tf_mono side_solve_dom gs])
   have "t \<in> sound_domain.gamma_state gamma_sign
        (side_analyse_ip pi ps main sign_tf bot s0
          (cfg_exit (compile_prog pi ps main)))"

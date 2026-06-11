@@ -1,7 +1,12 @@
 # Migration — seed initial globals at the entry (drop `restrict_global s0 = bot`)
 
-Status: **planned, not started.** Goal: make the side-effecting analysis sound
-from an *arbitrary* initial state `s0`, not only one whose globals are `bot`.
+Status: **complete (E1–E4).** The side-effecting analysis is sound from an
+*arbitrary* initial state `s0`; the `restrict_global s0 = bot` hypothesis is
+gone from both the interprocedural and the intra side stacks. Full
+`Goblint_Formalization` session builds sorry-free (`isabelle build`, ~44s warm).
+
+Goal: make the side-effecting analysis sound from an *arbitrary* initial state
+`s0`, not only one whose globals are `bot`.
 
 ## 0. The gap
 
@@ -75,12 +80,19 @@ So only the global side of the post-solution bound moves.
 
 ## 2. Slices
 
-| Slice | Change | Exit |
-| --- | --- | --- |
-| E1 | Redefine `make_side_rhs_tree_ip` (entry `Side`); repair `eq`/sides/dep lemmas + `is_mono_eq`/`mono_sides`/`mono_deps` in `TD_Side_IP_CFG` | theory builds, preconditions green |
-| E2 | Split `side_post_solution_le_global_ip`; keep `apply_tf_combined_le_ip`/`combine_combined_le_ip`; prove unconditional `s0_le_side_env_entry_ip` | bounds green |
-| E3 | Drop `restrict_global s0 = bot` from `side_analyse_ip_collect_sound_exit_pruned` and `side_ip_sign_analysis_sound`; update `Example_Side_Proc_Global` to a non-trivial `s0` (e.g. `proc_global_s0 = λ_. STop`) | examples green from arbitrary `s0` |
-| E4 (optional) | Mirror in the intra stack: `make_side_rhs_tree`, `TD_Side_CFG`, `TD_Side_Soundness`, `Example_Side_Global` | intra green from arbitrary `s0` |
+| Slice | Change | Exit | Status |
+| --- | --- | --- | --- |
+| E1 | Redefine `make_side_rhs_tree_ip` (entry `Side`); add `sides_make_side_rhs_tree_ip_{Inr,Inl}` + `dep_aux_make_side_rhs_tree_ip` helpers; repair `mono_sides` (structured) / `mono_deps` / `dep_side_rhs_tree_ip_{edge,combine}` in `TD_Side_IP_CFG` (`eq`/`is_mono_eq` carried verbatim) | theory builds, preconditions green | ✅ done |
+| E2 | Split `side_post_solution_le_global_ip` (now bounds `side_glob_ip ≤ sides_of_rhs … (Inr ())`); add `restrict_global_s0_le_global_ip`; prove unconditional `s0_le_side_env_entry_ip` | bounds green | ✅ done |
+| E3 | Drop `restrict_global s0 = bot` from `side_analyse_ip_collect_sound_exit_pruned` and `side_ip_sign_analysis_sound`; `Example_Side_Proc_Global` now uses `side_proc_global_s0 = (λ_. STop)` | examples green from arbitrary `s0` | ✅ done |
+| E4 | Mirror in the intra stack: `make_side_rhs_tree` + helpers in `TD_Side_CFG`, new `restrict_global_s0_le_global` / `s0_le_side_env_entry`; rewrite the inline entry-coverage in the three `TD_Side_Soundness` theorems; drop the hypothesis from `side_sign_analysis_sound`; `Example_Side_Global` now uses `(λ_. STop)` | intra green from arbitrary `s0` | ✅ done |
+
+Single key idea, applied in both stacks: wrap the entry node's strategy tree in
+`Side () (restrict_global s0) t`. It is invisible to `traverse_rhs` (= `eq`) and
+to `dep_aux`, so every local-fold and dependency lemma carries verbatim; it adds
+only `⊔ restrict_global s0` to the global slot `sides_of_rhs … (Inr ())`, which
+is exactly what discharges `s0 ≤ side_env σ (cfg_entry g)` without the
+globals-free hypothesis.
 
 ## 3. Risks
 

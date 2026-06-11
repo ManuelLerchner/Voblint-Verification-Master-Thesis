@@ -168,7 +168,6 @@ theorem side_analyse_collect_sound_at_solver:
   assumes side_solve_dom:
     "side_cfg_solve_dom (to_cfg c) tf bot0 s0 v0"
   assumes S_sub: "S \<subseteq> gamma_state s0"
-  assumes s0_global_bot: "restrict_global s0 = bot"
   shows "cfg_collect (to_cfg c) S v0
          \<le> gamma_state (side_analyse c tf bot0 s0 v0)"
 proof -
@@ -189,30 +188,8 @@ proof -
   have entry_cov: "S \<subseteq> gamma_state
        (side_env (solver.side_sigma_at v0) (cfg_entry g))"
   proof -
-    have local_le: "side_acc tf (\<squnion>) (bot0 \<squnion> restrict_local s0) (solver.side_sigma_at v0)
-                     (predecessor_list g (cfg_entry g))
-                   \<le> solver.side_sigma_at v0 (Inl (cfg_entry g))"
-      using side_post_solution_le_local[OF pp' entry_in] unfolding g_def by simp
-    have acc0_le: "bot0 \<squnion> restrict_local s0 \<le> solver.side_sigma_at v0 (Inl (cfg_entry g))"
-      using side_acc_ge_acc local_le by (rule order_trans)
-    have s0_le: "s0 \<le> bot0 \<squnion> restrict_local s0"
-    proof (rule le_funI)
-      fix x
-      show "s0 x \<le> (bot0 \<squnion> restrict_local s0) x"
-      proof (cases "is_global x")
-        case True
-        have "restrict_global s0 x = bot x"
-          using s0_global_bot by (simp add: fun_eq_iff restrict_global_def)
-        then show ?thesis using True unfolding restrict_global_def by simp
-      next
-        case False
-        then show ?thesis unfolding restrict_local_def using sup_ge2 by simp
-      qed
-    qed
-    have sigma_le: "s0 \<le> solver.side_sigma_at v0 (Inl (cfg_entry g))"
-      using acc0_le s0_le by (auto intro: order_trans)
     have "s0 \<le> side_env (solver.side_sigma_at v0) (cfg_entry g)"
-      unfolding side_env_def by (rule order_trans[OF sigma_le sup_ge1])
+      by (rule s0_le_side_env_entry[OF pp' entry_in])
     thus ?thesis using S_sub gamma_state_mono by blast
   qed
   show ?thesis
@@ -265,7 +242,6 @@ theorem side_analyse_collect_sound_solver:
   assumes side_solve_dom:
     "\<And>v. side_cfg_solve_dom (to_cfg c) tf bot0 s0 v"
   assumes S_sub: "S \<subseteq> gamma_state s0"
-  assumes s0_global_bot: "restrict_global s0 = bot"
   shows "\<forall>v. cfg_collect (to_cfg c) S v
          \<le> gamma_state (side_analyse c tf bot0 s0 v)"
 proof (intro allI)
@@ -276,8 +252,7 @@ proof (intro allI)
   show "cfg_collect (to_cfg c) S v
         \<le> gamma_state (side_analyse c tf bot0 s0 v)"
     by (rule side_analyse_collect_sound_at_solver[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_sound_enter tf_mono fin_cfg entry_path side_solve_dom S_sub
-          s0_global_bot])
+          tf_sound_assume_not tf_sound_enter tf_mono fin_cfg entry_path side_solve_dom S_sub])
 qed
 
 theorem side_solver_sound:
@@ -305,15 +280,13 @@ theorem side_solver_sound:
     "cfg_path (to_cfg c) (cfg_entry (to_cfg c)) es (cfg_exit (to_cfg c))"
   assumes side_solve_dom:
     "side_cfg_solve_dom (to_cfg c) tf bot0 s0 (cfg_exit (to_cfg c))"
-  assumes s0_global_bot: "restrict_global s0 = bot"
   shows "t \<in> gamma_state (side_analyse c tf bot0 s0 (cfg_exit (to_cfg c)))"
 proof -
   have S_sub: "{s} \<subseteq> gamma_state s0" using s0_sound by auto
   have collect: "cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))
     \<le> gamma_state (side_analyse c tf bot0 s0 (cfg_exit (to_cfg c)))"
     by (rule side_analyse_collect_sound_at_solver[OF tf_sound_assign tf_sound_assume
-          tf_sound_assume_not tf_sound_enter tf_mono fin_cfg entry_path side_solve_dom S_sub
-          s0_global_bot])
+          tf_sound_assume_not tf_sound_enter tf_mono fin_cfg entry_path side_solve_dom S_sub])
   show ?thesis using collect exit_in_collect by blast
 qed
 

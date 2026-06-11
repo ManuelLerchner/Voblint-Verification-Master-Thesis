@@ -12,12 +12,11 @@ text \<open>
 definition side_global_prog :: com where
   "side_global_prog = ''Gx'' ::= N 1"
 
+(* A non-trivial initial state: every variable -- including the G-prefixed
+   global -- starts at STop, not bot.  Witnesses that the entry now seeds the
+   initial globals, so soundness no longer needs restrict_global s0 = bot. *)
 definition side_global_s0 :: "sign abs_state" where
-  "side_global_s0 = bot"
-
-lemma side_global_s0_restrict_global:
-  "restrict_global side_global_s0 = bot"
-  unfolding side_global_s0_def restrict_global_def by (simp add: fun_eq_iff)
+  "side_global_s0 = (\<lambda>_. STop)"
 
 lemma side_global_prog_finite:
   "finite (edges (to_cfg side_global_prog))"
@@ -47,8 +46,6 @@ proof -
     show "side_cfg_solve_dom (to_cfg side_global_prog) sign_tf bot side_global_s0
           (cfg_exit (to_cfg side_global_prog))"
       using side_solve_dom .
-    show "restrict_global side_global_s0 = bot"
-      by (rule side_global_s0_restrict_global)
     show "s \<in> sign_domain.gamma_state side_global_s0"
       using s_sound .
   qed

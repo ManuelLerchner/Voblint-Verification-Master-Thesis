@@ -11,12 +11,11 @@ text \<open>
   Example_Proc_Global.proc_global_sign_analysis on the side backend.
 \<close>
 
+(* A non-trivial initial state: every variable -- including the globals --
+   starts at STop, not bot.  Witnesses that the entry now seeds the initial
+   globals, so soundness no longer needs restrict_global s0 = bot. *)
 definition side_proc_global_s0 :: "sign abs_state" where
-  "side_proc_global_s0 = bot"
-
-lemma side_proc_global_s0_restrict_global:
-  "restrict_global side_proc_global_s0 = bot"
-  unfolding side_proc_global_s0_def restrict_global_def by (simp add: fun_eq_iff)
+  "side_proc_global_s0 = (\<lambda>_. STop)"
 
 theorem proc_global_side_sign_analysis:
   fixes s t :: store
@@ -36,8 +35,7 @@ proof -
     using runs unfolding pruns_to_ip_def
     by (metis singleton_store_def)
   show ?thesis
-    by (rule side_ip_sign_analysis_sound[OF s_sound collect_exit side_solve_dom
-          side_proc_global_s0_restrict_global])
+    by (rule side_ip_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 qed
 
 end
