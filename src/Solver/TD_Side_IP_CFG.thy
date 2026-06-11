@@ -727,4 +727,133 @@ proof -
   finally show ?thesis unfolding side_env_def .
 qed
 
+(* -- Dependency membership (edges and combine endpoints) -------------- *)
+
+lemma Inl_dep_aux_side_rhs_fold_ip_edge:
+  assumes "(u, a) \<in> set es"
+  shows "Inl u \<in> dep_aux sigma (side_rhs_fold_ip tf join acc es cs)"
+  using assms
+proof (induction es arbitrary: acc)
+  case Nil thus ?case by simp
+next
+  case (Cons x es)
+  obtain w b where x: "x = (w, b)" by (cases x)
+  show ?case
+  proof (cases "x = (u, a)")
+    case True
+    thus ?thesis unfolding True side_rhs_fold_ip.simps dep_aux.simps Let_def by simp
+  next
+    case False
+    have mem: "(u, a) \<in> set es" using Cons.prems x False by auto
+    show ?thesis unfolding x side_rhs_fold_ip.simps dep_aux.simps Let_def
+      using Cons.IH[OF mem] by simp
+  qed
+qed
+
+(* The dependencies reachable after the edge list is exhausted (the combine
+   queries) survive the edge prefix. *)
+lemma dep_aux_side_rhs_fold_ip_nil_sub_es:
+  "dep_aux sigma (side_rhs_fold_ip tf join acc [] cs)
+   \<subseteq> dep_aux sigma (side_rhs_fold_ip tf join acc es cs)"
+proof (induction es arbitrary: acc)
+  case Nil show ?case by simp
+next
+  case (Cons x es)
+  obtain w b where x: "x = (w, b)" by (cases x)
+  let ?acc' = "join acc (restrict_local (apply_tf tf b (join (sigma (Inl w)) (sigma (Inr ())))))"
+  have "dep_aux sigma (side_rhs_fold_ip tf join acc [] cs)
+        = dep_aux sigma (side_rhs_fold_ip tf join ?acc' [] cs)"
+    by (rule dep_aux_side_rhs_fold_ip_acc_indep)
+  also have "... \<subseteq> dep_aux sigma (side_rhs_fold_ip tf join ?acc' es cs)"
+    by (rule Cons.IH)
+  also have "... \<subseteq> dep_aux sigma (side_rhs_fold_ip tf join acc (x # es) cs)"
+    unfolding x side_rhs_fold_ip.simps dep_aux.simps Let_def by auto
+  finally show ?case .
+qed
+
+lemma Inl_dep_aux_side_rhs_fold_ip_call:
+  fixes c ex :: pp
+  assumes "(c, ex) \<in> set cs"
+  shows "Inl c \<in> dep_aux sigma (side_rhs_fold_ip tf join acc es cs)"
+proof -
+  have "Inl c \<in> dep_aux sigma (side_rhs_fold_ip tf join acc [] cs)"
+    using assms
+  proof (induction cs arbitrary: acc)
+    case Nil thus ?case by simp
+  next
+    case (Cons x cs)
+    obtain c2 e2 where x: "x = (c2, e2)" by (cases x)
+    show ?case
+    proof (cases "x = (c, ex)")
+      case True
+      thus ?thesis unfolding True side_rhs_fold_ip.simps dep_aux.simps Let_def by simp
+    next
+      case False
+      have mem: "(c, ex) \<in> set cs" using Cons.prems x False by auto
+      show ?thesis unfolding x side_rhs_fold_ip.simps dep_aux.simps Let_def
+        using Cons.IH[OF mem] by simp
+    qed
+  qed
+  thus ?thesis using dep_aux_side_rhs_fold_ip_nil_sub_es by blast
+qed
+
+lemma Inl_dep_aux_side_rhs_fold_ip_exit:
+  fixes c ex :: pp
+  assumes "(c, ex) \<in> set cs"
+  shows "Inl ex \<in> dep_aux sigma (side_rhs_fold_ip tf join acc es cs)"
+proof -
+  have "Inl ex \<in> dep_aux sigma (side_rhs_fold_ip tf join acc [] cs)"
+    using assms
+  proof (induction cs arbitrary: acc)
+    case Nil thus ?case by simp
+  next
+    case (Cons x cs)
+    obtain c2 e2 where x: "x = (c2, e2)" by (cases x)
+    show ?case
+    proof (cases "x = (c, ex)")
+      case True
+      thus ?thesis unfolding True side_rhs_fold_ip.simps dep_aux.simps Let_def by simp
+    next
+      case False
+      have mem: "(c, ex) \<in> set cs" using Cons.prems x False by auto
+      show ?thesis unfolding x side_rhs_fold_ip.simps dep_aux.simps Let_def
+        using Cons.IH[OF mem] by simp
+    qed
+  qed
+  thus ?thesis using dep_aux_side_rhs_fold_ip_nil_sub_es by blast
+qed
+
+(* -- Dependency at the eqsT level (edges and combine endpoints) ------- *)
+
+lemma dep_side_rhs_tree_ip_edge:
+  assumes fin: "finite (edges g)"
+  assumes ed: "(u, a, w) \<in> edges g"
+  shows "u \<in> dep\<^sub>L (side_cfg_T_ip g tf join bot0 s0) sigma w"
+proof -
+  have mem: "(u, a) \<in> set (predecessor_list g w)"
+    using ed fin by (auto simp: predecessors_def set_predecessor_list)
+  have "Inl u \<in> dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 w)"
+    unfolding make_side_rhs_tree_ip_def Let_def
+    by (rule Inl_dep_aux_side_rhs_fold_ip_edge[OF mem])
+  thus ?thesis unfolding side_cfg_T_ip_def dep\<^sub>L_def dep_def by simp
+qed
+
+lemma dep_side_rhs_tree_ip_combine:
+  fixes g :: cfg and c ex w :: pp
+  assumes finC: "finite (combines g)"
+  assumes ce: "(c, ex, w) \<in> combines g"
+  shows "c \<in> dep\<^sub>L (side_cfg_T_ip g tf join bot0 s0) sigma w
+       \<and> ex \<in> dep\<^sub>L (side_cfg_T_ip g tf join bot0 s0) sigma w"
+proof -
+  have mem: "(c, ex) \<in> set (combine_predecessor_list g w)"
+    using ce finC by (simp add: combine_predecessors_def)
+  have dc: "Inl c \<in> dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 w)"
+    unfolding make_side_rhs_tree_ip_def Let_def
+    by (rule Inl_dep_aux_side_rhs_fold_ip_call[OF mem])
+  have de: "Inl ex \<in> dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 w)"
+    unfolding make_side_rhs_tree_ip_def Let_def
+    by (rule Inl_dep_aux_side_rhs_fold_ip_exit[OF mem])
+  show ?thesis using dc de unfolding side_cfg_T_ip_def dep\<^sub>L_def dep_def by simp
+qed
+
 end
