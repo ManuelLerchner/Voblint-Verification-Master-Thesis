@@ -59,7 +59,7 @@ vendor/td-verification/    TD solver (AFP session `TD`, submodule)
 vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
 ```
 
-`ROOT` session `Goblint_Formalization` parent `HOL-IMP`, pulls sessions `TD` + `Dijkstra_Shortest_Path`. Top-level theories: `Goblint_Formalization`, `TD_CFG_Core`, `TD_Widen_Interface`, `TD_WN_Interface`, plus `Example_*` (`Sign_Analysis`, `Interval_Analysis`, `Interval_Widen`, `CFG_Collecting_Equiv`, `GraphViz`, `NonTerminating_Safe`).
+`ROOT` session `Goblint_Formalization` parent `HOL-IMP`, pulls sessions `TD` + `Dijkstra_Shortest_Path`. Top-level theories are the interprocedural / unified / side spine: `Trace_IP_Analysis_Sound`, `TD_IP_Soundness`, `Sign_IP_Soundness`, `CFG_Collect_Unified`, `Analysis_Sound`, `Sign_Side_Soundness`, `TD_CFG_Core`, plus `Example_*` (`Proc_Global`, `Proc_GraphViz`, `Side_Global`, `Trace_Digest_Precision`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Goblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `goblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`).
 
 Docs:
 

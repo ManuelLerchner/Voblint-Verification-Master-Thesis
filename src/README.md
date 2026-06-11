@@ -4,7 +4,10 @@ Isabelle/HOL session **Goblint_Formalization**: sound static analysis from IMP2 
 through CFG collecting semantics, abstract equations, and the vendored **TD** solver
 (`vendor/td-verification`, session `TD`) to pipeline soundness theorems.
 
-**Top level:** `Goblint_Formalization.thy` — example lemmas and `goblint_sign_sound`.
+**Top level:** the interprocedural / unified / side spine — `Trace_IP_Analysis_Sound`,
+`TD_IP_Soundness`, `Sign_IP_Soundness`, `Sign_Side_Soundness`, `Analysis_Sound`. The
+intra-procedural (classical) spine was extracted to the sibling repo
+`goblint-formalization-classical` (see `docs/CLASSICAL_SPINE_RETIREMENT.md`).
 
 **Pipeline (left to right):**
 

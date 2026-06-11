@@ -1,9 +1,39 @@
 # Migration — retire the classical (intra) spine into the unified/IP spine
 
-Status: **planning.** This is the deletion/rename phase the
-[[UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md]] deliberately deferred ("do not delete
-old names immediately"). U1–U4 already unified the *math*; this doc plans the
-*retirement* of the duplicate intra spine and the `_IP` suffix drop.
+Status: **executed (extraction + intra-top-layer deletion); `_IP` rename NOT done
+(infeasible as a rename — see below).** This was the deletion/rename phase the
+[[UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md]] deliberately deferred. U1–U4 already
+unified the *math*; this doc planned the *retirement* of the intra spine.
+
+## OUTCOME (what was actually done)
+
+- **Extraction.** The intra-procedural (classical) spine was copied into a
+  self-contained sibling repo `~/git/goblint-formalization-classical` (own `ROOT`,
+  TD fully vendored as plain files, builds sorry-free).
+- **Deletion from main** (branch `refactor/drop-classical-spine`). Removed the 16+1
+  intra-*only* leaf theories: `TD_Soundness`, `Sign_Soundness`,
+  `Interval_Soundness`, `Interval_Domain`, `Pipeline`, `Trace_Soundness`,
+  `TD_Widen_Interface`, `TD_WN_Interface`, `Goblint_Formalization`,
+  `CFG_Exit_Reachable`, and the 7 intra examples. Main went 58 -> 41 theories and
+  still builds green (IP / Side / unified untouched).
+- **Key structural finding — there is no separable "classical core" to delete.**
+  The IP/Side/unified spine is *built on* the intra foundation, not a duplicate of
+  it: `cfg_collect` (intra collecting) is used by `Analysis_Sound`
+  (`intra.collect_post_fixpoint_sound` / `intra_collect_eq`, the unified soundness
+  engine) and by the entire **Side (M3)** axis (`Sign_Side_Soundness`,
+  `TD_Side_CFG/Soundness`, `Example_Side_Global`). `Constraint_System_Sound`,
+  `CFG_Runs_To_Bridge`, the collecting layer, and `TD_Interface`'s intra locale are
+  all transitively imported by IP. So only the intra **analysis top layer** is
+  classical-only; the substrate stays.
+- **`_IP` rename is therefore NOT a rename.** Dropping `_IP` would rename
+  `cfg_collect_ip -> cfg_collect`, colliding with the load-bearing intra
+  `cfg_collect`. Making IP canonical requires first re-homing `Analysis_Sound` and
+  the Side axis off the intra collecting semantics — a deep refactor (Option B's
+  research slice), not a mechanical rename. Left undone deliberately.
+- **`TD_Interface` intra-locale trim** (`td_cfg_plain_solver` / `td_analyse`, now
+  used only inside `TD_Interface`): pending — needs an I/Q `.thy` edit + build.
+
+The original A/B analysis below predates the execution and is kept for context.
 
 Read first: `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` (U1–U4, done, green).
 
