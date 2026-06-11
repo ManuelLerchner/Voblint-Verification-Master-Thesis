@@ -2,11 +2,6 @@ theory TD_Side_IP_Soundness
   imports TD_Side_IP_Interface Constraint_System_IP_Sound CFG_Prune
 begin
 
-(* CFG_Prune transitively re-imports the plain TD (Basics) alongside the side
-   solver (Basics_side); the two share the name part_post_solution.  We work
-   exclusively with the side-effecting one. *)
-hide_const (open) Basics.part_post_solution
-
 (* -- Backward IP reachability lands in the side solver's dependency cone -- *)
 
 lemma ip_reaches_imp_trans_dep_or_eq_side:

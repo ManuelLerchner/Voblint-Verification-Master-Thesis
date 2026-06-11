@@ -1,5 +1,5 @@
 theory CFG_Prune
-  imports TD_CFG_IP_Core CFG_Collect_IP IMP2_Proc_to_CFG
+  imports CFG_Collect_IP IMP2_Proc_to_CFG
 begin
 
 (*
@@ -98,88 +98,10 @@ lemma finite_combines_prune_to:
   "finite (combines g) \<Longrightarrow> finite (combines (prune_to g v0))"
   using combines_prune_to_sub by (rule_tac finite_subset) auto
 
-(* -- reach discharge: ip_reaches ==> solver reach ------------------------ *)
-
-lemma dep_ip_rhs_tree_comb_call:
-  "(c, e) \<in> set cs \<Longrightarrow> c \<in> dep_aux \<sigma> (ip_rhs_tree tf join comb acc es cs)"
-proof (induct es arbitrary: acc)
-  case Nil
-  then show ?case
-    by (induct cs arbitrary: acc; auto simp: ip_rhs_tree.simps dep_aux.simps split: prod.splits)
-next
-  case (Cons p es')
-  then show ?case
-    by (cases p) (auto simp: ip_rhs_tree.simps dep_aux.simps)
-qed
-
-lemma dep_ip_rhs_tree_comb_exit:
-  "(c, e) \<in> set cs \<Longrightarrow> e \<in> dep_aux \<sigma> (ip_rhs_tree tf join comb acc es cs)"
-proof (induct es arbitrary: acc)
-  case Nil
-  then show ?case
-    by (induct cs arbitrary: acc; auto simp: ip_rhs_tree.simps dep_aux.simps split: prod.splits)
-next
-  case (Cons p es')
-  then show ?case
-    by (cases p) (auto simp: ip_rhs_tree.simps dep_aux.simps)
-qed
-
-lemma dep_ip_rhs_tree_combine:
-  assumes finC: "finite (combines g)"
-  assumes ce: "(c, ex, w) \<in> combines g"
-  shows "c \<in> dep (\<lambda>v. make_rhs_tree_ip g tf join_abs bot_abs s0 v) \<sigma> w
-       \<and> ex \<in> dep (\<lambda>v. make_rhs_tree_ip g tf join_abs bot_abs s0 v) \<sigma> w"
-proof -
-  define acc0 where
-    "acc0 = (if w = cfg_entry g then join_abs bot_abs s0 else bot_abs)"
-  have mem: "(c, ex) \<in> set (combine_predecessor_list g w)"
-    using ce finC by (simp add: combine_predecessors_def)
-  have dc: "c \<in> dep_aux \<sigma> (ip_rhs_tree tf join_abs combine_abs acc0
-      (predecessor_list g w) (combine_predecessor_list g w))"
-    by (rule dep_ip_rhs_tree_comb_call[OF mem])
-  have de: "ex \<in> dep_aux \<sigma> (ip_rhs_tree tf join_abs combine_abs acc0
-      (predecessor_list g w) (combine_predecessor_list g w))"
-    by (rule dep_ip_rhs_tree_comb_exit[OF mem])
-  show ?thesis
-    using dc de unfolding make_rhs_tree_ip_def Let_def dep_def acc0_def by simp
-qed
-
-lemma ip_reaches_imp_reach:
-  assumes fin: "finite (edges g)"
-  assumes finC: "finite (combines g)"
-  assumes "ip_reaches g v v0"
-  shows "v \<in> reach (\<lambda>v. make_rhs_tree_ip g tf join_abs bot_abs s0 v) \<sigma> v0"
-proof -
-  let ?T = "\<lambda>v. make_rhs_tree_ip g tf join_abs bot_abs s0 v"
-  from assms(3) have "(v, v0) \<in> {(u, w). ip_succ g u w}\<^sup>*"
-    unfolding ip_reaches_def .
-  thus ?thesis
-  proof (induction rule: converse_rtrancl_induct)
-    case base
-    show ?case by (rule reach.base)
-  next
-    case (step y z)
-    have su: "ip_succ g y z" using step.hyps(1) by simp
-    have zr: "z \<in> reach ?T \<sigma> v0" by (rule step.IH)
-    have ydep: "y \<in> dep ?T \<sigma> z"
-    proof -
-      from su consider
-        (e) a where "(y, a, z) \<in> edges g"
-        | (cc) e where "(y, e, z) \<in> combines g"
-        | (ce) c where "(c, y, z) \<in> combines g"
-        unfolding ip_succ_def by blast
-      then show ?thesis
-      proof cases
-        case e then show ?thesis using dep_ip_rhs_tree_edge[OF fin] by blast
-      next
-        case cc then show ?thesis using dep_ip_rhs_tree_combine[OF finC] by blast
-      next
-        case ce then show ?thesis using dep_ip_rhs_tree_combine[OF finC] by blast
-      qed
-    qed
-    show ?case using reach.step[OF zr ydep] .
-  qed
-qed
+(* The reach discharge for the retired plain top-down solver used to live here.
+   The side solver now discharges reachability via dep_side_rhs_tree_ip_* and
+   ip_reaches_imp_trans_dep_or_eq_side (TD_Side_IP_CFG / TD_Side_IP_Soundness).
+   The graph-level pruning frame below is solver-agnostic. *)
 
 (* -- collect frame: witness transport ------------------------------------ *)
 

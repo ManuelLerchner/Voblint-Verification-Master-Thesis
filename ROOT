@@ -30,14 +30,10 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Constraint_System_IP_Sound
     Analysis_Sound
     Trace_IP_Analysis_Sound
-    TD_CFG_Core
     Example_Proc_GraphViz
     Example_Side_Global
-    TD_IP_Soundness
     TD_Side_IP_Soundness
     Sign_Side_Soundness
-    Sign_IP_Soundness
     Sign_Side_IP_Soundness
-    Example_Proc_Global
     Example_Side_Proc_Global
     Example_Trace_Digest_Precision
