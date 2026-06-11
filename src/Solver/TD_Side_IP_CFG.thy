@@ -856,4 +856,33 @@ proof -
   show ?thesis using dc de unfolding side_cfg_T_ip_def dep\<^sub>L_def dep_def by simp
 qed
 
+(* -- Entry coverage from a globals-free initial state ----------------- *)
+
+(* At the entry point the local fold seeds restrict_local s0; if s0 carries no
+   globals then s0 itself is below the combined env at the entry. *)
+lemma s0_le_side_env_entry_ip:
+  assumes pp: "part_post_solution (side_cfg_T_ip g tf (\<squnion>) bot s0) v0 sigma vars"
+  assumes entry_in: "cfg_entry g \<in> vars"
+  assumes glob: "restrict_global s0 = bot"
+  shows "s0 \<le> side_env sigma (cfg_entry g)"
+proof -
+  have acc_le: "side_acc_ip tf (\<squnion>) (bot \<squnion> restrict_local s0) sigma
+                  (predecessor_list g (cfg_entry g)) (combine_predecessor_list g (cfg_entry g))
+                \<le> sigma (Inl (cfg_entry g))"
+    using side_post_solution_le_local_ip[OF pp entry_in] by simp
+  have "restrict_local s0 \<le> bot \<squnion> restrict_local s0" by simp
+  also have "... \<le> side_acc_ip tf (\<squnion>) (bot \<squnion> restrict_local s0) sigma
+                     (predecessor_list g (cfg_entry g)) (combine_predecessor_list g (cfg_entry g))"
+    by (rule side_acc_ip_ge_acc)
+  also have "... \<le> sigma (Inl (cfg_entry g))" by (rule acc_le)
+  finally have rl: "restrict_local s0 \<le> sigma (Inl (cfg_entry g))" .
+  have s0_eq: "s0 = restrict_local s0"
+  proof -
+    have "s0 = restrict_local s0 \<squnion> restrict_global s0"
+      by (rule restrict_local_global_join[symmetric])
+    thus ?thesis using glob by simp
+  qed
+  show ?thesis using rl s0_eq unfolding side_env_def by (simp add: le_supI1)
+qed
+
 end

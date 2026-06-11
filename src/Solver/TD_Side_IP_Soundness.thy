@@ -196,6 +196,53 @@ proof -
   show ?thesis using frame collect_pg by blast
 qed
 
+(*
+  Executable-facing soundness: run the side TD solver on the compiled program,
+  read back the combined env (side_analyse_ip), and over-approximate the IP
+  collecting semantics at the program exit.  The entry condition is discharged
+  from a globals-free initial state (restrict_global s0 = bot).  Mirrors
+  TD_IP_Soundness.td_analyse_ip_collect_sound_at_exit_pruned for the side solver.
+*)
+theorem side_analyse_ip_collect_sound_exit_pruned:
+  fixes pi ps main and s0 :: "'a abs_state" and S :: "store set"
+  assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes dom: "side_cfg_ip_solve_dom (compile_prog pi ps main) tf bot s0
+                  (cfg_exit (compile_prog pi ps main))"
+  assumes S_sound: "S \<le> gamma_state s0"
+  assumes glob: "restrict_global s0 = bot"
+  shows "cfg_collect_ip (compile_prog pi ps main) S (cfg_exit (compile_prog pi ps main))
+         \<le> gamma_state (side_analyse_ip pi ps main tf bot s0
+              (cfg_exit (compile_prog pi ps main)))"
+proof -
+  define g where "g = compile_prog pi ps main"
+  define v0 where "v0 = cfg_exit g"
+  interpret ip: td_cfg_side_ip_solver g tf bot s0
+    using tf_mono by unfold_locales
+  define sigma where "sigma = ip.side_sigma_at v0"
+  have fin: "finite (edges g)" unfolding g_def using compile_prog_finite by simp
+  have finC: "finite (combines g)" unfolding g_def using compile_prog_finite by simp
+  have dom': "side_cfg_ip_solve_dom g tf bot s0 v0"
+    using dom unfolding g_def v0_def by simp
+  have pp: "part_post_solution (side_cfg_T_ip g tf (\<squnion>) bot s0) v0 sigma (ip.side_stabl_at v0)"
+    using ip.side_solver_part_post_at_cfg[OF dom'] unfolding sigma_def
+    by (simp add: ip.cfg_side_T_ip_pkg_eq)
+  have entry_reach: "ip_reaches g (cfg_entry g) v0"
+    using compile_prog_entry_ip_reaches_exit unfolding g_def v0_def by simp
+  have entry_in: "cfg_entry g \<in> ip.side_stabl_at v0"
+    by (rule side_ip_cone_in_vars[OF pp fin finC entry_reach])
+  have entry_le: "s0 \<le> side_env sigma (cfg_entry g)"
+    by (rule s0_le_side_env_entry_ip[OF pp entry_in glob])
+  have entry_cov: "S \<le> gamma_state (side_env sigma (cfg_entry g))"
+    using S_sound gamma_state_mono[OF entry_le] by blast
+  have collect: "cfg_collect_ip g S (cfg_exit g) \<le> gamma_state (side_env sigma (cfg_exit g))"
+    by (rule side_collect_sound_ip_exit_pruned[OF pp[unfolded v0_def] fin finC entry_cov])
+  have analyse_eq:
+    "side_analyse_ip pi ps main tf bot s0 (cfg_exit g) = side_env sigma (cfg_exit g)"
+    unfolding side_analyse_ip_def sigma_def v0_def g_def by simp
+  show ?thesis
+    using collect analyse_eq by (simp add: g_def)
+qed
+
 end
 
 end
