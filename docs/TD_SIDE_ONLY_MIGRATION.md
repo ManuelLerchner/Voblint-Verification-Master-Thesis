@@ -1,9 +1,45 @@
 # Migration — retire `TD_plain`, depend only on `TD_side`
 
-Status: **planned, not started.** Goal: a single Goblint-faithful solver backend.
-The interprocedural (IP) analysis currently rides on the plain top-down solver
-(`TD_plain`); this migration re-expresses it over the side-effecting solver
-(`TD_side`) and then deletes `TD_plain` and everything built on it.
+Status: **DONE.** The interprocedural (IP) analysis now rides entirely on the
+side-effecting solver (`TD_side`); `TD_plain` and everything built on it have
+been deleted. `rg TD_plain src` is empty and the full `Goblint_Formalization`
+session builds green, sorry-free, with `TD.TD_plain` no longer loaded.
+
+Completed slices (each additive + build-gated until S5):
+
+* **S1** `TD_Side_IP_CFG` — `side_cfg_T_ip` (edge fold + combine fold over
+  `side_rhs_fold_ip`), denotation (`side_acc_ip`/`side_glob_ip`), full
+  monotonicity, dependency/side independence, and the three `TD_side`
+  preconditions (`is_mono_eq`/`mono_sides`/`mono_deps`). Also the per-edge and
+  per-combine post-solution bounds (`apply_tf_combined_le_ip`,
+  `combine_combined_le_ip`), dep membership, and the globals-free entry lemma.
+* **S2** `TD_Side_IP_Interface` — packages `cfg_side_T_ip_pkg`, interprets
+  `TD_side_mono`, reads back `side_sigma_at`/`side_stabl_at`/`side_env_at`, and
+  exposes the executable `side_analyse_ip` over `compile_prog`.
+* **S3** `TD_Side_IP_Soundness.side_collect_sound_ip_at` — IP collecting
+  soundness over a side post-solution, reusing the generic, solver-agnostic
+  bridge `post_fixpoint_sound_at_ip` with `env := side_env sigma`. The combine
+  result splits `restrict_local` (caller locals) / `restrict_global`
+  (callee-exit globals).
+* **S4** Reachability (`ip_reaches_imp_trans_dep_or_eq_side`,
+  `side_ip_cone_in_vars`) + pruned exit soundness
+  (`side_collect_sound_ip_exit_pruned`, no coverage hypothesis) + the executable
+  `side_analyse_ip_collect_sound_exit_pruned`, the Sign instantiation
+  (`Sign_Side_IP_Soundness.side_ip_sign_analysis_sound`), and the end-to-end
+  witness `Example_Side_Proc_Global`. The digest overlay (`Analysis_Sound`,
+  `Trace_IP_Analysis_Sound`) needed **no** re-point — it sits at the
+  constraint/collecting level and is solver-agnostic.
+* **S5** Deleted `TD_CFG_Core`, `TD_CFG_IP_Core`, `TD_Interface`,
+  `TD_IP_Soundness`, `Sign_IP_Soundness`, `Example_Proc_Global`; dropped
+  `CFG_Prune`'s plain reach-discharge lemmas and its `TD_CFG_IP_Core` import.
+
+Everything below is the original plan, kept for the record.
+
+---
+
+The interprocedural (IP) analysis used to ride on the plain top-down solver
+(`TD_plain`); this migration re-expressed it over the side-effecting solver
+(`TD_side`) and then deleted `TD_plain` and everything built on it.
 
 > This **reverses** the unified-handoff decision "two backends stay"
 > (`UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` §7). The justification: in Goblint the
