@@ -13,7 +13,6 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     "Pipeline"
     "Examples"
   theories
-    Goblint_Formalization
     IMP2_Globals
     IMP2_Proc
     IMP2_Proc_to_CFG
@@ -21,7 +20,6 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     TD_Side_Interface
     TD_Side_Soundness
     CFG_Trace_Collect
-    CFG_Exit_Reachable
     CFG_Collect_IP
     CFG_Prune
     CFG_Collect_IP_Adeq
@@ -30,23 +28,11 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Constraint_System_IP_Sound
     Analysis_Sound
     Trace_IP_Analysis_Sound
-    Trace_Soundness
     TD_CFG_Core
-    TD_Widen_Interface
-    TD_WN_Interface
-    Example_Sign_Analysis
-    Example_Interval_Analysis
-    Example_Interval_Widen
-    Example_CFG_Collecting_Equiv
-    Example_GraphViz
     Example_Proc_GraphViz
     Example_Side_Global
     TD_IP_Soundness
-    Sign_Soundness
     Sign_Side_Soundness
     Sign_IP_Soundness
-    Interval_Soundness
     Example_Proc_Global
-    Example_NonTerminating_Safe
-    Example_Trace_NonTerminating
     Example_Trace_Digest_Precision
