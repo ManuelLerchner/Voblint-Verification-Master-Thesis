@@ -11,7 +11,7 @@ TD_PATCH        := vendor/td-verification.patch
 AC_DIR          := vendor/autocorrode
 AC_PATCH        := vendor/autocorrode.patch
 
-.PHONY: all vendor build html jedit clean clean-vendor update-autocorrode refresh-autocorrode-patch refresh-td-patch
+.PHONY: all vendor bootstrap build html jedit clean clean-vendor update-autocorrode refresh-autocorrode-patch refresh-td-patch
 
 all: build
 
@@ -31,10 +31,20 @@ vendor:
 	  fi; \
 	fi
 
-# Build the project session. Depends on vendored TD solver.
+# Bootstrap: build all 4 sessions in topological order (fresh clone, no heaps).
+# Use -d (not -D) per session to avoid validating downstream sessions before
+# upstream heaps exist.
+bootstrap: vendor
+	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 Goblint_IMP2
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 -d src/CFG Goblint_CFG
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 -d src/CFG -d src/Analysis Goblint_Analysis
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . Goblint_Formalization
+
+# Build the top-level session (incremental; requires bootstrap heaps).
 build: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
-	$(ISABELLE) build -d $(AFP) -d $(TD_DIR) -D . $(SESSION)
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . $(SESSION)
 
 # HTML browser info for all session theories (see Isabelle System Manual, browser_info).
 # Output is copied to $(HTML_DIR)/ for a repo-local entry point; Isabelle also keeps a
@@ -42,7 +52,7 @@ build: vendor
 html: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
 	@test -n "$(ISABELLE_HOME_USER)" || { echo "ERROR: could not resolve ISABELLE_HOME_USER."; exit 1; }
-	$(ISABELLE) build -d $(AFP) -d $(TD_DIR) -D . -o browser_info -v $(SESSION)
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . -o browser_info $(SESSION)
 	@test -d "$(BROWSER_INFO_SRC)" || { echo "ERROR: browser_info missing at $(BROWSER_INFO_SRC)"; exit 1; }
 	rm -rf "$(HTML_DIR)"
 	mkdir -p "$(HTML_DIR)"

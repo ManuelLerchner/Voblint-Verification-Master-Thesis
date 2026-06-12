@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 IR="$REPO_ROOT/vendor/autocorrode/ir/repl.py"
 
-# Session "TD" (theory TD.TD_plain) vendor submodule ROOT
+# Session "TD" (theory TD.TD_side) vendor submodule ROOT
 TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$REPO_ROOT/vendor/td-verification}"
 if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
   echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)."
