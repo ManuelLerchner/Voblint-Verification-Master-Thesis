@@ -1,4 +1,4 @@
-theory CFG_Edges_Collect imports IMP2_SmallStep CFG_Path IMP2_Globals
+theory CFG_Edges_Collect imports "Goblint_IMP2.IMP2_SmallStep" CFG_Path "Goblint_IMP2.IMP2_Globals"
 begin
 
 (* Per-edge and path-based store-set collecting (edges_collect fold). *)

@@ -1,0 +1,10 @@
+session Goblint_Formalization in "." = "Goblint_Analysis" +
+  description "End-to-end soundness pipeline and examples"
+  directories
+    "../Pipeline"
+    "../Examples"
+  theories
+    Trace_IP_Analysis_Sound
+    Example_Proc_GraphViz
+    Example_Side_Proc_Global
+    Example_Trace_Digest_Precision

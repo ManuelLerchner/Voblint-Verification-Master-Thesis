@@ -1,5 +1,5 @@
 theory TD_Side_IP_Soundness
-  imports TD_Side_IP_Interface Constraint_System_IP_Sound CFG_Prune
+  imports TD_Side_IP_Interface Constraint_System_IP_Sound "Goblint_CFG.CFG_Prune"
 begin
 
 (* -- Backward IP reachability lands in the side solver's dependency cone -- *)

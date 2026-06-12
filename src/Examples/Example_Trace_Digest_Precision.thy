@@ -1,5 +1,5 @@
 theory Example_Trace_Digest_Precision
-  imports Trace_IP_Analysis_Sound Sign_Domain
+  imports Trace_IP_Analysis_Sound "Goblint_Analysis.Sign_Domain"
 begin
 
 (*

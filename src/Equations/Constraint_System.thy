@@ -1,5 +1,5 @@
 theory Constraint_System
-  imports CFG_Def Abstract_Domain IMP2_Globals IMP2_SmallStep
+  imports "Goblint_CFG.CFG_Def" Abstract_Domain "Goblint_IMP2.IMP2_Globals" "Goblint_IMP2.IMP2_SmallStep"
 begin
 
 (*

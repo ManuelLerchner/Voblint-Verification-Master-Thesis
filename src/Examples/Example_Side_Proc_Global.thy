@@ -1,7 +1,7 @@
 section \<open>Example: TD\_side Sign Analysis on a Single Global Increment Call\<close>
 
 theory Example_Side_Proc_Global
-  imports Sign_Side_IP_Soundness CFG_Collect_IP_Adeq
+  imports "Goblint_Analysis.Sign_Side_IP_Soundness" "Goblint_CFG.CFG_Collect_IP_Adeq"
 begin
 
 text \<open>

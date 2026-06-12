@@ -1,0 +1,20 @@
+session Goblint_Analysis in "." = "Goblint_CFG" +
+  description "Abstract domains, constraint systems, and TD solver bridge"
+  sessions
+    TD
+  directories
+    "../Domains"
+    "../Equations"
+    "../Solver"
+  theories
+    Abstract_Domain
+    Sign_Domain
+    Constraint_System
+    Constraint_System_Sound
+    Constraint_System_IP_Sound
+    Analysis_Sound
+    TD_Side_CFG
+    TD_Side_IP_CFG
+    TD_Side_IP_Interface
+    TD_Side_IP_Soundness
+    Sign_Side_IP_Soundness
