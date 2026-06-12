@@ -3,9 +3,9 @@ session Goblint_Analysis in "." = "Goblint_CFG" +
   sessions
     TD
   directories
-    "../Domains"
-    "../Equations"
-    "../Solver"
+    "Domains"
+    "Equations"
+    "Solver"
   theories
     Abstract_Domain
     Sign_Domain

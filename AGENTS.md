@@ -47,14 +47,15 @@ Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); 
 # Repository layout
 
 ```
-src/                       README.md — session map
 src/IMP2/                  syntax + small-step (README)
 src/CFG/                   CFG core (README); Collecting/ — cfg_collect (README)
-src/Domains/               abstract domains (README)
-src/Equations/             constraint systems + soundness (README)
-src/Examples/              executable demos (README)
-src/Solver/                TD solver bridge (README)
-src/Pipeline/              end-to-end soundness (README)
+src/Analysis/              Goblint_Analysis session
+src/Analysis/Domains/      abstract domains (README)
+src/Analysis/Equations/    constraint systems + soundness (README)
+src/Analysis/Solver/       TD solver bridge (README)
+src/Formalization/         Goblint_Formalization session
+src/Formalization/Pipeline/ end-to-end soundness (README)
+src/Formalization/Examples/ executable demos (README)
 vendor/td-verification/    TD solver (AFP session `TD`, submodule)
 vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
 ```
@@ -272,7 +273,7 @@ Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/star
   * Recovery if you slipped and used `Edit`: re-issue the same change via I/Q `write_file str_replace` to sync the buffer.
 * I/Q `write_file`: prefer `str_replace` over `line`/`insert` minimal diff keeps the doc model consistent.
 * I/R: after `.thy` edit → `load_theory(<FQN>)` to re-sync heap.
-* I/R `init` uses fully-qualified imports, e.g. `Goblint_Formalization.CFG_Runs_To_Bridge`.
+* I/R `init` uses fully-qualified imports, e.g. `Goblint_CFG.CFG_Collect_Unified`.
 * I/R `step` one Isar line per call.
 * `sledgehammer` timeout ≤ 15s. Paste back `blast` / `auto` / `meson`. `metis`/`smt` only if fast in batch.
 * `nitpick` via `step`: `lemma … nitpick [timeout=5] oops`.
