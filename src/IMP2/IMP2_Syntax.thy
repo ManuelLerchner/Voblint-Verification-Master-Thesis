@@ -52,15 +52,6 @@ datatype bexp =
 abbreviation Bc :: "bool \<Rightarrow> bexp"
   where "Bc v \<equiv> BaseB (BExp.Bc v)"
 
-(* -- Commands ------------------------------------------------------- *)
-
-datatype com =
-    SKIP
-  | Assign vname aexp            ("_ ::= _"  [1000, 61] 61)
-  | Seq    com   com             ("_ ;; _"   [60,  61]  60)
-  | If     bexp  com  com        ("IF _ THEN _ ELSE _"   [0, 0, 61] 61)
-  | While  bexp  com             ("WHILE _ DO _"         [0, 61]    61)
-
 instance aexp :: countable
   by countable_datatype
 

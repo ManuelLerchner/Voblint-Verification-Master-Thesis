@@ -11,9 +11,9 @@ begin
 
   Recommended use (clean output): the ML helper at the bottom of this
   theory writelns the DOT text into the Isabelle output panel:
-     ML_val \<open>CFG_GraphViz.writeln_dot (to_cfg my_program)\<close>
+     ML_val \<open>CFG_GraphViz.writeln_dot (compile_prog proc_table [''main''] prog)\<close>
 
-  See Examples/Example_GraphViz.thy for concrete programs.
+  See Examples/Example_Proc_GraphViz.thy for concrete programs.
 *)
 
 (* -- Helpers: numbers to strings ----------------------------------- *)
@@ -198,7 +198,7 @@ definition to_graphviz_regions ::
   (every `@{code ...}` antiquotation compiles its own generated-code
   snapshot, so the decoder must share its block with the calls).
 
-  Pattern (see Examples/Example_GraphViz.thy):
+  Pattern (see Examples/Example_Proc_GraphViz.thy):
 
     ML \<open>
       fun b x = if x then 1 else 0
@@ -208,7 +208,7 @@ definition to_graphviz_regions ::
       fun writeln_dot c =
         writeln (String.implode (map gchar (@{code to_graphviz} c)))
 
-      val _ = writeln_dot (@{code to_cfg} @{code my_program})
+      val _ = writeln_dot (@{code compile_prog} proc_table [''main''] prog)
       ...
     \<close>
 *)

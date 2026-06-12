@@ -1,5 +1,5 @@
 theory Constraint_System_Sound
-  imports Constraint_System CFG_Runs_To_Bridge
+  imports Constraint_System CFG_Collecting_Core
 begin
 
 (*
@@ -310,37 +310,6 @@ proof -
     unfolding cfg_collect_def
     by (rule lfp_lowerbound[where f="cfg_collect_F g S", OF key])
   then show ?thesis by (auto simp: le_fun_def)
-qed
-
-end
-
-context sound_transfer
-begin
-
-(* -- Corollary: Exit-Point Soundness ---------------------------- *)
-(*
-  At the exit point, the abstract value covers all reachable output states.
-*)
-
-corollary exit_sound:
-  assumes post_fp: "is_post_fixpoint (to_cfg c) tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
-  assumes s_in_S: "s \<in> S"
-  assumes exit_in_collect:
-    "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-  shows   "t \<in> gamma_state (env (cfg_exit (to_cfg c)))"
-proof -
-  have fin: "finite (edges (to_cfg c))"
-    by (rule to_cfg_finite)
-  have pfp: "\<forall>v. cfg_collect (to_cfg c) S v \<le> gamma_state (env v)"
-    by (rule post_fixpoint_sound[OF fin post_fp S_sound])
-  have t_in_sing: "t \<in> cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))"
-    using exit_in_collect .
-  have t_in_cfg: "t \<in> cfg_collect (to_cfg c) S (cfg_exit (to_cfg c))"
-    using t_in_sing s_in_S cfg_collect_mono_S[of "{s}" S "to_cfg c"]
-    by (auto simp: le_fun_def)
-  from pfp[rule_format, of "cfg_exit (to_cfg c)"] t_in_cfg
-    show ?thesis by blast
 qed
 
 end

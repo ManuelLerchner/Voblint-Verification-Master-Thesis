@@ -9,8 +9,6 @@ begin
     - each procedure body compiled once at a fresh offset;
     - call sites get unary enter edges `(call, EA_Enter, proc_entry)`;
     - returns use combine triples `(call, proc_exit, return)` in `combines g`.
-
-  Additive: `IMP2_to_CFG` / `to_cfg` on `com` is unchanged.
 *)
 
 type_synonym proc_info =

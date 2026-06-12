@@ -19,8 +19,6 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     TD_Side_CFG
     TD_Side_IP_CFG
     TD_Side_IP_Interface
-    TD_Side_Interface
-    TD_Side_Soundness
     CFG_Trace_Collect
     CFG_Collect_IP
     CFG_Prune
@@ -31,9 +29,7 @@ session "Goblint_Formalization" in "src" = "HOL-IMP" +
     Analysis_Sound
     Trace_IP_Analysis_Sound
     Example_Proc_GraphViz
-    Example_Side_Global
     TD_Side_IP_Soundness
-    Sign_Side_Soundness
     Sign_Side_IP_Soundness
     Example_Side_Proc_Global
     Example_Trace_Digest_Precision
