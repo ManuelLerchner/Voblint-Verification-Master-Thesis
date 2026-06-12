@@ -20,18 +20,18 @@ definition side_proc_global_s0 :: "sign abs_state" where
 theorem proc_global_side_sign_analysis:
   fixes s t :: store
   assumes s_sound: "s \<in> sign_domain.gamma_state side_proc_global_s0"
-  assumes runs: "pruns_to_ip inc_pi [''p''] (PCall ''p'') s t"
+  assumes runs: "pruns_to_ip inc_pi [''p''] (Call ''p'') s t"
   assumes side_solve_dom:
-    "side_cfg_ip_solve_dom (compile_prog inc_pi [''p''] (PCall ''p'')) sign_tf bot
+    "side_cfg_ip_solve_dom (compile_prog inc_pi [''p''] (Call ''p'')) sign_tf bot
        side_proc_global_s0
-       (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
+       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
   shows "t \<in> sign_domain.gamma_state
-       (side_analyse_ip inc_pi [''p''] (PCall ''p'') sign_tf bot side_proc_global_s0
-         (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p''))))"
+       (side_analyse_ip inc_pi [''p''] (Call ''p'') sign_tf bot side_proc_global_s0
+         (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
 proof -
   have collect_exit:
-    "t \<in> cfg_collect_ip (compile_prog inc_pi [''p''] (PCall ''p'')) {s}
-       (cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')))"
+    "t \<in> cfg_collect_ip (compile_prog inc_pi [''p''] (Call ''p'')) {s}
+       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
     using runs unfolding pruns_to_ip_def
     by (metis singleton_store_def)
   show ?thesis

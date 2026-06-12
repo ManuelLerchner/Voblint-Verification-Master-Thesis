@@ -1,15 +1,13 @@
 # IP-Only Consolidation
 
-Status: **DONE** (deletions); `pcom -> com` rename deferred. Authored 2026-06-12,
+Status: **DONE** (deletions + `pcom -> com` rename). Authored 2026-06-12,
 executed 2026-06-12. Supersedes the draft `TD_SIDE_FOLD_UNIFICATION_MIGRATION.md`.
 
 Phases 1-4 deletions landed in one slice on branch `consolidation/ip-only`:
 3908 lines removed across 14 `.thy` files, full `isabelle build` green. The
 classical `com` spine (intra side soundness, `to_cfg` cone, intra fold,
-`com` datatype + small-step) is gone; the side-effecting IP pipeline on `pcom`
-is the sole survivor. The optional `pcom -> com` identifier rename (Phase 4
-last bullet, ~700 occurrences, underspecified target names) is left as the
-separate follow-up the plan itself flags. See "Completion record" below.
+`com` datatype + small-step) is gone; the side-effecting IP pipeline (now
+renamed `pcom -> com`) is the sole survivor. See "Completion record" below.
 
 ## Goal
 
@@ -199,8 +197,20 @@ were substring matches of the `_ip` variants, not real uses.
 `IMP2_SmallStep`, keeping `aval`/`bval`. `pcom` (separate constructors
 `PSKIP`/...) is now the sole command language.
 
-**Deferred:** the `pcom -> com` / `pstep`/`compile_pcom`/`compile_prog`/
-`cfg_collect_ip` identifier rename. The plan flags it optional, mechanical, and
-"separate commits"; target names are left as `...`; scope is ~700 occurrences
-across 6+ files. It is cosmetic - `com` is already gone, so `pcom` is unambiguous
-- and is best done as its own reviewed slice.
+**Rename (follow-up slice, same branch).** Done by host `sed` + per-step build
+gate (the mechanical change is safer with `sed` than the desync-prone I/Q):
+
+- `pcom -> com` (datatype + all uses, incl. qualified `pcom.induct` etc.).
+  Verified no collisions (nothing live was named `com`) and no stray substrings.
+- `compile_pcom -> compile` (the plan's intended compiler name; `compile` was
+  freed by the Phase 2 `IMP2_to_CFG` deletion).
+- Constructors `PSKIP/PAssign/PSeq/PIf/PWhile/PScope/PCall/PRestore ->
+  SKIP/Assign/Seq/If/While/Scope/Call/Restore` (and the derived `pstep` rule
+  names `PSeqSE -> SeqSE`, `PIfTrue -> IfTrue`, ...). The `If` constructor
+  coexists with `HOL.If` (as the old `com` already did); build is clean.
+
+**Still deferred (deliberately):** `pstep`/`psteps`/`compile_prog`/
+`cfg_collect_ip`. The plan leaves their targets as `...`; the obvious drops
+collide (`cfg_collect_ip -> cfg_collect` clashes with the live generic
+`cfg_collect`; `pstep -> step` clashes with `star.step`), so they need chosen
+names and are best left as their own reviewed slice. They are unambiguous as-is.

@@ -123,7 +123,7 @@ end
 definition side_analyse_ip ::
     "proc_table
      \<Rightarrow> pname list
-     \<Rightarrow> pcom
+     \<Rightarrow> com
      => 'a::bounded_semilattice_sup_bot domain_transfer
      => 'a abs_state
      => 'a abs_state

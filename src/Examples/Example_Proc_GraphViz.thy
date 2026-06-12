@@ -30,14 +30,14 @@ text \<open>
 
 (* -- Example A: single call -------------------------------------- *)
 
-definition proc_p_body :: pcom where
-  "proc_p_body = PAssign ''Gx'' (Plus (V ''Gx'') (N 1))"
+definition proc_p_body :: com where
+  "proc_p_body = Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
 
 definition proc_table_a :: proc_table where
   "proc_table_a = ((\<lambda>_. None)(''p'' := Some proc_p_body))"
 
-definition prog_call_p :: pcom where
-  "prog_call_p = PCall ''p''"
+definition prog_call_p :: com where
+  "prog_call_p = Call ''p''"
 
 definition cfg_call_p :: cfg where
   "cfg_call_p = compile_prog proc_table_a [''p''] prog_call_p"
@@ -53,15 +53,15 @@ definition proc_exits_call_p :: "pp list" where
 
 (* -- Example B: two procedures + branch -------------------------- *)
 
-definition proc_q_body :: pcom where
-  "proc_q_body = PAssign ''Gy'' (Plus (V ''Gy'') (N 1))"
+definition proc_q_body :: com where
+  "proc_q_body = Assign ''Gy'' (Plus (V ''Gy'') (N 1))"
 
 definition proc_table_b :: proc_table where
   "proc_table_b = (proc_table_a(''q'' := Some proc_q_body))"
 
-definition prog_if_calls :: pcom where
+definition prog_if_calls :: com where
   "prog_if_calls =
-     PIf (Less (V ''Gx'') (V ''Gy'')) (PCall ''p'') (PCall ''q'')"
+     If (Less (V ''Gx'') (V ''Gy'')) (Call ''p'') (Call ''q'')"
 
 definition cfg_if_calls :: cfg where
   "cfg_if_calls = compile_prog proc_table_b [''p'', ''q''] prog_if_calls"

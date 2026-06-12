@@ -183,96 +183,96 @@ lemma ip_reaches_mk_mono:
   shows "ip_reaches (mk_ip_cfg a' b' E2 C2) v w"
   by (rule ip_reaches_mono[OF _ _ assms(3)]) (use assms in auto)
 
-lemma compile_pcom_entry_ip_reaches_exit:
-  "compile_pcom pi lay c n = (n', en, ex, E, C) \<Longrightarrow>
+lemma compile_entry_ip_reaches_exit:
+  "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow>
    ip_reaches (mk_ip_cfg en ex E C) en ex"
-proof (induction c arbitrary: n n' en ex E C rule: pcom.induct)
-  case PSKIP
+proof (induction c arbitrary: n n' en ex E C rule: com.induct)
+  case SKIP
   then show ?case by (auto intro: ip_reaches_edge)
 next
-  case (PAssign x a)
+  case (Assign x a)
   then show ?case by (auto intro: ip_reaches_edge)
 next
-  case (PSeq c1 c2)
+  case (Seq c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-        c1: "compile_pcom pi lay c1 n = (n1, en1, ex1, E1, C1)"
-    and c2: "compile_pcom pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+        c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
+    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and res: "en = en1" "ex = ex2"
              "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2" "C = C1 \<union> C2"
-    using PSeq.prems by (auto split: prod.splits)
+    using Seq.prems by (auto split: prod.splits)
   have r1: "ip_reaches (mk_ip_cfg en ex E C) en1 ex1"
   proof (rule ip_reaches_mk_mono)
     show "E1 \<subseteq> E" using res by auto
     show "C1 \<subseteq> C" using res by auto
-    show "ip_reaches (mk_ip_cfg en1 ex1 E1 C1) en1 ex1" using PSeq.IH(1)[OF c1] .
+    show "ip_reaches (mk_ip_cfg en1 ex1 E1 C1) en1 ex1" using Seq.IH(1)[OF c1] .
   qed
   have r2: "ip_reaches (mk_ip_cfg en ex E C) en2 ex2"
   proof (rule ip_reaches_mk_mono)
     show "E2 \<subseteq> E" using res by auto
     show "C2 \<subseteq> C" using res by auto
-    show "ip_reaches (mk_ip_cfg en2 ex2 E2 C2) en2 ex2" using PSeq.IH(2)[OF c2] .
+    show "ip_reaches (mk_ip_cfg en2 ex2 E2 C2) en2 ex2" using Seq.IH(2)[OF c2] .
   qed
   have re: "ip_reaches (mk_ip_cfg en ex E C) ex1 en2"
     using res by (auto intro: ip_reaches_edge)
   show ?case
     using r1 re r2 res by (auto intro: ip_reaches_trans)
 next
-  case (PIf b c1 c2)
+  case (If b c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-        c1: "compile_pcom pi lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
-    and c2: "compile_pcom pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+        c1: "compile pi lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
+    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and res: "en = n" "ex = n2"
              "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
                    \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
              "C = C1 \<union> C2"
-    using PIf.prems by (auto split: prod.splits)
+    using If.prems by (auto split: prod.splits)
   have e_en1: "ip_reaches (mk_ip_cfg en ex E C) n en1"
     using res by (auto intro: ip_reaches_edge)
   have r1: "ip_reaches (mk_ip_cfg en ex E C) en1 ex1"
   proof (rule ip_reaches_mk_mono)
     show "E1 \<subseteq> E" using res by auto
     show "C1 \<subseteq> C" using res by auto
-    show "ip_reaches (mk_ip_cfg en1 ex1 E1 C1) en1 ex1" using PIf.IH(1)[OF c1] .
+    show "ip_reaches (mk_ip_cfg en1 ex1 E1 C1) en1 ex1" using If.IH(1)[OF c1] .
   qed
   have ex1_xn: "ip_reaches (mk_ip_cfg en ex E C) ex1 n2"
     using res by (auto intro: ip_reaches_edge)
   show ?case
     using e_en1 r1 ex1_xn res by (auto intro: ip_reaches_trans)
 next
-  case (PWhile b c)
+  case (While b c)
   obtain n1 en1 ex1 E1 C1 where
-        cc: "compile_pcom pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
+        cc: "compile pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and res: "en = n" "ex = n1"
              "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1
                    \<union> {(ex1, EA_Nop, n)}"
              "C = C1"
-    using PWhile.prems by (auto split: prod.splits)
+    using While.prems by (auto split: prod.splits)
   show ?case using res by (auto intro: ip_reaches_edge)
 next
-  case (PScope c)
+  case (Scope c)
   obtain m ein exin Ein Cin where
-        cc: "compile_pcom pi lay c (Suc n) = (m, ein, exin, Ein, Cin)"
+        cc: "compile pi lay c (Suc n) = (m, ein, exin, Ein, Cin)"
     and res: "en = n" "ex = m"
              "E = Ein \<union> {(n, EA_Nop, ein)}"
              "C = Cin \<union> {(n, exin, m)}"
-    using PScope.prems by (auto split: prod.splits)
+    using Scope.prems by (auto split: prod.splits)
   show ?case using res by (auto intro: ip_reaches_combine_call)
 next
-  case (PCall p)
+  case (Call p)
   show ?case
   proof (cases "lay p")
     case None
-    then show ?thesis using PCall.prems by (auto intro: ip_reaches_refl)
+    then show ?thesis using Call.prems by (auto intro: ip_reaches_refl)
   next
     case (Some info)
     obtain en_p ex_p E_p C_p where info: "info = (en_p, ex_p, E_p, C_p)"
       by (cases info)
     have res: "en = n" "ex = n + 1" "E = {(n, EA_Enter, en_p)}" "C = {(n, ex_p, n + 1)}"
-      using PCall.prems Some info by auto
+      using Call.prems Some info by auto
     show ?thesis using res by (auto intro: ip_reaches_combine_call)
   qed
 next
-  case PRestore
+  case Restore
   then show ?case by (auto intro: ip_reaches_refl)
 qed
 
@@ -284,13 +284,13 @@ proof -
     procs: "compile_procs_list pi ps (\<lambda>_. None) 0 = (n1, lay, E_proc, C_proc)"
     by (cases "compile_procs_list pi ps (\<lambda>_. None) 0") auto
   obtain n2 en ex E_main C_main where
-    cmain: "compile_pcom pi lay main n1 = (n2, en, ex, E_main, C_main)"
-    by (cases "compile_pcom pi lay main n1") auto
+    cmain: "compile pi lay main n1 = (n2, en, ex, E_main, C_main)"
+    by (cases "compile pi lay main n1") auto
   have g_eq: "compile_prog pi ps main = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)"
     using procs cmain
     by (simp add: compile_prog_def compile_prog_with_regions_def Let_def)
   have rm: "ip_reaches (mk_ip_cfg en ex E_main C_main) en ex"
-    by (rule compile_pcom_entry_ip_reaches_exit[OF cmain])
+    by (rule compile_entry_ip_reaches_exit[OF cmain])
   have lift: "ip_reaches (mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)) en ex"
   proof (rule ip_reaches_mk_mono)
     show "E_main \<subseteq> E_proc \<union> E_main" by auto

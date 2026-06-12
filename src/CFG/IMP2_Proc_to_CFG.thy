@@ -3,7 +3,7 @@ theory IMP2_Proc_to_CFG
 begin
 
 (*
-  Interprocedural CFG compilation for `pcom` programs (M1 slice 1).
+  Interprocedural CFG compilation for `com` programs (M1 slice 1).
 
   Whole-program layout:
     - each procedure body compiled once at a fresh offset;
@@ -16,25 +16,25 @@ type_synonym proc_info =
 
 type_synonym proc_layout = "pname => proc_info option"
 
-fun compile_pcom ::
-  "proc_table => proc_layout => pcom => nat =>
+fun compile ::
+  "proc_table => proc_layout => com => nat =>
    nat * pp * pp * (pp * edge_action * pp) set * (pp * pp * pp) set"
 where
-    "compile_pcom pi lay PSKIP n =
+    "compile pi lay SKIP n =
        (n + 2, n, n + 1, {(n, EA_Nop, n + 1)}, {})"
 
-  | "compile_pcom pi lay (PAssign x a) n =
+  | "compile pi lay (Assign x a) n =
        (n + 2, n, n + 1, {(n, EA_Assign x a, n + 1)}, {})"
 
-  | "compile_pcom pi lay (PSeq c1 c2) n =
-       (let (n1, en1, ex1, E1, C1) = compile_pcom pi lay c1 n;
-            (n2, en2, ex2, E2, C2) = compile_pcom pi lay c2 n1
+  | "compile pi lay (Seq c1 c2) n =
+       (let (n1, en1, ex1, E1, C1) = compile pi lay c1 n;
+            (n2, en2, ex2, E2, C2) = compile pi lay c2 n1
         in  (n2, en1, ex2, E1 Un {(ex1, EA_Nop, en2)} Un E2, C1 Un C2))"
 
-  | "compile_pcom pi lay (PIf b c1 c2) n =
+  | "compile pi lay (If b c1 c2) n =
        (let en  = n;
-            (n1, en1, ex1, E1, C1) = compile_pcom pi lay c1 (n + 1);
-            (n2, en2, ex2, E2, C2) = compile_pcom pi lay c2 n1;
+            (n1, en1, ex1, E1, C1) = compile pi lay c1 (n + 1);
+            (n2, en2, ex2, E2, C2) = compile pi lay c2 n1;
             xn  = n2
         in  (n2 + 1, en, xn,
              {(en, EA_Assume b,    en1),
@@ -44,9 +44,9 @@ where
                  (ex2, EA_Nop, xn)},
              C1 Un C2))"
 
-  | "compile_pcom pi lay (PWhile b c) n =
+  | "compile pi lay (While b c) n =
        (let head = n;
-            (n1, en1, ex1, E1, C1) = compile_pcom pi lay c (n + 1);
+            (n1, en1, ex1, E1, C1) = compile pi lay c (n + 1);
             xn  = n1
         in  (n1 + 1, head, xn,
              {(head, EA_Assume b,    en1),
@@ -55,14 +55,14 @@ where
              Un {(ex1, EA_Nop, head)},
              C1))"
 
-  | "compile_pcom pi lay (PScope c) n =
-       (let (n', en, ex, E, C) = compile_pcom pi lay c (n + 1);
+  | "compile pi lay (Scope c) n =
+       (let (n', en, ex, E, C) = compile pi lay c (n + 1);
             scope_ex = n'
         in  (n' + 1, n, scope_ex,
              E Un {(n, EA_Nop, en)},
              C Un {(n, ex, scope_ex)}))"
 
-  | "compile_pcom pi lay (PCall p) n =
+  | "compile pi lay (Call p) n =
        (case lay p of
           None => (n + 1, n, n, {}, {})
         | Some (en_p, ex_p, E_p, C_p) =>
@@ -70,7 +70,7 @@ where
              {(n, EA_Enter, en_p)},
              {(n, ex_p, n + 1)}))"
 
-  | "compile_pcom pi lay PRestore n =
+  | "compile pi lay Restore n =
        (n, n, n, {}, {})"
 
 fun compile_procs_list ::
@@ -83,7 +83,7 @@ where
        (case pi p of
           None => compile_procs_list pi ps lay n
         | Some body =>
-            (let (n', en, ex, E, C) = compile_pcom pi lay body n;
+            (let (n', en, ex, E, C) = compile pi lay body n;
                  lay' = (case lay p of
                            None => (lay (p := Some (en, ex, E, C)))
                          | Some _ => lay);
@@ -106,9 +106,9 @@ definition proc_info_pp_list :: "proc_info \<Rightarrow> pp list" where
 definition proc_info_nodes :: "proc_info \<Rightarrow> pp set" where
   "proc_info_nodes info = set (proc_info_pp_list info)"
 
-definition pcom_pp_list ::
+definition com_pp_list ::
   "pp \<times> pp \<times> (pp \<times> edge_action \<times> pp) set \<times> (pp \<times> pp \<times> pp) set \<Rightarrow> pp list" where
-  "pcom_pp_list = proc_info_pp_list"
+  "com_pp_list = proc_info_pp_list"
 
 fun fold_proc_pps :: "pname list \<Rightarrow> proc_layout \<Rightarrow> pp set" where
   "fold_proc_pps [] lay = {}"
@@ -132,100 +132,100 @@ fun proc_list_regions :: "pname list \<Rightarrow> proc_layout \<Rightarrow> pro
       | Some info \<Rightarrow> (Some p, proc_info_pp_list info) # proc_list_regions ps lay)"
 
 definition compile_prog_with_regions ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pcom \<Rightarrow> cfg \<times> proc_region_list list" where
+  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> cfg \<times> proc_region_list list" where
   "compile_prog_with_regions pi ps main =
      (let (n1, lay, E_proc, C_proc) = compile_procs_list pi ps (\<lambda>_. None) 0;
-          (n2, en, ex, E_main, C_main) = compile_pcom pi lay main n1;
+          (n2, en, ex, E_main, C_main) = compile pi lay main n1;
           g = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main);
           main_reg = (None, main_region_pp_list (en, ex, E_main, C_main) ps lay)
       in  (g, main_reg # proc_list_regions ps lay))"
 
 definition compile_prog ::
-  "proc_table => pname list => pcom => cfg"
+  "proc_table => pname list => com => cfg"
 where
   "compile_prog pi ps main = fst (compile_prog_with_regions pi ps main)"
 
 definition compile_prog_regions ::
-  "proc_table => pname list => pcom => proc_region_list list"
+  "proc_table => pname list => com => proc_region_list list"
 where
   "compile_prog_regions pi ps main = snd (compile_prog_with_regions pi ps main)"
 
 (* -- Freshness / finiteness (CE1 baseline) -------------------------------- *)
 
-lemma compile_pcom_counter_mono:
-  "compile_pcom pi lay c n = (n', en, ex, E, C) \<Longrightarrow> n \<le> n'"
-proof (induction c arbitrary: n n' en ex E C rule: pcom.induct)
-  case PSKIP then show ?case by auto
+lemma compile_counter_mono:
+  "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow> n \<le> n'"
+proof (induction c arbitrary: n n' en ex E C rule: com.induct)
+  case SKIP then show ?case by auto
 next
-  case (PAssign x a) then show ?case by auto
+  case (Assign x a) then show ?case by auto
 next
-  case (PSeq c1 c2)
+  case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-    c1: "compile_pcom pi lay c1 n = (n1, en1, ex1, E1, C1)"
-    and c2: "compile_pcom pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+    c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
+    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and n': "n' = n2"
     by (auto split: prod.splits)
-  show ?case using PSeq.IH(1)[OF c1] PSeq.IH(2)[OF c2] n' by simp
+  show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] n' by simp
 next
-  case (PIf b c1 c2)
+  case (If b c1 c2)
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 xn where
-    c1: "compile_pcom pi lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
-    and c2: "compile_pcom pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+    c1: "compile pi lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
+    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and n': "n' = Suc n2"
     by (auto split: prod.splits)
-  show ?case using PIf.IH(1)[OF c1] PIf.IH(2)[OF c2] n' by simp
+  show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] n' by simp
 next
-  case (PWhile b c)
+  case (While b c)
   then obtain n1 en1 ex1 E1 C1 xn where
-    c: "compile_pcom pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
+    c: "compile pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and n': "n' = Suc n1"
     by (auto split: prod.splits)
-  show ?case using PWhile.IH[OF c] n' by simp
+  show ?case using While.IH[OF c] n' by simp
 next
-  case (PScope c)
+  case (Scope c)
   then obtain n1 en1 ex1 E1 C1 scope_ex where
-    c: "compile_pcom pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
+    c: "compile pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and n': "n' = Suc n1"
     and ex: "ex = scope_ex"
     by (auto split: prod.splits)
-  show ?case using PScope.IH[OF c] n' by simp
+  show ?case using Scope.IH[OF c] n' by simp
 next
-  case (PCall p) then show ?case by (auto split: option.splits prod.splits)
+  case (Call p) then show ?case by (auto split: option.splits prod.splits)
 next
-  case PRestore then show ?case by auto
+  case Restore then show ?case by auto
 qed
 
-lemma compile_pcom_finite:
-  "compile_pcom pi lay c n = (n', en, ex, E, C) \<Longrightarrow> finite E \<and> finite C"
-proof (induction c arbitrary: n n' en ex E C rule: pcom.induct)
-  case PSKIP
+lemma compile_finite:
+  "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow> finite E \<and> finite C"
+proof (induction c arbitrary: n n' en ex E C rule: com.induct)
+  case SKIP
   then show ?case by auto
 next
-  case (PAssign x a)
+  case (Assign x a)
   then show ?case by auto
 next
-  case (PSeq c1 c2)
+  case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-    c1: "compile_pcom pi lay c1 n = (n1, en1, ex1, E1, C1)"
-    and c2: "compile_pcom pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+    c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
+    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and E: "E = E1 Un {(ex1, EA_Nop, en2)} Un E2"
     and C: "C = C1 Un C2"
     by (auto split: prod.splits)
-  show ?case unfolding E C using PSeq.IH(1)[OF c1] PSeq.IH(2)[OF c2] by simp
+  show ?case unfolding E C using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] by simp
 next
-  case (PIf b c1 c2)
+  case (If b c1 c2)
   then show ?case by (auto split: prod.splits intro: finite_UnI)
 next
-  case (PWhile b c)
+  case (While b c)
   then show ?case by (auto split: prod.splits intro: finite_UnI)
 next
-  case (PScope c)
+  case (Scope c)
   then show ?case by (auto split: prod.splits intro: finite_UnI)
 next
-  case (PCall p)
+  case (Call p)
   then show ?case by (auto split: option.splits prod.splits)
 next
-  case PRestore
+  case Restore
   then show ?case by auto
 qed
 
@@ -244,12 +244,12 @@ next
   next
     case (Some body)
     with Cons obtain n1 en ex E0 C0 lay' n2 lay'' Eacc Cacc where
-      cp: "compile_pcom pi lay body n = (n1, en, ex, E0, C0)"
+      cp: "compile pi lay body n = (n1, en, ex, E0, C0)"
       and rest: "compile_procs_list pi ps lay' n1 = (n2, lay'', Eacc, Cacc)"
       and E: "E = E0 Un Eacc"
       and C: "C = C0 Un Cacc"
       by (auto split: prod.splits option.splits)
-    from compile_pcom_finite[OF cp] Cons.IH[OF rest] show ?thesis
+    from compile_finite[OF cp] Cons.IH[OF rest] show ?thesis
       unfolding E C by simp
   qed
 qed
@@ -259,7 +259,7 @@ lemma compile_prog_finite:
    \<and> finite (combines (compile_prog pi ps main))"
   unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
   by (auto simp: Let_def split: prod.splits
-       dest: compile_procs_list_finite compile_pcom_finite
+       dest: compile_procs_list_finite compile_finite
        intro: finite_UnI)
 
 end

@@ -13,7 +13,7 @@ definition singleton_store :: "store \<Rightarrow> store set" where
   "singleton_store s = {s}"
 
 definition pruns_to_ip ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pcom \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "pruns_to_ip pi ps c s t =
      (let g = compile_prog pi ps c in t \<in> cfg_collect_ip g (singleton_store s) (cfg_exit g))"
 
@@ -63,8 +63,8 @@ qed
 
 (* -- compile_prog shape for the increment witness ------------------ *)
 
-definition inc_body :: pcom where
-  "inc_body = PAssign ''Gx'' (Plus (V ''Gx'') (N 1))"
+definition inc_body :: com where
+  "inc_body = Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
 
 definition inc_pi :: proc_table where
   "inc_pi = (\<lambda>_. None)(''p'' := Some inc_body)"
@@ -82,17 +82,17 @@ lemma compile_procs_list_singleton_inc:
   "compile_procs_list inc_pi [''p''] (\<lambda>_. None) 0 =
      (2, ((\<lambda>_. None)(''p'' := Some (0, 1, {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {}))),
       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {})"
-  by (simp add: inc_pi_def inc_body_def compile_procs_list.simps compile_pcom.simps)
+  by (simp add: inc_pi_def inc_body_def compile_procs_list.simps compile.simps)
 
-lemma compile_pcom_inc_call:
-  "compile_pcom inc_pi
+lemma compile_inc_call:
+  "compile inc_pi
      ((\<lambda>_. None)(''p'' := Some (0, 1, { (0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {})))
-     (PCall ''p'') 2 =
+     (Call ''p'') 2 =
    (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
-  by (simp add: compile_pcom.simps)
+  by (simp add: compile.simps)
 
 lemma compile_prog_inc_entry:
-  "cfg_entry (compile_prog inc_pi [''p''] (PCall ''p'')) = 2"
+  "cfg_entry (compile_prog inc_pi [''p''] (Call ''p'')) = 2"
 proof -
   obtain lay E_proc C_proc where
     procs: "compile_procs_list inc_pi [''p''] (\<lambda>_. None) 0 = (2, lay, E_proc, C_proc)"
@@ -100,15 +100,15 @@ proof -
   have lay_eq: "lay = (\<lambda>_. None)(''p'' := Some (0, 1,
       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {}))"
     using procs compile_procs_list_singleton_inc by simp
-  have call: "compile_pcom inc_pi lay (PCall ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
-    using compile_pcom_inc_call unfolding lay_eq by simp
+  have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
+    using compile_inc_call unfolding lay_eq by simp
   show ?thesis
     unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
     using procs call by (simp add: Let_def split: prod.splits)
 qed
 
 lemma compile_prog_inc_exit:
-  "cfg_exit (compile_prog inc_pi [''p''] (PCall ''p'')) = 3"
+  "cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')) = 3"
 proof -
   obtain lay E_proc C_proc where
     procs: "compile_procs_list inc_pi [''p''] (\<lambda>_. None) 0 = (2, lay, E_proc, C_proc)"
@@ -116,15 +116,15 @@ proof -
   have lay_eq: "lay = (\<lambda>_. None)(''p'' := Some (0, 1,
       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {}))"
     using procs compile_procs_list_singleton_inc by simp
-  have call: "compile_pcom inc_pi lay (PCall ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
-    using compile_pcom_inc_call unfolding lay_eq by simp
+  have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
+    using compile_inc_call unfolding lay_eq by simp
   show ?thesis
     unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
     using procs call by (simp add: Let_def split: prod.splits)
 qed
 
 lemma compile_prog_inc_edges:
-  "edges (compile_prog inc_pi [''p''] (PCall ''p'')) =
+  "edges (compile_prog inc_pi [''p''] (Call ''p'')) =
      {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
       (2, EA_Enter, 0)}"
 proof -
@@ -134,8 +134,8 @@ proof -
   have lay_eq: "lay = (\<lambda>_. None)(''p'' := Some (0, 1,
       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {}))"
     using procs compile_procs_list_singleton_inc by simp
-  have call: "compile_pcom inc_pi lay (PCall ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
-    using compile_pcom_inc_call unfolding lay_eq by simp
+  have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
+    using compile_inc_call unfolding lay_eq by simp
   show ?thesis
     unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
     using procs call lay_eq compile_procs_list_singleton_inc
@@ -143,7 +143,7 @@ proof -
 qed
 
 lemma compile_prog_inc_combines:
-  "combines (compile_prog inc_pi [''p''] (PCall ''p'')) = {(2, 1, 3)}"
+  "combines (compile_prog inc_pi [''p''] (Call ''p'')) = {(2, 1, 3)}"
 proof -
   obtain lay E_proc C_proc where
     procs: "compile_procs_list inc_pi [''p''] (\<lambda>_. None) 0 = (2, lay, E_proc, C_proc)"
@@ -151,8 +151,8 @@ proof -
   have lay_eq: "lay = (\<lambda>_. None)(''p'' := Some (0, 1,
       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {}))"
     using procs compile_procs_list_singleton_inc by simp
-  have call: "compile_pcom inc_pi lay (PCall ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
-    using compile_pcom_inc_call unfolding lay_eq by simp
+  have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
+    using compile_inc_call unfolding lay_eq by simp
   show ?thesis
     unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
     using procs call lay_eq compile_procs_list_singleton_inc
@@ -252,9 +252,9 @@ qed
 
 lemma pruns_to_ip_pcall_global_increment:
   fixes s :: store
-  shows "pruns_to_ip inc_pi [''p''] (PCall ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pruns_to_ip inc_pi [''p''] (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  let ?g = "compile_prog inc_pi [''p''] (PCall ''p'')"
+  let ?g = "compile_prog inc_pi [''p''] (Call ''p'')"
   have collect_inc: "s(''Gx'' := s ''Gx'' + 1)
     \<in> cfg_collect_ip inc_g (singleton_store s) (cfg_exit inc_g)"
     using pcall_global_increment_cfg_collect_ip by simp
@@ -276,9 +276,9 @@ qed
 
 lemma pruns_to_inc_pcall:
   fixes s :: store
-  shows "pruns_to inc_pi (PCall ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pruns_to inc_pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have p: "inc_pi ''p'' = Some (PAssign ''Gx'' (Plus (V ''Gx'') (N 1)))"
+  have p: "inc_pi ''p'' = Some (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))"
     by (simp add: inc_pi_body inc_body_def)
   show ?thesis
     by (simp add: inc_body_def inc_pi_body pcall_global_increment)

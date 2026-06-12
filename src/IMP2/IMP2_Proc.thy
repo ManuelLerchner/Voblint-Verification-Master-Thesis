@@ -3,32 +3,32 @@ theory IMP2_Proc
 begin
 
 (*
-  Procedure-extended command language `pcom` with a frame-stack small-step
+  Procedure-extended command language `com` with a frame-stack small-step
   semantics, defined separately from the scalar command type `com`.
 
-  Procedures are parameterless (PCall p); parameters are passed via globals.
-  PScope and PCall both save the caller's locals on entry and restore them on
+  Procedures are parameterless (Call p); parameters are passed via globals.
+  Scope and Call both save the caller's locals on entry and restore them on
   exit via combine_states (globals from the callee's final store, locals from
   the saved frame).
 
-  The restore boundary is made explicit by the runtime-only marker PRestore:
-  the frame stack alone cannot locate a scope's end inside a PSeq, so entry
-  rewrites `PScope c` to `PSeq c PRestore` (frame pushed) and PRestore performs
-  the pop.  PRestore never appears in source programs.
+  The restore boundary is made explicit by the runtime-only marker Restore:
+  the frame stack alone cannot locate a scope's end inside a Seq, so entry
+  rewrites `Scope c` to `Seq c Restore` (frame pushed) and Restore performs
+  the pop.  Restore never appears in source programs.
 *)
 
-datatype pcom =
-    PSKIP
-  | PAssign vname aexp
-  | PSeq    pcom pcom
-  | PIf     bexp pcom pcom
-  | PWhile  bexp pcom
-  | PScope  pcom          (* local scope: save locals, restore on exit       *)
-  | PCall   pname         (* call parameterless procedure from the table     *)
-  | PRestore              (* runtime-only: pop a frame, restore caller locals *)
+datatype com =
+    SKIP
+  | Assign vname aexp
+  | Seq    com com
+  | If     bexp com com
+  | While  bexp com
+  | Scope  com          (* local scope: save locals, restore on exit       *)
+  | Call   pname         (* call parameterless procedure from the table     *)
+  | Restore              (* runtime-only: pop a frame, restore caller locals *)
 
 (* Procedure table: names to bodies. *)
-type_synonym proc_table = "pname \<Rightarrow> pcom option"
+type_synonym proc_table = "pname \<Rightarrow> com option"
 
 (* Runtime frame: the caller's store, whose locals are restored on return. *)
 type_synonym frame = store
@@ -36,66 +36,66 @@ type_synonym frame = store
 (* -- Frame-stack small-step ----------------------------------------- *)
 
 inductive
-  pstep :: "proc_table \<Rightarrow> pcom \<times> store \<times> frame list
-                       \<Rightarrow> pcom \<times> store \<times> frame list \<Rightarrow> bool"
+  pstep :: "proc_table \<Rightarrow> com \<times> store \<times> frame list
+                       \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
   for pi :: proc_table
 where
-  PAssign:  "pstep pi (PAssign x a, s, frs) (PSKIP, s(x := aval a s), frs)"
-| PSeq1:    "pstep pi (PSeq PSKIP c2, s, frs) (c2, s, frs)"
-| PSeq2:    "pstep pi (c1, s, frs) (c1', s', frs')
-             \<Longrightarrow> pstep pi (PSeq c1 c2, s, frs) (PSeq c1' c2, s', frs')"
-| PIfTrue:  "bval b s \<Longrightarrow> pstep pi (PIf b c1 c2, s, frs) (c1, s, frs)"
-| PIfFalse: "\<not> bval b s \<Longrightarrow> pstep pi (PIf b c1 c2, s, frs) (c2, s, frs)"
-| PWhile:   "pstep pi (PWhile b c, s, frs)
-                      (PIf b (PSeq c (PWhile b c)) PSKIP, s, frs)"
-| PScope:   "pstep pi (PScope c, s, frs) (PSeq c PRestore, s, s # frs)"
-| PCall:    "pi p = Some c
-             \<Longrightarrow> pstep pi (PCall p, s, frs) (PSeq c PRestore, s, s # frs)"
-| PRestore: "pstep pi (PRestore, s, fr # frs) (PSKIP, <fr|s>, frs)"
+  Assign:  "pstep pi (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
+| Seq1:    "pstep pi (Seq SKIP c2, s, frs) (c2, s, frs)"
+| Seq2:    "pstep pi (c1, s, frs) (c1', s', frs')
+             \<Longrightarrow> pstep pi (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+| IfTrue:  "bval b s \<Longrightarrow> pstep pi (If b c1 c2, s, frs) (c1, s, frs)"
+| IfFalse: "\<not> bval b s \<Longrightarrow> pstep pi (If b c1 c2, s, frs) (c2, s, frs)"
+| While:   "pstep pi (While b c, s, frs)
+                      (If b (Seq c (While b c)) SKIP, s, frs)"
+| Scope:   "pstep pi (Scope c, s, frs) (Seq c Restore, s, s # frs)"
+| Call:    "pi p = Some c
+             \<Longrightarrow> pstep pi (Call p, s, frs) (Seq c Restore, s, s # frs)"
+| Restore: "pstep pi (Restore, s, fr # frs) (SKIP, <fr|s>, frs)"
 
 abbreviation
-  psteps :: "proc_table \<Rightarrow> pcom \<times> store \<times> frame list
-                        \<Rightarrow> pcom \<times> store \<times> frame list \<Rightarrow> bool"
+  psteps :: "proc_table \<Rightarrow> com \<times> store \<times> frame list
+                        \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
 where "psteps pi x y \<equiv> star (pstep pi) x y"
 
 declare pstep.intros [simp, intro]
 
-inductive_cases PSkipSE[elim!]:    "pstep pi (PSKIP, s, frs) cfg"
-inductive_cases PAssignSE[elim!]:  "pstep pi (PAssign x a, s, frs) cfg"
-inductive_cases PSeqSE[elim]:      "pstep pi (PSeq c1 c2, s, frs) cfg"
-inductive_cases PIfSE[elim!]:      "pstep pi (PIf b c1 c2, s, frs) cfg"
-inductive_cases PWhileSE[elim!]:   "pstep pi (PWhile b c, s, frs) cfg"
-inductive_cases PScopeSE[elim!]:   "pstep pi (PScope c, s, frs) cfg"
-inductive_cases PCallSE[elim]:     "pstep pi (PCall p, s, frs) cfg"
-inductive_cases PRestoreSE[elim!]: "pstep pi (PRestore, s, frs) cfg"
+inductive_cases SkipSE[elim!]:    "pstep pi (SKIP, s, frs) cfg"
+inductive_cases AssignSE[elim!]:  "pstep pi (Assign x a, s, frs) cfg"
+inductive_cases SeqSE[elim]:      "pstep pi (Seq c1 c2, s, frs) cfg"
+inductive_cases IfSE[elim!]:      "pstep pi (If b c1 c2, s, frs) cfg"
+inductive_cases WhileSE[elim!]:   "pstep pi (While b c, s, frs) cfg"
+inductive_cases ScopeSE[elim!]:   "pstep pi (Scope c, s, frs) cfg"
+inductive_cases CallSE[elim]:     "pstep pi (Call p, s, frs) cfg"
+inductive_cases RestoreSE[elim!]: "pstep pi (Restore, s, frs) cfg"
 
 (* -- The semantics is deterministic --------------------------------- *)
 
 lemma pstep_deterministic:
   "pstep pi cs cs' \<Longrightarrow> pstep pi cs cs'' \<Longrightarrow> cs'' = cs'"
 proof (induction arbitrary: cs'' rule: pstep.induct)
-  case (PAssign x a s frs) then show ?case by blast
+  case (Assign x a s frs) then show ?case by blast
 next
-  case (PSeq1 c2 s frs) then show ?case by (blast elim: PSeqSE)
+  case (Seq1 c2 s frs) then show ?case by (blast elim: SeqSE)
 next
-  case (PSeq2 c1 s frs c1' s' frs' c2)
-  from PSeq2.prems PSeq2.hyps obtain c1'' s'' frs'' where
-    cs'': "cs'' = (PSeq c1'' c2, s'', frs'')" and
+  case (Seq2 c1 s frs c1' s' frs' c2)
+  from Seq2.prems Seq2.hyps obtain c1'' s'' frs'' where
+    cs'': "cs'' = (Seq c1'' c2, s'', frs'')" and
     step: "pstep pi (c1, s, frs) (c1'', s'', frs'')"
-    by (auto elim: PSeqSE)
-  from PSeq2.IH[OF step] cs'' show ?case by simp
+    by (auto elim: SeqSE)
+  from Seq2.IH[OF step] cs'' show ?case by simp
 next
-  case (PIfTrue b s c1 c2 frs) then show ?case by blast
+  case (IfTrue b s c1 c2 frs) then show ?case by blast
 next
-  case (PIfFalse b s c1 c2 frs) then show ?case by blast
+  case (IfFalse b s c1 c2 frs) then show ?case by blast
 next
-  case (PWhile b c s frs) then show ?case by blast
+  case (While b c s frs) then show ?case by blast
 next
-  case (PScope c s frs) then show ?case by blast
+  case (Scope c s frs) then show ?case by blast
 next
-  case (PCall p c s frs) then show ?case by (auto elim: PCallSE)
+  case (Call p c s frs) then show ?case by (auto elim: CallSE)
 next
-  case (PRestore s fr frs) then show ?case by auto
+  case (Restore s fr frs) then show ?case by auto
 qed
 
 (* -- Frame mechanism: a scope restores locals, commits globals ------ *)
@@ -114,42 +114,42 @@ lemma combine_after_local_assign:
 
 lemma scope_local_assign_noop:
   assumes "\<not> is_global x"
-  shows "psteps pi (PScope (PAssign x a), s, []) (PSKIP, s, [])"
+  shows "psteps pi (Scope (Assign x a), s, []) (SKIP, s, [])"
 proof -
   have eq: "<s | s(x := aval a s)> = s"
     by (rule combine_after_local_assign[OF assms])
   let ?s1 = "s(x := aval a s)"
-  have a: "pstep pi (PScope (PAssign x a), s, []) (PSeq (PAssign x a) PRestore, s, [s])"
-    by (rule PScope)
-  have b: "pstep pi (PSeq (PAssign x a) PRestore, s, [s]) (PSeq PSKIP PRestore, ?s1, [s])"
-    by (rule PSeq2[OF PAssign])
-  have c: "pstep pi (PSeq PSKIP PRestore, ?s1, [s]) (PRestore, ?s1, [s])"
-    by (rule PSeq1)
-  have d: "pstep pi (PRestore, ?s1, [s]) (PSKIP, <s | ?s1>, [])"
-    by (rule PRestore)
-  have "psteps pi (PScope (PAssign x a), s, []) (PSKIP, <s | ?s1>, [])"
+  have a: "pstep pi (Scope (Assign x a), s, []) (Seq (Assign x a) Restore, s, [s])"
+    by (rule Scope)
+  have b: "pstep pi (Seq (Assign x a) Restore, s, [s]) (Seq SKIP Restore, ?s1, [s])"
+    by (rule Seq2[OF Assign])
+  have c: "pstep pi (Seq SKIP Restore, ?s1, [s]) (Restore, ?s1, [s])"
+    by (rule Seq1)
+  have d: "pstep pi (Restore, ?s1, [s]) (SKIP, <s | ?s1>, [])"
+    by (rule Restore)
+  have "psteps pi (Scope (Assign x a), s, []) (SKIP, <s | ?s1>, [])"
     using a b c d by (meson star.refl star.step)
   with eq show ?thesis by simp
 qed
 
 (* -- Terminating runs ----------------------------------------------- *)
 
-(* A run of c from store s terminates in t when it reaches PSKIP with an empty
+(* A run of c from store s terminates in t when it reaches SKIP with an empty
    frame stack. *)
-definition pruns_to :: "proc_table \<Rightarrow> pcom \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pruns_to pi c s t = psteps pi (c, s, []) (PSKIP, t, [])"
+definition pruns_to :: "proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "pruns_to pi c s t = psteps pi (c, s, []) (SKIP, t, [])"
 
-lemma pruns_to_skip: "pruns_to pi PSKIP s s"
+lemma pruns_to_skip: "pruns_to pi SKIP s s"
   unfolding pruns_to_def by (rule star.refl)
 
-(* PSKIP is a normal form: no step leaves it (for any frame stack). *)
-lemma pstep_PSKIP_stuck: "\<not> pstep pi (PSKIP, s, frs) cs"
-  by (auto elim: PSkipSE)
+(* SKIP is a normal form: no step leaves it (for any frame stack). *)
+lemma pstep_SKIP_stuck: "\<not> pstep pi (SKIP, s, frs) cs"
+  by (auto elim: SkipSE)
 
-lemma pruns_to_assign: "pruns_to pi (PAssign x a) s (s(x := aval a s))"
+lemma pruns_to_assign: "pruns_to pi (Assign x a) s (s(x := aval a s))"
 proof -
-  have "pstep pi (PAssign x a, s, []) (PSKIP, s(x := aval a s), [])"
-    by (rule PAssign)
+  have "pstep pi (Assign x a, s, []) (SKIP, s(x := aval a s), [])"
+    by (rule Assign)
   thus ?thesis unfolding pruns_to_def by (meson star.refl star.step)
 qed
 
@@ -164,25 +164,25 @@ lemma combine_after_global_assign:
    while the caller's locals are restored.  Here the body increments the global
    ''Gx'', and the increment persists in the returned store. *)
 lemma pcall_global_increment:
-  assumes p: "pi ''p'' = Some (PAssign ''Gx'' (Plus (V ''Gx'') (N 1)))"
-  shows "pruns_to pi (PCall ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  assumes p: "pi ''p'' = Some (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))"
+  shows "pruns_to pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  let ?body = "PAssign ''Gx'' (Plus (V ''Gx'') (N 1))"
+  let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
   let ?v = "aval (Plus (V ''Gx'') (N 1)) s"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have a: "pstep pi (PCall ''p'', s, []) (PSeq ?body PRestore, s, [s])"
-    using p by (blast intro: PCall)
-  have b: "pstep pi (PSeq ?body PRestore, s, [s])
-                    (PSeq PSKIP PRestore, s(''Gx'' := ?v), [s])"
-    by (rule PSeq2[OF PAssign])
-  have c: "pstep pi (PSeq PSKIP PRestore, s(''Gx'' := ?v), [s])
-                    (PRestore, s(''Gx'' := ?v), [s])"
-    by (rule PSeq1)
-  have d: "pstep pi (PRestore, s(''Gx'' := ?v), [s]) (PSKIP, <s | s(''Gx'' := ?v)>, [])"
-    by (rule PRestore)
+  have a: "pstep pi (Call ''p'', s, []) (Seq ?body Restore, s, [s])"
+    using p by (blast intro: Call)
+  have b: "pstep pi (Seq ?body Restore, s, [s])
+                    (Seq SKIP Restore, s(''Gx'' := ?v), [s])"
+    by (rule Seq2[OF Assign])
+  have c: "pstep pi (Seq SKIP Restore, s(''Gx'' := ?v), [s])
+                    (Restore, s(''Gx'' := ?v), [s])"
+    by (rule Seq1)
+  have d: "pstep pi (Restore, s(''Gx'' := ?v), [s]) (SKIP, <s | s(''Gx'' := ?v)>, [])"
+    by (rule Restore)
   have eq: "<s | s(''Gx'' := ?v)> = s(''Gx'' := s ''Gx'' + 1)"
     using combine_after_global_assign[OF g] by simp
-  have "psteps pi (PCall ''p'', s, []) (PSKIP, <s | s(''Gx'' := ?v)>, [])"
+  have "psteps pi (Call ''p'', s, []) (SKIP, <s | s(''Gx'' := ?v)>, [])"
     using a b c d by (meson star.refl star.step)
   with eq show ?thesis unfolding pruns_to_def by simp
 qed
@@ -191,11 +191,11 @@ qed
 
 (* Reducing the first component of a sequence mirrors reducing it alone, with
    the frame stack threaded unchanged.  (Frame-aware analogue of star_seq2.) *)
-lemma psteps_PSeq2_cfg:
+lemma psteps_Seq2_cfg:
   assumes "star (pstep pi) X Y"
   shows "star (pstep pi)
-           (PSeq (fst X) c2, fst (snd X), snd (snd X))
-           (PSeq (fst Y) c2, fst (snd Y), snd (snd Y))"
+           (Seq (fst X) c2, fst (snd X), snd (snd X))
+           (Seq (fst Y) c2, fst (snd Y), snd (snd Y))"
   using assms
 proof (induction rule: star.induct)
   case (refl a)
@@ -205,57 +205,57 @@ next
   obtain ca sa fa where a: "a = (ca, sa, fa)" by (cases a) auto
   obtain cb sb fb where b: "b = (cb, sb, fb)" by (cases b) auto
   from step.hyps(1) a b have "pstep pi (ca, sa, fa) (cb, sb, fb)" by simp
-  hence "pstep pi (PSeq ca c2, sa, fa) (PSeq cb c2, sb, fb)" by (rule PSeq2)
+  hence "pstep pi (Seq ca c2, sa, fa) (Seq cb c2, sb, fb)" by (rule Seq2)
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
-lemma psteps_PSeq2:
+lemma psteps_Seq2:
   "star (pstep pi) (c1, s, frs) (c1', s', frs')
-   \<Longrightarrow> star (pstep pi) (PSeq c1 c2, s, frs) (PSeq c1' c2, s', frs')"
-  using psteps_PSeq2_cfg[where X = "(c1, s, frs)" and Y = "(c1', s', frs')"] by simp
+   \<Longrightarrow> star (pstep pi) (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+  using psteps_Seq2_cfg[where X = "(c1, s, frs)" and Y = "(c1', s', frs')"] by simp
 
 (* -- Structural composition of terminating runs ---------------------- *)
 
 (* Running c1 to s2 then c2 to t is a run of the sequence. *)
-lemma pruns_to_PSeq:
+lemma pruns_to_Seq:
   assumes "pruns_to pi c1 s s2" and "pruns_to pi c2 s2 t"
-  shows "pruns_to pi (PSeq c1 c2) s t"
+  shows "pruns_to pi (Seq c1 c2) s t"
 proof -
-  from assms(1) have a: "star (pstep pi) (PSeq c1 c2, s, []) (PSeq PSKIP c2, s2, [])"
-    unfolding pruns_to_def by (rule psteps_PSeq2)
-  have b: "pstep pi (PSeq PSKIP c2, s2, []) (c2, s2, [])" by (rule PSeq1)
+  from assms(1) have a: "star (pstep pi) (Seq c1 c2, s, []) (Seq SKIP c2, s2, [])"
+    unfolding pruns_to_def by (rule psteps_Seq2)
+  have b: "pstep pi (Seq SKIP c2, s2, []) (c2, s2, [])" by (rule Seq1)
   from a b assms(2) show ?thesis
     unfolding pruns_to_def by (meson star.step star_trans)
 qed
 
-lemma pruns_to_PIfTrue:
-  "bval b s \<Longrightarrow> pruns_to pi c1 s t \<Longrightarrow> pruns_to pi (PIf b c1 c2) s t"
-  unfolding pruns_to_def by (meson PIfTrue star.step)
+lemma pruns_to_IfTrue:
+  "bval b s \<Longrightarrow> pruns_to pi c1 s t \<Longrightarrow> pruns_to pi (If b c1 c2) s t"
+  unfolding pruns_to_def by (meson IfTrue star.step)
 
-lemma pruns_to_PIfFalse:
-  "\<not> bval b s \<Longrightarrow> pruns_to pi c2 s t \<Longrightarrow> pruns_to pi (PIf b c1 c2) s t"
-  unfolding pruns_to_def by (meson PIfFalse star.step)
+lemma pruns_to_IfFalse:
+  "\<not> bval b s \<Longrightarrow> pruns_to pi c2 s t \<Longrightarrow> pruns_to pi (If b c1 c2) s t"
+  unfolding pruns_to_def by (meson IfFalse star.step)
 
 (* A false guard exits the loop with the store unchanged. *)
-lemma pruns_to_PWhileFalse:
-  "\<not> bval b s \<Longrightarrow> pruns_to pi (PWhile b c) s s"
-  unfolding pruns_to_def by (meson PWhile PIfFalse star.refl star.step)
+lemma pruns_to_WhileFalse:
+  "\<not> bval b s \<Longrightarrow> pruns_to pi (While b c) s s"
+  unfolding pruns_to_def by (meson While IfFalse star.refl star.step)
 
 (* A true guard runs the body then re-enters the loop. *)
-lemma pruns_to_PWhileTrue:
+lemma pruns_to_WhileTrue:
   assumes b:    "bval b s"
       and body: "pruns_to pi c s s2"
-      and rest: "pruns_to pi (PWhile b c) s2 t"
-  shows "pruns_to pi (PWhile b c) s t"
+      and rest: "pruns_to pi (While b c) s2 t"
+  shows "pruns_to pi (While b c) s t"
 proof -
-  have seq: "pruns_to pi (PSeq c (PWhile b c)) s t"
-    using body rest by (rule pruns_to_PSeq)
-  have w: "pstep pi (PWhile b c, s, [])
-                    (PIf b (PSeq c (PWhile b c)) PSKIP, s, [])"
-    by (rule PWhile)
-  have i: "pstep pi (PIf b (PSeq c (PWhile b c)) PSKIP, s, [])
-                    (PSeq c (PWhile b c), s, [])"
-    using b by (rule PIfTrue)
+  have seq: "pruns_to pi (Seq c (While b c)) s t"
+    using body rest by (rule pruns_to_Seq)
+  have w: "pstep pi (While b c, s, [])
+                    (If b (Seq c (While b c)) SKIP, s, [])"
+    by (rule While)
+  have i: "pstep pi (If b (Seq c (While b c)) SKIP, s, [])
+                    (Seq c (While b c), s, [])"
+    using b by (rule IfTrue)
   from w i seq show ?thesis unfolding pruns_to_def by (meson star.step)
 qed
 
@@ -298,11 +298,11 @@ lemma pruns_to_determ:
   assumes "pruns_to pi c s t" and "pruns_to pi c s t'"
   shows "t = t'"
 proof -
-  from assms have s1: "star (pstep pi) (c, s, []) (PSKIP, t, [])"
-              and s2: "star (pstep pi) (c, s, []) (PSKIP, t', [])"
+  from assms have s1: "star (pstep pi) (c, s, []) (SKIP, t, [])"
+              and s2: "star (pstep pi) (c, s, []) (SKIP, t', [])"
     unfolding pruns_to_def by auto
-  have nb: "\<And>x. \<not> pstep pi (PSKIP, t, []) x" by (rule pstep_PSKIP_stuck)
-  have nc: "\<And>x. \<not> pstep pi (PSKIP, t', []) x" by (rule pstep_PSKIP_stuck)
+  have nb: "\<And>x. \<not> pstep pi (SKIP, t, []) x" by (rule pstep_SKIP_stuck)
+  have nc: "\<And>x. \<not> pstep pi (SKIP, t', []) x" by (rule pstep_SKIP_stuck)
   from pstep_star_determ[OF s1 s2 nb nc] show ?thesis by simp
 qed
 
