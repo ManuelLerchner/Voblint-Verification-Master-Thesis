@@ -1,8 +1,11 @@
 ISABELLE        ?= isabelle
 AFP             ?= $(HOME)/afp/thys
 SESSION         := Voblint_Formalization
+# All sessions, so a clean build forces every one to be (re)presented.
+# Isabelle only presents sessions it actually builds; on warm heaps the
+# up-to-date ancestors are skipped and their links render as [brackets].
+SESSIONS        := Voblint_IMP2 Voblint_CFG Voblint_Analysis Voblint_Formalization
 ISABELLE_HOME_USER ?= $(shell $(ISABELLE) getenv -b ISABELLE_HOME_USER 2>/dev/null)
-BROWSER_INFO_SRC := $(ISABELLE_HOME_USER)/browser_info/Unsorted/$(SESSION)
 HTML_DIR        := docs/html
 
 TD_DIR          := vendor/td-verification
@@ -52,13 +55,16 @@ build: vendor
 html: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
 	@test -n "$(ISABELLE_HOME_USER)" || { echo "ERROR: could not resolve ISABELLE_HOME_USER."; exit 1; }
-	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . -o browser_info $(SESSION)
-	@test -d "$(BROWSER_INFO_SRC)" || { echo "ERROR: browser_info missing at $(BROWSER_INFO_SRC)"; exit 1; }
+	# Clean build (-c) so every session is rebuilt and therefore presented.
+	# Isabelle emits HTML only for sessions it actually builds; -o browser_info
+	# on warm heaps would skip up-to-date ancestors (and re-presenting them
+	# collides on the isabelle_sources PRIMARY KEY). In fresh CI -c is a no-op.
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . -o browser_info -c $(SESSIONS)
 	rm -rf "$(HTML_DIR)"
 	mkdir -p "$(HTML_DIR)"
-	cp -R "$(BROWSER_INFO_SRC)/." "$(HTML_DIR)/"
+	cp -R "$(ISABELLE_HOME_USER)/browser_info/." "$(HTML_DIR)/"
 	touch "$(HTML_DIR)/.nojekyll"
-	@echo "Open $(HTML_DIR)/isabelle/index.html (session theories; includes transitive imports)."
+	@echo "Open $(HTML_DIR)/Unsorted/$(SESSION)/index.html"
 
 # Launch jEdit with the right session roots loaded.
 jedit: vendor
