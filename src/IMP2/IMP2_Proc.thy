@@ -48,9 +48,9 @@ where
 | IfFalse: "\<not> bval b s \<Longrightarrow> pstep pi (If b c1 c2, s, frs) (c2, s, frs)"
 | While:   "pstep pi (While b c, s, frs)
                       (If b (Seq c (While b c)) SKIP, s, frs)"
-| Scope:   "pstep pi (Scope c, s, frs) (Seq c Restore, s, s # frs)"
+| Scope:   "pstep pi (Scope c, s, frs) (Seq c Restore, enter_state s, s # frs)"
 | Call:    "pi p = Some c
-             \<Longrightarrow> pstep pi (Call p, s, frs) (Seq c Restore, s, s # frs)"
+             \<Longrightarrow> pstep pi (Call p, s, frs) (Seq c Restore, enter_state s, s # frs)"
 | Restore: "pstep pi (Restore, s, fr # frs) (SKIP, <fr|s>, frs)"
 
 abbreviation
@@ -116,12 +116,14 @@ lemma scope_local_assign_noop:
   assumes "\<not> is_global x"
   shows "psteps pi (Scope (Assign x a), s, []) (SKIP, s, [])"
 proof -
-  have eq: "<s | s(x := aval a s)> = s"
-    by (rule combine_after_local_assign[OF assms])
-  let ?s1 = "s(x := aval a s)"
-  have a: "pstep pi (Scope (Assign x a), s, []) (Seq (Assign x a) Restore, s, [s])"
+  (* Entry zeroes locals; the local write is then undone by the restore. *)
+  let ?es = "enter_state s"
+  let ?s1 = "?es(x := aval a ?es)"
+  have eq: "<s | ?s1> = s"
+    by (rule ext) (auto simp: enter_state_def assms)
+  have a: "pstep pi (Scope (Assign x a), s, []) (Seq (Assign x a) Restore, ?es, [s])"
     by (rule Scope)
-  have b: "pstep pi (Seq (Assign x a) Restore, s, [s]) (Seq SKIP Restore, ?s1, [s])"
+  have b: "pstep pi (Seq (Assign x a) Restore, ?es, [s]) (Seq SKIP Restore, ?s1, [s])"
     by (rule Seq2[OF Assign])
   have c: "pstep pi (Seq SKIP Restore, ?s1, [s]) (Restore, ?s1, [s])"
     by (rule Seq1)
@@ -168,21 +170,24 @@ lemma pcall_global_increment:
   shows "pruns_to pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
-  let ?v = "aval (Plus (V ''Gx'') (N 1)) s"
+  let ?es = "enter_state s"
+  let ?v = "aval (Plus (V ''Gx'') (N 1)) ?es"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have a: "pstep pi (Call ''p'', s, []) (Seq ?body Restore, s, [s])"
+  (* Entry zeroes locals; Gx is global, so the increment reads s ''Gx''. *)
+  have a: "pstep pi (Call ''p'', s, []) (Seq ?body Restore, ?es, [s])"
     using p by (blast intro: Call)
-  have b: "pstep pi (Seq ?body Restore, s, [s])
-                    (Seq SKIP Restore, s(''Gx'' := ?v), [s])"
+  have b: "pstep pi (Seq ?body Restore, ?es, [s])
+                    (Seq SKIP Restore, ?es(''Gx'' := ?v), [s])"
     by (rule Seq2[OF Assign])
-  have c: "pstep pi (Seq SKIP Restore, s(''Gx'' := ?v), [s])
-                    (Restore, s(''Gx'' := ?v), [s])"
+  have c: "pstep pi (Seq SKIP Restore, ?es(''Gx'' := ?v), [s])
+                    (Restore, ?es(''Gx'' := ?v), [s])"
     by (rule Seq1)
-  have d: "pstep pi (Restore, s(''Gx'' := ?v), [s]) (SKIP, <s | s(''Gx'' := ?v)>, [])"
+  have d: "pstep pi (Restore, ?es(''Gx'' := ?v), [s])
+                    (SKIP, <s | ?es(''Gx'' := ?v)>, [])"
     by (rule Restore)
-  have eq: "<s | s(''Gx'' := ?v)> = s(''Gx'' := s ''Gx'' + 1)"
-    using combine_after_global_assign[OF g] by simp
-  have "psteps pi (Call ''p'', s, []) (SKIP, <s | s(''Gx'' := ?v)>, [])"
+  have eq: "<s | ?es(''Gx'' := ?v)> = s(''Gx'' := s ''Gx'' + 1)"
+    by (rule ext) (simp add: enter_state_def is_global_def)
+  have "psteps pi (Call ''p'', s, []) (SKIP, <s | ?es(''Gx'' := ?v)>, [])"
     using a b c d by (meson star.refl star.step)
   with eq show ?thesis unfolding pruns_to_def by simp
 qed
@@ -259,7 +264,139 @@ proof -
   from w i seq show ?thesis unfolding pruns_to_def by (meson star.step)
 qed
 
-(* -- Determinism of terminating runs --------------------------------- *)
+
+(* -- Frame-stack extension ------------------------------------------ *)
+
+(* Extra frames appended at the bottom survive unchanged through any step. *)
+lemma pstep_frame_extend_cfg:
+  assumes "pstep pi X Y"
+  shows "pstep pi (fst X, fst (snd X), snd (snd X) @ extra)
+                  (fst Y, fst (snd Y), snd (snd Y) @ extra)"
+  using assms
+proof (induction rule: pstep.induct)
+  case Assign show ?case by (simp only: fst_conv snd_conv) (rule pstep.Assign)
+next
+  case Restore
+  show ?case by (simp only: fst_conv snd_conv append_Cons) (rule pstep.Restore)
+next
+  case Seq2 thus ?case by (auto intro: pstep.Seq2)
+qed simp_all
+
+lemma pstep_frame_extend:
+  "pstep pi (c, s, frs) (c', s', frs') ==>
+   pstep pi (c, s, frs @ extra) (c', s', frs' @ extra)"
+  using pstep_frame_extend_cfg[where X = "(c, s, frs)" and Y = "(c', s', frs')"]
+  by simp
+
+lemma psteps_frame_extend_cfg:
+  assumes "star (pstep pi) X Y"
+  shows "star (pstep pi)
+           (fst X, fst (snd X), snd (snd X) @ extra)
+           (fst Y, fst (snd Y), snd (snd Y) @ extra)"
+  using assms
+proof (induction rule: star.induct)
+  case (refl a) show ?case by (rule star.refl)
+next
+  case (step a b d)
+  obtain ca sa fa where a: "a = (ca, sa, fa)" by (cases a) auto
+  obtain cb sb fb where b: "b = (cb, sb, fb)" by (cases b) auto
+  from step.hyps(1) a b have "pstep pi (ca, sa, fa) (cb, sb, fb)" by simp
+  hence "pstep pi (ca, sa, fa @ extra) (cb, sb, fb @ extra)"
+    by (rule pstep_frame_extend)
+  with step.IH a b show ?case by (auto intro: star.step)
+qed
+
+lemma psteps_frame_extend:
+  "psteps pi (c, s, frs) (c', s', frs') ==>
+   psteps pi (c, s, frs @ extra) (c', s', frs' @ extra)"
+  using psteps_frame_extend_cfg[where X = "(c, s, frs)" and Y = "(c', s', frs')"]
+  by simp
+
+(* Lift body termination from empty stack to an arbitrary extra bottom. *)
+lemma psteps_frame_mono:
+  "psteps pi (c, s, []) (SKIP, t, []) ==>
+   psteps pi (c, s, extra) (SKIP, t, extra)"
+  using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
+  by simp
+
+(* -- Scope and Call termination ------------------------------------- *)
+
+lemma pruns_to_Scope:
+  assumes body: "pruns_to pi c (enter_state s) t'"
+  shows "pruns_to pi (Scope c) s (<s|t'>)"
+unfolding pruns_to_def
+proof -
+  have step_scope: "pstep pi (Scope c, s, []) (Seq c Restore, enter_state s, [s])"
+    by (rule Scope)
+  have body_lifted: "psteps pi (c, enter_state s, [s]) (SKIP, t', [s])"
+    using psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"] by simp
+  have body_seq: "psteps pi (Seq c Restore, enter_state s, [s]) (Seq SKIP Restore, t', [s])"
+    using psteps_Seq2[OF body_lifted] .
+  have step_seq1: "pstep pi (Seq SKIP Restore, t', [s]) (Restore, t', [s])"
+    by (rule Seq1)
+  have step_restore: "pstep pi (Restore, t', [s]) (SKIP, <s|t'>, [])"
+    by (rule Restore)
+  have tail: "psteps pi (Seq SKIP Restore, t', [s]) (SKIP, <s|t'>, [])"
+    using step_seq1 step_restore by (meson star.refl star.step)
+  have mid: "psteps pi (Seq c Restore, enter_state s, [s]) (SKIP, <s|t'>, [])"
+    using body_seq tail by (rule star_trans)
+  show "psteps pi (Scope c, s, []) (SKIP, <s|t'>, [])"
+    by (rule star.step[OF step_scope mid])
+qed
+
+lemma pruns_to_Call:
+  assumes p: "pi p = Some c"
+  assumes body: "pruns_to pi c (enter_state s) t'"
+  shows "pruns_to pi (Call p) s (<s|t'>)"
+unfolding pruns_to_def
+proof -
+  have step_call: "pstep pi (Call p, s, []) (Seq c Restore, enter_state s, [s])"
+    using p by (rule Call)
+  have body_lifted: "psteps pi (c, enter_state s, [s]) (SKIP, t', [s])"
+    using psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"] by simp
+  have body_seq: "psteps pi (Seq c Restore, enter_state s, [s]) (Seq SKIP Restore, t', [s])"
+    using psteps_Seq2[OF body_lifted] .
+  have step_seq1: "pstep pi (Seq SKIP Restore, t', [s]) (Restore, t', [s])"
+    by (rule Seq1)
+  have step_restore: "pstep pi (Restore, t', [s]) (SKIP, <s|t'>, [])"
+    by (rule Restore)
+  have tail: "psteps pi (Seq SKIP Restore, t', [s]) (SKIP, <s|t'>, [])"
+    using step_seq1 step_restore by (meson star.refl star.step)
+  have mid: "psteps pi (Seq c Restore, enter_state s, [s]) (SKIP, <s|t'>, [])"
+    using body_seq tail by (rule star_trans)
+  show "psteps pi (Call p, s, []) (SKIP, <s|t'>, [])"
+    by (rule star.step[OF step_call mid])
+qed
+
+(* A Scope body and a Call to the same body reduce to the identical
+   configuration after their first step, so they have the same terminating
+   runs.  This bridges IMP2's PCall (no scope) translated as Scope (...) back
+   to our Call. *)
+lemma pruns_to_Scope_Call:
+  assumes p: "pi p = Some c"
+  assumes run: "pruns_to pi (Scope c) s t"
+  shows "pruns_to pi (Call p) s t"
+proof -
+  have run': "psteps pi (Scope c, s, []) (SKIP, t, [])"
+    using run unfolding pruns_to_def .
+  show ?thesis
+  proof (cases rule: star.cases[OF run'])
+    case 1
+    then show ?thesis by auto
+  next
+    case (2 X Mid Z)
+    from 2 have hd: "pstep pi (Scope c, s, []) Mid"
+             and tl: "psteps pi Mid (SKIP, t, [])" by auto
+    from hd have Yval: "Mid = (Seq c Restore, enter_state s, [s])"
+      by (auto elim!: ScopeSE)
+    have "pstep pi (Call p, s, []) (Seq c Restore, enter_state s, [s])"
+      using p by (rule Call)
+    with tl Yval show ?thesis
+      unfolding pruns_to_def by (auto intro: star.step)
+  qed
+qed
+
+
 
 (* A deterministic relation reaches at most one normal form. *)
 lemma pstep_star_determ:

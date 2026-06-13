@@ -20,6 +20,17 @@ The soundness chain is closed end-to-end, `0 sorries`, full `isabelle build` gre
     sound digest-indexed env (`flat_env_is_digest_sound`), and a digest-indexed
     env can be **strictly tighter** than any sound flat env on a concrete program
     (`digest_beats_flat`, sign domain).
+- **AFP IMP2 semantic anchor** (`docs/AFP_IMP2_REBASE_MIGRATION.md`, Phase 1–3,
+  full build green): soundness is now expressible against AFP IMP2's standard
+  big-step semantics, not only our bespoke small-step. A one-way bridge
+  (`src/IMP2/IMP2_Bridge.thy`) and a backward simulation (`backward_sim`: every
+  terminating IMP2 run is reproduced by our `pruns_to`) transfer the existing
+  soundness to the recognised reference semantics. A worked example
+  (`src/IMP2/IMP2_VCG_Example.thy`) verifies a scalar loop's translation with
+  IMP2's own VCG (`vcg_cs`) and pulls the result back via `backward_sim`,
+  demonstrating that the verified abstract interpreter and a deductive verifier
+  interoperate on one semantics. Significance and the trace-vs-big-step
+  comparison: KB thesis outline `research/thesis-structure` §5.4–5.6.
 
 The research question — *can a verified pipeline soundly and precisely analyze
 history-sensitive globals?* — is answered in the machine-checked artifact.

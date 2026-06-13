@@ -1,8 +1,12 @@
 session Goblint_IMP2 in "." = "HOL-IMP" +
   description "IMP2 syntax, small-step, and procedure language"
+  sessions
+    IMP2
   theories
     HOL_IMP_Countable
     IMP2_Syntax
     IMP2_Globals
     IMP2_SmallStep
     IMP2_Proc
+    IMP2_Bridge
+    IMP2_VCG_Example

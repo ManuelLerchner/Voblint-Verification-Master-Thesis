@@ -16,9 +16,13 @@ begin
 (* Procedure names. *)
 type_synonym pname = string
 
-(* A variable is global iff its name is non-empty and starts with 'G'. *)
+(* A variable is global iff it is the empty name or starts with 'G'.
+   This matches AFP IMP2's is_global exactly (Syntax.thy): is_global [] and
+   is_global (CHR ''G'' # _) hold, all other names are local.  The empty-name
+   case is a totality convention shared with IMP2 so that combine_states /
+   enter_state correspond on the nose under the bridge. *)
 definition is_global :: "vname => bool" where
-  "is_global x = (x \<noteq> [] \<and> hd x = CHR ''G'')"
+  "is_global x = (x = [] \<or> hd x = CHR ''G'')"
 
 (* <s|t>: take locals from s, globals from t. *)
 definition combine_states :: "store => store => store"  ("<_|_>" [0, 0] 1000) where

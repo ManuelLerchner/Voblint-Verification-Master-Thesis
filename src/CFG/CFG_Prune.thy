@@ -98,8 +98,7 @@ lemma finite_combines_prune_to:
   "finite (combines g) \<Longrightarrow> finite (combines (prune_to g v0))"
   using combines_prune_to_sub by (rule_tac finite_subset) auto
 
-(* The reach discharge for the retired plain top-down solver used to live here.
-   The side solver now discharges reachability via dep_side_rhs_tree_ip_* and
+(* Reachability is discharged by the side solver via dep_side_rhs_tree_ip_* and
    ip_reaches_imp_trans_dep_or_eq_side (TD_Side_IP_CFG / TD_Side_IP_Soundness).
    The graph-level pruning frame below is solver-agnostic. *)
 
@@ -253,7 +252,7 @@ next
   obtain m ein exin Ein Cin where
         cc: "compile pi lay c (Suc n) = (m, ein, exin, Ein, Cin)"
     and res: "en = n" "ex = m"
-             "E = Ein \<union> {(n, EA_Nop, ein)}"
+             "E = Ein \<union> {(n, EA_Enter, ein)}"
              "C = Cin \<union> {(n, exin, m)}"
     using Scope.prems by (auto split: prod.splits)
   show ?case using res by (auto intro: ip_reaches_combine_call)

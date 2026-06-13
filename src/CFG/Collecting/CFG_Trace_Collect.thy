@@ -134,7 +134,7 @@ next
     unfolding alpha_last_def cfg_collect_trace_def using es s et xl by auto
 qed
 
-(* -- M3.5 polish: globals frame lemma ------------------------------------- *)
+(* -- Globals frame lemma -------------------------------------------------- *)
 (*
   A global variable that is never assigned along a trace keeps its initial
   value.  This makes the M4 reading precise at the source: an unwritten global

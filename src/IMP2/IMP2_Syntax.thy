@@ -22,7 +22,7 @@ begin
   fun/case clause that splits on a leaf must spell BaseN (AExp.N _) etc.
 *)
 
-(* vname comes from HOL-IMP.AExp (= string); kept as a re-affirmation. *)
+(* vname aliases HOL-IMP.AExp's type (= string). *)
 type_synonym store = "vname => int"
 
 (* -- Arithmetic Expressions ---------------------------------------- *)

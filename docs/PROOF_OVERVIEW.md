@@ -14,7 +14,17 @@ repository contributes, and how the main lemmas connect.
 | --- | --- |
 | IMP-style syntax patterns | Isabelle `HOL-IMP` (via wrapped `aexp` / `bexp`) |
 | Top-down solver algorithm | Vendored `TD` session (`vendor/td-verification`, `TD_plain`) |
+| Reference concrete semantics (big-step, VCG) | AFP `IMP2` (Lammich & Wimmer) |
 | IMP2 syntax, small-step, CFG, equations, domains, pipeline | This repository |
+
+**Reference-semantics anchor.** Soundness is also expressible against AFP IMP2's
+standard big-step semantics, via a one-way bridge (`src/IMP2/IMP2_Bridge.thy`)
+and a backward simulation (`backward_sim`): every terminating IMP2 run is
+reproduced by our `pruns_to`, so the existing soundness transfers to the
+recognised reference semantics. `src/IMP2/IMP2_VCG_Example.thy` shows IMP2's own
+VCG and our analyzer meeting on one program. Details:
+`docs/AFP_IMP2_REBASE_MIGRATION.md`; significance and the trace-vs-big-step
+comparison live in the KB thesis outline (`research/thesis-structure` §5.4–5.6).
 
 ### Scope honesty: pipeline axis, not framework axis
 

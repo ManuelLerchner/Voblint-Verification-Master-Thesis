@@ -59,7 +59,7 @@ where
        (let (n', en, ex, E, C) = compile pi lay c (n + 1);
             scope_ex = n'
         in  (n' + 1, n, scope_ex,
-             E Un {(n, EA_Nop, en)},
+             E Un {(n, EA_Enter, en)},
              C Un {(n, ex, scope_ex)}))"
 
   | "compile pi lay (Call p) n =
@@ -150,7 +150,7 @@ definition compile_prog_regions ::
 where
   "compile_prog_regions pi ps main = snd (compile_prog_with_regions pi ps main)"
 
-(* -- Freshness / finiteness (CE1 baseline) -------------------------------- *)
+(* -- Freshness / finiteness ------------------------------------------------ *)
 
 lemma compile_counter_mono:
   "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow> n \<le> n'"
