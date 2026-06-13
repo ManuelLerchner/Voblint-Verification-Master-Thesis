@@ -14,7 +14,7 @@
 | **Next session / week plan** | `docs/NEXT_STEPS.md` |
 | All declared lemmas/theorems | `rg -n '^(lemma\|theorem) ' src/` |
 | Soundness chain narrative | `docs/PROOF_OVERVIEW.md` |
-| Per-stage workflow | `docs/walkthrough/index.html` (layer walkthroughs) |
+| Per-stage workflow | `docs/PROOF_OVERVIEW.md` (lemma spine) + `src/*/README.md` (per-layer) |
 | Catalogued repo problems (P1–P10) by file:line | `docs/OPEN_PROBLEMS.md` |
 | CFG representation decision | `docs/cfg-representation.md` |
 | HOL-IMP differences | `docs/HOL_IMP_COMPARISON.md` |
@@ -131,7 +131,7 @@ Gated on P5 (vendored `TD_warrow_mono_term` demands `finite (UNIV :: 'pp set)`).
 
 ### Thesis writeup
 
-`docs/PROOF_OVERVIEW.md` and `docs/walkthrough/pipeline/index.html` are the prose-level pipeline-narrative sources. The thesis chapter lifts from them; cross-references to `.thy` files are by file path, not by lemma name (those drift; `rg` finds them).
+`docs/PROOF_OVERVIEW.md` is the prose-level pipeline-narrative source. The thesis chapter lifts from it; cross-references to `.thy` files are by file path, not by lemma name (those drift; `rg` finds them).
 
 ---
 

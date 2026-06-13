@@ -62,7 +62,7 @@ in `TD_side`). Closes the last solver hypothesis.
 ## Suggested week
 
 ```text
-Day 1–2:  Thesis prose (IP soundness + trace semantics chapter) from docs/walkthrough
+Day 1–2:  Thesis prose (IP soundness + trace semantics chapter) from docs/PROOF_OVERVIEW.md
 Parallel:  P1 (solve_dom total correctness) — closes last TD hypothesis
 Later:     Interval domain OR digest precision — one of, not both
 ```
