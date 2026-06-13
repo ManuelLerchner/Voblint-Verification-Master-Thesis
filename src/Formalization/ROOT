@@ -4,6 +4,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     "Pipeline"
     "Examples"
   theories
+    Voblint
     Trace_IP_Analysis_Sound
     Example_Proc_GraphViz
     Example_Side_Proc_Global
