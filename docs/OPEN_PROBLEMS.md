@@ -16,30 +16,31 @@ Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`, `docs/PROOF_OVERV
 ## Bridges in the soundness chain
 
 ```
-cfg_collect (spec at each pp)
+cfg_collect_trace_ip (trace spec at each pp)
        |
-       |  post_fixpoint_sound (B3)
+       |  alpha_last projection (CFG_Trace_Collect_IP)
        v
-gamma_state (env v)  <-----  td_analyse output (B4)
-       ^
-       |  [P1 solve_dom per pp] [P3 comp_fun_idem]
+cfg_collect_ip (state spec at each pp)
        |
-   TD_plain solver (per-pp root at v)
+       |  unified_post_fixpoint_sound_ip (Analysis_Sound / B3)
+       v
+gamma_state (env v)  <-----  side_analyse_ip output (B4)
+       ^
+       |  [P1 side_cfg_ip_solve_dom per pp]
+       |
+   TD_side solver (per-pp root at v, interprocedural)
 ```
 
 | Bridge | Statement | Where | Status |
 | --- | --- | --- | --- |
-| B3 | `is_post_fixpoint env ==> ∀v. cfg_collect g S v ⊆ gamma_state (env v)` | `Constraint_System_Sound.thy` | done |
-| B4 | per-pp `td_analyse` sound w.r.t. `cfg_collect` at queried `v` | `TD_Soundness.thy` (`td_analyse_collect_sound_at`) | done (modulo P1 as hyp) |
-| B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` | **done** (P2 — [#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)) |
-| B6 | `comp_fun_idem (ac_join cfg)` | `Pipeline.thy` assumptions | **done** (P3 — `join_state_comp_fun_idem`) |
-| B7 | `TD_plain.solve_dom … v` for each queried `v` | `Pipeline.thy` assumptions | open (P1) |
-| B8 | Interval widening + termination | `Interval_Domain.thy` | stretch (P6/P7) |
+| B3 | `is_post_fixpoint_ip env ==> ∀v. cfg_collect_ip g S v ⊆ gamma_state (env v)` | `Analysis_Sound.thy` (`unified_post_fixpoint_sound_ip`) | done |
+| B4 | per-pp `side_analyse_ip` sound w.r.t. `cfg_collect_ip` at queried `v` | `TD_Side_IP_Soundness.thy` (`side_analyse_ip_collect_sound_exit_pruned`) | done (modulo P1 as hyp) |
+| B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` (classical spine) | **done** (historical; classical spine retired) |
+| B6 | `comp_fun_idem (ac_join cfg)` | classical spine | **done** (historical; classical spine retired) |
+| B7 | `side_cfg_ip_solve_dom g tf bot s0 v` for each queried `v` | `Sign_Side_IP_Soundness.thy` assumptions | open (P1) |
 
-**Exit link:** `runs_to c s t` is definitional exit `cfg_collect` (`runs_to_def`).
-`exit_sound` uses `exit_in_collect` / `cfg_collect` at exit, not big-step.
-
-**Operational link:** `runs_to_iff_small_step` connects small-step termination to `runs_to`.
+**Operational link:** `pruns_to_ip pi ps c s t` is definitional exit `cfg_collect_ip`
+at `cfg_exit (compile_prog …)` (`CFG_Collect_IP_Adeq.thy`).
 
 Optional / removed from main path:
 
@@ -47,9 +48,9 @@ Optional / removed from main path:
 | --- | --- |
 | `Direct_Equations.thy` | **deleted** — was alternate AST path (P10 abandoned) |
 | `TD_Total.thy` | **deleted** — was orphan totality track (P6) |
-| HOL-IMP `Abs_Int2_ivl` reuse | not started; see `HOL_IMP_COMPARISON.md` |
+| Classical intra spine (`Pipeline.thy`, `TD_Soundness.thy`, etc.) | **extracted** to `voblint-formalization-classical` |
 
-`pipeline_invariant_sound` / `pipeline_sound_path` carry **P1** (`∀v. solve_dom`) as the only TD hypothesis; P3 is discharged.
+`trace_ip_analysis_sound` / `reaching_global_read_sound` carry **P1** (`side_cfg_ip_solve_dom`) as the only solver hypothesis.
 
 ---
 
@@ -57,34 +58,38 @@ Optional / removed from main path:
 
 | ID | Problem | Files | Why it blocks | Needed for |
 | --- | --- | --- | --- | --- |
-| P1 | `TD_plain.solve_dom` assumed | `Pipeline.thy`, `TD_Interface.thy` | "If TD terminates, result is sound" | Cleaner main theorem; total correctness (gated on P5) |
-| P2 | ~~`td_cfg_in_reach`~~ | was `Pipeline.thy` | **done** 2026-06-01 — Fix B (per-pp solve); hypothesis removed ([#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)) | Real (non-vacuous) soundness |
-| P3 | `comp_fun_idem (ac_join cfg)` assumed | `Pipeline.thy` | Finite fold needs commutative idempotent join | **done** 2026-05-27; lemma `join_state_comp_fun_idem` |
-| P4 | Interval domain stretch | `Interval_Domain.thy` | ~~Second domain~~ | **done** — `ivl_pipeline_sound`, `voblint_interval_sound`; still carries P1–P3 |
+| P1 | `side_cfg_ip_solve_dom` assumed | `Sign_Side_IP_Soundness.thy` | "If TD side terminates, result is sound" | Cleaner main theorem; total correctness |
+| P2 | ~~`td_cfg_in_reach`~~ | was classical `Pipeline.thy` | **done** 2026-06-01 — Fix B; classical spine retired | (historical) |
+| P3 | `comp_fun_idem (ac_join cfg)` | classical `Pipeline.thy` | **done** 2026-05-27 (`join_state_comp_fun_idem`); classical spine retired | (historical) |
+| P4 | Interval domain | not in current tree | Second numeric domain | Wider thesis scope |
 | P5 | `pp = nat` vs TD `finite UNIV` | `CFG_Def.thy`, vendored TD | Termination locale type finiteness | Generic termination claim |
 | P6 | TD total correctness | was `TD_Total.thy` | **file removed**; reopen if totality returns | Total correctness |
-| P7 | Widening soundness | `Interval_Domain.thy` | Feeds termination track | Interval + widening |
-| P8 | `quick_and_dirty` in `ROOT` | `ROOT` | ~~Batch ignores sorries~~ | **done** — removed; optional Core/Stretch session split remains |
-| P9 | Executable end-to-end limited | `Example_Sign_Analysis.thy` | `value` on full maps only for finite domains | In-Isabelle execution |
+| P7 | Widening soundness | not in current tree | Feeds termination track | Interval + widening |
+| P8 | `quick_and_dirty` in `ROOT` | `ROOT` | **done** — removed | — |
+| P9 | Executable end-to-end limited | `Example_Side_Proc_Global.thy` | Concrete solve_dom witness needed | In-Isabelle execution |
 | P10 | `Direct_Equations` | was `Equations/Direct_Equations.thy` | **deleted** — CFG path is the only route | — |
 
 ---
 
 ## Per-problem notes
 
-### P1 / P3 — assumptions on pipeline theorems
+### P1 — solver termination assumption
 
-`pipeline_invariant_sound`, `pipeline_sound_path`, and `pipeline_sound_runs_to`
-carry:
+`trace_ip_analysis_sound`, `reaching_global_read_sound`, and `side_ip_sign_analysis_sound`
+ultimately require:
 
 ```isabelle
-assumes td_solve_dom: "\<And>v. TD_plain.solve_dom (make_rhs_tree ...) v"  -- P1
+assumes side_solve_dom:
+  "side_cfg_ip_solve_dom (compile_prog pi ps main) sign_tf bot s0
+     (cfg_exit (compile_prog pi ps main))"
 ```
 
-P3 discharged 2026-05-27 via `join_state_comp_fun_idem`
-(`Abstract_Domain.thy`); see commit `1c119d3`.
+This is `TD_side.solve_dom destab_opt True (side_cfg_T_ip …) v`, i.e. termination
+of the side-effecting per-pp solve. Monotonicity of `side_cfg_T_ip` is proved
+(in `TD_Side_IP_CFG.thy`), so P1 is gated on well-foundedness of the TD side
+worklist over a finite pp set.
 
-P1 is gated on P5 for generic termination.
+P1 is gated on P5 for a generic termination proof.
 
 **P2 (closed 2026-06-01):** Fix B — per-pp `td_analyse`, `td_analyse_collect_sound_at`
 via `td_env_at_path_step_le`; `td_cfg_in_reach` removed from all theorems. See finding below (historical).
@@ -228,7 +233,10 @@ See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explic
 
 ### P4 / P7 — interval domain
 
-Sign chain proved (`voblint_sign_sound`; carries P1 only). Interval: `voblint_interval_sound` (same pipeline, P1 only).
+Sign end-to-end proved (`side_ip_sign_analysis_sound`; carries P1 only). Interval
+domain not in current tree — was in classical spine (sibling repo). Adding it
+requires only a `sound_transfer` interpretation for interval transfer functions;
+no architectural changes needed.
 
 ### P6 — TD total correctness
 
@@ -246,10 +254,11 @@ Split core vs stretch sessions when sorry-free core is policy.
 
 ## Where to start
 
-**Session plan:** `docs/NEXT_STEPS.md` (thesis write-up [#17](https://github.com/ManuelLerchner/voblint-formalization/issues/17) or P1 [#14](https://github.com/ManuelLerchner/voblint-formalization/issues/14)).
+**Session plan:** `docs/NEXT_STEPS.md`.
 
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
-3. `src/Pipeline/Pipeline.thy` — `pipeline_invariant_sound`, `pipeline_sound_path`
-4. P2 closed ([#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)); P3 closed ([#7](https://github.com/ManuelLerchner/voblint-formalization/issues/7)); open TD hyp: P1 only
-5. MCP-first workflow: `AGENTS.md`
+3. `src/Formalization/Pipeline/Trace_IP_Analysis_Sound.thy` — `trace_ip_analysis_sound`, `reaching_global_read_sound`
+4. `src/Analysis/Domains/Sign_Side_IP_Soundness.thy` — `side_ip_sign_analysis_sound`
+5. Open TD hyp: P1 (`side_cfg_ip_solve_dom`) only
+6. MCP-first workflow: `AGENTS.md`

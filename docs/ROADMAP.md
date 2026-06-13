@@ -48,17 +48,17 @@ Issue numbers are deliberately omitted — they go stale. The directions remain 
 
 ### Core soundness chain (done in code)
 
-Collecting spec + post-fixpoint + TD bridge (B3–B4 in `docs/OPEN_PROBLEMS.md`) are proved.
-Sign pipeline is closed end-to-end (`goblint_sign_sound`) modulo two named TD
-hypotheses (P1 only; P2 closed via per-pp solve).
+Collecting spec + post-fixpoint + TD side bridge (B3–B4 in `docs/OPEN_PROBLEMS.md`) are proved.
+Sign pipeline is closed end-to-end (`proc_global_side_sign_analysis` / `side_ip_sign_analysis_sound`)
+modulo one named TD hypothesis (P1: `side_cfg_ip_solve_dom`).
 
 ### Semantics and pipeline (current)
 
-- **Spec:** `cfg_collect` at every program point; `runs_to` is exit-projected sugar.
-- **Canonical soundness:** `pipeline_invariant_sound`, `pipeline_sound_path` (no termination premise).
-- **Exit corollaries:** `pipeline_sound_runs_to`, `sign_pipeline_sound`, `goblint_sign_sound`.
-- **Operational:** `small_step` in `IMP2_SmallStep.thy`; `runs_to_iff_small_step` in `CFG_Runs_To_Bridge.thy`.
-- **Showcase:** `Example_NonTerminating_Safe.thy` — per-pp safety without a terminating run.
+- **Spec:** `cfg_collect_ip` (IP state) and `cfg_collect_trace_ip` (IP trace) at every program point; `pruns_to_ip` is exit-projected sugar.
+- **Canonical soundness:** `trace_ip_analysis_sound` (no termination premise); `reaching_global_read_sound` (per-variable read).
+- **Exit corollary:** `side_ip_sign_analysis_sound` (sign domain).
+- **Operational:** `pstep` in `IMP2_Proc.thy`; `pruns_to_ip` in `CFG_Collect_IP_Adeq.thy`.
+- **Showcase:** `Example_Trace_Digest_Precision.thy` — digest vs. flat precision comparison.
 
 ### Domain stretch
 

@@ -1,23 +1,30 @@
 # End-to-end pipeline
 
-**Main contribution:** Parameterised soundness of the full analyzer pipeline —
-IMP2 → `to_cfg` → `rhs` / `td_analyse` → concretization — stated against
-**`cfg_collect` at every program point** (not only at exit).
+**Main contribution:** Composes the trace-IP projection (`alpha_last`) with the unified
+IP post-fixpoint soundness to obtain trace-level soundness theorems. Also provides
+global-read soundness and digest-read soundness as corollaries.
 
-**Theory:** `Pipeline.thy` — also `domain_transfer_sound`, `sign_analysis_config`,
-`ivl_analysis_config`, `run_analysis`.
+**Theory:** `Trace_IP_Analysis_Sound.thy`
 
 **Main theorems**
 
 | Theorem | Meaning |
 | --- | --- |
-| `pipeline_invariant_sound` | Every `v`: `cfg_collect (to_cfg c) {s} v ⊆ γ(run_analysis cfg c v)` |
-| `sign_pipeline_invariant_sound` | Sign-domain instance of the invariant |
-| `pipeline_sound_path` | Along any `cfg_path`, stores in `edges_collect` are covered |
-| `pipeline_sound_runs_to` | Exit corollary from `t ∈ cfg_collect … (cfg_exit …)` |
-| `pipeline_sound_runs_to_runs` | Same, with `runs_to c s t` as premise |
-| `sign_pipeline_sound` / `ivl_pipeline_sound` | Sign and interval exit corollaries (`lemma`/`corollary`; premise `runs_to`) |
+| `trace_ip_analysis_sound` | `alpha_last (cfg_collect_trace_ip g S v) ⊆ γ(env v)` — analyzer sound w.r.t. IP trace semantics |
+| `reaching_global_read_sound` | For every reaching trace `tr` at `v`: `(last tr) x ∈ γ(env v x)` |
+| `reaching_global_read_sound_d` | Digest-indexed variant: soundness for the `reaching_compat dgx rel d` refinement |
+| `digest_read_sound` | Digest-level corollary: `d ∈ dgx '' reaching_compat …` |
+| `flat_env_is_digest_sound` | Per-pp flat abstract env is a valid digest (specialises the digest family to the sign domain) |
 
-**Imports:** `TD_Soundness`, `Sign_Domain`, `Interval_Domain`.
+**Context:** `sound_transfer` locale — parameterised over an abstract domain with
+proved transfer soundness.
 
-**Top-level corollary:** `voblint_sign_sound` in `Voblint_Formalization.thy`.
+**Proof structure:** Composes two steps:
+1. `alpha_last_cfg_collect_trace_ip_le` — `alpha_last (…trace_ip…) ⊆ cfg_collect_ip`.
+2. `unified_post_fixpoint_sound_ip` — `cfg_collect_ip … ⊆ γ(env v)`.
+Then applies `subset_trans`.
+
+**Imports:** `Voblint_Analysis.Analysis_Sound`, `Voblint_CFG.CFG_Trace_Collect_IP`.
+
+**Downstream:** `Analysis/Domains/Sign_Side_IP_Soundness.thy` imports `TD_Side_IP_Soundness`
+(not this file directly); `Example_Side_Proc_Global.thy` uses `side_ip_sign_analysis_sound`.

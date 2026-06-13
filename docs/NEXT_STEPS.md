@@ -9,76 +9,75 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 
 **Done**
 
-- Full soundness chain: collecting semantics → post-fixpoint → TD → pipeline.
-- Sign + interval end-to-end: `goblint_sign_sound`, `goblint_interval_sound`.
-- **0 sorries** in `src/`; batch build without `quick_and_dirty` in `ROOT`.
-- **P2 closed** (Fix B, 2026-06-01): `td_cfg_in_reach` removed; per-pp `td_analyse`; `td_analyse_collect_sound_at` proved via path induction.
+- Full IP soundness chain: IMP2 with procedures → interprocedural CFG → `cfg_collect_ip` → side-effecting TD solver → `trace_ip_analysis_sound` / `reaching_global_read_sound`.
+- Sign domain end-to-end: `side_ip_sign_analysis_sound`, `proc_global_side_sign_analysis`.
+- **0 sorries** in `src/`.
+- Trace semantics (`cfg_collect_trace_ip`) + projection (`alpha_last`) + soundness morphism.
+- AFP IMP2 bridge + VCG co-existence example.
+- Classical (intra) spine extracted to sibling repo `voblint-formalization-classical`.
 
-**Still on main theorems**
+**Still open on main theorems**
 
-One TD side condition remains (P1), documented in `docs/OPEN_PROBLEMS.md`:
-
-| ID | Assumption | Issue | Status |
-| --- | --- | --- | --- |
-| P2 | `td_cfg_in_reach` | [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8) | ✅ closed |
-| P1 | `TD_plain.solve_dom` | [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14) | open |
+| ID | Assumption | Status |
+| --- | --- | --- |
+| P1 | `side_cfg_ip_solve_dom g sign_tf bot s0 v` (per-pp solve termination) | open |
 
 ---
 
 ## Now — start here
 
-**Primary: [#17 — Thesis writing](https://github.com/ManuelLerchner/goblint-formalization/issues/17)**
+**Primary: [#17 — Thesis writing](https://github.com/ManuelLerchner/voblint-formalization/issues/17)**
 
-The soundness chain is complete. Only `solve_dom` (P1) remains as an explicit hypothesis — a defensible thesis stance. Write up.
+The IP soundness chain is complete. Only `side_cfg_ip_solve_dom` (P1) remains as an
+explicit hypothesis — a defensible thesis stance. Write up.
 
-**Alternative: [#14 — P1 `solve_dom` total correctness](https://github.com/ManuelLerchner/goblint-formalization/issues/14)**
+**Alternative: P1 solve_dom total correctness**
 
-Prove termination of the per-pp TD solver (finite `pp`, well-founded recursion). Closes the last TD hypothesis.
+Prove termination of the per-pp TD side solver (finite `pp`, well-founded recursion
+in `TD_side`). Closes the last solver hypothesis.
 
 **Fallback**
 
-- Executability polish ([#16](https://github.com/ManuelLerchner/goblint-formalization/issues/16)).
-- Session split ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).
+- Add Interval domain — fits the `sound_transfer` locale; no architectural changes needed.
+- Examples / executability.
 
 ---
 
 ## Next goals (short horizon)
 
-| Priority | Goal | Issue | Payoff |
-| --- | --- | --- | --- |
-| 1 | **Thesis writing** | **#17** | All core lemmas proved; write-up is the blocker |
-| 2 | P1 `solve_dom` | **#14** | Last TD hypothesis; closes the chain fully |
-| 3 | Executability | **#16** | Per-pp `value` works; full `run_analysis` map still open |
-| 4 | Session split | **#13** | Core vs Stretch — needs `TD_Soundness` / `Pipeline` import refactor |
+| Priority | Goal | Payoff |
+| --- | --- | --- |
+| 1 | **Thesis writing** | Core chain proved; write-up is the blocker |
+| 2 | P1 `side_cfg_ip_solve_dom` | Closes the last solver hypothesis |
+| 3 | Interval domain | Second numeric domain; same scaffold |
+| 4 | Digest-indexed combine (M4 precision) | Context-sensitivity via `reaching_global_read_sound_d` |
 
 **Defer unless scope expands**
 
-- **#14** (total correctness, P5 finite `pp`) — large; partial correctness + explicit P1 is a defensible thesis stance (`docs/ROADMAP.md`).
-- Octagon track (**#25**, **#15**, **#19**) — only if supervisors choose Scope B.
+- Octagon domain — 4–6 weeks min; see `docs/ROADMAP.md` for difficulty notes.
+- Session split (Core / Stretch) — needs import refactor.
 
 ---
 
 ## Suggested week
 
 ```text
-Day 1–2:  Thesis prose (sign + interval soundness chapters) from docs/walkthrough
-Parallel:  #14 (solve_dom total correctness) — closes last TD hypothesis
-Later:     #16 (demos) OR #13 (session split) — one of, not both
-Stretch:   #11 (backward transformers) only if interval precision is thesis-critical
+Day 1–2:  Thesis prose (IP soundness + trace semantics chapter) from docs/walkthrough
+Parallel:  P1 (solve_dom total correctness) — closes last TD hypothesis
+Later:     Interval domain OR digest precision — one of, not both
 ```
 
 ---
 
-## Thesis milestone (next “done” slice)
+## Thesis milestone (next "done" slice)
 
-> Sign + interval soundness with **only `solve_dom`** as explicit TD hypothesis, plus one thesis chapter per domain.
-
-#7, #8 done. Remaining: **#14 → write-up**. Treat **#14** as optional stretch if `solve_dom` is explicitly stated in the thesis.
+> IP trace soundness with **only `side_cfg_ip_solve_dom`** as explicit hypothesis,
+> plus thesis chapter covering `trace_ip_analysis_sound` / `reaching_global_read_sound`.
 
 ---
 
 ## References
 
-- `docs/OPEN_PROBLEMS.md` — P1–P10, bridge diagram
+- `docs/OPEN_PROBLEMS.md` — P1, bridge diagram
 - `docs/PROOF_PHASES.md` — sorry inventory, completed milestones
 - [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8) — board view

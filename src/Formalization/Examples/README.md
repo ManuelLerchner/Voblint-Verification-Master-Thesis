@@ -1,20 +1,18 @@
 # Examples
 
-**Main contribution:** Executable smoke tests and small demonstrations — code
-generation, sanity checks on collecting vs paths, and sample analyses. Built as
-separate `ROOT` targets; not imported by `Voblint_Formalization.thy`.
+**Main contribution:** Concrete demonstrations — procedural soundness witnesses,
+CFG visualisation, coverage tests, and precision comparisons. Not imported by
+pipeline theories.
 
 **Theories**
 
 | File | Role |
 | --- | --- |
-| `Example_Sign_Analysis.thy` | Runnable sign analysis (`TD_Interface`, `Sign_Domain`) |
-| `Example_Interval_Analysis.thy` | Runnable interval analysis (`TD_Interface`, `Interval_Domain`) |
-| `Example_Interval_Widen.thy` | Interval analysis with widening (`TD_Widen_Interface`) |
-| `Example_CFG_Collecting_Equiv.thy` | Collecting vs path checks (`CFG_Runs_To_Bridge`) |
-| `Example_GraphViz.thy` | CFG Graphviz output (`CFG_GraphViz`, `IMP2_to_CFG`) |
-| `Example_NonTerminating_Safe.thy` | Partial / non-terminating run illustration (`Pipeline`) |
+| `Example_Side_Proc_Global.thy` | `proc_global_side_sign_analysis` — sign soundness witness for a single global-increment call (`inc_pi`); uses `side_analyse_ip` + `pruns_to_ip` |
+| `Example_IMP2_Coverage.thy` | Coverage test: non-terminating loop; `nloop_head_x_pos` via `reaching_global_read_sound`; exercises IP collecting on a concrete CFG |
+| `Example_Proc_GraphViz.thy` | Graphviz output for the procedural CFG (`compile_prog inc_pi …`) |
+| `Example_Trace_Digest_Precision.thy` | Precision comparison: `cfg_collect_trace_ip` vs flat `cfg_collect_ip` on a two-path program; shows `digest_beats_flat` — digest strictly more precise than flat sign env |
 
-**Session entry points** (see `ROOT`): `Example_Sign_Analysis`, `Example_Interval_Analysis`,
-`Example_Interval_Widen`, `Example_CFG_Collecting_Equiv`, `Example_GraphViz`,
-`Example_NonTerminating_Safe`, plus main target `Voblint_Formalization`.
+**Session entry points** (see `ROOT`): `Example_Side_Proc_Global`,
+`Example_IMP2_Coverage`, `Example_Proc_GraphViz`, `Example_Trace_Digest_Precision`,
+plus main target `Voblint_Formalization`.

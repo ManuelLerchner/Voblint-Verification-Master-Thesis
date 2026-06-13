@@ -1,64 +1,40 @@
 # Equation systems
 
 **Main contribution:** Turn a CFG plus abstract domain into a constraint system
-(`rhs :: pp => (pp => abs_state) => abs_state`, `domain_transfer` record), and prove
-that any post-fixpoint soundly over-approximates collecting semantics `cfg_collect`.
+(`rhs :: pp => (pp => abs_state) => abs_state`, `rhs_ip` for IP, `domain_transfer`
+record), and prove that any post-fixpoint soundly over-approximates collecting
+semantics `cfg_collect` / `cfg_collect_ip`.
 
 **Theories**
 
 | File | Role |
 | --- | --- |
-| `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `is_post_fixpoint`, `rhs_mono` |
-| `Constraint_System_Sound.thy` | `post_fixpoint_sound_at`, `post_fixpoint_sound`, `exit_sound`, `apply_tf_le_rhs` |
+| `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `rhs_ip`, `is_post_fixpoint`, `is_post_fixpoint_ip`, `rhs_mono` |
+| `Constraint_System_Sound.thy` | `post_fixpoint_sound_at`, `post_fixpoint_sound`, `exit_sound` (intra) |
+| `Constraint_System_IP_Sound.thy` | `post_fixpoint_sound_at_ip`, IP soundness via `rhs_ip` and `cfg_collect_ip` |
+| `Analysis_Sound.thy` | `collecting` locale engine; `unified_post_fixpoint_sound`; `unified_post_fixpoint_sound_ip` |
 
-**Key concepts:** One equation per program point (join over predecessor edges).
-`is_post_fixpoint g tf join bot s0 env` means `∀v. rhs g tf join bot s0 env v ≤ env v`
-(env is a post-fixpoint of the one-step operator). `post_fixpoint_sound` is per-pp
-inclusion in `gamma_state`; `exit_sound` is the exit-projected corollary.
+**Key concepts:** One equation per program point (join over predecessor edges + combine triples).
+`is_post_fixpoint_ip g tf join bot s0 env` means `∀v. rhs_ip g tf join bot s0 env v ≤ env v`.
+`unified_post_fixpoint_sound_ip` is the single engine (U2 migration): constructs the
+locale post-fixpoint witness and applies `collecting.collect_post_fixpoint_sound`.
 
 **Imports:** `Constraint_System` → `CFG_Def`, `Abstract_Domain`.
-`Constraint_System_Sound` → `Constraint_System`, `CFG_Runs_To_Bridge` (not a separate
-`CFG_Collecting` theory).
+`Analysis_Sound` → `CFG_Collect_Unified`, `Constraint_System_Sound`, `Constraint_System_IP_Sound`.
 
-**Downstream:** `Solver/TD_CFG_Core.thy` — `make_rhs_tree`; `Solver/TD_Interface.thy` —
-per-pp `td_analyse`, `td_env_at`; `Solver/TD_Soundness.thy` —
-`td_analyse_collect_sound_at` (via `post_fixpoint_sound_at` + TD session `TD_plain`).
+**Downstream:** `Analysis/Solver/TD_Side_IP_Soundness.thy` — bridges `part_post_solution`
+to `is_post_fixpoint_ip` via reach cone.
 
 ## Scope vs. Voblint's actual framework
 
-The constraint system above models a **single-domain, single-procedure,
-side-effect-free** equation system over a CFG — matching the AFP
-`Top_Down_Solver` (Stade, Tilscher, Seidl, CAV 2024) it sits on. The
-framework Voblint actually uses is **mixed flow-sensitive** (Seidl, Vojdani,
-Erhard, Schwarz, *Mixed Flow-Sensitive Static Analysis: Engineering
-Modularity*, FM 2026 tutorial, LNCS 15557, open access) — a tuple
-`(L, G, D^X, C)` of locals, globals, per-unknown domains, and side-effecting
-constraints. The OCaml realisation is `GlobConstrSys` /
-`DemandGlobConstrSys` in `src/constraint/constrSys.ml` of the
-`voblint/analyzer` repo. **None of the following structural extensions is
-currently modelled here**:
+The constraint system models a **single-domain, interprocedural, side-effecting**
+equation system over a CFG — matching the AFP `TD_side` solver it sits on. The
+framework Voblint actually uses is **mixed flow-sensitive** (Seidl, Vojdani, Erhard,
+Schwarz, FM 2026 tutorial) — a tuple `(L, G, D^X, C)` of locals, globals, per-unknown
+domains, and side-effecting constraints. **None of the following structural extensions
+is currently modelled here**: per-unknown distinct domains, context refinement, digests,
+update rules, `demand`, `Queries`, `sync` events, multi-analysis sum/product, or
+context-set tracking on globals.
 
-1. Locals / globals split (polymorphic-variant `[\`L | \`G]` unknowns)
-2. Side-effects (`set y d` callback alongside `get`)
-3. Per-unknown distinct domains `D_{[x]}` (`Lift2(G)(D)` variant lattice)
-4. Context refinement `[u, c]` (Voblint: `LVar = MyCFG.node × C.t`)
-5. Digests (trace abstractions; reduced cardinal power refinement)
-6. Update rules (per-origin widening; `EqConstrSys.postmortem` —
-   Stemmler et al. PLDI 2025, arXiv:2504.06026)
-7. `demand` callback (force evaluation without read)
-8. `Queries` system for inter-analysis communication
-9. `sync` events (`Normal | Join | JoinCall | Return`)
-10. Multi-analysis `Var2` sum on globals + product on locals
-11. Context-set tracking on globals (`G = GVarG (G) (C)` — Voblint-specific
-    bookkeeping)
-
-This is intentional, not a bug. The thesis is positioned on the
-**pipeline / domain-instance axis** (IMP AST → CFG → eqsys → TD → sound
-pointwise result, with sign + interval domain instances), not the solver
-axis. The directly adjacent published work on the latter is
-**Tilscher, Graß, Schwarz, Seidl, *Verifying a Solver for Mixed
-Flow-Sensitive Analyses*, NASA FM 2026** — supervisor Graß is co-author
-and the two strands should be complementary. See the KB page
-`~/git/voblint-formalization-kb/wiki/concepts/voblint-isabelle-gap.md`
-for the gap table and the meeting-4 prep page for the coordination
-questions.
+This is intentional. The thesis is on the **pipeline / domain-instance axis**, not
+the solver axis. The directly adjacent verified-solver work is Tilscher et al., FM 2026.

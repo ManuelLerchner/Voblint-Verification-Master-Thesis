@@ -1,33 +1,31 @@
-# TD solver bridge
+# TD solver bridge (side-effecting, interprocedural)
 
-**Main contribution:** Connect the vendored **TD** top-down solver (`vendor/td-verification`,
-session `TD`, theory `TD_plain`) to our `rhs` format. Per-program-point
-`td_analyse c … v` is proved sound against `cfg_collect` at `v`
-(`td_analyse_collect_sound_at` / `td_analyse_collect_sound`), then lifted to exit
-soundness per domain (`td_solver_sound`, `sign_analysis_sound`,
-`interval_analysis_sound`).
+**Main contribution:** Connect the vendored **TD side** solver (`vendor/td-verification`,
+session `TD`, theory `TD_side`) to our interprocedural CFG and `rhs_ip` format.
+`side_analyse_ip pi ps c tf bot s0 v` is proved sound against `cfg_collect_ip` at `v`
+(`side_analyse_ip_collect_sound_exit_pruned`).
 
 **Theories**
 
 | File | Role |
 | --- | --- |
-| `TD_CFG_Core.thy` | `make_rhs_tree`, `make_rhs`, CFG↔TD correspondence, `cfg_path_node_in_reach` |
-| `TD_Interface.thy` | Per-pp `td_analyse`, `td_env_at`, `td_analyse_eq_env_at`; imports `TD.TD_plain` |
-| `TD_Soundness.thy` | `td_analyse_collect_sound_at`, `td_analyse_collect_sound`, `td_solver_sound`, domain exit soundness |
-| `TD_Side_CFG.thy` | `side_cfg_T` construction, denotation, `side_collect_sound_*` (M3) |
-| `TD_Side_Interface.thy` | `td_cfg_side_solver`, `side_analyse`, `side_part_post_solution_at` via `TD_side_mono` |
-| `TD_Widen_Interface.thy` | Widening variant of the TD bridge (stretch) |
-| `TD_WN_Interface.thy` | Widening + narrowing interface (stretch) |
+| `TD_Side_CFG.thy` | `restrict_local`, `restrict_global`, `side_env`; base locals/globals split on abstract states; `side_cfg_T` construction template |
+| `TD_Side_IP_CFG.thy` | `side_cfg_T_ip` — interprocedural strategy tree; `side_rhs_ip`; `ip_reaches`, `ip_succ`; monotonicity (`side_cfg_T_ip_is_mono_eq`, `_mono_sides`, `_mono_deps`) |
+| `TD_Side_IP_Interface.thy` | `side_cfg_ip_solve_dom`, `td_cfg_side_ip_solver` locale; `side_stabl_at`, `side_sigma_at`, `side_env_at`, `side_env_entry`; `side_analyse_ip`; imports `TD.TD_side` |
+| `TD_Side_IP_Soundness.thy` | `ip_reaches_imp_trans_dep_or_eq_side`, `side_ip_cone_in_vars`, `side_analyse_ip_collect_sound_exit_pruned`; reach cone + pruning |
 
-**External:** Algorithm correctness is in the TD session (`TD_plain.partial_correctness`).
-This folder wires partial solutions to `post_fixpoint_sound_at` in
-`Constraint_System_Sound`.
+**External:** Algorithm correctness is in the TD session (`TD_side.partial_correctness`
+/ `TD_side_mono`). This folder wires `part_post_solution` to `is_post_fixpoint_ip`
+via `Constraint_System_IP_Sound`.
 
-**Operational hypothesis (P1):** `⋀v. TD_plain.solve_dom (make_rhs_tree …) v` at each
-queried program point. Former reach hypothesis `td_cfg_in_reach` (P2) was removed with
-per-pp solve (Fix B; issue #8 closed).
+**Operational hypothesis (P1):** `side_cfg_ip_solve_dom g tf bot s0 v` at each queried
+program point. This is `TD_side.solve_dom destab_opt True (side_cfg_T_ip …) v`.
+Monotonicity of `side_cfg_T_ip` is proved; termination gated on finite `pp` (P5).
 
-**Analysis configs** (`sign_analysis_config`, `ivl_analysis_config`) are in
-`Pipeline/Pipeline.thy`, not here.
+**Soundness mechanism:** `side_analyse_ip_collect_sound_exit_pruned` proves soundness
+at `cfg_exit` by showing every backward-reachable node from `v₀` is in the solver's
+`trans_dep` cone (reach cone lemma), so `part_post_solution` covers all relevant
+unknowns. CFG pruning (`CFG_Prune`) restricts to the backward-reachable subgraph.
 
-**Downstream:** `Pipeline/Pipeline.thy` — end-to-end invariant, path, and exit theorems.
+**Downstream:** `Analysis/Domains/Sign_Side_IP_Soundness.thy` — `side_ip_sign_analysis_sound`;
+`Formalization/Pipeline/Trace_IP_Analysis_Sound.thy` — `trace_ip_analysis_sound`.
