@@ -6,7 +6,7 @@ Seiten-Effekte?"). Goal: a **thesis-scoped** but non-trivial interprocedural
 analysis — not state-of-the-art context-sensitivity, but real interprocedural
 information flow with simplifying assumptions on `enter`/`combine`.
 
-KB companion: `~/git/goblint-formalization-kb/wiki/research/procedures-extension-feasibility.md`.
+KB companion: `~/git/voblint-formalization-kb/wiki/research/procedures-extension-feasibility.md`.
 
 > **⚠️ Read §9 first — it supersedes §1–§8 for the thesis scope.** Working the proofs
 > through (§9) showed the monovariant, flow-sensitive-globals scope needs **plain
@@ -27,7 +27,7 @@ The right target is the **`enter` / `combine` pair**, not "enter/exit":
 - `combine`: (caller pre-call state, callee summary) → return-site state (restore
   caller-private data, absorb callee effects on the return edge).
 
-These are exactly Goblint's `enter`/`combine` callbacks (`constraints.ml`,
+These are exactly Voblint's `enter`/`combine` callbacks (`constraints.ml`,
 `FromSpec` functor) and the Sharir–Pnueli functional-summary transfer pair. "exit"
 is just the callee's exit program point — it is not a transfer function. So:
 **target = `enter`/`combine`, with the callee exit unknown as the summary carrier.**
@@ -97,7 +97,7 @@ must consume. **The solver is already verified — the thesis re-proves nothing 
 | S1 | **No parameters, no return values.** Communication only through globals. | `enter`/`combine` reduce to projections (keep globals / restore locals). Kills parameter-aliasing soundness. | SOTA passes params + returns. |
 | S2 | **Monovariant (context-insensitive).** One entry + one exit summary per procedure. | Interprocedural merge = a single join over call sites. No context machinery. | SOTA: call-strings / functional / Context Gas (P4). |
 | S3 | **Recursion allowed — handled by the TD fixpoint for free.** | No special-casing; recursion = a cycle through the summary globals. Narrative win. | none (this is a feature, not a gap). |
-| S4 | **Local/global variable split.** Globals cross call boundaries; locals are caller-private and untouched by callees. | Makes the analysis non-trivial (callee affects caller via globals); matches FM 2026 §2 and Goblint. | none. |
+| S4 | **Local/global variable split.** Globals cross call boundaries; locals are caller-private and untouched by callees. | Makes the analysis non-trivial (callee affects caller via globals); matches FM 2026 §2 and Voblint. | none. |
 
 S1+S2 are the scope cuts. S3+S4 are kept precisely so the result is not the trivial
 inlining case. Net target: **monovariant, global-effect-only, recursion-tolerant
@@ -234,7 +234,7 @@ side-effecting solver. It needs exactly one new ingredient over the current plai
 pipeline: a **binary `combine` edge**. The merge at procedure entry is just an
 ordinary predecessor join; recursion is just a cycle the plain TD fixpoint already
 handles. `TD_side`/`Side` becomes necessary only when globals are made
-*flow-insensitive sinks* (written from anywhere, à la Goblint) or when contexts are
+*flow-insensitive sinks* (written from anywhere, à la Voblint) or when contexts are
 created dynamically (context-sensitivity). See §9.7. The plan below is therefore
 stated for the **plain-TD + binary-combine** route, which is strictly lower-risk
 than the `post_fixpoint_sound_side` route in §6 and keeps the verified `TD_plain`.
@@ -431,7 +431,7 @@ werden die Beweise extrem schwierig".
 | Scope | Merge mechanism | Combine mechanism | Solver |
 |---|---|---|---|
 | **This plan (S1–S4): monovariant, flow-sensitive globals** | predecessor join at `en_p` over `EA_Enter` edges | **binary combine edge** `(c,ex,r)` | **`TD_plain`** (multi-`Query` tree; verified, unchanged) |
-| Flow-**insensitive** globals (true sinks, written anywhere — Goblint-style) | `Side g d` accumulation into a global unknown | `QueryG` of the global summary | **`TD_side`** (`Basics_side`) |
+| Flow-**insensitive** globals (true sinks, written anywhere — Voblint-style) | `Side g d` accumulation into a global unknown | `QueryG` of the global summary | **`TD_side`** (`Basics_side`) |
 | Context-**sensitive** (call-strings / functional / Context Gas) | per-context entry unknowns created on the fly | per-context return query | `TD_side` + context lifter (P4) |
 
 So §6's `post_fixpoint_sound_side` / `TD_side` route is **not** required for the

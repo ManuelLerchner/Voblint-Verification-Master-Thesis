@@ -21,7 +21,7 @@ Roadmap: `docs/ROADMAP.md`.
 
 **Small-step link:** `runs_to_iff_small_step` in `CFG_Runs_To_Bridge.thy` (public entry for the collecting layer).
 
-**Sign end-to-end:** `goblint_sign_sound` in `Goblint_Formalization.thy`.
+**Sign end-to-end:** `voblint_sign_sound` in `Voblint_Formalization.thy`.
 
 **Non-terminating showcase:** `Example_NonTerminating_Safe.thy` — intermediate-pp
 safety via `pipeline_sound_path` without any terminating run.
@@ -42,7 +42,7 @@ uses `quick_and_dirty`; re-run the command after changes).
 | Area | Notes |
 | --- | --- |
 | `IMP2/`, `CFG/`, `Equations/Constraint_System_Sound.thy` | Collecting ↔ post-fixpoint bridges closed |
-| `Goblint_Formalization.thy`, sign pipeline | `goblint_sign_sound` closed |
+| `Voblint_Formalization.thy`, sign pipeline | `voblint_sign_sound` closed |
 | `Solver/TD_Soundness.thy`, `Pipeline.thy`, `Interval_Domain.thy` | Interval packaging closed (0 sorries) |
 ---
 
@@ -69,13 +69,13 @@ uses `quick_and_dirty`; re-run the command after changes).
 - Per-pp `td_analyse`: each call solves at the queried node; `td_cfg_in_reach` removed (was structurally false for multi-pp programs).
 - `td_analyse_collect_sound_at`: per-pp soundness via path induction using `td_env_at_path_step_le` (no global post-fixpoint needed).
 - `td_analyse_collect_sound`: all-pp corollary (requires `∀v. solve_dom`).
-- **P2 closed** ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8) done). Only P1 (`solve_dom`) remains explicit.
+- **P2 closed** ([#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8) done). Only P1 (`solve_dom`) remains explicit.
 
 ### Pipeline (sign + interval)
 
 - `pipeline_invariant_sound`, `pipeline_sound_path`, `pipeline_sound_runs_to`.
-- `sign_pipeline_sound`, `sign_pipeline_invariant_sound`, `goblint_sign_sound`.
-- `goblint_interval_sound` (interval end-to-end).
+- `sign_pipeline_sound`, `sign_pipeline_invariant_sound`, `voblint_sign_sound`.
+- `voblint_interval_sound` (interval end-to-end).
 
 ### Semantics cleanup (landed)
 
@@ -91,10 +91,10 @@ uses `quick_and_dirty`; re-run the command after changes).
 Tracked on **[GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8)** and
 `docs/OPEN_PROBLEMS.md` (P1–P10 catalogue):
 
-- Discharge or document **`solve_dom`** (P1 — last TD hypothesis; [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14)).
+- Discharge or document **`solve_dom`** (P1 — last TD hypothesis; [#14](https://github.com/ManuelLerchner/voblint-formalization/issues/14)).
 - **Interval / octagon** domains and executability.
 - Remaining **Phase 4** automation (`IMP2_to_CFG` apply scripts, path-lifting combinators).
-- Optional: split `Goblint_Formalization_Core` session ([#13](https://github.com/ManuelLerchner/goblint-formalization/issues/13)).
+- Optional: split `Voblint_Formalization_Core` session ([#13](https://github.com/ManuelLerchner/voblint-formalization/issues/13)).
 
 ```bash
 gh issue list --state open --label phase:stretch
@@ -105,7 +105,7 @@ gh issue list --state open --label phase:stretch
 ## Maintenance
 
 1. After lemma changes: `rg -n '^\s*sorry' src/` and update the table above.
-2. Batch verify: `isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization`
+2. Batch verify: `isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization`
 3. Refresh the matching `docs/walkthrough/<layer>/index.html` and `src/<layer>/README.md` when a layer changes materially.
 
 ---

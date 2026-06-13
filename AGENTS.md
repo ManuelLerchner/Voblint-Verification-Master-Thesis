@@ -49,18 +49,18 @@ Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); 
 ```
 src/IMP2/                  syntax + small-step (README)
 src/CFG/                   CFG core (README); Collecting/ — cfg_collect (README)
-src/Analysis/              Goblint_Analysis session
+src/Analysis/              Voblint_Analysis session
 src/Analysis/Domains/      abstract domains (README)
 src/Analysis/Equations/    constraint systems + soundness (README)
 src/Analysis/Solver/       TD solver bridge (README)
-src/Formalization/         Goblint_Formalization session
+src/Formalization/         Voblint_Formalization session
 src/Formalization/Pipeline/ end-to-end soundness (README)
 src/Formalization/Examples/ executable demos (README)
 vendor/td-verification/    TD solver (AFP session `TD`, submodule)
 vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
 ```
 
-`ROOTS` + scattered `ROOT` files define a 4-session DAG: `Goblint_IMP2` → `Goblint_CFG` → `Goblint_Analysis` → `Goblint_Formalization` (see `docs/SESSION_DAG_MIGRATION.md`). Cross-session imports use qualified names (`"Goblint_IMP2.IMP2_Syntax"` etc.). `Goblint_CFG` adds `Dijkstra_Shortest_Path`; `Goblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural / unified / side spine: `Trace_IP_Analysis_Sound`, `TD_Side_IP_Soundness`, `Sign_Side_IP_Soundness`, `CFG_Collect_Unified`, `Analysis_Sound`, plus `Example_*` (`Side_Proc_Global`, `Proc_GraphViz`, `Trace_Digest_Precision`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Goblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `goblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The remaining `com`-level / `to_cfg` intra duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the `com` datatype + small-step) was then collapsed onto the single `pcom` IP pipeline (see `docs/IP_ONLY_CONSOLIDATION.md`).
+`ROOTS` + scattered `ROOT` files define a 4-session DAG: `Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` (see `docs/SESSION_DAG_MIGRATION.md`). Cross-session imports use qualified names (`"Voblint_IMP2.IMP2_Syntax"` etc.). `Voblint_CFG` adds `Dijkstra_Shortest_Path`; `Voblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural / unified / side spine: `Trace_IP_Analysis_Sound`, `TD_Side_IP_Soundness`, `Sign_Side_IP_Soundness`, `CFG_Collect_Unified`, `Analysis_Sound`, plus `Example_*` (`Side_Proc_Global`, `Proc_GraphViz`, `Trace_Digest_Precision`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Voblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `voblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The remaining `com`-level / `to_cfg` intra duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the `com` datatype + small-step) was then collapsed onto the single `pcom` IP pipeline (see `docs/IP_ONLY_CONSOLIDATION.md`).
 
 Docs:
 
@@ -148,7 +148,7 @@ After any `write_file`, re-read the file from disk (or re-run `get_diagnostics`)
 Build command (from repo root, after bootstrap heaps exist):
 
 ```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 Always pass `-v` so per-theory progress streams live. Pass `-N` to parallelise within each session. With warm heaps an incremental build touches only the changed session(s) + dependents.
@@ -156,16 +156,16 @@ Always pass `-v` so per-theory progress streams live. Pass `-N` to parallelise w
 **Bootstrap** (fresh clone, no heaps yet — run once in order):
 
 ```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 Goblint_IMP2
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 -d src/CFG Goblint_CFG
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 -d src/CFG -d src/Analysis Goblint_Analysis
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 Voblint_IMP2
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 -d src/CFG Voblint_CFG
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 -d src/CFG -d src/Analysis Voblint_Analysis
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 To build only a sub-layer (e.g., working only on CFG, after bootstrap):
 
 ```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Goblint_CFG
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_CFG
 ```
 
 `sorry` in batch needs `options [quick_and_dirty]` in the relevant `ROOT`.
@@ -273,12 +273,12 @@ Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/star
   * Recovery if you slipped and used `Edit`: re-issue the same change via I/Q `write_file str_replace` to sync the buffer.
 * I/Q `write_file`: prefer `str_replace` over `line`/`insert` minimal diff keeps the doc model consistent.
 * I/R: after `.thy` edit → `load_theory(<FQN>)` to re-sync heap.
-* I/R `init` uses fully-qualified imports, e.g. `Goblint_CFG.CFG_Collect_Unified`.
+* I/R `init` uses fully-qualified imports, e.g. `Voblint_CFG.CFG_Collect_Unified`.
 * I/R `step` one Isar line per call.
 * `sledgehammer` timeout ≤ 15s. Paste back `blast` / `auto` / `meson`. `metis`/`smt` only if fast in batch.
 * `nitpick` via `step`: `lemma … nitpick [timeout=5] oops`.
 * `explore` ≠ `repl_step`. `explore` does not persist; `repl_step` commits.
-* `explore query='proof'` needs `Isar_Explore` imported. Session-qualified `src/` lives in session `Goblint_Formalization`, so unqualified `Isar_Explore` resolves wrong. `sledgehammer` / `find_theorems` queries don't need the import.
+* `explore query='proof'` needs `Isar_Explore` imported. Session-qualified `src/` lives in session `Voblint_Formalization`, so unqualified `Isar_Explore` resolves wrong. `sledgehammer` / `find_theorems` queries don't need the import.
 
 Traps: `docs/ISABELLE_AGENT_NOTES.md`.
 
@@ -343,5 +343,5 @@ Proof status lives in `docs/PROOF_PHASES.md` (sorry inventory) do not duplicate 
 Specific cases that require a source lookup before claiming:
 * "inherits correctness" or "soundness follows from …"
 * Quoted paper passages or attributed claims
-* "Real analyzers also …" statements about GobLint behavior
+* "Real analyzers also …" statements about VobLint behavior
 * Whether a particular lemma or definition exists in a given theory

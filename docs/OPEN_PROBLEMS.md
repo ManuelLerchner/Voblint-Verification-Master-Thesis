@@ -31,7 +31,7 @@ gamma_state (env v)  <-----  td_analyse output (B4)
 | --- | --- | --- | --- |
 | B3 | `is_post_fixpoint env ==> ∀v. cfg_collect g S v ⊆ gamma_state (env v)` | `Constraint_System_Sound.thy` | done |
 | B4 | per-pp `td_analyse` sound w.r.t. `cfg_collect` at queried `v` | `TD_Soundness.thy` (`td_analyse_collect_sound_at`) | done (modulo P1 as hyp) |
-| B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` | **done** (P2 — [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)) |
+| B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` | **done** (P2 — [#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)) |
 | B6 | `comp_fun_idem (ac_join cfg)` | `Pipeline.thy` assumptions | **done** (P3 — `join_state_comp_fun_idem`) |
 | B7 | `TD_plain.solve_dom … v` for each queried `v` | `Pipeline.thy` assumptions | open (P1) |
 | B8 | Interval widening + termination | `Interval_Domain.thy` | stretch (P6/P7) |
@@ -58,9 +58,9 @@ Optional / removed from main path:
 | ID | Problem | Files | Why it blocks | Needed for |
 | --- | --- | --- | --- | --- |
 | P1 | `TD_plain.solve_dom` assumed | `Pipeline.thy`, `TD_Interface.thy` | "If TD terminates, result is sound" | Cleaner main theorem; total correctness (gated on P5) |
-| P2 | ~~`td_cfg_in_reach`~~ | was `Pipeline.thy` | **done** 2026-06-01 — Fix B (per-pp solve); hypothesis removed ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)) | Real (non-vacuous) soundness |
+| P2 | ~~`td_cfg_in_reach`~~ | was `Pipeline.thy` | **done** 2026-06-01 — Fix B (per-pp solve); hypothesis removed ([#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)) | Real (non-vacuous) soundness |
 | P3 | `comp_fun_idem (ac_join cfg)` assumed | `Pipeline.thy` | Finite fold needs commutative idempotent join | **done** 2026-05-27; lemma `join_state_comp_fun_idem` |
-| P4 | Interval domain stretch | `Interval_Domain.thy` | ~~Second domain~~ | **done** — `ivl_pipeline_sound`, `goblint_interval_sound`; still carries P1–P3 |
+| P4 | Interval domain stretch | `Interval_Domain.thy` | ~~Second domain~~ | **done** — `ivl_pipeline_sound`, `voblint_interval_sound`; still carries P1–P3 |
 | P5 | `pp = nat` vs TD `finite UNIV` | `CFG_Def.thy`, vendored TD | Termination locale type finiteness | Generic termination claim |
 | P6 | TD total correctness | was `TD_Total.thy` | **file removed**; reopen if totality returns | Total correctness |
 | P7 | Widening soundness | `Interval_Domain.thy` | Feeds termination track | Interval + widening |
@@ -132,7 +132,7 @@ Take `c = ''x'' ::= N 5`. The compiled CFG `to_cfg c` has two pp's:
 - `dep T sigma 0 = {}`, so `reach T sigma 0 = {0}`.
 - `td_cfg_in_reach` at `v = 1` requires `1 \<in> {0}`. False.
 
-Instantiating `goblint_sign_sound` on this `c` is impossible: discharging
+Instantiating `voblint_sign_sound` on this `c` is impossible: discharging
 `td_cfg_in_reach` would require proving false.
 
 The proofs go through only because the hypothesis is left abstract — no
@@ -185,7 +185,7 @@ this step is unjustified at non-entry `v`.
 - Pipeline theorems quantify per-pp termination, no architectural
   inversion.
 - Cost: more solver invocations at run time. Acceptable for a
-  formalization — Goblint's real worklist solver covers everything in
+  formalization — Voblint's real worklist solver covers everything in
   one pass; this is a proof artifact.
 
 **C. Invert the equation system (rejected).**
@@ -218,7 +218,7 @@ fold P2 into the B3 refactor rather than fix it standalone first.
 
 #### Status
 
-**Closed 2026-06-01** — Fix B implemented ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)):
+**Closed 2026-06-01** — Fix B implemented ([#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)):
 `TD_Interface.thy`, `TD_Soundness.thy`, `Pipeline.thy`, `Constraint_System_Sound.thy`
 (`post_fixpoint_sound_at`). Historical analysis above kept for thesis / meeting notes.
 
@@ -228,7 +228,7 @@ See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explic
 
 ### P4 / P7 — interval domain
 
-Sign chain proved (`goblint_sign_sound`; carries P1 only). Interval: `goblint_interval_sound` (same pipeline, P1 only).
+Sign chain proved (`voblint_sign_sound`; carries P1 only). Interval: `voblint_interval_sound` (same pipeline, P1 only).
 
 ### P6 — TD total correctness
 
@@ -240,16 +240,16 @@ Split core vs stretch sessions when sorry-free core is policy.
 
 ### P10 — Direct_Equations
 
-**Abandoned.** File deleted; `Goblint_Formalization` imports CFG route only.
+**Abandoned.** File deleted; `Voblint_Formalization` imports CFG route only.
 
 ---
 
 ## Where to start
 
-**Session plan:** `docs/NEXT_STEPS.md` (thesis write-up [#17](https://github.com/ManuelLerchner/goblint-formalization/issues/17) or P1 [#14](https://github.com/ManuelLerchner/goblint-formalization/issues/14)).
+**Session plan:** `docs/NEXT_STEPS.md` (thesis write-up [#17](https://github.com/ManuelLerchner/voblint-formalization/issues/17) or P1 [#14](https://github.com/ManuelLerchner/voblint-formalization/issues/14)).
 
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
 3. `src/Pipeline/Pipeline.thy` — `pipeline_invariant_sound`, `pipeline_sound_path`
-4. P2 closed ([#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)); P3 closed ([#7](https://github.com/ManuelLerchner/goblint-formalization/issues/7)); open TD hyp: P1 only
+4. P2 closed ([#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)); P3 closed ([#7](https://github.com/ManuelLerchner/voblint-formalization/issues/7)); open TD hyp: P1 only
 5. MCP-first workflow: `AGENTS.md`

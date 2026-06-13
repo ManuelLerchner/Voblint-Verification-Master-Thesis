@@ -31,7 +31,7 @@
 
   <main>
     <header class="hero">
-      <span class="tag">Goblint Formalization · IMP2</span>
+      <span class="tag">Voblint Formalization · IMP2</span>
       <h1>IMP2 source language: syntax and small-step semantics</h1>
       <p>
         The <code>src/IMP2/</code> layer is the operational front door of the formalization:
@@ -277,7 +277,7 @@ where "x →* y ≡ star small_step x y"</code></pre>
 
       <div class="callout">
         <div class="label">Tiny example · assign sequence</div>
-        <p>From <code>Goblint_Formalization.thy</code> — swap <code>x</code> and <code>y</code> via a temp (three assigns, then <code>SKIP</code>):</p>
+        <p>From <code>Voblint_Formalization.thy</code> — swap <code>x</code> and <code>y</code> via a temp (three assigns, then <code>SKIP</code>):</p>
 <pre><code>example_swap =
   ''tmp'' ::= V ''x'' ;;
   ''x''   ::= V ''y'' ;;

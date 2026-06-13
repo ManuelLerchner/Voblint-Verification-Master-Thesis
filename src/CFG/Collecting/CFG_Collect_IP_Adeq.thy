@@ -1,5 +1,5 @@
 theory CFG_Collect_IP_Adeq
-  imports CFG_Collect_IP "Goblint_IMP2.IMP2_Proc"
+  imports CFG_Collect_IP "Voblint_IMP2.IMP2_Proc"
 begin
 
 (*

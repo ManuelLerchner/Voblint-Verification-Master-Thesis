@@ -5,7 +5,7 @@ Companion to `AGENTS.md`. Project-specific traps only.
 ## Build
 
 ```bash
-isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 - Solver session is **`TD`** from `vendor/td-verification` (not a separate AFP `Top_Down_Solver` path).
@@ -15,7 +15,7 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalizatio
 ## MCP (I/R)
 
 - HTTP MCP: `localhost:9148`; REPL `connect` uses TCP **`9147`** (not 9148).
-- After disk edits: `load_theory` with fully qualified names (`Goblint_Formalization.CFG_Runs_To_Bridge`).
+- After disk edits: `load_theory` with fully qualified names (`Voblint_Formalization.CFG_Runs_To_Bridge`).
 - `step`: one Isar line per call.
 - Prefer `blast` / `auto` / `meson` from sledgehammer; verify `metis` with a full build.
 

@@ -1,5 +1,5 @@
 theory Constraint_System_IP_Sound
-  imports Constraint_System_Sound "Goblint_CFG.CFG_Collect_IP"
+  imports Constraint_System_Sound "Voblint_CFG.CFG_Collect_IP"
 begin
 
 (* Interprocedural soundness (M1 slice 3, L-sound'). *)

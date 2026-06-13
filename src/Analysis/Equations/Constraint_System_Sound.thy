@@ -1,5 +1,5 @@
 theory Constraint_System_Sound
-  imports Constraint_System "Goblint_CFG.CFG_Collecting_Core"
+  imports Constraint_System "Voblint_CFG.CFG_Collecting_Core"
 begin
 
 (*

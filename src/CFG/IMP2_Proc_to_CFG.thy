@@ -1,5 +1,5 @@
 theory IMP2_Proc_to_CFG
-  imports CFG_Def "Goblint_IMP2.IMP2_Proc"
+  imports CFG_Def "Voblint_IMP2.IMP2_Proc"
 begin
 
 (*

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Running examples — lemma trace — Goblint Formalization</title>
+<title>Running examples — lemma trace — Voblint Formalization</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
 
   <main>
     <header class="hero" id="intro">
-      <span class="tag">Goblint Formalization · Running examples</span>
+      <span class="tag">Voblint Formalization · Running examples</span>
       <h1>One program, lemma by lemma</h1>
       <p>
         Layer walkthroughs catalogue definitions and proof obligations; this page
@@ -61,7 +61,7 @@ WHILE Less (N 0) (V x) DO
   x := Plus (V x) (N (-1))</code></pre>
           <p class="muted">
             Non-trivial control flow; headline
-            <code>goblint_sign_sound</code> in the
+            <code>voblint_sign_sound</code> in the
             <a href="../pipeline/index.html">pipeline walkthrough</a>.
           </p>
         </div>
@@ -72,7 +72,7 @@ WHILE Less (N 0) (V x) DO
 x := y;
 y := tmp</code></pre>
         <p class="muted">
-          Proved in <code>Goblint_Formalization.thy</code>:
+          Proved in <code>Voblint_Formalization.thy</code>:
           <code>example_swap_runs_to</code> and functional correctness
           <code>example_swap_correct</code> (not a sign/interval pipeline headline).
         </p>
@@ -413,7 +413,7 @@ domain_transfer_sound         — sign_tf instantiates edge soundness
         <div class="label">Assumption P1</div>
         <p>
           <code>⋀v. TD_plain.solve_dom … v</code> is the only explicit TD hypothesis in
-          <code>goblint_sign_sound</code> — operational “solver finishes on this CFG”, not a
+          <code>voblint_sign_sound</code> — operational “solver finishes on this CFG”, not a
           gap in <code>post_fixpoint_sound</code>.
         </p>
       </div>
@@ -439,7 +439,7 @@ term "make_rhs_tree (to_cfg example_prog) sign_tf (⊔) bot (λ_. STop)
       </div>
       <p class="step-conc">
         Layer: <a href="../pipeline/index.html">pipeline walkthrough</a> ·
-        <code>Pipeline.thy</code>, <code>Goblint_Formalization.thy</code>
+        <code>Pipeline.thy</code>, <code>Voblint_Formalization.thy</code>
       </p>
 
       <div class="lemma-stmt">
@@ -462,11 +462,11 @@ collecting_example_runs_to
 
       <p>
         Program A is not exported as a top-level theorem, but it is the same proof
-        pattern as <code>goblint_sign_sound</code> on Program B.
+        pattern as <code>voblint_sign_sound</code> on Program B.
       </p>
       <div class="thy-snippet">
-        <div class="thy-cap"><strong>Goblint_Formalization.thy</strong> <span>goblint_sign_sound</span></div>
-<pre><code>theorem goblint_sign_sound:
+        <div class="thy-cap"><strong>Voblint_Formalization.thy</strong> <span>voblint_sign_sound</span></div>
+<pre><code>theorem voblint_sign_sound:
   assumes runs: "runs_to c s t"
   assumes td_solve_dom: "⋀v. TD_plain.solve_dom (make_rhs_tree …) v"
   shows "t ∈ sign_domain.gamma_state
@@ -556,7 +556,7 @@ flowchart LR
           </tr>
           <tr>
             <td>Top-level</td>
-            <td class="mono">goblint_sign_sound</td>
+            <td class="mono">voblint_sign_sound</td>
             <td>Sign analysis at exit γ-concretizes to a set containing <code>t</code> (needs P1 <code>solve_dom</code>).</td>
           </tr>
         </tbody>
@@ -627,7 +627,7 @@ y := tmp</code></pre>
       </table>
 
       <div class="thy-snippet">
-        <div class="thy-cap"><strong>Goblint_Formalization.thy</strong> <span>lines 51–76 — existence</span></div>
+        <div class="thy-cap"><strong>Voblint_Formalization.thy</strong> <span>lines 51–76 — existence</span></div>
 <pre><code>definition example_swap :: com where
   "example_swap =
      (''tmp'' ::= V ''x'' ;;
@@ -644,7 +644,7 @@ qed</code></pre>
       </div>
 
       <div class="thy-snippet">
-        <div class="thy-cap"><strong>Goblint_Formalization.thy</strong> <span>lines 78–102 — correctness</span></div>
+        <div class="thy-cap"><strong>Voblint_Formalization.thy</strong> <span>lines 78–102 — correctness</span></div>
 <pre><code>lemma example_swap_correct:
   "runs_to example_swap s t ⟹ t ''x'' = s ''y'' ∧ t ''y'' = s ''x''"
 proof -
@@ -691,7 +691,7 @@ qed</code></pre>
           </tr>
           <tr>
             <td>swap <code>tmp,x,y</code></td>
-            <td class="mono">Goblint_Formalization.thy</td>
+            <td class="mono">Voblint_Formalization.thy</td>
             <td><a href="#trace-c">Program C</a> — <code>example_swap_runs_to</code>, <code>example_swap_correct</code></td>
           </tr>
           <tr>
@@ -709,7 +709,7 @@ qed</code></pre>
     </section>
 
     <footer class="page-footer">
-      Goblint Formalization ·
+      Voblint Formalization ·
       <a href="../pipeline/index.html">Pipeline</a> ·
       <a href="../../PROOF_OVERVIEW.md">Proof overview</a> ·
       <a href="../index.html">Hub</a>

@@ -39,7 +39,7 @@ Net removal: ~3500 `.thy` lines (~30% of `src/`).
 Deleting `Sign_Side_Soundness` removes the only `com`-level soundness statement
 (`side_sign_analysis_sound`); the IP terminal does not bridge to it. If that
 statement must survive, mirror it into the sibling
-`goblint-formalization-classical` repo before Phase 1. Otherwise it lives only
+`voblint-formalization-classical` repo before Phase 1. Otherwise it lives only
 in git history.
 
 ---
@@ -165,7 +165,7 @@ Remove the ~40 stray `*.thy~` jEdit backups; add `*.thy~` to `.gitignore`.
 ## Completion record (2026-06-12)
 
 Executed on branch `consolidation/ip-only`. Net: **3908 deletions**, 18 files
-changed, full `isabelle build Goblint_Formalization` green after each phase.
+changed, full `isabelle build Voblint_Formalization` green after each phase.
 
 **Pre-step:** removed 41 stray `*.thy~` jEdit backups (already in `.gitignore`).
 

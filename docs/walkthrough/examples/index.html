@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Examples Walkthrough — Goblint Formalization</title>
+<title>Examples Walkthrough — Voblint Formalization</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -34,13 +34,13 @@
 
   <main>
     <header class="hero" id="overview">
-      <span class="tag">Goblint Formalization · Examples</span>
+      <span class="tag">Voblint Formalization · Examples</span>
       <h1>Executable examples off the proof spine</h1>
       <p>
         Theories under <code>src/Examples/</code> are smoke tests and small demonstrations:
         code generation, sanity checks on collecting vs paths, runnable abstract analyses,
         and CFG visualization. They live in the same Isabelle session as the main formalization
-        but are <strong>not</strong> imported by <code>Goblint_Formalization.thy</code> — the
+        but are <strong>not</strong> imported by <code>Voblint_Formalization.thy</code> — the
         verified soundness chain does not depend on them.
       </p>
       <div class="callout running-ex" style="margin-top:20px">
@@ -51,7 +51,7 @@
           <strong>Program B</strong> — countdown loop in
           <a href="../pipeline/index.html#running-example">pipeline walkthrough</a>.
           <strong>Program C</strong> — <code>example_swap_*</code> in
-          <code>Goblint_Formalization.thy</code>.
+          <code>Voblint_Formalization.thy</code>.
         </p>
         <p class="muted" style="margin:8px 0 0">
           <a href="../running-example/index.html">Full lemma-by-lemma trace →</a>
@@ -63,7 +63,7 @@
       <h2><span class="badge">⊞</span>Example theories at a glance</h2>
       <p class="lede">
         All five are listed in <code>ROOT</code> under session
-        <code>Goblint_Formalization</code> (<code>directories "Examples"</code>). You can
+        <code>Voblint_Formalization</code> (<code>directories "Examples"</code>). You can
         build the full session or stop at a single example theory (see
         <a href="#how-to-build">How to build</a>).
       </p>
@@ -108,7 +108,7 @@
       <div class="callout">
         <div class="label">Not on the core proof spine</div>
         <p>
-          <code>Goblint_Formalization.thy</code> imports IMP2, CFG, domains, equations, TD bridge,
+          <code>Voblint_Formalization.thy</code> imports IMP2, CFG, domains, equations, TD bridge,
           and <code>Pipeline</code> — not the example theories. Examples reuse those layers for
           <code>value</code> / <code>term</code> checks and pedagogy; closing the main theorems
           does not require processing them.
@@ -218,7 +218,7 @@ y := x + 1</code></pre>
     </section>
 
     <section class="stage" id="example-swap">
-      <h2><span class="badge">04</span>Top-level swap (<code>Goblint_Formalization.thy</code>)</h2>
+      <h2><span class="badge">04</span>Top-level swap (<code>Voblint_Formalization.thy</code>)</h2>
       <p class="lede">
         Not under <code>src/Examples/</code> — smoke-test lemmas in the session entry theory.
       </p>
@@ -243,7 +243,7 @@ y := tmp</code></pre>
         Full proof excerpts and lemma list:
         <a href="../running-example/index.html#trace-c">Running example · Program C</a>.
       </p>
-      <p>Source: <code>src/Goblint_Formalization.thy</code> (lines 51–102)</p>
+      <p>Source: <code>src/Voblint_Formalization.thy</code> (lines 51–102)</p>
     </section>
 
     <section class="stage" id="example-graphviz">
@@ -342,7 +342,7 @@ flowchart TB
       <h2><span class="badge">⚙</span>How to build</h2>
       <p class="lede">
         From the repository root. Examples share session
-        <code>Goblint_Formalization</code> with the main theories; AFP and vendored TD paths
+        <code>Voblint_Formalization</code> with the main theories; AFP and vendored TD paths
         match the project default.
       </p>
 
@@ -351,7 +351,7 @@ flowchart TB
   -d ~/afp/thys \
   -d vendor/td-verification \
   -D . \
-  Goblint_Formalization</code></pre>
+  Voblint_Formalization</code></pre>
 
       <h4>Single example theory (faster incremental check)</h4>
       <p>
@@ -359,25 +359,25 @@ flowchart TB
         (as listed in <code>ROOT</code>):
       </p>
 <pre><code>isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
-  -e Example_Sign_Analysis Goblint_Formalization
+  -e Example_Sign_Analysis Voblint_Formalization
 
 isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
-  -e Example_Interval_Analysis Goblint_Formalization
+  -e Example_Interval_Analysis Voblint_Formalization
 
 isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
-  -e Example_CFG_Collecting_Equiv Goblint_Formalization
+  -e Example_CFG_Collecting_Equiv Voblint_Formalization
 
 isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
-  -e Example_GraphViz Goblint_Formalization
+  -e Example_GraphViz Voblint_Formalization
 
 isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
-  -e Example_NonTerminating_Safe Goblint_Formalization</code></pre>
+  -e Example_NonTerminating_Safe Voblint_Formalization</code></pre>
 
       <div class="callout">
         <div class="label">Interactive development</div>
         <p>
           Open any example in jEdit / Isabelle/jEdit with session
-          <code>Goblint_Formalization</code> and run <code>value</code> / ML blocks locally.
+          <code>Voblint_Formalization</code> and run <code>value</code> / ML blocks locally.
           <code>Example_GraphViz</code> prints DOT during build; sign/interval examples print
           solver results in the output panel.
         </p>
@@ -427,7 +427,7 @@ isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . \
     </section>
 
     <footer>
-      Goblint Formalization · examples walkthrough ·
+      Voblint Formalization · examples walkthrough ·
       <a href="../pipeline/index.html">pipeline</a> ·
       <a href="../cfg/collecting/index.html">Collecting</a> ·
       <code>src/Examples/</code>

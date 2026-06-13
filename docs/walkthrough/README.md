@@ -1,6 +1,6 @@
 # HTML walkthroughs
 
-Static documentation for the Goblint formalization. One page per `src/` layer,
+Static documentation for the Voblint formalization. One page per `src/` layer,
 plus a hub and shared assets. **Committed in the repo; not deployed to GitHub
 Pages** (the site is Isabelle browser info from `make html` → `docs/html/`).
 
@@ -42,7 +42,7 @@ From the repo root:
 make html
 ```
 
-Runs `isabelle build … -o browser_info` on session `Goblint_Formalization` and
+Runs `isabelle build … -o browser_info` on session `Voblint_Formalization` and
 copies the result to [`../html/`](../html/) (gitignored). Open
 [`../html/isabelle/index.html`](../html/isabelle/index.html) after a local build.
 CI deploys `docs/html/` to GitHub Pages on push to `main` (Isabelle browser info

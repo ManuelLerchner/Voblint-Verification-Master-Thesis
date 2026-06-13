@@ -31,7 +31,7 @@
 
   <main>
     <header class="hero">
-      <span class="tag">Goblint Formalization · Abstract Domains</span>
+      <span class="tag">Voblint Formalization · Abstract Domains</span>
       <h1>Sign and interval abstract domains</h1>
       <p>
         <code>src/Domains/</code> defines the shared abstract-domain interface
@@ -103,7 +103,7 @@
           <a href="../pipeline/index.html">Pipeline/Pipeline.thy</a> packages configs
           (<code>sign_analysis_config</code>, <code>ivl_analysis_config</code>), proves
           <code>domain_transfer_sound</code>, and connects to TD solver soundness
-          (<code>sign_pipeline_sound</code>, <code>goblint_sign_sound</code>).
+          (<code>sign_pipeline_sound</code>, <code>voblint_sign_sound</code>).
         </p>
       </div>
 
@@ -234,7 +234,7 @@ definition sign_tf :: "sign domain_transfer" where
         <p>
           Sign transfers are wired through
           <code>sign_analysis_config</code> in Pipeline.thy; end-to-end
-          <code>goblint_sign_sound</code> is closed. See
+          <code>voblint_sign_sound</code> is closed. See
           <a href="../pipeline/index.html">pipeline walkthrough</a>.
         </p>
       </div>
@@ -287,7 +287,7 @@ definition ivl_tf :: "ivl domain_transfer" where
       <div class="callout" style="border-color: var(--accent-4)">
         <div class="label">Proof status</div>
         <p>
-          Sign end-to-end is closed (<code>goblint_sign_sound</code>). Interval packaging
+          Sign end-to-end is closed (<code>voblint_sign_sound</code>). Interval packaging
           (<code>ivl_pipeline_sound</code>) is proved in <code>Pipeline.thy</code>; see
           <a href="../../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a> for stretch goals and open items.
         </p>
@@ -407,7 +407,7 @@ flowchart LR
   A["assign_sign_sound<br/>assume_sign_sound"] --> B["sign_tf_sound<br/>(domain_transfer_sound)"]
   B --> C["edge_collect_apply_tf_sound<br/>Constraint_System_Sound"]
   C --> D["post_fixpoint_sound"]
-  D --> E["pipeline_sound_path<br/>goblint_sign_sound"]
+  D --> E["pipeline_sound_path<br/>voblint_sign_sound"]
       </div>
     </section>
 
@@ -431,7 +431,7 @@ flowchart LR
           <h4><a href="../pipeline/index.html">Pipeline walkthrough</a></h4>
           <p>
             <code>analysis_config</code>, <code>run_analysis</code>, TD solver hook,
-            <code>sign_pipeline_sound</code> / <code>goblint_sign_sound</code>, and the CFG
+            <code>sign_pipeline_sound</code> / <code>voblint_sign_sound</code>, and the CFG
             collecting semantics link at every program point.
           </p>
           <p class="mono">src/Pipeline/Pipeline.thy</p>

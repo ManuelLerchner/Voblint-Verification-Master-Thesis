@@ -9,14 +9,14 @@ lives in the KB; this doc is the actionable extract.
 
 KB companion (read these for *why*, not just *what*):
 
-- `~/git/goblint-formalization-kb/wiki/research/seidl-pivot-migration-plan.md` — the
+- `~/git/voblint-formalization-kb/wiki/research/seidl-pivot-migration-plan.md` — the
   phased plan (this doc executes its Phase 0 + Phase 1).
-- `~/git/goblint-formalization-kb/wiki/research/seidl-restructuring-2026-06.md` —
+- `~/git/voblint-formalization-kb/wiki/research/seidl-restructuring-2026-06.md` —
   impact analysis, file-by-file table, what survives.
-- `~/git/goblint-formalization-kb/wiki/concepts/trace-semantics.md` — the concrete
+- `~/git/voblint-formalization-kb/wiki/concepts/trace-semantics.md` — the concrete
   foundation and the "semantics stronger than analysis" argument.
-- `~/git/goblint-formalization-kb/wiki/concepts/imp2.md` — §"Why vendor-trim" (Phase 1).
-- `~/git/goblint-formalization-kb/wiki/research/architecture-decisions.md` — the AD
+- `~/git/voblint-formalization-kb/wiki/concepts/imp2.md` — §"Why vendor-trim" (Phase 1).
+- `~/git/voblint-formalization-kb/wiki/research/architecture-decisions.md` — the AD
   ledger. **Respect locked ADs; do not flip them — see §6.**
 - `docs/PROCEDURES_EXTENSION_PLAN.md` — interprocedural CE1–CE4, §9 thesis path (M1).
 - `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` — **follow-on migration** (consolidate
@@ -26,7 +26,7 @@ KB companion (read these for *why*, not just *what*):
 > yet**. Branch `main` is sorry-free. This doc is the first executable step.
 
 > **Status update (2026-06-09) — next milestone is M3.5, consolidate-first.** KB review
-> (`~/git/goblint-formalization-kb`, meeting 5 + Cousot TCS 2002 read) surfaced that the
+> (`~/git/voblint-formalization-kb`, meeting 5 + Cousot TCS 2002 read) surfaced that the
 > trace work is **intraprocedural** (`cfg_collect_trace`, `trace = store list`) and the
 > procedures are **state-based** (`cfg_collect_ip`, `combine_states`). Their product —
 > the **interprocedural trace collecting** (`enter`/`combine` *on traces*) — is the
@@ -403,7 +403,7 @@ scalar store, **sorry-free** — *state-based, before traces*.
 ## 5. Build & verification gate (non-negotiable)
 
 ```bash
-isabelle build -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 - Run `make vendor` first if `vendor/td-verification` is missing.

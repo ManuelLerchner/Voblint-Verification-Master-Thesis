@@ -1,5 +1,5 @@
 theory Abstract_Domain
-  imports "Goblint_IMP2.IMP2_Syntax"
+  imports "Voblint_IMP2.IMP2_Syntax"
 begin
 
 (* Re-enable HOL.Lattices' \<squnion> / \<sqinter> notation (HOL-IMP parent strips it). *)

@@ -110,5 +110,5 @@ the issue tracker, not the critical path.
 
 Phase A1 only: re-type `store`, add `Vidx` + `ArrAssign`, re-prove the bridge
 agreement lemmas and `backward_sim` array cases, then port a scalar
-`IMP2_VCG_Example` to an array variant. Gate on a green `Goblint_IMP2` build
+`IMP2_VCG_Example` to an array variant. Gate on a green `Voblint_IMP2` build
 before touching the analysis layers.

@@ -4,7 +4,7 @@
 
 Status: **PHASE 1-3 DONE (route 2b)** 2026-06-13. Implements part 2 of
 `docs/AFP_IMP2_REUSE_DECISION.md`. Bridge theory `src/IMP2/IMP2_Bridge.thy` is
-batch-green in session `Goblint_IMP2`. The scope-semantics divergence found
+batch-green in session `Voblint_IMP2`. The scope-semantics divergence found
 during Phase 2 is **resolved** (route 2b): our concrete semantics zero locals on
 scope/call entry exactly like IMP2, and our `is_global` (`IMP2_Globals`) now
 matches AFP IMP2's `is_global` (`Syntax`) on the nose (empty name + `G…` are

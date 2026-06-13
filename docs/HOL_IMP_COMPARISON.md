@@ -1,6 +1,6 @@
 # Comparison with HOL-IMP abstract interpretation
 
-How this repository’s Goblint-shaped pipeline relates to Tobias Nipkow’s abstract
+How this repository’s Voblint-shaped pipeline relates to Tobias Nipkow’s abstract
 interpretation development in Isabelle’s
 [HOL-IMP session](https://isabelle.in.tum.de/library/HOL/HOL-IMP/) (`Collecting`,
 `ACom`, `Abs_Int0`–`Abs_Int3`, `Abs_State`, `Abs_Int2_ivl`, …).
@@ -32,7 +32,7 @@ computes the abstract result.
 | **Abstract analysis**          | `AI c = pfp (step' ⊤) (bot c)` : Kleene iteration **on the same `acom` shape**                      | `rhs` / `make_rhs_tree` on CFG; **`td_analyse`** (vendored TD solver) → `env :: pp ⇒ abs_state`         |
 | **Main soundness theorem**     | `AI_correct`: `AI c = Some C ⟹ CS c ≤ γ_c C`                                                        | **`pipeline_invariant_sound`** / **`pipeline_sound_path`**: `cfg_collect ⊆ γ ∘ env`; exit via **`pipeline_sound_runs_to`** |
 | **Solver**                     | Built-in **`pfp`** / `while_option` in Isabelle                                                     | **Separate verified session** (`TD`); we prove `td_analyse_collect_sound_at` (per-pp, Fix B)           |
-| **CFG / equation system**      | None : control flow is implicit in recursive `Step` / `step'`                                       | **Central** : matches Goblint compile → eqsys → solve. `cfg` extends AFP `Dijkstra_Shortest_Path.Graph` |
+| **CFG / equation system**      | None : control flow is implicit in recursive `Step` / `step'`                                       | **Central** : matches Voblint compile → eqsys → solve. `cfg` extends AFP `Dijkstra_Shortest_Path.Graph` |
 | **Intervals / widening**       | Worked out in-session (`Abs_Int2_ivl`, `Abs_Int3`)                                                  | Started (`Interval_Domain.thy`); stretch goal; code notes possible reuse of `Abs_Int2_ivl`              |
 | **“Run analysis”**             | `AI` + `show_acom` inside Isabelle                                                                  | `run_analysis` / `td_analyse`; full `value` on maps still limited (`Example_Sign_Analysis.thy`)         |
 
@@ -41,7 +41,7 @@ computes the abstract result.
 ## Architecture (side by side)
 
 ```text
-HOL-IMP (Nipkow)                    Goblint formalization
+HOL-IMP (Nipkow)                    Voblint formalization
 ─────────────────                   ─────────────────────
 
 com ──annotate──► acom              com ──to_cfg──► cfg (pp, edges)
@@ -84,10 +84,10 @@ refines **`cfg_collect`**; computation = **`td_analyse`** (verified externally).
 |                                                                                                 | TD: `⋀v. TD_plain.solve_dom` on `make_rhs_tree (to_cfg c) …` (P1 only; P2 removed)            |
 
 You do **not** re-prove the pipeline chain per domain; you discharge obligations and
-apply `pipeline_invariant_sound` / `sign_pipeline_sound` (as in `goblint_sign_sound`).
+apply `pipeline_invariant_sound` / `sign_pipeline_sound` (as in `voblint_sign_sound`).
 
 HOL-IMP does **not** separate edge transfer functions : assignment and guards are
-wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
+wired into `step'` on `acom`. We match **Voblint edge kinds** (`EA_Assign`,
 `EA_Assume`, `EA_AssumeNot`) explicitly.
 
 ---
@@ -119,7 +119,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **Smaller proof obligations for soundness** | `post_fixpoint_sound` / `pipeline_invariant_sound` do not need ⊓, ⊤, or `st` quotient theory.                   |
 | **Alignment with TD solver API**            | TD expects `join`, `bot`, optional `widen` on **`abs_state` maps** : same shape as `analysis_config`. |
-| **Goblint-shaped edges**                    | Transfer bundle matches CFG `edge_action`; not forced into Nipkow’s `Step` on `acom`.                 |
+| **Voblint-shaped edges**                    | Transfer bundle matches CFG `edge_action`; not forced into Nipkow’s `Step` on `acom`.                 |
 | **Independent of IMP syntax details**       | No `acom` annotations, no `strip`/`annotate`/`asize` bookkeeping.                                     |
 | **Clear thesis story**                      | “User supplies γ + join + transfers” is one table; pipeline proof is separate.                        |
 
@@ -140,7 +140,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 | **Representation mismatch**              | Nipkow’s `st` and `acom` do not match `cfg` + `pp => 'a abs_state` without a substantial adapter layer.                                                             |
 | **Stronger axioms than soundness needs** | Proving full lattice laws for every new domain is more work than `sound_domain` + transfers.                                                                        |
 | **Two parallel proof styles**            | Mixing `step'` on `acom` with `rhs` on CFG risks duplicate maintenance unless one is derived from the other.                                                        |
-| **Session / import weight**              | Pulling `HOL-IMP.Abs_Int2_ivl` into `Goblint_Formalization` adds dependencies and notation clashes (`top`, `bot`, `dom` are hidden in `Abs_Int_init` for a reason). |
+| **Session / import weight**              | Pulling `HOL-IMP.Abs_Int2_ivl` into `Voblint_Formalization` adds dependencies and notation clashes (`top`, `bot`, `dom` are hidden in `Abs_Int_init` for a reason). |
 
 ### Pragmatic recommendation
 
@@ -153,7 +153,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
     (`TD_Widen_Interface` / P6–P7).
 - **Do not** replace the CFG pipeline with `acom` + `AI` unless the thesis
   explicitly claims equivalence to the textbook presentation : that would be a
-  different formalization goal (annotation-centric vs Goblint-centric).
+  different formalization goal (annotation-centric vs Voblint-centric).
 
 ---
 
@@ -170,7 +170,7 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 ## When the two approaches feel the same
 
 - Instantiating a locale **does not** automatically export a top-level theorem :
-  you still write a corollary (`goblint_sign_sound` / `AI_correct` application).
+  you still write a corollary (`voblint_sign_sound` / `AI_correct` application).
 - **Transfer / step correctness** is always domain-specific (HOL-IMP: `aval'_correct`;
   us: `assign_*_sound`, `assume_*_sound`).
 - Both separate **“framework sound once”** from **“this lattice + these ops are correct”**.
@@ -187,4 +187,4 @@ wired into `step'` on `acom`. We match **Goblint edge kinds** (`EA_Assign`,
 | Sign instantiation      | `Domains/Sign_Domain.thy`                                        |
 | Interval + HOL-IMP note | `Domains/Interval_Domain.thy` (comment on `Abs_Int2_ivl`)        |
 | Generic pipeline        | `Pipeline/Pipeline.thy`                                          |
-| Sign end-to-end         | `Goblint_Formalization.thy` (`goblint_sign_sound`)               |
+| Sign end-to-end         | `Voblint_Formalization.thy` (`voblint_sign_sound`)               |

@@ -1,5 +1,5 @@
 theory CFG_Def
-  imports "Goblint_IMP2.IMP2_Syntax" "HOL-Library.Countable" "HOL-Library.Product_Lexorder"
+  imports "Voblint_IMP2.IMP2_Syntax" "HOL-Library.Countable" "HOL-Library.Product_Lexorder"
           "Dijkstra_Shortest_Path.Graph"
 begin
 

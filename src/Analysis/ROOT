@@ -1,4 +1,4 @@
-session Goblint_Analysis in "." = "Goblint_CFG" +
+session Voblint_Analysis in "." = "Voblint_CFG" +
   description "Abstract domains, constraint systems, and TD solver bridge"
   sessions
     TD

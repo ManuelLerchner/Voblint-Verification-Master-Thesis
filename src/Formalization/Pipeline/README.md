@@ -20,4 +20,4 @@ IMP2 → `to_cfg` → `rhs` / `td_analyse` → concretization — stated against
 
 **Imports:** `TD_Soundness`, `Sign_Domain`, `Interval_Domain`.
 
-**Top-level corollary:** `goblint_sign_sound` in `Goblint_Formalization.thy`.
+**Top-level corollary:** `voblint_sign_sound` in `Voblint_Formalization.thy`.

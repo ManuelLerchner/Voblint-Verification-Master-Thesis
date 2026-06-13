@@ -29,9 +29,9 @@ comparison live in the KB thesis outline (`research/thesis-structure` §5.4–5.
 ### Scope honesty: pipeline axis, not framework axis
 
 This repository is on the **pipeline / domain-instance axis** of the
-Goblint formalisation effort: IMP AST → CFG → equation system → AFP plain
+Voblint formalisation effort: IMP AST → CFG → equation system → AFP plain
 TD solver → pointwise sound abstract result, with sign + interval domain
-instances. It deliberately does **not** model the *framework* Goblint
+instances. It deliberately does **not** model the *framework* Voblint
 actually uses — Seidl, Vojdani, Erhard, Schwarz, *Mixed Flow-Sensitive
 Static Analysis: Engineering Modularity* (FM 2026 tutorial, LNCS 15557,
 open access), realised in OCaml as `GlobConstrSys` /
@@ -46,7 +46,7 @@ Seidl, *Verifying a Solver for Mixed Flow-Sensitive Analyses* (NASA FM
 2026)**. Supervisor Graß is co-author. Division of labour and the
 question whether the thesis can sit *on top of* their formalisation is a
 meeting-4 agenda item (see the KB at
-`~/git/goblint-formalization-kb/wiki/meetings/2026-06-01-meeting4-prep.md`,
+`~/git/voblint-formalization-kb/wiki/meetings/2026-06-01-meeting4-prep.md`,
 talking point #6).
 
 ---
@@ -76,7 +76,7 @@ lfp by `cfg_collect_eq_cfg_edges_collect`.
 **Exit corollaries** (terminating runs only):
 
 - `pipeline_sound_runs_to` — from `runs_to` at exit.
-- `sign_pipeline_sound` / `goblint_sign_sound` — sign domain instantiation.
+- `sign_pipeline_sound` / `voblint_sign_sound` — sign domain instantiation.
 - `ivl_pipeline_sound` — interval domain (same shape; assign TF lemmas closed;
   assume transformers are forward identity stubs — sound but imprecise).
 
@@ -97,7 +97,7 @@ flowchart TD
   subgraph sound ["Soundness"]
     INV["pipeline_invariant_sound"]
     PATH["pipeline_sound_path"]
-    EXIT["pipeline_sound_runs_to / goblint_sign_sound"]
+    EXIT["pipeline_sound_runs_to / voblint_sign_sound"]
   end
   CC --> PFP
   RHS --> TD --> PFP
@@ -115,7 +115,7 @@ t ∈ cfg_collect (to_cfg c) {s} (cfg_exit (to_cfg c))     -- spec (or runs_to c
 env = td_analyse c tf join bot init                      -- TD_Interface + TD_plain
 ```
 
-End-to-end: `goblint_sign_sound` (`Goblint_Formalization.thy`) from `sign_pipeline_sound`.
+End-to-end: `voblint_sign_sound` (`Voblint_Formalization.thy`) from `sign_pipeline_sound`.
 
 ---
 
@@ -157,13 +157,13 @@ Same CFG, `rhs`, and `td_analyse` once the domain fits the interfaces:
 
 ---
 
-## TD hypotheses on `goblint_sign_sound`
+## TD hypotheses on `voblint_sign_sound`
 
 The sign end-to-end theorem assumes the AFP solver terminates at each queried program point:
 
 - **`∀v. TD_plain.solve_dom (make_rhs_tree …) v`** (P1) — per-pp solve rooted at `v` (Fix B, 2026-06-01).
 
-`comp_fun_idem` on join is proved (`join_state_comp_fun_idem`). **`td_cfg_in_reach` was removed** (P2 closed, [#8](https://github.com/ManuelLerchner/goblint-formalization/issues/8)).
+`comp_fun_idem` on join is proved (`join_state_comp_fun_idem`). **`td_cfg_in_reach` was removed** (P2 closed, [#8](https://github.com/ManuelLerchner/voblint-formalization/issues/8)).
 
 These are operational obligations on the vendored solver, not gaps in
 `post_fixpoint_sound_at` / `td_analyse_collect_sound_at`.
@@ -189,7 +189,7 @@ express assignment soundness in general. The CFG + post-fixpoint story is the ma
 
 | Style | Meaning |
 | --- | --- |
-| **Generic** (`goblint_sign_sound`, `pipeline_sound_path`) | All programs; TD hypotheses explicit |
+| **Generic** (`voblint_sign_sound`, `pipeline_sound_path`) | All programs; TD hypotheses explicit |
 | **Concrete** (`example_swap_*`, `Example_Sign_Analysis`) | Fixed program; may use `value` / manual checks |
 
 ---

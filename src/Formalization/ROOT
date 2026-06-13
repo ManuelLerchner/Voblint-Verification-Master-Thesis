@@ -1,4 +1,4 @@
-session Goblint_Formalization in "." = "Goblint_Analysis" +
+session Voblint_Formalization in "." = "Voblint_Analysis" +
   description "End-to-end soundness pipeline and examples"
   directories
     "Pipeline"

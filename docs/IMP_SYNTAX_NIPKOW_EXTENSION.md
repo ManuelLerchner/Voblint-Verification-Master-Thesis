@@ -11,10 +11,10 @@
 **Non-goal:** changing `com` (already structurally identical to `HOL-IMP.Com`), changing semantics, replacing big-step (separate doc), or adopting AFP `IMP2` (different beast — see Rejected).
 
 See also:
-- `~/goblint-formalization-kb/wiki/meetings/2026-05-18-meeting3.md` §B — Alexandra's nested-constructor route + abbreviation caveat
-- `~/goblint-formalization-kb/wiki/concepts/imp-language.md` — Datatype extension caveat
-- `~/goblint-formalization-kb/wiki/concepts/imp2.md` — why we don't adopt AFP `IMP2` wholesale (naming collision, no soundness payoff)
-- `~/goblint-formalization-kb/wiki/research/graph-library-evaluation.md` — parallel AFP-reuse case (graph libraries)
+- `~/voblint-formalization-kb/wiki/meetings/2026-05-18-meeting3.md` §B — Alexandra's nested-constructor route + abbreviation caveat
+- `~/voblint-formalization-kb/wiki/concepts/imp-language.md` — Datatype extension caveat
+- `~/voblint-formalization-kb/wiki/concepts/imp2.md` — why we don't adopt AFP `IMP2` wholesale (naming collision, no soundness payoff)
+- `~/voblint-formalization-kb/wiki/research/graph-library-evaluation.md` — parallel AFP-reuse case (graph libraries)
 - Nipkow `HOL-IMP.AExp` — `datatype aexp = N int | V vname | Plus aexp aexp`; `aval`
 - Nipkow `HOL-IMP.BExp` — `datatype bexp = Bc bool | Not bexp | And bexp bexp | Less aexp aexp`; `bval`
 
@@ -156,7 +156,7 @@ Doing it standalone now = pure cost.
 ### Phase 0 — preflight (½ hr)
 
 - [ ] Confirm `HOL-IMP` is in our session deps (`ROOT`); if not, add.
-- [ ] Snapshot baseline build: `isabelle build -d . Goblint_Formalization`.
+- [ ] Snapshot baseline build: `isabelle build -d . Voblint_Formalization`.
 
 ### Phase 1 — provenance comments + `to_hol_imp_aexp` projection (½ day)
 
@@ -212,8 +212,8 @@ Recorded for the day this becomes worth doing.
 | `src/IMP2/IMP2_Syntax.thy` | + `HOL-IMP.AExp` / `BExp` imports; comment block rewrite | +~15 |
 | `src/IMP2/IMP2_SmallStep.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
 | `src/IMP2/README.md` | New — naming-collision callout | +~20 |
-| `~/goblint-formalization-kb/wiki/log.md` | Append entry | +1 |
-| `~/goblint-formalization-kb/wiki/concepts/imp-language.md` | Cross-link to agreement lemma | +1 line |
+| `~/voblint-formalization-kb/wiki/log.md` | Append entry | +1 |
+| `~/voblint-formalization-kb/wiki/concepts/imp-language.md` | Cross-link to agreement lemma | +1 line |
 
 ---
 
@@ -231,7 +231,7 @@ Recorded for the day this becomes worth doing.
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| `HOL-IMP` not in session deps | Low | Add to `ROOT` `Goblint_Formalization` session. |
+| `HOL-IMP` not in session deps | Low | Add to `ROOT` `Voblint_Formalization` session. |
 | Name clash with `HOL_IMP.N` / `HOL_IMP.V` / etc. via import | Medium | Use qualified names `HOL_IMP.N`; check `IMP2_Syntax.thy` constructors are not accidentally shadowed. |
 | `aval_agrees_on_hol_imp` ends up vacuous (no caller cares) | Medium | Documented as provenance check; not load-bearing. The point is the formal correspondence record. |
 | Approach 2 perceived as "not real AFP-reuse" | Medium | Document trigger conditions for Approach 1 (above) so the deferral is principled, not lazy. |

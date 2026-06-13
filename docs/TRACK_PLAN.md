@@ -19,7 +19,7 @@ walkthrough.
 
 | # | Task | Where | Effort | Issue | Status |
 | --- | --- | --- | --- | --- | --- |
-| A1 | Discharge **P3** `comp_fun_idem (ac_join cfg)` from `sound_domain` join laws | `Domains/Abstract_Domain.thy` — new lemma `join_state_comp_fun_idem`; drop `cfi` / `join_cfi` in `Pipeline.thy`, `Goblint_Formalization.thy` | 1–2 sessions | #7 | ✅ done 2026-05-27 (commit `1c119d3`) |
+| A1 | Discharge **P3** `comp_fun_idem (ac_join cfg)` from `sound_domain` join laws | `Domains/Abstract_Domain.thy` — new lemma `join_state_comp_fun_idem`; drop `cfi` / `join_cfi` in `Pipeline.thy`, `Voblint_Formalization.thy` | 1–2 sessions | #7 | ✅ done 2026-05-27 (commit `1c119d3`) |
 | A2 | Discharge **P2** `td_cfg_in_reach` | Fix B (per-pp `td_analyse`, `td_analyse_collect_sound_at`) | done 2026-06-01 | #8 | ✅ closed |
 | A3 | Thesis prose — sign + interval chapters | `docs/walkthrough/` → thesis PDF | parallel | #17 | ongoing |
 | A4 | Executability — full `run_analysis` map | `Examples/`, `code_datatype`/`code_unfold` pragmas | optional | #16 | defer |
@@ -31,7 +31,7 @@ Defer indefinitely:
   explicit `solve_dom` is defensible.
 - Octagon track (#25, #15, #19). Scope B only.
 
-Exit criterion: `goblint_sign_sound` / `goblint_interval_sound` carry only
+Exit criterion: `voblint_sign_sound` / `voblint_interval_sound` carry only
 `solve_dom` as TD hypothesis; thesis chapters drafted.
 
 ---

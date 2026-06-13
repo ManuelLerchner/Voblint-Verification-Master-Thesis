@@ -6,8 +6,8 @@ Read this before starting **M4** (digests / trace-combine) or merging to `main`.
 
 KB companion:
 
-- `~/git/goblint-formalization-kb/wiki/research/unified-analysis-migration-plan.md`
-- `~/git/goblint-formalization-kb/wiki/research/seidl-pivot-migration-plan.md` — parent pivot (M0–M4)
+- `~/git/voblint-formalization-kb/wiki/research/unified-analysis-migration-plan.md`
+- `~/git/voblint-formalization-kb/wiki/research/seidl-pivot-migration-plan.md` — parent pivot (M0–M4)
 - `docs/SEIDL_TRACE_MIGRATION_HANDOFF.md` — Seidl execution status (M1 done 2026-06-07)
 
 > **Status (2026-06-07):** planned, **not started**. Seidl pivot slices M0–M3 + M1
@@ -237,7 +237,7 @@ M4 will cement a fifth parallel stack.
 Same as Seidl handoff §5:
 
 ```bash
-isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 Each slice exits sorry-free with **no regression** in existing example theorems

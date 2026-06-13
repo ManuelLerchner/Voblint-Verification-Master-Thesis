@@ -2,7 +2,7 @@
 
 **Main contribution:** Executable smoke tests and small demonstrations — code
 generation, sanity checks on collecting vs paths, and sample analyses. Built as
-separate `ROOT` targets; not imported by `Goblint_Formalization.thy`.
+separate `ROOT` targets; not imported by `Voblint_Formalization.thy`.
 
 **Theories**
 
@@ -17,4 +17,4 @@ separate `ROOT` targets; not imported by `Goblint_Formalization.thy`.
 
 **Session entry points** (see `ROOT`): `Example_Sign_Analysis`, `Example_Interval_Analysis`,
 `Example_Interval_Widen`, `Example_CFG_Collecting_Equiv`, `Example_GraphViz`,
-`Example_NonTerminating_Safe`, plus main target `Goblint_Formalization`.
+`Example_NonTerminating_Safe`, plus main target `Voblint_Formalization`.

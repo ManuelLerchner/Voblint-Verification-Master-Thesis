@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>End-to-end pipeline — Goblint Formalization</title>
+<title>End-to-end pipeline — Voblint Formalization</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,7 +21,7 @@
       <li><a href="#invariant-soundness"><span class="num">1</span>Invariant soundness</a></li>
       <li><a href="#path-soundness"><span class="num">2</span>Path soundness</a></li>
       <li><a href="#exit-corollaries"><span class="num">3</span>Exit corollaries</a></li>
-      <li><a href="#goblint-sign-sound"><span class="num">4</span>goblint_sign_sound</a></li>
+      <li><a href="#voblint-sign-sound"><span class="num">4</span>voblint_sign_sound</a></li>
       <li><a href="#cross-links"><span class="num">↗</span>Layer walkthroughs</a></li>
       <li><a href="#lemma-spine"><span class="num">★</span>Lemma spine</a></li>
     </ol>
@@ -40,7 +40,7 @@
 
   <main>
     <header class="hero">
-      <span class="tag">Goblint Formalization · Main narrative</span>
+      <span class="tag">Voblint Formalization · Main narrative</span>
       <h1>End-to-end analyzer pipeline</h1>
       <p>
         How IMP2 source becomes a sound abstract result: compile to a CFG, build
@@ -56,7 +56,7 @@ WHILE Less (N 0) (V x) DO
       <p style="margin-top: 12px">
         Initial store <code>s = (λ_. 0)</code>; small-step execution terminates with
         <code>t x = 0</code>. The sign abstract exit for <code>x</code> must concretize to a set
-        containing <code>0</code> — the headline theorem <code>goblint_sign_sound</code> (closed).
+        containing <code>0</code> — the headline theorem <code>voblint_sign_sound</code> (closed).
       </p>
       <div class="callout running-ex" style="margin-top:20px">
         <div class="label">Lemma trace</div>
@@ -111,7 +111,7 @@ t x = 0</code></pre>
         <p>
           So the abstract sign at exit for <code>x</code> is in
           <code>{SZero, STop}</code> — its concretization contains <code>0</code>.
-          Proved as <code>goblint_sign_sound</code> via <code>sign_pipeline_sound</code>.
+          Proved as <code>voblint_sign_sound</code> via <code>sign_pipeline_sound</code>.
         </p>
       </div>
 
@@ -148,8 +148,8 @@ t x = 0</code></pre>
       <h2><span class="badge">→</span>Top-level flow</h2>
       <p class="lede">
         Artifact pipeline and where the main theorems sit.
-        <strong>Sign end-to-end is closed</strong> (<code>goblint_sign_sound</code>).
-        Interval pipeline is also closed (<code>goblint_interval_sound</code>); same P1
+        <strong>Sign end-to-end is closed</strong> (<code>voblint_sign_sound</code>).
+        Interval pipeline is also closed (<code>voblint_interval_sound</code>); same P1
         <code>solve_dom</code> assumption as sign.
         Big picture: <a href="../../PROOF_OVERVIEW.md"><code>docs/PROOF_OVERVIEW.md</code></a>.
       </p>
@@ -226,7 +226,7 @@ flowchart TD
             <td>Sign instantiation of exit soundness from <code>runs_to</code>.</td>
           </tr>
           <tr>
-            <td class="mono">goblint_sign_sound</td>
+            <td class="mono">voblint_sign_sound</td>
             <td>Exported thesis theorem: terminating run ⇒ concrete exit store in sign γ at exit.</td>
           </tr>
         </tbody>
@@ -399,22 +399,22 @@ flowchart TD
         <thead><tr><th>Lemma</th><th>In words</th></tr></thead>
         <tbody>
           <tr><td class="mono">sign_pipeline_sound</td><td>Closed: <code>runs_to</code> ⇒ exit store in sign γ of <code>run_analysis</code> at exit.</td></tr>
-          <tr><td class="mono">ivl_pipeline_sound</td><td>Closed: same for interval domain (<code>goblint_interval_sound</code> at top level).</td></tr>
+          <tr><td class="mono">ivl_pipeline_sound</td><td>Closed: same for interval domain (<code>voblint_interval_sound</code> at top level).</td></tr>
         </tbody>
       </table>
     </section>
 
     <!-- GOBLINT SIGN SOUND -->
-    <section class="stage" id="goblint-sign-sound">
-      <h2><span class="badge">04</span>goblint_sign_sound</h2>
+    <section class="stage" id="voblint-sign-sound">
+      <h2><span class="badge">04</span>voblint_sign_sound</h2>
       <p class="lede">
-        Top-level thesis entry point in <code>src/Goblint_Formalization.thy</code>.
+        Top-level thesis entry point in <code>src/Voblint_Formalization.thy</code>.
         Sign pipeline <strong>closed</strong> — instantiates generic pipeline lemmas with
         <code>sign_analysis_config</code> and proved sign transfer functions.
       </p>
 
       <div class="lemma-stmt">
-        <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">goblint_sign_sound</span> <span class="pill key">Goblint_Formalization.thy</span></div>
+        <div class="lemma-head"><span class="lemma-id">Thm</span><span class="lemma-title">voblint_sign_sound</span> <span class="pill key">Voblint_Formalization.thy</span></div>
         <p class="lemma-desc">
           <strong>Thesis headline (sign).</strong> If the program terminates from <code>s</code> to
           <code>t</code> and the TD solver finishes on the compiled CFG, then the sign analysis at
@@ -448,7 +448,7 @@ flowchart TD
       <p>
         TD hypotheses are operational (“solver covers this CFG”), not gaps in
         <code>post_fixpoint_sound</code>. See
-        <a href="../../PROOF_OVERVIEW.md#td-hypotheses-on-goblint_sign_sound">PROOF_OVERVIEW</a>.
+        <a href="../../PROOF_OVERVIEW.md#td-hypotheses-on-voblint_sign_sound">PROOF_OVERVIEW</a>.
       </p>
 
       <h3>End-to-end chain (sign, exit)</h3>
@@ -456,7 +456,7 @@ flowchart TD
         t ∈ cfg_collect (to_cfg c) {s} (cfg_exit …)     <em>— spec, or runs_to c s t</em><br>
           ⊆ γ_state (td_analyse … (cfg_exit …))        <em>— td_analyse_collect_sound_at at exit</em><br>
         run_analysis = td_analyse ∘ sign_analysis_config <em>— Pipeline + TD_Interface</em><br>
-        ⇒ goblint_sign_sound
+        ⇒ voblint_sign_sound
       </div>
 
       <div class="callout done">
@@ -518,7 +518,7 @@ flowchart TD
           <tr>
             <td>Pipeline (here)</td>
             <td><a href="./">pipeline/</a></td>
-            <td class="mono">Pipeline.thy · Goblint_Formalization.thy</td>
+            <td class="mono">Pipeline.thy · Voblint_Formalization.thy</td>
           </tr>
         </tbody>
       </table>
@@ -535,7 +535,7 @@ flowchart TD
     <section class="stage" id="lemma-spine">
       <h2><span class="badge">★</span>Lemma spine</h2>
       <p class="lede">
-        Dependency order from concrete semantics to <code>goblint_sign_sound</code>.
+        Dependency order from concrete semantics to <code>voblint_sign_sound</code>.
         No <code>big_step</code> in the soundness chain — collecting spec is
         <code>cfg_collect</code>.
       </p>
@@ -548,7 +548,7 @@ flowchart TD
   L4["Equations<br/>rhs_mono · post_fixpoint_sound"]
   L5["Solver bridge<br/>td_analyse_collect_sound_at"]
   L6["Pipeline<br/>pipeline_invariant_sound · pipeline_sound_path"]
-  L7["Exit + sign<br/>pipeline_sound_runs_to · sign_pipeline_sound · goblint_sign_sound"]
+  L7["Exit + sign<br/>pipeline_sound_runs_to · sign_pipeline_sound · voblint_sign_sound"]
   L1 --> L2 --> L4
   L3 --> L4
   L4 --> L5 --> L6 --> L7
@@ -585,7 +585,7 @@ flowchart TD
           <tr>
             <td>Pipeline</td>
             <td><code>pipeline_invariant_sound</code> + exit/path corollaries</td>
-            <td>Composes layers; <code>goblint_sign_sound</code> is the exported sign headline.</td>
+            <td>Composes layers; <code>voblint_sign_sound</code> is the exported sign headline.</td>
           </tr>
         </tbody>
       </table>
@@ -620,7 +620,7 @@ flowchart TD
             <td><code>t ∈ γ_sign</code> of sign analysis at exit</td>
           </tr>
           <tr>
-            <td class="mono">goblint_sign_sound</td>
+            <td class="mono">voblint_sign_sound</td>
             <td>As <code>sign_pipeline_sound</code> (top-level export)</td>
             <td>Thesis sign soundness statement</td>
           </tr>
@@ -629,7 +629,7 @@ flowchart TD
     </section>
 
     <footer>
-      Goblint Formalization ·
+      Voblint Formalization ·
       <code>src/Pipeline/README.md</code> ·
       <a href="../../PROOF_OVERVIEW.md">Proof overview</a> ·
       <a href="../../PROOF_PHASES.md">Proof phases / sorry inventory</a> ·

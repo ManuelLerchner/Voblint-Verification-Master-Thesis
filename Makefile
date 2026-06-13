@@ -1,6 +1,6 @@
 ISABELLE        ?= isabelle
 AFP             ?= $(HOME)/afp/thys
-SESSION         := Goblint_Formalization
+SESSION         := Voblint_Formalization
 ISABELLE_HOME_USER ?= $(shell $(ISABELLE) getenv -b ISABELLE_HOME_USER 2>/dev/null)
 BROWSER_INFO_SRC := $(ISABELLE_HOME_USER)/browser_info/Unsorted/$(SESSION)
 HTML_DIR        := docs/html
@@ -36,10 +36,10 @@ vendor:
 # upstream heaps exist.
 bootstrap: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
-	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 Goblint_IMP2
-	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 -d src/CFG Goblint_CFG
-	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 -d src/CFG -d src/Analysis Goblint_Analysis
-	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . Goblint_Formalization
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 Voblint_IMP2
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 -d src/CFG Voblint_CFG
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/IMP2 -d src/CFG -d src/Analysis Voblint_Analysis
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . Voblint_Formalization
 
 # Build the top-level session (incremental; requires bootstrap heaps).
 build: vendor

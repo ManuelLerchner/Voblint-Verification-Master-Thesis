@@ -2,7 +2,7 @@
 
 Status: **DONE.** The interprocedural (IP) analysis now rides entirely on the
 side-effecting solver (`TD_side`); `TD_plain` and everything built on it have
-been deleted. `rg TD_plain src` is empty and the full `Goblint_Formalization`
+been deleted. `rg TD_plain src` is empty and the full `Voblint_Formalization`
 session builds green, sorry-free, with `TD.TD_plain` no longer loaded.
 
 Completed slices (each additive + build-gated until S5):
@@ -42,7 +42,7 @@ The interprocedural (IP) analysis used to ride on the plain top-down solver
 (`TD_side`) and then deleted `TD_plain` and everything built on it.
 
 > This **reverses** the unified-handoff decision "two backends stay"
-> (`UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` §7). The justification: in Goblint the
+> (`UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` §7). The justification: in Voblint the
 > side-effecting constraint system is the universal one — flow-sensitive locals
 > and flow-insensitive globals both go through it; plain TD is a special case with
 > no side effects. One backend is the faithful end state.
@@ -150,7 +150,7 @@ digest-agnostic first (match `cfg_collect_ip`), reattach digest as the existing
 ## 5. Build gate
 
 ```bash
-isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 I/Q for development (`./scripts/start-both.sh`); each slice exits sorry-free.

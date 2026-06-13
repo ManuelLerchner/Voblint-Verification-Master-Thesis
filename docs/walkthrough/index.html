@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Goblint Formalization — Documentation Hub</title>
+<title>Voblint Formalization — Documentation Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,13 +27,13 @@
 
   <main>
     <header class="hero" id="hub">
-      <span class="tag">Goblint Formalization</span>
+      <span class="tag">Voblint Formalization</span>
       <h1>Verified static analysis pipeline</h1>
       <p>
         Interactive walkthroughs for each layer of the Isabelle/HOL formalization:
         IMP2 source and small-step semantics, CFG compilation and collecting semantics,
         abstract domains, equation systems, the vendored TD solver, and end-to-end
-        soundness (<code>goblint_sign_sound</code>).
+        soundness (<code>voblint_sign_sound</code>).
       </p>
     </header>
 
@@ -44,7 +44,7 @@
       <div class="grid-2">
         <a class="card card-link" href="pipeline/index.html">
           <h4>Pipeline <span class="pill">start here</span></h4>
-          <p>Full story: artifact flow, invariant / path / exit soundness, <code>goblint_sign_sound</code>.</p>
+          <p>Full story: artifact flow, invariant / path / exit soundness, <code>voblint_sign_sound</code>.</p>
         </a>
         <a class="card card-link" href="running-example/index.html">
           <h4>Running example <span class="pill">lemma trace</span></h4>
@@ -94,7 +94,7 @@ flowchart LR
   TD --> PL["Pipeline"]
   PL -.-> EX["Examples<br/>(ROOT only)"]
       </div>
-      <p class="muted">Sign and interval end-to-end are closed; top-level theorems assume P1 (<code>⋀v. TD_plain.solve_dom … v</code>) only. Examples are not imported by <code>Goblint_Formalization.thy</code>. Status: <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
+      <p class="muted">Sign and interval end-to-end are closed; top-level theorems assume P1 (<code>⋀v. TD_plain.solve_dom … v</code>) only. Examples are not imported by <code>Voblint_Formalization.thy</code>. Status: <a href="../PROOF_PHASES.md"><code>docs/PROOF_PHASES.md</code></a>.</p>
     </section>
 
     <section class="stage" id="docs">
@@ -107,7 +107,7 @@ flowchart LR
     </section>
 
     <footer class="page-footer">
-      Goblint Formalization · static HTML · shared <code>walkthrough.css</code>
+      Voblint Formalization · static HTML · shared <code>walkthrough.css</code>
     </footer>
   </main>
 </div>

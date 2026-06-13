@@ -1,5 +1,5 @@
 theory CFG_Trace_Collect
-  imports CFG_Collecting_Core "Goblint_IMP2.IMP2_Globals"
+  imports CFG_Collecting_Core "Voblint_IMP2.IMP2_Globals"
 begin
 
 (*

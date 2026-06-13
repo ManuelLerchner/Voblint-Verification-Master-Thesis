@@ -1,7 +1,7 @@
 section \<open>Example: interprocedural CFG (compile_prog) as Graphviz\<close>
 
 theory Example_Proc_GraphViz
-  imports "Goblint_CFG.CFG_GraphViz" "Goblint_CFG.IMP2_Proc_to_CFG"
+  imports "Voblint_CFG.CFG_GraphViz" "Voblint_CFG.IMP2_Proc_to_CFG"
 begin
 
 text \<open>

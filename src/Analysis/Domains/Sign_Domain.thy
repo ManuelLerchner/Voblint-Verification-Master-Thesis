@@ -1,5 +1,5 @@
 theory Sign_Domain
-  imports Abstract_Domain Constraint_System "Goblint_IMP2.IMP2_SmallStep" "Goblint_IMP2.IMP2_Globals"
+  imports Abstract_Domain Constraint_System "Voblint_IMP2.IMP2_SmallStep" "Voblint_IMP2.IMP2_Globals"
 begin
 
 (*

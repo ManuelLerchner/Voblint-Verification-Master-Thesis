@@ -1,7 +1,7 @@
 theory Example_IMP2_Coverage
-  imports Goblint_CFG.CFG_Prune "Goblint_CFG.CFG_Collect_Unified"
-    "Goblint_Analysis.Sign_Domain" "Goblint_Analysis.Constraint_System_Sound"
-    "Goblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
+  imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect_Unified"
+    "Voblint_Analysis.Sign_Domain" "Voblint_Analysis.Constraint_System_Sound"
+    "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
 begin
 
 (*

@@ -3,7 +3,7 @@
 Status: **complete (E1–E4).** The side-effecting analysis is sound from an
 *arbitrary* initial state `s0`; the `restrict_global s0 = bot` hypothesis is
 gone from both the interprocedural and the intra side stacks. Full
-`Goblint_Formalization` session builds sorry-free (`isabelle build`, ~44s warm).
+`Voblint_Formalization` session builds sorry-free (`isabelle build`, ~44s warm).
 
 Goal: make the side-effecting analysis sound from an *arbitrary* initial state
 `s0`, not only one whose globals are `bot`.
@@ -28,7 +28,7 @@ example `Example_Side_Proc_Global` is forced to use `s0 = bot` (for Sign,
 precision). The intra side stack (`TD_Side_CFG`, `side_collect_sound_at`,
 `Example_Side_Global`) has the identical limitation.
 
-This is not faithful: in Goblint globals start at their initial values, not `⊥`.
+This is not faithful: in Voblint globals start at their initial values, not `⊥`.
 
 ## 1. The fix
 
@@ -111,7 +111,7 @@ globals-free hypothesis.
 ## 4. Build gate
 
 ```bash
-isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 I/Q for development; each slice exits sorry-free.

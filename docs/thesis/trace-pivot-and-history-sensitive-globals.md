@@ -84,7 +84,7 @@ value (`CFG_Trace_Collect.thy`, `cfg_collect_trace_global_frame`).
 ## 5. M4 precision: digests
 
 A **digest** abstracts a trace's history — the calling context (sequential), or
-the held lock set (concurrent, Goblint's actual use). The precision idea: instead
+the held lock set (concurrent, Voblint's actual use). The precision idea: instead
 of one value per global, keep a map `digest → value`, and let a reader see only
 writes from *compatible* histories.
 
@@ -128,7 +128,7 @@ the coarseness of the sign lattice alone.
 ## 6. Scope of the claim, honestly
 
 The digest used in the witness is sequential (value-of-`x`, a stand-in for
-calling context). A **lockset** digest — Goblint's real concurrent use — requires
+calling context). A **lockset** digest — Voblint's real concurrent use — requires
 a concurrency model IMP2 does not have; that is a semantics extension, not a gap
 in the present proof. The precision claim is *strict improvement*, not
 *optimality*: the latter would require mechanizing the Galois `α`, which the

@@ -31,7 +31,7 @@
 
   <main>
     <header class="hero">
-      <span class="tag">Goblint Formalization · src/Solver/</span>
+      <span class="tag">Voblint Formalization · src/Solver/</span>
       <h1>TD solver bridge</h1>
       <p>
         This layer connects our function-style equation system
@@ -114,7 +114,7 @@ flowchart LR
         <ul>
           <li><strong>Imported:</strong> TD returns a partial solution on the reach set from the queried root <code>v0</code> (<code>TD_plain.partial_correctness</code>).</li>
           <li><strong>Proved here (Fix B):</strong> Per-pp <code>td_analyse c … v</code> solves at <code>v</code>; <code>td_analyse_collect_sound_at</code> links solver env to <code>cfg_collect</code> at that <code>v</code> via <code>td_env_at_path_step_le</code> and <code>post_fixpoint_sound_at</code>.</li>
-          <li><strong>Proved downstream:</strong> Pipeline point-map / path / exit corollaries; top-level <code>goblint_sign_sound</code> / <code>goblint_interval_sound</code>.</li>
+          <li><strong>Proved downstream:</strong> Pipeline point-map / path / exit corollaries; top-level <code>voblint_sign_sound</code> / <code>voblint_interval_sound</code>.</li>
         </ul>
       </div>
     </section>
@@ -373,8 +373,8 @@ flowchart TD
             <td>Exit corollary via <code>sign_analysis_sound</code> + <code>runs_to</code> / collecting bridge.</td>
           </tr>
           <tr>
-            <td class="mono">goblint_sign_sound</td>
-            <td>Top-level corollary in <code>Goblint_Formalization.thy</code>.</td>
+            <td class="mono">voblint_sign_sound</td>
+            <td>Top-level corollary in <code>Voblint_Formalization.thy</code>.</td>
           </tr>
         </tbody>
       </table>
@@ -384,7 +384,7 @@ flowchart TD
   COL["cfg_collect at exit<br/>IMP2 + CFG bridge"]
   TD["sign_analysis_sound<br/>TD_Soundness"]
   PIPE["sign_pipeline_sound<br/>Pipeline.thy"]
-  TOP["goblint_sign_sound"]
+  TOP["voblint_sign_sound"]
   COL --> TD --> PIPE --> TOP
       </div>
 
@@ -438,7 +438,7 @@ flowchart TD
           </tr>
           <tr>
             <td>Pipeline</td>
-            <td class="mono">run_analysis · sign_analysis_config · sign_pipeline_invariant_sound · goblint_sign_sound</td>
+            <td class="mono">run_analysis · sign_analysis_config · sign_pipeline_invariant_sound · voblint_sign_sound</td>
           </tr>
           <tr>
             <td>External TD</td>

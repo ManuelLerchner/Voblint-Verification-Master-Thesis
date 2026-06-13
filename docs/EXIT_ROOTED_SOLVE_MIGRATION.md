@@ -1,4 +1,4 @@
-# Migration — exit-rooted single solve (Goblint-aligned), and interval widening (#39)
+# Migration — exit-rooted single solve (Voblint-aligned), and interval widening (#39)
 
 Status: **design + core lemma proved; instantiations pending.** This doc records
 the decision, the proved pieces (drop-in Isar), the remaining steps, and one
@@ -8,8 +8,8 @@ newly-found prerequisite. Supersedes the per-pp widen-interface sketch.
 
 Two problems, one root cause and one fix.
 
-1. **#39 — interval headline carries a false hypothesis.** `goblint_interval_sound`
-   (`src/Goblint_Formalization.thy:120`) assumes, per program point,
+1. **#39 — interval headline carries a false hypothesis.** `voblint_interval_sound`
+   (`src/Voblint_Formalization.thy:120`) assumes, per program point,
    `TD_plain.solve_dom (make_rhs_tree … ivl_tf (⊔) bot …) v`. For intervals this
    is **not just unproven, it is false**: the interval lattice has infinite
    ascending chains, so the plain join solver never stabilises. Termination needs
@@ -19,7 +19,7 @@ Two problems, one root cause and one fix.
    point* (`td_analyse … v = lookup_bot (solve … v) v`). That is an artifact of
    our **pull-based** constraint encoding, not a necessity.
 
-### The encoding, and what Goblint/the paper actually do
+### The encoding, and what Voblint/the paper actually do
 
 Our `make_rhs_tree` builds the forward equation `[v] ⊒ ⟦s⟧(get[u])` for each edge
 `(u,s,v)` — the unknown for the **end** point `v` reads its **predecessor** `u`
@@ -235,7 +235,7 @@ from Step 1. Apply `ivl_sound_tf.post_solution_exit_collect_sound_at`.
 ### Step 4 — restate the headline
 
 ```isabelle
-theorem goblint_interval_sound_widen:
+theorem voblint_interval_sound_widen:
   assumes runs: "runs_to c s t"
   assumes exit_reachable: "\<And>v. v \<in> reach (make_rhs_tree (to_cfg c) ivl_tf (\<squnion>) bot (ac_init …))
                                      (\<dots>solve\<dots> (cfg_exit (to_cfg c))) (cfg_exit (to_cfg c))"
@@ -249,7 +249,7 @@ intervals, unlike the plain-join one it replaces.
 
 ### Step 5 — (optional) migrate sign + tidy
 
-Decide whether to also move `goblint_sign_sound` / the pipeline point-map theorems
+Decide whether to also move `voblint_sign_sound` / the pipeline point-map theorems
 onto the exit-rooted shape (one solve) or keep the per-pp versions. The generic
 theorem supports both; the per-pp ones can stay as corollaries.
 
@@ -265,6 +265,6 @@ Step 5 optional, last.
 ## Provenance
 
 - Constraint construction + start/return reachability: Apinis, Seidl, Vojdani,
-  *Side-Effecting Constraint Systems*, §2 (eq. 0). https://goblint.in.tum.de/assets/papers/side.pdf
+  *Side-Effecting Constraint Systems*, §2 (eq. 0). https://voblint.in.tum.de/assets/papers/side.pdf
 - Pull-direction of our encoding: `docs/OPEN_PROBLEMS.md` §P2 finding.
 - `compile (WHILE …)` exit edge: `src/CFG/IMP2_to_CFG.thy`.

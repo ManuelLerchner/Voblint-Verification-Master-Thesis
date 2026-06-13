@@ -1,5 +1,5 @@
 theory TD_Side_IP_CFG
-  imports TD_Side_CFG "Goblint_CFG.CFG_Collect_IP"
+  imports TD_Side_CFG "Voblint_CFG.CFG_Collect_IP"
 begin
 
 (*

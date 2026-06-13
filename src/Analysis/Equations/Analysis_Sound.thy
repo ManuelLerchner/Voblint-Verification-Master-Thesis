@@ -1,5 +1,5 @@
 theory Analysis_Sound
-  imports "Goblint_CFG.CFG_Collect_Unified" Constraint_System_Sound Constraint_System_IP_Sound
+  imports "Voblint_CFG.CFG_Collect_Unified" Constraint_System_Sound Constraint_System_IP_Sound
 begin
 
 (*

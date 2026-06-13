@@ -7,13 +7,13 @@ real prerequisite for M4 (globals over reaching traces). **Do M3.5 only — not 
 
 KB companions (read for *why*):
 
-- `~/git/goblint-formalization-kb/wiki/meetings/2026-06-05-meeting5.md` — the `enter`/`combine`
+- `~/git/voblint-formalization-kb/wiki/meetings/2026-06-05-meeting5.md` — the `enter`/`combine`
   specification (§A trace type, §C edge transformer, §D `enter`, §E `combine`, §F projection).
-- `~/git/goblint-formalization-kb/wiki/concepts/trace-semantics.md` §"Representation" — the
+- `~/git/voblint-formalization-kb/wiki/concepts/trace-semantics.md` §"Representation" — the
   Cousot-decided trace encoding (state sequence + optional action label; **junction** composition).
-- `~/git/goblint-formalization-kb/wiki/concepts/improving-thread-modular-ai.md` §3 — Schwarz's
+- `~/git/voblint-formalization-kb/wiki/concepts/improving-thread-modular-ai.md` §3 — Schwarz's
   `new` / binary `lock` / `sink`/`loc`/`last`; the `enter`≈`new`, `combine`≈binary-`lock` mapping.
-- `~/git/goblint-formalization-kb/wiki/research/seidl-pivot-migration-plan.md` §"Phase 3.5" — the plan row.
+- `~/git/voblint-formalization-kb/wiki/research/seidl-pivot-migration-plan.md` §"Phase 3.5" — the plan row.
 - `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` — **do U1–U2 first** (see §2); U4 is the trace-overlay hook M3.5 fills.
 - `docs/SEIDL_TRACE_MIGRATION_HANDOFF.md` — parent pivot status (M0–M3 + M1 done).
 
@@ -188,7 +188,7 @@ a new parallel stack.
 ## 6. Build gate (non-negotiable)
 
 ```bash
-isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Goblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
 ```
 
 - "Done" = full batch green (or exactly the expected sorries with `quick_and_dirty`).

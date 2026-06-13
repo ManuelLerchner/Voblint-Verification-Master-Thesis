@@ -1,4 +1,4 @@
-session Goblint_IMP2 in "." = "HOL-IMP" +
+session Voblint_IMP2 in "." = "HOL-IMP" +
   description "IMP2 syntax, small-step, and procedure language"
   sessions
     IMP2

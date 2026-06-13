@@ -1,21 +1,21 @@
 Voblint
 =======
 
-> **Voblint: Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL**
+> **Voblint: Towards a Verified Voblint-style Analysis Pipeline in Isabelle/HOL**
 > Master's thesis. Manuel Lerchner, TUM Informatics 2, supervised by Alexandra Graß.
 
 Abstract
 --------
 
-We formalize the Goblint analysis pipeline from IMP through CFG compilation and
+We formalize the Voblint analysis pipeline from IMP through CFG compilation and
 a constraint system to the verified top-down solver of
 [stilscher/td-verification](https://github.com/stilscher/td-verification), and
 prove that **any abstract domain** satisfying our locale and transfer obligations
 yields a solver result that soundly over-approximates concrete collecting
-semantics; sign analysis is the primary worked instance (`goblint_sign_sound`),
+semantics; sign analysis is the primary worked instance (`voblint_sign_sound`),
 modulo TD termination hypothesis P1 (`⋀v. TD_plain.solve_dom`; see
 `docs/OPEN_PROBLEMS.md`). Interval
-instance: `goblint_interval_sound` (same hypotheses).
+instance: `voblint_interval_sound` (same hypotheses).
 
 ### Pipeline (overview)
 
@@ -52,7 +52,7 @@ flowchart LR
 
 Operational link: `runs_to_iff_small_step` connects small-step termination to
 exit `cfg_collect`. End-to-end theorems: `pipeline_invariant_sound`,
-`pipeline_sound_path`, `pipeline_sound_runs_to` (generic; carry P1 `solve_dom`); `goblint_sign_sound`
+`pipeline_sound_path`, `pipeline_sound_runs_to` (generic; carry P1 `solve_dom`); `voblint_sign_sound`
 (sign instance). See `docs/OPEN_PROBLEMS.md`.
 
 Where abstract interpretation is in the proof
@@ -135,7 +135,7 @@ Concretely, the user writes:
 | 4    | Define `tf_assign`, `tf_assume`, `tf_assume_not` and prove `domain_transfer_sound`          | `assign_sign_sound`, `assume_sign_sound`                      |
 | 5    | Bundle as `analysis_config`                                                                | `Pipeline.thy` (`sign_analysis_config`)                       |
 | 6    | Show `s \<in> gamma_state (ac_init my_cfg)` for the initial store                          | `Pipeline.thy` (`sign_init_in_gamma`)                         |
-| 7    | Apply `pipeline_invariant_sound` / `sign_pipeline_sound`                                   | `Goblint_Formalization.thy` (`goblint_sign_sound`)            |
+| 7    | Apply `pipeline_invariant_sound` / `sign_pipeline_sound`                                   | `Voblint_Formalization.thy` (`voblint_sign_sound`)            |
 
 The pipeline carries one TD-side assumption the user must discharge:
 `⋀v. TD_plain.solve_dom (make_rhs_tree …) v` (P1). P2 (`td_cfg_in_reach`) was
@@ -167,7 +167,7 @@ provided `Makefile` targets:
   Equivalent to:
 
   ```
-  isabelle build -d $(AFP) -d vendor/td-verification -D . Goblint_Formalization
+  isabelle build -d $(AFP) -d vendor/td-verification -D . Voblint_Formalization
   ```
 
 - `make jedit`: launches Isabelle/jEdit with the correct session roots
@@ -208,7 +208,7 @@ Repository layout
 │   ├── Domains/          abstract domains (Sign, Interval, ...)
 │   ├── Pipeline/         end-to-end pipeline theorems
 │   ├── Examples/         concrete instantiations and worked examples
-│   └── Goblint_Formalization.thy   top-level session entry
+│   └── Voblint_Formalization.thy   top-level session entry
 ├── vendor/
 │   ├── td-verification/             git submodule (init via `make vendor`)
 │   ├── td-verification.patch        local Isabelle2025 compatibility patch

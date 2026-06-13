@@ -6,7 +6,7 @@ characterisation `cfg_collect_paths`, and exit projection `runs_to` with small-s
 equivalence.
 
 **Import:** `CFG_Runs_To_Bridge` pulls in the full chain below (also imported by
-`Goblint_Formalization`, `Constraint_System_Sound`, `TD_CFG_Core`,
+`Voblint_Formalization`, `Constraint_System_Sound`, `TD_CFG_Core`,
 `Example_CFG_Collecting_Equiv`).
 
 **Theories (dependency order)**
