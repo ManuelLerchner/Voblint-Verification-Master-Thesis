@@ -147,7 +147,7 @@ only: program AST, `compile_*` facts, reach/discharge lemmas, `td_solve_dom`.
 
 ### Slice U1 — collecting parameterization
 
-- Introduce `CFG_Collect_Unified.thy` (or extend `CFG_Collecting_Core`) with locale
+- Introduce `CFG_Collect_Unified.thy` (or extend `CFG_Collect_Core`) with locale
   above.
 - Prove `collecting_intra` and `collecting_ip` interpretations recover existing defs
   (`cfg_collect`, `cfg_collect_ip`) by reflexivity lemmas — **do not delete** old

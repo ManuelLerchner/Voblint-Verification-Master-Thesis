@@ -24,7 +24,7 @@ proved transfer soundness.
 2. `unified_post_fixpoint_sound_ip` — `cfg_collect_ip … ⊆ γ(env v)`.
 Then applies `subset_trans`.
 
-**Imports:** `Voblint_Analysis.Analysis_Sound`, `Voblint_CFG.CFG_Trace_Collect_IP`.
+**Imports:** `Voblint_Analysis.Analysis_Sound`, `Voblint_CFG.CFG_Collect_Trace_IP`.
 
 **Downstream:** `Analysis/Domains/Sign_Side_IP_Soundness.thy` imports `TD_Side_IP_Soundness`
 (not this file directly); `Example_Side_Proc_Global.thy` uses `side_ip_sign_analysis_sound`.

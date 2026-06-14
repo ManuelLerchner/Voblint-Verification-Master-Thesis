@@ -10,7 +10,7 @@ theory Voblint
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_CFG.CFG_Collect_IP"
-    "Voblint_CFG.CFG_Trace_Collect_IP"
+    "Voblint_CFG.CFG_Collect_Trace_IP"
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Abstract_Domain"
     "Voblint_Analysis.Sign_Domain"
@@ -45,7 +45,7 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Def}
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG}
     \<^item> @{theory Voblint_CFG.CFG_Collect_IP}
-    \<^item> @{theory Voblint_CFG.CFG_Trace_Collect_IP}
+    \<^item> @{theory Voblint_CFG.CFG_Collect_Trace_IP}
     \<^item> @{theory Voblint_CFG.CFG_Collect_Unified}
 
   \<^bold>\<open>3. Analysis.\<close> Abstract domains, the constraint system, and the

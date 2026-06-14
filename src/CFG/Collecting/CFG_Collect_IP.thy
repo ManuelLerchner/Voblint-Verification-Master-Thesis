@@ -1,5 +1,5 @@
 theory CFG_Collect_IP
-  imports CFG_Edges_Collect IMP2_Proc_to_CFG
+  imports CFG_Collect_Edges IMP2_Proc_to_CFG
 begin
 
 (*

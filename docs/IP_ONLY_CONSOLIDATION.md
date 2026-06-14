@@ -78,12 +78,12 @@ Trim / repoint:
 
 - `src/Equations/Constraint_System_Sound.thy`: delete the `to_cfg` exit
   corollary (~ll.326-342). KEEP the generic theorem (~l.246, over abstract `g`,
-  used by IP). Re-point import `CFG_Runs_To_Bridge` -> `CFG_Collecting_Core`.
+  used by IP). Re-point import `CFG_Runs_To_Bridge` -> `CFG_Collect_Core`.
 - `src/CFG/CFG_GraphViz.thy`: 2 `to_cfg` refs - repoint to `compile_prog` or drop.
 
 **Verification gate (do first):** confirm `cfg_collect_le_paths` (used by the
 generic soundness at `Constraint_System_Sound` l.248) lives in
-`CFG_Collecting_Core`, not `CFG_Compound_Paths`. If it is in `CFG_Compound_Paths`,
+`CFG_Collect_Core`, not `CFG_Compound_Paths`. If it is in `CFG_Compound_Paths`,
 extract it to Core before deleting. `cfg_collect_paths` + `_step/_entry/_post`
 are already confirmed in Core.
 
@@ -176,11 +176,11 @@ mention in `TD_Side_IP_Interface` is a comment). The `com`-level
 `side_sign_analysis_sound` now lives only in git history (CAVEAT accepted).
 
 **Phase 2 - to_cfg cone.** Gate confirmed: `cfg_collect_le_paths` and the
-`cfg_collect_paths` family live in `CFG_Collecting_Core`. Deleted `IMP2_to_CFG`,
+`cfg_collect_paths` family live in `CFG_Collect_Core`. Deleted `IMP2_to_CFG`,
 `CFG_Compound_Paths`, `CFG_Path_Bridge`, `CFG_Runs_To_Bridge`. Repointed
-`Constraint_System_Sound` import `CFG_Runs_To_Bridge -> CFG_Collecting_Core` and
+`Constraint_System_Sound` import `CFG_Runs_To_Bridge -> CFG_Collect_Core` and
 dropped its `to_cfg` `exit_sound` corollary (generic `post_fixpoint_sound_at`
-kept). Found one item the plan missed: `CFG_Edges_Collect` *really* imported
+kept). Found one item the plan missed: `CFG_Collect_Edges` *really* imported
 `IMP2_to_CFG` (for `aval`/`bval`); repointed it to `IMP2_Expr`. Cleaned
 stale `to_cfg` comments in `CFG_GraphViz` and `IMP2_Proc_to_CFG`.
 

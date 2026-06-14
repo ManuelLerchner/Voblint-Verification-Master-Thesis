@@ -54,7 +54,7 @@ one-step functional over the compiled CFG (`src/CFG/Collecting/CFG_Collect_IP.th
 Extends `cfg_collect` (intra) with `combine_states` triples for call/return.
 
 **Trace spec:** `cfg_collect_trace_ip g S v` — trace-valued interprocedural
-collecting (`CFG_Trace_Collect_IP.thy`). Projection: `alpha_last` collapses traces
+collecting (`CFG_Collect_Trace_IP.thy`). Projection: `alpha_last` collapses traces
 to last stores; `alpha_last (cfg_collect_trace_ip …) ⊆ cfg_collect_ip …`.
 
 **Operational link:** `pruns_to_ip pi ps c s t` — definitional exit projection of
@@ -135,7 +135,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | --- | --- | --- |
 | IMP2 | `IMP2_Syntax`, `IMP2_Expr`, `IMP2_Globals`, `IMP2_Proc` | `aval`, `bval`, `pstep`, `combine_states`, `enter_state` |
 | CFG | `IMP2_Proc_to_CFG` | `compile_prog`, `compile`, call/combine layout |
-| Collecting | `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Trace_Collect_IP` | `cfg_collect_ip`, `pruns_to_ip`, `alpha_last`, trace-ip projection |
+| Collecting | `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Collect_Trace_IP` | `cfg_collect_ip`, `pruns_to_ip`, `alpha_last`, trace-ip projection |
 | Unified | `CFG_Collect_Unified`, `Analysis_Sound` | locale `collecting`, `unified_post_fixpoint_sound_ip` |
 | Equations | `Constraint_System`, `Constraint_System_IP_Sound` | `rhs_ip`, `is_post_fixpoint_ip`, `post_fixpoint_sound_at` |
 | Solver | `TD_Side_IP_CFG`, `TD_Side_IP_Interface`, `TD_Side_IP_Soundness` | `side_cfg_T_ip`, `side_analyse_ip`, `side_analyse_ip_collect_sound_exit_pruned` |

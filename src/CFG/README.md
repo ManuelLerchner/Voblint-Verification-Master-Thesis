@@ -14,7 +14,7 @@ infrastructure (`cfg_path`, offsets), and reachability pruning.
 | `CFG_Prune.thy` | `ip_reaches`, reachability pruning (`CFG_Prune`); used by solver soundness |
 | `CFG_GraphViz.thy` | Pretty-printing / Graphviz export (tooling) |
 
-Path store folding uses `edges_collect` in [`Collecting/CFG_Edges_Collect.thy`](Collecting/CFG_Edges_Collect.thy).
+Path store folding uses `edges_collect` in [`Collecting/CFG_Collect_Edges.thy`](Collecting/CFG_Collect_Edges.thy).
 
 **Collecting semantics** (IP fixpoint over stores, trace, unified locale) live in
 [`Collecting/`](Collecting/) — import **`CFG_Collect_IP`** for interprocedural semantics

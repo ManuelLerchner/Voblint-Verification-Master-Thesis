@@ -8,13 +8,13 @@ trace-valued `cfg_collect_trace_ip`, and the unified `collecting` locale.
 
 | File | Role |
 | --- | --- |
-| `CFG_Edges_Collect.thy` | `edge_collect`, `collect_pp`, `cfg_collect` (intra lfp); imports `IMP2_Proc_to_CFG`, `CFG_Path` |
-| `CFG_Collecting_Core.thy` | `cfg_collect_F`, intra one-step functional; monotonicity |
+| `CFG_Collect_Edges.thy` | `edge_collect`, `collect_pp`, `cfg_collect` (intra lfp); imports `IMP2_Proc_to_CFG`, `CFG_Path` |
+| `CFG_Collect_Core.thy` | `cfg_collect_F`, intra one-step functional; monotonicity |
 | `CFG_Collect_IP.thy` | `cfg_collect_ip_F`, `cfg_collect_ip` (IP lfp); `collect_combine_pp`; `combine_states` triples |
 | `CFG_Collect_IP_Adeq.thy` | `pruns_to_ip` (exit projection); operational adequacy witness (`inc_pi` example) |
 | `CFG_Collect_Unified.thy` | `collecting` locale parameterised by `combine_at`; `intra.collect = cfg_collect`; `ip.collect = cfg_collect_ip` |
-| `CFG_Trace_Collect.thy` | `cfg_collect_trace` — intra trace-valued collecting |
-| `CFG_Trace_Collect_IP.thy` | `cfg_collect_trace_ip` — IP trace collecting; `alpha_last`; projection `alpha_last (cfg_collect_trace_ip …) ⊆ cfg_collect_ip …` |
+| `CFG_Collect_Trace.thy` | `cfg_collect_trace` — intra trace-valued collecting |
+| `CFG_Collect_Trace_IP.thy` | `cfg_collect_trace_ip` — IP trace collecting; `alpha_last`; projection `alpha_last (cfg_collect_trace_ip …) ⊆ cfg_collect_ip …` |
 
 **Specification spine**
 

@@ -1,5 +1,5 @@
 theory CFG_Collect_Unified
-  imports CFG_Collect_IP CFG_Collecting_Core
+  imports CFG_Collect_IP CFG_Collect_Core
 begin
 
 (*
@@ -12,7 +12,7 @@ begin
 
   The lfp skeleton (mono, unfold, post-fixpoint, entry, per-edge step, generic
   lfp lower bound) is proved ONCE in the locale.  The trace overlay (U4 / M3.5)
-  reuses the same skeleton; see CFG_Trace_Collect.
+  reuses the same skeleton; see CFG_Collect_Trace.
 *)
 
 locale collecting =

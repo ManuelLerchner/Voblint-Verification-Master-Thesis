@@ -18,7 +18,7 @@ Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`, `docs/PROOF_OVERV
 ```
 cfg_collect_trace_ip (trace spec at each pp)
        |
-       |  alpha_last projection (CFG_Trace_Collect_IP)
+       |  alpha_last projection (CFG_Collect_Trace_IP)
        v
 cfg_collect_ip (state spec at each pp)
        |

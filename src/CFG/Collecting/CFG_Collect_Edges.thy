@@ -1,4 +1,4 @@
-theory CFG_Edges_Collect imports "Voblint_IMP2.IMP2_Expr" CFG_Path "Voblint_IMP2.IMP2_Globals"
+theory CFG_Collect_Edges imports "Voblint_IMP2.IMP2_Expr" CFG_Path "Voblint_IMP2.IMP2_Globals"
 begin
 
 (* Per-edge and path-based store-set collecting (edges_collect fold). *)

@@ -89,7 +89,7 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # CFG path infrastructure
 
-`cfg_path` carries actions (needed for transfer-fn composition); `edges_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `edges_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the IP collecting layer in `src/CFG/Collecting/` (`CFG_Edges_Collect`, `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Collect_Unified`; import `CFG_Collect_IP_Adeq` for `pruns_to_ip` or `CFG_Collect_Unified` for the locale).
+`cfg_path` carries actions (needed for transfer-fn composition); `edges_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k` the shift is invisible to `edges_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the IP collecting layer in `src/CFG/Collecting/` (`CFG_Collect_Edges`, `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Collect_Unified`; import `CFG_Collect_IP_Adeq` for `pruns_to_ip` or `CFG_Collect_Unified` for the locale).
 
 **Thesis sentence:** Soundness is stated against interprocedural CFG collecting semantics at **every** program point (`cfg_collect_ip` / `cfg_collect_trace_ip`). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IP runs correspond to exit reachability (`pruns_to_ip`); partial and non-terminating behaviour is covered by the trace-level theorem without a final store.
 

@@ -135,7 +135,7 @@ slice, not a rename. Do not couple it to the deletion.
 | --- | --- | --- |
 | R1 | Replace `cfg_collect` def body with `intra.collect` (via `intra_collect_eq` as the new `[simp]`/`[code]` unfold), keep the name. Same for `cfg_collect_ip = ip.collect`. | batch green; no standalone `lfp(cfg_collect_F)` left |
 | R2 | Delete duplicated intra post-fixpoint soundness bodies in `Constraint_System_Sound` / `TD_Soundness`; re-export names as corollaries of `Analysis_Sound`. | old theorem names resolve, batch green |
-| R3 | Fold `CFG_Edges_Collect` / `CFG_Collecting_Core` standalone `cfg_collect_F` into `CFG_Collect_Unified` (or leave as the `intra` re-export module). | one collecting engine theory |
+| R3 | Fold `CFG_Collect_Edges` / `CFG_Collect_Core` standalone `cfg_collect_F` into `CFG_Collect_Unified` (or leave as the `intra` re-export module). | one collecting engine theory |
 | R4 | Doc + ROADMAP update; mark intra spine "interpretation of unified". | this doc → Done |
 
 Each slice exits sorry-free with **no example regression** (handoff §8 gate).
@@ -149,7 +149,7 @@ Each slice exits sorry-free with **no example regression** (handoff §8 gate).
 | B3 | Re-home **Interval** onto unified spine (interval `combine_at` is `{}`; mostly rename). |
 | B4 | Re-home **Side** (M3): decide whether `TD_side` soundness routes through the unified collecting at `combines = {}`, or stays a separate backend with the suffix dropped only on the collecting side. **Research slice — scope separately.** |
 | B5 | Drop `_IP` suffix across constants + theory names; update ROOT, examples, docs. |
-| B6 | Delete now-dead intra-only theories (`CFG_Edges_Collect` if fully subsumed; intra `to_cfg` if `com` dropped). |
+| B6 | Delete now-dead intra-only theories (`CFG_Collect_Edges` if fully subsumed; intra `to_cfg` if `com` dropped). |
 
 ## 5. Build gate
 

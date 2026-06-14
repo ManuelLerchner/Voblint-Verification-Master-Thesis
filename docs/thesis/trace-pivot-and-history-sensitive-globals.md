@@ -26,7 +26,7 @@ The repository's collecting semantics is built on enumerated CFG paths
 of reachable stores" with "set of reaching *traces*" (store sequences) and proves
 that projecting each trace to its last store recovers the old semantics exactly:
 
-> **Lift lemma** (`src/CFG/Collecting/CFG_Trace_Collect.thy`, `lift`):
+> **Lift lemma** (`src/CFG/Collecting/CFG_Collect_Trace.thy`, `lift`):
 > `α_last (cfg_collect_trace g S v) = cfg_collect_paths g S v`.
 
 Because `lift` is an *equality*, every existing numeric-domain soundness proof
@@ -48,7 +48,7 @@ globals and zeroes locals) and **combine triples** `(call, callee_exit, return)`
 — *not* a flat combine edge, which would need a `⊤` the bounded-semilattice
 domains do not have.
 
-The interprocedural trace collecting (`CFG_Trace_Collect_IP.thy`,
+The interprocedural trace collecting (`CFG_Collect_Trace_IP.thy`,
 `ip_trace_witness`) threads this: `entry` seeds a singleton, `edge` extends by one
 CFG edge, and `combine` splices a callee trace `ρ` onto the caller trace `τ` it
 returned to, under the junction condition `hd ρ = enter_state (last τ)`, appending
@@ -79,7 +79,7 @@ Specialized to a `G`-prefixed variable and joined over program points, this *is*
 the flow-insensitive global read — now stated against the trace semantics, where
 "history" is the reaching trace itself. A source-level sharpening confirms the
 reading: a global the CFG never assigns ends every reaching trace at its initial
-value (`CFG_Trace_Collect.thy`, `cfg_collect_trace_global_frame`).
+value (`CFG_Collect_Trace.thy`, `cfg_collect_trace_global_frame`).
 
 ## 5. M4 precision: digests
 
@@ -140,10 +140,10 @@ in the present proof. The precision claim is *strict improvement*, not
 
 | Result | File | Anchor |
 | --- | --- | --- |
-| Lift lemma | `src/CFG/Collecting/CFG_Trace_Collect.thy` | `lift` |
-| Globals frame | `src/CFG/Collecting/CFG_Trace_Collect.thy` | `cfg_collect_trace_global_frame` |
-| IP trace projection | `src/CFG/Collecting/CFG_Trace_Collect_IP.thy` | `alpha_last_cfg_collect_trace_ip_le` |
-| Digest refinement (A) | `src/CFG/Collecting/CFG_Trace_Collect_IP.thy` | `cfg_collect_trace_ip_d_subset` |
+| Lift lemma | `src/CFG/Collecting/CFG_Collect_Trace.thy` | `lift` |
+| Globals frame | `src/CFG/Collecting/CFG_Collect_Trace.thy` | `cfg_collect_trace_global_frame` |
+| IP trace projection | `src/CFG/Collecting/CFG_Collect_Trace_IP.thy` | `alpha_last_cfg_collect_trace_ip_le` |
+| Digest refinement (A) | `src/CFG/Collecting/CFG_Collect_Trace_IP.thy` | `cfg_collect_trace_ip_d_subset` |
 | M4 core | `src/Pipeline/Trace_IP_Analysis_Sound.thy` | `reaching_global_read_sound` |
 | Digest contract (B) | `src/Pipeline/Trace_IP_Analysis_Sound.thy` | `digest_env_sound`, `digest_read_sound`, `flat_env_is_digest_sound` |
 | Strict precision (C) | `src/Examples/Example_Trace_Digest_Precision.thy` | `digest_beats_flat` |

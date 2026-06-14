@@ -19,7 +19,7 @@ KB companions (read for *why*):
 
 > Status (2026-06-09): **Slices 2–3 done, green.** Branch `trace-spike`.
 > Consolidation U1–U4 landed first (see `UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md`),
-> then M3.5: `src/CFG/Collecting/CFG_Trace_Collect_IP.thy` defines
+> then M3.5: `src/CFG/Collecting/CFG_Collect_Trace_IP.thy` defines
 > `cfg_collect_trace_ip` (`ip_trace_witness`: entry / edge / junction-combine) and
 > proves the milestone projection
 > `alpha_last (cfg_collect_trace_ip g S v) \<subseteq> cfg_collect_ip g S v`
@@ -91,12 +91,12 @@ into the locale later — **but that re-incurs the debt; prefer the gate.**
 
 | Artifact | File | Role in M3.5 |
 | --- | --- | --- |
-| `cfg_collect_trace`, `alpha_last`, `lift` | `CFG/Collecting/CFG_Trace_Collect.thy` | intraprocedural template; `alpha_last` is the projection |
+| `cfg_collect_trace`, `alpha_last`, `lift` | `CFG/Collecting/CFG_Collect_Trace.thy` | intraprocedural template; `alpha_last` is the projection |
 | `cfg_collect_ip` (state-based) | `CFG/Collecting/CFG_Collect_IP.thy` | the **projection target** of the new lift |
 | `combine_states <s|t>` + algebra | `IMP2/IMP2_Globals.thy` | the `restore` in `combine` (locals from caller, globals from callee) |
 | `pstep` / `pruns_to` / determinism | `IMP2/IMP2_Proc.thy` | the small step each trace step reuses; adequacy witness |
 | `compile_prog`, enter edges, `combines g` triples | `CFG/IMP2_Proc_to_CFG.thy` | the CFG structure `enter`/`combine` thread through |
-| path-enumeration skeleton | `CFG/Collecting/CFG_Collecting_Core.thy` | `cfg_collect_trace_ip` mirrors its lfp/path proofs |
+| path-enumeration skeleton | `CFG/Collecting/CFG_Collect_Core.thy` | `cfg_collect_trace_ip` mirrors its lfp/path proofs |
 
 **~80% of the substrate is here.** M3.5 is new *glue*, not a new foundation.
 
@@ -151,7 +151,7 @@ M4 / a later milestone, not M3.5.) Template: Schwarz §3 Theorem 1 lock-compatib
 ## 5. Slices (each exits sorry-free, full `isabelle build`)
 
 ### Slice 1 — trace type + intraprocedural re-close
-- Enrich `trace` to `(edge_action * store) list` in `CFG_Trace_Collect.thy`.
+- Enrich `trace` to `(edge_action * store) list` in `CFG_Collect_Trace.thy`.
 - Re-close `edges_trace`, `cfg_collect_trace`, `alpha_last`, and **`lift`** over the new type.
 - **Exit:** intraprocedural `lift` green on the enriched type; no regression in `Trace_Soundness` / `Example_Trace_*`.
 

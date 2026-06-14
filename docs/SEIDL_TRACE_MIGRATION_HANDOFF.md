@@ -50,7 +50,7 @@ KB companion (read these for *why*, not just *what*):
 > **Progress update (2026-06-06, branch `trace-spike`).** M0 + the Phase 2
 > soundness layer are **green** (full `isabelle build`, sorry-free):
 >
-> - `src/CFG/Collecting/CFG_Trace_Collect.thy` — `edge_step`, `edges_trace`,
+> - `src/CFG/Collecting/CFG_Collect_Trace.thy` — `edge_step`, `edges_trace`,
 >   `cfg_collect_trace`, `alpha_last`, and the gate theorem `lift`
 >   (`alpha_last (cfg_collect_trace g S v) = cfg_collect_paths g S v`). **M0.**
 > - `src/Pipeline/Trace_Soundness.thy` — `cfg_collect_eq_alpha_last_trace`
@@ -182,13 +182,13 @@ KB companion (read these for *why*, not just *what*):
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
-| **M0** — lift lemma | **Done** | `CFG_Trace_Collect.thy` |
+| **M0** — lift lemma | **Done** | `CFG_Collect_Trace.thy` |
 | **M2** — trace soundness via `alpha_last` | **Done** | `Trace_Soundness.thy`, `Example_Trace_NonTerminating.thy` |
 | **M3** — TD_side theory + solver soundness | **Done** | `TD_Side_CFG` / `Interface` / `Soundness` |
 | **M3 witness** — concrete global example | **Done** | `Example_Side_Global.thy` |
 | **M1** — procedures end-to-end | **Done** | §9 slices 1–4; `Example_Proc_Global.thy` |
 | **U1–U4** — unified analysis migration | **Done** (2026-06-09) | `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` |
-| **M3.5** — interprocedural **trace** bridge | **Done** (core) | projection lemma green; `CFG_Trace_Collect_IP.thy` |
+| **M3.5** — interprocedural **trace** bridge | **Done** (core) | projection lemma green; `CFG_Collect_Trace_IP.thy` |
 | **M4** — globals over traces | **Done** (soundness + precision) | `reaching_global_read_sound` + digest layer; `Example_Trace_Digest_Precision.thy` |
 
 Migration is **complete**: the unified-analysis consolidation (U1–U4),
@@ -203,7 +203,7 @@ are all green (full `isabelle build`, 2026-06-09).
   premise (`cmp (dg tau) (dg rho)`) to the combine rule;
   `cfg_collect_trace_ip_d_subset` proves the refined trace set is a SUBSET of the
   unrefined one, so `reaching_global_read_sound_d` carries the M4 core over with
-  the same `env` at zero soundness cost. (`CFG_Trace_Collect_IP.thy`,
+  the same `env` at zero soundness cost. (`CFG_Collect_Trace_IP.thy`,
   `Trace_IP_Analysis_Sound.thy`.)
 - **B — digest-indexed analyzer contract.** `digest_env_sound` (per-(pp,digest)
   over-approximation of `reaching_compat`), `digest_read_sound` (the
@@ -224,7 +224,7 @@ semantics extension.
 
 > **Progress (2026-06-09) — consolidation + M3.5 projection green.**
 > Full `isabelle build` sorry-free. New theories: `CFG_Collect_Unified` (U1),
-> `Analysis_Sound` (U2), `Trace_IP_Analysis_Sound` (U4), `CFG_Trace_Collect_IP`
+> `Analysis_Sound` (U2), `Trace_IP_Analysis_Sound` (U4), `CFG_Collect_Trace_IP`
 > (M3.5). M3.5 milestone:
 > `alpha_last (cfg_collect_trace_ip g S v) \<subseteq> cfg_collect_ip g S v`
 > (`ip_trace_witness`; enter = edge step, combine = junction splice with
@@ -260,7 +260,7 @@ lemma first (Phase 0). Everything else waits on it.
 ## 2. Orientation — the one fact that makes this feasible
 
 The collecting semantics is built on **enumerated edge paths**. In
-`src/CFG/Collecting/CFG_Collecting_Core.thy`:
+`src/CFG/Collecting/CFG_Collect_Core.thy`:
 
 ```
 cfg_collect_paths g S v = (UN es : {es. g |- cfg_entry g ->[es] v}. edges_collect es S)
@@ -268,7 +268,7 @@ cfg_collect_paths g S v = (UN es : {es. g |- cfg_entry g ->[es] v}. edges_collec
 
 `es` is an explicit edge list — the **control-flow history is already first-class**.
 What discards the *data* history is the fold in
-`src/CFG/Collecting/CFG_Edges_Collect.thy`:
+`src/CFG/Collecting/CFG_Collect_Edges.thy`:
 
 ```
 fun edges_collect :: "(edge_action * pp) list => store set => store set" where
@@ -314,7 +314,7 @@ lemma lift:  "alpha_last (cfg_collect_trace g S v) = cfg_collect_paths g S v"
 ```
 
 Mirror the proof skeleton of the existing `cfg_collect_le_paths` /
-`cfg_collect_witness` in `CFG_Collecting_Core.thy` — the **path skeleton is unchanged**;
+`cfg_collect_witness` in `CFG_Collect_Core.thy` — the **path skeleton is unchanged**;
 you are threading a sequence through where a single final store used to flow. The
 key reusable facts: `edges_collect_append`, `edges_collect_member`,
 `cfg_collect_paths_step`.

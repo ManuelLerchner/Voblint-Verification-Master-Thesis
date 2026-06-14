@@ -1,5 +1,5 @@
-theory CFG_Collecting_Core
-  imports CFG_Edges_Collect
+theory CFG_Collect_Core
+  imports CFG_Collect_Edges
 begin
 
 (* cfg_collect_paths and path-to-lfp bridge lemmas (pre-compound). *)

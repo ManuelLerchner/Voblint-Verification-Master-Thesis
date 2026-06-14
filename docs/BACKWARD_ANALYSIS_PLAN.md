@@ -30,7 +30,7 @@ The hook points exist and are wired end to end.
 | --- | --- | --- |
 | `domain_transfer` record (`tf_assume`, `tf_assume_not` slots) | `src/Analysis/Equations/Constraint_System.thy:33` | ready, unchanged |
 | `apply_tf` dispatch (`EA_Assume`/`EA_AssumeNot` -> `tf_assume{,_not}`) | `src/Analysis/Equations/Constraint_System.thy:42` | ready, unchanged |
-| Concrete collecting semantics for guards | `src/CFG/Collecting/CFG_Edges_Collect.thy:11` | the spec we refine against |
+| Concrete collecting semantics for guards | `src/CFG/Collecting/CFG_Collect_Edges.thy:11` | the spec we refine against |
 | Soundness obligation shape | `sign_tf_sound_assume` `src/Analysis/Domains/Sign_Domain.thy:411` | reproved, same statement |
 | `gamma_state_bot : gamma_state bot = {}` | `src/Analysis/Domains/Abstract_Domain.thy:77` | enables ⊥ collapse |
 

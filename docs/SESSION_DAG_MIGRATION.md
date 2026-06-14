@@ -82,14 +82,14 @@ session Voblint_CFG in "src/CFG" = "Voblint_IMP2" +
     CFG_Path
     CFG_GraphViz
     IMP2_Proc_to_CFG
-    CFG_Collecting_Core
-    CFG_Edges_Collect
-    CFG_Trace_Collect
+    CFG_Collect_Core
+    CFG_Collect_Edges
+    CFG_Collect_Trace
     CFG_Collect_IP
     CFG_Prune
     CFG_Collect_IP_Adeq
     CFG_Collect_Unified
-    CFG_Trace_Collect_IP
+    CFG_Collect_Trace_IP
 
 session Voblint_Analysis in "src" = "Voblint_CFG" +
   description "Abstract domains, constraint systems, and TD solver bridge"
@@ -134,8 +134,8 @@ Every bare-name import that crosses a session boundary must become a qualified i
 |------|-----------------|
 | `CFG_Def.thy` | `IMP2_Syntax` → `"Voblint_IMP2.IMP2_Syntax"` |
 | `IMP2_Proc_to_CFG.thy` | `IMP2_Proc` → `"Voblint_IMP2.IMP2_Proc"` |
-| `CFG_Edges_Collect.thy` | `IMP2_Expr`, `IMP2_Globals` → qualified |
-| `CFG_Trace_Collect.thy` | `IMP2_Globals` → `"Voblint_IMP2.IMP2_Globals"` |
+| `CFG_Collect_Edges.thy` | `IMP2_Expr`, `IMP2_Globals` → qualified |
+| `CFG_Collect_Trace.thy` | `IMP2_Globals` → `"Voblint_IMP2.IMP2_Globals"` |
 | `CFG_Collect_IP_Adeq.thy` | `IMP2_Proc` → `"Voblint_IMP2.IMP2_Proc"` |
 
 **In `Voblint_Analysis` theories** — qualify CFG + IMP2 imports:
@@ -144,7 +144,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 |------|------------------|
 | `Sign_Domain.thy` | `IMP2_Expr`, `IMP2_Globals` → qualified (IMP2) |
 | `Constraint_System.thy` | `CFG_Def`, `IMP2_Globals`, `IMP2_Expr` → qualified |
-| `Constraint_System_Sound.thy` | `CFG_Collecting_Core` → `"Voblint_CFG.CFG_Collecting_Core"` |
+| `Constraint_System_Sound.thy` | `CFG_Collect_Core` → `"Voblint_CFG.CFG_Collect_Core"` |
 | `Constraint_System_IP_Sound.thy` | `CFG_Collect_IP` → `"Voblint_CFG.CFG_Collect_IP"` |
 | `Analysis_Sound.thy` | `CFG_Collect_Unified` → `"Voblint_CFG.CFG_Collect_Unified"` |
 | `TD_Side_CFG.thy` | `IMP2_Globals` → `"Voblint_IMP2.IMP2_Globals"` |
@@ -155,7 +155,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 
 | File | Imports to change |
 |------|------------------|
-| `Trace_IP_Analysis_Sound.thy` | `Analysis_Sound`, `CFG_Trace_Collect_IP` → qualified |
+| `Trace_IP_Analysis_Sound.thy` | `Analysis_Sound`, `CFG_Collect_Trace_IP` → qualified |
 | `Example_Proc_GraphViz.thy` | `CFG_GraphViz`, `IMP2_Proc_to_CFG` → qualified |
 | `Example_Side_Proc_Global.thy` | `Sign_Side_IP_Soundness`, `CFG_Collect_IP_Adeq` → qualified |
 | `Example_Trace_Digest_Precision.thy` | `Sign_Domain` → `"Voblint_Analysis.Sign_Domain"` |

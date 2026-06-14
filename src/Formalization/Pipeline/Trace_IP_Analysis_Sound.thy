@@ -1,5 +1,5 @@
 theory Trace_IP_Analysis_Sound
-  imports "Voblint_Analysis.Analysis_Sound" "Voblint_CFG.CFG_Trace_Collect_IP"
+  imports "Voblint_Analysis.Analysis_Sound" "Voblint_CFG.CFG_Collect_Trace_IP"
 begin
 
 (*

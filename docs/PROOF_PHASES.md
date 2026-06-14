@@ -45,13 +45,13 @@ As of last full-session build: **0 sorries** in `src/`.
 
 | File | Role |
 | --- | --- |
-| `CFG_Edges_Collect.thy` | `edge_collect`, `collect_pp`, `cfg_collect` (intra lfp) |
-| `CFG_Collecting_Core.thy` | `cfg_collect_F`, intra collecting engine |
+| `CFG_Collect_Edges.thy` | `edge_collect`, `collect_pp`, `cfg_collect` (intra lfp) |
+| `CFG_Collect_Core.thy` | `cfg_collect_F`, intra collecting engine |
 | `CFG_Collect_IP.thy` | `cfg_collect_ip` — IP collecting with combine triples |
 | `CFG_Collect_IP_Adeq.thy` | `pruns_to_ip`, operational adequacy witness |
 | `CFG_Collect_Unified.thy` | `collecting` locale; `intra.collect = cfg_collect`, `ip.collect = cfg_collect_ip` |
-| `CFG_Trace_Collect.thy` | Intra trace collecting |
-| `CFG_Trace_Collect_IP.thy` | `cfg_collect_trace_ip`, `alpha_last`, projection lemma |
+| `CFG_Collect_Trace.thy` | Intra trace collecting |
+| `CFG_Collect_Trace_IP.thy` | `cfg_collect_trace_ip`, `alpha_last`, projection lemma |
 
 ### Equations + unified soundness
 

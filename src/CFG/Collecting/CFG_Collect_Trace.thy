@@ -1,10 +1,10 @@
-theory CFG_Trace_Collect
-  imports CFG_Collecting_Core "Voblint_IMP2.IMP2_Globals"
+theory CFG_Collect_Trace
+  imports CFG_Collect_Core "Voblint_IMP2.IMP2_Globals"
 begin
 
 (*
   Trace-valued collecting semantics, alongside the reachable-state collecting
-  of CFG_Collecting_Core.  The central result `lift` shows that projecting
+  of CFG_Collect_Core.  The central result `lift` shows that projecting
   every trace to its last store recovers `cfg_collect_paths` exactly, so any
   property of the reachable-state collecting transfers to the trace collecting
   through the projection `alpha_last`.

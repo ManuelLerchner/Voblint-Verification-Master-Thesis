@@ -1,11 +1,11 @@
-theory CFG_Trace_Collect_IP
-  imports CFG_Trace_Collect CFG_Collect_IP
+theory CFG_Collect_Trace_IP
+  imports CFG_Collect_Trace CFG_Collect_IP
 begin
 
 (*
   M3.5 -- interprocedural TRACE collecting and the projection lemma.
 
-  cfg_collect_trace (intraprocedural, CFG_Trace_Collect) records the sequence of
+  cfg_collect_trace (intraprocedural, CFG_Collect_Trace) records the sequence of
   stores along a single CFG path.  M1's cfg_collect_ip (CFG_Collect_IP) is
   state-based with enter edges + combine triples.  M3.5 forms their product:
   a trace-valued interprocedural collecting whose enter is an ordinary edge step
