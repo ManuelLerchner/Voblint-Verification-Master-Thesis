@@ -2,10 +2,44 @@
 
 # Migration: re-introduce the Interval domain (onto the IP/side spine)
 
-Status: **PLANNED, NOT STARTED** 2026-06-14. Target branch: **`main`** (scalar
-store). Re-adds a second abstract domain — intervals — to demonstrate the
-domain-parametric architecture generalises beyond the finite Sign lattice, and
-to exercise real widening end to end (Sign's `widen = join` is trivial).
+Status: **DONE** 2026-06-14 (`Voblint_Formalization` builds green). Target
+branch: **`main`** (scalar store). Re-adds a second abstract domain — intervals
+— to demonstrate the domain-parametric architecture generalises beyond the
+finite Sign lattice, and to exercise real widening end to end (Sign's
+`widen = join` is trivial).
+
+Delivered:
+
+- `src/Analysis/Domains/Interval_Domain.thy` — domain core (`eint`/`ivl`
+  lattice, `bounded_semilattice_sup_bot`, `gamma_ivl`, precise `ivl_plus` /
+  `ivl_minus` / `ivl_times`, `meet_ivl`, `widen_ivl` + `widen_ivl_terminates`,
+  guard-refining `assume_ivl`, `ivl_tf`, the `ivl_sound_tf : sound_transfer`
+  interpretation, and the full transfer-fn monotonicity chain up to
+  `ivl_tf_mono`).
+- `src/Analysis/Domains/Interval_Side_IP_Soundness.thy` — headline wrapper
+  `side_ip_ivl_analysis_sound`.
+- `src/Formalization/Examples/Example_Interval_Side_Proc_Global.thy` — the
+  `inc_pi` witness at the interval domain (`proc_global_side_ivl_analysis`).
+- `src/Formalization/Examples/Example_Interval_Loop_Coverage.thy` — a full
+  bounded-loop program `x := 0; while (x < 20) { x := x + 1 }` whose exhibited
+  interval post-fixpoint proves `0 <= x <= 20` at the loop head
+  (`loop_head_x_bounded`) — both bounds, the upper one via guard refinement.
+
+**Multiplication is precise, with proper bottom handling.** The classical
+corner-product is monotone over *well-formed non-empty* intervals; the raw
+`ivl` datatype additionally contains unnormalised empties (`Ivl (Fin 5) (Fin 3)`,
+`bot`, …) and the classical fallback sent *every* non-all-finite interval —
+empties included — to `top`, which destroys the ordering (`bot <= x` but
+`top` is not `<= ivl_times (finite)`). The fix is `ivl_times a b =
+(if ivl_nonempty a ∧ ivl_nonempty b then ivl_times_core a b else bot)`: empty
+operand → `bot`, all-finite → corner product, nonempty-infinite → `top`. This is
+both sound (`ivl_times_sound`) and monotone (`ivl_times_mono`, via `corner_min_mono`
+/ `corner_max_mono`). `ivl_plus` / `ivl_minus` are precise and `bot`-preserving.
+
+**Narrowing.** `assume_ivl` refines `x` on the guard `x < n` (meet with
+`[.., n-1]`); `meet_ivl` + `meet_ivl_gamma` / `meet_ivl_mono1` discharge the
+soundness and monotonicity obligations. This is what lets the bounded-loop
+example prove a finite upper bound without widening.
 
 > Do **not** do this on `support-arrays`. That branch's `sound_transfer`
 > obligation is the array/weak-update shape (`s(x := (s x)(idx := …))`); the

@@ -8,4 +8,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Trace_IP_Analysis_Sound
     Example_Proc_GraphViz
     Example_Side_Proc_Global
+    Example_Interval_Side_Proc_Global
+    Example_Interval_Loop_Coverage
     Example_Trace_Digest_Precision
