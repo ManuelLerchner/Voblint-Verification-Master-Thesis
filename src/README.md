@@ -25,7 +25,7 @@ IMP2 (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD s
 | [`CFG/Collecting/`](CFG/Collecting/) | [README](CFG/Collecting/README.md) | IP collecting semantics (`cfg_collect_ip`), trace collecting, unified locale |
 | [`Analysis/Domains/`](Analysis/Domains/) | [README](Analysis/Domains/README.md) | Abstract domains (sign, shared locale) |
 | [`Analysis/Equations/`](Analysis/Equations/) | [README](Analysis/Equations/README.md) | CFG → IP equation system + fixpoint soundness |
-| [`Analysis/Solver/`](Analysis/Solver/) | [README](Analysis/Solver/README.md) | TD side solver bridge (`TD_Side_IP_CFG`, `TD_Side_IP_Interface`, soundness) |
+| [`Analysis/Solver/`](Analysis/Solver/) | [README](Analysis/Solver/README.md) | TD side solver bridge (`TD_Side_IP_{Tree,Mono,Bounds}`, `TD_Side_IP_Interface`, soundness) |
 | [`Formalization/Pipeline/`](Formalization/Pipeline/) | [README](Formalization/Pipeline/README.md) | End-to-end soundness (`trace_ip_analysis_sound`, `reaching_global_read_sound`) |
 | [`Formalization/Examples/`](Formalization/Examples/) | [README](Formalization/Examples/README.md) | Concrete demonstrations and precision examples |
 

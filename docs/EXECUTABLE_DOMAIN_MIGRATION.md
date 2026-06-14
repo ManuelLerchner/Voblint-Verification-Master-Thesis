@@ -183,7 +183,7 @@ green build is also proof the pipeline executes.
 * `src/Analysis/Domains/Abstract_Domain.thy` — `abs_state = vname => 'a`.
 * `src/CFG/CFG_Def.thy:145-214` — `cfg_edges_list` / `predecessor_list` /
   `combine_predecessor_list` (G1).
-* `src/Analysis/Solver/TD_Side_IP_CFG.thy` — `side_cfg_T_ip` /
+* `src/Analysis/Solver/TD_Side_IP_Bounds.thy` — `side_cfg_T_ip` /
   `make_side_rhs_tree_ip` / `side_rhs_fold_ip` (the eqs to mirror at `sign st`).
 * `src/Analysis/Solver/TD_Side_IP_Interface.thy` — `td_cfg_side_ip_solver` locale
   + `side_analyse_ip` (G2; the global entry replaces this routing).

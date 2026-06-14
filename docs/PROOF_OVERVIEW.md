@@ -122,7 +122,7 @@ Full chain: `side_ip_sign_analysis_sound` ← `sound_transfer.side_analyse_ip_co
 - `pp = nat` — program points
 - `'a abs_state = vname ⇒ 'a`; `'a domain_transfer` — assign / assume / assume-not
 - `rhs`, `rhs_ip`, `is_post_fixpoint_ip` — IP constraint system (`Constraint_System.thy`)
-- `side_cfg_T_ip` — side-effecting strategy tree (`TD_Side_IP_CFG.thy`)
+- `side_cfg_T_ip` — side-effecting strategy tree (`TD_Side_IP_Tree.thy`)
 - `side_analyse_ip` — solver output function (`TD_Side_IP_Interface.thy`)
 
 Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
@@ -138,7 +138,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | Collecting | `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Collect_Trace_IP` | `cfg_collect_ip`, `pruns_to_ip`, `alpha_last`, trace-ip projection |
 | Unified | `CFG_Collect_Unified`, `Analysis_Sound` | locale `collecting`, `unified_post_fixpoint_sound_ip` |
 | Equations | `Constraint_System`, `Constraint_System_IP_Sound` | `rhs_ip`, `is_post_fixpoint_ip`, `post_fixpoint_sound_at` |
-| Solver | `TD_Side_IP_CFG`, `TD_Side_IP_Interface`, `TD_Side_IP_Soundness` | `side_cfg_T_ip`, `side_analyse_ip`, `side_analyse_ip_collect_sound_exit_pruned` |
+| Solver | `TD_Side_IP_{Tree,Mono,Bounds}`, `TD_Side_IP_Interface`, `TD_Side_IP_Soundness` | `side_cfg_T_ip`, `side_analyse_ip`, `side_analyse_ip_collect_sound_exit_pruned` |
 | Pipeline | `Trace_IP_Analysis_Sound` | `trace_ip_analysis_sound`, `reaching_global_read_sound`, `digest_read_sound` |
 | Domain | `Sign_Side_IP_Soundness` | `side_ip_sign_analysis_sound` |
 | Examples | `Example_Side_Proc_Global` | `proc_global_side_sign_analysis` |

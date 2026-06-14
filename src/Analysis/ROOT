@@ -14,7 +14,9 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Constraint_System_IP_Sound
     Analysis_Sound
     TD_Side_CFG
-    TD_Side_IP_CFG
+    TD_Side_IP_Tree
+    TD_Side_IP_Mono
+    TD_Side_IP_Bounds
     TD_Side_IP_Interface
     TD_Side_IP_Soundness
     Sign_Side_IP_Soundness

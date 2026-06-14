@@ -99,7 +99,7 @@ lemma finite_combines_prune_to:
   using combines_prune_to_sub by (rule_tac finite_subset) auto
 
 (* Reachability is discharged by the side solver via dep_side_rhs_tree_ip_* and
-   ip_reaches_imp_trans_dep_or_eq_side (TD_Side_IP_CFG / TD_Side_IP_Soundness).
+   ip_reaches_imp_trans_dep_or_eq_side (TD_Side_IP_Bounds / TD_Side_IP_Soundness).
    The graph-level pruning frame below is solver-agnostic. *)
 
 (* -- collect frame: witness transport ------------------------------------ *)

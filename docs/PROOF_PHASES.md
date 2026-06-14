@@ -63,7 +63,7 @@ As of last full-session build: **0 sorries** in `src/`.
 ### Side-effecting TD solver bridge
 
 - `TD_Side_CFG.thy` — `restrict_local`, `restrict_global`, `side_env`, `side_cfg_T` base.
-- `TD_Side_IP_CFG.thy` — `side_cfg_T_ip`, `side_rhs_ip`, `ip_reaches`, `ip_succ`; monotonicity.
+- `TD_Side_IP_Tree.thy` / `TD_Side_IP_Mono.thy` — `side_cfg_T_ip` construction; fold monotonicity & TD_side preconditions.
 - `TD_Side_IP_Interface.thy` — `side_cfg_ip_solve_dom`, `side_analyse_ip`; imports `TD.TD_side`.
 - `TD_Side_IP_Soundness.thy` — `side_analyse_ip_collect_sound_exit_pruned` via reach cone + pruning.
 

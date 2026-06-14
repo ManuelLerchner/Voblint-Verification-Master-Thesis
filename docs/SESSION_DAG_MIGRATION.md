@@ -107,7 +107,7 @@ session Voblint_Analysis in "src" = "Voblint_CFG" +
     Constraint_System_IP_Sound
     Analysis_Sound
     TD_Side_CFG
-    TD_Side_IP_CFG
+    TD_Side_IP_Bounds
     TD_Side_IP_Interface
     TD_Side_IP_Soundness
     Sign_Side_IP_Soundness
@@ -148,7 +148,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 | `Constraint_System_IP_Sound.thy` | `CFG_Collect_IP` → `"Voblint_CFG.CFG_Collect_IP"` |
 | `Analysis_Sound.thy` | `CFG_Collect_Unified` → `"Voblint_CFG.CFG_Collect_Unified"` |
 | `TD_Side_CFG.thy` | `IMP2_Globals` → `"Voblint_IMP2.IMP2_Globals"` |
-| `TD_Side_IP_CFG.thy` | `CFG_Collect_IP` → `"Voblint_CFG.CFG_Collect_IP"` |
+| `TD_Side_IP_Bounds.thy` | `CFG_Collect_IP` → `"Voblint_CFG.CFG_Collect_IP"` |
 | `TD_Side_IP_Soundness.thy` | `CFG_Prune` → `"Voblint_CFG.CFG_Prune"` |
 
 **In `Voblint_Formalization` theories** — qualify Analysis + CFG imports:

@@ -11,7 +11,7 @@ begin
   the single global unknown.
 
   The interprocedural strategy tree, transfer functions, and their
-  monotonicity live in TD_Side_IP_CFG.
+  monotonicity live in TD_Side_IP_Mono.
 *)
 
 (* Keep only the local (resp. global) component of an abstract state; the other

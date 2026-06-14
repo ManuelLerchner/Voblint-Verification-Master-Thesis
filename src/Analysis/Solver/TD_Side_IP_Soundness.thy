@@ -87,7 +87,7 @@ qed
 
   Reuses the generic, solver-agnostic bridge post_fixpoint_sound_at_ip; the only
   IP-specific content is the per-edge bound (apply_tf_combined_le_ip) and the
-  per-combine bound (combine_combined_le_ip) proved in TD_Side_IP_CFG.
+  per-combine bound (combine_combined_le_ip) proved in TD_Side_IP_Bounds.
 
   Coverage (every edge target / combine return point lies in the solved stable
   set vars) is taken as a hypothesis here, exactly as the plain reachability-form

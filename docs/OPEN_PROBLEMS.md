@@ -86,7 +86,7 @@ assumes side_solve_dom:
 
 This is `TD_side.solve_dom destab_opt True (side_cfg_T_ip …) v`, i.e. termination
 of the side-effecting per-pp solve. Monotonicity of `side_cfg_T_ip` is proved
-(in `TD_Side_IP_CFG.thy`), so P1 is gated on well-foundedness of the TD side
+(in `TD_Side_IP_Mono.thy`), so P1 is gated on well-foundedness of the TD side
 worklist over a finite pp set.
 
 P1 is gated on P5 for a generic termination proof.

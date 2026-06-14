@@ -1,5 +1,5 @@
 theory TD_Side_IP_Interface
-  imports TD_Side_IP_CFG "TD.TD_side"
+  imports TD_Side_IP_Bounds "TD.TD_side"
 begin
 
 (*
@@ -9,7 +9,7 @@ begin
   side_env_at.
 
   Monotonicity of side_cfg_T_ip is derived from transfer-function monotonicity
-  (side_cfg_T_ip_is_mono_eq / _mono_sides / _mono_deps in TD_Side_IP_CFG).
+  (side_cfg_T_ip_is_mono_eq / _mono_sides / _mono_deps in TD_Side_IP_Mono).
 *)
 
 definition side_cfg_ip_solve_dom ::

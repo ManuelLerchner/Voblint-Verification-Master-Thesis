@@ -92,7 +92,7 @@ ROOT entries gone; generic soundness still builds; full build green.
 
 ## Phase 3 - trim the intra fold from `TD_Side_CFG`
 
-After Phase 1, the intra fold quintet has **0** references in `TD_Side_IP_CFG`
+After Phase 1, the intra fold quintet has **0** references in `TD_Side_IP_Bounds`
 (verified). Delete, don't bridge.
 
 - `src/Solver/TD_Side_CFG.thy` (846 -> ~450): delete `side_rhs_fold`,
@@ -103,7 +103,7 @@ After Phase 1, the intra fold quintet has **0** references in `TD_Side_IP_CFG`
   (12). `TD_Side_CFG` becomes the Option-A generic base.
 
 **Boundary rule:** a `TD_Side_CFG` declaration is DELETED iff it mentions a
-quintet name and has 0 references in `TD_Side_IP_CFG`; else KEEP.
+quintet name and has 0 references in `TD_Side_IP_Bounds`; else KEEP.
 
 **Exit:** quintet gone from `TD_Side_CFG`; IP spine green; full build green.
 

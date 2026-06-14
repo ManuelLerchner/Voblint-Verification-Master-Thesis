@@ -7,7 +7,7 @@ session builds green, sorry-free, with `TD.TD_plain` no longer loaded.
 
 Completed slices (each additive + build-gated until S5):
 
-* **S1** `TD_Side_IP_CFG` — `side_cfg_T_ip` (edge fold + combine fold over
+* **S1** `TD_Side_IP_Bounds` — `side_cfg_T_ip` (edge fold + combine fold over
   `side_rhs_fold_ip`), denotation (`side_acc_ip`/`side_glob_ip`), full
   monotonicity, dependency/side independence, and the three `TD_side`
   preconditions (`is_mono_eq`/`mono_sides`/`mono_deps`). Also the per-edge and
@@ -127,7 +127,7 @@ digest-agnostic first (match `cfg_collect_ip`), reattach digest as the existing
 
 | Slice | New / changed | Exit |
 | --- | --- | --- |
-| S1 | `TD_Side_IP_CFG` — `side_cfg_T_ip` (edge fold + combine fold), denotation, `is_mono_eq`/`mono_sides`/`mono_deps` | theory builds, monotonicity green |
+| S1 | `TD_Side_IP_Bounds` — `side_cfg_T_ip` (edge fold + combine fold), denotation, `is_mono_eq`/`mono_sides`/`mono_deps` | theory builds, monotonicity green |
 | S2 | `TD_Side_IP_Interface` — package `cfg_side_T_ip`, `TD_side_mono.solve` readback, `side_env_at` (mirror `TD_Side_Interface`) | solver interpretation green |
 | S3 | IP collecting soundness over the side post-solution: `side_collect_sound_ip_at` (mirror `side_collect_sound_at`, add the combine step into the per-edge/-combine bound) against `cfg_collect_ip` | soundness theorem green |
 | S4 | Re-point `Constraint_System_IP_Sound` / `Analysis_Sound` (or add side variants), then `TD_IP_Soundness`, `Sign_IP_Soundness`, `Example_Proc_Global` onto the side solver. Re-attach digest (`Trace_IP_Analysis_Sound`) as overlay | examples green, no `TD_plain` use left in IP |

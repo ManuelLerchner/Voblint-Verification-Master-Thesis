@@ -10,7 +10,9 @@ session `TD`, theory `TD_side`) to our interprocedural CFG and `rhs_ip` format.
 | File | Role |
 | --- | --- |
 | `TD_Side_CFG.thy` | `restrict_local`, `restrict_global`, `side_env`; base locals/globals split on abstract states; `side_cfg_T` construction template |
-| `TD_Side_IP_CFG.thy` | `side_cfg_T_ip` — interprocedural strategy tree; `side_rhs_ip`; `ip_reaches`, `ip_succ`; monotonicity (`side_cfg_T_ip_is_mono_eq`, `_mono_sides`, `_mono_deps`) |
+| `TD_Side_IP_Tree.thy` | `side_cfg_T_ip` — interprocedural strategy tree; `side_rhs_fold_ip`, `make_side_rhs_tree_ip`; local/global fold denotation (`side_acc_ip`, `side_glob_ip`) |
+| `TD_Side_IP_Mono.thy` | monotonicity of the folds + dependency stability; TD_side preconditions (`side_cfg_T_ip_is_mono_eq`, `_mono_sides`, `_mono_deps`) |
+| `TD_Side_IP_Bounds.thy` | post-solution bounds for soundness: edge/combine closure (`apply_tf_combined_le_ip`, `combine_combined_le_ip`), dependency membership, entry coverage (`s0_le_side_env_entry_ip`) |
 | `TD_Side_IP_Interface.thy` | `side_cfg_ip_solve_dom`, `td_cfg_side_ip_solver` locale; `side_stabl_at`, `side_sigma_at`, `side_env_at`, `side_env_entry`; `side_analyse_ip`; imports `TD.TD_side` |
 | `TD_Side_IP_Soundness.thy` | `ip_reaches_imp_trans_dep_or_eq_side`, `side_ip_cone_in_vars`, `side_analyse_ip_collect_sound_exit_pruned`; reach cone + pruning |
 
