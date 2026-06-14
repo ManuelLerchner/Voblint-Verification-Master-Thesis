@@ -6,7 +6,7 @@ session Voblint_IMP2 in "." = "HOL-IMP" +
     HOL_IMP_Countable
     IMP2_Syntax
     IMP2_Globals
-    IMP2_SmallStep
+    IMP2_Expr
     IMP2_Proc
     IMP2_Bridge
     IMP2_VCG_Example

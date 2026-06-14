@@ -1,4 +1,4 @@
-theory IMP2_SmallStep
+theory IMP2_Expr
   imports IMP2_Syntax "HOL-IMP.Star"
 begin
 
@@ -7,6 +7,10 @@ begin
 
   aval/bval evaluate the IMP2 expression extensions, delegating
   BaseN/BaseB to Nipkow's HOL-IMP AExp/BExp.
+
+  The actual small-step relation `pstep` lives in IMP2_Proc.thy;
+  this module is expression evaluation only.  `HOL-IMP.Star` is
+  re-exported here so `pstep`'s `star` closure resolves downstream.
 *)
 
 (* -- Expression Evaluation -------------------------------------- *)

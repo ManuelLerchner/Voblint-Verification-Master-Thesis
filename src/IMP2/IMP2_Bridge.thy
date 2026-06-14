@@ -18,7 +18,7 @@ begin
        default scalar index (IMP2 uses N 0) never matters.
 
   Qualified names disambiguate the heavy clash between three layers:
-    - ours      : IMP2_Syntax.aexp/bexp, IMP2_SmallStep.aval/bval
+    - ours      : IMP2_Syntax.aexp/bexp, IMP2_Expr.aval/bval
     - Nipkow    : AExp.aexp/aval, BExp.bexp/bval (wrapped under BaseN/BaseB)
     - AFP IMP2  : Syntax.aexp/bexp, Semantics.aval/bval/state
 *)
@@ -56,7 +56,7 @@ fun to_imp2_aexp :: "IMP2_Syntax.aexp => Syntax.aexp" where
 | "to_imp2_aexp (Minus a b)            = Syntax.Binop (-) (to_imp2_aexp a) (to_imp2_aexp b)"
 | "to_imp2_aexp (Times a b)            = Syntax.Binop times (to_imp2_aexp a) (to_imp2_aexp b)"
 
-lemma aval_to_imp2: "IMP2_SmallStep.aval e s = Semantics.aval (to_imp2_aexp e) (embed s)"
+lemma aval_to_imp2: "IMP2_Expr.aval e s = Semantics.aval (to_imp2_aexp e) (embed s)"
   by (induction e) (simp_all add: aval_nip)
 
 fun to_imp2_bexp :: "IMP2_Syntax.bexp => Syntax.bexp" where
@@ -67,7 +67,7 @@ fun to_imp2_bexp :: "IMP2_Syntax.bexp => Syntax.bexp" where
 | "to_imp2_bexp (IMP2_Syntax.Less a b) = Syntax.Cmpop (<) (to_imp2_aexp a) (to_imp2_aexp b)"
 | "to_imp2_bexp (Eq a b)               = Syntax.Cmpop (=) (to_imp2_aexp a) (to_imp2_aexp b)"
 
-lemma bval_to_imp2: "IMP2_SmallStep.bval e s = Semantics.bval (to_imp2_bexp e) (embed s)"
+lemma bval_to_imp2: "IMP2_Expr.bval e s = Semantics.bval (to_imp2_bexp e) (embed s)"
   by (induction e) (simp_all add: aval_to_imp2 bval_nip)
 
 (* -- Commands --------------------------------------------------------- *)
@@ -122,7 +122,7 @@ lemma proj0_embed: "proj0 (embed s) = s"
 
 lemma to_imp2_Assign_bigstep:
   "Semantics.big_step P (to_imp2_com (IMP2_Proc.com.Assign x a), embed s)
-        ((embed s)(x := ((embed s) x)(0 := IMP2_SmallStep.aval a s)))"
+        ((embed s)(x := ((embed s) x)(0 := IMP2_Expr.aval a s)))"
 proof -
   have "Semantics.big_step P
           (Syntax.AssignIdx x (Syntax.N 0) (to_imp2_aexp a), embed s)
@@ -133,8 +133,8 @@ proof -
 qed
 
 lemma proj0_Assign:
-  "proj0 ((embed s)(x := ((embed s) x)(0 := IMP2_SmallStep.aval a s)))
-     = s(x := IMP2_SmallStep.aval a s)"
+  "proj0 ((embed s)(x := ((embed s) x)(0 := IMP2_Expr.aval a s)))
+     = s(x := IMP2_Expr.aval a s)"
   by (rule ext) (simp add: proj0_def embed_def)
 
 (* -- Expression agreement under projection ----------------------------- *)
@@ -156,7 +156,7 @@ lemma aval_nip_sim:
   by (induction a) (auto simp: proj0_def fun_eq_iff)
 
 lemma aval_to_imp2_sim:
-  "proj0 S = s ==> Semantics.aval (to_imp2_aexp e) S = IMP2_SmallStep.aval e s"
+  "proj0 S = s ==> Semantics.aval (to_imp2_aexp e) S = IMP2_Expr.aval e s"
   by (induction e) (simp_all add: aval_nip_sim)
 
 lemma bval_nip_sim:
@@ -164,7 +164,7 @@ lemma bval_nip_sim:
   by (induction b) (simp_all add: aval_nip_sim)
 
 lemma bval_to_imp2_sim:
-  "proj0 S = s ==> Semantics.bval (to_imp2_bexp e) S = IMP2_SmallStep.bval e s"
+  "proj0 S = s ==> Semantics.bval (to_imp2_bexp e) S = IMP2_Expr.bval e s"
   by (induction e) (simp_all add: aval_to_imp2_sim bval_nip_sim)
 
 (* -- Locals/globals split agrees with IMP2 --------------------------- *)
@@ -240,10 +240,10 @@ next
       and ae: "a = to_imp2_aexp a0" and ie: "i = Syntax.N 0"
     by (cases c) auto
   have run: "pruns_to pi (IMP2_Proc.com.Assign x a0) (proj0 s)
-               ((proj0 s)(x := IMP2_SmallStep.aval a0 (proj0 s)))"
+               ((proj0 s)(x := IMP2_Expr.aval a0 (proj0 s)))"
     by (rule pruns_to_assign)
   have res: "proj0 (s(x := (s x)(Semantics.aval i s := Semantics.aval a s)))
-               = (proj0 s)(x := IMP2_SmallStep.aval a0 (proj0 s))"
+               = (proj0 s)(x := IMP2_Expr.aval a0 (proj0 s))"
     using ae ie by (auto simp: proj0_def aval_to_imp2_sim fun_eq_iff)
   show ?case using c run res by (simp add: fun_upd_def)
 next
@@ -275,7 +275,7 @@ next
       and 2: "cm2 = to_imp2_com d"
     by (cases c) auto
   from IfTrue.prems c have sa: "source_com a" by auto
-  have guard: "IMP2_SmallStep.bval b0 (proj0 s)"
+  have guard: "IMP2_Expr.bval b0 (proj0 s)"
     using IfTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
   have bodyrun: "pruns_to pi a (proj0 s) (proj0 t)"
     using IfTrue.IH[OF IfTrue.prems(1) 1 sa] .
@@ -289,7 +289,7 @@ next
       and 2: "cm2 = to_imp2_com d"
     by (cases c) auto
   from IfFalse.prems c have sd: "source_com d" by auto
-  have guard: "\<not> IMP2_SmallStep.bval b0 (proj0 s)"
+  have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using IfFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
   have bodyrun: "pruns_to pi d (proj0 s) (proj0 t)"
     using IfFalse.IH[OF IfFalse.prems(1) 2 sd] .
@@ -315,7 +315,7 @@ next
   then obtain b0 a where c: "c = IMP2_Proc.com.While b0 a"
       and be: "b = to_imp2_bexp b0" and 0: "cm0 = to_imp2_com a"
     by (cases c) auto
-  have guard: "\<not> IMP2_SmallStep.bval b0 (proj0 s)"
+  have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using WhileFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
   from guard have "pruns_to pi (IMP2_Proc.com.While b0 a) (proj0 s) (proj0 s)"
     by (rule pruns_to_WhileFalse)
@@ -326,7 +326,7 @@ next
       and be: "b = to_imp2_bexp b0" and ce: "cm0 = to_imp2_com a"
     by (cases c) auto
   from WhileTrue.prems c have sa: "source_com a" by auto
-  have guard: "IMP2_SmallStep.bval b0 (proj0 s1)"
+  have guard: "IMP2_Expr.bval b0 (proj0 s1)"
     using WhileTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
   have bodyrun: "pruns_to pi a (proj0 s1) (proj0 s2)"
     using WhileTrue.IH(1)[OF WhileTrue.prems(1) ce sa] .

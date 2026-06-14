@@ -1,5 +1,5 @@
 theory IMP2_Proc
-  imports IMP2_SmallStep IMP2_Globals
+  imports IMP2_Expr IMP2_Globals
 begin
 
 (*

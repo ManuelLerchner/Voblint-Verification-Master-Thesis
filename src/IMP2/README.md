@@ -6,15 +6,15 @@ semantics, and a bridge to AFP IMP2 for the thesis reference anchor.
 
 **Theories**
 
-| File | Role |
-| --- | --- |
-| `IMP2_Syntax.thy` | Base `com` (SKIP, Assign, Seq, If, While), `aexp`, `bexp` datatypes; countability instances; HOL-IMP leaf wraps |
-| `IMP2_SmallStep.thy` | `aval`, `bval`, `small_step` (intra, `→`), `small_steps` (`→*`), determinism |
-| `HOL_IMP_Countable.thy` | Countability for wrapped HOL-IMP `AExp` / `BExp` types |
-| `IMP2_Globals.thy` | `combine_states <s\|t>`, `enter_state`, `is_global`; `pname` type synonym |
-| `IMP2_Proc.thy` | Extended `com` with Scope / Call / Restore; `proc_table`; `pstep` (frame-stack small-step, `→ₚ`), `psteps` (`→ₚ*`) |
-| `IMP2_Bridge.thy` | One-way bridge: our `com` / `store` → AFP `IMP2` (expression embedding + scalar-array state embedding) |
-| `IMP2_VCG_Example.thy` | Example showing IMP2's own VCG and our analyzer agreeing on one program |
+| File                    | Role                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `IMP2_Syntax.thy`       | Base `com` (SKIP, Assign, Seq, If, While), `aexp`, `bexp` datatypes; countability instances; HOL-IMP leaf wraps    |
+| `IMP2_Expr.thy`         | `aval`, `bval`, `small_step` (intra, `→`), `small_steps` (`→*`), determinism                                       |
+| `HOL_IMP_Countable.thy` | Countability for wrapped HOL-IMP `AExp` / `BExp` types                                                             |
+| `IMP2_Globals.thy`      | `combine_states <s\|t>`, `enter_state`, `is_global`; `pname` type synonym                                          |
+| `IMP2_Proc.thy`         | Extended `com` with Scope / Call / Restore; `proc_table`; `pstep` (frame-stack small-step, `→ₚ`), `psteps` (`→ₚ*`) |
+| `IMP2_Bridge.thy`       | One-way bridge: our `com` / `store` → AFP `IMP2` (expression embedding + scalar-array state embedding)             |
+| `IMP2_VCG_Example.thy`  | Example showing IMP2's own VCG and our analyzer agreeing on one program                                            |
 
 **Key concepts:**
 

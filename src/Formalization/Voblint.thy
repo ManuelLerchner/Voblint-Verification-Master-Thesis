@@ -5,7 +5,7 @@ section \<open>Voblint: a verified abstract interpreter for IMP2\<close>
 theory Voblint
   imports
     "Voblint_IMP2.IMP2_Syntax"
-    "Voblint_IMP2.IMP2_SmallStep"
+    "Voblint_IMP2.IMP2_Expr"
     "Voblint_IMP2.IMP2_Proc"
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.IMP2_Proc_to_CFG"
@@ -37,7 +37,7 @@ text \<open>
   \<^bold>\<open>1. Language.\<close> IMP2 syntax, small-step semantics, and the
   procedural extension (scopes, calls, restores).
     \<^item> @{theory Voblint_IMP2.IMP2_Syntax}
-    \<^item> @{theory Voblint_IMP2.IMP2_SmallStep}
+    \<^item> @{theory Voblint_IMP2.IMP2_Expr}
     \<^item> @{theory Voblint_IMP2.IMP2_Proc}
 
   \<^bold>\<open>2. Control-flow graph.\<close> CFG construction and the interprocedural

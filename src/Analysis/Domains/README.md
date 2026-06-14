@@ -6,14 +6,14 @@
 
 **Theories**
 
-| File | Role |
-| --- | --- |
-| `Abstract_Domain.thy` | `sound_domain`, `abstract_domain` (+ `widen`), `gamma_state`, join/fold lemmas, `join_state_comp_fun_idem` |
-| `Sign_Domain.thy` | Sign lattice (`SNeg`, `SZero`, `SPos`, `STop`, `SBot`), `gamma_sign`, `sign_tf`, `interpretation sign_domain: abstract_domain` |
-| `Sign_Side_IP_Soundness.thy` | `side_ip_sign_analysis_sound` — sign domain end-to-end via `side_analyse_ip` |
+| File                         | Role                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `Abstract_Domain.thy`        | `sound_domain`, `abstract_domain` (+ `widen`), `gamma_state`, join/fold lemmas, `join_state_comp_fun_idem`                     |
+| `Sign_Domain.thy`            | Sign lattice (`SNeg`, `SZero`, `SPos`, `STop`, `SBot`), `gamma_sign`, `sign_tf`, `interpretation sign_domain: abstract_domain` |
+| `Sign_Side_IP_Soundness.thy` | `side_ip_sign_analysis_sound` — sign domain end-to-end via `side_analyse_ip`                                                   |
 
 **Layering:** `Sign_Domain` imports `Constraint_System` (for the `'a domain_transfer`
-type) and `IMP2_SmallStep` (for `aval` / `bval` in transfer proofs).
+type) and `IMP2_Expr` (for `aval` / `bval` in transfer proofs).
 `Sign_Side_IP_Soundness` imports `Sign_Domain` and `TD_Side_IP_Soundness`.
 
 **Key concepts:** `gamma` / `gamma_state`, `bot`, join (⊔); per-action soundness lemmas
