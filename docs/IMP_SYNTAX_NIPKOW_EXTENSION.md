@@ -2,7 +2,7 @@
 
 > **Status (2026-05):** **Approach 1c implemented** in `src/IMP2/IMP2_Syntax.thy`
 > (hybrid `BaseN`/`BaseB` wrap over HOL-IMP leaf forms + native compound/ext
-> constructors). Semantics in `IMP2_SmallStep.thy`. The sections below record
+> constructors). Semantics in `IMP2_Expr.thy`. The sections below record
 > the original decision process; Approach 2 (`to_hol_imp_aexp` projection) was
 > not pursued.
 
@@ -31,7 +31,7 @@ See also:
   compound forms are typed over Nipkow datatypes, so they cannot express
   "Plus over our extended aexp" inside the wrap alone).
 - `com` remains native and structurally identical to `HOL-IMP.Com`.
-- `aval` / `bval` live in `IMP2_SmallStep.thy`; wrapped leaf cases delegate to
+- `aval` / `bval` live in `IMP2_Expr.thy`; wrapped leaf cases delegate to
   `AExp.aval` / `BExp.bval`.
 
 Trade-off documented in the theory: abbreviations `N`, `V`, `Bc` do not unfold
@@ -65,7 +65,7 @@ datatype com = SKIP | Assign vname aexp | Seq com com
              | If bexp com com | While bexp com
 ```
 
-with `aval` / `bval` in `IMP2_SmallStep.thy` (formerly planned as `IMP2_Semantics.thy`).
+with `aval` / `bval` in `IMP2_Expr.thy` (formerly planned as `IMP2_Semantics.thy`).
 
 Comment that was removed from the file stated: *"We define IMP2 from scratch (not importing HOL-IMP.Com)…"*
 That justification was weak after Meeting 3 §B. AFP-reuse stance: import + interpret/extend over redeclaration — **now partially realized via Approach 1c.**
@@ -142,7 +142,7 @@ Rejected by Meeting 3 §B. AFP `IMP2` carries arrays, `PScope`, `Assign-Locals`,
 
 **Rationale.** Meeting 3 §B verdict was *"Stay on the current extended-HOL-IMP for now; eventual move toward a Nipkow-IMP extension (open: own further extension vs. partial AFP-IMP2 adoption — Alexandra's nested-constructor route is the realistic path)."* Approach 1's abbreviation-doesn't-unfold cost is real and falls on already-closed proofs (bridge, sign chain). Approach 2 codifies the correspondence + locks the AFP-reuse stance at the documentation layer without paying the rewrite cost.
 
-**Trigger to revisit Approach 1.** Land Approach 1 only when we are touching `IMP2_Syntax` / `IMP2_SmallStep` anyway:
+**Trigger to revisit Approach 1.** Land Approach 1 only when we are touching `IMP2_Syntax` / `IMP2_Expr` anyway:
 
 - When adding the interval domain (`Domains/Interval_Domain` already exists but is partial) — new transfer functions touch shared call sites.
 - When adopting AFP `IMP2` arrays (if Octagon / relational stretch goal materialises).
@@ -160,7 +160,7 @@ Doing it standalone now = pure cost.
 
 ### Phase 1 — provenance comments + `to_hol_imp_aexp` projection (½ day)
 
-**Touches:** `src/IMP2/IMP2_Syntax.thy`, `src/IMP2/IMP2_SmallStep.thy`.
+**Touches:** `src/IMP2/IMP2_Syntax.thy`, `src/IMP2/IMP2_Expr.thy`.
 
 1. Add `imports "HOL-IMP.AExp" "HOL-IMP.BExp"` to `IMP2_Syntax.thy` (alongside existing imports).
 2. Add structural-correspondence `text` block citing Nipkow.
@@ -210,7 +210,7 @@ Recorded for the day this becomes worth doing.
 | File | Change | Net LOC |
 |---|---|---|
 | `src/IMP2/IMP2_Syntax.thy` | + `HOL-IMP.AExp` / `BExp` imports; comment block rewrite | +~15 |
-| `src/IMP2/IMP2_SmallStep.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
+| `src/IMP2/IMP2_Expr.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
 | `src/IMP2/README.md` | New — naming-collision callout | +~20 |
 | `~/voblint-formalization-kb/wiki/log.md` | Append entry | +1 |
 | `~/voblint-formalization-kb/wiki/concepts/imp-language.md` | Cross-link to agreement lemma | +1 line |

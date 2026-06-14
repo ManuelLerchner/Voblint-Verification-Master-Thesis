@@ -36,7 +36,7 @@ executability rationale in `AFP_IMP2_REUSE_DECISION.md`).
 
 ## The type mismatch (grounded)
 
-Ours (`src/IMP2/IMP2_Syntax.thy`, `IMP2_SmallStep.thy`):
+Ours (`src/IMP2/IMP2_Syntax.thy`, `IMP2_Expr.thy`):
 
 ```
 store = vname => int                                  -- scalar

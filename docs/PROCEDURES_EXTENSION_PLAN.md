@@ -137,7 +137,7 @@ extended object (mechanical), **N** = genuinely new proof.
 | ID | Statement | Kind | Notes |
 |---|---|---|---|
 | SE1 | `com` + `Call pname`; `program = pname ⇒ com option`; store split locals⊎globals | R' | extend `IMP2_Syntax.thy` |
-| SE2 | program-relative `small_step` with call stack; `PCall`/`PReturn` rules realise `enter`/`combine` | R' | re-prove `small_step_deterministic` + the `star_*` inversion lemmas (`IMP2_SmallStep.thy`) |
+| SE2 | program-relative `small_step` with call stack; `PCall`/`PReturn` rules realise `enter`/`combine` | R' | re-prove `small_step_deterministic` + the `star_*` inversion lemmas (`IMP2_Expr.thy`) |
 | SE3 | interprocedural collecting semantics (reachable-state set over the whole-program CFG) | R' | extend `cfg_collect` / `cfg_collect_paths` |
 | **SE4** | **monovariant merge soundness**: the single callee-entry summary (join over all call sites) over-approximates every individual calling context | **N** | the heart of interprocedural soundness; the one genuinely new semantic argument |
 
@@ -199,7 +199,7 @@ Changed:
 
 ```
 src/IMP2/IMP2_Syntax.thy     -- + Call pname; type pname; local/global vname tagging  (SE1)
-src/IMP2/IMP2_SmallStep.thy  -- program-relative step + call stack; re-prove inversions (SE2)
+src/IMP2/IMP2_Expr.thy  -- program-relative step + call stack; re-prove inversions (SE2)
 src/CFG/IMP2_to_CFG.thy      -- compile_prog; whole-program freshness/finiteness        (CE1)
 src/CFG/Collecting/*         -- interprocedural collecting semantics                    (SE3, SE4)
 src/Domains/{Sign,Interval}_Domain.thy -- enter/combine instances                       (PD1)

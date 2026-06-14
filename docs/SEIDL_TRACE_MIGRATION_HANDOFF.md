@@ -389,7 +389,7 @@ with one global procedure table `pi :: pname ~=> com` passed as a parameter.
 This phase delivers Level 1 only; it is the prerequisite for 2 and 3.
 
 **Files:** `src/IMP2/IMP2_Syntax.thy` (add `Scope`/`PCall`, `is_global`,
-`combine_states`; remove `countable` per Step 0), `src/IMP2/IMP2_SmallStep.thy`
+`combine_states`; remove `countable` per Step 0), `src/IMP2/IMP2_Expr.thy`
 (frame stack + clauses + `runs_to` bridge), `src/CFG/CFG_Def.thy` /
 `src/CFG/IMP2_to_CFG.thy` (call/return edges; recheck `edge_action` needs no order
 once countability is gone). `Collecting`/`Domains`/`Equations`/`Pipeline` **untouched**.

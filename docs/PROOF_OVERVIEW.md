@@ -133,7 +133,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 
 | Stage | File(s) | Main facts |
 | --- | --- | --- |
-| IMP2 | `IMP2_Syntax`, `IMP2_SmallStep`, `IMP2_Globals`, `IMP2_Proc` | `aval`, `bval`, `pstep`, `combine_states`, `enter_state` |
+| IMP2 | `IMP2_Syntax`, `IMP2_Expr`, `IMP2_Globals`, `IMP2_Proc` | `aval`, `bval`, `pstep`, `combine_states`, `enter_state` |
 | CFG | `IMP2_Proc_to_CFG` | `compile_prog`, `compile`, call/combine layout |
 | Collecting | `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Trace_Collect_IP` | `cfg_collect_ip`, `pruns_to_ip`, `alpha_last`, trace-ip projection |
 | Unified | `CFG_Collect_Unified`, `Analysis_Sound` | locale `collecting`, `unified_post_fixpoint_sound_ip` |

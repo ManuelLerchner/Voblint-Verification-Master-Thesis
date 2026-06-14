@@ -48,7 +48,7 @@ worth it. The abstract-domain precision is a separate, later dial (C first).
 
 ### Phase A1 - concrete layer + bridge
 
-`src/IMP2/IMP2_Syntax.thy`, `IMP2_SmallStep.thy`, `IMP2_Proc.thy`,
+`src/IMP2/IMP2_Syntax.thy`, `IMP2_Expr.thy`, `IMP2_Proc.thy`,
 `IMP2_Bridge.thy`:
 
 - `store = vname => int => int`.

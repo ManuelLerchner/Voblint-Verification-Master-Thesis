@@ -9,7 +9,7 @@ semantics, and a bridge to AFP IMP2 for the thesis reference anchor.
 | File                    | Role                                                                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `IMP2_Syntax.thy`       | Base `com` (SKIP, Assign, Seq, If, While), `aexp`, `bexp` datatypes; countability instances; HOL-IMP leaf wraps    |
-| `IMP2_Expr.thy`         | `aval`, `bval`, `small_step` (intra, `→`), `small_steps` (`→*`), determinism                                       |
+| `IMP2_Expr.thy`         | `aval`, `bval` — expression evaluation only; leaf cases delegate to HOL-IMP `AExp` / `BExp`                        |
 | `HOL_IMP_Countable.thy` | Countability for wrapped HOL-IMP `AExp` / `BExp` types                                                             |
 | `IMP2_Globals.thy`      | `combine_states <s\|t>`, `enter_state`, `is_global`; `pname` type synonym                                          |
 | `IMP2_Proc.thy`         | Extended `com` with Scope / Call / Restore; `proc_table`; `pstep` (frame-stack small-step, `→ₚ`), `psteps` (`→ₚ*`) |

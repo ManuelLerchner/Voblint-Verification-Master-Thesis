@@ -68,7 +68,7 @@ session Voblint_IMP2 in "src/IMP2" = "HOL-IMP" +
     HOL_IMP_Countable
     IMP2_Syntax
     IMP2_Globals
-    IMP2_SmallStep
+    IMP2_Expr
     IMP2_Proc
 
 session Voblint_CFG in "src/CFG" = "Voblint_IMP2" +
@@ -134,7 +134,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 |------|-----------------|
 | `CFG_Def.thy` | `IMP2_Syntax` → `"Voblint_IMP2.IMP2_Syntax"` |
 | `IMP2_Proc_to_CFG.thy` | `IMP2_Proc` → `"Voblint_IMP2.IMP2_Proc"` |
-| `CFG_Edges_Collect.thy` | `IMP2_SmallStep`, `IMP2_Globals` → qualified |
+| `CFG_Edges_Collect.thy` | `IMP2_Expr`, `IMP2_Globals` → qualified |
 | `CFG_Trace_Collect.thy` | `IMP2_Globals` → `"Voblint_IMP2.IMP2_Globals"` |
 | `CFG_Collect_IP_Adeq.thy` | `IMP2_Proc` → `"Voblint_IMP2.IMP2_Proc"` |
 
@@ -142,8 +142,8 @@ Every bare-name import that crosses a session boundary must become a qualified i
 
 | File | Imports to change |
 |------|------------------|
-| `Sign_Domain.thy` | `IMP2_SmallStep`, `IMP2_Globals` → qualified (IMP2) |
-| `Constraint_System.thy` | `CFG_Def`, `IMP2_Globals`, `IMP2_SmallStep` → qualified |
+| `Sign_Domain.thy` | `IMP2_Expr`, `IMP2_Globals` → qualified (IMP2) |
+| `Constraint_System.thy` | `CFG_Def`, `IMP2_Globals`, `IMP2_Expr` → qualified |
 | `Constraint_System_Sound.thy` | `CFG_Collecting_Core` → `"Voblint_CFG.CFG_Collecting_Core"` |
 | `Constraint_System_IP_Sound.thy` | `CFG_Collect_IP` → `"Voblint_CFG.CFG_Collect_IP"` |
 | `Analysis_Sound.thy` | `CFG_Collect_Unified` → `"Voblint_CFG.CFG_Collect_Unified"` |
@@ -206,7 +206,7 @@ session Voblint_IMP2 in "src/IMP2" = "HOL-IMP" +
     HOL_IMP_Countable
     IMP2_Syntax
     IMP2_Globals
-    IMP2_SmallStep
+    IMP2_Expr
     IMP2_Proc
     IMP2_Bridge     (* add after Phase 1 of AFP IMP2 rebase *)
 ```

@@ -31,14 +31,16 @@ Four Isabelle sessions, built in order:
 The concrete spec is an interprocedural **trace** collecting semantics
 (`cfg_collect_trace_ip`): the ordered run, not just the set of reachable states.
 Traces are what history-sensitive globals need - *which* writes reach a given
-read. Small-step (`IMP2_SmallStep.thy`) is the operational view; flattening a
+read. Both the trace semantics and its flattening are CFG-edge based: dropping a
 trace to its last state recovers the reachable-state collecting semantics
-(`cfg_collect_ip`) the analyzer over-approximates.
+(`cfg_collect_ip`) the analyzer over-approximates
+(`alpha_last_cfg_collect_trace_ip_le`). No small-step is involved in that step.
 
 Big-step is **not** the spec - it is vacuous on diverging programs. It enters
 only as a *reference* semantics: `backward_sim` (`src/IMP2/IMP2_Bridge.thy`)
-shows every terminating AFP IMP2 big-step run is reproduced by our small-step,
-anchoring soundness to a recognised AFP-blessed semantics. The two are
+shows every terminating AFP IMP2 big-step run is reproduced by our small-step
+(`pstep`, `src/IMP2/IMP2_Proc.thy`), anchoring soundness to a recognised
+AFP-blessed semantics. The two are
 complementary - the analyzer certifies every program point (and diverging runs);
 big-step / VCG pins the exact functional result at exit on terminating runs.
 
