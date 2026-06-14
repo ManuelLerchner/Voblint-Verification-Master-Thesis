@@ -4,6 +4,19 @@ section \<open>Voblint: a verified abstract interpreter for IMP2\<close>
 
 theory Voblint
   imports
+    "Voblint_IMP2.IMP2_Syntax"
+    "Voblint_IMP2.IMP2_SmallStep"
+    "Voblint_IMP2.IMP2_Proc"
+    "Voblint_CFG.CFG_Def"
+    "Voblint_CFG.IMP2_Proc_to_CFG"
+    "Voblint_CFG.CFG_Collect_IP"
+    "Voblint_CFG.CFG_Trace_Collect_IP"
+    "Voblint_CFG.CFG_Collect_Unified"
+    "Voblint_Analysis.Abstract_Domain"
+    "Voblint_Analysis.Sign_Domain"
+    "Voblint_Analysis.Constraint_System"
+    "Voblint_Analysis.TD_Side_IP_Soundness"
+    "Voblint_Analysis.Analysis_Sound"
     Trace_IP_Analysis_Sound
     Example_Side_Proc_Global
     Example_Trace_Digest_Precision
@@ -46,7 +59,7 @@ text \<open>
   \<^bold>\<open>4. End-to-end soundness.\<close> The headline theorem and executable
   examples.
     \<^item> @{theory Voblint_Formalization.Trace_IP_Analysis_Sound} --- the main
-      result, @{thm [source] trace_ip_analysis_sound}.
+      result, @{thm [source] sound_transfer.trace_ip_analysis_sound}.
     \<^item> @{theory Voblint_Formalization.Example_Side_Proc_Global}
     \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision}
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz}
