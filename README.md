@@ -1,282 +1,169 @@
 Voblint
 =======
 
-> **Voblint: Towards a Verified Voblint-style Analysis Pipeline in Isabelle/HOL**
+> **Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL**
 > Master's thesis. Manuel Lerchner, TUM Informatics 2, supervised by Alexandra Graß.
 
-Abstract
---------
+## Abstract
 
-We formalize the Voblint analysis pipeline from IMP through CFG compilation and
-a constraint system to the verified top-down solver of
-[stilscher/td-verification](https://github.com/stilscher/td-verification), and
-prove that **any abstract domain** satisfying our locale and transfer obligations
-yields a solver result that soundly over-approximates concrete collecting
-semantics; sign analysis is the primary worked instance (`voblint_sign_sound`),
-modulo TD termination hypothesis P1 (`⋀v. TD_plain.solve_dom`; see
-`docs/OPEN_PROBLEMS.md`). Interval
-instance: `voblint_interval_sound` (same hypotheses).
+We formalize an end-to-end soundness proof for a Goblint-style abstract
+interpreter. An IMP2 program (with procedures, scopes, calls) is compiled to a
+control-flow graph; the graph induces a constraint system; the verified
+side-effecting top-down solver of
+[stilscher/td-verification](https://github.com/stilscher/td-verification)
+computes a post-fixpoint; and **any abstract domain** satisfying our locale and
+transfer obligations yields a result that soundly over-approximates the
+interprocedural collecting semantics **at every program point**. Sign analysis
+is the worked instance.
 
-### Pipeline (overview)
+## Pipeline
 
-Solid arrows: compilation and analysis steps. Dotted arrows: proved soundness
-bridges. Dashed red arrows: bridges still missing (open problems; see
-`docs/OPEN_PROBLEMS.md`).
-
-```mermaid
-flowchart LR
-  SS["small_step / runs_to"]
-  CC["cfg_collect"]
-  PFP["env (post-fixpoint)"]
-  TD["TD solver output"]
-  TERM["TD terminates"]
-  IVL["interval + widen"]
-
-  SS -->|"operational link"| CC
-  CC -->|B3| PFP
-  PFP -->|"B4: td_analyse_collect_sound_at"| TD
-  TD -.->|"B7: solve_dom (P1)"| TERM
-  IVL -.->|"B8: widen + totality (P6/P7)"| TERM
-
-  linkStyle 4,5 stroke:#c62828,stroke-dasharray: 4 3
+```
+IMP2 (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD side) → Pipeline → Examples
+                    Domains ────────────────────────────────┘
 ```
 
-| Bridge | Lemma / obligation                                            | Status              |
-| ------ | ------------------------------------------------------------- | ------------------- |
-| B3     | `post_fixpoint_sound` / `post_fixpoint_sound_at` — over-approximates `cfg_collect` | **done** |
-| B4     | `td_analyse_collect_sound_at` — per-pp TD result sound at `v` | **done** (Fix B, #8) |
-| ~~B5~~ | ~~`td_cfg_in_reach`~~ (P2)                                    | **removed** 2026-06-01 |
-| ~~B6~~ | ~~`comp_fun_idem`~~ (P3)                                      | **done** (`join_state_comp_fun_idem`) |
-| B7     | `⋀v. TD_plain.solve_dom` — per-pp solver termination          | **open** (P1)       |
-| B8     | Interval widening + TD totality integration                   | **stretch** (P6/P7) |
+Four Isabelle sessions, built in order:
+`Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization`.
 
-Operational link: `runs_to_iff_small_step` connects small-step termination to
-exit `cfg_collect`. End-to-end theorems: `pipeline_invariant_sound`,
-`pipeline_sound_path`, `pipeline_sound_runs_to` (generic; carry P1 `solve_dom`); `voblint_sign_sound`
-(sign instance). See `docs/OPEN_PROBLEMS.md`.
+## Semantic foundation
 
-Where abstract interpretation is in the proof
--------------------------------------------
+The concrete spec is an interprocedural **trace** collecting semantics
+(`cfg_collect_trace_ip`): the ordered run, not just the set of reachable states.
+Traces are what history-sensitive globals need - *which* writes reach a given
+read. Small-step (`IMP2_SmallStep.thy`) is the operational view; flattening a
+trace to its last state recovers the reachable-state collecting semantics
+(`cfg_collect_ip`) the analyzer over-approximates.
 
-The equation system is not validated by a separate “code generator correctness”
-theorem. We **define** `rhs` as the abstract analogue of CFG collecting, then
-prove that **every post-fixpoint** over-approximates concrete reachability.
+Big-step is **not** the spec - it is vacuous on diverging programs. It enters
+only as a *reference* semantics: `backward_sim` (`src/IMP2/IMP2_Bridge.thy`)
+shows every terminating AFP IMP2 big-step run is reproduced by our small-step,
+anchoring soundness to a recognised AFP-blessed semantics. The two are
+complementary - the analyzer certifies every program point (and diverging runs);
+big-step / VCG pins the exact functional result at exit on terminating runs.
 
-|                      | Concrete (collecting)                  | Abstract interpretation                                        |
-| -------------------- | -------------------------------------- | -------------------------------------------------------------- |
-| One edge             | `edge_collect a` on store sets         | `apply_tf tf a` on `abs_state`                                 |
-| One program point    | `collect_pp` join of predecessor edges | `rhs` join of `apply_tf` images                                |
-| Global               | `cfg_collect` (least fixpoint)         | `env` with `is_post_fixpoint`                                  |
-| Link                 | (definition)                           | `edge_collect (γ σ) ⊆ γ (apply_tf … σ)` **transfer soundness** |
-| Main soundness lemma |                                        | `post_fixpoint_sound`: `cfg_collect ⊆ γ ∘ env`                 |
+## Headline result
 
-So **abstract interpretation is the `rhs` / `γ` / `join` / `apply_tf` layer**.
-`make_rhs` / `make_rhs_tree` spell out the equations; per-pp `td_analyse c … v`
-runs the TD solver; `td_analyse_collect_sound_at` + `post_fixpoint_sound_at`
-show the result is sound w.r.t. `cfg_collect` at `v`. IMP enters via small-step semantics and CFG
-compilation; exit behaviour is `runs_to` / `runs_to_iff_small_step`.
+`sound_transfer.trace_ip_analysis_sound`
+(`src/Formalization/Pipeline/Trace_IP_Analysis_Sound.thy`): for a post-fixpoint
+`env` of the interprocedural constraint system, the abstraction of the trace
+collecting semantics is below `gamma_state (env v)` at every program point `v`.
+Sign instance: `side_ip_sign_analysis_sound`
+(`src/Analysis/Domains/Sign_Side_IP_Soundness.thy`).
 
-Adding a new abstract domain
-----------------------------
+Globals shared across the program are tracked flow-insensitively through the
+solver's side-effect mechanism. In `Trace_IP_Analysis_Sound.thy`:
+`reaching_global_read_sound` - any global's value over any reaching trace lies in
+`gamma`; `digest_read_sound` - digest-indexed reads are sound;
+`flat_env_is_digest_sound` - the flat (flow-insensitive) env is the degenerate
+sound digest. `Example_Trace_Digest_Precision.thy` then witnesses
+(`digest_beats_flat`) that a digest-indexed read is strictly tighter than the
+flat read on a concrete program.
 
-To plug a new analysis into the pipeline, a user supplies an abstract value
-type and a transfer bundle, then discharges a handful of obligations. The
-parametric `pipeline_invariant_sound` / `pipeline_sound_path` do the rest. Sign
-(`src/Domains/Sign_Domain.thy`) is the worked reference.
+Soundness is *not* validated by a separate code-generator theorem. We **define**
+the equation system as the abstract analogue of CFG collecting, then prove every
+post-fixpoint over-approximates concrete reachability:
 
-```mermaid
-flowchart TD
-  subgraph U ["User supplies"]
-    T["abstract value type 'a"]
-    G["gamma :: 'a => int set"]
-    TF["transfer bundle:<br/>tf_assign / tf_assume / tf_assume_not"]
-    INIT["initial abstract state ac_init"]
-  end
+| | Concrete (collecting) | Abstract |
+| --- | --- | --- |
+| One edge | `edges_collect` on store sets | `apply_tf tf` on `abs_state` |
+| One point | join of predecessor edges | constraint `rhs` join |
+| Global | `cfg_collect_trace_ip` | `env` with `is_post_fixpoint_ip` |
+| Link | (definition) | transfer soundness: `gamma` commutes with each `tf` |
 
-  subgraph I ["Instance work (per domain)"]
-    LAT["instantiation:<br/>'a :: bounded_semilattice_sup_bot<br/>(gives bot, sup, ord)"]
-    SD["interpretation sound_domain gamma<br/>obligations: gamma_bot, gamma_mono"]
-    DTS["lemma domain_transfer_sound:<br/>each tf preserves gamma"]
-    AC["definition my_analysis_config:<br/>bundles gamma, join, bot, tf, init"]
-    INITg["lemma: s ∈ gamma_state (ac_init my_cfg)"]
-  end
+## Adding a domain
 
-  subgraph F ["Framework provides (proved once)"]
-    PS["pipeline_invariant_sound[OF ...]<br/>--&gt; cfg_collect ⊆ gamma . env"]
-  end
+Supply an abstract value type, a `gamma`, and a transfer bundle
+(`tf_assign` / `tf_assume` / `tf_assume_not`); discharge a handful of
+obligations; the parametric pipeline does the rest. Sign
+(`src/Analysis/Domains/Sign_Domain.thy`) is the reference.
 
-  T --> LAT --> SD
-  G --> SD
-  TF --> DTS
-  G --> DTS
-  T --> AC
-  G --> AC
-  TF --> AC
-  INIT --> AC
-  INIT --> INITg
-  G --> INITg
-  SD --> PS
-  DTS --> PS
-  AC --> PS
-  INITg --> PS
+| Step | What | Reference (sign) |
+| --- | --- | --- |
+| 1 | value type + lattice instance (`bot`, `sup`, `ord`) | `datatype sign`, `instantiation` |
+| 2 | define `gamma`, prove `gamma_bot` / `gamma_mono` | `gamma_sign_mono` |
+| 3 | `interpretation` of the `abstract_domain` locale | `sign_domain` |
+| 4 | define transfer fns, prove they preserve `gamma` | `assign_sign_sound`, `assume_sign_sound` |
+| 5 | apply the IP pipeline soundness theorem | `side_ip_sign_analysis_sound` |
 
-  style U fill:#e3f2fd
-  style I fill:#fff3e0
-  style F fill:#e8f5e9
-```
+## Requirements
 
-Concretely, the user writes:
+- [Isabelle](https://isabelle.in.tum.de/) 2025 or newer, with `isabelle` in `$PATH`.
+- A local [AFP](https://www.isa-afp.org/) checkout (`thys/`): transitive deps
+  `Root_Balanced_Tree`, `Dijkstra_Shortest_Path`.
+- GNU `make`, `git`, POSIX tools.
 
-| Step | What                                                                                       | Reference (sign)                                              |
-| ---- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| 1    | Declare abstract value type and its lattice instance                                       | `Sign_Domain.thy` — `datatype sign`, `instantiation` blocks   |
-| 2    | Define `gamma_<dom>` and prove `gamma_bot`, `gamma_mono`                                   | `Sign_Domain.thy` (`gamma_sign_mono`)                         |
-| 3    | `interpretation <dom>_domain: abstract_domain gamma_<dom> widen_<dom>`                    | `Sign_Domain.thy` (`interpretation sign_domain`)              |
-| 4    | Define `tf_assign`, `tf_assume`, `tf_assume_not` and prove `domain_transfer_sound`          | `assign_sign_sound`, `assume_sign_sound`                      |
-| 5    | Bundle as `analysis_config`                                                                | `Pipeline.thy` (`sign_analysis_config`)                       |
-| 6    | Show `s \<in> gamma_state (ac_init my_cfg)` for the initial store                          | `Pipeline.thy` (`sign_init_in_gamma`)                         |
-| 7    | Apply `pipeline_invariant_sound` / `sign_pipeline_sound`                                   | `Voblint_Formalization.thy` (`voblint_sign_sound`)            |
+## Build
 
-The pipeline carries one TD-side assumption the user must discharge:
-`⋀v. TD_plain.solve_dom (make_rhs_tree …) v` (P1). P2 (`td_cfg_in_reach`) was
-removed with per-pp solve (Fix B); P3 (`comp_fun_idem`) is proved in-repo. See
-`docs/OPEN_PROBLEMS.md`.
-
-Requirements
-------------
-
-- A running version of [Isabelle](https://isabelle.in.tum.de/) (Isabelle2025 or
-  newer) with `isabelle` in your `$PATH`.
-- The [Archive of Formal Proofs](https://www.isa-afp.org/) checked out locally;
-  the build needs the `thys/` directory (transitive dependency
-  `Root_Balanced_Tree`).
-- GNU `make`, `git`, and standard POSIX tools.
-
-Build instructions
-------------------
-
-Set `AFP` to your AFP `thys/` directory (default `~/afp/thys`) and use the
-provided `Makefile` targets:
-
-- `make vendor`: initializes the `vendor/td-verification` git submodule (pinned
-  via the superproject gitlink), then applies `vendor/td-verification.patch`
-  (Isabelle2025 compatibility uses `Set.remove_eq` in place of `remove_def`,
-  see the patch for details).
-
-- `make build` (default): runs the Isabelle formalization, depends on `vendor`.
-  Equivalent to:
-
-  ```
-  isabelle build -d $(AFP) -d vendor/td-verification -D . Voblint_Formalization
-  ```
-
-- `make jedit`: launches Isabelle/jEdit with the correct session roots
-  pre-loaded.
-
-- `make html`: builds Isabelle browser info (`-o browser_info`) and copies it to
-  `docs/html/` (gitignored; entry point `docs/html/isabelle/index.html`; same
-  mechanism as the
-  [Isabelle library HTML pages](https://stackoverflow.com/questions/17833567/how-to-generate-html-version-of-isabelle-theory)).
-  CI deploys `docs/html/` to GitHub Pages on push to `main`. Handwritten layer
-  walkthroughs live under `docs/walkthrough/` (repo only, not on the site).
-
-- `make clean-vendor`: removes `vendor/td-verification/` (re-fetched on next
-  `make vendor`).
-
-- `make clean`: removes vendored sources and the built session heap.
-
-Example:
+Set `AFP` to your AFP `thys/` directory (default `~/afp/thys`):
 
 ```
 make AFP=/path/to/afp/thys build
 ```
 
-The `quick_and_dirty` option is set in `ROOT`, so `sorry` placeholders are
-permitted during proof development.
+| Target | Role |
+| --- | --- |
+| `make vendor` | init `vendor/td-verification` submodule + apply Isabelle2025 patch |
+| `make build` (default) | build session `Voblint_Formalization` (depends on `vendor`) |
+| `make jedit` | launch Isabelle/jEdit with session roots pre-loaded |
+| `make html` | browser info → `docs/html/` (CI deploys to GitHub Pages on `main`) |
+| `make clean` / `clean-vendor` | remove built heaps / vendored sources |
 
-Repository layout
------------------
+`quick_and_dirty` is set in `ROOT`, so `sorry` placeholders are permitted during
+development. See `src/README.md` for the per-layer map.
+
+## Layout
 
 ```
-.
-├── src/
-│   ├── IMP2/             IMP syntax and small-step semantics
-│   ├── CFG/              CFG definition, paths, IMP-to-CFG compiler
-│   │   └── Collecting/   cfg_collect, runs_to, small-step bridge
-│   ├── Equations/        constraint system + soundness layer
-│   ├── Solver/           TD solver bridge (plain + widen/WN interfaces)
-│   ├── Domains/          abstract domains (Sign, Interval, ...)
-│   ├── Pipeline/         end-to-end pipeline theorems
-│   ├── Examples/         concrete instantiations and worked examples
-│   └── Voblint_Formalization.thy   top-level session entry
-├── vendor/
-│   ├── td-verification/             git submodule (init via `make vendor`)
-│   ├── td-verification.patch        local Isabelle2025 compatibility patch
-│   └── autocorrode/                 I/Q and I/R MCP (via `./scripts/setup.sh`)
-├── docs/                 proof overview, phases; walkthroughs + generated HTML
-├── Makefile              build entry points (vendor, build, jedit, clean)
-└── ROOT                  Isabelle session definition
+src/
+  IMP2/          syntax, procedures, globals/locals, small-step
+  CFG/           CFG, IP compilation, paths; Collecting/ - IP collecting semantics
+  Analysis/      Domains/ Equations/ Solver/ (Voblint_Analysis session)
+  Formalization/ Pipeline/ Examples/ (Voblint_Formalization session)
+vendor/
+  td-verification/         verified TD solver (submodule, AFP session TD)
+  td-verification.patch    local Isabelle2025 compatibility patch
+  autocorrode/             I/Q + I/R MCP servers (via ./scripts/setup.sh)
+docs/          proof overview, phases, roadmap, walkthroughs, generated HTML
 ```
 
-Verified dependencies
----------------------
+The analysis rides on the **side-effecting** solver (`TD.TD_side`) only; the
+plain top-down solver was retired. The intra-procedural (classical) spine moved
+to the sibling repo `voblint-formalization-classical`.
 
-| Dependency                       | Source                                                  | Role                                      |
-| -------------------------------- | ------------------------------------------------------- | ----------------------------------------- |
-| `HOL-IMP`                        | Isabelle distribution                                   | session parent; IMP syntax/semantics base |
-| `TD` (`TD_plain`, `Basics`, ...) | vendored from `stilscher/td-verification` + local patch | verified top-down solver                  |
-| `Dijkstra_Shortest_Path`         | AFP                                                     | CFG graph type (`CFG_Def.thy`)            |
-| `Root_Balanced_Tree`             | AFP                                                     | transitive dep of TD session              |
+## Verified dependencies
 
-Also built as separate `ROOT` theories: `TD_CFG_Core`, `TD_Widen_Interface`,
-`TD_WN_Interface`, and the `Example_*` targets.
+| Dependency | Source | Role |
+| --- | --- | --- |
+| `HOL-IMP` | Isabelle distribution | session parent; IMP base |
+| `TD` (`TD_side`, `Basics`, …) | vendored `stilscher/td-verification` + patch | verified top-down solver |
+| `Dijkstra_Shortest_Path` | AFP | CFG graph type |
+| `Root_Balanced_Tree` | AFP | transitive dep of TD |
 
-Vendoring the TD solver
------------------------
+## Vendoring the TD solver
 
-The top-down solver lives upstream at
-[stilscher/td-verification](https://github.com/stilscher/td-verification).
-This repository vendors it via submodule
+Upstream: [stilscher/td-verification](https://github.com/stilscher/td-verification).
+Vendored as a submodule via the private fork
 [`ManuelLerchner/td-verification`](https://github.com/ManuelLerchner/td-verification)
-(a private fork of upstream, for CI and local access).
-GitHub Actions cannot clone that fork with the default `GITHUB_TOKEN`; add a
-**classic PAT** with `repo` scope as repository secret **`SUBMODULES_TOKEN`**
-(Settings → Secrets and variables → Actions), or make the fork public.
-A small local change is needed for Isabelle2025 compatibility, kept as a
-plain `git`-format patch in `vendor/td-verification.patch`. Run `make vendor`
-to initialize the submodule and apply the patch (idempotent). The patch diff is
-reviewable in this repository; the submodule gitlink pins the upstream commit.
+(CI + local access). GitHub Actions cannot clone the fork with the default
+`GITHUB_TOKEN`; add a classic PAT with `repo` scope as repository secret
+`SUBMODULES_TOKEN`, or make the fork public. A small Isabelle2025 compatibility
+change lives in `vendor/td-verification.patch`; `make vendor` applies it
+(idempotent).
 
-Documentation
--------------
+## Agent-assisted development
 
-| Document                       | Contents                                                |
-| ------------------------------ | ------------------------------------------------------- |
-| `docs/OPEN_PROBLEMS.md`        | Bridges B3–B8, problem catalogue, handoff notes         |
-| `docs/HOL_IMP_COMPARISON.md`   | vs HOL-IMP `Abs_*`: workflow, domain theory tradeoffs   |
-| `docs/PROOF_OVERVIEW.md`       | Theorem chain, key types and lemmas                     |
-| `docs/PROOF_PHASES.md`         | Proof status, sorry inventory, remaining work           |
-| `docs/walkthrough/`            | Per-layer HTML walkthroughs (`index.html` hub; not on GitHub Pages) |
-| `docs/html/`                   | Isabelle browser info (`make html`; entry `isabelle/index.html`; gitignored; GitHub Pages on `main`) |
-
-Agent / MCP workflow notes: `docs/ISABELLE_AGENT_NOTES.md`. Bootstrap: `./scripts/setup.sh`, `./scripts/start-ir.sh`.
-
-Agent-assisted development (Isabelle/Q)
----------------------------------------
-
-Proof development in this repository also experiments with
+Proof development experiments with
 [Isabelle/Q](https://github.com/awslabs/AutoCorrode/tree/main/iq) (I/Q), an MCP
 server for Isabelle/jEdit that lets coding agents edit theories, query proof
-states, run Sledgehammer, and explore tactics interactively. The setup follows
-the autoformalization workflow described by Kevin Kappelmann et al. in
-[*Just Type It in Isabelle! AI Agents Drafting, Mechanizing, and Generalizing
-from Human Hints*](https://arxiv.org/abs/2604.15713) (arXiv:2604.15713, 2026);
-see their §6.1 for the Isabelle/Q technical setup and `AGENTS.md` here for
-project-specific conventions.
+states, run Sledgehammer, and explore tactics. Following the autoformalization
+workflow of Kappelmann et al.,
+[*Just Type It in Isabelle!*](https://arxiv.org/abs/2604.15713) (arXiv:2604.15713,
+2026), §6.1. See `AGENTS.md` and `docs/ISABELLE_AGENT_NOTES.md`.
 
-| Script                                  | Role                                                                                                     |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `./scripts/setup.sh`                    | One-shot bootstrap: submodules, venv, I/Q jEdit plugin (skip with `--no-iq`)                             |
-| `./scripts/start-iq.sh`                 | Launch Isabelle/jEdit with I/Q listening on port 8765                                                    |
-| `./scripts/start-ir.sh`                 | Headless [Isabelle/R](https://github.com/awslabs/AutoCorrode/tree/main/ir) MCP on port 9148              |
-| `./scripts/start-both.sh`               | Start I/R in background + I/Q in foreground; Ctrl+C tears down both                                      |
+| Script | Role |
+| --- | --- |
+| `./scripts/setup.sh` | one-shot bootstrap: submodules, venv, I/Q plugin (`--no-iq` to skip) |
+| `./scripts/start-iq.sh` | Isabelle/jEdit + I/Q on port 8765 |
+| `./scripts/start-ir.sh` | headless Isabelle/R MCP on port 9148 |
+| `./scripts/start-both.sh` | I/R background + I/Q foreground; Ctrl+C tears down both |
