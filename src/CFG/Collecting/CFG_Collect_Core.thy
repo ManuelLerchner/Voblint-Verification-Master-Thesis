@@ -2,7 +2,7 @@ theory CFG_Collect_Core
   imports CFG_Collect_Edges
 begin
 
-(* cfg_collect_paths and path-to-lfp bridge lemmas (pre-compound). *)
+section \<open>Path-based collecting and path-to-lfp bridge (pre-compound)\<close>
 
 (* Path-based collecting environment. *)
 definition cfg_collect_paths :: "cfg => store set => pp => store set" where

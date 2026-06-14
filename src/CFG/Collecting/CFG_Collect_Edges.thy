@@ -1,9 +1,11 @@
 theory CFG_Collect_Edges imports "Voblint_IMP2.IMP2_Expr" CFG_Path "Voblint_IMP2.IMP2_Globals"
 begin
 
-(* Per-edge and path-based store-set collecting (edges_collect fold). *)
+section \<open>Per-edge and path-based store-set collecting\<close>
 
-(* \<midarrow>\<midarrow> Per-Edge Transfer Function on State Sets \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+text \<open>Store-set collecting via the edges_collect fold over CFG paths.\<close>
+
+subsection \<open>Per-edge transfer function on state sets\<close>
 
 fun edge_collect :: "edge_action => store set => store set" where
     "edge_collect EA_Nop           S = S"
@@ -108,31 +110,34 @@ lemma edges_collect_offset_path[simp]:
   by (induction es arbitrary: S) (auto simp: offset_path_def)
 
 
-(* \<midarrow>\<midarrow> CFG Collecting Environment \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>CFG collecting environment\<close>
+
+text \<open>
   A collecting environment maps each program point to the set of states
   that can appear there during any execution starting from some fixed
   initial set.
-*)
+\<close>
 
 type_synonym cenv = "pp => store set"
 
 
-(* \<midarrow>\<midarrow> Collecting Transformer for One Program Point \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>Collecting transformer for one program point\<close>
+
+text \<open>
   collect_pp g rho v = join of edge_collect(a)(rho u) over all (u,a,v) in g.
-  This is the single-step "push" of states through each incoming edge.
-*)
+  This is the single-step ''push'' of states through each incoming edge.
+\<close>
 
 definition collect_pp :: "cfg => cenv => pp => store set" where
   "collect_pp g rho v =
      \<Union>{edge_collect a (rho u) | u a. (u, a, v) : edges g}"
 
-(* \<midarrow>\<midarrow> Least Fixpoint (Collecting Semantics over CFG) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>Least fixpoint (collecting semantics over CFG)\<close>
+
+text \<open>
   Given an initial store set S at the entry, the CFG collecting semantics
   is the least fixpoint of the monotone transformer collect_pp.
-*)
+\<close>
 
 
 definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
@@ -142,8 +147,9 @@ definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
 definition cfg_collect :: "cfg => store set => cenv" where
   "cfg_collect g S = lfp (cfg_collect_F g S)"
 
-(* \<midarrow>\<midarrow> Monotonicity of collect_pp \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>
-   Required for lfp to be well-defined. *)
+subsection \<open>Monotonicity of collect_pp\<close>
+
+text \<open>Required for lfp to be well-defined.\<close>
 
 lemma collect_pp_mono:
   "mono (\<lambda>rho. collect_pp g rho v)"

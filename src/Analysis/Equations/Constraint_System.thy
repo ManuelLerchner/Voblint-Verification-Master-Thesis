@@ -2,9 +2,9 @@ theory Constraint_System
   imports "Voblint_CFG.CFG_Def" Abstract_Domain "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr"
 begin
 
-(*
-  Equation System over a CFG.
+section \<open>Equation system over a CFG\<close>
 
+text \<open>
   Given:
     - A CFG  g
     - An abstract domain  D  (instance of abstract_domain)
@@ -24,13 +24,14 @@ begin
 
   All transfer functions are parameterised over the domain via a locale
   so the same equation-system construction works for Sign, Interval, etc.
-*)
+\<close>
 
-(* ── Abstract Transfer Function Record ───────────────────────── *)
-(*
+subsection \<open>Abstract transfer function record\<close>
+
+text \<open>
   A domain_transfer bundles the per-action abstract transformers.
   Parameterised by the abstract value type 'a.
-*)
+\<close>
 
 record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)"
@@ -38,7 +39,7 @@ record 'a domain_transfer =
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
   tf_enter     :: "('a abs_state) => ('a abs_state)"
 
-(* ── Apply Transfer Function to One Edge ─────────────────────── *)
+subsection \<open>Apply transfer function to one edge\<close>
 
 fun apply_tf :: "'a domain_transfer
                  => edge_action
@@ -50,12 +51,13 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_AssumeNot b)    sigma = tf_assume_not tf b sigma"
   | "apply_tf tf EA_Enter            sigma = tf_enter tf sigma"
 
-(* ── Abstract Join over a Set ─────────────────────────────────── *)
-(*
+subsection \<open>Abstract join over a set\<close>
+
+text \<open>
   Fold join_abs over a finite set of abstract states.
   Requires comp_fun_commute join_abs for the result to be order-independent.
   Finiteness of the predecessor set follows from finite (edges g).
-*)
+\<close>
 
 definition abs_join_set ::
     "('a abs_state => 'a abs_state => 'a abs_state)
@@ -109,20 +111,16 @@ where
   "is_post_fixpoint g tf join_abs bot_abs s0 env =
      (\<forall>v. rhs g tf join_abs bot_abs s0 env v <= env v)"
 
-(* ── Monotonicity of rhs ──────────────────────────────────────── *)
-(*
-  The RHS is monotone in the environment: if env1 <= env2 pointwise
-  (in the abstract order), then rhs env1 <= rhs env2.
-  This is required by the top-down solver for it to be applicable.
-*)
+subsection \<open>Monotonicity of rhs\<close>
 
-(*
-  Monotonicity of @{const rhs} in the environment.
-
-  Requires join algebra typical of @{const sound_domain} / @{const abstract_domain}
-  instances (upper bounds + mixed monotonicity + least-upper-bound property for
-  binary join), and monotonicity of @{const apply_tf} in the abstract state.
-*)
+text \<open>
+  The RHS is monotone in the environment: if env1 <= env2 pointwise (in the
+  abstract order), then rhs env1 <= rhs env2.  This is required by the top-down
+  solver.  The proof uses the join algebra of @{const sound_domain} /
+  @{const abstract_domain} instances (upper bounds, mixed monotonicity,
+  least-upper-bound for binary join) and monotonicity of @{const apply_tf} in
+  the abstract state.
+\<close>
 
 lemma mem_image_le_fold_insert_step:
   fixes f :: "'p \<Rightarrow> 'a::preorder" and j :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" and z :: 'a and p F
@@ -398,7 +396,7 @@ proof -
       using \<open>v \<noteq> cfg_entry g\<close> by simp
   qed
 qed
-(* -- Interprocedural RHS (M1 slice 3) -------------------------------- *)
+subsection \<open>Interprocedural RHS\<close>
 
 definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "combine_abs sc se = (\<lambda>x. if is_global x then se x else sc x)"
@@ -501,21 +499,21 @@ next
 
 qed
 
-(*
+text \<open>
   Key soundness statement for the constraint system:
   If env is a post-fixpoint (env v <= rhs ... env v for all v),
   then env overapproximates the CFG collecting semantics.
   Proved in Constraint_System_Sound.thy.
   Interprocedural variant: Constraint_System_IP_Sound.thy.
-*)
+\<close>
 
-(*
+text \<open>
   Sound transfer function: a domain_transfer tf that soundly over-approximates
   the concrete edge actions w.r.t. a sound_domain's concretization.  Bundles the
   four per-action soundness obligations (assign / assume / assume-not / enter)
-  that previously threaded through every soundness theorem as explicit
-  assumptions.  Concrete domains discharge these once via `interpretation`.
-*)
+  as locale assumptions.  Concrete domains discharge these once via
+  `interpretation`.
+\<close>
 locale sound_transfer = sound_domain +
   fixes tf :: "'a domain_transfer"
   assumes tf_sound_assign:

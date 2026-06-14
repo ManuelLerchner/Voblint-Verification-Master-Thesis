@@ -2,7 +2,9 @@ theory TD_Side_IP_Bounds
   imports TD_Side_IP_Mono
 begin
 
-(*
+section \<open>Side IP solver: post-solution bounds\<close>
+
+text \<open>
   Post-solution bounds: the facts the soundness layer consumes.
 
   A post-solution of side_cfg_T_ip bounds, at every program point in scope, the
@@ -11,9 +13,9 @@ begin
   combine_combined_le_ip), dependency membership, and entry coverage
   (s0_le_side_env_entry_ip).  Construction: TD_Side_IP_Tree.  Monotonicity /
   solver preconditions: TD_Side_IP_Mono.
-*)
+\<close>
 
-(* -- Post-solution in usable form ------------------------------------- *)
+subsection \<open>Post-solution in usable form\<close>
 
 (* A post-solution of side_cfg_T_ip bounds, at every program point in scope,
    the local fold by the local unknown and the global contribution by the
@@ -45,7 +47,7 @@ proof -
   thus ?thesis using le by (rule order_trans)
 qed
 
-(* -- Fold upper bounds (join = sup) ----------------------------------- *)
+subsection \<open>Fold upper bounds (join = sup)\<close>
 
 lemma side_acc_ip_ge_acc:
   "acc \<le> side_acc_ip tf (\<squnion>) acc sigma es cs"
@@ -240,7 +242,7 @@ lemma restrict_global_le_side_glob_ip_combine:
   using restrict_global_le_side_glob_ip_combine_nil[OF assms] side_glob_ip_es_mono
   by (rule order_trans)
 
-(* -- Edge / combine closure of a side post-solution ------------------- *)
+subsection \<open>Edge / combine closure of a side post-solution\<close>
 
 (* For any CFG edge (u, a, v), a post-solution's combined env at u, transferred
    along a, is below the combined env at v. *)
@@ -297,7 +299,7 @@ proof -
   finally show ?thesis unfolding side_env_def .
 qed
 
-(* -- Dependency membership (edges and combine endpoints) -------------- *)
+subsection \<open>Dependency membership (edges and combine endpoints)\<close>
 
 lemma Inl_dep_aux_side_rhs_fold_ip_edge:
   assumes "(u, a) \<in> set es"
@@ -393,7 +395,7 @@ proof -
   thus ?thesis using dep_aux_side_rhs_fold_ip_nil_sub_es by blast
 qed
 
-(* -- Dependency at the eqsT level (edges and combine endpoints) ------- *)
+subsection \<open>Dependency at the eqsT level (edges and combine endpoints)\<close>
 
 lemma dep_side_rhs_tree_ip_edge:
   assumes fin: "finite (edges g)"
@@ -426,7 +428,7 @@ proof -
   show ?thesis using dc de unfolding side_cfg_T_ip_def dep\<^sub>L_def dep_def by simp
 qed
 
-(* -- Entry coverage from an arbitrary initial state ------------------- *)
+subsection \<open>Entry coverage from an arbitrary initial state\<close>
 
 (* The entry node's wrapping Side () contributes restrict_global s0 to the
    single global unknown, so the initial globals are below it in any

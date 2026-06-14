@@ -13,6 +13,13 @@ You are a formal proof engineer working with Isabelle/jEdit. Your work is surgic
 * Apply-style: 1–2 tactics at a time, inspect, proceed. Never replace entire scripts.
 * Structured Isar: top-down. Sketch with `sorry` placeholders. Fill one at a time. If a `sorry` is complex, hoist it as a separate lemma or open a `proof -` subproof.
 
+**REMEMBER: Comments describe the *current* theory, never its history.**
+
+* No "Option-A/B", "Mirrors X", "IP analogue of X", "previously/formerly/used to", "no longer needs", or references to deleted/retired theories (e.g. `TD_Side_Interface`, `TD_IP_Soundness`, intra-spine names). State what the code does now.
+* Comparing to a *still-existing* sibling is fine (`Mirrors cfg_collect_paths`); comparing to a removed one is rot — delete it.
+* A "no longer / previously" that describes the *mathematics* (e.g. "after one write the array is no longer the constant array") stays; only project-history framing goes.
+* Prefer Isabelle document structure over comment banners: file-header `(* … *)` → `section ‹…›` + `text ‹…›`; `(* -- X -- *)` separators → `subsection ‹X›`. Keep short why-comments as `(* … *)`. Use ASCII `\<open>`/`\<close>` for cartouches.
+
 ---
 
 # Project goal

@@ -2,16 +2,18 @@ theory TD_Side_IP_Mono
   imports TD_Side_IP_Tree
 begin
 
-(*
+section \<open>Side IP solver: monotonicity and solver preconditions\<close>
+
+text \<open>
   Monotonicity of the side IP strategy and the TD_side solver preconditions.
 
   Proves the local/global folds are monotone, that dependencies are stable
   (independent of acc and sigma), and packages these as the three TD_side
   hypotheses on side_cfg_T_ip: side_cfg_T_ip_is_mono_eq, _mono_sides,
   _mono_deps.  Construction: TD_Side_IP_Tree.  Bounds: TD_Side_IP_Bounds.
-*)
+\<close>
 
-(* -- Monotonicity of the local fold ----------------------------------- *)
+subsection \<open>Monotonicity of the local fold\<close>
 
 lemma side_acc_ip_mono_acc:
   fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -114,7 +116,7 @@ lemma side_acc_ip_mono_sup:
   shows "side_acc_ip tf (\<squnion>) acc sigma1 es cs \<le> side_acc_ip tf (\<squnion>) acc sigma2 es cs"
   by (rule side_acc_ip_mono[OF tf_mono sup_mono sigma_le])
 
-(* -- Monotonicity of the global contribution -------------------------- *)
+subsection \<open>Monotonicity of the global contribution\<close>
 
 lemma side_glob_ip_mono:
   fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -167,7 +169,7 @@ lemma side_glob_ip_mono_sup:
   shows "side_glob_ip tf (\<squnion>) sigma1 es cs \<le> side_glob_ip tf (\<squnion>) sigma2 es cs"
   by (rule side_glob_ip_mono[OF tf_mono sup_mono sigma_le])
 
-(* -- Dependencies are independent of acc and of sigma ----------------- *)
+subsection \<open>Dependencies are independent of acc and of sigma\<close>
 
 lemma dep_aux_side_rhs_fold_ip_acc_indep:
   "dep_aux sigma (side_rhs_fold_ip tf join acc1 es cs)
@@ -248,7 +250,7 @@ next
     using inner unfolding acc1_def acc2_def by simp
 qed
 
-(* -- Side contributions: all land in the global slot Inr () ----------- *)
+subsection \<open>Side contributions: all land in the global slot Inr ()\<close>
 
 lemma sides_side_rhs_fold_ip_Inr:
   "sides_of_rhs (side_rhs_fold_ip tf join acc es cs) sigma (Inr ())
@@ -333,7 +335,7 @@ next
   show ?thesis unfolding make_side_rhs_tree_ip_def Let_def using False by simp
 qed
 
-(* -- Solver preconditions for TD_side --------------------------------- *)
+subsection \<open>Solver preconditions for TD_side\<close>
 
 lemma side_cfg_T_ip_is_mono_eq:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"

@@ -6,9 +6,9 @@ begin
 notation sup (infixl "\<squnion>" 65)
 notation inf (infixl "\<sqinter>" 70)
 
-(*
-  Abstract Domain -- Locale and Lifted State Concretization.
+section \<open>Abstract domain: locale and lifted state concretization\<close>
 
+text \<open>
   An abstract domain is a type 'a equipped with:
     bot     : bottom element (empty concretization)
     sup     : sound upper bound (for RHS fold over predecessor edges)
@@ -18,7 +18,7 @@ notation inf (infixl "\<sqinter>" 70)
   bot and sup come from the bounded_semilattice_sup_bot type class.
   'a abs_state = vname => 'a inherits the same class pointwise via HOL's
   fun instances, so we never need to define lifted-bot / lifted-join.
-*)
+\<close>
 
 type_synonym 'a abs_state = "vname => 'a"
 
@@ -49,7 +49,7 @@ locale sound_domain =
     "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
 begin
 
-(* ── Derived gamma-sup bounds ──────────────────────────────── *)
+subsection \<open>Derived gamma-sup bounds\<close>
 
 lemma gamma_sup_ub1: "gamma a \<subseteq> gamma (a \<squnion> b)"
   by (rule gamma_mono[OF sup_ge1])
@@ -61,7 +61,7 @@ lemma gamma_sup_sound:
   "gamma a \<union> gamma b \<subseteq> gamma (a \<squnion> b)"
   using gamma_sup_ub1 gamma_sup_ub2 by blast
 
-(* ── Lifted Concretization ───────────────────────────────────── *)
+subsection \<open>Lifted concretization\<close>
 
 definition gamma_state :: "'a abs_state => store set" where
   "gamma_state sigma = {s. \<forall>x. s x \<in> gamma (sigma x)}"
@@ -123,13 +123,16 @@ lemma gamma_abs_sup_set_ub:
 
 end
 
-(* ── Abstract Domain Locale ──────────────────────────────────────
-   Extends sound_domain with widening for termination guarantees.
-   Required when connecting to the TD solver for a domain with
-   infinite ascending chains (e.g., intervals).
+subsection \<open>Abstract domain locale (with widening)\<close>
 
-   Finite domains (sign, parity) instantiate this with widen = sup;
-   the widen axioms then hold trivially from sup_ge1/sup_ge2. *)
+text \<open>
+  Extends sound_domain with widening for termination guarantees.
+  Required when connecting to the TD solver for a domain with
+  infinite ascending chains (e.g., intervals).
+
+  Finite domains (sign, parity) instantiate this with widen = sup;
+  the widen axioms then hold trivially from sup_ge1/sup_ge2.
+\<close>
 
 locale abstract_domain = sound_domain +
   fixes widen :: "'a => 'a => 'a"

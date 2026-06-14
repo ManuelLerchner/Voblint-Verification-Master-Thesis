@@ -2,20 +2,20 @@ theory CFG_Path
   imports CFG_Def
 begin
 
-(*
-  CFG_Path -- Inductive path predicate for CFGs.
+section \<open>Inductive path predicate for CFGs\<close>
 
+text \<open>
   Pattern: inductive path + derived notation + intro/elim/simp lemma library.
   Adapted from: https://github.com/lohner/FormalSSA (Ullrich & Lohner, Isabelle2016)
-                "Verified Construction of Static Single-Assignment Form"
+                ''Verified Construction of Static Single-Assignment Form''
                 SSA_CFG.thy / Graph_path.thy path2 + lemma library.
 
   Design choices vs. FormalSSA:
     - FormalSSA path2: list of *nodes* (predecessor-based graph)
     - Our cfg_path:   list of *(edge_action * pp)* steps (labeled-edge graph)
-*)
+\<close>
 
-(* \<midarrow>\<midarrow> Core Inductive Predicate \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+subsection \<open>Core inductive predicate\<close>
 
 inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool"
                  ("_ \<turnstile> _ \<longrightarrow>\<^bsub>_\<^esub> _" [60, 0, 0, 60] 60) where 
@@ -75,7 +75,7 @@ lemma cfg_path_on_path_step:
   shows "g \<turnstile> p \<longrightarrow>\<^bsub>esx @ [(a, w)]\<^esub> w"
   using cfg_path_append[OF prefix cfg_path_step_target[OF step]] by simp
 
-(* \<midarrow>\<midarrow> Offset Paths \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+subsection \<open>Offset paths\<close>
 
 definition offset_path :: "nat => (edge_action * pp) list => (edge_action * pp) list" where
   "offset_path k es = map (\<lambda>(a, p). (a, p + k)) es"

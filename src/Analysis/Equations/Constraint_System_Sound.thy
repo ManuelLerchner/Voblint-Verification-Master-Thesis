@@ -2,9 +2,9 @@ theory Constraint_System_Sound
   imports Constraint_System "Voblint_CFG.CFG_Collect_Core"
 begin
 
-(*
-  Constraint System -- Soundness Theorem.
+section \<open>Constraint system: soundness theorem\<close>
 
+text \<open>
   Main result: any post-fixpoint of the equation system overapproximates
   the CFG collecting semantics.
 
@@ -14,9 +14,9 @@ begin
        By induction on the CFG collecting semantics (or by lfp properties).
     3. Conclude: every concrete state reachable at v is in gamma(env(v)).
 
-  This is the "big bridge" in the pipeline connecting the abstract
+  This is the ''big bridge'' in the pipeline connecting the abstract
   constraint system back to concrete program behaviour.
-*)
+\<close>
 
 (* Global rhs-step lemmas (no gamma needed). *)
 lemma apply_tf_le_rhs:

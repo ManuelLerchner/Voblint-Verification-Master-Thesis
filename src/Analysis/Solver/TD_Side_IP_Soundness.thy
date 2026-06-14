@@ -2,7 +2,9 @@ theory TD_Side_IP_Soundness
   imports TD_Side_IP_Interface Constraint_System_IP_Sound "Voblint_CFG.CFG_Prune"
 begin
 
-(* -- Backward IP reachability lands in the side solver's dependency cone -- *)
+section \<open>Side IP solver: collecting soundness\<close>
+
+subsection \<open>Backward IP reachability lands in the side solver's dependency cone\<close>
 
 lemma ip_reaches_imp_trans_dep_or_eq_side:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
@@ -76,11 +78,8 @@ proof -
   qed
 qed
 
-(*
-  Collecting soundness of a side-effecting INTERPROCEDURAL post-solution.
-
-  Mirrors the M3 intra theorem (TD_Side_CFG.side_collect_sound_at) and the
-  plain IP theorem (TD_IP_Soundness.td_analyse_ip_collect_sound_at): the
+text \<open>
+  Collecting soundness of a side-effecting interprocedural post-solution: the
   combined env of a side_cfg_T_ip post-solution soundly over-approximates the
   interprocedural CFG collecting semantics (cfg_collect_ip), which folds in the
   combine triples.
@@ -90,10 +89,9 @@ qed
   per-combine bound (combine_combined_le_ip) proved in TD_Side_IP_Bounds.
 
   Coverage (every edge target / combine return point lies in the solved stable
-  set vars) is taken as a hypothesis here, exactly as the plain reachability-form
-  theorem takes edge/combine reachability; on the backward cone of the query node
-  it is discharged by pruning (cf. TD_IP_Soundness).
-*)
+  set vars) is taken as a hypothesis here; on the backward cone of the query
+  node it is discharged by pruning.
+\<close>
 
 context sound_transfer
 begin
@@ -132,13 +130,13 @@ proof -
           OF fin finC entry step_le combine_le entry_le])
 qed
 
-(*
+text \<open>
   Exit-rooted soundness with the coverage condition discharged by pruning: the
   solver runs on the full graph g, while the collecting value at the exit
   depends only on the backward cone, which is connected by construction, so
   every edge target / combine return on the cone is in the solved stable set.
-  No coverage hypothesis (cf. TD_IP_Soundness.td_analyse_ip_collect_sound_at_exit_pruned).
-*)
+  No coverage hypothesis is needed.
+\<close>
 theorem side_collect_sound_ip_exit_pruned:
   fixes g :: cfg and sigma :: "pp + unit => 'a abs_state"
     and bot0 s0 :: "'a abs_state" and S :: "store set"
@@ -191,14 +189,13 @@ proof -
   show ?thesis using frame collect_pg by blast
 qed
 
-(*
+text \<open>
   Executable-facing soundness: run the side TD solver on the compiled program,
   read back the combined env (side_analyse_ip), and over-approximate the IP
   collecting semantics at the program exit.  The entry condition is discharged
   from an arbitrary initial state s0 (the entry seeds both its locals and its
-  globals).  Mirrors
-  TD_IP_Soundness.td_analyse_ip_collect_sound_at_exit_pruned for the side solver.
-*)
+  globals).
+\<close>
 theorem side_analyse_ip_collect_sound_exit_pruned:
   fixes pi ps main and s0 :: "'a abs_state" and S :: "store set"
   assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"

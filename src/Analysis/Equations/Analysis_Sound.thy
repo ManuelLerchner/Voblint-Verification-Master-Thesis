@@ -2,12 +2,12 @@ theory Analysis_Sound
   imports "Voblint_CFG.CFG_Collect_Unified" Constraint_System_Sound Constraint_System_IP_Sound
 begin
 
-(*
-  U2 (unified-analysis migration): one soundness engine.
+section \<open>Unified analysis soundness: one engine\<close>
 
+text \<open>
   Both the intra-procedural soundness (post_fixpoint_sound, Constraint_System_Sound)
   and the interprocedural soundness (post_fixpoint_sound_ip, Constraint_System_IP_Sound)
-  share the same final step: gamma \<circ> env is a post-fixpoint of the collecting
+  share the same final step: gamma o env is a post-fixpoint of the collecting
   functional F, hence the lfp collect is below it (lfp_lowerbound).  That step is
   captured ONCE by the collecting locale (CFG_Collect_Unified) as
   collect_post_fixpoint_sound.
@@ -16,12 +16,12 @@ begin
   conclusions through this single engine: each only constructs the per-instance
   post-fixpoint witness (key) from the already-shared piece lemmas
   (collect_pp_abstract_sound[_ip], collect_combine_pp_abstract_sound) and calls
-  the generic locale lemma.  A new combine_at hook (e.g. M4's digest-indexed join)
+  the generic locale lemma.  A new combine_at hook (e.g. a digest-indexed join)
   obtains soundness the same way -- construct key for its F, apply
-  collect_post_fixpoint_sound -- instead of forking a fifth soundness stack.
-*)
+  collect_post_fixpoint_sound -- instead of forking another soundness stack.
+\<close>
 
-(* -- Generic engine: lfp soundness from a post-fixpoint witness ------------ *)
+subsection \<open>Generic engine: lfp soundness from a post-fixpoint witness\<close>
 
 lemma (in collecting) collect_post_fixpoint_sound:
   assumes "F g S B \<le> B"
@@ -31,7 +31,7 @@ lemma (in collecting) collect_post_fixpoint_sound:
 context sound_transfer
 begin
 
-(* -- Intra-procedural soundness via the engine ---------------------------- *)
+subsection \<open>Intra-procedural soundness via the engine\<close>
 
 lemma unified_post_fixpoint_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
@@ -60,7 +60,7 @@ proof -
   thus ?thesis unfolding intra_collect_eq .
 qed
 
-(* -- Interprocedural soundness via the engine ----------------------------- *)
+subsection \<open>Interprocedural soundness via the engine\<close>
 
 lemma unified_post_fixpoint_sound_ip:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"

@@ -2,8 +2,10 @@ theory TD_Side_CFG
   imports Constraint_System_Sound "Voblint_IMP2.IMP2_Globals" "TD.TD_side"
 begin
 
-(*
-  Option-A generic base for the side-effecting interprocedural solver.
+section \<open>Side IP solver: generic base\<close>
+
+text \<open>
+  Generic base for the side-effecting interprocedural solver.
 
   A locals/globals split on abstract states: restrict_local / restrict_global
   keep one component (the other set to bot), so their join recovers the
@@ -12,7 +14,7 @@ begin
 
   The interprocedural strategy tree, transfer functions, and their
   monotonicity live in TD_Side_IP_Mono.
-*)
+\<close>
 
 (* Keep only the local (resp. global) component of an abstract state; the other
    component is set to bot, so the join of the two recovers the original. *)

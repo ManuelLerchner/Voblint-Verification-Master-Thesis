@@ -2,17 +2,18 @@ theory CFG_Collect_IP
   imports CFG_Collect_Edges IMP2_Proc_to_CFG
 begin
 
-(*
-  Interprocedural collecting semantics (M1 slice 2).
+section \<open>Interprocedural collecting semantics\<close>
 
+text \<open>
   Extends cfg_collect with combine triples from combines g:
     (call, proc_exit, return) contributes
       { combine_states s t | s in C call, t in C proc_exit }
     at the return program point.
 
   When combines g = {}, agrees with cfg_collect.
-  Operational adequacy (pruns_to => cfg_collect_ip) is the next proof target.
-*)
+  Operational adequacy (pruns_to => cfg_collect_ip) is proved in
+  CFG_Collect_IP_Adeq.
+\<close>
 
 definition collect_combine_pp :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set" where
   "collect_combine_pp g rho v =
@@ -28,7 +29,7 @@ definition cfg_collect_ip_F :: "cfg \<Rightarrow> store set \<Rightarrow> cenv \
 definition cfg_collect_ip :: "cfg \<Rightarrow> store set \<Rightarrow> cenv" where
   "cfg_collect_ip g S = lfp (cfg_collect_ip_F g S)"
 
-(* -- Monotonicity ------------------------------------------------ *)
+subsection \<open>Monotonicity\<close>
 
 lemma combine_states_image_mono:
   assumes "S \<subseteq> S'" and "T \<subseteq> T'"
@@ -89,7 +90,7 @@ lemma cfg_collect_ip_lfp_unfold:
   unfolding cfg_collect_ip_def
   by (simp add: cfg_collect_ip_F_mono def_lfp_unfold)
 
-(* -- Relation to intra-procedural cfg_collect ---------------------- *)
+subsection \<open>Relation to intra-procedural cfg_collect\<close>
 
 lemma collect_combine_pp_empty[simp]:
   "combines g = {} \<Longrightarrow> collect_combine_pp g rho v = {}"
@@ -172,7 +173,7 @@ proof
     using x step cfg_collect_ip_post by blast
 qed
 
-(* -- Witness-based paths (edge + combine) -------------------------------- *)
+subsection \<open>Witness-based paths (edge + combine)\<close>
 
 inductive ip_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" for g where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> ip_witness g S v s"

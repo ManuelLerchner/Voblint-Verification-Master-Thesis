@@ -2,17 +2,18 @@ theory CFG_Collect_Trace_IP
   imports CFG_Collect_Trace CFG_Collect_IP
 begin
 
-(*
-  M3.5 -- interprocedural TRACE collecting and the projection lemma.
+section \<open>Interprocedural trace collecting and the projection lemma\<close>
 
+text \<open>
   cfg_collect_trace (intraprocedural, CFG_Collect_Trace) records the sequence of
-  stores along a single CFG path.  M1's cfg_collect_ip (CFG_Collect_IP) is
-  state-based with enter edges + combine triples.  M3.5 forms their product:
-  a trace-valued interprocedural collecting whose enter is an ordinary edge step
-  and whose combine splices a callee trace (rho) onto the caller trace (tau) it
-  returned to, restoring with combine_states (caller locals, callee globals).
+  stores along a single CFG path.  cfg_collect_ip (CFG_Collect_IP) is
+  state-based with enter edges + combine triples.  This theory forms their
+  product: a trace-valued interprocedural collecting whose enter is an ordinary
+  edge step and whose combine splices a callee trace (rho) onto the caller trace
+  (tau) it returned to, restoring with combine_states (caller locals, callee
+  globals).
 
-  The milestone is the interprocedural projection (REFINEMENT, not equality):
+  The central result is the interprocedural projection (REFINEMENT, not equality):
 
       alpha_last (cfg_collect_trace_ip g S v)  \<subseteq>  cfg_collect_ip g S v
 
@@ -24,19 +25,20 @@ begin
   precise.  But every matched combine_states (last tau) (last rho) IS produced by
   collect_combine_pp (witness s = last tau \<in> cfg_collect_ip c,
   t = last rho \<in> cfg_collect_ip ex), so the \<subseteq> direction always holds.  This
-  lets M1's soundness (analysis \<supseteq> cfg_collect_ip) carry to the trace foundation
-  by transitivity, and the strict cases are the precision payoff of the pivot.
+  lets the state-based soundness (analysis \<supseteq> cfg_collect_ip) carry to the trace
+  foundation by transitivity, and the strict cases are the precision payoff.
 
   cfg_collect_ip = ip.collect (CFG_Collect_Unified, ip_collect_eq), so this lands
-  on the unified collecting locale rather than a fifth parallel stack.
+  on the unified collecting locale rather than a parallel stack.
 
   The junction condition is recorded for fidelity (it pins down the genuinely
   reachable interprocedural traces) but is NOT used by the projection: any
   pairing's last store already lands in the over-combining cfg_collect_ip.
-*)
+\<close>
 
-(* -- Interprocedural trace witness ---------------------------------------- *)
-(*
+subsection \<open>Interprocedural trace witness\<close>
+
+text \<open>
   ip_trace_witness g S v tr : tr is a store sequence reaching v.
   entry   : a singleton [s] for s in the initial set, at the CFG entry.
   edge    : extend by one CFG edge (covers intra edges AND enter edges, since
@@ -46,7 +48,7 @@ begin
             procedure exit ex) onto the caller trace tau (at the call site c) it
             was entered from, appending the restored return store
             combine_states (last tau) (last rho).
-*)
+\<close>
 inductive ip_trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool" for g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> ip_trace_witness g S v [s]"
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> ip_trace_witness g S u tr
@@ -61,7 +63,7 @@ inductive ip_trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Ri
 definition cfg_collect_trace_ip :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
   "cfg_collect_trace_ip g S v = {tr. ip_trace_witness g S v tr}"
 
-(* -- Basic structure ------------------------------------------------------ *)
+subsection \<open>Basic structure\<close>
 
 lemma ip_trace_witness_nonempty:
   "ip_trace_witness g S v tr \<Longrightarrow> tr \<noteq> []"
@@ -71,12 +73,13 @@ lemma cfg_collect_trace_ip_entry:
   "s \<in> S \<Longrightarrow> [s] \<in> cfg_collect_trace_ip g S (cfg_entry g)"
   unfolding cfg_collect_trace_ip_def using ip_trace_witness.entry by simp
 
-(* -- Interprocedural projection (the milestone) --------------------------- *)
-(*
+subsection \<open>Interprocedural projection\<close>
+
+text \<open>
   Every interprocedural trace projects (last store) into the state-based
   interprocedural collecting.  Near-copy of ip_witness_in_cfg_collect_ip
   (CFG_Collect_IP), carrying traces and projecting with last.
-*)
+\<close>
 lemma ip_trace_witness_last_in_cfg_collect_ip:
   assumes "ip_trace_witness g S v tr"
   shows "last tr \<in> cfg_collect_ip g S v"
@@ -120,18 +123,19 @@ theorem alpha_last_cfg_collect_trace_ip_le:
   using ip_trace_witness_last_in_cfg_collect_ip by auto
 
 
-(* -- M4 precision: digest-refined interprocedural trace collecting ---------- *)
-(*
+subsection \<open>Digest-refined interprocedural trace collecting\<close>
+
+text \<open>
   A digest abstracts a trace's history (calling context, lockset, ...).  The
   digest-refined witness adds ONE premise to the combine rule: the caller and
   callee digests must be COMPATIBLE (cmp).  Every other rule is unchanged, so the
   refined trace set is a SUBSET of the unrefined one (cfg_collect_trace_ip_d_subset).
   Soundness therefore carries over verbatim (reaching_global_read_sound_d in
   Trace_IP_Analysis_Sound) -- the digest hook only SHRINKS the trace set.  This
-  mechanizes the "combine_at digest hook preserves soundness" claim M4 precision
-  rests on; choosing a concrete digest + proving strictly tighter reads is the
-  precision payoff (Example_Trace_Digest_Precision).
-*)
+  mechanizes the claim that the ''combine_at digest hook preserves soundness'';
+  choosing a concrete digest + proving strictly tighter reads is the precision
+  payoff (Example_Trace_Digest_Precision).
+\<close>
 inductive ip_trace_witness_d ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool"
   for dg :: "trace \<Rightarrow> 'd" and cmp :: "'d \<Rightarrow> 'd \<Rightarrow> bool" and g S where

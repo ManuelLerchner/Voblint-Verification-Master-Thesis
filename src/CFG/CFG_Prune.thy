@@ -2,13 +2,13 @@ theory CFG_Prune
   imports CFG_Collect_IP IMP2_Proc_to_CFG
 begin
 
-(*
-  Dead-procedure pruning for interprocedural CFGs.
+section \<open>Dead-procedure pruning for interprocedural CFGs\<close>
 
+text \<open>
   `compile_prog` unions every procedure's edges/combines into the graph,
   whether or not the procedure is ever called.  A defined-but-uncalled
   procedure leaves body nodes that are edge-targets yet cannot reach the
-  program exit -- breaking the "every program point reaches the exit"
+  program exit -- breaking the ''every program point reaches the exit''
   well-formedness condition.
 
   We prune the graph to the backward cone of the exit (the live, reachable
@@ -16,9 +16,9 @@ begin
   exit is unchanged (a witness from entry to exit stays inside the cone), so
   soundness transports back to the unpruned analysis with no well-formedness
   hypothesis.
-*)
+\<close>
 
-(* -- Interprocedural reachability ---------------------------------------- *)
+subsection \<open>Interprocedural reachability\<close>
 
 (* One dependency step: u's abstract value feeds w's right-hand side, either
    via an edge (u -> w) or a combine (call site or callee exit of w). *)
@@ -43,7 +43,7 @@ definition prune_to :: "cfg \<Rightarrow> pp \<Rightarrow> cfg" where
 definition prune_cfg :: "cfg \<Rightarrow> cfg" where
   "prune_cfg g = prune_to g (cfg_exit g)"
 
-(* -- reaches basics ------------------------------------------------------ *)
+subsection \<open>reaches basics\<close>
 
 lemma ip_reaches_refl: "ip_reaches g v v"
   by (simp add: ip_reaches_def)
@@ -68,7 +68,7 @@ proof -
   thus ?thesis using assms(3) unfolding ip_reaches_def by blast
 qed
 
-(* -- prune_to selectors -------------------------------------------------- *)
+subsection \<open>prune_to selectors\<close>
 
 lemma edges_prune_to[simp]:
   "edges (prune_to g v0) = {e \<in> edges g. snd (snd e) \<in> cone g v0}"
@@ -102,7 +102,7 @@ lemma finite_combines_prune_to:
    ip_reaches_imp_trans_dep_or_eq_side (TD_Side_IP_Bounds / TD_Side_IP_Soundness).
    The graph-level pruning frame below is solver-agnostic. *)
 
-(* -- collect frame: witness transport ------------------------------------ *)
+subsection \<open>Collect frame: witness transport\<close>
 
 lemma ip_witness_prune_to:
   assumes "ip_witness g S v t"
@@ -155,7 +155,7 @@ proof
     using wp by (simp add: prune_cfg_def cfg_collect_ip_eq_paths cfg_collect_ip_paths_def)
 qed
 
-(* -- entry reaches exit for compile_prog --------------------------------- *)
+subsection \<open>Entry reaches exit for compile_prog\<close>
 
 lemma ip_succ_imp_reaches: "ip_succ g u w \<Longrightarrow> ip_reaches g u w"
   using ip_succ_reaches ip_reaches_refl by blast

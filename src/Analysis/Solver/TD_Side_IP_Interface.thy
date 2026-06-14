@@ -2,15 +2,17 @@ theory TD_Side_IP_Interface
   imports TD_Side_IP_Bounds "TD.TD_side"
 begin
 
-(*
-  Side-effecting TD backend for the INTERPROCEDURAL CFG (TD_side on
-  side_cfg_T_ip).  Mirrors TD_Side_Interface: package side_cfg_T_ip as
-  cfg_side_T_ip, run TD_side_mono.solve, read back sigma / stabl, expose
-  side_env_at.
+section \<open>Side IP solver: TD_side backend interface\<close>
+
+text \<open>
+  Side-effecting TD backend for the interprocedural CFG (TD_side on
+  side_cfg_T_ip).  Packages side_cfg_T_ip as cfg_side_T_ip_pkg, interprets it
+  as TD_side_mono, reads back the stable set and unknown assignment
+  (side_stabl_at / side_sigma_at), and exposes the combined env (side_env_at).
 
   Monotonicity of side_cfg_T_ip is derived from transfer-function monotonicity
   (side_cfg_T_ip_is_mono_eq / _mono_sides / _mono_deps in TD_Side_IP_Mono).
-*)
+\<close>
 
 definition side_cfg_ip_solve_dom ::
   "cfg \<Rightarrow> 'a::bounded_semilattice_sup_bot domain_transfer

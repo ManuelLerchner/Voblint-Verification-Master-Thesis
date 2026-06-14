@@ -2,18 +2,19 @@ theory CFG_Collect_Unified
   imports CFG_Collect_IP CFG_Collect_Core
 begin
 
-(*
-  U1 (unified-analysis migration): one collecting locale parameterised by a
-  combine_at hook.  The intra-procedural and interprocedural collecting
-  semantics are recovered as interpretations:
+section \<open>Unified collecting locale\<close>
+
+text \<open>
+  One collecting locale parameterised by a combine_at hook.  The intra-procedural
+  and interprocedural collecting semantics are recovered as interpretations:
 
     intra:  combine_at = (\<lambda>g rho v. {})        recovers cfg_collect
     ip:     combine_at = collect_combine_pp     recovers cfg_collect_ip
 
   The lfp skeleton (mono, unfold, post-fixpoint, entry, per-edge step, generic
-  lfp lower bound) is proved ONCE in the locale.  The trace overlay (U4 / M3.5)
-  reuses the same skeleton; see CFG_Collect_Trace.
-*)
+  lfp lower bound) is proved ONCE in the locale.  The trace overlay reuses the
+  same skeleton; see CFG_Collect_Trace.
+\<close>
 
 locale collecting =
   fixes combine_at :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set"
@@ -76,7 +77,7 @@ qed
 
 end
 
-(* -- Intra-procedural interpretation -------------------------------------- *)
+subsection \<open>Intra-procedural interpretation\<close>
 
 interpretation intra: collecting "\<lambda>g rho v. {}"
   by unfold_locales simp
@@ -91,7 +92,7 @@ proof -
   thus ?thesis by (simp add: intra.collect_def cfg_collect_def)
 qed
 
-(* -- Interprocedural interpretation --------------------------------------- *)
+subsection \<open>Interprocedural interpretation\<close>
 
 interpretation ip: collecting collect_combine_pp
   by unfold_locales (metis collect_combine_pp_mono monoD)

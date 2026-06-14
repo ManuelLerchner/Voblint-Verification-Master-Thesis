@@ -3,13 +3,13 @@ theory CFG_Def
           "Dijkstra_Shortest_Path.Graph"
 begin
 
-(*
-  CFG -- Control-Flow Graph Definition.
+section \<open>Control-flow graph definition\<close>
 
+text \<open>
   A CFG represents a program as a directed graph where:
     - Nodes are program points (natural numbers, allocated during translation).
     - Edges carry edge actions: assignments, branch assumptions, or no-ops.
-    - Each edge (u, a, v) means: "go from u to v, performing action a".
+    - Each edge (u, a, v) means: ''go from u to v, performing action a''.
 
   A `cfg` is a record-extension of AFP's `Dijkstra_Shortest_Path.Graph.graph`,
   inheriting the `nodes` and `edges` selectors and adding `cfg_entry`,
@@ -17,22 +17,23 @@ begin
   it auto-computes `nodes` from the edges plus endpoints so that
   `valid_graph` holds by construction.
 
-  Translation from IMP2 to CFG is in IMP2_to_CFG.thy.
+  Translation from IMP2 to CFG is in IMP2_Proc_to_CFG.thy.
   The equation system over a CFG is in Equations/Constraint_System.thy.
-*)
+\<close>
 
-(* \<midarrow>\<midarrow> Program Points \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+subsection \<open>Program points\<close>
 
 type_synonym pp = nat
 
-(* \<midarrow>\<midarrow> Edge Actions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>Edge actions\<close>
+
+text \<open>
   Each edge carries one of:
     EA_Nop          -- unconditional edge (no state change)
     EA_Assign x a   -- assignment: state updated as s(x := aval a s)
     EA_Assume b     -- assume b holds: filter states where bval b s = True
     EA_AssumeNot b  -- assume b fails: filter states where bval b s = False
-*)
+\<close>
 
 datatype edge_action =
     EA_Nop
@@ -61,14 +62,14 @@ instance
 
 end
 
-(* \<midarrow>\<midarrow> CFG Record (extension of AFP graph) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+subsection \<open>CFG record (extension of AFP graph)\<close>
 
 record cfg = "(pp, edge_action) graph" +
   cfg_entry :: pp
   cfg_exit  :: pp
   combines  :: "(pp * pp * pp) set"   (* (call, callee_exit, return) triples *)
 
-(* \<midarrow>\<midarrow> CFG Construction ) \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+subsection \<open>CFG construction\<close>
 
 definition mk_ip_cfg ::
   "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> pp \<times> pp) set \<Rightarrow> cfg" where
@@ -111,7 +112,7 @@ lemma in_offset_edges_iff:
   "((u + k::nat, a, v + k) \<in> offset_edges k E) \<longleftrightarrow> (u, a, v) \<in> E"
   unfolding offset_edges_def by (force simp: prod_eq_iff)
 
-(* \<midarrow>\<midarrow> Derived Notions \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
+subsection \<open>Derived notions\<close>
 
 definition predecessors :: "cfg => pp => (pp * edge_action) set" where
   "predecessors g v = {(u, a) | u a. (u, a, v) : edges g}"

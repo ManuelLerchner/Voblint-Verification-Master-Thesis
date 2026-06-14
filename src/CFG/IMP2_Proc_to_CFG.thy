@@ -2,14 +2,14 @@ theory IMP2_Proc_to_CFG
   imports CFG_Def "Voblint_IMP2.IMP2_Proc"
 begin
 
-(*
-  Interprocedural CFG compilation for `com` programs (M1 slice 1).
+section \<open>Interprocedural CFG compilation for `com` programs\<close>
 
+text \<open>
   Whole-program layout:
     - each procedure body compiled once at a fresh offset;
     - call sites get unary enter edges `(call, EA_Enter, proc_entry)`;
     - returns use combine triples `(call, proc_exit, return)` in `combines g`.
-*)
+\<close>
 
 type_synonym proc_info =
   "pp * pp * (pp * edge_action * pp) set * (pp * pp * pp) set"
@@ -150,7 +150,7 @@ definition compile_prog_regions ::
 where
   "compile_prog_regions pi ps main = snd (compile_prog_with_regions pi ps main)"
 
-(* -- Freshness / finiteness ------------------------------------------------ *)
+subsection \<open>Freshness / finiteness\<close>
 
 lemma compile_counter_mono:
   "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow> n \<le> n'"

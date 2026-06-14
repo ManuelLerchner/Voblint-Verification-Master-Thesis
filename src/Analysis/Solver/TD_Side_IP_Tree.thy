@@ -2,23 +2,25 @@ theory TD_Side_IP_Tree
   imports TD_Side_CFG "Voblint_CFG.CFG_Collect_IP"
 begin
 
-(*
-  Side-effecting constraint system over an INTERPROCEDURAL CFG, with a
-  locals/globals split -- CONSTRUCTION and DENOTATION.
+section \<open>Side IP solver: constraint system construction and denotation\<close>
 
-  This is the IP analogue of TD_Side_CFG: the intra encoding handles ordinary
-  edges; here we additionally fold the incoming combine triples of each return
-  point.  For a return point v, combines g contains triples (call, proc_exit,
-  v).  The combined abstract state combine_abs sc se takes locals from the
-  caller sc and globals from the callee exit se -- exactly restrict_local sc
-  join restrict_global se.  The local part flows on to v's local unknown; the
-  global part is contributed to the single global unknown by a side effect.
+text \<open>
+  Side-effecting constraint system over an interprocedural CFG, with a
+  locals/globals split -- construction and denotation.
+
+  side_acc_ip folds the incoming ordinary edges of a program point and then,
+  at a return point, the incoming combine triples.  For a return point v,
+  combines g contains triples (call, proc_exit, v).  The combined abstract
+  state combine_abs sc se takes locals from the caller sc and globals from the
+  callee exit se -- exactly restrict_local sc join restrict_global se.  The
+  local part flows on to v's local unknown; the global part is contributed to
+  the single global unknown by a side effect.
 
   Monotonicity / solver preconditions: TD_Side_IP_Mono.
   Post-solution bounds for soundness: TD_Side_IP_Bounds.
-*)
+\<close>
 
-(* -- Strategy tree ---------------------------------------------------- *)
+subsection \<open>Strategy tree\<close>
 
 (* One program point: fold the incoming edges (QueryL/QueryG/Side) then the
    incoming combine triples (QueryL call / QueryL exit / QueryG / Side). *)
@@ -71,7 +73,7 @@ lemma restrict_global_combine_eq:
   "restrict_global (restrict_local A \<squnion> restrict_global B) = restrict_global B"
   unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
 
-(* -- Denotation: local fold ------------------------------------------- *)
+subsection \<open>Denotation: local fold\<close>
 
 fun side_acc_ip ::
   "'a::bounded_semilattice_sup_bot domain_transfer
@@ -89,7 +91,7 @@ where
        (join acc (restrict_local (join (sigma (Inl cc)) (sigma (Inr ())))))
        sigma [] cs"
 
-(* -- Denotation: global contribution ---------------------------------- *)
+subsection \<open>Denotation: global contribution\<close>
 
 fun side_glob_ip ::
   "'a::bounded_semilattice_sup_bot domain_transfer

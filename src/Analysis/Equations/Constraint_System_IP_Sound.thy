@@ -2,7 +2,7 @@ theory Constraint_System_IP_Sound
   imports Constraint_System_Sound "Voblint_CFG.CFG_Collect_IP"
 begin
 
-(* Interprocedural soundness (M1 slice 3, L-sound'). *)
+section \<open>Interprocedural constraint-system soundness\<close>
 
 lemma apply_tf_le_rhs_ip:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"

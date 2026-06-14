@@ -2,25 +2,25 @@ theory Trace_IP_Analysis_Sound
   imports "Voblint_Analysis.Analysis_Sound" "Voblint_CFG.CFG_Collect_Trace_IP"
 begin
 
-(*
-  U4 (unified-analysis migration): the trace overlay as a soundness morphism.
+section \<open>Trace overlay as a soundness morphism\<close>
 
-  Composes M3.5's interprocedural projection
+text \<open>
+  Composes the interprocedural projection
     alpha_last (cfg_collect_trace_ip g S v) \<subseteq> cfg_collect_ip g S v
-  with U2's unified interprocedural soundness
+  with the unified interprocedural soundness
     cfg_collect_ip g S v \<le> gamma_state (env v)
   to obtain: the analyzer is sound w.r.t. the interprocedural TRACE semantics,
   projected to last stores.  alpha_last is thus a soundness-preserving morphism --
   no separate trace soundness stack is needed.
 
-  This is the M4 extension point: a digest-indexed combine_at refining
+  This is the digest extension point: a digest-indexed combine_at refining
   cfg_collect_trace_ip keeps the same shape
 
       alpha_last (precise trace collecting) \<subseteq> cfg_collect_ip \<le> gamma_state env,
 
-  so the global-read soundness M4 adds plugs in below the projection without
-  forking a new soundness chain.  M4 itself is NOT implemented here.
-*)
+  so the global-read soundness a digest hook adds plugs in below the projection
+  without forking a new soundness chain.
+\<close>
 
 context sound_transfer
 begin
@@ -40,26 +40,27 @@ proof -
   from proj st show ?thesis by (rule subset_trans)
 qed
 
-(*
-  M4 (core) -- history-sensitive read soundness over reaching traces.
+text \<open>
+  History-sensitive read soundness over reaching traces.
 
   For ANY variable x (global or local) and ANY interprocedural trace tr reaching
   program point v, the value that x holds at the end of tr is contained in the
-  analysis result's concretization gamma (env v x).  The "history" is the reaching
-  trace itself: this is the soundness of reading a variable's value over the set
-  of reaching interprocedural traces, which is exactly the flow-insensitive global
-  read once specialised to a G-prefixed variable and joined over program points.
+  analysis result's concretization gamma (env v x).  The ''history'' is the
+  reaching trace itself: this is the soundness of reading a variable's value over
+  the set of reaching interprocedural traces, which is exactly the
+  flow-insensitive global read once specialised to a G-prefixed variable and
+  joined over program points.
 
   It is an immediate consequence of trace_ip_analysis_sound (last tr is in
   alpha_last of the trace set, hence in gamma_state (env v)) and the per-coordinate
   shape of gamma_state.
 
-  Scope: this is the SOUNDNESS half of M4.  The PRECISION half -- digest-indexed
-  (context-sensitive) summaries that keep callers apart -- refines
-  cfg_collect_trace_ip's combine via a digest hook on the unified collecting
-  locale; it strengthens the trace set (smaller), so this soundness statement is
-  preserved unchanged.  That precision refinement is future work.
-*)
+  The precision half -- digest-indexed (context-sensitive) summaries that keep
+  callers apart -- refines cfg_collect_trace_ip's combine via a digest hook on the
+  unified collecting locale; it strengthens the trace set (smaller), so this
+  soundness statement is preserved unchanged.  That refinement is
+  reaching_global_read_sound_d below.
+\<close>
 theorem reaching_global_read_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
@@ -78,14 +79,14 @@ proof -
 qed
 
 
-(*
-  M4 precision corollary: soundness of the digest-REFINED reaching-trace read.
+text \<open>
+  Digest-refined corollary: soundness of the digest-REFINED reaching-trace read.
   cfg_collect_trace_ip_d (any digest dg, any compatibility cmp) is a subset of
-  cfg_collect_trace_ip (cfg_collect_trace_ip_d_subset), so the M4 soundness core
+  cfg_collect_trace_ip (cfg_collect_trace_ip_d_subset), so the soundness core
   transfers unchanged: the SAME analysis env soundly over-approximates every
   digest-restricted reaching trace.  The digest hook buys precision at zero
   soundness cost.
-*)
+\<close>
 theorem reaching_global_read_sound_d:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
@@ -101,8 +102,8 @@ proof -
     using reaching_global_read_sound[OF fin finC post_fp S_sound] by blast
 qed
 
-(*
-  M4 precision -- the digest-INDEXED analyzer contract.
+text \<open>
+  The digest-INDEXED analyzer contract.
 
   A digest-indexed env  envd :: pp => 'd => 'a abs_state  assigns each
   (program point, reader-digest) pair its own abstract state.  It is sound when,
@@ -114,7 +115,7 @@ qed
   digest-indexed env -- so the contract is realizable with no instantiation gap;
   precision is the freedom to pick a TIGHTER envd
   (see Example_Trace_Digest_Precision).
-*)
+\<close>
 definition digest_env_sound ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set
      \<Rightarrow> (pp \<Rightarrow> 'd \<Rightarrow> 'a abs_state) \<Rightarrow> bool" where

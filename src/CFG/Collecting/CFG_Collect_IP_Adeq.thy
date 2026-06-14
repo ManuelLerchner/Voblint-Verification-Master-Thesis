@@ -2,12 +2,12 @@ theory CFG_Collect_IP_Adeq
   imports CFG_Collect_IP "Voblint_IMP2.IMP2_Proc"
 begin
 
-(*
-  Operational adequacy for cfg_collect_ip (M1 slice 2, L-adeq).
+section \<open>Operational adequacy for cfg_collect_ip\<close>
 
+text \<open>
   Exit projection for interprocedural programs, plus the first concrete
   witness: non-recursive call that increments a global (IMP2_Proc.pcall_global_increment).
-*)
+\<close>
 
 definition singleton_store :: "store \<Rightarrow> store set" where
   "singleton_store s = {s}"
@@ -61,7 +61,7 @@ proof -
   show ?thesis using step cfg_collect_ip_post by blast
 qed
 
-(* -- compile_prog shape for the increment witness ------------------ *)
+subsection \<open>compile_prog shape for the increment witness\<close>
 
 definition inc_body :: com where
   "inc_body = Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
@@ -206,7 +206,7 @@ lemma combine_after_enter_global_assign:
   shows "<s | (enter_state s)(x := v)> = s(x := v)"
   using assms by (auto simp: combine_states_def enter_state_def)
 
-(* -- Witness: global increment survives a single call ---------------- *)
+subsection \<open>Witness: global increment survives a single call\<close>
 
 lemma pcall_global_increment_cfg_collect_ip:
   fixes s :: store

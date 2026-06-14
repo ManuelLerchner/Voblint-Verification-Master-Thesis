@@ -7,13 +7,13 @@ begin
 text \<open>
   Side-effecting interprocedural witness: @{const inc_pi} with a single call to
   procedure p.  Operational semantics via @{const pruns_to_ip}; soundness via
-  @{const side_analyse_ip} (the side TD solver).  Mirrors the plain
-  Example_Proc_Global.proc_global_sign_analysis on the side backend.
+  @{const side_analyse_ip} (the side TD solver).
 \<close>
 
 (* A non-trivial initial state: every variable -- including the globals --
-   starts at STop, not bot.  Witnesses that the entry now seeds the initial
-   globals, so soundness no longer needs restrict_global s0 = bot. *)
+   starts at STop, not bot.  The entry seeds the initial globals into the
+   single global unknown, so soundness holds for an arbitrary s0 (no
+   restrict_global s0 = bot precondition). *)
 definition side_proc_global_s0 :: "sign abs_state" where
   "side_proc_global_s0 = (\<lambda>_. STop)"
 

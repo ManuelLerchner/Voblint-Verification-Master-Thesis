@@ -2,7 +2,9 @@ theory CFG_Collect_Trace
   imports CFG_Collect_Core "Voblint_IMP2.IMP2_Globals"
 begin
 
-(*
+section \<open>Trace-valued collecting semantics\<close>
+
+text \<open>
   Trace-valued collecting semantics, alongside the reachable-state collecting
   of CFG_Collect_Core.  The central result `lift` shows that projecting
   every trace to its last store recovers `cfg_collect_paths` exactly, so any
@@ -11,16 +13,17 @@ begin
 
   Traces are encoded as `store list`: the sequence of stores visited along a
   path.  This is all `lift` needs.
-*)
+\<close>
 
 type_synonym trace = "store list"
 
-(* \<midarrow>\<midarrow> Single-store step \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>Single-store step\<close>
+
+text \<open>
   edge_step is the single-store version of edge_collect: it returns None
   exactly when an assume edge filters the store out, and Some of the updated
   store otherwise.
-*)
+\<close>
 fun edge_step :: "edge_action => store => store option" where
     "edge_step EA_Nop           s = Some s"
   | "edge_step (EA_Assign x a)  s = Some (s(x := aval a s))"
@@ -33,11 +36,12 @@ lemma edge_collect_single:
   "edge_collect a {s} = set_option (edge_step a s)"
   by (cases a) auto
 
-(* \<midarrow>\<midarrow> Trace of a single run along an edge path \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>Trace of a single run along an edge path\<close>
+
+text \<open>
   Walk an edge path from one start store, recording the sequence of stores
   visited (start store included).  None when some assume kills the run.
-*)
+\<close>
 fun edges_trace :: "(edge_action * pp) list => store => trace option" where
     "edges_trace [] s = Some [s]"
   | "edges_trace ((a, _) # es) s =
@@ -89,12 +93,13 @@ next
   qed
 qed
 
-(* \<midarrow>\<midarrow> Trace-valued collecting \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>Trace-valued collecting\<close>
+
+text \<open>
   All traces reaching v from some start store in S along some CFG path.
-  Mirrors cfg_collect_paths, threading a sequence where a single final store
-  used to flow.
-*)
+  Mirrors cfg_collect_paths but carries the whole store sequence (a trace)
+  where cfg_collect_paths keeps only the final store.
+\<close>
 definition cfg_collect_trace :: "cfg => store set => pp => trace set" where
   "cfg_collect_trace g S v =
      {tr. \<exists>es s. (g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v) \<and> s \<in> S \<and> edges_trace es s = Some tr}"
@@ -103,12 +108,13 @@ definition cfg_collect_trace :: "cfg => store set => pp => trace set" where
 definition alpha_last :: "trace set => store set" where
   "alpha_last T = {last tr | tr. tr \<in> T}"
 
-(* \<midarrow>\<midarrow> The lift lemma \<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow>\<midarrow> *)
-(*
+subsection \<open>The lift lemma\<close>
+
+text \<open>
   Projecting traces to their last store recovers the reachable-state path
   collecting exactly.  Every existing numeric-domain proof composes through
   alpha_last unchanged.
-*)
+\<close>
 theorem lift:
   "alpha_last (cfg_collect_trace g S v) = cfg_collect_paths g S v"
 proof (rule set_eqI, rule iffI)
@@ -134,16 +140,17 @@ next
     unfolding alpha_last_def cfg_collect_trace_def using es s et xl by auto
 qed
 
-(* -- Globals frame lemma -------------------------------------------------- *)
-(*
+subsection \<open>Globals frame lemma\<close>
+
+text \<open>
   A global variable that is never assigned along a trace keeps its initial
-  value.  This makes the M4 reading precise at the source: an unwritten global
+  value.  This makes the read precise at the source: an unwritten global
   reads back exactly what it started with.  edge_step preserves any global x
   that the edge does not assign (assignments to other variables, assume/nop, and
   EA_Enter all leave globals untouched -- enter_state keeps globals and zeroes
   only locals).  Lifted along a path: if the CFG never assigns x, every reaching
   trace ends with x at its start value.
-*)
+\<close>
 lemma edge_step_preserves_global:
   assumes "is_global x"
   assumes "\<forall>e. a \<noteq> EA_Assign x e"

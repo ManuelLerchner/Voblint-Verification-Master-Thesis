@@ -2,8 +2,9 @@ theory Sign_Side_IP_Soundness
   imports Sign_Domain TD_Side_IP_Soundness
 begin
 
-(* Sign domain: side-effecting interprocedural TD solver instantiation.
-   Mirrors Sign_IP_Soundness for the side solver (side_analyse_ip). *)
+section \<open>Sign domain: side-effecting interprocedural TD solver instantiation\<close>
+
+text \<open>Instantiates the side IP solver (side_analyse_ip) at the Sign domain.\<close>
 
 theorem side_ip_sign_analysis_sound:
   fixes pi ps main and s t :: store and s0 :: "sign abs_state"
