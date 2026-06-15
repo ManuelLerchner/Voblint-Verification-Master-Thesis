@@ -5,11 +5,10 @@ begin
 section \<open>Unified collecting locale\<close>
 
 text \<open>
-  One collecting locale parameterised by a combine_at hook.  The intra-procedural
-  and interprocedural collecting semantics are recovered as interpretations:
+  One collecting locale parameterised by a combine_at hook.  The interprocedural
+  collecting semantics is recovered as an interpretation:
 
-    intra:  combine_at = (\<lambda>g \<rho> v. {})        recovers cfg_collect
-    ip:     combine_at = collect_combine_pp     recovers cfg_collect_ip
+    ip:  combine_at = collect_combine_pp     recovers cfg_collect_ip
 
   The lfp skeleton (mono, unfold, post-fixpoint, entry, per-edge step, generic
   lfp lower bound) is proved ONCE in the locale.  The trace overlay reuses the
@@ -76,21 +75,6 @@ proof -
 qed
 
 end
-
-subsection \<open>Intra-procedural interpretation\<close>
-
-interpretation intra: collecting "\<lambda>g \<rho> v. {}"
-  by unfold_locales simp
-
-lemma intra_F_eq: "intra.F g S \<rho> v = cfg_collect_F g S \<rho> v"
-  by (simp add: intra.F_def cfg_collect_F_def)
-
-lemma intra_collect_eq: "intra.collect g S = cfg_collect g S"
-proof -
-  have "intra.F g S = cfg_collect_F g S"
-    by (rule ext)+ (rule intra_F_eq)
-  thus ?thesis by (simp add: intra.collect_def cfg_collect_def)
-qed
 
 subsection \<open>Interprocedural interpretation\<close>
 

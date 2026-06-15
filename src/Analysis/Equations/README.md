@@ -10,13 +10,13 @@ semantics `cfg_collect` / `cfg_collect_ip`.
 | File | Role |
 | --- | --- |
 | `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `rhs_ip`, `is_post_fixpoint`, `is_post_fixpoint_ip`, `rhs_mono` |
-| `Constraint_System_Sound.thy` | `post_fixpoint_sound_at`, `post_fixpoint_sound`, `exit_sound` (intra) |
+| `Constraint_System_Sound.thy` | shared head lemmas: `apply_tf_le_rhs`, `s0_le_rhs_entry`, `edge_collect_apply_tf_sound` |
 | `Constraint_System_IP_Sound.thy` | `post_fixpoint_sound_at_ip`, IP soundness via `rhs_ip` and `cfg_collect_ip` |
-| `Analysis_Sound.thy` | `collecting` locale engine; `unified_post_fixpoint_sound`; `unified_post_fixpoint_sound_ip` |
+| `Analysis_Sound.thy` | `collecting` locale engine; `unified_post_fixpoint_sound_ip` |
 
 **Key concepts:** One equation per program point (join over predecessor edges + combine triples).
 `is_post_fixpoint_ip g tf join bot s0 env` means `∀v. rhs_ip g tf join bot s0 env v ≤ env v`.
-`unified_post_fixpoint_sound_ip` is the single engine (U2 migration): constructs the
+`unified_post_fixpoint_sound_ip` is the single soundness engine: constructs the
 locale post-fixpoint witness and applies `collecting.collect_post_fixpoint_sound`.
 
 **Imports:** `Constraint_System` → `CFG_Def`, `Abstract_Domain`.

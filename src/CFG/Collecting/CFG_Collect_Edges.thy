@@ -132,20 +132,11 @@ definition collect_pp :: "cfg => cenv => pp => store set" where
   "collect_pp g \<rho> v =
      \<Union>{edge_collect a (\<rho> u) | u a. (u, a, v) : edges g}"
 
-subsection \<open>Least fixpoint (collecting semantics over CFG)\<close>
-
-text \<open>
-  Given an initial store set S at the entry, the CFG collecting semantics
-  is the least fixpoint of the monotone transformer collect_pp.
-\<close>
-
+subsection \<open>Per-point collecting transformer\<close>
 
 definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
   "cfg_collect_F g S \<rho> v =
      (if v = cfg_entry g then S else {}) \<union> collect_pp g \<rho> v"
-
-definition cfg_collect :: "cfg => store set => cenv" where
-  "cfg_collect g S = lfp (cfg_collect_F g S)"
 
 subsection \<open>Monotonicity of collect_pp\<close>
 
@@ -177,16 +168,6 @@ qed
 lemma cfg_collect_F_mono_S:
   "S \<subseteq> S' \<Longrightarrow> cfg_collect_F g S \<rho> \<le> cfg_collect_F g S' \<rho>"
   unfolding cfg_collect_F_def le_fun_def by auto
-
-lemma cfg_collect_mono_S:
-  "S \<subseteq> S' \<Longrightarrow> cfg_collect g S \<le> cfg_collect g S'"
-  unfolding cfg_collect_def
-  by (rule lfp_mono) (rule cfg_collect_F_mono_S)
-
-lemma cfg_collect_lfp_unfold:
-  "cfg_collect g S = cfg_collect_F g S (cfg_collect g S)"
-  unfolding cfg_collect_def
-  by (simp add: cfg_collect_F_mono def_lfp_unfold)
 
 
 end

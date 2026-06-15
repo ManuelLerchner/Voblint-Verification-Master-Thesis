@@ -5,12 +5,12 @@ begin
 section \<open>Interprocedural collecting semantics\<close>
 
 text \<open>
-  Extends cfg_collect with combine triples from combines g:
+  Interprocedural collecting semantics: extends the per-edge transformer
+  with combine triples from combines g:
     (call, proc_exit, return) contributes
       { combine_states s t | s in C call, t in C proc_exit }
     at the return program point.
 
-  When combines g = {}, agrees with cfg_collect.
   Operational adequacy (pruns_to => cfg_collect_ip) is proved in
   CFG_Collect_IP_Adeq.
 \<close>
@@ -90,43 +90,9 @@ lemma cfg_collect_ip_lfp_unfold:
   unfolding cfg_collect_ip_def
   by (simp add: cfg_collect_ip_F_mono def_lfp_unfold)
 
-subsection \<open>Relation to intra-procedural cfg_collect\<close>
-
-lemma collect_combine_pp_empty[simp]:
-  "combines g = {} \<Longrightarrow> collect_combine_pp g \<rho> v = {}"
-  unfolding collect_combine_pp_def by auto
-
-lemma cfg_collect_ip_F_eq_cfg_collect_F:
-  assumes "combines g = {}"
-  shows "cfg_collect_ip_F g S \<rho> v = cfg_collect_F g S \<rho> v"
-  unfolding cfg_collect_ip_F_def cfg_collect_F_def using assms by auto
-
-lemma cfg_collect_ip_eq_cfg_collect:
-  assumes "combines g = {}"
-  shows "cfg_collect_ip g S = cfg_collect g S"
-proof -
-  have eq: "cfg_collect_ip_F g S = cfg_collect_F g S"
-  proof
-    fix \<rho>
-    show "cfg_collect_ip_F g S \<rho> = cfg_collect_F g S \<rho>"
-    proof (rule ext)
-      fix v
-      show "cfg_collect_ip_F g S \<rho> v = cfg_collect_F g S \<rho> v"
-        using cfg_collect_ip_F_eq_cfg_collect_F[OF assms] .
-    qed
-  qed
-  show ?thesis unfolding cfg_collect_ip_def cfg_collect_def eq by simp
-qed
-
 lemma cfg_collect_ip_F_ge_cfg_collect_F:
   "cfg_collect_F g S \<rho> v \<subseteq> cfg_collect_ip_F g S \<rho> v"
   unfolding cfg_collect_F_def cfg_collect_ip_F_def by auto
-
-lemma cfg_collect_le_cfg_collect_ip:
-  "cfg_collect g S \<le> cfg_collect_ip g S"
-  unfolding cfg_collect_def cfg_collect_ip_def
-  by (simp add: cfg_collect_ip_F_ge_cfg_collect_F le_funI lfp_mono)
- 
 
 lemma cfg_collect_ip_entry:
   "S \<subseteq> cfg_collect_ip g S (cfg_entry g)"

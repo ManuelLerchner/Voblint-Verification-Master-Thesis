@@ -2,23 +2,19 @@ theory Analysis_Sound
   imports "Voblint_CFG.CFG_Collect_Unified" Constraint_System_Sound Constraint_System_IP_Sound
 begin
 
-section \<open>Unified analysis soundness: one engine\<close>
+section \<open>Analysis soundness: one engine\<close>
 
 text \<open>
-  Both the intra-procedural soundness (post_fixpoint_sound, Constraint_System_Sound)
-  and the interprocedural soundness (post_fixpoint_sound_ip, Constraint_System_IP_Sound)
-  share the same final step: \<gamma> o env is a post-fixpoint of the collecting
-  functional F, hence the lfp collect is below it (lfp_lowerbound).  That step is
-  captured ONCE by the collecting locale (CFG_Collect_Unified) as
-  collect_post_fixpoint_sound.
+  The interprocedural soundness proof shares a single final step with any future
+  combine_at variant: \<gamma> o env is a post-fixpoint of the collecting functional F,
+  so the lfp collect sits below it (lfp_lowerbound).  That step is captured ONCE
+  by the collecting locale (CFG_Collect_Unified) as collect_post_fixpoint_sound.
 
-  unified_post_fixpoint_sound / _ip below re-derive the intra and IP soundness
-  conclusions through this single engine: each only constructs the per-instance
-  post-fixpoint witness (key) from the already-shared piece lemmas
-  (collect_pp_abstract_sound[_ip], collect_combine_pp_abstract_sound) and calls
-  the generic locale lemma.  A new combine_at hook (e.g. a digest-indexed join)
-  obtains soundness the same way -- construct key for its F, apply
-  collect_post_fixpoint_sound -- instead of forking another soundness stack.
+  unified_post_fixpoint_sound_ip constructs the per-instance post-fixpoint witness
+  (key) from the shared piece lemmas (collect_pp_abstract_sound_ip,
+  collect_combine_pp_abstract_sound) and delegates to the generic locale lemma.
+  A new combine_at hook obtains soundness the same way -- construct key for its F,
+  apply collect_post_fixpoint_sound -- without forking another soundness stack.
 \<close>
 
 subsection \<open>Generic engine: lfp soundness from a post-fixpoint witness\<close>
@@ -30,35 +26,6 @@ lemma (in collecting) collect_post_fixpoint_sound:
 
 context sound_transfer
 begin
-
-subsection \<open>Intra-procedural soundness via the engine\<close>
-
-lemma unified_post_fixpoint_sound:
-  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
-  assumes fin: "finite (edges g)"
-  assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
-  shows "cfg_collect g S v \<le> gamma_state (env v)"
-proof -
-  have coll_le: "\<And>v. collect_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
-    by (rule collect_pp_abstract_sound[OF fin post_fp])
-  have s0_le_env: "s0 \<le> env (cfg_entry g)"
-    using s0_le_rhs_entry[OF fin]
-          post_fp[unfolded is_post_fixpoint_def, rule_format, of "cfg_entry g"]
-    by (rule order_trans)
-  have S_le_env: "S \<le> gamma_state (env (cfg_entry g))"
-    using S_sound gamma_state_mono[OF s0_le_env] by blast
-  have key: "intra.F g S (\<lambda>v. gamma_state (env v)) \<le> (\<lambda>v. gamma_state (env v))"
-  proof (rule le_funI)
-    fix v
-    show "intra.F g S (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
-      unfolding intra_F_eq cfg_collect_F_def
-      using coll_le S_le_env by auto
-  qed
-  have "intra.collect g S v \<le> gamma_state (env v)"
-    by (rule intra.collect_post_fixpoint_sound[OF key])
-  thus ?thesis unfolding intra_collect_eq .
-qed
 
 subsection \<open>Interprocedural soundness via the engine\<close>
 

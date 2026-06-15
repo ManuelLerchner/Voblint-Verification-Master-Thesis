@@ -1,6 +1,6 @@
 # IP Collecting Canonical — remove the dead intra layer
 
-Status: **PLANNED** (analysis done 2026-06-14; not yet executed). Tracks
+Status: **DONE** (executed 2026-06-15; Scope A complete). Tracks
 proof-repo issue **#41**; KB open question **OQ-29**
 (`research/open-questions/oq-ip-collecting-canonical`). Supersedes the
 "deep re-home" framing in `CLASSICAL_SPINE_RETIREMENT.md` (that note predates the

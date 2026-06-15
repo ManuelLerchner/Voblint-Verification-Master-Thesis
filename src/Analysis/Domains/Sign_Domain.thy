@@ -400,7 +400,7 @@ definition sign_tf :: "sign domain_transfer" where
 text \<open>
   The four transfer-function soundness facts for the sign domain, bundled once
   so example theories cite them instead of re-proving the same blocks.  These
-  are the tf_sound_* premises of unified_post_fixpoint_sound[_ip] / the
+  are the tf_sound_* premises of unified_post_fixpoint_sound_ip / the
   per-solver soundness theorems.
 \<close>
 lemma sign_tf_sound_assign:
