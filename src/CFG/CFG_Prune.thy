@@ -183,7 +183,7 @@ lemma ip_reaches_mk_mono:
   by (rule ip_reaches_mono[OF _ _ assms(3)]) (use assms in auto)
 
 lemma compile_entry_ip_reaches_exit:
-  "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow>
+  "compile \<Pi> lay c n = (n', en, ex, E, C) \<Longrightarrow>
    ip_reaches (mk_ip_cfg en ex E C) en ex"
 proof (induction c arbitrary: n n' en ex E C rule: com.induct)
   case SKIP
@@ -194,8 +194,8 @@ next
 next
   case (Seq c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-        c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
-    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+        c1: "compile \<Pi> lay c1 n = (n1, en1, ex1, E1, C1)"
+    and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and res: "en = en1" "ex = ex2"
              "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2" "C = C1 \<union> C2"
     using Seq.prems by (auto split: prod.splits)
@@ -218,8 +218,8 @@ next
 next
   case (If b c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-        c1: "compile pi lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
-    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+        c1: "compile \<Pi> lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
+    and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and res: "en = n" "ex = n2"
              "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, en2)} \<union> E1 \<union> E2
                    \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
@@ -240,7 +240,7 @@ next
 next
   case (While b c)
   obtain n1 en1 ex1 E1 C1 where
-        cc: "compile pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
+        cc: "compile \<Pi> lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and res: "en = n" "ex = n1"
              "E = {(n, EA_Assume b, en1), (n, EA_AssumeNot b, n1)} \<union> E1
                    \<union> {(ex1, EA_Nop, n)}"
@@ -250,7 +250,7 @@ next
 next
   case (Scope c)
   obtain m ein exin Ein Cin where
-        cc: "compile pi lay c (Suc n) = (m, ein, exin, Ein, Cin)"
+        cc: "compile \<Pi> lay c (Suc n) = (m, ein, exin, Ein, Cin)"
     and res: "en = n" "ex = m"
              "E = Ein \<union> {(n, EA_Enter, ein)}"
              "C = Cin \<union> {(n, exin, m)}"
@@ -276,16 +276,16 @@ next
 qed
 
 lemma compile_prog_entry_ip_reaches_exit:
-  "ip_reaches (compile_prog pi ps main)
-     (cfg_entry (compile_prog pi ps main)) (cfg_exit (compile_prog pi ps main))"
+  "ip_reaches (compile_prog \<Pi> ps main)
+     (cfg_entry (compile_prog \<Pi> ps main)) (cfg_exit (compile_prog \<Pi> ps main))"
 proof -
   obtain n1 lay E_proc C_proc where
-    procs: "compile_procs_list pi ps (\<lambda>_. None) 0 = (n1, lay, E_proc, C_proc)"
-    by (cases "compile_procs_list pi ps (\<lambda>_. None) 0") auto
+    procs: "compile_procs_list \<Pi> ps (\<lambda>_. None) 0 = (n1, lay, E_proc, C_proc)"
+    by (cases "compile_procs_list \<Pi> ps (\<lambda>_. None) 0") auto
   obtain n2 en ex E_main C_main where
-    cmain: "compile pi lay main n1 = (n2, en, ex, E_main, C_main)"
-    by (cases "compile pi lay main n1") auto
-  have g_eq: "compile_prog pi ps main = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)"
+    cmain: "compile \<Pi> lay main n1 = (n2, en, ex, E_main, C_main)"
+    by (cases "compile \<Pi> lay main n1") auto
+  have g_eq: "compile_prog \<Pi> ps main = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)"
     using procs cmain
     by (simp add: compile_prog_def compile_prog_with_regions_def Let_def)
   have rm: "ip_reaches (mk_ip_cfg en ex E_main C_main) en ex"

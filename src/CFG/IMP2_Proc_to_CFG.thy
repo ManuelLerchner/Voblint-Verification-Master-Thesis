@@ -20,23 +20,23 @@ fun compile ::
   "proc_table => proc_layout => com => nat =>
    nat * pp * pp * (pp * edge_action * pp) set * (pp * pp * pp) set"
 where
-    "compile pi lay SKIP n =
+    "compile \<Pi> lay SKIP n =
        (n + 2, n, n + 1, {(n, EA_Nop, n + 1)}, {})"
 
-  | "compile pi lay (Assign x a) n =
+  | "compile \<Pi> lay (Assign x a) n =
        (n + 2, n, n + 1, {(n, EA_Assign x a, n + 1)}, {})"
 
-  | "compile pi lay (Seq c1 c2) n =
-       (let (n1, en1, ex1, E1, C1) = compile pi lay c1 n;
-            (n2, en2, ex2, E2, C2) = compile pi lay c2 n1
+  | "compile \<Pi> lay (Seq c1 c2) n =
+       (let (n1, en1, ex1, E1, C1) = compile \<Pi> lay c1 n;
+            (n2, en2, ex2, E2, C2) = compile \<Pi> lay c2 n1
         in  (n2, en1, ex2, 
              E1 Un (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) Un E2,
              C1 Un C2))"
 
-  | "compile pi lay (If b c1 c2) n =
+  | "compile \<Pi> lay (If b c1 c2) n =
        (let en  = n;
-            (n1, en1, ex1, E1, C1) = compile pi lay c1 (n + 1);
-            (n2, en2, ex2, E2, C2) = compile pi lay c2 n1;
+            (n1, en1, ex1, E1, C1) = compile \<Pi> lay c1 (n + 1);
+            (n2, en2, ex2, E2, C2) = compile \<Pi> lay c2 n1;
             xn  = n2
         in  (n2 + 1, en, xn,
              {(en, EA_Assume b,    en1),
@@ -46,9 +46,9 @@ where
                  (ex2, EA_Nop, xn)},
              C1 Un C2))"
 
-  | "compile pi lay (While b c) n =
+  | "compile \<Pi> lay (While b c) n =
        (let head = n;
-            (n1, en1, ex1, E1, C1) = compile pi lay c (n + 1);
+            (n1, en1, ex1, E1, C1) = compile \<Pi> lay c (n + 1);
             xn  = n1
         in  (n1 + 1, head, xn,
              {(head, EA_Assume b,    en1),
@@ -57,14 +57,14 @@ where
              Un {(ex1, EA_Nop, head)},
              C1))"
 
-  | "compile pi lay (Scope c) n =
-       (let (n', en, ex, E, C) = compile pi lay c (n + 1);
+  | "compile \<Pi> lay (Scope c) n =
+       (let (n', en, ex, E, C) = compile \<Pi> lay c (n + 1);
             scope_ex = n'
         in  (n' + 1, n, scope_ex,
              E Un {(n, EA_Enter, en)},
              C Un {(n, ex, scope_ex)}))"
 
-  | "compile pi lay (Call p) n =
+  | "compile \<Pi> lay (Call p) n =
        (case lay p of
           None => (n + 1, n, n, {}, {})
         | Some (en_p, ex_p, E_p, C_p) =>
@@ -72,24 +72,24 @@ where
              {(n, EA_Enter, en_p)},
              {(n, ex_p, n + 1)}))"
 
-  | "compile pi lay Restore n =
+  | "compile \<Pi> lay Restore n =
        (n, n, n, {}, {})"
 
 fun compile_procs_list ::
   "proc_table => pname list => proc_layout => nat =>
    nat * proc_layout * (pp * edge_action * pp) set * (pp * pp * pp) set"
 where
-    "compile_procs_list pi [] lay n = (n, lay, {}, {})"
+    "compile_procs_list \<Pi> [] lay n = (n, lay, {}, {})"
 
-  | "compile_procs_list pi (p # ps) lay n =
-       (case pi p of
-          None => compile_procs_list pi ps lay n
+  | "compile_procs_list \<Pi> (p # ps) lay n =
+       (case \<Pi> p of
+          None => compile_procs_list \<Pi> ps lay n
         | Some body =>
-            (let (n', en, ex, E, C) = compile pi lay body n;
+            (let (n', en, ex, E, C) = compile \<Pi> lay body n;
                  lay' = (case lay p of
                            None => (lay (p := Some (en, ex, E, C)))
                          | Some _ => lay);
-                 (n'', lay'', Eacc, Cacc) = compile_procs_list pi ps lay' n'
+                 (n'', lay'', Eacc, Cacc) = compile_procs_list \<Pi> ps lay' n'
              in  (n'', lay'', E Un Eacc, C Un Cacc)))"
 
 
@@ -135,9 +135,9 @@ fun proc_list_regions :: "pname list \<Rightarrow> proc_layout \<Rightarrow> pro
 
 definition compile_prog_with_regions ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> cfg \<times> proc_region_list list" where
-  "compile_prog_with_regions pi ps main =
-     (let (n1, lay, E_proc, C_proc) = compile_procs_list pi ps (\<lambda>_. None) 0;
-          (n2, en, ex, E_main, C_main) = compile pi lay main n1;
+  "compile_prog_with_regions \<Pi> ps main =
+     (let (n1, lay, E_proc, C_proc) = compile_procs_list \<Pi> ps (\<lambda>_. None) 0;
+          (n2, en, ex, E_main, C_main) = compile \<Pi> lay main n1;
           g = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main);
           main_reg = (None, main_region_pp_list (en, ex, E_main, C_main) ps lay)
       in  (g, main_reg # proc_list_regions ps lay))"
@@ -145,12 +145,12 @@ definition compile_prog_with_regions ::
 definition compile_prog ::
   "proc_table => pname list => com => cfg"
 where
-  "compile_prog pi ps main = fst (compile_prog_with_regions pi ps main)"
+  "compile_prog \<Pi> ps main = fst (compile_prog_with_regions \<Pi> ps main)"
 
 definition compile_prog_regions ::
   "proc_table => pname list => com => proc_region_list list"
 where
-  "compile_prog_regions pi ps main = snd (compile_prog_with_regions pi ps main)"
+  "compile_prog_regions \<Pi> ps main = snd (compile_prog_with_regions \<Pi> ps main)"
 
 text \<open>
   Reusable simp bundle for evaluating @{const compile_prog} on a concrete program.
@@ -166,7 +166,7 @@ lemmas compile_eval_simps =
 subsection \<open>Freshness / finiteness\<close>
 
 lemma compile_counter_mono:
-  "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow> n \<le> n'"
+  "compile \<Pi> lay c n = (n', en, ex, E, C) \<Longrightarrow> n \<le> n'"
 proof (induction c arbitrary: n n' en ex E C rule: com.induct)
   case SKIP then show ?case by auto
 next
@@ -174,30 +174,30 @@ next
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-    c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
-    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+    c1: "compile \<Pi> lay c1 n = (n1, en1, ex1, E1, C1)"
+    and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and n': "n' = n2"
     by (auto split: prod.splits)
   show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] n' by simp
 next
   case (If b c1 c2)
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 xn where
-    c1: "compile pi lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
-    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+    c1: "compile \<Pi> lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
+    and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and n': "n' = Suc n2"
     by (auto split: prod.splits)
   show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] n' by simp
 next
   case (While b c)
   then obtain n1 en1 ex1 E1 C1 xn where
-    c: "compile pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
+    c: "compile \<Pi> lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and n': "n' = Suc n1"
     by (auto split: prod.splits)
   show ?case using While.IH[OF c] n' by simp
 next
   case (Scope c)
   then obtain n1 en1 ex1 E1 C1 scope_ex where
-    c: "compile pi lay c (Suc n) = (n1, en1, ex1, E1, C1)"
+    c: "compile \<Pi> lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and n': "n' = Suc n1"
     and ex: "ex = scope_ex"
     by (auto split: prod.splits)
@@ -209,7 +209,7 @@ next
 qed
 
 lemma compile_finite:
-  "compile pi lay c n = (n', en, ex, E, C) \<Longrightarrow> finite E \<and> finite C"
+  "compile \<Pi> lay c n = (n', en, ex, E, C) \<Longrightarrow> finite E \<and> finite C"
 proof (induction c arbitrary: n n' en ex E C rule: com.induct)
   case SKIP
   then show ?case by auto
@@ -219,8 +219,8 @@ next
 next
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
-    c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
-    and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
+    c1: "compile \<Pi> lay c1 n = (n1, en1, ex1, E1, C1)"
+    and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and E: "E = E1 Un (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) Un E2"
     and C: "C = C1 Un C2"
     by (auto split: prod.splits)
@@ -243,7 +243,7 @@ next
 qed
 
 lemma compile_procs_list_finite:
-  "compile_procs_list pi ps lay n = (n', lay', E, C)
+  "compile_procs_list \<Pi> ps lay n = (n', lay', E, C)
    \<Longrightarrow> finite E \<and> finite C"
 proof (induction ps arbitrary: lay n n' lay' E C)
   case Nil
@@ -251,14 +251,14 @@ proof (induction ps arbitrary: lay n n' lay' E C)
 next
   case (Cons p ps)
   then show ?case
-  proof (cases "pi p")
+  proof (cases "\<Pi> p")
     case None
     with Cons show ?thesis by auto
   next
     case (Some body)
     with Cons obtain n1 en ex E0 C0 lay' n2 lay'' Eacc Cacc where
-      cp: "compile pi lay body n = (n1, en, ex, E0, C0)"
-      and rest: "compile_procs_list pi ps lay' n1 = (n2, lay'', Eacc, Cacc)"
+      cp: "compile \<Pi> lay body n = (n1, en, ex, E0, C0)"
+      and rest: "compile_procs_list \<Pi> ps lay' n1 = (n2, lay'', Eacc, Cacc)"
       and E: "E = E0 Un Eacc"
       and C: "C = C0 Un Cacc"
       by (auto split: prod.splits option.splits)
@@ -268,8 +268,8 @@ next
 qed
 
 lemma compile_prog_finite:
-  "finite (edges (compile_prog pi ps main))
-   \<and> finite (combines (compile_prog pi ps main))"
+  "finite (edges (compile_prog \<Pi> ps main))
+   \<and> finite (combines (compile_prog \<Pi> ps main))"
   unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
   by (auto simp: Let_def split: prod.splits
        dest: compile_procs_list_finite compile_finite

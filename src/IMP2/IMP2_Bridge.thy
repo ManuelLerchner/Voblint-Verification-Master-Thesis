@@ -101,7 +101,7 @@ fun to_imp2_com :: "IMP2_Proc.com => Syntax.com" where
 | "to_imp2_com IMP2_Proc.com.Restore        = Syntax.SKIP"
 
 definition to_imp2_pi :: "proc_table => Syntax.program" where
-  "to_imp2_pi pi = (%p. map_option (%c. Syntax.Scope (to_imp2_com c)) (pi p))"
+  "to_imp2_pi \<Pi> = (%p. map_option (%c. Syntax.Scope (to_imp2_com c)) (\<Pi> p))"
 
 (* -- State projection: read every array back at the default index ---- *)
 
@@ -212,7 +212,7 @@ fun source_com :: "IMP2_Proc.com => bool" where
 | "source_com IMP2_Proc.com.Restore      = False"
 
 definition source_pi :: "proc_table => bool" where
-  "source_pi pi = (\<forall>p c. pi p = Some c \<longrightarrow> source_com c)"
+  "source_pi \<Pi> = (\<forall>p c. \<Pi> p = Some c \<longrightarrow> source_com c)"
 
 (* -- Backward simulation: IMP2 big-step -> our small-step ------------- *)
 
@@ -227,9 +227,9 @@ definition source_pi :: "proc_table => bool" where
 *)
 
 lemma backward_sim_aux:
-  assumes sp: "source_pi pi"
-  shows "big_step Pg (cm, S) T ==> Pg = to_imp2_pi pi ==> cm = to_imp2_com c
-          ==> source_com c ==> pruns_to pi c (proj0 S) (proj0 T)"
+  assumes sp: "source_pi \<Pi>"
+  shows "big_step Pg (cm, S) T ==> Pg = to_imp2_pi \<Pi> ==> cm = to_imp2_com c
+          ==> source_com c ==> pruns_to \<Pi> c (proj0 S) (proj0 T)"
 proof (induction arbitrary: c rule: big_step_induct)
   case (Skip Pg s)
   hence "c = IMP2_Proc.com.SKIP" by (cases c) auto
@@ -239,7 +239,7 @@ next
   then obtain a0 where c: "c = IMP2_Proc.com.Assign x a0"
       and ae: "a = to_imp2_aexp a0" and ie: "i = Syntax.N 0"
     by (cases c) auto
-  have run: "pruns_to pi (IMP2_Proc.com.Assign x a0) (proj0 s)
+  have run: "pruns_to \<Pi> (IMP2_Proc.com.Assign x a0) (proj0 s)
                ((proj0 s)(x := IMP2_Expr.aval a0 (proj0 s)))"
     by (rule pruns_to_assign)
   have res: "proj0 (s(x := (s x)(Semantics.aval i s := Semantics.aval a s)))
@@ -261,11 +261,11 @@ next
       and 1: "cm1 = to_imp2_com a" and 2: "cm2 = to_imp2_com b"
     by (cases c) auto
   from Seq.prems c have sa: "source_com a" and sb: "source_com b" by auto
-  have r1: "pruns_to pi a (proj0 s1) (proj0 s2)"
+  have r1: "pruns_to \<Pi> a (proj0 s1) (proj0 s2)"
     using Seq.IH(1)[OF Seq.prems(1) 1 sa] .
-  have r2: "pruns_to pi b (proj0 s2) (proj0 s3)"
+  have r2: "pruns_to \<Pi> b (proj0 s2) (proj0 s3)"
     using Seq.IH(2)[OF Seq.prems(1) 2 sb] .
-  from r1 r2 have "pruns_to pi (IMP2_Proc.com.Seq a b) (proj0 s1) (proj0 s3)"
+  from r1 r2 have "pruns_to \<Pi> (IMP2_Proc.com.Seq a b) (proj0 s1) (proj0 s3)"
     by (rule pruns_to_Seq)
   thus ?case using c by simp
 next
@@ -277,9 +277,9 @@ next
   from IfTrue.prems c have sa: "source_com a" by auto
   have guard: "IMP2_Expr.bval b0 (proj0 s)"
     using IfTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  have bodyrun: "pruns_to pi a (proj0 s) (proj0 t)"
+  have bodyrun: "pruns_to \<Pi> a (proj0 s) (proj0 t)"
     using IfTrue.IH[OF IfTrue.prems(1) 1 sa] .
-  from guard bodyrun have "pruns_to pi (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
+  from guard bodyrun have "pruns_to \<Pi> (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
     by (rule pruns_to_IfTrue)
   thus ?case using c by simp
 next
@@ -291,9 +291,9 @@ next
   from IfFalse.prems c have sd: "source_com d" by auto
   have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using IfFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  have bodyrun: "pruns_to pi d (proj0 s) (proj0 t)"
+  have bodyrun: "pruns_to \<Pi> d (proj0 s) (proj0 t)"
     using IfFalse.IH[OF IfFalse.prems(1) 2 sd] .
-  from guard bodyrun have "pruns_to pi (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
+  from guard bodyrun have "pruns_to \<Pi> (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
     by (rule pruns_to_IfFalse)
   thus ?case using c by simp
 next
@@ -301,12 +301,12 @@ next
   then obtain a where c: "c = IMP2_Proc.com.Scope a" and 0: "cm0 = to_imp2_com a"
     by (cases c) auto
   from Scope.prems c have sa: "source_com a" by auto
-  have body: "pruns_to pi a (enter_state (proj0 s)) (proj0 s')"
+  have body: "pruns_to \<Pi> a (enter_state (proj0 s)) (proj0 s')"
     using Scope.IH[OF Scope.prems(1) 0 sa] by (simp add: proj0_null_combine)
-  have "pruns_to pi (IMP2_Proc.com.Scope a) (proj0 s)
+  have "pruns_to \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
           (IMP2_Globals.combine_states (proj0 s) (proj0 s'))"
     using body by (rule pruns_to_Scope)
-  hence "pruns_to pi (IMP2_Proc.com.Scope a) (proj0 s)
+  hence "pruns_to \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
           (proj0 (Semantics.combine_states s s'))"
     by (simp add: proj0_combine_states)
   thus ?case using c by simp
@@ -317,7 +317,7 @@ next
     by (cases c) auto
   have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using WhileFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  from guard have "pruns_to pi (IMP2_Proc.com.While b0 a) (proj0 s) (proj0 s)"
+  from guard have "pruns_to \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s) (proj0 s)"
     by (rule pruns_to_WhileFalse)
   thus ?case using c by simp
 next
@@ -328,29 +328,29 @@ next
   from WhileTrue.prems c have sa: "source_com a" by auto
   have guard: "IMP2_Expr.bval b0 (proj0 s1)"
     using WhileTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  have bodyrun: "pruns_to pi a (proj0 s1) (proj0 s2)"
+  have bodyrun: "pruns_to \<Pi> a (proj0 s1) (proj0 s2)"
     using WhileTrue.IH(1)[OF WhileTrue.prems(1) ce sa] .
   have eqw: "Syntax.While b cm0 = to_imp2_com (IMP2_Proc.com.While b0 a)"
     using be ce by simp
   have sw: "source_com (IMP2_Proc.com.While b0 a)" using sa by simp
-  have looprun: "pruns_to pi (IMP2_Proc.com.While b0 a) (proj0 s2) (proj0 s3)"
+  have looprun: "pruns_to \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s2) (proj0 s3)"
     using WhileTrue.IH(2)[OF WhileTrue.prems(1) eqw sw] .
   from guard bodyrun looprun
-  have "pruns_to pi (IMP2_Proc.com.While b0 a) (proj0 s1) (proj0 s3)"
+  have "pruns_to \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s1) (proj0 s3)"
     by (rule pruns_to_WhileTrue)
   thus ?case using c by simp
 next
   case (PCall Pg p cbody s t)
   then have c: "c = IMP2_Proc.com.Call p" by (cases c) auto
-  from PCall.hyps(1) PCall.prems(1) obtain c0 where pip: "pi p = Some c0"
+  from PCall.hyps(1) PCall.prems(1) obtain c0 where pip: "\<Pi> p = Some c0"
       and cb: "cbody = Syntax.Scope (to_imp2_com c0)"
     by (auto simp: to_imp2_pi_def split: option.splits)
   from sp pip have s0: "source_com c0" by (auto simp: source_pi_def)
   have eq: "cbody = to_imp2_com (IMP2_Proc.com.Scope c0)" using cb by simp
   have sc0: "source_com (IMP2_Proc.com.Scope c0)" using s0 by simp
-  have scoperun: "pruns_to pi (IMP2_Proc.com.Scope c0) (proj0 s) (proj0 t)"
+  have scoperun: "pruns_to \<Pi> (IMP2_Proc.com.Scope c0) (proj0 s) (proj0 t)"
     using PCall.IH[OF PCall.prems(1) eq sc0] .
-  have "pruns_to pi (IMP2_Proc.com.Call p) (proj0 s) (proj0 t)"
+  have "pruns_to \<Pi> (IMP2_Proc.com.Call p) (proj0 s) (proj0 t)"
     by (rule pruns_to_Scope_Call[OF pip scoperun])
   thus ?case using c by simp
 next
@@ -368,11 +368,11 @@ qed
 *)
 
 theorem backward_sim:
-  assumes bs: "big_step (to_imp2_pi pi) (cm, S) T"
-      and sp: "source_pi pi"
+  assumes bs: "big_step (to_imp2_pi \<Pi>) (cm, S) T"
+      and sp: "source_pi \<Pi>"
       and cc: "cm = to_imp2_com c"
       and sc: "source_com c"
-  shows "pruns_to pi c (proj0 S) (proj0 T)"
+  shows "pruns_to \<Pi> c (proj0 S) (proj0 T)"
   using backward_sim_aux[OF sp bs refl cc sc] .
 
 end

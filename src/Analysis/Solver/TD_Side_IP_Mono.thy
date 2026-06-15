@@ -8,7 +8,7 @@ text \<open>
   Monotonicity of the side IP strategy and the TD_side solver preconditions.
 
   Proves the local/global folds are monotone, that dependencies are stable
-  (independent of acc and sigma), and packages these as the three TD_side
+  (independent of acc and \<sigma>), and packages these as the three TD_side
   hypotheses on side_cfg_T_ip: side_cfg_T_ip_is_mono_eq, _mono_sides,
   _mono_deps.  Construction: TD_Side_IP_Tree.  Bounds: TD_Side_IP_Bounds.
 \<close>
@@ -18,12 +18,12 @@ subsection \<open>Monotonicity of the local fold\<close>
 lemma side_acc_ip_mono_acc:
   fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and join :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and sigma :: "pp + unit \<Rightarrow> 'a abs_state"
+    and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
   assumes join_mono:
     "\<And>s1 s1' s2 s2'. s1 \<le> s1' \<Longrightarrow> s2 \<le> s2'
      \<Longrightarrow> join s1 s2 \<le> join s1' s2'"
   shows "acc1 \<le> acc2 \<Longrightarrow>
-         side_acc_ip tf join acc1 sigma es cs \<le> side_acc_ip tf join acc2 sigma es cs"
+         side_acc_ip tf join acc1 \<sigma> es cs \<le> side_acc_ip tf join acc2 \<sigma> es cs"
 proof (induction es arbitrary: acc1 acc2 cs)
   case Nil
   then show ?case
@@ -33,8 +33,8 @@ proof (induction es arbitrary: acc1 acc2 cs)
   next
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have jle: "join acc1 (restrict_local (join (sigma (Inl cc)) (sigma (Inr ()))))
-             \<le> join acc2 (restrict_local (join (sigma (Inl cc)) (sigma (Inr ()))))"
+    have jle: "join acc1 (restrict_local (join (\<sigma> (Inl cc)) (\<sigma> (Inr ()))))
+             \<le> join acc2 (restrict_local (join (\<sigma> (Inl cc)) (\<sigma> (Inr ()))))"
       by (rule join_abs_state_left_mono[OF join_mono Cons.prems])
     show ?case unfolding x
       using Cons.IH[OF jle] by simp
@@ -42,8 +42,8 @@ proof (induction es arbitrary: acc1 acc2 cs)
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
-  have jle: "join acc1 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))
-           \<le> join acc2 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))"
+  have jle: "join acc1 (restrict_local (apply_tf tf a (join (\<sigma> (Inl u)) (\<sigma> (Inr ())))))
+           \<le> join acc2 (restrict_local (apply_tf tf a (join (\<sigma> (Inl u)) (\<sigma> (Inr ())))))"
     by (rule join_abs_state_left_mono[OF join_mono Cons.prems])
   show ?case unfolding x
     using Cons.IH[OF jle] by simp
@@ -169,11 +169,11 @@ lemma side_glob_ip_mono_sup:
   shows "side_glob_ip tf (\<squnion>) sigma1 es cs \<le> side_glob_ip tf (\<squnion>) sigma2 es cs"
   by (rule side_glob_ip_mono[OF tf_mono sup_mono sigma_le])
 
-subsection \<open>Dependencies are independent of acc and of sigma\<close>
+subsection \<open>Dependencies are independent of acc and of \<sigma>\<close>
 
 lemma dep_aux_side_rhs_fold_ip_acc_indep:
-  "dep_aux sigma (side_rhs_fold_ip tf join acc1 es cs)
-   = dep_aux sigma (side_rhs_fold_ip tf join acc2 es cs)"
+  "dep_aux \<sigma> (side_rhs_fold_ip tf join acc1 es cs)
+   = dep_aux \<sigma> (side_rhs_fold_ip tf join acc2 es cs)"
 proof (induction es arbitrary: acc1 acc2 cs)
   case Nil
   show ?case
@@ -184,15 +184,15 @@ proof (induction es arbitrary: acc1 acc2 cs)
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     show ?case unfolding x side_rhs_fold_ip.simps dep_aux.simps Let_def
-      using Cons.IH[of "join acc1 (restrict_local (restrict_local (join (sigma (Inl cc)) (sigma (Inr ()))) \<squnion> restrict_global (join (sigma (Inl ex)) (sigma (Inr ())))))"
-                       "join acc2 (restrict_local (restrict_local (join (sigma (Inl cc)) (sigma (Inr ()))) \<squnion> restrict_global (join (sigma (Inl ex)) (sigma (Inr ()))))) "]
+      using Cons.IH[of "join acc1 (restrict_local (restrict_local (join (\<sigma> (Inl cc)) (\<sigma> (Inr ()))) \<squnion> restrict_global (join (\<sigma> (Inl ex)) (\<sigma> (Inr ())))))"
+                       "join acc2 (restrict_local (restrict_local (join (\<sigma> (Inl cc)) (\<sigma> (Inr ()))) \<squnion> restrict_global (join (\<sigma> (Inl ex)) (\<sigma> (Inr ()))))) "]
       by simp
   qed
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
-  have step: "dep_aux sigma (side_rhs_fold_ip tf join (join acc1 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))) es cs)
-            = dep_aux sigma (side_rhs_fold_ip tf join (join acc2 (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ())))))) es cs)"
+  have step: "dep_aux \<sigma> (side_rhs_fold_ip tf join (join acc1 (restrict_local (apply_tf tf a (join (\<sigma> (Inl u)) (\<sigma> (Inr ())))))) es cs)
+            = dep_aux \<sigma> (side_rhs_fold_ip tf join (join acc2 (restrict_local (apply_tf tf a (join (\<sigma> (Inl u)) (\<sigma> (Inr ())))))) es cs)"
     by (rule Cons.IH)
   show ?case unfolding x side_rhs_fold_ip.simps dep_aux.simps Let_def
     using step by simp
@@ -253,8 +253,8 @@ qed
 subsection \<open>Side contributions: all land in the global slot Inr ()\<close>
 
 lemma sides_side_rhs_fold_ip_Inr:
-  "sides_of_rhs (side_rhs_fold_ip tf join acc es cs) sigma (Inr ())
-   = side_glob_ip tf join sigma es cs"
+  "sides_of_rhs (side_rhs_fold_ip tf join acc es cs) \<sigma> (Inr ())
+   = side_glob_ip tf join \<sigma> es cs"
 proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
@@ -274,7 +274,7 @@ next
 qed
 
 lemma sides_side_rhs_fold_ip_Inl:
-  "sides_of_rhs (side_rhs_fold_ip tf join acc es cs) sigma (Inl u) = bot"
+  "sides_of_rhs (side_rhs_fold_ip tf join acc es cs) \<sigma> (Inl u) = bot"
 proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
@@ -295,8 +295,8 @@ qed
 (* The entry node additionally seeds the initial globals into the single global
    unknown via its wrapping Side ();  every other node is the bare fold. *)
 lemma sides_make_side_rhs_tree_ip_Inr:
-  "sides_of_rhs (make_side_rhs_tree_ip g tf join bot0 s0 v) sigma (Inr ())
-   = side_glob_ip tf join sigma (predecessor_list g v) (combine_predecessor_list g v)
+  "sides_of_rhs (make_side_rhs_tree_ip g tf join bot0 s0 v) \<sigma> (Inr ())
+   = side_glob_ip tf join \<sigma> (predecessor_list g v) (combine_predecessor_list g v)
       \<squnion> (if v = cfg_entry g then restrict_global s0 else bot)"
 proof (cases "v = cfg_entry g")
   case True
@@ -309,7 +309,7 @@ next
 qed
 
 lemma sides_make_side_rhs_tree_ip_Inl:
-  "sides_of_rhs (make_side_rhs_tree_ip g tf join bot0 s0 v) sigma (Inl u) = bot"
+  "sides_of_rhs (make_side_rhs_tree_ip g tf join bot0 s0 v) \<sigma> (Inl u) = bot"
 proof (cases "v = cfg_entry g")
   case True
   show ?thesis unfolding make_side_rhs_tree_ip_def Let_def
@@ -321,10 +321,10 @@ next
 qed
 
 (* The wrapping Side () is invisible to dep_aux, so dependencies are still the
-   fold's -- in particular independent of sigma. *)
+   fold's -- in particular independent of \<sigma>. *)
 lemma dep_aux_make_side_rhs_tree_ip:
-  "dep_aux sigma (make_side_rhs_tree_ip g tf join bot0 s0 v)
-   = dep_aux sigma (side_rhs_fold_ip tf join
+  "dep_aux \<sigma> (make_side_rhs_tree_ip g tf join bot0 s0 v)
+   = dep_aux \<sigma> (side_rhs_fold_ip tf join
         (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0)
         (predecessor_list g v) (combine_predecessor_list g v))"
 proof (cases "v = cfg_entry g")

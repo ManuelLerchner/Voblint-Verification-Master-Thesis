@@ -45,7 +45,7 @@ text \<open>
 
   For ANY variable x (global or local) and ANY interprocedural trace tr reaching
   program point v, the value that x holds at the end of tr is contained in the
-  analysis result's concretization gamma (env v x).  The ''history'' is the
+  analysis result's concretization \<gamma> (env v x).  The ''history'' is the
   reaching trace itself: this is the soundness of reading a variable's value over
   the set of reaching interprocedural traces, which is exactly the
   flow-insensitive global read once specialised to a G-prefixed variable and
@@ -68,7 +68,7 @@ theorem reaching_global_read_sound:
   assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
   assumes tr: "tr \<in> cfg_collect_trace_ip g S v"
-  shows "(last tr) x \<in> gamma (env v x)"
+  shows "(last tr) x \<in> \<gamma> (env v x)"
 proof -
   have mem: "last tr \<in> alpha_last (cfg_collect_trace_ip g S v)"
     using tr unfolding alpha_last_def by blast
@@ -94,7 +94,7 @@ theorem reaching_global_read_sound_d:
   assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
   assumes tr: "tr \<in> cfg_collect_trace_ip_d dg cmp g S v"
-  shows "(last tr) x \<in> gamma (env v x)"
+  shows "(last tr) x \<in> \<gamma> (env v x)"
 proof -
   have "tr \<in> cfg_collect_trace_ip g S v"
     using tr cfg_collect_trace_ip_d_subset by blast
@@ -127,7 +127,7 @@ theorem digest_read_sound:
   assumes snd: "digest_env_sound dg cmp g S envd"
   assumes tr: "tr \<in> cfg_collect_trace_ip g S v"
   assumes cm: "cmp (dg tr) d"
-  shows "(last tr) x \<in> gamma (envd v d x)"
+  shows "(last tr) x \<in> \<gamma> (envd v d x)"
 proof -
   have "tr \<in> reaching_compat dg cmp d g S v"
     using tr cm unfolding reaching_compat_def by blast

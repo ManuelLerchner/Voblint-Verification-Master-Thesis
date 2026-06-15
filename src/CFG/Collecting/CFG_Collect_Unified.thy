@@ -8,7 +8,7 @@ text \<open>
   One collecting locale parameterised by a combine_at hook.  The intra-procedural
   and interprocedural collecting semantics are recovered as interpretations:
 
-    intra:  combine_at = (\<lambda>g rho v. {})        recovers cfg_collect
+    intra:  combine_at = (\<lambda>g \<rho> v. {})        recovers cfg_collect
     ip:     combine_at = collect_combine_pp     recovers cfg_collect_ip
 
   The lfp skeleton (mono, unfold, post-fixpoint, entry, per-edge step, generic
@@ -19,14 +19,14 @@ text \<open>
 locale collecting =
   fixes combine_at :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set"
   assumes combine_at_mono:
-    "rho \<le> rho' \<Longrightarrow> combine_at g rho v \<subseteq> combine_at g rho' v"
+    "\<rho> \<le> rho' \<Longrightarrow> combine_at g \<rho> v \<subseteq> combine_at g rho' v"
 begin
 
 definition F :: "cfg \<Rightarrow> store set \<Rightarrow> cenv \<Rightarrow> cenv" where
-  "F g S rho v =
+  "F g S \<rho> v =
      (if v = cfg_entry g then S else {})
-     \<union> collect_pp g rho v
-     \<union> combine_at g rho v"
+     \<union> collect_pp g \<rho> v
+     \<union> combine_at g \<rho> v"
 
 definition collect :: "cfg \<Rightarrow> store set \<Rightarrow> cenv" where
   "collect g S = lfp (F g S)"
@@ -79,10 +79,10 @@ end
 
 subsection \<open>Intra-procedural interpretation\<close>
 
-interpretation intra: collecting "\<lambda>g rho v. {}"
+interpretation intra: collecting "\<lambda>g \<rho> v. {}"
   by unfold_locales simp
 
-lemma intra_F_eq: "intra.F g S rho v = cfg_collect_F g S rho v"
+lemma intra_F_eq: "intra.F g S \<rho> v = cfg_collect_F g S \<rho> v"
   by (simp add: intra.F_def cfg_collect_F_def)
 
 lemma intra_collect_eq: "intra.collect g S = cfg_collect g S"
@@ -97,7 +97,7 @@ subsection \<open>Interprocedural interpretation\<close>
 interpretation ip: collecting collect_combine_pp
   by unfold_locales (metis collect_combine_pp_mono monoD)
 
-lemma ip_F_eq: "ip.F g S rho v = cfg_collect_ip_F g S rho v"
+lemma ip_F_eq: "ip.F g S \<rho> v = cfg_collect_ip_F g S \<rho> v"
   by (simp add: ip.F_def cfg_collect_ip_F_def)
 
 lemma ip_collect_eq: "ip.collect g S = cfg_collect_ip g S"

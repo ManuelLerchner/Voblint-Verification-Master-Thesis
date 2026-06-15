@@ -81,15 +81,15 @@ fun side_acc_ip ::
    => 'a abs_state => (pp + unit => 'a abs_state)
    => (pp * edge_action) list => (pp * pp) list => 'a abs_state"
 where
-  "side_acc_ip tf join acc sigma [] [] = acc"
-| "side_acc_ip tf join acc sigma ((u, a) # ps) cs =
+  "side_acc_ip tf join acc \<sigma> [] [] = acc"
+| "side_acc_ip tf join acc \<sigma> ((u, a) # ps) cs =
      side_acc_ip tf join
-       (join acc (restrict_local (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ()))))))
-       sigma ps cs"
-| "side_acc_ip tf join acc sigma [] ((cc, ex) # cs) =
+       (join acc (restrict_local (apply_tf tf a (join (\<sigma> (Inl u)) (\<sigma> (Inr ()))))))
+       \<sigma> ps cs"
+| "side_acc_ip tf join acc \<sigma> [] ((cc, ex) # cs) =
      side_acc_ip tf join
-       (join acc (restrict_local (join (sigma (Inl cc)) (sigma (Inr ())))))
-       sigma [] cs"
+       (join acc (restrict_local (join (\<sigma> (Inl cc)) (\<sigma> (Inr ())))))
+       \<sigma> [] cs"
 
 subsection \<open>Denotation: global contribution\<close>
 
@@ -99,17 +99,17 @@ fun side_glob_ip ::
    => (pp + unit => 'a abs_state)
    => (pp * edge_action) list => (pp * pp) list => 'a abs_state"
 where
-  "side_glob_ip tf join sigma [] [] = bot"
-| "side_glob_ip tf join sigma ((u, a) # ps) cs =
-     side_glob_ip tf join sigma ps cs
-       \<squnion> restrict_global (apply_tf tf a (join (sigma (Inl u)) (sigma (Inr ()))))"
-| "side_glob_ip tf join sigma [] ((cc, ex) # cs) =
-     side_glob_ip tf join sigma [] cs
-       \<squnion> restrict_global (join (sigma (Inl ex)) (sigma (Inr ())))"
+  "side_glob_ip tf join \<sigma> [] [] = bot"
+| "side_glob_ip tf join \<sigma> ((u, a) # ps) cs =
+     side_glob_ip tf join \<sigma> ps cs
+       \<squnion> restrict_global (apply_tf tf a (join (\<sigma> (Inl u)) (\<sigma> (Inr ()))))"
+| "side_glob_ip tf join \<sigma> [] ((cc, ex) # cs) =
+     side_glob_ip tf join \<sigma> [] cs
+       \<squnion> restrict_global (join (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
 
 (* traverse_rhs (= eq) of the fold is exactly side_acc_ip. *)
 lemma traverse_side_rhs_fold_ip:
-  "traverse_rhs (side_rhs_fold_ip tf join acc es cs) sigma = side_acc_ip tf join acc sigma es cs"
+  "traverse_rhs (side_rhs_fold_ip tf join acc es cs) \<sigma> = side_acc_ip tf join acc \<sigma> es cs"
 proof (induction es arbitrary: acc cs)
   case Nil
   then show ?case
@@ -129,10 +129,10 @@ next
 qed
 
 lemma eq_side_cfg_T_ip:
-  "eq (side_cfg_T_ip g tf join bot0 s0) v sigma =
+  "eq (side_cfg_T_ip g tf join bot0 s0) v \<sigma> =
      side_acc_ip tf join
        (if v = cfg_entry g then join bot0 (restrict_local s0) else bot0)
-       sigma (predecessor_list g v) (combine_predecessor_list g v)"
+       \<sigma> (predecessor_list g v) (combine_predecessor_list g v)"
   unfolding side_cfg_T_ip_def make_side_rhs_tree_ip_def
   by (simp add: traverse_side_rhs_fold_ip Let_def)
 

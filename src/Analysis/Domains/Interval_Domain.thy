@@ -352,7 +352,7 @@ next
 qed
 
 lemma ivl_gamma_state_conv:
-  "(s : ivl_domain.gamma_state sigma) = (s : sound_domain.gamma_state gamma_ivl sigma)"
+  "(s : ivl_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_ivl \<sigma>)"
   unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by simp
 
 subsection \<open>Extended-integer arithmetic\<close>
@@ -489,24 +489,24 @@ qed
 subsection \<open>Abstract expression evaluation\<close>
 
 fun aval_ivl_hol :: "AExp.aexp => (vname => ivl) => ivl" where
-    "aval_ivl_hol (AExp.N n)      sigma = Ivl (Fin n) (Fin n)"
-  | "aval_ivl_hol (AExp.V x)      sigma = sigma x"
-  | "aval_ivl_hol (AExp.Plus a b) sigma = ivl_plus (aval_ivl_hol a sigma) (aval_ivl_hol b sigma)"
+    "aval_ivl_hol (AExp.N n)      \<sigma> = Ivl (Fin n) (Fin n)"
+  | "aval_ivl_hol (AExp.V x)      \<sigma> = \<sigma> x"
+  | "aval_ivl_hol (AExp.Plus a b) \<sigma> = ivl_plus (aval_ivl_hol a \<sigma>) (aval_ivl_hol b \<sigma>)"
 
 fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
-    "aval_ivl (BaseN a)    sigma = aval_ivl_hol a sigma"
-  | "aval_ivl (Plus  a b)  sigma = ivl_plus  (aval_ivl a sigma) (aval_ivl b sigma)"
-  | "aval_ivl (Minus a b)  sigma = ivl_minus (aval_ivl a sigma) (aval_ivl b sigma)"
-  | "aval_ivl (Times a b)  sigma = ivl_times (aval_ivl a sigma) (aval_ivl b sigma)"
+    "aval_ivl (BaseN a)    \<sigma> = aval_ivl_hol a \<sigma>"
+  | "aval_ivl (Plus  a b)  \<sigma> = ivl_plus  (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
+  | "aval_ivl (Minus a b)  \<sigma> = ivl_minus (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
+  | "aval_ivl (Times a b)  \<sigma> = ivl_times (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
 
 lemma aval_ivl_hol_sound:
-  "(\<forall>x. s x \<in> gamma_ivl (sigma x))
-   \<Longrightarrow> AExp.aval a s \<in> gamma_ivl (aval_ivl_hol a sigma)"
+  "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
+   \<Longrightarrow> AExp.aval a s \<in> gamma_ivl (aval_ivl_hol a \<sigma>)"
   by (induction a; simp add: ivl_plus_sound)
 
 lemma aval_ivl_sound:
-  "(\<forall>x. s x \<in> gamma_ivl (sigma x))
-   \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a sigma)"
+  "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
+   \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a \<sigma>)"
   by (induction a;
       simp add: aval.simps aval_ivl.simps aval_ivl_hol_sound
                 ivl_plus_sound ivl_minus_sound ivl_times_sound)
@@ -519,17 +519,17 @@ text \<open>
   All other guards are treated conservatively (identity).
 \<close>
 fun assume_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
-    "assume_ivl (Less (V x) (N n)) sigma =
-       sigma(x := meet_ivl (sigma x) (Ivl MinInf (Fin (n - 1))))"
-  | "assume_ivl _ sigma = sigma"
+    "assume_ivl (Less (V x) (N n)) \<sigma> =
+       \<sigma>(x := meet_ivl (\<sigma> x) (Ivl MinInf (Fin (n - 1))))"
+  | "assume_ivl _ \<sigma> = \<sigma>"
 
 lemma assume_ivl_default:
-  "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_ivl b sigma = sigma"
-  by (cases "(b, sigma)" rule: assume_ivl.cases) auto
+  "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_ivl b \<sigma> = \<sigma>"
+  by (cases "(b, \<sigma>)" rule: assume_ivl.cases) auto
 
 lemma assume_ivl_sound:
-  assumes gs: "s \<in> ivl_domain.gamma_state sigma" and b: "bval b s"
-  shows "s \<in> ivl_domain.gamma_state (assume_ivl b sigma)"
+  assumes gs: "s \<in> ivl_domain.gamma_state \<sigma>" and b: "bval b s"
+  shows "s \<in> ivl_domain.gamma_state (assume_ivl b \<sigma>)"
 proof (cases "\<exists>x n. b = Less (V x) (N n)")
   case False
   with assume_ivl_default gs show ?thesis by metis
@@ -537,29 +537,29 @@ next
   case True
   then obtain x n where bn: "b = Less (V x) (N n)" by blast
   have xv: "s x < n" using b bn by simp
-  have "assume_ivl b sigma = sigma(x := meet_ivl (sigma x) (Ivl MinInf (Fin (n-1))))"
+  have "assume_ivl b \<sigma> = \<sigma>(x := meet_ivl (\<sigma> x) (Ivl MinInf (Fin (n-1))))"
     using bn by simp
-  moreover have "s x \<in> gamma_ivl (meet_ivl (sigma x) (Ivl MinInf (Fin (n-1))))"
+  moreover have "s x \<in> gamma_ivl (meet_ivl (\<sigma> x) (Ivl MinInf (Fin (n-1))))"
   proof (rule meet_ivl_gamma)
-    show "s x \<in> gamma_ivl (sigma x)" using gs unfolding ivl_domain.gamma_state_def by simp
+    show "s x \<in> gamma_ivl (\<sigma> x)" using gs unfolding ivl_domain.gamma_state_def by simp
     show "s x \<in> gamma_ivl (Ivl MinInf (Fin (n-1)))" using xv by simp
   qed
-  moreover have "\<And>y. y \<noteq> x \<Longrightarrow> s y \<in> gamma_ivl (sigma y)"
+  moreover have "\<And>y. y \<noteq> x \<Longrightarrow> s y \<in> gamma_ivl (\<sigma> y)"
     using gs unfolding ivl_domain.gamma_state_def by simp
   ultimately show ?thesis unfolding ivl_domain.gamma_state_def by simp
 qed
 
 fun assume_not_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
-    "assume_not_ivl _ sigma = sigma"
+    "assume_not_ivl _ \<sigma> = \<sigma>"
 
 definition assign_ivl ::
     "vname => aexp => (vname => ivl) => (vname => ivl)"
 where
-  "assign_ivl x a sigma = sigma(x := aval_ivl a sigma)"
+  "assign_ivl x a \<sigma> = \<sigma>(x := aval_ivl a \<sigma>)"
 
 lemma assign_ivl_sound:
-  "s \<in> ivl_domain.gamma_state sigma
-   \<Longrightarrow> s(x := aval a s) \<in> ivl_domain.gamma_state (assign_ivl x a sigma)"
+  "s \<in> ivl_domain.gamma_state \<sigma>
+   \<Longrightarrow> s(x := aval a s) \<in> ivl_domain.gamma_state (assign_ivl x a \<sigma>)"
   unfolding ivl_domain.gamma_state_def assign_ivl_def
   by (auto simp: aval_ivl_sound)
 
@@ -567,11 +567,11 @@ subsection \<open>Procedure entry and bundled transfer functions\<close>
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval.\<close>
 definition enter_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_ivl sigma = (\<lambda>x. if is_global x then sigma x else Ivl MinInf PlusInf)"
+  "enter_ivl \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else Ivl MinInf PlusInf)"
 
 lemma enter_ivl_sound:
-  assumes "s \<in> ivl_domain.gamma_state sigma"
-  shows "enter_state s \<in> ivl_domain.gamma_state (enter_ivl sigma)"
+  assumes "s \<in> ivl_domain.gamma_state \<sigma>"
+  shows "enter_state s \<in> ivl_domain.gamma_state (enter_ivl \<sigma>)"
   using assms unfolding ivl_domain.gamma_state_def enter_ivl_def enter_state_def
   by (intro CollectI allI) (auto simp: gamma_ivl.simps)
 
@@ -582,38 +582,38 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_enter      = enter_ivl |)"
 
 lemma ivl_tf_sound_assign:
-  "\<forall>x a sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
-     st(x := aval a st) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
+  "\<forall>x a \<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
+     st(x := aval a st) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a \<sigma>)"
   unfolding ivl_tf_def by (simp add: assign_ivl_sound)
 
 lemma ivl_tf_sound_assume:
-  "\<forall>b sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
-     bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
+  "\<forall>b \<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
+     bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume ivl_tf b \<sigma>)"
   unfolding ivl_tf_def by (simp add: assume_ivl_sound)
 
 lemma ivl_tf_sound_assume_not:
-  "\<forall>b sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
-     \<not> bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
+  "\<forall>b \<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
+     \<not> bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b \<sigma>)"
   unfolding ivl_tf_def by simp
 
 lemma ivl_tf_sound_enter:
-  "\<forall>sigma. \<forall>st \<in> ivl_domain.gamma_state sigma.
-     enter_state st \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
+  "\<forall>\<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
+     enter_state st \<in> ivl_domain.gamma_state (tf_enter ivl_tf \<sigma>)"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
 interpretation ivl_sound_tf: sound_transfer gamma_ivl ivl_tf
 proof unfold_locales
-  show "\<forall>x a sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
-       s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a sigma)"
+  show "\<forall>x a \<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>.
+       s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a \<sigma>)"
     by (rule ivl_tf_sound_assign)
-  show "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b sigma)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>. bval b s
+       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b \<sigma>)"
     by (rule ivl_tf_sound_assume)
-  show "\<forall>b sigma. \<forall>s \<in> ivl_domain.gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b sigma)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>. \<not> bval b s
+       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b \<sigma>)"
     by (rule ivl_tf_sound_assume_not)
-  show "\<forall>sigma. \<forall>s \<in> ivl_domain.gamma_state sigma.
-       enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf sigma)"
+  show "\<forall>\<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>.
+       enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf \<sigma>)"
     by (rule ivl_tf_sound_enter)
 qed
 

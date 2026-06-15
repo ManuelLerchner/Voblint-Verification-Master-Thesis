@@ -2,6 +2,10 @@ theory TD_Side_CFG
   imports Constraint_System_Sound "Voblint_IMP2.IMP2_Globals" "TD.TD_side"
 begin
 
+(* TD_side defines a record field \<sigma> for its internal state; hide the short
+   name so our \<sigma> variables (abstract state maps) are unambiguous. *)
+hide_const (open) \<sigma>
+
 section \<open>Side IP solver: generic base\<close>
 
 text \<open>
@@ -20,14 +24,14 @@ text \<open>
    component is set to bot, so the join of the two recovers the original. *)
 definition restrict_local ::
   "'a::bounded_semilattice_sup_bot abs_state => 'a abs_state" where
-  "restrict_local sigma = (\<lambda>x. if is_global x then bot else sigma x)"
+  "restrict_local \<sigma> = (\<lambda>x. if is_global x then bot else \<sigma> x)"
 
 definition restrict_global ::
   "'a::bounded_semilattice_sup_bot abs_state => 'a abs_state" where
-  "restrict_global sigma = (\<lambda>x. if is_global x then sigma x else bot)"
+  "restrict_global \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else bot)"
 
 lemma restrict_local_global_join:
-  "restrict_local sigma \<squnion> restrict_global sigma = sigma"
+  "restrict_local \<sigma> \<squnion> restrict_global \<sigma> = \<sigma>"
   unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
 
 lemma restrict_local_mono:
@@ -77,22 +81,22 @@ lemma restrict_combine:
    global unknown. *)
 definition side_env ::
   "(pp + unit => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
-  "side_env sigma v = sigma (Inl v) \<squnion> sigma (Inr ())"
+  "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> \<sigma> (Inr ())"
 
 
 (* Generic reachability over the solver's local dependency relation: a single
    dependency step lands in the transitive closure, which is itself transitive. *)
 lemma trans_dep\<^sub>L_step_in:
   fixes T :: "(pp, unit, 'd::order_bot) eqsT"
-  assumes "y \<in> dep\<^sub>L T sigma x"
-  shows "y \<in> trans_dep\<^sub>L T sigma x"
+  assumes "y \<in> dep\<^sub>L T \<sigma> x"
+  shows "y \<in> trans_dep\<^sub>L T \<sigma> x"
   using assms by blast
 
 lemma trans_dep\<^sub>L_trans:
   fixes T :: "(pp, unit, 'd::order_bot) eqsT"
-  assumes "y \<in> trans_dep\<^sub>L T sigma x"
-    and "z \<in> dep\<^sub>L T sigma y"
-  shows "z \<in> trans_dep\<^sub>L T sigma x"
+  assumes "y \<in> trans_dep\<^sub>L T \<sigma> x"
+    and "z \<in> dep\<^sub>L T \<sigma> y"
+  shows "z \<in> trans_dep\<^sub>L T \<sigma> x"
   by (metis Nitpick.tranclp_unfold assms(1,2) mem_Collect_eq tranclp.trancl_into_trancl)
 
 

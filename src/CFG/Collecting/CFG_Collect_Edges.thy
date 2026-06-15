@@ -124,13 +124,13 @@ type_synonym cenv = "pp => store set"
 subsection \<open>Collecting transformer for one program point\<close>
 
 text \<open>
-  collect_pp g rho v = join of edge_collect(a)(rho u) over all (u,a,v) in g.
+  collect_pp g \<rho> v = join of edge_collect(a)(\<rho> u) over all (u,a,v) in g.
   This is the single-step ''push'' of states through each incoming edge.
 \<close>
 
 definition collect_pp :: "cfg => cenv => pp => store set" where
-  "collect_pp g rho v =
-     \<Union>{edge_collect a (rho u) | u a. (u, a, v) : edges g}"
+  "collect_pp g \<rho> v =
+     \<Union>{edge_collect a (\<rho> u) | u a. (u, a, v) : edges g}"
 
 subsection \<open>Least fixpoint (collecting semantics over CFG)\<close>
 
@@ -141,8 +141,8 @@ text \<open>
 
 
 definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
-  "cfg_collect_F g S rho v =
-     (if v = cfg_entry g then S else {}) \<union> collect_pp g rho v"
+  "cfg_collect_F g S \<rho> v =
+     (if v = cfg_entry g then S else {}) \<union> collect_pp g \<rho> v"
 
 definition cfg_collect :: "cfg => store set => cenv" where
   "cfg_collect g S = lfp (cfg_collect_F g S)"
@@ -152,7 +152,7 @@ subsection \<open>Monotonicity of collect_pp\<close>
 text \<open>Required for lfp to be well-defined.\<close>
 
 lemma collect_pp_mono:
-  "mono (\<lambda>rho. collect_pp g rho v)"
+  "mono (\<lambda>\<rho>. collect_pp g \<rho> v)"
 proof
   fix rho1 rho2 :: cenv
   assume "rho1 \<le> rho2"
@@ -175,7 +175,7 @@ proof (rule monoI)
 qed
 
 lemma cfg_collect_F_mono_S:
-  "S \<subseteq> S' \<Longrightarrow> cfg_collect_F g S rho \<le> cfg_collect_F g S' rho"
+  "S \<subseteq> S' \<Longrightarrow> cfg_collect_F g S \<rho> \<le> cfg_collect_F g S' \<rho>"
   unfolding cfg_collect_F_def le_fun_def by auto
 
 lemma cfg_collect_mono_S:

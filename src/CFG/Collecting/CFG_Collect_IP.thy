@@ -16,15 +16,15 @@ text \<open>
 \<close>
 
 definition collect_combine_pp :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set" where
-  "collect_combine_pp g rho v =
-     \<Union>{ {combine_states s t | s t. s \<in> rho c \<and> t \<in> rho ex}
+  "collect_combine_pp g \<rho> v =
+     \<Union>{ {combine_states s t | s t. s \<in> \<rho> c \<and> t \<in> \<rho> ex}
            | c ex ret. (c, ex, ret) \<in> combines g \<and> ret = v }"
 
 definition cfg_collect_ip_F :: "cfg \<Rightarrow> store set \<Rightarrow> cenv \<Rightarrow> cenv" where
-  "cfg_collect_ip_F g S rho v =
+  "cfg_collect_ip_F g S \<rho> v =
      (if v = cfg_entry g then S else {})
-     \<union> collect_pp g rho v
-     \<union> collect_combine_pp g rho v"
+     \<union> collect_pp g \<rho> v
+     \<union> collect_combine_pp g \<rho> v"
 
 definition cfg_collect_ip :: "cfg \<Rightarrow> store set \<Rightarrow> cenv" where
   "cfg_collect_ip g S = lfp (cfg_collect_ip_F g S)"
@@ -38,7 +38,7 @@ lemma combine_states_image_mono:
   using assms by blast
 
 lemma collect_combine_pp_mono:
-  "mono (\<lambda>rho. collect_combine_pp g rho v)"
+  "mono (\<lambda>\<rho>. collect_combine_pp g \<rho> v)"
 proof
   fix rho1 rho2 :: cenv
   assume le: "rho1 \<le> rho2"
@@ -77,7 +77,7 @@ proof (rule monoI)
 qed
 
 lemma cfg_collect_ip_F_mono_S:
-  "S \<subseteq> S' \<Longrightarrow> cfg_collect_ip_F g S rho \<le> cfg_collect_ip_F g S' rho"
+  "S \<subseteq> S' \<Longrightarrow> cfg_collect_ip_F g S \<rho> \<le> cfg_collect_ip_F g S' \<rho>"
   unfolding cfg_collect_ip_F_def le_fun_def by auto
 
 lemma cfg_collect_ip_mono_S:
@@ -93,12 +93,12 @@ lemma cfg_collect_ip_lfp_unfold:
 subsection \<open>Relation to intra-procedural cfg_collect\<close>
 
 lemma collect_combine_pp_empty[simp]:
-  "combines g = {} \<Longrightarrow> collect_combine_pp g rho v = {}"
+  "combines g = {} \<Longrightarrow> collect_combine_pp g \<rho> v = {}"
   unfolding collect_combine_pp_def by auto
 
 lemma cfg_collect_ip_F_eq_cfg_collect_F:
   assumes "combines g = {}"
-  shows "cfg_collect_ip_F g S rho v = cfg_collect_F g S rho v"
+  shows "cfg_collect_ip_F g S \<rho> v = cfg_collect_F g S \<rho> v"
   unfolding cfg_collect_ip_F_def cfg_collect_F_def using assms by auto
 
 lemma cfg_collect_ip_eq_cfg_collect:
@@ -107,11 +107,11 @@ lemma cfg_collect_ip_eq_cfg_collect:
 proof -
   have eq: "cfg_collect_ip_F g S = cfg_collect_F g S"
   proof
-    fix rho
-    show "cfg_collect_ip_F g S rho = cfg_collect_F g S rho"
+    fix \<rho>
+    show "cfg_collect_ip_F g S \<rho> = cfg_collect_F g S \<rho>"
     proof (rule ext)
       fix v
-      show "cfg_collect_ip_F g S rho v = cfg_collect_F g S rho v"
+      show "cfg_collect_ip_F g S \<rho> v = cfg_collect_F g S \<rho> v"
         using cfg_collect_ip_F_eq_cfg_collect_F[OF assms] .
     qed
   qed
@@ -119,7 +119,7 @@ proof -
 qed
 
 lemma cfg_collect_ip_F_ge_cfg_collect_F:
-  "cfg_collect_F g S rho v \<subseteq> cfg_collect_ip_F g S rho v"
+  "cfg_collect_F g S \<rho> v \<subseteq> cfg_collect_ip_F g S \<rho> v"
   unfolding cfg_collect_F_def cfg_collect_ip_F_def by auto
 
 lemma cfg_collect_le_cfg_collect_ip:
@@ -143,19 +143,19 @@ qed
 
 lemma collect_combine_pp_member:
   assumes "(c, ex, ret) \<in> combines g" "ret = v"
-      and "s \<in> rho c" "t \<in> rho ex"
-  shows "combine_states s t \<in> collect_combine_pp g rho v"
+      and "s \<in> \<rho> c" "t \<in> \<rho> ex"
+  shows "combine_states s t \<in> collect_combine_pp g \<rho> v"
   using assms unfolding collect_combine_pp_def by blast
 
 lemma collect_combine_pp_in_cfg_collect_ip:
-  assumes le: "rho \<le> cfg_collect_ip g S"
-  shows "collect_combine_pp g rho v \<subseteq> cfg_collect_ip g S v"
+  assumes le: "\<rho> \<le> cfg_collect_ip g S"
+  shows "collect_combine_pp g \<rho> v \<subseteq> cfg_collect_ip g S v"
 proof
   fix x
-  assume xin: "x \<in> collect_combine_pp g rho v"
+  assume xin: "x \<in> collect_combine_pp g \<rho> v"
   from xin obtain c ex ret s t where
         h: "(c, ex, ret) \<in> combines g" "ret = v"
-    and st: "s \<in> rho c" "t \<in> rho ex"
+    and st: "s \<in> \<rho> c" "t \<in> \<rho> ex"
     and x: "x = combine_states s t"
     unfolding collect_combine_pp_def by blast
   from le have sc: "s \<in> cfg_collect_ip g S c" and tc: "t \<in> cfg_collect_ip g S ex"

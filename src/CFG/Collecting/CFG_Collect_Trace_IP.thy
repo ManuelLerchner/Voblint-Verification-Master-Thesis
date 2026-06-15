@@ -9,7 +9,7 @@ text \<open>
   stores along a single CFG path.  cfg_collect_ip (CFG_Collect_IP) is
   state-based with enter edges + combine triples.  This theory forms their
   product: a trace-valued interprocedural collecting whose enter is an ordinary
-  edge step and whose combine splices a callee trace (rho) onto the caller trace
+  edge step and whose combine splices a callee trace (\<rho>) onto the caller trace
   (tau) it returned to, restoring with combine_states (caller locals, callee
   globals).
 
@@ -18,13 +18,13 @@ text \<open>
       alpha_last (cfg_collect_trace_ip g S v)  \<subseteq>  cfg_collect_ip g S v
 
   Why \<subseteq> and not =:  the state-based cfg_collect_ip over-combines via
-  collect_combine_pp -- it pairs EVERY s \<in> rho call with EVERY t \<in> rho exit,
+  collect_combine_pp -- it pairs EVERY s \<in> \<rho> call with EVERY t \<in> \<rho> exit,
   including caller/callee states that never co-occurred on a real run.  The trace
   combine only splices a callee trace with the caller it actually returned to
-  (junction condition hd rho = enter_state (last tau)), so it is strictly more
-  precise.  But every matched combine_states (last tau) (last rho) IS produced by
+  (junction condition hd \<rho> = enter_state (last tau)), so it is strictly more
+  precise.  But every matched combine_states (last tau) (last \<rho>) IS produced by
   collect_combine_pp (witness s = last tau \<in> cfg_collect_ip c,
-  t = last rho \<in> cfg_collect_ip ex), so the \<subseteq> direction always holds.  This
+  t = last \<rho> \<in> cfg_collect_ip ex), so the \<subseteq> direction always holds.  This
   lets the state-based soundness (analysis \<supseteq> cfg_collect_ip) carry to the trace
   foundation by transitivity, and the strict cases are the precision payoff.
 
@@ -44,10 +44,10 @@ text \<open>
   edge    : extend by one CFG edge (covers intra edges AND enter edges, since
             EA_Enter is an ordinary edge_action with edge_step EA_Enter s =
             Some (enter_state s)).
-  combine : at a combine triple (c, ex, ret), splice the callee trace rho (at the
+  combine : at a combine triple (c, ex, ret), splice the callee trace \<rho> (at the
             procedure exit ex) onto the caller trace tau (at the call site c) it
             was entered from, appending the restored return store
-            combine_states (last tau) (last rho).
+            combine_states (last tau) (last \<rho>).
 \<close>
 inductive ip_trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool" for g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> ip_trace_witness g S v [s]"
@@ -55,10 +55,10 @@ inductive ip_trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Ri
          \<Longrightarrow> edge_step a (last tr) = Some s'
          \<Longrightarrow> ip_trace_witness g S v (tr @ [s'])"
 | combine: "(c, ex, v) \<in> combines g \<Longrightarrow> ip_trace_witness g S c tau
-            \<Longrightarrow> ip_trace_witness g S ex rho
-            \<Longrightarrow> hd rho = enter_state (last tau)
+            \<Longrightarrow> ip_trace_witness g S ex \<rho>
+            \<Longrightarrow> hd \<rho> = enter_state (last tau)
             \<Longrightarrow> ip_trace_witness g S v
-                  (tau @ rho @ [combine_states (last tau) (last rho)])"
+                  (tau @ \<rho> @ [combine_states (last tau) (last \<rho>)])"
 
 definition cfg_collect_trace_ip :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
   "cfg_collect_trace_ip g S v = {tr. ip_trace_witness g S v tr}"
@@ -104,15 +104,15 @@ next
   then have "s' \<in> cfg_collect_ip g S v" using cfg_collect_ip_post by blast
   then show ?case by simp
 next
-  case (combine c ex v tau rho)
+  case (combine c ex v tau \<rho>)
   have ih1: "last tau \<in> cfg_collect_ip g S c" using combine.IH(1) .
-  have ih2: "last rho \<in> cfg_collect_ip g S ex" using combine.IH(2) .
+  have ih2: "last \<rho> \<in> cfg_collect_ip g S ex" using combine.IH(2) .
   have h: "(c, ex, v) \<in> combines g" using combine.hyps(1) .
-  have "combine_states (last tau) (last rho) \<in> collect_combine_pp g (cfg_collect_ip g S) v"
+  have "combine_states (last tau) (last \<rho>) \<in> collect_combine_pp g (cfg_collect_ip g S) v"
     using collect_combine_pp_member[OF h refl ih1 ih2] .
-  then have "combine_states (last tau) (last rho) \<in> cfg_collect_ip_F g S (cfg_collect_ip g S) v"
+  then have "combine_states (last tau) (last \<rho>) \<in> cfg_collect_ip_F g S (cfg_collect_ip g S) v"
     unfolding cfg_collect_ip_F_def by auto
-  then have "combine_states (last tau) (last rho) \<in> cfg_collect_ip g S v"
+  then have "combine_states (last tau) (last \<rho>) \<in> cfg_collect_ip g S v"
     using cfg_collect_ip_post by blast
   then show ?case by (metis last_snoc append_assoc)
 qed
@@ -144,11 +144,11 @@ inductive ip_trace_witness_d ::
          \<Longrightarrow> edge_step a (last tr) = Some s'
          \<Longrightarrow> ip_trace_witness_d dg cmp g S v (tr @ [s'])"
 | combine: "(c, ex, v) \<in> combines g \<Longrightarrow> ip_trace_witness_d dg cmp g S c tau
-            \<Longrightarrow> ip_trace_witness_d dg cmp g S ex rho
-            \<Longrightarrow> hd rho = enter_state (last tau)
-            \<Longrightarrow> cmp (dg tau) (dg rho)
+            \<Longrightarrow> ip_trace_witness_d dg cmp g S ex \<rho>
+            \<Longrightarrow> hd \<rho> = enter_state (last tau)
+            \<Longrightarrow> cmp (dg tau) (dg \<rho>)
             \<Longrightarrow> ip_trace_witness_d dg cmp g S v
-                  (tau @ rho @ [combine_states (last tau) (last rho)])"
+                  (tau @ \<rho> @ [combine_states (last tau) (last \<rho>)])"
 
 definition cfg_collect_trace_ip_d ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where

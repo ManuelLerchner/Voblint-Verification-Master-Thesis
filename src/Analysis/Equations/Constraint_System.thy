@@ -12,10 +12,10 @@ text \<open>
 
   We construct an equation system (constraint system) where each
   program point v has an equation:
-    sigma(v) = join_over { tf(a)(sigma(u)) | (u,a,v) in g }
+    \<sigma>(v) = join_over { tf(a)(\<sigma>(u)) | (u,a,v) in g }
 
   plus the special base case at the entry:
-    sigma(entry) includes the initial abstract state.
+    \<sigma>(entry) includes the initial abstract state.
 
   The equation system is represented as an RHS function:
     rhs :: pp => (pp => D abs_state) => D abs_state
@@ -45,11 +45,11 @@ fun apply_tf :: "'a domain_transfer
                  => edge_action
                  => ('a abs_state)
                  => ('a abs_state)" where
-    "apply_tf tf EA_Nop              sigma = sigma"
-  | "apply_tf tf (EA_Assign x a)     sigma = tf_assign tf x a sigma"
-  | "apply_tf tf (EA_Assume b)       sigma = tf_assume tf b sigma"
-  | "apply_tf tf (EA_AssumeNot b)    sigma = tf_assume_not tf b sigma"
-  | "apply_tf tf EA_Enter            sigma = tf_enter tf sigma"
+    "apply_tf tf EA_Nop              \<sigma> = \<sigma>"
+  | "apply_tf tf (EA_Assign x a)     \<sigma> = tf_assign tf x a \<sigma>"
+  | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
+  | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
+  | "apply_tf tf EA_Enter            \<sigma> = tf_enter tf \<sigma>"
 
 subsection \<open>Abstract join over a set\<close>
 
@@ -528,16 +528,16 @@ text \<open>
 locale sound_transfer = sound_domain +
   fixes tf :: "'a domain_transfer"
   assumes tf_sound_assign:
-    "\<forall>x (a::aexp) sigma. \<forall>s \<in> gamma_state sigma.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a sigma)"
+    "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> gamma_state \<sigma>.
+       s(x := aval a s) \<in> gamma_state (tf_assign tf x a \<sigma>)"
   assumes tf_sound_assume:
-    "\<forall>(b::bexp) sigma. \<forall>s \<in> gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b sigma)"
+    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> gamma_state \<sigma>. bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume tf b \<sigma>)"
   assumes tf_sound_assume_not:
-    "\<forall>(b::bexp) sigma. \<forall>s \<in> gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b sigma)"
+    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> gamma_state \<sigma>. \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b \<sigma>)"
   assumes tf_sound_enter:
-    "\<forall>sigma. \<forall>s \<in> gamma_state sigma.
-       enter_state s \<in> gamma_state (tf_enter tf sigma)"
+    "\<forall>\<sigma>. \<forall>s \<in> gamma_state \<sigma>.
+       enter_state s \<in> gamma_state (tf_enter tf \<sigma>)"
 
 end

@@ -108,7 +108,7 @@ theorem main_prog_result:
   "pruns_to proc_pi main_prog s (s(''Gx'' := 25))"
 proof -
   have step1: "pruns_to proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
-    using pruns_to_assign[where pi = proc_pi and x = "''Gx''" and a = "N 4" and s = s,
+    using pruns_to_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s,
                           simplified]
     by assumption
   have step2: "pruns_to proc_pi (Call ''inc'') (s(''Gx'' := 4)) (s(''Gx'' := 5))"

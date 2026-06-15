@@ -146,15 +146,15 @@ lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
   by (auto simp: sign_of_int.simps gamma_sign.simps split: if_splits)
 
 fun aval_sign_hol :: "AExp.aexp => (vname => sign) => sign" where
-    "aval_sign_hol (AExp.N n)      sigma = sign_of_int n"
-  | "aval_sign_hol (AExp.V x)      sigma = sigma x"
-  | "aval_sign_hol (AExp.Plus a b) sigma = sign_plus (aval_sign_hol a sigma) (aval_sign_hol b sigma)"
+    "aval_sign_hol (AExp.N n)      \<sigma> = sign_of_int n"
+  | "aval_sign_hol (AExp.V x)      \<sigma> = \<sigma> x"
+  | "aval_sign_hol (AExp.Plus a b) \<sigma> = sign_plus (aval_sign_hol a \<sigma>) (aval_sign_hol b \<sigma>)"
 
 fun aval_sign :: "aexp => (vname => sign) => sign" where
-    "aval_sign (BaseN a)    sigma = aval_sign_hol a sigma"
-  | "aval_sign (Plus  a b)  sigma = sign_plus  (aval_sign a sigma) (aval_sign b sigma)"
-  | "aval_sign (Minus a b)  sigma = sign_minus (aval_sign a sigma) (aval_sign b sigma)"
-  | "aval_sign (Times a b)  sigma = sign_times (aval_sign a sigma) (aval_sign b sigma)"
+    "aval_sign (BaseN a)    \<sigma> = aval_sign_hol a \<sigma>"
+  | "aval_sign (Plus  a b)  \<sigma> = sign_plus  (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
+  | "aval_sign (Minus a b)  \<sigma> = sign_minus (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
+  | "aval_sign (Times a b)  \<sigma> = sign_times (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
@@ -172,25 +172,25 @@ lemma sign_times_sound:
   using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg)
 
 lemma aval_sign_hol_sound:
-  "(\<forall>x. s x \<in> gamma_sign (sigma x))
-   \<Longrightarrow> AExp.aval a s \<in> gamma_sign (aval_sign_hol a sigma)"
-  by (induction a arbitrary: s sigma; simp add: sign_of_int_gamma sign_plus_sound)
+  "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))
+   \<Longrightarrow> AExp.aval a s \<in> gamma_sign (aval_sign_hol a \<sigma>)"
+  by (induction a arbitrary: s \<sigma>; simp add: sign_of_int_gamma sign_plus_sound)
 
 lemma aval_sign_sound:
-  "(\<forall>x. s x \<in> gamma_sign (sigma x))
-   \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a sigma)"
-  by (induction a arbitrary: s sigma;
+  "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))
+   \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a \<sigma>)"
+  by (induction a arbitrary: s \<sigma>;
       simp add: aval.simps aval_sign.simps aval_sign_hol_sound
                 sign_plus_sound sign_minus_sound sign_times_sound)
 
 subsection \<open>Abstract assume\<close>
 
 fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
-    "assume_sign (Less (V x) (N n)) sigma = (if n = 0 then sigma(x := SNeg) else sigma)"
-  | "assume_sign _                  sigma = sigma"
+    "assume_sign (Less (V x) (N n)) \<sigma> = (if n = 0 then \<sigma>(x := SNeg) else \<sigma>)"
+  | "assume_sign _                  \<sigma> = \<sigma>"
 
 fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
-  "assume_not_sign _ sigma = sigma"   (* conservative: no refinement *)
+  "assume_not_sign _ \<sigma> = \<sigma>"   (* conservative: no refinement *)
 
 subsection \<open>Typeclass instances\<close>
 
@@ -257,11 +257,11 @@ next
 qed
 
 lemma sign_gamma_state_conv:
-  "(s : sign_domain.gamma_state sigma) = (s : sound_domain.gamma_state gamma_sign sigma)"
+  "(s : sign_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_sign \<sigma>)"
   unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
 
 lemma assume_sign_default:
-  "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_sign b sigma = sigma"
+  "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_sign b \<sigma> = \<sigma>"
 proof (cases b rule: bexp.exhaust)
   case (Less a1 a2)
   assume H: "\<not> (\<exists>x n. b = Less (V x) (N n))" and bL: "b = Less a1 a2"
@@ -274,11 +274,11 @@ proof (cases b rule: bexp.exhaust)
 qed (simp_all add: assume_sign.simps)
 
 lemma assume_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state sigma" and b: "bval b s"
-  shows "s \<in> sign_domain.gamma_state (assume_sign b sigma)"
+  assumes gs: "s \<in> sign_domain.gamma_state \<sigma>" and b: "bval b s"
+  shows "s \<in> sign_domain.gamma_state (assume_sign b \<sigma>)"
 proof (cases "\<exists>x n. b = Less (V x) (N n)")
   case False
-  with assume_sign_default have "assume_sign b sigma = sigma"
+  with assume_sign_default have "assume_sign b \<sigma> = \<sigma>"
     by blast
   with gs show ?thesis by simp
 next
@@ -289,25 +289,25 @@ next
   show ?thesis
   proof (cases "n = 0")
     case True
-    with bn have "assume_sign b sigma = sigma(x := SNeg)"
+    with bn have "assume_sign b \<sigma> = \<sigma>(x := SNeg)"
       by (simp add: assume_sign.simps)
     moreover have "s x \<in> gamma_sign SNeg"
       using xv True by simp
-    moreover have "\<And>y. y \<noteq> x \<Longrightarrow> s y \<in> gamma_sign (sigma y)"
+    moreover have "\<And>y. y \<noteq> x \<Longrightarrow> s y \<in> gamma_sign (\<sigma> y)"
       using gs unfolding sign_domain.gamma_state_def by simp
     ultimately show ?thesis
       unfolding sign_domain.gamma_state_def by simp
   next
     case False
-    with bn have "assume_sign b sigma = sigma"
+    with bn have "assume_sign b \<sigma> = \<sigma>"
       by (simp add: assume_sign.simps False)
     with gs show ?thesis by simp
   qed
 qed
 
 lemma assume_not_sign_sound:
-  "s \<in> sign_domain.gamma_state sigma \<Longrightarrow> \<not> bval b s
-   \<Longrightarrow> s \<in> sign_domain.gamma_state (assume_not_sign b sigma)"
+  "s \<in> sign_domain.gamma_state \<sigma> \<Longrightarrow> \<not> bval b s
+   \<Longrightarrow> s \<in> sign_domain.gamma_state (assume_not_sign b \<sigma>)"
   unfolding assume_not_sign.simps by simp
 lemma assume_not_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_sign b sigma1 \<le> assume_not_sign b sigma2"
@@ -319,17 +319,17 @@ subsection \<open>Abstract assignment\<close>
 definition assign_sign ::
     "vname => aexp => (vname => sign) => (vname => sign)"
 where
-  "assign_sign x a sigma = sigma(x := aval_sign a sigma)"
+  "assign_sign x a \<sigma> = \<sigma>(x := aval_sign a \<sigma>)"
 
 lemma assign_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state sigma"
-  shows "s(x := aval a s) \<in> sign_domain.gamma_state (assign_sign x a sigma)"
+  assumes gs: "s \<in> sign_domain.gamma_state \<sigma>"
+  shows "s(x := aval a s) \<in> sign_domain.gamma_state (assign_sign x a \<sigma>)"
   unfolding assign_sign_def sign_domain.gamma_state_def
 proof safe
   fix y
-  from gs have V: "\<forall>z. s z \<in> gamma_sign (sigma z)"
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
     unfolding sign_domain.gamma_state_def by simp
-  show "(s(x := aval a s)) y \<in> gamma_sign ((sigma(x := aval_sign a sigma)) y)"
+  show "(s(x := aval a s)) y \<in> gamma_sign ((\<sigma>(x := aval_sign a \<sigma>)) y)"
   proof (cases "y = x")
     case True
     with V show ?thesis by (simp add: aval_sign_sound)
@@ -343,13 +343,13 @@ subsection \<open>Bundled transfer functions\<close>
 
 (* Procedure entry: keep globals, reset locals to Top (unknown). *)
 definition enter_sign :: "sign abs_state => sign abs_state" where
-  "enter_sign sigma = (\<lambda>x. if is_global x then sigma x else STop)"
+  "enter_sign \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else STop)"
 
 lemma enter_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state sigma"
-  shows "enter_state s \<in> sign_domain.gamma_state (enter_sign sigma)"
+  assumes gs: "s \<in> sign_domain.gamma_state \<sigma>"
+  shows "enter_state s \<in> sign_domain.gamma_state (enter_sign \<sigma>)"
 proof -
-  from gs have V: "\<forall>z. s z \<in> gamma_sign (sigma z)"
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
     unfolding sign_domain.gamma_state_def by simp
   show ?thesis
     unfolding sign_domain.gamma_state_def enter_sign_def
@@ -404,38 +404,38 @@ text \<open>
   per-solver soundness theorems.
 \<close>
 lemma sign_tf_sound_assign:
-  "\<forall>x a sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-     st(x := aval a st) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
+  "\<forall>x a \<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
+     st(x := aval a st) \<in> sign_domain.gamma_state (tf_assign sign_tf x a \<sigma>)"
   unfolding sign_tf_def by (simp add: assign_sign_sound)
 
 lemma sign_tf_sound_assume:
-  "\<forall>b sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-     bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
+  "\<forall>b \<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
+     bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume sign_tf b \<sigma>)"
   unfolding sign_tf_def by (simp add: assume_sign_sound)
 
 lemma sign_tf_sound_assume_not:
-  "\<forall>b sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-     \<not> bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
+  "\<forall>b \<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
+     \<not> bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume_not sign_tf b \<sigma>)"
   unfolding sign_tf_def by (simp add: assume_not_sign_sound)
 
 lemma sign_tf_sound_enter:
-  "\<forall>sigma. \<forall>st \<in> sign_domain.gamma_state sigma.
-     enter_state st \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
+  "\<forall>\<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
+     enter_state st \<in> sign_domain.gamma_state (tf_enter sign_tf \<sigma>)"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
 interpretation sign_sound_tf: sound_transfer gamma_sign sign_tf
 proof unfold_locales
-  show "\<forall>x a sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-       s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a sigma)"
+  show "\<forall>x a \<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>.
+       s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a \<sigma>)"
     by (rule sign_tf_sound_assign)
-  show "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma. bval b s
-       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>. bval b s
+       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b \<sigma>)"
     by (rule sign_tf_sound_assume)
-  show "\<forall>b sigma. \<forall>s \<in> sign_domain.gamma_state sigma. \<not> bval b s
-       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b sigma)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>. \<not> bval b s
+       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b \<sigma>)"
     by (rule sign_tf_sound_assume_not)
-  show "\<forall>sigma. \<forall>s \<in> sign_domain.gamma_state sigma.
-       enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf sigma)"
+  show "\<forall>\<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>.
+       enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf \<sigma>)"
     by (rule sign_tf_sound_enter)
 qed
 

@@ -14,13 +14,13 @@ definition singleton_store :: "store \<Rightarrow> store set" where
 
 definition pruns_to_ip ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pruns_to_ip pi ps c s t =
-     (let g = compile_prog pi ps c in t \<in> cfg_collect_ip g (singleton_store s) (cfg_exit g))"
+  "pruns_to_ip \<Pi> ps c s t =
+     (let g = compile_prog \<Pi> ps c in t \<in> cfg_collect_ip g (singleton_store s) (cfg_exit g))"
 
 lemma pruns_to_ipD[elim]:
-  "pruns_to_ip pi ps c s t
-   \<Longrightarrow> t \<in> cfg_collect_ip (compile_prog pi ps c) (singleton_store s)
-                  (cfg_exit (compile_prog pi ps c))"
+  "pruns_to_ip \<Pi> ps c s t
+   \<Longrightarrow> t \<in> cfg_collect_ip (compile_prog \<Pi> ps c) (singleton_store s)
+                  (cfg_exit (compile_prog \<Pi> ps c))"
   unfolding pruns_to_ip_def by (auto simp: Let_def)
 
 lemma cfg_collect_ip_lfp_lowerbound:
@@ -169,12 +169,12 @@ lemma compile_prog_inc_structure:
   unfolding inc_g_def mk_ip_cfg_def by auto
 
 lemma collect_pp_edges_cong:
-  "edges g1 = edges g2 \<Longrightarrow> collect_pp g1 rho v = collect_pp g2 rho v"
+  "edges g1 = edges g2 \<Longrightarrow> collect_pp g1 \<rho> v = collect_pp g2 \<rho> v"
   unfolding collect_pp_def by auto
 
 lemma collect_combine_pp_combines_cong:
   "combines g1 = combines g2
-   \<Longrightarrow> collect_combine_pp g1 rho v = collect_combine_pp g2 rho v"
+   \<Longrightarrow> collect_combine_pp g1 \<rho> v = collect_combine_pp g2 \<rho> v"
   unfolding collect_combine_pp_def by auto
 
 lemma cfg_collect_ip_cong:

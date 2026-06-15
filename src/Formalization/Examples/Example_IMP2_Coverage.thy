@@ -47,17 +47,17 @@ qed auto
 (* Hence the translated program has no terminating AFP IMP2 run, for any start
    state -- so a total-correctness big-step/VCG result is vacuous. *)
 lemma loop_no_terminating_run:
-  "\<not> Semantics.big_step (to_imp2_pi pi) (to_imp2_com loop_prog, s) t"
+  "\<not> Semantics.big_step (to_imp2_pi \<Pi>) (to_imp2_com loop_prog, s) t"
 proof
-  assume "Semantics.big_step (to_imp2_pi pi) (to_imp2_com loop_prog, s) t"
-  then have "Semantics.big_step (to_imp2_pi pi)
+  assume "Semantics.big_step (to_imp2_pi \<Pi>) (to_imp2_com loop_prog, s) t"
+  then have "Semantics.big_step (to_imp2_pi \<Pi>)
      (Syntax.Seq (Syntax.AssignIdx ''x'' (Syntax.N 0) (Syntax.N 1))
         (Syntax.While (Syntax.Bc True)
            (Syntax.AssignIdx ''x'' (Syntax.N 0)
               (Syntax.Binop (+) (Syntax.Vidx ''x'' (Syntax.N 0)) (Syntax.N 1)))), s) t"
     by (simp add: loop_prog_def)
   then obtain s2 where
-    "Semantics.big_step (to_imp2_pi pi)
+    "Semantics.big_step (to_imp2_pi \<Pi>)
        (Syntax.While (Syntax.Bc True)
           (Syntax.AssignIdx ''x'' (Syntax.N 0)
              (Syntax.Binop (+) (Syntax.Vidx ''x'' (Syntax.N 0)) (Syntax.N 1))), s2) t"

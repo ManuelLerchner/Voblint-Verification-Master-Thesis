@@ -12,13 +12,13 @@ text \<open>
     1. Define what it means for env to be a post-fixpoint.
     2. Prove: post-fixpoint ==> env(v) >= cfg_collect(v) for all v.
        By induction on the CFG collecting semantics (or by lfp properties).
-    3. Conclude: every concrete state reachable at v is in gamma(env(v)).
+    3. Conclude: every concrete state reachable at v is in \<gamma>(env(v)).
 
   This is the ''big bridge'' in the pipeline connecting the abstract
   constraint system back to concrete program behaviour.
 \<close>
 
-(* Global rhs-step lemmas (no gamma needed). *)
+(* Global rhs-step lemmas (no \<gamma> needed). *)
 lemma apply_tf_le_rhs:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
@@ -104,7 +104,7 @@ begin
    apply_tf in the abstract domain. *)
 lemma edge_collect_apply_tf_sound:
   shows
-    "edge_collect a (gamma_state sigma) \<subseteq> gamma_state (apply_tf tf a sigma)"
+    "edge_collect a (gamma_state \<sigma>) \<subseteq> gamma_state (apply_tf tf a \<sigma>)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by simp

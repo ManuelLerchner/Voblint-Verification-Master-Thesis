@@ -7,7 +7,7 @@ section \<open>Unified analysis soundness: one engine\<close>
 text \<open>
   Both the intra-procedural soundness (post_fixpoint_sound, Constraint_System_Sound)
   and the interprocedural soundness (post_fixpoint_sound_ip, Constraint_System_IP_Sound)
-  share the same final step: gamma o env is a post-fixpoint of the collecting
+  share the same final step: \<gamma> o env is a post-fixpoint of the collecting
   functional F, hence the lfp collect is below it (lfp_lowerbound).  That step is
   captured ONCE by the collecting locale (CFG_Collect_Unified) as
   collect_post_fixpoint_sound.

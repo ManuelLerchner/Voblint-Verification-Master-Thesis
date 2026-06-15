@@ -13,7 +13,7 @@ text \<open>
     bot     : bottom element (empty concretization)
     sup     : sound upper bound (for RHS fold over predecessor edges)
     widen   : widening operator (ensures termination)
-    gamma   : concretization map  'a => int set
+    \<gamma>   : concretization map  'a => int set
 
   bot and sup come from the bounded_semilattice_sup_bot type class.
   'a abs_state = vname => 'a inherits the same class pointwise via HOL's
@@ -42,29 +42,29 @@ lemma join_state_comp_fun_idem:
   by (rule comp_fun_idem_sup)
 
 locale sound_domain =
-  fixes gamma :: "'a::bounded_semilattice_sup_bot => int set"
+  fixes \<gamma> :: "'a::bounded_semilattice_sup_bot => int set"
   assumes gamma_bot:
-    "gamma bot = {}"
+    "\<gamma> bot = {}"
   assumes gamma_mono:
-    "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
+    "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
 begin
 
-subsection \<open>Derived gamma-sup bounds\<close>
+subsection \<open>Derived \<gamma>-sup bounds\<close>
 
-lemma gamma_sup_ub1: "gamma a \<subseteq> gamma (a \<squnion> b)"
+lemma gamma_sup_ub1: "\<gamma> a \<subseteq> \<gamma> (a \<squnion> b)"
   by (rule gamma_mono[OF sup_ge1])
 
-lemma gamma_sup_ub2: "gamma b \<subseteq> gamma (a \<squnion> b)"
+lemma gamma_sup_ub2: "\<gamma> b \<subseteq> \<gamma> (a \<squnion> b)"
   by (rule gamma_mono[OF sup_ge2])
 
 lemma gamma_sup_sound:
-  "gamma a \<union> gamma b \<subseteq> gamma (a \<squnion> b)"
+  "\<gamma> a \<union> \<gamma> b \<subseteq> \<gamma> (a \<squnion> b)"
   using gamma_sup_ub1 gamma_sup_ub2 by blast
 
 subsection \<open>Lifted concretization\<close>
 
 definition gamma_state :: "'a abs_state => store set" where
-  "gamma_state sigma = {s. \<forall>x. s x \<in> gamma (sigma x)}"
+  "gamma_state \<sigma> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
 
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
    fun :: bot and fun :: sup instances; no extra definitions needed. *)
@@ -118,7 +118,7 @@ context sound_domain
 begin
 
 lemma gamma_abs_sup_set_ub:
-  "finite S \<Longrightarrow> x \<in> S \<Longrightarrow> gamma x \<subseteq> gamma (Finite_Set.fold (\<squnion>) bot S)"
+  "finite S \<Longrightarrow> x \<in> S \<Longrightarrow> \<gamma> x \<subseteq> \<gamma> (Finite_Set.fold (\<squnion>) bot S)"
   using gamma_mono sup_fold_ge by auto
 
 end
@@ -137,9 +137,9 @@ text \<open>
 locale abstract_domain = sound_domain +
   fixes widen :: "'a => 'a => 'a"
   assumes widen_ub1:
-    "gamma a \<subseteq> gamma (widen a b)"
+    "\<gamma> a \<subseteq> \<gamma> (widen a b)"
   assumes widen_ub2:
-    "gamma b \<subseteq> gamma (widen a b)"
+    "\<gamma> b \<subseteq> \<gamma> (widen a b)"
 begin
 
 definition widen_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
