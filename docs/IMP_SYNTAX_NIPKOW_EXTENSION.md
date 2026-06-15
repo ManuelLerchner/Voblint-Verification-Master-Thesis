@@ -11,6 +11,7 @@
 **Non-goal:** changing `com` (already structurally identical to `HOL-IMP.Com`), changing semantics, replacing big-step (separate doc), or adopting AFP `IMP2` (different beast — see Rejected).
 
 See also:
+
 - `~/voblint-formalization-kb/wiki/meetings/2026-05-18-meeting3.md` §B — Alexandra's nested-constructor route + abbreviation caveat
 - `~/voblint-formalization-kb/wiki/concepts/imp-language.md` — Datatype extension caveat
 - `~/voblint-formalization-kb/wiki/concepts/imp2.md` — why we don't adopt AFP `IMP2` wholesale (naming collision, no soundness payoff)
@@ -92,11 +93,13 @@ abbreviation Plus_ext where "Plus_ext a b \<equiv> Base (HOL_IMP.Plus a b)"
 ```
 
 **Pros:**
+
 - Genuine reuse — Nipkow's `aexp` theorems apply directly inside the `Base` wrapper.
 - Future-compatible with AFP `IMP2` arrays / `PScope` (same extension pattern).
 - Aligns with Alexandra's recommendation.
 
 **Cons (realistic — Meeting 3 §B):**
+
 - **Abbreviations do not unfold in pattern matching.** Case analysis on `aexp_ext` still sees `Base (HOL_IMP.N n)` not `N_ext n`. Every `fun aval_ext` clause and every collecting/transfer lemma sees the `Base ...` shape and must case-split on the wrapped Nipkow constructor — duplication.
 - `fun aval_ext` recurses *into* `Nipkow.aval` for `Base _` and recurses on `aexp_ext` for `Minus`/`Times`. Two recursions instead of one.
 - `Plus` only lives inside `Base` → loses uniform "addition" treatment when collecting; sign / parity / interval transfer functions need a layer of unwrapping.
@@ -124,11 +127,13 @@ lemma aval_agrees_on_hol_imp:
 ```
 
 **Pros:**
+
 - Zero rewrite of downstream proofs.
 - Makes the Nipkow correspondence formal (a checked theorem, not a comment).
 - Cheap to land.
 
 **Cons:**
+
 - Doesn't actually *reuse* Nipkow's lemmas — only proves we could.
 - Genuine AFP-reuse stance is not satisfied at the syntax level (it still is at the graph / solver level).
 

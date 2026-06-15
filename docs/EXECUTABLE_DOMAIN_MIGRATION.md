@@ -186,6 +186,6 @@ green build is also proof the pipeline executes.
 * `src/Analysis/Solver/TD_Side_IP_Bounds.thy` — `side_cfg_T_ip` /
   `make_side_rhs_tree_ip` / `side_rhs_fold_ip` (the eqs to mirror at `sign st`).
 * `src/Analysis/Solver/TD_Side_IP_Interface.thy` — `td_cfg_side_ip_solver` locale
-  + `side_analyse_ip` (G2; the global entry replaces this routing).
+  * `side_analyse_ip` (G2; the global entry replaces this routing).
 * HOL-IMP `Abs_State.thy`, `Abs_Int0/1.thy`, `Abs_Int2_ivl.thy` — the precedent
   for the executable `st` and the abstract/executable refinement split.

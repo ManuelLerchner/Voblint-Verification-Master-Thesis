@@ -69,7 +69,7 @@ KB companion (read these for *why*, not just *what*):
 > **Phase 1 (frame-stack route) — substrate + procedure semantics green:**
 >
 > - `src/IMP2/IMP2_Globals.thy` — `pname`, `is_global`, `combine_states` (`<_|_>`)
->   + the combine algebra (collapse/nest/upd/cases). The Level-1 locals/globals
+>   - the combine algebra (collapse/nest/upd/cases). The Level-1 locals/globals
 >   split over the scalar store; self-contained, no `com` ripple.
 > - `src/IMP2/IMP2_Proc.thy` — procedure-extended command type `pcom`
 >   (`PScope`/`PCall`/runtime `PRestore`), `proc_table`, frame-stack `pstep`
@@ -562,7 +562,7 @@ unchanged.
 ### Slice 5 — M4 — **after M3.5** (and unified migration)
 
 History-sensitive globals over **reaching traces** (digest-indexed join). Requires the
-**interprocedural _trace_ collecting** `cfg_collect_trace_ip` — that is **M3.5**
+**interprocedural *trace* collecting** `cfg_collect_trace_ip` — that is **M3.5**
 (`docs/M3_5_INTERPROC_TRACE_HANDOFF.md`), not the state-based `cfg_collect_ip` — so the
 "last preceding write over reaching traces" property is even statable. Prerequisites
 M0 + M3 + M1 collecting are in place; **M3.5 is the missing one (§6).**

@@ -31,6 +31,7 @@ The migration was implemented and tested. It fails because **Isabelle requires s
 even those from parent sessions or `sessions` dependencies**.
 
 Bare-name imports (`imports IMP2_Syntax`) only resolve automatically for:
+
 - Theories defined in the **current session's directories**
 - Standard library sessions (HOL, HOL-IMP, HOL-Library) that ship as part of the
   Isabelle installation and are in the built-in source search path

@@ -265,6 +265,6 @@ Step 5 optional, last.
 ## Provenance
 
 - Constraint construction + start/return reachability: Apinis, Seidl, Vojdani,
-  *Side-Effecting Constraint Systems*, §2 (eq. 0). https://voblint.in.tum.de/assets/papers/side.pdf
+  *Side-Effecting Constraint Systems*, §2 (eq. 0). <https://voblint.in.tum.de/assets/papers/side.pdf>
 - Pull-direction of our encoding: `docs/OPEN_PROBLEMS.md` §P2 finding.
 - `compile (WHILE …)` exit edge: `src/CFG/IMP2_to_CFG.thy`.

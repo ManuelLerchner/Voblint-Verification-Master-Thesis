@@ -348,6 +348,7 @@ Proof status lives in `docs/PROOF_PHASES.md` (sorry inventory) do not duplicate 
 **Never assert facts about analyzer behavior, paper contents, or proof correctness without first verifying against the repo or source.** Flag uncertainty explicitly ("I believe X — verify against `src/Y`") rather than stating it as fact.
 
 Specific cases that require a source lookup before claiming:
+
 * "inherits correctness" or "soundness follows from …"
 * Quoted paper passages or attributed claims
 * "Real analyzers also …" statements about VobLint behavior

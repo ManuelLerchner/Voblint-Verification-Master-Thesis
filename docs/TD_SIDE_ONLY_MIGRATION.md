@@ -81,15 +81,15 @@ The Side (M3) stack already does exactly this for the **intra** CFG with a
 locals/globals split. `src/Solver/TD_Side_CFG.thy` is the blueprint; reuse its
 shape verbatim for IP, extending only the per-point fold:
 
-- `side_rhs_fold` folds incoming edges into a `QueryL u / QueryG () / Side ()`
+* `side_rhs_fold` folds incoming edges into a `QueryL u / QueryG () / Side ()`
   chain; `make_side_rhs_tree` seeds the entry; `side_cfg_T` is the `eqsT`.
-- Denotation lemmas: `side_acc` (local fold, `= eq`), `side_glob` (global side
+* Denotation lemmas: `side_acc` (local fold, `= eq`), `side_glob` (global side
   contribution, `= sides_of_rhs … (Inr ())`), with `traverse_side_rhs_fold`,
   `eq_side_cfg_T`, `sides_side_rhs_fold_Inl/Inr`.
-- Solver preconditions: `side_cfg_T_is_mono_eq`, `side_cfg_T_mono_sides`,
+* Solver preconditions: `side_cfg_T_is_mono_eq`, `side_cfg_T_mono_sides`,
   `side_cfg_T_mono_deps` (all from `tf_mono` + the `side_acc/side_glob/dep_aux`
   monotonicity lemmas).
-- Post-solution bounds: `side_post_solution_le_local/_global`,
+* Post-solution bounds: `side_post_solution_le_local/_global`,
   `apply_tf_combined_le`, dependency/reachability
   (`cfg_path_node_in_trans_dep_side`, `side_vars_on_query_path`), and the
   collecting-soundness theorem `side_collect_sound_path` / `side_collect_sound_at`
@@ -101,9 +101,9 @@ The intra `side_rhs_fold` handles ordinary edges only. IP adds two constructs th
 plain encoding carries (`make_rhs_tree_ip` in `TD_CFG_IP_Core`, combine triples in
 `compile_prog`):
 
-- **`EA_Enter` edges** `(call, EA_Enter, proc_entry)` — a plain edge in the fold,
+* **`EA_Enter` edges** `(call, EA_Enter, proc_entry)` — a plain edge in the fold,
   no special handling needed beyond inclusion in `predecessor_list`.
-- **Combine triples** `(call, proc_exit, return)` in `combines g` — the return
+* **Combine triples** `(call, proc_exit, return)` in `combines g` — the return
   point reads *two* unknowns (caller `call` and callee `proc_exit`) and combines
   them (`combine_states`). This is the real extension: the per-point RHS for a
   return node must, in addition to the edge fold, query both endpoints of each
@@ -135,15 +135,15 @@ digest-agnostic first (match `cfg_collect_ip`), reattach digest as the existing
 
 ## 4. Risks
 
-- **Combine encoding correctness** (S1/S3) — the side combine fold must match
+* **Combine encoding correctness** (S1/S3) — the side combine fold must match
   `collect_combine_pp` of `cfg_collect_ip`; get the local/global split right for
   combine results, not just edges. Highest-risk step.
-- **`Constraint_System` RHS format** is currently "expected by the TD_plain
+* **`Constraint_System` RHS format** is currently "expected by the TD_plain
   locale." Deleting plain (S5) means re-checking nothing else (Sign domain,
   examples) depends on `make_rhs_tree` shapes.
-- **Digest / M4** — keep out of S1–S3; reattach as overlay in S4 to avoid baking
+* **Digest / M4** — keep out of S1–S3; reattach as overlay in S4 to avoid baking
   context-sensitivity into the new encoding.
-- Effort: comparable to the original M3 Side slice **per** IP construct — this is a
+* Effort: comparable to the original M3 Side slice **per** IP construct — this is a
   research-grade migration, not a refactor. Budget multiple sessions; keep each
   slice additive so `main` stays green until S5.
 

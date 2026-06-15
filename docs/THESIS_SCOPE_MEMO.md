@@ -67,6 +67,7 @@ with the difficulty notes in `docs/ROADMAP.md`. Reopen Scope B only if the
 supervisors want the relational-domain contribution and accept the calendar risk.
 
 Concrete asks for sign-off:
+
 1. Scope A or B?
 2. `γ`-only soundness + strict-precision (recommended), or formalize `α` for an
    optimality claim?

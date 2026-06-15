@@ -128,10 +128,13 @@ assumption — it has no `sound_domain` context. `side_analyse_ip_eq_env_at`
 ```
 [OF sign_sound_tf.sound_transfer_axioms sign_tf_mono side_solve_dom gs]
 ```
+
 becomes
+
 ```
 [OF sign_sound_tf.sound_transfer_axioms side_solve_dom gs]
 ```
+
 (`tf_mono` is now bundled inside `sound_transfer_axioms`.)
 
 ### Step 5 — docs

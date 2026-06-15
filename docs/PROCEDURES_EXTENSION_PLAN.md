@@ -290,7 +290,7 @@ union of:
   { combine s t | s ∈ C c, t ∈ C ex }   for each (c, ex, v) ∈ combines
 ```
 
-with `edge_collect EA_Enter X = enter ` X` (image of `enter`). Monotone ⇒ `lfp`
+with `edge_collect EA_Enter X = enter` X` (image of `enter`). Monotone ⇒`lfp`
 exists. Note `C r` pairs **any** `s ∈ C c` with **any** `t ∈ C ex` — including
 mismatched caller/return pairs. That deliberate over-approximation *is*
 monovariance (see Example 3).
@@ -369,27 +369,29 @@ the binary mirror of the existing unary edge case.
 **L-adeq (operational adequacy, SE4).** Induction on the height of `π ⊢ ⟨c,s⟩ ⇓ t`.
 The only non-routine case is `PCall` on `Call p` at call node with caller state `s`:
 ▸ by the prefix reasoning (IH up to the call) `s ∈ C(call_node c)`;
-▸ `enter s ∈ enter ` (C c) = edge_collect EA_Enter (C c) ⊆ C(en_p)` by `F`'s enter
+▸ `enter s ∈ enter` (C c) = edge_collect EA_Enter (C c) ⊆ C(en_p)` by `F`'s enter
   clause — the merge absorbs this caller, however many others contribute;
-▸ the callee sub-derivation `π ⊢ ⟨body, enter s⟩ ⇓ t` has smaller height; apply the
+▸ the callee sub-derivation`π ⊢ ⟨body, enter s⟩ ⇓ t` has smaller height; apply the
   *intraprocedural* adequacy of the body's sub-CFG seeded at `C(en_p)` (the present
   repo's `cfg_collect_paths` argument, reused verbatim on the sub-CFG) to get
   `t ∈ C(ex_p)`;
-▸ then `combine s t ∈ {combine s' t' | s'∈C c, t'∈C ex_p} ⊆ C(r)` by `F`'s combine
-  clause, using `s ∈ C c` and `t ∈ C ex_p`.
-So the post-call state lands in `C(r)`. ∎
+▸ then`combine s t ∈ {combine s' t' | s'∈C c, t'∈C ex_p} ⊆ C(r)` by `F`'s combine
+  clause, using`s ∈ C c` and `t ∈ C ex_p`.
+So the post-call state lands in`C(r)`. ∎
 **Crux:** soundness survives the monovariant merge precisely because the *matched*
-pair `(s,t)` from one activation is a *member* of the all-pairs set the analysis
+pair`(s,t)` from one activation is a *member* of the all-pairs set the analysis
 keeps — over-approximation never drops the real pair. Recursion is unproblematic:
 the induction is on derivation height, not on call depth.
 
 ### 9.6 Worked examples
 
 **Example 1 — non-recursive, global effect, locals preserved.**
+
 ```
 global g;   proc inc() { g := g + 1; }
 main() { local x;  x := 5;  inc();  inc(); }
 ```
+
 Sign analysis. At the two call nodes `c1,c2`: `x = +`, and `g` whatever sign holds.
 `en_inc = enter_abs(env c1) ⊔ enter_abs(env c2)` keeps the global `g`, sets local
 `x` to ⊤. Body: `g := g+1`. At each return, `combine_abs` takes `g` from `ex_inc`
@@ -398,10 +400,12 @@ into the callee). Demonstrates `combine = caller-locals ⊕ callee-globals` and 
 the call is *not* a `SKIP`: `g` genuinely changes.
 
 **Example 2 — recursion (inlining is impossible).**
+
 ```
 global n, r;   proc fac() { if (n > 0) { r := r*n; n := n-1; fac(); } }
 main() { n := 4; r := 1; fac(); }
 ```
+
 Interval analysis with widening. The call graph has a self-loop `fac → fac`, so the
 whole-program CFG has a cycle `en_fac → (body) → c_rec → en_fac` and a combine
 `(c_rec, ex_fac, r_rec)`. There is **no** finite inlining. The TD fixpoint iterates:
@@ -413,10 +417,12 @@ exactly the "Fixpunkt über alle Summaries" claim. The verified `TD_plain` compu
 this; the only assumption is the existing `solve_dom` (termination/descent), unchanged.
 
 **Example 3 — monovariant precision loss (soundness ≠ precision).**
+
 ```
 global g;   proc id() { }                       (* no-op on g *)
 main() { local b; if (b) { g := 1; id(); A: } else { g := -1; id(); B: } }
 ```
+
 Sign analysis. Call nodes carry `g=+` (then-branch) and `g=-` (else-branch). Both
 enter edges feed the *one* shared `en_id`, so `en_id` sees `g = + ⊔ - = ⊤`, and
 `ex_id` carries `g=⊤`. At `A:` and `B:`, `combine_abs` takes `g` from the shared
@@ -458,7 +464,7 @@ pipeline hypothesis `∀v. v ∈ reach(entry)` is **structurally false** for any
 multi-pp program — not a missing lemma.
 
 **Why exit-rooting (the tempting "Fix A") is wrong.** Rooting the solve at `cfg_exit`
-gives `reach = ` backward cone of exit = nodes that *forward-reach* exit. For a
+gives `reach =` backward cone of exit = nodes that *forward-reach* exit. For a
 **diverging** program the loop body never reaches exit, so it falls outside the cone
 — exit-rooting reproduces the vacuity for exactly the divergence examples
 (`nonterm_prog`, `incr_loop_prog`) the small-step migration was built to handle.
@@ -472,6 +478,7 @@ consumed in **localized** form (post-fixpoint on `reach(v)` ⟹ soundness at `v`
 never as a global `∀v` post-fixpoint.
 
 **Procedures interaction.**
+
 - The new `dep` edges are: a return node `r` queries `{call c, callee-exit ex_p}`;
   `en_p` queries **all** its call sites. Backward cones become interprocedural and,
   under recursion, cyclic. Under per-pp solve this needs no new argument:

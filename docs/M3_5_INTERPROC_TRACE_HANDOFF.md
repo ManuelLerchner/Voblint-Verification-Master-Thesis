@@ -151,16 +151,19 @@ M4 / a later milestone, not M3.5.) Template: Schwarz §3 Theorem 1 lock-compatib
 ## 5. Slices (each exits sorry-free, full `isabelle build`)
 
 ### Slice 1 — trace type + intraprocedural re-close
+
 - Enrich `trace` to `(edge_action * store) list` in `CFG_Collect_Trace.thy`.
 - Re-close `edges_trace`, `cfg_collect_trace`, `alpha_last`, and **`lift`** over the new type.
 - **Exit:** intraprocedural `lift` green on the enriched type; no regression in `Trace_Soundness` / `Example_Trace_*`.
 
 ### Slice 2 — `cfg_collect_trace_ip`
+
 - Define the trace-valued interprocedural collecting (junction-based `enter`/`combine`,
   `combine_states` for restore), mirroring `cfg_collect_ip`'s lfp.
 - **Exit:** definition + basic lemmas (monotone RHS, `finite` side-conditions, path/junction append).
 
 ### Slice 3 — interprocedural projection lemma (the milestone)
+
 - Prove `alpha_last (cfg_collect_trace_ip g S v) ⊆ cfg_collect_ip g S v` (refinement; see §1).
 - Strategy: induct on the lfp / path skeleton; intra/`enter` pps give equality (reuse the
   M0 `lift` argument), the **combine/return pp** gives the ⊆ step — every matched
@@ -173,6 +176,7 @@ M4 / a later milestone, not M3.5.) Template: Schwarz §3 Theorem 1 lock-compatib
 - **Exit:** ⊆ lemma green, sorry-free.
 
 ### Slice 4 — witness
+
 - Reuse the M1 example (`Example_Proc_Global`, `inc()`/`Gx`): show its reaching traces
   project (`alpha_last`) to the IP collecting at the return site. This example has a
   **single calling context**, so here the ⊆ is an **equality** — a sanity check that the

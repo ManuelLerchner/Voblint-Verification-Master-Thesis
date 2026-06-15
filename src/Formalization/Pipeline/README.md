@@ -20,6 +20,7 @@ global-read soundness and digest-read soundness as corollaries.
 proved transfer soundness.
 
 **Proof structure:** Composes two steps:
+
 1. `alpha_last_cfg_collect_trace_ip_le` — `alpha_last (…trace_ip…) ⊆ cfg_collect_ip`.
 2. `unified_post_fixpoint_sound_ip` — `cfg_collect_ip … ⊆ γ(env v)`.
 Then applies `subset_trans`.
