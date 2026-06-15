@@ -197,7 +197,7 @@ next
         c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
     and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and res: "en = en1" "ex = ex2"
-             "E = E1 \<union> {(ex1, EA_Nop, en2)} \<union> E2" "C = C1 \<union> C2"
+             "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2" "C = C1 \<union> C2"
     using Seq.prems by (auto split: prod.splits)
   have r1: "ip_reaches (mk_ip_cfg en ex E C) en1 ex1"
   proof (rule ip_reaches_mk_mono)
@@ -212,9 +212,9 @@ next
     show "ip_reaches (mk_ip_cfg en2 ex2 E2 C2) en2 ex2" using Seq.IH(2)[OF c2] .
   qed
   have re: "ip_reaches (mk_ip_cfg en ex E C) ex1 en2"
-    using res by (auto intro: ip_reaches_edge)
+    using res by (auto intro: ip_reaches_edge ip_reaches_refl)
   show ?case
-    using r1 re r2 res by (auto intro: ip_reaches_trans)
+    using r1 re r2 res ip_reaches_trans by blast 
 next
   case (If b c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where

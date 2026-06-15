@@ -142,7 +142,6 @@ lemma main_cfg_full:
       (4, EA_Assign ''Gx'' (N 4), 5),
       (5, EA_Nop, 6),
       (6, EA_Enter, 0),
-      (7, EA_Nop, 7),
       (7, EA_Enter, 2)}
      {(6, 1, 7), (7, 3, 8)}"
   by (simp add: compile_eval_simps proc_pi_def inc_body_def sqr_body_def main_prog_def;
@@ -157,7 +156,6 @@ lemma main_cfg_edges:
       (4, EA_Assign ''Gx'' (N 4), 5),
       (5, EA_Nop, 6),
       (6, EA_Enter, 0),
-      (7, EA_Nop, 7),
       (7, EA_Enter, 2)}"
   by (simp add: main_cfg_full)
 lemma main_cfg_combines: "combines main_cfg = {(6, 1, 7), (7, 3, 8)}"

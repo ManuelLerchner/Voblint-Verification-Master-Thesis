@@ -29,7 +29,9 @@ where
   | "compile pi lay (Seq c1 c2) n =
        (let (n1, en1, ex1, E1, C1) = compile pi lay c1 n;
             (n2, en2, ex2, E2, C2) = compile pi lay c2 n1
-        in  (n2, en1, ex2, E1 Un {(ex1, EA_Nop, en2)} Un E2, C1 Un C2))"
+        in  (n2, en1, ex2, 
+             E1 Un (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) Un E2,
+             C1 Un C2))"
 
   | "compile pi lay (If b c1 c2) n =
        (let en  = n;
@@ -219,7 +221,7 @@ next
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
     c1: "compile pi lay c1 n = (n1, en1, ex1, E1, C1)"
     and c2: "compile pi lay c2 n1 = (n2, en2, ex2, E2, C2)"
-    and E: "E = E1 Un {(ex1, EA_Nop, en2)} Un E2"
+    and E: "E = E1 Un (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) Un E2"
     and C: "C = C1 Un C2"
     by (auto split: prod.splits)
   show ?case unfolding E C using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] by simp
