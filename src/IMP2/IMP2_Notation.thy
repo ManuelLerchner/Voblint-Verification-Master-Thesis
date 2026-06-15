@@ -3,13 +3,23 @@ theory IMP2_Notation
 begin
 
 text \<open>
-  Tier-3 IMP2 quotation bracket: @{text "IMP { \<dots> }"} produces an
+  IMP2 quotation bracket: @{text "IMP { \<dots> }"} produces an
   @{type IMP2_Proc.com} without HOL string quotes or qualified constructor names.
 
-  Inside the bracket, bare identifiers become @{const V} literals (HOL string literals via @{type vname});
-  numerals become @{const N}; @{text "_ + _ / _ - _ / _ * _"} map to
-  @{const Plus}/@{const Minus}/@{const Times}; @{text "_ < _ / _ == _"} to
-  @{const Less}/@{const Eq}; @{text "true/false"} to @{const Bc}.
+  Design is inspired by:
+  https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html
+  and 
+  https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5
+
+  Inside the bracket:
+  - bare identifiers become @{const V} literals (HOL string literals via @{type vname})
+  - numerals become @{const N}
+  - arithmetic:
+      +, -, * map to @{const Plus}, @{const Minus}, @{const Times}
+  - boolean comparisons:
+      <, == map to @{const Less}, @{const Eq}
+  - constants:
+      true/false map to @{const Bc}
 
   Example:
   @{verbatim [display]
