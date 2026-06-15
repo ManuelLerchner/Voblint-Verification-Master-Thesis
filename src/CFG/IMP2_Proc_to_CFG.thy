@@ -152,9 +152,9 @@ where
 
 text \<open>
   Reusable simp bundle for evaluating @{const compile_prog} on a concrete program.
-  After unfolding with these rules, @{tactic blast} closes the resulting set
+  After unfolding with these rules, blast closes the resulting set
   equality (Suc-form on both sides after @{thm [source] eval_nat_numeral}).
-  For programs without procedure calls, @{tactic auto} alone suffices.
+  For programs without procedure calls, auto alone suffices.
 \<close>
 lemmas compile_eval_simps =
   compile_prog_def compile_prog_with_regions_def
