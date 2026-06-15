@@ -1,6 +1,10 @@
 theory IMP2_VCG_Example
-  imports IMP2_Bridge "IMP2.IMP2_VCG"
+  imports IMP2_Bridge IMP2_Notation "IMP2.IMP2_VCG"
 begin
+
+(* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
+no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
+hide_const (open) Syntax.N Syntax.V Syntax.Bc
 
 (*
   Worked example tying three layers together on AFP IMP2's standard semantics:
@@ -18,13 +22,10 @@ begin
 *)
 
 definition count_prog :: "IMP2_Proc.com" where
-  "count_prog =
-     IMP2_Proc.com.Seq
-       (IMP2_Proc.com.Assign ''i'' (BaseN (AExp.N 0)))
-       (IMP2_Proc.com.While
-          (Less (BaseN (AExp.V ''i'')) (BaseN (AExp.V ''n'')))
-          (IMP2_Proc.com.Assign ''i''
-             (Plus (BaseN (AExp.V ''i'')) (BaseN (AExp.N 1)))))"
+  "count_prog = IMP {
+     i := 0;
+     while i < n { i := i + 1 }
+   }"
 
 (* The translation is an ordinary IMP2 command (array writes at index 0). *)
 lemma count_prog_translated:

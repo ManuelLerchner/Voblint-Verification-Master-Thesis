@@ -8,5 +8,6 @@ session Voblint_IMP2 in "." = "HOL-IMP" +
     IMP2_Globals
     IMP2_Expr
     IMP2_Proc
+    IMP2_Notation
     IMP2_Bridge
     IMP2_VCG_Example

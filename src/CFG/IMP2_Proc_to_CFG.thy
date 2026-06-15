@@ -150,6 +150,17 @@ definition compile_prog_regions ::
 where
   "compile_prog_regions pi ps main = snd (compile_prog_with_regions pi ps main)"
 
+text \<open>
+  Reusable simp bundle for evaluating @{const compile_prog} on a concrete program.
+  After unfolding with these rules, @{tactic blast} closes the resulting set
+  equality (Suc-form on both sides after @{thm [source] eval_nat_numeral}).
+  For programs without procedure calls, @{tactic auto} alone suffices.
+\<close>
+lemmas compile_eval_simps =
+  compile_prog_def compile_prog_with_regions_def
+  compile_procs_list.simps compile.simps Let_def
+  eval_nat_numeral
+
 subsection \<open>Freshness / finiteness\<close>
 
 lemma compile_counter_mono:

@@ -792,4 +792,20 @@ lemma ivl_tf_mono:
      (auto simp: ivl_tf_def assign_ivl_mono assume_ivl_mono assume_not_ivl_mono
                  enter_ivl_mono)
 
+text \<open>
+  Reusable simp bundle for post-fixpoint proofs over the interval domain.
+  Covers the core evaluation rules shared by all interval examples.
+  Examples with multiplication also need @{thm [source] ivl_times_def},
+  @{thm [source] ivl_times_core.simps}, @{thm [source] ivl_nonempty.simps};
+  examples with assume edges also need @{thm [source] assume_ivl.simps},
+  @{thm [source] assume_not_ivl.simps}, @{thm [source] meet_ivl.simps};
+  examples with procedure calls also need @{thm [source] enter_ivl_def},
+  @{thm [source] combine_abs_def}, @{thm [source] is_global_def}.
+\<close>
+lemmas ivl_eval_simps =
+  ivl_tf_def assign_ivl_def
+  aval_ivl.simps aval_ivl_hol.simps
+  ivl_plus.simps eint_plus.simps
+  less_eq_ivl_def le_fun_def
+
 end

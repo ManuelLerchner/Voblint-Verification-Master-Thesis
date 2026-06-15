@@ -461,6 +461,17 @@ lemma abs_join_set_le_superset:
   unfolding abs_join_set_def
   by (simp add: finY fold_bot_le_superset sub)
 
+lemma abs_join_set_le:
+  fixes X :: "'a::bounded_semilattice_sup_bot abs_state"
+  assumes fin: "finite S" and le: "\<And>s. s \<in> S \<Longrightarrow> s \<le> X"
+  shows "abs_join_set (\<squnion>) bot S \<le> X"
+proof -
+  have "abs_join_set (\<squnion>) bot S = Sup_fin (insert bot S)"
+    unfolding abs_join_set_def using fin by (simp add: Sup_fin.eq_fold)
+  also have "\<dots> \<le> X" using fin le by (intro Sup_fin.boundedI) auto
+  finally show ?thesis .
+qed
+
 lemma rhs_le_rhs_ip:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state" and v :: pp

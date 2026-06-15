@@ -3,8 +3,12 @@ section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 theory Example_Interval_Loop_Coverage
   imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
+    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
 begin
+
+(* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
+no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
+hide_const (open) Syntax.N Syntax.V
 
 text \<open>
   A full program carried end to end through the interval analyzer:
@@ -22,47 +26,40 @@ text \<open>
 \<close>
 
 definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog =
-     IMP2_Proc.com.Seq
-       (IMP2_Proc.com.Assign ''x'' (BaseN (AExp.N 0)))
-       (IMP2_Proc.com.While (IMP2_Syntax.bexp.Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20)))
-          (IMP2_Proc.com.Assign ''x''
-             (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1)))))"
+  "loop_prog = IMP {
+     x := 0;
+     while x < 20 { x := x + 1 }
+   }"
 
 subsection \<open>The compiled CFG\<close>
 
 abbreviation "loop_cfg \<equiv> compile_prog Map.empty [] loop_prog"
 
-lemma loop_cfg_entry: "cfg_entry loop_cfg = 0"
-  by (simp add: compile_prog_def compile_prog_with_regions_def loop_prog_def Let_def)
+lemma loop_cfg_full:
+  "loop_cfg = mk_ip_cfg 0 5
+     {(0, EA_Assign ''x'' (N 0), 1),
+      (1, EA_Nop, 2),
+      (2, EA_Assume (Less (V ''x'') (N 20)), 3),
+      (2, EA_AssumeNot (Less (V ''x'') (N 20)), 5),
+      (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
+      (4, EA_Nop, 2)}
+     {}"
+  by (simp add: compile_eval_simps loop_prog_def; blast)
 
-lemma loop_cfg_combines: "combines loop_cfg = {}"
-  by (simp add: compile_prog_def compile_prog_with_regions_def loop_prog_def Let_def)
-
+lemma loop_cfg_entry:   "cfg_entry loop_cfg = 0" by (simp add: loop_cfg_full)
+lemma loop_cfg_exit:    "cfg_exit  loop_cfg = 5" by (simp add: loop_cfg_full)
+lemma loop_cfg_combines: "combines loop_cfg = {}" by (simp add: loop_cfg_full)
 lemma loop_cfg_edges:
   "edges loop_cfg =
-     {(0, EA_Assign ''x'' (BaseN (AExp.N 0)), 1),
+     {(0, EA_Assign ''x'' (N 0), 1),
       (1, EA_Nop, 2),
-      (2, EA_Assume (IMP2_Syntax.bexp.Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 3),
-      (2, EA_AssumeNot (IMP2_Syntax.bexp.Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 5),
-      (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), 4),
+      (2, EA_Assume (Less (V ''x'') (N 20)), 3),
+      (2, EA_AssumeNot (Less (V ''x'') (N 20)), 5),
+      (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
       (4, EA_Nop, 2)}"
-  by (auto simp: compile_prog_def compile_prog_with_regions_def loop_prog_def Let_def
-             eval_nat_numeral)
+  by (simp add: loop_cfg_full)
 
 subsection \<open>An exhibited interval post-fixpoint\<close>
-
-text \<open>The abstract join is below @{term X} iff every member is.\<close>
-lemma abs_join_set_le:
-  fixes X :: "'a::bounded_semilattice_sup_bot abs_state"
-  assumes fin: "finite S" and le: "\<And>s. s \<in> S \<Longrightarrow> s \<le> X"
-  shows "abs_join_set (\<squnion>) bot S \<le> X"
-proof -
-  have "abs_join_set (\<squnion>) bot S = Sup_fin (insert bot S)"
-    unfolding abs_join_set_def using fin by (simp add: Sup_fin.eq_fold)
-  also have "\<dots> \<le> X" using fin le by (intro Sup_fin.boundedI) auto
-  finally show ?thesis .
-qed
 
 definition loop_s0 :: "ivl abs_state" where
   "loop_s0 = (\<lambda>_. Ivl MinInf PlusInf)"
@@ -93,17 +90,15 @@ proof (rule allI)
     apply (rule abs_join_set_le)
     apply (rule finite_subset[where B=
             "insert loop_s0 ((\<lambda>(u,a). apply_tf ivl_tf a (loop_env u)) `
-               {(0, EA_Assign ''x'' (BaseN (AExp.N 0))),
+               {(0, EA_Assign ''x'' (N 0)),
                 (1, EA_Nop),
-                (2, EA_Assume (IMP2_Syntax.bexp.Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20)))),
-                (2, EA_AssumeNot (IMP2_Syntax.bexp.Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20)))),
-                (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1)))),
+                (2, EA_Assume (Less (V ''x'') (N 20))),
+                (2, EA_AssumeNot (Less (V ''x'') (N 20))),
+                (3, EA_Assign ''x'' (Plus (V ''x'') (N 1))),
                 (4, EA_Nop)})"])
     by (auto split: if_splits
-               simp: loop_env_def loop_s0_def ivl_tf_def assign_ivl_def
-                     aval_ivl.simps aval_ivl_hol.simps ivl_plus.simps eint_plus.simps
-                     assume_ivl.simps assume_not_ivl.simps meet_ivl.simps
-                     less_eq_ivl_def le_fun_def)
+             simp: loop_env_def loop_s0_def ivl_eval_simps
+                   assume_ivl.simps assume_not_ivl.simps meet_ivl.simps)
 qed
 
 subsection \<open>Soundness: @{text "0 \<le> x \<le> 20"} at the loop head\<close>

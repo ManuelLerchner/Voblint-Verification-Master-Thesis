@@ -1,8 +1,12 @@
 theory Example_IMP2_Coverage
   imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Sign_Domain" "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
+    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
 begin
+
+(* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
+no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
+hide_const (open) Syntax.N Syntax.V Syntax.Bc
 
 (*
   Coverage witness: the analyzer yields a sound safety invariant on a
@@ -22,12 +26,10 @@ begin
 *)
 
 definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog =
-     IMP2_Proc.com.Seq
-       (IMP2_Proc.com.Assign ''x'' (BaseN (AExp.N 1)))
-       (IMP2_Proc.com.While (BaseB (BExp.Bc True))
-          (IMP2_Proc.com.Assign ''x''
-             (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1)))))"
+  "loop_prog = IMP {
+     x := 1;
+     while true { x := x + 1 }
+   }"
 
 (* -- No terminating run --------------------------------------------------- *)
 
@@ -67,34 +69,30 @@ qed
 
 abbreviation "loop_cfg \<equiv> compile_prog Map.empty [] loop_prog"
 
-lemma loop_cfg_entry: "cfg_entry loop_cfg = 0"
-  by (simp add: compile_prog_def compile_prog_with_regions_def loop_prog_def Let_def)
+lemma loop_cfg_full:
+  "loop_cfg = mk_ip_cfg 0 5
+     {(0, EA_Assign ''x'' (N 1), 1),
+      (1, EA_Nop, 2),
+      (2, EA_Assume (Bc True), 3),
+      (2, EA_AssumeNot (Bc True), 5),
+      (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
+      (4, EA_Nop, 2)}
+     {}"
+  by (simp add: compile_eval_simps loop_prog_def; blast)
 
-lemma loop_cfg_combines: "combines loop_cfg = {}"
-  by (simp add: compile_prog_def compile_prog_with_regions_def loop_prog_def Let_def)
-
+lemma loop_cfg_entry:   "cfg_entry loop_cfg = 0" by (simp add: loop_cfg_full)
+lemma loop_cfg_exit:    "cfg_exit  loop_cfg = 5" by (simp add: loop_cfg_full)
+lemma loop_cfg_combines: "combines loop_cfg = {}" by (simp add: loop_cfg_full)
 lemma loop_cfg_edges:
   "edges loop_cfg =
-     {(0, EA_Assign ''x'' (BaseN (AExp.N 1)), 1),
+     {(0, EA_Assign ''x'' (N 1), 1),
       (1, EA_Nop, 2),
-      (2, EA_Assume (BaseB (BExp.Bc True)), 3),
-      (2, EA_AssumeNot (BaseB (BExp.Bc True)), 5),
-      (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), 4),
+      (2, EA_Assume (Bc True), 3),
+      (2, EA_AssumeNot (Bc True), 5),
+      (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
       (4, EA_Nop, 2)}"
-  by (auto simp: compile_prog_def compile_prog_with_regions_def loop_prog_def Let_def
-             eval_nat_numeral)
+  by (simp add: loop_cfg_full)
 
-(* LUB characterization: the abstract join is below X iff every member is. *)
-lemma abs_join_set_le:
-  fixes X :: "'a::bounded_semilattice_sup_bot abs_state"
-  assumes fin: "finite S" and le: "\<And>s. s \<in> S \<Longrightarrow> s \<le> X"
-  shows "abs_join_set (\<squnion>) bot S \<le> X"
-proof -
-  have "abs_join_set (\<squnion>) bot S = Sup_fin (insert bot S)"
-    unfolding abs_join_set_def using fin by (simp add: Sup_fin.eq_fold)
-  also have "\<dots> \<le> X" using fin le by (intro Sup_fin.boundedI) auto
-  finally show ?thesis .
-qed
 
 (* The exhibited sign solution: x is positive everywhere inside the loop;
    the entry keeps x at STop (it must, since rhs(entry) = s0). *)
@@ -115,11 +113,11 @@ proof (rule allI)
     apply (rule abs_join_set_le)
     apply (rule finite_subset[where B=
             "insert loop_s0 ((\<lambda>(u,a). apply_tf sign_tf a (loop_env u)) `
-               {(0, EA_Assign ''x'' (BaseN (AExp.N 1))),
+               {(0, EA_Assign ''x'' (N 1)),
                 (1, EA_Nop),
-                (2, EA_Assume (BaseB (BExp.Bc True))),
-                (2, EA_AssumeNot (BaseB (BExp.Bc True))),
-                (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1)))),
+                (2, EA_Assume (Bc True)),
+                (2, EA_AssumeNot (Bc True)),
+                (3, EA_Assign ''x'' (Plus (V ''x'') (N 1))),
                 (4, EA_Nop)})"])
     by (auto split: if_splits
                simp: loop_env_def loop_s0_def sign_tf_def assign_sign_def

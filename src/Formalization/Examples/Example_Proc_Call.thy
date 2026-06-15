@@ -1,0 +1,287 @@
+section \<open>Example: Procedure Calls --- Increment and Square\<close>
+
+theory Example_Proc_Call
+  imports
+    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_IMP2.IMP2_Bridge"
+    "Voblint_CFG.CFG_Prune"
+    "Voblint_CFG.CFG_GraphViz"
+    "Voblint_CFG.CFG_Collect_Unified"
+    "Voblint_Analysis.Interval_Domain"
+    "Voblint_Analysis.Constraint_System_Sound"
+    Trace_IP_Analysis_Sound
+begin
+
+no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
+hide_const (open) Syntax.N Syntax.V Syntax.Assign Semantics.aval Semantics.bval
+
+text \<open>
+  Two parameterless procedures communicate through the global variable
+  @{term \<open>''Gx''\<close>}.  Variable names starting with \<open>G\<close> are global:
+  they survive call-frame restore while locals are reset to zero.
+
+  \<^item> \<open>inc\<close>: adds 1 to \<open>Gx\<close>.
+  \<^item> \<open>sqr\<close>: replaces \<open>Gx\<close> with its square.
+
+  Main program: \<open>Gx := 4; call inc; call sqr\<close>
+  terminates with \<open>Gx = 25\<close> since \<open>(4 + 1)^2 = 25\<close>.
+\<close>
+
+definition inc_body :: "IMP2_Proc.com" where
+  "inc_body = IMP { Gx := Gx + 1 }"
+
+definition sqr_body :: "IMP2_Proc.com" where
+  "sqr_body = IMP { Gx := Gx * Gx }"
+
+definition proc_pi :: proc_table where
+  "proc_pi = (\<lambda>_. None)(''inc'' := Some inc_body, ''sqr'' := Some sqr_body)"
+
+definition main_prog :: "IMP2_Proc.com" where
+  "main_prog = IMP {
+     Gx := 4;
+     call inc;
+     call sqr
+   }"
+
+subsection \<open>Concrete run\<close>
+
+text \<open>
+  Each call leaves the global incremented or squared; the caller's locals
+  are restored by @{const combine_states}.
+\<close>
+
+lemma call_inc_result:
+  "pruns_to proc_pi (Call ''inc'') s (s(''Gx'' := s ''Gx'' + 1))"
+proof -
+  have run: "pruns_to proc_pi (Call ''inc'') s
+                (<s|(enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
+  proof (rule pruns_to_Call[where c = inc_body])
+    show "proc_pi ''inc'' = Some inc_body"
+      by (simp add: proc_pi_def)
+    show "pruns_to proc_pi inc_body (enter_state s)
+             ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
+    proof -
+      have "pruns_to proc_pi (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))
+               (enter_state s)
+               ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
+        by (rule pruns_to_assign)
+      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state s) = s ''Gx'' + 1"
+        by (simp add: enter_state_def is_global_def)
+      ultimately show ?thesis by (simp add: inc_body_def)
+    qed
+  qed
+  moreover have "<s|(enter_state s)(''Gx'' := s ''Gx'' + 1)> = s(''Gx'' := s ''Gx'' + 1)"
+    by (rule ext) (simp add: enter_state_def is_global_def)
+  ultimately show ?thesis by simp
+qed
+
+lemma call_sqr_result:
+  "pruns_to proc_pi (Call ''sqr'') s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+proof -
+  have run: "pruns_to proc_pi (Call ''sqr'') s
+                (<s|(enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')>)"
+  proof (rule pruns_to_Call[where c = sqr_body])
+    show "proc_pi ''sqr'' = Some sqr_body"
+      by (simp add: proc_pi_def)
+    show "pruns_to proc_pi sqr_body (enter_state s)
+             ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
+    proof -
+      have "pruns_to proc_pi (Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')))
+               (enter_state s)
+               ((enter_state s)(''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s)))"
+        by (rule pruns_to_assign)
+      moreover have "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s) = s ''Gx'' * s ''Gx''"
+        by (simp add: enter_state_def is_global_def)
+      ultimately show ?thesis by (simp add: sqr_body_def)
+    qed
+  qed
+  moreover have "<s|(enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')> = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+    by (rule ext) (simp add: enter_state_def is_global_def)
+  ultimately show ?thesis by simp
+qed
+
+text \<open>
+  @{const main_prog} terminates in @{term \<open>s(''Gx'' := 25)\<close>} for every
+  initial store, regardless of @{term \<open>''Gx''\<close>}'s starting value.
+\<close>
+theorem main_prog_result:
+  "pruns_to proc_pi main_prog s (s(''Gx'' := 25))"
+proof -
+  have step1: "pruns_to proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
+    using pruns_to_assign[where pi = proc_pi and x = "''Gx''" and a = "N 4" and s = s,
+                          simplified]
+    by assumption
+  have step2: "pruns_to proc_pi (Call ''inc'') (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+    using call_inc_result[where s = "s(''Gx'' := 4)", simplified]
+    by assumption
+  have step3: "pruns_to proc_pi (Call ''sqr'') (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+    using call_sqr_result[where s = "s(''Gx'' := 5)", simplified]
+    by assumption
+  show ?thesis
+    unfolding main_prog_def
+    by (rule pruns_to_Seq[OF pruns_to_Seq[OF step1 step2] step3])
+qed
+
+subsection \<open>Interprocedural CFG\<close>
+
+text \<open>
+  Compile @{const main_prog} together with its two procedure bodies.
+  @{const compile_prog} first lays out @{const inc_body} at nodes 0--1
+  and @{const sqr_body} at nodes 2--3, then compiles the main body
+  starting at node 4.  Two call sites produce combine triples
+  @{text "(6, 1, 7)"} (return from @{text inc}) and
+  @{text "(7, 3, 8)"} (return from @{text sqr}).
+\<close>
+
+abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_prog"
+
+lemma main_cfg_full:
+  "main_cfg = mk_ip_cfg 4 8
+     {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
+      (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), 3),
+      (4, EA_Assign ''Gx'' (N 4), 5),
+      (5, EA_Nop, 6),
+      (6, EA_Enter, 0),
+      (7, EA_Nop, 7),
+      (7, EA_Enter, 2)}
+     {(6, 1, 7), (7, 3, 8)}"
+  by (simp add: compile_eval_simps proc_pi_def inc_body_def sqr_body_def main_prog_def;
+      blast)
+
+lemma main_cfg_entry:   "cfg_entry main_cfg = 4"                    by (simp add: main_cfg_full)
+lemma main_cfg_exit:    "cfg_exit  main_cfg = 8"                    by (simp add: main_cfg_full)
+lemma main_cfg_edges:
+  "edges main_cfg =
+     {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
+      (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), 3),
+      (4, EA_Assign ''Gx'' (N 4), 5),
+      (5, EA_Nop, 6),
+      (6, EA_Enter, 0),
+      (7, EA_Nop, 7),
+      (7, EA_Enter, 2)}"
+  by (simp add: main_cfg_full)
+lemma main_cfg_combines: "combines main_cfg = {(6, 1, 7), (7, 3, 8)}"
+  by (simp add: main_cfg_full)
+ 
+
+
+subsection \<open>Abstract interval post-fixpoint\<close>
+
+text \<open>
+  The initial abstract state maps every variable to the full interval.
+\<close>
+definition main_prog_s0 :: "ivl abs_state" where
+  "main_prog_s0 = (\<lambda>_. Ivl MinInf PlusInf)"
+
+text \<open>
+  Abstract environment: each program point is assigned an interval state.
+  The assignment propagates @{text "Gx = [4,4]"} after @{text "Gx := 4"},
+  @{text "Gx = [5,5]"} after @{text "inc"} executes, and
+  @{text "Gx = [25,25]"} after @{text "sqr"} executes.
+  All local variables remain unconstrained throughout.
+
+  Node groupings:
+  @{text "0"} -- inc body entry (after EA_Enter from node 6);
+  @{text "5"} -- after @{text "Gx := 4"};
+  @{text "6"} -- call site to inc (after EA_Nop from node 5).
+  @{text "1"} -- inc body exit;
+  @{text "2"} -- sqr body entry;
+  @{text "7"} -- return from inc / call site to sqr.
+  @{text "3"} -- sqr body exit;
+  @{text "8"} -- program exit (combine from sqr return).
+\<close>
+
+definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
+  "main_prog_env v x =
+     (if (v = 0 \<or> v = 5 \<or> v = 6) \<and> x = ''Gx'' then Ivl (Fin 4) (Fin 4)
+      else if (v = 1 \<or> v = 2 \<or> v = 7) \<and> x = ''Gx'' then Ivl (Fin 5) (Fin 5)
+      else if (v = 3 \<or> v = 8) \<and> x = ''Gx'' then Ivl (Fin 25) (Fin 25)
+      else Ivl MinInf PlusInf)"
+
+lemma main_prog_postfix:
+  "is_post_fixpoint_ip main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env"
+  unfolding is_post_fixpoint_ip_def
+proof (rule allI)
+  fix v
+  show "rhs_ip main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env v
+          \<le> main_prog_env v"
+    apply (simp only: rhs_ip_def Let_def main_cfg_entry main_cfg_edges main_cfg_combines)
+    apply (rule abs_join_set_le)
+     apply (rule finite_subset[where B =
+             "insert main_prog_s0
+               ((\<lambda>(u, a). apply_tf ivl_tf a (main_prog_env u)) `
+                  {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1))),
+                   (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx''))),
+                   (4, EA_Assign ''Gx'' (N 4)),
+                   (5, EA_Nop), (6, EA_Enter), (7, EA_Nop), (7, EA_Enter)})
+             \<union>
+             ((\<lambda>(c, e). combine_abs (main_prog_env c) (main_prog_env e)) `
+                  {(6, 1), (7, 3)})"])
+    by (auto split: if_splits
+              simp: main_prog_env_def main_prog_s0_def ivl_eval_simps
+                    ivl_times_def ivl_times_core.simps ivl_nonempty.simps
+                    enter_ivl_def combine_abs_def is_global_def)
+qed
+
+
+subsection \<open>Interval analysis soundness\<close>
+
+text \<open>
+  For any interprocedural trace that reaches the program exit and whose
+  initial store is in the concretisation of @{const main_prog_s0},
+  the value of @{term \<open>''Gx''\<close>} at the end of the trace lies in
+  @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
+
+  The proof applies the generic interprocedural post-fixpoint soundness
+  theorem (@{thm [source] Trace_IP_Analysis_Sound.sound_transfer.reaching_global_read_sound})
+  to the exhibited post-fixpoint @{thm [source] main_prog_postfix [no_vars]}.
+\<close>
+
+theorem main_prog_interval_analysis:
+  assumes S_sound: "S \<le> ivl_domain.gamma_state main_prog_s0"
+  assumes tr: "tr \<in> cfg_collect_trace_ip main_cfg S (cfg_exit main_cfg)"
+  shows "(last tr) ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
+proof -
+  have fin_e: "finite (edges main_cfg)" by (simp add: main_cfg_edges)
+  have fin_c: "finite (combines main_cfg)" by (simp add: main_cfg_combines)
+  have s0_conv: "S \<le> sound_domain.gamma_state gamma_ivl main_prog_s0"
+    using S_sound unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by auto
+  have "(last tr) ''Gx'' \<in> gamma_ivl (main_prog_env (cfg_exit main_cfg) ''Gx'')"
+    by (rule Trace_IP_Analysis_Sound.sound_transfer.reaching_global_read_sound
+          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix s0_conv tr])
+  then show ?thesis by (simp add: main_prog_env_def main_cfg_exit)
+qed
+
+
+subsection \<open>DOT output\<close>
+
+definition cfg_main :: cfg where
+  "cfg_main = compile_prog proc_pi [''inc'', ''sqr''] main_prog"
+
+definition regions_main :: "graphviz_region list" where
+  "regions_main = compile_prog_regions proc_pi [''inc'', ''sqr''] main_prog"
+
+definition proc_entries_main :: "pp list" where
+  "proc_entries_main = enter_targets [(6, EA_Enter, 0), (7, EA_Enter, 2)]"
+
+definition proc_exits_main :: "pp list" where
+  "proc_exits_main = combine_exits [(6, 1, 7), (7, 3, 8)]"
+
+(* -- DOT output -------------------------------------------------- *)
+
+ML \<open>
+  fun b x = if x then 1 else 0
+  fun gchar (@{code Char} (b0,b1,b2,b3,b4,b5,b6,b7)) =
+    Char.chr (    b b0 +   2 * b b1 +   4 * b b2 +   8 * b b3
+              + 16 * b b4 +  32 * b b5 +  64 * b b6 + 128 * b b7)
+  fun writeln_dot title g regs proc_entries proc_exits =
+    (writeln ("--- DOT " ^ title ^ " ---");
+     writeln (String.implode
+       (map gchar (@{code to_graphviz_regions} g regs proc_entries proc_exits))))
+
+  val _ = writeln_dot "inc/sqr" @{code cfg_main} @{code regions_main}
+                        @{code proc_entries_main} @{code proc_exits_main}
+\<close>
+
+end
+

@@ -1,7 +1,7 @@
 section \<open>Example: interprocedural CFG (compile_prog) as Graphviz\<close>
 
 theory Example_Proc_GraphViz
-  imports "Voblint_CFG.CFG_GraphViz" "Voblint_CFG.IMP2_Proc_to_CFG"
+  imports "Voblint_IMP2.IMP2_Notation" "Voblint_CFG.CFG_GraphViz" "Voblint_CFG.IMP2_Proc_to_CFG"
 begin
 
 text \<open>
@@ -31,13 +31,13 @@ text \<open>
 (* -- Example A: single call -------------------------------------- *)
 
 definition proc_p_body :: com where
-  "proc_p_body = Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
+  "proc_p_body = IMP { Gx := Gx + 1 }"
 
 definition proc_table_a :: proc_table where
   "proc_table_a = ((\<lambda>_. None)(''p'' := Some proc_p_body))"
 
 definition prog_call_p :: com where
-  "prog_call_p = Call ''p''"
+  "prog_call_p = IMP { call p }"
 
 definition cfg_call_p :: cfg where
   "cfg_call_p = compile_prog proc_table_a [''p''] prog_call_p"
@@ -54,14 +54,13 @@ definition proc_exits_call_p :: "pp list" where
 (* -- Example B: two procedures + branch -------------------------- *)
 
 definition proc_q_body :: com where
-  "proc_q_body = Assign ''Gy'' (Plus (V ''Gy'') (N 1))"
+  "proc_q_body = IMP { Gy := Gy + 1 }"
 
 definition proc_table_b :: proc_table where
   "proc_table_b = (proc_table_a(''q'' := Some proc_q_body))"
 
 definition prog_if_calls :: com where
-  "prog_if_calls =
-     If (Less (V ''Gx'') (V ''Gy'')) (Call ''p'') (Call ''q'')"
+  "prog_if_calls = IMP { if Gx < Gy { call p } else { call q } }"
 
 definition cfg_if_calls :: cfg where
   "cfg_if_calls = compile_prog proc_table_b [''p'', ''q''] prog_if_calls"
