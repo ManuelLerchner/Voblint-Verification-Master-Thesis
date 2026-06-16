@@ -74,6 +74,8 @@ Docs:
 * `docs/PROOF_PHASES.md` — steps, exit criteria, sorry inventory
 * `docs/PROOF_OVERVIEW.md` — big picture
 * `docs/ROADMAP.md` — live backlog (mirrors GitHub Project 8)
+* `docs/NON_GOALS.md` — what the project deliberately does NOT do (each tied to a decision doc)
+* `docs/GLOSSARY.md` — project terms with `file:line` references
 * `docs/NEXT_STEPS.md`, `docs/OPEN_PROBLEMS.md` — short-horizon + open items
 * `docs/HOL_IMP_COMPARISON.md`, `docs/IMP_SYNTAX_NIPKOW_EXTENSION.md`, `docs/cfg-representation.md` — design references
 * `docs/ISABELLE_AGENT_NOTES.md` — MCP / Isabelle traps
@@ -110,13 +112,13 @@ Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textua
 
 ## Hard rules (agents)
 
-| Do | Don't |
-| --- | --- |
+| Do                                                                           | Don't                                                        |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `open_file` → `get_diagnostics` / `get_command_info` on the theory you touch | `isabelle build` after every edit or to “see if it compiles” |
-| `explore` / `get_context_info` before non-trivial proof changes | Host `Read`/`Edit`/`Write` on tracked `.thy` files |
-| `write_file` → `save_file` → `normalize_isabelle_ascii.py` → `open_file` | Assume I/Q buffer == on-disk file without `save_file` |
-| One failing command at a time via I/Q diagnostics | Full rebuild to locate a failure I/Q already names by line |
-| Batch build once: user request, CI, or **all** touched theories green in I/Q | Batch build as substitute for `get_diagnostics` / `explore` |
+| `explore` / `get_context_info` before non-trivial proof changes              | Host `Read`/`Edit`/`Write` on tracked `.thy` files           |
+| `write_file` → `save_file` → `normalize_isabelle_ascii.py` → `open_file`     | Assume I/Q buffer == on-disk file without `save_file`        |
+| One failing command at a time via I/Q diagnostics                            | Full rebuild to locate a failure I/Q already names by line   |
+| Batch build once: user request, CI, or **all** touched theories green in I/Q | Batch build as substitute for `get_diagnostics` / `explore`  |
 
 **If I/Q is up:** debugging a proof or syntax error = I/Q only, until `get_diagnostics` (scope=file, severity=error) is empty on every file you changed.
 
