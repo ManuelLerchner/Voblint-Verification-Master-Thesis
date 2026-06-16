@@ -9,6 +9,8 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
   theories
     Abstract_Domain
     Sign_Domain
+    Exec_St
+    Exec_Sign_Run
     Interval_Domain
     Constraint_System
     Constraint_System_Sound
@@ -17,8 +19,11 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_CFG
     TD_Side_IP_Tree
     TD_Side_IP_Mono
+    Exec_Bridge
     TD_Side_IP_Bounds
     TD_Side_IP_Interface
     TD_Side_IP_Soundness
     Sign_Side_IP_Soundness
     Interval_Side_IP_Soundness
+    Sign_Exec
+    Sign_Exec_Sound

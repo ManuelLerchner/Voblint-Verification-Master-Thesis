@@ -21,6 +21,7 @@ theory Voblint
     "Voblint_CFG.CFG_Collect_Trace_IP"
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_CFG.CFG_Prune"
+    "Voblint_CFG.Exec_CFG"
     "Voblint_Analysis.Abstract_Domain"
     "Voblint_Analysis.Constraint_System"
     "Voblint_Analysis.Constraint_System_Sound"
@@ -32,8 +33,14 @@ theory Voblint
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Interval_Side_IP_Soundness"
     "Voblint_Analysis.Analysis_Sound"
+    "Voblint_Analysis.Exec_St"
+    "Voblint_Analysis.Exec_Bridge"
+    "Voblint_Analysis.Sign_Exec"
+    "Voblint_Analysis.Sign_Exec_Sound"
     Trace_IP_Analysis_Sound
     Example_IMP2_Coverage
+    Example_Side_Execute
+    Example_Side_Execute_Proc
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
     Example_Proc_Call
