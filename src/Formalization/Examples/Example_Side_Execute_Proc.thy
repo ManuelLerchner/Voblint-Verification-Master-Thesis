@@ -39,11 +39,13 @@ lemma pq_computes_x_pos:
   "sign_exec pq_pt [''p'', ''q''] pq_main ''x'' = SPos"
   by eval
 
+lemma pq_terminates: "sign_exec_terminates pq_pt [''p'', ''q''] pq_main"
+  by (rule sign_exec_terminates_via_solve_c) eval
+
 corollary pq_certified_sound:
-  assumes "sign_exec_terminates pq_pt [''p'', ''q''] pq_main"
-  shows "cfg_collect_ip (compile_prog pq_pt [''p'', ''q''] pq_main) UNIV pq_exit
-         \<le> sign_domain.gamma_state (sign_exec pq_pt [''p'', ''q''] pq_main)"
-  using assms by (rule sign_exec_sound_collecting)
+  "cfg_collect_ip (compile_prog pq_pt [''p'', ''q''] pq_main) UNIV pq_exit
+   \<le> sign_domain.gamma_state (sign_exec pq_pt [''p'', ''q''] pq_main)"
+  by (rule sign_exec_sound_collecting[OF pq_terminates])
 
 subsection \<open>Soundness against the underlying trace semantics\<close>
 
@@ -65,10 +67,9 @@ text \<open>
 \<close>
 
 corollary pq_certified_sound_trace:
-  assumes "sign_exec_terminates pq_pt [''p'', ''q''] pq_main"
-      and "tr \<in> cfg_collect_trace_ip (compile_prog pq_pt [''p'', ''q''] pq_main) UNIV pq_exit"
+  assumes "tr \<in> cfg_collect_trace_ip (compile_prog pq_pt [''p'', ''q''] pq_main) UNIV pq_exit"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec pq_pt [''p'', ''q''] pq_main)"
-  using assms by (rule sign_exec_sound_trace)
+  using assms by (rule sign_exec_sound_trace[OF pq_terminates])
 
 end
 

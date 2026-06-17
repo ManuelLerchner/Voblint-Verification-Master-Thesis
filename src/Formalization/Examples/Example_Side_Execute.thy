@@ -36,17 +36,25 @@ lemma x1_computes_x_pos:
   by eval
 
 text \<open>
-  Certified sound: assuming the solver terminates, the computed result
-  over-approximates the interprocedural collecting semantics at the exit from
-  any input store -- so after \<open>x := 1\<close>, \<open>x\<close> is positive.  This is just an
-  instance of the program-parametric @{thm sign_exec_sound_collecting}.
+  Termination is not assumed but proved: the executable side solver returns a
+  result on this program (@{method eval}), so by
+  @{thm sign_exec_terminates_via_solve_c} the program lies in the solver's domain.
+\<close>
+
+lemma x1_terminates: "sign_exec_terminates x1_pt [] x1_main"
+  by (rule sign_exec_terminates_via_solve_c) eval
+
+text \<open>
+  Certified sound, unconditionally: the computed result over-approximates the
+  interprocedural collecting semantics at the exit from any input store -- so
+  after \<open>x := 1\<close>, \<open>x\<close> is positive.  An instance of the program-parametric
+  @{thm sign_exec_sound_collecting}, with termination discharged by execution.
 \<close>
 
 corollary x1_certified_sound:
-  assumes "sign_exec_terminates x1_pt [] x1_main"
-  shows "cfg_collect_ip (compile_prog x1_pt [] x1_main) UNIV x1_exit
-         \<le> sign_domain.gamma_state (sign_exec x1_pt [] x1_main)"
-  using assms by (rule sign_exec_sound_collecting)
+  "cfg_collect_ip (compile_prog x1_pt [] x1_main) UNIV x1_exit
+   \<le> sign_domain.gamma_state (sign_exec x1_pt [] x1_main)"
+  by (rule sign_exec_sound_collecting[OF x1_terminates])
 
 end
 

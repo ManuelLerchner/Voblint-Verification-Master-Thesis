@@ -42,6 +42,25 @@ definition sign_exec_terminates ::
         (sign_exec_eqs \<Pi> ps main) (cfg_exit (compile_prog \<Pi> ps main))"
 
 text \<open>
+  Discharging termination by execution.  When the vendored side solver's
+  executable @{const TD_side_always_join_Interp_solve_c} returns a result on a
+  concrete program, that program lies in the solver's domain, so
+  @{const sign_exec_terminates} holds.  The bridge is the solver's
+  @{thm TD_side_always_join_Interp.term_equivalence}
+  (\<open>solve_dom x \<longleftrightarrow> solve_c_dom x\<close>): the option-valued @{const TD_side_always_join_Interp_solve_c}
+  code-generates, so examples discharge the premise by @{method eval}, turning
+  the soundness assumption into a proved fact.
+\<close>
+
+lemma sign_exec_terminates_via_solve_c:
+  assumes "TD_side_always_join_Interp_solve_c (sign_exec_eqs \<Pi> ps main)
+             (cfg_exit (compile_prog \<Pi> ps main)) \<noteq> None"
+  shows "sign_exec_terminates \<Pi> ps main"
+  unfolding sign_exec_terminates_def TD_side_always_join_Interp.term_equivalence
+            TD_side_always_join_Interp.solve_c_dom_def
+  using assms by (simp add: not_None_eq)
+
+text \<open>
   Soundness at the state level: from any input, every store reaching the exit
   under the interprocedural collecting semantics is over-approximated by the
   computed result.  The seed is top (\<open>top_sign_st\<close>), whose concretization is the
