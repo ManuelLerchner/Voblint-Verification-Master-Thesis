@@ -21,7 +21,8 @@ hide_const (open) Syntax.N Syntax.V Syntax.Bc
     * The sign analyzer still proves x > 0 at the loop head over every reaching
       trace (loop_head_x_pos), via a post-fixpoint and trace_ip_analysis_sound.
 
-  Only the sign domain lives in this repo (interval/ln was extracted), so the
+  Only the sign domain is used in this witness (interval coverage lives in
+  @{theory Voblint_Formalization.Example_Interval_Loop_Coverage}), so the
   property is x > 0 (SPos), not x >= 0.
 *)
 

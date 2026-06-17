@@ -30,6 +30,10 @@ lemma x1_computes_x_pos:
   "sign_exec_prog x1_prog ''x'' = SPos"
   by eval
 
+lemma x1_y_top:
+  "sign_exec_prog x1_prog ''y'' = STop"
+  by eval
+
 text \<open>
   Termination is not assumed but proved: the executable side solver returns a
   result on this program (@{method eval}), so by

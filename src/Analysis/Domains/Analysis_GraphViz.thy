@@ -16,8 +16,8 @@ text \<open>
   @{theory Voblint_CFG.CFG_GraphViz}.
 
   The @{class show_val} instance for the domain type is resolved
-  automatically; call sites supply only the variable list and the raw
-  solver result.
+  automatically.  Region-scoped locals come from @{text "sol (Inl pp)"};
+  globals from @{text "sol (Inr ())"} in @{text "cluster_globals"}.
 
   The @{text "_lit"} variants return @{type String.literal}, which the
   code generator maps to native ML @{text "string"}, so example files
@@ -190,9 +190,8 @@ subsection \<open>Whole-program convenience wrappers\<close>
 
 text \<open>
   The @{text "annotated_dot_of_prog"} family bundles
-  @{const compile_prog}, @{const compile_prog_regions},
-  @{const collect_vars_cfg}, and @{const graphviz_of_analysis_auto}
-  into a single call.  The @{text "_lit"} suffix means
+  @{const compile_prog}, @{const compile_prog_regions}, region-scoped
+  node labels, and @{const graphviz_of_analysis_prog} into a single call.
   @{const String.implode} is applied so the code generator returns a
   native ML @{text "string"} -- no @{text "char list"} decoder needed.
 \<close>
