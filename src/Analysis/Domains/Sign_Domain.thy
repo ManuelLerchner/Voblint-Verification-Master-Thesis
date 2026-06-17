@@ -6,37 +6,48 @@ section \<open>Sign domain: instantiation of abstract_domain\<close>
 
 text \<open>
   sign abstracts integers by their sign:
-    Bot  -- empty (unreachable / undefined)
-    Neg  -- strictly negative  {n | n < 0}
-    Zero -- exactly zero       {0}
-    Pos  -- strictly positive  {n | n > 0}
-    Top  -- all integers       UNIV
+    Bot    -- empty (unreachable / undefined)
+    Neg    -- strictly negative   {n | n < 0}
+    NonPos -- non-positive        {n | n \<le> 0}
+    Zero   -- exactly zero        {0}
+    NonNeg -- non-negative        {n | n \<ge> 0}
+    Pos    -- strictly positive   {n | n > 0}
+    Top    -- all integers        UNIV
 
-  Finite lattice; first concrete domain in the pipeline (no widening).
+  Seven-element lattice (Bot \<sqsubseteq> Neg,Zero,Pos \<sqsubseteq> NonPos,NonNeg \<sqsubseteq> Top).
+  Finite; no widening needed.
 \<close>
 
 subsection \<open>Sign datatype\<close>
 
-datatype sign = SBot | SNeg | SZero | SPos | STop
+datatype sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop
 
 subsection \<open>Concretization\<close>
 
 fun gamma_sign :: "sign => int set" where
-    "gamma_sign SBot  = {}"
-  | "gamma_sign SNeg  = {n. n < 0}"
-  | "gamma_sign SZero = {0}"
-  | "gamma_sign SPos  = {n. n > 0}"
-  | "gamma_sign STop  = UNIV"
+    "gamma_sign SBot    = {}"
+  | "gamma_sign SNeg    = {n. n < 0}"
+  | "gamma_sign SNonPos = {n. n \<le> 0}"
+  | "gamma_sign SZero   = {0}"
+  | "gamma_sign SNonNeg = {n. n \<ge> 0}"
+  | "gamma_sign SPos    = {n. n > 0}"
+  | "gamma_sign STop    = UNIV"
 
 subsection \<open>Partial order\<close>
 
 fun sign_le :: "sign => sign => bool" where
-    "sign_le SBot  _     = True"
-  | "sign_le _     STop  = True"
-  | "sign_le SNeg  SNeg  = True"
-  | "sign_le SZero SZero = True"
-  | "sign_le SPos  SPos  = True"
-  | "sign_le _     _     = False"
+    "sign_le SBot    _       = True"
+  | "sign_le _       STop    = True"
+  | "sign_le SNeg    SNeg    = True"
+  | "sign_le SNeg    SNonPos = True"
+  | "sign_le SNonPos SNonPos = True"
+  | "sign_le SZero   SZero   = True"
+  | "sign_le SZero   SNonPos = True"
+  | "sign_le SZero   SNonNeg = True"
+  | "sign_le SNonNeg SNonNeg = True"
+  | "sign_le SPos    SPos    = True"
+  | "sign_le SPos    SNonNeg = True"
+  | "sign_le _       _       = False"
 
 lemma sign_le_refl:    "sign_le s s"                              by (cases s) simp_all
 
@@ -81,14 +92,28 @@ end
 subsection \<open>Join (least upper bound)\<close>
 
 fun join_sign :: "sign => sign => sign" where
-    "join_sign SBot b     = b"
-  | "join_sign a    SBot  = a"
-  | "join_sign STop _     = STop"
-  | "join_sign _    STop  = STop"
-  | "join_sign SNeg SNeg  = SNeg"
-  | "join_sign SZero SZero = SZero"
-  | "join_sign SPos SPos  = SPos"
-  | "join_sign _    _     = STop"
+    "join_sign SBot    b       = b"
+  | "join_sign a       SBot    = a"
+  | "join_sign STop    _       = STop"
+  | "join_sign _       STop    = STop"
+  | "join_sign SNeg    SNeg    = SNeg"
+  | "join_sign SNeg    SZero   = SNonPos"
+  | "join_sign SNeg    SNonPos = SNonPos"
+  | "join_sign SZero   SNeg    = SNonPos"
+  | "join_sign SZero   SZero   = SZero"
+  | "join_sign SZero   SPos    = SNonNeg"
+  | "join_sign SZero   SNonPos = SNonPos"
+  | "join_sign SZero   SNonNeg = SNonNeg"
+  | "join_sign SNonPos SNeg    = SNonPos"
+  | "join_sign SNonPos SZero   = SNonPos"
+  | "join_sign SNonPos SNonPos = SNonPos"
+  | "join_sign SNonNeg SZero   = SNonNeg"
+  | "join_sign SNonNeg SPos    = SNonNeg"
+  | "join_sign SNonNeg SNonNeg = SNonNeg"
+  | "join_sign SPos    SZero   = SNonNeg"
+  | "join_sign SPos    SNonNeg = SNonNeg"
+  | "join_sign SPos    SPos    = SPos"
+  | "join_sign _       _       = STop"
 
 lemma join_sign_ub1: "sign_le a (join_sign a b)"
   by (cases a; cases b; simp add: join_sign.simps)
@@ -111,33 +136,64 @@ subsection \<open>Abstract arithmetic operations\<close>
 text \<open>Define helpers first so aval_sign can call them.\<close>
 
 fun sign_plus :: "sign => sign => sign" where
-    "sign_plus SBot _     = SBot"
-  | "sign_plus _    SBot  = SBot"
-  | "sign_plus SNeg SNeg  = SNeg"
-  | "sign_plus SPos SPos  = SPos"
-  | "sign_plus SZero b    = b"
-  | "sign_plus a    SZero = a"
-  | "sign_plus _    _     = STop"
+    "sign_plus SBot    _       = SBot"
+  | "sign_plus _       SBot    = SBot"
+  | "sign_plus SNeg    SNeg    = SNeg"
+  | "sign_plus SNeg    SNonPos = SNeg"
+  | "sign_plus SNonPos SNeg    = SNeg"
+  | "sign_plus SNonPos SNonPos = SNonPos"
+  | "sign_plus SPos    SPos    = SPos"
+  | "sign_plus SPos    SNonNeg = SPos"
+  | "sign_plus SNonNeg SPos    = SPos"
+  | "sign_plus SNonNeg SNonNeg = SNonNeg"
+  | "sign_plus SZero   b       = b"
+  | "sign_plus a       SZero   = a"
+  | "sign_plus _       _       = STop"
 
 fun sign_minus :: "sign => sign => sign" where
-    "sign_minus SBot _     = SBot"
-  | "sign_minus _    SBot  = SBot"
-  | "sign_minus SNeg SPos  = SNeg"
-  | "sign_minus SPos SNeg  = SPos"
-  | "sign_minus SZero SZero = SZero"
-  | "sign_minus _    _     = STop"
+    "sign_minus SBot    _       = SBot"
+  | "sign_minus _       SBot    = SBot"
+  | "sign_minus SNeg    SPos    = SNeg"
+  | "sign_minus SNeg    SNonNeg = SNeg"
+  | "sign_minus SPos    SNeg    = SPos"
+  | "sign_minus SPos    SNonPos = SPos"
+  | "sign_minus SNeg    SZero   = SNeg"
+  | "sign_minus SPos    SZero   = SPos"
+  | "sign_minus SZero   SZero   = SZero"
+  | "sign_minus SZero   SNeg    = SPos"
+  | "sign_minus SZero   SPos    = SNeg"
+  | "sign_minus SZero   SNonNeg = SNonPos"
+  | "sign_minus SZero   SNonPos = SNonNeg"
+  | "sign_minus SNonNeg SZero   = SNonNeg"
+  | "sign_minus SNonNeg SNeg    = SPos"
+  | "sign_minus SNonNeg SNonPos = SNonNeg"
+  | "sign_minus SNonPos SZero   = SNonPos"
+  | "sign_minus SNonPos SPos    = SNeg"
+  | "sign_minus SNonPos SNonNeg = SNonPos"
+  | "sign_minus _       _       = STop"
 
 fun sign_times :: "sign => sign => sign" where
-    "sign_times SBot _     = SBot"
-  | "sign_times _    SBot  = SBot"
-  | "sign_times SZero _    = SZero"
-  | "sign_times _    SZero = SZero"
-  | "sign_times SNeg SNeg  = SPos"
-  | "sign_times SPos SPos  = SPos"
-  | "sign_times SNeg SPos  = SNeg"
-  | "sign_times SPos SNeg  = SNeg"
-  | "sign_times STop _     = STop"
-  | "sign_times _    STop  = STop"
+    "sign_times SBot    _       = SBot"
+  | "sign_times _       SBot    = SBot"
+  | "sign_times SZero   _       = SZero"
+  | "sign_times _       SZero   = SZero"
+  | "sign_times SNeg    SNeg    = SPos"
+  | "sign_times SPos    SPos    = SPos"
+  | "sign_times SNeg    SPos    = SNeg"
+  | "sign_times SPos    SNeg    = SNeg"
+  | "sign_times SNeg    SNonPos = SNonNeg"
+  | "sign_times SNonPos SNeg    = SNonNeg"
+  | "sign_times SNeg    SNonNeg = SNonPos"
+  | "sign_times SNonNeg SNeg    = SNonPos"
+  | "sign_times SPos    SNonNeg = SNonNeg"
+  | "sign_times SNonNeg SPos    = SNonNeg"
+  | "sign_times SPos    SNonPos = SNonPos"
+  | "sign_times SNonPos SPos    = SNonPos"
+  | "sign_times SNonNeg SNonNeg = SNonNeg"
+  | "sign_times SNonNeg SNonPos = SNonPos"
+  | "sign_times SNonPos SNonNeg = SNonPos"
+  | "sign_times SNonPos SNonPos = SNonNeg"
+  | "sign_times _       _       = STop"
 
 fun sign_of_int :: "int => sign" where
   "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
@@ -169,7 +225,8 @@ lemma sign_minus_sound:
 lemma sign_times_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
   shows "i * j \<in> gamma_sign (sign_times a b)"
-  using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg)
+  using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg
+                                                zero_le_mult_iff mult_le_0_iff)
 
 lemma aval_sign_hol_sound:
   "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))

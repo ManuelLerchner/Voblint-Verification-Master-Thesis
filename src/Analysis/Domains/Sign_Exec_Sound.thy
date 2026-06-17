@@ -23,7 +23,7 @@ text \<open>
 
 definition sign_exec_eqs ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp, unit, sign st) eqsT" where
-  "sign_exec_eqs \<Pi> ps main = side_cfg_T_ip_st_prog \<Pi> ps main sign_tf_st bot top_sign_st"
+  "sign_exec_eqs \<Pi> ps main = side_cfg_T_ip_st_prog \<Pi> ps main sign_tf_st bot cinit_sign_st"
 
 definition sign_exec_raw ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> sign st)" where
@@ -62,15 +62,17 @@ lemma sign_exec_terminates_via_solve_c:
   using assms by (simp add: not_None_eq)
 
 text \<open>
-  Soundness at the state level: from any input, every store reaching the exit
-  under the interprocedural collecting semantics is over-approximated by the
-  computed result.  The seed is top (\<open>top_sign_st\<close>), whose concretization is the
-  whole store space, so the statement is non-vacuous.
+  Soundness at the state level: starting from any C-faithful initial store
+  (globals zero, locals arbitrary), every store reaching the exit under the
+  interprocedural collecting semantics is over-approximated by the computed
+  result.  Switching the seed from \<open>top_sign_st\<close> to \<open>cinit_sign_st\<close> (globals
+  at \<open>SZero\<close>) lets the richer lattice give tighter global bounds, e.g.\
+  \<open>Gresult = SNonNeg\<close> instead of \<open>STop\<close>.
 \<close>
 
 theorem sign_exec_sound_collecting:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
-  shows "cfg_collect_ip (compile_prog \<Pi> ps main) UNIV (cfg_exit (compile_prog \<Pi> ps main))
+  shows "cfg_collect_ip (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
          \<le> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
 proof -
   define g where "g = compile_prog \<Pi> ps main"
@@ -84,24 +86,26 @@ proof -
   have pp0: "part_post_solution (sign_exec_eqs \<Pi> ps main) (cfg_exit g) (snd sol) (fst sol)"
     using TD_side_always_join_Interp.partial_post_solution[OF dom]
     by (metis sol_def prod.collapse)
-  have pp_st: "part_post_solution (side_cfg_T_ip_st g sign_tf_st bot top_sign_st)
+  have pp_st: "part_post_solution (side_cfg_T_ip_st g sign_tf_st bot cinit_sign_st)
                  (cfg_exit g) (snd sol) (fst sol)"
     using side_cfg_T_ip_st_prog_part_post'[OF pp0[unfolded sign_exec_eqs_def]]
     by (simp add: g_def)
-  have pp_abs: "part_post_solution (side_cfg_T_ip g sign_tf (\<squnion>) bot (\<lambda>_. STop))
+  have pp_abs: "part_post_solution (side_cfg_T_ip g sign_tf (\<squnion>) bot (\<lambda>x. if is_global x then SZero else STop))
                   (cfg_exit g) \<sigma> (fst sol)"
     using part_post_solution_st_to_abs[OF sign_tf_st_commute pp_st]
-    by (simp add: \<sigma>_def fun_of_st_bot fun_of_st_top_sign_st bot_fun_def)
+    by (simp add: \<sigma>_def fun_of_st_bot fun_of_st_cinit_sign_st bot_fun_def)
   have reach: "ip_reaches g (cfg_entry g) (cfg_exit g)"
     by (simp add: g_def compile_prog_entry_ip_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
     by (rule side_ip_cone_in_vars[OF pp_abs fin finC reach])
-  have entry_le: "(\<lambda>_. STop) \<le> side_env \<sigma> (cfg_entry g)"
+  have entry_le: "(\<lambda>x. if is_global x then SZero else STop) \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_ip[OF pp_abs entry_in])
-  have entry_cov: "UNIV \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_entry g))"
-    using sign_domain.gamma_state_mono[OF entry_le]
-    by (simp add: sign_domain.gamma_state_def)
-  have "cfg_collect_ip g UNIV (cfg_exit g)
+  have seed_cov: "cinit_stores \<subseteq> sign_domain.gamma_state (\<lambda>x. if is_global x then SZero else STop)"
+    unfolding cinit_stores_def sign_domain.gamma_state_def
+    by (auto simp: gamma_sign.simps)
+  have entry_cov: "cinit_stores \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_entry g))"
+    using seed_cov sign_domain.gamma_state_mono[OF entry_le] by (rule subset_trans)
+  have "cfg_collect_ip g cinit_stores (cfg_exit g)
         \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_exit g))"
     using sound_transfer.side_collect_sound_ip_exit_pruned
             [OF sign_sound_tf.sound_transfer_axioms pp_abs fin finC entry_cov] .
@@ -111,21 +115,20 @@ qed
 
 text \<open>
   Soundness against the underlying interprocedural trace semantics: for any
-  reaching trace, the value of every variable at the end of the trace is
-  over-approximated.  This is the projection (\<open>alpha_last\<close>) of the trace
-  collecting semantics composed with the state-level bound.
+  C-faithful reaching trace, the value of every variable at the end of the
+  trace is over-approximated.
 \<close>
 
 theorem sign_exec_sound_trace:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
-  assumes tr: "tr \<in> cfg_collect_trace_ip (compile_prog \<Pi> ps main) UNIV
+  assumes tr: "tr \<in> cfg_collect_trace_ip (compile_prog \<Pi> ps main) cinit_stores
                        (cfg_exit (compile_prog \<Pi> ps main))"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
 proof -
-  from tr have "last tr \<in> alpha_last (cfg_collect_trace_ip (compile_prog \<Pi> ps main) UNIV
+  from tr have "last tr \<in> alpha_last (cfg_collect_trace_ip (compile_prog \<Pi> ps main) cinit_stores
                                         (cfg_exit (compile_prog \<Pi> ps main)))"
     by (auto simp: alpha_last_def)
-  moreover have "alpha_last (cfg_collect_trace_ip (compile_prog \<Pi> ps main) UNIV
+  moreover have "alpha_last (cfg_collect_trace_ip (compile_prog \<Pi> ps main) cinit_stores
                               (cfg_exit (compile_prog \<Pi> ps main)))
                  \<le> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
     using alpha_last_cfg_collect_trace_ip_le sign_exec_sound_collecting[OF solves]
@@ -161,14 +164,14 @@ lemma sign_terminates_prog_via_solve_c:
 
 corollary sign_exec_prog_sound_collecting:
   assumes "sign_terminates_prog p"
-  shows "cfg_collect_ip (prog_cfg p) UNIV (cfg_exit (prog_cfg p))
+  shows "cfg_collect_ip (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))
            \<le> sign_domain.gamma_state (sign_exec_prog p)"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_collecting)
 
 corollary sign_exec_prog_sound_trace:
   assumes "sign_terminates_prog p"
-      and "tr \<in> cfg_collect_trace_ip (prog_cfg p) UNIV (cfg_exit (prog_cfg p))"
+      and "tr \<in> cfg_collect_trace_ip (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog p)"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_trace)

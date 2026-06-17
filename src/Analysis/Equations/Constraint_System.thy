@@ -518,6 +518,22 @@ text \<open>
   Interprocedural variant: Constraint_System_IP_Sound.thy.
 \<close>
 
+subsection \<open>C-faithful initial store set\<close>
+
+text \<open>
+  In C, global variables are zero-initialised before \<open>main\<close> starts
+  (ISO C 6.7.9p10); local variables are uninitialized and may hold any
+  integer value.  \<open>cinit_stores\<close> is the corresponding set of concrete stores:
+  those where every global is 0 and locals are unconstrained.
+
+  Any analysis that uses a domain-specific abstract seed \<open>s0\<close> satisfying
+  \<open>cinit_stores \<subseteq> gamma_state s0\<close> may state its soundness theorem against
+  \<open>cinit_stores\<close> rather than \<open>UNIV\<close>, matching C program semantics.
+\<close>
+
+definition cinit_stores :: "store set" where
+  "cinit_stores = {s. \<forall>x. is_global x \<longrightarrow> s x = 0}"
+
 text \<open>
   Sound transfer function: a domain_transfer tf that soundly over-approximates
   the concrete edge actions w.r.t. a sound_domain's concretization.  Bundles the

@@ -140,19 +140,24 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | Equations | `Constraint_System`, `Constraint_System_IP_Sound` | `rhs_ip`, `is_post_fixpoint_ip`, `post_fixpoint_sound_at` |
 | Solver | `TD_Side_IP_{Tree,Mono,Bounds}`, `TD_Side_IP_Interface`, `TD_Side_IP_Soundness` | `side_cfg_T_ip`, `side_analyse_ip`, `side_analyse_ip_collect_sound_exit_pruned` |
 | Pipeline | `Trace_IP_Analysis_Sound` | `trace_ip_analysis_sound`, `reaching_global_read_sound`, `digest_read_sound` |
-| Domain | `Sign_Side_IP_Soundness` | `side_ip_sign_analysis_sound` |
+| Domain | `Sign_Domain`, `Sign_Exec`, `Sign_Side_IP_Soundness`, `Sign_Exec_Sound` | `sign_domain`/`sign_sound_tf` interpretations, `cinit_sign_st`, `sign_exec_sound_collecting` |
 | Examples | `Example_Side_Proc_Global` | `proc_global_side_sign_analysis` |
 
 ---
 
 ## Adding a domain
 
-Same CFG, `rhs_ip`, and `side_analyse_ip` once the domain fits the interfaces:
+Same CFG, `rhs_ip`, and `side_analyse_ip` once the domain fits the four-layer interface
+(see `src/Analysis/Domains/README.md` for the detailed chain):
 
-1. Define `'a` with `{ord, bot}` and `gamma`, `join`.
-2. Prove `interpretation … abstract_domain` or use `sound_domain`.
-3. Prove `domain_transfer_sound` for your transfer functions.
-4. Instantiate `sound_transfer` and use `trace_ip_analysis_sound` / `reaching_global_read_sound`.
+1. **Type class layer.** Instantiate `'a :: bounded_semilattice_sup_bot` — gives `⊥`, `⊔`, `≤` and lifts them pointwise to `'a abs_state` for free via HOL's `fun` instances.
+2. **Locale layer.** `interpretation … : abstract_domain gamma widen` and `interpretation … : sound_transfer gamma tf`. All derived lemmas (monotonicity, entry coverage, `side_collect_sound_ip_exit_pruned`) become available prefixed by the interpretation name.
+3. **Executable bridge.** Define an `'a st` mirror `tf_st` and prove `fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)`. Define a domain-specific C seed `cinit_X_st` where globals default to the abstract zero and locals default to `⊤`.
+4. **End-to-end.** Define `X_exec_eqs` using `side_cfg_T_ip_st_prog … cinit_X_st`. The soundness proof follows the pattern in `Sign_Exec_Sound.thy` — wrap solver output → lift via commutation → cover entry from `cinit_stores` → apply locale engine.
+
+**`cinit_stores`** (`Constraint_System.thy`): the shared C-faithful initial store set
+`{s. ∀x. is_global x → s x = 0}`. Every domain's soundness theorem is stated against
+this set (not `UNIV`) when a domain-specific seed satisfying `cinit_stores ⊆ γ(seed)` exists.
 
 **Limits:** finite predecessor joins, monotone transfer functions, side solver termination.
 

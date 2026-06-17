@@ -50,20 +50,19 @@ definition branch_prog :: imp_prog where
    \<rbrakk>"
 
 text \<open>
-  The computed abstract state at the exit (these @{command value} calls evaluate
-  at build time).  The concrete \<open>x\<close> is positive on both branches (\<open>1+1\<close> and
-  \<open>1+2\<close>), but that does not survive to the exit: \<open>x\<close> is local, and \<open>Gresult\<close>
-  (hence \<open>Gout\<close>) is a flow-insensitive global unknown joined against the \<open>STop\<close>
-  entry seed, so every global reads back \<open>STop\<close>.  The bound is sound; the sign
-  domain is simply too coarse on globals to certify \<open>Gresult \<noteq> 0\<close> -- the check
-  a client would need to justify the original \<open>100 / Gresult\<close>.
+  The computed abstract state at the exit.  With C-faithful seeding
+  (\<open>cinit_sign_st\<close>: globals start at \<open>SZero\<close>, locals at \<open>STop\<close>), the
+  7-element lattice can give tighter global bounds: \<open>SZero \<squnion> SPos = SNonNeg\<close>
+  instead of \<open>STop\<close>.  Concretely, both branches of \<open>compute\<close> assign
+  a positive \<open>x\<close> to \<open>Gresult\<close>; joined against the zero initial value the
+  result is \<open>SNonNeg\<close> (\<open>\<ge> 0\<close>), not \<open>STop\<close>.
 \<close>
 
 value "sign_exec_prog branch_prog ''Gresult''"
 value "sign_exec_prog branch_prog ''Gout''"
 
-lemma ec_result_top:
-  "sign_exec_prog branch_prog ''Gresult'' = STop"
+lemma ec_result_nonnneg:
+  "sign_exec_prog branch_prog ''Gresult'' = SNonNeg"
   by eval
 
 text \<open>Termination is proved, not assumed: the executable side solver returns a
@@ -81,36 +80,33 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "cfg_collect_ip (prog_cfg branch_prog) UNIV (cfg_exit (prog_cfg branch_prog))
+  "cfg_collect_ip (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))
    \<le> sign_domain.gamma_state (sign_exec_prog branch_prog)"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
 text \<open>
   The same bound against the underlying interprocedural \<open>trace\<close> semantics: the
-  last store of \<^emph>\<open>any\<close> trace reaching the exit is over-approximated by the
-  computed result -- the last-store projection (\<open>alpha_last\<close>) of
-  @{const cfg_collect_trace_ip}, the semantics the whole development is sound
-  against.
+  last store of \<^emph>\<open>any\<close> C-faithful trace reaching the exit is over-approximated
+  by the computed result.
 \<close>
 
 corollary ec_certified_sound_trace:
-  assumes "tr \<in> cfg_collect_trace_ip (prog_cfg branch_prog) UNIV (cfg_exit (prog_cfg branch_prog))"
+  assumes "tr \<in> cfg_collect_trace_ip (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog branch_prog)"
   using assms by (rule sign_exec_prog_sound_trace[OF ec_terminates])
 
 text \<open>
   Flow-insensitive global analysis: concrete values of every global at the exit.
-  The analysis joins all writes to a global across the entire program (both call
-  sites of \<open>compute\<close> and the surrounding \<open>main\<close>) against the \<open>STop\<close>
-  initialisation seed.
+  The analysis joins all writes to a global across the entire program against the
+  C-faithful initialisation seed (\<open>SZero\<close> for globals).
 \<close>
 
 value "sign_exec_prog branch_prog ''Ginput''"
 
 text \<open>
-  \<open>Ginput\<close> is assigned the literal \<open>5\<close> (positive) and \<open>-3\<close> (negative)
-  in \<open>main\<close>.  Because globals are treated flow-insensitively, both
-  writes are joined: \<open>SPos \<squnion> SNeg = STop\<close>.
+  \<open>Ginput\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
+  writes are joined: \<open>SZero \<squnion> SPos \<squnion> SNeg = SZero \<squnion> STop = STop\<close>.
+  Opposite-sign writes still collapse to \<open>STop\<close> regardless of the seed.
 \<close>
 
 lemma ec_ginput_top:
@@ -120,47 +116,43 @@ lemma ec_ginput_top:
 value "sign_exec_prog branch_prog ''Gout''"
 
 text \<open>
-  \<open>Gout\<close> is computed as \<open>100 * Gresult\<close>.  Since \<open>Gresult\<close> is
-  already \<open>STop\<close> (see @{thm ec_result_top}), the product \<open>SPos * STop = STop\<close>
-  propagates the imprecision.
+  \<open>Gout\<close> is computed as \<open>100 * Gresult\<close>.  With \<open>Gresult = SNonNeg\<close>
+  (see @{thm ec_result_nonnneg}), the product \<open>SPos * SNonNeg = SNonNeg\<close>
+  joined against the zero seed gives \<open>SZero \<squnion> SNonNeg = SNonNeg\<close>.
 \<close>
 
-lemma ec_gout_top:
-  "sign_exec_prog branch_prog ''Gout'' = STop"
+lemma ec_gout_nonnneg:
+  "sign_exec_prog branch_prog ''Gout'' = SNonNeg"
   by eval
 
 text \<open>
-  Precision summary.  Tracing the analysis step by step reveals where precision
-  is lost and what a hypothetical more-precise analysis would need.
+  Precision summary.
 
-  \<^bold>\<open>What the analysis computes:\<close>
+  \<^bold>\<open>What the analysis now computes (C-faithful seed + 7-element lattice):\<close>
 
-  \<^item> \<open>Ginput = STop\<close>: two writes with opposite signs (\<open>5\<close> positive, \<open>-3\<close>
-    negative) join to the top element.  The analysis cannot distinguish the
-    two call contexts.
+  \<^item> \<open>Ginput = STop\<close>: writes \<open>5\<close> and \<open>-3\<close> have opposite signs; their join is
+    \<open>STop\<close> regardless of the seed.
 
-  \<^item> \<open>Gresult = STop\<close>: the assignment \<open>result = x\<close> inside @{term compute}
-    writes a locally positive \<open>x\<close> (\<open>1 + 1\<close> and \<open>1 + 2\<close>, both positive), but
-    that write is joined against the \<open>STop\<close> initialisation seed.  Joining
-    \<open>SPos\<close> with the seed \<open>STop\<close> gives \<open>STop\<close>.
+  \<^item> \<open>Gresult = SNonNeg\<close>: both branches of \<open>compute\<close> assign a positive \<open>x\<close>
+    (\<open>1+1\<close> and \<open>1+2\<close>).  The write \<open>SPos\<close> is joined against the \<open>SZero\<close> seed:
+    \<open>SZero \<squnion> SPos = SNonNeg\<close>.  The 5-element flat lattice would have given
+    \<open>STop\<close> here; the 7-element lattice gives \<open>SNonNeg\<close>.
 
-  \<^item> \<open>Gout = STop\<close>: \<open>100 * STop = STop\<close>; the imprecision propagates.
+  \<^item> \<open>Gout = SNonNeg\<close>: \<open>SPos * SNonNeg = SNonNeg\<close>, joined against \<open>SZero\<close>.
 
-  \<^bold>\<open>What flow-sensitive global analysis would yield:\<close>
+  \<^bold>\<open>Remaining precision gap:\<close>
 
-  A fully flow-sensitive analysis seeding globals at \<open>SBot\<close> (\(\bot\)) would
-  compute \<open>Gresult = SPos\<close> (both branches write a positive \<open>x\<close>) and in turn
-  certify \<open>Gresult \<noteq> 0\<close>, ruling out division-by-zero in the original
-  \<open>100 / result\<close>.  The sign domain is sufficiently precise for that goal;
-  only the flow-insensitive treatment of globals blocks the certification.
+  \<open>SNonNeg\<close> includes \<open>0\<close>, so the analysis cannot certify \<open>Gresult \<noteq> 0\<close> -- the
+  check needed to justify the original \<open>100 / Gresult\<close>.  That would require
+  knowing \<open>Gresult\<close> is strictly positive (\<open>SPos\<close>), which in turn requires
+  knowing the initial write of \<open>0\<close> is overwritten before the exit (flow
+  sensitivity on globals, not modelled here).
 
   \<^bold>\<open>What stays precise:\<close>
 
   The local variable \<open>x\<close> inside @{term compute} is analysed flow-sensitively.
-  On the then-branch \<open>x = 1 + 1 = 2\<close> (positive) and on the else-branch
-  \<open>x = 1 + 2 = 3\<close> (positive); both are \<open>SPos\<close>.  This flow-sensitive precision
-  is preserved inside the procedure body --- it is only the global write that
-  loses information when the result is stored in @{term Gresult}.
+  On the then-branch \<open>x = 1 + 1 = 2\<close> and on the else-branch \<open>x = 1 + 2 = 3\<close>;
+  both are \<open>SPos\<close>.  This precision is preserved inside the procedure body.
 \<close>
 
 end

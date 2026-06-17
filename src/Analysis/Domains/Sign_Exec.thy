@@ -77,6 +77,28 @@ lemma lookup_top_sign_st [simp]: "lookup_st top_sign_st x = STop"
 lemma fun_of_st_top_sign_st: "fun_of_st top_sign_st = (\<lambda>_. STop)"
   by (rule ext) simp
 
+subsection \<open>C-faithful initialisation seed: globals at zero, locals unknown\<close>
+
+text \<open>
+  In C, globals are zero-initialised before \<open>main\<close> starts (ISO C \<section>6.7.9p10);
+  locals are uninitialized and may hold any value (UB to read before writing).
+  \<open>cinit_sign_st\<close> reflects this: global default \<open>SZero\<close>, local default \<open>STop\<close>.
+  Its concretisation is \<open>cinit_stores\<close> (defined in Sign_Exec_Sound): exactly the
+  stores where every global is 0 and locals are arbitrary.
+  Joining any concrete write against \<open>SZero\<close> (rather than \<open>STop\<close>) lets the
+  richer lattice contribute: e.g.\ \<open>SZero \<squnion> SPos = SNonNeg\<close> instead of \<open>STop\<close>.
+\<close>
+
+lift_definition cinit_sign_st :: "sign st" is "(STop, SZero, [])" .
+
+lemma lookup_cinit_sign_st [simp]:
+  "lookup_st cinit_sign_st x = (if is_global x then SZero else STop)"
+  by transfer simp
+
+lemma fun_of_st_cinit_sign_st:
+  "fun_of_st cinit_sign_st = (\<lambda>x. if is_global x then SZero else STop)"
+  by (rule ext) simp
+
 subsection \<open>The executable sign transfer function\<close>
 
 theorem sign_tf_st_commute:
