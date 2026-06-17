@@ -6,7 +6,9 @@ begin
 
 text \<open>
   Two @{const compile_prog} demos exported via @{const plain_dot_of_prog_lit}
-  (procedure clusters from @{const compile_prog_regions}).
+  (procedure clusters from @{const compile_prog_regions}).  These are
+  structural CFG witnesses only; annotated DOT needs an executable analysis
+  result (see the sign executable examples).
 
   @verbatim\<open>
   Example A (simple):

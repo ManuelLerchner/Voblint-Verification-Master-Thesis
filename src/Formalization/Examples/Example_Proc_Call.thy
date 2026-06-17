@@ -225,6 +225,10 @@ proof (rule allI)
                     enter_ivl_def combine_abs_def is_global_def)
 qed
 
+lemma main_prog_gx_exit_ivl:
+  "main_prog_env (cfg_exit main_cfg) ''Gx'' = Ivl (Fin 25) (Fin 25)"
+  by (simp add: main_prog_env_def main_cfg_exit)
+
 
 subsection \<open>Interval analysis soundness\<close>
 
@@ -259,7 +263,9 @@ subsection \<open>DOT output\<close>
 
 text \<open>
   @{const plain_dot_of_prog_lit} emits the procedural CFG with procedure
-  clusters and entry/exit highlighting in one call.
+  clusters and entry/exit highlighting.  Annotated interval DOT is not yet
+  wired; the exhibited post-fixpoint gives @{thm [source] main_prog_gx_exit_ivl}
+  at exit.
 \<close>
 
 ML_val \<open>

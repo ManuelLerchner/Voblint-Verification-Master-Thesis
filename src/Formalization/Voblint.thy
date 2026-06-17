@@ -115,7 +115,7 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Side_Branch_Calls} --- branching procedure called twice;
       flow-sensitive locals and flow-insensitive globals in GraphViz.
     \<^item> @{theory Voblint_Formalization.Example_Side_Proc_Global} --- Sign IP analysis on a single
-      global-increment procedure call.
+      global-increment procedure call; executable @{const sign_exec_prog} and annotated DOT.
     \<^item> @{theory Voblint_Formalization.Example_Interval_Side_Proc_Global} --- Interval IP analysis
       on the same program; demonstrates domain-generic soundness scaffold.
     \<^item> @{theory Voblint_Formalization.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close>
@@ -125,7 +125,7 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- precision of the
       trace-IP collecting semantics.
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- interprocedural CFG rendered
-      as plain and sign-annotated GraphViz DOT.
+      as plain GraphViz DOT (structural witness; sign examples carry annotated DOT).
 \<close>
 
 end

@@ -41,12 +41,7 @@ proof -
     by (rule side_ip_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 qed
 
-subsection \<open>Annotated CFG visualisation\<close>
-
-text \<open>
-  @{const sign_annotated_dot_lit} on the same @{const inc_pi} witness: CFG
-  nodes labelled with sign abstract states from @{const sign_exec_raw}.
-\<close>
+subsection \<open>Executable sign analysis\<close>
 
 definition inc_procs :: "pname list" where
   "inc_procs = [''p'']"
@@ -54,9 +49,34 @@ definition inc_procs :: "pname list" where
 definition inc_main :: com where
   "inc_main = Call ''p''"
 
+definition inc_prog :: imp_prog where
+  "inc_prog = (inc_procs, inc_pi, inc_main)"
+
+
+value "sign_exec_prog inc_prog ''Gx''"
+
+lemma inc_gx_nonneg:
+  "sign_exec_prog inc_prog ''Gx'' = SNonNeg"
+  by eval
+
+lemma inc_terminates: "sign_terminates_prog inc_prog"
+  by (rule sign_terminates_prog_via_solve_c) eval
+
+corollary inc_certified_sound:
+  "cfg_collect_ip (prog_cfg inc_prog) cinit_stores (cfg_exit (prog_cfg inc_prog))
+   \<le> sign_domain.gamma_state (sign_exec_prog inc_prog)"
+  by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
+
+subsection \<open>Annotated CFG visualisation\<close>
+
+text \<open>
+  @{const sign_annotated_dot_prog_lit} on the same witness: CFG nodes labelled
+  with sign abstract states from @{const sign_exec_raw} (exit @{thm [source] inc_gx_nonneg}).
+\<close>
+
+
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_lit}
-             @{code inc_pi} @{code inc_procs} @{code inc_main})
+  writeln (@{code sign_annotated_dot_prog_lit} @{code inc_prog})
 \<close>
 
 end
