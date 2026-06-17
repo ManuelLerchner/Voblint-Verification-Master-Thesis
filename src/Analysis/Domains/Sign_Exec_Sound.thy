@@ -1,6 +1,7 @@
 theory Sign_Exec_Sound
   imports Sign_Exec Sign_Side_IP_Soundness
           "Voblint_CFG.CFG_Collect_Trace_IP" "TD.TD_side_upd_rule"
+          "Voblint_IMP2.IMP2_Notation"
 begin
 
 section \<open>Executable sign analysis: the computed result and its certified soundness\<close>
@@ -131,5 +132,45 @@ proof -
     by (rule subset_trans)
   ultimately show ?thesis by blast
 qed
+
+section \<open>Whole-program convenience layer\<close>
+
+text \<open>
+  An @{type imp_prog} written with the \<open>\<lbrakk> \<dots> \<rbrakk>\<close> bracket already bundles the
+  procedure table, procedure-name list, and main command.  The wrappers below
+  feed those three projections to the analyzer in one step, so example
+  statements name the program once instead of repeating the triple.
+\<close>
+
+definition prog_cfg :: "imp_prog \<Rightarrow> cfg" where
+  "prog_cfg p = compile_prog (prog_table p) (prog_procs p) (prog_main p)"
+
+definition sign_exec_prog :: "imp_prog \<Rightarrow> sign abs_state" where
+  "sign_exec_prog p = sign_exec (prog_table p) (prog_procs p) (prog_main p)"
+
+definition sign_terminates_prog :: "imp_prog \<Rightarrow> bool" where
+  "sign_terminates_prog p = sign_exec_terminates (prog_table p) (prog_procs p) (prog_main p)"
+
+lemma sign_terminates_prog_via_solve_c:
+  assumes "TD_side_always_join_Interp_solve_c
+             (sign_exec_eqs (prog_table p) (prog_procs p) (prog_main p))
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p) (prog_main p))) \<noteq> None"
+  shows "sign_terminates_prog p"
+  unfolding sign_terminates_prog_def
+  using assms by (rule sign_exec_terminates_via_solve_c)
+
+corollary sign_exec_prog_sound_collecting:
+  assumes "sign_terminates_prog p"
+  shows "cfg_collect_ip (prog_cfg p) UNIV (cfg_exit (prog_cfg p))
+           \<le> sign_domain.gamma_state (sign_exec_prog p)"
+  using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
+  by (rule sign_exec_sound_collecting)
+
+corollary sign_exec_prog_sound_trace:
+  assumes "sign_terminates_prog p"
+      and "tr \<in> cfg_collect_trace_ip (prog_cfg p) UNIV (cfg_exit (prog_cfg p))"
+  shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog p)"
+  using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
+  by (rule sign_exec_sound_trace)
 
 end

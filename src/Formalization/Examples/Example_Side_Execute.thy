@@ -15,47 +15,41 @@ text \<open>
 definition x1_prog :: imp_prog where
   "x1_prog = \<lbrakk> void main() { x := 1 } \<rbrakk>"
 
-abbreviation x1_pt   :: proc_table where "x1_pt   \<equiv> prog_table x1_prog"
-abbreviation x1_main :: com        where "x1_main \<equiv> prog_main  x1_prog"
-
-abbreviation x1_exit :: pp where
-  "x1_exit \<equiv> cfg_exit (compile_prog x1_pt [] x1_main)"
-
 text \<open>
   Querying the computed abstract state at the exit (these @{command value} calls
   evaluate at build time): \<open>x\<close> is \<open>SPos\<close>, an untouched \<open>y\<close> stays \<open>STop\<close>.
 \<close>
 
-value "sign_exec x1_pt [] x1_main ''x''"
-value "sign_exec x1_pt [] x1_main ''y''"
+value "sign_exec_prog x1_prog ''x''"
+value "sign_exec_prog x1_prog ''y''"
 
 text \<open>The solver computes \<open>x \<mapsto> SPos\<close> at the exit, captured as a theorem
   by code reflection.\<close>
 
 lemma x1_computes_x_pos:
-  "sign_exec x1_pt [] x1_main ''x'' = SPos"
+  "sign_exec_prog x1_prog ''x'' = SPos"
   by eval
 
 text \<open>
   Termination is not assumed but proved: the executable side solver returns a
   result on this program (@{method eval}), so by
-  @{thm sign_exec_terminates_via_solve_c} the program lies in the solver's domain.
+  @{thm sign_terminates_prog_via_solve_c} the program lies in the solver's domain.
 \<close>
 
-lemma x1_terminates: "sign_exec_terminates x1_pt [] x1_main"
-  by (rule sign_exec_terminates_via_solve_c) eval
+lemma x1_terminates: "sign_terminates_prog x1_prog"
+  by (rule sign_terminates_prog_via_solve_c) eval
 
 text \<open>
   Certified sound, unconditionally: the computed result over-approximates the
   interprocedural collecting semantics at the exit from any input store -- so
   after \<open>x := 1\<close>, \<open>x\<close> is positive.  An instance of the program-parametric
-  @{thm sign_exec_sound_collecting}, with termination discharged by execution.
+  @{thm sign_exec_prog_sound_collecting}, with termination discharged by execution.
 \<close>
 
 corollary x1_certified_sound:
-  "cfg_collect_ip (compile_prog x1_pt [] x1_main) UNIV x1_exit
-   \<le> sign_domain.gamma_state (sign_exec x1_pt [] x1_main)"
-  by (rule sign_exec_sound_collecting[OF x1_terminates])
+  "cfg_collect_ip (prog_cfg x1_prog) UNIV (cfg_exit (prog_cfg x1_prog))
+   \<le> sign_domain.gamma_state (sign_exec_prog x1_prog)"
+  by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
 
 end
 

@@ -40,7 +40,6 @@ theory Voblint
     Trace_IP_Analysis_Sound
     Example_IMP2_Coverage
     Example_Side_Execute
-    Example_Side_Execute_Proc
     Example_Side_Branch_Calls
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global

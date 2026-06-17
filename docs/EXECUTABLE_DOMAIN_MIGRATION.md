@@ -41,21 +41,18 @@ code-generated `prog` equation system to the `compile_prog` system → transport
 the sign seam (`part_post_solution_st_to_abs` + `sign_tf_st_commute`) → the proved
 `side_collect_sound_ip_exit_pruned`.
 
-**Down to the underlying trace semantics + big-step** (`Example_Side_Execute_Proc`,
-the two-proc file). The state-level bound is the `alpha_last` (last-store)
-projection of the interprocedural *trace* semantics `cfg_collect_trace_ip`, so two
-corollaries compose onto the certified result:
-`pq_certified_sound_trace` (the last store of *any* interprocedural trace reaching
-the exit is over-approximated, via `alpha_last_cfg_collect_trace_ip_le`) and
-`pq_certified_sound_run` (for an actual terminating run `pruns_to_ip … s t`, the
-real final store `t` is sound — the IMP2 procedural big-step level, via
-`cfg_collect_ip_mono_S` from the singleton run). The trace semantics is itself
-adequate w.r.t. the IMP2 big-step semantics (the existing CFG collecting
-adequacy), so the computed `x ↦ SPos` holds for real executions.
+**Down to the underlying trace semantics** (`Example_Side_Branch_Calls`). The
+state-level bound is the `alpha_last` (last-store) projection of the
+interprocedural *trace* semantics `cfg_collect_trace_ip`, so a corollary composes
+onto the certified result: `ec_certified_sound_trace` (the last store of *any*
+interprocedural trace reaching the exit is over-approximated, via
+`alpha_last_cfg_collect_trace_ip_le`). The trace semantics is itself adequate
+w.r.t. the IMP2 big-step semantics (the existing CFG collecting adequacy), so the
+computed result holds for real executions.
 
-The two examples are split by concern: `Example_Side_Execute` (single-edge,
-list-equality path) and `Example_Side_Execute_Proc` (multi-edge, set-invariance
-transfer + the trace/run corollaries).
+The executable examples are split by concern: `Example_Side_Execute` (single-edge,
+the minimal `x := 1` witness) and `Example_Side_Branch_Calls` (multi-edge:
+branching plus a procedure called twice, with the trace-level corollary).
 
 **Set-invariance bridge (the multi-edge enabler, `Exec_Bridge`).** Sorted
 `predecessor_list` does not code-generate (the `to_nat` `edge_action` order); the

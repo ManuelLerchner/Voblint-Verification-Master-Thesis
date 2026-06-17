@@ -14,5 +14,4 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Proc_Call
     Example_Trace_Digest_Precision
     Example_Side_Execute
-    Example_Side_Execute_Proc
     Example_Side_Branch_Calls
