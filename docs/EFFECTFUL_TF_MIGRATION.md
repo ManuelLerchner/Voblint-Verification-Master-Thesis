@@ -1,6 +1,9 @@
 # Migration — effectful transfer functions and named global unknowns
 
-Status: **PLANNED** (research findings 2026-06-17, not yet started).
+Status: **CORE LANDED** (2026-06-17). The effectful infrastructure and the
+backward-compatibility bridge are implemented and verified (`Voblint_Analysis`
+and `Voblint_Formalization` build green, no `sorry`). Full Gap-1 generalisation
+of the downstream pipeline is staged behind the bridge — see §8.
 
 This document records the findings from investigating alignment of our proof
 architecture with Goblint's `EqConstrSys` / `Spec` interfaces, and lays out a
@@ -482,3 +485,49 @@ of `Spec.assign` (or `branch`, `enter`, ...) receiving a manager with `global` a
 
 Context (`C : Printable.S`) remains out of scope — unknowns are bare `pp` with no
 call-string tagging. This is the remaining honest gap to state in the thesis.
+
+---
+
+## 8. Implementation status (2026-06-17)
+
+What landed and verified (`isabelle build` green for `Voblint_Analysis` +
+`Voblint_Formalization`, no `sorry`):
+
+| Piece | Location | Status |
+|---|---|---|
+| `seqcomp_tree` + `traverse_seqcomp` + `dep_aux_seqcomp` | `Strategy_Tree_Monad.thy` | **done** |
+| `seqcomp_mono` (bind preserves monotonicity) | `Strategy_Tree_Monad.thy` | **done** |
+| `static_deps` + `static_deps_seqcomp` (Step 5 dep machinery) | `Strategy_Tree_Monad.thy` | **done** |
+| `edge_tf_tree`, `effectful_domain_transfer`, `apply_etf` | `Constraint_System.thy` | **done** |
+| `restrict_local` / `restrict_global` moved here, `TD.Basics_side` imported | `Constraint_System.thy` | **done** |
+| `pure_edge_tree`, `etf_from_tf`, `traverse_pure_edge_tree`, `apply_etf_from_tf` | `TD_Side_CFG.thy` | **done** |
+| `side_env_g` (Gap-1 generic combiner) + `side_env = side_env_g _ ()` | `TD_Side_CFG.thy` | **done** |
+| `side_rhs_fold_ip_eff` (Step 3 fold via `seqcomp_tree`) + `side_acc_ip_eff` denotation | `TD_Side_IP_Tree.thy` | **done** |
+| Bridge: `side_cfg_T_ip_eff (etf_from_tf tf) = side_cfg_T_ip tf (\<squnion>)` | `TD_Side_IP_Tree.thy` | **done** |
+| Eff solver preconditions `is_mono_eq` / `mono_sides` / `mono_deps` | `TD_Side_IP_Mono.thy` | **done** |
+| Sign instance `sign_etf = etf_from_tf sign_tf` + its 3 preconditions | `Sign_Side_IP_Soundness.thy` | **done** |
+
+The **bridge** is the key result: `side_cfg_T_ip_eff (etf_from_tf tf)` is *literally
+the same strategy tree* as the pure `side_cfg_T_ip tf (\<squnion>)`. Every existing theorem
+about the pure system — including the end-to-end IP soundness theorems in
+`TD_Side_IP_Soundness` / `Sign_Side_IP_Soundness` — therefore applies verbatim to the
+effectful-shim system. No soundness proof was duplicated and no soundness locale was
+introduced uninterpreted (avoids the instantiation-gap audit failure).
+
+The `effectful_domain_transfer` record is polymorphic in the global-name type `'g`,
+so the *capability* to route to named globals (Gap 1) and to query/conditionally
+side-effect (Gap 2) is present in the interface. The IP fold instantiates `'g = unit`
+to interface with the existing unit-global IP soundness pipeline; the per-edge TF
+trees may still be genuinely effectful.
+
+### Remaining (staged behind the bridge)
+
+- **Genuinely-effectful soundness.** A non-shim `etf` (e.g. the flag-routed example
+  in §2) needs its own `etf_mono` / `static_deps` discharge — the monad lemmas
+  `seqcomp_mono` and `static_deps_seqcomp` are in place for exactly this, but no
+  non-shim domain instance has been proven sound yet.
+- **Gap-1 end-to-end (`pp + 'g`).** The IP fold's combine/return linkage and
+  `Exec_Bridge` still hardcode the single `Inr ()` global. Generalising these to
+  `pp + 'g` (per §3 Step 6) is the remaining large change; `side_env_g` is the
+  prepared entry point.
+- **Interval effectful instance** mirroring `sign_etf`.

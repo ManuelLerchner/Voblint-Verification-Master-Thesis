@@ -83,6 +83,57 @@ definition side_env ::
   "(pp + unit => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
   "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> \<sigma> (Inr ())"
 
+(* Generalisation of side_env to named globals: side_env_g \<sigma> g v = \<sigma>(Inl v) \<squnion> \<sigma>(Inr g). *)
+definition side_env_g ::
+  "(pp + 'g => 'a::bounded_semilattice_sup_bot abs_state) => 'g => pp => 'a abs_state"
+where
+  "side_env_g \<sigma> g v = \<sigma> (Inl v) \<squnion> \<sigma> (Inr g)"
+
+lemma side_env_eq_side_env_g:
+  "side_env \<sigma> v = side_env_g \<sigma> () v"
+  unfolding side_env_def side_env_g_def by simp
+
+
+subsection \<open>Pure-domain effectful transfer shim\<close>
+
+text \<open>
+  pure_edge_tree wraps a domain_transfer into an effectful tree: query the
+  local state at u, query the single global unknown (), apply the pure TF to
+  their join, split the result into a local Answer and a global Side.
+
+  etf_from_tf lifts a domain_transfer to an effectful_domain_transfer using
+  this shim for every action.  apply_etf (etf_from_tf tf) a u = pure_edge_tree tf a u.
+\<close>
+
+definition pure_edge_tree ::
+  "'a::bounded_semilattice_sup_bot domain_transfer => edge_action => (unit, 'a) edge_tf_tree"
+where
+  "pure_edge_tree tf a u =
+     QueryL u (\<lambda>su. QueryG () (\<lambda>g.
+       let res = apply_tf tf a (su \<squnion> g) in
+       Side () (restrict_global res)
+         (Answer (restrict_local res))))"
+
+definition etf_from_tf ::
+  "'a::bounded_semilattice_sup_bot domain_transfer => (unit, 'a) effectful_domain_transfer"
+where
+  "etf_from_tf tf = \<lparr>
+    etf_nop        = pure_edge_tree tf EA_Nop,
+    etf_assign     = \<lambda>x e. pure_edge_tree tf (EA_Assign x e),
+    etf_assume     = \<lambda>b. pure_edge_tree tf (EA_Assume b),
+    etf_assume_not = \<lambda>b. pure_edge_tree tf (EA_AssumeNot b),
+    etf_enter      = pure_edge_tree tf EA_Enter
+  \<rparr>"
+
+lemma apply_etf_from_tf [simp]:
+  "apply_etf (etf_from_tf tf) a u = pure_edge_tree tf a u"
+  by (cases a) (simp_all add: etf_from_tf_def)
+
+lemma traverse_pure_edge_tree:
+  "traverse_rhs (pure_edge_tree tf a u) \<sigma> =
+   restrict_local (apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
+  unfolding pure_edge_tree_def by (simp add: Let_def)
+
 
 (* Generic reachability over the solver's local dependency relation: a single
    dependency step lands in the transitive closure, which is itself transitive. *)

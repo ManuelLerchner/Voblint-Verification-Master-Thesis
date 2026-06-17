@@ -1,5 +1,5 @@
 theory Constraint_System
-  imports "Voblint_CFG.CFG_Def" Abstract_Domain "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr"
+  imports "Voblint_CFG.CFG_Def" Abstract_Domain "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr" "TD.Basics_side"
 begin
 
 section \<open>Equation system over a CFG\<close>
@@ -555,5 +555,40 @@ locale sound_transfer = sound_domain +
   assumes tf_sound_enter:
     "\<forall>\<sigma>. \<forall>s \<in> gamma_state \<sigma>.
        enter_state s \<in> gamma_state (tf_enter tf \<sigma>)"
+
+
+subsection \<open>Effectful transfer function record\<close>
+
+text \<open>
+  An effectful_domain_transfer bundles per-action strategy tree producers.
+  Each field takes the edge-action parameters plus the source program point u and
+  returns a strategy tree that may QueryL/QueryG arbitrary unknowns, emit Side
+  contributions to named globals, and ends with Answer carrying the local result.
+
+  apply_etf dispatches on edge_action to the matching field.
+
+  The pure-domain shim (pure_edge_tree / etf_from_tf) lives in TD_Side_CFG where
+  restrict_local / restrict_global are defined.
+\<close>
+
+type_synonym ('g, 'd) edge_tf_tree =
+  "pp \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
+
+record ('g, 'd) effectful_domain_transfer =
+  etf_nop        :: "('g, 'd) edge_tf_tree"
+  etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_assume     :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_assume_not :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_enter      :: "('g, 'd) edge_tf_tree"
+
+fun apply_etf ::
+  "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
+   \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
+where
+  "apply_etf etf EA_Nop           u = etf_nop etf u"
+| "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
+| "apply_etf etf (EA_Assume b)    u = etf_assume etf b u"
+| "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
+| "apply_etf etf EA_Enter         u = etf_enter etf u"
 
 end

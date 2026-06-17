@@ -17,6 +17,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Constraint_System_IP_Sound
     Analysis_Sound
     TD_Side_CFG
+    Strategy_Tree_Monad
     TD_Side_IP_Tree
     TD_Side_IP_Mono
     Exec_Bridge

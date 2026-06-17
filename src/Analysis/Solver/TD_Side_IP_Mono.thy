@@ -393,4 +393,35 @@ lemma side_cfg_T_ip_mono_deps:
   apply (subst (asm) dep_aux_side_rhs_fold_ip_indep)
   by simp
 
+subsection \<open>Solver preconditions for the effectful pure-shim system\<close>
+
+text \<open>
+  For etf = etf_from_tf tf the effectful system is the pure system
+  (side_cfg_T_ip_eff_etf_from_tf), so the three TD_side preconditions transfer
+  directly.  A genuinely effectful etf would instead discharge these from the
+  monad lemmas (seqcomp_mono, static_deps_seqcomp).
+\<close>
+
+lemma side_cfg_T_ip_eff_is_mono_eq:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  shows "is_mono_eq (side_cfg_T_ip_eff g (etf_from_tf tf) bot0 s0)"
+  by (simp add: side_cfg_T_ip_eff_etf_from_tf side_cfg_T_ip_is_mono_eq tf_mono)
+
+lemma side_cfg_T_ip_eff_mono_sides:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state"
+  assumes tf_mono:
+    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  shows "mono_sides (side_cfg_T_ip_eff g (etf_from_tf tf) bot0 s0)"
+  by (simp add: side_cfg_T_ip_eff_etf_from_tf side_cfg_T_ip_mono_sides tf_mono)
+
+lemma side_cfg_T_ip_eff_mono_deps:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and bot0 s0 :: "'a abs_state"
+  shows "mono_deps (side_cfg_T_ip_eff g (etf_from_tf tf) bot0 s0)"
+  by (simp add: side_cfg_T_ip_eff_etf_from_tf side_cfg_T_ip_mono_deps)
+
 end
