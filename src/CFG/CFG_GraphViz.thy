@@ -187,30 +187,78 @@ definition to_graphviz_regions ::
      @ concat (sorted_list_of_set (combine_to_dot ` combines g))
      @ ''}'' @ nl)"
 
-(* -- Main entry point: flat export; use to_graphviz_regions for clusters -- *)
+(* -- Variable collection from CFG edges ----------------------------- *)
 
-(*
-  -- ML output recipe -----------------------------------------------
+fun vars_of_action :: "edge_action \<Rightarrow> vname list" where
+    "vars_of_action (EA_Assign x _) = [x]"
+  | "vars_of_action _               = []"
 
-  Isabelle's `value` prints a string as a [CHR ''d'', CHR ''i'', ...]
-  chain that's awkward to copy. To get clean text, use one ML block
-  per theory that bundles the decoder with every call site
-  (every `@{code ...}` antiquotation compiles its own generated-code
-  snapshot, so the decoder must share its block with the calls).
+definition collect_vars_cfg :: "cfg \<Rightarrow> vname list" where
+  "collect_vars_cfg g =
+     remdups (concat (map (\<lambda>(_, a, _). vars_of_action a) (sorted_list_of_set (edges g))))"
 
-  Pattern (see Examples/Example_Proc_GraphViz.thy):
+(* -- Generic labeled rendering: caller supplies (pp => string) ------ *)
 
-    ML \<open>
-      fun b x = if x then 1 else 0
-      fun gchar (@{code Char} (b0,b1,b2,b3,b4,b5,b6,b7)) =
-        Char.chr (   b b0 +   2 * b b1 +   4 * b b2 +   8 * b b3
-                + 16 * b b4 +  32 * b b5 +  64 * b b6 + 128 * b b7)
-      fun writeln_dot c =
-        writeln (String.implode (map gchar (@{code to_graphviz} c)))
+definition pp_node_dot_labeled ::
+    "(pp \<Rightarrow> string) \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> pp list \<Rightarrow> pp list \<Rightarrow> string" where
+  "pp_node_dot_labeled lbl g v proc_entries proc_exits =
+     (let base = string_of_nat v; lab = lbl v
+      in  if v = cfg_entry g then
+            ''  '' @ base @ '' [shape=doublecircle,color=green,label='' @ dq @ lab @ dq @ ''];'' @ nl
+          else if v = cfg_exit g then
+            ''  '' @ base @ '' [shape=doublecircle,color=red,label='' @ dq @ lab @ dq @ ''];'' @ nl
+          else if mem_pp v proc_entries then
+            ''  '' @ base @ '' [shape=box,color=green,label='' @ dq @ lab @ dq @ ''];'' @ nl
+          else if mem_pp v proc_exits then
+            ''  '' @ base @ '' [shape=box,color=red,label='' @ dq @ lab @ dq @ ''];'' @ nl
+          else
+            ''  '' @ base @ '' [label='' @ dq @ lab @ dq @ ''];'' @ nl)"
 
-      val _ = writeln_dot (@{code compile_prog} proc_table [''main''] prog)
-      ...
-    \<close>
-*)
+definition region_to_dot_labeled ::
+    "(pp \<Rightarrow> string) \<Rightarrow> cfg \<Rightarrow> pp list \<Rightarrow> pp list \<Rightarrow> string option \<times> pp list \<Rightarrow> string" where
+  "region_to_dot_labeled lbl g proc_entries proc_exits reg =
+     (case reg of (owner, vs) \<Rightarrow>
+        ''  subgraph '' @ region_cluster_id owner @ '' {'' @ nl
+      @ ''    label='' @ dq @ region_label owner @ dq @ '';'' @ nl
+      @ ''    style=filled; color=lightgrey;'' @ nl
+      @ concat (map (\<lambda>v. pp_node_dot_labeled lbl g v proc_entries proc_exits) vs)
+      @ ''  }'' @ nl)"
+
+definition to_graphviz_labeled ::
+    "(pp \<Rightarrow> string) \<Rightarrow> cfg \<Rightarrow> graphviz_region list \<Rightarrow> pp list \<Rightarrow> pp list \<Rightarrow> string" where
+  "to_graphviz_labeled lbl g regs proc_entries proc_exits =
+     (if regs = [] then
+        ''digraph CFG {'' @ nl
+      @ ''  rankdir=TB;'' @ nl
+      @ concat (map (\<lambda>v. pp_node_dot_labeled lbl g v [] []) (sorted_list_of_set (nodes g)))
+      @ concat (sorted_list_of_set (edge_to_dot ` edges g))
+      @ concat (sorted_list_of_set (combine_to_dot ` combines g))
+      @ ''}'' @ nl
+      else
+        ''digraph CFG {'' @ nl
+      @ ''  rankdir=TB;'' @ nl
+      @ concat (map (region_to_dot_labeled lbl g proc_entries proc_exits) regs)
+      @ concat (sorted_list_of_set (edge_to_dot ` edges g))
+      @ concat (sorted_list_of_set (combine_to_dot ` combines g))
+      @ ''}'' @ nl)"
+
+(* Plain (unlabeled) node label: just "ppN" *)
+definition pp_plain_label :: "pp \<Rightarrow> string" where
+  "pp_plain_label v = ''pp'' @ string_of_nat v"
+
+(* -- Reusable ML decoder and output helper -------------------------- *)
+
+ML \<open>
+structure CFG_GraphViz = struct
+  fun b x = if x then 1 else 0
+  fun decode_char (@{code Char} (b0,b1,b2,b3,b4,b5,b6,b7)) =
+    Char.chr (    b b0 +   2 * b b1 +   4 * b b2 +   8 * b b3
+              + 16 * b b4 +  32 * b b5 +  64 * b b6 + 128 * b b7)
+  fun dot_string cs = String.implode (map decode_char cs)
+  fun write_dot title cs =
+    (writeln ("=== DOT: " ^ title ^ " ===");
+     writeln (dot_string cs))
+end
+\<close>
 
 end

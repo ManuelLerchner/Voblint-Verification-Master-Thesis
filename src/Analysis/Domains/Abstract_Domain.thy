@@ -147,4 +147,36 @@ definition widen_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
 
 end
 
+subsection \<open>Printable-domain typeclass\<close>
+
+text \<open>
+  The @{text show_val} class equips an abstract value type with a string
+  printer.  Separate from @{locale abstract_domain} so the mathematical
+  locale stays a purely semantic object; rendering is a separate concern.
+
+  Every domain used in visualisation instantiates this class.
+  The @{text Analysis_GraphViz} rendering layer is parameterised over any
+  @{text "'a::show_val"} and needs no domain-specific code paths.
+\<close>
+
+class show_val =
+  fixes show_val :: "'a \<Rightarrow> string"
+
+subsection \<open>String utilities for show_val instances\<close>
+
+text \<open>
+  Shared nat/int-to-string helpers so domain @{class show_val} instances
+  do not each re-define them.
+\<close>
+
+fun show_nat :: "nat \<Rightarrow> string" where
+  "show_nat n =
+     (if n < 10 then [char_of (n + 48)]
+      else show_nat (n div 10) @ [char_of (n mod 10 + 48)])"
+
+definition show_int :: "int \<Rightarrow> string" where
+  "show_int i =
+     (if i < 0 then ''-'' @ show_nat (nat (- i))
+      else show_nat (nat i))"
+
 end

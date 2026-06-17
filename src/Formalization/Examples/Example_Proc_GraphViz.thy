@@ -1,11 +1,11 @@
 section \<open>Example: interprocedural CFG (compile_prog) as Graphviz\<close>
 
 theory Example_Proc_GraphViz
-  imports "Voblint_IMP2.IMP2_Notation" "Voblint_CFG.CFG_GraphViz" "Voblint_CFG.IMP2_Proc_to_CFG"
+  imports "Voblint_IMP2.IMP2_Notation" "Voblint_Analysis.Analysis_GraphViz"
 begin
 
 text \<open>
-  Two @{const compile_prog} demos exported via @{const to_graphviz_regions}
+  Two @{const compile_prog} demos exported via @{const plain_dot_of_prog_lit}
   (procedure clusters from @{const compile_prog_regions}).
 
   @verbatim\<open>
@@ -39,17 +39,8 @@ definition proc_table_a :: proc_table where
 definition prog_call_p :: com where
   "prog_call_p = \<lbrakk> p() \<rbrakk>"
 
-definition cfg_call_p :: cfg where
-  "cfg_call_p = compile_prog proc_table_a [''p''] prog_call_p"
-
-definition regions_call_p :: "graphviz_region list" where
-  "regions_call_p = compile_prog_regions proc_table_a [''p''] prog_call_p"
-
-definition proc_entries_call_p :: "pp list" where
-  "proc_entries_call_p = enter_targets [(9, EA_Enter, 0)]"
-
-definition proc_exits_call_p :: "pp list" where
-  "proc_exits_call_p = combine_exits [(9, 2, 10)]"
+definition procs_a :: "pname list" where
+  "procs_a = [''p'']"
 
 (* -- Example B: two procedures + branch -------------------------- *)
 
@@ -62,34 +53,28 @@ definition proc_table_b :: proc_table where
 definition prog_if_calls :: com where
   "prog_if_calls = \<lbrakk> if (Gx < Gy) { p() } else { q() } \<rbrakk>"
 
-definition cfg_if_calls :: cfg where
-  "cfg_if_calls = compile_prog proc_table_b [''p'', ''q''] prog_if_calls"
-
-definition regions_if_calls :: "graphviz_region list" where
-  "regions_if_calls = compile_prog_regions proc_table_b [''p'', ''q''] prog_if_calls"
-
-definition proc_entries_if_calls :: "pp list" where
-  "proc_entries_if_calls = enter_targets [(11, EA_Enter, 0), (13, EA_Enter, 3)]"
-
-definition proc_exits_if_calls :: "pp list" where
-  "proc_exits_if_calls = combine_exits [(11, 2, 14), (13, 8, 14)]"
+definition procs_b :: "pname list" where
+  "procs_b = [''p'', ''q'']"
 
 (* -- DOT output -------------------------------------------------- *)
 
-ML \<open>
-  fun b x = if x then 1 else 0
-  fun gchar (@{code Char} (b0,b1,b2,b3,b4,b5,b6,b7)) =
-    Char.chr (    b b0 +   2 * b b1 +   4 * b b2 +   8 * b b3
-              + 16 * b b4 +  32 * b b5 +  64 * b b6 + 128 * b b7)
-  fun writeln_dot title g regs proc_entries proc_exits =
-    (writeln ("--- DOT " ^ title ^ " ---");
-     writeln (String.implode
-       (map gchar (@{code to_graphviz_regions} g regs proc_entries proc_exits))))
+subsection \<open>DOT output\<close>
 
-  val _ = writeln_dot "call p" @{code cfg_call_p} @{code regions_call_p}
-                        @{code proc_entries_call_p} @{code proc_exits_call_p}
-  val _ = writeln_dot "if calls p/q" @{code cfg_if_calls} @{code regions_if_calls}
-                        @{code proc_entries_if_calls} @{code proc_exits_if_calls}
+text \<open>
+  @{const plain_dot_of_prog_lit} bundles @{const compile_prog},
+  @{const compile_prog_regions}, and labeled rendering into one call.
+  The result is a native ML @{text "string"} -- a single @{command ML_val}
+  with @{text "writeln"} suffices.
+\<close>
+
+ML_val \<open>
+  writeln (@{code plain_dot_of_prog_lit}
+             @{code proc_table_a} @{code procs_a} @{code prog_call_p})
+\<close>
+
+ML_val \<open>
+  writeln (@{code plain_dot_of_prog_lit}
+             @{code proc_table_b} @{code procs_b} @{code prog_if_calls})
 \<close>
 
 end

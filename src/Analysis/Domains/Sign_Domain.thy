@@ -526,6 +526,25 @@ lemma sign_times_mono2:
   unfolding less_eq_sign_def
   by (cases a; cases b1; cases b2; simp)
 
+subsection \<open>Printable instance\<close>
+
+fun string_of_sign :: "sign \<Rightarrow> string" where
+    "string_of_sign SBot    = ''Bot''"
+  | "string_of_sign SNeg    = ''Neg''"
+  | "string_of_sign SNonPos = ''<=0''"
+  | "string_of_sign SZero   = ''0''"
+  | "string_of_sign SNonNeg = ''>=0''"
+  | "string_of_sign SPos    = ''Pos''"
+  | "string_of_sign STop    = ''T''"
+
+instantiation sign :: show_val begin
+definition "show_val_sign (s :: sign) = string_of_sign s"
+instance ..
+end
+
+lemma show_val_sign_eq [simp]: "(show_val :: sign \<Rightarrow> string) = string_of_sign"
+  unfolding show_val_sign_def by simp
+
 lemma sign_plus_combine_mono:
   "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> sign_plus a1 b1 \<le> sign_plus a2 b2"
   by (meson order.trans sign_plus_mono1 sign_plus_mono2)

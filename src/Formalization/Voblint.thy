@@ -22,6 +22,7 @@ theory Voblint
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_CFG.CFG_Prune"
     "Voblint_CFG.Exec_CFG"
+    "Voblint_CFG.CFG_GraphViz"
     "Voblint_Analysis.Abstract_Domain"
     "Voblint_Analysis.Constraint_System"
     "Voblint_Analysis.Constraint_System_Sound"
@@ -37,6 +38,7 @@ theory Voblint
     "Voblint_Analysis.Exec_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_Analysis.Analysis_GraphViz"
     Trace_IP_Analysis_Sound
     Example_IMP2_Coverage
     Example_Side_Execute
@@ -82,10 +84,12 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Collect_Trace_IP} --- interprocedural trace collecting and the projection lemma.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Unified} --- unified locale combining both collecting views.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning: restrict to reachable sub-CFG.
+    \<^item> @{theory Voblint_CFG.Exec_CFG} --- executable CFG compilation (code export for examples).
+    \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
 
   \<^bold>\<open>3. Analysis.\<close> Abstract domains, the constraint system, and the TD
   solver bridge --- from local equation to global post-fixpoint.
-    \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>abstract_domain\<close> locale and lifted state concretization.
+    \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>abstract_domain\<close> locale, lifted state concretization, and @{class show_val}.
     \<^item> @{theory Voblint_Analysis.Constraint_System} --- equation system over a CFG.
     \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- each constraint RHS soundly over-approximates the collecting step.
     \<^item> @{theory Voblint_Analysis.Constraint_System_IP_Sound} --- interprocedural constraint soundness.
@@ -96,12 +100,20 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval domain instantiation.
     \<^item> @{theory Voblint_Analysis.Interval_Side_IP_Soundness} --- Interval domain instantiated at the side IP solver.
     \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- unified soundness: one engine over both collecting views.
+    \<^item> @{theory Voblint_Analysis.Exec_St} --- executable abstract-state maps for code generation.
+    \<^item> @{theory Voblint_Analysis.Exec_Bridge} --- generic executable transfer mirror and S4 commutation.
+    \<^item> @{theory Voblint_Analysis.Sign_Exec} --- sign-domain executable transfer functions.
+    \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable sign IP solver and certified program queries.
+    \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
 
   \<^bold>\<open>4. End-to-end soundness.\<close> The headline theorem and executable examples.
     \<^item> @{theory Voblint_Formalization.Trace_IP_Analysis_Sound} --- the main
       result, @{thm [source] sound_transfer.trace_ip_analysis_sound}.
     \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop:
       soundness where big-step has no final state.
+    \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified sign IP example with annotated CFG DOT.
+    \<^item> @{theory Voblint_Formalization.Example_Side_Branch_Calls} --- branching procedure called twice;
+      flow-sensitive locals and flow-insensitive globals in GraphViz.
     \<^item> @{theory Voblint_Formalization.Example_Side_Proc_Global} --- Sign IP analysis on a single
       global-increment procedure call.
     \<^item> @{theory Voblint_Formalization.Example_Interval_Side_Proc_Global} --- Interval IP analysis
@@ -113,7 +125,7 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- precision of the
       trace-IP collecting semantics.
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- interprocedural CFG rendered
-      as GraphViz DOT.
+      as plain and sign-annotated GraphViz DOT.
 \<close>
 
 end

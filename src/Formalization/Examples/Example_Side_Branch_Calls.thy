@@ -18,8 +18,9 @@ text \<open>
       Gresult = x;
   }
   int main() {
-      Ginput = 5;   compute();
-      Ginput = -3;  compute();
+      int r = 0;                      // local call counter
+      Ginput = 5;   compute();  r = r + 1;
+      Ginput = -3;  compute();  r = r + 1;
       Gout = 100 * Gresult;           // language has no '/', so use '*'
   }
   \end{verbatim}
@@ -27,8 +28,8 @@ text \<open>
   Two modelling notes.  The expression language @{type aexp} has \<open>Plus\<close> /
   \<open>Minus\<close> / \<open>Times\<close> but no division, so \<open>100 / Gresult\<close> is written as the
   multiplication \<open>100 * Gresult\<close>.  Variables whose name starts with \<open>G\<close> are
-  global (@{const is_global}); \<open>x\<close> is local to \<open>compute\<close> and lives only inside
-  its scope.
+  global (@{const is_global}); @{text "x"} is local to @{text "compute"}, @{text "r"} to
+  @{text "main"}.
 \<close>
 
 definition branch_prog :: imp_prog where
@@ -41,10 +42,13 @@ definition branch_prog :: imp_prog where
        Gresult := x
      }
      void main() {
+       r := 0;
        Ginput := 5;
        compute();
+       r := r + 1;
        Ginput := 0 - 3;
        compute();
+       r := r + 1;
        Gout := 100 * Gresult
      }
    \<rbrakk>"
@@ -125,6 +129,12 @@ lemma ec_gout_nonnneg:
   "sign_exec_prog branch_prog ''Gout'' = SNonNeg"
   by eval
 
+value "sign_exec_prog branch_prog ''r''"
+
+lemma ec_r_pos:
+  "sign_exec_prog branch_prog ''r'' = SPos"
+  by eval
+
 text \<open>
   Precision summary.
 
@@ -150,9 +160,21 @@ text \<open>
 
   \<^bold>\<open>What stays precise:\<close>
 
-  The local variable \<open>x\<close> inside @{term compute} is analysed flow-sensitively.
-  On the then-branch \<open>x = 1 + 1 = 2\<close> and on the else-branch \<open>x = 1 + 2 = 3\<close>;
-  both are \<open>SPos\<close>.  This precision is preserved inside the procedure body.
+  The local variable @{text "x"} inside @{term compute} is analysed flow-sensitively.
+  On the then-branch @{text "x = 1 + 1 = 2"} and on the else-branch @{text "x = 1 + 2 = 3"};
+  both are @{term SPos}.  In @{text "main"}, @{text "r"} counts procedure calls
+  (@{text "r := 0"} then two @{text "r := r + 1"}); at exit @{thm ec_r_pos}.
+\<close>
+
+subsection \<open>Annotated CFG visualisation\<close>
+
+text \<open>
+  The branching multi-call program rendered with sign annotations at every
+  program point via @{const sign_annotated_dot_prog_lit}.
+\<close>
+
+ML_val \<open>
+  writeln (@{code sign_annotated_dot_prog_lit} @{code branch_prog})
 \<close>
 
 end

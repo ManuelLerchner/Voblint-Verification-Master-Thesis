@@ -47,9 +47,20 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "cfg_collect_ip (prog_cfg x1_prog) UNIV (cfg_exit (prog_cfg x1_prog))
+  "cfg_collect_ip (prog_cfg x1_prog) cinit_stores (cfg_exit (prog_cfg x1_prog))
    \<le> sign_domain.gamma_state (sign_exec_prog x1_prog)"
   by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
+
+subsection \<open>Annotated CFG visualisation\<close>
+
+text \<open>
+  One-command DOT export via @{const sign_annotated_dot_prog_lit}: the CFG
+  with per-program-point sign abstract states on each node label.
+\<close>
+
+ML_val \<open>
+  writeln (@{code sign_annotated_dot_prog_lit} @{code x1_prog})
+\<close>
 
 end
 

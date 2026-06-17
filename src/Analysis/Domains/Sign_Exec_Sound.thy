@@ -2,6 +2,7 @@ theory Sign_Exec_Sound
   imports Sign_Exec Sign_Side_IP_Soundness
           "Voblint_CFG.CFG_Collect_Trace_IP" "TD.TD_side_upd_rule"
           "Voblint_IMP2.IMP2_Notation"
+          Analysis_GraphViz
 begin
 
 section \<open>Executable sign analysis: the computed result and its certified soundness\<close>
@@ -175,5 +176,31 @@ corollary sign_exec_prog_sound_trace:
   shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog p)"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_trace)
+
+section \<open>Visualisation convenience\<close>
+
+text \<open>
+  One-command annotated CFG rendering for the sign domain.
+
+  @{text "sign_annotated_dot_lit"} composes @{const sign_exec_raw} with
+  @{const annotated_dot_of_prog_lit}: it compiles the program, runs the
+  solver, collects assigned variables, and emits an annotated Graphviz
+  DOT string as a native ML @{text "string"} (via @{const String.implode}).
+
+  Typical example-file use -- no @{text "char list"} decoder needed:
+
+  @{text [display] "ML_val \<open>
+    writeln (@{code sign_annotated_dot_prog_lit} @{code my_prog})
+  \<close>"}
+\<close>
+
+definition sign_annotated_dot_lit ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> String.literal" where
+  "sign_annotated_dot_lit \<Pi> ps main =
+     annotated_dot_of_prog_lit \<Pi> ps main (sign_exec_raw \<Pi> ps main)"
+
+definition sign_annotated_dot_prog_lit :: "imp_prog \<Rightarrow> String.literal" where
+  "sign_annotated_dot_prog_lit p =
+     sign_annotated_dot_lit (prog_table p) (prog_procs p) (prog_main p)"
 
 end

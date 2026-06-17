@@ -5,15 +5,16 @@ theory Example_Proc_Call
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.CFG_GraphViz"
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Constraint_System_Sound"
     Trace_IP_Analysis_Sound
+    "Voblint_Analysis.Analysis_GraphViz"
 begin
 
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
 hide_const (open) Syntax.N Syntax.V Syntax.Assign Semantics.aval Semantics.bval
+hide_const phase.N
 
 text \<open>
   Two parameterless procedures communicate through the global variable
@@ -42,6 +43,9 @@ definition main_prog :: "IMP2_Proc.com" where
      inc();
      sqr()
    \<rbrakk>"
+
+definition main_procs :: "pname list" where
+  "main_procs = [''inc'', ''sqr'']"
 
 subsection \<open>Concrete run\<close>
 
@@ -253,32 +257,14 @@ qed
 
 subsection \<open>DOT output\<close>
 
-definition cfg_main :: cfg where
-  "cfg_main = compile_prog proc_pi [''inc'', ''sqr''] main_prog"
+text \<open>
+  @{const plain_dot_of_prog_lit} emits the procedural CFG with procedure
+  clusters and entry/exit highlighting in one call.
+\<close>
 
-definition regions_main :: "graphviz_region list" where
-  "regions_main = compile_prog_regions proc_pi [''inc'', ''sqr''] main_prog"
-
-definition proc_entries_main :: "pp list" where
-  "proc_entries_main = enter_targets [(6, EA_Enter, 0), (7, EA_Enter, 2)]"
-
-definition proc_exits_main :: "pp list" where
-  "proc_exits_main = combine_exits [(6, 1, 7), (7, 3, 8)]"
-
-(* -- DOT output -------------------------------------------------- *)
-
-ML \<open>
-  fun b x = if x then 1 else 0
-  fun gchar (@{code Char} (b0,b1,b2,b3,b4,b5,b6,b7)) =
-    Char.chr (    b b0 +   2 * b b1 +   4 * b b2 +   8 * b b3
-              + 16 * b b4 +  32 * b b5 +  64 * b b6 + 128 * b b7)
-  fun writeln_dot title g regs proc_entries proc_exits =
-    (writeln ("--- DOT " ^ title ^ " ---");
-     writeln (String.implode
-       (map gchar (@{code to_graphviz_regions} g regs proc_entries proc_exits))))
-
-  val _ = writeln_dot "inc/sqr" @{code cfg_main} @{code regions_main}
-                        @{code proc_entries_main} @{code proc_exits_main}
+ML_val \<open>
+  writeln (@{code plain_dot_of_prog_lit}
+             @{code proc_pi} @{code main_procs} @{code main_prog})
 \<close>
 
 end

@@ -27,3 +27,4 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Interval_Side_IP_Soundness
     Sign_Exec
     Sign_Exec_Sound
+    Analysis_GraphViz

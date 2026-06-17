@@ -1,7 +1,10 @@
 section \<open>Example: TD\_side Sign Analysis on a Single Global Increment Call\<close>
 
 theory Example_Side_Proc_Global
-  imports "Voblint_Analysis.Sign_Side_IP_Soundness" "Voblint_CFG.CFG_Collect_IP_Adeq"
+  imports
+    "Voblint_Analysis.Sign_Side_IP_Soundness"
+    "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_CFG.CFG_Collect_IP_Adeq"
 begin
 
 text \<open>
@@ -37,5 +40,23 @@ proof -
   show ?thesis
     by (rule side_ip_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 qed
+
+subsection \<open>Annotated CFG visualisation\<close>
+
+text \<open>
+  @{const sign_annotated_dot_lit} on the same @{const inc_pi} witness: CFG
+  nodes labelled with sign abstract states from @{const sign_exec_raw}.
+\<close>
+
+definition inc_procs :: "pname list" where
+  "inc_procs = [''p'']"
+
+definition inc_main :: com where
+  "inc_main = Call ''p''"
+
+ML_val \<open>
+  writeln (@{code sign_annotated_dot_lit}
+             @{code inc_pi} @{code inc_procs} @{code inc_main})
+\<close>
 
 end
