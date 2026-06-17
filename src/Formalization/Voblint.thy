@@ -41,6 +41,7 @@ theory Voblint
     Example_IMP2_Coverage
     Example_Side_Execute
     Example_Side_Execute_Proc
+    Example_Side_Branch_Calls
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
     Example_Proc_Call
@@ -66,7 +67,7 @@ text \<open>
     \<^item> @{theory Voblint_IMP2.IMP2_Expr} --- expression evaluation and small-step semantics.
     \<^item> @{theory Voblint_IMP2.IMP2_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_IMP2.IMP2_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
-    \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>IMP { ... }\<close> quotation bracket for writing programs.
+    \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for writing commands and whole programs.
     \<^item> @{theory Voblint_IMP2.IMP2_Bridge} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pruns_to\<close>; transfers analyzer soundness to AFP IMP2's concrete semantics.
 
   \<^bold>\<open>2. Control-flow graph.\<close> CFG construction and the interprocedural

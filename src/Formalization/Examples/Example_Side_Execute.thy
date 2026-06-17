@@ -1,5 +1,5 @@
 theory Example_Side_Execute
-  imports "Voblint_Analysis.Sign_Exec_Sound"
+  imports "Voblint_Analysis.Sign_Exec_Sound" "Voblint_IMP2.IMP2_Notation"
 begin
 
 section \<open>Running the certified sign analyzer on \<open>x := 1\<close>\<close>
@@ -12,10 +12,11 @@ text \<open>
   execution proof.
 \<close>
 
-definition x1_pt :: proc_table where "x1_pt = (\<lambda>_. None)"
+definition x1_prog :: imp_prog where
+  "x1_prog = \<lbrakk> void main() { x := 1 } \<rbrakk>"
 
-abbreviation x1_main :: com where
-  "x1_main \<equiv> Assign ''x'' (BaseN (AExp.N 1))"
+abbreviation x1_pt   :: proc_table where "x1_pt   \<equiv> prog_table x1_prog"
+abbreviation x1_main :: com        where "x1_main \<equiv> prog_main  x1_prog"
 
 abbreviation x1_exit :: pp where
   "x1_exit \<equiv> cfg_exit (compile_prog x1_pt [] x1_main)"

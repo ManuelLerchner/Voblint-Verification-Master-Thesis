@@ -22,10 +22,10 @@ hide_const (open) Syntax.N Syntax.V Syntax.Bc
 *)
 
 definition count_prog :: "IMP2_Proc.com" where
-  "count_prog = IMP {
+  "count_prog = \<lbrakk>
      i := 0;
-     while i < n { i := i + 1 }
-   }"
+     while (i < n) { i := i + 1 }
+   \<rbrakk>"
 
 (* The translation is an ordinary IMP2 command (array writes at index 0). *)
 lemma count_prog_translated:

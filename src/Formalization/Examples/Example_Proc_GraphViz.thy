@@ -31,13 +31,13 @@ text \<open>
 (* -- Example A: single call -------------------------------------- *)
 
 definition proc_p_body :: com where
-  "proc_p_body = IMP { Gx := Gx + 1 }"
+  "proc_p_body = \<lbrakk> Gx := Gx + 1 \<rbrakk>"
 
 definition proc_table_a :: proc_table where
   "proc_table_a = ((\<lambda>_. None)(''p'' := Some proc_p_body))"
 
 definition prog_call_p :: com where
-  "prog_call_p = IMP { call p }"
+  "prog_call_p = \<lbrakk> p() \<rbrakk>"
 
 definition cfg_call_p :: cfg where
   "cfg_call_p = compile_prog proc_table_a [''p''] prog_call_p"
@@ -54,13 +54,13 @@ definition proc_exits_call_p :: "pp list" where
 (* -- Example B: two procedures + branch -------------------------- *)
 
 definition proc_q_body :: com where
-  "proc_q_body = IMP { Gy := Gy + 1 }"
+  "proc_q_body = \<lbrakk> Gy := Gy + 1 \<rbrakk>"
 
 definition proc_table_b :: proc_table where
   "proc_table_b = (proc_table_a(''q'' := Some proc_q_body))"
 
 definition prog_if_calls :: com where
-  "prog_if_calls = IMP { if Gx < Gy { call p } else { call q } }"
+  "prog_if_calls = \<lbrakk> if (Gx < Gy) { p() } else { q() } \<rbrakk>"
 
 definition cfg_if_calls :: cfg where
   "cfg_if_calls = compile_prog proc_table_b [''p'', ''q''] prog_if_calls"

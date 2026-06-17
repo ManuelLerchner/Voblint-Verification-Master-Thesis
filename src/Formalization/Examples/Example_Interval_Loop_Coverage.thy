@@ -26,10 +26,10 @@ text \<open>
 \<close>
 
 definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog = IMP {
+  "loop_prog = \<lbrakk>
      x := 0;
-     while x < 20 { x := x + 1 }
-   }"
+     while (x < 20) { x := x + 1 }
+   \<rbrakk>"
 
 subsection \<open>The compiled CFG\<close>
 

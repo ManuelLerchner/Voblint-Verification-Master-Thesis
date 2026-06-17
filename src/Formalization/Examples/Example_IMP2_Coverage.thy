@@ -26,10 +26,10 @@ hide_const (open) Syntax.N Syntax.V Syntax.Bc
 *)
 
 definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog = IMP {
+  "loop_prog = \<lbrakk>
      x := 1;
-     while true { x := x + 1 }
-   }"
+     while (true) { x := x + 1 }
+   \<rbrakk>"
 
 (* -- No terminating run --------------------------------------------------- *)
 

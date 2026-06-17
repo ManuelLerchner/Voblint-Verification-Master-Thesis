@@ -28,20 +28,20 @@ text \<open>
 \<close>
 
 definition inc_body :: "IMP2_Proc.com" where
-  "inc_body = IMP { Gx := Gx + 1 }"
+  "inc_body = \<lbrakk> Gx := Gx + 1 \<rbrakk>"
 
 definition sqr_body :: "IMP2_Proc.com" where
-  "sqr_body = IMP { Gx := Gx * Gx }"
+  "sqr_body = \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
 definition proc_pi :: proc_table where
   "proc_pi = (\<lambda>_. None)(''inc'' := Some inc_body, ''sqr'' := Some sqr_body)"
 
 definition main_prog :: "IMP2_Proc.com" where
-  "main_prog = IMP {
+  "main_prog = \<lbrakk>
      Gx := 4;
-     call inc;
-     call sqr
-   }"
+     inc();
+     sqr()
+   \<rbrakk>"
 
 subsection \<open>Concrete run\<close>
 

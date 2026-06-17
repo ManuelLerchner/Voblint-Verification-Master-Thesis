@@ -1,5 +1,6 @@
 theory Example_Side_Execute_Proc
   imports "Voblint_Analysis.Sign_Exec_Sound" "Voblint_CFG.CFG_Collect_Trace_IP"
+          "Voblint_IMP2.IMP2_Notation"
 begin
 
 section \<open>Certified sign analyzer on a two-procedure-call program\<close>
@@ -14,13 +15,16 @@ text \<open>
   set-invariance transfer underneath them handles the multi-edge case.
 \<close>
 
-definition pq_pt :: proc_table where
-  "pq_pt = ((\<lambda>_. None)
-              (''p'' := Some (Assign ''Gx'' (BaseN (AExp.N 1))),
-               ''q'' := Some (Assign ''Gy'' (BaseN (AExp.N 1)))))"
+definition pq_prog :: imp_prog where
+  "pq_prog = \<lbrakk>
+     int Gx, Gy;
+     void p() { Gx := 1 }
+     void q() { Gy := 1 }
+     void main() { x := 1; p(); q() }
+   \<rbrakk>"
 
-abbreviation pq_main :: com where
-  "pq_main \<equiv> Seq (Assign ''x'' (BaseN (AExp.N 1))) (Seq (Call ''p'') (Call ''q''))"
+abbreviation pq_pt   :: proc_table where "pq_pt   \<equiv> prog_table pq_prog"
+abbreviation pq_main :: com        where "pq_main \<equiv> prog_main  pq_prog"
 
 abbreviation pq_exit :: pp where
   "pq_exit \<equiv> cfg_exit (compile_prog pq_pt [''p'', ''q''] pq_main)"
