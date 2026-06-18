@@ -22,7 +22,7 @@ locale post-fixpoint witness and applies `collecting.collect_post_fixpoint_sound
 **Imports:** `Constraint_System` → `CFG_Def`, `Abstract_Domain`.
 `Analysis_Sound` → `CFG_Collect_Unified`, `Constraint_System_Sound`, `Constraint_System_IP_Sound`.
 
-**Downstream:** `Analysis/Solver/TD_Side_IP_Soundness.thy` — bridges `part_post_solution`
+**Downstream:** `Analysis/Solver/TD_Side_IP_Eff_Soundness.thy` — bridges `part_post_solution`
 to `is_post_fixpoint_ip` via reach cone.
 
 ## Scope vs. Voblint's actual framework

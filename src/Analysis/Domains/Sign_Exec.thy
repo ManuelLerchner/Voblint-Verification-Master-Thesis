@@ -5,7 +5,7 @@ begin
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
 
 text \<open>
-  The generic S4 transport (\<open>Exec_Bridge.part_post_solution_st_to_abs\<close>) is
+  The generic S4 effectful transport (\<open>Exec_Bridge.part_post_solution_st_to_abs_eff\<close>) is
   parameterised over an executable transfer mirror \<open>tf_st\<close> with the commutation
   hypothesis \<open>fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)\<close>.  This theory
   discharges that obligation for the sign domain: \<open>sign_tf_st\<close> mirrors

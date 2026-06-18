@@ -27,5 +27,5 @@ Then applies `subset_trans`.
 
 **Imports:** `Voblint_Analysis.Analysis_Sound`, `Voblint_CFG.CFG_Collect_Trace_IP`.
 
-**Downstream:** `Analysis/Domains/Sign_Side_IP_Soundness.thy` imports `TD_Side_IP_Soundness`
+**Downstream:** `Analysis/Domains/Sign_Side_IP_Soundness.thy` imports `TD_Side_IP_Eff_Soundness`
 (not this file directly); `Example_Side_Proc_Global.thy` uses `side_ip_sign_analysis_sound`.

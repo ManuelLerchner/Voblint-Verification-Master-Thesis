@@ -34,7 +34,7 @@ gamma_state (env v)  <-----  side_analyse_ip output (B4)
 | Bridge | Statement | Where | Status |
 | --- | --- | --- | --- |
 | B3 | `is_post_fixpoint_ip env ==> ∀v. cfg_collect_ip g S v ⊆ gamma_state (env v)` | `Analysis_Sound.thy` (`unified_post_fixpoint_sound_ip`) | done |
-| B4 | per-pp `side_analyse_ip` sound w.r.t. `cfg_collect_ip` at queried `v` | `TD_Side_IP_Soundness.thy` (`side_analyse_ip_collect_sound_exit_pruned`) | done (modulo P1 as hyp) |
+| B4 | per-pp `side_analyse_ip_eff` sound w.r.t. `cfg_collect_ip` at queried `v` | `TD_Side_IP_Eff_Soundness.thy` (`side_analyse_ip_eff_collect_sound_exit_pruned_gen`) | done (modulo P1 as hyp) |
 | B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` (classical spine) | **done** (historical; classical spine retired) |
 | B6 | `comp_fun_idem (ac_join cfg)` | classical spine | **done** (historical; classical spine retired) |
 | B7 | `side_cfg_ip_solve_dom g tf bot s0 v` for each queried `v` | `Sign_Side_IP_Soundness.thy` assumptions | open (P1) |
@@ -84,10 +84,10 @@ assumes side_solve_dom:
      (cfg_exit (compile_prog pi ps main))"
 ```
 
-This is `TD_side.solve_dom destab_opt True (side_cfg_T_ip …) v`, i.e. termination
-of the side-effecting per-pp solve. Monotonicity of `side_cfg_T_ip` is proved
-(in `TD_Side_IP_Mono.thy`), so P1 is gated on well-foundedness of the TD side
-worklist over a finite pp set.
+This is `TD_side.solve_dom destab_opt True (side_cfg_T_ip_eff …) v`, i.e. termination
+of the side-effecting per-pp solve. Monotonicity of `side_cfg_T_ip_eff` is proved
+(in `TD_Side_IP_Eff_Bounds.thy` + `TD_Side_IP_Eff_Soundness.thy`), so P1 is gated on
+well-foundedness of the TD side worklist over a finite pp set.
 
 P1 is gated on P5 for a generic termination proof.
 

@@ -10,7 +10,7 @@ begin
 text \<open>
   Side-effecting interprocedural witness: @{const inc_pi} with a single call to
   procedure p.  Operational semantics via @{const pruns_to_ip}; soundness via
-  @{const side_analyse_ip} (the side TD solver).
+  @{const side_analyse_ip_eff} (the effectful side TD solver).
 \<close>
 
 (* A non-trivial initial state: every variable -- including the globals --
@@ -25,11 +25,11 @@ theorem proc_global_side_sign_analysis:
   assumes s_sound: "s \<in> sign_domain.gamma_state side_proc_global_s0"
   assumes runs: "pruns_to_ip inc_pi [''p''] (Call ''p'') s t"
   assumes side_solve_dom:
-    "side_cfg_ip_solve_dom (compile_prog inc_pi [''p''] (Call ''p'')) sign_tf bot
+    "side_cfg_ip_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p'')) sign_etf bot
        side_proc_global_s0
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
   shows "t \<in> sign_domain.gamma_state
-       (side_analyse_ip inc_pi [''p''] (Call ''p'') sign_tf bot side_proc_global_s0
+       (side_analyse_ip_eff inc_pi [''p''] (Call ''p'') sign_etf bot side_proc_global_s0
          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
 proof -
   have collect_exit:

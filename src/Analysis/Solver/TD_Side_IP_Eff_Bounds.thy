@@ -1,5 +1,5 @@
 theory TD_Side_IP_Eff_Bounds
-  imports TD_Side_IP_Mono
+  imports TD_Side_IP_Tree
 begin
 
 section \<open>Effectful side IP solver: general monotonicity (no shim)\<close>

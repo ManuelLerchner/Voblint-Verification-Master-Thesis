@@ -1,5 +1,5 @@
 theory Exec_Bridge
-  imports Exec_St TD_Side_IP_Mono
+  imports Exec_St TD_Side_IP_Eff_Bounds
 begin
 
 section \<open>S4 bridge: fun_of_st homomorphisms and executable equation-system transport\<close>
@@ -236,6 +236,130 @@ next
    
 qed
 
+subsection \<open>Simulation against the effectful shim fold\<close>
+
+text \<open>
+  The same fun_of_st simulation, but targeting the effectful shim fold
+  side_acc_ip_eff (etf_from_tf tf) / its global side contributions, so the
+  executable post-solution transports onto side_cfg_T_ip_eff directly with no
+  pure side_cfg_T_ip in the chain.
+\<close>
+
+lemma side_acc_ip_st_fun_of_st_eff:
+  assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
+  shows "fun_of_st (side_acc_ip_st tf_st acc_st \<sigma>_st es cs) =
+         side_acc_ip_eff (etf_from_tf tf) (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) es cs"
+proof (induction es arbitrary: acc_st cs)
+  case Nil
+  then show ?case
+  proof (induction cs arbitrary: acc_st)
+    case Nil thus ?case by simp
+  next
+    case (Cons x cs)
+    obtain cc ex where x: "x = (cc, ex)" by (cases x)
+    have "fun_of_st (side_acc_ip_st tf_st acc_st \<sigma>_st [] (x # cs))
+        = fun_of_st (side_acc_ip_st tf_st
+            (acc_st \<squnion> restrict_local_st (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))) \<sigma>_st [] cs)"
+      unfolding x by simp
+    also have "... = side_acc_ip_eff (etf_from_tf tf)
+            (fun_of_st (acc_st \<squnion> restrict_local_st (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))))
+            (fun_of_st \<circ> \<sigma>_st) [] cs"
+      by (rule Cons.IH)
+    also have "... = side_acc_ip_eff (etf_from_tf tf) (fun_of_st acc_st)
+            (fun_of_st \<circ> \<sigma>_st) [] (x # cs)"
+      unfolding x
+      by (simp add: side_acc_ip_eff.simps(3) traverse_pure_combine_tree
+            fun_of_st_sup fun_of_st_restrict_local_st o_def)
+    finally show ?case .
+  qed
+next
+  case (Cons x es)
+  obtain u a where x: "x = (u, a)" by (cases x)
+  have "fun_of_st (side_acc_ip_st tf_st acc_st \<sigma>_st (x # es) cs)
+      = fun_of_st (side_acc_ip_st tf_st
+          (acc_st \<squnion> restrict_local_st (tf_st a (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))) \<sigma>_st es cs)"
+    unfolding x by simp
+  also have "... = side_acc_ip_eff (etf_from_tf tf)
+          (fun_of_st (acc_st \<squnion> restrict_local_st (tf_st a (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))))
+          (fun_of_st \<circ> \<sigma>_st) es cs"
+    by (rule Cons.IH)
+  also have "... = side_acc_ip_eff (etf_from_tf tf) (fun_of_st acc_st)
+          (fun_of_st \<circ> \<sigma>_st) (x # es) cs"
+    unfolding x
+    by (simp add: side_acc_ip_eff.simps(2) traverse_pure_edge_tree
+          fun_of_st_sup fun_of_st_restrict_local_st commute o_def)
+  finally show ?case .
+qed
+
+lemma sides_eff_fold_edge_step:
+  "sides_of_rhs (side_rhs_fold_ip_eff etf acc ((u, a) # es) cs) \<sigma> (Inr ())
+   = sides_of_rhs (apply_etf etf a u) \<sigma> (Inr ())
+     \<squnion> sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) \<sigma> (Inr ())"
+proof -
+  have "sides_of_rhs (side_rhs_fold_ip_eff etf
+          (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) es cs) \<sigma> (Inr ())
+      = sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) \<sigma> (Inr ())"
+    by (rule fun_cong[OF sides_side_rhs_fold_ip_eff_acc_indep])
+  thus ?thesis by (simp add: side_rhs_fold_ip_eff.simps sides_of_rhs_seqcomp sup_apply)
+qed
+
+lemma sides_eff_fold_combine_step:
+  "sides_of_rhs (side_rhs_fold_ip_eff etf acc [] ((cc, ex) # cs)) \<sigma> (Inr ())
+   = sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ())
+     \<squnion> sides_of_rhs (side_rhs_fold_ip_eff etf acc [] cs) \<sigma> (Inr ())"
+proof -
+  have "sides_of_rhs (side_rhs_fold_ip_eff etf
+          (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma> (Inr ())
+      = sides_of_rhs (side_rhs_fold_ip_eff etf acc [] cs) \<sigma> (Inr ())"
+    by (rule fun_cong[OF sides_side_rhs_fold_ip_eff_acc_indep])
+  thus ?thesis by (simp add: side_rhs_fold_ip_eff.simps sides_of_rhs_seqcomp sup_apply)
+qed
+
+lemma side_glob_ip_st_fun_of_st_eff:
+  assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
+  shows "fun_of_st (side_glob_ip_st tf_st \<sigma>_st es cs) =
+         sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+proof (induction es arbitrary: acc cs)
+  case Nil
+  then show ?case
+  proof (induction cs arbitrary: acc)
+    case Nil thus ?case by simp
+  next
+    case (Cons x cs)
+    obtain cc ex where x: "x = (cc, ex)" by (cases x)
+    have ih: "fun_of_st (side_glob_ip_st tf_st \<sigma>_st [] cs)
+            = sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+      by (rule Cons.IH)
+    have "fun_of_st (side_glob_ip_st tf_st \<sigma>_st [] (x # cs))
+        = restrict_global (fun_of_st (\<sigma>_st (Inl ex)) \<squnion> fun_of_st (\<sigma>_st (Inr ())))
+          \<squnion> sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+      unfolding x by (simp add: fun_of_st_sup fun_of_st_restrict_global_st ih sup.commute)
+    also have "... = sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc [] (x # cs))
+            (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+      unfolding x
+      by (simp del: side_rhs_fold_ip_eff.simps
+            add: sides_eff_fold_combine_step sides_pure_combine_tree_Inr o_def sup.commute)
+    finally show ?case .
+  qed
+next
+  case (Cons x es)
+  obtain u a where x: "x = (u, a)" by (cases x)
+  have ih: "fun_of_st (side_glob_ip_st tf_st \<sigma>_st es cs)
+          = sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+    by (rule Cons.IH)
+  have "fun_of_st (side_glob_ip_st tf_st \<sigma>_st (x # es) cs)
+      = restrict_global (apply_tf tf a (fun_of_st (\<sigma>_st (Inl u)) \<squnion> fun_of_st (\<sigma>_st (Inr ()))))
+        \<squnion> sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+    unfolding x
+    by (simp add: fun_of_st_sup fun_of_st_restrict_global_st commute ih sup.commute)
+  also have "... = sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc (x # es) cs)
+          (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+    unfolding x
+    by (simp del: side_rhs_fold_ip_eff.simps
+          add: sides_eff_fold_edge_step sides_pure_edge_tree_Inr o_def sup.commute)
+  finally show ?case .
+qed
+
 subsection \<open>Strategy tree: side_rhs_fold_ip_st\<close>
 
 text \<open>
@@ -395,29 +519,6 @@ text \<open>
   accumulator that arises in each branch.
 \<close>
 
-lemma dep_aux_side_rhs_fold_ip_st_eq_ip:
-  "dep_aux \<sigma>_st (side_rhs_fold_ip_st tf_st acc es cs) =
-   dep_aux \<sigma>_abs (side_rhs_fold_ip tf join acc' es cs)"
-proof (induction es arbitrary: acc acc' cs)
-  case Nil
-  show ?case
-  proof (induction cs arbitrary: acc acc')
-    case Nil thus ?case by simp
-  next
-    case (Cons c cs acc acc')
-    obtain cc ex where c: "c = (cc, ex)" by (cases c)
-    show ?case unfolding c
-      apply (simp add: dep_aux.simps side_rhs_fold_ip_st.simps side_rhs_fold_ip.simps Let_def)
-      by (metis Cons.IH)
-  qed
-next
-  case (Cons e es acc acc' cs)
-  obtain u a where e: "e = (u, a)" by (cases e)
-  show ?case unfolding e
-    apply (simp add: dep_aux.simps side_rhs_fold_ip_st.simps side_rhs_fold_ip.simps Let_def)
-    by (metis Cons.IH)
-qed
-
 lemma dep_aux_side_rhs_fold_ip_st_set:
   "dep_aux \<sigma> (side_rhs_fold_ip_st tf_st acc es cs) =
    (\<Union>(u, a)\<in>set es. {Inl u, Inr ()}) \<union> (\<Union>(cc, ex)\<in>set cs. {Inl cc, Inl ex, Inr ()})"
@@ -458,26 +559,69 @@ next
   show ?thesis unfolding make_side_rhs_tree_ip_st_def Let_def using False by simp
 qed
 
-lemma dep_aux_make_side_rhs_tree_ip_st_eq_ip:
-  "dep_aux \<sigma>_st (make_side_rhs_tree_ip_st g tf_st bot0_st s0_st v) =
-   dep_aux \<sigma>_abs (make_side_rhs_tree_ip g tf join bot0 s0 v)"
-  by (simp add: dep_aux_make_side_rhs_tree_ip_st dep_aux_make_side_rhs_tree_ip
-                dep_aux_side_rhs_fold_ip_st_eq_ip)
-
-subsection \<open>Transport: executable part_post_solution \<open>\<Rightarrow>\<close> abstract part_post_solution\<close>
+subsection \<open>Transport: executable part_post_solution \<open>\<Rightarrow>\<close> effectful part_post_solution\<close>
 
 text \<open>
-  Given that fun_of_st commutes with the per-edge transfer function tf_st (the
-  commutation hypothesis), any part_post_solution of the executable equation system
-  side_cfg_T_ip_st at 'a st maps via fun_of_st to a part_post_solution of the
-  abstract side_cfg_T_ip at 'a abs_state.
-
-  The proof structure: for each program point v in vars,
-  (a) the local equation bound transfers by fun_of_st_mono + simulation;
-  (b) the global side-effect bound transfers similarly;
-  (c) the local side (Inl) is bot in both systems;
-  (d) dependency inclusion is structural (same QueryL/QueryG pattern).
+  The shim effectful fold queries exactly the same unknowns as the executable
+  st fold: each edge contributes its source local and the global, each combine
+  its call/exit locals and the global.  So both dep_aux sets coincide.
 \<close>
+lemma dep_aux_side_rhs_fold_ip_eff_from_tf_set:
+  "dep_aux \<sigma> (side_rhs_fold_ip_eff (etf_from_tf tf) acc es cs) =
+   (\<Union>(u, a)\<in>set es. {Inl u, Inr ()}) \<union> (\<Union>(cc, ex)\<in>set cs. {Inl cc, Inl ex, Inr ()})"
+proof (induction es arbitrary: acc cs)
+  case Nil
+  show ?case
+  proof (induction cs arbitrary: acc)
+    case Nil show ?case by simp
+  next
+    case (Cons c cs)
+    obtain cc ex where c: "c = (cc, ex)" by (cases c)
+    show ?case unfolding c
+      by (simp add: side_rhs_fold_ip_eff.simps dep_aux_seqcomp etf_combine_from_tf
+            pure_combine_tree_def Let_def Cons.IH)
+  qed
+next
+  case (Cons e es)
+  obtain u a where e: "e = (u, a)" by (cases e)
+  show ?case unfolding e
+    by (simp add: side_rhs_fold_ip_eff.simps dep_aux_seqcomp apply_etf_from_tf
+          pure_edge_tree_def Let_def Cons.IH)
+qed
+
+lemma dep_aux_make_side_rhs_tree_ip_st_eq_eff:
+  "dep_aux \<sigma>_st (make_side_rhs_tree_ip_st g tf_st bot0_st s0_st v) =
+   dep_aux \<sigma>_abs (make_side_rhs_tree_ip_eff g (etf_from_tf tf) bot0 s0 v)"
+  by (simp add: dep_aux_make_side_rhs_tree_ip_st dep_aux_make_side_rhs_tree_ip_eff
+        dep_aux_side_rhs_fold_ip_st_set dep_aux_side_rhs_fold_ip_eff_from_tf_set)
+
+text \<open>The shim fold only side-effects the global slot, so local sides are bot.\<close>
+lemma sides_side_rhs_fold_ip_eff_from_tf_Inl:
+  "sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) acc es cs) \<sigma> (Inl u) = bot"
+proof (induction es arbitrary: acc cs)
+  case Nil
+  show ?case
+  proof (induction cs arbitrary: acc)
+    case Nil show ?case by simp
+  next
+    case (Cons c cs)
+    obtain cc ex where c: "c = (cc, ex)" by (cases c)
+    show ?case unfolding c
+      by (simp add: side_rhs_fold_ip_eff.simps sides_of_rhs_seqcomp sup_apply
+            etf_combine_from_tf pure_combine_tree_def Let_def Cons.IH)
+  qed
+next
+  case (Cons e es)
+  obtain w b where e: "e = (w, b)" by (cases e)
+  show ?case unfolding e
+    by (simp add: side_rhs_fold_ip_eff.simps sides_of_rhs_seqcomp sup_apply
+          apply_etf_from_tf pure_edge_tree_def Let_def Cons.IH)
+qed
+
+lemma sides_make_side_rhs_tree_ip_eff_from_tf_Inl:
+  "sides_of_rhs (make_side_rhs_tree_ip_eff g (etf_from_tf tf) bot0 s0 v) \<sigma> (Inl u) = bot"
+  unfolding make_side_rhs_tree_ip_eff_def
+  by (simp add: sides_side_rhs_fold_ip_eff_from_tf_Inl Let_def)
 
 context
   fixes g :: cfg
@@ -487,76 +631,108 @@ context
   assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
 begin
 
-private lemma fun_of_st_eq_ip_st:
+private lemma fun_of_st_eq_ip_st_eff:
   "fun_of_st (eq (side_cfg_T_ip_st g tf_st bot0_st s0_st) v \<sigma>_st) =
-   eq (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st)) v (fun_of_st \<circ> \<sigma>_st)"
-  unfolding eq_side_cfg_T_ip_st eq_side_cfg_T_ip
-  by (simp add: side_acc_ip_st_fun_of_st[OF commute]
+   eq (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st)) v (fun_of_st \<circ> \<sigma>_st)"
+  unfolding eq_side_cfg_T_ip_st eq_side_cfg_T_ip_eff
+  by (simp add: side_acc_ip_st_fun_of_st_eff[OF commute]
                 fun_of_st_sup fun_of_st_restrict_local_st)
 
-private lemma fun_of_st_sides_ip_st_Inr:
+private lemma fun_of_st_sides_ip_st_Inr_eff:
   "fun_of_st (sides_of_rhs (side_cfg_T_ip_st g tf_st bot0_st s0_st v) \<sigma>_st (Inr ())) =
-   sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st) v)
+   sides_of_rhs (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)
      (fun_of_st \<circ> \<sigma>_st) (Inr ())"
-  unfolding side_cfg_T_ip_def make_side_rhs_tree_ip_def
-  unfolding side_cfg_T_ip_st_def
-  by (simp add: commute make_side_rhs_tree_ip_st_def side_glob_ip_st_fun_of_st
-      sides_side_rhs_fold_ip_Inr sides_side_rhs_fold_ip_st_Inr)
- 
+proof (cases "v = cfg_entry g")
+  case True
+  have acc_eq:
+    "sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf)
+         (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+         (predecessor_list g v) (combine_predecessor_list g v))
+       (fun_of_st \<circ> \<sigma>_st) (Inr ()) =
+     sides_of_rhs (side_rhs_fold_ip_eff (etf_from_tf tf) (fun_of_st bot0_st)
+         (predecessor_list g v) (combine_predecessor_list g v))
+       (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+    by (rule fun_cong[OF sides_side_rhs_fold_ip_eff_acc_indep])
+  show ?thesis
+    unfolding side_cfg_T_ip_st_def side_cfg_T_ip_eff_def
+              make_side_rhs_tree_ip_st_def make_side_rhs_tree_ip_eff_def
+    using True
+    using acc_eq by (auto simp add: sides_side_rhs_fold_ip_st_Inr Let_def
+                  side_glob_ip_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"]
+                  acc_eq fun_of_st_sup fun_of_st_restrict_global_st)
+next
+  case False
+  show ?thesis
+    unfolding side_cfg_T_ip_st_def side_cfg_T_ip_eff_def
+              make_side_rhs_tree_ip_st_def make_side_rhs_tree_ip_eff_def
+    using False
+    by (simp add: sides_side_rhs_fold_ip_st_Inr Let_def
+                  side_glob_ip_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"]
+                  fun_of_st_sup)
+qed
 
-theorem part_post_solution_st_to_abs:
+text \<open>
+  Executable post-solution maps directly to a part_post_solution of the effectful
+  shim equation system \<open>side_cfg_T_ip_eff (etf_from_tf tf)\<close>.  The proof structure
+  mirrors the pure transport: (a) the local equation bound transfers via
+  fun_of_st_eq_ip_st_eff; (b) the global side-effect bound via
+  fun_of_st_sides_ip_st_Inr_eff; (c) local sides are bot by
+  sides_make_side_rhs_tree_ip_eff_from_tf_Inl; (d) dependencies agree by
+  dep_aux_make_side_rhs_tree_ip_st_eq_eff.
+\<close>
+theorem part_post_solution_st_to_abs_eff:
   assumes pp_st:
     "part_post_solution (side_cfg_T_ip_st g tf_st bot0_st s0_st) x \<sigma>_st vars"
   shows
     "part_post_solution
-       (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st))
+       (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
        x (fun_of_st \<circ> \<sigma>_st) vars"
 proof -
   have x_in: "x \<in> vars" using pp_st by simp
   have deps: "\<And>v. v \<in> vars \<Longrightarrow>
       dep\<^sub>L (side_cfg_T_ip_st g tf_st bot0_st s0_st) \<sigma>_st v
-    = dep\<^sub>L (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st))
+    = dep\<^sub>L (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
              (fun_of_st \<circ> \<sigma>_st) v"
   proof -
     fix v
     have eq: "dep_aux \<sigma>_st (make_side_rhs_tree_ip_st g tf_st bot0_st s0_st v) =
               dep_aux (fun_of_st \<circ> \<sigma>_st)
-                (make_side_rhs_tree_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st) v)"
-      by (rule dep_aux_make_side_rhs_tree_ip_st_eq_ip)
+                (make_side_rhs_tree_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)"
+      by (rule dep_aux_make_side_rhs_tree_ip_st_eq_eff)
     show "dep\<^sub>L (side_cfg_T_ip_st g tf_st bot0_st s0_st) \<sigma>_st v =
-          dep\<^sub>L (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st))
+          dep\<^sub>L (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
                  (fun_of_st \<circ> \<sigma>_st) v"
-      by (simp add: dep\<^sub>L_def dep_def side_cfg_T_ip_st_def side_cfg_T_ip_def eq)
+      by (simp add: dep\<^sub>L_def dep_def side_cfg_T_ip_st_def side_cfg_T_ip_eff_def eq)
   qed
   show ?thesis
   proof (intro conjI x_in ballI conjI)
     fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st))
+    show "dep\<^sub>L (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
               (fun_of_st \<circ> \<sigma>_st) v \<subseteq> vars"
       using pp_st v_in deps[OF v_in] by auto
-    show "eq (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st)) v
+    show "eq (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st)) v
              (fun_of_st \<circ> \<sigma>_st) \<le> (fun_of_st \<circ> \<sigma>_st) (Inl v)"
     proof -
       have le_st: "eq (side_cfg_T_ip_st g tf_st bot0_st s0_st) v \<sigma>_st \<le> \<sigma>_st (Inl v)"
         using pp_st v_in by simp
       have sim: "fun_of_st (eq (side_cfg_T_ip_st g tf_st bot0_st s0_st) v \<sigma>_st) =
-                 eq (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st))
+                 eq (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
                     v (fun_of_st \<circ> \<sigma>_st)"
-        by (rule fun_of_st_eq_ip_st)
+        by (rule fun_of_st_eq_ip_st_eff)
       from fun_of_st_mono[OF le_st] sim show ?thesis by (simp add: o_def)
     qed
-    show "sides_of_rhs (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st) v)
+    show "sides_of_rhs (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)
              (fun_of_st \<circ> \<sigma>_st) \<le> fun_of_st \<circ> \<sigma>_st"
     proof (rule le_funI)
       fix k
       show "sides_of_rhs
-               (side_cfg_T_ip g tf (\<squnion>) (fun_of_st bot0_st) (fun_of_st s0_st) v)
+               (side_cfg_T_ip_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)
                (fun_of_st \<circ> \<sigma>_st) k
             \<le> (fun_of_st \<circ> \<sigma>_st) k"
-        apply(cases k)
-        apply(auto)
-        apply (simp add: side_cfg_T_ip_def sides_make_side_rhs_tree_ip_Inl)
-        by (metis fun_of_st_mono fun_of_st_sides_ip_st_Inr le_fun_def pp_st v_in)
+        apply (cases k)
+        apply auto
+        apply (simp add: side_cfg_T_ip_eff_def sides_make_side_rhs_tree_ip_eff_from_tf_Inl)
+        by (metis fun_of_st_mono fun_of_st_sides_ip_st_Inr_eff le_fun_def pp_st v_in)
     qed
   qed
 qed

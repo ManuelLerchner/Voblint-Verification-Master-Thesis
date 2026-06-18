@@ -16,8 +16,8 @@ text \<open>
   local part flows on to v's local unknown; the global part is contributed to
   the single global unknown by a side effect.
 
-  Monotonicity / solver preconditions: TD_Side_IP_Mono.
-  Post-solution bounds for soundness: TD_Side_IP_Bounds.
+  Monotonicity / solver preconditions: TD_Side_IP_Eff_Bounds (generic _gen) and TD_Side_IP_Eff_Soundness (shim for etf_from_tf).
+  Post-solution bounds for soundness: TD_Side_IP_Eff_Bounds.
 \<close>
 
 subsection \<open>Strategy tree\<close>

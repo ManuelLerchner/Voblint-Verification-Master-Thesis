@@ -420,7 +420,7 @@ The shim `pure_edge_tree` uses `'g = unit` (backward compat). New domains use
 | `Strategy_Tree_Monad.thy` | **new** — `seqcomp_tree` + 3 key lemmas |
 | `Constraint_System.thy` | replace `domain_transfer` with `effectful_domain_transfer`; add `pure_edge_tree` shim; restate `sound_effectful_transfer` |
 | `TD_Side_IP_Tree.thy` | rewrite `side_rhs_fold_ip` using `seqcomp_tree`; restate `side_acc_ip_eff` |
-| `TD_Side_IP_Mono.thy` | re-prove `is_mono_eq`, `mono_sides`, `mono_deps` for new fold |
+| `TD_Side_IP_Mono.thy` | **deleted** — shim mono re-proved in `TD_Side_IP_Eff_Soundness` via `_gen`; pure mono removed |
 | `TD_Side_CFG.thy` | generalise `pp + unit` to `pp + 'g`; update `side_env` |
 | `Exec_Bridge.thy` | update to `effectful_domain_transfer`; `pp + 'g` |
 | `Sign_Domain.thy` | migrate to `effectful_domain_transfer` via `pure_edge_tree` |
@@ -504,7 +504,7 @@ What landed and verified (`isabelle build` green for `Voblint_Analysis` +
 | `side_env_g` (Gap-1 generic combiner) + `side_env = side_env_g _ ()` | `TD_Side_CFG.thy` | **done** |
 | `side_rhs_fold_ip_eff` (Step 3 fold via `seqcomp_tree`) + `side_acc_ip_eff` denotation | `TD_Side_IP_Tree.thy` | **done** |
 | Bridge: `side_cfg_T_ip_eff (etf_from_tf tf) = side_cfg_T_ip tf (\<squnion>)` | `TD_Side_IP_Tree.thy` | **done** |
-| Eff solver preconditions `is_mono_eq` / `mono_sides` / `mono_deps` | `TD_Side_IP_Mono.thy` | **done** |
+| Shim mono (`side_cfg_T_ip_eff_is_mono_eq` / `_mono_sides` / `_mono_deps`) for `etf_from_tf` | `TD_Side_IP_Eff_Soundness.thy` (re-proved via `_gen`) | **done** |
 | `seqcomp_mono`, `static_deps` + `static_deps_seqcomp` (Step 1/5 monad lemmas) | `Strategy_Tree_Monad.thy` | **done** |
 | `etf_full` reassembly + `sound_effectful_transfer` locale (Step 4 contract) | `Constraint_System.thy` | **done** |
 | `sound_transfer_imp_sound_effectful` (every sound pure domain satisfies the contract via the shim) | `TD_Side_CFG.thy` | **done** |
@@ -565,23 +565,94 @@ end-to-end soundness `side_analyse_ip_eff_collect_sound_exit_pruned` transports 
 pure exit-pruned theorem across the shim — so **the effectful analyser is sound for
 every sound pure domain, with examples ready to migrate to `side_analyse_ip_eff`.**
 
-### Remaining
+### The standalone effectful path is complete (no bridge)
 
-- **General-effectful post-fixpoint bounds (non-shim).** For a non-shim `etf`,
-  `post_fixpoint_sound_at_ip_eff`'s `step_le` / `combine_le` hypotheses (and the
-  `td_cfg_side_ip_solver_eff` mono preconditions) need effectful analogues of
-  `apply_tf_combined_le_ip` / `combine_combined_le_ip` proved from a
-  `part_post_solution` of `side_cfg_T_ip_eff g etf` (relating `side_acc_ip_eff` /
-  `sides_of_rhs` of the eff fold to the solved env). This is the remaining bounds slab
-  — and the gate for retiring the pure path.
-- **Migrate examples** to `side_analyse_ip_eff (etf_from_tf …)` (mechanical now that the
-  shim transfer + soundness exist).
-- **Genuinely-effectful monotonicity/deps for a non-shim `etf`.** A non-shim `etf`
-  (e.g. the flag-routed example in §2) needs its `is_mono_eq` / `mono_deps` discharged
-  from `seqcomp_mono` / `static_deps_seqcomp` rather than through the pure-shim bridge.
-  The monad lemmas are in place; no non-shim instance has been wired yet.
+The effectful pipeline is now **provably self-contained** — a non-shim `etf` obtains
+the full solver interface and end-to-end soundness with no reference to
+`side_cfg_T_ip`, the pure bounds, or `etf_from_tf`:
+
+- **Mono (Step 1, `TD_Side_IP_Eff_Bounds.thy`).** `side_cfg_T_ip_eff_is_mono_eq_gen` /
+  `_mono_sides_gen` / `_mono_deps_gen` discharge the three `TD_side` preconditions from
+  a per-tree monotonicity / static-dependency contract — dischargeable for a real
+  effectful `etf` via `seqcomp_mono` / `static_deps_seqcomp`. Supporting:
+  `sides_of_rhs_seqcomp` / `_at` (the side-contribution bind laws).
+- **Bounds (Step 2, `TD_Side_IP_Eff_Bounds.thy`).** `etf_combined_le_ip_eff` /
+  `etf_combine_combined_le_ip_eff` discharge the per-edge / per-combine post-fixpoint
+  bounds from a `part_post_solution` of `side_cfg_T_ip_eff g etf`. The
+  `etf_full = traverse_rhs ⊔ sides_of_rhs` split makes these a clean `sup_mono`,
+  cleaner than the pure `restrict_local/global` rejoin.
+- **Pipeline (Step 3, `TD_Side_IP_Eff_Pipeline.thy`).**
+  `td_cfg_side_ip_solver_eff_gen` builds the interface from the mono/static contract;
+  `side_collect_sound_ip_at_eff` (in `sound_effectful_transfer`) gives collecting
+  soundness from a post-solution. Together: a non-shim `etf` with the
+  per-tree mono/static + `sound_effectful_transfer` contracts has the whole pipeline,
+  pure layer untouched.
+
+This settles the feasibility question: **the pure-shim bridge is avoidable; the
+effectful path stands alone.**
+
+### Sign/Interval headlines and examples migrated to the standalone path (2026-06-18)
+
+The Sign and Interval headline soundness theorems and both side-effecting
+examples now flow through the standalone effectful pipeline, with no reference to
+`side_analyse_ip` or any pure IP soundness theorem. `Voblint_Formalization` builds
+green, no `sorry`.
+
+| Piece | Location | Status |
+|---|---|---|
+| Eff dependency cone (`dep_side_rhs_tree_ip_eff_edge` / `_combine`, `ip_reaches_imp_trans_dep_or_eq_side_eff`, `side_ip_cone_in_vars_eff`) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
+| Eff exit pruning + entry seeding (`side_collect_sound_ip_exit_pruned_eff`, `s0_le_side_env_entry_ip_eff`) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
+| Executable standalone soundness `side_analyse_ip_eff_collect_sound_exit_pruned_gen` (interface from the per-tree mono/static contract, no pure shim) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
+| Generic shim discharge of the cone contracts for `etf_from_tf` (`dep_aux_apply_etf_from_tf_src`, `static_deps_*`) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
+| `side_ip_sign_analysis_sound` re-proved via `side_analyse_ip_eff` + `sign_sound_etf` | `Sign_Side_IP_Soundness.thy` | **done** |
+| `ivl_etf` / `ivl_sound_etf` instance + `side_ip_ivl_analysis_sound` on the eff path | `Interval_Side_IP_Soundness.thy` | **done** |
+| Examples point at `side_analyse_ip_eff` / `sign_etf` / `ivl_etf` | `Example_Side_Proc_Global.thy`, `Example_Interval_Side_Proc_Global.thy` | **done** |
+
+The `side_ip_*_analysis_sound` headlines are now stated against `side_analyse_ip_eff`
+and proved by instantiating `side_analyse_ip_eff_collect_sound_exit_pruned_gen` at the
+domain's `sound_effectful_transfer` witness, discharging the three TD_side
+preconditions from `*_tf_mono` and the five cone contracts generically from the
+`etf_from_tf` shim structure.
+
+### Pure IP soundness + pure solver interface + pure bounds deleted (2026-06-18)
+
+`Sign_Exec_Sound.thy` was re-based onto the standalone effectful soundness layer:
+`Exec_Bridge.part_post_solution_st_to_abs_eff` maps the executable `'a st`
+post-solution to a `part_post_solution` of `side_cfg_T_ip_eff (etf_from_tf tf)`,
+and `sign_exec_sound_collecting` now draws its collecting soundness from
+`sound_effectful_transfer.side_collect_sound_ip_exit_pruned_eff` (the Sign witness
+`sign_sound_etf`) — no pure IP soundness theorem.  With that last consumer gone,
+three whole pure files were deleted, `Voblint_Formalization` builds green, no `sorry`:
+
+| Deleted | Was |
+|---|---|
+| `TD_Side_IP_Soundness.thy` | pure IP collecting soundness: `side_collect_sound_ip_at` / `_exit_pruned`, `ip_reaches_imp_trans_dep_or_eq_side`, `side_ip_cone_in_vars`, `side_analyse_ip_collect_sound_exit_pruned` |
+| `TD_Side_IP_Interface.thy` | pure solver interface: `td_cfg_side_ip_solver` locale, `side_analyse_ip`, `side_cfg_ip_solve_dom`, `side_nu_at` / `side_stabl_at` / `side_env_at` |
+| `TD_Side_IP_Bounds.thy` | pure post-solution bounds (`apply_tf_combined_le_ip`, `combine_combined_le_ip`, the pure dependency-cone membership and entry-seeding lemmas) |
+
+Also removed: the `*_from_tf` shim transport family from `TD_Side_IP_Eff_Interface`.
+
+### Pure monotonicity deleted (2026-06-18)
+
+`TD_Side_IP_Mono.thy` has been deleted. The three shim monotonicity lemmas
+(`side_cfg_T_ip_eff_is_mono_eq` / `_mono_sides` / `_mono_deps`) were re-proved in
+`TD_Side_IP_Eff_Soundness.thy` using the generic `_gen` versions from
+`TD_Side_IP_Eff_Bounds.thy` and structural properties of `pure_edge_tree` /
+`pure_combine_tree`. `Exec_Bridge` was decoupled from the pure transport: a direct
+`'a st`→eff fold simulation (`side_acc_ip_st_fun_of_st_eff`,
+`side_glob_ip_st_fun_of_st_eff`) proves `part_post_solution_st_to_abs_eff` without
+going through `side_cfg_T_ip`. `Voblint_Formalization` builds green, no `sorry`.
+
+The pure fold (`side_acc_ip`, `side_rhs_fold_ip`, `side_glob_ip`) remains in
+`TD_Side_IP_Tree.thy` as an internal stepping stone for the simulation proof;
+it is not referenced from any soundness or interface theory outside `Exec_Bridge`.
+
+### Open (non-blocking)
+
+- **A non-shim effectful instance.** Wire one genuinely effectful `etf` (e.g. the
+  flag-routed example in §2) through `side_analyse_ip_eff_collect_sound_exit_pruned_gen`
+  to exercise the standalone path for real (precision the pure system cannot express).
 - **Gap-1 end-to-end (`pp + 'g`).** The IP fold's combine/return linkage and
   `Exec_Bridge` still hardcode the single `Inr ()` global. Generalising these to
   `pp + 'g` (per §3 Step 6) is the remaining large change; `side_env_g` is the
   prepared entry point.
-- **Interval effectful instance** mirroring `sign_etf` / `sign_sound_etf`.

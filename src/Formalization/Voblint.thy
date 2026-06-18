@@ -27,7 +27,7 @@ theory Voblint
     "Voblint_Analysis.Constraint_System_Sound"
     "Voblint_Analysis.Constraint_System_IP_Sound"
     "Voblint_Analysis.TD_Side_CFG"
-    "Voblint_Analysis.TD_Side_IP_Soundness"
+    "Voblint_Analysis.TD_Side_IP_Eff_Soundness"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Side_IP_Soundness"
     "Voblint_Analysis.Interval_Domain"
@@ -92,7 +92,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- each constraint RHS soundly over-approximates the collecting step.
     \<^item> @{theory Voblint_Analysis.Constraint_System_IP_Sound} --- interprocedural constraint soundness.
     \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- wires the constraint system into the side-effecting TD solver.
-    \<^item> @{theory Voblint_Analysis.TD_Side_IP_Soundness} --- collecting soundness of the side-effecting IP solver.
+    \<^item> @{theory Voblint_Analysis.TD_Side_IP_Eff_Soundness} --- collecting soundness of the standalone effectful side-effecting IP solver.
     \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice: concrete domain instantiation.
     \<^item> @{theory Voblint_Analysis.Sign_Side_IP_Soundness} --- Sign domain instantiated at the side IP solver.
     \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval domain instantiation.

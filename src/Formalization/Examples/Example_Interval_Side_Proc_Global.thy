@@ -7,7 +7,7 @@ begin
 text \<open>
   Interval instance of the side-effecting interprocedural witness: the same
   @{const inc_pi} program (a single call to procedure p incrementing the global
-  @{term \<open>''Gx''\<close>}) carried through the @{const side_analyse_ip} solver at the
+  @{term \<open>''Gx''\<close>}) carried through the @{const side_analyse_ip_eff} solver at the
   interval domain.  Demonstrates the soundness scaffold is domain-generic by
   reusing it on a second, infinite-height numeric domain.
 \<close>
@@ -24,11 +24,11 @@ theorem proc_global_side_ivl_analysis:
   assumes s_sound: "s \<in> ivl_domain.gamma_state side_proc_global_ivl_s0"
   assumes runs: "pruns_to_ip inc_pi [''p''] (Call ''p'') s t"
   assumes side_solve_dom:
-    "side_cfg_ip_solve_dom (compile_prog inc_pi [''p''] (Call ''p'')) ivl_tf bot
+    "side_cfg_ip_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p'')) ivl_etf bot
        side_proc_global_ivl_s0
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
   shows "t \<in> ivl_domain.gamma_state
-       (side_analyse_ip inc_pi [''p''] (Call ''p'') ivl_tf bot side_proc_global_ivl_s0
+       (side_analyse_ip_eff inc_pi [''p''] (Call ''p'') ivl_etf bot side_proc_global_ivl_s0
          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
 proof -
   have collect_exit:

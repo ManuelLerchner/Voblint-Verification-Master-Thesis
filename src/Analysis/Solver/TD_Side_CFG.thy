@@ -16,8 +16,8 @@ text \<open>
   original state.  side_env combines the local unknown at a program point with
   the single global unknown.
 
-  The interprocedural strategy tree, transfer functions, and their
-  monotonicity live in TD_Side_IP_Mono.
+  The interprocedural strategy tree and transfer functions live in TD_Side_IP_Tree;
+  monotonicity and solver preconditions live in TD_Side_IP_Eff_Bounds and TD_Side_IP_Eff_Soundness.
 \<close>
 
 (* Keep only the local (resp. global) component of an abstract state; the other
@@ -184,6 +184,12 @@ lemma etf_full_etf_from_tf:
 lemma traverse_pure_combine_tree:
   "traverse_rhs (pure_combine_tree cc ex) \<sigma> = restrict_local (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))"
   unfolding pure_combine_tree_def by (simp add: Let_def restrict_local_combine_eq)
+
+(* The shim's combine tree contributes the callee-exit globals to the global slot. *)
+lemma sides_pure_combine_tree_Inr:
+  "sides_of_rhs (pure_combine_tree cc ex) \<sigma> (Inr ()) =
+   restrict_global (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
+  unfolding pure_combine_tree_def by (simp add: Let_def restrict_global_combine_eq)
 
 (* The shim's combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_pure_combine_tree:

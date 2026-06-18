@@ -69,7 +69,7 @@ to last stores; `alpha_last (cfg_collect_trace_ip …) ⊆ cfg_collect_ip …`.
 
 **Domain instantiation:**
 
-- `side_ip_sign_analysis_sound` (`Sign_Side_IP_Soundness.thy`) — sign analysis at exit, using `side_analyse_ip`.
+- `side_ip_sign_analysis_sound` (`Sign_Side_IP_Soundness.thy`) — sign analysis at exit, using `side_analyse_ip_eff`.
 - `proc_global_side_sign_analysis` (`Example_Side_Proc_Global.thy`) — concrete witness: global-increment call.
 
 ```mermaid
@@ -106,11 +106,11 @@ flowchart TD
 ```
 pruns_to_ip pi ps c s t             -- spec: t at exit of compile_prog pi ps c
   => t in cfg_collect_ip … exit
-  => t in gamma_state (side_analyse_ip pi ps c sign_tf bot s0 exit)
+  => t in gamma_state (side_analyse_ip_eff pi ps c sign_etf bot s0 exit)
      (side_ip_sign_analysis_sound / proc_global_side_sign_analysis)
 ```
 
-Full chain: `side_ip_sign_analysis_sound` ← `sound_transfer.side_analyse_ip_collect_sound_exit_pruned` ← `TD_Side_IP_Soundness` ← `Analysis_Sound.unified_post_fixpoint_sound_ip` ← `CFG_Collect_IP`.
+Full chain: `side_ip_sign_analysis_sound` ← `side_analyse_ip_eff_collect_sound_exit_pruned_gen` ← `sound_effectful_transfer.side_collect_sound_ip_exit_pruned_eff` (`TD_Side_IP_Eff_Soundness`) ← `post_fixpoint_sound_at_ip_eff` ← `CFG_Collect_IP`.
 
 ---
 
@@ -138,7 +138,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 | Collecting | `CFG_Collect_IP`, `CFG_Collect_IP_Adeq`, `CFG_Collect_Trace_IP` | `cfg_collect_ip`, `pruns_to_ip`, `alpha_last`, trace-ip projection |
 | Unified | `CFG_Collect_Unified`, `Analysis_Sound` | locale `collecting`, `unified_post_fixpoint_sound_ip` |
 | Equations | `Constraint_System`, `Constraint_System_IP_Sound` | `rhs_ip`, `is_post_fixpoint_ip`, `post_fixpoint_sound_at` |
-| Solver | `TD_Side_IP_{Tree,Mono,Bounds}`, `TD_Side_IP_Interface`, `TD_Side_IP_Soundness` | `side_cfg_T_ip`, `side_analyse_ip`, `side_analyse_ip_collect_sound_exit_pruned` |
+| Solver | `TD_Side_IP_{Tree,Mono}`, `TD_Side_IP_Eff_{Sound,Bounds,Interface,Pipeline,Soundness}` | `side_cfg_T_ip_eff`, `side_analyse_ip_eff`, `side_analyse_ip_eff_collect_sound_exit_pruned_gen` |
 | Pipeline | `Trace_IP_Analysis_Sound` | `trace_ip_analysis_sound`, `reaching_global_read_sound`, `digest_read_sound` |
 | Domain | `Sign_Domain`, `Sign_Exec`, `Sign_Side_IP_Soundness`, `Sign_Exec_Sound` | `sign_domain`/`sign_sound_tf` interpretations, `cinit_sign_st`, `sign_exec_sound_collecting` |
 | Examples | `Example_Side_Proc_Global` | `proc_global_side_sign_analysis` |
