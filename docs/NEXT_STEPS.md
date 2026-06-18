@@ -10,7 +10,8 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 **Done**
 
 - Full IP soundness chain: IMP2 with procedures → interprocedural CFG → `cfg_collect_ip` → side-effecting TD solver → `trace_ip_analysis_sound` / `reaching_global_read_sound`.
-- Sign domain end-to-end: `side_ip_sign_analysis_sound`, `proc_global_side_sign_analysis`.
+- Sign and Interval domain end-to-end on the standalone effectful path: `side_ip_sign_analysis_sound`, `side_ip_ivl_analysis_sound`, executable `sign_exec_sound_collecting` via `Exec_Bridge`.
+- **Effectful spine is the sole spine** (2026-06-18): all pure-only solver files (`TD_Side_IP_Soundness`, `TD_Side_IP_Interface`, `TD_Side_IP_Bounds`, `TD_Side_IP_Mono`) deleted; `side_cfg_T_ip_eff` is the only equation system; shim mono in `TD_Side_IP_Eff_Soundness`, transport in `Exec_Bridge` via direct fold simulation.
 - **0 sorries** in `src/`.
 - Trace semantics (`cfg_collect_trace_ip`) + projection (`alpha_last`) + soundness morphism.
 - AFP IMP2 bridge + VCG co-existence example.

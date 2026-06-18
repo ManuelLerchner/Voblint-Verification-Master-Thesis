@@ -51,7 +51,7 @@ only in the leaf read corollaries that project to a single variable
 (`src/Formalization/Pipeline/Trace_IP_Analysis_Sound.thy:77,137`):
 `(last tr) x \<in> gamma (env v x)`.
 
-The solver-soundness chain (`src/Analysis/Solver/TD_Side_IP_Soundness.thy`)
+The solver-soundness chain (`src/Analysis/Solver/TD_Side_IP_Eff_Soundness.thy`)
 depends on `gamma_state` through exactly **four abstract facts**, never its
 structure:
 
@@ -148,7 +148,7 @@ spine edits.
 
 - `Constraint_System.thy`: `domain_transfer` over `'d` carriers; restate
   `sound_transfer` over `gamma_st`; keep `apply_tf`.
-- `TD_Side_IP_Soundness.thy`, `Trace_IP_Analysis_Sound.thy`: swap
+- `TD_Side_IP_Eff_Soundness.thy`, `Trace_IP_Analysis_Sound.thy`: swap
   `gamma_state` -> `gamma_st`; leaf read corollary gains the optional
   `gamma_st_read` assumption.
 - Re-interpret Sign through the new locale; confirm `Sign_Side_IP_Soundness`
@@ -167,7 +167,7 @@ spine edits.
 
 - `Abstract_Domain.thy`: `rel_domain` locale + box `interpretation`.
 - `Constraint_System.thy`: generalize transfer carrier + `sound_transfer`.
-- `TD_Side_IP_Soundness.thy` / `Trace_IP_Analysis_Sound.thy`:
+- `TD_Side_IP_Eff_Soundness.thy` / `Trace_IP_Analysis_Sound.thy`:
   `gamma_state` -> `gamma_st`, optional read assumption.
 - New `src/Analysis/Domains/Rel_Order_Domain.thy`.
 - IP combine: restricted/conservative combinator + soundness, or defer.

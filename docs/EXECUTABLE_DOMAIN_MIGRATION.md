@@ -421,12 +421,13 @@ returns a concrete list, with no `to_nat`/`linorder` dependency.
    Alternatively skip the abstract `predecessor_list` entirely and feed the
    `sign st` eqs (S4) a list directly from `compile_edges`.
 
-### S4: the soundness bridge (the substance)
+### S4: the soundness bridge (the substance) — COMPLETED
 
 Goal: the *computed* executable result, read through `fun_of_st` (= `lookup_st`),
-is a `part_post_solution` of the abstract `side_cfg_T_ip g tf (⊔) bot s0`, so the
-already-proved `side_collect_sound_ip_exit_pruned` (`TD_Side_IP_Soundness.thy`)
-certifies it with no new soundness argument.
+is a `part_post_solution` of the effectful system `side_cfg_T_ip_eff g (etf_from_tf tf) bot s0`,
+so the already-proved `side_collect_sound_ip_exit_pruned_eff` (`TD_Side_IP_Eff_Soundness.thy`)
+certifies it. This was implemented in `Exec_Bridge.part_post_solution_st_to_abs_eff`
+via a direct `'a st`→eff fold simulation (2026-06-18); `TD_Side_IP_Soundness.thy` no longer exists.
 
 **Design it generic, not sign-only.** Almost everything below is generic in the
 value domain `'a :: bounded_semilattice_sup_bot` and belongs in `Exec_St` (or a

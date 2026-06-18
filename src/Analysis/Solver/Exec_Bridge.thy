@@ -24,7 +24,7 @@ text \<open>
   5. make_side_rhs_tree_ip_st / side_cfg_T_ip_st: the full executable equation system.
 
   6. Transport theorem: a part_post_solution of side_cfg_T_ip_st (at 'a st) maps via
-     fun_of_st to a part_post_solution of side_cfg_T_ip (at 'a abs_state).
+     fun_of_st to a part_post_solution of side_cfg_T_ip_eff (etf_from_tf tf).
 \<close>
 
 subsection \<open>fun_of_st homomorphisms for local/global projections\<close>
@@ -239,10 +239,9 @@ qed
 subsection \<open>Simulation against the effectful shim fold\<close>
 
 text \<open>
-  The same fun_of_st simulation, but targeting the effectful shim fold
-  side_acc_ip_eff (etf_from_tf tf) / its global side contributions, so the
-  executable post-solution transports onto side_cfg_T_ip_eff directly with no
-  pure side_cfg_T_ip in the chain.
+  fun_of_st simulation against the effectful shim fold side_acc_ip_eff (etf_from_tf tf)
+  and its global side contributions.  These lemmas drive the transport theorem
+  part_post_solution_st_to_abs_eff without going through the pure fold.
 \<close>
 
 lemma side_acc_ip_st_fun_of_st_eff:
@@ -673,12 +672,11 @@ qed
 
 text \<open>
   Executable post-solution maps directly to a part_post_solution of the effectful
-  shim equation system \<open>side_cfg_T_ip_eff (etf_from_tf tf)\<close>.  The proof structure
-  mirrors the pure transport: (a) the local equation bound transfers via
-  fun_of_st_eq_ip_st_eff; (b) the global side-effect bound via
-  fun_of_st_sides_ip_st_Inr_eff; (c) local sides are bot by
-  sides_make_side_rhs_tree_ip_eff_from_tf_Inl; (d) dependencies agree by
-  dep_aux_make_side_rhs_tree_ip_st_eq_eff.
+  shim equation system \<open>side_cfg_T_ip_eff (etf_from_tf tf)\<close>.  Proof structure:
+  (a) the local equation bound transfers via fun_of_st_eq_ip_st_eff;
+  (b) the global side-effect bound via fun_of_st_sides_ip_st_Inr_eff;
+  (c) local sides are bot by sides_make_side_rhs_tree_ip_eff_from_tf_Inl;
+  (d) dependencies agree by dep_aux_make_side_rhs_tree_ip_st_eq_eff.
 \<close>
 theorem part_post_solution_st_to_abs_eff:
   assumes pp_st:
