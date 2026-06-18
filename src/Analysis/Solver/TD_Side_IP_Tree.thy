@@ -62,17 +62,6 @@ definition side_cfg_T_ip ::
 where
   "side_cfg_T_ip g tf join bot0 s0 = make_side_rhs_tree_ip g tf join bot0 s0"
 
-(* The combine result keeps locals from A (caller) and globals from B (callee
-   exit); its local restriction is restrict_local A, its global restriction is
-   restrict_global B.  (Compare combine_abs / restrict_combine.) *)
-lemma restrict_local_combine_eq:
-  "restrict_local (restrict_local A \<squnion> restrict_global B) = restrict_local A"
-  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
-
-lemma restrict_global_combine_eq:
-  "restrict_global (restrict_local A \<squnion> restrict_global B) = restrict_global B"
-  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
-
 subsection \<open>Denotation: local fold\<close>
 
 fun side_acc_ip ::
@@ -163,10 +152,8 @@ where
      seqcomp_tree (apply_etf etf a u)
        (\<lambda>res. side_rhs_fold_ip_eff etf (acc \<squnion> res) ps cs)"
 | "side_rhs_fold_ip_eff etf acc [] ((cc, ex) # cs) =
-     QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>glob.
-       let res = restrict_local (sc \<squnion> glob) \<squnion> restrict_global (se \<squnion> glob)
-       in Side () (restrict_global res)
-            (side_rhs_fold_ip_eff etf (acc \<squnion> restrict_local res) [] cs))))"
+     seqcomp_tree (etf_combine etf cc ex)
+       (\<lambda>res. side_rhs_fold_ip_eff etf (acc \<squnion> res) [] cs)"
 
 definition make_side_rhs_tree_ip_eff ::
   "cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
@@ -199,7 +186,7 @@ where
      side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> ps cs"
 | "side_acc_ip_eff etf acc \<sigma> [] ((cc, ex) # cs) =
      side_acc_ip_eff etf
-       (acc \<squnion> restrict_local (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))) \<sigma> [] cs"
+       (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) \<sigma> [] cs"
 
 lemma traverse_side_rhs_fold_ip_eff:
   "traverse_rhs (side_rhs_fold_ip_eff etf acc es cs) \<sigma> =
@@ -215,7 +202,7 @@ proof (induction es arbitrary: acc cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     show ?case unfolding x
       unfolding side_rhs_fold_ip_eff.simps side_acc_ip_eff.simps
-      by (simp only: traverse_rhs.simps restrict_local_combine_eq Let_def Cons.IH)
+      by (simp only: traverse_seqcomp Cons.IH)
   qed
 next
   case (Cons x es)
@@ -244,7 +231,8 @@ proof (induction es arbitrary: acc cs)
   next
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    show ?case unfolding x using Cons.IH by (simp add: sup_fun_def)
+    show ?case unfolding x using Cons.IH
+      by (simp add: traverse_pure_combine_tree sup_fun_def)
   qed
 next
   case (Cons x es)
@@ -274,7 +262,7 @@ proof (induction es arbitrary: acc cs)
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     show ?case unfolding x
-      by (simp add: Cons.IH Let_def sup_fun_def)
+      by (simp add: Cons.IH pure_combine_tree_def Let_def sup_fun_def)
   qed
 next
   case (Cons x es)

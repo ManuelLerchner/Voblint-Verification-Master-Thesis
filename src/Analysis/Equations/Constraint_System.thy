@@ -401,6 +401,29 @@ subsection \<open>Interprocedural RHS\<close>
 definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "combine_abs sc se = (\<lambda>x. if is_global x then se x else sc x)"
 
+text \<open>
+  Soundness of the abstract combine: combining a caller store (sound for sc) with
+  a callee-exit store (sound for se) yields a store sound for combine_abs sc se.
+  A pure sound_domain fact -- independent of any transfer function -- reused by
+  both the interprocedural constraint-system soundness and the effectful pipeline.
+\<close>
+context sound_domain
+begin
+
+lemma combine_states_sound:
+  assumes sc: "s \<in> gamma_state \<sigma>c" and se: "t \<in> gamma_state \<sigma>e"
+  shows "combine_states s t \<in> gamma_state (combine_abs \<sigma>c \<sigma>e)"
+proof -
+  from sc have Vc: "\<forall>z. s z \<in> \<gamma> (\<sigma>c z)"
+    unfolding gamma_state_def by auto
+  from se have Ve: "\<forall>z. t z \<in> \<gamma> (\<sigma>e z)"
+    unfolding gamma_state_def by auto
+  show ?thesis unfolding gamma_state_def combine_abs_def combine_states_def
+    using Vc Ve by auto
+qed
+
+end
+
 definition rhs_ip ::
     "cfg
      \<Rightarrow> 'a domain_transfer
@@ -574,12 +597,22 @@ text \<open>
 type_synonym ('g, 'd) edge_tf_tree =
   "pp \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
 
+text \<open>
+  A combine (procedure return) tree producer takes the caller program point and
+  the callee-exit program point and builds a tree that queries both their local
+  unknowns (and any globals), emits Side contributions, and ends with the
+  combined local result.  Unlike an edge, it has two local inputs.
+\<close>
+type_synonym ('g, 'd) combine_tf_tree =
+  "pp \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
+
 record ('g, 'd) effectful_domain_transfer =
   etf_nop        :: "('g, 'd) edge_tf_tree"
   etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_assume     :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_assume_not :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_enter      :: "('g, 'd) edge_tf_tree"
+  etf_combine    :: "('g, 'd) combine_tf_tree"
 
 fun apply_etf ::
   "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
@@ -591,4 +624,56 @@ where
 | "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
 | "apply_etf etf EA_Enter         u = etf_enter etf u"
 
+subsection \<open>Reassembled full result and effectful soundness\<close>
+
+text \<open>
+  An effectful edge tree splits its outcome between a local Answer (the value of
+  the source unknown after the edge) and Side contributions to the named globals.
+  etf_full reassembles the complete abstract post-state: the local result joined
+  with the contribution to the single global unknown.  For the pure-domain shim
+  this is exactly apply_tf tf a (combined), so the soundness obligation below is
+  the existing sound_transfer obligation stated against the combined input.
+
+  Stating soundness against etf_full -- rather than against the local Answer
+  alone -- is essential: the local restriction sends globals to bot, and
+  gamma_state of a bot global is empty (gamma_bot), so the local Answer in
+  isolation never over-approximates a concrete post-state that touches globals.
+  The contributions must be put back together first.
+\<close>
+
+definition etf_full ::
+  "(pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
+   \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
+where
+  "etf_full t \<sigma> = traverse_rhs t \<sigma> \<squnion> sides_of_rhs t \<sigma> (Inr ())"
+
+text \<open>
+  Soundness contract for an effectful transfer record: each per-action tree's
+  reassembled full result over-approximates the concrete edge step applied to the
+  combined source state.  The combined source state is \<open>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<close>
+  (locals at u joined with the single global unknown -- see side_env).  This is
+  the Goblint-aligned interface: the obligation is stated on traverse_rhs /
+  sides_of_rhs, exactly the data the TD solver consumes.
+\<close>
+
+locale sound_effectful_transfer = sound_domain +
+  fixes etf :: "(unit, 'a) effectful_domain_transfer"
+  assumes etf_sound_nop:
+    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+       s \<in> gamma_state (etf_full (etf_nop etf u) \<sigma>)"
+  assumes etf_sound_assign:
+    "\<forall>x e u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+       s(x := aval e s) \<in> gamma_state (etf_full (etf_assign etf x e u) \<sigma>)"
+  assumes etf_sound_assume:
+    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())). bval b s
+       \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume etf b u) \<sigma>)"
+  assumes etf_sound_assume_not:
+    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())). \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume_not etf b u) \<sigma>)"  assumes etf_sound_enter:
+    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+       enter_state s \<in> gamma_state (etf_full (etf_enter etf u) \<sigma>)"
+  assumes etf_sound_combine:
+    "\<forall>cc ex \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())).
+       \<forall>t \<in> gamma_state (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())).
+         combine_states s t \<in> gamma_state (etf_full (etf_combine etf cc ex) \<sigma>)"
 end

@@ -54,23 +54,6 @@ proof -
 
 qed
 
-context sound_domain
-begin
-
-lemma combine_states_sound:
-  assumes sc: "s \<in> gamma_state \<sigma>c" and se: "t \<in> gamma_state \<sigma>e"
-  shows "combine_states s t \<in> gamma_state (combine_abs \<sigma>c \<sigma>e)"
-proof -
-  from sc have Vc: "\<forall>z. s z \<in> \<gamma> (\<sigma>c z)"
-    unfolding gamma_state_def by auto
-  from se have Ve: "\<forall>z. t z \<in> \<gamma> (\<sigma>e z)"
-    unfolding gamma_state_def by auto
-  show ?thesis unfolding gamma_state_def combine_abs_def combine_states_def
-    using Vc Ve by auto
-qed
-
-end
-
 context sound_transfer
 begin
 

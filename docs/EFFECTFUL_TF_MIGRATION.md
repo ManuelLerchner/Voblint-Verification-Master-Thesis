@@ -505,14 +505,34 @@ What landed and verified (`isabelle build` green for `Voblint_Analysis` +
 | `side_rhs_fold_ip_eff` (Step 3 fold via `seqcomp_tree`) + `side_acc_ip_eff` denotation | `TD_Side_IP_Tree.thy` | **done** |
 | Bridge: `side_cfg_T_ip_eff (etf_from_tf tf) = side_cfg_T_ip tf (\<squnion>)` | `TD_Side_IP_Tree.thy` | **done** |
 | Eff solver preconditions `is_mono_eq` / `mono_sides` / `mono_deps` | `TD_Side_IP_Mono.thy` | **done** |
-| Sign instance `sign_etf = etf_from_tf sign_tf` + its 3 preconditions | `Sign_Side_IP_Soundness.thy` | **done** |
+| `seqcomp_mono`, `static_deps` + `static_deps_seqcomp` (Step 1/5 monad lemmas) | `Strategy_Tree_Monad.thy` | **done** |
+| `etf_full` reassembly + `sound_effectful_transfer` locale (Step 4 contract) | `Constraint_System.thy` | **done** |
+| `sound_transfer_imp_sound_effectful` (every sound pure domain satisfies the contract via the shim) | `TD_Side_CFG.thy` | **done** |
+| Sign instance `sign_etf` + 3 preconditions + `sign_sound_etf : sound_effectful_transfer` | `Sign_Side_IP_Soundness.thy` | **done** |
+| `etf_sound_nop` completes the 5-action contract | `Constraint_System.thy` | **done** |
+| `edge_collect_etf_sound` + `ip_witness_gamma_eff` + `post_fixpoint_sound_at_ip_eff` (general-effectful IP collecting soundness) | `TD_Side_IP_Eff_Sound.thy` | **done** |
+| `etf_combine` field + `etf_sound_combine` obligation (procedure return is now an analysis-customizable effectful TF, like Goblint's `combine`) | `Constraint_System.thy` | **done** |
+| `pure_combine_tree` shim + `etf_from_tf` extended + `combine_states_sound` moved up to `Constraint_System` (single source of truth) | `Constraint_System.thy`, `TD_Side_CFG.thy` | **done** |
+| Eff fold + denotation + bridge + soundness reworked to route combine through `etf_combine` | `TD_Side_IP_Tree.thy`, `TD_Side_IP_Eff_Sound.thy` | **done** |
+| Effectful solver interface `td_cfg_side_ip_solver_eff` + `side_analyse_ip_eff` (TD_side backend on `side_cfg_T_ip_eff`) | `TD_Side_IP_Eff_Interface.thy` | **done** |
+| Shim transfer `side_analyse_ip_eff (etf_from_tf tf) = side_analyse_ip tf` + end-to-end shim soundness `side_analyse_ip_eff_collect_sound_exit_pruned` | `TD_Side_IP_Eff_Interface.thy` | **done** |
 
 The **bridge** is the key result: `side_cfg_T_ip_eff (etf_from_tf tf)` is *literally
 the same strategy tree* as the pure `side_cfg_T_ip tf (\<squnion>)`. Every existing theorem
 about the pure system — including the end-to-end IP soundness theorems in
 `TD_Side_IP_Soundness` / `Sign_Side_IP_Soundness` — therefore applies verbatim to the
-effectful-shim system. No soundness proof was duplicated and no soundness locale was
-introduced uninterpreted (avoids the instantiation-gap audit failure).
+effectful-shim system. No soundness proof was duplicated.
+
+The **soundness contract** `sound_effectful_transfer` (Step 4) is also in place and
+*interpreted*, not orphaned: `sound_transfer_imp_sound_effectful` shows every sound
+pure domain satisfies it via the shim, and `sign_sound_etf` is the concrete Sign
+witness (`sound_effectful_transfer gamma_sign sign_etf`). The obligation is stated on
+`etf_full` — the local Answer rejoined with the global Side contribution — because the
+local restriction alone sends globals to `bot` (whose `gamma` is empty), so it can
+never over-approximate a post-state touching globals; the contributions must be
+reassembled first. This avoids the instantiation-gap audit failure (a locale with no
+interpretation) and the definition-drift failure (a soundness statement that is
+vacuously false on the restricted local).
 
 The `effectful_domain_transfer` record is polymorphic in the global-name type `'g`,
 so the *capability* to route to named globals (Gap 1) and to query/conditionally
@@ -520,14 +540,48 @@ side-effect (Gap 2) is present in the interface. The IP fold instantiates `'g = 
 to interface with the existing unit-global IP soundness pipeline; the per-edge TF
 trees may still be genuinely effectful.
 
-### Remaining (staged behind the bridge)
+The **general-effectful collecting soundness** theorem
+`post_fixpoint_sound_at_ip_eff` is now proven (`TD_Side_IP_Eff_Sound.thy`),
+mirroring the pure `post_fixpoint_sound_at_ip` in `context sound_effectful_transfer`.
+It holds for *any* `etf` satisfying the contract — not just the shim — with concrete
+soundness drawn from `edge_collect_etf_sound` (the five-action per-edge lemma) and the
+combine soundness drawn from `etf_sound_combine`. The abstract step is
+`etf_full (apply_etf etf a u) σ` and the abstract combine is `etf_full (etf_combine etf c ex) σ`,
+so a genuinely effectful TF (named globals, conditional sides) — including a custom
+procedure-return TF — is covered the moment its post-fixpoint `≤` bounds hold.
 
-- **Genuinely-effectful soundness.** A non-shim `etf` (e.g. the flag-routed example
-  in §2) needs its own `etf_mono` / `static_deps` discharge — the monad lemmas
-  `seqcomp_mono` and `static_deps_seqcomp` are in place for exactly this, but no
-  non-shim domain instance has been proven sound yet.
+**Procedure return is now customizable.** `etf_combine` is a record field with its own
+`etf_sound_combine` obligation, the fold routes return through `seqcomp_tree (etf_combine etf c ex)`,
+and the soundness theorem's `combine_le` bound is `etf_full (etf_combine etf c ex) σ ≤ side_env σ ret`.
+The fixed `combine_abs` is now just the shim default (`pure_combine_tree`), matching
+Goblint's developer-implemented `combine`. `combine_states_sound` moved up to
+`Constraint_System` as the single source of truth for both pipelines.
+
+The **effectful solver interface** is now in place (`TD_Side_IP_Eff_Interface.thy`):
+`td_cfg_side_ip_solver_eff` runs the vendored `TD_side` backend on
+`side_cfg_T_ip_eff`, exposing `side_analyse_ip_eff`. For the shim it coincides with
+the pure solver (`side_analyse_ip_eff (etf_from_tf tf) = side_analyse_ip tf`), and the
+end-to-end soundness `side_analyse_ip_eff_collect_sound_exit_pruned` transports the
+pure exit-pruned theorem across the shim — so **the effectful analyser is sound for
+every sound pure domain, with examples ready to migrate to `side_analyse_ip_eff`.**
+
+### Remaining
+
+- **General-effectful post-fixpoint bounds (non-shim).** For a non-shim `etf`,
+  `post_fixpoint_sound_at_ip_eff`'s `step_le` / `combine_le` hypotheses (and the
+  `td_cfg_side_ip_solver_eff` mono preconditions) need effectful analogues of
+  `apply_tf_combined_le_ip` / `combine_combined_le_ip` proved from a
+  `part_post_solution` of `side_cfg_T_ip_eff g etf` (relating `side_acc_ip_eff` /
+  `sides_of_rhs` of the eff fold to the solved env). This is the remaining bounds slab
+  — and the gate for retiring the pure path.
+- **Migrate examples** to `side_analyse_ip_eff (etf_from_tf …)` (mechanical now that the
+  shim transfer + soundness exist).
+- **Genuinely-effectful monotonicity/deps for a non-shim `etf`.** A non-shim `etf`
+  (e.g. the flag-routed example in §2) needs its `is_mono_eq` / `mono_deps` discharged
+  from `seqcomp_mono` / `static_deps_seqcomp` rather than through the pure-shim bridge.
+  The monad lemmas are in place; no non-shim instance has been wired yet.
 - **Gap-1 end-to-end (`pp + 'g`).** The IP fold's combine/return linkage and
   `Exec_Bridge` still hardcode the single `Inr ()` global. Generalising these to
   `pp + 'g` (per §3 Step 6) is the remaining large change; `side_env_g` is the
   prepared entry point.
-- **Interval effectful instance** mirroring `sign_etf`.
+- **Interval effectful instance** mirroring `sign_etf` / `sign_sound_etf`.

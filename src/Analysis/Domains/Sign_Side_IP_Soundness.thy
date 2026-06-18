@@ -68,4 +68,17 @@ lemma sign_etf_mono_deps:
   "mono_deps (side_cfg_T_ip_eff g sign_etf bot0 s0)"
   unfolding sign_etf_def by (rule side_cfg_T_ip_eff_mono_deps)
 
+text \<open>
+  The Sign domain satisfies the effectful soundness contract: every per-action
+  tree's reassembled full result over-approximates the concrete edge step.  This
+  is the concrete instantiation of sound_effectful_transfer, discharged from the
+  existing sign_sound_tf via the shim -- closing the instantiation gap for the
+  Goblint-aligned effectful interface.
+\<close>
+
+lemma sign_sound_etf:
+  "sound_effectful_transfer gamma_sign sign_etf"
+  unfolding sign_etf_def
+  by (rule sound_transfer_imp_sound_effectful[OF sign_sound_tf.sound_transfer_axioms])
+
 end
