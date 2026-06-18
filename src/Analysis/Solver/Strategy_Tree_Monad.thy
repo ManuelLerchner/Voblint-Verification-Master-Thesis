@@ -46,6 +46,12 @@ next
        (auto simp: Side.IH Let_def sup_fun_def fun_upd_def ac_simps)
 qed
 
+lemma sides_of_rhs_seqcomp_at:
+  fixes t :: "('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree"
+  shows "sides_of_rhs (seqcomp_tree t k) \<sigma> z
+         = sides_of_rhs t \<sigma> z \<squnion> sides_of_rhs (k (traverse_rhs t \<sigma>)) \<sigma> z"
+  using sides_of_rhs_seqcomp[of t k \<sigma>] by (simp add: sup_apply)
+
 text \<open>
   Monotonicity is preserved by bind: if t is monotone in the environment, every
   continuation k v is monotone in the environment, and k is monotone in the value
