@@ -29,6 +29,23 @@ lemma dep_aux_seqcomp:
    = dep_aux \<sigma> t \<union> dep_aux \<sigma> (k (traverse_rhs t \<sigma>))"
   by (induction t arbitrary: k) (auto intro: rangeI)
 
+lemma sides_of_rhs_seqcomp:
+  fixes t :: "('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree"
+  shows "sides_of_rhs (seqcomp_tree t k) \<sigma>
+         = sides_of_rhs t \<sigma> \<squnion> sides_of_rhs (k (traverse_rhs t \<sigma>)) \<sigma>"
+proof (induction t arbitrary: k)
+  case (Answer d) show ?case by (simp add: bot_fun_def)
+next
+  case (QueryL x f) thus ?case by simp
+next
+  case (QueryG x f) thus ?case by simp
+next
+  case (Side x d t)
+  show ?case
+    by (rule ext)
+       (auto simp: Side.IH Let_def sup_fun_def fun_upd_def ac_simps)
+qed
+
 text \<open>
   Monotonicity is preserved by bind: if t is monotone in the environment, every
   continuation k v is monotone in the environment, and k is monotone in the value
