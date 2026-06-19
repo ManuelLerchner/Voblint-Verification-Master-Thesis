@@ -706,12 +706,41 @@ precision is the queryable per-name value the unit pot structurally cannot hold.
 
 ### 9.4 Implementation order (build-gated slices)
 
-1. `all_sides` + `etf_full` via it, prove `all_sides = sides_of_rhs _ (Inr ())`
-   at `unit` (no type change yet). **foundational, low risk.**
-2. Generalise `etf_full`, `glob_env`, `side_env_all`, the
-   `sound_effectful_transfer` locale from `unit` to `'g::finite`; re-prove the
-   shim coincidences at `unit`.
-3. Generalise `TD_Side_IP_Eff_Bounds` / `_Soundness` / `_Interface` /
-   `_Pipeline`: quantify the `Inr ()` bounds over all `g`, entry-seed per name.
-4. Rework `Exec_Bridge` `'a st` simulation (heaviest `Inr ()` user).
-5. Flag-routed `'g`-indexed example + per-unknown precision theorem.
+Status as of 2026-06-19. The **foundation (1, 2a, glob_env infra) is landed and
+batch-green**; the remaining work (2b onward) is one coupled cascade through the
+locale — no intermediate green commit is possible until it is finished, because
+generalising the locale turns every in-context soundness lemma red at once.
+
+- [x] **1. `all_sides` + coincidence.** `all_sides` primrec +
+  `all_sides_eq_sides_Inr_unit` in `Constraint_System`. Commit `d2d0ecb`.
+- [x] **2a. `etf_full` to `'g`.** Body is `traverse_rhs t s ⊔ all_sides t s`,
+  polymorphic in `'g`; shim lemmas + post-fixpoint bounds carry over via the
+  coincidence rewrite. Commit `51785fc`.
+- [x] **glob_env infra.** `glob_env` (finite fold over `UNIV::'g::finite`) +
+  `glob_env_upper` / `glob_env_unit` / `glob_env_mono` (commit `6727cc5`) and the
+  bridge `all_sides_le_glob_env_sides : all_sides t s <= glob_env (sides_of_rhs t s)`
+  (commit `f97e618`). These are exactly the primitives the cascade consumes; all
+  additive, `Voblint_Analysis` green.
+- [ ] **2b. Generalise the `sound_effectful_transfer` locale** from
+  `fixes etf :: "(unit, 'a) ..."` to `"('g::finite, 'a) ..."`; replace the
+  obligation source `sigma (Inl u) ⊔ sigma (Inr ())` with
+  `sigma (Inl u) ⊔ glob_env sigma`. Re-prove `sound_transfer_imp_sound_effectful`
+  (shim) via `glob_env_unit`, and `sign_sound_etf` / `ivl_sound_etf`.
+- [ ] **3. Generalise the soundness chain** (all *in-locale*, so all break at
+  once when 2b lands): introduce `side_env_all sigma v = sigma (Inl v) ⊔ glob_env sigma`
+  (`= side_env` at `unit`). The edge/combine closure bounds
+  (`etf_combined_le_ip_eff` / `etf_combine_combined_le_ip_eff`) split into a local
+  half (`traverse_rhs <= sigma (Inl v)`, unchanged) and a global half
+  (`all_sides <= glob_env sigma`) discharged by `all_sides_le_glob_env_sides` +
+  `glob_env_mono` + a **per-name** generalisation of
+  `side_post_solution_le_global_ip_eff` (`sides_of_rhs (T x) sigma (Inr g) <= sigma (Inr g)`
+  for every `g`). The reachability cone (`TD_Side_IP_Eff_Soundness`) currently
+  tracks the single `Inr ()` dependency; it must track each `Inr g`. Entry seeding
+  (`s0_le_side_env_entry_ip_eff`) seeds `restrict_global s0` per name (see
+  `SIDE_ENTRY_GLOBALS_SEEDING.md`, which solved the same shape at `unit`).
+- [ ] **4. Rework `Exec_Bridge`** (heaviest `Inr ()` user, 40 occurrences): the
+  `'a st`->eff fold simulation (`side_acc_ip_st_fun_of_st_eff`,
+  `part_post_solution_st_to_abs_eff`) reads `sigma (Inr ())`; route through
+  `glob_env`. Stays `'g = unit` for the executable shim path — only the abstract
+  side must accept `'g`.
+- [ ] **5. Flag-routed `'g`-indexed example + per-unknown precision theorem.**
