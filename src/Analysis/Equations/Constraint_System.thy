@@ -718,6 +718,45 @@ proof -
           sup_least sup_mono le])
 qed
 
+text \<open>
+  Bridge between the two side aggregations: the total of a tree's Side
+  contributions is below the join of the per-name side map.  This routes the
+  full-state reassembly (all_sides, in etf_full) through the per-name post-fixpoint
+  bounds (sides_of_rhs (Inr g) <= sigma (Inr g)) used by the solver: composed with
+  glob_env_mono it gives all_sides t sigma <= glob_env sigma for any post-solution.
+\<close>
+
+lemma all_sides_le_glob_env_sides:
+  fixes t :: "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  shows "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
+proof (induction t)
+  case (Answer d) show ?case by (simp add: le_fun_def)
+next
+  case (QueryL y f)
+  have "all_sides (f (\<sigma> (Inl y))) \<sigma> \<le> glob_env (sides_of_rhs (f (\<sigma> (Inl y))) \<sigma>)"
+    using QueryL.IH by blast
+  then show ?case by simp
+next
+  case (QueryG y f)
+  have "all_sides (f (\<sigma> (Inr y))) \<sigma> \<le> glob_env (sides_of_rhs (f (\<sigma> (Inr y))) \<sigma>)"
+    using QueryG.IH by blast
+  then show ?case by simp
+next
+  case (Side y d t)
+  have mono: "sides_of_rhs t \<sigma> \<le> sides_of_rhs (Side y d t) \<sigma>"
+    by (auto simp: le_fun_def Let_def sup_ge1)
+  have d_le: "d \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)"
+  proof -
+    have "d \<le> sides_of_rhs (Side y d t) \<sigma> (Inr y)" by (simp add: Let_def)
+    also have "\<dots> \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)" by (rule glob_env_upper)
+    finally show ?thesis .
+  qed
+  have rest_le: "all_sides t \<sigma> \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)"
+    using Side.IH glob_env_mono[OF mono] by (rule order_trans)
+  from d_le rest_le show ?case
+    unfolding all_sides.simps(4) by (rule sup_least)
+qed
+
 locale sound_effectful_transfer = sound_domain +
   fixes etf :: "(unit, 'a) effectful_domain_transfer"
   assumes etf_sound_nop:
