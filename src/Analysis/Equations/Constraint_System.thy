@@ -679,6 +679,45 @@ text \<open>
   sides_of_rhs, exactly the data the TD solver consumes.
 \<close>
 
+subsection \<open>The named-global environment\<close>
+
+text \<open>
+  glob_env joins all named-global unknowns of sigma into a single abstract
+  state: the full flow-insensitive global value seen at any point.  With a
+  finite global-name type the join is a finite fold (abs_join_set over the image
+  of UNIV), so it is well defined in a non-complete bounded_semilattice_sup_bot.
+  At 'g = unit it is the single pot sigma (Inr ()) (glob_env_unit), so it
+  generalises the unit pipeline's read of the global unknown.
+\<close>
+
+definition glob_env ::
+  "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> 'a abs_state"
+where
+  "glob_env \<sigma> = abs_join_set (\<squnion>) \<bottom> ((\<lambda>g. \<sigma> (Inr g)) ` UNIV)"
+
+lemma glob_env_upper: "\<sigma> (Inr g) \<le> glob_env \<sigma>"
+  unfolding glob_env_def abs_join_set_def
+  by (rule mem_image_le_fold[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2]) blast
+
+lemma glob_env_unit:
+  fixes \<sigma> :: "pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  shows "glob_env \<sigma> = \<sigma> (Inr ())"
+proof (rule order_antisym)
+  show "glob_env \<sigma> \<le> \<sigma> (Inr ())"
+    unfolding glob_env_def by (rule abs_join_set_le) auto
+  show "\<sigma> (Inr ()) \<le> glob_env \<sigma>" by (rule glob_env_upper)
+qed
+
+lemma glob_env_mono:
+  assumes "\<sigma>1 \<le> \<sigma>2" shows "glob_env \<sigma>1 \<le> glob_env \<sigma>2"
+proof -
+  have le: "\<And>p. \<sigma>1 (Inr p) \<le> \<sigma>2 (Inr p)" by (rule le_funD[OF assms])
+  show ?thesis
+    unfolding glob_env_def abs_join_set_def
+    by (rule fold_join_image_mono[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2
+          sup_least sup_mono le])
+qed
+
 locale sound_effectful_transfer = sound_domain +
   fixes etf :: "(unit, 'a) effectful_domain_transfer"
   assumes etf_sound_nop:
