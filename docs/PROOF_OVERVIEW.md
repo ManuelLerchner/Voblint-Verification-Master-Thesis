@@ -153,7 +153,7 @@ Same CFG, `rhs_ip`, and `side_analyse_ip` once the domain fits the four-layer in
 1. **Type class layer.** Instantiate `'a :: bounded_semilattice_sup_bot` — gives `⊥`, `⊔`, `≤` and lifts them pointwise to `'a abs_state` for free via HOL's `fun` instances.
 2. **Locale layer.** `interpretation … : abstract_domain gamma widen` and `interpretation … : sound_transfer gamma tf`. All derived lemmas (monotonicity, entry coverage, `side_collect_sound_ip_exit_pruned`) become available prefixed by the interpretation name.
 3. **Executable bridge.** Define an `'a st` mirror `tf_st` and prove `fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)`. Define a domain-specific C seed `cinit_X_st` where globals default to the abstract zero and locals default to `⊤`.
-4. **End-to-end.** Define `X_exec_eqs` using `side_cfg_T_ip_st_prog … cinit_X_st`. The soundness proof follows the pattern in `Sign_Exec_Sound.thy` — wrap solver output → lift via commutation → cover entry from `cinit_stores` → apply locale engine.
+4. **End-to-end.** Define `X_exec_eqs` using `side_cfg_T_ip_st (compile_prog …) … cinit_X_st`. The soundness proof follows the pattern in `Sign_Exec_Sound.thy` — wrap solver output → lift via commutation → cover entry from `cinit_stores` → apply locale engine.
 
 **`cinit_stores`** (`Constraint_System.thy`): the shared C-faithful initial store set
 `{s. ∀x. is_global x → s x = 0}`. Every domain's soundness theorem is stated against

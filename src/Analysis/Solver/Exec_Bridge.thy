@@ -1,5 +1,5 @@
 theory Exec_Bridge
-  imports Exec_St TD_Side_IP_Mono "Voblint_CFG.Exec_CFG"
+  imports Exec_St TD_Side_IP_Mono
 begin
 
 section \<open>S4 bridge: fun_of_st homomorphisms and executable equation-system transport\<close>
@@ -25,9 +25,6 @@ text \<open>
 
   6. Transport theorem: a part_post_solution of side_cfg_T_ip_st (at 'a st) maps via
      fun_of_st to a part_post_solution of side_cfg_T_ip (at 'a abs_state).
-
-  7. Code equations that redirect predecessor_list / combine_predecessor_list on a
-     compiled program to the executable list-based versions from Exec_CFG.
 \<close>
 
 subsection \<open>fun_of_st homomorphisms for local/global projections\<close>
@@ -118,9 +115,8 @@ text \<open>
   \<open>side_acc_ip_st\<close> and \<open>side_glob_ip_st\<close> are joins (\<open>\<squnion>\<close>) over the edge / combine
   lists, and \<open>\<squnion>\<close> is commutative, associative and idempotent, so the result
   depends only on the *sets* of edges / combines, not their order or multiplicity.
-  This is what lets a solver post-solution over the code-generated
-  \<open>predecessor_list_prog\<close> enumeration transfer to the \<open>predecessor_list\<close>
-  (sorted) enumeration the soundness chain is stated over.
+  The equation system thus does not depend on the particular \<open>predecessor_list\<close>
+  enumeration order, only on the predecessor *set* the soundness chain fixes.
 \<close>
 
 lemma side_acc_ip_st_fold:
@@ -567,138 +563,5 @@ qed
 
 end
 
-subsection \<open>Code-generating equation system over the list-built CFG\<close>
-
-text \<open>
-  \<open>side_cfg_T_ip_st\<close> calls \<open>predecessor_list (compile_prog ...)\<close>, which does not
-  code-generate (sorting needs a \<open>to_nat\<close>-based \<open>edge_action\<close> linorder).
-  \<open>side_cfg_T_ip_st_prog\<close> is the same construction reading the predecessor /
-  combine lists off the executable list-built CFG (\<open>predecessor_list_prog\<close> /
-  \<open>combine_predecessor_list_prog\<close> from Exec_CFG), so it code-generates and can be
-  fed to the vendored solver.  When the two enumerations agree as lists (they do
-  for straight-line programs, where every point has at most one predecessor), the
-  two equation systems are equal, so a solver post-solution of the \<open>prog\<close> system
-  is a post-solution of the \<open>compile_prog\<close> system that the soundness chain uses.
-\<close>
-
-definition side_cfg_T_ip_st_prog ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com
-   \<Rightarrow> (edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st)
-   \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> (pp, unit, 'a st) eqsT"
-where
-  "side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st v =
-     (let g = compile_prog \<Pi> ps main;
-          acc0 = (if v = cfg_entry g then bot0_st \<squnion> restrict_local_st s0_st else bot0_st);
-          t = side_rhs_fold_ip_st tf_st acc0
-                (predecessor_list_prog \<Pi> ps main v)
-                (combine_predecessor_list_prog \<Pi> ps main v)
-      in if v = cfg_entry g then Side () (restrict_global_st s0_st) t else t)"
-
-lemma side_cfg_T_ip_st_prog_eq:
-  assumes pl: "\<And>v. predecessor_list_prog \<Pi> ps main v
-                  = predecessor_list (compile_prog \<Pi> ps main) v"
-      and cl: "\<And>v. combine_predecessor_list_prog \<Pi> ps main v
-                  = combine_predecessor_list (compile_prog \<Pi> ps main) v"
-  shows "side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st
-         = side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st"
-  unfolding side_cfg_T_ip_st_prog_def side_cfg_T_ip_st_def make_side_rhs_tree_ip_st_def
-  by (rule ext) (simp add: Let_def pl cl)
-
-text \<open>
-  When the two enumerations agree only as *sets* (the general case -- any program
-  point may have several predecessors), the trees differ but their \<open>eq\<close>, \<open>sides\<close>
-  and \<open>dep\<close> coincide (the IP folds are set-invariant), so a post-solution of the
-  \<open>prog\<close> system is a post-solution of the \<open>compile_prog\<close> system.
-\<close>
-
-lemma eq_side_cfg_T_ip_st_prog:
-  "eq (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st) v \<sigma> =
-     side_acc_ip_st tf_st
-       (if v = cfg_entry (compile_prog \<Pi> ps main)
-        then bot0_st \<squnion> restrict_local_st s0_st else bot0_st)
-       \<sigma> (predecessor_list_prog \<Pi> ps main v) (combine_predecessor_list_prog \<Pi> ps main v)"
-  unfolding side_cfg_T_ip_st_prog_def Let_def
-  by (simp add: traverse_side_rhs_fold_ip_st)
-
-lemma sides_side_cfg_T_ip_st_prog_Inr:
-  "sides_of_rhs (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st v) \<sigma> (Inr ()) =
-     side_glob_ip_st tf_st \<sigma> (predecessor_list_prog \<Pi> ps main v)
-        (combine_predecessor_list_prog \<Pi> ps main v)
-       \<squnion> (if v = cfg_entry (compile_prog \<Pi> ps main) then restrict_global_st s0_st else bot)"
-  unfolding side_cfg_T_ip_st_prog_def Let_def
-  by (cases "v = cfg_entry (compile_prog \<Pi> ps main)")
-     (simp_all add: sides_side_rhs_fold_ip_st_Inr)
-
-lemma sides_side_cfg_T_ip_st_prog_Inl:
-  "sides_of_rhs (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st v) \<sigma> (Inl u) = bot"
-  unfolding side_cfg_T_ip_st_prog_def Let_def
-  by (cases "v = cfg_entry (compile_prog \<Pi> ps main)")
-     (simp_all add: sides_side_rhs_fold_ip_st_Inl Let_def)
-
-lemma dep_aux_side_cfg_T_ip_st_prog:
-  "dep_aux \<sigma> (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st v)
-   = dep_aux \<sigma> (side_rhs_fold_ip_st tf_st
-        (if v = cfg_entry (compile_prog \<Pi> ps main)
-         then bot0_st \<squnion> restrict_local_st s0_st else bot0_st)
-        (predecessor_list_prog \<Pi> ps main v) (combine_predecessor_list_prog \<Pi> ps main v))"
-  unfolding side_cfg_T_ip_st_prog_def Let_def
-  by (cases "v = cfg_entry (compile_prog \<Pi> ps main)") (simp_all add: dep_aux.simps)
-
-lemma side_cfg_T_ip_st_prog_part_post:
-  assumes pl: "\<And>v. set (predecessor_list_prog \<Pi> ps main v)
-                  = set (predecessor_list (compile_prog \<Pi> ps main) v)"
-      and cl: "\<And>v. set (combine_predecessor_list_prog \<Pi> ps main v)
-                  = set (combine_predecessor_list (compile_prog \<Pi> ps main) v)"
-      and pp: "part_post_solution (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st) x \<sigma> vars"
-  shows "part_post_solution (side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st) x \<sigma> vars"
-proof -
-  have EQ: "eq (side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st) v \<sigma>
-          = eq (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st) v \<sigma>" for v
-    by (simp add: eq_side_cfg_T_ip_st eq_side_cfg_T_ip_st_prog
-          side_acc_ip_st_cong[OF pl cl])
-  have SI: "sides_of_rhs (side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st v) \<sigma>
-          = sides_of_rhs (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st v) \<sigma>" for v
-  proof (rule ext)
-    fix k
-    show "sides_of_rhs (side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st v) \<sigma> k
-        = sides_of_rhs (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st v) \<sigma> k"
-    proof (cases k)
-      case (Inl u)
-      then show ?thesis
-        by (simp add: side_cfg_T_ip_st_def sides_make_side_rhs_tree_ip_st_Inl
-              sides_side_cfg_T_ip_st_prog_Inl)
-    next
-      case (Inr y)
-      then show ?thesis
-        by (simp add: side_cfg_T_ip_st_def sides_make_side_rhs_tree_ip_st_Inr
-              sides_side_cfg_T_ip_st_prog_Inr side_glob_ip_st_cong[OF pl cl])
-    qed
-  qed
-  have DEP: "dep\<^sub>L (side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st) \<sigma> v
-           = dep\<^sub>L (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st) \<sigma> v" for v
-    by (simp add: dep\<^sub>L_def dep_def side_cfg_T_ip_st_def
-          dep_aux_make_side_rhs_tree_ip_st dep_aux_side_cfg_T_ip_st_prog
-          dep_aux_side_rhs_fold_ip_st_set pl cl)
-  from pp show ?thesis by (simp add: EQ SI DEP)
-qed
-
-text \<open>
-  The two enumerations always agree as sets (both equal @{const predecessors} /
-  @{const combine_predecessors} of the compiled CFG), so the transfer needs no
-  side conditions: a solver post-solution of the code-generated \<open>prog\<close> system is
-  a post-solution of the \<open>compile_prog\<close> system the soundness chain uses.
-\<close>
-
-lemma side_cfg_T_ip_st_prog_part_post':
-  assumes "part_post_solution (side_cfg_T_ip_st_prog \<Pi> ps main tf_st bot0_st s0_st) x \<sigma> vars"
-  shows "part_post_solution (side_cfg_T_ip_st (compile_prog \<Pi> ps main) tf_st bot0_st s0_st) x \<sigma> vars"
-proof (rule side_cfg_T_ip_st_prog_part_post[OF _ _ assms])
-  show "\<And>v. set (predecessor_list_prog \<Pi> ps main v)
-          = set (predecessor_list (compile_prog \<Pi> ps main) v)"
-    by (simp add: set_predecessor_list_prog set_predecessor_list compile_prog_finite)
-  show "\<And>v. set (combine_predecessor_list_prog \<Pi> ps main v)
-          = set (combine_predecessor_list (compile_prog \<Pi> ps main) v)"
-    by (simp add: set_combine_predecessor_list_prog set_combine_predecessor_list compile_prog_finite)
-qed
 
 end

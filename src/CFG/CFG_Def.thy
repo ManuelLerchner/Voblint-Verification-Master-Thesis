@@ -45,22 +45,12 @@ datatype edge_action =
 instance edge_action :: countable
   by countable_datatype
 
-(* Implementation order for @{const cfg_edges_list} / @{const predecessor_list}
-   (TD strategy trees), not part of the IMP2 semantics. *)
-instantiation edge_action :: linorder
-begin
-
-definition less_eq_edge_action_def:
-  "((\<le>) :: edge_action \<Rightarrow> edge_action \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x \<le> to_nat y"
-
-definition less_edge_action_def:
-  "((<) :: edge_action \<Rightarrow> edge_action \<Rightarrow> bool) \<equiv> \<lambda>x y. to_nat x < to_nat y"
-
-instance
-  apply (standard, goal_cases)
-  unfolding less_eq_edge_action_def less_edge_action_def by(auto)
-
-end
+(* Executable structural linear order on edge actions (AFP Deriving), used to
+   enumerate edge sets deterministically via @{const sorted_list_of_set} in
+   @{const cfg_edges_list} / @{const predecessor_list}. Code-generates, so the
+   predecessor lookups feeding the TD bridge run directly. Not part of the IMP2
+   semantics. *)
+derive linorder edge_action
 
 subsection \<open>CFG record (extension of AFP graph)\<close>
 
@@ -147,6 +137,15 @@ definition cfg_edges_list :: "cfg \<Rightarrow> (pp \<times> edge_action \<times
   "cfg_edges_list g =
      (if finite (edges g) then sorted_list_of_set (edges g) else [])"
 
+(* Drop the finiteness guard for code generation: sorted_list_of_set already
+   yields [] on an infinite set, so the guarded and unguarded forms agree.
+   Without this the generated code would have to decide finite (edges g). *)
+lemma cfg_edges_list_code [code]:
+  "cfg_edges_list g = sorted_list_of_set (edges g)"
+  unfolding cfg_edges_list_def
+  by (cases "finite (edges g)")
+     (auto simp: sorted_list_of_set.fold_insort_key.infinite)
+
 definition predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
   "predecessor_list g v =
      map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g))"
@@ -208,6 +207,12 @@ qed
 definition cfg_combines_list :: "cfg \<Rightarrow> (pp \<times> pp \<times> pp) list" where
   "cfg_combines_list g =
      (if finite (combines g) then sorted_list_of_set (combines g) else [])"
+
+lemma cfg_combines_list_code [code]:
+  "cfg_combines_list g = sorted_list_of_set (combines g)"
+  unfolding cfg_combines_list_def
+  by (cases "finite (combines g)")
+     (auto simp: sorted_list_of_set.fold_insort_key.infinite)
 
 definition combine_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) list" where
   "combine_predecessor_list g v =

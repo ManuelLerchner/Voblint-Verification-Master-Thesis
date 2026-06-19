@@ -58,6 +58,14 @@ instance aexp :: countable
 instance bexp :: countable
   by countable_datatype
 
+(* Executable linear orders for the expression datatypes, derived structurally
+   (AFP Deriving). Used to enumerate CFG edge sets deterministically via
+   sorted_list_of_set without falling back on a non-executable to_nat order.
+   The wrapped Nipkow types AExp.aexp / BExp.bexp carry their linorder
+   instances from HOL_IMP_Countable. *)
+derive linorder aexp
+derive linorder bexp
+
 (* -- Short-name printing for clashing constructors --------------------
    Nipkow's HOL-IMP defines AExp.aexp.Plus and BExp.bexp.Bc, which clash
    with our IMP2_Syntax.aexp.Plus and the IMP2_Syntax.Bc abbreviation.

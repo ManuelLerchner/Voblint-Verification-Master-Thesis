@@ -1,5 +1,17 @@
 # Migration — executable abstract domain, run the solver for real
 
+> **Superseded (2026-06-19): the list-built CFG mirror was retired.**
+> This document's plan made `predecessor_list` / `combine_predecessor_list`
+> code-generate through a separate list-level compilation (`compile_edges`,
+> `prog_cfg_edges`, the `predecessor_list_prog` family in `Exec_CFG.thy`) plus a
+> `side_cfg_T_ip_st_prog` transport theorem. That whole layer is gone. The root
+> cause — `edge_action`'s `linorder` was non-executable (defined via `to_nat`) —
+> was fixed directly: `edge_action`, `aexp`, `bexp` now carry a structural
+> executable `linorder` (AFP `Deriving`), so `predecessor_list (compile_prog …)`
+> code-generates and `side_cfg_T_ip_st (compile_prog …)` is fed to the solver
+> with no mirror. References below to `Exec_CFG` / `compile_edges` /
+> `side_cfg_T_ip_st_prog` are historical.
+
 Status: **DONE (S5 landed, 2026-06-17 — see §0c).** The executable domain, the
 solver run on real compiled programs, the soundness bridge, and the certified
 end-to-end examples all exist and are batch-green, sorry-free. History below.

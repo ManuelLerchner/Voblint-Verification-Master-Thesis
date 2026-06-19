@@ -24,7 +24,8 @@ text \<open>
 
 definition sign_exec_eqs ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp, unit, sign st) eqsT" where
-  "sign_exec_eqs \<Pi> ps main = side_cfg_T_ip_st_prog \<Pi> ps main sign_tf_st bot cinit_sign_st"
+  "sign_exec_eqs \<Pi> ps main =
+     side_cfg_T_ip_st (compile_prog \<Pi> ps main) sign_tf_st bot cinit_sign_st"
 
 definition sign_exec_raw ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> sign st)" where
@@ -89,8 +90,7 @@ proof -
     by (metis sol_def prod.collapse)
   have pp_st: "part_post_solution (side_cfg_T_ip_st g sign_tf_st bot cinit_sign_st)
                  (cfg_exit g) (snd sol) (fst sol)"
-    using side_cfg_T_ip_st_prog_part_post'[OF pp0[unfolded sign_exec_eqs_def]]
-    by (simp add: g_def)
+    using pp0 by (simp add: sign_exec_eqs_def g_def)
   have pp_abs: "part_post_solution (side_cfg_T_ip g sign_tf (\<squnion>) bot (\<lambda>x. if is_global x then SZero else STop))
                   (cfg_exit g) \<sigma> (fst sol)"
     using part_post_solution_st_to_abs[OF sign_tf_st_commute pp_st]

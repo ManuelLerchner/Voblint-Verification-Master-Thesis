@@ -81,16 +81,18 @@ concretisation is `cinit_stores` (defined in `Constraint_System.thy`).
 
 ```isabelle
 sign_exec_eqs Π ps main =
-  side_cfg_T_ip_st_prog Π ps main sign_tf_st ⊥ cinit_sign_st
+  side_cfg_T_ip_st (compile_prog Π ps main) sign_tf_st ⊥ cinit_sign_st
 ```
 
 Packages CFG + executable transfer function + seed into the solver's
-`eqsT` format.  The vendored `TD_side_always_join_Interp` runs on it
+`eqsT` format.  `predecessor_list` / `combine_predecessor_list` over a
+compiled CFG code-generate directly (`edge_action` carries a structural
+executable linear order), so the equation system runs without a separate
+list-built mirror.  The vendored `TD_side_always_join_Interp` runs on it
 and returns a stable assignment.  The soundness proof:
 
 1. Unwrap solver output: `TD_side_always_join_Interp.partial_post_solution`
-2. Project to `st` space: `side_cfg_T_ip_st_prog_part_post'`
-3. Lift to abstract space: `part_post_solution_st_to_abs` (uses commutation)
+2. Lift to abstract space: `part_post_solution_st_to_abs` (uses commutation)
 4. Cover entry: `cinit_stores ⊆ γ(cinit_sign_st)` (provable by `auto`)
 5. Apply soundness engine: `sign_sound_tf.side_collect_sound_ip_exit_pruned`
 

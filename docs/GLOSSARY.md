@@ -36,7 +36,7 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `mk_cfg` / `mk_ip_cfg`                  | CFG constructors (intra / interprocedural).                                                           | `CFG_Def.thy:74,85`                    |
 | `offset_edges k`                        | Shift sub-command edges to offset `k > 0` when compiling compound CFGs; invisible to `edges_collect`. | `CFG_Def.thy:99`                       |
 | `predecessors` / `combine_predecessors` | Incoming edges / call-combine predecessors of a point.                                                | `CFG_Def.thy:117,130`                  |
-| `compile_prog`                          | Compile a program + procedure table into a `cfg`.                                                     | `Exec_CFG.thy`, `IMP2_Proc_to_CFG.thy` |
+| `compile_prog`                          | Compile a program + procedure table into a `cfg`.                                                     | `IMP2_Proc_to_CFG.thy`                 |
 | `cfg_path`                              | Inductive predicate carrying actions along a path (needed for transfer-fn composition).               | `CFG_Path.thy:20`                      |
 | `cfg_prune`                             | Prune the CFG (exit reachability).                                                                    | `CFG_Prune.thy`                        |
 | `to_graphviz`                           | Emit DOT for a CFG (clusters per procedure region).                                                   | `CFG_GraphViz.thy:169`                 |

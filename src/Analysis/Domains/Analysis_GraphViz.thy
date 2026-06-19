@@ -2,11 +2,25 @@ theory Analysis_GraphViz
   imports
     "Voblint_CFG.CFG_GraphViz"
     "Voblint_CFG.IMP2_Proc_to_CFG"
-    "Voblint_CFG.Exec_CFG"
     TD_Side_CFG
     Exec_St
     Abstract_Domain
 begin
+
+text \<open>
+  Edge and combine enumeration of a compiled program, read off the CFG via the
+  sorted-set encodings.  These code-generate: @{const cfg_edges_list} /
+  @{const cfg_combines_list} drop their finiteness guard for the code generator
+  (CFG_Def), and @{typ edge_action} carries a structural executable linear order.
+\<close>
+
+definition prog_cfg_edges ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where
+  "prog_cfg_edges \<Pi> ps main = cfg_edges_list (compile_prog \<Pi> ps main)"
+
+definition prog_cfg_combines ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp \<times> pp \<times> pp) list" where
+  "prog_cfg_combines \<Pi> ps main = cfg_combines_list (compile_prog \<Pi> ps main)"
 
 section \<open>Generic analysis-annotated CFG rendering\<close>
 

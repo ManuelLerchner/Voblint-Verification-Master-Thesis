@@ -60,10 +60,11 @@ fan out is the trace layer (`edge_step` is a function) — that is the real work
 
 ### Slice 2 — CFG action threading (mechanical)
 
-- `src/CFG/CFG_Def.thy:38`: add `EA_Havoc vname`; re-derive `countable`.
+- `src/CFG/CFG_Def.thy:38`: add `EA_Havoc vname`; re-derive `countable` and
+  the structural `linorder` (`derive linorder edge_action`).
 - Add the missing clause in every theory that matches exhaustively on
-  `edge_action` (15 files): `CFG_GraphViz` (pretty-print `x := random()`),
-  `CFG_Prune`, `Exec_CFG`, `IMP2_Proc_to_CFG`, the collecting theories, the
+  `edge_action`: `CFG_GraphViz` (pretty-print `x := random()`),
+  `CFG_Prune`, `IMP2_Proc_to_CFG`, the collecting theories, the
   analysis transfers, the examples. Each is a single new case.
 - `src/CFG/IMP2_Proc_to_CFG.thy`: compile `Havoc x` -> `(n, EA_Havoc x, n+1)`.
 

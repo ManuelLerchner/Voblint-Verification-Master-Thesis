@@ -21,7 +21,6 @@ theory Voblint
     "Voblint_CFG.CFG_Collect_Trace_IP"
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.Exec_CFG"
     "Voblint_CFG.CFG_GraphViz"
     "Voblint_Analysis.Abstract_Domain"
     "Voblint_Analysis.Constraint_System"
@@ -84,7 +83,6 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Collect_Trace_IP} --- interprocedural trace collecting and the projection lemma.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Unified} --- unified locale combining both collecting views.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning: restrict to reachable sub-CFG.
-    \<^item> @{theory Voblint_CFG.Exec_CFG} --- executable CFG compilation (code export for examples).
     \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
 
   \<^bold>\<open>3. Analysis.\<close> Abstract domains, the constraint system, and the TD
