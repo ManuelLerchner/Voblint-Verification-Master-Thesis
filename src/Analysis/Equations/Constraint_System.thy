@@ -641,6 +641,29 @@ text \<open>
   The contributions must be put back together first.
 \<close>
 
+text \<open>
+  all_sides totals every Side contribution of a tree, regardless of the named
+  global it targets.  Unlike sides_of_rhs (which keeps a per-name map), this is a
+  single finite join over the tree's Side nodes -- the data needed to reassemble
+  the full post-state across arbitrarily many named globals without an infinite
+  Sup.  At 'g = unit every Side targets (), so all_sides coincides with
+  sides_of_rhs _ (Inr ()) (all_sides_eq_sides_Inr_unit below).
+\<close>
+
+primrec all_sides ::
+  "(pp, 'g, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
+where
+  "all_sides (Answer d) \<sigma> = \<bottom>"
+| "all_sides (QueryL y f) \<sigma> = all_sides (f (\<sigma> (Inl y))) \<sigma>"
+| "all_sides (QueryG y f) \<sigma> = all_sides (f (\<sigma> (Inr y))) \<sigma>"
+| "all_sides (Side y d t) \<sigma> = d \<squnion> all_sides t \<sigma>"
+
+lemma all_sides_eq_sides_Inr_unit:
+  fixes t :: "(pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  shows "all_sides t \<sigma> = sides_of_rhs t \<sigma> (Inr ())"
+  by (induction t) (auto simp: Let_def sup_commute)
+
 definition etf_full ::
   "(pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
    \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"

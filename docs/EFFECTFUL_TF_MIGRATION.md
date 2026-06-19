@@ -656,3 +656,62 @@ it is not referenced from any soundness or interface theory outside `Exec_Bridge
   `Exec_Bridge` still hardcode the single `Inr ()` global. Generalising these to
   `pp + 'g` (per §3 Step 6) is the remaining large change; `side_env_g` is the
   prepared entry point.
+
+---
+
+## 9. Gap-1 design decisions (2026-06-19)
+
+### 9.1 The two open items are one item
+
+A **non-shim precision example requires Gap-1** — it is not independent. With
+`'g = unit` there is a single global pot `sigma (Inr ())`, and the soundness
+contract `etf_sound_assign` forces any global write to contribute to it
+(`etf_full` joins `sides_of_rhs t sigma (Inr ())`; suppressing the `Side`
+collapses the global slot to `bot`, whose `gamma` is empty, so the obligation
+fails). Conflicting writes (`Gdata := 5; Gdata := -5`) therefore force
+`sigma (Inr ()) = STop`; no sound `'g = unit` etf beats the shim on global
+precision. The doc's own §1.3 says it: "Gap 2 without Gap 1 has limited
+practical effect." So the §8 "suppression-only example" idea is **unsound**; the
+flag-routed example must use named globals (`'g = vname` / a finite index).
+
+### 9.2 The infinite-join obstacle and its resolution
+
+The vendored `Side y d t` already routes to the named slot `Inr y`
+(`Basics_side.sides_of_rhs`), so the solver is `'g`-generic. The obstacle is in
+*our* reassembly: a full-store abstract result (the headline's single
+`abs_state` at the exit, and `etf_full`'s global coverage) must join **all**
+named globals. Over an infinite `'g` that is an infinite `Sup`, which
+`bounded_semilattice_sup_bot` (non-complete) lacks.
+
+**Resolution — `'g::finite`.** The generic effectful pipeline carries a
+`finite` sort constraint on the global-name type. A named-global analysis
+enumerates its global unknowns as a finite type (this mirrors Goblint: a `Spec`
+fixes a finite set of global-unknown *kinds*). The shim keeps `'g = unit`
+(`unit::finite`), so every existing instance survives unchanged.
+
+### 9.3 New primitives (replace the hardcoded `Inr ()`)
+
+| Primitive | Definition | Role |
+|---|---|---|
+| `all_sides t sigma` | tree-recursive total of every `Side` contribution (`Side y d t -> d ⊔ all_sides t`) | finite by tree structure; replaces `sides_of_rhs t sigma (Inr ())` in `etf_full` |
+| `etf_full t sigma` | `traverse_rhs t sigma ⊔ all_sides t sigma` | full-store post-state; coincides with the current def at `'g = unit` |
+| `glob_env sigma` | `Finite_Set.fold (λg a. a ⊔ sigma (Inr g)) bot UNIV` | join of all named-global unknowns (matches the project's locked join convention) |
+| `side_env_all sigma v` | `sigma (Inl v) ⊔ glob_env sigma` | full env at a point; `= side_env` at `'g = unit` |
+
+The precision win lives in the **per-unknown** values
+(`sigma (Inr ''Gdata_flagpos'') = SPos` distinct from `sigma (Inr ''Gdata_flagneg'') = SNeg`),
+not in the merged exit store (which still joins to `STop`). The headline
+soundness theorem keeps joining all globals via `glob_env`; the demonstrated
+precision is the queryable per-name value the unit pot structurally cannot hold.
+
+### 9.4 Implementation order (build-gated slices)
+
+1. `all_sides` + `etf_full` via it, prove `all_sides = sides_of_rhs _ (Inr ())`
+   at `unit` (no type change yet). **foundational, low risk.**
+2. Generalise `etf_full`, `glob_env`, `side_env_all`, the
+   `sound_effectful_transfer` locale from `unit` to `'g::finite`; re-prove the
+   shim coincidences at `unit`.
+3. Generalise `TD_Side_IP_Eff_Bounds` / `_Soundness` / `_Interface` /
+   `_Pipeline`: quantify the `Inr ()` bounds over all `g`, entry-seed per name.
+4. Rework `Exec_Bridge` `'a st` simulation (heaviest `Inr ()` user).
+5. Flag-routed `'g`-indexed example + per-unknown precision theorem.
