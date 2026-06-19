@@ -60,6 +60,10 @@ modulo one named TD hypothesis (P1: `side_cfg_ip_solve_dom`).
 - **Operational:** `pstep` in `IMP2_Proc.thy`; `pruns_to_ip` in `CFG_Collect_IP_Adeq.thy`.
 - **Showcase:** `Example_Trace_Digest_Precision.thy` — digest vs. flat precision comparison.
 
+### Trace-based analyzer fork (planned)
+
+Full digest-partitioned analyzer (one abstract state per `(pp, digest)`), still executable on `TD_side`. The trace contract (`digest_env_sound` / `digest_read_sound`) already exists and is proved realizable by the flat collapse (`flat_env_is_digest_sound`); the fork produces a *tighter* `envd`. Approach A (digest-indexed unknowns), first instance k-call-string. Plan + slices + exit criteria: `docs/TRACE_BASED_FORK_MIGRATION.md`. Single-threaded precursor to thread-modular work.
+
 ### Domain stretch
 
 Interval is the next instance. Octagon is the relational stretch. Both fit the existing `sound_domain` / `abstract_domain` locale chain. **Interval pipeline is the architectural template**: once instantiated, octagon and any further domains follow the same scaffold provided the `vname ⇒ 'a abs_state` pointwise lifting is adequate. For domains where it is not (e.g. octagons over DBMs), see "Two-layer split" below.
