@@ -174,7 +174,8 @@ lemma sides_pure_edge_tree_Inr:
 lemma etf_full_pure_edge_tree:
   "etf_full (pure_edge_tree tf a u) \<sigma> = apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
   unfolding etf_full_def
-  by (simp add: traverse_pure_edge_tree sides_pure_edge_tree_Inr restrict_local_global_join)
+  by (simp add: all_sides_eq_sides_Inr_unit traverse_pure_edge_tree sides_pure_edge_tree_Inr
+        restrict_local_global_join)
 
 lemma etf_full_etf_from_tf:
   "etf_full (apply_etf (etf_from_tf tf) a u) \<sigma> = apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
@@ -196,8 +197,8 @@ lemma etf_full_pure_combine_tree:
   "etf_full (pure_combine_tree cc ex) \<sigma>
    = combine_abs (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())) (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
   unfolding etf_full_def pure_combine_tree_def
-  by (simp add: Let_def restrict_local_combine_eq restrict_global_combine_eq
-        restrict_combine combine_abs_def)
+  by (simp add: all_sides_eq_sides_Inr_unit[unfolded pure_combine_tree_def] Let_def
+        restrict_local_combine_eq restrict_global_combine_eq restrict_combine combine_abs_def)
 
 text \<open>
   Every sound pure transfer record satisfies the effectful soundness contract via

@@ -665,10 +665,10 @@ lemma all_sides_eq_sides_Inr_unit:
   by (induction t) (auto simp: Let_def sup_commute)
 
 definition etf_full ::
-  "(pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
-   \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
+  "(pp, 'g, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
 where
-  "etf_full t \<sigma> = traverse_rhs t \<sigma> \<squnion> sides_of_rhs t \<sigma> (Inr ())"
+  "etf_full t \<sigma> = traverse_rhs t \<sigma> \<squnion> all_sides t \<sigma>"
 
 text \<open>
   Soundness contract for an effectful transfer record: each per-action tree's

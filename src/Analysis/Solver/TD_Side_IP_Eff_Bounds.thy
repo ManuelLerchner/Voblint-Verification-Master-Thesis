@@ -575,7 +575,7 @@ proof -
     by (meson order_trans)
   have "etf_full (apply_etf etf a u) \<sigma>
         = traverse_rhs (apply_etf etf a u) \<sigma> \<squnion> sides_of_rhs (apply_etf etf a u) \<sigma> (Inr ())"
-    by (simp add: etf_full_def)
+    by (simp add: etf_full_def all_sides_eq_sides_Inr_unit)
   also have "\<dots> \<le> \<sigma> (Inl v) \<squnion> \<sigma> (Inr ())" using loc glob by (rule sup_mono)
   finally show ?thesis unfolding side_env_def .
 qed
@@ -601,7 +601,7 @@ proof -
     by (meson order_trans)
   have "etf_full (etf_combine etf cc ex) \<sigma>
         = traverse_rhs (etf_combine etf cc ex) \<sigma> \<squnion> sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ())"
-    by (simp add: etf_full_def)
+    by (simp add: etf_full_def all_sides_eq_sides_Inr_unit)
   also have "\<dots> \<le> \<sigma> (Inl v) \<squnion> \<sigma> (Inr ())" using loc glob by (rule sup_mono)
   finally show ?thesis unfolding side_env_def .
 qed
