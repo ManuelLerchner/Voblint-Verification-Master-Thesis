@@ -71,7 +71,7 @@ qed
 abbreviation "loop_cfg \<equiv> compile_prog Map.empty [] loop_prog"
 
 lemma loop_cfg_full:
-  "loop_cfg = mk_ip_cfg 0 5
+  "loop_cfg = mk_cfg 0 5
      {(0, EA_Assign ''x'' (N 1), 1),
       (1, EA_Nop, 2),
       (2, EA_Assume (Bc True), 3),
@@ -104,13 +104,12 @@ definition loop_env :: "pp \<Rightarrow> sign abs_state" where
   "loop_env v = (if v \<in> {1,2,3,4,5} then (\<lambda>_. STop)(''x'' := SPos) else (\<lambda>_. STop))"
 
 lemma loop_postfix:
-  "is_post_fixpoint_ip loop_cfg sign_tf (\<squnion>) bot loop_s0 loop_env"
-  unfolding is_post_fixpoint_ip_def
+  "is_post_fixpoint loop_cfg sign_tf (\<squnion>) bot loop_s0 loop_env"
+  unfolding is_post_fixpoint_def
 proof (rule allI)
   fix v
-  show "rhs_ip loop_cfg sign_tf (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
-    apply (simp only: rhs_ip_eq_rhs_if_no_combines[OF loop_cfg_combines]
-                      rhs_def Let_def loop_cfg_entry loop_cfg_edges)
+  show "rhs loop_cfg sign_tf (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
+    apply (simp only: rhs_def Let_def loop_cfg_entry loop_cfg_edges loop_cfg_combines)
     apply (rule abs_join_set_le)
     apply (rule finite_subset[where B=
             "insert loop_s0 ((\<lambda>(u,a). apply_tf sign_tf a (loop_env u)) `
@@ -133,7 +132,7 @@ abbreviation "loop_head \<equiv> 2"
 
 lemma loop_head_x_pos:
   assumes S_sound: "S \<subseteq> sign_domain.gamma_state loop_s0"
-  assumes tr: "tr \<in> cfg_collect_trace_ip loop_cfg S loop_head"
+  assumes tr: "tr \<in> cfg_collect_trace loop_cfg S loop_head"
   shows "(last tr) ''x'' > 0"
 proof -
   have fin_e: "finite (edges loop_cfg)"

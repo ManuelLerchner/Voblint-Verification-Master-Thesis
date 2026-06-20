@@ -28,7 +28,7 @@ begin
 
 definition sp :: store where "sp = (\<lambda>_. 0)(''x'' := 1)"
 definition sn :: store where "sn = (\<lambda>_. 0)(''x'' := - 1)"
-definition gcfg :: cfg where "gcfg = mk_cfg 0 0 {}"
+definition gcfg :: cfg where "gcfg = mk_cfg 0 0 {} {}"
 definition S0 :: "store set" where "S0 = {sp, sn}"
 
 lemma gcfg_edges[simp]: "edges gcfg = {}" by (simp add: gcfg_def)
@@ -38,30 +38,30 @@ lemma gcfg_entry[simp]: "cfg_entry gcfg = 0" by (simp add: gcfg_def)
 (* -- the reaching trace set is exactly the two singletons ----------------- *)
 
 lemma gcfg_witness_inv:
-  "ip_trace_witness gcfg S0 v tr \<Longrightarrow> v = 0 \<and> (\<exists>s\<in>S0. tr = [s])"
-  by (induction rule: ip_trace_witness.induct) auto
+  "trace_witness gcfg S0 v tr \<Longrightarrow> v = 0 \<and> (\<exists>s\<in>S0. tr = [s])"
+  by (induction rule: trace_witness.induct) auto
 
-lemma reaching_gcfg: "cfg_collect_trace_ip gcfg S0 0 = {[sp], [sn]}"
+lemma reaching_gcfg: "cfg_collect_trace gcfg S0 0 = {[sp], [sn]}"
 proof
-  show "cfg_collect_trace_ip gcfg S0 0 \<subseteq> {[sp], [sn]}"
-    using gcfg_witness_inv unfolding cfg_collect_trace_ip_def S0_def by auto
+  show "cfg_collect_trace gcfg S0 0 \<subseteq> {[sp], [sn]}"
+    using gcfg_witness_inv unfolding cfg_collect_trace_def S0_def by auto
 next
-  show "{[sp], [sn]} \<subseteq> cfg_collect_trace_ip gcfg S0 0"
+  show "{[sp], [sn]} \<subseteq> cfg_collect_trace gcfg S0 0"
   proof -
-    have "[sp] \<in> cfg_collect_trace_ip gcfg S0 0"
-      using cfg_collect_trace_ip_entry[of sp S0 gcfg] by (simp add: S0_def)
-    moreover have "[sn] \<in> cfg_collect_trace_ip gcfg S0 0"
-      using cfg_collect_trace_ip_entry[of sn S0 gcfg] by (simp add: S0_def)
+    have "[sp] \<in> cfg_collect_trace gcfg S0 0"
+      using cfg_collect_trace_entry[of sp S0 gcfg] by (simp add: S0_def)
+    moreover have "[sn] \<in> cfg_collect_trace gcfg S0 0"
+      using cfg_collect_trace_entry[of sn S0 gcfg] by (simp add: S0_def)
     ultimately show ?thesis by simp
   qed
 qed
 
-lemma reaching_gcfg_other: "v \<noteq> 0 \<Longrightarrow> cfg_collect_trace_ip gcfg S0 v = {}"
-  using gcfg_witness_inv unfolding cfg_collect_trace_ip_def by auto
+lemma reaching_gcfg_other: "v \<noteq> 0 \<Longrightarrow> cfg_collect_trace gcfg S0 v = {}"
+  using gcfg_witness_inv unfolding cfg_collect_trace_def by auto
 
 lemma alpha_last_empty[simp]: "alpha_last {} = {}" unfolding alpha_last_def by simp
 lemma alpha_last_single: "alpha_last {t} = {last t}" unfolding alpha_last_def by auto
-lemma alpha_last_reaching: "alpha_last (cfg_collect_trace_ip gcfg S0 0) = {sp, sn}"
+lemma alpha_last_reaching: "alpha_last (cfg_collect_trace gcfg S0 0) = {sp, sn}"
   unfolding alpha_last_def reaching_gcfg by force
 
 (* -- sign coarseness: only STop concretizes both a positive and a negative -- *)
@@ -72,7 +72,7 @@ lemma sign_pos_neg_top: "(1::int) \<in> gamma_sign sv \<Longrightarrow> (-1::int
 (* -- ANY sound flat env reads x as the whole of ZZ ------------------------ *)
 
 lemma flat_forces_top:
-  assumes "alpha_last (cfg_collect_trace_ip gcfg S0 0) \<le> sign_domain.gamma_state envf"
+  assumes "alpha_last (cfg_collect_trace gcfg S0 0) \<le> sign_domain.gamma_state envf"
   shows "gamma_sign (envf ''x'') = UNIV"
 proof -
   from assms have sp_in: "sp \<in> sign_domain.gamma_state envf"
@@ -91,7 +91,7 @@ proof -
 qed
 
 theorem digest_strictly_more_precise:
-  assumes flat: "alpha_last (cfg_collect_trace_ip gcfg S0 0) \<le> sign_domain.gamma_state envf"
+  assumes flat: "alpha_last (cfg_collect_trace gcfg S0 0) \<le> sign_domain.gamma_state envf"
   shows "gamma_sign SPos \<subset> gamma_sign (envf ''x'')"
 proof -
   have top: "gamma_sign (envf ''x'') = UNIV" by (rule flat_forces_top[OF flat])
@@ -134,7 +134,7 @@ proof (intro allI)
   show "alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> sign_domain.gamma_state (envd v d)"
   proof (cases "v = 0")
     case False
-    then have "cfg_collect_trace_ip gcfg S0 v = {}" by (rule reaching_gcfg_other)
+    then have "cfg_collect_trace gcfg S0 v = {}" by (rule reaching_gcfg_other)
     then have "reaching_compat dgx (=) d gcfg S0 v = {}"
       unfolding reaching_compat_def by simp
     then show ?thesis by simp
@@ -167,7 +167,7 @@ lemma digest_read_pos: "(last [sp]) ''x'' \<in> gamma_sign (envd 0 1 ''x'')"
 (* -- capstone: sound AND strictly more precise than every sound flat env --- *)
 
 theorem digest_beats_flat:
-  assumes flat: "alpha_last (cfg_collect_trace_ip gcfg S0 0) \<le> sign_domain.gamma_state envf"
+  assumes flat: "alpha_last (cfg_collect_trace gcfg S0 0) \<le> sign_domain.gamma_state envf"
   shows "gamma_sign (envd 0 1 ''x'') \<subset> gamma_sign (envf ''x'')
        \<and> (\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> sign_domain.gamma_state (envd v d))"
 proof

@@ -12,7 +12,7 @@
 | `Exec_St.thy`                | `'a st` quotient type (two-region rep), `lookup_st`, `update_st`, order/sup/widening instances   |
 | `Sign_Domain.thy`            | 7-element sign lattice (`SBot SNeg SNonPos SZero SNonNeg SPos STop`), `gamma_sign`, `sign_tf`, type class + locale interpretations |
 | `Sign_Exec.thy`              | Executable mirror `sign_tf_st`, commutation proof, `cinit_sign_st` seed                          |
-| `Sign_Side_IP_Soundness.thy` | `side_ip_sign_analysis_sound` — sign domain end-to-end via `side_analyse_ip_eff`                     |
+| `Sign_Side_Soundness.thy` | `side_sign_analysis_sound` — sign domain end-to-end via `side_analyse_eff`                     |
 | `Sign_Exec_Sound.thy`        | `sign_exec_eqs`, `sign_exec`, `sign_exec_sound_collecting` / `_trace` — program-parametric sound theorems |
 | `Exec_Sign_Run.thy`          | Code-generation entry point for the sign analysis executable                                     |
 | `Interval_Domain.thy`        | Interval domain (`ivl`), `gamma_ivl`, `ivl_tf`, `ivl_domain` / `ivl_sound_tf` interpretations   |
@@ -56,7 +56,7 @@ interpretation sign_sound_tf: sound_transfer gamma_sign sign_tf
 ```
 Provides `sign_sound_tf` from which `sign_sound_etf : sound_effectful_transfer
 gamma_sign sign_etf` is derived; the latter exposes
-`side_collect_sound_ip_exit_pruned_eff` — the big soundness engine used by the
+`side_collect_sound_exit_pruned_eff` — the big soundness engine used by the
 end-to-end proof.
 
 ### 3. Executable bridge layer  (`Sign_Exec.thy`)
@@ -72,7 +72,7 @@ sign_tf_st_commute:
 
 `part_post_solution_st_to_abs_eff` (in `Exec_Bridge.thy`) converts a TD
 post-fixpoint in `sign st` space into one for the effectful equation system
-`side_cfg_T_ip_eff (etf_from_tf sign_tf)` in `sign abs_state` space, where the
+`side_cfg_T_eff (etf_from_tf sign_tf)` in `sign abs_state` space, where the
 effectful soundness locale theorems apply.
 
 **C-faithful seed:** `cinit_sign_st :: sign st` represents
@@ -84,7 +84,7 @@ concretisation is `cinit_stores` (defined in `Constraint_System.thy`).
 
 ```isabelle
 sign_exec_eqs Π ps main =
-  side_cfg_T_ip_st (compile_prog Π ps main) sign_tf_st ⊥ cinit_sign_st
+  side_cfg_T_st (compile_prog Π ps main) sign_tf_st ⊥ cinit_sign_st
 ```
 
 Packages CFG + executable transfer function + seed into the solver's
@@ -97,9 +97,9 @@ and returns a stable assignment.  The soundness proof:
 1. Unwrap solver output: `TD_side_always_join_Interp.partial_post_solution`
 2. Lift to the effectful system: `part_post_solution_st_to_abs_eff` (uses commutation)
 4. Cover entry: `cinit_stores ⊆ γ(cinit_sign_st)` (provable by `auto`)
-5. Apply soundness engine: `sign_sound_etf.side_collect_sound_ip_exit_pruned_eff`
+5. Apply soundness engine: `sign_sound_etf.side_collect_sound_exit_pruned_eff`
 
-**Result:** `cfg_collect_ip g cinit_stores exit ≤ γ(sign_exec ...)`
+**Result:** `cfg_collect g cinit_stores exit ≤ γ(sign_exec ...)`
 
 ---
 
@@ -137,8 +137,8 @@ requires flow-sensitivity on globals.
 ```
 Sign_Domain ──imports──▶ Abstract_Domain, Constraint_System, IMP2_Expr, IMP2_Globals
 Sign_Exec   ──imports──▶ Exec_Bridge, Sign_Domain
-Sign_Side_IP_Soundness ──imports──▶ Sign_Domain, TD_Side_IP_Eff_Soundness
-Sign_Exec_Sound ──imports──▶ Sign_Exec, Sign_Side_IP_Soundness
+Sign_Side_Soundness ──imports──▶ Sign_Domain, TD_Side_Eff_Soundness
+Sign_Exec_Sound ──imports──▶ Sign_Exec, Sign_Side_Soundness
 ```
 
 **Downstream:** `Formalization/Pipeline/Trace_IP_Analysis_Sound.thy` —

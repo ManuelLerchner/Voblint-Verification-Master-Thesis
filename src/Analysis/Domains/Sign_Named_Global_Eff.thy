@@ -1,5 +1,5 @@
 theory Sign_Named_Global_Eff
-  imports Sign_Side_IP_Soundness
+  imports Sign_Side_Soundness
 begin
 
 section \<open>A genuinely effectful, named-global Sign transfer\<close>

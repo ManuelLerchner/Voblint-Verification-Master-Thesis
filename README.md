@@ -29,12 +29,12 @@ Four Isabelle sessions, built in order:
 ## Semantic foundation
 
 The concrete spec is an interprocedural **trace** collecting semantics
-(`cfg_collect_trace_ip`): the ordered run, not just the set of reachable states.
+(`cfg_collect_trace`): the ordered run, not just the set of reachable states.
 Traces are what history-sensitive globals need - *which* writes reach a given
 read. Both the trace semantics and its flattening are CFG-edge based: dropping a
 trace to its last state recovers the reachable-state collecting semantics
-(`cfg_collect_ip`) the analyzer over-approximates
-(`alpha_last_cfg_collect_trace_ip_le`). No small-step is involved in that step.
+(`cfg_collect`) the analyzer over-approximates
+(`alpha_last_cfg_collect_trace_le`). No small-step is involved in that step.
 
 Big-step is **not** the spec - it is vacuous on diverging programs. It enters
 only as a *reference* semantics: `backward_sim` (`src/IMP2/IMP2_Bridge.thy`)
@@ -50,8 +50,8 @@ big-step / VCG pins the exact functional result at exit on terminating runs.
 (`src/Formalization/Pipeline/Trace_IP_Analysis_Sound.thy`): for a post-fixpoint
 `env` of the interprocedural constraint system, the abstraction of the trace
 collecting semantics is below `gamma_state (env v)` at every program point `v`.
-Sign instance: `side_ip_sign_analysis_sound`
-(`src/Analysis/Domains/Sign_Side_IP_Soundness.thy`).
+Sign instance: `side_sign_analysis_sound`
+(`src/Analysis/Domains/Sign_Side_Soundness.thy`).
 
 Globals shared across the program are tracked flow-insensitively through the
 solver's side-effect mechanism. In `Trace_IP_Analysis_Sound.thy`:
@@ -70,7 +70,7 @@ post-fixpoint over-approximates concrete reachability:
 | --- | --- | --- |
 | One edge | `edges_collect` on store sets | `apply_tf tf` on `abs_state` |
 | One point | join of predecessor edges | constraint `rhs` join |
-| Global | `cfg_collect_trace_ip` | `env` with `is_post_fixpoint_ip` |
+| Global | `cfg_collect_trace` | `env` with `is_post_fixpoint` |
 | Link | (definition) | transfer soundness: `gamma` commutes with each `tf` |
 
 ## Adding a domain
@@ -86,7 +86,7 @@ obligations; the parametric pipeline does the rest. Sign
 | 2 | define `gamma`, prove `gamma_bot` / `gamma_mono` | `gamma_sign_mono` |
 | 3 | `interpretation` of the `abstract_domain` locale | `sign_domain` |
 | 4 | define transfer fns, prove they preserve `gamma` | `assign_sign_sound`, `assume_sign_sound` |
-| 5 | apply the IP pipeline soundness theorem | `side_ip_sign_analysis_sound` |
+| 5 | apply the IP pipeline soundness theorem | `side_sign_analysis_sound` |
 
 ## Requirements
 

@@ -75,7 +75,8 @@ definition mk_cfg ::
 declare mk_cfg_def[simp]
 
 lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E C))"
-  unfolding valid_graph_def graph.truncate_def mk_cfg_def by force
+  unfolding valid_graph_def graph.truncate_def mk_cfg_def
+  by (simp add: image_comp inf_sup_aci(5) sup.left_commute sup.orderI)
 
 (* Affine shift along program points compile c (n+k) is compile c n with all pp+k. *)
 

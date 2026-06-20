@@ -1,22 +1,22 @@
 theory Trace_IP_Analysis_Sound
-  imports "Voblint_Analysis.Analysis_Sound" "Voblint_CFG.CFG_Collect_Trace_IP"
+  imports "Voblint_Analysis.Analysis_Sound" "Voblint_CFG.CFG_Collect_Trace"
 begin
 
 section \<open>Trace overlay as a soundness morphism\<close>
 
 text \<open>
   Composes the interprocedural projection
-    alpha_last (cfg_collect_trace_ip g S v) \<subseteq> cfg_collect_ip g S v
+    alpha_last (cfg_collect_trace g S v) \<subseteq> cfg_collect g S v
   with the unified interprocedural soundness
-    cfg_collect_ip g S v \<le> gamma_state (env v)
+    cfg_collect g S v \<le> gamma_state (env v)
   to obtain: the analyzer is sound w.r.t. the interprocedural TRACE semantics,
   projected to last stores.  alpha_last is thus a soundness-preserving morphism --
   no separate trace soundness stack is needed.
 
   This is the digest extension point: a digest-indexed combine_at refining
-  cfg_collect_trace_ip keeps the same shape
+  cfg_collect_trace keeps the same shape
 
-      alpha_last (precise trace collecting) \<subseteq> cfg_collect_ip \<le> gamma_state env,
+      alpha_last (precise trace collecting) \<subseteq> cfg_collect \<le> gamma_state env,
 
   so the global-read soundness a digest hook adds plugs in below the projection
   without forking a new soundness chain.
@@ -29,14 +29,14 @@ theorem trace_ip_analysis_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
-  assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
+  assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  shows "alpha_last (cfg_collect_trace_ip g S v) \<le> gamma_state (env v)"
+  shows "alpha_last (cfg_collect_trace g S v) \<le> gamma_state (env v)"
 proof -
-  have proj: "alpha_last (cfg_collect_trace_ip g S v) \<le> cfg_collect_ip g S v"
-    by (rule alpha_last_cfg_collect_trace_ip_le)
-  have st: "cfg_collect_ip g S v \<le> gamma_state (env v)"
-    by (rule unified_post_fixpoint_sound_ip[OF fin finC post_fp S_sound])
+  have proj: "alpha_last (cfg_collect_trace g S v) \<le> cfg_collect g S v"
+    by (rule alpha_last_cfg_collect_trace_le)
+  have st: "cfg_collect g S v \<le> gamma_state (env v)"
+    by (rule unified_post_fixpoint_sound[OF fin finC post_fp S_sound])
   from proj st show ?thesis by (rule subset_trans)
 qed
 
@@ -56,7 +56,7 @@ text \<open>
   shape of gamma_state.
 
   The precision half -- digest-indexed (context-sensitive) summaries that keep
-  callers apart -- refines cfg_collect_trace_ip's combine via a digest hook on the
+  callers apart -- refines cfg_collect_trace's combine via a digest hook on the
   unified collecting locale; it strengthens the trace set (smaller), so this
   soundness statement is preserved unchanged.  That refinement is
   reaching_global_read_sound_d below.
@@ -65,14 +65,14 @@ theorem reaching_global_read_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
-  assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
+  assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes tr: "tr \<in> cfg_collect_trace_ip g S v"
+  assumes tr: "tr \<in> cfg_collect_trace g S v"
   shows "(last tr) x \<in> \<gamma> (env v x)"
 proof -
-  have mem: "last tr \<in> alpha_last (cfg_collect_trace_ip g S v)"
+  have mem: "last tr \<in> alpha_last (cfg_collect_trace g S v)"
     using tr unfolding alpha_last_def by blast
-  have le: "alpha_last (cfg_collect_trace_ip g S v) \<le> gamma_state (env v)"
+  have le: "alpha_last (cfg_collect_trace g S v) \<le> gamma_state (env v)"
     by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound])
   from mem le have "last tr \<in> gamma_state (env v)" by blast
   thus ?thesis unfolding gamma_state_def by blast
@@ -81,8 +81,8 @@ qed
 
 text \<open>
   Digest-refined corollary: soundness of the digest-REFINED reaching-trace read.
-  cfg_collect_trace_ip_d (any digest dg, any compatibility cmp) is a subset of
-  cfg_collect_trace_ip (cfg_collect_trace_ip_d_subset), so the soundness core
+  cfg_collect_trace_d (any digest dg, any compatibility cmp) is a subset of
+  cfg_collect_trace (cfg_collect_trace_d_subset), so the soundness core
   transfers unchanged: the SAME analysis env soundly over-approximates every
   digest-restricted reaching trace.  The digest hook buys precision at zero
   soundness cost.
@@ -91,13 +91,13 @@ theorem reaching_global_read_sound_d:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
-  assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
+  assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
-  assumes tr: "tr \<in> cfg_collect_trace_ip_d dg cmp g S v"
+  assumes tr: "tr \<in> cfg_collect_trace_d dg cmp g S v"
   shows "(last tr) x \<in> \<gamma> (env v x)"
 proof -
-  have "tr \<in> cfg_collect_trace_ip g S v"
-    using tr cfg_collect_trace_ip_d_subset by blast
+  have "tr \<in> cfg_collect_trace g S v"
+    using tr cfg_collect_trace_d_subset by blast
   thus ?thesis
     using reaching_global_read_sound[OF fin finC post_fp S_sound] by blast
 qed
@@ -125,7 +125,7 @@ definition digest_env_sound ::
 theorem digest_read_sound:
   fixes envd :: "pp \<Rightarrow> 'd \<Rightarrow> 'a abs_state"
   assumes snd: "digest_env_sound dg cmp g S envd"
-  assumes tr: "tr \<in> cfg_collect_trace_ip g S v"
+  assumes tr: "tr \<in> cfg_collect_trace g S v"
   assumes cm: "cmp (dg tr) d"
   shows "(last tr) x \<in> \<gamma> (envd v d x)"
 proof -
@@ -142,15 +142,15 @@ theorem flat_env_is_digest_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
-  assumes post_fp: "is_post_fixpoint_ip g tf (\<squnion>) bot s0 env"
+  assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> gamma_state s0"
   shows "digest_env_sound dg cmp g S (\<lambda>v d. env v)"
   unfolding digest_env_sound_def
 proof (intro allI)
   fix d v
-  have "reaching_compat dg cmp d g S v \<subseteq> cfg_collect_trace_ip g S v"
+  have "reaching_compat dg cmp d g S v \<subseteq> cfg_collect_trace g S v"
     unfolding reaching_compat_def by blast
-  hence "alpha_last (reaching_compat dg cmp d g S v) \<le> alpha_last (cfg_collect_trace_ip g S v)"
+  hence "alpha_last (reaching_compat dg cmp d g S v) \<le> alpha_last (cfg_collect_trace g S v)"
     unfolding alpha_last_def by blast
   also have "... \<le> gamma_state (env v)"
     by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound])

@@ -16,31 +16,31 @@ Related: `docs/HOL_IMP_COMPARISON.md`, `docs/PROOF_PHASES.md`, `docs/PROOF_OVERV
 ## Bridges in the soundness chain
 
 ```
-cfg_collect_trace_ip (trace spec at each pp)
+cfg_collect_trace (trace spec at each pp)
        |
-       |  alpha_last projection (CFG_Collect_Trace_IP)
+       |  alpha_last projection (CFG_Collect_Trace)
        v
-cfg_collect_ip (state spec at each pp)
+cfg_collect (state spec at each pp)
        |
-       |  unified_post_fixpoint_sound_ip (Analysis_Sound / B3)
+       |  unified_post_fixpoint_sound (Analysis_Sound / B3)
        v
 gamma_state (env v)  <-----  side_analyse_ip output (B4)
        ^
-       |  [P1 side_cfg_ip_solve_dom per pp]
+       |  [P1 side_cfg_solve_dom per pp]
        |
    TD_side solver (per-pp root at v, interprocedural)
 ```
 
 | Bridge | Statement | Where | Status |
 | --- | --- | --- | --- |
-| B3 | `is_post_fixpoint_ip env ==> ∀v. cfg_collect_ip g S v ⊆ gamma_state (env v)` | `Analysis_Sound.thy` (`unified_post_fixpoint_sound_ip`) | done |
-| B4 | per-pp `side_analyse_ip_eff` sound w.r.t. `cfg_collect_ip` at queried `v` | `TD_Side_IP_Eff_Soundness.thy` (`side_analyse_ip_eff_collect_sound_exit_pruned_gen`) | done (modulo P1 as hyp) |
+| B3 | `is_post_fixpoint env ==> ∀v. cfg_collect g S v ⊆ gamma_state (env v)` | `Analysis_Sound.thy` (`unified_post_fixpoint_sound`) | done |
+| B4 | per-pp `side_analyse_eff` sound w.r.t. `cfg_collect` at queried `v` | `TD_Side_Eff_Soundness.thy` (`side_analyse_eff_collect_sound_exit_pruned_gen`) | done (modulo P1 as hyp) |
 | B5 | ~~`td_cfg_in_reach`~~ — removed (Fix B, 2026-06-01) | was `Pipeline.thy` (classical spine) | **done** (historical; classical spine retired) |
 | B6 | `comp_fun_idem (ac_join cfg)` | classical spine | **done** (historical; classical spine retired) |
-| B7 | `side_cfg_ip_solve_dom g tf bot s0 v` for each queried `v` | `Sign_Side_IP_Soundness.thy` assumptions | open (P1) |
+| B7 | `side_cfg_solve_dom g tf bot s0 v` for each queried `v` | `Sign_Side_Soundness.thy` assumptions | open (P1) |
 
-**Operational link:** `pruns_to_ip pi ps c s t` is definitional exit `cfg_collect_ip`
-at `cfg_exit (compile_prog …)` (`CFG_Collect_IP_Adeq.thy`).
+**Operational link:** `cfg_runs_to pi ps c s t` is definitional exit `cfg_collect`
+at `cfg_exit (compile_prog …)` (`CFG_Collect_Adeq.thy`).
 
 Optional / removed from main path:
 
@@ -50,7 +50,7 @@ Optional / removed from main path:
 | `TD_Total.thy` | **deleted** — was orphan totality track (P6) |
 | Classical intra spine (`Pipeline.thy`, `TD_Soundness.thy`, etc.) | **extracted** to `voblint-formalization-classical` |
 
-`trace_ip_analysis_sound` / `reaching_global_read_sound` carry **P1** (`side_cfg_ip_solve_dom`) as the only solver hypothesis.
+`trace_ip_analysis_sound` / `reaching_global_read_sound` carry **P1** (`side_cfg_solve_dom`) as the only solver hypothesis.
 
 ---
 
@@ -58,7 +58,7 @@ Optional / removed from main path:
 
 | ID | Problem | Files | Why it blocks | Needed for |
 | --- | --- | --- | --- | --- |
-| P1 | `side_cfg_ip_solve_dom` assumed | `Sign_Side_IP_Soundness.thy` | "If TD side terminates, result is sound" | Cleaner main theorem; total correctness |
+| P1 | `side_cfg_solve_dom` assumed | `Sign_Side_Soundness.thy` | "If TD side terminates, result is sound" | Cleaner main theorem; total correctness |
 | P2 | ~~`td_cfg_in_reach`~~ | was classical `Pipeline.thy` | **done** 2026-06-01 — Fix B; classical spine retired | (historical) |
 | P3 | `comp_fun_idem (ac_join cfg)` | classical `Pipeline.thy` | **done** 2026-05-27 (`join_state_comp_fun_idem`); classical spine retired | (historical) |
 | P4 | Interval domain | not in current tree | Second numeric domain | Wider thesis scope |
@@ -75,18 +75,18 @@ Optional / removed from main path:
 
 ### P1 — solver termination assumption
 
-`trace_ip_analysis_sound`, `reaching_global_read_sound`, and `side_ip_sign_analysis_sound`
+`trace_ip_analysis_sound`, `reaching_global_read_sound`, and `side_sign_analysis_sound`
 ultimately require:
 
 ```isabelle
 assumes side_solve_dom:
-  "side_cfg_ip_solve_dom (compile_prog pi ps main) sign_tf bot s0
+  "side_cfg_solve_dom (compile_prog pi ps main) sign_tf bot s0
      (cfg_exit (compile_prog pi ps main))"
 ```
 
 This is `TD_side.solve_dom destab_opt True (side_cfg_T_ip_eff …) v`, i.e. termination
 of the side-effecting per-pp solve. Monotonicity of `side_cfg_T_ip_eff` is proved
-(in `TD_Side_IP_Eff_Bounds.thy` + `TD_Side_IP_Eff_Soundness.thy`), so P1 is gated on
+(in `TD_Side_Eff_Bounds.thy` + `TD_Side_Eff_Soundness.thy`), so P1 is gated on
 well-foundedness of the TD side worklist over a finite pp set.
 
 P1 is gated on P5 for a generic termination proof.
@@ -233,7 +233,7 @@ See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explic
 
 ### P4 / P7 — interval domain
 
-Sign end-to-end proved (`side_ip_sign_analysis_sound`; carries P1 only). Interval
+Sign end-to-end proved (`side_sign_analysis_sound`; carries P1 only). Interval
 domain not in current tree — was in classical spine (sibling repo). Adding it
 requires only a `sound_transfer` interpretation for interval transfer functions;
 no architectural changes needed.
@@ -259,6 +259,6 @@ Split core vs stretch sessions when sorry-free core is policy.
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
 3. `src/Formalization/Pipeline/Trace_IP_Analysis_Sound.thy` — `trace_ip_analysis_sound`, `reaching_global_read_sound`
-4. `src/Analysis/Domains/Sign_Side_IP_Soundness.thy` — `side_ip_sign_analysis_sound`
-5. Open TD hyp: P1 (`side_cfg_ip_solve_dom`) only
+4. `src/Analysis/Domains/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`
+5. Open TD hyp: P1 (`side_cfg_solve_dom`) only
 6. MCP-first workflow: `AGENTS.md`

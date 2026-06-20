@@ -51,7 +51,7 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "cfg_collect_ip (prog_cfg x1_prog) cinit_stores (cfg_exit (prog_cfg x1_prog))
+  "cfg_collect (prog_cfg x1_prog) cinit_stores (cfg_exit (prog_cfg x1_prog))
    \<le> sign_domain.gamma_state (sign_exec_prog x1_prog)"
   by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
 

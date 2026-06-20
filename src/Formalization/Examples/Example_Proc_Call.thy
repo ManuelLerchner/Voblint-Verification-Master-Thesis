@@ -140,7 +140,7 @@ text \<open>
 abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_prog"
 
 lemma main_cfg_full:
-  "main_cfg = mk_ip_cfg 4 8
+  "main_cfg = mk_cfg 4 8
      {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
       (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), 3),
       (4, EA_Assign ''Gx'' (N 4), 5),
@@ -201,13 +201,13 @@ definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
       else Ivl MinInf PlusInf)"
 
 lemma main_prog_postfix:
-  "is_post_fixpoint_ip main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env"
-  unfolding is_post_fixpoint_ip_def
+  "is_post_fixpoint main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env"
+  unfolding is_post_fixpoint_def
 proof (rule allI)
   fix v
-  show "rhs_ip main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env v
+  show "rhs main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env v
           \<le> main_prog_env v"
-    apply (simp only: rhs_ip_def Let_def main_cfg_entry main_cfg_edges main_cfg_combines)
+    apply (simp only: rhs_def Let_def main_cfg_entry main_cfg_edges main_cfg_combines)
     apply (rule abs_join_set_le)
      apply (rule finite_subset[where B =
              "insert main_prog_s0
@@ -245,7 +245,7 @@ text \<open>
 
 theorem main_prog_interval_analysis:
   assumes S_sound: "S \<le> ivl_domain.gamma_state main_prog_s0"
-  assumes tr: "tr \<in> cfg_collect_trace_ip main_cfg S (cfg_exit main_cfg)"
+  assumes tr: "tr \<in> cfg_collect_trace main_cfg S (cfg_exit main_cfg)"
   shows "(last tr) ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (edges main_cfg)" by (simp add: main_cfg_edges)

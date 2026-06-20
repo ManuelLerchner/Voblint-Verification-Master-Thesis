@@ -3,7 +3,7 @@
 **Main contribution:** Turn a CFG plus abstract domain into a constraint system
 (`rhs :: pp => (pp => abs_state) => abs_state`, `rhs_ip` for IP, `domain_transfer`
 record), and prove that any post-fixpoint soundly over-approximates collecting
-semantics `cfg_collect` / `cfg_collect_ip`.
+semantics `cfg_collect` / `cfg_collect`.
 
 **Theories**
 
@@ -11,7 +11,7 @@ semantics `cfg_collect` / `cfg_collect_ip`.
 | --- | --- |
 | `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `rhs_ip`, `is_post_fixpoint`, `is_post_fixpoint_ip`, `rhs_mono` |
 | `Constraint_System_Sound.thy` | shared head lemmas: `apply_tf_le_rhs`, `s0_le_rhs_entry`, `edge_collect_apply_tf_sound` |
-| `Constraint_System_IP_Sound.thy` | `post_fixpoint_sound_at_ip`, IP soundness via `rhs_ip` and `cfg_collect_ip` |
+| `Constraint_System_IP_Sound.thy` | `post_fixpoint_sound_at_ip`, IP soundness via `rhs_ip` and `cfg_collect` |
 | `Analysis_Sound.thy` | `collecting` locale engine; `unified_post_fixpoint_sound_ip` |
 
 **Key concepts:** One equation per program point (join over predecessor edges + combine triples).
@@ -22,7 +22,7 @@ locale post-fixpoint witness and applies `collecting.collect_post_fixpoint_sound
 **Imports:** `Constraint_System` → `CFG_Def`, `Abstract_Domain`.
 `Analysis_Sound` → `CFG_Collect_Unified`, `Constraint_System_Sound`, `Constraint_System_IP_Sound`.
 
-**Downstream:** `Analysis/Solver/TD_Side_IP_Eff_Soundness.thy` — bridges `part_post_solution`
+**Downstream:** `Analysis/Solver/TD_Side_Eff_Soundness.thy` — bridges `part_post_solution`
 to `is_post_fixpoint_ip` via reach cone.
 
 ## Scope vs. Voblint's actual framework

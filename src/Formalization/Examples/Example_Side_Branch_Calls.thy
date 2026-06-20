@@ -84,7 +84,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "cfg_collect_ip (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))
+  "cfg_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))
    \<le> sign_domain.gamma_state (sign_exec_prog branch_prog)"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
@@ -95,7 +95,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_trace:
-  assumes "tr \<in> cfg_collect_trace_ip (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
+  assumes "tr \<in> cfg_collect_trace (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog branch_prog)"
   using assms by (rule sign_exec_prog_sound_trace[OF ec_terminates])
 

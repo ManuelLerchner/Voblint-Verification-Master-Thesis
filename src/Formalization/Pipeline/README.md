@@ -10,7 +10,7 @@ global-read soundness and digest-read soundness as corollaries.
 
 | Theorem | Meaning |
 | --- | --- |
-| `trace_ip_analysis_sound` | `alpha_last (cfg_collect_trace_ip g S v) ⊆ γ(env v)` — analyzer sound w.r.t. IP trace semantics |
+| `trace_ip_analysis_sound` | `alpha_last (cfg_collect_trace g S v) ⊆ γ(env v)` — analyzer sound w.r.t. IP trace semantics |
 | `reaching_global_read_sound` | For every reaching trace `tr` at `v`: `(last tr) x ∈ γ(env v x)` |
 | `reaching_global_read_sound_d` | Digest-indexed variant: soundness for the `reaching_compat dgx rel d` refinement |
 | `digest_read_sound` | Digest-level corollary: `d ∈ dgx '' reaching_compat …` |
@@ -21,11 +21,11 @@ proved transfer soundness.
 
 **Proof structure:** Composes two steps:
 
-1. `alpha_last_cfg_collect_trace_ip_le` — `alpha_last (…trace_ip…) ⊆ cfg_collect_ip`.
-2. `unified_post_fixpoint_sound_ip` — `cfg_collect_ip … ⊆ γ(env v)`.
+1. `alpha_last_cfg_collect_trace_le` — `alpha_last (…trace_ip…) ⊆ cfg_collect`.
+2. `unified_post_fixpoint_sound` — `cfg_collect … ⊆ γ(env v)`.
 Then applies `subset_trans`.
 
-**Imports:** `Voblint_Analysis.Analysis_Sound`, `Voblint_CFG.CFG_Collect_Trace_IP`.
+**Imports:** `Voblint_Analysis.Analysis_Sound`, `Voblint_CFG.CFG_Collect_Trace`.
 
-**Downstream:** `Analysis/Domains/Sign_Side_IP_Soundness.thy` imports `TD_Side_IP_Eff_Soundness`
-(not this file directly); `Example_Side_Proc_Global.thy` uses `side_ip_sign_analysis_sound`.
+**Downstream:** `Analysis/Domains/Sign_Side_Soundness.thy` imports `TD_Side_Eff_Soundness`
+(not this file directly); `Example_Side_Proc_Global.thy` uses `side_sign_analysis_sound`.
