@@ -33,7 +33,7 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `cfg`                                   | A `(pp, edge_action) graph` record plus entry/exit and procedure wiring.                              | `CFG_Def.thy:67`                       |
 | `edge_action`                           | Edge label: `EA_Nop`, `EA_Assign`, `EA_Assume`, `EA_AssumeNot`, `EA_Enter`.                           | `CFG_Def.thy:38`                       |
 | `EA_Enter`                              | Call/scope entry: reset locals, keep globals.                                                         | `CFG_Def.thy`                          |
-| `mk_cfg` / `mk_ip_cfg`                  | CFG constructors (intra / interprocedural).                                                           | `CFG_Def.thy:74,85`                    |
+| `mk_cfg` / `mk_cfg`                  | CFG constructors (intra / interprocedural).                                                           | `CFG_Def.thy:74,85`                    |
 | `offset_edges k`                        | Shift sub-command edges to offset `k > 0` when compiling compound CFGs; invisible to `edges_collect`. | `CFG_Def.thy:99`                       |
 | `predecessors` / `combine_predecessors` | Incoming edges / call-combine predecessors of a point.                                                | `CFG_Def.thy:117,130`                  |
 | `compile_prog`                          | Compile a program + procedure table into a `cfg`.                                                     | `IMP2_Proc_to_CFG.thy`                 |
@@ -48,9 +48,9 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `cenv`                                | Collecting environment: program point to reachable store set.                             | `CFG_Collect_*`               |
 | `edges_collect`                       | Fold edge actions over a store set along a path.                                          | `CFG_Collect_Edges.thy:33`    |
 | `cfg_collect_paths`                   | Intra collecting semantics (substrate; not the soundness target).                         | `CFG_Collect_Core.thy:8`      |
-| `cfg_collect_ip`                      | Interprocedural collecting semantics — the soundness target at every point.               | `CFG_Collect_IP.thy:29`       |
-| `cfg_collect_trace_ip`                | Trace-level IP collecting: covers partial and non-terminating behaviour, no final store.  | `CFG_Collect_Trace_IP.thy:63` |
-| `pruns_to_ip`                         | Terminating IP runs correspond to exit reachability. Import `CFG_Collect_IP_Adeq` for it. | `CFG_Collect_IP_Adeq.thy:15`  |
+| `cfg_collect`                      | Interprocedural collecting semantics — the soundness target at every point.               | `CFG_Collect.thy:29`       |
+| `cfg_collect_trace`                | Trace-level IP collecting: covers partial and non-terminating behaviour, no final store.  | `CFG_Collect_Trace.thy:63` |
+| `cfg_runs_to`                         | Terminating IP runs correspond to exit reachability. Import `CFG_Collect_Adeq` for it. | `CFG_Collect_Adeq.thy:15`  |
 | `collecting` locale / `collect` / `F` | The unified collecting locale and its fixpoint functional.                                | `CFG_Collect_Unified.thy:18`  |
 
 ## Abstract domains
@@ -71,20 +71,20 @@ stated against interprocedural CFG collecting semantics at every program point.
 | Term                                       | Meaning                                                                                 | Source                                            |
 | ------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | `rhs`                                      | Equation right-hand side: `pp => (pp => abs_state) => abs_state`. The solver interface. | `Constraint_System.thy:70`                        |
-| `rhs_ip` / `combine_abs`                   | Interprocedural RHS and the call-combine of abstract states.                            | `Constraint_System.thy:401,404`                   |
-| `is_post_fixpoint` / `is_post_fixpoint_ip` | Soundness target: a post-fixpoint over-approximates the collecting semantics.           | `Constraint_System.thy:102,424`                   |
+| `rhs` / `combine_abs`                   | Interprocedural RHS and the call-combine of abstract states.                            | `Constraint_System.thy:401,404`                   |
+| `is_post_fixpoint` / `is_post_fixpoint` | Soundness target: a post-fixpoint over-approximates the collecting semantics.           | `Constraint_System.thy:102,424`                   |
 | `TD` / `TD_side`                           | Vendored verified top-down solver; only the side-effecting variant is used.             | `vendor/td-verification`                          |
-| `side_env` / `side_analyse_ip_eff`         | Side-solver environment and the effectful IP analysis entry point.                      | `TD_Side_CFG.thy`, `TD_Side_IP_Eff_Interface.thy` |
-| `td_cfg_side_ip_solver_eff`                | Locale wrapping the effectful side solver for CFG/IP use.                               | `TD_Side_IP_Eff_Interface.thy`                    |
+| `side_env` / `side_analyse_ip_eff`         | Side-solver environment and the effectful IP analysis entry point.                      | `TD_Side_CFG.thy`, `TD_Side_Eff_Interface.thy` |
+| `td_cfg_side_ip_solver_eff`                | Locale wrapping the effectful side solver for CFG/IP use.                               | `TD_Side_Eff_Interface.thy`                    |
 | `restrict_local` / `restrict_global`       | Split an abstract state into local / global parts across a call.                        | `TD_Side_CFG.thy:25,29`                           |
 
 ## Headline soundness theorems
 
 | Theorem                                                      | Claim                                                          | Source                                                             |
 | ------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `post_fixpoint_sound_ip`                                     | A post-fixpoint soundly over-approximates `cfg_collect_ip`.    | `Constraint_System_IP_Sound.thy:208`                               |
-| `side_collect_sound_ip_at_eff`                               | The effectful side solver's result is sound at every program point. | `TD_Side_IP_Eff_Pipeline.thy`                                 |
-| `side_collect_sound_ip_exit_pruned_eff`                      | Soundness at the exit of the pruned CFG.                       | `TD_Side_IP_Eff_Soundness.thy`                                     |
-| `side_ip_sign_analysis_sound` / `side_ip_ivl_analysis_sound` | End-to-end soundness instantiated at sign / interval.          | `Sign_Side_IP_Soundness.thy:9`, `Interval_Side_IP_Soundness.thy:9` |
-| `trace_ip_analysis_sound`                                    | Trace-level soundness covering partial / non-terminating runs. | `Trace_IP_Analysis_Sound.thy:28`                                   |
-| `unified_post_fixpoint_sound_ip`                             | The unified soundness engine over the collecting locale.       | `Analysis_Sound.thy:32`                                            |
+| `post_fixpoint_sound`                                     | A post-fixpoint soundly over-approximates `cfg_collect`.    | `Constraint_System_Sound.thy:208`                               |
+| `side_collect_sound_ip_at_eff`                               | The effectful side solver's result is sound at every program point. | `TD_Side_Eff_Pipeline.thy`                                 |
+| `side_collect_sound_ip_exit_pruned_eff`                      | Soundness at the exit of the pruned CFG.                       | `TD_Side_Eff_Soundness.thy`                                     |
+| `side_ip_sign_analysis_sound` / `side_ip_ivl_analysis_sound` | End-to-end soundness instantiated at sign / interval.          | `Sign_Side_Soundness.thy:9`, `Interval_Side_Soundness.thy:9` |
+| `trace_analysis_sound`                                    | Trace-level soundness covering partial / non-terminating runs. | `Trace_Analysis_Sound.thy:28`                                   |
+| `unified_post_fixpoint_sound`                             | The unified soundness engine over the collecting locale.       | `Analysis_Sound.thy:32`                                            |

@@ -37,7 +37,7 @@ theory Voblint
     "Voblint_Analysis.Sign_Named_Global_Eff"
     "Voblint_Analysis.Exec_Sign_Run"
     "Voblint_Analysis.Analysis_GraphViz"
-    Trace_IP_Analysis_Sound
+    Trace_Analysis_Sound
     Example_IMP2_Coverage
     Example_Side_Execute
     Example_Side_Branch_Calls
@@ -109,8 +109,8 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
 
   \<^bold>\<open>4. End-to-end soundness.\<close> The headline theorem and executable examples.
-    \<^item> @{theory Voblint_Formalization.Trace_IP_Analysis_Sound} --- the main
-      result, @{thm [source] sound_transfer.trace_ip_analysis_sound}.
+    \<^item> @{theory Voblint_Formalization.Trace_Analysis_Sound} --- the main
+      result, @{thm [source] sound_transfer.trace_analysis_sound}.
     \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop:
       soundness where big-step has no final state.
     \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified sign IP example with annotated CFG DOT.

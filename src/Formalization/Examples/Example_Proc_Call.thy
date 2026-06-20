@@ -8,7 +8,7 @@ theory Example_Proc_Call
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Constraint_System_Sound"
-    Trace_IP_Analysis_Sound
+    Trace_Analysis_Sound
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
@@ -239,7 +239,7 @@ text \<open>
   @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
 
   The proof applies the generic interprocedural post-fixpoint soundness
-  theorem (@{thm [source] Trace_IP_Analysis_Sound.sound_transfer.reaching_global_read_sound})
+  theorem (@{thm [source] Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound})
   to the exhibited post-fixpoint @{thm [source] main_prog_postfix [no_vars]}.
 \<close>
 
@@ -253,7 +253,7 @@ proof -
   have s0_conv: "S \<le> sound_domain.gamma_state gamma_ivl main_prog_s0"
     using S_sound unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by auto
   have "(last tr) ''Gx'' \<in> gamma_ivl (main_prog_env (cfg_exit main_cfg) ''Gx'')"
-    by (rule Trace_IP_Analysis_Sound.sound_transfer.reaching_global_read_sound
+    by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix s0_conv tr])
   then show ?thesis by (simp add: main_prog_env_def main_cfg_exit)
 qed

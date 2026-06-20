@@ -1,7 +1,7 @@
 theory Example_IMP2_Coverage
   imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Sign_Domain" "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
+    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_Analysis_Sound
 begin
 
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
@@ -19,7 +19,7 @@ hide_const (open) Syntax.N Syntax.V Syntax.Bc
     * There is no terminating run, so big_step relates no final state and a
       total-correctness goal is vacuous (loop_no_terminating_run).
     * The sign analyzer still proves x > 0 at the loop head over every reaching
-      trace (loop_head_x_pos), via a post-fixpoint and trace_ip_analysis_sound.
+      trace (loop_head_x_pos), via a post-fixpoint and trace_analysis_sound.
 
   Only the sign domain is used in this witness (interval coverage lives in
   @{theory Voblint_Formalization.Example_Interval_Loop_Coverage}), so the
@@ -143,7 +143,7 @@ proof -
     using S_sound
     unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by auto
   have "(last tr) ''x'' \<in> gamma_sign (loop_env loop_head ''x'')"
-    by (rule Trace_IP_Analysis_Sound.sound_transfer.reaching_global_read_sound
+    by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF sign_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])
   then show ?thesis
     by (auto simp: loop_env_def gamma_sign.simps)

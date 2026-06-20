@@ -4,13 +4,13 @@
 IP post-fixpoint soundness to obtain trace-level soundness theorems. Also provides
 global-read soundness and digest-read soundness as corollaries.
 
-**Theory:** `Trace_IP_Analysis_Sound.thy`
+**Theory:** `Trace_Analysis_Sound.thy`
 
 **Main theorems**
 
 | Theorem | Meaning |
 | --- | --- |
-| `trace_ip_analysis_sound` | `alpha_last (cfg_collect_trace g S v) ⊆ γ(env v)` — analyzer sound w.r.t. IP trace semantics |
+| `trace_analysis_sound` | `alpha_last (cfg_collect_trace g S v) ⊆ γ(env v)` — analyzer sound w.r.t. IP trace semantics |
 | `reaching_global_read_sound` | For every reaching trace `tr` at `v`: `(last tr) x ∈ γ(env v x)` |
 | `reaching_global_read_sound_d` | Digest-indexed variant: soundness for the `reaching_compat dgx rel d` refinement |
 | `digest_read_sound` | Digest-level corollary: `d ∈ dgx '' reaching_compat …` |
@@ -21,7 +21,7 @@ proved transfer soundness.
 
 **Proof structure:** Composes two steps:
 
-1. `alpha_last_cfg_collect_trace_le` — `alpha_last (…trace_ip…) ⊆ cfg_collect`.
+1. `alpha_last_cfg_collect_trace_le` — `alpha_last (…cfg_collect_trace…) ⊆ cfg_collect`.
 2. `unified_post_fixpoint_sound` — `cfg_collect … ⊆ γ(env v)`.
 Then applies `subset_trans`.
 

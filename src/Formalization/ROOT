@@ -5,7 +5,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     "Examples"
   theories
     Voblint
-    Trace_IP_Analysis_Sound
+    Trace_Analysis_Sound
     Example_Proc_GraphViz
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global

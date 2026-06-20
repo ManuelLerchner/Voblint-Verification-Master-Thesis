@@ -360,7 +360,7 @@ text \<open>
   return on the cone is in the solved stable set.  No coverage hypothesis is
   needed beyond the query / static contracts that drive the cone.
 
-  The executable system side_cfg_T_ip_eff fixes the single global unknown
+  The executable system side_cfg_T_eff fixes the single global unknown
   ('g = unit), so this theorem is for a unit etf; the soundness contract is an
   explicit hypothesis and the generic abstract soundness is interpreted at unit.
 \<close>

@@ -60,10 +60,10 @@ text \<open>
   from the post-solution (etf_combined_le_eff / etf_combine_combined_le_eff);
   coverage (every edge target / combine return is solved) is taken as a hypothesis.
 
-  The executable system side_cfg_T_ip_eff fixes the single global unknown
+  The executable system side_cfg_T_eff fixes the single global unknown
   ('g = unit; its entry seeding emits Side ()), so this theorem is stated for a
   unit etf with the soundness contract supplied as an explicit hypothesis; the
-  generic abstract soundness (post_fixpoint_sound_at_ip_eff) is interpreted at
+  generic abstract soundness (post_fixpoint_sound_at_eff) is interpreted at
   unit.
 \<close>
 

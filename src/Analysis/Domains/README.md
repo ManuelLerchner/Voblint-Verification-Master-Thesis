@@ -16,7 +16,7 @@
 | `Sign_Exec_Sound.thy`        | `sign_exec_eqs`, `sign_exec`, `sign_exec_sound_collecting` / `_trace` — program-parametric sound theorems |
 | `Exec_Sign_Run.thy`          | Code-generation entry point for the sign analysis executable                                     |
 | `Interval_Domain.thy`        | Interval domain (`ivl`), `gamma_ivl`, `ivl_tf`, `ivl_domain` / `ivl_sound_tf` interpretations   |
-| `Interval_Side_IP_Soundness.thy` | Interval domain end-to-end soundness                                                         |
+| `Interval_Side_Soundness.thy` | Interval domain end-to-end soundness                                                         |
 
 **C-faithful initial stores** (`cinit_stores`) is defined in
 `Analysis/Equations/Constraint_System.thy` (the first layer that imports both `store`
@@ -141,8 +141,8 @@ Sign_Side_Soundness ──imports──▶ Sign_Domain, TD_Side_Eff_Soundness
 Sign_Exec_Sound ──imports──▶ Sign_Exec, Sign_Side_Soundness
 ```
 
-**Downstream:** `Formalization/Pipeline/Trace_IP_Analysis_Sound.thy` —
-`trace_ip_analysis_sound`.  `Formalization/Examples/` — concrete verified
+**Downstream:** `Formalization/Pipeline/Trace_Analysis_Sound.thy` —
+`trace_analysis_sound`.  `Formalization/Examples/` — concrete verified
 programs using `sign_exec_prog`.
 
 **Stretch goal:** Interval domain reintroduction (fits `sound_transfer` locale

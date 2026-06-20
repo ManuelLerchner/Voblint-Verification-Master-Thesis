@@ -1,5 +1,5 @@
 theory Example_Trace_Digest_Precision
-  imports Trace_IP_Analysis_Sound "Voblint_Analysis.Sign_Domain"
+  imports Trace_Analysis_Sound "Voblint_Analysis.Sign_Domain"
 begin
 
 (*
@@ -16,7 +16,7 @@ begin
   the two histories apart: the reader holding digest 1 sees only sp, so x reads
   as SPos = {n. n > 0}, which is a STRICT subset of ZZ -- and this digest-indexed
   env is globally sound (digest_env_sound_concrete, the unfolded
-  Trace_IP_Analysis_Sound.digest_env_sound with gamma_state = sign_domain.gamma_state).
+  Trace_Analysis_Sound.digest_env_sound with gamma_state = sign_domain.gamma_state).
   digest_beats_flat bundles both: sound AND strictly tighter.
 
   This is the precision payoff the trace pivot was built for: history-indexed

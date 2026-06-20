@@ -3,7 +3,7 @@ section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 theory Example_Interval_Loop_Coverage
   imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_IP_Analysis_Sound
+    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_Analysis_Sound
 begin
 
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
@@ -115,7 +115,7 @@ proof -
   have s0_conv: "S \<subseteq> sound_domain.gamma_state gamma_ivl loop_s0"
     using S_sound unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by auto
   have "(last tr) ''x'' \<in> gamma_ivl (loop_env loop_head ''x'')"
-    by (rule Trace_IP_Analysis_Sound.sound_transfer.reaching_global_read_sound
+    by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])
   then show ?thesis by (auto simp: loop_env_def)
 qed

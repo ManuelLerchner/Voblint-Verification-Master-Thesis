@@ -1,4 +1,4 @@
-theory Trace_IP_Analysis_Sound
+theory Trace_Analysis_Sound
   imports "Voblint_Analysis.Analysis_Sound" "Voblint_CFG.CFG_Collect_Trace"
 begin
 
@@ -25,7 +25,7 @@ text \<open>
 context sound_transfer
 begin
 
-theorem trace_ip_analysis_sound:
+theorem trace_analysis_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
@@ -51,7 +51,7 @@ text \<open>
   flow-insensitive global read once specialised to a G-prefixed variable and
   joined over program points.
 
-  It is an immediate consequence of trace_ip_analysis_sound (last tr is in
+  It is an immediate consequence of trace_analysis_sound (last tr is in
   alpha_last of the trace set, hence in gamma_state (env v)) and the per-coordinate
   shape of gamma_state.
 
@@ -73,7 +73,7 @@ proof -
   have mem: "last tr \<in> alpha_last (cfg_collect_trace g S v)"
     using tr unfolding alpha_last_def by blast
   have le: "alpha_last (cfg_collect_trace g S v) \<le> gamma_state (env v)"
-    by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound])
+    by (rule trace_analysis_sound[OF fin finC post_fp S_sound])
   from mem le have "last tr \<in> gamma_state (env v)" by blast
   thus ?thesis unfolding gamma_state_def by blast
 qed
@@ -153,7 +153,7 @@ proof (intro allI)
   hence "alpha_last (reaching_compat dg cmp d g S v) \<le> alpha_last (cfg_collect_trace g S v)"
     unfolding alpha_last_def by blast
   also have "... \<le> gamma_state (env v)"
-    by (rule trace_ip_analysis_sound[OF fin finC post_fp S_sound])
+    by (rule trace_analysis_sound[OF fin finC post_fp S_sound])
   finally show "alpha_last (reaching_compat dg cmp d g S v) \<le> gamma_state ((\<lambda>v d. env v) v d)"
     by simp
 qed
