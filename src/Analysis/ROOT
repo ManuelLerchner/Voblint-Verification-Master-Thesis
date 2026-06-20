@@ -26,6 +26,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_IP_Eff_Pipeline
     TD_Side_IP_Eff_Soundness
     Sign_Side_IP_Soundness
+    Sign_Named_Global_Eff
     Interval_Side_IP_Soundness
     Sign_Exec
     Sign_Exec_Sound
