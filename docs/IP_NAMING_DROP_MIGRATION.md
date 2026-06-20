@@ -63,6 +63,7 @@ The true intra spine is already gone. What remains:
 | `cfg_collect_ip_paths` | `cfg_collect_paths` | delete intra `cfg_collect_paths` (Core) |
 | `cfg_collect_ip_post` / `_entry` / `_lfp_unfold` / ... | `cfg_collect_post` / `_entry` / ... | — |
 | `ip_witness` | `cfg_witness` | not bare `witness` (too generic) |
+| `ip_succ` / `ip_reaches` | `cfg_succ` / `cfg_reaches` | CFG_Prune reachability |
 | `cfg_collect_trace_ip` | `cfg_collect_trace` | delete intra `cfg_collect_trace` + `alpha_last`↔paths bridge; keep shared trace infra |
 | `ip_trace_witness` / `ip_trace_witness_d` | `trace_witness` / `trace_witness_d` | — |
 | `cfg_collect_trace_ip_d` | `cfg_collect_trace_d` | — |
@@ -70,8 +71,8 @@ The true intra spine is already gone. What remains:
 | `is_post_fixpoint_ip` | `is_post_fixpoint` | delete intra |
 | `apply_tf_le_rhs_ip` / `s0_le_rhs_ip_entry` / `combine_abs_le_rhs_ip` | `apply_tf_le_rhs` / `s0_le_rhs_entry` / `combine_abs_le_rhs` | replace deleted intra lemmas of these names |
 | `collect_pp_abstract_sound_ip` / `post_fixpoint_sound_at_ip` / `post_fixpoint_sound_ip` / `ip_witness_gamma` | drop `_ip` / `ip_` | — |
-| `mk_ip_cfg` | `mk_cfg` | — |
-| `pruns_to_ip` | `pruns_to` | — |
+| `mk_ip_cfg` | `mk_cfg` | collapses with the old dead 3-arg no-combines `mk_cfg`; single 4-arg constructor now |
+| `pruns_to_ip` | `cfg_runs_to` | bare `pruns_to` is the live big-step relation in `IMP2_Proc`; the CFG-collecting-exit relation gets a distinct name |
 | `side_rhs_fold_ip`, `side_acc_ip`, `side_glob_ip`, `side_cfg_T_ip`, `side_analyse_ip`, `cfg_side_T_ip_pkg`, `td_cfg_side_ip_solver`, ... (TD_Side layer) | drop `_ip` | — |
 | `trace_ip_analysis_sound` | `trace_analysis_sound` | — |
 
@@ -89,13 +90,36 @@ The true intra spine is already gone. What remains:
 | `CFG/Collecting/CFG_Collect_Unified.thy` | keep (rename the `ip` interpretation) |
 | `Analysis/Equations/Constraint_System_IP_Sound.thy` | merge into `Constraint_System_Sound.thy` (kills duplicate `combine_states_sound`) |
 | `Analysis/Solver/TD_Side_IP_Tree.thy` | `TD_Side_Tree.thy` |
-| `Analysis/Solver/TD_Side_IP_Mono.thy` | `TD_Side_Mono.thy` |
-| `Analysis/Solver/TD_Side_IP_Bounds.thy` | `TD_Side_Bounds.thy` |
-| `Analysis/Solver/TD_Side_IP_Interface.thy` | `TD_Side_Interface.thy` |
-| `Analysis/Solver/TD_Side_IP_Soundness.thy` | `TD_Side_Soundness.thy` |
+| `Analysis/Solver/TD_Side_IP_Eff_Bounds.thy` | `TD_Side_Eff_Bounds.thy` |
+| `Analysis/Solver/TD_Side_IP_Eff_Interface.thy` | `TD_Side_Eff_Interface.thy` |
+| `Analysis/Solver/TD_Side_IP_Eff_Pipeline.thy` | `TD_Side_Eff_Pipeline.thy` |
+| `Analysis/Solver/TD_Side_IP_Eff_Sound.thy` | `TD_Side_Eff_Sound.thy` |
+| `Analysis/Solver/TD_Side_IP_Eff_Soundness.thy` | `TD_Side_Eff_Soundness.thy` |
 | `Analysis/Domains/Sign_Side_IP_Soundness.thy` | `Sign_Side_Soundness.thy` |
 | `Analysis/Domains/Interval_Side_IP_Soundness.thy` | `Interval_Side_Soundness.thy` |
 | `Formalization/Pipeline/Trace_IP_Analysis_Sound.thy` | `Trace_Analysis_Sound.thy` |
+
+Note: `IP` is dropped but the `Eff` (effectful) marker stays — it is not ip-naming.
+
+## Completion record
+
+- **Slice 1 (Voblint_CFG)** — DONE, batch build green. Commit
+  `refactor(cfg): drop ip naming, merge collecting layer into one frame`.
+- **Slice 2 (Voblint_Analysis)** — rename DONE and verified faithful:
+  `Constraint_System` rhs/`is_post_fixpoint` merge, `Constraint_System_IP_Sound`
+  folded into `Constraint_System_Sound` (edge/entry bounds re-proved directly
+  against the combine-aware `rhs`), `Analysis_Sound` `ip.`->`cfg.`, the
+  `TD_Side`/domain rename wave + file renames + ROOT. Every touched theory
+  compiles **up to** the pre-existing break below.
+  - **Pre-existing blocker (NOT from this refactor):** `Voblint_Analysis` already
+    fails to build at base commit `7e837e3` ("wip") at
+    `TD_Side_Eff_Pipeline` line 67 — `side_cfg_T_eff` is `unit`-typed while the
+    `sound_effectful_transfer` `etf` is `('g,'a)`. This is the unfinished
+    effectful unit->'g "locale cascade" recorded in the base commit log. Verified
+    by building the unmodified base: identical error at the same line. Full
+    `Voblint_Analysis` / `Voblint_Formalization` green build is gated on finishing
+    that cascade, which is separate work from dropping `ip`.
+- **Slice 3 (Voblint_Formalization)** — pending.
 
 `CFG_Prune.thy` keeps its name; only `mk_ip_cfg` → `mk_cfg` inside.
 

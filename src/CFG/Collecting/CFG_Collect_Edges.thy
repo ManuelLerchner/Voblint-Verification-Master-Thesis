@@ -132,12 +132,6 @@ definition collect_pp :: "cfg => cenv => pp => store set" where
   "collect_pp g \<rho> v =
      \<Union>{edge_collect a (\<rho> u) | u a. (u, a, v) : edges g}"
 
-subsection \<open>Per-point collecting transformer\<close>
-
-definition cfg_collect_F :: "cfg => store set => cenv => cenv" where
-  "cfg_collect_F g S \<rho> v =
-     (if v = cfg_entry g then S else {}) \<union> collect_pp g \<rho> v"
-
 subsection \<open>Monotonicity of collect_pp\<close>
 
 text \<open>Required for lfp to be well-defined.\<close>
@@ -154,20 +148,5 @@ proof
   then show "collect_pp g rho1 v \<subseteq> collect_pp g rho2 v"
     unfolding collect_pp_def by auto
 qed
-
-lemma cfg_collect_F_mono:
-  "mono (cfg_collect_F g S)"
-proof (rule monoI)
-  fix rho1 rho2 :: cenv
-  assume le: "rho1 \<le> rho2"
-  then show "cfg_collect_F g S rho1 \<le> cfg_collect_F g S rho2"
-    unfolding cfg_collect_F_def le_fun_def
-    using collect_pp_mono le monotoneD by fastforce
-qed
-
-lemma cfg_collect_F_mono_S:
-  "S \<subseteq> S' \<Longrightarrow> cfg_collect_F g S \<rho> \<le> cfg_collect_F g S' \<rho>"
-  unfolding cfg_collect_F_def le_fun_def by auto
-
 
 end

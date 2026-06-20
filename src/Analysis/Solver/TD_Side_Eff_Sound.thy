@@ -1,11 +1,11 @@
-theory TD_Side_IP_Eff_Sound
-  imports TD_Side_IP_Tree Constraint_System_IP_Sound
+theory TD_Side_Eff_Sound
+  imports TD_Side_Tree Constraint_System_Sound
 begin
 
 section \<open>Effectful IP soundness: post-fixpoint over-approximates collecting\<close>
 
 text \<open>
-  The genuinely effectful counterpart of sound_transfer.post_fixpoint_sound_at_ip:
+  The genuinely effectful counterpart of sound_transfer.post_fixpoint_sound_at:
   a post-fixpoint of the effectful equation system soundly over-approximates the
   interprocedural CFG collecting semantics.  Where the pure development uses
   apply_tf tf a, this uses etf_full (apply_etf etf a u) sigma -- the reassembled
@@ -61,13 +61,13 @@ qed
 subsection \<open>Witness soundness and post-fixpoint soundness\<close>
 
 text \<open>
-  Effectful witness soundness (mirrors ip_witness_gamma).  The abstract post-state
+  Effectful witness soundness (mirrors cfg_witness_gamma).  The abstract post-state
   of an edge is etf_full (apply_etf etf a u) sigma; its concrete soundness is
   edge_collect_etf_sound.  The combine and entry cases are identical to the pure
   development.
 \<close>
 
-lemma ip_witness_gamma_eff:
+lemma cfg_witness_gamma_eff:
   fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set"
   assumes step_le:
@@ -78,11 +78,11 @@ lemma ip_witness_gamma_eff:
        etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
   assumes S_le: "S \<le> gamma_state s0"
-  assumes wit: "ip_witness g S v st"
+  assumes wit: "cfg_witness g S v st"
   shows "st \<in> gamma_state (side_env \<sigma> v)"
 proof -
   from wit S_le show "st \<in> gamma_state (side_env \<sigma> v)"
-  proof (induction rule: ip_witness.induct)
+  proof (induction rule: cfg_witness.induct)
     case (entry v s Sa)
     show ?case using S_le entry_le gamma_state_mono entry by blast
   next
@@ -110,12 +110,12 @@ qed
 
 text \<open>
   Effectful collecting soundness at a program point (mirrors
-  post_fixpoint_sound_at_ip): under the per-edge / per-combine post-fixpoint
+  post_fixpoint_sound_at): under the per-edge / per-combine post-fixpoint
   bounds, the combined env of an effectful post-solution over-approximates the
   IP collecting semantics.
 \<close>
 
-theorem post_fixpoint_sound_at_ip_eff:
+theorem post_fixpoint_sound_at_eff:
   fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set" and v0 :: pp
   assumes S_sound: "S \<le> gamma_state s0"
@@ -126,14 +126,14 @@ theorem post_fixpoint_sound_at_ip_eff:
     "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
        etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
-  shows "cfg_collect_ip g S v0 \<le> gamma_state (side_env \<sigma> v0)"
+  shows "cfg_collect g S v0 \<le> gamma_state (side_env \<sigma> v0)"
 proof
   fix t
-  assume "t \<in> cfg_collect_ip g S v0"
-  with cfg_collect_ip_le_paths have wit: "ip_witness g S v0 t"
-    unfolding cfg_collect_ip_paths_def by auto
+  assume "t \<in> cfg_collect g S v0"
+  with cfg_collect_le_paths have wit: "cfg_witness g S v0 t"
+    unfolding cfg_collect_paths_def by auto
   show "t \<in> gamma_state (side_env \<sigma> v0)"
-    using ip_witness_gamma_eff[OF step_le combine_le entry_le S_sound wit] .
+    using cfg_witness_gamma_eff[OF step_le combine_le entry_le S_sound wit] .
 qed
 
 end

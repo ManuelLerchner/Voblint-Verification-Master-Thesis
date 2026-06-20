@@ -14,20 +14,19 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Interval_Domain
     Constraint_System
     Constraint_System_Sound
-    Constraint_System_IP_Sound
     Analysis_Sound
     TD_Side_CFG
     Strategy_Tree_Monad
-    TD_Side_IP_Tree
+    TD_Side_Tree
     Exec_Bridge
-    TD_Side_IP_Eff_Sound
-    TD_Side_IP_Eff_Bounds
-    TD_Side_IP_Eff_Interface
-    TD_Side_IP_Eff_Pipeline
-    TD_Side_IP_Eff_Soundness
-    Sign_Side_IP_Soundness
+    TD_Side_Eff_Sound
+    TD_Side_Eff_Bounds
+    TD_Side_Eff_Interface
+    TD_Side_Eff_Pipeline
+    TD_Side_Eff_Soundness
+    Sign_Side_Soundness
     Sign_Named_Global_Eff
-    Interval_Side_IP_Soundness
+    Interval_Side_Soundness
     Sign_Exec
     Sign_Exec_Sound
     Analysis_GraphViz

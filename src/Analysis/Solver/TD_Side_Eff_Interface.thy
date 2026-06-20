@@ -1,37 +1,37 @@
-theory TD_Side_IP_Eff_Interface
-  imports TD_Side_IP_Tree "TD.TD_side"
+theory TD_Side_Eff_Interface
+  imports TD_Side_Tree "TD.TD_side"
 begin
 
 section \<open>Effectful side IP solver: TD_side backend interface\<close>
 
 text \<open>
   TD_side backend for the effectful interprocedural equation system
-  (side_cfg_T_ip_eff).  Mirrors td_cfg_side_ip_solver but fixes an
+  (side_cfg_T_eff).  Mirrors td_cfg_side_solver but fixes an
   effectful_domain_transfer and assumes the three TD_side preconditions on
-  side_cfg_T_ip_eff directly (a non-shim etf supplies them from the monad lemmas;
-  the pure shim from side_cfg_T_ip_eff_etf_from_tf).
+  side_cfg_T_eff directly (a non-shim etf supplies them from the monad lemmas;
+  the pure shim from side_cfg_T_eff_etf_from_tf).
 \<close>
 
-definition side_cfg_ip_solve_dom_eff ::
+definition side_cfg_solve_dom_eff ::
   "cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> pp \<Rightarrow> bool"
 where
-  "side_cfg_ip_solve_dom_eff g etf bot0 s0 v =
-     TD_side.solve_dom destab_opt True (side_cfg_T_ip_eff g etf bot0 s0) v"
+  "side_cfg_solve_dom_eff g etf bot0 s0 v =
+     TD_side.solve_dom destab_opt True (side_cfg_T_eff g etf bot0 s0) v"
 
-locale td_cfg_side_ip_solver_eff =
+locale td_cfg_side_solver_eff =
   fixes g :: cfg and
   etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer" and
   bot0 s0 :: "'a abs_state"
-  assumes mono_eq:    "is_mono_eq (side_cfg_T_ip_eff g etf bot0 s0)"
-    and   mono_sides: "mono_sides (side_cfg_T_ip_eff g etf bot0 s0)"
-    and   mono_deps:  "mono_deps (side_cfg_T_ip_eff g etf bot0 s0)"
+  assumes mono_eq:    "is_mono_eq (side_cfg_T_eff g etf bot0 s0)"
+    and   mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0)"
+    and   mono_deps:  "mono_deps (side_cfg_T_eff g etf bot0 s0)"
 begin
 
 definition cfg_pkg_eff :: "(pp, unit, 'a abs_state) eqsT"
-  where "cfg_pkg_eff = side_cfg_T_ip_eff g etf bot0 s0"
+  where "cfg_pkg_eff = side_cfg_T_eff g etf bot0 s0"
 
-lemma cfg_pkg_eff_eq[simp]: "cfg_pkg_eff = side_cfg_T_ip_eff g etf bot0 s0"
+lemma cfg_pkg_eff_eq[simp]: "cfg_pkg_eff = side_cfg_T_eff g etf bot0 s0"
   unfolding cfg_pkg_eff_def by rule
 
 interpretation side: TD_side_mono cfg_pkg_eff
@@ -59,11 +59,11 @@ lemma part_post_at:
   using side.least_partial_post_solution[OF dom solve_prod] by simp
 
 lemma solve_dom_eq:
-  "side_cfg_ip_solve_dom_eff g etf bot0 s0 v = side.solve_dom v"
-  unfolding side_cfg_ip_solve_dom_eff_def cfg_pkg_eff_def by simp
+  "side_cfg_solve_dom_eff g etf bot0 s0 v = side.solve_dom v"
+  unfolding side_cfg_solve_dom_eff_def cfg_pkg_eff_def by simp
 
 lemma part_post_at_cfg:
-  assumes "side_cfg_ip_solve_dom_eff g etf bot0 s0 v"
+  assumes "side_cfg_solve_dom_eff g etf bot0 s0 v"
   shows "part_post_solution cfg_pkg_eff v (nu_at v) (stabl_at v)"
   using part_post_at assms unfolding solve_dom_eq by simp
 
@@ -73,12 +73,12 @@ lemma env_at_eq [simp]: "env_at x0 v = side_env (nu_at x0) v"
 end
 
 text \<open>Executable-facing combined env at each pp (entry query).\<close>
-definition side_analyse_ip_eff ::
+definition side_analyse_eff ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com
      \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
      \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> pp \<Rightarrow> 'a abs_state"
 where
-  "side_analyse_ip_eff \<Pi> ps main etf bot0 s0 v =
-     side_env (td_cfg_side_ip_solver_eff.nu_at (compile_prog \<Pi> ps main) etf bot0 s0 v) v"
+  "side_analyse_eff \<Pi> ps main etf bot0 s0 v =
+     side_env (td_cfg_side_solver_eff.nu_at (compile_prog \<Pi> ps main) etf bot0 s0 v) v"
 
 end

@@ -138,7 +138,7 @@ definition compile_prog_with_regions ::
   "compile_prog_with_regions \<Pi> ps main =
      (let (n1, lay, E_proc, C_proc) = compile_procs_list \<Pi> ps (\<lambda>_. None) 0;
           (n2, en, ex, E_main, C_main) = compile \<Pi> lay main n1;
-          g = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main);
+          g = mk_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main);
           main_reg = (None, main_region_pp_list (en, ex, E_main, C_main) ps lay)
       in  (g, main_reg # proc_list_regions ps lay))"
 
@@ -270,7 +270,7 @@ qed
 lemma compile_prog_finite:
   "finite (edges (compile_prog \<Pi> ps main))
    \<and> finite (combines (compile_prog \<Pi> ps main))"
-  unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
+  unfolding compile_prog_def compile_prog_with_regions_def mk_cfg_def
   by (auto simp: Let_def split: prod.splits
        dest: compile_procs_list_finite compile_finite
        intro: finite_UnI)

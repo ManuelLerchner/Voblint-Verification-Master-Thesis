@@ -1,6 +1,6 @@
 theory Sign_Exec_Sound
-  imports Sign_Exec Sign_Side_IP_Soundness
-          "Voblint_CFG.CFG_Collect_Trace_IP" "TD.TD_side_upd_rule"
+  imports Sign_Exec Sign_Side_Soundness
+          "Voblint_CFG.CFG_Collect_Trace" "TD.TD_side_upd_rule"
           "Voblint_IMP2.IMP2_Notation"
           Analysis_GraphViz
 begin
@@ -25,7 +25,7 @@ text \<open>
 definition sign_exec_eqs ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp, unit, sign st) eqsT" where
   "sign_exec_eqs \<Pi> ps main =
-     side_cfg_T_ip_st (compile_prog \<Pi> ps main) sign_tf_st bot cinit_sign_st"
+     side_cfg_T_st (compile_prog \<Pi> ps main) sign_tf_st bot cinit_sign_st"
 
 definition sign_exec_raw ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> sign st)" where
@@ -74,7 +74,7 @@ text \<open>
 
 theorem sign_exec_sound_collecting:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
-  shows "cfg_collect_ip (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
+  shows "cfg_collect (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
          \<le> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
 proof -
   define g where "g = compile_prog \<Pi> ps main"
@@ -88,13 +88,13 @@ proof -
   have pp0: "part_post_solution (sign_exec_eqs \<Pi> ps main) (cfg_exit g) (snd sol) (fst sol)"
     using TD_side_always_join_Interp.partial_post_solution[OF dom]
     by (metis sol_def prod.collapse)
-  have pp_st: "part_post_solution (side_cfg_T_ip_st g sign_tf_st bot cinit_sign_st)
+  have pp_st: "part_post_solution (side_cfg_T_st g sign_tf_st bot cinit_sign_st)
                  (cfg_exit g) (snd sol) (fst sol)"
     using pp0 by (simp add: sign_exec_eqs_def g_def)
   interpret se: sound_effectful_transfer gamma_sign sign_etf
     by (rule sign_sound_etf)
   have pp_eff: "part_post_solution
-                  (side_cfg_T_ip_eff g sign_etf bot
+                  (side_cfg_T_eff g sign_etf bot
                      (\<lambda>x. if is_global x then SZero else STop))
                   (cfg_exit g) \<sigma> (fst sol)"
     using part_post_solution_st_to_abs_eff[OF sign_tf_st_commute pp_st]
@@ -110,20 +110,20 @@ proof -
     unfolding sign_etf_def by (rule static_deps_apply_etf_from_tf)
   have cs: "\<And>cc ex. static_deps (etf_combine sign_etf cc ex)"
     unfolding sign_etf_def by (rule static_deps_etf_combine_from_tf)
-  have reach: "ip_reaches g (cfg_entry g) (cfg_exit g)"
-    by (simp add: g_def compile_prog_entry_ip_reaches_exit)
+  have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"
+    by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
-    by (rule side_ip_cone_in_vars_eff[OF pp_eff fin finC ed cd1 cd2 es cs reach])
+    by (rule side_cone_in_vars_eff[OF pp_eff fin finC ed cd1 cd2 es cs reach])
   have entry_le: "(\<lambda>x. if is_global x then SZero else STop) \<le> side_env \<sigma> (cfg_entry g)"
-    by (rule s0_le_side_env_entry_ip_eff[OF pp_eff entry_in])
+    by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
   have seed_cov: "cinit_stores \<subseteq> sign_domain.gamma_state (\<lambda>x. if is_global x then SZero else STop)"
     unfolding cinit_stores_def sign_domain.gamma_state_def
     by (auto simp: gamma_sign.simps)
   have entry_cov: "cinit_stores \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_entry g))"
     using seed_cov sign_domain.gamma_state_mono[OF entry_le] by (rule subset_trans)
-  have "cfg_collect_ip g cinit_stores (cfg_exit g)
+  have "cfg_collect g cinit_stores (cfg_exit g)
         \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_exit g))"
-    by (rule side_collect_sound_ip_exit_pruned_eff
+    by (rule side_collect_sound_exit_pruned_eff
           [OF sign_sound_etf pp_eff fin finC entry_cov ed cd1 cd2 es cs])
   then show ?thesis
     by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
@@ -137,17 +137,17 @@ text \<open>
 
 theorem sign_exec_sound_trace:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
-  assumes tr: "tr \<in> cfg_collect_trace_ip (compile_prog \<Pi> ps main) cinit_stores
+  assumes tr: "tr \<in> cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
                        (cfg_exit (compile_prog \<Pi> ps main))"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
 proof -
-  from tr have "last tr \<in> alpha_last (cfg_collect_trace_ip (compile_prog \<Pi> ps main) cinit_stores
+  from tr have "last tr \<in> alpha_last (cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
                                         (cfg_exit (compile_prog \<Pi> ps main)))"
     by (auto simp: alpha_last_def)
-  moreover have "alpha_last (cfg_collect_trace_ip (compile_prog \<Pi> ps main) cinit_stores
+  moreover have "alpha_last (cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
                               (cfg_exit (compile_prog \<Pi> ps main)))
                  \<le> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
-    using alpha_last_cfg_collect_trace_ip_le sign_exec_sound_collecting[OF solves]
+    using alpha_last_cfg_collect_trace_le sign_exec_sound_collecting[OF solves]
     by (rule subset_trans)
   ultimately show ?thesis by blast
 qed
@@ -180,14 +180,14 @@ lemma sign_terminates_prog_via_solve_c:
 
 corollary sign_exec_prog_sound_collecting:
   assumes "sign_terminates_prog p"
-  shows "cfg_collect_ip (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))
+  shows "cfg_collect (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))
            \<le> sign_domain.gamma_state (sign_exec_prog p)"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_collecting)
 
 corollary sign_exec_prog_sound_trace:
   assumes "sign_terminates_prog p"
-      and "tr \<in> cfg_collect_trace_ip (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))"
+      and "tr \<in> cfg_collect_trace (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))"
   shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog p)"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_trace)

@@ -1,5 +1,5 @@
-theory Interval_Side_IP_Soundness
-  imports Interval_Domain TD_Side_IP_Eff_Soundness
+theory Interval_Side_Soundness
+  imports Interval_Domain TD_Side_Eff_Soundness
 begin
 
 section \<open>Interval domain: effectful transfer instance\<close>
@@ -14,16 +14,16 @@ definition ivl_etf :: "(unit, ivl) effectful_domain_transfer" where
   "ivl_etf = etf_from_tf ivl_tf"
 
 lemma ivl_etf_is_mono_eq:
-  "is_mono_eq (side_cfg_T_ip_eff g ivl_etf bot0 s0)"
-  unfolding ivl_etf_def by (rule side_cfg_T_ip_eff_is_mono_eq[OF ivl_tf_mono])
+  "is_mono_eq (side_cfg_T_eff g ivl_etf bot0 s0)"
+  unfolding ivl_etf_def by (rule side_cfg_T_eff_is_mono_eq[OF ivl_tf_mono])
 
 lemma ivl_etf_mono_sides:
-  "mono_sides (side_cfg_T_ip_eff g ivl_etf bot0 s0)"
-  unfolding ivl_etf_def by (rule side_cfg_T_ip_eff_mono_sides[OF ivl_tf_mono])
+  "mono_sides (side_cfg_T_eff g ivl_etf bot0 s0)"
+  unfolding ivl_etf_def by (rule side_cfg_T_eff_mono_sides[OF ivl_tf_mono])
 
 lemma ivl_etf_mono_deps:
-  "mono_deps (side_cfg_T_ip_eff g ivl_etf bot0 s0)"
-  unfolding ivl_etf_def by (rule side_cfg_T_ip_eff_mono_deps)
+  "mono_deps (side_cfg_T_eff g ivl_etf bot0 s0)"
+  unfolding ivl_etf_def by (rule side_cfg_T_eff_mono_deps)
 
 lemma ivl_sound_etf:
   "sound_effectful_transfer gamma_ivl ivl_etf"
@@ -34,22 +34,22 @@ section \<open>Interval domain: standalone effectful interprocedural soundness\<
 
 text \<open>
   Headline soundness for the Interval analysis, stated against the effectful side
-  IP solver (side_analyse_ip_eff) and proved through the standalone effectful
-  pipeline (mirrors side_ip_sign_analysis_sound).  No pure side_analyse_ip / pure
+  IP solver (side_analyse_eff) and proved through the standalone effectful
+  pipeline (mirrors side_sign_analysis_sound).  No pure side_analyse / pure
   IP soundness theorem is used.
 \<close>
 
-theorem side_ip_ivl_analysis_sound:
+theorem side_ivl_analysis_sound:
   fixes \<Pi> ps main and s t :: store and s0 :: "ivl abs_state"
   assumes s_sound: "s \<in> ivl_domain.gamma_state s0"
   assumes collect_exit:
-    "t \<in> cfg_collect_ip (compile_prog \<Pi> ps main) {s}
+    "t \<in> cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))"
   assumes side_solve_dom:
-    "side_cfg_ip_solve_dom_eff (compile_prog \<Pi> ps main) ivl_etf bot s0
+    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) ivl_etf bot s0
        (cfg_exit (compile_prog \<Pi> ps main))"
   shows "t \<in> ivl_domain.gamma_state
-       (side_analyse_ip_eff \<Pi> ps main ivl_etf bot s0
+       (side_analyse_eff \<Pi> ps main ivl_etf bot s0
          (cfg_exit (compile_prog \<Pi> ps main)))"
 proof -
   interpret se: sound_effectful_transfer gamma_ivl ivl_etf
@@ -68,16 +68,16 @@ proof -
   have cs: "\<And>cc ex. static_deps (etf_combine ivl_etf cc ex)"
     unfolding ivl_etf_def by (rule static_deps_etf_combine_from_tf)
   have collect:
-    "cfg_collect_ip (compile_prog \<Pi> ps main) {s}
+    "cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
      \<le> sound_domain.gamma_state gamma_ivl
-         (side_analyse_ip_eff \<Pi> ps main ivl_etf bot s0
+         (side_analyse_eff \<Pi> ps main ivl_etf bot s0
            (cfg_exit (compile_prog \<Pi> ps main)))"
-    by (rule side_analyse_ip_eff_collect_sound_exit_pruned_gen
+    by (rule side_analyse_eff_collect_sound_exit_pruned_gen
           [OF ivl_sound_etf ivl_etf_is_mono_eq ivl_etf_mono_sides ivl_etf_mono_deps
               side_solve_dom gs ed cd1 cd2 es cs])
   have "t \<in> sound_domain.gamma_state gamma_ivl
-       (side_analyse_ip_eff \<Pi> ps main ivl_etf bot s0
+       (side_analyse_eff \<Pi> ps main ivl_etf bot s0
          (cfg_exit (compile_prog \<Pi> ps main)))"
     using collect collect_exit by blast
   then show ?thesis

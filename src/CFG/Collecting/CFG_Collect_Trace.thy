@@ -1,18 +1,16 @@
 theory CFG_Collect_Trace
-  imports CFG_Collect_Core "Voblint_IMP2.IMP2_Globals"
+  imports CFG_Collect "Voblint_IMP2.IMP2_Globals"
 begin
 
 section \<open>Trace-valued collecting semantics\<close>
 
 text \<open>
-  Trace-valued collecting semantics, alongside the reachable-state collecting
-  of CFG_Collect_Core.  The central result `lift` shows that projecting
-  every trace to its last store recovers `cfg_collect_paths` exactly, so any
-  property of the reachable-state collecting transfers to the trace collecting
-  through the projection `alpha_last`.
-
-  Traces are encoded as `store list`: the sequence of stores visited along a
-  path.  This is all `lift` needs.
+  Trace-valued interprocedural collecting: store sequences (traces) reaching a
+  program point, alongside the reachable-state collecting \<open>cfg_collect\<close>
+  (CFG_Collect).  Traces are \<open>store list\<close>: the sequence of stores visited
+  along a run.  Projecting every trace to its last store (\<open>alpha_last\<close>) lands in
+  the state-based collecting (\<open>alpha_last_cfg_collect_trace_le\<close>), so state-based
+  soundness carries to the trace foundation by transitivity.
 \<close>
 
 type_synonym trace = "store list"
@@ -36,177 +34,145 @@ lemma edge_collect_single:
   "edge_collect a {s} = set_option (edge_step a s)"
   by (cases a) auto
 
-subsection \<open>Trace of a single run along an edge path\<close>
-
-text \<open>
-  Walk an edge path from one start store, recording the sequence of stores
-  visited (start store included).  None when some assume kills the run.
-\<close>
-fun edges_trace :: "(edge_action * pp) list => store => trace option" where
-    "edges_trace [] s = Some [s]"
-  | "edges_trace ((a, _) # es) s =
-       (case edge_step a s of
-          None    => None
-        | Some s' => map_option ((#) s) (edges_trace es s'))"
-
-(* Traces are non-empty: the start store is always recorded. *)
-lemma edges_trace_nonempty:
-  "edges_trace es s = Some tr \<Longrightarrow> tr \<noteq> []"
-  by (induction es arbitrary: s tr) (auto split: option.splits)
-
-(*
-  The bridge to the existing fold: edges_collect on a singleton keeps exactly
-  the last store of the trace (or nothing, when the run is killed).
-*)
-lemma edges_collect_single:
-  "edges_collect es {s} =
-     (case edges_trace es s of None \<Rightarrow> {} | Some tr \<Rightarrow> {last tr})"
-proof (induction es arbitrary: s)
-  case Nil
-  show ?case by simp
-next
-  case (Cons e es)
-  obtain a p where e: "e = (a, p)" by (cases e) auto
-  have step: "edges_collect (e # es) {s} = edges_collect es (edge_collect a {s})"
-    unfolding e by simp
-  show ?case
-  proof (cases "edge_step a s")
-    case None
-    hence ec: "edge_collect a {s} = {}" by (simp add: edge_collect_single)
-    from None have "edges_trace (e # es) s = None" unfolding e by simp
-    with step ec show ?thesis by simp
-  next
-    case (Some s')
-    hence ec: "edge_collect a {s} = {s'}" by (simp add: edge_collect_single)
-    have tr: "edges_trace (e # es) s = map_option ((#) s) (edges_trace es s')"
-      unfolding e using Some by simp
-    show ?thesis
-    proof (cases "edges_trace es s'")
-      case None
-      with step ec tr Cons.IH[of s'] show ?thesis by simp
-    next
-      case (Some tr')
-      hence "tr' \<noteq> []" using edges_trace_nonempty by blast
-      hence "last (s # tr') = last tr'" by simp
-      with step ec tr Some Cons.IH[of s'] show ?thesis by simp
-    qed
-  qed
-qed
-
-subsection \<open>Trace-valued collecting\<close>
-
-text \<open>
-  All traces reaching v from some start store in S along some CFG path.
-  Mirrors cfg_collect_paths but carries the whole store sequence (a trace)
-  where cfg_collect_paths keeps only the final store.
-\<close>
-definition cfg_collect_trace :: "cfg => store set => pp => trace set" where
-  "cfg_collect_trace g S v =
-     {tr. \<exists>es s. (g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v) \<and> s \<in> S \<and> edges_trace es s = Some tr}"
+subsection \<open>Last-store projection\<close>
 
 (* Projection: the last store of each trace. *)
 definition alpha_last :: "trace set => store set" where
   "alpha_last T = {last tr | tr. tr \<in> T}"
 
-subsection \<open>The lift lemma\<close>
+subsection \<open>Interprocedural trace witness\<close>
 
 text \<open>
-  Projecting traces to their last store recovers the reachable-state path
-  collecting exactly.  Every existing numeric-domain proof composes through
-  alpha_last unchanged.
+  trace_witness g S v tr : tr is a store sequence reaching v.
+  entry   : a singleton [s] for s in the initial set, at the CFG entry.
+  edge    : extend by one CFG edge (covers intra edges AND enter edges, since
+            EA_Enter is an ordinary edge_action with edge_step EA_Enter s =
+            Some (enter_state s)).
+  combine : at a combine triple (c, ex, ret), splice the callee trace \<rho> (at the
+            procedure exit ex) onto the caller trace tau (at the call site c) it
+            was entered from, appending the restored return store
+            combine_states (last tau) (last \<rho>).
 \<close>
-theorem lift:
-  "alpha_last (cfg_collect_trace g S v) = cfg_collect_paths g S v"
-proof (rule set_eqI, rule iffI)
-  fix x assume "x \<in> alpha_last (cfg_collect_trace g S v)"
-  then obtain tr es s where
-        es: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v" and s: "s \<in> S"
-    and et: "edges_trace es s = Some tr" and x: "x = last tr"
-    unfolding alpha_last_def cfg_collect_trace_def by auto
-  from et x have "x \<in> edges_collect es {s}" by (simp add: edges_collect_single)
-  with s have "x \<in> edges_collect es S" using edges_collect_member by blast
-  then show "x \<in> cfg_collect_paths g S v"
-    unfolding cfg_collect_paths_def using es by auto
-next
-  fix x assume "x \<in> cfg_collect_paths g S v"
-  then obtain es where es: "g \<turnstile> (cfg_entry g) \<longrightarrow>\<^bsub>es\<^esub> v"
-    and x: "x \<in> edges_collect es S"
-    unfolding cfg_collect_paths_def by auto
-  from x obtain s where s: "s \<in> S" and xs: "x \<in> edges_collect es {s}"
-    using edges_collect_member by blast
-  from xs obtain tr where et: "edges_trace es s = Some tr" and xl: "x = last tr"
-    by (auto simp: edges_collect_single split: option.splits)
-  show "x \<in> alpha_last (cfg_collect_trace g S v)"
-    unfolding alpha_last_def cfg_collect_trace_def using es s et xl by auto
-qed
+inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool" for g S where
+  entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness g S v [s]"
+| edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness g S u tr
+         \<Longrightarrow> edge_step a (last tr) = Some s'
+         \<Longrightarrow> trace_witness g S v (tr @ [s'])"
+| combine: "(c, ex, v) \<in> combines g \<Longrightarrow> trace_witness g S c tau
+            \<Longrightarrow> trace_witness g S ex \<rho>
+            \<Longrightarrow> hd \<rho> = enter_state (last tau)
+            \<Longrightarrow> trace_witness g S v
+                  (tau @ \<rho> @ [combine_states (last tau) (last \<rho>)])"
 
-subsection \<open>Globals frame lemma\<close>
+definition cfg_collect_trace :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
+  "cfg_collect_trace g S v = {tr. trace_witness g S v tr}"
+
+subsection \<open>Basic structure\<close>
+
+lemma trace_witness_nonempty:
+  "trace_witness g S v tr \<Longrightarrow> tr \<noteq> []"
+  by (induction rule: trace_witness.induct) auto
+
+lemma cfg_collect_trace_entry:
+  "s \<in> S \<Longrightarrow> [s] \<in> cfg_collect_trace g S (cfg_entry g)"
+  unfolding cfg_collect_trace_def using trace_witness.entry by simp
+
+subsection \<open>Interprocedural projection\<close>
 
 text \<open>
-  A global variable that is never assigned along a trace keeps its initial
-  value.  This makes the read precise at the source: an unwritten global
-  reads back exactly what it started with.  edge_step preserves any global x
-  that the edge does not assign (assignments to other variables, assume/nop, and
-  EA_Enter all leave globals untouched -- enter_state keeps globals and zeroes
-  only locals).  Lifted along a path: if the CFG never assigns x, every reaching
-  trace ends with x at its start value.
+  Every interprocedural trace projects (last store) into the state-based
+  interprocedural collecting.  Carries traces through the same lfp post-fixpoint
+  steps as cfg_witness_in_cfg_collect (CFG_Collect), projecting with last.
 \<close>
-lemma edge_step_preserves_global:
-  assumes "is_global x"
-  assumes "\<forall>e. a \<noteq> EA_Assign x e"
-  assumes "edge_step a s = Some s'"
-  shows "s' x = s x"
-  using assms by (cases a) (auto simp: enter_state_def split: if_splits)
-
-lemma edges_trace_global_frame:
-  assumes "is_global x"
-  assumes "\<forall>(a, p) \<in> set es. \<forall>e. a \<noteq> EA_Assign x e"
-  assumes "edges_trace es s = Some tr"
-  shows "(last tr) x = s x"
+lemma trace_witness_last_in_cfg_collect:
+  assumes "trace_witness g S v tr"
+  shows "last tr \<in> cfg_collect g S v"
   using assms
-proof (induction es arbitrary: s tr)
-  case Nil
-  then have "tr = [s]" by auto
+proof (induction rule: trace_witness.induct)
+  case (entry v s)
+  then show ?case using cfg_collect_entry by auto
+next
+  case (edge u a v tr s')
+  have ih: "last tr \<in> cfg_collect g S u" using edge.IH .
+  have e: "(u, a, v) \<in> edges g" using edge.hyps(1) .
+  have st: "edge_step a (last tr) = Some s'" using edge.hyps(3) .
+  have s'in: "s' \<in> edge_collect a {last tr}"
+    using st by (simp add: edge_collect_single)
+  have sub: "{last tr} \<subseteq> cfg_collect g S u" using ih by simp
+  have "s' \<in> edge_collect a (cfg_collect g S u)"
+    using s'in edge_collect_mono[OF sub] by blast
+  then have "s' \<in> collect_pp g (cfg_collect g S) v"
+    unfolding collect_pp_def using e by auto
+  then have "s' \<in> cfg_collect_F g S (cfg_collect g S) v"
+    unfolding cfg_collect_F_def by auto
+  then have "s' \<in> cfg_collect g S v" using cfg_collect_post by blast
   then show ?case by simp
 next
-  case (Cons ap es)
-  obtain a p where ap: "ap = (a, p)" by (cases ap)
-  from Cons.prems(3) ap obtain s' where
-      step: "edge_step a s = Some s'" and
-      rest: "edges_trace es s' = Some (tl tr)" and
-      hdtr: "tr = s # tl tr"
-    by (auto split: option.splits)
-  have notx: "\<forall>e. a \<noteq> EA_Assign x e" using Cons.prems(2) ap by simp
-  have tail: "\<forall>(a, p) \<in> set es. \<forall>e. a \<noteq> EA_Assign x e"
-    using Cons.prems(2) ap by simp
-  have s'x: "s' x = s x"
-    by (rule edge_step_preserves_global[OF Cons.prems(1) notx step])
-  have nn: "tl tr \<noteq> []" using rest edges_trace_nonempty by blast
-  have lt: "last tr = last (tl tr)" using hdtr nn by (metis last_ConsR)
-  have "last tr x = s' x" using lt Cons.IH[OF Cons.prems(1) tail rest] by simp
-  then show ?case using s'x by simp
+  case (combine c ex v tau \<rho>)
+  have ih1: "last tau \<in> cfg_collect g S c" using combine.IH(1) .
+  have ih2: "last \<rho> \<in> cfg_collect g S ex" using combine.IH(2) .
+  have h: "(c, ex, v) \<in> combines g" using combine.hyps(1) .
+  have "combine_states (last tau) (last \<rho>) \<in> collect_combine_pp g (cfg_collect g S) v"
+    using collect_combine_pp_member[OF h refl ih1 ih2] .
+  then have "combine_states (last tau) (last \<rho>) \<in> cfg_collect_F g S (cfg_collect g S) v"
+    unfolding cfg_collect_F_def by auto
+  then have "combine_states (last tau) (last \<rho>) \<in> cfg_collect g S v"
+    using cfg_collect_post by blast
+  then show ?case by (metis last_snoc append_assoc)
 qed
 
-lemma cfg_path_actions_in_edges:
-  assumes "g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
-  shows "\<forall>(a, w) \<in> set es. \<exists>u'. (u', a, w) \<in> edges g"
-  using assms by (induction rule: cfg_path.induct) auto
+theorem alpha_last_cfg_collect_trace_le:
+  "alpha_last (cfg_collect_trace g S v) \<subseteq> cfg_collect g S v"
+  unfolding alpha_last_def cfg_collect_trace_def
+  using trace_witness_last_in_cfg_collect by auto
 
-corollary cfg_collect_trace_global_frame:
-  assumes glob: "is_global x"
-  assumes unwritten: "\<forall>(u, a, w) \<in> edges g. \<forall>e. a \<noteq> EA_Assign x e"
-  assumes tr: "tr \<in> cfg_collect_trace g S v"
-  shows "\<exists>s \<in> S. (last tr) x = s x"
-proof -
-  from tr obtain es s where
-      path: "g \<turnstile> cfg_entry g \<longrightarrow>\<^bsub>es\<^esub> v" and s: "s \<in> S"
-      and et: "edges_trace es s = Some tr"
-    unfolding cfg_collect_trace_def by auto
-  have nowrite: "\<forall>(a, p) \<in> set es. \<forall>e. a \<noteq> EA_Assign x e"
-    using cfg_path_actions_in_edges[OF path] unwritten by fastforce
-  have "(last tr) x = s x"
-    by (rule edges_trace_global_frame[OF glob nowrite et])
-  thus ?thesis using s by blast
-qed
+
+subsection \<open>Digest-refined interprocedural trace collecting\<close>
+
+text \<open>
+  A digest abstracts a trace's history (calling context, lockset, ...).  The
+  digest-refined witness adds ONE premise to the combine rule: the caller and
+  callee digests must be COMPATIBLE (cmp).  Every other rule is unchanged, so the
+  refined trace set is a SUBSET of the unrefined one (cfg_collect_trace_d_subset).
+  Soundness therefore carries over verbatim (reaching_global_read_sound_d in
+  Trace_Analysis_Sound) -- the digest hook only SHRINKS the trace set.  This
+  mechanizes the claim that the ''combine_at digest hook preserves soundness'';
+  choosing a concrete digest + proving strictly tighter reads is the precision
+  payoff (Example_Trace_Digest_Precision).
+\<close>
+inductive trace_witness_d ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool"
+  for dg :: "trace \<Rightarrow> 'd" and cmp :: "'d \<Rightarrow> 'd \<Rightarrow> bool" and g S where
+  entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness_d dg cmp g S v [s]"
+| edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness_d dg cmp g S u tr
+         \<Longrightarrow> edge_step a (last tr) = Some s'
+         \<Longrightarrow> trace_witness_d dg cmp g S v (tr @ [s'])"
+| combine: "(c, ex, v) \<in> combines g \<Longrightarrow> trace_witness_d dg cmp g S c tau
+            \<Longrightarrow> trace_witness_d dg cmp g S ex \<rho>
+            \<Longrightarrow> hd \<rho> = enter_state (last tau)
+            \<Longrightarrow> cmp (dg tau) (dg \<rho>)
+            \<Longrightarrow> trace_witness_d dg cmp g S v
+                  (tau @ \<rho> @ [combine_states (last tau) (last \<rho>)])"
+
+definition cfg_collect_trace_d ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
+  "cfg_collect_trace_d dg cmp g S v = {tr. trace_witness_d dg cmp g S v tr}"
+
+lemma trace_witness_d_imp:
+  "trace_witness_d dg cmp g S v tr \<Longrightarrow> trace_witness g S v tr"
+  by (induction rule: trace_witness_d.induct) (auto intro: trace_witness.intros)
+
+theorem cfg_collect_trace_d_subset:
+  "cfg_collect_trace_d dg cmp g S v \<subseteq> cfg_collect_trace g S v"
+  unfolding cfg_collect_trace_d_def cfg_collect_trace_def
+  using trace_witness_d_imp by blast
+
+(* Reader-side digest filter: the traces reaching v whose digest is compatible
+   with the reading digest d.  The precise (history-sensitive) global read joins
+   only over reaching_compat, not over all reaching traces. *)
+definition reaching_compat ::
+  "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
+  "reaching_compat dg cmp d g S v = {tr \<in> cfg_collect_trace g S v. cmp (dg tr) d}"
+
 
 end

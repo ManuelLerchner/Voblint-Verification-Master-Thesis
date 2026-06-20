@@ -1,14 +1,14 @@
 theory CFG_Collect_Unified
-  imports CFG_Collect_IP CFG_Collect_Core
+  imports CFG_Collect
 begin
 
 section \<open>Unified collecting locale\<close>
 
 text \<open>
-  One collecting locale parameterised by a combine_at hook.  The interprocedural
-  collecting semantics is recovered as an interpretation:
+  One collecting locale parameterised by a combine_at hook.  The collecting
+  semantics is recovered as an interpretation:
 
-    ip:  combine_at = collect_combine_pp     recovers cfg_collect_ip
+    cfg:  combine_at = collect_combine_pp     recovers cfg_collect
 
   The lfp skeleton (mono, unfold, post-fixpoint, entry, per-edge step, generic
   lfp lower bound) is proved ONCE in the locale.  The trace overlay reuses the
@@ -78,17 +78,17 @@ end
 
 subsection \<open>Interprocedural interpretation\<close>
 
-interpretation ip: collecting collect_combine_pp
+interpretation cfg: collecting collect_combine_pp
   by unfold_locales (metis collect_combine_pp_mono monoD)
 
-lemma ip_F_eq: "ip.F g S \<rho> v = cfg_collect_ip_F g S \<rho> v"
-  by (simp add: ip.F_def cfg_collect_ip_F_def)
+lemma cfg_F_eq: "cfg.F g S \<rho> v = cfg_collect_F g S \<rho> v"
+  by (simp add: cfg.F_def cfg_collect_F_def)
 
-lemma ip_collect_eq: "ip.collect g S = cfg_collect_ip g S"
+lemma cfg_collect_eq: "cfg.collect g S = cfg_collect g S"
 proof -
-  have "ip.F g S = cfg_collect_ip_F g S"
-    by (rule ext)+ (rule ip_F_eq)
-  thus ?thesis by (simp add: ip.collect_def cfg_collect_ip_def)
+  have "cfg.F g S = cfg_collect_F g S"
+    by (rule ext)+ (rule cfg_F_eq)
+  thus ?thesis by (simp add: cfg.collect_def cfg_collect_def)
 qed
 
 end

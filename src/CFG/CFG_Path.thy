@@ -92,10 +92,10 @@ lemma offset_path_append[simp]:
   unfolding offset_path_def by simp
 
 lemma cfg_path_offset:
-  assumes "mk_cfg ent ex E \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
-  shows "mk_cfg (ent + k) (ex + k) (offset_edges k E) \<turnstile> (u + k) \<longrightarrow>\<^bsub>offset_path k es\<^esub> (v + k)"
+  assumes "mk_cfg ent ex E {} \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+  shows "mk_cfg (ent + k) (ex + k) (offset_edges k E) {} \<turnstile> (u + k) \<longrightarrow>\<^bsub>offset_path k es\<^esub> (v + k)"
   using assms
-  apply (induction "mk_cfg ent ex E" u es v rule: cfg_path.induct)
+  apply (induction "mk_cfg ent ex E {}" u es v rule: cfg_path.induct)
   by(auto simp add: cfg_path.step in_offset_edges_iff)
 
 lemma cfg_path_split_last:

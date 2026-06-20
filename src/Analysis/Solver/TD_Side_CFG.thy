@@ -16,8 +16,8 @@ text \<open>
   original state.  side_env combines the local unknown at a program point with
   the single global unknown.
 
-  The interprocedural strategy tree and transfer functions live in TD_Side_IP_Tree;
-  monotonicity and solver preconditions live in TD_Side_IP_Eff_Bounds and TD_Side_IP_Eff_Soundness.
+  The interprocedural strategy tree and transfer functions live in TD_Side_Tree;
+  monotonicity and solver preconditions live in TD_Side_Eff_Bounds and TD_Side_Eff_Soundness.
 \<close>
 
 (* Keep only the local (resp. global) component of an abstract state; the other

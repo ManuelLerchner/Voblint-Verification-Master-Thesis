@@ -1,5 +1,5 @@
-theory TD_Side_IP_Eff_Bounds
-  imports TD_Side_IP_Tree
+theory TD_Side_Eff_Bounds
+  imports TD_Side_Tree
 begin
 
 section \<open>Effectful side IP solver: general monotonicity (no shim)\<close>
@@ -7,7 +7,7 @@ section \<open>Effectful side IP solver: general monotonicity (no shim)\<close>
 text \<open>
   Monotonicity of the effectful equation system for an *arbitrary* etf, from a
   per-tree contract (each edge / combine tree is monotone in the environment).
-  This replaces the pure-shim discharge (td_cfg_side_ip_solver_eff_from_tf, which
+  This replaces the pure-shim discharge (td_cfg_side_solver_eff_from_tf, which
   routes through the bridge to the pure mono lemmas): a genuinely effectful etf
   supplies the per-tree monotonicity directly -- e.g. via seqcomp_mono on its
   QueryL/QueryG/Side construction.
@@ -18,10 +18,10 @@ text \<open>
 
 subsection \<open>Monotonicity of the effectful local fold\<close>
 
-lemma side_acc_ip_eff_mono_acc:
+lemma side_acc_eff_mono_acc:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   shows "acc1 \<le> acc2 \<Longrightarrow>
-         side_acc_ip_eff etf acc1 \<sigma> es cs \<le> side_acc_ip_eff etf acc2 \<sigma> es cs"
+         side_acc_eff etf acc1 \<sigma> es cs \<le> side_acc_eff etf acc2 \<sigma> es cs"
 proof (induction es arbitrary: acc1 acc2 cs)
   case Nil
   then show ?case
@@ -40,7 +40,7 @@ next
     using Cons.IH[OF sup_mono[OF Cons.prems order_refl]] by (simp add: sup_fun_def)
 qed
 
-lemma side_acc_ip_eff_mono:
+lemma side_acc_eff_mono:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
   assumes edge_mono:
@@ -50,7 +50,7 @@ lemma side_acc_ip_eff_mono:
     "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (etf_combine etf cc ex) s1 \<le> traverse_rhs (etf_combine etf cc ex) s2"
   assumes sigma_le: "sigma1 \<le> sigma2"
-  shows "side_acc_ip_eff etf acc sigma1 es cs \<le> side_acc_ip_eff etf acc sigma2 es cs"
+  shows "side_acc_eff etf acc sigma1 es cs \<le> side_acc_eff etf acc sigma2 es cs"
 proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
@@ -63,13 +63,13 @@ proof (induction es arbitrary: acc cs)
                   \<le> traverse_rhs (etf_combine etf cc ex) sigma2"
       by (rule comb_mono[OF sigma_le])
     have step1:
-      "side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma1 [] cs
-       \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma2 [] cs"
+      "side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma1 [] cs
+       \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma2 [] cs"
       by (rule Cons.IH)
     have step2:
-      "side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma2 [] cs
-       \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma2) sigma2 [] cs"
-      by (rule side_acc_ip_eff_mono_acc[OF sup_mono[OF order_refl c_le]])
+      "side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma2 [] cs
+       \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma2) sigma2 [] cs"
+      by (rule side_acc_eff_mono_acc[OF sup_mono[OF order_refl c_le]])
     show ?case unfolding x using order_trans[OF step1 step2] by simp
   qed
 next
@@ -79,19 +79,19 @@ next
                 \<le> traverse_rhs (apply_etf etf a u) sigma2"
     by (rule edge_mono[OF sigma_le])
   have step1:
-    "side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) sigma1 es cs
-     \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) sigma2 es cs"
+    "side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) sigma1 es cs
+     \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) sigma2 es cs"
     by (rule Cons.IH)
   have step2:
-    "side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) sigma2 es cs
-     \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma2) sigma2 es cs"
-    by (rule side_acc_ip_eff_mono_acc[OF sup_mono[OF order_refl c_le]])
+    "side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) sigma2 es cs
+     \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma2) sigma2 es cs"
+    by (rule side_acc_eff_mono_acc[OF sup_mono[OF order_refl c_le]])
   show ?case unfolding x using order_trans[OF step1 step2] by simp
 qed
 
 subsection \<open>is_mono_eq for an arbitrary etf\<close>
 
-lemma side_cfg_T_ip_eff_is_mono_eq_gen:
+lemma side_cfg_T_eff_is_mono_eq_gen:
   fixes g :: cfg
     and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and bot0 s0 :: "'a abs_state"
@@ -101,15 +101,15 @@ lemma side_cfg_T_ip_eff_is_mono_eq_gen:
   assumes comb_mono:
     "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (etf_combine etf cc ex) s1 \<le> traverse_rhs (etf_combine etf cc ex) s2"
-  shows "is_mono_eq (side_cfg_T_ip_eff g etf bot0 s0)"
+  shows "is_mono_eq (side_cfg_T_eff g etf bot0 s0)"
   unfolding is_mono_eq_def
 proof (intro allI impI)
   fix x :: pp and \<sigma>1 \<sigma>2 :: "pp + unit \<Rightarrow> 'a abs_state"
   assume le: "\<sigma>1 \<le> \<sigma>2"
-  show "eq (side_cfg_T_ip_eff g etf bot0 s0) x \<sigma>1
-        \<le> eq (side_cfg_T_ip_eff g etf bot0 s0) x \<sigma>2"
-    unfolding eq_side_cfg_T_ip_eff
-    by (rule side_acc_ip_eff_mono[OF edge_mono comb_mono le])
+  show "eq (side_cfg_T_eff g etf bot0 s0) x \<sigma>1
+        \<le> eq (side_cfg_T_eff g etf bot0 s0) x \<sigma>2"
+    unfolding eq_side_cfg_T_eff
+    by (rule side_acc_eff_mono[OF edge_mono comb_mono le])
 qed
 
 subsection \<open>Side contributions: independent of acc, monotone in the environment\<close>
@@ -119,10 +119,10 @@ text \<open>
   accumulator flows into the final Answer (sides = bot), so the side map is
   independent of acc.
 \<close>
-lemma sides_side_rhs_fold_ip_eff_acc_indep:
+lemma sides_side_rhs_fold_eff_acc_indep:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "sides_of_rhs (side_rhs_fold_ip_eff etf acc1 es cs) \<sigma>
-         = sides_of_rhs (side_rhs_fold_ip_eff etf acc2 es cs) \<sigma>"
+  shows "sides_of_rhs (side_rhs_fold_eff etf acc1 es cs) \<sigma>
+         = sides_of_rhs (side_rhs_fold_eff etf acc2 es cs) \<sigma>"
 proof (induction es arbitrary: acc1 acc2 cs)
   case Nil
   show ?case
@@ -131,27 +131,27 @@ proof (induction es arbitrary: acc1 acc2 cs)
   next
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have step: "sides_of_rhs (side_rhs_fold_ip_eff etf
+    have step: "sides_of_rhs (side_rhs_fold_eff etf
                   (acc1 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma>
-              = sides_of_rhs (side_rhs_fold_ip_eff etf
+              = sides_of_rhs (side_rhs_fold_eff etf
                   (acc2 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma>"
       by (rule Cons.IH)
-    show ?case unfolding x side_rhs_fold_ip_eff.simps
+    show ?case unfolding x side_rhs_fold_eff.simps
       using step by (simp add: sides_of_rhs_seqcomp)
   qed
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
-  have step: "sides_of_rhs (side_rhs_fold_ip_eff etf
+  have step: "sides_of_rhs (side_rhs_fold_eff etf
                 (acc1 \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) es cs) \<sigma>
-            = sides_of_rhs (side_rhs_fold_ip_eff etf
+            = sides_of_rhs (side_rhs_fold_eff etf
                 (acc2 \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) es cs) \<sigma>"
     by (rule Cons.IH)
-  show ?case unfolding x side_rhs_fold_ip_eff.simps
+  show ?case unfolding x side_rhs_fold_eff.simps
     using step by (simp add: sides_of_rhs_seqcomp)
 qed
 
-lemma sides_side_rhs_fold_ip_eff_mono:
+lemma sides_side_rhs_fold_eff_mono:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and sigma1 sigma2 :: "pp + unit \<Rightarrow> 'a abs_state"
   assumes edge_sides_mono:
@@ -161,8 +161,8 @@ lemma sides_side_rhs_fold_ip_eff_mono:
     "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
   assumes sigma_le: "sigma1 \<le> sigma2"
-  shows "sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) sigma1
-         \<le> sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) sigma2"
+  shows "sides_of_rhs (side_rhs_fold_eff etf acc es cs) sigma1
+         \<le> sides_of_rhs (side_rhs_fold_eff etf acc es cs) sigma2"
 proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
@@ -174,17 +174,17 @@ proof (induction es arbitrary: acc cs)
     have g_le: "sides_of_rhs (etf_combine etf cc ex) sigma1
                   \<le> sides_of_rhs (etf_combine etf cc ex) sigma2"
       by (rule comb_sides_mono[OF sigma_le])
-    have ih: "sides_of_rhs (side_rhs_fold_ip_eff etf
+    have ih: "sides_of_rhs (side_rhs_fold_eff etf
                 (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) [] cs) sigma1
-            \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+            \<le> sides_of_rhs (side_rhs_fold_eff etf
                 (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) [] cs) sigma2"
       by (rule Cons.IH)
-    have rest_le: "sides_of_rhs (side_rhs_fold_ip_eff etf
+    have rest_le: "sides_of_rhs (side_rhs_fold_eff etf
                      (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) [] cs) sigma1
-                 \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+                 \<le> sides_of_rhs (side_rhs_fold_eff etf
                      (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma2) [] cs) sigma2"
-      using ih sides_side_rhs_fold_ip_eff_acc_indep by metis
-    show ?case unfolding x side_rhs_fold_ip_eff.simps
+      using ih sides_side_rhs_fold_eff_acc_indep by metis
+    show ?case unfolding x side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp) (rule sup_mono[OF g_le rest_le])
   qed
 next
@@ -193,17 +193,17 @@ next
   have g_le: "sides_of_rhs (apply_etf etf a u) sigma1
                 \<le> sides_of_rhs (apply_etf etf a u) sigma2"
     by (rule edge_sides_mono[OF sigma_le])
-  have ih: "sides_of_rhs (side_rhs_fold_ip_eff etf
+  have ih: "sides_of_rhs (side_rhs_fold_eff etf
               (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) es cs) sigma1
-          \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+          \<le> sides_of_rhs (side_rhs_fold_eff etf
               (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) es cs) sigma2"
     by (rule Cons.IH)
-  have rest_le: "sides_of_rhs (side_rhs_fold_ip_eff etf
+  have rest_le: "sides_of_rhs (side_rhs_fold_eff etf
                    (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma1) es cs) sigma1
-               \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+               \<le> sides_of_rhs (side_rhs_fold_eff etf
                    (acc \<squnion> traverse_rhs (apply_etf etf a u) sigma2) es cs) sigma2"
-    using ih sides_side_rhs_fold_ip_eff_acc_indep by metis
-  show ?case unfolding x side_rhs_fold_ip_eff.simps
+    using ih sides_side_rhs_fold_eff_acc_indep by metis
+  show ?case unfolding x side_rhs_fold_eff.simps
     by (simp only: sides_of_rhs_seqcomp) (rule sup_mono[OF g_le rest_le])
 qed
 
@@ -219,7 +219,7 @@ proof -
   show ?thesis unfolding eq by (rule sup_mono[OF assms order_refl])
 qed
 
-lemma side_cfg_T_ip_eff_mono_sides_gen:
+lemma side_cfg_T_eff_mono_sides_gen:
   fixes g :: cfg
     and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and bot0 s0 :: "'a abs_state"
@@ -229,31 +229,31 @@ lemma side_cfg_T_ip_eff_mono_sides_gen:
   assumes comb_sides_mono:
     "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
-  shows "mono_sides (side_cfg_T_ip_eff g etf bot0 s0)"
+  shows "mono_sides (side_cfg_T_eff g etf bot0 s0)"
 proof (unfold mono_sides_def, intro allI impI)
   fix w :: pp and \<sigma>1 \<sigma>2 :: "pp + unit \<Rightarrow> 'a abs_state"
   assume le: "\<sigma>1 \<le> \<sigma>2"
-  have fold_le: "\<And>acc. sides_of_rhs (side_rhs_fold_ip_eff etf acc
+  have fold_le: "\<And>acc. sides_of_rhs (side_rhs_fold_eff etf acc
                    (predecessor_list g w) (combine_predecessor_list g w)) \<sigma>1
-                 \<le> sides_of_rhs (side_rhs_fold_ip_eff etf acc
+                 \<le> sides_of_rhs (side_rhs_fold_eff etf acc
                    (predecessor_list g w) (combine_predecessor_list g w)) \<sigma>2"
-    by (rule sides_side_rhs_fold_ip_eff_mono[OF edge_sides_mono comb_sides_mono le])
-  show "sides_of_rhs (side_cfg_T_ip_eff g etf bot0 s0 w) \<sigma>1
-        \<le> sides_of_rhs (side_cfg_T_ip_eff g etf bot0 s0 w) \<sigma>2"
+    by (rule sides_side_rhs_fold_eff_mono[OF edge_sides_mono comb_sides_mono le])
+  show "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 w) \<sigma>1
+        \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 w) \<sigma>2"
   proof (cases "w = cfg_entry g")
     case False
     show ?thesis
-      unfolding side_cfg_T_ip_eff_def make_side_rhs_tree_ip_eff_def Let_def
+      unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def Let_def
       using False fold_le[of bot0] by simp
   next
     case True
-    have m_le: "sides_of_rhs (side_rhs_fold_ip_eff etf (bot0 \<squnion> restrict_local s0)
+    have m_le: "sides_of_rhs (side_rhs_fold_eff etf (bot0 \<squnion> restrict_local s0)
                   (predecessor_list g (cfg_entry g)) (combine_predecessor_list g (cfg_entry g))) \<sigma>1
-              \<le> sides_of_rhs (side_rhs_fold_ip_eff etf (bot0 \<squnion> restrict_local s0)
+              \<le> sides_of_rhs (side_rhs_fold_eff etf (bot0 \<squnion> restrict_local s0)
                   (predecessor_list g (cfg_entry g)) (combine_predecessor_list g (cfg_entry g))) \<sigma>2"
       using fold_le[of "bot0 \<squnion> restrict_local s0"] True by simp
     show ?thesis
-      unfolding side_cfg_T_ip_eff_def make_side_rhs_tree_ip_eff_def
+      unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
       using True by (simp add: Let_def fun_upd_sup_mono[OF m_le])
   qed
 qed
@@ -266,12 +266,12 @@ text \<open>
   deps are the union of the per-tree deps and the continuation's deps; the
   accumulator only affects the final Answer, so deps are also acc-independent.
 \<close>
-lemma dep_aux_side_rhs_fold_ip_eff_indep:
+lemma dep_aux_side_rhs_fold_eff_indep:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
       and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  shows "dep_aux \<sigma>1 (side_rhs_fold_ip_eff etf acc1 es cs)
-       = dep_aux \<sigma>2 (side_rhs_fold_ip_eff etf acc2 es cs)"
+  shows "dep_aux \<sigma>1 (side_rhs_fold_eff etf acc1 es cs)
+       = dep_aux \<sigma>2 (side_rhs_fold_eff etf acc2 es cs)"
 proof (induction es arbitrary: acc1 acc2 cs \<sigma>1 \<sigma>2)
   case Nil
   show ?case
@@ -282,12 +282,12 @@ proof (induction es arbitrary: acc1 acc2 cs \<sigma>1 \<sigma>2)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     have e: "dep_aux \<sigma>1 (etf_combine etf cc ex) = dep_aux \<sigma>2 (etf_combine etf cc ex)"
       using comb_static unfolding static_deps_def by blast
-    have ih: "dep_aux \<sigma>1 (side_rhs_fold_ip_eff etf
+    have ih: "dep_aux \<sigma>1 (side_rhs_fold_eff etf
                 (acc1 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>1) [] cs)
-            = dep_aux \<sigma>2 (side_rhs_fold_ip_eff etf
+            = dep_aux \<sigma>2 (side_rhs_fold_eff etf
                 (acc2 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>2) [] cs)"
       by (rule Cons.IH)
-    show ?case unfolding x side_rhs_fold_ip_eff.simps
+    show ?case unfolding x side_rhs_fold_eff.simps
       by (simp add: dep_aux_seqcomp e ih)
   qed
 next
@@ -295,42 +295,42 @@ next
   obtain u a where x: "x = (u, a)" by (cases x)
   have e: "dep_aux \<sigma>1 (apply_etf etf a u) = dep_aux \<sigma>2 (apply_etf etf a u)"
     using edge_static unfolding static_deps_def by blast
-  have ih: "dep_aux \<sigma>1 (side_rhs_fold_ip_eff etf
+  have ih: "dep_aux \<sigma>1 (side_rhs_fold_eff etf
               (acc1 \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>1) es cs)
-          = dep_aux \<sigma>2 (side_rhs_fold_ip_eff etf
+          = dep_aux \<sigma>2 (side_rhs_fold_eff etf
               (acc2 \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>2) es cs)"
     by (rule Cons.IH)
-  show ?case unfolding x side_rhs_fold_ip_eff.simps
+  show ?case unfolding x side_rhs_fold_eff.simps
     by (simp add: dep_aux_seqcomp e ih)
 qed
 
-lemma dep_aux_make_side_rhs_tree_ip_eff:
-  "dep_aux \<sigma> (make_side_rhs_tree_ip_eff g etf bot0 s0 v)
-   = dep_aux \<sigma> (side_rhs_fold_ip_eff etf
+lemma dep_aux_make_side_rhs_tree_eff:
+  "dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 v)
+   = dep_aux \<sigma> (side_rhs_fold_eff etf
         (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
         (predecessor_list g v) (combine_predecessor_list g v))"
   by (cases "v = cfg_entry g")
-     (simp_all add: make_side_rhs_tree_ip_eff_def Let_def)
+     (simp_all add: make_side_rhs_tree_eff_def Let_def)
 
-lemma side_cfg_T_ip_eff_mono_deps_gen:
+lemma side_cfg_T_eff_mono_deps_gen:
   fixes g :: cfg
     and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and bot0 s0 :: "'a abs_state"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
       and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  shows "mono_deps (side_cfg_T_ip_eff g etf bot0 s0)"
-  unfolding mono_deps_def side_cfg_T_ip_eff_def dep_def
+  shows "mono_deps (side_cfg_T_eff g etf bot0 s0)"
+  unfolding mono_deps_def side_cfg_T_eff_def dep_def
   apply clarify
-  apply (simp only: dep_aux_make_side_rhs_tree_ip_eff)
-  apply (subst (asm) dep_aux_side_rhs_fold_ip_eff_indep[OF edge_static comb_static])
+  apply (simp only: dep_aux_make_side_rhs_tree_eff)
+  apply (subst (asm) dep_aux_side_rhs_fold_eff_indep[OF edge_static comb_static])
   apply assumption
   done
 
 subsection \<open>Fold upper bounds: each contribution is below the fold\<close>
 
-lemma side_acc_ip_eff_ge_acc:
+lemma side_acc_eff_ge_acc:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "acc \<le> side_acc_ip_eff etf acc \<sigma> es cs"
+  shows "acc \<le> side_acc_eff etf acc \<sigma> es cs"
 proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
@@ -339,38 +339,38 @@ proof (induction es arbitrary: acc cs)
   next
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have "acc \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) \<sigma> [] cs"
+    have "acc \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) \<sigma> [] cs"
       by (meson Cons.IH sup_ge1 order_trans)
-    then show ?case unfolding x by (simp only: side_acc_ip_eff.simps)
+    then show ?case unfolding x by (simp only: side_acc_eff.simps)
   qed
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
-  have "acc \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> es cs"
+  have "acc \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> es cs"
     by (meson Cons.IH sup_ge1 order_trans)
-  then show ?case unfolding x by (simp only: side_acc_ip_eff.simps)
+  then show ?case unfolding x by (simp only: side_acc_eff.simps)
 qed
 
-lemma side_acc_ip_eff_es_mono:
+lemma side_acc_eff_es_mono:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "side_acc_ip_eff etf acc \<sigma> [] cs \<le> side_acc_ip_eff etf acc \<sigma> es cs"
+  shows "side_acc_eff etf acc \<sigma> [] cs \<le> side_acc_eff etf acc \<sigma> es cs"
 proof (induction es arbitrary: acc)
   case Nil show ?case by simp
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
-  have "side_acc_ip_eff etf acc \<sigma> [] cs
-        \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> [] cs"
-    by (rule side_acc_ip_eff_mono_acc[OF sup_ge1])
-  also have "\<dots> \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> es cs"
+  have "side_acc_eff etf acc \<sigma> [] cs
+        \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> [] cs"
+    by (rule side_acc_eff_mono_acc[OF sup_ge1])
+  also have "\<dots> \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) \<sigma> es cs"
     by (rule Cons.IH)
-  finally show ?case unfolding x by (simp only: side_acc_ip_eff.simps)
+  finally show ?case unfolding x by (simp only: side_acc_eff.simps)
 qed
 
-lemma traverse_le_side_acc_ip_eff_edge:
+lemma traverse_le_side_acc_eff_edge:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   shows "(u, a) \<in> set es \<Longrightarrow>
-         traverse_rhs (apply_etf etf a u) \<sigma> \<le> side_acc_ip_eff etf acc \<sigma> es cs"
+         traverse_rhs (apply_etf etf a u) \<sigma> \<le> side_acc_eff etf acc \<sigma> es cs"
 proof (induction es arbitrary: acc)
   case Nil thus ?case by simp
 next
@@ -382,22 +382,22 @@ next
     case hd
     then have uw: "u = w" and ab: "a = b" by auto
     have "traverse_rhs (apply_etf etf b w) \<sigma>
-          \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf b w) \<sigma>) \<sigma> es cs"
-      using side_acc_ip_eff_ge_acc sup_ge2 order_trans by blast
-    thus ?thesis unfolding x uw ab by (simp only: side_acc_ip_eff.simps)
+          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf b w) \<sigma>) \<sigma> es cs"
+      using side_acc_eff_ge_acc sup_ge2 order_trans by blast
+    thus ?thesis unfolding x uw ab by (simp only: side_acc_eff.simps)
   next
     case tl
     have "traverse_rhs (apply_etf etf a u) \<sigma>
-          \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (apply_etf etf b w) \<sigma>) \<sigma> es cs"
+          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (apply_etf etf b w) \<sigma>) \<sigma> es cs"
       by (rule Cons.IH[OF tl])
-    thus ?thesis unfolding x by (simp only: side_acc_ip_eff.simps)
+    thus ?thesis unfolding x by (simp only: side_acc_eff.simps)
   qed
 qed
 
-lemma traverse_le_side_acc_ip_eff_combine_nil:
+lemma traverse_le_side_acc_eff_combine_nil:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   shows "(cc, ex) \<in> set cs \<Longrightarrow>
-         traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> side_acc_ip_eff etf acc \<sigma> [] cs"
+         traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] cs"
 proof (induction cs arbitrary: acc)
   case Nil thus ?case by simp
 next
@@ -409,30 +409,30 @@ next
     case hd
     then have cc2: "cc = c2" and exe2: "ex = e2" by auto
     have "traverse_rhs (etf_combine etf c2 e2) \<sigma>
-          \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) \<sigma> [] cs"
-      using side_acc_ip_eff_ge_acc sup_ge2 order_trans by blast
-    thus ?thesis unfolding x cc2 exe2 by (simp only: side_acc_ip_eff.simps)
+          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) \<sigma> [] cs"
+      using side_acc_eff_ge_acc sup_ge2 order_trans by blast
+    thus ?thesis unfolding x cc2 exe2 by (simp only: side_acc_eff.simps)
   next
     case tl
     have "traverse_rhs (etf_combine etf cc ex) \<sigma>
-          \<le> side_acc_ip_eff etf (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) \<sigma> [] cs"
+          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) \<sigma> [] cs"
       by (rule Cons.IH[OF tl])
-    thus ?thesis unfolding x by (simp only: side_acc_ip_eff.simps)
+    thus ?thesis unfolding x by (simp only: side_acc_eff.simps)
   qed
 qed
 
-lemma traverse_le_side_acc_ip_eff_combine:
+lemma traverse_le_side_acc_eff_combine:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes "(cc, ex) \<in> set cs"
-  shows "traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> side_acc_ip_eff etf acc \<sigma> es cs"
-  using traverse_le_side_acc_ip_eff_combine_nil[OF assms] side_acc_ip_eff_es_mono
+  shows "traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> es cs"
+  using traverse_le_side_acc_eff_combine_nil[OF assms] side_acc_eff_es_mono
   by (rule order_trans)
 
-lemma sides_le_side_rhs_fold_ip_eff_edge:
+lemma sides_le_side_rhs_fold_eff_edge:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   shows "(u, a) \<in> set es \<Longrightarrow>
          sides_of_rhs (apply_etf etf a u) \<sigma> (Inr ())
-           \<le> sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) \<sigma> (Inr ())"
+           \<le> sides_of_rhs (side_rhs_fold_eff etf acc es cs) \<sigma> (Inr ())"
 proof (induction es arbitrary: acc)
   case Nil thus ?case by simp
 next
@@ -443,24 +443,24 @@ next
   proof cases
     case hd
     then have uw: "u = w" and ab: "a = b" by auto
-    show ?thesis unfolding x uw ab side_rhs_fold_ip_eff.simps
+    show ?thesis unfolding x uw ab side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp_at) (rule sup_ge1)
   next
     case tl
     have ih: "sides_of_rhs (apply_etf etf a u) \<sigma> (Inr ())
-          \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+          \<le> sides_of_rhs (side_rhs_fold_eff etf
                (acc \<squnion> traverse_rhs (apply_etf etf b w) \<sigma>) es cs) \<sigma> (Inr ())"
       by (rule Cons.IH[OF tl])
-    show ?thesis unfolding x side_rhs_fold_ip_eff.simps
+    show ?thesis unfolding x side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp_at) (rule le_supI2[OF ih])
   qed
 qed
 
-lemma sides_le_side_rhs_fold_ip_eff_combine_nil:
+lemma sides_le_side_rhs_fold_eff_combine_nil:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   shows "(cc, ex) \<in> set cs \<Longrightarrow>
          sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ())
-           \<le> sides_of_rhs (side_rhs_fold_ip_eff etf acc [] cs) \<sigma> (Inr ())"
+           \<le> sides_of_rhs (side_rhs_fold_eff etf acc [] cs) \<sigma> (Inr ())"
 proof (induction cs arbitrary: acc)
   case Nil thus ?case by simp
 next
@@ -471,92 +471,92 @@ next
   proof cases
     case hd
     then have cc2: "cc = c2" and exe2: "ex = e2" by auto
-    show ?thesis unfolding x cc2 exe2 side_rhs_fold_ip_eff.simps
+    show ?thesis unfolding x cc2 exe2 side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp_at) (rule sup_ge1)
   next
     case tl
     have ih: "sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ())
-          \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+          \<le> sides_of_rhs (side_rhs_fold_eff etf
                (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) [] cs) \<sigma> (Inr ())"
       by (rule Cons.IH[OF tl])
-    show ?thesis unfolding x side_rhs_fold_ip_eff.simps
+    show ?thesis unfolding x side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp_at) (rule le_supI2[OF ih])
   qed
 qed
 
-lemma sides_side_rhs_fold_ip_eff_es_mono:
+lemma sides_side_rhs_fold_eff_es_mono:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "sides_of_rhs (side_rhs_fold_ip_eff etf acc [] cs) \<sigma> (Inr ())
-         \<le> sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) \<sigma> (Inr ())"
+  shows "sides_of_rhs (side_rhs_fold_eff etf acc [] cs) \<sigma> (Inr ())
+         \<le> sides_of_rhs (side_rhs_fold_eff etf acc es cs) \<sigma> (Inr ())"
 proof (induction es arbitrary: acc)
   case Nil show ?case by simp
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
-  have acc_eq: "sides_of_rhs (side_rhs_fold_ip_eff etf acc [] cs) \<sigma> (Inr ())
-              = sides_of_rhs (side_rhs_fold_ip_eff etf
+  have acc_eq: "sides_of_rhs (side_rhs_fold_eff etf acc [] cs) \<sigma> (Inr ())
+              = sides_of_rhs (side_rhs_fold_eff etf
                   (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) [] cs) \<sigma> (Inr ())"
-    by (rule fun_cong[OF sides_side_rhs_fold_ip_eff_acc_indep])
-  have ih: "sides_of_rhs (side_rhs_fold_ip_eff etf
+    by (rule fun_cong[OF sides_side_rhs_fold_eff_acc_indep])
+  have ih: "sides_of_rhs (side_rhs_fold_eff etf
               (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) [] cs) \<sigma> (Inr ())
-          \<le> sides_of_rhs (side_rhs_fold_ip_eff etf
+          \<le> sides_of_rhs (side_rhs_fold_eff etf
               (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) es cs) \<sigma> (Inr ())"
     by (rule Cons.IH)
-  show ?case unfolding x side_rhs_fold_ip_eff.simps
+  show ?case unfolding x side_rhs_fold_eff.simps
     apply (simp only: sides_of_rhs_seqcomp_at)
     apply (subst acc_eq)
     by (rule le_supI2[OF ih])
 qed
 
-lemma sides_le_side_rhs_fold_ip_eff_combine:
+lemma sides_le_side_rhs_fold_eff_combine:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes "(cc, ex) \<in> set cs"
   shows "sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ())
-         \<le> sides_of_rhs (side_rhs_fold_ip_eff etf acc es cs) \<sigma> (Inr ())"
-  using sides_le_side_rhs_fold_ip_eff_combine_nil[OF assms]
-        sides_side_rhs_fold_ip_eff_es_mono
+         \<le> sides_of_rhs (side_rhs_fold_eff etf acc es cs) \<sigma> (Inr ())"
+  using sides_le_side_rhs_fold_eff_combine_nil[OF assms]
+        sides_side_rhs_fold_eff_es_mono
   by (rule order_trans)
 
 subsection \<open>Post-solution in usable form\<close>
 
-lemma side_post_solution_le_local_ip_eff:
+lemma side_post_solution_le_local_eff:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0) x \<sigma> vars"
+  assumes "part_post_solution (side_cfg_T_eff g etf bot0 s0) x \<sigma> vars"
       and "v \<in> vars"
-  shows "side_acc_ip_eff etf
+  shows "side_acc_eff etf
            (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
            \<sigma> (predecessor_list g v) (combine_predecessor_list g v) \<le> \<sigma> (Inl v)"
 proof -
-  from assms have "eq (side_cfg_T_ip_eff g etf bot0 s0) v \<sigma> \<le> \<sigma> (Inl v)" by auto
-  thus ?thesis by (simp add: eq_side_cfg_T_ip_eff)
+  from assms have "eq (side_cfg_T_eff g etf bot0 s0) v \<sigma> \<le> \<sigma> (Inl v)" by auto
+  thus ?thesis by (simp add: eq_side_cfg_T_eff)
 qed
 
 (* The fold's global contribution is below the packaged tree's (the entry Side
    wrapper only adds). *)
-lemma sides_fold_le_side_cfg_T_ip_eff:
+lemma sides_fold_le_side_cfg_T_eff:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "sides_of_rhs (side_rhs_fold_ip_eff etf
+  shows "sides_of_rhs (side_rhs_fold_eff etf
            (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
            (predecessor_list g v) (combine_predecessor_list g v)) \<sigma> (Inr ())
-         \<le> sides_of_rhs (side_cfg_T_ip_eff g etf bot0 s0 v) \<sigma> (Inr ())"
-  unfolding side_cfg_T_ip_eff_def make_side_rhs_tree_ip_eff_def Let_def
+         \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 v) \<sigma> (Inr ())"
+  unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def Let_def
   by (cases "v = cfg_entry g") (auto simp: sup_apply fun_upd_def Let_def)
 
-lemma side_post_solution_le_global_ip_eff:
+lemma side_post_solution_le_global_eff:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes pp: "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0) x \<sigma> vars"
+  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0) x \<sigma> vars"
       and v: "v \<in> vars"
-  shows "sides_of_rhs (side_cfg_T_ip_eff g etf bot0 s0 v) \<sigma> (Inr ()) \<le> \<sigma> (Inr ())"
+  shows "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 v) \<sigma> (Inr ()) \<le> \<sigma> (Inr ())"
 proof -
-  from pp v have "sides_of_rhs (side_cfg_T_ip_eff g etf bot0 s0 v) \<sigma> \<le> \<sigma>" by auto
+  from pp v have "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 v) \<sigma> \<le> \<sigma>" by auto
   thus ?thesis by (rule le_funD)
 qed
 
 subsection \<open>Edge / combine closure of a post-solution\<close>
 
-lemma etf_combined_le_ip_eff:
+lemma etf_combined_le_eff:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes pp:  "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0) x \<sigma> vars"
+  assumes pp:  "part_post_solution (side_cfg_T_eff g etf bot0 s0) x \<sigma> vars"
       and v:   "v \<in> vars"
       and e:   "(u, a, v) \<in> edges g"
       and fin: "finite (edges g)"
@@ -565,13 +565,13 @@ proof -
   have mem: "(u, a) \<in> set (predecessor_list g v)"
     using e by (simp add: set_predecessor_list[OF fin] predecessors_def)
   have loc: "traverse_rhs (apply_etf etf a u) \<sigma> \<le> \<sigma> (Inl v)"
-    using traverse_le_side_acc_ip_eff_edge[OF mem]
-          side_post_solution_le_local_ip_eff[OF pp v]
+    using traverse_le_side_acc_eff_edge[OF mem]
+          side_post_solution_le_local_eff[OF pp v]
     by (rule order_trans)
   have glob: "sides_of_rhs (apply_etf etf a u) \<sigma> (Inr ()) \<le> \<sigma> (Inr ())"
-    using sides_le_side_rhs_fold_ip_eff_edge[OF mem]
-          sides_fold_le_side_cfg_T_ip_eff
-          side_post_solution_le_global_ip_eff[OF pp v]
+    using sides_le_side_rhs_fold_eff_edge[OF mem]
+          sides_fold_le_side_cfg_T_eff
+          side_post_solution_le_global_eff[OF pp v]
     by (meson order_trans)
   have "etf_full (apply_etf etf a u) \<sigma>
         = traverse_rhs (apply_etf etf a u) \<sigma> \<squnion> sides_of_rhs (apply_etf etf a u) \<sigma> (Inr ())"
@@ -580,9 +580,9 @@ proof -
   finally show ?thesis unfolding side_env_def glob_env_unit .
 qed
 
-lemma etf_combine_combined_le_ip_eff:
+lemma etf_combine_combined_le_eff:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes pp:   "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0) x \<sigma> vars"
+  assumes pp:   "part_post_solution (side_cfg_T_eff g etf bot0 s0) x \<sigma> vars"
       and v:    "v \<in> vars"
       and e:    "(cc, ex, v) \<in> combines g"
       and finC: "finite (combines g)"
@@ -591,13 +591,13 @@ proof -
   have mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
     using e by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_def)
   have loc: "traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> \<sigma> (Inl v)"
-    using traverse_le_side_acc_ip_eff_combine[OF mem]
-          side_post_solution_le_local_ip_eff[OF pp v]
+    using traverse_le_side_acc_eff_combine[OF mem]
+          side_post_solution_le_local_eff[OF pp v]
     by (rule order_trans)
   have glob: "sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ()) \<le> \<sigma> (Inr ())"
-    using sides_le_side_rhs_fold_ip_eff_combine[OF mem]
-          sides_fold_le_side_cfg_T_ip_eff
-          side_post_solution_le_global_ip_eff[OF pp v]
+    using sides_le_side_rhs_fold_eff_combine[OF mem]
+          sides_fold_le_side_cfg_T_eff
+          side_post_solution_le_global_eff[OF pp v]
     by (meson order_trans)
   have "etf_full (etf_combine etf cc ex) \<sigma>
         = traverse_rhs (etf_combine etf cc ex) \<sigma> \<squnion> sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr ())"

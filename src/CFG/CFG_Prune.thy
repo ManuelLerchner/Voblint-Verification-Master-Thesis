@@ -1,5 +1,5 @@
 theory CFG_Prune
-  imports CFG_Collect_IP IMP2_Proc_to_CFG
+  imports CFG_Collect IMP2_Proc_to_CFG
 begin
 
 section \<open>Dead-procedure pruning for interprocedural CFGs\<close>
@@ -22,21 +22,21 @@ subsection \<open>Interprocedural reachability\<close>
 
 (* One dependency step: u's abstract value feeds w's right-hand side, either
    via an edge (u -> w) or a combine (call site or callee exit of w). *)
-definition ip_succ :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> bool" where
-  "ip_succ g u w \<longleftrightarrow>
+definition cfg_succ :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> bool" where
+  "cfg_succ g u w \<longleftrightarrow>
      (\<exists>a. (u, a, w) \<in> edges g)
    \<or> (\<exists>e. (u, e, w) \<in> combines g)
    \<or> (\<exists>c. (c, u, w) \<in> combines g)"
 
-definition ip_reaches :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> bool" where
-  "ip_reaches g v v0 \<longleftrightarrow> (v, v0) \<in> {(u, w). ip_succ g u w}\<^sup>*"
+definition cfg_reaches :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> bool" where
+  "cfg_reaches g v v0 \<longleftrightarrow> (v, v0) \<in> {(u, w). cfg_succ g u w}\<^sup>*"
 
 definition cone :: "cfg \<Rightarrow> pp \<Rightarrow> pp set" where
-  "cone g v0 = {v. ip_reaches g v v0}"
+  "cone g v0 = {v. cfg_reaches g v v0}"
 
 definition prune_to :: "cfg \<Rightarrow> pp \<Rightarrow> cfg" where
   "prune_to g v0 =
-     mk_ip_cfg (cfg_entry g) (cfg_exit g)
+     mk_cfg (cfg_entry g) (cfg_exit g)
        {e \<in> edges g. snd (snd e) \<in> cone g v0}
        {ct \<in> combines g. snd (snd ct) \<in> cone g v0}"
 
@@ -45,27 +45,27 @@ definition prune_cfg :: "cfg \<Rightarrow> cfg" where
 
 subsection \<open>reaches basics\<close>
 
-lemma ip_reaches_refl: "ip_reaches g v v"
-  by (simp add: ip_reaches_def)
+lemma cfg_reaches_refl: "cfg_reaches g v v"
+  by (simp add: cfg_reaches_def)
 
-lemma ip_succ_reaches:
-  "ip_succ g u w \<Longrightarrow> ip_reaches g w v0 \<Longrightarrow> ip_reaches g u v0"
-  by (auto simp: ip_reaches_def intro: converse_rtrancl_into_rtrancl)
+lemma cfg_succ_reaches:
+  "cfg_succ g u w \<Longrightarrow> cfg_reaches g w v0 \<Longrightarrow> cfg_reaches g u v0"
+  by (auto simp: cfg_reaches_def intro: converse_rtrancl_into_rtrancl)
 
-lemma ip_succ_mono:
-  assumes "edges g1 \<subseteq> edges g2" "combines g1 \<subseteq> combines g2" "ip_succ g1 u w"
-  shows "ip_succ g2 u w"
-  using assms unfolding ip_succ_def by blast
+lemma cfg_succ_mono:
+  assumes "edges g1 \<subseteq> edges g2" "combines g1 \<subseteq> combines g2" "cfg_succ g1 u w"
+  shows "cfg_succ g2 u w"
+  using assms unfolding cfg_succ_def by blast
 
-lemma ip_reaches_mono:
-  assumes "edges g1 \<subseteq> edges g2" "combines g1 \<subseteq> combines g2" "ip_reaches g1 v w"
-  shows "ip_reaches g2 v w"
+lemma cfg_reaches_mono:
+  assumes "edges g1 \<subseteq> edges g2" "combines g1 \<subseteq> combines g2" "cfg_reaches g1 v w"
+  shows "cfg_reaches g2 v w"
 proof -
-  have "{(u, w). ip_succ g1 u w} \<subseteq> {(u, w). ip_succ g2 u w}"
-    using ip_succ_mono[OF assms(1,2)] by auto
-  then have "{(u, w). ip_succ g1 u w}\<^sup>* \<subseteq> {(u, w). ip_succ g2 u w}\<^sup>*"
+  have "{(u, w). cfg_succ g1 u w} \<subseteq> {(u, w). cfg_succ g2 u w}"
+    using cfg_succ_mono[OF assms(1,2)] by auto
+  then have "{(u, w). cfg_succ g1 u w}\<^sup>* \<subseteq> {(u, w). cfg_succ g2 u w}\<^sup>*"
     by (rule rtrancl_mono)
-  thus ?thesis using assms(3) unfolding ip_reaches_def by blast
+  thus ?thesis using assms(3) unfolding cfg_reaches_def by blast
 qed
 
 subsection \<open>prune_to selectors\<close>
@@ -99,98 +99,98 @@ lemma finite_combines_prune_to:
   using combines_prune_to_sub by (rule_tac finite_subset) auto
 
 (* Reachability is discharged by the side solver via dep_side_rhs_tree_ip_* and
-   ip_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_IP_Eff_Soundness).
+   cfg_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_IP_Eff_Soundness).
    The graph-level pruning frame below is solver-agnostic. *)
 
 subsection \<open>Collect frame: witness transport\<close>
 
-lemma ip_witness_prune_to:
-  assumes "ip_witness g S v t"
-  shows "ip_reaches g v v0 \<longrightarrow> ip_witness (prune_to g v0) S v t"
+lemma cfg_witness_prune_to:
+  assumes "cfg_witness g S v t"
+  shows "cfg_reaches g v v0 \<longrightarrow> cfg_witness (prune_to g v0) S v t"
   using assms
-proof (induction rule: ip_witness.induct)
+proof (induction rule: cfg_witness.induct)
   case (entry v s Sa)
   then show ?case
-    by (auto intro: ip_witness.entry)
+    by (auto intro: cfg_witness.entry)
 next
   case (edge u a v Sa s t)
   show ?case
   proof (rule impI)
-    assume rv: "ip_reaches g v v0"
-    have ruv: "ip_reaches g u v0"
-      using edge.hyps(1) rv ip_succ_reaches unfolding ip_succ_def by blast
-    have wu: "ip_witness (prune_to g v0) Sa u s" using edge.IH ruv by blast
+    assume rv: "cfg_reaches g v v0"
+    have ruv: "cfg_reaches g u v0"
+      using edge.hyps(1) rv cfg_succ_reaches unfolding cfg_succ_def by blast
+    have wu: "cfg_witness (prune_to g v0) Sa u s" using edge.IH ruv by blast
     have ev: "(u, a, v) \<in> edges (prune_to g v0)"
       using edge.hyps(1) rv by (simp add: cone_def)
-    show "ip_witness (prune_to g v0) Sa v t"
-      by (rule ip_witness.edge[OF ev wu edge.hyps(3)])
+    show "cfg_witness (prune_to g v0) Sa v t"
+      by (rule cfg_witness.edge[OF ev wu edge.hyps(3)])
   qed
 next
   case (combine c ex v Sa s t)
   show ?case
   proof (rule impI)
-    assume rv: "ip_reaches g v v0"
-    have rc: "ip_reaches g c v0"
-      using combine.hyps(1) rv ip_succ_reaches unfolding ip_succ_def by blast
-    have rex: "ip_reaches g ex v0"
-      using combine.hyps(1) rv ip_succ_reaches unfolding ip_succ_def by blast
-    have wc: "ip_witness (prune_to g v0) Sa c s" using combine.IH(1) rc by blast
-    have wex: "ip_witness (prune_to g v0) Sa ex t" using combine.IH(2) rex by blast
+    assume rv: "cfg_reaches g v v0"
+    have rc: "cfg_reaches g c v0"
+      using combine.hyps(1) rv cfg_succ_reaches unfolding cfg_succ_def by blast
+    have rex: "cfg_reaches g ex v0"
+      using combine.hyps(1) rv cfg_succ_reaches unfolding cfg_succ_def by blast
+    have wc: "cfg_witness (prune_to g v0) Sa c s" using combine.IH(1) rc by blast
+    have wex: "cfg_witness (prune_to g v0) Sa ex t" using combine.IH(2) rex by blast
     have cv: "(c, ex, v) \<in> combines (prune_to g v0)"
       using combine.hyps(1) rv by (simp add: cone_def)
-    show "ip_witness (prune_to g v0) Sa v (combine_states s t)"
-      by (rule ip_witness.combine[OF cv wc wex])
+    show "cfg_witness (prune_to g v0) Sa v (combine_states s t)"
+      by (rule cfg_witness.combine[OF cv wc wex])
   qed
 qed
 
-lemma cfg_collect_ip_prune_exit:
-  "cfg_collect_ip g S (cfg_exit g) \<subseteq> cfg_collect_ip (prune_cfg g) S (cfg_exit g)"
+lemma cfg_collect_prune_exit:
+  "cfg_collect g S (cfg_exit g) \<subseteq> cfg_collect (prune_cfg g) S (cfg_exit g)"
 proof
-  fix t assume "t \<in> cfg_collect_ip g S (cfg_exit g)"
-  then have wg: "ip_witness g S (cfg_exit g) t"
-    by (simp add: cfg_collect_ip_eq_paths cfg_collect_ip_paths_def)
-  have wp: "ip_witness (prune_to g (cfg_exit g)) S (cfg_exit g) t"
-    using ip_witness_prune_to[OF wg] ip_reaches_refl by blast
-  show "t \<in> cfg_collect_ip (prune_cfg g) S (cfg_exit g)"
-    using wp by (simp add: prune_cfg_def cfg_collect_ip_eq_paths cfg_collect_ip_paths_def)
+  fix t assume "t \<in> cfg_collect g S (cfg_exit g)"
+  then have wg: "cfg_witness g S (cfg_exit g) t"
+    by (simp add: cfg_collect_eq_paths cfg_collect_paths_def)
+  have wp: "cfg_witness (prune_to g (cfg_exit g)) S (cfg_exit g) t"
+    using cfg_witness_prune_to[OF wg] cfg_reaches_refl by blast
+  show "t \<in> cfg_collect (prune_cfg g) S (cfg_exit g)"
+    using wp by (simp add: prune_cfg_def cfg_collect_eq_paths cfg_collect_paths_def)
 qed
 
 subsection \<open>Entry reaches exit for compile_prog\<close>
 
-lemma ip_succ_imp_reaches: "ip_succ g u w \<Longrightarrow> ip_reaches g u w"
-  using ip_succ_reaches ip_reaches_refl by blast
+lemma cfg_succ_imp_reaches: "cfg_succ g u w \<Longrightarrow> cfg_reaches g u w"
+  using cfg_succ_reaches cfg_reaches_refl by blast
 
-lemma ip_reaches_trans:
-  "ip_reaches g a b \<Longrightarrow> ip_reaches g b c \<Longrightarrow> ip_reaches g a c"
-  by (auto simp: ip_reaches_def)
+lemma cfg_reaches_trans:
+  "cfg_reaches g a b \<Longrightarrow> cfg_reaches g b c \<Longrightarrow> cfg_reaches g a c"
+  by (auto simp: cfg_reaches_def)
 
-lemma ip_reaches_edge:
-  "(u, a, w) \<in> edges g \<Longrightarrow> ip_reaches g u w"
-  by (rule ip_succ_imp_reaches) (auto simp: ip_succ_def)
+lemma cfg_reaches_edge:
+  "(u, a, w) \<in> edges g \<Longrightarrow> cfg_reaches g u w"
+  by (rule cfg_succ_imp_reaches) (auto simp: cfg_succ_def)
 
-lemma ip_reaches_combine_call:
-  "(u, e, w) \<in> combines g \<Longrightarrow> ip_reaches g u w"
-  by (rule ip_succ_imp_reaches) (auto simp: ip_succ_def)
+lemma cfg_reaches_combine_call:
+  "(u, e, w) \<in> combines g \<Longrightarrow> cfg_reaches g u w"
+  by (rule cfg_succ_imp_reaches) (auto simp: cfg_succ_def)
 
-lemma ip_reaches_combine_exit:
-  "(c, u, w) \<in> combines g \<Longrightarrow> ip_reaches g u w"
-  by (rule ip_succ_imp_reaches) (auto simp: ip_succ_def)
+lemma cfg_reaches_combine_exit:
+  "(c, u, w) \<in> combines g \<Longrightarrow> cfg_reaches g u w"
+  by (rule cfg_succ_imp_reaches) (auto simp: cfg_succ_def)
 
-lemma ip_reaches_mk_mono:
+lemma cfg_reaches_mk_mono:
   assumes "E1 \<subseteq> E2" "C1 \<subseteq> C2"
-  assumes "ip_reaches (mk_ip_cfg a b E1 C1) v w"
-  shows "ip_reaches (mk_ip_cfg a' b' E2 C2) v w"
-  by (rule ip_reaches_mono[OF _ _ assms(3)]) (use assms in auto)
+  assumes "cfg_reaches (mk_cfg a b E1 C1) v w"
+  shows "cfg_reaches (mk_cfg a' b' E2 C2) v w"
+  by (rule cfg_reaches_mono[OF _ _ assms(3)]) (use assms in auto)
 
-lemma compile_entry_ip_reaches_exit:
+lemma compile_entry_cfg_reaches_exit:
   "compile \<Pi> lay c n = (n', en, ex, E, C) \<Longrightarrow>
-   ip_reaches (mk_ip_cfg en ex E C) en ex"
+   cfg_reaches (mk_cfg en ex E C) en ex"
 proof (induction c arbitrary: n n' en ex E C rule: com.induct)
   case SKIP
-  then show ?case by (auto intro: ip_reaches_edge)
+  then show ?case by (auto intro: cfg_reaches_edge)
 next
   case (Assign x a)
-  then show ?case by (auto intro: ip_reaches_edge)
+  then show ?case by (auto intro: cfg_reaches_edge)
 next
   case (Seq c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
@@ -199,22 +199,22 @@ next
     and res: "en = en1" "ex = ex2"
              "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2" "C = C1 \<union> C2"
     using Seq.prems by (auto split: prod.splits)
-  have r1: "ip_reaches (mk_ip_cfg en ex E C) en1 ex1"
-  proof (rule ip_reaches_mk_mono)
+  have r1: "cfg_reaches (mk_cfg en ex E C) en1 ex1"
+  proof (rule cfg_reaches_mk_mono)
     show "E1 \<subseteq> E" using res by auto
     show "C1 \<subseteq> C" using res by auto
-    show "ip_reaches (mk_ip_cfg en1 ex1 E1 C1) en1 ex1" using Seq.IH(1)[OF c1] .
+    show "cfg_reaches (mk_cfg en1 ex1 E1 C1) en1 ex1" using Seq.IH(1)[OF c1] .
   qed
-  have r2: "ip_reaches (mk_ip_cfg en ex E C) en2 ex2"
-  proof (rule ip_reaches_mk_mono)
+  have r2: "cfg_reaches (mk_cfg en ex E C) en2 ex2"
+  proof (rule cfg_reaches_mk_mono)
     show "E2 \<subseteq> E" using res by auto
     show "C2 \<subseteq> C" using res by auto
-    show "ip_reaches (mk_ip_cfg en2 ex2 E2 C2) en2 ex2" using Seq.IH(2)[OF c2] .
+    show "cfg_reaches (mk_cfg en2 ex2 E2 C2) en2 ex2" using Seq.IH(2)[OF c2] .
   qed
-  have re: "ip_reaches (mk_ip_cfg en ex E C) ex1 en2"
-    using res by (auto intro: ip_reaches_edge ip_reaches_refl)
+  have re: "cfg_reaches (mk_cfg en ex E C) ex1 en2"
+    using res by (auto intro: cfg_reaches_edge cfg_reaches_refl)
   show ?case
-    using r1 re r2 res ip_reaches_trans by blast 
+    using r1 re r2 res cfg_reaches_trans by blast 
 next
   case (If b c1 c2)
   obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
@@ -225,18 +225,18 @@ next
                    \<union> {(ex1, EA_Nop, n2), (ex2, EA_Nop, n2)}"
              "C = C1 \<union> C2"
     using If.prems by (auto split: prod.splits)
-  have e_en1: "ip_reaches (mk_ip_cfg en ex E C) n en1"
-    using res by (auto intro: ip_reaches_edge)
-  have r1: "ip_reaches (mk_ip_cfg en ex E C) en1 ex1"
-  proof (rule ip_reaches_mk_mono)
+  have e_en1: "cfg_reaches (mk_cfg en ex E C) n en1"
+    using res by (auto intro: cfg_reaches_edge)
+  have r1: "cfg_reaches (mk_cfg en ex E C) en1 ex1"
+  proof (rule cfg_reaches_mk_mono)
     show "E1 \<subseteq> E" using res by auto
     show "C1 \<subseteq> C" using res by auto
-    show "ip_reaches (mk_ip_cfg en1 ex1 E1 C1) en1 ex1" using If.IH(1)[OF c1] .
+    show "cfg_reaches (mk_cfg en1 ex1 E1 C1) en1 ex1" using If.IH(1)[OF c1] .
   qed
-  have ex1_xn: "ip_reaches (mk_ip_cfg en ex E C) ex1 n2"
-    using res by (auto intro: ip_reaches_edge)
+  have ex1_xn: "cfg_reaches (mk_cfg en ex E C) ex1 n2"
+    using res by (auto intro: cfg_reaches_edge)
   show ?case
-    using e_en1 r1 ex1_xn res by (auto intro: ip_reaches_trans)
+    using e_en1 r1 ex1_xn res by (auto intro: cfg_reaches_trans)
 next
   case (While b c)
   obtain n1 en1 ex1 E1 C1 where
@@ -246,7 +246,7 @@ next
                    \<union> {(ex1, EA_Nop, n)}"
              "C = C1"
     using While.prems by (auto split: prod.splits)
-  show ?case using res by (auto intro: ip_reaches_edge)
+  show ?case using res by (auto intro: cfg_reaches_edge)
 next
   case (Scope c)
   obtain m ein exin Ein Cin where
@@ -255,28 +255,28 @@ next
              "E = Ein \<union> {(n, EA_Enter, ein)}"
              "C = Cin \<union> {(n, exin, m)}"
     using Scope.prems by (auto split: prod.splits)
-  show ?case using res by (auto intro: ip_reaches_combine_call)
+  show ?case using res by (auto intro: cfg_reaches_combine_call)
 next
   case (Call p)
   show ?case
   proof (cases "lay p")
     case None
-    then show ?thesis using Call.prems by (auto intro: ip_reaches_refl)
+    then show ?thesis using Call.prems by (auto intro: cfg_reaches_refl)
   next
     case (Some info)
     obtain en_p ex_p E_p C_p where info: "info = (en_p, ex_p, E_p, C_p)"
       by (cases info)
     have res: "en = n" "ex = n + 1" "E = {(n, EA_Enter, en_p)}" "C = {(n, ex_p, n + 1)}"
       using Call.prems Some info by auto
-    show ?thesis using res by (auto intro: ip_reaches_combine_call)
+    show ?thesis using res by (auto intro: cfg_reaches_combine_call)
   qed
 next
   case Restore
-  then show ?case by (auto intro: ip_reaches_refl)
+  then show ?case by (auto intro: cfg_reaches_refl)
 qed
 
-lemma compile_prog_entry_ip_reaches_exit:
-  "ip_reaches (compile_prog \<Pi> ps main)
+lemma compile_prog_entry_cfg_reaches_exit:
+  "cfg_reaches (compile_prog \<Pi> ps main)
      (cfg_entry (compile_prog \<Pi> ps main)) (cfg_exit (compile_prog \<Pi> ps main))"
 proof -
   obtain n1 lay E_proc C_proc where
@@ -285,16 +285,16 @@ proof -
   obtain n2 en ex E_main C_main where
     cmain: "compile \<Pi> lay main n1 = (n2, en, ex, E_main, C_main)"
     by (cases "compile \<Pi> lay main n1") auto
-  have g_eq: "compile_prog \<Pi> ps main = mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)"
+  have g_eq: "compile_prog \<Pi> ps main = mk_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)"
     using procs cmain
     by (simp add: compile_prog_def compile_prog_with_regions_def Let_def)
-  have rm: "ip_reaches (mk_ip_cfg en ex E_main C_main) en ex"
-    by (rule compile_entry_ip_reaches_exit[OF cmain])
-  have lift: "ip_reaches (mk_ip_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)) en ex"
-  proof (rule ip_reaches_mk_mono)
+  have rm: "cfg_reaches (mk_cfg en ex E_main C_main) en ex"
+    by (rule compile_entry_cfg_reaches_exit[OF cmain])
+  have lift: "cfg_reaches (mk_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main)) en ex"
+  proof (rule cfg_reaches_mk_mono)
     show "E_main \<subseteq> E_proc \<union> E_main" by auto
     show "C_main \<subseteq> C_proc \<union> C_main" by auto
-    show "ip_reaches (mk_ip_cfg en ex E_main C_main) en ex" by (rule rm)
+    show "cfg_reaches (mk_cfg en ex E_main C_main) en ex" by (rule rm)
   qed
   show ?thesis using lift unfolding g_eq by simp
 qed

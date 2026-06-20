@@ -1,8 +1,8 @@
-theory CFG_Collect_IP_Adeq
-  imports CFG_Collect_IP "Voblint_IMP2.IMP2_Proc"
+theory CFG_Collect_Adeq
+  imports CFG_Collect "Voblint_IMP2.IMP2_Proc"
 begin
 
-section \<open>Operational adequacy for cfg_collect_ip\<close>
+section \<open>Operational adequacy for cfg_collect\<close>
 
 text \<open>
   Exit projection for interprocedural programs, plus the first concrete
@@ -12,53 +12,53 @@ text \<open>
 definition singleton_store :: "store \<Rightarrow> store set" where
   "singleton_store s = {s}"
 
-definition pruns_to_ip ::
+definition cfg_runs_to ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pruns_to_ip \<Pi> ps c s t =
-     (let g = compile_prog \<Pi> ps c in t \<in> cfg_collect_ip g (singleton_store s) (cfg_exit g))"
+  "cfg_runs_to \<Pi> ps c s t =
+     (let g = compile_prog \<Pi> ps c in t \<in> cfg_collect g (singleton_store s) (cfg_exit g))"
 
-lemma pruns_to_ipD[elim]:
-  "pruns_to_ip \<Pi> ps c s t
-   \<Longrightarrow> t \<in> cfg_collect_ip (compile_prog \<Pi> ps c) (singleton_store s)
+lemma cfg_runs_toD[elim]:
+  "cfg_runs_to \<Pi> ps c s t
+   \<Longrightarrow> t \<in> cfg_collect (compile_prog \<Pi> ps c) (singleton_store s)
                   (cfg_exit (compile_prog \<Pi> ps c))"
-  unfolding pruns_to_ip_def by (auto simp: Let_def)
+  unfolding cfg_runs_to_def by (auto simp: Let_def)
 
-lemma cfg_collect_ip_lfp_lowerbound:
-  assumes le: "cfg_collect_ip_F g S env \<le> env"
-  shows "cfg_collect_ip g S \<le> env"
-  unfolding cfg_collect_ip_def
+lemma cfg_collect_lfp_lowerbound:
+  assumes le: "cfg_collect_F g S env \<le> env"
+  shows "cfg_collect g S \<le> env"
+  unfolding cfg_collect_def
   using le lfp_lowerbound by blast
 
-lemma cfg_collect_ip_collect_pp:
-  "collect_pp g (cfg_collect_ip g S) v \<subseteq> cfg_collect_ip g S v"
+lemma cfg_collect_collect_pp:
+  "collect_pp g (cfg_collect g S) v \<subseteq> cfg_collect g S v"
 proof
   fix x
-  assume xin: "x \<in> collect_pp g (cfg_collect_ip g S) v"
-  have step: "x \<in> cfg_collect_ip_F g S (cfg_collect_ip g S) v"
-    unfolding cfg_collect_ip_F_def using xin by auto
-  show "x \<in> cfg_collect_ip g S v" using step cfg_collect_ip_post by blast
+  assume xin: "x \<in> collect_pp g (cfg_collect g S) v"
+  have step: "x \<in> cfg_collect_F g S (cfg_collect g S) v"
+    unfolding cfg_collect_F_def using xin by auto
+  show "x \<in> cfg_collect g S v" using step cfg_collect_post by blast
 qed
 
-lemma cfg_collect_ip_edge:
+lemma cfg_collect_edge:
   assumes e: "(u, a, v) \<in> edges g"
-      and xin: "x \<in> edge_collect a (cfg_collect_ip g S u)"
-  shows "x \<in> cfg_collect_ip g S v"
+      and xin: "x \<in> edge_collect a (cfg_collect g S u)"
+  shows "x \<in> cfg_collect g S v"
 proof -
-  have "x \<in> collect_pp g (cfg_collect_ip g S) v"
+  have "x \<in> collect_pp g (cfg_collect g S) v"
     unfolding collect_pp_def using e xin by blast
-  thus ?thesis using cfg_collect_ip_collect_pp by blast
+  thus ?thesis using cfg_collect_collect_pp by blast
 qed
 
-lemma cfg_collect_ip_combine:
+lemma cfg_collect_combine:
   assumes h: "(c, ex, ret) \<in> combines g" and ret: "ret = v"
-      and sc: "s \<in> cfg_collect_ip g S c" and te: "t \<in> cfg_collect_ip g S ex"
-  shows "combine_states s t \<in> cfg_collect_ip g S v"
+      and sc: "s \<in> cfg_collect g S c" and te: "t \<in> cfg_collect g S ex"
+  shows "combine_states s t \<in> cfg_collect g S v"
 proof -
-  have mem: "combine_states s t \<in> collect_combine_pp g (cfg_collect_ip g S) v"
+  have mem: "combine_states s t \<in> collect_combine_pp g (cfg_collect g S) v"
     using collect_combine_pp_member[OF h ret sc te] .
-  have step: "combine_states s t \<in> cfg_collect_ip_F g S (cfg_collect_ip g S) v"
-    unfolding cfg_collect_ip_F_def using mem by auto
-  show ?thesis using step cfg_collect_ip_post by blast
+  have step: "combine_states s t \<in> cfg_collect_F g S (cfg_collect g S) v"
+    unfolding cfg_collect_F_def using mem by auto
+  show ?thesis using step cfg_collect_post by blast
 qed
 
 subsection \<open>compile_prog shape for the increment witness\<close>
@@ -70,7 +70,7 @@ definition inc_pi :: proc_table where
   "inc_pi = (\<lambda>_. None)(''p'' := Some inc_body)"
 
 definition inc_g :: cfg where
-  "inc_g = mk_ip_cfg 2 3
+  "inc_g = mk_cfg 2 3
     {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
      (2, EA_Enter, 0)}
     {(2, 1, 3)}"
@@ -103,7 +103,7 @@ proof -
   have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
     using compile_inc_call unfolding lay_eq by simp
   show ?thesis
-    unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
+    unfolding compile_prog_def compile_prog_with_regions_def mk_cfg_def
     using procs call by (simp add: Let_def split: prod.splits)
 qed
 
@@ -119,7 +119,7 @@ proof -
   have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
     using compile_inc_call unfolding lay_eq by simp
   show ?thesis
-    unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
+    unfolding compile_prog_def compile_prog_with_regions_def mk_cfg_def
     using procs call by (simp add: Let_def split: prod.splits)
 qed
 
@@ -137,7 +137,7 @@ proof -
   have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
     using compile_inc_call unfolding lay_eq by simp
   show ?thesis
-    unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
+    unfolding compile_prog_def compile_prog_with_regions_def mk_cfg_def
     using procs call lay_eq compile_procs_list_singleton_inc
     by (auto simp: Let_def split: prod.splits)
 qed
@@ -154,7 +154,7 @@ proof -
   have call: "compile inc_pi lay (Call ''p'') 2 = (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
     using compile_inc_call unfolding lay_eq by simp
   show ?thesis
-    unfolding compile_prog_def compile_prog_with_regions_def mk_ip_cfg_def
+    unfolding compile_prog_def compile_prog_with_regions_def mk_cfg_def
     using procs call lay_eq compile_procs_list_singleton_inc
     by (simp add: Let_def split: prod.splits)
 qed
@@ -166,7 +166,7 @@ lemma compile_prog_inc_structure:
        {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
         (2, EA_Enter, 0)}"
     and "combines inc_g = {(2, 1, 3)}"
-  unfolding inc_g_def mk_ip_cfg_def by auto
+  unfolding inc_g_def mk_cfg_def by auto
 
 lemma collect_pp_edges_cong:
   "edges g1 = edges g2 \<Longrightarrow> collect_pp g1 \<rho> v = collect_pp g2 \<rho> v"
@@ -177,17 +177,17 @@ lemma collect_combine_pp_combines_cong:
    \<Longrightarrow> collect_combine_pp g1 \<rho> v = collect_combine_pp g2 \<rho> v"
   unfolding collect_combine_pp_def by auto
 
-lemma cfg_collect_ip_cong:
+lemma cfg_collect_cong:
   assumes entry: "cfg_entry g1 = cfg_entry g2"
   assumes edges: "edges g1 = edges g2"
   assumes combines: "combines g1 = combines g2"
-  shows "cfg_collect_ip g1 S v = cfg_collect_ip g2 S v"
+  shows "cfg_collect g1 S v = cfg_collect g2 S v"
 proof -
-  have F: "cfg_collect_ip_F g1 S = cfg_collect_ip_F g2 S"
-    using assms unfolding cfg_collect_ip_F_def
+  have F: "cfg_collect_F g1 S = cfg_collect_F g2 S"
+    using assms unfolding cfg_collect_F_def
     using collect_combine_pp_def collect_pp_def by presburger
   show ?thesis
-    unfolding cfg_collect_ip_def
+    unfolding cfg_collect_def
     by (simp add: F)
 qed
 
@@ -208,36 +208,36 @@ lemma combine_after_enter_global_assign:
 
 subsection \<open>Witness: global increment survives a single call\<close>
 
-lemma pcall_global_increment_cfg_collect_ip:
+lemma pcall_global_increment_cfg_collect:
   fixes s :: store
-  shows "s(''Gx'' := s ''Gx'' + 1) \<in> cfg_collect_ip inc_g (singleton_store s) (cfg_exit inc_g)"
+  shows "s(''Gx'' := s ''Gx'' + 1) \<in> cfg_collect inc_g (singleton_store s) (cfg_exit inc_g)"
 proof -
   let ?g = inc_g and ?S = "singleton_store s"
     and ?t = "s(''Gx'' := s ''Gx'' + 1)"
-  have entry: "singleton_store s \<subseteq> cfg_collect_ip ?g ?S (cfg_entry ?g)"
-    using cfg_collect_ip_entry by simp
-  have s_at_call: "s \<in> cfg_collect_ip ?g ?S 2"
+  have entry: "singleton_store s \<subseteq> cfg_collect ?g ?S (cfg_entry ?g)"
+    using cfg_collect_entry by simp
+  have s_at_call: "s \<in> cfg_collect ?g ?S 2"
     using entry compile_prog_inc_structure(1) singleton_store_def by auto
   have en: "(2, EA_Enter, 0) \<in> edges ?g"
     using compile_prog_inc_structure by simp
-  have enter: "enter_state s \<in> cfg_collect_ip ?g ?S 0"
-  proof (rule cfg_collect_ip_edge[OF en])
-    show "enter_state s \<in> edge_collect EA_Enter (cfg_collect_ip ?g ?S 2)"
+  have enter: "enter_state s \<in> cfg_collect ?g ?S 0"
+  proof (rule cfg_collect_edge[OF en])
+    show "enter_state s \<in> edge_collect EA_Enter (cfg_collect ?g ?S 2)"
       using s_at_call by (simp add: edge_collect.simps)
   qed
   have asg: "(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1) \<in> edges ?g"
     using compile_prog_inc_structure by simp
   let ?body_store = "(enter_state s)(''Gx'' := s ''Gx'' + 1)"
   have edge_asg: "?body_store \<in> edge_collect (EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)))
-                  (cfg_collect_ip ?g ?S 0)"
+                  (cfg_collect ?g ?S 0)"
   proof -
     have mem: "(enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s))
-      \<in> edge_collect (EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1))) (cfg_collect_ip ?g ?S 0)"
+      \<in> edge_collect (EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1))) (cfg_collect ?g ?S 0)"
       using enter edge_collect_assign_enter_state by blast
     show ?thesis using mem aval_plus_gx_on_enter by simp
   qed
-  have body_store: "?body_store \<in> cfg_collect_ip ?g ?S 1"
-    using cfg_collect_ip_edge[OF asg edge_asg] by simp
+  have body_store: "?body_store \<in> cfg_collect ?g ?S 1"
+    using cfg_collect_edge[OF asg edge_asg] by simp
   have comb: "(2, 1, 3) \<in> combines ?g"
     using compile_prog_inc_structure by simp
   have g: "is_global ''Gx''"
@@ -245,24 +245,24 @@ proof -
   have "?t = combine_states s ?body_store"
     using combine_after_enter_global_assign[OF g] by (simp add: enter_state_def)
   show ?thesis
-    using cfg_collect_ip_combine[OF comb refl s_at_call body_store]
+    using cfg_collect_combine[OF comb refl s_at_call body_store]
       combine_after_enter_global_assign[OF g]
     by (simp add: compile_prog_inc_structure(2) enter_state_def)
 qed
 
-lemma pruns_to_ip_pcall_global_increment:
+lemma cfg_runs_to_pcall_global_increment:
   fixes s :: store
-  shows "pruns_to_ip inc_pi [''p''] (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "cfg_runs_to inc_pi [''p''] (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   let ?g = "compile_prog inc_pi [''p''] (Call ''p'')"
   have collect_inc: "s(''Gx'' := s ''Gx'' + 1)
-    \<in> cfg_collect_ip inc_g (singleton_store s) (cfg_exit inc_g)"
-    using pcall_global_increment_cfg_collect_ip by simp
+    \<in> cfg_collect inc_g (singleton_store s) (cfg_exit inc_g)"
+    using pcall_global_increment_cfg_collect by simp
   have exit_eq: "cfg_exit ?g = cfg_exit inc_g"
     by (simp add: compile_prog_inc_exit compile_prog_inc_structure(2))
-  have cong_at_exit: "cfg_collect_ip inc_g (singleton_store s) (cfg_exit inc_g)
-    = cfg_collect_ip ?g (singleton_store s) (cfg_exit inc_g)"
-  proof (rule cfg_collect_ip_cong)
+  have cong_at_exit: "cfg_collect inc_g (singleton_store s) (cfg_exit inc_g)
+    = cfg_collect ?g (singleton_store s) (cfg_exit inc_g)"
+  proof (rule cfg_collect_cong)
     show "cfg_entry inc_g = cfg_entry ?g"
       using compile_prog_inc_entry compile_prog_inc_structure(1) by simp
     show "edges inc_g = edges ?g"
@@ -270,7 +270,7 @@ proof -
     show "combines inc_g = combines ?g"
       using compile_prog_inc_combines compile_prog_inc_structure by simp
   qed
-  show ?thesis unfolding pruns_to_ip_def
+  show ?thesis unfolding cfg_runs_to_def
     using collect_inc cong_at_exit exit_eq by simp
 qed
 

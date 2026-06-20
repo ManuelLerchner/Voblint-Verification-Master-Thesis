@@ -61,9 +61,9 @@ record cfg = "(pp, edge_action) graph" +
 
 subsection \<open>CFG construction\<close>
 
-definition mk_ip_cfg ::
+definition mk_cfg ::
   "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> pp \<times> pp) set \<Rightarrow> cfg" where
-  "mk_ip_cfg entry exit E C =
+  "mk_cfg entry exit E C =
      \<lparr> nodes = ({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E
                   \<union> fst ` C \<union> (fst \<circ> snd) ` C \<union> (snd \<circ> snd) ` C),
        edges = E,
@@ -72,16 +72,9 @@ definition mk_ip_cfg ::
        combines = C
      \<rparr>"
 
-definition mk_cfg :: "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> cfg" where
-  "mk_cfg entry exit E = mk_ip_cfg entry exit E {}"
+declare mk_cfg_def[simp]
 
-declare mk_cfg_def[simp] mk_ip_cfg_def[simp]
-
-lemma mk_cfg_combines_empty[simp]:
-  "combines (mk_cfg en ex E) = {}"
-  by (simp add: mk_cfg_def)
-
-lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E))"
+lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E C))"
   unfolding valid_graph_def graph.truncate_def mk_cfg_def by force
 
 (* Affine shift along program points compile c (n+k) is compile c n with all pp+k. *)
