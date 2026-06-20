@@ -123,8 +123,8 @@ proof -
     using seed_cov sign_domain.gamma_state_mono[OF entry_le] by (rule subset_trans)
   have "cfg_collect_ip g cinit_stores (cfg_exit g)
         \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_exit g))"
-    by (rule se.side_collect_sound_ip_exit_pruned_eff
-          [OF pp_eff fin finC entry_cov ed cd1 cd2 es cs])
+    by (rule side_collect_sound_ip_exit_pruned_eff
+          [OF sign_sound_etf pp_eff fin finC entry_cov ed cd1 cd2 es cs])
   then show ?thesis
     by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
 qed

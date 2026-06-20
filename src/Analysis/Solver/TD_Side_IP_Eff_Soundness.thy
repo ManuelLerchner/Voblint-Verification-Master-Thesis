@@ -348,13 +348,10 @@ proof -
     by (rule restrict_local_global_join[symmetric])
   also have "... \<le> \<sigma> (Inl (cfg_entry g)) \<squnion> \<sigma> (Inr ())"
     using rl rg by (rule sup_mono)
-  finally show ?thesis unfolding side_env_def .
+  finally show ?thesis unfolding side_env_def glob_env_unit .
 qed
 
 subsection \<open>Exit-rooted collecting soundness with coverage discharged by pruning\<close>
-
-context sound_effectful_transfer
-begin
 
 text \<open>
   Exit-rooted effectful collecting soundness: the solver runs on
@@ -362,23 +359,31 @@ text \<open>
   backward cone (connected by construction), so every edge target / combine
   return on the cone is in the solved stable set.  No coverage hypothesis is
   needed beyond the query / static contracts that drive the cone.
+
+  The executable system side_cfg_T_ip_eff fixes the single global unknown
+  ('g = unit), so this theorem is for a unit etf; the soundness contract is an
+  explicit hypothesis and the generic abstract soundness is interpreted at unit.
 \<close>
 
 theorem side_collect_sound_ip_exit_pruned_eff:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
     and bot0 s0 :: "'a abs_state" and S :: "store set"
+    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "(unit, 'a) effectful_domain_transfer"
+  assumes se: "sound_effectful_transfer \<gamma> etf"
   assumes pp: "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0)
                  (cfg_exit g) \<sigma> vars"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
-  assumes entry: "S \<le> gamma_state (side_env \<sigma> (cfg_entry g))"
+  assumes entry: "S \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> (cfg_entry g))"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
   assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  shows "cfg_collect_ip g S (cfg_exit g) \<le> gamma_state (side_env \<sigma> (cfg_exit g))"
+  shows "cfg_collect_ip g S (cfg_exit g)
+         \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> (cfg_exit g))"
 proof -
+  interpret se: sound_effectful_transfer \<gamma> etf by (rule se)
   define pg where "pg = prune_cfg g"
   have fin_pg: "finite (edges pg)"
     unfolding pg_def prune_cfg_def using finite_edges_prune_to[OF fin] .
@@ -413,10 +418,10 @@ proof -
     show "etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
       by (rule etf_combine_combined_le_ip_eff[OF pp rv uce_g finC])
   qed
-  have entry_pg: "S \<le> gamma_state (side_env \<sigma> (cfg_entry pg))"
+  have entry_pg: "S \<le> se.gamma_state (side_env \<sigma> (cfg_entry pg))"
     using entry by (simp add: pg_def prune_cfg_def)
-  have collect_pg: "cfg_collect_ip pg S (cfg_exit g) \<le> gamma_state (side_env \<sigma> (cfg_exit g))"
-    by (rule post_fixpoint_sound_at_ip_eff[OF entry_pg step_le combine_le order_refl])
+  have collect_pg: "cfg_collect_ip pg S (cfg_exit g) \<le> se.gamma_state (side_env \<sigma> (cfg_exit g))"
+    by (rule se.post_fixpoint_sound_at_ip_eff[OF entry_pg step_le combine_le order_refl])
   have frame: "cfg_collect_ip g S (cfg_exit g) \<subseteq> cfg_collect_ip pg S (cfg_exit g)"
     using cfg_collect_ip_prune_exit[of g S] by (simp add: pg_def)
   show ?thesis using frame collect_pg by blast
@@ -432,22 +437,26 @@ text \<open>
   from its construction; the pure shim discharges them generically).
 \<close>
 theorem side_analyse_ip_eff_collect_sound_exit_pruned_gen:
-  fixes \<Pi> ps main and s0 :: "'a abs_state" and S :: "store set"
+  fixes \<Pi> ps main and s0 :: "'a::bounded_semilattice_sup_bot abs_state"
+    and S :: "store set"
+    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "(unit, 'a) effectful_domain_transfer"
+  assumes se: "sound_effectful_transfer \<gamma> etf"
   assumes mono_eq: "is_mono_eq (side_cfg_T_ip_eff (compile_prog \<Pi> ps main) etf bot s0)"
   assumes mono_sides: "mono_sides (side_cfg_T_ip_eff (compile_prog \<Pi> ps main) etf bot s0)"
   assumes mono_deps: "mono_deps (side_cfg_T_ip_eff (compile_prog \<Pi> ps main) etf bot s0)"
   assumes dom: "side_cfg_ip_solve_dom_eff (compile_prog \<Pi> ps main) etf bot s0
                   (cfg_exit (compile_prog \<Pi> ps main))"
-  assumes S_sound: "S \<le> gamma_state s0"
+  assumes S_sound: "S \<le> sound_domain.gamma_state \<gamma> s0"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
   assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
   shows "cfg_collect_ip (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
-         \<le> gamma_state (side_analyse_ip_eff \<Pi> ps main etf bot s0
+         \<le> sound_domain.gamma_state \<gamma> (side_analyse_ip_eff \<Pi> ps main etf bot s0
               (cfg_exit (compile_prog \<Pi> ps main)))"
 proof -
+  interpret se: sound_effectful_transfer \<gamma> etf by (rule se)
   define g where "g = compile_prog \<Pi> ps main"
   define v0 where "v0 = cfg_exit g"
   interpret ip: td_cfg_side_ip_solver_eff g etf bot s0
@@ -466,18 +475,16 @@ proof -
           edge_static comb_static entry_reach])
   have entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_ip_eff[OF pp entry_in])
-  have entry_cov: "S \<le> gamma_state (side_env \<sigma> (cfg_entry g))"
-    using S_sound gamma_state_mono[OF entry_le] by blast
-  have collect: "cfg_collect_ip g S (cfg_exit g) \<le> gamma_state (side_env \<sigma> (cfg_exit g))"
-    by (rule side_collect_sound_ip_exit_pruned_eff[OF pp[unfolded v0_def] fin finC
+  have entry_cov: "S \<le> se.gamma_state (side_env \<sigma> (cfg_entry g))"
+    using S_sound se.gamma_state_mono[OF entry_le] by blast
+  have collect: "cfg_collect_ip g S (cfg_exit g) \<le> se.gamma_state (side_env \<sigma> (cfg_exit g))"
+    by (rule side_collect_sound_ip_exit_pruned_eff[OF se pp[unfolded v0_def] fin finC
           entry_cov edge_dep comb_dep1 comb_dep2 edge_static comb_static])
   have analyse_eq:
     "side_analyse_ip_eff \<Pi> ps main etf bot s0 (cfg_exit g) = side_env \<sigma> (cfg_exit g)"
     unfolding side_analyse_ip_eff_def \<sigma>_def v0_def g_def by simp
   show ?thesis using collect analyse_eq by (simp add: g_def)
 qed
-
-end
 
 subsection \<open>Pure-shim discharge of the cone contracts\<close>
 

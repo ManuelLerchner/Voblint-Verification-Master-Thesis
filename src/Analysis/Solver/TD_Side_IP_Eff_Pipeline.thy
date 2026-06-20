@@ -53,28 +53,34 @@ qed
 
 subsection \<open>Collecting soundness from a post-solution\<close>
 
-context sound_effectful_transfer
-begin
-
 text \<open>
   Effectful counterpart of sound_transfer.side_collect_sound_ip_at: a
   post-solution of the effectful equation system soundly over-approximates the IP
   collecting semantics at v0.  The per-edge / per-combine bounds are discharged
   from the post-solution (etf_combined_le_ip_eff / etf_combine_combined_le_ip_eff);
   coverage (every edge target / combine return is solved) is taken as a hypothesis.
+
+  The executable system side_cfg_T_ip_eff fixes the single global unknown
+  ('g = unit; its entry seeding emits Side ()), so this theorem is stated for a
+  unit etf with the soundness contract supplied as an explicit hypothesis; the
+  generic abstract soundness (post_fixpoint_sound_at_ip_eff) is interpreted at
+  unit.
 \<close>
 
 theorem side_collect_sound_ip_at_eff:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
     and bot0 s0 :: "'a abs_state" and v0 :: pp and S :: "store set"
-  assumes pp: "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0) v0 \<sigma> vars"
+    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "(unit, 'a) effectful_domain_transfer"
+  assumes se: "sound_effectful_transfer \<gamma> etf"
+      and pp: "part_post_solution (side_cfg_T_ip_eff g etf bot0 s0) v0 \<sigma> vars"
       and fin: "finite (edges g)"
       and finC: "finite (combines g)"
-      and entry: "S \<le> gamma_state (side_env \<sigma> (cfg_entry g))"
+      and entry: "S \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> (cfg_entry g))"
       and edge_cov: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> w \<in> vars"
       and combine_cov: "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow> ret \<in> vars"
-  shows "cfg_collect_ip g S v0 \<le> gamma_state (side_env \<sigma> v0)"
+  shows "cfg_collect_ip g S v0 \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> v0)"
 proof -
+  interpret se: sound_effectful_transfer \<gamma> etf by (rule se)
   have step_le:
     "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
   proof -
@@ -91,9 +97,7 @@ proof -
       by (rule etf_combine_combined_le_ip_eff[OF pp combine_cov[OF cmb] cmb finC])
   qed
   show ?thesis
-    by (rule post_fixpoint_sound_at_ip_eff[OF entry step_le combine_le order_refl])
+    by (rule se.post_fixpoint_sound_at_ip_eff[OF entry step_le combine_le order_refl])
 qed
-
-end
 
 end

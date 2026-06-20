@@ -87,13 +87,14 @@ lemma restrict_global_combine_eq:
   unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
 
 
-(* The abstract state combined from the local unknown at v and the single
-   global unknown. *)
+(* The abstract state combined from the local unknown at v and the join of all
+   named-global unknowns (glob_env).  At 'g = unit this is the single global
+   unknown \<sigma> (Inr ()) (glob_env_unit). *)
 definition side_env ::
-  "(pp + unit => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
-  "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> \<sigma> (Inr ())"
+  "(pp + 'g::finite => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
+  "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> glob_env \<sigma>"
 
-(* Generalisation of side_env to named globals: side_env_g \<sigma> g v = \<sigma>(Inl v) \<squnion> \<sigma>(Inr g). *)
+(* Reading a single named global g combined with the locals at v. *)
 definition side_env_g ::
   "(pp + 'g => 'a::bounded_semilattice_sup_bot abs_state) => 'g => pp => 'a abs_state"
 where
@@ -101,7 +102,7 @@ where
 
 lemma side_env_eq_side_env_g:
   "side_env \<sigma> v = side_env_g \<sigma> () v"
-  unfolding side_env_def side_env_g_def by simp
+  unfolding side_env_def side_env_g_def by (simp add: glob_env_unit)
 
 
 subsection \<open>Pure-domain effectful transfer shim\<close>
@@ -213,7 +214,7 @@ lemma sound_transfer_imp_sound_effectful:
 proof -
   interpret st: sound_transfer \<gamma> tf by (rule assms)
   show ?thesis
-  proof (unfold_locales)
+  proof (unfold_locales; unfold glob_env_unit)
     show "\<forall>u \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
             s \<in> st.gamma_state (etf_full (etf_nop (etf_from_tf tf) u) \<sigma>)"
     proof (intro allI ballI)

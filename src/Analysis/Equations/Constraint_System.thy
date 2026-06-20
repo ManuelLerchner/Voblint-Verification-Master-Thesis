@@ -719,6 +719,32 @@ proof -
 qed
 
 text \<open>
+  Executable form: when the global-name type additionally enumerates (Enum),
+  fold over the enumeration's image rather than over UNIV.  Used by the unit
+  pipeline's value-evaluation (unit is enum); the abstract development keeps the
+  UNIV definition.
+\<close>
+
+lemma glob_env_code [code]:
+  "glob_env (\<sigma> :: pp + 'g::enum \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state)
+   = List.fold (\<squnion>) (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum) \<bottom>"
+proof -
+  interpret ci: comp_fun_idem "(\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _"
+    by unfold_locales (auto simp: sup_left_commute)
+  have "glob_env \<sigma> = Finite_Set.fold (\<squnion>) \<bottom> (set (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum))"
+    unfolding glob_env_def abs_join_set_def by (simp add: UNIV_enum set_map)
+  also have "\<dots> = List.fold (\<squnion>) (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum) \<bottom>"
+    by (rule ci.fold_set_fold)
+  finally show ?thesis .
+qed
+
+text \<open>
+  Drop the UNIV-based definitional code equation: it folds over an abstract UNIV
+  and is not executable.  glob_env_code (enum) is the executable replacement.
+\<close>
+declare glob_env_def [code del]
+
+text \<open>
   Bridge between the two side aggregations: the total of a tree's Side
   contributions is below the join of the per-name side map.  This routes the
   full-state reassembly (all_sides, in etf_full) through the per-name post-fixpoint
@@ -758,23 +784,24 @@ next
 qed
 
 locale sound_effectful_transfer = sound_domain +
-  fixes etf :: "(unit, 'a) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a) effectful_domain_transfer"
   assumes etf_sound_nop:
-    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
        s \<in> gamma_state (etf_full (etf_nop etf u) \<sigma>)"
   assumes etf_sound_assign:
-    "\<forall>x e u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+    "\<forall>x e u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
        s(x := aval e s) \<in> gamma_state (etf_full (etf_assign etf x e u) \<sigma>)"
   assumes etf_sound_assume:
-    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())). bval b s
+    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). bval b s
        \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume etf b u) \<sigma>)"
   assumes etf_sound_assume_not:
-    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())). \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume_not etf b u) \<sigma>)"  assumes etf_sound_enter:
-    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume_not etf b u) \<sigma>)"
+  assumes etf_sound_enter:
+    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
        enter_state s \<in> gamma_state (etf_full (etf_enter etf u) \<sigma>)"
   assumes etf_sound_combine:
-    "\<forall>cc ex \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())).
-       \<forall>t \<in> gamma_state (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())).
+    "\<forall>cc ex \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>).
+       \<forall>t \<in> gamma_state (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>).
          combine_states s t \<in> gamma_state (etf_full (etf_combine etf cc ex) \<sigma>)"
 end

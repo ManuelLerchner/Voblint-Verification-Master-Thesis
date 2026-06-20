@@ -68,7 +68,7 @@ text \<open>
 \<close>
 
 lemma ip_witness_gamma_eff:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set"
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> edges g
@@ -116,7 +116,7 @@ text \<open>
 \<close>
 
 theorem post_fixpoint_sound_at_ip_eff:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set" and v0 :: pp
   assumes S_sound: "S \<le> gamma_state s0"
   assumes step_le:

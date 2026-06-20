@@ -73,8 +73,8 @@ proof -
      \<le> sound_domain.gamma_state gamma_ivl
          (side_analyse_ip_eff \<Pi> ps main ivl_etf bot s0
            (cfg_exit (compile_prog \<Pi> ps main)))"
-    by (rule se.side_analyse_ip_eff_collect_sound_exit_pruned_gen
-          [OF ivl_etf_is_mono_eq ivl_etf_mono_sides ivl_etf_mono_deps
+    by (rule side_analyse_ip_eff_collect_sound_exit_pruned_gen
+          [OF ivl_sound_etf ivl_etf_is_mono_eq ivl_etf_mono_sides ivl_etf_mono_deps
               side_solve_dom gs ed cd1 cd2 es cs])
   have "t \<in> sound_domain.gamma_state gamma_ivl
        (side_analyse_ip_eff \<Pi> ps main ivl_etf bot s0
