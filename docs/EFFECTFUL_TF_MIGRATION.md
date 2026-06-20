@@ -706,10 +706,23 @@ precision is the queryable per-name value the unit pot structurally cannot hold.
 
 ### 9.4 Implementation order (build-gated slices)
 
-Status as of 2026-06-19. The **foundation (1, 2a, glob_env infra) is landed and
-batch-green**; the remaining work (2b onward) is one coupled cascade through the
-locale — no intermediate green commit is possible until it is finished, because
-generalising the locale turns every in-context soundness lemma red at once.
+Status as of 2026-06-20: **Gap-1 is DONE.** All slices below landed, the full
+`Voblint_Formalization` session builds green with no `sorry`, and a genuinely
+effectful, named-global witness exercises the generalised interface for real.
+
+**Architecture chosen — decouple, don't propagate.** The generalisation lives in
+the *abstract* layer: the `sound_effectful_transfer` locale and the abstract
+collecting-soundness (`edge_collect_etf_sound`, `ip_witness_gamma_eff`,
+`post_fixpoint_sound_at_ip_eff`) are now polymorphic in `'g::finite`. The
+*executable* solver construction (`side_cfg_T_ip_eff`, whose entry seeding emits
+`Side ()`) stays at `'g = unit`; the three executable theorems were pulled out of
+the generic locale and take `sound_effectful_transfer γ etf` as an explicit unit
+hypothesis, interpreting the generic abstract soundness at unit. This made slice 4
+(Exec_Bridge rework) **unnecessary** — the executable path is untouched. A
+named-global analysis demonstrates its precision through the generic
+`post_fixpoint_sound_at_ip_eff`, not through the unit solver. Note `'g::finite`
+excludes `vname` (infinite); a finite `gname` type is used, matching Goblint's
+finite set of global-unknown kinds.
 
 - [x] **1. `all_sides` + coincidence.** `all_sides` primrec +
   `all_sides_eq_sides_Inr_unit` in `Constraint_System`. Commit `d2d0ecb`.
@@ -721,26 +734,32 @@ generalising the locale turns every in-context soundness lemma red at once.
   bridge `all_sides_le_glob_env_sides : all_sides t s <= glob_env (sides_of_rhs t s)`
   (commit `f97e618`). These are exactly the primitives the cascade consumes; all
   additive, `Voblint_Analysis` green.
-- [ ] **2b. Generalise the `sound_effectful_transfer` locale** from
-  `fixes etf :: "(unit, 'a) ..."` to `"('g::finite, 'a) ..."`; replace the
-  obligation source `sigma (Inl u) ⊔ sigma (Inr ())` with
-  `sigma (Inl u) ⊔ glob_env sigma`. Re-prove `sound_transfer_imp_sound_effectful`
-  (shim) via `glob_env_unit`, and `sign_sound_etf` / `ivl_sound_etf`.
-- [ ] **3. Generalise the soundness chain** (all *in-locale*, so all break at
-  once when 2b lands): introduce `side_env_all sigma v = sigma (Inl v) ⊔ glob_env sigma`
-  (`= side_env` at `unit`). The edge/combine closure bounds
-  (`etf_combined_le_ip_eff` / `etf_combine_combined_le_ip_eff`) split into a local
-  half (`traverse_rhs <= sigma (Inl v)`, unchanged) and a global half
-  (`all_sides <= glob_env sigma`) discharged by `all_sides_le_glob_env_sides` +
-  `glob_env_mono` + a **per-name** generalisation of
-  `side_post_solution_le_global_ip_eff` (`sides_of_rhs (T x) sigma (Inr g) <= sigma (Inr g)`
-  for every `g`). The reachability cone (`TD_Side_IP_Eff_Soundness`) currently
-  tracks the single `Inr ()` dependency; it must track each `Inr g`. Entry seeding
-  (`s0_le_side_env_entry_ip_eff`) seeds `restrict_global s0` per name (see
-  `SIDE_ENTRY_GLOBALS_SEEDING.md`, which solved the same shape at `unit`).
-- [ ] **4. Rework `Exec_Bridge`** (heaviest `Inr ()` user, 40 occurrences): the
-  `'a st`->eff fold simulation (`side_acc_ip_st_fun_of_st_eff`,
-  `part_post_solution_st_to_abs_eff`) reads `sigma (Inr ())`; route through
-  `glob_env`. Stays `'g = unit` for the executable shim path — only the abstract
-  side must accept `'g`.
-- [ ] **5. Flag-routed `'g`-indexed example + per-unknown precision theorem.**
+- [x] **2b. Generalised the `sound_effectful_transfer` locale** to
+  `('g::finite, 'a)`; obligation source is now `sigma (Inl u) ⊔ glob_env sigma`.
+  `side_env` redefined via `glob_env` (coincides at unit by `glob_env_unit`).
+  `sound_transfer_imp_sound_effectful`, `sign_sound_etf`, `ivl_sound_etf`
+  re-proved. Commit `3474bef`.
+- [x] **3. Decoupled the executable soundness chain** rather than propagating
+  `'g` into it. `edge_collect_etf_sound` / `ip_witness_gamma_eff` /
+  `post_fixpoint_sound_at_ip_eff` are generic in-locale; the unit-bound executable
+  theorems (`side_collect_sound_ip_at_eff`, `side_collect_sound_ip_exit_pruned_eff`,
+  `side_analyse_ip_eff_collect_sound_exit_pruned_gen`) moved out of the locale with
+  an explicit `sound_effectful_transfer γ etf` hypothesis. Sign/Interval headlines +
+  `Sign_Exec_Sound` updated to `[OF ..._sound_etf ...]`. `glob_env` gets an
+  `enum`-based executable code equation so the unit examples still code-generate.
+  Commit `3474bef`.
+- [x] **4. Exec_Bridge: no rework needed.** The decoupling keeps the executable
+  path (incl. Exec_Bridge) at `'g = unit`; it is unchanged and green.
+- [x] **5. Flag-routed named-global witness.** `Sign_Named_Global_Eff.thy`:
+  `flag_etf :: (gname, sign) ...` routes the assign contribution to `Gpos` / `Gneg`
+  by the queried sign of `''Gflag''`; `flag_etf_sound` proves
+  `sound_effectful_transfer gamma_sign flag_etf` (the non-unit instantiation);
+  `flag_assign_routes_pos` / `_neg` show the per-slot routing the unit pot cannot
+  express. Commit `ef0baab`.
+
+**Remaining honest gap (out of scope here):** the named-global example demonstrates
+the capability and soundness at the *abstract* (post-fixpoint) level. A fully
+*runnable* `gname`-indexed solver (executable `side_analyse` at `'g ≠ unit`) would
+require generalising the entry seeding (`Side ()` → per-name seed) — the one piece
+deliberately left unit-bound. The thesis claim (the effectful interface expresses
+sound named-global routing the single pot cannot) is established without it.
