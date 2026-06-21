@@ -257,4 +257,11 @@ parse_translation \<open>
   end
 \<close>
 
+subsection \<open>Executable examples\<close>
+
+value "\<lbrakk> x := 0 \<rbrakk>"
+value "\<lbrakk> x := 0; y := 1 \<rbrakk>"
+value "\<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
+value "\<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
+
 end

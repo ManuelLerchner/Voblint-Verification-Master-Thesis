@@ -826,4 +826,27 @@ end
 lemma show_val_ivl_eq [simp]: "(show_val :: ivl \<Rightarrow> string) = string_of_ivl"
   unfolding show_val_ivl_def by simp
 
+subsection \<open>Executable examples\<close>
+
+value "eint_plus (Fin 3) (Fin (-1))"
+value "eint_plus PlusInf (Fin 100)"
+value "eint_minus (Fin 5) (Fin 3)"
+value "eint_minus (Fin 0) PlusInf"
+
+value "ivl_plus (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 2) (Fin 5))"
+value "ivl_minus (Ivl (Fin 5) (Fin 10)) (Ivl (Fin 1) (Fin 3))"
+value "ivl_times (Ivl (Fin (-2)) (Fin 3)) (Ivl (Fin (-1)) (Fin 4))"
+
+value "join_ivl (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 2) (Fin 5))"
+value "widen_ivl (Ivl (Fin 0) (Fin 1)) (Ivl (Fin 0) (Fin 2))"
+value "widen_ivl (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 0) (Fin 3))"
+value "meet_ivl (Ivl (Fin 0) (Fin 10)) (Ivl (Fin 3) (Fin 7))"
+
+value "string_of_eint MinInf"
+value "string_of_eint PlusInf"
+value "string_of_ivl (Ivl (Fin (-3)) PlusInf)"
+
+value "aval_ivl (Minus (V ''x'') (N 1)) ((\<lambda>_. ivl_top)(''x'' := Ivl (Fin 5) (Fin 10)))"
+value "(assume_ivl (Less (V ''x'') (N 5)) ((\<lambda>_. ivl_top)(''x'' := Ivl (Fin 0) (Fin 10)))) ''x''"
+
 end

@@ -67,4 +67,16 @@ lemma combine_cases:
         | (Global) "is_global n" "<s|t> n = t n"
   by (cases "is_global n") auto
 
+subsection \<open>Executable examples\<close>
+
+value "is_global ''Gx''"
+value "is_global ''x''"
+value "is_global []"
+
+value "<(\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2) | (\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)> ''x''"
+value "<(\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2) | (\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)> ''Gx''"
+
+value "enter_state ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''x''"
+value "enter_state ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''Gx''"
+
 end

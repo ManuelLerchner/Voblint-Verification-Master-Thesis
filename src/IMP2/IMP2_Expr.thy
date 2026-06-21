@@ -29,6 +29,16 @@ fun bval :: "bexp => store => bool" where
   | "bval (Less a b)  s  = (aval a s < aval b s)"
   | "bval (Eq   a b)  s  = (aval a s = aval b s)"
 
+subsection \<open>Executable examples\<close>
+
+value "aval (Plus (N 3) (N 4)) (\<lambda>_. 0::int)"
+value "aval (V ''x'') ((\<lambda>_. 0::int)(''x'' := 42))"
+value "aval (Times (Minus (V ''x'') (N 2)) (N 3)) ((\<lambda>_. 0::int)(''x'' := 5))"
+
+value "bval (Less (V ''x'') (N 10)) ((\<lambda>_. 0::int)(''x'' := 7))"
+value "bval (Eq (V ''x'') (N 5)) ((\<lambda>_. 0::int)(''x'' := 5))"
+value "bval (Not (Bc True)) (\<lambda>_. 0::int)"
+
 end
 
 

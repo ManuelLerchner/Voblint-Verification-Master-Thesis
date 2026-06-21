@@ -584,4 +584,29 @@ lemma sign_tf_mono:
   by (auto simp: sign_tf_def assign_sign_mono assume_sign_mono assume_not_sign_mono
            enter_sign_mono)
 
+subsection \<open>Executable examples\<close>
+
+value "sign_of_int (-5)"
+value "sign_of_int 0"
+value "sign_of_int 3"
+
+value "sign_plus SNeg SPos"
+value "sign_minus SPos SPos"
+value "sign_times SNeg SNeg"
+value "sign_times SZero STop"
+
+value "join_sign SNeg SPos"
+value "join_sign SNeg SZero"
+value "join_sign SPos SZero"
+
+value "string_of_sign STop"
+value "string_of_sign SNonPos"
+
+value "aval_sign (Times (N (-2)) (N 3)) (\<lambda>_. SBot)"
+value "aval_sign (Plus (V ''x'') (V ''x'')) ((\<lambda>_. SBot)(''x'' := SPos))"
+
+value "assign_sign ''x'' (N 1) (\<lambda>_. SBot) ''x''"
+value "(assume_sign (Less (V ''x'') (N 0)) (\<lambda>_. STop)) ''x''"
+value "(assume_sign (Less (V ''x'') (N 5)) (\<lambda>_. STop)) ''x''"
+
 end

@@ -375,4 +375,17 @@ theorem backward_sim:
   shows "pruns_to \<Pi> c (proj0 S) (proj0 T)"
   using backward_sim_aux[OF sp bs refl cc sc] .
 
+subsection \<open>Executable examples\<close>
+
+value "source_com IMP2_Proc.com.SKIP"
+value "source_com IMP2_Proc.com.Restore"
+value "source_com (IMP2_Proc.com.Seq IMP2_Proc.com.SKIP IMP2_Proc.com.SKIP)"
+
+value "to_imp2_com IMP2_Proc.com.SKIP"
+value "to_imp2_com (IMP2_Proc.com.Scope IMP2_Proc.com.SKIP)"
+value "to_imp2_com (IMP2_Proc.com.Seq IMP2_Proc.com.SKIP IMP2_Proc.com.SKIP)"
+
+value "embed (\<lambda>_. 5::int) ''x'' 0"
+value "proj0 (\<lambda>v (n::int). 7::int) ''x''"
+
 end

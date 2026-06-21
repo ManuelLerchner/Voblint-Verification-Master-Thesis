@@ -275,4 +275,12 @@ lemma compile_prog_finite:
        dest: compile_procs_list_finite compile_finite
        intro: finite_UnI)
 
+subsection \<open>Executable examples\<close>
+
+value "cfg_entry (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
+value "cfg_exit  (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
+value "cfg_edges_list (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
+value "cfg_edges_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Assign ''x'' (N 1)))"
+value "cfg_combines_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Call ''f''))"
+
 end

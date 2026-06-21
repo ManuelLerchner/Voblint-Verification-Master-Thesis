@@ -261,4 +261,18 @@ structure CFG_GraphViz = struct
 end
 \<close>
 
+subsection \<open>Executable examples\<close>
+
+value "string_of_nat 42"
+value "string_of_nat 0"
+
+value "string_of_action EA_Nop"
+value "string_of_action (EA_Assign ''x'' (N 0))"
+value "string_of_action (EA_Assume (Less (V ''x'') (N 10)))"
+value "string_of_action EA_Enter"
+
+value "pp_plain_label 5"
+
+value "collect_vars_cfg (mk_cfg 0 1 {(0, EA_Assign ''x'' (N 0), 1)} {})"
+
 end

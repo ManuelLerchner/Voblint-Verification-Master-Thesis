@@ -50,5 +50,8 @@ definition sign_solution :: "pp set \<times> (pp + glob \<Rightarrow> sign st)" 
 
 value "lookup_st (snd sign_solution (Inl P2)) ''x''"
 value "lookup_st (snd sign_solution (Inl P2)) ''y''"
+value "lookup_st (snd sign_solution (Inl P0)) ''x''"
+value "lookup_st (snd sign_solution (Inl P1)) ''x''"
+value "fst sign_solution"
 
 end

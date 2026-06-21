@@ -268,4 +268,16 @@ proof -
     unfolding combine_predecessor_list_def by simp
 qed
 
+subsection \<open>Executable examples\<close>
+
+value "cfg_entry (mk_cfg 0 2 {(0, EA_Nop, 1), (1, EA_Nop, 2)} {})"
+value "cfg_exit  (mk_cfg 0 2 {(0, EA_Nop, 1), (1, EA_Nop, 2)} {})"
+
+value "cfg_edges_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {})"
+value "predecessor_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {}) 1"
+value "predecessor_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {}) 0"
+
+value "cfg_combines_list (mk_cfg 2 3 {(2, EA_Enter, 0)} {(2, 1, 3)})"
+value "combine_predecessor_list (mk_cfg 2 3 {(2, EA_Enter, 0)} {(2, 1, 3)}) 3"
+
 end

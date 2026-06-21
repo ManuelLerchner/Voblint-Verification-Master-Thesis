@@ -284,4 +284,14 @@ proof -
     by (simp add: inc_body_def inc_pi_body pcall_global_increment)
 qed
 
+subsection \<open>Executable examples\<close>
+
+value "inc_body"
+value "inc_pi ''p''"
+value "inc_pi ''q''"
+value "cfg_entry inc_g"
+value "cfg_exit inc_g"
+value "cfg_edges_list inc_g"
+value "cfg_combines_list inc_g"
+
 end

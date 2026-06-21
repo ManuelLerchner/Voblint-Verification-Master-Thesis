@@ -78,4 +78,10 @@ proof -
   ultimately show ?thesis by blast
 qed
 
+subsection \<open>Executable examples\<close>
+
+value "count_prog"
+value "source_com count_prog"
+value "to_imp2_com count_prog"
+
 end
