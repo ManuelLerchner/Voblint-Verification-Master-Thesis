@@ -110,6 +110,101 @@ k-call-strings qualify.
 * `flat_env_is_digest_sound` still holds (the flat analyzer remains a valid
   coarsest instance — the fork is additive).
 
+## Review findings (2026-06-21) — gaps to close before building
+
+Design review of the plan above. The skeleton is sound and the "fill-in not
+rewrite" framing is credible, but there is **one missing obligation** and **two
+under-specified danger spots**, all concentrated where the plan already flags the
+risk (S2). Ordered by severity.
+
+### R1 — termination obligation is not enumerated (blocking S5)
+
+S3 re-discharges `is_mono_eq` / `mono_sides` / `mono_deps` — those are
+*monotonicity*, not *termination*. The current analyzer carries an explicit
+solver-termination hypothesis (`side_cfg_ip_solve_dom`, open totality track #14).
+Partitioning multiplies the unknown space by `|reachable digests|`, which for
+length-`k` call strings is up to `branching^k`. The plan never states whether the
+indexed system inherits a parametric `side_cfg_ip_d_solve_dom` or needs a new one.
+**"Bounded k-call-strings qualify" addresses finiteness, not `solve_dom`.** Until
+this obligation is named, exit criterion "`side_analyse_ip_d` code-generates and
+runs" is unjustified.
+
+* **Action:** add the termination obligation to S3's deliverables — state it as
+  inherited-parametric (rides on #14) or as a new per-`(pp,'d)` hypothesis.
+
+### R2 — S2 crux lemma: k-truncation consistency is unspecified (soundness)
+
+`step_digest_refines_dg` is named but its dangerous half is not pinned down. The
+real condition is a **simulation**: the *incremental* digest the solver computes
+per edge must soundly track the *whole-trace* digest `dg(t)`. For bounded `k`,
+pushing a frame at depth `k` drops the oldest entry — so `dg` (whole trace) and
+the incremental push-with-truncation must truncate **identically**, or the
+partition indexed by the incremental digest can *miss* reaching traces →
+**unsound read**. This is exactly where unsoundness hides silently.
+
+* **Action:** pin the statement so it preserves `reaching_compat`, e.g.
+  `\<forall> t e. cmp (incr_digest (dg_of t) e) (dg (t @ [e]))` (or the precise
+  variant the contract needs), and prove `dg` and `incr_digest` agree on
+  truncation for the `CallString` instance.
+
+### R3 — `combine`/return under truncation: the k-CFA call/return mismatch (soundness)
+
+The plan says "enter pushes, combine requires `cmp`" but never that combine must
+**pop** to recover the caller's call string, and — critically — that **after a
+truncated push you cannot recover the truncated suffix**, so combine must
+over-approximate by joining *all* `cmp`-compatible caller partitions. This is the
+classic unrealizable-return subtlety of k-limited call strings. A naive pop that
+assumes combine is the exact inverse of enter is **unsound at depth ≥ k**.
+
+* **Action:** specify the combine digest handling explicitly in S2 (sound
+  over-approximation by `cmp`-compatible join, not exact inverse-of-enter).
+
+### R4 — verify the contract is parametric in `(dg, cmp)` (verify before building)
+
+The whole "fill-in not rewrite" claim rests on `digest_env_sound dg cmp g S envd`
+being a genuinely parametric obligation with `flat_env_is_digest_sound` as *one*
+interpretation. If the proved theorems quietly fix `dg = collapse`, S4 is a
+rewrite, not a fill-in.
+
+* **Action:** confirm the `digest_env_sound` / `digest_read_sound` locale does not
+  fix `dg`/`cmp` before relying on S4 being a plug-in.
+
+### R5 — S5 exit is too weak ("shows tighter (evaluated)")
+
+A `value`-level inequality demonstrates precision; it does not *certify* it. For
+thesis grade the witness should **instantiate `digest_beats_flat` /
+`digest_strictly_more_precise` at the computed `envd`** — a theorem that the
+running analyzer is strictly more precise, not an eyeballed print-out. That
+theorem is the whole point of the trace-semantics two-sided payoff
+(KB: `research/thesis-structure.md` §3.1).
+
+* **Action:** sharpen S5's exit from evaluated inequality to a computed-witness
+  precision theorem.
+
+### R6 — interaction with the executability machinery (G1–G3) is implicit
+
+One sentence needed: the `(pp \<times> 'd)` unknowns are discovered **lazily** by
+`TD_side`'s demand-driven solving (no pre-enumeration of reachable call strings),
+and `'a st` / `fun_of_st` are reused **per-partition unchanged** (G3 untouched).
+Confirm rather than leave implicit.
+
+### Suggested new slice — S2.5: conservativity checkpoint (derisking)
+
+Before S3/S4, prove the indexed construction at the trivial digest (`k = 0`)
+**reproduces today's flat analyzer**. The plan currently has
+`flat_env_is_digest_sound` "still holds" only as a *final* exit criterion; making
+`k = 0 \<equiv> flat` an *early* gate confirms the generalization is conservative
+before investing in the precision proofs, and isolates any regression to the
+indexing layer.
+
+### Verdict
+
+Fix **R1–R3** and the plan is buildable; add **R4–R6 + S2.5** and it is
+thesis-grade. Approach-B rejection, the `oq-ip-collecting-canonical` scope-out,
+and the additive/build-gated discipline are all correct. R2/R3 are the known-hard
+parts of k-CFA — the eventual proofs may already cover them, but the *plan* must
+state the obligations so they cannot be skipped.
+
 ## Out of scope (here)
 
 * **Foundational re-base of `cfg_collect_ip`** as a derived over-approx of

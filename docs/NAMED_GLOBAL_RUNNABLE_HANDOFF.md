@@ -1,10 +1,63 @@
 # Handoff — generalize the effectful IP solver to named globals (`'g::finite`)
 
+> **✅ DONE — Level A complete (2026-06-21).** `Voblint_Formalization` batch-green,
+> no sorry. The achievable core was delivered; see the **Completion report** below.
+> The narrative design record is now `docs/EFFECTFUL_TF_MIGRATION.md §10` (and KB
+> AD-32). Level B (code-gen `value`-runnable at `'g = gname`) remains open as
+> planned.
+>
 > **Uncommitted working note** (intentionally not in git). Task spec for a fresh
 > proof-engineering agent. Read this, then `docs/EFFECTFUL_TF_MIGRATION.md §9` and
 > `docs/SIDE_ENTRY_GLOBALS_SEEDING.md`, then start. Follow `CLAUDE.md` for the I/Q
 > MCP workflow and the build-green discipline — **never edit `.thy` via host
 > Read/Edit/Write; go through I/Q `write_file`.**
+
+## Completion report (2026-06-21)
+
+**Status: Level A done.** `isabelle build … Voblint_Formalization` green, 0 sorry.
+
+**Delivered (the achievable core, §0):**
+
+- **Seed-slot generalisation.** Added `gseed :: 'g` to `make_side_rhs_tree_eff` /
+  `side_cfg_T_eff` / `side_cfg_solve_dom_eff` / the `td_cfg_side_solver_eff` locale /
+  `nu_at` / `side_analyse_eff`; entry wrap `Side gseed (restrict_global s0)`. The eff
+  family (`side_rhs_fold_eff`, `side_acc_eff`) and all of `TD_Side_Eff_Bounds` widened
+  to `'g`. Every unit caller (Sign/Interval headlines, `Exec_Bridge`, examples) threads
+  `gseed = ()` — unchanged behaviour. (Files renamed since this spec: `TD_Side_IP_*` →
+  `TD_Side_*`; `_ip_eff` → `_eff`.)
+- **Global-half bounds.** Added `glob_env_mono_Inr` (`Constraint_System`); restated
+  `etf_combined_le_eff` / `etf_combine_combined_le_eff` per-name via
+  `all_sides_le_glob_env_sides`; entry coverage `Inr () → Inr gseed ≤ glob_env σ`
+  (`glob_env_upper`).
+- **Standalone gen theorem at `'g::finite`** (`side_collect_sound_exit_pruned_eff`,
+  `side_analyse_eff_collect_sound_exit_pruned_gen`) re-typed and re-proved.
+- **Headline (§10's deliverable):** `Sign_Named_Global_Eff.named_ip_analysis_sound` —
+  a two-slot named-global Sign analysis `named_etf :: (gname, sign)` (edges → `Gpos`,
+  combine → `Gneg`) over-approximates `cfg_collect` at the exit **through the real
+  `side_analyse_eff` at `'g = gname`** (not the unit shim), seeded `gseed = Gpos`. The
+  three TD_side preconditions discharge for the non-shim etf from the generic `_gen`
+  lemmas (no shim shortcut).
+
+**Deviation from §4 / §10 — a genuine finding (the §9 risk realised):** the
+conditional `flag_etf` is **not** `mono_sides`, so it *cannot* drive the fixpoint
+solver. As `σ` grows the reassembled `''Gflag''` value can move `SPos → STop`, so
+`flag_route` flips the assign contribution `Gpos → Gneg` and the side map drops its
+`Gpos` entry — `sides_of_rhs` is not `σ`-monotone. Therefore the through-solver
+headline uses the **monotone constant-routed `named_etf`** instead of `flag_etf`.
+`flag_etf` remains the **per-tree precision** witness (`flag_etf_sound`,
+`flag_assign_routes_pos` / `_neg`). Documented in-theory by the deliberate `oops`
+lemma `flag_etf_mono_sides_unprovable` + an explanatory `text`. (So §4's "discharge
+the three preconditions for `flag_etf`" is replaced by discharging them for the
+monotone `named_etf`; this is the §9 "if a bound can't be re-expressed … surface it"
+contingency.)
+
+**Level B (open, unchanged):** `value`-runnable code-gen at `'g = gname` still needs
+`Exec_St`'s side fold + `Exec_Bridge` (the 39 `Inr ()`) generalised off `'g = unit`.
+Not started — left at `gseed = ()`, exactly as §6 scoped it.
+
+**Docs updated:** `docs/EFFECTFUL_TF_MIGRATION.md §10`; KB `research/status.md`,
+`architecture-decisions.md` (AD-32 refines AD-31), `research/thesis-structure.md §9.4`,
+`log.md`.
 
 ## 0. TL;DR
 
