@@ -1,8 +1,13 @@
 # Migration — exit-rooted single solve (Voblint-aligned), and interval widening (#39)
 
-Status: **design + core lemma proved; instantiations pending.** This doc records
-the decision, the proved pieces (drop-in Isar), the remaining steps, and one
-newly-found prerequisite. Supersedes the per-pp widen-interface sketch.
+Status: **SUPERSEDED** (2026-06-21). The TD_plain path this doc targets was
+retired (`docs/TD_SIDE_ONLY_MIGRATION.md`). The exit-rooted shape is already
+in place on the TD_side path: `side_analyse_eff_collect_sound_exit_pruned_gen`
+(`TD_Side_Eff_Soundness.thy`) takes `solve_dom` at `cfg_exit`; both
+`side_sign_analysis_sound` and `side_ivl_analysis_sound` instantiate it there.
+The remaining open obligation is **P1** (`side_cfg_solve_dom_eff` termination),
+tracked in `docs/OPEN_PROBLEMS.md`. Historical design notes and proved lemmas
+below are kept for reference.
 
 ## Why
 

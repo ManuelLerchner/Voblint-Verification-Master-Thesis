@@ -1,6 +1,6 @@
 # IP Naming Drop — one interprocedural frame, no `ip` suffix
 
-Status: **PLANNED** (authored 2026-06-19). Follows
+Status: **DONE** (2026-06-21). Follows
 `IP_ONLY_CONSOLIDATION.md` (deleted the classical `com`/`to_cfg` spine) and
 `IP_COLLECTING_CANONICAL_MIGRATION.md` (removed the dead intra `collecting`
 interpretation, freeing the bare `cfg_collect` name).
@@ -119,7 +119,14 @@ Note: `IP` is dropped but the `Eff` (effectful) marker stays — it is not ip-na
     by building the unmodified base: identical error at the same line. Full
     `Voblint_Analysis` / `Voblint_Formalization` green build is gated on finishing
     that cascade, which is separate work from dropping `ip`.
-- **Slice 3 (Voblint_Formalization)** — pending.
+- **Slice 3 (Voblint_Formalization) + remaining Analysis** — completed on `main`
+  via commits `e1b8344`, `597a4a2`, `5add649`, and `4b018cb` (the effectful
+  cascade landed alongside the naming work; the last `_ip` identifier —
+  `named_ip_analysis_sound` — renamed to `named_analysis_sound` in `4b018cb`).
+  `rg '_ip' src/ -g '*.thy'` is clean except for Nipkow-bridge names
+  (`nip_aexp`, `aval_nip`, `bval_nip`) which the migration doc explicitly
+  excludes. The worktree `refactor/ip-naming-drop` is superseded; main is the
+  canonical result.
 
 `CFG_Prune.thy` keeps its name; only `mk_ip_cfg` → `mk_cfg` inside.
 

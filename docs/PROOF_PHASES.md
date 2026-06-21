@@ -7,14 +7,14 @@ Roadmap: `docs/ROADMAP.md`.
 
 ## Target theorems
 
-**Trace soundness (per-pp):** `alpha_last (cfg_collect_trace_ip g S v) ⊆ γ(env v)`.
-`Trace_IP_Analysis_Sound.trace_ip_analysis_sound`.
+**Trace soundness (per-pp):** `alpha_last (cfg_collect_trace g S v) ⊆ γ(env v)`.
+`Trace_Analysis_Sound.trace_analysis_sound`.
 
 **Global read soundness:** For every reaching trace `tr` at `v`, `(last tr) x ∈ γ(env v x)`.
-`Trace_IP_Analysis_Sound.reaching_global_read_sound`.
+`Trace_Analysis_Sound.reaching_global_read_sound`.
 
-**Sign domain exit:** `pruns_to_ip pi ps c s t` → `t ∈ γ(side_analyse_ip … exit)`.
-`Sign_Side_IP_Soundness.side_ip_sign_analysis_sound`.
+**Sign domain exit:** `cfg_runs_to pi ps c s t` → `t ∈ γ(side_analyse_eff … exit)`.
+`Sign_Side_Soundness.side_sign_analysis_sound`.
 
 **Concrete witness:** `proc_global_side_sign_analysis` in `Example_Side_Proc_Global.thy`.
 
@@ -45,33 +45,31 @@ As of last full-session build: **0 sorries** in `src/`.
 
 | File | Role |
 | --- | --- |
-| `CFG_Collect_Edges.thy` | `edge_collect`, `collect_pp`, `cfg_collect` (intra lfp) |
-| `CFG_Collect_Core.thy` | `cfg_collect_F`, intra collecting engine |
-| `CFG_Collect_IP.thy` | `cfg_collect_ip` — IP collecting with combine triples |
-| `CFG_Collect_IP_Adeq.thy` | `pruns_to_ip`, operational adequacy witness |
-| `CFG_Collect_Unified.thy` | `collecting` locale; `intra.collect = cfg_collect`, `ip.collect = cfg_collect_ip` |
-| `CFG_Collect_Trace.thy` | Intra trace collecting |
-| `CFG_Collect_Trace_IP.thy` | `cfg_collect_trace_ip`, `alpha_last`, projection lemma |
+| `CFG_Collect_Edges.thy` | `edge_collect`, `collect_pp`, `cfg_collect_F` |
+| `CFG_Collect.thy` | `cfg_collect` — IP collecting with combine triples |
+| `CFG_Collect_Adeq.thy` | `cfg_runs_to`, operational adequacy witness |
+| `CFG_Collect_Unified.thy` | `collecting` locale; `cfg.collect = cfg_collect` |
+| `CFG_Collect_Trace.thy` | `cfg_collect_trace`, `alpha_last`, projection lemma; shared trace machinery |
 
 ### Equations + unified soundness
 
-- `Constraint_System.thy` — `rhs`, `rhs_ip`, `is_post_fixpoint`, `is_post_fixpoint_ip`.
-- `Constraint_System_Sound.thy` — `post_fixpoint_sound_at` (intra).
-- `Constraint_System_IP_Sound.thy` — `post_fixpoint_sound_at_ip` (interprocedural).
-- `Analysis_Sound.thy` — `unified_post_fixpoint_sound_ip` (single engine; U2 migration).
+- `Constraint_System.thy` — `rhs`, `is_post_fixpoint`, `combine_abs`, `etf_full`, `glob_env`.
+- `Constraint_System_Sound.thy` — `post_fixpoint_sound_at` + IP bounds (merged from former `Constraint_System_IP_Sound`).
+- `Analysis_Sound.thy` — `unified_post_fixpoint_sound` (single engine).
 
 ### Side-effecting TD solver bridge
 
 - `TD_Side_CFG.thy` — `restrict_local`, `restrict_global`, `side_env`, `side_cfg_T` base.
-- `TD_Side_IP_Tree.thy` — `side_cfg_T_ip` / `side_cfg_T_ip_eff` construction and denotation; pure fold retained as simulation stepping stone in `Exec_Bridge`.
-- `TD_Side_IP_Eff_Bounds.thy` — generic `_gen` mono and static-deps preconditions; `TD_Side_IP_Eff_Soundness.thy` — shim mono for `etf_from_tf`.
-- `TD_Side_IP_Eff_Interface.thy` — `side_cfg_ip_solve_dom_eff`, `side_analyse_ip_eff`; imports `TD.TD_side`.
-- `TD_Side_IP_Eff_Soundness.thy` — `side_analyse_ip_eff_collect_sound_exit_pruned_gen` via reach cone + pruning.
+- `TD_Side_Tree.thy` — `side_cfg_T_eff` construction and denotation; pure fold retained as simulation stepping stone in `Exec_Bridge`.
+- `TD_Side_Eff_Bounds.thy` — generic `_gen` mono and static-deps preconditions; `TD_Side_Eff_Sound.thy` — shim mono for `etf_from_tf`.
+- `TD_Side_Eff_Interface.thy` — `side_cfg_solve_dom_eff`, `side_analyse_eff`; imports `TD.TD_side`.
+- `TD_Side_Eff_Soundness.thy` — `side_analyse_eff_collect_sound_exit_pruned_gen` via reach cone + pruning.
 
 ### Pipeline + domain
 
-- `trace_ip_analysis_sound`, `reaching_global_read_sound`, `reaching_global_read_sound_d`, `flat_env_is_digest_sound` (`Trace_IP_Analysis_Sound.thy`).
-- `side_ip_sign_analysis_sound` (`Sign_Side_IP_Soundness.thy`).
+- `trace_analysis_sound`, `reaching_global_read_sound`, `reaching_global_read_sound_d`, `flat_env_is_digest_sound` (`Trace_Analysis_Sound.thy`).
+- `side_sign_analysis_sound`, `side_ivl_analysis_sound` (`Sign_Side_Soundness.thy`).
+- `named_analysis_sound` (`Sign_Named_Global_Eff.thy`) — non-unit `'g` witness closing the Gap-1 instantiation gap.
 - `proc_global_side_sign_analysis` (`Example_Side_Proc_Global.thy`) — concrete procedural witness.
 
 ### Classical spine retirement
@@ -84,8 +82,8 @@ analysis, `Pipeline.thy`, `voblint_sign_sound` — was extracted to
 
 ## Open / stretch
 
-- Discharge **`side_cfg_ip_solve_dom`** — last solver termination hypothesis (cf. P1 in `docs/OPEN_PROBLEMS.md`).
-- **Interval / octagon** domains — fit the `sound_transfer` locale; no `Interval_Domain.thy` in current tree.
+- Discharge **`side_cfg_solve_dom`** — last solver termination hypothesis (cf. P1 in `docs/OPEN_PROBLEMS.md`).
+- **Interval / octagon** domains — `Interval_Domain.thy` exists; `side_ivl_analysis_sound` carries P1.
 - **Digest-indexed combine** (M4 precision) — `reaching_global_read_sound_d` is the hook.
 
 ```bash

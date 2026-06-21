@@ -448,7 +448,7 @@ text \<open>
   initial globals are seeded into the Gpos slot.
 \<close>
 
-theorem named_ip_analysis_sound:
+theorem named_analysis_sound:
   fixes \<Pi> ps main and s t :: store and s0 :: "sign abs_state"
   assumes s_sound: "s \<in> sign_domain.gamma_state s0"
   assumes collect_exit:
