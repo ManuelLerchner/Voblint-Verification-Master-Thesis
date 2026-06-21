@@ -552,6 +552,17 @@ proof -
 qed
 
 text \<open>
+  Per-name monotonicity of glob_env: it reads only the named-global slots, so a
+  pointwise bound on the Inr components alone suffices.  Used to route a per-name
+  side bound (sides_of_rhs t \<sigma> (Inr g) \<le> \<sigma> (Inr g)) into a global-env bound.
+\<close>
+lemma glob_env_mono_Inr:
+  assumes "\<And>p. \<sigma>1 (Inr p) \<le> \<sigma>2 (Inr p)"
+  shows "glob_env \<sigma>1 \<le> glob_env \<sigma>2"
+  unfolding glob_env_def abs_join_set_def
+  by (rule fold_join_image_mono[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2
+        sup_least sup_mono assms])
+text \<open>
   Executable form: when the global-name type additionally enumerates (Enum),
   fold over the enumeration's image rather than over UNIV.  Used by the unit
   pipeline's value-evaluation (unit is enum); the abstract development keeps the

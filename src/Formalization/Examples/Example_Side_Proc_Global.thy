@@ -26,10 +26,10 @@ theorem proc_global_side_sign_analysis:
   assumes runs: "cfg_runs_to inc_pi [''p''] (Call ''p'') s t"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p'')) sign_etf bot
-       side_proc_global_s0
+       side_proc_global_s0 ()
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
   shows "t \<in> sign_domain.gamma_state
-       (side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf bot side_proc_global_s0
+       (side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf bot side_proc_global_s0 ()
          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
 proof -
   have collect_exit:

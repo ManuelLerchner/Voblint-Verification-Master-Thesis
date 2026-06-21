@@ -763,3 +763,50 @@ the capability and soundness at the *abstract* (post-fixpoint) level. A fully
 require generalising the entry seeding (`Side ()` → per-name seed) — the one piece
 deliberately left unit-bound. The thesis claim (the effectful interface expresses
 sound named-global routing the single pot cannot) is established without it.
+
+## 10. Named-global solver construction generalised to `'g::finite` (2026-06-21)
+
+**Level A is done.** The executable-solver-construction chain — previously
+`unit`-bound because its entry seeding emitted `Side ()` — is now `'g::finite`
+generic with a designated seed-slot parameter `gseed :: 'g`, and a genuinely
+named-global analysis runs **through the real solver interface** end-to-end.
+
+- **Seed-slot parameter.** `make_side_rhs_tree_eff` / `side_cfg_T_eff` /
+  `side_cfg_solve_dom_eff` / the `td_cfg_side_solver_eff` locale / `nu_at` /
+  `side_analyse_eff` all take `gseed :: 'g`; the entry wrap is
+  `Side gseed (restrict_global s0)`. Entry coverage generalises from
+  `restrict_global s0 ≤ σ (Inr ())` to `restrict_global s0 ≤ σ (Inr gseed) ≤
+  glob_env σ` (`glob_env_upper`). Every unit caller (Sign/Interval headlines,
+  `Exec_Bridge`, examples) threads `gseed = ()` and is unchanged in behaviour.
+- **Global-half bounds restated per-name.** `etf_combined_le_eff` /
+  `etf_combine_combined_le_eff` route the per-name side bound
+  (`sides_of_rhs (T x) σ (Inr g) ≤ σ (Inr g)`) through
+  `all_sides_le_glob_env_sides` + a new `glob_env_mono_Inr`, replacing the
+  single-pot `all_sides_eq_sides_Inr_unit` step.
+- **Headline (`Sign_Named_Global_Eff.named_ip_analysis_sound`).** The
+  two-slot named-global Sign analysis `named_etf :: (gname, sign) ...` (edges →
+  `Gpos`, combine → `Gneg`) over-approximates `cfg_collect` at the exit through
+  `side_analyse_eff` at `'g = gname` — **not** the unit shim. Its three TD_side
+  preconditions discharge for the non-shim etf from the generic `_gen` lemmas
+  (`named_traverse_mono` / `named_sides_mono` / `named_edge_static` …), seeded at
+  `gseed = Gpos`.
+
+**Finding — conditional routing is not solver-compatible.** The
+flag-conditional `flag_etf` is **not** `mono_sides`: as `σ` grows the reassembled
+`''Gflag''` value can move `SPos → STop`, so `flag_route` flips the assign
+contribution `Gpos → Gneg` and the side map drops its `Gpos` entry, breaking
+`σ`-monotonicity of `sides_of_rhs`. So `flag_etf` cannot drive the fixpoint
+solver (documented in `Sign_Named_Global_Eff.flag_etf_mono_sides_unprovable`,
+deliberately `oops`). `flag_etf` remains the *per-tree precision* witness
+(`flag_etf_sound`, `flag_assign_routes_pos` / `_neg`); the *through-solver*
+headline uses the monotone constant-routed `named_etf`. This is the §9 risk made
+concrete: the genuinely-effectful conditional routing and fixpoint-solver
+monotonicity are in tension, and the named-global headline is carried by the
+monotone (still non-unit, two-slot) witness.
+
+**Level B (open, separate handoff): code-gen `value`-runnable demo.** `'a abs_state
+= vname ⇒ 'a` is not executable; the executable path uses `'a st` (`Exec_St`)
+bridged by `Exec_Bridge` (`part_post_solution_st_to_abs_eff`), still at
+`'g = unit`. Making *that* run at `'g = gname` (generalising `Exec_St`'s side
+fold + `Exec_Bridge`) is the remaining piece — only then can one `value`-observe
+`Gpos` and `Gneg` holding distinct values. Not started.

@@ -25,10 +25,10 @@ theorem proc_global_side_ivl_analysis:
   assumes runs: "cfg_runs_to inc_pi [''p''] (Call ''p'') s t"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p'')) ivl_etf bot
-       side_proc_global_ivl_s0
+       side_proc_global_ivl_s0 ()
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
   shows "t \<in> ivl_domain.gamma_state
-       (side_analyse_eff inc_pi [''p''] (Call ''p'') ivl_etf bot side_proc_global_ivl_s0
+       (side_analyse_eff inc_pi [''p''] (Call ''p'') ivl_etf bot side_proc_global_ivl_s0 ()
          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
 proof -
   have collect_exit:

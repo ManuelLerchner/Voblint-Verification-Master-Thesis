@@ -590,7 +590,7 @@ qed
 
 lemma dep_aux_make_side_rhs_tree_st_eq_eff:
   "dep_aux \<sigma>_st (make_side_rhs_tree_st g tf_st bot0_st s0_st v) =
-   dep_aux \<sigma>_abs (make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 v)"
+   dep_aux \<sigma>_abs (make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 () v)"
   by (simp add: dep_aux_make_side_rhs_tree_st dep_aux_make_side_rhs_tree_eff
         dep_aux_side_rhs_fold_st_set dep_aux_side_rhs_fold_eff_from_tf_set)
 
@@ -618,7 +618,7 @@ next
 qed
 
 lemma sides_make_side_rhs_tree_eff_from_tf_Inl:
-  "sides_of_rhs (make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 v) \<sigma> (Inl u) = bot"
+  "sides_of_rhs (make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 () v) \<sigma> (Inl u) = bot"
   unfolding make_side_rhs_tree_eff_def
   by (simp add: sides_side_rhs_fold_eff_from_tf_Inl Let_def)
 
@@ -632,14 +632,14 @@ begin
 
 private lemma fun_of_st_eq_st_eff:
   "fun_of_st (eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st) =
-   eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st)) v (fun_of_st \<circ> \<sigma>_st)"
+   eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ()) v (fun_of_st \<circ> \<sigma>_st)"
   unfolding eq_side_cfg_T_st eq_side_cfg_T_eff
   by (simp add: side_acc_st_fun_of_st_eff[OF commute]
                 fun_of_st_sup fun_of_st_restrict_local_st)
 
 private lemma fun_of_st_sides_st_Inr_eff:
   "fun_of_st (sides_of_rhs (side_cfg_T_st g tf_st bot0_st s0_st v) \<sigma>_st (Inr ())) =
-   sides_of_rhs (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)
+   sides_of_rhs (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)
      (fun_of_st \<circ> \<sigma>_st) (Inr ())"
 proof (cases "v = cfg_entry g")
   case True
@@ -672,7 +672,8 @@ qed
 
 text \<open>
   Executable post-solution maps directly to a part_post_solution of the effectful
-  shim equation system \<open>side_cfg_T_eff (etf_from_tf tf)\<close>.  Proof structure:
+  shim equation system \<open>side_cfg_T_eff (etf_from_tf tf)\<close> at the unit seed-slot.
+  Proof structure:
   (a) the local equation bound transfers via fun_of_st_eq_st_eff;
   (b) the global side-effect bound via fun_of_st_sides_st_Inr_eff;
   (c) local sides are bot by sides_make_side_rhs_tree_eff_from_tf_Inl;
@@ -683,48 +684,48 @@ theorem part_post_solution_st_to_abs_eff:
     "part_post_solution (side_cfg_T_st g tf_st bot0_st s0_st) x \<sigma>_st vars"
   shows
     "part_post_solution
-       (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
+       (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
        x (fun_of_st \<circ> \<sigma>_st) vars"
 proof -
   have x_in: "x \<in> vars" using pp_st by simp
   have deps: "\<And>v. v \<in> vars \<Longrightarrow>
       dep\<^sub>L (side_cfg_T_st g tf_st bot0_st s0_st) \<sigma>_st v
-    = dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
+    = dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
              (fun_of_st \<circ> \<sigma>_st) v"
   proof -
     fix v
     have eq: "dep_aux \<sigma>_st (make_side_rhs_tree_st g tf_st bot0_st s0_st v) =
               dep_aux (fun_of_st \<circ> \<sigma>_st)
-                (make_side_rhs_tree_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)"
+                (make_side_rhs_tree_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)"
       by (rule dep_aux_make_side_rhs_tree_st_eq_eff)
     show "dep\<^sub>L (side_cfg_T_st g tf_st bot0_st s0_st) \<sigma>_st v =
-          dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
+          dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
                  (fun_of_st \<circ> \<sigma>_st) v"
       by (simp add: dep\<^sub>L_def dep_def side_cfg_T_st_def side_cfg_T_eff_def eq)
   qed
   show ?thesis
   proof (intro conjI x_in ballI conjI)
     fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
+    show "dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
               (fun_of_st \<circ> \<sigma>_st) v \<subseteq> vars"
       using pp_st v_in deps[OF v_in] by auto
-    show "eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st)) v
+    show "eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ()) v
              (fun_of_st \<circ> \<sigma>_st) \<le> (fun_of_st \<circ> \<sigma>_st) (Inl v)"
     proof -
       have le_st: "eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st \<le> \<sigma>_st (Inl v)"
         using pp_st v_in by simp
       have sim: "fun_of_st (eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st) =
-                 eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st))
+                 eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
                     v (fun_of_st \<circ> \<sigma>_st)"
         by (rule fun_of_st_eq_st_eff)
       from fun_of_st_mono[OF le_st] sim show ?thesis by (simp add: o_def)
     qed
-    show "sides_of_rhs (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)
+    show "sides_of_rhs (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)
              (fun_of_st \<circ> \<sigma>_st) \<le> fun_of_st \<circ> \<sigma>_st"
     proof (rule le_funI)
       fix k
       show "sides_of_rhs
-               (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) v)
+               (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)
                (fun_of_st \<circ> \<sigma>_st) k
             \<le> (fun_of_st \<circ> \<sigma>_st) k"
         apply (cases k)

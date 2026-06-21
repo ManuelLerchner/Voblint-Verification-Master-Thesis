@@ -25,8 +25,8 @@ subsection \<open>Solver interface from the per-tree contract\<close>
 
 lemma td_cfg_side_solver_eff_gen:
   fixes g :: cfg
-    and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state"
+    and etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and bot0 s0 :: "'a abs_state" and gseed :: 'g
   assumes edge_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
@@ -41,13 +41,13 @@ lemma td_cfg_side_solver_eff_gen:
        sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  shows "td_cfg_side_solver_eff g etf bot0 s0"
+  shows "td_cfg_side_solver_eff g etf bot0 s0 gseed"
 proof
-  show "is_mono_eq (side_cfg_T_eff g etf bot0 s0)"
+  show "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_is_mono_eq_gen[OF edge_mono comb_mono])
-  show "mono_sides (side_cfg_T_eff g etf bot0 s0)"
+  show "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_mono_sides_gen[OF edge_sides_mono comb_sides_mono])
-  show "mono_deps (side_cfg_T_eff g etf bot0 s0)"
+  show "mono_deps (side_cfg_T_eff g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_mono_deps_gen[OF edge_static comb_static])
 qed
 
@@ -60,19 +60,19 @@ text \<open>
   from the post-solution (etf_combined_le_eff / etf_combine_combined_le_eff);
   coverage (every edge target / combine return is solved) is taken as a hypothesis.
 
-  The executable system side_cfg_T_eff fixes the single global unknown
-  ('g = unit; its entry seeding emits Side ()), so this theorem is stated for a
-  unit etf with the soundness contract supplied as an explicit hypothesis; the
-  generic abstract soundness (post_fixpoint_sound_at_eff) is interpreted at
-  unit.
+  Generic in the named-global type 'g (finite); the initial globals are seeded
+  into the designated slot gseed at the entry.  The soundness contract is an
+  explicit hypothesis and the generic abstract soundness
+  (post_fixpoint_sound_at_eff) is interpreted at 'g.
 \<close>
 
 theorem side_collect_sound_at_eff:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
     and bot0 s0 :: "'a abs_state" and v0 :: pp and S :: "store set"
-    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "(unit, 'a) effectful_domain_transfer"
+    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "('g, 'a) effectful_domain_transfer"
+    and gseed :: 'g
   assumes se: "sound_effectful_transfer \<gamma> etf"
-      and pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0) v0 \<sigma> vars"
+      and pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) v0 \<sigma> vars"
       and fin: "finite (edges g)"
       and finC: "finite (combines g)"
       and entry: "S \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> (cfg_entry g))"

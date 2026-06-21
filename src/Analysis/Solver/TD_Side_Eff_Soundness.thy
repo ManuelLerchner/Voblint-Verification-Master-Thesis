@@ -28,7 +28,7 @@ subsection \<open>Dependency membership for the effectful fold\<close>
 text \<open>dep_aux of the fold is acc-independent when the per-tree skeletons are static.\<close>
 
 lemma dep_aux_side_rhs_fold_eff_acc_indep:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
       and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
   shows "dep_aux \<sigma> (side_rhs_fold_eff etf acc1 es cs)
@@ -38,7 +38,7 @@ lemma dep_aux_side_rhs_fold_eff_acc_indep:
 text \<open>The source local of an edge in the list is a dependency of the fold.\<close>
 
 lemma Inl_dep_aux_side_rhs_fold_eff_edge:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_dep: "\<And>b w \<sigma>'. Inl w \<in> dep_aux \<sigma>' (apply_etf etf b w)"
   assumes mem: "(u, a) \<in> set es"
   shows "Inl u \<in> dep_aux \<sigma> (side_rhs_fold_eff etf acc es cs)"
@@ -67,7 +67,7 @@ qed
 text \<open>The combine queries (call queries) survive the edge prefix.\<close>
 
 lemma dep_aux_side_rhs_fold_eff_nil_sub_es:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
       and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
   shows "dep_aux \<sigma> (side_rhs_fold_eff etf acc [] cs)
@@ -89,7 +89,7 @@ next
 qed
 
 lemma Inl_dep_aux_side_rhs_fold_eff_call:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes comb_dep: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
       and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
@@ -124,7 +124,7 @@ proof -
 qed
 
 lemma Inl_dep_aux_side_rhs_fold_eff_exit:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes comb_dep: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
       and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
@@ -161,38 +161,39 @@ qed
 subsection \<open>Dependency at the eqsT level (edges and combine endpoints)\<close>
 
 lemma dep_side_rhs_tree_eff_edge:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
   assumes fin: "finite (edges g)"
   assumes ed: "(u, a, w) \<in> edges g"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  shows "u \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> w"
+  shows "u \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> w"
 proof -
   have mem: "(u, a) \<in> set (predecessor_list g w)"
     using ed by (simp add: set_predecessor_list[OF fin] predecessors_def)
-  have "Inl u \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 w)"
+  have "Inl u \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 gseed w)"
     unfolding dep_aux_make_side_rhs_tree_eff
     by (rule Inl_dep_aux_side_rhs_fold_eff_edge[OF edge_dep mem])
   thus ?thesis unfolding side_cfg_T_eff_def dep\<^sub>L_def dep_def by simp
 qed
 
 lemma dep_side_rhs_tree_eff_combine:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and c ex w :: pp
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and c ex w :: pp and gseed :: 'g
   assumes finC: "finite (combines g)"
   assumes ce: "(c, ex, w) \<in> combines g"
   assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  shows "c \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> w
-       \<and> ex \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> w"
+  shows "c \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> w
+       \<and> ex \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> w"
 proof -
   have mem: "(c, ex) \<in> set (combine_predecessor_list g w)"
     using ce by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_def)
-  have dc: "Inl c \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 w)"
+  have dc: "Inl c \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 gseed w)"
     unfolding dep_aux_make_side_rhs_tree_eff
     by (rule Inl_dep_aux_side_rhs_fold_eff_call[OF comb_dep1 edge_static comb_static mem])
-  have de: "Inl ex \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 w)"
+  have de: "Inl ex \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 gseed w)"
     unfolding dep_aux_make_side_rhs_tree_eff
     by (rule Inl_dep_aux_side_rhs_fold_eff_exit[OF comb_dep2 edge_static comb_static mem])
   show ?thesis using dc de unfolding side_cfg_T_eff_def dep\<^sub>L_def dep_def by simp
@@ -201,8 +202,8 @@ qed
 subsection \<open>Backward IP reachability lands in the effectful solver's dependency cone\<close>
 
 lemma cfg_reaches_imp_trans_dep_or_eq_side_eff:
-  fixes g :: cfg and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
+  fixes g :: cfg and etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state" and gseed :: 'g
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
@@ -211,7 +212,7 @@ lemma cfg_reaches_imp_trans_dep_or_eq_side_eff:
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
   assumes reach: "cfg_reaches g w v0"
-  shows "w = v0 \<or> w \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> v0"
+  shows "w = v0 \<or> w \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> v0"
 proof -
   from reach have "(w, v0) \<in> {(u, z). cfg_succ g u z}\<^sup>*"
     unfolding cfg_reaches_def .
@@ -222,7 +223,7 @@ proof -
   next
     case (step y z)
     have su: "cfg_succ g y z" using step.hyps(1) by simp
-    have ydep: "y \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> z"
+    have ydep: "y \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> z"
     proof -
       from su consider
         (e) a where "(y, a, z) \<in> edges g"
@@ -251,17 +252,20 @@ proof -
       show ?thesis using ydep True trans_dep\<^sub>L_step_in by blast
     next
       case False
-      have z_in: "z \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> v0"
+      have z_in: "z \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> v0"
         using step.IH False by blast
-      show ?thesis using trans_dep\<^sub>L_trans[OF z_in ydep] by blast
+      have "y \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> v0"
+        by (metis Nitpick.tranclp_unfold mem_Collect_eq
+              tranclp.trancl_into_trancl ydep z_in)
+      thus ?thesis by blast
     qed
   qed
 qed
 
 lemma side_cone_in_vars_eff:
-  fixes g :: cfg and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
-  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0) v0 \<sigma> vars"
+  fixes g :: cfg and etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state" and gseed :: 'g
+  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) v0 \<sigma> vars"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
@@ -274,7 +278,7 @@ lemma side_cone_in_vars_eff:
 proof -
   have v0v: "v0 \<in> vars" using pp by auto
   consider (eq) "w = v0"
-    | (td) "w \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> v0"
+    | (td) "w \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> v0"
     using cfg_reaches_imp_trans_dep_or_eq_side_eff[OF fin finC edge_dep comb_dep1
             comb_dep2 edge_static comb_static reach] by blast
   thus ?thesis
@@ -282,7 +286,7 @@ proof -
     case eq thus ?thesis using v0v by simp
   next
     case td
-    have "trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0) \<sigma> v0 \<subseteq> vars"
+    have "trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> v0 \<subseteq> vars"
       using part_post_solution_implies_trans_dep_subsumed[OF pp] by simp
     thus ?thesis using td by blast
   qed
@@ -291,42 +295,45 @@ qed
 subsection \<open>Entry coverage from an arbitrary initial state\<close>
 
 text \<open>
-  The entry node's wrapping Side () contributes restrict_global s0 to the single
-  global unknown, so the initial globals are below it in any post-solution.
+  The entry node's wrapping Side gseed contributes restrict_global s0 to the
+  designated named-global slot gseed, so the initial globals are below it in any
+  post-solution.
 \<close>
 
 lemma restrict_global_s0_le_global_eff:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0) x \<sigma> vars"
+  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma> vars"
       and entry_in: "cfg_entry g \<in> vars"
-  shows "restrict_global s0 \<le> \<sigma> (Inr ())"
+  shows "restrict_global s0 \<le> \<sigma> (Inr gseed)"
 proof -
   from pp entry_in
-  have "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 (cfg_entry g)) \<sigma> \<le> \<sigma>" by auto
-  hence le: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 (cfg_entry g)) \<sigma> (Inr ())
-             \<le> \<sigma> (Inr ())"
+  have "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed (cfg_entry g)) \<sigma> \<le> \<sigma>" by auto
+  hence le: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)
+             \<le> \<sigma> (Inr gseed)"
     by (simp add: le_fun_def)
-  have e: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 (cfg_entry g)) \<sigma> (Inr ())
+  have e: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)
            = sides_of_rhs (side_rhs_fold_eff etf (bot0 \<squnion> restrict_local s0)
                 (predecessor_list g (cfg_entry g))
-                (combine_predecessor_list g (cfg_entry g))) \<sigma> (Inr ())
+                (combine_predecessor_list g (cfg_entry g))) \<sigma> (Inr gseed)
              \<squnion> restrict_global s0"
     unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
     by (simp add: Let_def)
   have "restrict_global s0
-        \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 (cfg_entry g)) \<sigma> (Inr ())"
+        \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)"
     unfolding e by (rule sup_ge2)
   thus ?thesis using le by (rule order_trans)
 qed
 
 text \<open>
   At the entry point the local fold seeds restrict_local s0 and the wrapping
-  Side () seeds restrict_global s0, so s0 itself is below the combined env at the
-  entry -- for an arbitrary initial state.
+  Side gseed seeds restrict_global s0 into slot gseed (below glob_env), so s0
+  itself is below the combined env at the entry -- for an arbitrary initial state.
 \<close>
 lemma s0_le_side_env_entry_eff:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0) v0 \<sigma> vars"
+  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) v0 \<sigma> vars"
   assumes entry_in: "cfg_entry g \<in> vars"
   shows "s0 \<le> side_env \<sigma> (cfg_entry g)"
 proof -
@@ -342,13 +349,15 @@ proof -
     by (rule side_acc_eff_ge_acc)
   also have "... \<le> \<sigma> (Inl (cfg_entry g))" by (rule acc_le)
   finally have rl: "restrict_local s0 \<le> \<sigma> (Inl (cfg_entry g))" .
-  have rg: "restrict_global s0 \<le> \<sigma> (Inr ())"
+  have rg: "restrict_global s0 \<le> \<sigma> (Inr gseed)"
     by (rule restrict_global_s0_le_global_eff[OF pp entry_in])
   have "s0 = restrict_local s0 \<squnion> restrict_global s0"
     by (rule restrict_local_global_join[symmetric])
-  also have "... \<le> \<sigma> (Inl (cfg_entry g)) \<squnion> \<sigma> (Inr ())"
+  also have "... \<le> \<sigma> (Inl (cfg_entry g)) \<squnion> \<sigma> (Inr gseed)"
     using rl rg by (rule sup_mono)
-  finally show ?thesis unfolding side_env_def glob_env_unit .
+  also have "... \<le> \<sigma> (Inl (cfg_entry g)) \<squnion> glob_env \<sigma>"
+    by (rule sup_mono[OF order_refl glob_env_upper])
+  finally show ?thesis unfolding side_env_def .
 qed
 
 subsection \<open>Exit-rooted collecting soundness with coverage discharged by pruning\<close>
@@ -360,17 +369,18 @@ text \<open>
   return on the cone is in the solved stable set.  No coverage hypothesis is
   needed beyond the query / static contracts that drive the cone.
 
-  The executable system side_cfg_T_eff fixes the single global unknown
-  ('g = unit), so this theorem is for a unit etf; the soundness contract is an
-  explicit hypothesis and the generic abstract soundness is interpreted at unit.
+  Generic in the named-global type 'g (finite): the soundness contract is an
+  explicit hypothesis and the generic abstract soundness is interpreted at 'g.
+  The initial globals are seeded into the designated slot gseed at the entry.
 \<close>
 
 theorem side_collect_sound_exit_pruned_eff:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
     and bot0 s0 :: "'a abs_state" and S :: "store set"
-    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "(unit, 'a) effectful_domain_transfer"
+    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "('g, 'a) effectful_domain_transfer"
+    and gseed :: 'g
   assumes se: "sound_effectful_transfer \<gamma> etf"
-  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0)
+  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed)
                  (cfg_exit g) \<sigma> vars"
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
@@ -439,12 +449,13 @@ text \<open>
 theorem side_analyse_eff_collect_sound_exit_pruned_gen:
   fixes \<Pi> ps main and s0 :: "'a::bounded_semilattice_sup_bot abs_state"
     and S :: "store set"
-    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "(unit, 'a) effectful_domain_transfer"
+    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "('g::finite, 'a) effectful_domain_transfer"
+    and gseed :: 'g
   assumes se: "sound_effectful_transfer \<gamma> etf"
-  assumes mono_eq: "is_mono_eq (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0)"
-  assumes mono_sides: "mono_sides (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0)"
-  assumes mono_deps: "mono_deps (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0)"
-  assumes dom: "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) etf bot s0
+  assumes mono_eq: "is_mono_eq (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes mono_sides: "mono_sides (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes mono_deps: "mono_deps (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes dom: "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) etf bot s0 gseed
                   (cfg_exit (compile_prog \<Pi> ps main))"
   assumes S_sound: "S \<le> sound_domain.gamma_state \<gamma> s0"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
@@ -453,20 +464,20 @@ theorem side_analyse_eff_collect_sound_exit_pruned_gen:
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
   shows "cfg_collect (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
-         \<le> sound_domain.gamma_state \<gamma> (side_analyse_eff \<Pi> ps main etf bot s0
+         \<le> sound_domain.gamma_state \<gamma> (side_analyse_eff \<Pi> ps main etf bot s0 gseed
               (cfg_exit (compile_prog \<Pi> ps main)))"
 proof -
   interpret se: sound_effectful_transfer \<gamma> etf by (rule se)
   define g where "g = compile_prog \<Pi> ps main"
   define v0 where "v0 = cfg_exit g"
-  interpret ip: td_cfg_side_solver_eff g etf bot s0
+  interpret ip: td_cfg_side_solver_eff g etf bot s0 gseed
     using mono_eq mono_sides mono_deps unfolding g_def by unfold_locales
   define \<sigma> where "\<sigma> = ip.nu_at v0"
   have fin: "finite (edges g)" unfolding g_def using compile_prog_finite by simp
   have finC: "finite (combines g)" unfolding g_def using compile_prog_finite by simp
-  have dom': "side_cfg_solve_dom_eff g etf bot s0 v0"
+  have dom': "side_cfg_solve_dom_eff g etf bot s0 gseed v0"
     using dom unfolding g_def v0_def by simp
-  have pp: "part_post_solution (side_cfg_T_eff g etf bot s0) v0 \<sigma> (ip.stabl_at v0)"
+  have pp: "part_post_solution (side_cfg_T_eff g etf bot s0 gseed) v0 \<sigma> (ip.stabl_at v0)"
     using ip.part_post_at_cfg[OF dom'] unfolding \<sigma>_def by simp
   have entry_reach: "cfg_reaches g (cfg_entry g) v0"
     using compile_prog_entry_cfg_reaches_exit unfolding g_def v0_def by simp
@@ -481,7 +492,7 @@ proof -
     by (rule side_collect_sound_exit_pruned_eff[OF se pp[unfolded v0_def] fin finC
           entry_cov edge_dep comb_dep1 comb_dep2 edge_static comb_static])
   have analyse_eq:
-    "side_analyse_eff \<Pi> ps main etf bot s0 (cfg_exit g) = side_env \<sigma> (cfg_exit g)"
+    "side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) = side_env \<sigma> (cfg_exit g)"
     unfolding side_analyse_eff_def \<sigma>_def v0_def g_def by simp
   show ?thesis using collect analyse_eq by (simp add: g_def)
 qed
@@ -529,7 +540,7 @@ lemma side_cfg_T_eff_is_mono_eq:
     and bot0 s0 :: "'a abs_state"
   assumes tf_mono:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-  shows "is_mono_eq (side_cfg_T_eff g (etf_from_tf tf) bot0 s0)"
+  shows "is_mono_eq (side_cfg_T_eff g (etf_from_tf tf) bot0 s0 ())"
   apply (rule side_cfg_T_eff_is_mono_eq_gen)
   subgoal for a u s1 s2
     by (simp add: apply_etf_from_tf traverse_pure_edge_tree)
@@ -544,7 +555,7 @@ lemma side_cfg_T_eff_mono_sides:
     and bot0 s0 :: "'a abs_state"
   assumes tf_mono:
     "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-  shows "mono_sides (side_cfg_T_eff g (etf_from_tf tf) bot0 s0)"
+  shows "mono_sides (side_cfg_T_eff g (etf_from_tf tf) bot0 s0 ())"
   apply (rule side_cfg_T_eff_mono_sides_gen)
   subgoal for a u s1 s2
     apply (rule le_funI, rename_tac k, case_tac k)
@@ -561,7 +572,7 @@ lemma side_cfg_T_eff_mono_sides:
 lemma side_cfg_T_eff_mono_deps:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and bot0 s0 :: "'a abs_state"
-  shows "mono_deps (side_cfg_T_eff g (etf_from_tf tf) bot0 s0)"
+  shows "mono_deps (side_cfg_T_eff g (etf_from_tf tf) bot0 s0 ())"
   apply (rule side_cfg_T_eff_mono_deps_gen)
   by (simp add: static_deps_def pure_edge_tree_def Let_def)
      (simp add: static_deps_def pure_combine_tree_def Let_def)

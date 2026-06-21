@@ -14,15 +14,15 @@ definition sign_etf :: "(unit, sign) effectful_domain_transfer" where
   "sign_etf = etf_from_tf sign_tf"
 
 lemma sign_etf_is_mono_eq:
-  "is_mono_eq (side_cfg_T_eff g sign_etf bot0 s0)"
+  "is_mono_eq (side_cfg_T_eff g sign_etf bot0 s0 ())"
   unfolding sign_etf_def by (rule side_cfg_T_eff_is_mono_eq[OF sign_tf_mono])
 
 lemma sign_etf_mono_sides:
-  "mono_sides (side_cfg_T_eff g sign_etf bot0 s0)"
+  "mono_sides (side_cfg_T_eff g sign_etf bot0 s0 ())"
   unfolding sign_etf_def by (rule side_cfg_T_eff_mono_sides[OF sign_tf_mono])
 
 lemma sign_etf_mono_deps:
-  "mono_deps (side_cfg_T_eff g sign_etf bot0 s0)"
+  "mono_deps (side_cfg_T_eff g sign_etf bot0 s0 ())"
   unfolding sign_etf_def by (rule side_cfg_T_eff_mono_deps)
 
 text \<open>
@@ -46,8 +46,8 @@ text \<open>
   pipeline: side_analyse_eff_collect_sound_exit_pruned_gen instantiated at the
   Sign witness sign_sound_etf.  The five cone contracts are discharged generically
   for the shim etf (sign_etf = etf_from_tf sign_tf); the three TD_side
-  preconditions come from sign_tf_mono.  No pure side_analyse / pure IP
-  soundness theorem is used.
+  preconditions come from sign_tf_mono.  The unit seed-slot () carries the
+  initial globals.  No pure side_analyse / pure IP soundness theorem is used.
 \<close>
 
 theorem side_sign_analysis_sound:
@@ -57,10 +57,10 @@ theorem side_sign_analysis_sound:
     "t \<in> cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) sign_etf bot s0
+    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) sign_etf bot s0 ()
        (cfg_exit (compile_prog \<Pi> ps main))"
   shows "t \<in> sign_domain.gamma_state
-       (side_analyse_eff \<Pi> ps main sign_etf bot s0
+       (side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
          (cfg_exit (compile_prog \<Pi> ps main)))"
 proof -
   interpret se: sound_effectful_transfer gamma_sign sign_etf
@@ -82,13 +82,13 @@ proof -
     "cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
      \<le> sound_domain.gamma_state gamma_sign
-         (side_analyse_eff \<Pi> ps main sign_etf bot s0
+         (side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
            (cfg_exit (compile_prog \<Pi> ps main)))"
     by (rule side_analyse_eff_collect_sound_exit_pruned_gen
           [OF sign_sound_etf sign_etf_is_mono_eq sign_etf_mono_sides sign_etf_mono_deps
               side_solve_dom gs ed cd1 cd2 es cs])
   have "t \<in> sound_domain.gamma_state gamma_sign
-       (side_analyse_eff \<Pi> ps main sign_etf bot s0
+       (side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
          (cfg_exit (compile_prog \<Pi> ps main)))"
     using collect collect_exit by blast
   then show ?thesis

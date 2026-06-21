@@ -13,25 +13,25 @@ text \<open>
 \<close>
 
 definition side_cfg_solve_dom_eff ::
-  "cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> pp \<Rightarrow> bool"
+  "cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp \<Rightarrow> bool"
 where
-  "side_cfg_solve_dom_eff g etf bot0 s0 v =
-     TD_side.solve_dom destab_opt True (side_cfg_T_eff g etf bot0 s0) v"
+  "side_cfg_solve_dom_eff g etf bot0 s0 gseed v =
+     TD_side.solve_dom destab_opt True (side_cfg_T_eff g etf bot0 s0 gseed) v"
 
 locale td_cfg_side_solver_eff =
   fixes g :: cfg and
-  etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer" and
-  bot0 s0 :: "'a abs_state"
-  assumes mono_eq:    "is_mono_eq (side_cfg_T_eff g etf bot0 s0)"
-    and   mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0)"
-    and   mono_deps:  "mono_deps (side_cfg_T_eff g etf bot0 s0)"
+  etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer" and
+  bot0 s0 :: "'a abs_state" and gseed :: 'g
+  assumes mono_eq:    "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
+    and   mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
+    and   mono_deps:  "mono_deps (side_cfg_T_eff g etf bot0 s0 gseed)"
 begin
 
-definition cfg_pkg_eff :: "(pp, unit, 'a abs_state) eqsT"
-  where "cfg_pkg_eff = side_cfg_T_eff g etf bot0 s0"
+definition cfg_pkg_eff :: "(pp, 'g, 'a abs_state) eqsT"
+  where "cfg_pkg_eff = side_cfg_T_eff g etf bot0 s0 gseed"
 
-lemma cfg_pkg_eff_eq[simp]: "cfg_pkg_eff = side_cfg_T_eff g etf bot0 s0"
+lemma cfg_pkg_eff_eq[simp]: "cfg_pkg_eff = side_cfg_T_eff g etf bot0 s0 gseed"
   unfolding cfg_pkg_eff_def by rule
 
 interpretation side: TD_side_mono cfg_pkg_eff
@@ -44,7 +44,7 @@ qed
 definition stabl_at :: "pp \<Rightarrow> pp set"
   where "stabl_at x = fst (side.solve x)"
 
-definition nu_at :: "pp \<Rightarrow> pp + unit \<Rightarrow> 'a abs_state"
+definition nu_at :: "pp \<Rightarrow> pp + 'g \<Rightarrow> 'a abs_state"
   where "nu_at x = snd (side.solve x)"
 
 definition env_at :: "pp \<Rightarrow> pp \<Rightarrow> 'a abs_state"
@@ -59,11 +59,11 @@ lemma part_post_at:
   using side.least_partial_post_solution[OF dom solve_prod] by simp
 
 lemma solve_dom_eq:
-  "side_cfg_solve_dom_eff g etf bot0 s0 v = side.solve_dom v"
+  "side_cfg_solve_dom_eff g etf bot0 s0 gseed v = side.solve_dom v"
   unfolding side_cfg_solve_dom_eff_def cfg_pkg_eff_def by simp
 
 lemma part_post_at_cfg:
-  assumes "side_cfg_solve_dom_eff g etf bot0 s0 v"
+  assumes "side_cfg_solve_dom_eff g etf bot0 s0 gseed v"
   shows "part_post_solution cfg_pkg_eff v (nu_at v) (stabl_at v)"
   using part_post_at assms unfolding solve_dom_eq by simp
 
@@ -75,10 +75,10 @@ end
 text \<open>Executable-facing combined env at each pp (entry query).\<close>
 definition side_analyse_eff ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com
-     \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-     \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> pp \<Rightarrow> 'a abs_state"
+     \<Rightarrow> ('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+     \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp \<Rightarrow> 'a abs_state"
 where
-  "side_analyse_eff \<Pi> ps main etf bot0 s0 v =
-     side_env (td_cfg_side_solver_eff.nu_at (compile_prog \<Pi> ps main) etf bot0 s0 v) v"
+  "side_analyse_eff \<Pi> ps main etf bot0 s0 gseed v =
+     side_env (td_cfg_side_solver_eff.nu_at (compile_prog \<Pi> ps main) etf bot0 s0 gseed v) v"
 
 end

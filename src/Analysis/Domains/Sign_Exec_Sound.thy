@@ -95,7 +95,7 @@ proof -
     by (rule sign_sound_etf)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff g sign_etf bot
-                     (\<lambda>x. if is_global x then SZero else STop))
+                     (\<lambda>x. if is_global x then SZero else STop) ())
                   (cfg_exit g) \<sigma> (fst sol)"
     using part_post_solution_st_to_abs_eff[OF sign_tf_st_commute pp_st]
     unfolding sign_etf_def

@@ -142,10 +142,10 @@ text \<open>
 \<close>
 
 fun side_rhs_fold_eff ::
-  "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+  "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state
    \<Rightarrow> (pp \<times> edge_action) list \<Rightarrow> (pp \<times> pp) list
-   \<Rightarrow> (pp, unit, 'a abs_state) strategy_tree"
+   \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree"
 where
   "side_rhs_fold_eff etf acc [] [] = Answer acc"
 | "side_rhs_fold_eff etf acc ((u, a) # ps) cs =
@@ -156,29 +156,29 @@ where
        (\<lambda>res. side_rhs_fold_eff etf (acc \<squnion> res) [] cs)"
 
 definition make_side_rhs_tree_eff ::
-  "cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> pp
-   \<Rightarrow> (pp, unit, 'a abs_state) strategy_tree"
+  "cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp
+   \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree"
 where
-  "make_side_rhs_tree_eff g etf bot0 s0 v =
+  "make_side_rhs_tree_eff g etf bot0 s0 gseed v =
      (let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0);
           t    = side_rhs_fold_eff etf acc0
                    (predecessor_list g v) (combine_predecessor_list g v)
-      in if v = cfg_entry g then Side () (restrict_global s0) t else t)"
+      in if v = cfg_entry g then Side gseed (restrict_global s0) t else t)"
 
 definition side_cfg_T_eff ::
-  "cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> (pp, unit, 'a abs_state) eqsT"
+  "cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
+   \<Rightarrow> (pp, 'g, 'a abs_state) eqsT"
 where
-  "side_cfg_T_eff g etf bot0 s0 = make_side_rhs_tree_eff g etf bot0 s0"
+  "side_cfg_T_eff g etf bot0 s0 gseed = make_side_rhs_tree_eff g etf bot0 s0 gseed"
 
 subsection \<open>Denotation of the effectful fold\<close>
 
 fun side_acc_eff ::
-  "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+  "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state
-   \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state)
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state)
    \<Rightarrow> (pp \<times> edge_action) list \<Rightarrow> (pp \<times> pp) list \<Rightarrow> 'a abs_state"
 where
   "side_acc_eff etf acc \<sigma> [] [] = acc"
@@ -213,7 +213,7 @@ next
 qed
 
 lemma eq_side_cfg_T_eff:
-  "eq (side_cfg_T_eff g etf bot0 s0) v \<sigma> =
+  "eq (side_cfg_T_eff g etf bot0 s0 gseed) v \<sigma> =
      side_acc_eff etf
        (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
        \<sigma> (predecessor_list g v) (combine_predecessor_list g v)"
@@ -247,7 +247,8 @@ text \<open>
   For etf = etf_from_tf tf the effectful fold builds exactly the tree the pure
   fold builds (with join = \<squnion>).  This is the backward-compatibility bridge: every
   result proven about side_cfg_T tf (\<squnion>) -- monotonicity, side contributions,
-  dependencies, soundness -- transfers verbatim to side_cfg_T_eff (etf_from_tf tf).
+  dependencies, soundness -- transfers verbatim to side_cfg_T_eff (etf_from_tf tf)
+  with the unit seed-slot.
 \<close>
 
 lemma side_rhs_fold_eff_etf_from_tf:
@@ -272,14 +273,14 @@ next
 qed
 
 lemma make_side_rhs_tree_eff_etf_from_tf:
-  "make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0
+  "make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 ()
    = make_side_rhs_tree g tf (\<squnion>) bot0 s0"
   by (rule ext)
      (simp add: make_side_rhs_tree_eff_def make_side_rhs_tree_def
                 side_rhs_fold_eff_etf_from_tf Let_def)
 
 lemma side_cfg_T_eff_etf_from_tf:
-  "side_cfg_T_eff g (etf_from_tf tf) bot0 s0 = side_cfg_T g tf (\<squnion>) bot0 s0"
+  "side_cfg_T_eff g (etf_from_tf tf) bot0 s0 () = side_cfg_T g tf (\<squnion>) bot0 s0"
   unfolding side_cfg_T_eff_def side_cfg_T_def
   by (rule make_side_rhs_tree_eff_etf_from_tf)
 
