@@ -1,5 +1,7 @@
 # IMP2 Pretty Notation Migration
 
+Status: **DONE** (Tier 3 implemented in `IMP2_Notation.thy`; bracket `⟦ ... ⟧` and whole-program `⟦ proc f { .. } main { .. } ⟧` live). Used in `Example_Side_Execute`, `Example_Proc_Call`, `IMP2_VCG_Example`.
+
 ## Problem
 
 Example programs are written with fully-qualified constructors:

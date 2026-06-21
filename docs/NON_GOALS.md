@@ -28,10 +28,6 @@ backlog live in `docs/ROADMAP.md`; this file is only the "not doing" half.
   `voblint-formalization-classical` and removed here. The intra *substrate*
   (`cfg_collect`, collecting layer) stays — it is load-bearing for the IP/Side
   spine. See `docs/CLASSICAL_SPINE_RETIREMENT.md`, `docs/IP_ONLY_CONSOLIDATION.md`.
-- **No `_IP` -> base rename.** Dropping `_IP` would collide
-  `cfg_collect_ip` with the still-live intra `cfg_collect`. Making IP canonical
-  is a deep re-homing refactor, not a rename — deliberately left undone. See
-  `docs/CLASSICAL_SPINE_RETIREMENT.md`.
 - **No `Direct_Equations` layer.** The CFG layer won; direct equations were
   deleted as off-path.
 

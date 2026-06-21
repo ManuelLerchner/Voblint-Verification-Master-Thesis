@@ -82,7 +82,11 @@ analysis, `Pipeline.thy`, `voblint_sign_sound` — was extracted to
 
 ## Open / stretch
 
-- Discharge **`side_cfg_solve_dom`** — last solver termination hypothesis (cf. P1 in `docs/OPEN_PROBLEMS.md`).
+- **`side_cfg_solve_dom`** — deliberately kept as an explicit hypothesis (P1).
+  Termination of the vendored `TD_side` solver is the vendor's obligation, not
+  ours. Our result is conditional soundness: *if* the solver terminates, the
+  abstract result over-approximates `cfg_collect`. See `docs/NON_GOALS.md` and
+  `docs/P1_TOTAL_CORRECTNESS_ROUTE.md`.
 - **Interval / octagon** domains — `Interval_Domain.thy` exists; `side_ivl_analysis_sound` carries P1.
 - **Digest-indexed combine** (M4 precision) — `reaching_global_read_sound_d` is the hook.
 

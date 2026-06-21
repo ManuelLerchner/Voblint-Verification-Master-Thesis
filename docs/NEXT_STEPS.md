@@ -17,11 +17,11 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 - AFP IMP2 bridge + VCG co-existence example.
 - Classical (intra) spine extracted to sibling repo `voblint-formalization-classical`.
 
-**Still open on main theorems**
+**Explicit hypotheses (out of scope by design)**
 
-| ID | Assumption | Status |
+| ID | Assumption | Stance |
 | --- | --- | --- |
-| P1 | `side_cfg_solve_dom g sign_tf bot s0 v` (per-pp solve termination) | open |
+| P1 | `side_cfg_solve_dom_eff … (cfg_exit …)` | Vendor's obligation. `TD_side` is vendored from `td-verification`; its termination is not our proof obligation. Our result is conditional soundness: *if* the solver terminates, the abstract result is sound. See `docs/NON_GOALS.md`. |
 
 ---
 
@@ -29,18 +29,13 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 
 **Primary: [#17 — Thesis writing](https://github.com/ManuelLerchner/voblint-formalization/issues/17)**
 
-The IP soundness chain is complete. Only `side_cfg_solve_dom` (P1) remains as an
-explicit hypothesis — a defensible thesis stance. Write up.
+The IP soundness chain is complete. `side_cfg_solve_dom` (P1) is explicitly
+out of scope — a vendor hypothesis, not ours. Write up.
 
-**Alternative: P1 solve_dom total correctness**
+**Alternatives**
 
-Prove termination of the per-pp TD side solver (finite `pp`, well-founded recursion
-in `TD_side`). Closes the last solver hypothesis.
-
-**Fallback**
-
-- Add Interval domain — fits the `sound_transfer` locale; no architectural changes needed.
-- Examples / executability.
+- **NONDET_HAVOC** — add `x := random()` to the language; first nondeterministic construct, demonstrates pipeline extensibility. See `docs/NONDET_HAVOC_MIGRATION.md`.
+- **Digest fork S1** — `Digest` locale + `CallString` interpretation, no sorry. See `docs/TRACE_BASED_FORK_MIGRATION.md`.
 
 ---
 
@@ -49,9 +44,9 @@ in `TD_side`). Closes the last solver hypothesis.
 | Priority | Goal | Payoff |
 | --- | --- | --- |
 | 1 | **Thesis writing** | Core chain proved; write-up is the blocker |
-| 2 | P1 `side_cfg_solve_dom` | Closes the last solver hypothesis |
-| 3 | Interval domain | Second numeric domain; same scaffold |
-| 4 | Digest-indexed combine (M4 precision) | Context-sensitivity via `reaching_global_read_sound_d` |
+| 2 | NONDET_HAVOC | Language extension; demonstrates pipeline extensibility |
+| 3 | Digest fork S1 | First step toward context-sensitivity |
+| 4 | Interval domain | Second numeric domain; same scaffold |
 
 **Defer unless scope expands**
 
