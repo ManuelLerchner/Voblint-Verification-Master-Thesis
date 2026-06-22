@@ -9,6 +9,7 @@ begin
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
 hide_const (open) Syntax.N Syntax.V
+hide_const phase.N
 
 text \<open>
   A full program carried end to end through the interval analyzer:
@@ -23,6 +24,13 @@ text \<open>
   join with the initial \<^verbatim>\<open>[0,0]\<close> the loop head stabilises at \<^verbatim>\<open>[0,20]\<close> with no
   widening needed.  The Sign lattice expresses neither bound (it collapses
   \<^verbatim>\<open>[0,0]\<close> joined with \<^verbatim>\<open>[1,1]\<close> to sign top).
+
+  Certified backward-analysis story: @{text "Example_Guard_Refinement"}
+  isolates the guard step; this theory carries the same @{const assume_ivl} transfers
+  through the full CFG to a trace-level soundness theorem.
+
+  Executable mirror (Kleene / warrowing TD on @{text "ivl st"}, eval only):
+  @{text "Exec_Ivl_Run"}.
 \<close>
 
 definition loop_prog :: "IMP2_Proc.com" where
@@ -97,8 +105,32 @@ proof (rule allI)
                 (4, EA_Nop)})"])
     by (auto split: if_splits
              simp: loop_env_def loop_s0_def ivl_eval_simps
-                   assume_ivl.simps assume_not_ivl.simps meet_ivl.simps)
+                   assume_ivl_def assume_not_ivl_def
+                   ivl_backward_domain.bfilter.simps ivl_backward_domain.afilter.simps
+                   inv_less_ivl.simps meet_ivl.simps)
 qed
+
+subsection \<open>Backward guard refinement at the body entry\<close>
+
+text \<open>
+  Edge from node 2 to node 3 is @{const EA_Assume} on @{text "x < 20"}.  The body-entry
+  interval @{text "[0,19]"} in @{const loop_env} is exactly
+  @{const assume_ivl} applied at the loop head --- not widening and not join
+  alone (identity assume would keep @{text "[0,20]"}; see
+  @{text "Example_Guard_Refinement"}).
+\<close>
+
+abbreviation "loop_body_entry \<equiv> 3"
+
+lemma loop_body_x_from_assume:
+  "tf_assume ivl_tf (Less (V ''x'') (N 20)) (loop_env 2) ''x'' = Ivl (Fin 0) (Fin 19)"
+  unfolding ivl_tf_def assume_ivl_def loop_env_def
+  by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
+        ivl_backward_domain.afilter.simps aval_ivl.simps aval_ivl_hol.simps meet_ivl.simps)
+
+lemma loop_body_entry_x:
+  "loop_env loop_body_entry ''x'' = Ivl (Fin 0) (Fin 19)"
+  by (simp add: loop_env_def)
 
 subsection \<open>Soundness: @{text "0 \<le> x \<le> 20"} at the loop head\<close>
 

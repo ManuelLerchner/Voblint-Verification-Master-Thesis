@@ -1,0 +1,111 @@
+theory Exec_Ivl_Run
+  imports Ivl_Exec "Voblint_CFG.IMP2_Proc_to_CFG" "TD.TD_side_upd_rule"
+            "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
+begin
+
+no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
+hide_const (open) Syntax.N Syntax.V
+
+section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
+
+text \<open>
+  Same program as @{text "Example_Interval_Loop_Coverage"} in session
+  \<^session>\<open>Voblint_Formalization\<close>:
+  @{text "x := 0; while (x < 20) { x := x + 1 }"}.
+
+  The executable transfer @{const ivl_tf_st} applies the same backward guard
+  filters as @{const assume_ivl} (via @{const assume_ivl_st} / @{const bfilter_ivl_st})
+  on @{const EA_Assume} edges.  Node~3 therefore reads @{text "[0,19]"} because
+  @{text "x < 20"} refines @{text "x"} at the loop head --- not because of widening.
+
+  This theory evaluates two fixpoint engines on @{const side_cfg_T_st}:
+  bounded Kleene iteration on @{const eq}, and @{const TD_side_warrowing_apinis_Interp_solve}
+  (pointwise interval widening on @{typ "ivl st"} for solver termination).
+  Neither is linked to @{const cfg_collect} here; see the manual post-fixpoint
+  and trace soundness proof in that example theory.
+\<close>
+
+definition loop_prog :: "IMP2_Proc.com" where
+  "loop_prog = \<lbrakk>
+     x := 0;
+     while (x < 20) { x := x + 1 }
+   \<rbrakk>"
+
+definition loop_cfg :: cfg where
+  "loop_cfg = mk_cfg 0 5
+     {(0, EA_Assign ''x'' (BaseN (AExp.N 0)), 1),
+      (1, EA_Nop, 2),
+      (2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 3),
+      (2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 5),
+      (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), 4),
+      (4, EA_Nop, 2)}
+     {}"
+
+lemma loop_cfg_compiles:
+  "loop_cfg = compile_prog Map.empty [] loop_prog"
+  by (simp add: loop_cfg_def compile_eval_simps loop_prog_def; blast)
+
+lemma loop_cfg_entry [simp]: "cfg_entry loop_cfg = 0"
+  by (simp add: loop_cfg_def)
+
+lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = 5"
+  by (simp add: loop_cfg_def)
+
+definition loop_ivl_eqs :: "(pp, unit, ivl st) eqsT" where
+  "loop_ivl_eqs = side_cfg_T_st loop_cfg ivl_tf_st bot cinit_ivl_st"
+
+definition loop_sig0 :: "pp + unit \<Rightarrow> ivl st" where
+  "loop_sig0 k =
+     (case k of Inl _ \<Rightarrow> bot | Inr () \<Rightarrow> restrict_global_st cinit_ivl_st)"
+
+definition loop_kleene_step :: "(pp + unit \<Rightarrow> ivl st) \<Rightarrow> (pp + unit \<Rightarrow> ivl st)" where
+  "loop_kleene_step sig =
+     (\<lambda>k. case k of
+        Inl v \<Rightarrow> eq loop_ivl_eqs v sig
+      | Inr () \<Rightarrow> sig (Inr ()))"
+
+fun loop_iter_sig :: "nat \<Rightarrow> (pp + unit \<Rightarrow> ivl st) \<Rightarrow> (pp + unit \<Rightarrow> ivl st)" where
+  "loop_iter_sig 0 sig = sig"
+| "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
+
+definition loop_ivl_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
+  "loop_ivl_sol = ({0, 1, 2, 3, 4, 5}, loop_iter_sig 100 loop_sig0)"
+
+definition loop_ivl_at :: "pp \<Rightarrow> ivl" where
+  "loop_ivl_at pp = lookup_st (snd loop_ivl_sol (Inl pp)) ''x''"
+
+text \<open>Loop head (node 2): @{text "[0,20]"}.  Body entry (node 3): @{text "[0,19]"} from
+  @{const EA_Assume} backward refinement on @{text "x < 20"}.\<close>
+value "string_of_ivl (loop_ivl_at 2)"
+value "string_of_ivl (loop_ivl_at 3)"
+value "string_of_ivl (loop_ivl_at 5)"
+
+lemma loop_head_ivl:
+  "loop_ivl_at 2 = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_body_ivl:
+  "loop_ivl_at 3 = Ivl (Fin 0) (Fin 19)"
+  by eval
+
+definition loop_ivl_td_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
+  "loop_ivl_td_sol = TD_side_warrowing_apinis_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg)"
+
+definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
+  "loop_ivl_td_at pp = lookup_st (snd loop_ivl_td_sol (Inl pp)) ''x''"
+
+text \<open>Widening TD (Apinis warrowing): same intervals as bounded Kleene --- backward
+  filters carry the precision; widening is solver infrastructure only on this program.\<close>
+value "string_of_ivl (loop_ivl_td_at 2)"
+value "string_of_ivl (loop_ivl_td_at 3)"
+
+lemma loop_head_ivl_td:
+  "loop_ivl_td_at 2 = Ivl (Fin 0) (Fin 20)"
+  by eval
+
+lemma loop_body_ivl_td:
+  "loop_ivl_td_at 3 = Ivl (Fin 0) (Fin 19)"
+  by eval
+
+
+end

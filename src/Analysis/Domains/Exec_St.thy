@@ -2,6 +2,10 @@ theory Exec_St
   imports Abstract_Domain "TD.Update_rules" "Voblint_IMP2.IMP2_Globals"
 begin
 
+class bounded_widening = bounded_semilattice_sup_bot + widening
+class bounded_narrowing = bounded_semilattice_sup_bot + narrowing
+class bounded_warrowing = bounded_semilattice_sup_bot + warrowing
+
 section \<open>Executable abstract state: two-region explicit-default association list\<close>
 
 text \<open>
@@ -22,8 +26,7 @@ text \<open>
   cofinitely-\<open>bot\<close> state.
 
   Instances: order, bounded_semilattice_sup_bot, equal (via antisymmetry),
-  widening (widen = sup), narrowing (identity), warrowing -- all generic in the
-  value domain.
+  widening / narrowing / warrowing pointwise on the value domain.
 \<close>
 
 subsection \<open>Underlying association list representation\<close>
@@ -304,35 +307,161 @@ instance proof
 qed
 end
 
-subsection \<open>Widening instance\<close>
+subsection \<open>Pointwise warrowing on the value domain\<close>
 
 text \<open>
-  \<open>'a st :: widening\<close> with \<open>widen = sup\<close>; \<open>widen_ge1/2\<close> hold by \<open>sup_ge1/2\<close>.
+  Pointwise @{const widen} / @{const narrow} on the value domain, lifted through
+  @{const fun_rep_st} like @{const merge_st_rep} does for join.
 \<close>
 
-instantiation st :: (bounded_semilattice_sup_bot) widening begin
-definition "widen (s :: ('a::bounded_semilattice_sup_bot) st) t = s \<squnion> t"
+fun widen_st_rep :: "('a::bounded_warrowing) st_rep \<Rightarrow> 'a st_rep \<Rightarrow> 'a st_rep" where
+  "widen_st_rep (dl1, dg1, ps1) (dl2, dg2, ps2) =
+     (dl1 \<nabla> dl2, dg1 \<nabla> dg2,
+      map (\<lambda>(x, _). (x, fun_rep_st (dl1, dg1, ps1) x \<nabla> fun_rep_st (dl2, dg2, ps2) x))
+          (ps1 @ ps2))"
+
+lemma fun_rep_widen_st_rep:
+  "fun_rep_st (widen_st_rep r1 r2) =
+   (\<lambda>x. fun_rep_st r1 x \<nabla> fun_rep_st r2 x)"
+proof (cases r1; cases r2)
+  fix dl1 dg1 ps1 dl2 dg2 ps2
+  assume r1: "r1 = (dl1, dg1, ps1)" and r2: "r2 = (dl2, dg2, ps2)"
+  show ?thesis
+    unfolding r1 r2
+  proof (rule ext)
+    fix x
+    show "fun_rep_st (widen_st_rep (dl1, dg1, ps1) (dl2, dg2, ps2)) x
+          = fun_rep_st (dl1, dg1, ps1) x \<nabla> fun_rep_st (dl2, dg2, ps2) x"
+    proof (cases "x \<in> set (map fst ps1) \<union> set (map fst ps2)")
+      case True
+      then show ?thesis by (simp add: map_of_merge_pair)
+    next
+      case False
+      then have "map_of ps1 x = None" "map_of ps2 x = None"
+        by (auto simp: map_of_eq_None_iff)
+      with False show ?thesis by (simp add: map_of_merge_pair split: if_splits)
+    qed
+  qed
+qed
+
+fun narrow_st_rep :: "('a::bounded_warrowing) st_rep \<Rightarrow> 'a st_rep \<Rightarrow> 'a st_rep" where
+  "narrow_st_rep (dl1, dg1, ps1) (dl2, dg2, ps2) =
+     (dl1 \<Delta> dl2, dg1 \<Delta> dg2,
+      map (\<lambda>(x, _). (x, fun_rep_st (dl1, dg1, ps1) x \<Delta> fun_rep_st (dl2, dg2, ps2) x))
+          (ps1 @ ps2))"
+
+lemma fun_rep_narrow_st_rep:
+  "fun_rep_st (narrow_st_rep r1 r2) =
+   (\<lambda>x. fun_rep_st r1 x \<Delta> fun_rep_st r2 x)"
+proof (cases r1; cases r2)
+  fix dl1 dg1 ps1 dl2 dg2 ps2
+  assume r1: "r1 = (dl1, dg1, ps1)" and r2: "r2 = (dl2, dg2, ps2)"
+  show ?thesis
+    unfolding r1 r2
+  proof (rule ext)
+    fix x
+    show "fun_rep_st (narrow_st_rep (dl1, dg1, ps1) (dl2, dg2, ps2)) x
+          = fun_rep_st (dl1, dg1, ps1) x \<Delta> fun_rep_st (dl2, dg2, ps2) x"
+    proof (cases "x \<in> set (map fst ps1) \<union> set (map fst ps2)")
+      case True
+      then show ?thesis by (simp add: map_of_merge_pair)
+    next
+      case False
+      then have "map_of ps1 x = None" "map_of ps2 x = None"
+        by (auto simp: map_of_eq_None_iff)
+      with False show ?thesis by (simp add: map_of_merge_pair split: if_splits)
+    qed
+  qed
+qed
+
+lemma widen_st_rep_eq_st:
+  "eq_st r1 r1' \<Longrightarrow> eq_st r2 r2' \<Longrightarrow>
+   eq_st (widen_st_rep r1 r2) (widen_st_rep r1' r2')"
+  by (auto simp: eq_st_def fun_rep_widen_st_rep)
+
+lemma narrow_st_rep_eq_st:
+  "eq_st r1 r1' \<Longrightarrow> eq_st r2 r2' \<Longrightarrow>
+   eq_st (narrow_st_rep r1 r2) (narrow_st_rep r1' r2')"
+  by (auto simp: eq_st_def fun_rep_narrow_st_rep)
+
+lemma lookup_Abs_st [simp]:
+  "lookup_st (Abs_st r) x = fun_rep_st r x"
+  by transfer simp
+
+lemma Abs_st_rep_st [simp]: "Abs_st (rep_st s) = s"
+  by (fact Lifting.Quotient_abs_rep [OF Quotient_st])
+
+lemma lookup_st_rep:
+  "lookup_st s x = fun_rep_st (rep_st s) x"
+  using lookup_Abs_st[of "rep_st s" x] by simp
+
+lift_definition widen_on_st :: "('a::bounded_warrowing) st \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  is widen_st_rep
+  by (auto simp: eq_st_def fun_rep_widen_st_rep fun_eq_iff)
+
+lift_definition narrow_on_st :: "('a::bounded_warrowing) st \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  is narrow_st_rep
+  by (auto simp: eq_st_def fun_rep_narrow_st_rep fun_eq_iff)
+
+instantiation st :: (bounded_warrowing) widening begin
+
+definition "widen (s :: ('a::bounded_warrowing) st) t = widen_on_st s t"
+
+lemma lookup_widen_st_aux:
+  "lookup_st (widen_on_st s t) x = lookup_st s x \<nabla> lookup_st t x"
+  by transfer (simp add: fun_rep_widen_st_rep)
+
+lemma widen_st_ge1:
+  "(a :: 'a::bounded_warrowing st) \<le> widen a b"
+  unfolding le_st_iff widen_st_def
+  by (intro allI) (subst lookup_widen_st_aux, rule widen_ge1)
+
+lemma widen_st_ge2:
+  "(b :: 'a::bounded_warrowing st) \<le> widen a b"
+  unfolding le_st_iff widen_st_def
+  by (intro allI) (subst lookup_widen_st_aux, rule widen_ge2)
+
 instance proof
-  show "\<And>a b :: ('a::bounded_semilattice_sup_bot) st. a \<le> a \<nabla> b"
-    unfolding widen_st_def by simp
-  show "\<And>a b :: ('a::bounded_semilattice_sup_bot) st. b \<le> a \<nabla> b"
-    unfolding widen_st_def by simp
+  fix a b :: "('a::bounded_warrowing) st"
+  show "a \<le> widen a b" by (rule widen_st_ge1)
+  show "b \<le> widen a b" by (rule widen_st_ge2)
 qed
 end
 
-subsection \<open>Narrowing instance\<close>
+lemma lookup_widen_st [simp]:
+  "lookup_st (s \<nabla> t) x = lookup_st s x \<nabla> lookup_st t x"
+  unfolding widen_st_def by (rule lookup_widen_st_aux)
 
-instantiation st :: (bounded_semilattice_sup_bot) narrowing begin
-definition "narrow (s :: ('a::bounded_semilattice_sup_bot) st) t = s"
+instantiation st :: (bounded_warrowing) narrowing begin
+
+definition "narrow (s :: ('a::bounded_warrowing) st) t = narrow_on_st s t"
+
+lemma lookup_narrow_st_aux:
+  "lookup_st (narrow_on_st s t) x = lookup_st s x \<Delta> lookup_st t x"
+  by transfer (simp add: fun_rep_narrow_st_rep)
+
+lemma narrow_st_ge:
+  "b \<le> (a :: 'a::bounded_warrowing st) \<Longrightarrow> b \<le> narrow a b"
+  unfolding le_st_iff narrow_st_def
+  by (intro allI impI) (subst lookup_narrow_st_aux, auto intro: narrow_ge simp: le_st_iff)
+
+lemma narrow_st_le:
+  "b \<le> (a :: 'a::bounded_warrowing st) \<Longrightarrow> narrow a b \<le> a"
+  unfolding le_st_iff narrow_st_def
+  by (intro allI impI) (subst lookup_narrow_st_aux, auto intro: narrow_le simp: le_st_iff)
+
 instance proof
-  show "\<And>a b :: ('a::bounded_semilattice_sup_bot) st. b \<le> a \<Longrightarrow> b \<le> a \<Delta> b"
-    unfolding narrow_st_def by simp
-  show "\<And>a b :: ('a::bounded_semilattice_sup_bot) st. b \<le> a \<Longrightarrow> a \<Delta> b \<le> a"
-    unfolding narrow_st_def by simp
+  fix a b :: "('a::bounded_warrowing) st"
+  show "b \<le> a \<Longrightarrow> b \<le> narrow a b" by (rule narrow_st_ge)
+  show "b \<le> a \<Longrightarrow> narrow a b \<le> a" by (rule narrow_st_le)
 qed
 end
 
-instance st :: (bounded_semilattice_sup_bot) warrowing ..
+lemma lookup_narrow_st [simp]:
+  "lookup_st (s \<Delta> t) x = lookup_st s x \<Delta> lookup_st t x"
+  unfolding narrow_st_def by (rule lookup_narrow_st_aux)
+
+instance st :: (bounded_warrowing) warrowing ..
 
 subsection \<open>Refinement: 'a st vs 'a abs_state\<close>
 

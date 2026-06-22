@@ -273,10 +273,8 @@ qed
 
 subsection \<open>Right-hand side of the equation system\<close>
 
-definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" ("\<langle>_|_\<rangle>") where
   "combine_abs sc se = (\<lambda>x. if is_global x then se x else sc x)"
-
-notation combine_abs ("\<langle>_|_\<rangle>")
 
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with

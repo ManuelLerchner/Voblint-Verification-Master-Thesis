@@ -2,17 +2,22 @@
 
 # Migration: backward analysis of guards (Nipkow `Abs_Int2` `afilter`/`bfilter`)
 
-Status: **PLANNED, NOT STARTED** 2026-06-14. Target branch: **`main`** (scalar
-store, strong update). Adds *backward* (inverse) abstract evaluation of branch
-guards so that conditionals refine the abstract state per branch
-(`if (x < 100)` => then-branch knows `x <= 99`). Mirrors HOL-IMP
+Status: **DONE** 2026-06-22. Sign and Interval domains wired through generic
+`backward_domain` (`afilter`/`bfilter`); soundness and monotonicity reproved;
+`Example_Interval_Loop_Coverage` exhibits interval guard refinement the pre-migration
+identity transfers could not show. Green batch build:
+`isabelle build Voblint_Formalization` (2026-06-22).
+
+Target branch: **`main`** (scalar store, strong update). Adds *backward* (inverse)
+abstract evaluation of branch guards so that conditionals refine the abstract state
+per branch (`if (x < 100)` => then-branch knows `x <= 99`). Mirrors HOL-IMP
 [`Abs_Int2`](https://isabelle.in.tum.de/library/HOL/HOL-IMP/Abs_Int2.html).
 
 This is a **precision** upgrade, not a soundness change. The `tf_assume`
 obligation is one-directional (keep every concrete state satisfying `b`), so the
-current identity transfers are already sound; backward filtering only tightens
+previous identity transfers were already sound; backward filtering only tightens
 them. **Nothing in the CFG, equation system, TD solver, or pipeline soundness
-theorem changes.** The work is confined to the domain layer plus reproving the
+theorem changed.** The work is confined to the domain layer plus reproving the
 two existing per-domain `*_sound_assume{,_not}` lemmas and monotonicity.
 
 > Scope split: this plan covers backward analysis only. **Narrowing** (the other
@@ -22,34 +27,57 @@ two existing per-domain `*_sound_assume{,_not}` lemmas and monotonicity.
 
 ---
 
-## Where the code already is
+## Where the code lives
 
-The hook points exist and are wired end to end.
-
-| Artifact | Location | State today |
+| Artifact | Location | State |
 | --- | --- | --- |
-| `domain_transfer` record (`tf_assume`, `tf_assume_not` slots) | `src/Analysis/Equations/Constraint_System.thy:33` | ready, unchanged |
-| `apply_tf` dispatch (`EA_Assume`/`EA_AssumeNot` -> `tf_assume{,_not}`) | `src/Analysis/Equations/Constraint_System.thy:42` | ready, unchanged |
-| Concrete collecting semantics for guards | `src/CFG/Collecting/CFG_Collect_Edges.thy:11` | the spec we refine against |
-| Soundness obligation shape | `sign_tf_sound_assume` `src/Analysis/Domains/Sign_Domain.thy:411` | reproved, same statement |
-| `gamma_state_bot : gamma_state bot = {}` | `src/Analysis/Domains/Abstract_Domain.thy:77` | enables ⊥ collapse |
+| Generic `backward_domain` locale | `Abstract_Domain.thy:157` | done |
+| `domain_transfer` record | `Constraint_System.thy:33` | unchanged |
+| `apply_tf` dispatch | `Constraint_System.thy:42` | unchanged |
+| Collecting semantics (spec) | `CFG_Collect_Edges.thy:11` | unchanged |
+| Sign: `meet_sign`, `inv_*`, interpretation | `Sign_Domain.thy:328` | done |
+| Sign: `assume_sign` / `assume_not_sign` | `Sign_Domain.thy:484` | done |
+| Sign: `sign_tf_sound_assume{,_not}` | `Sign_Domain.thy:594` | reproved |
+| Sign: monotonicity lemmas | `Sign_Domain.thy:695` | done |
+| Sign executable mirror | `Sign_Exec.thy` | updated |
+| Interval: `meet_ivl`, `inv_less_ivl` | `Interval_Domain.thy:192` | done |
+| Interval: `assume_ivl` / `assume_not_ivl` | `Interval_Domain.thy:721` | done |
+| Interval: sound + mono chain | `Interval_Domain.thy:770` | done |
+| `gamma_state_bot` | `Abstract_Domain.thy:77` | unchanged |
+| Interval refinement example | `Example_Interval_Loop_Coverage.thy` | done |
+| Backward vs identity contrast | `Example_Guard_Refinement.thy` | done |
 
-Current transfers (the gap this plan closes):
+Per-domain `afilter`/`bfilter` are exported as global constants via
+`global_interpretation … defines` (`afilter_sign`/`bfilter_sign`,
+`afilter_ivl`/`bfilter_ivl`); proof scripts unfold via
+`sign_backward_domain.*.simps` / `ivl_backward_domain.*.simps`.
+
+---
+
+## Implemented transfers
 
 ```isabelle
-(* Sign_Domain.thy:189 -- only the x<0 special case *)
-assume_sign (Less (V x) (N n)) sigma = (if n = 0 then sigma(x := SNeg) else sigma)
-assume_sign _ sigma = sigma
-assume_not_sign _ sigma = sigma                    (* identity *)
+(* Sign_Domain.thy -- generic bfilter, not the old x<0 special case *)
+definition assume_sign where
+  "assume_sign b sigma = bfilter_sign b True sigma"
+definition assume_not_sign where
+  "assume_not_sign b sigma = bfilter_sign b False sigma"
 ```
 
 ```isabelle
-(* classical Interval_Domain.thy:591 -- both identity, flagged TODO *)
-assume_ivl     _ sigma = sigma   (* TODO: precise narrowing on Less/Eq *)
-assume_not_ivl _ sigma = sigma   (* TODO *)
+(* Interval_Domain.thy -- replaces former identity/TODO bodies *)
+definition assume_ivl where
+  "assume_ivl b sigma = bfilter_ivl b True sigma"
+definition assume_not_ivl where
+  "assume_not_ivl b sigma = bfilter_ivl b False sigma"
 ```
 
-So `assume_sign` is already a degenerate `bfilter`; this plan generalises it.
+v1 conservatism (by design, sound):
+
+- `BaseN`/`BaseB` interiors: `afilter`/`bfilter` catch-all returns state unchanged.
+- Sign/Interval `inv_plus`/`inv_minus`/`inv_times`: identity pairs `(a1, a2)` —
+  arithmetic backward refinement deferred; `Less`/`Eq`/`And`/`Or`/`Not` carry
+  the precision payoff.
 
 ---
 
@@ -76,16 +104,10 @@ datatype bexp =
 Two grammar notes that bite:
 
 1. **`BaseN`/`BaseB` nesting.** Leaves and Nipkow subtrees hide inside `BaseN`
-   (and `BaseB` for booleans). `afilter` must descend at least to `BaseN
-   (AExp.V x)` to refine a variable, and decide whether to descend into the
-   Nipkow `AExp.Plus` subtree or treat it as an opaque leaf (conservative).
-   Recommend: handle the IMP2-level constructors (`Plus`/`Minus`/`Times`,
-   `Less`/`Eq`/`And`/`Or`/`Not`) precisely; treat `BaseN`/`BaseB` interiors
-   conservatively in v1 (still sound), revisit if real guards need it.
-2. **Extensions over HOL-IMP.** We have `Or`, `Eq`, `Minus`, `Times` that
-   `Abs_Int2` lacks. They are mechanical (`Or` dualises `And`; `Eq` is meet both
-   ways; `Minus`/`Times` need `inv_minus`/`inv_times`) but they are extra
-   obligations Nipkow's text does not pre-chew.
+   (and `BaseB` for booleans). `afilter` descends to `BaseN (AExp.V x)` for
+   variable refinement; other `BaseN`/`BaseB` interiors are conservative in v1.
+2. **Extensions over HOL-IMP.** `Or`, `Eq`, `Minus`, `Times` are implemented in
+   the generic locale; `inv_plus`/`inv_minus`/`inv_times` are identity in v1.
 
 ---
 
@@ -95,182 +117,102 @@ Two grammar notes that bite:
 that. Both domains have a representable bottom whose concretisation is empty:
 
 - Sign: `SBot`, `gamma_sign SBot = {}` (`Sign_Domain.thy:25`).
-- Interval: `Ivl PlusInf MinInf`, empty `gamma_ivl` (classical
-  `Interval_Domain.thy:57`).
+- Interval: `Ivl PlusInf MinInf`, empty `gamma_ivl` (`Interval_Domain.thy:57`).
 - State level: `gamma_state_bot : gamma_state bot = {}` already proved.
 
-So an unsatisfiable refinement (`x < 0 && x > 0`) returns the pointwise bottom
-abs_state, and `apply_tf`'s type is untouched. **Design decision: filters return
-`'a abs_state`, collapsing to `bot` on contradiction.** Simpler than option,
-reuses existing infra, keeps the equation system signature stable.
+Unsatisfiable refinements collapse to pointwise `bot`; `apply_tf`'s type is
+unchanged.
 
 ---
 
 ## Design: inverse operators + `afilter`/`bfilter`
 
-Three layers, smallest first.
+Three layers — all present in `backward_domain` (`Abstract_Domain.thy`).
 
 ### 1. Per-domain inverse value operators
 
-Add to each domain (Sign, Interval). Signatures (ASCII Isabelle):
+Sign: `meet_sign`, `inv_less_sign` (full case analysis); `inv_plus_sign` /
+`inv_minus_sign` / `inv_times_sign` identity.
+
+Interval: `meet_ivl`, `inv_less_ivl` (interval meet with shifted bounds);
+`inv_plus_ivl` / `inv_minus_ivl` / `inv_times_ivl` identity.
+
+### 2. Generic `afilter` / `bfilter` — locale level
+
+Written once in `backward_domain`; each domain supplies `meet`, `aval_abs`, `inv_*`
+via `global_interpretation`.
+
+### 3. Wire into `tf_assume{,_not}`
 
 ```isabelle
-(* meet / glb -- PREREQUISITE, see risks *)
-meet :: "'a => 'a => 'a"
-
-(* refine operands of  a1 < a2  given the boolean outcome *)
-inv_less :: "bool => 'a => 'a => 'a * 'a"
-
-(* refine operands of  a1 + a2  given an abstract result *)
-inv_plus :: "'a => 'a => 'a => 'a * 'a"
-(* likewise inv_minus, inv_times for our extensions *)
+assume_sign b sigma = bfilter_sign b True sigma
+assume_not_sign b sigma = bfilter_sign b False sigma
+(* ivl analogues *)
 ```
 
-Interval realisation (sketch, `ivl = Ivl eint eint`):
-
-```isabelle
-inv_less True  (Ivl l1 u1) (Ivl l2 u2) =
-  (Ivl l1 u1  meet  Ivl MinInf (u2 - 1),     (* a1 <= u2 - 1 *)
-   Ivl l2 u2  meet  Ivl (l1 + 1) PlusInf)    (* a2 >= l1 + 1 *)
-inv_less False i1 i2 = (* a1 >= a2 *)
-  (i1 meet Ivl l2 PlusInf,  i2 meet Ivl MinInf u1)
-
-inv_plus r a1 a2 = (a1 meet (r - a2), a2 meet (r - a1))   (* uses ivl '-' *)
-```
-
-Sign realisation is the existing pattern generalised: `inv_less True _ (sign of
-a2)` etc.; most cases stay coarse (`SBot`/unchanged), which is fine — Sign is the
-correctness witness, intervals are where precision lands.
-
-Per-operator soundness obligation (the only new proof shape):
-
-```isabelle
-(* inv_less sound: if n1 < n2 holds concretely and n_i in gamma a_i,
-   then n_i in gamma (fst/snd (inv_less True a1 a2)) *)
-lemma inv_less_sound:
-  "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
-   \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2))
-     \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
-```
-
-### 2. Generic `afilter` (backward over `aexp`) -- domain-locale level
-
-Written **once** in `Abstract_Domain` against `meet` + `inv_*` + the forward
-abstract eval `aval_abs` (already present per domain as `aval_sign`/`aval_ivl`):
-
-```isabelle
-afilter :: "aexp => 'a => 'a abs_state => 'a abs_state"
-afilter (BaseN (AExp.V x)) a S = (let a' = meet a (S x)
-                                  in if a' = bot then bot else S(x := a'))
-afilter (BaseN (AExp.N n)) a S = (if N_consistent n a then S else bot)
-afilter (Plus  e1 e2) a S =
-  (let (a1,a2) = inv_plus  a (aval_abs e1 S) (aval_abs e2 S)
-   in afilter e1 a1 (afilter e2 a2 S))
-afilter (Minus e1 e2) a S = ... inv_minus ...
-afilter (Times e1 e2) a S = ... inv_times ...
-afilter (BaseN _)     a S = S          (* conservative: opaque Nipkow subtree *)
-```
-
-### 3. Generic `bfilter` -> wire into `tf_assume{,_not}`
-
-```isabelle
-bfilter :: "bexp => bool => 'a abs_state => 'a abs_state"
-bfilter (Less a1 a2) res S =
-  (let (b1,b2) = inv_less res (aval_abs a1 S) (aval_abs a2 S)
-   in afilter a1 b1 (afilter a2 b2 S))
-bfilter (Eq a1 a2) True  S = (* meet both directions *)
-bfilter (Not b)    res  S = bfilter b (\<not> res) S
-bfilter (And b1 b2) True  S = bfilter b1 True (bfilter b2 True S)
-bfilter (And b1 b2) False S = join_state (bfilter b1 False S) (bfilter b2 False S)
-bfilter (Or  b1 b2) True  S = join_state (bfilter b1 True S) (bfilter b2 True S)
-bfilter (Or  b1 b2) False S = bfilter b1 False (bfilter b2 False S)
-bfilter (BaseB _)  _    S = S          (* conservative *)
-```
-
-Then per domain:
-
-```isabelle
-assume_sign      b sigma = bfilter b True  sigma
-assume_not_sign  b sigma = bfilter b False sigma
-(* and ivl analogues -- replacing the identity/TODO bodies *)
-```
-
-Note `And False` / `Or True` need the existing `join_state` (de Morgan: refining
-`not (b1 and b2)` cannot pick a branch, so join the two possibilities). This is
-exactly Nipkow's `\<squnion>` case.
+`And False` / `Or True` use state-level join (`\<squnion>`), matching Nipkow's
+de Morgan cases.
 
 ---
 
-## Soundness: same lemma, reproved
+## Soundness and monotonicity
 
-The downstream theorem consumes the **unchanged** statements:
+Downstream theorems consume **unchanged** statements, e.g.:
 
 ```isabelle
 lemma sign_tf_sound_assume:
   "st \<in> sign_domain.gamma_state sigma \<Longrightarrow>
-   bval b st \<Longrightarrow> st \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
+   bval b st \<Longrightarrow>
+   st \<in> sign_domain.gamma_state (tf_assume sign_tf b sigma)"
 ```
 
-New proof structure: `bfilter_sound` by induction on `bexp` (then `afilter` by
-induction on `aexp`), each inductive step discharged by the matching
-`inv_*_sound` and `meet_sound`. Hoist `bfilter_sound`/`afilter_sound` as generic
-locale lemmas so both domains inherit them; only the leaf `inv_*_sound` /
-`meet_sound` lemmas are per-domain.
-
-Monotonicity (`assume_sign_mono`, `Sign_Domain.thy:508`, required by the solver
-for `tf` monotone): prove `bfilter`/`afilter` monotone in the state once,
-generically, from `meet`/`inv_*` monotone — then both domains inherit it.
+Proof structure: generic `bfilter_sound` / `afilter_sound` in the locale;
+per-domain discharge of `meet_sound`, `aval_abs_sound`, `inv_*_sound` at
+interpretation time. Monotonicity: per-domain `bfilter_*_mono` and
+`afilter_*_mono` from `inv_*_mono` + `inf_mono`.
 
 ---
 
-## Sequencing
+## Sequencing (completed)
 
+```text
+P1  meet (inf) + meet_sound          Sign + Interval
+P2  inv_less + inv_*(/minus/times)   Sign full; Interval inv_less only
+P3  generic afilter + afilter_sound  Abstract_Domain backward_domain
+P4  generic bfilter + bfilter_sound  Abstract_Domain backward_domain
+P5  Sign wire + sound + mono         Sign_Domain + Sign_Exec
+P6  Interval wire + sound + mono     Interval + Example_Interval_Loop_Coverage
 ```
-[interval reintroduction]            <- INTERVAL_REINTRODUCTION_PLAN.md, prerequisite for the payoff
-        |
-        v
-P1  meet (inf) + meet_sound          <- per domain; Sign likely lacks inf today
-P2  inv_less/inv_plus(/minus/times)  <- per domain, with *_sound
-P3  generic afilter + afilter_sound  <- Abstract_Domain locale
-P4  generic bfilter + bfilter_sound  <- Abstract_Domain locale
-P5  wire assume_* = bfilter; reprove sign_tf_sound_assume{,_not} + mono
-P6  ivl analogues (after interval lands); IP example showing branch refinement
-```
-
-P1-P5 can land on Sign alone (proves the framework) before intervals exist. The
-real demonstrator is P6: an interval example where `if (x < 100)` tightens the
-post-state — the precision Sign cannot show.
 
 ---
 
-## Risks / open questions
+## Risks / follow-ups (post-v1)
 
-1. **`meet` may not exist yet.** Sign has join but likely no `inf`; intervals
-   are `bounded_semilattice_sup_bot` (sup+bot, **not** necessarily a lattice with
-   `inf`). Adding a sound `meet` (`gamma (meet a b) \<supseteq> gamma a \<inter> gamma b`)
-   is the first concrete prerequisite. Verify against the actual class instances
-   before P1.
-2. **`BaseN`/`BaseB` interiors.** v1 treats them conservatively. Confirm what
-   guard shapes the IMP2->CFG compiler actually emits (`src/CFG/IMP2_Proc_to_CFG.thy`)
-   — if real guards bury `Less` under `BaseB`, conservative handling silently
-   buys nothing and the descent must go deeper.
-3. **`Times` inverse is coarse.** `inv_times` through zero/sign boundaries is the
-   classic imprecise case; acceptable to leave `Times` near-identity in v1.
-4. **`And False` join cost.** The de Morgan join doubles work on nested negated
-   conjunctions; fine for soundness, watch for blow-up only if guards are large.
-5. **Interval branch depends on reintroduction.** Do not start P6 until
-   `INTERVAL_REINTRODUCTION_PLAN.md` lands the `ivl` domain on `main`.
+1. **`BaseN`/`BaseB` interiors.** v1 conservative. If real guards bury `Less` under
+   `BaseB`, descent must go deeper — check emitted CFG shapes
+   (`src/CFG/IMP2_Proc_to_CFG.thy`).
+2. **Arithmetic inverses.** `inv_plus`/`inv_minus`/`inv_times` are identity on both
+   domains; interval arithmetic backward refinement is the next precision step.
+3. **`Times` inverse through zero.** Classic imprecise case; still deferred.
+4. **`And False` join cost.** Sound; watch only for pathological guard size.
+5. **Example simp bundles.** Examples using post-fixpoint `auto` over `assume_*`
+   need `assume_*_def` and locale `.bfilter.simps` (see
+   `Example_Interval_Loop_Coverage.thy`, `Example_IMP2_Coverage.thy`).
 
 ---
 
 ## Exit criteria
 
-- `bfilter`/`afilter` defined generically in `Abstract_Domain`; per-domain
-  `inv_*_sound` + `meet_sound` discharged.
-- `assume_sign`/`assume_not_sign` (and ivl analogues) delegate to `bfilter`;
-  `*_sound_assume{,_not}` and `*_mono` reproved — **statements unchanged**.
-- No edit to CFG, equation system, solver, or pipeline soundness theorem.
-- Green `isabelle build Voblint_Formalization` (the gate — interactive I/Q pass
-  is not completion).
-- An IP interval example exhibiting per-branch refinement that the pre-migration
-  identity transfer could not produce.
+- [x] `bfilter`/`afilter` defined generically in `Abstract_Domain`; per-domain
+  `inv_*_sound` + `meet_sound` discharged at interpretation.
+- [x] `assume_sign`/`assume_not_sign` and `assume_ivl`/`assume_not_ivl` delegate
+  to `bfilter`; `*_sound_assume{,_not}` and `*_mono` reproved — **statements
+  unchanged**.
+- [x] No edit to CFG, equation system, solver, or pipeline soundness theorem.
+- [x] Green `isabelle build Voblint_Formalization`.
+- [x] IP interval example (`Example_Interval_Loop_Coverage`) exhibiting per-branch
+  refinement (`x < 20` narrows body entry to `[0,19]`, loop head stabilises at
+  `[0,20]`) that identity transfers could not produce.
+- [x] Focused contrast example (`Example_Guard_Refinement`): same guard and one
+  body step side-by-side with identity assume (`[0,20]` vs `[0,19]` after
+  guard; join `[0,20]` vs drifting `[0,21]`).

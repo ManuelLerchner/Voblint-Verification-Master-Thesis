@@ -4,6 +4,9 @@ begin
 
 section \<open>Codegen probe: does sign st execute?\<close>
 
+instance sign :: bounded_warrowing ..
+
+
 text \<open>
   Minimal checks that the executable abstract state sign st evaluates under the
   code generator: lookup / update / sup / order / equality on concrete values.

@@ -7,6 +7,7 @@ begin
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
 hide_const (open) Syntax.N Syntax.V Syntax.Bc
+hide_const phase.N
 
 (*
   Coverage witness: the analyzer yields a sound safety invariant on a
@@ -121,6 +122,8 @@ proof (rule allI)
                 (4, EA_Nop)})"])
     by (auto split: if_splits
                simp: loop_env_def loop_s0_def sign_tf_def assign_sign_def
+                     assume_sign_def assume_not_sign_def
+                     sign_backward_domain.bfilter.simps
                      less_eq_sign_def le_fun_def)
 
 qed

@@ -1,10 +1,8 @@
 theory Abstract_Domain
-  imports "Voblint_IMP2.IMP2_Syntax"
+  imports "Voblint_IMP2.IMP2_Syntax" "Voblint_IMP2.IMP2_Expr"
 begin
 
-(* Re-enable HOL.Lattices' \<squnion> / \<sqinter> notation (HOL-IMP parent strips it). *)
-notation sup (infixl "\<squnion>" 65)
-notation inf (infixl "\<sqinter>" 70)
+unbundle lattice_syntax
 
 section \<open>Abstract domain: locale and lifted state concretization\<close>
 
@@ -63,10 +61,8 @@ lemma gamma_sup_sound:
 
 subsection \<open>Lifted concretization\<close>
 
-definition gamma_state :: "'a abs_state => store set" where
+definition gamma_state :: "'a abs_state => store set" ("\<lbrakk>_\<rbrakk>") where
   "gamma_state \<sigma> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
-
-notation gamma_state ("\<lbrakk>_\<rbrakk>")
 
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
    fun :: bot and fun :: sup instances; no extra definitions needed. *)
@@ -146,6 +142,258 @@ begin
 
 definition widen_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
   "widen_state sigma1 sigma2 = (\<lambda>x. widen (sigma1 x) (sigma2 x))"
+
+end
+
+subsection \<open>Backward-analysis locale\<close>
+
+text \<open>
+  Extends @{locale sound_domain} with the infrastructure for backward
+  (inverse) evaluation of guards and arithmetic expressions.
+  Per-domain: provide meet, aval_abs, and inv_* operators; the generic
+  afilter / bfilter and their soundness theorems follow by induction.
+\<close>
+
+locale backward_domain = sound_domain \<gamma>
+  for \<gamma> :: "'a::bounded_semilattice_sup_bot => int set" +
+  fixes
+    meet     :: "'a => 'a => 'a"
+    and aval_abs  :: "aexp => 'a abs_state => 'a"
+    and inv_less  :: "bool => 'a => 'a => 'a * 'a"
+    and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
+    and inv_minus :: "'a => 'a => 'a => 'a * 'a"
+    and inv_times :: "'a => 'a => 'a => 'a * 'a"
+  assumes
+    meet_sound:
+      "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (meet a b)"
+  and aval_abs_sound:
+      "(\<forall>x. s x \<in> \<gamma> (\<sigma> x)) \<Longrightarrow> aval e s \<in> \<gamma> (aval_abs e \<sigma>)"
+  and inv_less_sound:
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 < n2) = res
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_less res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_less res a1 a2))"
+  and inv_plus_sound:
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 + n2 \<in> \<gamma> r
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_plus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_plus r a1 a2))"
+  and inv_minus_sound:
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 - n2 \<in> \<gamma> r
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_minus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_minus r a1 a2))"
+  and inv_times_sound:
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 * n2 \<in> \<gamma> r
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_times r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_times r a1 a2))"
+begin
+
+fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
+    "afilter (BaseN (AExp.V x)) a \<sigma> = \<sigma>(x := meet a (\<sigma> x))"
+  | "afilter (Plus  e1 e2) a \<sigma> =
+       (let (a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "afilter (Minus e1 e2) a \<sigma> =
+       (let (a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "afilter (Times e1 e2) a \<sigma> =
+       (let (a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "afilter _ a \<sigma> = \<sigma>"
+
+fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
+    "bfilter (Less e1 e2) res \<sigma> =
+       (let (a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
+  | "bfilter (Not b) res \<sigma> = bfilter b (\<not> res) \<sigma>"
+  | "bfilter (And b1 b2) True  \<sigma> = bfilter b1 True  (bfilter b2 True  \<sigma>)"
+  | "bfilter (And b1 b2) False \<sigma> = bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>"
+  | "bfilter (Or  b1 b2) True  \<sigma> = bfilter b1 True  \<sigma> \<squnion> bfilter b2 True  \<sigma>"
+  | "bfilter (Or  b1 b2) False \<sigma> = bfilter b1 False (bfilter b2 False \<sigma>)"
+  | "bfilter (Eq  e1 e2) True  \<sigma> =
+       (let a = meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a (afilter e2 a \<sigma>))"
+  | "bfilter _ _ \<sigma> = \<sigma>"
+
+lemma afilter_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> \<gamma> a"
+  shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
+using assms proof (induction e arbitrary: a \<sigma>)
+  case (BaseN a')
+  show ?case proof (cases a')
+    case (V x)
+    have sx_a: "s x \<in> \<gamma> a"
+      using BaseN.prems(2) V by (simp add: aval.simps AExp.aval.simps)
+    have sx_s: "s x \<in> \<gamma> (\<sigma> x)"
+      using BaseN.prems(1) unfolding gamma_state_def by simp
+    show ?thesis
+      unfolding V gamma_state_def afilter.simps
+    proof (intro CollectI allI)
+      fix y show "s y \<in> \<gamma> ((\<sigma>(x := meet a (\<sigma> x))) y)"
+        using meet_sound[OF sx_a sx_s] BaseN.prems(1)[unfolded gamma_state_def]
+        by (cases "y = x") auto
+    qed
+  qed (auto simp: afilter.simps BaseN.prems(1))
+next
+  case (Plus e1 e2)
+  obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
+    by (cases "inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Plus.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have asum: "aval e1 s + aval e2 s \<in> \<gamma> a" using Plus.prems(2) by (simp add: aval.simps)
+  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+    using inv_plus_sound[OF e1a e2a asum] pair[symmetric] by simp
+  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
+    using Plus.IH(2)[OF Plus.prems(1) inv12[THEN conjunct2]] by simp
+  show ?case
+    unfolding afilter.simps pair[symmetric] Let_def
+    using Plus.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+next
+  case (Minus e1 e2)
+  obtain a1 a2 where pair: "(a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
+    by (cases "inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Minus.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have adiff: "aval e1 s - aval e2 s \<in> \<gamma> a" using Minus.prems(2) by (simp add: aval.simps)
+  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+    using inv_minus_sound[OF e1a e2a adiff] pair[symmetric] by simp
+  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
+    using Minus.IH(2)[OF Minus.prems(1) inv12[THEN conjunct2]] by simp
+  show ?case
+    unfolding afilter.simps pair[symmetric] Let_def
+    using Minus.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+next
+  case (Times e1 e2)
+  obtain a1 a2 where pair: "(a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
+    by (cases "inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Times.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have aprod: "aval e1 s * aval e2 s \<in> \<gamma> a" using Times.prems(2) by (simp add: aval.simps)
+  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+    using inv_times_sound[OF e1a e2a aprod] pair[symmetric] by simp
+  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
+    using Times.IH(2)[OF Times.prems(1) inv12[THEN conjunct2]] by simp
+  show ?case
+    unfolding afilter.simps pair[symmetric] Let_def
+    using Times.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+qed
+
+lemma bfilter_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "bval b s = res"
+  shows "s \<in> \<lbrakk>bfilter b res \<sigma>\<rbrakk>"
+using assms proof (induction b arbitrary: res \<sigma>)
+  case (BaseB b') thus ?case by (simp add: bfilter.simps)
+next
+  case (Not b)
+  have bv': "bval b s = (\<not> res)" using Not.prems(2) by (auto)
+  from Not.IH[OF Not.prems(1) bv'] show ?case by (simp add: bfilter.simps)
+next
+  case (And b1 b2)
+  show ?case proof (cases res)
+    case True
+    have v1: "bval b1 s = True" and v2: "bval b2 s = True"
+      using And.prems(2) True by (simp_all add: bval.simps)
+    have gs2: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
+      using And.IH(2)[OF And.prems(1) v2] by simp
+    show ?thesis
+      using And.IH(1)[OF gs2 v1] by (simp add: True bfilter.simps)
+  next
+    case False
+    have disj: "\<not> bval b1 s \<or> \<not> bval b2 s"
+      using And.prems(2) False by (auto simp: bval.simps)
+    show ?thesis proof (cases "bval b1 s")
+      case b1F: False
+      have v1: "bval b1 s = False" using b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter b1 False \<sigma>\<rbrakk>"
+        using And.IH(1)[OF And.prems(1) v1] by simp
+      have sup1: "s \<in> \<lbrakk>bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1[of "bfilter b1 False \<sigma>" "bfilter b2 False \<sigma>"] h]
+        by simp
+      show ?thesis using False sup1
+        using bfilter.simps(4) by presburger
+    next
+      case b1T: True
+      have v2: "bval b2 s = False" using disj b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
+        using And.IH(2)[OF And.prems(1) v2] by simp
+      have sup2: "s \<in> \<lbrakk>bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2[of "bfilter b2 False \<sigma>" "bfilter b1 False \<sigma>"] h]
+        by simp
+      show ?thesis using False sup2
+        using bfilter.simps(4) by presburger 
+    qed
+  qed
+next
+  case (Or b1 b2)
+  show ?case proof (cases res)
+    case True
+    have disj: "bval b1 s \<or> bval b2 s" using Or.prems(2) True by (simp add: bval.simps)
+    show ?thesis proof (cases "bval b1 s")
+      case b1T: True
+      have v1: "bval b1 s = True" using b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter b1 True \<sigma>\<rbrakk>"
+        using Or.IH(1)[OF Or.prems(1) v1] by simp
+      have sup1: "s \<in> \<lbrakk>bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1[of "bfilter b1 True \<sigma>" "bfilter b2 True \<sigma>"] h]
+        by simp
+      show ?thesis using True sup1
+        using bfilter.simps(5) by presburger 
+    next
+      case b1F: False
+      have v2: "bval b2 s = True" using disj b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
+        using Or.IH(2)[OF Or.prems(1) v2] by simp
+      have sup2: "s \<in> \<lbrakk>bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2[of "bfilter b2 True \<sigma>" "bfilter b1 True \<sigma>"] h]
+        by simp
+      show ?thesis using True sup2
+        using bfilter.simps(5) by presburger
+    qed
+  next
+    case False
+    have v1: "bval b1 s = False" and v2: "bval b2 s = False"
+      using Or.prems(2) False by (simp_all add: bval.simps)
+    have gs2: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
+      using Or.IH(2)[OF Or.prems(1) v2] by simp
+    show ?thesis
+      using Or.IH(1)[OF gs2 v1] by (simp add: False bfilter.simps)
+  qed
+next
+  case (Less e1 e2)
+  obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
+    by (cases "inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Less.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (simp add: bval.simps)
+  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+    using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
+  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
+    using afilter_sound[OF Less.prems(1) inv12[THEN conjunct2]] by simp
+  show ?case
+    unfolding bfilter.simps pair[symmetric] Let_def
+    using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
+next
+  case (Eq e1 e2)
+  show ?case proof (cases res)
+    case True
+    have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Eq.prems(1) unfolding gamma_state_def by simp
+    have eq: "aval e1 s = aval e2 s" using Eq.prems(2) True by (simp add: bval.simps)
+    have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+    have e2a: "aval e1 s \<in> \<gamma> (aval_abs e2 \<sigma>)"
+      using aval_abs_sound[OF gs] eq by simp
+    have ma: "aval e1 s \<in> \<gamma> (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
+      using meet_sound[OF e1a e2a] by simp
+    have me2: "aval e2 s \<in> \<gamma> (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
+      using ma eq by simp
+    have gs2: "s \<in> \<lbrakk>afilter e2 (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)) \<sigma>\<rbrakk>"
+      using afilter_sound[OF Eq.prems(1) me2] by simp
+    show ?thesis
+      unfolding True bfilter.simps Let_def
+      using afilter_sound[OF gs2 ma]
+      by (metis True bfilter.simps(7))
+  next
+    case False
+    then show ?thesis using Eq.prems(1) by (simp add: bfilter.simps)
+  qed
+qed
 
 end
 

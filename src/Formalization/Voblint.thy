@@ -45,6 +45,7 @@ theory Voblint
     Example_Interval_Side_Proc_Global
     Example_Proc_Call
     Example_Interval_Loop_Coverage
+    Example_Guard_Refinement
     Example_Trace_Digest_Precision
     Example_Proc_GraphViz
 begin
@@ -124,6 +125,8 @@ text \<open>
       procedures communicating through a global; terminates with \<^verbatim>\<open>Gx = 25\<close>.
     \<^item> @{theory Voblint_Formalization.Example_Interval_Loop_Coverage} --- Interval analysis of
       a bounded loop; proves \<^verbatim>\<open>x \<in> [0, 20]\<close> at the loop head without widening.
+    \<^item> @{theory Voblint_Formalization.Example_Guard_Refinement} --- backward vs identity
+      assume on @{text "x < 20"}: one guard step and one loop iteration show the precision gap.
     \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- precision of the
       trace-IP collecting semantics.
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- interprocedural CFG rendered

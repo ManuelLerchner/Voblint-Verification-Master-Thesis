@@ -11,6 +11,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Interval_Side_Proc_Global
     Example_IMP2_Coverage
     Example_Interval_Loop_Coverage
+    Example_Guard_Refinement
     Example_Proc_Call
     Example_Trace_Digest_Precision
     Example_Side_Execute

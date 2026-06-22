@@ -1,5 +1,5 @@
 theory Sign_Domain
-  imports Abstract_Domain Constraint_System "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Globals"
+  imports Abstract_Domain "TD.Update_rules" Constraint_System "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Globals"
 begin
 
 section \<open>Sign domain: instantiation of abstract_domain\<close>
@@ -128,8 +128,8 @@ lemma join_sign_assoc: "join_sign a (join_sign b c) = join_sign (join_sign a b) 
 
 subsection \<open>Widening (identity for finite domain: widen = join)\<close>
 
-definition widen_sign :: "sign => sign => sign" where
-  "widen_sign a b = join_sign a b"
+definition widen_sign_abs :: "sign => sign => sign" where
+  "widen_sign_abs a b = join_sign a b"
 
 subsection \<open>Abstract arithmetic operations\<close>
 
@@ -247,15 +247,6 @@ lemma aval_sign_sound:
       simp add: aval.simps aval_sign.simps aval_sign_hol_sound
                 sign_plus_sound sign_minus_sound sign_times_sound)
 
-subsection \<open>Abstract assume\<close>
-
-fun assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
-    "assume_sign (Less (V x) (N n)) \<sigma> = (if n = 0 then \<sigma>(x := SNeg) else \<sigma>)"
-  | "assume_sign _                  \<sigma> = \<sigma>"
-
-fun assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
-  "assume_not_sign _ \<sigma> = \<sigma>"   (* conservative: no refinement *)
-
 subsection \<open>Typeclass instances\<close>
 
 text \<open>
@@ -300,9 +291,31 @@ qed
 (* sign in order_bot + semilattice_sup -> bounded_semilattice_sup_bot for free *)
 instance sign :: bounded_semilattice_sup_bot ..
 
+
+subsection \<open>Type-class warrowing for TD warrowing solver\<close>
+
+definition narrow_sign_td :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
+  "narrow_sign_td a b = a"
+
+instantiation sign :: warrowing begin
+  definition "widen (a :: sign) b = join_sign a b"
+  definition "narrow (a :: sign) b = narrow_sign_td a b"
+instance proof
+  fix a b :: sign
+  show "a \<le> widen a b"
+    unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub1)
+  show "b \<le> widen a b"
+    unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub2)
+  show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
+    unfolding narrow_sign_def narrow_sign_td_def by simp
+  show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
+    unfolding narrow_sign_def narrow_sign_td_def by simp
+qed
+end
+
 subsection \<open>Abstract domain interpretation\<close>
 
-interpretation sign_domain: abstract_domain gamma_sign widen_sign
+interpretation sign_domain: abstract_domain gamma_sign widen_sign_abs
 proof unfold_locales
   show "gamma_sign bot = {}" unfolding bot_sign_def by simp
 next
@@ -312,12 +325,12 @@ next
     unfolding less_eq_sign_def by (rule gamma_sign_mono)
 next
   fix a b :: sign
-  show "gamma_sign a \<subseteq> gamma_sign (widen_sign a b)"
-    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub1 less_eq_sign_def)
+  show "gamma_sign a \<subseteq> gamma_sign (widen_sign_abs a b)"
+    unfolding widen_sign_abs_def by (simp add: gamma_sign_mono join_sign_ub1 less_eq_sign_def)
 next
   fix a b :: sign
-  show "gamma_sign b \<subseteq> gamma_sign (widen_sign a b)"
-    unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
+  show "gamma_sign b \<subseteq> gamma_sign (widen_sign_abs a b)"
+    unfolding widen_sign_abs_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
 qed
 
 notation sign_domain.gamma_state ("\<lbrakk>_\<rbrakk>")
@@ -326,57 +339,185 @@ lemma sign_gamma_state_conv:
   "(s : sign_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_sign \<sigma>)"
   unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
 
-lemma assume_sign_default:
-  "\<not> (\<exists>x n. b = Less (V x) (N n)) \<Longrightarrow> assume_sign b \<sigma> = \<sigma>"
-proof (cases b rule: bexp.exhaust)
-  case (Less a1 a2)
-  assume H: "\<not> (\<exists>x n. b = Less (V x) (N n))" and bL: "b = Less a1 a2"
-  with H have "\<nexists>x n. a1 = V x \<and> a2 = N n" by auto
-  then show ?thesis unfolding bL
-    apply(cases a1;cases a2)
-    apply(auto)
-    apply (metis AExp.aval.elims assume_sign.simps(6,7))
-    by (metis assume_sign.simps(11,12) aval_sign_hol.elims)
-qed (simp_all add: assume_sign.simps)
+subsection \<open>Meet (greatest lower bound)\<close>
+
+text \<open>
+  The seven-element sign lattice has a well-defined glb.  Adding @{class semilattice_inf}
+  here gives @{text \<open>inf_mono\<close>} for free, which is needed for the monotonicity proof
+  of @{text bfilter}.
+\<close>
+
+fun meet_sign :: "sign => sign => sign" where
+    "meet_sign SBot    _       = SBot"
+  | "meet_sign _       SBot    = SBot"
+  | "meet_sign STop    b       = b"
+  | "meet_sign a       STop    = a"
+  | "meet_sign SNeg    SNeg    = SNeg"
+  | "meet_sign SNeg    SNonPos = SNeg"
+  | "meet_sign SNonPos SNeg    = SNeg"
+  | "meet_sign SNonPos SNonPos = SNonPos"
+  | "meet_sign SNonPos SZero   = SZero"
+  | "meet_sign SZero   SNonPos = SZero"
+  | "meet_sign SNonPos SNonNeg = SZero"
+  | "meet_sign SNonNeg SNonPos = SZero"
+  | "meet_sign SZero   SZero   = SZero"
+  | "meet_sign SZero   SNonNeg = SZero"
+  | "meet_sign SNonNeg SZero   = SZero"
+  | "meet_sign SNonNeg SNonNeg = SNonNeg"
+  | "meet_sign SNonNeg SPos    = SPos"
+  | "meet_sign SPos    SNonNeg = SPos"
+  | "meet_sign SPos    SPos    = SPos"
+  | "meet_sign _       _       = SBot"
+
+lemma meet_sign_sound:
+  "n \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> n \<in> gamma_sign (meet_sign a b)"
+  by (cases a; cases b; auto simp: gamma_sign.simps)
+
+instantiation sign :: inf begin
+definition inf_sign :: "sign => sign => sign" where
+  "inf_sign = meet_sign"
+instance ..
+end
+
+declare inf_sign_def [simp]
+
+instance sign :: semilattice_inf
+proof
+  fix x y z :: sign
+  show "x \<sqinter> y \<le> x"
+    by (cases x; cases y; auto simp: less_eq_sign_def)
+  show "x \<sqinter> y \<le> y"
+    by (cases x; cases y; auto simp: less_eq_sign_def)
+  show "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> y \<sqinter> z"
+    by (cases x; cases y; cases z; auto simp: less_eq_sign_def)
+qed
+
+instance sign :: lattice ..
+instance sign :: bounded_lattice_bot ..
+
+subsection \<open>Backward-analysis: inverse operators\<close>
+
+text \<open>
+  Per the backward-domain plan, @{text inv_less_sign} provides sign-specific
+  refinement when a guard @{text "e1 < e2"} is known true or false.
+  @{text inv_plus_sign}, @{text inv_minus_sign}, @{text inv_times_sign} are
+  conservative (identity): sign is too coarse for useful arithmetic inversion;
+  the structural bfilter propagation (And/Or/Not/Eq) is where sign gains.
+\<close>
+
+fun inv_less_sign :: "bool => sign => sign => sign * sign" where
+    "inv_less_sign True  a1 a2 =
+       (let a1' = if sign_le a2 SNonPos then meet_sign a1 SNeg else a1 ;
+                a2' = if sign_le a1 SNonNeg then meet_sign a2 SPos else a2
+        in (a1', a2'))"
+  | "inv_less_sign False a1 a2 =
+       (let a1' = if sign_le a2 SPos then meet_sign a1 SPos
+                  else if sign_le a2 SNonNeg then meet_sign a1 SNonNeg
+                  else a1 ;
+                a2' = if sign_le a1 SNeg then meet_sign a2 SNeg
+                  else if sign_le a1 SNonPos then meet_sign a2 SNonPos
+                  else a2
+        in (a1', a2'))"
+
+fun inv_plus_sign :: "sign => sign => sign => sign * sign" where
+  "inv_plus_sign _ a1 a2 = (a1, a2)"
+
+fun inv_minus_sign :: "sign => sign => sign => sign * sign" where
+  "inv_minus_sign _ a1 a2 = (a1, a2)"
+
+fun inv_times_sign :: "sign => sign => sign => sign * sign" where
+  "inv_times_sign _ a1 a2 = (a1, a2)"
+
+lemma inv_less_sign_sound:
+  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> (n1 < n2) = res
+   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_less_sign res a1 a2))
+     \<and> n2 \<in> gamma_sign (snd (inv_less_sign res a1 a2))"
+  by (cases res; cases a1; cases a2;
+      auto simp: gamma_sign.simps less_eq_sign_def; linarith)
+
+lemma inv_plus_sign_sound:
+  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 + n2 \<in> gamma_sign r
+   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_plus_sign r a1 a2))
+     \<and> n2 \<in> gamma_sign (snd (inv_plus_sign r a1 a2))"
+  by simp
+
+lemma inv_minus_sign_sound:
+  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 - n2 \<in> gamma_sign r
+   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_minus_sign r a1 a2))
+     \<and> n2 \<in> gamma_sign (snd (inv_minus_sign r a1 a2))"
+  by simp
+
+lemma inv_times_sign_sound:
+  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 * n2 \<in> gamma_sign r
+   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_times_sign r a1 a2))
+     \<and> n2 \<in> gamma_sign (snd (inv_times_sign r a1 a2))"
+  by simp
+
+subsection \<open>Backward-domain interpretation\<close>
+
+global_interpretation sign_backward_domain:
+    backward_domain gamma_sign meet_sign aval_sign
+                    inv_less_sign inv_plus_sign inv_minus_sign inv_times_sign
+  defines
+    afilter_sign = sign_backward_domain.afilter
+    and bfilter_sign = sign_backward_domain.bfilter
+proof unfold_locales
+  fix n :: int and a b :: sign
+  assume "n \<in> gamma_sign a" "n \<in> gamma_sign b"
+  then show "n \<in> gamma_sign (meet_sign a b)" by (rule meet_sign_sound)
+next
+  fix s :: store and e :: aexp and \<sigma> :: "vname => sign"
+  assume "\<forall>x. s x \<in> gamma_sign (\<sigma> x)"
+  then show "aval e s \<in> gamma_sign (aval_sign e \<sigma>)" by (rule aval_sign_sound)
+next
+  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
+  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "(n1 < n2) = res"
+  then show "n1 \<in> gamma_sign (fst (inv_less_sign res a1 a2))
+           \<and> n2 \<in> gamma_sign (snd (inv_less_sign res a1 a2))"
+    by (rule inv_less_sign_sound)
+next
+  fix n1 n2 :: int and a1 a2 r :: sign
+  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "n1 + n2 \<in> gamma_sign r"
+  then show "n1 \<in> gamma_sign (fst (inv_plus_sign r a1 a2))
+           \<and> n2 \<in> gamma_sign (snd (inv_plus_sign r a1 a2))"
+    by (rule inv_plus_sign_sound)
+next
+  fix n1 n2 :: int and a1 a2 r :: sign
+  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "n1 - n2 \<in> gamma_sign r"
+  then show "n1 \<in> gamma_sign (fst (inv_minus_sign r a1 a2))
+           \<and> n2 \<in> gamma_sign (snd (inv_minus_sign r a1 a2))"
+    by (rule inv_minus_sign_sound)
+next
+  fix n1 n2 :: int and a1 a2 r :: sign
+  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "n1 * n2 \<in> gamma_sign r"
+  then show "n1 \<in> gamma_sign (fst (inv_times_sign r a1 a2))
+           \<and> n2 \<in> gamma_sign (snd (inv_times_sign r a1 a2))"
+    by (rule inv_times_sign_sound)
+qed
+
+subsection \<open>Abstract assume\<close>
+
+text \<open>
+  Guard refinement via backward evaluation.  @{text assume_sign} narrows the
+  abstract state on the then-branch; @{text assume_not_sign} on the else-branch.
+  Both delegate to the generic @{text bfilter} proved sound in @{locale backward_domain}.
+\<close>
+
+definition assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
+  "assume_sign b \<sigma> = bfilter_sign b True \<sigma>"
+
+definition assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
+  "assume_not_sign b \<sigma> = bfilter_sign b False \<sigma>"
 
 lemma assume_sign_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and b: "bval b s"
-  shows "s \<in> \<lbrakk>assume_sign b \<sigma>\<rbrakk>"
-proof (cases "\<exists>x n. b = Less (V x) (N n)")
-  case False
-  with assume_sign_default have "assume_sign b \<sigma> = \<sigma>"
-    by blast
-  with gs show ?thesis by simp
-next
-  case True
-  then obtain x n where bn: "b = Less (V x) (N n)" by blast
-  have xv: "s x < n"
-    using b bn by simp
-  show ?thesis
-  proof (cases "n = 0")
-    case True
-    with bn have "assume_sign b \<sigma> = \<sigma>(x := SNeg)"
-      by (simp add: assume_sign.simps)
-    moreover have "s x \<in> gamma_sign SNeg"
-      using xv True by simp
-    moreover have "\<And>y. y \<noteq> x \<Longrightarrow> s y \<in> gamma_sign (\<sigma> y)"
-      using gs unfolding sign_domain.gamma_state_def by simp
-    ultimately show ?thesis
-      unfolding sign_domain.gamma_state_def by simp
-  next
-    case False
-    with bn have "assume_sign b \<sigma> = \<sigma>"
-      by (simp add: assume_sign.simps False)
-    with gs show ?thesis by simp
-  qed
-qed
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_sign b \<sigma>\<rbrakk>"
+  unfolding assume_sign_def
+  using sign_backward_domain.bfilter_sound by simp
 
 lemma assume_not_sign_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_sign b \<sigma>\<rbrakk>"
-  unfolding assume_not_sign.simps by simp
-lemma assume_not_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_sign b sigma1 \<le> assume_not_sign b sigma2"
-  by (simp add: assume_not_sign.simps)
+  unfolding assume_not_sign_def
+  using sign_backward_domain.bfilter_sound by (simp add: eq_False)
 
 
 subsection \<open>Abstract assignment\<close>
@@ -566,16 +707,235 @@ lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
   by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
  
+lemma inv_less_sign_mono:
+  "a1 \<le> (a1'::sign) \<Longrightarrow> a2 \<le> a2' \<Longrightarrow>
+   fst (inv_less_sign r a1 a2) \<le> fst (inv_less_sign r a1' a2') \<and>
+   snd (inv_less_sign r a1 a2) \<le> snd (inv_less_sign r a1' a2')"
+  by (cases r; cases a1; cases a1'; cases a2; cases a2';
+      auto simp: less_eq_sign_def)
+
+lemma afilter_sign_mono:
+  "a1 \<le> (a2::sign) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
+   afilter_sign e a1 sigma1 \<le>
+   afilter_sign e a2 sigma2"
+proof (induction e arbitrary: a1 a2 sigma1 sigma2)
+  case (BaseN a')
+  show ?case
+  proof (cases a')
+    case (V x)
+    show ?thesis
+      unfolding V sign_backward_domain.afilter.simps
+      using BaseN.prems
+    proof (intro le_funI)
+      fix y
+      show "(sigma1(x := meet_sign a1 (sigma1 x))) y \<le> (sigma2(x := meet_sign a2 (sigma2 x))) y"
+      proof (cases "y = x")
+        case True
+        have eq1: "(sigma1(x := meet_sign a1 (sigma1 x))) y = meet_sign a1 (sigma1 x)"
+          using True by simp
+        have eq2: "(sigma2(x := meet_sign a2 (sigma2 x))) y = meet_sign a2 (sigma2 x)"
+          using True by simp
+        have mono: "meet_sign a1 (sigma1 x) \<le> meet_sign a2 (sigma2 x)"
+          using inf_mono[OF BaseN.prems(1) le_funD[OF BaseN.prems(2)]] by simp
+        from eq1 eq2 mono show ?thesis by simp
+      next
+        case False
+        have eq1: "(sigma1(x := meet_sign a1 (sigma1 x))) y = sigma1 y"
+          using False by simp
+        have eq2: "(sigma2(x := meet_sign a2 (sigma2 x))) y = sigma2 y"
+          using False by simp
+        have mono: "sigma1 y \<le> sigma2 y" by (rule le_funD[OF BaseN.prems(2)])
+        from eq1 eq2 mono show ?thesis by simp
+      qed
+    qed
+  next
+    case (N x1)
+    from N have heq: "a' = AExp.N x1" .
+    have h1: "afilter_sign (IMP2_Syntax.N x1) a1 sigma1 = sigma1" by simp
+    have h2: "afilter_sign (IMP2_Syntax.N x1) a2 sigma2 = sigma2" by simp
+    show ?thesis using BaseN.prems(2)
+      apply (subst heq)+
+      using h1 h2 by simp
+  next
+    case (Plus x1 x2)
+    from Plus have heq: "a' = AExp.aexp.Plus x1 x2" .
+    have h1: "afilter_sign (BaseN (AExp.aexp.Plus x1 x2)) a1 sigma1 = sigma1" by simp
+    have h2: "afilter_sign (BaseN (AExp.aexp.Plus x1 x2)) a2 sigma2 = sigma2" by simp
+    show ?thesis using BaseN.prems(2)
+      apply (subst heq)+
+      using h1 h2 by simp
+  qed
+next
+  case (Plus e1 e2)
+  have v1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
+    using aval_sign_mono[OF Plus.prems(2)] .
+  have v2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
+    using aval_sign_mono[OF Plus.prems(2)] .
+  have step: "afilter_sign e2 (aval_sign e2 sigma1) sigma1 \<le>
+              afilter_sign e2 (aval_sign e2 sigma2) sigma2"
+    using Plus.IH(2)[OF v2 Plus.prems(2)] .  have lhs: "afilter_sign (Plus e1 e2) a1 sigma1 =
+    afilter_sign e1 (aval_sign e1 sigma1) (afilter_sign e2 (aval_sign e2 sigma1) sigma1)"
+    by simp
+  have rhs: "afilter_sign (Plus e1 e2) a2 sigma2 =
+    afilter_sign e1 (aval_sign e1 sigma2) (afilter_sign e2 (aval_sign e2 sigma2) sigma2)"
+    by simp
+  show ?case unfolding lhs rhs by (rule Plus.IH(1)[OF v1 step])
+next
+  case (Minus e1 e2)
+  have v1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
+    using aval_sign_mono[OF Minus.prems(2)] .
+  have v2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
+    using aval_sign_mono[OF Minus.prems(2)] .
+  have step: "afilter_sign e2 (aval_sign e2 sigma1) sigma1 \<le>
+                afilter_sign e2 (aval_sign e2 sigma2) sigma2"
+    using Minus.IH(2)[OF v2 Minus.prems(2)] .
+  have lhs: "afilter_sign (Minus e1 e2) a1 sigma1 =
+    afilter_sign e1 (aval_sign e1 sigma1) (afilter_sign e2 (aval_sign e2 sigma1) sigma1)"
+    by simp
+  have rhs: "afilter_sign (Minus e1 e2) a2 sigma2 =
+    afilter_sign e1 (aval_sign e1 sigma2) (afilter_sign e2 (aval_sign e2 sigma2) sigma2)"
+    by simp
+  show ?case unfolding lhs rhs by (rule Minus.IH(1)[OF v1 step])
+next
+  case (Times e1 e2)
+  have v1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
+    using aval_sign_mono[OF Times.prems(2)] .
+  have v2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
+    using aval_sign_mono[OF Times.prems(2)] .
+  have step: "afilter_sign e2 (aval_sign e2 sigma1) sigma1 \<le>
+                afilter_sign e2 (aval_sign e2 sigma2) sigma2"
+    using Times.IH(2)[OF v2 Times.prems(2)] .
+  have lhs: "afilter_sign (Times e1 e2) a1 sigma1 =
+    afilter_sign e1 (aval_sign e1 sigma1) (afilter_sign e2 (aval_sign e2 sigma1) sigma1)"
+    by simp
+  have rhs: "afilter_sign (Times e1 e2) a2 sigma2 =
+    afilter_sign e1 (aval_sign e1 sigma2) (afilter_sign e2 (aval_sign e2 sigma2) sigma2)"
+    by simp
+  show ?case unfolding lhs rhs by (rule Times.IH(1)[OF v1 step])
+qed
+
+lemma bfilter_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow>
+   bfilter_sign b res sigma1 \<le>
+   bfilter_sign b res sigma2"
+proof (induction b arbitrary: res sigma1 sigma2)
+  case (BaseB b')
+  have h1: "bfilter_sign (BaseB b') res sigma1 = sigma1" by simp
+  have h2: "bfilter_sign (BaseB b') res sigma2 = sigma2" by simp
+  show ?case unfolding h1 h2 by (rule BaseB.prems)
+next
+  case (Not b)
+  show ?case
+    unfolding sign_backward_domain.bfilter.simps
+    by (rule Not.IH[OF Not.prems])
+next
+  case (And b1 b2)
+  show ?case
+  proof (cases res)
+    case True
+    hence r: "res = True" by simp
+    have step: "bfilter_sign b2 True sigma1 \<le>
+                bfilter_sign b2 True sigma2"
+      by (rule And.IH(2)[OF And.prems])
+    show ?thesis
+      unfolding r sign_backward_domain.bfilter.simps
+      by (rule And.IH(1)[OF step])
+  next
+    case False
+    hence r: "res = False" by simp
+    have ih1: "bfilter_sign b1 False sigma1 \<le>
+               bfilter_sign b1 False sigma2"
+      by (rule And.IH(1)[OF And.prems])
+    have ih2: "bfilter_sign b2 False sigma1 \<le>
+               bfilter_sign b2 False sigma2"
+      by (rule And.IH(2)[OF And.prems])
+    show ?thesis
+      unfolding r sign_backward_domain.bfilter.simps
+      by (rule sup_mono[OF ih1 ih2])
+  qed
+next
+  case (Or b1 b2)
+  show ?case
+  proof (cases res)
+    case True
+    hence r: "res = True" by simp
+    have ih1: "bfilter_sign b1 True sigma1 \<le>
+               bfilter_sign b1 True sigma2"
+      by (rule Or.IH(1)[OF Or.prems])
+    have ih2: "bfilter_sign b2 True sigma1 \<le>
+               bfilter_sign b2 True sigma2"
+      by (rule Or.IH(2)[OF Or.prems])
+    show ?thesis
+      unfolding r sign_backward_domain.bfilter.simps
+      by (rule sup_mono[OF ih1 ih2])
+  next
+    case False
+    hence r: "res = False" by simp
+    have step: "bfilter_sign b2 False sigma1 \<le>
+                bfilter_sign b2 False sigma2"
+      by (rule Or.IH(2)[OF Or.prems])
+    show ?thesis
+      unfolding r sign_backward_domain.bfilter.simps
+      by (rule Or.IH(1)[OF step])
+  qed
+next
+  case (Less e1 e2)
+  have vmono1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
+    using aval_sign_mono[OF Less.prems] .
+  have vmono2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
+    using aval_sign_mono[OF Less.prems] .
+  have amono: "fst (inv_less_sign res (aval_sign e1 sigma1) (aval_sign e2 sigma1)) \<le>
+               fst (inv_less_sign res (aval_sign e1 sigma2) (aval_sign e2 sigma2)) \<and>
+               snd (inv_less_sign res (aval_sign e1 sigma1) (aval_sign e2 sigma1)) \<le>
+               snd (inv_less_sign res (aval_sign e1 sigma2) (aval_sign e2 sigma2))"
+    by (rule inv_less_sign_mono[OF vmono1 vmono2])
+  have step: "afilter_sign e2
+                (snd (inv_less_sign res (aval_sign e1 sigma1) (aval_sign e2 sigma1))) sigma1 \<le>
+              afilter_sign e2
+                (snd (inv_less_sign res (aval_sign e1 sigma2) (aval_sign e2 sigma2))) sigma2"
+    by (rule afilter_sign_mono[OF amono[THEN conjunct2] Less.prems])
+  show ?case
+    unfolding sign_backward_domain.bfilter.simps Let_def case_prod_beta
+    by (rule afilter_sign_mono[OF amono[THEN conjunct1] step])
+next
+  case (Eq e1 e2)
+  show ?case
+  proof (cases res)
+    case True
+    hence r: "res = True" by simp
+    have vmono1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
+      using aval_sign_mono[OF Eq.prems] .
+    have vmono2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
+      using aval_sign_mono[OF Eq.prems] .
+    have mmono: "meet_sign (aval_sign e1 sigma1) (aval_sign e2 sigma1) \<le>
+                 meet_sign (aval_sign e1 sigma2) (aval_sign e2 sigma2)"
+      using inf_mono[OF vmono1 vmono2] by simp
+    have step: "afilter_sign e2
+                  (meet_sign (aval_sign e1 sigma1) (aval_sign e2 sigma1)) sigma1 \<le>
+                afilter_sign e2
+                  (meet_sign (aval_sign e1 sigma2) (aval_sign e2 sigma2)) sigma2"
+      by (rule afilter_sign_mono[OF mmono Eq.prems])
+    show ?thesis
+      unfolding r sign_backward_domain.bfilter.simps Let_def
+      by (rule afilter_sign_mono[OF mmono step])
+  next
+    case False
+    hence r: "res = False" by simp
+    have h1: "bfilter_sign (Eq e1 e2) False sigma1 = sigma1" by simp
+    have h2: "bfilter_sign (Eq e1 e2) False sigma2 = sigma2" by simp
+    show ?thesis unfolding r h1 h2 by (rule Eq.prems)
+  qed
+qed
+
 lemma assume_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_sign b sigma1 \<le> assume_sign b sigma2"
-proof (induction b arbitrary: sigma1 sigma2)
-  case (Less a1 a2)
-  then show ?case
-    unfolding le_fun_def
-    apply(auto)
-    by (smt (verit, best) assume_sign.simps(1) assume_sign_default fun_upd_other fun_upd_same
-        order_class.order_eq_iff)
-qed auto
+  unfolding assume_sign_def
+  by (rule bfilter_sign_mono)
+
+lemma assume_not_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_sign b sigma1 \<le> assume_not_sign b sigma2"
+  unfolding assume_not_sign_def
+  by (rule bfilter_sign_mono)
 
 
 lemma sign_tf_mono:
@@ -606,7 +966,9 @@ value "aval_sign (Times (N (-2)) (N 3)) (\<lambda>_. SBot)"
 value "aval_sign (Plus (V ''x'') (V ''x'')) ((\<lambda>_. SBot)(''x'' := SPos))"
 
 value "assign_sign ''x'' (N 1) (\<lambda>_. SBot) ''x''"
-value "(assume_sign (Less (V ''x'') (N 0)) (\<lambda>_. STop)) ''x''"
-value "(assume_sign (Less (V ''x'') (N 5)) (\<lambda>_. STop)) ''x''"
+
+text \<open>Backward guard refinement is the abstract spec @{const assume_sign}.
+  Its executable mirror @{text assume_sign_st} on @{text "sign st"} is defined and
+  demonstrated in theory @{text Sign_Exec}.\<close>
 
 end
