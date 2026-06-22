@@ -221,7 +221,7 @@ proof (rule allI)
                   {(6, 1), (7, 3)})"])
     by (auto split: if_splits
               simp: main_prog_env_def main_prog_s0_def ivl_eval_simps
-                    ivl_times_def ivl_times_core.simps ivl_nonempty.simps
+                    times_ivl_def ivl_times_core.simps ivl_nonempty.simps
                     enter_ivl_def combine_abs_def is_global_def)
 qed
 
@@ -244,14 +244,14 @@ text \<open>
 \<close>
 
 theorem main_prog_interval_analysis:
-  assumes S_sound: "S \<le> ivl_domain.gamma_state main_prog_s0"
+  assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
   assumes tr: "tr \<in> cfg_collect_trace main_cfg S (cfg_exit main_cfg)"
   shows "(last tr) ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (edges main_cfg)" by (simp add: main_cfg_edges)
   have fin_c: "finite (combines main_cfg)" by (simp add: main_cfg_combines)
-  have s0_conv: "S \<le> sound_domain.gamma_state gamma_ivl main_prog_s0"
-    using S_sound unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by auto
+  have s0_conv: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
+    using S_sound by simp
   have "(last tr) ''Gx'' \<in> gamma_ivl (main_prog_env (cfg_exit main_cfg) ''Gx'')"
     by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix s0_conv tr])

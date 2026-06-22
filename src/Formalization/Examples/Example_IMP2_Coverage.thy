@@ -131,7 +131,7 @@ qed
 abbreviation "loop_head \<equiv> 2"
 
 lemma loop_head_x_pos:
-  assumes S_sound: "S \<subseteq> sign_domain.gamma_state loop_s0"
+  assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
   assumes tr: "tr \<in> cfg_collect_trace loop_cfg S loop_head"
   shows "(last tr) ''x'' > 0"
 proof -
@@ -139,9 +139,8 @@ proof -
     by (simp add: loop_cfg_edges)
   have fin_c: "finite (combines loop_cfg)"
     by (simp add: loop_cfg_combines)
-  have s0_conv: "S \<subseteq> sound_domain.gamma_state gamma_sign loop_s0"
-    using S_sound
-    unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by auto
+  have s0_conv: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
+    using S_sound by simp
   have "(last tr) ''x'' \<in> gamma_sign (loop_env loop_head ''x'')"
     by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF sign_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])

@@ -75,7 +75,7 @@ text \<open>
 theorem sign_exec_sound_collecting:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
   shows "cfg_collect (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
-         \<le> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
+         \<le> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
 proof -
   define g where "g = compile_prog \<Pi> ps main"
   define sol where "sol = TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps main) (cfg_exit g)"
@@ -116,13 +116,13 @@ proof -
     by (rule side_cone_in_vars_eff[OF pp_eff fin finC ed cd1 cd2 es cs reach])
   have entry_le: "(\<lambda>x. if is_global x then SZero else STop) \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
-  have seed_cov: "cinit_stores \<subseteq> sign_domain.gamma_state (\<lambda>x. if is_global x then SZero else STop)"
+  have seed_cov: "cinit_stores \<subseteq> \<lbrakk>\<lambda>x. if is_global x then SZero else STop\<rbrakk>"
     unfolding cinit_stores_def sign_domain.gamma_state_def
     by (auto simp: gamma_sign.simps)
-  have entry_cov: "cinit_stores \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_entry g))"
+  have entry_cov: "cinit_stores \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using seed_cov sign_domain.gamma_state_mono[OF entry_le] by (rule subset_trans)
   have "cfg_collect g cinit_stores (cfg_exit g)
-        \<le> sign_domain.gamma_state (side_env \<sigma> (cfg_exit g))"
+        \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     by (rule side_collect_sound_exit_pruned_eff
           [OF sign_sound_etf pp_eff fin finC entry_cov ed cd1 cd2 es cs])
   then show ?thesis
@@ -139,14 +139,14 @@ theorem sign_exec_sound_trace:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
   assumes tr: "tr \<in> cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
                        (cfg_exit (compile_prog \<Pi> ps main))"
-  shows "last tr \<in> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
+  shows "last tr \<in> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
 proof -
   from tr have "last tr \<in> alpha_last (cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
                                         (cfg_exit (compile_prog \<Pi> ps main)))"
     by (auto simp: alpha_last_def)
   moreover have "alpha_last (cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
                               (cfg_exit (compile_prog \<Pi> ps main)))
-                 \<le> sign_domain.gamma_state (sign_exec \<Pi> ps main)"
+                 \<le> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
     using alpha_last_cfg_collect_trace_le sign_exec_sound_collecting[OF solves]
     by (rule subset_trans)
   ultimately show ?thesis by blast
@@ -181,14 +181,14 @@ lemma sign_terminates_prog_via_solve_c:
 corollary sign_exec_prog_sound_collecting:
   assumes "sign_terminates_prog p"
   shows "cfg_collect (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))
-           \<le> sign_domain.gamma_state (sign_exec_prog p)"
+           \<le> \<lbrakk>sign_exec_prog p\<rbrakk>"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_collecting)
 
 corollary sign_exec_prog_sound_trace:
   assumes "sign_terminates_prog p"
       and "tr \<in> cfg_collect_trace (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))"
-  shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog p)"
+  shows "last tr \<in> \<lbrakk>sign_exec_prog p\<rbrakk>"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_trace)
 

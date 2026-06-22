@@ -85,7 +85,7 @@ text \<open>
 
 corollary ec_certified_sound:
   "cfg_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))
-   \<le> sign_domain.gamma_state (sign_exec_prog branch_prog)"
+   \<le> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
 text \<open>
@@ -96,7 +96,7 @@ text \<open>
 
 corollary ec_certified_sound_trace:
   assumes "tr \<in> cfg_collect_trace (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
-  shows "last tr \<in> sign_domain.gamma_state (sign_exec_prog branch_prog)"
+  shows "last tr \<in> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
   using assms by (rule sign_exec_prog_sound_trace[OF ec_terminates])
 
 text \<open>

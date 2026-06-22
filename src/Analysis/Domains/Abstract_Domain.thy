@@ -66,25 +66,27 @@ subsection \<open>Lifted concretization\<close>
 definition gamma_state :: "'a abs_state => store set" where
   "gamma_state \<sigma> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
 
+notation gamma_state ("\<lbrakk>_\<rbrakk>")
+
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
    fun :: bot and fun :: sup instances; no extra definitions needed. *)
 
 lemma gamma_state_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> gamma_state sigma1 \<subseteq> gamma_state sigma2"
+  "sigma1 \<le> sigma2 \<Longrightarrow> \<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma2\<rbrakk>"
   unfolding gamma_state_def le_fun_def
   using gamma_mono by blast
 
 lemma gamma_state_bot:
-  "gamma_state bot = {}"
+  "\<lbrakk>bot\<rbrakk> = {}"
   unfolding gamma_state_def bot_fun_def using gamma_bot by auto
 
 lemma gamma_state_sup_ub1:
-  "gamma_state sigma1 \<subseteq> gamma_state (sigma1 \<squnion> sigma2)"
+  "\<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub1 by blast
 
 lemma gamma_state_sup_ub2:
-  "gamma_state sigma2 \<subseteq> gamma_state (sigma1 \<squnion> sigma2)"
+  "\<lbrakk>sigma2\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
 

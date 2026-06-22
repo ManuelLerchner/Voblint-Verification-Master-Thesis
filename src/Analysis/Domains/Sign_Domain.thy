@@ -133,67 +133,74 @@ definition widen_sign :: "sign => sign => sign" where
 
 subsection \<open>Abstract arithmetic operations\<close>
 
-text \<open>Define helpers first so aval_sign can call them.\<close>
+instantiation sign :: plus begin
+fun plus_sign :: "sign => sign => sign" where
+    "plus_sign SBot    _       = SBot"
+  | "plus_sign _       SBot    = SBot"
+  | "plus_sign SNeg    SNeg    = SNeg"
+  | "plus_sign SNeg    SNonPos = SNeg"
+  | "plus_sign SNonPos SNeg    = SNeg"
+  | "plus_sign SNonPos SNonPos = SNonPos"
+  | "plus_sign SPos    SPos    = SPos"
+  | "plus_sign SPos    SNonNeg = SPos"
+  | "plus_sign SNonNeg SPos    = SPos"
+  | "plus_sign SNonNeg SNonNeg = SNonNeg"
+  | "plus_sign SZero   b       = b"
+  | "plus_sign a       SZero   = a"
+  | "plus_sign _       _       = STop"
+instance ..
+end
 
-fun sign_plus :: "sign => sign => sign" where
-    "sign_plus SBot    _       = SBot"
-  | "sign_plus _       SBot    = SBot"
-  | "sign_plus SNeg    SNeg    = SNeg"
-  | "sign_plus SNeg    SNonPos = SNeg"
-  | "sign_plus SNonPos SNeg    = SNeg"
-  | "sign_plus SNonPos SNonPos = SNonPos"
-  | "sign_plus SPos    SPos    = SPos"
-  | "sign_plus SPos    SNonNeg = SPos"
-  | "sign_plus SNonNeg SPos    = SPos"
-  | "sign_plus SNonNeg SNonNeg = SNonNeg"
-  | "sign_plus SZero   b       = b"
-  | "sign_plus a       SZero   = a"
-  | "sign_plus _       _       = STop"
+instantiation sign :: minus begin
+fun minus_sign :: "sign => sign => sign" where
+    "minus_sign SBot    _       = SBot"
+  | "minus_sign _       SBot    = SBot"
+  | "minus_sign SNeg    SPos    = SNeg"
+  | "minus_sign SNeg    SNonNeg = SNeg"
+  | "minus_sign SPos    SNeg    = SPos"
+  | "minus_sign SPos    SNonPos = SPos"
+  | "minus_sign SNeg    SZero   = SNeg"
+  | "minus_sign SPos    SZero   = SPos"
+  | "minus_sign SZero   SZero   = SZero"
+  | "minus_sign SZero   SNeg    = SPos"
+  | "minus_sign SZero   SPos    = SNeg"
+  | "minus_sign SZero   SNonNeg = SNonPos"
+  | "minus_sign SZero   SNonPos = SNonNeg"
+  | "minus_sign SNonNeg SZero   = SNonNeg"
+  | "minus_sign SNonNeg SNeg    = SPos"
+  | "minus_sign SNonNeg SNonPos = SNonNeg"
+  | "minus_sign SNonPos SZero   = SNonPos"
+  | "minus_sign SNonPos SPos    = SNeg"
+  | "minus_sign SNonPos SNonNeg = SNonPos"
+  | "minus_sign _       _       = STop"
+instance ..
+end
 
-fun sign_minus :: "sign => sign => sign" where
-    "sign_minus SBot    _       = SBot"
-  | "sign_minus _       SBot    = SBot"
-  | "sign_minus SNeg    SPos    = SNeg"
-  | "sign_minus SNeg    SNonNeg = SNeg"
-  | "sign_minus SPos    SNeg    = SPos"
-  | "sign_minus SPos    SNonPos = SPos"
-  | "sign_minus SNeg    SZero   = SNeg"
-  | "sign_minus SPos    SZero   = SPos"
-  | "sign_minus SZero   SZero   = SZero"
-  | "sign_minus SZero   SNeg    = SPos"
-  | "sign_minus SZero   SPos    = SNeg"
-  | "sign_minus SZero   SNonNeg = SNonPos"
-  | "sign_minus SZero   SNonPos = SNonNeg"
-  | "sign_minus SNonNeg SZero   = SNonNeg"
-  | "sign_minus SNonNeg SNeg    = SPos"
-  | "sign_minus SNonNeg SNonPos = SNonNeg"
-  | "sign_minus SNonPos SZero   = SNonPos"
-  | "sign_minus SNonPos SPos    = SNeg"
-  | "sign_minus SNonPos SNonNeg = SNonPos"
-  | "sign_minus _       _       = STop"
-
-fun sign_times :: "sign => sign => sign" where
-    "sign_times SBot    _       = SBot"
-  | "sign_times _       SBot    = SBot"
-  | "sign_times SZero   _       = SZero"
-  | "sign_times _       SZero   = SZero"
-  | "sign_times SNeg    SNeg    = SPos"
-  | "sign_times SPos    SPos    = SPos"
-  | "sign_times SNeg    SPos    = SNeg"
-  | "sign_times SPos    SNeg    = SNeg"
-  | "sign_times SNeg    SNonPos = SNonNeg"
-  | "sign_times SNonPos SNeg    = SNonNeg"
-  | "sign_times SNeg    SNonNeg = SNonPos"
-  | "sign_times SNonNeg SNeg    = SNonPos"
-  | "sign_times SPos    SNonNeg = SNonNeg"
-  | "sign_times SNonNeg SPos    = SNonNeg"
-  | "sign_times SPos    SNonPos = SNonPos"
-  | "sign_times SNonPos SPos    = SNonPos"
-  | "sign_times SNonNeg SNonNeg = SNonNeg"
-  | "sign_times SNonNeg SNonPos = SNonPos"
-  | "sign_times SNonPos SNonNeg = SNonPos"
-  | "sign_times SNonPos SNonPos = SNonNeg"
-  | "sign_times _       _       = STop"
+instantiation sign :: times begin
+fun times_sign :: "sign => sign => sign" where
+    "times_sign SBot    _       = SBot"
+  | "times_sign _       SBot    = SBot"
+  | "times_sign SZero   _       = SZero"
+  | "times_sign _       SZero   = SZero"
+  | "times_sign SNeg    SNeg    = SPos"
+  | "times_sign SPos    SPos    = SPos"
+  | "times_sign SNeg    SPos    = SNeg"
+  | "times_sign SPos    SNeg    = SNeg"
+  | "times_sign SNeg    SNonPos = SNonNeg"
+  | "times_sign SNonPos SNeg    = SNonNeg"
+  | "times_sign SNeg    SNonNeg = SNonPos"
+  | "times_sign SNonNeg SNeg    = SNonPos"
+  | "times_sign SPos    SNonNeg = SNonNeg"
+  | "times_sign SNonNeg SPos    = SNonNeg"
+  | "times_sign SPos    SNonPos = SNonPos"
+  | "times_sign SNonPos SPos    = SNonPos"
+  | "times_sign SNonNeg SNonNeg = SNonNeg"
+  | "times_sign SNonNeg SNonPos = SNonPos"
+  | "times_sign SNonPos SNonNeg = SNonPos"
+  | "times_sign SNonPos SNonPos = SNonNeg"
+  | "times_sign _       _       = STop"
+instance ..
+end
 
 fun sign_of_int :: "int => sign" where
   "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
@@ -204,27 +211,27 @@ lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
 fun aval_sign_hol :: "AExp.aexp => (vname => sign) => sign" where
     "aval_sign_hol (AExp.N n)      \<sigma> = sign_of_int n"
   | "aval_sign_hol (AExp.V x)      \<sigma> = \<sigma> x"
-  | "aval_sign_hol (AExp.Plus a b) \<sigma> = sign_plus (aval_sign_hol a \<sigma>) (aval_sign_hol b \<sigma>)"
+  | "aval_sign_hol (AExp.Plus a b) \<sigma> = aval_sign_hol a \<sigma> + aval_sign_hol b \<sigma>"
 
 fun aval_sign :: "aexp => (vname => sign) => sign" where
     "aval_sign (BaseN a)    \<sigma> = aval_sign_hol a \<sigma>"
-  | "aval_sign (Plus  a b)  \<sigma> = sign_plus  (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
-  | "aval_sign (Minus a b)  \<sigma> = sign_minus (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
-  | "aval_sign (Times a b)  \<sigma> = sign_times (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
+  | "aval_sign (Plus  a b)  \<sigma> = aval_sign a \<sigma> + aval_sign b \<sigma>"
+  | "aval_sign (Minus a b)  \<sigma> = aval_sign a \<sigma> - aval_sign b \<sigma>"
+  | "aval_sign (Times a b)  \<sigma> = aval_sign a \<sigma> * aval_sign b \<sigma>"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
-  shows "i + j \<in> gamma_sign (sign_plus a b)"
+  shows "i + j \<in> gamma_sign (a + b)"
   using assms by (cases a; cases b; auto simp: gamma_sign.simps)
 
 lemma sign_minus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
-  shows "i - j \<in> gamma_sign (sign_minus a b)"
+  shows "i - j \<in> gamma_sign (a - b)"
   using assms by (cases a; cases b; auto simp: gamma_sign.simps)
 
 lemma sign_times_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
-  shows "i * j \<in> gamma_sign (sign_times a b)"
+  shows "i * j \<in> gamma_sign (a * b)"
   using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg
                                                 zero_le_mult_iff mult_le_0_iff)
 
@@ -313,6 +320,8 @@ next
     unfolding widen_sign_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
 qed
 
+notation sign_domain.gamma_state ("\<lbrakk>_\<rbrakk>")
+
 lemma sign_gamma_state_conv:
   "(s : sign_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_sign \<sigma>)"
   unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
@@ -331,8 +340,8 @@ proof (cases b rule: bexp.exhaust)
 qed (simp_all add: assume_sign.simps)
 
 lemma assume_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state \<sigma>" and b: "bval b s"
-  shows "s \<in> sign_domain.gamma_state (assume_sign b \<sigma>)"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and b: "bval b s"
+  shows "s \<in> \<lbrakk>assume_sign b \<sigma>\<rbrakk>"
 proof (cases "\<exists>x n. b = Less (V x) (N n)")
   case False
   with assume_sign_default have "assume_sign b \<sigma> = \<sigma>"
@@ -363,8 +372,7 @@ next
 qed
 
 lemma assume_not_sign_sound:
-  "s \<in> sign_domain.gamma_state \<sigma> \<Longrightarrow> \<not> bval b s
-   \<Longrightarrow> s \<in> sign_domain.gamma_state (assume_not_sign b \<sigma>)"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_sign b \<sigma>\<rbrakk>"
   unfolding assume_not_sign.simps by simp
 lemma assume_not_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_sign b sigma1 \<le> assume_not_sign b sigma2"
@@ -379,8 +387,8 @@ where
   "assign_sign x a \<sigma> = \<sigma>(x := aval_sign a \<sigma>)"
 
 lemma assign_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state \<sigma>"
-  shows "s(x := aval a s) \<in> sign_domain.gamma_state (assign_sign x a \<sigma>)"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(x := aval a s) \<in> \<lbrakk>assign_sign x a \<sigma>\<rbrakk>"
   unfolding assign_sign_def sign_domain.gamma_state_def
 proof safe
   fix y
@@ -403,8 +411,8 @@ definition enter_sign :: "sign abs_state => sign abs_state" where
   "enter_sign \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else STop)"
 
 lemma enter_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state \<sigma>"
-  shows "enter_state s \<in> sign_domain.gamma_state (enter_sign \<sigma>)"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "enter_state s \<in> \<lbrakk>enter_sign \<sigma>\<rbrakk>"
 proof -
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
     unfolding sign_domain.gamma_state_def by simp
@@ -435,9 +443,9 @@ definition combine_sign :: "sign abs_state \<Rightarrow> sign abs_state \<Righta
   "combine_sign = combine_abs"
 
 lemma combine_sign_sound:
-  assumes gs: "s \<in> sign_domain.gamma_state sigma_c"
-      and ge: "t \<in> sign_domain.gamma_state sigma_e"
-  shows "combine_states s t \<in> sign_domain.gamma_state (combine_sign sigma_c sigma_e)"
+  assumes gs: "s \<in> \<lbrakk>sigma_c\<rbrakk>"
+      and ge: "t \<in> \<lbrakk>sigma_e\<rbrakk>"
+  shows "combine_states s t \<in> \<lbrakk>combine_sign sigma_c sigma_e\<rbrakk>"
 proof -
   from gs have Vc: "\<forall>z. s z \<in> gamma_sign (sigma_c z)"
     unfolding sign_domain.gamma_state_def by simp
@@ -461,68 +469,60 @@ text \<open>
   per-solver soundness theorems.
 \<close>
 lemma sign_tf_sound_assign:
-  "\<forall>x a \<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
-     st(x := aval a st) \<in> sign_domain.gamma_state (tf_assign sign_tf x a \<sigma>)"
+  "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: assign_sign_sound)
 
 lemma sign_tf_sound_assume:
-  "\<forall>b \<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
-     bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume sign_tf b \<sigma>)"
+  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume sign_tf b \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: assume_sign_sound)
 
 lemma sign_tf_sound_assume_not:
-  "\<forall>b \<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
-     \<not> bval b st \<longrightarrow> st \<in> sign_domain.gamma_state (tf_assume_not sign_tf b \<sigma>)"
+  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: assume_not_sign_sound)
 
 lemma sign_tf_sound_enter:
-  "\<forall>\<sigma>. \<forall>st \<in> sign_domain.gamma_state \<sigma>.
-     enter_state st \<in> sign_domain.gamma_state (tf_enter sign_tf \<sigma>)"
+  "\<forall>\<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state st \<in> \<lbrakk>tf_enter sign_tf \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
 interpretation sign_sound_tf: sound_transfer gamma_sign sign_tf
 proof unfold_locales
-  show "\<forall>x a \<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>.
-       s(x := aval a s) \<in> sign_domain.gamma_state (tf_assign sign_tf x a \<sigma>)"
+  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_assign)
-  show "\<forall>b \<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>. bval b s
-       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume sign_tf b \<sigma>)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume sign_tf b \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_assume)
-  show "\<forall>b \<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>. \<not> bval b s
-       \<longrightarrow> s \<in> sign_domain.gamma_state (tf_assume_not sign_tf b \<sigma>)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_assume_not)
-  show "\<forall>\<sigma>. \<forall>s \<in> sign_domain.gamma_state \<sigma>.
-       enter_state s \<in> sign_domain.gamma_state (tf_enter sign_tf \<sigma>)"
+  show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state s \<in> \<lbrakk>tf_enter sign_tf \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_enter)
 qed
 
 lemma sign_plus_mono1:
-  "a1 \<le> a2 \<Longrightarrow> sign_plus a1 b \<le> sign_plus a2 b"
+  "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::sign)"
   unfolding less_eq_sign_def
   by (cases a1; cases a2; cases b; simp)
 
 lemma sign_plus_mono2:
-  "b1 \<le> b2 \<Longrightarrow> sign_plus a b1 \<le> sign_plus a b2"
+  "b1 \<le> b2 \<Longrightarrow> a + b1 \<le> a + (b2::sign)"
   unfolding less_eq_sign_def
   by (cases a; cases b1; cases b2; simp)
 
 lemma sign_minus_mono1:
-  "a1 \<le> a2 \<Longrightarrow> sign_minus a1 b \<le> sign_minus a2 b"
+  "a1 \<le> a2 \<Longrightarrow> a1 - b \<le> a2 - (b::sign)"
   unfolding less_eq_sign_def
   by (cases a1; cases a2; cases b; simp)
 
 lemma sign_minus_mono2:
-  "b1 \<le> b2 \<Longrightarrow> sign_minus a b1 \<le> sign_minus a b2"
+  "b1 \<le> b2 \<Longrightarrow> a - b1 \<le> a - (b2::sign)"
   unfolding less_eq_sign_def
   by (cases a; cases b1; cases b2; simp)
 
 lemma sign_times_mono1:
-  "a1 \<le> a2 \<Longrightarrow> sign_times a1 b \<le> sign_times a2 b"
+  "a1 \<le> a2 \<Longrightarrow> a1 * b \<le> a2 * (b::sign)"
   unfolding less_eq_sign_def
   by (cases a1; cases a2; cases b; simp)
 
 lemma sign_times_mono2:
-  "b1 \<le> b2 \<Longrightarrow> sign_times a b1 \<le> sign_times a b2"
+  "b1 \<le> b2 \<Longrightarrow> a * b1 \<le> a * (b2::sign)"
   unfolding less_eq_sign_def
   by (cases a; cases b1; cases b2; simp)
 
@@ -546,7 +546,7 @@ lemma show_val_sign_eq [simp]: "(show_val :: sign \<Rightarrow> string) = string
   unfolding show_val_sign_def by simp
 
 lemma sign_plus_combine_mono:
-  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> sign_plus a1 b1 \<le> sign_plus a2 b2"
+  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 + b1 \<le> a2 + (b2::sign)"
   by (meson order.trans sign_plus_mono1 sign_plus_mono2)
 
 lemma aval_sign_hol_mono:
@@ -590,10 +590,10 @@ value "sign_of_int (-5)"
 value "sign_of_int 0"
 value "sign_of_int 3"
 
-value "sign_plus SNeg SPos"
-value "sign_minus SPos SPos"
-value "sign_times SNeg SNeg"
-value "sign_times SZero STop"
+value "(SNeg::sign) + SPos"
+value "(SPos::sign) - SPos"
+value "(SNeg::sign) * SNeg"
+value "(SZero::sign) * STop"
 
 value "join_sign SNeg SPos"
 value "join_sign SNeg SZero"

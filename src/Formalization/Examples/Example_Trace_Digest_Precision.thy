@@ -72,11 +72,11 @@ lemma sign_pos_neg_top: "(1::int) \<in> gamma_sign sv \<Longrightarrow> (-1::int
 (* -- ANY sound flat env reads x as the whole of ZZ ------------------------ *)
 
 lemma flat_forces_top:
-  assumes "alpha_last (cfg_collect_trace gcfg S0 0) \<le> sign_domain.gamma_state envf"
+  assumes "alpha_last (cfg_collect_trace gcfg S0 0) \<le> \<lbrakk>envf\<rbrakk>"
   shows "gamma_sign (envf ''x'') = UNIV"
 proof -
-  from assms have sp_in: "sp \<in> sign_domain.gamma_state envf"
-    and sn_in: "sn \<in> sign_domain.gamma_state envf"
+  from assms have sp_in: "sp \<in> \<lbrakk>envf\<rbrakk>"
+    and sn_in: "sn \<in> \<lbrakk>envf\<rbrakk>"
     using alpha_last_reaching by auto
   from sp_in have "\<forall>y. sp y \<in> gamma_sign (envf y)"
     by (simp add: sign_domain.gamma_state_def)
@@ -91,7 +91,7 @@ proof -
 qed
 
 theorem digest_strictly_more_precise:
-  assumes flat: "alpha_last (cfg_collect_trace gcfg S0 0) \<le> sign_domain.gamma_state envf"
+  assumes flat: "alpha_last (cfg_collect_trace gcfg S0 0) \<le> \<lbrakk>envf\<rbrakk>"
   shows "gamma_sign SPos \<subset> gamma_sign (envf ''x'')"
 proof -
   have top: "gamma_sign (envf ''x'') = UNIV" by (rule flat_forces_top[OF flat])
@@ -112,9 +112,9 @@ lemma dgx_sp[simp]: "dgx [sp] = 1" by (simp add: dgx_def sp_def)
 lemma dgx_sn[simp]: "dgx [sn] = - 1" by (simp add: dgx_def sn_def)
 lemma envd_0_1_x[simp]: "envd 0 1 ''x'' = SPos" by (simp add: envd_def)
 
-lemma sp_in_envd: "sp \<in> sign_domain.gamma_state (envd 0 1)"
+lemma sp_in_envd: "sp \<in> \<lbrakk>envd 0 1\<rbrakk>"
   unfolding sign_domain.gamma_state_def envd_def sp_def by auto
-lemma sn_in_envd: "sn \<in> sign_domain.gamma_state (envd 0 (- 1))"
+lemma sn_in_envd: "sn \<in> \<lbrakk>envd 0 (- 1)\<rbrakk>"
   unfolding sign_domain.gamma_state_def envd_def sn_def by auto
 
 lemma reaching_compat_0_1: "reaching_compat dgx (=) 1 gcfg S0 0 = {[sp]}"
@@ -128,10 +128,10 @@ lemma reaching_compat_0_other:
 (* -- the digest-indexed env is GLOBALLY sound (= digest_env_sound unfolded) -- *)
 
 lemma digest_env_sound_concrete:
-  "\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> sign_domain.gamma_state (envd v d)"
+  "\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> \<lbrakk>envd v d\<rbrakk>"
 proof (intro allI)
   fix d :: int and v :: pp
-  show "alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> sign_domain.gamma_state (envd v d)"
+  show "alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> \<lbrakk>envd v d\<rbrakk>"
   proof (cases "v = 0")
     case False
     then have "cfg_collect_trace gcfg S0 v = {}" by (rule reaching_gcfg_other)
@@ -167,14 +167,14 @@ lemma digest_read_pos: "(last [sp]) ''x'' \<in> gamma_sign (envd 0 1 ''x'')"
 (* -- capstone: sound AND strictly more precise than every sound flat env --- *)
 
 theorem digest_beats_flat:
-  assumes flat: "alpha_last (cfg_collect_trace gcfg S0 0) \<le> sign_domain.gamma_state envf"
+  assumes flat: "alpha_last (cfg_collect_trace gcfg S0 0) \<le> \<lbrakk>envf\<rbrakk>"
   shows "gamma_sign (envd 0 1 ''x'') \<subset> gamma_sign (envf ''x'')
-       \<and> (\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> sign_domain.gamma_state (envd v d))"
+       \<and> (\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> \<lbrakk>envd v d\<rbrakk>)"
 proof
   show "gamma_sign (envd 0 1 ''x'') \<subset> gamma_sign (envf ''x'')"
     using digest_strictly_more_precise[OF flat] by simp
 next
-  show "\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> sign_domain.gamma_state (envd v d)"
+  show "\<forall>d v. alpha_last (reaching_compat dgx (=) d gcfg S0 v) \<le> \<lbrakk>envd v d\<rbrakk>"
     by (rule digest_env_sound_concrete)
 qed
 

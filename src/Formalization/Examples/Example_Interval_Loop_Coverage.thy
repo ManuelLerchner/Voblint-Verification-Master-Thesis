@@ -106,14 +106,14 @@ text \<open>The loop head is the assume node where @{term \<open>x < 20\<close>}
 abbreviation "loop_head \<equiv> 2"
 
 lemma loop_head_x_bounded:
-  assumes S_sound: "S \<subseteq> ivl_domain.gamma_state loop_s0"
+  assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
   assumes tr: "tr \<in> cfg_collect_trace loop_cfg S loop_head"
   shows "0 \<le> (last tr) ''x'' \<and> (last tr) ''x'' \<le> 20"
 proof -
   have fin_e: "finite (edges loop_cfg)" by (simp add: loop_cfg_edges)
   have fin_c: "finite (combines loop_cfg)" by (simp add: loop_cfg_combines)
-  have s0_conv: "S \<subseteq> sound_domain.gamma_state gamma_ivl loop_s0"
-    using S_sound unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by auto
+  have s0_conv: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
+    using S_sound by simp
   have "(last tr) ''x'' \<in> gamma_ivl (loop_env loop_head ''x'')"
     by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])

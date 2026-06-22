@@ -52,22 +52,20 @@ text \<open>
 
 theorem side_sign_analysis_sound:
   fixes \<Pi> ps main and s t :: store and s0 :: "sign abs_state"
-  assumes s_sound: "s \<in> sign_domain.gamma_state s0"
+  assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
     "t \<in> cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) sign_etf bot s0 ()
        (cfg_exit (compile_prog \<Pi> ps main))"
-  shows "t \<in> sign_domain.gamma_state
-       (side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
-         (cfg_exit (compile_prog \<Pi> ps main)))"
+  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
+         (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
 proof -
   interpret se: sound_effectful_transfer gamma_sign sign_etf
     by (rule sign_sound_etf)
-  have gs: "{s} \<le> sound_domain.gamma_state gamma_sign s0"
-    using s_sound
-    unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by auto
+  have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>"
+    using s_sound by simp
   have ed: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf sign_etf b z)"
     unfolding sign_etf_def by (rule dep_aux_apply_etf_from_tf_src)
   have cd1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine sign_etf c2 e2)"
@@ -81,18 +79,13 @@ proof -
   have collect:
     "cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
-     \<le> sound_domain.gamma_state gamma_sign
-         (side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
-           (cfg_exit (compile_prog \<Pi> ps main)))"
+     \<le> \<lbrakk>side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
+           (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
     by (rule side_analyse_eff_collect_sound_exit_pruned_gen
           [OF sign_sound_etf sign_etf_is_mono_eq sign_etf_mono_sides sign_etf_mono_deps
               side_solve_dom gs ed cd1 cd2 es cs])
-  have "t \<in> sound_domain.gamma_state gamma_sign
-       (side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
-         (cfg_exit (compile_prog \<Pi> ps main)))"
+  show ?thesis
     using collect collect_exit by blast
-  then show ?thesis
-    unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by auto
 qed
 
 end

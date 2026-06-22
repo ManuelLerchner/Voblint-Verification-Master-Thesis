@@ -276,6 +276,8 @@ subsection \<open>Right-hand side of the equation system\<close>
 definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "combine_abs sc se = (\<lambda>x. if is_global x then se x else sc x)"
 
+notation combine_abs ("\<langle>_|_\<rangle>")
+
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
   a callee-exit store (sound for se) yields a store sound for combine_abs sc se.
@@ -286,8 +288,8 @@ context sound_domain
 begin
 
 lemma combine_states_sound:
-  assumes sc: "s \<in> gamma_state \<sigma>c" and se: "t \<in> gamma_state \<sigma>e"
-  shows "combine_states s t \<in> gamma_state (combine_abs \<sigma>c \<sigma>e)"
+  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_states s t \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
 proof -
   from sc have Vc: "\<forall>z. s z \<in> \<gamma> (\<sigma>c z)"
     unfolding gamma_state_def by auto
@@ -312,7 +314,7 @@ where
   "rhs g tf join_abs bot_abs s0 env v =
      (let edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u))
                           {(u, a) | u a. (u, a, v) \<in> edges g};
-          comb_vals = image (\<lambda>(c, e). combine_abs (env c) (env e))
+          comb_vals = image (\<lambda>(c, e). \<langle>env c|env e\<rangle>)
                           {(c, e) | c e. (c, e, v) \<in> combines g};
           base = if v = cfg_entry g
                  then insert s0 (edge_vals \<union> comb_vals)
@@ -400,17 +402,17 @@ text \<open>
 locale sound_transfer = sound_domain +
   fixes tf :: "'a domain_transfer"
   assumes tf_sound_assign:
-    "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> gamma_state \<sigma>.
-       s(x := aval a s) \<in> gamma_state (tf_assign tf x a \<sigma>)"
+    "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_assume:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> gamma_state \<sigma>. bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume tf b \<sigma>)"
+    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
+       \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
   assumes tf_sound_assume_not:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> gamma_state \<sigma>. \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (tf_assume_not tf b \<sigma>)"
+    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s
+       \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
   assumes tf_sound_enter:
-    "\<forall>\<sigma>. \<forall>s \<in> gamma_state \<sigma>.
-       enter_state s \<in> gamma_state (tf_enter tf \<sigma>)"
+    "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       enter_state s \<in> \<lbrakk>tf_enter tf \<sigma>\<rbrakk>"
 
 
 subsection \<open>Effectful transfer function record\<close>
@@ -630,22 +632,22 @@ qed
 locale sound_effectful_transfer = sound_domain +
   fixes etf :: "('g::finite, 'a) effectful_domain_transfer"
   assumes etf_sound_nop:
-    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-       s \<in> gamma_state (etf_full (etf_nop etf u) \<sigma>)"
+    "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+       s \<in> \<lbrakk>etf_full (etf_nop etf u) \<sigma>\<rbrakk>"
   assumes etf_sound_assign:
-    "\<forall>x e u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-       s(x := aval e s) \<in> gamma_state (etf_full (etf_assign etf x e u) \<sigma>)"
+    "\<forall>x e u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+       s(x := aval e s) \<in> \<lbrakk>etf_full (etf_assign etf x e u) \<sigma>\<rbrakk>"
   assumes etf_sound_assume:
-    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). bval b s
-       \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume etf b u) \<sigma>)"
+    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+       \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume etf b u) \<sigma>\<rbrakk>"
   assumes etf_sound_assume_not:
-    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state (etf_full (etf_assume_not etf b u) \<sigma>)"
+    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+       \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not etf b u) \<sigma>\<rbrakk>"
   assumes etf_sound_enter:
-    "\<forall>u \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-       enter_state s \<in> gamma_state (etf_full (etf_enter etf u) \<sigma>)"
+    "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+       enter_state s \<in> \<lbrakk>etf_full (etf_enter etf u) \<sigma>\<rbrakk>"
   assumes etf_sound_combine:
-    "\<forall>cc ex \<sigma>. \<forall>s \<in> gamma_state (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>).
-       \<forall>t \<in> gamma_state (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>).
-         combine_states s t \<in> gamma_state (etf_full (etf_combine etf cc ex) \<sigma>)"
+    "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+       \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
+         combine_states s t \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>"
 end

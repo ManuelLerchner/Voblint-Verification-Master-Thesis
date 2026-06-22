@@ -45,13 +45,31 @@ lemma eint_le_MinInf_left [simp]: "eint_le MinInf x"
 lemma eint_le_linear: "eint_le x y \<or> eint_le y x"
   by (cases x; cases y) auto
 
+instantiation eint :: ord begin
+definition less_eq_eint :: "eint => eint => bool" where "less_eq_eint = eint_le"
+definition less_eint    :: "eint => eint => bool" where "(a :: eint) < b = (eint_le a b \<and> \<not> eint_le b a)"
+instance ..
+end
+
+declare less_eq_eint_def [simp]
+
+instance eint :: linorder
+proof
+  fix x y z :: eint
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding less_eint_def less_eq_eint_def by simp
+  show "x \<le> x"                           unfolding less_eq_eint_def by (rule eint_le_refl)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"    unfolding less_eq_eint_def by (rule eint_le_trans)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"    unfolding less_eq_eint_def by (rule eint_le_antisym)
+  show "x \<le> y \<or> y \<le> x"                  unfolding less_eq_eint_def by (rule eint_le_linear)
+qed
+
 subsection \<open>Interval type and order\<close>
 
 datatype ivl = Ivl eint eint   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
 instantiation ivl :: ord begin
 definition less_eq_ivl :: "ivl => ivl => bool" where
-  "(a::ivl) <= b = (case (a, b) of (Ivl l1 u1, Ivl l2 u2) => eint_le l2 l1 \<and> eint_le u1 u2)"
+  "(a::ivl) <= b = (case (a, b) of (Ivl l1 u1, Ivl l2 u2) => l2 \<le> l1 \<and> u1 \<le> u2)"
 definition less_ivl :: "ivl => ivl => bool" where
   "(a::ivl) < b = (a <= b \<and> \<not> b <= a)"
 instance ..
@@ -91,7 +109,7 @@ definition ivl_top :: ivl where
 subsection \<open>Concretization\<close>
 
 fun gamma_ivl :: "ivl => int set" where
-    "gamma_ivl (Ivl l u) = {n. eint_le l (Fin n) \<and> eint_le (Fin n) u}"
+    "gamma_ivl (Ivl l u) = {n. l \<le> Fin n \<and> Fin n \<le> u}"
 
 lemma gamma_ivl_bot: "gamma_ivl bot = {}"
   unfolding bot_ivl_def by auto
@@ -115,8 +133,8 @@ subsection \<open>Join (least upper bound)\<close>
 
 fun join_ivl :: "ivl => ivl => ivl" where
     "join_ivl (Ivl l1 u1) (Ivl l2 u2) =
-       Ivl (if eint_le l1 l2 then l1 else l2)
-           (if eint_le u2 u1 then u1 else u2)"
+       Ivl (if l1 \<le> l2 then l1 else l2)
+           (if u2 \<le> u1 then u1 else u2)"
 
 lemma join_ivl_le_ub1: "(a :: ivl) \<le> join_ivl a b"
 proof (cases a; cases b)
@@ -172,17 +190,61 @@ text \<open>
   interval on a guard (@{text "x < n"} narrows the upper bound).
 \<close>
 fun meet_ivl :: "ivl => ivl => ivl" where
-  "meet_ivl (Ivl l1 u1) (Ivl l2 u2) =
-     Ivl (if eint_le l2 l1 then l1 else l2) (if eint_le u1 u2 then u1 else u2)"
+    "meet_ivl (Ivl l1 u1) (Ivl l2 u2) =
+       Ivl (if l2 \<le> l1 then l1 else l2)
+           (if u1 \<le> u2 then u1 else u2)"
+
+instantiation ivl :: inf begin
+definition inf_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where "inf_ivl = meet_ivl"
+instance ..
+end
+declare inf_ivl_def [simp]
 
 lemma meet_ivl_gamma:
-  "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (meet_ivl a b)"
+  "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (a \<sqinter> b)"
   by (cases a; cases b; auto split: if_splits intro: eint_le_trans)
 
 lemma meet_ivl_mono1:
-  "a1 \<le> a2 \<Longrightarrow> meet_ivl a1 b \<le> meet_ivl a2 b"
+  "(a1 :: ivl) \<le> a2 \<Longrightarrow> a1 \<sqinter> b \<le> a2 \<sqinter> b"
   by (cases a1; cases a2; cases b; auto simp: less_eq_ivl_def split: if_splits
         intro: eint_le_trans elim: eint_le.elims)
+
+lemma meet_ivl_le_lb1: "(a :: ivl) \<sqinter> b \<le> a"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume h: "a = Ivl l1 u1" "b = Ivl l2 u2"
+  show "a \<sqinter> b \<le> a"
+    using h eint_le_linear[of l2 l1] eint_le_linear[of u1 u2]
+    by (auto simp: less_eq_ivl_def split: if_splits simp: eint_le_refl)
+qed
+
+lemma meet_ivl_le_lb2: "(a :: ivl) \<sqinter> b \<le> b"
+proof (cases a; cases b)
+  fix l1 u1 l2 u2 :: eint
+  assume h: "a = Ivl l1 u1" "b = Ivl l2 u2"
+  show "a \<sqinter> b \<le> b"
+    using h eint_le_linear[of l1 l2] eint_le_linear[of u1 u2]
+    by (auto simp: less_eq_ivl_def split: if_splits simp: eint_le_refl)
+qed
+
+lemma meet_ivl_greatest: "(a :: ivl) \<le> c \<Longrightarrow> a \<le> b \<Longrightarrow> a \<le> c \<sqinter> b"
+proof (cases a; cases b; cases c)
+  fix l1 u1 l2 u2 l3 u3 :: eint
+  assume h: "a = Ivl l1 u1" "b = Ivl l2 u2" "c = Ivl l3 u3" "a \<le> c" "a \<le> b"
+  show "a \<le> c \<sqinter> b"
+    using h by (auto simp: less_eq_ivl_def split: if_splits intro: eint_le_trans)
+qed
+
+instance ivl :: semilattice_inf
+proof
+  fix x y z :: ivl
+  show "x \<sqinter> y \<le> x" by (rule meet_ivl_le_lb1)
+  show "x \<sqinter> y \<le> y" by (rule meet_ivl_le_lb2)
+  show "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> y \<sqinter> z" by (rule meet_ivl_greatest)
+qed
+
+instance ivl :: lattice ..
+instance ivl :: bounded_lattice_bot ..
 
 subsection \<open>Widening\<close>
 
@@ -194,31 +256,33 @@ text \<open>
 
 fun widen_ivl :: "ivl => ivl => ivl" where
     "widen_ivl (Ivl l1 u1) (Ivl l2 u2) =
-       Ivl (if eint_le l1 l2 then l1 else MinInf)
-           (if eint_le u2 u1 then u1 else PlusInf)"
+       Ivl (if l1 \<le> l2 then l1 else MinInf)
+           (if u2 \<le> u1 then u1 else PlusInf)"
 
-lemma a_le_widen_ivl: "(a :: ivl) \<le> widen_ivl a b"
+notation widen_ivl (infixl "\<nabla>" 65)
+
+lemma a_le_widen_ivl: "(a :: ivl) \<le> a \<nabla> b"
 proof (cases a; cases b)
   fix l1 u1 l2 u2 :: eint
   assume "a = Ivl l1 u1" "b = Ivl l2 u2"
-  then show "a \<le> widen_ivl a b"
+  then show "a \<le> a \<nabla> b"
     unfolding less_eq_ivl_def by (auto simp: eint_le_refl)
 qed
 
-lemma b_le_widen_ivl: "(b :: ivl) \<le> widen_ivl a b"
+lemma b_le_widen_ivl: "(b :: ivl) \<le> a \<nabla> b"
 proof (cases a; cases b)
   fix l1 u1 l2 u2 :: eint
   assume "a = Ivl l1 u1" "b = Ivl l2 u2"
-  then show "b \<le> widen_ivl a b"
+  then show "b \<le> a \<nabla> b"
     unfolding less_eq_ivl_def
     using eint_le_linear[of l1 l2] eint_le_linear[of u2 u1]
     by auto
 qed
 
-lemma widen_ivl_ub1: "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl a b)"
+lemma widen_ivl_ub1: "gamma_ivl a \<subseteq> gamma_ivl (a \<nabla> b)"
   using gamma_ivl_mono a_le_widen_ivl by blast
 
-lemma widen_ivl_ub2: "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl a b)"
+lemma widen_ivl_ub2: "gamma_ivl b \<subseteq> gamma_ivl (a \<nabla> b)"
   using gamma_ivl_mono b_le_widen_ivl by blast
 
 text \<open>
@@ -228,7 +292,7 @@ text \<open>
   transitions the chain is constant.
 \<close>
 lemma widen_ivl_terminates:
-  assumes "\<forall>i. widen_ivl (f i) (f (Suc i)) = f (Suc i)"
+  assumes "\<forall>i. f i \<nabla> f (Suc i) = f (Suc i)"
   shows "\<exists>n. \<forall>j. n \<le> j \<longrightarrow> f j = f n"
 proof -
   define lb where "lb i = (case f i of Ivl l _ \<Rightarrow> l)" for i
@@ -240,7 +304,7 @@ proof -
     "ub (Suc i) = ub i \<or> ub (Suc i) = PlusInf"
     for i
   proof -
-    have "widen_ivl (Ivl (lb i) (ub i)) (Ivl (lb (Suc i)) (ub (Suc i)))
+    have "Ivl (lb i) (ub i) \<nabla> Ivl (lb (Suc i)) (ub (Suc i))
           = Ivl (lb (Suc i)) (ub (Suc i))"
       using assms[rule_format, of i] f_eq[of i] f_eq[of "Suc i"] by simp
     then have eqs:
@@ -345,11 +409,13 @@ next
   then show "gamma_ivl a \<subseteq> gamma_ivl b" by (rule gamma_ivl_mono)
 next
   fix a b :: ivl
-  show "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl a b)" by (rule widen_ivl_ub1)
+  show "gamma_ivl a \<subseteq> gamma_ivl (a \<nabla> b)" by (rule widen_ivl_ub1)
 next
   fix a b :: ivl
-  show "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl a b)" by (rule widen_ivl_ub2)
+  show "gamma_ivl b \<subseteq> gamma_ivl (a \<nabla> b)" by (rule widen_ivl_ub2)
 qed
+
+notation ivl_domain.gamma_state ("\<lbrakk>_\<rbrakk>")
 
 lemma ivl_gamma_state_conv:
   "(s : ivl_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_ivl \<sigma>)"
@@ -357,33 +423,45 @@ lemma ivl_gamma_state_conv:
 
 subsection \<open>Extended-integer arithmetic\<close>
 
-fun eint_plus :: "eint => eint => eint" where
-    "eint_plus (Fin n)   (Fin m)   = Fin (n + m)"
-  | "eint_plus (Fin _)   MinInf    = MinInf"
-  | "eint_plus (Fin _)   PlusInf   = PlusInf"
-  | "eint_plus MinInf    MinInf    = MinInf"
-  | "eint_plus MinInf    (Fin _)   = MinInf"
-  | "eint_plus MinInf    PlusInf   = MinInf"
-  | "eint_plus PlusInf   MinInf    = PlusInf"
-  | "eint_plus PlusInf   (Fin _)   = PlusInf"
-  | "eint_plus PlusInf   PlusInf   = PlusInf"
+instantiation eint :: plus begin
+fun plus_eint :: "eint => eint => eint" where
+    "plus_eint (Fin n)   (Fin m)   = Fin (n + m)"
+  | "plus_eint (Fin _)   MinInf    = MinInf"
+  | "plus_eint (Fin _)   PlusInf   = PlusInf"
+  | "plus_eint MinInf    MinInf    = MinInf"
+  | "plus_eint MinInf    (Fin _)   = MinInf"
+  | "plus_eint MinInf    PlusInf   = MinInf"
+  | "plus_eint PlusInf   MinInf    = PlusInf"
+  | "plus_eint PlusInf   (Fin _)   = PlusInf"
+  | "plus_eint PlusInf   PlusInf   = PlusInf"
+instance ..
+end
 
-fun eint_minus :: "eint => eint => eint" where
-    "eint_minus (Fin n)   (Fin m)   = Fin (n - m)"
-  | "eint_minus (Fin _)   MinInf    = PlusInf"
-  | "eint_minus (Fin _)   PlusInf   = MinInf"
-  | "eint_minus MinInf    MinInf    = MinInf"
-  | "eint_minus MinInf    (Fin _)   = MinInf"
-  | "eint_minus MinInf    PlusInf   = MinInf"
-  | "eint_minus PlusInf   MinInf    = PlusInf"
-  | "eint_minus PlusInf   (Fin _)   = PlusInf"
-  | "eint_minus PlusInf   PlusInf   = PlusInf"
+instantiation eint :: minus begin
+fun minus_eint :: "eint => eint => eint" where
+    "minus_eint (Fin n)   (Fin m)   = Fin (n - m)"
+  | "minus_eint (Fin _)   MinInf    = PlusInf"
+  | "minus_eint (Fin _)   PlusInf   = MinInf"
+  | "minus_eint MinInf    MinInf    = MinInf"
+  | "minus_eint MinInf    (Fin _)   = MinInf"
+  | "minus_eint MinInf    PlusInf   = MinInf"
+  | "minus_eint PlusInf   MinInf    = PlusInf"
+  | "minus_eint PlusInf   (Fin _)   = PlusInf"
+  | "minus_eint PlusInf   PlusInf   = PlusInf"
+instance ..
+end
 
-fun ivl_plus :: "ivl => ivl => ivl" where
-    "ivl_plus  (Ivl l1 u1) (Ivl l2 u2) = Ivl (eint_plus l1 l2) (eint_plus u1 u2)"
+instantiation ivl :: plus begin
+fun plus_ivl :: "ivl => ivl => ivl" where
+    "plus_ivl  (Ivl l1 u1) (Ivl l2 u2) = Ivl (l1 + l2) (u1 + u2)"
+instance ..
+end
 
-fun ivl_minus :: "ivl => ivl => ivl" where
-    "ivl_minus (Ivl l1 u1) (Ivl l2 u2) = Ivl (eint_minus l1 u2) (eint_minus u1 l2)"
+instantiation ivl :: minus begin
+fun minus_ivl :: "ivl => ivl => ivl" where
+    "minus_ivl (Ivl l1 u1) (Ivl l2 u2) = Ivl (l1 - u2) (u1 - l2)"
+instance ..
+end
 
 text \<open>
   Emptiness test on intervals.  The raw @{typ ivl} lattice contains many
@@ -394,7 +472,7 @@ text \<open>
   handling, which is what makes the precise corner product monotone.
 \<close>
 fun ivl_nonempty :: "ivl => bool" where
-  "ivl_nonempty (Ivl l u) = (eint_le l u \<and> l \<noteq> PlusInf \<and> u \<noteq> MinInf)"
+  "ivl_nonempty (Ivl l u) = (l \<le> u \<and> l \<noteq> PlusInf \<and> u \<noteq> MinInf)"
 
 lemma gamma_ivl_nonempty: "i \<in> gamma_ivl v \<Longrightarrow> ivl_nonempty v"
   by (cases v; cases "case v of Ivl l _ => l"; cases "case v of Ivl _ u => u"; auto)
@@ -431,12 +509,19 @@ fun ivl_times_core :: "ivl => ivl => ivl" where
            (Fin (max (l1*l2) (max (l1*u2) (max (u1*l2) (u1*u2)))))"
   | "ivl_times_core _ _ = ivl_top"
 
-definition ivl_times :: "ivl => ivl => ivl" where
-  "ivl_times a b = (if ivl_nonempty a \<and> ivl_nonempty b then ivl_times_core a b else bot)"
+instantiation ivl :: times begin
+definition times_ivl :: "ivl => ivl => ivl" where
+  "times_ivl a b = (if ivl_nonempty a \<and> ivl_nonempty b then ivl_times_core a b else bot)"
+instance ..
+end
+
+(* times_ivl_def is NOT declared [simp]: the conditional body would
+   cause simp to split on ivl_nonempty before ivl_times_sound / ivl_times_mono
+   can fire. Add it explicitly in proofs that must unfold * directly. *)
 
 lemma ivl_plus_sound:
   assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
-  shows "i + j \<in> gamma_ivl (ivl_plus a b)"
+  shows "i + j \<in> gamma_ivl (a + b)"
 proof (cases a; cases b)
   fix l1 u1 l2 u2 :: eint
   assume "a = Ivl l1 u1" "b = Ivl l2 u2"
@@ -444,7 +529,7 @@ proof (cases a; cases b)
     "eint_le l1 (Fin i)" "eint_le (Fin i) u1"
     "eint_le l2 (Fin j)" "eint_le (Fin j) u2"
     by auto
-  show "i + j \<in> gamma_ivl (ivl_plus a b)"
+  show "i + j \<in> gamma_ivl (a + b)"
     unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
     using bnds
     by (cases l1; cases l2; cases u1; cases u2) auto
@@ -452,7 +537,7 @@ qed
 
 lemma ivl_minus_sound:
   assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
-  shows "i - j \<in> gamma_ivl (ivl_minus a b)"
+  shows "i - j \<in> gamma_ivl (a - b)"
 proof (cases a; cases b)
   fix l1 u1 l2 u2 :: eint
   assume "a = Ivl l1 u1" "b = Ivl l2 u2"
@@ -460,7 +545,7 @@ proof (cases a; cases b)
     "eint_le l1 (Fin i)" "eint_le (Fin i) u1"
     "eint_le l2 (Fin j)" "eint_le (Fin j) u2"
     by auto
-  show "i - j \<in> gamma_ivl (ivl_minus a b)"
+  show "i - j \<in> gamma_ivl (a - b)"
     unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
     using bnds
     by (cases l1; cases l2; cases u1; cases u2) auto
@@ -468,11 +553,11 @@ qed
 
 lemma ivl_times_sound:
   assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
-  shows "i * j \<in> gamma_ivl (ivl_times a b)"
+  shows "i * j \<in> gamma_ivl (a * b)"
 proof -
   from assms have ne: "ivl_nonempty a" "ivl_nonempty b"
     by (auto intro: gamma_ivl_nonempty)
-  hence eq: "ivl_times a b = ivl_times_core a b" by (simp add: ivl_times_def)
+  hence eq: "a * b = ivl_times_core a b" by (simp add: times_ivl_def)
   show ?thesis
   proof (cases a; cases b)
     fix l1 u1 l2 u2 assume ab: "a = Ivl l1 u1" "b = Ivl l2 u2"
@@ -482,7 +567,7 @@ proof -
       from assms ab fin have bnds: "n1 \<le> i" "i \<le> m1" "n2 \<le> j" "j \<le> m2" by auto
       show ?thesis using eq ab fin
         int_mult_in_corners_lo[OF bnds] int_mult_in_corners_hi[OF bnds] by simp
-    qed (use eq ab in \<open>simp_all add: ivl_top_def\<close>)
+    qed (use eq ab ne(1) ne(2) in \<open>simp_all add: ivl_top_def\<close>)
   qed
 qed
 
@@ -491,13 +576,13 @@ subsection \<open>Abstract expression evaluation\<close>
 fun aval_ivl_hol :: "AExp.aexp => (vname => ivl) => ivl" where
     "aval_ivl_hol (AExp.N n)      \<sigma> = Ivl (Fin n) (Fin n)"
   | "aval_ivl_hol (AExp.V x)      \<sigma> = \<sigma> x"
-  | "aval_ivl_hol (AExp.Plus a b) \<sigma> = ivl_plus (aval_ivl_hol a \<sigma>) (aval_ivl_hol b \<sigma>)"
+  | "aval_ivl_hol (AExp.Plus a b) \<sigma> = aval_ivl_hol a \<sigma> + aval_ivl_hol b \<sigma>"
 
 fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
     "aval_ivl (BaseN a)    \<sigma> = aval_ivl_hol a \<sigma>"
-  | "aval_ivl (Plus  a b)  \<sigma> = ivl_plus  (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
-  | "aval_ivl (Minus a b)  \<sigma> = ivl_minus (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
-  | "aval_ivl (Times a b)  \<sigma> = ivl_times (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
+  | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
+  | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
+  | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
 
 lemma aval_ivl_hol_sound:
   "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
@@ -528,8 +613,8 @@ lemma assume_ivl_default:
   by (cases "(b, \<sigma>)" rule: assume_ivl.cases) auto
 
 lemma assume_ivl_sound:
-  assumes gs: "s \<in> ivl_domain.gamma_state \<sigma>" and b: "bval b s"
-  shows "s \<in> ivl_domain.gamma_state (assume_ivl b \<sigma>)"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and b: "bval b s"
+  shows "s \<in> \<lbrakk>assume_ivl b \<sigma>\<rbrakk>"
 proof (cases "\<exists>x n. b = Less (V x) (N n)")
   case False
   with assume_ivl_default gs show ?thesis by metis
@@ -540,7 +625,7 @@ next
   have "assume_ivl b \<sigma> = \<sigma>(x := meet_ivl (\<sigma> x) (Ivl MinInf (Fin (n-1))))"
     using bn by simp
   moreover have "s x \<in> gamma_ivl (meet_ivl (\<sigma> x) (Ivl MinInf (Fin (n-1))))"
-  proof (rule meet_ivl_gamma)
+  proof (rule meet_ivl_gamma[simplified])
     show "s x \<in> gamma_ivl (\<sigma> x)" using gs unfolding ivl_domain.gamma_state_def by simp
     show "s x \<in> gamma_ivl (Ivl MinInf (Fin (n-1)))" using xv by simp
   qed
@@ -558,8 +643,8 @@ where
   "assign_ivl x a \<sigma> = \<sigma>(x := aval_ivl a \<sigma>)"
 
 lemma assign_ivl_sound:
-  "s \<in> ivl_domain.gamma_state \<sigma>
-   \<Longrightarrow> s(x := aval a s) \<in> ivl_domain.gamma_state (assign_ivl x a \<sigma>)"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk>
+   \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign_ivl x a \<sigma>\<rbrakk>"
   unfolding ivl_domain.gamma_state_def assign_ivl_def
   by (auto simp: aval_ivl_sound)
 
@@ -570,8 +655,8 @@ definition enter_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
   "enter_ivl \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else Ivl MinInf PlusInf)"
 
 lemma enter_ivl_sound:
-  assumes "s \<in> ivl_domain.gamma_state \<sigma>"
-  shows "enter_state s \<in> ivl_domain.gamma_state (enter_ivl \<sigma>)"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "enter_state s \<in> \<lbrakk>enter_ivl \<sigma>\<rbrakk>"
   using assms unfolding ivl_domain.gamma_state_def enter_ivl_def enter_state_def
   by (intro CollectI allI) (auto simp: gamma_ivl.simps)
 
@@ -582,58 +667,50 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_enter      = enter_ivl |)"
 
 lemma ivl_tf_sound_assign:
-  "\<forall>x a \<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
-     st(x := aval a st) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a \<sigma>)"
+  "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: assign_ivl_sound)
 
 lemma ivl_tf_sound_assume:
-  "\<forall>b \<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
-     bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume ivl_tf b \<sigma>)"
+  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: assume_ivl_sound)
 
 lemma ivl_tf_sound_assume_not:
-  "\<forall>b \<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
-     \<not> bval b st \<longrightarrow> st \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b \<sigma>)"
+  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by simp
 
 lemma ivl_tf_sound_enter:
-  "\<forall>\<sigma>. \<forall>st \<in> ivl_domain.gamma_state \<sigma>.
-     enter_state st \<in> ivl_domain.gamma_state (tf_enter ivl_tf \<sigma>)"
+  "\<forall>\<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state st \<in> \<lbrakk>tf_enter ivl_tf \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
 interpretation ivl_sound_tf: sound_transfer gamma_ivl ivl_tf
 proof unfold_locales
-  show "\<forall>x a \<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>.
-       s(x := aval a s) \<in> ivl_domain.gamma_state (tf_assign ivl_tf x a \<sigma>)"
+  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_assign)
-  show "\<forall>b \<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>. bval b s
-       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume ivl_tf b \<sigma>)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_assume)
-  show "\<forall>b \<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>. \<not> bval b s
-       \<longrightarrow> s \<in> ivl_domain.gamma_state (tf_assume_not ivl_tf b \<sigma>)"
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_assume_not)
-  show "\<forall>\<sigma>. \<forall>s \<in> ivl_domain.gamma_state \<sigma>.
-       enter_state s \<in> ivl_domain.gamma_state (tf_enter ivl_tf \<sigma>)"
+  show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state s \<in> \<lbrakk>tf_enter ivl_tf \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_enter)
 qed
 
 subsection \<open>Monotonicity of the transfer functions\<close>
 
 lemma eint_plus_mono:
-  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (eint_plus a1 b1) (eint_plus a2 b2)"
+  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (a1 + b1) (a2 + b2)"
   by (cases a1; cases a2; cases b1; cases b2; auto)
 
 lemma eint_minus_mono:
-  "eint_le a1 a2 \<Longrightarrow> eint_le b2 b1 \<Longrightarrow> eint_le (eint_minus a1 b1) (eint_minus a2 b2)"
+  "eint_le a1 a2 \<Longrightarrow> eint_le b2 b1 \<Longrightarrow> eint_le (a1 - b1) (a2 - b2)"
   by (cases a1; cases a2; cases b1; cases b2; auto)
 
 lemma ivl_plus_mono:
-  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> ivl_plus a1 b1 \<le> ivl_plus a2 b2"
+  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> a1 + b1 \<le> a2 + (b2::ivl)"
   by (cases a1; cases a2; cases b1; cases b2;
       simp add: less_eq_ivl_def eint_plus_mono)
 
 lemma ivl_minus_mono:
-  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> ivl_minus a1 b1 \<le> ivl_minus a2 b2"
+  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> a1 - b1 \<le> a2 - (b2::ivl)"
   by (cases a1; cases a2; cases b1; cases b2;
       simp add: less_eq_ivl_def eint_minus_mono)
 
@@ -717,19 +794,19 @@ qed
 
 lemma ivl_times_mono:
   assumes "a1 \<le> a2" "b1 \<le> b2"
-  shows "ivl_times a1 b1 \<le> ivl_times a2 b2"
+  shows "a1 * b1 \<le> a2 * (b2::ivl)"
 proof (cases "ivl_nonempty a1 \<and> ivl_nonempty b1")
   case False
-  then have "ivl_times a1 b1 = bot" by (auto simp add: ivl_times_def)
+  then have "a1 * b1 = bot" by (auto simp add: times_ivl_def)
   thus ?thesis by simp
 next
   case True
   hence ne2: "ivl_nonempty a2" "ivl_nonempty b2"
     using assms ivl_nonempty_mono by blast+
-  have "ivl_times a1 b1 = ivl_times_core a1 b1"
-    using True by (simp add: ivl_times_def)
-  moreover have "ivl_times a2 b2 = ivl_times_core a2 b2"
-    using ne2 by (simp add: ivl_times_def)
+  have "a1 * b1 = ivl_times_core a1 b1"
+    using True by (simp add: times_ivl_def)
+  moreover have "a2 * b2 = ivl_times_core a2 b2"
+    using ne2 by (simp add: times_ivl_def)
   ultimately show ?thesis
     using ivl_times_core_mono[OF _ _ assms] True by simp
 qed
@@ -762,7 +839,7 @@ next
     fix y
     show "(sigma1(x := meet_ivl (sigma1 x) (Ivl MinInf (Fin (n-1))))) y
           \<le> (sigma2(x := meet_ivl (sigma2 x) (Ivl MinInf (Fin (n-1))))) y"
-      using assms by (cases "y = x"; auto simp: meet_ivl_mono1 le_funD)
+      using assms by (cases "y = x"; auto simp: meet_ivl_mono1[simplified] le_funD)
   qed
 qed
 
@@ -795,7 +872,7 @@ lemma ivl_tf_mono:
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.
   Covers the core evaluation rules shared by all interval examples.
-  Examples with multiplication also need @{thm [source] ivl_times_def},
+  Examples with multiplication also need @{thm [source] times_ivl_def},
   @{thm [source] ivl_times_core.simps}, @{thm [source] ivl_nonempty.simps};
   examples with assume edges also need @{thm [source] assume_ivl.simps},
   @{thm [source] assume_not_ivl.simps}, @{thm [source] meet_ivl.simps};
@@ -805,7 +882,7 @@ text \<open>
 lemmas ivl_eval_simps =
   ivl_tf_def assign_ivl_def
   aval_ivl.simps aval_ivl_hol.simps
-  ivl_plus.simps eint_plus.simps
+  plus_ivl.simps plus_eint.simps
   less_eq_ivl_def le_fun_def
 
 subsection \<open>Printable instance\<close>
@@ -828,18 +905,18 @@ lemma show_val_ivl_eq [simp]: "(show_val :: ivl \<Rightarrow> string) = string_o
 
 subsection \<open>Executable examples\<close>
 
-value "eint_plus (Fin 3) (Fin (-1))"
-value "eint_plus PlusInf (Fin 100)"
-value "eint_minus (Fin 5) (Fin 3)"
-value "eint_minus (Fin 0) PlusInf"
+value "(Fin 3 :: eint) + Fin (-1)"
+value "(PlusInf :: eint) + Fin 100"
+value "(Fin 5 :: eint) - Fin 3"
+value "(Fin 0 :: eint) - PlusInf"
 
-value "ivl_plus (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 2) (Fin 5))"
-value "ivl_minus (Ivl (Fin 5) (Fin 10)) (Ivl (Fin 1) (Fin 3))"
-value "ivl_times (Ivl (Fin (-2)) (Fin 3)) (Ivl (Fin (-1)) (Fin 4))"
+value "Ivl (Fin 1) (Fin 3) + Ivl (Fin 2) (Fin 5)"
+value "Ivl (Fin 5) (Fin 10) - Ivl (Fin 1) (Fin 3)"
+value "Ivl (Fin (-2)) (Fin 3) * Ivl (Fin (-1)) (Fin 4)"
 
 value "join_ivl (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 2) (Fin 5))"
-value "widen_ivl (Ivl (Fin 0) (Fin 1)) (Ivl (Fin 0) (Fin 2))"
-value "widen_ivl (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 0) (Fin 3))"
+value "Ivl (Fin 0) (Fin 1) \<nabla> Ivl (Fin 0) (Fin 2)"
+value "Ivl (Fin 1) (Fin 3) \<nabla> Ivl (Fin 0) (Fin 3)"
 value "meet_ivl (Ivl (Fin 0) (Fin 10)) (Ivl (Fin 3) (Fin 7))"
 
 value "string_of_eint MinInf"

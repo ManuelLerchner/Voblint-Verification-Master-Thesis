@@ -158,31 +158,31 @@ subsection \<open>Soundness: a non-unit witness of sound_effectful_transfer\<clo
 theorem flag_etf_sound:
   "sound_effectful_transfer gamma_sign flag_etf"
 proof (unfold_locales)
-  show "\<forall>u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-          s \<in> sign_domain.gamma_state (etf_full (etf_nop flag_etf u) \<sigma>)"
+  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          s \<in> \<lbrakk>etf_full (etf_nop flag_etf u) \<sigma>\<rbrakk>"
     by (simp add: flag_etf_full_nop)
 next
-  show "\<forall>x a u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
+  show "\<forall>x a u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
           s(x := aval a s)
-            \<in> sign_domain.gamma_state (etf_full (etf_assign flag_etf x a u) \<sigma>)"
+            \<in> \<lbrakk>etf_full (etf_assign flag_etf x a u) \<sigma>\<rbrakk>"
     using sign_tf_sound_assign by (simp add: flag_etf_full_assign)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). bval b s
-          \<longrightarrow> s \<in> sign_domain.gamma_state (etf_full (etf_assume flag_etf b u) \<sigma>)"
+  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume flag_etf b u) \<sigma>\<rbrakk>"
     using sign_tf_sound_assume by (simp add: flag_etf_full_assume)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). \<not> bval b s
-          \<longrightarrow> s \<in> sign_domain.gamma_state (etf_full (etf_assume_not flag_etf b u) \<sigma>)"
+  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not flag_etf b u) \<sigma>\<rbrakk>"
     using sign_tf_sound_assume_not by (simp add: flag_etf_full_assume_not)
 next
-  show "\<forall>u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-          enter_state s \<in> sign_domain.gamma_state (etf_full (etf_enter flag_etf u) \<sigma>)"
+  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          enter_state s \<in> \<lbrakk>etf_full (etf_enter flag_etf u) \<sigma>\<rbrakk>"
     using sign_tf_sound_enter by (simp add: flag_etf_full_enter)
 next
-  show "\<forall>cc ex \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>).
-          \<forall>t \<in> sign_domain.gamma_state (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>).
+  show "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+          \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
             combine_states s t
-              \<in> sign_domain.gamma_state (etf_full (etf_combine flag_etf cc ex) \<sigma>)"
+              \<in> \<lbrakk>etf_full (etf_combine flag_etf cc ex) \<sigma>\<rbrakk>"
     by (auto simp: flag_etf_full_combine intro: sign_domain.combine_states_sound)
 qed
 
@@ -333,31 +333,31 @@ lemma named_etf_full_combine:
 theorem named_etf_sound:
   "sound_effectful_transfer gamma_sign named_etf"
 proof (unfold_locales)
-  show "\<forall>u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-          s \<in> sign_domain.gamma_state (etf_full (etf_nop named_etf u) \<sigma>)"
+  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          s \<in> \<lbrakk>etf_full (etf_nop named_etf u) \<sigma>\<rbrakk>"
     by (simp add: named_etf_full_nop)
 next
-  show "\<forall>x a u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
+  show "\<forall>x a u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
           s(x := aval a s)
-            \<in> sign_domain.gamma_state (etf_full (etf_assign named_etf x a u) \<sigma>)"
+            \<in> \<lbrakk>etf_full (etf_assign named_etf x a u) \<sigma>\<rbrakk>"
     using sign_tf_sound_assign by (simp add: named_etf_full_assign)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). bval b s
-          \<longrightarrow> s \<in> sign_domain.gamma_state (etf_full (etf_assume named_etf b u) \<sigma>)"
+  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume named_etf b u) \<sigma>\<rbrakk>"
     using sign_tf_sound_assume by (simp add: named_etf_full_assume)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>). \<not> bval b s
-          \<longrightarrow> s \<in> sign_domain.gamma_state (etf_full (etf_assume_not named_etf b u) \<sigma>)"
+  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not named_etf b u) \<sigma>\<rbrakk>"
     using sign_tf_sound_assume_not by (simp add: named_etf_full_assume_not)
 next
-  show "\<forall>u \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl u) \<squnion> glob_env \<sigma>).
-          enter_state s \<in> sign_domain.gamma_state (etf_full (etf_enter named_etf u) \<sigma>)"
+  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          enter_state s \<in> \<lbrakk>etf_full (etf_enter named_etf u) \<sigma>\<rbrakk>"
     using sign_tf_sound_enter by (simp add: named_etf_full_enter)
 next
-  show "\<forall>cc ex \<sigma>. \<forall>s \<in> sign_domain.gamma_state (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>).
-          \<forall>t \<in> sign_domain.gamma_state (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>).
+  show "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+          \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
             combine_states s t
-              \<in> sign_domain.gamma_state (etf_full (etf_combine named_etf cc ex) \<sigma>)"
+              \<in> \<lbrakk>etf_full (etf_combine named_etf cc ex) \<sigma>\<rbrakk>"
     by (auto simp: named_etf_full_combine intro: sign_domain.combine_states_sound)
 qed
 
@@ -450,36 +450,29 @@ text \<open>
 
 theorem named_analysis_sound:
   fixes \<Pi> ps main and s t :: store and s0 :: "sign abs_state"
-  assumes s_sound: "s \<in> sign_domain.gamma_state s0"
+  assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
     "t \<in> cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) named_etf bot s0 Gpos
        (cfg_exit (compile_prog \<Pi> ps main))"
-  shows "t \<in> sign_domain.gamma_state
-       (side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
-         (cfg_exit (compile_prog \<Pi> ps main)))"
+  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
+         (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
 proof -
-  have gs: "{s} \<le> sound_domain.gamma_state gamma_sign s0"
-    using s_sound
-    unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by auto
+  have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>"
+    using s_sound by simp
   have collect:
     "cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
-     \<le> sound_domain.gamma_state gamma_sign
-         (side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
-           (cfg_exit (compile_prog \<Pi> ps main)))"
+     \<le> \<lbrakk>side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
+         (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
     by (rule side_analyse_eff_collect_sound_exit_pruned_gen
           [OF named_etf_sound named_etf_is_mono_eq named_etf_mono_sides named_etf_mono_deps
               side_solve_dom gs named_edge_dep named_comb_dep1 named_comb_dep2
               named_edge_static named_comb_static])
-  have "t \<in> sound_domain.gamma_state gamma_sign
-       (side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
-         (cfg_exit (compile_prog \<Pi> ps main)))"
+  show ?thesis
     using collect collect_exit by blast
-  then show ?thesis
-    unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by auto
 qed
 
 subsection \<open>Why the conditional flag routing cannot drive the solver\<close>

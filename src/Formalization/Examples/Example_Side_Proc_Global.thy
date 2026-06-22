@@ -22,15 +22,14 @@ definition side_proc_global_s0 :: "sign abs_state" where
 
 theorem proc_global_side_sign_analysis:
   fixes s t :: store
-  assumes s_sound: "s \<in> sign_domain.gamma_state side_proc_global_s0"
+  assumes s_sound: "s \<in> \<lbrakk>side_proc_global_s0\<rbrakk>"
   assumes runs: "cfg_runs_to inc_pi [''p''] (Call ''p'') s t"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p'')) sign_etf bot
        side_proc_global_s0 ()
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
-  shows "t \<in> sign_domain.gamma_state
-       (side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf bot side_proc_global_s0 ()
-         (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
+  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf bot side_proc_global_s0 ()
+         (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))\<rbrakk>"
 proof -
   have collect_exit:
     "t \<in> cfg_collect (compile_prog inc_pi [''p''] (Call ''p'')) {s}
@@ -64,7 +63,7 @@ lemma inc_terminates: "sign_terminates_prog inc_prog"
 
 corollary inc_certified_sound:
   "cfg_collect (prog_cfg inc_prog) cinit_stores (cfg_exit (prog_cfg inc_prog))
-   \<le> sign_domain.gamma_state (sign_exec_prog inc_prog)"
+   \<le> \<lbrakk>sign_exec_prog inc_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
 
 subsection \<open>Annotated CFG visualisation\<close>
