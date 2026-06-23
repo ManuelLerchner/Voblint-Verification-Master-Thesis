@@ -13,6 +13,7 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 - Sign and Interval domain end-to-end on the standalone effectful path: `side_sign_analysis_sound`, `side_ivl_analysis_sound`, executable `sign_exec_sound_collecting` via `Exec_Bridge`.
 - **Effectful spine is the sole spine** (2026-06-18): all pure-only solver files (`TD_Side_IP_Soundness`, `TD_Side_IP_Interface`, `TD_Side_IP_Bounds`, `TD_Side_IP_Mono`) deleted; `side_cfg_T_ip_eff` is the only equation system; shim mono in `TD_Side_Eff_Soundness`, transport in `Exec_Bridge` via direct fold simulation.
 - **0 sorries** in `src/`.
+- **`sound_domain`/`abstract_domain` → type classes** (2026-06-23): `locale sound_domain` and `locale abstract_domain` replaced by `class sound_domain` and `class abstract_domain`; `gamma` is now a single class operation; `gamma_state`/`widen_state` are global definitions with `⟦_⟧` notation; Sign and Interval instantiated via `instantiation` blocks; `backward_domain` drops the `γ` parameter; solver theorems require only `'a::sound_domain` constraints. `Update_rules.N` shadow clash fixed via `hide_const (open)` in `Abstract_Domain`, `Sign_Domain`, `Interval_Domain`.
 - Trace semantics (`cfg_collect_trace`) + projection (`alpha_last`) + soundness morphism.
 - AFP IMP2 bridge + VCG co-existence example.
 - Classical (intra) spine extracted to sibling repo `voblint-formalization-classical`.
