@@ -35,9 +35,7 @@ subsection \<open>One guard: @{text "x < 20"} narrows the upper bound\<close>
 lemma refine_x_lt_20:
   "assume_ivl (Less (V ''x'') (N 20)) sigma_loop_head ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding sigma_x_def
-  by (simp add: assume_ivl_def inv_less_ivl.simps
-        ivl_backward_domain.bfilter.simps ivl_backward_domain.afilter.simps
-        aval_ivl.simps aval_ivl_hol.simps meet_ivl.simps plus_eint.simps)
+  by (simp add: assume_ivl_def)
 
 lemma identity_x_lt_20:
   "assume_ivl_identity (Less (V ''x'') (N 20)) sigma_loop_head ''x'' =
@@ -51,7 +49,7 @@ text \<open>
 lemma refine_excludes_20:
   "20 \<in> gamma_ivl (Ivl (Fin 0) (Fin 20))"
   "20 \<notin> gamma_ivl (Ivl (Fin 0) (Fin 19))"
-  by (simp_all add: gamma_ivl.simps)
+  by simp_all
 
 value "assume_ivl (Less (V ''x'') (N 20)) sigma_loop_head ''x''"
 value "assume_ivl_identity (Less (V ''x'') (N 20)) sigma_loop_head ''x''"
@@ -71,15 +69,12 @@ definition body_after_identity :: "ivl abs_state" where
 lemma body_step_refined:
   "body_after_refined ''x'' = Ivl (Fin 1) (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
-  by (simp add: assign_ivl_def assume_ivl_def inv_less_ivl.simps
-        ivl_backward_domain.bfilter.simps ivl_backward_domain.afilter.simps
-        aval_ivl.simps aval_ivl_hol.simps meet_ivl.simps plus_ivl.simps plus_eint.simps)
+  by (simp add: assign_ivl_def assume_ivl_def)
 
 lemma body_step_identity:
   "body_after_identity ''x'' = Ivl (Fin 1) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: assign_ivl_def aval_ivl.simps aval_ivl_hol.simps
-        plus_ivl.simps plus_eint.simps)
+  by (simp add: assign_ivl_def)
 
 text \<open>
   Joining the initial @{text "[0,0]"} with the body exit is where the gap
@@ -89,16 +84,11 @@ text \<open>
 lemma loop_join_refined:
   "sigma_x (Ivl (Fin 0) (Fin 0)) ''x'' \<squnion> body_after_refined ''x'' = Ivl (Fin 0) (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
-  by (simp add: sup_ivl_def join_ivl.simps assign_ivl_def assume_ivl_def
-        inv_less_ivl.simps ivl_backward_domain.bfilter.simps
-        ivl_backward_domain.afilter.simps aval_ivl.simps aval_ivl_hol.simps
-        meet_ivl.simps plus_ivl.simps plus_eint.simps)
+  by (simp add: sup_ivl_def assign_ivl_def assume_ivl_def)
 
 lemma loop_join_identity:
   "sigma_x (Ivl (Fin 0) (Fin 0)) ''x'' \<squnion> body_after_identity ''x'' = Ivl (Fin 0) (Fin 21)"
-  unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: sup_ivl_def join_ivl.simps assign_ivl_def aval_ivl.simps
-        aval_ivl_hol.simps plus_ivl.simps plus_eint.simps)
+  unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def  by (simp add: sup_ivl_def assign_ivl_def)
 
 lemma backward_analysis_strictly_tighter:
   "Ivl (Fin 0) (Fin 20) \<le> Ivl (Fin 0) (Fin 21)"

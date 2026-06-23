@@ -124,7 +124,7 @@ proof -
       have img: "f ` insert p F = insert (f p) (f ` F)"
         using ninfF by auto
       have fold_eq: "Finite_Set.fold j z (f ` insert p F) = j (f p) (Finite_Set.fold j z (f ` F))"
-        using finF pnF ninfF unfolding img by (simp add: jc.fold_insert)
+        using finF pnF ninfF unfolding img by simp
       show ?thesis
         unfolding xfp fold_eq by (simp add: ub1)
     qed
@@ -152,7 +152,7 @@ proof -
       have img: "f ` insert p F = insert (f p) (f ` F)"
         using ninfF' by auto
       have fold_i: "Finite_Set.fold j z (f ` insert p F) = j (f p) (Finite_Set.fold j z (f ` F))"
-        using finF pnF ninfF' unfolding img by (simp add: jc.fold_insert)
+        using finF pnF ninfF' unfolding img by simp
       have "x \<le> Finite_Set.fold j z (f ` F)"
         by (fact xleF)
       also have "\<dots> \<le> j (f p) (Finite_Set.fold j z (f ` F))"
@@ -224,8 +224,7 @@ next
       have Rimg: "f2 ` insert p F = insert (f2 p) (f2 ` F)"
         using H2' by auto
       have Rfold: "Finite_Set.fold j z (f2 ` insert p F) = j (f2 p) (Finite_Set.fold j z (f2 ` F))"
-        using insert.hyps H2' unfolding Rimg
-        by (simp add: jc.fold_insert)
+        using insert.hyps H2' unfolding Rimg by simp
       have foldf1: "Finite_Set.fold j z (f1 ` F) \<le> j (f2 p) (Finite_Set.fold j z (f2 ` F))"
         by (rule order_trans[OF IH ub2])
       show ?thesis
@@ -240,8 +239,7 @@ next
     have Limg: "f1 ` insert p F = insert (f1 p) (f1 ` F)"
       using H1' by auto
     have Lfold: "Finite_Set.fold j z (f1 ` insert p F) = j (f1 p) (Finite_Set.fold j z (f1 ` F))"
-      using insert.hyps H1' unfolding Limg
-      by (simp add: jc.fold_insert)
+      using insert.hyps H1' unfolding Limg by simp
     show ?thesis
     proof (cases "f2 p \<in> f2 ` F")
       assume H2: "f2 p \<in> f2 ` F"
@@ -260,8 +258,7 @@ next
       have Rimg: "f2 ` insert p F = insert (f2 p) (f2 ` F)"
         using H2' by auto
       have Rfold: "Finite_Set.fold j z (f2 ` insert p F) = j (f2 p) (Finite_Set.fold j z (f2 ` F))"
-        using insert.hyps H2' unfolding Rimg
-        by (simp add: jc.fold_insert)
+        using insert.hyps H2' unfolding Rimg by simp
       have lej: "j (f1 p) (Finite_Set.fold j z (f1 ` F)) \<le> j (f2 p) (Finite_Set.fold j z (f2 ` F))"
         by (rule mono[OF lep IH])
       show ?thesis
@@ -340,7 +337,7 @@ lemma fold_bot_le_superset:
   assumes finY: "finite Y"
   assumes sub: "X \<subseteq> Y"
   shows "Finite_Set.fold (\<squnion>) bot X \<le> Finite_Set.fold (\<squnion>) bot Y"
-  by (metis (no_types, lifting) ext Sup_fin.eq_fold Sup_fin.insert Sup_fin.subset finY finite_subset
+  by (metis (no_types, lifting) Sup_fin.eq_fold Sup_fin.insert Sup_fin.subset finY finite_subset
       fold_empty sub sup.absorb_iff2 sup.commute sup_bot_left)
 
 lemma abs_join_set_le_superset:
@@ -572,7 +569,7 @@ proof -
   interpret ci: comp_fun_idem "(\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _"
     by unfold_locales (auto simp: sup_left_commute)
   have "glob_env \<sigma> = Finite_Set.fold (\<squnion>) \<bottom> (set (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum))"
-    unfolding glob_env_def abs_join_set_def by (simp add: UNIV_enum set_map)
+    unfolding glob_env_def abs_join_set_def by (simp add: UNIV_enum)
   also have "\<dots> = List.fold (\<squnion>) (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum) \<bottom>"
     by (rule ci.fold_set_fold)
   finally show ?thesis .
@@ -610,7 +607,7 @@ next
 next
   case (Side y d t)
   have mono: "sides_of_rhs t \<sigma> \<le> sides_of_rhs (Side y d t) \<sigma>"
-    by (auto simp: le_fun_def Let_def sup_ge1)
+    by (auto simp: le_fun_def Let_def)
   have d_le: "d \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)"
   proof -
     have "d \<le> sides_of_rhs (Side y d t) \<sigma> (Inr y)" by (simp add: Let_def)

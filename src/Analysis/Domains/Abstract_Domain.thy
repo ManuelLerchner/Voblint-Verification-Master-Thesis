@@ -233,7 +233,7 @@ using assms proof (induction e arbitrary: a \<sigma>)
   show ?case proof (cases a')
     case (V x)
     have sx_a: "s x \<in> gamma a"
-      using BaseN.prems(2) V by (simp add: aval.simps AExp.aval.simps)
+      using BaseN.prems(2) V by simp
     have sx_s: "s x \<in> gamma (\<sigma> x)"
       using BaseN.prems(1) unfolding gamma_state_def by simp
     show ?thesis
@@ -243,7 +243,7 @@ using assms proof (induction e arbitrary: a \<sigma>)
         using meet_sound[OF sx_a sx_s] BaseN.prems(1)[unfolded gamma_state_def]
         by (cases "y = x") auto
     qed
-  qed (auto simp: afilter.simps BaseN.prems(1))
+  qed (auto simp: BaseN.prems(1))
 next
   case (Plus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
@@ -251,7 +251,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Plus.prems(1) unfolding gamma_state_def by simp
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by (simp add: aval.simps)
+  have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_plus_sound[OF e1a e2a asum] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -266,7 +266,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Minus.prems(1) unfolding gamma_state_def by simp
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by (simp add: aval.simps)
+  have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_minus_sound[OF e1a e2a adiff] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -281,7 +281,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Times.prems(1) unfolding gamma_state_def by simp
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by (simp add: aval.simps)
+  have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_times_sound[OF e1a e2a aprod] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -295,25 +295,25 @@ lemma bfilter_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "bval b s = res"
   shows "s \<in> \<lbrakk>bfilter b res \<sigma>\<rbrakk>"
 using assms proof (induction b arbitrary: res \<sigma>)
-  case (BaseB b') thus ?case by (simp add: bfilter.simps)
+  case (BaseB b') thus ?case by simp
 next
   case (Not b)
   have bv': "bval b s = (\<not> res)" using Not.prems(2) by (auto)
-  from Not.IH[OF Not.prems(1) bv'] show ?case by (simp add: bfilter.simps)
+  from Not.IH[OF Not.prems(1) bv'] show ?case by simp
 next
   case (And b1 b2)
   show ?case proof (cases res)
     case True
     have v1: "bval b1 s = True" and v2: "bval b2 s = True"
-      using And.prems(2) True by (simp_all add: bval.simps)
+      using And.prems(2) True by simp_all
     have gs2: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
       using And.IH(2)[OF And.prems(1) v2] by simp
     show ?thesis
-      using And.IH(1)[OF gs2 v1] by (simp add: True bfilter.simps)
+      using And.IH(1)[OF gs2 v1] by (simp add: True)
   next
     case False
     have disj: "\<not> bval b1 s \<or> \<not> bval b2 s"
-      using And.prems(2) False by (auto simp: bval.simps)
+      using And.prems(2) False by auto
     show ?thesis proof (cases "bval b1 s")
       case b1F: False
       have v1: "bval b1 s = False" using b1F by simp
@@ -340,7 +340,7 @@ next
   case (Or b1 b2)
   show ?case proof (cases res)
     case True
-    have disj: "bval b1 s \<or> bval b2 s" using Or.prems(2) True by (simp add: bval.simps)
+    have disj: "bval b1 s \<or> bval b2 s" using Or.prems(2) True by simp
     show ?thesis proof (cases "bval b1 s")
       case b1T: True
       have v1: "bval b1 s = True" using b1T by simp
@@ -365,11 +365,11 @@ next
   next
     case False
     have v1: "bval b1 s = False" and v2: "bval b2 s = False"
-      using Or.prems(2) False by (simp_all add: bval.simps)
+      using Or.prems(2) False by simp_all
     have gs2: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
       using Or.IH(2)[OF Or.prems(1) v2] by simp
     show ?thesis
-      using Or.IH(1)[OF gs2 v1] by (simp add: False bfilter.simps)
+      using Or.IH(1)[OF gs2 v1] by (simp add: False)
   qed
 next
   case (Less e1 e2)
@@ -378,7 +378,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Less.prems(1) unfolding gamma_state_def by simp
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (simp add: bval.simps)
+  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by simp
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -391,7 +391,7 @@ next
   show ?case proof (cases res)
     case True
     have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Eq.prems(1) unfolding gamma_state_def by simp
-    have eq: "aval e1 s = aval e2 s" using Eq.prems(2) True by (simp add: bval.simps)
+    have eq: "aval e1 s = aval e2 s" using Eq.prems(2) True by simp
     have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
     have e2a: "aval e1 s \<in> gamma (aval_abs e2 \<sigma>)"
       using aval_abs_sound[OF gs] eq by simp
@@ -402,12 +402,11 @@ next
     have gs2: "s \<in> \<lbrakk>afilter e2 (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)) \<sigma>\<rbrakk>"
       using afilter_sound[OF Eq.prems(1) me2] by simp
     show ?thesis
-      unfolding True bfilter.simps Let_def
       using afilter_sound[OF gs2 ma]
-      by (metis True bfilter.simps(7))
+      by (simp add: True Let_def)
   next
     case False
-    then show ?thesis using Eq.prems(1) by (simp add: bfilter.simps)
+    then show ?thesis using Eq.prems(1) by simp
   qed
 qed
 

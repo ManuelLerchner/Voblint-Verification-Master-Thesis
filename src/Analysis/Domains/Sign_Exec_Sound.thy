@@ -61,7 +61,7 @@ lemma sign_exec_terminates_via_solve_c:
   shows "sign_exec_terminates \<Pi> ps main"
   unfolding sign_exec_terminates_def TD_side_always_join_Interp.term_equivalence
             TD_side_always_join_Interp.solve_c_dom_def
-  using assms by (simp add: not_None_eq)
+  using assms by simp
 
 text \<open>
   Soundness at the state level: starting from any C-faithful initial store
@@ -77,8 +77,9 @@ theorem sign_exec_sound_collecting:
   shows "cfg_collect (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
          \<le> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
 proof -
-  define g where "g = compile_prog \<Pi> ps main"
-  define sol where "sol = TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps main) (cfg_exit g)"
+  define g :: cfg where "g = compile_prog \<Pi> ps main"
+  define sol :: "pp set \<times> (pp + unit \<Rightarrow> sign st)" where
+    "sol = TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps main) (cfg_exit g)"
   define \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" where "\<sigma> = fun_of_st \<circ> snd sol"
   have fin: "finite (edges g)" unfolding g_def using compile_prog_finite by simp
   have finC: "finite (combines g)" unfolding g_def using compile_prog_finite by simp
@@ -86,8 +87,8 @@ proof -
                (sign_exec_eqs \<Pi> ps main) (cfg_exit g)"
     using solves unfolding sign_exec_terminates_def g_def by simp
   have pp0: "part_post_solution (sign_exec_eqs \<Pi> ps main) (cfg_exit g) (snd sol) (fst sol)"
-    using TD_side_always_join_Interp.partial_post_solution[OF dom]
-    by (metis sol_def prod.collapse)
+    using TD_side_always_join_Interp.partial_post_solution[OF dom, of "fst sol" "snd sol"]
+    unfolding sol_def by simp
   have pp_st: "part_post_solution (side_cfg_T_st g sign_tf_st bot cinit_sign_st)
                  (cfg_exit g) (snd sol) (fst sol)"
     using pp0 by (simp add: sign_exec_eqs_def g_def)
@@ -99,7 +100,7 @@ proof -
                   (cfg_exit g) \<sigma> (fst sol)"
     using part_post_solution_st_to_abs_eff[OF sign_tf_st_commute pp_st]
     unfolding sign_etf_def
-    by (simp add: \<sigma>_def fun_of_st_bot fun_of_st_cinit_sign_st bot_fun_def)
+    by (simp add: \<sigma>_def fun_of_st_cinit_sign_st bot_fun_def)
   have ed: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf sign_etf b z)"
     unfolding sign_etf_def by (rule dep_aux_apply_etf_from_tf_src)
   have cd1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine sign_etf c2 e2)"
@@ -118,7 +119,7 @@ proof -
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
   have seed_cov: "cinit_stores \<subseteq> \<lbrakk>\<lambda>x. if is_global x then SZero else STop\<rbrakk>"
     unfolding cinit_stores_def gamma_state_def
-    by (auto simp: gamma_sign.simps)
+    by auto
   have entry_cov: "cinit_stores \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
   have "cfg_collect g cinit_stores (cfg_exit g)

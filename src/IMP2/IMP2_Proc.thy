@@ -76,13 +76,13 @@ lemma pstep_deterministic:
 proof (induction arbitrary: cs'' rule: pstep.induct)
   case (Assign x a s frs) then show ?case by blast
 next
-  case (Seq1 c2 s frs) then show ?case by (blast elim: SeqSE)
+  case (Seq1 c2 s frs) then show ?case by blast
 next
   case (Seq2 c1 s frs c1' s' frs' c2)
   from Seq2.prems Seq2.hyps obtain c1'' s'' frs'' where
     cs'': "cs'' = (Seq c1'' c2, s'', frs'')" and
     step: "pstep \<Pi> (c1, s, frs) (c1'', s'', frs'')"
-    by (auto elim: SeqSE)
+    by auto
   from Seq2.IH[OF step] cs'' show ?case by simp
 next
   case (IfTrue b s c1 c2 frs) then show ?case by blast
@@ -93,7 +93,7 @@ next
 next
   case (Scope c s frs) then show ?case by blast
 next
-  case (Call p c s frs) then show ?case by (auto elim: CallSE)
+  case (Call p c s frs) then show ?case by auto
 next
   case (Restore s fr frs) then show ?case by auto
 qed
@@ -146,7 +146,7 @@ lemma pruns_to_skip: "pruns_to \<Pi> SKIP s s"
 
 (* SKIP is a normal form: no step leaves it (for any frame stack). *)
 lemma pstep_SKIP_stuck: "\<not> pstep \<Pi> (SKIP, s, frs) cs"
-  by (auto elim: SkipSE)
+  by auto
 
 lemma pruns_to_assign: "pruns_to \<Pi> (Assign x a) s (s(x := aval a s))"
 proof -
@@ -175,7 +175,7 @@ proof -
   have g: "is_global ''Gx''" by (simp add: is_global_def)
   (* Entry zeroes locals; Gx is global, so the increment reads s ''Gx''. *)
   have a: "pstep \<Pi> (Call ''p'', s, []) (Seq ?body Restore, ?es, [s])"
-    using p by (blast intro: Call)
+    using p by blast
   have b: "pstep \<Pi> (Seq ?body Restore, ?es, [s])
                     (Seq SKIP Restore, ?es(''Gx'' := ?v), [s])"
     by (rule Seq2[OF Assign])
@@ -279,7 +279,7 @@ next
   case Restore
   show ?case by (simp only: fst_conv snd_conv append_Cons) (rule pstep.Restore)
 next
-  case Seq2 thus ?case by (auto intro: pstep.Seq2)
+  case Seq2 thus ?case by auto
 qed simp_all
 
 lemma pstep_frame_extend:
@@ -388,7 +388,7 @@ proof -
     from 2 have hd: "pstep \<Pi> (Scope c, s, []) Mid"
              and tl: "psteps \<Pi> Mid (SKIP, t, [])" by auto
     from hd have Yval: "Mid = (Seq c Restore, enter_state s, [s])"
-      by (auto elim!: ScopeSE)
+      by auto
     have "pstep \<Pi> (Call p, s, []) (Seq c Restore, enter_state s, [s])"
       using p by (rule Call)
     with tl Yval show ?thesis

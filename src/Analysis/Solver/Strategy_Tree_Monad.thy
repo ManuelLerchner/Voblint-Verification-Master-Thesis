@@ -50,7 +50,7 @@ lemma sides_of_rhs_seqcomp_at:
   fixes t :: "('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree"
   shows "sides_of_rhs (seqcomp_tree t k) \<sigma> z
          = sides_of_rhs t \<sigma> z \<squnion> sides_of_rhs (k (traverse_rhs t \<sigma>)) \<sigma> z"
-  using sides_of_rhs_seqcomp[of t k \<sigma>] by (simp add: sup_apply)
+  using sides_of_rhs_seqcomp[of t k \<sigma>] by simp
 
 text \<open>
   Monotonicity is preserved by bind: if t is monotone in the environment, every

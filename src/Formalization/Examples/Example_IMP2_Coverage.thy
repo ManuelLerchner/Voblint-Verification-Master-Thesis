@@ -80,7 +80,7 @@ lemma loop_cfg_full:
       (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
       (4, EA_Nop, 2)}
      {}"
-  by (simp add: compile_eval_simps loop_prog_def; blast)
+  by (simp add: compile_prog_def compile_prog_with_regions_def Let_def eval_nat_numeral loop_prog_def; blast)
 
 lemma loop_cfg_entry:   "cfg_entry loop_cfg = 0" by (simp add: loop_cfg_full)
 lemma loop_cfg_exit:    "cfg_exit  loop_cfg = 5" by (simp add: loop_cfg_full)
@@ -123,7 +123,6 @@ proof (rule allI)
     by (auto split: if_splits
                simp: loop_env_def loop_s0_def sign_tf_def assign_sign_def
                      assume_sign_def assume_not_sign_def
-                     sign_backward_domain.bfilter.simps
                      less_eq_sign_def le_fun_def)
 
 qed
@@ -144,11 +143,11 @@ proof -
     by (simp add: loop_cfg_combines)
   have s0_conv: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
     using S_sound by simp
-  have "(last tr) ''x'' \<in> gamma_sign (loop_env loop_head ''x'')"
+  have "(last tr) ''x'' \<in> gamma (loop_env loop_head ''x'')"
     by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF sign_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])
   then show ?thesis
-    by (auto simp: loop_env_def gamma_sign.simps)
+    by (auto simp: loop_env_def)
 qed
 
 end

@@ -72,7 +72,7 @@ proof (rule monoI)
       unfolding cfg_collect_F_def
       using monoD[OF collect_pp_mono[of g v] le]
             monoD[OF collect_combine_pp_mono[of g v] le]
-      by (auto dest: subsetD)
+      by auto
   qed
 qed
 

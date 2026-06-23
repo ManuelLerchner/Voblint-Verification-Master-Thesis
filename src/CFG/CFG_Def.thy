@@ -45,6 +45,10 @@ datatype edge_action =
 instance edge_action :: countable
   by countable_datatype
 
+(* bexp linorder is required for edge_action below; derived here (not in
+   IMP2_Syntax) so IMP2 stays warning-free. *)
+derive linorder bexp
+
 (* Executable structural linear order on edge actions (AFP Deriving), used to
    enumerate edge sets deterministically via @{const sorted_list_of_set} in
    @{const cfg_edges_list} / @{const predecessor_list}. Code-generates, so the
@@ -137,8 +141,8 @@ definition cfg_edges_list :: "cfg \<Rightarrow> (pp \<times> edge_action \<times
 lemma cfg_edges_list_code [code]:
   "cfg_edges_list g = sorted_list_of_set (edges g)"
   unfolding cfg_edges_list_def
-  by (cases "finite (edges g)")
-     (auto simp: sorted_list_of_set.fold_insort_key.infinite)
+  by (cases "finite (edges g)") auto
+
 
 definition predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
   "predecessor_list g v =
@@ -205,8 +209,8 @@ definition cfg_combines_list :: "cfg \<Rightarrow> (pp \<times> pp \<times> pp) 
 lemma cfg_combines_list_code [code]:
   "cfg_combines_list g = sorted_list_of_set (combines g)"
   unfolding cfg_combines_list_def
-  by (cases "finite (combines g)")
-     (auto simp: sorted_list_of_set.fold_insort_key.infinite)
+  by (cases "finite (combines g)") auto
+
 
 definition combine_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) list" where
   "combine_predecessor_list g v =

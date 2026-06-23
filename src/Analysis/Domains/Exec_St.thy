@@ -544,7 +544,7 @@ lemma lookup_combine_abs_st [simp]:
   "lookup_st (combine_abs_st sc se) x =
    (if is_global x then lookup_st se x else lookup_st sc x)"
   by (cases "is_global x")
-     (simp_all add: combine_abs_st_def lookup_sup_st)
+     (simp_all add: combine_abs_st_def)
 
 end
 

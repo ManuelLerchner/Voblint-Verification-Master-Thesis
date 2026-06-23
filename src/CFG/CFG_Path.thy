@@ -27,7 +27,7 @@ inductive_cases cfg_emptyE[elim!]: "g \<turnstile> v \<rightarrow>\<langle>[]\<r
 
 lemma cfg_path_emptyD:
   "g \<turnstile> u \<rightarrow>\<langle>[]\<rangle> v \<Longrightarrow> u = v"
-  by (auto elim: cfg_emptyE)
+  by auto
 
 inductive_cases cfg_stepE[elim]: "g \<turnstile> v \<rightarrow>\<langle>es\<rangle> u"
 

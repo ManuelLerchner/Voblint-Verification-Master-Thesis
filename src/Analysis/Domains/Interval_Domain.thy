@@ -614,7 +614,7 @@ lemma aval_ivl_sound:
   "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
    \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a \<sigma>)"
   by (induction a;
-      simp add: aval.simps aval_ivl.simps aval_ivl_hol_sound
+      simp add: aval_ivl_hol_sound
                 ivl_plus_sound ivl_minus_sound ivl_times_sound)
 
 subsection \<open>Backward inverse operators\<close>
@@ -650,22 +650,22 @@ fun inv_times_ivl :: "ivl => ivl => ivl => ivl * ivl" where
 lemma inv_less_ivl_n1_ub:
   "n2 \<in> gamma_ivl (Ivl l2 u2) \<Longrightarrow> n1 < n2
    \<Longrightarrow> n1 \<in> gamma_ivl (Ivl MinInf (u2 - Fin 1))"
-  by (cases u2; auto simp: gamma_ivl.simps; linarith)
+  by (cases u2; auto; linarith)
 
 lemma inv_less_ivl_n2_lb:
   "n1 \<in> gamma_ivl (Ivl l1 u1) \<Longrightarrow> n1 < n2
    \<Longrightarrow> n2 \<in> gamma_ivl (Ivl (l1 + Fin 1) PlusInf)"
-  by (cases l1; auto simp: gamma_ivl.simps; linarith)
+  by (cases l1; auto; linarith)
 
 lemma inv_less_ivl_n1_ge_lb:
   "n2 \<in> gamma_ivl (Ivl l2 u2) \<Longrightarrow> \<not> n1 < n2
    \<Longrightarrow> n1 \<in> gamma_ivl (Ivl l2 PlusInf)"
-  by (cases l2; auto simp: gamma_ivl.simps; linarith)
+  by (cases l2; auto; linarith)
 
 lemma inv_less_ivl_n2_le_ub:
   "n1 \<in> gamma_ivl (Ivl l1 u1) \<Longrightarrow> \<not> n1 < n2
    \<Longrightarrow> n2 \<in> gamma_ivl (Ivl MinInf u1)"
-  by (cases u1; auto simp: gamma_ivl.simps; linarith)
+  by (cases u1; auto; linarith)
 
 lemma inv_less_ivl_sound:
   assumes g1: "n1 \<in> gamma_ivl a1" and g2: "n2 \<in> gamma_ivl a2" and eq: "(n1 < n2) = res"
@@ -761,7 +761,7 @@ definition assume_not_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
 lemma assume_not_ivl_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_ivl b \<sigma>\<rbrakk>"
   unfolding assume_not_ivl_def
-  using ivl_backward_domain.bfilter_sound by (simp add: eq_False)
+  using ivl_backward_domain.bfilter_sound by simp
 
 definition assign_ivl ::
     "vname => aexp => (vname => ivl) => (vname => ivl)"
@@ -784,7 +784,7 @@ lemma enter_ivl_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state s \<in> \<lbrakk>enter_ivl \<sigma>\<rbrakk>"
   using assms unfolding gamma_state_def enter_ivl_def enter_state_def
-  by (intro CollectI allI) (auto simp: gamma_ivl.simps)
+  by (intro CollectI allI) auto
 
 definition ivl_tf :: "ivl domain_transfer" where
   "ivl_tf = (| tf_assign     = assign_ivl,
@@ -940,7 +940,7 @@ qed
 lemma aval_ivl_hol_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl_hol a sigma1 \<le> aval_ivl_hol a sigma2"
   by (induction a arbitrary: sigma1 sigma2)
-     (auto simp: ivl_plus_mono le_funD order_refl)
+     (auto simp: ivl_plus_mono le_funD)
 
 lemma aval_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl a sigma1 \<le> aval_ivl a sigma2"
@@ -1216,7 +1216,7 @@ proof (rule le_funI)
     with True show ?thesis unfolding enter_ivl_def by simp
   next
     case False
-    thus ?thesis unfolding enter_ivl_def by (simp add: order_refl)
+    thus ?thesis unfolding enter_ivl_def by simp
   qed
 qed
 

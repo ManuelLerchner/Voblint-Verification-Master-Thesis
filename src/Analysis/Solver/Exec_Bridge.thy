@@ -136,14 +136,14 @@ proof -
       case (Cons c cs)
       obtain cc ex where c: "c = (cc, ex)" by (cases c)
       show ?case
-        using Cons.IH by (simp add: c fold_insert_idem ac_simps)
+        using Cons.IH by (simp add: c ac_simps)
     qed
   next
     case (Cons e es)
     obtain u a where e: "e = (u, a)" by (cases e)
     show ?case
       using Cons.IH
-      by (simp add: e fold_insert_idem image_Un[symmetric] Un_insert_left ac_simps)
+      by (simp add: e image_Un[symmetric] ac_simps)
   qed
 qed
 
@@ -164,14 +164,14 @@ proof -
       case (Cons c cs)
       obtain cc ex where c: "c = (cc, ex)" by (cases c)
       show ?case
-        using Cons.IH by (simp add: c fold_insert_idem ac_simps)
+        using Cons.IH by (simp add: c ac_simps)
     qed
   next
     case (Cons e es)
     obtain u a where e: "e = (u, a)" by (cases e)
     show ?case
       using Cons.IH
-      by (simp add: e fold_insert_idem image_Un[symmetric] Un_insert_left ac_simps)
+      by (simp add: e image_Un[symmetric] ac_simps)
   qed
 qed
 
@@ -267,8 +267,7 @@ proof (induction es arbitrary: acc_st cs)
     also have "... = side_acc_eff (etf_from_tf tf) (fun_of_st acc_st)
             (fun_of_st \<circ> \<sigma>_st) [] (x # cs)"
       unfolding x
-      by (simp add: side_acc_eff.simps(3) traverse_pure_combine_tree
-            fun_of_st_sup fun_of_st_restrict_local_st o_def)
+      by (simp add: traverse_pure_combine_tree o_def)
     finally show ?case .
   qed
 next
@@ -285,8 +284,7 @@ next
   also have "... = side_acc_eff (etf_from_tf tf) (fun_of_st acc_st)
           (fun_of_st \<circ> \<sigma>_st) (x # es) cs"
     unfolding x
-    by (simp add: side_acc_eff.simps(2) traverse_pure_edge_tree
-          fun_of_st_sup fun_of_st_restrict_local_st commute o_def)
+    by (simp add: traverse_pure_edge_tree commute o_def)
   finally show ?case .
 qed
 
@@ -299,7 +297,7 @@ proof -
           (acc \<squnion> traverse_rhs (apply_etf etf a u) \<sigma>) es cs) \<sigma> (Inr ())
       = sides_of_rhs (side_rhs_fold_eff etf acc es cs) \<sigma> (Inr ())"
     by (rule fun_cong[OF sides_side_rhs_fold_eff_acc_indep])
-  thus ?thesis by (simp add: side_rhs_fold_eff.simps sides_of_rhs_seqcomp sup_apply)
+  thus ?thesis by (simp add: sides_of_rhs_seqcomp)
 qed
 
 lemma sides_eff_fold_combine_step:
@@ -311,7 +309,7 @@ proof -
           (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma> (Inr ())
       = sides_of_rhs (side_rhs_fold_eff etf acc [] cs) \<sigma> (Inr ())"
     by (rule fun_cong[OF sides_side_rhs_fold_eff_acc_indep])
-  thus ?thesis by (simp add: side_rhs_fold_eff.simps sides_of_rhs_seqcomp sup_apply)
+  thus ?thesis by (simp add: sides_of_rhs_seqcomp)
 qed
 
 lemma side_glob_st_fun_of_st_eff:
@@ -332,7 +330,7 @@ proof (induction es arbitrary: acc cs)
     have "fun_of_st (side_glob_st tf_st \<sigma>_st [] (x # cs))
         = restrict_global (fun_of_st (\<sigma>_st (Inl ex)) \<squnion> fun_of_st (\<sigma>_st (Inr ())))
           \<squnion> sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
-      unfolding x by (simp add: fun_of_st_sup fun_of_st_restrict_global_st ih sup.commute)
+      unfolding x by (simp add: ih sup.commute)
     also have "... = sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc [] (x # cs))
             (fun_of_st \<circ> \<sigma>_st) (Inr ())"
       unfolding x
@@ -350,7 +348,7 @@ next
       = restrict_global (apply_tf tf a (fun_of_st (\<sigma>_st (Inl u)) \<squnion> fun_of_st (\<sigma>_st (Inr ()))))
         \<squnion> sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
     unfolding x
-    by (simp add: fun_of_st_sup fun_of_st_restrict_global_st commute ih sup.commute)
+    by (simp add: commute ih sup.commute)
   also have "... = sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc (x # es) cs)
           (fun_of_st \<circ> \<sigma>_st) (Inr ())"
     unfolding x
@@ -397,7 +395,7 @@ proof (induction es arbitrary: acc cs)
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     show ?case unfolding x using Cons.IH
-      by (simp add: Let_def restrict_local_st_combine_abs_st)
+      by (simp add: Let_def)
   qed
 next
   case (Cons x es)
@@ -417,7 +415,7 @@ proof (induction es arbitrary: acc cs)
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     show ?case unfolding x using Cons.IH
-      by (simp add: Let_def restrict_global_st_combine_abs_st)
+      by (simp add: Let_def)
   qed
 next
   case (Cons x es)
@@ -525,18 +523,18 @@ proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
   proof (induction cs arbitrary: acc)
-    case Nil show ?case by (simp add: dep_aux.simps side_rhs_fold_st.simps)
+    case Nil show ?case by simp
   next
     case (Cons c cs)
     obtain cc ex where c: "c = (cc, ex)" by (cases c)
     show ?case unfolding c
-      by (simp add: dep_aux.simps side_rhs_fold_st.simps Let_def Cons.IH)
+      by (simp add: Let_def Cons.IH)
   qed
 next
   case (Cons e es)
   obtain u a where e: "e = (u, a)" by (cases e)
   show ?case unfolding e
-    by (simp add: dep_aux.simps side_rhs_fold_st.simps Let_def Cons.IH)
+    by (simp add: Let_def Cons.IH)
 qed
 
 lemma dep_aux_side_rhs_fold_st_cong:
@@ -577,14 +575,14 @@ proof (induction es arbitrary: acc cs)
     case (Cons c cs)
     obtain cc ex where c: "c = (cc, ex)" by (cases c)
     show ?case unfolding c
-      by (simp add: side_rhs_fold_eff.simps dep_aux_seqcomp etf_combine_from_tf
+      by (simp add: dep_aux_seqcomp
             pure_combine_tree_def Let_def Cons.IH)
   qed
 next
   case (Cons e es)
   obtain u a where e: "e = (u, a)" by (cases e)
   show ?case unfolding e
-    by (simp add: side_rhs_fold_eff.simps dep_aux_seqcomp apply_etf_from_tf
+    by (simp add: dep_aux_seqcomp
           pure_edge_tree_def Let_def Cons.IH)
 qed
 
@@ -606,15 +604,15 @@ proof (induction es arbitrary: acc cs)
     case (Cons c cs)
     obtain cc ex where c: "c = (cc, ex)" by (cases c)
     show ?case unfolding c
-      by (simp add: side_rhs_fold_eff.simps sides_of_rhs_seqcomp sup_apply
-            etf_combine_from_tf pure_combine_tree_def Let_def Cons.IH)
+      by (simp add: sides_of_rhs_seqcomp
+            pure_combine_tree_def Let_def Cons.IH)
   qed
 next
   case (Cons e es)
   obtain w b where e: "e = (w, b)" by (cases e)
   show ?case unfolding e
-    by (simp add: side_rhs_fold_eff.simps sides_of_rhs_seqcomp sup_apply
-          apply_etf_from_tf pure_edge_tree_def Let_def Cons.IH)
+    by (simp add: sides_of_rhs_seqcomp
+          pure_edge_tree_def Let_def Cons.IH)
 qed
 
 lemma sides_make_side_rhs_tree_eff_from_tf_Inl:
@@ -634,8 +632,7 @@ private lemma fun_of_st_eq_st_eff:
   "fun_of_st (eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st) =
    eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ()) v (fun_of_st \<circ> \<sigma>_st)"
   unfolding eq_side_cfg_T_st eq_side_cfg_T_eff
-  by (simp add: side_acc_st_fun_of_st_eff[OF commute]
-                fun_of_st_sup fun_of_st_restrict_local_st)
+  by (simp add: side_acc_st_fun_of_st_eff[OF commute])
 
 private lemma fun_of_st_sides_st_Inr_eff:
   "fun_of_st (sides_of_rhs (side_cfg_T_st g tf_st bot0_st s0_st v) \<sigma>_st (Inr ())) =
@@ -658,7 +655,7 @@ proof (cases "v = cfg_entry g")
     using True
     using acc_eq by (auto simp add: sides_side_rhs_fold_st_Inr Let_def
                   side_glob_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"]
-                  acc_eq fun_of_st_sup fun_of_st_restrict_global_st)
+                  acc_eq)
 next
   case False
   show ?thesis
@@ -666,8 +663,7 @@ next
               make_side_rhs_tree_st_def make_side_rhs_tree_eff_def
     using False
     by (simp add: sides_side_rhs_fold_st_Inr Let_def
-                  side_glob_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"]
-                  fun_of_st_sup)
+                  side_glob_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"])
 qed
 
 text \<open>

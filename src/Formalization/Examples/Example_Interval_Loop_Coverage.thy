@@ -52,7 +52,7 @@ lemma loop_cfg_full:
       (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
       (4, EA_Nop, 2)}
      {}"
-  by (simp add: compile_eval_simps loop_prog_def; blast)
+  by (simp add: compile_prog_def compile_prog_with_regions_def Let_def eval_nat_numeral loop_prog_def; blast)
 
 lemma loop_cfg_entry:   "cfg_entry loop_cfg = 0" by (simp add: loop_cfg_full)
 lemma loop_cfg_exit:    "cfg_exit  loop_cfg = 5" by (simp add: loop_cfg_full)
@@ -104,10 +104,8 @@ proof (rule allI)
                 (3, EA_Assign ''x'' (Plus (V ''x'') (N 1))),
                 (4, EA_Nop)})"])
     by (auto split: if_splits
-             simp: loop_env_def loop_s0_def ivl_eval_simps
-                   assume_ivl_def assume_not_ivl_def
-                   ivl_backward_domain.bfilter.simps ivl_backward_domain.afilter.simps
-                   inv_less_ivl.simps meet_ivl.simps)
+             simp: loop_env_def loop_s0_def ivl_tf_def assign_ivl_def
+                   assume_ivl_def assume_not_ivl_def less_eq_ivl_def le_fun_def)
 qed
 
 subsection \<open>Backward guard refinement at the body entry\<close>
@@ -146,7 +144,7 @@ proof -
   have fin_c: "finite (combines loop_cfg)" by (simp add: loop_cfg_combines)
   have s0_conv: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
     using S_sound by simp
-  have "(last tr) ''x'' \<in> gamma_ivl (loop_env loop_head ''x'')"
+  have "(last tr) ''x'' \<in> gamma (loop_env loop_head ''x'')"
     by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])
   then show ?thesis by (auto simp: loop_env_def)

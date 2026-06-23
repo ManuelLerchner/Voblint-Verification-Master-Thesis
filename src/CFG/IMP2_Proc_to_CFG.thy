@@ -160,7 +160,6 @@ text \<open>
 \<close>
 lemmas compile_eval_simps =
   compile_prog_def compile_prog_with_regions_def
-  compile_procs_list.simps compile.simps Let_def
   eval_nat_numeral
 
 subsection \<open>Freshness / finiteness\<close>
@@ -181,7 +180,7 @@ next
   show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] n' by simp
 next
   case (If b c1 c2)
-  then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 xn where
+  then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
     c1: "compile \<Pi> lay c1 (Suc n) = (n1, en1, ex1, E1, C1)"
     and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
     and n': "n' = Suc n2"
@@ -189,7 +188,7 @@ next
   show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] n' by simp
 next
   case (While b c)
-  then obtain n1 en1 ex1 E1 C1 xn where
+  then obtain n1 en1 ex1 E1 C1 where
     c: "compile \<Pi> lay c (Suc n) = (n1, en1, ex1, E1, C1)"
     and n': "n' = Suc n1"
     by (auto split: prod.splits)

@@ -38,13 +38,13 @@ lemma restrict_local_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> restrict_local (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
      \<le> restrict_local sigma2"
   unfolding restrict_local_def le_fun_def
-  by (auto dest: le_funD simp: bot_least)
+  by (auto dest: le_funD)
 
 lemma restrict_global_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> restrict_global (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
      \<le> restrict_global sigma2"
   unfolding restrict_global_def le_fun_def
-  by (auto dest: le_funD simp: bot_least)
+  by (auto dest: le_funD)
 
 
 (* Monotonicity in the queried assignment (join = \<squnion>). *)
@@ -180,7 +180,7 @@ lemma etf_full_pure_edge_tree:
 
 lemma etf_full_etf_from_tf:
   "etf_full (apply_etf (etf_from_tf tf) a u) \<sigma> = apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-  by (simp add: apply_etf_from_tf etf_full_pure_edge_tree)
+  by (simp add: etf_full_pure_edge_tree)
 
 (* The shim's combine tree returns the caller's locals as its Answer. *)
 lemma traverse_pure_combine_tree:

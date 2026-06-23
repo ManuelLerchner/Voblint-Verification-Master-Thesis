@@ -184,7 +184,7 @@ lemma proj0_combine_states:
   "proj0 (Semantics.combine_states S T)
      = IMP2_Globals.combine_states (proj0 S) (proj0 T)"
   by (rule ext)
-     (simp add: proj0_def Semantics.combine_states_def combine_states_def is_global_eq)
+     (simp add: proj0_def Semantics.combine_states_def is_global_eq)
 
 (* Projecting IMP2's scope-entry state recovers our enter_state. *)
 lemma proj0_null_combine:

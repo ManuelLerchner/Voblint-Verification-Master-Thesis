@@ -545,7 +545,7 @@ lemma sides_fold_le_side_cfg_T_eff:
            (predecessor_list g v) (combine_predecessor_list g v)) \<sigma> (Inr gg)
          \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed v) \<sigma> (Inr gg)"
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def Let_def
-  by (cases "v = cfg_entry g") (auto simp: sup_apply fun_upd_def Let_def)
+  by (cases "v = cfg_entry g") (auto simp: fun_upd_def Let_def)
 
 lemma side_post_solution_le_global_eff:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"

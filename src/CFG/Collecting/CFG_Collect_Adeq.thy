@@ -82,14 +82,14 @@ lemma compile_procs_list_singleton_inc:
   "compile_procs_list inc_pi [''p''] (\<lambda>_. None) 0 =
      (2, ((\<lambda>_. None)(''p'' := Some (0, 1, {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {}))),
       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {})"
-  by (simp add: inc_pi_def inc_body_def compile_procs_list.simps compile.simps)
+  by (simp add: inc_pi_def inc_body_def)
 
 lemma compile_inc_call:
   "compile inc_pi
      ((\<lambda>_. None)(''p'' := Some (0, 1, { (0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1)}, {})))
      (Call ''p'') 2 =
    (3, 2, 3, {(2, EA_Enter, 0)}, {(2, 1, 3)})"
-  by (simp add: compile.simps)
+  by simp
 
 lemma compile_prog_inc_entry:
   "cfg_entry (compile_prog inc_pi [''p''] (Call ''p'')) = 2"
@@ -195,7 +195,7 @@ lemma edge_collect_assign_enter_state:
   fixes s :: store and x :: vname and a :: aexp
   assumes "enter_state s \<in> S"
   shows "(enter_state s)(x := aval a (enter_state s)) \<in> edge_collect (EA_Assign x a) S"
-  using assms by (auto simp: edge_collect.simps)
+  using assms by auto
 
 lemma aval_plus_gx_on_enter:
   "aval (Plus (V ''Gx'') (N 1)) (enter_state s) = s ''Gx'' + 1"
@@ -223,7 +223,7 @@ proof -
   have enter: "enter_state s \<in> cfg_collect ?g ?S 0"
   proof (rule cfg_collect_edge[OF en])
     show "enter_state s \<in> edge_collect EA_Enter (cfg_collect ?g ?S 2)"
-      using s_at_call by (simp add: edge_collect.simps)
+      using s_at_call by simp
   qed
   have asg: "(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1) \<in> edges ?g"
     using compile_prog_inc_structure by simp

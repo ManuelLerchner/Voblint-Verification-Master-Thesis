@@ -66,7 +66,7 @@ lemma sign_le_trans:
 lemma gamma_sign_mono:
   assumes st: "sign_le s t"
   shows "gamma_sign s <= gamma_sign t"
-  using st by (cases s; cases t; auto simp: gamma_sign.simps)
+  using st by (cases s; cases t; auto)
 
 instantiation sign :: ord begin
 definition less_eq_sign :: "sign => sign => bool" where "(a::sign) <= b = sign_le a b"
@@ -118,13 +118,13 @@ fun join_sign :: "sign => sign => sign" where
   | "join_sign _       _       = STop"
 
 lemma join_sign_ub1: "sign_le a (join_sign a b)"
-  by (cases a; cases b; simp add: join_sign.simps)
+  by (cases a; cases b; simp)
 
 lemma join_sign_ub2: "sign_le b (join_sign a b)"
-  by (cases a; cases b; simp add: join_sign.simps)
+  by (cases a; cases b; simp)
 
 lemma join_sign_least: "sign_le a c ==> sign_le b c ==> sign_le (join_sign a b) c"
-  by (cases a; cases b; cases c; simp add: join_sign.simps)
+  by (cases a; cases b; cases c; simp)
 lemma join_sign_comm:  "join_sign a b = join_sign b a"                 by (cases a; cases b) simp_all
 lemma join_sign_assoc: "join_sign a (join_sign b c) = join_sign (join_sign a b) c"  by (cases a; cases b; cases c) simp_all
 
@@ -208,7 +208,7 @@ fun sign_of_int :: "int => sign" where
   "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
 
 lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
-  by (auto simp: sign_of_int.simps gamma_sign.simps split: if_splits)
+  by (auto split: if_splits)
 
 fun aval_sign_hol :: "AExp.aexp => (vname => sign) => sign" where
     "aval_sign_hol (AExp.N n)      \<sigma> = sign_of_int n"
@@ -224,17 +224,17 @@ fun aval_sign :: "aexp => (vname => sign) => sign" where
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
   shows "i + j \<in> gamma_sign (a + b)"
-  using assms by (cases a; cases b; auto simp: gamma_sign.simps)
+  using assms by (cases a; cases b; auto)
 
 lemma sign_minus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
   shows "i - j \<in> gamma_sign (a - b)"
-  using assms by (cases a; cases b; auto simp: gamma_sign.simps)
+  using assms by (cases a; cases b; auto)
 
 lemma sign_times_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
   shows "i * j \<in> gamma_sign (a * b)"
-  using assms by (cases a; cases b; auto simp: gamma_sign.simps mult_neg_neg mult_neg_pos mult_pos_neg
+  using assms by (cases a; cases b; auto simp: mult_neg_neg mult_neg_pos mult_pos_neg
                                                 zero_le_mult_iff mult_le_0_iff)
 
 lemma aval_sign_hol_sound:
@@ -246,8 +246,7 @@ lemma aval_sign_sound:
   "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))
    \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a \<sigma>)"
   by (induction a arbitrary: s \<sigma>;
-      simp add: aval.simps aval_sign.simps aval_sign_hol_sound
-                sign_plus_sound sign_minus_sound sign_times_sound)
+      simp add: aval_sign_hol_sound sign_plus_sound sign_minus_sound sign_times_sound)
 
 subsection \<open>Typeclass instances\<close>
 
@@ -368,7 +367,7 @@ fun meet_sign :: "sign => sign => sign" where
 
 lemma meet_sign_sound:
   "n \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> n \<in> gamma_sign (meet_sign a b)"
-  by (cases a; cases b; auto simp: gamma_sign.simps)
+  by (cases a; cases b; auto)
 
 instantiation sign :: inf begin
 definition inf_sign :: "sign => sign => sign" where
@@ -430,7 +429,7 @@ lemma inv_less_sign_sound:
    \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_less_sign res a1 a2))
      \<and> n2 \<in> gamma_sign (snd (inv_less_sign res a1 a2))"
   by (cases res; cases a1; cases a2;
-      auto simp: gamma_sign.simps less_eq_sign_def; linarith)
+      auto simp: less_eq_sign_def; linarith)
 
 lemma inv_plus_sign_sound:
   "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 + n2 \<in> gamma_sign r
@@ -526,7 +525,7 @@ lemma assume_sign_sound:
 lemma assume_not_sign_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_sign b \<sigma>\<rbrakk>"
   unfolding assume_not_sign_def
-  using sign_backward_domain.bfilter_sound by (simp add: eq_False)
+  using sign_backward_domain.bfilter_sound by simp
 
 
 subsection \<open>Abstract assignment\<close>
@@ -569,7 +568,7 @@ proof -
   show ?thesis
     unfolding gamma_state_def enter_sign_def
     by (intro CollectI allI; cases "is_global x";
-        auto simp: enter_state_def V gamma_sign.simps)
+        auto simp: enter_state_def V)
 qed
 
 lemma enter_sign_mono:
@@ -603,7 +602,7 @@ proof -
     unfolding gamma_state_def by simp
   show ?thesis
     unfolding gamma_state_def combine_sign_def combine_abs_def combine_states_def
-    by (intro CollectI allI; cases "is_global x"; auto simp: Vc Ve gamma_sign.simps)
+    by (intro CollectI allI; cases "is_global x"; auto simp: Vc Ve)
 qed
 
 definition sign_tf :: "sign domain_transfer" where

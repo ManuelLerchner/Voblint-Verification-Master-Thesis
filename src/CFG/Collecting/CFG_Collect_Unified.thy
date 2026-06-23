@@ -40,7 +40,7 @@ proof (rule monoI)
     show "F g S rho1 v \<subseteq> F g S rho2 v"
       unfolding F_def
       using monoD[OF collect_pp_mono[of g v] le] combine_at_mono[OF le]
-      by (auto dest: subsetD)
+      by auto
   qed
 qed
 

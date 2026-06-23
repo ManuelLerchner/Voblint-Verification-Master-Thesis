@@ -543,10 +543,10 @@ lemma side_cfg_T_eff_is_mono_eq:
   shows "is_mono_eq (side_cfg_T_eff g (etf_from_tf tf) bot0 s0 ())"
   apply (rule side_cfg_T_eff_is_mono_eq_gen)
   subgoal for a u s1 s2
-    by (simp add: apply_etf_from_tf traverse_pure_edge_tree)
+    by (simp add: traverse_pure_edge_tree)
        (rule restrict_local_mono, rule tf_mono, intro sup_mono; simp add: le_fun_def)
   subgoal for cc ex s1 s2
-    by (simp add: etf_combine_from_tf traverse_pure_combine_tree)
+    by (simp add: traverse_pure_combine_tree)
        (rule restrict_local_mono, intro sup_mono; simp add: le_fun_def)
   done
 
@@ -559,13 +559,13 @@ lemma side_cfg_T_eff_mono_sides:
   apply (rule side_cfg_T_eff_mono_sides_gen)
   subgoal for a u s1 s2
     apply (rule le_funI, rename_tac k, case_tac k)
-    by (simp add: apply_etf_from_tf pure_edge_tree_def Let_def)
-       (simp add: apply_etf_from_tf sides_pure_edge_tree_Inr,
+    by (simp add: pure_edge_tree_def Let_def)
+       (simp add: sides_pure_edge_tree_Inr,
         rule restrict_global_mono, rule tf_mono, intro sup_mono; simp add: le_fun_def)
   subgoal for cc ex s1 s2
     apply (rule le_funI, rename_tac k, case_tac k)
-    by (simp add: etf_combine_from_tf pure_combine_tree_def Let_def)
-       (simp add: etf_combine_from_tf sides_pure_combine_tree_Inr,
+    by (simp add: pure_combine_tree_def Let_def)
+       (simp add: sides_pure_combine_tree_Inr,
         rule restrict_global_mono, intro sup_mono; simp add: le_fun_def)
   done
 

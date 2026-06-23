@@ -69,7 +69,7 @@ lemma edges_collect_nop_append:
   "edges_collect (es1 @ [(EA_Nop, w)] @ es2) S = edges_collect es2 (edges_collect es1 S)"
 proof (induction es1 arbitrary: S)
   case Nil
-  show ?case by (simp add: edges_collect_append)
+  show ?case by simp
 next
   case (Cons e es1)
   obtain a p where ep: "e = (a, p)" by (cases e) auto
@@ -93,7 +93,7 @@ next
   from m have "m \<in> edge_collect a M"
     using M' by auto
   then obtain m0 where m0: "m0 \<in> M" and mm: "m \<in> edge_collect a {m0}"
-    by (cases a) (auto simp: mem_Collect_eq)
+    by (cases a) auto
   have "t \<in> edges_collect (e # es) {m0}"
     unfolding ew edges_collect.simps mm tm
     using mm edges_collect_member tm by blast

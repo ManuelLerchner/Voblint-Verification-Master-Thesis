@@ -58,7 +58,7 @@ lemma call_inc_result:
   "pruns_to proc_pi (Call ''inc'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   have run: "pruns_to proc_pi (Call ''inc'') s
-                (<s|(enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
+                (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pruns_to_Call[where c = inc_body])
     show "proc_pi ''inc'' = Some inc_body"
       by (simp add: proc_pi_def)
@@ -74,7 +74,7 @@ proof -
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
-  moreover have "<s|(enter_state s)(''Gx'' := s ''Gx'' + 1)> = s(''Gx'' := s ''Gx'' + 1)"
+  moreover have "IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)) = s(''Gx'' := s ''Gx'' + 1)"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed
@@ -83,7 +83,7 @@ lemma call_sqr_result:
   "pruns_to proc_pi (Call ''sqr'') s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
   have run: "pruns_to proc_pi (Call ''sqr'') s
-                (<s|(enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')>)"
+                (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pruns_to_Call[where c = sqr_body])
     show "proc_pi ''sqr'' = Some sqr_body"
       by (simp add: proc_pi_def)
@@ -99,7 +99,7 @@ proof -
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
-  moreover have "<s|(enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')> = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+  moreover have "IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed
@@ -148,7 +148,8 @@ lemma main_cfg_full:
       (6, EA_Enter, 0),
       (7, EA_Enter, 2)}
      {(6, 1, 7), (7, 3, 8)}"
-  by (simp add: compile_eval_simps proc_pi_def inc_body_def sqr_body_def main_prog_def;
+  by (simp add: proc_pi_def inc_body_def sqr_body_def main_prog_def
+      compile_prog_def compile_prog_with_regions_def Let_def eval_nat_numeral;
       blast)
 
 lemma main_cfg_entry:   "cfg_entry main_cfg = 4"                    by (simp add: main_cfg_full)
@@ -220,8 +221,8 @@ proof (rule allI)
              ((\<lambda>(c, e). \<langle>main_prog_env c|main_prog_env e\<rangle>) `
                   {(6, 1), (7, 3)})"])
     by (auto split: if_splits
-              simp: main_prog_env_def main_prog_s0_def ivl_eval_simps
-                    times_ivl_def ivl_times_core.simps ivl_nonempty.simps
+              simp: main_prog_env_def main_prog_s0_def ivl_tf_def assign_ivl_def
+                    times_ivl_def less_eq_ivl_def le_fun_def
                     enter_ivl_def combine_abs_def is_global_def)
 qed
 
@@ -252,7 +253,7 @@ proof -
   have fin_c: "finite (combines main_cfg)" by (simp add: main_cfg_combines)
   have s0_conv: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
     using S_sound by simp
-  have "(last tr) ''Gx'' \<in> gamma_ivl (main_prog_env (cfg_exit main_cfg) ''Gx'')"
+  have "(last tr) ''Gx'' \<in> gamma (main_prog_env (cfg_exit main_cfg) ''Gx'')"
     by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix s0_conv tr])
   then show ?thesis by (simp add: main_prog_env_def main_cfg_exit)
