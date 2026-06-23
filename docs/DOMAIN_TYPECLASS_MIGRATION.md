@@ -1,5 +1,7 @@
 # Migration: `sound_domain` / `abstract_domain` — Locales to Type Classes
 
+Status: **DONE.** All 11 steps complete and `Voblint_Formalization` builds green (commit `52d7486`). `gamma`, `widen`, and `⟦_⟧` resolve globally; no locale interpretations remain for either domain.
+
 ## Motivation
 
 * One canonical `gamma` per domain type (no per-interpretation prefix).
@@ -273,8 +275,7 @@ isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formal
 
 Show green output before declaring done.
 
-**Status (2026-06-23): Steps 1–10 complete. Step 11 pending full bootstrap build.**
-All I/Q diagnostics clean (0 errors, fully processed) on every touched theory. `Voblint_IMP2` / `Voblint_CFG` rebuild green. `Voblint_Analysis` heap is stale after session-wide edits; requires bootstrap before `Voblint_Formalization` can run. Run the bootstrap sequence from `CLAUDE.md` to close this gate.
+**Status (2026-06-24): All steps complete. Build green (commit `52d7486`).**
 
 ---
 
