@@ -26,7 +26,7 @@ lemma ivl_etf_mono_deps:
   unfolding ivl_etf_def by (rule side_cfg_T_eff_mono_deps)
 
 lemma ivl_sound_etf:
-  "sound_effectful_transfer gamma_ivl ivl_etf"
+  "sound_effectful_transfer ivl_etf"
   unfolding ivl_etf_def
   by (rule sound_transfer_imp_sound_effectful[OF ivl_sound_tf.sound_transfer_axioms])
 
@@ -51,7 +51,7 @@ theorem side_ivl_analysis_sound:
   shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps main ivl_etf bot s0 ()
          (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
 proof -
-  interpret se: sound_effectful_transfer gamma_ivl ivl_etf
+  interpret se: sound_effectful_transfer ivl_etf
     by (rule ivl_sound_etf)
   have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>"
     using s_sound by simp

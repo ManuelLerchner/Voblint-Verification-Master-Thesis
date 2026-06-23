@@ -67,20 +67,20 @@ text \<open>
 \<close>
 
 theorem side_collect_sound_at_eff:
-  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
     and bot0 s0 :: "'a abs_state" and v0 :: pp and S :: "store set"
-    and \<gamma> :: "'a \<Rightarrow> int set" and etf :: "('g, 'a) effectful_domain_transfer"
+    and etf :: "('g, 'a) effectful_domain_transfer"
     and gseed :: 'g
-  assumes se: "sound_effectful_transfer \<gamma> etf"
+  assumes se: "sound_effectful_transfer etf"
       and pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) v0 \<sigma> vars"
       and fin: "finite (edges g)"
       and finC: "finite (combines g)"
-      and entry: "S \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> (cfg_entry g))"
+      and entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
       and edge_cov: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> w \<in> vars"
       and combine_cov: "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow> ret \<in> vars"
-  shows "cfg_collect g S v0 \<le> sound_domain.gamma_state \<gamma> (side_env \<sigma> v0)"
+  shows "cfg_collect g S v0 \<le> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 proof -
-  interpret se: sound_effectful_transfer \<gamma> etf by (rule se)
+  interpret se: sound_effectful_transfer etf by (rule se)
   have step_le:
     "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
   proof -

@@ -30,12 +30,12 @@ theorem trace_analysis_sound:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
-  shows "alpha_last (cfg_collect_trace g S v) \<le> gamma_state (env v)"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  shows "alpha_last (cfg_collect_trace g S v) \<le> \<lbrakk>env v\<rbrakk>"
 proof -
   have proj: "alpha_last (cfg_collect_trace g S v) \<le> cfg_collect g S v"
     by (rule alpha_last_cfg_collect_trace_le)
-  have st: "cfg_collect g S v \<le> gamma_state (env v)"
+  have st: "cfg_collect g S v \<le> \<lbrakk>env v\<rbrakk>"
     by (rule unified_post_fixpoint_sound[OF fin finC post_fp S_sound])
   from proj st show ?thesis by (rule subset_trans)
 qed
@@ -52,7 +52,7 @@ text \<open>
   joined over program points.
 
   It is an immediate consequence of trace_analysis_sound (last tr is in
-  alpha_last of the trace set, hence in gamma_state (env v)) and the per-coordinate
+  alpha_last of the trace set, hence in \<lbrakk>env v\<rbrakk>) and the per-coordinate
   shape of gamma_state.
 
   The precision half -- digest-indexed (context-sensitive) summaries that keep
@@ -66,15 +66,15 @@ theorem reaching_global_read_sound:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes tr: "tr \<in> cfg_collect_trace g S v"
-  shows "(last tr) x \<in> \<gamma> (env v x)"
+  shows "(last tr) x \<in> gamma (env v x)"
 proof -
   have mem: "last tr \<in> alpha_last (cfg_collect_trace g S v)"
     using tr unfolding alpha_last_def by blast
-  have le: "alpha_last (cfg_collect_trace g S v) \<le> gamma_state (env v)"
+  have le: "alpha_last (cfg_collect_trace g S v) \<le> \<lbrakk>env v\<rbrakk>"
     by (rule trace_analysis_sound[OF fin finC post_fp S_sound])
-  from mem le have "last tr \<in> gamma_state (env v)" by blast
+  from mem le have "last tr \<in> \<lbrakk>env v\<rbrakk>" by blast
   thus ?thesis unfolding gamma_state_def by blast
 qed
 
@@ -92,9 +92,9 @@ theorem reaching_global_read_sound_d:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes tr: "tr \<in> cfg_collect_trace_d dg cmp g S v"
-  shows "(last tr) x \<in> \<gamma> (env v x)"
+  shows "(last tr) x \<in> gamma (env v x)"
 proof -
   have "tr \<in> cfg_collect_trace g S v"
     using tr cfg_collect_trace_d_subset by blast
@@ -120,20 +120,20 @@ definition digest_env_sound ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set
      \<Rightarrow> (pp \<Rightarrow> 'd \<Rightarrow> 'a abs_state) \<Rightarrow> bool" where
   "digest_env_sound dg cmp g S envd =
-     (\<forall>d v. alpha_last (reaching_compat dg cmp d g S v) \<le> gamma_state (envd v d))"
+     (\<forall>d v. alpha_last (reaching_compat dg cmp d g S v) \<le> \<lbrakk>envd v d\<rbrakk>)"
 
 theorem digest_read_sound:
   fixes envd :: "pp \<Rightarrow> 'd \<Rightarrow> 'a abs_state"
   assumes snd: "digest_env_sound dg cmp g S envd"
   assumes tr: "tr \<in> cfg_collect_trace g S v"
   assumes cm: "cmp (dg tr) d"
-  shows "(last tr) x \<in> \<gamma> (envd v d x)"
+  shows "(last tr) x \<in> gamma (envd v d x)"
 proof -
   have "tr \<in> reaching_compat dg cmp d g S v"
     using tr cm unfolding reaching_compat_def by blast
   hence "last tr \<in> alpha_last (reaching_compat dg cmp d g S v)"
     unfolding alpha_last_def by blast
-  with snd have "last tr \<in> gamma_state (envd v d)"
+  with snd have "last tr \<in> \<lbrakk>envd v d\<rbrakk>"
     unfolding digest_env_sound_def by blast
   thus ?thesis unfolding gamma_state_def by blast
 qed
@@ -143,7 +143,7 @@ theorem flat_env_is_digest_sound:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   shows "digest_env_sound dg cmp g S (\<lambda>v d. env v)"
   unfolding digest_env_sound_def
 proof (intro allI)
@@ -152,12 +152,13 @@ proof (intro allI)
     unfolding reaching_compat_def by blast
   hence "alpha_last (reaching_compat dg cmp d g S v) \<le> alpha_last (cfg_collect_trace g S v)"
     unfolding alpha_last_def by blast
-  also have "... \<le> gamma_state (env v)"
+  also have "... \<le> \<lbrakk>env v\<rbrakk>"
     by (rule trace_analysis_sound[OF fin finC post_fp S_sound])
-  finally show "alpha_last (reaching_compat dg cmp d g S v) \<le> gamma_state ((\<lambda>v d. env v) v d)"
+  finally show "alpha_last (reaching_compat dg cmp d g S v) \<le> \<lbrakk>(\<lambda>v d. env v) v d\<rbrakk>"
     by simp
 qed
 
 end
 
 end
+

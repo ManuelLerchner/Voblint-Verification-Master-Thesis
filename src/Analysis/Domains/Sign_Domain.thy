@@ -2,6 +2,8 @@ theory Sign_Domain
   imports Abstract_Domain "TD.Update_rules" Constraint_System "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Globals"
 begin
 
+hide_const (open) Update_rules.N
+
 section \<open>Sign domain: instantiation of abstract_domain\<close>
 
 text \<open>
@@ -313,31 +315,26 @@ instance proof
 qed
 end
 
-subsection \<open>Abstract domain interpretation\<close>
+subsection \<open>Abstract domain instantiation\<close>
 
-interpretation sign_domain: abstract_domain gamma_sign widen_sign_abs
-proof unfold_locales
-  show "gamma_sign bot = {}" unfolding bot_sign_def by simp
+instantiation sign :: sound_domain begin
+definition gamma_abs_sign [simp]: "gamma (a :: sign) = gamma_sign a"
+instance proof
+  show "gamma (bot :: sign) = {}"
+    unfolding bot_sign_def by simp
 next
   fix a b :: sign
-  assume "a \<le> b"
-  then show "gamma_sign a \<subseteq> gamma_sign b"
-    unfolding less_eq_sign_def by (rule gamma_sign_mono)
-next
-  fix a b :: sign
-  show "gamma_sign a \<subseteq> gamma_sign (widen_sign_abs a b)"
-    unfolding widen_sign_abs_def by (simp add: gamma_sign_mono join_sign_ub1 less_eq_sign_def)
-next
-  fix a b :: sign
-  show "gamma_sign b \<subseteq> gamma_sign (widen_sign_abs a b)"
-    unfolding widen_sign_abs_def by (simp add: gamma_sign_mono join_sign_ub2 less_eq_sign_def)
+  assume H: "a \<le> b"
+  show "gamma a \<subseteq> gamma b"
+  proof -
+    have "gamma_sign a \<subseteq> gamma_sign b"
+      using H unfolding less_eq_sign_def by (rule gamma_sign_mono)
+    then show ?thesis by simp
+  qed
 qed
+end
 
-notation sign_domain.gamma_state ("\<lbrakk>_\<rbrakk>")
-
-lemma sign_gamma_state_conv:
-  "(s : sign_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_sign \<sigma>)"
-  unfolding sign_domain.gamma_state_def sound_domain.gamma_state_def by simp
+instance sign :: abstract_domain ..
 
 subsection \<open>Meet (greatest lower bound)\<close>
 
@@ -456,43 +453,55 @@ lemma inv_times_sign_sound:
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain gamma_sign meet_sign aval_sign
+    backward_domain meet_sign aval_sign
                     inv_less_sign inv_plus_sign inv_minus_sign inv_times_sign
   defines
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
 proof unfold_locales
   fix n :: int and a b :: sign
-  assume "n \<in> gamma_sign a" "n \<in> gamma_sign b"
-  then show "n \<in> gamma_sign (meet_sign a b)" by (rule meet_sign_sound)
+  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
+  have h1: "n \<in> gamma_sign a" using H1 by simp
+  have h2: "n \<in> gamma_sign b" using H2 by simp
+  show "n \<in> gamma (meet_sign a b)"
+    using meet_sign_sound[OF h1 h2] by simp
 next
-  fix s :: store and e :: aexp and \<sigma> :: "vname => sign"
-  assume "\<forall>x. s x \<in> gamma_sign (\<sigma> x)"
-  then show "aval e s \<in> gamma_sign (aval_sign e \<sigma>)" by (rule aval_sign_sound)
+  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> sign"
+  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
+  have h: "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" using H by simp
+  show "aval e s \<in> gamma (aval_sign e \<sigma>)"
+    using aval_sign_sound[OF h] by simp
 next
   fix n1 n2 :: int and a1 a2 :: sign and res :: bool
-  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "(n1 < n2) = res"
-  then show "n1 \<in> gamma_sign (fst (inv_less_sign res a1 a2))
-           \<and> n2 \<in> gamma_sign (snd (inv_less_sign res a1 a2))"
-    by (rule inv_less_sign_sound)
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
+  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
+  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
+  show "n1 \<in> gamma (fst (inv_less_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_sign res a1 a2))"
+    using inv_less_sign_sound[OF h1 h2 H3] by simp
 next
   fix n1 n2 :: int and a1 a2 r :: sign
-  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "n1 + n2 \<in> gamma_sign r"
-  then show "n1 \<in> gamma_sign (fst (inv_plus_sign r a1 a2))
-           \<and> n2 \<in> gamma_sign (snd (inv_plus_sign r a1 a2))"
-    by (rule inv_plus_sign_sound)
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
+  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
+  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
+  have h3: "n1 + n2 \<in> gamma_sign r" using H3 by simp
+  show "n1 \<in> gamma (fst (inv_plus_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus_sign r a1 a2))"
+    using inv_plus_sign_sound[OF h1 h2 h3] by simp
 next
   fix n1 n2 :: int and a1 a2 r :: sign
-  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "n1 - n2 \<in> gamma_sign r"
-  then show "n1 \<in> gamma_sign (fst (inv_minus_sign r a1 a2))
-           \<and> n2 \<in> gamma_sign (snd (inv_minus_sign r a1 a2))"
-    by (rule inv_minus_sign_sound)
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
+  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
+  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
+  have h3: "n1 - n2 \<in> gamma_sign r" using H3 by simp
+  show "n1 \<in> gamma (fst (inv_minus_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus_sign r a1 a2))"
+    using inv_minus_sign_sound[OF h1 h2 h3] by simp
 next
   fix n1 n2 :: int and a1 a2 r :: sign
-  assume "n1 \<in> gamma_sign a1" "n2 \<in> gamma_sign a2" "n1 * n2 \<in> gamma_sign r"
-  then show "n1 \<in> gamma_sign (fst (inv_times_sign r a1 a2))
-           \<and> n2 \<in> gamma_sign (snd (inv_times_sign r a1 a2))"
-    by (rule inv_times_sign_sound)
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
+  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
+  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
+  have h3: "n1 * n2 \<in> gamma_sign r" using H3 by simp
+  show "n1 \<in> gamma (fst (inv_times_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times_sign r a1 a2))"
+    using inv_times_sign_sound[OF h1 h2 h3] by simp
 qed
 
 subsection \<open>Abstract assume\<close>
@@ -530,12 +539,12 @@ where
 lemma assign_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "s(x := aval a s) \<in> \<lbrakk>assign_sign x a \<sigma>\<rbrakk>"
-  unfolding assign_sign_def sign_domain.gamma_state_def
+  unfolding assign_sign_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    unfolding sign_domain.gamma_state_def by simp
-  show "(s(x := aval a s)) y \<in> gamma_sign ((\<sigma>(x := aval_sign a \<sigma>)) y)"
+    unfolding gamma_state_def by simp
+  show "(s(x := aval a s)) y \<in> gamma ((\<sigma>(x := aval_sign a \<sigma>)) y)"
   proof (cases "y = x")
     case True
     with V show ?thesis by (simp add: aval_sign_sound)
@@ -556,9 +565,9 @@ lemma enter_sign_sound:
   shows "enter_state s \<in> \<lbrakk>enter_sign \<sigma>\<rbrakk>"
 proof -
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    unfolding sign_domain.gamma_state_def by simp
+    unfolding gamma_state_def by simp
   show ?thesis
-    unfolding sign_domain.gamma_state_def enter_sign_def
+    unfolding gamma_state_def enter_sign_def
     by (intro CollectI allI; cases "is_global x";
         auto simp: enter_state_def V gamma_sign.simps)
 qed
@@ -586,14 +595,14 @@ definition combine_sign :: "sign abs_state \<Rightarrow> sign abs_state \<Righta
 lemma combine_sign_sound:
   assumes gs: "s \<in> \<lbrakk>sigma_c\<rbrakk>"
       and ge: "t \<in> \<lbrakk>sigma_e\<rbrakk>"
-  shows "combine_states s t \<in> \<lbrakk>combine_sign sigma_c sigma_e\<rbrakk>"
+  shows "<s|t> \<in> \<lbrakk>combine_sign sigma_c sigma_e\<rbrakk>"
 proof -
   from gs have Vc: "\<forall>z. s z \<in> gamma_sign (sigma_c z)"
-    unfolding sign_domain.gamma_state_def by simp
+    unfolding gamma_state_def by simp
   from ge have Ve: "\<forall>z. t z \<in> gamma_sign (sigma_e z)"
-    unfolding sign_domain.gamma_state_def by simp
+    unfolding gamma_state_def by simp
   show ?thesis
-    unfolding sign_domain.gamma_state_def combine_sign_def combine_abs_def combine_states_def
+    unfolding gamma_state_def combine_sign_def combine_abs_def combine_states_def
     by (intro CollectI allI; cases "is_global x"; auto simp: Vc Ve gamma_sign.simps)
 qed
 
@@ -625,7 +634,7 @@ lemma sign_tf_sound_enter:
   "\<forall>\<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state st \<in> \<lbrakk>tf_enter sign_tf \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
-interpretation sign_sound_tf: sound_transfer gamma_sign sign_tf
+interpretation sign_sound_tf: sound_transfer sign_tf
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_assign)

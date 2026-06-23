@@ -79,11 +79,11 @@ proof -
     and sn_in: "sn \<in> \<lbrakk>envf\<rbrakk>"
     using alpha_last_reaching by auto
   from sp_in have "\<forall>y. sp y \<in> gamma_sign (envf y)"
-    by (simp add: sign_domain.gamma_state_def)
+    by (simp add: gamma_state_def)
   from this[rule_format, of "''x''"] have p1: "(1::int) \<in> gamma_sign (envf ''x'')"
     by (simp add: sp_def)
   from sn_in have "\<forall>y. sn y \<in> gamma_sign (envf y)"
-    by (simp add: sign_domain.gamma_state_def)
+    by (simp add: gamma_state_def)
   from this[rule_format, of "''x''"] have p2: "(-1::int) \<in> gamma_sign (envf ''x'')"
     by (simp add: sn_def)
   from p1 p2 have "envf ''x'' = STop" by (rule sign_pos_neg_top)
@@ -113,9 +113,9 @@ lemma dgx_sn[simp]: "dgx [sn] = - 1" by (simp add: dgx_def sn_def)
 lemma envd_0_1_x[simp]: "envd 0 1 ''x'' = SPos" by (simp add: envd_def)
 
 lemma sp_in_envd: "sp \<in> \<lbrakk>envd 0 1\<rbrakk>"
-  unfolding sign_domain.gamma_state_def envd_def sp_def by auto
+  unfolding gamma_state_def envd_def sp_def by auto
 lemma sn_in_envd: "sn \<in> \<lbrakk>envd 0 (- 1)\<rbrakk>"
-  unfolding sign_domain.gamma_state_def envd_def sn_def by auto
+  unfolding gamma_state_def envd_def sn_def by auto
 
 lemma reaching_compat_0_1: "reaching_compat dgx (=) 1 gcfg S0 0 = {[sp]}"
   unfolding reaching_compat_def reaching_gcfg by auto

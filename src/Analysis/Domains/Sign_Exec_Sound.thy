@@ -91,7 +91,7 @@ proof -
   have pp_st: "part_post_solution (side_cfg_T_st g sign_tf_st bot cinit_sign_st)
                  (cfg_exit g) (snd sol) (fst sol)"
     using pp0 by (simp add: sign_exec_eqs_def g_def)
-  interpret se: sound_effectful_transfer gamma_sign sign_etf
+  interpret se: sound_effectful_transfer sign_etf
     by (rule sign_sound_etf)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff g sign_etf bot
@@ -117,10 +117,10 @@ proof -
   have entry_le: "(\<lambda>x. if is_global x then SZero else STop) \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
   have seed_cov: "cinit_stores \<subseteq> \<lbrakk>\<lambda>x. if is_global x then SZero else STop\<rbrakk>"
-    unfolding cinit_stores_def sign_domain.gamma_state_def
+    unfolding cinit_stores_def gamma_state_def
     by (auto simp: gamma_sign.simps)
   have entry_cov: "cinit_stores \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
-    using seed_cov sign_domain.gamma_state_mono[OF entry_le] by (rule subset_trans)
+    using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
   have "cfg_collect g cinit_stores (cfg_exit g)
         \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     by (rule side_collect_sound_exit_pruned_eff

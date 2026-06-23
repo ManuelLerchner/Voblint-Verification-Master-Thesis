@@ -52,11 +52,11 @@ qed
 lemma cfg_collect_combine:
   assumes h: "(c, ex, ret) \<in> combines g" and ret: "ret = v"
       and sc: "s \<in> cfg_collect g S c" and te: "t \<in> cfg_collect g S ex"
-  shows "combine_states s t \<in> cfg_collect g S v"
+  shows "<s|t> \<in> cfg_collect g S v"
 proof -
-  have mem: "combine_states s t \<in> collect_combine_pp g (cfg_collect g S) v"
+  have mem: "<s|t> \<in> collect_combine_pp g (cfg_collect g S) v"
     using collect_combine_pp_member[OF h ret sc te] .
-  have step: "combine_states s t \<in> cfg_collect_F g S (cfg_collect g S) v"
+  have step: "<s|t> \<in> cfg_collect_F g S (cfg_collect g S) v"
     unfolding cfg_collect_F_def using mem by auto
   show ?thesis using step cfg_collect_post by blast
 qed
@@ -242,7 +242,7 @@ proof -
     using compile_prog_inc_structure by simp
   have g: "is_global ''Gx''"
     by (simp add: is_global_def)
-  have "?t = combine_states s ?body_store"
+  have "?t = <s|?body_store>"
     using combine_after_enter_global_assign[OF g] by (simp add: enter_state_def)
   show ?thesis
     using cfg_collect_combine[OF comb refl s_at_call body_store]

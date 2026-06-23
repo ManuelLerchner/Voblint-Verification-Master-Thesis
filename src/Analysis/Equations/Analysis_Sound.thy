@@ -34,27 +34,27 @@ lemma unified_post_fixpoint_sound:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
-  assumes S_sound: "S \<le> gamma_state s0"
-  shows "cfg_collect g S v \<le> gamma_state (env v)"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  shows "cfg_collect g S v \<le> \<lbrakk>env v\<rbrakk>"
 proof -
-  have coll_le: "\<And>v. collect_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
+  have coll_le: "\<And>v. collect_pp g (\<lambda>v. \<lbrakk>env v\<rbrakk>) v \<le> \<lbrakk>env v\<rbrakk>"
     by (rule collect_pp_abstract_sound[OF fin finC post_fp])
-  have comb_le: "\<And>v. collect_combine_pp g (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
+  have comb_le: "\<And>v. collect_combine_pp g (\<lambda>v. \<lbrakk>env v\<rbrakk>) v \<le> \<lbrakk>env v\<rbrakk>"
     by (rule collect_combine_pp_abstract_sound[OF fin finC post_fp])
   have s0_le_env: "s0 \<le> env (cfg_entry g)"
     using s0_le_rhs_entry[OF fin finC]
           post_fp[unfolded is_post_fixpoint_def, rule_format, of "cfg_entry g"]
     by (rule order_trans)
-  have S_le_env: "S \<le> gamma_state (env (cfg_entry g))"
+  have S_le_env: "S \<le> \<lbrakk>env (cfg_entry g)\<rbrakk>"
     using S_sound gamma_state_mono[OF s0_le_env] by blast
-  have key: "cfg.F g S (\<lambda>v. gamma_state (env v)) \<le> (\<lambda>v. gamma_state (env v))"
+  have key: "cfg.F g S (\<lambda>v. \<lbrakk>env v\<rbrakk>) \<le> (\<lambda>v. \<lbrakk>env v\<rbrakk>)"
   proof (rule le_funI)
     fix v
-    show "cfg.F g S (\<lambda>v. gamma_state (env v)) v \<le> gamma_state (env v)"
+    show "cfg.F g S (\<lambda>v. \<lbrakk>env v\<rbrakk>) v \<le> \<lbrakk>env v\<rbrakk>"
       unfolding cfg_F_eq cfg_collect_F_def
       using coll_le comb_le S_le_env by auto
   qed
-  have "cfg.collect g S v \<le> gamma_state (env v)"
+  have "cfg.collect g S v \<le> \<lbrakk>env v\<rbrakk>"
     by (rule cfg.collect_post_fixpoint_sound[OF key])
   thus ?thesis unfolding cfg_collect_eq .
 qed
@@ -62,3 +62,4 @@ qed
 end
 
 end
+

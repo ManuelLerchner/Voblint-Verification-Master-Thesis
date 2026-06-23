@@ -2,6 +2,8 @@ theory Interval_Domain
   imports Abstract_Domain "TD.Update_rules" Constraint_System "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Globals"
 begin
 
+hide_const (open) Update_rules.N
+
 section \<open>Interval domain: instantiation of abstract_domain\<close>
 
 text \<open>
@@ -420,28 +422,25 @@ end
 
 
 
-subsection \<open>Abstract domain interpretation\<close>
+subsection \<open>Abstract domain instantiation\<close>
 
-interpretation ivl_domain: abstract_domain gamma_ivl widen_ivl_core
-proof (unfold_locales)
-  show "gamma_ivl bot = {}" by (rule gamma_ivl_bot)
+instantiation ivl :: sound_domain begin
+definition gamma_abs_ivl [simp]: "gamma (a :: ivl) = gamma_ivl a"
+instance proof
+  show "gamma (bot :: ivl) = {}"
+    by (simp add: gamma_ivl_bot)
 next
   fix a b :: ivl
-  assume "a \<le> b"
-  then show "gamma_ivl a \<subseteq> gamma_ivl b" by (rule gamma_ivl_mono)
-next
-  fix a b :: ivl
-  show "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl_core a b)" by (rule widen_ivl_core_ub1)
-next
-  fix a b :: ivl
-  show "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl_core a b)" by (rule widen_ivl_core_ub2)
+  assume H: "a \<le> b"
+  show "gamma a \<subseteq> gamma b"
+  proof -
+    have "gamma_ivl a \<subseteq> gamma_ivl b" using H by (rule gamma_ivl_mono)
+    then show ?thesis by simp
+  qed
 qed
+end
 
-notation ivl_domain.gamma_state ("\<lbrakk>_\<rbrakk>")
-
-lemma ivl_gamma_state_conv:
-  "(s : ivl_domain.gamma_state \<sigma>) = (s : sound_domain.gamma_state gamma_ivl \<sigma>)"
-  unfolding ivl_domain.gamma_state_def sound_domain.gamma_state_def by simp
+instance ivl :: abstract_domain ..
 
 subsection \<open>Extended-integer arithmetic\<close>
 
@@ -698,40 +697,46 @@ qed
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation ivl_backward_domain:
-    backward_domain gamma_ivl meet_ivl aval_ivl
+    backward_domain meet_ivl aval_ivl
                     inv_less_ivl inv_plus_ivl inv_minus_ivl inv_times_ivl
   defines
     afilter_ivl = ivl_backward_domain.afilter
     and bfilter_ivl = ivl_backward_domain.bfilter
 proof unfold_locales
   fix n :: int and a b :: ivl
-  assume "n \<in> gamma_ivl a" "n \<in> gamma_ivl b"
-  then show "n \<in> gamma_ivl (meet_ivl a b)" by (rule meet_ivl_gamma[simplified])
+  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
+  have h1: "n \<in> gamma_ivl a" using H1 by simp
+  have h2: "n \<in> gamma_ivl b" using H2 by simp
+  show "n \<in> gamma (meet_ivl a b)"
+    using meet_ivl_gamma[simplified, OF h1 h2] by simp
 next
-  fix s :: store and e :: aexp and \<sigma> :: "vname => ivl"
-  assume "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)"
-  then show "aval e s \<in> gamma_ivl (aval_ivl e \<sigma>)" by (rule aval_ivl_sound)
+  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> ivl"
+  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
+  have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using H by simp
+  show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
+    using aval_ivl_sound[OF h] by simp
 next
   fix n1 n2 :: int and a1 a2 :: ivl and res :: bool
-  assume "n1 \<in> gamma_ivl a1" "n2 \<in> gamma_ivl a2" "(n1 < n2) = res"
-  then show "n1 \<in> gamma_ivl (fst (inv_less_ivl res a1 a2))
-           \<and> n2 \<in> gamma_ivl (snd (inv_less_ivl res a1 a2))"
-    by (rule inv_less_ivl_sound)
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
+  have h1: "n1 \<in> gamma_ivl a1" using H1 by simp
+  have h2: "n2 \<in> gamma_ivl a2" using H2 by simp
+  show "n1 \<in> gamma (fst (inv_less_ivl res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_ivl res a1 a2))"
+    using inv_less_ivl_sound[OF h1 h2 H3] by simp
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
-  assume "n1 \<in> gamma_ivl a1" "n2 \<in> gamma_ivl a2" "n1 + n2 \<in> gamma_ivl r"
-  then show "n1 \<in> gamma_ivl (fst (inv_plus_ivl r a1 a2))
-           \<and> n2 \<in> gamma_ivl (snd (inv_plus_ivl r a1 a2))" by simp
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_plus_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus_ivl r a1 a2))"
+    using H1 H2 by simp
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
-  assume "n1 \<in> gamma_ivl a1" "n2 \<in> gamma_ivl a2" "n1 - n2 \<in> gamma_ivl r"
-  then show "n1 \<in> gamma_ivl (fst (inv_minus_ivl r a1 a2))
-           \<and> n2 \<in> gamma_ivl (snd (inv_minus_ivl r a1 a2))" by simp
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_minus_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus_ivl r a1 a2))"
+    using H1 H2 by simp
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
-  assume "n1 \<in> gamma_ivl a1" "n2 \<in> gamma_ivl a2" "n1 * n2 \<in> gamma_ivl r"
-  then show "n1 \<in> gamma_ivl (fst (inv_times_ivl r a1 a2))
-           \<and> n2 \<in> gamma_ivl (snd (inv_times_ivl r a1 a2))" by simp
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_times_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times_ivl r a1 a2))"
+    using H1 H2 by simp
 qed
 
 subsection \<open>Abstract assume and assignment\<close>
@@ -766,7 +771,7 @@ where
 lemma assign_ivl_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk>
    \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign_ivl x a \<sigma>\<rbrakk>"
-  unfolding ivl_domain.gamma_state_def assign_ivl_def
+  unfolding gamma_state_def assign_ivl_def
   by (auto simp: aval_ivl_sound)
 
 subsection \<open>Procedure entry and bundled transfer functions\<close>
@@ -778,7 +783,7 @@ definition enter_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
 lemma enter_ivl_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state s \<in> \<lbrakk>enter_ivl \<sigma>\<rbrakk>"
-  using assms unfolding ivl_domain.gamma_state_def enter_ivl_def enter_state_def
+  using assms unfolding gamma_state_def enter_ivl_def enter_state_def
   by (intro CollectI allI) (auto simp: gamma_ivl.simps)
 
 definition ivl_tf :: "ivl domain_transfer" where
@@ -803,7 +808,7 @@ lemma ivl_tf_sound_enter:
   "\<forall>\<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state st \<in> \<lbrakk>tf_enter ivl_tf \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
-interpretation ivl_sound_tf: sound_transfer gamma_ivl ivl_tf
+interpretation ivl_sound_tf: sound_transfer ivl_tf
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_assign)

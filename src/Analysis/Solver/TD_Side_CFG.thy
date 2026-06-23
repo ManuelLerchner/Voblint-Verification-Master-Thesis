@@ -196,7 +196,7 @@ lemma sides_pure_combine_tree_Inr:
 (* The shim's combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_pure_combine_tree:
   "etf_full (pure_combine_tree cc ex) \<sigma>
-   = combine_abs (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())) (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
+   = \<langle>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())|\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rangle>"
   unfolding etf_full_def pure_combine_tree_def
   by (simp add: all_sides_eq_sides_Inr_unit[unfolded pure_combine_tree_def] Let_def
         restrict_local_combine_eq restrict_global_combine_eq restrict_combine combine_abs_def)
@@ -209,97 +209,97 @@ text \<open>
 \<close>
 
 lemma sound_transfer_imp_sound_effectful:
-  assumes "sound_transfer \<gamma> tf"
-  shows "sound_effectful_transfer \<gamma> (etf_from_tf tf)"
+  assumes "sound_transfer tf"
+  shows "sound_effectful_transfer (etf_from_tf tf)"
 proof -
-  interpret st: sound_transfer \<gamma> tf by (rule assms)
+  interpret st: sound_transfer tf by (rule assms)
   show ?thesis
   proof (unfold_locales; unfold glob_env_unit)
-    show "\<forall>u \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
-            s \<in> st.gamma_state (etf_full (etf_nop (etf_from_tf tf) u) \<sigma>)"
+    show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            s \<in> \<lbrakk>etf_full (etf_nop (etf_from_tf tf) u) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix u :: pp and \<sigma> and s :: store
-      assume m: "s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+      fix u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
       have eq: "etf_full (etf_nop (etf_from_tf tf) u) \<sigma>
                   = \<sigma> (Inl u) \<squnion> \<sigma> (Inr ())"
         by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      show "s \<in> st.gamma_state (etf_full (etf_nop (etf_from_tf tf) u) \<sigma>)"
+      show "s \<in> \<lbrakk>etf_full (etf_nop (etf_from_tf tf) u) \<sigma>\<rbrakk>"
         using m by (simp add: eq)
     qed
   next
-    show "\<forall>x e u \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
+    show "\<forall>x e u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             s(x := aval e s)
-              \<in> st.gamma_state (etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>)"
+              \<in> \<lbrakk>etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix x e and u :: pp and \<sigma> and s :: store
-      assume m: "s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+      fix x e and u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
       have eq: "etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>
                   = tf_assign tf x e (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
         by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
       have "s(x := aval e s)
-              \<in> st.gamma_state (tf_assign tf x e (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
+              \<in> \<lbrakk>tf_assign tf x e (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
         using st.tf_sound_assign m by blast
       thus "s(x := aval e s)
-              \<in> st.gamma_state (etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>)"
+              \<in> \<lbrakk>etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>\<rbrakk>"
         by (simp add: eq)
     qed
   next
-    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())). bval b s
-            \<longrightarrow> s \<in> st.gamma_state (etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>)"
+    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
+            \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
     proof (intro allI ballI impI)
-      fix b :: bexp and u :: pp and \<sigma> and s :: store
-      assume m: "s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))" and bv: "bval b s"
+      fix b :: bexp and u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>" and bv: "bval b s"
       have eq: "etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>
                   = tf_assume tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
         by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "s \<in> st.gamma_state (tf_assume tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
+      have "s \<in> \<lbrakk>tf_assume tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
         using st.tf_sound_assume m bv by blast
-      thus "s \<in> st.gamma_state (etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>)"
+      thus "s \<in> \<lbrakk>etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
         by (simp add: eq)
     qed
   next
-    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())). \<not> bval b s
-            \<longrightarrow> s \<in> st.gamma_state (etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>)"
+    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
+            \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
     proof (intro allI ballI impI)
-      fix b :: bexp and u :: pp and \<sigma> and s :: store
-      assume m: "s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))" and bv: "\<not> bval b s"
+      fix b :: bexp and u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>" and bv: "\<not> bval b s"
       have eq: "etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>
                   = tf_assume_not tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
         by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "s \<in> st.gamma_state (tf_assume_not tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
+      have "s \<in> \<lbrakk>tf_assume_not tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
         using st.tf_sound_assume_not m bv by blast
-      thus "s \<in> st.gamma_state (etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>)"
+      thus "s \<in> \<lbrakk>etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
         by (simp add: eq)
     qed
   next
-    show "\<forall>u \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())).
-            enter_state s \<in> st.gamma_state (etf_full (etf_enter (etf_from_tf tf) u) \<sigma>)"
+    show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            enter_state s \<in> \<lbrakk>etf_full (etf_enter (etf_from_tf tf) u) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix u :: pp and \<sigma> and s :: store
-      assume m: "s \<in> st.gamma_state (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+      fix u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
       have eq: "etf_full (etf_enter (etf_from_tf tf) u) \<sigma>
                   = tf_enter tf (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
         by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "enter_state s \<in> st.gamma_state (tf_enter tf (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
+      have "enter_state s \<in> \<lbrakk>tf_enter tf (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
         using st.tf_sound_enter m by blast
-      thus "enter_state s \<in> st.gamma_state (etf_full (etf_enter (etf_from_tf tf) u) \<sigma>)"
+      thus "enter_state s \<in> \<lbrakk>etf_full (etf_enter (etf_from_tf tf) u) \<sigma>\<rbrakk>"
         by (simp add: eq)
     qed
   next
-    show "\<forall>cc ex \<sigma>. \<forall>s \<in> st.gamma_state (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())).
-            \<forall>t \<in> st.gamma_state (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())).
-              combine_states s t
-                \<in> st.gamma_state (etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>)"
+    show "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+              <s|t>
+                \<in> \<lbrakk>etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix cc ex :: pp and \<sigma> and s t :: store
-      assume sc: "s \<in> st.gamma_state (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))"
-         and te: "t \<in> st.gamma_state (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
+      fix cc ex :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s t :: store
+      assume sc: "s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>"
+         and te: "t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>"
       have eq: "etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>
-                  = combine_abs (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())) (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
+                  = \<langle>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())|\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rangle>"
         by (simp add: etf_full_pure_combine_tree)
-      show "combine_states s t
-              \<in> st.gamma_state (etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>)"
-        unfolding eq using st.combine_states_sound[OF sc te] .
+      show "<s|t>
+              \<in> \<lbrakk>etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>\<rbrakk>"
+        unfolding eq using combine_states_sound[OF sc te] .
     qed
   qed
 qed

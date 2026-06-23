@@ -282,22 +282,18 @@ text \<open>
   A pure sound_domain fact -- independent of any transfer function -- reused by
   both the interprocedural constraint-system soundness and the effectful pipeline.
 \<close>
-context sound_domain
-begin
-
 lemma combine_states_sound:
+  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_states s t \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
+  shows "<s|t> \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
 proof -
-  from sc have Vc: "\<forall>z. s z \<in> \<gamma> (\<sigma>c z)"
+  from sc have Vc: "\<forall>z. s z \<in> gamma (\<sigma>c z)"
     unfolding gamma_state_def by auto
-  from se have Ve: "\<forall>z. t z \<in> \<gamma> (\<sigma>e z)"
+  from se have Ve: "\<forall>z. t z \<in> gamma (\<sigma>e z)"
     unfolding gamma_state_def by auto
   show ?thesis unfolding gamma_state_def combine_abs_def combine_states_def
     using Vc Ve by auto
 qed
-
-end
 
 definition rhs ::
     "cfg
@@ -397,8 +393,8 @@ text \<open>
   as locale assumptions.  Concrete domains discharge these once via
   `interpretation`.
 \<close>
-locale sound_transfer = sound_domain +
-  fixes tf :: "'a domain_transfer"
+locale sound_transfer =
+  fixes tf :: "'a::sound_domain domain_transfer"
   assumes tf_sound_assign:
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
@@ -627,8 +623,8 @@ next
     unfolding all_sides.simps(4) by (rule sup_least)
 qed
 
-locale sound_effectful_transfer = sound_domain +
-  fixes etf :: "('g::finite, 'a) effectful_domain_transfer"
+locale sound_effectful_transfer =
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
   assumes etf_sound_nop:
     "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
        s \<in> \<lbrakk>etf_full (etf_nop etf u) \<sigma>\<rbrakk>"
@@ -647,5 +643,5 @@ locale sound_effectful_transfer = sound_domain +
   assumes etf_sound_combine:
     "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
        \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-         combine_states s t \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>"
+         <s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>"
 end

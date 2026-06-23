@@ -1,6 +1,8 @@
 theory Abstract_Domain
-  imports "Voblint_IMP2.IMP2_Syntax" "Voblint_IMP2.IMP2_Expr"
+  imports "Voblint_IMP2.IMP2_Syntax" "Voblint_IMP2.IMP2_Expr" "TD.Update_rules"
 begin
+
+hide_const (open) Update_rules.N
 
 unbundle lattice_syntax
 
@@ -39,54 +41,55 @@ lemma join_state_comp_fun_idem:
      'a::semilattice_sup abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"
   by (rule comp_fun_idem_sup)
 
-locale sound_domain =
-  fixes \<gamma> :: "'a::bounded_semilattice_sup_bot => int set"
-  assumes gamma_bot:
-    "\<gamma> bot = {}"
-  assumes gamma_mono:
-    "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
-begin
+subsection \<open>Sound-domain type class\<close>
 
-subsection \<open>Derived \<gamma>-sup bounds\<close>
-
-lemma gamma_sup_ub1: "\<gamma> a \<subseteq> \<gamma> (a \<squnion> b)"
-  by (rule gamma_mono[OF sup_ge1])
-
-lemma gamma_sup_ub2: "\<gamma> b \<subseteq> \<gamma> (a \<squnion> b)"
-  by (rule gamma_mono[OF sup_ge2])
-
-lemma gamma_sup_sound:
-  "\<gamma> a \<union> \<gamma> b \<subseteq> \<gamma> (a \<squnion> b)"
-  using gamma_sup_ub1 gamma_sup_ub2 by blast
+class sound_domain = bounded_semilattice_sup_bot +
+  fixes gamma :: "'a \<Rightarrow> int set"
+  assumes gamma_bot: "gamma bot = {}"
+  assumes gamma_mono: "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
 
 subsection \<open>Lifted concretization\<close>
 
-definition gamma_state :: "'a abs_state => store set" ("\<lbrakk>_\<rbrakk>") where
-  "gamma_state \<sigma> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
+definition gamma_state :: "('a::sound_domain) abs_state \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>") where
+  "gamma_state \<sigma> = {s. \<forall>x. s x \<in> gamma (\<sigma> x)}"
 
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
    fun :: bot and fun :: sup instances; no extra definitions needed. *)
 
+subsection \<open>Derived gamma-sup bounds\<close>
+
+lemma gamma_sup_ub1: "gamma a \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
+  by (rule gamma_mono[OF sup_ge1])
+
+lemma gamma_sup_ub2: "gamma b \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
+  by (rule gamma_mono[OF sup_ge2])
+
+lemma gamma_sup_sound: "gamma a \<union> gamma b \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
+  using gamma_sup_ub1 gamma_sup_ub2 by blast
+
+subsection \<open>Lifted concretization lemmas\<close>
+
 lemma gamma_state_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> \<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma2\<rbrakk>"
+  for sigma1 sigma2 :: "'a::sound_domain abs_state"
   unfolding gamma_state_def le_fun_def
   using gamma_mono by blast
 
 lemma gamma_state_bot:
-  "\<lbrakk>bot\<rbrakk> = {}"
+  "\<lbrakk>bot :: 'a::sound_domain abs_state\<rbrakk> = {}"
   unfolding gamma_state_def bot_fun_def using gamma_bot by auto
 
 lemma gamma_state_sup_ub1:
   "\<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  for sigma1 sigma2 :: "'a::sound_domain abs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub1 by blast
 
 lemma gamma_state_sup_ub2:
   "\<lbrakk>sigma2\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  for sigma1 sigma2 :: "'a::sound_domain abs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
-
-end
 
 lemma sup_fold_ge:
   fixes S :: "'a::bounded_semilattice_sup_bot set"
@@ -112,14 +115,10 @@ next
   qed
 qed
 
-context sound_domain
-begin
-
 lemma gamma_abs_sup_set_ub:
-  "finite S \<Longrightarrow> x \<in> S \<Longrightarrow> \<gamma> x \<subseteq> \<gamma> (Finite_Set.fold (\<squnion>) bot S)"
+  "finite S \<Longrightarrow> x \<in> S \<Longrightarrow> gamma x \<subseteq> gamma (Finite_Set.fold (\<squnion>) bot S)"
+  for x :: "'a::sound_domain"
   using gamma_mono sup_fold_ge by auto
-
-end
 
 subsection \<open>Abstract domain locale (with widening)\<close>
 
@@ -132,32 +131,49 @@ text \<open>
   the widen axioms then hold trivially from sup_ge1/sup_ge2.
 \<close>
 
-locale abstract_domain = sound_domain +
-  fixes widen :: "'a => 'a => 'a"
-  assumes widen_ub1:
-    "\<gamma> a \<subseteq> \<gamma> (widen a b)"
-  assumes widen_ub2:
-    "\<gamma> b \<subseteq> \<gamma> (widen a b)"
-begin
+subsection \<open>Abstract-domain type class (with widening)\<close>
 
-definition widen_state :: "'a abs_state => 'a abs_state => 'a abs_state" where
+text \<open>
+  Extends sound_domain with widening for termination guarantees.
+  Required when connecting to the TD solver for a domain with
+  infinite ascending chains (e.g., intervals).
+
+  Finite domains (sign, parity) instantiate this with widen = sup;
+  the widen axioms then hold trivially from sup_ge1/sup_ge2.
+
+  Inherits widen from TD.Update_rules widening rather than re-fixing it,
+  so sign :: warrowing and ivl :: warrowing instantiations remain consistent.
+\<close>
+
+class abstract_domain = sound_domain + widening
+
+subsection \<open>Derived widening-gamma bounds\<close>
+
+lemma widen_ub1: "gamma a \<subseteq> gamma (a \<nabla> b)" for a b :: "'a::abstract_domain"
+  by (rule gamma_mono[OF widen_ge1])
+
+lemma widen_ub2: "gamma b \<subseteq> gamma (a \<nabla> b)" for a b :: "'a::abstract_domain"
+  by (rule gamma_mono[OF widen_ge2])
+
+subsection \<open>Lifted widening\<close>
+
+definition widen_state ::
+    "('a::abstract_domain) abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  where
   "widen_state sigma1 sigma2 = (\<lambda>x. widen (sigma1 x) (sigma2 x))"
-
-end
 
 subsection \<open>Backward-analysis locale\<close>
 
 text \<open>
-  Extends @{locale sound_domain} with the infrastructure for backward
+  Extends @{class sound_domain} with the infrastructure for backward
   (inverse) evaluation of guards and arithmetic expressions.
   Per-domain: provide meet, aval_abs, and inv_* operators; the generic
   afilter / bfilter and their soundness theorems follow by induction.
 \<close>
 
-locale backward_domain = sound_domain \<gamma>
-  for \<gamma> :: "'a::bounded_semilattice_sup_bot => int set" +
+locale backward_domain =
   fixes
-    meet     :: "'a => 'a => 'a"
+    meet     :: "'a::sound_domain => 'a => 'a"
     and aval_abs  :: "aexp => 'a abs_state => 'a"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
@@ -165,21 +181,21 @@ locale backward_domain = sound_domain \<gamma>
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
   assumes
     meet_sound:
-      "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (meet a b)"
+      "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (meet a b)"
   and aval_abs_sound:
-      "(\<forall>x. s x \<in> \<gamma> (\<sigma> x)) \<Longrightarrow> aval e s \<in> \<gamma> (aval_abs e \<sigma>)"
+      "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
   and inv_less_sound:
-      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 < n2) = res
-       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_less res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_less res a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
   and inv_plus_sound:
-      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 + n2 \<in> \<gamma> r
-       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_plus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_plus r a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 + n2 \<in> gamma r
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_plus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus r a1 a2))"
   and inv_minus_sound:
-      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 - n2 \<in> \<gamma> r
-       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_minus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_minus r a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 - n2 \<in> gamma r
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_minus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus r a1 a2))"
   and inv_times_sound:
-      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 * n2 \<in> \<gamma> r
-       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_times r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_times r a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 * n2 \<in> gamma r
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
 begin
 
 fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
@@ -210,20 +226,20 @@ fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter _ _ \<sigma> = \<sigma>"
 
 lemma afilter_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> \<gamma> a"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
   shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: a \<sigma>)
   case (BaseN a')
   show ?case proof (cases a')
     case (V x)
-    have sx_a: "s x \<in> \<gamma> a"
+    have sx_a: "s x \<in> gamma a"
       using BaseN.prems(2) V by (simp add: aval.simps AExp.aval.simps)
-    have sx_s: "s x \<in> \<gamma> (\<sigma> x)"
+    have sx_s: "s x \<in> gamma (\<sigma> x)"
       using BaseN.prems(1) unfolding gamma_state_def by simp
     show ?thesis
       unfolding V gamma_state_def afilter.simps
     proof (intro CollectI allI)
-      fix y show "s y \<in> \<gamma> ((\<sigma>(x := meet a (\<sigma> x))) y)"
+      fix y show "s y \<in> gamma ((\<sigma>(x := meet a (\<sigma> x))) y)"
         using meet_sound[OF sx_a sx_s] BaseN.prems(1)[unfolded gamma_state_def]
         by (cases "y = x") auto
     qed
@@ -232,11 +248,11 @@ next
   case (Plus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Plus.prems(1) unfolding gamma_state_def by simp
-  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have asum: "aval e1 s + aval e2 s \<in> \<gamma> a" using Plus.prems(2) by (simp add: aval.simps)
-  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Plus.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by (simp add: aval.simps)
+  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_plus_sound[OF e1a e2a asum] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
     using Plus.IH(2)[OF Plus.prems(1) inv12[THEN conjunct2]] by simp
@@ -247,11 +263,11 @@ next
   case (Minus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Minus.prems(1) unfolding gamma_state_def by simp
-  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have adiff: "aval e1 s - aval e2 s \<in> \<gamma> a" using Minus.prems(2) by (simp add: aval.simps)
-  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Minus.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by (simp add: aval.simps)
+  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_minus_sound[OF e1a e2a adiff] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
     using Minus.IH(2)[OF Minus.prems(1) inv12[THEN conjunct2]] by simp
@@ -262,11 +278,11 @@ next
   case (Times e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Times.prems(1) unfolding gamma_state_def by simp
-  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have aprod: "aval e1 s * aval e2 s \<in> \<gamma> a" using Times.prems(2) by (simp add: aval.simps)
-  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Times.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by (simp add: aval.simps)
+  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_times_sound[OF e1a e2a aprod] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
     using Times.IH(2)[OF Times.prems(1) inv12[THEN conjunct2]] by simp
@@ -359,11 +375,11 @@ next
   case (Less e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Less.prems(1) unfolding gamma_state_def by simp
-  have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> \<gamma> (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Less.prems(1) unfolding gamma_state_def by simp
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (simp add: bval.simps)
-  have inv12: "aval e1 s \<in> \<gamma> a1 \<and> aval e2 s \<in> \<gamma> a2"
+  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
     using afilter_sound[OF Less.prems(1) inv12[THEN conjunct2]] by simp
@@ -374,14 +390,14 @@ next
   case (Eq e1 e2)
   show ?case proof (cases res)
     case True
-    have gs: "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using Eq.prems(1) unfolding gamma_state_def by simp
+    have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Eq.prems(1) unfolding gamma_state_def by simp
     have eq: "aval e1 s = aval e2 s" using Eq.prems(2) True by (simp add: bval.simps)
-    have e1a: "aval e1 s \<in> \<gamma> (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-    have e2a: "aval e1 s \<in> \<gamma> (aval_abs e2 \<sigma>)"
+    have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+    have e2a: "aval e1 s \<in> gamma (aval_abs e2 \<sigma>)"
       using aval_abs_sound[OF gs] eq by simp
-    have ma: "aval e1 s \<in> \<gamma> (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
+    have ma: "aval e1 s \<in> gamma (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
       using meet_sound[OF e1a e2a] by simp
-    have me2: "aval e2 s \<in> \<gamma> (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
+    have me2: "aval e2 s \<in> gamma (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
       using ma eq by simp
     have gs2: "s \<in> \<lbrakk>afilter e2 (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)) \<sigma>\<rbrakk>"
       using afilter_sound[OF Eq.prems(1) me2] by simp
@@ -401,8 +417,8 @@ subsection \<open>Printable-domain typeclass\<close>
 
 text \<open>
   The @{text show_val} class equips an abstract value type with a string
-  printer.  Separate from @{locale abstract_domain} so the mathematical
-  locale stays a purely semantic object; rendering is a separate concern.
+  printer.  Separate from @{class abstract_domain} so the abstract-domain
+  class stays a purely semantic object; rendering is a separate concern.
 
   Every domain used in visualisation instantiates this class.
   The @{text Analysis_GraphViz} rendering layer is parameterised over any

@@ -17,7 +17,7 @@ text \<open>
 
 definition collect_combine_pp :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set" where
   "collect_combine_pp g \<rho> v =
-     \<Union>{ {combine_states s t | s t. s \<in> \<rho> c \<and> t \<in> \<rho> ex}
+     \<Union>{ {<s|t> | s t. s \<in> \<rho> c \<and> t \<in> \<rho> ex}
            | c ex ret. (c, ex, ret) \<in> combines g \<and> ret = v }"
 
 definition cfg_collect_F :: "cfg \<Rightarrow> store set \<Rightarrow> cenv \<Rightarrow> cenv" where
@@ -33,8 +33,8 @@ subsection \<open>Monotonicity\<close>
 
 lemma combine_states_image_mono:
   assumes "S \<subseteq> S'" and "T \<subseteq> T'"
-  shows "{combine_states s t | s t. s \<in> S \<and> t \<in> T}
-         \<subseteq> {combine_states s t | s t. s \<in> S' \<and> t \<in> T'}"
+  shows "{<s|t> | s t. s \<in> S \<and> t \<in> T}
+         \<subseteq> {<s|t> | s t. s \<in> S' \<and> t \<in> T'}"
   using assms by blast
 
 lemma collect_combine_pp_mono:
@@ -52,7 +52,7 @@ proof
     obtain c ex ret s t where
       h: "(c, ex, ret) \<in> combines g" "ret = v"
       and st: "s \<in> rho1 c" "t \<in> rho1 ex"
-      and x: "x = combine_states s t"
+      and x: "x = <s|t>"
       by blast
     have "s \<in> rho2 c" "t \<in> rho2 ex" using st sub by auto
     thus "x \<in> collect_combine_pp g rho2 v"
@@ -109,7 +109,7 @@ qed
 lemma collect_combine_pp_member:
   assumes "(c, ex, ret) \<in> combines g" "ret = v"
       and "s \<in> \<rho> c" "t \<in> \<rho> ex"
-  shows "combine_states s t \<in> collect_combine_pp g \<rho> v"
+  shows "<s|t> \<in> collect_combine_pp g \<rho> v"
   using assms unfolding collect_combine_pp_def by blast
 
 lemma collect_combine_pp_in_cfg_collect:
@@ -121,18 +121,18 @@ proof
   from xin obtain c ex ret s t where
         h: "(c, ex, ret) \<in> combines g" "ret = v"
     and st: "s \<in> \<rho> c" "t \<in> \<rho> ex"
-    and x: "x = combine_states s t"
+    and x: "x = <s|t>"
     unfolding collect_combine_pp_def by blast
   from le have sc: "s \<in> cfg_collect g S c" and tc: "t \<in> cfg_collect g S ex"
     unfolding le_fun_def using st by auto
-  have mem: "combine_states s t \<in> collect_combine_pp g (cfg_collect g S) v"
+  have mem: "<s|t> \<in> collect_combine_pp g (cfg_collect g S) v"
   proof (rule collect_combine_pp_member)
     show "(c, ex, ret) \<in> combines g" using h by simp
     show "ret = v" using h by simp
     show "s \<in> cfg_collect g S c" using sc .
     show "t \<in> cfg_collect g S ex" using tc .
   qed
-  have step: "combine_states s t \<in> cfg_collect_F g S (cfg_collect g S) v"
+  have step: "<s|t> \<in> cfg_collect_F g S (cfg_collect g S) v"
     unfolding cfg_collect_F_def using mem by auto
   show "x \<in> cfg_collect g S v"
     using x step cfg_collect_post by blast
@@ -145,7 +145,7 @@ inductive cfg_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightar
   | edge: "(u, a, v) \<in> edges g \<Longrightarrow> cfg_witness g S u s \<Longrightarrow>
            t \<in> edge_collect a {s} \<Longrightarrow> cfg_witness g S v t"
   | combine: "(c, ex, v) \<in> combines g \<Longrightarrow> cfg_witness g S c s \<Longrightarrow>
-             cfg_witness g S ex t \<Longrightarrow> cfg_witness g S v (combine_states s t)"
+             cfg_witness g S ex t \<Longrightarrow> cfg_witness g S v <s|t>"
 
 definition cfg_collect_paths :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> store set" where
   "cfg_collect_paths g S v = {s. cfg_witness g S v s}"
@@ -170,16 +170,16 @@ qed
 
 lemma cfg_collect_paths_combine:
   assumes h: "(c, ex, v) \<in> combines g"
-  shows "{combine_states s t | s t.
+  shows "{<s|t> | s t.
            s \<in> cfg_collect_paths g S c \<and> t \<in> cfg_collect_paths g S ex}
          \<subseteq> cfg_collect_paths g S v"
 proof
   fix x
-  assume x: "x \<in> {combine_states s t | s t.
+  assume x: "x \<in> {<s|t> | s t.
                     s \<in> cfg_collect_paths g S c \<and> t \<in> cfg_collect_paths g S ex}"
   then obtain s t where
         sc: "cfg_witness g S c s" and te: "cfg_witness g S ex t"
-    and x: "x = combine_states s t"
+    and x: "x = <s|t>"
     unfolding cfg_collect_paths_def by blast
   show "x \<in> cfg_collect_paths g S v"
     unfolding cfg_collect_paths_def using cfg_witness.combine[OF h sc te] x by auto
@@ -198,7 +198,7 @@ proof -
     assume xin: "x \<in> collect_combine_pp g (cfg_collect_paths g S) v"
     from xin obtain c ex s t where h: "(c, ex, v) \<in> combines g"
       and st: "s \<in> cfg_collect_paths g S c" "t \<in> cfg_collect_paths g S ex"
-      and x: "x = combine_states s t"
+    and x: "x = <s|t>"
       unfolding collect_combine_pp_def by auto
     show "x \<in> cfg_collect_paths g S v"
       using cfg_collect_paths_combine[OF h] st x by (auto simp: cfg_collect_paths_def)
@@ -245,10 +245,10 @@ proof -
     then show ?case using cfg_collect_post by blast
   next
     case (combine c ex v Sa sto t)
-    have "combine_states sto t \<in> collect_combine_pp g (cfg_collect g Sa) v"
+    have "<sto|t> \<in> collect_combine_pp g (cfg_collect g Sa) v"
       using collect_combine_pp_member[OF combine(1) refl combine.IH(1) combine.IH(2)] .
-    have "combine_states sto t \<in> cfg_collect_F g Sa (cfg_collect g Sa) v"
-      unfolding cfg_collect_F_def using \<open>combine_states sto t \<in> collect_combine_pp g (cfg_collect g Sa) v\<close>
+    have "<sto|t> \<in> cfg_collect_F g Sa (cfg_collect g Sa) v"
+      unfolding cfg_collect_F_def using \<open><sto|t> \<in> collect_combine_pp g (cfg_collect g Sa) v\<close>
       by auto
     then show ?case using cfg_collect_post by blast
   qed

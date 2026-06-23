@@ -29,8 +29,8 @@ text \<open>
 \<close>
 
 lemma edge_collect_etf_sound:
-  "edge_collect a (gamma_state (side_env \<sigma> u))
-   \<subseteq> gamma_state (etf_full (apply_etf etf a u) \<sigma>)"
+  "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
+   \<subseteq> \<lbrakk>etf_full (apply_etf etf a u) \<sigma>\<rbrakk>"
 proof (cases a)
   case EA_Nop
   show ?thesis
@@ -77,32 +77,32 @@ lemma cfg_witness_gamma_eff:
     "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
        etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
-  assumes S_le: "S \<le> gamma_state s0"
+  assumes S_le: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes wit: "cfg_witness g S v st"
-  shows "st \<in> gamma_state (side_env \<sigma> v)"
+  shows "st \<in> \<lbrakk>side_env \<sigma> v\<rbrakk>"
 proof -
-  from wit S_le show "st \<in> gamma_state (side_env \<sigma> v)"
+  from wit S_le show "st \<in> \<lbrakk>side_env \<sigma> v\<rbrakk>"
   proof (induction rule: cfg_witness.induct)
     case (entry v s Sa)
     show ?case using S_le entry_le gamma_state_mono entry by blast
   next
     case (edge u a v S s t)
-    have s_g: "s \<in> gamma_state (side_env \<sigma> u)" using edge by simp
+    have s_g: "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>" using edge by simp
     have t_ec: "t \<in> edge_collect a {s}" using edge by simp
-    have step1: "t \<in> gamma_state (etf_full (apply_etf etf a u) \<sigma>)"
+    have step1: "t \<in> \<lbrakk>etf_full (apply_etf etf a u) \<sigma>\<rbrakk>"
     proof -
-      have sub: "{s} \<subseteq> gamma_state (side_env \<sigma> u)" using s_g by simp
-      have "edge_collect a {s} \<subseteq> edge_collect a (gamma_state (side_env \<sigma> u))"
+      have sub: "{s} \<subseteq> \<lbrakk>side_env \<sigma> u\<rbrakk>" using s_g by simp
+      have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>"
         using edge_collect_mono[OF sub] by blast
       thus ?thesis using t_ec edge_collect_etf_sound by blast
     qed
     show ?case using gamma_state_mono[OF step_le[OF edge(1)]] step1 by blast
   next
     case (combine c ex v S s t)
-    have sc: "s \<in> gamma_state (side_env \<sigma> c)" and tc: "t \<in> gamma_state (side_env \<sigma> ex)"
+    have sc: "s \<in> \<lbrakk>side_env \<sigma> c\<rbrakk>" and tc: "t \<in> \<lbrakk>side_env \<sigma> ex\<rbrakk>"
       apply (auto simp add: combine.IH(1) combine.prems)
       by (simp add: combine.IH(2) combine.prems)
-    have step: "combine_states s t \<in> gamma_state (etf_full (etf_combine etf c ex) \<sigma>)"
+    have step: "<s|t> \<in> \<lbrakk>etf_full (etf_combine etf c ex) \<sigma>\<rbrakk>"
       using etf_sound_combine sc tc unfolding side_env_def by blast
     show ?case using gamma_state_mono[OF combine_le[OF combine(1)]] step by blast
   qed
@@ -118,7 +118,7 @@ text \<open>
 theorem post_fixpoint_sound_at_eff:
   fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set" and v0 :: pp
-  assumes S_sound: "S \<le> gamma_state s0"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> edges g
        \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
@@ -126,16 +126,17 @@ theorem post_fixpoint_sound_at_eff:
     "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
        etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
-  shows "cfg_collect g S v0 \<le> gamma_state (side_env \<sigma> v0)"
+  shows "cfg_collect g S v0 \<le> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 proof
   fix t
   assume "t \<in> cfg_collect g S v0"
   with cfg_collect_le_paths have wit: "cfg_witness g S v0 t"
     unfolding cfg_collect_paths_def by auto
-  show "t \<in> gamma_state (side_env \<sigma> v0)"
+  show "t \<in> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
     using cfg_witness_gamma_eff[OF step_le combine_le entry_le S_sound wit] .
 qed
 
 end
 
 end
+

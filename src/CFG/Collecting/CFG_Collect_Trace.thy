@@ -62,7 +62,7 @@ inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Right
             \<Longrightarrow> trace_witness g S ex \<rho>
             \<Longrightarrow> hd \<rho> = enter_state (last tau)
             \<Longrightarrow> trace_witness g S v
-                  (tau @ \<rho> @ [combine_states (last tau) (last \<rho>)])"
+                  (tau @ \<rho> @ [<last tau|last \<rho>>])"
 
 definition cfg_collect_trace :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
   "cfg_collect_trace g S v = {tr. trace_witness g S v tr}"
@@ -112,11 +112,11 @@ next
   have ih1: "last tau \<in> cfg_collect g S c" using combine.IH(1) .
   have ih2: "last \<rho> \<in> cfg_collect g S ex" using combine.IH(2) .
   have h: "(c, ex, v) \<in> combines g" using combine.hyps(1) .
-  have "combine_states (last tau) (last \<rho>) \<in> collect_combine_pp g (cfg_collect g S) v"
+  have "<last tau|last \<rho>> \<in> collect_combine_pp g (cfg_collect g S) v"
     using collect_combine_pp_member[OF h refl ih1 ih2] .
-  then have "combine_states (last tau) (last \<rho>) \<in> cfg_collect_F g S (cfg_collect g S) v"
+  then have "<last tau|last \<rho>> \<in> cfg_collect_F g S (cfg_collect g S) v"
     unfolding cfg_collect_F_def by auto
-  then have "combine_states (last tau) (last \<rho>) \<in> cfg_collect g S v"
+  then have "<last tau|last \<rho>> \<in> cfg_collect g S v"
     using cfg_collect_post by blast
   then show ?case by (metis last_snoc append_assoc)
 qed
@@ -152,7 +152,7 @@ inductive trace_witness_d ::
             \<Longrightarrow> hd \<rho> = enter_state (last tau)
             \<Longrightarrow> cmp (dg tau) (dg \<rho>)
             \<Longrightarrow> trace_witness_d dg cmp g S v
-                  (tau @ \<rho> @ [combine_states (last tau) (last \<rho>)])"
+                  (tau @ \<rho> @ [<last tau|last \<rho>>])"
 
 definition cfg_collect_trace_d ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where

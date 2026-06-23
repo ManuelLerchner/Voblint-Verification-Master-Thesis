@@ -138,7 +138,7 @@ next
     have wex: "cfg_witness (prune_to g v0) Sa ex t" using combine.IH(2) rex by blast
     have cv: "(c, ex, v) \<in> combines (prune_to g v0)"
       using combine.hyps(1) rv by (simp add: cone_def)
-    show "cfg_witness (prune_to g v0) Sa v (combine_states s t)"
+    show "cfg_witness (prune_to g v0) Sa v <s|t>"
       by (rule cfg_witness.combine[OF cv wc wex])
   qed
 qed

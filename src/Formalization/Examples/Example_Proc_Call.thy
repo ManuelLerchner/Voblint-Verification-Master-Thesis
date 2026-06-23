@@ -217,7 +217,7 @@ proof (rule allI)
                    (4, EA_Assign ''Gx'' (N 4)),
                    (5, EA_Nop), (6, EA_Enter), (7, EA_Nop), (7, EA_Enter)})
              \<union>
-             ((\<lambda>(c, e). combine_abs (main_prog_env c) (main_prog_env e)) `
+             ((\<lambda>(c, e). \<langle>main_prog_env c|main_prog_env e\<rangle>) `
                   {(6, 1), (7, 3)})"])
     by (auto split: if_splits
               simp: main_prog_env_def main_prog_s0_def ivl_eval_simps

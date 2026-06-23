@@ -18,61 +18,61 @@ text \<open>
 subsection \<open>Core inductive predicate\<close>
 
 inductive cfg_path :: "cfg => pp => (edge_action * pp) list => pp => bool"
-                 ("_ \<turnstile> _ \<longrightarrow>\<^bsub>_\<^esub> _" [60, 0, 0, 60] 60) where 
-  empty[intro]: "g \<turnstile> v \<longrightarrow>\<^bsub>[]\<^esub> v"
-| step[intro]:  "(u, a, w) : edges g ==> g \<turnstile> w \<longrightarrow>\<^bsub>es\<^esub> v
-                ==> g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v"
+                 ("_ \<turnstile> _ \<rightarrow>\<langle>_\<rangle> _" [60, 0, 0, 60] 60) where
+  empty[intro]: "g \<turnstile> v \<rightarrow>\<langle>[]\<rangle> v"
+| step[intro]:  "(u, a, w) : edges g ==> g \<turnstile> w \<rightarrow>\<langle>es\<rangle> v
+                ==> g \<turnstile> u \<rightarrow>\<langle>(a, w) # es\<rangle> v"
 
-inductive_cases cfg_emptyE[elim!]: "g \<turnstile> v \<longrightarrow>\<^bsub>[]\<^esub> u"
+inductive_cases cfg_emptyE[elim!]: "g \<turnstile> v \<rightarrow>\<langle>[]\<rangle> u"
 
 lemma cfg_path_emptyD:
-  "g \<turnstile> u \<longrightarrow>\<^bsub>[]\<^esub> v \<Longrightarrow> u = v"
+  "g \<turnstile> u \<rightarrow>\<langle>[]\<rangle> v \<Longrightarrow> u = v"
   by (auto elim: cfg_emptyE)
 
-inductive_cases cfg_stepE[elim]: "g \<turnstile> v \<longrightarrow>\<^bsub>es\<^esub> u"
+inductive_cases cfg_stepE[elim]: "g \<turnstile> v \<rightarrow>\<langle>es\<rangle> u"
 
 lemma cfg_path_ConsD_edge:
-  "g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v \<Longrightarrow> (u, a, w) \<in> edges g"
+  "g \<turnstile> u \<rightarrow>\<langle>(a, w) # es\<rangle> v \<Longrightarrow> (u, a, w) \<in> edges g"
   by (cases rule: cfg_stepE) auto
 
 lemma cfg_path_ConsD_rest:
-  "g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v \<Longrightarrow> g \<turnstile> w \<longrightarrow>\<^bsub>es\<^esub> v"
+  "g \<turnstile> u \<rightarrow>\<langle>(a, w) # es\<rangle> v \<Longrightarrow> g \<turnstile> w \<rightarrow>\<langle>es\<rangle> v"
   by (cases rule: cfg_stepE) auto
 
 lemma cfg_path_ne_nil:
-  assumes path: "g \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+  assumes path: "g \<turnstile> u \<rightarrow>\<langle>es\<rangle> v"
     and u_ne: "u \<noteq> v"
   shows "es \<noteq> []"
   using assms cfg_path_emptyD by auto
 
 
 lemma cfg_path_append[intro]:
-  "g \<turnstile> u \<longrightarrow>\<^bsub>es1\<^esub> v ==> g \<turnstile> v \<longrightarrow>\<^bsub>es2\<^esub> w ==> g \<turnstile> u \<longrightarrow>\<^bsub>es1 @ es2\<^esub> w"
-  apply (induction es1 arbitrary: u) 
+  "g \<turnstile> u \<rightarrow>\<langle>es1\<rangle> v ==> g \<turnstile> v \<rightarrow>\<langle>es2\<rangle> w ==> g \<turnstile> u \<rightarrow>\<langle>es1 @ es2\<rangle> w"
+  apply (induction es1 arbitrary: u)
   by(auto)
 
 lemma cfg_path_suffix_to_query:
-  assumes prefix: "g \<turnstile> p \<longrightarrow>\<^bsub>esx\<^esub> x"
-  assumes suffix: "g \<turnstile> x \<longrightarrow>\<^bsub>es'\<^esub> v0"
-  shows "g \<turnstile> p \<longrightarrow>\<^bsub>esx @ es'\<^esub> v0"
+  assumes prefix: "g \<turnstile> p \<rightarrow>\<langle>esx\<rangle> x"
+  assumes suffix: "g \<turnstile> x \<rightarrow>\<langle>es'\<rangle> v0"
+  shows "g \<turnstile> p \<rightarrow>\<langle>esx @ es'\<rangle> v0"
   using cfg_path_append[OF prefix suffix] .
 
 (* First step of a non-empty path reaches its intermediate target. *)
 lemma cfg_path_step_target:
-  assumes path: "g \<turnstile> u \<longrightarrow>\<^bsub>(a, w) # es\<^esub> v"
-  shows "g \<turnstile> u \<longrightarrow>\<^bsub>[(a, w)]\<^esub> w"
+  assumes path: "g \<turnstile> u \<rightarrow>\<langle>(a, w) # es\<rangle> v"
+  shows "g \<turnstile> u \<rightarrow>\<langle>[(a, w)]\<rangle> w"
 proof (rule cfg_path.step)
   show "(u, a, w) \<in> edges g"
     using path by (cases rule: cfg_stepE) auto
-  show "g \<turnstile> w \<longrightarrow>\<^bsub>[]\<^esub> w"
+  show "g \<turnstile> w \<rightarrow>\<langle>[]\<rangle> w"
     by (rule cfg_path.empty)
 qed
 
 (* If x lies on a path from p to v and takes one step toward v, so does w. *)
 lemma cfg_path_on_path_step:
-  assumes prefix: "g \<turnstile> p \<longrightarrow>\<^bsub>esx\<^esub> x"
-  assumes step: "g \<turnstile> x \<longrightarrow>\<^bsub>(a, w) # es'\<^esub> v"
-  shows "g \<turnstile> p \<longrightarrow>\<^bsub>esx @ [(a, w)]\<^esub> w"
+  assumes prefix: "g \<turnstile> p \<rightarrow>\<langle>esx\<rangle> x"
+  assumes step: "g \<turnstile> x \<rightarrow>\<langle>(a, w) # es'\<rangle> v"
+  shows "g \<turnstile> p \<rightarrow>\<langle>esx @ [(a, w)]\<rangle> w"
   using cfg_path_append[OF prefix cfg_path_step_target[OF step]] by simp
 
 subsection \<open>Offset paths\<close>
@@ -92,24 +92,24 @@ lemma offset_path_append[simp]:
   unfolding offset_path_def by simp
 
 lemma cfg_path_offset:
-  assumes "mk_cfg ent ex E {} \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
-  shows "mk_cfg (ent + k) (ex + k) (offset_edges k E) {} \<turnstile> (u + k) \<longrightarrow>\<^bsub>offset_path k es\<^esub> (v + k)"
+  assumes "mk_cfg ent ex E {} \<turnstile> u \<rightarrow>\<langle>es\<rangle> v"
+  shows "mk_cfg (ent + k) (ex + k) (offset_edges k E) {} \<turnstile> (u + k) \<rightarrow>\<langle>offset_path k es\<rangle> (v + k)"
   using assms
   apply (induction "mk_cfg ent ex E {}" u es v rule: cfg_path.induct)
   by(auto simp add: cfg_path.step in_offset_edges_iff)
 
 lemma cfg_path_split_last:
-  assumes p: "G \<turnstile> u \<longrightarrow>\<^bsub>es\<^esub> v"
+  assumes p: "G \<turnstile> u \<rightarrow>\<langle>es\<rangle> v"
     and ne: "es \<noteq> []"
   shows "\<exists>es' mid a. es = es' @ [(a, v)] \<and>
-                      G \<turnstile> u \<longrightarrow>\<^bsub>es'\<^esub> mid \<and>
+                      G \<turnstile> u \<rightarrow>\<langle>es'\<rangle> mid \<and>
                       (mid, a, v) \<in> edges G"
 using assms proof (induction es arbitrary: u)
   case Nil
   thus ?case by simp
 next
   case (Cons hd tl)
-  then obtain a w where "hd = (a, w)" and "(u, a, w) \<in> edges G" and "G \<turnstile> w \<longrightarrow>\<^bsub>tl\<^esub> v"
+  then obtain a w where "hd = (a, w)" and "(u, a, w) \<in> edges G" and "G \<turnstile> w \<rightarrow>\<langle>tl\<rangle> v"
     by blast
   then show ?case
     using Cons.IH cfg_path.step cfg_path_append empty by fastforce

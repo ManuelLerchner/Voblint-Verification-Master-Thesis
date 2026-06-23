@@ -4,6 +4,8 @@ theory Example_Guard_Refinement
   imports "Voblint_Analysis.Interval_Domain"
 begin
 
+hide_const (open) Update_rules.N
+
 text \<open>
   Backward analysis is sound without being useful: the pre-migration identity
   assume transfer already satisfied @{term tf_assume}.  The payoff is
