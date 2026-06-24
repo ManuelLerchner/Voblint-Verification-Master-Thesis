@@ -17,3 +17,4 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Trace_Digest_Precision
     Example_Side_Execute
     Example_Side_Branch_Calls
+    Example_Mixed_Flow_Sign

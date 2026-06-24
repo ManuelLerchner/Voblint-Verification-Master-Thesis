@@ -92,8 +92,6 @@ proof -
   have pp_st: "part_post_solution (side_cfg_T_st g sign_tf_st bot cinit_sign_st)
                  (cfg_exit g) (snd sol) (fst sol)"
     using pp0 by (simp add: sign_exec_eqs_def g_def)
-  interpret se: sound_effectful_transfer sign_etf
-    by (rule sign_sound_etf)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff g sign_etf bot
                      (\<lambda>x. if is_global x then SZero else STop) ())
@@ -101,20 +99,11 @@ proof -
     using part_post_solution_st_to_abs_eff[OF sign_tf_st_commute pp_st]
     unfolding sign_etf_def
     by (simp add: \<sigma>_def fun_of_st_cinit_sign_st bot_fun_def)
-  have ed: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf sign_etf b z)"
-    unfolding sign_etf_def by (rule dep_aux_apply_etf_from_tf_src)
-  have cd1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine sign_etf c2 e2)"
-    unfolding sign_etf_def by (rule dep_aux_etf_combine_from_tf_call)
-  have cd2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine sign_etf c2 e2)"
-    unfolding sign_etf_def by (rule dep_aux_etf_combine_from_tf_exit)
-  have es: "\<And>a u. static_deps (apply_etf sign_etf a u)"
-    unfolding sign_etf_def by (rule static_deps_apply_etf_from_tf)
-  have cs: "\<And>cc ex. static_deps (etf_combine sign_etf cc ex)"
-    unfolding sign_etf_def by (rule static_deps_etf_combine_from_tf)
+  have cone: "cone_compatible_etf sign_etf" by (rule sign_etf_cone_compatible)
   have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"
     by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
-    by (rule side_cone_in_vars_eff[OF pp_eff fin finC ed cd1 cd2 es cs reach])
+    by (rule side_cone_in_vars_eff_cone[OF pp_eff fin finC cone reach])
   have entry_le: "(\<lambda>x. if is_global x then SZero else STop) \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
   have seed_cov: "cinit_stores \<subseteq> \<lbrakk>\<lambda>x. if is_global x then SZero else STop\<rbrakk>"
@@ -124,8 +113,8 @@ proof -
     using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
   have "cfg_collect g cinit_stores (cfg_exit g)
         \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-    by (rule side_collect_sound_exit_pruned_eff
-          [OF sign_sound_etf pp_eff fin finC entry_cov ed cd1 cd2 es cs])
+    by (rule side_collect_sound_exit_pruned_eff_cone
+          [OF sign_sound_etf pp_eff fin finC entry_cov cone])
   then show ?thesis
     by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
 qed

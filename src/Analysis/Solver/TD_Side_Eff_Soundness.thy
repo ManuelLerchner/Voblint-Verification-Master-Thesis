@@ -322,6 +322,23 @@ proof -
   qed
 qed
 
+corollary side_cone_in_vars_eff_cone:
+  fixes g :: cfg and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
+    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state" and gseed :: 'g
+  assumes pp:   "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) v0 \<sigma> vars"
+  assumes fin:  "finite (edges g)"
+  assumes finC: "finite (combines g)"
+  assumes cone: "cone_compatible_etf etf"
+  assumes reach: "cfg_reaches g w v0"
+  shows "w \<in> vars"
+  by (rule side_cone_in_vars_eff[OF pp fin finC
+        cone_compatible_etf_edge_dep[OF cone]
+        cone_compatible_etf_comb_dep1[OF cone]
+        cone_compatible_etf_comb_dep2[OF cone]
+        cone_compatible_etf_edge_static[OF cone]
+        cone_compatible_etf_comb_static[OF cone]
+        reach])
+
 subsection \<open>Entry coverage from an arbitrary initial state\<close>
 
 text \<open>
@@ -467,6 +484,24 @@ proof -
   show ?thesis using frame collect_pg by blast
 qed
 
+corollary side_collect_sound_exit_pruned_eff_cone:
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
+    and bot0 s0 :: "'a abs_state" and S :: "store set"
+    and etf :: "('g, 'a) effectful_domain_transfer" and gseed :: 'g
+  assumes se:    "sound_effectful_transfer etf"
+  assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
+  assumes fin:   "finite (edges g)"
+  assumes finC:  "finite (combines g)"
+  assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  assumes cone:  "cone_compatible_etf etf"
+  shows "cfg_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  by (rule side_collect_sound_exit_pruned_eff[OF se pp fin finC entry
+        cone_compatible_etf_edge_dep[OF cone]
+        cone_compatible_etf_comb_dep1[OF cone]
+        cone_compatible_etf_comb_dep2[OF cone]
+        cone_compatible_etf_edge_static[OF cone]
+        cone_compatible_etf_comb_static[OF cone]])
+
 subsection \<open>Executable-facing standalone soundness\<close>
 
 text \<open>
@@ -580,6 +615,14 @@ lemma static_deps_etf_combine_from_tf:
   "static_deps (etf_combine (etf_from_tf tf) cc ex)"
   by (simp add: static_deps_def pure_combine_tree_def Let_def)
 
+lemma cone_compatible_etf_from_tf:
+  "cone_compatible_etf (etf_from_tf tf)"
+  unfolding cone_compatible_etf_def
+  using dep_aux_apply_etf_from_tf_src dep_aux_etf_combine_from_tf_call
+        dep_aux_etf_combine_from_tf_exit static_deps_apply_etf_from_tf
+        static_deps_etf_combine_from_tf
+  by blast
+
 subsection \<open>Solver preconditions for the pure-shim etf_from_tf system\<close>
 
 text \<open>
@@ -629,5 +672,15 @@ lemma side_cfg_T_eff_mono_deps:
   apply (rule side_cfg_T_eff_mono_deps_gen)
   by (simp add: static_deps_def pure_edge_tree_def Let_def)
      (simp add: static_deps_def pure_combine_tree_def Let_def)
+
+lemma threefold_mono_from_tf:
+  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and g :: cfg and bot0 s0 :: "'a abs_state"
+  assumes "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  shows "threefold_mono (side_cfg_T_eff g (etf_from_tf tf) bot0 s0 ())"
+  unfolding threefold_mono_def
+  using side_cfg_T_eff_is_mono_eq[OF assms] side_cfg_T_eff_mono_sides[OF assms]
+        side_cfg_T_eff_mono_deps
+  by blast
 
 end

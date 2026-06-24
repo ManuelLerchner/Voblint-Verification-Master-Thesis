@@ -38,16 +38,20 @@ lemma sign_sound_etf:
   unfolding sign_etf_def
   by (rule sound_transfer_imp_sound_effectful[OF sign_sound_tf.sound_transfer_axioms])
 
+lemma sign_etf_cone_compatible: "cone_compatible_etf sign_etf"
+  unfolding sign_etf_def by (rule cone_compatible_etf_from_tf)
+
+lemma sign_etf_threefold_mono:
+  "threefold_mono (side_cfg_T_eff g sign_etf bot0 s0 ())"
+  unfolding sign_etf_def by (rule threefold_mono_from_tf[OF sign_tf_mono])
+
 section \<open>Sign domain: standalone effectful interprocedural soundness\<close>
 
 text \<open>
   Headline soundness for the Sign analysis, stated against the effectful side IP
-  solver (side_analyse_eff) and proved through the standalone effectful
-  pipeline: side_analyse_eff_collect_sound_exit_pruned_gen instantiated at the
-  Sign witness sign_sound_etf.  The five cone contracts are discharged generically
-  for the shim etf (sign_etf = etf_from_tf sign_tf); the three TD_side
-  preconditions come from sign_tf_mono.  The unit seed-slot () carries the
-  initial globals.  No pure side_analyse / pure IP soundness theorem is used.
+  solver (side_analyse_eff).  Cone compatibility and threefold monotonicity are
+  discharged by the generic pure-shim lemmas; the unit seed-slot () carries the
+  initial globals.
 \<close>
 
 theorem side_sign_analysis_sound:
@@ -62,30 +66,16 @@ theorem side_sign_analysis_sound:
   shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
          (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
 proof -
-  interpret se: sound_effectful_transfer sign_etf
-    by (rule sign_sound_etf)
-  have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>"
-    using s_sound by simp
-  have ed: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf sign_etf b z)"
-    unfolding sign_etf_def by (rule dep_aux_apply_etf_from_tf_src)
-  have cd1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine sign_etf c2 e2)"
-    unfolding sign_etf_def by (rule dep_aux_etf_combine_from_tf_call)
-  have cd2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine sign_etf c2 e2)"
-    unfolding sign_etf_def by (rule dep_aux_etf_combine_from_tf_exit)
-  have es: "\<And>a u. static_deps (apply_etf sign_etf a u)"
-    unfolding sign_etf_def by (rule static_deps_apply_etf_from_tf)
-  have cs: "\<And>cc ex. static_deps (etf_combine sign_etf cc ex)"
-    unfolding sign_etf_def by (rule static_deps_etf_combine_from_tf)
+  have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
   have collect:
     "cfg_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
      \<le> \<lbrakk>side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
            (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
-    by (rule side_analyse_eff_collect_sound_exit_pruned_gen
-          [OF sign_sound_etf sign_etf_is_mono_eq sign_etf_mono_sides sign_etf_mono_deps
-              side_solve_dom gs ed cd1 cd2 es cs])
-  show ?thesis
-    using collect collect_exit by blast
+    by (rule side_analyse_eff_collect_sound_exit_pruned
+          [OF sign_sound_etf sign_etf_threefold_mono sign_etf_cone_compatible
+              side_solve_dom gs])
+  show ?thesis using collect collect_exit by blast
 qed
 
 end
