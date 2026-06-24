@@ -100,4 +100,47 @@ proof -
     by (rule se.post_fixpoint_sound_at_eff[OF entry step_le combine_le order_refl])
 qed
 
+subsection \<open>Cone-compatibility\<close>
+
+text \<open>
+  cone_compatible_etf bundles the five structural conditions that guarantee the
+  solver's stable set reaches the program entry (the cone argument in
+  side_cone_in_vars_eff).
+
+  The first three are self-reference conditions: each edge/combine tree queries
+  its own source program points.  The last two say the queried unknowns are
+  independent of the environment (static_deps), so the cone is determined
+  structurally rather than by the abstract state.
+\<close>
+
+definition cone_compatible_etf ::
+  "('g::finite, 'a::sound_domain) effectful_domain_transfer \<Rightarrow> bool"
+where
+  "cone_compatible_etf etf \<equiv>
+     (\<forall>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)) \<and>
+     (\<forall>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)) \<and>
+     (\<forall>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)) \<and>
+     (\<forall>a u. static_deps (apply_etf etf a u)) \<and>
+     (\<forall>cc ex. static_deps (etf_combine etf cc ex))"
+
+lemma cone_compatible_etf_edge_dep:
+  "cone_compatible_etf etf \<Longrightarrow> Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
+  unfolding cone_compatible_etf_def by blast
+
+lemma cone_compatible_etf_comb_dep1:
+  "cone_compatible_etf etf \<Longrightarrow> Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  unfolding cone_compatible_etf_def by blast
+
+lemma cone_compatible_etf_comb_dep2:
+  "cone_compatible_etf etf \<Longrightarrow> Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  unfolding cone_compatible_etf_def by blast
+
+lemma cone_compatible_etf_edge_static:
+  "cone_compatible_etf etf \<Longrightarrow> static_deps (apply_etf etf a u)"
+  unfolding cone_compatible_etf_def by blast
+
+lemma cone_compatible_etf_comb_static:
+  "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_combine etf cc ex)"
+  unfolding cone_compatible_etf_def by blast
+
 end

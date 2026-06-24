@@ -10,64 +10,110 @@ text \<open>
   - globals are flow-insensitive (one unknown per global name, joined over all
     contributions via side effects, read back as glob_env)
 
-  The soundness ingredients already exist:
-    side_analyse_eff_collect_sound_exit_pruned_gen
-      => cfg_collect g S exit <= [[side_analyse_eff ... exit]]
-    alpha_last_cfg_collect_trace_le
-      => alpha_last (cfg_collect_trace g S v) <= cfg_collect g S v
+  Two theorems are provided at the trace-semantics level.
 
-  This theory packages both into one theorem at the trace semantics level
-  (mixed_flow_analysis_sound).  The mono_sides hypothesis is the monotone-routing
-  precondition that excludes non-monotone conditional side-routing (flag_etf etc.)
-  -- the concrete obstruction found in Meeting 7 ss 3.
+  mixed_flow_analysis_sound: generic soundness given any partial post-solution.
+  No threefold monotonicity required; the caller supplies sigma directly.
+  This is the minimal soundness result: any over-approximating fixpoint works.
+
+  mixed_flow_analysis_optimal: soundness via the TD solver, plus the optimality
+  guarantee that the solver's environment is the *least* partial post-solution.
+  Requires threefold_mono (paper Def. 7) and cone_compatible_etf.  The
+  mono_sides component of threefold_mono is the monotone-routing precondition
+  that excludes non-monotone conditional side-routing (flag_etf, Meeting 7 s3).
 
   side_analyse_eff ... v x unfolds to
     side_env (nu_at ...) v x = (nu_at ...) (Inl v) x |_| glob_env (nu_at ...) x
   In the pure-shim case (etf = etf_from_tf tf):
-  - for local x (not is_global x): glob_env s x = bot, so result = s (Inl v) x
-  - for global x (is_global x):    s (Inl v) x = bot, so result = glob_env s x
-  The local component is therefore flow-sensitive (indexed by v); the global
-  component is flow-insensitive (v-independent).
+  - for local x (not is_global x): glob_env s x = bot, result = s (Inl v) x
+  - for global x (is_global x):    s (Inl v) x = bot, result = glob_env s x
+  So the local component is flow-sensitive (indexed by v) and the global component
+  is flow-insensitive (v-independent).
 \<close>
 
+subsection \<open>Generic soundness from any partial post-solution\<close>
+
 theorem mixed_flow_analysis_sound:
-  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
-    and etf :: "('g::finite, 'a) effectful_domain_transfer" and gseed :: 'g
-    and S :: "store set" and tr :: "store list"
-  (* g and T abbreviate the repeated subexpressions *)
-  assumes g_eq: "g = compile_prog \<Pi> ps main"
-  assumes T_eq: "T = side_cfg_T_eff g etf bot s0 gseed"
-  assumes se: "sound_effectful_transfer etf"
-  assumes mono_eq:    "is_mono_eq T"
-  assumes mono_sides: "mono_sides T"
-  assumes mono_deps:  "mono_deps  T"
-  assumes dom:        "side_cfg_solve_dom_eff g etf bot s0 gseed (cfg_exit g)"
-  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
-  assumes edge_dep:    "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  assumes comb_dep1:   "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes comb_dep2:   "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
+    and bot0 s0 :: "'a abs_state" and S :: "store set" and tr :: "store list"
+    and etf :: "('g, 'a) effectful_domain_transfer" and gseed :: 'g
+  assumes se:    "sound_effectful_transfer etf"
+  assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
+  assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  assumes cone:  "cone_compatible_etf etf"
+  assumes fin:   "finite (edges g)"
+  assumes finC:  "finite (combines g)"
   assumes tr_in: "tr \<in> cfg_collect_trace g S (cfg_exit g)"
-  shows "\<forall>x. (last tr) x \<in> gamma
-               (side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) x)"
+  shows "\<forall>x. (last tr) x \<in> gamma (side_env \<sigma> (cfg_exit g) x)"
 proof -
   have state_sound:
-    "cfg_collect g S (cfg_exit g) \<le>
-       \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
-    unfolding g_eq
-    by (rule side_analyse_eff_collect_sound_exit_pruned_gen[OF se
-               mono_eq[unfolded T_eq g_eq] mono_sides[unfolded T_eq g_eq]
-               mono_deps[unfolded T_eq g_eq] dom[unfolded g_eq] S_sound
-               edge_dep comb_dep1 comb_dep2 edge_static comb_static])
+    "cfg_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+    by (rule side_collect_sound_exit_pruned_eff[OF se pp fin finC entry
+          cone_compatible_etf_edge_dep[OF cone]
+          cone_compatible_etf_comb_dep1[OF cone]
+          cone_compatible_etf_comb_dep2[OF cone]
+          cone_compatible_etf_edge_static[OF cone]
+          cone_compatible_etf_comb_static[OF cone]])
   have trace_proj:
     "alpha_last (cfg_collect_trace g S (cfg_exit g)) \<le> cfg_collect g S (cfg_exit g)"
     by (rule alpha_last_cfg_collect_trace_le)
   have last_in: "last tr \<in> alpha_last (cfg_collect_trace g S (cfg_exit g))"
     using tr_in unfolding alpha_last_def by blast
-  have "last tr \<in> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+  have "last tr \<in> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     using last_in trace_proj state_sound by blast
   thus ?thesis unfolding gamma_state_def by blast
+qed
+
+subsection \<open>Optimal soundness via the TD solver (threefold monotonicity)\<close>
+
+theorem mixed_flow_analysis_optimal:
+  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
+    and etf :: "('g::finite, 'a) effectful_domain_transfer" and gseed :: 'g
+    and S :: "store set" and tr :: "store list"
+  assumes g_eq:  "g = compile_prog \<Pi> ps main"
+  assumes T_eq:  "T = side_cfg_T_eff g etf bot s0 gseed"
+  assumes se:    "sound_effectful_transfer etf"
+  assumes tfm:   "threefold_mono T"
+  assumes cone:  "cone_compatible_etf etf"
+  assumes dom:   "side_cfg_solve_dom_eff g etf bot s0 gseed (cfg_exit g)"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  assumes tr_in: "tr \<in> cfg_collect_trace g S (cfg_exit g)"
+  shows sound:
+    "\<forall>x. (last tr) x \<in> gamma (side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) x)"
+    and optimal:
+    "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) (cfg_exit g)
+       (td_cfg_side_solver_eff.nu_at g etf bot s0 gseed (cfg_exit g))
+       (td_cfg_side_solver_eff.stabl_at g etf bot s0 gseed (cfg_exit g))"
+proof -
+  interpret ip: td_cfg_side_solver_eff g etf bot s0 gseed
+    using threefold_monoD_eq[OF tfm[unfolded T_eq]]
+          threefold_monoD_sides[OF tfm[unfolded T_eq]]
+          threefold_monoD_deps[OF tfm[unfolded T_eq]]
+    by unfold_locales
+  have state_sound:
+    "cfg_collect g S (cfg_exit g) \<le>
+       \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+    unfolding g_eq
+    by (rule side_analyse_eff_collect_sound_exit_pruned[OF se
+          tfm[unfolded T_eq g_eq] cone dom[unfolded g_eq] S_sound])
+  have trace_proj:
+    "alpha_last (cfg_collect_trace g S (cfg_exit g)) \<le> cfg_collect g S (cfg_exit g)"
+    by (rule alpha_last_cfg_collect_trace_le)
+  have last_in: "last tr \<in> alpha_last (cfg_collect_trace g S (cfg_exit g))"
+    using tr_in unfolding alpha_last_def by blast
+  have last_sound: "last tr \<in> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+    using last_in trace_proj state_sound by blast
+  show sound: "\<forall>x. (last tr) x \<in> gamma (side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) x)"
+    using last_sound unfolding gamma_state_def by blast
+  have opt_full:
+    "least_part_post_solution ip.cfg_pkg_eff (cfg_exit g)
+       (ip.nu_at (cfg_exit g)) (ip.stabl_at (cfg_exit g))"
+    by (rule ip.least_part_post_at_cfg[OF dom])
+  show optimal:
+    "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) (cfg_exit g)
+       (td_cfg_side_solver_eff.nu_at g etf bot s0 gseed (cfg_exit g))
+       (td_cfg_side_solver_eff.stabl_at g etf bot s0 gseed (cfg_exit g))"
+    using opt_full[simplified ip.cfg_pkg_eff_def] by blast
 qed
 
 end

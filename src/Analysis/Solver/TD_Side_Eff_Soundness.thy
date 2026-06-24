@@ -23,6 +23,36 @@ text \<open>
       environment (already required for the TD_side mono_deps precondition).
 \<close>
 
+subsection \<open>Threefold monotonicity\<close>
+
+text \<open>
+  threefold_mono bundles the three TD_side preconditions required for the
+  solver to converge to a partial post-solution (paper Definition 7).
+
+  is_mono_eq: the equation value is monotone in the environment.
+  mono_sides: the side-effect map is monotone in the environment.
+  mono_deps: the dependency skeleton is a shrinking function of the
+             environment (larger env => smaller or equal dep set).
+
+  These three conditions together let the TD_side solver use the
+  optimized destab_opt=True strategy and guarantee a least partial
+  post-solution.
+\<close>
+
+definition threefold_mono ::
+  "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> bool"
+where
+  "threefold_mono T \<equiv> is_mono_eq T \<and> mono_sides T \<and> mono_deps T"
+
+lemma threefold_monoD_eq:   "threefold_mono T \<Longrightarrow> is_mono_eq T"
+  unfolding threefold_mono_def by blast
+
+lemma threefold_monoD_sides: "threefold_mono T \<Longrightarrow> mono_sides T"
+  unfolding threefold_mono_def by blast
+
+lemma threefold_monoD_deps:  "threefold_mono T \<Longrightarrow> mono_deps T"
+  unfolding threefold_mono_def by blast
+
 subsection \<open>Dependency membership for the effectful fold\<close>
 
 text \<open>dep_aux of the fold is acc-independent when the per-tree skeletons are static.\<close>
@@ -496,6 +526,29 @@ proof -
     "side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) = side_env \<sigma> (cfg_exit g)"
     unfolding side_analyse_eff_def \<sigma>_def v0_def g_def by simp  show ?thesis using collect analyse_eq by (simp add: g_def)
 qed
+
+corollary side_analyse_eff_collect_sound_exit_pruned:
+  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
+    and S :: "store set"
+    and etf :: "('g::finite, 'a) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes se:   "sound_effectful_transfer etf"
+  assumes tfm:  "threefold_mono (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes cone: "cone_compatible_etf etf"
+  assumes dom:  "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) etf bot s0 gseed
+                   (cfg_exit (compile_prog \<Pi> ps main))"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  shows "cfg_collect (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
+         \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed
+               (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+  by (rule side_analyse_eff_collect_sound_exit_pruned_gen[OF se
+        threefold_monoD_eq[OF tfm] threefold_monoD_sides[OF tfm]
+        threefold_monoD_deps[OF tfm] dom S_sound
+        cone_compatible_etf_edge_dep[OF cone]
+        cone_compatible_etf_comb_dep1[OF cone]
+        cone_compatible_etf_comb_dep2[OF cone]
+        cone_compatible_etf_edge_static[OF cone]
+        cone_compatible_etf_comb_static[OF cone]])
 
 subsection \<open>Pure-shim discharge of the cone contracts\<close>
 

@@ -67,6 +67,14 @@ lemma part_post_at_cfg:
   shows "part_post_solution cfg_pkg_eff v (nu_at v) (stabl_at v)"
   using part_post_at assms unfolding solve_dom_eq by simp
 
+lemma least_part_post_at_cfg:
+  assumes dom: "side_cfg_solve_dom_eff g etf bot0 s0 gseed v"
+  shows "least_part_post_solution cfg_pkg_eff v (nu_at v) (stabl_at v)"
+proof -
+  have dv: "side.solve_dom v" using dom unfolding solve_dom_eq .  show ?thesis
+    using side.least_partial_post_solution[OF dv solve_prod] by blast
+qed
+
 lemma env_at_eq [simp]: "env_at x0 v = side_env (nu_at x0) v"
   unfolding env_at_def by simp
 
