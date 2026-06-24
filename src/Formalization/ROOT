@@ -6,6 +6,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   theories
     Voblint
     Trace_Analysis_Sound
+    Mixed_Flow_Sound
     Example_Proc_GraphViz
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
