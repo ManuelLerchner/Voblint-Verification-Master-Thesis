@@ -1,5 +1,5 @@
 theory Example_IMP2_Coverage
-  imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect_Unified"
+  imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect"
     "Voblint_Analysis.Sign_Domain" "Voblint_Analysis.Constraint_System_Sound"
     "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_Analysis_Sound
 begin

@@ -16,7 +16,6 @@ theory Voblint
     "Voblint_CFG.CFG_Collect"
     "Voblint_CFG.CFG_Collect_Trace"
     "Voblint_CFG.CFG_Collect_Runs"
-    "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_CFG.CFG_Prune"
     "Voblint_CFG.CFG_GraphViz"
     "Voblint_Analysis.Abstract_Domain"
@@ -77,7 +76,6 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Collect} --- edge/path transfer functions, pointwise collecting semantics (\<^verbatim>\<open>cfg_collect\<close>), and path-to-lfp bridge.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Runs} --- run-to-exit projection: terminating runs reach \<^verbatim>\<open>cfg_collect\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Trace} --- trace-valued and interprocedural trace collecting semantics.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Unified} --- unified locale combining both collecting views.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning: restrict to reachable sub-CFG.
     \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
 
@@ -99,7 +97,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- genuinely effectful Sign transfer with named globals: routes contributions to distinct unknowns depending on a flag variable's sign; witnesses the full \<^verbatim>\<open>sound_effectful_transfer\<close> contract.
     \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval domain instantiation.
     \<^item> @{theory Voblint_Analysis.Interval_Side_Soundness} --- Interval domain instantiated at the side IP solver.
-    \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- unified soundness: one engine over both collecting views.
+    \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- post-fixpoint soundness for \<^verbatim>\<open>cfg_collect\<close>.
     \<^item> @{theory Voblint_Analysis.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Analysis.Exec_Bridge} --- generic executable transfer mirror and S4 commutation.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- sign-domain executable transfer functions.

@@ -56,10 +56,9 @@ text \<open>
   shape of gamma_state.
 
   The precision half -- digest-indexed (context-sensitive) summaries that keep
-  callers apart -- refines cfg_collect_trace's combine via a digest hook on the
-  unified collecting locale; it strengthens the trace set (smaller), so this
-  soundness statement is preserved unchanged.  That refinement is
-  reaching_global_read_sound_d below.
+  callers apart -- refines cfg_collect_trace with a digest hook. It strengthens
+  the trace set (smaller), so this soundness statement is preserved unchanged.
+  That refinement is reaching_global_read_sound_d below.
 \<close>
 theorem reaching_global_read_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"

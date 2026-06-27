@@ -1,28 +1,27 @@
 theory Analysis_Sound
-  imports "Voblint_CFG.CFG_Collect_Unified" Constraint_System_Sound
+  imports Constraint_System_Sound
 begin
 
-section \<open>Analysis soundness: one engine\<close>
+section \<open>Analysis soundness\<close>
 
 text \<open>
-  The interprocedural soundness proof shares a single final step with any future
-  combine_at variant: \<gamma> o env is a post-fixpoint of the collecting functional F,
-  so the lfp collect sits below it (lfp_lowerbound).  That step is captured ONCE
-  by the collecting locale (CFG_Collect_Unified) as collect_post_fixpoint_sound.
-
-  unified_post_fixpoint_sound constructs the per-instance post-fixpoint witness
-  (key) from the shared piece lemmas (collect_pp_abstract_sound,
-  collect_combine_pp_abstract_sound) and delegates to the generic locale lemma.
-  A new combine_at hook obtains soundness the same way -- construct key for its F,
-  apply collect_post_fixpoint_sound -- without forking another soundness stack.
+  The interprocedural soundness proof builds a concrete post-fixpoint witness for
+  cfg_collect_F from the shared piece lemmas (collect_pp_abstract_sound and
+  collect_combine_pp_abstract_sound), then applies the lfp lower-bound rule for
+  cfg_collect.
 \<close>
 
-subsection \<open>Generic engine: lfp soundness from a post-fixpoint witness\<close>
+subsection \<open>Post-fixpoint soundness for cfg_collect\<close>
 
-lemma (in collecting) collect_post_fixpoint_sound:
-  assumes "F g S B \<le> B"
-  shows "collect g S v \<le> B v"
-  using collect_lowerbound[OF assms] by (auto simp: le_fun_def)
+lemma cfg_collect_post_fixpoint_sound:
+  assumes "cfg_collect_F g S B \<le> B"
+  shows "cfg_collect g S v \<le> B v"
+proof -
+  have "lfp (cfg_collect_F g S) \<le> B"
+    using assms cfg_collect_F_mono lfp_lowerbound by blast
+  then show ?thesis
+    unfolding cfg_collect_def le_fun_def by simp
+qed
 
 context sound_transfer
 begin
@@ -47,16 +46,15 @@ proof -
     by (rule order_trans)
   have S_le_env: "S \<le> \<lbrakk>env (cfg_entry g)\<rbrakk>"
     using S_sound gamma_state_mono[OF s0_le_env] by blast
-  have key: "cfg.F g S (\<lambda>v. \<lbrakk>env v\<rbrakk>) \<le> (\<lambda>v. \<lbrakk>env v\<rbrakk>)"
+  have key: "cfg_collect_F g S (\<lambda>v. \<lbrakk>env v\<rbrakk>) \<le> (\<lambda>v. \<lbrakk>env v\<rbrakk>)"
   proof (rule le_funI)
     fix v
-    show "cfg.F g S (\<lambda>v. \<lbrakk>env v\<rbrakk>) v \<le> \<lbrakk>env v\<rbrakk>"
-      unfolding cfg_F_eq cfg_collect_F_def
+    show "cfg_collect_F g S (\<lambda>v. \<lbrakk>env v\<rbrakk>) v \<le> \<lbrakk>env v\<rbrakk>"
+      unfolding cfg_collect_F_def
       using coll_le comb_le S_le_env by auto
   qed
-  have "cfg.collect g S v \<le> \<lbrakk>env v\<rbrakk>"
-    by (rule cfg.collect_post_fixpoint_sound[OF key])
-  thus ?thesis unfolding cfg_collect_eq .
+  show ?thesis
+    by (rule cfg_collect_post_fixpoint_sound[OF key])
 qed
 
 end

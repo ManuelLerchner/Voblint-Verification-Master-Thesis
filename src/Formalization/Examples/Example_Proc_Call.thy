@@ -5,7 +5,7 @@ theory Example_Proc_Call
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.CFG_Collect_Unified"
+    "Voblint_CFG.CFG_Collect"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Constraint_System_Sound"
     Trace_Analysis_Sound

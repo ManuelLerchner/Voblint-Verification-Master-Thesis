@@ -18,7 +18,7 @@ Path store folding uses `edges_collect` in [`Collecting/CFG_Collect.thy`](Collec
 
 **Collecting semantics** (IP fixpoint over stores, trace, unified locale) live in
 [`Collecting/`](Collecting/) — import **`CFG_Collect`** for interprocedural semantics
-or **`CFG_Collect_Unified`** for the locale.
+and **`CFG_Collect_Trace`** for trace-valued semantics.
 
 **Key concepts:** `cfg_entry`, `cfg_exit`, `edges g`, `combines g`; `compile_prog pi ps c`
 produces a single flat CFG with call-site / procedure-exit combine triples.

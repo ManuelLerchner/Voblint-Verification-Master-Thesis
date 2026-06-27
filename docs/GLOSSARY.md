@@ -51,7 +51,6 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `cfg_collect`                      | Interprocedural collecting semantics — the soundness target at every point.               | `CFG_Collect.thy:29`       |
 | `cfg_collect_trace`                | Trace-level IP collecting: covers partial and non-terminating behaviour, no final store.  | `CFG_Collect_Trace.thy:63` |
 | `cfg_runs_to`                         | Terminating IP runs correspond to exit reachability. Import `CFG_Collect_Runs` for it. | `CFG_Collect_Runs.thy`     |
-| `collecting` locale / `collect` / `F` | The unified collecting locale and its fixpoint functional.                                | `CFG_Collect_Unified.thy:18`  |
 
 ## Abstract domains
 
@@ -87,4 +86,4 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `side_collect_sound_ip_exit_pruned_eff`                      | Soundness at the exit of the pruned CFG.                       | `TD_Side_Eff_Soundness.thy`                                     |
 | `side_ip_sign_analysis_sound` / `side_ip_ivl_analysis_sound` | End-to-end soundness instantiated at sign / interval.          | `Sign_Side_Soundness.thy:9`, `Interval_Side_Soundness.thy:9` |
 | `trace_analysis_sound`                                    | Trace-level soundness covering partial / non-terminating runs. | `Trace_Analysis_Sound.thy:28`                                   |
-| `unified_post_fixpoint_sound`                             | The unified soundness engine over the collecting locale.       | `Analysis_Sound.thy:32`                                            |
+| `unified_post_fixpoint_sound`                             | Post-fixpoint soundness for `cfg_collect`.                     | `Analysis_Sound.thy`                                               |

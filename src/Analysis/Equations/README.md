@@ -12,15 +12,15 @@ semantics `cfg_collect` / `cfg_collect`.
 | `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `rhs`, `is_post_fixpoint`, `is_post_fixpoint`, `rhs_mono` |
 | `Constraint_System_Sound.thy` | shared head lemmas: `apply_tf_le_rhs`, `s0_le_rhs_entry`, `edge_collect_apply_tf_sound` |
 | `Constraint_System_Sound.thy` | `post_fixpoint_sound_at`, IP soundness via `rhs` and `cfg_collect` |
-| `Analysis_Sound.thy` | `collecting` locale engine; `unified_post_fixpoint_sound` |
+| `Analysis_Sound.thy` | concrete `cfg_collect` post-fixpoint engine; `unified_post_fixpoint_sound` |
 
 **Key concepts:** One equation per program point (join over predecessor edges + combine triples).
 `is_post_fixpoint g tf join bot s0 env` means `∀v. rhs g tf join bot s0 env v ≤ env v`.
 `unified_post_fixpoint_sound` is the single soundness engine: constructs the
-locale post-fixpoint witness and applies `collecting.collect_post_fixpoint_sound`.
+`cfg_collect_F` post-fixpoint witness and applies `cfg_collect_post_fixpoint_sound`.
 
 **Imports:** `Constraint_System` → `CFG_Def`, `Abstract_Domain`.
-`Analysis_Sound` → `CFG_Collect_Unified`, `Constraint_System_Sound`, `Constraint_System_Sound`.
+`Analysis_Sound` → `Constraint_System_Sound`.
 
 **Downstream:** `Analysis/Solver/TD_Side_Eff_Soundness.thy` — bridges `part_post_solution`
 to `is_post_fixpoint` via reach cone.
