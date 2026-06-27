@@ -9,9 +9,8 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     CFG_Path
     CFG_GraphViz
     IMP2_Proc_to_CFG
-    CFG_Collect_Edges
     CFG_Collect
     CFG_Collect_Trace
     CFG_Prune
-    CFG_Collect_Adeq
+    CFG_Collect_Runs
     CFG_Collect_Unified

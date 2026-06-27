@@ -13,10 +13,9 @@ theory Voblint
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"
-    "Voblint_CFG.CFG_Collect_Edges"
     "Voblint_CFG.CFG_Collect"
     "Voblint_CFG.CFG_Collect_Trace"
-    "Voblint_CFG.CFG_Collect_Adeq"
+    "Voblint_CFG.CFG_Collect_Runs"
     "Voblint_CFG.CFG_Collect_Unified"
     "Voblint_CFG.CFG_Prune"
     "Voblint_CFG.CFG_GraphViz"
@@ -75,9 +74,8 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node and edge types.
     \<^item> @{theory Voblint_CFG.CFG_Path} --- inductive path predicate and offset infrastructure.
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Edges} --- per-edge transfer functions on store sets.
-    \<^item> @{theory Voblint_CFG.CFG_Collect} --- interprocedural collecting semantics (\<^verbatim>\<open>cfg_collect\<close>) and path-to-lfp bridge.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Adeq} --- operational adequacy: big-step runs reach \<^verbatim>\<open>cfg_collect\<close>.
+    \<^item> @{theory Voblint_CFG.CFG_Collect} --- edge/path transfer functions, pointwise collecting semantics (\<^verbatim>\<open>cfg_collect\<close>), and path-to-lfp bridge.
+    \<^item> @{theory Voblint_CFG.CFG_Collect_Runs} --- run-to-exit projection: terminating runs reach \<^verbatim>\<open>cfg_collect\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Trace} --- trace-valued and interprocedural trace collecting semantics.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Unified} --- unified locale combining both collecting views.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning: restrict to reachable sub-CFG.

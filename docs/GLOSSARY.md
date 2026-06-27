@@ -46,11 +46,11 @@ stated against interprocedural CFG collecting semantics at every program point.
 | Term                                  | Meaning                                                                                   | Source                        |
 | ------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------- |
 | `cenv`                                | Collecting environment: program point to reachable store set.                             | `CFG_Collect_*`               |
-| `edges_collect`                       | Fold edge actions over a store set along a path.                                          | `CFG_Collect_Edges.thy:33`    |
+| `edges_collect`                       | Fold edge actions over a store set along a path.                                          | `CFG_Collect.thy`             |
 | `cfg_collect_paths`                   | Intra collecting semantics (substrate; not the soundness target).                         | `CFG_Collect_Core.thy:8`      |
 | `cfg_collect`                      | Interprocedural collecting semantics — the soundness target at every point.               | `CFG_Collect.thy:29`       |
 | `cfg_collect_trace`                | Trace-level IP collecting: covers partial and non-terminating behaviour, no final store.  | `CFG_Collect_Trace.thy:63` |
-| `cfg_runs_to`                         | Terminating IP runs correspond to exit reachability. Import `CFG_Collect_Adeq` for it. | `CFG_Collect_Adeq.thy:15`  |
+| `cfg_runs_to`                         | Terminating IP runs correspond to exit reachability. Import `CFG_Collect_Runs` for it. | `CFG_Collect_Runs.thy`     |
 | `collecting` locale / `collect` / `F` | The unified collecting locale and its fixpoint functional.                                | `CFG_Collect_Unified.thy:18`  |
 
 ## Abstract domains

@@ -40,7 +40,7 @@ gamma_state (env v)  <-----  side_analyse_ip output (B4)
 | B7 | `side_cfg_solve_dom g tf bot s0 v` for each queried `v` | `Sign_Side_Soundness.thy` assumptions | open (P1) |
 
 **Operational link:** `cfg_runs_to pi ps c s t` is definitional exit `cfg_collect`
-at `cfg_exit (compile_prog …)` (`CFG_Collect_Adeq.thy`).
+at `cfg_exit (compile_prog …)` (`CFG_Collect_Runs.thy`).
 
 Optional / removed from main path:
 

@@ -26,4 +26,4 @@ semantics, and a bridge to AFP IMP2 for the thesis reference anchor.
 - `enter_state s` — globals from `s`, locals reset to 0.
 
 **Downstream:** `CFG/IMP2_Proc_to_CFG.thy` compiles `com` programs with a `proc_table` to
-interprocedural CFGs; `CFG/Collecting/CFG_Collect_Adeq.thy` defines `cfg_runs_to`.
+interprocedural CFGs; `CFG/Collecting/CFG_Collect_Runs.thy` defines `cfg_runs_to`.

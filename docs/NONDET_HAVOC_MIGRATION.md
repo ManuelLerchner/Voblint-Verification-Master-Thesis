@@ -39,7 +39,7 @@ with no ordering or consumption. That removes any oracle/stream state and keeps
 | Source semantics | `src/IMP2/IMP2_Proc.thy:43` | `pstep` Assign -> `s(x := aval a s)`; `pstep_deterministic` :74 | needs relational `Havoc` rule |
 | Expr | `src/IMP2/IMP2_Expr.thy:18` | `aval :: aexp => store => int` | unchanged (atomic decision) |
 | CFG action | `src/CFG/CFG_Def.thy:38` | `datatype edge_action` | add `EA_Havoc` |
-| Concrete collecting | `src/CFG/Collecting/CFG_Collect_Edges.thy:12` | `edge_collect :: edge_action => store set => store set` | already set-valued; add one clause |
+| Concrete collecting | `src/CFG/Collecting/CFG_Collect.thy` | `edge_collect :: edge_action => store set => store set` | already set-valued; add one clause |
 | Trace | `src/CFG/Collecting/CFG_Collect_Trace.thy:27` | `edge_step :: ... => store option` | refactor to `store set` (main proof cost) |
 | Abstract | `src/Analysis/Domains/Sign_Exec.thy:57` | `sign_tf_st` per-action transfer | `EA_Havoc x -> top` |
 
@@ -70,7 +70,7 @@ fan out is the trace layer (`edge_step` is a function) — that is the real work
 
 ### Slice 3 — concrete collecting (mechanical)
 
-- `src/CFG/Collecting/CFG_Collect_Edges.thy:12`:
+- `src/CFG/Collecting/CFG_Collect.thy`:
   `edge_collect (EA_Havoc x) S = { s(x := v) | s v. True }`.
 - Re-check `edge_collect_mono`, `edge_collect_empty_set`.
 

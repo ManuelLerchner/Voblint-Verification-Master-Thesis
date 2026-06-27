@@ -8,12 +8,9 @@ compiled CFG: interprocedural lfp `cfg_collect`, trace-valued
 
 | File | Role |
 | --- | --- |
-| `CFG_Collect_Edges.thy` | `edge_collect`, `collect_pp`, `cfg_collect_F` (per-point transformer); imports `IMP2_Proc_to_CFG`, `CFG_Path` |
-| `CFG_Collect_Core.thy` | `cfg_collect_paths` — path-based collecting; adequacy lemmas for the IP spine |
-| `CFG_Collect.thy` | `cfg_collect_F`, `cfg_collect` (IP lfp); `collect_combine_pp`; `combine_states` triples |
-| `CFG_Collect_Adeq.thy` | `cfg_runs_to` (exit projection); operational adequacy witness (`inc_pi` example) |
+| `CFG_Collect.thy` | `edge_collect`, `edges_collect`, `collect_pp`, `collect_combine_pp`, `cfg_collect_F`, `cfg_collect`, and the witness/path-to-lfp bridge |
+| `CFG_Collect_Runs.thy` | `cfg_runs_to` (exit projection); run-to-collecting witness (`inc_pi` example) |
 | `CFG_Collect_Unified.thy` | `collecting` locale parameterised by `combine_at`; `ip.collect = cfg_collect` |
-| `CFG_Collect_Trace.thy` | `cfg_collect_trace` — intra trace-valued collecting |
 | `CFG_Collect_Trace.thy` | `cfg_collect_trace` — IP trace collecting; `alpha_last`; projection `alpha_last (cfg_collect_trace …) ⊆ cfg_collect …` |
 
 **Specification spine**

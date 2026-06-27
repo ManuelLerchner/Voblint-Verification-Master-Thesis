@@ -1,7 +1,7 @@
 section \<open>Example: TD\_side Interval Analysis on a Single Global Increment Call\<close>
 
 theory Example_Interval_Side_Proc_Global
-  imports "Voblint_Analysis.Interval_Side_Soundness" "Voblint_CFG.CFG_Collect_Adeq"
+  imports "Voblint_Analysis.Interval_Side_Soundness" "Voblint_CFG.CFG_Collect_Runs"
 begin
 
 text \<open>

@@ -45,9 +45,8 @@ As of last full-session build: **0 sorries** in `src/`.
 
 | File | Role |
 | --- | --- |
-| `CFG_Collect_Edges.thy` | `edge_collect`, `collect_pp`, `cfg_collect_F` |
-| `CFG_Collect.thy` | `cfg_collect` — IP collecting with combine triples |
-| `CFG_Collect_Adeq.thy` | `cfg_runs_to`, operational adequacy witness |
+| `CFG_Collect.thy` | edge/path transfer, `cfg_collect` — IP collecting with combine triples, and the path-to-lfp bridge |
+| `CFG_Collect_Runs.thy` | `cfg_runs_to`, run-to-exit collecting witness |
 | `CFG_Collect_Unified.thy` | `collecting` locale; `cfg.collect = cfg_collect` |
 | `CFG_Collect_Trace.thy` | `cfg_collect_trace`, `alpha_last`, projection lemma; shared trace machinery |
 

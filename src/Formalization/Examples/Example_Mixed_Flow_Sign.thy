@@ -3,7 +3,7 @@ section \<open>Example: mixed_flow_analysis_optimal_tf applied to the sign domai
 theory Example_Mixed_Flow_Sign
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
-    "Voblint_CFG.CFG_Collect_Adeq"
+    "Voblint_CFG.CFG_Collect_Runs"
     Mixed_Flow_Sound
 begin
 

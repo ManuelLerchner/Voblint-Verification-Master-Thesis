@@ -34,7 +34,7 @@ two existing per-domain `*_sound_assume{,_not}` lemmas and monotonicity.
 | Generic `backward_domain` locale | `Abstract_Domain.thy:157` | done |
 | `domain_transfer` record | `Constraint_System.thy:33` | unchanged |
 | `apply_tf` dispatch | `Constraint_System.thy:42` | unchanged |
-| Collecting semantics (spec) | `CFG_Collect_Edges.thy:11` | unchanged |
+| Collecting semantics (spec) | `CFG_Collect.thy` | unchanged |
 | Sign: `meet_sign`, `inv_*`, interpretation | `Sign_Domain.thy:328` | done |
 | Sign: `assume_sign` / `assume_not_sign` | `Sign_Domain.thy:484` | done |
 | Sign: `sign_tf_sound_assume{,_not}` | `Sign_Domain.thy:594` | reproved |

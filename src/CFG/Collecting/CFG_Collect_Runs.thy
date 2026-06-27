@@ -1,8 +1,8 @@
-theory CFG_Collect_Adeq
+theory CFG_Collect_Runs
   imports CFG_Collect "Voblint_IMP2.IMP2_Proc"
 begin
 
-section \<open>Operational adequacy for cfg_collect\<close>
+section \<open>Run-to-exit projection for cfg_collect\<close>
 
 text \<open>
   Exit projection for interprocedural programs, plus the first concrete
