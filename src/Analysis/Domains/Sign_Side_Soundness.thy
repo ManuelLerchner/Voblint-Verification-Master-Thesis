@@ -13,17 +13,7 @@ text \<open>
 definition sign_etf :: "(unit, sign) effectful_domain_transfer" where
   "sign_etf = etf_from_tf sign_tf"
 
-lemma sign_etf_is_mono_eq:
-  "is_mono_eq (side_cfg_T_eff g sign_etf bot0 s0 ())"
-  unfolding sign_etf_def by (rule side_cfg_T_eff_is_mono_eq[OF sign_tf_mono])
 
-lemma sign_etf_mono_sides:
-  "mono_sides (side_cfg_T_eff g sign_etf bot0 s0 ())"
-  unfolding sign_etf_def by (rule side_cfg_T_eff_mono_sides[OF sign_tf_mono])
-
-lemma sign_etf_mono_deps:
-  "mono_deps (side_cfg_T_eff g sign_etf bot0 s0 ())"
-  unfolding sign_etf_def by (rule side_cfg_T_eff_mono_deps)
 
 text \<open>
   The Sign domain satisfies the effectful soundness contract: every per-action

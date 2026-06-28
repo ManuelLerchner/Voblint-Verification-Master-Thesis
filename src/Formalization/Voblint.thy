@@ -17,7 +17,6 @@ theory Voblint
     "Voblint_CFG.CFG_Collect_Trace"
     "Voblint_CFG.CFG_Collect_Runs"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.CFG_GraphViz"
     "Voblint_Analysis.Abstract_Domain"
     "Voblint_Analysis.Constraint_System"
     "Voblint_Analysis.Constraint_System_Sound"
@@ -34,13 +33,15 @@ theory Voblint
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_Named_Global_Eff"
     "Voblint_Analysis.Exec_Sign_Run"
-    "Voblint_Analysis.Analysis_GraphViz"
     Trace_Analysis_Sound
+    Mixed_Flow_Sound
+    Example_Inc_Proc
     Example_IMP2_Coverage
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
+    Example_Mixed_Flow_Sign
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
@@ -50,83 +51,80 @@ begin
 
 text \<open>
   This development formalises an end-to-end soundness proof for an abstract
-  interpreter in the style of Goblint. An IMP2 program is compiled to a
-  control-flow graph; the graph induces a constraint system; a verified
-  top-down solver computes a post-fixpoint; and that post-fixpoint soundly
-  over-approximates the interprocedural collecting semantics at every program
-  point.
+  interpreter in the style of Goblint.  An IMP2 program is compiled to a
+  control-flow graph; the graph induces an effectful equation system; the
+  verified TD_side solver computes a partial post-solution; and the resulting
+  mixed flow-sensitive abstract state over-approximates the interprocedural
+  trace collecting semantics at every program point.  For pure-shim domains,
+  the solver result is also the least partial post-solution of the generated
+  equation system.
 
-  The proof is layered into four Isabelle sessions. Read them in order; every
-  theory name below links into its formal text.
+  The proof is layered into four Isabelle sessions.  The list below separates
+  the proof spine from executable frontends, DOT exporters, and research
+  witnesses.
 
-  \<^bold>\<open>1. Language.\<close> IMP2 syntax, small-step semantics, and the
-  procedural extension (scopes, calls, restores).
+  \<^bold>\<open>1. Language.\<close> IMP2 syntax, small-step semantics, and the procedural
+  extension (scopes, calls, restores).
     \<^item> @{theory Voblint_IMP2.IMP2_Syntax} --- AST, variable names, countability.
     \<^item> @{theory Voblint_IMP2.IMP2_Expr} --- expression evaluation and small-step semantics.
     \<^item> @{theory Voblint_IMP2.IMP2_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_IMP2.IMP2_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
-    \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for writing commands and whole programs.
-    \<^item> @{theory Voblint_IMP2.IMP2_Bridge} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pruns_to\<close>; transfers analyzer soundness to AFP IMP2's concrete semantics.
+    \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
+    \<^item> @{theory Voblint_IMP2.IMP2_Bridge} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pruns_to\<close>.
 
-  \<^bold>\<open>2. Control-flow graph.\<close> CFG construction and the interprocedural
-  collecting semantics it carries.
-    \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node and edge types.
+  \<^bold>\<open>2. Control-flow graph.\<close> CFG construction and the collecting semantics it carries.
+    \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node and edge types, predecessor enumeration, finite code lists.
     \<^item> @{theory Voblint_CFG.CFG_Path} --- inductive path predicate and offset infrastructure.
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
-    \<^item> @{theory Voblint_CFG.CFG_Collect} --- edge/path transfer functions, pointwise collecting semantics (\<^verbatim>\<open>cfg_collect\<close>), and path-to-lfp bridge.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Runs} --- run-to-exit projection: terminating runs reach \<^verbatim>\<open>cfg_collect\<close>.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Trace} --- trace-valued and interprocedural trace collecting semantics.
-    \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning: restrict to reachable sub-CFG.
-    \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
+    \<^item> @{theory Voblint_CFG.CFG_Collect} --- edge/path transfer functions, pointwise \<^verbatim>\<open>cfg_collect\<close>, and path-to-lfp bridge.
+    \<^item> @{theory Voblint_CFG.CFG_Collect_Trace} --- trace-valued and digest-refined collecting semantics.
+    \<^item> @{theory Voblint_CFG.CFG_Collect_Runs} --- generic run-to-exit projection into \<^verbatim>\<open>cfg_collect\<close>.
+    \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning and the reachability cone used by the solver proof.
 
-  \<^bold>\<open>3. Analysis.\<close> Abstract domains, the constraint system, and the TD
-  solver bridge --- from local equation to global post-fixpoint.
-    \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>abstract_domain\<close> locale, lifted state concretization, and @{class show_val}.
-    \<^item> @{theory Voblint_Analysis.Constraint_System} --- equation system over a CFG.
-    \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- each constraint RHS soundly over-approximates the collecting step.
-    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- wires the constraint system into the side-effecting TD solver.
-    \<^item> @{theory Voblint_Analysis.Strategy_Tree_Monad} --- monad for sequential composition of strategy trees.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Tree} --- \<^verbatim>\<open>side_cfg_T_eff\<close>: effectful IP strategy tree construction and denotation; folds \<^verbatim>\<open>side_acc_eff\<close> over CFG edges and combines.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Sound} --- a post-fixpoint of the effectful equation system soundly over-approximates \<^verbatim>\<open>cfg_collect\<close> (no shim; uses \<^verbatim>\<open>sound_effectful_transfer\<close>).
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Bounds} --- monotonicity of the effectful equation system for an arbitrary \<^verbatim>\<open>etf\<close>; TD_side preconditions \<^verbatim>\<open>side_cfg_T_eff_is_mono_eq\<close> / \<^verbatim>\<open>_mono_sides\<close> / \<^verbatim>\<open>_mono_deps\<close>.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Interface} --- \<^verbatim>\<open>td_cfg_side_solver_eff\<close> locale; \<^verbatim>\<open>side_cfg_solve_dom_eff\<close>; \<^verbatim>\<open>side_analyse_eff\<close>: TD_side backend on \<^verbatim>\<open>side_cfg_T_eff\<close>.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Pipeline} --- ties mono, interface, and sound strands for an arbitrary \<^verbatim>\<open>etf\<close>; \<^verbatim>\<open>side_collect_sound_at_eff\<close>.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- standalone effectful collecting soundness with pruning: \<^verbatim>\<open>side_collect_sound_exit_pruned_eff\<close>.
-    \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice: concrete domain instantiation.
-    \<^item> @{theory Voblint_Analysis.Sign_Side_Soundness} --- Sign domain instantiated at the side IP solver.
-    \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- genuinely effectful Sign transfer with named globals: routes contributions to distinct unknowns depending on a flag variable's sign; witnesses the full \<^verbatim>\<open>sound_effectful_transfer\<close> contract.
-    \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval domain instantiation.
-    \<^item> @{theory Voblint_Analysis.Interval_Side_Soundness} --- Interval domain instantiated at the side IP solver.
-    \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- post-fixpoint soundness for \<^verbatim>\<open>cfg_collect\<close>.
+  \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge.
+    \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, \<^verbatim>\<open>abstract_domain\<close>, lifted state concretization, and display support.
+    \<^item> @{theory Voblint_Analysis.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, and \<^verbatim>\<open>sound_effectful_transfer\<close>.
+    \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- pure post-fixpoint soundness against \<^verbatim>\<open>cfg_collect\<close>.
+    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction and the pure-transfer shim \<^verbatim>\<open>etf_from_tf\<close>.
+    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- effectful TD_side collecting soundness with pruning, \<^verbatim>\<open>threefold_mono\<close>, and \<^verbatim>\<open>cone_compatible_etf\<close>.
+    \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- small post-fixpoint bridge lemmas for \<^verbatim>\<open>cfg_collect\<close>.
+
+  \<^bold>\<open>4. Concrete domains.\<close> Domain instances used by the proof spine and examples.
+    \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice, transfer functions, soundness, monotonicity, and display instance.
+    \<^item> @{theory Voblint_Analysis.Sign_Side_Soundness} --- Sign instantiated at the effectful side IP solver.
+    \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval lattice, widening, transfer functions, soundness, and monotonicity.
+    \<^item> @{theory Voblint_Analysis.Interval_Side_Soundness} --- Interval instantiated at the effectful side IP solver.
+
+  \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified sign execution.
     \<^item> @{theory Voblint_Analysis.Exec_St} --- executable abstract-state maps for code generation.
-    \<^item> @{theory Voblint_Analysis.Exec_Bridge} --- generic executable transfer mirror and S4 commutation.
-    \<^item> @{theory Voblint_Analysis.Sign_Exec} --- sign-domain executable transfer functions.
-    \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable sign IP solver and certified program queries.
-    \<^item> @{theory Voblint_Analysis.Exec_Sign_Run} --- codegen probe: \<^verbatim>\<open>value\<close> checks on sign \<^verbatim>\<open>st\<close>; runs the vendored TD_side solver on a two-point sign equation system end-to-end.
-    \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
+    \<^item> @{theory Voblint_Analysis.Exec_Bridge} --- commutation bridge from executable states to function states.
+    \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
+    \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable Sign IP solver, trace soundness, and annotated DOT entry points.
 
-  \<^bold>\<open>4. End-to-end soundness.\<close> The headline theorem and executable examples.
-    \<^item> @{theory Voblint_Formalization.Trace_Analysis_Sound} --- the main
-      result, @{thm [source] sound_transfer.trace_analysis_sound}.
-    \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop:
-      soundness where big-step has no final state.
-    \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified sign IP example with annotated CFG DOT.
-    \<^item> @{theory Voblint_Formalization.Example_Side_Branch_Calls} --- branching procedure called twice;
-      flow-sensitive locals and flow-insensitive globals in GraphViz.
-    \<^item> @{theory Voblint_Formalization.Example_Side_Proc_Global} --- Sign IP analysis on a single
-      global-increment procedure call; executable @{const sign_exec_prog} and annotated DOT.
-    \<^item> @{theory Voblint_Formalization.Example_Interval_Side_Proc_Global} --- Interval IP analysis
-      on the same program; demonstrates domain-generic soundness scaffold.
-    \<^item> @{theory Voblint_Formalization.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close>
-      procedures communicating through a global; terminates with \<^verbatim>\<open>Gx = 25\<close>.
-    \<^item> @{theory Voblint_Formalization.Example_Interval_Loop_Coverage} --- Interval analysis of
-      a bounded loop; proves \<^verbatim>\<open>x \<in> [0, 20]\<close> at the loop head without widening.
-    \<^item> @{theory Voblint_Formalization.Example_Guard_Refinement} --- backward vs identity
-      assume on @{text "x < 20"}: one guard step and one loop iteration show the precision gap.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- precision of the
-      trace-IP collecting semantics.
-    \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- interprocedural CFG rendered
-      as plain GraphViz DOT (structural witness; sign examples carry annotated DOT).
+  \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and optimality statements.
+    \<^item> @{theory Voblint_Formalization.Trace_Analysis_Sound} --- trace-level post-fixpoint soundness and digest-indexed trace reading.
+    \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality:
+      @{thm [source] mixed_flow_analysis_sound_tf} and @{thm [source] mixed_flow_analysis_optimal_tf}.
+
+  \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, and tooling.
+    \<^item> @{theory Voblint_Formalization.Example_Inc_Proc} --- shared global-increment procedure witness used by sign, interval, and mixed-flow examples.
+    \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop.
+    \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
+    \<^item> @{theory Voblint_Formalization.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals and flow-insensitive globals.
+    \<^item> @{theory Voblint_Formalization.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment procedure call.
+    \<^item> @{theory Voblint_Formalization.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the shared global-increment procedure call.
+    \<^item> @{theory Voblint_Formalization.Example_Mixed_Flow_Sign} --- application of the mixed-flow soundness and optimality theorem to Sign.
+    \<^item> @{theory Voblint_Formalization.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
+    \<^item> @{theory Voblint_Formalization.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
+    \<^item> @{theory Voblint_Formalization.Example_Guard_Refinement} --- backward guard refinement precision witness.
+    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- trace digest precision witness.
+    \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
+
+  \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
+    \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
+    \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
+    \<^item> @{theory Voblint_Analysis.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
+    \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; documents the solver-compatible constant route and the conditional-route monotonicity boundary.
 \<close>
 
 end

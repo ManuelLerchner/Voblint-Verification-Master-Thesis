@@ -8,10 +8,12 @@ comparisons. Not imported by pipeline theories.
 
 | File | Role |
 | --- | --- |
+| `Example_Inc_Proc.thy` | Shared `inc_pi` witness: procedure `p` increments global `Gx`; used by sign, interval, and mixed-flow examples |
 | `Example_Side_Execute.thy` | Minimal certified sign IP run (`x := 1`); `sign_exec_prog` + annotated DOT |
 | `Example_Side_Branch_Calls.thy` | Branching procedure called twice; flow-sensitive locals, globals cluster |
 | `Example_Side_Proc_Global.thy` | Sign IP on `inc_pi` / single `Call ''p''`; manual soundness + `sign_exec_prog` + annotated DOT |
 | `Example_Interval_Side_Proc_Global.thy` | Interval IP on the same `inc_pi` witness (manual post-fixpoint only) |
+| `Example_Mixed_Flow_Sign.thy` | Applies `mixed_flow_analysis_sound_tf` / `mixed_flow_analysis_optimal_tf` to the sign domain on `inc_pi` |
 | `Example_Proc_Call.thy` | Interval analysis of `inc`/`sqr` via global `Gx`; plain structural DOT |
 | `Example_Interval_Loop_Coverage.thy` | Bounded loop; backward `assume_ivl` refines body to `[0,19]`; certified trace soundness `[0,20]` at loop head |
 | `Example_Guard_Refinement.thy` | Backward vs identity assume on `x < 20`; single-guard precision gap (companion to loop coverage) |

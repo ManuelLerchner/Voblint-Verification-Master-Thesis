@@ -13,17 +13,7 @@ text \<open>
 definition ivl_etf :: "(unit, ivl) effectful_domain_transfer" where
   "ivl_etf = etf_from_tf ivl_tf"
 
-lemma ivl_etf_is_mono_eq:
-  "is_mono_eq (side_cfg_T_eff g ivl_etf bot0 s0 ())"
-  unfolding ivl_etf_def by (rule side_cfg_T_eff_is_mono_eq[OF ivl_tf_mono])
 
-lemma ivl_etf_mono_sides:
-  "mono_sides (side_cfg_T_eff g ivl_etf bot0 s0 ())"
-  unfolding ivl_etf_def by (rule side_cfg_T_eff_mono_sides[OF ivl_tf_mono])
-
-lemma ivl_etf_mono_deps:
-  "mono_deps (side_cfg_T_eff g ivl_etf bot0 s0 ())"
-  unfolding ivl_etf_def by (rule side_cfg_T_eff_mono_deps)
 
 lemma ivl_sound_etf:
   "sound_effectful_transfer ivl_etf"

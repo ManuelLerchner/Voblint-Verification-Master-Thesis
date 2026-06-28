@@ -4,7 +4,7 @@ theory Example_Side_Proc_Global
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Sign_Exec_Sound"
-    "Voblint_CFG.CFG_Collect_Runs"
+    Example_Inc_Proc
 begin
 
 text \<open>

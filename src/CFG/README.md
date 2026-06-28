@@ -16,7 +16,7 @@ infrastructure (`cfg_path`, offsets), and reachability pruning.
 
 Path store folding uses `edges_collect` in [`Collecting/CFG_Collect.thy`](Collecting/CFG_Collect.thy).
 
-**Collecting semantics** (IP fixpoint over stores, trace, unified locale) live in
+**Collecting semantics** (IP fixpoint over stores and traces) live in
 [`Collecting/`](Collecting/) — import **`CFG_Collect`** for interprocedural semantics
 and **`CFG_Collect_Trace`** for trace-valued semantics.
 
