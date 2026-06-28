@@ -69,6 +69,14 @@ solver. Two tracks (digest/k-CFA vs semantic entry-state), shared B0–B2 founda
 `TRACE_BASED_FORK_MIGRATION.md` (A), `SEMANTIC_CONTEXT_MIGRATION.md` (B),
 `TRACE_CONTEXT_BRIDGE_MIGRATION.md` (shared semantics).
 
+### Ghost instrumentation and checks (future — Track C)
+
+Executable validation: ghost variables encode Level-A observables; `__goblint_check`
+assertions; Phase 2 proves flat analyzer fails where computed context analyzer
+passes (D5). **Depends on** trace-context B3. Plan:
+`docs/GHOST_INSTRUMENTATION_MIGRATION.md`. Thesis stretch — declarative soundness
+chain remains primary (`docs/THESIS_SCOPE_MEMO.md`).
+
 ### Trace-based analyzer fork (planned — Track A detail)
 
 Full digest-partitioned analyzer (one abstract state per `(pp, digest)`), still executable on `TD_side`. The trace contract (`digest_env_sound` / `digest_read_sound`) already exists and is proved realizable by the flat collapse (`flat_env_is_digest_sound`); the fork produces a *tighter* `envd`. Approach A (digest-indexed unknowns), first instance k-call-string. Plan + slices + exit criteria: `docs/TRACE_BASED_FORK_MIGRATION.md`. Single-threaded precursor to thread-modular work.

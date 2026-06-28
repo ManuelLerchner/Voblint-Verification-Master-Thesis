@@ -11,6 +11,7 @@ child docs — do not merge their solver steps.
 | `TRACE_BASED_FORK_MIGRATION.md` | **A** digest / k-CFA | mono back-end, `(pp × d)` unknowns, R1–R6 |
 | `SEMANTIC_CONTEXT_MIGRATION.md` | **B** entry-state | warrowing back-end, `(pp + g) × c`, S0–S4 |
 | `CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` | thesis framing | PLDI §2 axis, reduced cardinal power |
+| `GHOST_INSTRUMENTATION_MIGRATION.md` | **C** executable checks | ghost + `__goblint_check`; after B3 for D5 |
 
 KB: `wiki/research/trace-precision-direction.md`, `wiki/concepts/digests.md`.
 
@@ -732,6 +733,7 @@ Always:
 
 ## 16. See also
 
+- `docs/GHOST_INSTRUMENTATION_MIGRATION.md` — Track C: ghosts + checks (future)
 - `docs/ROADMAP.md` — stable direction pointers
 - `docs/thesis/trace-pivot-and-history-sensitive-globals.md` — chapter narrative
 - `docs/NON_GOALS.md` — no optimality, `solve_dom` assumed
