@@ -18,6 +18,7 @@ text \<open>
   - numerals become @{const N}
   - arithmetic:
       +, -, * map to @{const Plus}, @{const Minus}, @{const Times}
+      unary minus @{text "-n"} on numerals becomes @{const N} with a negative int
   - boolean comparisons:
       <, == map to @{const Less}, @{const Eq}
   - constants:
@@ -46,6 +47,8 @@ abbreviation prog_table :: "imp_prog \<Rightarrow> proc_table" where "prog_table
 abbreviation prog_main  :: "imp_prog \<Rightarrow> com"        where "prog_main p \<equiv> snd (snd p)"
 
 nonterminal imp2_com
+nonterminal imp2_stmt
+nonterminal imp2_stmts
 nonterminal imp2_aexp
 nonterminal imp2_bexp
 nonterminal imp2_gdecl
@@ -55,14 +58,21 @@ nonterminal imp2_funcs
 syntax
   "_IMP2"        :: "imp2_com \<Rightarrow> IMP2_Proc.com"              ("\<lbrakk> _ \<rbrakk>")
 
-  "_imp2_skip"   :: imp2_com                                  ("skip")
-  "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_com"            ("_ := _"                 [900, 61] 61)
+  "_imp2_skip"   :: imp2_stmt                                  ("skip")
+  "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
+  "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
+                                                               ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
+  "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)
+  "_imp2_scope"  :: "imp2_stmts \<Rightarrow> imp2_stmt"                   ("scope { _ }"            [61] 61)
+  "_imp2_call"   :: "id \<Rightarrow> imp2_stmt"                         ("_'(')"                  [1000] 61)
+
+  "_imp2_stmts_one" :: "imp2_stmt \<Rightarrow> imp2_stmts"                  ("_" 61)
+  "_imp2_stmts_seq" :: "imp2_stmts \<Rightarrow> imp2_stmt \<Rightarrow> imp2_stmts" ("_; _"                   [61, 61] 61)
+
+  "_imp2_com_wrap" :: "imp2_stmt \<Rightarrow> imp2_com"                  ("_" 61)
   "_imp2_seq"    :: "imp2_com \<Rightarrow> imp2_com \<Rightarrow> imp2_com"       ("_; _"                   [60, 61] 60)
-  "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_com \<Rightarrow> imp2_com \<Rightarrow> imp2_com"
-                                                               ("if '( _ ') { _ } else { _ }" [0, 0, 61] 61)
-  "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_com \<Rightarrow> imp2_com"      ("while '( _ ') { _ }"    [0, 61] 61)
-  "_imp2_scope"  :: "imp2_com \<Rightarrow> imp2_com"                   ("scope { _ }"            [61] 61)
-  "_imp2_call"   :: "id \<Rightarrow> imp2_com"                         ("_'(')"                  [1000] 61)
+
+
 
   "_PROG"        :: "imp2_gdecl \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("\<lbrakk> _ _ \<rbrakk>")
   "_gdecl_none"  :: imp2_gdecl                                    ("")
@@ -76,6 +86,7 @@ syntax
   "_imp2_num"    :: "num_const \<Rightarrow> imp2_aexp"                 ("_"   1000)
   "_imp2_zero"   :: imp2_aexp                                 ("0"   1000)
   "_imp2_one"    :: imp2_aexp                                 ("1"   1000)
+  "_imp2_uminus" :: "imp2_aexp \<Rightarrow> imp2_aexp"                        ("- _"                    90)
   "_imp2_plus"   :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_aexp"   ("_ + _"                  [65, 66] 65)
   "_imp2_minus"  :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_aexp"   ("_ - _"                  [65, 66] 65)
   "_imp2_times"  :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_aexp"   ("_ * _"                  [70, 71] 70)
@@ -152,12 +163,24 @@ parse_translation \<open>
            | NONE => raise TERM ("IMP2_Notation: not a numeral", [Const (s, dummyT)]))
       | read_num_const t = dest_num t
 
+    fun neg_num n =
+      K c_N $ HOLogic.mk_number HOLogic.intT (~ n)
+
     fun aexp_tr (Const ("_imp2_var",  _) $ Free (x, _)) =
           K c_V $ HOLogic.mk_string x
       | aexp_tr (Const ("_imp2_zero", _)) = K c_N $ HOLogic.mk_number HOLogic.intT 0
       | aexp_tr (Const ("_imp2_one",  _)) = K c_N $ HOLogic.mk_number HOLogic.intT 1
       | aexp_tr (Const ("_imp2_num",  _) $ n) =
           K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)
+      | aexp_tr (Const ("_imp2_uminus", _) $ a) =
+          (case a of
+             Const ("_imp2_num", _) $ n => neg_num (read_num_const n)
+           | Const ("_imp2_zero", _) =>
+               K c_N $ HOLogic.mk_number HOLogic.intT 0
+           | Const ("_imp2_one", _) => neg_num 1
+           | Const ("_imp2_uminus", _) $ b => aexp_tr b
+           | _ =>
+               K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr a)
       | aexp_tr (Const ("_imp2_plus",  _) $ a $ b) = K c_Plus  $ aexp_tr a $ aexp_tr b
       | aexp_tr (Const ("_imp2_minus", _) $ a $ b) = K c_Minus $ aexp_tr a $ aexp_tr b
       | aexp_tr (Const ("_imp2_times", _) $ a $ b) = K c_Times $ aexp_tr a $ aexp_tr b
@@ -172,17 +195,27 @@ parse_translation \<open>
       | bexp_tr (Const ("_imp2_or",    _) $ a $ b) = K c_Or   $ bexp_tr a $ bexp_tr b
       | bexp_tr t = raise TERM ("IMP2_Notation: bexp_tr", [t])
 
-    fun com_tr (Const ("_imp2_skip",   _)) = K c_SKIP
-      | com_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
+    fun stmts_tr (Const ("_imp2_stmts_one", _) $ s) = stmt_tr s
+      | stmts_tr (Const ("_imp2_stmts_seq", _) $ ss $ s) =
+          K c_Seq $ stmts_tr ss $ stmt_tr s
+      | stmts_tr t = raise TERM ("IMP2_Notation: stmts_tr", [t])
+
+    and stmt_tr (Const ("_imp2_skip",   _)) = K c_SKIP
+      | stmt_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
           K c_Assign $ HOLogic.mk_string x $ aexp_tr a
-      | com_tr (Const ("_imp2_seq",    _) $ c1 $ c2) = K c_Seq   $ com_tr c1 $ com_tr c2
-      | com_tr (Const ("_imp2_if",     _) $ b $ c1 $ c2) =
-          K c_If $ bexp_tr b $ com_tr c1 $ com_tr c2
-      | com_tr (Const ("_imp2_while",  _) $ b $ c) = K c_While $ bexp_tr b $ com_tr c
-      | com_tr (Const ("_imp2_scope",  _) $ c)     = K c_Scope $ com_tr c
-      | com_tr (Const ("_imp2_call",   _) $ Free (p, _)) =
+      | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
+          K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
+      | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
+      | stmt_tr (Const ("_imp2_scope",  _) $ s)     = K c_Scope $ stmts_tr s
+      | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _)) =
           K c_Call $ HOLogic.mk_string p
+      | stmt_tr t = raise TERM ("IMP2_Notation: stmt_tr", [t])
+
+    and com_tr (Const ("_imp2_com_wrap", _) $ s) = stmt_tr s
+      | com_tr (Const ("_imp2_seq",    _) $ c1 $ c2) = K c_Seq   $ com_tr c1 $ com_tr c2
       | com_tr t = raise TERM ("IMP2_Notation: com_tr", [t])
+
+
 
     val c_None    = "Option.option.None"
     val c_Some    = "Option.option.Some"
@@ -263,5 +296,6 @@ value "\<lbrakk> x := 0 \<rbrakk>"
 value "\<lbrakk> x := 0; y := 1 \<rbrakk>"
 value "\<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "\<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
+
 
 end

@@ -20,6 +20,8 @@ comparisons. Not imported by pipeline theories.
 | `Example_IMP2_Coverage.thy` | Non-terminating loop; sign coverage via trace soundness |
 | `Example_Proc_GraphViz.thy` | Plain procedural CFG DOT (`plain_dot_of_prog_lit`; two demo programs) |
 | `Example_Trace_Digest_Precision.thy` | Digest vs flat collecting precision on a two-path program |
+| `Example_Trace_Digest_Combine.thy` | Combine-side digest filtering: compiled if/else callee, `cmp` blocks path 3 |
+| `Example_Trace_Digest_ReachingCompat.thy` | Reader-side `reaching_compat`: lockset ghost filters global read |
 
 **GraphViz:** Sign examples with `Sign_Exec_Sound` use `sign_annotated_dot_prog_lit`
 (per-node sign states + `cluster_globals`). Interval and structural examples use
