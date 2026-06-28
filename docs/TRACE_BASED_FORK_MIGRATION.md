@@ -1,5 +1,8 @@
 # Migration — trace-based analyzer fork (digest partitioning, TD-executable)
 
+> **Agent entry point:** `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` (umbrella, Track A).
+> This file holds Track A slice detail (R1–R6, executability).
+
 Status: **PLANNED.** Not started. Lands on a dedicated branch + git worktree off
 `main`; the classical/IP spine on `main` stays green throughout. Decision
 (2026-06-19): **Approach A — digest partitioning**, first concrete instance
@@ -204,6 +207,15 @@ thesis-grade. Approach-B rejection, the `oq-ip-collecting-canonical` scope-out,
 and the additive/build-gated discipline are all correct. R2/R3 are the known-hard
 parts of k-CFA — the eventual proofs may already cover them, but the *plan* must
 state the obligations so they cannot be skipped.
+
+## Semantic bridge (shared with semantic-context track)
+
+The fork's S4 soundness obligation is instance of the shared target in
+`docs/TRACE_CONTEXT_BRIDGE_MIGRATION.md`: prove the solver post-fixpoint
+over-approximates `cfg_collect_ctx dg cmp g S v c` (equivalently
+`digest_env_sound`). Slice S2 (`step_digest_refines_dg`) is the shared B2 bridge
+lemma. Optional `lfp(trace)` equivalence (bridge B1) is proof-interface only —
+see that doc.
 
 ## Out of scope (here)
 

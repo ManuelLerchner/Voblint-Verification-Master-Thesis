@@ -1,5 +1,8 @@
 # Semantic-context migration plan (Path B, soundness-only)
 
+> **Agent entry point:** `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` (umbrella, Track B).
+> This file holds warrowing + entry-state slice detail (S0–S4).
+
 Plan to give Voblint **Goblint-style semantic (entry-state) context-sensitivity** —
 procedure entries as side-effect sinks keyed by `c = enter#(abstract state)`, with
 conditional routing allowed — by running the **warrowing side back-end**, accepting
@@ -138,6 +141,8 @@ S0 ──▶ S1 ──▶ S2 ──▶ S3
 
 ## See Also
 
+- `docs/TRACE_CONTEXT_BRIDGE_MIGRATION.md` — semantic middle layer (`alpha_ctx`,
+  `cfg_collect_ctx`, optional `lfp(trace)`); target `context_analysis_sound`
 - [[research/td-side-monotonicity-audit]] — the vendor/locale evidence this plan rests on
 - [[research/trace-precision-direction]] — Path A vs B; the `mono_sides` wall
 - [[concepts/interprocedural-encodings]] — the encoding-1 (entries-as-sinks) target

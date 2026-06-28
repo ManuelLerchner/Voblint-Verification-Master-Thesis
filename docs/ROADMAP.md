@@ -61,7 +61,15 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
 - **Operational:** `pstep` in `IMP2_Proc.thy`; `cfg_runs_to` in `CFG_Collect_Runs.thy`.
 - **Showcase:** `Example_Trace_Digest_Precision.thy` — digest vs. flat precision comparison.
 
-### Trace-based analyzer fork (planned)
+### Trace-context analysis (planned — umbrella)
+
+History-sensitive analysis: trace semantics → `cfg_collect_ctx` → context-indexed
+solver. Two tracks (digest/k-CFA vs semantic entry-state), shared B0–B2 foundation.
+**Agent plan:** `docs/TRACE_CONTEXT_ANALYSIS_MIGRATION.md`. Track detail:
+`TRACE_BASED_FORK_MIGRATION.md` (A), `SEMANTIC_CONTEXT_MIGRATION.md` (B),
+`TRACE_CONTEXT_BRIDGE_MIGRATION.md` (shared semantics).
+
+### Trace-based analyzer fork (planned — Track A detail)
 
 Full digest-partitioned analyzer (one abstract state per `(pp, digest)`), still executable on `TD_side`. The trace contract (`digest_env_sound` / `digest_read_sound`) already exists and is proved realizable by the flat collapse (`flat_env_is_digest_sound`); the fork produces a *tighter* `envd`. Approach A (digest-indexed unknowns), first instance k-call-string. Plan + slices + exit criteria: `docs/TRACE_BASED_FORK_MIGRATION.md`. Single-threaded precursor to thread-modular work.
 
