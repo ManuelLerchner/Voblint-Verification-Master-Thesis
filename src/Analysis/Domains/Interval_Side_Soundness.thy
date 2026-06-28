@@ -5,35 +5,45 @@ begin
 section \<open>Interval domain: effectful transfer instance\<close>
 
 text \<open>
-  The Interval domain's effectful transfer functions, obtained by wrapping the
-  pure ivl_tf record via the pure_edge_tree shim -- the concrete Interval witness
-  for the Goblint-aligned effectful interface (mirrors sign_etf).
+  The Interval domain provides the effectful transfer record consumed by
+  TD_side.  Each edge tree queries the local program point and the unit global
+  slot, applies the interval transfer, then splits the result into local and
+  global parts.
 \<close>
 
 definition ivl_etf :: "(unit, ivl) effectful_domain_transfer" where
-  "ivl_etf = etf_from_tf ivl_tf"
+  "ivl_etf = \<lparr>
+    etf_nop        = pure_edge_tree ivl_tf EA_Nop,
+    etf_assign     = (\<lambda>x e. pure_edge_tree ivl_tf (EA_Assign x e)),
+    etf_assume     = (\<lambda>b. pure_edge_tree ivl_tf (EA_Assume b)),
+    etf_assume_not = (\<lambda>b. pure_edge_tree ivl_tf (EA_AssumeNot b)),
+    etf_enter      = pure_edge_tree ivl_tf EA_Enter,
+    etf_combine    = pure_combine_tree
+  \<rparr>"
 
-
+lemma ivl_etf_pure_transfer:
+  "pure_effectful_transfer ivl_tf ivl_etf"
+  unfolding ivl_etf_def pure_effectful_transfer_def by simp
 
 lemma ivl_sound_etf:
   "sound_effectful_transfer ivl_etf"
-  unfolding ivl_etf_def
-  by (rule sound_transfer_imp_sound_effectful[OF ivl_sound_tf.sound_transfer_axioms])
+  by (rule sound_transfer_imp_sound_effectful_pure_etf
+        [OF ivl_sound_tf.sound_transfer_axioms ivl_etf_pure_transfer])
 
 lemma ivl_etf_cone_compatible: "cone_compatible_etf ivl_etf"
-  unfolding ivl_etf_def by (rule cone_compatible_etf_from_tf)
+  by (rule cone_compatible_etf_pure_transfer[OF ivl_etf_pure_transfer])
 
 lemma ivl_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff g ivl_etf bot0 s0 ())"
-  unfolding ivl_etf_def by (rule threefold_mono_from_tf[OF ivl_tf_mono])
+  by (rule threefold_mono_pure_transfer[OF ivl_etf_pure_transfer ivl_tf_mono])
 
 section \<open>Interval domain: standalone effectful interprocedural soundness\<close>
 
 text \<open>
   Headline soundness for the Interval analysis, stated against the effectful side
   IP solver (side_analyse_eff).  Cone compatibility and threefold monotonicity are
-  discharged by the generic pure-shim lemmas; the unit seed-slot () carries the
-  initial globals.
+  discharged from the native ivl_etf record shape; the unit seed-slot () carries
+  the initial globals.
 \<close>
 
 theorem side_ivl_analysis_sound:

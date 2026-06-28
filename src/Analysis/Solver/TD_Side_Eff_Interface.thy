@@ -6,10 +6,8 @@ section \<open>Effectful side IP solver: TD_side backend interface\<close>
 
 text \<open>
   TD_side backend for the effectful interprocedural equation system
-  (side_cfg_T_eff).  Mirrors td_cfg_side_solver but fixes an
-  effectful_domain_transfer and assumes the three TD_side preconditions on
-  side_cfg_T_eff directly (a non-shim etf supplies them from the monad lemmas;
-  the pure shim from side_cfg_T_eff_etf_from_tf).
+  (side_cfg_T_eff).  The locale fixes an effectful_domain_transfer and assumes
+  the three TD_side preconditions on side_cfg_T_eff directly.
 \<close>
 
 definition side_cfg_solve_dom_eff ::

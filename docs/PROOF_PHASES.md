@@ -59,7 +59,7 @@ As of last full-session build: **0 sorries** in `src/`.
 
 - `TD_Side_CFG.thy` — `restrict_local`, `restrict_global`, `side_env`, `side_cfg_T` base.
 - `TD_Side_Tree.thy` — `side_cfg_T_eff` construction and denotation; pure fold retained as simulation stepping stone in `Exec_Bridge`.
-- `TD_Side_Eff_Bounds.thy` — generic `_gen` mono and static-deps preconditions; `TD_Side_Eff_Sound.thy` — shim mono for `etf_from_tf`.
+- `TD_Side_Eff_Bounds.thy` — generic `_gen` mono and static-deps preconditions; `TD_Side_Eff_Soundness.thy` — bundled `threefold_mono`, cone compatibility, and pure-transfer compatibility lemmas.
 - `TD_Side_Eff_Interface.thy` — `side_cfg_solve_dom_eff`, `side_analyse_eff`; imports `TD.TD_side`.
 - `TD_Side_Eff_Soundness.thy` — `side_analyse_eff_collect_sound_exit_pruned_gen` via reach cone + pruning.
 
@@ -67,7 +67,7 @@ As of last full-session build: **0 sorries** in `src/`.
 
 - `trace_analysis_sound`, `reaching_global_read_sound`, `reaching_global_read_sound_d`, `flat_env_is_digest_sound` (`Trace_Analysis_Sound.thy`).
 - `side_sign_analysis_sound`, `side_ivl_analysis_sound` (`Sign_Side_Soundness.thy`).
-- `named_analysis_sound` (`Sign_Named_Global_Eff.thy`) — non-unit `'g` witness closing the Gap-1 instantiation gap.
+- `named_analysis_sound` (`Sign_Named_Global_Eff.thy`) — non-unit `'g` witness for named-global routing.
 - `proc_global_side_sign_analysis` (`Example_Side_Proc_Global.thy`) — concrete procedural witness.
 
 ### Classical spine retirement

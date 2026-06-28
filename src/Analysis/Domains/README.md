@@ -2,7 +2,8 @@
 
 **Main contribution:** Shared abstract-domain interface (`sound_domain` /
 `abstract_domain` locales, `'a abs_state`, `gamma_state`) and concrete domains
-(sign, interval stretch) with per-edge transfer soundness lemmas.
+(sign, interval stretch) with native effectful transfer records consumed by
+TD_side.
 
 **Theories**
 
@@ -12,11 +13,11 @@
 | `Exec_St.thy`                | `'a st` quotient type (two-region rep), `lookup_st`, `update_st`, order/sup/widening instances   |
 | `Sign_Domain.thy`            | 7-element sign lattice (`SBot SNeg SNonPos SZero SNonNeg SPos STop`), `gamma_sign`, `sign_tf`, type class + locale interpretations |
 | `Sign_Exec.thy`              | Executable mirror `sign_tf_st`, commutation proof, `cinit_sign_st` seed                          |
-| `Sign_Side_Soundness.thy` | `side_sign_analysis_sound` — sign domain end-to-end via `side_analyse_eff`                     |
+| `Sign_Side_Soundness.thy` | `sign_etf`, `side_sign_analysis_sound` — native effectful sign transfer and end-to-end soundness via `side_analyse_eff` |
 | `Sign_Exec_Sound.thy`        | `sign_exec_eqs`, `sign_exec`, `sign_exec_sound_collecting` / `_trace` — program-parametric sound theorems |
 | `Exec_Sign_Run.thy`          | Code-generation entry point for the sign analysis executable                                     |
 | `Interval_Domain.thy`        | Interval domain (`ivl`), `gamma_ivl`, `ivl_tf`, `ivl_domain` / `ivl_sound_tf` interpretations   |
-| `Interval_Side_Soundness.thy` | Interval domain end-to-end soundness                                                         |
+| `Interval_Side_Soundness.thy` | `ivl_etf`, interval domain end-to-end soundness                                             |
 
 **C-faithful initial stores** (`cinit_stores`) is defined in
 `Analysis/Equations/Constraint_System.thy` (the first layer that imports both `store`
@@ -54,10 +55,10 @@ Provides `sign_domain.gamma_state_mono`, `gamma_state_sup_ub1/2`, etc.
 -- Constraint_System.thy: sound_transfer = sound_domain + tf soundness
 interpretation sign_sound_tf: sound_transfer gamma_sign sign_tf
 ```
-Provides `sign_sound_tf` from which `sign_sound_etf : sound_effectful_transfer
-gamma_sign sign_etf` is derived; the latter exposes
-`side_collect_sound_exit_pruned_eff` — the big soundness engine used by the
-end-to-end proof.
+Provides `sign_sound_tf`. `Sign_Side_Soundness.thy` packages the domain as the
+native effectful transfer record `sign_etf` and proves
+`sign_sound_etf : sound_effectful_transfer sign_etf`; the latter exposes the
+effectful soundness engine used by the end-to-end proof.
 
 ### 3. Executable bridge layer  (`Sign_Exec.thy`)
 
@@ -71,9 +72,10 @@ sign_tf_st_commute:
 ```
 
 `part_post_solution_st_to_abs_eff` (in `Exec_Bridge.thy`) converts a TD
-post-fixpoint in `sign st` space into one for the effectful equation system
-`side_cfg_T_eff (etf_from_tf sign_tf)` in `sign abs_state` space, where the
-effectful soundness locale theorems apply.
+post-fixpoint in `sign st` space into one for the effectful equation system used
+by the abstract soundness proof. The current executable transport still uses the
+pure-transfer compatibility adapter internally; the domain-facing theorem path
+uses `sign_etf`.
 
 **C-faithful seed:** `cinit_sign_st :: sign st` represents
 `λx. if is_global x then SZero else STop` — globals seeded at zero

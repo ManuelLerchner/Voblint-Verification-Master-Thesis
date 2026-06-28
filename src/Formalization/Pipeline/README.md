@@ -16,13 +16,14 @@ mixed-flow optimality statements.
 | `reaching_global_read_sound_d` | Digest-indexed variant: soundness for the `reaching_compat dgx rel d` refinement |
 | `digest_read_sound` | Digest-level corollary: `d ∈ dgx '' reaching_compat …` |
 | `flat_env_is_digest_sound` | Per-pp flat abstract env is a valid digest (specialises the digest family to the sign domain) |
-| `mixed_flow_analysis_sound_tf` | Trace-level soundness for analyses built from a pure transfer `tf` via `etf_from_tf` |
-| `mixed_flow_analysis_optimal_tf` | Soundness plus least-partial-post-solution optimality for the generated TD_side equation system |
+| `mixed_flow_analysis_sound` | Trace-level soundness for any effectful transfer record, given a partial post-solution |
+| `mixed_flow_analysis_optimal` | Soundness plus least-partial-post-solution optimality for TD_side on an effectful equation system |
 
 **Context:** `Trace_Analysis_Sound.thy` works inside the `sound_transfer` locale.
 `Mixed_Flow_Sound.thy` is stated directly over `sound_effectful_transfer`,
-`threefold_mono`, and the TD_side post-solution interface; the `_tf` corollaries
-discharge the structural obligations for pure transfers.
+`threefold_mono`, and the TD_side post-solution interface. Domain theories should
+provide native `effectful_domain_transfer` records (`sign_etf`, `ivl_etf`) and
+discharge their structural contracts from the record shape.
 
 **Proof structure:** Composes two steps:
 

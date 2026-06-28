@@ -24,11 +24,9 @@ text \<open>
 
   side_analyse_eff ... v x unfolds to
     side_env (nu_at ...) v x = (nu_at ...) (Inl v) x |_| glob_env (nu_at ...) x
-  In the pure-shim case (etf = etf_from_tf tf):
-  - for local x (not is_global x): glob_env s x = bot, result = s (Inl v) x
-  - for global x (is_global x):    s (Inl v) x = bot, result = glob_env s x
-  So the local component is flow-sensitive (indexed by v) and the global component
-  is flow-insensitive (v-independent).
+  The local component is flow-sensitive (indexed by v).  The global component is
+  flow-insensitive: all named-global side contributions are joined through
+  glob_env before reads at any program point.
 \<close>
 
 subsection \<open>Generic soundness from any partial post-solution\<close>
@@ -111,58 +109,6 @@ proof -
     using opt_full[simplified ip.cfg_pkg_eff_def] by blast
 qed
 
-subsection \<open>Pure-shim specializations (etf_from_tf)\<close>
 
-text \<open>
-  When etf = etf_from_tf tf, cone_compatible_etf holds structurally
-  (cone_compatible_etf_from_tf) and, given tf_mono, threefold_mono holds too
-  (threefold_mono_from_tf).  These corollaries drop both preconditions: the caller
-  only supplies domain-specific transfer-function obligations (soundness,
-  monotonicity, solve_dom) and program-level obligations (S_sound, tr_in).
-\<close>
-
-corollary mixed_flow_analysis_sound_tf:
-  fixes g :: cfg and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state"
-    and bot0 s0 :: "'a abs_state" and S :: "store set" and tr :: "store list"
-    and tf :: "'a domain_transfer"
-  assumes se:    "sound_effectful_transfer (etf_from_tf tf)"
-  assumes pp:    "part_post_solution (side_cfg_T_eff g (etf_from_tf tf) bot0 s0 ())
-                    (cfg_exit g) \<sigma> vars"
-  assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
-  assumes fin:   "finite (edges g)"
-  assumes finC:  "finite (combines g)"
-  assumes tr_in: "tr \<in> cfg_collect_trace g S (cfg_exit g)"
-  shows "\<forall>x. (last tr) x \<in> gamma (side_env \<sigma> (cfg_exit g) x)"
-  by (rule mixed_flow_analysis_sound[OF se pp entry cone_compatible_etf_from_tf
-        fin finC tr_in])
-
-corollary mixed_flow_analysis_optimal_tf:
-  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
-    and tf :: "'a domain_transfer" and S :: "store set" and tr :: "store list"
-  assumes g_eq:  "g = compile_prog \<Pi> ps main"
-  assumes T_eq:  "T = side_cfg_T_eff g (etf_from_tf tf) bot s0 ()"
-  assumes se:    "sound_effectful_transfer (etf_from_tf tf)"
-  assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-  assumes dom:   "side_cfg_solve_dom_eff g (etf_from_tf tf) bot s0 () (cfg_exit g)"
-  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
-  assumes tr_in: "tr \<in> cfg_collect_trace g S (cfg_exit g)"
-  shows
-    "\<forall>x. (last tr) x \<in> gamma
-       (side_analyse_eff \<Pi> ps main (etf_from_tf tf) bot s0 () (cfg_exit g) x)"
-    and
-    "least_part_post_solution (side_cfg_T_eff g (etf_from_tf tf) bot s0 ()) (cfg_exit g)
-       (td_cfg_side_solver_eff.nu_at g (etf_from_tf tf) bot s0 () (cfg_exit g))
-       (td_cfg_side_solver_eff.stabl_at g (etf_from_tf tf) bot s0 () (cfg_exit g))"
-proof -
-  have tfm: "threefold_mono T"
-    unfolding T_eq by (rule threefold_mono_from_tf[OF tf_mono])
-  show "\<forall>x. (last tr) x \<in> gamma
-       (side_analyse_eff \<Pi> ps main (etf_from_tf tf) bot s0 () (cfg_exit g) x)"
-    by (rule sound[OF g_eq T_eq se tfm cone_compatible_etf_from_tf dom S_sound tr_in])
-  show "least_part_post_solution (side_cfg_T_eff g (etf_from_tf tf) bot s0 ()) (cfg_exit g)
-       (td_cfg_side_solver_eff.nu_at g (etf_from_tf tf) bot s0 () (cfg_exit g))
-       (td_cfg_side_solver_eff.stabl_at g (etf_from_tf tf) bot s0 () (cfg_exit g))"
-    by (rule optimal[OF g_eq T_eq se tfm cone_compatible_etf_from_tf dom S_sound tr_in])
-qed
 
 end

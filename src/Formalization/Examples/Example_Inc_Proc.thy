@@ -122,8 +122,25 @@ lemma pruns_to_inc_pcall:
   fixes s :: store
   shows "pruns_to inc_pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  show ?thesis
-    by (simp add: inc_pi_def inc_program_parts pcall_global_increment)
+  let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
+  have g: "is_global ''Gx''" by (simp add: is_global_def)
+  have run: "pruns_to inc_pi (Call ''p'') s
+                (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
+  proof (rule pruns_to_Call[where c = ?body])
+    show "inc_pi ''p'' = Some ?body"
+      by (simp add: inc_pi_def inc_program_parts)
+    show "pruns_to inc_pi ?body (enter_state s)
+             ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
+    proof -
+      have "pruns_to inc_pi ?body (enter_state s)
+               ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
+        by (rule pruns_to_assign)
+      thus ?thesis using aval_plus_gx_on_enter by simp
+    qed
+  qed
+  moreover have "<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)> = s(''Gx'' := s ''Gx'' + 1)"
+    using combine_after_enter_global_assign[OF g] by simp
+  ultimately show ?thesis by simp
 qed
 
 end

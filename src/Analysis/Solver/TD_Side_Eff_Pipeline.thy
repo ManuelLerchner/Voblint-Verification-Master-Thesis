@@ -2,11 +2,10 @@ theory TD_Side_Eff_Pipeline
   imports TD_Side_Eff_Bounds TD_Side_Eff_Sound TD_Side_Eff_Interface
 begin
 
-section \<open>Standalone effectful pipeline (no pure-shim bridge)\<close>
+section \<open>Standalone effectful pipeline\<close>
 
 text \<open>
-  Ties the three strands together for an *arbitrary* etf, with no reference to the
-  pure side_cfg_T / pure bounds / etf_from_tf shim:
+  Ties the three strands together for an arbitrary etf:
 
     * the TD_side solver interface (td_cfg_side_solver_eff) is discharged from a
       per-tree monotonicity / static-dependency contract (Step 1);
@@ -16,9 +15,8 @@ text \<open>
       post_fixpoint_sound_at_eff.
 
   A genuinely effectful analysis (named globals, conditional sides, custom return)
-  supplies the per-tree contracts directly -- e.g. via seqcomp_mono /
-  static_deps_seqcomp on its construction -- and obtains the full pipeline without
-  the pure layer.
+  supplies the per-tree contracts directly, e.g. via seqcomp_mono /
+  static_deps_seqcomp on its construction.
 \<close>
 
 subsection \<open>Solver interface from the per-tree contract\<close>

@@ -84,20 +84,6 @@ lemma cfg_entry_prune_to[simp]: "cfg_entry (prune_to g v0) = cfg_entry g"
 lemma cfg_exit_prune_to[simp]: "cfg_exit (prune_to g v0) = cfg_exit g"
   by (simp add: prune_to_def)
 
-lemma edges_prune_to_sub: "edges (prune_to g v0) \<subseteq> edges g"
-  by auto
-
-lemma combines_prune_to_sub: "combines (prune_to g v0) \<subseteq> combines g"
-  by auto
-
-lemma finite_edges_prune_to:
-  "finite (edges g) \<Longrightarrow> finite (edges (prune_to g v0))"
-  using edges_prune_to_sub by (rule_tac finite_subset) auto
-
-lemma finite_combines_prune_to:
-  "finite (combines g) \<Longrightarrow> finite (combines (prune_to g v0))"
-  using combines_prune_to_sub by (rule_tac finite_subset) auto
-
 (* Reachability is discharged by the side solver via dep_side_rhs_tree_* and
    cfg_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_Eff_Soundness).
    The graph-level pruning frame below is solver-agnostic. *)

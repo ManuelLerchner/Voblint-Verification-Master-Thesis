@@ -96,8 +96,8 @@ proof -
                   (side_cfg_T_eff g sign_etf bot
                      (\<lambda>x. if is_global x then SZero else STop) ())
                   (cfg_exit g) \<sigma> (fst sol)"
-    using part_post_solution_st_to_abs_eff[OF sign_tf_st_commute pp_st]
-    unfolding sign_etf_def
+    using part_post_solution_st_to_abs_eff
+            [OF sign_etf_pure_transfer sign_tf_st_commute pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_sign_st bot_fun_def)
   have cone: "cone_compatible_etf sign_etf" by (rule sign_etf_cone_compatible)
   have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"

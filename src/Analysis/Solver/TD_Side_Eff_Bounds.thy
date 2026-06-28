@@ -2,15 +2,13 @@ theory TD_Side_Eff_Bounds
   imports TD_Side_Tree
 begin
 
-section \<open>Effectful side IP solver: general monotonicity (no shim)\<close>
+section \<open>Effectful side IP solver: general monotonicity\<close>
 
 text \<open>
-  Monotonicity of the effectful equation system for an *arbitrary* etf, from a
-  per-tree contract (each edge / combine tree is monotone in the environment).
-  This replaces the pure-shim discharge (td_cfg_side_solver_eff_from_tf, which
-  routes through the bridge to the pure mono lemmas): a genuinely effectful etf
-  supplies the per-tree monotonicity directly -- e.g. via seqcomp_mono on its
-  QueryL/QueryG/Side construction.
+  Monotonicity of the effectful equation system for an arbitrary etf follows
+  from a per-tree contract: each edge and combine tree is monotone in the
+  environment. A genuinely effectful etf supplies this contract directly, e.g.
+  via seqcomp_mono on its QueryL/QueryG/Side construction.
 
   The per-tree contract is stated on traverse_rhs of the trees the fold composes
   (apply_etf etf a u for edges, etf_combine etf c ex for combine endpoints).

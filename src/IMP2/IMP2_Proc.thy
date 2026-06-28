@@ -59,138 +59,52 @@ abbreviation
 where "psteps \<Pi> x y \<equiv> star (pstep \<Pi>) x y"
 
 declare pstep.intros [simp, intro]
+declare pstep.Seq2[simp del]
 
 inductive_cases SkipSE[elim!]:    "pstep \<Pi> (SKIP, s, frs) cfg"
 inductive_cases AssignSE[elim!]:  "pstep \<Pi> (Assign x a, s, frs) cfg"
 inductive_cases SeqSE[elim]:      "pstep \<Pi> (Seq c1 c2, s, frs) cfg"
 inductive_cases IfSE[elim!]:      "pstep \<Pi> (If b c1 c2, s, frs) cfg"
-inductive_cases WhileSE[elim!]:   "pstep \<Pi> (While b c, s, frs) cfg"
+inductive_cases WhileSE[elim]:   "pstep \<Pi> (While b c, s, frs) cfg"
 inductive_cases ScopeSE[elim!]:   "pstep \<Pi> (Scope c, s, frs) cfg"
 inductive_cases CallSE[elim]:     "pstep \<Pi> (Call p, s, frs) cfg"
 inductive_cases RestoreSE[elim!]: "pstep \<Pi> (Restore, s, frs) cfg"
-
-(* -- The semantics is deterministic --------------------------------- *)
-
-lemma pstep_deterministic:
-  "pstep \<Pi> cs cs' \<Longrightarrow> pstep \<Pi> cs cs'' \<Longrightarrow> cs'' = cs'"
-proof (induction arbitrary: cs'' rule: pstep.induct)
-  case (Assign x a s frs) then show ?case by blast
-next
-  case (Seq1 c2 s frs) then show ?case by blast
-next
-  case (Seq2 c1 s frs c1' s' frs' c2)
-  from Seq2.prems Seq2.hyps obtain c1'' s'' frs'' where
-    cs'': "cs'' = (Seq c1'' c2, s'', frs'')" and
-    step: "pstep \<Pi> (c1, s, frs) (c1'', s'', frs'')"
-    by auto
-  from Seq2.IH[OF step] cs'' show ?case by simp
-next
-  case (IfTrue b s c1 c2 frs) then show ?case by blast
-next
-  case (IfFalse b s c1 c2 frs) then show ?case by blast
-next
-  case (While b c s frs) then show ?case by blast
-next
-  case (Scope c s frs) then show ?case by blast
-next
-  case (Call p c s frs) then show ?case by auto
-next
-  case (Restore s fr frs) then show ?case by auto
-qed
-
-(* -- Frame mechanism: a scope restores locals, commits globals ------ *)
+(* -- Successful termination ----------------------------------------- *)
 
 text \<open>
-  Validation of the frame mechanism.  Assigning a local variable inside a
-  scope has no net effect on the store: the body's write is undone by the
-  restore (locals come from the saved frame), so the run returns to the
-  starting store.
+  Concrete Semantics calls a configuration final when no small step applies; for
+  IMP that coincides with SKIP.  Here configurations carry a frame stack, so
+  stuckness at SKIP with a non-empty stack is not a successful end.
+  \<^term>\<open>pfinal\<close> is the good exit: command finished and frames balanced.
 \<close>
 
-lemma combine_after_local_assign:
-  assumes "\<not> is_global x"
-  shows "<s | s(x := v)> = s"
-  using assms by (rule_tac ext) auto
+fun pfinal :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
+  "pfinal (c, s, frs) = (c = SKIP \<and> frs = [])"
 
-lemma scope_local_assign_noop:
-  assumes "\<not> is_global x"
-  shows "psteps \<Pi> (Scope (Assign x a), s, []) (SKIP, s, [])"
-proof -
-  (* Entry zeroes locals; the local write is then undone by the restore. *)
-  let ?es = "enter_state s"
-  let ?s1 = "?es(x := aval a ?es)"
-  have eq: "<s | ?s1> = s"
-    by (rule ext) (auto simp: enter_state_def assms)
-  have a: "pstep \<Pi> (Scope (Assign x a), s, []) (Seq (Assign x a) Restore, ?es, [s])"
-    by (rule Scope)
-  have b: "pstep \<Pi> (Seq (Assign x a) Restore, ?es, [s]) (Seq SKIP Restore, ?s1, [s])"
-    by (rule Seq2[OF Assign])
-  have c: "pstep \<Pi> (Seq SKIP Restore, ?s1, [s]) (Restore, ?s1, [s])"
-    by (rule Seq1)
-  have d: "pstep \<Pi> (Restore, ?s1, [s]) (SKIP, <s | ?s1>, [])"
-    by (rule Restore)
-  have "psteps \<Pi> (Scope (Assign x a), s, []) (SKIP, <s | ?s1>, [])"
-    using a b c d by (meson star.refl star.step)
-  with eq show ?thesis by simp
-qed
+lemma pfinalD[elim]:
+  assumes "pfinal (c, s, frs)"
+  shows "c = SKIP \<and> frs = []"
+  using assms unfolding pfinal.simps by simp
 
-(* -- Terminating runs ----------------------------------------------- *)
+lemma pfinal_iff_SKIP_empty[simp]:
+  "pfinal (c, s, frs) = (c = SKIP \<and> frs = [])"
+  unfolding pfinal.simps by simp
 
-(* A run of c from store s terminates in t when it reaches SKIP with an empty
-   frame stack. *)
+(* A run of c from store s completes in t when it reaches a pfinal configuration
+   whose store is t. *)
 definition pruns_to :: "proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "pruns_to \<Pi> c s t = psteps \<Pi> (c, s, []) (SKIP, t, [])"
+
+lemma pruns_to_iff_reaches_pfinal:
+  "pruns_to \<Pi> c s t \<longleftrightarrow>
+     (\<exists>cfg. psteps \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
+  unfolding pruns_to_def by auto
 
 lemma pruns_to_skip: "pruns_to \<Pi> SKIP s s"
   unfolding pruns_to_def by (rule star.refl)
 
-(* SKIP is a normal form: no step leaves it (for any frame stack). *)
-lemma pstep_SKIP_stuck: "\<not> pstep \<Pi> (SKIP, s, frs) cs"
-  by auto
-
 lemma pruns_to_assign: "pruns_to \<Pi> (Assign x a) s (s(x := aval a s))"
-proof -
-  have "pstep \<Pi> (Assign x a, s, []) (SKIP, s(x := aval a s), [])"
-    by (rule Assign)
-  thus ?thesis unfolding pruns_to_def by (meson star.refl star.step)
-qed
-
-(* A write to a global commits: combining over a global update keeps the new
-   value (dual to combine_after_local_assign). *)
-lemma combine_after_global_assign:
-  assumes "is_global x"
-  shows "<s | s(x := v)> = s(x := v)"
-  using assms by (rule_tac ext) auto
-
-(* A procedure call runs the callee body and commits its writes to globals,
-   while the caller's locals are restored.  Here the body increments the global
-   ''Gx'', and the increment persists in the returned store. *)
-lemma pcall_global_increment:
-  assumes p: "\<Pi> ''p'' = Some (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))"
-  shows "pruns_to \<Pi> (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
-proof -
-  let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
-  let ?es = "enter_state s"
-  let ?v = "aval (Plus (V ''Gx'') (N 1)) ?es"
-  have g: "is_global ''Gx''" by (simp add: is_global_def)
-  (* Entry zeroes locals; Gx is global, so the increment reads s ''Gx''. *)
-  have a: "pstep \<Pi> (Call ''p'', s, []) (Seq ?body Restore, ?es, [s])"
-    using p by blast
-  have b: "pstep \<Pi> (Seq ?body Restore, ?es, [s])
-                    (Seq SKIP Restore, ?es(''Gx'' := ?v), [s])"
-    by (rule Seq2[OF Assign])
-  have c: "pstep \<Pi> (Seq SKIP Restore, ?es(''Gx'' := ?v), [s])
-                    (Restore, ?es(''Gx'' := ?v), [s])"
-    by (rule Seq1)
-  have d: "pstep \<Pi> (Restore, ?es(''Gx'' := ?v), [s])
-                    (SKIP, <s | ?es(''Gx'' := ?v)>, [])"
-    by (rule Restore)
-  have eq: "<s | ?es(''Gx'' := ?v)> = s(''Gx'' := s ''Gx'' + 1)"
-    by (rule ext) (simp add: enter_state_def is_global_def)
-  have "psteps \<Pi> (Call ''p'', s, []) (SKIP, <s | ?es(''Gx'' := ?v)>, [])"
-    using a b c d by (meson star.refl star.step)
-  with eq show ?thesis unfolding pruns_to_def by simp
-qed
+  by (simp add: pruns_to_def)
 
 (* -- Sequencing lifts through the small-step --------------------------- *)
 
@@ -321,51 +235,48 @@ lemma psteps_frame_mono:
 
 (* -- Scope and Call termination ------------------------------------- *)
 
-lemma pruns_to_Scope:
-  assumes body: "pruns_to \<Pi> c (enter_state s) t'"
-  shows "pruns_to \<Pi> (Scope c) s (<s|t'>)"
-unfolding pruns_to_def
+(* After Scope/Call entry the body runs inside Seq c Restore with one saved
+   caller frame.  Run the body to SKIP, then Restore pops back to empty stack. *)
+lemma psteps_Seq_Restore_body:
+  assumes "psteps \<Pi> (c, enter_state s, [s]) (SKIP, t', [s])"
+  shows "psteps \<Pi> (Seq c Restore, enter_state s, [s]) (SKIP, <s|t'>, [])"
 proof -
-  have step_scope: "pstep \<Pi> (Scope c, s, []) (Seq c Restore, enter_state s, [s])"
-    by (rule Scope)
-  have body_lifted: "psteps \<Pi> (c, enter_state s, [s]) (SKIP, t', [s])"
-    using psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"] by simp
   have body_seq: "psteps \<Pi> (Seq c Restore, enter_state s, [s]) (Seq SKIP Restore, t', [s])"
-    using psteps_Seq2[OF body_lifted] .
+    using psteps_Seq2[OF assms] .
   have step_seq1: "pstep \<Pi> (Seq SKIP Restore, t', [s]) (Restore, t', [s])"
     by (rule Seq1)
   have step_restore: "pstep \<Pi> (Restore, t', [s]) (SKIP, <s|t'>, [])"
     by (rule Restore)
   have tail: "psteps \<Pi> (Seq SKIP Restore, t', [s]) (SKIP, <s|t'>, [])"
     using step_seq1 step_restore by (meson star.refl star.step)
-  have mid: "psteps \<Pi> (Seq c Restore, enter_state s, [s]) (SKIP, <s|t'>, [])"
-    using body_seq tail by (rule star_trans)
-  show "psteps \<Pi> (Scope c, s, []) (SKIP, <s|t'>, [])"
-    by (rule star.step[OF step_scope mid])
+  show ?thesis using body_seq tail by (rule star_trans)
 qed
+
+(* Scope and Call share the same entry configuration; only the first step
+   differs. *)
+lemma psteps_framed_entry:
+  assumes entry: "pstep \<Pi> (cmd, s, []) (Seq c Restore, enter_state s, [s])"
+  assumes body: "psteps \<Pi> (c, enter_state s, [s]) (SKIP, t', [s])"
+  shows "psteps \<Pi> (cmd, s, []) (SKIP, <s|t'>, [])"
+  using entry body psteps_Seq_Restore_body by (meson star.step star_trans)
+
+lemma pruns_to_Scope:
+  assumes body: "pruns_to \<Pi> c (enter_state s) t'"
+  shows "pruns_to \<Pi> (Scope c) s (<s|t'>)"
+  unfolding pruns_to_def
+  by (rule psteps_framed_entry[OF Scope])
+     (rule psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"])
 
 lemma pruns_to_Call:
   assumes p: "\<Pi> p = Some c"
   assumes body: "pruns_to \<Pi> c (enter_state s) t'"
   shows "pruns_to \<Pi> (Call p) s (<s|t'>)"
-unfolding pruns_to_def
-proof -
-  have step_call: "pstep \<Pi> (Call p, s, []) (Seq c Restore, enter_state s, [s])"
+  unfolding pruns_to_def
+proof (rule psteps_framed_entry)
+  show "pstep \<Pi> (Call p, s, []) (Seq c Restore, enter_state s, [s])"
     using p by (rule Call)
-  have body_lifted: "psteps \<Pi> (c, enter_state s, [s]) (SKIP, t', [s])"
+  show "psteps \<Pi> (c, enter_state s, [s]) (SKIP, t', [s])"
     using psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"] by simp
-  have body_seq: "psteps \<Pi> (Seq c Restore, enter_state s, [s]) (Seq SKIP Restore, t', [s])"
-    using psteps_Seq2[OF body_lifted] .
-  have step_seq1: "pstep \<Pi> (Seq SKIP Restore, t', [s]) (Restore, t', [s])"
-    by (rule Seq1)
-  have step_restore: "pstep \<Pi> (Restore, t', [s]) (SKIP, <s|t'>, [])"
-    by (rule Restore)
-  have tail: "psteps \<Pi> (Seq SKIP Restore, t', [s]) (SKIP, <s|t'>, [])"
-    using step_seq1 step_restore by (meson star.refl star.step)
-  have mid: "psteps \<Pi> (Seq c Restore, enter_state s, [s]) (SKIP, <s|t'>, [])"
-    using body_seq tail by (rule star_trans)
-  show "psteps \<Pi> (Call p, s, []) (SKIP, <s|t'>, [])"
-    by (rule star.step[OF step_call mid])
 qed
 
 (* A Scope body and a Call to the same body reduce to the identical
@@ -394,53 +305,6 @@ proof -
     with tl Yval show ?thesis
       unfolding pruns_to_def by (auto intro: star.step)
   qed
-qed
-
-
-
-(* A deterministic relation reaches at most one normal form. *)
-lemma pstep_star_determ:
-  "star (pstep \<Pi>) a b \<Longrightarrow> star (pstep \<Pi>) a c \<Longrightarrow>
-   (\<And>x. \<not> pstep \<Pi> b x) \<Longrightarrow> (\<And>x. \<not> pstep \<Pi> c x) \<Longrightarrow> b = c"
-proof (induction arbitrary: c rule: star.induct)
-  case (refl a)
-  from refl.prems(1) show ?case
-  proof (cases rule: star.cases)
-    case refl
-    then show ?thesis by simp
-  next
-    case (step d)
-    then have "pstep \<Pi> a d" by auto
-    with refl.prems(2) show ?thesis by blast
-  qed
-next
-  case (step a a' b)
-  note outer_step = step.hyps(1) and outer_ih = step.IH
-    and nb = step.prems(2) and nc = step.prems(3)
-  from step.prems(1) show ?case
-  proof (cases rule: star.cases)
-    case refl
-    with outer_step nc show ?thesis by blast
-  next
-    case (step d)
-    then have ad: "pstep \<Pi> a d" and dc: "star (pstep \<Pi>) d c" by auto
-    from pstep_deterministic[OF outer_step ad] have da: "d = a'" .
-    have "star (pstep \<Pi>) a' c" using dc da by simp
-    from outer_ih[OF this nb nc] show ?thesis .
-  qed
-qed
-
-(* Hence a run is functional: the terminating result is unique. *)
-lemma pruns_to_determ:
-  assumes "pruns_to \<Pi> c s t" and "pruns_to \<Pi> c s t'"
-  shows "t = t'"
-proof -
-  from assms have s1: "star (pstep \<Pi>) (c, s, []) (SKIP, t, [])"
-              and s2: "star (pstep \<Pi>) (c, s, []) (SKIP, t', [])"
-    unfolding pruns_to_def by auto
-  have nb: "\<And>x. \<not> pstep \<Pi> (SKIP, t, []) x" by (rule pstep_SKIP_stuck)
-  have nc: "\<And>x. \<not> pstep \<Pi> (SKIP, t', []) x" by (rule pstep_SKIP_stuck)
-  from pstep_star_determ[OF s1 s2 nb nc] show ?thesis by simp
 qed
 
 end

@@ -439,13 +439,12 @@ lemma named_etf_mono_deps:
 subsection \<open>Headline: a named-global analysis sound through the real side solver\<close>
 
 text \<open>
-  The named-global Sign analysis (two slots Gpos / Gneg, type 'g = gname, NOT the
-  unit shim) over-approximates the interprocedural CFG collecting semantics at the
-  program exit, proved through the real effectful side TD solver
-  (side_analyse_eff at 'g = gname).  The three TD_side preconditions are
-  discharged for the non-shim named_etf directly from the generic per-tree
-  lemmas; the cone contracts hold by the routed trees' query skeleton.  The
-  initial globals are seeded into the Gpos slot.
+  The named-global Sign analysis uses two slots Gpos / Gneg ('g = gname) and
+  over-approximates the interprocedural CFG collecting semantics at the program
+  exit through the effectful side TD solver (side_analyse_eff at 'g = gname).
+  The three TD_side preconditions are discharged for named_etf directly from the
+  generic per-tree lemmas; the cone contracts hold by the routed trees' query
+  skeleton. The initial globals are seeded into the Gpos slot.
 \<close>
 
 theorem named_analysis_sound:

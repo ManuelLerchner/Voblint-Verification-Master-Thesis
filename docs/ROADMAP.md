@@ -49,15 +49,16 @@ Issue numbers are deliberately omitted — they go stale. The directions remain 
 ### Core soundness chain (done in code)
 
 Collecting spec + post-fixpoint + TD side bridge (B3–B4 in `docs/OPEN_PROBLEMS.md`) are proved.
-Sign pipeline is closed end-to-end (`proc_global_side_sign_analysis` / `side_ip_sign_analysis_sound`)
-modulo one named TD hypothesis (P1: `side_cfg_ip_solve_dom`).
+Sign pipeline is closed end-to-end (`proc_global_side_sign_analysis` / `side_sign_analysis_sound`)
+modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
 
 ### Semantics and pipeline (current)
 
-- **Spec:** `cfg_collect_ip` (IP state) and `cfg_collect_trace_ip` (IP trace) at every program point; `pruns_to_ip` is exit-projected sugar.
-- **Canonical soundness:** `trace_ip_analysis_sound` (no termination premise); `reaching_global_read_sound` (per-variable read).
-- **Exit corollary:** `side_ip_sign_analysis_sound` (sign domain).
-- **Operational:** `pstep` in `IMP2_Proc.thy`; `pruns_to_ip` in `CFG_Collect_IP_Adeq.thy`.
+- **Spec:** `cfg_collect` (IP state) and `cfg_collect_trace` (IP trace) at every program point; `cfg_runs_to` is exit-projected sugar.
+- **Canonical soundness:** `trace_analysis_sound` (no termination premise); `reaching_global_read_sound` (per-variable read).
+- **Mixed-flow theorem:** `mixed_flow_analysis_sound` / `mixed_flow_analysis_optimal` for effectful TD_side equation systems.
+- **Exit corollary:** `side_sign_analysis_sound` (sign domain).
+- **Operational:** `pstep` in `IMP2_Proc.thy`; `cfg_runs_to` in `CFG_Collect_Runs.thy`.
 - **Showcase:** `Example_Trace_Digest_Precision.thy` — digest vs. flat precision comparison.
 
 ### Trace-based analyzer fork (planned)

@@ -7,20 +7,20 @@ format. `side_analyse_eff pi ps c etf bot s0 v` is proved sound against
 
 The solver rides on the **effectful** equation system `side_cfg_T_eff`
 (transfer functions are strategy trees that may query and side-effect named
-globals). The pure single-pot equation system `side_cfg_T` survives only as the
-denotational substrate the `'a st` executable bridge and the shim monotonicity
-lemmas are still defined against; its IP-soundness and solver-interface layers were
-retired (see `docs/EFFECTFUL_TF_MIGRATION.md`).
+globals). Domain-facing theories provide native `effectful_domain_transfer`
+records. Unit-global pure-transfer records support executable transport and
+legacy-style pure domains without a separate adapter. Their IP-soundness and
+solver-interface layers were retired (see `docs/EFFECTFUL_TF_MIGRATION.md`).
 
 **Theories**
 
 | File | Role |
 | --- | --- |
 | `Strategy_Tree_Monad.thy` | `seqcomp_tree` (bind) + `traverse_seqcomp` / `dep_aux_seqcomp` / `sides_of_rhs_seqcomp`; `static_deps` and `seqcomp_mono` |
-| `TD_Side_CFG.thy` | `restrict_local`, `restrict_global`, `side_env`; `pure_edge_tree` / `pure_combine_tree` / `etf_from_tf` shim; `trans_dep\<^sub>L` step/trans lemmas |
-| `TD_Side_Tree.thy` | `side_cfg_T` (pure) and `side_cfg_T_eff` (effectful) interprocedural strategy trees; folds `side_acc` / `side_acc_eff`; the `etf_from_tf` bridges |
-| `TD_Side_Eff_Bounds.thy` (generic `_gen`) + `TD_Side_Eff_Soundness.thy` (shim for `etf_from_tf`) | monotonicity + dependency stability; TD_side preconditions `side_cfg_T_eff_is_mono_eq` / `_mono_sides` / `_mono_deps` |
-| `Exec_Bridge.thy` | executable `'a st` fold mirror + `fun_of_st` simulation; `part_post_solution_st_to_abs_eff` maps the `'a st` post-solution to a `part_post_solution` of `side_cfg_T_eff (etf_from_tf tf)` |
+| `TD_Side_CFG.thy` | `restrict_local`, `restrict_global`, `side_env`; unit-global pure-transfer tree shape (`pure_edge_tree`, `pure_combine_tree`, `pure_effectful_transfer`); `trans_dep\<^sub>L` step/trans lemmas |
+| `TD_Side_Tree.thy` | `side_cfg_T_eff` effectful interprocedural strategy trees; folds `side_acc_eff` |
+| `TD_Side_Eff_Bounds.thy` + `TD_Side_Eff_Soundness.thy` | monotonicity + dependency stability; TD_side preconditions `side_cfg_T_eff_is_mono_eq` / `_mono_sides` / `_mono_deps`, plus pure-transfer compatibility discharges |
+| `Exec_Bridge.thy` | executable `'a st` fold mirror + `fun_of_st` simulation; `part_post_solution_st_to_abs_eff` maps the `'a st` post-solution to a `part_post_solution` of `side_cfg_T_eff` for a matching unit-global effectful record |
 | `TD_Side_Eff_Sound.thy` | `post_fixpoint_sound_at_eff` — a post-fixpoint of the effectful system over-approximates `cfg_collect` (in `sound_effectful_transfer`) |
 | `TD_Side_Eff_Bounds.thy` | per-edge / per-combine post-solution bounds (`etf_combined_le_eff`) and the generic TD_side preconditions (`side_cfg_T_eff_is_mono_eq_gen` …) |
 | `TD_Side_Eff_Interface.thy` | `td_cfg_side_solver_eff` locale, `side_cfg_solve_dom_eff`, `side_analyse_eff` (TD_side backend on `side_cfg_T_eff`) |

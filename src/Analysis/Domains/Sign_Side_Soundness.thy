@@ -5,43 +5,49 @@ begin
 section \<open>Sign domain: effectful transfer instance\<close>
 
 text \<open>
-  The Sign domain's effectful transfer functions, obtained by wrapping the pure
-  sign_tf record via the pure_edge_tree shim.  This is the concrete witness that
-  a real domain instantiates the Goblint-aligned effectful interface.
+  The Sign domain provides the effectful transfer record consumed by TD_side.
+  Each edge tree queries the local program point and the unit global slot,
+  applies the sign transfer, then splits the result into local and global parts.
 \<close>
 
 definition sign_etf :: "(unit, sign) effectful_domain_transfer" where
-  "sign_etf = etf_from_tf sign_tf"
+  "sign_etf = \<lparr>
+    etf_nop        = pure_edge_tree sign_tf EA_Nop,
+    etf_assign     = (\<lambda>x e. pure_edge_tree sign_tf (EA_Assign x e)),
+    etf_assume     = (\<lambda>b. pure_edge_tree sign_tf (EA_Assume b)),
+    etf_assume_not = (\<lambda>b. pure_edge_tree sign_tf (EA_AssumeNot b)),
+    etf_enter      = pure_edge_tree sign_tf EA_Enter,
+    etf_combine    = pure_combine_tree
+  \<rparr>"
 
-
+lemma sign_etf_pure_transfer:
+  "pure_effectful_transfer sign_tf sign_etf"
+  unfolding sign_etf_def pure_effectful_transfer_def by simp
 
 text \<open>
   The Sign domain satisfies the effectful soundness contract: every per-action
-  tree's reassembled full result over-approximates the concrete edge step.  This
-  is the concrete instantiation of sound_effectful_transfer, discharged from the
-  existing sign_sound_tf via the shim -- closing the instantiation gap for the
-  Goblint-aligned effectful interface.
+  tree's reassembled full result over-approximates the concrete edge step.
 \<close>
 
 lemma sign_sound_etf:
   "sound_effectful_transfer sign_etf"
-  unfolding sign_etf_def
-  by (rule sound_transfer_imp_sound_effectful[OF sign_sound_tf.sound_transfer_axioms])
+  by (rule sound_transfer_imp_sound_effectful_pure_etf
+        [OF sign_sound_tf.sound_transfer_axioms sign_etf_pure_transfer])
 
 lemma sign_etf_cone_compatible: "cone_compatible_etf sign_etf"
-  unfolding sign_etf_def by (rule cone_compatible_etf_from_tf)
+  by (rule cone_compatible_etf_pure_transfer[OF sign_etf_pure_transfer])
 
 lemma sign_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff g sign_etf bot0 s0 ())"
-  unfolding sign_etf_def by (rule threefold_mono_from_tf[OF sign_tf_mono])
+  by (rule threefold_mono_pure_transfer[OF sign_etf_pure_transfer sign_tf_mono])
 
 section \<open>Sign domain: standalone effectful interprocedural soundness\<close>
 
 text \<open>
   Headline soundness for the Sign analysis, stated against the effectful side IP
   solver (side_analyse_eff).  Cone compatibility and threefold monotonicity are
-  discharged by the generic pure-shim lemmas; the unit seed-slot () carries the
-  initial globals.
+  discharged from the native sign_etf record shape; the unit seed-slot () carries
+  the initial globals.
 \<close>
 
 theorem side_sign_analysis_sound:

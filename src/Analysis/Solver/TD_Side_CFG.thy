@@ -105,15 +105,13 @@ lemma side_env_eq_side_env_g:
   unfolding side_env_def side_env_g_def by (simp add: glob_env_unit)
 
 
-subsection \<open>Pure-domain effectful transfer shim\<close>
+subsection \<open>Unit-global pure-transfer trees\<close>
 
 text \<open>
-  pure_edge_tree wraps a domain_transfer into an effectful tree: query the
-  local state at u, query the single global unknown (), apply the pure TF to
-  their join, split the result into a local Answer and a global Side.
-
-  etf_from_tf lifts a domain_transfer to an effectful_domain_transfer using
-  this shim for every action.  apply_etf (etf_from_tf tf) a u = pure_edge_tree tf a u.
+  pure_edge_tree builds the unit-global effectful tree used by domains whose
+  concrete transfer is still described by a domain_transfer: query the local
+  state at u, query the unit global slot, apply the transfer to their join, then
+  split the result into a local Answer and a global Side.
 \<close>
 
 definition pure_edge_tree ::
@@ -125,10 +123,9 @@ where
        Side () (restrict_global res)
          (Answer (restrict_local res))))"
 
-(* Shim for the procedure-return combine: query the caller local cc, the
-   callee-exit local ex, and the global; reassemble locals-from-caller +
-   globals-from-callee (= combine_abs) and split into a local Answer and a
-   global Side -- the fixed combine_abs default, lifted into the effectful form. *)
+(* Procedure-return combine: query the caller local cc, the callee-exit local
+   ex, and the global; reassemble locals-from-caller + globals-from-callee
+   (= combine_abs) and split into a local Answer and a global Side. *)
 definition pure_combine_tree ::
   "pp => pp => (pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
 where
@@ -138,39 +135,44 @@ where
        Side () (restrict_global res)
          (Answer (restrict_local res)))))"
 
-definition etf_from_tf ::
-  "'a::bounded_semilattice_sup_bot domain_transfer => (unit, 'a) effectful_domain_transfer"
+definition pure_effectful_transfer ::
+  "'a::bounded_semilattice_sup_bot domain_transfer =>
+   (unit, 'a) effectful_domain_transfer => bool"
 where
-  "etf_from_tf tf = \<lparr>
-    etf_nop        = pure_edge_tree tf EA_Nop,
-    etf_assign     = \<lambda>x e. pure_edge_tree tf (EA_Assign x e),
-    etf_assume     = \<lambda>b. pure_edge_tree tf (EA_Assume b),
-    etf_assume_not = \<lambda>b. pure_edge_tree tf (EA_AssumeNot b),
-    etf_enter      = pure_edge_tree tf EA_Enter,
-    etf_combine    = pure_combine_tree
-  \<rparr>"
+  "pure_effectful_transfer tf etf \<longleftrightarrow>
+     etf_nop etf = pure_edge_tree tf EA_Nop \<and>
+     etf_assign etf = (\<lambda>x e. pure_edge_tree tf (EA_Assign x e)) \<and>
+     etf_assume etf = (\<lambda>b. pure_edge_tree tf (EA_Assume b)) \<and>
+     etf_assume_not etf = (\<lambda>b. pure_edge_tree tf (EA_AssumeNot b)) \<and>
+     etf_enter etf = pure_edge_tree tf EA_Enter \<and>
+     etf_combine etf = pure_combine_tree"
 
-lemma etf_combine_from_tf [simp]:
-  "etf_combine (etf_from_tf tf) = pure_combine_tree"
-  by (simp add: etf_from_tf_def)
+lemma pure_effectful_transfer_apply:
+  assumes "pure_effectful_transfer tf etf"
+  shows "apply_etf etf a u = pure_edge_tree tf a u"
+  using assms unfolding pure_effectful_transfer_def
+  by (cases a) simp_all
 
-lemma apply_etf_from_tf [simp]:
-  "apply_etf (etf_from_tf tf) a u = pure_edge_tree tf a u"
-  by (cases a) (simp_all add: etf_from_tf_def)
+lemma pure_effectful_transfer_combine:
+  assumes "pure_effectful_transfer tf etf"
+  shows "etf_combine etf = pure_combine_tree"
+  using assms unfolding pure_effectful_transfer_def by simp
+
+
 
 lemma traverse_pure_edge_tree:
   "traverse_rhs (pure_edge_tree tf a u) \<sigma> =
    restrict_local (apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
   unfolding pure_edge_tree_def by (simp add: Let_def)
 
-(* The shim's single Side contribution to the global slot is the global
+(* The tree's single Side contribution to the global slot is the global
    restriction of the pure result. *)
 lemma sides_pure_edge_tree_Inr:
   "sides_of_rhs (pure_edge_tree tf a u) \<sigma> (Inr ()) =
    restrict_global (apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
   unfolding pure_edge_tree_def by (simp add: Let_def)
 
-(* Reassembling the shim's local Answer and global Side recovers the full pure
+(* Reassembling the tree's local Answer and global Side recovers the full pure
    result -- restrict_local and restrict_global join back to the original. *)
 lemma etf_full_pure_edge_tree:
   "etf_full (pure_edge_tree tf a u) \<sigma> = apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
@@ -178,22 +180,21 @@ lemma etf_full_pure_edge_tree:
   by (simp add: all_sides_eq_sides_Inr_unit traverse_pure_edge_tree sides_pure_edge_tree_Inr
         restrict_local_global_join)
 
-lemma etf_full_etf_from_tf:
-  "etf_full (apply_etf (etf_from_tf tf) a u) \<sigma> = apply_tf tf a (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-  by (simp add: etf_full_pure_edge_tree)
 
-(* The shim's combine tree returns the caller's locals as its Answer. *)
+
+
+(* The unit-global combine tree returns the caller's locals as its Answer. *)
 lemma traverse_pure_combine_tree:
   "traverse_rhs (pure_combine_tree cc ex) \<sigma> = restrict_local (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))"
   unfolding pure_combine_tree_def by (simp add: Let_def restrict_local_combine_eq)
 
-(* The shim's combine tree contributes the callee-exit globals to the global slot. *)
+(* The unit-global combine tree contributes the callee-exit globals to the global slot. *)
 lemma sides_pure_combine_tree_Inr:
   "sides_of_rhs (pure_combine_tree cc ex) \<sigma> (Inr ()) =
    restrict_global (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
   unfolding pure_combine_tree_def by (simp add: Let_def restrict_global_combine_eq)
 
-(* The shim's combine tree reassembles to the fixed abstract combine. *)
+(* The unit-global combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_pure_combine_tree:
   "etf_full (pure_combine_tree cc ex) \<sigma>
    = \<langle>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())|\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rangle>"
@@ -202,107 +203,88 @@ lemma etf_full_pure_combine_tree:
         restrict_local_combine_eq restrict_global_combine_eq restrict_combine combine_abs_def)
 
 text \<open>
-  Every sound pure transfer record satisfies the effectful soundness contract via
-  the shim.  The four obligations reduce, through etf_full_etf_from_tf, to the
-  four sound_transfer obligations on the combined source state -- so no concrete
-  domain needs a fresh soundness proof to enter the effectful interface.
+  A pure-transfer-shaped effectful record satisfies the effectful soundness
+  contract whenever the underlying domain_transfer satisfies the pure soundness
+  contract.
 \<close>
 
-lemma sound_transfer_imp_sound_effectful:
-  assumes "sound_transfer tf"
-  shows "sound_effectful_transfer (etf_from_tf tf)"
+lemma sound_transfer_imp_sound_effectful_pure_etf:
+  assumes st_axioms: "sound_transfer tf"
+  assumes shape: "pure_effectful_transfer tf etf"
+  shows "sound_effectful_transfer etf"
 proof -
-  interpret st: sound_transfer tf by (rule assms)
+  interpret st: sound_transfer tf by (rule st_axioms)
   show ?thesis
   proof (unfold_locales; unfold glob_env_unit)
     show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-            s \<in> \<lbrakk>etf_full (etf_nop (etf_from_tf tf) u) \<sigma>\<rbrakk>"
-    proof (intro allI ballI)
-      fix u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
-      assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      have eq: "etf_full (etf_nop (etf_from_tf tf) u) \<sigma>
-                  = \<sigma> (Inl u) \<squnion> \<sigma> (Inr ())"
-        by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      show "s \<in> \<lbrakk>etf_full (etf_nop (etf_from_tf tf) u) \<sigma>\<rbrakk>"
-        using m by (simp add: eq)
-    qed
+            s \<in> \<lbrakk>etf_full (etf_nop etf u) \<sigma>\<rbrakk>"
+      using shape by (simp add: pure_effectful_transfer_def etf_full_pure_edge_tree)
   next
     show "\<forall>x e u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-            s(x := aval e s)
-              \<in> \<lbrakk>etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>\<rbrakk>"
+            s(x := aval e s) \<in> \<lbrakk>etf_full (etf_assign etf x e u) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix x e and u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      fix x e and u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
       assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      have eq: "etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>
+      have eq: "etf_full (etf_assign etf x e u) \<sigma>
                   = tf_assign tf x e (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-        by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "s(x := aval e s)
-              \<in> \<lbrakk>tf_assign tf x e (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
-        using st.tf_sound_assign m by blast
-      thus "s(x := aval e s)
-              \<in> \<lbrakk>etf_full (etf_assign (etf_from_tf tf) x e u) \<sigma>\<rbrakk>"
-        by (simp add: eq)
+        using shape by (simp add: pure_effectful_transfer_def etf_full_pure_edge_tree)
+      show "s(x := aval e s) \<in> \<lbrakk>etf_full (etf_assign etf x e u) \<sigma>\<rbrakk>"
+        unfolding eq using st.tf_sound_assign m by blast
     qed
   next
-    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
+    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            bval b s \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume etf b u) \<sigma>\<rbrakk>"
     proof (intro allI ballI impI)
-      fix b :: bexp and u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      fix b :: bexp and u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
       assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>" and bv: "bval b s"
-      have eq: "etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>
+      have eq: "etf_full (etf_assume etf b u) \<sigma>
                   = tf_assume tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-        by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "s \<in> \<lbrakk>tf_assume tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
-        using st.tf_sound_assume m bv by blast
-      thus "s \<in> \<lbrakk>etf_full (etf_assume (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
-        by (simp add: eq)
+        using shape by (simp add: pure_effectful_transfer_def etf_full_pure_edge_tree)
+      show "s \<in> \<lbrakk>etf_full (etf_assume etf b u) \<sigma>\<rbrakk>"
+        unfolding eq using st.tf_sound_assume m bv by blast
     qed
   next
-    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
+    show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not etf b u) \<sigma>\<rbrakk>"
     proof (intro allI ballI impI)
-      fix b :: bexp and u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      fix b :: bexp and u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
       assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>" and bv: "\<not> bval b s"
-      have eq: "etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>
+      have eq: "etf_full (etf_assume_not etf b u) \<sigma>
                   = tf_assume_not tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-        by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "s \<in> \<lbrakk>tf_assume_not tf b (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
-        using st.tf_sound_assume_not m bv by blast
-      thus "s \<in> \<lbrakk>etf_full (etf_assume_not (etf_from_tf tf) b u) \<sigma>\<rbrakk>"
-        by (simp add: eq)
+        using shape by (simp add: pure_effectful_transfer_def etf_full_pure_edge_tree)
+      show "s \<in> \<lbrakk>etf_full (etf_assume_not etf b u) \<sigma>\<rbrakk>"
+        unfolding eq using st.tf_sound_assume_not m bv by blast
     qed
   next
     show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-            enter_state s \<in> \<lbrakk>etf_full (etf_enter (etf_from_tf tf) u) \<sigma>\<rbrakk>"
+            enter_state s \<in> \<lbrakk>etf_full (etf_enter etf u) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix u :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s :: store
+      fix u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
       assume m: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      have eq: "etf_full (etf_enter (etf_from_tf tf) u) \<sigma>
+      have eq: "etf_full (etf_enter etf u) \<sigma>
                   = tf_enter tf (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-        by (simp add: etf_from_tf_def etf_full_pure_edge_tree)
-      have "enter_state s \<in> \<lbrakk>tf_enter tf (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))\<rbrakk>"
-        using st.tf_sound_enter m by blast
-      thus "enter_state s \<in> \<lbrakk>etf_full (etf_enter (etf_from_tf tf) u) \<sigma>\<rbrakk>"
-        by (simp add: eq)
+        using shape by (simp add: pure_effectful_transfer_def etf_full_pure_edge_tree)
+      show "enter_state s \<in> \<lbrakk>etf_full (etf_enter etf u) \<sigma>\<rbrakk>"
+        unfolding eq using st.tf_sound_enter m by blast
     qed
   next
     show "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              <s|t>
-                \<in> \<lbrakk>etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>\<rbrakk>"
+              <s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>"
     proof (intro allI ballI)
-      fix cc ex :: pp and \<sigma> :: "(pp + unit) \<Rightarrow> 'a abs_state" and s t :: store
+      fix cc ex :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s t :: store
       assume sc: "s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>"
          and te: "t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      have eq: "etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>
+      have eq: "etf_full (etf_combine etf cc ex) \<sigma>
                   = \<langle>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())|\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rangle>"
-        by (simp add: etf_full_pure_combine_tree)
-      show "<s|t>
-              \<in> \<lbrakk>etf_full (etf_combine (etf_from_tf tf) cc ex) \<sigma>\<rbrakk>"
+        using shape by (simp add: pure_effectful_transfer_def etf_full_pure_combine_tree)
+      show "<s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>"
         unfolding eq using combine_states_sound[OF sc te] .
     qed
   qed
 qed
+
+
 
 
 (* Generic reachability over the solver's local dependency relation: a single

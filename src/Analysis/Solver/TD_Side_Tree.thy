@@ -16,7 +16,7 @@ text \<open>
   local part flows on to v's local unknown; the global part is contributed to
   the single global unknown by a side effect.
 
-  Monotonicity / solver preconditions: TD_Side_Eff_Bounds (generic _gen) and TD_Side_Eff_Soundness (shim for etf_from_tf).
+  Monotonicity / solver preconditions: TD_Side_Eff_Bounds (generic _gen) and TD_Side_Eff_Soundness.
   Post-solution bounds for soundness: TD_Side_Eff_Bounds.
 \<close>
 
@@ -137,8 +137,6 @@ text \<open>
   combine triples model IP call/return linkage and always reference the single
   global unknown.
 
-  For etf = etf_from_tf tf, edge cases produce the same tree as side_rhs_fold
-  tf (\<squnion>), proved below via traverse_seqcomp and traverse_pure_edge_tree.
 \<close>
 
 fun side_rhs_fold_eff ::
@@ -220,68 +218,6 @@ lemma eq_side_cfg_T_eff:
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
   by (simp add: traverse_side_rhs_fold_eff Let_def)
 
-lemma side_acc_eff_eq_side_acc:
-  "side_acc_eff (etf_from_tf tf) acc \<sigma> es cs =
-   side_acc tf (\<squnion>) acc \<sigma> es cs"
-proof (induction es arbitrary: acc cs)
-  case Nil
-  then show ?case
-  proof (induction cs arbitrary: acc)
-    case Nil show ?case by simp
-  next
-    case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    show ?case unfolding x using Cons.IH
-      by (simp add: traverse_pure_combine_tree sup_fun_def)
-  qed
-next
-  case (Cons x es)
-  obtain u a where x: "x = (u, a)" by (cases x)
-  show ?case unfolding x using Cons.IH
-    by (simp add: traverse_pure_edge_tree sup_fun_def)
-qed
 
-subsection \<open>Pure shim: effectful and pure folds build the same tree\<close>
-
-text \<open>
-  For etf = etf_from_tf tf the effectful fold builds exactly the tree the pure
-  fold builds (with join = \<squnion>).  This is the backward-compatibility bridge: every
-  result proven about side_cfg_T tf (\<squnion>) -- monotonicity, side contributions,
-  dependencies, soundness -- transfers verbatim to side_cfg_T_eff (etf_from_tf tf)
-  with the unit seed-slot.
-\<close>
-
-lemma side_rhs_fold_eff_etf_from_tf:
-  "side_rhs_fold_eff (etf_from_tf tf) acc es cs
-   = side_rhs_fold tf (\<squnion>) acc es cs"
-proof (induction es arbitrary: acc cs)
-  case Nil
-  then show ?case
-  proof (induction cs arbitrary: acc)
-    case Nil show ?case by simp
-  next
-    case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    show ?case unfolding x
-      by (simp add: Cons.IH pure_combine_tree_def Let_def sup_fun_def)
-  qed
-next
-  case (Cons x es)
-  obtain u a where x: "x = (u, a)" by (cases x)
-  show ?case unfolding x
-    by (simp add: Cons.IH pure_edge_tree_def Let_def sup_fun_def)
-qed
-
-lemma make_side_rhs_tree_eff_etf_from_tf:
-  "make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 ()
-   = make_side_rhs_tree g tf (\<squnion>) bot0 s0"
-  by (rule ext)
-     (simp add: make_side_rhs_tree_eff_def make_side_rhs_tree_def
-                side_rhs_fold_eff_etf_from_tf Let_def)
-
-lemma side_cfg_T_eff_etf_from_tf:
-  "side_cfg_T_eff g (etf_from_tf tf) bot0 s0 () = side_cfg_T g tf (\<squnion>) bot0 s0"
-  unfolding side_cfg_T_eff_def side_cfg_T_def
-  by (rule make_side_rhs_tree_eff_etf_from_tf)
 
 end

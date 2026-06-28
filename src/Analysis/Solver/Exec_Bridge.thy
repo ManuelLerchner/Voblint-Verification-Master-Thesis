@@ -24,7 +24,8 @@ text \<open>
   5. make_side_rhs_tree_st / side_cfg_T_st: the full executable equation system.
 
   6. Transport theorem: a part_post_solution of side_cfg_T_st (at 'a st) maps via
-     fun_of_st to a part_post_solution of side_cfg_T_eff (etf_from_tf tf).
+     fun_of_st to a part_post_solution of side_cfg_T_eff for a native effectful record
+     with the matching unit-global pure-transfer tree shape.
 \<close>
 
 subsection \<open>fun_of_st homomorphisms for local/global projections\<close>
@@ -236,18 +237,19 @@ next
    
 qed
 
-subsection \<open>Simulation against the effectful shim fold\<close>
+subsection \<open>Simulation against unit-global pure-transfer effectful folds\<close>
 
 text \<open>
-  fun_of_st simulation against the effectful shim fold side_acc_eff (etf_from_tf tf)
-  and its global side contributions.  These lemmas drive the transport theorem
-  part_post_solution_st_to_abs_eff without going through the pure fold.
+  fun_of_st simulation against an effectful fold whose record has the
+  pure_effectful_transfer shape, and against its global side contributions. These
+  lemmas drive the transport theorem part_post_solution_st_to_abs_eff.
 \<close>
 
 lemma side_acc_st_fun_of_st_eff:
+  assumes shape: "pure_effectful_transfer tf etf"
   assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
   shows "fun_of_st (side_acc_st tf_st acc_st \<sigma>_st es cs) =
-         side_acc_eff (etf_from_tf tf) (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) es cs"
+         side_acc_eff etf (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) es cs"
 proof (induction es arbitrary: acc_st cs)
   case Nil
   then show ?case
@@ -260,14 +262,15 @@ proof (induction es arbitrary: acc_st cs)
         = fun_of_st (side_acc_st tf_st
             (acc_st \<squnion> restrict_local_st (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))) \<sigma>_st [] cs)"
       unfolding x by simp
-    also have "... = side_acc_eff (etf_from_tf tf)
+    also have "... = side_acc_eff etf
             (fun_of_st (acc_st \<squnion> restrict_local_st (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))))
             (fun_of_st \<circ> \<sigma>_st) [] cs"
       by (rule Cons.IH)
-    also have "... = side_acc_eff (etf_from_tf tf) (fun_of_st acc_st)
+    also have "... = side_acc_eff etf (fun_of_st acc_st)
             (fun_of_st \<circ> \<sigma>_st) [] (x # cs)"
       unfolding x
-      by (simp add: traverse_pure_combine_tree o_def)
+      using shape
+      by (simp add: pure_effectful_transfer_combine traverse_pure_combine_tree o_def)
     finally show ?case .
   qed
 next
@@ -277,14 +280,15 @@ next
       = fun_of_st (side_acc_st tf_st
           (acc_st \<squnion> restrict_local_st (tf_st a (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))) \<sigma>_st es cs)"
     unfolding x by simp
-  also have "... = side_acc_eff (etf_from_tf tf)
+  also have "... = side_acc_eff etf
           (fun_of_st (acc_st \<squnion> restrict_local_st (tf_st a (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))))
           (fun_of_st \<circ> \<sigma>_st) es cs"
     by (rule Cons.IH)
-  also have "... = side_acc_eff (etf_from_tf tf) (fun_of_st acc_st)
+  also have "... = side_acc_eff etf (fun_of_st acc_st)
           (fun_of_st \<circ> \<sigma>_st) (x # es) cs"
     unfolding x
-    by (simp add: traverse_pure_edge_tree commute o_def)
+    using shape
+    by (simp add: pure_effectful_transfer_apply traverse_pure_edge_tree commute o_def)
   finally show ?case .
 qed
 
@@ -313,9 +317,10 @@ proof -
 qed
 
 lemma side_glob_st_fun_of_st_eff:
+  assumes shape: "pure_effectful_transfer tf etf"
   assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
   shows "fun_of_st (side_glob_st tf_st \<sigma>_st es cs) =
-         sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+         sides_of_rhs (side_rhs_fold_eff etf acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
 proof (induction es arbitrary: acc cs)
   case Nil
   then show ?case
@@ -325,37 +330,40 @@ proof (induction es arbitrary: acc cs)
     case (Cons x cs)
     obtain cc ex where x: "x = (cc, ex)" by (cases x)
     have ih: "fun_of_st (side_glob_st tf_st \<sigma>_st [] cs)
-            = sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+            = sides_of_rhs (side_rhs_fold_eff etf acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
       by (rule Cons.IH)
     have "fun_of_st (side_glob_st tf_st \<sigma>_st [] (x # cs))
         = restrict_global (fun_of_st (\<sigma>_st (Inl ex)) \<squnion> fun_of_st (\<sigma>_st (Inr ())))
-          \<squnion> sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+          \<squnion> sides_of_rhs (side_rhs_fold_eff etf acc [] cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
       unfolding x by (simp add: ih sup.commute)
-    also have "... = sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc [] (x # cs))
+    also have "... = sides_of_rhs (side_rhs_fold_eff etf acc [] (x # cs))
             (fun_of_st \<circ> \<sigma>_st) (Inr ())"
       unfolding x
+      using shape
       by (simp del: side_rhs_fold_eff.simps
-            add: sides_eff_fold_combine_step sides_pure_combine_tree_Inr o_def sup.commute)
+            add: pure_effectful_transfer_combine sides_eff_fold_combine_step sides_pure_combine_tree_Inr o_def sup.commute)
     finally show ?case .
   qed
 next
   case (Cons x es)
   obtain u a where x: "x = (u, a)" by (cases x)
   have ih: "fun_of_st (side_glob_st tf_st \<sigma>_st es cs)
-          = sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+          = sides_of_rhs (side_rhs_fold_eff etf acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
     by (rule Cons.IH)
   have "fun_of_st (side_glob_st tf_st \<sigma>_st (x # es) cs)
       = restrict_global (apply_tf tf a (fun_of_st (\<sigma>_st (Inl u)) \<squnion> fun_of_st (\<sigma>_st (Inr ()))))
-        \<squnion> sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
+        \<squnion> sides_of_rhs (side_rhs_fold_eff etf acc es cs) (fun_of_st \<circ> \<sigma>_st) (Inr ())"
     unfolding x
     by (simp add: commute ih sup.commute)
-  also have "... = sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc (x # es) cs)
+  also have "... = sides_of_rhs (side_rhs_fold_eff etf acc (x # es) cs)
           (fun_of_st \<circ> \<sigma>_st) (Inr ())"
     unfolding x
+    using shape
     by (simp del: side_rhs_fold_eff.simps
-          add: sides_eff_fold_edge_step sides_pure_edge_tree_Inr o_def sup.commute)
+          add: pure_effectful_transfer_apply sides_eff_fold_edge_step sides_pure_edge_tree_Inr o_def sup.commute)
   finally show ?case .
 qed
+
 
 subsection \<open>Strategy tree: side_rhs_fold_st\<close>
 
@@ -556,15 +564,14 @@ next
   show ?thesis unfolding make_side_rhs_tree_st_def Let_def using False by simp
 qed
 
-subsection \<open>Transport: executable part_post_solution \<open>\<Rightarrow>\<close> effectful part_post_solution\<close>
-
 text \<open>
-  The shim effectful fold queries exactly the same unknowns as the executable
-  st fold: each edge contributes its source local and the global, each combine
-  its call/exit locals and the global.  So both dep_aux sets coincide.
+  A pure-transfer-shaped effectful fold queries exactly the same unknowns as the
+  executable st fold: each edge contributes its source local and the global, each
+  combine its call/exit locals and the global. So both dep_aux sets coincide.
 \<close>
-lemma dep_aux_side_rhs_fold_eff_from_tf_set:
-  "dep_aux \<sigma> (side_rhs_fold_eff (etf_from_tf tf) acc es cs) =
+lemma dep_aux_side_rhs_fold_eff_pure_transfer_set:
+  assumes shape: "pure_effectful_transfer tf etf"
+  shows "dep_aux \<sigma> (side_rhs_fold_eff etf acc es cs) =
    (\<Union>(u, a)\<in>set es. {Inl u, Inr ()}) \<union> (\<Union>(cc, ex)\<in>set cs. {Inl cc, Inl ex, Inr ()})"
 proof (induction es arbitrary: acc cs)
   case Nil
@@ -575,26 +582,30 @@ proof (induction es arbitrary: acc cs)
     case (Cons c cs)
     obtain cc ex where c: "c = (cc, ex)" by (cases c)
     show ?case unfolding c
-      by (simp add: dep_aux_seqcomp
+      using shape
+      by (simp add: dep_aux_seqcomp pure_effectful_transfer_combine
             pure_combine_tree_def Let_def Cons.IH)
   qed
 next
   case (Cons e es)
   obtain u a where e: "e = (u, a)" by (cases e)
   show ?case unfolding e
-    by (simp add: dep_aux_seqcomp
+    using shape
+    by (simp add: dep_aux_seqcomp pure_effectful_transfer_apply
           pure_edge_tree_def Let_def Cons.IH)
 qed
 
 lemma dep_aux_make_side_rhs_tree_st_eq_eff:
-  "dep_aux \<sigma>_st (make_side_rhs_tree_st g tf_st bot0_st s0_st v) =
-   dep_aux \<sigma>_abs (make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 () v)"
+  assumes shape: "pure_effectful_transfer tf etf"
+  shows "dep_aux \<sigma>_st (make_side_rhs_tree_st g tf_st bot0_st s0_st v) =
+   dep_aux \<sigma>_abs (make_side_rhs_tree_eff g etf bot0 s0 () v)"
   by (simp add: dep_aux_make_side_rhs_tree_st dep_aux_make_side_rhs_tree_eff
-        dep_aux_side_rhs_fold_st_set dep_aux_side_rhs_fold_eff_from_tf_set)
+        dep_aux_side_rhs_fold_st_set dep_aux_side_rhs_fold_eff_pure_transfer_set[OF shape])
 
-text \<open>The shim fold only side-effects the global slot, so local sides are bot.\<close>
-lemma sides_side_rhs_fold_eff_from_tf_Inl:
-  "sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) acc es cs) \<sigma> (Inl u) = bot"
+text \<open>The pure-transfer-shaped fold only side-effects the global slot, so local sides are bot.\<close>
+lemma sides_side_rhs_fold_eff_pure_transfer_Inl:
+  assumes shape: "pure_effectful_transfer tf etf"
+  shows "sides_of_rhs (side_rhs_fold_eff etf acc es cs) \<sigma> (Inl u) = bot"
 proof (induction es arbitrary: acc cs)
   case Nil
   show ?case
@@ -604,48 +615,53 @@ proof (induction es arbitrary: acc cs)
     case (Cons c cs)
     obtain cc ex where c: "c = (cc, ex)" by (cases c)
     show ?case unfolding c
-      by (simp add: sides_of_rhs_seqcomp
-            pure_combine_tree_def Let_def Cons.IH)
+      using shape by (simp add: sides_of_rhs_seqcomp
+            pure_effectful_transfer_combine pure_combine_tree_def Let_def Cons.IH)
   qed
 next
   case (Cons e es)
   obtain w b where e: "e = (w, b)" by (cases e)
   show ?case unfolding e
-    by (simp add: sides_of_rhs_seqcomp
-          pure_edge_tree_def Let_def Cons.IH)
+    using shape by (simp add: sides_of_rhs_seqcomp
+          pure_effectful_transfer_apply pure_edge_tree_def Let_def Cons.IH)
 qed
 
-lemma sides_make_side_rhs_tree_eff_from_tf_Inl:
-  "sides_of_rhs (make_side_rhs_tree_eff g (etf_from_tf tf) bot0 s0 () v) \<sigma> (Inl u) = bot"
+lemma sides_make_side_rhs_tree_eff_pure_transfer_Inl:
+  assumes shape: "pure_effectful_transfer tf etf"
+  shows "sides_of_rhs (make_side_rhs_tree_eff g etf bot0 s0 () v) \<sigma> (Inl u) = bot"
   unfolding make_side_rhs_tree_eff_def
-  by (simp add: sides_side_rhs_fold_eff_from_tf_Inl Let_def)
+  by (simp add: sides_side_rhs_fold_eff_pure_transfer_Inl[OF shape] Let_def)
+
+
 
 context
   fixes g :: cfg
   fixes tf :: "('a::bounded_semilattice_sup_bot) domain_transfer"
+  fixes etf :: "(unit, 'a) effectful_domain_transfer"
   fixes tf_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
   fixes bot0_st s0_st :: "'a st"
+  assumes shape: "pure_effectful_transfer tf etf"
   assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
 begin
 
 private lemma fun_of_st_eq_st_eff:
   "fun_of_st (eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st) =
-   eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ()) v (fun_of_st \<circ> \<sigma>_st)"
+   eq (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ()) v (fun_of_st \<circ> \<sigma>_st)"
   unfolding eq_side_cfg_T_st eq_side_cfg_T_eff
-  by (simp add: side_acc_st_fun_of_st_eff[OF commute])
+  by (simp add: side_acc_st_fun_of_st_eff[OF shape commute])
 
 private lemma fun_of_st_sides_st_Inr_eff:
   "fun_of_st (sides_of_rhs (side_cfg_T_st g tf_st bot0_st s0_st v) \<sigma>_st (Inr ())) =
-   sides_of_rhs (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)
+   sides_of_rhs (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
      (fun_of_st \<circ> \<sigma>_st) (Inr ())"
 proof (cases "v = cfg_entry g")
   case True
   have acc_eq:
-    "sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf)
+    "sides_of_rhs (side_rhs_fold_eff etf
          (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
          (predecessor_list g v) (combine_predecessor_list g v))
        (fun_of_st \<circ> \<sigma>_st) (Inr ()) =
-     sides_of_rhs (side_rhs_fold_eff (etf_from_tf tf) (fun_of_st bot0_st)
+     sides_of_rhs (side_rhs_fold_eff etf (fun_of_st bot0_st)
          (predecessor_list g v) (combine_predecessor_list g v))
        (fun_of_st \<circ> \<sigma>_st) (Inr ())"
     by (rule fun_cong[OF sides_side_rhs_fold_eff_acc_indep])
@@ -654,7 +670,7 @@ proof (cases "v = cfg_entry g")
               make_side_rhs_tree_st_def make_side_rhs_tree_eff_def
     using True
     using acc_eq by (auto simp add: sides_side_rhs_fold_st_Inr Let_def
-                  side_glob_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"]
+                  side_glob_st_fun_of_st_eff[OF shape commute, where acc="fun_of_st bot0_st"]
                   acc_eq)
 next
   case False
@@ -663,76 +679,73 @@ next
               make_side_rhs_tree_st_def make_side_rhs_tree_eff_def
     using False
     by (simp add: sides_side_rhs_fold_st_Inr Let_def
-                  side_glob_st_fun_of_st_eff[OF commute, where acc="fun_of_st bot0_st"])
+                  side_glob_st_fun_of_st_eff[OF shape commute, where acc="fun_of_st bot0_st"])
 qed
 
 text \<open>
-  Executable post-solution maps directly to a part_post_solution of the effectful
-  shim equation system \<open>side_cfg_T_eff (etf_from_tf tf)\<close> at the unit seed-slot.
-  Proof structure:
-  (a) the local equation bound transfers via fun_of_st_eq_st_eff;
-  (b) the global side-effect bound via fun_of_st_sides_st_Inr_eff;
-  (c) local sides are bot by sides_make_side_rhs_tree_eff_from_tf_Inl;
-  (d) dependencies agree by dep_aux_make_side_rhs_tree_st_eq_eff.
+  Executable post-solutions map directly to part_post_solution facts for the
+  native effectful equation system when the effectful record has the same
+  unit-global pure-transfer tree shape as the executable transfer.
 \<close>
 theorem part_post_solution_st_to_abs_eff:
   assumes pp_st:
     "part_post_solution (side_cfg_T_st g tf_st bot0_st s0_st) x \<sigma>_st vars"
   shows
     "part_post_solution
-       (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
+       (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
        x (fun_of_st \<circ> \<sigma>_st) vars"
 proof -
   have x_in: "x \<in> vars" using pp_st by simp
   have deps: "\<And>v. v \<in> vars \<Longrightarrow>
       dep\<^sub>L (side_cfg_T_st g tf_st bot0_st s0_st) \<sigma>_st v
-    = dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
+    = dep\<^sub>L (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
              (fun_of_st \<circ> \<sigma>_st) v"
   proof -
     fix v
     have eq: "dep_aux \<sigma>_st (make_side_rhs_tree_st g tf_st bot0_st s0_st v) =
               dep_aux (fun_of_st \<circ> \<sigma>_st)
-                (make_side_rhs_tree_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)"
-      by (rule dep_aux_make_side_rhs_tree_st_eq_eff)
+                (make_side_rhs_tree_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)"
+      by (rule dep_aux_make_side_rhs_tree_st_eq_eff[OF shape])
     show "dep\<^sub>L (side_cfg_T_st g tf_st bot0_st s0_st) \<sigma>_st v =
-          dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
+          dep\<^sub>L (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
                  (fun_of_st \<circ> \<sigma>_st) v"
       by (simp add: dep\<^sub>L_def dep_def side_cfg_T_st_def side_cfg_T_eff_def eq)
   qed
   show ?thesis
   proof (intro conjI x_in ballI conjI)
     fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
+    show "dep\<^sub>L (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
               (fun_of_st \<circ> \<sigma>_st) v \<subseteq> vars"
       using pp_st v_in deps[OF v_in] by auto
-    show "eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ()) v
+    show "eq (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ()) v
              (fun_of_st \<circ> \<sigma>_st) \<le> (fun_of_st \<circ> \<sigma>_st) (Inl v)"
     proof -
       have le_st: "eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st \<le> \<sigma>_st (Inl v)"
         using pp_st v_in by simp
       have sim: "fun_of_st (eq (side_cfg_T_st g tf_st bot0_st s0_st) v \<sigma>_st) =
-                 eq (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) ())
+                 eq (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
                     v (fun_of_st \<circ> \<sigma>_st)"
         by (rule fun_of_st_eq_st_eff)
       from fun_of_st_mono[OF le_st] sim show ?thesis by (simp add: o_def)
     qed
-    show "sides_of_rhs (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)
+    show "sides_of_rhs (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
              (fun_of_st \<circ> \<sigma>_st) \<le> fun_of_st \<circ> \<sigma>_st"
     proof (rule le_funI)
       fix k
       show "sides_of_rhs
-               (side_cfg_T_eff g (etf_from_tf tf) (fun_of_st bot0_st) (fun_of_st s0_st) () v)
+               (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
                (fun_of_st \<circ> \<sigma>_st) k
             \<le> (fun_of_st \<circ> \<sigma>_st) k"
         apply (cases k)
         apply auto
-        apply (simp add: side_cfg_T_eff_def sides_make_side_rhs_tree_eff_from_tf_Inl)
+        apply (simp add: side_cfg_T_eff_def sides_make_side_rhs_tree_eff_pure_transfer_Inl[OF shape])
         by (metis fun_of_st_mono fun_of_st_sides_st_Inr_eff le_fun_def pp_st v_in)
     qed
   qed
 qed
 
 end
+
 
 
 end

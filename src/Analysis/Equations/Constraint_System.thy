@@ -416,7 +416,7 @@ text \<open>
 
   apply_etf dispatches on edge_action to the matching field.
 
-  The pure-domain shim (pure_edge_tree / etf_from_tf) lives in TD_Side_CFG where
+  Unit-global pure-transfer tree constructors live in TD_Side_CFG where
   restrict_local / restrict_global are defined.
 \<close>
 
@@ -456,7 +456,7 @@ text \<open>
   An effectful edge tree splits its outcome between a local Answer (the value of
   the source unknown after the edge) and Side contributions to the named globals.
   etf_full reassembles the complete abstract post-state: the local result joined
-  with the contribution to the single global unknown.  For the pure-domain shim
+  with the contribution to the global unknowns. For unit-global pure transfers
   this is exactly apply_tf tf a (combined), so the soundness obligation below is
   the existing sound_transfer obligation stated against the combined input.
 

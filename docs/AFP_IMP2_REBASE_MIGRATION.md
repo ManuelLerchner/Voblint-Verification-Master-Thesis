@@ -234,3 +234,12 @@ pass `-d ~/afp/thys` (already in the build command). Heap refresh after the
 Scaffold `src/IMP2/IMP2_Bridge.thy` with the two definitions and two agreement
 lemmas stubbed to `sorry`, via I/Q; fill via the I/Q inner loop; batch-gate when
 file-clean. Do not touch Phases 2-3 until Phase 1 is green.
+
+---
+
+## Follow-up (open)
+
+**Phase 4 — forward simulation + CFG adequacy:** `backward_sim` (IMP2 → `pruns_to`)
+is done; the converse (`pruns_to` → IMP2 `big_step`) and the operational link
+(`pruns_to` → `cfg_runs_to`) are not. Plan, lemma checklist, and phasing:
+`docs/AFP_IMP2_FORWARD_SIM_MIGRATION.md`.

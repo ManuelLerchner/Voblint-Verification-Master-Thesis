@@ -55,9 +55,9 @@ text \<open>
   control-flow graph; the graph induces an effectful equation system; the
   verified TD_side solver computes a partial post-solution; and the resulting
   mixed flow-sensitive abstract state over-approximates the interprocedural
-  trace collecting semantics at every program point.  For pure-shim domains,
-  the solver result is also the least partial post-solution of the generated
-  equation system.
+  trace collecting semantics at every program point.  When the generated
+  equation system satisfies threefold monotonicity, the solver result is also
+  the least partial post-solution.
 
   The proof is layered into four Isabelle sessions.  The list below separates
   the proof spine from executable frontends, DOT exporters, and research
@@ -85,7 +85,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, \<^verbatim>\<open>abstract_domain\<close>, lifted state concretization, and display support.
     \<^item> @{theory Voblint_Analysis.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, and \<^verbatim>\<open>sound_effectful_transfer\<close>.
     \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- pure post-fixpoint soundness against \<^verbatim>\<open>cfg_collect\<close>.
-    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction and the pure-transfer shim \<^verbatim>\<open>etf_from_tf\<close>.
+    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, and compatibility adapters for pure transfers.
     \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- effectful TD_side collecting soundness with pruning, \<^verbatim>\<open>threefold_mono\<close>, and \<^verbatim>\<open>cone_compatible_etf\<close>.
     \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- small post-fixpoint bridge lemmas for \<^verbatim>\<open>cfg_collect\<close>.
 
@@ -104,7 +104,7 @@ text \<open>
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and optimality statements.
     \<^item> @{theory Voblint_Formalization.Trace_Analysis_Sound} --- trace-level post-fixpoint soundness and digest-indexed trace reading.
     \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality:
-      @{thm [source] mixed_flow_analysis_sound_tf} and @{thm [source] mixed_flow_analysis_optimal_tf}.
+      @{thm [source] mixed_flow_analysis_sound} and @{thm [source] mixed_flow_analysis_optimal}.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, and tooling.
     \<^item> @{theory Voblint_Formalization.Example_Inc_Proc} --- shared global-increment procedure witness used by sign, interval, and mixed-flow examples.
