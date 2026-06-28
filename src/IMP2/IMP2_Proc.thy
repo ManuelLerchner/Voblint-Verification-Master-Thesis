@@ -91,20 +91,36 @@ lemma pfinal_iff_SKIP_empty[simp]:
   unfolding pfinal.simps by simp
 
 (* A run of c from store s completes in t when it reaches a pfinal configuration
-   whose store is t. *)
-definition pruns_to :: "proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pruns_to \<Pi> c s t = psteps \<Pi> (c, s, []) (SKIP, t, [])"
+   whose store is t (Concrete Semantics: small-step termination to a good final cfg). *)
 
-lemma pruns_to_iff_reaches_pfinal:
-  "pruns_to \<Pi> c s t \<longleftrightarrow>
+definition pno_step :: "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" where
+  "pno_step \<Pi> cfg \<longleftrightarrow>
+     \<not> (\<exists>cfg'. pstep \<Pi> cfg cfg')"
+
+lemma pfinal_imp_pno_step:
+  assumes pf: "pfinal (c, s, frs)"
+  shows "pno_step \<Pi> (c, s, frs)"
+  using pf unfolding pno_step_def pfinal.simps
+  by (auto elim!: SkipSE)
+
+definition pcompletes :: "proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "pcompletes \<Pi> c s t = psteps \<Pi> (c, s, []) (SKIP, t, [])"
+
+lemma pcompletes_iff_small_termination:
+  "pcompletes \<Pi> c s t \<longleftrightarrow>
      (\<exists>cfg. psteps \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
-  unfolding pruns_to_def by auto
+  unfolding pcompletes_def by auto
 
-lemma pruns_to_skip: "pruns_to \<Pi> SKIP s s"
-  unfolding pruns_to_def by (rule star.refl)
+lemma pcompletes_iff_reaches_pfinal[simp]:
+  "pcompletes \<Pi> c s t \<longleftrightarrow>
+     (\<exists>cfg. psteps \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
+  unfolding pcompletes_def by auto
 
-lemma pruns_to_assign: "pruns_to \<Pi> (Assign x a) s (s(x := aval a s))"
-  by (simp add: pruns_to_def)
+lemma pcompletes_skip: "pcompletes \<Pi> SKIP s s"
+  unfolding pcompletes_def by (rule star.refl)
+
+lemma pcompletes_assign: "pcompletes \<Pi> (Assign x a) s (s(x := aval a s))"
+  by (simp add: pcompletes_def)
 
 (* -- Sequencing lifts through the small-step --------------------------- *)
 
@@ -136,46 +152,46 @@ lemma psteps_Seq2:
 (* -- Structural composition of terminating runs ---------------------- *)
 
 (* Running c1 to s2 then c2 to t is a run of the sequence. *)
-lemma pruns_to_Seq:
-  assumes "pruns_to \<Pi> c1 s s2" and "pruns_to \<Pi> c2 s2 t"
-  shows "pruns_to \<Pi> (Seq c1 c2) s t"
+lemma pcompletes_Seq:
+  assumes "pcompletes \<Pi> c1 s s2" and "pcompletes \<Pi> c2 s2 t"
+  shows "pcompletes \<Pi> (Seq c1 c2) s t"
 proof -
   from assms(1) have a: "star (pstep \<Pi>) (Seq c1 c2, s, []) (Seq SKIP c2, s2, [])"
-    unfolding pruns_to_def by (rule psteps_Seq2)
+    unfolding pcompletes_def by (rule psteps_Seq2)
   have b: "pstep \<Pi> (Seq SKIP c2, s2, []) (c2, s2, [])" by (rule Seq1)
   from a b assms(2) show ?thesis
-    unfolding pruns_to_def by (meson star.step star_trans)
+    unfolding pcompletes_def by (meson star.step star_trans)
 qed
 
-lemma pruns_to_IfTrue:
-  "bval b s \<Longrightarrow> pruns_to \<Pi> c1 s t \<Longrightarrow> pruns_to \<Pi> (If b c1 c2) s t"
-  unfolding pruns_to_def by (meson IfTrue star.step)
+lemma pcompletes_IfTrue:
+  "bval b s \<Longrightarrow> pcompletes \<Pi> c1 s t \<Longrightarrow> pcompletes \<Pi> (If b c1 c2) s t"
+  unfolding pcompletes_def by (meson IfTrue star.step)
 
-lemma pruns_to_IfFalse:
-  "\<not> bval b s \<Longrightarrow> pruns_to \<Pi> c2 s t \<Longrightarrow> pruns_to \<Pi> (If b c1 c2) s t"
-  unfolding pruns_to_def by (meson IfFalse star.step)
+lemma pcompletes_IfFalse:
+  "\<not> bval b s \<Longrightarrow> pcompletes \<Pi> c2 s t \<Longrightarrow> pcompletes \<Pi> (If b c1 c2) s t"
+  unfolding pcompletes_def by (meson IfFalse star.step)
 
 (* A false guard exits the loop with the store unchanged. *)
-lemma pruns_to_WhileFalse:
-  "\<not> bval b s \<Longrightarrow> pruns_to \<Pi> (While b c) s s"
-  unfolding pruns_to_def by (meson While IfFalse star.refl star.step)
+lemma pcompletes_WhileFalse:
+  "\<not> bval b s \<Longrightarrow> pcompletes \<Pi> (While b c) s s"
+  unfolding pcompletes_def by (meson While IfFalse star.refl star.step)
 
 (* A true guard runs the body then re-enters the loop. *)
-lemma pruns_to_WhileTrue:
+lemma pcompletes_WhileTrue:
   assumes b:    "bval b s"
-      and body: "pruns_to \<Pi> c s s2"
-      and rest: "pruns_to \<Pi> (While b c) s2 t"
-  shows "pruns_to \<Pi> (While b c) s t"
+      and body: "pcompletes \<Pi> c s s2"
+      and rest: "pcompletes \<Pi> (While b c) s2 t"
+  shows "pcompletes \<Pi> (While b c) s t"
 proof -
-  have seq: "pruns_to \<Pi> (Seq c (While b c)) s t"
-    using body rest by (rule pruns_to_Seq)
+  have seq: "pcompletes \<Pi> (Seq c (While b c)) s t"
+    using body rest by (rule pcompletes_Seq)
   have w: "pstep \<Pi> (While b c, s, [])
                     (If b (Seq c (While b c)) SKIP, s, [])"
     by (rule While)
   have i: "pstep \<Pi> (If b (Seq c (While b c)) SKIP, s, [])
                     (Seq c (While b c), s, [])"
     using b by (rule IfTrue)
-  from w i seq show ?thesis unfolding pruns_to_def by (meson star.step)
+  from w i seq show ?thesis unfolding pcompletes_def by (meson star.step)
 qed
 
 
@@ -260,36 +276,36 @@ lemma psteps_framed_entry:
   shows "psteps \<Pi> (cmd, s, []) (SKIP, <s|t'>, [])"
   using entry body psteps_Seq_Restore_body by (meson star.step star_trans)
 
-lemma pruns_to_Scope:
-  assumes body: "pruns_to \<Pi> c (enter_state s) t'"
-  shows "pruns_to \<Pi> (Scope c) s (<s|t'>)"
-  unfolding pruns_to_def
+lemma pcompletes_Scope:
+  assumes body: "pcompletes \<Pi> c (enter_state s) t'"
+  shows "pcompletes \<Pi> (Scope c) s (<s|t'>)"
+  unfolding pcompletes_def
   by (rule psteps_framed_entry[OF Scope])
-     (rule psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"])
+     (rule psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[s]"])
 
-lemma pruns_to_Call:
+lemma pcompletes_Call:
   assumes p: "\<Pi> p = Some c"
-  assumes body: "pruns_to \<Pi> c (enter_state s) t'"
-  shows "pruns_to \<Pi> (Call p) s (<s|t'>)"
-  unfolding pruns_to_def
+  assumes body: "pcompletes \<Pi> c (enter_state s) t'"
+  shows "pcompletes \<Pi> (Call p) s (<s|t'>)"
+  unfolding pcompletes_def
 proof (rule psteps_framed_entry)
   show "pstep \<Pi> (Call p, s, []) (Seq c Restore, enter_state s, [s])"
     using p by (rule Call)
   show "psteps \<Pi> (c, enter_state s, [s]) (SKIP, t', [s])"
-    using psteps_frame_mono[OF body[unfolded pruns_to_def], where extra = "[s]"] by simp
+    using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[s]"] by simp
 qed
 
 (* A Scope body and a Call to the same body reduce to the identical
    configuration after their first step, so they have the same terminating
    runs.  This bridges IMP2's PCall (no scope) translated as Scope (...) back
    to our Call. *)
-lemma pruns_to_Scope_Call:
+lemma pcompletes_Scope_Call:
   assumes p: "\<Pi> p = Some c"
-  assumes run: "pruns_to \<Pi> (Scope c) s t"
-  shows "pruns_to \<Pi> (Call p) s t"
+  assumes run: "pcompletes \<Pi> (Scope c) s t"
+  shows "pcompletes \<Pi> (Call p) s t"
 proof -
   have run': "psteps \<Pi> (Scope c, s, []) (SKIP, t, [])"
-    using run unfolding pruns_to_def .
+    using run unfolding pcompletes_def .
   show ?thesis
   proof (cases rule: star.cases[OF run'])
     case 1
@@ -303,7 +319,7 @@ proof -
     have "pstep \<Pi> (Call p, s, []) (Seq c Restore, enter_state s, [s])"
       using p by (rule Call)
     with tl Yval show ?thesis
-      unfolding pruns_to_def by (auto intro: star.step)
+      unfolding pcompletes_def by (auto intro: star.step)
   qed
 qed
 

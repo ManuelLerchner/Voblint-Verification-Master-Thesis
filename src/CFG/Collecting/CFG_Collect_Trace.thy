@@ -11,6 +11,17 @@ text \<open>
   along a run.  Projecting every trace to its last store (\<open>alpha_last\<close>) lands in
   the state-based collecting (\<open>alpha_last_cfg_collect_trace_le\<close>), so state-based
   soundness carries to the trace foundation by transitivity.
+
+  Trace witness
+       |
+       v
+  cfg_collect_trace
+       | alpha_last
+       v
+  cfg_collect
+       |
+       v
+  abstract interpretation
 \<close>
 
 type_synonym trace = "store list"
@@ -37,8 +48,12 @@ lemma edge_collect_single:
 subsection \<open>Last-store projection\<close>
 
 (* Projection: the last store of each trace. *)
-definition alpha_last :: "trace set => store set" where
-  "alpha_last T = {last tr | tr. tr \<in> T}"
+definition alpha_last :: "trace set \<Rightarrow> store set" where
+  "alpha_last T = last ` T"
+
+lemma alpha_last_mono:
+  "A \<subseteq> B \<Longrightarrow> alpha_last A \<subseteq> alpha_last B"
+  unfolding alpha_last_def by blast
 
 subsection \<open>Interprocedural trace witness\<close>
 
@@ -48,10 +63,11 @@ text \<open>
   edge    : extend by one CFG edge (covers intra edges AND enter edges, since
             EA_Enter is an ordinary edge_action with edge_step EA_Enter s =
             Some (enter_state s)).
-  combine : at a combine triple (c, ex, ret), splice the callee trace \<rho> (at the
-            procedure exit ex) onto the caller trace tau (at the call site c) it
-            was entered from, appending the restored return store
-            combine_states (last tau) (last \<rho>).
+  combine : at a combine triple (c, ex, ret), append the callee body trace to
+            the caller trace and then append the restored return store
+            combine_states (last tau) (last \<rho>).  The premise hd \<rho> =
+            enter_state (last tau) identifies the callee entry store, so tl \<rho>
+            avoids recording that call transition twice.
 \<close>
 inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool" for g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness g S v [s]"
@@ -62,7 +78,7 @@ inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Right
             \<Longrightarrow> trace_witness g S ex \<rho>
             \<Longrightarrow> hd \<rho> = enter_state (last tau)
             \<Longrightarrow> trace_witness g S v
-                  (tau @ \<rho> @ [<last tau|last \<rho>>])"
+                  (tau @ tl \<rho> @ [<last tau|last \<rho>>])"
 
 definition cfg_collect_trace :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
   "cfg_collect_trace g S v = {tr. trace_witness g S v tr}"
@@ -130,15 +146,11 @@ theorem alpha_last_cfg_collect_trace_le:
 subsection \<open>Digest-refined interprocedural trace collecting\<close>
 
 text \<open>
-  A digest abstracts a trace's history (calling context, lockset, ...).  The
-  digest-refined witness adds ONE premise to the combine rule: the caller and
-  callee digests must be COMPATIBLE (cmp).  Every other rule is unchanged, so the
-  refined trace set is a SUBSET of the unrefined one (cfg_collect_trace_d_subset).
-  Soundness therefore carries over verbatim (reaching_global_read_sound_d in
-  Trace_Analysis_Sound) -- the digest hook only SHRINKS the trace set.  This
-  mechanizes the claim that the ''combine_at digest hook preserves soundness'';
-  choosing a concrete digest + proving strictly tighter reads is the precision
-  payoff (Example_Trace_Digest_Precision).
+  A digest compresses execution history into a finite context, such as call
+  strings or locksets.  The only semantic change is an additional compatibility
+  check in the combine rule.  Consequently the refined trace semantics is a
+  subset of the original one, preserving soundness while enabling more precise
+  analyses.
 \<close>
 inductive trace_witness_d ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool"
@@ -152,7 +164,7 @@ inductive trace_witness_d ::
             \<Longrightarrow> hd \<rho> = enter_state (last tau)
             \<Longrightarrow> cmp (dg tau) (dg \<rho>)
             \<Longrightarrow> trace_witness_d dg cmp g S v
-                  (tau @ \<rho> @ [<last tau|last \<rho>>])"
+                  (tau @ tl \<rho> @ [<last tau|last \<rho>>])"
 
 definition cfg_collect_trace_d ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
@@ -167,12 +179,38 @@ theorem cfg_collect_trace_d_subset:
   unfolding cfg_collect_trace_d_def cfg_collect_trace_def
   using trace_witness_d_imp by blast
 
+theorem alpha_last_cfg_collect_trace_d_le:
+  "alpha_last (cfg_collect_trace_d dg cmp g S v) \<subseteq> cfg_collect g S v"
+proof -
+  have "alpha_last (cfg_collect_trace_d dg cmp g S v)
+      \<subseteq> alpha_last (cfg_collect_trace g S v)"
+    by (rule alpha_last_mono[OF cfg_collect_trace_d_subset])
+  also have "... \<subseteq> cfg_collect g S v"
+    by (rule alpha_last_cfg_collect_trace_le)
+  finally show ?thesis .
+qed
+
 (* Reader-side digest filter: the traces reaching v whose digest is compatible
    with the reading digest d.  The precise (history-sensitive) global read joins
    only over reaching_compat, not over all reaching traces. *)
 definition reaching_compat ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
   "reaching_compat dg cmp d g S v = {tr \<in> cfg_collect_trace g S v. cmp (dg tr) d}"
+
+lemma reaching_compat_subset:
+  "reaching_compat dg cmp d g S v \<subseteq> cfg_collect_trace g S v"
+  unfolding reaching_compat_def by blast
+
+theorem alpha_last_reaching_compat_le:
+  "alpha_last (reaching_compat dg cmp d g S v) \<subseteq> cfg_collect g S v"
+proof -
+  have "alpha_last (reaching_compat dg cmp d g S v)
+      \<subseteq> alpha_last (cfg_collect_trace g S v)"
+    by (rule alpha_last_mono[OF reaching_compat_subset])
+  also have "... \<subseteq> cfg_collect g S v"
+    by (rule alpha_last_cfg_collect_trace_le)
+  finally show ?thesis .
+qed
 
 
 end

@@ -66,14 +66,14 @@ lemma combine_after_enter_global_assign:
 
 lemma pcall_global_increment_cfg_collect:
   fixes s :: store
-  shows "s(''Gx'' := s ''Gx'' + 1) \<in> cfg_collect inc_g (singleton_store s) (cfg_exit inc_g)"
+  shows "s(''Gx'' := s ''Gx'' + 1) \<in> cfg_collect inc_g {s} (cfg_exit inc_g)"
 proof -
-  let ?g = inc_g and ?S = "singleton_store s"
+  let ?g = inc_g and ?S = "{s}"
     and ?t = "s(''Gx'' := s ''Gx'' + 1)"
-  have entry: "singleton_store s \<subseteq> cfg_collect ?g ?S (cfg_entry ?g)"
+  have entry: "{s} \<subseteq> cfg_collect ?g ?S (cfg_entry ?g)"
     using cfg_collect_entry by simp
   have s_at_call: "s \<in> cfg_collect ?g ?S 2"
-    using entry inc_g_structure(1) singleton_store_def by auto
+    using entry inc_g_structure(1) by auto
   have en: "(2, EA_Enter, 0) \<in> edges ?g"
     using inc_g_structure by simp
   have enter: "enter_state s \<in> cfg_collect ?g ?S 0"
@@ -111,30 +111,30 @@ lemma cfg_runs_to_pcall_global_increment:
   shows "cfg_runs_to inc_pi [''p''] (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   have "s(''Gx'' := s ''Gx'' + 1)
-      \<in> cfg_collect inc_g (singleton_store s) (cfg_exit inc_g)"
+      \<in> cfg_collect inc_g {s} (cfg_exit inc_g)"
     using pcall_global_increment_cfg_collect by simp
   thus ?thesis
     unfolding cfg_runs_to_def
-    by (simp add: inc_g_eq_compile Let_def)
+    by (auto simp: inc_g_eq_compile Let_def)
 qed
 
-lemma pruns_to_inc_pcall:
+lemma pcompletes_inc_pcall:
   fixes s :: store
-  shows "pruns_to inc_pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pcompletes inc_pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have run: "pruns_to inc_pi (Call ''p'') s
+  have run: "pcompletes inc_pi (Call ''p'') s
                 (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
-  proof (rule pruns_to_Call[where c = ?body])
+  proof (rule pcompletes_Call[where c = ?body])
     show "inc_pi ''p'' = Some ?body"
       by (simp add: inc_pi_def inc_program_parts)
-    show "pruns_to inc_pi ?body (enter_state s)
+    show "pcompletes inc_pi ?body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pruns_to inc_pi ?body (enter_state s)
+      have "pcompletes inc_pi ?body (enter_state s)
                ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
-        by (rule pruns_to_assign)
+        by (rule pcompletes_assign)
       thus ?thesis using aval_plus_gx_on_enter by simp
     qed
   qed

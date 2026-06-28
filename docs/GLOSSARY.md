@@ -22,7 +22,7 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `store`                                        | `vname => int` — concrete program state.                                                                                                                | `IMP2_Syntax.thy:26`  |
 | `pname`                                        | `string` — procedure name.                                                                                                                              | `IMP2_Globals.thy:17` |
 | `is_global` / `combine_states` / `enter_state` | Global-variable handling: globals survive scope entry; locals are reset.                                                                                | `IMP2_Globals.thy`    |
-| `pruns_to`                                     | Procedural big-step: `proc_table => com => store => store => bool`.                                                                                     | `IMP2_Proc.thy:141`   |
+| `pcompletes`                                     | Procedural completion: `proc_table => com => store => store => bool`; reaches `pfinal`. See `pcompletes_iff_small_termination`. | `IMP2_Proc.thy` |
 | `aval` / `bval`                                | Concrete arithmetic / boolean expression evaluation.                                                                                                    | `IMP2_Expr.thy`       |
 
 ## CFG layer

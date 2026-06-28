@@ -62,7 +62,7 @@ lemma count_HT:
 *)
 theorem count_via_imp2_vcg:
   assumes n0: "0 \<le> s ''n'' 0"
-  shows "\<exists>t. pruns_to Map.empty count_prog (proj0 s) t \<and> t ''i'' = s ''n'' 0"
+  shows "\<exists>t. pcompletes Map.empty count_prog (proj0 s) t \<and> t ''i'' = s ''n'' 0"
 proof -
   have "wp (to_imp2_pi Map.empty) (to_imp2_com count_prog)
            (\<lambda>t. t ''i'' 0 = s ''n'' 0) s"
@@ -72,7 +72,7 @@ proof -
       and q:  "t ''i'' 0 = s ''n'' 0"
     by (auto simp: wp_def)
   have sp: "source_pi Map.empty" by (simp add: source_pi_def)
-  have "pruns_to Map.empty count_prog (proj0 s) (proj0 t)"
+  have "pcompletes Map.empty count_prog (proj0 s) (proj0 t)"
     using backward_sim[OF bs sp refl source_count_prog] .
   moreover have "proj0 t ''i'' = s ''n'' 0" using q by (simp add: proj0_def)
   ultimately show ?thesis by blast

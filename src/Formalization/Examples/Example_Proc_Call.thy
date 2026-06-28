@@ -55,20 +55,20 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pruns_to proc_pi (Call ''inc'') s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes proc_pi (Call ''inc'') s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have run: "pruns_to proc_pi (Call ''inc'') s
+  have run: "pcompletes proc_pi (Call ''inc'') s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
-  proof (rule pruns_to_Call[where c = inc_body])
+  proof (rule pcompletes_Call[where c = inc_body])
     show "proc_pi ''inc'' = Some inc_body"
       by (simp add: proc_pi_def)
-    show "pruns_to proc_pi inc_body (enter_state s)
+    show "pcompletes proc_pi inc_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pruns_to proc_pi (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))
+      have "pcompletes proc_pi (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))
                (enter_state s)
                ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
-        by (rule pruns_to_assign)
+        by (rule pcompletes_assign)
       moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state s) = s ''Gx'' + 1"
         by (simp add: enter_state_def is_global_def)
       ultimately show ?thesis by (simp add: inc_body_def)
@@ -80,20 +80,20 @@ proof -
 qed
 
 lemma call_sqr_result:
-  "pruns_to proc_pi (Call ''sqr'') s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes proc_pi (Call ''sqr'') s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
-  have run: "pruns_to proc_pi (Call ''sqr'') s
+  have run: "pcompletes proc_pi (Call ''sqr'') s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
-  proof (rule pruns_to_Call[where c = sqr_body])
+  proof (rule pcompletes_Call[where c = sqr_body])
     show "proc_pi ''sqr'' = Some sqr_body"
       by (simp add: proc_pi_def)
-    show "pruns_to proc_pi sqr_body (enter_state s)
+    show "pcompletes proc_pi sqr_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
     proof -
-      have "pruns_to proc_pi (Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')))
+      have "pcompletes proc_pi (Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')))
                (enter_state s)
                ((enter_state s)(''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s)))"
-        by (rule pruns_to_assign)
+        by (rule pcompletes_assign)
       moreover have "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s) = s ''Gx'' * s ''Gx''"
         by (simp add: enter_state_def is_global_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
@@ -109,21 +109,20 @@ text \<open>
   initial store, regardless of @{term \<open>''Gx''\<close>}'s starting value.
 \<close>
 theorem main_prog_result:
-  "pruns_to proc_pi main_prog s (s(''Gx'' := 25))"
+  "pcompletes proc_pi main_prog s (s(''Gx'' := 25))"
 proof -
-  have step1: "pruns_to proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
-    using pruns_to_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s,
-                          simplified]
-    by assumption
-  have step2: "pruns_to proc_pi (Call ''inc'') (s(''Gx'' := 4)) (s(''Gx'' := 5))"
-    using call_inc_result[where s = "s(''Gx'' := 4)", simplified]
-    by assumption
-  have step3: "pruns_to proc_pi (Call ''sqr'') (s(''Gx'' := 5)) (s(''Gx'' := 25))"
-    using call_sqr_result[where s = "s(''Gx'' := 5)", simplified]
-    by assumption
+  have step1: "pcompletes proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
+    using pcompletes_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
+    by (simp add: pcompletes_def)
+  have step2: "pcompletes proc_pi (Call ''inc'') (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+    using call_inc_result[where s = "s(''Gx'' := 4)"]
+    by simp
+  have step3: "pcompletes proc_pi (Call ''sqr'') (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+    using call_sqr_result[where s = "s(''Gx'' := 5)"]
+    by simp
   show ?thesis
     unfolding main_prog_def
-    by (rule pruns_to_Seq[OF pruns_to_Seq[OF step1 step2] step3])
+    by (rule pcompletes_Seq[OF pcompletes_Seq[OF step1 step2] step3])
 qed
 
 subsection \<open>Interprocedural CFG\<close>

@@ -1,0 +1,31 @@
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+[mcp_servers.isabelle-iq]
+command = "python3"
+args = ["vendor/autocorrode/iq/iq_bridge.py"]
+
+[mcp_servers.isabelle-iq.env]
+IQ_AUTH_TOKEN = "isabelle-local"
+IQ_MCP_BRIDGE_HOST = "127.0.0.1"
+IQ_MCP_BRIDGE_PORT = "8765"
+IQ_MCP_ALLOWED_ROOTS = "/Users/manuellerchner/git/goblint-formalization"
+IQ_MCP_ALLOWED_READ_ROOTS = "/Users/manuellerchner/git/goblint-formalization"
+
+[mcp_servers.isabelle-iq.tools.read_file]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.write_file]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.save_file]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_diagnostics]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-ir]
+url = "http://localhost:9148/mcp"
+
+[mcp_servers.isabelle-ir.http_headers]
+Authorization = "Bearer isabelle-local"
+Accept = "application/json, text/event-stream"

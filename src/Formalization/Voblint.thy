@@ -70,7 +70,7 @@ text \<open>
     \<^item> @{theory Voblint_IMP2.IMP2_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_IMP2.IMP2_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
     \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
-    \<^item> @{theory Voblint_IMP2.IMP2_Bridge} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pruns_to\<close>.
+    \<^item> @{theory Voblint_IMP2.IMP2_Bridge} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pcompletes\<close>.
 
   \<^bold>\<open>2. Control-flow graph.\<close> CFG construction and the collecting semantics it carries.
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node and edge types, predecessor enumeration, finite code lists.

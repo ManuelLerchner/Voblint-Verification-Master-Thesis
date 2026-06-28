@@ -10,18 +10,14 @@ text \<open>
   the stores collected at the compiled CFG exit.
 \<close>
 
-
-definition singleton_store :: "store \<Rightarrow> store set" where
-  "singleton_store s = {s}"
-
 definition cfg_runs_to ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "cfg_runs_to \<Pi> ps c s t =
-     (let g = compile_prog \<Pi> ps c in t \<in> cfg_collect g (singleton_store s) (cfg_exit g))"
+     (let g = compile_prog \<Pi> ps c in t \<in> cfg_collect g {s} (cfg_exit g))"
 
 lemma cfg_runs_toD[elim]:
   "cfg_runs_to \<Pi> ps c s t
-   \<Longrightarrow> t \<in> cfg_collect (compile_prog \<Pi> ps c) (singleton_store s)
+   \<Longrightarrow> t \<in> cfg_collect (compile_prog \<Pi> ps c) {s}
                   (cfg_exit (compile_prog \<Pi> ps c))"
   unfolding cfg_runs_to_def by (auto simp: Let_def)
 

@@ -35,7 +35,7 @@ proof -
     "t \<in> cfg_collect (compile_prog inc_pi [''p''] (Call ''p'')) {s}
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
     using runs unfolding cfg_runs_to_def
-    by (metis singleton_store_def)
+    by metis
   show ?thesis
     by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 qed

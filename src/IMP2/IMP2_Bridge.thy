@@ -220,7 +220,7 @@ definition source_pi :: "proc_table => bool" where
   Every terminating AFP IMP2 run of a translated source command is reproduced
   by our frame-stack small-step semantics, read back through proj0.  The proof
   is by rule induction on IMP2's big-step derivation; each rule maps to the
-  matching pruns_to combinator.  source_pi pins down that procedure bodies are
+  matching pcompletes combinator.  source_pi pins down that procedure bodies are
   source commands (no runtime-only Restore); the runtime-only IMP2 commands
   (ArrayCpy, CLEAR, Assign_Locals, PScope) are never in the range of
   to_imp2_com and hence vacuous.
@@ -229,19 +229,19 @@ definition source_pi :: "proc_table => bool" where
 lemma backward_sim_aux:
   assumes sp: "source_pi \<Pi>"
   shows "big_step Pg (cm, S) T ==> Pg = to_imp2_pi \<Pi> ==> cm = to_imp2_com c
-          ==> source_com c ==> pruns_to \<Pi> c (proj0 S) (proj0 T)"
+          ==> source_com c ==> pcompletes \<Pi> c (proj0 S) (proj0 T)"
 proof (induction arbitrary: c rule: big_step_induct)
   case (Skip Pg s)
   hence "c = IMP2_Proc.com.SKIP" by (cases c) auto
-  thus ?case by (simp add: pruns_to_skip)
+  thus ?case by (simp add: pcompletes_skip)
 next
   case (AssignIdx Pg x i a s)
   then obtain a0 where c: "c = IMP2_Proc.com.Assign x a0"
       and ae: "a = to_imp2_aexp a0" and ie: "i = Syntax.N 0"
     by (cases c) auto
-  have run: "pruns_to \<Pi> (IMP2_Proc.com.Assign x a0) (proj0 s)
+  have run: "pcompletes \<Pi> (IMP2_Proc.com.Assign x a0) (proj0 s)
                ((proj0 s)(x := IMP2_Expr.aval a0 (proj0 s)))"
-    by (rule pruns_to_assign)
+    by (rule pcompletes_assign)
   have res: "proj0 (s(x := (s x)(Semantics.aval i s := Semantics.aval a s)))
                = (proj0 s)(x := IMP2_Expr.aval a0 (proj0 s))"
     using ae ie by (auto simp: proj0_def aval_to_imp2_sim fun_eq_iff)
@@ -261,12 +261,12 @@ next
       and 1: "cm1 = to_imp2_com a" and 2: "cm2 = to_imp2_com b"
     by (cases c) auto
   from Seq.prems c have sa: "source_com a" and sb: "source_com b" by auto
-  have r1: "pruns_to \<Pi> a (proj0 s1) (proj0 s2)"
+  have r1: "pcompletes \<Pi> a (proj0 s1) (proj0 s2)"
     using Seq.IH(1)[OF Seq.prems(1) 1 sa] .
-  have r2: "pruns_to \<Pi> b (proj0 s2) (proj0 s3)"
+  have r2: "pcompletes \<Pi> b (proj0 s2) (proj0 s3)"
     using Seq.IH(2)[OF Seq.prems(1) 2 sb] .
-  from r1 r2 have "pruns_to \<Pi> (IMP2_Proc.com.Seq a b) (proj0 s1) (proj0 s3)"
-    by (rule pruns_to_Seq)
+  from r1 r2 have "pcompletes \<Pi> (IMP2_Proc.com.Seq a b) (proj0 s1) (proj0 s3)"
+    by (rule pcompletes_Seq)
   thus ?case using c by simp
 next
   case (IfTrue b s Pg cm1 t cm2)
@@ -277,10 +277,10 @@ next
   from IfTrue.prems c have sa: "source_com a" by auto
   have guard: "IMP2_Expr.bval b0 (proj0 s)"
     using IfTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  have bodyrun: "pruns_to \<Pi> a (proj0 s) (proj0 t)"
+  have bodyrun: "pcompletes \<Pi> a (proj0 s) (proj0 t)"
     using IfTrue.IH[OF IfTrue.prems(1) 1 sa] .
-  from guard bodyrun have "pruns_to \<Pi> (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
-    by (rule pruns_to_IfTrue)
+  from guard bodyrun have "pcompletes \<Pi> (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
+    by (rule pcompletes_IfTrue)
   thus ?case using c by simp
 next
   case (IfFalse b s Pg cm2 t cm1)
@@ -291,22 +291,22 @@ next
   from IfFalse.prems c have sd: "source_com d" by auto
   have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using IfFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  have bodyrun: "pruns_to \<Pi> d (proj0 s) (proj0 t)"
+  have bodyrun: "pcompletes \<Pi> d (proj0 s) (proj0 t)"
     using IfFalse.IH[OF IfFalse.prems(1) 2 sd] .
-  from guard bodyrun have "pruns_to \<Pi> (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
-    by (rule pruns_to_IfFalse)
+  from guard bodyrun have "pcompletes \<Pi> (IMP2_Proc.com.If b0 a d) (proj0 s) (proj0 t)"
+    by (rule pcompletes_IfFalse)
   thus ?case using c by simp
 next
   case (Scope Pg cm0 s s')
   then obtain a where c: "c = IMP2_Proc.com.Scope a" and 0: "cm0 = to_imp2_com a"
     by (cases c) auto
   from Scope.prems c have sa: "source_com a" by auto
-  have body: "pruns_to \<Pi> a (enter_state (proj0 s)) (proj0 s')"
+  have body: "pcompletes \<Pi> a (enter_state (proj0 s)) (proj0 s')"
     using Scope.IH[OF Scope.prems(1) 0 sa] by (simp add: proj0_null_combine)
-  have "pruns_to \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
+  have "pcompletes \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
           (IMP2_Globals.combine_states (proj0 s) (proj0 s'))"
-    using body by (rule pruns_to_Scope)
-  hence "pruns_to \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
+    using body by (rule pcompletes_Scope)
+  hence "pcompletes \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
           (proj0 (Semantics.combine_states s s'))"
     by (simp add: proj0_combine_states)
   thus ?case using c by simp
@@ -317,8 +317,8 @@ next
     by (cases c) auto
   have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using WhileFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  from guard have "pruns_to \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s) (proj0 s)"
-    by (rule pruns_to_WhileFalse)
+  from guard have "pcompletes \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s) (proj0 s)"
+    by (rule pcompletes_WhileFalse)
   thus ?case using c by simp
 next
   case (WhileTrue b s1 Pg cm0 s2 s3)
@@ -328,16 +328,16 @@ next
   from WhileTrue.prems c have sa: "source_com a" by auto
   have guard: "IMP2_Expr.bval b0 (proj0 s1)"
     using WhileTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
-  have bodyrun: "pruns_to \<Pi> a (proj0 s1) (proj0 s2)"
+  have bodyrun: "pcompletes \<Pi> a (proj0 s1) (proj0 s2)"
     using WhileTrue.IH(1)[OF WhileTrue.prems(1) ce sa] .
   have eqw: "Syntax.While b cm0 = to_imp2_com (IMP2_Proc.com.While b0 a)"
     using be ce by simp
   have sw: "source_com (IMP2_Proc.com.While b0 a)" using sa by simp
-  have looprun: "pruns_to \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s2) (proj0 s3)"
+  have looprun: "pcompletes \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s2) (proj0 s3)"
     using WhileTrue.IH(2)[OF WhileTrue.prems(1) eqw sw] .
   from guard bodyrun looprun
-  have "pruns_to \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s1) (proj0 s3)"
-    by (rule pruns_to_WhileTrue)
+  have "pcompletes \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s1) (proj0 s3)"
+    by (rule pcompletes_WhileTrue)
   thus ?case using c by simp
 next
   case (PCall Pg p cbody s t)
@@ -348,10 +348,10 @@ next
   from sp pip have s0: "source_com c0" by (auto simp: source_pi_def)
   have eq: "cbody = to_imp2_com (IMP2_Proc.com.Scope c0)" using cb by simp
   have sc0: "source_com (IMP2_Proc.com.Scope c0)" using s0 by simp
-  have scoperun: "pruns_to \<Pi> (IMP2_Proc.com.Scope c0) (proj0 s) (proj0 t)"
+  have scoperun: "pcompletes \<Pi> (IMP2_Proc.com.Scope c0) (proj0 s) (proj0 t)"
     using PCall.IH[OF PCall.prems(1) eq sc0] .
-  have "pruns_to \<Pi> (IMP2_Proc.com.Call p) (proj0 s) (proj0 t)"
-    by (rule pruns_to_Scope_Call[OF pip scoperun])
+  have "pcompletes \<Pi> (IMP2_Proc.com.Call p) (proj0 s) (proj0 t)"
+    by (rule pcompletes_Scope_Call[OF pip scoperun])
   thus ?case using c by simp
 next
   case (PScope Pg pi' cm0 s t)
@@ -363,7 +363,7 @@ qed
   IMP2's standard concrete semantics.  Whenever the translated source program
   terminates under IMP2 big-step, our small-step semantics reaches the same
   final store (read back through proj0).  Composed with the existing pipeline
-  soundness (stated against pruns_to / cfg_collect), this transfers soundness to
+  soundness (stated against pcompletes / cfg_collect), this transfers soundness to
   AFP IMP2 with no further proof obligation on the analyzer side.
 *)
 
@@ -372,8 +372,30 @@ theorem backward_sim:
       and sp: "source_pi \<Pi>"
       and cc: "cm = to_imp2_com c"
       and sc: "source_com c"
-  shows "pruns_to \<Pi> c (proj0 S) (proj0 T)"
+  shows "pcompletes \<Pi> c (proj0 S) (proj0 T)"
   using backward_sim_aux[OF sp bs refl cc sc] .
+
+corollary big_step_imp_pcompletes:
+  assumes run: "big_step (to_imp2_pi \<Pi>) (to_imp2_com c, S) T"
+      and sp: "source_pi \<Pi>"
+      and sc: "source_com c"
+  shows "pcompletes \<Pi> c (proj0 S) (proj0 T)"
+  using backward_sim[OF run sp refl sc] .
+
+lemma ex_big_step_imp_ex_pcompletes:
+  assumes sp: "source_pi \<Pi>"
+      and sc: "source_com c"
+      and run: "big_step (to_imp2_pi \<Pi>) (to_imp2_com c, S) T"
+  shows "\<exists>t. pcompletes \<Pi> c (proj0 S) t"
+  using big_step_imp_pcompletes[OF run sp sc] by blast
+
+text \<open>
+  Concrete Semantics equates big-step termination with reaching a final
+  small-step configuration.  Here @{term pcompletes_iff_small_termination} is
+  the small-step side (reach @{term pfinal}); @{term ex_big_step_imp_ex_pcompletes}
+  is the big-to-small direction.  The converse (every @{term pcompletes} run
+  comes from a @{term big_step}) is forward simulation (Track A, open).
+\<close>
 
 subsection \<open>Executable examples\<close>
 
