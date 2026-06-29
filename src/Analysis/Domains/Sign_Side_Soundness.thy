@@ -6,40 +6,74 @@ section \<open>Sign domain: effectful transfer instance\<close>
 
 text \<open>
   The Sign domain provides the effectful transfer record consumed by TD_side.
-  Each edge tree queries the local program point and the unit global slot,
-  applies the sign transfer, then splits the result into local and global parts.
+  @{const mixed_etf_of_transfer} dispatches local edges to
+  @{const local_edge_tree} and global edges to @{const unit_edge_tree}.
 \<close>
 
 definition sign_etf :: "(unit, sign) effectful_domain_transfer" where
-  "sign_etf = \<lparr>
-    etf_nop        = pure_edge_tree sign_tf EA_Nop,
-    etf_assign     = (\<lambda>x e. pure_edge_tree sign_tf (EA_Assign x e)),
-    etf_assume     = (\<lambda>b. pure_edge_tree sign_tf (EA_Assume b)),
-    etf_assume_not = (\<lambda>b. pure_edge_tree sign_tf (EA_AssumeNot b)),
-    etf_enter      = pure_edge_tree sign_tf EA_Enter,
-    etf_combine    = pure_combine_tree
-  \<rparr>"
+  "sign_etf = mixed_etf_of_transfer sign_tf"
 
-lemma sign_etf_pure_transfer:
-  "pure_effectful_transfer sign_tf sign_etf"
-  unfolding sign_etf_def pure_effectful_transfer_def by simp
+lemma sign_etf_edge_tree:
+  "apply_etf sign_etf a u = mixed_etf_edge_tree sign_tf a u"
+  unfolding sign_etf_def apply_etf_mixed_of_transfer by simp
 
-text \<open>
-  The Sign domain satisfies the effectful soundness contract: every per-action
-  tree's reassembled full result over-approximates the concrete edge step.
-\<close>
+lemma sign_etf_edge_tree_mixed:
+  "apply_etf sign_etf a u =
+   (if local_edge_action a then local_edge_tree (apply_tf sign_tf a) u
+    else unit_edge_tree (apply_tf sign_tf a) u)"
+  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def by simp
+
+lemma sign_etf_combine_tree:
+  "etf_combine sign_etf cc ex = unit_combine_tree cc ex"
+  unfolding sign_etf_def etf_combine_mixed_of_transfer by simp
 
 lemma sign_sound_etf:
   "sound_effectful_transfer sign_etf"
-  by (rule sound_transfer_imp_sound_effectful_pure_etf
-        [OF sign_sound_tf.sound_transfer_axioms sign_etf_pure_transfer])
+  unfolding sign_etf_def
+  by (rule sound_effectful_transfer_mixed_of_transfer
+        [OF sign_is_sound_transfer sign_tf_local_edge_invariant])
 
 lemma sign_etf_cone_compatible: "cone_compatible_etf sign_etf"
-  by (rule cone_compatible_etf_pure_transfer[OF sign_etf_pure_transfer])
+  by (rule cone_compatible_etf_local_unit_transfer
+       [OF sign_etf_edge_tree_mixed sign_etf_combine_tree])
 
 lemma sign_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff g sign_etf bot0 s0 ())"
-  by (rule threefold_mono_pure_transfer[OF sign_etf_pure_transfer sign_tf_mono])
+  by (rule threefold_mono_local_unit_transfer
+       [OF sign_etf_edge_tree_mixed sign_etf_combine_tree sign_tf_mono])
+
+subsection \<open>Unit-only sign ETF (executable transport)\<close>
+
+text \<open>
+  Exec soundness bridges unit-shaped executable trees to this abstract
+  unit-only effectful record.  The mixed @{const sign_etf} is for
+  @{const side_analyse_eff}.
+\<close>
+
+definition sign_etf_unit :: "(unit, sign) effectful_domain_transfer" where
+  "sign_etf_unit = unit_etf_of_transfer sign_tf"
+
+lemma sign_etf_unit_edge_tree:
+  "apply_etf sign_etf_unit a u = unit_edge_tree (apply_tf sign_tf a) u"
+  unfolding sign_etf_unit_def apply_etf_unit_of_transfer by simp
+
+lemma sign_etf_unit_combine_tree:
+  "etf_combine sign_etf_unit cc ex = unit_combine_tree cc ex"
+  unfolding sign_etf_unit_def etf_combine_unit_of_transfer by simp
+
+lemma sign_sound_etf_unit:
+  "sound_effectful_transfer sign_etf_unit"
+  unfolding sign_etf_unit_def
+  by (rule sound_effectful_transfer_unit_of_transfer [OF sign_is_sound_transfer])
+
+lemma sign_etf_unit_cone_compatible: "cone_compatible_etf sign_etf_unit"
+  by (rule cone_compatible_etf_unit_transfer
+       [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree])
+
+lemma sign_etf_unit_threefold_mono:
+  "threefold_mono (side_cfg_T_eff g sign_etf_unit bot0 s0 ())"
+  by (rule threefold_mono_unit_transfer
+       [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree sign_tf_mono])
 
 section \<open>Sign domain: standalone effectful interprocedural soundness\<close>
 

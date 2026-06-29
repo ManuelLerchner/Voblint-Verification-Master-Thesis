@@ -74,7 +74,7 @@ sign_tf_st_commute:
 `part_post_solution_st_to_abs_eff` (in `Exec_Bridge.thy`) converts a TD
 post-fixpoint in `sign st` space into one for the effectful equation system used
 by the abstract soundness proof. The current executable transport still uses the
-pure-transfer compatibility adapter internally; the domain-facing theorem path
+unit-global effectful tree equations internally; the domain-facing theorem path
 uses `sign_etf`.
 
 **C-faithful seed:** `cinit_sign_st :: sign st` represents
@@ -86,7 +86,7 @@ concretisation is `cinit_stores` (defined in `Constraint_System.thy`).
 
 ```isabelle
 sign_exec_eqs Π ps main =
-  side_cfg_T_st (compile_prog Π ps main) sign_tf_st ⊥ cinit_sign_st
+  side_cfg_T_eff_st (compile_prog Π ps main) sign_etf_st bot cinit_sign_st ()
 ```
 
 Packages CFG + executable transfer function + seed into the solver's
@@ -97,7 +97,7 @@ list-built mirror.  The vendored `TD_side_always_join_Interp` runs on it
 and returns a stable assignment.  The soundness proof:
 
 1. Unwrap solver output: `TD_side_always_join_Interp.partial_post_solution`
-2. Lift to the effectful system: `part_post_solution_st_to_abs_eff` (uses commutation)
+2. Lift to the effectful system: `part_post_solution_st_to_abs_eff_unit_transfer` (uses commutation)
 4. Cover entry: `cinit_stores ⊆ γ(cinit_sign_st)` (provable by `auto`)
 5. Apply soundness engine: `sign_sound_etf.side_collect_sound_exit_pruned_eff`
 

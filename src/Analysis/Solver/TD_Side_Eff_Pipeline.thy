@@ -19,6 +19,36 @@ text \<open>
   static_deps_seqcomp on its construction.
 \<close>
 
+subsection \<open>Threefold monotonicity\<close>
+
+text \<open>
+  threefold_mono bundles the three TD_side preconditions required for the
+  solver to converge to a partial post-solution (paper Definition 7).
+
+  is_mono_eq: the equation value is monotone in the environment.
+  mono_sides: the side-effect map is monotone in the environment.
+  mono_deps: the dependency skeleton is a shrinking function of the
+             environment (larger env => smaller or equal dep set).
+
+  These three conditions together let the TD_side solver use the
+  optimized destab_opt=True strategy and guarantee a least partial
+  post-solution.
+\<close>
+
+definition threefold_mono ::
+  "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> bool"
+where
+  "threefold_mono T \<equiv> is_mono_eq T \<and> mono_sides T \<and> mono_deps T"
+
+lemma threefold_monoD_eq:   "threefold_mono T \<Longrightarrow> is_mono_eq T"
+  unfolding threefold_mono_def by blast
+
+lemma threefold_monoD_sides: "threefold_mono T \<Longrightarrow> mono_sides T"
+  unfolding threefold_mono_def by blast
+
+lemma threefold_monoD_deps:  "threefold_mono T \<Longrightarrow> mono_deps T"
+  unfolding threefold_mono_def by blast
+
 subsection \<open>Solver interface from the per-tree contract\<close>
 
 lemma td_cfg_side_solver_eff_gen:
@@ -76,7 +106,9 @@ theorem side_collect_sound_at_eff:
       and entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
       and edge_cov: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> w \<in> vars"
       and combine_cov: "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow> ret \<in> vars"
+      and inr: "inr_slot_locals_bot \<sigma>"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
+
 proof -
   interpret se: sound_effectful_transfer etf by (rule se)
   have step_le:
@@ -95,7 +127,8 @@ proof -
       by (rule etf_combine_combined_le_eff[OF pp combine_cov[OF cmb] cmb finC])
   qed
   show ?thesis
-    by (rule se.post_fixpoint_sound_at_eff[OF entry step_le combine_le order_refl])
+    by (rule se.post_fixpoint_sound_at_eff[OF inr entry step_le combine_le order_refl])
+
 qed
 
 subsection \<open>Cone-compatibility\<close>
@@ -112,33 +145,50 @@ text \<open>
 \<close>
 
 definition cone_compatible_etf ::
-  "('g::finite, 'a::sound_domain) effectful_domain_transfer \<Rightarrow> bool"
+  "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer \<Rightarrow> bool"
 where
   "cone_compatible_etf etf \<equiv>
      (\<forall>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)) \<and>
      (\<forall>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)) \<and>
      (\<forall>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)) \<and>
      (\<forall>a u. static_deps (apply_etf etf a u)) \<and>
-     (\<forall>cc ex. static_deps (etf_combine etf cc ex))"
+     (\<forall>cc ex. static_deps (etf_combine etf cc ex)) \<and>
+     (\<forall>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
+     (\<forall>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g)))"
+
+
 
 lemma cone_compatible_etf_edge_dep:
   "cone_compatible_etf etf \<Longrightarrow> Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  unfolding cone_compatible_etf_def by blast
+  unfolding cone_compatible_etf_def by auto
+
 
 lemma cone_compatible_etf_comb_dep1:
   "cone_compatible_etf etf \<Longrightarrow> Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  unfolding cone_compatible_etf_def by blast
+  unfolding cone_compatible_etf_def by auto
+
 
 lemma cone_compatible_etf_comb_dep2:
   "cone_compatible_etf etf \<Longrightarrow> Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  unfolding cone_compatible_etf_def by blast
+  unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_edge_static:
   "cone_compatible_etf etf \<Longrightarrow> static_deps (apply_etf etf a u)"
-  unfolding cone_compatible_etf_def by blast
+  unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_comb_static:
   "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_combine etf cc ex)"
-  unfolding cone_compatible_etf_def by blast
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_edge_inr:
+  "cone_compatible_etf etf \<Longrightarrow>
+     local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_comb_inr:
+  "cone_compatible_etf etf \<Longrightarrow>
+     local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+  unfolding cone_compatible_etf_def by auto
+
 
 end

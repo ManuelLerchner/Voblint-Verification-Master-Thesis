@@ -90,6 +90,7 @@ corollary sign_mixed_flow_sound_from_pp:
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))) \<sigma> vars"
   assumes entry:
     "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry (compile_prog inc_pi [''p''] (Call ''p'')))\<rbrakk>"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes tr_in:
     "tr \<in> cfg_collect_trace (compile_prog inc_pi [''p''] (Call ''p'')) S
        (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
@@ -100,7 +101,7 @@ corollary sign_mixed_flow_sound_from_pp:
         [OF sign_sound_etf pp entry sign_etf_cone_compatible
             compile_prog_finite[THEN conjunct1]
             compile_prog_finite[THEN conjunct2]
-            tr_in])
+            inr tr_in])
 
 end
 

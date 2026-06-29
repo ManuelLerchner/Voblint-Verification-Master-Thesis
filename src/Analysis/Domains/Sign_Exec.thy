@@ -227,6 +227,30 @@ next
   then show ?thesis by (simp add: sign_tf_def enter_sign_st_commute)
 qed
 
+subsection \<open>Executable effectful transfer record\<close>
+
+definition sign_etf_st :: "(unit, sign st) effectful_st_transfer" where
+  "sign_etf_st = \<lparr>
+    etf_st_nop        = unit_edge_tree_st (sign_tf_st EA_Nop),
+    etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (sign_tf_st (EA_Assign x e))),
+    etf_st_assume     = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_Assume b))),
+    etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_AssumeNot b))),
+    etf_st_enter      = unit_edge_tree_st (sign_tf_st EA_Enter),
+    etf_st_combine    = unit_combine_tree_st
+  \<rparr>"
+
+lemma sign_etf_st_edge_tree:
+  "apply_etf_st sign_etf_st a u = unit_edge_tree_st (sign_tf_st a) u"
+  unfolding sign_etf_st_def by (cases a) simp_all
+
+lemma sign_etf_st_combine_tree:
+  "etf_combine_st sign_etf_st cc ex = unit_combine_tree_st cc ex"
+  unfolding sign_etf_st_def by simp
+
+lemma sign_etf_st_exists_unit:
+  "\<And>a u. \<exists>f. apply_etf_st sign_etf_st a u = unit_edge_tree_st f u"
+  using sign_etf_st_edge_tree by blast
+
 subsection \<open>Executable examples\<close>
 
 value "lookup_st top_sign_st ''x''"

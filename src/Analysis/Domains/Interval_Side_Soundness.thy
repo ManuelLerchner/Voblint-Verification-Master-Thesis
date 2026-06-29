@@ -12,30 +12,27 @@ text \<open>
 \<close>
 
 definition ivl_etf :: "(unit, ivl) effectful_domain_transfer" where
-  "ivl_etf = \<lparr>
-    etf_nop        = pure_edge_tree ivl_tf EA_Nop,
-    etf_assign     = (\<lambda>x e. pure_edge_tree ivl_tf (EA_Assign x e)),
-    etf_assume     = (\<lambda>b. pure_edge_tree ivl_tf (EA_Assume b)),
-    etf_assume_not = (\<lambda>b. pure_edge_tree ivl_tf (EA_AssumeNot b)),
-    etf_enter      = pure_edge_tree ivl_tf EA_Enter,
-    etf_combine    = pure_combine_tree
-  \<rparr>"
+  "ivl_etf = unit_etf_of_transfer ivl_tf"
 
-lemma ivl_etf_pure_transfer:
-  "pure_effectful_transfer ivl_tf ivl_etf"
-  unfolding ivl_etf_def pure_effectful_transfer_def by simp
+lemma ivl_etf_edge_tree:
+  "apply_etf ivl_etf a u = unit_edge_tree (apply_tf ivl_tf a) u"
+  unfolding ivl_etf_def apply_etf_unit_of_transfer by simp
+
+lemma ivl_etf_combine_tree:
+  "etf_combine ivl_etf cc ex = unit_combine_tree cc ex"
+  unfolding ivl_etf_def etf_combine_unit_of_transfer by simp
 
 lemma ivl_sound_etf:
   "sound_effectful_transfer ivl_etf"
-  by (rule sound_transfer_imp_sound_effectful_pure_etf
-        [OF ivl_sound_tf.sound_transfer_axioms ivl_etf_pure_transfer])
+  unfolding ivl_etf_def
+  by (rule sound_effectful_transfer_unit_of_transfer [OF ivl_is_sound_transfer])
 
 lemma ivl_etf_cone_compatible: "cone_compatible_etf ivl_etf"
-  by (rule cone_compatible_etf_pure_transfer[OF ivl_etf_pure_transfer])
+  by (rule cone_compatible_etf_unit_transfer[OF ivl_etf_edge_tree ivl_etf_combine_tree])
 
 lemma ivl_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff g ivl_etf bot0 s0 ())"
-  by (rule threefold_mono_pure_transfer[OF ivl_etf_pure_transfer ivl_tf_mono])
+  by (rule threefold_mono_unit_transfer[OF ivl_etf_edge_tree ivl_etf_combine_tree ivl_tf_mono])
 
 section \<open>Interval domain: standalone effectful interprocedural soundness\<close>
 

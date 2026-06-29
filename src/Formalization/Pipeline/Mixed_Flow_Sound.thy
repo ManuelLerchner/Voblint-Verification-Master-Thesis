@@ -41,12 +41,14 @@ theorem mixed_flow_analysis_sound:
   assumes cone:  "cone_compatible_etf etf"
   assumes fin:   "finite (edges g)"
   assumes finC:  "finite (combines g)"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes tr_in: "tr \<in> cfg_collect_trace g S (cfg_exit g)"
   shows "\<forall>x. (last tr) x \<in> gamma (side_env \<sigma> (cfg_exit g) x)"
 proof -
   have state_sound:
     "cfg_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-    by (rule side_collect_sound_exit_pruned_eff_cone[OF se pp fin finC entry cone])
+    by (rule side_collect_sound_exit_pruned_eff_cone[OF se pp fin finC entry cone inr])
+
   have trace_proj:
     "alpha_last (cfg_collect_trace g S (cfg_exit g)) \<le> cfg_collect g S (cfg_exit g)"
     by (rule alpha_last_cfg_collect_trace_le)

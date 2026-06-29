@@ -158,31 +158,40 @@ subsection \<open>Soundness: a non-unit witness of sound_effectful_transfer\<clo
 theorem flag_etf_sound:
   "sound_effectful_transfer flag_etf"
 proof (unfold_locales)
-  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-          s \<in> \<lbrakk>etf_full (etf_nop flag_etf u) \<sigma>\<rbrakk>"
-    by (simp add: flag_etf_full_nop)
+  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            s \<in> \<lbrakk>etf_collecting_full (etf_nop flag_etf u) \<sigma>\<rbrakk>)"
+    by (auto simp add: flag_etf_full_nop intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>x a u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-          s(x := aval a s)
-            \<in> \<lbrakk>etf_full (etf_assign flag_etf x a u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_assign by (simp add: flag_etf_full_assign)
+  show "\<forall>x a u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            s(x := aval a s)
+              \<in> \<lbrakk>etf_collecting_full (etf_assign flag_etf x a u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assign
+    by (auto simp add: flag_etf_full_assign intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume flag_etf b u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_assume by (simp add: flag_etf_full_assume)
+  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume flag_etf b u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assume
+    by (auto simp add: flag_etf_full_assume intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not flag_etf b u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_assume_not by (simp add: flag_etf_full_assume_not)
+  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not flag_etf b u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assume_not
+    by (auto simp add: flag_etf_full_assume_not intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-          enter_state s \<in> \<lbrakk>etf_full (etf_enter flag_etf u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_enter by (simp add: flag_etf_full_enter)
+  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter flag_etf u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_enter
+    by (auto simp add: flag_etf_full_enter intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-          \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-            <s|t>
-              \<in> \<lbrakk>etf_full (etf_combine flag_etf cc ex) \<sigma>\<rbrakk>"
+  show "\<forall>cc ex \<sigma>.
+       inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. <s|t> \<in> \<lbrakk>etf_full (etf_combine flag_etf cc ex) \<sigma>\<rbrakk>) "
     by (auto simp: flag_etf_full_combine intro: combine_states_sound)
 qed
 
@@ -262,6 +271,32 @@ lemma dep_aux_route_combine:
   "dep_aux \<sigma> (route_combine route cc ex) = {Inl cc, Inl ex, Inr Gpos, Inr Gneg}"
   unfolding route_combine_def by (simp add: Let_def)
 
+lemma sides_inr_local_bot_route_tree_const:
+  fixes gg :: gname
+  shows "local_bot_on_locals (sides_of_rhs (route_tree (\<lambda>_. gg) f u) \<sigma> (Inr g))"
+proof (cases "g = gg")
+  case True
+  show ?thesis
+    using local_bot_on_locals_restrict_global[where \<sigma>="f (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"]
+    by (simp add: True sides_route_tree_const)
+next
+  case False
+  show ?thesis by (simp add: False sides_route_tree_const local_bot_on_locals_def)
+qed
+
+lemma sides_inr_local_bot_route_combine_const:
+  fixes gg :: gname
+  shows "local_bot_on_locals (sides_of_rhs (route_combine (\<lambda>_. gg) cc ex) \<sigma> (Inr g))"
+proof (cases "g = gg")
+  case True
+  show ?thesis
+    using local_bot_on_locals_restrict_global[where \<sigma>="\<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>"]
+    by (simp add: True sides_route_combine_const)
+next
+  case False
+  show ?thesis by (simp add: False sides_route_combine_const local_bot_on_locals_def)
+qed
+
 lemma combine_abs_mono:
   "sc1 \<le> sc2 \<Longrightarrow> se1 \<le> se2 \<Longrightarrow> \<langle>sc1|se1\<rangle> \<le> \<langle>sc2|se2\<rangle>"
   by (auto simp: combine_abs_def le_fun_def)
@@ -301,6 +336,14 @@ lemma etf_combine_named:
   "etf_combine named_etf cc ex = route_combine (\<lambda>_. Gneg) cc ex"
   by (simp add: named_etf_def)
 
+lemma named_edge_inr_local_bot:
+  "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf named_etf a u) \<sigma>' (Inr g))"
+  unfolding apply_etf_named by (rule sides_inr_local_bot_route_tree_const)
+
+lemma named_comb_inr_local_bot:
+  "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine named_etf cc ex) \<sigma>' (Inr g))"
+  unfolding etf_combine_named by (rule sides_inr_local_bot_route_combine_const)
+
 lemma named_etf_full_nop:
   "etf_full (etf_nop named_etf u) \<sigma> = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
   unfolding named_etf_def by (simp add: route_tree_etf_full sup_fun_def)
@@ -333,31 +376,39 @@ lemma named_etf_full_combine:
 theorem named_etf_sound:
   "sound_effectful_transfer named_etf"
 proof (unfold_locales)
-  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-          s \<in> \<lbrakk>etf_full (etf_nop named_etf u) \<sigma>\<rbrakk>"
-    by (simp add: named_etf_full_nop)
+  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            s \<in> \<lbrakk>etf_collecting_full (etf_nop named_etf u) \<sigma>\<rbrakk>)"
+    by (auto simp add: named_etf_full_nop intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>x a u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-          s(x := aval a s)
-            \<in> \<lbrakk>etf_full (etf_assign named_etf x a u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_assign by (simp add: named_etf_full_assign)
+  show "\<forall>x a u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            s(x := aval a s)
+              \<in> \<lbrakk>etf_collecting_full (etf_assign named_etf x a u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assign
+    by (auto simp add: named_etf_full_assign intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume named_etf b u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_assume by (simp add: named_etf_full_assume)
+  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume named_etf b u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assume
+    by (auto simp add: named_etf_full_assume intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not named_etf b u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_assume_not by (simp add: named_etf_full_assume_not)
+  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not named_etf b u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assume_not
+    by (auto simp add: named_etf_full_assume_not intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-          enter_state s \<in> \<lbrakk>etf_full (etf_enter named_etf u) \<sigma>\<rbrakk>"
-    using sign_tf_sound_enter by (simp add: named_etf_full_enter)
+  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter named_etf u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_enter
+    by (auto simp add: named_etf_full_enter intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-          \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-            <s|t>
-              \<in> \<lbrakk>etf_full (etf_combine named_etf cc ex) \<sigma>\<rbrakk>"
+  show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. <s|t> \<in> \<lbrakk>etf_full (etf_combine named_etf cc ex) \<sigma>\<rbrakk>)"
     by (auto simp: named_etf_full_combine intro: combine_states_sound)
 qed
 
@@ -469,7 +520,8 @@ proof -
     by (rule side_analyse_eff_collect_sound_exit_pruned_gen
           [OF named_etf_sound named_etf_is_mono_eq named_etf_mono_sides named_etf_mono_deps
               side_solve_dom gs named_edge_dep named_comb_dep1 named_comb_dep2
-              named_edge_static named_comb_static])
+              named_edge_static named_comb_static
+              named_edge_inr_local_bot named_comb_inr_local_bot])
   show ?thesis
     using collect collect_exit by blast
 qed

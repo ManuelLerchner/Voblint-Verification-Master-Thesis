@@ -628,4 +628,257 @@ proof -
   finally show ?thesis unfolding side_env_def .
 qed
 
+subsection \<open>Inr-slot local bot on least post-solutions\<close>
+
+text \<open>
+  Strip local components at Inr slots to @{const restrict_global}; locals are
+  already bottom there.  A least post-solution is below every post-solution,
+  hence below the stripped env, so its Inr locals stay bottom.
+\<close>
+
+lemma inr_slot_locals_bot_iff_Inr_restrict_global:
+  shows "inr_slot_locals_bot \<sigma> \<longleftrightarrow> (\<forall>g. \<sigma> (Inr g) = restrict_global (\<sigma> (Inr g)))"
+  by (metis (no_types, lifting) ext inr_slot_locals_bot_def restrict_global_def)
+
+lemma local_bot_on_locals_eq_restrict_global:
+  fixes a :: "'a::bounded_semilattice_sup_bot abs_state"
+  shows "local_bot_on_locals a \<longleftrightarrow> a = restrict_global a"
+  by (metis antisym dual_order.refl le_restrict_global_when_local_bot
+      local_bot_on_locals_restrict_global restrict_local_global_join sup_ge2)
+
+definition strip_inr_globals ::
+  "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state)
+   \<Rightarrow> pp + 'g \<Rightarrow> 'a abs_state"
+where
+  "strip_inr_globals \<sigma> k = (case k of Inl p \<Rightarrow> \<sigma> (Inl p) | Inr g \<Rightarrow> restrict_global (\<sigma> (Inr g)))"
+
+lemma strip_inr_globals_le:
+  "strip_inr_globals \<sigma> \<le> \<sigma>"
+  unfolding strip_inr_globals_def le_fun_def
+  by (auto simp: restrict_global_def le_funD bot_least split: sum.splits)
+
+lemma strip_inr_globals_Inr:
+  "strip_inr_globals \<sigma> (Inr g) = restrict_global (\<sigma> (Inr g))"
+  unfolding strip_inr_globals_def by simp
+
+lemma strip_inr_globals_Inl:
+  "strip_inr_globals \<sigma> (Inl p) = \<sigma> (Inl p)"
+  unfolding strip_inr_globals_def by simp
+
+lemma sides_of_rhs_Side_Inr_local_bot:
+  fixes \<sigma> :: "pp + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+    and g u :: 'g
+    and t :: "(pp, 'g, 'a abs_state) strategy_tree"
+    and d :: "'a abs_state"
+  assumes lb_t: "local_bot_on_locals (sides_of_rhs t \<sigma> (Inr u))"
+  assumes lb_d: "local_bot_on_locals d"
+  shows "local_bot_on_locals (sides_of_rhs (Side g d t) \<sigma> (Inr u))"
+  unfolding sides_of_rhs.simps Let_def
+  using lb_d lb_t local_bot_join by auto
+
+lemma sides_side_rhs_fold_eff_Inr_local_bot:
+  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+  shows "local_bot_on_locals (sides_of_rhs (side_rhs_fold_eff etf acc ps cs) \<sigma> (Inr u))"
+proof (induction ps arbitrary: acc cs)
+  case Nil
+  then show ?case
+  proof (induction cs arbitrary: acc)
+    case Nil
+    show ?case unfolding local_bot_on_locals_def by simp
+  next
+    case (Cons ce cs)
+    obtain cc ex where ce: "ce = (cc, ex)" by (cases ce)
+    have tree: "local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr u))"
+      by (rule comb_inr)
+    have rest: "local_bot_on_locals
+          (sides_of_rhs (side_rhs_fold_eff etf
+             (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma> (Inr u))"
+      by (rule Cons.IH)
+    show ?case unfolding ce side_rhs_fold_eff.simps sides_of_rhs_seqcomp_at
+      by (rule local_bot_join[OF tree rest])
+  qed
+next
+  case (Cons ea ps)
+  obtain u' a where ea: "ea = (u', a)" by (cases ea)
+  have tree: "local_bot_on_locals (sides_of_rhs (apply_etf etf a u') \<sigma> (Inr u))"
+    by (rule edge_inr)
+  have rest: "local_bot_on_locals
+        (sides_of_rhs (side_rhs_fold_eff etf
+           (acc \<squnion> traverse_rhs (apply_etf etf a u') \<sigma>) ps cs) \<sigma> (Inr u))"
+    by (rule Cons.IH)
+  show ?case unfolding ea side_rhs_fold_eff.simps sides_of_rhs_seqcomp_at
+    by (rule local_bot_join[OF tree rest])
+qed
+
+lemma sides_make_side_rhs_tree_eff_Inr_local_bot:
+  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+  shows "local_bot_on_locals (sides_of_rhs (make_side_rhs_tree_eff g etf bot0 s0 gseed v) \<sigma> (Inr u))"
+  unfolding make_side_rhs_tree_eff_def Let_def
+  apply (cases "v = cfg_entry g")
+  apply (auto intro!: local_bot_join[OF sides_side_rhs_fold_eff_Inr_local_bot
+       local_bot_on_locals_restrict_global]
+       simp: sides_of_rhs.simps split: if_splits)
+  apply (metis comb_inr edge_inr fun_upd_apply local_bot_join local_bot_on_locals_restrict_global
+      sides_side_rhs_fold_eff_Inr_local_bot)
+  using comb_inr edge_inr sides_side_rhs_fold_eff_Inr_local_bot by blast
+
+lemma sides_side_cfg_T_eff_Inr_local_bot:
+  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+  shows "local_bot_on_locals (sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed v) \<sigma> (Inr u))"
+  unfolding side_cfg_T_eff_def
+  by (rule sides_make_side_rhs_tree_eff_Inr_local_bot[OF edge_inr comb_inr])
+
+lemma part_post_solution_strip_inr_globals_eff:
+  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma> vars"
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+  assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
+  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes mono_eq: "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
+  assumes mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
+  shows "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x (strip_inr_globals \<sigma>) vars"
+
+proof -
+  from pp obtain x_in: "x \<in> vars" and u_vars:
+    "\<And>u. u \<in> vars \<Longrightarrow> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> u \<subseteq> vars
+      \<and> eq (side_cfg_T_eff g etf bot0 s0 gseed) u \<sigma> \<le> \<sigma> (Inl u)
+      \<and> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma> \<le> \<sigma>"
+    by auto
+  show ?thesis
+  proof (intro conjI ballI)
+    show "x \<in> vars" by (rule x_in)
+  next
+    fix u assume u: "u \<in> vars"
+    have dep: "dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> u \<subseteq> vars"
+      using u_vars[OF u] by simp
+    show "dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) (strip_inr_globals \<sigma>) u \<subseteq> vars"
+    proof -
+      have "dep (side_cfg_T_eff g etf bot0 s0 gseed) (strip_inr_globals \<sigma>) u
+            = dep (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> u"
+        unfolding dep_def side_cfg_T_eff_def
+        by (simp add: dep_aux_make_side_rhs_tree_eff
+             dep_aux_side_rhs_fold_eff_indep[OF edge_static comb_static])
+      then show ?thesis unfolding dep\<^sub>L_def using dep
+        by (simp add: dep\<^sub>L_def) 
+    qed
+
+    have strip_le: "strip_inr_globals \<sigma> \<le> \<sigma>"
+      by (rule strip_inr_globals_le)
+    show "eq (side_cfg_T_eff g etf bot0 s0 gseed) u (strip_inr_globals \<sigma>)
+          \<le> strip_inr_globals \<sigma> (Inl u)"
+      by (metis (no_types, opaque_lifting) is_mono_eq_def mono_eq order.trans pp strip_inr_globals_Inl
+          strip_le u)
+   
+
+    show "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) (strip_inr_globals \<sigma>)
+          \<le> strip_inr_globals \<sigma>"
+    proof (rule le_funI)
+      fix k
+      show "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) (strip_inr_globals \<sigma>) k
+            \<le> strip_inr_globals \<sigma> k"
+      proof (cases k)
+        case (Inl p)
+        have strip_le: "strip_inr_globals \<sigma> \<le> \<sigma>"
+          by (rule strip_inr_globals_le)
+        have sides_mono:
+          "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) (strip_inr_globals \<sigma>)
+           \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma>"
+          using mono_sides strip_le unfolding mono_sides_def by blast
+        have sides_le: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma> (Inl p)
+                       \<le> \<sigma> (Inl p)"
+          using u_vars[OF u] by (simp add: le_funD)
+        show ?thesis
+          using sides_mono sides_le strip_inr_globals_Inl
+          by (metis (no_types, lifting) Inl le_funE order_trans)
+
+      next
+        case (Inr g')
+        have strip_le: "strip_inr_globals \<sigma> \<le> \<sigma>"
+          by (rule strip_inr_globals_le)
+        have sides_mono:
+          "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) (strip_inr_globals \<sigma>) (Inr g')
+           \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma> (Inr g')"
+          using mono_sides strip_le unfolding mono_sides_def
+          by (simp add: le_funD)
+        have lb: "local_bot_on_locals
+              (sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma> (Inr g'))"
+          by (rule sides_side_cfg_T_eff_Inr_local_bot[OF edge_inr comb_inr])
+        have sides_le: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma> (Inr g')
+                       \<le> \<sigma> (Inr g')"
+          using u_vars[OF u] by (simp add: le_funD)
+        have bound: "sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed u) \<sigma> (Inr g')
+                      \<le> restrict_global (\<sigma> (Inr g'))"
+          by (rule le_restrict_global_when_local_bot[OF lb sides_le])
+        show ?thesis
+          using sides_mono bound strip_inr_globals_Inr
+          by (metis (no_types, lifting) Inr le_funE order_trans)
+
+      qed
+    qed
+  qed
+qed
+
+lemma inr_slot_locals_bot_strip:
+  "inr_slot_locals_bot (strip_inr_globals \<sigma>)"
+  unfolding inr_slot_locals_bot_iff_Inr_restrict_global strip_inr_globals_Inr
+  using local_bot_on_locals_eq_restrict_global local_bot_on_locals_restrict_global by auto
+
+lemma least_part_post_solution_inr_slot_locals_bot_eff:
+  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes least: "least_part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma> vars"
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+  assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
+  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes mono_eq: "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
+  assumes mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
+  shows "inr_slot_locals_bot \<sigma>"
+proof -
+  from least have pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma> vars"
+      and min: "\<And>\<sigma>'. part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma>' vars
+                 \<Longrightarrow> \<sigma> \<le> \<sigma>'"
+    by auto
+
+
+  have strip_pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x (strip_inr_globals \<sigma>) vars"
+    by (rule part_post_solution_strip_inr_globals_eff[OF pp edge_inr comb_inr edge_static
+          comb_static mono_eq mono_sides])
+  have strip_le: "strip_inr_globals \<sigma> \<le> \<sigma>"
+    by (rule strip_inr_globals_le)
+  have \<sigma>_le_strip: "\<sigma> \<le> strip_inr_globals \<sigma>"
+    using min[OF strip_pp] .
+  show ?thesis
+    unfolding inr_slot_locals_bot_iff_Inr_restrict_global
+  proof (intro allI)
+    fix g
+    have "\<sigma> (Inr g) = strip_inr_globals \<sigma> (Inr g)"
+      using \<sigma>_le_strip strip_le by (simp add: le_antisym le_funD)
+    also have "\<dots> = restrict_global (\<sigma> (Inr g))"
+      by (simp add: strip_inr_globals_Inr)
+    finally show "\<sigma> (Inr g) = restrict_global (\<sigma> (Inr g))" .
+  qed
+qed
+
+
 end

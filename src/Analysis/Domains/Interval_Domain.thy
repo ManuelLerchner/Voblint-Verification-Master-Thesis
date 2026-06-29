@@ -820,6 +820,9 @@ proof unfold_locales
     by (rule ivl_tf_sound_enter)
 qed
 
+lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
+  by (unfold_locales) (fact ivl_tf_sound_assign ivl_tf_sound_assume ivl_tf_sound_assume_not ivl_tf_sound_enter)+
+
 subsection \<open>Monotonicity of the transfer functions\<close>
 
 lemma eint_plus_mono:

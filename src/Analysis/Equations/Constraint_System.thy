@@ -416,7 +416,7 @@ text \<open>
 
   apply_etf dispatches on edge_action to the matching field.
 
-  Unit-global pure-transfer tree constructors live in TD_Side_CFG where
+  Unit-global effectful tree constructors live in TD_Side_CFG where
   restrict_local / restrict_global are defined.
 \<close>
 
@@ -450,15 +450,30 @@ where
 | "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
 | "apply_etf etf EA_Enter         u = etf_enter etf u"
 
+fun local_edge_action :: "edge_action \<Rightarrow> bool" where
+  "local_edge_action EA_Nop = True"
+| "local_edge_action (EA_Assign x e) =
+    ((~ is_global x) & (~ aexp_mentions_global e))"
+| "local_edge_action (EA_Assume b) = (~ bexp_mentions_global b)"
+| "local_edge_action (EA_AssumeNot b) = (~ bexp_mentions_global b)"
+| "local_edge_action EA_Enter = False"
+
+text \<open>
+  @{const local_edge_action}: the edge neither reads nor writes globals (enter and
+  combine are separate).  A global assignment such as
+  @{term \<open>EA_Assign ''Gx'' e\<close>} is not local even when @{term e} mentions only
+  locals.
+\<close>
+
 subsection \<open>Reassembled full result and effectful soundness\<close>
 
 text \<open>
   An effectful edge tree splits its outcome between a local Answer (the value of
   the source unknown after the edge) and Side contributions to the named globals.
   etf_full reassembles the complete abstract post-state: the local result joined
-  with the contribution to the global unknowns. For unit-global pure transfers
-  this is exactly apply_tf tf a (combined), so the soundness obligation below is
-  the existing sound_transfer obligation stated against the combined input.
+  with the contribution to the global unknowns. For unit-global records built
+  from apply_tf, this recovers the domain transfer's full abstract post-state on
+  the combined input.
 
   Stating soundness against etf_full -- rather than against the local Answer
   alone -- is essential: the local restriction sends globals to bot, and
@@ -495,15 +510,6 @@ definition etf_full ::
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
 where
   "etf_full t \<sigma> = traverse_rhs t \<sigma> \<squnion> all_sides t \<sigma>"
-
-text \<open>
-  Soundness contract for an effectful transfer record: each per-action tree's
-  reassembled full result over-approximates the concrete edge step applied to the
-  combined source state.  The combined source state is \<open>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<close>
-  (locals at u joined with the single global unknown -- see side_env).  This is
-  the Goblint-aligned interface: the obligation is stated on traverse_rhs /
-  sides_of_rhs, exactly the data the TD solver consumes.
-\<close>
 
 subsection \<open>The named-global environment\<close>
 
@@ -555,6 +561,26 @@ lemma glob_env_mono_Inr:
   unfolding glob_env_def abs_join_set_def
   by (rule fold_join_image_mono[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2
         sup_least sup_mono assms])
+
+text \<open>
+  Collecting soundness for local-only trees: @{const etf_full} carries locals;
+  globals are restored by joining @{const glob_env}.
+\<close>
+
+definition etf_collecting_full ::
+  "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
+where
+  "etf_collecting_full t \<sigma> = etf_full t \<sigma> \<squnion> glob_env \<sigma>"
+
+lemma etf_full_le_etf_collecting_full:
+  "etf_full t \<sigma> \<le> etf_collecting_full t \<sigma>"
+  unfolding etf_collecting_full_def by simp
+
+lemma in_gamma_etf_collecting_full:
+  "s \<in> \<lbrakk>etf_full t \<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>etf_collecting_full t \<sigma>\<rbrakk>"
+  using gamma_state_mono[OF etf_full_le_etf_collecting_full] by blast
+
 text \<open>
   Executable form: when the global-name type additionally enumerates (Enum),
   fold over the enumeration's image rather than over UNIV.  Used by the unit
@@ -620,26 +646,38 @@ next
     unfolding all_sides.simps(4) by (rule sup_least)
 qed
 
+definition inr_slot_locals_bot ::
+  "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
+where
+  "inr_slot_locals_bot \<sigma> =
+     (\<forall>g. \<forall>x. \<not> is_global x \<longrightarrow> \<sigma> (Inr g) x = bot)"
+
 locale sound_effectful_transfer =
   fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
   assumes etf_sound_nop:
-    "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-       s \<in> \<lbrakk>etf_full (etf_nop etf u) \<sigma>\<rbrakk>"
+    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+         s \<in> \<lbrakk>etf_collecting_full (etf_nop etf u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assign:
-    "\<forall>x e u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-       s(x := aval e s) \<in> \<lbrakk>etf_full (etf_assign etf x e u) \<sigma>\<rbrakk>"
+    "\<forall>x e u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+         s(x := aval e s) \<in> \<lbrakk>etf_collecting_full (etf_assign etf x e u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assume:
-    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
-       \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume etf b u) \<sigma>\<rbrakk>"
+    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+       \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume etf b u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assume_not:
-    "\<forall>(b::bexp) u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
-       \<longrightarrow> s \<in> \<lbrakk>etf_full (etf_assume_not etf b u) \<sigma>\<rbrakk>"
+    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+       \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not etf b u) \<sigma>\<rbrakk>)"
   assumes etf_sound_enter:
-    "\<forall>u \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-       enter_state s \<in> \<lbrakk>etf_full (etf_enter etf u) \<sigma>\<rbrakk>"
+    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+         enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter etf u) \<sigma>\<rbrakk>)"
   assumes etf_sound_combine:
-    "\<forall>cc ex \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+    "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
        \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-         <s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>"
+         <s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>)"
 
 end

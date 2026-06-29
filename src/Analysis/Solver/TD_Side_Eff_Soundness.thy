@@ -1,13 +1,12 @@
 theory TD_Side_Eff_Soundness
-  imports TD_Side_Eff_Pipeline "Voblint_CFG.CFG_Prune"
+  imports TD_Side_RHS_Generator "Voblint_CFG.CFG_Prune"
 begin
 
 section \<open>Standalone effectful side IP solver: collecting soundness with pruning\<close>
 
 text \<open>
-  Standalone effectful IP collecting soundness with pruning, built directly on
-  side_cfg_T_eff with no reference to the pure side_cfg_T pipeline.  The
-  dependency cone, exit pruning and entry seeding are re-established for the
+  Standalone effectful IP collecting soundness with pruning, built on
+  @{const side_cfg_T_eff}.  The dependency cone, exit pruning and entry seeding are re-established for the
   effectful equation system; the per-edge / per-combine post-fixpoint bounds come
   from TD_Side_Eff_Bounds and the collecting step from
   post_fixpoint_sound_at_eff.
@@ -22,35 +21,7 @@ text \<open>
       environment (already required for the TD_side mono_deps precondition).
 \<close>
 
-subsection \<open>Threefold monotonicity\<close>
 
-text \<open>
-  threefold_mono bundles the three TD_side preconditions required for the
-  solver to converge to a partial post-solution (paper Definition 7).
-
-  is_mono_eq: the equation value is monotone in the environment.
-  mono_sides: the side-effect map is monotone in the environment.
-  mono_deps: the dependency skeleton is a shrinking function of the
-             environment (larger env => smaller or equal dep set).
-
-  These three conditions together let the TD_side solver use the
-  optimized destab_opt=True strategy and guarantee a least partial
-  post-solution.
-\<close>
-
-definition threefold_mono ::
-  "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> bool"
-where
-  "threefold_mono T \<equiv> is_mono_eq T \<and> mono_sides T \<and> mono_deps T"
-
-lemma threefold_monoD_eq:   "threefold_mono T \<Longrightarrow> is_mono_eq T"
-  unfolding threefold_mono_def by blast
-
-lemma threefold_monoD_sides: "threefold_mono T \<Longrightarrow> mono_sides T"
-  unfolding threefold_mono_def by blast
-
-lemma threefold_monoD_deps:  "threefold_mono T \<Longrightarrow> mono_deps T"
-  unfolding threefold_mono_def by blast
 
 subsection \<open>Dependency membership for the effectful fold\<close>
 
@@ -436,6 +407,7 @@ theorem side_collect_sound_exit_pruned_eff:
   assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
   shows "cfg_collect g S (cfg_exit g)
          \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
 proof -
@@ -477,7 +449,7 @@ proof -
   have entry_pg: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry pg)\<rbrakk>"
     using entry by (simp add: pg_def prune_cfg_def)
   have collect_pg: "cfg_collect pg S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-    by (rule se.post_fixpoint_sound_at_eff[OF entry_pg step_le combine_le order_refl])
+    by (rule se.post_fixpoint_sound_at_eff[OF inr entry_pg step_le combine_le order_refl])
   have frame: "cfg_collect g S (cfg_exit g) \<subseteq> cfg_collect pg S (cfg_exit g)"
     using cfg_collect_prune_exit[of g S] by (simp add: pg_def)
   show ?thesis using frame collect_pg by blast
@@ -493,13 +465,14 @@ corollary side_collect_sound_exit_pruned_eff_cone:
   assumes finC:  "finite (combines g)"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes cone:  "cone_compatible_etf etf"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
   shows "cfg_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
   by (rule side_collect_sound_exit_pruned_eff[OF se pp fin finC entry
         cone_compatible_etf_edge_dep[OF cone]
         cone_compatible_etf_comb_dep1[OF cone]
         cone_compatible_etf_comb_dep2[OF cone]
         cone_compatible_etf_edge_static[OF cone]
-        cone_compatible_etf_comb_static[OF cone]])
+        cone_compatible_etf_comb_static[OF cone] inr])
 
 subsection \<open>Executable-facing standalone soundness\<close>
 
@@ -527,6 +500,10 @@ theorem side_analyse_eff_collect_sound_exit_pruned_gen:
   assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
   shows "cfg_collect (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
          \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed
               (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
@@ -552,9 +529,16 @@ proof -
     by (rule s0_le_side_env_entry_eff[OF pp entry_in])
   have entry_cov: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using S_sound gamma_state_mono[OF entry_le] by blast
+  have least: "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) v0 \<sigma> (ip.stabl_at v0)"
+    by (metis (mono_tags, opaque_lifting) dom' ip.cfg_pkg_eff_eq ip.least_part_post_at_cfg
+        local.\<sigma>_def)
+  have inr: "inr_slot_locals_bot \<sigma>"
+    by (metis comb_inr comb_static edge_inr edge_static g_def least
+        least_part_post_solution_inr_slot_locals_bot_eff mono_eq mono_sides)
   have collect: "cfg_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     by (rule side_collect_sound_exit_pruned_eff[OF se pp[unfolded v0_def] fin finC
-          entry_cov edge_dep comb_dep1 comb_dep2 edge_static comb_static])
+          entry_cov edge_dep comb_dep1 comb_dep2 edge_static comb_static inr])
+
 
   have analyse_eq:
     "side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) = side_env \<sigma> (cfg_exit g)"
@@ -582,152 +566,69 @@ corollary side_analyse_eff_collect_sound_exit_pruned:
         cone_compatible_etf_comb_dep1[OF cone]
         cone_compatible_etf_comb_dep2[OF cone]
         cone_compatible_etf_edge_static[OF cone]
-        cone_compatible_etf_comb_static[OF cone]])
+        cone_compatible_etf_comb_static[OF cone]
+        cone_compatible_etf_edge_inr[OF cone]
+        cone_compatible_etf_comb_inr[OF cone]])
 
-subsection \<open>Unit-global pure-transfer record contracts\<close>
+
+subsection \<open>Unit-global effectful record contracts\<close>
 
 text \<open>
-  A record satisfying pure_effectful_transfer has fixed QueryL/QueryG skeletons for all
-  edge and combine trees. The solver-side cone and monotonicity contracts follow
-  from that record shape and the monotonicity of the underlying domain_transfer.
+  Unit-global records have fixed QueryL/QueryG skeletons for edge and combine
+  trees.  The solver-side cone and monotonicity contracts follow from that tree
+  shape and monotonicity of the edge transformers.
 \<close>
 
-lemma dep_aux_apply_etf_pure_transfer_src:
-  assumes "pure_effectful_transfer tf etf"
-  shows "Inl u \<in> dep_aux \<sigma> (apply_etf etf a u)"
-  using assms by (simp add: pure_effectful_transfer_apply pure_edge_tree_def)
-
-lemma dep_aux_etf_combine_pure_transfer_call:
-  assumes "pure_effectful_transfer tf etf"
-  shows "Inl cc \<in> dep_aux \<sigma> (etf_combine etf cc ex)"
-  using assms by (simp add: pure_effectful_transfer_combine pure_combine_tree_def)
-
-lemma dep_aux_etf_combine_pure_transfer_exit:
-  assumes "pure_effectful_transfer tf etf"
-  shows "Inl ex \<in> dep_aux \<sigma> (etf_combine etf cc ex)"
-  using assms by (simp add: pure_effectful_transfer_combine pure_combine_tree_def)
-
-lemma static_deps_apply_etf_pure_transfer:
-  assumes "pure_effectful_transfer tf etf"
-  shows "static_deps (apply_etf etf a u)"
-  using assms by (simp add: static_deps_def pure_effectful_transfer_apply pure_edge_tree_def Let_def)
-
-lemma static_deps_etf_combine_pure_transfer:
-  assumes "pure_effectful_transfer tf etf"
-  shows "static_deps (etf_combine etf cc ex)"
-  using assms by (simp add: static_deps_def pure_effectful_transfer_combine pure_combine_tree_def Let_def)
-
-lemma cone_compatible_etf_pure_transfer:
+lemma cone_compatible_etf_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
-  assumes shape: "pure_effectful_transfer tf etf"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
+  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
   shows "cone_compatible_etf etf"
-  unfolding cone_compatible_etf_def
-  using dep_aux_apply_etf_pure_transfer_src[OF shape]
-        dep_aux_etf_combine_pure_transfer_call[OF shape]
-        dep_aux_etf_combine_pure_transfer_exit[OF shape]
-        static_deps_apply_etf_pure_transfer[OF shape]
-        static_deps_etf_combine_pure_transfer[OF shape]
-  by blast
+proof -
+  interpret sound_rhs_generator_unit etf F using edge comb by unfold_locales
+  show ?thesis by (rule cone_compatible)
+qed
 
-lemma side_cfg_T_eff_is_mono_eq_pure_transfer:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state"
-  assumes shape: "pure_effectful_transfer tf etf"
-  assumes tf_mono:
-    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-  shows "is_mono_eq (side_cfg_T_eff g etf bot0 s0 ())"
-  apply (rule side_cfg_T_eff_is_mono_eq_gen)
-  subgoal for a u s1 s2
-    using shape
-    by (simp add: pure_effectful_transfer_apply traverse_pure_edge_tree)
-       (rule restrict_local_mono, rule tf_mono, intro sup_mono; simp add: le_fun_def)
-  subgoal for cc ex s1 s2
-    using shape
-    by (simp add: pure_effectful_transfer_combine traverse_pure_combine_tree)
-       (rule restrict_local_mono, intro sup_mono; simp add: le_fun_def)
-  done
-
-lemma side_cfg_T_eff_mono_sides_pure_transfer:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state"
-  assumes shape: "pure_effectful_transfer tf etf"
-  assumes tf_mono:
-    "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-  shows "mono_sides (side_cfg_T_eff g etf bot0 s0 ())"
-  apply (rule side_cfg_T_eff_mono_sides_gen)
-  subgoal for a u s1 s2
-  proof -
-    assume le: "s1 \<le> s2"
-    show "sides_of_rhs (apply_etf etf a u) s1 \<le> sides_of_rhs (apply_etf etf a u) s2"
-    proof (rule le_funI)
-      fix k
-      show "sides_of_rhs (apply_etf etf a u) s1 k \<le> sides_of_rhs (apply_etf etf a u) s2 k"
-      proof (cases k)
-        case (Inl x)
-        show ?thesis
-          using shape Inl by (simp add: pure_effectful_transfer_apply pure_edge_tree_def Let_def)
-      next
-        case (Inr y)
-        show ?thesis
-          using shape Inr le
-          by (cases y)
-             (simp add: pure_effectful_transfer_apply sides_pure_edge_tree_Inr,
-              rule restrict_global_mono, rule tf_mono, intro sup_mono; simp add: le_fun_def)
-      qed
-    qed
-  qed
-  subgoal for cc ex s1 s2
-  proof -
-    assume le: "s1 \<le> s2"
-    show "sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
-    proof (rule le_funI)
-      fix k
-      show "sides_of_rhs (etf_combine etf cc ex) s1 k \<le> sides_of_rhs (etf_combine etf cc ex) s2 k"
-      proof (cases k)
-        case (Inl x)
-        show ?thesis
-          using shape Inl by (simp add: pure_effectful_transfer_combine pure_combine_tree_def Let_def)
-      next
-        case (Inr y)
-        show ?thesis
-          using shape Inr le
-          by (cases y)
-             (simp add: pure_effectful_transfer_combine sides_pure_combine_tree_Inr,
-              rule restrict_global_mono, intro sup_mono; simp add: le_fun_def)
-      qed
-    qed
-  qed
-  done
-
-
-
-lemma side_cfg_T_eff_mono_deps_pure_transfer:
-  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state"
-  assumes shape: "pure_effectful_transfer tf etf"
-  shows "mono_deps (side_cfg_T_eff g etf bot0 s0 ())"
-  apply (rule side_cfg_T_eff_mono_deps_gen)
-  using static_deps_apply_etf_pure_transfer[OF shape]
-        static_deps_etf_combine_pure_transfer[OF shape]
-  by simp_all
-
-lemma threefold_mono_pure_transfer:
-  fixes tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
+lemma threefold_mono_unit_transfer:
+  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state"
-  assumes shape: "pure_effectful_transfer tf etf"
-  assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+  assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
+  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
-  unfolding threefold_mono_def
-  using side_cfg_T_eff_is_mono_eq_pure_transfer[OF shape mono]
-        side_cfg_T_eff_mono_sides_pure_transfer[OF shape mono]
-        side_cfg_T_eff_mono_deps_pure_transfer[OF shape]
-  by blast
+proof -
+  interpret sound_rhs_generator_unit_mono etf F using edge comb mono by unfold_locales
+  show ?thesis by (rule threefold_mono)
+qed
 
+lemma cone_compatible_etf_local_unit_transfer:
+  fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  assumes edge: "\<And>a u. apply_etf etf a u =
+    (if local_edge_action a then local_edge_tree (F a) u
+     else unit_edge_tree (F a) u)"
+  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  shows "cone_compatible_etf etf"
+proof -
+  interpret sound_rhs_generator_mixed etf F using edge comb by unfold_locales
+  show ?thesis by (rule cone_compatible)
+qed
 
-
+lemma threefold_mono_local_unit_transfer:
+  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and g :: cfg and bot0 s0 :: "'a abs_state"
+  assumes edge: "\<And>a u. apply_etf etf a u =
+    (if local_edge_action a then local_edge_tree (F a) u
+     else unit_edge_tree (F a) u)"
+  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
+  shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
+proof -
+  interpret sound_rhs_generator_mixed_mono etf F using edge comb mono by unfold_locales
+  show ?thesis by (rule threefold_mono)
+qed
 
 end

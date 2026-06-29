@@ -1,5 +1,5 @@
 theory Sign_Exec_Sound
-  imports Sign_Exec Sign_Side_Soundness
+  imports Sign_Exec Sign_Side_Soundness Solver_Side_RG
           "Voblint_CFG.CFG_Collect_Trace" "TD.TD_side_upd_rule"
           "Voblint_IMP2.IMP2_Notation"
           Analysis_GraphViz
@@ -25,7 +25,7 @@ text \<open>
 definition sign_exec_eqs ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp, unit, sign st) eqsT" where
   "sign_exec_eqs \<Pi> ps main =
-     side_cfg_T_st (compile_prog \<Pi> ps main) sign_tf_st bot cinit_sign_st"
+     side_cfg_T_eff_st (compile_prog \<Pi> ps main) sign_etf_st bot cinit_sign_st ()"
 
 definition sign_exec_raw ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> sign st)" where
@@ -70,7 +70,13 @@ text \<open>
   result.  Switching the seed from \<open>top_sign_st\<close> to \<open>cinit_sign_st\<close> (globals
   at \<open>SZero\<close>) lets the richer lattice give tighter global bounds, e.g.\
   \<open>Gresult = SNonNeg\<close> instead of \<open>STop\<close>.
+
+  The side solver keeps \<open>Inr\<close> slots globally restricted via
+  @{theory Voblint_Analysis.Solver_Side_RG} (\<open>side_rg\<close> on the eqsys
+  \<open>\<Longrightarrow>\<close> \<open>TD_side_always_join_solve_Inr_rg\<close> \<open>\<Longrightarrow>\<close> \<open>inr_slot_locals_bot\<close>).
 \<close>
+
+
 
 theorem sign_exec_sound_collecting:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
@@ -89,17 +95,30 @@ proof -
   have pp0: "part_post_solution (sign_exec_eqs \<Pi> ps main) (cfg_exit g) (snd sol) (fst sol)"
     using TD_side_always_join_Interp.partial_post_solution[OF dom, of "fst sol" "snd sol"]
     unfolding sol_def by simp
-  have pp_st: "part_post_solution (side_cfg_T_st g sign_tf_st bot cinit_sign_st)
+  have pp_st: "part_post_solution (side_cfg_T_eff_st g sign_etf_st bot cinit_sign_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
     using pp0 by (simp add: sign_exec_eqs_def g_def)
   have pp_eff: "part_post_solution
-                  (side_cfg_T_eff g sign_etf bot
+                  (side_cfg_T_eff g sign_etf_unit bot
                      (\<lambda>x. if is_global x then SZero else STop) ())
                   (cfg_exit g) \<sigma> (fst sol)"
-    using part_post_solution_st_to_abs_eff
-            [OF sign_etf_pure_transfer sign_tf_st_commute pp_st]
+    using part_post_solution_st_to_abs_eff_unit_transfer
+            [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree
+                sign_etf_st_edge_tree sign_etf_st_combine_tree sign_tf_st_commute pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_sign_st bot_fun_def)
-  have cone: "cone_compatible_etf sign_etf" by (rule sign_etf_cone_compatible)
+  have cone: "cone_compatible_etf sign_etf_unit" by (rule sign_etf_unit_cone_compatible)
+  have srz: "\<And>z. side_rg (sign_exec_eqs \<Pi> ps main z)"
+    unfolding sign_exec_eqs_def
+    by (rule side_rg_side_cfg_T_eff_st_unit
+          [OF sign_etf_st_exists_unit sign_etf_st_combine_tree])
+  have solpair: "TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps main) (cfg_exit g)
+                   = (fst sol, snd sol)"
+    unfolding sol_def by simp
+  have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_st (snd sol (Inr gg))"
+    by (rule TD_side_always_join_solve_Inr_rg[OF dom srz solpair])
+  have inr: "inr_slot_locals_bot \<sigma>"
+    unfolding \<sigma>_def
+    using inr_slot_locals_bot_fun_of_st_restrict_global_st rg by blast
   have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"
     by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
@@ -114,7 +133,7 @@ proof -
   have "cfg_collect g cinit_stores (cfg_exit g)
         \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     by (rule side_collect_sound_exit_pruned_eff_cone
-          [OF sign_sound_etf pp_eff fin finC entry_cov cone])
+          [OF sign_sound_etf_unit pp_eff fin finC entry_cov cone inr])
   then show ?thesis
     by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
 qed

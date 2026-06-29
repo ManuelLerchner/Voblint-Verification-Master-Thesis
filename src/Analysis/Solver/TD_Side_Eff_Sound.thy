@@ -1,5 +1,5 @@
 theory TD_Side_Eff_Sound
-  imports TD_Side_Tree Constraint_System_Sound
+  imports TD_Side_Tree TD_Side_CFG Constraint_System_Sound
 begin
 
 section \<open>Effectful IP soundness: post-fixpoint over-approximates collecting\<close>
@@ -29,33 +29,34 @@ text \<open>
 \<close>
 
 lemma edge_collect_etf_sound:
-  "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
-   \<subseteq> \<lbrakk>etf_full (apply_etf etf a u) \<sigma>\<rbrakk>"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
+  shows "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
+   \<subseteq> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"
 proof (cases a)
   case EA_Nop
   show ?thesis
     unfolding EA_Nop apply_etf.simps edge_collect.simps side_env_def
-    using etf_sound_nop by blast
+    using etf_sound_nop inr by auto
 next
   case (EA_Assign x ax)
   show ?thesis
     unfolding EA_Assign apply_etf.simps edge_collect.simps side_env_def
-    using etf_sound_assign by blast
+    using etf_sound_assign inr by auto
 next
   case (EA_Assume b)
   show ?thesis
     unfolding EA_Assume apply_etf.simps edge_collect.simps side_env_def
-    using etf_sound_assume by blast
+    using etf_sound_assume inr by auto
 next
   case (EA_AssumeNot b)
   show ?thesis
     unfolding EA_AssumeNot apply_etf.simps edge_collect.simps side_env_def
-    using etf_sound_assume_not by blast
+    using etf_sound_assume_not inr by auto
 next
   case EA_Enter
   show ?thesis
     unfolding EA_Enter apply_etf.simps edge_collect.simps side_env_def
-    using etf_sound_enter by blast
+    using etf_sound_enter inr by auto
 qed
 
 subsection \<open>Witness soundness and post-fixpoint soundness\<close>
@@ -70,6 +71,7 @@ text \<open>
 lemma cfg_witness_gamma_eff:
   fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> edges g
        \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
@@ -89,21 +91,23 @@ proof -
     case (edge u a v S s t)
     have s_g: "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>" using edge by simp
     have t_ec: "t \<in> edge_collect a {s}" using edge by simp
-    have step1: "t \<in> \<lbrakk>etf_full (apply_etf etf a u) \<sigma>\<rbrakk>"
+    have step1: "t \<in> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"
     proof -
       have sub: "{s} \<subseteq> \<lbrakk>side_env \<sigma> u\<rbrakk>" using s_g by simp
       have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>"
         using edge_collect_mono[OF sub] by blast
-      thus ?thesis using t_ec edge_collect_etf_sound by blast
+      thus ?thesis using t_ec edge_collect_etf_sound[OF inr] by blast
     qed
-    show ?case using gamma_state_mono[OF step_le[OF edge(1)]] step1 by blast
+    have collect_le: "etf_collecting_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> v"
+      using etf_collecting_full_le_side_env[OF step_le[OF edge(1)]] .
+    show ?case using gamma_state_mono[OF collect_le] step1 by blast
   next
     case (combine c ex v S s t)
     have sc: "s \<in> \<lbrakk>side_env \<sigma> c\<rbrakk>" and tc: "t \<in> \<lbrakk>side_env \<sigma> ex\<rbrakk>"
       apply (auto simp add: combine.IH(1) combine.prems)
       by (simp add: combine.IH(2) combine.prems)
     have step: "<s|t> \<in> \<lbrakk>etf_full (etf_combine etf c ex) \<sigma>\<rbrakk>"
-      using etf_sound_combine sc tc unfolding side_env_def by blast
+      using etf_sound_combine inr sc tc unfolding side_env_def by auto
     show ?case using gamma_state_mono[OF combine_le[OF combine(1)]] step by blast
   qed
 qed
@@ -118,6 +122,7 @@ text \<open>
 theorem post_fixpoint_sound_at_eff:
   fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set" and v0 :: pp
+  assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> edges g
@@ -133,7 +138,7 @@ proof
   with cfg_collect_le_paths have wit: "cfg_witness g S v0 t"
     unfolding cfg_collect_paths_def by auto
   show "t \<in> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
-    using cfg_witness_gamma_eff[OF step_le combine_le entry_le S_sound wit] .
+    using cfg_witness_gamma_eff[OF inr step_le combine_le entry_le S_sound wit] .
 qed
 
 end

@@ -87,7 +87,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, \<^verbatim>\<open>abstract_domain\<close>, lifted state concretization, and display support.
     \<^item> @{theory Voblint_Analysis.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, and \<^verbatim>\<open>sound_effectful_transfer\<close>.
     \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- pure post-fixpoint soundness against \<^verbatim>\<open>cfg_collect\<close>.
-    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, and compatibility adapters for pure transfers.
+    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, and unit-global effectful tree constructors.
     \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- effectful TD_side collecting soundness with pruning, \<^verbatim>\<open>threefold_mono\<close>, and \<^verbatim>\<open>cone_compatible_etf\<close>.
     \<^item> @{theory Voblint_Analysis.Analysis_Sound} --- small post-fixpoint bridge lemmas for \<^verbatim>\<open>cfg_collect\<close>.
 

@@ -546,5 +546,24 @@ lemma lookup_combine_abs_st [simp]:
   by (cases "is_global x")
      (simp_all add: combine_abs_st_def)
 
+lemma st_eqI_lookup:
+  assumes "\<And>x. lookup_st s1 x = lookup_st s2 x"
+  shows "s1 = s2"
+  using assms unfolding eq_st_def lookup_st_rep
+  by (metis (no_types, lifting) ext Abs_st_rep_st eq_st_def st.abs_eq_iff) 
+
+lemma restrict_global_st_eq_when_lookup_local_bot:
+  assumes "\<And>x. \<not> is_global x \<Longrightarrow> lookup_st s x = bot"
+  shows "restrict_global_st s = s"
+  by (rule st_eqI_lookup) (auto simp: lookup_restrict_global_st assms)
+
+lemma restrict_global_st_sup_restrict_global_st:
+  "restrict_global_st a \<squnion> restrict_global_st b = restrict_global_st (a \<squnion> b)"
+  by (rule st_eqI_lookup) (auto simp: lookup_restrict_global_st lookup_sup_st)
+
+lemma bot_sup_restrict_global_st:
+  "bot \<squnion> restrict_global_st s = restrict_global_st s"
+  by (rule st_eqI_lookup) (auto simp: lookup_restrict_global_st lookup_sup_st)
+
 end
 

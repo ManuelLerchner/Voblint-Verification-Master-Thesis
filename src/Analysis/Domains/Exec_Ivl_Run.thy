@@ -18,7 +18,7 @@ text \<open>
   on @{const EA_Assume} edges.  Node~3 therefore reads @{text "[0,19]"} because
   @{text "x < 20"} refines @{text "x"} at the loop head --- not because of widening.
 
-  This theory evaluates two fixpoint engines on @{const side_cfg_T_st}:
+  This theory evaluates two fixpoint engines on @{const side_cfg_T_eff_st}:
   bounded Kleene iteration on @{const eq}, and @{const TD_side_warrowing_apinis_Interp_solve}
   (pointwise interval widening on @{typ "ivl st"} for solver termination).
   Neither is linked to @{const cfg_collect} here; see the manual post-fixpoint
@@ -52,7 +52,7 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = 5"
   by (simp add: loop_cfg_def)
 
 definition loop_ivl_eqs :: "(pp, unit, ivl st) eqsT" where
-  "loop_ivl_eqs = side_cfg_T_st loop_cfg ivl_tf_st bot cinit_ivl_st"
+  "loop_ivl_eqs = side_cfg_T_eff_st loop_cfg ivl_etf_st bot cinit_ivl_st ()"
 
 definition loop_sig0 :: "pp + unit \<Rightarrow> ivl st" where
   "loop_sig0 k =

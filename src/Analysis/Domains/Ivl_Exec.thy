@@ -195,6 +195,26 @@ next
   then show ?thesis by (simp add: ivl_tf_def enter_ivl_st_commute)
 qed
 
+subsection \<open>Executable effectful transfer record\<close>
+
+definition ivl_etf_st :: "(unit, ivl st) effectful_st_transfer" where
+  "ivl_etf_st = \<lparr>
+    etf_st_nop        = unit_edge_tree_st (ivl_tf_st EA_Nop),
+    etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (ivl_tf_st (EA_Assign x e))),
+    etf_st_assume     = (\<lambda>b. unit_edge_tree_st (ivl_tf_st (EA_Assume b))),
+    etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (ivl_tf_st (EA_AssumeNot b))),
+    etf_st_enter      = unit_edge_tree_st (ivl_tf_st EA_Enter),
+    etf_st_combine    = unit_combine_tree_st
+  \<rparr>"
+
+lemma ivl_etf_st_edge_tree:
+  "apply_etf_st ivl_etf_st a u = unit_edge_tree_st (ivl_tf_st a) u"
+  unfolding ivl_etf_st_def by (cases a) simp_all
+
+lemma ivl_etf_st_combine_tree:
+  "etf_combine_st ivl_etf_st cc ex = unit_combine_tree_st cc ex"
+  unfolding ivl_etf_st_def by simp
+
 value "lookup_st (ivl_tf_st (EA_Assume (Less (IMP2_Syntax.V ''x'') (IMP2_Syntax.N 20)))
            (update_st top_ivl_st ''x'' (Ivl (Fin 0) (Fin 20)))) ''x''"
 

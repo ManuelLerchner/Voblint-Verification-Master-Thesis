@@ -152,7 +152,7 @@ definition dg_tag where
   "dg_tag tr = (last tr) ''tag''"
 
 definition cmp_pair where
-  "cmp_pair p c = (p = c)"
+  "cmp_pair p c_tag = (p = c_tag)"
 
 
 lemma tau1_witness: "trace_witness combine_g S0 call_pp tau1"
