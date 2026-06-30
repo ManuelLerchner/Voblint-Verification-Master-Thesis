@@ -9,9 +9,9 @@ instance ivl :: bounded_warrowing ..
 
 text \<open>
   Executable mirror of @{const ivl_tf} on @{typ "ivl st"}, following
-  the sign-domain pattern in @{file "Sign_Exec.thy"}.  Commutation lemmas hook
+  the sign-domain pattern in \<open>Sign_Exec\<close>.  Commutation lemmas hook
   into the generic @{theory Voblint_Analysis.Exec_Bridge} transport; no certified
-  end-to-end soundness theory yet (cf.\ @{file "Sign_Exec_Sound.thy"}).
+  end-to-end soundness theory yet (cf.\ \<open>Sign_Exec_Sound\<close>).
 \<close>
 
 lemma fun_of_st_update:

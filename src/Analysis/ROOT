@@ -3,9 +3,13 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
   sessions
     TD
   directories
-    "Domains"
-    "Equations"
-    "Solver"
+    "Generic/Domain"
+    "Generic/Equations"
+    "Generic/Solver"
+    "Instances/Sign"
+    "Instances/Interval"
+    "Instances/NamedGlobalSign"
+    "Instances/Tooling"
   theories
     Abstract_Domain
     Sign_Domain

@@ -7,12 +7,13 @@ section \<open>Effectful RHS generator locales\<close>
 text \<open>
   @{term unit_etf_of_transfer} and @{term mixed_etf_of_transfer} share combine-tree
   shape and differ only in per-edge tree dispatch.  These locales bundle the
-  solver-side cone and threefold-monotonicity contracts for each shape.
+  transfer-tree shape, dependency-staticness facts, and solver-side monotonicity
+  packaging for each shape.
 \<close>
 
 subsection \<open>Shared combine-tree infrastructure\<close>
 
-locale sound_rhs_generator =
+locale sound_rhs_generator_base =
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
 begin
@@ -25,19 +26,40 @@ lemma dep_aux_comb_exit:
   "Inl ex \<in> dep_aux \<sigma> (etf_combine etf cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
-lemma static_deps_comb:
-  "static_deps (etf_combine etf cc ex)"
-  by (simp add: comb static_deps_def unit_combine_tree_def Let_def)
-
 lemma comb_inr:
   "\<And>cc ex \<sigma> g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr g))"
   unfolding comb by (rule sides_inr_local_bot_unit_combine_tree)
 
 end
 
+locale sound_rhs_generator_static = sound_rhs_generator_base
+begin
+
+lemma static_deps_comb:
+  "static_deps (etf_combine etf cc ex)"
+  by (simp add: comb static_deps_def unit_combine_tree_def Let_def)
+
+end
+
+locale sound_rhs_generator_mono = sound_rhs_generator_static etf
+  for etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer" +
+  fixes T :: "('x, 'g, 'a) eqsT"
+  assumes is_mono_eq: "is_mono_eq T"
+  assumes mono_sides: "mono_sides T"
+  assumes mono_deps: "mono_deps T"
+begin
+
+lemma threefold_mono:
+  "threefold_mono T"
+  unfolding threefold_mono_def
+  using is_mono_eq mono_sides mono_deps
+  by blast
+
+end
+
 subsection \<open>Unit edge-tree generator\<close>
 
-locale sound_rhs_generator_unit = sound_rhs_generator +
+locale unit_rhs_generator = sound_rhs_generator_static +
   fixes F :: "edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
 begin
@@ -63,7 +85,9 @@ lemma cone_compatible:
 
 end
 
-locale sound_rhs_generator_unit_mono = sound_rhs_generator_unit +
+locale sound_rhs_generator_unit = unit_rhs_generator
+
+locale unit_rhs_generator_mono = unit_rhs_generator +
   assumes F_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
 begin
 
@@ -139,6 +163,8 @@ lemma threefold_mono:
 
 end
 
+locale sound_rhs_generator_unit_mono = unit_rhs_generator_mono
+
 subsection \<open>Mixed local/unit edge-tree generator\<close>
 
 lemma static_deps_local_edge_tree:
@@ -157,7 +183,7 @@ lemma dep_aux_unit_edge_tree_src:
   "Inl u \<in> dep_aux \<sigma> (unit_edge_tree f u)"
   unfolding unit_edge_tree_def by simp
 
-locale sound_rhs_generator_mixed = sound_rhs_generator +
+locale mixed_rhs_generator = sound_rhs_generator_static +
   fixes F :: "edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action a then local_edge_tree (F a) u
@@ -186,7 +212,9 @@ lemma cone_compatible:
 
 end
 
-locale sound_rhs_generator_mixed_mono = sound_rhs_generator_mixed +
+locale sound_rhs_generator_mixed = mixed_rhs_generator
+
+locale mixed_rhs_generator_mono = mixed_rhs_generator +
   assumes F_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
 begin
 
@@ -287,5 +315,7 @@ lemma threefold_mono:
   by blast
 
 end
+
+locale sound_rhs_generator_mixed_mono = mixed_rhs_generator_mono
 
 end
