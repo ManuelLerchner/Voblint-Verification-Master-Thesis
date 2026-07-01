@@ -200,6 +200,258 @@ definition graphviz_of_analysis_prog ::
        (proc_entry_pps_prog \<Pi> ps main)
        (proc_exit_pps_prog \<Pi> ps main)"
 
+subsection \<open>Context-indexed debug DOT generators\<close>
+
+text \<open>
+  Debug rendering for already-materialised context-indexed analysis graphs.
+  The caller supplies the context list, context labels, node labels, and the
+  context-specific edges.  This layer only assembles DOT; it does not reconstruct
+  call contexts from the plain CFG.
+\<close>
+
+definition ctx_debug_node_id :: "('ctx \<Rightarrow> string) \<Rightarrow> pp * 'ctx \<Rightarrow> string" where
+  "ctx_debug_node_id ctx_key pc =
+     (case pc of (p, k) \<Rightarrow> ''pp'' @ string_of_nat p @ ''_ctx_'' @ ctx_key k)"
+
+definition ctx_debug_nodes_for :: "'ctx \<Rightarrow> (pp * 'ctx) list \<Rightarrow> (pp * 'ctx) list" where
+  "ctx_debug_nodes_for k ns = filter (\<lambda>pc. snd pc = k) ns"
+
+definition ctx_debug_cluster_id :: "('ctx \<Rightarrow> string) \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_debug_cluster_id ctx_key k = ''cluster_ctx_'' @ ctx_key k"
+
+definition ctx_debug_node_dot ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> pp * 'ctx \<Rightarrow> string" where
+  "ctx_debug_node_dot ctx_key node_label node_attrs pc =
+     (case pc of (p, k) \<Rightarrow>
+        ''  '' @ ctx_debug_node_id ctx_key pc @ '' ['' @ node_attrs p @
+        '',label='' @ dq @ node_label pc @ dq @ ''];'' @ nl)"
+
+definition ctx_debug_cluster_dot ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow>
+   (pp * 'ctx) list \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_debug_cluster_dot ctx_key ctx_label node_label node_attrs ns k =
+     ''  subgraph '' @ ctx_debug_cluster_id ctx_key k @ '' {'' @ nl @
+     ''    label='' @ dq @ ctx_label k @ dq @ '';'' @ nl @
+     ''    style=filled; color=lightgrey; fillcolor=white;'' @ nl @
+     concat (map (ctx_debug_node_dot ctx_key node_label node_attrs)
+       (ctx_debug_nodes_for k ns)) @
+     ''  }'' @ nl"
+
+definition ctx_debug_globals_node_id :: "('ctx \<Rightarrow> string) \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_debug_globals_node_id ctx_key k = ''globals_ctx_'' @ ctx_key k"
+
+definition ctx_debug_globals_node_dot :: "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_debug_globals_node_dot ctx_key globals_label k =
+     (let lab = globals_label k in
+      if lab = [] then []
+      else ''    '' @ ctx_debug_globals_node_id ctx_key k @
+        '' [shape=note,width=2.2,fixedsize=false,label='' @ dq @ ''global env'' @ gv_nl @
+        ''(flow-insensitive)'' @ gv_nl @ lab @ dq @ ''];'' @ nl)"
+
+definition ctx_debug_cluster_dot_with_globals ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow>
+   (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> (pp * 'ctx) list \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_debug_cluster_dot_with_globals ctx_key ctx_label globals_label node_label node_attrs ns k =
+     ''  subgraph '' @ ctx_debug_cluster_id ctx_key k @ '' {'' @ nl @
+     ''    label='' @ dq @ ctx_label k @ dq @ '';'' @ nl @
+     ''    style=filled; color=lightgrey; fillcolor=white;'' @ nl @
+     concat (map (ctx_debug_node_dot ctx_key node_label node_attrs)
+       (ctx_debug_nodes_for k ns)) @
+     ctx_debug_globals_node_dot ctx_key globals_label k @
+     ''  }'' @ nl"
+
+definition ctx_debug_intra_dot ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx) * edge_action * (pp * 'ctx) \<Rightarrow> string" where
+  "ctx_debug_intra_dot ctx_key e =
+     (case e of (src, a, dst) \<Rightarrow>
+        ''  '' @ ctx_debug_node_id ctx_key src @ '' -> '' @ ctx_debug_node_id ctx_key dst @
+        '' [label='' @ dq @ string_of_action a @ dq @ ''];'' @ nl)"
+
+definition ctx_debug_call_dot ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx) * (pp * 'ctx) \<Rightarrow> string" where
+  "ctx_debug_call_dot ctx_key ctx_label e =
+     (case e of (src, dst) \<Rightarrow>
+        ''  '' @ ctx_debug_node_id ctx_key src @ '' -> '' @ ctx_debug_node_id ctx_key dst @
+        '' [color=purple,penwidth=2,label='' @ dq @ ''EA_Enter'' @ gv_nl @
+        ''callee '' @ (case dst of (_, k) \<Rightarrow> ctx_label k) @ dq @ ''];'' @ nl)"
+
+definition ctx_debug_return_dot ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx) \<Rightarrow> string" where
+  "ctx_debug_return_dot ctx_key e =
+     (case e of (src, (call, ex, ret), dst) \<Rightarrow>
+        ''  '' @ ctx_debug_node_id ctx_key src @ '' -> '' @ ctx_debug_node_id ctx_key dst @
+        '' [style=dashed,color=blue,label='' @ dq @ ''return'' @ gv_nl @ ''combine ('' @
+        string_of_nat call @ '','' @ string_of_nat ex @ '','' @ string_of_nat ret @
+        '')'' @ dq @ ''];'' @ nl)"
+
+definition ctx_debug_graphviz ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow>
+   'ctx list \<Rightarrow> (pp * 'ctx) list \<Rightarrow>
+   ((pp * 'ctx) * edge_action * (pp * 'ctx)) list \<Rightarrow>
+   ((pp * 'ctx) * (pp * 'ctx)) list \<Rightarrow>
+   ((pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx)) list \<Rightarrow> string" where
+  "ctx_debug_graphviz ctx_key ctx_label node_label node_attrs ks ns intra_edges call_edges return_edges =
+     ''digraph CFG_CTX {'' @ nl @
+     ''  rankdir=TB;'' @ nl @
+     ''  node [fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl @
+     concat (map (ctx_debug_cluster_dot ctx_key ctx_label node_label node_attrs ns) ks) @
+     concat (map (ctx_debug_intra_dot ctx_key) intra_edges) @
+     concat (map (ctx_debug_call_dot ctx_key ctx_label) call_edges) @
+     concat (map (ctx_debug_return_dot ctx_key) return_edges) @
+     ''}'' @ nl"
+
+definition ctx_debug_graphviz_with_globals ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow>
+   (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> (pp * 'ctx) list \<Rightarrow>
+   ((pp * 'ctx) * edge_action * (pp * 'ctx)) list \<Rightarrow>
+   ((pp * 'ctx) * (pp * 'ctx)) list \<Rightarrow>
+   ((pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx)) list \<Rightarrow> string" where
+  "ctx_debug_graphviz_with_globals ctx_key ctx_label globals_label node_label node_attrs ks ns intra_edges call_edges return_edges =
+     ''digraph CFG_CTX {'' @ nl @
+     ''  rankdir=TB;'' @ nl @
+     ''  node [fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl @
+     concat (map (ctx_debug_cluster_dot_with_globals ctx_key ctx_label globals_label node_label node_attrs ns) ks) @
+     concat (map (ctx_debug_intra_dot ctx_key) intra_edges) @
+     concat (map (ctx_debug_call_dot ctx_key ctx_label) call_edges) @
+     concat (map (ctx_debug_return_dot ctx_key) return_edges) @
+     ''}'' @ nl"
+
+text \<open>
+  Convenience adapter for witnesses where the rendered context is unchanged
+  along every CFG edge and combine edge.  Analyses with value-dependent call
+  contexts should call @{const ctx_debug_graphviz} directly with explicit
+  context-specific edges.
+\<close>
+
+definition ctx_debug_same_ctx_nodes :: "'ctx list \<Rightarrow> pp list \<Rightarrow> (pp * 'ctx) list" where
+  "ctx_debug_same_ctx_nodes ks ps = concat (map (\<lambda>k. map (\<lambda>p. (p, k)) ps) ks)"
+
+definition ctx_debug_same_ctx_intra_edges ::
+  "'ctx list \<Rightarrow> (pp * edge_action * pp) list \<Rightarrow> ((pp * 'ctx) * edge_action * (pp * 'ctx)) list" where
+  "ctx_debug_same_ctx_intra_edges ks es =
+     concat (map (\<lambda>k. concat (map (\<lambda>e. case e of
+       (u, EA_Enter, v) \<Rightarrow> []
+     | (u, a, v) \<Rightarrow> [((u, k), a, (v, k))]) es)) ks)"
+
+definition ctx_debug_same_ctx_call_edges ::
+  "'ctx list \<Rightarrow> (pp * edge_action * pp) list \<Rightarrow> ((pp * 'ctx) * (pp * 'ctx)) list" where
+  "ctx_debug_same_ctx_call_edges ks es =
+     concat (map (\<lambda>k. concat (map (\<lambda>e. case e of
+       (u, EA_Enter, v) \<Rightarrow> [((u, k), (v, k))]
+     | _ \<Rightarrow> []) es)) ks)"
+
+definition ctx_debug_same_ctx_return_edges ::
+  "'ctx list \<Rightarrow> (pp * pp * pp) list \<Rightarrow> ((pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx)) list" where
+  "ctx_debug_same_ctx_return_edges ks cs =
+     concat (map (\<lambda>k. map (\<lambda>(call, ex, ret). ((ex, k), (call, ex, ret), (ret, k))) cs) ks)"
+
+definition ctx_debug_graphviz_same_ctx_lists ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow>
+   'ctx list \<Rightarrow> pp list \<Rightarrow> (pp * edge_action * pp) list \<Rightarrow> (pp * pp * pp) list \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_lists ctx_key ctx_label node_label node_attrs ks ps es cs =
+     ctx_debug_graphviz ctx_key ctx_label node_label node_attrs ks
+       (ctx_debug_same_ctx_nodes ks ps)
+       (ctx_debug_same_ctx_intra_edges ks es)
+       (ctx_debug_same_ctx_call_edges ks es)
+       (ctx_debug_same_ctx_return_edges ks cs)"
+
+definition ctx_debug_graphviz_same_ctx_lists_with_globals ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow>
+   (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> pp list \<Rightarrow>
+   (pp * edge_action * pp) list \<Rightarrow> (pp * pp * pp) list \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_lists_with_globals ctx_key ctx_label globals_label node_label node_attrs ks ps es cs =
+     ctx_debug_graphviz_with_globals ctx_key ctx_label globals_label node_label node_attrs ks
+       (ctx_debug_same_ctx_nodes ks ps)
+       (ctx_debug_same_ctx_intra_edges ks es)
+       (ctx_debug_same_ctx_call_edges ks es)
+       (ctx_debug_same_ctx_return_edges ks cs)"
+
+definition ctx_debug_graphviz_same_ctx_cfg_with_globals ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow>
+   (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg_with_globals ctx_key ctx_label globals_label node_label node_attrs ks g =
+     ctx_debug_graphviz_same_ctx_lists_with_globals ctx_key ctx_label globals_label node_label node_attrs ks
+       (sorted_list_of_set (nodes g)) (cfg_edges_list g) (cfg_combines_list g)"
+
+definition ctx_debug_graphviz_same_ctx_cfg ::
+  "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow>
+   'ctx list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg ctx_key ctx_label node_label node_attrs ks g =
+     ctx_debug_graphviz_same_ctx_lists ctx_key ctx_label node_label node_attrs ks
+       (sorted_list_of_set (nodes g)) (cfg_edges_list g) (cfg_combines_list g)"
+
+definition ctx_debug_show_key :: "'ctx::show_val \<Rightarrow> string" where
+  "ctx_debug_show_key k = show_val k"
+
+definition ctx_debug_show_label :: "string \<Rightarrow> 'ctx::show_val \<Rightarrow> string" where
+  "ctx_debug_show_label name k = ''ctx '' @ name @ ''='' @ show_val k"
+
+definition ctx_debug_graphviz_same_ctx_cfg_show ::
+  "string \<Rightarrow> (pp * 'ctx::show_val \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg_show name node_label node_attrs ks g =
+     ctx_debug_graphviz_same_ctx_cfg ctx_debug_show_key (ctx_debug_show_label name)
+       node_label node_attrs ks g"
+
+definition ctx_debug_show_label_lines :: "('ctx::show_val \<Rightarrow> string list) \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_debug_show_label_lines lines k = join_gv_nl (lines k)"
+
+definition ctx_debug_graphviz_same_ctx_cfg_show_lines ::
+  "('ctx::show_val \<Rightarrow> string list) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg_show_lines lines node_label node_attrs ks g =
+     ctx_debug_graphviz_same_ctx_cfg ctx_debug_show_key (ctx_debug_show_label_lines lines)
+       node_label node_attrs ks g"
+
+fun ctx_debug_enter_sources :: "(pp * edge_action * pp) list \<Rightarrow> pp list" where
+  "ctx_debug_enter_sources [] = []"
+| "ctx_debug_enter_sources ((src, EA_Enter, _) # es) = src # ctx_debug_enter_sources es"
+| "ctx_debug_enter_sources (_ # es) = ctx_debug_enter_sources es"
+
+definition ctx_debug_call_source_pps :: "cfg \<Rightarrow> pp list" where
+  "ctx_debug_call_source_pps g = ctx_debug_enter_sources (cfg_edges_list g)"
+
+definition ctx_debug_default_node_role :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
+  "ctx_debug_default_node_role g p =
+     (if p = cfg_entry g then
+        (if mem_pp p (ctx_debug_call_source_pps g)
+         then ''program entry'' @ gv_nl @ ''call site''
+         else ''program entry'')
+      else if p = cfg_exit g then ''program exit''
+      else if mem_pp p (proc_entry_pps_list g) then ''proc entry''
+      else if mem_pp p (proc_exit_pps_list g) then ''proc exit''
+      else if mem_pp p (ctx_debug_call_source_pps g) then ''call site''
+      else [])"
+
+definition ctx_debug_default_node_label :: "cfg \<Rightarrow> pp * 'ctx \<Rightarrow> string" where
+  "ctx_debug_default_node_label g pc =
+     (case pc of (p, k) \<Rightarrow> ''pp'' @ string_of_nat p @ gv_nl @ ctx_debug_default_node_role g p)"
+
+definition ctx_debug_default_node_attrs :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
+  "ctx_debug_default_node_attrs g p =
+     (if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
+      else if p = cfg_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+      else if mem_pp p (proc_entry_pps_list g) then ''shape=box,color=green,style=filled,fillcolor=lightgreen''
+      else if mem_pp p (proc_exit_pps_list g) then ''shape=box,color=red,style=filled,fillcolor=lightgreen''
+      else ''shape=box,style=filled,fillcolor=lightgreen'')"
+
+definition ctx_debug_graphviz_same_ctx_cfg_show_default ::
+  "string \<Rightarrow> 'ctx::show_val list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg_show_default name ks g =
+     ctx_debug_graphviz_same_ctx_cfg_show name
+       (ctx_debug_default_node_label g) (ctx_debug_default_node_attrs g) ks g"
+
+definition ctx_debug_graphviz_same_ctx_cfg_show_lines_default ::
+  "('ctx::show_val \<Rightarrow> string list) \<Rightarrow> 'ctx list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg_show_lines_default lines ks g =
+     ctx_debug_graphviz_same_ctx_cfg_show_lines lines
+       (ctx_debug_default_node_label g) (ctx_debug_default_node_attrs g) ks g"
+
+definition ctx_debug_graphviz_same_ctx_cfg_show_globals_default ::
+  "('ctx::show_val \<Rightarrow> string list) \<Rightarrow> ('ctx \<Rightarrow> string list) \<Rightarrow> 'ctx list \<Rightarrow> cfg \<Rightarrow> string" where
+  "ctx_debug_graphviz_same_ctx_cfg_show_globals_default ctx_lines globals_lines ks g =
+     ctx_debug_graphviz_same_ctx_cfg_with_globals
+       ctx_debug_show_key (ctx_debug_show_label_lines ctx_lines) (ctx_debug_show_label_lines globals_lines)
+       (ctx_debug_default_node_label g) (ctx_debug_default_node_attrs g) ks g"
+
 subsection \<open>Whole-program convenience wrappers\<close>
 
 text \<open>

@@ -682,13 +682,13 @@ lemma sign_times_mono2:
 subsection \<open>Printable instance\<close>
 
 fun string_of_sign :: "sign \<Rightarrow> string" where
-    "string_of_sign SBot    = ''Bot''"
-  | "string_of_sign SNeg    = ''Neg''"
-  | "string_of_sign SNonPos = ''<=0''"
-  | "string_of_sign SZero   = ''0''"
-  | "string_of_sign SNonNeg = ''>=0''"
-  | "string_of_sign SPos    = ''Pos''"
-  | "string_of_sign STop    = ''T''"
+    "string_of_sign SBot    = ''Bottom''"
+  | "string_of_sign SNeg    = ''Negative''"
+  | "string_of_sign SNonPos = ''NonPositive''"
+  | "string_of_sign SZero   = ''Zero''"
+  | "string_of_sign SNonNeg = ''NonNegative''"
+  | "string_of_sign SPos    = ''Positive''"
+  | "string_of_sign STop    = ''Top''"
 
 instantiation sign :: show_val begin
 definition "show_val_sign (s :: sign) = string_of_sign s"
