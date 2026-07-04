@@ -157,6 +157,19 @@ proof (intro allI)
     by simp
 qed
 
+text \<open>
+  The digest soundness contract, stated against the named context-collecting
+  semantics \<open>cfg_collect_ctx\<close> (CFG_Collect_Trace) instead of the unfolded
+  \<open>alpha_last (reaching_compat ...)\<close>.  A one-step rewrite via
+  \<open>cfg_collect_ctx_reaching_compat\<close>; both are literally the same proposition.  This
+  is the \<open>(pp, c)\<close>-indexed shape a context-sensitive solver must satisfy.
+\<close>
+theorem context_collect_sound:
+  "digest_env_sound dg cmp g S envd
+     = (\<forall>c v. cfg_collect_ctx dg cmp g S v c \<le> \<lbrakk>envd v c\<rbrakk>)"
+  unfolding digest_env_sound_def cfg_collect_ctx_reaching_compat
+  by (rule refl)
+
 end
 
 end

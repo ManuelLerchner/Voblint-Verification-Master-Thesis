@@ -22,6 +22,9 @@ comparisons. Not imported by pipeline theories.
 | `Example_Trace_Digest_Precision.thy` | Digest vs flat collecting precision on a two-path program |
 | `Example_Trace_Digest_Combine.thy` | Combine-side digest filtering: compiled if/else callee, `cmp` blocks path 3 |
 | `Example_Trace_Digest_ReachingCompat.thy` | Reader-side `reaching_compat`: lockset ghost filters global read |
+| `Example_Finite_Sign_Context_Analysis.thy` | Finite sign-derived calling contexts (`GZero`/`GPos`/`GNonNeg`/`GOther`); executable keyed `_st` run plus finite-key soundness-facing theorem |
+| `Example_Mode_Value_Digest_Showcase.thy` | Guided reading of the value-carried mode digest on the compiled `mode_prog` run |
+| `Example_Digest_Pipeline_Showcase.thy` | **Canonical end-to-end showcase**: source -> CFG -> equations -> strategy tree -> TD-side solver -> solution -> digest projection -> annotated CFG -> GraphViz -> soundness, all executable on one program |
 
 **GraphViz:** Sign examples with `Sign_Exec_Sound` use `sign_annotated_dot_prog_lit`
 (per-node sign states + `cluster_globals`). Interval and structural examples use
