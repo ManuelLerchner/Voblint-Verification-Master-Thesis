@@ -66,6 +66,163 @@ lemma sign_sound_etf_unit:
   unfolding sign_etf_unit_def
   by (rule sound_effectful_transfer_unit_of_transfer [OF sign_is_sound_transfer])
 
+definition sign_etf_retain :: "(unit, sign) effectful_domain_transfer" where
+  "sign_etf_retain = retain_etf_of_transfer sign_tf"
+
+lemma sign_etf_retain_edge_tree:
+  "apply_etf sign_etf_retain a u = retain_edge_tree (apply_tf sign_tf a) u"
+  unfolding sign_etf_retain_def apply_etf_retain_of_transfer by simp
+
+lemma sign_etf_retain_combine_tree:
+  "etf_combine sign_etf_retain cc ex = unit_combine_tree cc ex"
+  unfolding sign_etf_retain_def etf_combine_retain_of_transfer by simp
+
+lemma sign_sound_etf_retain:
+  "sound_effectful_transfer sign_etf_retain"
+  unfolding sign_etf_retain_def
+  by (rule sound_effectful_transfer_retain_of_transfer [OF sign_is_sound_transfer])
+
+lemma sign_etf_retain_enter:
+  "etf_enter sign_etf_retain u = retain_edge_tree enter_sign u"
+proof -
+  have tf: "apply_tf sign_tf EA_Enter = enter_sign"
+    by (simp add: sign_tf_def fun_eq_iff)
+  have "etf_enter sign_etf_retain u = apply_etf sign_etf_retain EA_Enter u" by simp
+  also have "\<dots> = retain_edge_tree (apply_tf sign_tf EA_Enter) u"
+    by (rule sign_etf_retain_edge_tree)
+  also have "\<dots> = retain_edge_tree enter_sign u" by (simp add: tf)
+  finally show ?thesis .
+qed
+
+text \<open>
+  The fresh callee frame for the sign enter transfer: locals reset to @{term STop}
+  (the abstraction of the zeroed callee frame), globals bot.  It is exactly
+  @{term \<open>restrict_local (enter_sign x)\<close>}, independent of the input @{term x}.
+\<close>
+
+definition fresh_frame_sign :: "sign abs_state" where
+  "fresh_frame_sign = (\<lambda>x. if is_global x then \<bottom> else STop)"
+
+lemma sign_etf_unit_enter:
+  "etf_enter sign_etf_unit u = unit_edge_tree enter_sign u"
+proof -
+  have tf: "apply_tf sign_tf EA_Enter = enter_sign"
+    by (simp add: sign_tf_def fun_eq_iff)
+  have "etf_enter sign_etf_unit u = apply_etf sign_etf_unit EA_Enter u" by simp
+  also have "\<dots> = unit_edge_tree (apply_tf sign_tf EA_Enter) u"
+    by (rule sign_etf_unit_edge_tree)
+  also have "\<dots> = unit_edge_tree enter_sign u" by (simp add: tf)
+  finally show ?thesis .
+qed
+
+lemma sign_sound_etf_unit_framed:
+  "sound_effectful_transfer_framed sign_etf_unit fresh_frame_sign"
+proof (rule sound_effectful_transfer_framed.intro)
+  show "sound_effectful_transfer sign_etf_unit" by (rule sign_sound_etf_unit)
+next
+  show "sound_effectful_transfer_framed_axioms sign_etf_unit fresh_frame_sign"
+    unfolding sound_effectful_transfer_framed_axioms_def
+  proof (intro allI impI)
+    fix u and \<sigma> :: "pp + unit \<Rightarrow> sign abs_state"
+    assume inr: "inr_slot_locals_bot \<sigma>" and inl: "inl_slot_globals_bot \<sigma>"
+    have "etf_full (etf_enter sign_etf_unit u) \<sigma>
+            = enter_sign (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+      by (simp add: sign_etf_unit_enter etf_full_unit_edge_tree)
+    also have "\<dots> \<le> fresh_frame_sign \<squnion> glob_env \<sigma>"
+    proof (rule le_funI)
+      fix x
+      show "enter_sign (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())) x \<le> (fresh_frame_sign \<squnion> glob_env \<sigma>) x"
+      proof (cases "is_global x")
+        case True
+        have "\<sigma> (Inl u) x = \<bottom>" using inl True by (simp add: inl_slot_globals_bot_def)
+        thus ?thesis using True
+          by (simp add: enter_sign_def fresh_frame_sign_def glob_env_unit)
+      next
+        case False
+        thus ?thesis
+          by (simp add: enter_sign_def fresh_frame_sign_def glob_env_unit)
+      qed
+    qed
+    finally show "etf_full (etf_enter sign_etf_unit u) \<sigma>
+                    \<le> fresh_frame_sign \<squnion> glob_env \<sigma>" .
+  qed
+qed
+
+text \<open>
+  Retain companion: the enter bound also holds under the weaker
+  @{const inl_glob_le_glob_env} premise, so the retain Sign spine (local slots
+  carrying globals) discharges the framed contract.  Same proof, but the global
+  case bounds @{term "\<sigma> (Inl u) x"} by @{const glob_env} rather than forcing it to
+  @{term \<bottom>}.
+\<close>
+lemma sign_sound_etf_unit_framed_le:
+  "sound_effectful_transfer_framed_le sign_etf_unit fresh_frame_sign"
+proof (rule sound_effectful_transfer_framed_le.intro)
+  show "sound_effectful_transfer sign_etf_unit" by (rule sign_sound_etf_unit)
+next
+  show "sound_effectful_transfer_framed_le_axioms sign_etf_unit fresh_frame_sign"
+    unfolding sound_effectful_transfer_framed_le_axioms_def
+  proof (intro allI impI)
+    fix u and \<sigma> :: "pp + unit \<Rightarrow> sign abs_state"
+    assume inr: "inr_slot_locals_bot \<sigma>" and inl: "inl_glob_le_glob_env \<sigma>"
+    have "etf_full (etf_enter sign_etf_unit u) \<sigma>
+            = enter_sign (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+      by (simp add: sign_etf_unit_enter etf_full_unit_edge_tree)
+    also have "\<dots> \<le> fresh_frame_sign \<squnion> glob_env \<sigma>"
+    proof (rule le_funI)
+      fix x
+      show "enter_sign (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())) x \<le> (fresh_frame_sign \<squnion> glob_env \<sigma>) x"
+      proof (cases "is_global x")
+        case True
+        have "\<sigma> (Inl u) x \<le> glob_env \<sigma> x"
+          using inl True by (simp add: inl_glob_le_glob_env_def)
+        thus ?thesis using True
+          by (simp add: enter_sign_def fresh_frame_sign_def glob_env_unit sup_fun_def le_sup_iff)
+      next
+        case False
+        thus ?thesis
+          by (simp add: enter_sign_def fresh_frame_sign_def glob_env_unit)
+      qed
+    qed
+    finally show "etf_full (etf_enter sign_etf_unit u) \<sigma>
+                    \<le> fresh_frame_sign \<squnion> glob_env \<sigma>" .
+  qed
+qed
+
+lemma sign_sound_etf_retain_framed_le:
+  "sound_effectful_transfer_framed_le sign_etf_retain fresh_frame_sign"
+proof (rule sound_effectful_transfer_framed_le.intro)
+  show "sound_effectful_transfer sign_etf_retain" by (rule sign_sound_etf_retain)
+next
+  show "sound_effectful_transfer_framed_le_axioms sign_etf_retain fresh_frame_sign"
+    unfolding sound_effectful_transfer_framed_le_axioms_def
+  proof (intro allI impI)
+    fix u and \<sigma> :: "pp + unit \<Rightarrow> sign abs_state"
+    assume inr: "inr_slot_locals_bot \<sigma>" and inl: "inl_glob_le_glob_env \<sigma>"
+    have "etf_full (etf_enter sign_etf_retain u) \<sigma>
+            = enter_sign (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+      by (simp add: sign_etf_retain_enter etf_full_retain_edge_tree)
+    also have "\<dots> \<le> fresh_frame_sign \<squnion> glob_env \<sigma>"
+    proof (rule le_funI)
+      fix x
+      show "enter_sign (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())) x \<le> (fresh_frame_sign \<squnion> glob_env \<sigma>) x"
+      proof (cases "is_global x")
+        case True
+        have "\<sigma> (Inl u) x \<le> glob_env \<sigma> x"
+          using inl True by (simp add: inl_glob_le_glob_env_def)
+        thus ?thesis using True
+          by (simp add: enter_sign_def fresh_frame_sign_def glob_env_unit sup_fun_def le_sup_iff)
+      next
+        case False
+        thus ?thesis
+          by (simp add: enter_sign_def fresh_frame_sign_def glob_env_unit)
+      qed
+    qed
+    finally show "etf_full (etf_enter sign_etf_retain u) \<sigma>
+                    \<le> fresh_frame_sign \<squnion> glob_env \<sigma>" .
+  qed
+qed
+
 lemma sign_etf_unit_cone_compatible: "cone_compatible_etf sign_etf_unit"
   by (rule cone_compatible_etf_unit_transfer
        [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree])

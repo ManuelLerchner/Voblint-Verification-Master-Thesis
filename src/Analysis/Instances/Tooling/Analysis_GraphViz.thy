@@ -482,5 +482,52 @@ definition plain_dot_of_prog_lit :: "proc_table \<Rightarrow> pname list \<Right
           (proc_entry_pps_prog \<Pi> ps main)
           (proc_exit_pps_prog \<Pi> ps main))"
 
+section \<open>Generic context-annotated renderer\<close>
+
+text \<open>
+  A renderer for a \<^emph>\<open>context-sensitive\<close> solution: one Graphviz cluster per context, each
+  node annotated with the abstract state that context assigns it.  Where the whole-program
+  \<open>sign_annotated_dot_prog_lit\<close> draws the context-\<^emph>\<open>insensitive\<close> CFG (one copy of each
+  procedure), this draws the per-context copies a context-sensitive solution actually holds.
+
+  It is generic over the node type \<^typ>\<open>'v\<close>, the context type \<^typ>\<open>'ctx\<close>, and the way each is
+  shown, taking the graph as explicit node and labelled-edge lists.  The caller supplies:
+  \<^item> \<open>vid\<close> --- a node identifier (Graphviz-safe token);
+  \<^item> \<open>nlab\<close> --- the annotation lines for a node under a context (already newline-joined, e.g.
+    via \<^const>\<open>label_of_st\<close> on a solution \<open>(v, k) \<mapsto> state\<close>);
+  \<^item> \<open>ckey\<close> --- a per-context token that keeps the cluster and its node ids distinct;
+  \<^item> \<open>clabel\<close> --- the cluster header text.
+\<close>
+
+definition ctx_annot_node ::
+  "('v \<Rightarrow> string) \<Rightarrow> ('v \<Rightarrow> 'ctx \<Rightarrow> string) \<Rightarrow> string \<Rightarrow> 'ctx \<Rightarrow> 'v \<Rightarrow> string" where
+  "ctx_annot_node vid nlab ck k v =
+     ''    '' @ ck @ ''_'' @ vid v @ '' [label=\"'' @ vid v @ gv_nl @ nlab v k @ ''\"];'' @ [CHR 0x0A]"
+
+definition ctx_annot_edge ::
+  "('v \<Rightarrow> string) \<Rightarrow> string \<Rightarrow> ('v \<times> 'v \<times> string) \<Rightarrow> string" where
+  "ctx_annot_edge vid ck e =
+     (case e of (a, b, l) \<Rightarrow>
+        ''    '' @ ck @ ''_'' @ vid a @ '' -> '' @ ck @ ''_'' @ vid b
+          @ '' [label=\"'' @ l @ ''\"];'' @ [CHR 0x0A])"
+
+definition ctx_annot_cluster ::
+  "('v \<Rightarrow> string) \<Rightarrow> ('v \<Rightarrow> 'ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string)
+     \<Rightarrow> 'v list \<Rightarrow> ('v \<times> 'v \<times> string) list \<Rightarrow> 'ctx \<Rightarrow> string" where
+  "ctx_annot_cluster vid nlab ckey clabel ns es k =
+     ''  subgraph cluster_'' @ ckey k @ '' {'' @ [CHR 0x0A]
+       @ ''    label=\"'' @ clabel k @ ''\"; color=blue;'' @ [CHR 0x0A]
+       @ concat (map (ctx_annot_node vid nlab (ckey k) k) ns)
+       @ concat (map (ctx_annot_edge vid (ckey k)) es)
+       @ ''  }'' @ [CHR 0x0A]"
+
+definition ctx_annotated_graphviz ::
+  "('v \<Rightarrow> string) \<Rightarrow> ('v \<Rightarrow> 'ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string)
+     \<Rightarrow> 'v list \<Rightarrow> ('v \<times> 'v \<times> string) list \<Rightarrow> 'ctx list \<Rightarrow> string" where
+  "ctx_annotated_graphviz vid nlab ckey clabel ns es ks =
+     ''digraph CtxCFG {'' @ [CHR 0x0A] @ ''  rankdir=TB;'' @ [CHR 0x0A]
+       @ concat (map (ctx_annot_cluster vid nlab ckey clabel ns es) ks)
+       @ ''}'' @ [CHR 0x0A]"
+
 end
 
