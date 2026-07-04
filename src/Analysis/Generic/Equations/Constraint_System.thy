@@ -652,6 +652,38 @@ where
   "inr_slot_locals_bot \<sigma> =
      (\<forall>g. \<forall>x. \<not> is_global x \<longrightarrow> \<sigma> (Inr g) x = bot)"
 
+text \<open>
+  Dual of @{const inr_slot_locals_bot}: every local program-point unknown carries
+  bot in its global components.  Holds for the effectful generator's solutions
+  because each edge tree ends in a local-restricted Answer, so the local
+  unknowns never accumulate globals.  The keyed enter bound uses it to discard the
+  caller's (bot) global part of a callee-entry frame.
+\<close>
+
+definition inl_slot_globals_bot ::
+  "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
+where
+  "inl_slot_globals_bot \<sigma> =
+     (\<forall>v. \<forall>x. is_global x \<longrightarrow> \<sigma> (Inl v) x = bot)"
+
+text \<open>
+  The retain relaxation of @{const inl_slot_globals_bot}: a local unknown may carry
+  globals, but each is bounded by the global environment.  A retain edge tree keeps
+  the written global in its local Answer @{emph \<open>and\<close>} publishes it to the global
+  slot, so at a solution every local-slot global sits below @{const glob_env}.  This
+  is exactly what the keyed enter bound needs: the caller's global part of a
+  callee-entry frame is already covered by the globals.
+\<close>
+definition inl_glob_le_glob_env ::
+  "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
+where
+  "inl_glob_le_glob_env \<sigma> =
+     (\<forall>v. \<forall>x. is_global x \<longrightarrow> \<sigma> (Inl v) x \<le> glob_env \<sigma> x)"
+
+lemma inl_slot_globals_bot_le_glob_env:
+  "inl_slot_globals_bot \<sigma> \<Longrightarrow> inl_glob_le_glob_env \<sigma>"
+  by (auto simp: inl_slot_globals_bot_def inl_glob_le_glob_env_def)
+
 locale sound_effectful_transfer =
   fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
   assumes etf_sound_nop:
@@ -680,4 +712,39 @@ locale sound_effectful_transfer =
        \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
          <s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>)"
 
+text \<open>
+  The keyed generator filters call-enter edges out of the intra predecessor fold
+  and instead seeds each callee-entry frame with a fixed fresh local frame.  For
+  that to stay sound the enter transfer must be bounded above by that fresh frame
+  joined with the global environment: entering a procedure resets locals into the
+  fresh frame and preserves only globals.  This is the upper-bound companion of
+  @{const sound_effectful_transfer}'s lower-bound @{text etf_sound_enter}.
+\<close>
+
+locale sound_effectful_transfer_framed = sound_effectful_transfer +
+  fixes fresh_frame :: "'a::sound_domain abs_state"
+  assumes etf_enter_framed_le:
+    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow> inl_slot_globals_bot \<sigma> \<longrightarrow>
+       etf_full (etf_enter etf u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
+
+text \<open>
+  The retain-compatible companion of @{locale sound_effectful_transfer_framed}: the
+  enter bound holds under the weaker premise @{const inl_glob_le_glob_env}, so a
+  retain spine (whose local slots carry globals) can still discharge it.  Since
+  @{const inl_slot_globals_bot} implies @{const inl_glob_le_glob_env}, this contract
+  is stronger; @{term framed_le_imp_framed} recovers the publish contract.
+\<close>
+locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
+  fixes fresh_frame :: "'a::sound_domain abs_state"
+  assumes etf_enter_framed_glob_le:
+    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow> inl_glob_le_glob_env \<sigma> \<longrightarrow>
+       etf_full (etf_enter etf u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
+
+lemma (in sound_effectful_transfer_framed_le) framed_le_imp_framed:
+  "sound_effectful_transfer_framed etf fresh_frame"
+  by (simp add: sound_effectful_transfer_framed_def sound_effectful_transfer_axioms
+        sound_effectful_transfer_framed_axioms_def
+        etf_enter_framed_glob_le inl_slot_globals_bot_le_glob_env)
+
 end
+

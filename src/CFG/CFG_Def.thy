@@ -200,6 +200,51 @@ proof -
     unfolding predecessor_list_def by simp
 qed
 
+subsection \<open>Frame-entry predecessor split\<close>
+
+text \<open>
+  A frame-entry node is the target of some \<^const>\<open>EA_Enter\<close> edge (a procedure
+  or scope entry -- the IMP2-to-CFG compiler emits this edge shape for both
+  ``Call`` and ``Scope``).  Splitting \<^const>\<open>predecessor_list\<close> into its
+  \<^const>\<open>EA_Enter\<close>
+  and non-\<^const>\<open>EA_Enter\<close> parts lets a context-sensitive generator seed a
+  frame-entry node's locals from the call context while still folding in any
+  other predecessor (e.g. a loop backedge, when the frame entry coincides with
+  a loop head) through the ordinary transfer.
+\<close>
+
+definition enter_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
+  "enter_predecessor_list g v = filter (\<lambda>(u, a). a = EA_Enter) (predecessor_list g v)"
+
+definition non_enter_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
+  "non_enter_predecessor_list g v = filter (\<lambda>(u, a). a \<noteq> EA_Enter) (predecessor_list g v)"
+
+definition is_frame_entry :: "cfg \<Rightarrow> pp \<Rightarrow> bool" where
+  "is_frame_entry g v = (enter_predecessor_list g v \<noteq> [])"
+
+lemma set_predecessor_list_enter_split:
+  "set (predecessor_list g v)
+     = set (enter_predecessor_list g v) \<union> set (non_enter_predecessor_list g v)"
+  unfolding enter_predecessor_list_def non_enter_predecessor_list_def by auto
+
+lemma enter_predecessor_list_action:
+  "(u, a) \<in> set (enter_predecessor_list g v) \<Longrightarrow> a = EA_Enter"
+  unfolding enter_predecessor_list_def by auto
+
+lemma non_enter_predecessor_list_action:
+  "(u, a) \<in> set (non_enter_predecessor_list g v) \<Longrightarrow> a \<noteq> EA_Enter"
+  unfolding non_enter_predecessor_list_def by auto
+
+lemma non_enter_predecessor_list_mem:
+  "(u, a) \<in> set (predecessor_list g v) \<Longrightarrow> a \<noteq> EA_Enter
+   \<Longrightarrow> (u, a) \<in> set (non_enter_predecessor_list g v)"
+  unfolding non_enter_predecessor_list_def by auto
+
+lemma enter_predecessor_list_mem:
+  "(u, EA_Enter) \<in> set (predecessor_list g v)
+   \<Longrightarrow> (u, EA_Enter) \<in> set (enter_predecessor_list g v)"
+  unfolding enter_predecessor_list_def by auto
+
 (* Stable combine enumeration for the interprocedural TD bridge. *)
 
 definition cfg_combines_list :: "cfg \<Rightarrow> (pp \<times> pp \<times> pp) list" where

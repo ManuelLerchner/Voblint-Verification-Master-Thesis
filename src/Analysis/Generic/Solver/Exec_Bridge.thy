@@ -196,6 +196,76 @@ lemma sides_unit_combine_tree_st_Inl:
   "sides_of_rhs (unit_combine_tree_st cc ex) \<sigma> (Inl u') = bot"
   unfolding unit_combine_tree_st_def Let_def by simp
 
+subsection \<open>Executable retain edge tree\<close>
+
+text \<open>
+  The executable counterpart of @{const retain_edge_tree}: the local Answer keeps
+  the full result (globals retained).  It differs from @{const unit_edge_tree_st}
+  only in the Answer payload, which @{const sides_of_rhs} ignores --- so its side
+  map is the publish tree's, while its traverse carries the full transfer result.
+  The two commutation lemmas transport traverse and sides through @{const fun_of_st}
+  to the kernel @{const retain_edge_tree}, so a runnable retain transfer discharges
+  the hypotheses of the generic executable fold.
+\<close>
+
+definition retain_edge_tree_st ::
+  "('a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st) \<Rightarrow> (unit, 'a st) st_edge_tf_tree"
+where
+  "retain_edge_tree_st f u =
+     QueryL u (\<lambda>su. QueryG () (\<lambda>g.
+       let res = f (su \<squnion> g) in
+       Side () (restrict_global_st res) (Answer res)))"
+
+lemma traverse_retain_edge_tree_st:
+  "traverse_rhs (retain_edge_tree_st f u) \<sigma>_st =
+   f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ()))"
+  unfolding retain_edge_tree_st_def by (simp add: Let_def)
+
+lemma sides_retain_edge_tree_st_Inr:
+  "sides_of_rhs (retain_edge_tree_st f u) \<sigma>_st (Inr ()) =
+   restrict_global_st (f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))"
+  unfolding retain_edge_tree_st_def by (simp add: Let_def)
+
+lemma sides_retain_edge_tree_st_Inl:
+  "sides_of_rhs (retain_edge_tree_st f u) \<sigma> (Inl u') = bot"
+  unfolding retain_edge_tree_st_def Let_def by simp
+
+lemma side_rg_retain_edge_tree_st: "side_rg (retain_edge_tree_st f u)"
+  unfolding retain_edge_tree_st_def by (simp add: Let_def)
+
+lemma dep_aux_retain_edge_tree_st:
+  fixes f :: "'a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st"
+    and g :: "'a abs_state \<Rightarrow> 'a abs_state"
+  shows "dep_aux \<sigma>1 (retain_edge_tree_st f u) = dep_aux \<sigma>2 (retain_edge_tree g u)"
+  unfolding retain_edge_tree_st_def retain_edge_tree_def Let_def by simp
+
+lemma traverse_retain_edge_tree_st_commute:
+  fixes f :: "'a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st"
+    and g :: "'a abs_state \<Rightarrow> 'a abs_state"
+  assumes commute: "\<And>s. fun_of_st (f s) = g (fun_of_st s)"
+  shows "fun_of_st (traverse_rhs (retain_edge_tree_st f u) \<sigma>_st)
+       = traverse_rhs (retain_edge_tree g u) (fun_of_st \<circ> \<sigma>_st)"
+  by (simp add: traverse_retain_edge_tree_st traverse_retain_edge_tree
+                commute fun_of_st_sup o_def)
+
+lemma sides_retain_edge_tree_st_commute:
+  fixes f :: "'a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st"
+    and g :: "'a abs_state \<Rightarrow> 'a abs_state"
+  assumes commute: "\<And>s. fun_of_st (f s) = g (fun_of_st s)"
+  shows "fun_of_st (sides_of_rhs (retain_edge_tree_st f u) \<sigma>_st k)
+       = sides_of_rhs (retain_edge_tree g u) (fun_of_st \<circ> \<sigma>_st) k"
+proof (cases k)
+  case (Inl u')
+  then show ?thesis
+    by (simp add: sides_retain_edge_tree_st_Inl sides_retain_eq_unit
+                  sides_unit_edge_tree_Inl fun_of_st_bot bot_fun_def)
+next
+  case (Inr g')
+  then show ?thesis
+    by (simp add: sides_retain_edge_tree_st_Inr sides_retain_edge_tree_Inr
+                  commute fun_of_st_sup o_def)
+qed
+
 locale sound_rhs_generator_exec = sound_rhs_generator_unit +
   fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot st) effectful_st_transfer"
     and F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"

@@ -460,4 +460,127 @@ proof -
 qed
 
 
+subsection \<open>Context-indexed collecting semantics (B0)\<close>
+
+text \<open>
+  The store collecting at a program point, refined by a context \<open>c\<close>: project to
+  their last store only the reaching traces whose digest \<open>dg tr\<close> is compatible
+  with \<open>c\<close>.  This is the \<open>(pp, c)\<close>-indexed semantics a context-sensitive solver
+  must over-approximate; \<open>alpha_ctx\<close> is the projection, \<open>cfg_collect_ctx\<close> applies
+  it to the trace collecting.  With \<open>cmp = (\<lambda>_ _. True)\<close> every reaching trace is
+  kept and the context dimension collapses to flat \<open>alpha_last\<close>.
+\<close>
+
+definition alpha_ctx ::
+  "(trace \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> trace set \<Rightarrow> 'c \<Rightarrow> store set" where
+  "alpha_ctx dg cmp T c = {last tr | tr. tr \<in> T \<and> cmp (dg tr) c}"
+
+definition cfg_collect_ctx ::
+  "(trace \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
+  "cfg_collect_ctx dg cmp g S v c = alpha_ctx dg cmp (cfg_collect_trace g S v) c"
+
+text \<open>Bridge to the existing digest infrastructure: context collecting is the
+  last-store projection of the digest-compatible reaching traces.\<close>
+lemma cfg_collect_ctx_reaching_compat:
+  "cfg_collect_ctx dg cmp g S v c = alpha_last (reaching_compat dg cmp c g S v)"
+  unfolding cfg_collect_ctx_def alpha_ctx_def alpha_last_def reaching_compat_def
+  by auto
+
+text \<open>Adding a context only shrinks the collected stores.\<close>
+lemma cfg_collect_ctx_subset_flat:
+  "cfg_collect_ctx dg cmp g S v c \<subseteq> alpha_last (cfg_collect_trace g S v)"
+  unfolding cfg_collect_ctx_reaching_compat
+  by (rule alpha_last_mono[OF reaching_compat_subset])
+
+text \<open>Flat collapse: a trivial compatibility recovers the context-insensitive read.\<close>
+lemma cfg_collect_ctx_flat:
+  "cfg_collect_ctx dg (\<lambda>_ _. True) g S v c = alpha_last (cfg_collect_trace g S v)"
+  unfolding cfg_collect_ctx_def alpha_ctx_def alpha_last_def by auto
+
+text \<open>Context collecting lands in the state-based collecting, as the flat read does.\<close>
+theorem cfg_collect_ctx_le:
+  "cfg_collect_ctx dg cmp g S v c \<subseteq> cfg_collect g S v"
+  unfolding cfg_collect_ctx_reaching_compat
+  by (rule alpha_last_reaching_compat_le)
+
+
+subsection \<open>Incremental context tracking refines the trace digest (B2)\<close>
+
+text \<open>
+  A context-sensitive solver indexes unknowns by \<open>(pp, context)\<close> and computes the
+  context INCREMENTALLY: seeded at entries, advanced one edge at a time by
+  \<open>step_ctx\<close>, combined at returns by \<open>comb_ctx\<close>.  The collecting semantics instead
+  filters traces by the WHOLE-trace digest \<open>dg\<close> (\<open>reaching_compat\<close> /
+  \<open>cfg_collect_ctx\<close>).  \<open>context_transfer\<close> fixes the incremental transfers with their
+  per-step refinement obligations against \<open>dg\<close>; \<open>trace_witness_ctx\<close> threads the
+  incremental context along a witness derivation; \<open>context_step_refines_dg\<close> shows
+  the incremental context is \<open>dg\<close>-compatible on every witness trace, so the
+  context-threaded collecting lands in \<open>cfg_collect_ctx\<close>.  An instance discharges
+  only the three local obligations and inherits whole-trace faithfulness.
+\<close>
+
+locale context_transfer =
+  fixes dg :: "trace \<Rightarrow> 'c"
+    and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and seed_ctx :: 'c
+    and step_ctx :: "'c \<Rightarrow> edge_action \<Rightarrow> store \<Rightarrow> 'c"
+    and comb_ctx :: "'c \<Rightarrow> 'c \<Rightarrow> 'c"
+  assumes seed_ok: "cmp (dg [s]) seed_ctx"
+    and step_ok:
+      "edge_step a (last tr) = Some s' \<Longrightarrow> cmp (dg tr) c
+        \<Longrightarrow> cmp (dg (tr @ [s'])) (step_ctx c a (last tr))"
+    and comb_ok:
+      "hd rho = enter_state (last tau) \<Longrightarrow> cmp (dg tau) c1 \<Longrightarrow> cmp (dg rho) c2
+        \<Longrightarrow> cmp (dg (tau @ tl rho @ [<last tau|last rho>])) (comb_ctx c1 c2)"
+begin
+
+inductive trace_witness_ctx ::
+  "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> trace \<Rightarrow> bool" for g S where
+  entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness_ctx g S v seed_ctx [s]"
+| proc_entry:
+    "(cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+      \<Longrightarrow> trace_witness_ctx g S v seed_ctx [s]"
+| edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness_ctx g S u c tr
+      \<Longrightarrow> edge_step a (last tr) = Some s'
+      \<Longrightarrow> trace_witness_ctx g S v (step_ctx c a (last tr)) (tr @ [s'])"
+| combine: "(cl, ex, v) \<in> combines g \<Longrightarrow> trace_witness_ctx g S cl c1 tau
+      \<Longrightarrow> trace_witness_ctx g S ex c2 rho
+      \<Longrightarrow> hd rho = enter_state (last tau)
+      \<Longrightarrow> trace_witness_ctx g S v (comb_ctx c1 c2)
+            (tau @ tl rho @ [<last tau|last rho>])"
+
+text \<open>The context-threaded witness forgets to the plain trace witness.\<close>
+lemma trace_witness_ctx_imp:
+  "trace_witness_ctx g S v c tr \<Longrightarrow> trace_witness g S v tr"
+  by (induction rule: trace_witness_ctx.induct) (auto intro: trace_witness.intros)
+
+text \<open>The incremental context is \<open>dg\<close>-compatible on every witness trace.\<close>
+lemma context_step_refines_dg:
+  "trace_witness_ctx g S v c tr \<Longrightarrow> cmp (dg tr) c"
+proof (induction rule: trace_witness_ctx.induct)
+  case (entry v s) show ?case by (rule seed_ok)
+next
+  case (proc_entry v s) show ?case by (rule seed_ok)
+next
+  case (edge u a v c tr s') then show ?case by (auto intro: step_ok)
+next
+  case (combine cl ex v c1 tau c2 rho) then show ?case by (auto intro: comb_ok)
+qed
+
+text \<open>So the context-threaded collecting is captured by \<open>cfg_collect_ctx\<close> (B0).\<close>
+lemma trace_witness_ctx_in_reaching_compat:
+  assumes "trace_witness_ctx g S v c tr"
+  shows "tr \<in> reaching_compat dg cmp c g S v"
+  using trace_witness_ctx_imp[OF assms] context_step_refines_dg[OF assms]
+  by (simp add: reaching_compat_def cfg_collect_trace_def)
+
+lemma trace_witness_ctx_last_in_cfg_collect_ctx:
+  assumes "trace_witness_ctx g S v c tr"
+  shows "last tr \<in> cfg_collect_ctx dg cmp g S v c"
+  unfolding cfg_collect_ctx_reaching_compat alpha_last_def
+  using trace_witness_ctx_in_reaching_compat[OF assms] by blast
+
+end
+
+
 end
