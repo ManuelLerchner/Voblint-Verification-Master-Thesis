@@ -1,9 +1,10 @@
 # Migration — trace-context analysis (umbrella plan)
 
-Status: **PLANNED.** Agent entry point for history-sensitive analysis. Two
-**implementation tracks** share one **semantic foundation** (B0–B2) and one
-**soundness target** (`context_analysis_sound`). Track-specific detail lives in
-child docs — do not merge their solver steps.
+Status: **Track B DONE (batch-sealed, no `sorry`). Track A not started.**
+Agent entry point for history-sensitive analysis. Two **implementation tracks**
+share one **semantic foundation** (B0–B2) and one **soundness target**
+(`context_analysis_sound`). Track-specific detail lives in child docs — do not
+merge their solver steps.
 
 | Child doc | Track | When to read |
 | --- | --- | --- |
@@ -212,13 +213,11 @@ Plus: monotonicity under trace refinement; flat collapse when `cmp = (λ_ _. Tru
 Add `cfg_collect_trace_F` + `cfg_collect_trace_lfp`; prove
 `trace_witness_iff_lfp`. **Do not replace** `trace_witness`.
 
-**Combine clause must match the inductive rule verbatim** (`CFG_Collect_Trace.thy`):
-
-```isabelle
-tau @ tl rho @ [<last tau|last rho>]   (* not tau @ rho *)
-```
-
-with `hd rho = enter_state (last tau)`.
+**Combine clause must match `trace_witness.combine` verbatim** — the compressed
+form (`tau @ tl rho @ [<last tau|last rho>]`, premise `hd rho = enter_state (last
+tau)`, **not** `tau @ rho`). Source of truth: the inductive rule in
+`src/CFG/Collecting/CFG_Collect_Trace.thy`; the spelled-out caution lives once in
+`TRACE_CONTEXT_BRIDGE_MIGRATION.md` (B1).
 
 **Skip B1** unless proving B3 via post-fixpoint induction or thesis needs
 "trace-level AI" wording.
@@ -303,13 +302,13 @@ conditional routing (`flag_etf`).
 
 **Stages (semantic naming):**
 
-| Stage | Deliverable |
-| --- | --- |
-| B-S0 | warrowing interface + global widening instance |
-| B-S1 | context-threaded `side_cfg_T_eff`, abstract `enter_ctx` |
-| B-S2 | entry-state instance + `semantic_ctx_analysis_sound` |
-| B-S3 | `semantic_ctx_strictly_more_precise` witness |
-| B-S4 | runnable / `solve_dom` (future; Context Gas) |
+| Stage | Deliverable | Status |
+| --- | --- | --- |
+| B-S0 | warrowing interface + global widening instance | **DONE** (sign); interval-apinis deferred |
+| B-S1 | context-threaded `side_cfg_T_eff`, abstract `enter_ctx` | **DONE** (`TD_Side_Tree.thy`, `TD_Side_Eff_Ctx_Sound.thy`) |
+| B-S2 | entry-state instance + `semantic_entry_store_ctx_analysis_sound` | **DONE** (`TD_Side_Eff_Ctx_Sound.thy`) |
+| B-S3 | `entry_store_context_precision_witness` (strict precision) | **DONE** (`Example_Entry_Store_Context_Precision.thy`) |
+| B-S4 | runnable / `solve_dom` (future; Context Gas) | viability probe **DONE** (`Exec_Sign_Ctx_Run.thy`); generator-driven = follow-on |
 
 **Main risk:** `mono_sides` breaks; per-context `gseed`; infinite context set
 without bounding.
@@ -370,18 +369,18 @@ track; **PLANNED** = new example theory.
 
 | # | Theorem (working name) | Meaning | Status | File / stage |
 | --- | --- | --- | --- | --- |
-| T1 | `context_analysis_sound` | `cfg_collect_ctx … c ⊆ γ(env v c)` | **PLANNED** | Track A4 / B-S2 |
-| T2 | `context_collect_sound` | `digest_env_sound` via `cfg_collect_ctx` | **B0** | `Trace_Analysis_Sound.thy` |
+| T1 | `context_analysis_sound` | `cfg_collect_ctx … c ⊆ γ(env v c)` | **DONE (Track B)** `semantic_entry_store_ctx_analysis_sound` / **PLANNED (Track A)** | `TD_Side_Eff_Ctx_Sound.thy` / Track A4 |
+| T2 | `context_collect_sound` | `digest_env_sound` via `cfg_collect_ctx` | **DONE** | `Trace_Analysis_Sound.thy` |
 | T3 | `flat_env_is_digest_sound` | flat `env` satisfies digest contract | **DONE** | `Trace_Analysis_Sound.thy` |
-| T4 | `flat_is_context_sound` | `envd v c = env v` ⇒ context sound | **B0** | corollary of T3 + T2 |
-| T5 | `context_k0_eq_flat` | `k = 0` analyzer = flat analyzer | **TRACK** | Track A, S2.5 |
+| T4 | `flat_is_context_sound` | `envd v c = env v` ⇒ context sound | **DONE** | corollary of T3 + T2 |
+| T5 | `context_k0_eq_flat` | `k = 0` analyzer = flat analyzer | **TRACK A** | Track A, S2.5 |
 | T6 | `digest_read_sound` | read uses only compatible-history values | **DONE** | `Trace_Analysis_Sound.thy` |
-| T7 | `combine_ctx_sound` | IP `cmp` + combine preserves `cfg_collect_ctx` | **B2** | `CFG_Collect_Context.thy` |
-| T8 | `context_step_refines_dg` | incremental ctx simulates `dg` on traces | **B2** | per-track instance |
+| T7 | `combine_ctx_sound` | IP `cmp` + combine preserves `cfg_collect_ctx` | **DONE** | `CFG_Collect_Trace.thy` (`trace_witness_ctx_last_in_cfg_collect_ctx`) |
+| T8 | `context_step_refines_dg` | incremental ctx simulates `dg` on traces | **DONE** | `CFG_Collect_Trace.thy` (`context_step_refines_dg`) |
 | T9 | `digest_beats_flat` | strict precision, hand-built `envd` | **DONE** | `Example_Trace_Digest_Precision.thy` |
-| T10 | `one_callstring_separates_callers` | k-CFA precision on real CFG | **TRACK** | `Example_CallString_Precision.thy` |
-| T11 | `semantic_ctx_separates_entry_states` | entry-state beats call-string | **TRACK** | `Example_Semantic_Ctx_Precision.thy` |
-| T12 | `history_sensitive_sound_and_precise` | sound + strict ⊃ flat (computed env) | **TRACK** | capstone per track |
+| T10 | `one_callstring_separates_callers` | k-CFA precision on real CFG | **TRACK A** | `Example_CallString_Precision.thy` |
+| T11 | `entry_store_context_precision_witness` | entry-state beats monovariant | **DONE** | `Example_Entry_Store_Context_Precision.thy` |
+| T12 | `history_sensitive_sound_and_precise` | sound + strict ⊃ flat (computed env) | **TRACK A** | capstone per track |
 
 ### T1 — Main soundness (central)
 
@@ -433,7 +432,8 @@ After B0: hypothesis is equivalently `context_collect_sound` on `envd`.
 
 ### T7–T8 — IP bridge (anti wrong-return)
 
-Combine clause uses **compressed** traces (`tl rho`):
+Combine clause uses **compressed** traces (`tl rho` — `trace_witness.combine`,
+`CFG_Collect_Trace.thy`):
 
 ```isabelle
 lemma combine_ctx_sound:

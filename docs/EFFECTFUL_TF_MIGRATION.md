@@ -353,6 +353,14 @@ For `pure_edge_tree`, these reduce to the current `sound_transfer` obligations b
 `traverse_seqcomp`. The Sign/Interval `interpretation sound_effectful_transfer`
 proofs are mechanical rewrites of the existing ones.
 
+> **Extension (2026-07-01, AD-35).** `etf_sound_enter` is a *lower* (soundness)
+> bound only. The keyed context generator (`side_cfg_T_eff_cmp`), which filters
+> `EA_Enter` from its intra fold, needs a matching *upper* bound; the sub-locale
+> `sound_effectful_transfer_framed` (same file) adds it — a `fresh_frame`
+> parameter with `etf_full (etf_enter etf u) σ ≤ fresh_frame ⊔ glob_env σ`. Domains
+> riding the keyed context generator discharge this one extra lemma (sign:
+> `sign_sound_etf_unit_framed`). See `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`.
+
 ### Step 5 — Monotonicity and `mono_deps`
 
 The TD solver requires `mono_deps` — dependency structure must not depend on `σ`.

@@ -14,6 +14,7 @@
 | **Next session / week plan** | `docs/NEXT_STEPS.md` |
 | All declared lemmas/theorems | `rg -n '^(lemma\|theorem) ' src/` |
 | Soundness chain narrative | `docs/PROOF_OVERVIEW.md` |
+| Keyed context architecture | `docs/KEYED_CONTEXT_CONSOLIDATION.md` |
 | Per-stage workflow | `docs/PROOF_OVERVIEW.md` (lemma spine) + `src/*/README.md` (per-layer) |
 | Catalogued repo problems (P1–P10) by file:line | `docs/OPEN_PROBLEMS.md` |
 | CFG representation decision | `docs/cfg-representation.md` |
@@ -60,6 +61,85 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
 - **Exit corollary:** `side_sign_analysis_sound` (sign domain).
 - **Operational:** `pstep` in `IMP2_Proc.thy`; `cfg_runs_to` in `CFG_Collect_Runs.thy`.
 - **Showcase:** `Example_Trace_Digest_Precision.thy` — digest vs. flat precision comparison.
+- **Keyed-global context precision:** `Example_Global_Ctx_Read_Precision.thy` (sound read-layer
+  witness: global-derived contexts, filtered read `SZero`/`SPos` vs. join-all `SNonNeg`,
+  contrasted with the unsound caller-local seeded split) and `Exec_Sign_Cmp_Keyed_Run.thy`
+  (concrete keyed post-solution: per-context global slots, `LOCAL_POST`/`CMP_SOUND`/
+  `COMB_BOUND_CMP` discharged in the `post_fixpoint_sound_at_ctx_semantic_cmp_final` premise
+  shape, `by eval` separation) and `Exec_Sign_Cmp_Keyed_Solve.thy` (the same two-call
+  abstraction as a keyed side-effecting equation system solved through the real
+  `TD_side_always_join_Interp_solve`; separated slots read `by eval`). Executable filtered
+  read: `glob_env_cmp_code` in `Global_Cmp_Read.thy`. `Exec_Cmp_Bridge.thy` adds the reusable
+  executable `_st` keyed generator `side_cfg_T_eff_cmp_st`; `Exec_Sign_Cmp_Keyed_Gen_Run.thy`
+  instantiates it for the sign domain with `gkey = id` and a global-derived context, checks that
+  the real side solver runs (`kgen_runs` by eval), records the materialised keyed slots
+  (`kgen_generated_solver_result` by eval), proves the returned solver result is a concrete
+  `part_post_solution` (`kgen_part_post_solution_st`), and adds the soundness-facing corollary
+  `kgen_keyed_generator_sound_if_post_fixpoint` from the generic keyed theorem. `Exec_Cmp_Bridge`
+  also exposes `side_rg_side_cfg_T_eff_cmp_st_unit`, the structural invariant needed by future
+  executable certification. This `sign st`-keyed run keys on the flow-insensitive global
+  (`restrict_global_st` of the joined caller), so its pure `G = SZero` context reads precisely
+  (`kgen_slot_zero_precise`) while its value-merged context stays `SNonNeg` (`kgen_slot_merged`);
+  the seeding combine `kgen_combine_st` feeds the callee-entry globals. Full per-call-site
+  `SZero`/`SPos` separation is carried by `Example_Finite_Sign_Context_Analysis.thy`, a
+  first-class example with a finite context/key type `GZero | GPos | GNonNeg | GOther` computed
+  from the sign value of global `G`: it runs the executable keyed `_st` generator and proves the
+  separated slots `by eval` (`fctx_slot_zero_precise` = `SZero`, `fctx_slot_pos_precise` = `SPos`,
+  `fctx_join_all` = `SNonNeg`), plus the finite-key soundness-facing theorem
+  `fctx_keyed_sound_if_post_fixpoint`. The precision hinges on filtering `EA_Enter` from the
+  intra fold and seeding a framed fresh frame (see the framed-enter redesign below,
+  `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`). The remaining bridge is the value-dependent
+  finite-context soundness theorem (concrete `st` run → abstract post-fixpoint) / eventual
+  `context_domain` locale. Batch-green, no sorry.
+- **Generic keyed soundness core:** `TD_Side_Eff_Cmp_Pull.thy` — the reusable heart of a
+  keyed generator. The masking pullback `pull_cmp` collapses the `cmp`-filtered slots into a
+  monovariant view (`side_env_cmp_pull`), so `post_fixpoint_sound_at_cmp_pull` reduces keyed
+  collecting soundness to the monovariant `post_fixpoint_sound_at_eff` for any program/domain;
+  `cmp_edge_sound` / `cmp_entry_sound` discharge the `EDGE` / `ENTRY` premises of
+  `post_fixpoint_sound_at_ctx_semantic_cmp_final` from the pullback bounds.
+- **Keyed generator (sound):** `TD_Side_Eff_Cmp_Gen.thy` — `map_gtree` (the global-key
+  relabel absent from the context spine, which only relabels locals via `map_ltree`), the
+  keyed generator `side_cfg_T_eff_cmp` (routes each context's global writes to slot `gkey c`).
+  Call-enter edges are filtered out of the intra predecessor fold
+  (`non_enter_predecessor_list`) and each frame-entry node seeds a context-independent fresh
+  local frame; callee-entry globals flow only through the combine edge — this kills the enter
+  duplication that merged distinct call-site activations. Its denotation
+  `eq_side_cfg_T_eff_cmp` and the routing chain follow. The `pull_gk` pullback reads each
+  context's single keyed slot; `side_cfg_T_eff_cmp_edge_le` (non-enter) / `_combine_le` are the
+  routing-correctness bounds (global side-aggregation: `sides_intra_pull_gk` →
+  `sides_le_side_rhs_fold_ctx` → `sides_fold_le_side_cfg_T_eff_cmp` →
+  `side_post_solution_le_global_cmp`, landing the keyed slot), and `side_cfg_T_eff_cmp_enter_le`
+  discharges the filtered enter edge from the new `sound_effectful_transfer_framed` contract
+  (`Constraint_System.thy`: the enter upper bound `etf_full (etf_enter etf u) σ ≤ fresh_frame ⊔
+  glob_env σ`, the companion to the old lower-bound-only `etf_sound_enter`) plus the
+  frame-entry seed. The end-to-end theorem `side_cfg_T_eff_cmp_collect_sound` case-splits
+  enter/non-enter, discharges `post_fixpoint_sound_at_eff` at `pull_gk`, and collapses
+  (`{k. gcmp ctx k} = {gkey ctx}`) into the `cmp`-filtered read: a post-fixpoint of the keyed
+  generator over-approximates IP collecting semantics at `side_env_cmp`. Sign discharges the
+  framed contract via `fresh_frame_sign` / `sign_sound_etf_unit_framed`. Batch-green. Design
+  note: `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`.
+
+### Retain keyed context (status)
+
+- **Retain migration: complete.** The context-fixed keyed generator path routes through the
+  retain discipline end-to-end: `retain_edge_tree`, the retain-compatible enter bound
+  (`side_cfg_T_eff_cmp_enter_le_le`), the generalized invariant `inl_glob_le_keyed_ctx`
+  (local globals ≤ keyed global slot — old publish `inl_slot_globals_bot_ctx` still implies
+  it), the Sign retain spine (`sign_etf_retain` / `sign_etf_retain_st`), the exact concrete
+  retain run (`kgen_retain_part_solution`), and the keyed soundness endpoint
+  (`kgen_retain_keyed_generator_sound_if_post_fixpoint` / `_if_exact_fixpoint`). The
+  `route_read_cmp` (routing) / `side_env_cmp` (observation) split is confirmed, and
+  `route_read_cmp` now observes retained globals: `Exec_Sign_Cmp_Keyed_Run.thy` proves the
+  routing read sees `G = SZero`/`SPos` under retain vs `SBot` under publish
+  (`route_read_retain_G` / `route_read_publish_G` / `route_ctx_publish_collapses`). Retain has
+  delivered its part — do not keep extending it.
+- **Switching fctx: blocked by caller-context exactness / ENTER_MONO.** In
+  `Example_Finite_Sign_Context_Analysis.thy` both call sites share caller context `GOther`, so
+  the observation read `side_env_cmp σ (4/7, GOther) ''G'' = SNonNeg`
+  (`fctx_caller_read_G_imprecise`). `ENTER_MONO` quantifies over the observation
+  concretization, which retain does **not** sharpen (retain fixes only the routing read). Fix
+  is a context-scheme change — a finite caller context exact on `G` at each call site — not a
+  retain change. See `docs/OPEN_PROBLEMS.md`.
 
 ### Trace-context analysis (planned — umbrella)
 

@@ -5,6 +5,7 @@ repository contributes, and how the main lemmas connect.
 
 **Status and sorry inventory:** `docs/PROOF_PHASES.md`.
 **Live roadmap and backlog:** `docs/ROADMAP.md` → [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).
+**Keyed context branch:** `docs/KEYED_CONTEXT_CONSOLIDATION.md`.
 
 ---
 
@@ -115,6 +116,20 @@ Full chain: `side_sign_analysis_sound` ←
 `side_analyse_eff_collect_sound_exit_pruned` ←
 `side_collect_sound_exit_pruned_eff_cone` ←
 `post_fixpoint_sound_at_eff` ← `CFG_Collect`.
+
+## Keyed context branch
+
+The keyed-global context branch extends the side-effecting pipeline with
+`glob_env_cmp` / `side_env_cmp`, the framed-enter contract
+`sound_effectful_transfer_framed`, and the keyed generator
+`side_cfg_T_eff_cmp`. Its central theorem is
+`side_cfg_T_eff_cmp_collect_sound`: a post-fixpoint of the keyed generator
+over-approximates `cfg_collect` when each context reads its compatible global
+slot. The finite executable demonstration is
+`Example_Finite_Sign_Context_Analysis.thy`.
+
+Architecture graph, example review, and remaining debt:
+`docs/KEYED_CONTEXT_CONSOLIDATION.md`.
 
 ---
 

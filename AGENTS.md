@@ -305,7 +305,10 @@ Traps: `docs/ISABELLE_AGENT_NOTES.md`.
 * Numeral literals can't be `fun` patterns.
 * `inv` clashes with `Hilbert_Choice.inv`.
 * `ALL j >= n.` invalid → `ALL j. n <= j --> …`.
-* Free vars like `rhs` may shadow imported constants rename.
+* Free vars may resolve to imported constants. `c` is especially risky because
+  `Dijkstra_Shortest_Path` imports an edge-cost constant `c`; bind intended
+  variables with `fixes` or rename them (`ctx`, `cmd`, `cost`) before debugging
+  strange type errors.
 * Don't use Isar keywords (`back`, `prefer`, `defer`, `then`, `with`, `also`, `finally`) as `have`/`obtain` labels. `back` → cryptic "proposition expected, end-of-input" past the line.
 * `induction … rule: big_step.induct` binds case patterns in **textual** order of the rule, not conclusion order. Wrong order → type-clash (store typed as `com`). HOL-IMP IfTrue / IfFalse / WhileTrue: read rule body.
 
@@ -313,6 +316,17 @@ Traps: `docs/ISABELLE_AGENT_NOTES.md`.
 
 * `ROOT` parent: `= "HOL-IMP" +`. Imports: `"HOL-IMP.Com"`, `"HOL-IMP.Big_Step"`.
 * Big-step infix: `(c,s) ⇒ t`. Existential exec: `apply (rule exI)` before `Assign`/`Seq`.
+
+---
+
+# Searching (rg vs grep)
+
+`rg` never rewrites matched text. If `rg` and `grep -R` disagree on hit counts, the cause is **default filtering**, not corruption: `rg` skips `.gitignore`d and hidden paths by default, `grep -R` searches everything. In this repo the gap is usually `.claude/worktrees/` (a git worktree, ignored) and `.git/`.
+
+* Trust `rg`. Don't switch to `grep` because counts differ — widen `rg` instead.
+* `rg --no-ignore PAT` — include `.gitignore`d files.
+* `rg -uu PAT` — include ignored **and** hidden (matches `grep -R` coverage, plus `.git/`).
+* `rg -uu --glob '!.git' PAT` — everything except `.git/`.
 
 ---
 

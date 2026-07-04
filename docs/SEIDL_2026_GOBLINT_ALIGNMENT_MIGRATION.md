@@ -1,0 +1,611 @@
+# Migration - Seidl 2026 mixed-flow Goblint alignment
+
+Status: **PLANNING**.
+
+Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis: Engineering
+Modularity", FM 2026, LNCS 16557, pp. 446-470.
+
+This document records the paper notation and maps it to the current Isabelle
+formalization. The aim is closer conceptual alignment with Goblint's mixed
+flow-sensitive model without losing the current proof spine.
+
+Related local docs:
+
+- `docs/EFFECTFUL_TF_MIGRATION.md`
+- `docs/GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md`
+- `docs/TRACE_CONTEXT_ANALYSIS_MIGRATION.md`
+- `docs/SEMANTIC_CONTEXT_MIGRATION.md`
+- `docs/CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md`
+
+## Paper model
+
+### Side-effecting constraint systems
+
+The paper presents a side-effecting constraint system as:
+
+```text
+(L, G, D_X, C)
+
+X = L union G
+D_X = (D[x])_[x in X]
+E = set of valuations eta with eta[x] in D[x]
+```
+
+`L` are local unknowns, usually flow-sensitive program points. `G` are global
+unknowns, where side contributions are accumulated flow-insensitively. Each
+unknown may have its own domain. A local unknown `[u]` is constrained by one or
+more functions:
+
+```text
+f : E -> (E x D[u])
+```
+
+For a valuation `eta`, `f eta = (eta', d)` returns finitely many global
+contributions in `eta'` plus one local contribution `d` for `[u]`. The paper's
+constraint shape is:
+
+```text
+(eta, eta[u]) >= f eta
+```
+
+Interpretation: `eta[u]` must cover the local contribution, and every global
+slot must cover the side-effect contribution produced by the same constraint.
+
+### CFG-derived mixed-flow constraints
+
+For a CFG:
+
+```text
+N      program points
+Act    program actions
+E      subset of N x Act x N
+```
+
+Every incoming edge `(u, act, v)` induces a constraint for `[v]`:
+
+```text
+(eta, eta[v]) >= [[(u, act, v)]] (eta[u]) eta
+```
+
+The transfer function has shape:
+
+```text
+[[e]] : D[u] -> E -> (E x D[v])
+```
+
+It receives the source local value and the whole valuation for further local or
+global reads. It returns global side effects plus the successor local value.
+
+### Procedure calls
+
+For a call edge:
+
+```text
+e = (u, f(args), v)
+start_f, ret_f
+enter_f,args : D[u] -> D[start_f]
+combine_f    : D[u] -> D[ret_f] -> D[v]
+```
+
+The paper's call transfer is:
+
+```text
+[[e]] d eta =
+  if d = bottom then (empty, bottom)
+  else
+    let sigma = {[start_f] -> enter_f,args d}
+    let d' = combine_f d (eta[ret_f])
+    in (sigma, d')
+```
+
+Under this formulation, procedure start points are accumulated like global
+unknowns. The initial main call uses a dedicated local `[_main]`:
+
+```text
+(eta, eta[_main]) >= (sigma_0, eta[ret_main])
+```
+
+### Context sensitivity
+
+The paper refines locals by contexts:
+
+```text
+[u] becomes [u, c], c in C
+```
+
+A non-call edge keeps the same context:
+
+```text
+(eta, eta[v, c]) >= [[(e, c)]] (eta[u, c]) eta
+```
+
+For calls, the analysis supplies:
+
+```text
+context_u,f,args : D[u] -> C -> C
+```
+
+The context-sensitive call transfer is:
+
+```text
+[[e, c]] d eta =
+  if d = bottom then (empty, bottom)
+  else
+    let c' = context_u,f,args d c
+    let sigma = {[start_f, c'] -> enter_f,args d}
+    let d' = combine_f d (eta[ret_f, c'])
+    in (sigma, d')
+```
+
+The initial main constraint reads `eta[ret_main, c0]` and seeds
+`[start_main, c0]`.
+
+Typical instances:
+
+- `k`-callstring: `C` is bounded call-site history.
+- 1-callstring: `C` is call sites plus `_main`, and `context _ _ = u`.
+- partial tabulation: `C` contains abstract start states, and
+  `context d _ = enter d`.
+
+### Digests
+
+Digests generalize call contexts from call histories to abstractions of the
+reaching execution history, including concurrent events. The paper writes the
+digest set as `A`. A digest-refined domain for an unknown `[x]` is:
+
+```text
+D[x]^A = A -> D[x]
+```
+
+Both local and global unknowns may be refined. Transfer functions operate by
+case analysis over digests. Global reads may use a compatibility relation on
+digests, so a reader with digest `a` only joins global components whose writer
+digest is compatible with `a`.
+
+Example digests in the paper:
+
+- call-string contexts,
+- trace partitions by predicates,
+- sets of held mutexes,
+- mutex types,
+- thread identifiers,
+- global modification counts,
+- single-threaded vs multi-threaded mode `{ST, MT}`.
+
+### Solvers and update rules
+
+The paper separates analysis specification from solving. Solvers for
+side-effecting systems include nested fixpoint strategies and the top-down TD
+solver with side effects. TD starts at an initial unknown, queries dependencies
+on demand, maintains a `called` set to stop infinite descent, tracks
+dependencies dynamically, and uses cycles as widening/narrowing candidates.
+
+For global side effects, the paper highlights update rules. An update rule is
+invoked when a contribution `d` to a global `g` is triggered. The naive rule
+widens the old global value with `d`. A more precise rule stores contributions
+per origin local and joins origins afterward, applying widening only per origin.
+Further rules may revoke outdated toxic contributions.
+
+### Goblint implementation interface
+
+The paper's simplified Goblint analysis specification contains:
+
+```text
+D_L       local domain
+Gbar      analysis-specific global names
+D_Gbar    global domain
+transfer functions for statements
+enter     call-entry abstraction
+combine   return abstraction
+context   optional callee-context function
+startcontext
+ask/query inter-analysis communication
+sideg     side-effect to a named global
+```
+
+Multiple activated analyses combine local domains by product. Their global
+domains are kept as distinct global namespaces and combined by a sum-like
+domain. Transfer functions are applied componentwise to the product local
+state. Goblint also supports limited cooperation by query dispatch: `man.ask`
+sends a query to all analyses and meets the answer lattice results.
+
+## Current Isabelle mapping
+
+| Paper notation | Current Isabelle artifact | Status |
+| --- | --- | --- |
+| `L` local unknowns | `pp` or context-indexed `pp x 'c` | Present |
+| `G` global unknowns | `'g` in `pp + 'g`; older unit instance remains | Present |
+| `X = L union G` | sum type `pp + 'g` | Present |
+| valuation `eta : X -> D` | `sigma :: pp + 'g => 'a abs_state` | Present, single payload type |
+| per-unknown domains `D[x]` | uniform `'a abs_state` for all locals and globals | Simplified |
+| `f : E -> (E x D[u])` | strategy tree with `QueryL`, `QueryG`, `Side`, `Answer` | Present |
+| local result `d` | `Answer d`, denoted by `traverse_rhs` | Present |
+| global side effects `eta'` | `Side g d t`, denoted by `sides_of_rhs` / `all_sides` | Present |
+| CFG transfer `[[e]]` | `apply_etf etf a u` and `side_rhs_fold_eff` | Present |
+| plain edge transfer | `domain_transfer`, `apply_tf` | Present |
+| call `enter` | `etf_enter`; also `tf_enter` in plain transfer record | Present |
+| call `combine` | `etf_combine`; unit bridge uses `unit_combine_tree` | Present but structural |
+| start-point side seed | `make_side_rhs_tree_eff`, `gseed`, `restrict_global s0` | Present |
+| local/global read at a point | `side_env sigma v = sigma (Inl v) sup glob_env sigma` | Present |
+| named global read | `side_env_g sigma g v = sigma (Inl v) sup sigma (Inr g)` | Present |
+| join all globals | `glob_env` | Present |
+| context-indexed unknowns | `map_ltree`, `side_cfg_T_eff_ctx`, executable mirrors | Present |
+| trace/digest compatibility | `reaching_compat`, `alpha_ctx`, `cfg_collect_ctx` | Present semantically |
+| digest soundness contract | `digest_env_sound`, `digest_read_sound` | Present |
+| update rules | TD_side default update behavior only | Gap |
+| multi-analysis product/sum | no framework-level product/sum of activated analyses | Gap |
+| query bus | no `ask`/`query` abstraction | Gap |
+
+## Similarities and differences
+
+| Topic | Paper/Goblint | Isabelle formalization | Difference / migration pressure |
+| --- | --- | --- | --- |
+| Core system shape | Side-effecting `(L, G, D_X, C)` with local constraints producing global side effects | `strategy_tree` encodes reads, side effects, and answers over `pp + 'g` | Strong match. Use paper notation in docs and theorem names. |
+| Domain family | Each unknown `[x]` may have domain `D[x]` | One state type `'a abs_state` is used for all local and global slots | Major simplification. Needed for current TD bridge; limits Goblint fidelity and analysis composition. |
+| Local domain vs global domain | Goblint has separate `D` and `G` domains | Globals and locals both store `'a abs_state`; named globals are distinguished by `'g` | Named globals are present, but payload type is unified. |
+| Global unknowns | Analysis-defined `GVar.t` | finite `'g`, plus old `unit` bridge | Good alignment for single analysis; finite requirement should be documented as a solver/interface condition. |
+| Global read | Transfer can read a selected global via manager | `QueryG g`; `side_env_g` exists | Good alignment. Need more user-facing instances that do not collapse through `glob_env`. |
+| Global side effect | `man.sideg g d` inside transfer | `Side g d t` inside strategy tree | Good alignment. |
+| Plain CFG equation | one constraint per incoming edge | `rhs` and `side_rhs_fold_eff` fold incoming predecessors | Good match. |
+| Procedure start points | Treated as globals in paper's call formalization | CFG has `EA_Enter`; seed uses `gseed`; call/return modeled via combine triples | Conceptual mismatch. The current CFG has explicit structural call edges and combine triples; paper treats start-point seed as side effect. |
+| Return combine | analysis-specific `combine_f : D[u] -> D[ret_f] -> D[v]` | default `unit_combine_tree` uses locals from caller and globals from callee | Gap for relational domains and Goblint `combine`. |
+| Context-sensitive calls | `context d c` computes callee context; read `ret_f,c'` | context-indexing infrastructure exists; executable bridge computes callee context from caller state plus global; eq-(6) combine soundness contract named (`switching_combine_sound`) + discharged for the context-preserving instance | Theorem-facing contract now aligned with eq (6); value-dependent discharge (Slice 4 body) open. See `ROUTE_A_SWITCHING_COMBINE_MIGRATION.md`. |
+| Digests | reduced cardinal power `A -> D[x]` for locals and globals; compatible global reads | semantic `cfg_collect_ctx`, `digest_env_sound`; examples exist | Semantic layer present. Solver-level digest-indexed globals remain staged. |
+| Update rules | per-global update rule, possibly per origin/revocation | not modeled as a parameter of solver interface | Major solver-alignment gap. |
+| Multiple analyses | local product, global sum, componentwise transfer, query system | single analysis/domain stack | Out of thesis scope unless explicitly planned. |
+| Solver termination | widening/narrowing and TD cycle handling discussed | soundness assumes `solve_dom`; no general termination proof | Known gap. |
+
+## Key existing lemmas and contracts
+
+These are the current anchors for paper alignment.
+
+| Paper obligation | Isabelle anchor |
+| --- | --- |
+| local result and side effects jointly satisfy constraints | `part_post_solution` from vendored TD side solver, used by `td_cfg_side_solver_eff.part_post_at_cfg` |
+| named side effects are bounded by global environment | `all_sides_le_glob_env_sides`, `glob_env_upper`, `glob_env_mono_Inr` |
+| unit-global tree reconstructs the pure transfer | `etf_full_unit_edge_tree` |
+| unit-global combine reconstructs structural combine | `etf_full_unit_combine_tree` |
+| structural call combine is concretely sound | `combine_states_sound` |
+| context filtering refines flat traces | `cfg_collect_ctx_subset_flat` |
+| context collecting is last-store projection of compatible traces | `cfg_collect_ctx_reaching_compat` |
+| context collecting is included in flat collecting | `cfg_collect_ctx_le` |
+| digest-indexed analyzer contract | `digest_env_sound` |
+| compatible digest read is sound | `digest_read_sound` |
+| flat analyzer is a degenerate digest-indexed analyzer | `flat_env_is_digest_sound` |
+| mixed-flow trace soundness | `mixed_flow_analysis_sound` |
+| TD-backed mixed-flow soundness | `mixed_flow_analysis_optimal` |
+
+## Migration plan
+
+### Slice 0 - terminology and paper notation
+
+Goal: make the paper correspondence obvious to future readers.
+
+Edits:
+
+- Add a short "Seidl 2026 notation" subsection to `src/Analysis/Generic/Solver/README.md`.
+- Rename or alias doc-facing terms:
+  - local unknowns: `L`,
+  - global unknowns: `G`,
+  - valuation: `sigma`,
+  - side-effecting constraint: `strategy_tree`.
+- Cross-link this document from `docs/PROOF_OVERVIEW.md` and `docs/ROADMAP.md`.
+
+No theory changes.
+
+### Slice 1 - expose the exact side-effecting constraint contract
+
+Goal: state the paper's `(eta, eta[u]) >= f eta` contract directly over
+`strategy_tree`.
+
+Add an Isabelle definition in the generic solver layer:
+
+```isabelle
+definition se_constraint_holds ::
+  "('l, 'g, 'd) strategy_tree => ('l + 'g => 'd) => 'l => bool"
+```
+
+Intended shape:
+
+```text
+traverse_rhs t sigma <= sigma (Inl u)
+sides_of_rhs t sigma (Inr g) <= sigma (Inr g) for all g
+```
+
+Key lemmas:
+
+- `part_post_solution_imp_se_constraint_holds`
+- `se_constraint_holds_imp_etf_full_le_env`
+- unit bridge: `se_constraint_holds` specializes to the old post-fixpoint shape.
+
+This gives the paper equation (1) a named theorem-level target.
+
+### Slice 2 - make CFG equations paper-shaped
+
+Goal: align equation (2) with current per-edge/fold construction.
+
+Add documentation-level and theorem-level wrappers:
+
+```isabelle
+definition edge_constraint_tree ::
+  "cfg => ('g,'a) effectful_domain_transfer => pp => edge_action => pp
+   => (pp,'g,'a abs_state) strategy_tree"
+```
+
+The wrapper should reduce to `apply_etf etf act u` for ordinary edges. Then prove:
+
+- every incoming CFG edge contributes to the folded RHS;
+- `side_rhs_fold_eff` is the finite join of paper edge constraints;
+- the entry seed is the paper initialization constraint.
+
+This is mostly naming and decomposition. It should not alter solver behavior.
+
+### Slice 3 - Goblint-style named globals as first-class examples
+
+Goal: stop presenting `unit` as the primary story.
+
+Add or promote one example where:
+
+- `'g` has at least two constructors,
+- `QueryG g` reads one named global,
+- `Side g' d` writes a selected named global,
+- soundness uses `side_env_g`, not only `glob_env`.
+
+Proof obligations:
+
+- `side_env_g_le_side_env` when a theorem needs the joined global view.
+- named-global transfer soundness lemma that states the manager-style contract:
+
+```text
+if local and selected global reads are sound, then the Answer and Side effects
+are sound for their selected names.
+```
+
+This closes the remaining practical gap between paper `man.global`/`man.sideg`
+and the repo examples.
+
+### Slice 4 - paper equation (6) for context-sensitive calls
+
+> **Started (2026-07-01, A1/A2).** `ROUTE_A_SWITCHING_COMBINE_MIGRATION.md` lands the
+> first concrete piece: `switching_combine_sound`
+> (`Example_Finite_Sign_Context_Analysis.thy`) names the theorem-facing soundness
+> obligation of equation (6)'s combine; `fixed_combine_satisfies_switching_combine_sound`
+> discharges it for the context-preserving instance (`context d c = c`, the certified
+> fixed combine); and `fctx_route_call4/7` + `fctx_route_bound_zero/pos` witness that
+> the value-dependent selector (`fctx_ec_call` = paper `context_u,f,args`) routes each
+> call to the correct finite context with the side contribution bounded by that keyed
+> slot. Open: the general equation-(6) discharge for value-dependent `context` (the
+> `paper_context_call` locale below), plus an `abs_state` switching combine and the
+> return-path re-import argument.
+
+Goal: align the context solver with the paper's call transfer:
+
+```text
+c' = context d c
+side [start_f,c'] (enter d)
+read [ret_f,c']
+combine d ret
+```
+
+Current infrastructure already supports context-indexed locals and an executable
+state-dependent context bridge. The migration should add a clean theorem-facing
+locale:
+
+```isabelle
+locale paper_context_call =
+  fixes context :: "'a abs_state => 'c => 'c"
+  fixes enter :: "'a abs_state => 'a abs_state"
+  fixes combine :: "'a abs_state => 'a abs_state => 'a abs_state"
+```
+
+Key lemmas:
+
+- non-call edges preserve context;
+- call edges route the start and return unknowns through the same `c'`;
+- the existing `side_cfg_T_eff_ctx` instance satisfies the paper equation (6);
+- initialization satisfies equation (7).
+
+This slice should explicitly compare `context_transfer` / `trace_witness_ctx`
+with the paper's `context_u,f,args`.
+
+### Slice 5 - digest-indexed globals as reduced cardinal power
+
+Goal: move from semantic digest soundness to solver-level digest slots.
+
+Represent paper `D[x]^A = A -> D[x]` by either:
+
+1. payload lifting: store `'a abs_state` replaced by `'d => 'a abs_state`, or
+2. slot splitting: replace a named global `g` by `(g, d)` when the digest set is
+   finite and statically known.
+
+Recommendation: start with slot splitting for globals and keep locals
+context-indexed as `(pp, d)`. This matches the existing finite `'g` solver
+interface and avoids a large rewrite of `abs_state`.
+
+New definitions:
+
+```text
+compat_glob_env cmp sigma g reader_digest
+cfg_collect_digest_global dg cmp ...
+```
+
+Key lemmas:
+
+- compatible global join is below `glob_env`;
+- `digest_read_sound` instantiated by a solver environment, not just an
+  arbitrary `envd`;
+- flat collapse when compatibility is universal;
+- ST/MT example from the paper: an `ST` reader excludes `MT` writes.
+
+### Slice 6 - analysis-specific combine
+
+Goal: replace hardwired structural return combine with a Goblint-style
+analysis-provided `combine`.
+
+Current `unit_combine_tree` implements:
+
+```text
+locals from caller, globals from callee exit
+```
+
+This is sound for product-style Sign/Interval states, but it bakes in a
+non-Goblint API decision and blocks relational domains.
+
+Add an abstract combine tree builder:
+
+```isabelle
+record ('g,'a) call_transfer =
+  enter_tree   :: ...
+  combine_tree :: "pp => pp => (pp,'g,'a abs_state) strategy_tree"
+```
+
+Assumption:
+
+```text
+combine_tree_sound:
+  caller concrete in gamma caller_abs
+  callee concrete in gamma callee_abs
+  implies restored concrete in gamma (etf_full combine_tree sigma)
+```
+
+Then recover `unit_combine_tree` as one instance using `combine_states_sound`.
+
+This is the most important semantic alignment step for Goblint's `enter` and
+`combine` interface.
+
+### Slice 7 - update-rule abstraction
+
+Goal: model the solver-level hook discussed in paper Section 5.3.
+
+Do not change the vendored solver first. Add an abstract post-processing layer:
+
+```text
+origin = local unknown or edge id
+contribution table : g -> origin -> value
+update_rule old origin new -> table
+global_value table g = join over origins
+```
+
+Prove:
+
+- naive update refines to current global join;
+- per-origin update is sound if every stored contribution is sound;
+- per-origin widening is sound when widening is an upper bound;
+- revocation is sound only if dependency invalidation removes all consumers
+  or re-solves them.
+
+This can start as a separate theory/document because full TD integration is
+substantial.
+
+### Slice 8 - multi-analysis product/sum and query bus
+
+Goal: align with Goblint framework structure.
+
+This is out of thesis-critical path. If pursued:
+
+- define activated analyses indexed by `'A`;
+- local domain as product over analyses;
+- global names as dependent sum `(analysis_id, global_name)`;
+- componentwise transfer;
+- optional query lattice and `ask` contract.
+
+Key risk: dependent domain families are awkward in HOL with the current uniform
+`'a abs_state`. A pragmatic first step is a fixed binary product of two analyses.
+
+## Recommended order
+
+1. Slice 0: terminology and cross-links.
+2. Slice 1: paper constraint contract over strategy trees.
+3. Slice 3: named-global example using `side_env_g`.
+4. Slice 4: theorem-facing context-call locale.
+5. Slice 5: digest-indexed globals by slot splitting.
+6. Slice 6: analysis-specific combine.
+7. Slice 7: update rules.
+8. Slice 8: multi-analysis framework.
+
+Rationale: the first four slices mostly expose structure already present. Slice 5
+turns semantic digest contracts into solver-facing precision. Slice 6 changes the
+API boundary and should land after the existing side/context stack is easier to
+read. Slices 7-8 are solver/framework research extensions.
+
+## TODO - recreate paper examples
+
+These examples should become small Isabelle theories under
+`src/Formalization/Examples/` once the required slices exist. Each example should
+state both the executable result and the semantic soundness property it witnesses.
+
+| Paper example | What it demonstrates | Current support | Target Isabelle artifact | Difficulty |
+| --- | --- | --- | --- | --- |
+| Fig. 1 / Example 1: sequential globals `g,h`, values `1`, `-17`, `42` | Basic global-store widening shape: locals flow sensitively, selected globals flow insensitively | CFG, side effects, Sign/Interval domains, named globals mostly exist | `Example_Seidl_Global_Store_Widening.thy`: prove `g <= 42`-style abstract fact for named global slots | Medium |
+| Example 2: interval widening loses precision to `[-inf, inf]` | Naive global widening can destroy a useful bound | Interval domain exists; update-rule model does not | Negative/diagnostic example after update-rule abstraction exists | Hard |
+| Example 2 refinement: widen per origin | Per-origin contribution tables recover `[-17,42]` | Not modeled | `Example_Seidl_Per_Origin_Update.thy`: compare naive vs per-origin update rule | Hard |
+| Example 3: global `h` written once but flow-insensitive analysis infers repeated writes | Flow-insensitive globals lose path/count precision | Trace/digest semantics exists; solver-level digest slots pending | `Example_Seidl_Mod_Count_Digest.thy`: bounded write-count digest proves final `h = 1` | Hard |
+| Fig. 2 / Example 4: thread-modular local `y`, shared global `g` | Thread-local state remains flow-sensitive while shared memory is flow-insensitive | No real thread semantics; mixed-flow mechanism exists | Start as sequential simulation of two thread bodies; full thread semantics is stretch | Very hard for full version |
+| Fig. 3 / Example 9: `{ST, MT}` digest | Reader in single-threaded mode ignores writes from multi-threaded mode | `cfg_collect_ctx`, `digest_read_sound` exist; solver slots pending | `Example_Seidl_ST_MT_Digest.thy`: compatible read excludes `MT` global writes | Medium-hard |
+| Example 7: 1-callstring context sensitivity | Calls from distinct call sites get distinct procedure instances | Context-indexed equation generator exists | `Example_Seidl_One_Callstring.thy`: same procedure called twice, separate contexts prove separate facts | Medium |
+| Example 8: partial tabulation by abstract entry state | Callee context is `enter d`, not just call site | Semantic/executable context bridge exists | `Example_Seidl_Partial_Tabulation.thy`: context keyed by abstract start state | Medium-hard |
+| Goblint `man.sideg` assignment example | Assignment to selected global emits a named side effect | `Side g d t`, `QueryG g` exist | Promote a named-global transfer example using at least two global names | Easy-medium |
+| Goblint `ask/query` cooperation | Analyses exchange information without full product reduction | Not modeled | Deferred framework example after multi-analysis product/sum | Very hard |
+
+### TODO difficulty analysis
+
+| Change | Why it matters | Expected effort | Risk |
+| --- | --- | --- | --- |
+| Add paper-shaped contracts over `strategy_tree` | Makes equation (1) explicit and reviewable | 1-2 days | Low |
+| Add CFG-edge wrapper and fold decomposition | Makes equation (2) explicit | 1-3 days | Low |
+| Add named-global example with `side_env_g` | Shows Goblint-like `global`/`sideg` use | 2-4 days | Low-medium |
+| Add context-call locale for equation (6) | Makes context-sensitive calls match the paper | 3-6 days | Medium |
+| Recreate 1-callstring example | Tests context routing end to end | 3-6 days | Medium |
+| Recreate ST/MT digest example by slot splitting | Tests digest-compatible global reads | 1-2 weeks | Medium-high |
+| Recreate write-count digest for `h` | Tests bounded modification-count digests | 1-2 weeks | Medium-high |
+| Generalize `combine` to analysis-provided trees | Aligns with Goblint `combine`; prerequisite for relational domains | 1-3 weeks | High |
+| Model per-origin update rules | Captures paper Section 5.3 precision recovery | 2-4 weeks | High |
+| Integrate update rules into TD-side solving | Makes update precision executable, not just semantic | 4+ weeks | Very high |
+| Separate local/global payload domains | Matches Goblint `D` vs `G` | 3-5 weeks | Very high |
+| Multi-analysis product/sum and query bus | Matches Goblint framework composition | 4-8+ weeks | Very high |
+| Full thread-modular semantics | Recreates Fig. 2 faithfully | Open-ended | Very high |
+
+### TODO sequencing for examples
+
+1. Start with the named-global assignment example. It exercises existing
+   infrastructure and gives a small proof target.
+2. Recreate Example 7 with 1-callstring contexts. This validates the
+   context-indexed solver before introducing digest-specific globals.
+3. Recreate Fig. 3 / Example 9 using finite digest slot splitting.
+4. Recreate Fig. 1 / Example 1 as the baseline global-store widening example.
+5. Add write-count digest for Example 3 after digest slots are stable.
+6. Add per-origin update rules and revisit Example 2.
+7. Treat Fig. 2 as a stretch goal unless a thread semantics is added.
+
+## Open risks
+
+- **Uniform payload type.** The paper permits `D[x]` per unknown; Goblint has
+  separate local and global domains. The repo uses one `'a abs_state` payload.
+  This keeps the solver bridge simple but limits full fidelity.
+- **Finite globals.** `glob_env` relies on finite `'g`. This is acceptable for
+  executable instances, but the paper permits potentially infinite unknown sets.
+- **Context/source of calls.** The paper treats procedure start points as globals.
+  The repo uses explicit interprocedural CFG structure and combine triples. The
+  migration should align the theorem shape, not force a worse CFG encoding.
+- **Relational domains.** Hardwired `restrict_local`/`restrict_global` loses
+  cross-variable relations. Analysis-specific `combine` is required before an
+  octagon story can match Goblint.
+- **Termination.** The current soundness story assumes `solve_dom`; the paper
+  discusses widening/narrowing and TD cycle handling. A termination theorem is a
+  separate project.
+- **Update-rule precision.** Per-origin update rules can improve precision at
+  globals, but revocation interacts with dependency invalidation and should not be
+  modeled as a pure lattice join without solver-state invariants.
+
+## Acceptance checklist
+
+- Paper equation (1) has a named Isabelle contract over `strategy_tree`.
+- Paper equation (2) has a named CFG-edge wrapper and fold decomposition lemma.
+- Paper equations (3), (6), and (7) are stated as theorem-facing call/context
+  contracts.
+- At least one executable example uses named globals beyond `unit`.
+- Digest-indexed global reads are backed by solver slots, not only arbitrary
+  `envd`.
+- Structural combine is an instance of an abstract `combine`, not the only API.
+- The docs consistently describe the system as a side-effecting constraint
+  system with local unknowns `L`, global unknowns `G`, and valuation `sigma`.

@@ -3,6 +3,25 @@
 > **Agent entry point:** `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` (umbrella, Track B).
 > This file holds warrowing + entry-state slice detail (S0–S4).
 
+> **STATUS (batch-sealed, `Voblint_Formalization` build exit 0, no `sorry` in `src/`):**
+> The headline contribution is **DONE** — sound semantic entry-state context-sensitivity
+> with a machine-checked strict-precision witness.
+> - **S0** — sign warrowing back-end soundness end-to-end (`sign_exec_sound_collecting`
+>   / `_trace`, `Sign_Exec_Sound.thy`), mono-free via `partial_post_solution` + RG
+>   `inr_slot_locals_bot`. *Interval-apinis (real-widening) soundness is the lone S0
+>   follow-on — independent transport, sign already witnesses the back-end.*
+> - **S1** — context-indexed equation system + context-parametric soundness chain
+>   (`TD_Side_Tree.thy` `side_cfg_T_eff_ctx`; `TD_Side_Eff_Ctx_Sound.thy`
+>   `post_fixpoint_sound_at_ctx_semantic`, `side_collect_sound_exit_pruned_ctx`).
+> - **S2** — entry-store instance `semantic_entry_store_ctx_analysis_sound`
+>   (`TD_Side_Eff_Ctx_Sound.thy`); the value-dependent combine `unit_combine_tree_ctx
+>   entry_store_ec`. *`flag_etf`-through-warrowing bonus is unstarted — same transport
+>   class as interval-apinis.*
+> - **S3** — `entry_store_context_precision_witness`
+>   (`Example_Entry_Store_Context_Precision.thy`): strict precision over any
+>   monovariant cover, machine-checked.
+> - **S4** — future / out of scope (`solve_dom` assumed, as the whole pipeline does).
+
 Plan to give Voblint **Goblint-style semantic (entry-state) context-sensitivity** —
 procedure entries as side-effect sinks keyed by `c = enter#(abstract state)`, with
 conditional routing allowed — by running the **warrowing side back-end**, accepting
@@ -77,6 +96,19 @@ reuses the decoupling architecture (AD-31) that already made the spine `'g`-poly
 **Risk:** per-context **entry seeding** interacts with the `gseed` machinery (AD-32);
 likely needs per-`c` seeding (the piece AD-32 left at `unit`).
 
+> **Update (2026-07-01, AD-35): the entry-seeding risk is resolved.** The keyed
+> context generator `side_cfg_T_eff_cmp` (`TD_Side_Eff_Cmp_Gen.thy`) filters
+> `EA_Enter` out of the intra predecessor fold (`non_enter_predecessor_list`) and
+> seeds a context-independent **fresh local frame** at frame-entry nodes; callee-entry
+> globals come only from the `combine` edge. Soundness is re-established through a new
+> transfer contract `sound_effectful_transfer_framed` (the enter *upper* bound
+> `etf_full (etf_enter etf u) σ ≤ fresh_frame ⊔ glob_env σ`), with
+> `side_cfg_T_eff_cmp_collect_sound` case-splitting enter/non-enter. This realises the
+> S1 context-indexed system on the **monotone** back-end for the finite-context special
+> case (Path A). The Path-B warrowing route stays the target for value-dependent
+> `enter#`. See `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md` and
+> `docs/GLOBAL_CONTEXT_REDESIGN.md`.
+
 ### S2 — Semantic (entry-state) context instance
 
 - instantiate `'c =` abstract entry state (or a projection); `enter_ctx =` the `enter#`;
@@ -96,7 +128,20 @@ analysis is **strictly more precise** than the context-insensitive read.
 **Acceptance:** `semantic_ctx_strictly_more_precise`, machine-checked. Without this
 the contribution is "sound context-sensitivity" with no demonstrated benefit.
 
+> **Partial witness already on `main` (2026-07-01, AD-35).** For a *finite* context
+> type, `Example_Finite_Sign_Context_Analysis.thy` proves by `eval` that the keyed
+> context analysis separates two activations of `f() { GH := G }` — `GZero`-context
+> slot `GH = SZero`, `GPos`-context slot `GH = SPos`, join-all `SNonNeg` — where the
+> context-insensitive read collapses to `SNonNeg`. This is the finite-context (Path A)
+> analogue of the S3 payoff; the semantic entry-state (Path B)
+> `semantic_ctx_strictly_more_precise` is still the target.
+
 ### S4 — Termination / runnability (scoped)
+
+> **Detail doc:** `EXECUTABLE_CONTEXT_MIGRATION.md` — the generator-driven
+> executable path (E0–E4). Viability already proven (`Exec_Sign_Ctx_Run`,
+> `Exec_Ivl_Ctx_Run`); the headline is E2, a generator-driven precision witness
+> over a compiled CFG.
 
 The soundness claim assumes `solve_dom` (as the whole pipeline does today). For a
 *runnable* (`value`/code-gen) result the context set must be finite — full

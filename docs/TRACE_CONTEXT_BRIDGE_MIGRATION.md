@@ -3,10 +3,13 @@
 > **Agent entry point:** `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` (umbrella). This file
 > holds B0–B2 detail only.
 
-Status: **PLANNED.** Adds the missing **semantic middle layer** between
-`cfg_collect_trace` and context-/digest-indexed analysis. Unifies the proof target
-for `TRACE_BASED_FORK_MIGRATION.md`, `SEMANTIC_CONTEXT_MIGRATION.md` (S1/S2), and
-`CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` without replacing any of them.
+Status: **PARTIALLY DONE (Track B path, batch-sealed).** B0 (`alpha_ctx`,
+`cfg_collect_ctx`, `context_collect_sound`) and B2 (`context_transfer` locale,
+`trace_witness_ctx`, `context_step_refines_dg`, `trace_witness_ctx_last_in_cfg_collect_ctx`)
+are in the repo and batch-green. B1 was not needed for Track B (post-fixpoint
+induction factored through `trace_witness` + `pull_ctx` pullback instead). B3 is
+done for Track B — see `SEMANTIC_CONTEXT_MIGRATION.md`. Track A (digest / k-CFA)
+has not started; B2 will need a second instance for call-string digests.
 
 KB: `wiki/research/trace-precision-direction.md`, `wiki/concepts/digests.md`.
 
@@ -149,8 +152,10 @@ lemma cfg_collect_ctx_reaching_compat:
 **Do not replace `trace_witness`.** Add a functional mirror, following the
 `cfg_collect_F` / `cfg_witness` pattern in `CFG_Collect.thy`.
 
-**Combine rule must match `trace_witness` verbatim.** In `CFG_Collect_Trace.thy`
-the combine conclusion is **compressed** (callee entry store not duplicated):
+**Combine rule must match `trace_witness` verbatim** (this is the single
+authoritative home for the compressed-combine caution; other docs point here).
+In `CFG_Collect_Trace.thy` the `trace_witness.combine` conclusion is
+**compressed** (callee entry store not duplicated):
 
 ```isabelle
 (* trace_witness.combine — CFG_Collect_Trace.thy *)

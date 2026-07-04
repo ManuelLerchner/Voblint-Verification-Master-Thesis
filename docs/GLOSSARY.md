@@ -74,6 +74,9 @@ stated against interprocedural CFG collecting semantics at every program point.
 | `TD` / `TD_side`                           | Vendored verified top-down solver; only the side-effecting variant is used.             | `vendor/td-verification`                          |
 | `effectful_domain_transfer` / `apply_etf`  | Native transfer record for TD_side: strategy-tree producers for edges and combines.     | `Constraint_System.thy`                           |
 | `side_env` / `side_analyse_eff`            | Side-solver environment and the effectful analysis entry point.                         | `TD_Side_CFG.thy`, `TD_Side_Eff_Interface.thy`    |
+| `glob_env_cmp` / `side_env_cmp`            | Context-compatible global read: join only the global slots compatible with the current context. | `Global_Cmp_Read.thy`                    |
+| `sound_effectful_transfer_framed`          | Strengthening of effectful transfer soundness with an enter upper bound by a fresh frame plus globals. | `Constraint_System.thy`, `Sign_Side_Soundness.thy` |
+| `side_cfg_T_eff_cmp` / `_st`               | Abstract / executable keyed-global equation-system generator.                           | `TD_Side_Eff_Cmp_Gen.thy`, `Exec_Cmp_Bridge.thy` |
 | `td_cfg_side_solver_eff`                   | Locale wrapping the effectful side solver for CFG use.                                  | `TD_Side_Eff_Interface.thy`                       |
 | `restrict_local` / `restrict_global`       | Split an abstract state into local / global parts across a call.                        | `TD_Side_CFG.thy:25,29`                           |
 
