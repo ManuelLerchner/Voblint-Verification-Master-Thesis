@@ -23,6 +23,22 @@ text \<open>
   below): a query of one named unknown is not polluted by the other.
 \<close>
 
+text \<open>
+  Seidl et al. (FM 2026) notation, for this theory:
+
+  - the effectful edge transfer [[e]] : D[u] -> E -> (E x D[v]) is route_tree /
+    apply_etf named_etf; its full reassembled result etf_full is the paper's
+    (E x D[v]) recombined;
+  - the named global unknowns G are the two slots Gpos / Gneg (the analysis-defined
+    GVar.t of a single analysis);
+  - man.global g is QueryG g / side_env_g (read one slot), man.sideg g d is
+    Side g d (write one slot);
+  - the paper constraint (eta, eta[u]) >= f eta is se_constraint_holds; the
+    post-solution obligation is discharged through the side TD solver in
+    named_analysis_sound.
+
+\<close>
+
 subsection \<open>A two-element global-name type\<close>
 
 datatype gname = Gpos | Gneg
@@ -541,5 +557,97 @@ text \<open>
 lemma flag_etf_mono_sides_unprovable:
   "mono_sides (side_cfg_T_eff g flag_etf bot0 s0 gseed)"
   oops
+
+section \<open>A Goblint man.global / man.sideg witness reading a single named global\<close>
+
+text \<open>
+  The routed trees above reassemble the source state from ALL named globals
+  (glob_env).  Goblint's manager interface is finer: a transfer reads one
+  selected global via man.global g and writes one selected global via
+  man.sideg g'.  sideg_tree is that shape -- it queries exactly the local
+  unknown and the single named global gread, so its source read is side_env_g
+  (not the joined side_env), and it Sides the global part to the single named
+  slot gwrite.  Soundness is stated against side_env_g, closing the practical gap
+  between the paper's man.global / man.sideg and the repo examples.
+\<close>
+
+definition sideg_tree ::
+  "gname \<Rightarrow> gname \<Rightarrow> (sign abs_state \<Rightarrow> sign abs_state) \<Rightarrow> pp
+   \<Rightarrow> (pp, gname, sign abs_state) strategy_tree"
+where
+  "sideg_tree gread gwrite f u =
+     QueryL u (\<lambda>su. QueryG gread (\<lambda>g.
+       let res = f (su \<squnion> g)
+       in Side gwrite (restrict_global res) (Answer (restrict_local res))))"
+
+text \<open>
+  The tree reads exactly the local unknown u and the one named global gread --
+  the man.global g contract: a single selected global, not the joined view.
+\<close>
+lemma dep_aux_sideg_tree:
+  "dep_aux \<sigma> (sideg_tree gread gwrite f u) = {Inl u, Inr gread}"
+  unfolding sideg_tree_def by (simp add: Let_def)
+
+lemma traverse_sideg_tree:
+  "traverse_rhs (sideg_tree gread gwrite f u) \<sigma>
+   = restrict_local (f (side_env_g \<sigma> gread u))"
+  unfolding sideg_tree_def side_env_g_def by (simp add: Let_def)
+
+text \<open>
+  The man.sideg g' contract: the whole global contribution lands in the single
+  selected slot gwrite; every other named slot receives bot.
+\<close>
+lemma sides_sideg_tree:
+  "sides_of_rhs (sideg_tree gread gwrite f u) \<sigma>
+   = (\<lambda>_. \<bottom>)(Inr gwrite := restrict_global (f (side_env_g \<sigma> gread u)))"
+  unfolding sideg_tree_def side_env_g_def by (simp add: Let_def)
+
+lemma etf_full_sideg_tree:
+  "etf_full (sideg_tree gread gwrite f u) \<sigma> = f (side_env_g \<sigma> gread u)"
+  unfolding etf_full_def sideg_tree_def side_env_g_def
+  by (simp add: Let_def restrict_local_global_join)
+
+text \<open>
+  Soundness of a man.sideg assignment stated through the single-global read: if a
+  concrete store concretises the selected-global source view side_env_g, its
+  post-store concretises the reassembled full result.  This is the manager-style
+  contract -- read one named global, write one named global -- for the sign
+  assignment transfer.
+\<close>
+theorem sideg_assign_sound:
+  assumes "s \<in> \<lbrakk>side_env_g \<sigma> gread u\<rbrakk>"
+  shows "s(x := aval a s)
+         \<in> \<lbrakk>etf_full (sideg_tree gread gwrite
+                       (apply_tf sign_tf (EA_Assign x a)) u) \<sigma>\<rbrakk>"
+proof -
+  have "s(x := aval a s) \<in> \<lbrakk>tf_assign sign_tf x a (side_env_g \<sigma> gread u)\<rbrakk>"
+    using assms sign_tf_sound_assign by blast
+  thus ?thesis by (simp add: etf_full_sideg_tree)
+qed
+
+subsection \<open>Two named keys: read one, write the other\<close>
+
+text \<open>
+  Instantiating gread = Gpos, gwrite = Gneg exhibits the two-key routing the
+  single-pot unit interface cannot express: the contribution lands only in Gneg,
+  and the Gpos slot the transfer read is left untouched by this tree.
+\<close>
+lemma sideg_pos_neg_writes_only_neg:
+  "sides_of_rhs (sideg_tree Gpos Gneg f u) \<sigma> (Inr Gpos) = \<bottom>"
+  by (simp add: sides_sideg_tree)
+
+lemma sideg_pos_neg_reads_only_pos:
+  "dep_aux \<sigma> (sideg_tree Gpos Gneg f u) = {Inl u, Inr Gpos}"
+  by (simp add: dep_aux_sideg_tree)
+
+text \<open>
+  The joined-view bridge: because a single-global read is tighter than the joined
+  side_env (side_env_g_le_side_env), every concrete store of the selected-global
+  view is also a concrete store of the joined view.  A theorem phrased against
+  the joined global environment therefore subsumes the man.global read.
+\<close>
+lemma gamma_side_env_g_subset_side_env:
+  "\<lbrakk>side_env_g \<sigma> g v\<rbrakk> \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+  by (rule gamma_state_mono[OF side_env_g_le_side_env])
 
 end

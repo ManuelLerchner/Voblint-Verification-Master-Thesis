@@ -191,6 +191,16 @@ text \<open>
   routes to \<open>GZero\<close>, site 7 to \<open>GPos\<close>.
 \<close>
 
+text \<open>
+  Seidl et al. (FM 2026) notation: \<^const>\<open>fctx_ec_call\<close> is the paper's
+  \<open>context\<^bsub>u,f,args\<^esub> : D[u] -> C -> C\<close> --- the value-dependent callee-context
+  selector of equation (6).  This is the shape of the paper's Example 7
+  (1-callstring / partial tabulation): the same procedure \<open>f\<close>, reached from two
+  distinct call sites, is routed to two distinct finite contexts (\<open>GZero\<close> vs
+  \<open>GPos\<close>) so the two instances prove separate facts (\<open>fctx_route_bound_zero\<close> /
+  \<open>_pos\<close>).
+\<close>
+
 lemma fctx_route_call4: "fctx_ec_call 4 ctx (fctx_call_state 4 s) = GZero"
   by (simp add: fctx_ec_call_def fctx_call_state_def sign_gctx_of_st_def
         sign_gctx_of_sign_def is_global_def restrict_global_def)

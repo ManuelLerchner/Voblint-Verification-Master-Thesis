@@ -104,6 +104,14 @@ lemma side_env_eq_side_env_g:
   "side_env \<sigma> v = side_env_g \<sigma> () v"
   unfolding side_env_def side_env_g_def by (simp add: glob_env_unit)
 
+(* Reading a single named global is a tighter view than the joined global
+   environment: side_env_g picks one slot, side_env joins all of them. *)
+lemma side_env_g_le_side_env:
+  fixes \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  shows "side_env_g \<sigma> g v \<le> side_env \<sigma> v"
+  unfolding side_env_g_def side_env_def
+  by (rule sup_mono[OF order_refl glob_env_upper])
+
 
 subsection \<open>Unit-global effectful trees\<close>
 

@@ -646,6 +646,67 @@ next
     unfolding all_sides.simps(4) by (rule sup_least)
 qed
 
+subsection \<open>Paper equation (1): the side-effecting constraint over a strategy tree\<close>
+
+text \<open>
+  Seidl et al. (FM 2026) write a local unknown's constraint as
+  \<open>(eta, eta[u]) >= f eta\<close>: the valuation must cover both the local contribution
+  and every global side effect the same right-hand side produces.  Over a
+  @{typ \<open>('x,'g,'d) strategy_tree\<close>} the local contribution is @{const traverse_rhs}
+  and the per-name side effects are @{const sides_of_rhs}, so the paper's
+  constraint for the tree at unknown @{term u} is exactly the conjunction below.
+  It is the per-unknown body of the vendored @{term part_post_solution}.
+\<close>
+
+definition se_constraint_holds ::
+  "('x,'g,'d::bounded_semilattice_sup_bot) strategy_tree \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'x \<Rightarrow> bool"
+where
+  "se_constraint_holds t \<sigma> u \<equiv>
+     traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<and> sides_of_rhs t \<sigma> \<le> \<sigma>"
+
+text \<open>
+  A post-solution unknown satisfies the paper constraint: the local answer is
+  covered and the side map is subsumed.
+\<close>
+lemma part_post_solution_imp_se_constraint_holds:
+  assumes "part_post_solution T x \<sigma> vars" and "u \<in> vars"
+  shows "se_constraint_holds (T u) \<sigma> u"
+  using assms unfolding se_constraint_holds_def by auto
+
+text \<open>
+  The reverse decomposition: @{const part_post_solution} is precisely
+  well-foundedness of the local dependencies plus the paper constraint holding at
+  every unknown.  This is the sense in which @{const se_constraint_holds}
+  specialises the post-fixpoint shape to a single unknown.
+\<close>
+lemma part_post_solution_iff_se_constraint_holds:
+  "part_post_solution T x \<sigma> vars \<longleftrightarrow>
+     x \<in> vars \<and> (\<forall>u \<in> vars. dep\<^sub>L T \<sigma> u \<subseteq> vars \<and> se_constraint_holds (T u) \<sigma> u)"
+  unfolding se_constraint_holds_def by auto
+
+text \<open>
+  The paper constraint bounds the reassembled full post-state @{const etf_full} by
+  the local unknown joined with the global environment (the read
+  @{term \<open>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<close>}, later named @{text side_env}).  This is the
+  effectful reading of equation (1): once the side map is subsumed, the total of
+  the tree's contributions is below the flow-insensitive global value.
+\<close>
+lemma se_constraint_holds_imp_etf_full_le_env:
+  fixes t :: "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  assumes "se_constraint_holds t \<sigma> u"
+  shows "etf_full t \<sigma> \<le> \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
+proof -
+  have loc: "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
+    and sid: "sides_of_rhs t \<sigma> \<le> \<sigma>"
+    using assms unfolding se_constraint_holds_def by auto
+  have "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
+    by (rule all_sides_le_glob_env_sides)
+  also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono[OF sid])
+  finally have g: "all_sides t \<sigma> \<le> glob_env \<sigma>" .
+  show ?thesis
+    unfolding etf_full_def by (rule sup_mono[OF loc g])
+qed
+
 definition inr_slot_locals_bot ::
   "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
 where

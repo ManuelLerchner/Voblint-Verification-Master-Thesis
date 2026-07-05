@@ -1053,6 +1053,7 @@ proof -
   finally show ?thesis .
 qed
 
+
 subsection \<open>The value-dependent (switching) combine contract\<close>
 
 text \<open>
@@ -1336,6 +1337,41 @@ proof -
   show ?thesis
     by (rule side_cfg_T_eff_cmp_collect_sound
           [OF stf _ inr inl S_sound pp' finE finC cover_edge cover_comb cover_entry]) auto
+qed
+
+text \<open>
+  The context-sliced collecting bound straight from a post-fixpoint, carrying
+  \<^emph>\<open>no\<close> \<open>ENTRY\<close> / \<open>EDGE\<close> / combine / digest premise: \<^const>\<open>cfg_collect_ctx\<close> is a
+  slice of \<^const>\<open>cfg_collect\<close> (\<open>cfg_collect_ctx_le\<close>), which
+  \<open>side_cfg_T_eff_cmp_collect_sound\<close> already over-approximates at the \<open>cmp\<close> read.  This
+  discharges the obligations that \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>
+  carries as premises: for the fixed-combine generator they hold structurally, not as
+  per-example assumptions.  The context-collapse / superset digest instances then
+  lift this to \<open>obs_digest\<close> through \<open>obs_digest_collect_ctx_sound_of_cmp\<close>.
+\<close>
+corollary side_cfg_T_eff_cmp_collect_ctx_sound:
+  fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
+    and etf :: "(unit, 'a) effectful_domain_transfer"
+  assumes stf: "sound_effectful_transfer_framed etf fresh_frame"
+    and single: "{k. gcmp ctx k} = {gkey ctx}"
+    and inr: "inr_slot_locals_bot_ctx \<sigma>"
+    and inl: "inl_slot_globals_bot_ctx \<sigma>"
+    and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+    and pp: "part_post_solution
+               (side_cfg_T_eff_cmp gkey
+                  (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
+                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                  g etf fresh_frame bot0 s0) x \<sigma> vars"
+    and finE: "finite (edges g)"
+    and finC: "finite (combines g)"
+    and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars"
+    and cover_comb: "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    and cover_entry: "(cfg_entry g, ctx) \<in> vars"
+  shows "cfg_collect_ctx dg cmp g S v0 ctx \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
+proof (rule order_trans[OF cfg_collect_ctx_le])
+  show "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
+    using stf single inr inl S_sound pp finE finC cover_edge cover_comb cover_entry
+    by (rule side_cfg_T_eff_cmp_collect_sound)
 qed
 
 end

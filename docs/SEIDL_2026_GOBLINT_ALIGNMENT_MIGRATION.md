@@ -1,6 +1,7 @@
 # Migration - Seidl 2026 mixed-flow Goblint alignment
 
-Status: **PLANNING**.
+Status: **IN PROGRESS**. Phase A (Slices 1-3, structural exposure) landed; see the
+per-slice "Landed" notes below. Slices 4-8 remain.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis: Engineering
 Modularity", FM 2026, LNCS 16557, pp. 446-470.
@@ -219,6 +220,8 @@ sends a query to all analyses and meets the answer lattice results.
 | valuation `eta : X -> D` | `sigma :: pp + 'g => 'a abs_state` | Present, single payload type |
 | per-unknown domains `D[x]` | uniform `'a abs_state` for all locals and globals | Simplified |
 | `f : E -> (E x D[u])` | strategy tree with `QueryL`, `QueryG`, `Side`, `Answer` | Present |
+| paper eq (1) constraint | `se_constraint_holds` + `part_post_solution_imp_se_constraint_holds`, `se_constraint_holds_imp_etf_full_le_env` | Present (Slice 1) |
+| paper eq (2) per-edge tree | `edge_constraint_tree`, `cfg_edge_contributes_to_eq`, `side_acc_eff_least` | Present (Slice 2) |
 | local result `d` | `Answer d`, denoted by `traverse_rhs` | Present |
 | global side effects `eta'` | `Side g d t`, denoted by `sides_of_rhs` / `all_sides` | Present |
 | CFG transfer `[[e]]` | `apply_etf etf a u` and `side_rhs_fold_eff` | Present |
@@ -227,7 +230,7 @@ sends a query to all analyses and meets the answer lattice results.
 | call `combine` | `etf_combine`; unit bridge uses `unit_combine_tree` | Present but structural |
 | start-point side seed | `make_side_rhs_tree_eff`, `gseed`, `restrict_global s0` | Present |
 | local/global read at a point | `side_env sigma v = sigma (Inl v) sup glob_env sigma` | Present |
-| named global read | `side_env_g sigma g v = sigma (Inl v) sup sigma (Inr g)` | Present |
+| named global read | `side_env_g sigma g v = sigma (Inl v) sup sigma (Inr g)`; `sideg_tree` reads one slot; `side_env_g_le_side_env` | Present (Slice 3) |
 | join all globals | `glob_env` | Present |
 | context-indexed unknowns | `map_ltree`, `side_cfg_T_eff_ctx`, executable mirrors | Present |
 | trace/digest compatibility | `reaching_compat`, `alpha_ctx`, `cfg_collect_ctx` | Present semantically |
@@ -244,7 +247,7 @@ sends a query to all analyses and meets the answer lattice results.
 | Domain family | Each unknown `[x]` may have domain `D[x]` | One state type `'a abs_state` is used for all local and global slots | Major simplification. Needed for current TD bridge; limits Goblint fidelity and analysis composition. |
 | Local domain vs global domain | Goblint has separate `D` and `G` domains | Globals and locals both store `'a abs_state`; named globals are distinguished by `'g` | Named globals are present, but payload type is unified. |
 | Global unknowns | Analysis-defined `GVar.t` | finite `'g`, plus old `unit` bridge | Good alignment for single analysis; finite requirement should be documented as a solver/interface condition. |
-| Global read | Transfer can read a selected global via manager | `QueryG g`; `side_env_g` exists | Good alignment. Need more user-facing instances that do not collapse through `glob_env`. |
+| Global read | Transfer can read a selected global via manager | `QueryG g`; `side_env_g`, `side_env_g_le_side_env`; `sideg_tree` reads one slot | Good alignment. `sideg_tree` (Slice 3) is a `man.global`/`man.sideg` instance that reads a single named global via `side_env_g`, not `glob_env`. |
 | Global side effect | `man.sideg g d` inside transfer | `Side g d t` inside strategy tree | Good alignment. |
 | Plain CFG equation | one constraint per incoming edge | `rhs` and `side_rhs_fold_eff` fold incoming predecessors | Good match. |
 | Procedure start points | Treated as globals in paper's call formalization | CFG has `EA_Enter`; seed uses `gseed`; call/return modeled via combine triples | Conceptual mismatch. The current CFG has explicit structural call edges and combine triples; paper treats start-point seed as side effect. |
@@ -261,6 +264,10 @@ These are the current anchors for paper alignment.
 
 | Paper obligation | Isabelle anchor |
 | --- | --- |
+| paper eq (1) over a strategy tree | `se_constraint_holds`; `part_post_solution_imp_se_constraint_holds`, `se_constraint_holds_imp_etf_full_le_env` |
+| paper eq (2) per-edge tree + fold | `edge_constraint_tree`; `side_acc_eff_least`, `cfg_edge_contributes_to_eq`, `cfg_combine_contributes_to_eq` |
+| paper eq (7) initialization seed | `entry_local_seed_le_eq`, `entry_global_seed_le_sides` |
+| `man.global` / `man.sideg` single-slot transfer | `sideg_tree`; `sideg_assign_sound`, `side_env_g_le_side_env` |
 | local result and side effects jointly satisfy constraints | `part_post_solution` from vendored TD side solver, used by `td_cfg_side_solver_eff.part_post_at_cfg` |
 | named side effects are bounded by global environment | `all_sides_le_glob_env_sides`, `glob_env_upper`, `glob_env_mono_Inr` |
 | unit-global tree reconstructs the pure transfer | `etf_full_unit_edge_tree` |
@@ -291,9 +298,19 @@ Edits:
   - side-effecting constraint: `strategy_tree`.
 - Cross-link this document from `docs/PROOF_OVERVIEW.md` and `docs/ROADMAP.md`.
 
-No theory changes.
+Partly landed: paper-notation `text` bridges added to
+`Sign_Named_Global_Eff.thy` (`[[e]]` / `man.global` / `man.sideg` / eq (1)
+mapping) and `Example_Finite_Sign_Context_Analysis.thy` (`fctx_ec_call` =
+paper `context_{u,f,args}`, Example 7). Additive only, no renames.
 
 ### Slice 1 - expose the exact side-effecting constraint contract
+
+> **Landed.** `se_constraint_holds` and its bridges live in
+> `src/Analysis/Generic/Equations/Constraint_System.thy`:
+> `part_post_solution_imp_se_constraint_holds`,
+> `part_post_solution_iff_se_constraint_holds` (the post-fixpoint reformulation),
+> and `se_constraint_holds_imp_etf_full_le_env` (the `etf_full <= side_env` bound).
+> Batch-green on `Voblint_Formalization`.
 
 Goal: state the paper's `(eta, eta[u]) >= f eta` contract directly over
 `strategy_tree`.
@@ -322,6 +339,16 @@ This gives the paper equation (1) a named theorem-level target.
 
 ### Slice 2 - make CFG equations paper-shaped
 
+> **Landed.** `edge_constraint_tree` and the fold decomposition live in
+> `src/Analysis/Generic/Solver/TD_Side_Tree.thy`. The fold
+> `side_acc_eff` is characterised as the finite join of the per-edge/per-combine
+> contributions (`acc_le_side_acc_eff`, `side_acc_eff_edge_contributes`,
+> `side_acc_eff_combine_contributes`, `side_acc_eff_least`). At the CFG level
+> `cfg_edge_contributes_to_eq` / `cfg_combine_contributes_to_eq` show every
+> incoming edge/combine contributes to the point's equation, and
+> `entry_local_seed_le_eq` / `entry_global_seed_le_sides` cover the initialization
+> constraint. Batch-green.
+
 Goal: align equation (2) with current per-edge/fold construction.
 
 Add documentation-level and theorem-level wrappers:
@@ -341,6 +368,17 @@ The wrapper should reduce to `apply_etf etf act u` for ordinary edges. Then prov
 This is mostly naming and decomposition. It should not alter solver behavior.
 
 ### Slice 3 - Goblint-style named globals as first-class examples
+
+> **Landed.** `src/Analysis/Instances/NamedGlobalSign/Sign_Named_Global_Eff.thy`
+> already carried `named_etf` (two slots `Gpos`/`Gneg`, sound through the real
+> side solver via `named_analysis_sound`). Phase A adds the `man.global`/`man.sideg`
+> witness that reads a *single* named global: `sideg_tree` (queries only the local
+> and one slot `gread`, Sides to one slot `gwrite`), with `traverse_sideg_tree`,
+> `sides_sideg_tree`, `etf_full_sideg_tree`, and soundness `sideg_assign_sound`
+> stated through `side_env_g`. Two-key routing is witnessed by
+> `sideg_pos_neg_writes_only_neg` / `sideg_pos_neg_reads_only_pos`, and the joined
+> view bridges via `side_env_g_le_side_env` (`gamma_side_env_g_subset_side_env`).
+> Batch-green.
 
 Goal: stop presenting `unit` as the primary story.
 
@@ -514,14 +552,15 @@ Key risk: dependent domain families are awkward in HOL with the current uniform
 
 ## Recommended order
 
-1. Slice 0: terminology and cross-links.
-2. Slice 1: paper constraint contract over strategy trees.
-3. Slice 3: named-global example using `side_env_g`.
-4. Slice 4: theorem-facing context-call locale.
-5. Slice 5: digest-indexed globals by slot splitting.
-6. Slice 6: analysis-specific combine.
-7. Slice 7: update rules.
-8. Slice 8: multi-analysis framework.
+1. ~~Slice 0: terminology and cross-links.~~
+2. ~~Slice 1: paper constraint contract over strategy trees.~~ **(done)**
+3. ~~Slice 2: CFG-edge wrapper and fold decomposition.~~ **(done)**
+4. ~~Slice 3: named-global example using `side_env_g`.~~ **(done)**
+5. Slice 4: theorem-facing context-call locale.
+6. Slice 5: digest-indexed globals by slot splitting.
+7. Slice 6: analysis-specific combine.
+8. Slice 7: update rules.
+9. Slice 8: multi-analysis framework.
 
 Rationale: the first four slices mostly expose structure already present. Slice 5
 turns semantic digest contracts into solver-facing precision. Slice 6 changes the
@@ -599,11 +638,15 @@ state both the executable result and the semantic soundness property it witnesse
 
 ## Acceptance checklist
 
-- Paper equation (1) has a named Isabelle contract over `strategy_tree`.
-- Paper equation (2) has a named CFG-edge wrapper and fold decomposition lemma.
+- [x] Paper equation (1) has a named Isabelle contract over `strategy_tree`
+  (`se_constraint_holds`, Slice 1).
+- [x] Paper equation (2) has a named CFG-edge wrapper and fold decomposition lemma
+  (`edge_constraint_tree`, `side_acc_eff_least`, Slice 2).
 - Paper equations (3), (6), and (7) are stated as theorem-facing call/context
-  contracts.
-- At least one executable example uses named globals beyond `unit`.
+  contracts. (Eq (7) init: `entry_local_seed_le_eq` / `entry_global_seed_le_sides`,
+  Slice 2. Eqs (3)/(6) call/context: open, Slice 4.)
+- [x] At least one executable example uses named globals beyond `unit`
+  (`named_etf`, `sideg_tree`, Slice 3).
 - Digest-indexed global reads are backed by solver slots, not only arbitrary
   `envd`.
 - Structural combine is an instance of an abstract `combine`, not the only API.

@@ -1,14 +1,85 @@
 # Discharging the generic ENTRY/EDGE generator-to-collecting bounds for the digest read
 
-> **Status: PLAN.** No theory changed. Scopes the one item `DIGEST_TWO_FAMILIES.md`
-> §6 and `OPEN_PROBLEMS.md` leave open for *every* digest instance: the generic
-> `ENTRY` / `EDGE` generator-to-collecting bounds on the `obs_digest` read. Claims
-> tagged **[verified]** were read against the sources at `file:line`; the rest are the
-> proposed construction.
+> **Status: IN PROGRESS — superset-reader class closed (batch-green).** Scopes the one
+> item `DIGEST_TWO_FAMILIES.md` §6 and `OPEN_PROBLEMS.md` leave open for *every* digest
+> instance: the generic `ENTRY` / `EDGE` generator-to-collecting bounds on the
+> `obs_digest` read. Claims tagged **[verified]** were read against the sources at
+> `file:line`; **[batch-green]** passes the full `isabelle build`.
 >
 > Companions: `DIGEST_TWO_FAMILIES.md` (the two families and their shared residual),
 > `DIGEST_INDEXED_READER_MIGRATION.md` (RD spine; COMB split + `CMP_SOUND` closed),
 > `VALUE_CARRIED_DIGEST_{MIGRATION,STATUS}.md` (mode family), `OPEN_PROBLEMS.md` P11.
+
+---
+
+## 0. Session findings (2026-07-05) — the plan sharpened by reading the seam
+
+Two facts from reading the sources changed the plan and are load-bearing below:
+
+1. **The gamma-level EDGE/ENTRY discharge already exists for the `side_env_cmp` read.**
+   `cmp_edge_sound` and `cmp_entry_sound` (`TD_Side_Eff_Cmp_Pull.thy:163,205`
+   [verified]) prove exactly the trace backbone's `EDGE` / `ENTRY` for `side_env_cmp`
+   from a generator post-fixpoint, via the masking pullback `pull_cmp`. So the residual
+   is **not** "discharge EDGE/ENTRY from scratch" — it is "reach the `obs_digest` read
+   from these."
+
+2. **The true family boundary is point-*dependence* of the reader, not monotonicity.**
+   My first draft called `ENTRY` "easy monotone"; that is wrong for tight readers.
+   `obs_digest ≥ side_env_cmp` holds **iff** the reader admits a *superset* of the
+   context keys (`side_env_cmp_le_obs_digest`, below). The mode/RD readers admit a
+   *different, tighter* set — so the monotone bridge does not apply, and their `EDGE`
+   needs the per-point argument. What actually decides tractability:
+
+   | reader | `reader_digest` | admits vs `{k. gcmp ctx k}` | discharge |
+   | --- | --- | --- | --- |
+   | ctx-collapse | `λv ctx. ctx` (point-indep.) | equal | bridge → cmp read **[batch-green]** |
+   | superset | any, `⊇ gcmp` | superset | bridge → cmp read **[batch-green]** |
+   | mode | `mode_decode (σ(Inl(v,ctx)) ''mode'')` (point-dep.) | tighter, not ⊇ | frontier |
+   | RD | reaching set (point-dep., non-monotone) | tighter, kill | frontier |
+
+**Landed this session (batch-green, `Voblint_Analysis` + `Voblint_Formalization`):**
+
+- `side_env_cmp_le_obs_digest` (`Digest_Global_Read.thy`) — the superset-reader
+  monotone bridge `side_env_cmp gcmp σ (v,ctx) ≤ obs_digest σ (v,ctx)` from
+  `glob_env_cmp_filter_mono`.
+- `obs_digest_collect_ctx_sound_of_cmp` (`Digest_Global_Read.thy`) — the payoff:
+  `cfg_collect_ctx ≤ [[side_env_cmp]] ⟹ cfg_collect_ctx ≤ [[obs_digest]]` for a
+  superset reader, by `gamma_state_mono`. So a superset-reader digest read inherits the
+  `side_env_cmp` collecting bound with **no** `ENTRY`/`EDGE` restated at `obs_digest`.
+- `side_cfg_T_eff_cmp_collect_ctx_sound` (`TD_Side_Eff_Cmp_Gen.thy`) — **the premise-free
+  ctx-collecting theorem.** From a `side_cfg_T_eff_cmp` post-fixpoint (fixed combine) it
+  proves `cfg_collect_ctx dg cmp g S v0 ctx ≤ [[side_env_cmp gcmp σ (v0,ctx)]]` carrying
+  **no** `ENTRY`/`EDGE`/`PROC_ENTRY`/`LOCAL_POST`/`CMP_SOUND`/`DG_*`/`ENTER_MONO`
+  premise. The short route: `cfg_collect_ctx ⊆ cfg_collect` (`cfg_collect_ctx_le`) chained
+  with the already-premise-free state bound `side_cfg_T_eff_cmp_collect_sound` — the
+  digest-filtered slice inherits the plain generator soundness, which discharges every
+  one of those obligations structurally.
+
+This closes the superset-reader class (ctx-collapse included), sidesteps the seam
+(§0.1), and delivers the premise-free ctx theorem the whole item was about — for the
+`side_env_cmp` read. Remaining: (a) point the context-reader **witnesses** at
+`side_cfg_T_eff_cmp_collect_ctx_sound` (drop their per-edge `by eval` `EDGE`/`ENTRY`),
+S8; (b) the point-dependent readers mode/RD at the **tight** `obs_digest` read (the
+frontier, §4) — `cfg_collect_ctx ⊆ cfg_collect` does **not** help there, because a
+tight `obs_digest` need not over-approximate `cfg_collect`.
+
+### 0.1 The seam that turned out not to matter: `pull_gk` vs `pull_cmp`
+
+The gamma-EDGE discharge for `side_env_cmp` exists as `cmp_edge_sound`
+(`TD_Side_Eff_Cmp_Pull.thy:163`), but its abstract-bound premise is stated at
+`pull_cmp` (masks the `'g`-keyed slots, type `pp + 'g`), whereas the executable
+generator `side_cfg_T_eff_cmp` is **unit-global** and its edge bound
+`side_cfg_T_eff_cmp_edge_le` (`TD_Side_Eff_Cmp_Gen.thy:300`) is at `pull_gk` (single
+`Inr (gkey ctx)` slot, type `pp + unit`). The first draft treated reconciling these as
+the load-bearing next step.
+
+It is not needed. `side_cfg_T_eff_cmp_collect_ctx_sound` proves the ctx bound through
+the **state**-collecting route (`cfg_collect_ctx_le` + `side_cfg_T_eff_cmp_collect_sound`),
+which never touches the trace backbone's gamma-EDGE and so never crosses the seam. A
+`pull_gk` sibling of `cmp_edge_sound` was prototyped and verified during this work, then
+**removed** as dead code once the state route landed — it discharged the same fact by a
+longer path with no consumer. The seam remains real for anyone who *wants* the
+trace-level per-edge discharge, but the premise-free ctx theorem does not.
 
 ---
 
@@ -99,7 +170,13 @@ of `side_env_cmp`.**
 
 ---
 
-## 3. Why `obs_digest` is not free from §2
+## 3. Why `obs_digest` is not free from §2 — *(frontier only)*
+
+> **Scope.** §3–§5 describe the per-edge construction for **point-dependent (tight)
+> readers** — the mode/RD frontier. For the **context / superset** readers this is
+> obsolete: `side_cfg_T_eff_cmp_collect_ctx_sound` (§0) reaches `obs_digest` through the
+> state-collecting route without any `obs_digest_edge_le`. Read §3–§5 as the plan for
+> the frontier, not for the context read.
 
 `obs_digest` is `side_env_cmp` plus the extra admitted global slots:
 
@@ -235,16 +312,23 @@ Each instance discharges **only** `READER_EDGE` (§4) and supplies its
 | S3 | `obs_digest_edge_le` combining S2 + `side_cfg_T_eff_cmp_site_edge_le` + `READER_EDGE` (§5.2) | S2 | medium |
 | S4 | `obs_digest_collect_sound_gen` skeleton (§5.1), mirroring `side_cfg_T_eff_cmp_collect_sound_gen` | S1, S3 | low — copy of §2 |
 | S5 | Promote solution invariants (§5.3) to generic post-fixpoint lemmas | — | low |
-| S6 | ctx-collapse + mode instances: discharge `READER_EDGE`, drop the premises | S4 | low |
-| S7 | RD instance: `READER_EDGE` via bot-on-locals; re-derive RD reader theorem premise-free of `EDGE`/`ENTRY` | S4 | high — non-monotone |
-| S8 | Re-thread `Exec_Sign_*_Keyed_Run` witnesses: delete the `by eval` `EDGE`/`ENTRY` discharges, cite S6/S7 | S6, S7 | low |
+| S6a | **[DONE — batch-green]** superset-reader class: `side_env_cmp_le_obs_digest` + `obs_digest_collect_ctx_sound_of_cmp` reduce the `obs_digest` bound to the cmp read | — | done |
+| S6b-ii | **[DONE — batch-green]** `side_cfg_T_eff_cmp_collect_ctx_sound`: premise-free ctx-collecting bound from a post-fixpoint (via `cfg_collect_ctx_le` + `side_cfg_T_eff_cmp_collect_sound`) | — | done |
+| S7-mode | mode instance: point-dependent reader; `READER_EDGE` fails at reset frames (`MODE_AGREE`) — **frontier** | S3 | high — point-dependent |
+| S7-RD | RD instance: `READER_EDGE` via bot-on-locals; non-monotone kill — **frontier** | S3 | high — non-monotone |
+| S8 | Re-thread `Exec_Sign_*_Keyed_Run` witnesses: delete the `by eval` `EDGE`/`ENTRY` discharges, cite S6/S7 | S6b, S7 | low |
 
-Land S1–S6 first: that closes the mode and context families entirely and reduces the
-open item to "RD non-monotone `READER_EDGE`" — a sharper, smaller residual than "shared
-by all instances." S7 is the only genuinely hard step and is RD-specific; if it
-resists, the honest statement becomes: *generic ENTRY/EDGE discharge complete for
-monotone readers (ctx, mode); RD reader carries a single per-edge bot-on-locals
-transport obligation.*
+Order that survived contact with the sources: **S6a + S6b-ii (done) → S8 → S7**. S6a
+closes the superset-reader class (ctx-collapse included) by reduction; S6b-ii makes the
+`side_env_cmp` collecting theorem premise-free via the state-collecting route
+(`cfg_collect_ctx_le`), giving that reduction a premise-free target. The point-dependent readers
+(**mode, RD**) are the genuine frontier: their readers admit a tighter, non-superset key
+set, so neither the monotone bridge nor `cmp_edge_sound` applies — mode additionally
+hits the machine-checked-false `MODE_AGREE` at reset frames. Honest end-state if the
+frontier resists: *generic ENTRY/EDGE discharge complete for point-independent
+(superset) readers; point-dependent readers (mode value-projection, RD reaching sets)
+carry a per-point reader-transport obligation that is a real soundness layer, not a
+proof convenience.*
 
 ---
 

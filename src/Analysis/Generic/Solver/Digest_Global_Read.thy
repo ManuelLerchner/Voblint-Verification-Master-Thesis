@@ -111,6 +111,48 @@ proof -
     unfolding obs_digest_def side_env_cmp_def glob_env_cmp_def by simp
 qed
 
+text \<open>
+  Superset-reader monotone bridge: when the reader admits at least the
+  context-compatible keys, the digest read dominates the context-only read
+  \<^const>\<open>side_env_cmp\<close> pointwise.  Local slots coincide; the global part is
+  \<open>glob_env_cmp_filter_mono\<close>.  This lets a superset reader inherit the
+  \<^const>\<open>side_env_cmp\<close> collecting soundness (seed / edge) through
+  \<open>gamma_state_mono\<close> --- no per-edge argument at \<^const>\<open>obs_digest\<close> is needed for
+  such readers, only the already-discharged one at \<^const>\<open>side_env_cmp\<close>.
+\<close>
+lemma side_env_cmp_le_obs_digest:
+  fixes \<sigma> :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  assumes "{k. gcmp ctx k} \<subseteq> {k. compatible (reader_digest v ctx) k}"
+  shows "side_env_cmp gcmp \<sigma> (v, ctx) \<le> obs_digest \<sigma> (v, ctx)"
+proof -
+  have H: "glob_env_cmp gcmp ctx \<sigma>
+             \<le> glob_env_cmp (\<lambda>_ g. compatible (reader_digest v ctx) g) ctx \<sigma>"
+    by (rule glob_env_cmp_filter_mono) (use assms in auto)
+  show ?thesis
+    unfolding side_env_cmp_def obs_digest_def fst_conv snd_conv
+    by (rule sup_mono[OF order_refl H])
+qed
+
+text \<open>
+  Payoff of the bridge: for a superset reader (\<open>admits\<close>) the context-sliced
+  collecting bound at \<^const>\<open>obs_digest\<close> follows from the one at
+  \<^const>\<open>side_env_cmp\<close> by \<open>gamma_state_mono\<close> --- the seed / edge / combine premises
+  are discharged once at the context read and inherited, never restated at the
+  digest read.  The context-collapse reader (\<open>reader_digest = (\<lambda>v ctx. ctx)\<close>) is
+  the reflexive case.
+\<close>
+lemma obs_digest_collect_ctx_sound_of_cmp:
+  fixes \<sigma> :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  assumes admits: "{k. gcmp ctx k} \<subseteq> {k. compatible (reader_digest v ctx) k}"
+  assumes cmp_bound: "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v, ctx)\<rbrakk>"
+  shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
+proof (rule order_trans[OF cmp_bound])
+  have "side_env_cmp gcmp \<sigma> (v, ctx) \<le> obs_digest \<sigma> (v, ctx)"
+    using admits by (rule side_env_cmp_le_obs_digest)
+  thus "\<lbrakk>side_env_cmp gcmp \<sigma> (v, ctx)\<rbrakk> \<le> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
+    by (rule gamma_state_mono)
+qed
+
 subsection \<open>Combine reassembly at the digest read\<close>
 
 text \<open>
