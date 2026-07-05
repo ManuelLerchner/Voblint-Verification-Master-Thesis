@@ -1,19 +1,45 @@
-# Two digest families: externally-computed vs value-derived
+# Digest-Indexed Context-Sensitive Analysis
 
-> One kernel, two instances. Both refine a flow-insensitive global with a *digest*
-> so distinct writes land in distinct slots and a reader selects only the compatible
-> ones. They differ on **where the digest comes from**. Claims tagged **[verified]**
-> were checked against the sources at `file:line`; **[batch-green]** passes the full
-> `isabelle build`.
->
-> Companions: `DIGEST_INDEXED_READER_MIGRATION.md` (RD family, full spine),
-> `VALUE_CARRIED_DIGEST_MIGRATION.md` + `VALUE_CARRIED_DIGEST_STATUS.md` (mode family),
-> `DGC_ALIGNMENT_ANALYSIS.md` (the alignment gap both hit at calls).
->
-> **Consolidated status.** Both instances build in `Voblint_Analysis` and are
-> demonstrated in `Voblint_Formalization` under the full `isabelle build` (no `sorry`).
-> The value-derived compiled run `Exec_Sign_Mode_Compiled_Run` (`digest_separates_the_modes`)
-> is wired into the session ROOT alongside the RD run.
+This work develops a generic framework for digest-indexed context-sensitive analyses on top of a
+verified top-down solver. Rather than committing to a single notion of context, the framework
+abstracts over *how* contexts (or digests) are computed and *how* global information is
+partitioned and recovered.
+
+The framework supports two complementary families of digest analyses:
+
+- **Value-derived digests**, where the digest is projected directly from the abstract value state
+  computed by the existing analysis. These require no additional fixpoint computation and closely
+  mirror Goblint's context projection mechanism.
+- **Externally-computed digests**, where the digest is obtained from an independent analysis, such
+  as reaching definitions. These allow richer context distinctions while remaining within the same
+  generic framework.
+
+Both families instantiate the same kernel without modification, demonstrating that the framework
+is independent of the particular digest construction.
+
+The framework is implemented on top of the verified top-down solver formalization (the vendored
+`td-verification` / `TD_side` of Tilscher, Graß, Schwarz, and Seidl, NASA FM 2026) and provides a
+machine-checked connection from executable solver output to the abstract collecting semantics.
+
+A central technical result of this work is identifying that the main precision limitation does
+**not** arise from context sensitivity itself, but from the publish-and-erase treatment of
+globals. This boundary is characterized formally and motivates future work on automatic digest
+generation and selective publication strategies.
+
+The current development proves the soundness of the generic digest framework and its executable
+writer-side implementation. For value-derived digests, it additionally characterizes the precise
+frame-locality boundary where the projection-based reader ceases to be sufficient. Generic
+generator-to-collecting ENTRY/EDGE discharge remains future work shared by all digest instances.
+
+> **Status & companions.** One kernel, two instances, differing only in *where the digest comes
+> from*. Both build in `Voblint_Analysis` and are demonstrated in `Voblint_Formalization` under
+> the full `isabelle build` (no `sorry`); the value-derived compiled run
+> `Exec_Sign_Mode_Compiled_Run` (`digest_separates_the_modes`) is wired into the session ROOT
+> alongside the RD run, and `Example_Digest_Pipeline_Showcase.thy` carries one program through the
+> whole executable chain. Claims tagged **[verified]** were checked at `file:line`; **[batch-green]**
+> passes the full build. Companions: `DIGEST_INDEXED_READER_MIGRATION.md` (RD spine),
+> `VALUE_CARRIED_DIGEST_MIGRATION.md` + `VALUE_CARRIED_DIGEST_STATUS.md` (mode),
+> `DGC_ALIGNMENT_ANALYSIS.md` (the publish-and-erase alignment gap).
 
 ---
 
