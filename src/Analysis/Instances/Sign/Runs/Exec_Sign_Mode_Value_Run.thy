@@ -1,11 +1,11 @@
 theory Exec_Sign_Mode_Value_Run
-  imports Value_Digest_Read Exec_Sign_RD_Keyed_Solve
+  imports Value_Digest_Read Exec_Sign_Cmp_Keyed_Run Exec_Sign_Run
 begin
 
 section \<open>Executable value-carried mode digest: the solver is the source of truth\<close>
 
 text \<open>
-  The value-carried analogue of \<^theory>\<open>Voblint_Analysis.Exec_Sign_RD_Keyed_Solve\<close>.  A
+  A value-carried mode-digest run.  A
   finite \<^typ>\<open>mode\<close> partitions the global \<open>G\<close>; each partition slot \<^term>\<open>Inr MZero\<close> /
   \<^term>\<open>Inr MOne\<close> is written by the vendored \<^const>\<open>TD_side_always_join_Interp_solve\<close>.  The
   \<^emph>\<open>projection reader\<close> \<^const>\<open>mode_obs\<close> --- which recovers the mode from the solved local ghost

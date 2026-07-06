@@ -7,7 +7,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Generic/Equations"
     "Generic/Solver/Core"
     "Generic/Solver/Context"
-    "Generic/Solver/ReachingDefs"
     "Generic/Solver/Exec"
     "Instances/Sign"
     "Instances/Sign/Runs"
@@ -49,8 +48,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Value_Digest_Reader
     Digest_Keyed_Writer
     Digest_Keyed_Writer_Sound
-    Reaching_Defs
-    RD_Set_Edge_Backbone
     TD_Side_Eff_Cmp_Pull
     TD_Side_Eff_Cmp_Gen
     Sign_Side_Soundness
@@ -65,8 +62,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_Sign_Cmp_Keyed_Solve
     Exec_Sign_Cmp_Keyed_Gen_Run
     Exec_Sign_Cmp_Keyed_Retain_Run
-    Exec_Sign_RD_Keyed_Run
-    Exec_Sign_RD_Keyed_Solve
     Value_Digest_Read
     Exec_Sign_Mode_Value_Run
     Exec_Sign_Mode_Compiled_Run

@@ -20,7 +20,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Trace_Digest_ReachingCompat
     Example_Entry_Store_Context_Precision
     Example_Global_Ctx_Read_Precision
-    Example_Config_Mode_Digest_Precision
     Example_Mode_Value_Digest_Showcase
     Example_Digest_Pipeline_Showcase
     Example_Finite_Sign_Context_Analysis
