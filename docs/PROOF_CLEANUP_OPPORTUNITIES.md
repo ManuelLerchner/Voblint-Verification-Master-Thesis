@@ -3,12 +3,33 @@
 Audit of all 93 tracked `.thy` files (32.3k lines) after the context-sensitive
 migration. Goal: identify duplication, shared-lemma / locale / generic-theorem
 candidates, and doc drift. Every finding below is grounded in concrete
-`file:line` references verified against `src/`. Nothing here is applied yet — this
-is the change menu, ordered by value-to-risk.
+`file:line` references verified against `src/`.
 
 Each item states: **what** duplicates, **where**, the **mechanism** to remove it,
-rough **savings**, and **risk**. Do them in a scratch worktree, one at a time,
-with the I/Q inner loop and a batch build as the gate.
+rough **savings**, and **risk**.
+
+## Execution status (2026-07-06)
+
+Worked through on branch `cleanup/migration-proof-cleanup`, one commit per item,
+each gated on a green `isabelle build … Voblint_Formalization`.
+
+| Item | Outcome |
+| --- | --- |
+| A — generic `st→abs` transport | **Done.** `part_post_solution_st_to_abs_transport` in `Exec_Bridge`; six generator variants rewired. −271/+169 lines. |
+| B — generic `afilter`/`bfilter` mono | **Done.** `backward_domain_mono` locale; Sign + Interval interpret it. −395/+294 lines. |
+| G — `rd_glob_read_singleton` | **Done.** Reduced to the generic `glob_env_cmp_singleton`. |
+| I — Interval README drift | **Done.** |
+| J — on-disk cruft | **Done** (local `git clean`; nothing tracked). |
+| K — folder structure | **Done.** `Generic/Solver/` → Core/Context/ReachingDefs/Exec; `Instances/*/Runs/`. Names resolve by ROOT `directories`, no imports touched. |
+| L.2 — `Value_Digest_Read` wiring | **Verified, no action.** The mode runs import it directly; the audit's "zero importers" was an artifact of first-token-only import parsing. No parallel copy. |
+| L.3 — doc history split | **Done as index** (`docs/INDEX.md`) instead of a move — physically relocating the heavily cross-referenced migration docs would have rotted ~100 links and forced CLAUDE.md edits. |
+| H — RD soundness variants | **Audited, no change.** Five variants have live consumers; three (`_sem`, `_paths`, `_paths_mustwrite`) are terminal capability theorems (distinct premise shapes cited as migration milestones), not accidental duplication. |
+| C — `cmp`/`obs_digest` combine dedup | **Deferred (blocked).** `Digest_Global_Read` (obs) imports `TD_Side_Eff_Cmp_Sound` (cmp), so the cmp trio is *upstream* substrate; expressing it via obs would invert the dependency. The same seam is under active rework in `DIGEST_GENERATOR_COLLECTING_DISCHARGE_MIGRATION`. Not a quick dedup. |
+| D — keyed-witness scaffold | **Deferred per doc guidance.** Partly aesthetic; the witnesses are teaching artifacts whose self-containment is a feature. The K reorg (witnesses now segregated in `Runs/`) already addressed the "demos dilute the story" concern. |
+| E — Sign/Interval instance mirror | **Deferred per doc guidance** — the doc recommends waiting for the Octagon domain so the abstraction is designed against a third client. B already extracted the largest shared piece (filter monotonicity). |
+| L.1 — concept stepping-stones | **Decided, no deletion.** NamedGlobalSign is intentional WIP ("soundness in progress"); the ctx/retain run demos are documented contrasts now tidied into `Runs/`. Retiring proven WIP / milestone witnesses was not warranted; K's reorg delivered the organizational win without destroying work. |
+
+The findings below are the original menu, kept as the rationale record.
 
 ---
 
