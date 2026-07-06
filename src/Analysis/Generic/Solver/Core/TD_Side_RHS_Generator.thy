@@ -41,22 +41,6 @@ lemma static_deps_comb:
 
 end
 
-locale sound_rhs_generator_mono = sound_rhs_generator_static etf
-  for etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer" +
-  fixes T :: "('x, 'g, 'a) eqsT"
-  assumes is_mono_eq: "is_mono_eq T"
-  assumes mono_sides: "mono_sides T"
-  assumes mono_deps: "mono_deps T"
-begin
-
-lemma threefold_mono:
-  "threefold_mono T"
-  unfolding threefold_mono_def
-  using is_mono_eq mono_sides mono_deps
-  by blast
-
-end
-
 subsection \<open>Unit edge-tree generator\<close>
 
 locale unit_rhs_generator = sound_rhs_generator_static +
@@ -84,8 +68,6 @@ lemma cone_compatible:
   by blast
 
 end
-
-locale sound_rhs_generator_unit = unit_rhs_generator
 
 locale unit_rhs_generator_mono = unit_rhs_generator +
   assumes F_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
@@ -163,8 +145,6 @@ lemma threefold_mono:
 
 end
 
-locale sound_rhs_generator_unit_mono = unit_rhs_generator_mono
-
 subsection \<open>Mixed local/unit edge-tree generator\<close>
 
 lemma static_deps_local_edge_tree:
@@ -211,8 +191,6 @@ lemma cone_compatible:
   by (auto split: if_split_asm)
 
 end
-
-locale sound_rhs_generator_mixed = mixed_rhs_generator
 
 locale mixed_rhs_generator_mono = mixed_rhs_generator +
   assumes F_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
@@ -315,7 +293,5 @@ lemma threefold_mono:
   by blast
 
 end
-
-locale sound_rhs_generator_mixed_mono = mixed_rhs_generator_mono
 
 end

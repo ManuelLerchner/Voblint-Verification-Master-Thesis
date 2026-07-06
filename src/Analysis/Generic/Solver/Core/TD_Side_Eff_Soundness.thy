@@ -586,7 +586,7 @@ lemma cone_compatible_etf_unit_transfer:
   assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
   shows "cone_compatible_etf etf"
 proof -
-  interpret sound_rhs_generator_unit etf F using edge comb by unfold_locales
+  interpret unit_rhs_generator etf F using edge comb by unfold_locales
   show ?thesis by (rule cone_compatible)
 qed
 
@@ -599,7 +599,7 @@ lemma threefold_mono_unit_transfer:
   assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
 proof -
-  interpret sound_rhs_generator_unit_mono etf F using edge comb mono by unfold_locales
+  interpret unit_rhs_generator_mono etf F using edge comb mono by unfold_locales
   show ?thesis by (rule threefold_mono)
 qed
 
@@ -612,7 +612,7 @@ lemma cone_compatible_etf_local_unit_transfer:
   assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
   shows "cone_compatible_etf etf"
 proof -
-  interpret sound_rhs_generator_mixed etf F using edge comb by unfold_locales
+  interpret mixed_rhs_generator etf F using edge comb by unfold_locales
   show ?thesis by (rule cone_compatible)
 qed
 
@@ -627,7 +627,7 @@ lemma threefold_mono_local_unit_transfer:
   assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
 proof -
-  interpret sound_rhs_generator_mixed_mono etf F using edge comb mono by unfold_locales
+  interpret mixed_rhs_generator_mono etf F using edge comb mono by unfold_locales
   show ?thesis by (rule threefold_mono)
 qed
 

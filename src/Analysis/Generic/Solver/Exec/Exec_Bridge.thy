@@ -266,7 +266,7 @@ next
                   commute fun_of_st_sup o_def)
 qed
 
-locale sound_rhs_generator_exec = sound_rhs_generator_unit +
+locale sound_rhs_generator_exec = unit_rhs_generator +
   fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot st) effectful_st_transfer"
     and F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
