@@ -67,17 +67,7 @@ subsection \<open>The digest read collapses to the reaching slot\<close>
 lemma rd_glob_read_singleton:
   assumes "R = {d}"
   shows "glob_env_cmp (\<lambda>_ g. rd_compatible R g) ctx \<sigma> = \<sigma> (Inr d)"
-proof (rule order_antisym)
-  show "glob_env_cmp (\<lambda>_ g. rd_compatible R g) ctx \<sigma> \<le> \<sigma> (Inr d)"
-  proof (rule glob_env_cmp_le)
-    fix k assume "(\<lambda>_ g. rd_compatible R g) ctx k"
-    hence "k = d" using assms by (simp add: rd_compatible_def)
-    thus "\<sigma> (Inr k) \<le> \<sigma> (Inr d)" by simp
-  qed
-  have "(\<lambda>_ g. rd_compatible R g) ctx d" using assms by (simp add: rd_compatible_def)
-  thus "\<sigma> (Inr d) \<le> glob_env_cmp (\<lambda>_ g. rd_compatible R g) ctx \<sigma>"
-    by (rule glob_env_cmp_upper)
-qed
+  by (rule glob_env_cmp_singleton) (simp add: rd_compatible_set assms)
 
 lemma rd_read_at:
   assumes "reach v ctx = {d}"
