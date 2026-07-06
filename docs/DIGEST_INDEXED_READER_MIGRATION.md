@@ -546,7 +546,13 @@ global-slots-⊤-on-locals invariant. Tracked under B2/A5, not a separate obstac
      abstract-reach level and never ranges over `reach_paths_sem`, so `REAL` does not apply
      to it; exhibiting `REAL` non-vacuously requires a concrete `reach_paths_sem` CFG
      (procedure, combine, `tp_witness` paths) — a construction, not a proof gap.
-   - **[B1 scaffold — site-keyed writer generator + transport present, I/Q-clean]**
+   - **[B1 scaffold — REMOVED. The site-keyed writer generator, the return-aware
+     transport, and the def-site `rd_switching_combine` emitter described in the bullets
+     below were proven and batch-green, but never consumed: no witness or example drives
+     the solver through them, and the RD family is demonstrated reader-side only against a
+     hand-built equation system. Deleted in commits `f455d93` (RD emitter + `cmp_site_ret`)
+     and `964ea1a` (`cmp_site` writer family). The following text is retained for
+     provenance; the named constants no longer exist in the tree.]**
      `side_cfg_T_eff_cmp_site` / `side_cfg_T_eff_cmp_site_st` are the abstract and
      executable writer-keyed generator shapes: intra-edge `Side` contributions route
      to `site v`, the target program point's writer key, while local reads stay indexed
@@ -755,12 +761,12 @@ global-slots-⊤-on-locals invariant. Tracked under B2/A5, not a separate obstac
 | path-carrying witness, sound+complete (B2.5) | `tp_witness`, `tp_witness_trace`, `tp_witness_exists` | pairs a store trace with a generating CFG path; projects to `trace_witness`, and every witnessed trace has a path [proven] |
 | interprocedural no-kill at witness level (B2.5) | `tp_witness_combine_rd_pres` | a combine composes caller⌢callee paths and preserves the caller's reaching def when the callee path does not write `x` [proven] |
 | endpoint-aware path reader (B2.6) | `reach_paths_sem`, `reach_paths_return_incl`, `reaching_def_collect_sound_paths` | union over path witnesses at the read endpoint; finite-key path RD discharges `RD_RETURN_INCL` from the path-carrying RUN premise; leaves `CMP_SOUND` [proven] |
-| site-keyed writer generator + transport (B1 scaffold) | `side_cfg_T_eff_cmp_site`, `side_cfg_T_eff_cmp_site_st`, `part_post_solution_cmp_site_st_to_abs_eff` | intra-edge global writes route to target writer key `site v`; executable post-solutions transport to the abstract site-keyed generator; existing context-keyed generator unchanged [proven] |
-| site-keyed switching transport (typed caveat) | `part_post_solution_cmp_site_switching_st_to_abs_eff_unit_transfer` | switching combine transport over `side_cfg_T_eff_cmp_site`; limited to `site :: pp ⇒ 'c` because current switching combine emits context-keyed sides [proven] |
-| return-aware site transport (B1 scaffold) | `side_cfg_T_eff_cmp_site_ret`, `side_cfg_T_eff_cmp_site_ret_st`, `part_post_solution_cmp_site_ret_st_to_abs_eff` | generator passes the return endpoint into `cmb`, allowing combine-side writer keys to depend on the equation endpoint; concrete RD combine routing still open [proven] |
+| site-keyed writer generator + transport (B1 scaffold) | ~~`side_cfg_T_eff_cmp_site`, `side_cfg_T_eff_cmp_site_st`, `part_post_solution_cmp_site_st_to_abs_eff`~~ | **REMOVED** — proven but never consumed; superseded by the digest writer (`Digest_Keyed_Writer`). Deleted in commit `964ea1a` |
+| site-keyed switching transport (typed caveat) | ~~`part_post_solution_cmp_site_switching_st_to_abs_eff_unit_transfer`~~ | **REMOVED** — orphan capstone, sole consumer of the site-keyed transport; deleted in `964ea1a` |
+| return-aware site transport (B1 scaffold) | ~~`side_cfg_T_eff_cmp_site_ret`, `side_cfg_T_eff_cmp_site_ret_st`, `part_post_solution_cmp_site_ret_st_to_abs_eff`~~ | **REMOVED** — "concrete RD combine routing" never landed; deleted in `f455d93` |
 | concrete CMP_SOUND discharge, def-site-keyed witness | `CMP_SOUND_inst`, `LOCAL_POST_inst`, `GLOB_BOT_inst`, `rd_collect_sound_witness` (`Exec_Sign_RD_Keyed_Run.thy`) | flat §8 callee-writes program over `sign`: hand-exhibited def-site solution discharges the three combine premises of `reaching_def_collect_sound_bot` in exact shape and plugs them in; `CMP_SOUND` proven for the RD reader, not premised [proven, batch-green] |
 | def-site RD precision payoff, machine-checked | `read_call4`, `read_return6`, `points_separated`, `merge_join_all`, `return_incl_fails` | reader separates points under one call-only context (`SZero` at call 4, `SPos` at return 6); context-blind join `= SNonNeg`; caller set `{DS1} ⊄ {DS3}` witnesses the kill [proven] |
-| def-site switching combine + transport | `rd_switching_combine_st`/`_abs`, `side_rg_rd_switching_combine_st`, `traverse`/`sides`/`dep`\_`rd_switching_combine_st_fun_of_st`, `part_post_solution_rd_switching_st_to_abs_eff` | combine reads `QueryG (site cc)`, writes `Side (site ex)`/`Side (site ret)`; the three `fun_of_st` bridges discharge the return-aware transport, moving an executable RD-keyed post-solution to its abstract image; context stays call-only [proven, batch-green] |
+| def-site switching combine + transport | ~~`rd_switching_combine_st`/`_abs`, `side_rg_rd_switching_combine_st`, `part_post_solution_rd_switching_st_to_abs_eff`~~ | **REMOVED** — the def-site emitter was proven but had zero live consumers; the RD family is demonstrated reader-side only. Deleted in `f455d93` |
 | executable RD solve, def-site slots | `rd_eqs`, `rd_solution`, `slot_DS1`/`slot_DS3`/`slot_join_all`, `rd_slots_strictly_separate` (`Exec_Sign_RD_Keyed_Solve.thy`) | verified `TD_side_always_join_Interp_solve` computes separated def-site slots (`SZero`/`SPos`); join-all `= SNonNeg`; strict separation — all `by eval` [proven, batch-green] |
 | executable RD read, point-sensitive | `rd_env`, `read_reach_DS1`/`read_reach_DS3`/`read_join_all`, `rd_reads_point_sensitive`; `instance def_site :: enum` | `glob_env_cmp` filtered by `rd_compatible` on the solved env recovers `SZero` at `{DS1}`, `SPos` at `{DS3}`, `SNonNeg` at `{DS1,DS3}`; point-sensitive under one call-only context, `by eval` [proven, batch-green] |
 | `obs_digest` generalizes `side_env_cmp` | `obs_digest_collapse_shape` | degenerate `ctx`/`gcmp` instance [proven] |

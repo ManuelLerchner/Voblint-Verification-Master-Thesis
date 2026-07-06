@@ -6,6 +6,11 @@
 > `obs_digest` read. Claims tagged **[verified]** were read against the sources at
 > `file:line`; **[batch-green]** passes the full `isabelle build`.
 >
+> **Substrate note.** Several steps below (S3, §5.2) built on the site-keyed generator
+> `side_cfg_T_eff_cmp_site` and its edge bound `side_cfg_T_eff_cmp_site_edge_le`. That
+> generator was removed as unconsumed (commit `964ea1a`); the live substrate is the
+> digest-keyed writer (`Digest_Keyed_Writer`). Rebase these steps onto it before pursuing.
+>
 > Companions: `DIGEST_TWO_FAMILIES.md` (the two families and their shared residual),
 > `DIGEST_INDEXED_READER_MIGRATION.md` (RD spine; COMB split + `CMP_SOUND` closed),
 > `VALUE_CARRIED_DIGEST_{MIGRATION,STATUS}.md` (mode family), `OPEN_PROBLEMS.md` P11.

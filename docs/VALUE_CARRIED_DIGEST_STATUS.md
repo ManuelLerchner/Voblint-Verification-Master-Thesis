@@ -137,10 +137,9 @@ that generator keys **every intra write by the fixed context**, so both land in 
 slot and flow-insensitively join: `slot_MZero = slot_MOne = SNonNeg`. The mode split is
 real but spurious for the value. This exposed the architectural gap concretely:
 
-> Every executable generator relabels a global write by a **constant** key — the fixed
-> context `gkey c` (`side_cfg_T_eff_cmp_st`) or the target site `site v`
-> (`side_cfg_T_eff_cmp_site_st`). None keys by a **projection of the write-point
-> state**, which is what a value-carried digest needs.
+> Every executable generator relabels a global write by a **constant** key — e.g. the
+> fixed context `gkey c` (`side_cfg_T_eff_cmp_st`). None keys by a **projection of the
+> write-point state**, which is what a value-carried digest needs.
 
 **The fix (digest-keyed).** New generic, kernel-free generator in
 `src/Analysis/Generic/Solver/Digest_Keyed_Writer.thy`:

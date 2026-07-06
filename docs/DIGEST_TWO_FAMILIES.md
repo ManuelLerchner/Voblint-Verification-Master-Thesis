@@ -210,7 +210,7 @@ domain and are out of scope (Design Q / Stage 5).
 |---|---|---|
 | kernel | `Digest_Global_Read.thy` | `Digest_Global_Read.thy` |
 | reader/instance | `Reaching_Defs.thy`, `Digest_Global_Read.thy` (RD section) | `Value_Digest_Read.thy` |
-| writer | `side_cfg_T_eff_cmp_site` + `rd_switching_combine_st` (`Exec_Cmp_Bridge.thy`) | `Digest_Keyed_Writer.thy` + `Digest_Keyed_Writer_Sound.thy` |
+| writer | reader-only in-tree — the RD run's equation system is hand-built (`Exec_Sign_RD_Keyed_Run.thy`); no generic solver-emitted writer | `Digest_Keyed_Writer.thy` + `Digest_Keyed_Writer_Sound.thy` |
 | executable run | `Exec_Sign_RD_Keyed_Run/_Solve.thy` | `Exec_Sign_Mode_Value_Run.thy`, `Exec_Sign_Mode_Compiled_Run.thy` |
 | showcase | — | `Example_Mode_Value_Digest_Showcase.thy` |
 | design/status | `DIGEST_INDEXED_READER_MIGRATION.md` | `VALUE_CARRIED_DIGEST_{MIGRATION,STATUS}.md` |

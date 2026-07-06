@@ -28,6 +28,8 @@ each gated on a green `isabelle build … Voblint_Formalization`.
 | D — keyed-witness scaffold | **Deferred per doc guidance.** Partly aesthetic; the witnesses are teaching artifacts whose self-containment is a feature. The K reorg (witnesses now segregated in `Runs/`) already addressed the "demos dilute the story" concern. |
 | E — Sign/Interval instance mirror | **Deferred per doc guidance** — the doc recommends waiting for the Octagon domain so the abstraction is designed against a third client. B already extracted the largest shared piece (filter monotonicity). |
 | L.1 — concept stepping-stones | **Decided, no deletion.** NamedGlobalSign is intentional WIP ("soundness in progress"); the ctx/retain run demos are documented contrasts now tidied into `Runs/`. Retiring proven WIP / milestone witnesses was not warranted; K's reorg delivered the organizational win without destroying work. |
+| M — RD def-site emitter scaffold | **Done (commit `f455d93`).** `rd_switching_combine_st/abs` + the return-aware `cmp_site_ret` transport (`side_cfg_T_eff_cmp_site_ret`, `part_post_solution_{cmp_site_ret,rd_switching}_st_to_abs_eff`) were proven but had zero live consumers. −467 lines. RD *reader* family untouched. |
+| N — `cmp_site` site-keyed writer family | **Done (commit `964ea1a`).** `side_cfg_T_eff_cmp_site(_st)`, its transport chain, the edge-bound soundness cluster, and the orphan `..._cmp_site_switching_..._unit_transfer` capstone — superseded by `Digest_Keyed_Writer`. −523 lines. Stale doc refs reconciled. |
 
 The findings below are the original menu, kept as the rationale record.
 
@@ -63,9 +65,9 @@ abstract `part_post_solution`. There are **ten** such theorems plus their
 
 - `part_post_solution_st_to_abs_eff` — `Exec_Bridge.thy:860`
 - `part_post_solution_cmp_st_to_abs_eff` — `Exec_Cmp_Bridge.thy:765` (~270 lines)
-- `part_post_solution_cmp_site_st_to_abs_eff` — `Exec_Cmp_Bridge.thy:1066` (~270 lines)
-- `part_post_solution_cmp_site_ret_st_to_abs_eff` — `Exec_Cmp_Bridge.thy:1367`
-- `part_post_solution_rd_switching_st_to_abs_eff` — `Exec_Cmp_Bridge.thy:1434`
+- ~~`part_post_solution_cmp_site_st_to_abs_eff`~~ — deleted (item N, `964ea1a`)
+- ~~`part_post_solution_cmp_site_ret_st_to_abs_eff`~~ — deleted (item M, `f455d93`)
+- ~~`part_post_solution_rd_switching_st_to_abs_eff`~~ — deleted (item M, `f455d93`)
 - `part_post_solution_ctx_st_to_abs_eff` — `Exec_Ctx_Bridge.thy:488`
 - `part_post_solution_ctx_seeded_st_to_abs_eff` — `Exec_Ctx_Bridge.thy:985`
 - `part_post_solution_digest_st_to_abs_eff` — `Digest_Keyed_Writer_Sound.thy:359`
