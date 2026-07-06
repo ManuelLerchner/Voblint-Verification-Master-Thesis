@@ -24,15 +24,38 @@ they demonstrate the domain, they are not part of it.
 | --- | --- | --- |
 | `Sign/` | 7-element sign lattice | full soundness + executable + end-to-end |
 | `Interval/` | Interval domain (`ivl`) | full soundness + executable + end-to-end (`side_ivl_analysis_sound`) |
-| `NamedGlobalSign/` | Named-global sign (mixed-flow, side-effecting) | executable; soundness in progress |
+| `NamedGlobalSign/` | Named-global sign (mixed-flow, side-effecting) | executable + constant-route soundness through the solver; the conditional-flag route is a **documented boundary** (`flag_etf_mono_sides_unprovable`, `oops`) — provably not `mono_sides`, hence not solver-drivable |
 | `Tooling/` | GraphViz CFG/analysis output | utility, no soundness obligation |
 
 ## Adding a domain
 
-1. Add type class instantiations; HOL lifts them pointwise automatically.
-2. Interpret `abstract_domain` and `sound_transfer` in `Generic/Domain/Abstract_Domain`.
-3. Define the `'d st` executable mirror and prove `tf_st_commute`.
-4. Define the `effectful_domain_transfer` record; prove `sound_effectful_transfer`.
-5. Add the new `.thy` files to `src/Analysis/ROOT` `theories` (order: domain before soundness before exec).
+1. **Type-class instances.** Instantiate `ord`, `order`, `bot`/`order_bot`,
+   `sup`/`semilattice_sup`, `inf`/`lattice`, and `warrowing`, then `sound_domain`
+   (fixes `gamma`) and `abstract_domain` (adds `widen`). HOL lifts them pointwise to
+   `'d abs_state = vname => 'd` automatically. Add `show_val` for visualisation.
+2. **Forward transfer.** Define `aval_<d>` / `assign_<d>` / `assume_<d>`, bundle a
+   `domain_transfer` record, and `interpret sound_transfer` — this discharges the
+   collecting obligations. `gamma_state_mono` / `gamma_state_sup_ub*` follow.
+3. **Backward transfer (guards).** Provide `meet`, `aval_abs`, and the four `inv_*`
+   operators; `interpret backward_domain` for `afilter`/`bfilter` + soundness, then
+   `interpret backward_domain_mono` (only the six operator-mono goals; the parent is
+   already interpreted) for `afilter_mono`/`bfilter_mono` — both proved generically
+   in `Generic/Domain/Abstract_Domain`. See `Sign_Domain` / `Interval_Domain` for the
+   interpretation shape.
+4. **Executable mirror.** Define the `'d st` mirror and prove `tf_st_commute`; the
+   generic `part_post_solution_st_to_abs_transport` in `Generic/Solver/Exec/Exec_Bridge`
+   lifts any executable post-solution to the abstract one.
+5. **End-to-end soundness.** Package an `effectful_domain_transfer` record; prove
+   `sound_effectful_transfer`. The engine in `Generic/Solver/` delivers
+   `cfg_collect g cinit <= gamma(analyse ...)`.
+6. **Context-sensitivity / digests — free.** No per-domain work: `glob_env_cmp`,
+   `side_env_cmp`, `digest_global_read` (`obs_digest`), the cmp/ctx/digest generators,
+   and their soundness are all generic over `'d::bounded_semilattice_sup_bot`. A new
+   domain plugs into them unchanged; only *witnesses* (`Runs/`) are written per domain.
+7. Register the `.thy` files in `src/Analysis/ROOT` (`directories` + `theories`,
+   order: domain before soundness before exec/runs).
 
 No changes to `Generic/` are needed unless the new domain requires a new tree shape.
+The Sign and Interval folders are the two worked examples; the `Generic/` layer is
+domain-agnostic — it contains no domain-specific code (comments name `sign`/`ivl`
+only as illustrations).
