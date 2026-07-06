@@ -18,7 +18,7 @@ Each sub-folder threads one abstract domain through four layers:
 | Folder | Domain | Status |
 | --- | --- | --- |
 | `Sign/` | 7-element sign lattice | full soundness + executable + end-to-end |
-| `Interval/` | Interval domain (`ivl`) | soundness + executable; no end-to-end soundness theory yet |
+| `Interval/` | Interval domain (`ivl`) | full soundness + executable + end-to-end (`side_ivl_analysis_sound`) |
 | `NamedGlobalSign/` | Named-global sign (mixed-flow, side-effecting) | executable; soundness in progress |
 | `Tooling/` | GraphViz CFG/analysis output | utility, no soundness obligation |
 
