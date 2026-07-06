@@ -999,203 +999,59 @@ proof -
   qed
 qed
 
-lemma afilter_ivl_mono:
-  "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
-   afilter_ivl e a1 sigma1 \<le>
-   afilter_ivl e a2 sigma2"
-proof (induction e arbitrary: a1 a2 sigma1 sigma2)
-  case (BaseN a')
-  show ?case
-  proof (cases a')
-    case (V x)
-    show ?thesis
-      unfolding V ivl_backward_domain.afilter.simps
-      using BaseN.prems
-    proof (intro le_funI)
-      fix y
-      show "(sigma1(x := meet_ivl a1 (sigma1 x))) y \<le> (sigma2(x := meet_ivl a2 (sigma2 x))) y"
-      proof (cases "y = x")
-        case True
-        have eq1: "(sigma1(x := meet_ivl a1 (sigma1 x))) y = meet_ivl a1 (sigma1 x)" using True by simp
-        have eq2: "(sigma2(x := meet_ivl a2 (sigma2 x))) y = meet_ivl a2 (sigma2 x)" using True by simp
-        have mono: "meet_ivl a1 (sigma1 x) \<le> meet_ivl a2 (sigma2 x)"
-          using inf_mono[OF BaseN.prems(1) le_funD[OF BaseN.prems(2)]] by simp
-        from eq1 eq2 mono show ?thesis by simp
-      next
-        case False
-        have eq1: "(sigma1(x := meet_ivl a1 (sigma1 x))) y = sigma1 y" using False by simp
-        have eq2: "(sigma2(x := meet_ivl a2 (sigma2 x))) y = sigma2 y" using False by simp
-        have mono: "sigma1 y \<le> sigma2 y" by (rule le_funD[OF BaseN.prems(2)])
-        from eq1 eq2 mono show ?thesis by simp
-      qed
-    qed
-  next
-    case (N x1)
-    have h1: "afilter_ivl (IMP2_Syntax.N x1) a1 sigma1 = sigma1" by simp
-    have h2: "afilter_ivl (IMP2_Syntax.N x1) a2 sigma2 = sigma2" by simp
-    show ?thesis using BaseN.prems(2) by (subst N)+ (simp add: h1 h2)
-  next
-    case (Plus x1 x2)
-    have h1: "afilter_ivl (BaseN (AExp.aexp.Plus x1 x2)) a1 sigma1 = sigma1" by simp
-    have h2: "afilter_ivl (BaseN (AExp.aexp.Plus x1 x2)) a2 sigma2 = sigma2" by simp
-    show ?thesis using BaseN.prems(2) by (subst Plus)+ (simp add: h1 h2)
-  qed
+text \<open>
+  Monotonicity of @{const afilter_ivl} / @{const bfilter_ivl} is the generic
+  @{locale backward_domain_mono} result: interpret it at the interval operators
+  (the parent @{term ivl_backward_domain} already discharges soundness, so only the
+  six operator-mono facts remain) and the filter monotonicity follows.
+\<close>
+
+context begin
+interpretation ivl_bdm:
+  backward_domain_mono meet_ivl aval_ivl
+                       inv_less_ivl inv_plus_ivl inv_minus_ivl inv_times_ivl
+proof unfold_locales
+  fix a1 a2 b1 b2 :: ivl
+  assume "a1 \<le> a2" and "b1 \<le> b2"
+  hence "a1 \<sqinter> b1 \<le> a2 \<sqinter> b2" by (rule inf_mono)
+  thus "meet_ivl a1 b1 \<le> meet_ivl a2 b2" by (simp add: inf_ivl_def)
 next
-  case (Plus e1 e2)
-  have v1: "aval_ivl e1 sigma1 \<le> aval_ivl e1 sigma2" using aval_ivl_mono[OF Plus.prems(2)] .
-  have v2: "aval_ivl e2 sigma1 \<le> aval_ivl e2 sigma2" using aval_ivl_mono[OF Plus.prems(2)] .
-  have step: "afilter_ivl e2 (aval_ivl e2 sigma1) sigma1 \<le>
-              afilter_ivl e2 (aval_ivl e2 sigma2) sigma2"
-    using Plus.IH(2)[OF v2 Plus.prems(2)] .
-  have lhs: "afilter_ivl (Plus e1 e2) a1 sigma1 =
-    afilter_ivl e1 (aval_ivl e1 sigma1) (afilter_ivl e2 (aval_ivl e2 sigma1) sigma1)"
-    by simp
-  have rhs: "afilter_ivl (Plus e1 e2) a2 sigma2 =
-    afilter_ivl e1 (aval_ivl e1 sigma2) (afilter_ivl e2 (aval_ivl e2 sigma2) sigma2)"
-    by simp
-  show ?case unfolding lhs rhs by (rule Plus.IH(1)[OF v1 step])
+  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
+  assume "\<sigma>1 \<le> \<sigma>2"
+  thus "aval_ivl e \<sigma>1 \<le> aval_ivl e \<sigma>2" by (rule aval_ivl_mono)
 next
-  case (Minus e1 e2)
-  have v1: "aval_ivl e1 sigma1 \<le> aval_ivl e1 sigma2" using aval_ivl_mono[OF Minus.prems(2)] .
-  have v2: "aval_ivl e2 sigma1 \<le> aval_ivl e2 sigma2" using aval_ivl_mono[OF Minus.prems(2)] .
-  have step: "afilter_ivl e2 (aval_ivl e2 sigma1) sigma1 \<le>
-              afilter_ivl e2 (aval_ivl e2 sigma2) sigma2"
-    using Minus.IH(2)[OF v2 Minus.prems(2)] .
-  have lhs: "afilter_ivl (Minus e1 e2) a1 sigma1 =
-    afilter_ivl e1 (aval_ivl e1 sigma1) (afilter_ivl e2 (aval_ivl e2 sigma1) sigma1)"
-    by simp
-  have rhs: "afilter_ivl (Minus e1 e2) a2 sigma2 =
-    afilter_ivl e1 (aval_ivl e1 sigma2) (afilter_ivl e2 (aval_ivl e2 sigma2) sigma2)"
-    by simp
-  show ?case unfolding lhs rhs by (rule Minus.IH(1)[OF v1 step])
+  fix x1 x2 y1 y2 :: ivl and res :: bool
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_less_ivl res x1 y1) \<le> fst (inv_less_ivl res x2 y2) \<and>
+        snd (inv_less_ivl res x1 y1) \<le> snd (inv_less_ivl res x2 y2)"
+    by (rule inv_less_ivl_mono)
 next
-  case (Times e1 e2)
-  have v1: "aval_ivl e1 sigma1 \<le> aval_ivl e1 sigma2" using aval_ivl_mono[OF Times.prems(2)] .
-  have v2: "aval_ivl e2 sigma1 \<le> aval_ivl e2 sigma2" using aval_ivl_mono[OF Times.prems(2)] .
-  have step: "afilter_ivl e2 (aval_ivl e2 sigma1) sigma1 \<le>
-              afilter_ivl e2 (aval_ivl e2 sigma2) sigma2"
-    using Times.IH(2)[OF v2 Times.prems(2)] .
-  have lhs: "afilter_ivl (Times e1 e2) a1 sigma1 =
-    afilter_ivl e1 (aval_ivl e1 sigma1) (afilter_ivl e2 (aval_ivl e2 sigma1) sigma1)"
-    by simp
-  have rhs: "afilter_ivl (Times e1 e2) a2 sigma2 =
-    afilter_ivl e1 (aval_ivl e1 sigma2) (afilter_ivl e2 (aval_ivl e2 sigma2) sigma2)"
-    by simp
-  show ?case unfolding lhs rhs by (rule Times.IH(1)[OF v1 step])
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_plus_ivl r1 x1 y1) \<le> fst (inv_plus_ivl r2 x2 y2) \<and>
+        snd (inv_plus_ivl r1 x1 y1) \<le> snd (inv_plus_ivl r2 x2 y2)" by simp
+next
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_minus_ivl r1 x1 y1) \<le> fst (inv_minus_ivl r2 x2 y2) \<and>
+        snd (inv_minus_ivl r1 x1 y1) \<le> snd (inv_minus_ivl r2 x2 y2)" by simp
+next
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_times_ivl r1 x1 y1) \<le> fst (inv_times_ivl r2 x2 y2) \<and>
+        snd (inv_times_ivl r1 x1 y1) \<le> snd (inv_times_ivl r2 x2 y2)" by simp
 qed
 
+lemma afilter_ivl_mono:
+  "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
+   afilter_ivl e a1 sigma1 \<le> afilter_ivl e a2 sigma2"
+  using ivl_bdm.afilter_mono by (simp add: afilter_ivl_def)
+
 lemma bfilter_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   bfilter_ivl b res sigma1 \<le>
-   bfilter_ivl b res sigma2"
-proof (induction b arbitrary: res sigma1 sigma2)
-  case (BaseB b')
-  have h1: "bfilter_ivl (BaseB b') res sigma1 = sigma1" by simp
-  have h2: "bfilter_ivl (BaseB b') res sigma2 = sigma2" by simp
-  show ?case unfolding h1 h2 by (rule BaseB.prems)
-next
-  case (Not b)
-  show ?case
-    unfolding ivl_backward_domain.bfilter.simps
-    by (rule Not.IH[OF Not.prems])
-next
-  case (And b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    hence r: "res = True" by simp
-    have step: "bfilter_ivl b2 True sigma1 \<le>
-                bfilter_ivl b2 True sigma2"
-      by (rule And.IH(2)[OF And.prems])
-    show ?thesis
-      unfolding r ivl_backward_domain.bfilter.simps
-      by (rule And.IH(1)[OF step])
-  next
-    case False
-    hence r: "res = False" by simp
-    have ih1: "bfilter_ivl b1 False sigma1 \<le>
-               bfilter_ivl b1 False sigma2"
-      by (rule And.IH(1)[OF And.prems])
-    have ih2: "bfilter_ivl b2 False sigma1 \<le>
-               bfilter_ivl b2 False sigma2"
-      by (rule And.IH(2)[OF And.prems])
-    show ?thesis
-      unfolding r ivl_backward_domain.bfilter.simps
-      by (rule sup_mono[OF ih1 ih2])
-  qed
-next
-  case (Or b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    hence r: "res = True" by simp
-    have ih1: "bfilter_ivl b1 True sigma1 \<le>
-               bfilter_ivl b1 True sigma2"
-      by (rule Or.IH(1)[OF Or.prems])
-    have ih2: "bfilter_ivl b2 True sigma1 \<le>
-               bfilter_ivl b2 True sigma2"
-      by (rule Or.IH(2)[OF Or.prems])
-    show ?thesis
-      unfolding r ivl_backward_domain.bfilter.simps
-      by (rule sup_mono[OF ih1 ih2])
-  next
-    case False
-    hence r: "res = False" by simp
-    have step: "bfilter_ivl b2 False sigma1 \<le>
-                bfilter_ivl b2 False sigma2"
-      by (rule Or.IH(2)[OF Or.prems])
-    show ?thesis
-      unfolding r ivl_backward_domain.bfilter.simps
-      by (rule Or.IH(1)[OF step])
-  qed
-next
-  case (Less e1 e2)
-  have vmono1: "aval_ivl e1 sigma1 \<le> aval_ivl e1 sigma2"
-    using aval_ivl_mono[OF Less.prems] .
-  have vmono2: "aval_ivl e2 sigma1 \<le> aval_ivl e2 sigma2"
-    using aval_ivl_mono[OF Less.prems] .
-  have amono: "fst (inv_less_ivl res (aval_ivl e1 sigma1) (aval_ivl e2 sigma1)) \<le>
-               fst (inv_less_ivl res (aval_ivl e1 sigma2) (aval_ivl e2 sigma2)) \<and>
-               snd (inv_less_ivl res (aval_ivl e1 sigma1) (aval_ivl e2 sigma1)) \<le>
-               snd (inv_less_ivl res (aval_ivl e1 sigma2) (aval_ivl e2 sigma2))"
-    by (rule inv_less_ivl_mono[OF vmono1 vmono2])
-  have step: "afilter_ivl e2
-                (snd (inv_less_ivl res (aval_ivl e1 sigma1) (aval_ivl e2 sigma1))) sigma1 \<le>
-              afilter_ivl e2
-                (snd (inv_less_ivl res (aval_ivl e1 sigma2) (aval_ivl e2 sigma2))) sigma2"
-    by (rule afilter_ivl_mono[OF amono[THEN conjunct2] Less.prems])
-  show ?case
-    unfolding ivl_backward_domain.bfilter.simps Let_def case_prod_beta
-    by (rule afilter_ivl_mono[OF amono[THEN conjunct1] step])
-next
-  case (Eq e1 e2)
-  show ?case
-  proof (cases res)
-    case True
-    hence r: "res = True" by simp
-    have vmono1: "aval_ivl e1 sigma1 \<le> aval_ivl e1 sigma2"
-      using aval_ivl_mono[OF Eq.prems] .
-    have vmono2: "aval_ivl e2 sigma1 \<le> aval_ivl e2 sigma2"
-      using aval_ivl_mono[OF Eq.prems] .
-    have mmono: "meet_ivl (aval_ivl e1 sigma1) (aval_ivl e2 sigma1) \<le>
-                 meet_ivl (aval_ivl e1 sigma2) (aval_ivl e2 sigma2)"
-      using inf_mono[OF vmono1 vmono2] by simp
-    have step: "afilter_ivl e2
-                  (meet_ivl (aval_ivl e1 sigma1) (aval_ivl e2 sigma1)) sigma1 \<le>
-                afilter_ivl e2
-                  (meet_ivl (aval_ivl e1 sigma2) (aval_ivl e2 sigma2)) sigma2"
-      using afilter_ivl_mono[OF mmono Eq.prems] .
-    show ?thesis
-      unfolding r ivl_backward_domain.bfilter.simps Let_def
-      by (rule afilter_ivl_mono[OF mmono step])
-  next
-    case False
-    hence r: "res = False" by simp
-    have h1: "bfilter_ivl (Eq e1 e2) False sigma1 = sigma1" by simp
-    have h2: "bfilter_ivl (Eq e1 e2) False sigma2 = sigma2" by simp
-    show ?thesis unfolding r h1 h2 by (rule Eq.prems)
-  qed
-qed
+  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl b res sigma1 \<le> bfilter_ivl b res sigma2"
+  using ivl_bdm.bfilter_mono by (simp add: bfilter_ivl_def)
+
+end
 
 lemma assume_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_ivl b sigma1 \<le> assume_ivl b sigma2"

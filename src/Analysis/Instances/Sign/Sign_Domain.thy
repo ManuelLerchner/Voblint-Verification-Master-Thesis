@@ -726,218 +726,59 @@ lemma inv_less_sign_mono:
   by (cases r; cases a1; cases a1'; cases a2; cases a2';
       auto simp: less_eq_sign_def)
 
-lemma afilter_sign_mono:
-  "a1 \<le> (a2::sign) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
-   afilter_sign e a1 sigma1 \<le>
-   afilter_sign e a2 sigma2"
-proof (induction e arbitrary: a1 a2 sigma1 sigma2)
-  case (BaseN a')
-  show ?case
-  proof (cases a')
-    case (V x)
-    show ?thesis
-      unfolding V sign_backward_domain.afilter.simps
-      using BaseN.prems
-    proof (intro le_funI)
-      fix y
-      show "(sigma1(x := meet_sign a1 (sigma1 x))) y \<le> (sigma2(x := meet_sign a2 (sigma2 x))) y"
-      proof (cases "y = x")
-        case True
-        have eq1: "(sigma1(x := meet_sign a1 (sigma1 x))) y = meet_sign a1 (sigma1 x)"
-          using True by simp
-        have eq2: "(sigma2(x := meet_sign a2 (sigma2 x))) y = meet_sign a2 (sigma2 x)"
-          using True by simp
-        have mono: "meet_sign a1 (sigma1 x) \<le> meet_sign a2 (sigma2 x)"
-          using inf_mono[OF BaseN.prems(1) le_funD[OF BaseN.prems(2)]] by simp
-        from eq1 eq2 mono show ?thesis by simp
-      next
-        case False
-        have eq1: "(sigma1(x := meet_sign a1 (sigma1 x))) y = sigma1 y"
-          using False by simp
-        have eq2: "(sigma2(x := meet_sign a2 (sigma2 x))) y = sigma2 y"
-          using False by simp
-        have mono: "sigma1 y \<le> sigma2 y" by (rule le_funD[OF BaseN.prems(2)])
-        from eq1 eq2 mono show ?thesis by simp
-      qed
-    qed
-  next
-    case (N x1)
-    from N have heq: "a' = AExp.N x1" .
-    have h1: "afilter_sign (IMP2_Syntax.N x1) a1 sigma1 = sigma1" by simp
-    have h2: "afilter_sign (IMP2_Syntax.N x1) a2 sigma2 = sigma2" by simp
-    show ?thesis using BaseN.prems(2)
-      apply (subst heq)+
-      using h1 h2 by simp
-  next
-    case (Plus x1 x2)
-    from Plus have heq: "a' = AExp.aexp.Plus x1 x2" .
-    have h1: "afilter_sign (BaseN (AExp.aexp.Plus x1 x2)) a1 sigma1 = sigma1" by simp
-    have h2: "afilter_sign (BaseN (AExp.aexp.Plus x1 x2)) a2 sigma2 = sigma2" by simp
-    show ?thesis using BaseN.prems(2)
-      apply (subst heq)+
-      using h1 h2 by simp
-  qed
+text \<open>
+  Monotonicity of @{const afilter_sign} / @{const bfilter_sign} is the generic
+  @{locale backward_domain_mono} result: interpret it at the sign operators
+  (soundness as in @{term sign_backward_domain}, plus the six operator-mono facts)
+  and the filter monotonicity follows by the shared induction.
+\<close>
+
+context begin
+interpretation sign_bdm:
+  backward_domain_mono meet_sign aval_sign
+                       inv_less_sign inv_plus_sign inv_minus_sign inv_times_sign
+proof unfold_locales
+  fix a1 a2 b1 b2 :: sign
+  assume "a1 \<le> a2" and "b1 \<le> b2"
+  thus "meet_sign a1 b1 \<le> meet_sign a2 b2"
+    by (cases a1; cases a2; cases b1; cases b2; auto simp: less_eq_sign_def)
 next
-  case (Plus e1 e2)
-  have v1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
-    using aval_sign_mono[OF Plus.prems(2)] .
-  have v2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
-    using aval_sign_mono[OF Plus.prems(2)] .
-  have step: "afilter_sign e2 (aval_sign e2 sigma1) sigma1 \<le>
-              afilter_sign e2 (aval_sign e2 sigma2) sigma2"
-    using Plus.IH(2)[OF v2 Plus.prems(2)] .  have lhs: "afilter_sign (Plus e1 e2) a1 sigma1 =
-    afilter_sign e1 (aval_sign e1 sigma1) (afilter_sign e2 (aval_sign e2 sigma1) sigma1)"
-    by simp
-  have rhs: "afilter_sign (Plus e1 e2) a2 sigma2 =
-    afilter_sign e1 (aval_sign e1 sigma2) (afilter_sign e2 (aval_sign e2 sigma2) sigma2)"
-    by simp
-  show ?case unfolding lhs rhs by (rule Plus.IH(1)[OF v1 step])
+  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
+  assume "\<sigma>1 \<le> \<sigma>2"
+  thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
 next
-  case (Minus e1 e2)
-  have v1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
-    using aval_sign_mono[OF Minus.prems(2)] .
-  have v2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
-    using aval_sign_mono[OF Minus.prems(2)] .
-  have step: "afilter_sign e2 (aval_sign e2 sigma1) sigma1 \<le>
-                afilter_sign e2 (aval_sign e2 sigma2) sigma2"
-    using Minus.IH(2)[OF v2 Minus.prems(2)] .
-  have lhs: "afilter_sign (Minus e1 e2) a1 sigma1 =
-    afilter_sign e1 (aval_sign e1 sigma1) (afilter_sign e2 (aval_sign e2 sigma1) sigma1)"
-    by simp
-  have rhs: "afilter_sign (Minus e1 e2) a2 sigma2 =
-    afilter_sign e1 (aval_sign e1 sigma2) (afilter_sign e2 (aval_sign e2 sigma2) sigma2)"
-    by simp
-  show ?case unfolding lhs rhs by (rule Minus.IH(1)[OF v1 step])
+  fix x1 x2 y1 y2 :: sign and res :: bool
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_less_sign res x1 y1) \<le> fst (inv_less_sign res x2 y2) \<and>
+        snd (inv_less_sign res x1 y1) \<le> snd (inv_less_sign res x2 y2)"
+    by (rule inv_less_sign_mono)
 next
-  case (Times e1 e2)
-  have v1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
-    using aval_sign_mono[OF Times.prems(2)] .
-  have v2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
-    using aval_sign_mono[OF Times.prems(2)] .
-  have step: "afilter_sign e2 (aval_sign e2 sigma1) sigma1 \<le>
-                afilter_sign e2 (aval_sign e2 sigma2) sigma2"
-    using Times.IH(2)[OF v2 Times.prems(2)] .
-  have lhs: "afilter_sign (Times e1 e2) a1 sigma1 =
-    afilter_sign e1 (aval_sign e1 sigma1) (afilter_sign e2 (aval_sign e2 sigma1) sigma1)"
-    by simp
-  have rhs: "afilter_sign (Times e1 e2) a2 sigma2 =
-    afilter_sign e1 (aval_sign e1 sigma2) (afilter_sign e2 (aval_sign e2 sigma2) sigma2)"
-    by simp
-  show ?case unfolding lhs rhs by (rule Times.IH(1)[OF v1 step])
+  fix r1 r2 x1 x2 y1 y2 :: sign
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_plus_sign r1 x1 y1) \<le> fst (inv_plus_sign r2 x2 y2) \<and>
+        snd (inv_plus_sign r1 x1 y1) \<le> snd (inv_plus_sign r2 x2 y2)" by simp
+next
+  fix r1 r2 x1 x2 y1 y2 :: sign
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_minus_sign r1 x1 y1) \<le> fst (inv_minus_sign r2 x2 y2) \<and>
+        snd (inv_minus_sign r1 x1 y1) \<le> snd (inv_minus_sign r2 x2 y2)" by simp
+next
+  fix r1 r2 x1 x2 y1 y2 :: sign
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_times_sign r1 x1 y1) \<le> fst (inv_times_sign r2 x2 y2) \<and>
+        snd (inv_times_sign r1 x1 y1) \<le> snd (inv_times_sign r2 x2 y2)" by simp
 qed
 
+lemma afilter_sign_mono:
+  "a1 \<le> (a2::sign) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
+   afilter_sign e a1 sigma1 \<le> afilter_sign e a2 sigma2"
+  using sign_bdm.afilter_mono by (simp add: afilter_sign_def)
+
 lemma bfilter_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   bfilter_sign b res sigma1 \<le>
-   bfilter_sign b res sigma2"
-proof (induction b arbitrary: res sigma1 sigma2)
-  case (BaseB b')
-  have h1: "bfilter_sign (BaseB b') res sigma1 = sigma1" by simp
-  have h2: "bfilter_sign (BaseB b') res sigma2 = sigma2" by simp
-  show ?case unfolding h1 h2 by (rule BaseB.prems)
-next
-  case (Not b)
-  show ?case
-    unfolding sign_backward_domain.bfilter.simps
-    by (rule Not.IH[OF Not.prems])
-next
-  case (And b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    hence r: "res = True" by simp
-    have step: "bfilter_sign b2 True sigma1 \<le>
-                bfilter_sign b2 True sigma2"
-      by (rule And.IH(2)[OF And.prems])
-    show ?thesis
-      unfolding r sign_backward_domain.bfilter.simps
-      by (rule And.IH(1)[OF step])
-  next
-    case False
-    hence r: "res = False" by simp
-    have ih1: "bfilter_sign b1 False sigma1 \<le>
-               bfilter_sign b1 False sigma2"
-      by (rule And.IH(1)[OF And.prems])
-    have ih2: "bfilter_sign b2 False sigma1 \<le>
-               bfilter_sign b2 False sigma2"
-      by (rule And.IH(2)[OF And.prems])
-    show ?thesis
-      unfolding r sign_backward_domain.bfilter.simps
-      by (rule sup_mono[OF ih1 ih2])
-  qed
-next
-  case (Or b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    hence r: "res = True" by simp
-    have ih1: "bfilter_sign b1 True sigma1 \<le>
-               bfilter_sign b1 True sigma2"
-      by (rule Or.IH(1)[OF Or.prems])
-    have ih2: "bfilter_sign b2 True sigma1 \<le>
-               bfilter_sign b2 True sigma2"
-      by (rule Or.IH(2)[OF Or.prems])
-    show ?thesis
-      unfolding r sign_backward_domain.bfilter.simps
-      by (rule sup_mono[OF ih1 ih2])
-  next
-    case False
-    hence r: "res = False" by simp
-    have step: "bfilter_sign b2 False sigma1 \<le>
-                bfilter_sign b2 False sigma2"
-      by (rule Or.IH(2)[OF Or.prems])
-    show ?thesis
-      unfolding r sign_backward_domain.bfilter.simps
-      by (rule Or.IH(1)[OF step])
-  qed
-next
-  case (Less e1 e2)
-  have vmono1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
-    using aval_sign_mono[OF Less.prems] .
-  have vmono2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
-    using aval_sign_mono[OF Less.prems] .
-  have amono: "fst (inv_less_sign res (aval_sign e1 sigma1) (aval_sign e2 sigma1)) \<le>
-               fst (inv_less_sign res (aval_sign e1 sigma2) (aval_sign e2 sigma2)) \<and>
-               snd (inv_less_sign res (aval_sign e1 sigma1) (aval_sign e2 sigma1)) \<le>
-               snd (inv_less_sign res (aval_sign e1 sigma2) (aval_sign e2 sigma2))"
-    by (rule inv_less_sign_mono[OF vmono1 vmono2])
-  have step: "afilter_sign e2
-                (snd (inv_less_sign res (aval_sign e1 sigma1) (aval_sign e2 sigma1))) sigma1 \<le>
-              afilter_sign e2
-                (snd (inv_less_sign res (aval_sign e1 sigma2) (aval_sign e2 sigma2))) sigma2"
-    by (rule afilter_sign_mono[OF amono[THEN conjunct2] Less.prems])
-  show ?case
-    unfolding sign_backward_domain.bfilter.simps Let_def case_prod_beta
-    by (rule afilter_sign_mono[OF amono[THEN conjunct1] step])
-next
-  case (Eq e1 e2)
-  show ?case
-  proof (cases res)
-    case True
-    hence r: "res = True" by simp
-    have vmono1: "aval_sign e1 sigma1 \<le> aval_sign e1 sigma2"
-      using aval_sign_mono[OF Eq.prems] .
-    have vmono2: "aval_sign e2 sigma1 \<le> aval_sign e2 sigma2"
-      using aval_sign_mono[OF Eq.prems] .
-    have mmono: "meet_sign (aval_sign e1 sigma1) (aval_sign e2 sigma1) \<le>
-                 meet_sign (aval_sign e1 sigma2) (aval_sign e2 sigma2)"
-      using inf_mono[OF vmono1 vmono2] by simp
-    have step: "afilter_sign e2
-                  (meet_sign (aval_sign e1 sigma1) (aval_sign e2 sigma1)) sigma1 \<le>
-                afilter_sign e2
-                  (meet_sign (aval_sign e1 sigma2) (aval_sign e2 sigma2)) sigma2"
-      by (rule afilter_sign_mono[OF mmono Eq.prems])
-    show ?thesis
-      unfolding r sign_backward_domain.bfilter.simps Let_def
-      by (rule afilter_sign_mono[OF mmono step])
-  next
-    case False
-    hence r: "res = False" by simp
-    have h1: "bfilter_sign (Eq e1 e2) False sigma1 = sigma1" by simp
-    have h2: "bfilter_sign (Eq e1 e2) False sigma2 = sigma2" by simp
-    show ?thesis unfolding r h1 h2 by (rule Eq.prems)
-  qed
-qed
+  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_sign b res sigma1 \<le> bfilter_sign b res sigma2"
+  using sign_bdm.bfilter_mono by (simp add: bfilter_sign_def)
+
+end
 
 lemma assume_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_sign b sigma1 \<le> assume_sign b sigma2"

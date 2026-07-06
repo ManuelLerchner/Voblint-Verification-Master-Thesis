@@ -412,6 +412,208 @@ qed
 
 end
 
+subsection \<open>Monotone backward-analysis locale\<close>
+
+text \<open>
+  Extends @{locale backward_domain} with monotonicity of the domain-author
+  operators.  The generic @{term afilter} / @{term bfilter} are then monotone in
+  the abstract state (and target value) by the same induction that proves their
+  soundness -- discharged once here instead of once per domain.  A concrete
+  domain interprets this locale by supplying the six operator-monotonicity facts;
+  the inv-operator obligations are stated in the componentwise @{term fst} /
+  @{term snd} shape the domains prove directly.
+\<close>
+
+locale backward_domain_mono = backward_domain +
+  assumes meet_mono:
+      "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> meet a1 b1 \<le> meet a2 b2"
+  and aval_abs_mono:
+      "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2"
+  and inv_less_mono:
+      "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       fst (inv_less res x1 y1) \<le> fst (inv_less res x2 y2) \<and>
+       snd (inv_less res x1 y1) \<le> snd (inv_less res x2 y2)"
+  and inv_plus_mono:
+      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       fst (inv_plus r1 x1 y1) \<le> fst (inv_plus r2 x2 y2) \<and>
+       snd (inv_plus r1 x1 y1) \<le> snd (inv_plus r2 x2 y2)"
+  and inv_minus_mono:
+      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       fst (inv_minus r1 x1 y1) \<le> fst (inv_minus r2 x2 y2) \<and>
+       snd (inv_minus r1 x1 y1) \<le> snd (inv_minus r2 x2 y2)"
+  and inv_times_mono:
+      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       fst (inv_times r1 x1 y1) \<le> fst (inv_times r2 x2 y2) \<and>
+       snd (inv_times r1 x1 y1) \<le> snd (inv_times r2 x2 y2)"
+begin
+
+text \<open>Expose the @{term afilter} arithmetic recursions in @{term fst} / @{term snd} form.\<close>
+lemma afilter_Plus_unfold:
+  "afilter (Plus e1 e2) a \<sigma> =
+     afilter e1 (fst (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma afilter_Minus_unfold:
+  "afilter (Minus e1 e2) a \<sigma> =
+     afilter e1 (fst (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma afilter_Times_unfold:
+  "afilter (Times e1 e2) a \<sigma> =
+     afilter e1 (fst (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma bfilter_Less_unfold:
+  "bfilter (Less e1 e2) res \<sigma> =
+     afilter e1 (fst (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma afilter_mono:
+  "a1 \<le> a2 \<Longrightarrow> \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> afilter e a1 \<sigma>1 \<le> afilter e a2 \<sigma>2"
+proof (induction e arbitrary: a1 a2 \<sigma>1 \<sigma>2)
+  case (BaseN a')
+  show ?case
+  proof (cases a')
+    case (V x)
+    show ?thesis
+      unfolding V afilter.simps
+    proof (rule le_funI)
+      fix y
+      show "(\<sigma>1(x := meet a1 (\<sigma>1 x))) y \<le> (\<sigma>2(x := meet a2 (\<sigma>2 x))) y"
+      proof (cases "y = x")
+        case True
+        thus ?thesis using meet_mono[OF BaseN.prems(1) le_funD[OF BaseN.prems(2)]] by simp
+      next
+        case False thus ?thesis using le_funD[OF BaseN.prems(2)] by simp
+      qed
+    qed
+  qed (use BaseN.prems(2) in simp_all)
+next
+  case (Plus e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
+  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
+  have iv: "fst (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> fst (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
+          \<and> snd (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> snd (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+    by (rule inv_plus_mono[OF Plus.prems(1) v1 v2])
+  have step: "afilter e2 (snd (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
+            \<le> afilter e2 (snd (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+    by (rule Plus.IH(2)[OF conjunct2[OF iv] Plus.prems(2)])
+  show ?case unfolding afilter_Plus_unfold
+    by (rule Plus.IH(1)[OF conjunct1[OF iv] step])
+next
+  case (Minus e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Minus.prems(2)])
+  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Minus.prems(2)])
+  have iv: "fst (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> fst (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
+          \<and> snd (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> snd (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+    by (rule inv_minus_mono[OF Minus.prems(1) v1 v2])
+  have step: "afilter e2 (snd (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
+            \<le> afilter e2 (snd (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+    by (rule Minus.IH(2)[OF conjunct2[OF iv] Minus.prems(2)])
+  show ?case unfolding afilter_Minus_unfold
+    by (rule Minus.IH(1)[OF conjunct1[OF iv] step])
+next
+  case (Times e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Times.prems(2)])
+  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Times.prems(2)])
+  have iv: "fst (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> fst (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
+          \<and> snd (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> snd (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+    by (rule inv_times_mono[OF Times.prems(1) v1 v2])
+  have step: "afilter e2 (snd (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
+            \<le> afilter e2 (snd (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+    by (rule Times.IH(2)[OF conjunct2[OF iv] Times.prems(2)])
+  show ?case unfolding afilter_Times_unfold
+    by (rule Times.IH(1)[OF conjunct1[OF iv] step])
+qed
+
+lemma bfilter_mono:
+  "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
+proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
+  case (BaseB b') thus ?case by simp
+next
+  case (Not b) show ?case unfolding bfilter.simps by (rule Not.IH[OF Not.prems])
+next
+  case (And b1 b2)
+  show ?case
+  proof (cases res)
+    case True
+    have c: "bfilter b2 True \<sigma>1 \<le> bfilter b2 True \<sigma>2" by (rule And.IH(2)[OF And.prems])
+    have "bfilter b1 True (bfilter b2 True \<sigma>1) \<le> bfilter b1 True (bfilter b2 True \<sigma>2)"
+      by (rule And.IH(1)[OF c])
+    thus ?thesis using True by simp
+  next
+    case False
+    have resF: "res = False" using False by simp
+    have c1: "bfilter b1 False \<sigma>1 \<le> bfilter b1 False \<sigma>2" by (rule And.IH(1)[OF And.prems])
+    have c2: "bfilter b2 False \<sigma>1 \<le> bfilter b2 False \<sigma>2" by (rule And.IH(2)[OF And.prems])
+    have e1: "bfilter (And b1 b2) res \<sigma>1 = bfilter b1 False \<sigma>1 \<squnion> bfilter b2 False \<sigma>1"
+      using resF by simp
+    have e2: "bfilter (And b1 b2) res \<sigma>2 = bfilter b1 False \<sigma>2 \<squnion> bfilter b2 False \<sigma>2"
+      using resF by simp
+    show ?thesis unfolding e1 e2 by (rule sup_mono[OF c1 c2])
+  qed
+next
+  case (Or b1 b2)
+  show ?case
+  proof (cases res)
+    case True
+    have resT: "res = True" using True by simp
+    have c1: "bfilter b1 True \<sigma>1 \<le> bfilter b1 True \<sigma>2" by (rule Or.IH(1)[OF Or.prems])
+    have c2: "bfilter b2 True \<sigma>1 \<le> bfilter b2 True \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
+    have e1: "bfilter (Or b1 b2) res \<sigma>1 = bfilter b1 True \<sigma>1 \<squnion> bfilter b2 True \<sigma>1"
+      using resT by simp
+    have e2: "bfilter (Or b1 b2) res \<sigma>2 = bfilter b1 True \<sigma>2 \<squnion> bfilter b2 True \<sigma>2"
+      using resT by simp
+    show ?thesis unfolding e1 e2 by (rule sup_mono[OF c1 c2])
+  next
+    case False
+    have c: "bfilter b2 False \<sigma>1 \<le> bfilter b2 False \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
+    have "bfilter b1 False (bfilter b2 False \<sigma>1) \<le> bfilter b1 False (bfilter b2 False \<sigma>2)"
+      by (rule Or.IH(1)[OF c])
+    thus ?thesis using False by simp
+  qed
+next
+  case (Less e1 e2)
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Less.prems])
+  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Less.prems])
+  have iv: "fst (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> fst (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
+          \<and> snd (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> snd (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+    by (rule inv_less_mono[OF v1 v2])
+  have step: "afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
+            \<le> afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+    by (rule afilter_mono[OF conjunct2[OF iv] Less.prems])
+  show ?case unfolding bfilter_Less_unfold
+    by (rule afilter_mono[OF conjunct1[OF iv] step])
+next
+  case (Eq e1 e2)
+  show ?case
+  proof (cases res)
+    case True
+    have m: "meet (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1) \<le> meet (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2)"
+      by (rule meet_mono[OF aval_abs_mono[OF Eq.prems] aval_abs_mono[OF Eq.prems]])
+    have step: "afilter e2 (meet (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1)) \<sigma>1
+              \<le> afilter e2 (meet (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2)) \<sigma>2"
+      by (rule afilter_mono[OF m Eq.prems])
+    show ?thesis using afilter_mono[OF m step] by (simp add: True Let_def)
+  next
+    case False thus ?thesis using Eq.prems by simp
+  qed
+qed
+
+end
+
 subsection \<open>Printable-domain typeclass\<close>
 
 text \<open>
