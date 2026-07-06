@@ -491,52 +491,26 @@ theorem part_post_solution_ctx_st_to_abs_eff:
   shows "part_post_solution
            (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
            x (\<lambda>k. fun_of_st (sigma_st k)) vars"
-proof -
-  have x_in: "x \<in> vars" using pp_st by simp
-  have deps: "\<And>v. v \<in> vars \<Longrightarrow>
-      dep\<^sub>L (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st ()) sigma_st v
-    = dep\<^sub>L (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
-        (\<lambda>k. fun_of_st (sigma_st k)) v"
-  proof -
-    fix v assume "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st ()) sigma_st v
-      = dep\<^sub>L (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
-          (\<lambda>k. fun_of_st (sigma_st k)) v"
-      using dep_aux_side_cfg_T_eff_ctx_st_eq[where v="fst v" and ctx="snd v"]
-      by (cases v) (simp add: dep\<^sub>L_def dep_def)
-  qed
-  show ?thesis
-  proof (intro conjI x_in ballI conjI)
-    fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
-            (\<lambda>k. fun_of_st (sigma_st k)) v \<subseteq> vars"
-      using pp_st v_in deps[OF v_in] by auto
-    show "eq (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ()) v
-            (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k)) (Inl v)"
-    proof -
-      have le_st: "eq (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st ()) v sigma_st
-                   \<le> sigma_st (Inl v)"
-        using pp_st v_in by simp
-      show ?thesis
-        using fun_of_st_mono[OF le_st]
-          fun_of_st_eq_side_cfg_T_eff_ctx_st[where v="fst v" and ctx="snd v"]
-        by (cases v) simp
-    qed
-    show "sides_of_rhs (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
-            (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k))"
-    proof (rule le_funI)
-      fix k
-      have le_st: "sides_of_rhs (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st () v) sigma_st k
-                   \<le> sigma_st k"
-        using pp_st v_in by (simp add: le_fun_def)
-      show "sides_of_rhs (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
-              (\<lambda>k. fun_of_st (sigma_st k)) k
-            \<le> (\<lambda>k. fun_of_st (sigma_st k)) k"
-        using fun_of_st_mono[OF le_st]
-          fun_of_st_sides_side_cfg_T_eff_ctx_st[where v="fst v" and ctx="snd v" and k=k]
-        by (cases v) simp
-    qed
-  qed
+proof (rule part_post_solution_st_to_abs_transport[OF _ _ _ pp_st])
+  fix v \<sigma>
+  show "fun_of_st (eq (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st ()) v \<sigma>)
+        = eq (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
+            v (\<lambda>k. fun_of_st (\<sigma> k))"
+    using fun_of_st_eq_side_cfg_T_eff_ctx_st[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
+next
+  fix v \<sigma> k
+  show "fun_of_st (sides_of_rhs (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st () v) \<sigma> k)
+        = sides_of_rhs (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
+            (\<lambda>k. fun_of_st (\<sigma> k)) k"
+    using fun_of_st_sides_side_cfg_T_eff_ctx_st[where v="fst v" and ctx="snd v" and k=k]
+    by (cases v) simp
+next
+  fix v \<sigma>
+  show "dep_aux \<sigma> (side_cfg_T_eff_ctx_st cmb_st g etf_st bot0_st s0_st () v)
+        = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (side_cfg_T_eff_ctx cmb_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)"
+    using dep_aux_side_cfg_T_eff_ctx_st_eq[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
 qed
 
 end
@@ -988,47 +962,26 @@ theorem part_post_solution_ctx_seeded_st_to_abs_eff:
   shows "part_post_solution
            (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
            x (\<lambda>k. fun_of_st (sigma_st k)) vars"
-proof -
-  have x_in: "x \<in> vars" using pp_st by simp
-  show ?thesis
-  proof (intro conjI x_in ballI conjI)
-    fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
-            (\<lambda>k. fun_of_st (sigma_st k)) v \<subseteq> vars"
-    proof -
-      have "dep\<^sub>L (side_cfg_T_eff_ctx_seeded_st scmb_st ent_st g etf_st bot0_st s0_st ()) sigma_st v
-        = dep\<^sub>L (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
-            (\<lambda>k. fun_of_st (sigma_st k)) v"
-        using dep_aux_side_cfg_T_eff_ctx_seeded_st_eq[where v="fst v" and ctx="snd v"]
-        by (cases v) (simp add: dep\<^sub>L_def dep_def)
-      then show ?thesis using pp_st v_in by auto
-    qed
-    show "eq (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ()) v
-            (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k)) (Inl v)"
-    proof -
-      have le_st: "eq (side_cfg_T_eff_ctx_seeded_st scmb_st ent_st g etf_st bot0_st s0_st ()) v sigma_st
-                   \<le> sigma_st (Inl v)"
-        using pp_st v_in by simp
-      show ?thesis
-        using fun_of_st_mono[OF le_st]
-          fun_of_st_eq_side_cfg_T_eff_ctx_seeded_st[where v="fst v" and ctx="snd v"]
-        by (cases v) simp
-    qed
-    show "sides_of_rhs (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
-            (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k))"
-    proof (rule le_funI)
-      fix k
-      have le_st: "sides_of_rhs (side_cfg_T_eff_ctx_seeded_st scmb_st ent_st g etf_st bot0_st s0_st () v) sigma_st k
-                   \<le> sigma_st k"
-        using pp_st v_in by (simp add: le_fun_def)
-      show "sides_of_rhs (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
-              (\<lambda>k. fun_of_st (sigma_st k)) k
-            \<le> (\<lambda>k. fun_of_st (sigma_st k)) k"
-        using fun_of_st_mono[OF le_st]
-          fun_of_st_sides_side_cfg_T_eff_ctx_seeded_st[where v="fst v" and ctx="snd v" and k=k]
-        by (cases v) simp
-    qed
-  qed
+proof (rule part_post_solution_st_to_abs_transport[OF _ _ _ pp_st])
+  fix v \<sigma>
+  show "fun_of_st (eq (side_cfg_T_eff_ctx_seeded_st scmb_st ent_st g etf_st bot0_st s0_st ()) v \<sigma>)
+        = eq (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
+            v (\<lambda>k. fun_of_st (\<sigma> k))"
+    using fun_of_st_eq_side_cfg_T_eff_ctx_seeded_st[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
+next
+  fix v \<sigma> k
+  show "fun_of_st (sides_of_rhs (side_cfg_T_eff_ctx_seeded_st scmb_st ent_st g etf_st bot0_st s0_st () v) \<sigma> k)
+        = sides_of_rhs (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)
+            (\<lambda>k. fun_of_st (\<sigma> k)) k"
+    using fun_of_st_sides_side_cfg_T_eff_ctx_seeded_st[where v="fst v" and ctx="snd v" and k=k]
+    by (cases v) simp
+next
+  fix v \<sigma>
+  show "dep_aux \<sigma> (side_cfg_T_eff_ctx_seeded_st scmb_st ent_st g etf_st bot0_st s0_st () v)
+        = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (side_cfg_T_eff_ctx_seeded scmb_abs ent_abs g etf (fun_of_st bot0_st) (fun_of_st s0_st) () v)"
+    using dep_aux_side_cfg_T_eff_ctx_seeded_st_eq[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
 qed
 
 end

@@ -705,6 +705,51 @@ next
     by (simp add: dep_aux_side_rhs_fold_eff_st_eq[OF tr_edge tr_comb dep_edge dep_comb])
 qed
 
+subsection \<open>Generic \<open>st\<close> post-solution transport\<close>
+
+text \<open>
+  Every executable generator variant maps its \<open>'a st\<close> post-solution to an abstract
+  \<^const>\<open>part_post_solution\<close> under \<^const>\<open>fun_of_st\<close>, and the lifting is identical:
+  it depends only on three commutation facts about the specific generator --- \<open>eq\<close>,
+  \<open>sides_of_rhs\<close>, and \<open>dep_aux\<close> commute with \<^const>\<open>fun_of_st\<close>.  This lemma packages
+  that lifting once; each concrete generator supplies the three facts and applies it.
+\<close>
+
+lemma part_post_solution_st_to_abs_transport:
+  fixes T_st :: "'u \<Rightarrow> ('u, 'g, ('a::bounded_semilattice_sup_bot) st) strategy_tree"
+    and T_abs :: "'u \<Rightarrow> ('u, 'g, 'a abs_state) strategy_tree"
+  assumes EQ: "\<And>v \<sigma>. fun_of_st (eq T_st v \<sigma>) = eq T_abs v (\<lambda>k. fun_of_st (\<sigma> k))"
+    and SIDES: "\<And>v \<sigma> k. fun_of_st (sides_of_rhs (T_st v) \<sigma> k)
+                  = sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (\<sigma> k)) k"
+    and DEP: "\<And>v \<sigma>. dep_aux \<sigma> (T_st v) = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (T_abs v)"
+    and pp: "part_post_solution T_st x sigma_st vars"
+  shows "part_post_solution T_abs x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+proof -
+  have x_in: "x \<in> vars" using pp by simp
+  have deps: "\<And>v. dep\<^sub>L T_st sigma_st v = dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v"
+    using DEP by (simp add: dep\<^sub>L_def dep_def)
+  show ?thesis
+  proof (intro conjI x_in ballI conjI)
+    fix v assume v_in: "v \<in> vars"
+    show "dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v \<subseteq> vars"
+      using pp v_in deps by auto
+    show "eq T_abs v (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k)) (Inl v)"
+    proof -
+      have le_st: "eq T_st v sigma_st \<le> sigma_st (Inl v)" using pp v_in by simp
+      show ?thesis using fun_of_st_mono[OF le_st] EQ by simp
+    qed
+    show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k))"
+    proof (rule le_funI)
+      fix k
+      have le_st: "sides_of_rhs (T_st v) sigma_st k \<le> sigma_st k"
+        using pp v_in by (simp add: le_fun_def)
+      show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) k
+              \<le> (\<lambda>k. fun_of_st (sigma_st k)) k"
+        using fun_of_st_mono[OF le_st] SIDES by simp
+    qed
+  qed
+qed
+
 subsection \<open>Transport: executable effectful post-solution to abstract effectful post-solution\<close>
 
 context
