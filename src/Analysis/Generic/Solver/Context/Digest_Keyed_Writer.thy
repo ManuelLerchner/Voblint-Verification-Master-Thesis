@@ -5,8 +5,8 @@ begin
 section \<open>Generic digest-keyed side-effecting generator\<close>
 
 text \<open>
-  The executable generator missing from \<^const>\<open>side_cfg_T_eff_cmp_st\<close> (context-keyed) and
-  \<^const>\<open>side_cfg_T_eff_cmp_site_st\<close> (site-keyed): each intra global write is routed to the
+  The executable generator beyond \<^const>\<open>side_cfg_T_eff_cmp_st\<close> (context-keyed): each intra
+  global write is routed to the
   slot \<^emph>\<open>keyed by a digest of the write-point abstract state\<close>, \<open>dg s\<close>.  This is Goblint's
   \<open>sideg\<close>-with-digest --- the write key is a projection of the local state at the write
   (\<open>Digest.compute man.local\<close>), so two writes to one global that differ in their digest land
