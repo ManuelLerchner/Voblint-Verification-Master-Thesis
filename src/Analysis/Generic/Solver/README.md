@@ -5,13 +5,12 @@ to the interprocedural CFG and effectful `rhs` format.
 `side_analyse_eff pi ps c etf bot s0 v` is proved sound against `cfg_collect` at `v`
 (`side_analyse_eff_collect_sound_exit_pruned_gen`).
 
-The layer is split into four concerns, one subfolder each:
+The layer is split into three concerns, one subfolder each:
 
 | Subfolder | Concern |
 | --- | --- |
 | `Core/` | the TD-side strategy-tree spine: monad, generator, monotonicity, base collecting soundness |
 | `Context/` | context-indexed / cmp-filtered / digest-refined global reads and their soundness |
-| `ReachingDefs/` | the reaching-definitions digest instance |
 | `Exec/` | the `'a st` executable mirror and `fun_of_st` transport |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
@@ -41,11 +40,6 @@ locale `digest_global_read` (`obs_digest`); `Global_Cmp_Read` / `Context_Domain`
 degenerate context-only base the digest read collapses to; the `TD_Side_Eff_Cmp_*` /
 `TD_Side_Eff_Ctx_Sound` files carry the EDGE/ENTRY discharge and combine soundness the
 kernel builds on. `Digest_Keyed_Writer{,_Sound}` is the value-derived (mode) writer.
-
-## `ReachingDefs/`
-
-`Reaching_Defs` (path-level reaching definitions) + `RD_Set_Edge_Backbone` (the merged-edge
-family). The externally-computed digest instance of the kernel.
 
 ## `Exec/`
 

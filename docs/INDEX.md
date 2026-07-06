@@ -30,7 +30,7 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 ## Reference & design (enduring, no lifecycle status)
 
 `HOL_IMP_COMPARISON.md` · `IMP_SYNTAX_NIPKOW_EXTENSION.md` · `cfg-representation.md` ·
-`DIGEST_TWO_FAMILIES.md` (the converged design) · `DIGEST_IN_FIXPOINT_DESIGN.md` ·
+`DIGEST_TWO_FAMILIES.md` (design rationale; Family A / RD retired `92739cf`, mode-only in-tree) · `DIGEST_IN_FIXPOINT_DESIGN.md` ·
 `CONTEXT_DOMAIN_ARCHITECTURE.md` · `DGC_ALIGNMENT_ANALYSIS.md` ·
 `ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` · `ROUTE_A7_DECISION_A_vs_C.md` ·
 `ROUTE_A_SWITCHING_COMBINE_MIGRATION.md` · `AFP_IMP2_REUSE_DECISION.md` ·
@@ -42,7 +42,7 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 | Doc | Status |
 | --- | --- |
 | `DIGEST_GENERATOR_COLLECTING_DISCHARGE_MIGRATION.md` | IN PROGRESS — superset-reader class closed |
-| `DIGEST_INDEXED_READER_MIGRATION.md` | CMP_SOUND closed; reader spine complete |
+| `DIGEST_INDEXED_READER_MIGRATION.md` | **RETIRED** — the RD family it describes was removed (`92739cf`); historical |
 | `CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` | IN PROGRESS |
 | `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` | IN PROGRESS (Phase A landed) |
 | `DOMAIN_INTERFACE_MINIMIZATION.md` | IN PROGRESS |

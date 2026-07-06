@@ -10,6 +10,9 @@
 > `side_cfg_T_eff_cmp_site` and its edge bound `side_cfg_T_eff_cmp_site_edge_le`. That
 > generator was removed as unconsumed (commit `964ea1a`); the live substrate is the
 > digest-keyed writer (`Digest_Keyed_Writer`). Rebase these steps onto it before pursuing.
+> The **S7-RD** frontier step and every `Reaching_Defs`-based row are also moot: the
+> reaching-definitions family was removed (commit `92739cf`), so only the mode instance
+> remains to discharge.
 >
 > Companions: `DIGEST_TWO_FAMILIES.md` (the two families and their shared residual),
 > `DIGEST_INDEXED_READER_MIGRATION.md` (RD spine; COMB split + `CMP_SOUND` closed),

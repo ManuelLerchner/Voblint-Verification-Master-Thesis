@@ -1,5 +1,12 @@
 # Digest-Indexed Context-Sensitive Analysis
 
+> **RETIRED — Family A (reaching definitions) was removed from the tree (commit `92739cf`).**
+> This document is kept as design rationale: it records *why* the digest kernel is generic
+> (it was validated against two dissimilar instances). In the current tree only **Family B
+> (value-derived / mode)** is instantiated; the generic `obs_digest` kernel remains, but its
+> externally-computed reaching-definitions instance and all RD witnesses are gone. Read the
+> Family A / §3 material below as historical design, not as current code.
+
 This work develops a generic framework for digest-indexed context-sensitive analyses on top of a
 verified top-down solver. Rather than committing to a single notion of context, the framework
 abstracts over *how* contexts (or digests) are computed and *how* global information is

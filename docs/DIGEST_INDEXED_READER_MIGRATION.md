@@ -1,5 +1,13 @@
 # Migration — reaching-definition global reads (writer re-keying + digest-indexed reader)
 
+> **RETIRED — the reaching-definitions digest family was removed from the tree (commit
+> `92739cf`).** It was a demonstration-only instance, off the value-derived thesis. The
+> generic `obs_digest` kernel survives (the mode family uses it); the RD instance section of
+> `Digest_Global_Read`, `Reaching_Defs`, `RD_Set_Edge_Backbone`, the `Exec_Sign_RD_Keyed_*`
+> witnesses, and `Example_Config_Mode_Digest_Precision` are gone. This whole document is
+> historical: the constants it names no longer exist. Kept for provenance of the reader
+> soundness argument.
+
 > **Status: CMP_SOUND CLOSED — migration proof spine complete.** The generic read
 > interface (`digest_global_read`, `obs_digest`), its kernel-over-interface theorems,
 > the RD instance (may-def + kill routes), the semantic path reader, and an
