@@ -124,41 +124,6 @@ lemma eq_side_cfg_T_eff_cmp_site:
   unfolding side_cfg_T_eff_cmp_site_def
   by (simp add: traverse_side_rhs_fold_ctx Let_def)
 
-text \<open>
-  Return-aware site-keyed variant.  The target program point is passed to the
-  combine builder, so combine-side \<^const>\<open>Side\<close> nodes can use the same writer
-  key as the equation endpoint when an instance needs that routing.
-\<close>
-definition side_cfg_T_eff_cmp_site_ret ::
-  "(pp \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
-   \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
-where
-  "side_cfg_T_eff_cmp_site_ret site cmb g etf fresh_frame bot0 s0 =
-     (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
-                   \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>);
-            intra = map (\<lambda>(u, a).
-                          map_gtree (\<lambda>_. site v)
-                            (map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u)))
-                        (non_enter_predecessor_list g v);
-            comb  = map (\<lambda>(cc, ex). cmb c v cc ex) (combine_predecessor_list g v);
-            t = side_rhs_fold_ctx acc0 (intra @ comb)
-        in if v = cfg_entry g then Side (site v) (restrict_global s0) t else t)"
-
-lemma eq_side_cfg_T_eff_cmp_site_ret:
-  "eq (side_cfg_T_eff_cmp_site_ret site cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma> =
-     side_acc_ctx
-       ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
-        \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>)) \<sigma>
-       (map (\<lambda>(u, a).
-              map_gtree (\<lambda>_. site v)
-                (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
-            (non_enter_predecessor_list g v)
-        @ map (\<lambda>(cc, ex). cmb ctx v cc ex) (combine_predecessor_list g v))"
-  unfolding side_cfg_T_eff_cmp_site_ret_def
-  by (simp add: traverse_side_rhs_fold_ctx Let_def)
 
 subsection \<open>Routing: the keyed intra tree reads the context / keyed-slot pullback\<close>
 
