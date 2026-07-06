@@ -5,9 +5,14 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
   directories
     "Generic/Domain"
     "Generic/Equations"
-    "Generic/Solver"
+    "Generic/Solver/Core"
+    "Generic/Solver/Context"
+    "Generic/Solver/ReachingDefs"
+    "Generic/Solver/Exec"
     "Instances/Sign"
+    "Instances/Sign/Runs"
     "Instances/Interval"
+    "Instances/Interval/Runs"
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
   theories

@@ -5,24 +5,51 @@ to the interprocedural CFG and effectful `rhs` format.
 `side_analyse_eff pi ps c etf bot s0 v` is proved sound against `cfg_collect` at `v`
 (`side_analyse_eff_collect_sound_exit_pruned_gen`).
 
-**Theories**
+The layer is split into four concerns, one subfolder each:
+
+| Subfolder | Concern |
+| --- | --- |
+| `Core/` | the TD-side strategy-tree spine: monad, generator, monotonicity, base collecting soundness |
+| `Context/` | context-indexed / cmp-filtered / digest-refined global reads and their soundness |
+| `ReachingDefs/` | the reaching-definitions digest instance |
+| `Exec/` | the `'a st` executable mirror and `fun_of_st` transport |
+
+**External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
+This layer wires `part_post_solution` to `is_post_fixpoint` via `Generic/Equations/Constraint_System_Sound`.
+
+**Downstream:** `Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
+`Instances/Interval/Interval_Side_Soundness.thy`; `Formalization/Pipeline/Trace_Analysis_Sound.thy`.
+
+## `Core/`
 
 | File | Role |
 | --- | --- |
 | `Strategy_Tree_Monad.thy` | `seqcomp_tree` (bind), `traverse_seqcomp`, `dep_aux_seqcomp`, `sides_of_rhs_seqcomp`; `static_deps`, `seqcomp_mono` |
-| `TD_Side_CFG.thy` | `restrict_local`, `restrict_global`, `side_env`; unit-global tree constructors (`unit_edge_tree`, `unit_combine_tree`); `trans_dep\<^sub>L` step/trans lemmas |
+| `TD_Side_CFG.thy` | `restrict_local`, `restrict_global`, `side_env`; unit-global tree constructors; `trans_dep\<^sub>L` step/trans lemmas |
 | `TD_Side_Tree.thy` | `side_cfg_T_eff` effectful IP strategy trees; folds `side_acc_eff` |
-| `TD_Side_Eff_Bounds.thy` | Monotonicity + dependency stability; `side_cfg_T_eff_is_mono_eq_gen`, `_mono_sides_gen`, `_mono_deps_gen` |
+| `TD_Side_Eff_Bounds.thy` | monotonicity + dependency stability |
 | `TD_Side_Eff_Interface.thy` | `td_cfg_side_solver_eff` locale, `side_cfg_solve_dom_eff`, `side_analyse_eff` |
-| `TD_Side_Eff_Pipeline.thy` | Ties mono/static contract + collecting soundness for an arbitrary `etf` |
-| `TD_Side_Eff_Sound.thy` | `post_fixpoint_sound_at_eff` — effectful post-fixpoint over-approximates `cfg_collect` |
-| `TD_Side_Eff_Soundness.thy` | Effectful collecting soundness with pruning: `side_collect_sound_exit_pruned_eff`, `side_analyse_eff_collect_sound_exit_pruned_gen` |
+| `TD_Side_Eff_Pipeline.thy` | ties mono/static contract + collecting soundness for an arbitrary `etf` |
+| `TD_Side_Eff_Sound.thy` | `post_fixpoint_sound_at_eff` |
+| `TD_Side_Eff_Soundness.thy` | collecting soundness with pruning |
 | `TD_Side_RHS_Generator.thy` | `unit_rhs_generator` / `mixed_rhs_generator` locale stacks; `threefold_mono` discharge |
-| `Exec_Bridge.thy` | `'a st` fold mirror + `fun_of_st` simulation; `part_post_solution_st_to_abs_eff` lifts an `'a st` post-solution to a `part_post_solution` of `side_cfg_T_eff` |
-| `Solver_Side_RG.thy` | Reach-global lemmas: reachability under side-effecting queries |
 
-**External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
-This folder wires `part_post_solution` to `is_post_fixpoint` via `Generic/Equations/Constraint_System_Sound`.
+## `Context/`
 
-**Downstream:** `Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
-`Instances/Interval/Interval_Side_Soundness.thy`; `Formalization/Pipeline/Trace_Analysis_Sound.thy`.
+Context-indexed and digest-refined global reads. `Digest_Global_Read` holds the kernel
+locale `digest_global_read` (`obs_digest`); `Global_Cmp_Read` / `Context_Domain` are the
+degenerate context-only base the digest read collapses to; the `TD_Side_Eff_Cmp_*` /
+`TD_Side_Eff_Ctx_Sound` files carry the EDGE/ENTRY discharge and combine soundness the
+kernel builds on. `Digest_Keyed_Writer{,_Sound}` is the value-derived (mode) writer.
+
+## `ReachingDefs/`
+
+`Reaching_Defs` (path-level reaching definitions) + `RD_Set_Edge_Backbone` (the merged-edge
+family). The externally-computed digest instance of the kernel.
+
+## `Exec/`
+
+`Exec_Bridge` (`'a st` fold mirror + `fun_of_st` simulation + the generic
+`part_post_solution_st_to_abs_transport`), `Exec_Ctx_Bridge`, `Exec_Cmp_Bridge`
+(executable generator variants and their transport), and `Solver_Side_RG` (reach-global
+lemmas). `Digest_Keyed_Writer{,_Sound}` in `Context/` imports this chain.

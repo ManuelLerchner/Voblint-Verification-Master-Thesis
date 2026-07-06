@@ -13,6 +13,11 @@ Each sub-folder threads one abstract domain through four layers:
    proves `sound_effectful_transfer`; the soundness engine in `Generic/Solver/` delivers
    `cfg_collect g cinit ≤ γ(analyse …)`.
 
+The four layers above are the **domain definition** and live directly in the domain folder.
+Executable **witnesses and runs** (the `Exec_<domain>_*_Run` / `_Solve` demonstrations that
+evaluate the real solver via the code generator) live in the folder's `Runs/` subfolder —
+they demonstrate the domain, they are not part of it.
+
 ## Sub-folders
 
 | Folder | Domain | Status |
