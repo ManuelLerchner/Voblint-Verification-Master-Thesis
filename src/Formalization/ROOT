@@ -2,7 +2,10 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   description "End-to-end soundness pipeline and examples"
   directories
     "Pipeline"
-    "Examples"
+    "Examples/Digest"
+    "Examples/Interprocedural"
+    "Examples/Numeric"
+    "Examples/Tooling"
   theories
     Voblint
     Trace_Analysis_Sound
