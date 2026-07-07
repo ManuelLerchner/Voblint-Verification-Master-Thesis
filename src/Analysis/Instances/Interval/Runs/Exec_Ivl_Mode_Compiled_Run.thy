@@ -198,4 +198,24 @@ lemma wide_loop_widened_then_narrowed:
   "lookup_st (snd wide_sol (Inl (cfg_exit wide_cfg))) ''x'' = Ivl (Fin 1000000) (Fin 1000000)"
   unfolding wide_unfold by eval
 
+subsection \<open>Update rules: per-origin joins keep the digest precise\<close>
+
+text \<open>The globals-widening blow-up above is an artefact of the \<^emph>\<open>merge-then-combine\<close>
+  update rule (\<open>always_join\<close> / \<open>warrowing_apinis\<close>), which folds every write to a global
+  into one slot before combining.  The \<^bold>\<open>per-origin\<close> update rule keeps each write
+  origin's contribution separate, so a per-origin \<^emph>\<open>join\<close> reproduces the digest
+  separation exactly --- \<open>[0, 5]\<close> at \<open>ILo\<close> --- on the same equation system, no digest
+  keying required in the solver.  This is the Schwarz clustered / per-origin discipline,
+  and it is the natural bridge: a per-origin \<^emph>\<open>widening\<close> rule would widen each origin's
+  contribution independently, giving loop termination without collapsing the digest
+  partitions.  The vendored \<^const>\<open>TD_side_warrowing_per_origin_Interp_solve\<close> is that
+  rule, but it does not yet code-generate on this system (an \<open>Interrupt_Breakdown\<close> under
+  \<open>by eval\<close>), so combining widening \<^emph>\<open>and\<close> a precise digest in one executable solve is
+  an open item --- see \<open>docs/OPEN_PROBLEMS.md\<close>.\<close>
+
+lemma iv_digest_per_origin_precise:
+  "lookup_st (snd (TD_side_per_origin_Interp_solve iv_digest_eqs (cfg_exit iv_cfg, ILo)) (Inr ILo)) ''G''
+     = Ivl (Fin 0) (Fin 5)"
+  unfolding iv_unfold by eval
+
 end
