@@ -19,8 +19,9 @@ text \<open>
 subsection \<open>The program\<close>
 
 text \<open>
-  \<open>mode\<close> is a \<^emph>\<open>ghost local\<close>: an ordinary local the analysis reads back as the digest.  \<open>G\<close> is
-  the one global.  \<open>main\<close> sets \<open>mode\<close> and \<open>G\<close>, calls \<open>f\<close> under each mode, and reads \<open>G\<close> back;
+  \<open>mode\<close> is an \<^emph>\<open>ordinary local variable\<close> the analysis reads back as the digest --- no
+  instrumentation: \<open>main\<close> reads it into the local computation (\<open>x := G + mode\<close>).  \<open>G\<close> is
+  the one global.  \<open>main\<close> sets \<open>mode\<close> and \<open>G\<close>, calls \<open>f\<close> under each mode, and reads them back;
   \<open>f\<close> reads \<open>G\<close>.  The two calls happen at two different modes, so \<open>f\<close> is analysed \<^emph>\<open>twice\<close>,
   each activation seeing only its own global partition.
 
@@ -28,8 +29,8 @@ text \<open>
   \begin{verbatim}
     global G;
     void f()    { z := G }
-    void main() { mode := 0; G := 0; f(); x := G;
-                  mode := 1; G := 1; f(); y := G }
+    void main() { mode := 0; G := 0; f(); x := G + mode;
+                  mode := 1; G := 1; f(); y := G + mode }
   \end{verbatim}
 \<close>
 
@@ -51,7 +52,7 @@ value "cfg_combines_list mode_cfg"
 subsection \<open>Contexts from the local state\<close>
 
 text \<open>
-  The call context is not hand-chosen: @{const mode_ec} reads the caller's ghost \<open>''mode''\<close> and
+  The call context is not hand-chosen: @{const mode_ec} reads the caller's local \<open>''mode''\<close> and
   decodes it to a \<^typ>\<open>mode\<close> --- a \<^emph>\<open>function of the caller abstract state\<close>.  Only the finite
   enumeration of \<^typ>\<open>mode\<close> bounds how many activations appear.  Running the solver materialises
   both:
@@ -62,7 +63,7 @@ lemma showcase_both_contexts_generated: "ctxs_at 0 = {MZero, MOne}"
 
 text \<open>
   Soundness point --- \<^emph>\<open>the mode rides the context, not the callee's locals\<close>.  On a call,
-  \<^const>\<open>enter_state\<close> resets the callee's locals to \<open>0\<close>, so \<open>f\<close>'s own ghost \<open>''mode''\<close> is wiped
+  \<^const>\<open>enter_state\<close> resets the callee's locals to \<open>0\<close>, so \<open>f\<close>'s own \<open>''mode''\<close> local is wiped
   on entry (visible below: \<open>f\<close>'s nodes carry \<open>mode = Bottom\<close>).  A callee cannot recover its
   digest by re-projecting its reset local slot; the mode travels through the context side
   channel.  This is Goblint's frame-locality of the digest.
@@ -101,9 +102,9 @@ definition mode_digest_env :: "(nat \<times> mode) + mode \<Rightarrow> sign abs
   "mode_digest_env = (\<lambda>k. fun_of_st (snd mode_digest_solution k))"
 
 text \<open>
-  \<open>main\<close> runs under one activation, \<^term>\<open>MZero\<close>.  At its two read points --- \<open>x := G\<close> on the edge
-  out of \<open>pp7\<close> (there \<open>mode = 0\<close>) and \<open>y := G\<close> on the edge out of \<open>pp14\<close> (there \<open>mode = 1\<close>) ---
-  @{const mode_obs} decodes the \<^emph>\<open>flow-sensitive\<close> ghost and reads exactly that partition:
+  \<open>main\<close> runs under one activation, \<^term>\<open>MZero\<close>.  At its two read points --- \<open>x := G + mode\<close> on the edge
+  out of \<open>pp7\<close> (there \<open>mode = 0\<close>) and \<open>y := G + mode\<close> on the edge out of \<open>pp14\<close> (there \<open>mode = 1\<close>) ---
+  @{const mode_obs} decodes the \<^emph>\<open>flow-sensitive\<close> local and reads exactly that partition:
   \<^const>\<open>SZero\<close> for the first read, \<^const>\<open>SPos\<close> for the second, on the real compiled run.
 \<close>
 
@@ -131,8 +132,8 @@ subsection \<open>Certified executable result\<close>
 
 text \<open>
   The proven bridge @{thm[source] mode_obs_eq_side_env_cmp} identifies the projection read with
-  the certified context read @{const side_env_cmp} \<^emph>\<open>exactly where the ghost aligns with the
-  activation context\<close>.  At \<open>pp7\<close> the ghost is still \<^term>\<open>MZero\<close>, so alignment holds on the run:
+  the certified context read @{const side_env_cmp} \<^emph>\<open>exactly where the projected \<open>''mode''\<close> aligns
+  with the activation context\<close>.  At \<open>pp7\<close> \<open>''mode''\<close> is still \<^term>\<open>MZero\<close>, so alignment holds on the run:
 \<close>
 
 lemma showcase_align_at_x: "mode_decode (mode_digest_env (Inl (7, MZero)) ''mode'') = MZero"
@@ -143,7 +144,7 @@ theorem showcase_read_is_certified_at_x:
   using showcase_align_at_x by (rule mode_obs_eq_side_env_cmp)
 
 text \<open>
-  Where the ghost has moved on inside the same activation --- \<open>pp14\<close>, \<open>mode = 1\<close> still under
+  Where \<open>''mode''\<close> has moved on inside the same activation --- \<open>pp14\<close>, \<open>mode = 1\<close> still under
   \<open>main @ MZero\<close> --- alignment \<^emph>\<open>fails\<close>, and the projection read is strictly more precise than the
   fixed context: it reads \<^const>\<open>SPos\<close> (the correct value written into \<open>y\<close>) where the context
   \<^term>\<open>MZero\<close> would select the wrong slot.  That extra precision is exactly the digest's value.
@@ -158,8 +159,8 @@ text \<open>
   transported to its abstract image (\<open>part_post_solution_digest_st_to_abs_eff\<close>) and its solver
   invariants discharged on this run (\<open>mode_INR_BOT\<close>, \<open>mode_LOCAL_POST\<close>).  What is \<^emph>\<open>not\<close> closed
   is a read \<^emph>\<open>boundary\<close>, and it is settled the honest way --- by a machine-checked
-  counterexample: the kernel's \<open>MODE_AGREE\<close> (the ghost read at a callee exit under the routed
-  context equals the read at the return) is \<^bold>\<open>false\<close> here.  A callee's ghost is reset on entry,
+  counterexample: the kernel's \<open>MODE_AGREE\<close> (the \<open>''mode''\<close> read at a callee exit under the routed
+  context equals the read at the return) is \<^bold>\<open>false\<close> here.  A callee's \<open>''mode''\<close> local is reset on entry,
   so at a callee interior it decodes \<^term>\<open>MZero\<close> while the mode-1 return decodes \<^term>\<open>MOne\<close>.
   The value-derived read is therefore precise in the frame that \<^emph>\<open>sets\<close> the mode and rides the
   context elsewhere --- Goblint's frame-locality.  The read kernel is instantiated, never
@@ -184,14 +185,14 @@ subsection \<open>What this demonstrates\<close>
 text \<open>
   \<^item> \<^bold>\<open>One executable analysis\<close> computes the abstract state --- the vendored side-effecting
     solver on the compiled CFG, no hand-written result and no second equation system.
-  \<^item> \<^bold>\<open>The digest is a projection\<close> of that state (@{const mode_dg} of the ghost \<open>''mode''\<close>),
+  \<^item> \<^bold>\<open>The digest is a projection\<close> of that state (@{const mode_dg} of the local \<open>''mode''\<close>),
     generated automatically as the call context.
   \<^item> \<^bold>\<open>Globals are partitioned by the digest\<close> (\<^term>\<open>Inr MZero\<close>, \<^term>\<open>Inr MOne\<close>), keyed at each
     write by the write-point state --- Goblint's \<open>sideg\<close> with a digest.
   \<^item> \<^bold>\<open>\<open>f\<close> is analysed in two contexts\<close> (@{thm[source] ctxs_at_0}); the callee's read rides the
     context, its reset locals notwithstanding.
   \<^item> \<^bold>\<open>The projection read is more precise than the activation context\<close> and equals the certified
-    context read exactly where the ghost aligns (@{thm[source] showcase_read_is_certified_at_x}).
+    context read exactly where \<open>''mode''\<close> aligns (@{thm[source] showcase_read_is_certified_at_x}).
     The digest writer is transported and its invariants discharged; the residual read boundary
     at callee interiors (\<open>MODE_AGREE\<close>) is machine-checked \<^emph>\<open>false\<close> --- frame-locality, not a
     gap.  The read kernel (\<open>digest_global_read\<close>) is instantiated, never modified.

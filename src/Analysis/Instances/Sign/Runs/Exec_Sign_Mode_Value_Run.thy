@@ -8,7 +8,7 @@ text \<open>
   A value-carried mode-digest run.  A
   finite \<^typ>\<open>mode\<close> partitions the global \<open>G\<close>; each partition slot \<^term>\<open>Inr MZero\<close> /
   \<^term>\<open>Inr MOne\<close> is written by the vendored \<^const>\<open>TD_side_always_join_Interp_solve\<close>.  The
-  \<^emph>\<open>projection reader\<close> \<^const>\<open>mode_obs\<close> --- which recovers the mode from the solved local ghost
+  \<^emph>\<open>projection reader\<close> \<^const>\<open>mode_obs\<close> --- which recovers the mode from the solved local variable
   \<open>''mode''\<close> and reads only that partition --- is run on the solver's own output.  It separates
   the two modes where the context-blind join-all merges them.  Read soundness is the keystone
   \<^theory_text>\<open>mode_obs_eq_side_env_cmp\<close>: under the alignment the projection read equals the
@@ -21,7 +21,7 @@ text \<open>
   Local point \<^term>\<open>(0::nat, ctx)\<close> is the driver; it queries both mode activations so the
   solver materialises both partition slots.  Point \<^term>\<open>(Suc n, ctx)\<close> is the mode worker:
   it side-effects \<open>G\<close> (valued by the context's sign) to its own partition \<^term>\<open>Inr ctx\<close> and
-  answers a local state whose ghost \<open>''mode''\<close> carries that same sign --- so the projection
+  answers a local state whose local \<open>''mode''\<close> carries that same sign --- so the projection
   reader recovers the context from the solved local slot.
 \<close>
 
@@ -57,7 +57,7 @@ definition mode_env :: "(nat \<times> mode) + mode \<Rightarrow> sign abs_state"
   "mode_env = (\<lambda>k. fun_of_st (snd mode_solution k))"
 
 text \<open>
-  The projection read at each activation.  \<^const>\<open>mode_obs\<close> decodes the ghost \<open>''mode''\<close> from
+  The projection read at each activation.  \<^const>\<open>mode_obs\<close> decodes the local \<open>''mode''\<close> from
   the local slot and reads exactly that partition: \<^const>\<open>SZero\<close> under \<^const>\<open>MZero\<close>,
   \<^const>\<open>SPos\<close> under \<^const>\<open>MOne\<close>.  Rewriting by \<^theory_text>\<open>mode_obs_reduce\<close> exposes the
   code-generatable local-join-single-slot shape.
@@ -86,7 +86,7 @@ qed
 subsection \<open>The executable read is the certified context read\<close>
 
 text \<open>
-  The alignment invariant holds on the solved environment: the ghost \<open>''mode''\<close> decoded at each
+  The alignment invariant holds on the solved environment: the local \<open>''mode''\<close> decoded at each
   activation equals its context.  This is \<^const>\<open>mode_decode\<close> of the local slot; the solver
   answered \<open>''mode'' := m\<close> with \<open>m\<close> the context's sign.
 \<close>
