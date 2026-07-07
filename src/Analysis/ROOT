@@ -24,7 +24,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_Ivl_Run
     Exec_Ivl_Ctx_Run
     Exec_Ivl_Ctx_Gen_Run
-    Exec_Ivl_Mode_Compiled_Run
     Constraint_System
     Constraint_System_Sound
     Analysis_Sound
@@ -66,5 +65,4 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_Sign_Cmp_Keyed_Retain_Run
     Value_Digest_Read
     Exec_Sign_Mode_Value_Run
-    Exec_Sign_Mode_Compiled_Run
     Analysis_GraphViz

@@ -1,5 +1,5 @@
 theory Example_Mode_Value_Digest_Showcase
-  imports "Voblint_Analysis.Exec_Sign_Mode_Compiled_Run"
+  imports "Voblint_Formalization.Example_Sign_Mode_Digest"
 begin
 
 section \<open>Value-carried digest showcase\<close>
@@ -12,10 +12,10 @@ text \<open>
   \<open>by (rule \<dots>)\<close> onto a proven lemma --- nothing is hand-computed.
 
   The underlying run and its annotated-CFG renderer are proved in
-  \<^theory>\<open>Voblint_Analysis.Exec_Sign_Mode_Compiled_Run\<close>; the read kernel and the bridge lemma in
+  \<^theory>\<open>Voblint_Formalization.Example_Sign_Mode_Digest\<close>; the read kernel and the bridge lemma in
   \<^theory>\<open>Voblint_Analysis.Value_Digest_Read\<close>.  This theory is the guided reading.  The interval
   counterpart --- same kernel, interval domain, with a while loop --- is the self-contained run
-  \<open>Voblint_Analysis.Exec_Ivl_Mode_Compiled_Run\<close>.
+  \<open>Voblint_Formalization.Example_Interval_Mode_Digest\<close>.
 \<close>
 
 subsection \<open>The program\<close>
@@ -206,7 +206,7 @@ text \<open>
   \<^item> \<^theory>\<open>Voblint_Analysis.Value_Digest_Read\<close> --- the read kernel (the \<open>digest_global_read\<close>
     instance), the reduction \<open>mode_obs_reduce\<close>, and the certified bridge
     \<open>mode_obs_eq_side_env_cmp\<close>.
-  \<^item> \<^theory>\<open>Voblint_Analysis.Exec_Sign_Mode_Compiled_Run\<close> --- the compiled run behind this
+  \<^item> \<^theory>\<open>Voblint_Formalization.Example_Sign_Mode_Digest\<close> --- the compiled run behind this
     showcase: the digest writer's transport, the discharged solver invariants, and the
     \<open>MODE_AGREE\<close> counterexample.
   \<^item> \<open>docs/DIGEST_TWO_FAMILIES.md\<close> --- this value-derived digest beside the

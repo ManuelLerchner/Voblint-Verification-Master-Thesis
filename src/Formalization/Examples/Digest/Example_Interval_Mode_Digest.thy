@@ -1,11 +1,11 @@
-theory Exec_Ivl_Mode_Compiled_Run
+theory Example_Interval_Mode_Digest
   imports
-    Value_Digest_Reader
-    Ivl_Exec
-    Digest_Keyed_Writer_Sound
-    Solver_Menu
-    Interval_Side_Soundness
-    Analysis_GraphViz
+    "Voblint_Analysis.Value_Digest_Reader"
+    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis.Digest_Keyed_Writer_Sound"
+    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Analysis.Interval_Side_Soundness"
+    "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_IMP2.IMP2_Notation"
 begin
@@ -13,7 +13,7 @@ begin
 section \<open>Compiled interval mode context from the local state (with a loop)\<close>
 
 text \<open>
-  The interval sibling of \<open>Exec_Sign_Mode_Compiled_Run\<close>: the \<^emph>\<open>same\<close> generic
+  The interval sibling of \<open>Example_Sign_Mode_Digest\<close>: the \<^emph>\<open>same\<close> generic
   value-derived digest machinery, at the \<^typ>\<open>ivl\<close> domain instead of \<open>sign\<close>.
   The only domain-specific content is the projection \<open>ivl_decode\<close>, which
   buckets an interval by a numeric threshold; the reader locale

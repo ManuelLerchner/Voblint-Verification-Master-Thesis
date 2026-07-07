@@ -1,5 +1,5 @@
 theory Example_Digest_Pipeline_Showcase
-  imports "Voblint_Analysis.Exec_Sign_Mode_Compiled_Run"
+  imports "Voblint_Formalization.Example_Sign_Mode_Digest"
 begin
 
 section \<open>The context-sensitive digest analysis, end to end\<close>
@@ -280,7 +280,7 @@ text \<open>
   projection reader \<^const>\<open>mode_obs\<close> is certified against the context read exactly where the
   ghost is set (the mode-setting frame), and its single kernel premise \<open>MODE_AGREE\<close> is
   machine-checked \<^emph>\<open>false\<close> at callee interiors --- Goblint's frame-locality, a proven boundary
-  rather than a gap.  See \<^theory>\<open>Voblint_Analysis.Exec_Sign_Mode_Compiled_Run\<close> and
+  rather than a gap.  See \<^theory>\<open>Voblint_Formalization.Example_Sign_Mode_Digest\<close> and
   \<open>docs/DIGEST_TWO_FAMILIES.md\<close>.
 \<close>
 

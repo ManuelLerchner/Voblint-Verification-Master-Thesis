@@ -1,6 +1,10 @@
-theory Exec_Sign_Mode_Compiled_Run
-  imports Value_Digest_Read Exec_Sign_Cmp_Keyed_Gen_Run Digest_Keyed_Writer_Sound
-          Solver_Menu Analysis_GraphViz
+theory Example_Sign_Mode_Digest
+  imports
+    "Voblint_Analysis.Value_Digest_Read"
+    "Voblint_Analysis.Exec_Sign_Cmp_Keyed_Gen_Run"
+    "Voblint_Analysis.Digest_Keyed_Writer_Sound"
+    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Analysis.Analysis_GraphViz"
 begin
 
 section \<open>Compiled mode context from the local state: what the pipeline does and does not do\<close>
