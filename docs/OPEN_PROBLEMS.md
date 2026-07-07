@@ -68,7 +68,8 @@ Optional / removed from main path:
 | P8 | `quick_and_dirty` in `ROOT` | `ROOT` | **done** — removed | — |
 | P9 | Executable end-to-end limited | `Example_Side_Proc_Global.thy` | Concrete solve_dom witness needed | In-Isabelle execution |
 | P10 | `Direct_Equations` | was `Equations/Direct_Equations.thy` | **deleted** — CFG path is the only route | — |
-| P11 | Per-origin widening on a digest system | `Exec_Ivl_Mode_Compiled_Run.thy`, vendor `Update_rules.thy:143` | `warrowing_per_origin` `by eval` raises `Interrupt_Breakdown` in `update_global_warrowing_per_origin`; `solve_dom` is `iterate_dom` (per-run, no free termination thm), so no soundness path without executability | One executable *and sound* solve with both widening (loop termination) and a precise digest |
+| P11 | Per-origin widening on a digest system | `Example_Interval_Mode_Digest.thy`, vendor `Update_rules.thy:143` | `warrowing_per_origin` `by eval` raises `Interrupt_Breakdown` in `update_global_warrowing_per_origin`; `solve_dom` is `iterate_dom` (per-run, no free termination thm), so no soundness path without executability | One executable *and sound* solve with both widening (loop termination) and a precise digest |
+| P12 | Per-depth call contexts for recursion | `Example_Interval_Recursion_Digest.thy` | The value-digest generator keys global *writes* by the write-point digest, but a recursive self-*call* is not split into a fresh per-depth context, so the executable digest solve climbs `G` unbounded and breaks down under `by eval` (like P11). Plain join non-terminates; warrowing widens `G` to top | A digest that materialises per-depth call contexts, recovering full precision on recursion executably |
 
 ---
 
