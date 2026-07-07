@@ -49,3 +49,8 @@ is the value-derived (mode) writer.
 `part_post_solution_st_to_abs_transport`), `Exec_Ctx_Bridge`, `Exec_Cmp_Bridge`
 (executable generator variants and their transport), and `Solver_Side_RG` (reach-global
 lemmas). `Digest_Keyed_Writer{,_Sound}` in `Context/` imports this chain.
+
+`Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`, `warrow`)
+behind one `side_solver` signature; `run_menu eqs entry k var` reads one slot's variable
+under every discipline in a single `value`/lemma. Currently an executable convenience only
+— soundness per rule is the subject of `docs/UPDATE_RULE_FORMALIZATION_PLAN.md`.
