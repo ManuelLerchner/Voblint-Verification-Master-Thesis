@@ -331,4 +331,12 @@ proof -
               ivl_etf_st_edge_tree ivl_etf_st_combine_tree ivl_tf_st_commute pp_st])
 qed
 
+subsection \<open>Emit the GraphViz sources\<close>
+
+text \<open>Print the DOT for the context-clustered digest run and the annotated widening loop.
+  Paste either into Graphviz.\<close>
+
+ML_val \<open>writeln (@{code iv_digest_dot})\<close>
+ML_val \<open>writeln (@{code wide_dot})\<close>
+
 end
