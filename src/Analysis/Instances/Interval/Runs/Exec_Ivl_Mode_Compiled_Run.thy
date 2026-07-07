@@ -1,0 +1,159 @@
+theory Exec_Ivl_Mode_Compiled_Run
+  imports
+    Value_Digest_Reader
+    Ivl_Exec
+    Digest_Keyed_Writer_Sound
+    "TD.TD_side_upd_rule"
+    "Voblint_CFG.IMP2_Proc_to_CFG"
+    "Voblint_IMP2.IMP2_Notation"
+begin
+
+section \<open>Compiled interval mode context from the local state (with a loop)\<close>
+
+text \<open>
+  The interval sibling of \<open>Exec_Sign_Mode_Compiled_Run\<close>: the \<^emph>\<open>same\<close> generic
+  value-derived digest machinery, at the \<^typ>\<open>ivl\<close> domain instead of \<open>sign\<close>.
+  The only domain-specific content is the projection \<open>ivl_decode\<close>, which
+  buckets an interval by a numeric threshold; the reader locale
+  \<^locale>\<open>value_digest_reader\<close>, the digest generator, and the switching combine are
+  reused unchanged.  This is the second dissimilar instance of the kernel, which is
+  what makes its genericity a demonstrated fact rather than a claim.
+
+  \<open>main\<close> first runs a \<^bold>\<open>while loop\<close> \<open>i := 0; while (i < 5) { i := i + 1 }\<close> --- the
+  interval analysis tracks \<open>i\<close> as a range --- then calls \<open>f\<close> under two contexts
+  distinguished by the ordinary local \<open>m\<close> (\<open>m = 1\<close> vs \<open>m = 3\<close>), reading \<open>i\<close> and \<open>m\<close>
+  back (\<open>x := i + m\<close>).  The digest keys each global write by the projected \<open>m\<close>, so
+  the two writes to \<open>G\<close> stay in separate partitions where the context-blind read merges them.
+\<close>
+
+subsection \<open>The finite interval mode (the projection's codomain)\<close>
+
+datatype imode = ILo | IHi
+
+instance imode :: finite
+proof
+  show "finite (UNIV :: imode set)"
+  proof (rule finite_subset[of _ "{ILo, IHi}"])
+    show "(UNIV :: imode set) \<subseteq> {ILo, IHi}" using imode.exhaust by blast
+    show "finite {ILo, IHi}" by simp
+  qed
+qed
+
+instantiation imode :: enum
+begin
+definition "enum_imode = [ILo, IHi]"
+definition "enum_all_imode P \<longleftrightarrow> P ILo \<and> P IHi"
+definition "enum_ex_imode P \<longleftrightarrow> P ILo \<or> P IHi"
+instance
+proof
+  show "(UNIV :: imode set) = set enum_class.enum"
+    using imode.exhaust by (auto simp: enum_imode_def)
+qed (auto simp: enum_imode_def enum_all_imode_def enum_ex_imode_def, (metis imode.exhaust)+)
+end
+
+subsection \<open>Decode: bucket an interval by a numeric threshold (the only ivl-specific content)\<close>
+
+text \<open>\<open>IHi\<close> iff the interval is entirely \<open>\<ge> 2\<close> (lower bound at least \<open>Fin 2\<close>); every
+  other interval --- including the unset default \<^const>\<open>ivl_top\<close> --- is \<open>ILo\<close>.\<close>
+definition ivl_decode :: "ivl \<Rightarrow> imode" where
+  "ivl_decode i = (case i of Ivl l u \<Rightarrow> (if Fin 2 \<le> l then IHi else ILo))"
+
+text \<open>The generic reader, instantiated at the interval domain and the projected local \<open>''m''\<close>.\<close>
+interpretation ivl_mode: value_digest_reader ivl_decode "''m''" .
+
+subsection \<open>The source program (procedures + a while loop)\<close>
+
+definition iv_prog :: imp_prog where
+  "iv_prog = \<lbrakk>
+     int G;
+
+     void f() {
+       z := G
+     }
+     void main() {
+       i := 0;
+       while (i < 5) { i := i + 1 };
+       m := 1;  G := 5;  f();  x := i + m;
+       m := 3;  G := 9;  f();  y := i + m
+     }
+   \<rbrakk>"
+
+definition iv_cfg :: cfg where
+  "iv_cfg = compile_prog (prog_table iv_prog) (prog_procs iv_prog) (prog_main iv_prog)"
+
+subsection \<open>Automatic context: project the caller's local \<open>m\<close>\<close>
+
+definition iv_ec :: "pp \<Rightarrow> imode \<Rightarrow> ivl st \<Rightarrow> imode" where
+  "iv_ec cc ctx caller = ivl_decode (lookup_st caller ''m'')"
+
+definition iv_prep :: "pp \<Rightarrow> ivl st \<Rightarrow> ivl st" where
+  "iv_prep cc s = s"
+
+definition iv_dg :: "ivl st \<Rightarrow> imode" where
+  "iv_dg s = ivl_decode (lookup_st s ''m'')"
+
+subsection \<open>Context-keyed run (the merge): globals collapse under one context\<close>
+
+definition iv_cmp_eqs :: "(pp \<times> imode, imode, ivl st) eqsT" where
+  "iv_cmp_eqs = side_cfg_T_eff_cmp_st id
+                  (\<lambda>c cc ex. switching_combine_st iv_prep iv_ec cc ex c)
+                  iv_cfg ivl_etf_st bot bot cinit_ivl_st"
+
+definition iv_cmp_solution ::
+  "(pp \<times> imode) set \<times> ((pp \<times> imode) + imode \<Rightarrow> ivl st)" where
+  "iv_cmp_solution = TD_side_always_join_Interp_solve iv_cmp_eqs (cfg_exit iv_cfg, ILo)"
+
+subsection \<open>Digest-keyed run (the fix): globals stay separated per mode\<close>
+
+definition iv_digest_eqs :: "(pp \<times> imode, imode, ivl st) eqsT" where
+  "iv_digest_eqs = side_cfg_T_eff_digest_st iv_dg
+                     (\<lambda>c cc ex. switching_combine_digest_st iv_dg iv_prep cc ex c)
+                     iv_cfg ivl_etf_st bot bot cinit_ivl_st"
+
+definition iv_digest_solution ::
+  "(pp \<times> imode) set \<times> ((pp \<times> imode) + imode \<Rightarrow> ivl st)" where
+  "iv_digest_solution = TD_side_always_join_Interp_solve iv_digest_eqs (cfg_exit iv_cfg, ILo)"
+
+lemmas iv_unfold =
+  iv_cmp_solution_def iv_cmp_eqs_def iv_digest_solution_def iv_digest_eqs_def
+  iv_cfg_def iv_ec_def iv_prep_def iv_dg_def ivl_decode_def
+
+subsection \<open>The while loop is tracked as an interval range\<close>
+
+text \<open>After \<open>i := 0; while (i < 5) { i := i + 1 }\<close> the interval analysis knows \<open>i\<close> is
+  exactly \<open>[5, 5]\<close> at the exit --- the loop counter tracked through the fixpoint, the
+  guard \<open>i < 5\<close> capping it (\<open>TD_side_always_join_Interp_solve\<close> converges without widening).\<close>
+lemma iv_loop_tracked:
+  "lookup_st (snd iv_digest_solution (Inl (cfg_exit iv_cfg, ILo))) ''i'' = Ivl (Fin 5) (Fin 5)"
+  unfolding iv_unfold by eval
+
+subsection \<open>The solver separates the global into finite mode partitions\<close>
+
+lemma iv_digest_runs: "fst iv_digest_solution \<noteq> {}"
+  unfolding iv_unfold by eval
+
+text \<open>Context-blind: under one function context both writes to \<open>G\<close> join into one slot,
+  so the read is the imprecise \<open>[0, 9]\<close>.\<close>
+lemma iv_cmp_merges:
+  "lookup_st (snd iv_cmp_solution (Inr ILo)) ''G'' = Ivl (Fin 0) (Fin 9)"
+  unfolding iv_unfold by eval
+
+text \<open>Digest-keyed: the two projected modes keep \<open>G\<close> in separate partitions.  The
+  \<open>IHi\<close> partition is the \<^emph>\<open>sharp\<close> \<open>[9, 9]\<close> where the context-blind read only knows \<open>[0, 9]\<close>.\<close>
+lemma iv_digest_slot_ILo:
+  "lookup_st (snd iv_digest_solution (Inr ILo)) ''G'' = Ivl (Fin 0) (Fin 5)"
+  unfolding iv_unfold by eval
+
+lemma iv_digest_slot_IHi:
+  "lookup_st (snd iv_digest_solution (Inr IHi)) ''G'' = Ivl (Fin 9) (Fin 9)"
+  unfolding iv_unfold by eval
+
+text \<open>The precision payoff on the interval domain, sealed by the solver: the digest
+  read at \<open>IHi\<close> is strictly tighter than the context-blind merge.\<close>
+theorem iv_digest_separates_the_modes:
+  "lookup_st (snd iv_digest_solution (Inr ILo)) ''G'' = Ivl (Fin 0) (Fin 5)
+   \<and> lookup_st (snd iv_digest_solution (Inr IHi)) ''G'' = Ivl (Fin 9) (Fin 9)
+   \<and> lookup_st (snd iv_cmp_solution (Inr ILo)) ''G'' = Ivl (Fin 0) (Fin 9)"
+  using iv_digest_slot_ILo iv_digest_slot_IHi iv_cmp_merges by blast
+
+end

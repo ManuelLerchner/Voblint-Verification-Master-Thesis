@@ -6,3 +6,9 @@ solver via the code generator. Demonstrations, not part of the domain definition
 
 - `Exec_Ivl_Run` — codegen probe + solver run.
 - `Exec_Ivl_Ctx_Run` / `Exec_Ivl_Ctx_Gen_Run` — context-sensitive runs.
+- `Exec_Ivl_Mode_Compiled_Run` — the value-derived digest flagship at the interval
+  domain (sibling of Sign's `Exec_Sign_Mode_Compiled_Run`): a program with a **while
+  loop** and procedure calls, contexts projected from an ordinary local via
+  `ivl_decode` (a numeric-threshold bucket), showing the digest keeps `G` in separate
+  partitions (`[0,5]` / `[9,9]`) where the context-blind read merges to `[0,9]`. The
+  second dissimilar instance of the generic `value_digest_reader` kernel.
