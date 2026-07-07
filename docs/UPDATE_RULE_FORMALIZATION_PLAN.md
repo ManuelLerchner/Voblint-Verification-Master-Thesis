@@ -6,9 +6,38 @@ warrowing = widening/narrowing, and their combination) from eval-only experiment
 with a machine-checked over-approximation theorem, so `run_menu`'s columns are certified,
 and the analyser can **terminate on unbounded loops with a proof** (widening).
 
-Status today: soundness is proved and instantiated only for `always_join`. The other rules
-run under `by eval` (see `Exec_Ivl_Mode_Compiled_Run`, `Exec_Ivl_Run`) but carry no
-soundness corollary.
+## Status (2026-07-07): Phases A-D done, E open
+
+- **A (audit) --- done, and it collapsed the plan.** Both unknowns resolved favorably:
+  `part_post_solution` (`Basics_side.thy:337`) is *update-rule-independent* (just "sigma is
+  a join-order post-solution"), and the vendor proves it for *every* rule
+  (`partial_post_solution` on the `TD_side_upd_rule` locale). The whole transport below it is
+  rule-agnostic. **No bridge lemmas needed** --- per-origin/warrowing soundness is pure
+  instantiation.
+- **B (warrowing sound) --- done.** `mode_digest_abstracts_wa` in
+  `Exec_Sign_Mode_Compiled_Run`.
+- **C (per-origin sound) --- done.** `mode_digest_abstracts_po` (keeps the digest sharp).
+- **D (parametric) --- done for the digest example.** `mode_digest_sound_all_update_rules`
+  bundles the three abstract post-solutions --- the exact precondition `Analysis_Sound` /
+  `Constraint_System_Sound` consume. A fully generic top-level analyser selector (one entry
+  parametric in the rule) remains optional future work; the per-run instantiation is a
+  4-lemma copy with the interpretation swapped.
+- **E (close P11) --- open, diagnosed.** `solve_dom` is `iterate_dom` (established per run,
+  here by `eval` on `solve_c \<noteq> None`), *not* a free termination theorem. For
+  `warrowing_per_origin`, `by eval` raises `Interrupt_Breakdown` inside the vendor's
+  `update_global_warrowing_per_origin` iteration (`Update_rules.thy:143`), so neither the
+  executable result nor `solve_dom` is obtainable on our systems --- and there is no
+  soundness path without one. Fixing it is vendor-internal code-gen work; left to P11.
+
+Result: the digest analysis is certified sound under `join`, `per_origin`, and `warrow`;
+widening is now a *proven-sound* feature (soundness holds while it terminates on unbounded
+loops). The remaining gap is the one ideal-but-unexecutable combination (per-origin widening).
+
+---
+
+Status when written: soundness was proved and instantiated only for `always_join`. The other
+rules ran under `by eval` (see `Exec_Ivl_Mode_Compiled_Run`, `Exec_Ivl_Run`) with no soundness
+corollary.
 
 ---
 

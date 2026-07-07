@@ -68,7 +68,7 @@ Optional / removed from main path:
 | P8 | `quick_and_dirty` in `ROOT` | `ROOT` | **done** — removed | — |
 | P9 | Executable end-to-end limited | `Example_Side_Proc_Global.thy` | Concrete solve_dom witness needed | In-Isabelle execution |
 | P10 | `Direct_Equations` | was `Equations/Direct_Equations.thy` | **deleted** — CFG path is the only route | — |
-| P11 | Per-origin widening on a digest system | `Exec_Ivl_Mode_Compiled_Run.thy` | `TD_side_warrowing_per_origin_Interp_solve` does not code-generate (`Interrupt_Breakdown`); per-origin *join* works | One executable solve with both widening (loop termination) and a precise digest |
+| P11 | Per-origin widening on a digest system | `Exec_Ivl_Mode_Compiled_Run.thy`, vendor `Update_rules.thy:143` | `warrowing_per_origin` `by eval` raises `Interrupt_Breakdown` in `update_global_warrowing_per_origin`; `solve_dom` is `iterate_dom` (per-run, no free termination thm), so no soundness path without executability | One executable *and sound* solve with both widening (loop termination) and a precise digest |
 
 ---
 
