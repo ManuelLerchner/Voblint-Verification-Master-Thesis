@@ -8,7 +8,8 @@ section \<open>Sign instance of the value-carried digest reader\<close>
 
 text \<open>
   The value-derived digest family instantiated at the sign domain: a two-point
-  \<^emph>\<open>mode\<close> projected from the sign of a ghost local \<open>''mode''\<close>.  All machinery ---
+  \<^emph>\<open>mode\<close> projected from the sign of a designated program variable \<open>''mode''\<close> ---
+  an ordinary local, read from the value solution, not instrumentation.  All machinery ---
   the read @{const value_digest_reader.vd_obs}, its reduced shape, and the
   context-sliced collecting soundness --- is the generic
   \<^locale>\<open>value_digest_reader\<close>; the only sign-specific content is the projection
@@ -44,7 +45,7 @@ end
 
 subsection \<open>Decode and compatibility (the only sign-specific content)\<close>
 
-text \<open>The mode carried by a slot: the sign of the ghost variable, collapsed to two points.
+text \<open>The mode carried by a slot: the sign of the projected variable, collapsed to two points.
   \<^const>\<open>SPos\<close> is mode one; every other sign --- including the unset default \<^const>\<open>STop\<close> ---
   is the initial mode zero, so an unkeyed initial global lands in \<^term>\<open>MZero\<close>, not \<^term>\<open>MOne\<close>.\<close>
 definition mode_decode :: "sign \<Rightarrow> mode" where
@@ -60,7 +61,7 @@ lemma mode_compatible_singleton: "{g. mode_compatible d g} = {d}"
 subsection \<open>The sign interpretation and its re-exposed reader\<close>
 
 text \<open>
-  Interpret the generic reader at \<^const>\<open>mode_decode\<close> and the ghost variable \<open>''mode''\<close>.
+  Interpret the generic reader at \<^const>\<open>mode_decode\<close> and the projected variable \<open>''mode''\<close>.
   The read and every soundness theorem are inherited; the names below re-expose the
   locale facts under the projection-specific names the runs and examples use.
 \<close>

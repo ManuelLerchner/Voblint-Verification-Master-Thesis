@@ -39,7 +39,9 @@ Context-indexed and digest-refined global reads. `Digest_Global_Read` holds the 
 locale `digest_global_read` (`obs_digest`); `Global_Cmp_Read` / `Context_Domain` are the
 degenerate context-only base the digest read collapses to; the `TD_Side_Eff_Cmp_*` /
 `TD_Side_Eff_Ctx_Sound` files carry the EDGE/ENTRY discharge and combine soundness the
-kernel builds on. `Digest_Keyed_Writer{,_Sound}` is the value-derived (mode) writer.
+kernel builds on. `Value_Digest_Reader` is the generic value-projected reader locale
+(`value_digest_reader`, `vd_obs`) the sign mode reader instantiates. `Digest_Keyed_Writer{,_Sound}`
+is the value-derived (mode) writer.
 
 ## `Exec/`
 
