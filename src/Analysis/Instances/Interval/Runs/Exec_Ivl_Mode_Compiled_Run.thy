@@ -220,17 +220,9 @@ lemma wide_solve_c_some:
   "TD_side_warrowing_apinis_Interp_solve_c wide_eqs (cfg_exit wide_cfg) \<noteq> None"
   unfolding wide_eqs_def wide_cfg_def by eval
 
-lemma wide_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE(ivl st)
-     wide_eqs (cfg_exit wide_cfg)"
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  using wide_solve_c_some by simp
-
 lemma wide_part_post_solution:
   "part_post_solution wide_eqs (cfg_exit wide_cfg) (snd wide_sol) (fst wide_sol)"
-  using TD_side_warrowing_apinis_Interp.partial_post_solution
-      [OF wide_solve_dom, of "fst wide_sol" "snd wide_sol"]
+  using TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c[OF wide_solve_c_some]
   unfolding wide_sol_def by simp
 
 theorem wide_abstracts:

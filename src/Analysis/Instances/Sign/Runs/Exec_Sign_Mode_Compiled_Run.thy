@@ -1,5 +1,6 @@
 theory Exec_Sign_Mode_Compiled_Run
-  imports Value_Digest_Read Exec_Sign_Cmp_Keyed_Gen_Run Digest_Keyed_Writer_Sound Analysis_GraphViz
+  imports Value_Digest_Read Exec_Sign_Cmp_Keyed_Gen_Run Digest_Keyed_Writer_Sound
+          Solver_Menu Analysis_GraphViz
 begin
 
 section \<open>Compiled mode context from the local state: what the pipeline does and does not do\<close>
@@ -177,18 +178,10 @@ lemma mode_digest_solve_c_some:
   "TD_side_always_join_Interp_solve_c mode_digest_eqs (cfg_exit mode_cfg, MZero) \<noteq> None"
   unfolding mode_digest_eqs_def mode_cfg_def mode_prep_def mode_dg_def by eval
 
-lemma mode_digest_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(mode) TYPE(sign st)
-     mode_digest_eqs (cfg_exit mode_cfg, MZero)"
-  unfolding TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  using mode_digest_solve_c_some by simp
-
 lemma mode_digest_part_post_solution_st:
   "part_post_solution mode_digest_eqs (cfg_exit mode_cfg, MZero)
      (snd mode_digest_solution) (fst mode_digest_solution)"
-  using TD_side_always_join_Interp.partial_post_solution
-      [OF mode_digest_solve_dom, of "fst mode_digest_solution" "snd mode_digest_solution"]
+  using TD_side_always_join_Interp.part_post_solution_of_solve_c[OF mode_digest_solve_c_some]
   unfolding mode_digest_solution_def by simp
 
 subsection \<open>The digest run maps to the abstract digest generator\<close>
@@ -256,18 +249,10 @@ lemma mode_digest_solve_c_some_po:
   "TD_side_per_origin_Interp_solve_c mode_digest_eqs (cfg_exit mode_cfg, MZero) \<noteq> None"
   unfolding mode_digest_eqs_def mode_cfg_def mode_prep_def mode_dg_def by eval
 
-lemma mode_digest_solve_dom_po:
-  "TD_side_per_origin_Interp.solve_dom TYPE(mode) TYPE(sign st)
-     mode_digest_eqs (cfg_exit mode_cfg, MZero)"
-  unfolding TD_side_per_origin_Interp.term_equivalence
-            TD_side_per_origin_Interp.solve_c_dom_def
-  using mode_digest_solve_c_some_po by simp
-
 lemma mode_digest_part_post_solution_st_po:
   "part_post_solution mode_digest_eqs (cfg_exit mode_cfg, MZero)
      (snd mode_digest_solution_po) (fst mode_digest_solution_po)"
-  using TD_side_per_origin_Interp.partial_post_solution
-      [OF mode_digest_solve_dom_po, of "fst mode_digest_solution_po" "snd mode_digest_solution_po"]
+  using TD_side_per_origin_Interp.part_post_solution_of_solve_c[OF mode_digest_solve_c_some_po]
   unfolding mode_digest_solution_po_def by simp
 
 theorem mode_digest_abstracts_po:
@@ -306,18 +291,10 @@ lemma mode_digest_solve_c_some_wa:
   "TD_side_warrowing_apinis_Interp_solve_c mode_digest_eqs (cfg_exit mode_cfg, MZero) \<noteq> None"
   unfolding mode_digest_eqs_def mode_cfg_def mode_prep_def mode_dg_def by eval
 
-lemma mode_digest_solve_dom_wa:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(mode) TYPE(sign st)
-     mode_digest_eqs (cfg_exit mode_cfg, MZero)"
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  using mode_digest_solve_c_some_wa by simp
-
 lemma mode_digest_part_post_solution_st_wa:
   "part_post_solution mode_digest_eqs (cfg_exit mode_cfg, MZero)
      (snd mode_digest_solution_wa) (fst mode_digest_solution_wa)"
-  using TD_side_warrowing_apinis_Interp.partial_post_solution
-      [OF mode_digest_solve_dom_wa, of "fst mode_digest_solution_wa" "snd mode_digest_solution_wa"]
+  using TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c[OF mode_digest_solve_c_some_wa]
   unfolding mode_digest_solution_wa_def by simp
 
 theorem mode_digest_abstracts_wa:
