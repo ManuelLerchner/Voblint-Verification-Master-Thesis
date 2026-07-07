@@ -1,5 +1,5 @@
 theory Exec_Ivl_Run
-  imports Ivl_Exec "Voblint_CFG.IMP2_Proc_to_CFG" "TD.TD_side_upd_rule"
+  imports Ivl_Exec Solver_Menu "Voblint_CFG.IMP2_Proc_to_CFG"
             "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
 begin
 
@@ -107,5 +107,21 @@ lemma loop_body_ivl_td:
   "loop_ivl_td_at 3 = Ivl (Fin 0) (Fin 19)"
   by eval
 
+subsection \<open>The loop under every update rule at once\<close>
+
+text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open>x\<close> under each update rule in one line,
+  and here the disciplines \<^emph>\<open>disagree\<close>: plain \<open>join\<close> and \<open>per_origin\<close> settle at the sound
+  but coarse post-fixpoint \<open>[0, \<infinity>)\<close> --- without a narrowing phase they never tighten the
+  ascending counter --- while \<open>warrow\<close> widens and then narrows back to the precise \<open>[0, 20]\<close>.
+  So on this loop widening/narrowing is a genuine precision gain over the join solver, not
+  mere termination infrastructure.\<close>
+value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl 2) ''x''"
+
+lemma loop_head_across_update_rules:
+  "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl 2) ''x''
+     = [(STR ''join'',       Ivl (Fin 0) PlusInf),
+        (STR ''per_origin'', Ivl (Fin 0) PlusInf),
+        (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"
+  unfolding loop_ivl_eqs_def run_menu_def solver_menu_def by eval
 
 end

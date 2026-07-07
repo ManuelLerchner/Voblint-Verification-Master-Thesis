@@ -3,7 +3,7 @@ theory Exec_Ivl_Mode_Compiled_Run
     Value_Digest_Reader
     Ivl_Exec
     Digest_Keyed_Writer_Sound
-    "TD.TD_side_upd_rule"
+    Solver_Menu
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_IMP2.IMP2_Notation"
 begin
@@ -156,19 +156,26 @@ theorem iv_digest_separates_the_modes:
    \<and> lookup_st (snd iv_cmp_solution (Inr ILo)) ''G'' = Ivl (Fin 0) (Fin 9)"
   using iv_digest_slot_ILo iv_digest_slot_IHi iv_cmp_merges by blast
 
-subsection \<open>Why the digest run uses the plain join solver\<close>
+subsection \<open>The same digest system across the update-rule menu\<close>
 
-text \<open>Apinis warrowing \<^bold>\<open>widens globals\<close> and warrows (narrows) only locals.  The digest
-  partitions \<^term>\<open>Inr ILo\<close> / \<^term>\<open>Inr IHi\<close> \<^emph>\<open>are\<close> globals, so solving the digest system with
-  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> widens both \<open>G\<close> slots to the top interval ---
-  destroying the separation --- while the local loop variable stays \<open>[5, 5]\<close>.  Hence the
-  value-derived digest is inherently a \<^emph>\<open>join-solver\<close> demonstration; widening/narrowing is
-  shown separately below on a local loop variable, where narrowing recovers precision.\<close>
+text \<open>One \<^const>\<open>run_menu\<close> solves the digest system under every update rule and reads the
+  \<open>ILo\<close> partition of \<open>G\<close> --- the whole story in one machine-checked line:
+  \<^item> \<open>join\<close> and \<open>per_origin\<close> both keep the partition sharp at \<open>[0, 5]\<close>.  Per-origin
+    reproduces the digest separation \<^emph>\<open>without the solver knowing about digests\<close> --- it
+    keeps each write origin's contribution separate (the Schwarz clustered discipline).
+  \<^item> \<open>warrow\<close> (Apinis warrowing) widens \<^emph>\<open>globals\<close>, and the digest partitions are globals,
+    so it collapses the slot to the top interval \<^term>\<open>Ivl MinInf PlusInf\<close>.
+  So the value-derived digest is a \<^emph>\<open>join / per-origin\<close> demonstration; global widening is
+  the wrong tool for it.  A per-origin \<^emph>\<open>widening\<close> rule would combine both --- loop
+  termination without collapsing the digest --- but does not yet code-generate (P11).
+  Widening on a \<^emph>\<open>local\<close>, where it belongs, is shown next.\<close>
 
-lemma digest_warrowing_widens_globals_to_top:
-  "lookup_st (snd (TD_side_warrowing_apinis_Interp_solve iv_digest_eqs (cfg_exit iv_cfg, ILo)) (Inr ILo)) ''G''
-     = Ivl MinInf PlusInf"
-  unfolding iv_unfold by eval
+lemma iv_digest_across_update_rules:
+  "run_menu iv_digest_eqs (cfg_exit iv_cfg, ILo) (Inr ILo) ''G''
+     = [(STR ''join'',       Ivl (Fin 0) (Fin 5)),
+        (STR ''per_origin'', Ivl (Fin 0) (Fin 5)),
+        (STR ''warrow'',     Ivl MinInf PlusInf)]"
+  unfolding iv_unfold run_menu_def solver_menu_def by eval
 
 subsection \<open>Widening and narrowing on an unbounded loop (backward filter recovers precision)\<close>
 
@@ -197,25 +204,5 @@ text \<open>Widening + narrowing land the exit on the sharp \<open>[1000000, 100
 lemma wide_loop_widened_then_narrowed:
   "lookup_st (snd wide_sol (Inl (cfg_exit wide_cfg))) ''x'' = Ivl (Fin 1000000) (Fin 1000000)"
   unfolding wide_unfold by eval
-
-subsection \<open>Update rules: per-origin joins keep the digest precise\<close>
-
-text \<open>The globals-widening blow-up above is an artefact of the \<^emph>\<open>merge-then-combine\<close>
-  update rule (\<open>always_join\<close> / \<open>warrowing_apinis\<close>), which folds every write to a global
-  into one slot before combining.  The \<^bold>\<open>per-origin\<close> update rule keeps each write
-  origin's contribution separate, so a per-origin \<^emph>\<open>join\<close> reproduces the digest
-  separation exactly --- \<open>[0, 5]\<close> at \<open>ILo\<close> --- on the same equation system, no digest
-  keying required in the solver.  This is the Schwarz clustered / per-origin discipline,
-  and it is the natural bridge: a per-origin \<^emph>\<open>widening\<close> rule would widen each origin's
-  contribution independently, giving loop termination without collapsing the digest
-  partitions.  The vendored \<^const>\<open>TD_side_warrowing_per_origin_Interp_solve\<close> is that
-  rule, but it does not yet code-generate on this system (an \<open>Interrupt_Breakdown\<close> under
-  \<open>by eval\<close>), so combining widening \<^emph>\<open>and\<close> a precise digest in one executable solve is
-  an open item --- see \<open>docs/OPEN_PROBLEMS.md\<close>.\<close>
-
-lemma iv_digest_per_origin_precise:
-  "lookup_st (snd (TD_side_per_origin_Interp_solve iv_digest_eqs (cfg_exit iv_cfg, ILo)) (Inr ILo)) ''G''
-     = Ivl (Fin 0) (Fin 5)"
-  unfolding iv_unfold by eval
 
 end
