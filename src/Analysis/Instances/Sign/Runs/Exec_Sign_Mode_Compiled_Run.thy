@@ -6,7 +6,7 @@ section \<open>Compiled mode context from the local state: what the pipeline doe
 
 text \<open>
   A source program is compiled to a CFG and analysed with the call context generated
-  \<^emph>\<open>automatically\<close> by projecting the caller's local ghost \<open>''mode''\<close> through
+  \<^emph>\<open>automatically\<close> by projecting the caller's ordinary local \<open>''mode''\<close> through
   \<^const>\<open>mode_decode\<close> --- Goblint's \<open>context : D.t \<rightarrow> C.t\<close>.  The finite \<^typ>\<open>mode\<close> keys the
   global partitions; the vendored \<^const>\<open>TD_side_always_join_Interp_solve\<close> runs the reusable
   \<^const>\<open>switching_combine_st\<close>.
@@ -35,9 +35,10 @@ text \<open>
 
 subsection \<open>The source program\<close>
 
-text \<open>\<open>main\<close> sets the ghost \<open>''mode''\<close> and the global \<open>G\<close>, calls \<open>f\<close> under each mode, and
-  reads \<open>G\<close> back; \<open>f\<close> reads the global.  \<open>G\<close>-prefixed names are global; \<open>mode\<close>, \<open>x\<close>, \<open>y\<close>, \<open>z\<close>
-  are locals.\<close>
+text \<open>\<open>main\<close> sets the local \<open>''mode''\<close> and the global \<open>G\<close>, calls \<open>f\<close> under each mode, and
+  reads them back into \<open>x\<close> / \<open>y\<close> (\<open>x := G + mode\<close>) --- so \<open>''mode''\<close> is a genuine program
+  variable, read for computation, not a write-only ghost; \<open>f\<close> reads the global.
+  \<open>G\<close>-prefixed names are global; \<open>mode\<close>, \<open>x\<close>, \<open>y\<close>, \<open>z\<close> are locals.\<close>
 
 definition mode_prog :: imp_prog where
   "mode_prog = \<lbrakk>
@@ -47,8 +48,8 @@ definition mode_prog :: imp_prog where
        z := G
      }
      void main() {
-       mode := 0;  G := 0;  f();  x := G;
-       mode := 1;  G := 1;  f();  y := G
+       mode := 0;  G := 0;  f();  x := G + mode;
+       mode := 1;  G := 1;  f();  y := G + mode
      }
    \<rbrakk>"
 
@@ -314,9 +315,9 @@ proof -
     using mode_local_le_6_7 mode_local_le_13_14 x by (auto simp: mode_local_restrict_le)
 qed
 
-text \<open>MODE_AGREE probe: the callee-exit ghost (reset on entry, decodes to \<^term>\<open>MZero\<close>) does
-  \<^emph>\<open>not\<close> agree with the mode-1 return node ghost (\<^term>\<open>MOne\<close>).  So the kernel's \<open>MODE_AGREE\<close> ---
-  ghost consistency across the call --- is false at the callee frame.\<close>
+text \<open>MODE_AGREE probe: the callee-exit \<open>''mode''\<close> local (reset on entry, decodes to \<^term>\<open>MZero\<close>)
+  does \<^emph>\<open>not\<close> agree with the mode-1 return node value (\<^term>\<open>MOne\<close>).  So the kernel's \<open>MODE_AGREE\<close> ---
+  local-value consistency across the call --- is false at the callee frame.\<close>
 lemma mode_agree_probe_callee:
   "mode_decode (lookup_st (snd mode_digest_solution (Inl (1, MOne))) ''mode'') = MZero"
   unfolding mode_digest_unfold mode_decode_def by eval
@@ -364,20 +365,20 @@ text \<open>
 
   \<^bold>\<open>The soundness boundary (machine-checked).\<close>  Full soundness of the projection read
   \<^const>\<open>mode_obs\<close> at \<^emph>\<open>every\<close> point is \<^emph>\<open>not\<close> attainable, and this is a proven fact, not an open
-  gap: the kernel's \<open>MODE_AGREE\<close> --- the ghost \<open>''mode''\<close> read at a callee exit under the routed
+  gap: the kernel's \<open>MODE_AGREE\<close> --- the \<open>''mode''\<close> local read at a callee exit under the routed
   context must equal the read at the return --- is \<^emph>\<open>false\<close> here.  \<^theory_text>\<open>mode_agree_probe_callee\<close>
   and \<^theory_text>\<open>mode_agree_probe_return\<close> compute (\<open>by eval\<close>) that the callee exit \<^term>\<open>(1, MOne)\<close> decodes
-  to \<^term>\<open>MZero\<close> (its ghost was reset by \<^const>\<open>enter_state\<close>) while the mode-1 return \<^term>\<open>(14, MZero)\<close>
-  decodes to \<^term>\<open>MOne\<close>.  So at a callee-interior point \<^const>\<open>mode_obs\<close> re-projects the reset ghost
+  to \<^term>\<open>MZero\<close> (its \<open>''mode''\<close> local was reset by \<^const>\<open>enter_state\<close>) while the mode-1 return \<^term>\<open>(14, MZero)\<close>
+  decodes to \<^term>\<open>MOne\<close>.  So at a callee-interior point \<^const>\<open>mode_obs\<close> re-projects the reset local
   and reads the \<^emph>\<open>wrong\<close> partition; the correct callee read must ride the \<^emph>\<open>context\<close>
   (\<^const>\<open>side_env_cmp\<close>), which is exactly why the certified bridge \<^theory_text>\<open>mode_obs_eq_side_env_cmp\<close>
-  only holds where the ghost is set (the alignment premise).  This is the frame-locality of the
+  only holds where \<open>''mode''\<close> is set (the alignment premise).  This is the frame-locality of the
   digest, now a machine-checked disproof of the single-reader condition rather than a caveat.
 
   \<^bold>\<open>Consequence.\<close>  \<^theory_text>\<open>mode_collect_sound_witness\<close> is the honest conditional theorem
   (\<open>cfg_collect_ctx \<le> mode_obs\<close> given \<open>INL_BOT\<close> / \<open>MODE_AGREE\<close> / the generic collecting premises),
-  at the same premise-carrying standard as the reaching-definition witness --- but its \<open>MODE_AGREE\<close>
-  premise is unsatisfiable for this run, so it certifies the ghost-set frames, not the callee
+  at a premise-carrying standard --- but its \<open>MODE_AGREE\<close>
+  premise is unsatisfiable for this run, so it certifies the frames where \<open>''mode''\<close> is set, not the callee
   frames.  Genuinely open (both shared with every instance, not mode-specific): \<open>INL_BOT\<close> for the
   solver output (a solver-default invariant over the infinite \<^term>\<open>Inl\<close> keys) and the
   generic \<open>ENTRY\<close> / \<open>EDGE\<close> generator-to-collecting bounds.
@@ -419,7 +420,7 @@ text \<open>Callee reads are shown \<^emph>\<open>context-served\<close>: at an 
   the certified context read \<^const>\<open>side_env_cmp\<close> --- the value of the context's own partition
   \<^term>\<open>Inr (rctx_mode r)\<close> --- not the executable reset-local slot.  \<open>f @ MOne\<close> therefore shows
   \<open>z = Positive\<close> (its \<open>MOne\<close> partition), \<open>f @ MZero\<close> shows \<open>z = Zero\<close>.  The executable reset-local
-  read would instead default both to \<^const>\<open>MZero\<close> (the frame-locality caveat): the callee's ghost
+  read would instead default both to \<^const>\<open>MZero\<close> (the frame-locality caveat): the callee's local
   \<open>''mode''\<close> is wiped on entry, so its own re-projection cannot recover the caller's mode --- the
   digest rides the context, which is exactly what the context-served read displays.\<close>
 definition rmode_node_label :: "pp \<times> rctx \<Rightarrow> string" where
