@@ -13,7 +13,9 @@ text \<open>
 
   The underlying run and its annotated-CFG renderer are proved in
   \<^theory>\<open>Voblint_Analysis.Exec_Sign_Mode_Compiled_Run\<close>; the read kernel and the bridge lemma in
-  \<^theory>\<open>Voblint_Analysis.Value_Digest_Read\<close>.  This theory is the guided reading.
+  \<^theory>\<open>Voblint_Analysis.Value_Digest_Read\<close>.  This theory is the guided reading.  The interval
+  counterpart --- same kernel, interval domain, with a while loop --- is
+  \<open>Example_Interval_Mode_Showcase\<close>.
 \<close>
 
 subsection \<open>The program\<close>
