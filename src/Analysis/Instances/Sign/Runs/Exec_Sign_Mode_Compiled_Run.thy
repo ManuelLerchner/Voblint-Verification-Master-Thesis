@@ -239,6 +239,121 @@ proof -
               mode_prep_commute mode_dg_compat pp_st])
 qed
 
+subsection \<open>The same soundness under the per-origin update rule\<close>
+
+text \<open>The abstract post-solution --- the fact the analyzer soundness consumes --- does not
+  depend on \<^emph>\<open>which\<close> update rule produced the run.  \<^const>\<open>part_post_solution\<close> is
+  update-rule-independent, the vendor proves it for every rule (\<open>partial_post_solution\<close> on the
+  \<open>TD_side_upd_rule\<close> locale), and the abstract transport is rule-agnostic.  So the identical
+  chain, with only the solver interpretation swapped, certifies the per-origin solve --- and
+  here per-origin keeps the digest precise, so it is sound \<^emph>\<open>and\<close> sharp.\<close>
+
+definition mode_digest_solution_po ::
+  "(pp \<times> mode) set \<times> ((pp \<times> mode) + mode \<Rightarrow> sign st)" where
+  "mode_digest_solution_po = TD_side_per_origin_Interp_solve mode_digest_eqs (cfg_exit mode_cfg, MZero)"
+
+lemma mode_digest_solve_c_some_po:
+  "TD_side_per_origin_Interp_solve_c mode_digest_eqs (cfg_exit mode_cfg, MZero) \<noteq> None"
+  unfolding mode_digest_eqs_def mode_cfg_def mode_prep_def mode_dg_def by eval
+
+lemma mode_digest_solve_dom_po:
+  "TD_side_per_origin_Interp.solve_dom TYPE(mode) TYPE(sign st)
+     mode_digest_eqs (cfg_exit mode_cfg, MZero)"
+  unfolding TD_side_per_origin_Interp.term_equivalence
+            TD_side_per_origin_Interp.solve_c_dom_def
+  using mode_digest_solve_c_some_po by simp
+
+lemma mode_digest_part_post_solution_st_po:
+  "part_post_solution mode_digest_eqs (cfg_exit mode_cfg, MZero)
+     (snd mode_digest_solution_po) (fst mode_digest_solution_po)"
+  using TD_side_per_origin_Interp.partial_post_solution
+      [OF mode_digest_solve_dom_po, of "fst mode_digest_solution_po" "snd mode_digest_solution_po"]
+  unfolding mode_digest_solution_po_def by simp
+
+theorem mode_digest_abstracts_po:
+  "part_post_solution
+     (side_cfg_T_eff_digest mode_dg_abs
+        (\<lambda>ctx cc ex. abs_switching_combine_digest mode_dg_abs mode_prep_abs cc ex ctx)
+        mode_cfg sign_etf_unit (fun_of_st bot) (fun_of_st bot) (fun_of_st cinit_sign_st))
+     (cfg_exit mode_cfg, MZero)
+     (\<lambda>k. fun_of_st (snd mode_digest_solution_po k)) (fst mode_digest_solution_po)"
+proof -
+  have pp_st: "part_post_solution
+       (side_cfg_T_eff_digest_st mode_dg
+          (\<lambda>ctx cc ex. switching_combine_digest_st mode_dg mode_prep cc ex ctx)
+          mode_cfg sign_etf_st bot bot cinit_sign_st) (cfg_exit mode_cfg, MZero)
+       (snd mode_digest_solution_po) (fst mode_digest_solution_po)"
+    using mode_digest_part_post_solution_st_po unfolding mode_digest_eqs_def by simp
+  show ?thesis
+    by (rule part_post_solution_digest_switching_st_to_abs_eff_unit_transfer
+          [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree
+              sign_etf_st_edge_tree sign_etf_st_combine_tree sign_tf_st_commute
+              mode_prep_commute mode_dg_compat pp_st])
+qed
+
+subsection \<open>The same soundness under the warrowing (widening) update rule\<close>
+
+text \<open>Identical chain, warrowing interpretation.  Here the digest globals over-approximate to
+  \<^const>\<open>STop\<close> (Apinis warrowing widens globals), so the run is sound but \<^emph>\<open>not\<close> sharp --- the
+  point being that soundness holds for the widening solver too, which is what lets the analyzer
+  terminate on unbounded loops.  Precision and soundness are separate concerns.\<close>
+
+definition mode_digest_solution_wa ::
+  "(pp \<times> mode) set \<times> ((pp \<times> mode) + mode \<Rightarrow> sign st)" where
+  "mode_digest_solution_wa = TD_side_warrowing_apinis_Interp_solve mode_digest_eqs (cfg_exit mode_cfg, MZero)"
+
+lemma mode_digest_solve_c_some_wa:
+  "TD_side_warrowing_apinis_Interp_solve_c mode_digest_eqs (cfg_exit mode_cfg, MZero) \<noteq> None"
+  unfolding mode_digest_eqs_def mode_cfg_def mode_prep_def mode_dg_def by eval
+
+lemma mode_digest_solve_dom_wa:
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(mode) TYPE(sign st)
+     mode_digest_eqs (cfg_exit mode_cfg, MZero)"
+  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
+            TD_side_warrowing_apinis_Interp.solve_c_dom_def
+  using mode_digest_solve_c_some_wa by simp
+
+lemma mode_digest_part_post_solution_st_wa:
+  "part_post_solution mode_digest_eqs (cfg_exit mode_cfg, MZero)
+     (snd mode_digest_solution_wa) (fst mode_digest_solution_wa)"
+  using TD_side_warrowing_apinis_Interp.partial_post_solution
+      [OF mode_digest_solve_dom_wa, of "fst mode_digest_solution_wa" "snd mode_digest_solution_wa"]
+  unfolding mode_digest_solution_wa_def by simp
+
+theorem mode_digest_abstracts_wa:
+  "part_post_solution
+     (side_cfg_T_eff_digest mode_dg_abs
+        (\<lambda>ctx cc ex. abs_switching_combine_digest mode_dg_abs mode_prep_abs cc ex ctx)
+        mode_cfg sign_etf_unit (fun_of_st bot) (fun_of_st bot) (fun_of_st cinit_sign_st))
+     (cfg_exit mode_cfg, MZero)
+     (\<lambda>k. fun_of_st (snd mode_digest_solution_wa k)) (fst mode_digest_solution_wa)"
+proof -
+  have pp_st: "part_post_solution
+       (side_cfg_T_eff_digest_st mode_dg
+          (\<lambda>ctx cc ex. switching_combine_digest_st mode_dg mode_prep cc ex ctx)
+          mode_cfg sign_etf_st bot bot cinit_sign_st) (cfg_exit mode_cfg, MZero)
+       (snd mode_digest_solution_wa) (fst mode_digest_solution_wa)"
+    using mode_digest_part_post_solution_st_wa unfolding mode_digest_eqs_def by simp
+  show ?thesis
+    by (rule part_post_solution_digest_switching_st_to_abs_eff_unit_transfer
+          [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree
+              sign_etf_st_edge_tree sign_etf_st_combine_tree sign_tf_st_commute
+              mode_prep_commute mode_dg_compat pp_st])
+qed
+
+subsection \<open>Update-rule-parametric soundness (summary)\<close>
+
+text \<open>The analyzer's soundness precondition --- an abstract post-solution of the digest
+  generator, the fact \<^theory_text>\<open>Analysis_Sound\<close> / \<^theory_text>\<open>Constraint_System_Sound\<close> consume --- is met by the
+  solver output under \<^emph>\<open>every\<close> update rule tested.  The chain is the same for all three; only
+  the solver interpretation changes.  So an analysis run may pick its update rule freely and
+  stay sound: \<open>join\<close> / \<open>per_origin\<close> keep the digest sharp, and \<open>warrow\<close> (widening) stays sound
+  while letting the solver terminate on unbounded loops.  This is the machine-checked backing
+  for the \<open>run_menu\<close> columns and the roadmap in \<open>docs/UPDATE_RULE_FORMALIZATION_PLAN.md\<close>.\<close>
+
+lemmas mode_digest_sound_all_update_rules =
+  mode_digest_abstracts mode_digest_abstracts_po mode_digest_abstracts_wa
+
 subsection \<open>Collecting soundness witness on the solver output\<close>
 
 text \<open>
