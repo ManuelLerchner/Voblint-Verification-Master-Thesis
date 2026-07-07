@@ -247,7 +247,7 @@ text \<open>@{command ML_val} \<open>writeln (@{code wide_dot})\<close> emits th
 
 text \<open>The \<^emph>\<open>context-sensitive\<close> digest view, the interval counterpart of the sign flagship's
   \<open>mode_digest_dot\<close>: \<^emph>\<open>three\<close> clusters, one per activation (\<open>main\<close> once, \<open>f @ ILo\<close>, \<open>f @ IHi\<close>),
-  each \<^bold>\<open>node labelled with its solved local intervals\<close> (\<open>i\<close>, \<open>x\<close>, \<open>y\<close>, \<open>z\<close>) and each cluster
+  each \<^bold>\<open>node labelled with its solved local intervals\<close> (all locals, auto-collected) and each cluster
   with its own global partition of \<open>G\<close>.  The two calls are routed by the digest computed from
   the solution (\<open>iv_call_ctx\<close>): the \<open>m=1\<close> call enters \<open>f @ ILo\<close>, the \<open>m=3\<close> call \<open>f @ IHi\<close>,
   both returning into \<open>main\<close>.  Only the labels are interval-specific; the renderer is generic.\<close>
@@ -272,13 +272,12 @@ definition ivl_rctx_label :: "ivl_rctx \<Rightarrow> string" where
 definition iv_f_rctx_of :: "pp \<Rightarrow> ivl_rctx" where
   "iv_f_rctx_of cc = (if iv_call_ctx cc = ILo then IvFILo else IvFIHi)"
 
+text \<open>Node labels come from the generic \<^const>\<open>ctx_debug_state_node_label_auto\<close>: it auto-collects
+  the program's locals and prints each node's solved interval, so no hand-written label or
+  variable list is needed --- only the per-node state lookup.\<close>
 definition iv_node_label :: "pp \<times> ivl_rctx \<Rightarrow> string" where
-  "iv_node_label pk =
-     (case pk of (p, r) \<Rightarrow>
-        let s = snd iv_digest_solution (Inl (p, ivl_rctx_mode r)) in
-        ''pp'' @ string_of_nat p @ gv_nl @
-        ''i='' @ show_val (lookup_st s ''i'') @ ''  x='' @ show_val (lookup_st s ''x'') @
-        ''  y='' @ show_val (lookup_st s ''y'') @ ''  z='' @ show_val (lookup_st s ''z''))"
+  "iv_node_label = ctx_debug_state_node_label_auto iv_cfg
+     (\<lambda>pc. case pc of (p, r) \<Rightarrow> snd iv_digest_solution (Inl (p, ivl_rctx_mode r)))"
 
 definition iv_digest_globals :: "ivl_rctx \<Rightarrow> string" where
   "iv_digest_globals r =

@@ -3,13 +3,26 @@ section \<open>Example: mixed_flow_analysis_optimal applied to the sign domain\<
 theory Example_Mixed_Flow_Sign
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
-    Example_Inc_Proc
+    "Voblint_CFG.CFG_Collect_Runs"
+    "Voblint_IMP2.IMP2_Notation"
     Mixed_Flow_Sound
 begin
 
+text \<open>The analyzed program, defined locally so the example is self-contained: a single
+  procedure \<open>p\<close> increments the global \<open>Gx\<close>, \<open>main\<close> calls it once.\<close>
+definition inc_program :: imp_prog where
+  "inc_program = \<lbrakk>
+     int Gx;
+     void p() { Gx := Gx + 1 }
+     void main() { p() }
+   \<rbrakk>"
+
+definition inc_pi :: proc_table where
+  "inc_pi = prog_table inc_program"
+
 text \<open>
   Demonstrates the top-level trace-level theorem applied to the sign domain
-  on the @{const inc_pi} program (procedure p increments the global Gx).
+  on the \<open>inc_pi\<close> program (procedure p increments the global Gx).
 
   The effectful transfer record is the domain interface here.  Its soundness,
   cone compatibility, and threefold monotonicity are discharged by the Sign

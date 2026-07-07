@@ -425,6 +425,33 @@ definition ctx_debug_default_node_label :: "cfg \<Rightarrow> pp * 'ctx \<Righta
   "ctx_debug_default_node_label g pc =
      (case pc of (p, k) \<Rightarrow> ''pp'' @ string_of_nat p @ gv_nl @ ctx_debug_default_node_role g p)"
 
+text \<open>
+  Generic per-node \<^emph>\<open>state\<close> label for the context-clustered renderer.  Any analysis whose
+  solution stores a local state per \<open>(pp, ctx)\<close> gets node labels showing the abstract values ---
+  \<open>var=value\<close> via \<^const>\<open>label_of_st\<close> on the domain's \<^class>\<open>show_val\<close> printer --- with no
+  hand-written label.  \<open>cfg_local_vars\<close> auto-collects the program's local variables, so
+  callers supply only the state lookup \<open>loc :: (pp \<times> 'ctx) \<Rightarrow> 'a st\<close> (typically
+  \<open>\<lambda>(p, k). snd solution (Inl (p, k))\<close>).
+\<close>
+
+definition cfg_local_vars :: "cfg \<Rightarrow> vname list" where
+  "cfg_local_vars g =
+     filter (\<lambda>x. \<not> is_global x)
+       (remdups (concat (map (\<lambda>(_, a, _). vars_of_action a) (cfg_edges_list g))))"
+
+definition ctx_debug_state_node_label ::
+  "cfg \<Rightarrow> vname list \<Rightarrow>
+   ((pp \<times> 'ctx) \<Rightarrow> ('a::{show_val, bounded_semilattice_sup_bot}) st) \<Rightarrow> pp \<times> 'ctx \<Rightarrow> string" where
+  "ctx_debug_state_node_label g vars loc pc =
+     (case pc of (p, k) \<Rightarrow>
+        ''pp'' @ string_of_nat p
+        @ (let r = ctx_debug_default_node_role g p in if r = [] then [] else gv_nl @ r)
+        @ (let l = label_of_st show_val vars (loc pc) in if l = [] then [] else gv_nl @ l))"
+
+definition ctx_debug_state_node_label_auto ::
+  "cfg \<Rightarrow> ((pp \<times> 'ctx) \<Rightarrow> ('a::{show_val, bounded_semilattice_sup_bot}) st) \<Rightarrow> pp \<times> 'ctx \<Rightarrow> string" where
+  "ctx_debug_state_node_label_auto g loc = ctx_debug_state_node_label g (cfg_local_vars g) loc"
+
 definition ctx_debug_default_node_attrs :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
   "ctx_debug_default_node_attrs g p =
      (if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''

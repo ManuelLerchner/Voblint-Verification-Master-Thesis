@@ -4,14 +4,27 @@ theory Example_Side_Proc_Global
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Sign_Exec_Sound"
-    Example_Inc_Proc
+    "Voblint_CFG.CFG_Collect_Runs"
+    "Voblint_IMP2.IMP2_Notation"
 begin
 
 text \<open>
-  Side-effecting interprocedural witness: @{const inc_pi} with a single call to
+  Side-effecting interprocedural witness: \<open>inc_pi\<close> with a single call to
   procedure p.  Operational semantics via @{const cfg_runs_to}; soundness via
   @{const side_analyse_eff} (the effectful side TD solver).
 \<close>
+
+text \<open>The analyzed program, defined locally so the example is self-contained: a single
+  procedure \<open>p\<close> increments the global \<open>Gx\<close>, \<open>main\<close> calls it once.\<close>
+definition inc_program :: imp_prog where
+  "inc_program = \<lbrakk>
+     int Gx;
+     void p() { Gx := Gx + 1 }
+     void main() { p() }
+   \<rbrakk>"
+
+definition inc_pi :: proc_table where
+  "inc_pi = prog_table inc_program"
 
 (* A non-trivial initial state: every variable -- including the globals --
    starts at STop, not bot.  The entry seeds the initial globals into the
