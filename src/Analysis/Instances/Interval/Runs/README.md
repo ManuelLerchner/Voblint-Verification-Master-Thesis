@@ -11,4 +11,8 @@ solver via the code generator. Demonstrations, not part of the domain definition
   loop** and procedure calls, contexts projected from an ordinary local via
   `ivl_decode` (a numeric-threshold bucket), showing the digest keeps `G` in separate
   partitions (`[0,5]` / `[9,9]`) where the context-blind read merges to `[0,9]`. The
-  second dissimilar instance of the generic `value_digest_reader` kernel.
+  second dissimilar instance of the generic `value_digest_reader` kernel. Also carries:
+  the update-rule menu (`iv_digest_across_update_rules`), a **proven-sound** widening
+  loop (`wide_abstracts`), and GraphViz output — `wide_dot` (annotated per-node
+  intervals) and `iv_digest_dot` (context-clustered, one cluster per digest mode with
+  its separated `G`), both via the generic `show_val` renderers.

@@ -21,6 +21,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Entry_Store_Context_Precision
     Example_Global_Ctx_Read_Precision
     Example_Mode_Value_Digest_Showcase
+    Example_Interval_Mode_Showcase
     Example_Digest_Pipeline_Showcase
     Example_Finite_Sign_Context_Analysis
     Example_Side_Execute

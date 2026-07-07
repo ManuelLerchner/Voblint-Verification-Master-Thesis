@@ -5,6 +5,7 @@ theory Exec_Ivl_Mode_Compiled_Run
     Digest_Keyed_Writer_Sound
     Solver_Menu
     Interval_Side_Soundness
+    Analysis_GraphViz
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_IMP2.IMP2_Notation"
 begin
@@ -50,6 +51,13 @@ proof
   show "(UNIV :: imode set) = set enum_class.enum"
     using imode.exhaust by (auto simp: enum_imode_def)
 qed (auto simp: enum_imode_def enum_all_imode_def enum_ex_imode_def, (metis imode.exhaust)+)
+end
+
+text \<open>A \<^class>\<open>show_val\<close> instance so the generic context-clustered GraphViz renderer prints the
+  mode partitions.\<close>
+instantiation imode :: show_val begin
+definition "show_val_imode m = (case m of ILo \<Rightarrow> ''ILo'' | IHi \<Rightarrow> ''IHi'')"
+instance ..
 end
 
 subsection \<open>Decode: bucket an interval by a numeric threshold (the only ivl-specific content)\<close>
@@ -224,6 +232,37 @@ lemma wide_part_post_solution:
   "part_post_solution wide_eqs (cfg_exit wide_cfg) (snd wide_sol) (fst wide_sol)"
   using TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c[OF wide_solve_c_some]
   unfolding wide_sol_def by simp
+
+subsection \<open>Annotated interval GraphViz\<close>
+
+text \<open>The analysis-annotated DOT renderer (\<^const>\<open>annotated_dot_of_prog_lit\<close>) is generic over
+  any \<^class>\<open>show_val\<close> domain; \<^typ>\<open>ivl\<close> has that instance, so the interval solution renders with
+  no domain-specific tooling --- the interval counterpart of the sign examples' annotated DOT.
+  Each CFG node carries its flow-sensitive interval; here the widened loop counter.\<close>
+
+definition wide_dot :: String.literal where
+  "wide_dot = annotated_dot_of_prog_lit Map.empty [] wide_prog (snd wide_sol)"
+
+text \<open>@{command ML_val} \<open>writeln (@{code wide_dot})\<close> emits the DOT source.\<close>
+
+text \<open>The \<^emph>\<open>context-sensitive\<close> digest view, the interval counterpart of the sign flagship's
+  \<open>mode_digest_dot\<close>: the generic context-clustered renderer
+  \<^const>\<open>ctx_debug_graphviz_same_ctx_cfg_show_globals_default\<close> draws one CFG cluster per digest
+  mode, each carrying that mode's global partition of \<open>G\<close> --- so the separation
+  (\<open>ILo: [0,5]\<close> vs \<open>IHi: [9,9]\<close>) is visible as two clusters with different \<open>G\<close> notes.  Only the
+  \<^class>\<open>show_val\<close> instance for \<^typ>\<open>imode\<close> is interval-specific; the renderer is generic.\<close>
+
+definition iv_digest_globals_lines :: "imode \<Rightarrow> string list" where
+  "iv_digest_globals_lines k =
+     [''G = '' @ show_val (lookup_st (snd iv_digest_solution (Inr k)) ''G'')]"
+
+definition iv_digest_dot :: String.literal where
+  "iv_digest_dot = String.implode
+     (ctx_debug_graphviz_same_ctx_cfg_show_globals_default
+        (\<lambda>_. []) iv_digest_globals_lines [ILo, IHi] iv_cfg)"
+
+text \<open>@{command ML_val} \<open>writeln (@{code iv_digest_dot})\<close> emits the DOT source; the two clusters
+  carry \<open>G = [0,5]\<close> (\<open>ILo\<close>) and \<open>G = [9,9]\<close> (\<open>IHi\<close>), the digest separation made visible.\<close>
 
 theorem wide_abstracts:
   "part_post_solution

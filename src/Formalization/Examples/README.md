@@ -24,12 +24,14 @@ comparisons. Not imported by pipeline theories.
 | `Example_Trace_Digest_ReachingCompat.thy` | Reader-side `reaching_compat`: lockset ghost filters global read |
 | `Example_Finite_Sign_Context_Analysis.thy` | Finite sign-derived calling contexts (`GZero`/`GPos`/`GNonNeg`/`GOther`); executable keyed `_st` run plus finite-key soundness-facing theorem |
 | `Example_Mode_Value_Digest_Showcase.thy` | Guided reading of the value-carried mode digest on the compiled `mode_prog` run |
+| `Example_Interval_Mode_Showcase.thy` | Interval counterpart: guided reading of the interval mode-digest run (loop tracking, digest separation, update-rule soundness, context-clustered GraphViz) |
 | `Example_Digest_Pipeline_Showcase.thy` | **Canonical end-to-end showcase**: source -> CFG -> equations -> strategy tree -> TD-side solver -> solution -> digest projection -> annotated CFG -> GraphViz -> soundness, all executable on one program |
 
-**GraphViz:** Sign examples with `Sign_Exec_Sound` use `sign_annotated_dot_prog_lit`
-(per-node sign states + `cluster_globals`). Interval and structural examples use
-`plain_dot_of_prog_lit` (annotated interval DOT is future work; executable interval
-analysis lives in `Voblint_Analysis.Exec_Ivl_Run` / `Ivl_Exec`).
+**GraphViz:** The annotated-DOT renderer (`annotated_dot_of_prog_lit`) is generic over any
+`show_val` domain. Sign examples with `Sign_Exec_Sound` use it for per-node sign states +
+`cluster_globals`; the interval flagship `Voblint_Analysis.Exec_Ivl_Mode_Compiled_Run`
+(`wide_dot`) uses the same renderer on the `ivl` `show_val` instance. Structural-only
+examples use `plain_dot_of_prog_lit`.
 
 **Backward analysis arc:** start with `Example_Guard_Refinement` (one guard, identity
 contrast), then `Example_Interval_Loop_Coverage` (full CFG + trace soundness). Eval-only
