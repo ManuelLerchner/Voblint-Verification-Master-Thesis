@@ -156,4 +156,46 @@ theorem iv_digest_separates_the_modes:
    \<and> lookup_st (snd iv_cmp_solution (Inr ILo)) ''G'' = Ivl (Fin 0) (Fin 9)"
   using iv_digest_slot_ILo iv_digest_slot_IHi iv_cmp_merges by blast
 
+subsection \<open>Why the digest run uses the plain join solver\<close>
+
+text \<open>Apinis warrowing \<^bold>\<open>widens globals\<close> and warrows (narrows) only locals.  The digest
+  partitions \<^term>\<open>Inr ILo\<close> / \<^term>\<open>Inr IHi\<close> \<^emph>\<open>are\<close> globals, so solving the digest system with
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> widens both \<open>G\<close> slots to the top interval ---
+  destroying the separation --- while the local loop variable stays \<open>[5, 5]\<close>.  Hence the
+  value-derived digest is inherently a \<^emph>\<open>join-solver\<close> demonstration; widening/narrowing is
+  shown separately below on a local loop variable, where narrowing recovers precision.\<close>
+
+lemma digest_warrowing_widens_globals_to_top:
+  "lookup_st (snd (TD_side_warrowing_apinis_Interp_solve iv_digest_eqs (cfg_exit iv_cfg, ILo)) (Inr ILo)) ''G''
+     = Ivl MinInf PlusInf"
+  unfolding iv_unfold by eval
+
+subsection \<open>Widening and narrowing on an unbounded loop (backward filter recovers precision)\<close>
+
+text \<open>A loop whose bound is far too large for the join solver to reach by iteration.  The
+  warrowing solver \<^bold>\<open>widens\<close> the counter to \<open>[0, \<infinity>)\<close> at the head, then the backward guard
+  filter --- the same inverse interval analysis (\<^const>\<open>inv_less_ivl\<close>) the digest run's guards
+  use --- \<^bold>\<open>narrows\<close> it back to the exact \<open>[0, 1000000]\<close>, so the exit is the sharp
+  \<open>[1000000, 1000000]\<close>.  Neither operator alone gives a terminating \<^emph>\<open>and\<close> precise result.\<close>
+
+definition wide_prog :: "IMP2_Proc.com" where
+  "wide_prog = \<lbrakk> x := 0; while (x < 1000000) { x := x + 1 } \<rbrakk>"
+
+definition wide_cfg :: cfg where
+  "wide_cfg = compile_prog Map.empty [] wide_prog"
+
+definition wide_eqs :: "(pp, unit, ivl st) eqsT" where
+  "wide_eqs = side_cfg_T_eff_st wide_cfg ivl_etf_st bot cinit_ivl_st ()"
+
+definition wide_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
+  "wide_sol = TD_side_warrowing_apinis_Interp_solve wide_eqs (cfg_exit wide_cfg)"
+
+lemmas wide_unfold = wide_sol_def wide_eqs_def wide_cfg_def
+
+text \<open>Widening + narrowing land the exit on the sharp \<open>[1000000, 1000000]\<close> in one solve
+  (fractions of a second), where a pure join would need a million iterations.\<close>
+lemma wide_loop_widened_then_narrowed:
+  "lookup_st (snd wide_sol (Inl (cfg_exit wide_cfg))) ''x'' = Ivl (Fin 1000000) (Fin 1000000)"
+  unfolding wide_unfold by eval
+
 end
