@@ -246,23 +246,75 @@ definition wide_dot :: String.literal where
 text \<open>@{command ML_val} \<open>writeln (@{code wide_dot})\<close> emits the DOT source.\<close>
 
 text \<open>The \<^emph>\<open>context-sensitive\<close> digest view, the interval counterpart of the sign flagship's
-  \<open>mode_digest_dot\<close>: the generic context-clustered renderer
-  \<^const>\<open>ctx_debug_graphviz_same_ctx_cfg_show_globals_default\<close> draws one CFG cluster per digest
-  mode, each carrying that mode's global partition of \<open>G\<close> --- so the separation
-  (\<open>ILo: [0,5]\<close> vs \<open>IHi: [9,9]\<close>) is visible as two clusters with different \<open>G\<close> notes.  Only the
-  \<^class>\<open>show_val\<close> instance for \<^typ>\<open>imode\<close> is interval-specific; the renderer is generic.\<close>
+  \<open>mode_digest_dot\<close>: \<^emph>\<open>three\<close> clusters, one per activation (\<open>main\<close> once, \<open>f @ ILo\<close>, \<open>f @ IHi\<close>),
+  each \<^bold>\<open>node labelled with its solved local intervals\<close> (\<open>i\<close>, \<open>x\<close>, \<open>y\<close>, \<open>z\<close>) and each cluster
+  with its own global partition of \<open>G\<close>.  The two calls are routed by the digest computed from
+  the solution (\<open>iv_call_ctx\<close>): the \<open>m=1\<close> call enters \<open>f @ ILo\<close>, the \<open>m=3\<close> call \<open>f @ IHi\<close>,
+  both returning into \<open>main\<close>.  Only the labels are interval-specific; the renderer is generic.\<close>
 
-definition iv_digest_globals_lines :: "imode \<Rightarrow> string list" where
-  "iv_digest_globals_lines k =
-     [''G = '' @ show_val (lookup_st (snd iv_digest_solution (Inr k)) ''G'')]"
+text \<open>\<open>f\<close> is compiled first, so its body is \<open>pp0\<close>/\<open>pp1\<close>; \<open>main\<close> is the rest.\<close>
+definition iv_f_pps :: "pp list" where "iv_f_pps = [0, 1]"
+
+definition iv_call_ctx :: "pp \<Rightarrow> imode" where
+  "iv_call_ctx cc = iv_dg (snd iv_digest_solution (Inl (cc, ILo)))"
+
+datatype ivl_rctx = IvMain | IvFILo | IvFIHi
+
+definition ivl_rctx_mode :: "ivl_rctx \<Rightarrow> imode" where
+  "ivl_rctx_mode r = (case r of IvMain \<Rightarrow> ILo | IvFILo \<Rightarrow> ILo | IvFIHi \<Rightarrow> IHi)"
+
+definition ivl_rctx_key :: "ivl_rctx \<Rightarrow> string" where
+  "ivl_rctx_key r = (case r of IvMain \<Rightarrow> ''main'' | IvFILo \<Rightarrow> ''fILo'' | IvFIHi \<Rightarrow> ''fIHi'')"
+
+definition ivl_rctx_label :: "ivl_rctx \<Rightarrow> string" where
+  "ivl_rctx_label r = (case r of IvMain \<Rightarrow> ''main'' | IvFILo \<Rightarrow> ''f @ ILo'' | IvFIHi \<Rightarrow> ''f @ IHi'')"
+
+definition iv_f_rctx_of :: "pp \<Rightarrow> ivl_rctx" where
+  "iv_f_rctx_of cc = (if iv_call_ctx cc = ILo then IvFILo else IvFIHi)"
+
+definition iv_node_label :: "pp \<times> ivl_rctx \<Rightarrow> string" where
+  "iv_node_label pk =
+     (case pk of (p, r) \<Rightarrow>
+        let s = snd iv_digest_solution (Inl (p, ivl_rctx_mode r)) in
+        ''pp'' @ string_of_nat p @ gv_nl @
+        ''i='' @ show_val (lookup_st s ''i'') @ ''  x='' @ show_val (lookup_st s ''x'') @
+        ''  y='' @ show_val (lookup_st s ''y'') @ ''  z='' @ show_val (lookup_st s ''z''))"
+
+definition iv_digest_globals :: "ivl_rctx \<Rightarrow> string" where
+  "iv_digest_globals r =
+     ''G = '' @ show_val (lookup_st (snd iv_digest_solution (Inr (ivl_rctx_mode r))) ''G'')"
+
+definition iv_rmode_nodes :: "(pp \<times> ivl_rctx) list" where
+  "iv_rmode_nodes =
+     map (\<lambda>p. (p, IvMain)) (filter (\<lambda>p. p \<notin> set iv_f_pps) (sorted_list_of_set (nodes iv_cfg)))
+   @ map (\<lambda>p. (p, IvFILo)) iv_f_pps
+   @ map (\<lambda>p. (p, IvFIHi)) iv_f_pps"
+
+definition iv_rmode_intra :: "((pp \<times> ivl_rctx) \<times> edge_action \<times> (pp \<times> ivl_rctx)) list" where
+  "iv_rmode_intra =
+     [((u, IvMain), a, (v, IvMain)). (u, a, v) \<leftarrow> cfg_edges_list iv_cfg,
+        a \<noteq> EA_Enter, u \<notin> set iv_f_pps, v \<notin> set iv_f_pps]
+   @ [((u, r), a, (v, r)). (u, a, v) \<leftarrow> cfg_edges_list iv_cfg,
+        u \<in> set iv_f_pps, v \<in> set iv_f_pps, r \<leftarrow> [IvFILo, IvFIHi]]"
+
+definition iv_rmode_calls :: "((pp \<times> ivl_rctx) \<times> (pp \<times> ivl_rctx)) list" where
+  "iv_rmode_calls =
+     [((u, IvMain), (v, iv_f_rctx_of u)). (u, a, v) \<leftarrow> cfg_edges_list iv_cfg, a = EA_Enter]"
+
+definition iv_rmode_returns :: "((pp \<times> ivl_rctx) \<times> (pp \<times> pp \<times> pp) \<times> (pp \<times> ivl_rctx)) list" where
+  "iv_rmode_returns =
+     [((ex, iv_f_rctx_of cc), (cc, ex, ret), (ret, IvMain)). (cc, ex, ret) \<leftarrow> cfg_combines_list iv_cfg]"
 
 definition iv_digest_dot :: String.literal where
   "iv_digest_dot = String.implode
-     (ctx_debug_graphviz_same_ctx_cfg_show_globals_default
-        (\<lambda>_. []) iv_digest_globals_lines [ILo, IHi] iv_cfg)"
+     (ctx_debug_graphviz_with_globals
+        ivl_rctx_key ivl_rctx_label iv_digest_globals iv_node_label (\<lambda>_. ''shape=box'')
+        [IvMain, IvFILo, IvFIHi]
+        iv_rmode_nodes iv_rmode_intra iv_rmode_calls iv_rmode_returns)"
 
-text \<open>@{command ML_val} \<open>writeln (@{code iv_digest_dot})\<close> emits the DOT source; the two clusters
-  carry \<open>G = [0,5]\<close> (\<open>ILo\<close>) and \<open>G = [9,9]\<close> (\<open>IHi\<close>), the digest separation made visible.\<close>
+text \<open>@{command ML_val} \<open>writeln (@{code iv_digest_dot})\<close> emits the DOT source; \<open>main\<close>'s nodes
+  carry the loop counter \<open>i=[5,5]\<close> and the reads \<open>x\<close>/\<open>y\<close>, and the two \<open>f\<close> clusters carry the
+  separated globals \<open>G=[0,5]\<close> / \<open>G=[9,9]\<close>.\<close>
 
 theorem wide_abstracts:
   "part_post_solution

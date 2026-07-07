@@ -24,7 +24,6 @@ comparisons. Not imported by pipeline theories.
 | `Example_Trace_Digest_ReachingCompat.thy` | Reader-side `reaching_compat`: lockset ghost filters global read |
 | `Example_Finite_Sign_Context_Analysis.thy` | Finite sign-derived calling contexts (`GZero`/`GPos`/`GNonNeg`/`GOther`); executable keyed `_st` run plus finite-key soundness-facing theorem |
 | `Example_Mode_Value_Digest_Showcase.thy` | Guided reading of the value-carried mode digest on the compiled `mode_prog` run |
-| `Example_Interval_Mode_Showcase.thy` | Interval counterpart: guided reading of the interval mode-digest run (loop tracking, digest separation, update-rule soundness, context-clustered GraphViz) |
 | `Example_Digest_Pipeline_Showcase.thy` | **Canonical end-to-end showcase**: source -> CFG -> equations -> strategy tree -> TD-side solver -> solution -> digest projection -> annotated CFG -> GraphViz -> soundness, all executable on one program |
 
 **GraphViz:** The annotated-DOT renderer (`annotated_dot_of_prog_lit`) is generic over any
