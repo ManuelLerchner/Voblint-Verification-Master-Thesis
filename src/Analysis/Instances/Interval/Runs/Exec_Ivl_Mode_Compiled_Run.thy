@@ -4,6 +4,7 @@ theory Exec_Ivl_Mode_Compiled_Run
     Ivl_Exec
     Digest_Keyed_Writer_Sound
     Solver_Menu
+    Interval_Side_Soundness
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_IMP2.IMP2_Notation"
 begin
@@ -204,5 +205,48 @@ text \<open>Widening + narrowing land the exit on the sharp \<open>[1000000, 100
 lemma wide_loop_widened_then_narrowed:
   "lookup_st (snd wide_sol (Inl (cfg_exit wide_cfg))) ''x'' = Ivl (Fin 1000000) (Fin 1000000)"
   unfolding wide_unfold by eval
+
+subsection \<open>The widening loop, proven sound (not merely evaluated)\<close>
+
+text \<open>The instantiation that certifies the digest run under each update rule (in the sign
+  flagship) applies here too: the vendor proves the warrowing solve is a
+  \<^const>\<open>part_post_solution\<close>, and the plain-generator transport lifts it to a post-solution of
+  the \<^emph>\<open>abstract\<close> interval generator --- the exact fact the analyzer soundness consumes.  So the
+  million-iteration loop is not just evaluated to \<open>[1000000, 1000000]\<close>; the warrowing solver's
+  whole run is a certified sound over-approximation.  Widening is a proven-sound feature that
+  terminates where join cannot.\<close>
+
+lemma wide_solve_c_some:
+  "TD_side_warrowing_apinis_Interp_solve_c wide_eqs (cfg_exit wide_cfg) \<noteq> None"
+  unfolding wide_eqs_def wide_cfg_def by eval
+
+lemma wide_solve_dom:
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE(ivl st)
+     wide_eqs (cfg_exit wide_cfg)"
+  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
+            TD_side_warrowing_apinis_Interp.solve_c_dom_def
+  using wide_solve_c_some by simp
+
+lemma wide_part_post_solution:
+  "part_post_solution wide_eqs (cfg_exit wide_cfg) (snd wide_sol) (fst wide_sol)"
+  using TD_side_warrowing_apinis_Interp.partial_post_solution
+      [OF wide_solve_dom, of "fst wide_sol" "snd wide_sol"]
+  unfolding wide_sol_def by simp
+
+theorem wide_abstracts:
+  "part_post_solution
+     (side_cfg_T_eff wide_cfg ivl_etf (fun_of_st bot) (fun_of_st cinit_ivl_st) ())
+     (cfg_exit wide_cfg)
+     (fun_of_st \<circ> snd wide_sol) (fst wide_sol)"
+proof -
+  have pp_st: "part_post_solution
+       (side_cfg_T_eff_st wide_cfg ivl_etf_st bot cinit_ivl_st ()) (cfg_exit wide_cfg)
+       (snd wide_sol) (fst wide_sol)"
+    using wide_part_post_solution unfolding wide_eqs_def by simp
+  show ?thesis
+    by (rule part_post_solution_st_to_abs_eff_unit_transfer
+          [OF ivl_etf_edge_tree ivl_etf_combine_tree
+              ivl_etf_st_edge_tree ivl_etf_st_combine_tree ivl_tf_st_commute pp_st])
+qed
 
 end
