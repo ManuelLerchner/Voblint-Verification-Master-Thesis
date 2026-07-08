@@ -1,15 +1,63 @@
 # M2 — `R_read` / D-G boundary alignment
 
-Status: **PLANNED, research. Not started.** Goblint-faithfulness *precision*
-upgrade of the keyed context route. Lands on a worktree branch off `main`; the
-shipped soundness results (Track B, keyed generator overapproximation) stay green
-throughout. This is not a soundness prerequisite for anything currently in the
-repo — it is the removal of a documented precision obstruction.
+Status: **Stage 1 partially done (transport toolkit landed); concrete closure
+blocked by a structural finding.** Goblint-faithfulness *precision* upgrade of the
+keyed context route. The shipped soundness results (Track B, keyed generator
+overapproximation) stay green throughout. This is not a soundness prerequisite for
+anything currently in the repo — it is the removal of a documented precision
+obstruction.
 
 Design basis: `DGC_ALIGNMENT_ANALYSIS.md` (the layered change, §6, and the
 risk/obligation audit, §8–9), `ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` (the
 corrected call-only Goblint model), `ROUTE_A7_DECISION_A_vs_C.md` (why the keyed
 `(=)` route is blocked today). This doc turns that analysis into a staged plan.
+
+---
+
+## Progress and findings (2026-07-09)
+
+**Landed (committed, batch-green):** the exact `part_solution` st→abs transport
+toolkit — the generic enabler for certifying a concrete run whose exactness is
+established per run against a soundness theorem that needs an *exact* fixpoint:
+
+- `part_solution_st_to_abs_transport` (`Exec_Bridge.thy`) — commit `c50eacfe`.
+- `part_solution_cmp_st_to_abs_eff` (`Exec_Cmp_Bridge.thy`) — commit `c50eacfe`.
+- `part_solution_cmp_switching_st_to_abs_eff_unit_transfer` (`Exec_Cmp_Bridge.thy`)
+  — commit `4ea73e3b`.
+
+**Foundations verified sound.** The retain-path abstract soundness (O1,
+cross-procedure global soundness) is *already proven* conditional on an exact
+fixpoint (`inl_glob_le_keyed_ctx_full` → retain enter/combine/collecting bounds →
+`kgen_retain_keyed_generator_sound_if_exact_fixpoint`). The concrete run already
+has an exact fixpoint (`kgen_retain_exact_eqs` eval-check → `kgen_retain_part_solution`).
+The DGC-doc framing of O1 as "genuinely hard, new proof" was stale — the hard part
+was already discharged; the residual generic link is the exact transport, now built.
+
+**Structural blocker found (eval, definitive).** The concrete `kgen` retain run is
+*genuinely context-sensitive*: `card (snd \` fst kgen_retain_solution) = 3` (three
+value-derived contexts). The keyed collecting-soundness theorems
+(`side_cfg_T_eff_cmp_collect_sound_gen_le`, `kgen_retain_keyed_generator_sound_if_exact_fixpoint`)
+conclude against the **context-insensitive** `cfg_collect g S v0 ≤ side_env_cmp (=) σ (v0, ctx)`
+and require **single-context global covering** — every edge target solved at *one*
+fixed `ctx`. Eval confirms this is unsatisfiable here:
+
+```
+∃c ∈ snd ` fst kgen_retain_solution. ∀(u,a,w) ∈ edges kgen_cfg. (w,c) ∈ fst kgen_retain_solution
+  = False
+```
+
+No single context covers all nodes, so the unconditional concrete closure via the
+existing theorem is **impossible for a multi-context run** — not a proof-effort gap.
+
+**Reframed remaining work.** The keyed retain soundness is stated against the
+wrong collecting semantics for a context-sensitive run: it should target the
+**context-indexed** `cfg_collect_ctx dg cmp g S v0 ctx ≤ side_env_cmp (=) σ (v0, ctx)`
+(per `(v0, ctx)`, needing only the run's own reachability), not the
+context-insensitive `cfg_collect` with global single-context covering. Producing
+that context-indexed keyed retain soundness theorem is the genuine next slice
+(it is a new soundness theorem, mirroring the Track-B / `cfg_collect_ctx`
+machinery); the exact transport then closes the concrete run against it. Covering
+becomes per-context and eval-dischargeable.
 
 ---
 
