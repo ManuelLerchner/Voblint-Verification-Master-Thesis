@@ -13,11 +13,25 @@ com  ──compile──▶  CFG  ──side_cfg_T_eff──▶  strategy trees 
 
 ```bash
 cd demo
-python3 -m voblint_pipeline.main
+python3 -m voblint_pipeline.main            # sign analysis, straight-line program
+python3 -m voblint_pipeline.main_interval   # interval widening vs per-origin widening
 ```
 
-Prints: the compiled CFG, every Kleene iteration round, and the final abstract
+`main` prints the compiled CFG, every Kleene iteration round, and the final abstract
 state + concretisation `γ` at each program point.
+
+`main_interval` runs `G := 0; while (G < 3) { G := G + 1 }` — a global that climbs
+monotonically, the hard case for the infinite-height interval lattice — under three
+disciplines and compares them:
+
+1. **plain join** — does not converge (capped; `G` keeps climbing `[0,k]`);
+2. **monovariant widening** (`solve_widening`) — `G = [0, +inf]`;
+3. **per-origin widening** (`origin_lift.py`, mirrors `Origin_Lift.thy`) — `G = [0, +inf]`,
+   **identical to (2)**, matching the machine-checked `rec_per_origin_matches_monovariant`.
+
+The point is the negative: per-origin widening separates the *writes* by origin but the
+transfer *reads* `collapse_origins`, re-merging the self-loop, so it buys no precision on
+a climbing global (see `../docs/PER_ORIGIN_WIDENING.md`, OPEN_PROBLEMS P11/P12).
 
 ## Modules (each ↔ a formalization file)
 
@@ -29,8 +43,11 @@ state + concretisation `γ` at each program point.
 | `state.py` | `restrict_local`/`restrict_global`/`side_env`/`combine_abs` |
 | `trees.py` | `unit_edge_tree`, `local_edge_tree`, `unit_combine_tree`, `side_cfg_T_eff` |
 | `sign.py` | `Sign_Domain.thy` — lattice, γ, arithmetic, forward transfer |
-| `solver.py` | a naive Kleene post-fixpoint (stands in for the TD side solver) |
-| `main.py` | end-to-end driver |
+| `interval.py` | `Interval_Domain` / `Ivl_Exec` — interval lattice + `widen`/`narrow` (infinite height) |
+| `solver.py` | naive Kleene post-fixpoint + `solve_widening` (monovariant warrowing analogue) |
+| `origin_lift.py` | `Origin_Lift.thy` — `OriginState`, `lift_tree`, `solve_per_origin` (per-origin widening) |
+| `main.py` | sign end-to-end driver |
+| `main_interval.py` | interval widening vs per-origin widening driver |
 
 ## What is faithful, and what is simplified
 

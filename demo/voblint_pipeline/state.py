@@ -14,12 +14,14 @@ from .imp_ast import is_global
 
 
 class Domain(Protocol):
-    """A sound_domain: a bounded semilattice with a concretisation gamma."""
+    """A sound_domain: a bounded semilattice with a concretisation gamma.
+    Domains over an infinite-height lattice (Interval) also provide `widen`."""
     def bot(self): ...
     def join(self, x, y): ...
     def leq(self, x, y) -> bool: ...
     def gamma(self, x) -> str: ...
     def show(self, x) -> str: ...
+    def widen(self, x, y): ...   # optional; required for widening solves
 
 
 class AbsState:
@@ -43,6 +45,10 @@ class AbsState:
 
     def leq(self, other: "AbsState") -> bool:          # pointwise ≤
         return all(self.dom.leq(self.m[x], other.m[x]) for x in self.vars)
+
+    def widen(self, other: "AbsState") -> "AbsState":  # pointwise domain widening
+        return AbsState(self.dom, self.vars,
+                        {x: self.dom.widen(self.m[x], other.m[x]) for x in self.vars})
 
     def __eq__(self, other):         return isinstance(other, AbsState) and self.m == other.m
 
