@@ -72,6 +72,44 @@ against `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`, which is the substance 
 the D/G/C boundary this doc set out to establish. Stages 2–7 below are the shape
 of that discharge (R_read routing, invariant relaxation, the `fctx` separation).
 
+## Stage 2 verdict (2026-07-09): ENTER_MONO is *not* provable — machine-backed
+
+`ENTER_MONO` for the value-keyed retain routing is refuted, not merely open. Proven
+batch-green in `src/Analysis/Instances/Sign/Runs/Exec_Sign_Cmp_Keyed_Retain_EnterMono.thy`
+(commit `413c9265`):
+
+- `retain_keyed_merged_G` (eval): the per-context keyed global slot at
+  `kgen_ctx_merged` is `SNonNeg` — the two value-distinct activations sharing that
+  context join coarse in the one keyed slot.
+- `retain_read_merged_G_coarse`: the soundness read `σ(Inl (cl,ctx)) ⊔ σ(Inr ctx)`
+  (= `side_env_cmp` after the `(=)` singleton collapse) is `≥ SNonNeg` on `G` at
+  *every* call site of that context — **independent of `route_read_cmp`**. The retain
+  invariant `inl_glob_le_keyed_ctx` (`local ≤ keyed`) makes the keyed slot dominate
+  the join, so routing precision from the local slot is invisible to the gamma.
+- `read_admits_two_point_classes` / `enter_mono_read_not_point`: the read
+  concretises to `0` and `2`, which lie in different point-sign classes
+  (`0 ∈ SZero`, `2 ∉ SZero`). `ENTER_MONO` with `cmp = (=)` needs one routed context
+  equal to `entdg s` for every such `s`; a value-keyed `entdg` separates them, so no
+  single routed context works.
+
+**Exact missing invariant:** `ENTER_MONO` needs `side_env_cmp` entry-digest-uniform;
+retain gives `local ≤ keyed`, so the read equals the coarse keyed slot on globals;
+uniformity would require the *converse* `keyed ≤ local` — which a per-context keyed
+global cannot supply once two value-distinct calls share a context. **Not a
+proof-effort gap and not fixable by strengthening retain-transfer lemmas.**
+
+**Second, independent blocker (also machine-backed):** the value-keyed context type
+`sign st` is **not** a `finite` instance, while the keyed soundness stack requires
+`'g :: finite`; so `side_env_cmp` does not even type-apply to this run. A finite
+context quotient is a prerequisite orthogonal to `ENTER_MONO`.
+
+**Minimal required architecture change (documented, not implemented):** the D/G/C
+read split — state `ENTER_MONO`'s gamma over the routing read `route_read_cmp` (the
+local slot), decoupled from the global-read `side_env_cmp` the soundness conclusion
+is stated against. That changes *what the theorem certifies* (the read in the
+conclusion), so it is a genuine architecture change, not a local proof repair. Per
+the standing instruction, this stops here for review before any such change.
+
 ---
 
 ## 1. Goal and motivation
