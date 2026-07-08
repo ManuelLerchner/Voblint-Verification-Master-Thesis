@@ -18,6 +18,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Abstract_Domain
     Sign_Domain
     Exec_St
+    Origin_State
     Exec_Sign_Run
     Interval_Domain
     Ivl_Exec
