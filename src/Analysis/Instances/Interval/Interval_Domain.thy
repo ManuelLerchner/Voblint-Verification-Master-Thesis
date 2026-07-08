@@ -401,16 +401,17 @@ qed
 
 subsection \<open>Type-class widening for TD warrowing solver\<close>
 
-text \<open>Narrowing is the identity (\<open>a \<Delta> b = a\<close>): the executable interval precision comes from
-  the backward guard filters, not a narrowing phase.  A real interval narrowing is
-  deliberately \<^emph>\<open>not\<close> used inside the Apinis warrowing rule, which bounds neither the number
-  of narrowing steps nor widen/narrow alternation --- unbounded narrowing there caused a
-  widen/narrow oscillation that made \<open>rec_digest_solution\<close> loop (\<open>Interrupt_Breakdown\<close>).
-  Finite upper bounds on recursive globals need a \<^emph>\<open>gas-bounded\<close> narrowing rule
-  (\<^const>\<open>update_global_bounded_narrowing\<close>, TD Listing 9) as its own solver, or stronger
-  context/origin-sensitive reads --- not narrowing in this rule.\<close>
-definition narrow_ivl_td :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "narrow_ivl_td a b = a"
+text \<open>Standard interval narrowing: when the recomputed value \<open>b\<close> refines the widened value
+  \<open>a\<close> (\<open>b \<le> a\<close>), keep \<open>a\<close>'s finite bounds and only fill an infinite bound of \<open>a\<close> from \<open>b\<close>.
+  A bound moves off \<open>\<pm>inf\<close> at most once, so the narrowing descent is finite.  Combined with
+  the backward guard filters this recovers loop bounds under \<^emph>\<open>every\<close> update rule (a bounded
+  local counter reads \<open>[0, 20]\<close> under \<open>join\<close>, \<open>per_origin\<close> and \<open>warrow\<close> alike).  It does not
+  help a \<^emph>\<open>flow-insensitive global\<close>: there the guard never bounds the value written back to
+  the slot, so \<open>[0, +inf]\<close> is a genuine fixpoint and narrowing has nothing smaller to descend
+  to (see \<open>Example_Interval_Recursion_Origin\<close>).\<close>
+fun narrow_ivl_td :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "narrow_ivl_td (Ivl l1 u1) (Ivl l2 u2) =
+     Ivl (if l1 = MinInf then l2 else l1) (if u1 = PlusInf then u2 else u1)"
 
 instantiation ivl :: warrowing begin
   text \<open>Widening carries the standard bot-law \<open>bot \<nabla> x = x\<close>, \<open>x \<nabla> bot = x\<close>: since
@@ -437,9 +438,9 @@ instance proof
       by (cases "b = bot") (simp_all add: widen_ivl_def b_le_widen_ivl_core bot.extremum)
   qed
   show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
-    unfolding narrow_ivl_def narrow_ivl_td_def by simp
+    unfolding narrow_ivl_def by (cases a; cases b) (auto simp: less_eq_ivl_def eint_le_refl split: if_splits)
   show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
-    unfolding narrow_ivl_def narrow_ivl_td_def by simp
+    unfolding narrow_ivl_def by (cases a; cases b) (auto simp: less_eq_ivl_def eint_le_refl split: if_splits)
 qed
 end
 

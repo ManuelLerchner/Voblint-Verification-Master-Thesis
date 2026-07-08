@@ -110,18 +110,18 @@ lemma loop_body_ivl_td:
 subsection \<open>The loop under every update rule at once\<close>
 
 text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open>x\<close> under each update rule in one line,
-  and here the disciplines \<^emph>\<open>disagree\<close>: plain \<open>join\<close> and \<open>per_origin\<close> settle at the sound
-  but coarse post-fixpoint \<open>[0, \<infinity>)\<close>, while \<open>warrow\<close> reaches the precise \<open>[0, 20]\<close>.  Interval
-  narrowing is the identity here, so the precision is not from a narrowing phase: \<open>warrow\<close>
-  widens the counter for termination and the backward guard filter on \<open>x < 20\<close> recovers the
-  bound.  On this loop the warrowing solver is a genuine precision gain over the join solver,
-  not mere termination infrastructure.\<close>
+  and here all three \<^emph>\<open>agree\<close> at the precise \<open>[0, 20]\<close>.  \<open>x\<close> is a bounded local: interval
+  narrowing (fill an infinite bound from the guard-refined value) plus the backward guard
+  filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
+  (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
+  machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>
+  (\<open>Example_Interval_Recursion_Origin\<close>).\<close>
 value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl 2) ''x''"
 
 lemma loop_head_across_update_rules:
   "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl 2) ''x''
-     = [(STR ''join'',       Ivl (Fin 0) PlusInf),
-        (STR ''per_origin'', Ivl (Fin 0) PlusInf),
+     = [(STR ''join'',       Ivl (Fin 0) (Fin 20)),
+        (STR ''per_origin'', Ivl (Fin 0) (Fin 20)),
         (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"
   unfolding loop_ivl_eqs_def run_menu_def solver_menu_def by eval
 

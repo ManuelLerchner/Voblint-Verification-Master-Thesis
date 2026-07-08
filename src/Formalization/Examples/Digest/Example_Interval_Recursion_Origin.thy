@@ -50,7 +50,9 @@ subsection \<open>Monovariant warrowing widens \<open>G\<close>'s upper bound to
 
 text \<open>The widening bot-law (\<^const>\<open>widen\<close> on \<^typ>\<open>ivl\<close>) keeps the first write exact, so the
   lower bound settles at \<open>0\<close>; the recursive increment still climbs the upper bound, which
-  widens to \<open>+inf\<close> --- the interval narrowing here is the identity, so nothing claws it back.\<close>
+  widens to \<open>+inf\<close>.  Interval narrowing is real and reclaims the bound of a local loop
+  counter, but \<open>G\<close> is a flow-insensitive global slot: the guard never bounds the write-back,
+  so \<open>[0, +inf]\<close> is a genuine fixpoint and narrowing has nothing smaller to descend to.\<close>
 definition rec_warrow_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
   "rec_warrow_sol = TD_side_warrowing_apinis_Interp_solve rec_eqs (cfg_exit rec_cfg)"
 
@@ -95,10 +97,13 @@ text \<open>
   runs; and more fundamentally \<open>G\<close> is a \<^emph>\<open>flow-insensitive global side slot\<close>, so the
   guard \<open>G < 3\<close> never bounds the value the increment writes back to the slot.  The upper
   bound therefore climbs and widens to \<open>+inf\<close>, and \<open>[0, +inf]\<close> is a genuine fixpoint that
-  no origin split and no reader can shrink.  Recovering the finite upper bound \<open>3\<close> needs a
-  \<^emph>\<open>gas-bounded\<close> narrowing solver (\<^const>\<open>update_global_bounded_narrowing\<close>, TD Listing 9 ---
-  plain interval narrowing in the Apinis rule is unbounded and diverges) or a flow-/
-  context-/origin-sensitive \<^emph>\<open>read\<close> of the slot, not a value-domain widening lift.  See
+  no origin split, no reader, and no narrowing can shrink --- interval narrowing reclaims a
+  local loop bound but has nothing smaller to descend to on this flow-insensitive slot.
+  Recovering the finite upper bound \<open>3\<close> needs a flow-/context-/origin-sensitive \<^emph>\<open>read\<close> of the
+  slot (a side-semantics change), or a gas-bounded narrowing solver
+  (\<^const>\<open>update_global_bounded_narrowing\<close>, TD Listing 9) --- though a probe (2026-07-08) shows
+  that rule, even with real narrowing, still yields \<open>[0, +inf]\<close> on this global, so a value-
+  domain lift is not the missing piece.  See
   \<open>docs/OPEN_PROBLEMS.md\<close> P11.
 \<close>
 

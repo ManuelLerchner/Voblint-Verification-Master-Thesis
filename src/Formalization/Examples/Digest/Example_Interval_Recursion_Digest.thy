@@ -57,8 +57,10 @@ text \<open>
 
   \<^bold>\<open>Widening.\<close>  Apinis warrowing terminates.  The widening bot-law keeps the first write
   exact, so \<open>G\<close> settles at \<open>[0, +inf]\<close> (lower bound pinned at \<open>0\<close>); the recursive increment
-  still climbs the upper bound to \<open>+inf\<close>, and interval narrowing is the identity, so nothing
-  recovers the finite bound.
+  still climbs the upper bound to \<open>+inf\<close>.  Interval narrowing \<^emph>\<open>is\<close> real and recovers the
+  bound of a local loop counter, but not here: \<open>G\<close> is a flow-insensitive global side slot,
+  so the guard never bounds the value written back and \<open>[0, +inf]\<close> is a genuine fixpoint with
+  nothing smaller for narrowing to descend to.
 \<close>
 
 definition rec_eqs :: "(pp, unit, ivl st) eqsT" where
@@ -137,9 +139,10 @@ text \<open>
   bot-law \<open>G\<close> is kept precise (\<open>[0,0], [1,1], [2,2], \<dots>\<close>) as it climbs, so this
   \<^emph>\<open>value-keyed\<close> digest churns through a fresh bucket per depth and the warrowing digest
   solve no longer terminates within the solver's breakdown bound (\<open>Interrupt_Breakdown\<close>).
-  That is a termination regression \<^emph>\<open>caused by keeping the global precise\<close>, not by the solver
-  menu; real interval narrowing in the Apinis rule diverges here too (unbounded widen/narrow
-  alternation), which is why the interval domain's narrowing is the identity.
+  That is a termination regression \<^emph>\<open>caused by keeping the global precise\<close> (the bot-law), not
+  by narrowing: it breaks down identically with narrowing on or off, because the digest keys
+  on \<open>G\<close>'s exact value and the plain monovariant \<open>G\<close> stays a flow-insensitive \<open>[0, +inf]\<close>
+  either way.
 
   So the activation separation is documented, not \<open>eval\<close>'d: the live buckets are \<open>R0\<close> and
   \<open>RTop\<close>, and the exact-depth buckets \<open>R1\<close>/\<open>R2\<close>/\<open>R3\<close> stay \<^term>\<open>\<bottom>\<close> (once \<open>G\<close> is a range the
