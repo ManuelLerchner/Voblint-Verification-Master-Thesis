@@ -54,3 +54,11 @@ lemmas). `Digest_Keyed_Writer{,_Sound}` in `Context/` imports this chain.
 behind one `side_solver` signature; `run_menu eqs entry k var` reads one slot's variable
 under every discipline in a single `value`/lemma. Currently an executable convenience only
 — soundness per rule is the subject of `docs/UPDATE_RULE_FORMALIZATION_PLAN.md`.
+
+`Origin_Lift` realises **per-origin widening** as an equation-system transform, sidestepping
+the vendored `warrowing_per_origin` rule that does not code-generate (P11). It lifts an
+existing system's value domain to `('o, 'd) origin_st` (`Domain/Origin_State`): reads
+`collapse_origins` the origin map, writes `inject_origin` at the evaluated unknown's origin,
+transfers unchanged. The lifted system runs under the ordinary Apinis warrowing solver, whose
+pointwise widening on `origin_st` is per-origin widening — so it `eval`s directly.
+`TD_side_per_origin_widen_solve org_of T v` / `read_per_origin` are the entry points.
