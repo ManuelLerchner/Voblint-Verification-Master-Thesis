@@ -65,6 +65,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_Sign_Cmp_Keyed_Solve
     Exec_Sign_Cmp_Keyed_Gen_Run
     Exec_Sign_Cmp_Keyed_Retain_Run
+    Exec_Sign_Cmp_Keyed_Retain_EnterMono
     Value_Digest_Read
     Exec_Sign_Mode_Value_Run
     Analysis_GraphViz
