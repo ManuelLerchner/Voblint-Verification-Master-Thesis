@@ -54,6 +54,27 @@ definition origin_lift_eqs ::
      \<Rightarrow> ('x, 'g, ('o, 'd) origin_st) eqsT" where
   "origin_lift_eqs org_of T = (\<lambda>x. lift_tree (org_of x) (T x))"
 
+subsection \<open>Soundness reduction: collapsing a lifted solution recovers the original\<close>
+
+text \<open>
+  The local result of a lifted equation is exactly the original result injected at the
+  origin, because \<^const>\<open>QueryL\<close>/\<^const>\<open>QueryG\<close> collapse their reads before the original
+  transfer runs and \<^const>\<open>Answer\<close> only wraps the result.  This is the reduction that
+  carries the ordinary warrowing soundness through the origin lift: read a lifted
+  post-solution through \<^const>\<open>collapse_origins\<close> and the original right-hand side is
+  recovered verbatim, so the collapsed reads subsume the original equations.
+\<close>
+
+lemma traverse_lift_tree:
+  "traverse_rhs (lift_tree org t) sol'
+   = inject_origin org (traverse_rhs t (\<lambda>k. collapse_origins (sol' k)))"
+  by (induction t) simp_all
+
+lemma collapse_eq_origin_lift:
+  "collapse_origins (eq (origin_lift_eqs org_of T) u sol')
+   = eq T u (\<lambda>k. collapse_origins (sol' k))"
+  unfolding origin_lift_eqs_def by (simp add: traverse_lift_tree)
+
 subsection \<open>The per-origin widening solver variant\<close>
 
 text \<open>
