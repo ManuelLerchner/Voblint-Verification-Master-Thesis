@@ -2,6 +2,30 @@
 
 Design review only. No theory changes are prescribed here.
 
+> **Status (2026-07-08) — reconciliation.** The `(node, context)` unknown
+> mechanism this study analyses is **already modeled and verified**, not pending.
+> Goblint solves over `(node, context)` unknowns (`type lv = MyCFG.node * S.C.t`,
+> `FromSpec` in
+> [`constraints.ml`](https://github.com/goblint/analyzer/blob/master/src/framework/constraints.ml)),
+> call-only context selection, separate flow-insensitive `V.t -> G.t` globals.
+> The formalization captures that shape: the `context_domain` locale mirrors
+> `Spec` (`start_context`/`prep`/`ctx_sel`/`entdg`/`cmp`); the semantic
+> entry-state instance is **sound, strictly precise, and computed**
+> (`semantic_entry_store_ctx_analysis_sound`,
+> `entry_store_context_precision_witness`); the contract is
+> `cfg_collect_ctx` + `context_analysis_sound` / `digest_env_sound` /
+> `digest_read_sound`. **This is sufficient for the core thesis claim.**
+>
+> The `D/G/C` boundary described below (feed `ctx_sel` a pre-loss `R_read`
+> instead of the joined `side_env_cmp` view; add `publish`/`read_global`) is
+> **faithfulness polish, POSTPONE** — its payoff is dissolving the `fctx`
+> negative result, not enabling context-sensitivity, which already works. It is
+> genuine soundness research (changes `ENTER_MONO`/`CMP_SOUND`), not a blocker.
+> Sibling optional items: computed k-call-string breadth
+> (`TRACE_BASED_FORK_MIGRATION.md`, Track A) and context-bounding lifters
+> (Context Gas / Loopfree Callstring — future). See `docs/NEXT_STEPS.md`
+> "Context-sensitivity status".
+
 Upstream Goblint correction (2026-07-02): Goblint does **not** update contexts on
 ordinary CFG edges. Its `Spec.context` receives a `D.t` local abstract state. In
 the base analysis, that `D.t` store may still contain C globals
