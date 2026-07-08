@@ -752,6 +752,51 @@ proof -
   qed
 qed
 
+text \<open>
+  The exact analogue: an \<^emph>\<open>exact\<close> \<^const>\<open>part_solution\<close> of the executable generator maps,
+  under \<^const>\<open>fun_of_st\<close>, to an exact \<^const>\<open>part_solution\<close> of its abstract image.  The
+  two abbreviations differ only in the \<open>eq\<close> conjunct (\<open>=\<close> vs \<open>\<le>\<close>); the same three
+  commutation facts carry it, with the \<open>eq\<close> branch using the equality directly.  This is
+  the enabler for certifying a concrete retain run whose exactness is established per run
+  (via a decidable reverse-inequality \<open>eval\<close> check) against the abstract retain soundness
+  theorem, which needs an exact fixpoint.
+\<close>
+
+lemma part_solution_st_to_abs_transport:
+  fixes T_st :: "'u \<Rightarrow> ('u, 'g, ('a::bounded_semilattice_sup_bot) st) strategy_tree"
+    and T_abs :: "'u \<Rightarrow> ('u, 'g, 'a abs_state) strategy_tree"
+  assumes EQ: "\<And>v \<sigma>. fun_of_st (eq T_st v \<sigma>) = eq T_abs v (\<lambda>k. fun_of_st (\<sigma> k))"
+    and SIDES: "\<And>v \<sigma> k. fun_of_st (sides_of_rhs (T_st v) \<sigma> k)
+                  = sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (\<sigma> k)) k"
+    and DEP: "\<And>v \<sigma>. dep_aux \<sigma> (T_st v) = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (T_abs v)"
+    and ps: "part_solution T_st x sigma_st vars"
+  shows "part_solution T_abs x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+proof -
+  have x_in: "x \<in> vars" using ps by simp
+  have deps: "\<And>v. dep\<^sub>L T_st sigma_st v = dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v"
+    using DEP by (simp add: dep\<^sub>L_def dep_def)
+  show ?thesis
+  proof (intro conjI x_in ballI conjI)
+    fix v assume v_in: "v \<in> vars"
+    show "dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v \<subseteq> vars"
+      using ps v_in deps by auto
+    show "eq T_abs v (\<lambda>k. fun_of_st (sigma_st k)) = (\<lambda>k. fun_of_st (sigma_st k)) (Inl v)"
+    proof -
+      have eq_st: "eq T_st v sigma_st = sigma_st (Inl v)" using ps v_in by simp
+      show ?thesis using arg_cong[where f = fun_of_st, OF eq_st] EQ by simp
+    qed
+    show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k))"
+    proof (rule le_funI)
+      fix k
+      have le_st: "sides_of_rhs (T_st v) sigma_st k \<le> sigma_st k"
+        using ps v_in by (simp add: le_fun_def)
+      show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) k
+              \<le> (\<lambda>k. fun_of_st (sigma_st k)) k"
+        using fun_of_st_mono[OF le_st] SIDES by simp
+    qed
+  qed
+qed
+
 subsection \<open>Transport: executable effectful post-solution to abstract effectful post-solution\<close>
 
 context

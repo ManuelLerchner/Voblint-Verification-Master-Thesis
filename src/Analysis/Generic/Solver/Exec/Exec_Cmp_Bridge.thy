@@ -652,6 +652,43 @@ next
     by (cases v) simp
 qed
 
+text \<open>
+  The exact companion of @{thm [source] part_post_solution_cmp_st_to_abs_eff}: an exact
+  \<^const>\<open>part_solution\<close> of the executable keyed generator maps, under \<^const>\<open>fun_of_st\<close>,
+  to an exact \<^const>\<open>part_solution\<close> of its abstract image.  Same three commutation
+  bridges, routed through @{thm [source] part_solution_st_to_abs_transport}.
+\<close>
+
+theorem part_solution_cmp_st_to_abs_eff:
+  assumes ps_st:
+    "part_solution (side_cfg_T_eff_cmp_st gkey cmb_st g etf_st fresh_frame_st bot0_st s0_st) x sigma_st vars"
+  shows "part_solution
+           (side_cfg_T_eff_cmp gkey cmb_abs g etf
+              (fun_of_st fresh_frame_st) (fun_of_st bot0_st) (fun_of_st s0_st))
+           x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+proof (rule part_solution_st_to_abs_transport[OF _ _ _ ps_st])
+  fix v \<sigma>
+  show "fun_of_st (eq (side_cfg_T_eff_cmp_st gkey cmb_st g etf_st fresh_frame_st bot0_st s0_st) v \<sigma>)
+        = eq (side_cfg_T_eff_cmp gkey cmb_abs g etf
+                (fun_of_st fresh_frame_st) (fun_of_st bot0_st) (fun_of_st s0_st)) v (\<lambda>k. fun_of_st (\<sigma> k))"
+    using fun_of_st_eq_side_cfg_T_eff_cmp_st[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
+next
+  fix v \<sigma> k
+  show "fun_of_st (sides_of_rhs (side_cfg_T_eff_cmp_st gkey cmb_st g etf_st fresh_frame_st bot0_st s0_st v) \<sigma> k)
+        = sides_of_rhs (side_cfg_T_eff_cmp gkey cmb_abs g etf
+                (fun_of_st fresh_frame_st) (fun_of_st bot0_st) (fun_of_st s0_st) v) (\<lambda>k. fun_of_st (\<sigma> k)) k"
+    using fun_of_st_sides_side_cfg_T_eff_cmp_st[where v="fst v" and ctx="snd v" and k=k]
+    by (cases v) simp
+next
+  fix v \<sigma>
+  show "dep_aux \<sigma> (side_cfg_T_eff_cmp_st gkey cmb_st g etf_st fresh_frame_st bot0_st s0_st v)
+        = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (side_cfg_T_eff_cmp gkey cmb_abs g etf
+                (fun_of_st fresh_frame_st) (fun_of_st bot0_st) (fun_of_st s0_st) v)"
+    using dep_aux_side_cfg_T_eff_cmp_st_eq[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
+qed
+
 end
 
 
