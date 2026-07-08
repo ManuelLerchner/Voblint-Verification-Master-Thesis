@@ -766,6 +766,79 @@ proof -
           [OF tr_edge sd_edge dep_edge tr_comb sd_comb dep_comb pp_st])
 qed
 
+text \<open>
+  The exact companion of the switching-combine transport: an exact \<^const>\<open>part_solution\<close>
+  of the executable switching-combine generator maps, under \<^const>\<open>fun_of_st\<close>, to an exact
+  \<^const>\<open>part_solution\<close> of its abstract \<^const>\<open>abs_switching_combine\<close> image.  Same six
+  commutation facts, routed through @{thm [source] part_solution_cmp_st_to_abs_eff}.
+\<close>
+
+lemma part_solution_cmp_switching_st_to_abs_eff_unit_transfer:
+  fixes g :: cfg
+  fixes etf_st :: "(unit, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf :: "(unit, 'a) effectful_domain_transfer"
+  fixes F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  fixes bot0_st s0_st fresh_frame_st :: "'a st"
+  fixes gkey :: "'c \<Rightarrow> 'c"
+  fixes prep_st :: "pp \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  fixes prep_abs :: "pp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  fixes ec_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a st \<Rightarrow> 'c"
+  fixes ec_abs :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c"
+  assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
+  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
+  assumes comb_st: "\<And>cc ex. etf_combine_st etf_st cc ex = unit_combine_tree_st cc ex"
+  assumes commute: "\<And>a s. fun_of_st (F_st a s) = F a (fun_of_st s)"
+  assumes prep: "\<And>cc s. fun_of_st (prep_st cc s) = prep_abs cc (fun_of_st s)"
+  assumes ec: "\<And>cc ctx s. ec_st cc ctx s = ec_abs cc ctx (fun_of_st s)"
+  assumes ps_st:
+    "part_solution
+       (side_cfg_T_eff_cmp_st gkey
+          (\<lambda>ctx cc ex. switching_combine_st (prep_st) (ec_st) cc ex ctx)
+          g etf_st fresh_frame_st bot0_st s0_st) x sigma_st vars"
+  shows "part_solution
+       (side_cfg_T_eff_cmp gkey
+          (\<lambda>ctx cc ex. abs_switching_combine (prep_abs) (ec_abs) cc ex ctx)
+          g etf (fun_of_st fresh_frame_st) (fun_of_st bot0_st) (fun_of_st s0_st))
+       x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+proof -
+  have tr_edge:
+    "\<And>a u \<sigma>_st. fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
+     = traverse_rhs (apply_etf etf a u) (\<lambda>k. fun_of_st (\<sigma>_st k))"
+    unfolding edge_st edge traverse_unit_edge_tree_st traverse_unit_edge_tree
+    by (simp add: commute Let_def)
+  have sd_edge:
+    "\<And>a u \<sigma>_st k. fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st k)
+     = sides_of_rhs (apply_etf etf a u) (\<lambda>k. fun_of_st (\<sigma>_st k)) k"
+    using sides_apply_etf_st_unit_transfer[OF edge_st edge comb comb_st commute]
+    by (simp add: o_def)
+  have dep_edge:
+    "\<And>a u \<sigma>_st. dep_aux \<sigma>_st (apply_etf_st etf_st a u)
+     = dep_aux (\<lambda>k. fun_of_st (\<sigma>_st k)) (apply_etf etf a u)"
+    by (simp add: edge_st edge dep_aux_unit_edge_tree_st)
+  have tr_comb:
+    "\<And>ctx cc ex \<sigma>_st.
+       fun_of_st (traverse_rhs (switching_combine_st prep_st ec_st cc ex ctx) \<sigma>_st)
+       = traverse_rhs (abs_switching_combine prep_abs ec_abs cc ex ctx)
+           (\<lambda>k. fun_of_st (\<sigma>_st k))"
+    using prep ec by (rule traverse_switching_combine_st_fun_of_st)
+  have sd_comb:
+    "\<And>ctx cc ex \<sigma>_st k.
+       fun_of_st (sides_of_rhs (switching_combine_st prep_st ec_st cc ex ctx) \<sigma>_st k)
+       = sides_of_rhs (abs_switching_combine prep_abs ec_abs cc ex ctx)
+           (\<lambda>k. fun_of_st (\<sigma>_st k)) k"
+    using prep ec by (rule sides_switching_combine_st_fun_of_st)
+  have dep_comb:
+    "\<And>ctx cc ex \<sigma>_st.
+       dep_aux \<sigma>_st (switching_combine_st prep_st ec_st cc ex ctx)
+       = dep_aux (\<lambda>k. fun_of_st (\<sigma>_st k)) (abs_switching_combine prep_abs ec_abs cc ex ctx)"
+    using prep ec by (rule dep_switching_combine_st_fun_of_st)
+  show ?thesis
+    by (rule part_solution_cmp_st_to_abs_eff
+          [OF tr_edge sd_edge dep_edge tr_comb sd_comb dep_comb ps_st])
+qed
+
 
 end
 
