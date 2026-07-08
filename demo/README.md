@@ -27,11 +27,20 @@ disciplines and compares them:
 1. **plain join** — does not converge (capped; `G` keeps climbing `[0,k]`);
 2. **monovariant widening** (`solve_widening`) — `G = [0, +inf]`;
 3. **per-origin widening** (`origin_lift.py`, mirrors `Origin_Lift.thy`) — `G = [0, +inf]`,
-   **identical to (2)**, matching the machine-checked `rec_per_origin_matches_monovariant`.
+   **identical to (2)** — the same phenomenon as the machine-checked
+   `rec_per_origin_matches_monovariant`.
 
 The point is the negative: per-origin widening separates the *writes* by origin but the
 transfer *reads* `collapse_origins`, re-merging the self-loop, so it buys no precision on
 a climbing global (see `../docs/PER_ORIGIN_WIDENING.md`, OPEN_PROBLEMS P11/P12).
+
+**Correspondence with Isabelle** (audited after the fact): the interval domain ops
+(`join`/`plus`/`minus`/`leq`/`widen_ivl_core`) and the tree transform
+(`lift_tree`/`collapse`/`inject`) are exact. The fixpoint *strategy* is a naive
+Kleene-with-widening stand-in for the vendored TD Apinis warrowing (documented, as for the
+sign demo), and the program is a loop rather than the recursive procedure — so the numbers
+illustrate the mechanism rather than reproduce the `by eval` result bit-for-bit. `times` is
+an unverified approximation, not exercised here.
 
 ## Modules (each ↔ a formalization file)
 

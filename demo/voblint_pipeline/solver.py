@@ -55,14 +55,25 @@ def solve(T, points, global_keys, dom, vars, verbose: bool = False, max_rounds: 
     return sigma, it
 
 
+def _widen_step(old, joined, bot):
+    """Establish-then-widen: a slot's first (bottom -> non-bottom) value is taken by
+    join; widening applies only once a value is established.  This is how the vendored
+    TD Apinis solver behaves -- it never calls widen with a bottom left argument (a
+    point is widened only on re-visits), and matters because widen(bot, b) = top for the
+    exact `widen_ivl_core`."""
+    return joined if old == bot else old.widen(joined)
+
+
 def solve_widening(T, points, global_keys, dom, vars, verbose: bool = False,
                    max_rounds: int = 1000):
-    """Post-fixpoint by ascending iteration with *widening* on every slot --- the
-    monovariant analogue of the vendored Apinis warrowing rule.  `new = old widen
-    (old join rhs)` climbs and then jumps unstable interval ends to +/-inf, so it
-    terminates even on an infinite-height domain.  Returns (sigma, iterations)."""
-    sigma = {L(v): bot_state(dom, vars) for v in points}
-    sigma |= {R(g): bot_state(dom, vars) for g in global_keys}
+    """Post-fixpoint by ascending iteration with *widening* --- a naive monovariant
+    stand-in for the vendored Apinis warrowing rule (it widens but, unlike warrowing,
+    does not narrow; see the module note on the solver being a stand-in).  The domain
+    `widen` is exact (`widen_ivl_core`); the *strategy* is what is simplified.  Returns
+    (sigma, iterations)."""
+    bot = bot_state(dom, vars)
+    sigma = {L(v): bot for v in points}
+    sigma |= {R(g): bot for g in global_keys}
 
     it = 0
     while it < max_rounds:
@@ -71,10 +82,10 @@ def solve_widening(T, points, global_keys, dom, vars, verbose: bool = False,
         for v in sorted(points):
             t = T(v)
             cur = new[L(v)]
-            new[L(v)] = cur.widen(cur.join(traverse_rhs(t, sigma, dom, vars)))
+            new[L(v)] = _widen_step(cur, cur.join(traverse_rhs(t, sigma, dom, vars)), bot)
             for key, d in sides_of_rhs(t, sigma, dom, vars).items():
-                base = new.get(key, bot_state(dom, vars))
-                new[key] = base.widen(base.join(d))
+                base = new.get(key, bot)
+                new[key] = _widen_step(base, base.join(d), bot)
         if verbose:
             print(f"  round {it}: " +
                   " ".join(f"{k[1]}={new[k].show()}" for k in new if k[0] == 'L'))

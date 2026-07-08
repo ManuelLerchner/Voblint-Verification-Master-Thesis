@@ -58,11 +58,14 @@ def ivl_leq(a: Ivl, b: Ivl) -> bool:      # <=
     return b.lo <= a.lo and a.hi <= b.hi
 
 
-def ivl_widen(a: Ivl, b: Ivl) -> Ivl:     # Ivl_Exec widen: unstable ends -> infinity
-    if a.is_bot(): return b
-    if b.is_bot(): return a
-    return Ivl(NEG_INF if b.lo < a.lo else a.lo,
-               POS_INF if b.hi > a.hi else a.hi)
+def ivl_widen(a: Ivl, b: Ivl) -> Ivl:
+    """widen_ivl_core (Interval_Domain.thy:259), verbatim -- no bottom special case:
+         Ivl (if l1<=l2 then l1 else MinInf) (if u2<=u1 then u1 else PlusInf).
+    Note this makes `widen(bot, b) = top`: the operator is only ever meant to be
+    applied to an *established* (non-bottom) left value -- the solver establishes a
+    slot by join first and only then widens on re-visits (see solve_widening)."""
+    return Ivl(a.lo if a.lo <= b.lo else NEG_INF,
+               a.hi if b.hi <= a.hi else POS_INF)
 
 
 # ---- abstract arithmetic (interval, with careful infinity handling) -----------
@@ -78,6 +81,9 @@ def ivl_minus(a: Ivl, b: Ivl) -> Ivl:
     return Ivl(a.lo - b.hi, a.hi - b.lo)
 
 def ivl_times(a: Ivl, b: Ivl) -> Ivl:
+    """Endpoint-product interval multiply.  APPROXIMATE: not verified against
+    Isabelle `ivl_times_core` / `times_eint` and not exercised by the current
+    examples (which use only `+`).  Kept for completeness; check before relying on it."""
     if a.is_bot() or b.is_bot(): return BOT
     ps = [_m(a.lo, b.lo), _m(a.lo, b.hi), _m(a.hi, b.lo), _m(a.hi, b.hi)]
     return Ivl(min(ps), max(ps))

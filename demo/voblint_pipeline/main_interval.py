@@ -11,8 +11,18 @@ We run three disciplines and compare:
   2. monovariant widening
   3. per-origin widening (Origin_Lift): keeps each write origin's cell separate
 
-and observe that (2) and (3) give the *same* interval for G, exactly as the
-machine-checked `rec_per_origin_matches_monovariant`.
+and observe that (2) and (3) give the *same* interval for G --- the same phenomenon as
+the machine-checked `rec_per_origin_matches_monovariant`.
+
+Correspondence with Isabelle (checked):
+  * EXACT: the interval domain ops (join/plus/minus/leq/`widen_ivl_core`) and the tree
+    transform (`lift_tree`/`collapse`/`inject`, Origin_Lift.thy).
+  * STAND-IN: the fixpoint *strategy* is a naive Kleene-with-widening, not the vendored
+    TD Apinis warrowing (no narrowing; establish-then-widen models that the real solver
+    never widens from bottom).  And this program is a `while`-loop, not the recursive
+    procedure of Example_Interval_Recursion_Origin.thy (the demo has no Call yet) --- so
+    the *numbers* need not equal the `by eval` result, but the *phenomenon* is the same.
+  * `times` is an unverified approximation (not exercised here).
 """
 from __future__ import annotations
 from . import imp_ast as A
@@ -85,7 +95,7 @@ def run():
     print(f"    monovariant widening   G = {G2}")
     print(f"    per-origin  widening   G = {G3}")
     print(f"    -> {'IDENTICAL' if same else 'DIFFERENT'} "
-          f"({'matches rec_per_origin_matches_monovariant' if same else 'unexpected'})\n")
+          f"({'same phenomenon as rec_per_origin_matches_monovariant' if same else 'differs'})\n")
     print("why: per-origin widening separates the *writes* to G by origin, but every")
     print("transfer *reads* collapse_origins -- the join over all origins, including the")
     print("loop edge's own climbing cell -- so the monotone self-loop survives the split")

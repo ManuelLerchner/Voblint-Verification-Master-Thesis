@@ -57,9 +57,25 @@ class OriginState:
                            {k: self._cell(k).join(other._cell(k)) for k in keys})
 
     def widen(self, other: "OriginState") -> "OriginState":
+        """Guarded pointwise widening, as in Origin_State.thy `widen`: widen every
+        origin cell present in either operand.  NOTE this uses the raw `widen_ivl_core`,
+        so a cell that is bottom in `self` is widened straight to top (widen(bot,.)=top)."""
         keys = set(self.m) | set(other.m)
         return OriginState(self.dom, self.vars,
                            {k: self._cell(k).widen(other._cell(k)) for k in keys})
+
+    def widen_establish(self, other: "OriginState") -> "OriginState":
+        """The *solver's* per-origin widening step: establish-then-widen per cell.  A
+        fresh origin cell (bottom in `self`) is taken directly; an established cell is
+        widened.  This is the per-origin analogue of solver._widen_step and is what a
+        point-based solver does at every granularity -- it never feeds a bottom left
+        argument to the widening operator, which for `widen_ivl_core` would jump to top."""
+        bs = bot_state(self.dom, self.vars)
+        keys = set(self.m) | set(other.m)
+        return OriginState(self.dom, self.vars,
+            {k: (other._cell(k) if self._cell(k) == bs
+                 else self._cell(k).widen(other._cell(k)))
+             for k in keys})
 
     def leq(self, other: "OriginState") -> bool:
         return all(self._cell(k).leq(other._cell(k)) for k in set(self.m) | set(other.m))
@@ -108,10 +124,10 @@ def solve_per_origin(T, points, global_keys, dom, vars, org_of=lambda x: x,
         for v in sorted(points):
             t = Tl(v)
             cur = new[L(v)]
-            new[L(v)] = cur.widen(cur.join(traverse_rhs(t, sigma, dom, vars)))
+            new[L(v)] = cur.widen_establish(cur.join(traverse_rhs(t, sigma, dom, vars)))
             for key, d in sides_of_rhs(t, sigma, dom, vars).items():
                 base = new.get(key, obot)
-                new[key] = base.widen(base.join(d))
+                new[key] = base.widen_establish(base.join(d))
         if verbose:
             print(f"  round {it}: " +
                   " ".join(f"{k[1]}={new[k].show()}" for k in new if k[0] == 'L'))
