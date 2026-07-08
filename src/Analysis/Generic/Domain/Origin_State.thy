@@ -24,6 +24,11 @@ text \<open>
 lemma narrow_bot_bot: "(\<bottom>::'a::bounded_warrowing) \<Delta> \<bottom> = \<bottom>"
   by (metis narrow_le order.antisym order_refl bot.extremum)
 
+text \<open>\<^typ>\<open>'a st\<close> has the \<^class>\<open>warrowing\<close> and \<^class>\<open>bounded_semilattice_sup_bot\<close>
+  instances separately; bundle them so \<open>'a st\<close> can serve as the value domain wherever
+  the single class \<^class>\<open>bounded_warrowing\<close> is required (e.g. under the origin lift).\<close>
+instance st :: (bounded_warrowing) bounded_warrowing ..
+
 subsection \<open>Representation: association list with implicit bottom default\<close>
 
 type_synonym ('a, 'b) origin_rep = "('a \<times> 'b) list"
