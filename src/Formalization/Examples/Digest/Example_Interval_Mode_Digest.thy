@@ -173,7 +173,8 @@ text \<open>One \<^const>\<open>run_menu\<close> solves the digest system under 
     reproduces the digest separation \<^emph>\<open>without the solver knowing about digests\<close> --- it
     keeps each write origin's contribution separate (the Schwarz clustered discipline).
   \<^item> \<open>warrow\<close> (Apinis warrowing) widens \<^emph>\<open>globals\<close>, and the digest partitions are globals,
-    so it collapses the slot to the top interval \<^term>\<open>Ivl MinInf PlusInf\<close>.
+    so it widens the slot's upper bound to \<open>+inf\<close> --- \<^term>\<open>Ivl (Fin 0) PlusInf\<close> (the
+    widening bot-law pins the lower bound at \<open>0\<close>) --- losing the sharp \<open>[0, 5]\<close>.
   So the value-derived digest is a \<^emph>\<open>join / per-origin\<close> demonstration; global widening is
   the wrong tool for it.  A per-origin \<^emph>\<open>widening\<close> rule would combine both --- loop
   termination without collapsing the digest --- but does not yet code-generate (P11).
@@ -183,7 +184,7 @@ lemma iv_digest_across_update_rules:
   "run_menu iv_digest_eqs (cfg_exit iv_cfg, ILo) (Inr ILo) ''G''
      = [(STR ''join'',       Ivl (Fin 0) (Fin 5)),
         (STR ''per_origin'', Ivl (Fin 0) (Fin 5)),
-        (STR ''warrow'',     Ivl MinInf PlusInf)]"
+        (STR ''warrow'',     Ivl (Fin 0) PlusInf)]"
   unfolding iv_unfold run_menu_def solver_menu_def by eval
 
 subsection \<open>Widening and narrowing on an unbounded loop (backward filter recovers precision)\<close>

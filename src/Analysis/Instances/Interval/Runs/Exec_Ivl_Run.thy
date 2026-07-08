@@ -111,10 +111,11 @@ subsection \<open>The loop under every update rule at once\<close>
 
 text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open>x\<close> under each update rule in one line,
   and here the disciplines \<^emph>\<open>disagree\<close>: plain \<open>join\<close> and \<open>per_origin\<close> settle at the sound
-  but coarse post-fixpoint \<open>[0, \<infinity>)\<close> --- without a narrowing phase they never tighten the
-  ascending counter --- while \<open>warrow\<close> widens and then narrows back to the precise \<open>[0, 20]\<close>.
-  So on this loop widening/narrowing is a genuine precision gain over the join solver, not
-  mere termination infrastructure.\<close>
+  but coarse post-fixpoint \<open>[0, \<infinity>)\<close>, while \<open>warrow\<close> reaches the precise \<open>[0, 20]\<close>.  Interval
+  narrowing is the identity here, so the precision is not from a narrowing phase: \<open>warrow\<close>
+  widens the counter for termination and the backward guard filter on \<open>x < 20\<close> recovers the
+  bound.  On this loop the warrowing solver is a genuine precision gain over the join solver,
+  not mere termination infrastructure.\<close>
 value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl 2) ''x''"
 
 lemma loop_head_across_update_rules:

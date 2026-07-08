@@ -401,18 +401,41 @@ qed
 
 subsection \<open>Type-class widening for TD warrowing solver\<close>
 
+text \<open>Narrowing is the identity (\<open>a \<Delta> b = a\<close>): the executable interval precision comes from
+  the backward guard filters, not a narrowing phase.  A real interval narrowing is
+  deliberately \<^emph>\<open>not\<close> used inside the Apinis warrowing rule, which bounds neither the number
+  of narrowing steps nor widen/narrow alternation --- unbounded narrowing there caused a
+  widen/narrow oscillation that made \<open>rec_digest_solution\<close> loop (\<open>Interrupt_Breakdown\<close>).
+  Finite upper bounds on recursive globals need a \<^emph>\<open>gas-bounded\<close> narrowing rule
+  (\<^const>\<open>update_global_bounded_narrowing\<close>, TD Listing 9) as its own solver, or stronger
+  context/origin-sensitive reads --- not narrowing in this rule.\<close>
 definition narrow_ivl_td :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   "narrow_ivl_td a b = a"
 
 instantiation ivl :: warrowing begin
-  definition "widen (a :: ivl) b = widen_ivl_core a b"
+  text \<open>Widening carries the standard bot-law \<open>bot \<nabla> x = x\<close>, \<open>x \<nabla> bot = x\<close>: since
+    \<^term>\<open>bot :: ivl\<close> is the empty interval \<^term>\<open>Ivl PlusInf MinInf\<close>, an unguarded
+    \<^const>\<open>widen_ivl_core\<close> from bot would jump straight to the top interval, topping any
+    unknown on its first stabilisation.  The guard keeps the first contribution exact.\<close>
+  definition "widen (a :: ivl) b =
+     (if a = bot then b else if b = bot then a else widen_ivl_core a b)"
   definition "narrow (a :: ivl) b = narrow_ivl_td a b"
 instance proof
   fix a b :: ivl
   show "a \<le> widen a b"
-    unfolding widen_ivl_def by (rule a_le_widen_ivl_core)
+  proof (cases "a = bot")
+    case True thus ?thesis by (simp add: widen_ivl_def)
+  next
+    case False thus ?thesis
+      by (cases "b = bot") (simp_all add: widen_ivl_def a_le_widen_ivl_core bot.extremum)
+  qed
   show "b \<le> widen a b"
-    unfolding widen_ivl_def by (rule b_le_widen_ivl_core)
+  proof (cases "a = bot")
+    case True thus ?thesis by (simp add: widen_ivl_def)
+  next
+    case False thus ?thesis
+      by (cases "b = bot") (simp_all add: widen_ivl_def b_le_widen_ivl_core bot.extremum)
+  qed
   show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
     unfolding narrow_ivl_def narrow_ivl_td_def by simp
   show "b \<le> a \<Longrightarrow> narrow a b \<le> a"

@@ -18,13 +18,15 @@ text \<open>
   this example makes the difficulty --- and the depth digest that is meant to fix it
   --- an executable, machine-checked fact rather than a prose claim.
 
-  The headline finding, sealed by \<open>eval\<close> below, is a genuine wall: \<^emph>\<open>no\<close> value digest
-  on a monotonically climbing global can make the join solver converge (a climbing
-  interval leaves every fixed bucket, collapsing to the coarse \<open>RTop\<close> partition, which
-  then climbs unbounded).  So the only terminating interval solver is Apinis warrowing,
-  and warrowing widens \<^emph>\<open>globals\<close> --- the digest partitions are globals --- to the top
-  interval.  The digest still separates the recursion into activation partitions; it
-  cannot keep their values sharp without per-origin widening (\<open>docs/OPEN_PROBLEMS.md\<close> P11).
+  The headline finding is a genuine wall.  Monovariant Apinis warrowing terminates but
+  widens \<open>G\<close>'s \<^emph>\<open>upper\<close> bound to \<open>+inf\<close> (the widening bot-law pins the lower bound at \<open>0\<close>,
+  so \<open>G = [0, +inf]\<close>, sealed by \<open>eval\<close> below).  The \<^emph>\<open>value-keyed\<close> depth digest that is meant
+  to sharpen it does not help and, worse, does not terminate: keeping \<open>G\<close> precise makes a
+  climbing interval leave every fixed value bucket, so the digest churns a fresh partition
+  per depth and the warrowing digest solve runs to \<open>Interrupt_Breakdown\<close>.  So the digest
+  activation separation is stated non-evaluationally (below); a terminating \<^emph>\<open>and\<close> precise
+  depth split needs a gas-bounded narrowing solver or context/origin-sensitive reads, not a
+  value digest (\<open>docs/OPEN_PROBLEMS.md\<close> P11).
 \<close>
 
 subsection \<open>The recursive program\<close>
@@ -53,7 +55,10 @@ text \<open>
   108s of real iteration under \<open>by eval\<close> --- measured, then removed so the theory builds).
   No lemma here evaluates it.
 
-  \<^bold>\<open>Widening.\<close>  Apinis warrowing terminates --- by widening \<open>G\<close> to the top interval.
+  \<^bold>\<open>Widening.\<close>  Apinis warrowing terminates.  The widening bot-law keeps the first write
+  exact, so \<open>G\<close> settles at \<open>[0, +inf]\<close> (lower bound pinned at \<open>0\<close>); the recursive increment
+  still climbs the upper bound to \<open>+inf\<close>, and interval narrowing is the identity, so nothing
+  recovers the finite bound.
 \<close>
 
 definition rec_eqs :: "(pp, unit, ivl st) eqsT" where
@@ -63,7 +68,7 @@ definition rec_warrow_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" 
   "rec_warrow_sol = TD_side_warrowing_apinis_Interp_solve rec_eqs (cfg_exit rec_cfg)"
 
 lemma rec_warrowing_widens_to_top:
-  "lookup_st (snd rec_warrow_sol (Inr ())) ''G'' = Ivl MinInf PlusInf"
+  "lookup_st (snd rec_warrow_sol (Inr ())) ''G'' = Ivl (Fin 0) PlusInf"
   unfolding rec_warrow_sol_def rec_eqs_def rec_cfg_def by eval
 
 subsection \<open>A depth digest: bucket \<open>G\<close> by its exact value\<close>
@@ -125,29 +130,30 @@ definition rec_digest_solution ::
   "(pp \<times> rmode) set \<times> ((pp \<times> rmode) + rmode \<Rightarrow> ivl st)" where
   "rec_digest_solution = TD_side_warrowing_apinis_Interp_solve rec_digest_eqs (cfg_exit rec_cfg, R0)"
 
-lemmas rec_unfold =
-  rec_digest_solution_def rec_digest_eqs_def rec_cfg_def rec_dg_def rec_prep_def rdec_def
+text \<open>
+  \<^bold>\<open>This solve is stated non-evaluationally on purpose.\<close>  Before the widening bot-law, \<open>G\<close>
+  topped to \<^term>\<open>Ivl MinInf PlusInf\<close> on its first write, so \<^const>\<open>rec_digest_solution\<close> saw
+  only two value buckets --- \<open>R0\<close> (entry) and \<open>RTop\<close> --- and \<open>eval\<close>'d in one shot.  With the
+  bot-law \<open>G\<close> is kept precise (\<open>[0,0], [1,1], [2,2], \<dots>\<close>) as it climbs, so this
+  \<^emph>\<open>value-keyed\<close> digest churns through a fresh bucket per depth and the warrowing digest
+  solve no longer terminates within the solver's breakdown bound (\<open>Interrupt_Breakdown\<close>).
+  That is a termination regression \<^emph>\<open>caused by keeping the global precise\<close>, not by the solver
+  menu; real interval narrowing in the Apinis rule diverges here too (unbounded widen/narrow
+  alternation), which is why the interval domain's narrowing is the identity.
 
-text \<open>Both live partitions widen to the top interval; the depth buckets are empty
-  (\<^const>\<open>Ivl\<close> \<^const>\<open>PlusInf\<close> \<^const>\<open>MinInf\<close> is the bottom interval).\<close>
-theorem rec_digest_separates_activations_not_values:
-  "lookup_st (snd rec_digest_solution (Inr R0))   ''G'' = Ivl MinInf PlusInf
- \<and> lookup_st (snd rec_digest_solution (Inr RTop)) ''G'' = Ivl MinInf PlusInf
- \<and> lookup_st (snd rec_digest_solution (Inr R1))   ''G'' = Ivl PlusInf MinInf
- \<and> lookup_st (snd rec_digest_solution (Inr R2))   ''G'' = Ivl PlusInf MinInf
- \<and> lookup_st (snd rec_digest_solution (Inr R3))   ''G'' = Ivl PlusInf MinInf"
-  unfolding rec_unfold by eval
-
-text \<open>The precision that a per-depth split \<^emph>\<open>would\<close> have exposed (the decode lemma rdec_separates_depths)
-  is real in the decode but unreachable through an executable solver: join diverges, warrowing
-  widens.  Recovering it needs a per-origin \<^emph>\<open>widening\<close> discipline that keeps each recursion
-  depth's contribution separate under a terminating solve (P11), which does not yet
-  code-generate.\<close>
+  So the activation separation is documented, not \<open>eval\<close>'d: the live buckets are \<open>R0\<close> and
+  \<open>RTop\<close>, and the exact-depth buckets \<open>R1\<close>/\<open>R2\<close>/\<open>R3\<close> stay \<^term>\<open>\<bottom>\<close> (once \<open>G\<close> is a range the
+  projection is already \<open>RTop\<close>).  The precision a per-depth split \<^emph>\<open>would\<close> expose (the decode
+  lemma \<open>rdec_separates_depths\<close>) is real in the decode but unreachable through this
+  executable solver.  Recovering it --- a terminating \<^emph>\<open>and\<close> precise depth split --- needs a
+  gas-bounded narrowing solver (\<^const>\<open>update_global_bounded_narrowing\<close>, TD Listing 9) or
+  context/origin-sensitive reads (P11), not a value-domain widening lift.
+\<close>
 
 subsection \<open>GraphViz of the (warrowing) recursive analysis\<close>
 
 text \<open>The monovariant warrowing solution rendered as an analysis-annotated CFG: each node
-  carries its flow-sensitive interval, and \<open>G\<close> shows the widened \<open>[-inf, +inf]\<close> at the
+  carries its flow-sensitive interval, and \<open>G\<close> shows the widened \<open>[0, +inf]\<close> at the
   recursive slot.  The renderer is the generic \<^const>\<open>annotated_dot_of_prog_lit\<close>, so the
   interval domain needs no bespoke tooling.\<close>
 
