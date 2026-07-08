@@ -49,15 +49,28 @@ fixed `ctx`. Eval confirms this is unsatisfiable here:
 No single context covers all nodes, so the unconditional concrete closure via the
 existing theorem is **impossible for a multi-context run** — not a proof-effort gap.
 
-**Reframed remaining work.** The keyed retain soundness is stated against the
-wrong collecting semantics for a context-sensitive run: it should target the
-**context-indexed** `cfg_collect_ctx dg cmp g S v0 ctx ≤ side_env_cmp (=) σ (v0, ctx)`
-(per `(v0, ctx)`, needing only the run's own reachability), not the
-context-insensitive `cfg_collect` with global single-context covering. Producing
-that context-indexed keyed retain soundness theorem is the genuine next slice
-(it is a new soundness theorem, mirroring the Track-B / `cfg_collect_ctx`
-machinery); the exact transport then closes the concrete run against it. Covering
-becomes per-context and eval-dischargeable.
+**Reframed remaining work — and the residual pinned to one obligation.** The
+correct target already exists: `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`
+(`TD_Side_Eff_Cmp_Sound.thy:368`) concludes the **context-indexed**
+`cfg_collect_ctx dg cmp g S v ctx ≤ side_env_cmp gcmp σ (v, ctx)` with **no
+covering premise at all** — it bypasses the multi-context blocker. Its obligations
+are the switching-combine soundness contract: `ENTRY` / `PROC_ENTRY` / `EDGE`,
+`LOCAL_POST` / `CMP_SOUND`, the digest-propagation `DG_INTRA` / `DG_RETURN` /
+`DG_CALLEE`, and **`ENTER_MONO`**.
+
+`ENTER_MONO` is the crux and cannot be shortcut: it is a *semantic* statement
+(`∀` concrete store `s ∈ γ(side_env_cmp σ (cl,ctx))`, the entry digest is
+`cmp`-compatible with the routed context), so it is **not eval-dischargeable**.
+It is exactly the `fctx` obstruction — whether the retain (`R_read`) routing lets
+the value-keyed context distinguish the two calls. Discharging `ENTER_MONO` for
+the retain routing (plus `CMP_SOUND` / `DG_*` for the value-keyed digest instance)
+**is the core M2 research question**, not a mechanical assembly.
+
+So the concrete closure's residual is now located precisely: the exact-transport
+enabler is done; the remaining work is the `ENTER_MONO` (retain-routing) discharge
+against `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`, which is the substance of
+the D/G/C boundary this doc set out to establish. Stages 2–7 below are the shape
+of that discharge (R_read routing, invariant relaxation, the `fctx` separation).
 
 ---
 
