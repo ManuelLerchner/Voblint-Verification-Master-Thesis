@@ -285,3 +285,58 @@ It is the faithful path *iff* a chapter commits to certifying Goblint's `D/G/C`
 `Spec.context` boundary with exact context matching. Highest research risk of the
 three tracks; also the deepest alignment payoff. Ship the obstruction
 characterization as a standalone result regardless of whether M2 is attempted.
+
+## 11. Stage-1 progress: read split, machine-backed (`Exec_Sign_Cmp_RRead_Split`)
+
+Landed theory: `src/Analysis/Instances/Sign/Runs/Exec_Sign_Cmp_RRead_Split.thy`
+(session `Voblint_Analysis`, green, no `sorry`). It makes the D/G/C split explicit
+and pins down — by `eval` on the concrete `kgen_cfg` run — where the `fctx`
+obstruction actually lives.
+
+**The three reads already exist as constants.** `R_read = route_read_cmp`
+(`sg (Inl (v,ctx))`), `G_read = glob_env_cmp`, `Obs = side_env_cmp`, with
+`side_env_cmp_def : Obs = R_read ⊔ G_read` (`obs_is_rread_join_gread`). "Defining
+the reads" is naming + the decomposition, not new machinery.
+
+**The read-site split is a sound relaxation, but insufficient alone.**
+`enter_mono_rread_of_obs`: since `Obs ≥ R_read`, `⟦R_read⟧ ⊆ ⟦Obs⟧`, so `ENTER_MONO`
+quantified over `R_read` is *implied by* — strictly weaker than — the current
+`Obs` obligation. Migrating the routing read to `R_read` can only relax, never
+strengthen (the safe direction). **But it does not dissolve the obstruction for
+the retain run:** the retain local slot is *already* polluted at the transfer.
+`traverse_retain_edge_tree_st` shows `retain_edge_tree_st` computes
+`f (sg (Inl u) ⊔ sg (Inr ()))` — it folds the published global into the local at
+**every** edge. Machine-checked (`retain_caller_local_polluted`): after `G := 0`
+the local `G` is the point `SZero` (pp 3), but the next `Nop` re-merges the
+flow-insensitive slot, so at the actual call site (pp 4, the combine's caller
+`cc`) the local is already `SNonNeg`. No read-site choice recovers a point.
+
+**The obstruction has two write-site sources**, both a re-merge of the published
+global `g = sg (Inr ctx)`:
+1. the transfer: `retain_edge_tree_st` computes `f (su ⊔ g)`;
+2. the combine: `kgen_combine_st` computes `caller = sc ⊔ g` before selecting the
+   callee context `kgen_ec ctx caller`.
+
+**Applying the split at both write sites dissolves the obstruction (verified).**
+`clean_edge_tree_st` (sequential-Goblint-faithful: keeps globals flow-sensitively
+in the local via `Answer`, publishes to `Inr`, but does **not** read the published
+slot back — `res = f su`) plus `kgen_combine_rread` (context from the local `sc`
+alone). On the same `kgen_cfg`, `by eval`:
+- caller locals are points — `SZero` at site 4, `SPos` at site 7
+  (`kgen_rread_caller_locals_points`);
+- the two value-distinct activations get **distinct point contexts** `{G:SZero}`
+  and `{G:SPos}` (`kgen_rread_contexts_points`), where the retain run merged both
+  into the single coarse `SNonNeg` slot (`retain_keyed_merged_G`);
+- those contexts separate the exact values the obstruction conflated: `0 → SZero`
+  context, `2 → SPos` context (`rread_contexts_separate_values`). Each context's
+  read is entry-digest-uniform — the converse of `read_admits_two_point_classes` —
+  so `ENTER_MONO` over `R_read` holds where the `Obs` read failed.
+
+**Revised go/no-go (supersedes the §7 Stage-1 framing).** The gate is no longer
+"cross-proc soundness of the *retain* transfer" (that transfer re-pollutes). It is
+**soundness of the *clean* transfer** — dropping `⊔ g` — against `cfg_collect`.
+Dropping the published-slot re-read models Goblint's sequential `D.t` discipline
+(globals flow-sensitive in the local; the flow-insensitive `G.t` is a separate
+`G_read`), which is sound for single-writer sequential collecting semantics. That
+soundness is **not claimed** in the landed theory and is the next go/no-go before
+any kernel `ENTER_MONO`/`CMP_SOUND` migration.
