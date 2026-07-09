@@ -166,22 +166,188 @@ proof
     by (rule clean_cfg_witness_rread[OF step_le combine_le entry_le w])
 qed
 
+section \<open>Context-sliced collecting soundness over the local read (R_read)\<close>
+
+text \<open>
+  The context-sensitive statement the migration targets: the clean spine's
+  \<^emph>\<open>per-context\<close> local slot \<open>sg (Inl (v, ctx))\<close> soundly over-approximates the
+  context-sliced collecting semantics \<^const>\<open>cfg_collect_ctx\<close> --- Goblint's
+  \<open>(node, context)\<close> unknown.  It instantiates the read-agnostic trace backbone
+  \<open>post_fixpoint_sound_at_ctx_semantic_generic\<close> with \<^bold>\<open>both\<close> the observation
+  read \<open>renv\<close> and the routing read \<open>rread\<close> set to \<^const>\<open>route_read_cmp\<close> (the local
+  slot).  Two consequences, each dissolving an obstruction the retain spine hit:
+
+    \<^item> \<^bold>\<open>No \<open>'g :: finite\<close>.\<close>  \<^const>\<open>route_read_cmp\<close> never touches an \<open>Inr\<close> slot, so
+      the global-key type is unconstrained.  The \<open>Keyed_Retain_EnterMono\<close>
+      obstruction (A) --- \<^typ>\<open>sign st\<close> is not \<^class>\<open>finite\<close>, so
+      \<^const>\<open>side_env_cmp\<close> does not type-apply --- is gone: the value-keyed context
+      needs no finite quotient.
+    \<^item> \<^bold>\<open>ENTER_MONO over the local read.\<close>  The entering store is quantified over
+      \<open>\<lbrakk>sg (Inl (cl, ctx))\<rbrakk>\<close>, the precise per-context local --- not the coarse
+      published global that dominated the Obs read (obstruction B).  Where two
+      value-distinct activations share a context under the retain run, seeding the
+      local separates them into point contexts (\<open>kgen_rread_contexts_points\<close>).
+\<close>
+
+text \<open>An edge step is sound under a local (R_read) post-fixpoint bound: the base
+  transfer over the local slot dominates the successor local slot.\<close>
+
+lemma clean_edge_ctx_of_bound:
+  assumes bound: "apply_tf sign_tf a A \<le> B"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>"
+    and step: "edge_step a s = Some s'"
+  shows "s' \<in> \<lbrakk>B\<rbrakk>"
+proof -
+  have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)
+  have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>A\<rbrakk>" using s edge_collect_mono by blast
+  also have "... \<subseteq> \<lbrakk>apply_tf sign_tf a A\<rbrakk>" by (rule sign_sound_tf.edge_collect_apply_tf_sound)
+  also have "... \<subseteq> \<lbrakk>B\<rbrakk>" using gamma_state_mono[OF bound] by blast
+  finally show ?thesis using m by blast
+qed
+
+text \<open>
+  The per-trace kernel: instantiate the generic backbone at \<open>renv = rread =
+  route_read_cmp\<close>.  \<open>EDGE_BOUND\<close> is the local post-fixpoint bound (the clean
+  transfer writes to the local slot); \<open>ENTER_MONO\<close> reads the routing context from
+  the local slot; \<open>ENTRY\<close> / \<open>PROC_ENTRY\<close> are the seed obligations (the callee-entry
+  local over-approximates the reaching stores of the context, globals included);
+  \<open>COMB\<close> is the procedure-return combine.  All reads are the local slot.
+\<close>
+
+theorem clean_ctx_trace_rread:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> sign abs_state"
+    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> sign abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
+  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
+    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
+        \<Longrightarrow> apply_tf sign_tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
+    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+        \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
+        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
+    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
+    and wit: "trace_witness g S v tr"
+    and compat: "cmp (dg tr) ctx"
+  shows "last tr \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+proof -
+  have "last tr \<in> \<lbrakk>route_read_cmp sg (v, ctx)\<rbrakk>"
+  proof (rule post_fixpoint_sound_at_ctx_semantic_generic
+      [where renv = route_read_cmp and rread = route_read_cmp and rt = rt
+         and \<sigma> = sg and dg = dg and cmp = cmp and entdg = entdg and S = S and g = g])
+    show "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>route_read_cmp sg (cfg_entry g, ctx)\<rbrakk>"
+      using ENTRY by (simp add: route_read_cmp_def)
+  next
+    show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>route_read_cmp sg (v, ctx)\<rbrakk>"
+      using PROC_ENTRY by (simp add: route_read_cmp_def)
+  next
+    fix ctx u a v tr' s'
+    assume e: "(u, a, v) \<in> edges g" and st: "edge_step a (last tr') = Some s'"
+      and lt: "last tr' \<in> \<lbrakk>route_read_cmp sg (u, ctx)\<rbrakk>"
+    show "s' \<in> \<lbrakk>route_read_cmp sg (v, ctx)\<rbrakk>"
+      using clean_edge_ctx_of_bound[OF EDGE_BOUND[OF e] _ st] lt
+      by (simp add: route_read_cmp_def)
+  next
+    fix ctx cl ex v tau rho
+    assume c: "(cl, ex, v) \<in> combines g"
+      and ct: "last tau \<in> \<lbrakk>route_read_cmp sg (cl, ctx)\<rbrakk>"
+      and ce: "last rho \<in> \<lbrakk>route_read_cmp sg (ex, rt cl ctx (route_read_cmp sg (cl, ctx)))\<rbrakk>"
+    show "<last tau|last rho> \<in> \<lbrakk>route_read_cmp sg (v, ctx)\<rbrakk>"
+      using COMB[OF c] ct ce by (simp add: route_read_cmp_def)
+  next
+    show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx" using DG_INTRA .
+  next
+    show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau" using DG_RETURN .
+  next
+    show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)" using DG_CALLEE .
+  next
+    show "\<And>ctx cl s. s \<in> \<lbrakk>route_read_cmp sg (cl, ctx)\<rbrakk>
+        \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp sg (cl, ctx)))"
+      using ENTER_MONO by (simp add: route_read_cmp_def)
+  next
+    show "trace_witness g S v tr" by (rule wit)
+  next
+    show "cmp (dg tr) ctx" by (rule compat)
+  qed
+  thus ?thesis by (simp add: route_read_cmp_def)
+qed
+
+text \<open>
+  The set-level context-sliced soundness: every store reaching \<open>v\<close> along a trace
+  whose digest is \<open>cmp\<close>-compatible with \<open>ctx\<close> lies in the concretisation of the
+  \<^emph>\<open>local\<close> slot at \<open>(v, ctx)\<close>.  The conclusion \<open>\<lbrakk>sg (Inl (v, ctx))\<rbrakk>\<close> is R_read;
+  the coarse published global never enters it.
+\<close>
+
+theorem clean_ctx_collect_rread:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> sign abs_state"
+    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> sign abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
+  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
+    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
+        \<Longrightarrow> apply_tf sign_tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
+    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+        \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
+        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
+    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
+  shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+proof -
+  have tr_sound: "\<And>tr. trace_witness g S v tr \<Longrightarrow> cmp (dg tr) ctx \<Longrightarrow> last tr \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  proof -
+    fix tr assume w: "trace_witness g S v tr" and c: "cmp (dg tr) ctx"
+    show "last tr \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+      by (rule clean_ctx_trace_rread
+          [where sg = sg and rt = rt and dg = dg and cmp = cmp and entdg = entdg and g = g and S = S,
+           OF ENTRY PROC_ENTRY EDGE_BOUND COMB DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO w c])
+  qed
+  show ?thesis
+    unfolding cfg_collect_ctx_def alpha_ctx_def cfg_collect_trace_def
+    using tr_sound by auto
+qed
+
 text \<open>
   \<^bold>\<open>What is certified.\<close>  The clean (Goblint-sequential) transfer, which reads only
   the local slot, is \<^emph>\<open>sound\<close> when soundness is measured against the local read:
-  the five per-edge obligations (\<open>clean_rread_*\<close>) hold unconditionally, and the
-  flat collecting theorem \<open>clean_cfg_collect_rread\<close> lifts them --- under the natural
-  local post-fixpoint bounds --- to \<^const>\<open>cfg_collect\<close>.  This is the read split the
-  \<open>Exec_Sign_Cmp_Keyed_Retain_EnterMono\<close> obstruction identified as the fix: the
-  soundness conclusion is stated over R_read (\<open>sg (Inl v)\<close>), decoupled from the
-  coarse published global that dominated the Obs read.  The retain (\<open>\<squnion> g\<close>) spine
-  remains the sound baseline for the Obs conclusion.
+  the five per-edge obligations (\<open>clean_rread_*\<close>) hold unconditionally; the flat
+  theorem \<open>clean_cfg_collect_rread\<close> lifts them to \<^const>\<open>cfg_collect\<close>; and
+  \<open>clean_ctx_collect_rread\<close> gives the context-sensitive statement against
+  \<^const>\<open>cfg_collect_ctx\<close> with the conclusion at the per-context local slot
+  \<open>sg (Inl (v, ctx))\<close>.  This is the read split the \<open>Keyed_Retain_EnterMono\<close>
+  obstruction identified as the fix, and it clears \<^emph>\<open>both\<close> obstructions the retain
+  spine hit: no \<open>'g :: finite\<close> quotient (the local read ignores \<open>Inr\<close>), and
+  \<open>ENTER_MONO\<close> over the local read (decoupled from the coarse published global).
+  The retain (\<open>\<squnion> g\<close>) / \<^const>\<open>side_env_cmp\<close> spine is untouched --- it remains the
+  sound conservative baseline for the Obs conclusion.
 
-  \<^bold>\<open>Remaining obligation.\<close>  Lifting this to the context-sliced \<^const>\<open>cfg_collect_ctx\<close>
-  --- and connecting it to the executable seeded run through the \<open>_st\<close> and keyed
-  bridges --- is the next slice.  The entry seed bound \<open>entry_le\<close> is exactly what the
-  Goblint-faithful seed \<open>side_cfg_T_eff_cmp_seed_st\<close> with \<^const>\<open>restrict_global_st\<close>
-  establishes per context (\<open>seed_clean_sound_on_prog2\<close>).
+  \<^bold>\<open>The entry invariant, explicitly.\<close>  \<open>ENTRY\<close> / \<open>PROC_ENTRY\<close> are exactly
+  \<^emph>\<open>callee-entry local \<sqsupseteq> context-specific caller stores\<close> (globals included): every
+  store reaching the entry in context \<open>ctx\<close> lies in \<open>\<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>\<close>.
+  The Goblint-faithful seed \<open>side_cfg_T_eff_cmp_seed_st\<close> with
+  \<^const>\<open>restrict_global_st\<close> establishes it per context
+  (\<open>seed_clean_sound_on_prog2\<close>).  \<open>EDGE_BOUND\<close> then propagates it reading only the
+  local, and \<open>clean_ctx_collect_rread\<close> concludes soundness --- \<^emph>\<open>without\<close> the
+  \<open>local \<squnion> global\<close> recovery.
+
+  \<^bold>\<open>Remaining obligation.\<close>  Discharging \<open>ENTRY\<close> / \<open>PROC_ENTRY\<close> / \<open>EDGE_BOUND\<close> /
+  \<open>COMB\<close> / \<open>ENTER_MONO\<close> for the concrete executable seeded run \<open>seed_clean_sol\<close>
+  through the \<open>_st\<close> and keyed bridges is the executable-reduction slice; the
+  precision witnesses (\<open>kgen_rread_contexts_points\<close>, \<open>seed_clean_sound_on_prog2\<close>)
+  already show the run meets them on the two-call program.
 \<close>
 
 end
