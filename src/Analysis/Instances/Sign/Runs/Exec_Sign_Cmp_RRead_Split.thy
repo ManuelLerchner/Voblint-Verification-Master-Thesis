@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_RRead_Split
-  imports Exec_Sign_Cmp_Keyed_Retain_EnterMono
+  imports Exec_Sign_Cmp_Keyed_Retain_EnterMono Clean_RRead_Sound
 begin
 
 section \<open>The D/G/C read split: R_read / G_read / Obs\<close>
@@ -218,26 +218,8 @@ text \<open>
   assigned value, computed on the local (where a callee-entry global is \<open>\<bottom>\<close>), is
   dropped.\<close>
 
-definition clean_edge_tree ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> 'u \<Rightarrow> ('u, unit, 'a abs_state) strategy_tree" where
-  "clean_edge_tree f u = QueryL u (\<lambda>su. let res = f su in Side () (restrict_global res) (Answer res))"
-
-lemma restrict_global_le': "restrict_global s \<le> s"
-  by (simp add: restrict_global_def le_fun_def)
-
-lemma etf_full_clean_edge_tree: "etf_full (clean_edge_tree f u) sg = f (sg (Inl u))"
-  unfolding clean_edge_tree_def etf_full_def all_sides_def traverse_rhs_def
-  by (simp add: Let_def sup.absorb1 restrict_global_le')
-
-definition clean_etf_of_transfer ::
-  "'a::bounded_semilattice_sup_bot domain_transfer \<Rightarrow> (unit, 'a) effectful_domain_transfer" where
-  "clean_etf_of_transfer tf = \<lparr>
-     etf_nop = clean_edge_tree (apply_tf tf EA_Nop),
-     etf_assign = (\<lambda>x e. clean_edge_tree (apply_tf tf (EA_Assign x e))),
-     etf_assume = (\<lambda>b. clean_edge_tree (apply_tf tf (EA_Assume b))),
-     etf_assume_not = (\<lambda>b. clean_edge_tree (apply_tf tf (EA_AssumeNot b))),
-     etf_enter = clean_edge_tree (apply_tf tf EA_Enter),
-     etf_combine = unit_combine_tree \<rparr>"
+text \<open>The clean edge tree and the clean transfer constructor are domain-generic
+  (\<^theory>\<open>Voblint_Analysis.Clean_RRead_Sound\<close>); Sign only names the instance.\<close>
 
 definition sign_etf_clean :: "(unit, sign) effectful_domain_transfer" where
   "sign_etf_clean = clean_etf_of_transfer sign_tf"
