@@ -38,6 +38,20 @@ text \<open>
   remaining proof obligation --- see \<open>docs/VALUE_CARRIED_DIGEST_STATUS.md\<close>.
 \<close>
 
+text \<open>
+  \<^bold>\<open>Architecture (kept on the keyed / digest-writer baseline deliberately).\<close>  This
+  example contrasts two \<^emph>\<open>keyed flow-insensitive global\<close> write disciplines ---
+  context-keyed (\<^const>\<open>side_cfg_T_eff_cmp_st\<close>) vs digest-keyed
+  (\<^const>\<open>side_cfg_T_eff_digest_st\<close>, Goblint's \<open>sideg (G, Digest.compute d)\<close>).  Both
+  route globals through the \<open>Inr\<close> keyed slot and read them back via
+  \<^const>\<open>side_env_cmp\<close> / \<^const>\<open>mode_obs\<close>; the digest write key is the fix on that
+  axis.  This is a \<^emph>\<open>different\<close> mechanism from the seeded-clean sequential D/G/C
+  spine (which keeps globals flow-sensitively in the callee \<^emph>\<open>local\<close> and reads only
+  R_read), so it is not migrated: the before/after digest-writer study is its point.
+  The seeded-clean spine is the Goblint sequential model; its run is
+  \<open>Example_Seed_Clean_Context\<close> and its certified soundness \<open>clean_ctx_collect_rread\<close>.
+\<close>
+
 subsection \<open>The source program\<close>
 
 text \<open>\<open>main\<close> sets the local \<open>''mode''\<close> and the global \<open>G\<close>, calls \<open>f\<close> under each mode, and

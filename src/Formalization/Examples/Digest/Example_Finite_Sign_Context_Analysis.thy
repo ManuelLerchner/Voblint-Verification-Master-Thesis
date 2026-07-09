@@ -10,6 +10,23 @@ text \<open>
   remains the value-domain state, while the context/key is a finite datatype.
 \<close>
 
+text \<open>
+  \<^bold>\<open>Architecture (kept on the retain / \<^const>\<open>side_env_cmp\<close> baseline deliberately).\<close>
+  This example studies the \<^emph>\<open>keyed flow-insensitive global\<close> architecture and its
+  \<open>ENTER_MONO\<close> obstruction: the observation read \<^const>\<open>side_env_cmp\<close> \<open>= local \<squnion>
+  global\<close> pins \<open>G\<close> to \<^const>\<open>SNonNeg\<close> at the shared caller context, and it then
+  prototypes a \<^emph>\<open>value-refined caller context\<close> fix (\<open>fctxu\<close>, an intra-edge context
+  update).  It is \<^emph>\<open>not\<close> a Goblint sequential D/G/C example and is not migrated to
+  the seeded-clean spine: doing so would delete the obstruction study that motivates
+  the fix.  The seeded-clean (R_read) spine is the \<^emph>\<open>Goblint-faithful\<close> alternative
+  resolution of the same obstruction --- it seeds the callee-entry \<^emph>\<open>local\<close> from the
+  context and reads only that local, so the coarse \<^const>\<open>side_env_cmp\<close> global
+  summand never enters the routing read; its certified soundness is
+  \<open>clean_ctx_collect_rread\<close> and its run is \<open>Example_Seed_Clean_Context\<close>.  The
+  \<open>fctxu\<close> value-refined contexts here are an \<^emph>\<open>orthogonal\<close> axis (finite-context
+  refinement), preserved as the comparison baseline.
+\<close>
+
 datatype sign_gctx = GZero | GPos | GNonNeg | GOther
 
 lemma UNIV_sign_gctx: "(UNIV :: sign_gctx set) = {GZero, GPos, GNonNeg, GOther}"

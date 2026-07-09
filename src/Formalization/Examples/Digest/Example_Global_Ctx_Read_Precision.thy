@@ -90,4 +90,18 @@ text \<open>
   discharges only its read layer.
 \<close>
 
+text \<open>
+  \<^bold>\<open>Two distinct ``seeded'' constructions --- do not conflate.\<close>  The unsound split
+  named above is \<open>Exec_Sign_Ctx_Seeded_Run\<close>, which seeds the callee-entry local from
+  the \<^emph>\<open>full caller local\<close> (\<open>seed_ec ctx sc = restrict_local_st sc\<close>, \<open>ent = id\<close>);
+  \<^const>\<open>enter_state\<close> erases those locals, so it reconstructs information the callee
+  never receives.  The \<^emph>\<open>seeded-clean\<close> spine (\<open>Exec_Sign_Cmp_Seed_Sound\<close>,
+  \<open>Example_Seed_Clean_Context\<close>) is a \<^emph>\<open>different\<close> construction: it seeds the
+  callee-entry local from the caller \<^emph>\<open>global\<close> (\<open>kgen_ec ctx sc = restrict_global_st
+  sc\<close>), which \<^const>\<open>enter_state\<close> \<^emph>\<open>preserves\<close> --- the same global-derived channel
+  this witness uses.  It is certified sound (\<open>clean_ctx_collect_rread\<close>) over the
+  R_read local slot.  So ``the seeded caller-local split is unsound'' applies only to
+  the \<^emph>\<open>local\<close>-seed run, not to the global-seeded seeded-clean spine.
+\<close>
+
 end
