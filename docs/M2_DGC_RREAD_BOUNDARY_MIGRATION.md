@@ -418,11 +418,68 @@ preserved.
 globals without consulting the published slot; `⊔ g` becomes unnecessary because
 `enter` (the seed) now supplies the information.
 
-**Remaining obligation.** This is a go/no-go witness, not yet a proof. The seeded
-clean transfer's soundness is *context-relative*: the entry local holds the
-*precise* per-context global (sharper than the flow-insensitive `Inr` slot, which
-`clean_eq_retain_if_local_dominates` does not cover), so the soundness statement is
-against `cfg_collect_ctx`, not flat `cfg_collect`. The full proof — a seeded
-analogue of `sound_effectful_transfer` discharged from the entry invariant
-`entry-local ⊒ globals(context)` — is the next slice. Retain remains the sound
-baseline until then.
+**Remaining obligation (discharged in Stage 4).** This is a go/no-go witness, not
+yet a proof. The seeded clean transfer's soundness is *context-relative*: the entry
+local holds the *precise* per-context global, so the soundness statement is against
+`cfg_collect_ctx`, not flat `cfg_collect`. Stage 4 proves it.
+
+## 14. Stage 4: certified soundness over R_read (`Exec_Sign_Cmp_Seed_Sound`)
+
+Stage 4 discharges the Stage-3 obligation as a machine-checked theorem, with no
+`sorry` and no weakened assumptions. The key move: measure soundness against the
+**local read** (R_read), the read the clean transfer actually uses, instead of the
+Obs read `local ⊔ global`.
+
+**Transfer level.** The clean transfer violates the Obs-quantified
+`sound_effectful_transfer` (Stage 2, `clean_transfer_unsound`) but satisfies its
+R_read reformulation — every premise quantified over `⟦sg (Inl u)⟧` instead of
+`⟦sg (Inl u) ⊔ glob_env sg⟧` — **unconditionally** (`clean_rread_nop` …
+`clean_rread_enter`). Each reduces to the base sign transfer soundness applied to
+the local slot; `clean_edge_collect_rread` packages the edge case.
+
+**Flat collecting.** `clean_cfg_collect_rread`: under the natural local
+post-fixpoint bounds (`etf_full (apply_etf sign_etf_clean a u) sg ≤ sg (Inl w)`), a
+combine bound, and an entry seed bound, the clean spine over-approximates
+`cfg_collect` **at the local slot** — never rejoining the published global.
+
+**Context-sliced (the target).** `clean_ctx_collect_rread`:
+
+```
+cfg_collect_ctx dg cmp g S v ctx  ⊆  ⟦sg (Inl (v, ctx))⟧
+```
+
+the context-sensitive statement, conclusion at the per-context local slot. It
+instantiates the read-agnostic trace backbone
+`post_fixpoint_sound_at_ctx_semantic_generic` with **both** `renv` and `rread` set
+to `route_read_cmp` (the local slot). This clears *both* obstructions the retain
+spine hit:
+
+* **(A) no `'g :: finite`.** `route_read_cmp` never touches an `Inr` slot, so the
+  global-key type is unconstrained — the value-keyed context (`sign st`, not
+  `finite`) needs no quotient. The obstruction that `side_env_cmp` does not
+  type-apply is gone.
+* **(B) ENTER_MONO over the local read.** The entering store is quantified over the
+  precise per-context local `⟦sg (Inl (cl, ctx))⟧`, not the coarse published global
+  that dominated the Obs read.
+
+**The entry invariant, explicit.** `ENTRY` / `PROC_ENTRY` state exactly
+*callee-entry local ⊒ context-specific caller stores* (globals included). The
+Goblint-faithful seed (Stage 3) establishes it per context; `EDGE_BOUND` propagates
+it reading only the local.
+
+**Precision, machine-backed.** `rread_strictly_sharper_than_retain`: on the two-call
+program the seeded-clean context slots are `{G:SZero}` and `{G:SPos}` — points
+*strictly* below the retain merged `SNonNeg` (`SZero < SNonNeg`, `SPos < SNonNeg`).
+The `SNonNeg` obstruction is dissolved; the global-derived context split is
+certified, not merely executable.
+
+**Baselines preserved.** The retain (`⊔ g`) / `side_env_cmp` spine is untouched and
+remains the sound conservative baseline for the Obs conclusion. `seed_generalises`
+keeps every shipped run intact.
+
+**Remaining (executable-reduction slice).** Discharging `ENTRY` / `PROC_ENTRY` /
+`EDGE_BOUND` / `COMB` / `ENTER_MONO` for the concrete `seed_clean_sol` run through
+the `_st` and keyed bridges connects the certified kernel to the executable run end
+to end. The precision witnesses (`kgen_rread_contexts_points`,
+`seed_clean_sound_on_prog2`) already show the run meets those obligations on the
+two-call and increment programs.

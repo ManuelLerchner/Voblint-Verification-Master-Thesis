@@ -320,6 +320,35 @@ proof -
     using tr_sound by auto
 qed
 
+section \<open>Precision witnesses: the global-derived context split\<close>
+
+text \<open>
+  The two-call program \<open>kgen_cfg\<close> calls a procedure at two sites where the global
+  \<open>G\<close> holds value-distinct signs.  Under the \<^emph>\<open>retain\<close> run the two activations
+  share one keyed context slot, joining to the non-point \<^const>\<open>SNonNeg\<close>
+  (\<open>retain_keyed_merged_G\<close>) --- the \<open>fctx\<close> obstruction.  Under the seeded-clean /
+  R_read run they land in \<^emph>\<open>separate point contexts\<close> \<open>{G:SZero}\<close> and \<open>{G:SPos}\<close>
+  (\<open>kgen_rread_contexts_points\<close>): the global-derived context split the retain read
+  could not express.
+\<close>
+
+lemma sign_strict_precision: "SZero < SNonNeg" "SPos < SNonNeg" "SZero \<noteq> SPos"
+  by eval+
+
+text \<open>
+  \<^bold>\<open>Strict precision, machine-backed.\<close>  The seeded-clean context slots are
+  \<^emph>\<open>strictly\<close> below the retain merged slot: the first call context reads \<open>G = SZero\<close>,
+  the second \<open>G = SPos\<close>, each a point strictly under the retain \<^const>\<open>SNonNeg\<close>.  The
+  \<^const>\<open>SNonNeg\<close> obstruction (\<open>read_admits_two_point_classes\<close>) is gone.
+\<close>
+
+theorem rread_strictly_sharper_than_retain:
+  "lookup_st (snd kgen_rread_solution (Inr (Abs_st (SBot, SBot, [(''G'', SZero)])))) ''G'' = SZero
+   \<and> lookup_st (snd kgen_rread_solution (Inr (Abs_st (SBot, SBot, [(''G'', SPos)])))) ''G'' = SPos
+   \<and> lookup_st (snd kgen_retain_solution (Inr kgen_ctx_merged)) ''G'' = SNonNeg
+   \<and> SZero < SNonNeg \<and> SPos < SNonNeg"
+  using kgen_rread_contexts_points retain_keyed_merged_G sign_strict_precision by simp
+
 text \<open>
   \<^bold>\<open>What is certified.\<close>  The clean (Goblint-sequential) transfer, which reads only
   the local slot, is \<^emph>\<open>sound\<close> when soundness is measured against the local read:
