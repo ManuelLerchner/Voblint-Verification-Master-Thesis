@@ -25,6 +25,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_Ivl_Run
     Exec_Ivl_Ctx_Run
     Exec_Ivl_Ctx_Gen_Run
+    Exec_Ivl_Cmp_Seed_Sound
     Constraint_System
     Constraint_System_Sound
     Analysis_Sound
