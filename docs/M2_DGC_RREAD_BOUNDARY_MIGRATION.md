@@ -340,3 +340,44 @@ Dropping the published-slot re-read models Goblint's sequential `D.t` discipline
 `G_read`), which is sound for single-writer sequential collecting semantics. That
 soundness is **not claimed** in the landed theory and is the next go/no-go before
 any kernel `ENTER_MONO`/`CMP_SOUND` migration.
+
+## 12. Stage-2 verdict: the clean transfer is UNSOUND — go/no-go = NO
+
+Stage 2 discharged the go/no-go and it **fails**. `clean_edge_tree_st` is unsound
+against the collecting semantics, proved two ways in `Exec_Sign_Cmp_RRead_Split`:
+
+- **Program-independent (`clean_transfer_unsound`).** `¬ sound_effectful_transfer
+  sign_etf_clean`. The assign obligation of `sound_effectful_transfer` quantifies
+  the incoming store over `⟦σ(Inl u) ⊔ glob_env σ⟧` (local **⊔** global), while the
+  clean image `etf_collecting_full = etf_full ⊔ glob_env` re-joins only the *old*
+  `glob_env σ`; the assigned value is computed on the local, where a callee-entry
+  global is `⊥`. Witness: global slot `G=SZero`, local `G=⊥`, concrete `G=0`;
+  `G:=G+1` gives `1`, image is `SZero`, `1 ∉ gamma_sign SZero`.
+- **Executable (`clean2_loses_increment_retain_keeps`).** On `int G; f(){G:=G+1};
+  main(){G:=0; f()}` (concrete `G=1` at exit), the clean run's observed global is
+  `SZero`; the sound retain run gives `SNonNeg`. `kgen`'s `G:=G+G` only *looked*
+  sound because the seed sits on a fixpoint of `+`; a genuine global read exposes
+  the loss.
+
+**Why (mechanism).** In this equation system globals live in the flow-insensitive
+`Inr` slot. The combine seeds a callee's globals *there* (via `Side`), and the
+enter edge is filtered from the intra fold, so the callee-entry *local* slot is
+`⊥` on globals. Both `unit_edge_tree` and `retain_edge_tree` read `su ⊔ g`; the
+`⊔ g` is the **load-bearing channel** delivering globals to the transfer. The
+Stage-1 precision loss and this soundness failure are the *same* mechanism —
+reading the published `Inr` global. This is the earlyglobs/multithreaded channel,
+**not** Goblint's sequential `D.t` discipline (where `enter` copies globals into
+the callee `D.t`). The earlier "sound for sequential semantics" note was correct
+about Goblint sequential mode but *wrong* about this architecture.
+
+**Exact missing invariant.** A sound flow-sensitive-global (clean) transfer needs
+the **callee-entry local slot seeded with the caller's globals**. The current
+filtered-enter / `Inr`-seed does not establish it and cannot without a generator
+change (the enter edge injecting globals into the callee local instead of the
+flow-insensitive slot).
+
+**Consequence.** Per the go/no-go, the kernel `ENTER_MONO`/`CMP_SOUND` are **not**
+migrated to `R_read`. The read split (§11) stays as a certified precision/faithful
+characterization; making it *sound* is gated on the generator-level enter/seed
+change above — a larger slice than M2 Stage 2, to be scoped separately. The
+retain (`⊔ g`) analyzer remains the sound shipped baseline.
