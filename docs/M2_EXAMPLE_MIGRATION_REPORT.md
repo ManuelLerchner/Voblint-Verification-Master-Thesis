@@ -95,9 +95,17 @@ standalone demonstration.
   all — a hand-built `wsig` isolates the read discipline. Not a spine candidate.
   Disambiguating note added (below).
 
-**Interval examples** — the certified clean spine is currently **sign-only**
-(`sign_etf_clean_st`, `kgen_combine_rread`). No interval seeded-clean transfer is
-proved, so interval examples cannot migrate without new soundness work. Left as-is.
+**Interval examples** — the seeded-clean D/G/C *soundness* spine is now
+domain-generic (`Clean_RRead_Sound`, proved under `sound_transfer tf`) and is
+instantiated for interval in `Exec_Ivl_Cmp_Seed_Sound`
+(`ivl_clean_ctx_collect_rread`, `ivl_clean_ctx_collect_rread_head`) with no
+interval-specific proof — the same architecture Sign uses. What is *not* wired is an
+executable interval seeded-clean *run*: the interval `_st` seeded generator and
+R_read combine (the interval analogue of `sign_etf_clean_st` / `kgen_combine_rread`)
+do not exist, so there is no stable `by eval` interval precision witness. The
+executable interval examples therefore stay on the retain / `side_env_cmp` (Obs)
+baseline as contrast, and their imprecision is **widening/narrowing-related**, not
+D/G/C-related — see "Interval D/G/C soundness vs widening precision" below.
 
 **Flat-IP / intra examples** (`Example_Side_*`, `Example_Inc_Proc`,
 `Example_Mixed_Flow_Sign`, `Example_Side_Execute`) — use `side_analyse_eff` /
@@ -157,3 +165,46 @@ flow-insensitive (earlyglobs / multithreaded-style) global, which Goblint also h
 Both are kept. The seeded-clean spine is the default for new sequential D/G/C
 examples; `side_env_cmp` stays where the flow-insensitive keyed global is the
 intended model or the conservative comparison.
+
+## Interval D/G/C soundness vs widening precision
+
+The seeded-clean spine is domain-generic: `Clean_RRead_Sound` proves the clean
+transfer, the five R_read obligations, the flat theorem `clean_cfg_collect_rread`,
+the trace kernel `clean_ctx_trace_rread`, and the context-sliced
+`clean_ctx_collect_rread` / `clean_ctx_collect_rread_head` under a single
+`sound_transfer tf` assumption. Sign and interval are both thin instantiations —
+`sign_etf_clean = clean_etf_of_transfer sign_tf`,
+`ivl_etf_clean = clean_etf_of_transfer ivl_tf` — and the interval spine
+(`Exec_Ivl_Cmp_Seed_Sound`) follows from `ivl_is_sound_transfer` with **no
+interval-specific proof**.
+
+The three obligations that carry domain/analysis content map to Goblint's
+`Spec` interface:
+
+| Obligation | Goblint |
+| --- | --- |
+| `ENTRY` / `PROC_ENTRY` (callee-entry local ⊒ context-specific caller stores) | `Spec.enter` |
+| `ENTER_MONO` (routing context selected from the callee local `D`) | `Spec.context` |
+| `COMB` (procedure-return reassembly) | `Spec.combine` |
+
+**The boundary.** D/G/C soundness is orthogonal to interval precision. The
+context-sliced theorem concludes the R_read local slot soundly over-approximates
+`cfg_collect_ctx` for *any* post-solution meeting the enter / context / combine
+obligations — at every program point, regardless of how coarse that solution is. On
+programs with loops the coarseness is set by the widening / narrowing operators of
+`abstract_domain` (`widen_state`, warrowing), not by the R_read split. Concretely:
+
+* `Example_Interval_Loop_Coverage` proves the loop head `[0,20]` — the `[0,19]` body
+  refinement plus the joined `20`. That the bound is `[0,20]` and not tighter is
+  `assume_ivl` + join + the loop shape, i.e. a widening/guard matter.
+* `Example_Interval_Recursion_Digest` / `Example_Interval_Recursion_Origin` widen `G`
+  toward `[0, +inf]` / top under warrowing; recovering per-depth precision is a
+  narrowing/origin question.
+
+None of these imprecisions is a D/G/C artefact. Migrating an executable interval
+example to the seeded-clean spine would need an interval `_st` seeded generator and
+R_read combine (the analogue of `sign_etf_clean_st` / `kgen_combine_rread`); those
+are not wired, so no stable `by eval` interval witness exists and the executable
+interval examples remain on the retain / `side_env_cmp` baseline as contrast. The
+soundness architecture is nonetheless shared — the interval spine is certified,
+generic, and `sorry`-free.
