@@ -42,6 +42,36 @@ lemma eq_side_cfg_T_eff_cmp_st:
   unfolding side_cfg_T_eff_cmp_st_def
   by (simp add: Let_def)
 
+text \<open>
+  The \<^emph>\<open>seeded\<close> executable generator: the minimal change from
+  \<^const>\<open>side_cfg_T_eff_cmp_st\<close> is a context-dependent frame seed
+  \<open>frame_seed :: 'c \<Rightarrow> 'a st\<close> replacing the constant \<open>fresh_frame_st\<close>.  With the
+  faithful seed \<^const>\<open>restrict_global_st\<close> it delivers the caller's globals into the
+  callee-entry \<^emph>\<open>local\<close> slot (Goblint's \<open>sidel (FunctionEntry f, fc) v\<close>), so a
+  clean transfer reading only that slot sees them.  Domain-generic --- Sign and
+  interval both instantiate it.
+\<close>
+
+definition side_cfg_T_eff_cmp_seed_st ::
+  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a st) strategy_tree)
+   \<Rightarrow> ('c \<Rightarrow> 'a st) \<Rightarrow> cfg \<Rightarrow> (unit, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
+   \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> (pp \<times> 'c, 'g, 'a st) eqsT"
+where
+  "side_cfg_T_eff_cmp_seed_st gkey cmb frame_seed g etf bot0_st s0_st =
+     (\<lambda>(v, c).
+        let acc0 = (if v = cfg_entry g then bot0_st \<squnion> restrict_local_st s0_st else bot0_st)
+                   \<squnion> (if is_frame_entry g v then frame_seed c else \<bottom>);
+            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
+                            (map_ltree (\<lambda>w. (w, c)) (apply_etf_st etf a u)))
+                        (non_enter_predecessor_list g v);
+            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
+            t = side_rhs_fold_ctx_st acc0 (intra @ comb)
+        in if v = cfg_entry g then Side (gkey c) (restrict_global_st s0_st) t else t)"
+
+lemma seed_generalises:
+  "side_cfg_T_eff_cmp_st gkey cmb g etf ff bot0 s0
+     = side_cfg_T_eff_cmp_seed_st gkey cmb (\<lambda>_. ff) g etf bot0 s0"
+  unfolding side_cfg_T_eff_cmp_st_def side_cfg_T_eff_cmp_seed_st_def by simp
 
 lemma side_rg_map_ltree:
   assumes "side_rg t"

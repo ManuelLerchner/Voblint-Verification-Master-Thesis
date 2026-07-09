@@ -38,26 +38,10 @@ text \<open>
   transfers for free.
 \<close>
 
-definition side_cfg_T_eff_cmp_seed_st ::
-  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a st) strategy_tree)
-   \<Rightarrow> ('c \<Rightarrow> 'a st) \<Rightarrow> cfg \<Rightarrow> (unit, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
-   \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> (pp \<times> 'c, 'g, 'a st) eqsT"
-where
-  "side_cfg_T_eff_cmp_seed_st gkey cmb frame_seed g etf bot0_st s0_st =
-     (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0_st \<squnion> restrict_local_st s0_st else bot0_st)
-                   \<squnion> (if is_frame_entry g v then frame_seed c else \<bottom>);
-            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
-                            (map_ltree (\<lambda>w. (w, c)) (apply_etf_st etf a u)))
-                        (non_enter_predecessor_list g v);
-            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
-            t = side_rhs_fold_ctx_st acc0 (intra @ comb)
-        in if v = cfg_entry g then Side (gkey c) (restrict_global_st s0_st) t else t)"
-
-lemma seed_generalises:
-  "side_cfg_T_eff_cmp_st gkey cmb g etf ff bot0 s0
-     = side_cfg_T_eff_cmp_seed_st gkey cmb (\<lambda>_. ff) g etf bot0 s0"
-  unfolding side_cfg_T_eff_cmp_st_def side_cfg_T_eff_cmp_seed_st_def by simp
+text \<open>The seeded generator \<^const>\<open>side_cfg_T_eff_cmp_seed_st\<close> and
+  @{thm [source] seed_generalises} are domain-generic
+  (\<^theory>\<open>Voblint_Analysis.Exec_Cmp_Bridge\<close>, beside
+  \<^const>\<open>side_cfg_T_eff_cmp_st\<close>); Sign and interval both instantiate them.\<close>
 
 subsection \<open>Why the seed removes the need for the published-global read\<close>
 
