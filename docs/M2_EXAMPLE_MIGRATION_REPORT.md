@@ -219,3 +219,19 @@ refinement and join. The retain / `side_env_cmp` interval examples remain the
 conservative baseline. The interval seeded-clean spine — generic soundness
 (`ivl_clean_ctx_collect_rread`), executable run, and precision witnesses — is
 certified and `sorry`-free.
+
+`Exec_Ivl_Cmp_Seed_Clean_Derived_Run` extends the same spine to a **derived**
+global: `f` computes `GH := G + 1` from the caller-set `G`. Both call sites solve
+exactly per context — the derived global is kept separated `[1,1]` (context
+`G=[0,0]`) vs `[11,11]` (context `G=[10,10]`), witnessed **twice**: as the callee-exit
+local (`dseed_callee_exit_derived`) and as the context-indexed global side state
+(`dseed_global_side_separated`), the latter because the generator publishes each side
+effect under the writer's own context (`gkey c = c`). A monovariant analysis would
+merge `f`'s entries to `G=[0,10]` and collapse the exit to `GH=[1,11]`
+(`dseed_contexts_separate` records the distinctness the split preserves). A
+context-clustered GraphViz (`dseed_dot`) renders the three activations with each `f`
+copy carrying its own `GH`. This run also pins down an R_read boundary: because the
+clean transfer reads only the local slot, a caller reading a global back after the
+call would see `bot` — folding a global into a read is G_read/Obs, a different
+combine — so the precision lives at the callee and in the per-context global side,
+not in a caller read-back.

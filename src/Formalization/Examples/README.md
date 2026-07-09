@@ -62,9 +62,12 @@ examples use `plain_dot_of_prog_lit`.
 
 **Seeded-clean D/G/C spine (interval):** the interval context-sliced R_read soundness
 is `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
-instantiation of the generic `Clean_RRead_Sound`; the executable interval run is
+instantiation of the generic `Clean_RRead_Sound`; the executable interval runs are
 `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Run` (non-recursive two-call program,
-`by eval` precision witnesses). The retain / `side_env_cmp` interval examples stay as
+`by eval` precision witnesses) and `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
+(same spine with a *derived* global `GH := G + 1`: the derived global stays separated
+per calling context — `[1,1]` vs `[11,11]` — both as the callee-exit local and as the
+context-indexed global side state, with a context-clustered GraphViz `dseed_dot`). The retain / `side_env_cmp` interval examples stay as
 the conservative baseline; their loop / recursion imprecision is widening/warrowing-related,
 not D/G/C-related. See `docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
 
