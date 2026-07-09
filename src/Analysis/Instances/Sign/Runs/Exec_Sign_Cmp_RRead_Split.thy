@@ -92,9 +92,8 @@ text \<open>
   \<open>context\<close> from the enter-produced local D.t.
 \<close>
 
-definition clean_edge_tree_st :: "(sign st \<Rightarrow> sign st) \<Rightarrow> 'u \<Rightarrow> ('u, unit, sign st) strategy_tree" where
-  "clean_edge_tree_st f u =
-     QueryL u (\<lambda>su. let res = f su in Side () (restrict_global_st res) (Answer res))"
+text \<open>The clean executable edge \<^const>\<open>clean_edge_tree_st\<close> is domain-generic
+  (\<^theory>\<open>Voblint_Analysis.Exec_Bridge\<close>); Sign only names the instance.\<close>
 
 definition sign_etf_clean_st :: "(unit, sign st) effectful_st_transfer" where
   "sign_etf_clean_st = \<lparr>
