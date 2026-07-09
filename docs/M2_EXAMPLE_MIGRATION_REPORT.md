@@ -7,26 +7,32 @@ whether it models Goblint's sequential `D/G/C` semantics.
 
 ## Executive summary
 
-**Zero pre-existing examples were migrated.** None of them model the sequential
-`D/G/C` caller-local-seeding architecture the seeded-clean spine implements: the
-context-keyed sign examples each deliberately study a *different* architecture axis
-(a `side_env_cmp` obstruction, digest-keyed writes, the global read layer), and the
-remaining examples have no context dimension to key (flat IP / intra) or use a
-domain the certified clean spine does not yet cover (interval). The seeded-clean
-spine's dedicated example, `Example_Seed_Clean_Context`, was added in the prior
-slice and is the Goblint-faithful default going forward.
+**One example was migrated** (additively): `Example_Finite_Sign_Context_Analysis`.
+Its program `fctx_prog` (`f() { GH := G }`, called twice under distinct globals) is a
+Goblint sequential `D/G/C` scenario. The seeded-clean (R_read) spine was run on it as
+the certified primary resolution — `GH` splits `SZero`/`SPos` per context, and the
+caller read of `G` is a *point* (`SZero`/`SPos`) strictly below the `SNonNeg` the
+`side_env_cmp` observation read is stuck at. The prior `side_env_cmp` obstruction
+study and the `fctxu` value-refined-context prototype are **preserved as the
+conservative baseline and comparison**.
 
-Three keyed-sign examples received **documentation cross-references** marking them as
-retained baselines and pointing to the seeded-clean default; one also got a
-disambiguating note (see "Proof / doc changes"). All are pure `text` additions — no
-proof changed, full `Voblint_Analysis` + `Voblint_Formalization` green.
+The other keyed-sign examples were **not** migrated — they model *different*
+architecture axes (digest-keyed writes, the global read layer), and the remaining
+examples have no context dimension to key (flat IP / intra) or use a domain the
+certified clean spine does not yet cover (interval). `Example_Seed_Clean_Context`
+(prior slice) remains the seeded-clean spine's dedicated demonstration.
+
+Two keyed-sign examples received **documentation cross-references** marking them as
+retained baselines and pointing to the seeded-clean default; one got a disambiguating
+note (see "Proof / doc changes"). Full `Voblint_Analysis` + `Voblint_Formalization`
+green after every step.
 
 ## All examples inspected
 
 | Example | Spine / mechanism | Models sequential D/G/C? | Decision |
 | --- | --- | --- | --- |
 | `Example_Seed_Clean_Context` | seeded-clean (R_read) | **yes** | already on new spine (prior slice) |
-| `Example_Finite_Sign_Context_Analysis` | keyed `side_env_cmp` + `fctxu` value-refined ctx | no — obstruction study | **retain** + cross-ref |
+| `Example_Finite_Sign_Context_Analysis` | keyed `side_env_cmp` + `fctxu` + **seeded-clean** | **yes** (`fctx_prog`) | **MIGRATED** (additive; baselines kept) |
 | `Example_Sign_Mode_Digest` | keyed vs digest-keyed *writes* | no — digest-writer study | **retain** + cross-ref |
 | `Example_Global_Ctx_Read_Precision` | `glob_env_cmp` read layer | no — read-layer witness | **retain** + disambig note |
 | `Example_Mode_Value_Digest_Showcase` | value-carried digest read (interval) | no — digest-reader, interval | retain (interval) |
@@ -53,21 +59,31 @@ proof changed, full `Voblint_Analysis` + `Voblint_Formalization` green.
 
 ## Which examples were migrated
 
-None of the pre-existing examples. `Example_Seed_Clean_Context` (added in the prior
-slice) is the seeded-clean spine's example and remains the Goblint-faithful default.
+**`Example_Finite_Sign_Context_Analysis`** — migrated *additively*. Its program
+`fctx_prog` is a Goblint sequential D/G/C scenario (a procedure reads a global under
+two calling contexts). A new **Migration** section runs the certified seeded-clean
+spine on it (`side_cfg_T_eff_cmp_seed_st id kgen_combine_rread restrict_global_st
+fctx_cfg sign_etf_clean_st …`):
+
+* `fctx_seed_clean_runs` — the spine solves the program (side solver).
+* `fctx_seed_clean_split` (`by eval`) — context `{G:SZero}` → `GH = SZero`, `{G:SPos}`
+  → `GH = SPos`: the same precise separation the `fctxu` prototype achieves, now on
+  the spine whose soundness is *proved* (`clean_ctx_collect_rread`), not prototyped.
+* `fctx_seed_clean_caller_G_exact` (`by eval`) — the caller read of `G` is the point
+  `SZero` at call 4, `SPos` at call 7.
+* `fctx_seed_clean_strictly_sharper` — those points are **strictly below** the
+  `SNonNeg` the `side_env_cmp` observation read is pinned to
+  (`fctx_caller_read_G_imprecise`): a strict precision improvement, and exactly the
+  `ENTER_MONO`-enabling exactness the obstruction study identified as missing.
+
+The prior `side_env_cmp` obstruction study and the `fctxu` value-refined-context
+prototype are preserved unchanged as the conservative baseline and the comparison.
+`Example_Seed_Clean_Context` (prior slice) remains the seeded-clean spine's
+standalone demonstration.
 
 ## Which were intentionally left, and why
 
 **Keyed-sign examples — different architecture axis (comparison baselines):**
-
-* **`Example_Finite_Sign_Context_Analysis`** — an *obstruction study* of the keyed
-  flow-insensitive global: it proves `ENTER_MONO` unprovable because the observation
-  read `side_env_cmp = local ⊔ global` pins `G` to `SNonNeg`, then prototypes a
-  *value-refined caller context* fix (`fctxu`, an intra-edge context update).
-  Migrating would delete the obstruction study that motivates the fix. The
-  seeded-clean spine is the Goblint-faithful *alternative* resolution of the same
-  obstruction (seed the callee local, read only R_read); the `fctxu` value-refined
-  contexts are an orthogonal finite-context axis. Cross-reference added.
 
 * **`Example_Sign_Mode_Digest`** — a before/after study of two keyed-global *write*
   disciplines (context-keyed vs digest-keyed, Goblint's `sideg (G, Digest.compute
@@ -94,13 +110,17 @@ level, below/beside any abstract routing choice.
 
 ## Proof / doc changes required
 
-No proof changed. Three `text`-block documentation additions:
+**`Example_Finite_Sign_Context_Analysis`** — one new import
+(`Voblint_Analysis.Exec_Sign_Cmp_Seed_Sound`), a rewritten header note (the program
+is now framed as a D/G/C scenario analysed three ways), and a new **Migration**
+section with five `by eval` / `by simp` facts (above). No existing proof changed; all
+prior lemmas (`fctx_*`, `fctxu_*`) are untouched.
 
-1. `Example_Finite_Sign_Context_Analysis` — architecture note: retained as the
-   `side_env_cmp` obstruction study; seeded-clean is the D/G/C-faithful alternative.
-2. `Example_Sign_Mode_Digest` — architecture note: retained as the digest-writer
+Doc-only `text`-block additions elsewhere:
+
+1. `Example_Sign_Mode_Digest` — architecture note: retained as the digest-writer
    study; seeded-clean is the sequential model.
-3. `Example_Global_Ctx_Read_Precision` — **disambiguation** (the one potential
+2. `Example_Global_Ctx_Read_Precision` — **disambiguation** (the one potential
    confusion): the example's "the seeded caller-local split is unsound" claim refers
    to `Exec_Sign_Ctx_Seeded_Run`, which seeds from the caller **local**
    (`restrict_local_st`, erased by `enter_state`) → genuinely unsound. The certified
@@ -111,8 +131,12 @@ No proof changed. Three `text`-block documentation additions:
 
 ## Examples whose behavior changed
 
-None. All edits are documentation. Executable witnesses and `by eval` results are
-byte-for-byte unchanged; the full build is green.
+**`Example_Finite_Sign_Context_Analysis`** — improved. It now additionally
+demonstrates the certified seeded-clean spine resolving `fctx_prog` with a strict
+precision gain: the caller read of `G` drops from `SNonNeg` (the `side_env_cmp`
+observation) to the exact per-call-site points `SZero`/`SPos`. No prior result
+regressed — the existing `side_env_cmp` and `fctxu` witnesses are unchanged. Every
+other example's behavior is unchanged (remaining edits are documentation).
 
 ## Remaining reliance on `side_env_cmp` routing
 

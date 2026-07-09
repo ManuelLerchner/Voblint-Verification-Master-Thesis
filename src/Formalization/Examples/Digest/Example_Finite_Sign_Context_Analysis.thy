@@ -1,5 +1,7 @@
 theory Example_Finite_Sign_Context_Analysis
-  imports Voblint_Analysis.Exec_Sign_Cmp_Keyed_Gen_Run
+  imports
+    Voblint_Analysis.Exec_Sign_Cmp_Keyed_Gen_Run
+    Voblint_Analysis.Exec_Sign_Cmp_Seed_Sound
 begin
 
 section \<open>Finite sign-derived calling contexts\<close>
@@ -11,20 +13,29 @@ text \<open>
 \<close>
 
 text \<open>
-  \<^bold>\<open>Architecture (kept on the retain / \<^const>\<open>side_env_cmp\<close> baseline deliberately).\<close>
-  This example studies the \<^emph>\<open>keyed flow-insensitive global\<close> architecture and its
-  \<open>ENTER_MONO\<close> obstruction: the observation read \<^const>\<open>side_env_cmp\<close> \<open>= local \<squnion>
-  global\<close> pins \<open>G\<close> to \<^const>\<open>SNonNeg\<close> at the shared caller context, and it then
-  prototypes a \<^emph>\<open>value-refined caller context\<close> fix (\<open>fctxu\<close>, an intra-edge context
-  update).  It is \<^emph>\<open>not\<close> a Goblint sequential D/G/C example and is not migrated to
-  the seeded-clean spine: doing so would delete the obstruction study that motivates
-  the fix.  The seeded-clean (R_read) spine is the \<^emph>\<open>Goblint-faithful\<close> alternative
-  resolution of the same obstruction --- it seeds the callee-entry \<^emph>\<open>local\<close> from the
-  context and reads only that local, so the coarse \<^const>\<open>side_env_cmp\<close> global
-  summand never enters the routing read; its certified soundness is
-  \<open>clean_ctx_collect_rread\<close> and its run is \<open>Example_Seed_Clean_Context\<close>.  The
-  \<open>fctxu\<close> value-refined contexts here are an \<^emph>\<open>orthogonal\<close> axis (finite-context
-  refinement), preserved as the comparison baseline.
+  \<^bold>\<open>Program: a Goblint sequential D/G/C scenario.\<close>  \<open>fctx_prog\<close> is \<open>void f() { GH :=
+  G }; void main() { G := 0; f(); G := 1; f() }\<close> --- a procedure that reads a global
+  under two distinct calling contexts.  It is analysed here \<^emph>\<open>three\<close> ways:
+
+    \<^enum> \<^bold>\<open>Keyed \<^const>\<open>side_env_cmp\<close> (the obstruction, baseline).\<close>  With a finite
+      context and the observation read \<^const>\<open>side_env_cmp\<close> \<open>= local \<squnion> global\<close>,
+      \<open>ENTER_MONO\<close> is unprovable: the global summand pins \<open>G\<close> to \<^const>\<open>SNonNeg\<close> at
+      the shared caller context (\<open>fctx_caller_read_G_imprecise\<close>).
+    \<^enum> \<^bold>\<open>Value-refined caller contexts (\<open>fctxu\<close>, prototype).\<close>  An intra-edge context
+      update splits \<open>main\<close> so calls 4/7 sit under \<open>GZero\<close>/\<open>GPos\<close> --- an orthogonal
+      finite-context axis, no soundness claim.
+    \<^enum> \<^bold>\<open>Seeded-clean (R_read) --- the certified Goblint-faithful resolution.\<close>  The
+      section \<^bold>\<open>Migration\<close> below runs the seeded-clean spine
+      (\<^const>\<open>side_cfg_T_eff_cmp_seed_st\<close> + \<^const>\<open>sign_etf_clean_st\<close> +
+      \<^const>\<open>kgen_combine_rread\<close>) on the \<^emph>\<open>same\<close> \<open>fctx_prog\<close>.  It seeds the
+      callee-entry \<^emph>\<open>local\<close> from the caller global and reads only that local, so the
+      caller read of \<open>G\<close> is a \<^emph>\<open>point\<close> (\<^const>\<open>SZero\<close>/\<^const>\<open>SPos\<close>, strictly below
+      the \<^const>\<open>SNonNeg\<close> the \<^const>\<open>side_env_cmp\<close> read is stuck at) and its
+      soundness is certified (\<open>clean_ctx_collect_rread\<close>).
+
+  Interpretations 1 and 2 stay as the conservative baseline and the comparison
+  prototype; interpretation 3 is the seeded-clean default for this sequential D/G/C
+  program.
 \<close>
 
 datatype sign_gctx = GZero | GPos | GNonNeg | GOther
@@ -502,5 +513,72 @@ lemma fctxu_fGPos_GH_pos:
     fctx_ec_call_def fctx_call_state_def unit_combine_tree_cmp_ctx_st_def
     sign_gctx_of_st_def sign_gctx_of_sign_def
   by eval
+
+section \<open>Migration: the seeded-clean (R_read) spine resolves the same program, certified\<close>
+
+text \<open>
+  The Goblint-faithful resolution of the obstruction, on the \<^emph>\<open>same\<close> \<open>fctx_prog\<close>.
+  Instead of a finite context read through \<^const>\<open>side_env_cmp\<close> (interpretation 1,
+  which the global summand pins to \<^const>\<open>SNonNeg\<close>) or an intra-edge context update
+  (interpretation 2, \<open>fctxu\<close>), the seeded-clean spine keys the context on the caller
+  \<^emph>\<open>global\<close> state (\<^const>\<open>restrict_global_st\<close>, which \<^const>\<open>enter_state\<close> preserves),
+  seeds that into the callee-entry \<^emph>\<open>local\<close>, and reads only the local
+  (\<^const>\<open>sign_etf_clean_st\<close>).  Same generator/combine as \<open>Example_Seed_Clean_Context\<close>,
+  now on the global-reading program \<open>f() { GH := G }\<close>.  Its soundness against the
+  context-sliced collecting semantics is certified by \<open>clean_ctx_collect_rread\<close>.
+\<close>
+
+definition fctx_seed_clean_eqs :: "(pp \<times> sign st, sign st, sign st) eqsT" where
+  "fctx_seed_clean_eqs = side_cfg_T_eff_cmp_seed_st id
+     (\<lambda>c cc ex. kgen_combine_rread cc ex c)
+     restrict_global_st fctx_cfg sign_etf_clean_st bot cinit_sign_st"
+
+definition fctx_seed_clean_solution ::
+  "(pp \<times> sign st) set \<times> ((pp \<times> sign st) + sign st \<Rightarrow> sign st)" where
+  "fctx_seed_clean_solution = TD_side_always_join_Interp_solve fctx_seed_clean_eqs (cfg_exit fctx_cfg, bot)"
+
+lemma fctx_seed_clean_runs: "fst fctx_seed_clean_solution \<noteq> {}"
+  unfolding fctx_seed_clean_solution_def fctx_seed_clean_eqs_def fctx_cfg_def fctx_prog_def
+    kgen_ec_def kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
+    side_cfg_T_eff_cmp_seed_st_def by eval
+
+text \<open>
+  \<^bold>\<open>The split, certified spine.\<close>  The callee \<open>f\<close> reads \<open>G\<close> (delivered by the seed into
+  its local) and writes \<open>GH\<close>: context \<open>{G:SZero}\<close> gives \<open>GH = SZero\<close>, context
+  \<open>{G:SPos}\<close> gives \<open>GH = SPos\<close> --- the same precise separation \<open>fctxu\<close> achieves
+  (\<open>fctxu_fGZero_GH_zero\<close> / \<open>fctxu_fGPos_GH_pos\<close>), now on the seeded-clean spine whose
+  soundness is proved, not prototyped.
+\<close>
+
+lemma fctx_seed_clean_split:
+  "lookup_st (snd fctx_seed_clean_solution (Inr (Abs_st (SBot, SBot, [(''G'', SZero)])))) ''GH'' = SZero
+   \<and> lookup_st (snd fctx_seed_clean_solution (Inr (Abs_st (SBot, SBot, [(''G'', SPos)])))) ''GH'' = SPos"
+  unfolding fctx_seed_clean_solution_def fctx_seed_clean_eqs_def fctx_cfg_def fctx_prog_def
+    kgen_ec_def kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
+    side_cfg_T_eff_cmp_seed_st_def by eval
+
+text \<open>
+  \<^bold>\<open>Strictly sharper than the \<^const>\<open>side_env_cmp\<close> baseline.\<close>  Where interpretation 1's
+  observation read of \<open>G\<close> at each call site is \<^const>\<open>SNonNeg\<close>
+  (\<open>fctx_caller_read_G_imprecise\<close> at 4, \<open>fctx_caller_read_G_imprecise7\<close> at 7 --- the
+  join of both \<open>G\<close>-writes), the seeded-clean caller \<^emph>\<open>local\<close> read is the point
+  \<^const>\<open>SZero\<close> at call 4 and \<^const>\<open>SPos\<close> at call 7, each strictly below
+  \<^const>\<open>SNonNeg\<close>.  The seed makes the routing read exact; this is exactly the
+  \<open>ENTER_MONO\<close>-enabling precision the obstruction study identified as missing.
+\<close>
+
+lemma fctx_seed_clean_caller_G_exact:
+  "lookup_st (snd fctx_seed_clean_solution (Inl (4, bot::sign st))) ''G'' = SZero
+   \<and> lookup_st (snd fctx_seed_clean_solution (Inl (7, bot::sign st))) ''G'' = SPos"
+  unfolding fctx_seed_clean_solution_def fctx_seed_clean_eqs_def fctx_cfg_def fctx_prog_def
+    kgen_ec_def kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
+    side_cfg_T_eff_cmp_seed_st_def by eval
+
+theorem fctx_seed_clean_strictly_sharper:
+  "lookup_st (snd fctx_seed_clean_solution (Inl (4, bot::sign st))) ''G'' = SZero
+   \<and> lookup_st (snd fctx_seed_clean_solution (Inl (7, bot::sign st))) ''G'' = SPos
+   \<and> lookup_st (snd fctx_solution (Inl (4, GOther)) \<squnion> snd fctx_solution (Inr GOther)) ''G'' = SNonNeg
+   \<and> SZero < SNonNeg \<and> SPos < SNonNeg"
+  using fctx_seed_clean_caller_G_exact fctx_caller_read_G_imprecise sign_strict_precision by simp
 
 end
