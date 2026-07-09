@@ -473,13 +473,33 @@ program the seeded-clean context slots are `{G:SZero}` and `{G:SPos}` — points
 The `SNonNeg` obstruction is dissolved; the global-derived context split is
 certified, not merely executable.
 
+**Executable reduction (`clean_ctx_collect_rread_head`).** For any *head* digest
+(`head_digest`, reading only the head store of the current activation) the three
+digest-propagation obligations `DG_INTRA` / `DG_RETURN` / `DG_CALLEE` discharge
+generically. What remains is exactly the run-specific bundle: the seed soundness
+`ENTRY` / `PROC_ENTRY`, the local post-fixpoint bounds `EDGE_BOUND` / `COMB`, and
+the value-digest routing `ENTER_MONO` (over the local read). This is the R_read
+analogue of the retain spine's `..._if_post_fixpoint` reduction — and, unlike it,
+needs no `'c :: finite`, because the conclusion is the local slot, not
+`side_env_cmp`. (The retain spine's own concrete `sign st` run is *not* bridged to
+its abstract soundness for exactly that finiteness reason; the R_read conclusion
+removes the blocker.)
+
+**Executable seeded run + example.** `kgen_seed_clean_solution` runs the seeded +
+clean + R_read spine through the vendored side solver on the two-call program;
+`kgen_seed_clean_precision` gives the point contexts `{G:SZero}` / `{G:SPos}` and
+`kgen_seed_clean_caller_locals` shows the seed delivers the globals to the callee
+local (SZero at pp 4, SPos at pp 7). The example theory
+`Example_Seed_Clean_Context` presents the spine end to end and contrasts it with
+the retain baseline.
+
 **Baselines preserved.** The retain (`⊔ g`) / `side_env_cmp` spine is untouched and
 remains the sound conservative baseline for the Obs conclusion. `seed_generalises`
 keeps every shipped run intact.
 
-**Remaining (executable-reduction slice).** Discharging `ENTRY` / `PROC_ENTRY` /
-`EDGE_BOUND` / `COMB` / `ENTER_MONO` for the concrete `seed_clean_sol` run through
-the `_st` and keyed bridges connects the certified kernel to the executable run end
-to end. The precision witnesses (`kgen_rread_contexts_points`,
-`seed_clean_sound_on_prog2`) already show the run meets those obligations on the
-two-call and increment programs.
+**Remaining.** The one obligation not yet discharged as a closed theorem for the
+concrete run is deriving `EDGE_BOUND` / `COMB` / `ENTER_MONO` from the solver's
+`part_post_solution` through the seeded-generator structure lemmas — the same
+generator-bridge machinery the retain spine builds in `Exec_Sign_Cmp_Keyed_Gen_Run`.
+`clean_ctx_collect_rread_head` isolates it to exactly those bounds; the executable
+witnesses show the run satisfies them.

@@ -320,6 +320,114 @@ proof -
     using tr_sound by auto
 qed
 
+section \<open>Executable reduction: discharging the digest-propagation obligations\<close>
+
+text \<open>
+  For any \<^emph>\<open>head\<close> digest --- one reading only the head store of the current
+  activation, \<^const>\<open>head_digest\<close> --- the three digest-propagation obligations
+  (\<open>DG_INTRA\<close> / \<open>DG_RETURN\<close> / \<open>DG_CALLEE\<close>) of \<open>clean_ctx_collect_rread\<close> are
+  discharged generically (program- and value-independent).  What remains is exactly
+  the run-specific bundle: the seed soundness (\<open>ENTRY\<close> / \<open>PROC_ENTRY\<close>), the local
+  post-fixpoint bounds (\<open>EDGE_BOUND\<close> / \<open>COMB\<close>), and the value-digest routing
+  (\<open>ENTER_MONO\<close>, over the local read).  This is the R_read analogue of the retain
+  spine's \<open>..._if_post_fixpoint\<close> reduction --- and, unlike it, needs no
+  \<open>'c :: finite\<close> (the conclusion is the local slot, not \<^const>\<open>side_env_cmp\<close>).
+\<close>
+
+theorem clean_ctx_collect_rread_head:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> sign abs_state"
+    and f :: "store \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> sign abs_state \<Rightarrow> 'c"
+  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (head_digest f [s]) ctx
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
+    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
+        \<Longrightarrow> apply_tf sign_tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
+    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+        \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
+        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
+  shows "cfg_collect_ctx (head_digest f) cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+proof (rule clean_ctx_collect_rread
+      [where dg = "head_digest f" and entdg = "\<lambda>s. f (enter_state s)" and rt = rt
+         and sg = sg and cmp = cmp and g = g and S = S])
+  show "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
+    by (rule ENTRY)
+next
+  show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    by (rule PROC_ENTRY)
+next
+  show "\<And>ctx u a v. (u, a, v) \<in> edges g \<Longrightarrow> apply_tf sign_tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
+    by (rule EDGE_BOUND)
+next
+  show "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
+        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    by (rule COMB)
+next
+  show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (head_digest f (tr @ [s'])) ctx \<Longrightarrow> cmp (head_digest f tr) ctx"
+    by (rule head_digest_DG_INTRA)
+next
+  show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> head_digest f (tau @ tl rho @ [<last tau|last rho>]) = head_digest f tau"
+    by (rule head_digest_DG_RETURN)
+next
+  show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> head_digest f rho = f (enter_state (last tau))"
+    by (simp add: head_digest_def)
+next
+  show "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk> \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
+    by (rule ENTER_MONO)
+qed
+
+section \<open>Executable seeded-clean run on the two-call program\<close>
+
+text \<open>
+  The Goblint-faithful spine end to end on \<^const>\<open>kgen_prog\<close>
+  (\<open>f(){G:=G+G}; main(){G:=0; f(); G:=1; f()}\<close>): the \<^emph>\<open>seeded\<close> generator
+  \<^const>\<open>side_cfg_T_eff_cmp_seed_st\<close> with the faithful seed \<^const>\<open>restrict_global_st\<close>,
+  the \<^emph>\<open>clean\<close> transfer \<^const>\<open>sign_etf_clean_st\<close>, and the R_read combine
+  \<^const>\<open>kgen_combine_rread\<close>, fed to the vendored side solver.
+\<close>
+
+definition kgen_seed_clean_eqs :: "(pp \<times> sign st, sign st, sign st) eqsT" where
+  "kgen_seed_clean_eqs = side_cfg_T_eff_cmp_seed_st id
+     (\<lambda>c cc ex. kgen_combine_rread cc ex c)
+     restrict_global_st kgen_cfg sign_etf_clean_st bot cinit_sign_st"
+
+definition kgen_seed_clean_solution ::
+  "(pp \<times> sign st) set \<times> ((pp \<times> sign st) + sign st \<Rightarrow> sign st)" where
+  "kgen_seed_clean_solution = TD_side_always_join_Interp_solve kgen_seed_clean_eqs (cfg_exit kgen_cfg, bot)"
+
+lemma kgen_seed_clean_runs: "fst kgen_seed_clean_solution \<noteq> {}"
+  unfolding kgen_seed_clean_solution_def kgen_seed_clean_eqs_def kgen_cfg_def kgen_ec_def
+    kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
+    side_cfg_T_eff_cmp_seed_st_def by eval
+
+text \<open>
+  The seed puts the caller's global into the callee-entry \<^emph>\<open>local\<close>: the caller-local
+  slots at the two call sites (pp 4, pp 7) are the points \<^const>\<open>SZero\<close> and
+  \<^const>\<open>SPos\<close> --- the clean transfer read them, not the published slot.
+\<close>
+
+lemma kgen_seed_clean_caller_locals:
+  "lookup_st (snd kgen_seed_clean_solution (Inl (4, bot::sign st))) ''G'' = SZero
+   \<and> lookup_st (snd kgen_seed_clean_solution (Inl (7, bot::sign st))) ''G'' = SPos"
+  unfolding kgen_seed_clean_solution_def kgen_seed_clean_eqs_def kgen_cfg_def kgen_ec_def
+    kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
+    side_cfg_T_eff_cmp_seed_st_def by eval
+
+text \<open>The two activations land in separate point contexts \<open>{G:SZero}\<close>, \<open>{G:SPos}\<close>.\<close>
+
+lemma kgen_seed_clean_precision:
+  "lookup_st (snd kgen_seed_clean_solution (Inr (Abs_st (SBot, SBot, [(''G'', SZero)])))) ''G'' = SZero
+   \<and> lookup_st (snd kgen_seed_clean_solution (Inr (Abs_st (SBot, SBot, [(''G'', SPos)])))) ''G'' = SPos"
+  unfolding kgen_seed_clean_solution_def kgen_seed_clean_eqs_def kgen_cfg_def kgen_ec_def
+    kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
+    side_cfg_T_eff_cmp_seed_st_def by eval
+
 section \<open>Precision witnesses: the global-derived context split\<close>
 
 text \<open>
