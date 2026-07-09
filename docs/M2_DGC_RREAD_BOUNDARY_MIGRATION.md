@@ -569,3 +569,50 @@ forward into the caller local, so the second context observes it.
 the solver's `part_post_solution` (§14 "Remaining") is orthogonal to the return path
 and unchanged by rehydration; `rehydrate_caller_continuation_sound` closes the `COMB`
 half of that reduction as a closed theorem.
+
+## 16. Stage 6: seeded-generator `st`→`abs` transport enabler (`Exec_Cmp_Bridge`)
+
+Stage 4 left one generic enabler open (§14 "Remaining"): transporting the concrete
+seeded-clean run's `part_post_solution` (over `'a st`) to the abstract
+`side_cfg_T_eff_cmp_seed` post-solution the kernel bounds read. That enabler is now
+landed, batch-green in session `Voblint_Analysis` (`Finished Voblint_Analysis`, no
+`sorry`).
+
+**What landed (`Exec_Cmp_Bridge.thy`).**
+
+- The abstract seeded generator `side_cfg_T_eff_cmp_seed` and its denotation
+  `eq_side_cfg_T_eff_cmp_seed` were hoisted from the Sign runs theory into
+  `Exec_Cmp_Bridge`, beside the executable `side_cfg_T_eff_cmp_seed_st`, together with
+  the new executable denotation `eq_side_cfg_T_eff_cmp_seed_st`. The Sign runs theory
+  now inherits them instead of redefining.
+- `part_post_solution_cmp_seed_st_to_abs_eff`: a post-solution of the executable
+  seeded generator maps, under `fun_of_st`, to a post-solution of its abstract image,
+  the frame seed `frame_seed_st` carried to `λc. fun_of_st (frame_seed_st c)`. It
+  mirrors `part_post_solution_cmp_st_to_abs_eff` and routes through
+  `part_post_solution_st_to_abs_transport` with three commutation obligations
+  (`eq` / `sides` / `dep`).
+
+**Why the mirror is exact — no new content.** `side_cfg_T_eff_cmp`'s `acc0` already
+carries the `⊔ (if is_frame_entry then fresh_frame else ⊥)` shape; the seeded
+generator only replaces the constant `fresh_frame` with `frame_seed c`. The transfer
+is unit-global in both (`etf :: (unit, 'a)`, decoupled from the key type `'g`), and
+the fold list `intra @ comb` is identical, so the three commutation lemmas reuse the
+existing `private` fold-relation lemmas (`cmp_fold_traverse_rel` / `cmp_fold_sides_rel`
+/ `cmp_fold_dep_rel`) unchanged.
+
+**What this closes.** With the transport, the concrete `kgen_seed_clean_solution`'s
+`part_post_solution` becomes the abstract post-solution that `seeded_clean_edge_bound`
+(§14) consumes — so `EDGE_BOUND` is discharged for the real run with no `'g :: finite`
+and no per-run `eval`. Item (i) transport and the intra edge half of the kernel
+obligation are now closed generically.
+
+**Residual, sharpened to one semantic bundle.** `ENTRY` / `PROC_ENTRY` reduce
+order-theoretically to `frame_seed ctx ≤ sg (Inl (proc_entry, ctx))` (the seed summand
+sits below the post-solution slot), but their γ-form then needs the seeded context to
+cover the entering stores — i.e. they collapse into `ENTER_MONO` over the local read.
+The remaining work is that single semantic obligation: proving, generically, that the
+R_read-seeded context γ-covers the concrete entering stores uniformly per context.
+Over `Obs` this was refuted (§12); over `R_read` the concrete run satisfies it by
+`eval` (`kgen_rread_contexts_points`), and lifting that to a generic theorem is the
+go/no-go crux — unchanged by this stage, which removes only the mechanical transport
+around it.

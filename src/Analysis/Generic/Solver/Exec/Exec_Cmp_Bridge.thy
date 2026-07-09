@@ -73,6 +73,52 @@ lemma seed_generalises:
      = side_cfg_T_eff_cmp_seed_st gkey cmb (\<lambda>_. ff) g etf bot0 s0"
   unfolding side_cfg_T_eff_cmp_st_def side_cfg_T_eff_cmp_seed_st_def by simp
 
+text \<open>
+  The abstract seeded generator: the \<^typ>\<open>'a abs_state\<close> image of
+  \<^const>\<open>side_cfg_T_eff_cmp_seed_st\<close>, mirroring \<^const>\<open>side_cfg_T_eff_cmp\<close>'s relation
+  to \<^const>\<open>side_cfg_T_eff_cmp_st\<close>.  Kept here so the executable-to-abstract transport
+  can name both generators.
+\<close>
+
+definition side_cfg_T_eff_cmp_seed ::
+  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+   \<Rightarrow> ('c \<Rightarrow> 'a abs_state) \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
+where
+  "side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0 =
+     (\<lambda>(v, c).
+        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+                   \<squnion> (if is_frame_entry g v then frame_seed c else \<bottom>);
+            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
+                            (map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u)))
+                        (non_enter_predecessor_list g v);
+            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
+            t = side_rhs_fold_ctx acc0 (intra @ comb)
+        in if v = cfg_entry g then Side (gkey c) (restrict_global s0) t else t)"
+
+lemma eq_side_cfg_T_eff_cmp_seed:
+  "eq (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) (v, ctx) sg
+   = side_acc_ctx ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+                   \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>))
+       sg
+       (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
+             (non_enter_predecessor_list g v)
+        @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
+  by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
+
+lemma eq_side_cfg_T_eff_cmp_seed_st:
+  "eq (side_cfg_T_eff_cmp_seed_st gkey cmb frame_seed_st g etf bot0_st s0_st) (v, ctx) sg =
+     traverse_rhs
+       (side_rhs_fold_ctx_st
+          ((if v = cfg_entry g then bot0_st \<squnion> restrict_local_st s0_st else bot0_st)
+           \<squnion> (if is_frame_entry g v then frame_seed_st ctx else \<bottom>))
+          (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
+                          (map_ltree (\<lambda>w. (w, ctx)) (apply_etf_st etf a u)))
+               (non_enter_predecessor_list g v)
+           @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))) sg"
+  unfolding side_cfg_T_eff_cmp_seed_st_def
+  by (simp add: Let_def)
+
 lemma side_rg_map_ltree:
   assumes "side_rg t"
   shows "side_rg (map_ltree r t)"
@@ -679,6 +725,73 @@ next
         = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (side_cfg_T_eff_cmp gkey cmb_abs g etf
                 (fun_of_st fresh_frame_st) (fun_of_st bot0_st) (fun_of_st s0_st) v)"
     using dep_aux_side_cfg_T_eff_cmp_st_eq[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
+qed
+
+lemma fun_of_st_eq_side_cfg_T_eff_cmp_seed_st:
+  "fun_of_st
+     (eq (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st) (v, ctx) \<sigma>_st)
+   = eq (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+           (fun_of_st bot0_st) (fun_of_st s0_st)) (v, ctx)
+       (\<lambda>k. fun_of_st (\<sigma>_st k))"
+  unfolding eq_side_cfg_T_eff_cmp_seed_st eq_side_cfg_T_eff_cmp_seed
+  by (simp add: Let_def traverse_side_rhs_fold_ctx cmp_fold_traverse_rel bot_fun_def[symmetric])
+
+lemma fun_of_st_sides_side_cfg_T_eff_cmp_seed_st:
+  "fun_of_st
+     (sides_of_rhs (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st (v, ctx)) \<sigma>_st k)
+   = sides_of_rhs
+       (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+          (fun_of_st bot0_st) (fun_of_st s0_st) (v, ctx))
+       (\<lambda>k. fun_of_st (\<sigma>_st k)) k"
+  unfolding side_cfg_T_eff_cmp_seed_st_def side_cfg_T_eff_cmp_seed_def
+  by (cases "v = cfg_entry g")
+     (simp_all add: Let_def cmp_fold_sides_rel bot_fun_def[symmetric])
+
+lemma dep_aux_side_cfg_T_eff_cmp_seed_st_eq:
+  "dep_aux \<sigma>_st (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st (v, ctx))
+   = dep_aux (\<lambda>k. fun_of_st (\<sigma>_st k))
+       (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+          (fun_of_st bot0_st) (fun_of_st s0_st) (v, ctx))"
+  unfolding side_cfg_T_eff_cmp_seed_st_def side_cfg_T_eff_cmp_seed_def
+  by (cases "v = cfg_entry g")
+     (simp_all add: Let_def cmp_fold_dep_rel bot_fun_def[symmetric])
+
+text \<open>
+  The seeded transport: a post-solution of the executable seeded generator maps, under
+  \<^const>\<open>fun_of_st\<close>, to a post-solution of its abstract image, the frame seed
+  \<^term>\<open>frame_seed_st\<close> carried to \<^term>\<open>\<lambda>c. fun_of_st (frame_seed_st c)\<close>.  Mirror of
+  @{thm [source] part_post_solution_cmp_st_to_abs_eff}; the context-dependent seed is the
+  only difference from the constant-frame keyed generator.
+\<close>
+
+theorem part_post_solution_cmp_seed_st_to_abs_eff:
+  assumes pp_st:
+    "part_post_solution (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st) x sigma_st vars"
+  shows "part_post_solution
+           (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+              (fun_of_st bot0_st) (fun_of_st s0_st))
+           x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+proof (rule part_post_solution_st_to_abs_transport[OF _ _ _ pp_st])
+  fix v \<sigma>
+  show "fun_of_st (eq (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st) v \<sigma>)
+        = eq (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+                (fun_of_st bot0_st) (fun_of_st s0_st)) v (\<lambda>k. fun_of_st (\<sigma> k))"
+    using fun_of_st_eq_side_cfg_T_eff_cmp_seed_st[where v="fst v" and ctx="snd v"]
+    by (cases v) simp
+next
+  fix v \<sigma> k
+  show "fun_of_st (sides_of_rhs (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st v) \<sigma> k)
+        = sides_of_rhs (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+                (fun_of_st bot0_st) (fun_of_st s0_st) v) (\<lambda>k. fun_of_st (\<sigma> k)) k"
+    using fun_of_st_sides_side_cfg_T_eff_cmp_seed_st[where v="fst v" and ctx="snd v" and k=k]
+    by (cases v) simp
+next
+  fix v \<sigma>
+  show "dep_aux \<sigma> (side_cfg_T_eff_cmp_seed_st gkey cmb_st frame_seed_st g etf_st bot0_st s0_st v)
+        = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (side_cfg_T_eff_cmp_seed gkey cmb_abs (\<lambda>c. fun_of_st (frame_seed_st c)) g etf
+                (fun_of_st bot0_st) (fun_of_st s0_st) v)"
+    using dep_aux_side_cfg_T_eff_cmp_seed_st_eq[where v="fst v" and ctx="snd v"]
     by (cases v) simp
 qed
 

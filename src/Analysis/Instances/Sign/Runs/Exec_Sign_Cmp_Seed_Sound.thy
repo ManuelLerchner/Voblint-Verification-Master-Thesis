@@ -121,31 +121,6 @@ text \<open>
   no per-run evaluation.
 \<close>
 
-definition side_cfg_T_eff_cmp_seed ::
-  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
-   \<Rightarrow> ('c \<Rightarrow> 'a abs_state) \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
-where
-  "side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0 =
-     (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
-                   \<squnion> (if is_frame_entry g v then frame_seed c else \<bottom>);
-            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
-                            (map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u)))
-                        (non_enter_predecessor_list g v);
-            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
-            t = side_rhs_fold_ctx acc0 (intra @ comb)
-        in if v = cfg_entry g then Side (gkey c) (restrict_global s0) t else t)"
-
-lemma eq_side_cfg_T_eff_cmp_seed:
-  "eq (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) (v, ctx) sg
-   = side_acc_ctx ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
-                   \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>))
-       sg
-       (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
-             (non_enter_predecessor_list g v)
-        @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
-  by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
 
 lemma traverse_apply_etf_clean:
   "traverse_rhs (apply_etf sign_etf_clean a u) sg = apply_tf sign_tf a (sg (Inl u))"
