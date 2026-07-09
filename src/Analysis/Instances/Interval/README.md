@@ -1,7 +1,8 @@
 # Interval domain (`ivl`)
 
 The interval domain threaded through the four layers of the
-`Instances/README.md` recipe. Executable witnesses live in `Runs/`.
+`Instances/README.md` recipe. Executable witnesses live under
+`src/Formalization/Examples/Executable/Interval/`.
 
 | File | Role |
 | --- | --- |

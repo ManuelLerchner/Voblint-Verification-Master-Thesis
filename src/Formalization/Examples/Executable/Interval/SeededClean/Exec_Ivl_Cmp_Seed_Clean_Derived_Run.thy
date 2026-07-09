@@ -1,5 +1,5 @@
 theory Exec_Ivl_Cmp_Seed_Clean_Derived_Run
-  imports Exec_Ivl_Cmp_Seed_Clean_Run Analysis_GraphViz
+  imports Exec_Ivl_Cmp_Seed_Clean_Run Voblint_Analysis.Analysis_GraphViz
 begin
 
 section \<open>Executable interval seeded-clean (R_read) run: a derived global kept context-separated\<close>
@@ -223,7 +223,7 @@ text \<open>
   (\<open>dseed_derived_in_gamma\<close>) and distinct (\<open>dseed_contexts_separate\<close>), where a
   monovariant analysis would merge them to \<open>GH = [1,11]\<close>.  The abstract D/G/C
   soundness this run instances lives in
-  \<^theory>\<open>Voblint_Analysis.Exec_Ivl_Cmp_Seed_Sound\<close>
+  \<^theory>\<open>Voblint_Formalization.Exec_Ivl_Cmp_Seed_Sound\<close>
   (@{thm [source] ivl_clean_ctx_collect_rread}).  No loop is analysed, so interval
   widening is not engaged.
 \<close>

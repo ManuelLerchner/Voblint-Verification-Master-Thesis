@@ -1,5 +1,5 @@
 theory Example_Seed_Clean_Context
-  imports Voblint_Analysis.Exec_Sign_Cmp_Seed_Sound
+  imports Exec_Sign_Cmp_Seed_Sound
 begin
 
 section \<open>The Goblint-faithful seeded-clean spine on a two-call program\<close>

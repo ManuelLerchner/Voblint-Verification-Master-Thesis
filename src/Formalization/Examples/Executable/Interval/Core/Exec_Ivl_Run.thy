@@ -1,5 +1,5 @@
 theory Exec_Ivl_Run
-  imports Ivl_Exec Solver_Menu "Voblint_CFG.IMP2_Proc_to_CFG"
+  imports Voblint_Analysis.Ivl_Exec Voblint_Analysis.Solver_Menu "Voblint_CFG.IMP2_Proc_to_CFG"
             "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
 begin
 

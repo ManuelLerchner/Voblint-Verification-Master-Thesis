@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_RRead_Split
-  imports Exec_Sign_Cmp_Keyed_Retain_EnterMono Clean_RRead_Sound
+  imports Exec_Sign_Cmp_Keyed_Retain_EnterMono Voblint_Analysis.Clean_RRead_Sound
 begin
 
 section \<open>The D/G/C read split: R_read / G_read / Obs\<close>

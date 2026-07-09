@@ -32,7 +32,7 @@ theory Voblint
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_Named_Global_Eff"
-    "Voblint_Analysis.Exec_Sign_Run"
+    Exec_Sign_Run
     Trace_Analysis_Sound
     Mixed_Flow_Sound
     Example_Inc_Proc
@@ -127,7 +127,7 @@ text \<open>
   \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
     \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
     \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
-    \<^item> @{theory Voblint_Analysis.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
+    \<^item> @{theory Voblint_Formalization.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; documents the solver-compatible constant route and the conditional-route monotonicity boundary.
 \<close>
 

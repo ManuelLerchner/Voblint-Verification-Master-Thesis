@@ -9,9 +9,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Generic/Solver/Context"
     "Generic/Solver/Exec"
     "Instances/Sign"
-    "Instances/Sign/Runs"
     "Instances/Interval"
-    "Instances/Interval/Runs"
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
   theories
@@ -19,16 +17,8 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Domain
     Exec_St
     Origin_State
-    Exec_Sign_Run
     Interval_Domain
     Ivl_Exec
-    Exec_Ivl_Run
-    Exec_Ivl_Ctx_Run
-    Exec_Ivl_Ctx_Gen_Run
-    Exec_Ivl_Cmp_Seed_Sound
-    Exec_Ivl_Cmp_Seed_Clean_Run
-    Exec_Ivl_Cmp_Seed_Clean_Derived_Run
-    Exec_Ivl_Cmp_Seed_Rehydrate_Run
     Constraint_System
     Constraint_System_Sound
     Analysis_Sound
@@ -63,17 +53,5 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Interval_Side_Soundness
     Sign_Exec
     Sign_Exec_Sound
-    Exec_Sign_Ctx_Run
-    Exec_Sign_Ctx_Gen_Run
-    Exec_Sign_Ctx_Seeded_Run
-    Exec_Sign_Cmp_Keyed_Run
-    Exec_Sign_Cmp_Keyed_Solve
-    Exec_Sign_Cmp_Keyed_Gen_Run
-    Exec_Sign_Cmp_Keyed_Retain_Run
-    Exec_Sign_Cmp_Keyed_Retain_EnterMono
-    Exec_Sign_Cmp_RRead_Split
-    Exec_Sign_Cmp_Seed_Enter
-    Exec_Sign_Cmp_Seed_Sound
     Value_Digest_Read
-    Exec_Sign_Mode_Value_Run
     Analysis_GraphViz

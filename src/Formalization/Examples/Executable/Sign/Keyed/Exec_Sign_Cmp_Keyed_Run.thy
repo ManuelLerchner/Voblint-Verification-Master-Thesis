@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_Keyed_Run
-  imports TD_Side_Eff_Cmp_Sound Sign_Domain
+  imports Voblint_Analysis.TD_Side_Eff_Cmp_Sound Voblint_Analysis.Sign_Domain
 begin
 
 section \<open>Keyed-global context precision: sound concrete witness (sign)\<close>

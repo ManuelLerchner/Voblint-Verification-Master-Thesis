@@ -1,7 +1,7 @@
 theory Example_Finite_Sign_Context_Analysis
   imports
-    Voblint_Analysis.Exec_Sign_Cmp_Keyed_Gen_Run
-    Voblint_Analysis.Exec_Sign_Cmp_Seed_Sound
+    Exec_Sign_Cmp_Keyed_Gen_Run
+    Exec_Sign_Cmp_Seed_Sound
 begin
 
 section \<open>Finite sign-derived calling contexts\<close>

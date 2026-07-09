@@ -2,6 +2,14 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   description "End-to-end soundness pipeline and examples"
   directories
     "Pipeline"
+    "Examples/Executable/Common"
+    "Examples/Executable/Sign/Core"
+    "Examples/Executable/Sign/Context"
+    "Examples/Executable/Sign/Keyed"
+    "Examples/Executable/Sign/SeededClean"
+    "Examples/Executable/Interval/Core"
+    "Examples/Executable/Interval/Context"
+    "Examples/Executable/Interval/SeededClean"
     "Examples/Digest"
     "Examples/Interprocedural"
     "Examples/Numeric"
@@ -10,6 +18,27 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Voblint
     Trace_Analysis_Sound
     Mixed_Flow_Sound
+    Exec_Context_Run_Common
+    Exec_Sign_Run
+    Exec_Sign_Ctx_Run
+    Exec_Sign_Ctx_Gen_Run
+    Exec_Sign_Ctx_Seeded_Run
+    Exec_Sign_Cmp_Keyed_Run
+    Exec_Sign_Cmp_Keyed_Solve
+    Exec_Sign_Cmp_Keyed_Gen_Run
+    Exec_Sign_Cmp_Keyed_Retain_Run
+    Exec_Sign_Cmp_Keyed_Retain_EnterMono
+    Exec_Sign_Cmp_RRead_Split
+    Exec_Sign_Cmp_Seed_Enter
+    Exec_Sign_Cmp_Seed_Sound
+    Exec_Sign_Mode_Value_Run
+    Exec_Ivl_Run
+    Exec_Ivl_Ctx_Run
+    Exec_Ivl_Ctx_Gen_Run
+    Exec_Ivl_Cmp_Seed_Sound
+    Exec_Ivl_Cmp_Seed_Clean_Run
+    Exec_Ivl_Cmp_Seed_Clean_Derived_Run
+    Exec_Ivl_Cmp_Seed_Rehydrate_Run
     Example_Inc_Proc
     Example_Proc_GraphViz
     Example_Side_Proc_Global

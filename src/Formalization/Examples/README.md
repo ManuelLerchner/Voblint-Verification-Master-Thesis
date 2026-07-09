@@ -5,6 +5,23 @@ executable analyzer runs, CFG visualisation, coverage tests, and precision
 comparisons. Not imported by pipeline theories. Grouped into themed subfolders
 (theory names stay flat; `ROOT` declares the directories).
 
+## `Executable/` — code-generated analyzer runs
+
+Executable runs that evaluate the real TD-side solver through generated code.
+These are examples even when they expose soundness-facing obligations: they fix a
+concrete program, equation system, or precision witness.
+
+| Folder | Role |
+| --- | --- |
+| `Executable/Common/` | shared scaffolds for small executable witnesses |
+| `Executable/Sign/Core/` | basic sign `st` codegen and hand-written equation-system probe |
+| `Executable/Sign/Context/` | sign context-sensitive runs and seeded entry witness |
+| `Executable/Sign/Keyed/` | sign keyed-global, retain, and mode-value digest runs |
+| `Executable/Sign/SeededClean/` | sign D/G/C seeded-clean witnesses |
+| `Executable/Interval/Core/` | interval loop solver run and update-rule menu |
+| `Executable/Interval/Context/` | interval context-sensitive runs |
+| `Executable/Interval/SeededClean/` | interval seeded-clean, derived-global, and return-rehydration runs |
+
 ## `Digest/` — context-sensitivity and digests
 
 | File | Role |
@@ -58,17 +75,18 @@ auto-collecting the program's locals. Sign and interval flagships both use them;
 examples use `plain_dot_of_prog_lit`.
 
 **Backward analysis arc:** `Example_Guard_Refinement` (one guard) → `Example_Interval_Loop_Coverage`
-(full CFG + trace soundness). Eval-only mirror: `Voblint_Analysis.Exec_Ivl_Run`.
+(full CFG + trace soundness). Eval-only mirror: `Exec_Ivl_Run` in
+`Executable/Interval/Core/`.
 
 **Seeded-clean D/G/C spine (interval):** the interval context-sliced R_read soundness
-is `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
+is `Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
 instantiation of the generic `Clean_RRead_Sound`; the executable interval runs are
-`Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Run` (non-recursive two-call program,
-`by eval` precision witnesses) and `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
+`Exec_Ivl_Cmp_Seed_Clean_Run` (non-recursive two-call program,
+`by eval` precision witnesses) and `Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
 (same spine with a *derived* global `GH := G + 1`: the derived global stays separated
 per calling context — `[1,1]` vs `[11,11]` — both as the callee-exit local and as the
 context-indexed global side state, with a context-clustered GraphViz `dseed_dot`).
-`Voblint_Analysis.Exec_Ivl_Cmp_Seed_Rehydrate_Run` adds **return rehydration** (Goblint
+`Exec_Ivl_Cmp_Seed_Rehydrate_Run` adds **return rehydration** (Goblint
 `Spec.combine`): the caller continuation is the structural combine `combine_abs_st`
 (caller locals + callee globals), so reading a global back after a call recovers the
 exact point (`g1=[0,0]`, `h1=[1,1]`, `g2=[10,10]`, `h2=[11,11]`) rather than `bot` —

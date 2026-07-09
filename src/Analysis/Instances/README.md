@@ -15,8 +15,9 @@ Each sub-folder threads one abstract domain through four layers:
 
 The four layers above are the **domain definition** and live directly in the domain folder.
 Executable **witnesses and runs** (the `Exec_<domain>_*_Run` / `_Solve` demonstrations that
-evaluate the real solver via the code generator) live in the folder's `Runs/` subfolder —
-they demonstrate the domain, they are not part of it.
+evaluate the real solver via the code generator) live under
+`src/Formalization/Examples/Executable/`. They demonstrate the domain, they are not
+part of the reusable analysis instance.
 
 ## Sub-folders
 
@@ -51,9 +52,10 @@ they demonstrate the domain, they are not part of it.
 6. **Context-sensitivity / digests — free.** No per-domain work: `glob_env_cmp`,
    `side_env_cmp`, `digest_global_read` (`obs_digest`), the cmp/ctx/digest generators,
    and their soundness are all generic over `'d::bounded_semilattice_sup_bot`. A new
-   domain plugs into them unchanged; only *witnesses* (`Runs/`) are written per domain.
+   domain plugs into them unchanged; only executable witnesses are written per domain,
+   in `src/Formalization/Examples/Executable/`.
 7. Register the `.thy` files in `src/Analysis/ROOT` (`directories` + `theories`,
-   order: domain before soundness before exec/runs).
+   order: domain before soundness before executable bridges).
 
 No changes to `Generic/` are needed unless the new domain requires a new tree shape.
 The Sign and Interval folders are the two worked examples; the `Generic/` layer is

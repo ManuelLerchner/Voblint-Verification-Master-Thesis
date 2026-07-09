@@ -121,7 +121,7 @@ level, below/beside any abstract routing choice.
 ## Proof / doc changes required
 
 **`Example_Finite_Sign_Context_Analysis`** — one new import
-(`Voblint_Analysis.Exec_Sign_Cmp_Seed_Sound`), a rewritten header note (the program
+(`Exec_Sign_Cmp_Seed_Sound`), a rewritten header note (the program
 is now framed as a D/G/C scenario analysed three ways), and a new **Migration**
 section with five `by eval` / `by simp` facts (above). No existing proof changed; all
 prior lemmas (`fctx_*`, `fctxu_*`) are untouched.

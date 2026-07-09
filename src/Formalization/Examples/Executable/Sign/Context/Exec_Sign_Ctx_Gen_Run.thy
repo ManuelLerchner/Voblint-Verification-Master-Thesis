@@ -1,5 +1,5 @@
 theory Exec_Sign_Ctx_Gen_Run
-  imports Sign_Exec_Sound Exec_Ctx_Bridge TD_Side_Eff_Ctx_Sound
+  imports Voblint_Analysis.Sign_Exec_Sound Voblint_Analysis.Exec_Ctx_Bridge Voblint_Analysis.TD_Side_Eff_Ctx_Sound
 begin
 
 section \<open>Generator-driven executable context analysis on a compiled CFG (sign)\<close>

@@ -20,14 +20,14 @@ each gated on a green `isabelle build … Voblint_Formalization`.
 | G — `rd_glob_read_singleton` | **Done.** Reduced to the generic `glob_env_cmp_singleton`. |
 | I — Interval README drift | **Done.** |
 | J — on-disk cruft | **Done** (local `git clean`; nothing tracked). |
-| K — folder structure | **Done.** `Generic/Solver/` → Core/Context/ReachingDefs/Exec; `Instances/*/Runs/`. Names resolve by ROOT `directories`, no imports touched. |
+| K — folder structure | **Superseded.** `Generic/Solver/` remains split into Core/Context/ReachingDefs/Exec. Executable run witnesses moved from `Instances/*/Runs/` to `src/Formalization/Examples/Executable/`, grouped by domain and theme. |
 | L.2 — `Value_Digest_Read` wiring | **Verified, no action.** The mode runs import it directly; the audit's "zero importers" was an artifact of first-token-only import parsing. No parallel copy. |
 | L.3 — doc history split | **Done as index** (`docs/INDEX.md`) instead of a move — physically relocating the heavily cross-referenced migration docs would have rotted ~100 links and forced CLAUDE.md edits. |
 | H — RD soundness variants | **Audited, no change.** Five variants have live consumers; three (`_sem`, `_paths`, `_paths_mustwrite`) are terminal capability theorems (distinct premise shapes cited as migration milestones), not accidental duplication. |
 | C — `cmp`/`obs_digest` combine dedup | **Deferred (blocked).** `Digest_Global_Read` (obs) imports `TD_Side_Eff_Cmp_Sound` (cmp), so the cmp trio is *upstream* substrate; expressing it via obs would invert the dependency. The same seam is under active rework in `DIGEST_GENERATOR_COLLECTING_DISCHARGE_MIGRATION`. Not a quick dedup. |
-| D — keyed-witness scaffold | **Deferred per doc guidance.** Partly aesthetic; the witnesses are teaching artifacts whose self-containment is a feature. The K reorg (witnesses now segregated in `Runs/`) already addressed the "demos dilute the story" concern. |
+| D — keyed-witness scaffold | **Deferred per doc guidance.** Partly aesthetic; the witnesses are teaching artifacts whose self-containment is a feature. The executable-example move keeps those demos out of the reusable Analysis instance. |
 | E — Sign/Interval instance mirror | **Deferred per doc guidance** — the doc recommends waiting for the Octagon domain so the abstraction is designed against a third client. B already extracted the largest shared piece (filter monotonicity). |
-| L.1 — concept stepping-stones | **Decided, no deletion.** NamedGlobalSign is intentional WIP ("soundness in progress"); the ctx/retain run demos are documented contrasts now tidied into `Runs/`. Retiring proven WIP / milestone witnesses was not warranted; K's reorg delivered the organizational win without destroying work. |
+| L.1 — concept stepping-stones | **Decided, no deletion.** NamedGlobalSign is intentional WIP ("soundness in progress"); the ctx/retain run demos are documented contrasts now housed under `Examples/Executable/`. Retiring proven WIP / milestone witnesses was not warranted; the reorg delivered the organizational win without destroying work. |
 | M — RD def-site emitter scaffold | **Done (commit `f455d93`).** `rd_switching_combine_st/abs` + the return-aware `cmp_site_ret` transport (`side_cfg_T_eff_cmp_site_ret`, `part_post_solution_{cmp_site_ret,rd_switching}_st_to_abs_eff`) were proven but had zero live consumers. −467 lines. RD *reader* family untouched. |
 | N — `cmp_site` site-keyed writer family | **Done (commit `964ea1a`).** `side_cfg_T_eff_cmp_site(_st)`, its transport chain, the edge-bound soundness cluster, and the orphan `..._cmp_site_switching_..._unit_transfer` capstone — superseded by `Digest_Keyed_Writer`. −523 lines. Stale doc refs reconciled. |
 | O — reaching-definitions digest family | **Done (commit `92739cf`).** Family A (external RD digest): the RD instance of `Digest_Global_Read`, `Reaching_Defs`, `RD_Set_Edge_Backbone`, the `Exec_Sign_RD_Keyed_*` witnesses, `Example_Config_Mode_Digest_Precision`. Demonstration-only, off the value-derived thesis. −1741 lines; the generic kernel + mode family untouched. Design docs retired to historical. |
@@ -362,12 +362,12 @@ files. Separate them:
   `Sign_Exec_Sound`, `Sign_Side_Soundness`, plus the sign-specific read instances
   `Value_Digest_Read`, `Exec_Sign_Mode_Value_Run`, `Exec_Sign_Mode_Compiled_Run`
   (these instantiate the digest/mode reader for sign — arguably domain content).
-- **Witnesses & runs (move to `Instances/Sign/Runs/` or `Instances/Witnesses/`):**
+- **Witnesses & runs (now under `Formalization/Examples/Executable/Sign/`):**
   the `Exec_Sign_Ctx_*`, `Exec_Sign_Cmp_Keyed_*`, `Exec_Sign_RD_Keyed_*`,
-  `Exec_Sign_Run` demonstrations. These are the files item **D** deduplicates; a
-  `Runs/` subfolder is also the natural home for **D**'s shared scaffold theory.
+  `Exec_Sign_Run` demonstrations. These are the files item **D** deduplicates.
 
-Same treatment for `Instances/Interval/` (`Exec_Ivl_*_Run` → `Interval/Runs/`).
+Same treatment for interval executable runs (`Exec_Ivl_*_Run` →
+`Formalization/Examples/Executable/Interval/`).
 `Ivl_Exec` earns the same split as `Sign_Exec`.
 
 ### K.3 Smaller structural notes

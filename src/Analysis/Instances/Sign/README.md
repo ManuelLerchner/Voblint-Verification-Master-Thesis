@@ -3,8 +3,9 @@
 The concrete sign domain threaded through the four layers of the
 `Instances/README.md` recipe: type-class instances, `abstract_domain` /
 `sound_transfer` interpretations, executable bridge, and end-to-end effectful
-soundness. Executable witnesses live in `Runs/`; they demonstrate the domain,
-they are not part of it.
+soundness. Executable witnesses live under
+`src/Formalization/Examples/Executable/Sign/`; they demonstrate the domain, they
+are not part of the reusable instance.
 
 | File | Role |
 | --- | --- |

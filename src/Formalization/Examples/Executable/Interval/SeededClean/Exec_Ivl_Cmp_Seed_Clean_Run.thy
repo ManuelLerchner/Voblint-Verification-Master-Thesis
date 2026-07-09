@@ -1,5 +1,5 @@
 theory Exec_Ivl_Cmp_Seed_Clean_Run
-  imports Exec_Ivl_Ctx_Gen_Run Exec_Cmp_Bridge Exec_Ivl_Cmp_Seed_Sound
+  imports Exec_Ivl_Ctx_Gen_Run Voblint_Analysis.Exec_Cmp_Bridge Exec_Ivl_Cmp_Seed_Sound
 begin
 
 section \<open>Executable interval seeded-clean (R_read) run on a two-call program\<close>
@@ -190,7 +190,7 @@ text \<open>
   (\<open>iseed_callee_increment\<close>, \<open>iseed_increment_in_gamma\<close>), and the global-derived
   context keeps the two activations at distinct points (\<open>iseed_contexts_separate\<close>).
   The abstract D/G/C soundness this run instances lives in
-  \<^theory>\<open>Voblint_Analysis.Exec_Ivl_Cmp_Seed_Sound\<close>
+  \<^theory>\<open>Voblint_Formalization.Exec_Ivl_Cmp_Seed_Sound\<close>
   (@{thm [source] ivl_clean_ctx_collect_rread}).  No loop is analysed, so interval
   widening is not engaged; interval loop precision is a widening matter, orthogonal
   to this D/G/C run.

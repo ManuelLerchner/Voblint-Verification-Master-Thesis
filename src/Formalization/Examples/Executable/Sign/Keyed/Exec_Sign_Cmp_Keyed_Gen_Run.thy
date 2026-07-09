@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_Keyed_Gen_Run
-  imports Exec_Sign_Ctx_Seeded_Run Exec_Cmp_Bridge Solver_Side_RG
+  imports Exec_Sign_Ctx_Seeded_Run Voblint_Analysis.Exec_Cmp_Bridge Voblint_Analysis.Solver_Side_RG
 begin
 
 section \<open>Executable keyed-global generator run (sign)\<close>

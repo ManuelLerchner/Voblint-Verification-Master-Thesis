@@ -1,11 +1,11 @@
 theory Exec_Ivl_Cmp_Seed_Rehydrate_Run
-  imports Exec_Ivl_Cmp_Seed_Clean_Run Analysis_GraphViz
+  imports Exec_Ivl_Cmp_Seed_Clean_Run Voblint_Analysis.Analysis_GraphViz
 begin
 
 section \<open>Return rehydration: caller continuation on the seeded-clean (R_read) spine\<close>
 
 text \<open>
-  The seeded-clean spine (\<^theory>\<open>Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Run\<close>) is
+  The seeded-clean spine (\<^theory>\<open>Voblint_Formalization.Exec_Ivl_Cmp_Seed_Clean_Run\<close>) is
   Goblint-faithful on the \<^emph>\<open>enter\<close> side (the seed copies caller globals into the
   callee-entry local) and reads only the local \<open>D\<close> in the transfer.  Its combine,
   \<^const>\<open>ivl_combine_rread\<close>, returns \<^const>\<open>restrict_local_st\<close> of the merged result:
@@ -272,7 +272,7 @@ text \<open>
   (\<open>ivl_combine_rehydrate_answer\<close>).  Executably, the four read-backs recover the exact
   points (\<open>rhyd_readbacks_exact\<close>, sound by \<open>rhyd_readbacks_in_gamma\<close>) and the two
   contexts stay separated (\<open>rhyd_callee_exit_separated\<close>).  The strip-combine spine
-  (\<^theory>\<open>Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Run\<close>) and the retain
+  (\<^theory>\<open>Voblint_Formalization.Exec_Ivl_Cmp_Seed_Clean_Run\<close>) and the retain
   \<open>side_env_cmp\<close> baseline are untouched.  No loop is analysed, so interval widening is
   not engaged.
 \<close>

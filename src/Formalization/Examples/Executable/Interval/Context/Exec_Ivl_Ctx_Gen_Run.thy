@@ -1,5 +1,5 @@
 theory Exec_Ivl_Ctx_Gen_Run
-  imports Exec_Ivl_Run Exec_Ctx_Bridge
+  imports Exec_Ivl_Run Voblint_Analysis.Exec_Ctx_Bridge
 begin
 
 section \<open>Generator-driven executable context analysis on a compiled CFG (interval)\<close>

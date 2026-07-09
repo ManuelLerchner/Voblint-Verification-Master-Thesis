@@ -1,5 +1,5 @@
 theory Exec_Ivl_Cmp_Seed_Sound
-  imports Clean_RRead_Sound Interval_Domain
+  imports Voblint_Analysis.Clean_RRead_Sound Voblint_Analysis.Interval_Domain
 begin
 
 section \<open>Interval instantiates the generic seeded-clean R_read spine\<close>

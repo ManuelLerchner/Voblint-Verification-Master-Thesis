@@ -75,7 +75,7 @@ of that discharge (R_read routing, invariant relaxation, the `fctx` separation).
 ## Stage 2 verdict (2026-07-09): ENTER_MONO is *not* provable — machine-backed
 
 `ENTER_MONO` for the value-keyed retain routing is refuted, not merely open. Proven
-batch-green in `src/Analysis/Instances/Sign/Runs/Exec_Sign_Cmp_Keyed_Retain_EnterMono.thy`
+batch-green in `src/Formalization/Examples/Executable/Sign/Keyed/Exec_Sign_Cmp_Keyed_Retain_EnterMono.thy`
 (commit `413c9265`):
 
 - `retain_keyed_merged_G` (eval): the per-context keyed global slot at
@@ -288,8 +288,8 @@ characterization as a standalone result regardless of whether M2 is attempted.
 
 ## 11. Stage-1 progress: read split, machine-backed (`Exec_Sign_Cmp_RRead_Split`)
 
-Landed theory: `src/Analysis/Instances/Sign/Runs/Exec_Sign_Cmp_RRead_Split.thy`
-(session `Voblint_Analysis`, green, no `sorry`). It makes the D/G/C split explicit
+Landed theory: `src/Formalization/Examples/Executable/Sign/SeededClean/Exec_Sign_Cmp_RRead_Split.thy`
+(session `Voblint_Formalization`, green, no `sorry`). It makes the D/G/C split explicit
 and pins down — by `eval` on the concrete `kgen_cfg` run — where the `fctx`
 obstruction actually lives.
 
