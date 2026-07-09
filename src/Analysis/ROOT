@@ -28,6 +28,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_Ivl_Cmp_Seed_Sound
     Exec_Ivl_Cmp_Seed_Clean_Run
     Exec_Ivl_Cmp_Seed_Clean_Derived_Run
+    Exec_Ivl_Cmp_Seed_Rehydrate_Run
     Constraint_System
     Constraint_System_Sound
     Analysis_Sound

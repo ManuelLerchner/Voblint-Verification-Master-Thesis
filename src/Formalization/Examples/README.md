@@ -67,7 +67,13 @@ instantiation of the generic `Clean_RRead_Sound`; the executable interval runs a
 `by eval` precision witnesses) and `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
 (same spine with a *derived* global `GH := G + 1`: the derived global stays separated
 per calling context — `[1,1]` vs `[11,11]` — both as the callee-exit local and as the
-context-indexed global side state, with a context-clustered GraphViz `dseed_dot`). The retain / `side_env_cmp` interval examples stay as
+context-indexed global side state, with a context-clustered GraphViz `dseed_dot`).
+`Voblint_Analysis.Exec_Ivl_Cmp_Seed_Rehydrate_Run` adds **return rehydration** (Goblint
+`Spec.combine`): the caller continuation is the structural combine `combine_abs_st`
+(caller locals + callee globals), so reading a global back after a call recovers the
+exact point (`g1=[0,0]`, `h1=[1,1]`, `g2=[10,10]`, `h2=[11,11]`) rather than `bot` —
+without a `local ⊔ global` read. Its `rehydrate_caller_continuation_sound` discharges
+the `COMB` obligation of the generic `clean_ctx_collect_rread`. The retain / `side_env_cmp` interval examples stay as
 the conservative baseline; their loop / recursion imprecision is widening/warrowing-related,
 not D/G/C-related. See `docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
 

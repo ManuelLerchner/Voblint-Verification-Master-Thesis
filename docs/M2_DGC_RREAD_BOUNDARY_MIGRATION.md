@@ -503,3 +503,69 @@ concrete run is deriving `EDGE_BOUND` / `COMB` / `ENTER_MONO` from the solver's
 generator-bridge machinery the retain spine builds in `Exec_Sign_Cmp_Keyed_Gen_Run`.
 `clean_ctx_collect_rread_head` isolates it to exactly those bounds; the executable
 witnesses show the run satisfies them.
+
+## 15. Stage 5: return rehydration (`Exec_Ivl_Cmp_Seed_Rehydrate_Run`)
+
+Stage 4 seeded the callee *entry* Goblint-faithfully. The dual — the *return* path —
+was still lossy: the seeded-clean combine (`ivl_combine_rread`) returned
+`restrict_local_st` of the merged result, **stripping** globals from the caller-local
+state. A caller reading a global back after the call (`g := G; h := GH`) observed
+`bot`. Stage 5 closes the return path.
+
+**Goblint's return path (Tasks 1–3).** `Spec.combine_env` / `combine_assign`
+(`analyses.ml` ≈ 1500–1514) receive the callee's exit `D.t` (first argument) and the
+caller's call-site `D.t` (second), and reconstruct the caller continuation. For a
+non-relational domain that reconstruction is **caller locals + callee globals** —
+verified against the repo's own alignment record (`GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md`
+§Gap 3: *"What we do: fixed structural combine — `restrict_local` of caller joined
+with `restrict_global` of callee"*). In the Isabelle formalization that operation is
+`combine_abs_st sc se = restrict_local_st sc ⊔ restrict_global_st se`
+(`Exec_St.thy:531`), the abstract mirror of the concrete `combine_states` (`<s|t>`,
+locals from `s`, globals from `t`). **No divergence from Goblint** — the strip combine
+was simply discarding the reconstructed globals via an extra `restrict_local_st`.
+
+**Where globals were discarded (Task 3).** `ivl_combine_rread` computes
+`res = restrict_local_st sc ⊔ restrict_global_st (se ⊔ g)` (already carrying the
+callee globals) but returns `Answer (restrict_local_st res)` — the outer
+`restrict_local_st` erases them.
+
+**Return rehydration (Task 4).** `ivl_combine_rehydrate` drops the extra
+`restrict_local_st` and the non-faithful `⊔ g`: the caller continuation is
+`Answer (combine_abs_st sc se)`, publishing the callee's returned globals
+`restrict_global_st se` to the context slot. The transfer is unchanged (clean,
+local-only `ivl_etf_clean_st`), the context is still selected from the caller local
+(`ivl_ec`, `ivl_combine_rehydrate_context_is_local`), and the folded-in globals are
+the callee's returned globals, **not** a `local ⊔ global` read of a published slot
+(`ivl_combine_rehydrate_answer`). R_read architecture preserved.
+
+**Soundness (Task 5).** The rehydrated continuation is exactly the `COMB` obligation
+of the generic `clean_ctx_collect_rread` (`Clean_RRead_Sound.thy:230`), whose
+conclusion is the return-node local slot. `rehydrate_caller_continuation_sound`
+discharges it:
+
+```
+s ∈ ⟦fun_of_st sc⟧  ⟹  t ∈ ⟦fun_of_st se⟧  ⟹  <s|t> ∈ ⟦fun_of_st (combine_abs_st sc se)⟧
+```
+
+a pure `sound_domain` fact (`combine_states_sound` transported to the executable `st`
+layer via `fun_of_st_combine_abs_st`) — no published-global read, so no `local ⊔
+global` join. This is precisely what the *strip* combine could not discharge: its
+returned local has the callee-written global at `bot`, so `<s|t>` (carrying the
+concrete global) escapes the concretisation. Rehydration restores exactly the missing
+globals, and no more. The generic theorem, the seeded-clean strip spine, and the
+retain `side_env_cmp` baseline are all untouched — nothing is invalidated.
+
+**Executable witness (Task 6).** On the target program (`f(){GH:=G+1}`; `main` calls
+`f` twice with `G=0` then `G=10`, reading both globals back), `rhyd_readbacks_exact`
+(`by eval`) gives `g1=[0,0]`, `h1=[1,1]`, `g2=[10,10]`, `h2=[11,11]` — the desired
+result, arising through the rehydrating combine, not a read-time global join
+(`rhyd_readbacks_in_gamma` certifies soundness). `rhyd_callee_exit_separated` shows the
+two contexts stay separated (`GH=[1,1]` vs `GH=[11,11]`); a context-clustered GraphViz
+(`rhyd_dot`) shows the read-backs accumulating along `main`. The second call's context
+is `{G=[10,10], GH=[1,1]}` — rehydration carries the first call's derived global
+forward into the caller local, so the second context observes it.
+
+**Residual (unchanged).** The end-to-end discharge of `EDGE_BOUND` / `ENTER_MONO` from
+the solver's `part_post_solution` (§14 "Remaining") is orthogonal to the return path
+and unchanged by rehydration; `rehydrate_caller_continuation_sound` closes the `COMB`
+half of that reduction as a closed theorem.
