@@ -95,17 +95,19 @@ standalone demonstration.
   all — a hand-built `wsig` isolates the read discipline. Not a spine candidate.
   Disambiguating note added (below).
 
-**Interval examples** — the seeded-clean D/G/C *soundness* spine is now
-domain-generic (`Clean_RRead_Sound`, proved under `sound_transfer tf`) and is
-instantiated for interval in `Exec_Ivl_Cmp_Seed_Sound`
-(`ivl_clean_ctx_collect_rread`, `ivl_clean_ctx_collect_rread_head`) with no
-interval-specific proof — the same architecture Sign uses. What is *not* wired is an
-executable interval seeded-clean *run*: the interval `_st` seeded generator and
-R_read combine (the interval analogue of `sign_etf_clean_st` / `kgen_combine_rread`)
-do not exist, so there is no stable `by eval` interval precision witness. The
-executable interval examples therefore stay on the retain / `side_env_cmp` (Obs)
-baseline as contrast, and their imprecision is **widening/narrowing-related**, not
-D/G/C-related — see "Interval D/G/C soundness vs widening precision" below.
+**Interval examples** — interval is a full peer of Sign on the seeded-clean spine,
+both in soundness and execution. The D/G/C *soundness* spine is domain-generic
+(`Clean_RRead_Sound`, proved under `sound_transfer tf`) and instantiated for interval
+in `Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`,
+`ivl_clean_ctx_collect_rread_head`) with no interval-specific proof. The *executable*
+interval seeded-clean run now also exists (`Exec_Ivl_Cmp_Seed_Clean_Run`): the
+generic seed generator `side_cfg_T_eff_cmp_seed_st` and clean edge
+`clean_edge_tree_st` (both lifted to the generic layer) with the interval
+`ivl_etf_clean_st` / `ivl_combine_rread`, run through the vendored side solver on a
+non-recursive two-call program, with stable `by eval` witnesses. The retain /
+`side_env_cmp` (Obs) interval examples remain as the conservative baseline; their
+loop / recursion imprecision is **widening/narrowing-related**, not D/G/C-related —
+see "Interval D/G/C soundness vs widening precision" below.
 
 **Flat-IP / intra examples** (`Example_Side_*`, `Example_Inc_Proc`,
 `Example_Mixed_Flow_Sign`, `Example_Side_Execute`) — use `side_analyse_eff` /
@@ -201,10 +203,19 @@ programs with loops the coarseness is set by the widening / narrowing operators 
   toward `[0, +inf]` / top under warrowing; recovering per-depth precision is a
   narrowing/origin question.
 
-None of these imprecisions is a D/G/C artefact. Migrating an executable interval
-example to the seeded-clean spine would need an interval `_st` seeded generator and
-R_read combine (the analogue of `sign_etf_clean_st` / `kgen_combine_rread`); those
-are not wired, so no stable `by eval` interval witness exists and the executable
-interval examples remain on the retain / `side_env_cmp` baseline as contrast. The
-soundness architecture is nonetheless shared — the interval spine is certified,
-generic, and `sorry`-free.
+None of these imprecisions is a D/G/C artefact — confirmed executably.
+`Exec_Ivl_Cmp_Seed_Clean_Run` runs the interval seeded-clean spine on a
+non-recursive, loop-free two-call program and the D/G/C machinery is **exactly
+precise**: the seed delivers each caller's `G` into the callee-entry local
+(`[0,0]` / `[10,10]`, `iseed_callee_entry_seeded`), the clean transfer reads only
+that local and computes the sound increment (`[1,1]` / `[11,11]`,
+`iseed_callee_increment` + `iseed_increment_in_gamma`), and the two activations stay
+at distinct points (`iseed_contexts_separate`). Where a loop or recursion *is*
+present, the coarsening is the solver's widening/warrowing, orthogonal to this run:
+`Example_Interval_Recursion_Digest` widens `G` to `[0, +inf]` under monovariant
+Apinis warrowing (its own "genuine wall" — a warrowing matter, not a D/G/C one), and
+`Example_Interval_Loop_Coverage` stabilises the loop head at `[0,20]` by guard
+refinement and join. The retain / `side_env_cmp` interval examples remain the
+conservative baseline. The interval seeded-clean spine — generic soundness
+(`ivl_clean_ctx_collect_rread`), executable run, and precision witnesses — is
+certified and `sorry`-free.

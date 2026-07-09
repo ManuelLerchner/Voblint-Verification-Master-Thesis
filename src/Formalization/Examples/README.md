@@ -62,9 +62,10 @@ examples use `plain_dot_of_prog_lit`.
 
 **Seeded-clean D/G/C spine (interval):** the interval context-sliced R_read soundness
 is `Voblint_Analysis.Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
-instantiation of the generic `Clean_RRead_Sound`. The executable interval examples
-stay on the retain / `side_env_cmp` baseline (no interval seeded-clean run is wired);
-their loop / recursion imprecision is widening/narrowing-related, not D/G/C-related.
-See `docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
+instantiation of the generic `Clean_RRead_Sound`; the executable interval run is
+`Voblint_Analysis.Exec_Ivl_Cmp_Seed_Clean_Run` (non-recursive two-call program,
+`by eval` precision witnesses). The retain / `side_env_cmp` interval examples stay as
+the conservative baseline; their loop / recursion imprecision is widening/warrowing-related,
+not D/G/C-related. See `docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
 
 **Session entry point:** `Voblint.thy` imports the curated example set for the umbrella document.
