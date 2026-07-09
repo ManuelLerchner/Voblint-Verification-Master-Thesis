@@ -381,3 +381,48 @@ migrated to `R_read`. The read split (§11) stays as a certified precision/faith
 characterization; making it *sound* is gated on the generator-level enter/seed
 change above — a larger slice than M2 Stage 2, to be scoped separately. The
 retain (`⊔ g`) analyzer remains the sound shipped baseline.
+
+## 13. Stage 3: Goblint-faithful enter (`Exec_Sign_Cmp_Seed_Enter`)
+
+Stage 3 attacks the cause Stage 2 isolated — the callee-entry local lacks the
+caller's globals — rather than the symptom (`⊔ g`).
+
+**Where globals are lost (verified).** In `side_cfg_T_eff_cmp_st` the callee-entry
+unknown `(v,c)` is a frame entry (`is_frame_entry`); its seed is the constant
+`fresh_frame_st`, and `fresh_frame_sign` sets globals to `⊥`. The enter edge is
+filtered (`non_enter_predecessor_list`), so the caller's globals never reach the
+entry local — they are routed to the flow-insensitive `Inr` slot, and the
+transfer recovers them via `⊔ g`.
+
+**Goblint.** `Spec.enter` returns the callee `D.t` `v` (globals retained), and
+`sidel (FunctionEntry f, fc) v` seeds the callee-entry **local** `(node,context)`
+unknown with `v`. Goblint seeds a *local* unknown; we seed only the *global* slot.
+
+**The refactor (`side_cfg_T_eff_cmp_seed_st`).** Minimal change: replace the
+constant frame seed `fresh_frame_st :: 'a st` with a context-dependent
+`frame_seed :: 'c ⇒ 'a st`. `seed_generalises` proves the shipped generator is the
+constant instance `(λ_. fresh_frame_st)`, so every existing theorem transfers and
+existing runs are untouched. The faithful seed is `restrict_global_st`: since the
+context `c = restrict_global_st(caller)`, `restrict_global_st c = c` delivers
+exactly the caller's flow-sensitive globals to the entry local (`faithful_seed_idem`).
+
+**Result (executable, `seed_clean_sound_on_prog2`).** On the Stage-2 counterexample
+`f(){G:=G+1}; main(){G:=0; f()}`, the seeded generator + *clean* transfer + R_read
+combine gives: callee-entry local `G=SZero` (globals now present, was absent);
+callee-exit local `G=SPos` (clean `f(local)` computed the increment, was `SBot`);
+observed global `SNonNeg` (captures concrete `G=1`) — **sound**, where the unseeded
+clean run was not. Context still the precise point `{G:SZero}` — Stage-1 precision
+preserved.
+
+**Success criteria met (executably).** The callee-entry local carries the required
+globals without consulting the published slot; `⊔ g` becomes unnecessary because
+`enter` (the seed) now supplies the information.
+
+**Remaining obligation.** This is a go/no-go witness, not yet a proof. The seeded
+clean transfer's soundness is *context-relative*: the entry local holds the
+*precise* per-context global (sharper than the flow-insensitive `Inr` slot, which
+`clean_eq_retain_if_local_dominates` does not cover), so the soundness statement is
+against `cfg_collect_ctx`, not flat `cfg_collect`. The full proof — a seeded
+analogue of `sound_effectful_transfer` discharged from the entry invariant
+`entry-local ⊒ globals(context)` — is the next slice. Retain remains the sound
+baseline until then.
