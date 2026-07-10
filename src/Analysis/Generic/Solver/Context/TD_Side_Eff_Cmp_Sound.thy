@@ -456,20 +456,41 @@ theorem side_cfg_T_eff_cmp_collect_ctx_sound_semantic:
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp sigma (cl, ctx)))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
 proof -
-  have trace_sound:
-    "\<And>tr. trace_witness g S v tr \<Longrightarrow> cmp (dg tr) ctx
-       \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-  proof -
-    fix tr assume w: "trace_witness g S v tr" and c: "cmp (dg tr) ctx"
-    show "last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-      by (rule post_fixpoint_sound_at_ctx_semantic_cmp_final
-            [where gcmp = gcmp and rt = rt and dg = dg and cmp = cmp and entdg = entdg,
-             OF ENTRY PROC_ENTRY EDGE LOCAL_POST CMP_SOUND
-                DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO w c])
+  interpret L: context_analysis_soundness
+      "undefined" "\<lambda>cc. id" rt entdg cmp
+      "side_env_cmp gcmp" route_read_cmp sigma S g dg
+  proof (unfold_locales, goal_cases)
+    case (1 ctx s) then show ?case using ENTRY by blast
+  next
+    case (2 ctx v s) then show ?case using PROC_ENTRY by blast
+  next
+    case (3 ctx u a v tr s') then show ?case using EDGE by blast
+  next
+    case (4 ctx cl ex v tau rho)
+    then have caller: "last tau \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>"
+      and callee: "last rho \<in> \<lbrakk>side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx)))\<rbrakk>"
+      and comb: "(cl, ex, v) \<in> combines g"
+      by (auto simp: context_domain.route_def)
+    have bound: "combine_read_cmp gcmp sigma rt cl ex ctx \<le> side_env_cmp gcmp sigma (v, ctx)"
+    proof (rule combine_read_cmp_le)
+      fix x assume "\<not> is_global x"
+      thus "sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x" by (rule LOCAL_POST[OF comb])
+    next
+      fix x assume "is_global x"
+      thus "side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
+              \<le> side_env_cmp gcmp sigma (v, ctx) x" by (rule CMP_SOUND[OF comb])
+    qed
+    show ?case by (rule combine_case_cmp_sound[OF caller callee bound])
+  next
+    case (5 tr s' ctx) then show ?case using DG_INTRA by blast
+  next
+    case (6 tau rho) then show ?case using DG_RETURN by blast
+  next
+    case (7 tau rho) then show ?case using DG_CALLEE by blast
+  next
+    case (8 ctx cl s) then show ?case using ENTER_MONO by (simp add: context_domain.route_def)
   qed
-  show ?thesis
-    unfolding cfg_collect_ctx_def alpha_ctx_def cfg_collect_trace_def
-    using trace_sound by auto
+  show ?thesis by (rule L.collect_sound)
 qed
 
 subsection \<open>Head-digest: discharging the digest-propagation obligations\<close>
