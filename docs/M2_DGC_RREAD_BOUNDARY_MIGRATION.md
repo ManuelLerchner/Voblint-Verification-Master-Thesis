@@ -679,3 +679,90 @@ sign spine.
 Batch note: the theory builds green in an isolated heap store; `int` numeral/type
 annotations use `Int.int` to avoid the IMP2 program-syntax `int` keyword under the full
 import context.
+
+## 18. Stage 8: interval migration + the `point_digest` locale
+
+The B3 ENTER_MONO capability is now a domain-generic **locale** interpreted by both
+Sign and Interval, and the canonical interval seeded-clean run carries a theorem-level
+ENTER_MONO witness. Batch-green (isolated heap), no `sorry`.
+
+**The `point_digest` locale (`Seed_EnterMono_Lift.thy`, Common).** The generic ENTER_MONO
+lift is refactored from a plain lemma into a locale, on the criterion of the
+`LOCALE_HIERARCHY_DESIGN_STUDY.md`: a capability with plural domain instances that
+carries a shared *assumption* earns a locale (the domain axis, factor 2 — like
+`sound_transfer` / `value_digest_reader`). `point_digest` fixes a point abstraction
+`decode :: int => 'a` and a point predicate `is_point`, bundles the single assumption
+`point_exact` (on a point slot `decode` is constant over the concretisation and returns
+it — a precision fact soundness never gives), and re-exports `enter_mono_point`. An
+assumption-free wrapper would have been ceremony; the assumption is what makes the locale
+pay off.
+
+**Two interpretations.** `sign_pd: point_digest sign_of_int point_sign` and
+`ivl_pd: point_digest ivl_of_int point_ivl`, each discharging `point_exact` from its
+domain gamma-exactness lemma (`point_sign_gamma_exact` / `point_ivl_gamma_exact`). Both
+inherit `enter_mono_point`; the per-domain `enter_mono_sign_point` / `enter_mono_ivl_point`
+lemmas are gone (de-duplicated into the one inherited fact).
+
+**Interval semantic validity (verified before migrating).** (1) The routing slot at each
+call site is `ivl_ec ctx sc = restrict_global_st sc` read from the caller local; on `G`
+it is the point `[0,0]` at site 4 and `[10,10]` at site 7 (`iseed_caller_locals_points`,
+`by eval`). (2) The digest `ivl_of_int n = [n,n]` is constant over a point interval's
+concretisation (`gamma_ivl [k,k] = {k}`, `point_ivl_gamma_exact`). (3) The
+`point_digest` assumption therefore holds — so the interval instance is valid, not
+assumed. The interval domain is genuinely different from sign (a lattice of ranges, not a
+finite sign set), and point-exactness is what both share.
+
+**Interval witness (`Exec_Ivl_Seed_EnterMono.thy`).** `iseed_enter_mono_call_sites` /
+`_call_sites'`: every store admitted by a call-site routing slot routes, under
+`ivl_of_int`, to that slot's own point interval — the theorem-level ENTER_MONO the eval
+witnesses of `Exec_Ivl_Cmp_Seed_Clean_Run` (`iseed_contexts_separate` et al.) previously
+only exhibited operationally. `non_point_ivl_splits` gives the interval Obs-failure
+sharpness (`[0,10]` admits `0` and `10` of distinct digest). The executable probes are
+preserved unchanged in the run theory.
+
+**Genuinely-required invariant (unchanged, now shared).** *Point-routing* — the
+seeded-clean transfer keeps each call-site routing slot gamma-exact on the digest
+projection. It is the `point_exact` premise localised to the run's slots; soundness never
+gives it, the Goblint-faithful seed + clean transfer establishes it.
+
+## 19. Obs (`side_env_cmp`) audit
+
+`Obs = side_env_cmp = R_read (local) ⊔ G_read (published global)`. `Obs` is **not
+removed** — this audit classifies its 203 uses across 19 files. Category counts are by
+role, not by occurrence.
+
+**REQUIRED** — foundational definition, shipped baseline soundness, and the active
+value-digest track:
+
+| File(s) | Role |
+| --- | --- |
+| `Global_Cmp_Read.thy` | **defines** `side_env_cmp` + `side_env_cmp_singleton` (consumed by the digest reader) |
+| `TD_Side_Eff_Cmp_Sound.thy` | `side_cfg_T_eff_cmp_collect_ctx_sound_semantic` — context-indexed Obs soundness (shipped keyed baseline) |
+| `TD_Side_Eff_Cmp_Pull.thy`, `TD_Side_Eff_Cmp_Gen.thy` | `post_fixpoint_sound_at_cmp_pull`, keyed pullback / generator routing over Obs |
+| `Digest_Global_Read.thy`, `Value_Digest_Reader.thy`, `Value_Digest_Read.thy` | digest-filtered Obs read (`obs_digest` / `vd_obs`) — active value-digest track |
+| `Exec_Sign_Cmp_Keyed_Run/_Gen_Run/_Retain_Run`, `Example_Sign_Mode_Digest`, `Example_Mode_Value_Digest_Showcase`, `Example_Digest_Pipeline_Showcase`, `Example_Finite_Sign_Context_Analysis`, `Exec_Sign_Mode_Value_Run` | shipped keyed/retain + value-digest example runs concluding over Obs / `mode_obs` |
+| `Exec_Sign_Ctx_Seeded_Run.thy` | entry-store (subseteq) route rests on `side_env_cmp` / `CMP_SOUND` — a distinct active route |
+
+**COMPARISON-ONLY** — characterisation contrasting Obs with R_read; no shipped analysis
+depends on these for soundness, they exist to pin the boundary:
+
+| File | Role |
+| --- | --- |
+| `Exec_Sign_Cmp_RRead_Split.thy` | the read decomposition `obs_is_rread_join_gread`, `rread_le_obs`, `enter_mono_rread_of_obs` |
+| `Exec_Sign_Cmp_Keyed_Retain_EnterMono.thy` | the **negative** result: ENTER_MONO refuted over Obs (`enter_mono_read_not_point`, `retain_read_merged_G_coarse`) |
+| `Exec_Sign_Cmp_Seed_Sound.thy`, `Exec_Sign_Seed_EnterMono.thy`, `Exec_Ivl_Cmp_Seed_Rehydrate_Run.thy` | verdict prose contrasting the R_read spine against the Obs baseline |
+
+**SUPERSEDED** — none *removable*. The seeded-clean R_read conclusion is strictly more
+precise than the Obs conclusion, but only for the *seeded-clean* transfer; the clean
+transfer is unsound without the seed (§12), so Obs remains the only sound read for the
+general keyed / retain transfer. Obs is superseded in precision on the seeded-clean spine,
+not superseded as a result.
+
+**DEAD** — one helper lemma: `side_env_cmp_True` (`Global_Cmp_Read.thy:82`, the
+trivial-comparison collapse `Obs (\<lambda>_ _. True)`) has no consumers. Minor cleanup
+candidate; harmless.
+
+**Conclusion.** No `Obs` use is safe to remove today beyond the single dead helper. The
+R_read spine adds a sharper conclusion alongside Obs; it does not retire it. Retiring Obs
+would require migrating the keyed / retain / value-digest tracks off the published-global
+read — out of scope here and gated on their own seed/transfer changes.

@@ -1,5 +1,5 @@
 theory Exec_Sign_Seed_EnterMono
-  imports Exec_Sign_Cmp_Seed_Sound
+  imports Exec_Sign_Cmp_Seed_Sound Seed_EnterMono_Lift
 begin
 
 section \<open>B3: ENTER_MONO over R_read reduces to slot gamma-exactness\<close>
@@ -65,45 +65,24 @@ lemma non_point_sign_splits:
    \<and> sign_of_int 0 \<noteq> sign_of_int 1 \<and> \<not> point_sign SNonNeg"
   by (simp add: point_sign_def)
 
-subsection \<open>The domain-generic lift\<close>
+subsection \<open>Sign interprets the point-digest capability\<close>
 
 text \<open>
-  Per-projection gamma-exactness of the routing slot implies the \<open>ENTER_MONO\<close>
-  equation.  The premise \<open>EXACT\<close> quantifies only the value gamma of the
-  \<^emph>\<open>projected variable\<close> (\<open>v \<in> gamma (L proj_var)\<close>) and never mentions the
-  entering store \<open>s\<close>, the state concretisation \<open>\<lbrakk>L\<rbrakk>\<close>, or the routing plumbing ---
-  strictly weaker than, and not circular with, the conclusion.  The proof is the
-  projection \<open>s \<in> \<lbrakk>L\<rbrakk> \<Longrightarrow> s proj_var \<in> gamma (L proj_var)\<close> followed by \<open>EXACT\<close>.
+  The domain-generic ENTER_MONO lift is the \<^locale>\<open>point_digest\<close> locale
+  (\<^theory>\<open>Voblint_Formalization.Seed_EnterMono_Lift\<close>): it fixes a point abstraction
+  \<open>decode\<close> and a point predicate \<open>is_point\<close>, bundles the single gamma-exactness
+  assumption \<open>point_exact\<close>, and re-exports \<open>point_digest.enter_mono_point\<close>.
+  Sign discharges the assumption via \<open>point_sign_gamma_exact\<close> (\<open>gamma = gamma_sign\<close>
+  on the sign sound-domain instance), inheriting the ENTER_MONO point lemma with
+  \<open>decode = sign_of_int\<close>.  Interval interprets the same locale in
+  \<open>Exec_Ivl_Seed_EnterMono\<close>.
 \<close>
 
-lemma enter_mono_proj_lift:
-  fixes sg :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and decode_conc :: "Int.int \<Rightarrow> 'm" and decode_abs :: "'a \<Rightarrow> 'm"
-    and proj_var :: vname and cl :: pp and ctx :: 'c and s :: store
-  assumes EXACT: "\<And>v. v \<in> gamma (sg (Inl (cl, ctx)) proj_var)
-                    \<Longrightarrow> decode_conc v = decode_abs (sg (Inl (cl, ctx)) proj_var)"
-    and s: "s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
-  shows "decode_conc (s proj_var) = decode_abs (sg (Inl (cl, ctx)) proj_var)"
-proof -
-  have "s proj_var \<in> gamma (sg (Inl (cl, ctx)) proj_var)"
-    using s unfolding gamma_state_def by simp
-  thus ?thesis by (rule EXACT)
-qed
-
-text \<open>Sign specialisation: at a \<^emph>\<open>point\<close> routing slot the value-keyed digest
-  \<^const>\<open>sign_of_int\<close> routes every admitted store to the slot's own sign --- the
-  \<open>ENTER_MONO\<close> equation with \<open>cmp = (=)\<close>, \<open>decode_conc = sign_of_int\<close>,
-  \<open>decode_abs = id\<close>.  Proved through the generic lift.\<close>
-
-lemma enter_mono_sign_point:
-  fixes sg :: "(pp \<times> 'c) + 'g \<Rightarrow> sign abs_state"
-  assumes pt: "point_sign (sg (Inl (cl, ctx)) proj_var)"
-    and s: "s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
-  shows "sign_of_int (s proj_var) = sg (Inl (cl, ctx)) proj_var"
-proof -
-  have "s proj_var \<in> gamma_sign (sg (Inl (cl, ctx)) proj_var)"
-    using s unfolding gamma_state_def by simp
-  thus ?thesis by (rule point_sign_gamma_exact[OF pt])
+interpretation sign_pd: point_digest sign_of_int point_sign
+proof (unfold_locales)
+  fix a v assume p: "point_sign a" and g: "v \<in> gamma a"
+  from g have "v \<in> gamma_sign a" by simp
+  from p this show "sign_of_int v = a" by (rule point_sign_gamma_exact)
 qed
 
 subsection \<open>Instantiation for the seeded-clean run\<close>
@@ -139,13 +118,13 @@ text \<open>
 theorem seed_enter_mono_call_sites:
   assumes "s \<in> \<lbrakk>seed_sg (Inl (4, bot))\<rbrakk>"
   shows "sign_of_int (s ''G'') = seed_sg (Inl (4, bot)) ''G''"
-  by (rule enter_mono_sign_point[where sg = seed_sg and cl = 4 and ctx = bot and proj_var = "''G''",
+  by (rule sign_pd.enter_mono_point[where sg = seed_sg and cl = 4 and ctx = bot and proj_var = "''G''",
         OF seed_slots_point(1) assms])
 
 theorem seed_enter_mono_call_sites':
   assumes "s \<in> \<lbrakk>seed_sg (Inl (7, bot))\<rbrakk>"
   shows "sign_of_int (s ''G'') = seed_sg (Inl (7, bot)) ''G''"
-  by (rule enter_mono_sign_point[where sg = seed_sg and cl = 7 and ctx = bot and proj_var = "''G''",
+  by (rule sign_pd.enter_mono_point[where sg = seed_sg and cl = 7 and ctx = bot and proj_var = "''G''",
         OF seed_slots_point(2) assms])
 
 text \<open>
@@ -153,9 +132,10 @@ text \<open>
   is \<^emph>\<open>not\<close> provable unconditionally --- it requires the routing slot to be
   gamma-exact (a point), which soundness alone never gives (\<open>non_point_sign_splits\<close>
   exhibits the failure at \<^const>\<open>SNonNeg\<close>).  It \<^emph>\<open>is\<close> provable relative to that
-  precision premise, which factors cleanly: the domain-generic lift
-  \<open>enter_mono_proj_lift\<close> (reusable at any \<^class>\<open>sound_domain\<close> and any value digest),
-  the sign domain lemma \<open>point_sign_gamma_exact\<close>, and the eval-checkable slot
+  precision premise, which factors cleanly: the domain-generic \<^locale>\<open>point_digest\<close>
+  locale (\<open>point_digest.enter_mono_point\<close>, reusable at any \<^class>\<open>sound_domain\<close>
+  and any point digest), the sign domain lemma \<open>point_sign_gamma_exact\<close> discharging
+  its assumption, and the eval-checkable slot
   premise \<open>seed_slots_point\<close> that the seeded-clean generator makes the call-site
   routing slots points.  The genuinely-required extra invariant is therefore
   \<^emph>\<open>point-routing\<close>: the seeded clean transfer keeps each call-site routing slot
