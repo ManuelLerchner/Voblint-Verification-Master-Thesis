@@ -496,15 +496,51 @@ fun minus_eint :: "eint => eint => eint" where
 instance ..
 end
 
+text \<open>
+  \<^bold>\<open>Canonical empty interval.\<close>  The raw \<^typ>\<open>ivl\<close> lattice has infinitely many empty
+  representations (any \<^term>\<open>Ivl l u\<close> with \<open>l > u\<close>, or an infinite bound on the wrong
+  side).  \<open>normalize_ivl\<close> collapses every empty interval to the single \<^const>\<open>bot\<close>
+  representative \<^term>\<open>Ivl PlusInf MinInf\<close>, leaving non-empty intervals untouched.
+
+  Arithmetic feeds its operands through \<open>normalize_ivl\<close> first.  Since the pointwise
+  sum/difference of \<^const>\<open>bot\<close> with anything is again \<^const>\<open>bot\<close>, this keeps every empty
+  result canonical.  Without it, \<open>[1,0] + [1,1] = [2,1]\<close> would manufacture ever-new empty
+  representations, which as context keys defeat fixpoint convergence (see
+  \<open>Example_Interval_Recursion_Convergence\<close>).\<close>
+
+definition normalize_ivl :: "ivl \<Rightarrow> ivl" where
+  "normalize_ivl v =
+     (case v of Ivl l u \<Rightarrow>
+        if l \<le> u \<and> l \<noteq> PlusInf \<and> u \<noteq> MinInf then v else bot)"
+
+lemma normalize_ivl_gamma: "gamma_ivl (normalize_ivl v) = gamma_ivl v"
+  by (cases v) (auto simp: normalize_ivl_def bot_ivl_def eint_le.simps
+        split: eint.splits if_splits intro: eint_le_trans)
+
+lemma eint_le_PlusInf_iff: "eint_le PlusInf z \<longleftrightarrow> z = PlusInf"
+  by (cases z) auto
+lemma eint_le_MinInf_iff: "eint_le z MinInf \<longleftrightarrow> z = MinInf"
+  by (cases z) auto
+
+lemma normalize_ivl_mono: "x \<le> y \<Longrightarrow> normalize_ivl x \<le> normalize_ivl y"
+  by (cases x; cases y)
+     (auto simp: normalize_ivl_def less_eq_ivl_def bot_ivl_def eint_le.simps
+        eint_le_PlusInf_iff eint_le_MinInf_iff
+        split: eint.splits if_splits intro: eint_le_trans)
+
 instantiation ivl :: plus begin
 fun plus_ivl :: "ivl => ivl => ivl" where
-    "plus_ivl  (Ivl l1 u1) (Ivl l2 u2) = Ivl (l1 + l2) (u1 + u2)"
+    "plus_ivl (Ivl l1 u1) (Ivl l2 u2) =
+       (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of
+          (Ivl a b, Ivl c d) \<Rightarrow> normalize_ivl (Ivl (a + c) (b + d)))"
 instance ..
 end
 
 instantiation ivl :: minus begin
 fun minus_ivl :: "ivl => ivl => ivl" where
-    "minus_ivl (Ivl l1 u1) (Ivl l2 u2) = Ivl (l1 - u2) (u1 - l2)"
+    "minus_ivl (Ivl l1 u1) (Ivl l2 u2) =
+       (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of
+          (Ivl a b, Ivl c d) \<Rightarrow> normalize_ivl (Ivl (a - d) (b - c)))"
 instance ..
 end
 
@@ -576,7 +612,7 @@ proof (cases a; cases b)
     by auto
   show "i + j \<in> gamma_ivl (a + b)"
     unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
-    using bnds
+    using bnds normalize_ivl_def
     by (cases l1; cases l2; cases u1; cases u2) auto
 qed
 
@@ -592,7 +628,7 @@ proof (cases a; cases b)
     by auto
   show "i - j \<in> gamma_ivl (a - b)"
     unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
-    using bnds
+    using bnds normalize_ivl_def
     by (cases l1; cases l2; cases u1; cases u2) auto
 qed
 
@@ -857,15 +893,54 @@ lemma eint_minus_mono:
   "eint_le a1 a2 \<Longrightarrow> eint_le b2 b1 \<Longrightarrow> eint_le (a1 - b1) (a2 - b2)"
   by (cases a1; cases a2; cases b1; cases b2; auto)
 
+text \<open>Both operators route their operands through \<^const>\<open>normalize_ivl\<close>; these rewrites
+  expose that shape without the constructor-pattern gate, so monotonicity factors through
+  \<^const>\<open>normalize_ivl\<close>'s monotonicity and the pointwise \<^typ>\<open>eint\<close> bounds.\<close>
+lemma plus_ivl_norm:
+  "a + b = (case (normalize_ivl a, normalize_ivl b) of
+              (Ivl l1 u1, Ivl l2 u2) \<Rightarrow> normalize_ivl (Ivl (l1 + l2) (u1 + u2)))"
+  by (cases a; cases b) simp
+
+lemma minus_ivl_norm:
+  "a - b = (case (normalize_ivl a, normalize_ivl b) of
+              (Ivl l1 u1, Ivl l2 u2) \<Rightarrow> normalize_ivl (Ivl (l1 - u2) (u1 - l2)))"
+  by (cases a; cases b) simp
+
 lemma ivl_plus_mono:
-  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> a1 + b1 \<le> a2 + (b2::ivl)"
-  by (cases a1; cases a2; cases b1; cases b2;
-      simp add: less_eq_ivl_def eint_plus_mono)
+  assumes "a1 \<le> a2" "b1 \<le> b2" shows "a1 + b1 \<le> a2 + (b2::ivl)"
+proof -
+  obtain pa qa where na1: "normalize_ivl a1 = Ivl pa qa" by (cases "normalize_ivl a1")
+  obtain ra sa where na2: "normalize_ivl a2 = Ivl ra sa" by (cases "normalize_ivl a2")
+  obtain pb qb where nb1: "normalize_ivl b1 = Ivl pb qb" by (cases "normalize_ivl b1")
+  obtain rb sb where nb2: "normalize_ivl b2 = Ivl rb sb" by (cases "normalize_ivl b2")
+  from normalize_ivl_mono[OF assms(1)] na1 na2 have A: "Ivl pa qa \<le> Ivl ra sa" by simp
+  from normalize_ivl_mono[OF assms(2)] nb1 nb2 have B: "Ivl pb qb \<le> Ivl rb sb" by simp
+  have "Ivl (pa + pb) (qa + qb) \<le> Ivl (ra + rb) (sa + sb)"
+    using A B by (auto simp: less_eq_ivl_def eint_plus_mono)
+  moreover have "a1 + b1 = normalize_ivl (Ivl (pa + pb) (qa + qb))"
+    by (simp add: plus_ivl_norm na1 nb1)
+  moreover have "a2 + b2 = normalize_ivl (Ivl (ra + rb) (sa + sb))"
+    by (simp add: plus_ivl_norm na2 nb2)
+  ultimately show ?thesis by (metis normalize_ivl_mono)
+qed
 
 lemma ivl_minus_mono:
-  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> a1 - b1 \<le> a2 - (b2::ivl)"
-  by (cases a1; cases a2; cases b1; cases b2;
-      simp add: less_eq_ivl_def eint_minus_mono)
+  assumes "a1 \<le> a2" "b1 \<le> b2" shows "a1 - b1 \<le> a2 - (b2::ivl)"
+proof -
+  obtain pa qa where na1: "normalize_ivl a1 = Ivl pa qa" by (cases "normalize_ivl a1")
+  obtain ra sa where na2: "normalize_ivl a2 = Ivl ra sa" by (cases "normalize_ivl a2")
+  obtain pb qb where nb1: "normalize_ivl b1 = Ivl pb qb" by (cases "normalize_ivl b1")
+  obtain rb sb where nb2: "normalize_ivl b2 = Ivl rb sb" by (cases "normalize_ivl b2")
+  from normalize_ivl_mono[OF assms(1)] na1 na2 have A: "Ivl pa qa \<le> Ivl ra sa" by simp
+  from normalize_ivl_mono[OF assms(2)] nb1 nb2 have B: "Ivl pb qb \<le> Ivl rb sb" by simp
+  have "Ivl (pa - qb) (qa - pb) \<le> Ivl (ra - sb) (sa - rb)"
+    using A B by (auto simp: less_eq_ivl_def eint_minus_mono)
+  moreover have "a1 - b1 = normalize_ivl (Ivl (pa - qb) (qa - pb))"
+    by (simp add: minus_ivl_norm na1 nb1)
+  moreover have "a2 - b2 = normalize_ivl (Ivl (ra - sb) (sa - rb))"
+    by (simp add: minus_ivl_norm na2 nb2)
+  ultimately show ?thesis by (metis normalize_ivl_mono)
+qed
 
 text \<open>
   Monotonicity of the precise corner product.  Over a larger box the corner
