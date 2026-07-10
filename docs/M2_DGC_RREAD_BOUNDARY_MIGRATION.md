@@ -627,3 +627,55 @@ read. Over `Obs` this was refuted (§12); over `R_read` the concrete run satisfi
 `eval` (`kgen_rread_contexts_points`), and lifting that to a generic theorem is the
 go/no-go crux (B3). This stage leaves that crux untouched and isolated: it is the sole
 remaining run-specific semantic hypothesis of `clean_ctx_collect_rread`.
+
+## 17. Stage 7 (B3): the ENTER_MONO seed-covering lifts to a theorem
+
+The B3 go/no-go is **resolved positively**: the eval-true `R_read` separation lifts to
+a theorem-level `ENTER_MONO`. Landed in `Exec_Sign_Seed_EnterMono.thy`, batch-green in
+an isolated heap (no `sorry`).
+
+**Exact obligation, weakest form.** For the value-keyed digest over the local read,
+`ENTER_MONO` with `cmp = (=)`, `entdg s = decode_conc (s proj_var)`,
+`rt cl ctx L = decode_abs (L proj_var)` is the pointwise equation
+`s ∈ ⟦sg (Inl (cl, ctx))⟧ ⟹ decode_conc (s proj_var) = decode_abs (sg (Inl (cl, ctx)) proj_var)`.
+
+**Why Obs is false (formalised).** `non_point_sign_splits`: `SNonNeg` (the coarse
+keyed slot the Obs read `local ⊔ keyed` collapses two value-distinct calls into) admits
+`0` and `1` with `sign_of_int 0 ≠ sign_of_int 1` — the routing equation cannot hold for
+both. This is the exact obstruction `Keyed_Retain_EnterMono.enter_mono_read_not_point`
+identified, now stated as a domain fact.
+
+**What makes R_read true — the property, isolated.** *Point-routing*: the routing slot's
+projection is γ-exact (a point). `point_sign_gamma_exact`: for `a ∈ {SBot, SNeg, SZero,
+SPos}`, `v ∈ gamma_sign a ⟹ sign_of_int v = a` — `sign_of_int` is constant on a point's
+concretisation and returns it. A **precision** fact, never given by soundness (which
+only over-approximates).
+
+**The domain-generic lift (strictly weaker, non-circular).** `enter_mono_proj_lift`
+(any `sound_domain`, any value digest): the premise `EXACT` quantifies only
+`v ∈ gamma (L proj_var)` at the *projected variable* — it never mentions the entering
+store `s`, the state concretisation `⟦L⟧`, or the routing plumbing, so it is strictly
+weaker than and independent of the `ENTER_MONO` conclusion (which quantifies `s ∈ ⟦L⟧`).
+Proof: project `s ∈ ⟦L⟧ ⟹ s proj_var ∈ gamma (L proj_var)`, then `EXACT`.
+
+**Instantiation for the run.** `enter_mono_sign_point` (sign, `decode_abs = id`) + the
+eval-checked `seed_slots_point` (the seeded generator makes the call-site routing slots
+`SZero`/`SPos`) give `seed_enter_mono_call_sites` / `_call_sites'`: at each call site
+every admitted store routes to that slot's own point context — the value-keyed
+`Spec.context` distinguishing the two calls the Obs read merged, now a proved routing
+equation, not an `eval` witness.
+
+**Verdict.** `ENTER_MONO` is not provable unconditionally (`non_point_sign_splits`
+exhibits the failure at a non-point), but factors cleanly into: (i) the reusable domain
+lift `enter_mono_proj_lift`; (ii) the sign domain lemma `point_sign_gamma_exact`; (iii)
+the run-specific, eval-checkable **point-routing** premise that the seeded-clean transfer
+keeps each call-site routing slot γ-exact on the digest projection. Point-routing is the
+genuinely-required extra invariant; it holds here because the Goblint-faithful seed
+delivers the caller's precise per-context global into the callee-entry local and the
+clean transfer never rejoins the coarse published slot. With B3 discharged for the run,
+**all obligations of `clean_ctx_collect_rread` are met** on the seeded-clean interval /
+sign spine.
+
+Batch note: the theory builds green in an isolated heap store; `int` numeral/type
+annotations use `Int.int` to avoid the IMP2 program-syntax `int` keyword under the full
+import context.

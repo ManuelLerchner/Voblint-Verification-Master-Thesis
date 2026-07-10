@@ -424,12 +424,18 @@ transport of the run's post-solution), `seeded_clean_edge_bound` (`EDGE_BOUND` f
 post-solution), `seeded_clean_seed_bound` (the order half of `ENTRY`/`PROC_ENTRY`:
 `frame_seed ctx ≤ sg (Inl (v, ctx))` at every reached frame-entry), plus the already-
 generic `rehydrate_caller_continuation_sound` (COMB) and head-digest `DG_*`. The
-residual is now the single semantic obligation this section is about — `ENTER_MONO`
-over `route_read_cmp`: does the R_read-seeded context γ-cover the entering stores
-uniformly per context (turning the seed order bound into `s ∈ ⟦frame_seed ctx⟧`).
-Refuted over `Obs` (§12); satisfied by `eval` on the two-call run over `R_read`
-(`kgen_rread_contexts_points`); the generic lift is the go/no-go crux, and now the sole
-remaining hypothesis of `clean_ctx_collect_rread`.
+last obligation — `ENTER_MONO` over `route_read_cmp` — is now **discharged as a
+theorem** (`Exec_Sign_Seed_EnterMono.thy`, batch-green isolated, no `sorry`;
+`M2_DGC_RREAD_BOUNDARY_MIGRATION.md` §17). It factors into a domain-generic lift
+`enter_mono_proj_lift` (per-projection γ-exactness ⟹ the routing equation, reusable at
+any `sound_domain`), the sign lemma `point_sign_gamma_exact`, and the run-specific
+**point-routing** premise `seed_slots_point` (the seeded-clean generator keeps each
+call-site routing slot γ-exact). `seed_enter_mono_call_sites` is the resulting routing
+equation at the two call sites — the value-keyed split proved, where the Obs read merged
+them (`non_point_sign_splits` formalises the Obs failure). Point-routing is the genuinely-
+required extra invariant, unprovable from soundness alone but established here by the
+Goblint-faithful seed + clean transfer. With it, all obligations of
+`clean_ctx_collect_rread` are met on the seeded-clean spine.
 
 ---
 
