@@ -87,6 +87,74 @@ proof -
   thus ?thesis using compat by blast
 qed
 
+section \<open>The context-soundness obligation bundle as a locale\<close>
+
+text \<open>
+  The read-agnostic trace backbone \<open>post_fixpoint_sound_at_ctx_semantic_generic\<close>
+  is re-invoked at every context spine (seeded-clean R_read, retain
+  \<^const>\<open>side_env_cmp\<close>, digest) with the same eight obligations --- the seed
+  conditions \<open>ENTRY\<close> / \<open>PROC_ENTRY\<close>, the intra step \<open>EDGE\<close>, the switching combine
+  \<open>COMB\<close>, the digest-propagation trio \<open>DG_INTRA\<close> / \<open>DG_RETURN\<close> / \<open>DG_CALLEE\<close>, and the
+  routing compatibility \<open>ENTER_MONO\<close>.  Packaging them once as the assumptions of a
+  locale extending \<^locale>\<open>context_domain\<close> binds the routing to
+  \<^const>\<open>context_domain.route\<close> and the digest / order to the locale's \<open>entdg\<close> /
+  \<open>cmp\<close> --- exactly Goblint's \<open>context\<close> after \<open>enter\<close>.  Each spine becomes an
+  interpretation and inherits the context-sliced collecting theorem \<open>collect_sound\<close>
+  without restating the wrapping from \<^const>\<open>cfg_collect_ctx\<close> down to the trace
+  level.
+\<close>
+
+locale context_analysis_soundness = context_domain +
+  fixes renv  :: "(pp \<times> 'a + 'g \<Rightarrow> 'b abs_state) \<Rightarrow> (pp \<times> 'a) \<Rightarrow> 'b abs_state"
+    and rread :: "(pp \<times> 'a + 'g \<Rightarrow> 'b abs_state) \<Rightarrow> (pp \<times> 'a) \<Rightarrow> 'b abs_state"
+    and \<sigma>  :: "pp \<times> 'a + 'g \<Rightarrow> 'b abs_state"
+    and S  :: "store set"
+    and g  :: cfg
+    and dg :: "store list \<Rightarrow> 'a"
+  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
+        \<Longrightarrow> s \<in> \<lbrakk>renv \<sigma> (cfg_entry g, ctx)\<rbrakk>"
+    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>renv \<sigma> (v, ctx)\<rbrakk>"
+    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
+        \<Longrightarrow> last tr \<in> \<lbrakk>renv \<sigma> (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>renv \<sigma> (v, ctx)\<rbrakk>"
+    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+        \<Longrightarrow> last tau \<in> \<lbrakk>renv \<sigma> (cl, ctx)\<rbrakk>
+        \<Longrightarrow> last rho \<in> \<lbrakk>renv \<sigma> (ex, route cl ctx (rread \<sigma> (cl, ctx)))\<rbrakk>
+        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>renv \<sigma> (v, ctx)\<rbrakk>"
+    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
+    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>renv \<sigma> (cl, ctx)\<rbrakk>
+        \<Longrightarrow> cmp (entdg s) (route cl ctx (rread \<sigma> (cl, ctx)))"
+begin
+
+text \<open>
+  The canonical context-sliced collecting soundness theorem: every store reaching
+  \<open>v\<close> along a trace whose digest is \<open>cmp\<close>-compatible with \<open>ctx\<close> is covered by the
+  read \<^term>\<open>renv \<sigma> (v, ctx)\<close>.  Wraps the trace backbone through
+  \<^const>\<open>cfg_collect_ctx\<close> once, for every interpretation.
+\<close>
+
+theorem collect_sound:
+  "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>renv \<sigma> (v, ctx)\<rbrakk>"
+proof -
+  have trace_sound:
+    "\<And>tr. trace_witness g S v tr \<Longrightarrow> cmp (dg tr) ctx \<Longrightarrow> last tr \<in> \<lbrakk>renv \<sigma> (v, ctx)\<rbrakk>"
+  proof -
+    fix tr assume w: "trace_witness g S v tr" and c: "cmp (dg tr) ctx"
+    show "last tr \<in> \<lbrakk>renv \<sigma> (v, ctx)\<rbrakk>"
+      by (rule post_fixpoint_sound_at_ctx_semantic_generic
+            [where renv = renv and rread = rread and rt = route and \<sigma> = \<sigma>
+               and dg = dg and cmp = cmp and entdg = entdg and S = S and g = g,
+             OF ENTRY PROC_ENTRY EDGE COMB DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO w c])
+  qed
+  show ?thesis
+    unfolding cfg_collect_ctx_def alpha_ctx_def cfg_collect_trace_def
+    using trace_sound by auto
+qed
+
+end
+
 section \<open>Instance 1: the existing unit-global theorem is a special case\<close>
 
 text \<open>
