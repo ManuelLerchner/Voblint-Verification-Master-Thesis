@@ -83,7 +83,7 @@ GOther`, so the slot holds `SZero ⊔ SPos = SNonNeg` [proven: `fctx_GOther_slot
 Both writes are joined **at write time**. Once joined into one writer slot, **no
 reader — however refined — can recover them.** The observation read
 `side_env_cmp (=) σ (v,ctx) = σ(Inl(v,ctx)) ⊔ σ(Inr ctx)` then pins `G` to `SNonNeg`
-at both call nodes [proven: `fctx_caller_read_G_imprecise`, `..._imprecise7`], and
+at both call nodes [proven: `fctx_caller_read_G_imprecise`, `..._imprecise8`], and
 `ENTER_MONO` fails.
 
 This reframes the problem. A digest-indexed *reader* was necessary but **not
@@ -263,7 +263,7 @@ points* in the single `main` activation, so a flow-sensitive `δ(pp)` separates 
 under one call-only context. No context refinement, no `cstep`. This is precisely what
 makes `ENTER_MONO` provable: the caller observation of `G` is now exact at each call
 node, and the routing to `f`'s context (already exact — `fctx_route_call4 = GZero`,
-`fctx_route_call7 = GPos`) becomes sound.
+`fctx_route_call8 = GPos`) becomes sound.
 
 (f's *internal* read `GH := G` is one pp reached from both call sites; under monovariant
 it still carries `RD = {d1,d3}`. Its precision comes from the *routed* context — which

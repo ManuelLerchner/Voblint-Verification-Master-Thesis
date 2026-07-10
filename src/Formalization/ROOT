@@ -49,6 +49,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
+    Example_Proc_Recursion_CFG
     Example_Trace_Digest_Precision
     Example_Trace_Digest_Combine
     Example_Trace_Digest_ReachingCompat

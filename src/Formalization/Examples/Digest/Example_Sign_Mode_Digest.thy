@@ -406,9 +406,9 @@ next
   case MOne show ?thesis unfolding MOne mode_digest_unfold by eval
 qed
 
-lemma mode_local_le_13_14:
-  "restrict_local_st (snd mode_digest_solution (Inl (13, ctx)))
-     \<le> restrict_local_st (snd mode_digest_solution (Inl (14, ctx)))"
+lemma mode_local_le_14_15:
+  "restrict_local_st (snd mode_digest_solution (Inl (14, ctx)))
+     \<le> restrict_local_st (snd mode_digest_solution (Inl (15, ctx)))"
 proof (cases ctx)
   case MZero show ?thesis unfolding MZero mode_digest_unfold by eval
 next
@@ -419,10 +419,10 @@ lemma mode_LOCAL_POST:
   assumes c: "(cl, ex, v) \<in> combines mode_cfg" and x: "\<not> is_global x"
   shows "mode_digest_env (Inl (cl, ctx)) x \<le> mode_digest_env (Inl (v, ctx)) x"
 proof -
-  have "combines mode_cfg = {(6, 1, 7), (13, 1, 14)}" unfolding mode_cfg_def by eval
-  with c have "(cl, v) = (6, 7) \<or> (cl, v) = (13, 14)" by auto
+  have "combines mode_cfg = {(6, 1, 7), (14, 1, 15)}" unfolding mode_cfg_def by eval
+  with c have "(cl, v) = (6, 7) \<or> (cl, v) = (14, 15)" by auto
   then show ?thesis
-    using mode_local_le_6_7 mode_local_le_13_14 x by (auto simp: mode_local_restrict_le)
+    using mode_local_le_6_7 mode_local_le_14_15 x by (auto simp: mode_local_restrict_le)
 qed
 
 text \<open>MODE_AGREE probe: the callee-exit \<open>''mode''\<close> local (reset on entry, decodes to \<^term>\<open>MZero\<close>)

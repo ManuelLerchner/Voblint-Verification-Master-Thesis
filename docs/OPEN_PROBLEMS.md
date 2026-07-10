@@ -277,18 +277,18 @@ ctx))` and needs it exact on the digest variable `G`. It is not, and no
 call-boundary context scheme can fix it — machine-checked in the file's
 "Investigation" subsection:
 
-- `fctx_call4_only_GOther` / `fctx_call7_only_GOther`: both call nodes 4 and 7
+- `fctx_call4_only_GOther` / `fctx_call8_only_GOther`: both call nodes 4 and 8
   live under the single caller context `GOther` (they are interior points of one
   `main` activation; context changes only at call boundaries).
 - `fctx_GOther_slot_joins_G`: the keyed slot `Inr GOther` joins `main`'s `G := 0`
   and `G := 1` to `SNonNeg` (globals are flow-insensitive per context).
-- `fctx_caller_read_G_imprecise` / `_imprecise7`: `side_env_cmp` adds that global
+- `fctx_caller_read_G_imprecise` / `_imprecise8`: `side_env_cmp` adds that global
   summand, pinning the observation of `G` at both call nodes to `SNonNeg`.
 
 Retain sharpens only the routing read `route_read_cmp` (the local slot), not the
 global summand `side_env_cmp` adds. Every candidate call-boundary scheme
 (call-site-refined, call-string, entry-store) leaves `main` under one context, so
-`Inr (that context)` joins both writes. The needed `G = 0` at 4 vs `G = 1` at 7
+`Inr (that context)` joins both writes. The needed `G = 0` at 4 vs `G = 1` at 8
 distinction is flow-sensitivity *within* one activation — expressible only by an
 intra-edge context update, outside the call-only protocol.
 
@@ -302,7 +302,7 @@ other into a never-demanded sink; a constant `_ → GZero`/`GPos` makes the dema
 solver materialise spurious context copies that re-run the pinning combine and
 pollute the keyed slot (diagnosed and fixed during the prototype). Machine-checked
 by eval on the real side solver: `fctxu_call4_GZero` (call 4 under `GZero`, not
-`GOther`), `fctxu_call7_GPos`, `fctxu_caller_read_G4_exact` / `_G7_exact` (the
+`GOther`), `fctxu_call8_GPos`, `fctxu_caller_read_G4_exact` / `_G8_exact` (the
 observation read of `G` is now `SZero` / `SPos`, exact — so `ENTER_MONO` becomes
 provable), `fctxu_fGZero_GH_zero` / `fctxu_fGPos_GH_pos` (`f`@`GZero` gives
 `GH = SZero`, `f`@`GPos` gives `SPos`). Dependencies stay static and the RHS

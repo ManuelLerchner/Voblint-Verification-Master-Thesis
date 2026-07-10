@@ -12,7 +12,7 @@ text \<open>
 \<close>
 
 type_synonym proc_info =
-  "pp * pp * (pp * edge_action * pp) set * (pp * pp * pp) set"
+  "pp * pp * pp set * (pp * edge_action * pp) set * (pp * pp * pp) set"
 
 type_synonym proc_layout = "pname => proc_info option"
 
@@ -66,31 +66,63 @@ where
 
   | "compile \<Pi> lay (Call p) n =
        (case lay p of
-          None => (n + 1, n, n, {}, {})
-        | Some (en_p, ex_p, E_p, C_p) =>
-            (n + 1, n, n + 1,
+          None => (n + 2, n, n, {}, {})
+        | Some (en_p, ex_p, Ns_p, E_p, C_p) =>
+            (n + 2, n, n + 1,
              {(n, EA_Enter, en_p)},
              {(n, ex_p, n + 1)}))"
 
   | "compile \<Pi> lay Restore n =
        (n, n, n, {}, {})"
 
-fun compile_procs_list ::
+definition known_proc_layout :: "proc_table => pname list => proc_layout => proc_layout" where
+  "known_proc_layout \<Pi> ps lay =
+     (\<lambda>p. case lay p of
+            Some info => Some info
+          | None => if p \<in> set ps \<and> \<Pi> p \<noteq> None then Some (0, 0, {}, {}, {}) else None)"
+
+fun compile_procs_layout ::
+  "proc_table => pname list => proc_layout => nat => nat * proc_layout"
+where
+    "compile_procs_layout \<Pi> [] lay n = (n, lay)"
+
+  | "compile_procs_layout \<Pi> (p # ps) lay n =
+       (case \<Pi> p of
+          None => compile_procs_layout \<Pi> ps lay n
+        | Some body =>
+            (let complete_lay = known_proc_layout \<Pi> (p # ps) lay;
+                 (n', en, ex, E, C) = compile \<Pi> complete_lay body n;
+                 lay' = (case lay p of
+                           None => (lay (p := Some (en, ex, {n..<n'}, {}, {})))
+                         | Some _ => lay);
+                 (n'', lay'') = compile_procs_layout \<Pi> ps lay' n'
+             in  (n'', lay'')))"
+
+fun compile_procs_bodies ::
+  "proc_table => pname list => proc_layout => proc_layout => nat =>
+   nat * proc_layout * (pp * edge_action * pp) set * (pp * pp * pp) set"
+where
+    "compile_procs_bodies \<Pi> [] base_lay full_lay n = (n, full_lay, {}, {})"
+
+  | "compile_procs_bodies \<Pi> (p # ps) base_lay full_lay n =
+       (case \<Pi> p of
+          None => compile_procs_bodies \<Pi> ps base_lay full_lay n
+        | Some body =>
+            (let (n', en, ex, E, C) = compile \<Pi> base_lay body n;
+                 full_lay' = (case full_lay p of
+                                None => (full_lay (p := Some (en, ex, {n..<n'}, E, C)))
+                              | Some _ => full_lay);
+                 (n'', full_lay'', Eacc, Cacc) = compile_procs_bodies \<Pi> ps base_lay full_lay' n'
+             in  (n'', full_lay'', E Un Eacc, C Un Cacc)))"
+
+definition compile_procs_list ::
   "proc_table => pname list => proc_layout => nat =>
    nat * proc_layout * (pp * edge_action * pp) set * (pp * pp * pp) set"
 where
-    "compile_procs_list \<Pi> [] lay n = (n, lay, {}, {})"
-
-  | "compile_procs_list \<Pi> (p # ps) lay n =
-       (case \<Pi> p of
-          None => compile_procs_list \<Pi> ps lay n
-        | Some body =>
-            (let (n', en, ex, E, C) = compile \<Pi> lay body n;
-                 lay' = (case lay p of
-                           None => (lay (p := Some (en, ex, E, C)))
-                         | Some _ => lay);
-                 (n'', lay'', Eacc, Cacc) = compile_procs_list \<Pi> ps lay' n'
-             in  (n'', lay'', E Un Eacc, C Un Cacc)))"
+  "compile_procs_list \<Pi> ps lay n =
+     (let (n', base_lay) = compile_procs_layout \<Pi> ps lay n;
+          (n'', full_lay, E, C) = compile_procs_bodies \<Pi> ps base_lay lay n
+      in (n'', full_lay, E, C))"
 
 
 definition edges_endpoint_pps :: "(pp \<times> edge_action \<times> pp) set \<Rightarrow> pp set" where
@@ -102,14 +134,13 @@ definition combines_endpoint_pps :: "(pp \<times> pp \<times> pp) set \<Rightarr
 
 definition proc_info_pp_list :: "proc_info \<Rightarrow> pp list" where
   "proc_info_pp_list info =
-     (case info of (en, ex, E, C) \<Rightarrow>
-        sorted_list_of_set ({en, ex} \<union> edges_endpoint_pps E \<union> combines_endpoint_pps C))"
+     (case info of (en, ex, Ns, E, C) \<Rightarrow> sorted_list_of_set ({en, ex} \<union> Ns))"
 
 definition proc_info_nodes :: "proc_info \<Rightarrow> pp set" where
   "proc_info_nodes info = set (proc_info_pp_list info)"
 
 definition com_pp_list ::
-  "pp \<times> pp \<times> (pp \<times> edge_action \<times> pp) set \<times> (pp \<times> pp \<times> pp) set \<Rightarrow> pp list" where
+  "proc_info \<Rightarrow> pp list" where
   "com_pp_list = proc_info_pp_list"
 
 fun fold_proc_pps :: "pname list \<Rightarrow> proc_layout \<Rightarrow> pp set" where
@@ -139,7 +170,7 @@ definition compile_prog_with_regions ::
      (let (n1, lay, E_proc, C_proc) = compile_procs_list \<Pi> ps (\<lambda>_. None) 0;
           (n2, en, ex, E_main, C_main) = compile \<Pi> lay main n1;
           g = mk_cfg en ex (E_proc \<union> E_main) (C_proc \<union> C_main);
-          main_reg = (None, main_region_pp_list (en, ex, E_main, C_main) ps lay)
+          main_reg = (None, main_region_pp_list (en, ex, {n1..<n2}, E_main, C_main) ps lay)
       in  (g, main_reg # proc_list_regions ps lay))"
 
 definition compile_prog ::
@@ -159,8 +190,10 @@ text \<open>
   For programs without procedure calls, auto alone suffices.
 \<close>
 lemmas compile_eval_simps =
-  compile_prog_def compile_prog_with_regions_def
-  eval_nat_numeral
+  compile_prog_def compile_prog_with_regions_def compile_procs_list_def
+  known_proc_layout_def eval_nat_numeral
+
+
 
 subsection \<open>Freshness / finiteness\<close>
 
@@ -241,10 +274,10 @@ next
   then show ?case by auto
 qed
 
-lemma compile_procs_list_finite:
-  "compile_procs_list \<Pi> ps lay n = (n', lay', E, C)
+lemma compile_procs_bodies_finite:
+  "compile_procs_bodies \<Pi> ps base_lay full_lay n = (n', full_lay', E, C)
    \<Longrightarrow> finite E \<and> finite C"
-proof (induction ps arbitrary: lay n n' lay' E C)
+proof (induction ps arbitrary: full_lay n n' full_lay' E C)
   case Nil
   then show ?case by auto
 next
@@ -255,9 +288,10 @@ next
     with Cons show ?thesis by auto
   next
     case (Some body)
-    with Cons obtain n1 en ex E0 C0 lay' n2 lay'' Eacc Cacc where
-      cp: "compile \<Pi> lay body n = (n1, en, ex, E0, C0)"
-      and rest: "compile_procs_list \<Pi> ps lay' n1 = (n2, lay'', Eacc, Cacc)"
+    with Cons obtain n1 en ex E0 C0 full_lay1 n2 full_lay2 Eacc Cacc where
+      cp: "compile \<Pi> base_lay body n = (n1, en, ex, E0, C0)"
+      and rest: "compile_procs_bodies \<Pi> ps base_lay full_lay1 n1 =
+                   (n2, full_lay2, Eacc, Cacc)"
       and E: "E = E0 Un Eacc"
       and C: "C = C0 Un Cacc"
       by (auto split: prod.splits option.splits)
@@ -265,6 +299,12 @@ next
       unfolding E C by simp
   qed
 qed
+
+lemma compile_procs_list_finite:
+  "compile_procs_list \<Pi> ps lay n = (n', lay', E, C)
+   \<Longrightarrow> finite E \<and> finite C"
+  unfolding compile_procs_list_def
+  by (auto simp: Let_def split: prod.splits dest: compile_procs_bodies_finite)
 
 lemma compile_prog_finite:
   "finite (edges (compile_prog \<Pi> ps main))
@@ -281,5 +321,8 @@ value "cfg_exit  (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
 value "cfg_edges_list (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
 value "cfg_edges_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Assign ''x'' (N 1)))"
 value "cfg_combines_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Call ''f''))"
+
+
+
 
 end

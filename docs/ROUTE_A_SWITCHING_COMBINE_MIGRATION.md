@@ -161,7 +161,7 @@ call):
 
 ```isabelle
 lemma fctx_route_call4: "fctx_ec_call 4 ctx (fctx_call_state 4 s) = GZero"   (* by simp *)
-lemma fctx_route_call7: "fctx_ec_call 7 ctx (fctx_call_state 7 s) = GPos"    (* by simp *)
+lemma fctx_route_call8: "fctx_ec_call 8 ctx (fctx_call_state 8 s) = GPos"    (* by simp *)
 ```
 
 **Side contribution bounded by the routed keyed slot** (the surviving global `G` the

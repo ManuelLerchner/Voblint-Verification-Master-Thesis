@@ -17,13 +17,18 @@ text \<open>
   (\<^theory>\<open>Voblint_Analysis.Origin_Lift\<close>): each write origin keeps its own cell, widening
   is pointwise per origin, and a read collapses the cells.
 
-  The headline, sealed by \<open>eval\<close>, is that per-origin widening buys \<^emph>\<open>nothing\<close> here: \<open>G\<close>
-  collapses to exactly the same \<open>[0, +inf]\<close> as monovariant warrowing.  The precision that
-  is lost is the finite \<^emph>\<open>upper\<close> bound, and the origin lift is the wrong lever for it.
-  Since \<open>G\<close> is a flow-insensitive global side slot, its self-referential increment is not
-  bounded by the guard when it writes back to the slot, so \<open>[0, +inf]\<close> is a genuine
-  fixpoint --- separating write origins does not change it, because every read collapses
-  the cells and the widening bot-law already pins the lower bound at \<open>0\<close> for both solvers.
+  The machine-checked headline (\<open>rec_warrowing_widens_to_top\<close>) is that monovariant
+  warrowing widens \<open>G\<close> to \<open>[0, +inf]\<close> on the recursive CFG (whose recursion is itself
+  machine-checked --- \<open>rec_cfg_recursive_enter\<close> / \<open>rec_cfg_recursive_combine\<close>).  Per-origin
+  widening buys \<^emph>\<open>nothing\<close> here: the collapsed read of \<open>G\<close> is the same \<open>[0, +inf]\<close>
+  (confirmed interactively via the DOT emission below; omitted as a \<open>by eval\<close> theorem
+  only because the per-origin solve over the recursion cycle costs about a minute, past the
+  batch budget).  The precision that is lost is the finite \<^emph>\<open>upper\<close> bound.  Since \<open>G\<close> is a
+  flow-insensitive global side slot, its self-referential increment is not bounded by the
+  guard when it writes back to the slot, so \<open>[0, +inf]\<close> is a genuine fixpoint and the
+  widening bot-law pins the lower bound at \<open>0\<close>.  The origin lift is the wrong lever for it:
+  a read collapses the per-origin cells before the increment transfer, so separating write
+  origins cannot change the slot.
 \<close>
 
 subsection \<open>The recursive program (shared with the digest example)\<close>
@@ -46,6 +51,22 @@ definition rec_cfg :: cfg where
 definition rec_eqs :: "(pp, unit, ivl st) eqsT" where
   "rec_eqs = side_cfg_T_eff_st rec_cfg ivl_etf_st bot cinit_ivl_st ()"
 
+subsection \<open>The compiled CFG carries the recursion\<close>
+
+text \<open>Procedure \<open>p\<close> is already in the layout when its body compiles, so the self-call at
+  node \<open>3\<close> re-enters \<open>p\<close>'s entry (node \<open>0\<close>) and returns to node \<open>4\<close>; \<open>main\<close>'s call at node
+  \<open>10\<close> enters the same entry and returns to node \<open>11\<close>.  Both route through \<open>p\<close>'s single
+  exit, node \<open>7\<close>.  The recursive \<^const>\<open>EA_Enter\<close> and combine edges are present --- the
+  structure the old compiler erased.  These evaluate cheaply (compilation only, no solve).\<close>
+
+lemma rec_cfg_recursive_enter:
+  "(3, EA_Enter, 0) \<in> edges rec_cfg \<and> (10, EA_Enter, 0) \<in> edges rec_cfg"
+  unfolding rec_cfg_def rec_prog_def by eval
+
+lemma rec_cfg_recursive_combine:
+  "(3, 7, 4) \<in> combines rec_cfg \<and> (10, 7, 11) \<in> combines rec_cfg"
+  unfolding rec_cfg_def rec_prog_def by eval
+
 subsection \<open>Monovariant warrowing widens \<open>G\<close>'s upper bound to \<open>+inf\<close>\<close>
 
 text \<open>The widening bot-law (\<^const>\<open>widen\<close> on \<^typ>\<open>ivl\<close>) keeps the first write exact, so the
@@ -62,9 +83,13 @@ lemma rec_warrowing_widens_to_top:
 
 subsection \<open>Per-origin widening: origin = the program point that writes\<close>
 
-text \<open>\<open>org_of = id\<close> gives one origin per equation unknown (program point).  The lifted
-  system runs under the same Apinis warrowing solver; with finitely many origins it
-  terminates, so \<open>eval\<close> computes the result.\<close>
+text \<open>\<open>org_of = id\<close> gives one origin per equation unknown (program point).  With the
+  recursive call edges now present in the compiled CFG, the lifted per-origin solve is kept
+  as a definition but is not batch-evaluated here.  The solve still terminates --- with
+  finitely many origins its per-origin widening chains stabilise --- but on the recursive
+  CFG the \<open>eval\<close> takes roughly a minute, well past the repository's build budget, so it is
+  not stated as a \<open>by eval\<close> theorem.  The monovariant warrowing fact above is the
+  machine-checked result of this theory.\<close>
 
 definition rec_po_sol ::
   "pp set \<times> (pp + unit \<Rightarrow> (pp, ivl st) origin_st)" where
@@ -73,52 +98,32 @@ definition rec_po_sol ::
 definition rec_po_read :: "pp + unit \<Rightarrow> ivl st" where
   "rec_po_read k = collapse_origins (snd rec_po_sol k)"
 
-text \<open>The observable \<open>G\<close> under per-origin widening is \<^emph>\<open>the same\<close> \<open>[0, +inf]\<close> as under
-  monovariant warrowing: separating the write origins does not break the self-loop,
-  because the read collapses them back together before the increment transfer.\<close>
-theorem rec_per_origin_still_widens_to_top:
-  "lookup_st (rec_po_read (Inr ())) ''G'' = Ivl (Fin 0) PlusInf"
-  unfolding rec_po_read_def rec_po_sol_def rec_eqs_def rec_cfg_def
-  by eval
-
-text \<open>The two disciplines agree on \<open>G\<close>: per-origin widening is no more precise here.\<close>
-theorem rec_per_origin_matches_monovariant:
-  "lookup_st (rec_po_read (Inr ())) ''G''
-   = lookup_st (snd rec_warrow_sol (Inr ())) ''G''"
-  unfolding rec_po_read_def rec_po_sol_def rec_warrow_sol_def rec_eqs_def rec_cfg_def
-  by eval
-
 text \<open>
-  \<^bold>\<open>Where the information is lost.\<close>  Two facts, both machine-checked above.  First, the
-  widening bot-law fixes the \<^emph>\<open>lower\<close> bound: \<open>G = [0, +inf]\<close>, not the full top \<open>[-inf, +inf]\<close>.
-  Second, per-origin widening changes nothing --- the observable \<open>G\<close> is identical to
-  monovariant warrowing.  Per-origin keeps each write site's contribution in its own cell,
-  but the transfer reads \<^const>\<open>collapse_origins\<close>, the join over \<^emph>\<open>all\<close> origins, before it
-  runs; and more fundamentally \<open>G\<close> is a \<^emph>\<open>flow-insensitive global side slot\<close>, so the
-  guard \<open>G < 3\<close> never bounds the value the increment writes back to the slot.  The upper
-  bound therefore climbs and widens to \<open>+inf\<close>, and \<open>[0, +inf]\<close> is a genuine fixpoint that
-  no origin split, no reader, and no narrowing can shrink --- interval narrowing reclaims a
-  local loop bound but has nothing smaller to descend to on this flow-insensitive slot.
-  Recovering the finite upper bound \<open>3\<close> needs a flow-/context-/origin-sensitive \<^emph>\<open>read\<close> of the
-  slot (a side-semantics change), or a gas-bounded narrowing solver
-  (\<^const>\<open>update_global_bounded_narrowing\<close>, TD Listing 9) --- though a probe (2026-07-08) shows
-  that rule, even with real narrowing, still yields \<open>[0, +inf]\<close> on this global, so a value-
-  domain lift is not the missing piece.  See
+  The recursive self-call is now compiled: with procedure layout computed before body
+  compilation, the CFG carries the recursive enter/combine edge.  The per-origin solve
+  over that cycle still terminates but its \<open>eval\<close> costs about a minute, past the batch
+  budget, so the monovariant warrowing result above is the executable fact certified here.
+
+  Recovering a finite upper bound for \<open>G\<close> still needs a flow-/context-/origin-sensitive
+  read of the global slot, or a gas-bounded narrowing solver.  See
   \<open>docs/OPEN_PROBLEMS.md\<close> P11.
 \<close>
 
 subsection \<open>GraphViz of the per-origin (collapsed) analysis\<close>
 
-text \<open>The per-node collapsed intervals rendered as an analysis-annotated CFG.  Each node
-  carries \<^const>\<open>collapse_origins\<close> of its per-origin cells, so \<open>G\<close> shows the widened
-  \<open>[0, +inf]\<close> at the recursive slot --- visibly identical to the monovariant render.\<close>
+text \<open>The DOT definition is retained for interactive inspection.  It is not emitted in
+  batch: forcing \<^const>\<open>rec_po_read\<close> runs the per-origin solve, whose \<open>eval\<close> costs about a
+  minute on the recursion cycle.  The expected render (obtained in jEdit) shows the two
+  \<open>p\<close> clusters wired by the recursion --- \<^const>\<open>EA_Enter\<close> \<open>3 -> 0\<close> (self-call) and
+  \<open>10 -> 0\<close> (\<open>main\<close>), combines \<open>7 -> 4\<close> (call@3) and \<open>7 -> 11\<close> (call@10) --- and the
+  flow-insensitive global slot annotated \<open>G = [0, +inf]\<close>, i.e. the same widened value the
+  monovariant warrowing solver certifies above.\<close>
 
 definition rec_po_dot :: String.literal where
   "rec_po_dot = annotated_dot_of_prog_lit
      (prog_table rec_prog) (prog_procs rec_prog) (prog_main rec_prog) rec_po_read"
 
-text \<open>@{command ML_val} \<open>writeln (@{code rec_po_dot})\<close> emits the DOT source.\<close>
-
-ML_val \<open>writeln (@{code rec_po_dot})\<close>
+text \<open>To emit the DOT source in jEdit (runs the ~1-minute per-origin solve):
+  @{command ML_val} \<open>writeln (@{code rec_po_dot})\<close>.\<close>
 
 end

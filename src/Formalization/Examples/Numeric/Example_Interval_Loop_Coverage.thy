@@ -52,7 +52,7 @@ lemma loop_cfg_full:
       (3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), 4),
       (4, EA_Nop, 2)}
      {}"
-  by (simp add: compile_prog_def compile_prog_with_regions_def Let_def eval_nat_numeral loop_prog_def; blast)
+  by (simp add: compile_prog_def compile_prog_with_regions_def compile_procs_list_def Let_def eval_nat_numeral loop_prog_def; blast)
 
 lemma loop_cfg_entry:   "cfg_entry loop_cfg = 0" by (simp add: loop_cfg_full)
 lemma loop_cfg_exit:    "cfg_exit  loop_cfg = 5" by (simp add: loop_cfg_full)

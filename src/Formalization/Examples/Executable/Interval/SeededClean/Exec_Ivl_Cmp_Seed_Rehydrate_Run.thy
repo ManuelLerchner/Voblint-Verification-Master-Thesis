@@ -132,6 +132,7 @@ definition rhyd_solution ::
   "(pp \<times> ivl st) set \<times> ((pp \<times> ivl st) + ivl st \<Rightarrow> ivl st)" where
   "rhyd_solution = TD_side_always_join_Interp_solve rhyd_eqs (cfg_exit rhyd_cfg, bot)"
 
+
 lemma rhyd_runs: "fst rhyd_solution \<noteq> {}"
   unfolding rhyd_solution_def rhyd_eqs_def rhyd_cfg_def rhyd_prog_def
     ivl_ec_def ivl_combine_rehydrate_def ivl_etf_clean_st_def clean_edge_tree_st_def
@@ -140,17 +141,17 @@ lemma rhyd_runs: "fst rhyd_solution \<noteq> {}"
 subsection \<open>The read-backs recover the exact points (rehydration, not a read join)\<close>
 
 text \<open>
-  \<^const>\<open>rhyd_cfg\<close> nodes: \<open>f = 0 \<rightarrow> 1\<close>; \<open>main\<close> reads back \<open>g1\<close> at \<open>6\<close>, \<open>h1\<close> at \<open>8\<close>,
-  \<open>g2\<close> at \<open>13\<close>, \<open>h2\<close> at \<open>15\<close>.  All four are exact points --- the globals are present in
+  \<^const>\<open>rhyd_cfg\<close> nodes: \<open>f = 0 \<rightarrow> 1\<close>; \<open>main\<close> reads back \<open>g1\<close> at \<open>7\<close>, \<open>h1\<close> at \<open>9\<close>,
+  \<open>g2\<close> at \<open>15\<close>, \<open>h2\<close> at \<open>17\<close>.  All four are exact points --- the globals are present in
   the caller-local flow because \<^const>\<open>ivl_combine_rehydrate\<close> put them back on return,
   \<^emph>\<open>not\<close> because a read folds in a published global.
 \<close>
 
 lemma rhyd_readbacks_exact:
-  "lookup_st (snd rhyd_solution (Inl (6,  bot::ivl st))) ''g1'' = Ivl (Fin 0)  (Fin 0)
-   \<and> lookup_st (snd rhyd_solution (Inl (8,  bot::ivl st))) ''h1'' = Ivl (Fin 1)  (Fin 1)
-   \<and> lookup_st (snd rhyd_solution (Inl (13, bot::ivl st))) ''g2'' = Ivl (Fin 10) (Fin 10)
-   \<and> lookup_st (snd rhyd_solution (Inl (15, bot::ivl st))) ''h2'' = Ivl (Fin 11) (Fin 11)"
+  "lookup_st (snd rhyd_solution (Inl (7,  bot::ivl st))) ''g1'' = Ivl (Fin 0)  (Fin 0)
+   \<and> lookup_st (snd rhyd_solution (Inl (9,  bot::ivl st))) ''h1'' = Ivl (Fin 1)  (Fin 1)
+   \<and> lookup_st (snd rhyd_solution (Inl (15, bot::ivl st))) ''g2'' = Ivl (Fin 10) (Fin 10)
+   \<and> lookup_st (snd rhyd_solution (Inl (17, bot::ivl st))) ''h2'' = Ivl (Fin 11) (Fin 11)"
   unfolding rhyd_solution_def rhyd_eqs_def rhyd_cfg_def rhyd_prog_def
     ivl_ec_def ivl_combine_rehydrate_def ivl_etf_clean_st_def clean_edge_tree_st_def
     combine_abs_st_def side_cfg_T_eff_cmp_seed_st_def by eval

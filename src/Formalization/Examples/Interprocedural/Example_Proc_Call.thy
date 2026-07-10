@@ -131,28 +131,29 @@ text \<open>
   Compile @{const main_prog} together with its two procedure bodies.
   @{const compile_prog} first lays out @{const inc_body} at nodes 0--1
   and @{const sqr_body} at nodes 2--3, then compiles the main body
-  starting at node 4.  Two call sites produce combine triples
-  @{text "(6, 1, 7)"} (return from @{text inc}) and
-  @{text "(7, 3, 8)"} (return from @{text sqr}).
+  starting at node 4.  Each call site owns a distinct return node, so the
+  two combine triples are @{text "(6, 1, 7)"} (return from @{text inc}) and
+  @{text "(8, 3, 9)"} (return from @{text sqr}).
 \<close>
 
 abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_prog"
 
 lemma main_cfg_full:
-  "main_cfg = mk_cfg 4 8
+  "main_cfg = mk_cfg 4 9
      {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
       (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), 3),
       (4, EA_Assign ''Gx'' (N 4), 5),
       (5, EA_Nop, 6),
       (6, EA_Enter, 0),
-      (7, EA_Enter, 2)}
-     {(6, 1, 7), (7, 3, 8)}"
+      (7, EA_Nop, 8),
+      (8, EA_Enter, 2)}
+     {(6, 1, 7), (8, 3, 9)}"
   by (simp add: proc_pi_def inc_body_def sqr_body_def main_prog_def
-      compile_prog_def compile_prog_with_regions_def Let_def eval_nat_numeral;
+      compile_prog_def compile_prog_with_regions_def compile_procs_list_def Let_def eval_nat_numeral;
       blast)
 
 lemma main_cfg_entry:   "cfg_entry main_cfg = 4"                    by (simp add: main_cfg_full)
-lemma main_cfg_exit:    "cfg_exit  main_cfg = 8"                    by (simp add: main_cfg_full)
+lemma main_cfg_exit:    "cfg_exit  main_cfg = 9"                    by (simp add: main_cfg_full)
 lemma main_cfg_edges:
   "edges main_cfg =
      {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
@@ -160,10 +161,12 @@ lemma main_cfg_edges:
       (4, EA_Assign ''Gx'' (N 4), 5),
       (5, EA_Nop, 6),
       (6, EA_Enter, 0),
-      (7, EA_Enter, 2)}"
+      (7, EA_Nop, 8),
+      (8, EA_Enter, 2)}"
   by (simp add: main_cfg_full)
-lemma main_cfg_combines: "combines main_cfg = {(6, 1, 7), (7, 3, 8)}"
+lemma main_cfg_combines: "combines main_cfg = {(6, 1, 7), (8, 3, 9)}"
   by (simp add: main_cfg_full)
+
  
 
 
@@ -188,16 +191,17 @@ text \<open>
   @{text "6"} -- call site to inc (after EA_Nop from node 5).
   @{text "1"} -- inc body exit;
   @{text "2"} -- sqr body entry;
-  @{text "7"} -- return from inc / call site to sqr.
+  @{text "7"} -- return from inc;
+  @{text "8"} -- call site to sqr;
   @{text "3"} -- sqr body exit;
-  @{text "8"} -- program exit (combine from sqr return).
+  @{text "9"} -- program exit (combine from sqr return).
 \<close>
 
 definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
   "main_prog_env v x =
      (if (v = 0 \<or> v = 5 \<or> v = 6) \<and> x = ''Gx'' then Ivl (Fin 4) (Fin 4)
-      else if (v = 1 \<or> v = 2 \<or> v = 7) \<and> x = ''Gx'' then Ivl (Fin 5) (Fin 5)
-      else if (v = 3 \<or> v = 8) \<and> x = ''Gx'' then Ivl (Fin 25) (Fin 25)
+      else if (v = 1 \<or> v = 2 \<or> v = 7 \<or> v = 8) \<and> x = ''Gx'' then Ivl (Fin 5) (Fin 5)
+      else if (v = 3 \<or> v = 9) \<and> x = ''Gx'' then Ivl (Fin 25) (Fin 25)
       else Ivl MinInf PlusInf)"
 
 lemma main_prog_postfix:
@@ -215,10 +219,10 @@ proof (rule allI)
                   {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1))),
                    (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx''))),
                    (4, EA_Assign ''Gx'' (N 4)),
-                   (5, EA_Nop), (6, EA_Enter), (7, EA_Nop), (7, EA_Enter)})
+                   (5, EA_Nop), (6, EA_Enter), (7, EA_Nop), (8, EA_Enter)})
              \<union>
              ((\<lambda>(c, e). \<langle>main_prog_env c|main_prog_env e\<rangle>) `
-                  {(6, 1), (7, 3)})"])
+                  {(6, 1), (8, 3)})"])
     by (auto split: if_splits
               simp: main_prog_env_def main_prog_s0_def ivl_tf_def assign_ivl_def
                     times_ivl_def less_eq_ivl_def le_fun_def

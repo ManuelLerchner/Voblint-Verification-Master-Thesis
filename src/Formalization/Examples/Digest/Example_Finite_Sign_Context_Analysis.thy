@@ -22,7 +22,7 @@ text \<open>
       \<open>ENTER_MONO\<close> is unprovable: the global summand pins \<open>G\<close> to \<^const>\<open>SNonNeg\<close> at
       the shared caller context (\<open>fctx_caller_read_G_imprecise\<close>).
     \<^enum> \<^bold>\<open>Value-refined caller contexts (\<open>fctxu\<close>, prototype).\<close>  An intra-edge context
-      update splits \<open>main\<close> so calls 4/7 sit under \<open>GZero\<close>/\<open>GPos\<close> --- an orthogonal
+      update splits \<open>main\<close> so calls 4/8 sit under \<open>GZero\<close>/\<open>GPos\<close> --- an orthogonal
       finite-context axis, no soundness claim.
     \<^enum> \<^bold>\<open>Seeded-clean (R_read) --- the certified Goblint-faithful resolution.\<close>  The
       section \<^bold>\<open>Migration\<close> below runs the seeded-clean spine
@@ -89,13 +89,13 @@ definition fctx_ec_call :: "pp \<Rightarrow> sign_gctx \<Rightarrow> sign st \<R
      (case sign_gctx_of_st sc of
         GZero \<Rightarrow> GZero
       | GPos \<Rightarrow> GPos
-      | GNonNeg \<Rightarrow> (if cc = 4 then GZero else if cc = 7 then GPos else GNonNeg)
+      | GNonNeg \<Rightarrow> (if cc = 4 then GZero else if cc = 8 then GPos else GNonNeg)
       | GOther \<Rightarrow> GOther)"
 
 definition fctx_call_state :: "pp \<Rightarrow> sign st \<Rightarrow> sign st" where
   "fctx_call_state cc s =
      (if cc = 4 then update_st (update_st s ''G'' SZero) ''GH'' SBot
-      else if cc = 7 then update_st (update_st s ''G'' SPos) ''GH'' SBot
+      else if cc = 8 then update_st (update_st s ''G'' SPos) ''GH'' SBot
       else s)"
 
 definition unit_combine_tree_cmp_ctx_st ::
@@ -159,6 +159,7 @@ text \<open>
   bridge toward a dedicated finite context-domain locale.
 \<close>
 
+
 definition fctx_abs_eqs :: "(pp \<times> sign_gctx, sign_gctx, sign abs_state) eqsT" where
   "fctx_abs_eqs =
      side_cfg_T_eff_cmp id
@@ -213,10 +214,10 @@ text \<open>
 subsection \<open>The example's switching route discharges the contract's obligations concretely\<close>
 
 text \<open>
-  The two call sites of \<open>fctx_prog\<close> are \<open>cc = 4\<close> (the \<open>G := 0; f()\<close>) and \<open>cc = 7\<close>
+  The two call sites of \<open>fctx_prog\<close> are \<open>cc = 4\<close> (the \<open>G := 0; f()\<close>) and \<open>cc = 8\<close>
   (the \<open>G := 1; f()\<close>).  \<^const>\<open>fctx_call_state\<close> overwrites \<open>G\<close> before the call, so the
   routed callee context is determined \<^emph>\<open>independently of the solver state\<close>: site 4
-  routes to \<open>GZero\<close>, site 7 to \<open>GPos\<close>.
+  routes to \<open>GZero\<close>, site 8 to \<open>GPos\<close>.
 \<close>
 
 text \<open>
@@ -233,7 +234,7 @@ lemma fctx_route_call4: "fctx_ec_call 4 ctx (fctx_call_state 4 s) = GZero"
   by (simp add: fctx_ec_call_def fctx_call_state_def sign_gctx_of_st_def
         sign_gctx_of_sign_def is_global_def restrict_global_def)
 
-lemma fctx_route_call7: "fctx_ec_call 7 ctx (fctx_call_state 7 s) = GPos"
+lemma fctx_route_call8: "fctx_ec_call 8 ctx (fctx_call_state 8 s) = GPos"
   by (simp add: fctx_ec_call_def fctx_call_state_def sign_gctx_of_st_def
         sign_gctx_of_sign_def is_global_def restrict_global_def)
 
@@ -257,11 +258,12 @@ lemma fctx_route_bound_pos:
     sign_gctx_of_st_def sign_gctx_of_sign_def
   by eval
 
+
 subsection \<open>Obstruction: the shared caller context defeats ENTER_MONO\<close>
 
 text \<open>
-  Both call sites (\<open>cc = 4\<close>, \<open>cc = 7\<close>) live in the caller context \<open>GOther\<close>
-  (the reachable set contains only \<open>(4, GOther)\<close> and \<open>(7, GOther)\<close>), whose global
+  Both call sites (\<open>cc = 4\<close>, \<open>cc = 8\<close>) live in the caller context \<open>GOther\<close>
+  (the reachable set contains only \<open>(4, GOther)\<close> and \<open>(8, GOther)\<close>), whose global
   slot \<open>Inr GOther\<close> joins the two activations.  The read of \<open>G\<close> at either call site
   is therefore \<open>SNonNeg = SZero \<squnion> SPos\<close>: its concretisation contains stores with
   \<open>G = 0\<close> (enter digest \<open>GZero\<close>) and with \<open>G = 1\<close> (enter digest \<open>GPos\<close>).
@@ -300,9 +302,9 @@ text \<open>
   the observation read must be exact on the digest variable \<open>G\<close>.
 
   It is not, and no call-boundary context scheme can make it so on this program:
-  \<^item> Both call nodes \<open>4\<close> and \<open>7\<close> live under a single caller context \<open>GOther\<close>
-    (\<open>fctx_call4_only_GOther\<close>, \<open>fctx_call7_only_GOther\<close>).  This is structural, not
-    accidental: context changes only at call boundaries, and \<open>4\<close>/\<open>7\<close> are interior
+  \<^item> Both call nodes \<open>4\<close> and \<open>8\<close> live under a single caller context \<open>GOther\<close>
+    (\<open>fctx_call4_only_GOther\<close>, \<open>fctx_call8_only_GOther\<close>).  This is structural, not
+    accidental: context changes only at call boundaries, and \<open>4\<close>/\<open>8\<close> are interior
     points of one \<open>main\<close> activation, so every trace reaching them carries \<open>main\<close>'s
     single entry digest.  No call-boundary \<open>ec\<close> can assign interior points distinct
     contexts.
@@ -311,7 +313,7 @@ text \<open>
     \<^const>\<open>SNonNeg\<close> (\<open>fctx_GOther_slot_joins_G\<close>).
   \<^item> \<^const>\<open>side_env_cmp\<close> reads \<open>sigma (Inl (cl, ctx)) \<squnion> sigma (Inr ctx)\<close>; the global
     summand pins the observation of \<open>G\<close> at every call node to \<^const>\<open>SNonNeg\<close>
-    (\<open>fctx_caller_read_G_imprecise\<close> at \<open>4\<close>, \<open>fctx_caller_read_G_imprecise7\<close> at \<open>7\<close>),
+    (\<open>fctx_caller_read_G_imprecise\<close> at \<open>4\<close>, \<open>fctx_caller_read_G_imprecise8\<close> at \<open>8\<close>),
     regardless of the local slot's precision.
 
   Retain sharpens only the routing read \<^const>\<open>route_read_cmp\<close> (the local slot); it
@@ -321,13 +323,13 @@ text \<open>
   component refines the CALLEE key, not \<open>main\<close>; call-string: \<open>main\<close> is the root, both
   \<open>f\<close>-calls share caller string \<open>[]\<close>; entry-store: \<open>main\<close> has one entry store, one
   context.  In every case \<open>Inr (context of main)\<close> joins both \<open>G\<close>-writes.  A per-program-point
-  distinction (\<open>G = 0\<close> at \<open>4\<close> vs \<open>G = 1\<close> at \<open>7\<close>) is flow-sensitivity WITHIN one
+  distinction (\<open>G = 0\<close> at \<open>4\<close> vs \<open>G = 1\<close> at \<open>8\<close>) is flow-sensitivity WITHIN one
   activation --- expressible only by an intra-edge context update (\<open>step_ctx\<close>), which the
   call-only protocol excludes.  Hence: stop; the fix is not a call-boundary context scheme.
 \<close>
 
-lemma fctx_caller_read_G_imprecise7:
-  "lookup_st (snd fctx_solution (Inl (7, GOther)) \<squnion> snd fctx_solution (Inr GOther)) ''G'' = SNonNeg"
+lemma fctx_caller_read_G_imprecise8:
+  "lookup_st (snd fctx_solution (Inl (8, GOther)) \<squnion> snd fctx_solution (Inr GOther)) ''G'' = SNonNeg"
   unfolding fctx_solution_def fctx_eqs_def fctx_cfg_def fctx_prog_def fctx_ec_def
     fctx_ec_call_def fctx_call_state_def unit_combine_tree_cmp_ctx_st_def
     sign_gctx_of_st_def sign_gctx_of_sign_def
@@ -343,11 +345,11 @@ lemma fctx_call4_only_GOther:
     sign_gctx_of_st_def sign_gctx_of_sign_def
   by eval
 
-lemma fctx_call7_only_GOther:
-  "(7, GOther) \<in> fst fctx_solution
-   \<and> (7, GZero) \<notin> fst fctx_solution
-   \<and> (7, GPos) \<notin> fst fctx_solution
-   \<and> (7, GNonNeg) \<notin> fst fctx_solution"
+lemma fctx_call8_only_GOther:
+  "(8, GOther) \<in> fst fctx_solution
+   \<and> (8, GZero) \<notin> fst fctx_solution
+   \<and> (8, GPos) \<notin> fst fctx_solution
+   \<and> (8, GNonNeg) \<notin> fst fctx_solution"
   unfolding fctx_solution_def fctx_eqs_def fctx_cfg_def fctx_prog_def fctx_ec_def
     fctx_ec_call_def fctx_call_state_def unit_combine_tree_cmp_ctx_st_def
     sign_gctx_of_st_def sign_gctx_of_sign_def
@@ -436,7 +438,7 @@ definition fctxu_eqs :: "(pp \<times> sign_gctx, sign_gctx, sign st) eqsT" where
       (\<lambda>c cc ex. unit_combine_tree_cmp_ctx_st fctx_ec_call cc ex c)
       fctx_cfg sign_etf_st bot bot cinit_sign_st"
 
-text \<open>The value-refined context propagates forward, so \<open>main\<close>'s exit (pp 8) is under \<open>GPos\<close>.\<close>
+text \<open>The value-refined context propagates forward, so \<open>main\<close>'s exit (pp 9) is under \<open>GPos\<close>.\<close>
 definition fctxu_solution ::
   "(pp \<times> sign_gctx) set \<times> ((pp \<times> sign_gctx) + sign_gctx \<Rightarrow> sign st)" where
   "fctxu_solution = TD_side_always_join_Interp_solve fctxu_eqs (cfg_exit fctx_cfg, GPos)"
@@ -456,7 +458,7 @@ lemma fctxu_solves:
     sign_gctx_of_st_def sign_gctx_of_sign_def
   by eval
 
-subsection \<open>The split, machine-checked: calls 4/7 land under GZero/GPos, exactly\<close>
+subsection \<open>The split, machine-checked: calls 4/8 land under GZero/GPos, exactly\<close>
 
 text \<open>Call node 4 is analysed under \<open>GZero\<close> and NOT under the joined \<open>GOther\<close>.\<close>
 lemma fctxu_call4_GZero:
@@ -467,9 +469,9 @@ lemma fctxu_call4_GZero:
     sign_gctx_of_st_def sign_gctx_of_sign_def
   by eval
 
-text \<open>Call node 7 is analysed under \<open>GPos\<close> and NOT under the joined \<open>GOther\<close>.\<close>
-lemma fctxu_call7_GPos:
-  "(7, GPos) \<in> fst fctxu_solution \<and> (7, GOther) \<notin> fst fctxu_solution"
+text \<open>Call node 8 is analysed under \<open>GPos\<close> and NOT under the joined \<open>GOther\<close>.\<close>
+lemma fctxu_call8_GPos:
+  "(8, GPos) \<in> fst fctxu_solution \<and> (8, GOther) \<notin> fst fctxu_solution"
   unfolding fctxu_solution_def fctxu_eqs_def side_cfg_T_eff_cmp_ctxupd_st_def
     fctx_ctx_step_def fctx_ctx_list_def fctx_cfg_def fctx_prog_def fctx_ec_def
     fctx_ec_call_def fctx_call_state_def unit_combine_tree_cmp_ctx_st_def
@@ -489,8 +491,8 @@ lemma fctxu_caller_read_G4_exact:
     sign_gctx_of_st_def sign_gctx_of_sign_def
   by eval
 
-lemma fctxu_caller_read_G7_exact:
-  "lookup_st (snd fctxu_solution (Inl (7, GPos)) \<squnion> snd fctxu_solution (Inr GPos)) ''G'' = SPos"
+lemma fctxu_caller_read_G8_exact:
+  "lookup_st (snd fctxu_solution (Inl (8, GPos)) \<squnion> snd fctxu_solution (Inr GPos)) ''G'' = SPos"
   unfolding fctxu_solution_def fctxu_eqs_def side_cfg_T_eff_cmp_ctxupd_st_def
     fctx_ctx_step_def fctx_ctx_list_def fctx_cfg_def fctx_prog_def fctx_ec_def
     fctx_ec_call_def fctx_call_state_def unit_combine_tree_cmp_ctx_st_def
@@ -560,23 +562,23 @@ lemma fctx_seed_clean_split:
 text \<open>
   \<^bold>\<open>Strictly sharper than the \<^const>\<open>side_env_cmp\<close> baseline.\<close>  Where interpretation 1's
   observation read of \<open>G\<close> at each call site is \<^const>\<open>SNonNeg\<close>
-  (\<open>fctx_caller_read_G_imprecise\<close> at 4, \<open>fctx_caller_read_G_imprecise7\<close> at 7 --- the
+  (\<open>fctx_caller_read_G_imprecise\<close> at 4, \<open>fctx_caller_read_G_imprecise8\<close> at 8 --- the
   join of both \<open>G\<close>-writes), the seeded-clean caller \<^emph>\<open>local\<close> read is the point
-  \<^const>\<open>SZero\<close> at call 4 and \<^const>\<open>SPos\<close> at call 7, each strictly below
+  \<^const>\<open>SZero\<close> at call 4 and \<^const>\<open>SPos\<close> at call 8, each strictly below
   \<^const>\<open>SNonNeg\<close>.  The seed makes the routing read exact; this is exactly the
   \<open>ENTER_MONO\<close>-enabling precision the obstruction study identified as missing.
 \<close>
 
 lemma fctx_seed_clean_caller_G_exact:
   "lookup_st (snd fctx_seed_clean_solution (Inl (4, bot::sign st))) ''G'' = SZero
-   \<and> lookup_st (snd fctx_seed_clean_solution (Inl (7, bot::sign st))) ''G'' = SPos"
+   \<and> lookup_st (snd fctx_seed_clean_solution (Inl (8, bot::sign st))) ''G'' = SPos"
   unfolding fctx_seed_clean_solution_def fctx_seed_clean_eqs_def fctx_cfg_def fctx_prog_def
     kgen_ec_def kgen_combine_rread_def sign_etf_clean_st_def clean_edge_tree_st_def
     side_cfg_T_eff_cmp_seed_st_def by eval
 
 theorem fctx_seed_clean_strictly_sharper:
   "lookup_st (snd fctx_seed_clean_solution (Inl (4, bot::sign st))) ''G'' = SZero
-   \<and> lookup_st (snd fctx_seed_clean_solution (Inl (7, bot::sign st))) ''G'' = SPos
+   \<and> lookup_st (snd fctx_seed_clean_solution (Inl (8, bot::sign st))) ''G'' = SPos
    \<and> lookup_st (snd fctx_solution (Inl (4, GOther)) \<squnion> snd fctx_solution (Inr GOther)) ''G'' = SNonNeg
    \<and> SZero < SNonNeg \<and> SPos < SNonNeg"
   using fctx_seed_clean_caller_G_exact fctx_caller_read_G_imprecise sign_strict_precision by simp
