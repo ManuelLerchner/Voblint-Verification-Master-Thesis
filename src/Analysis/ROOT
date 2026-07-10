@@ -14,15 +14,28 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Instances/Tooling"
   theories
     Abstract_Domain
-    Sign_Domain
+    Sign_Lattice
+    Sign_Arithmetic
+    Sign_Backward
+    Sign_Print
     Exec_St
     Origin_State
+    Interval_Bounds
+    Interval_Lattice
+    Interval_Warrowing
+    Interval_Arithmetic
+    Interval_Backward
+    Interval_Transfer
+    Interval_Print
     Interval_Domain
     Ivl_Exec
     Constraint_System
+    Sign_Transfer
     Constraint_System_Sound
     Analysis_Sound
     TD_Side_CFG
+    Sign_Local_Effects
+    Sign_Domain
     Global_Cmp_Read
     Context_Domain
     Strategy_Tree_Monad

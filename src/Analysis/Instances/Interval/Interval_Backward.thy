@@ -1,0 +1,264 @@
+theory Interval_Backward
+  imports Interval_Arithmetic "Voblint_IMP2.IMP2_Expr"
+begin
+
+section \<open>Interval backward filtering\<close>
+
+subsection \<open>Abstract expression evaluation\<close>
+
+fun aval_ivl_hol :: "AExp.aexp => (vname => ivl) => ivl" where
+    "aval_ivl_hol (AExp.N n)      \<sigma> = Ivl (Fin n) (Fin n)"
+  | "aval_ivl_hol (AExp.V x)      \<sigma> = \<sigma> x"
+  | "aval_ivl_hol (AExp.Plus a b) \<sigma> = aval_ivl_hol a \<sigma> + aval_ivl_hol b \<sigma>"
+
+fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
+    "aval_ivl (BaseN a)    \<sigma> = aval_ivl_hol a \<sigma>"
+  | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
+  | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
+  | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
+
+lemma aval_ivl_hol_sound:
+  "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
+   \<Longrightarrow> AExp.aval a s \<in> gamma_ivl (aval_ivl_hol a \<sigma>)"
+  by (induction a; simp add: ivl_plus_sound)
+
+lemma aval_ivl_sound:
+  "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
+   \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a \<sigma>)"
+  by (induction a;
+      simp add: aval_ivl_hol_sound
+                ivl_plus_sound ivl_minus_sound ivl_times_sound)
+
+subsection \<open>Backward inverse operators\<close>
+
+text \<open>
+  Inverse operators for backward analysis over intervals.
+  @{text inv_less_ivl} performs precise interval narrowing: on the true branch
+  of @{text "n1 < n2"}, the upper bound of @{text n1} tightens to one below
+  the upper bound of @{text n2}, and the lower bound of @{text n2} tightens to
+  one above the lower bound of @{text n1}.  On the false branch (@{text "n1 \<ge> n2"}),
+  @{text n1}\<open>s\<close> lower bound tightens to the lower bound of @{text n2}, and @{text n2}\<open>s\<close>
+  upper bound tightens to the upper bound of @{text n1}.  The remaining inverse
+  operators are conservative (identity) for simplicity.
+\<close>
+
+fun inv_less_ivl :: "bool => ivl => ivl => ivl * ivl" where
+    "inv_less_ivl True  (Ivl l1 u1) (Ivl l2 u2) =
+       (Ivl l1 u1 \<sqinter> Ivl MinInf (u2 - Fin 1),
+        Ivl l2 u2 \<sqinter> Ivl (l1 + Fin 1) PlusInf)"
+  | "inv_less_ivl False (Ivl l1 u1) (Ivl l2 u2) =
+       (Ivl l1 u1 \<sqinter> Ivl l2 PlusInf,
+        Ivl l2 u2 \<sqinter> Ivl MinInf u1)"
+
+fun inv_plus_ivl :: "ivl => ivl => ivl => ivl * ivl" where
+  "inv_plus_ivl _ a1 a2 = (a1, a2)"
+
+fun inv_minus_ivl :: "ivl => ivl => ivl => ivl * ivl" where
+  "inv_minus_ivl _ a1 a2 = (a1, a2)"
+
+fun inv_times_ivl :: "ivl => ivl => ivl => ivl * ivl" where
+  "inv_times_ivl _ a1 a2 = (a1, a2)"
+
+lemma inv_less_ivl_n1_ub:
+  "n2 \<in> gamma_ivl (Ivl l2 u2) \<Longrightarrow> n1 < n2
+   \<Longrightarrow> n1 \<in> gamma_ivl (Ivl MinInf (u2 - Fin 1))"
+  by (cases u2; auto; linarith)
+
+lemma inv_less_ivl_n2_lb:
+  "n1 \<in> gamma_ivl (Ivl l1 u1) \<Longrightarrow> n1 < n2
+   \<Longrightarrow> n2 \<in> gamma_ivl (Ivl (l1 + Fin 1) PlusInf)"
+  by (cases l1; auto; linarith)
+
+lemma inv_less_ivl_n1_ge_lb:
+  "n2 \<in> gamma_ivl (Ivl l2 u2) \<Longrightarrow> \<not> n1 < n2
+   \<Longrightarrow> n1 \<in> gamma_ivl (Ivl l2 PlusInf)"
+  by (cases l2; auto; linarith)
+
+lemma inv_less_ivl_n2_le_ub:
+  "n1 \<in> gamma_ivl (Ivl l1 u1) \<Longrightarrow> \<not> n1 < n2
+   \<Longrightarrow> n2 \<in> gamma_ivl (Ivl MinInf u1)"
+  by (cases u1; auto; linarith)
+
+lemma inv_less_ivl_sound:
+  assumes g1: "n1 \<in> gamma_ivl a1" and g2: "n2 \<in> gamma_ivl a2" and eq: "(n1 < n2) = res"
+  shows "n1 \<in> gamma_ivl (fst (inv_less_ivl res a1 a2))
+       \<and> n2 \<in> gamma_ivl (snd (inv_less_ivl res a1 a2))"
+proof -
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (cases a1) auto
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (cases a2) auto
+  show ?thesis
+  proof (cases res)
+    case True
+    have lt: "n1 < n2" using eq True by simp
+    have p1: "n1 \<in> gamma_ivl (Ivl l1 u1 \<sqinter> Ivl MinInf (u2 - Fin 1))"
+      by (rule meet_ivl_gamma[OF g1[unfolded ha1] inv_less_ivl_n1_ub[OF g2[unfolded ha2] lt]])
+    have p2: "n2 \<in> gamma_ivl (Ivl l2 u2 \<sqinter> Ivl (l1 + Fin 1) PlusInf)"
+      by (rule meet_ivl_gamma[OF g2[unfolded ha2] inv_less_ivl_n2_lb[OF g1[unfolded ha1] lt]])
+    show ?thesis using p1 p2 by (simp add: True ha1 ha2)
+  next
+    case False
+    have nlt: "\<not> n1 < n2" using eq False by simp
+    have p1: "n1 \<in> gamma_ivl (Ivl l1 u1 \<sqinter> Ivl l2 PlusInf)"
+      by (rule meet_ivl_gamma[OF g1[unfolded ha1] inv_less_ivl_n1_ge_lb[OF g2[unfolded ha2] nlt]])
+    have p2: "n2 \<in> gamma_ivl (Ivl l2 u2 \<sqinter> Ivl MinInf u1)"
+      by (rule meet_ivl_gamma[OF g2[unfolded ha2] inv_less_ivl_n2_le_ub[OF g1[unfolded ha1] nlt]])
+    show ?thesis using p1 p2 by (simp add: False ha1 ha2)
+  qed
+qed
+
+subsection \<open>Backward-domain interpretation\<close>
+
+global_interpretation ivl_backward_domain:
+    backward_domain meet_ivl aval_ivl
+                    inv_less_ivl inv_plus_ivl inv_minus_ivl inv_times_ivl
+  defines
+    afilter_ivl = ivl_backward_domain.afilter
+    and bfilter_ivl = ivl_backward_domain.bfilter
+proof unfold_locales
+  fix n :: int and a b :: ivl
+  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
+  have h1: "n \<in> gamma_ivl a" using H1 by simp
+  have h2: "n \<in> gamma_ivl b" using H2 by simp
+  show "n \<in> gamma (meet_ivl a b)"
+    using meet_ivl_gamma[simplified, OF h1 h2] by simp
+next
+  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> ivl"
+  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
+  have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using H by simp
+  show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
+    using aval_ivl_sound[OF h] by simp
+next
+  fix n1 n2 :: int and a1 a2 :: ivl and res :: bool
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
+  have h1: "n1 \<in> gamma_ivl a1" using H1 by simp
+  have h2: "n2 \<in> gamma_ivl a2" using H2 by simp
+  show "n1 \<in> gamma (fst (inv_less_ivl res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_ivl res a1 a2))"
+    using inv_less_ivl_sound[OF h1 h2 H3] by simp
+next
+  fix n1 n2 :: int and a1 a2 r :: ivl
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_plus_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus_ivl r a1 a2))"
+    using H1 H2 by simp
+next
+  fix n1 n2 :: int and a1 a2 r :: ivl
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_minus_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus_ivl r a1 a2))"
+    using H1 H2 by simp
+next
+  fix n1 n2 :: int and a1 a2 r :: ivl
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_times_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times_ivl r a1 a2))"
+    using H1 H2 by simp
+qed
+
+lemma aval_ivl_hol_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl_hol a sigma1 \<le> aval_ivl_hol a sigma2"
+  by (induction a arbitrary: sigma1 sigma2)
+     (auto simp: ivl_plus_mono le_funD)
+
+lemma aval_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl a sigma1 \<le> aval_ivl a sigma2"
+  by (induction a arbitrary: sigma1 sigma2)
+     (auto simp: aval_ivl_hol_mono ivl_plus_mono ivl_minus_mono ivl_times_mono)
+
+
+lemma inv_less_ivl_mono:
+  assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"
+  shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
+       \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
+proof -
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (cases a1) auto
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (cases a2) auto
+  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (cases a1') auto
+  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (cases a2') auto
+  from a1[unfolded ha1 ha1' less_eq_ivl_def] have ord1: "eint_le l1' l1" "eint_le u1 u1'" by auto
+  from a2[unfolded ha2 ha2' less_eq_ivl_def] have ord2: "eint_le l2' l2" "eint_le u2 u2'" by auto
+  show ?thesis
+  proof (cases res)
+    case True
+    then have r: "res = True" by simp
+    have aux1: "Ivl MinInf (u2 - Fin 1) \<le> Ivl MinInf (u2' - Fin (1::int))"
+      by (simp add: less_eq_ivl_def eint_minus_mono[OF ord2(2) eint_le_refl])
+    have aux2: "Ivl (l1 + Fin 1) PlusInf \<le> Ivl (l1' + Fin (1::int)) PlusInf"
+      by (simp add: less_eq_ivl_def eint_plus_mono[OF ord1(1) eint_le_refl])
+    show ?thesis
+      unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
+    proof (intro conjI)
+      show "Ivl l1 u1 \<sqinter> Ivl MinInf (u2 - Fin 1) \<le> Ivl l1' u1' \<sqinter> Ivl MinInf (u2' - Fin 1)"
+        by (intro inf_mono a1[unfolded ha1 ha1'] aux1)
+      show "Ivl l2 u2 \<sqinter> Ivl (l1 + Fin 1) PlusInf \<le> Ivl l2' u2' \<sqinter> Ivl (l1' + Fin 1) PlusInf"
+        by (intro inf_mono a2[unfolded ha2 ha2'] aux2)
+    qed
+  next
+    case False
+    then have r: "res = False" by simp
+    have aux3: "Ivl l2 PlusInf \<le> Ivl l2' PlusInf"
+      by (simp add: less_eq_ivl_def ord2(1) eint_le_refl)
+    have aux4: "Ivl MinInf u1 \<le> Ivl MinInf u1'"
+      by (simp add: less_eq_ivl_def ord1(2) eint_le_refl)
+    show ?thesis
+      unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
+    proof (intro conjI)
+      show "Ivl l1 u1 \<sqinter> Ivl l2 PlusInf \<le> Ivl l1' u1' \<sqinter> Ivl l2' PlusInf"
+        by (intro inf_mono a1[unfolded ha1 ha1'] aux3)
+      show "Ivl l2 u2 \<sqinter> Ivl MinInf u1 \<le> Ivl l2' u2' \<sqinter> Ivl MinInf u1'"
+        by (intro inf_mono a2[unfolded ha2 ha2'] aux4)
+    qed
+  qed
+qed
+
+text \<open>
+  Monotonicity of @{const afilter_ivl} / @{const bfilter_ivl} is the generic
+  @{locale backward_domain_mono} result: interpret it at the interval operators
+  (the parent @{term ivl_backward_domain} already discharges soundness, so only the
+  six operator-mono facts remain) and the filter monotonicity follows.
+\<close>
+
+context begin
+interpretation ivl_bdm:
+  backward_domain_mono meet_ivl aval_ivl
+                       inv_less_ivl inv_plus_ivl inv_minus_ivl inv_times_ivl
+proof unfold_locales
+  fix a1 a2 b1 b2 :: ivl
+  assume "a1 \<le> a2" and "b1 \<le> b2"
+  hence "a1 \<sqinter> b1 \<le> a2 \<sqinter> b2" by (rule inf_mono)
+  thus "meet_ivl a1 b1 \<le> meet_ivl a2 b2" by (simp add: inf_ivl_def)
+next
+  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
+  assume "\<sigma>1 \<le> \<sigma>2"
+  thus "aval_ivl e \<sigma>1 \<le> aval_ivl e \<sigma>2" by (rule aval_ivl_mono)
+next
+  fix x1 x2 y1 y2 :: ivl and res :: bool
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_less_ivl res x1 y1) \<le> fst (inv_less_ivl res x2 y2) \<and>
+        snd (inv_less_ivl res x1 y1) \<le> snd (inv_less_ivl res x2 y2)"
+    by (rule inv_less_ivl_mono)
+next
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_plus_ivl r1 x1 y1) \<le> fst (inv_plus_ivl r2 x2 y2) \<and>
+        snd (inv_plus_ivl r1 x1 y1) \<le> snd (inv_plus_ivl r2 x2 y2)" by simp
+next
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_minus_ivl r1 x1 y1) \<le> fst (inv_minus_ivl r2 x2 y2) \<and>
+        snd (inv_minus_ivl r1 x1 y1) \<le> snd (inv_minus_ivl r2 x2 y2)" by simp
+next
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_times_ivl r1 x1 y1) \<le> fst (inv_times_ivl r2 x2 y2) \<and>
+        snd (inv_times_ivl r1 x1 y1) \<le> snd (inv_times_ivl r2 x2 y2)" by simp
+qed
+
+lemma afilter_ivl_mono:
+  "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
+   afilter_ivl e a1 sigma1 \<le> afilter_ivl e a2 sigma2"
+  using ivl_bdm.afilter_mono by (simp add: afilter_ivl_def)
+
+lemma bfilter_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl b res sigma1 \<le> bfilter_ivl b res sigma2"
+  using ivl_bdm.bfilter_mono by (simp add: bfilter_ivl_def)
+
+end
+
+end

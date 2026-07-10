@@ -105,7 +105,7 @@ proof (rule allI)
                 (4, EA_Nop)})"])
     by (auto split: if_splits
              simp: loop_env_def loop_s0_def ivl_tf_def assign_ivl_def
-                   assume_ivl_def assume_not_ivl_def less_eq_ivl_def le_fun_def)
+                   assume_ivl_def assume_not_ivl_def normalize_ivl_def less_eq_ivl_def le_fun_def)
 qed
 
 subsection \<open>Backward guard refinement at the body entry\<close>

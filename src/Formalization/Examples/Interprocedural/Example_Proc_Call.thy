@@ -225,7 +225,7 @@ proof (rule allI)
                   {(6, 1), (8, 3)})"])
     by (auto split: if_splits
               simp: main_prog_env_def main_prog_s0_def ivl_tf_def assign_ivl_def
-                    times_ivl_def less_eq_ivl_def le_fun_def
+                    times_ivl_def normalize_ivl_def less_eq_ivl_def le_fun_def
                     enter_ivl_def combine_abs_def is_global_def)
 qed
 
