@@ -74,16 +74,6 @@ definition side_env_cmp ::
 where
   "side_env_cmp cmp \<sigma> p = \<sigma> (Inl p) \<squnion> glob_env_cmp cmp (snd p) \<sigma>"
 
-text \<open>
-  True-compatible read reproduces the join-all discipline: the global part is
-  the join of every named-global slot, independent of the context.  (\<^const>\<open>glob_env\<close>
-  fixes its local index to \<^typ>\<open>pp\<close>, so the join-all shape is spelled out here.)
-\<close>
-lemma side_env_cmp_True:
-  "side_env_cmp (\<lambda>_ _. True) \<sigma> p
-     = \<sigma> (Inl p) \<squnion> abs_join_set (\<squnion>) \<bottom> ((\<lambda>k. \<sigma> (Inr k)) ` UNIV)"
-  unfolding side_env_cmp_def glob_env_cmp_def by simp
-
 lemma side_env_cmp_singleton:
   assumes "{k. cmp ctx k} = {k0}"
   shows "side_env_cmp cmp \<sigma> (v, ctx) = \<sigma> (Inl (v, ctx)) \<squnion> \<sigma> (Inr k0)"

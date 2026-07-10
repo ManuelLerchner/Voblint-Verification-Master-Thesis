@@ -758,11 +758,45 @@ transfer is unsound without the seed (§12), so Obs remains the only sound read 
 general keyed / retain transfer. Obs is superseded in precision on the seeded-clean spine,
 not superseded as a result.
 
-**DEAD** — one helper lemma: `side_env_cmp_True` (`Global_Cmp_Read.thy:82`, the
-trivial-comparison collapse `Obs (\<lambda>_ _. True)`) has no consumers. Minor cleanup
-candidate; harmless.
+**DEAD** — one helper lemma: `side_env_cmp_True` (the trivial-comparison collapse
+`Obs (\<lambda>_ _. True)` to the join-all read) had no consumers and is **removed** in
+`Global_Cmp_Read.thy`. The join-all read stays reachable through the general
+`side_env_cmp` definition; `side_env_cmp_singleton` (the single-key collapse, consumed by
+the digest reader) is retained.
 
 **Conclusion.** No `Obs` use is safe to remove today beyond the single dead helper. The
 R_read spine adds a sharper conclusion alongside Obs; it does not retire it. Retiring Obs
 would require migrating the keyed / retain / value-digest tracks off the published-global
 read — out of scope here and gated on their own seed/transfer changes.
+
+## 20. Consolidation: the `point_digest` boundary
+
+The seeded-clean R_read development closes on one reusable interface. Three facts fix why
+it is shaped this way.
+
+**Obs stays necessary for the non-seeded keyed / retain analyses.** The clean transfer
+reads only the caller *local* slot; without the seed it drops the published global and is
+unsound (§12). The keyed / retain / value-digest tracks never install the seed, so they
+must read the published global — that read *is* `Obs = side_env_cmp = local ⊔ global`.
+Obs is their only sound context read; the R_read spine does not replace it (§19,
+SUPERSEDED).
+
+**Seeded-clean R_read needs γ-exact routing.** `ENTER_MONO` (Goblint `Spec.context`) is
+the equation `decode (s proj_var) = L proj_var` at a routing slot `L`. It is **false** at
+a non-point slot: `non_point_sign_splits` / `non_point_ivl_splits` exhibit two admitted
+stores of distinct digest under one slot (`SNonNeg`; `[0,10]`). It holds exactly when the
+slot's projection is a *point* — its concretisation collapses to a single digest. That is
+a precision (γ-exactness) fact soundness never gives, and it is what the Goblint-faithful
+seed buys: the caller's precise per-context global flows into the callee-entry local, and
+the clean transfer never rejoins the coarse published slot.
+
+**`point_digest` captures exactly that requirement.** The locale
+(`Seed_EnterMono_Lift.thy`) fixes a point abstraction `decode` and a point predicate
+`is_point`, bundles the single assumption `point_exact` (on a point, `decode` is constant
+over the concretisation and returns it), and re-exports one lemma `enter_mono_point`. Sign
+and Interval interpret it (`point_sign_gamma_exact`, `point_ivl_gamma_exact`), each
+inheriting `ENTER_MONO` at any point routing slot — factor-2 domain reuse of a real
+assumption. Per call site the remaining premise is the eval-checkable
+`point`-ness of the slot (`seed_slots_point`, `iseed_slots_point`), which the seeded-clean
+generator maintains. No further abstraction is introduced; the per-domain point lemmas are
+the only domain-specific code.
