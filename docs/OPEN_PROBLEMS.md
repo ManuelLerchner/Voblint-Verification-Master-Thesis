@@ -418,14 +418,18 @@ can express.
 **Update (2026-07-10) — seeded-clean bridge, transport enabler landed.** The R_read
 seeded-clean spine (Goblint-faithful enter/context/combine, `M2_DGC_RREAD_BOUNDARY_MIGRATION.md`
 §13–16) sidesteps this problem's `Obs`-read obstruction by concluding at the local
-slot. Its solver-to-kernel bridge now has two of its three generic pieces closed,
-batch-green in `Voblint_Analysis`: `seeded_clean_edge_bound` (`EDGE_BOUND` from any
-post-solution) and `part_post_solution_cmp_seed_st_to_abs_eff` (`Exec_Cmp_Bridge`, the
-`st`→`abs` transport of the run's post-solution). The residual is now the single
-semantic obligation this section is about — `ENTER_MONO`/`PROC_ENTRY` over `route_read_cmp`:
-generically, does the R_read-seeded context γ-cover the entering stores uniformly per
-context. Refuted over `Obs` (§12); satisfied by `eval` on the two-call run over `R_read`
-(`kgen_rread_contexts_points`); the generic lift is the go/no-go crux.
+slot. Its solver-to-kernel bridge now has all structural pieces closed, batch-green:
+`part_post_solution_cmp_seed_st_to_abs_eff` (`Exec_Cmp_Bridge`, the `st`→`abs`
+transport of the run's post-solution), `seeded_clean_edge_bound` (`EDGE_BOUND` from any
+post-solution), `seeded_clean_seed_bound` (the order half of `ENTRY`/`PROC_ENTRY`:
+`frame_seed ctx ≤ sg (Inl (v, ctx))` at every reached frame-entry), plus the already-
+generic `rehydrate_caller_continuation_sound` (COMB) and head-digest `DG_*`. The
+residual is now the single semantic obligation this section is about — `ENTER_MONO`
+over `route_read_cmp`: does the R_read-seeded context γ-cover the entering stores
+uniformly per context (turning the seed order bound into `s ∈ ⟦frame_seed ctx⟧`).
+Refuted over `Obs` (§12); satisfied by `eval` on the two-call run over `R_read`
+(`kgen_rread_contexts_points`); the generic lift is the go/no-go crux, and now the sole
+remaining hypothesis of `clean_ctx_collect_rread`.
 
 ---
 

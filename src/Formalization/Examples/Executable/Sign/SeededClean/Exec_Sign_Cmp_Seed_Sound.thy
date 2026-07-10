@@ -184,6 +184,41 @@ proof -
 qed
 
 text \<open>
+  \<^bold>\<open>The seed bound, from the post-solution.\<close>  At every frame-entry node
+  \<open>(v, ctx)\<close> that the solver reached (\<open>is_frame_entry g v\<close>, \<open>(v,ctx) \<in> vars\<close>), the
+  context-dependent seed sits below the entry local slot --- the order-theoretic half
+  of the kernel's \<open>ENTRY\<close> / \<open>PROC_ENTRY\<close> hypotheses.  Same structure as
+  \<open>seeded_clean_edge_bound\<close>, but the seed is a summand of the fold \<^emph>\<open>seed\<close> \<open>acc0\<close>
+  rather than of the tree list, so it is dominated directly by \<^const>\<open>side_acc_ctx\<close>
+  (\<open>side_acc_ctx_ge_acc\<close>) --- no membership witness needed.  The \<^emph>\<open>semantic\<close> half
+  (that the seed's \<open>\<gamma>\<close> covers the concrete entering stores per context, i.e.
+  \<open>ENTER_MONO\<close>) is separate and not implied by this bound.
+\<close>
+
+theorem seeded_clean_seed_bound:
+  assumes pp: "part_post_solution
+                 (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g sign_etf_clean bot0 s0) x sg vars"
+    and cov: "(v, ctx) \<in> vars"
+    and fe: "is_frame_entry g v"
+  shows "frame_seed ctx \<le> sg (Inl (v, ctx))"
+proof -
+  let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf sign_etf_clean a u)))
+                    (non_enter_predecessor_list g v)"
+  let ?comb = "map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)"
+  let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+               \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>)"
+  have "frame_seed ctx \<le> ?acc0" using fe by simp
+  also have "?acc0 \<le> side_acc_ctx ?acc0 sg (?intra @ ?comb)"
+    by (rule side_acc_ctx_ge_acc)
+  also have "\<dots> = eq (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g sign_etf_clean bot0 s0) (v, ctx) sg"
+    by (rule eq_side_cfg_T_eff_cmp_seed[symmetric])
+  also have "\<dots> \<le> sg (Inl (v, ctx))"
+    using part_post_solution_imp_se_constraint_holds[OF pp cov]
+    by (simp add: se_constraint_holds_def)
+  finally show ?thesis .
+qed
+
+text \<open>
   \<^bold>\<open>Status of the concrete-run reduction.\<close>  \<open>seeded_clean_edge_bound\<close> discharges the
   kernel's \<open>EDGE_BOUND\<close> for every intra edge of any seeded-clean post-solution, with
   no \<open>'g :: finite\<close> and no per-run \<open>eval\<close>.  What remains to feed the concrete

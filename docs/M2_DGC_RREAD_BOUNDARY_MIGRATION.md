@@ -606,13 +606,24 @@ existing `private` fold-relation lemmas (`cmp_fold_traverse_rel` / `cmp_fold_sid
 and no per-run `eval`. Item (i) transport and the intra edge half of the kernel
 obligation are now closed generically.
 
-**Residual, sharpened to one semantic bundle.** `ENTRY` / `PROC_ENTRY` reduce
-order-theoretically to `frame_seed ctx ≤ sg (Inl (proc_entry, ctx))` (the seed summand
-sits below the post-solution slot), but their γ-form then needs the seeded context to
-cover the entering stores — i.e. they collapse into `ENTER_MONO` over the local read.
-The remaining work is that single semantic obligation: proving, generically, that the
-R_read-seeded context γ-covers the concrete entering stores uniformly per context.
-Over `Obs` this was refuted (§12); over `R_read` the concrete run satisfies it by
+**Structural seed bound (the order half of ENTRY/PROC_ENTRY).** The order-theoretic
+reduction of `ENTRY` / `PROC_ENTRY` is now a theorem, `seeded_clean_seed_bound`
+(`Exec_Sign_Cmp_Seed_Sound.thy`, batch-green): from any `part_post_solution` of the
+seeded generator, at every reached frame-entry `(v, ctx)` (`is_frame_entry g v`,
+`(v,ctx) ∈ vars`), the seed sits below the entry slot, `frame_seed ctx ≤ sg (Inl (v,
+ctx))`. Same shape as `seeded_clean_edge_bound`, but the seed is a summand of the fold
+seed `acc0`, so it is dominated directly by `side_acc_ctx` (`side_acc_ctx_ge_acc`) with
+no membership witness.
+
+**Residual, now a single semantic obligation.** With `seeded_clean_edge_bound` (EDGE),
+`seeded_clean_seed_bound` (the order half of ENTRY/PROC_ENTRY),
+`rehydrate_caller_continuation_sound` (COMB), and the head-digest discharge of
+`DG_INTRA`/`DG_RETURN`/`DG_CALLEE` (`clean_ctx_collect_rread_head`) all landed, **every
+structural obligation of the kernel is discharged**. What remains is exactly the
+semantic γ-half: turning the order bound `frame_seed ctx ≤ sg (Inl (v, ctx))` into the
+γ-statement `s ∈ ⟦sg (Inl (v, ctx))⟧` for entering stores `s` of compatible digest —
+i.e. `s ∈ ⟦frame_seed ctx⟧`, the seed-covering that *is* `ENTER_MONO` over the local
+read. Over `Obs` this was refuted (§12); over `R_read` the concrete run satisfies it by
 `eval` (`kgen_rread_contexts_points`), and lifting that to a generic theorem is the
-go/no-go crux — unchanged by this stage, which removes only the mechanical transport
-around it.
+go/no-go crux (B3). This stage leaves that crux untouched and isolated: it is the sole
+remaining run-specific semantic hypothesis of `clean_ctx_collect_rread`.
