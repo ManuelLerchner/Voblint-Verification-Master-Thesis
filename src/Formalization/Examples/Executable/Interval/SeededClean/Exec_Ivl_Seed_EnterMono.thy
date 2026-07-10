@@ -1,5 +1,5 @@
 theory Exec_Ivl_Seed_EnterMono
-  imports Exec_Ivl_Cmp_Seed_Clean_Run Seed_EnterMono_Lift
+  imports Exec_Ivl_Cmp_Seed_Clean_Run Voblint_Analysis.Seed_EnterMono_Lift
 begin
 
 section \<open>Interval ENTER_MONO: the seeded-clean run instantiates point-digest routing\<close>
@@ -9,7 +9,7 @@ text \<open>
   seeded-clean kernel \<open>clean_ctx_collect_rread\<close> --- \<open>ENTER_MONO\<close> (Goblint
   \<open>Spec.context\<close>) --- is discharged for the interval run by interpreting the
   domain-generic \<^locale>\<open>point_digest\<close> capability
-  (\<^theory>\<open>Voblint_Formalization.Seed_EnterMono_Lift\<close>).
+  (\<^theory>\<open>Voblint_Analysis.Seed_EnterMono_Lift\<close>).
 
   The interval routing digest is the point abstraction \<open>ivl_of_int n = [n, n]\<close>; the
   context selector reads the caller \<^emph>\<open>local\<close> (\<^const>\<open>ivl_ec\<close>, R_read).  At each call

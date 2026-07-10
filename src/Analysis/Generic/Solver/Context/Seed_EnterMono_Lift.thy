@@ -1,5 +1,5 @@
 theory Seed_EnterMono_Lift
-  imports Voblint_Analysis.Clean_RRead_Sound
+  imports Clean_RRead_Sound
 begin
 
 section \<open>Point-digest routing: the domain-generic ENTER_MONO capability\<close>

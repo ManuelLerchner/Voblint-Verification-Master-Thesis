@@ -19,7 +19,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Trace_Analysis_Sound
     Mixed_Flow_Sound
     Exec_Context_Run_Common
-    Seed_EnterMono_Lift
     Exec_Sign_Run
     Exec_Sign_Ctx_Run
     Exec_Sign_Ctx_Gen_Run

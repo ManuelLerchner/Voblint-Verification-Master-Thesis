@@ -42,6 +42,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Ctx_Sound
     TD_Side_Eff_Cmp_Sound
     Clean_RRead_Sound
+    Seed_EnterMono_Lift
     Digest_Global_Read
     Value_Digest_Reader
     Digest_Keyed_Writer

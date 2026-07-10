@@ -1,5 +1,5 @@
 theory Exec_Sign_Seed_EnterMono
-  imports Exec_Sign_Cmp_Seed_Sound Seed_EnterMono_Lift
+  imports Exec_Sign_Cmp_Seed_Sound Voblint_Analysis.Seed_EnterMono_Lift
 begin
 
 section \<open>B3: ENTER_MONO over R_read reduces to slot gamma-exactness\<close>
@@ -69,7 +69,7 @@ subsection \<open>Sign interprets the point-digest capability\<close>
 
 text \<open>
   The domain-generic ENTER_MONO lift is the \<^locale>\<open>point_digest\<close> locale
-  (\<^theory>\<open>Voblint_Formalization.Seed_EnterMono_Lift\<close>): it fixes a point abstraction
+  (\<^theory>\<open>Voblint_Analysis.Seed_EnterMono_Lift\<close>): it fixes a point abstraction
   \<open>decode\<close> and a point predicate \<open>is_point\<close>, bundles the single gamma-exactness
   assumption \<open>point_exact\<close>, and re-exports \<open>point_digest.enter_mono_point\<close>.
   Sign discharges the assumption via \<open>point_sign_gamma_exact\<close> (\<open>gamma = gamma_sign\<close>
