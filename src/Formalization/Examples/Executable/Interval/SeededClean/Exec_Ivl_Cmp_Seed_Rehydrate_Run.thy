@@ -69,6 +69,19 @@ lemma ivl_combine_rehydrate_answer:
              (Answer (combine_abs_st sc se)))))"
   by (simp add: ivl_combine_rehydrate_def ivl_ec_def Let_def)
 
+text \<open>The reassembled return value: \<^const>\<open>traverse_rhs\<close> collapses the
+  \<open>QueryL / Side / Answer\<close> skeleton to the \<^const>\<open>combine_abs_st\<close> continuation ---
+  caller locals from \<open>sg (Inl (cc, ctx))\<close>, callee globals from the callee-exit slot
+  at the R_read-selected context \<open>restrict_global_st (sg (Inl (cc, ctx)))\<close>.  This is
+  the combine tree's \<^const>\<open>combine_abs_st\<close> shape that the generic combine bound
+  \<open>Exec_Cmp_Bridge.seeded_clean_comb_bound\<close> dominates by the return slot.\<close>
+
+lemma traverse_ivl_combine_rehydrate:
+  "traverse_rhs (ivl_combine_rehydrate cc ex ctx) sg
+     = combine_abs_st (sg (Inl (cc, ctx)))
+         (sg (Inl (ex, restrict_global_st (sg (Inl (cc, ctx))))))"
+  by (simp add: ivl_combine_rehydrate_def ivl_ec_def Let_def)
+
 subsection \<open>Soundness of the rehydrated caller continuation (Spec.combine)\<close>
 
 text \<open>

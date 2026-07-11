@@ -437,6 +437,33 @@ required extra invariant, unprovable from soundness alone but established here b
 Goblint-faithful seed + clean transfer. With it, all obligations of
 `clean_ctx_collect_rread` are met on the seeded-clean spine.
 
+**Update (2026-07-11b) — entry-side reductions closed; residual is a trace-digest gap.**
+`Seeded_Clean_Ctx_Collect.thy` closes every per-obligation reduction of the seeded-clean
+kernel generically: `seeded_clean_edge_bound` (non-enter `EDGE_BOUND`, hoisted from Sign),
+`seeded_clean_seed_bound` (seed order-half of `ENTRY`/`PROC_ENTRY`), `seeded_clean_comb_bound`
+(`COMB`), and `point_digest.enter_mono_kernel` — the **ENTER_MONO connection** from the
+point-routing equation, so `ENTER_MONO` is no longer a raw premise. The final
+`cfg_collect_ctx ⊆ γ` is blocked by one genuine gap: the seeded generator seeds callee
+entries at the *callee* context, but every `hd`-based trace digest gives a callee-entry-
+reaching trace the *caller* context (it is reached via the `edge` rule on `EA_Enter`), so the
+enter-edge `EDGE_BOUND` reduces to `tf_enter(caller) = ⊥` (false). The retain spine avoids
+this by using the transfer at enter; the clean spine replaces it with the seed. Needs a
+context-switching R_read trace digest (activation-separated collecting semantics) — a
+structural change, not a lemma. Detail: `M2_DGC_RREAD_BOUNDARY_MIGRATION.md` §22.
+
+**Update (2026-07-11) — `COMB` reduced to an abstract bound.** The return combine is no
+longer a raw semantic premise on the clean R_read spine. `combine_abs_bound_sound` +
+`clean_{cfg,ctx}_collect_rread_bound` / `…_head_bound` (`Clean_RRead_Sound.thy`) replace
+the `<s|t> ∈ ⟦sg (Inl ret)⟧` premise with the order-theoretic
+`⟨caller|callee⟩ ≤ sg (Inl ret)` — the R_read analogue of the retain spine's
+`combine_read_cmp_le`. Interval instantiates all three (`Exec_Ivl_Cmp_Seed_Sound.thy`),
+matching `ivl_combine_rehydrate`'s `combine_abs_st` return. The recursive interval
+example now applies the vendored generic post-fixpoint (`rdiv_rehyd_post_fixpoint`) and
+reads `EDGE_BOUND`/`COMB_BOUND`/seed bound uniformly off it (`rdiv_rehyd_rhs_dominated`,
+`rdiv_rehyd_main_return_sound`). Full detail: `M2_DGC_RREAD_BOUNDARY_MIGRATION.md` §21.
+The one remaining step — the seeded-context routing + `st`→`abs` transport for interval
+(built for Sign, §16–18) — is deliberately left as marked-incomplete generic closure.
+
 ---
 
 ## Where to start
