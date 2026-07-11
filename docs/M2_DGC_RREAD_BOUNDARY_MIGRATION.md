@@ -886,6 +886,39 @@ eval-checkable point-routing premise. It blocks the final lift for Sign and inte
 this is why the interval example stops at the reached-RHS domination rather than a
 program-specialised reachable-context proof.
 
+## 22. Entry-side reductions closed; the residual is a trace-digest gap
+
+`Seeded_Clean_Ctx_Collect.thy` (session `Voblint_Analysis`) closes every *per-obligation*
+reduction of the seeded-clean kernel, domain-generic, read off any
+`side_cfg_T_eff_cmp_seed` post-solution:
+
+- `seeded_clean_edge_bound` — the kernel `EDGE_BOUND` for non-enter edges (hoisted from the
+  Sign-specific proof to `clean_etf_of_transfer tf`, no duplication);
+- `seeded_clean_seed_bound` — the seed order-half of `ENTRY`/`PROC_ENTRY`;
+- `seeded_clean_comb_bound` (`Exec_Cmp_Bridge`) + `combine_abs_bound_sound` — `COMB_BOUND`;
+- `point_digest.enter_mono_kernel` — **the ENTER_MONO connection**: from the point-routing
+  equation (`enter_mono_point`) to the kernel obligation
+  `cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl,ctx))))`, with
+  `f s = enc (decode (s proj_var))`, `rt cl ctx L = enc (L proj_var)`, `cmp = (=)`.
+  `ENTER_MONO` is **no longer a raw semantic premise** — it reduces to the single
+  point-routing condition `is_point (sg (Inl (cl,ctx)) proj_var)` plus `is_global proj_var`.
+
+**The one genuine blocker to `cfg_collect_ctx ⊆ γ`** — determined, not plumbing. Assembly
+needs a digest that assigns a *callee-entry-reaching* trace the *callee* context. A nested
+callee entry `v` is reached in `trace_witness` only through the `edge` rule on an `EA_Enter`
+edge, extending the *caller* trace by `enter_state (last tau)`; every `hd`-based digest
+(`head_digest`, the retain spine's `entry_store_dg = {hd tr}`) therefore gives the *caller*
+context. The seeded generator seeds `v` at the *callee* context (`restrict_global_st` of the
+caller slot), so `sg (Inl (v, caller_ctx)) = ⊥`, and the kernel's enter-edge `EDGE_BOUND`
+demands `tf_enter tf (caller slot) = ⊥` — false. The retain spine avoids this by *using the
+transfer at enter* (`entry_store_ec = edge_collect EA_Enter`); the clean seeded generator
+*replaces* it with the seed for R_read precision, which is exactly why the enter-edge bound
+no longer holds. A context-switching digest can't rescue it either: it breaks `DG_INTRA`
+across the `edge` rule's `EA_Enter` steps. The missing result is a **context-switching
+R_read trace digest** (the clean-spine analogue of `entry_store_dg`/`entry_store_ec`), which
+requires an activation-separated collecting semantics — a structural change, not a lemma.
+Full statement in `Seeded_Clean_Ctx_Collect.thy` §Status.
+
 **Explicit function returns are orthogonal.** This whole closure is on the globals-only
 language. The recursive counter returns `G = 3` to `main` through the concrete
 `combine_states` (caller locals + callee globals) with no `Return e`, no synthetic `RET`,
