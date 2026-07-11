@@ -60,6 +60,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Interval_Recursion_Digest
     Example_Interval_Recursion_Origin
     Example_Interval_Recursion_Convergence
+    Example_Interval_Recursion_Rehydrate
     Example_Mode_Value_Digest_Showcase
     Example_Digest_Pipeline_Showcase
     Example_Finite_Sign_Context_Analysis
