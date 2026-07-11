@@ -437,6 +437,19 @@ required extra invariant, unprovable from soundness alone but established here b
 Goblint-faithful seed + clean transfer. With it, all obligations of
 `clean_ctx_collect_rread` are met on the seeded-clean spine.
 
+**Update (2026-07-11) — `COMB` reduced to an abstract bound.** The return combine is no
+longer a raw semantic premise on the clean R_read spine. `combine_abs_bound_sound` +
+`clean_{cfg,ctx}_collect_rread_bound` / `…_head_bound` (`Clean_RRead_Sound.thy`) replace
+the `<s|t> ∈ ⟦sg (Inl ret)⟧` premise with the order-theoretic
+`⟨caller|callee⟩ ≤ sg (Inl ret)` — the R_read analogue of the retain spine's
+`combine_read_cmp_le`. Interval instantiates all three (`Exec_Ivl_Cmp_Seed_Sound.thy`),
+matching `ivl_combine_rehydrate`'s `combine_abs_st` return. The recursive interval
+example now applies the vendored generic post-fixpoint (`rdiv_rehyd_post_fixpoint`) and
+reads `EDGE_BOUND`/`COMB_BOUND`/seed bound uniformly off it (`rdiv_rehyd_rhs_dominated`,
+`rdiv_rehyd_main_return_sound`). Full detail: `M2_DGC_RREAD_BOUNDARY_MIGRATION.md` §21.
+The one remaining step — the seeded-context routing + `st`→`abs` transport for interval
+(built for Sign, §16–18) — is deliberately left as marked-incomplete generic closure.
+
 ---
 
 ## Where to start

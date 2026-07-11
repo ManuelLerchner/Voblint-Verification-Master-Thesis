@@ -800,3 +800,97 @@ assumption. Per call site the remaining premise is the eval-checkable
 `point`-ness of the slot (`seed_slots_point`, `iseed_slots_point`), which the seeded-clean
 generator maintains. No further abstraction is introduced; the per-domain point lemmas are
 the only domain-specific code.
+
+## 21. The `COMB` black box removed: abstract-bound return combine
+
+Stage 5 (§15) discharged the return combine as the *raw* `COMB` obligation
+(`<s|t> ∈ ⟦sg (Inl ret)⟧`) via `rehydrate_caller_continuation_sound`. That obligation
+was still exposed as a semantic premise on `clean_ctx_collect_rread`: every caller of the
+theorem had to supply a `<s|t>` fact. The retain (`side_env_cmp`) spine had already
+eliminated its analogue — `combine_case_cmp_sound` / `combine_read_cmp_le` reduce the raw
+combine to an order-theoretic `≤` bound (`TD_Side_Eff_Cmp_Sound.thy`). This stage mirrors
+that reduction for the clean R_read spine.
+
+**The bridge (`Clean_RRead_Sound.thy`).** `combine_abs_bound_sound` is the clean analogue
+of `combine_case_cmp_sound`: from an abstract bound `⟨sc|se⟩ ≤ sr` on the reassembled
+continuation it derives `<s|t> ∈ ⟦sr⟧` for any `s ∈ ⟦sc⟧`, `t ∈ ⟦se⟧` — pure
+`combine_states_sound` carried to the return slot by `gamma_state_mono`. Three
+`_bound` wrappers replace the raw `COMB`/`combine_le` premise with the abstract bound
+`⟨sg (Inl (cl, ctx))|sg (Inl (ex, rt cl ctx …))⟩ ≤ sg (Inl (v, ctx))`:
+`clean_cfg_collect_rread_bound` (flat), `clean_ctx_collect_rread_bound` (context-sliced),
+`clean_ctx_collect_rread_head_bound` (head-digest, the R_read analogue of
+`post_fixpoint_sound_at_ctx_semantic_cmp_final`). Interval instantiates all three
+(`Exec_Ivl_Cmp_Seed_Sound.thy`, `[OF ivl_is_sound_transfer]`); the bound is exactly the
+shape `ivl_combine_rehydrate` produces on its `Answer` channel (`combine_abs_st`). The
+strip combine cannot meet the bound once a returned global is read back (its returned
+local has that global at `bot`); the rehydrating combine meets it by construction.
+
+**Why the strip spine was never *unsound*.** The clean R_read soundness theorem always
+carried the return combine as an obligation — first `COMB`, now `COMB_BOUND`. The strip
+combine simply *fails* to discharge it (`⟨sc|se⟩` with `se` stripped to `bot` is strictly
+below the concrete return once a global is read back). So the theorem never *applied* at
+return nodes under the strip combine — it did not silently prove a false result. The
+recursive convergence example (`Example_Interval_Recursion_Convergence`) only ever
+asserted executable `by eval` values on the solved fixpoint; it never instantiated the
+soundness theorem, so it made **no** soundness claim about the `bot` it showed at `main`.
+Isabelle proved no false theorem. The gap was an *un-discharged obligation*, not a wrong
+one.
+
+**rdiv closure (`Example_Interval_Recursion_Rehydrate.thy`).** The generic solver
+post-fixpoint is applied, not re-proved: `rdiv_rehyd_post_fixpoint` instantiates the
+vendored `TD_side_always_join_Interp.partial_post_solution` (termination by
+`term_equivalence` + an `eval` on `…_solve_c`). Its reached-unknown consequence
+`rdiv_rehyd_rhs_dominated` states that at every solved unknown the reassembled RHS — the
+clean edge transfers *and* the rehydrated `combine_abs_st` return — is dominated by the
+stored slot (`EDGE_BOUND` / `COMB_BOUND` / seed bound uniformly, straight off the
+post-fixpoint). `rdiv_rehyd_main_return_sound` specialises it to `main`'s continuation
+(node 11, context `bot`) — the exact node where the strip combine stranded `G` at `bot`,
+now carrying the callee's `G = [3,3]` (`rdiv_rehyd_returns_global_to_main`). The
+executable contrast `rdiv_clean_strips_global_at_main` (strip = `bot`) vs
+`rdiv_rehyd_returns_global_to_main` (rehydrate = `[3,3]`) witnesses the fix directly.
+
+**The return (COMB) half, closed generically.** `seeded_clean_comb_bound`
+(`Exec_Cmp_Bridge.thy`) is the combine analogue of `seeded_clean_edge_bound`: from any
+`side_cfg_T_eff_cmp_seed` post-solution, every combine predecessor's reassembled value
+`traverse_rhs (cmb ctx cc ex) sg` is dominated by the return slot `sg (Inl (v, ctx))`
+(combine-generic — `cmb` is a free parameter). `traverse_ivl_combine_rehydrate`
+(`Exec_Ivl_Cmp_Seed_Rehydrate_Run.thy`) computes that summand for the rehydrating combine:
+it is exactly `combine_abs_st (sg (Inl (cc, ctx))) (sg (Inl (ex, restrict_global_st (sg (Inl (cc, ctx))))))`.
+Together they give COMB_BOUND its `combine_abs` shape. The kernel's routing selector `rt`
+is a **free** parameter; choosing `rt cl ctx _ = restrict_global_st (snd sol (Inl (cl, ctx)))`
+matches the generator's callee key exactly, so there is **no** context-reification
+obstruction (the keyed-spine's "reify contexts into a finite key" concern does not arise
+here).
+
+**What blocks the final lift — determined, not mechanical.** Feeding the run into
+`ivl_clean_ctx_collect_rread_head_bound` to conclude
+`cfg_collect_ctx rdiv_cfg … ⊆ ⟦sg (Inl (v, ctx))⟧` leaves three *mechanical* obligations
+(an interval copy of `seeded_clean_edge_bound`; `part_post_solution_cmp_seed_st_to_abs_eff`
+instantiated at the rehydrate combine; the `combine_abs` assembly) and **two genuinely
+missing generic results**, unclosed for *every* domain (Sign included), not specific to
+interval or rehydration:
+
+1. **ENTRY / PROC_ENTRY γ-cover** — the seed `restrict_global_st` covers the concrete
+   entering stores per context. Only program-specific witnesses exist (Sign's
+   `seed_clean_sound_on_prog2`); no generic seed-soundness lemma.
+2. **ENTER_MONO kernel-connection** — from the point-routing *equation*
+   (`point_ivl_gamma_exact` / `iseed_slots_point`) to the kernel's
+   `cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))` with the generator's concrete
+   `cmp`/`f`/`rt`. `Exec_Ivl_Seed_EnterMono` / `Exec_Sign_Seed_EnterMono` prove the routing
+   equation in isolation but never wire it to this obligation.
+
+The **smallest single missing generic lemma** is a *generator-to-kernel instantiation*: one
+lemma over an arbitrary `side_cfg_T_eff_cmp_seed` run reducing the kernel's
+`ENTRY`/`PROC_ENTRY`/`ENTER_MONO` to (a) seed γ-soundness on the initial stores and (b) the
+eval-checkable point-routing premise. It blocks the final lift for Sign and interval alike;
+this is why the interval example stops at the reached-RHS domination rather than a
+program-specialised reachable-context proof.
+
+**Explicit function returns are orthogonal.** This whole closure is on the globals-only
+language. The recursive counter returns `G = 3` to `main` through the concrete
+`combine_states` (caller locals + callee globals) with no `Return e`, no synthetic `RET`,
+no `x := f()`. The missing `main.G` in the strip graph was a *combine* limitation, not a
+language-expressiveness one. Explicit return values (`Return e` / `Call (lval option)`)
+solve a different problem — returning a computed value directly into a caller *local* — and
+are not required here (`PROCEDURES_EXTENSION_PLAN.md` S1). The return-values investigation
+is closed as *not needed* for this example.
