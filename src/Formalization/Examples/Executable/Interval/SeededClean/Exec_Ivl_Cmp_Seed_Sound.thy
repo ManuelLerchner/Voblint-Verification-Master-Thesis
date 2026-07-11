@@ -54,6 +54,16 @@ text \<open>Its executable head-digest reduction (digest-propagation obligations
 
 lemmas ivl_clean_ctx_collect_rread_head = sound_transfer.clean_ctx_collect_rread_head[OF ivl_is_sound_transfer]
 
+text \<open>The bound wrappers: the raw semantic \<open>COMB\<close> return premise is replaced by an
+  abstract \<^const>\<open>combine_abs\<close> bound on the reassembled caller continuation --- exactly
+  the shape the rehydrating combine produces on its \<open>Answer\<close> channel.
+  \<open>combine_states_sound\<close> at the interval domain discharges the concrete return; the
+  strip combine cannot meet the bound once a returned global is read back.\<close>
+
+lemmas ivl_clean_cfg_collect_rread_bound = sound_transfer.clean_cfg_collect_rread_bound[OF ivl_is_sound_transfer]
+lemmas ivl_clean_ctx_collect_rread_bound = sound_transfer.clean_ctx_collect_rread_bound[OF ivl_is_sound_transfer]
+lemmas ivl_clean_ctx_collect_rread_head_bound = sound_transfer.clean_ctx_collect_rread_head_bound[OF ivl_is_sound_transfer]
+
 section \<open>Scope: D/G/C soundness versus interval widening precision\<close>
 
 text \<open>
