@@ -106,6 +106,44 @@ lemma eq_side_cfg_T_eff_cmp_seed:
         @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
   by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
 
+text \<open>
+  The combine analogue of the intra edge bound (\<open>seeded_clean_edge_bound\<close>): every
+  combine predecessor \<open>(cc, ex)\<close> of a reached return node \<open>(v, ctx)\<close> contributes its
+  reassembled tree value \<^term>\<open>traverse_rhs (cmb ctx cc ex) sg\<close> as a summand of the
+  seeded fold, so the post-solution dominates it.  This is the \<open>COMB\<close> half of the
+  seeded-clean kernel's return obligation, read straight off any
+  \<^const>\<open>side_cfg_T_eff_cmp_seed\<close> post-solution --- combine-generic (the combine tree
+  \<open>cmb\<close> is a free parameter; its \<^const>\<open>combine_abs\<close> shape is a separate per-combine
+  fact).
+\<close>
+
+lemma seeded_clean_comb_bound:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  assumes finC: "finite (combines g)"
+    and pp: "part_post_solution
+               (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) x sg vars"
+    and cov: "(v, ctx) \<in> vars"
+    and c: "(cc, ex, v) \<in> combines g"
+  shows "traverse_rhs (cmb ctx cc ex) sg \<le> sg (Inl (v, ctx))"
+proof -
+  let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
+                    (non_enter_predecessor_list g v)"
+  let ?comb = "map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)"
+  let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+               \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>)"
+  have mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
+    using c by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_def)
+  have summand: "cmb ctx cc ex \<in> set (?intra @ ?comb)" using mem by force
+  have "traverse_rhs (cmb ctx cc ex) sg \<le> side_acc_ctx ?acc0 sg (?intra @ ?comb)"
+    by (rule traverse_le_side_acc_ctx[OF summand])
+  also have "\<dots> = eq (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) (v, ctx) sg"
+    by (rule eq_side_cfg_T_eff_cmp_seed[symmetric])
+  also have "\<dots> \<le> sg (Inl (v, ctx))"
+    using part_post_solution_imp_se_constraint_holds[OF pp cov]
+    by (simp add: se_constraint_holds_def)
+  finally show ?thesis .
+qed
+
 lemma eq_side_cfg_T_eff_cmp_seed_st:
   "eq (side_cfg_T_eff_cmp_seed_st gkey cmb frame_seed_st g etf bot0_st s0_st) (v, ctx) sg =
      traverse_rhs

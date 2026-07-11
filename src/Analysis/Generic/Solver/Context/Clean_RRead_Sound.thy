@@ -189,6 +189,52 @@ proof
     by (rule clean_cfg_witness_rread[OF step_le combine_le entry_le w])
 qed
 
+subsection \<open>Discharging the return combine from an abstract bound\<close>
+
+text \<open>
+  The clean analogue of \<open>combine_case_cmp_sound\<close>: the raw \<open>combine_le\<close> / \<open>COMB\<close>
+  premise (\<open><s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>\<close>, the concrete procedure-return combine) reduces
+  to an \<^emph>\<open>abstract\<close> bound on the reassembled continuation
+  \<^term>\<open>\<langle>sc|se\<rangle> :: 'a abs_state\<close>.  Given \<open>\<langle>sc|se\<rangle> \<le> sr\<close>, any concrete return
+  \<open><s|t>\<close> assembled from a caller store sound for \<open>sc\<close> and a callee-exit store sound
+  for \<open>se\<close> lies in \<open>\<lbrakk>sr\<rbrakk>\<close>: pure \<open>combine_states_sound\<close> carried to the return
+  slot by \<open>gamma_state_mono\<close>.  On the strip combine this bound fails once a
+  callee writes a global that is read back (the returned local has that global at
+  \<open>\<bottom>\<close>, so \<open>\<langle>sc|se\<rangle>\<close> is strictly below the concrete return); on the rehydrating
+  combine (\<^const>\<open>combine_abs\<close> at the return slot) it holds by construction.
+\<close>
+
+lemma combine_abs_bound_sound:
+  fixes sc se sr :: "'a abs_state"
+  assumes bound: "\<langle>sc|se\<rangle> \<le> sr"
+    and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
+  shows "<s|t> \<in> \<lbrakk>sr\<rbrakk>"
+proof -
+  have "<s|t> \<in> \<lbrakk>\<langle>sc|se\<rangle>\<rbrakk>" using sc se by (rule combine_states_sound)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
+text \<open>
+  Flat collecting soundness with the return combine as an abstract bound
+  \<open>combine_bound\<close> instead of the raw semantic \<open>combine_le\<close>: no \<open><s|t>\<close> obligation is
+  exposed to the caller.  The bound \<open>\<langle>sg (Inl c)|sg (Inl ex)\<rangle> \<le> sg (Inl ret)\<close> is the
+  same order-theoretic shape as \<open>step_le\<close>, checkable against a post-solution.
+\<close>
+
+theorem clean_cfg_collect_rread_bound:
+  assumes step_le: "\<And>u a w. (u, a, w) \<in> edges g
+      \<Longrightarrow> etf_full (apply_etf (clean_etf_of_transfer tf) a u) sg \<le> sg (Inl w)"
+    and combine_bound: "\<And>c ex ret. (c, ex, ret) \<in> combines g
+      \<Longrightarrow> \<langle>sg (Inl c)|sg (Inl ex)\<rangle> \<le> sg (Inl ret)"
+    and entry_le: "S \<subseteq> \<lbrakk>sg (Inl (cfg_entry g))\<rbrakk>"
+  shows "cfg_collect g S v \<subseteq> \<lbrakk>sg (Inl v)\<rbrakk>"
+proof (rule clean_cfg_collect_rread[OF step_le _ entry_le])
+  fix c ex ret s t
+  assume "(c, ex, ret) \<in> combines g" and "s \<in> \<lbrakk>sg (Inl c)\<rbrakk>" and "t \<in> \<lbrakk>sg (Inl ex)\<rbrakk>"
+  thus "<s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
+    by (rule combine_abs_bound_sound[OF combine_bound])
+qed
+
 subsection \<open>Context-sliced collecting soundness over the local read\<close>
 
 text \<open>
@@ -322,6 +368,44 @@ proof -
     using tr_sound by auto
 qed
 
+text \<open>
+  Context-sliced collecting soundness with the return combine as an abstract bound
+  \<open>COMB_BOUND\<close> instead of the raw semantic \<open>COMB\<close>.  The bound is on the reassembled
+  caller continuation \<^term>\<open>\<langle>sg (Inl (cl, ctx))|sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rangle>\<close>
+  --- caller local at \<open>ctx\<close>, callee exit under the value-derived context --- which
+  the rehydrating combine (\<^const>\<open>combine_abs\<close> at the return slot) meets by
+  construction and the strip combine cannot once a returned global is read back.
+\<close>
+
+theorem clean_ctx_collect_rread_bound:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a abs_state"
+    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
+  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
+    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
+        \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
+    and COMB_BOUND: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
+        \<Longrightarrow> \<langle>sg (Inl (cl, ctx))|sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rangle> \<le> sg (Inl (v, ctx))"
+    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
+    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
+  shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+proof (rule clean_ctx_collect_rread
+      [where sg = sg and rt = rt and dg = dg and cmp = cmp and entdg = entdg and g = g and S = S,
+       OF ENTRY PROC_ENTRY EDGE_BOUND _ DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO])
+  fix ctx cl ex v tau rho
+  assume c: "(cl, ex, v) \<in> combines g"
+    and ct: "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
+    and ce: "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
+  show "<last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    by (rule combine_abs_bound_sound[OF COMB_BOUND[OF c] ct ce])
+qed
+
 subsection \<open>Executable reduction: discharging the digest-propagation obligations\<close>
 
 text \<open>
@@ -380,6 +464,41 @@ next
 next
   show "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk> \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
     by (rule ENTER_MONO)
+qed
+
+text \<open>
+  The executable head-digest reduction with the return combine as an abstract bound.
+  Combines the generic digest-propagation discharge with \<open>COMB_BOUND\<close>: the only
+  return obligation is now the order-theoretic \<open>combine_abs\<close> bound, checkable against
+  a post-solution --- no raw \<open><s|t>\<close> assumption survives.  This is the fully reduced
+  clean+rehydrate return contract, the R_read analogue of
+  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>.
+\<close>
+
+theorem clean_ctx_collect_rread_head_bound:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a abs_state"
+    and f :: "store \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c"
+  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (head_digest f [s]) ctx
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
+    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+        \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
+        \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
+    and COMB_BOUND: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
+        \<Longrightarrow> \<langle>sg (Inl (cl, ctx))|sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rangle> \<le> sg (Inl (v, ctx))"
+    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+        \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
+  shows "cfg_collect_ctx (head_digest f) cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+proof (rule clean_ctx_collect_rread_head
+      [where sg = sg and f = f and rt = rt and cmp = cmp and g = g and S = S,
+       OF ENTRY PROC_ENTRY EDGE_BOUND _ ENTER_MONO])
+  fix ctx cl ex v tau rho
+  assume c: "(cl, ex, v) \<in> combines g"
+    and ct: "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
+    and ce: "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
+  show "<last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    by (rule combine_abs_bound_sound[OF COMB_BOUND[OF c] ct ce])
 qed
 
 end
