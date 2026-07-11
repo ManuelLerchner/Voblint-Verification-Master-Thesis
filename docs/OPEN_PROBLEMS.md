@@ -464,6 +464,212 @@ reads `EDGE_BOUND`/`COMB_BOUND`/seed bound uniformly off it (`rdiv_rehyd_rhs_dom
 The one remaining step — the seeded-context routing + `st`→`abs` transport for interval
 (built for Sign, §16–18) — is deliberately left as marked-incomplete generic closure.
 
+**Update (2026-07-11c) — activation semantics closes the trace-digest gap; surfaces a
+seed-locals obstruction.** The 2026-07-11b trace-digest gap is resolved structurally:
+`CFG_Collect_Activation.thy` adds the call-only activation witness `trace_witness_act`
+(context constant on ordinary edges, routed at `EA_Enter`, resumed at combine; forgets to
+`trace_witness`), and `Seeded_Activation_Sound.thy` proves the generic
+`seeded_activation_collecting_sound` — `cfg_collect_ctx_act ⊆ γ` from a seeded
+post-solution + `ENTRY_G`/`PROC_ENTRY_G`/`SEED_G`/`COMB_BOUND`, with `EDGE`/`COMB`
+discharged off the closed reductions and `SEED_G` reduced by `seeded_activation_seed` to
+the covering invariant `enter_state s ∈ ⟦frame_seed (enterc kc s)⟧`. Instantiating it for
+the *shipped* Sign/Interval runs is **blocked by a genuine domain gap**: the globals-only
+seed `restrict_global` leaves callee-entry locals at `⊥`, so (since `gamma_state` is total
+and `gamma_ivl ⊥ = {}`) the callee-entry slot concretises to `{}` and `SEED_G` is
+unsatisfiable — the activation witness *removes the vacuity* by which the old
+`head_digest` path hid this at callee entries. Needs a locals-covering seed
+(`restrict_global c ⊔ zero_locals`) + re-solve — small but genuinely new domain theory.
+Detail: `ACTIVATION_SEED_LOCALS_OBSTRUCTION.md`; design basis:
+`ACTIVATION_SEMANTICS_MODEL_DECISION.md`.
+
+**Update (2026-07-11d) — covering seed + executable seed correspondence landed; residual
+is a dependency-closure reachability wiring.** `cover_seed` closes the locals gap
+generically (`enter_state s ∈ ⟦cover_seed pz fs kc⟧` from globals-\<gamma> + `0 ∈ γ pz`);
+`seeded_activation_collecting_sound_cover` packages it. The executable
+`cover_seed_st` + `fun_of_st_cover_seed_st` give the `st`→`abs` seed correspondence, and
+the `vars` obligations (`cov_edge`/`cov_frame`) are conditioned on an inhabited source so
+they are instantiable. Sign and Interval instances proved. The shipped-run end-to-end
+`cfg_collect_ctx_act ⊆ γ` is blocked only by connecting the activation callee context
+`enterc kc s` to the generator's `restrict_global_st (sg (Inl (cc, kc)))` (point routing)
+and discharging the reached callee context from backward dependency closure of the query
+unknown (`part_post_solution` gives `dep_L`-closure; the return node's combine reads the
+callee exit, whose body deps reach the callee entry) — a dependency-closure-backed proof,
+not new solver theory. Full status + next slice: `ACTIVATION_MIGRATION_SUMMARY.md`;
+canonical-foundation rationale: `ACTIVATION_CANONICAL_FOUNDATION.md`.
+
+**Update (2026-07-11e) — recursive-return obstruction is a witness-calculus limitation.**
+Dependency reachability holds (no counterexample: `dep_aux` ignores `Side` targets, so the
+seeded callee entry is reached through the combine's `QueryL` of the callee exit;
+`Seeded_Activation_Reach.thy` proves the backward `dep_L` bridges
+`intra_pred_in_vars` / `combine_dep_in_vars` and the enter-edge
+`callee_entry_dep_L_empty`). The remaining failure is the shape of the seeded witness
+interface: `trace_witness_act_hd_initial` proves every activation-trace head lies in
+`S ∪ enter_state ` S`, while a recursive callee activation is available as a suffix headed
+by `enter_state (last tau)` from the caller execution.
+
+`Activation_Witness_From.thy` repairs the witness layer with `twf`, a from-node witness
+whose start rule seeds any store at any program point. The lemma
+`twf_combine_reuses_callee_suffix` states the needed reuse principle explicitly: combine
+can consume a callee suffix witness beginning at the frame entry, headed by the
+caller-derived entry store. The returning fragment `twfr` supports the query-anchored
+theorem `twfr_sound_seeded`, which derives the required `cov_edge` / `cov_frame`
+obligations from the backward dependency contract and reuses the existing seeded edge,
+seed, combine, and cover-seed facts.
+
+The active architecture therefore keeps `trace_witness`, `trace_witness_act`,
+`cfg_collect`, CFG definitions, and solver interfaces fixed. The activation-indexed
+store-set collecting experiment has been removed from the active session graph. Design
+note: `docs/WITNESS_CALCULUS_REPAIR.md`.
+
+**Update (2026-07-11f) — generic reachability tasks closed; residual is one executable
+transport bridge.** The three generic deliverables the dependency-reachability goal asks
+for are proved and I/Q-clean:
+
+* **Unified dependency-reachability theorem (task 1).** `act_reach` (`Seeded_Activation_Reach.thy`)
+  folds the intra and combine activation dependency steps into one relation;
+  `act_reach_in_vars` proves every unknown reachable from a solved query is solved, by one
+  induction discharging each step from `part_post_solution`'s backward `dep_L` closure — no
+  forward-closure invariant. The `enter` case is covered by combine-then-body composition
+  (`combine_reaches_frame_in_vars`), since `dep_aux` drops `Side` targets so the callee
+  entry is reached backward through the exit.
+* **Routing equality via point-exactness (task 3).** `point_route_eq` (`Seed_EnterMono_Lift.thy`,
+  in the `point_digest` locale) lifts `enter_mono_point` to the global region:
+  `restrict_global (\<lambda>x. decode (s x)) = restrict_global (sg (Inl (cl, ctx)))` on a
+  point-exact inhabited caller slot — the concrete callee-context routing equals the
+  abstract-slot routing.
+* **`cov_edge` / `cov_frame` derived (task 4).** `cov_edge_from_query` / `cov_frame_from_query`
+  expose the two run-level `vars` obligations as derivations from `(query) \<in> vars` plus
+  dependency closure, not assumptions. `twfr_sound_seeded` threads them along the witness.
+
+The remaining piece (tasks 5–6, the shipped `rdiv` interval run as a direct
+`cfg_collect_ctx_act \<subseteq> \<gamma>` / `twfr_sound_seeded` instance) is blocked only by the
+executable→abstract transport gap of `WITNESS_CALCULUS_REPAIR.md` §Remaining:
+`ivl_combine_rehydrate` computes the callee context from the executable caller slot
+(`ivl st`), while the abstract theorem works over `fun_of_st` images, and the context key
+cannot be reconstructed from the abstract value alone. This is a concrete transport lemma,
+not missing generic theory.
+
+**Update (2026-07-11g) — enter reachability made first-class; ENTER_MONO/SEED_glob wired
+generically.** Two further generic closures, I/Q-clean:
+
+* **Enter as a first-class `act_reach` chain (task 2).** `act_reach_intra_rtrancl` lifts an
+  `intra_pred_rel` rtrancl to `act_reach` intra steps at a fixed context; `act_reach_enter`
+  packages the enter obligation as *one* `act_reach` derivation (return node → combine step
+  to the routed callee exit → intra body chain to the callee entry) rather than an external
+  chaining of bridge lemmas. The three activation rules are now covered by a single
+  reachability relation with an explicit enter consequence.
+* **SEED_glob reduced to point-exactness (`seed_glob_from_point_route`, `point_digest`).**
+  With the pointwise-decode global routing `enterc kc s = restrict_global (\<lambda>x. decode (s x))`,
+  the seed obligation `s xx \<in> gamma (enterc kc s xx)` follows from caller-store soundness
+  plus point-exactness of the caller slot's globals (via `point_route_eq`). This wires the
+  routing equation to the kernel obligation — the first of the two "genuinely missing generic
+  results" flagged in `Example_Interval_Recursion_Rehydrate.thy` (the ENTER_MONO
+  kernel-connection), now closed with no program-specialised proof.
+
+What is left for the shipped-run instance is genuinely a **run contract**, not missing
+generic theory: (a) the ENTRY / PROC_ENTRY \<gamma>-cover (`s \<in> S \<Longrightarrow> s \<in> \<lbrakk>seed at entry\<rbrakk>`),
+which depends on the run's initial-state set and its seed — the analogue of Sign's
+`seed_clean_sound_on_prog2`, supplied per run; and (b) the `ivl st`→abstract match of the
+concrete `enterc` to the generator's `ivl_combine_rehydrate_abs` routing key, plus
+eval-checked point-exactness of the reached slots and `(query) \<in> vars`.
+
+**Update (2026-07-11h) — the `rdiv` run contract is being discharged in
+`Example_Rdiv_Twfr_Sound.thy` (keys stay `ivl st`, no `fun_of_st` inverse).** Landed and
+I/Q-clean:
+
+* `rdiv_enterc kc s = ivl_abs_route_st (\<lambda>x. ivl_of_int (s x))` — the witness routing keeps
+  the entered store's globals and abstracts them to an ∗executable∗ `ivl st` key.
+* `rdiv_route_correspondence` — on an inhabited point-exact caller slot this equals
+  `ivl_abs_route_st (rdiv_sg (Inl (cl, kc)))`, the ∗same∗ key the generator's
+  `ivl_combine_rehydrate_abs` reads (proved from `point_ivl_gamma_exact`, no `fun_of_st`
+  inverse, no key reconstruction from abstract values).
+* `dep_aux_ivl_combine_rehydrate_abs` — the combine tree depends exactly on the caller call
+  node and the routed callee exit.
+* `rdiv_q_edge` / `rdiv_q_caller` / `rdiv_q_callee` — three `twfr_sound_seeded` `q_*`
+  obligations discharged from `rdiv_rehyd_cover_abs_post_fixpoint` via the generic
+  `q_edge_from_pp` / `combine_edge_dep_in_vars`, no manual context enumeration.
+* `rdiv_comb_bound` — COMB_BOUND from `seeded_clean_comb_bound` +
+  `traverse_ivl_combine_rehydrate_abs` + the routing correspondence.
+
+Remaining to close the end-to-end `twfr_sound_seeded` instance: SEED_glob (the
+`fun_of_st ∘ st_of_abs` transport of the routed-key seed content), `q_frame` (the callee
+body's `intra_pred_rel` chain to the frame entry), the point-exactness contract
+(inhabited caller slot ⟹ point on globals, one `eval` over the finite solved slots),
+`(cfg_exit rdiv_cfg, bot) \<in> vars` (`eval`), a concrete `twfr` witness reaching node 11
+with `G = [3,3]`, and the final over-approximation theorem. The generic scaffolding and
+the routing bridge are complete; what remains is the run-specific assembly.
+
+**Update (2026-07-11i) — the full-slot `twfr_sound_seeded` conclusion is VACUOUS for
+seeded-clean runs; the non-vacuous soundness is per-coordinate.** Discovered while wiring
+the `rdiv` instance. Verified by `eval` + definitions:
+
+* The concrete store universe is `vname \<Rightarrow> int` over ALL names; `is_global x`
+  holds for infinitely many (`x = [] \<or> hd x = CHR ''G''`), and
+  `gamma_state \<sigma> = {s. \<forall>x. s x \<in> gamma (\<sigma> x)}` quantifies over every one.
+* At the shipped run's return node 11 (main context `bot`) the local slot has
+  `G = [3,3]` but any UNMENTIONED global (e.g. `''GG''`) sits at
+  `Ivl PlusInf MinInf = \<bottom>`, whose `gamma_ivl` is `{}` (`gamma_ivl_bot`). The
+  rehydrating combine takes globals from the callee exit, whose local slot never touched
+  `GG`, so `GG` stays `\<bottom>`. Hence `\<lbrakk>sg (Inl (11, bot))\<rbrakk> = {}`.
+* Therefore `twfr_sound_seeded`'s conclusion `last tr \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>`
+  has an EMPTY right side here, and its premise `hd tr \<in> \<lbrakk>sg (Inl (w, wc))\<rbrakk>`
+  is likewise unsatisfiable (entry `Inl` slot is empty too — globals live in the `Inr`
+  slot in the R_read architecture, not in `Inl`). A "successful" instantiation would be
+  the vacuous empty collecting set the autoformalization audit forbids.
+* This is ARCHITECTURAL, not specific to `rdiv`: the whole activation / twfr full-
+  `gamma_state` spine (`seeded_activation_collecting_sound`, `activation_trace_sound`) is
+  vacuous on any run seeded by `restrict_global` (unmentioned globals `\<bottom>`). No
+  combined concretization reading globals from `Inr` exists.
+* The codebase's own non-vacuous headline (`reaching_global_read_sound`) already reads
+  PER-VARIABLE: `(last tr) x \<in> gamma (env v x)`. The honest non-vacuous `rdiv`
+  deliverable is the same shape at the twfr level, projected to `G`:
+  `(last tr) ''G'' \<in> gamma_ivl (sg (Inl (11, bot)) ''G'') = gamma_ivl [3,3]`, with
+  `3 \<in> [3,3]` — non-vacuous, shipped run unchanged. A fully generic per-coordinate
+  twfr theorem does not close (intra transfers couple coordinates); the `G`-coordinate
+  closes for `rdiv` because every `rdiv` edge's `G`-output reads only `G`.
+
+**Update (2026-07-11j) — Phase 1 closed: per-coordinate `rdiv` soundness + explicit
+witness, full batch-green.**  `Example_Rdiv_Twfr_Sound.thy` now carries the end-to-end,
+non-vacuous result (shipped run unchanged, keys stay `ivl st`, no `fun_of_st` inverse):
+
+* `rdiv_slot_11_full_gamma_empty` — the full-store slot at node 11 is `{}` (unmentioned
+  global `''GG''` at bot); the mechanised proof that a full-slot conclusion would be vacuous.
+* `rdiv_analysis_G_sound_at_main_cont` — `3 : gamma (rdiv_sg (Inl (11, bot)) ''G'')`
+  (`= gamma_ivl [3,3]`), the per-coordinate soundness.
+* An explicit `twfr` witness of the shipped `rdiv_cfg`, built bottom-up: `wit_f3` (base,
+  else branch), `wit_frec` (generic recursive level, `combine` at `(3,7,4)`),
+  `wit_f0`/`wit_f1`/`wit_f2` chained, `wit_main` (top call spliced at `(10,7,11)`).  Stores
+  are `gk k = (%_. 0)(''G'' := k)`; `enter_state (gk k) = gk k` and `<gk a|gk b> = gk b`.
+* `rdiv_twfr_witness_reaches_main_cont` — the witness reaches node 11 (ctx bot) with
+  `last tr ''G'' = 3`, and is non-empty.
+* `rdiv_witness_G_over_approximated` — the end-to-end theorem: a concrete `twfr` run reaches
+  node 11 whose terminal `G` lies in the analysis slot `[3,3]`.  Non-vacuous by the witness.
+
+The full-slot `twfr_sound_seeded` instantiation (its `q_frame` / `SEED_glob` /
+point-exactness premises) was left undischarged deliberately: it is provably vacuous here, so
+discharging it would produce the empty collecting set the audit forbids.  The generic
+`twfr_sound_seeded` `SEED_glob` premise was still tightened (conditioned on `(u,kc) : vars`)
+as a standalone improvement.
+
+**Update (2026-07-12) — twfr migration complete; canonical spine.**  The `rdiv` proof was
+refactored into reusable infrastructure and every shipped executable seeded example moved
+onto the witness spine:
+
+* `Twfr_Reach_Read.thy` — the generic `twfr_reach_read` reach-and-read combinator plus the
+  domain-agnostic single-global concrete store family `gk` and its `edge_step` lemmas.
+* `Ivl_Twfr_Common.thy` — the run-independent interval seeded-clean dischargers
+  (`ivl_enterc`, `ivl_route_correspondence`, `dep_aux_ivl_combine_rehydrate_abs`,
+  `ivl_q_caller`, `ivl_q_callee`, `ivl_comb_bound`), generic in the graph + post-fixpoint.
+* Migrated examples with concrete witness + per-coordinate soundness: `iseed`
+  (`iseed_wit_{lo,hi}_sound`), `dseed` (`dseed_wit_{lo,hi}_sound`), `rhyd`
+  (`rhyd_wit_readback_sound`, a witness across a return combine), sign `seed_enter`
+  (`seed_wit_sound`).  `rdiv` now routes its end-to-end theorem through `twfr_reach_read`
+  and drops the dead premise-discharge cluster.
+
+No Sign-specific dischargers were needed: a callee-exit query crosses no return combine, so
+`Twfr_Reach_Read` + the `gk` kit suffice across Sign and Interval.  Migration summary table
+and the canonical-path statement live in `docs/WITNESS_CALCULUS_REPAIR.md`.
+
 ---
 
 ## Where to start

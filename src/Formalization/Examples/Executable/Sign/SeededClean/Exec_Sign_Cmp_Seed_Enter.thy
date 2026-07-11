@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_Seed_Enter
-  imports Exec_Sign_Cmp_RRead_Split
+  imports Exec_Sign_Cmp_RRead_Split Twfr_Reach_Read
 begin
 
 section \<open>Goblint-faithful enter: seed the callee-entry local from the context\<close>
@@ -99,8 +99,45 @@ lemma seed_clean_sound_on_prog2:
   unfolding seed_clean_sol_def cfg2_def prog2_def kgen_ec_def kgen_combine_rread_def
     sign_etf_clean_st_def clean_edge_tree_st_def side_cfg_T_eff_cmp_seed_st_def by eval
 
-lemma increment_in_gamma: "1 \<in> gamma_sign SNonNeg" "1 \<notin> gamma_sign SZero"
-  by simp_all
+subsection \<open>A concrete twfr witness and the per-coordinate soundness\<close>
+
+text \<open>The callee assignment edge \<open>0 \<to> 1\<close> (\<open>f\<close>'s \<open>G := G + 1\<close>), by \<open>eval\<close>.\<close>
+
+lemma seed_e_0_1:
+  "(0, EA_Assign ''G'' (Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)), 1) \<in> edges cfg2"
+  unfolding cfg2_def prog2_def by eval
+
+text \<open>The callee frame of the activation is opened by \<^const>\<open>twfr\<close>'s \<open>start\<close> at \<open>f\<close>'s entry
+  (node 0) in the seeded context, executes \<open>G := G + 1\<close> reading the seeded \<open>G = 0\<close> and reaches
+  the callee exit (node 1) with \<open>G = 1\<close>.  The store is the shared \<^const>\<open>gk\<close> family.\<close>
+
+lemma seed_wit:
+  "twfr enterc combc cfg2 0 (Abs_st (SBot, SBot, [(''G'', SZero)])) 1
+     (Abs_st (SBot, SBot, [(''G'', SZero)])) [gk 0, gk 1]"
+proof -
+  have w0: "twfr enterc combc cfg2 0 (Abs_st (SBot, SBot, [(''G'', SZero)])) 0
+              (Abs_st (SBot, SBot, [(''G'', SZero)])) [gk 0]"
+    by (rule twfr.start)
+  show ?thesis using twfr.intra[OF seed_e_0_1 _ w0] by (simp add: step_assign_incr)
+qed
+
+text \<open>\<^bold>\<open>Per-coordinate soundness.\<close>  A concrete \<^const>\<open>twfr\<close> execution reaches the callee exit
+  and its terminal \<open>G\<close> lies in the concretisation of the analyzer's slot there --- the slot
+  is \<^const>\<open>SPos\<close> (\<open>seed_clean_sound_on_prog2\<close>) and \<open>1 \<in> gamma_sign SPos\<close>.  Non-vacuous: the
+  concrete increment is a genuine member; contrast the flow-insensitive \<^const>\<open>Inr\<close> global
+  \<^const>\<open>SNonNeg\<close>, which also admits \<open>1\<close>.\<close>
+
+theorem seed_wit_sound:
+  "\<exists>tr. twfr enterc combc cfg2 0 (Abs_st (SBot, SBot, [(''G'', SZero)])) 1
+          (Abs_st (SBot, SBot, [(''G'', SZero)])) tr \<and> tr \<noteq> []
+     \<and> last tr ''G'' \<in> gamma_sign (lookup_st
+          (snd seed_clean_sol (Inl (1, Abs_st (SBot, SBot, [(''G'', SZero)])))) ''G'')"
+proof -
+  have rd: "last [gk 0, gk 1] ''G'' \<in> gamma_sign (lookup_st
+              (snd seed_clean_sol (Inl (1, Abs_st (SBot, SBot, [(''G'', SZero)])))) ''G'')"
+    using seed_clean_sound_on_prog2 by simp
+  show ?thesis by (rule twfr_reach_read[OF seed_wit rd])
+qed
 
 text \<open>
   \<^bold>\<open>Verdict.\<close>  The refactor works on the go/no-go program.  Seeding the callee-entry
@@ -112,15 +149,15 @@ text \<open>
   \<open>{G:SZero}\<close>), so Stage-1 precision is preserved.  Existing runs are untouched:
   \<open>seed_generalises\<close> recovers the shipped generator as the constant-seed instance.
 
-  \<^bold>\<open>Remaining obligation (next stage).\<close>  This is an executable go/no-go witness, not
-  yet a proof.  The seeded clean transfer's soundness is inherently
-  \<^emph>\<open>context-relative\<close>: the entry local carries the \<^emph>\<open>precise\<close> per-context global
-  (sharper than the flow-insensitive \<open>Inr\<close> slot, which \<open>clean_eq_retain_if_local_dominates\<close>
-  does not cover), so the soundness statement is against the context-sliced
-  \<^const>\<open>cfg_collect_ctx\<close>, not flat \<^const>\<open>cfg_collect\<close>.  The full proof --- a seeded
-  analogue of \<^const>\<open>sound_effectful_transfer\<close> discharged from the entry invariant
-  \<open>entry-local \<sqsupseteq> globals(context)\<close> --- is the next slice; the retain (\<open>\<squnion> g\<close>)
-  analyzer remains the sound shipped baseline until then.
+  \<^bold>\<open>Per-coordinate soundness (proved).\<close>  A concrete \<^const>\<open>twfr\<close> execution reaches the
+  callee exit in the seeded context and its terminal \<open>G = 1\<close> lies in the analyzer's slot
+  \<^const>\<open>SPos\<close> there (\<open>seed_wit_sound\<close>), so the seeded clean transfer is sound on this run ---
+  not merely a go/no-go witness.  The soundness is \<^emph>\<open>context-relative\<close>: the entry local
+  carries the \<^emph>\<open>precise\<close> per-context global (sharper than the flow-insensitive \<open>Inr\<close> slot,
+  which \<open>clean_eq_retain_if_local_dominates\<close> does not cover), so the statement is against the
+  context-sliced slot, not the flat one.  The generic context-sliced soundness this run
+  instances is the seeded analogue of \<^const>\<open>sound_effectful_transfer\<close>; the retain (\<open>\<squnion> g\<close>)
+  analyzer remains the sound shipped baseline for the flow-insensitive read.
 \<close>
 
 end

@@ -82,6 +82,102 @@ lemma traverse_ivl_combine_rehydrate:
          (sg (Inl (ex, restrict_global_st (sg (Inl (cc, ctx))))))"
   by (simp add: ivl_combine_rehydrate_def ivl_ec_def Let_def)
 
+text \<open>Abstract counterpart with executable context keys.  The callee key is obtained from
+  the abstract caller value only through the canonical executable representative of its
+  global projection; on values transported by \<open>fun_of_st\<close> this is exactly the executable
+  \<open>restrict_global_st\<close> key.\<close>
+
+definition ivl_abs_route_st :: "ivl abs_state \<Rightarrow> ivl st" where
+  "ivl_abs_route_st sc = st_of_abs (restrict_global sc)"
+
+lemma ivl_abs_route_st_fun_of_st [simp]:
+  "ivl_abs_route_st (fun_of_st sc) = restrict_global_st sc"
+  by (metis fun_of_st_restrict_global_st ivl_abs_route_st_def
+      st_of_abs_fun_of_st)
+
+definition ivl_combine_rehydrate_abs ::
+  "pp \<Rightarrow> pp \<Rightarrow> ivl st \<Rightarrow> (pp \<times> ivl st, ivl st, ivl abs_state) strategy_tree"
+where
+  "ivl_combine_rehydrate_abs cc ex ctx =
+     QueryL (cc, ctx) (\<lambda>sc.
+       let callee = ivl_abs_route_st sc in
+       Side callee (restrict_global sc)
+         (QueryL (ex, callee) (\<lambda>se.
+           Side ctx (restrict_global se)
+             (Answer (combine_abs sc se)))))"
+
+lemma traverse_ivl_combine_rehydrate_abs:
+  "traverse_rhs (ivl_combine_rehydrate_abs cc ex ctx) sg
+     = combine_abs (sg (Inl (cc, ctx)))
+         (sg (Inl (ex, ivl_abs_route_st (sg (Inl (cc, ctx))))))"
+  by (simp add: ivl_combine_rehydrate_abs_def Let_def)
+
+lemma traverse_ivl_combine_rehydrate_fun_of_st:
+  fixes sigma_st :: "pp \<times> ivl st + ivl st \<Rightarrow> ivl st"
+  shows "fun_of_st (traverse_rhs (ivl_combine_rehydrate cc ex ctx) sigma_st)
+     = traverse_rhs (ivl_combine_rehydrate_abs cc ex ctx)
+         (\<lambda>k. fun_of_st (sigma_st k))"
+  by (simp add: ivl_combine_rehydrate_def ivl_combine_rehydrate_abs_def ivl_ec_def Let_def)
+
+lemma sides_ivl_combine_rehydrate_fun_of_st:
+  fixes sigma_st :: "pp \<times> ivl st + ivl st \<Rightarrow> ivl st"
+  shows "fun_of_st (sides_of_rhs (ivl_combine_rehydrate cc ex ctx) sigma_st k)
+     = sides_of_rhs (ivl_combine_rehydrate_abs cc ex ctx)
+         (\<lambda>k. fun_of_st (sigma_st k)) k"
+  by (cases k) (simp_all add: ivl_combine_rehydrate_def ivl_combine_rehydrate_abs_def ivl_ec_def Let_def bot_fun_def fun_eq_iff)
+
+lemma dep_ivl_combine_rehydrate_fun_of_st:
+  fixes sigma_st :: "pp \<times> ivl st + ivl st \<Rightarrow> ivl st"
+  shows "dep_aux sigma_st (ivl_combine_rehydrate cc ex ctx)
+     = dep_aux (\<lambda>k. fun_of_st (sigma_st k)) (ivl_combine_rehydrate_abs cc ex ctx)"
+  by (simp add: ivl_combine_rehydrate_def ivl_combine_rehydrate_abs_def ivl_ec_def Let_def)
+
+lemma traverse_ivl_etf_clean_st_fun_of_st:
+  fixes sigma_st :: "pp + unit => ivl st"
+  shows "fun_of_st (traverse_rhs (apply_etf_st ivl_etf_clean_st a u) sigma_st)
+     = traverse_rhs (apply_etf (clean_etf_of_transfer ivl_tf) a u)
+         (\<lambda>k. fun_of_st (sigma_st k))"
+  by (cases a)
+     (simp_all add: ivl_etf_clean_st_def clean_edge_tree_st_def clean_etf_of_transfer_def
+        clean_edge_tree_def Let_def ivl_tf_st_commute ivl_tf_def assign_ivl_def
+        fun_of_st_update assume_ivl_st_commute assume_not_ivl_st_commute enter_ivl_st_commute)
+
+lemma sides_ivl_etf_clean_st_fun_of_st:
+  fixes sigma_st :: "pp + unit => ivl st"
+  shows "fun_of_st (sides_of_rhs (apply_etf_st ivl_etf_clean_st a u) sigma_st k)
+     = sides_of_rhs (apply_etf (clean_etf_of_transfer ivl_tf) a u)
+         (\<lambda>k. fun_of_st (sigma_st k)) k"
+  by (cases a; cases k)
+     (simp_all add: ivl_etf_clean_st_def clean_edge_tree_st_def clean_etf_of_transfer_def
+        clean_edge_tree_def Let_def ivl_tf_st_commute bot_fun_def fun_eq_iff ivl_tf_def
+        assign_ivl_def fun_of_st_update assume_ivl_st_commute assume_not_ivl_st_commute
+        enter_ivl_st_commute)
+
+lemma dep_ivl_etf_clean_st_fun_of_st:
+  fixes sigma_st :: "pp + unit => ivl st"
+  shows "dep_aux sigma_st (apply_etf_st ivl_etf_clean_st a u)
+     = dep_aux (\<lambda>k. fun_of_st (sigma_st k))
+         (apply_etf (clean_etf_of_transfer ivl_tf) a u)"
+  by (cases a)
+     (simp_all add: ivl_etf_clean_st_def clean_edge_tree_st_def clean_etf_of_transfer_def
+        clean_edge_tree_def Let_def)
+
+lemma part_post_solution_ivl_rehydrate_seed_st_to_abs_eff:
+  assumes pp_st:
+    "part_post_solution
+       (side_cfg_T_eff_cmp_seed_st id (\<lambda>c cc ex. ivl_combine_rehydrate cc ex c)
+          frame_seed_st g ivl_etf_clean_st bot0_st s0_st) x sigma_st vars"
+  shows "part_post_solution
+       (side_cfg_T_eff_cmp_seed id (\<lambda>c cc ex. ivl_combine_rehydrate_abs cc ex c)
+          (\<lambda>c. fun_of_st (frame_seed_st c)) g (clean_etf_of_transfer ivl_tf)
+          (fun_of_st bot0_st) (fun_of_st s0_st))
+       x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+  by (rule part_post_solution_cmp_seed_st_to_abs_eff
+        [OF traverse_ivl_etf_clean_st_fun_of_st sides_ivl_etf_clean_st_fun_of_st
+            dep_ivl_etf_clean_st_fun_of_st traverse_ivl_combine_rehydrate_fun_of_st
+            sides_ivl_combine_rehydrate_fun_of_st dep_ivl_combine_rehydrate_fun_of_st
+            pp_st])
+
 subsection \<open>Soundness of the rehydrated caller continuation (Spec.combine)\<close>
 
 text \<open>
@@ -176,6 +272,89 @@ lemma rhyd_readbacks_in_gamma:
   "0 \<in> gamma_ivl (Ivl (Fin 0) (Fin 0)) \<and> 1 \<in> gamma_ivl (Ivl (Fin 1) (Fin 1))
    \<and> 10 \<in> gamma_ivl (Ivl (Fin 10) (Fin 10)) \<and> 11 \<in> gamma_ivl (Ivl (Fin 11) (Fin 11))"
   by simp
+
+subsection \<open>A concrete twfr witness for the rehydrated readback\<close>
+
+text \<open>The readback of the first call's global happens on the \<^emph>\<open>caller\<close> continuation, past a
+  return combine: an explicit \<^const>\<open>twfr\<close> run of \<^const>\<open>rhyd_cfg\<close> that runs \<open>main\<close> to the
+  first call (\<open>2 \<to> 3 \<to> 4\<close>, \<open>G := 0\<close>), calls \<open>f\<close> (whose body \<open>GH := G + 1\<close> is opened by
+  \<open>start\<close> at the callee entry and spliced back by \<open>combine\<close> at \<open>(4,1,5)\<close>), and reads the
+  rehydrated \<open>G\<close> into \<open>g1\<close> (\<open>5 \<to> 6 \<to> 7\<close>).  The terminal store carries \<open>g1 = 0\<close> --- the exact
+  point \<open>rhyd_readbacks_exact\<close> assigns node 7.  The store family is the shared \<^const>\<open>gk\<close>
+  extended with the derived global \<open>GH\<close>.\<close>
+
+definition gkh where
+  "gkh k j = (gk k)(''GH'' := j)"
+
+lemma gkh_G [simp]: "gkh k j ''G'' = k"
+  and gkh_GH [simp]: "gkh k j ''GH'' = j"
+  and gkh_g1 [simp]: "gkh k j ''g1'' = 0"
+  by (simp_all add: gkh_def gk_def)
+
+lemma combine_gk_gkh [simp]: "<gk a|gkh b cc> = gkh b cc"
+  by (rule ext) (simp add: combine_states_def gkh_def gk_def IMP2_Globals.is_global_def)
+
+text \<open>The rhyd edges the witness traverses, by \<open>eval\<close>.\<close>
+
+lemma rhyd_e_2_3: "(2, EA_Assign ''G'' (IMP2_Syntax.N 0), 3) \<in> edges rhyd_cfg"
+  and rhyd_e_3_4: "(3, EA_Nop, 4) \<in> edges rhyd_cfg"
+  and rhyd_e_4_0: "(4, EA_Enter, 0) \<in> edges rhyd_cfg"
+  and rhyd_e_0_1: "(0, EA_Assign ''GH'' (Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)), 1) \<in> edges rhyd_cfg"
+  and rhyd_e_5_6: "(5, EA_Nop, 6) \<in> edges rhyd_cfg"
+  and rhyd_e_6_7: "(6, EA_Assign ''g1'' (IMP2_Syntax.V ''G''), 7) \<in> edges rhyd_cfg"
+  unfolding rhyd_cfg_def rhyd_prog_def by eval+
+
+lemma rhyd_c_4_1_5: "(4, 1, 5) \<in> combines rhyd_cfg"
+  unfolding rhyd_cfg_def rhyd_prog_def by eval
+
+abbreviation rhyd_combc :: "ivl st \<Rightarrow> ivl st \<Rightarrow> ivl st" where
+  "rhyd_combc \<equiv> (\<lambda>c1 c2. c1)"
+
+lemma rhyd_wit_readback:
+  "\<exists>tr. twfr enterc rhyd_combc rhyd_cfg 2 bot 7 bot tr \<and> tr \<noteq> [] \<and> last tr ''g1'' = 0"
+proof -
+  have m2: "twfr enterc rhyd_combc rhyd_cfg 2 bot 2 bot [gk 5]" by (rule twfr.start)
+  have m3: "twfr enterc rhyd_combc rhyd_cfg 2 bot 3 bot [gk 5, gk 0]"
+    using twfr.intra[OF rhyd_e_2_3 _ m2] by (simp add: step_assign_const)
+  have m4: "twfr enterc rhyd_combc rhyd_cfg 2 bot 4 bot [gk 5, gk 0, gk 0]"
+    using twfr.intra[OF rhyd_e_3_4 _ m3] by (simp add: step_nop)
+  have rho: "twfr enterc rhyd_combc rhyd_cfg 0 (enterc bot (gk 0)) 1 (enterc bot (gk 0))
+               [gk 0, gkh 0 1]"
+  proof -
+    have c0: "twfr enterc rhyd_combc rhyd_cfg 0 (enterc bot (gk 0)) 0 (enterc bot (gk 0)) [gk 0]"
+      by (rule twfr.start)
+    show ?thesis using twfr.intra[OF rhyd_e_0_1 _ c0] by (simp add: gkh_def gk_def)
+  qed
+  have hd_eq: "hd [gk 0, gkh 0 1] = enter_state (last [gk 5, gk 0, gk 0])" by simp
+  let ?t5 = "[gk 5, gk 0, gk 0] @ tl [gk 0, gkh 0 1] @ [<gk 0|gkh 0 1>]"
+  have m5: "twfr enterc rhyd_combc rhyd_cfg 2 bot 5 bot ?t5"
+    using twfr.combine[OF rhyd_c_4_1_5 rhyd_e_4_0 m4 _ hd_eq] rho by simp
+  have m6: "twfr enterc rhyd_combc rhyd_cfg 2 bot 6 bot (?t5 @ [gkh 0 1])"
+    using twfr.intra[OF rhyd_e_5_6 _ m5] by simp
+  have m7: "twfr enterc rhyd_combc rhyd_cfg 2 bot 7 bot ((?t5 @ [gkh 0 1]) @ [gkh 0 1])"
+    using twfr.intra[OF rhyd_e_6_7 _ m6] by (simp add: gkh_def gk_def fun_upd_idem)
+  show ?thesis
+  proof (intro exI conjI)
+    show "twfr enterc rhyd_combc rhyd_cfg 2 bot 7 bot ((?t5 @ [gkh 0 1]) @ [gkh 0 1])"
+      by (rule m7)
+  qed simp_all
+qed
+
+text \<open>\<^bold>\<open>Per-coordinate soundness of the readback.\<close>  The concrete \<^const>\<open>twfr\<close> run reaches the
+  readback node 7 with \<open>g1 = 0\<close>, which lies in the concretisation of the analyzer's slot
+  there --- \<open>0 \<in> gamma [0,0]\<close>.  Non-vacuous.\<close>
+
+theorem rhyd_wit_readback_sound:
+  "\<exists>tr. twfr enterc rhyd_combc rhyd_cfg 2 bot 7 bot tr \<and> tr \<noteq> []
+     \<and> last tr ''g1'' \<in> gamma_ivl (lookup_st (snd rhyd_solution (Inl (7, bot))) ''g1'')"
+proof -
+  obtain tr where w: "twfr enterc rhyd_combc rhyd_cfg 2 bot 7 bot tr" and ne: "tr \<noteq> []"
+      and g1: "last tr ''g1'' = 0"
+    using rhyd_wit_readback by blast
+  have rd: "last tr ''g1'' \<in> gamma_ivl (lookup_st (snd rhyd_solution (Inl (7, bot))) ''g1'')"
+    using g1 rhyd_readbacks_exact by simp
+  show ?thesis using w ne rd by blast
+qed
 
 subsection \<open>The two contexts stay separated (rehydration preserves R_read precision)\<close>
 
@@ -284,8 +463,10 @@ text \<open>
   the caller local (\<open>ivl_combine_rehydrate_context_is_local\<close>), and the reconstructed
   globals are the callee's returned globals, not a \<open>local \<squnion> global\<close> read
   (\<open>ivl_combine_rehydrate_answer\<close>).  Executably, the four read-backs recover the exact
-  points (\<open>rhyd_readbacks_exact\<close>, sound by \<open>rhyd_readbacks_in_gamma\<close>) and the two
-  contexts stay separated (\<open>rhyd_callee_exit_separated\<close>).  The strip-combine spine
+  points (\<open>rhyd_readbacks_exact\<close>, sound by \<open>rhyd_readbacks_in_gamma\<close>); a concrete
+  \<^const>\<open>twfr\<close> run past the return combine reaches the first read-back node with the exact
+  \<open>g1 = 0\<close> in the analysis slot there (\<open>rhyd_wit_readback_sound\<close>), and the two contexts stay
+  separated (\<open>rhyd_callee_exit_separated\<close>).  The strip-combine spine
   (\<^theory>\<open>Voblint_Formalization.Exec_Ivl_Cmp_Seed_Clean_Run\<close>) and the retain
   \<open>side_env_cmp\<close> baseline are untouched.  No loop is analysed, so interval widening is
   not engaged.

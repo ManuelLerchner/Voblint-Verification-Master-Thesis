@@ -1,5 +1,6 @@
 theory Exec_Ivl_Cmp_Seed_Clean_Run
   imports Exec_Ivl_Ctx_Gen_Run Voblint_Analysis.Exec_Cmp_Bridge Exec_Ivl_Cmp_Seed_Sound
+    Twfr_Reach_Read
 begin
 
 section \<open>Executable interval seeded-clean (R_read) run on a two-call program\<close>
@@ -158,13 +159,59 @@ lemma iseed_callee_increment:
     ivl_ec_def ivl_combine_rread_def ivl_etf_clean_st_def clean_edge_tree_st_def
     side_cfg_T_eff_cmp_seed_st_def by eval
 
-text \<open>Soundness of the two callee-exit results: the concrete run computes \<open>G = 1\<close>
-  (from \<open>G = 0\<close>) and \<open>G = 11\<close> (from \<open>G = 10\<close>), and both lie in the concretisation of
-  the analyzer's interval.\<close>
+subsection \<open>A concrete twfr witness and the per-coordinate soundness\<close>
 
-lemma iseed_increment_in_gamma:
-  "1 \<in> gamma_ivl (Ivl (Fin 1) (Fin 1)) \<and> 11 \<in> gamma_ivl (Ivl (Fin 11) (Fin 11))"
-  by simp
+text \<open>The callee assignment edge \<open>0 \<to> 1\<close> (\<open>f\<close>'s \<open>G := G + 1\<close>), by \<open>eval\<close>.\<close>
+
+lemma iseed_e_0_1:
+  "(0, EA_Assign ''G'' (Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)), 1) \<in> edges iseed_cfg"
+  unfolding iseed_cfg_def iseed_prog_def by eval
+
+text \<open>The callee frame of each activation is opened by \<^const>\<open>twfr\<close>'s \<open>start\<close> at \<open>f\<close>'s entry
+  (node 0) in the analysis's context, executes \<open>G := G + 1\<close> and reaches the callee exit
+  (node 1): entry \<open>G = 0\<close> gives exit \<open>G = 1\<close> in \<^const>\<open>iseed_ctx_lo\<close>, entry \<open>G = 10\<close> gives exit
+  \<open>G = 11\<close> in \<^const>\<open>iseed_ctx_hi\<close>.  The store is the shared \<^const>\<open>gk\<close> family.\<close>
+
+lemma iseed_wit_lo:
+  "twfr enterc combc iseed_cfg 0 iseed_ctx_lo 1 iseed_ctx_lo [gk 0, gk 1]"
+proof -
+  have w0: "twfr enterc combc iseed_cfg 0 iseed_ctx_lo 0 iseed_ctx_lo [gk 0]"
+    by (rule twfr.start)
+  show ?thesis using twfr.intra[OF iseed_e_0_1 _ w0] by (simp add: step_assign_incr)
+qed
+
+lemma iseed_wit_hi:
+  "twfr enterc combc iseed_cfg 0 iseed_ctx_hi 1 iseed_ctx_hi [gk 10, gk 11]"
+proof -
+  have w0: "twfr enterc combc iseed_cfg 0 iseed_ctx_hi 0 iseed_ctx_hi [gk 10]"
+    by (rule twfr.start)
+  show ?thesis using twfr.intra[OF iseed_e_0_1 _ w0] by (simp add: step_assign_incr)
+qed
+
+text \<open>\<^bold>\<open>Per-coordinate soundness.\<close>  A concrete \<^const>\<open>twfr\<close> execution reaches the callee exit
+  in each context and its terminal \<open>G\<close> lies in the concretisation of the analyzer's slot
+  there --- \<open>1 \<in> gamma [1,1]\<close> and \<open>11 \<in> gamma [11,11]\<close>.  Non-vacuous: the concrete increment
+  is a genuine member.\<close>
+
+theorem iseed_wit_lo_sound:
+  "\<exists>tr. twfr enterc combc iseed_cfg 0 iseed_ctx_lo 1 iseed_ctx_lo tr \<and> tr \<noteq> []
+     \<and> last tr ''G'' \<in> gamma_ivl (lookup_st (snd iseed_clean_solution (Inl (1, iseed_ctx_lo))) ''G'')"
+proof -
+  have rd: "last [gk 0, gk 1] ''G''
+              \<in> gamma_ivl (lookup_st (snd iseed_clean_solution (Inl (1, iseed_ctx_lo))) ''G'')"
+    using iseed_callee_increment by simp
+  show ?thesis by (rule twfr_reach_read[OF iseed_wit_lo rd])
+qed
+
+theorem iseed_wit_hi_sound:
+  "\<exists>tr. twfr enterc combc iseed_cfg 0 iseed_ctx_hi 1 iseed_ctx_hi tr \<and> tr \<noteq> []
+     \<and> last tr ''G'' \<in> gamma_ivl (lookup_st (snd iseed_clean_solution (Inl (1, iseed_ctx_hi))) ''G'')"
+proof -
+  have rd: "last [gk 10, gk 11] ''G''
+              \<in> gamma_ivl (lookup_st (snd iseed_clean_solution (Inl (1, iseed_ctx_hi))) ''G'')"
+    using iseed_callee_increment by simp
+  show ?thesis by (rule twfr_reach_read[OF iseed_wit_hi rd])
+qed
 
 subsection \<open>The two contexts stay separate (D/G/C precision)\<close>
 
@@ -186,9 +233,11 @@ text \<open>
   end through the vendored side solver on a non-recursive, loop-free program: the
   seed (\<^const>\<open>restrict_global_st\<close>) delivers the caller's globals to the callee-entry
   local (\<open>iseed_callee_entry_seeded\<close>), the clean transfer reads only that local
-  (\<open>iseed_caller_locals_points\<close>) and computes the sound increment
-  (\<open>iseed_callee_increment\<close>, \<open>iseed_increment_in_gamma\<close>), and the global-derived
-  context keeps the two activations at distinct points (\<open>iseed_contexts_separate\<close>).
+  (\<open>iseed_caller_locals_points\<close>) and computes the increment
+  (\<open>iseed_callee_increment\<close>); a concrete \<^const>\<open>twfr\<close> execution reaches each callee exit and
+  its terminal \<open>G\<close> lies in that slot (\<open>iseed_wit_lo_sound\<close> / \<open>iseed_wit_hi_sound\<close>), and the
+  global-derived context keeps the two activations at distinct points
+  (\<open>iseed_contexts_separate\<close>).
   The abstract D/G/C soundness this run instances lives in
   \<^theory>\<open>Voblint_Formalization.Exec_Ivl_Cmp_Seed_Sound\<close>
   (@{thm [source] ivl_clean_ctx_collect_rread}).  No loop is analysed, so interval

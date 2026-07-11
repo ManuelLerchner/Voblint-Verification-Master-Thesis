@@ -54,6 +54,60 @@ proof -
   thus ?thesis by (rule point_exact[OF pt])
 qed
 
+text \<open>
+  \<^bold>\<open>The routing equality (task 3).\<close>  \<open>enter_mono_point\<close> lifted from one projection variable
+  to the whole \<^emph>\<open>global region\<close>: on a point-exact inhabited caller slot, the callee context
+  routed from the \<^emph>\<open>concrete\<close> caller store (the pointwise \<open>decode\<close>-image, restricted to
+  globals) equals the callee context routed from the \<^emph>\<open>abstract\<close> caller slot
+  (\<^const>\<open>restrict_global\<close> of \<open>sg (Inl (cl, ctx))\<close>) --- Goblint's \<open>context f (enter ...)\<close>
+  computed either way.  This is the point-exactness identity that closes the executable
+  routing correspondence: \<open>enterc kc s = restrict_global (sg (Inl (cl, ctx)))\<close> for an
+  \<open>enterc\<close> that keeps the entered store's globals and abstracts them pointwise.\<close>
+
+lemma point_route_eq:
+  fixes sg :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a abs_state"
+  assumes s: "s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
+    and pts: "\<And>x. is_global x \<Longrightarrow> is_point (sg (Inl (cl, ctx)) x)"
+  shows "restrict_global (\<lambda>x. decode (s x)) = restrict_global (sg (Inl (cl, ctx)))"
+proof (rule ext)
+  fix x
+  show "restrict_global (\<lambda>x. decode (s x)) x = restrict_global (sg (Inl (cl, ctx))) x"
+  proof (cases "is_global x")
+    case True
+    have "decode (s x) = sg (Inl (cl, ctx)) x"
+      by (rule enter_mono_point[where sg = sg and cl = cl and ctx = ctx and proj_var = x,
+            OF pts[OF True] s])
+    thus ?thesis unfolding restrict_global_def using True by simp
+  next
+    case False
+    thus ?thesis unfolding restrict_global_def by simp
+  qed
+qed
+
+text \<open>
+  \<^bold>\<open>SEED_glob discharged from point-exactness (the ENTER_MONO kernel-connection).\<close>  With the
+  pointwise-decode global routing \<open>enterc kc s = restrict_global (\<lambda>x. decode (s x))\<close> --- Goblint's
+  \<open>context f (enter ...)\<close> keeping the entered store's globals --- the seed \<open>\<gamma>\<close>-obligation
+  \<open>s xx \<in> gamma (enterc kc s xx)\<close> (\<open>SEED_glob\<close> with \<open>fs = id\<close>) follows from just the caller
+  store's soundness and the point-exactness of the caller slot's globals.  The routing
+  equation \<open>point_route_eq\<close> collapses the routed slot to the caller slot on globals, where
+  the entering store is admitted by assumption.  This reduces \<open>SEED_glob\<close> to the
+  eval-checkable point-exactness premise, wiring the routing equation to the kernel
+  obligation.\<close>
+lemma seed_glob_from_point_route:
+  fixes sg :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a abs_state"
+  assumes s: "s \<in> \<lbrakk>sg (Inl (cl, kc))\<rbrakk>"
+    and pts: "\<And>x. is_global x \<Longrightarrow> is_point (sg (Inl (cl, kc)) x)"
+    and xx: "is_global xx"
+  shows "s xx \<in> gamma (restrict_global (\<lambda>x. decode (s x)) xx)"
+proof -
+  have "restrict_global (\<lambda>x. decode (s x)) xx = restrict_global (sg (Inl (cl, kc))) xx"
+    using point_route_eq[where sg = sg and cl = cl and ctx = kc and s = s, OF s pts] by simp
+  also have "\<dots> = sg (Inl (cl, kc)) xx" unfolding restrict_global_def using xx by simp
+  finally show ?thesis
+    using s xx unfolding gamma_state_def by simp
+qed
+
 end
 
 end

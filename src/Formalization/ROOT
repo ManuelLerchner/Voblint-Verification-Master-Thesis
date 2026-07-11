@@ -19,6 +19,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Trace_Analysis_Sound
     Mixed_Flow_Sound
     Exec_Context_Run_Common
+    Twfr_Reach_Read
     Exec_Sign_Run
     Exec_Sign_Ctx_Run
     Exec_Sign_Ctx_Gen_Run
@@ -39,6 +40,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Exec_Ivl_Cmp_Seed_Sound
     Exec_Ivl_Cmp_Seed_Clean_Run
     Exec_Ivl_Seed_EnterMono
+    Ivl_Twfr_Common
     Exec_Ivl_Cmp_Seed_Clean_Derived_Run
     Exec_Ivl_Cmp_Seed_Rehydrate_Run
     Example_Inc_Proc
@@ -61,6 +63,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Interval_Recursion_Origin
     Example_Interval_Recursion_Convergence
     Example_Interval_Recursion_Rehydrate
+    Example_Rdiv_Twfr_Sound
     Example_Mode_Value_Digest_Showcase
     Example_Digest_Pipeline_Showcase
     Example_Finite_Sign_Context_Analysis

@@ -4,6 +4,7 @@ theory Example_Interval_Recursion_Rehydrate
   imports
     Voblint_Formalization.Example_Interval_Recursion_Convergence
     Voblint_Formalization.Exec_Ivl_Cmp_Seed_Rehydrate_Run
+    Voblint_Analysis.Activation_Domain_Instances
 begin
 
 text \<open>
@@ -41,6 +42,36 @@ definition rdiv_rehyd_eqs :: "(pp \<times> ivl st, ivl st, ivl st) eqsT" where
 definition rdiv_rehyd_solution ::
   "(pp \<times> ivl st) set \<times> ((pp \<times> ivl st) + ivl st \<Rightarrow> ivl st)" where
   "rdiv_rehyd_solution = TD_side_always_join_Interp_solve rdiv_rehyd_eqs (cfg_exit rdiv_cfg, bot)"
+
+definition rdiv_zero_ivl :: ivl where
+  "rdiv_zero_ivl = Ivl (Fin 0) (Fin 0)"
+
+definition rdiv_rehyd_cover_eqs :: "(pp \<times> ivl st, ivl st, ivl st) eqsT" where
+  "rdiv_rehyd_cover_eqs = side_cfg_T_eff_cmp_seed_st id
+     (\<lambda>c cc ex. ivl_combine_rehydrate cc ex c)
+     (cover_seed_st rdiv_zero_ivl) rdiv_cfg ivl_etf_clean_st bot cinit_ivl_st"
+
+definition rdiv_rehyd_cover_solution ::
+  "(pp \<times> ivl st) set \<times> ((pp \<times> ivl st) + ivl st \<Rightarrow> ivl st)" where
+  "rdiv_rehyd_cover_solution =
+     TD_side_always_join_Interp_solve rdiv_rehyd_cover_eqs (cfg_exit rdiv_cfg, bot)"
+
+lemma rdiv_rehyd_cover_runs: "fst rdiv_rehyd_cover_solution \<noteq> {}"
+  unfolding rdiv_rehyd_cover_solution_def rdiv_rehyd_cover_eqs_def rdiv_cfg_def rdiv_prog_def
+    rdiv_zero_ivl_def ivl_ec_def ivl_combine_rehydrate_def ivl_etf_clean_st_def
+    clean_edge_tree_st_def side_cfg_T_eff_cmp_seed_st_def by eval
+
+lemma rdiv_rehyd_cover_returns_global_to_main:
+  "lookup_st (snd rdiv_rehyd_cover_solution (Inl (11, bot))) ''G'' = Ivl (Fin 3) (Fin 3)"
+  unfolding rdiv_rehyd_cover_solution_def rdiv_rehyd_cover_eqs_def rdiv_cfg_def rdiv_prog_def
+    rdiv_zero_ivl_def ivl_ec_def ivl_combine_rehydrate_def ivl_etf_clean_st_def
+    clean_edge_tree_st_def side_cfg_T_eff_cmp_seed_st_def by eval
+
+lemma rdiv_rehyd_cover_main_cont_reached:
+  "(11, bot::ivl st) \<in> fst rdiv_rehyd_cover_solution"
+  unfolding rdiv_rehyd_cover_solution_def rdiv_rehyd_cover_eqs_def rdiv_cfg_def rdiv_prog_def
+    rdiv_zero_ivl_def ivl_ec_def ivl_combine_rehydrate_def ivl_etf_clean_st_def
+    clean_edge_tree_st_def side_cfg_T_eff_cmp_seed_st_def by eval
 
 text \<open>The exact (widening-free) rehydrating solve terminates on the same bounded recursion.\<close>
 lemma rdiv_rehyd_runs: "fst rdiv_rehyd_solution \<noteq> {}"
@@ -126,6 +157,57 @@ theorem rdiv_rehyd_post_fixpoint:
   using TD_side_always_join_Interp.partial_post_solution
       [OF rdiv_rehyd_solve_dom, of "fst rdiv_rehyd_solution" "snd rdiv_rehyd_solution"]
   unfolding rdiv_rehyd_solution_def by simp
+
+lemma rdiv_rehyd_cover_solve_c_some:
+  "TD_side_always_join_Interp_solve_c rdiv_rehyd_cover_eqs (cfg_exit rdiv_cfg, bot) \<noteq> None"
+  unfolding rdiv_rehyd_cover_eqs_def rdiv_cfg_def rdiv_prog_def
+    rdiv_zero_ivl_def ivl_ec_def ivl_combine_rehydrate_def ivl_etf_clean_st_def
+    clean_edge_tree_st_def side_cfg_T_eff_cmp_seed_st_def by eval
+
+lemma rdiv_rehyd_cover_solve_dom:
+  "TD_side_always_join_Interp.solve_dom TYPE(ivl st) TYPE(ivl st)
+     rdiv_rehyd_cover_eqs (cfg_exit rdiv_cfg, bot)"
+  unfolding TD_side_always_join_Interp.term_equivalence
+            TD_side_always_join_Interp.solve_c_dom_def
+  using rdiv_rehyd_cover_solve_c_some by simp
+
+theorem rdiv_rehyd_cover_post_fixpoint:
+  "part_post_solution rdiv_rehyd_cover_eqs (cfg_exit rdiv_cfg, bot)
+     (snd rdiv_rehyd_cover_solution) (fst rdiv_rehyd_cover_solution)"
+  using TD_side_always_join_Interp.partial_post_solution
+      [OF rdiv_rehyd_cover_solve_dom,
+        of "fst rdiv_rehyd_cover_solution" "snd rdiv_rehyd_cover_solution"]
+  unfolding rdiv_rehyd_cover_solution_def by simp
+
+theorem rdiv_rehyd_cover_abs_post_fixpoint:
+  "part_post_solution
+     (side_cfg_T_eff_cmp_seed id (\<lambda>c cc ex. ivl_combine_rehydrate_abs cc ex c)
+        (cover_seed rdiv_zero_ivl fun_of_st) rdiv_cfg (clean_etf_of_transfer ivl_tf)
+        (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st))
+     (cfg_exit rdiv_cfg, bot)
+     (\<lambda>k. fun_of_st (snd rdiv_rehyd_cover_solution k))
+     (fst rdiv_rehyd_cover_solution)"
+proof -
+  have pp_st:
+    "part_post_solution
+       (side_cfg_T_eff_cmp_seed_st id (\<lambda>c cc ex. ivl_combine_rehydrate cc ex c)
+          (cover_seed_st rdiv_zero_ivl) rdiv_cfg ivl_etf_clean_st bot cinit_ivl_st)
+       (cfg_exit rdiv_cfg, bot)
+       (snd rdiv_rehyd_cover_solution) (fst rdiv_rehyd_cover_solution)"
+    using rdiv_rehyd_cover_post_fixpoint
+    by (simp add: rdiv_rehyd_cover_eqs_def)
+  have pp_abs:
+    "part_post_solution
+       (side_cfg_T_eff_cmp_seed id (\<lambda>c cc ex. ivl_combine_rehydrate_abs cc ex c)
+          (\<lambda>c. fun_of_st (cover_seed_st rdiv_zero_ivl c)) rdiv_cfg
+          (clean_etf_of_transfer ivl_tf) (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st))
+       (cfg_exit rdiv_cfg, bot)
+       (\<lambda>k. fun_of_st (snd rdiv_rehyd_cover_solution k))
+       (fst rdiv_rehyd_cover_solution)"
+    by (rule part_post_solution_ivl_rehydrate_seed_st_to_abs_eff[OF pp_st])
+  show ?thesis
+    using pp_abs by (simp add: fun_of_st_cover_seed_st)
+qed
 
 text \<open>
   The reached-unknown consequence: at every solved unknown the reassembled
