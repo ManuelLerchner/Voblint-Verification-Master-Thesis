@@ -355,17 +355,37 @@ theorem clean_ctx_collect_rread:
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof -
-  have tr_sound: "\<And>tr. trace_witness g S v tr \<Longrightarrow> cmp (dg tr) ctx \<Longrightarrow> last tr \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-  proof -
-    fix tr assume w: "trace_witness g S v tr" and c: "cmp (dg tr) ctx"
-    show "last tr \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-      by (rule clean_ctx_trace_rread
-          [where sg = sg and rt = rt and dg = dg and cmp = cmp and entdg = entdg and g = g and S = S,
-           OF ENTRY PROC_ENTRY EDGE_BOUND COMB DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO w c])
+  interpret L: context_analysis_soundness
+      "undefined" "\<lambda>cc. id" rt entdg cmp
+      route_read_cmp route_read_cmp sg S g dg
+  proof (unfold_locales, goal_cases)
+    case (1 ctx s) then show ?case using ENTRY by (simp add: route_read_cmp_def)
+  next
+    case (2 ctx v s) then show ?case using PROC_ENTRY by (simp add: route_read_cmp_def)
+  next
+    case (3 ctx u a v tr s')
+    then have e: "(u, a, v) \<in> edges g" and st: "edge_step a (last tr) = Some s'"
+      and lt: "last tr \<in> \<lbrakk>sg (Inl (u, ctx))\<rbrakk>" by (auto simp: route_read_cmp_def)
+    show ?case using clean_edge_ctx_of_bound[OF EDGE_BOUND[OF e] lt st]
+      by (simp add: route_read_cmp_def)
+  next
+    case (4 ctx cl ex v tau rho)
+    then have ct: "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
+      and ce: "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
+      and c: "(cl, ex, v) \<in> combines g"
+      by (auto simp: route_read_cmp_def context_domain.route_def)
+    show ?case using COMB[OF c ct ce] by (simp add: route_read_cmp_def)
+  next
+    case (5 tr s' ctx) then show ?case using DG_INTRA by blast
+  next
+    case (6 tau rho) then show ?case using DG_RETURN by blast
+  next
+    case (7 tau rho) then show ?case using DG_CALLEE by blast
+  next
+    case (8 ctx cl s) then show ?case using ENTER_MONO by (simp add: route_read_cmp_def context_domain.route_def)
   qed
-  show ?thesis
-    unfolding cfg_collect_ctx_def alpha_ctx_def cfg_collect_trace_def
-    using tr_sound by auto
+  have "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>route_read_cmp sg (v, ctx)\<rbrakk>" by (rule L.collect_sound)
+  thus ?thesis by (simp add: route_read_cmp_def)
 qed
 
 text \<open>
