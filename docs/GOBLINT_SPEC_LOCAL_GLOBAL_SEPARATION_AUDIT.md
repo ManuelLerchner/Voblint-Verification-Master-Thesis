@@ -605,7 +605,7 @@ Every executable spec field is connected to the existing CMP path. Delivered in
 - Therefore Stage 0 **declares** the first-class call contract and **bridges** each field to the
   retained implementation (entry: `Sign_spec_generator_eq`; merge: `spec_cmb_realizes_combine`;
   routing: `own_slot_le_read`), but does **not** yet claim end-to-end integration
-  (contract ⟹ run premises ⟹ soundness). That integration is Stage 0.5.
+  (contract ⟹ run premises ⟹ soundness). That integration is Stage 0.5 — **delivered, see §8**.
 
 ### 7.4a Second implementation pass — layering and the merge parameter
 
@@ -616,8 +616,10 @@ A review pass tightened the Stage-0 boundary further:
   `return_merge` parameter would not determine the generated equations — the specification and
   the implementation could silently diverge. Rather than ship a parameter that configures
   nothing (the same reasoning that dropped `assign_ret`), Stage 0 keeps the merge **fixed** to
-  `combine_abs` (soundness: `combine_states_sound`) and reintroduces `return_merge` as a real,
-  generator-driving parameter in Stage 0.5. `call_spec` therefore fixes only `entry_seed`.
+  `combine_abs` (soundness: `combine_states_sound`); reintroducing `return_merge` as a real,
+  generator-driving parameter stays deferred (Stage 1+, §7.4 — Stage 0.5 as delivered in §8 is
+  the post-fixpoint integration and deliberately does not redesign the contract). `call_spec`
+  therefore fixes only `entry_seed`.
 - **`spec_cmb` / `spec_generator` live in a separate wiring theory `Call_Spec_Generator`**, not in
   `Call_Spec`. They are generator machinery (`map_gtree`/`map_ltree`/`etf_combine`), not semantic
   specification — if Goblint changed its combine-tree encoding they would not belong in the spec.
@@ -638,8 +640,64 @@ generator equals the seeded CMP generator with the sign fields.
 - `man` / `Queries.ask` manager and query access.
 - `enter` callee- and argument-dependence; multiple enter results; separate caller-restore and
   callee-entry states.
-- Split `combine_env` / `combine_assign`.
+- Split `combine_env` / `combine_assign`; an analysis-varied, generator-driving `return_merge`.
 - Return-destination handling (`combine_assign`, `lval option`).
+
+---
+
+## 8. Stage 0.5 — post-fixpoint integration (delivered)
+
+Stage 0.5 closes the gap named in §7.3: an analysis that (1) interprets
+`goblint_analysis_spec`, (2) supplies transfer soundness, (3) instantiates `spec_generator`,
+and (4) exhibits a solver post-fixpoint obtains collecting-semantics soundness **without**
+restating the six candidate-solution premises. No contract redesign; every proof is a wrapper
+around existing theorems.
+
+### 8.1 Dependency audit of the six premises
+
+Route: `side_cfg_T_eff_cmp_collect_sound_gen` (`TD_Side_Eff_Cmp_Gen.thy:961`) already
+discharges the premises *internally* from a fixed-frame-generator post-fixpoint; the digest
+slice is below the flat set (`cfg_collect_ctx_le`, `CFG_Collect_Trace.thy:501`).
+
+| Premise | Source on the post-fixpoint route | Classification |
+|---|---|---|
+| `ENTRY` | `s0_le_side_env_cmp_entry` inside `_collect_sound_gen` | already solved (internal) |
+| `PROC_ENTRY` | `side_cfg_T_eff_cmp_enter_le` — needs `sound_effectful_transfer_framed` | already solved (internal; framed transfer is the analysis's input) |
+| `EDGE` | `side_cfg_T_eff_cmp_edge_le` | already solved (internal) |
+| `LOCAL_POST` | combine branch of `_collect_sound_gen` via `switching_combine_sound` | already solved — supplied by the spec's own `spec_cmb_realizes_combine` |
+| `CMP_SOUND` | same combine branch | already solved — same bridge |
+| `ENTER_MONO` | **not needed**: the flat theorem bounds *all* traces; slicing needs no digest compatibility | bypassed (genuine missing assumption only on the digest-precise route, where it is provably not always dischargeable — `Example_Finite_Sign_Context_Analysis`) |
+
+Missing bridges found: exactly one new lemma plus assembly wrappers.
+
+### 8.2 Delivered artifacts
+
+| Artifact | Location | Content |
+|---|---|---|
+| `side_cfg_T_eff_cmp_seed_const` | `Exec_Cmp_Bridge.thy` | the one new lemma: a constant frame seed collapses `side_cfg_T_eff_cmp_seed` to `side_cfg_T_eff_cmp` (definitional, `by simp`) |
+| `spec_post_fixpoint_flat_sound` | `Call_Spec_Sound.thy`, in `goblint_analysis_spec` | post-fixpoint of `spec_generator` ⟹ `cfg_collect g S v0 ≤ ⟦side_env_cmp gcmp σ (v0, ctx)⟧` |
+| `spec_post_fixpoint_collecting_sound` | `Call_Spec_Sound.thy`, in `context_collecting_soundness` | **the canonical Stage-0.5 entry point**: same premises ⟹ `cfg_collect_ctx dg cmp g S v0 ctx ≤ …` |
+| `sign_spec_post_fixpoint_sound` | `Sign_Call_Spec.thy` | Sign instance: post-fixpoint at `sign_etf_unit` + well-formedness side conditions ⟹ soundness; the spec obligations (`seed_const` = `refl`, `sign_sound_etf_unit_framed`, unit `single`) discharged once |
+
+### 8.3 Honest scope
+
+- **Route**: soundness is certified through the *flat collapse* — each keyed slot at `ctx`
+  covers all flows (`cfg_collect`), and every digest slice sits below that. This is sound and
+  premise-free, but does not exploit digest slicing for precision. A digest-precise candidate
+  solution (slots covering only their compatible traces) still uses the six-premise
+  `context_collecting_sound`; a premise-free theorem for that route cannot exist because
+  `ENTER_MONO` is candidate-solution-specific and not always dischargeable (§6.10 pt. 2).
+- **`seed_const`**: the theorem requires a context-independent `entry_seed` (collapsing the
+  seeded generator to the fixed-frame one). Context-dependent seeds are the activation-witness
+  spine (`Seeded_Clean_Ctx_Collect` / `Seeded_Activation_Sound`), not this endpoint.
+- **`single`**: at the read context, routing must be exactly-one-slot
+  (`{k. gcmp ctx k} = {gkey ctx}`) — the flat collapse needs it; Stage 0's locale law
+  `reads_own_slot` stays deliberately weaker.
+- **Remaining hypotheses** (`inr`/`inl` slot invariants, `S ≤ ⟦s0⟧`, finiteness, variable
+  covers) are the standard solution well-formedness side conditions every existing generator
+  endpoint takes — they are not among the six semantic premises.
+- Both Stage-0 endpoints remain: `context_collecting_sound` (premise-level, digest-precise)
+  and `spec_post_fixpoint_collecting_sound` (post-fixpoint, premise-free). Nothing weakened.
 
 ---
 

@@ -67,6 +67,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Cmp_Gen
     Call_Spec
     Call_Spec_Generator
+    Call_Spec_Sound
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness

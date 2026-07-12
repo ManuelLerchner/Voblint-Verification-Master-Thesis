@@ -107,6 +107,18 @@ lemma eq_side_cfg_T_eff_cmp_seed:
   by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
 
 text \<open>
+  A constant frame seed collapses the seeded generator to the fixed-frame generator:
+  the two definitions differ only in \<open>frame_seed c\<close> vs \<open>fresh_frame\<close>.  This is the
+  reduction that lets fixed-frame post-fixpoint theorems consume seeded-generator
+  post-fixpoints whenever the seed does not depend on the context.
+\<close>
+
+lemma side_cfg_T_eff_cmp_seed_const:
+  "side_cfg_T_eff_cmp_seed gkey cmb (\<lambda>_. fr) g etf bot0 s0
+     = side_cfg_T_eff_cmp gkey cmb g etf fr bot0 s0"
+  unfolding side_cfg_T_eff_cmp_seed_def side_cfg_T_eff_cmp_def by simp
+
+text \<open>
   The combine analogue of the intra edge bound (\<open>seeded_clean_edge_bound\<close>): every
   combine predecessor \<open>(cc, ex)\<close> of a reached return node \<open>(v, ctx)\<close> contributes its
   reassembled tree value \<^term>\<open>traverse_rhs (cmb ctx cc ex) sg\<close> as a summand of the

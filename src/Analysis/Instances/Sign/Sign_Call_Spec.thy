@@ -1,5 +1,5 @@
 theory Sign_Call_Spec
-  imports "Voblint_Analysis.Call_Spec_Generator" Sign_Side_Soundness
+  imports "Voblint_Analysis.Call_Spec_Sound" Sign_Side_Soundness
 begin
 
 section \<open>Sign instance of the Goblint-inspired call specification (Stage 0)\<close>
@@ -31,10 +31,10 @@ interpretation Sign_spec:
   by unfold_locales simp_all
 
 text \<open>
-  The delivered soundness endpoint for this instance: a post-fixpoint of the keyed
-  generator over-approximates the context-sliced collecting semantics, given the six
-  candidate-solution premises.  It is \<open>context_collecting_soundness.context_collecting_sound\<close>
-  specialised to the sign fields.
+  The premise-level endpoint: \<open>context_collecting_soundness.context_collecting_sound\<close>
+  specialised to the sign fields, for candidate solutions certified by the six premises
+  directly (the digest-precise route).  Post-fixpoints of the configured generator use
+  \<open>sign_spec_post_fixpoint_sound\<close> below instead, which needs none of the six.
 \<close>
 
 thm Sign_spec.context_collecting_sound
@@ -62,5 +62,40 @@ lemma Sign_spec_generator_eq:
          (\<lambda>ctx cc ex. map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex)))
          (\<lambda>_. fresh_frame_sign) g sign_etf bot0 s0"
   by (simp add: Sign_spec.spec_generator_def Sign_spec_cmb_eq)
+
+subsection \<open>The Stage-0.5 endpoint: soundness from a post-fixpoint alone\<close>
+
+text \<open>
+  The Sign instance of \<open>spec_post_fixpoint_collecting_sound\<close>: a post-fixpoint of the
+  configured generator \<^const>\<open>Sign_spec.spec_generator\<close> (at the framed unit transfer
+  \<^const>\<open>sign_etf_unit\<close>) yields collecting soundness with \<^emph>\<open>no\<close> restatement of the six
+  candidate-solution premises.  The spec-level obligations are discharged once:
+  \<^item> \<open>seed_const\<close> --- the interpretation's \<open>entry_seed\<close> is literally \<open>(\<lambda>_. fresh_frame_sign)\<close>;
+  \<^item> transfer soundness --- @{thm [source] sign_sound_etf_unit_framed};
+  \<^item> \<open>single\<close> --- the unit key space is a singleton.
+  What remains are the standard solution well-formedness side conditions
+  (slot invariants, start cover, finiteness, variable covers).
+\<close>
+
+theorem sign_spec_post_fixpoint_sound:
+  fixes sigma :: "pp \<times> unit + unit \<Rightarrow> sign abs_state"
+  assumes pp: "part_post_solution (Sign_spec.spec_generator g sign_etf_unit bot0 s0) x sigma vars"
+    and inr: "inr_slot_locals_bot_ctx sigma"
+    and inl: "inl_slot_globals_bot_ctx sigma"
+    and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+    and finE: "finite (edges g)"
+    and finC: "finite (combines g)"
+    and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_comb: "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow> (ret, ()) \<in> vars"
+    and cover_entry: "(cfg_entry g, ()) \<in> vars"
+  shows "cfg_collect_ctx (\<lambda>_. ()) (\<lambda>_ _. True) g S v0 ()
+           \<le> \<lbrakk>side_env_cmp (\<lambda>_ _. True) sigma (v0, ())\<rbrakk>"
+proof -
+  have single: "{k::unit. True} = {()}" by auto
+  show ?thesis
+    by (rule Sign_spec.spec_post_fixpoint_collecting_sound
+          [OF refl sign_sound_etf_unit_framed single inr inl S_sound pp finE finC
+              cover_edge cover_comb cover_entry])
+qed
 
 end
