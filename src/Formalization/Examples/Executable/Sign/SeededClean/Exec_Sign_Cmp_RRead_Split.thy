@@ -4,6 +4,9 @@ begin
 
 section \<open>The D/G/C read split: R_read / G_read / Obs\<close>
 
+text \<open>\<^bold>\<open>Role: regression / counterexample.\<close> The headline \<open>clean_transfer_unsound\<close>
+  intentionally proves that the naive clean transfer is \<^emph>\<open>not\<close> sound, motivating the
+  R_read boundary.  A guardrail, not a soundness spine.\<close>
 text \<open>
   The three reads the Goblint \<open>Spec.context\<close> boundary distinguishes already exist
   as constants in the keyed stack; this theory makes the split explicit and pins

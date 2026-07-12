@@ -9,6 +9,10 @@ begin
 
 section \<open>Compiled mode context from the local state: what the pipeline does and does not do\<close>
 
+text \<open>\<^bold>\<open>Role: separate proved spine.\<close> The value-partition (mode) digest is its own
+  end-to-end soundness path (\<open>mode_collect_sound_witness\<close> on
+  \<open>Trace_Analysis_Sound.context_collect_sound\<close>), parallel to and independent of the
+  twfr recursive spine.\<close>
 text \<open>
   A source program is compiled to a CFG and analysed with the call context generated
   \<^emph>\<open>automatically\<close> by projecting the caller's ordinary local \<open>''mode''\<close> through

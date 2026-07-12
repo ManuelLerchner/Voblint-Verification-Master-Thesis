@@ -4,6 +4,10 @@ begin
 
 section \<open>Executable semantic entry-state context analysis (sign)\<close>
 
+text \<open>\<^bold>\<open>Role: executable precision regression.\<close> An \<open>eval\<close>-only witness that entry-state
+  contexts are strictly more precise than flat analysis.  The proved entry-context soundness
+  endpoint is \<open>semantic_entry_store_ctx_analysis_sound\<close>, instantiated executably by
+  \<open>Exec_Sign_Ctx_Gen_Run\<close>.\<close>
 text \<open>
   A runnable witness that the context-indexed analysis executes through the real
   vendored side solver and separates call contexts.  Contexts are keyed by the
