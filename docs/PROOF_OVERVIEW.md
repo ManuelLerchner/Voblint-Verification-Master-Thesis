@@ -117,6 +117,47 @@ Full chain: `side_sign_analysis_sound` ←
 `side_collect_sound_exit_pruned_eff_cone` ←
 `post_fixpoint_sound_at_eff` ← `CFG_Collect`.
 
+---
+
+## Canonical spine and analysis branches
+
+The context-sensitive analyses are **one layered tower**, not competing spines;
+five theorems close end-to-end soundness. Architecture diagram: repository
+`README.md` (§ Architecture).
+
+**Canonical end-to-end chain** — each step reuses the soundness of the one below:
+
+`cfg_collect_trace` → `Constraint_System_Sound` → `TD_Side_Eff_Soundness`
+(`side_analyse_eff_collect_sound_exit_pruned`) → entry-context
+(`TD_Side_Eff_Ctx_Sound.semantic_entry_store_ctx_analysis_sound`) → keyed/combine
+(`TD_Side_Eff_Cmp_Sound.post_fixpoint_sound_at_ctx_semantic_cmp_final`) →
+seeded-clean (`Clean_RRead_Sound.clean_ctx_collect_rread_head_bound`) →
+activation collecting (`Seeded_Activation_Sound.seeded_activation_collecting_sound`)
+→ `twf`/`twfr` witness (`Activation_Witness_From`) → recursive soundness
+(`Example_Rdiv_Twfr_Sound.rdiv_witness_G_over_approximated`).
+
+Steps two through five lie inside the dependency cone of the recursive flagship
+`Example_Rdiv_Twfr_Sound`: required support, not alternatives. The mode/value
+digest (`Trace_Analysis_Sound.context_collect_sound` →
+`Example_Sign_Mode_Digest.mode_collect_sound_witness`) is a *separate* proved spine.
+
+**Branch roles.** Every non-flagship theory is classified:
+
+| Role | Meaning | Representative |
+| --- | --- | --- |
+| Canonical spine | proved end-to-end soundness | `side_sign_analysis_sound`, `rdiv_witness_G_over_approximated` |
+| Required support | inside a flagship's dependency cone | context tower, return rehydration (`rdiv_rehyd_main_return_sound`) |
+| Regression / counterexample | intentional negative fact | `clean_transfer_unsound` (`¬ sound_effectful_transfer sign_etf_clean`) |
+| Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run`, `Exec_Sign_Cmp_Keyed_Solve` |
+| Design evidence | motivates a design; proves no soundness | `Example_Interval_Recursion_Digest` |
+
+**Retired.** The per-origin-widening experiment (`Origin_State`, `Origin_Lift`,
+`Example_Interval_Recursion_Origin`) was removed: isolated, outside every proved
+soundness endpoint, and its positive precision claim was never machine-checked
+(the per-origin solve exceeds the batch budget and lived only in prose). Its
+machine-checked negative regression `rec_warrowing_widens_to_top` survives
+unchanged in `Example_Interval_Recursion_Digest`.
+
 ## Keyed context branch
 
 The keyed-global context branch extends the side-effecting pipeline with
@@ -166,7 +207,7 @@ Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
 ## Adding a domain
 
 Same CFG, `rhs`, and `side_analyse_eff` once the domain fits the four-layer interface
-(see `src/Analysis/Domains/README.md` for the detailed chain):
+(see `src/Analysis/Instances/README.md` for the detailed chain):
 
 1. **Type class layer.** Instantiate `'a :: bounded_semilattice_sup_bot` — gives `⊥`, `⊔`, `≤` and lifts them pointwise to `'a abs_state` for free via HOL's `fun` instances.
 2. **Locale layer.** `interpretation … : abstract_domain gamma widen` and `interpretation … : sound_transfer gamma tf`. All derived lemmas (monotonicity, entry coverage, `side_collect_sound_ip_exit_pruned`) become available prefixed by the interpretation name.
