@@ -12,6 +12,10 @@ begin
 
 section \<open>A recursive interval analysis and the depth digest\<close>
 
+text \<open>\<^bold>\<open>Role: historical design evidence.\<close> The depth digest characterises why a
+  monovariant recursive analysis loses the global bound (\<open>rec_warrowing_widens_to_top\<close>);
+  it does not itself prove end-to-end soundness.  The canonical recursive soundness is
+  \<open>Example_Rdiv_Twfr_Sound\<close>.\<close>
 text \<open>
   A recursive procedure counts a global \<open>G\<close> up to 3.  Recursion over an
   infinite-height domain is the hard case for a context-free numeric analysis, and
