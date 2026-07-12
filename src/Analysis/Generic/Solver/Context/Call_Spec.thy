@@ -104,19 +104,23 @@ locale goblint_analysis_spec =
 subsection \<open>Soundness assembly\<close>
 
 text \<open>
-  The composed corollary wraps the existing \<open>context_domain.collect_ctx_sound_route\<close>:
-  \<^locale>\<open>trace_context_compatibility\<close> supplies the digest laws and the six
-  solution-dependent premises stay hypotheses.  No mathematics is reproved.
+  \<open>context_collecting_soundness\<close> packages \<^emph>\<open>collecting-semantics soundness\<close>, not
+  generator soundness: it wraps the existing \<open>context_domain.collect_ctx_sound_route\<close>,
+  with \<^locale>\<open>trace_context_compatibility\<close> supplying the digest laws.  The six
+  solution-dependent premises (\<open>ENTRY\<close> \<dots> \<open>ENTER_MONO\<close>, \<open>CMP_SOUND\<close> among them) stay
+  hypotheses on the candidate solution; the theorem does not produce that solution and
+  reproves no mathematics.
 
   Honest scope: this theorem consumes \<open>cmp\<close> / \<open>entdg\<close> / \<open>dg\<close> / \<open>gcmp\<close> / \<open>route\<close>; it does
-  \<^emph>\<open>not\<close> consume \<open>entry_seed\<close>, which configures the generator that produces the candidate
-  solution and enters soundness through \<open>PROC_ENTRY\<close> / \<open>CMP_SOUND\<close>.  Stage 0 declares the
-  contract and bridges its fields (\<open>own_slot_le_read\<close> here; \<open>spec_generator\<close> and
-  \<open>spec_cmb_realizes_combine\<close> in \<open>Call_Spec_Generator\<close>); deriving
-  the run premises from the contract is Stage 0.5.
+  \<^emph>\<open>not\<close> consume \<open>entry_seed\<close>, which configures the generator (\<open>spec_generator\<close> in
+  \<open>Call_Spec_Generator\<close>) that produces the candidate solution and enters soundness only
+  through the \<open>PROC_ENTRY\<close> / \<open>CMP_SOUND\<close> hypotheses.  Stage 0 declares the contract and
+  bridges its fields (\<open>own_slot_le_read\<close> here; \<open>spec_generator\<close> and
+  \<open>spec_cmb_realizes_combine\<close> in \<open>Call_Spec_Generator\<close>); discharging the solution
+  premises from the generated system is Stage 0.5.
 \<close>
 
-locale cmp_generator_soundness =
+locale context_collecting_soundness =
   goblint_analysis_spec start_context prep ctx_sel entdg cmp entry_seed gkey gcmp +
   trace_context_compatibility dg cmp entdg
   for start_context :: "'c"
@@ -130,7 +134,7 @@ locale cmp_generator_soundness =
     and dg :: "store list \<Rightarrow> 'c"
 begin
 
-theorem cmp_generator_sound:
+theorem context_collecting_sound:
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (cfg_entry g, ctx)\<rbrakk>"
     and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
