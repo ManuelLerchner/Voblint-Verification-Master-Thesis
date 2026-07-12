@@ -226,108 +226,141 @@ the first-class combine contract with no type surgery and no soundness reproof.
 
 This section refines Stage 0 into a design that can be transcribed to a theory directly. It
 stays over the **current single-`'a` state** (`'a abs_state = vname => 'a`) and changes **no**
-`abs_state`, `strategy_tree`, equation-system value type, or solver interface. The only new
-artifact is one locale plus one soundness corollary; the existing `Exec_Sign_Cmp_*` spine
-becomes its first interpretation.
+`abs_state`, `strategy_tree`, equation-system value type, or solver interface. The new artifact
+is a small **locale hierarchy** — `call_spec`, `global_routing_spec`,
+`trace_context_compatibility`, composed in `goblint_analysis_spec` — plus one soundness
+corollary; the existing `Exec_Sign_Cmp_*` spine becomes its first interpretation.
 
-### 6.1 What `call_spec` owns — and what it deliberately does not
+> **Revision note (interface critique incorporated).** An earlier draft used a constant
+> `enter :: 'a abs_state`, an under-specified `combine`, an `assign_ret` placeholder, and folded
+> `dg`/`gcmp` into one `call_spec`. Auditing the actual generator confirmed: (1) the seeded
+> generator uses **context-dependent** `frame_seed :: 'c => 'a abs_state`
+> (`Exec_Cmp_Bridge.thy:55,83`), so `enter` must be `enter_seed :: 'c => 'a abs_state`;
+> (2) `combines g :: (pp × pp × pp) set` (`IMP2_Proc_to_CFG.thy:131`) carries **no destination
+> lval**, so `assign_ret` has no referent and is dropped, not stubbed; (3) `dg :: store list => 'c`
+> is a collecting-semantics proof device, not executable call behaviour, so it moves to its own
+> `trace_context_compatibility`; (4) `gcmp` drives the keyed read `side_env_cmp`, i.e. global
+> routing, so it moves to `global_routing_spec`.
 
-`call_spec` packages exactly the **call-behaviour contract**: the pieces that decide how an
-activation enters, how caller and callee recombine, how a context is selected, and how globals
-are keyed. It does *not* absorb the per-edge transfer (`effectful_domain_transfer`), the
-generator `side_cfg_T_eff_cmp`, or the solver — those remain separate and unchanged. The
-generic soundness theorem `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`
-(`TD_Side_Eff_Cmp_Sound.thy:324`) already has ten premises; `call_spec`'s job is to own the
-subset that is call behaviour and prove them once, leaving the transfer/generator subset with
-`sound_effectful_transfer` where it already lives.
+### 6.1 Decomposition and premise ownership
 
-Premise ownership (from the theorem head at `TD_Side_Eff_Cmp_Sound.thy:324`):
+The ten premises of `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`
+(`TD_Side_Eff_Cmp_Sound.thy:324`) split cleanly across four concerns. Each locale owns exactly
+one concern; the composed soundness theorem consumes all four.
 
-| Premise | Owner | Why |
+| Premise | Owning locale | Why |
 |---|---|---|
-| `ENTRY`, `EDGE` | `sound_effectful_transfer` + generator | per-edge transfer soundness, not call behaviour |
-| `PROC_ENTRY` | `call_spec` (enter) + framed transfer | callee-entry frame bound |
+| `ENTRY`, `EDGE` | `sound_effectful_transfer` (transfer) | per-edge transfer soundness |
+| `PROC_ENTRY` | `call_spec` (`enter_seed`) + framed transfer | context-keyed callee-entry frame bound |
 | `LOCAL_POST` | generator post-solution | local slot monotone through combine — structural |
-| `CMP_SOUND` | **`call_spec` (combine)** | the global-half combine over-approximation |
-| `DG_INTRA`, `DG_RETURN`, `DG_CALLEE` | **`call_spec` (context/digest)** | digest stability laws |
-| `ENTER_MONO` | **`call_spec` (context selection)** | selected context compatible with `entdg` |
+| `CMP_SOUND` | `call_spec` (`combine`) + `global_routing_spec` (`gkey`,`gcmp`) | merge over-approximation read through the keyed slots |
+| `ENTER_MONO` | `call_spec` (context selection) + `global_routing_spec` (read) | selected context compatible with `entdg` |
+| `DG_INTRA`, `DG_RETURN`, `DG_CALLEE` | **`trace_context_compatibility`** (`dg`) | digest stability — proof infrastructure, not runtime config |
 
 ### 6.2 The interface (single-`'a`, implementation-ready)
 
-`call_spec` extends the existing `context_domain` (`Context_Domain.thy:32`) — reusing
-`start_context`, `ctx_sel`, `entdg`, `cmp`, `prep` verbatim — and adds the routing keys and the
-abstract call operations. All types are current; nothing below mentions `'l`/`'g` split.
+Four locales. `call_spec` and `global_routing_spec` are **executable analysis configuration**;
+`trace_context_compatibility` is **proof-only**. All types are current; nothing mentions `'l`/`'g`.
 
 ```isabelle
+(* --- executable call configuration: entry frame + caller/callee merge --- *)
 locale call_spec = context_domain +
-  (* --- global-slot routing (generator configuration) --- *)
-  fixes gkey :: "'c => 'g::finite"                         (* context -> global key *)
-    and gcmp :: "'c => 'g => bool"                         (* context/key compatibility *)
-  (* --- abstract call operations, over the current single-'a state --- *)
-    and enter      :: "'a::sound_domain abs_state"          (* callee-entry frame seed *)
+  fixes enter_seed :: "'c => 'a::sound_domain abs_state"     (* context-keyed callee-entry frame *)
     and combine    :: "'a abs_state => 'a abs_state => 'a abs_state"
-    and assign_ret :: "'a abs_state => 'a abs_state"        (* return write-back; today id *)
-    and dg         :: "store list => 'c"                    (* trace digest = context of a run *)
   assumes
-    (* enter: the transfer's enter edge is bounded by the frame joined with globals
-       (= sound_effectful_transfer_framed.etf_enter_framed_le, with fresh_frame := enter) *)
+    (* enter: the transfer's enter edge is bounded by the context frame joined with globals
+       (= sound_effectful_transfer_framed.etf_enter_framed_le, fresh_frame := enter_seed c) *)
     enter_framed:
-      "\<And>etf u \<sigma>. sound_effectful_transfer etf
+      "\<And>etf c u \<sigma>. sound_effectful_transfer etf
          \<Longrightarrow> inr_slot_locals_bot \<sigma> \<Longrightarrow> inl_slot_globals_bot \<sigma>
-         \<Longrightarrow> etf_full (etf_enter etf u) \<sigma> \<le> enter \<squnion> glob_env \<sigma>"
-  and (* combine: caller-sound s and callee-sound t recombine soundly
-         (= combine_states_sound, specialised to combine) *)
+         \<Longrightarrow> etf_full (etf_enter etf u) \<sigma> \<le> enter_seed c \<squnion> glob_env \<sigma>"
+  and (* merge: caller-sound s and callee-sound t recombine soundly (= combine_states_sound) *)
     combine_sound:
       "\<And>\<sigma>c \<sigma>e s t. s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> <s|t> \<in> \<lbrakk>combine \<sigma>c \<sigma>e\<rbrakk>"
-  and (* return write-back is sound (today assign_ret = id, trivially) *)
-    assign_ret_sound: "\<And>\<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>assign_ret \<sigma>\<rbrakk>"
-  and (* digest laws — exactly DG_INTRA / DG_RETURN / DG_CALLEE *)
+
+(* --- executable global-store routing: which keyed slot a context writes / reads --- *)
+locale global_routing_spec =
+  fixes gkey :: "'c => 'g::finite"                           (* context -> global write key *)
+    and gcmp :: "'c => 'g => bool"                           (* which keyed slots a context reads *)
+
+(* --- proof-only: the trace digest and its stability laws (no runtime role) --- *)
+locale trace_context_compatibility =
+  fixes dg  :: "store list => 'c"                            (* context of a concrete run *)
+    and cmp :: "'c => 'c => bool"
+    and entdg :: "store => 'c"
+  assumes
     dg_intra:  "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
   and dg_return: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
   and dg_callee: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau)
                      \<Longrightarrow> dg rho = entdg (last tau)"
-  and (* selected context is entdg-compatible — exactly ENTER_MONO, via route/ctx_sel *)
+
+(* --- the analysis specification: everything an analysis supplies to configure a run --- *)
+locale goblint_analysis_spec = abstract_domain + call_spec + global_routing_spec +
+  assumes
+    (* selected context is entdg-compatible — exactly ENTER_MONO, via route/ctx_sel + the keyed read *)
     enter_mono:
       "\<And>sigma ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>
          \<Longrightarrow> cmp (entdg s) (route cl ctx (route_read_cmp sigma (cl, ctx)))"
 ```
 
-`route` is the existing `context_domain.route` (`Context_Domain.thy:40`); `<_|_>`,
-`enter_state`, `glob_env`, `side_env_cmp`, `route_read_cmp`, `inr_slot_locals_bot`,
-`inl_slot_globals_bot`, `etf_full` are all existing constants — no new primitives.
+`route = context_domain.route` (`Context_Domain.thy:40`); `<_|_>`, `enter_state`, `glob_env`,
+`side_env_cmp`, `route_read_cmp`, `inr_slot_locals_bot`, `inl_slot_globals_bot`, `etf_full` are
+existing constants — no new primitives. `enter_mono` sits in `goblint_analysis_spec` (not
+`call_spec`) because it couples context selection (`route`/`ctx_sel`) to the keyed read
+(`side_env_cmp gcmp`), i.e. it spans call semantics *and* routing.
+
+**Why `combine` stays value-level `'a abs_state => 'a abs_state => 'a abs_state`.** Audit of the
+three consumers: the builder `cmb :: 'c => pp => pp => strategy_tree` (`TD_Side_Eff_Cmp_Gen.thy:53`)
+takes `(context, caller-pp, callee-exit-pp)` and produces a *routing* tree; `etf_combine :: pp => pp
+=> strategy_tree` (`Constraint_System.thy:435`) denotes the **site- and context-free** merge
+`<s|t>` (`combine_states`, `IMP2_Globals.thy:28`); `combines g` carries no destination. So the
+site/context/routing dependence lives in the *builder* and in `ctx_sel` (which derives the callee
+context, `route cc ctx a = ctx_sel cc ctx (prep cc a)`), **not** in the merge. The weakest
+sufficient value-level merge is therefore two states in, one out. Its extension arguments —
+caller context, callee context (both already handled by `ctx_sel`), and a return lval (once the
+CFG has one) — are deliberately **not** added now.
+
+**Honest caveat on `combine`.** In the current spine the merge is *fixed* to `combine_abs`
+(locals-from-caller, globals-from-callee); only the routing builder varies per analysis. So
+`combine` is a genuine contract field — it is exactly the Goblint-`combine` override point and it
+*is* consumed by `combine_sound`/`CMP_SOUND` — but today its only sound instance is `combine_abs`.
+It is kept (unlike `assign_ret`) because `combine_abs` is a real, referenced operation, whereas a
+return write-back has no referent in this language yet.
 
 ### 6.3 Field-by-field mapping
 
-| `call_spec` field | Current source | Semantic law | Theorem / proof step requiring it | Category |
-|---|---|---|---|---|
-| `start_context`, `ctx_sel`, `cmp`, `prep` | `context_domain` (`Context_Domain.thy:32-37`) | `route` collapse (`route_def`) | interpret step for premise 4/8 in `…sound_semantic` proof | call semantics |
-| `entdg` | `context_domain` (`:36`) | `dg_callee`, `enter_mono` | `DG_CALLEE`, `ENTER_MONO` | call semantics |
-| `dg` | per-instance `head_digest f` (`TD_Side_Eff_Cmp_Sound.thy:398`) | `dg_intra/return/callee` | `DG_INTRA/RETURN/CALLEE` | call semantics |
-| `enter` | `fresh_frame_sign` (`Sign_Side_Soundness.thy:103`) | `enter_framed` | `PROC_ENTRY`; `sound_effectful_transfer_framed.etf_enter_framed_le` (`Constraint_System.thy:~785`) | call semantics (frame); the `etf_enter` edge stays **transfer semantics** |
-| `combine` | `combine_abs` (`Constraint_System.thy:273`) | `combine_sound` (= `combine_states_sound`) | `CMP_SOUND` via `combine_read_cmp_le`/`combine_case_cmp_sound` (`TD_Side_Eff_Cmp_Sound.thy:63-72`) | call semantics; builder `cmb` is **generator config**; `etf_combine` is **transfer semantics** |
-| `assign_ret` | `id` (implicit — no return value in IMP2) | `assign_ret_sound` (trivial) | none today; extension point for a real return value | call semantics |
-| `gkey` | per-instance `'c => 'g` (unit / keyed) | routing commute `traverse_intra_cmp` (`TD_Side_Eff_Cmp_Gen.thy`) | `side_cfg_T_eff_cmp` `map_gtree` routing | generator config |
-| `gcmp` | single-key compat (`Global_Cmp_Read.thy:50,77` singleton collapse) | `side_env_cmp_singleton` | `CMP_SOUND` read collapse | generator config ↔ call semantics bridge |
+| Field | Locale | Current source | Semantic law | Proof step requiring it | Category |
+|---|---|---|---|---|---|
+| `start_context`, `ctx_sel`, `cmp`, `prep`, `entdg` | `context_domain` (`Context_Domain.thy:32-37`) | existing | `route` collapse (`route_def`) | interpret step, premises 4/8 | call semantics |
+| `enter_seed :: 'c => 'a abs_state` | `call_spec` | `frame_seed` (`Exec_Cmp_Bridge.thy:55,83`); const `fresh_frame_sign` (`Sign_Side_Soundness.thy:103`) is the unit-context case | `enter_framed` | `PROC_ENTRY`; `etf_enter_framed_le` (`Constraint_System.thy:~785`) | call semantics (frame); `etf_enter` edge stays **transfer semantics** |
+| `combine :: state => state => state` | `call_spec` | `combine_abs` (`Constraint_System.thy:273`) — merge is *fixed*, only routing varies | `combine_sound` (= `combine_states_sound`) | `CMP_SOUND` via `combine_read_cmp_le`/`combine_case_cmp_sound` (`TD_Side_Eff_Cmp_Sound.thy:63-72`) | call semantics; builder `cmb` is **generator config**; `etf_combine` is **transfer semantics** |
+| `gkey :: 'c => 'g` | `global_routing_spec` | per-instance (unit / keyed) | routing commute `traverse_intra_cmp` (`TD_Side_Eff_Cmp_Gen.thy`) | `side_cfg_T_eff_cmp` `map_gtree` routing | generator config / routing |
+| `gcmp :: 'c => 'g => bool` | `global_routing_spec` | singleton collapse (`Global_Cmp_Read.thy:50,77`) | `side_env_cmp_singleton` | `CMP_SOUND` keyed read | global-store routing |
+| `dg :: store list => 'c` | `trace_context_compatibility` | per-instance `head_digest f` (`TD_Side_Eff_Cmp_Sound.thy:398`) | `dg_intra/return/callee` | `DG_INTRA/RETURN/CALLEE` | **proof infrastructure** (not runtime) |
+| *(dropped)* `assign_ret` | — | no destination lval in `combines g` (`IMP2_Proc_to_CFG.thy:131`) | — | none | deferred until the CFG carries return destinations |
 
-### 6.4 Exact soundness assumptions and the delivered corollary
+### 6.4 Exact soundness assumptions and the composed corollary
 
-`call_spec` + `sound_effectful_transfer etf` (+ the generator post-solution hypothesis) discharge
-all ten premises of `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`:
+`goblint_analysis_spec` (= `abstract_domain` + `call_spec` + `global_routing_spec` + `enter_mono`)
+composed with `trace_context_compatibility` and `sound_effectful_transfer etf` (+ the generator
+post-solution hypothesis) discharge all ten premises:
 
-- `enter_framed`  ⟹ `PROC_ENTRY` (with the generator's frame seed `= enter`).
-- `combine_sound` + `gcmp` singleton ⟹ `CMP_SOUND` (through `combine_read_cmp_le`).
-- `dg_intra/return/callee` ⟹ `DG_INTRA/RETURN/CALLEE` (for a `head_digest`, already proved
-  generically at `TD_Side_Eff_Cmp_Sound.thy:401-409`).
-- `enter_mono` ⟹ `ENTER_MONO`.
+- `call_spec.enter_framed`  ⟹ `PROC_ENTRY` (generator frame seed `= enter_seed c`).
+- `call_spec.combine_sound` + `global_routing_spec.gcmp` singleton ⟹ `CMP_SOUND` (via `combine_read_cmp_le`).
+- `goblint_analysis_spec.enter_mono` ⟹ `ENTER_MONO`.
+- `trace_context_compatibility.dg_*` ⟹ `DG_INTRA/RETURN/CALLEE` (for a `head_digest`, already
+  proved generically at `TD_Side_Eff_Cmp_Sound.thy:401-409`).
 - `ENTRY`, `EDGE`, `LOCAL_POST` come from `sound_effectful_transfer` + the generator structure,
   unchanged.
 
-Delivered corollary (the one new theorem):
+Delivered corollary (the one new theorem), stated in the composition:
 
 ```isabelle
-theorem (in call_spec) cmp_generator_sound:
+theorem (in goblint_analysis_spec) cmp_generator_sound:
   assumes "sound_effectful_transfer etf"
-    and   "part_post_solution (side_cfg_T_eff_cmp gkey cmb_fixed g etf enter bot0 s0) x sigma vars"
+    and   "trace_context_compatibility dg cmp entdg"
+    and   "part_post_solution
+             (side_cfg_T_eff_cmp gkey cmb_fixed g etf (enter_seed ctx0) bot0 s0) x sigma vars"
     and   "single-key compat for gcmp"           (* side_env_cmp_singleton hypothesis *)
   shows   "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
 ```
@@ -335,54 +368,61 @@ theorem (in call_spec) cmp_generator_sound:
 where `cmb_fixed c cc ex = map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w,c)) (etf_combine etf cc ex))`
 is the certified builder whose obligation is already proved by
 `fixed_combine_satisfies_switching_combine_sound` (`TD_Side_Eff_Cmp_Gen.thy:912`).
+(The seeded generator applies `enter_seed c` per frame-entry context, `Exec_Cmp_Bridge.thy:83`.)
 
 ### 6.5 CMP instance mapping (Sign, unit-global)
 
-The current sign spine (`Sign_Side_Soundness.thy`) becomes one interpretation:
+The current sign spine becomes interpretations of the three configuration/proof locales:
 
 ```isabelle
-interpretation Sign: call_spec
-  start_context = enter_sign cinit          (* existing context policy *)
-  prep          = (\<lambda>_. id)
-  ctx_sel       = (\<lambda>cc ctx a. ctx)          (* unit-global: single context *)
-  entdg         = (\<lambda>s. head_digest (sign o (\<lambda>x. s (SOME g. is_global g))) ...)  (* the sign-of-global digest, A7.3 *)
-  cmp           = (=)                         (* or the existing sign cmp *)
-  gkey          = (\<lambda>_. ())                    (* unit global slot *)
-  gcmp          = (\<lambda>_ _. True)                (* join-all read; or singleton for keyed *)
-  enter         = fresh_frame_sign            (* Sign_Side_Soundness.thy:103 *)
-  combine       = combine_abs
-  assign_ret    = id
-  dg            = head_digest (...)           (* the existing head digest *)
+interpretation Sign: goblint_analysis_spec
+  (* context_domain *)
+  start_context = enter_sign cinit    prep = (\<lambda>_. id)
+  ctx_sel = (\<lambda>cc ctx a. ctx)          entdg = sign_of_global   cmp = (=)
+  (* call_spec *)
+  enter_seed = (\<lambda>_. fresh_frame_sign) (* unit context: constant is the degenerate case *)
+  combine    = combine_abs
+  (* global_routing_spec *)
+  gkey = (\<lambda>_. ())                      gcmp = (\<lambda>_ _. True)   (* keyed sign: non-trivial *)
+  <proof: enter_framed = sign_etf_unit_framed; combine_sound = combine_states_sound;
+          enter_mono = the existing sign enter-mono obligation>
+
+interpretation SignDg: trace_context_compatibility
+  dg = head_digest sign_of_global   cmp = (=)   entdg = sign_of_global
+  <proof: dg_intra/return/callee = generic head_digest_DG_* lemmas>
 ```
 
-Every assumption is already proved for these values: `enter_framed` is
-`sign_etf_unit_framed` (`Sign_Side_Soundness.thy:119`); `combine_sound` is `combine_states_sound`;
-`dg_*` are the generic `head_digest_DG_*` lemmas; `enter_mono` is the sole per-instance
-value-dependent obligation the sign proof already discharges. The keyed sign instance
-(`Exec_Sign_Cmp_Keyed_*`) is the same interpretation with `gkey`/`gcmp` non-trivial.
+`enter_framed` is `sign_etf_unit_framed` (`Sign_Side_Soundness.thy:119`); `combine_sound` is
+`combine_states_sound`; `dg_*` are the generic `head_digest_DG_*` lemmas; `enter_mono` is the sole
+per-instance value-dependent obligation the sign proof already discharges. The keyed sign instance
+(`Exec_Sign_Cmp_Keyed_*`) is the same with non-trivial `gkey`/`gcmp` and a genuinely
+context-dependent `enter_seed`.
 
 ### 6.6 What stays hard-coded vs. what becomes a wrapper
 
 - **Stays hard-coded (Stage 0):** `combine_abs`, `combine_states` (`<_|_>`), `enter_state`,
   `restrict_local`, `restrict_global`, `glob_env`, `side_env_cmp`, and the generator
-  `side_cfg_T_eff_cmp`. These are the *semantic reference* and the *state-partition plumbing*;
-  `call_spec` references them in its laws but does not replace them. They are exactly the
-  Stage-1 casualties, so leaving them untouched isolates Stage 0 from the type surgery.
-- **Becomes a `call_spec`-derived wrapper:** the generator's frame seed argument (`fresh_frame`
-  ↦ `call_spec.enter`), the combine builder (`cmb` ↦ `cmb_fixed` built from `call_spec` +
-  `etf_combine`), and the digest (`head_digest …` ↦ `call_spec.dg`). Instances stop passing
-  these positionally and instead interpret `call_spec`.
+  `side_cfg_T_eff_cmp`. These are the *semantic reference* and *state-partition plumbing*; the
+  locales reference them in laws but do not replace them. They are the Stage-1 casualties, so
+  leaving them untouched isolates Stage 0 from the type surgery. Note the merge `combine_abs` stays
+  the *only* sound `combine` instance — the merge is not yet analysis-varied (only routing is).
+- **Becomes a locale-derived wrapper:** the generator's frame-seed argument
+  (`frame_seed` ↦ `call_spec.enter_seed`), the combine builder (`cmb` ↦ `cmb_fixed` from
+  `combine` + `gkey` + `etf_combine`), and the digest (`head_digest …` ↦
+  `trace_context_compatibility.dg`). Instances stop passing these positionally and instead
+  interpret the locales.
 
 ### 6.7 Stage-0 implementation sequence (do not implement yet)
 
-1. Add `Call_Spec.thy` importing `TD_Side_Eff_Cmp_Sound` + `Context_Domain`; define the locale of
-   §6.2. No proofs beyond the locale declaration.
-2. Prove `cmp_generator_sound` (§6.4) inside the locale by feeding the assumptions into
-   `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`. All premises already have named discharges;
-   this is assembly, not new mathematics.
-3. Add the `head_digest` convenience sublocale/lemma so instances supply only `entdg` and get
-   `dg_intra/return/callee` for free (reuse `TD_Side_Eff_Cmp_Sound.thy:401-409`).
-4. Interpret `call_spec` for the unit-global sign spine (§6.5); re-derive the existing sign
+1. Add `Call_Spec.thy` importing `TD_Side_Eff_Cmp_Sound` + `Context_Domain`; define the three
+   configuration/proof locales and `goblint_analysis_spec` of §6.2. No proofs beyond the
+   declarations.
+2. Prove `cmp_generator_sound` (§6.4) in `goblint_analysis_spec` by feeding the four locales'
+   assumptions into `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`. All premises already have
+   named discharges; this is assembly, not new mathematics.
+3. Add the `head_digest` convenience lemma so a `trace_context_compatibility` instance follows from
+   supplying only `entdg` (reuse `TD_Side_Eff_Cmp_Sound.thy:401-409`).
+4. Interpret the locales for the unit-global sign spine (§6.5); re-derive the existing sign
    soundness endpoint as `Sign.cmp_generator_sound`. Keep the old theorem as a one-line alias so
    nothing downstream breaks.
 5. Interpret for the keyed sign and the interval spine; retire the positional generator calls in
@@ -393,12 +433,14 @@ interpretations without editing the generator or solver.
 
 ### 6.8 Expected proof impact (Stage 0)
 
-- **New theory `Call_Spec.thy`:** ~1 locale + 1 assembled theorem + 1 head-digest sublocale.
-  Low risk — the theorem is a re-packaging of an existing proof.
+- **New theory `Call_Spec.thy`:** three small locales (`call_spec`, `global_routing_spec`,
+  `trace_context_compatibility`) + `goblint_analysis_spec` + 1 assembled theorem + 1 head-digest
+  lemma. Low risk — the theorem is a re-packaging of an existing proof.
 - **`sound_effectful_transfer` / `..._framed`:** unchanged; `call_spec.enter_framed` is stated to
-  match `etf_enter_framed_le` so the existing interpretations feed it directly.
-- **Instance files (`Sign_Side_Soundness`, `Exec_Sign_Cmp_*`, interval):** add an `interpretation`
-  and an alias per endpoint. No proof reopened; risk is name-plumbing only.
+  match `etf_enter_framed_le` (with `fresh_frame := enter_seed c`) so existing interpretations feed
+  it directly.
+- **Instance files (`Sign_Side_Soundness`, `Exec_Sign_Cmp_*`, interval):** add locale
+  `interpretation`s and an alias per endpoint. No proof reopened; risk is name-plumbing only.
 - **No change** to `abs_state`, `strategy_tree`, `effectful_domain_transfer`, `side_cfg_T_eff_cmp`,
   `side_env_cmp`, or any solver theory. This is the defining constraint of Stage 0 and is
   satisfied because `call_spec` only *consumes* those types.
@@ -409,19 +451,23 @@ interpretations without editing the generator or solver.
    takes caller and callee as the *same* type. Stage 1 needs `combine :: 'a abs_state => 'g_state => 'a abs_state`
    (callee contributes only globals). The Stage-0 field is deliberately single-`'a`; the signature
    change is the first Stage-1 edit and cannot be hidden behind the locale.
-2. **`enter :: 'a abs_state` is a whole-state frame.** Its `is_global`-partitioned meaning
-   (`fresh_frame_sign` sets locals to `STop`, globals to `⊥`) is baked into `restrict_*`. Stage 1
-   must re-type it as a local frame `'a abs_state_local`.
+2. **`enter_seed :: 'c => 'a abs_state` returns a whole-state frame.** Its `is_global`-partitioned
+   meaning (`fresh_frame_sign` sets locals to `STop`, globals to `⊥`) is baked into `restrict_*`.
+   Stage 1 must re-type its codomain to a local frame `'a abs_state_local`; the `'c =>` shape is
+   Stage-1-stable, only the codomain splits.
 3. **`combine_sound` references `<s|t>` and `⟦_⟧`.** Both are single-store / single-gamma. Stage 1
    replaces them with a split combine and two gammas; the `call_spec` law must be re-stated, so
-   `call_spec` itself is *not* Stage-1-stable — it is the seam where the split lands.
+   `call_spec` is *not* Stage-1-stable — it is the seam where the split lands. `global_routing_spec`
+   and `trace_context_compatibility` are comparatively stable (routing keys and digests are already
+   region-agnostic).
 4. **`gcmp`/`side_env_cmp` read a single-`'a` slot.** The singleton collapse
    (`Global_Cmp_Read.thy:50`) assumes global values live in the same `'a`; a distinct global
-   lattice changes the read type.
+   lattice changes the read type in `global_routing_spec`.
 
-Net: Stage 0 gives a genuine analysis-provided call contract and a single soundness corollary
-without touching the value types; Stage 1 begins precisely by re-typing `call_spec.combine` and
-`call_spec.enter`, which is why building `call_spec` first is the right forcing function.
+Net: Stage 0 gives a genuine analysis-provided call contract and a single composed soundness
+corollary without touching the value types; Stage 1 begins precisely by re-typing
+`call_spec.combine` and `call_spec.enter_seed`'s codomain — which is why the decomposition (call
+semantics vs. routing vs. proof-only) matters: it localises the Stage-1 churn to `call_spec`.
 
 ---
 
