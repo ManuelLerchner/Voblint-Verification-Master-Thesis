@@ -29,6 +29,9 @@ concrete program, equation system, or precision witness.
 | `Example_Sign_Mode_Digest.thy` | **Sign flagship**: value-derived digest on a compiled program — call context projected from an ordinary local, global partitioned by the same projection; sound under join / per-origin / warrowing update rules; context-clustered annotated GraphViz (`mode_digest_dot`) |
 | `Example_Interval_Mode_Digest.thy` | **Interval flagship**: the sign flagship's sibling at the `ivl` domain, with a **while loop**; digest keeps `G` separated (`[0,5]`/`[9,9]`), a **proven-sound widening loop** (`wide_abstracts`), the update-rule menu, and annotated GraphViz (`iv_digest_dot`, `wide_dot`) |
 | `Example_Interval_Recursion_Digest.thy` | Recursive countup; the depth-digest that would recover full precision, with an honest account of the executable wall (P12): join non-terminates, warrowing widens `G` to top |
+| `Example_Interval_Recursion_Convergence.thy` | **Recursive interval flagship (1/3)**: the seeded-clean solve on `rdiv` terminates once empty intervals are canonicalised; each call site keeps its own context; context-clustered GraphViz |
+| `Example_Interval_Recursion_Rehydrate.thy` | **Recursive interval flagship (2/3)**: the rehydrating combine returns the recursive global `[3,3]` to `main` (no return values); a genuine solver post-fixpoint (`rdiv_rehyd_cover_post_fixpoint`) with the return chain and `rdiv_rehyd_main_return_sound` |
+| `Example_Rdiv_Twfr_Sound.thy` | **Recursive interval flagship (3/3)**: executable soundness of `rdiv` via the `twfr` witness spine — a bottom-up recursive witness reaching `main` continuation with `G = 3` and the per-coordinate over-approximation `rdiv_witness_G_over_approximated` (canonical twfr end-to-end result) |
 | `Example_Mode_Value_Digest_Showcase.thy` | Guided reading of `Example_Sign_Mode_Digest`'s value-carried digest run |
 | `Example_Digest_Pipeline_Showcase.thy` | **Canonical end-to-end showcase**: source → CFG → equations → strategy tree → TD-side solver → solution → digest projection → annotated CFG → GraphViz → soundness, executable on one program |
 | `Example_Finite_Sign_Context_Analysis.thy` | Finite sign-derived calling contexts; executable keyed `_st` run + finite-key soundness-facing theorem |
@@ -94,5 +97,15 @@ without a `local ⊔ global` read. Its `rehydrate_caller_continuation_sound` dis
 the `COMB` obligation of the generic `clean_ctx_collect_rread`. The retain / `side_env_cmp` interval examples stay as
 the conservative baseline; their loop / recursion imprecision is widening/warrowing-related,
 not D/G/C-related. See `docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
+
+**Recursive interval flagship (`twf`/`twfr` witness calculus):** the canonical
+recursive-interval story is a three-theory tower on the `rdiv` program, each
+adding one capability: `Example_Interval_Recursion_Convergence` (the seeded-clean
+solve terminates, context-sensitive), `Example_Interval_Recursion_Rehydrate` (the
+returned global is rehydrated back to `main` as a solver post-fixpoint), and
+`Example_Rdiv_Twfr_Sound` (executable soundness via a bottom-up `twfr` witness —
+`rdiv_witness_G_over_approximated`). The `twfr` witness calculus is the canonical
+recursive proof layer; per-coordinate over-approximation is the non-vacuous
+soundness statement (the full-store slot is provably empty for seeded-clean runs).
 
 **Session entry point:** `Voblint.thy` imports the curated example set for the umbrella document.
