@@ -469,6 +469,65 @@ corollary without touching the value types; Stage 1 begins precisely by re-typin
 `call_spec.combine` and `call_spec.enter_seed`'s codomain — which is why the decomposition (call
 semantics vs. routing vs. proof-only) matters: it localises the Stage-1 churn to `call_spec`.
 
+### 6.10 Stage-0 implementation deviations (2026-07-12)
+
+Implementing §6 surfaced four points where code evidence overrides the design sketch. These are
+authoritative for `Call_Spec.thy`.
+
+1. **The composed corollary already exists — Stage 0 wraps it, not the base theorem.**
+   `context_domain.collect_ctx_sound_route` (`TD_Side_Eff_Cmp_Sound.thy`) already restates
+   `side_cfg_T_eff_cmp_collect_ctx_sound_semantic` with `rt = route` and the locale's `entdg`/`cmp`,
+   taking `ENTRY/PROC_ENTRY/EDGE/LOCAL_POST/CMP_SOUND/DG_*/ENTER_MONO` as premises. Stage 0's
+   `cmp_generator_sound` is a thin wrapper that supplies `DG_*` from `trace_context_compatibility`.
+
+2. **`ENTER_MONO`/`enter_mono` is candidate-solution-specific → theorem-level premise, not a locale
+   assumption.** It mentions the candidate solution `sigma` (`s \<in> \<lbrakk>side_env_cmp gcmp sigma …\<rbrakk>`)
+   and is *provably not always dischargeable* — `Example_Finite_Sign_Context_Analysis` shows the
+   shared-context sign case where it (there called `n`) is unprovable, becoming provable only with
+   keyed globals. Per the Stage-0 rule "keep candidate-solution premises out of reusable locales",
+   it is a hypothesis of the soundness corollary, **not** an assumption of `goblint_analysis_spec`.
+   (§6.2's placement of `enter_mono` in `goblint_analysis_spec` is superseded by this.)
+
+3. **`enter_framed` is not a `call_spec` assumption.** `etf` is deliberately not a spec-locale
+   parameter, and the enter bound is transfer-specific (`sound_effectful_transfer_framed`, e.g.
+   `sign_etf_unit_framed`). `call_spec` carries only the sigma-/etf-free `combine_sound`; the enter
+   bound is discharged at the transfer layer when a run discharges `PROC_ENTRY`. `enter_seed`
+   remains a config field with no locale law (like `start_context`).
+
+4. **`abstract_domain` is a type class, not a locale.** `goblint_analysis_spec` cannot
+   `abstract_domain +`; the constraint rides the type variable (`'a::sound_domain`, the class the
+   soundness theorem actually needs). Composition is `goblint_analysis_spec = call_spec +
+   global_routing_spec`.
+
+Resulting shapes (as built):
+
+```isabelle
+locale call_spec = context_domain +
+  fixes enter_seed :: "'c => 'a::sound_domain abs_state"
+    and combine    :: "'a abs_state => 'a abs_state => 'a abs_state"
+  assumes combine_sound:
+    "\<And>sc se s t. s \<in> \<lbrakk>sc\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>se\<rbrakk> \<Longrightarrow> <s|t> \<in> \<lbrakk>combine sc se\<rbrakk>"
+
+locale global_routing_spec =
+  fixes gkey :: "'c => 'g::finite" and gcmp :: "'c => 'g => bool"
+
+locale trace_context_compatibility =
+  fixes dg :: "store list => 'c" and cmp :: "'c => 'c => bool" and entdg :: "store => 'c"
+  assumes dg_intra … and dg_return … and dg_callee …
+
+locale goblint_analysis_spec = call_spec + global_routing_spec
+
+(* soundness assembly *)
+locale cmp_generator_soundness = goblint_analysis_spec + trace_context_compatibility
+begin
+theorem cmp_generator_sound:
+  assumes ENTRY … PROC_ENTRY … EDGE … LOCAL_POST … CMP_SOUND … ENTER_MONO …   (* all sigma-dependent *)
+  shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
+  by (rule collect_ctx_sound_route[OF ENTRY PROC_ENTRY EDGE LOCAL_POST CMP_SOUND
+                                       dg_intra dg_return dg_callee ENTER_MONO])
+end
+```
+
 ---
 
 ## Appendix — audited symbols and locations
