@@ -18,7 +18,7 @@ domains supply their own `'d` and discharge the same four facts.
 
 Five spots, in dependency order. File:line as of authoring.
 
-1. **Representation type** — `src/Analysis/Domains/Abstract_Domain.thy:23`
+1. **Representation type** — `src/Analysis/Generic/Domain/Abstract_Domain.thy`
    `type_synonym 'a abs_state = "vname => 'a"`. One independent abstract
    value per variable. This *is* the nonrelational commitment.
 
@@ -30,7 +30,7 @@ Five spots, in dependency order. File:line as of authoring.
    `instance "fun" :: (..) bounded_semilattice_sup_bot`. Join/bot lifted
    componentwise. A relational join is *not* pointwise.
 
-4. **Per-transfer soundness** — `src/Analysis/Equations/Constraint_System.thy:519`
+4. **Per-transfer soundness** — `src/Analysis/Generic/Equations/Constraint_System.thy`
    (`sound_transfer` locale). Phrased via `gamma_state`, inherits the box.
 
 5. **Variable-projection combinators** — `combine_abs`
@@ -42,16 +42,16 @@ Five spots, in dependency order. File:line as of authoring.
 The **core soundness theorem already speaks store-sets, not boxes**:
 
 ```
-trace_ip_analysis_sound : cfg_collect_trace_ip g S v  <=  gamma_state (env v)
+trace_analysis_sound : alpha_last (cfg_collect_trace g S v) <= gamma_state (env v)
 ```
 
 `gamma_state :: 'a abs_state => store set` — a set-of-stores inclusion, the
 relational-compatible shape. The box structure is unfolded (`gamma_state_def`)
 only in the leaf read corollaries that project to a single variable
-(`src/Formalization/Pipeline/Trace_IP_Analysis_Sound.thy:77,137`):
+(`src/Formalization/Pipeline/Trace_Analysis_Sound.thy`):
 `(last tr) x \<in> gamma (env v x)`.
 
-The solver-soundness chain (`src/Analysis/Solver/TD_Side_IP_Eff_Soundness.thy`)
+The solver-soundness chain (`src/Analysis/Generic/Solver/Core/TD_Side_Eff_Soundness.thy`)
 depends on `gamma_state` through exactly **four abstract facts**, never its
 structure:
 
@@ -167,9 +167,9 @@ spine edits.
 
 - `Abstract_Domain.thy`: `rel_domain` locale + box `interpretation`.
 - `Constraint_System.thy`: generalize transfer carrier + `sound_transfer`.
-- `TD_Side_IP_Eff_Soundness.thy` / `Trace_IP_Analysis_Sound.thy`:
+- `TD_Side_Eff_Soundness.thy` / `Trace_Analysis_Sound.thy`:
   `gamma_state` -> `gamma_st`, optional read assumption.
-- New `src/Analysis/Domains/Rel_Order_Domain.thy`.
+- New `src/Analysis/Instances/Relational/Rel_Order_Domain.thy` or another dedicated instance folder.
 - IP combine: restricted/conservative combinator + soundness, or defer.
 
 ## Open questions

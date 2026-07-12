@@ -61,10 +61,10 @@ Optional / removed from main path:
 | P1 | `side_cfg_solve_dom_eff` assumed | `Sign_Side_Soundness.thy` | "If TD side terminates, result is sound" | Cleaner main theorem; total correctness |
 | P2 | ~~`td_cfg_in_reach`~~ | was classical `Pipeline.thy` | **done** 2026-06-01 — Fix B; classical spine retired | (historical) |
 | P3 | `comp_fun_idem (ac_join cfg)` | classical `Pipeline.thy` | **done** 2026-05-27 (`join_state_comp_fun_idem`); classical spine retired | (historical) |
-| P4 | Interval domain | not in current tree | Second numeric domain | Wider thesis scope |
+| P4 | Interval domain | `Interval_Domain.thy`, `Interval_Side_Soundness.thy` | **done** — interval is in the current tree and has `side_ivl_analysis_sound`; remaining interval work is precision/termination, not domain existence | Wider thesis scope |
 | P5 | `pp = nat` vs TD `finite UNIV` | `CFG_Def.thy`, vendored TD | Termination locale type finiteness | Generic termination claim |
 | P6 | TD total correctness | was `TD_Total.thy` | **file removed**; reopen if totality returns | Total correctness |
-| P7 | Widening soundness | not in current tree | Feeds termination track | Interval + widening |
+| P7 | Widening / warrowing soundness | `Interval_Warrowing.thy`, executable interval examples | partially done — value-domain operators and executable witnesses exist; generic solver termination remains P1/P5 | Interval + widening |
 | P8 | `quick_and_dirty` in `ROOT` | `ROOT` | **done** — removed | — |
 | P9 | Executable end-to-end limited | `Example_Side_Proc_Global.thy` | Concrete solve_dom witness needed | In-Isabelle execution |
 | P10 | `Direct_Equations` | was `Equations/Direct_Equations.thy` | **deleted** — CFG path is the only route | — |
@@ -115,7 +115,7 @@ where `T = make_rhs_tree (to_cfg c) tf join bot s0` and
   `z \<in> dep T sigma y` then `z \<in> reach T sigma x`.
 - `dep T sigma y = dep_aux sigma (T y)` (`Basics.thy:212`) is the set of
   `Query` targets in the strategy tree at `y`.
-- `make_rhs_tree g tf join bot s0 v` (`src/Solver/TD_CFG_Core.thy:62`)
+- `make_rhs_tree g tf join bot s0 v` (retired `TD_CFG_Core` theory)
   builds the forward dataflow equation: `Query` nodes target
   `predecessor_list g v`.
 - Therefore `dep T sigma v` = CFG predecessors of `v`, and
@@ -148,7 +148,7 @@ a false premise.
 
 #### Where it bites in the proof
 
-`td_env_post_fixpoint` (`src/Solver/TD_Interface.thy:38-58`) closes the
+`td_env_post_fixpoint` (retired `TD_Interface` theory) closes the
 post-fixpoint goal at arbitrary `v` via
 
 ```
@@ -233,12 +233,12 @@ fold P2 into the B3 refactor rather than fix it standalone first.
 
 See previous table (routes a/b/c). Partial-correctness thesis may keep P1 explicit.
 
-### P4 / P7 — interval domain
+### P4 / P7 — interval domain and widening
 
-Sign end-to-end proved (`side_sign_analysis_sound`; carries P1 only). Interval
-domain not in current tree — was in classical spine (sibling repo). Adding it
-requires only a `sound_transfer` interpretation for interval transfer functions;
-no architectural changes needed.
+Sign and interval end-to-end soundness are both in the current tree
+(`side_sign_analysis_sound`, `side_ivl_analysis_sound`; both carry P1 as needed).
+The remaining interval work is precision and termination engineering, not
+introducing the domain.
 
 ### P6 — TD total correctness
 
@@ -270,7 +270,7 @@ instance. See `DIGEST_INDEXED_READER_MIGRATION.md` and the "Writer re-keying" su
 below. `cstep` demoted to fallback.
 
 The value-dependent (switching) route in
-`src/Formalization/Examples/Example_Finite_Sign_Context_Analysis.thy` cannot
+`src/Formalization/Examples/Digest/Example_Finite_Sign_Context_Analysis.thy` cannot
 discharge `ENTER_MONO` (`Voblint_Analysis.TD_Side_Eff_Cmp_Sound`). `ENTER_MONO`
 quantifies over the observation concretisation `gamma (side_env_cmp sigma (cl,
 ctx))` and needs it exact on the digest variable `G`. It is not, and no
@@ -679,6 +679,6 @@ and the canonical-path statement live in `docs/WITNESS_CALCULUS_REPAIR.md`.
 1. `rg -n '^\s*sorry' src/ | rg -v '\.thy~'`
 2. `docs/PROOF_OVERVIEW.md` — current theorem names
 3. `src/Formalization/Pipeline/Trace_Analysis_Sound.thy` — `trace_analysis_sound`, `reaching_global_read_sound`
-4. `src/Analysis/Domains/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`
+4. `src/Analysis/Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`
 5. Open TD hyp: P1 (`side_cfg_solve_dom_eff`) only
 6. MCP-first workflow: `AGENTS.md`

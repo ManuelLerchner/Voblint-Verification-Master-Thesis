@@ -14,10 +14,11 @@ The layer is split into three concerns, one subfolder each:
 | `Exec/` | the `'a st` executable mirror and `fun_of_st` transport |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
-This layer wires `part_post_solution` to `is_post_fixpoint` via `Generic/Equations/Constraint_System_Sound`.
+This layer wires `part_post_solution` to `is_post_fixpoint` via
+`src/Analysis/Generic/Equations/Constraint_System_Sound.thy`.
 
-**Downstream:** `Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
-`Instances/Interval/Interval_Side_Soundness.thy`; `Formalization/Pipeline/Trace_Analysis_Sound.thy`.
+**Downstream:** `src/Analysis/Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
+`src/Analysis/Instances/Interval/Interval_Side_Soundness.thy`; `src/Formalization/Pipeline/Trace_Analysis_Sound.thy`.
 
 ## `Core/`
 

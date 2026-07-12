@@ -45,7 +45,7 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 | `DIGEST_INDEXED_READER_MIGRATION.md` | **RETIRED** — the RD family it describes was removed (`92739cf`); historical |
 | `CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` | IN PROGRESS |
 | `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` | IN PROGRESS (Phase A landed) |
-| `DOMAIN_INTERFACE_MINIMIZATION.md` | IN PROGRESS |
+| `DOMAIN_INTERFACE_MINIMIZATION.md` | historical plan — superseded by the type-class/domain split now reflected in source READMEs |
 | `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` | Track B done; Track A open |
 | `TRACE_CONTEXT_BRIDGE_MIGRATION.md` | Partially done |
 | `P1_TOTAL_CORRECTNESS_ROUTE.md` | Open (GitHub #14) |

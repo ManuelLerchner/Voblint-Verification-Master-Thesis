@@ -52,6 +52,8 @@ concrete program, equation system, or precision witness.
 | `Example_Proc_Call.thy` | Interval analysis of `inc`/`sqr` via global `Gx`; structural DOT |
 | `Example_Side_Execute.thy` | Minimal certified sign IP run (`x := 1`) |
 | `Example_Side_Branch_Calls.thy` | Branching procedure called twice; flow-sensitive locals |
+| `Example_Seed_Clean_Context.thy` | Seeded-clean context witness on a two-call program |
+| `Example_Proc_Recursion_CFG.thy` | Recursive procedure CFG layout regression |
 
 Each of the four `inc`-based examples defines its own program locally (self-contained);
 `Example_Inc_Proc` is the standalone witness proving what they assume.

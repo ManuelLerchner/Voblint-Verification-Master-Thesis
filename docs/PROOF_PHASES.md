@@ -48,6 +48,7 @@ As of last full-session build: **0 sorries** in `src/`.
 | `CFG_Collect.thy` | edge/path transfer, `cfg_collect` — IP collecting with combine triples, and the path-to-lfp bridge |
 | `CFG_Collect_Runs.thy` | `cfg_runs_to`, run-to-exit collecting witness |
 | `CFG_Collect_Trace.thy` | `cfg_collect_trace`, `alpha_last`, projection lemma; shared trace machinery |
+| `CFG_Collect_Activation.thy` | activation-indexed trace collecting for call-only contexts |
 
 ### Equations + unified soundness
 
@@ -68,7 +69,7 @@ As of last full-session build: **0 sorries** in `src/`.
 ### Pipeline + domain
 
 - `trace_analysis_sound`, `reaching_global_read_sound`, `reaching_global_read_sound_d`, `flat_env_is_digest_sound` (`Trace_Analysis_Sound.thy`).
-- `side_sign_analysis_sound`, `side_ivl_analysis_sound` (`Sign_Side_Soundness.thy`).
+- `side_sign_analysis_sound` (`Sign_Side_Soundness.thy`), `side_ivl_analysis_sound` (`Interval_Side_Soundness.thy`).
 - `named_analysis_sound` (`Sign_Named_Global_Eff.thy`) — non-unit `'g` witness for named-global routing.
 - `proc_global_side_sign_analysis` (`Example_Side_Proc_Global.thy`) — concrete procedural witness.
 

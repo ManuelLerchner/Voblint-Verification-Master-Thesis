@@ -9,7 +9,7 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 
 **Done**
 
-- Full IP soundness chain: IMP2 with procedures → interprocedural CFG → `cfg_collect` → side-effecting TD solver → `trace_ip_analysis_sound` / `reaching_global_read_sound`.
+- Full IP soundness chain: IMP2 with procedures -> interprocedural CFG -> `cfg_collect` -> side-effecting TD solver -> `trace_analysis_sound` / `reaching_global_read_sound`.
 - Sign and Interval domain end-to-end on the standalone effectful path: `side_sign_analysis_sound`, `side_ivl_analysis_sound`, executable `sign_exec_sound_collecting` via `Exec_Bridge`.
 - **Effectful spine is the sole spine** (2026-06-18): all pure-only solver files (`TD_Side_IP_Soundness`, `TD_Side_IP_Interface`, `TD_Side_IP_Bounds`, `TD_Side_IP_Mono`) deleted; `side_cfg_T_ip_eff` is the only equation system; shim mono in `TD_Side_Eff_Soundness`, transport in `Exec_Bridge` via direct fold simulation.
 - **0 sorries** in `src/`.
@@ -113,7 +113,7 @@ Later:     Interval domain OR digest precision — one of, not both
 ## Thesis milestone (next "done" slice)
 
 > IP trace soundness with **only `side_cfg_solve_dom`** as explicit hypothesis,
-> plus thesis chapter covering `trace_ip_analysis_sound` / `reaching_global_read_sound`.
+> plus thesis chapter covering `trace_analysis_sound` / `reaching_global_read_sound`.
 
 ---
 

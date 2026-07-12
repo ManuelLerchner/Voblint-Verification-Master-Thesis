@@ -9,13 +9,13 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalizatio
 ```
 
 - Solver session is **`TD`** from `vendor/td-verification` (not a separate AFP `Top_Down_Solver` path).
-- `sorry` in batch needs `options [quick_and_dirty]` in `ROOT`.
+- Current `ROOT` files do not enable `quick_and_dirty`; keep `src/` sorry-free.
 - Run `make vendor` before the first build if `vendor/td-verification` is missing.
 
 ## MCP (I/R)
 
 - HTTP MCP: `localhost:9148`; REPL `connect` uses TCP **`9147`** (not 9148).
-- After disk edits: `load_theory` with fully qualified names (`Voblint_Formalization.CFG_Runs_To_Bridge`).
+- After disk edits: `load_theory` with fully qualified names (for example, `Voblint_CFG.CFG_Collect_Runs`).
 - `step`: one Isar line per call.
 - Prefer `blast` / `auto` / `meson` from sledgehammer; verify `metis` with a full build.
 
@@ -42,9 +42,9 @@ isabelle build -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalizatio
 
 ## Workflow
 
-1. `isabelle build …` until green (or expected sorries only).
+1. `isabelle build …` until green.
 2. MCP: `load_theory`, small REPL `init`.
 3. Trial tactics in `step` / `explore`; paste `blast`/`auto`/`meson` first.
 4. If automation fails, 5–15 lines of structured Isar; hoist hard subgoals as lemmas.
 
-CFG maintenance: `docs/walkthrough/cfg/collecting/index.html` and `src/CFG/Collecting/README.md`.
+CFG maintenance: `src/CFG/README.md` and `src/CFG/Collecting/README.md`.

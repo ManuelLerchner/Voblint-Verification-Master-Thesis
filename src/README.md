@@ -24,9 +24,10 @@ IMP2 (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD s
 | [`IMP2/`](IMP2/) | [README](IMP2/README.md) | Source language syntax, procedures, globals/locals split, small-step semantics |
 | [`CFG/`](CFG/) | [README](CFG/README.md) | Control-flow graphs, interprocedural compilation, paths |
 | [`CFG/Collecting/`](CFG/Collecting/) | [README](CFG/Collecting/README.md) | IP collecting semantics (`cfg_collect`), trace collecting, run-to-exit projection |
-| [`Analysis/Domains/`](Analysis/Domains/) | [README](Analysis/Domains/README.md) | Abstract domains and native effectful transfer records (`sign_etf`, `ivl_etf`) |
-| [`Analysis/Equations/`](Analysis/Equations/) | [README](Analysis/Equations/README.md) | CFG → IP equation system + fixpoint soundness |
-| [`Analysis/Solver/`](Analysis/Solver/) | [README](Analysis/Solver/README.md) | TD side solver bridge (`TD_Side_Tree (tree construction only)`, `TD_Side_Eff_*`, soundness) |
+| [`Analysis/Generic/Domain/`](Analysis/Generic/Domain/) | [README](Analysis/Generic/Domain/README.md) | Abstract-domain classes and executable state representation |
+| [`Analysis/Generic/Equations/`](Analysis/Generic/Equations/) | [README](Analysis/Generic/Equations/README.md) | CFG -> IP equation system + fixpoint soundness |
+| [`Analysis/Generic/Solver/`](Analysis/Generic/Solver/) | [README](Analysis/Generic/Solver/README.md) | TD side solver bridge (`Core/`, `Context/`, `Exec/`) |
+| [`Analysis/Instances/`](Analysis/Instances/) | [README](Analysis/Instances/README.md) | Concrete domains and native effectful transfer records (`sign_etf`, `ivl_etf`) |
 | [`Formalization/Pipeline/`](Formalization/Pipeline/) | [README](Formalization/Pipeline/README.md) | End-to-end soundness and mixed-flow optimality (`trace_analysis_sound`, `mixed_flow_analysis_optimal`) |
 | [`Formalization/Examples/`](Formalization/Examples/) | [README](Formalization/Examples/README.md) | Concrete demonstrations and precision examples |
 

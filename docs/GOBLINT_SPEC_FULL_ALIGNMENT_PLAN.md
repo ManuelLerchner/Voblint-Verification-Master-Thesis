@@ -8,7 +8,7 @@ structural gaps between our proof and Goblint's full `Spec` / `GlobConstrSys`
 interface, and sketches what closing each would require. None of this is required
 for the thesis; it is a roadmap for post-thesis extension.
 
-Related: `src/Analysis/Equations/README.md` §Scope vs. Voblint's actual framework —
+Related: `src/Analysis/Generic/Equations/README.md` §Scope vs. Voblint's actual framework —
 deliberately lists these extensions as out of scope for the current thesis axis.
 
 ---
@@ -245,6 +245,6 @@ For a post-thesis extension:
 | `INTERVAL_REINTRODUCTION_PLAN.md` | Partial Gap 6 (widening needed for termination) |
 | This document | Gaps 3–7 (long-term) |
 
-The thesis statement in `src/Analysis/Equations/README.md` explicitly scopes these
+The thesis statement in `src/Analysis/Generic/Equations/README.md` explicitly scopes these
 gaps out. That framing is correct and should be kept. This document exists so the
 gaps are named, estimated, and not forgotten.

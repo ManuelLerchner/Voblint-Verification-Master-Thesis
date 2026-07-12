@@ -14,6 +14,12 @@ the digest read from. See `../README.md` for the Core/Context/Exec split.
 | `TD_Side_Eff_Cmp_Pull.thy` | `cmp_edge_sound` / `cmp_entry_sound` — the EDGE/ENTRY discharge |
 | `TD_Side_Eff_Cmp_Gen.thy` | generator-level cmp soundness |
 | `TD_Side_Eff_Ctx_Sound.thy` | context-indexed pullback soundness |
+| `Clean_RRead_Sound.thy` | clean read-side soundness for D/G/C-style seeded runs |
+| `Seeded_Clean_Ctx_Collect.thy` | context collecting facts used by seeded-clean examples |
+| `Seed_EnterMono_Lift.thy` | enter-monotonicity lifting helpers for seeded contexts |
+| `Seeded_Activation_Reach.thy` | activation reachability infrastructure |
+| `Seeded_Activation_Sound.thy` | seeded activation collecting soundness |
+| `Activation_Witness_From.thy` | `twf` / `twfr` witness layer for recursive examples |
 | `Value_Digest_Reader.thy` | generic value-projected reader locale (`value_digest_reader`, `vd_obs`); the sign mode reader (`Instances/Sign/Value_Digest_Read`) instantiates it |
 | `Digest_Keyed_Writer.thy` | value-derived (mode) keyed global writer |
 | `Digest_Keyed_Writer_Sound.thy` | its soundness + `part_post_solution_digest_st_to_abs_eff` transport |

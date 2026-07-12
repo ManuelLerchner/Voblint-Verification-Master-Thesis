@@ -12,3 +12,4 @@ a thin corollary. See `../README.md` for the Core/Context/Exec split.
 | `Exec_Ctx_Bridge.thy` | context / context-seeded generator transport (`part_post_solution_ctx{,_seeded}_st_to_abs_eff`) |
 | `Exec_Cmp_Bridge.thy` | cmp generator transport (`part_post_solution_cmp_st_to_abs_eff`) |
 | `Solver_Side_RG.thy` | reach-global lemmas shared by the bridges |
+| `Solver_Menu.thy` | executable menu over join, per-origin, and warrowing solver update rules |

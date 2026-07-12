@@ -21,7 +21,9 @@ is the worked instance.
 At **every** program point `v`, the analyzer's post-fixpoint `env`
 over-approximates the CFG collecting semantics:
 
-$$\mathrm{cfg\_{collect}}\ g\ S\ v \;\subseteq\; \gamma(\mathrm{env}\ v)$$
+$$
+\mathrm{cfg}_{\mathrm{collect}}\ g\ S\ v \subseteq \gamma(\mathrm{env}\ v)
+$$
 
 This is **proved and `sorry`-free** (`trace_analysis_sound`; Sign instance
 `side_sign_analysis_sound`).
@@ -31,18 +33,24 @@ on the *trace* collecting semantics `cfg_collect_trace` (the ordered runs, not j
 the reachable states) — history-sensitive globals need to know *which* writes reach
 a read. The state-level `cfg_collect` is its `alpha_last` projection:
 
-$$\mathrm{cfg\_{collect}}\ g\ S\ v \;=\; \alpha_{\mathrm{last}}\bigl(\mathrm{cfg\_{collect}\_{trace}}\ g\ S\ v\bigr)$$
+$$
+\mathrm{cfg}_{\mathrm{collect}}\ g\ S\ v =
+\alpha_{\mathrm{last}}\bigl(\mathrm{cfg}_{\mathrm{collect\_trace}}\ g\ S\ v\bigr)
+$$
 
 so proving over-approximation at the trace level hands us the `cfg_collect ⊆ γ`
 statement above for free. The trace form is only *needed* for the per-global
-reaching-read theorem `reaching_global_read_sound`. For the headline over-
-approximation, `cfg_collect ⊆ γ` is the whole story.
+reaching-read theorem `reaching_global_read_sound`. For the headline
+over-approximation, `cfg_collect ⊆ γ` is the whole story.
 
 **Next step — compiler correctness.** `cfg_collect` is currently the specification.
 Once `compile_prog` is verified against the IMP2 *source* semantics end-to-end,
 the guarantee lifts to the program level:
 
-$$\mathrm{reach}_{\mathrm{IMP2}}(c)\ \text{at}\ v \;\subseteq\; \gamma(\mathrm{env}\ v)$$
+$$
+\mathrm{reach}_{\mathrm{IMP2}}(c)\ \text{at}\ v
+\subseteq \gamma(\mathrm{env}\ v)
+$$
 
 The backward bridge (`IMP2_Bridge.thy`) already anchors terminating runs to AFP
 IMP2 big-step; the full source-to-CFG collecting equivalence is the remaining
@@ -83,8 +91,9 @@ flowchart TB
   subgraph S2["Voblint_CFG · control-flow graph"]
     G1["IMP2_Proc_to_CFG<br/>compile_prog"]
     G2["CFG_Def / CFG_Path<br/>edges · combines · paths"]
-    G3["CFG_Collect_Trace<br/>cfg_collect_trace · alpha_last"]
-    G4["CFG_Collect<br/>cfg_collect · cfg_runs_to"]
+    G3["CFG_Collect<br/>cfg_collect"]
+    G4["CFG_Collect_Runs<br/>cfg_runs_to"]
+    G7["CFG_Collect_Trace<br/>cfg_collect_trace · alpha_last"]
     G5["CFG_Collect_Activation<br/>activation-indexed collecting"]
     G6["CFG_Prune<br/>reachability cone"]
   end
@@ -112,10 +121,10 @@ flowchart TB
   L1 --> L2 --> G1
   L3 --> G1
   L4 -. reference .-> G1
-  G1 --> G2 --> G3 --> G4
-  G3 --> G5
+  G1 --> G2 --> G3 --> G4 --> G7
+  G7 --> G5
   G2 --> G6
-  G4 --> C1 --> C2 --> C3
+  G3 --> C1 --> C2 --> C3
   TD --> C2
   C3 --> TOWER
   G5 --> T4
@@ -123,7 +132,7 @@ flowchart TB
   D1 --> EX
   D1 --> F0
   D1 --> FM
-  G3 --> FT
+  G7 --> FT
   T5 --> F1
   FT --> F2
   D1 --> GV
@@ -293,8 +302,8 @@ make AFP=/path/to/afp/thys build
 | `make html` | browser info → `docs/html/` (CI deploys to GitHub Pages on `main`) |
 | `make clean` / `clean-vendor` | remove built heaps / vendored sources |
 
-`quick_and_dirty` is set in `ROOT`, so `sorry` placeholders are permitted during
-development. See `src/README.md` for the per-layer map.
+The checked source tree is sorry-free; `ROOT` files do not enable
+`quick_and_dirty`. See `src/README.md` for the per-layer map.
 
 ## Layout
 

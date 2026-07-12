@@ -20,7 +20,7 @@ One equation per program point: join over predecessor edges + combine triples.
 **Imports:** `Constraint_System` → `Generic/Domain/Abstract_Domain`, CFG layer.
 `Analysis_Sound` → `Constraint_System_Sound`.
 
-**Downstream:** `Generic/Solver/TD_Side_Eff_Soundness.thy` bridges `part_post_solution`
+**Downstream:** `src/Analysis/Generic/Solver/Core/TD_Side_Eff_Soundness.thy` bridges `part_post_solution`
 to `is_post_fixpoint` via the reach cone.
 
 ## Scope

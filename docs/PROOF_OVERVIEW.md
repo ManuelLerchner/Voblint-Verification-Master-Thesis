@@ -27,7 +27,7 @@ meeting on one program. Details: `docs/AFP_IMP2_REBASE_MIGRATION.md`.
 
 This repository is on the **pipeline / domain-instance axis**: IMP2 AST →
 interprocedural CFG → equation system → AFP side-effecting TD solver → pointwise
-sound abstract result, with the sign domain instance. It deliberately does **not**
+sound abstract result, with sign and interval domain instances. It deliberately does **not**
 model the *framework* Voblint actually uses — `GlobConstrSys` / `DemandGlobConstrSys`
 in `src/constraint/constrSys.ml`. The directly adjacent verified-solver work is
 **Tilscher, Graß, Schwarz, Seidl, *Verifying a Solver for Mixed Flow-Sensitive

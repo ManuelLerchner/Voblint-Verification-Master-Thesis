@@ -28,6 +28,6 @@ Downstream consumers are in `src/Formalization/Pipeline/` and `src/Formalization
 
 ## ROOT
 
-`src/Analysis/ROOT` registers all seven `directories` entries so Isabelle's
+`src/Analysis/ROOT` registers all nine `directories` entries so Isabelle's
 theory-name uniqueness requirement is satisfied across the flat theory namespace.
 Theory headers (`theory Sign_Domain …`) are unchanged from before the folder migration.

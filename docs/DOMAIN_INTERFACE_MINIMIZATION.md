@@ -1,7 +1,9 @@
 # Migration — minimize the domain-author interface
 
-Status: **IN PROGRESS.** Authored 2026-06-14. Migration doc + plan landed;
-`.thy` edits pending (blocked on I/Q server start).
+Status: **SUPERSEDED / HISTORICAL.** Authored 2026-06-14. The current domain
+interface is documented in `src/Analysis/Generic/Domain/README.md` and
+`src/Analysis/Instances/README.md`; this file preserves the earlier migration
+plan and may mention pre-`Generic/` paths and retired locale names.
 
 ## Goal
 
@@ -139,8 +141,8 @@ becomes
 
 ### Step 5 — docs
 
-- `src/Analysis/Domains/README.md`: state the **contract** (the one locale +
-  its obligations), not just a file list. Note `abstract_domain` is the
+- `src/Analysis/Instances/README.md`: state the **contract** (the reusable domain
+  instance layers and their obligations), not just a file list. Note `abstract_domain` is the
   optional widening/termination extension, not required for soundness.
 - This file: flip status to DONE with a completion record + green build log.
 

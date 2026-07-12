@@ -20,7 +20,10 @@ This repo uses **labelled edge triples** `(pp × edge_action × pp) set` in `src
 
 ## Reachability
 
-CFG reachability for soundness uses `cfg_path` / `cfg_path_node_in_reach` in `src/CFG/` and `src/Solver/TD_CFG_Core.thy`. The former TD hypothesis `td_cfg_in_reach` (P2) was removed in favour of per-pp solve (Fix B); closed [issue #8](https://github.com/ManuelLerchner/goblint-formalization/issues/8).
+CFG reachability for soundness uses `cfg_path` / `cfg_path_node_in_reach` in `src/CFG/`
+and the reach-cone machinery in `src/Analysis/Generic/Solver/Core/`. The former
+TD hypothesis `td_cfg_in_reach` (P2) was removed in favour of per-pp solve (Fix B);
+closed [issue #8](https://github.com/ManuelLerchner/goblint-formalization/issues/8).
 
 ## KB
 
