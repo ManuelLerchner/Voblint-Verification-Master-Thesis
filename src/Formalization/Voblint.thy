@@ -49,6 +49,7 @@ theory Voblint
     Example_Trace_Digest_Combine
     Example_Trace_Digest_ReachingCompat
     Example_Proc_GraphViz
+    Example_Rdiv_Twfr_Sound
 begin
 
 text \<open>
@@ -123,12 +124,31 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Combine} --- combine-side digest filtering: @{const cmp_pair} at the return junction.
     \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_ReachingCompat} --- reader-side @{const reaching_compat}: lockset ghost filters the global read.
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
+    \<^item> @{theory Voblint_Formalization.Example_Rdiv_Twfr_Sound} --- canonical recursive witness: executable soundness of the recursive \<^verbatim>\<open>rdiv\<close> global via the \<^verbatim>\<open>twfr\<close> witness spine (@{thm [source] rdiv_witness_G_over_approximated}).
 
   \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
     \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
     \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
     \<^item> @{theory Voblint_Formalization.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; documents the solver-compatible constant route and the conditional-route monotonicity boundary.
+\<close>
+
+text \<open>
+  \<^bold>\<open>Canonical end-to-end chain.\<close> The context-sensitive analyses are one layered
+  spine, each step reusing the soundness of the step below and culminating in the
+  recursive \<^verbatim>\<open>rdiv\<close> witness.  There is no competing proof path:
+
+    \<^item> generic TD_side collecting soundness (\<^verbatim>\<open>side_analyse_eff_collect_sound_exit_pruned\<close>),
+    \<^item> entry-store context soundness (\<^verbatim>\<open>semantic_entry_store_ctx_analysis_sound\<close>),
+    \<^item> keyed/combine context soundness (\<^verbatim>\<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>),
+    \<^item> seeded-clean R_read soundness (\<^verbatim>\<open>clean_ctx_collect_rread_head_bound\<close>),
+    \<^item> activation-indexed collecting soundness (\<^verbatim>\<open>seeded_activation_collecting_sound\<close>),
+    \<^item> the \<^verbatim>\<open>twfr\<close> witness calculus (\<^verbatim>\<open>Activation_Witness_From\<close>),
+    \<^item> recursive \<^verbatim>\<open>rdiv\<close> soundness (\<^verbatim>\<open>rdiv_witness_G_over_approximated\<close>).
+
+  Steps two through five all lie inside the dependency cone of the recursive
+  flagship @{theory Voblint_Formalization.Example_Rdiv_Twfr_Sound}: they are the
+  required support of the canonical recursive result, not alternative spines.
 \<close>
 
 end

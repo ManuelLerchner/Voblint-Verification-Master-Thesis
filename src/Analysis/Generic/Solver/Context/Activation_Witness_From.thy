@@ -87,13 +87,6 @@ text \<open>The callee side of a combine can be supplied by a suffix witness tha
   frame entry.  The start store is the caller-derived entry store, so the proof does not need
   a separate global seed for the callee activation.\<close>
 
-lemma twf_callee_suffix_start:
-  "twf enterc combc g fe cex fe cex [s]"
-  by (rule twf.start)
-
-lemma twf_callee_enter_suffix_start:
-  "twf enterc combc g fe (enterc c s) fe (enterc c s) [enter_state s]"
-  by (rule twf.start)
 
 lemma twf_combine_reuses_callee_suffix:
   assumes cmb: "(cl, ex, v) \<in> combines g"
@@ -105,19 +98,6 @@ lemma twf_combine_reuses_callee_suffix:
            (tau @ tl rho @ [<last tau|last rho>])"
   by (rule twf.combine[OF cmb en caller callee hd])
 
-lemma twf_combine_fires:
-  assumes cmb: "(cl, ex, v) \<in> combines g"
-    and en: "(cl, EA_Enter, ex) \<in> edges g"
-    and caller: "twf enterc combc g w wc cl kc tau"
-  shows "twf enterc combc g w wc v (combc kc (enterc kc (last tau)))
-           (tau @ [<last tau|enter_state (last tau)>])"
-proof -
-  have callee: "twf enterc combc g ex (enterc kc (last tau)) ex (enterc kc (last tau))
-                  [enter_state (last tau)]"
-    by (rule twf.start)
-  show ?thesis
-    using twf_combine_reuses_callee_suffix[OF cmb en caller callee] by simp
-qed
 
 section \<open>The returning fragment and query-anchored seeded soundness\<close>
 
@@ -146,41 +126,6 @@ inductive twfr ::
 
 lemma twfr_nonempty: "twfr enterc combc g w wc v ctx tr \<Longrightarrow> tr \<noteq> []"
   by (induction rule: twfr.induct) auto
-
-lemma twfr_callee_suffix_start:
-  "twfr enterc combc g fe cex fe cex [s]"
-  by (rule twfr.start)
-
-lemma twfr_callee_enter_suffix_start:
-  "twfr enterc combc g fe (enterc c s) fe (enterc c s) [enter_state s]"
-  by (rule twfr.start)
-
-lemma twfr_combine_reuses_callee_suffix:
-  assumes cmb: "(cl, ex, v) \<in> combines g"
-    and en: "(cl, EA_Enter, fe) \<in> edges g"
-    and caller: "twfr enterc combc g w wc cl kc tau"
-    and callee: "twfr enterc combc g fe (enterc kc (last tau)) ex (enterc kc (last tau)) rho"
-    and hd: "hd rho = enter_state (last tau)"
-  shows "twfr enterc combc g w wc v (combc kc (enterc kc (last tau)))
-           (tau @ tl rho @ [<last tau|last rho>])"
-  by (rule twfr.combine[OF cmb en caller callee hd])
-
-lemma twfr_combine_fires:
-  assumes cmb: "(cl, ex, v) \<in> combines g"
-    and en: "(cl, EA_Enter, ex) \<in> edges g"
-    and caller: "twfr enterc combc g w wc cl kc tau"
-  shows "twfr enterc combc g w wc v (combc kc (enterc kc (last tau)))
-           (tau @ [<last tau|enter_state (last tau)>])"
-proof -
-  have callee: "twfr enterc combc g ex (enterc kc (last tau)) ex (enterc kc (last tau))
-                  [enter_state (last tau)]"
-    by (rule twfr.start)
-  show ?thesis
-    using twfr_combine_reuses_callee_suffix[OF cmb en caller callee] by simp
-qed
-
-lemma twfr_imp_twf: "twfr enterc combc g w wc v ctx tr \<Longrightarrow> twf enterc combc g w wc v ctx tr"
-  by (induction rule: twfr.induct) (auto intro: twf.intros)
 
 text \<open>
   \<^bold>\<open>Query-anchored seeded soundness (tasks 1--4).\<close>  The four \<open>q_*\<close> premises are the
