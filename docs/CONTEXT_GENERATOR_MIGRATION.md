@@ -764,18 +764,82 @@ Query-based exploration was valuable for understanding the design space. But the
 
 ## Audit Documents (Archived After Migration)
 
-These documents are archived in `docs/architecture/history/` to provide historical context and evidence for the migration decision:
+- **Dependency Audit:** `docs/architecture/history/CTX_DEPENDENCY_AUDIT.md` — the real
+  dependency-cone analysis and the delete/retain classification produced during
+  implementation.
+- **Migration Plan:** this document, kept at `docs/CONTEXT_GENERATOR_MIGRATION.md` as the
+  updated record of what was planned and what was actually done.
 
-- **Dependency Audit:** `CTX_DEPENDENCY_AUDIT.md` — Complete dependency cone analysis; classification of what to delete, migrate, or retain
-- **Structural Analysis:** `STRUCTURAL_AUDIT.md` — Detailed comparison of all four generators; component-by-component breakdown
-- **Enter Divergence Trace:** `ENTER_DIVERGENCE_TRACE.md` — End-to-end trace explaining the architectural divergence between query-based and seed-based strategies
-- **Migration Plan:** `MIGRATION_TO_GOBLINT_ALIGNED_ARCHITECTURE.md` — This document (archived after completion)
-
-Future developers can refer to these documents to understand why CTX was removed and why CMP was chosen as canonical.
+The `STRUCTURAL_AUDIT.md`, `ENTER_DIVERGENCE_TRACE.md`, and
+`GENERATOR_INVENTORY_BEFORE_MIGRATION.md` referenced earlier in this file never existed and
+are not archived.
 
 ---
 
 ## Conclusion
 
 The formalization will consolidate around the CMP/seed-based generator architecture, eliminating the historical CTX path. This improves code clarity, reduces duplication, and aligns the thesis with Goblint's proven design. All thesis-critical results will be demonstrated via CMP; the architecture will be clean and maintainable.
+
+---
+
+## Implementation Log (2026-07-12)
+
+What was actually done, as small verified commits:
+
+1. **docs(ctx-migration): correct dependency cone** — added the *Implementation Findings*
+   section; recorded that the CMP soundness spine imports `TD_Side_Eff_Ctx_Sound`, the CMP
+   executable bridge imports `Exec_Ctx_Bridge`, and `Seeded_Activation_Sound` imports
+   `Seeded_Clean_Ctx_Collect`, so those three are retained substrate rather than CTX-only
+   deletables.
+2. **delete prototype scaffolding** — removed `Canonical_Generator.thy` (broken, never in any
+   ROOT) and `Analysis_Configuration.thy` (unused locale; CMP generators already take
+   `gkey`/`cmb`/`frame_seed` directly).
+3. **refactor: delete query-executable CTX examples; repoint CMP deps** — removed
+   `Exec_Sign_Ctx_Run`, `Exec_Sign_Ctx_Gen_Run`, `Exec_Sign_Ctx_Seeded_Run`,
+   `Exec_Ivl_Ctx_Run`, `Exec_Ivl_Ctx_Gen_Run`, and the orphaned `Exec_Context_Run_Common`
+   (ROOT + files). Repointed the two retained CMP examples that imported CTX examples only
+   for transitive deps (`Exec_Sign_Cmp_Keyed_Gen_Run` → `Sign_Exec_Sound`;
+   `Exec_Ivl_Cmp_Seed_Clean_Run` → `Exec_Ivl_Run`). Reworded prose naming deleted theories.
+   `Voblint_Formalization` build green.
+4. **refactor: drop dead executable CTX generators from `Exec_Ctx_Bridge`** — removed the two
+   now-unreferenced executable generators `side_cfg_T_eff_ctx_st` / `side_cfg_T_eff_ctx_seeded_st`
+   and their transport clusters (~590 lines), keeping the shared executable helpers
+   (`side_rhs_fold_ctx_st`, `unit_combine_tree_ctx_st`, `st_of_abs`) that `Exec_Cmp_Bridge`
+   consumes. Fixed a `\<^const>` antiquotation in `Exec_Sign_Cmp_Keyed_Gen_Run`. Full
+   Analysis + Formalization build green.
+5. **docs: archive audit + update READMEs** — added
+   `docs/architecture/history/CTX_DEPENDENCY_AUDIT.md` (the real cone audit) and this
+   document; updated the Exec and Common READMEs.
+
+### CMP canonical status (no code change needed)
+
+The abstract CMP generator is already single and canonical: `side_cfg_T_eff_cmp`
+(`TD_Side_Eff_Cmp_Gen`), with seeding supplied as the `fresh_frame` argument. The seeded
+abstract generator `side_cfg_T_eff_cmp_seed` and executable `side_cfg_T_eff_cmp_seed_st` exist
+in `Exec_Cmp_Bridge`, and the unseeded executable generator already reduces to the seeded one
+with a constant seed:
+
+```isabelle
+lemma seed_generalises:
+  "side_cfg_T_eff_cmp_st gkey cmb g etf ff bot0 s0
+     = side_cfg_T_eff_cmp_seed_st gkey cmb (\<lambda>_. ff) g etf bot0 s0"
+```
+
+### Retained vs. deleted (final)
+
+- **Deleted:** `Canonical_Generator`, `Analysis_Configuration`, five CTX examples,
+  `Exec_Context_Run_Common`, and the two executable CTX generators inside `Exec_Ctx_Bridge`.
+- **Retained substrate:** `TD_Side_Eff_Ctx_Sound`, `Exec_Ctx_Bridge` (shared helpers),
+  `Seeded_Clean_Ctx_Collect`, the `TD_Side_Tree` CTX generators, and the two context-precision
+  witnesses (`Example_Global_Ctx_Read_Precision`, `Example_Entry_Store_Context_Precision`).
+
+### Deviations from the original plan
+
+- The three "CTX core" theories are **not** deleted — they are the proof substrate the CMP
+  path is built on. Deleting them would need an out-of-scope re-proof of CMP soundness.
+- No parameterized "one soundness theorem" was introduced; CMP soundness already exists and is
+  retained unchanged.
+- The named Phase-1 audit files never existed; a single real `CTX_DEPENDENCY_AUDIT.md` was
+  produced instead. `STRUCTURAL_AUDIT.md` / `ENTER_DIVERGENCE_TRACE.md` /
+  `GENERATOR_INVENTORY_BEFORE_MIGRATION.md` are not created (they never existed to archive).
 
