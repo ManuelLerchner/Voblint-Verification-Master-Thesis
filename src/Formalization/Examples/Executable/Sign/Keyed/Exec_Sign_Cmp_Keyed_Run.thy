@@ -5,7 +5,7 @@ begin
 section \<open>Keyed-global context precision: sound concrete witness (sign)\<close>
 
 text \<open>
-  The sound counterpart to \<open>Exec_Sign_Ctx_Seeded_Run\<close>.  Where the seeded demo keys
+  The sound counterpart to the unsound caller-local seeding strategy.  Where that strategy keys
   on caller locals (erased by \<^const>\<open>enter_state\<close>, hence unsound), this witness keys
   the globals themselves: a two-call program whose call contexts differ only by a
   preserved global input, analysed with per-context global slots \<^term>\<open>Inr False\<close> /

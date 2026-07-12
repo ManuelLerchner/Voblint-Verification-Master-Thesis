@@ -1,5 +1,5 @@
 theory Exec_Ivl_Cmp_Seed_Clean_Run
-  imports Exec_Ivl_Ctx_Gen_Run Voblint_Analysis.Exec_Cmp_Bridge Exec_Ivl_Cmp_Seed_Sound
+  imports Exec_Ivl_Run Voblint_Analysis.Exec_Cmp_Bridge Exec_Ivl_Cmp_Seed_Sound
     Twfr_Reach_Read
 begin
 

@@ -6,7 +6,7 @@ section \<open>Read-layer witness: cmp-filtered globals separate two call contex
 
 text \<open>
   \<^bold>\<open>Sound read-layer witness.\<close>  This is the sound counterpart to the
-  \<open>Exec_Sign_Ctx_Seeded_Run\<close> demo: it recovers per-context precision from the
+  unsound caller-local seeding demo: it recovers per-context precision from the
   \<^emph>\<open>global\<close> state, which \<^const>\<open>enter_state\<close> preserves, rather than from caller
   locals, which it erases.
 
@@ -76,7 +76,7 @@ lemma filtered_below_join_all:
 subsection \<open>Contrast: this split is sound, the caller-local seeded split is not\<close>
 
 text \<open>
-  The \<open>Exec_Sign_Ctx_Seeded_Run\<close> demo obtains a similar two-way split
+  The unsound caller-local seeding demo obtains a similar two-way split
   (\<open>{SZero, SPos}\<close> against the monovariant \<^const>\<open>STop\<close>), but keys it on caller
   locals under \<open>ent = id\<close>.  \<^const>\<open>enter_state\<close> erases those locals, so that split
   reconstructs information the callee never receives and does not over-approximate
@@ -92,7 +92,7 @@ text \<open>
 
 text \<open>
   \<^bold>\<open>Two distinct ``seeded'' constructions --- do not conflate.\<close>  The unsound split
-  named above is \<open>Exec_Sign_Ctx_Seeded_Run\<close>, which seeds the callee-entry local from
+  named above is the caller-local seeding strategy, which seeds the callee-entry local from
   the \<^emph>\<open>full caller local\<close> (\<open>seed_ec ctx sc = restrict_local_st sc\<close>, \<open>ent = id\<close>);
   \<^const>\<open>enter_state\<close> erases those locals, so it reconstructs information the callee
   never receives.  The \<^emph>\<open>seeded-clean\<close> spine (\<open>Exec_Sign_Cmp_Seed_Sound\<close>,
