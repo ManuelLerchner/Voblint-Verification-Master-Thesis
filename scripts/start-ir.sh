@@ -26,6 +26,11 @@ if [[ ! -x "$ISABELLE" ]]; then
   exit 1
 fi
 
+# repl.py accepts one --dir only. Register TD as a component so the heap build
+# and the later ML_process discover the parent session through Isabelle's
+# standard component environment.
+"$ISABELLE" components -u "$TD_COMPONENT_DIR"
+
 echo "Using Isabelle: $ISABELLE"
 echo "Starting I/R MCP server on http://localhost:9148/mcp ..."
 echo "Auth token: isabelle-local  (fixed via IR_AUTH_TOKEN)"
@@ -76,6 +81,5 @@ echo ""
 exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \
   --session Voblint_Formalization \
-  --dir "$TD_COMPONENT_DIR" \
   --dir "$REPO_ROOT" \
   --mcp

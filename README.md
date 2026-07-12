@@ -360,3 +360,12 @@ workflow of Kappelmann et al.,
 | `./scripts/start-iq.sh` | Isabelle/jEdit + I/Q on port 8765 |
 | `./scripts/start-ir.sh` | headless Isabelle/R MCP on port 9148 |
 | `./scripts/start-both.sh` | I/R background + I/Q foreground; Ctrl+C tears down both |
+
+`start-ir.sh` registers `vendor/td-verification` as an Isabelle component via
+`isabelle components -u`. This persistent, idempotent registration lets the
+I/R `ML_process` resolve the parent session `TD`; the I/R launcher accepts only
+one explicit session directory. Remove the registration, if needed, with:
+
+```bash
+isabelle components -x "$(pwd)/vendor/td-verification"
+```
