@@ -202,9 +202,11 @@ section \<open>Instance 2: cmp-filtered keyed globals\<close>
 text \<open>
   The target of the redesign: reads go through \<^const>\<open>side_env_cmp\<close> over a keyed
   global slot type \<^typ>\<open>'g::finite\<close>, so distinct contexts observe distinct global
-  slots.  The trace backbone is discharged by the generic theorem; the remaining
-  obligation is the keyed combine soundness \<open>COMB_SEM\<close> (Goblint's read-side
-  compatibility, to be supplied by the seeded keyed generator).
+  slots.  \<open>route_read_cmp\<close> is the routing read the switching combine queries
+  at a call site --- the plain local slot \<open>sigma (Inl vk)\<close> (Goblint's \<open>man.local\<close>).
+  The trace backbone is the read-agnostic \<^locale>\<open>context_analysis_soundness\<close> with
+  \<open>renv = side_env_cmp gcmp\<close> and \<open>rread = route_read_cmp\<close>; only the keyed combine
+  soundness remains to discharge (below).
 \<close>
 
 definition route_read_cmp ::
@@ -212,39 +214,12 @@ definition route_read_cmp ::
 where
   "route_read_cmp sigma vk = sigma (Inl vk)"
 
-theorem post_fixpoint_sound_at_ctx_semantic_cmp:
-  fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
-    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
-    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
-    and gcmp :: "'c \<Rightarrow> 'g \<Rightarrow> bool"
-  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
-        \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
-        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (v, ctx)\<rbrakk>"
-    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
-        \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (v, ctx)\<rbrakk>"
-    and COMB_SEM: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
-        \<Longrightarrow> last tau \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (cl, ctx)\<rbrakk>
-        \<Longrightarrow> last rho \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (ex, rt cl ctx (route_read_cmp \<sigma> (cl, ctx)))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (v, ctx)\<rbrakk>"
-    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
-    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (cl, ctx)\<rbrakk>
-        \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp \<sigma> (cl, ctx)))"
-    and wit: "trace_witness g S v tr"
-    and compat: "cmp (dg tr) ctx"
-  shows "last tr \<in> \<lbrakk>side_env_cmp gcmp \<sigma> (v, ctx)\<rbrakk>"
-  by (rule post_fixpoint_sound_at_ctx_semantic_generic
-        [where renv = "side_env_cmp gcmp" and rread = route_read_cmp
-           and rt = rt and dg = dg and cmp = cmp and entdg = entdg,
-         OF ENTRY PROC_ENTRY EDGE COMB_SEM DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO wit compat])
-
-section \<open>Keyed combine soundness: reducing COMB_SEM to a reassembly bound\<close>
+section \<open>Keyed combine soundness: reducing the combine to a reassembly bound\<close>
 
 text \<open>
-  The raw \<open>COMB_SEM\<close> premise of \<open>post_fixpoint_sound_at_ctx_semantic_cmp\<close> is the
-  value-dependent combine at the keyed read, taken as a black box.  This layer
+  The keyed read's switching combine --- the case-4 obligation the
+  \<^const>\<open>side_env_cmp\<close> interpretation of \<^locale>\<open>context_analysis_soundness\<close>
+  discharges --- is a value-dependent combine.  This layer
   discharges it from a \<^emph>\<open>bound\<close> the same way the unit spine discharges its
   combine case: \<open>combine_case_ctx_sound\<close> merges the caller/callee soundness through
   \<open>combine_states_sound\<close> and carries the result to the return unknown with
@@ -281,50 +256,11 @@ proof -
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
-text \<open>
-  The bound instance: discharging \<open>COMB_SEM\<close> through \<^const>\<open>combine_read_cmp\<close>
-  leaves the keyed reassembly bound \<open>COMB_BOUND_CMP\<close> as the sole combine
-  obligation --- the keyed analogue of the unit \<open>COMB_BOUND\<close> discharged in the
-  executable seeded instance.  Every other premise is the read-agnostic backbone's.
-\<close>
-
-theorem post_fixpoint_sound_at_ctx_semantic_cmp_bound:
-  fixes sigma :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
-    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
-    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
-    and gcmp :: "'c \<Rightarrow> 'g \<Rightarrow> bool"
-  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
-        \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
-        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
-        \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and COMB_BOUND_CMP: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
-        \<Longrightarrow> combine_read_cmp gcmp sigma rt cl ex ctx \<le> side_env_cmp gcmp sigma (v, ctx)"
-    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
-    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>
-        \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp sigma (cl, ctx)))"
-    and wit: "trace_witness g S v tr"
-    and compat: "cmp (dg tr) ctx"
-  shows "last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-proof (rule post_fixpoint_sound_at_ctx_semantic_generic
-        [where renv = "side_env_cmp gcmp" and rread = route_read_cmp
-           and rt = rt and dg = dg and cmp = cmp and entdg = entdg])
-  fix ctx cl ex v' tau rho
-  assume comb: "(cl, ex, v') \<in> combines g"
-    and cr: "last tau \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>"
-    and ce: "last rho \<in> \<lbrakk>side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx)))\<rbrakk>"
-  show "<last tau|last rho> \<in> \<lbrakk>side_env_cmp gcmp sigma (v', ctx)\<rbrakk>"
-    by (rule combine_case_cmp_sound[OF cr ce COMB_BOUND_CMP[OF comb]])
-qed (fact ENTRY PROC_ENTRY EDGE DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO wit compat)+
-
-section \<open>Generator bound: reducing COMB_BOUND_CMP to CMP_SOUND\<close>
+section \<open>Generator bound: reducing the reassembly bound to CMP_SOUND\<close>
 
 text \<open>
-  The keyed reassembly bound \<open>COMB_BOUND_CMP\<close> splits pointwise on the variable
-  class, because \<^const>\<open>combine_abs\<close> takes locals from the caller and globals from
+  The keyed reassembly bound \<open>combine_read_cmp \<le> side_env_cmp\<close> splits pointwise on
+  the variable class, because \<^const>\<open>combine_abs\<close> takes locals from the caller and globals from
   the callee.  At a \<^emph>\<open>local\<close> variable the read's global part is the shared
   \<^const>\<open>glob_env_cmp\<close> for \<open>ctx\<close> on both sides, so the bound reduces to the caller
   local unknown flowing to the return local unknown (\<open>LOCAL_POST\<close>, a post-solution
@@ -362,60 +298,12 @@ proof (rule le_funI)
   qed
 qed
 
-text \<open>
-  Fully wired keyed instance: the semantic-context soundness theorem with reads
-  through \<^const>\<open>side_env_cmp\<close>, resting on exactly two combine obligations ---
-  \<open>LOCAL_POST\<close> (post-solution local flow) and \<open>CMP_SOUND\<close> (Goblint read
-  soundness).  Every combine-specific premise is now a checkable side condition;
-  the raw \<open>COMB_SEM\<close> black box is gone.
-\<close>
-
-theorem post_fixpoint_sound_at_ctx_semantic_cmp_final:
-  fixes sigma :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
-    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
-    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
-    and gcmp :: "'c \<Rightarrow> 'g \<Rightarrow> bool"
-  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
-        \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
-        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
-        \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
-        \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
-        \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
-              \<le> side_env_cmp gcmp sigma (v, ctx) x"
-    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
-    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>
-        \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp sigma (cl, ctx)))"
-    and wit: "trace_witness g S v tr"
-    and compat: "cmp (dg tr) ctx"
-  shows "last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-proof (rule post_fixpoint_sound_at_ctx_semantic_cmp_bound
-        [where gcmp = gcmp and rt = rt and dg = dg and cmp = cmp and entdg = entdg])
-  fix ctx cl ex v'
-  assume comb: "(cl, ex, v') \<in> combines g"
-  show "combine_read_cmp gcmp sigma rt cl ex ctx \<le> side_env_cmp gcmp sigma (v', ctx)"
-  proof (rule combine_read_cmp_le)
-    fix x assume "\<not> is_global x"
-    thus "sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v', ctx)) x"
-      by (rule LOCAL_POST[OF comb])
-  next
-    fix x assume "is_global x"
-    thus "side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
-            \<le> side_env_cmp gcmp sigma (v', ctx) x"
-      by (rule CMP_SOUND[OF comb])
-  qed
-qed (fact ENTRY PROC_ENTRY EDGE DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO wit compat)+
-
 section \<open>Context-sliced collecting soundness (keyed globals)\<close>
 
 text \<open>
-  The reusable per-context kernel theorem (Route A, A7.1).  Wrapping
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close> from the trace level to the
+  The reusable per-context kernel theorem (Route A, A7.1).  Interpreting
+  \<^locale>\<open>context_analysis_soundness\<close> at \<open>renv = side_env_cmp gcmp\<close>,
+  \<open>rread = route_read_cmp\<close> lifts the inherited \<open>collect_sound\<close> to the
   context-sliced collecting set \<^const>\<open>cfg_collect_ctx\<close>: every store reaching \<open>v\<close>
   along a trace whose digest is \<open>cmp\<close>-compatible with \<open>ctx\<close> is covered by the
   keyed read \<^const>\<open>side_env_cmp\<close> at \<open>(v, ctx)\<close>.  This is the value-dependent

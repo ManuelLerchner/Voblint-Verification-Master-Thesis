@@ -152,7 +152,7 @@ qed
 subsection \<open>Per-edge trace soundness at the keyed read\<close>
 
 text \<open>
-  The per-edge fact of \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>'s \<open>EDGE\<close>
+  The per-edge fact of \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>'s \<open>EDGE\<close>
   premise, discharged from the keyed pullback bound.  Keyed analogue of
   \<open>entry_store_edge_sound_ctx\<close>: a concrete step through edge \<open>(u, a, v)\<close> that starts
   inside the filtered read at \<open>u\<close> lands inside the filtered read at \<open>v\<close>, whenever

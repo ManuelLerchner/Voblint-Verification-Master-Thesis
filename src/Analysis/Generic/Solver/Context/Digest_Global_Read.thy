@@ -227,98 +227,11 @@ proof (rule le_funI)
   qed
 qed
 
-subsection \<open>Trace soundness over the digest read\<close>
-
-text \<open>
-  The read-agnostic trace backbone \<open>post_fixpoint_sound_at_ctx_semantic_generic\<close>
-  swallows \<^const>\<open>obs_digest\<close> as a pure instantiation of its \<open>renv\<close> parameter, with
-  the plain local slot as the routing read \<open>rread\<close>.  Every seed / edge / combine /
-  digest-propagation premise keeps its shape; only the read symbol changes.
-\<close>
-theorem post_fixpoint_sound_obs_digest:
-  fixes \<sigma> :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
-    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
-  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
-        \<Longrightarrow> s \<in> \<lbrakk>obs_digest \<sigma> (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
-        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
-        \<Longrightarrow> last tr \<in> \<lbrakk>obs_digest \<sigma> (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-    and COMB_SEM: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
-        \<Longrightarrow> last tau \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>
-        \<Longrightarrow> last rho \<in> \<lbrakk>obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx))))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
-    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>
-        \<Longrightarrow> cmp (entdg s) (rt cl ctx (\<sigma> (Inl (cl, ctx))))"
-    and wit: "trace_witness g S v tr"
-    and compat: "cmp (dg tr) ctx"
-  shows "last tr \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-  by (rule post_fixpoint_sound_at_ctx_semantic_generic
-        [where renv = obs_digest and rread = "\<lambda>s vk. s (Inl vk)"
-           and rt = rt and dg = dg and cmp = cmp and entdg = entdg,
-         OF ENTRY PROC_ENTRY EDGE COMB_SEM DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO wit compat])
-
-text \<open>
-  Trace soundness resting on the checkable combine side conditions instead of the
-  raw \<open>COMB_SEM\<close> black box: \<open>LOCAL_POST\<close> (caller local flows to the return local),
-  \<open>READER_INCL\<close> (caller-node reader set included in the return-node reader set), and
-  \<open>CMP_SOUND\<close> (Goblint read soundness at the globals).  The keyed analogue of
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>.
-\<close>
-theorem post_fixpoint_sound_obs_digest_final:
-  fixes \<sigma> :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
-    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
-  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
-        \<Longrightarrow> s \<in> \<lbrakk>obs_digest \<sigma> (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
-        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
-        \<Longrightarrow> last tr \<in> \<lbrakk>obs_digest \<sigma> (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
-        \<Longrightarrow> \<sigma> (Inl (cl, ctx)) x \<le> \<sigma> (Inl (v, ctx)) x"
-    and READER_INCL: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
-        \<Longrightarrow> {g. compatible (reader_digest cl ctx) g} \<subseteq> {g. compatible (reader_digest v ctx) g}"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
-        \<Longrightarrow> obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) x \<le> obs_digest \<sigma> (v, ctx) x"
-    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
-    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>
-        \<Longrightarrow> cmp (entdg s) (rt cl ctx (\<sigma> (Inl (cl, ctx))))"
-    and wit: "trace_witness g S v tr"
-    and compat: "cmp (dg tr) ctx"
-  shows "last tr \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-proof (rule post_fixpoint_sound_obs_digest
-        [where rt = rt and dg = dg and cmp = cmp and entdg = entdg])
-  fix ctx cl ex v' tau rho
-  assume comb: "(cl, ex, v') \<in> combines g"
-    and cr: "last tau \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>"
-    and ce: "last rho \<in> \<lbrakk>obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx))))\<rbrakk>"
-  have bound: "combine_read_obs \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v', ctx)"
-  proof (rule combine_read_obs_le)
-    fix x assume "\<not> is_global x"
-    thus "\<sigma> (Inl (cl, ctx)) x \<le> \<sigma> (Inl (v', ctx)) x" by (rule LOCAL_POST[OF comb])
-  next
-    show "{g. compatible (reader_digest cl ctx) g} \<subseteq> {g. compatible (reader_digest v' ctx) g}"
-      by (rule READER_INCL[OF comb])
-  next
-    fix x assume "is_global x"
-    thus "obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) x \<le> obs_digest \<sigma> (v', ctx) x"
-      by (rule CMP_SOUND[OF comb])
-  qed
-  show "<last tau|last rho> \<in> \<lbrakk>obs_digest \<sigma> (v', ctx)\<rbrakk>"
-    by (rule combine_case_obs_sound[OF cr ce bound])
-qed (fact ENTRY PROC_ENTRY EDGE DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO wit compat)+
-
 subsection \<open>Context-sliced collecting soundness\<close>
 
 text \<open>
-  Lifting \<open>post_fixpoint_sound_obs_digest_final\<close> from the trace level to the
+  Interpreting \<^locale>\<open>context_analysis_soundness\<close> at \<open>renv = obs_digest\<close>, with the
+  plain local slot as the routing read, lifts the inherited \<open>collect_sound\<close> to the
   context-sliced collecting set \<^const>\<open>cfg_collect_ctx\<close>: every store reaching \<open>v\<close>
   along a trace whose digest is \<open>cmp\<close>-compatible with \<open>ctx\<close> is covered by the digest
   read \<^const>\<open>obs_digest\<close> at \<open>(v, ctx)\<close>.  The keyed analogue of
@@ -431,54 +344,6 @@ proof (rule le_funI)
       using False LOCAL_POST[OF False] b1 b2 by simp
   qed
 qed
-
-text \<open>
-  Trace soundness with the \<open>bot\<close>-on-locals invariant \<open>GLOB_BOT\<close> in place of
-  \<open>READER_INCL\<close>: the reader digest is unconstrained, so this is the variant a
-  non-monotone (kill) reader instantiates.
-\<close>
-theorem post_fixpoint_sound_obs_digest_final_bot:
-  fixes sigma :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
-    and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
-  assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
-        \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest sigma (v, ctx)\<rbrakk>"
-    and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
-        \<Longrightarrow> last tr \<in> \<lbrakk>obs_digest sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>obs_digest sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
-        \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
-    and GLOB_BOT: "\<And>gk. local_bot_on_locals (sigma (Inr gk))"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
-        \<Longrightarrow> obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> obs_digest sigma (v, ctx) x"
-    and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
-    and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>obs_digest sigma (cl, ctx)\<rbrakk>
-        \<Longrightarrow> cmp (entdg s) (rt cl ctx (sigma (Inl (cl, ctx))))"
-    and wit: "trace_witness g S v tr"
-    and compat: "cmp (dg tr) ctx"
-  shows "last tr \<in> \<lbrakk>obs_digest sigma (v, ctx)\<rbrakk>"
-proof (rule post_fixpoint_sound_obs_digest
-        [where rt = rt and dg = dg and cmp = cmp and entdg = entdg])
-  fix ctx cl ex v' tau rho
-  assume comb: "(cl, ex, v') \<in> combines g"
-    and cr: "last tau \<in> \<lbrakk>obs_digest sigma (cl, ctx)\<rbrakk>"
-    and ce: "last rho \<in> \<lbrakk>obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx))))\<rbrakk>"
-  have bound: "combine_read_obs sigma rt cl ex ctx \<le> obs_digest sigma (v', ctx)"
-  proof (rule combine_read_obs_le_bot)
-    fix x assume "\<not> is_global x"
-    thus "sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v', ctx)) x" by (rule LOCAL_POST[OF comb])
-  next
-    fix gk show "local_bot_on_locals (sigma (Inr gk))" by (rule GLOB_BOT)
-  next
-    fix x assume "is_global x"
-    thus "obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> obs_digest sigma (v', ctx) x"
-      by (rule CMP_SOUND[OF comb])
-  qed
-  show "<last tau|last rho> \<in> \<lbrakk>obs_digest sigma (v', ctx)\<rbrakk>"
-    by (rule combine_case_obs_sound[OF cr ce bound])
-qed (fact ENTRY PROC_ENTRY EDGE DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO wit compat)+
 
 text \<open>Context-sliced collecting soundness, \<open>bot\<close>-on-locals variant (unconstrained reader).\<close>
 theorem obs_digest_collect_ctx_sound_bot:
