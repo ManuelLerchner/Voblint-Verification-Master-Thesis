@@ -149,7 +149,7 @@ text \<open>
   parameters pass through globals, and only the global state survives
   \<^const>\<open>enter_state\<close>.  The sound form of per-context precision reads globals per
   context through \<open>side_env_cmp\<close> (\<open>Global_Cmp_Read\<close>) and rests on \<open>CMP_SOUND\<close> in
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>; the collecting-level witness
+  \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>; the collecting-level witness
   with a global context is \<open>Example_Entry_Store_Context_Precision\<close>.
 \<close>
 

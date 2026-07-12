@@ -16,9 +16,9 @@ text \<open>
   effect under context \<open>ctx\<close> is routed to slot \<^term>\<open>Inr ctx\<close>, and the \<open>cmp\<close>-filtered
   read (\<^const>\<open>glob_env_cmp\<close>, \<open>cmp = (=)\<close>) at a context recovers only that context's
   slot.  The two read-side combine obligations of
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close> --- \<open>LOCAL_POST\<close> (caller local flows
+  \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close> --- \<open>LOCAL_POST\<close> (caller local flows
   to the return) and \<open>CMP_SOUND\<close> (Goblint read compatibility) --- are discharged in
-  the theorem's exact premise shape, and their combine bound \<open>COMB_BOUND_CMP\<close> and
+  the theorem's exact premise shape, and their combine bound \<open>combine_read_cmp_le\<close> and
   soundness follow through \<^const>\<open>combine_read_cmp\<close> / \<open>combine_case_cmp_sound\<close>.
 \<close>
 
@@ -127,7 +127,7 @@ subsection \<open>Wiring: the obligations in the theorem's premise shape\<close>
 text \<open>
   The combine set of the witness program.  With \<^term>\<open>combines g = kw_combines\<close> the
   two lemmas below are literally the \<open>LOCAL_POST\<close> and \<open>CMP_SOUND\<close> premises of
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close> instantiated at \<open>kw_sig\<close>,
+  \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close> instantiated at \<open>kw_sig\<close>,
   \<open>gcmp = (=)\<close>, \<open>kw_ec\<close>.
 \<close>
 definition kw_combines :: "(pp \<times> pp \<times> pp) set" where

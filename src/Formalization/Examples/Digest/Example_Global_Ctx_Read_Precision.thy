@@ -86,7 +86,7 @@ text \<open>
   through  \<^const>\<open>glob_env_cmp\<close>.  Those globals survive \<^const>\<open>enter_state\<close>, so
   \<open>filtered_below_join_all\<close> makes the split a precision refinement of the
   join-all read with no soundness cost.  Soundness of the full keyed analysis rests
-  on \<open>CMP_SOUND\<close> in \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>; this witness
+  on \<open>CMP_SOUND\<close> in \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>; this witness
   discharges only its read layer.
 \<close>
 

@@ -9,10 +9,10 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Clean_RRead_Sound\<close>: \<^const>\<open>sign_etf_clean\<close> is
   \<^term>\<open>clean_etf_of_transfer sign_tf\<close>, and the context-sliced soundness theorems
   are the interpretations of the generic ones at @{thm sign_is_sound_transfer}.  The
-  five R_read obligations, the flat theorem \<open>clean_cfg_collect_rread\<close>, and the trace
-  kernel \<open>clean_ctx_trace_rread\<close> live generically; here we surface the two theorems
-  the executable examples consume and the glue lemma the seeded-generator reduction
-  needs.
+  five R_read obligations, the flat theorem \<open>clean_cfg_collect_rread\<close>, and the
+  context kernel \<open>clean_ctx_collect_rread\<close> live generically; here we surface the two
+  theorems the executable examples consume and the glue lemma the seeded-generator
+  reduction needs.
 \<close>
 
 lemma apply_etf_sign_etf_clean:

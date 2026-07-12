@@ -7,7 +7,7 @@ section \<open>Keyed-global context precision: executable solver run (sign)\<clo
 text \<open>
   The executable counterpart to \<open>Exec_Sign_Cmp_Keyed_Run\<close>.  There the keyed
   post-solution \<open>kw_sig\<close> is exhibited by hand and the combine obligations of
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close> are discharged against it.  Here
+  \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close> are discharged against it.  Here
   the same two-call abstraction is written as a genuine side-effecting equation
   system over keyed global slots and handed to the vendored
   \<^const>\<open>TD_side_always_join_Interp_solve\<close>: the solver itself computes the
@@ -90,7 +90,7 @@ theorem keyed_slots_strictly_separate:
 text \<open>
   The soundness of reading these slots per context --- that a call under context
   \<open>ctx\<close> may consult only slot \<^term>\<open>Inr ctx\<close> --- is the \<open>CMP_SOUND\<close> obligation of
-  \<open>post_fixpoint_sound_at_ctx_semantic_cmp_final\<close>, discharged for this abstraction
+  \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>, discharged for this abstraction
   in \<open>Exec_Sign_Cmp_Keyed_Run\<close>.  This theory adds the executable half: the keyed
   routing and the join-all merge are computed by the verified TD side solver.
 \<close>
