@@ -6,8 +6,8 @@ section \<open>Executable keyed-global generator run (sign)\<close>
 
 text \<open>
   The executable \<open>_st\<close> sibling of \<^const>\<open>side_cfg_T_eff_cmp\<close>: the same generator over
-  the code-generating finite-map state \<^typ>\<open>'a st\<close>.  It mirrors
-  \<^const>\<open>side_cfg_T_eff_ctx_st\<close> but keys each context's global writes (and, through the
+  the code-generating finite-map state \<^typ>\<open>'a st\<close>.  Like a plain
+  context-indexed generator it keys each context's global writes (and, through the
   keyed combine, its global reads) to the slot \<open>gkey c\<close> via \<^const>\<open>map_gtree\<close>.  Fed to
   the vendored \<^const>\<open>TD_side_always_join_Interp_solve\<close> it runs the real side solver
   over keyed global slots.
