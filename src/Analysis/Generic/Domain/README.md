@@ -9,7 +9,6 @@ No domain-specific content lives here.
 | --- | --- |
 | `Abstract_Domain.thy` | `sound_domain`, `abstract_domain` (+ `widen`), `gamma_state`, join/fold lemmas |
 | `Exec_St.thy` | `'a st` quotient type (two-region rep), `lookup_st`, `update_st`, order/sup/widening instances |
-| `Origin_State.thy` | `('a, 'b) origin_st` origin-indexed value map (bottom default), `collapse_origins`, guarded per-origin widening; the domain behind per-origin widening |
 
 **Key concepts**
 
