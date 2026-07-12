@@ -1,5 +1,5 @@
 theory TD_Side_CFG
-  imports Constraint_System_Sound "Voblint_IMP2.IMP2_Globals" "TD.TD_side"
+  imports Constraint_System_Sound Split_State "Voblint_IMP2.IMP2_Globals" "TD.TD_side"
 begin
 
 (* TD_side defines a record field \<sigma> for its internal state; hide the short
@@ -85,6 +85,31 @@ lemma restrict_local_combine_eq:
 lemma restrict_global_combine_eq:
   "restrict_global (restrict_local A \<squnion> restrict_global B) = restrict_global B"
   unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
+
+
+subsection \<open>Split-state bridge\<close>
+
+text \<open>
+  The split representation of \<open>Split_State\<close> packages exactly this
+  \<^const>\<open>restrict_local\<close> / \<^const>\<open>restrict_global\<close> decomposition:
+  \<^const>\<open>split_state\<close> is the pair of the two restrictions, restriction pairs
+  are well-formed split states, and \<^const>\<open>merge_state\<close> of two restrictions
+  is their join.
+\<close>
+
+lemma split_state_eq_restrict:
+  "split_state \<sigma> = (restrict_local \<sigma>, restrict_global \<sigma>)"
+  unfolding split_state_def restrict_local_def restrict_global_def by simp
+
+lemma wf_split_restrict:
+  "wf_split (restrict_local A, restrict_global B)"
+  unfolding wf_split_def restrict_local_def restrict_global_def by simp
+
+lemma merge_state_restrict:
+  "merge_state (restrict_local A, restrict_global B)
+   = restrict_local A \<squnion> restrict_global B"
+  unfolding merge_state_def restrict_local_def restrict_global_def sup_fun_def
+  by (rule ext) simp
 
 
 (* The abstract state combined from the local unknown at v and the join of all
