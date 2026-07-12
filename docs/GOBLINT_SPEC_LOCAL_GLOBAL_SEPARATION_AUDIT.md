@@ -592,6 +592,28 @@ Every executable spec field is connected to the existing CMP path:
   retained implementation, but does **not** yet claim end-to-end integration (contract ⟹ run
   premises ⟹ soundness). That integration is Stage 0.5.
 
+### 7.4a Second implementation pass — layering and the merge parameter
+
+A review pass tightened the Stage-0 boundary further:
+
+- **`return_merge` is deferred to Stage 0.5, not shipped in Stage 0.** The generator's combine
+  builder is derived from the transfer's `etf_combine`, *not* from `return_merge`, so a
+  `return_merge` parameter would not determine the generated equations — the specification and
+  the implementation could silently diverge. Rather than ship a parameter that configures
+  nothing (the same reasoning that dropped `assign_ret`), Stage 0 keeps the merge **fixed** to
+  `combine_abs` (soundness: `combine_states_sound`) and reintroduces `return_merge` as a real,
+  generator-driving parameter in Stage 0.5. `call_spec` therefore fixes only `entry_seed`.
+- **`spec_cmb` / `spec_generator` live in a separate wiring theory `Call_Spec_Generator`**, not in
+  `Call_Spec`. They are generator machinery (`map_gtree`/`map_ltree`/`etf_combine`), not semantic
+  specification — if Goblint changed its combine-tree encoding they would not belong in the spec.
+- **`Call_Spec` imports only the soundness layer `TD_Side_Eff_Cmp_Sound`**, not
+  `Exec_Cmp_Bridge`. The dependency runs `Call_Spec → (wiring) Call_Spec_Generator → Exec_Cmp_Bridge`,
+  so the specification stays abstract.
+
+Result: `Call_Spec` is purely semantic (locales + `own_slot_le_read` + `cmp_generator_sound`);
+`Call_Spec_Generator` connects `entry_seed` to `side_cfg_T_eff_cmp_seed` and proves the derived
+combine builder realizes `switching_combine_sound`.
+
 ### 7.4 Deferred to Stage 1+
 
 - Independent local `D` and global `G` lattices (Stage 1 proper).
