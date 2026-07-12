@@ -244,7 +244,7 @@ proof -
       kgen_cfg sign_etf_retain fresh_frame_sign bot (fun_of_st cinit_sign_st)"
     using fixed_combine_satisfies_switching_combine_sound_le[OF finC, of id sign_etf_retain fresh_frame_sign bot "fun_of_st cinit_sign_st"]
     by simp
-  have single: "{k. (=) ctx k} = {id ctx}"
+  have reads: "(=) ctx (id ctx)"
     by simp
   show ?thesis
     by (rule side_cfg_T_eff_cmp_collect_sound_gen_le
@@ -256,7 +256,7 @@ proof -
              and fresh_frame=fresh_frame_sign
              and gcmp="(=)"
              and ctx=ctx,
-           OF sign_sound_etf_retain_framed_le comb single inr inl S_sound pp' finE finC
+           OF sign_sound_etf_retain_framed_le comb reads inr inl S_sound pp' finE finC
               cover_edge cover_comb cover_entry])
 qed
 

@@ -818,6 +818,28 @@ proof -
     by (simp add: side_env_def side_env_cmp_def glob_env_unit pull_gk_Inl pull_gk_Inr)
 qed
 
+text \<open>
+  The inequality form under the weakest routing law (a context reads \<^emph>\<open>at least\<close> its
+  own slot): reading extra slots only enlarges the keyed read, so the pulled
+  monovariant read stays below it.  This is what lets the collecting-soundness
+  theorems consume \<open>gcmp ctx (gkey ctx)\<close> instead of the exact singleton collapse.
+\<close>
+
+lemma side_env_pull_gk_le_cmp:
+  assumes "gcmp ctx (gkey ctx)"
+  shows "side_env (pull_gk gkey ctx \<sigma>) v \<le> side_env_cmp gcmp \<sigma> (v, ctx)"
+proof -
+  have g: "\<sigma> (Inr (gkey ctx)) \<le> glob_env_cmp gcmp ctx \<sigma>"
+    by (simp add: glob_env_cmp_upper assms)
+  have "side_env (pull_gk gkey ctx \<sigma>) v = \<sigma> (Inl (v, ctx)) \<squnion> \<sigma> (Inr (gkey ctx))"
+    by (simp add: side_env_def glob_env_unit pull_gk_Inl pull_gk_Inr)
+  also have "\<dots> \<le> \<sigma> (Inl (v, ctx)) \<squnion> glob_env_cmp gcmp ctx \<sigma>"
+    by (rule sup_mono[OF order_refl g])
+  also have "\<dots> = side_env_cmp gcmp \<sigma> (v, ctx)"
+    by (simp add: side_env_cmp_def)
+  finally show ?thesis .
+qed
+
 lemma s0_le_side_env_cmp_entry:
   fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
     and etf :: "(unit, 'a) effectful_domain_transfer"
@@ -963,7 +985,7 @@ theorem side_cfg_T_eff_cmp_collect_sound_gen:
     and etf :: "(unit, 'a) effectful_domain_transfer"
   assumes stf: "sound_effectful_transfer_framed etf fresh_frame"
     and comb_sound: "switching_combine_sound gkey cmb g etf fresh_frame bot0 s0"
-    and single: "{k. gcmp ctx k} = {gkey ctx}"
+    and reads: "gcmp ctx (gkey ctx)"
     and inr: "inr_slot_locals_bot_ctx \<sigma>"
     and inl: "inl_slot_globals_bot_ctx \<sigma>"
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
@@ -1005,9 +1027,9 @@ proof -
     show "s0 \<le> side_env (pull_gk gkey ctx \<sigma>) (cfg_entry g)"
       by (rule s0_le_side_env_cmp_entry[OF pp cover_entry])
   qed
-  have eq: "side_env (pull_gk gkey ctx \<sigma>) v0 = side_env_cmp gcmp \<sigma> (v0, ctx)"
-    using single by (rule side_env_pull_gk_eq_cmp)
-  show ?thesis using main eq by simp
+  have le: "side_env (pull_gk gkey ctx \<sigma>) v0 \<le> side_env_cmp gcmp \<sigma> (v0, ctx)"
+    using reads by (rule side_env_pull_gk_le_cmp)
+  show ?thesis by (rule order_trans[OF main gamma_state_mono[OF le]])
 qed
 
 text \<open>
@@ -1024,7 +1046,7 @@ theorem side_cfg_T_eff_cmp_collect_sound_gen_le:
     and etf :: "(unit, 'a) effectful_domain_transfer"
   assumes stf: "sound_effectful_transfer_framed_le etf fresh_frame"
     and comb_sound: "switching_combine_sound_le gkey cmb g etf fresh_frame bot0 s0"
-    and single: "{k. gcmp ctx k} = {gkey ctx}"
+    and reads: "gcmp ctx (gkey ctx)"
     and inr: "inr_slot_locals_bot_ctx \<sigma>"
     and inl: "inl_glob_le_keyed_ctx gkey \<sigma>"
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
@@ -1066,9 +1088,9 @@ proof -
     show "s0 \<le> side_env (pull_gk gkey ctx \<sigma>) (cfg_entry g)"
       by (rule s0_le_side_env_cmp_entry[OF pp cover_entry])
   qed
-  have eq: "side_env (pull_gk gkey ctx \<sigma>) v0 = side_env_cmp gcmp \<sigma> (v0, ctx)"
-    using single by (rule side_env_pull_gk_eq_cmp)
-  show ?thesis using main eq by simp
+  have le: "side_env (pull_gk gkey ctx \<sigma>) v0 \<le> side_env_cmp gcmp \<sigma> (v0, ctx)"
+    using reads by (rule side_env_pull_gk_le_cmp)
+  show ?thesis by (rule order_trans[OF main gamma_state_mono[OF le]])
 qed
 
 text \<open>
@@ -1103,7 +1125,7 @@ proof (rule side_cfg_T_eff_cmp_collect_sound_gen)
           (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
           g etf fresh_frame bot0 s0"
     by (rule fixed_combine_satisfies_switching_combine_sound[OF finC])
-  show "{k. gcmp ctx k} = {gkey ctx}" by (rule single)
+  show "gcmp ctx (gkey ctx)" using single by auto
   show "inr_slot_locals_bot_ctx \<sigma>" by (rule inr)
   show "inl_slot_globals_bot_ctx \<sigma>" by (rule inl)
   show "S \<le> \<lbrakk>s0\<rbrakk>" by (rule S_sound)

@@ -72,7 +72,7 @@ text \<open>
   candidate-solution premises.  The spec-level obligations are discharged once:
   \<^item> \<open>seed_const\<close> --- the interpretation's \<open>entry_seed\<close> is literally \<open>(\<lambda>_. fresh_frame_sign)\<close>;
   \<^item> transfer soundness --- @{thm [source] sign_sound_etf_unit_framed};
-  \<^item> \<open>single\<close> --- the unit key space is a singleton.
+  routing rides on the locale's \<open>reads_own_slot\<close> (trivial for the unit key).
   What remains are the standard solution well-formedness side conditions
   (slot invariants, start cover, finiteness, variable covers).
 \<close>
@@ -90,12 +90,8 @@ theorem sign_spec_post_fixpoint_sound:
     and cover_entry: "(cfg_entry g, ()) \<in> vars"
   shows "cfg_collect_ctx (\<lambda>_. ()) (\<lambda>_ _. True) g S v0 ()
            \<le> \<lbrakk>side_env_cmp (\<lambda>_ _. True) sigma (v0, ())\<rbrakk>"
-proof -
-  have single: "{k::unit. True} = {()}" by auto
-  show ?thesis
-    by (rule Sign_spec.spec_post_fixpoint_collecting_sound
-          [OF refl sign_sound_etf_unit_framed single inr inl S_sound pp finE finC
-              cover_edge cover_comb cover_entry])
-qed
+  by (rule Sign_spec.spec_post_fixpoint_collecting_sound
+        [OF refl sign_sound_etf_unit_framed inr inl S_sound pp finE finC
+            cover_edge cover_comb cover_entry])
 
 end

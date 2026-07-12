@@ -690,14 +690,125 @@ Missing bridges found: exactly one new lemma plus assembly wrappers.
 - **`seed_const`**: the theorem requires a context-independent `entry_seed` (collapsing the
   seeded generator to the fixed-frame one). Context-dependent seeds are the activation-witness
   spine (`Seeded_Clean_Ctx_Collect` / `Seeded_Activation_Sound`), not this endpoint.
-- **`single`**: at the read context, routing must be exactly-one-slot
-  (`{k. gcmp ctx k} = {gkey ctx}`) — the flat collapse needs it; Stage 0's locale law
-  `reads_own_slot` stays deliberately weaker.
+- **Routing**: needs nothing beyond the Stage-0 locale. The generator theorems consume the
+  weakest law `gcmp ctx (gkey ctx)` (`side_env_pull_gk_le_cmp`), which is exactly
+  `reads_own_slot` — the earlier exact-singleton `single` hypothesis was a proof artifact,
+  removed in the Stage-0.75 audit (§9).
 - **Remaining hypotheses** (`inr`/`inl` slot invariants, `S ≤ ⟦s0⟧`, finiteness, variable
   covers) are the standard solution well-formedness side conditions every existing generator
   endpoint takes — they are not among the six semantic premises.
 - Both Stage-0 endpoints remain: `context_collecting_sound` (premise-level, digest-precise)
   and `spec_post_fixpoint_collecting_sound` (post-fixpoint, premise-free). Nothing weakened.
+
+---
+
+## 9. Stage 0.75 audit — are the Stage-0.5 restrictions fundamental?
+
+Question: are `seed_const`, `single` (exact routing), and the flat-collecting collapse
+(`cfg_collect_ctx_le`) fundamental, or removable within the current architecture?
+Method: locate the single point each enters the proof, test whether the surrounding
+mathematics needs it, and (where a removal is demonstrably correct and bounded) do it.
+
+### 9.1 Where each assumption enters (dependency graph)
+
+```
+spec_post_fixpoint_collecting_sound            (Call_Spec_Sound, context_collecting_soundness)
+ ├─ cfg_collect_ctx_le                                     ← [FLAT COLLAPSE]
+ │    (CFG_Collect_Trace.thy:501: every digest slice ⊆ flat collect)
+ └─ spec_post_fixpoint_flat_sound              (Call_Spec_Sound, goblint_analysis_spec)
+      ├─ gen_eq : spec_generator = side_cfg_T_eff_cmp …    ← [SEED_CONST]
+      │    └─ side_cfg_T_eff_cmp_seed_const    (Exec_Cmp_Bridge; constant-seed collapse)
+      └─ side_cfg_T_eff_cmp_collect_sound_gen  (TD_Side_Eff_Cmp_Gen.thy:961)
+           ├─ post_fixpoint_sound_at_eff        — pull_gk world: ENTRY/PROC_ENTRY/EDGE
+           ├─ spec_cmb_realizes_combine         — LOCAL_POST/CMP_SOUND
+           └─ side_env_pull_gk_le_cmp           ← [reads_own_slot]
+                (previously side_env_pull_gk_eq_cmp ← [SINGLE], now removed)
+```
+
+### 9.2 Classification
+
+| Assumption | Enters at | Why it was needed | Class | Status |
+|---|---|---|---|---|
+| `single` (`{k. gcmp ctx k} = {gkey ctx}`) | final collapse step of `_collect_sound_gen(_le)`: `side_env_pull_gk_eq_cmp` | the proof rewrote the pulled monovariant read into the keyed read by *equality* | **proof artifact** | **removed.** Reading extra slots only enlarges the keyed read: `side_env_pull_gk_le_cmp` (`≤` under `gcmp ctx (gkey ctx)`) + `gamma_state_mono` replace the equality. Generator theorems now take `reads`; the spec endpoints take *no* routing premise — `reads_own_slot` (the locale law) suffices end-to-end. Verified: `Voblint_Analysis` batch green; the one external caller (`Exec_Sign_Cmp_Keyed_Gen_Run`, retain spine) migrated and file-clean in I/Q. |
+| `seed_const` (`entry_seed = (λ_. fr)`) | `gen_eq` in `spec_post_fixpoint_flat_sound`, collapsing the seeded generator to the fixed-frame one that `_collect_sound_gen` is stated over | `_collect_sound_gen`'s internal lemmas (`enter_le`, `edge_le`, `switching_combine_sound`) are all stated for `side_cfg_T_eff_cmp` with one frame | **proof artifact** | removable, deferred (migration plan §9.3; no current consumer — all shipped seeds are constant) |
+| flat collapse (`cfg_collect_ctx_le`) | `spec_post_fixpoint_collecting_sound` | avoids `ENTER_MONO`, which is candidate-solution-dependent and provably not always dischargeable (§6.10 pt. 2) | **fundamental** for a premise-free endpoint — and currently **lossless** (§9.4) | keep |
+
+### 9.3 Migration plan: removing `seed_const`
+
+The generator *interface* already supports context-dependent seeds
+(`side_cfg_T_eff_cmp_seed` takes `frame_seed :: 'c ⇒ 'a abs_state`); only the soundness
+spine is frame-fixed. Key structural fact: in the CMP generator every subtree of the
+equation at `(v, ctx)` is keyed into row `ctx` (intra: `map_ltree (λw. (w, ctx))`;
+combine: `spec_cmb` keeps `ctx`), so **row `ctx` is dep-closed** and the seed system
+agrees with the fixed system (`fr := frame_seed ctx`) on that row. Plan (3 lemmas,
+no existing lemma changes):
+
+1. `cmp_row_dep_closed` — the `dep⇩L` set of the seed/fixed generator at `(v, ctx)` stays
+   in row `ctx` (strategy-tree induction, or reuse the `dep_aux` machinery in
+   `Exec_Cmp_Bridge.thy:830`).
+2. `part_post_solution_row_restrict` — from `part_post_solution (seed_sys) x σ vars`,
+   row-agreement, dep-closure, and `(cfg_entry g, ctx) ∈ vars` (the existing
+   `cover_entry`), derive `part_post_solution (fixed_sys[fr := frame_seed ctx])
+   (cfg_entry g, ctx) σ (vars ∩ (UNIV × {ctx}))`. Direct from the `part_post_solution`
+   definition (`Basics_side.thy:337`): membership, dep-closure, and the two `≤`
+   conditions all restrict/transfer pointwise where the equations agree.
+3. Generalized `spec_post_fixpoint_flat_sound` — replace `seed_const` + `stf` by the
+   pointwise `stf: sound_effectful_transfer_framed etf (entry_seed ctx)`; feed the
+   restricted post-solution to the unchanged `side_cfg_T_eff_cmp_collect_sound_gen`.
+
+Estimated impact: ~80–150 lines in `Exec_Cmp_Bridge`/`Call_Spec_Sound`; existing lemmas
+untouched; strictly more general endpoint (`seed_const` case is `entry_seed ctx = fr`).
+Not executed now: every shipped instance (Sign, Interval, retain) uses a constant seed,
+and context-dependent seeds currently live on the seeded-clean/activation spine with its
+own endpoints — the refactor has no consumer until a context-dependent-seed analysis
+runs on the flat route.
+
+### 9.4 The flat collapse is currently lossless (tasks 4 & 5)
+
+Two facts bound what a digest-sensitive endpoint could add:
+
+- **Self-contained rows.** The generic CMP generator keys *every* dependency of
+  `(v, ctx)` into row `ctx`; procedure entries are seeded by the frame plus the keyed
+  global read, and `spec_cmb` returns into the same row. Each row is therefore a closed
+  equation system over-approximating *all* flows — exactly what the flat theorem bounds.
+  For every system `spec_generator` can currently produce, the digest-precise conclusion
+  (same slice, same read) coincides with the flat-collapse conclusion. Context
+  sensitivity in this spine lives in the *keyed globals* (`gkey`-indexed `Inr` slots),
+  which both routes read identically. Row-switching generators (Goblint-style `ctx_sel`
+  at calls) exist only example-locally (`side_cfg_T_eff_cmp_ctxupd_st` in
+  `Example_Finite_Sign_Context_Analysis`), not in the shipped spine.
+- **`ENTER_MONO` cannot be premise-free, but can be solution-checkable.** A generic
+  premise-free digest route is impossible (§6.10 pt. 2: the shared-context sign case
+  falsifies `ENTER_MONO` for some post-fixpoints). The existing partial recovery is
+  `point_digest.enter_mono_point` (`Seed_EnterMono_Lift.thy`): point-exactness of the
+  computed solution slot (`is_point (σ (Inl (cl, ctx)) proj_var)`) discharges
+  `ENTER_MONO` — a *checkable side condition on the solver output*, not a semantic trace
+  premise. A future digest-sensitive endpoint can therefore expose exactly **one**
+  checkable obligation instead of six. That becomes worthwhile only together with a
+  row-switching `spec_cmb` — which interacts with the `enter`/`combine` redesign and
+  D/G separation, i.e. Stage 1 territory.
+
+Task 5 (context-dependent seeds without activation witnesses or generator changes):
+yes — the generator interface is unchanged and the flat route needs no witnesses; the
+cost is exactly the §9.3 row-restriction plan.
+
+Task 6 (routing from `reads_own_slot` alone): yes — implemented, see §9.2.
+
+### 9.5 Recommendation
+
+**B, with the routing item already completed.** Freeze Stage 0.5 and proceed to Stage 1:
+
+- `single` — eliminated now (done; the Stage-0 locale law is sufficient end-to-end, so
+  the contract and the proof spine finally state the *same* routing requirement).
+- `seed_const` — a real but consumer-less generalization; keep §9.3 as a ready-to-execute
+  plan rather than doing speculative proof work.
+- flat collapse — fundamental for a premise-free endpoint and lossless for everything the
+  current generator emits; the digest-sensitive upgrade only pays once the generator
+  switches rows at calls, which belongs with Stage 1's `enter`/`combine`/`D`–`G` redesign
+  (plus the one-obligation `point_digest` route when that happens).
+
+Stage 0.5 is architecturally complete for the current generator; the minimal remaining
+proof work before Stage 1 is **none** (the `seed_const` plan is optional and deferred).
 
 ---
 

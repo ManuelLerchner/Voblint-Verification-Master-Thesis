@@ -30,14 +30,15 @@ text \<open>
   (see the shared-context sign case in \<open>Example_Finite_Sign_Context_Analysis\<close>), so a
   premise-free theorem covering that route cannot exist.
 
-  Two hypotheses configure the route rather than the candidate solution:
+  One hypothesis configures the route rather than the candidate solution:
   \<^item> \<open>seed_const\<close>: the spec's \<open>entry_seed\<close> is context-independent, collapsing
     \<^const>\<open>side_cfg_T_eff_cmp_seed\<close> to the fixed-frame generator
     (\<open>side_cfg_T_eff_cmp_seed_const\<close>).  Context-dependent seeds are the
     activation-witness spine (\<open>Seeded_Clean_Ctx_Collect\<close>), not Stage 0.5.
-  \<^item> \<open>single\<close>: at the read context the routing is exactly-one-slot.  Stage 0's
-    \<open>reads_own_slot\<close> is deliberately weaker (at-least-own-slot); the flat collapse
-    additionally needs that no \<^emph>\<open>other\<close> slot is read.
+
+  Routing needs nothing beyond the locale: the generator theorems consume the weakest
+  law \<open>gcmp ctx (gkey ctx)\<close> (via \<open>side_env_pull_gk_le_cmp\<close>), which is exactly the
+  \<^locale>\<open>global_routing_spec\<close> assumption \<open>reads_own_slot\<close>.
 
   The remaining premises (\<open>inr\<close>/\<open>inl\<close> slot invariants, start cover \<open>S_sound\<close>,
   finiteness, variable covers) are the standard well-formedness side conditions every
@@ -52,7 +53,6 @@ theorem spec_post_fixpoint_flat_sound:
     and etf :: "(unit, 'a) effectful_domain_transfer"
   assumes seed_const: "entry_seed = (\<lambda>_. fr)"
     and stf: "sound_effectful_transfer_framed etf fr"
-    and single: "{k. gcmp ctx k} = {gkey ctx}"
     and inr: "inr_slot_locals_bot_ctx sigma"
     and inl: "inl_slot_globals_bot_ctx sigma"
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
@@ -71,9 +71,10 @@ proof -
     by (rule side_cfg_T_eff_cmp_seed_const)
   have comb: "switching_combine_sound gkey (spec_cmb etf) g etf fr bot0 s0"
     by (rule spec_cmb_realizes_combine[OF finC])
+  have reads: "gcmp ctx (gkey ctx)" by (rule reads_own_slot)
   show ?thesis
     by (rule side_cfg_T_eff_cmp_collect_sound_gen
-          [where gcmp = gcmp, OF stf comb single inr inl S_sound
+          [where gcmp = gcmp, OF stf comb reads inr inl S_sound
               pp[unfolded gen_eq] finE finC cover_edge cover_comb cover_entry])
 qed
 
@@ -94,7 +95,6 @@ theorem spec_post_fixpoint_collecting_sound:
     and etf :: "(unit, 'a) effectful_domain_transfer"
   assumes seed_const: "entry_seed = (\<lambda>_. fr)"
     and stf: "sound_effectful_transfer_framed etf fr"
-    and single: "{k. gcmp ctx k} = {gkey ctx}"
     and inr: "inr_slot_locals_bot_ctx sigma"
     and inl: "inl_slot_globals_bot_ctx sigma"
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
@@ -108,7 +108,7 @@ theorem spec_post_fixpoint_collecting_sound:
 proof -
   have flat: "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp sigma (v0, ctx)\<rbrakk>"
     by (rule spec_post_fixpoint_flat_sound
-          [OF seed_const stf single inr inl S_sound pp finE finC
+          [OF seed_const stf inr inl S_sound pp finE finC
               cover_edge cover_comb cover_entry])
   have slice: "cfg_collect_ctx dg cmp g S v0 ctx \<subseteq> cfg_collect g S v0"
     by (rule cfg_collect_ctx_le)
