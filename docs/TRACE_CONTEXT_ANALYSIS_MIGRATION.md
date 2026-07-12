@@ -16,6 +16,10 @@ merge their solver steps.
 
 KB: `wiki/research/trace-precision-direction.md`, `wiki/concepts/digests.md`.
 
+Related doc for the additive last-write layer:
+
+- `TRACE_LAST_WRITE_MIGRATION.md` - derived `last_writer` / `last_write_collect` on top of `cfg_collect_trace`
+
 ---
 
 ## 1. Goal
