@@ -7,14 +7,16 @@ generator or context redesign. All existing theorem statements are preserved;
 the split representation exists alongside the homogeneous one and is proven
 isomorphic to it.
 
-Status: **Stage 1A and Stage 1B implemented**. 1A:
+Status: **Stages 1A, 1B and 1C implemented**. 1A:
 `src/Analysis/Generic/Domain/Split_State.thy` plus a bridge subsection in
 `src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy`. 1B:
 `src/Analysis/Generic/Solver/Context/Split_Cmp_Gen.thy` (split-shaped trees,
 transfer factory and CMP generator, each proven equal to its homogeneous
 original) plus the sign instantiation in
-`src/Analysis/Instances/Sign/Sign_Call_Spec.thy`. Stages 1C-1D are design
-only.
+`src/Analysis/Instances/Sign/Sign_Call_Spec.thy`. 1C: the remaining generic
+tree constructors and factories, in the same theory (see the Stage 1C section
+below for the constructor audit, the retain finding, the executable-mirror
+audit and the Stage 1D readiness report). Stage 1D is design only.
 
 ## 1. Where the homogeneous representation is assumed
 
@@ -227,22 +229,115 @@ Split_State ('l,'g) split_state, merge/split iso, combine_split*
               sign_spec_post_fixpoint_sound_split
 ```
 
-Not migrated (deliberately): the `retain` / `local` / `mixed` tree factories
-(their `Answer` payloads are not split-shaped -- `retain` keeps globals in the
-local slot) and the `'a st` executable mirror. Both are Stage 1C targets.
+### Stage 1C -- remaining tree infrastructure, `'l = 'g` (implemented)
 
-### Stage 1C -- thread through `strategy_tree` payloads and transfers, `'l = 'g`
+Implemented in `Split_Cmp_Gen.thy` (Stage 1C section; new import
+`Clean_RRead_Sound` for the clean tree).
 
-* Generalize the tree payload from `'a abs_state` to a state parameter carried
-  by the transfer record; instantiate with `('a, 'a) split_state`.
-* `QueryL` answers become the local component, `QueryG` answers the global
-  component; `Side` publications carry the global component only (today:
-  `restrict_global res`).
-* `domain_transfer` gains a split-typed sibling (or is parameterized); Sign
-  and Interval instances are wrapped through `merge_state` / `split_state`, so
-  their existing transfer soundness lemmas transport via `gamma_split_merge`.
-* Executable mirror: `('l st, 'g st)` pairs; `restrict_local_st` /
-  `restrict_global_st` already exist.
+#### Constructor audit
+
+Every tree constructor in the generic layer, classified. "Naturally split"
+means the body is a composition of split-level operations
+(`split_state` components, `combine_split`, `merge_state`); all such
+constructors are migrated with a proven equality `split_version = original`.
+
+| Constructor | File | Classification | Split version / equality |
+| --- | --- | --- | --- |
+| `unit_edge_tree` | `TD_Side_CFG` | naturally split | `split_edge_tree` (1B), `split_edge_tree_eq_unit` |
+| `unit_combine_tree` | `TD_Side_CFG` | naturally split | `split_combine_tree` (1B), `split_combine_tree_eq_unit` |
+| `retain_edge_tree` | `TD_Side_CFG` | **intentionally mixes** (flow-sensitive global copy in the local unknown); still split-representable via pair reassembly | `split_retain_edge_tree`, `split_retain_edge_tree_eq` |
+| `clean_edge_tree` | `Clean_RRead_Sound` | same pattern as retain (Answer keeps the whole result; reads only the local slot) | `split_clean_edge_tree`, `split_clean_edge_tree_eq` |
+| `local_edge_tree` | `TD_Side_CFG` | naturally split (`combine_split` of split result with pass-through globals) | `split_local_edge_tree`, `split_local_edge_tree_eq` |
+| `mixed_etf_edge_tree` | `TD_Side_CFG` | dispatcher (no own body) | `split_mixed_etf_edge_tree`, `split_mixed_etf_edge_tree_eq` |
+| `unit_combine_tree_ctx` | `TD_Side_Tree` | naturally split (same `combine_split` shape; the context routing is value-dependent but state-opaque) | `split_combine_tree_ctx`, `split_combine_tree_ctx_eq` |
+| `make_side_rhs_tree_eff` | `TD_Side_Tree` | naturally split (entry-seed decomposition only) | `split_make_side_rhs_tree_eff`, `split_make_side_rhs_tree_eff_eq`, `side_cfg_T_eff_split_eq` |
+| `edge_constraint_tree` | `TD_Side_Tree` | homogeneous-opaque (alias for `apply_etf`; no structure inspection) | nothing to migrate |
+| `seqcomp_tree`, `map_ltree`, `map_gtree` | monad/relabel layer | fully polymorphic in the payload | nothing to migrate |
+| `route_tree`, `sideg_tree` | `Instances/NamedGlobalSign` | instance-level (named-global writer), outside the generic layer | Stage 1D instance work |
+
+`retain_combine_tree` and `local_combine_tree` do not exist: all three
+factories (`unit`, `retain`, `mixed`) share `unit_combine_tree` as their
+`etf_combine` field, and `clean` does too.
+
+Factories migrated with equalities: `split_retain_etf_of_transfer` (=
+`retain_etf_of_transfer`), `split_mixed_etf_of_transfer` (=
+`mixed_etf_of_transfer`), `split_clean_etf_of_transfer` (=
+`clean_etf_of_transfer`), each with the soundness corollary transported by
+rewriting (`sound_effectful_transfer_split_retain` / `_split_mixed`).
+
+#### The retain finding (design audit)
+
+Why retain stores global information inside the `Answer` payload:
+
+* The global unknown (`Inr` slot) is *flow-insensitive* -- `glob_env` joins
+  every published write, everywhere. A transfer that wants the globals *as
+  known at this program point* must carry that information in the only
+  pp-indexed unknown available: the local slot. `TD_Side_CFG`'s retain
+  subsection states this directly ("the local slot ... now carrying the
+  flow-sensitive global"), and the keyed retain example
+  (`Exec_Sign_Cmp_Keyed_Retain_Run`) exists to exhibit the precision gain.
+* It is **not an implementation artifact**: `sides_retain_eq_unit` and
+  `etf_full_retain_eq_unit_edge_tree` prove retain differs from `unit_edge_tree`
+  *only* in the Answer payload -- the whole point of the constructor is that
+  payload.
+* It **is cleanly split-representable**: the split version publishes the
+  global half (`snd (split_state res)`) and answers the *reassembled pair*
+  (`merge_state (split_state res) = res`, the Stage 1A isomorphism), giving a
+  definitional equality (`split_retain_edge_tree_eq`). Nothing blocks the
+  split representation.
+* The genuine Stage 1D consequence: for retain-style (and clean-style)
+  transfers the local unknown's value type must be the **full pair**
+  `('l, 'g) split_state` -- Goblint's `D` carrying a global copy -- whereas
+  unit/local/mixed transfers only ever put the local component in the Answer.
+  This is a typing decision, not a semantic blocker.
+
+#### Executable mirror audit
+
+Every `*_st` implementation, classified per the Stage 1C criterion (migrate
+only what is mechanically identical):
+
+| Mirror | Classification |
+| --- | --- |
+| `unit_edge_tree_st`, `unit_combine_tree_st`, `retain_edge_tree_st`, `clean_edge_tree_st` (`Exec_Bridge`) | duplicated implementation at `'a st` (quotient type, lifted `restrict_local_st`/`restrict_global_st`), connected by `fun_of_st` simulation lemmas -- not mechanically identical, no migration |
+| `unit_combine_tree_ctx_st`, `side_rhs_fold_ctx_st` (`Exec_Ctx_Bridge`) | same |
+| `make_side_rhs_tree_eff_st`, `side_cfg_T_eff_cmp_st`, `side_cfg_T_eff_cmp_seed_st` (`Exec_Bridge`/`Exec_Cmp_Bridge`) | same |
+| `restrict_local_st`, `restrict_global_st`, `combine_abs_st`, `st_of_abs` (`Exec_St`, `Exec_Ctx_Bridge`) | executable split *components* already exist; a split executable state is `('l st * 'g st)` -- a Stage 1D type change only |
+
+None are semantically different from their abstract counterparts (each has a
+`fun_of_st` simulation lemma); none are mechanically derivable (the `'a st`
+quotient forces separate definitions + transfer proofs). Hence no executable
+migration in 1C -- and none is needed: post-fixpoints transport through the
+existing simulation lemmas to the abstract generators, which 1B/1C prove
+equal to their split versions.
+
+#### Stage 1D readiness report
+
+| Component | Readiness for independent `('l, 'g)` |
+| --- | --- |
+| vendor solver, `strategy_tree`, `seqcomp_tree`, `map_ltree`/`map_gtree`, `side_rhs_fold*` | **ready** (polymorphic in the payload) |
+| split trees / factories / generators (1B+1C artefacts) | **blocked only by type changes**: `Side` payloads become `'g abs_state` (`snd`), `Answer` payloads `'l abs_state` (unit/local/mixed) or the pair (retain/clean) |
+| solver unknown-value type | **blocked only by a type decision**: the vendor `eqsT` has a single value type `'d`, so `Inl`/`Inr` slots cannot be typed differently; Stage 1D sets `'d := ('l, 'g) split_state` with `wf_split`-style slot invariants (the existing `inr_slot_locals_bot` / `inl_slot_globals_bot` are exactly the two halves of `wf_split`). No solver modification needed. |
+| soundness statements | **blocked only by type changes**: `gamma_state` -> `gamma_split` (Stage 1A already provides it, heterogeneous, with `gamma_split_merge` recovering today's statements at `'l = 'g`) |
+| transfer records (`domain_transfer`, `effectful_domain_transfer`) | **blocked only by type changes**: fields over the pair; enter/combine get genuinely split types mirroring `enter_state` / `<s\|t>` |
+| executable layer | **blocked only by type changes**: `('l st * 'g st)` pair, components already exist |
+| retain/clean transfers | **resolved** (see the retain finding): need pair-valued local unknowns; not a semantic blocker |
+| **semantic blockers** | **none identified at the tree level.** The single constraint of substance is the vendor solver's one-value-type interface, and it is absorbed by `'d := ('l, 'g) split_state` without touching the solver. |
+
+What remains before `locals : 'l, globals : 'g`:
+
+```
+'d := ('l,'g) split_state at the eqsT level
+  |
+  +-- trees: Side snd-typed, Answer fst-typed (pair for retain/clean)
+  |     [1B/1C split versions are the templates; drop merge_state at the
+  |      boundary instead of reassembling]
+  +-- transfer records over the pair; enter/combine split-typed
+  +-- side_env / glob_env readings via gamma_split
+  |     (slot invariants = wf_split halves, already stated)
+  +-- soundness endpoints restated with gamma_split
+  |     (homogeneous case recovered via gamma_split_merge)
+  +-- exec mirror at ('l st * 'g st)
+```
 
 ### Stage 1D -- allow `'l ~= 'g`
 

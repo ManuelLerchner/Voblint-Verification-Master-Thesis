@@ -26,4 +26,4 @@ the digest read from. See `../README.md` for the Core/Context/Exec split.
 | `Call_Spec.thy` | Goblint-inspired semantic call/routing contract (`call_spec`, `global_routing_spec`, `trace_context_compatibility`, `goblint_analysis_spec`; `context_collecting_sound`) |
 | `Call_Spec_Generator.thy` | wiring: `spec_generator` = seeded CMP generator with `frame_seed := entry_seed`; `spec_cmb_realizes_combine` |
 | `Call_Spec_Sound.thy` | Stage-0.5 endpoint: `spec_post_fixpoint_collecting_sound` — collecting soundness from a `spec_generator` post-fixpoint, no six-premise restatement |
-| `Split_Cmp_Gen.thy` | Stage-1B split-state CMP generator: split trees / `split_etf_of_transfer` / `side_cfg_T_eff_cmp_split_seed` / `spec_generator_split`, each proven equal to its homogeneous original (see `docs/SPLIT_STATE_MIGRATION.md`) |
+| `Split_Cmp_Gen.thy` | Stage-1B/1C split-state generators: split trees (unit/retain/clean/local/mixed/ctx-combine) and factories, `side_cfg_T_eff_cmp_split_seed`, `split_make_side_rhs_tree_eff`, `spec_generator_split` — each proven equal to its homogeneous original (see `docs/SPLIT_STATE_MIGRATION.md`) |
