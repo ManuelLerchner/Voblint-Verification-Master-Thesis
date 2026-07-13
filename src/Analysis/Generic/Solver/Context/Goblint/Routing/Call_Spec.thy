@@ -6,7 +6,7 @@ section \<open>A Goblint-inspired analysis specification (Stage 0)\<close>
 
 text \<open>
   Stage 0 of the Goblint-aligned direction (see
-  \<^file>\<open>../../../../../docs/GOBLINT_SPEC_LOCAL_GLOBAL_SEPARATION_AUDIT.md\<close>, sections 6-7):
+  \<^file>\<open>../../../../../../../docs/GOBLINT_SPEC_LOCAL_GLOBAL_SEPARATION_AUDIT.md\<close>, sections 6-7):
   a first-class, analysis-provided call and routing contract over the \<^emph>\<open>current\<close>
   single-value state \<^typ>\<open>'a abs_state\<close>.  No state, tree, equation-system, or solver
   type changes.  This theory is \<^emph>\<open>purely semantic\<close>: it imports only the soundness layer

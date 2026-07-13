@@ -1,7 +1,7 @@
 theory Activation_Domain_Instances
   imports
-    "../../Generic/Solver/Context/Seeded_Activation_Sound"
-    "../../Generic/Solver/Context/Activation_Witness_From"
+    "../../Generic/Solver/Context/Goblint/Routing/Support/Activation/Seeded_Activation_Sound"
+    "../../Generic/Solver/Context/Goblint/Routing/Support/Activation/Activation_Witness_From"
     "../Sign/Sign_Transfer"
     "../Interval/Interval_Transfer"
 begin

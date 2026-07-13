@@ -10,7 +10,7 @@ The layer is split into three concerns, one subfolder each:
 | Subfolder | Concern |
 | --- | --- |
 | `Core/` | the TD-side strategy-tree spine: monad, generator, monotonicity, base collecting soundness |
-| `Context/` | context-indexed / cmp-filtered / digest-refined global reads and their soundness |
+| `Context/` | Goblint-facing context spine: `Goblint/Read`, `Goblint/Read/Support`, `Goblint/Routing`, `Goblint/Routing/Support`, `Goblint/DG` |
 | `Exec/` | the `'a st` executable mirror and `fun_of_st` transport |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
@@ -36,13 +36,8 @@ This layer wires `part_post_solution` to `is_post_fixpoint` via
 
 ## `Context/`
 
-Context-indexed and digest-refined global reads. `Digest_Global_Read` holds the kernel
-locale `digest_global_read` (`obs_digest`); `Global_Cmp_Read` / `Context_Domain` are the
-degenerate context-only base the digest read collapses to; the `TD_Side_Eff_Cmp_*` /
-`TD_Side_Eff_Ctx_Sound` files carry the EDGE/ENTRY discharge and combine soundness the
-kernel builds on. `Value_Digest_Reader` is the generic value-projected reader locale
-(`value_digest_reader`, `vd_obs`) the sign mode reader instantiates. `Digest_Keyed_Writer{,_Sound}`
-is the value-derived (mode) writer.
+`Context/README.md` is the pointer. The live inventory is in
+`Context/Goblint/README.md`.
 
 ## `Exec/`
 
