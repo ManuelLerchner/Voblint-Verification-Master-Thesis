@@ -311,7 +311,7 @@ lemma inl_slot_globals_bot_pull_gk:
   by (simp add: inl_slot_globals_bot_ctx_def inl_slot_globals_bot_def pull_gk_Inl)
 
 text \<open>
-  The retain keyed invariant: every context copy's local globals sit below that
+  The keyed snapshot invariant: every context copy's local globals sit below that
   context's keyed slot.  It is the keyed analogue of @{const inl_glob_le_glob_env},
   and @{const inl_slot_globals_bot_ctx} implies it.  Its pullback is exactly the
   @{const inl_glob_le_glob_env} the weak enter contract needs.
@@ -333,19 +333,15 @@ lemma inl_glob_le_glob_env_pull_gk:
   by (simp add: inl_glob_le_keyed_ctx_def inl_glob_le_glob_env_def
         glob_env_unit pull_gk_Inl pull_gk_Inr)
 
-subsection \<open>The retain keyed invariant is derivable from an exact solution\<close>
+subsection \<open>Global-domination helpers for exact solutions\<close>
 
 text \<open>
-  \<^const>\<open>inl_glob_le_keyed_ctx\<close> is not an axiom: it is the globals-projection of the
-  exact-fixpoint property.  At an exact \<^const>\<open>part_solution\<close> each retain edge
-  publishes its written global to the keyed slot (the intra tree's \<open>Side\<close>), while its
-  full result --- globals included --- is the local Answer.  So the local slot's
-  globals are a sub-join of what the keyed slot accumulates, hence dominated by it.
-  A mere \<^const>\<open>part_post_solution\<close> is insufficient: it bounds the equation \<^emph>\<open>below\<close>
-  the local slot but leaves the local slot itself unbounded \<^emph>\<open>above\<close>, so an
-  adversarial post-solution can inflate a local global past the keyed slot.  The
-  vendored always-join side solver returns an exact \<^const>\<open>part_solution\<close> (no
-  widening), so the invariant holds at every reachable slot.
+  Generic ingredients for deriving \<^const>\<open>inl_glob_le_keyed_ctx\<close> from an exact
+  \<^const>\<open>part_solution\<close>: restriction algebra, the fold-level global bound, and
+  per-tree domination for the fixed combine.  An analysis whose local Answers
+  carry globals combines these with a per-edge domination fact for its own tree
+  shape to discharge the invariant from the solver output alone (see the retain
+  analysis for the packaged reduction).
 \<close>
 
 lemma restrict_global_sup:
@@ -405,28 +401,6 @@ next
   finally show ?case .
 qed
 
-text \<open>Per-tree domination for a keyed retain intra edge: traverse-global \<^emph>\<open>equals\<close> the keyed side.\<close>
-lemma restrict_global_traverse_retain_intra:
-  fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
-  shows "restrict_global (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-              (map_ltree (\<lambda>w. (w, ctx)) (retain_edge_tree f u))) \<sigma>)
-         = sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-              (map_ltree (\<lambda>w. (w, ctx)) (retain_edge_tree f u))) \<sigma> (Inr (gkey ctx))"
-proof -
-  have "restrict_global (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-             (map_ltree (\<lambda>w. (w, ctx)) (retain_edge_tree f u))) \<sigma>)
-        = restrict_global (traverse_rhs (retain_edge_tree f u) (pull_gk gkey ctx \<sigma>))"
-    by (simp add: traverse_intra_pull_gk)
-  also have "\<dots> = all_sides (retain_edge_tree f u) (pull_gk gkey ctx \<sigma>)"
-    by (simp add: traverse_retain_edge_tree all_sides_retain_edge_tree)
-  also have "\<dots> = sides_of_rhs (retain_edge_tree f u) (pull_gk gkey ctx \<sigma>) (Inr ())"
-    by (rule all_sides_eq_sides_Inr_unit)
-  also have "\<dots> = sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-             (map_ltree (\<lambda>w. (w, ctx)) (retain_edge_tree f u))) \<sigma> (Inr (gkey ctx))"
-    by (rule sides_intra_pull_gk[symmetric])
-  finally show ?thesis .
-qed
-
 text \<open>Per-tree domination for a keyed fixed-combine tree: its traverse has no global part.\<close>
 lemma restrict_global_traverse_unit_combine_intra:
   fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
@@ -442,152 +416,6 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>
-  The reduction: for the retain fixed-combine keyed system, an exact
-  \<^const>\<open>part_solution\<close> satisfies the keyed invariant at every reachable slot.  This
-  discharges the standing assumption of the retain keyed witness from the exact
-  solver output, leaving no non-derived solver obligation.
-\<close>
-theorem part_solution_imp_inl_glob_le_keyed_ctx:
-  fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
-    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  assumes retain_edge: "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
-    and retain_comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
-    and bot0_glob: "restrict_global bot0 = \<bottom>"
-    and frame_glob: "restrict_global fresh_frame = \<bottom>"
-    and ps: "part_solution (side_cfg_T_eff_cmp gkey
-                (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                    (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
-                g etf fresh_frame bot0 s0) x \<sigma> vars"
-    and v: "(v, ctx) \<in> vars"
-    and y: "is_global y"
-  shows "\<sigma> (Inl (v, ctx)) y \<le> \<sigma> (Inr (gkey ctx)) y"
-proof -
-  let ?cmb = "\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex))"
-  let ?T = "side_cfg_T_eff_cmp gkey ?cmb g etf fresh_frame bot0 s0"
-  let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
-                \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>)"
-  let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-                        (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
-                    (non_enter_predecessor_list g v)"
-  let ?comb = "map (\<lambda>(cc, ex). ?cmb ctx cc ex) (combine_predecessor_list g v)"
-  have exact: "eq ?T (v, ctx) \<sigma> = \<sigma> (Inl (v, ctx))" using ps v by auto
-  have hyp: "\<And>t. t \<in> set (?intra @ ?comb)
-             \<Longrightarrow> restrict_global (traverse_rhs t \<sigma>) \<le> sides_of_rhs t \<sigma> (Inr (gkey ctx))"
-  proof -
-    fix t assume t: "t \<in> set (?intra @ ?comb)"
-    show "restrict_global (traverse_rhs t \<sigma>) \<le> sides_of_rhs t \<sigma> (Inr (gkey ctx))"
-    proof (cases "t \<in> set ?intra")
-      case True
-      then obtain u a where
-        "t = map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))"
-        by auto
-      thus ?thesis
-        by (simp add: retain_edge restrict_global_traverse_retain_intra)
-    next
-      case False
-      with t have "t \<in> set ?comb" by simp
-      then obtain cc ex where
-        "t = map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf cc ex))"
-        by auto
-      thus ?thesis
-        by (simp add: retain_comb restrict_global_traverse_unit_combine_intra)
-    qed
-  qed
-  have acc0_glob: "restrict_global ?acc0 = \<bottom>"
-    using bot0_glob frame_glob
-    by (simp add: restrict_global_sup restrict_global_restrict_local_bot restrict_global_bot
-          split: if_split)
-  have fold_eq: "traverse_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> = eq ?T (v, ctx) \<sigma>"
-    by (simp add: eq_side_cfg_T_eff_cmp traverse_side_rhs_fold_ctx)
-  have sides_le: "sides_of_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> (Inr (gkey ctx))
-                    \<le> \<sigma> (Inr (gkey ctx))"
-  proof -
-    have "sides_of_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> (Inr (gkey ctx))
-            \<le> sides_of_rhs (?T (v, ctx)) \<sigma> (Inr (gkey ctx))"
-      by (rule sides_fold_le_side_cfg_T_eff_cmp)
-    also have "\<dots> \<le> \<sigma> (Inr (gkey ctx))"
-      by (rule side_post_solution_le_global_cmp[OF _ v]) (use ps in auto)
-    finally show ?thesis .
-  qed
-  have fun_le: "restrict_global (eq ?T (v, ctx) \<sigma>) \<le> \<sigma> (Inr (gkey ctx))"
-  proof -
-    have "restrict_global (eq ?T (v, ctx) \<sigma>)
-            \<le> restrict_global ?acc0
-              \<squnion> sides_of_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> (Inr (gkey ctx))"
-      by (metis (no_types, lifting) fold_eq hyp restrict_global_traverse_side_rhs_fold_ctx_le)
-    also have "\<dots> = sides_of_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> (Inr (gkey ctx))"
-      by (simp add: acc0_glob)
-    also have "\<dots> \<le> \<sigma> (Inr (gkey ctx))" by (rule sides_le)
-    finally show ?thesis .
-  qed
-  have "\<sigma> (Inl (v, ctx)) y = restrict_global (eq ?T (v, ctx) \<sigma>) y"
-    using y exact by (simp add: restrict_global_def)
-  also have "\<dots> \<le> \<sigma> (Inr (gkey ctx)) y" using fun_le by (rule le_funD)
-  finally show ?thesis .
-qed
-
-text \<open>
-  Packaged as the invariant on a covering variable set: on any \<open>vars\<close> closed under the
-  reachable slots, the exact retain solution satisfies \<^const>\<open>inl_glob_le_keyed_ctx\<close>
-  pointwise.  (The full unconditional \<^const>\<open>inl_glob_le_keyed_ctx\<close> additionally needs
-  the solver's \<open>\<bottom>\<close>-default outside \<open>vars\<close>, where both sides are \<open>\<bottom>\<close>.)
-\<close>
-lemma inl_glob_le_keyed_ctx_on_vars:
-  fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
-    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  assumes "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
-    and "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
-    and "restrict_global bot0 = \<bottom>" and "restrict_global fresh_frame = \<bottom>"
-    and "part_solution (side_cfg_T_eff_cmp gkey
-           (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-               (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
-           g etf fresh_frame bot0 s0) x \<sigma> vars"
-    and "\<And>v ctx. (v, ctx) \<in> vars"
-  shows "inl_glob_le_keyed_ctx gkey \<sigma>"
-  unfolding inl_glob_le_keyed_ctx_def
-  using part_solution_imp_inl_glob_le_keyed_ctx[OF assms(1-5)] assms(6) by blast
-
-text \<open>
-  The realistic full form.  Exactness gives the invariant on the solved set
-  \<open>vars\<close>; the solver's \<open>\<bottom>\<close>-init default gives it outside \<open>vars\<close> --- an unsolved
-  local slot keeps the initial \<open>\<bottom>\<close>, dominated by anything.  Together they discharge
-  the full \<^const>\<open>inl_glob_le_keyed_ctx\<close> from the fixpoint shape alone, with no
-  standalone slot-relating assumption.  Both inputs are intrinsic properties of the
-  solver output (exact fixpoint, \<open>\<bottom>\<close> default), not semantic assertions about the
-  analysis.
-\<close>
-lemma inl_glob_le_keyed_ctx_full:
-  fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
-    and etf :: "(unit, 'a) effectful_domain_transfer"
-    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  assumes retain_edge: "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
-    and retain_comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
-    and bot0_glob: "restrict_global bot0 = \<bottom>"
-    and frame_glob: "restrict_global fresh_frame = \<bottom>"
-    and ps: "part_solution (side_cfg_T_eff_cmp gkey
-                (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                    (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
-                g etf fresh_frame bot0 s0) x \<sigma> vars"
-    and outside: "\<And>v ctx. (v, ctx) \<notin> vars \<Longrightarrow> \<sigma> (Inl (v, ctx)) = \<bottom>"
-  shows "inl_glob_le_keyed_ctx gkey \<sigma>"
-  unfolding inl_glob_le_keyed_ctx_def
-proof (intro allI impI)
-  fix v ctx x assume glob: "is_global x"
-  show "\<sigma> (Inl (v, ctx)) x \<le> \<sigma> (Inr (gkey ctx)) x"
-  proof (cases "(v, ctx) \<in> vars")
-    case True
-    show ?thesis
-      by (rule part_solution_imp_inl_glob_le_keyed_ctx
-            [OF retain_edge retain_comb bot0_glob frame_glob ps True glob])
-  next
-    case False
-    then have "\<sigma> (Inl (v, ctx)) = \<bottom>" by (rule outside)
-    then show ?thesis by simp
-  qed
-qed
 
 text \<open>
   The call-enter edge is filtered out of the intra fold, so its bound is not read
@@ -654,11 +482,12 @@ proof -
 qed
 
 text \<open>
-  Retain enter bound: the same routing bound under the weaker framed contract
-  @{locale sound_effectful_transfer_framed_le} and the retain keyed invariant
-  @{const inl_glob_le_keyed_ctx}.  Identical to @{thm [source] side_cfg_T_eff_cmp_enter_le}
-  except the enter step pulls back @{const inl_glob_le_glob_env} instead of
-  @{const inl_slot_globals_bot} and invokes the weak-premise enter contract.
+  Weak-premise enter bound: the same routing bound under the weaker framed
+  contract @{locale sound_effectful_transfer_framed_le} and the keyed snapshot
+  invariant @{const inl_glob_le_keyed_ctx}.  Identical to
+  @{thm [source] side_cfg_T_eff_cmp_enter_le} except the enter step pulls back
+  @{const inl_glob_le_glob_env} instead of @{const inl_slot_globals_bot} and
+  invokes the weak-premise enter contract.
 \<close>
 lemma side_cfg_T_eff_cmp_enter_le_le:
   fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
@@ -940,10 +769,10 @@ lemma fixed_combine_satisfies_switching_combine_sound:
   by (blast intro: side_cfg_T_eff_cmp_combine_le[OF _ _ _ assms])
 
 text \<open>
-  The retain companion of @{const switching_combine_sound}: the combine bound holds
-  under the weaker @{const inl_glob_le_keyed_ctx} premise.  The combine bound itself
-  never reads the local-global invariant, so the certified fixed combine satisfies
-  it by the same @{thm [source] side_cfg_T_eff_cmp_combine_le}.
+  The weak-premise companion of @{const switching_combine_sound}: the combine
+  bound holds under the weaker @{const inl_glob_le_keyed_ctx} premise.  The
+  combine bound itself never reads the local-global invariant, so the certified
+  fixed combine satisfies it by the same @{thm [source] side_cfg_T_eff_cmp_combine_le}.
 \<close>
 definition switching_combine_sound_le ::
   "('c \<Rightarrow> 'g::finite) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
@@ -1033,12 +862,12 @@ proof -
 qed
 
 text \<open>
-  The retain sibling of @{thm [source] side_cfg_T_eff_cmp_collect_sound_gen}: the
-  collecting-soundness bound under the weak framed contract
-  @{locale sound_effectful_transfer_framed_le} and the retain keyed invariant
+  The weak-premise sibling of @{thm [source] side_cfg_T_eff_cmp_collect_sound_gen}:
+  the collecting-soundness bound under the weak framed contract
+  @{locale sound_effectful_transfer_framed_le} and the keyed snapshot invariant
   @{const inl_glob_le_keyed_ctx}.  Identical proof; only the enter sub-case uses
-  @{thm [source] side_cfg_T_eff_cmp_enter_le_le}.  A retain Sign spine (local slots
-  carrying globals) discharges this where the publish theorem's
+  @{thm [source] side_cfg_T_eff_cmp_enter_le_le}.  An analysis whose local slots
+  carry globals discharges this where the publish theorem's
   @{const inl_slot_globals_bot_ctx} premise fails.
 \<close>
 theorem side_cfg_T_eff_cmp_collect_sound_gen_le:

@@ -1,5 +1,5 @@
 theory Sign_Side_Soundness
-  imports Sign_Domain TD_Side_Eff_Soundness
+  imports Sign_Domain TD_Side_Eff_Soundness Retain_Analysis
 begin
 
 section \<open>Sign domain: effectful transfer instance\<close>

@@ -186,63 +186,6 @@ lemma etf_full_unit_edge_tree:
   by (simp add: all_sides_eq_sides_Inr_unit traverse_unit_edge_tree sides_unit_edge_tree_Inr
         restrict_local_global_join)
 
-subsection \<open>Retain-globals edge tree\<close>
-
-text \<open>
-  The retain-globals edge tree keeps the full result in the local Answer (globals
-  retained) instead of \<^const>\<open>restrict_local\<close>; the Side publication of
-  \<^term>\<open>restrict_global res\<close> is unchanged.  It differs from \<^const>\<open>unit_edge_tree\<close>
-  only in the Answer payload, which \<^const>\<open>sides_of_rhs\<close> ignores, so their side maps
-  coincide (\<open>sides_retain_eq_unit\<close>) and \<^const>\<open>etf_full\<close> is preserved
-  (\<open>etf_full_retain_eq_unit_edge_tree\<close>).  Only the local slot changes, now carrying
-  the flow-sensitive global.
-\<close>
-
-definition retain_edge_tree ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> (unit, 'a) edge_tf_tree"
-where
-  "retain_edge_tree f u =
-     QueryL u (\<lambda>su. QueryG () (\<lambda>g.
-       let res = f (su \<squnion> g) in
-       Side () (restrict_global res) (Answer res)))"
-
-lemma traverse_retain_edge_tree:
-  "traverse_rhs (retain_edge_tree f u) \<sigma> = f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-  unfolding retain_edge_tree_def by (simp add: Let_def)
-
-text \<open>Retain and unit differ only in the Answer payload, which \<^const>\<open>sides_of_rhs\<close> ignores.\<close>
-lemma sides_retain_eq_unit:
-  "sides_of_rhs (retain_edge_tree f u) \<sigma> = sides_of_rhs (unit_edge_tree f u) \<sigma>"
-  unfolding retain_edge_tree_def unit_edge_tree_def by (simp add: Let_def)
-
-lemma sides_retain_edge_tree_Inr:
-  "sides_of_rhs (retain_edge_tree f u) \<sigma> (Inr ()) =
-     restrict_global (f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
-  by (simp add: sides_retain_eq_unit sides_unit_edge_tree_Inr)
-
-lemma all_sides_retain_edge_tree:
-  "all_sides (retain_edge_tree f u) \<sigma> = restrict_global (f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
-  by (simp add: all_sides_eq_sides_Inr_unit sides_retain_edge_tree_Inr)
-
-lemma etf_full_retain_edge_tree:
-  "etf_full (retain_edge_tree f u) \<sigma> = f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
-  unfolding etf_full_def traverse_retain_edge_tree all_sides_retain_edge_tree
-    restrict_global_def sup_fun_def
-  by (rule ext) simp
-
-text \<open>
-  Retain preserves the reassembled per-edge transfer: any \<^const>\<open>etf_full\<close> bound
-  proved for \<^const>\<open>unit_edge_tree\<close> holds for \<^const>\<open>retain_edge_tree\<close> unchanged.
-\<close>
-lemma etf_full_retain_eq_unit_edge_tree:
-  "etf_full (retain_edge_tree f u) \<sigma> = etf_full (unit_edge_tree f u) \<sigma>"
-  by (simp add: etf_full_retain_edge_tree etf_full_unit_edge_tree)
-
-lemma etf_collecting_full_retain_eq_unit_edge_tree:
-  "etf_collecting_full (retain_edge_tree f u) \<sigma> =
-   etf_collecting_full (unit_edge_tree f u) \<sigma>"
-  by (simp add: etf_collecting_full_def etf_full_retain_eq_unit_edge_tree)
 
 
 (* The unit-global combine tree returns the caller's locals as its Answer. *)
@@ -441,10 +384,6 @@ next
   show ?thesis unfolding local_bot_on_locals_def bot by simp
 qed
 
-lemma sides_inr_local_bot_retain_edge_tree:
-  "local_bot_on_locals (sides_of_rhs (retain_edge_tree f u) \<sigma> (Inr g))"
-  by (simp add: sides_retain_eq_unit sides_inr_local_bot_unit_edge_tree)
-
 lemma sides_inr_local_bot_local_edge_tree:
   "local_bot_on_locals (sides_of_rhs (local_edge_tree f u) \<sigma> (Inr g))"
   unfolding local_edge_tree_def local_bot_on_locals_def by simp
@@ -587,18 +526,6 @@ where
     etf_combine    = unit_combine_tree
   \<rparr>"
 
-definition retain_etf_of_transfer ::
-  "'a::sound_domain domain_transfer \<Rightarrow> (unit, 'a) effectful_domain_transfer"
-where
-  "retain_etf_of_transfer tf = \<lparr>
-    etf_nop        = (\<lambda>u. retain_edge_tree (apply_tf tf EA_Nop) u),
-    etf_assign     = (\<lambda>x e u. retain_edge_tree (apply_tf tf (EA_Assign x e)) u),
-    etf_assume     = (\<lambda>b u. retain_edge_tree (apply_tf tf (EA_Assume b)) u),
-    etf_assume_not = (\<lambda>b u. retain_edge_tree (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>u. retain_edge_tree (apply_tf tf EA_Enter) u),
-    etf_combine    = unit_combine_tree
-  \<rparr>"
-
 definition mixed_etf_edge_tree ::
   "'a::sound_domain domain_transfer \<Rightarrow> edge_action \<Rightarrow> (unit, 'a) edge_tf_tree"
 where
@@ -634,15 +561,6 @@ lemma apply_etf_mixed_of_transfer:
 lemma etf_combine_mixed_of_transfer:
   "etf_combine (mixed_etf_of_transfer tf) cc ex = unit_combine_tree cc ex"
   unfolding mixed_etf_of_transfer_def by simp
-
-lemma apply_etf_retain_of_transfer:
-  "apply_etf (retain_etf_of_transfer tf) a u = retain_edge_tree (apply_tf tf a) u"
-  unfolding retain_etf_of_transfer_def by (cases a) simp_all
-
-lemma etf_combine_retain_of_transfer:
-  "etf_combine (retain_etf_of_transfer tf) cc ex = unit_combine_tree cc ex"
-  unfolding retain_etf_of_transfer_def by simp
-
 
 lemma mixed_etf_edge_tree_local:
   assumes "local_edge_action a"
@@ -870,62 +788,6 @@ proof -
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               <s|t> \<in> \<lbrakk>etf_full (etf_combine (unit_etf_of_transfer tf) cc ex) \<sigma>\<rbrakk>)"
       by (auto simp add: etf_combine_unit_of_transfer etf_full_unit_combine_tree
-           intro: combine_states_sound)
-  qed
-qed
-
-lemma sound_effectful_transfer_retain_of_transfer:
-  fixes tf :: "'a::sound_domain domain_transfer"
-  assumes st: "sound_transfer tf"
-  shows "sound_effectful_transfer (retain_etf_of_transfer tf)"
-proof -
-  interpret sound_transfer tf using st .
-  show ?thesis
-  proof (unfold_locales; unfold glob_env_unit)
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              s \<in> \<lbrakk>etf_collecting_full (etf_nop (retain_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
-      by (auto simp add: retain_etf_of_transfer_def glob_env_unit
-          etf_collecting_full_retain_eq_unit_edge_tree
-          intro: in_gamma_unit_edge_tree_nop)
-  next
-    show "\<forall>x e u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
-                (etf_assign (retain_etf_of_transfer tf) x e u) \<sigma>\<rbrakk>)"
-      by (auto simp add: retain_etf_of_transfer_def glob_env_unit
-          etf_collecting_full_retain_eq_unit_edge_tree
-          intro: in_gamma_unit_edge_tree_assign)
-  next
-    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
-                  (etf_assume (retain_etf_of_transfer tf) b u) \<sigma>\<rbrakk>)"
-      by (auto simp add: retain_etf_of_transfer_def glob_env_unit
-          etf_collecting_full_retain_eq_unit_edge_tree
-          intro: in_gamma_unit_edge_tree_assume)
-  next
-    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
-                  (etf_assume_not (retain_etf_of_transfer tf) b u) \<sigma>\<rbrakk>)"
-      by (auto simp add: retain_etf_of_transfer_def glob_env_unit
-          etf_collecting_full_retain_eq_unit_edge_tree
-          intro: in_gamma_unit_edge_tree_assume_not)
-  next
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              enter_state s \<in> \<lbrakk>etf_collecting_full
-                (etf_enter (retain_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
-      by (auto simp add: retain_etf_of_transfer_def glob_env_unit
-          etf_collecting_full_retain_eq_unit_edge_tree
-          intro: in_gamma_unit_edge_tree_enter)
-  next
-    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-            \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              <s|t> \<in> \<lbrakk>etf_full (etf_combine (retain_etf_of_transfer tf) cc ex) \<sigma>\<rbrakk>)"
-      by (auto simp add: etf_combine_retain_of_transfer etf_full_unit_combine_tree
            intro: combine_states_sound)
   qed
 qed

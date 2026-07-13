@@ -18,13 +18,17 @@ tree constructors and factories, in the same theory (see the Stage 1C section
 below for the constructor audit, the retain finding, the executable-mirror
 audit and the Stage 1D readiness report). Stage 1D is design only.
 
-**Architectural correction (post-1C, implemented first step):** comparing
+**Architectural correction (post-1C, executed through Stage 2):** comparing
 against Goblint's `analyses.ml` showed the generic retain tree sits at the
 wrong abstraction level -- retain is an *analysis* (its `D` = locals x global
 snapshot), not a framework execution strategy. Section 6 has the corrected
 framework/analysis boundary, the component classification, the replacement
-design, and the migration sequence; the first implementation step is
-`src/Analysis/Generic/Solver/Context/Retain_Analysis.thy`.
+design, and the migration sequence. Implemented: the framework core
+`src/Analysis/Generic/Solver/Context/DG_Framework.thy` (value-opaque trees,
+the heterogeneous `D`/`G` interface `dg_spec`, unit compatibility) and the
+pure analysis theory `Retain_Analysis.thy` (all retain machinery, moved out
+of `TD_Side_CFG` / `TD_Side_Eff_Cmp_Gen` / `Exec_Bridge`, plus the
+hetero-framework validation); Stage-1C `split_*` scaffolding deleted.
 
 ## 1. Where the homogeneous representation is assumed
 
@@ -452,28 +456,28 @@ Retain under this boundary is one example analysis with
                              equivalent via the Stage-1A isomorphism)
 ```
 
-### 6.3 Component classification (evidence-based)
+### 6.3 Component classification (evidence-based, Stage-2 state)
 
-| Component | Evidence | Layer | Verdict |
+| Component | Evidence | Layer | State |
 | --- | --- | --- | --- |
-| `unit_edge_tree`, `unit_combine_tree` (`TD_Side_CFG.thy:150,163`) | pure `Answer(restrict_local)` / `Side(restrict_global)` transport | framework (its `restrict_*` calls become the unit *analysis step* once `D`/`G` split; `step_edge_tree_unit` already factors them out) | KEEP |
-| `step_edge_tree`, `unit_step`, `retain_step` (`Retain_Analysis.thy`) | value-opaque tree + the two steps; `step_edge_tree_unit` / `step_edge_tree_retain` are definitional | framework core + analysis steps | KEEP (new) |
-| `retain_edge_tree` + traverse/sides/etf_full lemmas (`TD_Side_CFG.thy:201-245,444`) | differs from unit only in the Answer payload (`sides_retain_eq_unit`, `etf_full_retain_eq_unit_edge_tree`); the payload is analysis behaviour | retain analysis, currently in a framework file | REWRITE to a compatibility wrapper over `retain_step` / the retain analysis; then MOVE the retain-specific lemmas next to the analysis; DELETE once no caller remains |
-| `retain_etf_of_transfer` + soundness (`TD_Side_CFG.thy:590-644,877-928`) | factory instantiating every edge with `retain_edge_tree` | retain analysis implementation | MOVE (to the retain analysis theory) |
-| `inl_glob_le_glob_env` (`Constraint_System.thy:738`) | "a local unknown may carry globals, bounded by `glob_env`" -- a property of snapshot-carrying `D`s | retain analysis soundness obligation stated framework-wide | REWRITE: becomes the retain analysis's invariant on its own `D`; the framework keeps only `inl_slot_globals_bot` (= `wf_split` halves) |
-| `sound_effectful_transfer_framed_le` (`Constraint_System.thy:792`) | enter bound under the weaker retain premise; `framed_le_imp_framed` recovers the strict contract | retain analysis soundness | MOVE with the analysis; the framework contract stays `sound_effectful_transfer_framed` |
-| retain keyed invariant + exact-solution reduction (`TD_Side_Eff_Cmp_Gen.thy:314-658`), retain combine/collect endpoints (`:943,1036`) | soundness theorems for solutions whose local slots carry globals | retain analysis soundness theory | MOVE (they are parametric in the transfer only through `apply_etf etf a u = retain_edge_tree (F a) u` -- exactly the analysis's signature) |
-| `retain_edge_tree_st` (`Exec_Bridge.thy:212-278`) | executable mirror of the retain tree, `fun_of_st`-simulated | retain analysis, executable layer | MOVE with the analysis |
-| `sign_etf_retain` + `framed_le` instance (`Sign_Side_Soundness.thy:69-93,192-221`) | Sign instantiation of the retain factory | analysis instance (already analysis-layer) | KEEP (retarget imports when the factory moves) |
-| `split_retain_edge_tree`, `split_clean_edge_tree`, split factories (`Split_Cmp_Gen.thy:190-295`) | 1B/1C bridges, each `= original` | historical migration scaffolding | DELETE after the retain analysis replaces its callers (they were stepping stones to `Retain_Analysis.thy`) |
-| `clean_edge_tree`, `clean_etf_of_transfer` (`Clean_RRead_Sound.thy`) | same Answer-keeps-result pattern as retain (reads only the local slot) | clean analysis (same correction applies) | REWRITE/MOVE along the same sequence as retain |
-| Keyed retain examples (`Exec_Sign_Cmp_Keyed_Retain_*`, `Exec_Sign_Cmp_RRead_Split`, `Exec_Sign_Cmp_Keyed_Gen_Run`) | consumers exhibiting the precision gain | analysis usage | KEEP (retarget to the retain analysis when its executable layer lands) |
+| `unit_edge_tree`, `unit_combine_tree` (`TD_Side_CFG.thy`) | pure `Answer(restrict_local)` / `Side(restrict_global)` transport | framework; `step_edge_tree_unit` factors the restricts into the unit analysis step | KEEP |
+| `step_edge_tree`, `dg_edge_tree`, `dg_combine_tree`, `dg_spec`, `dg_state` (`DG_Framework.thy`) | value-opaque trees, slot packing only; `dg_edge_tree_answer_pure_D` / `dg_edge_tree_side_pure_G` hold for *every* step | framework core | KEEP (framework theory, no analysis knowledge) |
+| `retain_edge_tree` + traverse/sides/etf_full lemma set | differs from unit only in the Answer payload (`sides_retain_eq_unit`, `etf_full_retain_eq_unit_edge_tree`) | retain analysis | **MOVED** to `Retain_Analysis.thy` (was `TD_Side_CFG`) |
+| `retain_etf_of_transfer` + `sound_effectful_transfer_retain_of_transfer` | factory instantiating every edge with `retain_edge_tree` | retain analysis | **MOVED** to `Retain_Analysis.thy` (was `TD_Side_CFG`) |
+| `inl_glob_le_glob_env`, `sound_effectful_transfer_framed_le` (`Constraint_System.thy`) | **audit corrected the earlier MOVE verdict**: `sign_sound_etf_unit_framed_le` shows the *unit* transfer discharges the same contract, and the `_le` endpoints in `TD_Side_Eff_Cmp_Gen` are analysis-agnostic. The contract states the framework's enter obligation under the *weakest* slot invariant -- it never mentions snapshots structurally | framework contract, discharged per analysis | KEEP (prose reworded analysis-agnostic: "snapshot relaxation") |
+| `inl_glob_le_keyed_ctx`, `pull_gk` lemmas, `_le` enter/combine/collect endpoints (`TD_Side_Eff_Cmp_Gen.thy`) | parametric in the transfer; premises are slot invariants, not tree shapes | framework | KEEP (prose reworded: "keyed snapshot invariant") |
+| exact-solution reduction (`restrict_global_traverse_retain_intra`, `part_solution_imp_inl_glob_le_keyed_ctx`, `inl_glob_le_keyed_ctx_on_vars`/`_full`) | statements assume `apply_etf etf a u = retain_edge_tree (F a) u` -- the retain analysis's signature | retain analysis soundness | **MOVED** to `Retain_Analysis.thy` (was `TD_Side_Eff_Cmp_Gen`); the generic domination helpers stayed |
+| `retain_edge_tree_st` + commutation lemmas | executable mirror, `fun_of_st`-simulated | retain analysis, executable layer | **MOVED** to `Retain_Analysis.thy` (was `Exec_Bridge`) |
+| `sign_etf_retain` + `framed_le` instance (`Sign_Side_Soundness.thy`) | Sign instantiation of the retain factory | analysis instance | KEEP (now imports `Retain_Analysis`) |
+| `split_retain_*`, `split_clean_*`, `split_local_*`, `split_mixed_*`, `split_combine_tree_ctx`, `split_make_side_rhs_tree_eff`, `merge_combine_split` (Stage-1C block of `Split_Cmp_Gen.thy`) | zero consumers outside the theory | historical migration scaffolding | **DELETED** (the 1B layer -- `split_edge_tree`, `split_etf_of_transfer`, split seed generator, `spec_generator_split` -- stays: `Sign_Call_Spec` consumes it) |
+| `clean_edge_tree`, `clean_etf_of_transfer` (`Clean_RRead_Sound.thy`) | same Answer-keeps-result pattern as retain | clean analysis (same correction applies) | remaining blocker: follows the retain path in a later slice |
+| Keyed retain examples (`Exec_Sign_Cmp_Keyed_Retain_*`, `Exec_Sign_Cmp_RRead_Split`, `Exec_Sign_Cmp_Keyed_Gen_Run`) | consumers exhibiting the precision gain | analysis usage | unchanged -- they resolve the moved constants transitively via `Sign_Exec_Sound` -> `Sign_Side_Soundness` -> `Retain_Analysis` |
 
-No component is retained for historical reasons: everything retain-specific is
-scheduled to the analysis layer; the only framework survivors are the
-value-opaque tree shape and the slot invariants.
+No component is kept for historical reasons: everything whose *statement*
+mentions retain lives in `Retain_Analysis.thy`; the framework keeps only
+value-opaque trees, slot invariants, and analysis-agnostic contracts.
 
-### 6.4 Replacement design (implemented first step: `Retain_Analysis.thy`)
+### 6.4 Replacement design (implemented: `DG_Framework.thy` + `Retain_Analysis.thy`)
 
 Domain. `datatype ('l, 'g) dg_state = DG (locals: 'l) (globs: 'g)` with the
 componentwise `bounded_semilattice_sup_bot` instance. A copy type is
@@ -521,26 +525,126 @@ identical soundness: nothing existing was modified, weakened, or deleted.
 
 ### 6.5 Migration sequence
 
-1. **(done)** `Retain_Analysis.thy`: framework `step_edge_tree`; unit/retain
-   as steps with definitional equalities; `dg_state` copy lattice; the
-   pair-domain retain analysis with traverse/sides equivalence to
-   `retain_edge_tree` under the Stage-1A isomorphism.
-2. Redefine `retain_edge_tree` as the wrapper
-   `step_edge_tree (retain_step f)` (definitional, `step_edge_tree_retain`
-   makes it a one-line change) and move the retain factory + its soundness
-   lemmas into the analysis theory. Same for `clean_edge_tree`.
-3. Move `inl_glob_le_glob_env` + `sound_effectful_transfer_framed_le` + the
-   keyed retain invariant block (`TD_Side_Eff_Cmp_Gen.thy:314-658`) into the
-   retain analysis theory; the framework keeps `inl_slot_globals_bot` and
-   `sound_effectful_transfer_framed` only.
-4. Stage 1D typing: `'d := dg_state` at the `eqsT` level; unit/local/mixed
-   analyses use a locals-only `D`, the retain/clean analyses use the
-   snapshot-carrying `D` from step 1; the 1B/1C `split_*` scaffolding in
-   `Split_Cmp_Gen.thy` is deleted as its callers retarget.
-5. Executable layer: `dg_state` over `'a st`, retarget the keyed retain
-   examples; delete `retain_edge_tree_st` from `Exec_Bridge`.
+1. **(done)** First step: framework `step_edge_tree`; unit/retain as steps
+   with definitional equalities; `dg_state` copy lattice; the pair-domain
+   retain analysis with traverse/sides equivalence to `retain_edge_tree`
+   under the Stage-1A isomorphism.
+2. **(done)** Retain extraction: `retain_edge_tree` + lemma set + factory +
+   soundness moved from `TD_Side_CFG` to `Retain_Analysis.thy`;
+   the exact-solution reduction moved from `TD_Side_Eff_Cmp_Gen`;
+   `retain_edge_tree_st` moved from `Exec_Bridge`. Audit correction:
+   `inl_glob_le_glob_env` / `sound_effectful_transfer_framed_le` stay in the
+   framework -- they are analysis-agnostic contracts also discharged by the
+   unit transfer (`sign_sound_etf_unit_framed_le`); only their prose was
+   de-retained. Stage-1C `split_*` scaffolding deleted (no consumers).
+3. **(done)** Framework split: `DG_Framework.thy` carries the framework half
+   (homogeneous `step_edge_tree`, the `dg_state` lattice, the heterogeneous
+   `dg_edge_tree` / `dg_combine_tree` / `dg_spec` interface, unit
+   compatibility); `Retain_Analysis.thy` imports it and is pure analysis.
+4. Stage 1D typing: the heterogeneous generator. `('g, 'd) edge_tf_tree` and
+   `effectful_domain_transfer` bake the value type `'d abs_state`; generalize
+   the record/generator layer's value type so `apply_dg_spec` trees can drive
+   `side_cfg_T_eff_cmp`-style systems, with `'d := dg_state` and slot
+   invariants (= `wf_split` halves). Post-fixpoint/soundness transport via the
+   `dg_rep`-style embeddings.
+5. Clean analysis: `clean_edge_tree` follows the retain path (its own theory,
+   its own `D`). Executable layer: `dg_state` over `'a st`; retarget the keyed
+   retain examples to the analysis's executable form.
 
-End state: generic retain tree gone (or reduced to the step-2 wrapper during
-the transition), retain implemented through the standard `Answer : D` /
-`Side : G` interface, and no framework code depending on "local state contains
-globals".
+State after step 3: the generic retain tree is gone from the framework,
+retain is implemented through the standard `Answer : D` / `Side : G`
+interface, and no framework *code* depends on "local state contains globals"
+(the framed_le *contract* quantifies over such solutions without assuming
+them).
+
+### 6.6 The heterogeneous framework (`DG_Framework.thy`)
+
+The framework is now parameterized by two independent, fully opaque analysis
+domains, packed into the solver's single value type by slot:
+
+```
+FRAMEWORK (DG_Framework.thy -- no analysis knowledge)
+  dg_state             componentwise copy lattice ('l, 'g) with
+                       bounded_semilattice_sup_bot (raw pairs blocked by
+                       Product_Lexorder, see 6.4)
+  dg_edge_tree step u  QueryL; QueryG; Side (DG bot (fst r)); Answer (DG (snd r) bot)
+                       where r = step (locals d) (globs g)
+                       step : D => G => G x D   <-- the analysis boundary
+  dg_combine_tree comb the two-D procedure-return shape
+  dg_spec              Goblint-Spec-shaped record: one D => G => G x D step
+                       per edge action + the combine; apply_dg_spec
+  boundary theorems    dg_edge_tree_answer_pure_D, dg_edge_tree_side_pure_G:
+                       for EVERY step and assignment, Answers carry no G and
+                       Sides carry no D
+
+ANALYSES
+  unit   (DG_Framework compat layer)   D = G = 'a abs_state
+         unit_dg_spec tf; traverse/sides equal the legacy homogeneous trees
+         under dg_rep_flat (unit_dg_spec_traverse/_sides/_combine_*)
+  retain (Retain_Analysis.thy)         D = locals x snapshot, G = 'a abs_state
+         retain_hetero_step; retain_hetero_traverse/_sides prove behaviour
+         identical to the legacy retain_edge_tree under retain_hetero_rep
+```
+
+Retain validation (the expressiveness witness): `retain_hetero_step` runs on
+the same analysis-agnostic `dg_edge_tree` as every other analysis --
+`DG_Framework.thy` contains no retain knowledge -- and reproduces the legacy
+homogeneous retain semantics exactly. The snapshot lives inside the retain
+analysis's `D`; the framework never copies `G` into it.
+
+#### Proof audit (what replaced what)
+
+| Deleted / moved | Replacement | Obligations moved to the analysis? |
+| --- | --- | --- |
+| `TD_Side_CFG`'s retain subsection | same lemmas, verbatim, in `Retain_Analysis.thy` | yes -- they *are* the analysis now; no proof got longer |
+| `TD_Side_Eff_Cmp_Gen`'s exact-solution reduction | same theorems in `Retain_Analysis.thy`; the framework keeps the generic domination helpers they build on | yes -- deriving `inl_glob_le_keyed_ctx` from exactness is the retain analysis's job; other analyses use `inl_slot_globals_bot_ctx_le_keyed` |
+| `Exec_Bridge`'s retain_st subsection | same lemmas in `Retain_Analysis.thy` | yes |
+| Stage-1C `split_*` block (~200 lines, `Split_Cmp_Gen`) | superseded by `dg_edge_tree`/`dg_spec` + the 6.4 equivalence theorems; no replacement lemma needed (zero consumers) | n/a |
+| `unit_edge_tree` as primitive | unchanged, but now provably `step_edge_tree (unit_step f)` and reproduced on the hetero framework by `unit_dg_spec` | the unit steps are the base analysis's transfer |
+
+No proof was weakened; every moved lemma kept its statement and its proof
+text. The framework shrank by the retain subsections plus ~200 lines of
+scaffolding; `Retain_Analysis.thy` grew by exactly the moved material plus the
+hetero validation.
+
+#### "Would Goblint's framework contain this?" (remaining framework audit)
+
+| Remaining framework component | Goblint analogue / justification |
+| --- | --- |
+| `dg_edge_tree`, `dg_combine_tree`, `dg_spec` | yes: `constraints.ml`'s transfer-function-to-constraint-system plumbing over opaque `D`/`G` |
+| `step_edge_tree`, `unit_edge_tree`, `unit_combine_tree`, homogeneous generators | transitional: Goblint has no homogeneous layer, but the mechanized soundness spine is stated over it; retired only when Stage-1D re-types the generator (step 4) |
+| `inl_slot_globals_bot`, `inr_slot_locals_bot`, `inl_glob_le_keyed_ctx` | slot-typing invariants of the single-value-type encoding; Goblint has real two-typed unknowns and needs none -- the formalization requires them until (and after, as wf-invariants) `'d := dg_state` |
+| `sound_effectful_transfer(_framed, _framed_le)` | the mechanized counterpart of `Spec`'s implicit soundness obligations; Goblint states none (unverified), a verified framework must; `_le` is the weakest (analysis-agnostic) form |
+| `restrict_local` / `restrict_global` | the homogeneous encoding of slot projection; dissolves into `locals`/`globs` at Stage 1D |
+| `clean_edge_tree` (`Clean_RRead_Sound`) | no -- clean is an analysis; remaining blocker, follows the retain path |
+
+#### Remaining blockers
+
+1. **The heterogeneous generator** (Stage 1D, step 4): `edge_tf_tree` /
+   `effectful_domain_transfer` bake `'d abs_state`; the generator layer's
+   value type must be generalized before `dg_spec` analyses can drive the
+   solver end-to-end. Tree layer and compatibility proofs are in place.
+2. **Clean analysis extraction** (step 5): `clean_edge_tree` +
+   `clean_etf_of_transfer` still sit in `Clean_RRead_Sound` with the seeded
+   spine built on them.
+3. **Executable dg layer**: `dg_state` over `'a st` and example retargeting.
+
+#### Post-cleanup dependency graph
+
+```
+Constraint_System (framework: slot invariants, sound_effectful_transfer*,
+ |                 incl. the analysis-agnostic framed_le contract)
+ +-- TD_Side_CFG (framework: restricts, unit/local/mixed trees + factories)
+      +-- ... cmp/ctx/digest layers, Call_Spec* (framework, retain-free)
+      |    +-- TD_Side_Eff_Cmp_Gen (framework: keyed generator, _le endpoints,
+      |    |                        generic domination helpers)
+      |    +-- Exec_Bridge (framework exec: unit/clean _st trees, transports)
+      +-- Split_Cmp_Gen (Stage-1B split layer; consumer: Sign_Call_Spec)
+           +-- DG_Framework (framework core: dg_state, step/dg trees, dg_spec,
+                |            unit compatibility)
+                +-- Retain_Analysis (ANALYSIS: retain tree + factory +
+                     |               soundness + exactness reduction +
+                     |               executable mirror + hetero validation)
+                     +-- Sign_Side_Soundness (instances: sign unit/retain)
+                          +-- Sign_Exec_Sound -> keyed retain examples
+```

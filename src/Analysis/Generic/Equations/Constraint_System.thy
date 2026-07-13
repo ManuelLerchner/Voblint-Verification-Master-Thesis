@@ -728,12 +728,13 @@ where
      (\<forall>v. \<forall>x. is_global x \<longrightarrow> \<sigma> (Inl v) x = bot)"
 
 text \<open>
-  The retain relaxation of @{const inl_slot_globals_bot}: a local unknown may carry
-  globals, but each is bounded by the global environment.  A retain edge tree keeps
-  the written global in its local Answer @{emph \<open>and\<close>} publishes it to the global
-  slot, so at a solution every local-slot global sits below @{const glob_env}.  This
-  is exactly what the keyed enter bound needs: the caller's global part of a
-  callee-entry frame is already covered by the globals.
+  The snapshot relaxation of @{const inl_slot_globals_bot}: a local unknown may
+  carry globals, but each is bounded by the global environment.  An analysis
+  whose local Answers keep written globals @{emph \<open>and\<close>} publish the same values
+  to the global slot satisfies it at any solution: every local-slot global sits
+  below @{const glob_env}.  This is exactly what the keyed enter bound needs:
+  the caller's global part of a callee-entry frame is already covered by the
+  globals.
 \<close>
 definition inl_glob_le_glob_env ::
   "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
@@ -789,9 +790,9 @@ locale sound_effectful_transfer_framed = sound_effectful_transfer +
        etf_full (etf_enter etf u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
 
 text \<open>
-  The retain-compatible companion of @{locale sound_effectful_transfer_framed}: the
-  enter bound holds under the weaker premise @{const inl_glob_le_glob_env}, so a
-  retain spine (whose local slots carry globals) can still discharge it.  Since
+  The snapshot-compatible companion of @{locale sound_effectful_transfer_framed}:
+  the enter bound holds under the weaker premise @{const inl_glob_le_glob_env}, so
+  an analysis whose local slots carry globals can still discharge it.  Since
   @{const inl_slot_globals_bot} implies @{const inl_glob_le_glob_env}, this contract
   is stronger; @{term framed_le_imp_framed} recovers the publish contract.
 \<close>
