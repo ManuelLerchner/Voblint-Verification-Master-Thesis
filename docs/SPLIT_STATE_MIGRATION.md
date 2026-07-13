@@ -7,9 +7,14 @@ generator or context redesign. All existing theorem statements are preserved;
 the split representation exists alongside the homogeneous one and is proven
 isomorphic to it.
 
-Status: **Stage 1A implemented** (`src/Analysis/Generic/Domain/Split_State.thy`
-plus a bridge subsection in `src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy`).
-Stages 1B-1D are design only.
+Status: **Stage 1A and Stage 1B implemented**. 1A:
+`src/Analysis/Generic/Domain/Split_State.thy` plus a bridge subsection in
+`src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy`. 1B:
+`src/Analysis/Generic/Solver/Context/Split_Cmp_Gen.thy` (split-shaped trees,
+transfer factory and CMP generator, each proven equal to its homogeneous
+original) plus the sign instantiation in
+`src/Analysis/Instances/Sign/Sign_Call_Spec.thy`. Stages 1C-1D are design
+only.
 
 ## 1. Where the homogeneous representation is assumed
 
@@ -167,19 +172,64 @@ theory `Split_State`), not in `Constraint_System`, `TD_Side_CFG`,
 Done, see section 2. Exit criterion: `Voblint_Analysis` batch green, no new
 `sorry`, no existing statement changed.
 
-### Stage 1B -- thread `split_state` through the equation generator, `'l = 'g`
+### Stage 1B -- thread `split_state` through the CMP generator, `'l = 'g` (implemented)
 
-* Re-express the edge/combine tree payload plumbing in `TD_Side_CFG` through
-  the split form: replace the `(restrict_local .., restrict_global ..)`
-  idioms inside `unit_edge_tree` / `retain_edge_tree` / `local_edge_tree` /
-  `unit_combine_tree` by `split_state` / `merge_state`, using
-  `split_state_eq_restrict` and `merge_state_restrict` so that the existing
-  shape lemmas (`traverse_*`, `sides_*`, `etf_full_*`) are proved by rewriting,
-  not re-proved.
-* Obligations: each shape lemma gets a `merge_state` phrasing; the
-  `local_bot_on_locals` / `inr_slot_locals_bot` invariants get `wf_split`
-  phrasings (they are the two halves of `wf_split` today).
-* Everything stays at `'l = 'g`; solver and soundness spine untouched.
+Implemented in `Split_Cmp_Gen.thy` (+ `combine_split` in `Split_State.thy`,
+sign instantiation in `Sign_Call_Spec.thy`).
+
+**Boundary.** The audit of the CMP pipeline
+(`effectful_domain_transfer`, `strategy_tree`, `side_cfg_T_eff_cmp_seed`,
+`side_rhs_fold_ctx`, `side_env_cmp`, global/local routing) shows the
+`vname => 'a` structure is inspected in exactly two places:
+
+1. the tree bodies produced by the transfer factory (`unit_edge_tree`,
+   `unit_combine_tree` -- via `restrict_local` / `restrict_global`), and
+2. the generator's entry-seed decomposition of `s0`
+   (`restrict_local s0` accumulator seed, `restrict_global s0` entry `Side`).
+
+`side_rhs_fold_ctx`, `map_ltree`/`map_gtree` routing, `side_env_cmp` and the
+vendor solver are opaque in the state type -- unchanged.
+
+**Split artefacts, each proven equal to its original** (so the migrated
+generator produces literally the same equation system):
+
+| Split artefact | Original | Equality |
+| --- | --- | --- |
+| `combine_split` (pair surgery: caller locals, callee globals) | `combine_abs` | `combine_split_split_state`: `combine_split (split_state A) (split_state B) = split_state <A\|B>` |
+| `split_edge_tree` (splits the transfer result once; `Side` = global half, `Answer` = local half) | `unit_edge_tree` | `split_edge_tree_eq_unit` |
+| `split_combine_tree` (`combine_split` of the two split query results) | `unit_combine_tree` | `split_combine_tree_eq_unit` |
+| `split_etf_of_transfer` | `unit_etf_of_transfer` | `split_etf_of_transfer_eq_unit` (+ `sound_effectful_transfer_split_of_transfer`) |
+| `side_cfg_T_eff_cmp_split_seed` (entry seed via `split_state s0` components) | `side_cfg_T_eff_cmp_seed` | `side_cfg_T_eff_cmp_split_seed_eq` (+ `_const` collapse to the fixed-frame generator, `part_post_solution_split_seed_iff`) |
+| `spec_generator_split` (in `goblint_analysis_spec`) | `spec_generator` | `spec_generator_split_eq`, `part_post_solution_spec_split_iff` |
+| `sign_etf_split`, sign endpoint `sign_spec_post_fixpoint_sound_split` | `sign_etf_unit`, `sign_spec_post_fixpoint_sound` | `sign_etf_split_eq_unit`, `Sign_spec_generator_split_eq` |
+
+**Theorem audit.** No existing theorem changed -- statements, proofs and types
+are untouched; the migration is purely additive. Every new fact is either a
+definition, an equality to an existing constant, or a wrapper discharged by
+rewriting along such an equality (`pp[unfolded Sign_spec_generator_split_eq]`
+for the sign endpoint). Executable behaviour is unchanged twice over: the
+`'a st` mirror is untouched, and post-fixpoints of the migrated and original
+generators coincide by `part_post_solution_split_seed_iff`.
+
+**Dependency graph after 1B** (new nodes marked `*`):
+
+```
+Split_State ('l,'g) split_state, merge/split iso, combine_split*
+  |
+  +-- TD_Side_CFG bridge (split_state_eq_restrict, ...)
+        |
+        +-- Split_Cmp_Gen* : split trees = unit trees
+        |     split_etf_of_transfer = unit_etf_of_transfer
+        |     side_cfg_T_eff_cmp_split_seed = side_cfg_T_eff_cmp_seed
+        |     spec_generator_split = spec_generator
+        |
+        +-- Sign_Call_Spec : sign_etf_split = sign_etf_unit,
+              sign_spec_post_fixpoint_sound_split
+```
+
+Not migrated (deliberately): the `retain` / `local` / `mixed` tree factories
+(their `Answer` payloads are not split-shaped -- `retain` keeps globals in the
+local slot) and the `'a st` executable mirror. Both are Stage 1C targets.
 
 ### Stage 1C -- thread through `strategy_tree` payloads and transfers, `'l = 'g`
 

@@ -175,6 +175,29 @@ lemma merge_state_eq_sup:
   using assms unfolding merge_state_def wf_split_def sup_fun_def
   by (auto simp: fun_eq_iff)
 
+subsection \<open>Split-level call combine\<close>
+
+text \<open>
+  The procedure-return combine on split states: locals from the caller state,
+  globals from the callee-exit state.  On the split representation this is
+  literally pair surgery; the homogeneous \<open>combine_abs\<close> is its
+  \<open>merge_state\<close>-image.
+\<close>
+
+definition combine_split ::
+  "('l, 'g) split_state \<Rightarrow> ('l, 'g) split_state \<Rightarrow> ('l, 'g) split_state"
+where
+  "combine_split cs es = (fst cs, snd es)"
+
+lemma wf_split_combine_split:
+  "wf_split cs \<Longrightarrow> wf_split es \<Longrightarrow> wf_split (combine_split cs es)"
+  unfolding wf_split_def combine_split_def by simp
+
+lemma merge_state_combine_split:
+  "merge_state (combine_split cs es)
+   = (\<lambda>x. if is_global x then snd es x else fst cs x)"  unfolding merge_state_def combine_split_def
+  by (rule ext) (simp split: if_split)
+
 subsection \<open>Split concretization\<close>
 
 definition gamma_split ::

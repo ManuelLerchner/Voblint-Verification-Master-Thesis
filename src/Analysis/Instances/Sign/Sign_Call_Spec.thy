@@ -1,5 +1,6 @@
 theory Sign_Call_Spec
-  imports "Voblint_Analysis.Call_Spec_Sound" Sign_Side_Soundness
+  imports "Voblint_Analysis.Call_Spec_Sound" "Voblint_Analysis.Split_Cmp_Gen"
+    Sign_Side_Soundness
 begin
 
 section \<open>Sign instance of the Goblint-inspired call specification (Stage 0)\<close>
@@ -92,6 +93,53 @@ theorem sign_spec_post_fixpoint_sound:
            \<le> \<lbrakk>side_env_cmp (\<lambda>_ _. True) sigma (v0, ())\<rbrakk>"
   by (rule Sign_spec.spec_post_fixpoint_collecting_sound
         [OF refl sign_sound_etf_unit_framed inr inl S_sound pp finE finC
+            cover_edge cover_comb cover_entry])
+
+subsection \<open>Stage 1B: the sign instance through the split-state generator\<close>
+
+text \<open>
+  The sign transfer packaged through the split-state tree factory of
+  \<^theory>\<open>Voblint_Analysis.Split_Cmp_Gen\<close>.  It is \<^emph>\<open>equal\<close> to the unit
+  record \<^const>\<open>sign_etf_unit\<close>, so the migrated generator
+  \<^const>\<open>Sign_spec.spec_generator_split\<close> produces the same equation system,
+  the same post-fixpoints, and the same executable results as the original
+  \<^const>\<open>Sign_spec.spec_generator\<close> path.
+\<close>
+
+definition sign_etf_split :: "(unit, sign) effectful_domain_transfer" where
+  "sign_etf_split = split_etf_of_transfer sign_tf"
+
+lemma sign_etf_split_eq_unit: "sign_etf_split = sign_etf_unit"
+  unfolding sign_etf_split_def sign_etf_unit_def
+  by (rule split_etf_of_transfer_eq_unit)
+
+theorem Sign_spec_generator_split_eq:
+  "Sign_spec.spec_generator_split g sign_etf_split bot0 s0
+   = Sign_spec.spec_generator g sign_etf_unit bot0 s0"
+  by (simp add: Sign_spec.spec_generator_split_eq sign_etf_split_eq_unit)
+
+text \<open>
+  The Stage-0.5 endpoint restated through the migrated generator: identical
+  premises, identical conclusion --- discharged by rewriting the post-fixpoint
+  along the generator equality.
+\<close>
+
+theorem sign_spec_post_fixpoint_sound_split:
+  fixes sigma :: "pp \<times> unit + unit \<Rightarrow> sign abs_state"
+  assumes pp: "part_post_solution
+                 (Sign_spec.spec_generator_split g sign_etf_split bot0 s0) x sigma vars"
+    and inr: "inr_slot_locals_bot_ctx sigma"
+    and inl: "inl_slot_globals_bot_ctx sigma"
+    and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+    and finE: "finite (edges g)"
+    and finC: "finite (combines g)"
+    and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_comb: "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow> (ret, ()) \<in> vars"
+    and cover_entry: "(cfg_entry g, ()) \<in> vars"
+  shows "cfg_collect_ctx (\<lambda>_. ()) (\<lambda>_ _. True) g S v0 ()
+           \<le> \<lbrakk>side_env_cmp (\<lambda>_ _. True) sigma (v0, ())\<rbrakk>"
+  by (rule sign_spec_post_fixpoint_sound
+        [OF pp[unfolded Sign_spec_generator_split_eq] inr inl S_sound finE finC
             cover_edge cover_comb cover_entry])
 
 end
