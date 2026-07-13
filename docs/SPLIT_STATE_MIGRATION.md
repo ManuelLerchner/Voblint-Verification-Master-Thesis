@@ -409,6 +409,49 @@ Retain analysis through `retain_hetero_rep`. The framework never observes the
 snapshot field. `sign_retain_dg_post_fixpoint_iff` is the concrete sign/Retain
 witness.
 
+#### First mixed-domain analysis
+
+`Mixed_Sign_Interval.thy` supplies the first analysis whose two domains have
+different meanings:
+
+```
+D = sign abs_state    -- flow-sensitive answer at each CFG point
+G = ivl abs_state     -- one flow-insensitive invariant for the whole CFG
+```
+
+Each edge applies the Sign transfer to its local `D` input and the Interval
+transfer to the shared `G` input. It returns the next Sign state as the
+`Answer` and publishes the next Interval state through `Side`. Procedure
+combines follow the same separation. The analysis uses the ordinary
+`dg_spec`, `dg_edge_tree`, and `side_cfg_T_eff_cmp_seed_dg` interfaces;
+the framework contains no mixed-analysis hook.
+
+The old homogeneous interface required both results to inhabit one lattice.
+Representing this analysis there would require a Sign/Interval product, an
+artificial sum with routing invariants, or an embedding of one abstraction
+into the other. A product would copy the flow-insensitive Interval component
+through every local unknown. An embedding would discard either Sign's compact
+local precision or Interval's numeric bounds. Independent `D` and `G`
+slots express the intended information flow directly.
+
+`mixed_si_post_solution_collect_sound` composes the generic solver
+post-solution predicate with the existing Sign and Interval transfer
+soundness theorems. Its only analysis-specific obligations identify entry,
+edge-target, and combine-target coverage and exclude procedure-entry edges
+from this intentionally intraprocedural witness. The generic collecting
+mathematics is reused.
+
+`Example_Mixed_Sign_Interval_GraphViz.thy` compiles `x := 1; x := 2`,
+runs the TD side solver, proves termination and the resulting post-solution,
+and checks:
+
+* the exit-local Sign value for `x` is positive;
+* the published Interval invariant for `x` is `[0, 2]`.
+
+Its DOT output annotates CFG nodes with Sign stores and renders the shared
+Interval store in a separate global cluster. This exposes the domain split in
+the executable pipeline.
+
 #### Architecture before and after
 
 Before Stage 1D:
@@ -444,7 +487,7 @@ post-fixpoint transport -> preserved soundness endpoints
 The migration gate is run once after the complete slice: every touched theory
 must be error-free in I/Q, the analysis `sorry` inventory must be empty, and
 `Voblint_Analysis` must pass the batch build. Intermediate stages use I/Q only.
-The executable layer is outside this abstract-pipeline gate.
+The mixed executable witness is part of the final formalization gate.
 
 ## 6. Architectural correction: retain is an analysis, not a framework strategy
 
@@ -704,8 +747,10 @@ pipeline:
 4. **Clean analysis extraction** (step 5): `clean_edge_tree` +
    `clean_etf_of_transfer` still sit in `Clean_RRead_Sound` with the seeded
    spine built on them. This is a later analysis migration, not Stage 1D.
-5. **Executable dg layer**: `dg_state` over `'a st` and example retargeting.
-   The current deliverable covers the abstract `Voblint_Analysis` pipeline.
+5. **Executable dg layer**: componentwise widening and narrowing for
+   `dg_state` over executable stores, plus the mixed Sign/Interval solver and
+   annotated-CFG witness, are implemented. Existing homogeneous examples
+   remain on their compatibility API.
 
 #### Post-cleanup dependency graph
 

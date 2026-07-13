@@ -10,6 +10,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Generic/Solver/Exec"
     "Instances/Sign"
     "Instances/Interval"
+    "Instances/Mixed"
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
   theories
@@ -78,5 +79,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Exec
     Sign_Exec_Sound
     Sign_Call_Spec
+    Mixed_Sign_Interval
     Value_Digest_Read
     Analysis_GraphViz

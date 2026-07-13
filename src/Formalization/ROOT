@@ -38,6 +38,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Exec_Ivl_Cmp_Seed_Rehydrate_Run
     Example_Inc_Proc
     Example_Proc_GraphViz
+    Example_Mixed_Sign_Interval_GraphViz
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
     Example_IMP2_Coverage
