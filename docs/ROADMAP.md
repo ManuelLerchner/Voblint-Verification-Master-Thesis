@@ -141,22 +141,20 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
   is a context-scheme change — a finite caller context exact on `G` at each call site — not a
   retain change. See `docs/OPEN_PROBLEMS.md`.
 
-### Heterogeneous D/G framework (Stage 1 done, Stage 2 planned)
+### Heterogeneous D/G framework (complete)
 
-- **Stage 1 (A–D): complete.** The framework transports two independent
+- **Stages 1 and 2: complete.** The framework transports two independent
   analysis-chosen domains — per-point answers `D`, side-published facts `G` —
   through `dg_spec` / `dg_edge_tree` / `side_cfg_T_eff_cmp_seed_dg`
-  (`DG_Framework.thy`), with proven equality to the homogeneous system at
-  `D = G` and the retain analysis as expressiveness witness.
+  (`DG_Framework.thy`). Native `sound_dg_spec` soundness is canonical;
+  homogeneous analyses are `D = G` interpretations. Migration-only split,
+  packing, and post-solution transport cones have been deleted.
   `Instances/Mixed/Mixed_Sign_Interval.thy` (Sign `D`, Interval `G`) is the
   first genuinely mixed analysis: sound (`mixed_si_post_solution_collect_sound`)
   and executable (`Example_Mixed_Sign_Interval_GraphViz.thy`).
-- **Stage 2 (planned): native heterogeneous soundness.** Hoist the mixed
-  analysis's proof pattern into a `sound_dg_spec` locale over
-  `(D, G, gammaD, gammaG)` with `gamma_dg = gammaD Int gammaG` as primary
-  semantics; re-derive homogeneous endpoints as `D = G` interpretations; then
-  delete the unit/retain transport chains and the Stage-1B split layer.
-  Plan: `docs/SPLIT_STATE_MIGRATION.md` §7.
+- **Next boundary:** generalize native soundness beyond abstract-state-shaped
+  `D`/`G`, then port the context/digest tower from the homogeneous
+  `effectful_domain_transfer` API. See `docs/SPLIT_STATE_MIGRATION.md`.
 
 ### Trace-context analysis (planned — umbrella)
 

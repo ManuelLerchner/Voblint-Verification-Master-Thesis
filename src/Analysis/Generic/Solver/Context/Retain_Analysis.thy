@@ -10,7 +10,7 @@ text \<open>
   The framework transports \<open>Answer : D\<close> and \<open>Side : G\<close> and never copies \<open>G\<close>
   into \<open>D\<close>; the snapshot in the Answer is written by this analysis's own
   transfer.  The homogeneous \<open>retain_edge_tree\<close> (one \<open>'a abs_state\<close> value type,
-  Answer keeps the full result) is this analysis's legacy form; everything
+  Answer keeps the full result) is this analysis's homogeneous form; everything
   retain-specific --- the tree, its transfer factory, its soundness, its keyed
   exactness reduction, and its executable mirror --- lives here, not in the
   framework.
@@ -78,18 +78,7 @@ lemma sides_inr_local_bot_retain_edge_tree:
   "local_bot_on_locals (sides_of_rhs (retain_edge_tree f u) \<sigma> (Inr g))"
   by (simp add: sides_retain_eq_unit sides_inr_local_bot_unit_edge_tree)
 
-text \<open>The legacy tree factors through the framework shape: retain is a step.\<close>
 
-definition retain_step ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
-where
-  "retain_step f d g = (let res = f (d \<squnion> g) in (restrict_global res, res))"
-
-theorem step_edge_tree_retain:
-  "step_edge_tree (retain_step f) u = retain_edge_tree f u"
-  unfolding step_edge_tree_def retain_step_def retain_edge_tree_def
-  by (simp add: Let_def)
 
 subsection \<open>The retain transfer factory and its soundness\<close>
 
@@ -418,78 +407,16 @@ next
                   commute fun_of_st_sup o_def)
 qed
 
-subsection \<open>Retain on the flat dg carrier\<close>
 
-text \<open>
-  The analysis's domain choice made explicit on the solver value type:
-  \<open>D = ('a abs_state, 'a abs_state) dg_state\<close>, locals in the \<open>locals\<close> field, the
-  flow-sensitive global snapshot in the \<open>globs\<close> field; global slots carry
-  \<^const>\<open>emb_glob\<close>-embedded values.
-\<close>
-
-definition retain_dg_step ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> ('a abs_state, 'a abs_state) dg_state \<Rightarrow> ('a abs_state, 'a abs_state) dg_state
-   \<Rightarrow> ('a abs_state, 'a abs_state) dg_state \<times> ('a abs_state, 'a abs_state) dg_state"
-where
-  "retain_dg_step f d g =
-     (let res = f (merge_dg d \<squnion> globs g)
-      in (emb_glob (restrict_global res), split_dg res))"
-
-definition retain_dg_edge_tree ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> pp \<Rightarrow> (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
-where
-  "retain_dg_edge_tree f u = step_edge_tree (retain_dg_step f) u"
-
-lemma retain_dg_traverse_wf:
-  "wf_dg (traverse_rhs (retain_dg_edge_tree f u) \<tau>)"
-  unfolding retain_dg_edge_tree_def retain_dg_step_def
-  by (simp add: traverse_step_edge_tree Let_def wf_dg_split_dg)
-
-lemma retain_dg_sides_locals_bot:
-  "locals (sides_of_rhs (retain_dg_edge_tree f u) \<tau> (Inr ())) = bot"
-  unfolding retain_dg_edge_tree_def retain_dg_step_def emb_glob_def
-  by (simp add: sides_step_edge_tree_Inr Let_def)
-
-definition dg_rep ::
-  "(pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state)
-   \<Rightarrow> pp + unit \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
-where
-  "dg_rep \<sigma> =
-     (\<lambda>k. case k of Inl v \<Rightarrow> split_dg (\<sigma> (Inl v)) | Inr g \<Rightarrow> emb_glob (\<sigma> (Inr g)))"
-
-theorem retain_dg_traverse:
-  "traverse_rhs (retain_dg_edge_tree f u) (dg_rep \<sigma>)
-   = split_dg (traverse_rhs (retain_edge_tree f u) \<sigma>)"
-  unfolding retain_dg_edge_tree_def retain_dg_step_def dg_rep_def emb_glob_def
-  by (simp add: traverse_step_edge_tree traverse_retain_edge_tree Let_def)
-
-corollary retain_dg_traverse_merge:
-  "merge_dg (traverse_rhs (retain_dg_edge_tree f u) (dg_rep \<sigma>))
-   = traverse_rhs (retain_edge_tree f u) \<sigma>"
-  by (simp add: retain_dg_traverse)
-
-theorem retain_dg_sides_Inr:
-  "sides_of_rhs (retain_dg_edge_tree f u) (dg_rep \<sigma>) (Inr ())
-   = emb_glob (sides_of_rhs (retain_edge_tree f u) \<sigma> (Inr ()))"
-  unfolding retain_dg_edge_tree_def retain_dg_step_def dg_rep_def emb_glob_def
-  by (simp add: sides_step_edge_tree_Inr sides_retain_edge_tree_Inr Let_def)
-
-corollary retain_dg_sides_Inr_globs:
-  "globs (sides_of_rhs (retain_dg_edge_tree f u) (dg_rep \<sigma>) (Inr ()))
-   = sides_of_rhs (retain_edge_tree f u) \<sigma> (Inr ())"
-  by (simp add: retain_dg_sides_Inr emb_glob_def)
 
 subsection \<open>Retain on the heterogeneous framework: the expressiveness witness\<close>
 
 text \<open>
-  Retain as an ordinary \<open>D\<close>/\<open>G\<close>/step analysis on \<^const>\<open>dg_edge_tree\<close>:
-  \<open>D = ('a abs_state, 'a abs_state) dg_state\<close> (locals \<times> snapshot),
-  \<open>G = 'a abs_state\<close>.  The framework tree is the same analysis-agnostic
-  \<^const>\<open>dg_edge_tree\<close> every analysis uses --- no retain knowledge anywhere in
-  \<^theory>\<open>Voblint_Analysis.DG_Framework\<close> --- and under the slot embedding the
-  behaviour is exactly the homogeneous retain tree's.
+  Retain is an ordinary \<open>D\<close>/\<open>G\<close>/step analysis on
+  \<^const>\<open>dg_edge_tree\<close>.  Its local domain is
+  \<open>D = ('a abs_state, 'a abs_state) dg_state\<close>, carrying locals and a
+  flow-sensitive snapshot; its published domain is \<open>G = 'a abs_state\<close>.
+  The framework sees only the analysis-agnostic \<open>dg_spec\<close> interface.
 \<close>
 
 definition retain_hetero_step ::
@@ -501,101 +428,6 @@ where
      (let res = f (merge_dg d \<squnion> g)
       in (restrict_global res, split_dg res))"
 
-definition retain_hetero_rep ::
-  "('x + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state)
-   \<Rightarrow> 'x + unit \<Rightarrow> (('a abs_state, 'a abs_state) dg_state, 'a abs_state) dg_state"
-where
-  "retain_hetero_rep \<sigma> =
-     (\<lambda>k. case k of Inl v \<Rightarrow> DG (split_dg (\<sigma> (Inl v))) bot
-                  | Inr g \<Rightarrow> DG bot (\<sigma> (Inr g)))"
-
-theorem retain_hetero_traverse:
-  "traverse_rhs (dg_edge_tree (retain_hetero_step f) u) (retain_hetero_rep \<sigma>)
-   = DG (split_dg (traverse_rhs (retain_edge_tree f u) \<sigma>)) bot"
-  unfolding retain_hetero_step_def retain_hetero_rep_def
-  by (simp add: traverse_dg_edge_tree traverse_retain_edge_tree Let_def)
-
-theorem retain_hetero_sides:
-  "sides_of_rhs (dg_edge_tree (retain_hetero_step f) u) (retain_hetero_rep \<sigma>) (Inr ())
-   = DG bot (sides_of_rhs (retain_edge_tree f u) \<sigma> (Inr ()))"
-  unfolding retain_hetero_step_def retain_hetero_rep_def
-  by (simp add: sides_dg_edge_tree_Inr sides_retain_edge_tree_Inr Let_def)
-
-text \<open>
-  With @{thm [source] dg_edge_tree_answer_pure_D} and
-  @{thm [source] dg_edge_tree_side_pure_G} holding
-  for every step, retain needs no framework-specific support: the snapshot lives
-  inside this analysis's \<open>D\<close>, published globals are pure \<open>G\<close>, and the legacy
-  homogeneous behaviour is recovered exactly.
-\<close>
-
-subsection \<open>Retain's representation transport\<close>
-
-primrec retain_pack_tree ::
-  "('x, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
-   \<Rightarrow> ('x, unit,
-       (('a abs_state, 'a abs_state) dg_state, 'a abs_state) dg_state)
-      strategy_tree"
-where
-  "retain_pack_tree (Answer d) = Answer (DG (split_dg d) bot)"
-| "retain_pack_tree (QueryL x f) =
-     QueryL x (\<lambda>d. retain_pack_tree (f (merge_dg (locals d))))"
-| "retain_pack_tree (QueryG g f) =
-     QueryG g (\<lambda>d. retain_pack_tree (f (globs d)))"
-| "retain_pack_tree (Side g d t) =
-     Side g (DG bot d) (retain_pack_tree t)"
-
-lemma traverse_retain_pack_tree:
-  "traverse_rhs (retain_pack_tree t) (retain_hetero_rep \<sigma>) =
-   DG (split_dg (traverse_rhs t \<sigma>)) bot"
-  by (induction t)
-    (simp_all add: retain_hetero_rep_def bot_fun_def)
-
-lemma sides_retain_pack_tree:
-  "sides_of_rhs (retain_pack_tree t) (retain_hetero_rep \<sigma>) =
-   retain_hetero_rep (sides_of_rhs t \<sigma>)"
-  unfolding fun_eq_iff
-proof (intro allI)
-  fix k
-  show "sides_of_rhs (retain_pack_tree t) (retain_hetero_rep \<sigma>) k =
-        retain_hetero_rep (sides_of_rhs t \<sigma>) k"
-  proof (cases k)
-    case (Inl x)
-    then show ?thesis
-      by (simp add: retain_hetero_rep_def sides_of_rhs_Inl_any
-            bot_dg_state_def)
-  next
-    case (Inr g)
-    then show ?thesis
-      by (induction t)
-        (auto simp: retain_hetero_rep_def Let_def sup_dg_state_def
-          bot_dg_state_def)
-  qed
-qed
-
-lemma dep_aux_retain_pack_tree:
-  "dep_aux (retain_hetero_rep \<sigma>) (retain_pack_tree t) = dep_aux \<sigma> t"
-  by (induction t) (simp_all add: retain_hetero_rep_def)
-
-lemma retain_pack_tree_seqcomp:
-  "retain_pack_tree (seqcomp_tree t f) =
-   seqcomp_tree (retain_pack_tree t)
-     (\<lambda>d. retain_pack_tree (f (merge_dg (locals d))))"
-  by (induction t arbitrary: f) simp_all
-
-lemma retain_pack_tree_map_ltree:
-  "retain_pack_tree (map_ltree h t) = map_ltree h (retain_pack_tree t)"
-  by (induction t) simp_all
-
-lemma retain_pack_tree_map_gtree:
-  "retain_pack_tree (map_gtree h t) = map_gtree h (retain_pack_tree t)"
-  by (induction t) simp_all
-
-lemma dg_edge_tree_retain_pack:
-  "dg_edge_tree (retain_hetero_step f) u =
-   retain_pack_tree (retain_edge_tree f u)"
-  unfolding dg_edge_tree_def retain_hetero_step_def retain_edge_tree_def
-  by (simp add: Let_def fun_eq_iff)
 
 subsection \<open>Retain through the heterogeneous CMP generator\<close>
 
@@ -610,88 +442,7 @@ where
                 \<squnion> restrict_global (merge_dg de \<squnion> g)
       in (restrict_global res, split_dg (restrict_local res)))"
 
-lemma dg_combine_tree_retain_pack:
-  "dg_combine_tree retain_hetero_combine cc ex =
-   retain_pack_tree (unit_combine_tree cc ex)"
-  unfolding dg_combine_tree_def retain_hetero_combine_def
-    unit_combine_tree_def
-  by (simp add: Let_def fun_eq_iff)
-lemma retain_hetero_rep_bot [simp]:
-  "retain_hetero_rep
-     (bot :: 'x + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) = bot"
-  unfolding fun_eq_iff
-  by (intro allI; case_tac x; rule dg_state.expand)
-    (simp_all add: retain_hetero_rep_def bot_dg_state_def)
 
-lemma retain_hetero_rep_sup [simp]:
-  "retain_hetero_rep (\<sigma> \<squnion> \<tau>) =
-   retain_hetero_rep \<sigma> \<squnion> retain_hetero_rep \<tau>"
-  unfolding fun_eq_iff
-  by (intro allI; case_tac x; rule dg_state.expand)
-    (simp_all add: retain_hetero_rep_def sup_dg_state_def)
-
-
-lemma traverse_retain_pack_fold:
-  "traverse_rhs
-     (side_rhs_fold_dg (split_dg acc) (map retain_pack_tree ts))
-     (retain_hetero_rep \<sigma>) =
-   DG (split_dg (traverse_rhs (side_rhs_fold_ctx acc ts) \<sigma>)) bot"
-proof (induction ts arbitrary: acc)
-  case Nil
-  show ?case by (simp add: bot_fun_def)
-next
-  case (Cons t ts)
-  have acc_eq:
-    "split_dg acc \<squnion> split_dg (traverse_rhs t \<sigma>) =
-     split_dg (acc \<squnion> traverse_rhs t \<sigma>)"
-    by (rule split_dg_sup[symmetric])
-  show ?case
-    by (simp only: list.map side_rhs_fold_dg.simps side_rhs_fold_ctx.simps
-          traverse_seqcomp traverse_retain_pack_tree dg_state.sel acc_eq Cons.IH)
-qed
-
-lemma sides_retain_pack_fold:
-  "sides_of_rhs
-     (side_rhs_fold_dg (split_dg acc) (map retain_pack_tree ts))
-     (retain_hetero_rep \<sigma>) =
-   retain_hetero_rep
-     (sides_of_rhs (side_rhs_fold_ctx acc ts) \<sigma>)"
-proof (induction ts arbitrary: acc)
-  case Nil
-  show ?case
-    by (rule ext; case_tac x; rule dg_state.expand)
-      (simp_all add: retain_hetero_rep_def bot_dg_state_def bot_fun_def split_dg_def dg_of_pair_def split_state_def)
-next
-  case (Cons t ts)
-  have acc_eq:
-    "split_dg acc \<squnion> split_dg (traverse_rhs t \<sigma>) =
-     split_dg (acc \<squnion> traverse_rhs t \<sigma>)"
-    by (rule split_dg_sup[symmetric])
-  show ?case
-    by (simp only: list.map side_rhs_fold_dg.simps side_rhs_fold_ctx.simps
-          sides_of_rhs_seqcomp sides_retain_pack_tree
-          traverse_retain_pack_tree dg_state.sel acc_eq Cons.IH
-          retain_hetero_rep_sup)
-qed
-
-lemma dep_aux_retain_pack_fold:
-  "dep_aux (retain_hetero_rep \<sigma>)
-     (side_rhs_fold_dg (split_dg acc) (map retain_pack_tree ts)) =
-   dep_aux \<sigma> (side_rhs_fold_ctx acc ts)"
-proof (induction ts arbitrary: acc)
-  case Nil
-  show ?case by simp
-next
-  case (Cons t ts)
-  have acc_eq:
-    "split_dg acc \<squnion> split_dg (traverse_rhs t \<sigma>) =
-     split_dg (acc \<squnion> traverse_rhs t \<sigma>)"
-    by (rule split_dg_sup[symmetric])
-  show ?case
-    by (simp only: list.map side_rhs_fold_dg.simps side_rhs_fold_ctx.simps
-          dep_aux_seqcomp dep_aux_retain_pack_tree
-          traverse_retain_pack_tree dg_state.sel acc_eq Cons.IH)
-qed
 
 definition retain_dg_spec ::
   "'a::sound_domain domain_transfer
@@ -706,20 +457,7 @@ where
     dgs_combine    = retain_hetero_combine
   \<rparr>"
 
-lemma dg_spec_step_retain:
-  "dg_spec_step (retain_dg_spec tf) a =
-   retain_hetero_step (apply_tf tf a)"
-  unfolding retain_dg_spec_def by (cases a) simp_all
 
-lemma apply_retain_dg_spec:
-  "apply_dg_spec (retain_dg_spec tf) a u =
-   dg_edge_tree (retain_hetero_step (apply_tf tf a)) u"
-  by (simp add: apply_dg_spec_def dg_spec_step_retain)
-
-lemma combine_retain_dg_spec:
-  "dg_spec_combine_tree (retain_dg_spec tf) cc ex =
-   dg_combine_tree retain_hetero_combine cc ex"
-  by (simp add: dg_spec_combine_tree_def retain_dg_spec_def)
 
 definition retain_dg_cmb ::
   "'a::sound_domain domain_transfer \<Rightarrow> unit \<Rightarrow> pp \<Rightarrow> pp
@@ -732,31 +470,9 @@ where
        (map_ltree (\<lambda>w. (w, ctx))
          (dg_spec_combine_tree (retain_dg_spec tf) cc ex))"
 
-lemma apply_retain_dg_spec_pack:
-  "apply_dg_spec (retain_dg_spec tf) a u =
-   retain_pack_tree (apply_etf (retain_etf_of_transfer tf) a u)"
-  by (simp add: apply_retain_dg_spec dg_edge_tree_retain_pack
-        apply_etf_retain_of_transfer)
 
-lemma retain_dg_cmb_pack:
-  "retain_dg_cmb tf ctx cc ex =
-   retain_pack_tree
-     (map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex)))"
-  unfolding retain_dg_cmb_def combine_retain_dg_spec
-    dg_combine_tree_retain_pack
-  by (simp add: retain_pack_tree_map_ltree retain_pack_tree_map_gtree)
 
-definition retain_generator ::
-  "cfg \<Rightarrow> 'a::sound_domain domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> (pp \<times> unit, unit, 'a abs_state) eqsT"
-where
-  "retain_generator g tf fresh_frame bot0 s0 =
-     side_cfg_T_eff_cmp_seed (\<lambda>_. ())
-       (\<lambda>ctx cc ex. map_gtree (\<lambda>_. ())
-         (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex)))
-       (\<lambda>_. fresh_frame) g (retain_etf_of_transfer tf) bot0 s0"
+
 
 definition retain_dg_generator ::
   "cfg \<Rightarrow> 'a::sound_domain domain_transfer
@@ -769,223 +485,11 @@ where
        (\<lambda>_. split_dg fresh_frame) g (retain_dg_spec tf)
        (split_dg bot0) (split_dg (restrict_local s0)) (restrict_global s0)"
 
-lemma eq_retain_dg_generator:
-  "eq (retain_dg_generator g tf fresh_frame bot0 s0) (v, ctx) \<tau> =
-   DG (side_acc_dg
-     ((if v = cfg_entry g
-       then split_dg bot0 \<squnion> split_dg (restrict_local s0)
-       else split_dg bot0)
-      \<squnion> (if is_frame_entry g v then split_dg fresh_frame else bot))
-     \<tau>
-     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-              (map_ltree (\<lambda>w. (w, ctx))
-                (apply_dg_spec (retain_dg_spec tf) a u)))
-           (non_enter_predecessor_list g v)
-      @ map (\<lambda>(cc, ex). retain_dg_cmb tf ctx cc ex)
-            (combine_predecessor_list g v))) bot"
-  unfolding retain_dg_generator_def
-  by (rule eq_side_cfg_T_eff_cmp_seed_dg)
 
-lemma retain_dg_tree_list_pack:
-  "map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-          (map_ltree (\<lambda>w. (w, ctx))
-            (apply_dg_spec (retain_dg_spec tf) a u)))
-       (non_enter_predecessor_list g v)
-   @ map (\<lambda>(cc, ex). retain_dg_cmb tf ctx cc ex)
-       (combine_predecessor_list g v) =
-   map retain_pack_tree
-     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-            (map_ltree (\<lambda>w. (w, ctx))
-              (apply_etf (retain_etf_of_transfer tf) a u)))
-         (non_enter_predecessor_list g v)
-      @ map (\<lambda>(cc, ex). map_gtree (\<lambda>_. ())
-              (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex)))
-          (combine_predecessor_list g v))"
-  by (simp add: apply_retain_dg_spec_pack retain_dg_cmb_pack
-        retain_pack_tree_map_ltree[symmetric]
-        retain_pack_tree_map_gtree[symmetric] split: prod.splits)
 
-lemma retain_dg_acc0_pack:
-  fixes a b d :: "'a::bounded_semilattice_sup_bot abs_state"
-  shows "((if P then split_dg a \<squnion> split_dg b else split_dg a)
-      \<squnion> (if Q then split_dg d else bot)) =
-   split_dg ((if P then a \<squnion> b else a)
-      \<squnion> (if Q then d else bot))"
-  by simp
 
-lemma traverse_retain_dg_tree_list:
-  "traverse_rhs
-     (side_rhs_fold_dg (split_dg acc)
-       (map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-          (map_ltree (\<lambda>w. (w, ctx))
-            (apply_dg_spec (retain_dg_spec tf) a u)))
-        (non_enter_predecessor_list g v)
-      @ map (\<lambda>(cc, ex). retain_dg_cmb tf ctx cc ex)
-          (combine_predecessor_list g v)))
-     (retain_hetero_rep \<sigma>) =
-   DG (split_dg
-     (traverse_rhs
-       (side_rhs_fold_ctx acc
-         (map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-            (map_ltree (\<lambda>w. (w, ctx))
-              (apply_etf (retain_etf_of_transfer tf) a u)))
-          (non_enter_predecessor_list g v)
-        @ map (\<lambda>(cc, ex). map_gtree (\<lambda>_. ())
-            (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex)))
-          (combine_predecessor_list g v)))
-       \<sigma>)) bot"
-by (simp only: retain_dg_tree_list_pack traverse_retain_pack_fold)
 
-lemma eq_retain_dg_generator_rep:
-  "eq (retain_dg_generator g tf fresh_frame bot0 s0) (v, ctx)
-      (retain_hetero_rep \<sigma>) =
-   DG (split_dg
-     (eq (retain_generator g tf fresh_frame bot0 s0) (v, ctx) \<sigma>)) bot"
-  unfolding retain_dg_generator_def retain_generator_def
-    side_cfg_T_eff_cmp_seed_dg_def side_cfg_T_eff_cmp_seed_def
-  by (cases "v = cfg_entry g"; cases "is_frame_entry g v")
-    (simp_all only: Let_def if_True if_False prod.case
-      retain_dg_acc0_pack traverse_retain_dg_tree_list
-      traverse_rhs.simps refl sup_bot_right)
 
-lemma retain_hetero_rep_update_global:
-  fixes d :: "'a::bounded_semilattice_sup_bot abs_state"
-  shows "(retain_hetero_rep \<sigma>)
-           (Inr () := (retain_hetero_rep \<sigma>) (Inr ()) \<squnion> DG bot d) =
-         retain_hetero_rep (\<sigma> (Inr () := \<sigma> (Inr ()) \<squnion> d))"
-  by (rule ext; case_tac x; rule dg_state.expand)
-    (simp_all add: retain_hetero_rep_def sup_dg_state_def bot_dg_state_def)
 
-lemma sides_retain_dg_generator_rep:
-  "sides_of_rhs
-     (retain_dg_generator g tf fresh_frame bot0 s0 (v, ctx))
-     (retain_hetero_rep \<sigma>) =
-   retain_hetero_rep
-     (sides_of_rhs
-       (retain_generator g tf fresh_frame bot0 s0 (v, ctx)) \<sigma>)"
-  unfolding retain_dg_generator_def retain_generator_def
-    side_cfg_T_eff_cmp_seed_dg_def side_cfg_T_eff_cmp_seed_def
-  by (cases "v = cfg_entry g"; cases "is_frame_entry g v")
-    (simp_all only: Let_def if_True if_False prod.case
-      retain_dg_acc0_pack retain_dg_tree_list_pack
-      sides_retain_pack_fold sides_of_rhs.simps
-      retain_hetero_rep_sup retain_hetero_rep_update_global
-      refl sup_bot_right)
-
-lemma dep_aux_retain_dg_generator_rep:
-  "dep_aux (retain_hetero_rep \<sigma>)
-     (retain_dg_generator g tf fresh_frame bot0 s0 (v, ctx)) =
-   dep_aux \<sigma> (retain_generator g tf fresh_frame bot0 s0 (v, ctx))"
-  unfolding retain_dg_generator_def retain_generator_def
-    side_cfg_T_eff_cmp_seed_dg_def side_cfg_T_eff_cmp_seed_def
-  by (cases "v = cfg_entry g"; cases "is_frame_entry g v")
-    (simp_all only: Let_def if_True if_False prod.case
-      retain_dg_acc0_pack retain_dg_tree_list_pack
-      dep_aux_retain_pack_fold dep_aux.simps refl sup_bot_right)
-
-lemma retain_hetero_rep_le_iff [simp]:
-  "retain_hetero_rep \<sigma> \<le> retain_hetero_rep \<tau> \<longleftrightarrow> \<sigma> \<le> \<tau>"
-proof
-  assume h: "retain_hetero_rep \<sigma> \<le> retain_hetero_rep \<tau>"
-  show "\<sigma> \<le> \<tau>"
-  proof (rule le_funI)
-    fix k
-    show "\<sigma> k \<le> \<tau> k"
-
-    proof (cases k)
-      case (Inl x)
-      have outer:
-          "(retain_hetero_rep \<sigma>) (Inl x) \<le>
-           (retain_hetero_rep \<tau>) (Inl x)"
-        using le_funD[OF h, of "Inl x"] .
-      have inner:
-          "split_dg (\<sigma> (Inl x)) \<le> split_dg (\<tau> (Inl x))"
-        using outer
-        by (simp add: retain_hetero_rep_def)
-      show ?thesis
-        using Inl split_dg_le_iff[THEN iffD1, OF inner] by simp
-    next
-      case (Inr g)
-      have outer:
-          "(retain_hetero_rep \<sigma>) (Inr g) \<le>
-           (retain_hetero_rep \<tau>) (Inr g)"
-        using le_funD[OF h, of "Inr g"] .
-      have global: "\<sigma> (Inr g) \<le> \<tau> (Inr g)"
-        using outer
-        by (simp add: retain_hetero_rep_def sup.absorb_iff2 sup_dg_state_def)
-      show ?thesis using Inr global by simp
-    qed
-  qed
-next
-  assume h: "\<sigma> \<le> \<tau>"
-  show "retain_hetero_rep \<sigma> \<le> retain_hetero_rep \<tau>"
-  proof (rule le_funI)
-    fix k
-    have hk: "\<sigma> k \<le> \<tau> k" using le_funD[OF h, of k] .
-    show "(retain_hetero_rep \<sigma>) k \<le> (retain_hetero_rep \<tau>) k"
-    proof (cases k)
-      case (Inl x)
-      have split_le:
-          "split_dg (\<sigma> (Inl x)) \<le> split_dg (\<tau> (Inl x))"
-        using hk Inl split_dg_le_iff[THEN iffD2] by simp
-      show ?thesis
-        using Inl split_le
-        by (simp add: retain_hetero_rep_def)
-    next
-      case (Inr g)
-      show ?thesis
-        using hk Inr
-        by (simp add: retain_hetero_rep_def sup.absorb_iff2 sup_dg_state_def)
-    qed
-  qed
-qed
-
-lemma eq_retain_dg_generator_rep_any:
-  "eq (retain_dg_generator g tf fresh_frame bot0 s0) x
-      (retain_hetero_rep \<sigma>) =
-   DG (split_dg
-     (eq (retain_generator g tf fresh_frame bot0 s0) x \<sigma>)) bot"
-  by (cases x) (simp add: eq_retain_dg_generator_rep)
-
-lemma sides_retain_dg_generator_rep_any:
-  "sides_of_rhs
-     (retain_dg_generator g tf fresh_frame bot0 s0 x)
-     (retain_hetero_rep \<sigma>) =
-   retain_hetero_rep
-     (sides_of_rhs (retain_generator g tf fresh_frame bot0 s0 x) \<sigma>)"
-  by (cases x) (simp add: sides_retain_dg_generator_rep)
-
-lemma dep_aux_retain_dg_generator_rep_any:
-  "dep_aux (retain_hetero_rep \<sigma>)
-     (retain_dg_generator g tf fresh_frame bot0 s0 x) =
-   dep_aux \<sigma> (retain_generator g tf fresh_frame bot0 s0 x)"
-  by (cases x) (simp add: dep_aux_retain_dg_generator_rep)
-
-lemma retain_answer_le_rep_Inl [simp]:
-  "DG (split_dg d) bot \<le> (retain_hetero_rep \<sigma>) (Inl x)
-   \<longleftrightarrow> d \<le> \<sigma> (Inl x)"
-  by (simp add: retain_hetero_rep_def)
-
-theorem part_post_solution_retain_dg_iff:
-  "part_post_solution
-     (retain_dg_generator g tf fresh_frame bot0 s0)
-     x (retain_hetero_rep \<sigma>) vars
-   \<longleftrightarrow>
-   part_post_solution
-     (retain_generator g tf fresh_frame bot0 s0) x \<sigma> vars"
-  by (simp add: eq_retain_dg_generator_rep_any
-        sides_retain_dg_generator_rep_any dep_aux_retain_dg_generator_rep_any
-        dep\<^sub>L_def dep_def split: prod.splits)
-
-theorem retain_dg_generator_uses_standard_framework:
-  "apply_dg_spec (retain_dg_spec tf) a u =
-   dg_edge_tree (retain_hetero_step (apply_tf tf a)) u"
-  by (rule apply_retain_dg_spec)
-
-text \<open>
-  The complete generator sees only the standard \<open>dg_spec\<close> interface.  The
-  snapshot occurs solely in Retain's choice of \<open>D\<close>; \<open>side_cfg_T_eff_cmp_seed_dg\<close>
-  remains independent of Retain.
-\<close>
 
 end

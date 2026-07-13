@@ -206,14 +206,11 @@ corollary mixed_si_post_solution_collect_sound:
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
   shows "cfg_collect g S v \<subseteq> mixed_si_gamma sigma v"
-proof -
-  have pf: "mixed_si_postfix g s0d s0g sigma"
-    by (rule mixed_si_post_solution_postfix
-          [OF pp cover_entry cover_edge cover_combine finE no_enter finC])
-  show ?thesis
-    by (rule mixed_si_postfix_collect_sound
-          [OF pf finE finC soundD soundG])
-qed
+  unfolding mixed_si_gamma_dg
+  apply (rule mixed_si.dg_post_solution_collect_sound
+        [OF pp[unfolded mixed_si_generator_dg]
+            cover_entry cover_edge cover_combine finE no_enter finC])
+  using soundD soundG unfolding gamma_dg_def by auto
 
 section \<open>Executable instance\<close>
 
