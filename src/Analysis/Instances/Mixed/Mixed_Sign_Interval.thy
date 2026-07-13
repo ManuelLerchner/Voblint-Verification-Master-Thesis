@@ -10,11 +10,16 @@ begin
 section \<open>A flow-sensitive Sign analysis with a flow-insensitive Interval invariant\<close>
 
 text \<open>
-  The answer domain is a flow-sensitive Sign store.  The side domain is one
-  flow-insensitive Interval store shared by every equation.  An edge advances
-  both abstractions independently.  The local answer follows control flow;
-  the side contribution closes the shared interval store under every reachable
-  transfer.
+  The answer domain D is a flow-sensitive Sign store: every CFG point has its
+  own Sign answer.  The side domain G is one flow-insensitive Interval invariant
+  shared by every equation.  The name @{const globs} identifies the solver's
+  side slot; it does not restrict G to IMP2 variables satisfying
+  @{const is_global}.  The analysis chooses which facts G contains.
+
+  Every edge advances the two abstractions independently.  Its Sign result
+  becomes the successor's answer, while its Interval result is published to
+  the shared side unknown.  Solver joins therefore close G under every
+  reachable transfer.
 \<close>
 
 definition mixed_si_step ::
@@ -83,6 +88,14 @@ definition mixed_si_gamma ::
 where
   "mixed_si_gamma sigma v =
      \<lbrakk>mixed_si_D sigma v\<rbrakk> \<inter> \<lbrakk>mixed_si_G sigma\<rbrakk>"
+
+text \<open>
+  @{const mixed_si_D} reads the point-indexed @{term "Inl (v, ())"} answer.
+  @{const mixed_si_G} always reads the one @{term "Inr ()"} side unknown.
+  Consequently the concretisation at a point intersects its flow-sensitive
+  Sign fact with the same flow-insensitive Interval invariant used at every
+  point.
+\<close>
 
 definition mixed_si_trees ::
   "cfg \<Rightarrow> pp \<Rightarrow>
@@ -576,10 +589,18 @@ where
      side_cfg_T_eff_cmp_seed_dg (\<lambda>_. ()) mixed_si_cmb_st
        (\<lambda>_. bot) g mixed_si_spec_st bot0 s0d s0g"
 
+text \<open>
+  The witness uses the local IMP2 variable @{text "''x''"}.  The Sign answer
+  records its value at each control-flow point.  The Interval side invariant
+  records every value of the same variable seen anywhere in the run.  Starting
+  from zero, the program visits negative one and then two.  Thus the exit answer
+  is positive, while the shared invariant spans @{text "[-1, 2]"}.
+\<close>
+
 definition mixed_si_example_cfg :: cfg where
   "mixed_si_example_cfg =
      mk_cfg 0 2
-       {(0, EA_Assign ''x'' (IMP2_Syntax.N 1), 1),
+       {(0, EA_Assign ''x'' (IMP2_Syntax.N (-1)), 1),
         (1, EA_Assign ''x'' (IMP2_Syntax.N 2), 2)} {}"
 
 definition mixed_si_example_sign_seed :: "sign st" where
@@ -606,12 +627,18 @@ lemma mixed_si_example_terminates:
   "TD_side_always_join_Interp_solve_c mixed_si_example_eqs (2, ()) \<noteq> None"
   by eval
 
+lemma mixed_si_example_x_is_local:
+  "\<not> is_global ''x''"
+  by (simp add: is_global_def)
+
 lemma mixed_si_example_expected:
-  "lookup_st (locals (mixed_si_example_solution (Inl (2, ())))) ''x'' = SPos
+  "lookup_st (locals (mixed_si_example_solution (Inl (1, ())))) ''x'' = SNeg
+   \<and> lookup_st (locals (mixed_si_example_solution (Inl (2, ())))) ''x'' = SPos
    \<and> lookup_st (globs (mixed_si_example_solution (Inr ()))) ''x''
-       = Ivl (Fin 0) (Fin 2)"
+       = Ivl (Fin (-1)) (Fin 2)"
   by eval
 
+value "lookup_st (locals (mixed_si_example_solution (Inl (1, ())))) ''x''"
 value "lookup_st (locals (mixed_si_example_solution (Inl (2, ())))) ''x''"
 value "lookup_st (globs (mixed_si_example_solution (Inr ()))) ''x''"
 

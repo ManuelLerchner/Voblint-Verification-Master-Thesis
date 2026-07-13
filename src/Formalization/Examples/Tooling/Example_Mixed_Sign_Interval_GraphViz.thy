@@ -1,4 +1,4 @@
-section \<open>Example: mixed Sign answers and an Interval global invariant\<close>
+section \<open>Example: flow-sensitive Sign answers and a shared Interval invariant\<close>
 
 theory Example_Mixed_Sign_Interval_GraphViz
   imports
@@ -8,14 +8,21 @@ theory Example_Mixed_Sign_Interval_GraphViz
 begin
 
 text \<open>
-  The program compiles through the ordinary IMP2-to-CFG pipeline.  Its local
-  unknowns carry Sign stores, while the single global side unknown carries an
-  Interval store.  The DOT rendering displays Sign values at CFG nodes and the
-  shared Interval invariant in a separate cluster.
+  The program compiles through the ordinary IMP2-to-CFG pipeline.  The variable
+  @{text "''x''"} is local according to @{const is_global}.  Per-point answer
+  unknowns carry Sign stores, while the single side unknown carries an Interval
+  store chosen by this analysis.  The side slot is called @{const globs} by the
+  generic routing layer, but it is not an IMP2 global-variable store.
+
+  Starting from @{text "x = 0"}, execution visits @{text "x = -1"} and finishes
+  at @{text "x = 2"}.  The exit Sign answer is therefore positive.  The shared
+  Interval invariant joins all three values and is @{text "[-1, 2]"}.  The DOT
+  rendering displays the flow-sensitive Sign answers at CFG nodes and the
+  flow-insensitive Interval invariant in a separate cluster.
 \<close>
 
 definition mixed_graphviz_prog :: com where
-  "mixed_graphviz_prog = \<lbrakk> x := 1; x := 2 \<rbrakk>"
+  "mixed_graphviz_prog = \<lbrakk> x := -1; x := 2 \<rbrakk>"
 
 definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =
@@ -54,12 +61,16 @@ lemma mixed_graphviz_part_post_solution:
   by (rule TD_side_always_join_Interp.part_post_solution_of_solve_c)
     (rule mixed_graphviz_terminates)
 
+lemma mixed_graphviz_x_is_local:
+  "\<not> is_global ''x''"
+  by (rule mixed_si_example_x_is_local)
+
 lemma mixed_graphviz_expected:
   "lookup_st
       (locals (mixed_graphviz_solution
         (Inl (cfg_exit mixed_graphviz_cfg, ())))) ''x'' = SPos
    \<and> lookup_st (globs (mixed_graphviz_solution (Inr ()))) ''x''
-      = Ivl (Fin 0) (Fin 2)"
+      = Ivl (Fin (-1)) (Fin 2)"
   by eval
 
 definition mixed_graphviz_dot :: String.literal where
@@ -68,7 +79,7 @@ definition mixed_graphviz_dot :: String.literal where
        (ctx_debug_graphviz_same_ctx_cfg_with_globals
          (\<lambda>_. ''unit'')
          (\<lambda>_. ''mixed Sign answers'')
-         (\<lambda>_. ''Interval invariant'' @ gv_nl
+         (\<lambda>_. ''flow-insensitive Interval invariant'' @ gv_nl
            @ label_of_st show_val (cfg_local_vars mixed_graphviz_cfg)
                (globs (mixed_graphviz_solution (Inr ()))))
          (ctx_debug_state_node_label_auto mixed_graphviz_cfg

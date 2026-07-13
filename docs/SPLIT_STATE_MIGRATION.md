@@ -419,6 +419,12 @@ D = sign abs_state    -- flow-sensitive answer at each CFG point
 G = ivl abs_state     -- one flow-insensitive invariant for the whole CFG
 ```
 
+Here `G` means the analysis's shared side fact. It is not the subset of an
+IMP2 store whose names satisfy `is_global`. The generic `dg_state.globs`
+projection names the solver slot and imposes no meaning on its contents. This
+analysis chooses an Interval store over all program variables as `G`; another
+analysis may publish a reachability set, a counter, or a different invariant.
+
 Each edge applies the Sign transfer to its local `D` input and the Interval
 transfer to the shared `G` input. It returns the next Sign state as the
 `Answer` and publishes the next Interval state through `Side`. Procedure
@@ -441,16 +447,34 @@ edge-target, and combine-target coverage and exclude procedure-entry edges
 from this intentionally intraprocedural witness. The generic collecting
 mathematics is reused.
 
-`Example_Mixed_Sign_Interval_GraphViz.thy` compiles `x := 1; x := 2`,
+`Example_Mixed_Sign_Interval_GraphViz.thy` compiles `x := -1; x := 2`,
 runs the TD side solver, proves termination and the resulting post-solution,
 and checks:
 
+* `x` is an IMP2 local variable (`is_global ''x''` is false);
+* the intermediate Sign answer for `x` is negative;
 * the exit-local Sign value for `x` is positive;
-* the published Interval invariant for `x` is `[0, 2]`.
+* the published Interval invariant for `x` is `[-1, 2]`.
+
+The interval follows directly from the side equations. The initial side seed
+publishes the singleton `[0, 0]`. The first assignment applies the Interval
+transfer to the shared summary and publishes `[-1, -1]`; the second publishes
+`[2, 2]`. The side-effecting solver joins all contributions into its single
+`Inr ()` unknown:
+
+```
+[0, 0] ⊔ [-1, -1] ⊔ [2, 2] = [-1, 2]
+```
+
+The exit Sign answer only follows the final control-flow state, so it is
+`SPos`. The shared Interval invariant intentionally also describes earlier
+reachable states, so it contains `-1` and the entry seed `0`. The same local
+variable appears in both facts because their meanings differ by sensitivity
+and abstraction, not because `x` belongs to two source-language namespaces.
 
 Its DOT output annotates CFG nodes with Sign stores and renders the shared
-Interval store in a separate global cluster. This exposes the domain split in
-the executable pipeline.
+Interval store in a separate side-invariant cluster. This exposes the domain
+split in the executable pipeline.
 
 #### Architecture before and after
 

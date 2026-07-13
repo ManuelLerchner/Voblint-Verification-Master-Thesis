@@ -283,36 +283,62 @@ definition demo_seed :: unit where
 definition demo_init_abs :: "sign abs_state" where
   "demo_init_abs = fun_of_st cinit_sign_st"
 
+lemma demo_pcompletes_assign_value:
+  assumes aval_eq: "IMP2_Expr.aval a s = v"
+    and state_eq: "t = s(x := v)"
+  shows "pcompletes Pi (IMP2_Proc.com.Assign x a) s t"
+proof -
+  have base:
+      "pcompletes Pi (IMP2_Proc.com.Assign x a) s
+        (s(x := IMP2_Expr.aval a s))"
+    by (rule pcompletes_assign)
+  from base show ?thesis
+    by (simp only: aval_eq state_eq)
+qed
+
 lemma demo_step_body_run:
   "pcompletes (prog_table demo_prog) demo_step_body (enter_state s)
      ((enter_state s)(''t'' := s ''Gval''))"
-  unfolding demo_step_body_def
-  by (simp add: pcompletes_assign enter_state_def is_global_def)
+proof -
+  have aval_eq:
+      "IMP2_Expr.aval (IMP2_Syntax.V ''Gval'') (enter_state s) =
+        s ''Gval''"
+    by (simp add: enter_state_def is_global_def)
+  have base:
+      "pcompletes (prog_table demo_prog)
+        (IMP2_Proc.com.Assign ''t'' (IMP2_Syntax.V ''Gval''))
+        (enter_state s)
+        ((enter_state s)(''t'' :=
+          IMP2_Expr.aval (IMP2_Syntax.V ''Gval'') (enter_state s)))"
+    by (rule pcompletes_assign)
+  from base show ?thesis
+    unfolding demo_step_body_def
+    by (simp only: aval_eq)
+qed
+
+lemma combine_enter_t_update [simp]:
+  "<s | (enter_state s)(''t'' := v)> = s"
+  apply (rule HOL.ext)
+  apply (auto simp: IMP2_Globals.combine_states_def
+      IMP2_Globals.enter_state_def IMP2_Globals.is_global_def
+      split: if_splits)
+  done
 
 lemma demo_step_call:
-  "pcompletes (prog_table demo_prog) (Call ''step'') s
-     (combine_states s ((enter_state s)(''t'' := s ''Gval'')))"
+  "pcompletes (prog_table demo_prog) (Call ''step'') s s"
 proof -
-  have run:
+  have raw:
       "pcompletes (prog_table demo_prog) (Call ''step'') s
-         (combine_states s ((enter_state s)(''t'' := s ''Gval'')))"
+        (<s | (enter_state s)(''t'' := s ''Gval'')>)"
   proof (rule pcompletes_Call[where c = demo_step_body])
     show "prog_table demo_prog ''step'' = Some demo_step_body"
       by (simp add: demo_prog_def demo_step_body_def)
     show "pcompletes (prog_table demo_prog) demo_step_body (enter_state s)
             ((enter_state s)(''t'' := s ''Gval''))"
-    proof -
-      have "pcompletes (prog_table demo_prog) (IMP2_Proc.com.Assign ''t'' (IMP2_Syntax.V ''Gval''))
-              (enter_state s)
-              ((enter_state s)(''t'' := aval (IMP2_Syntax.V ''Gval'') (enter_state s)))"
-        by (rule pcompletes_assign)
-      moreover have "aval (IMP2_Syntax.V ''Gval'') (enter_state s) = s ''Gval''"
-        by (simp add: enter_state_def is_global_def)
-      ultimately show ?thesis
-        by (simp add: demo_step_body_def)
-    qed
+      by (rule demo_step_body_run)
   qed
-  then show ?thesis by simp
+  from raw show ?thesis
+    by (simp only: combine_enter_t_update)
 qed
 
 lemma demo_source_completes:
@@ -332,14 +358,17 @@ lemma demo_source_completes:
   apply (rule pcompletes_assign)
   apply (rule demo_step_call)
   apply (rule pcompletes_IfFalse)
-   apply simp
+  apply (simp add: IMP2_Globals.combine_states_def enter_state_def is_global_def)
   apply (rule pcompletes_assign)
   apply (rule pcompletes_assign)
   apply (rule pcompletes_assign)
   apply (rule demo_step_call)
   apply (rule pcompletes_IfTrue)
-   apply simp
-  apply (rule pcompletes_assign)
+  apply (simp add: IMP2_Globals.combine_states_def enter_state_def is_global_def)
+  apply (rule demo_pcompletes_assign_value)
+  apply (simp add: demo_source_initial_def)
+  apply (rule HOL.ext)
+  apply (simp add: demo_source_initial_def)
   done
 
 lemma demo_source_exec:
@@ -361,7 +390,7 @@ theorem demo_source_to_sign_analysis:
       side_cfg_solve_dom_eff demo_cfg sign_etf_unit bot demo_init_abs demo_seed v"
   shows "\<exists>v t stk.
     concrete_program_match demo_pi demo_ps demo_main
-      (demo_main, demo_source_initial, []) (v, t, stk) \<and>
+      (IMP2_Proc.com.SKIP, demo_source_final, []) (v, t, stk) \<and>
     t \<in> \<lbrakk>side_analyse_eff demo_pi demo_ps demo_main sign_etf_unit bot demo_init_abs demo_seed v\<rbrakk>"
 proof -
   interpret demo_bridge: source_to_analysis_bridge
@@ -371,18 +400,50 @@ proof -
     show "demo_cfg = compile_prog demo_pi demo_ps demo_main"
       unfolding demo_cfg_def by simp
     show "wf_compile_input demo_pi demo_ps demo_main"
-      unfolding wf_compile_input_def demo_prog_def by simp
+      unfolding wf_compile_input_def demo_prog_def demo_step_body_def
+      by (simp add: source_pi_def)
     show "psteps demo_pi (demo_main, demo_source_initial, [])
             (IMP2_Proc.com.SKIP, demo_source_final, [])"
-      using demo_source_exec by simp
-    show "sound_effectful_transfer sign_etf_unit"
-      by (rule sign_sound_etf_unit)
+      using demo_source_exec
+      unfolding demo_main_cmd_def demo_prog_def
+      by simp
+    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          s \<in> \<lbrakk>etf_collecting_full (etf_nop sign_etf_unit u) \<sigma>\<rbrakk>)"
+      by (rule sound_effectful_transfer.etf_sound_nop[OF sign_sound_etf_unit])
+    show "\<forall>x e u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          s(x := IMP2_Expr.aval e s) \<in>
+            \<lbrakk>etf_collecting_full (etf_assign sign_etf_unit x e u) \<sigma>\<rbrakk>)"
+      by (rule sound_effectful_transfer.etf_sound_assign[OF sign_sound_etf_unit])
+    show "\<forall>b u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          IMP2_Expr.bval b s \<longrightarrow>
+            s \<in> \<lbrakk>etf_collecting_full (etf_assume sign_etf_unit b u) \<sigma>\<rbrakk>)"
+      by (rule sound_effectful_transfer.etf_sound_assume[OF sign_sound_etf_unit])
+    show "\<forall>b u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          \<not> IMP2_Expr.bval b s \<longrightarrow>
+            s \<in> \<lbrakk>etf_collecting_full (etf_assume_not sign_etf_unit b u) \<sigma>\<rbrakk>)"
+      by (rule sound_effectful_transfer.etf_sound_assume_not[OF sign_sound_etf_unit])
+    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+          enter_state s \<in>
+            \<lbrakk>etf_collecting_full (etf_enter sign_etf_unit u) \<sigma>\<rbrakk>)"
+      by (rule sound_effectful_transfer.etf_sound_enter[OF sign_sound_etf_unit])
+    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+         \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
+          <s | t> \<in> \<lbrakk>etf_full (etf_combine sign_etf_unit cc ex) \<sigma>\<rbrakk>)"
+      by (rule sound_effectful_transfer.etf_sound_combine[OF sign_sound_etf_unit])
     show "threefold_mono (side_cfg_T_eff demo_cfg sign_etf_unit bot demo_init_abs demo_seed)"
+      unfolding demo_seed_def
       by (rule sign_etf_unit_threefold_mono)
     show "cone_compatible_etf sign_etf_unit"
       by (rule sign_etf_unit_cone_compatible)
     show "demo_source_initial \<in> \<lbrakk>demo_init_abs\<rbrakk>"
-      unfolding demo_source_initial_def by simp
+      unfolding demo_source_initial_def demo_init_abs_def
+      by (auto simp: fun_of_st_cinit_sign_st is_global_def gamma_state_def)
   qed
   show ?thesis
     using demo_bridge.source_reaches_side_analyse_eff[OF dom] by simp
