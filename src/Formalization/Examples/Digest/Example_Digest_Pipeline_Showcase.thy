@@ -1,5 +1,7 @@
 theory Example_Digest_Pipeline_Showcase
-  imports "Voblint_Formalization.Example_Sign_Mode_Digest"
+  imports
+    "Voblint_Formalization.Example_Sign_Mode_Digest"
+    "Voblint_Formalization.Compiler_Correctness_Prototype"
 begin
 
 section \<open>The context-sensitive digest analysis, end to end\<close>
@@ -41,6 +43,48 @@ definition demo_prog :: imp_prog where
        if (0 < mode) { r2 := mode + mode } else { r2 := mode - 1 }
      }
    \<rbrakk>"
+
+definition demo_step_body :: IMP2_Proc.com where
+  "demo_step_body =
+    IMP2_Proc.com.Assign ''t'' (IMP2_Syntax.V ''Gval'')"
+
+abbreviation demo_pi :: proc_table where "demo_pi \<equiv> prog_table demo_prog"
+abbreviation demo_ps :: "pname list" where "demo_ps \<equiv> prog_procs demo_prog"
+abbreviation demo_main :: IMP2_Proc.com where "demo_main \<equiv> prog_main demo_prog"
+
+definition demo_main_cmd :: IMP2_Proc.com where
+  "demo_main_cmd =
+    IMP2_Proc.com.Seq
+      (IMP2_Proc.com.Seq
+        (IMP2_Proc.com.Seq
+          (IMP2_Proc.com.Seq
+            (IMP2_Proc.com.Seq
+              (IMP2_Proc.com.Seq
+                (IMP2_Proc.com.Seq
+                  (IMP2_Proc.com.Assign ''mode'' (IMP2_Syntax.N 0))
+                  (IMP2_Proc.com.Assign ''Gval'' (IMP2_Syntax.N 0)))
+                (IMP2_Proc.com.Call ''step''))
+              (IMP2_Proc.com.If
+                (IMP2_Syntax.bexp.Less
+                  (IMP2_Syntax.N 0) (IMP2_Syntax.V ''mode''))
+                (IMP2_Proc.com.Assign ''r1''
+                  (IMP2_Syntax.Plus
+                    (IMP2_Syntax.V ''mode'') (IMP2_Syntax.V ''mode'')))
+                (IMP2_Proc.com.Assign ''r1''
+                  (IMP2_Syntax.Minus
+                    (IMP2_Syntax.V ''mode'') (IMP2_Syntax.N 1)))))
+            (IMP2_Proc.com.Assign ''mode'' (IMP2_Syntax.N 1)))
+          (IMP2_Proc.com.Assign ''Gval'' (IMP2_Syntax.N 1)))
+        (IMP2_Proc.com.Call ''step''))
+      (IMP2_Proc.com.If
+        (IMP2_Syntax.bexp.Less
+          (IMP2_Syntax.N 0) (IMP2_Syntax.V ''mode''))
+        (IMP2_Proc.com.Assign ''r2''
+          (IMP2_Syntax.Plus
+            (IMP2_Syntax.V ''mode'') (IMP2_Syntax.V ''mode'')))
+        (IMP2_Proc.com.Assign ''r2''
+          (IMP2_Syntax.Minus
+            (IMP2_Syntax.V ''mode'') (IMP2_Syntax.N 1))))"
 
 value "prog_procs demo_prog"
 value "prog_main demo_prog"
@@ -225,6 +269,126 @@ text \<open>Paste the emitted DOT into any Graphviz renderer.\<close>
 ML_val \<open>writeln (@{code demo_dot_lit})\<close>
 
 
+definition demo_source_initial :: store where
+  "demo_source_initial = (\<lambda>_. 0)"
+
+definition demo_source_final :: store where
+  "demo_source_final =
+    demo_source_initial
+      (''mode'' := 1, ''Gval'' := 1, ''r1'' := -1, ''r2'' := 2)"
+
+definition demo_seed :: unit where
+  "demo_seed = ()"
+
+definition demo_init_abs :: "sign abs_state" where
+  "demo_init_abs = fun_of_st cinit_sign_st"
+
+lemma demo_step_body_run:
+  "pcompletes (prog_table demo_prog) demo_step_body (enter_state s)
+     ((enter_state s)(''t'' := s ''Gval''))"
+  unfolding demo_step_body_def
+  by (simp add: pcompletes_assign enter_state_def is_global_def)
+
+lemma demo_step_call:
+  "pcompletes (prog_table demo_prog) (Call ''step'') s
+     (combine_states s ((enter_state s)(''t'' := s ''Gval'')))"
+proof -
+  have run:
+      "pcompletes (prog_table demo_prog) (Call ''step'') s
+         (combine_states s ((enter_state s)(''t'' := s ''Gval'')))"
+  proof (rule pcompletes_Call[where c = demo_step_body])
+    show "prog_table demo_prog ''step'' = Some demo_step_body"
+      by (simp add: demo_prog_def demo_step_body_def)
+    show "pcompletes (prog_table demo_prog) demo_step_body (enter_state s)
+            ((enter_state s)(''t'' := s ''Gval''))"
+    proof -
+      have "pcompletes (prog_table demo_prog) (IMP2_Proc.com.Assign ''t'' (IMP2_Syntax.V ''Gval''))
+              (enter_state s)
+              ((enter_state s)(''t'' := aval (IMP2_Syntax.V ''Gval'') (enter_state s)))"
+        by (rule pcompletes_assign)
+      moreover have "aval (IMP2_Syntax.V ''Gval'') (enter_state s) = s ''Gval''"
+        by (simp add: enter_state_def is_global_def)
+      ultimately show ?thesis
+        by (simp add: demo_step_body_def)
+    qed
+  qed
+  then show ?thesis by simp
+qed
+
+lemma demo_source_completes:
+  "pcompletes (prog_table demo_prog)
+    demo_main_cmd demo_source_initial demo_source_final"
+  apply (subst demo_source_final_def)
+  apply (subst demo_source_initial_def)
+  apply (subst demo_main_cmd_def)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_Seq)
+  apply (rule pcompletes_assign)
+  apply (rule pcompletes_assign)
+  apply (rule demo_step_call)
+  apply (rule pcompletes_IfFalse)
+   apply simp
+  apply (rule pcompletes_assign)
+  apply (rule pcompletes_assign)
+  apply (rule pcompletes_assign)
+  apply (rule demo_step_call)
+  apply (rule pcompletes_IfTrue)
+   apply simp
+  apply (rule pcompletes_assign)
+  done
+
+lemma demo_source_exec:
+  "psteps (prog_table demo_prog)
+    (demo_main_cmd, demo_source_initial, [])
+    (IMP2_Proc.com.SKIP, demo_source_final, [])"
+  using demo_source_completes unfolding pcompletes_def .
+
+text \<open>
+  Source-to-analysis handoff for the showcase: the concrete IMP2 execution is the
+  premise, and the compiler bridge lifts it to an abstract fact for the sign
+  analysis.  The solver-output theorem \<open>demo_abstracts\<close> is separate: it states
+  what the executable digest run computed.
+\<close>
+
+theorem demo_source_to_sign_analysis:
+  assumes dom:
+    "\<And>v. cfg_reaches demo_cfg (cfg_entry demo_cfg) v \<Longrightarrow>
+      side_cfg_solve_dom_eff demo_cfg sign_etf_unit bot demo_init_abs demo_seed v"
+  shows "\<exists>v t stk.
+    concrete_program_match demo_pi demo_ps demo_main
+      (demo_main, demo_source_initial, []) (v, t, stk) \<and>
+    t \<in> \<lbrakk>side_analyse_eff demo_pi demo_ps demo_main sign_etf_unit bot demo_init_abs demo_seed v\<rbrakk>"
+proof -
+  interpret demo_bridge: source_to_analysis_bridge
+      demo_pi demo_ps demo_main demo_cfg demo_source_initial
+      "(IMP2_Proc.com.SKIP, demo_source_final, [])" sign_etf_unit demo_init_abs demo_seed
+  proof
+    show "demo_cfg = compile_prog demo_pi demo_ps demo_main"
+      unfolding demo_cfg_def by simp
+    show "wf_compile_input demo_pi demo_ps demo_main"
+      unfolding wf_compile_input_def demo_prog_def by simp
+    show "psteps demo_pi (demo_main, demo_source_initial, [])
+            (IMP2_Proc.com.SKIP, demo_source_final, [])"
+      using demo_source_exec by simp
+    show "sound_effectful_transfer sign_etf_unit"
+      by (rule sign_sound_etf_unit)
+    show "threefold_mono (side_cfg_T_eff demo_cfg sign_etf_unit bot demo_init_abs demo_seed)"
+      by (rule sign_etf_unit_threefold_mono)
+    show "cone_compatible_etf sign_etf_unit"
+      by (rule sign_etf_unit_cone_compatible)
+    show "demo_source_initial \<in> \<lbrakk>demo_init_abs\<rbrakk>"
+      unfolding demo_source_initial_def by simp
+  qed
+  show ?thesis
+    using demo_bridge.source_reaches_side_analyse_eff[OF dom] by simp
+qed
+
+
 subsection \<open>8. Soundness\<close>
 
 text \<open>
@@ -285,4 +449,3 @@ text \<open>
 \<close>
 
 end
-

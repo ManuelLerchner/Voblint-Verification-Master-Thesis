@@ -56,6 +56,10 @@ The backward bridge (`IMP2_Bridge.thy`) already anchors terminating runs to AFP
 IMP2 big-step; the full source-to-CFG collecting equivalence is the remaining
 compiler-correctness step.
 
+The shipped examples already expose concrete IMP2 witnesses for the flagship
+showcase and the recursive `rdiv` program, so the source layer is now visible in
+the example suite even though the main theorem still lands at `cfg_collect`.
+
 ## Pipeline
 
 ```

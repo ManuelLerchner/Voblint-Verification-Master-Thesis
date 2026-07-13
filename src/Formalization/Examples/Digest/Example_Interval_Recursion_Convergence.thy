@@ -48,6 +48,232 @@ definition rdiv_prog :: imp_prog where
 definition rdiv_cfg :: cfg where
   "rdiv_cfg = compile_prog (prog_table rdiv_prog) (prog_procs rdiv_prog) (prog_main rdiv_prog)"
 
+definition rdiv_f_body :: IMP2_Proc.com where
+  "rdiv_f_body =
+     IMP2_Proc.com.If
+       (IMP2_Syntax.bexp.Less (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 3))
+       (IMP2_Proc.com.Seq
+          (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+          (IMP2_Proc.com.Call ''f''))
+       (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.V ''G''))"
+
+definition rdiv_main_cmd :: IMP2_Proc.com where
+  "rdiv_main_cmd =
+     IMP2_Proc.com.Seq
+       (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.N 0))
+       (IMP2_Proc.com.Call ''f'')"
+
+abbreviation rdiv_pi :: proc_table where "rdiv_pi \<equiv> prog_table rdiv_prog"
+abbreviation rdiv_ps :: "pname list" where "rdiv_ps \<equiv> prog_procs rdiv_prog"
+
+lemma rdiv_program_parts:
+  "prog_table rdiv_prog = [''f'' \<mapsto> rdiv_f_body] \<and>
+   prog_main rdiv_prog = rdiv_main_cmd"
+  unfolding rdiv_prog_def rdiv_f_body_def rdiv_main_cmd_def by simp
+
+definition rdiv_source_initial :: store where
+  "rdiv_source_initial = (\<lambda>_. 0)"
+
+definition rdiv_source_final :: store where
+  "rdiv_source_final = rdiv_source_initial(''G'' := 3)"
+
+definition rdiv_seed :: unit where
+  "rdiv_seed = ()"
+
+definition rdiv_init_abs :: "ivl abs_state" where
+  "rdiv_init_abs = fun_of_st cinit_ivl_st"
+
+lemma rdiv_call_3:
+  assumes "s ''G'' = 3"
+  shows "pcompletes (prog_table rdiv_prog) (Call ''f'') s (s(''G'' := 3))"
+proof -
+  have body:
+      "pcompletes (prog_table rdiv_prog) rdiv_f_body (enter_state s)
+         (enter_state s(''G'' := 3))"
+    unfolding rdiv_f_body_def
+    apply (rule pcompletes_IfFalse)
+     using assms by (simp add: enter_state_def is_global_def)
+    by (simp add: pcompletes_assign enter_state_def is_global_def assms)
+  have run:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'') s
+         (<s | enter_state s(''G'' := 3)>)"
+    by (rule pcompletes_Call[OF _ body]) (simp add: rdiv_program_parts)
+  then show ?thesis
+    using assms by (simp add: combine_states_def enter_state_def is_global_def)
+qed
+
+lemma rdiv_call_2:
+  assumes "s ''G'' = 2"
+  shows "pcompletes (prog_table rdiv_prog) (Call ''f'') s (s(''G'' := 3))"
+proof -
+  have inc:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+         (enter_state s) (enter_state s(''G'' := 3))"
+    using assms by (simp add: pcompletes_assign enter_state_def is_global_def)
+  have rec:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'')
+         (enter_state s(''G'' := 3)) (enter_state s(''G'' := 3))"
+    using rdiv_call_3[of "enter_state s(''G'' := 3)"] by simp
+  have body:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Seq
+            (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+            (IMP2_Proc.com.Call ''f''))
+         (enter_state s) (enter_state s(''G'' := 3))"
+    using inc rec by (rule pcompletes_Seq)
+  have guard:
+      "bval (IMP2_Syntax.bexp.Less (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 3)) (enter_state s)"
+    using assms by (simp add: enter_state_def is_global_def)
+  have run:
+      "pcompletes (prog_table rdiv_prog) rdiv_f_body (enter_state s)
+         (enter_state s(''G'' := 3))"
+    unfolding rdiv_f_body_def
+    using guard body by (rule pcompletes_IfTrue)
+  have call:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'') s
+         (<s | enter_state s(''G'' := 3)>)"
+    by (rule pcompletes_Call[OF _ run]) (simp add: rdiv_program_parts)
+  then show ?thesis
+    using assms by (simp add: combine_states_def enter_state_def is_global_def)
+qed
+
+lemma rdiv_call_1:
+  assumes "s ''G'' = 1"
+  shows "pcompletes (prog_table rdiv_prog) (Call ''f'') s (s(''G'' := 3))"
+proof -
+  have inc:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+         (enter_state s) (enter_state s(''G'' := 2))"
+    using assms by (simp add: pcompletes_assign enter_state_def is_global_def)
+  have rec:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'')
+         (enter_state s(''G'' := 2)) (enter_state s(''G'' := 3))"
+    using rdiv_call_2[of "enter_state s(''G'' := 2)"] by simp
+  have body:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Seq
+            (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+            (IMP2_Proc.com.Call ''f''))
+         (enter_state s) (enter_state s(''G'' := 3))"
+    using inc rec by (rule pcompletes_Seq)
+  have guard:
+      "bval (IMP2_Syntax.bexp.Less (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 3)) (enter_state s)"
+    using assms by (simp add: enter_state_def is_global_def)
+  have run:
+      "pcompletes (prog_table rdiv_prog) rdiv_f_body (enter_state s)
+         (enter_state s(''G'' := 3))"
+    unfolding rdiv_f_body_def
+    using guard body by (rule pcompletes_IfTrue)
+  have call:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'') s
+         (<s | enter_state s(''G'' := 3)>)"
+    by (rule pcompletes_Call[OF _ run]) (simp add: rdiv_program_parts)
+  then show ?thesis
+    using assms by (simp add: combine_states_def enter_state_def is_global_def)
+qed
+
+lemma rdiv_call_0:
+  assumes "s ''G'' = 0"
+  shows "pcompletes (prog_table rdiv_prog) (Call ''f'') s (s(''G'' := 3))"
+proof -
+  have inc:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+         (enter_state s) (enter_state s(''G'' := 1))"
+    using assms by (simp add: pcompletes_assign enter_state_def is_global_def)
+  have rec:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'')
+         (enter_state s(''G'' := 1)) (enter_state s(''G'' := 3))"
+    using rdiv_call_1[of "enter_state s(''G'' := 1)"] by simp
+  have body:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Seq
+            (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))
+            (IMP2_Proc.com.Call ''f''))
+         (enter_state s) (enter_state s(''G'' := 3))"
+    using inc rec by (rule pcompletes_Seq)
+  have guard:
+      "bval (IMP2_Syntax.bexp.Less (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 3)) (enter_state s)"
+    using assms by (simp add: enter_state_def is_global_def)
+  have run:
+      "pcompletes (prog_table rdiv_prog) rdiv_f_body (enter_state s)
+         (enter_state s(''G'' := 3))"
+    unfolding rdiv_f_body_def
+    using guard body by (rule pcompletes_IfTrue)
+  have call:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'') s
+         (<s | enter_state s(''G'' := 3)>)"
+    by (rule pcompletes_Call[OF _ run]) (simp add: rdiv_program_parts)
+  then show ?thesis
+    using assms by (simp add: combine_states_def enter_state_def is_global_def)
+qed
+
+lemma rdiv_source_completes:
+  "pcompletes (prog_table rdiv_prog) rdiv_main_cmd rdiv_source_initial rdiv_source_final"
+proof -
+  have init:
+      "pcompletes (prog_table rdiv_prog)
+         (IMP2_Proc.com.Assign ''G'' (IMP2_Syntax.N 0))
+         rdiv_source_initial (rdiv_source_initial(''G'' := 0))"
+    by (simp add: pcompletes_assign)
+  have call0:
+      "pcompletes (prog_table rdiv_prog) (Call ''f'')
+         (rdiv_source_initial(''G'' := 0)) (rdiv_source_initial(''G'' := 3))"
+    using rdiv_call_0[of "rdiv_source_initial(''G'' := 0)"] by simp
+  show ?thesis
+    unfolding rdiv_main_cmd_def rdiv_source_final_def
+    using init call0 by (simp add: pcompletes_Seq)
+qed
+
+lemma rdiv_source_exec:
+  "psteps (prog_table rdiv_prog)
+    (rdiv_main_cmd, rdiv_source_initial, [])
+    (IMP2_Proc.com.SKIP, rdiv_source_final, [])"
+  using rdiv_source_completes unfolding pcompletes_def by simp
+
+text \<open>
+  This is the end-to-end handoff theorem for the example: the concrete IMP2 run
+  is first discharged by @{thm [source] rdiv_source_exec}, then the generic
+  compiler-correctness bridge turns it into a CFG-point abstract fact for the
+  interval analysis.
+\<close>
+
+theorem rdiv_source_to_interval_analysis:
+  assumes dom:
+    "\<And>v. cfg_reaches rdiv_cfg (cfg_entry rdiv_cfg) v \<Longrightarrow>
+      side_cfg_solve_dom_eff rdiv_cfg ivl_etf bot rdiv_init_abs rdiv_seed v"
+  shows "\<exists>v t stk.
+    concrete_program_match rdiv_pi rdiv_ps rdiv_main_cmd
+      (rdiv_main_cmd, rdiv_source_initial, []) (v, t, stk) \<and>
+    t \<in> \<lbrakk>side_analyse_eff rdiv_pi rdiv_ps rdiv_main_cmd
+          ivl_etf bot rdiv_init_abs rdiv_seed v\<rbrakk>"
+proof -
+  interpret rdiv_bridge: source_to_analysis_bridge
+      rdiv_pi rdiv_ps rdiv_main_cmd rdiv_cfg rdiv_source_initial
+      "(IMP2_Proc.com.SKIP, rdiv_source_final, [])" ivl_etf rdiv_init_abs rdiv_seed
+  proof
+    show "rdiv_cfg = compile_prog rdiv_pi rdiv_ps rdiv_main_cmd"
+      unfolding rdiv_cfg_def by simp
+    show "wf_compile_input rdiv_pi rdiv_ps rdiv_main_cmd"
+      unfolding wf_compile_input_def rdiv_program_parts rdiv_main_cmd_def by simp
+    show "psteps rdiv_pi (rdiv_main_cmd, rdiv_source_initial, [])
+            (IMP2_Proc.com.SKIP, rdiv_source_final, [])"
+      using rdiv_source_exec by simp
+    show "sound_effectful_transfer ivl_etf"
+      by (rule ivl_sound_etf)
+    show "threefold_mono (side_cfg_T_eff rdiv_cfg ivl_etf bot rdiv_init_abs rdiv_seed)"
+      by (rule ivl_etf_threefold_mono)
+    show "cone_compatible_etf ivl_etf"
+      by (rule ivl_etf_cone_compatible)
+    show "rdiv_source_initial \<in> \<lbrakk>rdiv_init_abs\<rbrakk>"
+      unfolding rdiv_source_initial_def by simp
+  qed
+  show ?thesis
+    using rdiv_bridge.source_reaches_side_analyse_eff[OF dom] by simp
+qed
+
 subsection \<open>The exact seeded-clean solve now terminates\<close>
 
 definition rdiv_clean_eqs :: "(pp \<times> ivl st, ivl st, ivl st) eqsT" where
