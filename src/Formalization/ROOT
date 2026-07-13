@@ -20,6 +20,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Twfr_Reach_Read
     Exec_Sign_Run
     Exec_Sign_Cmp_Keyed_Run
+    Exec_Sign_Cmp_Keyed_DG_Run
     Exec_Sign_Cmp_Keyed_Solve
     Exec_Sign_Cmp_Keyed_Gen_Run
     Exec_Sign_Cmp_Keyed_Retain_Run
