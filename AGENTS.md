@@ -24,11 +24,13 @@ You are a formal proof engineer working with Isabelle/jEdit. Your work is surgic
 
 # Project goal
 
-`IMP AST → (CFG) → equation system → TD solver → sound abstract result → mapped back`.
+`IMP2 source → (CFG) → equation system → TD solver → sound abstract result → source bridge / mapped back`.
 
 Vendored `TD` solver (stilscher/td-verification) already verified. Proved: CFG
 collecting semantics (`cfg_collect`), CFG layer, eqsys soundness, abstract domains
-(Sign → Interval → Octagon stretch), pipeline composition.
+(Sign → Interval → Octagon stretch), pipeline composition, source-to-analysis bridge.
+Everything we formalize should stay Goblint-faithful and close to the actual
+Goblint repository on GitHub.
 
 ---
 
@@ -43,9 +45,9 @@ collecting semantics (`cfg_collect`), CFG layer, eqsys soundness, abstract domai
 | Joins            | `Finite_Set.fold` (needs comm + assoc, finite edges) |
 | Order            | `'a::ord` pointwise on states                        |
 
-Open: IMP vs IMP2 (long-term language scope only — current code is IMP2).
+Open: future IMP vs IMP2 scope only — current code is IMP2.
 
-Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); interval stretch in progress on the issue tracker.
+Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); interval instance is already in-tree, with remaining work on precision / termination engineering.
 
 **Live roadmap and backlog: `docs/ROADMAP.md` + [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).** Issues, dependencies, per-phase status, and Blazy-2013-inspired extensions live there, not in this file.
 
@@ -57,17 +59,17 @@ Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); 
 src/IMP2/                  syntax + small-step (README)
 src/CFG/                   CFG core (README); Collecting/ — cfg_collect (README)
 src/Analysis/              Voblint_Analysis session
-src/Analysis/Domains/      abstract domains (README)
+src/Analysis/Instances/    concrete domains and effectful transfer records (README)
 src/Analysis/Equations/    constraint systems + soundness (README)
 src/Analysis/Solver/       TD solver bridge (README)
 src/Formalization/         Voblint_Formalization session
-src/Formalization/Pipeline/ end-to-end soundness (README)
+src/Formalization/Pipeline/ end-to-end soundness + source bridge (README)
 src/Formalization/Examples/ executable demos (README)
 vendor/td-verification/    TD solver (AFP session `TD`, submodule)
 vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
 ```
 
-`ROOTS` + scattered `ROOT` files define a 4-session DAG: `Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` (see `docs/SESSION_DAG_MIGRATION.md`). Cross-session imports use qualified names (`"Voblint_IMP2.IMP2_Syntax"` etc.). `Voblint_IMP2` adds `Deriving` (executable `linorder` for `aexp`/`bexp`/`edge_action`, so CFG edge enumeration code-generates without a list-built mirror); `Voblint_CFG` adds `Dijkstra_Shortest_Path`; `Voblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural side-effecting spine: `Trace_Analysis_Sound`, `Mixed_Flow_Sound`, `TD_Side_Eff_Soundness`, `Sign_Side_Soundness`, `Interval_Side_Soundness`, `Analysis_Sound`, plus `Example_*` witnesses (`Example_Inc_Proc`, `Example_Mixed_Flow_Sign`, `Example_Side_Proc_Global`, `Example_Proc_GraphViz`, `Example_Trace_Digest_Precision`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Voblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `voblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The intra-only duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the intra `com` datatype) was then collapsed onto the single IP pipeline; the `com` datatype in `IMP2_Proc.thy` is the extended procedural language (Scope / Call / Restore) used throughout (see `docs/IP_ONLY_CONSOLIDATION.md`).
+`ROOTS` + scattered `ROOT` files define a 4-session DAG: `Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` (see `docs/SESSION_DAG_MIGRATION.md`). Cross-session imports use qualified names (`"Voblint_IMP2.IMP2_Syntax"` etc.). `Voblint_IMP2` adds `Deriving` (executable `linorder` for `aexp`/`bexp`/`edge_action`, so CFG edge enumeration code-generates without a list-built mirror); `Voblint_CFG` adds `Dijkstra_Shortest_Path`; `Voblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural side-effecting spine: `Trace_Analysis_Sound`, `Mixed_Flow_Sound`, `TD_Side_Eff_Soundness`, `Sign_Side_Soundness`, `Interval_Side_Soundness`, `Analysis_Sound`, `Compiler_Correctness_Prototype`, plus `Example_*` witnesses (`Example_Inc_Proc`, `Example_Mixed_Flow_Sign`, `Example_Side_Proc_Global`, `Example_Proc_GraphViz`, `Example_Trace_Digest_Precision`, `Example_Digest_Pipeline_Showcase`, `Example_Interval_Recursion_Convergence`, `Example_Rdiv_Twfr_Sound`). The source-to-analysis bridge is the reusable IMP2-facing endpoint; the end-to-end example instantiations live in the digest showcase and recursive interval flagships. The retained context tower is `TD_Side_Eff_Ctx_Sound` → `TD_Side_Eff_Cmp_Sound` → `Clean_RRead_Sound` → `Seeded_Clean_Ctx_Collect` → `Seeded_Activation_Sound` → `Activation_Witness_From`. The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Voblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `voblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The intra-only duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the intra `com` datatype) was then collapsed onto the single IP pipeline; the `com` datatype in `IMP2_Proc.thy` is the extended procedural language (Scope / Call / Restore) used throughout (see `docs/IP_ONLY_CONSOLIDATION.md`).
 
 Docs:
 
@@ -106,7 +108,7 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # Workflow: MCP first, build to verify
 
-**Default: I/Q (or I/R) for any development.** Read state before editing. Use `explore` to trial-run tactics. **Do not run `isabelle build` while iterating** — build only when the user asks, or at the end of a closed slice of work you are declaring done.
+**Default: I/Q (or I/R) for any development.** Read state before editing. Use `explore` to trial-run tactics. **Do not run `isabelle build` while iterating** — build only when the user asks, or once at the end of the complete task or migration.
 
 Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textual edits compile against a different goal than you reasoned about. Read state, then edit. Full-session batch build is slow, hides which command failed, and tempts disk/buffer drift when used as a debug loop.
 
@@ -118,7 +120,7 @@ Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textua
 | `explore` / `get_context_info` before non-trivial proof changes              | Host `Read`/`Edit`/`Write` on tracked `.thy` files           |
 | `write_file` → `save_file` → `normalize_isabelle_ascii.py` → `open_file`     | Assume I/Q buffer == on-disk file without `save_file`        |
 | One failing command at a time via I/Q diagnostics                            | Full rebuild to locate a failure I/Q already names by line   |
-| Batch build once: user request, CI, or **all** touched theories green in I/Q | Batch build as substitute for `get_diagnostics` / `explore`  |
+| Batch build once: user request, CI, or the **complete** task/migration is green in I/Q | Batch build between migration stages or as a substitute for `get_diagnostics` / `explore` |
 
 **If I/Q is up:** debugging a proof or syntax error = I/Q only, until `get_diagnostics` (scope=file, severity=error) is empty on every file you changed.
 
@@ -204,7 +206,7 @@ Patterns that keep iteration in I/Q and batch as a one-shot gate:
 
 **Workflow**
 
-* **I/Q inner loop, batch outer gate.** Debug one failing command via `get_diagnostics` / `explore`. Run `isabelle build` once when every touched theory is file-clean — not after each tactic change.
+* **I/Q inner loop, batch outer gate.** Debug one failing command via `get_diagnostics` / `explore`. Run `isabelle build` once when the complete task or migration is file-clean — not between stages or after tactic changes.
 * **I/Q is not completion.** Interactive checking can mark a step finished while subgoals remain, or accept bogus intro rules. Treat empty file diagnostics as “ready for batch”, not “proved”.
 * **Batch is completion.** Show a green `-v` log before calling work done.
 
@@ -269,14 +271,9 @@ Two servers vendored. Config in `.mcp.json` + `.claude/settings.local.json` (`en
 
 Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/start-iq.sh` (jEdit + I/Q only), or `./scripts/start-ir.sh` (headless REPL only).
 
-## Preflight (per session)
-
-1. Probe server up. If down → ask user to run `./scripts/start-both.sh` (or `./scripts/start-iq.sh` / `./scripts/start-ir.sh`).
-2. Load tool schemas via `ToolSearch select:mcp__isabelle-iq__authenticate,…` (or `…ir__connect,…`).
-3. `authenticate` (I/Q) or `connect` (I/R) with `token=isabelle-local`. All other calls fail until authenticated.
-
 ## Standing rules
 
+* Authenticate I/Q or connect I/R with `token=isabelle-local` before other server calls. Report a connection failure when an actual call fails; do not run a separate availability probe.
 * **Always edit `.thy` via I/Q `write_file`** (or I/R `repl_edit`). Never use the host `Edit`/`Write` tool on `.thy` files jEdit's buffer caches stale content even after `open_file`, so subsequent `read_file` / diagnostics / `explore` run against the old text.
   * Exception: the very first creation of a brand-new `.thy` not yet tracked by jEdit. Follow with `open_file` so jEdit picks it up.
   * Recovery if you slipped and used `Edit`: re-issue the same change via I/Q `write_file str_replace` to sync the buffer.

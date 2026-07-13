@@ -361,17 +361,17 @@ text \<open>
 \<close>
 
 fun side_rhs_fold_ctx ::
-  "'a::bounded_semilattice_sup_bot abs_state
-   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree list
-   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree"
+  "'d::bounded_semilattice_sup_bot
+   \<Rightarrow> (pp \<times> 'c, 'g, 'd) strategy_tree list
+   \<Rightarrow> (pp \<times> 'c, 'g, 'd) strategy_tree"
 where
   "side_rhs_fold_ctx acc [] = Answer acc"
 | "side_rhs_fold_ctx acc (t # ts) =
      seqcomp_tree t (\<lambda>res. side_rhs_fold_ctx (acc \<squnion> res) ts)"
 
 fun side_acc_ctx ::
-  "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> (pp \<times> 'c + 'g \<Rightarrow> 'a abs_state)
-   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree list \<Rightarrow> 'a abs_state"
+  "'d::bounded_semilattice_sup_bot \<Rightarrow> (pp \<times> 'c + 'g \<Rightarrow> 'd)
+   \<Rightarrow> (pp \<times> 'c, 'g, 'd) strategy_tree list \<Rightarrow> 'd"
 where
   "side_acc_ctx acc \<sigma> [] = acc"
 | "side_acc_ctx acc \<sigma> (t # ts) = side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>) \<sigma> ts"

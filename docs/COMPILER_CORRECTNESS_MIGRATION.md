@@ -1,26 +1,31 @@
 # Compiler correctness: source-level soundness of `compile_prog`
 
-> **Status (2026-07-10):** investigation only — no proof code written. Goal is to
-> extend soundness from *CFG-level* (`analysis >= cfg_collect (compile_prog Pi ps
-> main)`) to *source-level* (`analysis >= source semantics`) by verifying
-> `compile_prog`. The recent recursion-CFG bug fix (recursive calls were silently
-> omitted from the generated CFG; `Example_Proc_Recursion_CFG.thy`) invalidated no
-> proofs — they are CFG-parametric — but exposed that `compile_prog` sits in the
-> trusted computing base with no correctness theorem. This doc records the chosen
-> **two-phase** architecture, the missing lemmas, and a milestone plan.
+> **Status (2026-07-13): complete for the headline finite-prefix theorem.**
+> `Compiler_Correctness_Prototype.thy` proves the located weak simulation from
+> IMP2 `psteps` through `compile_prog`, connects located CFG execution to
+> `cfg_collect`, and instantiates the result with the verified side solver. The
+> concrete theorem `concrete_source_reaches_side_analyse_eff` covers every finite
+> source prefix, including prefixes of nonterminating executions. The optional
+> `pbig` development and a standalone terminating-exit projection were not needed
+> to close the source-to-analysis gap.
+
+The implementation took the direct Phase-2 route after the located simulation
+made Phase 1 redundant. This document retains the Phase-1 design as a possible
+terminating-semantics corollary, but it is not part of the soundness dependency
+chain.
 
 ## Problem statement
 
-Current end-to-end soundness is stated against the compiled CFG's collecting
-semantics:
+Before this migration, end-to-end soundness stopped at the compiled CFG's
+collecting semantics:
 
 ```
 analysis  >=  cfg_collect (compile_prog Pi ps main)
 ```
 
-It does **not** relate the analysis to the source-language semantics. The missing
-link is compiler correctness. There are two distinct strengths of it, and they are
-not the same theorem:
+It did **not** relate the analysis to the source-language semantics. The missing
+link was compiler correctness. There are two distinct strengths of it, and they
+are not the same theorem:
 
 - **Terminating exit correctness** (Phase 1): a complete source run that ends in
   store `t` has `t` collected at the CFG exit.
@@ -102,11 +107,10 @@ per-point).**
 
 **Exit projection** — `cfg_runs_to` in `CFG_Collect_Runs.thy`.
 
-**No located CFG execution semantics exists yet.** `cfg_witness` / `trace_witness`
-are summary/functional-style (Sharir-Pnueli): a return is a `combine` of call-site
-and callee-exit states, with no runtime stack. Phase 2 must *add* the located
-semantics (`cstep`, below); the nontermination/per-point requirement is what
-justifies paying for it.
+**Located CFG execution is implemented.** `Compiler_Correctness_Prototype.thy`
+defines `cstep` with an explicit stack and proves that its reflexive-transitive
+closure preserves `located_sound`. `control_at`, `frames_match`, and
+`concrete_program_match` provide the source-to-CFG matching relation.
 
 ## Compiler pipeline (`src/CFG/IMP2_Proc_to_CFG.thy`)
 
@@ -320,17 +324,33 @@ the existing recursion theory) — it is the running example for both phases.
 | `backward_sim` (IMP2 `big_step` -> `pcompletes`) | `IMP2_Bridge.thy` | 1 |
 | edge/combine-subset monotonicity pattern (`trace_witness_ext_edges`, `CFG_Prune`) | trace + prune | 1, 2 |
 
-## Missing definitions / lemmas
+## Implemented proof chain
 
-**Phase 1:** `pbig` (+ `pbig <-> pcompletes`); `compile_correct` (terminating);
-`layout_sound` + its step-count mutual induction; **fragment-embedding** and
-**endpoint/layout-agreement** compiler lemmas (shared with Phase 2).
+`Compiler_Correctness_Prototype.thy` contains the required Phase-2 components:
 
-**Phase 2:** `cstep` (located CFG semantics); B1 (`cstep`-run -> `cfg_collect`);
-the `sim` relation; `phase2_step` (weak simulation); the finite-prefix reachability
-theorem. Optional: coinductive divergence preservation.
+- `cstep`, `located_sound`, and `csteps_preserve_located_sound` connect located
+  CFG runs to `cfg_collect`.
+- `control_at` and `frames_match` express focus and stack correspondence without
+  reconstructing a program point from a residual command.
+- `control_step_simulation` proves one IMP2 step is simulated by zero or more CFG
+  steps.
+- `concrete_program_step_match` instantiates the simulation for the graph and
+  layout produced by the two-pass compiler.
+- `compiled_source_simulation.source_reaches_cfg_collect` lifts the result to all
+  finite prefixes.
+- `cfg_collect_prune_to_query` justifies solving the backward-reachable query cone.
+- `concrete_source_reaches_side_analyse_eff` composes the concrete compiler
+  simulation, collecting semantics, pruning, and side-solver soundness.
 
-**Shared compiler lemmas (both phases depend on these):**
+The compiler invariants used by the proof include procedure-layout completeness,
+body/layout endpoint agreement, fragment embedding into the whole-program edge
+and combine sets, source-command closure, and exact stack-site correspondence.
+
+The remaining optional results are `pbig <-> pcompletes`, a named terminating-exit
+projection, and coinductive divergence preservation. None is required for the
+finite-prefix source-to-analysis theorem.
+
+**Originally anticipated general compiler lemma:**
 
 ```isabelle
 (* endpoints depend on lay only through None/Some case-split in Call *)
@@ -341,41 +361,26 @@ lemma compile_endpoints_lay_indep:
    n1 = n2 & en1 = en2 & ex1 = ex2"
 ```
 
-plus fragment embedding `E, C <= edges/combines (compile_prog ...)` across the
-`compile_procs_layout` / `_bodies` folds.
+The completed proof did not need this general layout-independence statement.
+Instead, it proves the narrower two-pass facts used by the simulation:
+`compile_procs_list_complete`, `compile_procs_list_body`, and
+`compile_procs_list_fragment`, then packages them in `proc_layout_sound`.
 
-## Effort, risks
+## Residual assumptions and scope
 
-**TCB today:** `pstep` is taken to faithfully model the source language;
-`compile_prog` is the unverified trusted step. Phase 2 removes it; Phase 1 removes
-it for terminating programs only.
+`compile_prog` is no longer an unverified step between `pstep` and the analyzer.
+The source-facing theorem still deliberately takes `pstep` as the operational
+semantics of the procedural language. Relating `pstep` in the other direction to
+AFP IMP2 big-step semantics remains the separate Track-A task documented in
+`AFP_IMP2_FORWARD_SIM_MIGRATION.md`.
 
-**Estimated effort:** Phase 1 ~1–1.5 weeks; Phase 2 ~2–3 weeks on top.
+The proof establishes finite-prefix preservation. It does not claim a
+step-for-step correspondence or coinductive divergence preservation; neither is
+needed to cover every source state reachable in a finite number of steps.
 
-- Phase 1: `pbig` + equivalence 2–3 days; `compile_correct` core 3–5 days; shared
-  embedding/endpoint lemmas 4–8 days (dominant, but reused by Phase 2).
-- Phase 2: `cstep` + B1 2–3 days; `sim` relation + `phase2_step` 5–10 days
-  (dominant); reachability wrap-up 1–2 days.
+## Milestone status
 
-**Biggest technical risks (ranked):**
-
-1. **Two-pass layout endpoint agreement** (`compile_endpoints_lay_indep`) — the crux
-   for both phases. `compile` endpoints are lay-dependent for `Call`
-   (`None -> ex=n`, `Some -> ex=n+1`); must show pass-1 stubs and pass-2 base_lay
-   agree on Some-ness for every reachable call.
-2. **Phase-2 `sim` relation design** — the focus/tower correspondence and its
-   invariance under every `pstep` case (esp. `Seq1`/`Seq2`/`While`-unfold stutters).
-   CompCert-grade matching-states work.
-3. **Fragment embedding** across the folds — mechanical but fiddly;
-   `compile_counter_mono` helps.
-4. Phase-1 `layout_sound` self-reference through the step-count IH (moot in Phase 2,
-   where the stack is explicit).
-5. Minor: `Seq`'s conditional nop edge — two subcases in both the Phase-1 `Seq`
-   step and the Phase-2 `Seq1` stutter.
-
-## Roadmap / milestones
-
-**Phase 1 (terminating exit correctness):**
+**Phase 1 (terminating exit correctness, optional):**
 
 - **M1** — `pbig` + `pbig <-> pcompletes`. Gate: `big_step_imp_pbig` composes with
   `backward_sim`.
@@ -389,23 +394,22 @@ it for terminating programs only.
   `pbig ==> cfg_runs_to`, and `big_step ==> cfg_runs_to`. **State the terminating-only
   caveat explicitly.**
 
-**Phase 2 (per-point reachability correctness):**
+**Phase 2 (per-point reachability correctness, complete):**
 
-- **M6** — define `cstep`; prove B1 (`star cstep` -> `cfg_collect` at every point),
-  reusing M4's embedding.
-- **M7** — define `sim`; prove `phase2_step` (weak simulation, 0-or-1 CFG steps per
-  source step; no measure needed for reachability).
-- **M8** — finite-prefix reachability theorem: `psteps Pi (c,s,[]) cfg' ==> store
-  cfg' : cfg_collect (compile_prog Pi ps c) {s} (point of cfg')`. Recover Phase 1's
-  exit statement as the `cfg' = (SKIP,t,[])` corollary. Compose downstream for the
-  full **analysis >= source semantics at every point, including nonterminating runs**.
+- **M6 (done)** — define `cstep`; prove B1 (`star cstep` -> `cfg_collect` at every
+  point), using the concrete fragment-embedding lemmas.
+- **M7 (done)** — define the matching relation; prove the weak simulation (zero or
+  more CFG steps per source step; no measure needed for reachability).
+- **M8 (done)** — finite-prefix reachability theorem: `psteps Pi (c,s,[]) cfg' ==>
+  store cfg' : cfg_collect (compile_prog Pi ps c) {s} (point of cfg')`. Compose
+  downstream for the full **analysis >= source semantics at every point, including
+  nonterminating runs**.
 - **M9 (optional)** — coinductive divergence preservation (needs the residual-size
   measure). Not on the critical path.
 
-**Recommendation:** start M1 (cheap, composes immediately with `backward_sim`,
-validates the `pbig` interface), push through M4/M5 to bank the terminating result
-and the shared compiler lemmas, then move to Phase 2. Do the countdown example
-(item 5) early — it is the concrete oracle for both phases.
+The implementation closed M6-M8 directly. M1-M5 remain useful only if a named
+big-step or terminating-exit theorem is wanted independently of the stronger
+small-step result.
 
 ## Related docs
 

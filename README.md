@@ -18,47 +18,96 @@ is the worked instance.
 
 ## The soundness statement
 
-At **every** program point `v`, the analyzer's post-fixpoint `env`
-over-approximates the CFG collecting semantics:
+The current reusable end-to-end theorem in the repo is the locale bridge:
+
+```isabelle
+theorem source_reaches_side_analyse_eff:
+  assumes run: "psteps Pi (main, s, []) src'"
+      and se:  "sound_effectful_transfer etf"
+      and tfm: "threefold_mono (side_cfg_T_eff g etf bot s0 gseed)"
+      and cone: "cone_compatible_etf etf"
+      and init: "s \<in> \<lbrakk>s0\<rbrakk>"
+      and dom:
+        "\<And>v. cfg_reaches g (cfg_entry g) v \<Longrightarrow>
+         side_cfg_solve_dom_eff g etf bot s0 gseed v"
+  shows "\<exists>v t stk.
+    concrete_program_match Pi ps main src' (v, t, stk) \<and>
+    t \<in> \<lbrakk>side_analyse_eff Pi ps main etf bot s0 gseed v\<rbrakk>"
+```
+
+The concrete theory then instantiates that bridge as:
+
+```isabelle
+theorem concrete_source_reaches_side_analyse_eff:
+  assumes wf:  "wf_compile_input Pi ps main"
+      and run: "psteps Pi (main, s, []) src'"
+      and se:  "sound_effectful_transfer etf"
+      and tfm: "threefold_mono (side_cfg_T_eff (compile_prog Pi ps main) etf bot s0 gseed)"
+      and cone: "cone_compatible_etf etf"
+      and init: "s \<in> \<lbrakk>s0\<rbrakk>"
+      and dom:
+        "\<And>v. cfg_reaches (compile_prog Pi ps main)
+               (cfg_entry (compile_prog Pi ps main)) v \<Longrightarrow>
+         side_cfg_solve_dom_eff (compile_prog Pi ps main) etf bot s0 gseed v"
+  shows "\<exists>v t stk.
+    concrete_program_match Pi ps main src' (v, t, stk) \<and>
+    t \<in> \<lbrakk>side_analyse_eff Pi ps main etf bot s0 gseed v\<rbrakk>"
+```
+
+This is the strongest verified statement that connects the IMP2 source layer to
+the abstract result. It says:
+
+1. The source execution `psteps Pi (main, s, []) src'` is a real IMP2 run.
+2. The compiled CFG is the graph the solver runs on.
+3. The analysis result contains the concrete state `t` at the matched CFG point `v`.
+
+The assumptions mean:
+
+**IMP2 source assumptions**
+
+| Assumption | What it says | Why it is needed |
+| --- | --- | --- |
+| `wf` | The procedure table, entry procedure list, and main command are well-formed source input. | The compiler bridge and the source-to-CFG simulation only make sense for source programs in the expected shape. |
+| `run` | The IMP2 source program reaches `src'` from the initial state. | This is the concrete witness that the theorem transports into the analysis result. |
+| `init` | The concrete initial source store is covered by the abstract initial state. | The abstract analysis must start from a state that includes the concrete input. |
+
+**CFG / compiler assumptions**
+
+| Assumption | What it says | Why it is needed |
+| --- | --- | --- |
+| `tfm` | The effectful CFG generator is monotone in the solver sense. | The TD-side solver interface requires this to produce a valid post-solution. |
+| `cone` | The transfer obeys the dependency/cone discipline. | This is what lets the pruning and side-effect machinery stay sound. |
+
+**Solver / transfer assumptions**
+
+| Assumption | What it says | Why it is needed |
+| --- | --- | --- |
+| `se` | The effectful transfer is sound. | The solver soundness theorem needs each abstract transfer step to over-approximate the concrete effect. |
+| `dom` | Every CFG point reachable from the entry satisfies the solver domain precondition. | This is the local precondition needed to read the solver result back as an abstract state at each point. |
+
+The theorem is proved through the CFG collecting semantics:
+
+- `source_reaches_cfg_collect` turns the IMP2 run into a matched CFG point and a concrete store in `cfg_collect`.
+- `side_analyse_eff_collect_sound_at_pruned` turns that collecting fact into an abstract inclusion at the same CFG point.
+- `IMP2_Bridge.thy` provides the source/CFG simulation that connects the two.
+
+The trace semantics still matters, but only as an intermediate layer for the
+collecting proof, not as an equality. What the repo proves is the projection
+lemma:
 
 $$
-\mathrm{cfg}_{\mathrm{collect}}\ g\ S\ v \subseteq \gamma(\mathrm{env}\ v)
-$$
-
-This is **proved and `sorry`-free** (`trace_analysis_sound`; Sign instance
-`side_sign_analysis_sound`).
-
-**Where does the trace semantics come in?** The theorem is proved one level finer,
-on the *trace* collecting semantics `cfg_collect_trace` (the ordered runs, not just
-the reachable states) — history-sensitive globals need to know *which* writes reach
-a read. The state-level `cfg_collect` is its `alpha_last` projection:
-
-$$
-\mathrm{cfg}_{\mathrm{collect}}\ g\ S\ v =
 \alpha_{\mathrm{last}}\bigl(\mathrm{cfg}_{\mathrm{collect\_trace}}\ g\ S\ v\bigr)
+\subseteq
+\mathrm{cfg}_{\mathrm{collect}}\ g\ S\ v
 $$
 
-so proving over-approximation at the trace level hands us the `cfg_collect ⊆ γ`
-statement above for free. The trace form is only *needed* for the per-global
-reaching-read theorem `reaching_global_read_sound`. For the headline
-over-approximation, `cfg_collect ⊆ γ` is the whole story.
-
-**Next step — compiler correctness.** `cfg_collect` is currently the specification.
-Once `compile_prog` is verified against the IMP2 *source* semantics end-to-end,
-the guarantee lifts to the program level:
-
-$$
-\mathrm{reach}_{\mathrm{IMP2}}(c)\ \text{at}\ v
-\subseteq \gamma(\mathrm{env}\ v)
-$$
-
-The backward bridge (`IMP2_Bridge.thy`) already anchors terminating runs to AFP
-IMP2 big-step; the full source-to-CFG collecting equivalence is the remaining
-compiler-correctness step.
+That trace layer is needed for the per-global reaching-read theorem
+`reaching_global_read_sound`. For the main source-to-analysis theorem above,
+`cfg_collect` is where the solver soundness result lands.
 
 The shipped examples already expose concrete IMP2 witnesses for the flagship
-showcase and the recursive `rdiv` program, so the source layer is now visible in
-the example suite even though the main theorem still lands at `cfg_collect`.
+showcase and the recursive `rdiv` program, so the source layer is visible in the
+example suite as well.
 
 ## Pipeline
 
@@ -78,144 +127,34 @@ a TD-side post-fixpoint over CFG collecting semantics over-approximates that
 semantics at every program point — and the context-sensitive analyses form *one
 layered tower* culminating in the recursive `twfr` witness flagship.
 
-### Component & data flow
+### Core shape
 
-```mermaid
-flowchart TB
-  classDef spine fill:#e7f4ec,stroke:#2f8f5b,color:#123;
-  classDef witness fill:#ece9fb,stroke:#5b4bd6,color:#123;
-  classDef vend fill:#eef1f5,stroke:#64748b,color:#123,stroke-dasharray:4 3;
+- IMP2 source semantics and the backward bridge live in `Voblint_IMP2`.
+- CFG construction and collecting semantics live in `Voblint_CFG`.
+- Equation systems, solver wiring, and domain instances live in `Voblint_Analysis`.
+- The end-to-end theorems and examples live in `Voblint_Formalization`.
 
-  subgraph S1["Voblint_IMP2 · language"]
-    L1["IMP2_Syntax / IMP2_Expr<br/>aexp · bexp · small-step"]
-    L2["IMP2_Proc<br/>Scope / Call / Restore · pstep"]
-    L3["IMP2_Globals<br/>combine_states · enter_state"]
-    L4["IMP2_Bridge<br/>backward-sim from AFP IMP2"]
-  end
-  subgraph S2["Voblint_CFG · control-flow graph"]
-    G1["IMP2_Proc_to_CFG<br/>compile_prog"]
-    G2["CFG_Def / CFG_Path<br/>edges · combines · paths"]
-    G3["CFG_Collect<br/>cfg_collect"]
-    G4["CFG_Collect_Runs<br/>cfg_runs_to"]
-    G7["CFG_Collect_Trace<br/>cfg_collect_trace · alpha_last"]
-    G5["CFG_Collect_Activation<br/>activation-indexed collecting"]
-    G6["CFG_Prune<br/>reachability cone"]
-  end
-  subgraph S3["Voblint_Analysis · spine + domains"]
-    C1["Constraint_System(_Sound)<br/>rhs · is_post_fixpoint"]
-    C2["TD_Side_Tree / TD_Side_CFG<br/>side_cfg_T_eff"]
-    C3["TD_Side_Eff_Soundness<br/>generic solver soundness"]
-    TD["TD_side solver<br/>vendored · verified"]
-    subgraph TOWER["context tower · shared support"]
-      direction TB
-      T1["Ctx_Sound"] --> T2["Cmp_Sound"] --> T3["Clean_RRead_Sound"] --> T4["Seeded_Activation_Sound"] --> T5["Activation_Witness_From<br/>twf / twfr"]
-    end
-    D1["Sign / Interval domains<br/>sound_domain · sound_transfer"]
-    EX["Exec_St / Exec_Bridge<br/>code generation"]
-    GV["Analysis_GraphViz<br/>annotated DOT"]
-  end
-  subgraph S4["Voblint_Formalization · endpoints + examples"]
-    F0["side_sign / side_ivl _analysis_sound"]
-    FM["Mixed_Flow_Sound<br/>_sound / _optimal"]
-    FT["Trace_Analysis_Sound<br/>context_collect_sound"]
-    F1["Example_Rdiv_Twfr_Sound<br/>recursive flagship"]
-    F2["mode / value digest spine"]
-  end
-
-  L1 --> L2 --> G1
-  L3 --> G1
-  L4 -. reference .-> G1
-  G1 --> G2 --> G3 --> G4 --> G7
-  G7 --> G5
-  G2 --> G6
-  G3 --> C1 --> C2 --> C3
-  TD --> C2
-  C3 --> TOWER
-  G5 --> T4
-  C3 --> D1
-  D1 --> EX
-  D1 --> F0
-  D1 --> FM
-  G7 --> FT
-  T5 --> F1
-  FT --> F2
-  D1 --> GV
-
-  class C1,C3,F0,FM spine;
-  class T5,F1 witness;
-  class TD vend;
-```
-
-### Domain & locale inheritance
-
-The genericity is carried by a **type-class + locale hierarchy**: a domain is an
-`abstract_domain` (a `sound_domain` with widening, itself a bounded semilattice
-with `gamma`); transfer soundness is the `sound_transfer` / `sound_effectful_transfer`
-locale family; solver obligations live in the `*_rhs_generator` chain. Sign and
-Interval are *interpretations* of these; nothing in the spine mentions a concrete
-domain.
-
-```mermaid
-classDiagram
-  direction TB
-
-  class bounded_semilattice_sup_bot { <<type class>> }
-  class sound_domain { <<type class>> }
-  class abstract_domain { <<type class>> }
-  bounded_semilattice_sup_bot <|-- sound_domain
-  sound_domain <|-- abstract_domain
-
-  class sound_transfer { <<locale>> }
-  class sound_effectful_transfer { <<locale>> }
-  class sound_effectful_transfer_framed { <<locale>> }
-  class sound_effectful_transfer_framed_le { <<locale>> }
-  sound_effectful_transfer <|-- sound_effectful_transfer_framed
-  sound_effectful_transfer <|-- sound_effectful_transfer_framed_le
-
-  class sound_rhs_generator_base { <<locale>> }
-  class sound_rhs_generator_static { <<locale>> }
-  class mixed_rhs_generator { <<locale>> }
-  class mixed_rhs_generator_mono { <<locale>> }
-  class sound_rhs_generator_exec { <<locale>> }
-  sound_rhs_generator_base <|-- sound_rhs_generator_static
-  sound_rhs_generator_static <|-- mixed_rhs_generator
-  mixed_rhs_generator <|-- mixed_rhs_generator_mono
-  sound_rhs_generator_static <|-- sound_rhs_generator_exec
-
-  class backward_domain { <<locale>> }
-  class backward_domain_mono { <<locale>> }
-  backward_domain <|-- backward_domain_mono
-
-  class context_domain { <<locale>> }
-  class value_digest_reader { <<locale>> }
-
-  class Sign { <<interpretation>> }
-  class Interval { <<interpretation>> }
-  abstract_domain <|.. Sign
-  abstract_domain <|.. Interval
-  sound_transfer <|.. Sign
-  sound_transfer <|.. Interval
-  backward_domain_mono <|.. Sign
-  backward_domain_mono <|.. Interval
-  context_domain <|.. entry_store_ctx
-  value_digest_reader <|.. mode
-```
+The genericity is carried by a type-class + locale hierarchy:
+`abstract_domain` extends `sound_domain`; `sound_transfer` and
+`sound_effectful_transfer` carry transfer soundness; the solver side uses the
+`*_rhs_generator` and `TD_Side_*` locale stack. Sign and Interval are concrete
+interpretations of that stack.
 
 **Canonical end-to-end chain** — each step reuses the soundness of the one below:
 
 `cfg_collect_trace` → `Constraint_System_Sound` → `TD_Side_Eff_Soundness` →
-entry-context (`…_Ctx_Sound`) → keyed/combine (`…_Cmp_Sound`) → seeded-clean
-(`Clean_RRead_Sound`) → activation collecting (`Seeded_Activation_Sound`) →
-`twf`/`twfr` witness (`Activation_Witness_From`) → recursive soundness
-(`Example_Rdiv_Twfr_Sound`).
+`TD_Side_Eff_Ctx_Sound` → `TD_Side_Eff_Cmp_Sound` → `Clean_RRead_Sound` →
+`Seeded_Clean_Ctx_Collect` → `Seeded_Activation_Sound` →
+`Activation_Witness_From` → `Example_Rdiv_Twfr_Sound`.
 
-Five theorems close the loop end-to-end (base flow-sensitive, entry-context,
-keyed/combine, twfr-recursive, and the parallel mode/value digest spine
-`context_collect_sound`). Every other theory is classified by role:
+Five theorems close the loop end-to-end: the base flow-sensitive theorem,
+context-indexed soundness, keyed/combine soundness, seeded activation soundness,
+and the recursive `twfr` witness theorem. The digest spine
+`context_collect_sound` runs in parallel.
 
 | Role | Meaning | Representative |
 | --- | --- | --- |
-| Canonical spine | proved end-to-end soundness | `side_sign_analysis_sound`, `rdiv_witness_G_over_approximated` |
+| Canonical spine | proved end-to-end soundness | `source_reaches_side_analyse_eff`, `rdiv_witness_G_over_approximated` |
 | Required support | inside a flagship's dependency cone | context tower, return rehydration |
 | Regression / counterexample | intentional negative or precision fact | `clean_transfer_unsound` |
 | Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run` |
@@ -223,29 +162,30 @@ keyed/combine, twfr-recursive, and the parallel mode/value digest spine
 
 ## Semantic foundation
 
-The concrete spec is an interprocedural **trace** collecting semantics
-(`cfg_collect_trace`): the ordered run, not just the set of reachable states.
-Traces are what history-sensitive globals need - *which* writes reach a given
-read. Both the trace semantics and its flattening are CFG-edge based: dropping a
-trace to its last state recovers the reachable-state collecting semantics
-(`cfg_collect`) the analyzer over-approximates
-(`alpha_last_cfg_collect_trace_le`). No small-step is involved in that step.
+The concrete spec is the interprocedural trace collecting semantics
+(`cfg_collect_trace`). It records ordered runs, which is what history-sensitive
+globals need. The state-level collecting semantics (`cfg_collect`) is the
+projection target, not an equality:
+`alpha_last_cfg_collect_trace_le`.
 
-Big-step is **not** the spec - it is vacuous on diverging programs. It enters
-only as a *reference* semantics: `backward_sim` (`src/IMP2/IMP2_Bridge.thy`)
-shows every terminating AFP IMP2 big-step run is reproduced by our small-step
-(`pstep`, `src/IMP2/IMP2_Proc.thy`), anchoring soundness to a recognised
-AFP-blessed semantics. The two are
-complementary - the analyzer certifies every program point (and diverging runs);
-big-step / VCG pins the exact functional result at exit on terminating runs.
+Big-step is only a reference semantics. `IMP2_Bridge.thy` shows every
+terminating AFP IMP2 big-step run is reproduced by our small-step
+(`pstep`, `IMP2_Proc.thy`). The two views are complementary: the analyzer
+certifies every program point, while big-step / VCG pins the exact terminating
+result at exit.
 
 ## Headline result
 
+`source_reaches_side_analyse_eff`
+(`src/Formalization/Pipeline/Compiler_Correctness_Prototype.thy`): for a real
+IMP2 run, the compiled CFG, and a sound solver instance, the abstract result
+contains the matched concrete state at some CFG point. Sign instantiation:
+`demo_source_to_sign_analysis` / `rdiv_source_to_interval_analysis` in the
+example suite.
+
 `TD_Side_Eff_Soundness.side_analyse_eff_collect_sound_exit_pruned`
-(`src/Analysis/Generic/Solver/Core/TD_Side_Eff_Soundness.thy`): for a
-post-fixpoint `env` of the interprocedural constraint system, the abstraction of
-the trace collecting semantics is below `gamma_state (env v)` at every program
-point `v`. Sign instance: `side_sign_analysis_sound`
+(`src/Analysis/Generic/Solver/Core/TD_Side_Eff_Soundness.thy`) is the solver
+endpoint at CFG exit. Sign instance: `side_sign_analysis_sound`
 (`src/Analysis/Instances/Sign/Sign_Side_Soundness.thy`).
 
 Globals shared across the program are tracked flow-insensitively through the

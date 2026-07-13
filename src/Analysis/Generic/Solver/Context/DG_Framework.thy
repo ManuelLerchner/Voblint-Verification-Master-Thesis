@@ -153,6 +153,29 @@ definition split_dg :: "'a::bot abs_state \<Rightarrow> ('a abs_state, 'a abs_st
 lemma merge_split_dg [simp]: "merge_dg (split_dg s) = s"
   by (simp add: merge_dg_def split_dg_def)
 
+lemma split_dg_bot [simp]:
+  "split_dg (bot :: 'a::bounded_semilattice_sup_bot abs_state) = bot"
+  by (simp add: split_dg_def dg_of_pair_def split_state_bot bot_dg_state_def)
+
+lemma split_dg_sup [simp]:
+  fixes a b :: "'a::bounded_semilattice_sup_bot abs_state"
+  shows "split_dg (a \<squnion> b) = split_dg a \<squnion> split_dg b"
+proof -
+  have sp: "split_state (a \<squnion> b) =
+      (fst (split_state a) \<squnion> fst (split_state b),
+       snd (split_state a) \<squnion> snd (split_state b))"
+    by (rule split_state_sup)
+  show ?thesis
+    unfolding split_dg_def dg_of_pair_def sup_dg_state_def
+    by (simp add: sp)
+qed
+
+lemma split_dg_le_iff [simp]:
+  fixes a b :: "'a::order_bot abs_state"
+  shows "split_dg a \<le> split_dg b \<longleftrightarrow> a \<le> b"
+  by (auto simp: split_dg_def dg_of_pair_def split_state_def
+        less_eq_dg_state_def le_fun_def split: if_splits)
+
 definition wf_dg :: "('l::bot abs_state, 'g::bot abs_state) dg_state \<Rightarrow> bool" where
   "wf_dg d = wf_split (pair_of_dg d)"
 
@@ -337,14 +360,261 @@ theorem unit_dg_spec_combine_sides:
   by (simp add: sides_dg_combine_tree_Inr unit_combine_step_def
         sides_unit_combine_tree_Inr Let_def restrict_global_combine_eq)
 
+subsection \<open>Tree packing and homogeneous compatibility\<close>
+
+definition dg_env ::
+  "('x + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot)
+   \<Rightarrow> 'x + 'g \<Rightarrow> ('a, 'a) dg_state"
+where
+  "dg_env \<sigma> =
+     (\<lambda>k. case k of Inl x \<Rightarrow> DG (\<sigma> (Inl x)) bot
+                      | Inr g \<Rightarrow> DG bot (\<sigma> (Inr g)))"
+
+primrec pack_dg_tree ::
+  "('x, 'g, 'a::bounded_semilattice_sup_bot) strategy_tree
+   \<Rightarrow> ('x, 'g, ('a, 'a) dg_state) strategy_tree"
+where
+  "pack_dg_tree (Answer d) = Answer (DG d bot)"
+| "pack_dg_tree (QueryL x f) =
+     QueryL x (\<lambda>d. pack_dg_tree (f (locals d)))"
+| "pack_dg_tree (QueryG g f) =
+     QueryG g (\<lambda>d. pack_dg_tree (f (globs d)))"
+| "pack_dg_tree (Side g d t) =
+     Side g (DG bot d) (pack_dg_tree t)"
+
+lemma dg_env_Inl [simp]: "dg_env \<sigma> (Inl x) = DG (\<sigma> (Inl x)) bot"
+  by (simp add: dg_env_def)
+
+lemma dg_env_Inr [simp]: "dg_env \<sigma> (Inr g) = DG bot (\<sigma> (Inr g))"
+  by (simp add: dg_env_def)
+
+lemma DG_local_le_iff [simp]:
+  "DG a (bot :: 'g::order_bot) \<le> DG b bot \<longleftrightarrow> a \<le> b"
+  by (simp add: less_eq_dg_state_def)
+
+lemma dg_env_le_iff [simp]:
+  "dg_env \<sigma> \<le> dg_env \<tau> \<longleftrightarrow> \<sigma> \<le> \<tau>"
+proof
+  assume le: "dg_env \<sigma> \<le> dg_env \<tau>"
+  show "\<sigma> \<le> \<tau>"
+  proof (unfold le_fun_def, intro allI)
+    fix x
+    have "dg_env \<sigma> x \<le> dg_env \<tau> x"
+      using le unfolding le_fun_def by blast
+    then show "\<sigma> x \<le> \<tau> x"
+      by (cases x) (simp_all add: less_eq_dg_state_def)
+  qed
+next
+  assume le: "\<sigma> \<le> \<tau>"
+  show "dg_env \<sigma> \<le> dg_env \<tau>"
+  proof (unfold le_fun_def, intro allI)
+    fix x
+    have "\<sigma> x \<le> \<tau> x" using le unfolding le_fun_def by blast
+    then show "dg_env \<sigma> x \<le> dg_env \<tau> x"
+      by (cases x) (simp_all add: less_eq_dg_state_def)
+  qed
+qed
+
+lemma pack_dg_tree_seqcomp:
+  "pack_dg_tree (seqcomp_tree t f) =
+   seqcomp_tree (pack_dg_tree t) (\<lambda>d. pack_dg_tree (f (locals d)))"
+  by (induction t arbitrary: f) simp_all
+
+lemma pack_dg_tree_map_ltree:
+  "pack_dg_tree (map_ltree h t) = map_ltree h (pack_dg_tree t)"
+  by (induction t) simp_all
+
+lemma pack_dg_tree_map_gtree:
+  "pack_dg_tree (map_gtree h t) = map_gtree h (pack_dg_tree t)"
+  by (induction t) simp_all
+
+fun side_rhs_fold_dg ::
+  "'d::bounded_semilattice_sup_bot
+   \<Rightarrow> ('x, 'g, ('d, 'h::bounded_semilattice_sup_bot) dg_state) strategy_tree list
+   \<Rightarrow> ('x, 'g, ('d, 'h) dg_state) strategy_tree"
+where
+  "side_rhs_fold_dg acc [] = Answer (DG acc bot)"
+| "side_rhs_fold_dg acc (t # ts) =
+     seqcomp_tree t (\<lambda>res. side_rhs_fold_dg (acc \<squnion> locals res) ts)"
+
+fun side_acc_dg ::
+  "'d::bounded_semilattice_sup_bot
+   \<Rightarrow> ('x + 'g \<Rightarrow> ('d, 'h::bounded_semilattice_sup_bot) dg_state)
+   \<Rightarrow> ('x, 'g, ('d, 'h) dg_state) strategy_tree list \<Rightarrow> 'd"
+where
+  "side_acc_dg acc \<tau> [] = acc"
+| "side_acc_dg acc \<tau> (t # ts) =
+     side_acc_dg (acc \<squnion> locals (traverse_rhs t \<tau>)) \<tau> ts"
+
+lemma traverse_side_rhs_fold_dg:
+  "traverse_rhs (side_rhs_fold_dg acc ts) \<tau> =
+   DG (side_acc_dg acc \<tau> ts) bot"
+  by (induction ts arbitrary: acc) (simp_all add: traverse_seqcomp)
+
+lemma pack_dg_tree_fold:
+  "pack_dg_tree (side_rhs_fold_ctx acc ts) =
+   side_rhs_fold_dg acc (map pack_dg_tree ts)"
+  by (induction ts arbitrary: acc) (simp_all add: pack_dg_tree_seqcomp)
+
+lemma traverse_rhs_pack_dg_tree:
+  "traverse_rhs (pack_dg_tree t) (dg_env \<sigma>) =
+   DG (traverse_rhs t \<sigma>) bot"
+  by (induction t) simp_all
+
+lemma sides_of_rhs_Inl_any [simp]:
+  "sides_of_rhs t \<sigma> (Inl x) = bot"
+  by (induction t) (simp_all add: Let_def)
+
+lemma locals_sides_of_rhs_pack_dg_tree [simp]:
+  "locals (sides_of_rhs (pack_dg_tree t) (dg_env \<sigma>) k) = bot"
+  by (induction t arbitrary: k)
+    (auto simp: Let_def sup_dg_state_def bot_dg_state_def split: sum.splits)
+
+lemma globs_sides_of_rhs_pack_dg_tree [simp]:
+  "globs (sides_of_rhs (pack_dg_tree t) (dg_env \<sigma>) k) =
+   sides_of_rhs t \<sigma> k"
+  by (induction t arbitrary: k)
+    (auto simp: Let_def sup_dg_state_def bot_dg_state_def split: sum.splits)
+
+lemma sides_of_rhs_pack_dg_tree:
+  "sides_of_rhs (pack_dg_tree t) (dg_env \<sigma>) =
+   dg_env (sides_of_rhs t \<sigma>)"
+  unfolding fun_eq_iff
+proof (intro allI)
+  fix k
+  show "sides_of_rhs (pack_dg_tree t) (dg_env \<sigma>) k =
+        dg_env (sides_of_rhs t \<sigma>) k"
+    by (cases k; rule dg_state.expand)
+      (simp_all add: bot_dg_state_def)
+qed
+
+lemma dep_aux_pack_dg_tree:
+  "dep_aux (dg_env \<sigma>) (pack_dg_tree t) = dep_aux \<sigma> t"
+  by (induction t) simp_all
+
+lemma part_post_solution_pack_dg_iff:
+  "part_post_solution (\<lambda>x. pack_dg_tree (T x)) x (dg_env \<sigma>) vars
+   \<longleftrightarrow> part_post_solution T x \<sigma> vars"
+  by (simp add: dep_aux_pack_dg_tree traverse_rhs_pack_dg_tree
+        sides_of_rhs_pack_dg_tree dep\<^sub>L_def dep_def)
+
+lemma part_solution_pack_dg_iff:
+  "part_solution (\<lambda>x. pack_dg_tree (T x)) x (dg_env \<sigma>) vars
+   \<longleftrightarrow> part_solution T x \<sigma> vars"
+  by (simp add: dep_aux_pack_dg_tree traverse_rhs_pack_dg_tree
+        sides_of_rhs_pack_dg_tree dep\<^sub>L_def dep_def)
+
+subsection \<open>The heterogeneous seeded CMP generator\<close>
+
+definition side_cfg_T_eff_cmp_seed_dg ::
+  "('c \<Rightarrow> 'k)
+   \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp
+        \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
+   \<Rightarrow> ('c \<Rightarrow> 'd)
+   \<Rightarrow> cfg
+   \<Rightarrow> ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec
+   \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
+   \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
+where
+  "side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed g S bot0 s0d s0g =
+     (\<lambda>(v, c).
+        let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
+                   \<squnion> (if is_frame_entry g v then frame_seed c else bot);
+            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
+                            (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
+                        (non_enter_predecessor_list g v);
+            comb = map (\<lambda>(cc, ex). cmb c cc ex)
+                       (combine_predecessor_list g v);
+            t = side_rhs_fold_dg acc0 (intra @ comb)
+        in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
+
+lemma eq_side_cfg_T_eff_cmp_seed_dg:
+  "eq (side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed g S bot0 s0d s0g)
+      (v, ctx) \<tau> =
+   DG (side_acc_dg
+     ((if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
+      \<squnion> (if is_frame_entry g v then frame_seed ctx else bot))
+     \<tau>
+     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
+              (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
+           (non_enter_predecessor_list g v)
+      @ map (\<lambda>(cc, ex). cmb ctx cc ex)
+            (combine_predecessor_list g v))) bot"
+  by (simp add: side_cfg_T_eff_cmp_seed_dg_def Let_def
+        traverse_side_rhs_fold_dg)
+
+lemma apply_unit_dg_spec_pack:
+  "apply_dg_spec (unit_dg_spec tf) a u =
+   pack_dg_tree (apply_etf (unit_etf_of_transfer tf) a u)"
+  unfolding apply_dg_spec_def apply_etf_unit_of_transfer
+    dg_spec_step_unit dg_edge_tree_def unit_step_def unit_edge_tree_def
+  by (simp add: Let_def fun_eq_iff)
+
+lemma combine_unit_dg_spec_pack:
+  "dg_spec_combine_tree (unit_dg_spec tf) cc ex =
+   pack_dg_tree (unit_combine_tree cc ex)"
+  unfolding dg_spec_combine_tree_def unit_dg_spec_def dg_combine_tree_def
+    unit_combine_step_def unit_combine_tree_def
+  by (simp add: Let_def fun_eq_iff)
+
+lemma map_pack_dg_tree_routed:
+  "map (\<lambda>(u, a). map_gtree gh (map_ltree lh (pack_dg_tree (et a u)))) xs =
+   map pack_dg_tree
+     (map (\<lambda>(u, a). map_gtree gh (map_ltree lh (et a u))) xs)"
+  by (induction xs)
+    (auto simp: pack_dg_tree_map_ltree pack_dg_tree_map_gtree split: prod.splits)
+
+lemma map_pack_dg_tree_combine:
+  "map (\<lambda>(cc, ex). pack_dg_tree (cmb cc ex)) xs =
+   map pack_dg_tree (map (\<lambda>(cc, ex). cmb cc ex) xs)"
+  by (induction xs) (auto split: prod.splits)
+theorem side_cfg_T_eff_cmp_seed_dg_unit:
+  assumes cmb:
+    "\<And>c cc ex. cmb_dg c cc ex = pack_dg_tree (cmb c cc ex)"
+  shows
+    "side_cfg_T_eff_cmp_seed_dg gkey cmb_dg frame_seed g
+       (unit_dg_spec tf) bot0 (restrict_local s0) (restrict_global s0)
+     = (\<lambda>x. pack_dg_tree
+          (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g
+             (unit_etf_of_transfer tf) bot0 s0 x))"
+  unfolding fun_eq_iff
+  apply (intro allI)
+  subgoal for x
+    by (cases x)
+      (simp add: side_cfg_T_eff_cmp_seed_dg_def side_cfg_T_eff_cmp_seed_def
+        Let_def apply_unit_dg_spec_pack cmb pack_dg_tree_fold
+        map_pack_dg_tree_routed map_pack_dg_tree_combine
+        split: prod.splits)
+  done
+
+corollary part_post_solution_dg_unit_iff:
+  assumes cmb:
+    "\<And>c cc ex. cmb_dg c cc ex = pack_dg_tree (cmb c cc ex)"
+  shows
+    "part_post_solution
+       (side_cfg_T_eff_cmp_seed_dg gkey cmb_dg frame_seed g
+          (unit_dg_spec tf) bot0 (restrict_local s0) (restrict_global s0))
+       x (dg_env \<sigma>) vars
+     \<longleftrightarrow>
+     part_post_solution
+       (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g
+          (unit_etf_of_transfer tf) bot0 s0)
+       x \<sigma> vars"
+proof -
+  note gen = side_cfg_T_eff_cmp_seed_dg_unit[OF cmb]
+  show ?thesis
+    unfolding gen
+    by (rule part_post_solution_pack_dg_iff)
+qed
+
 text \<open>
-  The heterogeneous generator (threading \<^const>\<open>apply_dg_spec\<close> /
-  \<^const>\<open>dg_spec_combine_tree\<close> through \<^const>\<open>side_cfg_T_eff_cmp\<close>-style equation
-  systems) is the remaining Stage-1D work: \<^typ>\<open>('g, 'd) edge_tf_tree\<close> and the
-  \<^typ>\<open>('g, 'd) effectful_domain_transfer\<close> record bake the value type
-  \<open>'d abs_state\<close>, so the record-consuming generator layer needs its value type
-  generalized before dg-valued trees can drive it.  The tree layer above is
-  value-generic already.
+  The legacy aliases \\\<^typ>\<open>('g, 'd) edge_tf_tree\<close>,
+  \\\<^typ>\<open>('g, 'd) combine_tf_tree\<close>, and
+  \\\<^typ>\<open>('g, 'd) effectful_domain_transfer\<close> remain for the homogeneous
+  soundness and executable spines.  The heterogeneous generator consumes
+  \\\<^typ>\<open>('d, 'h) dg_spec\<close> directly: Answers carry \<open>D\<close>, Side
+  publications carry \<open>G\<close>, and only \\\<^typ>\<open>('d, 'h) dg_state\<close> packs
+  them for the vendor solver's single value parameter.
 \<close>
 
 end

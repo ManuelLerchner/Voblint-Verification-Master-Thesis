@@ -2,12 +2,11 @@
 
 Goal: independent local and global abstract domains (`'l` for locals, `'g` for
 globals), Goblint-style. Stage 1 is a representation refactoring in four
-phases; only Stage 1A is implemented. No semantic change, no new analyses, no
-generator or context redesign. All existing theorem statements are preserved;
-the split representation exists alongside the homogeneous one and is proven
-isomorphic to it.
+phases. No semantic change or analysis-specific framework hook is introduced.
+Existing homogeneous theorem statements remain available as compatibility
+endpoints.
 
-Status: **Stages 1A, 1B and 1C implemented**. 1A:
+Status: **Stages 1A--1D implemented for the abstract analysis pipeline**. 1A:
 `src/Analysis/Generic/Domain/Split_State.thy` plus a bridge subsection in
 `src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy`. 1B:
 `src/Analysis/Generic/Solver/Context/Split_Cmp_Gen.thy` (split-shaped trees,
@@ -15,8 +14,11 @@ transfer factory and CMP generator, each proven equal to its homogeneous
 original) plus the sign instantiation in
 `src/Analysis/Instances/Sign/Sign_Call_Spec.thy`. 1C: the remaining generic
 tree constructors and factories, in the same theory (see the Stage 1C section
-below for the constructor audit, the retain finding, the executable-mirror
-audit and the Stage 1D readiness report). Stage 1D is design only.
+below for the constructor audit, the retain finding, and the executable-mirror
+audit). 1D: `DG_Framework.thy` now carries independent `D`/`G` values through
+strategy trees and the complete seeded CMP generator; homogeneous equality,
+post-fixpoint transport, sign soundness transport, and the Retain validation
+live in `DG_Framework.thy`, `Retain_Analysis.thy`, and `Sign_Call_Spec.thy`.
 
 **Architectural correction (post-1C, executed through Stage 2):** comparing
 against Goblint's `analyses.ml` showed the generic retain tree sits at the
@@ -326,7 +328,7 @@ migration in 1C -- and none is needed: post-fixpoints transport through the
 existing simulation lemmas to the abstract generators, which 1B/1C prove
 equal to their split versions.
 
-#### Stage 1D readiness report
+#### Stage 1D pre-implementation audit (resolved)
 
 | Component | Readiness for independent `('l, 'g)` |
 | --- | --- |
@@ -339,7 +341,7 @@ equal to their split versions.
 | retain/clean transfers | **resolved as analyses** (section 6): each defines its own snapshot-carrying `D`; the framework stays `Answer : D`, `Side : G`. Not a semantic blocker. |
 | **semantic blockers** | **none identified at the tree level.** The single constraint of substance is the vendor solver's one-value-type interface, and it is absorbed by `'d := dg_state` (componentwise copy type) without touching the solver. |
 
-What remains before `locals : 'l, globals : 'g`:
+The audit produced the following implementation map, completed in Stage 1D:
 
 ```
 'd := ('l abs_state, 'g abs_state) dg_state at the eqsT level
@@ -352,29 +354,97 @@ What remains before `locals : 'l, globals : 'g`:
   |     (slot invariants = wf_split halves, already stated)
   +-- soundness endpoints restated with gamma_split
   |     (homogeneous case recovered via gamma_split_merge)
-  +-- exec mirror at ('l st * 'g st)
+  +-- exec mirror at ('l st * 'g st)  [later executable slice]
 ```
 
-### Stage 1D -- allow `'l ~= 'g`
+### Stage 1D -- independent `D` and `G` (implemented)
 
-* Soundness statements switch from `gamma_state` to `gamma_split` (the
-  homogeneous case remains available through `gamma_split_merge`).
-* `enter` / `combine` transfers get genuinely split types
-  (`combine: 'l abs_state => 'g abs_state => ...`), mirroring the store-level
-  `<s|t>` / `enter_state` split of `IMP2_Globals`.
-* The global unknown slots (`Inr` keys) change value type to `'g abs_state`;
-  the local slots to `'l abs_state`. The unknown space `pp + 'g` already keeps
-  them apart, so only `side_env`-style joins need the split reading
-  (`merge_state`-free, via `gamma_split`).
-* Only here do existing theorem *statements* change; 1A-1C keep them intact.
+The solver still has one value type. `dg_state D G` encodes the two typed
+slots without changing the vendored solver:
+
+* local unknowns contain `DG d bot`;
+* global unknowns contain `DG bot g`;
+* analysis steps have type `D => G => G * D`;
+* `side_rhs_fold_dg` joins only the `D` component of Answers;
+* `side_cfg_T_eff_cmp_seed_dg` seeds the entry `D` and `G` independently.
+
+The new generator preserves predecessor routing, context relabeling, combine
+routing, frame seeding, and entry publication. Only the transported value
+types differ.
+
+#### Homogeneous-interface audit and implemented type changes
+
+| Component | Before | Stage-1D form | Disposition |
+| --- | --- | --- | --- |
+| `effectful_domain_transfer` | every tree returns and publishes one `'a abs_state` | `dg_spec D G`, whose edge and combine fields implement `D => G => G * D` | legacy record retained as a compatibility and soundness bridge |
+| `edge_tf_tree` | `strategy_tree pp unit ('a abs_state)` | `dg_edge_tree step`, returning `dg_state D G` with pure-D Answers and pure-G Sides | heterogeneous path implemented |
+| `unit_edge_tree` | homogeneous restriction-based tree | `dg_edge_tree (apply_unit_dg_spec ...)` | equality/denotation compatibility proved |
+| `unit_combine_tree` | caller/callee values share one state type | `dg_combine_tree` / `dg_spec_combine_tree` over `D` and `G` | unit compatibility proved |
+| `side_rhs_fold_ctx` | joins homogeneous Answers | `side_rhs_fold_dg` joins `locals` only | implemented with traverse/sides/dependency transport |
+| `side_cfg_T_eff_cmp_seed` | one state supplies local accumulator and entry Side | `side_cfg_T_eff_cmp_seed_dg ... botD entryD entryG` | implemented |
+| strategy-tree wrappers | payload-polymorphic `seqcomp_tree`, `map_ltree`, `map_gtree` | unchanged; `pack_dg_tree` and Retain transport commute with them | no retyping required |
+| generator interfaces | `effectful_domain_transfer` plus one seed state | `dg_spec D G` plus separate D/G seeds | implemented additively |
+| post-fixpoint predicates | one homogeneous solver value | same vendored predicate over `dg_state D G` | homogeneous and Retain representation equivalences proved |
+| soundness locales | stated over the homogeneous transfer record and `gamma_state` | existing endpoints are recovered by representation transport | theorem statements preserved; direct heterogeneous locale restatement is unnecessary for Stage 1D |
+
+#### Compatibility and validation
+
+For `D = G = 'a abs_state`, `pack_dg_tree` embeds the old system. Theorems in
+`DG_Framework.thy` prove tree traversal, side effects, dependencies, equation
+systems, exact solutions, and post-fixpoints coincide. The sign instance then
+reuses the existing collecting-soundness endpoint without changing or
+weakening it.
+
+Retain uses a genuinely heterogeneous choice:
+
+```
+D = dg_state ('a abs_state) ('a abs_state)   -- locals + snapshot
+G = 'a abs_state                             -- published globals
+```
+
+`retain_dg_spec` is an ordinary `dg_spec`. `retain_dg_generator` uses the same
+generic CMP generator as the unit/sign instance. Its equation results, side
+effects, dependencies, order, and post-fixpoints transport to the existing
+Retain analysis through `retain_hetero_rep`. The framework never observes the
+snapshot field. `sign_retain_dg_post_fixpoint_iff` is the concrete sign/Retain
+witness.
+
+#### Architecture before and after
+
+Before Stage 1D:
+
+```
+effectful_domain_transfer ('a abs_state)
+        |
+homogeneous trees: Answer = Side = 'a abs_state
+        |
+side_cfg_T_eff_cmp_seed
+        |
+TD_side + homogeneous soundness locales
+```
+
+After Stage 1D:
+
+```
+analysis: dg_spec D G, step : D => G => G * D
+        |
+dg_edge_tree / dg_combine_tree
+        |
+side_rhs_fold_dg
+        |
+side_cfg_T_eff_cmp_seed_dg
+        |
+TD_side over dg_state D G
+        |
+post-fixpoint transport -> preserved soundness endpoints
+```
 
 ## 5. Verification
 
-Stage 1A gate: `Split_State.thy` and `TD_Side_CFG.thy` error-free in I/Q,
-`isabelle build ... Voblint_Analysis` green, `rg -n '^\s*sorry' src/Analysis`
-empty. The `Voblint_Formalization` session is gated separately (an unrelated
-in-progress prototype theory currently breaks it); no Formalization theory is
-touched by Stage 1A.
+The migration gate is run once after the complete slice: every touched theory
+must be error-free in I/Q, the analysis `sorry` inventory must be empty, and
+`Voblint_Analysis` must pass the batch build. Intermediate stages use I/Q only.
+The executable layer is outside this abstract-pipeline gate.
 
 ## 6. Architectural correction: retain is an analysis, not a framework strategy
 
@@ -541,21 +611,20 @@ identical soundness: nothing existing was modified, weakened, or deleted.
    (homogeneous `step_edge_tree`, the `dg_state` lattice, the heterogeneous
    `dg_edge_tree` / `dg_combine_tree` / `dg_spec` interface, unit
    compatibility); `Retain_Analysis.thy` imports it and is pure analysis.
-4. Stage 1D typing: the heterogeneous generator. `('g, 'd) edge_tf_tree` and
-   `effectful_domain_transfer` bake the value type `'d abs_state`; generalize
-   the record/generator layer's value type so `apply_dg_spec` trees can drive
-   `side_cfg_T_eff_cmp`-style systems, with `'d := dg_state` and slot
-   invariants (= `wf_split` halves). Post-fixpoint/soundness transport via the
-   `dg_rep`-style embeddings.
+4. **(done)** Stage 1D typing: `side_rhs_fold_dg` and
+   `side_cfg_T_eff_cmp_seed_dg` let `dg_spec` analyses drive the complete CMP
+   equation generator. Homogeneous generator equality and post-fixpoint
+   equivalence recover the old pipeline; Retain has its own representation
+   transport and requires no framework hook.
 5. Clean analysis: `clean_edge_tree` follows the retain path (its own theory,
    its own `D`). Executable layer: `dg_state` over `'a st`; retarget the keyed
    retain examples to the analysis's executable form.
 
-State after step 3: the generic retain tree is gone from the framework,
-retain is implemented through the standard `Answer : D` / `Side : G`
-interface, and no framework *code* depends on "local state contains globals"
-(the framed_le *contract* quantifies over such solutions without assuming
-them).
+State after step 4: the generic retain tree is gone from the framework,
+Retain drives the complete equation generator through the standard
+`Answer : D` / `Side : G` interface, and no framework code depends on "local
+state contains globals". The homogeneous pipeline remains as a proved
+compatibility and soundness layer.
 
 ### 6.6 The heterogeneous framework (`DG_Framework.thy`)
 
@@ -618,16 +687,25 @@ hetero validation.
 | `restrict_local` / `restrict_global` | the homogeneous encoding of slot projection; dissolves into `locals`/`globs` at Stage 1D |
 | `clean_edge_tree` (`Clean_RRead_Sound`) | no -- clean is an analysis; remaining blocker, follows the retain path |
 
-#### Remaining blockers
+#### Remaining legacy homogeneous components
 
-1. **The heterogeneous generator** (Stage 1D, step 4): `edge_tf_tree` /
-   `effectful_domain_transfer` bake `'d abs_state`; the generator layer's
-   value type must be generalized before `dg_spec` analyses can drive the
-   solver end-to-end. Tree layer and compatibility proofs are in place.
-2. **Clean analysis extraction** (step 5): `clean_edge_tree` +
+These components remain intentionally; none blocks the abstract heterogeneous
+pipeline:
+
+1. `effectful_domain_transfer`, `edge_tf_tree`, `unit_edge_tree`,
+   `unit_combine_tree`, and `side_cfg_T_eff_cmp_seed` provide the existing
+   homogeneous API, executable transports, and compatibility target.
+2. The collecting-soundness locales remain stated over that API. The
+   heterogeneous homogeneous instance reaches them through proved equation
+   and post-fixpoint equality, preserving the endpoint statements.
+3. `restrict_local` / `restrict_global` remain in homogeneous analyses and in
+   the compatibility definitions. Heterogeneous framework plumbing uses
+   `locals` / `globs` projections instead.
+4. **Clean analysis extraction** (step 5): `clean_edge_tree` +
    `clean_etf_of_transfer` still sit in `Clean_RRead_Sound` with the seeded
-   spine built on them.
-3. **Executable dg layer**: `dg_state` over `'a st` and example retargeting.
+   spine built on them. This is a later analysis migration, not Stage 1D.
+5. **Executable dg layer**: `dg_state` over `'a st` and example retargeting.
+   The current deliverable covers the abstract `Voblint_Analysis` pipeline.
 
 #### Post-cleanup dependency graph
 

@@ -2,6 +2,7 @@ theory Example_Rdiv_Twfr_Sound
   imports
     Example_Interval_Recursion_Rehydrate
     Ivl_Twfr_Common
+    "Voblint_Formalization.Compiler_Correctness_Prototype"
 begin
 
 section \<open>Recursive interval @{text rdiv}: executable soundness via the twfr witness spine\<close>
