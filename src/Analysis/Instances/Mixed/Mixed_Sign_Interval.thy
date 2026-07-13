@@ -1,6 +1,6 @@
 theory Mixed_Sign_Interval
   imports
-    "Voblint_Analysis.DG_Framework"
+    "Voblint_Analysis.DG_Soundness"
     "Voblint_Analysis.Solver_Menu"
     "Voblint_Analysis.Analysis_Sound"
     "Voblint_Analysis.Sign_Exec"
@@ -48,6 +48,10 @@ lemma mixed_si_spec_step [simp]:
   "dg_spec_step mixed_si_spec a d g = mixed_si_step a d g"
   unfolding mixed_si_spec_def by (cases a) simp_all
 
+lemma mixed_si_spec_combine [simp]:
+  "dgs_combine mixed_si_spec dc de g = mixed_si_combine dc de g"
+  unfolding mixed_si_spec_def by simp
+
 definition mixed_si_cmb ::
   "unit \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
@@ -89,124 +93,46 @@ where
   "mixed_si_gamma sigma v =
      \<lbrakk>mixed_si_D sigma v\<rbrakk> \<inter> \<lbrakk>mixed_si_G sigma\<rbrakk>"
 
+subsection \<open>Soundness through the native heterogeneous locale\<close>
+
 text \<open>
-  @{const mixed_si_D} reads the point-indexed @{term "Inl (v, ())"} answer.
-  @{const mixed_si_G} always reads the one @{term "Inr ()"} side unknown.
-  Consequently the concretisation at a point intersects its flow-sensitive
-  Sign fact with the same flow-insensitive Interval invariant used at every
-  point.
+  The analysis is an independent-transfer instance of \<open>sound_dg_spec\<close>: Sign
+  advances \<open>D\<close>, Interval advances \<open>G\<close>, and the procedure-return combine is
+  structural in each slot.  Every generator and collecting fact below is
+  inherited from the locale; no analysis-specific collecting proof remains.
 \<close>
 
-definition mixed_si_trees ::
-  "cfg \<Rightarrow> pp \<Rightarrow>
-   (pp \<times> unit, unit,
-      (sign abs_state, ivl abs_state) dg_state) strategy_tree list"
-where
-  "mixed_si_trees g v =
-     map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec mixed_si_spec a u)))
-       (non_enter_predecessor_list g v)
-     @ map (\<lambda>(cc, ex). mixed_si_cmb () cc ex)
-       (combine_predecessor_list g v)"
+lemma mixed_si_spec_indep:
+  "mixed_si_spec = indep_dg_spec sign_tf ivl_tf"
+  unfolding mixed_si_spec_def indep_dg_spec_def
+  by (simp add: fun_eq_iff mixed_si_step_def mixed_si_combine_def)
 
-definition mixed_si_acc ::
-  "cfg \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> pp
-   \<Rightarrow> sign abs_state"
-where
-  "mixed_si_acc g bot0 s0d v =
-     (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
+interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
+  unfolding mixed_si_spec_indep
+  by (rule sound_dg_spec_indep
+        [OF sign_is_sound_transfer ivl_is_sound_transfer])
 
-lemma eq_mixed_si_generator:
-  "eq (mixed_si_generator g bot0 s0d s0g) (v, ()) sigma =
-   DG (side_acc_dg (mixed_si_acc g bot0 s0d v)
-     sigma (mixed_si_trees g v)) bot"
-  unfolding mixed_si_generator_def mixed_si_trees_def mixed_si_acc_def
-    mixed_si_cmb_def
-  by (simp add: eq_side_cfg_T_eff_cmp_seed_dg)
+lemma mixed_si_cmb_dg:
+  "mixed_si_cmb = mixed_si.dg_cmb"
+  by (simp add: fun_eq_iff mixed_si_cmb_def mixed_si.dg_cmb_def)
 
-lemma sides_fold_le_mixed_si_generator:
-  "sides_of_rhs
-      (side_rhs_fold_dg (mixed_si_acc g bot0 s0d v)
-        (mixed_si_trees g v)) sigma k
-   \<le> sides_of_rhs (mixed_si_generator g bot0 s0d s0g (v, ())) sigma k"
-  unfolding mixed_si_generator_def mixed_si_trees_def mixed_si_acc_def
-    mixed_si_cmb_def side_cfg_T_eff_cmp_seed_dg_def
-  by (cases "v = cfg_entry g") (simp_all add: Let_def)
+lemma mixed_si_generator_dg:
+  "mixed_si_generator = mixed_si.dg_gen"
+  by (simp add: fun_eq_iff mixed_si_generator_def mixed_si.dg_gen_def
+        mixed_si_cmb_dg)
 
-lemma side_acc_dg_ge_acc:
-  "acc \<le> side_acc_dg acc sigma ts"
-proof (induction ts arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons t ts)
-  have "acc \<le> acc \<squnion> locals (traverse_rhs t sigma)" by simp
-  also have "... \<le> side_acc_dg
-      (acc \<squnion> locals (traverse_rhs t sigma)) sigma ts"
-    by (rule Cons.IH)
-  finally show ?case by simp
-qed
+lemma mixed_si_D_dg:
+  "mixed_si_D = mixed_si.dg_D"
+  by (simp add: fun_eq_iff mixed_si_D_def mixed_si.dg_D_def)
 
-lemma locals_traverse_le_side_acc_dg:
-  assumes "t \<in> set ts"
-  shows "locals (traverse_rhs t sigma) \<le> side_acc_dg acc sigma ts"
-using assms
-proof (induction ts arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons t' ts)
-  show ?case
-  proof (cases "t = t'")
-    case True
-    have "locals (traverse_rhs t sigma)
-        \<le> acc \<squnion> locals (traverse_rhs t' sigma)"
-      using True by simp
-    also have "... \<le> side_acc_dg
-        (acc \<squnion> locals (traverse_rhs t' sigma)) sigma ts"
-      by (rule side_acc_dg_ge_acc)
-    finally show ?thesis by simp
-  next
-    case False
-    with Cons.prems have "t \<in> set ts" by simp
-    then show ?thesis using Cons.IH by simp
-  qed
-qed
+lemma mixed_si_G_dg:
+  "mixed_si_G = mixed_si.dg_G"
+  by (simp add: fun_eq_iff mixed_si_G_def mixed_si.dg_G_def)
 
-lemma sides_le_side_rhs_fold_dg:
-  assumes "t \<in> set ts"
-  shows "sides_of_rhs t sigma k
-    \<le> sides_of_rhs (side_rhs_fold_dg acc ts) sigma k"
-using assms
-proof (induction ts arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons t' ts)
-  show ?case
-  proof (cases "t = t'")
-    case True
-    then show ?thesis
-      by (simp add: sides_of_rhs_seqcomp_at)
-  next
-    case False
-    with Cons.prems have "t \<in> set ts" by simp
-    then have "sides_of_rhs t sigma k
-        \<le> sides_of_rhs
-          (side_rhs_fold_dg
-            (acc \<squnion> locals (traverse_rhs t' sigma)) ts) sigma k"
-      by (rule Cons.IH)
-    also have "... \<le> sides_of_rhs t' sigma k \<squnion>
-        sides_of_rhs
-          (side_rhs_fold_dg
-            (acc \<squnion> locals (traverse_rhs t' sigma)) ts) sigma k"
-      by simp
-    also have "... =
-        sides_of_rhs (side_rhs_fold_dg acc (t' # ts)) sigma k"
-      by (simp add: sides_of_rhs_seqcomp_at)
-    finally show ?thesis .
-  qed
-qed
+lemma mixed_si_gamma_dg:
+  "mixed_si_gamma = mixed_si.dg_gamma"
+  by (simp add: fun_eq_iff mixed_si_gamma_def mixed_si.dg_gamma_def
+        gamma_dg_def mixed_si_D_dg mixed_si_G_dg)
 
 definition mixed_si_postfix ::
   "cfg \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
@@ -228,41 +154,11 @@ where
         combine_abs (mixed_si_G sigma) (mixed_si_G sigma)
           \<le> mixed_si_G sigma)"
 
-lemma mixed_si_edge_tree_local:
-  "locals (traverse_rhs
-      (map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ()))
-          (apply_dg_spec mixed_si_spec a u))) sigma)
-   = apply_tf sign_tf a (mixed_si_D sigma u)"
-  unfolding apply_dg_spec_def mixed_si_D_def
-  by (subst traverse_intra_cmp)
-    (simp add: traverse_dg_edge_tree mixed_si_step_def)
-
-lemma mixed_si_edge_tree_global:
-  "globs (sides_of_rhs
-      (map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ()))
-          (apply_dg_spec mixed_si_spec a u))) sigma (Inr ()))
-   = apply_tf ivl_tf a (mixed_si_G sigma)"
-  unfolding apply_dg_spec_def mixed_si_G_def
-  by (subst sides_map_gtree_unit_gen, subst sides_map_ltree_Inr)
-    (simp add: sides_dg_edge_tree_Inr mixed_si_step_def)
-
-lemma mixed_si_combine_tree_local:
-  "locals (traverse_rhs (mixed_si_cmb () cc ex) sigma)
-   = combine_abs (mixed_si_D sigma cc) (mixed_si_D sigma ex)"
-  unfolding mixed_si_cmb_def dg_spec_combine_tree_def mixed_si_D_def
-    mixed_si_spec_def
-  by (subst traverse_intra_cmp)
-    (simp add: traverse_dg_combine_tree mixed_si_combine_def)
-
-lemma mixed_si_combine_tree_global:
-  "globs (sides_of_rhs (mixed_si_cmb () cc ex) sigma (Inr ()))
-   = combine_abs (mixed_si_G sigma) (mixed_si_G sigma)"
-  unfolding mixed_si_cmb_def dg_spec_combine_tree_def mixed_si_G_def
-    mixed_si_spec_def
-  by (subst sides_map_gtree_unit_gen, subst sides_map_ltree_Inr)
-    (simp add: sides_dg_combine_tree_Inr mixed_si_combine_def)
+lemma mixed_si_postfix_dg:
+  "mixed_si_postfix = mixed_si.dg_postfix"
+  by (simp add: fun_eq_iff mixed_si_postfix_def mixed_si.dg_postfix_def
+        mixed_si_D_dg mixed_si_G_dg mixed_si_step_def
+        mixed_si_combine_def)
 
 theorem mixed_si_post_solution_postfix:
   assumes pp:
@@ -277,180 +173,10 @@ theorem mixed_si_post_solution_postfix:
     and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter"
     and finC: "finite (combines g)"
   shows "mixed_si_postfix g s0d s0g sigma"
-proof -
-  have eq_le:
-    "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
-      eq (mixed_si_generator g bot0 s0d s0g) (v, ()) sigma
-        \<le> sigma (Inl (v, ()))"
-    using part_post_solution_imp_se_constraint_holds[OF pp]
-    unfolding se_constraint_holds_def by blast
-  have sides_le:
-    "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
-      sides_of_rhs (mixed_si_generator g bot0 s0d s0g (v, ()))
-        sigma \<le> sigma"
-    using part_post_solution_imp_se_constraint_holds[OF pp]
-    unfolding se_constraint_holds_def by blast
-
-  have entryD: "s0d \<le> mixed_si_D sigma (cfg_entry g)"
-  proof -
-    have "s0d \<le> mixed_si_acc g bot0 s0d (cfg_entry g)"
-      by (simp add: mixed_si_acc_def)
-    also have "... \<le> side_acc_dg
-        (mixed_si_acc g bot0 s0d (cfg_entry g)) sigma
-        (mixed_si_trees g (cfg_entry g))"
-      by (rule side_acc_dg_ge_acc)
-    also have "... = locals
-        (eq (mixed_si_generator g bot0 s0d s0g)
-          (cfg_entry g, ()) sigma)"
-      by (simp add: eq_mixed_si_generator)
-    also have "... \<le> mixed_si_D sigma (cfg_entry g)"
-      using eq_le[OF cover_entry]
-      by (simp add: mixed_si_D_def less_eq_dg_state_def)
-    finally show ?thesis .
-  qed
-
-  have entryG: "s0g \<le> mixed_si_G sigma"
-  proof -
-    have seed:
-      "DG bot s0g \<le>
-       sides_of_rhs
-         (mixed_si_generator g bot0 s0d s0g (cfg_entry g, ()))
-         sigma (Inr ())"
-      unfolding mixed_si_generator_def side_cfg_T_eff_cmp_seed_dg_def
-      by (simp add: Let_def less_eq_dg_state_def sup_dg_state_def)
-    also have "... \<le> sigma (Inr ())"
-      using sides_le[OF cover_entry] by (rule le_funD)
-    finally show ?thesis
-      by (simp add: mixed_si_G_def less_eq_dg_state_def)
-  qed
-
-  have edgeD:
-    "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow>
-      apply_tf sign_tf a (mixed_si_D sigma u)
-        \<le> mixed_si_D sigma v"
-  proof -
-    fix u a v
-    assume edge: "(u, a, v) \<in> edges g"
-    have mem: "(u, a) \<in> set (non_enter_predecessor_list g v)"
-      using edge no_enter[OF edge]
-      by (simp add: non_enter_predecessor_list_def
-          set_predecessor_list[OF finE] predecessors_def)
-    have tree_mem:
-      "map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ()))
-          (apply_dg_spec mixed_si_spec a u))
-       \<in> set (mixed_si_trees g v)"
-      using mem by (auto simp: mixed_si_trees_def)
-    have "apply_tf sign_tf a (mixed_si_D sigma u)
-        \<le> side_acc_dg (mixed_si_acc g bot0 s0d v)
-          sigma (mixed_si_trees g v)"
-      using locals_traverse_le_side_acc_dg[OF tree_mem]
-      by (simp add: mixed_si_edge_tree_local)
-    also have "... = locals
-        (eq (mixed_si_generator g bot0 s0d s0g) (v, ()) sigma)"
-      by (simp add: eq_mixed_si_generator)
-    also have "... \<le> mixed_si_D sigma v"
-      using eq_le[OF cover_edge[OF edge]]
-      by (simp add: mixed_si_D_def less_eq_dg_state_def)
-    finally show "apply_tf sign_tf a (mixed_si_D sigma u)
-        \<le> mixed_si_D sigma v" .
-  qed
-
-  have edgeG:
-    "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow>
-      apply_tf ivl_tf a (mixed_si_G sigma) \<le> mixed_si_G sigma"
-  proof -
-    fix u a v
-    assume edge: "(u, a, v) \<in> edges g"
-    have mem: "(u, a) \<in> set (non_enter_predecessor_list g v)"
-      using edge no_enter[OF edge]
-      by (simp add: non_enter_predecessor_list_def
-          set_predecessor_list[OF finE] predecessors_def)
-    have tree_mem:
-      "map_gtree (\<lambda>_. ())
-        (map_ltree (\<lambda>w. (w, ()))
-          (apply_dg_spec mixed_si_spec a u))
-       \<in> set (mixed_si_trees g v)"
-      using mem by (auto simp: mixed_si_trees_def)
-    have "apply_tf ivl_tf a (mixed_si_G sigma)
-        \<le> globs (sides_of_rhs
-          (side_rhs_fold_dg (mixed_si_acc g bot0 s0d v)
-            (mixed_si_trees g v)) sigma (Inr ()))"
-      using sides_le_side_rhs_fold_dg[OF tree_mem, where k = "Inr ()"]
-      by (simp add: mixed_si_edge_tree_global less_eq_dg_state_def)
-    also have "... \<le> globs (sides_of_rhs
-        (mixed_si_generator g bot0 s0d s0g (v, ())) sigma (Inr ()))"
-      using sides_fold_le_mixed_si_generator[where k = "Inr ()"]
-      by (simp add: less_eq_dg_state_def)
-    also have "... \<le> mixed_si_G sigma"
-      using sides_le[OF cover_edge[OF edge], THEN le_funD, of "Inr ()"]
-      by (simp add: mixed_si_G_def less_eq_dg_state_def)
-    finally show "apply_tf ivl_tf a (mixed_si_G sigma)
-        \<le> mixed_si_G sigma" .
-  qed
-
-  have combineD:
-    "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-      combine_abs (mixed_si_D sigma cc) (mixed_si_D sigma ex)
-        \<le> mixed_si_D sigma v"
-  proof -
-    fix cc ex v
-    assume comb: "(cc, ex, v) \<in> combines g"
-    have mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-      using comb
-      by (simp add: set_combine_predecessor_list[OF finC]
-          combine_predecessors_def)
-    have tree_mem: "mixed_si_cmb () cc ex \<in> set (mixed_si_trees g v)"
-      using mem by (auto simp: mixed_si_trees_def)
-    have "combine_abs (mixed_si_D sigma cc) (mixed_si_D sigma ex)
-        \<le> side_acc_dg (mixed_si_acc g bot0 s0d v)
-          sigma (mixed_si_trees g v)"
-      using locals_traverse_le_side_acc_dg[OF tree_mem]
-      by (simp add: mixed_si_combine_tree_local)
-    also have "... = locals
-        (eq (mixed_si_generator g bot0 s0d s0g) (v, ()) sigma)"
-      by (simp add: eq_mixed_si_generator)
-    also have "... \<le> mixed_si_D sigma v"
-      using eq_le[OF cover_combine[OF comb]]
-      by (simp add: mixed_si_D_def less_eq_dg_state_def)
-    finally show "combine_abs (mixed_si_D sigma cc) (mixed_si_D sigma ex)
-        \<le> mixed_si_D sigma v" .
-  qed
-
-  have combineG:
-    "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-      combine_abs (mixed_si_G sigma) (mixed_si_G sigma)
-        \<le> mixed_si_G sigma"
-  proof -
-    fix cc ex v
-    assume comb: "(cc, ex, v) \<in> combines g"
-    have mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-      using comb
-      by (simp add: set_combine_predecessor_list[OF finC]
-          combine_predecessors_def)
-    have tree_mem: "mixed_si_cmb () cc ex \<in> set (mixed_si_trees g v)"
-      using mem by (auto simp: mixed_si_trees_def)
-    have "combine_abs (mixed_si_G sigma) (mixed_si_G sigma)
-        \<le> globs (sides_of_rhs
-          (side_rhs_fold_dg (mixed_si_acc g bot0 s0d v)
-            (mixed_si_trees g v)) sigma (Inr ()))"
-      using sides_le_side_rhs_fold_dg[OF tree_mem, where k = "Inr ()"]
-      by (simp add: mixed_si_combine_tree_global less_eq_dg_state_def)
-    also have "... \<le> globs (sides_of_rhs
-        (mixed_si_generator g bot0 s0d s0g (v, ())) sigma (Inr ()))"
-      using sides_fold_le_mixed_si_generator[where k = "Inr ()"]
-      by (simp add: less_eq_dg_state_def)
-    also have "... \<le> mixed_si_G sigma"
-      using sides_le[OF cover_combine[OF comb], THEN le_funD, of "Inr ()"]
-      by (simp add: mixed_si_G_def less_eq_dg_state_def)
-    finally show "combine_abs (mixed_si_G sigma) (mixed_si_G sigma)
-        \<le> mixed_si_G sigma" .
-  qed
-
-  show ?thesis
-    unfolding mixed_si_postfix_def
-    using entryD entryG edgeD edgeG combineD combineG by blast
-qed
+  unfolding mixed_si_postfix_dg
+  by (rule mixed_si.dg_post_solution_postfix
+        [OF pp[unfolded mixed_si_generator_dg]
+            cover_entry cover_edge cover_combine finE no_enter finC])
 
 theorem mixed_si_postfix_collect_sound:
   assumes pf: "mixed_si_postfix g s0d s0g sigma"
@@ -459,29 +185,10 @@ theorem mixed_si_postfix_collect_sound:
     and soundD: "S \<le> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<le> \<lbrakk>s0g\<rbrakk>"
   shows "cfg_collect g S v \<le> mixed_si_gamma sigma v"
-proof -
-  have d_sound: "cfg_collect g S v \<le> \<lbrakk>mixed_si_D sigma v\<rbrakk>"
-    by (rule sound_transfer.post_fixpoint_sound_at
-          [OF sign_is_sound_transfer finE finC soundD])
-      (use pf in \<open>auto simp: mixed_si_postfix_def\<close>)
-  have entryG: "s0g \<le> mixed_si_G sigma"
-    using pf unfolding mixed_si_postfix_def by blast
-  have stepG:
-    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow>
-       apply_tf ivl_tf a (mixed_si_G sigma) \<le> mixed_si_G sigma"
-    using pf unfolding mixed_si_postfix_def by blast
-  have combineG:
-    "\<And>cc ex w. (cc, ex, w) \<in> combines g \<Longrightarrow>
-       combine_abs (mixed_si_G sigma) (mixed_si_G sigma)
-         \<le> mixed_si_G sigma"
-    using pf unfolding mixed_si_postfix_def by blast
-  have g_sound: "cfg_collect g S v \<le> \<lbrakk>mixed_si_G sigma\<rbrakk>"
-    by (rule sound_transfer.post_fixpoint_sound_at
-          [where tf = ivl_tf and env = "\<lambda>_. mixed_si_G sigma",
-           OF ivl_is_sound_transfer finE finC soundG stepG combineG entryG])
-  show ?thesis
-    using d_sound g_sound unfolding mixed_si_gamma_def by blast
-qed
+  unfolding mixed_si_gamma_dg
+  apply (rule mixed_si.dg_postfix_collect_sound
+        [OF pf[unfolded mixed_si_postfix_dg] finE finC])
+  using soundD soundG unfolding gamma_dg_def by blast
 
 corollary mixed_si_post_solution_collect_sound:
   assumes pp:

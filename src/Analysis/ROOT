@@ -72,6 +72,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Call_Spec_Sound
     Split_Cmp_Gen
     DG_Framework
+    DG_Soundness
     Retain_Analysis
     Sign_Side_Soundness
     Sign_Named_Global_Eff
