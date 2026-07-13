@@ -567,6 +567,14 @@ so the formalization does not overstate what it captures.
 | `combine_assign : … → lval option → D.t → ask → D.t` | assign return value | *(absent)* | **deferred** — `combines g :: (pp × pp × pp)` has no return `lval` |
 | `man` / `Queries.ask` | manager / queries | *(absent)* | **deferred** |
 
+> **Architectural correction (post-1C).** Goblint's framework never copies `G.t` into
+> `D.t`: `ctx.global` reads and `ctx.sideg` writes are the only global channel, and any
+> flow-sensitive snapshot of global information an analysis wants lives inside its own
+> `D`. The generic `retain_edge_tree` therefore sits at the wrong abstraction level — it
+> is a retain *analysis* (D = locals × global snapshot), not a framework strategy. See
+> `SPLIT_STATE_MIGRATION.md` §6 for the classification, the replacement design
+> (`Retain_Analysis.thy`), and the migration sequence.
+
 ### 7.2 Bridge lemmas (contract field → retained implementation)
 
 Every executable spec field is connected to the existing CMP path. Delivered in

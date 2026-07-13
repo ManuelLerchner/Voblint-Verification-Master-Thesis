@@ -18,6 +18,14 @@ tree constructors and factories, in the same theory (see the Stage 1C section
 below for the constructor audit, the retain finding, the executable-mirror
 audit and the Stage 1D readiness report). Stage 1D is design only.
 
+**Architectural correction (post-1C, implemented first step):** comparing
+against Goblint's `analyses.ml` showed the generic retain tree sits at the
+wrong abstraction level -- retain is an *analysis* (its `D` = locals x global
+snapshot), not a framework execution strategy. Section 6 has the corrected
+framework/analysis boundary, the component classification, the replacement
+design, and the migration sequence; the first implementation step is
+`src/Analysis/Generic/Solver/Context/Retain_Analysis.thy`.
+
 ## 1. Where the homogeneous representation is assumed
 
 The representation is `type_synonym 'a abs_state = "vname => 'a"`
@@ -285,11 +293,15 @@ Why retain stores global information inside the `Answer` payload:
   (`merge_state (split_state res) = res`, the Stage 1A isomorphism), giving a
   definitional equality (`split_retain_edge_tree_eq`). Nothing blocks the
   split representation.
-* The genuine Stage 1D consequence: for retain-style (and clean-style)
-  transfers the local unknown's value type must be the **full pair**
-  `('l, 'g) split_state` -- Goblint's `D` carrying a global copy -- whereas
-  unit/local/mixed transfers only ever put the local component in the Answer.
-  This is a typing decision, not a semantic blocker.
+* The architectural consequence (corrected post-1C, see section 6): the
+  snapshot belongs to the **retain analysis's own `D`**, not to the framework.
+  Goblint's framework never copies `G` into `D`; an analysis that wants a
+  flow-sensitive global snapshot chooses `D = locals x snapshot` itself.
+  `retain_edge_tree` is therefore reclassified from framework strategy to
+  analysis implementation; the pair-domain version lives in
+  `Retain_Analysis.thy` and is proven to reproduce it exactly. Unit/local/mixed
+  transfers keep a locals-only `D`. This remains a typing decision, not a
+  semantic blocker.
 
 #### Executable mirror audit
 
@@ -315,23 +327,23 @@ equal to their split versions.
 | Component | Readiness for independent `('l, 'g)` |
 | --- | --- |
 | vendor solver, `strategy_tree`, `seqcomp_tree`, `map_ltree`/`map_gtree`, `side_rhs_fold*` | **ready** (polymorphic in the payload) |
-| split trees / factories / generators (1B+1C artefacts) | **blocked only by type changes**: `Side` payloads become `'g abs_state` (`snd`), `Answer` payloads `'l abs_state` (unit/local/mixed) or the pair (retain/clean) |
-| solver unknown-value type | **blocked only by a type decision**: the vendor `eqsT` has a single value type `'d`, so `Inl`/`Inr` slots cannot be typed differently; Stage 1D sets `'d := ('l, 'g) split_state` with `wf_split`-style slot invariants (the existing `inr_slot_locals_bot` / `inl_slot_globals_bot` are exactly the two halves of `wf_split`). No solver modification needed. |
+| split trees / factories / generators (1B+1C artefacts) | **blocked only by type changes**: `Side` payloads become `'g abs_state` (`snd`), `Answer` payloads `'l abs_state`; retain/clean carry their snapshot inside their own analysis `D` (section 6), not in a framework payload type |
+| solver unknown-value type | **blocked only by a type decision**: the vendor `eqsT` has a single value type `'d`, so `Inl`/`Inr` slots cannot be typed differently; Stage 1D sets `'d` to a componentwise-ordered D-x-G value with `wf_split`-style slot invariants (the existing `inr_slot_locals_bot` / `inl_slot_globals_bot` are exactly the two halves of `wf_split`). **Not the raw pair**: `CFG_Def` imports `HOL-Library.Product_Lexorder`, so `'l * 'g` already carries the lexicographic order repo-wide and the componentwise `Product_Order` instances clash (arity conflict, observed). Stage 1D uses the copy type `dg_state` (`Retain_Analysis.thy`), which carries the componentwise `bounded_semilattice_sup_bot` instance. No solver modification needed. |
 | soundness statements | **blocked only by type changes**: `gamma_state` -> `gamma_split` (Stage 1A already provides it, heterogeneous, with `gamma_split_merge` recovering today's statements at `'l = 'g`) |
 | transfer records (`domain_transfer`, `effectful_domain_transfer`) | **blocked only by type changes**: fields over the pair; enter/combine get genuinely split types mirroring `enter_state` / `<s\|t>` |
 | executable layer | **blocked only by type changes**: `('l st * 'g st)` pair, components already exist |
-| retain/clean transfers | **resolved** (see the retain finding): need pair-valued local unknowns; not a semantic blocker |
-| **semantic blockers** | **none identified at the tree level.** The single constraint of substance is the vendor solver's one-value-type interface, and it is absorbed by `'d := ('l, 'g) split_state` without touching the solver. |
+| retain/clean transfers | **resolved as analyses** (section 6): each defines its own snapshot-carrying `D`; the framework stays `Answer : D`, `Side : G`. Not a semantic blocker. |
+| **semantic blockers** | **none identified at the tree level.** The single constraint of substance is the vendor solver's one-value-type interface, and it is absorbed by `'d := dg_state` (componentwise copy type) without touching the solver. |
 
 What remains before `locals : 'l, globals : 'g`:
 
 ```
-'d := ('l,'g) split_state at the eqsT level
+'d := ('l abs_state, 'g abs_state) dg_state at the eqsT level
   |
-  +-- trees: Side snd-typed, Answer fst-typed (pair for retain/clean)
-  |     [1B/1C split versions are the templates; drop merge_state at the
-  |      boundary instead of reassembling]
-  +-- transfer records over the pair; enter/combine split-typed
+  +-- trees: step_edge_tree (analysis-parametric); Side globs-typed,
+  |     Answer locals-typed; retain/clean become analyses whose D carries
+  |     the snapshot (Retain_Analysis.thy is the template)
+  +-- transfer records over dg_state; enter/combine split-typed
   +-- side_env / glob_env readings via gamma_split
   |     (slot invariants = wf_split halves, already stated)
   +-- soundness endpoints restated with gamma_split
@@ -359,3 +371,176 @@ Stage 1A gate: `Split_State.thy` and `TD_Side_CFG.thy` error-free in I/Q,
 empty. The `Voblint_Formalization` session is gated separately (an unrelated
 in-progress prototype theory currently breaks it); no Formalization theory is
 touched by Stage 1A.
+
+## 6. Architectural correction: retain is an analysis, not a framework strategy
+
+Stage 1C classified `retain_edge_tree` as "intentionally mixes" and planned to
+carry it into Stage 1D as a framework tree with a pair-valued Answer type.
+Comparing against Goblint's framework shows that classification put retain at
+the wrong abstraction level. This section is the corrected design; it
+supersedes any earlier wording that suggested generic retain survives into the
+final framework.
+
+### 6.1 Goblint comparison (`src/framework/analyses.ml`)
+
+In Goblint, `module type Spec` declares per analysis:
+
+* `module D : Lattice.S` -- the flow-sensitive local domain, chosen by the
+  analysis;
+* `module G : Lattice.S` -- the flow-insensitive global domain, chosen by the
+  analysis;
+* `ctx.global : V.t -> G.t` / `ctx.sideg : V.t -> G.t -> unit` -- the only
+  channel between the two.
+
+The framework transports `D` values along edges and accumulates `G` values at
+global unknowns. It **never automatically copies `G` into `D`**: a transfer
+that wants global information calls `ctx.global` and decides itself what (if
+anything) of the result to keep in its `D`. Analyses that retain flow-sensitive
+copies of global information (e.g. the privatization variants of the base
+analysis) do so by *defining `D` to contain that copy* -- a per-analysis domain
+decision, invisible to the framework.
+
+Our `retain_edge_tree` (`TD_Side_CFG.thy`) instead bakes "the local unknown
+carries the written globals" into a *generic tree constructor*, and
+`inl_glob_le_glob_env` / `sound_effectful_transfer_framed_le`
+(`Constraint_System.thy`) compensate at the framework level for local slots
+containing globals. Both exist only because the homogeneous `'a abs_state`
+made D and G the same type, so "keep the globals in the Answer" was a one-line
+payload change. That is historical, not architectural.
+
+### 6.2 Corrected responsibilities
+
+Framework:
+
+* the strategy tree transports `Answer : D` and `Side : G` (in
+  `Retain_Analysis.thy`: `step_edge_tree`, which queries the local and global
+  unknowns and forwards both to an analysis-supplied step function);
+* the solver knows only `D` and `G` (one `eqsT` value type; slot invariants);
+* the framework never assumes `D` contains `G` and never copies `G` into `D`.
+
+Analysis:
+
+* chooses `D` and `G`;
+* decides whether `D` contains only local information, local information plus
+  cached globals, summaries, snapshots, or anything else flow-sensitive;
+* implements its transfer, its `Side` publication, and discharges its own
+  soundness obligations (for a snapshot-carrying `D`: the analogue of
+  `inl_glob_le_glob_env`, i.e. "my snapshot is bounded by the published
+  globals", becomes an analysis lemma, not a framework premise).
+
+Retain under this boundary is one example analysis with
+`D = Local x GlobalSnapshot`, `G = Global`, not a framework feature.
+
+```
+                       FRAMEWORK (value-opaque)
+  vendor TD_side solver -- eqsT over one value type 'd; slot invariants
+      |
+  step_edge_tree step u = QueryL u; QueryG (); Side (fst (step d g));
+      |                   Answer (snd (step d g))        [never inspects 'd]
+      |
+      |  step : D => G => G x D          <-- the analysis boundary
+      v
+                       ANALYSES (choose D, G, step)
+  unit analysis            retain analysis                clean analysis
+  D = locals only          D = locals x snapshot          D = locals x snapshot
+  step = unit_step         step = retain_dg_step          (same pattern,
+  (restrict_local /        (snapshot maintained by         local-slot read
+   restrict_global)         the analysis itself)           only)
+      |                        |
+  = unit_edge_tree         = retain_edge_tree  (definitional equalities:
+                             step_edge_tree_unit / _retain; dg-form proven
+                             equivalent via the Stage-1A isomorphism)
+```
+
+### 6.3 Component classification (evidence-based)
+
+| Component | Evidence | Layer | Verdict |
+| --- | --- | --- | --- |
+| `unit_edge_tree`, `unit_combine_tree` (`TD_Side_CFG.thy:150,163`) | pure `Answer(restrict_local)` / `Side(restrict_global)` transport | framework (its `restrict_*` calls become the unit *analysis step* once `D`/`G` split; `step_edge_tree_unit` already factors them out) | KEEP |
+| `step_edge_tree`, `unit_step`, `retain_step` (`Retain_Analysis.thy`) | value-opaque tree + the two steps; `step_edge_tree_unit` / `step_edge_tree_retain` are definitional | framework core + analysis steps | KEEP (new) |
+| `retain_edge_tree` + traverse/sides/etf_full lemmas (`TD_Side_CFG.thy:201-245,444`) | differs from unit only in the Answer payload (`sides_retain_eq_unit`, `etf_full_retain_eq_unit_edge_tree`); the payload is analysis behaviour | retain analysis, currently in a framework file | REWRITE to a compatibility wrapper over `retain_step` / the retain analysis; then MOVE the retain-specific lemmas next to the analysis; DELETE once no caller remains |
+| `retain_etf_of_transfer` + soundness (`TD_Side_CFG.thy:590-644,877-928`) | factory instantiating every edge with `retain_edge_tree` | retain analysis implementation | MOVE (to the retain analysis theory) |
+| `inl_glob_le_glob_env` (`Constraint_System.thy:738`) | "a local unknown may carry globals, bounded by `glob_env`" -- a property of snapshot-carrying `D`s | retain analysis soundness obligation stated framework-wide | REWRITE: becomes the retain analysis's invariant on its own `D`; the framework keeps only `inl_slot_globals_bot` (= `wf_split` halves) |
+| `sound_effectful_transfer_framed_le` (`Constraint_System.thy:792`) | enter bound under the weaker retain premise; `framed_le_imp_framed` recovers the strict contract | retain analysis soundness | MOVE with the analysis; the framework contract stays `sound_effectful_transfer_framed` |
+| retain keyed invariant + exact-solution reduction (`TD_Side_Eff_Cmp_Gen.thy:314-658`), retain combine/collect endpoints (`:943,1036`) | soundness theorems for solutions whose local slots carry globals | retain analysis soundness theory | MOVE (they are parametric in the transfer only through `apply_etf etf a u = retain_edge_tree (F a) u` -- exactly the analysis's signature) |
+| `retain_edge_tree_st` (`Exec_Bridge.thy:212-278`) | executable mirror of the retain tree, `fun_of_st`-simulated | retain analysis, executable layer | MOVE with the analysis |
+| `sign_etf_retain` + `framed_le` instance (`Sign_Side_Soundness.thy:69-93,192-221`) | Sign instantiation of the retain factory | analysis instance (already analysis-layer) | KEEP (retarget imports when the factory moves) |
+| `split_retain_edge_tree`, `split_clean_edge_tree`, split factories (`Split_Cmp_Gen.thy:190-295`) | 1B/1C bridges, each `= original` | historical migration scaffolding | DELETE after the retain analysis replaces its callers (they were stepping stones to `Retain_Analysis.thy`) |
+| `clean_edge_tree`, `clean_etf_of_transfer` (`Clean_RRead_Sound.thy`) | same Answer-keeps-result pattern as retain (reads only the local slot) | clean analysis (same correction applies) | REWRITE/MOVE along the same sequence as retain |
+| Keyed retain examples (`Exec_Sign_Cmp_Keyed_Retain_*`, `Exec_Sign_Cmp_RRead_Split`, `Exec_Sign_Cmp_Keyed_Gen_Run`) | consumers exhibiting the precision gain | analysis usage | KEEP (retarget to the retain analysis when its executable layer lands) |
+
+No component is retained for historical reasons: everything retain-specific is
+scheduled to the analysis layer; the only framework survivors are the
+value-opaque tree shape and the slot invariants.
+
+### 6.4 Replacement design (implemented first step: `Retain_Analysis.thy`)
+
+Domain. `datatype ('l, 'g) dg_state = DG (locals: 'l) (globs: 'g)` with the
+componentwise `bounded_semilattice_sup_bot` instance. A copy type is
+*required*, not stylistic: `CFG_Def` imports `HOL-Library.Product_Lexorder`,
+so raw pairs carry the lexicographic order repo-wide and the componentwise
+`Product_Order` instances raise an arity conflict (observed:
+`prod :: (inf, inf) inf` vs `prod :: (linorder, linorder) inf`). The retain
+analysis's local domain is `D = ('a abs_state, 'a abs_state) dg_state`:
+locals in `locals`, the flow-sensitive global snapshot in `globs`.
+Conversions `pair_of_dg` / `dg_of_pair` connect to the Stage-1A
+`split_state` pair, `merge_dg` / `split_dg` to the homogeneous state
+(`merge_split_dg`), `wf_dg` to `wf_split`.
+
+Transfer. `retain_dg_step f d g = (let res = f (merge_dg d ⊔ globs g) in
+(emb_glob (restrict_global res), split_dg res))`: read own `D` (which contains
+the snapshot) joined with the global slot, run the base transfer, keep the new
+snapshot in the Answer. The snapshot is written by the analysis's own step --
+the framework tree (`step_edge_tree`) forwards values it never inspects.
+
+Publication. `Side` carries `emb_glob (restrict_global res)` -- a pure-`G`
+value (local part `bot`). `retain_dg_sides_locals_bot` proves the analysis
+never publishes locals; `retain_dg_traverse_wf` proves every Answer is
+well-split. Both hold for arbitrary assignments, not just represented ones.
+
+Soundness responsibilities. The framework keeps: slot typing (`Inl` = `D`,
+`Inr` = `G`) and the generic collecting spine. The analysis owes: (a) its
+transfer soundness (today: `sound_effectful_transfer` for
+`retain_etf_of_transfer`, discharged from the base transfer), (b) the snapshot
+bound "`globs` of my `D` sits below the published globals" (today:
+`inl_glob_le_glob_env`, derived from exactness in `TD_Side_Eff_Cmp_Gen`), and
+(c) the framed enter bound under that snapshot invariant (today:
+`sound_effectful_transfer_framed_le`).
+
+Equivalence to current behaviour (proved, first-pass):
+
+| Theorem | Statement |
+| --- | --- |
+| `step_edge_tree_unit` / `step_edge_tree_retain` | the framework tree with the unit/retain step *is* `unit_edge_tree` / `retain_edge_tree` (definitional) |
+| `retain_dg_traverse` (+ `_merge`) | pair-domain evaluation = `split_dg` of the homogeneous retain evaluation; `merge_dg` recovers it exactly |
+| `retain_dg_sides_Inr` (+ `_globs`) | pair-domain global publication = embedded homogeneous retain publication |
+| `retain_dg_traverse_wf`, `retain_dg_sides_locals_bot` | slot discipline for every assignment |
+
+Identical semantics, identical (executable-layer untouched) behaviour,
+identical soundness: nothing existing was modified, weakened, or deleted.
+
+### 6.5 Migration sequence
+
+1. **(done)** `Retain_Analysis.thy`: framework `step_edge_tree`; unit/retain
+   as steps with definitional equalities; `dg_state` copy lattice; the
+   pair-domain retain analysis with traverse/sides equivalence to
+   `retain_edge_tree` under the Stage-1A isomorphism.
+2. Redefine `retain_edge_tree` as the wrapper
+   `step_edge_tree (retain_step f)` (definitional, `step_edge_tree_retain`
+   makes it a one-line change) and move the retain factory + its soundness
+   lemmas into the analysis theory. Same for `clean_edge_tree`.
+3. Move `inl_glob_le_glob_env` + `sound_effectful_transfer_framed_le` + the
+   keyed retain invariant block (`TD_Side_Eff_Cmp_Gen.thy:314-658`) into the
+   retain analysis theory; the framework keeps `inl_slot_globals_bot` and
+   `sound_effectful_transfer_framed` only.
+4. Stage 1D typing: `'d := dg_state` at the `eqsT` level; unit/local/mixed
+   analyses use a locals-only `D`, the retain/clean analyses use the
+   snapshot-carrying `D` from step 1; the 1B/1C `split_*` scaffolding in
+   `Split_Cmp_Gen.thy` is deleted as its callers retarget.
+5. Executable layer: `dg_state` over `'a st`, retarget the keyed retain
+   examples; delete `retain_edge_tree_st` from `Exec_Bridge`.
+
+End state: generic retain tree gone (or reduced to the step-2 wrapper during
+the transition), retain implemented through the standard `Answer : D` /
+`Side : G` interface, and no framework code depending on "local state contains
+globals".
