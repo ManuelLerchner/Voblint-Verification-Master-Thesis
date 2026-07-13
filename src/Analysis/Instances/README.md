@@ -26,6 +26,7 @@ part of the reusable analysis instance.
 | `Sign/` | 7-element sign lattice | full soundness + executable + end-to-end |
 | `Interval/` | Interval domain (`ivl`) | full soundness + executable + end-to-end (`side_ivl_analysis_sound`) |
 | `NamedGlobalSign/` | Named-global sign (mixed-flow, side-effecting) | executable + constant-route soundness through the solver; the conditional-flag route is a **documented boundary** (`flag_etf_mono_sides_unprovable`, `oops`) — provably not `mono_sides`, hence not solver-drivable |
+| `Mixed/` | Sign answers (`D`) + one flow-insensitive Interval side invariant (`G`) on the heterogeneous `dg_spec` interface | collecting soundness (`mixed_si_post_solution_collect_sound`) + executable solver run; first analysis with two genuinely different domains (see `docs/SPLIT_STATE_MIGRATION.md` §6.6) |
 | `Tooling/` | GraphViz CFG/analysis output | utility, no soundness obligation |
 
 ## Adding a domain

@@ -71,6 +71,7 @@ Each of the four `inc`-based examples defines its own program locally (self-cont
 | File | Role |
 | --- | --- |
 | `Example_Proc_GraphViz.thy` | Plain procedural CFG DOT (`plain_dot_of_prog_lit`; two demo programs) |
+| `Example_Mixed_Sign_Interval_GraphViz.thy` | Mixed Sign/Interval analysis (`Instances/Mixed`) on `x := -1; x := 2`: solver run + `part_post_solution` + expected values (exit answer `SPos`, side invariant `[-1, 2]`); DOT with Sign answers at nodes and the Interval invariant in its own cluster |
 
 ## Cross-cutting notes
 

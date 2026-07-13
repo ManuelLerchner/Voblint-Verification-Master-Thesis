@@ -472,6 +472,51 @@ reachable states, so it contains `-1` and the entry seed `0`. The same local
 variable appears in both facts because their meanings differ by sensitivity
 and abstraction, not because `x` belongs to two source-language namespaces.
 
+#### Where `G` flows (mechanism)
+
+The five stations of a `G` value, with the definitions that carry it:
+
+1. **Transfer.** The analysis supplies `dg_spec_step S a : D => G => G x D`
+   (`mixed_si_step a d g = (apply_tf ivl_tf a g, apply_tf sign_tf a d)`).
+   The framework never applies `a` to `G` itself; it only calls the step.
+2. **Side publication.** `dg_edge_tree step u` queries the predecessor's
+   local unknown and the global slot, then emits
+   `Side () (DG bot (fst r))` before answering `Answer (DG (snd r) bot)`.
+   The boundary theorems `dg_edge_tree_answer_pure_D` /
+   `dg_edge_tree_side_pure_G` hold for every step: Answers carry no `G`,
+   publications carry no `D`.
+3. **Equation system.** `side_cfg_T_eff_cmp_seed_dg` folds the edge and
+   combine trees with `side_rhs_fold_dg`, which joins only the `locals` of
+   Answers into the per-point equation result; `Side` nodes pass through the
+   fold untouched (`seqcomp_tree`). The entry equation additionally wraps
+   `Side (gkey c) (DG bot s0g)`: the `G` seed is published, never folded
+   into an answer.
+4. **Solver.** The vendored side-effecting TD solver accumulates every
+   publication into the global unknown by join; its output contract
+   `part_post_solution` demands `sides_of_rhs (T u) sigma <= sigma` for each
+   solved unknown, so the final `sigma (Inr ())` upper-bounds every
+   publication *evaluated at the final `sigma`*.
+5. **Theorem.** `mixed_si_postfix` reads that contract back as
+   `apply_tf ivl_tf a (mixed_si_G sigma) <= mixed_si_G sigma` for every edge,
+   i.e. `G` is one transfer-closed invariant. `mixed_si_postfix_collect_sound`
+   then instantiates the generic `sound_transfer.post_fixpoint_sound_at` with
+   the *constant* environment `(%_. mixed_si_G sigma)`, and intersects with
+   the flow-sensitive `D` result: `mixed_si_gamma sigma v =
+   [[mixed_si_D sigma v]] Int [[mixed_si_G sigma]]`.
+
+So `G` is **analysis-defined shared information**: whatever the analysis
+publishes through `Side`, joined by the solver, constrained only by the
+analysis's own soundness proof. It is not the `is_global` half of an IMP2
+store (that is one possible choice, the one the unit analysis makes), not a
+copy of `D` (slot purity), and flow-insensitivity is a property of *this*
+analysis's decision to publish transfer images of the single shared summary —
+the digest/keyed layers publish context-indexed `G`s through the same
+mechanism. The final interval is exactly the join of the entry seed and one
+publication per edge because the example is loop-free and each publication is
+a constant-assignment image: nothing else ever reaches the `Inr ()` unknown,
+and `part_post_solution` forces at least that join while the always-join TD
+run computes exactly it.
+
 Its DOT output annotates CFG nodes with Sign stores and renders the shared
 Interval store in a separate side-invariant cluster. This exposes the domain
 split in the executable pipeline.
@@ -754,27 +799,27 @@ hetero validation.
 | `restrict_local` / `restrict_global` | the homogeneous encoding of slot projection; dissolves into `locals`/`globs` at Stage 1D |
 | `clean_edge_tree` (`Clean_RRead_Sound`) | no -- clean is an analysis; remaining blocker, follows the retain path |
 
-#### Remaining legacy homogeneous components
+#### Remaining homogeneous components (classification)
 
-These components remain intentionally; none blocks the abstract heterogeneous
-pipeline:
+Everything in the framework that still assumes one lattice, `'a abs_state`,
+`gamma_state`, `combine_abs`, or exists only as migration transport. None
+blocks the heterogeneous pipeline; the classification drives Stage 2 (§7).
 
-1. `effectful_domain_transfer`, `edge_tf_tree`, `unit_edge_tree`,
-   `unit_combine_tree`, and `side_cfg_T_eff_cmp_seed` provide the existing
-   homogeneous API, executable transports, and compatibility target.
-2. The collecting-soundness locales remain stated over that API. The
-   heterogeneous homogeneous instance reaches them through proved equation
-   and post-fixpoint equality, preserving the endpoint statements.
-3. `restrict_local` / `restrict_global` remain in homogeneous analyses and in
-   the compatibility definitions. Heterogeneous framework plumbing uses
-   `locals` / `globs` projections instead.
-4. **Clean analysis extraction** (step 5): `clean_edge_tree` +
-   `clean_etf_of_transfer` still sit in `Clean_RRead_Sound` with the seeded
-   spine built on them. This is a later analysis migration, not Stage 1D.
-5. **Executable dg layer**: componentwise widening and narrowing for
-   `dg_state` over executable stores, plus the mixed Sign/Interval solver and
-   annotated-CFG witness, are implemented. Existing homogeneous examples
-   remain on their compatibility API.
+| Component | Where | Classification | Justification |
+| --- | --- | --- | --- |
+| `dg_state` slot packing (one solver value type) | `DG_Framework` | KEEP | the vendored TD solver has a single value lattice; `dg_edge_tree_answer_pure_D` / `dg_edge_tree_side_pure_G` prove the packing is invisible to analyses |
+| slot-typing invariants (`inl_slot_globals_bot`, `inr_slot_locals_bot`, keyed variants) | `Constraint_System`, cmp layers | KEEP | wf-facts of the single-value-type encoding; Goblint's two-typed unknowns need none, a packed encoding does |
+| `sound_effectful_transfer(_framed, _framed_le)` | `Constraint_System` | KEEP (until §7 GENERALIZE lands) | the analysis-agnostic soundness contract of the homogeneous API; the whole existing endpoint tower is stated over it |
+| `sound_transfer` + `gamma_state`-typed collecting lemmas (`post_fixpoint_sound_at`) | `Constraint_System(_Sound)` | GENERALIZE | Stage 2 hoists the mixed analysis's two-invocation pattern into a `(D, G, gammaD, gammaG)` locale; the homogeneous lemmas become its `D = G` instance |
+| `effectful_domain_transfer`, `edge_tf_tree`, homogeneous generators (`side_cfg_T_eff_cmp`, `side_cfg_T_eff_cmp_seed`, `spec_generator`) | `Constraint_System`, `TD_Side_Eff_Cmp_Gen`, `Exec_Cmp_Bridge`, `Call_Spec_Generator` | DEFER | the proven soundness spine and every instance ride on them; retire only after Stage 2 re-derives the endpoints as specializations |
+| `restrict_local` / `restrict_global` | `TD_Side_CFG` + homogeneous analyses | KEEP | the *unit analysis's* definition of its store split; analysis-layer semantics, no longer framework plumbing (`locals`/`globs` are) |
+| `combine_abs` | homogeneous analyses, `dgs_combine` fields | KEEP | an analysis's combine choice, not a framework assumption; the mixed analysis picks its own combine per domain |
+| `unit_edge_tree`, `unit_combine_tree`, `unit_etf_of_transfer`, `step_edge_tree` | `TD_Side_CFG`, `DG_Framework` | DEFER | the base analysis's homogeneous trees; consumed by the existing spine and by `Retain_Analysis`; fold onto `unit_dg_spec` when Stage 2 flips primary/derived |
+| unit transport (`dg_env`, `dg_rep_flat`, `pack_dg_tree` + traverse/sides/dep lemmas, `part_post_solution_pack_dg_iff`, `side_cfg_T_eff_cmp_seed_dg_unit`) | `DG_Framework` | REMOVE (after §7) | pure compatibility bridge; once the homogeneous endpoints are `D = G` specializations of the native locale, the bridge carries nothing |
+| retain transport (`retain_hetero_rep`, `retain_dg_*_rep*`, `part_post_solution_retain_dg_iff`) | `Retain_Analysis` | REMOVE (after §7) | validation-era equivalence; a native retain soundness proof replaces the detour through the homogeneous endpoint |
+| Stage-1B split layer (`Split_Cmp_Gen`: `split_etf_of_transfer`, `side_cfg_T_eff_cmp_split_seed`, `spec_generator_split`) + `Sign_Call_Spec` Stage-1B subsection | `Split_Cmp_Gen`, `Sign_Call_Spec` | REMOVE (after §7) | superseded scaffolding; sole remaining consumer is its own sign witness; `DG_Framework` imports it only as a conduit to `Call_Spec_Generator`/`Split_State` |
+| `clean_edge_tree` + `clean_etf_of_transfer` | `Clean_RRead_Sound` | DEFER | clean is an analysis (same finding as retain); extraction follows the retain path, independent of Stage 2 |
+| homogeneous executable examples (`Exec_*` runs, keyed retain examples) | `Formalization/Examples` | KEEP | they demonstrate the homogeneous instances, which remain first-class `D = G` analyses |
 
 #### Post-cleanup dependency graph
 
@@ -795,3 +840,114 @@ Constraint_System (framework: slot invariants, sound_effectful_transfer*,
                      +-- Sign_Side_Soundness (instances: sign unit/retain)
                           +-- Sign_Exec_Sound -> keyed retain examples
 ```
+
+## 7. Stage 2 plan: native heterogeneous soundness
+
+Stage 1D proves soundness of heterogeneous analyses by *transport*: pack the
+heterogeneous system, show it equals a homogeneous one, use the homogeneous
+endpoint. The mixed analysis already demonstrates the alternative — prove
+soundness *natively* from the post-solution contract — but does so with
+analysis-specific text. Stage 2 hoists that text into the framework, so
+compatibility proofs are replaced by native proofs, not duplicated by them.
+
+### 7.1 Primary semantics
+
+The primary concretization becomes the two-domain intersection the mixed
+analysis already uses:
+
+```
+gamma_dg gammaD gammaG sigma (v, c) =
+  gammaD (locals (sigma (Inl (v, c)))) Int gammaG (globs (sigma (Inr (gkey c))))
+```
+
+`gamma_split` (Split_State.thy) is its store-partitioned instance: `gammaD`
+constrains only non-`is_global` names, `gammaG` only `is_global` names — that
+is a *choice of the unit analysis*, not of the framework. The homogeneous
+`gamma_state` is recovered at `D = G` by `gamma_split_merge` /
+`gamma_split_eq_sup`. Nothing about `gamma_dg` mentions stores at all: `D` and
+`G` only need their own concretizations into `store set`.
+
+### 7.2 The native locale
+
+One locale, shaped after `mixed_si_postfix` / `mixed_si_postfix_collect_sound`
+(whose proof is the generic proof with `sign_tf` / `ivl_tf` inlined):
+
+```
+locale sound_dg_spec =
+  fixes S      :: "('dl, 'dg) dg_spec"
+    and gammaD :: "'dl => store set"
+    and gammaG :: "'dg => store set"
+  assumes step_D_sound:  edge semantics from gammaD d Int gammaG g
+                         lands in gammaD (snd (dg_spec_step S a d g))
+      and step_G_sound:  ... in gammaG (fst (dg_spec_step S a d g))
+      and combine sound: both projections of dgs_combine
+      and monotonicity of the projections used by the fold
+```
+
+Generic theorems inside the locale, all following the existing mixed proof
+line by line with `dg_spec_step` in place of the concrete transfers:
+
+1. `dg_post_solution_postfix` — `part_post_solution` of
+   `side_cfg_T_eff_cmp_seed_dg` + coverage of entry / edge targets / combine
+   targets implies the edge-wise postfix facts for `D` and the
+   publication-closure facts for `G` (generalizes
+   `mixed_si_post_solution_postfix`).
+2. `dg_postfix_collect_sound` — the postfix facts imply
+   `cfg_collect g S0 v <= gamma_dg ...` (generalizes
+   `mixed_si_postfix_collect_sound`; internally two invocations of the
+   collecting induction, the `G` one at a constant environment).
+
+### 7.3 What disappears, what specializes
+
+Compatibility lemmas that lose their role (deleted once step 4 below lands):
+
+* unit transport: `dg_env`, `dg_rep_flat`, `pack_dg_tree` and its
+  traverse/sides/dep lemmas, `part_post_solution_pack_dg_iff`,
+  `part_solution_pack_dg_iff`, `side_cfg_T_eff_cmp_seed_dg_unit`,
+  `unit_dg_spec_traverse/_sides/_combine_*`;
+* retain transport: `retain_hetero_rep`, `retain_dg_generator` rep-equality
+  chain, `part_post_solution_retain_dg_iff`,
+  `sign_retain_dg_post_fixpoint_iff` (its *statement* is subsumed by the
+  native retain interpretation);
+* the Stage-1B layer: `Split_Cmp_Gen.thy` and the `Sign_Call_Spec` Stage-1B
+  subsection (`DG_Framework` then imports `Call_Spec_Generator` directly).
+
+Existing proofs that become specializations (statements preserved):
+
+* `mixed_si_post_solution_postfix` / `mixed_si_postfix_collect_sound` — an
+  interpretation of `sound_dg_spec` at `mixed_si_spec`, `gammaD` the sign
+  `gamma_state`, `gammaG` the interval `gamma_state` (the two concrete
+  transfer-soundness facts discharge the locale assumptions);
+* the unit/sign homogeneous endpoints (`side_sign_analysis_sound`,
+  `sign_spec_post_fixpoint_sound`, interval siblings) — `D = G`
+  interpretations with `gammaD = gammaG = gamma_state`, replacing the
+  pack-transport route; endpoint statements unchanged;
+* retain — an interpretation at `D = dg_state locals snapshot`,
+  `gammaD = gamma of merge`, making the snapshot's soundness a locale
+  premise discharged by `sound_effectful_transfer_retain_of_transfer`'s
+  ingredients.
+
+What stays untouched: the vendored solver and its `part_post_solution`
+contract, `dg_state` packing + slot-purity boundary theorems,
+`side_rhs_fold_dg` and the generic fold/traverse/sides lemmas, every
+per-domain transfer-soundness fact (`sign_is_sound_transfer`,
+`ivl_is_sound_transfer`, ...) — they become the locale-premise suppliers.
+
+### 7.4 Steps and gates
+
+1. Add `gamma_dg` + the `sound_dg_spec` locale + the two generic theorems
+   (new theory `DG_Soundness.thy`, imports `DG_Framework`). Gate: green
+   `Voblint_Analysis`, mixed analysis re-proved as interpretation, zero new
+   `sorry`.
+2. Re-derive the homogeneous unit/sign/interval endpoints as `D = G`
+   interpretations. Gate: endpoint theorem statements byte-identical,
+   `Voblint_Formalization` examples unchanged.
+3. Native retain interpretation; delete the retain transport chain. Gate:
+   `Retain_Analysis` shrinks, no consumer breaks.
+4. Delete the unit transport block in `DG_Framework` and the Stage-1B layer.
+   Gate: full-DAG green build; the §6.6 classification table's REMOVE rows
+   are empty.
+
+Context-indexed and digest-refined `G` (the cmp/ctx/digest tower) is *not*
+re-proved in Stage 2; it keeps riding the homogeneous API until the clean
+analysis extraction (DEFER rows) migrates it.

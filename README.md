@@ -152,6 +152,20 @@ context-indexed soundness, keyed/combine soundness, seeded activation soundness,
 and the recursive `twfr` witness theorem. The digest spine
 `context_collect_sound` runs in parallel.
 
+### Independent D and G domains
+
+Following Goblint's `analyses.ml`, the framework transports two analysis-chosen
+domains without inspecting either: per-point answers `D` and side-published
+facts `G`, packed into disjoint slots of the `dg_state` copy lattice
+(`DG_Framework.thy`). An analysis is a `dg_spec` record of
+`step : D => G => G x D` functions; the seeded CMP generator
+`side_cfg_T_eff_cmp_seed_dg` turns it into the solver's equation system.
+`Instances/Mixed/Mixed_Sign_Interval.thy` is the witness that the split is
+real: flow-sensitive Sign answers next to one flow-insensitive Interval side
+invariant, sound and executable
+(`Example_Mixed_Sign_Interval_GraphViz.thy`). The homogeneous interfaces
+remain as proven-equal specializations (`docs/SPLIT_STATE_MIGRATION.md`).
+
 | Role | Meaning | Representative |
 | --- | --- | --- |
 | Canonical spine | proved end-to-end soundness | `source_reaches_side_analyse_eff`, `rdiv_witness_G_over_approximated` |
