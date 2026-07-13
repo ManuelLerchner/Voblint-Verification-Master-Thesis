@@ -20,6 +20,76 @@ generator redesign is needed.
 
 ---
 
+## 0. Architectural correction (N2 pivot, 2026-07-13)
+
+A source audit for N2 ("caller-state-dependent `enter`") found the target is
+**already met at the framework level** — and on a different spine than expected.
+Two parallel spines exist:
+
+| | Spine | Carrier | `enter` shape | Instances |
+| --- | --- | --- | --- | --- |
+| **Legacy** | `Call_Spec` / `context_collecting_soundness` | homogeneous `abs_state` | `entry_seed :: C => D` (context-seeded) | **Sign only** |
+| **Survivor** | `sound_dg_spec` (DG spine) | opaque `D`/`G` | `dgs_enter :: D => G => G x D` (**reads caller `D`**) | **Mixed** (`mixed_si`), **Retain** (`unit_dg_spec` diagonal) |
+
+`dgs_enter` already consumes the caller's `D`, so it **already matches the FM 2026
+caller-state-dependent `enter`** (eqs. 2–4). N2 is therefore not a redesign of
+`enter`; it is **convergence**: move the maintained analyses onto `sound_dg_spec`
+and retire the homogeneous `Call_Spec`/`entry_seed` tower.
+
+**Dependency-cone facts driving the plan:**
+
+* `Sign_Call_Spec` is a **dead leaf** — imported by nothing, endpoints
+  (`Sign_spec.*`, `sign_spec_post_fixpoint_sound`) consumed by nothing. It is a
+  demonstration that Sign fits the Goblint contract, not a maintained endpoint;
+  Sign's examples ride `sign_etf` / the generic CMP path directly.
+* `Call_Spec_Sound` is imported only by `Sign_Call_Spec`.
+* `DG_Framework` imports `Call_Spec_Generator` but references **none** of its
+  names — the import only transitively pulls in the `Exec_Cmp_Bridge` /
+  `TD_Side_Eff_Cmp_*` substrate. Re-pointing that import to the substrate
+  directly severs the coupling and isolates the whole `Call_Spec` tower.
+* The CMP kernel (`Exec_Cmp_Bridge`, `TD_Side_Eff_Cmp_*`) is shared substrate for
+  **both** spines and stays (it is not the `Call_Spec` spec wrapper).
+
+**Sequence:** (1) sever `DG_Framework`'s `Call_Spec_Generator` import; (2) give
+Sign a native `sound_dg_spec` endpoint via the `unit_dg_spec sign_tf` diagonal,
+mirroring `mixed_si`; (3) prove the Sign DG endpoint sound with unchanged
+collecting-soundness statement; (4) audit Interval (DG interpretation only if it
+is a maintained endpoint, not straight-line scaffolding); (5) delete the
+`Call_Spec` tower (`Call_Spec`, `Call_Spec_Generator`, `Call_Spec_Sound`,
+`Sign_Call_Spec`) once its cone is empty. Stages N3/N4 below are the earlier,
+broader framing of the same convergence; this section is the operative plan.
+
+### N2 outcome — DELIVERED (2026-07-13)
+
+* **DG import severed.** `DG_Framework` now imports `Exec_Cmp_Bridge` directly (it
+  referenced no `Call_Spec_Generator` name; the import only carried the CMP
+  substrate). The `Call_Spec` tower became an isolated island.
+* **Sign migrated.** `src/Analysis/Instances/Sign/Sign_DG.thy`:
+  `interpretation sign_dg: sound_dg_spec "unit_dg_spec sign_tf" gamma_unit`
+  (discharged by `sound_dg_spec_unit[OF sign_is_sound_transfer]`), with the native
+  endpoint `sign_dg_post_solution_collect_sound`
+  (`cfg_collect g S0 v ⊆ sign_dg_gamma sigma v` from a generator post-solution) —
+  the same collecting-soundness shape `mixed_si` proves. Sign now rides the survivor
+  spine with the same caller-`D` `dgs_enter` as Mixed/Retain.
+* **Executables untouched.** Sign's examples ride `sign_etf` / the generic CMP path,
+  not the deleted wrapper — no executable result changed. `Sign_Call_Spec` was a dead
+  leaf (imported by nothing, endpoints consumed by nothing).
+* **Interval: no DG interpretation** (task 4 audit). Interval never had a `Call_Spec`
+  wrapper; its straight-line endpoint is `side_ivl_analysis_sound` and its
+  context-sensitive behavior is exercised through the executable CMP-seed digest
+  family (seeded-clean / keyed-retain, shared substrate — kept). A native DG endpoint
+  is available generically via `sound_dg_spec_unit`/`sound_dg_spec_retain` at `ivl_tf`
+  if a consumer ever needs one; adding a bare `Interval_DG` mirror now would be
+  consumerless scaffolding.
+* **Tower deleted.** `Call_Spec.thy`, `Call_Spec_Generator.thy`,
+  `Call_Spec_Sound.thy`, `Sign_Call_Spec.thy` removed; `Routing/` top level now holds
+  only the `Support/` context-routing proof infrastructure (task 8 substrate,
+  preserved). READMEs and `ROOT` updated.
+* **Cone now empty:** no `.thy` references the deleted names; `Voblint_Analysis` +
+  `Voblint_Formalization` green, no new `sorry`.
+
+---
+
 ## 1. Audit: where each axis lives today
 
 Goblint's `Spec` boundary (`src/framework/analyses.ml`):

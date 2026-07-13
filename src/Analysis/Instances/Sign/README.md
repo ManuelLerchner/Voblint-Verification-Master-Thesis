@@ -19,4 +19,5 @@ are not part of the reusable instance.
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Exec_Sound.thy` | the computed sign result and its certified soundness |
 | `Sign_Side_Soundness.thy` | effectful transfer instance; `side_sign_analysis_sound` |
+| `Sign_DG.thy` | `sound_dg_spec` interpretation (`unit_dg_spec` diagonal); `sign_dg_post_solution_collect_sound` |
 | `Value_Digest_Read.thy` | sign instance of the value-carried digest reader (`Value_Digest_Reader`) |

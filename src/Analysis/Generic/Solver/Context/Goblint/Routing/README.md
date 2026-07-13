@@ -1,12 +1,8 @@
 # Routing
 
-Call and context-routing contract layers.
-
-| File | Role |
-| --- | --- |
-| `Call_Spec.thy` | Goblint-inspired call/routing contract |
-| `Call_Spec_Generator.thy` | generator wiring for the call spec |
-| `Call_Spec_Sound.thy` | collecting soundness from the generated spec |
+Context-routing proof support for the seeded CMP generator. The call/routing
+contract itself is the heterogeneous DG spine (`DG/`); analyses interpret
+`sound_dg_spec` directly, so no separate homogeneous call-spec wrapper lives here.
 
 ### `Routing/Support/`
 

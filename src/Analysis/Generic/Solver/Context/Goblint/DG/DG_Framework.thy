@@ -1,5 +1,5 @@
 theory DG_Framework
-  imports Call_Spec_Generator
+  imports "Voblint_Analysis.Exec_Cmp_Bridge"
 begin
 
 section \<open>The D/G framework core\<close>
