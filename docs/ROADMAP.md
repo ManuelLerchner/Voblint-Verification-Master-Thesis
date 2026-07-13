@@ -154,7 +154,9 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
   and executable (`Example_Mixed_Sign_Interval_GraphViz.thy`).
 - **Next boundary:** generalize native soundness beyond abstract-state-shaped
   `D`/`G`, then port the context/digest tower from the homogeneous
-  `effectful_domain_transfer` API. See `docs/SPLIT_STATE_MIGRATION.md`.
+  `effectful_domain_transfer` API. Audit + staged plan (N1–N4):
+  `docs/DGCV_LAYER_MIGRATION.md`; limitation tables:
+  `docs/SPLIT_STATE_MIGRATION.md`.
 
 ### Trace-context analysis (planned — umbrella)
 

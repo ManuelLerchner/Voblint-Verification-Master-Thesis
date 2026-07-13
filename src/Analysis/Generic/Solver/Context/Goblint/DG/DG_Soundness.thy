@@ -139,9 +139,9 @@ qed
 subsection \<open>Analysis-parametric heterogeneous soundness\<close>
 
 locale sound_dg_spec =
-  fixes S :: "('d::sound_domain abs_state,
-                'g::sound_domain abs_state) dg_spec"
-    and gammaDG :: "'d abs_state \<Rightarrow> 'g abs_state \<Rightarrow> store set"
+  fixes S :: "('D::bounded_semilattice_sup_bot,
+                'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
   assumes gammaDG_mono:
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow>
         gammaDG d g \<subseteq> gammaDG d' g'"
@@ -159,7 +159,7 @@ begin
 definition dg_cmb ::
   "unit \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
-        ('d abs_state, 'g abs_state) dg_state) strategy_tree"
+        ('D, 'G) dg_state) strategy_tree"
 where
   "dg_cmb ctx cc ex =
      map_gtree (\<lambda>_. ())
@@ -167,9 +167,9 @@ where
          (dg_spec_combine_tree S cc ex))"
 
 definition dg_gen ::
-  "cfg \<Rightarrow> 'd abs_state \<Rightarrow> 'd abs_state \<Rightarrow> 'g abs_state
+  "cfg \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'G
    \<Rightarrow> (pp \<times> unit, unit,
-        ('d abs_state, 'g abs_state) dg_state) eqsT"
+        ('D, 'G) dg_state) eqsT"
 where
   "dg_gen g bot0 s0d s0g =
      side_cfg_T_eff_cmp_seed_dg (\<lambda>_. ()) dg_cmb
@@ -177,21 +177,21 @@ where
 
 definition dg_D ::
   "(pp \<times> unit + unit \<Rightarrow>
-      ('d abs_state, 'g abs_state) dg_state)
-   \<Rightarrow> pp \<Rightarrow> 'd abs_state"
+      ('D, 'G) dg_state)
+   \<Rightarrow> pp \<Rightarrow> 'D"
 where
   "dg_D sigma v = locals (sigma (Inl (v, ())))"
 
 definition dg_G ::
   "(pp \<times> unit + unit \<Rightarrow>
-      ('d abs_state, 'g abs_state) dg_state)
-   \<Rightarrow> 'g abs_state"
+      ('D, 'G) dg_state)
+   \<Rightarrow> 'G"
 where
   "dg_G sigma = globs (sigma (Inr ()))"
 
 definition dg_gamma ::
   "(pp \<times> unit + unit \<Rightarrow>
-      ('d abs_state, 'g abs_state) dg_state)
+      ('D, 'G) dg_state)
    \<Rightarrow> pp \<Rightarrow> store set"
 where
   "dg_gamma sigma v = gammaDG (dg_D sigma v) (dg_G sigma)"
@@ -199,7 +199,7 @@ where
 definition dg_trees ::
   "cfg \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit,
-      ('d abs_state, 'g abs_state) dg_state) strategy_tree list"
+      ('D, 'G) dg_state) strategy_tree list"
 where
   "dg_trees g v =
      map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
@@ -209,8 +209,8 @@ where
        (combine_predecessor_list g v)"
 
 definition dg_acc ::
-  "cfg \<Rightarrow> 'd abs_state \<Rightarrow> 'd abs_state \<Rightarrow> pp
-   \<Rightarrow> 'd abs_state"
+  "cfg \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> pp
+   \<Rightarrow> 'D"
 where
   "dg_acc g bot0 s0d v =
      (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
@@ -232,9 +232,9 @@ lemma sides_fold_le_dg_gen:
   by (cases "v = cfg_entry g") (simp_all add: Let_def)
 
 definition dg_postfix ::
-  "cfg \<Rightarrow> 'd abs_state \<Rightarrow> 'g abs_state
+  "cfg \<Rightarrow> 'D \<Rightarrow> 'G
    \<Rightarrow> (pp \<times> unit + unit \<Rightarrow>
-        ('d abs_state, 'g abs_state) dg_state)
+        ('D, 'G) dg_state)
    \<Rightarrow> bool"
 where
   "dg_postfix g s0d s0g sigma \<longleftrightarrow>

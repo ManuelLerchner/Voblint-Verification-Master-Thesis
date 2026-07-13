@@ -1,5 +1,5 @@
 theory Retain_Analysis
-  imports DG_Framework
+  imports DG_Soundness
 begin
 
 section \<open>The retain analysis\<close>
@@ -429,7 +429,7 @@ where
       in (restrict_global res, split_dg res))"
 
 
-subsection \<open>Retain through the heterogeneous CMP generator\<close>
+subsection \<open>The heterogeneous retain spec\<close>
 
 definition retain_hetero_combine ::
   "('a::bounded_semilattice_sup_bot abs_state, 'a abs_state) dg_state
@@ -453,37 +453,82 @@ where
     dgs_assign     = (\<lambda>x e. retain_hetero_step (apply_tf tf (EA_Assign x e))),
     dgs_assume     = (\<lambda>b. retain_hetero_step (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. retain_hetero_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = retain_hetero_step (apply_tf tf EA_Enter),
-    dgs_combine    = retain_hetero_combine
+    dgs_enter      = retain_hetero_step (apply_tf tf EA_Enter),    dgs_combine    = retain_hetero_combine
   \<rparr>"
 
 
+subsection \<open>Native heterogeneous soundness\<close>
 
-definition retain_dg_cmb ::
-  "'a::sound_domain domain_transfer \<Rightarrow> unit \<Rightarrow> pp \<Rightarrow> pp
-   \<Rightarrow> (pp \<times> unit, unit,
-       (('a abs_state, 'a abs_state) dg_state, 'a abs_state) dg_state)
-      strategy_tree"
+text \<open>
+  Retain interprets \<^locale>\<open>sound_dg_spec\<close> \<^emph>\<open>directly\<close> at its product local
+  carrier \<open>D = ('a abs_state, 'a abs_state) dg_state\<close> and global carrier
+  \<open>G = 'a abs_state\<close> --- no homogeneous transport.  This is the witness that the
+  \<^locale>\<open>sound_dg_spec\<close> carrier generalization is real: an \<open>abs_state\<close>-only
+  soundness locale could not accept this product \<open>D\<close>.  The joint concretization
+  merges the two local slots before intersecting with the globals, matching how
+  \<^const>\<open>retain_hetero_step\<close> reads its inputs (\<open>f (merge_dg d \<squnion> g)\<close>).
+\<close>
+
+definition gamma_retain ::
+  "('a::sound_domain abs_state, 'a abs_state) dg_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
-  "retain_dg_cmb tf ctx cc ex =
-     map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree (retain_dg_spec tf) cc ex))"
+  "gamma_retain d g = \<lbrakk>merge_dg d \<squnion> g\<rbrakk>"
 
+lemma merge_dg_mono:
+  "d \<le> d' \<Longrightarrow> merge_dg d \<le> merge_dg d'"
+  unfolding merge_dg_def pair_of_dg_def
+  by (rule merge_state_mono) (auto simp: less_eq_dg_state_def)
 
+lemma gamma_retain_mono:
+  assumes "d \<le> d'" and "g \<le> g'"
+  shows "gamma_retain d g \<subseteq> gamma_retain d' g'"
+  unfolding gamma_retain_def
+  by (rule gamma_state_mono) (rule sup_mono[OF merge_dg_mono[OF assms(1)] assms(2)])
 
+lemma dg_spec_step_retain:
+  "dg_spec_step (retain_dg_spec tf) a d g = retain_hetero_step (apply_tf tf a) d g"
+  by (cases a) (simp_all add: retain_dg_spec_def)
 
+lemma sound_dg_spec_retain:
+  assumes sound: "sound_transfer tf"
+  shows "sound_dg_spec (retain_dg_spec tf) gamma_retain"
+  apply unfold_locales
+  subgoal for d d' g g'
+    by (rule gamma_retain_mono)
+  subgoal for a d g
+  proof -
+    have "edge_collect a (gamma_retain d g)
+          \<subseteq> \<lbrakk>apply_tf tf a (merge_dg d \<squnion> g)\<rbrakk>"
+      unfolding gamma_retain_def
+      by (rule sound_transfer.edge_collect_apply_tf_sound[OF sound])
+    also have "... \<subseteq> \<lbrakk>apply_tf tf a (merge_dg d \<squnion> g)
+                       \<squnion> restrict_global (apply_tf tf a (merge_dg d \<squnion> g))\<rbrakk>"
+      by (rule gamma_state_mono) simp
+    finally show ?thesis
+      by (simp add: dg_spec_step_retain retain_hetero_step_def Let_def
+            gamma_retain_def merge_split_dg)
+  qed
+  subgoal for s dc g t de
+  proof -
+    assume sin: "s \<in> gamma_retain dc g" and tin: "t \<in> gamma_retain de g"
+    have "combine_states s t
+          \<in> \<lbrakk>combine_abs (merge_dg dc \<squnion> g) (merge_dg de \<squnion> g)\<rbrakk>"
+      using combine_states_sound sin tin unfolding gamma_retain_def by blast
+    then show ?thesis
+      unfolding retain_dg_spec_def retain_hetero_combine_def gamma_retain_def
+      by (simp add: Let_def merge_split_dg restrict_local_global_join
+            combine_abs_restrict)
+  qed
+  done
 
-definition retain_dg_generator ::
-  "cfg \<Rightarrow> 'a::sound_domain domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> (pp \<times> unit, unit,
-       (('a abs_state, 'a abs_state) dg_state, 'a abs_state) dg_state) eqsT"
-where
-  "retain_dg_generator g tf fresh_frame bot0 s0 =
-     side_cfg_T_eff_cmp_seed_dg (\<lambda>_. ()) (retain_dg_cmb tf)
-       (\<lambda>_. split_dg fresh_frame) g (retain_dg_spec tf)
-       (split_dg bot0) (split_dg (restrict_local s0)) (restrict_global s0)"
+text \<open>
+  The layered public endpoint, instantiated for Retain: a solver post-solution
+  of the framework generator for \<^const>\<open>retain_dg_spec\<close> soundly
+  over-approximates the CFG collecting semantics at every program point.
+\<close>
+
+lemmas retain_post_solution_collect_sound =
+  sound_dg_spec.dg_post_solution_collect_sound[OF sound_dg_spec_retain]
 
 
 

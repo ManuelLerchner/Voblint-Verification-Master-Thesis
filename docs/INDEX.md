@@ -41,6 +41,7 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 
 | Doc | Status |
 | --- | --- |
+| `DGCV_LAYER_MIGRATION.md` | PLANNED — D/G/C/V native layer: carrier generalization (N1) → native heterogeneous context soundness (N2) → instance migration → homogeneous-tower retirement |
 | `DIGEST_GENERATOR_COLLECTING_DISCHARGE_MIGRATION.md` | IN PROGRESS — superset-reader class closed |
 | `DIGEST_INDEXED_READER_MIGRATION.md` | **RETIRED** — the RD family it describes was removed (`92739cf`); historical |
 | `CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` | IN PROGRESS |
