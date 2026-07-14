@@ -34,8 +34,7 @@ tree into `src/Analysis`.
 | `Context/Exec_Sign_Ctx_Run` | Context (entry-store) | retained — distinct route (entry-state context) | N/A (routes on entry store, not value digest) |
 | `Context/Exec_Sign_Ctx_Gen_Run` | Context (entry-store) | retained — distinct route | N/A |
 | `Context/Exec_Sign_Ctx_Seeded_Run` | Context (entry-store, ⊆) | retained — shipped active route (§19 REQUIRED) | N/A (subseteq route, not `=`-digest) |
-| `Keyed/Exec_Sign_Cmp_Keyed_Run` | Keyed Obs | **retained baseline** — the Obs read the R_read spine improves on | fails by design (slot is non-point at the merged context) |
-| `Keyed/Exec_Sign_Cmp_Keyed_Solve` | Keyed Obs | retained baseline (executable solve of the above) | fails: `slot_join_all = SNonNeg` |
+| `Keyed/Exec_Sign_Cmp_Keyed_DG_Run` | Keyed Obs | current DG baseline | reads the keyed DG solution directly |
 | `Keyed/Exec_Sign_Cmp_Keyed_Gen_Run` | Keyed Obs (generator) | retained baseline | fails: `kgen_slot_merged = SNonNeg` |
 | `Keyed/Exec_Sign_Cmp_Keyed_Retain_Run` | Retain | **retained** (task-mandated retain example) | fails: `retain_keyed_merged_G = SNonNeg` |
 | `Keyed/Exec_Sign_Cmp_Keyed_Retain_EnterMono` | Retain (negative) | **retained counterexample** — refutes ENTER_MONO over Obs | **refuted**: `enter_mono_read_not_point` |

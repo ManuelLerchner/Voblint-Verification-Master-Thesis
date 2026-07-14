@@ -90,6 +90,26 @@ end
 instance dg_state ::
   (bounded_semilattice_sup_bot, bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
 
+instantiation dg_state :: (bounded_warrowing, bounded_warrowing) bounded_warrowing
+begin
+
+definition widen_dg_state ::
+  "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state"
+where
+  "widen_dg_state a b = DG (widen (locals a) (locals b)) (widen (globs a) (globs b))"
+
+definition narrow_dg_state ::
+  "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state"
+where
+  "narrow_dg_state a b = DG (narrow (locals a) (locals b)) (narrow (globs a) (globs b))"
+
+instance
+  by standard
+    (auto simp: widen_dg_state_def narrow_dg_state_def less_eq_dg_state_def
+      intro: widen_ge1 widen_ge2 narrow_ge narrow_le)
+
+end
+
 text \<open>Conversions to the pair representation and the homogeneous state.\<close>
 
 definition pair_of_dg ::

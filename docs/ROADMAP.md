@@ -63,12 +63,9 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
 - **Showcase:** `Example_Trace_Digest_Precision.thy` — digest vs. flat precision comparison.
 - **Keyed-global context precision:** `Example_Global_Ctx_Read_Precision.thy` (sound read-layer
   witness: global-derived contexts, filtered read `SZero`/`SPos` vs. join-all `SNonNeg`,
-  contrasted with the unsound caller-local seeded split) and `Exec_Sign_Cmp_Keyed_Run.thy`
-  (concrete keyed post-solution: per-context global slots, `LOCAL_POST`/`CMP_SOUND`/
-  `COMB_BOUND_CMP` discharged in the `post_fixpoint_sound_at_ctx_semantic_cmp_final` premise
-  shape, `by eval` separation) and `Exec_Sign_Cmp_Keyed_Solve.thy` (the same two-call
-  abstraction as a keyed side-effecting equation system solved through the real
-  `TD_side_always_join_Interp_solve`; separated slots read `by eval`). Executable filtered
+  contrasted with the unsound caller-local seeded split) and `Exec_Sign_Cmp_Keyed_DG_Run.thy`
+  (current keyed DG witness: per-context global slots, `combine_sound`, `dg_gamma_c`, and
+  `by eval` separation). Executable filtered
   read: `glob_env_cmp_code` in `Global_Cmp_Read.thy`. `Exec_Cmp_Bridge.thy` adds the reusable
   executable `_st` keyed generator `side_cfg_T_eff_cmp_st`; `Exec_Sign_Cmp_Keyed_Gen_Run.thy`
   instantiates it for the sign domain with `gkey = id` and a global-derived context, checks that
@@ -129,7 +126,8 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
   retain run (`kgen_retain_part_solution`), and the keyed soundness endpoint
   (`kgen_retain_keyed_generator_sound_if_post_fixpoint` / `_if_exact_fixpoint`). The
   `route_read_cmp` (routing) / `side_env_cmp` (observation) split is confirmed, and
-  `route_read_cmp` now observes retained globals: `Exec_Sign_Cmp_Keyed_Run.thy` proves the
+  `Exec_Sign_Cmp_Keyed_DG_Run.thy` keeps the current keyed witness; the retain
+  story still lives in `Exec_Sign_Cmp_Keyed_Retain_Run.thy`, which proves the
   routing read sees `G = SZero`/`SPos` under retain vs `SBot` under publish
   (`route_read_retain_G` / `route_read_publish_G` / `route_ctx_publish_collapses`). Retain has
   delivered its part — do not keep extending it.

@@ -82,6 +82,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness
+    Interval_DG
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG

@@ -161,7 +161,7 @@ lemma entry_store_route_eq:
 interpretation has been deleted; the current architecture routes DG / keyed /
 digest / clean analyses over the shared `TD_Side_Eff_Ctx_Shared` backbone instead.
 
-**Keyed-context generator** — `Exec_Sign_Cmp_Keyed_Run.thy`. The executable keyed
+**Keyed-context generator** — `Exec_Sign_Cmp_Keyed_DG_Run.thy`. The executable keyed
 routing `kw_ec :: bool => sign abs_state => bool` is cc-free; at the two kernel use
 sites (`comb_bound`, `CMP_SOUND_inst`) it is wrapped as `(\<lambda>cc. kw_ec)` to meet
 the widened `rt` shape. Same executable results.
@@ -210,7 +210,7 @@ Batch-green on `Voblint_Analysis` and `Voblint_Formalization`, no `sorry`.
   already in scope. No new hypothesis, no changed conclusion.
 - **`combine_read_cmp`**: third argument type `('c => abs => 'c)` → `(pp => 'c => abs
   => 'c)`, body `rt cl ctx (...)`. Its consumer lemmas replay verbatim.
-- **Keyed-context generator** (`Exec_Sign_Cmp_Keyed_Run.thy`): the cc-free `kw_ec`
+- **Keyed-context generator** (`Exec_Sign_Cmp_Keyed_DG_Run.thy`): the cc-free `kw_ec`
   wrapped as `(\<lambda>cc. kw_ec)` at the two kernel call sites. Proofs
   (`by (meson cmp_sound combine_read_cmp_le local_post)` etc.) unchanged.
 
@@ -226,7 +226,7 @@ special case of the new one.
 - **Historical Stack B** — the entry-store interpretation has been deleted. The
   current architecture routes DG / keyed / digest / clean analyses over the shared
   `TD_Side_Eff_Ctx_Shared` backbone instead.
-- **Finite keyed example** — `Exec_Sign_Cmp_Keyed_Run.thy` computes the **same
+- **Finite keyed example** — `Exec_Sign_Cmp_Keyed_DG_Run.thy` computes the **same
   executable results** (`by eval` witnesses unchanged); only the two `rt`-shape wraps
   were mechanical.
 - The unit-global A7.1 corollary (`_ctx` block) keeps `ec` and instantiates the new

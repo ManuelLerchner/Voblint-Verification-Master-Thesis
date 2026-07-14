@@ -20,7 +20,7 @@ concrete program, equation system, or precision witness.
 | `Executable/Sign/SeededClean/` | sign D/G/C seeded-clean witnesses |
 | `Executable/Interval/Core/` | interval loop solver run and update-rule menu |
 | `Executable/Interval/Context/` | interval context-sensitive runs |
-| `Executable/Interval/SeededClean/` | interval seeded-clean, derived-global, and return-rehydration runs |
+| `Executable/Interval/SeededClean/` | interval seeded-clean, keyed DG, derived-global, and return-rehydration runs |
 
 ## `Digest/` — context-sensitivity and digests
 
@@ -88,7 +88,10 @@ examples use `plain_dot_of_prog_lit`.
 is `Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
 instantiation of the generic `Clean_RRead_Sound`; the executable interval runs are
 `Exec_Ivl_Cmp_Seed_Clean_Run` (non-recursive two-call program,
-`by eval` precision witnesses) and `Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
+`by eval` precision witnesses), `Exec_Ivl_Cmp_Keyed_DG_Run` (DG-native keyed-slot
+separation), the DG-native interval context probe in `Voblint_Analysis.Interval_DG`
+(`ivl_dg_two_context_sound`), and
+`Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
 (same spine with a *derived* global `GH := G + 1`: the derived global stays separated
 per calling context — `[1,1]` vs `[11,11]` — both as the callee-exit local and as the
 context-indexed global side state, with a context-clustered GraphViz `dseed_dot`).

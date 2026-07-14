@@ -41,7 +41,7 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 
 | Doc | Status |
 | --- | --- |
-| `DGCV_LAYER_MIGRATION.md` | IN PROGRESS — D/G/C/V native layer: N1 carrier generalization + N2 Sign-on-DG convergence DELIVERED; homogeneous-tower retirement pending |
+| `DGCV_LAYER_MIGRATION.md` | IN PROGRESS — D/G/C/V native layer: N1 carrier generalization + N2 Sign-on-DG convergence delivered; N3 delivered; N4 and paper-alignment follow-up remain |
 | `DG_KEYED_CONTEXT_FEASIBILITY.md` | DELIVERED (slice) — keyed/context soundness on the DG spine: reader lemma + per-context theorem + Sign probe; conditional GO for full port |
 | `DIGEST_GENERATOR_COLLECTING_DISCHARGE_MIGRATION.md` | IN PROGRESS — superset-reader class closed |
 | `DIGEST_INDEXED_READER_MIGRATION.md` | **RETIRED** — the RD family it describes was removed (`92739cf`); historical |

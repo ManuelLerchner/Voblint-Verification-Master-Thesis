@@ -19,9 +19,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Mixed_Flow_Sound
     Twfr_Reach_Read
     Exec_Sign_Run
-    Exec_Sign_Cmp_Keyed_Run
     Exec_Sign_Cmp_Keyed_DG_Run
-    Exec_Sign_Cmp_Keyed_Solve
     Exec_Sign_Cmp_Keyed_Gen_Run
     Exec_Sign_Cmp_Keyed_Retain_Run
     Exec_Sign_Cmp_Keyed_Retain_EnterMono
@@ -33,6 +31,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Exec_Ivl_Run
     Exec_Ivl_Cmp_Seed_Sound
     Exec_Ivl_Cmp_Seed_Clean_Run
+    Exec_Ivl_Cmp_Keyed_DG_Run
     Exec_Ivl_Seed_EnterMono
     Ivl_Twfr_Common
     Exec_Ivl_Cmp_Seed_Clean_Derived_Run

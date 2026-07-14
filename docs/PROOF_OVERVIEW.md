@@ -153,7 +153,7 @@ digest (`Trace_Analysis_Sound.context_collect_sound` →
 | Canonical spine | proved end-to-end soundness | `side_sign_analysis_sound`, `rdiv_witness_G_over_approximated` |
 | Required support | inside a flagship's dependency cone | context tower, return rehydration (`rdiv_rehyd_main_return_sound`) |
 | Regression / counterexample | intentional negative fact | `clean_transfer_unsound` (`¬ sound_effectful_transfer sign_etf_clean`) |
-| Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run`, `Exec_Sign_Cmp_Keyed_Solve` |
+| Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run` |
 | Design evidence | motivates a design; proves no soundness | `Example_Interval_Recursion_Digest` |
 
 **Retired.** The per-origin-widening experiment (`Origin_State`, `Origin_Lift`,

@@ -7,15 +7,13 @@ begin
 section \<open>Keyed-global context precision on the DG spine (sign)\<close>
 
 text \<open>
-  The DG migration of \<open>Exec_Sign_Cmp_Keyed_Run\<close>.  The homogeneous witness reads a keyed
-  solution through \<^const>\<open>side_env_cmp\<close> and meets \<open>[[side_env_cmp (=) kw_sig (p, ctx)]]\<close>;
-  here the same two-call, two-context program is a \<^emph>\<open>DG\<close> solution
+  The DG keyed witness for the two-call, two-context program.  It is a \<^emph>\<open>DG\<close> solution
   \<^term>\<open>kw_dg :: pp \<times> bool + bool \<Rightarrow> (sign abs_state, sign abs_state) dg_state\<close>, and the
   reader is \<^const>\<open>sound_dg_spec.dg_gamma_c\<close> --- the two-gamma meaning of the keyed
-  slots.  The meaning set is provably \<^emph>\<open>identical\<close> to the homogeneous one
-  (\<open>dg_meaning\<close>: it equals \<open>[[kw_loc p \<squnion> kw_slot ctx]]\<close>), so the migration preserves
-  theorem strength and executable precision while dropping the homogeneous
-  context-soundness stack: this theory imports only the DG endpoint.
+  slots.  The meaning set is provably \<^emph>\<open>identical\<close> to the keyed read shape
+  (\<open>dg_meaning\<close>: it equals \<open>[[kw_loc p \<squnion> kw_slot ctx]]\<close>), so the witness
+  preserves theorem strength and executable precision while dropping the
+  homogeneous context-soundness stack: this theory imports only the DG endpoint.
 
   The load-bearing obligation --- the switching combine of
   \<open>sound_dg_spec.dg_collect_ctx_sound\<close> --- is discharged through the DG locale's
@@ -196,4 +194,3 @@ lemma route_publish_contexts_indistinguishable:
   by (simp add: route_ctx_publish_collapses)
 
 end
-

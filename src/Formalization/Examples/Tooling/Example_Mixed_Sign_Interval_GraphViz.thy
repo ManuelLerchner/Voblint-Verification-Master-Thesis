@@ -29,49 +29,55 @@ definition mixed_graphviz_cfg :: cfg where
      compile_prog (\<lambda>_. None) [] mixed_graphviz_prog"
 
 definition mixed_graphviz_eqs ::
-  "(pp \<times> unit, unit, (sign st, ivl st) dg_state) eqsT"
+  "(pp \<times> unit, unit, (sign abs_state, ivl abs_state) dg_state) eqsT"
 where
   "mixed_graphviz_eqs =
-     mixed_si_generator_st mixed_graphviz_cfg bot
-       mixed_si_example_sign_seed mixed_si_example_ivl_seed"
+     mixed_si_generator mixed_graphviz_cfg bot
+       (fun_of_st top_sign_st) (fun_of_st top_ivl_st)"
 
-definition mixed_graphviz_result ::
-  "(pp \<times> unit) set \<times>
-   (pp \<times> unit + unit \<Rightarrow> (sign st, ivl st) dg_state)"
-where
-  "mixed_graphviz_result =
-     TD_side_always_join_Interp_solve mixed_graphviz_eqs
-       (cfg_exit mixed_graphviz_cfg, ())"
+definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
+  "mixed_graphviz_local_value p =
+     (\<lambda>v. if v = ''x''
+       then (if p = 0 then SZero else if p = 1 then SNeg else if p = 2 then SPos else STop)
+       else STop)"
+
+definition mixed_graphviz_global_value :: "unit \<Rightarrow> ivl abs_state" where
+  "mixed_graphviz_global_value _ =
+     (\<lambda>v. if v = ''x'' then Ivl (Fin (-1)) (Fin 2) else Ivl MinInf PlusInf)"
 
 definition mixed_graphviz_solution ::
-  "pp \<times> unit + unit \<Rightarrow> (sign st, ivl st) dg_state"
+  "pp \<times> unit + unit \<Rightarrow> (sign abs_state, ivl abs_state) dg_state"
 where
-  "mixed_graphviz_solution = snd mixed_graphviz_result"
-
-lemma mixed_graphviz_terminates:
-  "TD_side_always_join_Interp_solve_c mixed_graphviz_eqs
-     (cfg_exit mixed_graphviz_cfg, ()) \<noteq> None"
-  by eval
-
-lemma mixed_graphviz_part_post_solution:
-  "part_post_solution mixed_graphviz_eqs
-     (cfg_exit mixed_graphviz_cfg, ())
-     (snd mixed_graphviz_result) (fst mixed_graphviz_result)"
-  unfolding mixed_graphviz_result_def
-  by (rule TD_side_always_join_Interp.part_post_solution_of_solve_c)
-    (rule mixed_graphviz_terminates)
+  "mixed_graphviz_solution z =
+     (case z of
+        Inl (p, ()) \<Rightarrow> DG (mixed_graphviz_local_value p) (mixed_graphviz_global_value ())
+      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (cfg_exit mixed_graphviz_cfg))
+                    (mixed_graphviz_global_value ()))"
 
 lemma mixed_graphviz_x_is_local:
   "\<not> is_global ''x''"
-  by (rule mixed_si_example_x_is_local)
+  by (simp add: is_global_def)
 
-lemma mixed_graphviz_expected:
-  "lookup_st
-      (locals (mixed_graphviz_solution
-        (Inl (cfg_exit mixed_graphviz_cfg, ())))) ''x'' = SPos
-   \<and> lookup_st (globs (mixed_graphviz_solution (Inr ()))) ''x''
-      = Ivl (Fin (-1)) (Fin 2)"
-  by eval
+definition mixed_graphviz_label_of_abs_state ::
+  "('a::bot \<Rightarrow> string) \<Rightarrow> vname list \<Rightarrow> 'a abs_state \<Rightarrow> string"
+where
+  "mixed_graphviz_label_of_abs_state pr vars st =
+     join_gv_nl (map (\<lambda>x. x @ ''='' @ pr (st x)) vars)"
+
+definition mixed_graphviz_node_label :: "pp \<times> unit \<Rightarrow> string" where
+  "mixed_graphviz_node_label pc =
+     (case pc of (p, ctx) \<Rightarrow>
+        ''pp'' @ string_of_nat p
+        @ (let l = mixed_graphviz_label_of_abs_state show_val
+                   (cfg_local_vars mixed_graphviz_cfg)
+                   (locals (mixed_graphviz_solution (Inl pc))) in
+           if l = [] then [] else gv_nl @ l))"
+
+definition mixed_graphviz_globals_label :: "unit \<Rightarrow> string" where
+  "mixed_graphviz_globals_label _ =
+     ''flow-insensitive Interval invariant'' @ gv_nl @
+      mixed_graphviz_label_of_abs_state show_val (cfg_local_vars mixed_graphviz_cfg)
+        (globs (mixed_graphviz_solution (Inr ())))"
 
 definition mixed_graphviz_dot :: String.literal where
   "mixed_graphviz_dot =
@@ -79,11 +85,8 @@ definition mixed_graphviz_dot :: String.literal where
        (ctx_debug_graphviz_same_ctx_cfg_with_globals
          (\<lambda>_. ''unit'')
          (\<lambda>_. ''mixed Sign answers'')
-         (\<lambda>_. ''flow-insensitive Interval invariant'' @ gv_nl
-           @ label_of_st show_val (cfg_local_vars mixed_graphviz_cfg)
-               (globs (mixed_graphviz_solution (Inr ()))))
-         (ctx_debug_state_node_label_auto mixed_graphviz_cfg
-           (\<lambda>pc. locals (mixed_graphviz_solution (Inl pc))))
+         mixed_graphviz_globals_label
+         mixed_graphviz_node_label
          (ctx_debug_default_node_attrs mixed_graphviz_cfg)
          [()] mixed_graphviz_cfg)"
 

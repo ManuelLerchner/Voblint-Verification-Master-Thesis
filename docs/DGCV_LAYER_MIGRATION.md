@@ -1,9 +1,11 @@
-# D/G/C/V native layer — audit and migration plan
+# D/G/C/V native layer — audit and migration record
 
-> **Status:** design + migration plan, grounded in a source audit (2026-07-13). No
-> theory changes yet. This is the concrete plan behind the one-line "next
-> boundary" in `docs/ROADMAP.md` ("generalize native soundness beyond
-> abstract-state-shaped `D`/`G`, then port the context/digest tower").
+> **Status:** N1, N2, and N3 are delivered, the legacy `side_env_ctx` / `TD_Side_Eff_Ctx_Sound`
+> spine is deleted, and the remaining notes here track the broader D/G/C/V
+> generalization work that still sits on top of the current DG/keyed/digest/clean
+> architecture. This is the concrete record behind the one-line "next boundary"
+> in `docs/ROADMAP.md` ("generalize native soundness beyond abstract-state-shaped
+> `D`/`G`, then port the context/digest tower").
 >
 > Companions: `SPLIT_STATE_MIGRATION.md` (the completed D/G migration and its
 > limitation tables), `GOBLINT_SPEC_LOCAL_GLOBAL_SEPARATION_AUDIT.md` (the Stage-0
@@ -14,9 +16,9 @@
 **Question answered here:** should the repo grow a generic D/G/C/V locale layer —
 Goblint's `module D / G / C / V` `Spec` boundary — above the current
 `abs_state`-typed bridge, and is there a coherent migration path? **Yes on both.**
-The audit shows the four axes already exist separately; what is missing is one
-locale that joins them and one soundness theorem family stated over it. No
-generator redesign is needed.
+The audit showed the four axes already existed separately; N1 and N2 then
+collapsed the carrier restriction and the DG-signature gap. What remains is the
+paper-alignment work described below, not the retired `side_env_ctx` spine.
 
 ---
 
@@ -359,6 +361,13 @@ homogeneous halves of `Call_Spec*`, keeping at most a thin
 boilerplate. Same dead-code-audit discipline as the Stage-2 cleanup
 (consumer counts, then batch build).
 
+**Current residual:** the shared executable `_st` keyed generator and its
+`st`/warrowing transport remain as compatibility infrastructure for the
+executable regressions. They are now downstream of the DG-native witnesses:
+Sign and Interval both have native DG interpretations and context probes, and
+the interval keyed witness has been migrated to DG-native form:
+`Exec_Ivl_Cmp_Keyed_DG_Run`.
+
 ---
 
 ## 5. What the layer buys
@@ -399,12 +408,14 @@ simplified interface, not gaps in paper fidelity.
 
 ## 7. Recommended order and immediate next step
 
-1. **N1 now.** Cheap, mechanical, unlocks Retain, and N2 is only worth proving
-   once, over the generalized carriers.
-2. **N2** as the next research-scale slice (go/no-go on the two-gamma
-   `PROC_ENTRY`/`CMP_SOUND` restatements early, on a minimal fragment).
-3. **N3, N4** as consolidation.
-4. Then the paper-alignment sequence of §8.5: caller-`D`-dependent `enter`
+1. **N3 is delivered**: Sign and Interval have native DG interpretations, Retain
+   is natively sound on the generalized carriers, Clean / seeded-clean /
+   activation derive through the DG stack, and the mixed Sign+Interval flagship
+   exists; Sign and Interval both have native DG context probes, and the
+   interval executable keyed regression now uses the DG-native witness
+   `Exec_Ivl_Cmp_Keyed_DG_Run`.
+2. **N4 remains** as the cleanup slice: the paper-alignment sequence of §8.5
+   still points to caller-`D`-dependent `enter`
    (Phase 2), paper-order call-constraint generation (Phase 3), keyed `V → G`
    reads / finite keyed writes (Phase 4). These generalize the call interface
    past the restricted `entry_seed`; they are downstream of the D/G/C/V cleanup.

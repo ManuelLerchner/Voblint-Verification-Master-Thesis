@@ -585,7 +585,7 @@ global-slots-⊤-on-locals invariant. Tracked under B2/A5, not a separate obstac
      keys) so a *solved* generator solution keys writers by def-site.
    - **[CONCRETE CMP_SOUND DISCHARGE DONE — `Exec_Sign_RD_Keyed_Run.thy`, batch-green]**
      The `CMP_SOUND` residue is discharged as a post-solution fact for a concrete
-     def-site-keyed witness over `sign`, mirroring `Exec_Sign_Cmp_Keyed_Run` but
+     def-site-keyed witness over `sign`, mirroring `Exec_Sign_Cmp_Keyed_DG_Run` but
      keying globals on `def_site` and reading through `rd_obs`. The witness realises
      §7/§8's flat callee-writes program (call `4`, callee exit `5`, return `6`;
      `G:=0(DS1)` killed, `G:=1(DS3)` gen'd): a hand-exhibited solution `rd_sig`
@@ -648,7 +648,7 @@ global-slots-⊤-on-locals invariant. Tracked under B2/A5, not a separate obstac
      `instance def_site :: enum` (`Digest_Global_Read.thy`) so the filtered join
      code-generates. Together with `Exec_Sign_RD_Keyed_Run` (soundness) this is the
      executable-and-sound pair for the example, at parity with the ctx
-     `Exec_Sign_Cmp_Keyed_Solve` / `_Run` precedent.
+     `Exec_Sign_Cmp_Keyed_DG_Run` precedent.
    - **[SITE EDGE POST-FIXPOINT BOUND DONE — `TD_Side_Eff_Cmp_Gen.thy`, batch-green]**
      `side_cfg_T_eff_cmp_site_edge_le` is the def-site-keyed analogue of
      `side_cfg_T_eff_cmp_edge_le`: at a `part_post_solution` of the site generator, each

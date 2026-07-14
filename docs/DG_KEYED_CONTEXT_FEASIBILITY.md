@@ -24,7 +24,7 @@ only on the homogeneous `abs_state` kernel.
 ## 1. What the maintained keyed examples actually need
 
 Read tier, from source (`Example_Finite_Sign_Context_Analysis`,
-`Exec_Sign_Cmp_Keyed_Run`): they pick **`gcmp = (=)`**. With equality routing,
+`Exec_Sign_Cmp_Keyed_DG_Run`): they pick **`gcmp = (=)`**. With equality routing,
 `side_env_cmp (=) sig (p, ctx) = kw_loc p ⊔ kw_slot ctx` — each context reads *only
 its own* global slot `Inr ctx` (the **diagonal / own-slot** read), never a multi-slot
 join. Context *selection* at call/return (`route_read_cmp`, `kw_ec`) is exercised
