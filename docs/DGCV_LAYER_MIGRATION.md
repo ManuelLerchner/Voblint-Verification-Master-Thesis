@@ -368,6 +368,9 @@ Sign and Interval both have native DG interpretations and context probes, and
 the interval keyed witness has been migrated to DG-native form:
 `Exec_Ivl_Cmp_Keyed_DG_Run`.
 
+The recursive interval pair has been retired. Remaining compatibility
+consumers, if any, live outside this showcase cone and are tracked separately.
+
 ---
 
 ## 5. What the layer buys

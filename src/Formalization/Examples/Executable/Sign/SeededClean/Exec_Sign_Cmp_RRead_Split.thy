@@ -10,8 +10,8 @@ text \<open>\<^bold>\<open>Role: regression / counterexample.\<close> The headli
 text \<open>
   The three reads the Goblint \<open>Spec.context\<close> boundary distinguishes already exist
   as constants in the keyed stack; this theory makes the split explicit and pins
-  down --- machine-checked --- where the \<open>fctx\<close> obstruction of
-  \<open>Exec_Sign_Cmp_Keyed_Retain_EnterMono\<close> actually lives.
+  down --- machine-checked --- where the \<open>fctx\<close> obstruction in the keyed
+  retain cone actually lives.
 
     \<^item> \<^bold>\<open>R_read\<close> = \<^const>\<open>route_read_cmp\<close> \<open>sg (v,ctx) = sg (Inl (v,ctx))\<close> --- the local
       routing slot, read for context selection (Goblint's \<open>man.local\<close> D.t).

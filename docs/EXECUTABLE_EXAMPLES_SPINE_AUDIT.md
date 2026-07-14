@@ -9,9 +9,10 @@ whether it should migrate to the canonical seeded-clean `R_read` spine
 layout `Core / Context / Keyed / SeededClean` *is* the spine split). Every canonical
 positive precision demo already rides seeded-clean `R_read`. Every non-seeded example is
 an intentional baseline, a negative counterexample, a distinct routing (entry-store
-context), or base infrastructure. **No example migration is warranted.** The one
-structural change is promoting the reusable `point_digest` library out of the examples
-tree into `src/Analysis`.
+context), or base infrastructure. The only remaining legacy executable showcase in the
+seeded-clean cone is the interval rehydration example, which is retained as historical /
+pending migration material. The one structural change is promoting the reusable
+`point_digest` library out of the examples tree into `src/Analysis`.
 
 ## Spine legend
 
@@ -52,10 +53,10 @@ tree into `src/Analysis`.
 | `Context/Exec_Ivl_Ctx_Run` | Context (entry-store) | retained — distinct route | N/A |
 | `Context/Exec_Ivl_Ctx_Gen_Run` | Context (entry-store) | retained — distinct route | N/A |
 | `SeededClean/Exec_Ivl_Cmp_Seed_Sound` | seeded-clean | **already migrated** (kernel obligations) | holds |
-| `SeededClean/Exec_Ivl_Cmp_Seed_Clean_Run` | seeded-clean | **already migrated** (canonical positive) | holds |
-| `SeededClean/Exec_Ivl_Cmp_Seed_Clean_Derived_Run` | seeded-clean | **already migrated** (derived global) | holds |
-| `SeededClean/Exec_Ivl_Cmp_Seed_Rehydrate_Run` | seeded-clean | **already migrated** (return rehydration) | holds |
-| `SeededClean/Exec_Ivl_Seed_EnterMono` | seeded-clean | **already migrated** — reuses `point_digest` | **proved**: `iseed_slots_point` |
+| `SeededClean/Exec_Ivl_Cmp_Seed_Clean_Run` | seeded-clean | deleted | retired canonical positive; replaced by the DG-native seeded-enter probe and shared support |
+| `SeededClean/Exec_Ivl_Cmp_Seed_Clean_Derived_Run` | seeded-clean | deleted | retired derived-global showcase |
+| `SeededClean/Exec_Ivl_Cmp_Seed_Rehydrate_Run` | seeded-clean | deleted | return rehydration on the `R_read` spine; readback crossed a combine |
+| `SeededClean/Exec_Ivl_Seed_EnterMono` | seeded-clean | deleted | replaced by the DG-native seeded-enter probe and shared support |
 
 ### Common
 
@@ -87,11 +88,11 @@ supporting evidence under named lemmas; the ENTER_MONO proved/refuted split is
 theorem-level). No migration is needed to produce it — the baseline and the positive are
 deliberately separate theories on the same program.
 
-## Why no migration
+## Why the remaining split stays
 
-1. **Canonical positives already ride seeded-clean.** All `SeededClean/*` theories use
-   `side_cfg_T_eff_cmp_seed_st` and discharge `clean_ctx_collect_rread`, with ENTER_MONO
-   via `point_digest`.
+1. **Canonical positives already ride seeded-clean.** The remaining canonical interval
+   seeded-clean positives use the shared support and the DG probe; they discharge
+   `clean_ctx_collect_rread`, with ENTER_MONO via `point_digest`.
 2. **Keyed Obs examples are the baseline the spine improves on.** Migrating them would
    erase the "before" side of the comparison. Their routing slot is non-point by design
    (`kgen_slot_merged = SNonNeg`), so `point_digest` genuinely fails there — migration is
@@ -105,8 +106,10 @@ deliberately separate theories on the same program.
    counterexamples: `non_point_sign_splits`, `non_point_ivl_splits`,
    `enter_mono_read_not_point`).
 5. **Core theories are base infrastructure** with no context routing.
+6. **The rehydration showcase is distinct.** It demonstrates return rehydration on the
+   `R_read` spine and still relies on the legacy executable combine path.
 
-No example is obsolete/exploratory-superseded; none is deleted.
+The deleted base/derived/seeded-enter-mono interval files remain deleted.
 
 ## Organization audit
 
@@ -125,15 +128,19 @@ No example is obsolete/exploratory-superseded; none is deleted.
 
 ## Deliverables summary
 
-- **Migrated:** none (all canonical positives were already on the seeded-clean spine).
-- **Retained:** all 24 theories — baselines (Keyed Obs), retain example, negative
-  counterexample (`Retain_EnterMono`), entry-store context route, value-digest track,
-  RRead-split characterisation, Core infra, and the already-migrated SeededClean spine.
+- **Migrated:** the DG-native seeded-enter probe and the shared interval executable
+  support split.
+- **Retained:** baselines (Keyed Obs), retain example, negative counterexample
+  (`Retain_EnterMono`), entry-store context route, value-digest track,
+  RRead-split characterisation, Core infra, and the canonical SeededClean
+  positives.
 - **Moved:** `Seed_EnterMono_Lift` → `src/Analysis/Generic/Solver/Context/` (session
   `Voblint_Formalization` → `Voblint_Analysis`).
-- **Deleted:** none.
+- **Deleted:** `Exec_Ivl_Cmp_Seed_Clean_Run`, `Exec_Ivl_Cmp_Seed_Clean_Derived_Run`,
+  `Exec_Ivl_Cmp_Seed_Rehydrate_Run`, `Exec_Ivl_Seed_EnterMono`.
 - **Precision regressions:** none. **Failed premises:** none newly introduced; the
   documented `point_digest` failures at Obs/retain slots are the intended negative results.
 - **Final structure:** the `point_digest` capability library sits with the kernel it
-  serves under `src/Analysis`; the examples import it session-qualified. File count under
-  `Examples/Executable/` drops by one (24 → 23); `src/Analysis` gains one.
+  serves under `src/Analysis`; the examples import it session-qualified. The seeded-clean
+  interval cone is split between canonical DG-native positives and deleted legacy
+  rehydration support.

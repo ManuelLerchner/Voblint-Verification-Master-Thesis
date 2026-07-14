@@ -222,8 +222,8 @@ text \<open>
   Arithmetic feeds its operands through \<open>normalize_ivl\<close> first.  Since the pointwise
   sum/difference of \<^const>\<open>bot\<close> with anything is again \<^const>\<open>bot\<close>, this keeps every empty
   result canonical.  Without it, \<open>[1,0] + [1,1] = [2,1]\<close> would manufacture ever-new empty
-  representations, which as context keys defeat fixpoint convergence (see
-  \<open>Example_Interval_Recursion_Convergence\<close>).\<close>
+  representations, which as context keys defeat fixpoint convergence in the recursive
+  interval example.\<close>
 
 definition normalize_ivl :: "ivl \<Rightarrow> ivl" where
   "normalize_ivl v =

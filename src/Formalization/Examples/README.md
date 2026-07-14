@@ -20,15 +20,12 @@ concrete program, equation system, or precision witness.
 | `Executable/Sign/SeededClean/` | sign D/G/C seeded-clean witnesses |
 | `Executable/Interval/Core/` | interval loop solver run and update-rule menu |
 | `Executable/Interval/Context/` | interval context-sensitive runs |
-| `Executable/Interval/SeededClean/` | interval seeded-clean, keyed DG, derived-global, and return-rehydration runs |
+| `Executable/Interval/SeededClean/` | interval seeded-clean and keyed DG runs |
 
 ## `Digest/` — recursion and read regressions
 
 | File | Role |
 | --- | --- |
-| `Example_Interval_Recursion_Convergence.thy` | **Recursive interval flagship (1/3)**: the seeded-clean solve on `rdiv` terminates once empty intervals are canonicalised; includes the concrete IMP2 run to `G = 3`; each call site keeps its own context; context-clustered GraphViz |
-| `Example_Interval_Recursion_Rehydrate.thy` | **Recursive interval flagship (2/3)**: the rehydrating combine returns the recursive global `[3,3]` to `main` (no return values); a genuine solver post-fixpoint (`rdiv_rehyd_cover_post_fixpoint`) with the return chain and `rdiv_rehyd_main_return_sound` |
-| `Example_Rdiv_Twfr_Sound.thy` | **Recursive interval flagship (3/3)**: executable soundness of `rdiv` via the `twfr` witness spine, anchored by the concrete IMP2 execution to `G = 3` — a bottom-up recursive witness reaching `main` continuation and the per-coordinate over-approximation `rdiv_witness_G_over_approximated` (canonical twfr end-to-end result) |
 | `Example_Trace_Digest_Precision.thy` | Digest vs flat collecting precision on a two-path program |
 | `Example_Trace_Digest_Combine.thy` | Combine-side digest filtering: compiled if/else callee, `cmp` blocks path 3 |
 | `Example_Trace_Digest_ReachingCompat.thy` | Reader-side `reaching_compat`: lockset digest filters a global read |
@@ -80,32 +77,19 @@ examples use `plain_dot_of_prog_lit`.
 
 **Seeded-clean D/G/C spine (interval):** the interval context-sliced R_read soundness
 is `Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
-instantiation of the generic `Clean_RRead_Sound`; the executable interval runs are
-`Exec_Ivl_Cmp_Seed_Clean_Run` (non-recursive two-call program,
-`by eval` precision witnesses), `Exec_Ivl_Cmp_Keyed_DG_Run` (DG-native keyed-slot
-separation), the DG-native interval context probe in `Voblint_Analysis.Interval_DG`
-(`ivl_dg_two_context_sound`), and
-`Exec_Ivl_Cmp_Seed_Clean_Derived_Run`
-(same spine with a *derived* global `GH := G + 1`: the derived global stays separated
-per calling context — `[1,1]` vs `[11,11]` — both as the callee-exit local and as the
-context-indexed global side state, with a context-clustered GraphViz `dseed_dot`).
-`Exec_Ivl_Cmp_Seed_Rehydrate_Run` adds **return rehydration** (Goblint
-`Spec.combine`): the caller continuation is the structural combine `combine_abs_st`
-(caller locals + callee globals), so reading a global back after a call recovers the
-exact point (`g1=[0,0]`, `h1=[1,1]`, `g2=[10,10]`, `h2=[11,11]`) rather than `bot` —
-without a `local ⊔ global` read. Its `rehydrate_caller_continuation_sound` discharges
-the `COMB` obligation of the generic `clean_ctx_collect_rread`. The retain / `side_env_cmp` interval examples stay as
-the conservative baseline; their loop / recursion imprecision is widening/warrowing-related,
-not D/G/C-related. See `docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
+instantiation of the generic `Clean_RRead_Sound`. The native DG probe is
+`Exec_Ivl_Cmp_Seed_Enter`; the DG-native keyed witness is
+`Exec_Ivl_Cmp_Keyed_DG_Run`; the reusable executable support lives in
+`Exec_Ivl_Cmp_Shared`. `Exec_Ivl_Cmp_Seed_Clean_Run` and
+`Exec_Ivl_Cmp_Seed_Clean_Derived_Run` have been deleted. The recursive interval
+flagships and the legacy executable rehydration theory have been retired. The
+retain / `side_env_cmp` interval examples stay as the conservative baseline;
+their loop / recursion imprecision is widening/warrowing-related, not
+D/G/C-related. See
+`docs/M2_EXAMPLE_MIGRATION_REPORT.md` § "Interval D/G/C soundness vs widening precision".
 
-**Recursive interval flagship (`twf`/`twfr` witness calculus):** the canonical
-recursive-interval story is a three-theory tower on the `rdiv` program, each
-adding one capability: `Example_Interval_Recursion_Convergence` (the seeded-clean
-solve terminates, context-sensitive), `Example_Interval_Recursion_Rehydrate` (the
-returned global is rehydrated back to `main` as a solver post-fixpoint), and
-`Example_Rdiv_Twfr_Sound` (executable soundness via a bottom-up `twfr` witness —
-`rdiv_witness_G_over_approximated`). The `twfr` witness calculus is the canonical
-recursive proof layer; per-coordinate over-approximation is the non-vacuous
-soundness statement (the full-store slot is provably empty for seeded-clean runs).
+**Recursive interval flagship (`twf`/`twfr` witness calculus):** retired. The
+`rdiv` recursion / rehydration showcase is no longer part of the live example
+set.
 
 **Session entry point:** `Voblint.thy` imports the curated example set for the umbrella document.
