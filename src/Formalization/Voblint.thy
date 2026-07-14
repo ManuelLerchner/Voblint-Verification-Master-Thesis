@@ -27,12 +27,20 @@ theory Voblint
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Interval_Side_Soundness"
     "Voblint_Analysis.Analysis_Sound"
+    "Voblint_Analysis.DG_Framework"
+    "Voblint_Analysis.DG_Soundness"
+    "Voblint_Analysis.Sign_DG"
+    "Voblint_Analysis.Interval_DG"
+    "Voblint_Analysis.Mixed_Sign_Interval"
     "Voblint_Analysis.Exec_St"
     "Voblint_Analysis.Exec_Bridge"
+    "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_Named_Global_Eff"
     Exec_Sign_Run
+    Exec_Sign_DG_Run
+    Example_Interval_DG_Flagship
     Trace_Analysis_Sound
     Mixed_Flow_Sound
     Example_Inc_Proc
@@ -97,9 +105,19 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval lattice, widening, transfer functions, soundness, and monotonicity.
     \<^item> @{theory Voblint_Analysis.Interval_Side_Soundness} --- Interval instantiated at the effectful side IP solver.
 
-  \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified sign execution.
+  \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
+    (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain
+    \<^verbatim>\<open>G\<close>), which is the canonical context-sensitive backbone.
+    \<^item> @{theory Voblint_Analysis.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> analysis record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> componentwise copy lattice, and the seeded CMP generator \<^verbatim>\<open>side_cfg_T_eff_cmp_seed_dg\<close>.
+    \<^item> @{theory Voblint_Analysis.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>, \<^verbatim>\<open>dg_post_solution_collect_sound\<close>).
+    \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance (\<^verbatim>\<open>sign_dg_post_solution_collect_sound\<close>).
+    \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>).
+    \<^item> @{theory Voblint_Analysis.Mixed_Sign_Interval} --- the mixed flagship: Sign locals with Interval globals, both mixed-domain and context-sensitive (\<^verbatim>\<open>mixed_si_post_solution_collect_sound\<close>).
+
+  \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Analysis.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Analysis.Exec_Bridge} --- commutation bridge from executable states to function states.
+    \<^item> @{theory Voblint_Analysis.Exec_DG_Bridge} --- executable transport for the D/G spine: the product carrier \<^verbatim>\<open>(D st, G st) dg_state\<close>, the refinement morphism \<^verbatim>\<open>fun_of_dg_st\<close>, the executable generator \<^verbatim>\<open>dg_gen_of\<close>, and the post-solution transport \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>. Lets the verified solver \<^emph>\<open>run\<close> on D/G equations and certify the computed result.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable Sign IP solver, trace soundness, and annotated DOT entry points.
 
@@ -109,6 +127,8 @@ text \<open>
       @{thm [source] mixed_flow_analysis_sound} and @{thm [source] mixed_flow_analysis_optimal}.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, and tooling.
+    \<^item> \<^bold>\<open>@{theory Voblint_Formalization.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations are generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result is certified a post-solution and transported to the abstract semantics, and \<^verbatim>\<open>flagship_collect_sound\<close> proves it over-approximates the collecting semantics --- discovering the invariant \<^verbatim>\<open>x in [0,20]\<close>. The compiler-correctness simulation then lifts this to \<^emph>\<open>actual IMP2 source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>). Ends with an analysis-annotated GraphViz rendering.
+    \<^item> @{theory Voblint_Formalization.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver (\<^verbatim>\<open>dgEx_collect_sound\<close>).
     \<^item> @{theory Voblint_Formalization.Example_Inc_Proc} --- shared global-increment procedure witness used by sign, interval, and mixed-flow examples.
     \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop.
     \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
@@ -132,18 +152,24 @@ text \<open>
 \<close>
 
 text \<open>
-  \<^bold>\<open>Canonical end-to-end chain.\<close> The context-sensitive analyses are one layered
-  spine, each step reusing the soundness of the step below.  There is no competing
-  proof path:
+  \<^bold>\<open>The D/G execution pipeline (headline).\<close> The flagship threads a single chain,
+  every step machine-checked, from source to a soundness theorem over the
+  \<^emph>\<open>computed\<close> analysis result:
 
-    \<^item> generic TD_side collecting soundness (\<^verbatim>\<open>side_analyse_eff_collect_sound_exit_pruned\<close>),
-    \<^item> keyed/combine context soundness (\<^verbatim>\<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>),
-    \<^item> seeded-clean R_read soundness (\<^verbatim>\<open>clean_ctx_collect_rread_head_bound\<close>),
-    \<^item> activation-indexed collecting soundness (\<^verbatim>\<open>seeded_activation_collecting_sound\<close>),
-    \<^item> the \<^verbatim>\<open>twfr\<close> witness calculus (\<^verbatim>\<open>Activation_Witness_From\<close>).
+    \<^item> IMP2 source \<^verbatim>\<open>compile_prog\<close> to a CFG;
+    \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
+    \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
+    \<^item> the solver's own correctness theorem certifies \<^verbatim>\<open>part_post_solution sigma\<close> --- no re-checking;
+    \<^item> \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close> transports it to the abstract \<^verbatim>\<open>dg_gen\<close>;
+    \<^item> the native endpoint (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>) concludes
+      \<^verbatim>\<open>cfg_collect g S v <= gamma(sigma) v\<close> at every program point.
 
-  The witness calculus is used by the remaining executable examples; the deleted
-  recursive interval showcase has been retired.
+  \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
+  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain, Clean and
+  the mixed flagship are its instances, and context slicing is factored through
+  \<^verbatim>\<open>Ctx_Collect_Backbone\<close>. The base flow-sensitive spine remains
+  \<^verbatim>\<open>side_analyse_eff_collect_sound_exit_pruned\<close> (Sign \<^verbatim>\<open>side_sign_analysis_sound\<close>,
+  Interval \<^verbatim>\<open>side_ivl_analysis_sound\<close>).
 \<close>
 
 end

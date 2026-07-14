@@ -43,8 +43,9 @@ This layer wires `part_post_solution` to `is_post_fixpoint` via
 
 `Exec_Bridge` (`'a st` fold mirror + `fun_of_st` simulation + the generic
 `part_post_solution_st_to_abs_transport`) and `Solver_Side_RG` (reach-global
-lemmas). The former keyed executable bridge has been retired; current executable
-examples use the native DG witnesses directly.
+lemmas). The D/G product carrier is executable through `Exec_DG_Bridge`
+(`fun_of_dg_st`, `dg_gen_of`, `part_post_solution_dg_st_to_abs`), which lets the
+verified solver run on D/G equations; executable examples use it directly.
 
 `Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`, `warrow`)
 behind one `side_solver` signature; `run_menu eqs entry k var` reads one slot's variable
