@@ -213,7 +213,7 @@ text \<open>
   The activation \<open>EDGE\<close> obligation (non-\<^const>\<open>EA_Enter\<close>) is read off any
   \<^const>\<open>side_cfg_T_eff_cmp_seed\<close> post-solution: \<open>seeded_clean_edge_bound\<close> gives the
   local post-fixpoint bound \<open>apply_tf tf a (sg (Inl (u, c))) \<le> sg (Inl (v, c))\<close> and
-  \<open>clean_edge_ctx_of_bound\<close> carries it to the concrete edge step.  No digest, no
+  \<open>edge_of_bound\<close> carries it to the concrete edge step.  No digest, no
   \<open>eval\<close>.
 \<close>
 
@@ -230,7 +230,7 @@ proof -
   have bound: "apply_tf tf a (sg (Inl (u, kc))) \<le> sg (Inl (v, kc))"
     by (rule seeded_clean_edge_bound[OF fin pp covv e ne])
   show ?thesis
-    by (rule clean_edge_ctx_of_bound[OF bound s step])
+    by (rule edge_of_bound[OF bound s step])
 qed
 
 text \<open>\<open>COMB\<close> discharge: the abstract combine bound (met by the rehydrating combine)

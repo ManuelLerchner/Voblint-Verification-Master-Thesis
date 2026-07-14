@@ -1,9 +1,52 @@
 # Keyed / context-sensitive analysis: migration onto the DG spine
 
 > **Status:** IN PROGRESS. Phase 1 (one executable analysis migrated) + Phase 2
-> (routing/read backbone) DELIVERED and batch-green. Phases 3–5 (replacement
-> matrix completion, remaining example migration, homogeneous-kernel deletion)
-> open. No homogeneous theory deleted yet — every consumer still lives.
+> (routing/read backbone) + a Phase-5 **backbone unification** DELIVERED and
+> batch-green. Phases 3–4 (remaining example migration, homogeneous-kernel
+> deletion) open. No homogeneous theory deleted yet — every consumer still lives.
+
+## Backbone unification (Phase-5, delivered)
+
+`src/Analysis/Generic/Solver/Context/Ctx_Collect_Backbone.thy` (new) holds the
+**single canonical** context-sliced trace induction, carrier-agnostic over an opaque
+meaning `M :: pp x 'c => store set` and a routing read `rd`:
+
+* `trace_ctx_sound_meaning` — the trace backbone (was duplicated as the homogeneous
+  `post_fixpoint_sound_at_ctx_semantic_generic` and my DG `trace_ctx_sound_meaning`).
+* `collect_ctx_sound_meaning` — its `cfg_collect_ctx` wrapper.
+
+Both spines now **derive** from it:
+
+* homogeneous `post_fixpoint_sound_at_ctx_semantic_generic`
+  (`TD_Side_Eff_Cmp_Sound`) is now a corollary: `M (p,c) = [[renv sigma (p,c)]]` — the
+  ~65-line induction collapsed to a 10-subgoal `rule` application;
+* DG `sound_dg_spec.dg_collect_ctx_sound` (`DG_Route_Soundness`) instantiates
+  `M (p,c) = gammaDG (dg_D_c sigma c p) (dg_G_c sigma c)`.
+
+Import shape (no cycle — the backbone imports only `Voblint_CFG.CFG_Collect_Trace`,
+the shared ancestor of both towers):
+
+```
+CFG_Collect_Trace
+    |
+Ctx_Collect_Backbone   (canonical trace backbone, opaque M)
+   /                 \
+TD_Side_Eff_Cmp_Sound   DG_Route_Soundness
+(homogeneous M=[[.]])    (DG M=gammaDG)
+```
+
+### Key architectural finding (affects Phases 3–4)
+
+The endpoint the ~15 seeded-clean/digest consumers actually ride is
+`sound_transfer.clean_ctx_collect_rread` (+ `_head`, `_bound`, `clean_cfg_collect_rread`,
+five `clean_rread_*`). It reads **only the local slot** `[[sg (Inl u)]]` and deliberately
+never joins the published global — a **single-domain** read discipline. Re-expressing it
+over the two-gamma DG carrier would be **false abstraction** (an unused `G` slot;
+Kappelmann audit item 3). The correct consolidation is what was done here: unify at the
+**backbone**, keeping the clean/cmp readers as single-gamma `M` instances. So the goal's
+"migrate every consumer onto the DG carrier" over-reaches for the clean family; "one
+canonical spine" is achieved at the backbone, with `unit`/single-gamma and two-gamma DG
+both as `M`-instances.
 
 Follows the feasibility slice (`DG_KEYED_CONTEXT_FEASIBILITY.md`, conditional GO).
 The objective is a single canonical DG context-sensitive proof spine, retiring the

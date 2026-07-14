@@ -1,5 +1,5 @@
 theory Clean_RRead_Sound
-  imports TD_Side_Eff_Cmp_Sound
+  imports TD_Side_Eff_Cmp_Sound "Voblint_Analysis.Local_DG"
 begin
 
 section \<open>The clean (sequential-faithful) transfer over the local read (R_read)\<close>
@@ -238,24 +238,6 @@ qed
 subsection \<open>Context-sliced collecting soundness over the local read\<close>
 
 text \<open>
-  An edge step is sound under a local (R_read) post-fixpoint bound: the base
-  transfer over the local slot dominates the successor local slot.
-\<close>
-
-lemma clean_edge_ctx_of_bound:
-  assumes bound: "apply_tf tf a A \<le> B"
-    and s: "s \<in> \<lbrakk>A\<rbrakk>"
-    and step: "edge_step a s = Some s'"
-  shows "s' \<in> \<lbrakk>B\<rbrakk>"
-proof -
-  have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)
-  have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>A\<rbrakk>" using s edge_collect_mono by blast
-  also have "... \<subseteq> \<lbrakk>apply_tf tf a A\<rbrakk>" by (rule edge_collect_apply_tf_sound)
-  also have "... \<subseteq> \<lbrakk>B\<rbrakk>" using gamma_state_mono[OF bound] by blast
-  finally show ?thesis using m by blast
-qed
-
-text \<open>
   Set-level context-sliced soundness: every store reaching \<open>v\<close> along a trace whose
   digest is \<open>cmp\<close>-compatible with \<open>ctx\<close> lies in the concretisation of the
   \<^emph>\<open>local\<close> slot at \<open>(v, ctx)\<close> --- the R_read analogue of \<^const>\<open>cfg_collect_ctx\<close>.
@@ -281,39 +263,10 @@ theorem clean_ctx_collect_rread:
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-proof -
-  interpret L: context_analysis_soundness
-      "undefined" "\<lambda>cc. id" rt entdg cmp
-      route_read_cmp route_read_cmp sg S g dg
-  proof (unfold_locales, goal_cases)
-    case (1 ctx s) then show ?case using ENTRY by (simp add: route_read_cmp_def)
-  next
-    case (2 ctx v s) then show ?case using PROC_ENTRY by (simp add: route_read_cmp_def)
-  next
-    case (3 ctx u a v tr s')
-    then have e: "(u, a, v) \<in> edges g" and st: "edge_step a (last tr) = Some s'"
-      and lt: "last tr \<in> \<lbrakk>sg (Inl (u, ctx))\<rbrakk>" by (auto simp: route_read_cmp_def)
-    show ?case using clean_edge_ctx_of_bound[OF EDGE_BOUND[OF e] lt st]
-      by (simp add: route_read_cmp_def)
-  next
-    case (4 ctx cl ex v tau rho)
-    then have ct: "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
-      and ce: "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
-      and c: "(cl, ex, v) \<in> combines g"
-      by (auto simp: route_read_cmp_def context_domain.route_def)
-    show ?case using COMB[OF c ct ce] by (simp add: route_read_cmp_def)
-  next
-    case (5 tr s' ctx) then show ?case using DG_INTRA by blast
-  next
-    case (6 tau rho) then show ?case using DG_RETURN by blast
-  next
-    case (7 tau rho) then show ?case using DG_CALLEE by blast
-  next
-    case (8 ctx cl s) then show ?case using ENTER_MONO by (simp add: route_read_cmp_def context_domain.route_def)
-  qed
-  have "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>route_read_cmp sg (v, ctx)\<rbrakk>" by (rule L.collect_sound)
-  thus ?thesis by (simp add: route_read_cmp_def)
-qed
+  \<comment> \<open>The clean single-domain context theorem is a corollary of the DG endpoint at the
+      local-only adapter instance (\<open>Local_DG\<close>): same premises, same conclusion, with the
+      trivial Side component discharged once inside the adapter.\<close>
+  using assms by (rule clean_ctx_collect_rread_via_dg)
 
 text \<open>
   Context-sliced collecting soundness with the return combine as an abstract bound

@@ -1,5 +1,5 @@
 theory Constraint_System_Sound
-  imports Constraint_System "Voblint_CFG.CFG_Collect"
+  imports Constraint_System "Voblint_CFG.CFG_Collect" "Voblint_CFG.CFG_Collect_Trace"
 begin
 
 section \<open>Constraint system: soundness theorem\<close>
@@ -145,6 +145,23 @@ next
   then show ?thesis
     unfolding EA_Enter apply_tf.simps edge_collect.simps
     using tf_sound_enter by auto
+qed
+
+text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer
+  over \<open>A\<close> is dominated by \<open>B\<close>, a concrete step from a store in \<open>[[A]]\<close> lands in \<open>[[B]]\<close>.
+  A domain-level consequence of \<open>edge_collect_apply_tf_sound\<close> and monotonicity, shared
+  by the R_read / DG local-slot spines.\<close>
+lemma edge_of_bound:
+  assumes bound: "apply_tf tf a A \<le> B"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>"
+    and step: "edge_step a s = Some s'"
+  shows "s' \<in> \<lbrakk>B\<rbrakk>"
+proof -
+  have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)
+  have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>A\<rbrakk>" using s edge_collect_mono by blast
+  also have "... \<subseteq> \<lbrakk>apply_tf tf a A\<rbrakk>" by (rule edge_collect_apply_tf_sound)
+  also have "... \<subseteq> \<lbrakk>B\<rbrakk>" using gamma_state_mono[OF bound] by blast
+  finally show ?thesis using m by blast
 qed
 
 lemma collect_pp_abstract_sound:

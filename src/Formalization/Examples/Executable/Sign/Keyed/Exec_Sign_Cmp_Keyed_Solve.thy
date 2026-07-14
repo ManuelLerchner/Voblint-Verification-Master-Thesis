@@ -6,7 +6,7 @@ section \<open>Keyed-global context precision: executable solver run (sign)\<clo
 
 text \<open>\<^bold>\<open>Role: executable precision regression.\<close> An \<open>eval\<close>-only witness that keyed context
   slots stay separate.  The proved keyed/combine soundness endpoint is
-  \<open>context_analysis_soundness.collect_sound\<close>.\<close>
+  \<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>.\<close>
 text \<open>
   The executable counterpart to \<open>Exec_Sign_Cmp_Keyed_Run\<close>.  There the keyed
   post-solution \<open>kw_sig\<close> is exhibited by hand and the combine obligations of

@@ -43,6 +43,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_CFG
     Sign_Local_Effects
     Sign_Domain
+    Ctx_Collect_Backbone
     Global_Cmp_Read
     Context_Domain
     Strategy_Tree_Monad
@@ -77,6 +78,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Soundness
     DG_Context_Soundness
     DG_Route_Soundness
+    Local_DG
     Retain_Analysis
     Sign_Side_Soundness
     Sign_Named_Global_Eff

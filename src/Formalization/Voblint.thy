@@ -140,7 +140,7 @@ text \<open>
 
     \<^item> generic TD_side collecting soundness (\<^verbatim>\<open>side_analyse_eff_collect_sound_exit_pruned\<close>),
     \<^item> entry-store context soundness (\<^verbatim>\<open>semantic_entry_store_ctx_analysis_sound\<close>),
-    \<^item> keyed/combine context soundness (\<^verbatim>\<open>context_analysis_soundness.collect_sound\<close>),
+    \<^item> keyed/combine context soundness (\<^verbatim>\<open>side_cfg_T_eff_cmp_collect_ctx_sound_semantic\<close>),
     \<^item> seeded-clean R_read soundness (\<^verbatim>\<open>clean_ctx_collect_rread_head_bound\<close>),
     \<^item> activation-indexed collecting soundness (\<^verbatim>\<open>seeded_activation_collecting_sound\<close>),
     \<^item> the \<^verbatim>\<open>twfr\<close> witness calculus (\<^verbatim>\<open>Activation_Witness_From\<close>),
