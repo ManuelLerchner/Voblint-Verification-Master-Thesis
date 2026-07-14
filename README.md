@@ -143,8 +143,8 @@ The flagship is one executable instance of a reusable framework, not a
 special-purpose verified analyzer.
 
 The core abstraction is `sound_dg_spec`, the Isabelle image of Goblint's
-`Spec`-style split between per-program-point answers `D` and side-published
-facts `G`. An analysis supplies step and combine behavior over opaque carriers;
+[`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)-style split between per-program-point answers `D` and side-published
+facts `G` . An analysis supplies step and combine behavior over opaque carriers;
 the framework generates the equation system, runs the solver, and provides the
 soundness theorem that connects the computed result back to collecting
 semantics.
