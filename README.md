@@ -1,254 +1,221 @@
-Voblint
-=======
+# Voblint: An Executable and Machine-Checked Framework for Abstract Interpretation in Isabelle/HOL
 
-> **Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL**
 > Master's thesis. Manuel Lerchner, TUM Informatics 2, supervised by Alexandra Graß.
 
 ## Abstract
 
-We formalize an end-to-end soundness proof for a Goblint-style abstract
-interpreter. An IMP2 program (with procedures, scopes, calls) is compiled to a
-control-flow graph; the graph induces a constraint system; the verified
-side-effecting top-down solver of
-[stilscher/td-verification](https://github.com/stilscher/td-verification)
-computes a post-fixpoint; and **any abstract domain** satisfying our locale and
-transfer obligations yields a result that soundly over-approximates the
-interprocedural collecting semantics **at every program point**. Sign analysis
-is the worked instance.
+This repository implements an executable framework for certified abstract
+interpretation in Isabelle/HOL. Analyses are defined once, executed inside
+Isabelle using the verified side-effecting top-down solver of
+[stilscher/td-verification](https://github.com/stilscher/td-verification), and
+the solver computes analysis results that are certified sound once the analysis
+instantiates the framework's soundness obligations. The framework is generic
+over abstract domains and transfer functions. The flagship interval analysis
+computes the invariant `x ∈ [0,20]` for a counting loop, and Isabelle proves
+that this computed result soundly over-approximates every execution of the
+original IMP2 program.
 
-## The soundness statement
+**The analysis result is computed, not supplied, and its soundness is proved by
+the framework.**
 
-The current reusable end-to-end theorem in the repo is the locale bridge:
+## ⭐ Flagship Example
 
-```isabelle
-theorem source_reaches_side_analyse_eff:
-  assumes run: "psteps Pi (main, s, []) src'"
-      and se:  "sound_effectful_transfer etf"
-      and tfm: "threefold_mono (side_cfg_T_eff g etf bot s0 gseed)"
-      and cone: "cone_compatible_etf etf"
-      and init: "s \<in> \<lbrakk>s0\<rbrakk>"
-      and dom:
-        "\<And>v. cfg_reaches g (cfg_entry g) v \<Longrightarrow>
-         side_cfg_solve_dom_eff g etf bot s0 gseed v"
-  shows "\<exists>v t stk.
-    concrete_program_match Pi ps main src' (v, t, stk) \<and>
-    t \<in> \<lbrakk>side_analyse_eff Pi ps main etf bot s0 gseed v\<rbrakk>"
+`src/Formalization/Examples/Executable/Interval/Core/Example_Interval_DG_Flagship.thy`
+
+The flagship theory analyzes a counting loop:
+
+```c
+x = 0;
+while (x < 20)
+  x++;
 ```
 
-The concrete theory then instantiates that bridge as:
+It demonstrates the complete machine-checked chain:
 
-```isabelle
-theorem concrete_source_reaches_side_analyse_eff:
-  assumes wf:  "wf_compile_input Pi ps main"
-      and run: "psteps Pi (main, s, []) src'"
-      and se:  "sound_effectful_transfer etf"
-      and tfm: "threefold_mono (side_cfg_T_eff (compile_prog Pi ps main) etf bot s0 gseed)"
-      and cone: "cone_compatible_etf etf"
-      and init: "s \<in> \<lbrakk>s0\<rbrakk>"
-      and dom:
-        "\<And>v. cfg_reaches (compile_prog Pi ps main)
-               (cfg_entry (compile_prog Pi ps main)) v \<Longrightarrow>
-         side_cfg_solve_dom_eff (compile_prog Pi ps main) etf bot s0 gseed v"
-  shows "\<exists>v t stk.
-    concrete_program_match Pi ps main src' (v, t, stk) \<and>
-    t \<in> \<lbrakk>side_analyse_eff Pi ps main etf bot s0 gseed v\<rbrakk>"
+```text
+IMP2 source
+      ↓
+compile_prog
+      ↓
+CFG
+      ↓
+D/G equation generation
+      ↓
+verified solver
+      ↓
+computed interval solution
+      ↓
+solver correctness
+      ↓
+collecting soundness
+      ↓
+compiler correctness
+      ↓
+source-level guarantee
 ```
 
-This is the strongest verified statement that connects the IMP2 source layer to
-the abstract result. It says:
+Computed result:
 
-1. The source execution `psteps Pi (main, s, []) src'` is a real IMP2 run.
-2. The compiled CFG is the graph the solver runs on.
-3. The analysis result contains the concrete state `t` at the matched CFG point `v`.
+| Program point | Certified interval |
+| --- | --- |
+| Loop head | `[0,20]` |
+| Loop body | `[0,19]` |
+| Exit | `[20,20]` |
 
-The assumptions mean:
+Isabelle computes these intervals and proves them sound for every execution of
+the flagship source program from a valid initial store.
 
-**IMP2 source assumptions**
+These intervals are not handwritten; the verified solver produces them during
+evaluation inside Isabelle.
 
-| Assumption | What it says | Why it is needed |
-| --- | --- | --- |
-| `wf` | The procedure table, entry procedure list, and main command are well-formed source input. | The compiler bridge and the source-to-CFG simulation only make sense for source programs in the expected shape. |
-| `run` | The IMP2 source program reaches `src'` from the initial state. | This is the concrete witness that the theorem transports into the analysis result. |
-| `init` | The concrete initial source store is covered by the abstract initial state. | The abstract analysis must start from a state that includes the concrete input. |
+## Why This Matters
 
-**CFG / compiler assumptions**
+Many mechanized abstract-interpretation developments prove soundness assuming
+an abstract solution. This repository executes the verified solver inside
+Isabelle and certifies the computed analysis result. The flagship interval
+example is one instance of a generic D/G framework that also supports
+executable Sign and mixed-domain analyses.
 
-| Assumption | What it says | Why it is needed |
-| --- | --- | --- |
-| `tfm` | The effectful CFG generator is monotone in the solver sense. | The TD-side solver interface requires this to produce a valid post-solution. |
-| `cone` | The transfer obeys the dependency/cone discipline. | This is what lets the pruning and side-effect machinery stay sound. |
+## Contributions
 
-**Solver / transfer assumptions**
+### Scientific contributions
 
-| Assumption | What it says | Why it is needed |
-| --- | --- | --- |
-| `se` | The effectful transfer is sound. | The solver soundness theorem needs each abstract transfer step to over-approximate the concrete effect. |
-| `dom` | Every CFG point reachable from the entry satisfies the solver domain precondition. | This is the local precondition needed to read the solver result back as an abstract state at each point. |
+- Verified execution of abstract interpreters inside Isabelle.
+- Machine-checked certification of computed analysis results.
+- Generic D/G framework for Goblint-style abstract interpretation.
+- Source-level soundness via compiler correctness.
 
-The theorem is proved through the CFG collecting semantics:
+### Demonstrated instances
 
-- `source_reaches_cfg_collect` turns the IMP2 run into a matched CFG point and a concrete store in `cfg_collect`.
-- `side_analyse_eff_collect_sound_at_pruned` turns that collecting fact into an abstract inclusion at the same CFG point.
-- `IMP2_Bridge.thy` provides the source/CFG simulation that connects the two.
+- Executable Sign analysis.
+- Executable Interval analysis.
+- Mixed Sign x Interval analysis.
+- Certified flagship interval example with GraphViz output.
 
-The trace semantics still matters, but only as an intermediate layer for the
-collecting proof, not as an equality. What the repo proves is the projection
-lemma:
+## What Can I Reuse?
 
-$$
-\alpha_{\mathrm{last}}\bigl(\mathrm{cfg}_{\mathrm{collect\_trace}}\ g\ S\ v\bigr)
-\subseteq
-\mathrm{cfg}_{\mathrm{collect}}\ g\ S\ v
-$$
+To add a new analysis:
 
-That trace layer is needed for the per-global reaching-read theorem
-`reaching_global_read_sound`. For the main source-to-analysis theorem above,
-`cfg_collect` is where the solver soundness result lands.
+- define the abstract domain;
+- define sound transfer functions;
+- instantiate the generic D/G interface.
 
-The shipped examples already expose concrete IMP2 witnesses for the flagship
-showcase and the recursive `rdiv` program, so the source layer is visible in the
-example suite as well.
+The framework then:
 
-## Pipeline
+- generates equations,
+- executes the verified solver,
+- certifies the computed analysis result.
 
+## Certified Execution Pipeline
+
+The repository proves one end-to-end execution story:
+
+Key step: the verified solver computes `σ`.
+
+```text
+IMP2 source
+  → compile_prog
+  → CFG
+  → dg_gen_of
+  → verified solver computes σ
+  → solver correctness yields part_post_solution σ
+  → part_post_solution_dg_st_to_abs
+  → collecting-soundness theorem
+  → compiler-correctness simulation
+  → source-level guarantee
 ```
-IMP2 (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD side) → Pipeline → Examples
-                    Domains ────────────────────────────────┘
-```
 
-Four Isabelle sessions, built in order:
-`Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization`.
+Four distinct claims are established for the flagship:
 
-## Architecture
+1. The interval D/G analysis is executable.
+2. The verified solver computes the certified solution.
+3. The computed solution soundly over-approximates CFG collecting semantics.
+4. Compiler correctness lifts that guarantee to source-level IMP2 executions.
 
-Voblint is **one generic soundness core with several specializations**, not a set
-of competing analyses. Every soundness endpoint descends from a single theorem —
-a TD-side post-fixpoint over CFG collecting semantics over-approximates that
-semantics at every program point — and the context-sensitive analyses form *one
-layered tower* culminating in the recursive `twfr` witness flagship.
+The main executable witness is
+`Example_Interval_DG_Flagship.thy`. It proves the computed result non-vacuous,
+shows proper bounds at reachable program points, and ends with an
+analysis-annotated GraphViz rendering.
 
-### Core shape
+## Generic D/G Framework
 
-- IMP2 source semantics and the backward bridge live in `Voblint_IMP2`.
-- CFG construction and collecting semantics live in `Voblint_CFG`.
-- Equation systems, solver wiring, and domain instances live in `Voblint_Analysis`.
-- The end-to-end theorems and examples live in `Voblint_Formalization`.
+The flagship is one executable instance of a reusable framework, not a
+special-purpose verified analyzer.
 
-The genericity is carried by a type-class + locale hierarchy:
-`abstract_domain` extends `sound_domain`; `sound_transfer` and
-`sound_effectful_transfer` carry transfer soundness; the solver side uses the
-`*_rhs_generator` and `TD_Side_*` locale stack. Sign and Interval are concrete
-interpretations of that stack.
+The core abstraction is `sound_dg_spec`, the Isabelle image of Goblint's
+`Spec`-style split between per-program-point answers `D` and side-published
+facts `G`. An analysis supplies step and combine behavior over opaque carriers;
+the framework generates the equation system, runs the solver, and provides the
+soundness theorem that connects the computed result back to collecting
+semantics.
 
-**Canonical end-to-end chain** — each step reuses the soundness of the one below:
+`Exec_DG_Bridge.thy` gives the executable frontend for this interface:
 
-`cfg_collect_trace` → `Constraint_System_Sound` → `TD_Side_Eff_Soundness` →
-`TD_Side_Eff_Ctx_Shared` → DG / keyed / digest / clean soundness
-(`TD_Side_Eff_Cmp_Sound`, `Digest_Global_Read`, `Value_Digest_Reader`,
-`Clean_RRead_Sound`) → `Seeded_Clean_Ctx_Collect` → `Seeded_Activation_Sound`
-→ `Activation_Witness_From` → `Example_Rdiv_Twfr_Sound`.
+- executable finite-map carriers for abstract states,
+- the refinement morphism `fun_of_dg_st`,
+- executable equation generation `dg_gen_of`,
+- transport from solver-computed results to abstract post-solutions via
+  `part_post_solution_dg_st_to_abs`.
 
-The retired `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` entry-store spine is deleted.
-The shared context-collection helpers now live in `TD_Side_Eff_Ctx_Shared`.
+This is what lets Sign, Interval, and mixed analyses reuse the same certified
+execution pipeline.
 
-Five theorems close the loop end-to-end: the base flow-sensitive theorem,
-context-indexed soundness, keyed/combine soundness, seeded activation soundness,
-and the recursive `twfr` witness theorem. The digest spine
-`context_collect_sound` runs in parallel.
+### Adding a domain
 
-### Independent D and G domains
-
-Following Goblint's `analyses.ml`, the framework transports two analysis-chosen
-domains without inspecting either: per-point answers `D` and side-published
-facts `G`, packed into disjoint slots of the `dg_state` copy lattice
-(`DG_Framework.thy`). An analysis is a `dg_spec` record of
-`step : D => G => G x D` functions; the seeded CMP generator
-`side_cfg_T_eff_cmp_seed_dg` turns it into the solver's equation system.
-`Instances/Mixed/Mixed_Sign_Interval.thy` is the witness that the split is
-real: flow-sensitive Sign answers next to one flow-insensitive Interval side
-invariant, sound and executable
-(`Example_Mixed_Sign_Interval_GraphViz.thy`). The homogeneous interfaces
-remain as proven-equal specializations (`docs/SPLIT_STATE_MIGRATION.md`).
-
-| Role | Meaning | Representative |
-| --- | --- | --- |
-| Canonical spine | proved end-to-end soundness | `source_reaches_side_analyse_eff`, `rdiv_witness_G_over_approximated` |
-| Required support | inside a flagship's dependency cone | context tower, return rehydration |
-| Regression / counterexample | intentional negative or precision fact | `clean_transfer_unsound` |
-| Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run` |
-| Design evidence | motivates a design; proves no soundness | `Example_Interval_Recursion_Digest` |
-
-## Semantic foundation
-
-The concrete spec is the interprocedural trace collecting semantics
-(`cfg_collect_trace`). It records ordered runs, which is what history-sensitive
-globals need. The state-level collecting semantics (`cfg_collect`) is the
-projection target, not an equality:
-`alpha_last_cfg_collect_trace_le`.
-
-Big-step is only a reference semantics. `IMP2_Bridge.thy` shows every
-terminating AFP IMP2 big-step run is reproduced by our small-step
-(`pstep`, `IMP2_Proc.thy`). The two views are complementary: the analyzer
-certifies every program point, while big-step / VCG pins the exact terminating
-result at exit.
-
-## Headline result
-
-`source_reaches_side_analyse_eff`
-(`src/Formalization/Pipeline/Compiler_Correctness_Prototype.thy`): for a real
-IMP2 run, the compiled CFG, and a sound solver instance, the abstract result
-contains the matched concrete state at some CFG point. Sign instantiation:
-`demo_source_to_sign_analysis` / `rdiv_source_to_interval_analysis` in the
-example suite.
-
-`TD_Side_Eff_Soundness.side_analyse_eff_collect_sound_exit_pruned`
-(`src/Analysis/Generic/Solver/Core/TD_Side_Eff_Soundness.thy`) is the solver
-endpoint at CFG exit. Sign instance: `side_sign_analysis_sound`
-(`src/Analysis/Instances/Sign/Sign_Side_Soundness.thy`).
-
-Globals shared across the program are tracked flow-insensitively through the
-solver's side-effect mechanism. In `Trace_Analysis_Sound.thy`:
-`reaching_global_read_sound` - any global's value over any reaching trace lies in
-`gamma`; `digest_read_sound` - digest-indexed reads are sound;
-`flat_env_is_digest_sound` - the flat (flow-insensitive) env is the degenerate
-sound digest. `Example_Trace_Digest_Precision.thy` then witnesses
-(`digest_beats_flat`) that a digest-indexed read is strictly tighter than the
-flat read on a concrete program.
-
-Soundness is *not* validated by a separate code-generator theorem. We **define**
-the equation system as the abstract analogue of CFG collecting, then prove every
-post-fixpoint over-approximates concrete reachability:
-
-| | Concrete (collecting) | Abstract |
-| --- | --- | --- |
-| One edge | `edges_collect` on store sets | `apply_tf tf` on `abs_state` |
-| One point | join of predecessor edges | constraint `rhs` join |
-| Global | `cfg_collect_trace` | `env` with `is_post_fixpoint` |
-| Link | (definition) | transfer soundness: `gamma` commutes with each `tf` |
-
-## Adding a domain
-
-Supply an abstract value type, a `gamma`, and a transfer bundle
-(`tf_assign` / `tf_assume` / `tf_assume_not`); discharge a handful of
-obligations; the parametric pipeline does the rest. Sign
-(`src/Analysis/Instances/Sign/Sign_Domain.thy`) is the reference.
+To instantiate the framework, supply an abstract value type, a concretization
+`gamma`, and sound transfer functions. Sign
+(`src/Analysis/Instances/Sign/Sign_Domain.thy`) is the reference instance.
 
 | Step | What | Reference (sign) |
 | --- | --- | --- |
 | 1 | value type + lattice instance (`bot`, `sup`, `ord`) | `datatype sign`, `instantiation` |
 | 2 | define `gamma`, prove `gamma_bot` / `gamma_mono` | `gamma_sign_mono` |
 | 3 | `interpretation` of the `abstract_domain` locale | `sign_domain` |
-| 4 | define transfer fns, prove they preserve `gamma` | `assign_sign_sound`, `assume_sign_sound` |
-| 5 | apply the IP pipeline soundness theorem | `side_sign_analysis_sound` |
+| 4 | define transfer functions, prove they preserve `gamma` | `assign_sign_sound`, `assume_sign_sound` |
+| 5 | apply the interprocedural soundness theorem | `side_sign_analysis_sound` |
 
-## Requirements
+## Architecture
+
+- `Voblint_IMP2`: IMP2 source semantics, procedures, globals, and the
+  source-to-CFG bridge.
+- `Voblint_CFG`: CFG construction, paths, and interprocedural collecting
+  semantics.
+- `Voblint_Analysis`: domains, equation systems, solver wiring, and executable
+  D/G infrastructure.
+- `Voblint_Formalization`: end-to-end theorems, executable examples, and
+  demonstrations.
+
+Four Isabelle sessions build in order:
+`Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization`.
+
+## Theoretical Foundations
+
+The concrete semantic target is the interprocedural collecting semantics
+`cfg_collect`. The strongest reusable source-to-analysis theorem is
+`source_reaches_side_analyse_eff`
+(`src/Formalization/Pipeline/Compiler_Correctness_Prototype.thy`): for a real
+IMP2 run, the compiled CFG, and a sound solver instance, the abstract result
+contains the matched concrete state at some CFG point.
+
+The native D/G soundness endpoints include
+`sign_dg_post_solution_collect_sound`,
+`ivl_dg_post_solution_collect_sound`, and
+`mixed_si_post_solution_collect_sound`. The executable bridge turns computed
+solver output into the hypotheses these theorems require, and the flagship
+theory instantiates that path for a solver-computed interval result.
+
+For a more theorem-centric overview, see `docs/PROOF_OVERVIEW.md`,
+`docs/PROOF_PHASES.md`, and the session entry theory
+`src/Formalization/Voblint.thy`.
+
+## Build
+
+### Requirements
 
 - [Isabelle](https://isabelle.in.tum.de/) 2025 or newer, with `isabelle` in `$PATH`.
 - A local [AFP](https://www.isa-afp.org/) checkout (`thys/`): transitive deps
   `Root_Balanced_Tree`, `Dijkstra_Shortest_Path`.
 - GNU `make`, `git`, POSIX tools.
-
-## Build
 
 Set `AFP` to your AFP `thys/` directory (default `~/afp/thys`):
 
@@ -265,9 +232,9 @@ make AFP=/path/to/afp/thys build
 | `make clean` / `clean-vendor` | remove built heaps / vendored sources |
 
 The checked source tree is sorry-free; `ROOT` files do not enable
-`quick_and_dirty`. See `src/README.md` for the per-layer map.
+`quick_and_dirty`.
 
-## Layout
+## Repository Layout
 
 ```
 src/
@@ -282,11 +249,20 @@ vendor/
 docs/          proof overview, phases, roadmap, walkthroughs, generated HTML
 ```
 
-The analysis rides on the **side-effecting** solver (`TD.TD_side`) only; the
-plain top-down solver was retired. The intra-procedural (classical) spine moved
-to the sibling repo `voblint-formalization-classical`.
+The analysis rides on the **side-effecting** solver (`TD.TD_side`). An
+intra-procedural (classical) formulation is developed separately in the sibling
+repo `voblint-formalization-classical`.
 
-## Verified dependencies
+## Further Documentation
+
+For deeper theory-level detail, start with:
+
+- `docs/PROOF_OVERVIEW.md` for the big-picture proof story.
+- `docs/PROOF_PHASES.md` for phase status and remaining proof work.
+- `docs/ROADMAP.md` for active backlog and project direction.
+- `src/Formalization/Voblint.thy` for the session-level theory map.
+
+### Verified dependencies
 
 | Dependency | Source | Role |
 | --- | --- | --- |
@@ -295,7 +271,7 @@ to the sibling repo `voblint-formalization-classical`.
 | `Dijkstra_Shortest_Path` | AFP | CFG graph type |
 | `Root_Balanced_Tree` | AFP | transitive dep of TD |
 
-## Vendoring the TD solver
+### Vendoring the TD solver
 
 Upstream: [stilscher/td-verification](https://github.com/stilscher/td-verification).
 Vendored as a submodule via the private fork
@@ -306,7 +282,7 @@ Vendored as a submodule via the private fork
 change lives in `vendor/td-verification.patch`; `make vendor` applies it
 (idempotent).
 
-## Agent-assisted development
+### Agent-assisted development
 
 Proof development experiments with
 [Isabelle/Q](https://github.com/awslabs/AutoCorrode/tree/main/iq) (I/Q), an MCP

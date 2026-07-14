@@ -25,6 +25,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Exec_Sign_Cmp_Seed_Sound
     Exec_Sign_Mode_Value_Run
     Exec_Ivl_Run
+    Example_Interval_DG_Flagship
     Exec_Ivl_Cmp_Seed_Sound
     Exec_Ivl_Cmp_Keyed_DG_Run
     Exec_Ivl_Cmp_Seed_Enter

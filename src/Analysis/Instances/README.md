@@ -9,7 +9,8 @@ Each sub-folder threads one abstract domain through four layers:
    are derived automatically.
 3. **Executable witnesses** — native DG and per-domain executable runs live in the
    example theories under `src/Formalization/Examples/Executable/`; they exercise the
-   generated equation systems directly and no longer rely on a bridge theory.
+   generated equation systems directly, with the D/G product carrier made executable
+   through `Exec_DG_Bridge`.
 4. **End-to-end soundness** — packages the domain as an `effectful_domain_transfer` record and
    proves `sound_effectful_transfer`; the soundness engine in `Generic/Solver/` delivers
    `cfg_collect g cinit ≤ γ(analyse …)`.
