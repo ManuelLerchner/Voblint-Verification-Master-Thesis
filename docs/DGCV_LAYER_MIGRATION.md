@@ -1,11 +1,12 @@
 # D/G/C/V native layer — audit and migration record
 
-> **Status:** N1, N2, and N3 are delivered, the legacy `side_env_ctx` / `TD_Side_Eff_Ctx_Sound`
-> spine is deleted, and the remaining notes here track the broader D/G/C/V
-> generalization work that still sits on top of the current DG/keyed/digest/clean
-> architecture. This is the concrete record behind the one-line "next boundary"
-> in `docs/ROADMAP.md` ("generalize native soundness beyond abstract-state-shaped
-> `D`/`G`, then port the context/digest tower").
+> **Status:** the context-sensitive DG migration is delivered and closed, the
+> legacy `side_env_ctx` / `TD_Side_Eff_Ctx_Sound` spine is deleted, and the
+> remaining notes here track the separate post-migration D/G/C/V consolidation
+> that sits on top of the current DG/keyed/digest/clean architecture. This is
+> the concrete record behind the one-line "next boundary" in `docs/ROADMAP.md`
+> ("generalize native soundness beyond abstract-state-shaped `D`/`G`, then port
+> the context/digest tower").
 >
 > Companions: `SPLIT_STATE_MIGRATION.md` (the completed D/G migration and its
 > limitation tables), `GOBLINT_SPEC_LOCAL_GLOBAL_SEPARATION_AUDIT.md` (the Stage-0
@@ -18,7 +19,8 @@ Goblint's `module D / G / C / V` `Spec` boundary — above the current
 `abs_state`-typed bridge, and is there a coherent migration path? **Yes on both.**
 The audit showed the four axes already existed separately; N1 and N2 then
 collapsed the carrier restriction and the DG-signature gap. What remains is the
-paper-alignment work described below, not the retired `side_env_ctx` spine.
+separate paper-alignment / consolidation work described below, not the retired
+`side_env_ctx` spine.
 
 ---
 
@@ -45,12 +47,14 @@ and retire the homogeneous `Call_Spec`/`entry_seed` tower.
   demonstration that Sign fits the Goblint contract, not a maintained endpoint;
   Sign's examples ride `sign_etf` / the generic CMP path directly.
 * `Call_Spec_Sound` is imported only by `Sign_Call_Spec`.
-* `DG_Framework` imports `Call_Spec_Generator` but references **none** of its
-  names — the import only transitively pulls in the `Exec_Cmp_Bridge` /
-  `TD_Side_Eff_Cmp_*` substrate. Re-pointing that import to the substrate
-  directly severs the coupling and isolates the whole `Call_Spec` tower.
-* The CMP kernel (`Exec_Cmp_Bridge`, `TD_Side_Eff_Cmp_*`) is shared substrate for
-  **both** spines and stays (it is not the `Call_Spec` spec wrapper).
+* `DG_Framework` used to import `Call_Spec_Generator` while referencing **none**
+  of its names — the import only transitively pulled in the
+  `Exec_Cmp_Bridge` / `TD_Side_Eff_Cmp_*` substrate. Re-pointing that import to
+  the substrate directly severed the coupling and isolated the whole
+  `Call_Spec` tower.
+* The CMP kernel (`Exec_Cmp_Bridge`, `TD_Side_Eff_Cmp_*`) was shared substrate
+  for **both** spines and stayed separate from the `Call_Spec` spec wrapper
+  until the bridge retirement finished.
 
 **Sequence:** (1) sever `DG_Framework`'s `Call_Spec_Generator` import; (2) give
 Sign a native `sound_dg_spec` endpoint via the `unit_dg_spec sign_tf` diagonal,
@@ -58,14 +62,15 @@ mirroring `mixed_si`; (3) prove the Sign DG endpoint sound with unchanged
 collecting-soundness statement; (4) audit Interval (DG interpretation only if it
 is a maintained endpoint, not straight-line scaffolding); (5) delete the
 `Call_Spec` tower (`Call_Spec`, `Call_Spec_Generator`, `Call_Spec_Sound`,
-`Sign_Call_Spec`) once its cone is empty. Stages N3/N4 below are the earlier,
-broader framing of the same convergence; this section is the operative plan.
+`Sign_Call_Spec`) once its cone is empty. N3 below is the delivered migration;
+N4 below is the separate post-migration consolidation work.
 
 ### N2 outcome — DELIVERED (2026-07-13)
 
-* **DG import severed.** `DG_Framework` now imports `Exec_Cmp_Bridge` directly (it
-  referenced no `Call_Spec_Generator` name; the import only carried the CMP
-  substrate). The `Call_Spec` tower became an isolated island.
+* **DG import severed.** `DG_Framework` was re-pointed away from
+  `Call_Spec_Generator` and toward the CMP substrate directly (the import only
+  carried the substrate). The `Call_Spec` tower became an isolated island, and
+  the keyed executable bridge was later retired.
 * **Sign migrated.** `src/Analysis/Instances/Sign/Sign_DG.thy`:
   `interpretation sign_dg: sound_dg_spec "unit_dg_spec sign_tf" gamma_unit`
   (discharged by `sound_dg_spec_unit[OF sign_is_sound_transfer]`), with the native
@@ -352,24 +357,27 @@ read for `ctx_sel` (joined `G`-read vs pre-loss `D`) — resolve it the M2 way:
   context-sensitive routing with a precision witness the homogeneous design
   cannot state. This is the thesis-level validation.
 
-### Stage N4 — retire the homogeneous tower
+### Stage N4 — post-migration consolidation
 
-Only after N3: delete `effectful_domain_transfer`, `edge_tf_tree`,
-`combine_tf_tree`, the homogeneous generator + Ctx/Cmp kernels, and the
-homogeneous halves of `Call_Spec*`, keeping at most a thin
-`D = G = 'a abs_state` adapter (the `unit_dg_spec` route) if it saves instance
-boilerplate. Same dead-code-audit discipline as the Stage-2 cleanup
-(consumer counts, then batch build).
+This is a separate cleanup project, not a blocker for the delivered migration.
+Treat it as a current-source inventory plus dead-code removal pass:
 
-**Current residual:** the shared executable `_st` keyed generator and its
-`st`/warrowing transport remain as compatibility infrastructure for the
-executable regressions. They are now downstream of the DG-native witnesses:
-Sign and Interval both have native DG interpretations and context probes, and
-the interval keyed witness has been migrated to DG-native form:
-`Exec_Ivl_Cmp_Keyed_DG_Run`.
+1. find surviving homogeneous helpers and wrappers;
+2. classify each as dead, thin adapter, real independent functionality, or
+   duplicate of DG functionality;
+3. delete zero-consumer leftovers;
+4. thin surviving adapters to DG corollaries where possible;
+5. update terminology and docs for retained adapters only.
 
-The recursive interval pair has been retired. Remaining compatibility
-consumers, if any, live outside this showcase cone and are tracked separately.
+Keep feature work separate. Caller-`D`-dependent `enter`, paper-order
+call-constraint generation, keyed `V -> G` reads, and broader D/G/C/V
+generalization stay in the roadmap as future feature work, not N4 cleanup.
+
+**Current residual:** the DG-native executable examples remain; the retired
+`_st` bridge and deleted legacy examples stay deleted. If a surviving
+homogeneous helper still has live consumers, it belongs in the inventory below
+and is handled case by case. The dead `Exec_Ctx_Bridge` executable context
+mirror was deleted as part of the N4 cleanup pass.
 
 ---
 
@@ -381,7 +389,7 @@ consumers, if any, live outside this showcase cone and are tracked separately.
 | Mixed-domain **and** context-sensitive analyses | N2 joins the two towers |
 | `ctx_sel` over `D` — Goblint's actual `context` signature | N2 re-typing; removes the last `abs_state` baked into a contract |
 | A home for M2 (pre-loss routing) | opaque `D` carries routing info until `ctx_sel` reads it; no framework-forced publication loss |
-| One proof tower instead of two API families | N4 |
+| One proof tower instead of two API families | N4 consolidation only |
 | Honest Goblint mapping for the thesis | `D/G/C/V` named and typed as upstream |
 
 ---
@@ -393,7 +401,7 @@ Classification per `Spec` feature. Two reference points: the **tutorial's
 `analyses.ml`. Rows marked *beyond-tutorial* are extensions past the paper's
 simplified interface, not gaps in paper fidelity.
 
-| Goblint feature | Status after N1–N4 | Class |
+| Goblint feature | Status after the DG migration | Class |
 | --- | --- | --- |
 | `module D / G : Lattice`, arbitrary carriers | native | **required — delivered** |
 | `module C`, `context : ... -> D.t -> C.t` | native (`ctx_sel :: pp => 'c => 'D => 'c`) | **required — delivered** |
@@ -409,7 +417,7 @@ simplified interface, not gaps in paper fidelity.
 
 ---
 
-## 7. Recommended order and immediate next step
+## 7. Final status and post-migration note
 
 1. **N3 is delivered**: Sign and Interval have native DG interpretations, Retain
    is natively sound on the generalized carriers, Clean / seeded-clean /
@@ -417,11 +425,11 @@ simplified interface, not gaps in paper fidelity.
    exists; Sign and Interval both have native DG context probes, and the
    interval executable keyed regression now uses the DG-native witness
    `Exec_Ivl_Cmp_Keyed_DG_Run`.
-2. **N4 remains** as the cleanup slice: the paper-alignment sequence of §8.5
-   still points to caller-`D`-dependent `enter`
-   (Phase 2), paper-order call-constraint generation (Phase 3), keyed `V → G`
-   reads / finite keyed writes (Phase 4). These generalize the call interface
-   past the restricted `entry_seed`; they are downstream of the D/G/C/V cleanup.
+2. **N4 remains** only as post-migration consolidation: inventory surviving
+   homogeneous helpers, delete dead wrappers, and thin any unavoidable
+   adapters. Caller-`D`-dependent `enter`, paper-order call-constraint
+   generation, keyed `V -> G` reads, finite keyed writes, and broader D/G/C/V
+   generalization stay outside N4 as separate feature work.
 
 ---
 

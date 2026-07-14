@@ -39,6 +39,11 @@ lemma traverse_rhs_map_gtree:
   "traverse_rhs (map_gtree r t) \<sigma> = traverse_rhs t (\<lambda>z. \<sigma> (map_sum id r z))"
   by (induction t) auto
 
+lemma dep_aux_map_ltree:
+  "dep_aux \<sigma> (map_ltree h t)
+   = map_sum h id ` dep_aux (\<lambda>z. \<sigma> (map_sum h id z)) t"
+  by (induction t arbitrary: \<sigma>) auto
+
 subsection \<open>The keyed generator\<close>
 
 text \<open>
@@ -86,6 +91,44 @@ lemma eq_side_cfg_T_eff_cmp:
         @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
   unfolding side_cfg_T_eff_cmp_def
   by (simp add: traverse_side_rhs_fold_ctx Let_def)
+
+definition side_cfg_T_eff_cmp_seed ::
+  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+   \<Rightarrow> ('c \<Rightarrow> 'a abs_state) \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
+where
+  "side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0 =
+     (\<lambda>(v, c).
+        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+                   \<squnion> (if is_frame_entry g v then frame_seed c else \<bottom>);
+            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
+                            (map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u)))
+                        (non_enter_predecessor_list g v);
+            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
+            t = side_rhs_fold_ctx acc0 (intra @ comb)
+        in if v = cfg_entry g then Side (gkey c) (restrict_global s0) t else t)"
+
+lemma eq_side_cfg_T_eff_cmp_seed:
+  "eq (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) (v, ctx) \<sigma> =
+     side_acc_ctx ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+                   \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>))
+       \<sigma>
+       (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
+             (non_enter_predecessor_list g v)
+        @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
+  by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
+
+text \<open>
+  A constant frame seed collapses the seeded generator to the fixed-frame generator:
+  the two definitions differ only in \<open>frame_seed c\<close> vs \<open>fresh_frame\<close>.  This is the
+  reduction that lets fixed-frame post-fixpoint theorems consume seeded-generator
+  post-fixpoints whenever the seed does not depend on the context.
+\<close>
+
+lemma side_cfg_T_eff_cmp_seed_const:
+  "side_cfg_T_eff_cmp_seed gkey cmb (\<lambda>_. fr) g etf bot0 s0
+     = side_cfg_T_eff_cmp gkey cmb g etf fr bot0 s0"
+  unfolding side_cfg_T_eff_cmp_seed_def side_cfg_T_eff_cmp_def by simp
 
 
 subsection \<open>Routing: the keyed intra tree reads the context / keyed-slot pullback\<close>
@@ -148,9 +191,15 @@ lemma sides_map_ltree_Inr:
   by (induction t) (auto simp: Let_def)
 
 lemma sides_map_gtree_unit:
-  fixes t :: "('x, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  fixes t :: "('x, unit, 'b::bounded_semilattice_sup_bot) strategy_tree"
   shows "sides_of_rhs (map_gtree r t) \<sigma> (Inr (r ()))
          = sides_of_rhs t (\<lambda>z. \<sigma> (map_sum id r z)) (Inr ())"
+  by (induction t) (auto simp: Let_def)
+
+lemma sides_map_gtree_unit_gen:
+  fixes t :: "('x, unit, 'b::bounded_semilattice_sup_bot) strategy_tree"
+  shows "sides_of_rhs (map_gtree (\<lambda>_. ()) t) \<sigma> (Inr ())
+         = sides_of_rhs t (\<lambda>z. \<sigma> (map_sum id (\<lambda>_. ()) z)) (Inr ())"
   by (induction t) (auto simp: Let_def)
 
 lemma sides_map_gtree_off:

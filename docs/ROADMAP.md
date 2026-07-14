@@ -65,29 +65,19 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
   witness: global-derived contexts, filtered read `SZero`/`SPos` vs. join-all `SNonNeg`,
   contrasted with the unsound caller-local seeded split) and `Exec_Sign_Cmp_Keyed_DG_Run.thy`
   (current keyed DG witness: per-context global slots, `combine_sound`, `dg_gamma_c`, and
-  `by eval` separation). Executable filtered
-  read: `glob_env_cmp_code` in `Global_Cmp_Read.thy`. `Exec_Cmp_Bridge.thy` adds the reusable
-  executable `_st` keyed generator `side_cfg_T_eff_cmp_st`; `Exec_Sign_Cmp_Keyed_Gen_Run.thy`
-  instantiates it for the sign domain with `gkey = id` and a global-derived context, checks that
-  the real side solver runs (`kgen_runs` by eval), records the materialised keyed slots
-  (`kgen_generated_solver_result` by eval), proves the returned solver result is a concrete
-  `part_post_solution` (`kgen_part_post_solution_st`), and adds the soundness-facing corollary
-  `kgen_keyed_generator_sound_if_post_fixpoint` from the generic keyed theorem. `Exec_Cmp_Bridge`
-  also exposes `side_rg_side_cfg_T_eff_cmp_st_unit`, the structural invariant needed by future
-  executable certification. This `sign st`-keyed run keys on the flow-insensitive global
-  (`restrict_global_st` of the joined caller), so its pure `G = SZero` context reads precisely
-  (`kgen_slot_zero_precise`) while its value-merged context stays `SNonNeg` (`kgen_slot_merged`);
-  the seeding combine `kgen_combine_st` feeds the callee-entry globals. Full per-call-site
+  `by eval` separation). Executable filtered read: `glob_env_cmp_code` in
+  `Global_Cmp_Read.thy`. The former executable `_st` keyed generator has been retired; the
+  remaining seeded-clean and keyed examples are direct DG witnesses. Full per-call-site
   `SZero`/`SPos` separation is carried by `Example_Finite_Sign_Context_Analysis.thy`, a
   first-class example with a finite context/key type `GZero | GPos | GNonNeg | GOther` computed
-  from the sign value of global `G`: it runs the executable keyed `_st` generator and proves the
-  separated slots `by eval` (`fctx_slot_zero_precise` = `SZero`, `fctx_slot_pos_precise` = `SPos`,
-  `fctx_join_all` = `SNonNeg`), plus the finite-key soundness-facing theorem
-  `fctx_keyed_sound_if_post_fixpoint`. The precision hinges on filtering `EA_Enter` from the
-  intra fold and seeding a framed fresh frame (see the framed-enter redesign below,
-  `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`). The remaining bridge is the value-dependent
-  finite-context soundness theorem (concrete `st` run → abstract post-fixpoint) / eventual
-  `context_domain` locale. Batch-green, no sorry.
+  from the sign value of global `G`: it proves the separated slots `by eval`
+  (`fctx_slot_zero_precise` = `SZero`, `fctx_slot_pos_precise` = `SPos`, `fctx_join_all` =
+  `SNonNeg`), plus the finite-key soundness-facing theorem `fctx_keyed_sound_if_post_fixpoint`.
+  The precision hinges on filtering `EA_Enter` from the intra fold and seeding a framed fresh
+  frame (see the framed-enter redesign below, `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`).
+  The remaining proof obligation is the value-dependent finite-context soundness theorem
+  (concrete run → abstract post-fixpoint) / eventual `context_domain` locale. Batch-green, no
+  sorry.
 - **Generic keyed soundness core:** `TD_Side_Eff_Cmp_Pull.thy` — the reusable heart of a
   keyed generator. The masking pullback `pull_cmp` collapses the `cmp`-filtered slots into a
   monovariant view (`side_env_cmp_pull`), so `post_fixpoint_sound_at_cmp_pull` reduces keyed

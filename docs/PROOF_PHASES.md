@@ -63,8 +63,8 @@ As of last full-session build: **0 sorries** in `src/`.
 - `TD_Side_Eff_Bounds.thy` — generic `_gen` mono and static-deps preconditions; `TD_Side_Eff_Soundness.thy` — bundled `threefold_mono`, cone compatibility, and unit-global record lemmas.
 - `TD_Side_Eff_Interface.thy` — `side_cfg_solve_dom_eff`, `side_analyse_eff`; imports `TD.TD_side`.
 - `TD_Side_Eff_Soundness.thy` — `side_analyse_eff_collect_sound_exit_pruned_gen` via reach cone + pruning.
-- Keyed context branch — `Global_Cmp_Read`, `TD_Side_Eff_Cmp_*`, `Exec_Cmp_Bridge`,
-  and the finite sign examples. See `docs/KEYED_CONTEXT_CONSOLIDATION.md`.
+- Keyed context branch — `Global_Cmp_Read`, `TD_Side_Eff_Cmp_*`, and the finite sign
+  examples. See `docs/KEYED_CONTEXT_CONSOLIDATION.md`.
 
 ### Pipeline + domain
 

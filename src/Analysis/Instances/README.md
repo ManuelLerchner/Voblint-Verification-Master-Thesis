@@ -7,8 +7,9 @@ Each sub-folder threads one abstract domain through four layers:
 2. **Locale interpretation** — one `interpretation` of `abstract_domain` + one of `sound_transfer`
    discharge all proof obligations; downstream lemmas (`gamma_state_mono`, `gamma_state_sup_ub*`)
    are derived automatically.
-3. **Executable bridge** — a commutation theorem `tf_st_commute` linking the abstract transfer
-   function to its `'d st` association-list mirror; consumed by `Exec_Bridge.thy`.
+3. **Executable witnesses** — native DG and per-domain executable runs live in the
+   example theories under `src/Formalization/Examples/Executable/`; they exercise the
+   generated equation systems directly and no longer rely on a bridge theory.
 4. **End-to-end soundness** — packages the domain as an `effectful_domain_transfer` record and
    proves `sound_effectful_transfer`; the soundness engine in `Generic/Solver/` delivers
    `cfg_collect g cinit ≤ γ(analyse …)`.
@@ -44,19 +45,13 @@ part of the reusable analysis instance.
    already interpreted) for `afilter_mono`/`bfilter_mono` — both proved generically
    in `Generic/Domain/Abstract_Domain`. See `Sign_Domain` / `Interval_Domain` for the
    interpretation shape.
-4. **Executable mirror.** Define the `'d st` mirror and prove `tf_st_commute`; the
-   generic `part_post_solution_st_to_abs_transport` in `Generic/Solver/Exec/Exec_Bridge`
-   lifts any executable post-solution to the abstract one.
-5. **End-to-end soundness.** Package an `effectful_domain_transfer` record; prove
-   `sound_effectful_transfer`. The engine in `Generic/Solver/` delivers
-   `cfg_collect g cinit <= gamma(analyse ...)`.
-6. **Context-sensitivity / digests — free.** No per-domain work: `glob_env_cmp`,
+5. **Context-sensitivity / digests — free.** No per-domain work: `glob_env_cmp`,
    `side_env_cmp`, `digest_global_read` (`obs_digest`), the cmp/ctx/digest generators,
    and their soundness are all generic over `'d::bounded_semilattice_sup_bot`. A new
    domain plugs into them unchanged; only executable witnesses are written per domain,
    in `src/Formalization/Examples/Executable/`.
-7. Register the `.thy` files in `src/Analysis/ROOT` (`directories` + `theories`,
-   order: domain before soundness before executable bridges).
+6. Register the `.thy` files in `src/Analysis/ROOT` (`directories` + `theories`,
+   order: domain before soundness before executable witnesses).
 
 No changes to `Generic/` are needed unless the new domain requires a new tree shape.
 The Sign and Interval folders are the two worked examples; the `Generic/` layer is

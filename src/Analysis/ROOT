@@ -49,8 +49,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Strategy_Tree_Monad
     TD_Side_Tree
     Exec_Bridge
-    Exec_Ctx_Bridge
-    Exec_Cmp_Bridge
     Solver_Side_RG
     Solver_Menu
     TD_Side_Eff_Sound

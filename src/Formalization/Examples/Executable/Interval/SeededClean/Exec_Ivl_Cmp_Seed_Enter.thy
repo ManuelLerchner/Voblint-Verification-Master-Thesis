@@ -14,7 +14,7 @@ text \<open>
   separate local and global carriers.
 
   The point of the probe is architectural: the executable example no longer needs
-  @{const side_cfg_T_eff_cmp_seed_st} or the transport bridge.
+  the `_st` transport path.
 \<close>
 
 subsection \<open>The program\<close>

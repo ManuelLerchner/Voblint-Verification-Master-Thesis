@@ -270,8 +270,8 @@ lemma dg_edge_tree_global:
           (apply_dg_spec S a u))) sigma (Inr ()))
    = fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
   unfolding apply_dg_spec_def dg_D_def dg_G_def
-  by (subst sides_map_gtree_unit_gen, subst sides_map_ltree_Inr)
-    (simp add: sides_dg_edge_tree_Inr)
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_edge_tree_Inr
+      sum.map_comp o_def)
 
 lemma dg_combine_tree_local:
   "locals (traverse_rhs (dg_cmb () cc ex) sigma)
@@ -286,8 +286,8 @@ lemma dg_combine_tree_global:
    = fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
        (dg_G sigma))"
   unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  by (subst sides_map_gtree_unit_gen, subst sides_map_ltree_Inr)
-    (simp add: sides_dg_combine_tree_Inr)
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_combine_tree_Inr
+      sum.map_comp o_def)
 
 theorem dg_post_solution_postfix:
   assumes pp:

@@ -7,7 +7,7 @@ section \<open>Native DG seeded-clean context probe\<close>
 text \<open>
   The seeded-clean context probe now rides the native DG witness directly.  The
   example keeps the concrete two-call program and the per-context separation
-  result, but no longer mentions the retired state-transport bridge.
+  result.
 \<close>
 
 theorem seed_clean_example_runs:

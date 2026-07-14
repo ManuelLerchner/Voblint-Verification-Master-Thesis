@@ -1,5 +1,5 @@
 theory Seeded_Clean_Ctx_Collect
-  imports Seed_EnterMono_Lift Exec_Cmp_Bridge
+  imports Seed_EnterMono_Lift Voblint_Analysis.TD_Side_Eff_Cmp_Gen
 begin
 
 section \<open>Generic entry-side reduction for the seeded-clean context spine\<close>
@@ -169,7 +169,7 @@ text \<open>
 
     \<^item> \<open>EDGE_BOUND\<close> (non-enter): \<open>seeded_clean_edge_bound\<close>;
     \<^item> the seed order-half of \<open>ENTRY\<close> / \<open>PROC_ENTRY\<close>: \<open>seeded_clean_seed_bound\<close>;
-    \<^item> \<open>COMB_BOUND\<close>: \<open>Exec_Cmp_Bridge.seeded_clean_comb_bound\<close> +
+    \<^item> \<open>COMB_BOUND\<close>: \<open>seeded_clean_comb_bound\<close> +
       \<open>combine_abs_bound_sound\<close> (the abstract combine bound the rehydrating combine meets);
     \<^item> \<open>ENTER_MONO\<close>: \<open>point_digest.enter_mono_kernel\<close> --- discharged \<^emph>\<open>as a theorem\<close> from
       the point-routing condition, no longer a raw semantic premise.

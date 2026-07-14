@@ -20,14 +20,10 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Twfr_Reach_Read
     Exec_Sign_Run
     Exec_Sign_Cmp_Keyed_DG_Run
-    Exec_Sign_Cmp_Shared
-    Exec_Sign_Cmp_Keyed_Retain_EnterMono
-    Exec_Sign_Cmp_RRead_Split
     Exec_Sign_Cmp_Seed_Enter
     Exec_Sign_Cmp_Seed_Sound
     Exec_Sign_Mode_Value_Run
     Exec_Ivl_Run
-    Exec_Ivl_Cmp_Shared
     Exec_Ivl_Cmp_Seed_Sound
     Exec_Ivl_Cmp_Keyed_DG_Run
     Exec_Ivl_Cmp_Seed_Enter

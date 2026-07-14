@@ -11,7 +11,7 @@ The layer is split into three concerns, one subfolder each:
 | --- | --- |
 | `Core/` | the TD-side strategy-tree spine: monad, generator, monotonicity, base collecting soundness |
 | `Context/` | Goblint-facing context spine: `Goblint/Read`, `Goblint/Read/Support`, `Goblint/Routing`, `Goblint/Routing/Support`, `Goblint/DG` |
-| `Exec/` | the `'a st` executable mirror and `fun_of_st` transport |
+| `Exec/` | executable witnesses and DG-native example support |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
 This layer wires `part_post_solution` to `is_post_fixpoint` via
@@ -42,9 +42,9 @@ This layer wires `part_post_solution` to `is_post_fixpoint` via
 ## `Exec/`
 
 `Exec_Bridge` (`'a st` fold mirror + `fun_of_st` simulation + the generic
-`part_post_solution_st_to_abs_transport`), `Exec_Ctx_Bridge`, `Exec_Cmp_Bridge`
-(executable generator variants and their transport), and `Solver_Side_RG` (reach-global
-lemmas).
+`part_post_solution_st_to_abs_transport`) and `Solver_Side_RG` (reach-global
+lemmas). The former keyed executable bridge has been retired; current executable
+examples use the native DG witnesses directly.
 
 `Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`, `warrow`)
 behind one `side_solver` signature; `run_menu eqs entry k var` reads one slot's variable

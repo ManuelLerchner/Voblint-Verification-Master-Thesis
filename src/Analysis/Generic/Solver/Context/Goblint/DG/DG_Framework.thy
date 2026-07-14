@@ -1,5 +1,5 @@
 theory DG_Framework
-  imports "Voblint_Analysis.Exec_Cmp_Bridge"
+  imports "Voblint_Analysis.Exec_Bridge" "Voblint_Analysis.TD_Side_Eff_Cmp_Gen"
 begin
 
 section \<open>The D/G framework core\<close>
