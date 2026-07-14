@@ -1,5 +1,7 @@
 # M2 — `R_read` / D-G boundary alignment
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this migration has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Status: **Stage 1 partially done (transport toolkit landed); concrete closure
 blocked by a structural finding.** Goblint-faithfulness *precision* upgrade of the
 keyed context route. The shipped soundness results (Track B, keyed generator

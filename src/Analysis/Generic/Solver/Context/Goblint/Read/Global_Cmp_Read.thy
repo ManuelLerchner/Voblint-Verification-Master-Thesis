@@ -61,7 +61,7 @@ qed
 section \<open>Context-compatible side environment\<close>
 
 text \<open>
-  The reading counterpart of \<open>side_env_ctx\<close>: the local unknown at \<open>(v, ctx)\<close>
+  The reading counterpart of the context-local unknown at \<open>(v, ctx)\<close>
   joined with the \<open>cmp\<close>-filtered globals for \<open>ctx\<close>, instead of the join-all
   \<^const>\<open>glob_env\<close>.  \<open>cmp = (\<lambda>_ _. True)\<close> reproduces the join-all read; a single
   compatible key reduces to a single global slot.

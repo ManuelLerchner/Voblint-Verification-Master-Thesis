@@ -1,5 +1,7 @@
 # Global-state context: design analysis
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this analysis has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Status: **design landed.** The keyed `cmp` generator (`side_cfg_T_eff_cmp`,
 `TD_Side_Eff_Cmp_Gen.thy`) realizes this analysis: per-context global slots
 (`gkey c` via `map_gtree`), `cmp`-filtered reads (`side_env_cmp` / `pull_gk`,

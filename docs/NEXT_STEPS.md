@@ -15,7 +15,7 @@ Catalogue: `docs/OPEN_PROBLEMS.md`. Architecture: `docs/ROADMAP.md`.
 - **0 sorries** in `src/`.
 - **`sound_domain`/`abstract_domain` → type classes** (2026-06-23): `locale sound_domain` and `locale abstract_domain` replaced by `class sound_domain` and `class abstract_domain`; `gamma` is now a single class operation; `gamma_state`/`widen_state` are global definitions with `⟦_⟧` notation; Sign and Interval instantiated via `instantiation` blocks; `backward_domain` drops the `γ` parameter; solver theorems require only `'a::sound_domain` constraints. `Update_rules.N` shadow clash fixed via `hide_const (open)` in `Abstract_Domain`, `Sign_Domain`, `Interval_Domain`.
 - Trace semantics (`cfg_collect_trace`) + projection (`alpha_last`) + soundness morphism.
-- **Goblint-style context-indexed unknowns** — the `(node, context)` mechanism is modeled and verified, not pending. `context_domain` locale (`Context_Domain.thy`) mirrors Goblint's `Spec` D/G/C interface; `cfg_collect_ctx` + `context_analysis_sound`/`digest_env_sound`/`digest_read_sound` are the context collecting semantics and soundness contract; the semantic entry-state instance is **sound and strictly precise and computed** (`semantic_entry_store_ctx_analysis_sound`, `entry_store_context_precision_witness`). See "Context-sensitivity status" below.
+- **Goblint-style context-indexed unknowns** — the `(node, context)` mechanism is modeled and verified via the shared context-collection backbone (`TD_Side_Eff_Ctx_Shared`) plus DG / keyed / digest / clean soundness; `context_domain` locale (`Context_Domain.thy`) mirrors Goblint's `Spec` D/G/C interface. The retired entry-store context experiment (`TD_Side_Eff_Ctx_Sound`, `semantic_entry_store_ctx_analysis_sound`, `entry_store_context_precision_witness`) is deleted. See "Context-sensitivity status" below.
 - AFP IMP2 bridge + VCG co-existence example.
 - Classical (intra) spine extracted to sibling repo `voblint-formalization-classical`.
 
@@ -69,10 +69,9 @@ formalization already captures that mechanism:
 - **Unknown space** `(pp + 'g) × 'c` fed to the vendored `TD_side` (= `FromSpec`).
 - **`context_domain` locale** (`Context_Domain.thy`) mirrors the `Spec` D/G/C
   interface: `start_context`/`prep`/`ctx_sel`/`entdg`/`cmp`, call-only routing.
-- **Sound + strictly precise + computed** semantic entry-state instance:
-  `semantic_entry_store_ctx_analysis_sound` (`TD_Side_Eff_Ctx_Sound.thy`),
-  `entry_store_context_precision_witness` (`Example_Entry_Store_Context_Precision.thy`),
-  plus a finite value-derived context (`Example_Finite_Sign_Context_Analysis.thy`).
+- **Shared context-collection backbone + DG/keyed/digest/clean**: the current path is
+  `TD_Side_Eff_Ctx_Shared` feeding `TD_Side_Eff_Cmp_Sound`, `Digest_Global_Read`,
+  `Value_Digest_Reader`, `Clean_RRead_Sound`, and the seeded activation spine.
 - **Contract**: `cfg_collect_ctx` + `context_analysis_sound` /
   `digest_env_sound` / `digest_read_sound`.
 

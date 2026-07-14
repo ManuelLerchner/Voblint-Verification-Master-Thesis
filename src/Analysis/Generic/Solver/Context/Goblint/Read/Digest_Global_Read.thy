@@ -1,5 +1,5 @@
 theory Digest_Global_Read
-  imports TD_Side_Eff_Cmp_Sound
+  imports TD_Side_Eff_Cmp_Sound TD_Side_Eff_Ctx_Shared
 begin
 
 section \<open>Global read is bottom on local variables\<close>

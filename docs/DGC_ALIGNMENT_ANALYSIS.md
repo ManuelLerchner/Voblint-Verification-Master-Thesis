@@ -1,5 +1,7 @@
 # D/G/C alignment analysis: is the Route A obstruction fundamental?
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this analysis has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 > **Investigation only. No theory changes.** Validates the architecture before any
 > soundness-kernel change. Companion to `CONTEXT_DOMAIN_ARCHITECTURE.md` (the landed
 > locale), `ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` (the corrected Goblint model),
@@ -300,9 +302,10 @@ context selected from the routing read.
 
 - The `context_domain` interface shape, `route = ctx_sel ∘ prep`, `start_context`,
   `cmp`, `entdg` typing.
-- Stack B (`entry_store_ctx` interpretation, `semantic_entry_store_ctx_analysis_sound`):
-  it uses `cmp = (⊆)` with a **unit** global pot and entry-store contexts — it does not
-  route on a keyed global, so it is untouched by 6a/6b.
+- Historical Stack B (`entry_store_ctx` interpretation, deleted `semantic_entry_store_ctx_analysis_sound`):
+  it used `cmp = (⊆)` with a **unit** global pot and entry-store contexts. It is no
+  longer part of the live architecture; the current path is DG / keyed / digest /
+  clean over `TD_Side_Eff_Ctx_Shared`.
 - `glob_env_cmp` monotonicity/collapse lemmas.
 
 ---
@@ -408,10 +411,10 @@ the crux.
    Validate on a two-procedure, one-global fragment (the `fctx` shape) that a callee
    global write remains sound under the new publication discipline before touching the
    full keyed generator.
-4. **Keep Stack B (`C`) as the shipped soundness result** meanwhile: it already
-   certifies value-dependent context-sensitivity (`semantic_entry_store_ctx_analysis_sound`)
-   and is orthogonal to this rework. The D/G/C correction is a **precision** upgrade of
-   the keyed route (`A`), not a soundness prerequisite.
+4. **Keep the shared DG/keyed/digest/clean stack** as the shipped soundness result
+   meanwhile: the deleted entry-store experiment is orthogonal to this rework. The
+   D/G/C correction is a **precision** upgrade of the keyed route (`A`), not a
+   soundness prerequisite.
 5. **Ship the obstruction characterization as a result regardless:** "a finite keyed
    `(=)` context cannot separate a global-derived split under a publish-and-erase global
    discipline; the routing-relevant information must remain available in the

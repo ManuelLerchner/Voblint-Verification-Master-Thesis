@@ -165,7 +165,7 @@ every consumer (the `side_env_cmp` read, `pull_gk`, the CMP kernel) reads
 | Tower | Files | D/G | C/V | Endpoint |
 | --- | --- | --- | --- | --- |
 | Native DG | `Goblint/DG/DG_Soundness.thy` | independent | `unit`/`unit` | flat `cfg_collect` |
-| Homogeneous context/digest | `Goblint/Read/TD_Side_Eff_Ctx_Sound.thy`, `Read/Support/TD_Side_Eff_Cmp_Sound.thy`, `Read/Support/TD_Side_Eff_Cmp_Gen.thy`, `Goblint/Routing/Call_Spec*.thy` | one `'a abs_state` | full (`'c`, `'g::finite`, digests, `ENTER_MONO`) | `cfg_collect_ctx` |
+| Shared context backbone + DG/keyed/digest/clean | `Goblint/Read/Support/TD_Side_Eff_Ctx_Shared.thy`, `Read/Support/TD_Side_Eff_Cmp_Sound.thy`, `Read/Support/Digest_Global_Read.thy`, `Read/Support/Value_Digest_Reader.thy`, `Read/Support/TD_Side_Eff_Cmp_Gen.thy`, `Goblint/Routing/Call_Spec*.thy` | one `'a abs_state` | full (`'c`, `'g::finite`, digests, `ENTER_MONO`) | `cfg_collect_ctx` |
 
 Every context-sensitive result (Sign/Interval endpoints, keyed globals, digest
 precision, seeded-clean/activation spine) lives in the second tower. The mixed
@@ -316,7 +316,7 @@ Structure mirrors the homogeneous tower one-to-one:
 | --- | --- |
 | `glob_env_cmp` / `side_env_cmp` (`Read/Global_Cmp_Read.thy`) | `G`-valued keyed read over `Inr 'v` slots |
 | `pull_gk` routing (`Core/TD_Side_Tree.thy`) | same, `dg_state`-valued (map lemmas exist) |
-| `post_fixpoint_sound_at_ctx_semantic` (`Read/TD_Side_Eff_Ctx_Sound.thy`) | two-gamma restatement: `ENTRY`/`PROC_ENTRY`/`EDGE` over `gammaDG` |
+| shared context helpers (`TD_Side_Eff_Ctx_Shared.thy`) | pullback/slot invariants reused by DG, keyed, digest, clean |
 | `CMP_SOUND` / `LOCAL_POST` (`Read/Support/TD_Side_Eff_Cmp_Sound.thy`) | combine premises over `dgs_combine` (already the `sound_dg_spec.combine_sound` shape) |
 | `ENTER_MONO` + `dg_*` digest laws | unchanged store-level statements; `ctx_sel` now reads `dg_D sigma` |
 | `collect_ctx_sound_route` | `dg_analysis_spec` corollary |

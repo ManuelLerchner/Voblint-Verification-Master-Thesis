@@ -1,5 +1,7 @@
 # A7 design study: Goblint D/G/C context interface
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed here has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Design review only. No theory changes are prescribed here.
 
 > **Status (2026-07-08) — reconciliation.** The `(node, context)` unknown

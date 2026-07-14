@@ -1,5 +1,7 @@
 # Semantic-context migration plan (Path B, soundness-only)
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this plan has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 > **Agent entry point:** `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` (umbrella, Track B).
 > This file holds warrowing + entry-state slice detail (S0–S4).
 

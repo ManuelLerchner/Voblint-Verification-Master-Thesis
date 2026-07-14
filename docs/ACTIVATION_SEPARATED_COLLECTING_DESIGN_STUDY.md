@@ -1,5 +1,7 @@
 # Activation-separated collecting semantics — design study
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this study has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Status: **design only, not implemented.** Source-backed analysis of the least
 invasive way to unblock
 

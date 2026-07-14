@@ -61,9 +61,9 @@ structural context: the enter step is discharged by a **seed** obligation
 (`SEED_G`), not by a digest law plus a transfer bound.
 
 The digest infrastructure (`trace_witness_d`, `reaching_compat`, `cfg_collect_ctx`,
-`context_transfer`, the `DG_*`-based kernels) is **not removed**: the retain spine
-(`semantic_entry_store_ctx_analysis_sound`) still uses it and is the shipped sound
-baseline. It is now *isolated* to the retain path; the seeded path no longer needs it.
+`context_transfer`, the `DG_*`-based kernels) is **not removed**: it remains part of
+the current DG/keyed/digest/clean stack and the seeded activation path. The deleted
+entry-store context experiment no longer depends on it.
 
 ## 4. The Stage-3 fix: the locals-covering seed
 

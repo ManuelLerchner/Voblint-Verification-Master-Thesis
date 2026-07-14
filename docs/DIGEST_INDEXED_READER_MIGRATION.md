@@ -1,5 +1,7 @@
 # Migration — reaching-definition global reads (writer re-keying + digest-indexed reader)
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this migration has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 > **RETIRED — the reaching-definitions digest family was removed from the tree (commit
 > `92739cf`).** It was a demonstration-only instance, off the value-derived thesis. The
 > generic `obs_digest` kernel survives (the mode family uses it); the RD instance section of

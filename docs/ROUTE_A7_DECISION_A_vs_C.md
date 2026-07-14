@@ -1,5 +1,7 @@
 # A7 decision note: Goblint D/G/C route (A) vs semantic entry-store context (C)
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed here has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Route A (keyed `cmp=(=)` finite context) is blocked at the `fctx` witness by an
 architectural fact, not a missing lemma:
 
@@ -41,9 +43,9 @@ global side slots remain separate.
 
 | | **A — Goblint D/G/C keyed generator** | **C — semantic entry-store context** |
 | --- | --- | --- |
-| Idea | Context selection at calls reads a routing state before the relevant information is published, widened, or joined away. Published globals live separately in `G` side slots. | Reuse the proven `semantic_entry_store_ctx_analysis_sound`: context = entry-store abstraction, unit global pot. |
+| Idea | Context selection at calls reads a routing state before the relevant information is published, widened, or joined away. Published globals live separately in `G` side slots. | Historical only: the entry-store spine was deleted. |
 | Comparison | `cmp = (=)`, precise per-call keyed globals | `cmp = (subseteq)`, unit globals |
-| Status | Not built. New context model. | Sound in the repo today (`TD_Side_Eff_Ctx_Sound.thy`, batch-sealed). |
+| Status | Not built. New context model. | Historical only; the entry-store spine has been deleted. |
 | Kernel A7.1 | Untouched | Not used (different theorem) |
 | Touches | `Context_Domain.thy`, keyed combine/generator boundary, `ENTER_MONO`/`CMP_SOUND` statements, fctx witness representation of the routing information before it is lost | A witness program + instantiation of an existing theorem |
 | Effort / risk | Medium-large / medium-high; less invasive than normal-edge `step_ctx`, but requires a clean `D` vs `G` boundary | Small / low |

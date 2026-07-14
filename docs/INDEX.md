@@ -43,7 +43,6 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 | --- | --- |
 | `DGCV_LAYER_MIGRATION.md` | IN PROGRESS — D/G/C/V native layer: N1 carrier generalization + N2 Sign-on-DG convergence DELIVERED; homogeneous-tower retirement pending |
 | `DG_KEYED_CONTEXT_FEASIBILITY.md` | DELIVERED (slice) — keyed/context soundness on the DG spine: reader lemma + per-context theorem + Sign probe; conditional GO for full port |
-| `DG_KEYED_CONTEXT_MIGRATION.md` | IN PROGRESS — Phase 1 (one keyed Sign analysis migrated) + Phase 2 (carrier-agnostic backbone + DG `cfg_collect_ctx` endpoint) DELIVERED, batch-green; Phases 3–5 (matrix, remaining examples, kernel deletion) open |
 | `DIGEST_GENERATOR_COLLECTING_DISCHARGE_MIGRATION.md` | IN PROGRESS — superset-reader class closed |
 | `DIGEST_INDEXED_READER_MIGRATION.md` | **RETIRED** — the RD family it describes was removed (`92739cf`); historical |
 | `CONTEXT_SENSITIVE_GLOBALS_MIGRATION.md` | IN PROGRESS |
@@ -74,6 +73,7 @@ Read for provenance; the code is the current truth. Status is each doc's own.
 `IMP2_PRETTY_NOTATION_MIGRATION.md` · `INTERVAL_REINTRODUCTION_PLAN.md` ·
 `IP_COLLECTING_CANONICAL_MIGRATION.md` · `IP_NAMING_DROP_MIGRATION.md` ·
 `IP_ONLY_CONSOLIDATION.md` · `KEYED_CONTEXT_CONSOLIDATION.md` ·
+`DG_KEYED_CONTEXT_MIGRATION.md` ·
 `KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md` · `LOCAL_EDGE_TREE_MIGRATION.md` ·
 `NAMED_GLOBAL_RUNNABLE_HANDOFF.md` · `ROUTE_A5_HANDOFF.md` ·
 `SESSION_DAG_MIGRATION.md` · `SIDE_ENTRY_GLOBALS_SEEDING.md` ·

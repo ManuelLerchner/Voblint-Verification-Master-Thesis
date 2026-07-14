@@ -7,7 +7,6 @@ Global-read and digest-refinement infrastructure.
 | `Global_Cmp_Read.thy` | context-filtered global read |
 | `Context_Domain.thy` | context domain and routing base |
 | `Digest_Global_Read.thy` | digest-refined global read kernel |
-| `TD_Side_Eff_Ctx_Sound.thy` | context-indexed pullback soundness |
 | `Clean_RRead_Sound.thy` | clean read-side soundness |
 
 ## `Read/Support/`

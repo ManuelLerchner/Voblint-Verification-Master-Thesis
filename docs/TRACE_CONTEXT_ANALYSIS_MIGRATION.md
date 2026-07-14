@@ -1,5 +1,7 @@
 # Migration — trace-context analysis (umbrella plan)
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this plan has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Status: **Track B DONE (batch-sealed, no `sorry`). Track A not started.**
 Agent entry point for history-sensitive analysis. Two **implementation tracks**
 share one **semantic foundation** (B0–B2) and one **soundness target**

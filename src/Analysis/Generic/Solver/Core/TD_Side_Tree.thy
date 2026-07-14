@@ -680,7 +680,7 @@ text \<open>
   node's locals come from \<^const>\<open>apply_etf\<close>'s enter transfer applied to the
   caller's state, never from the context index itself.  \<open>side_cfg_T_eff_ctx_seeded\<close>
   is a separate generator (not a modification of \<^const>\<open>side_cfg_T_eff_ctx\<close>, to
-  keep the existing entry-store soundness chain in \<open>TD_Side_Eff_Ctx_Sound\<close>
+  keep the existing entry-store soundness chain in the dedicated entry-store witness
   untouched): at a frame-entry node \<^term>\<open>v\<close> (\<^term>\<open>is_frame_entry g v\<close>), every
   \<^const>\<open>EA_Enter\<close> predecessor is dropped from the ordinary intra fold and
   replaced by a single context-derived seed \<^term>\<open>combine_abs (ent c) s\<close> --

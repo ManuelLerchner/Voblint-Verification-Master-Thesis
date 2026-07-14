@@ -51,7 +51,7 @@ The findings below are the original menu, kept as the rationale record.
 | I | README / doc drift (Interval end-to-end) | `Instances/README.md` | — | none |
 | J | On-disk backup cruft (`*.thy~`, stale dirs) | `src/` working tree | — | none |
 | K | **Folder structure** — split two overloaded dirs | `Generic/Solver` (24), `Instances/Sign` (17) | — | low |
-| L | **Concept inventory** — retire/extract stepping-stones off the converged path | `NamedGlobalSign` (653), `TD_Side_Eff_Ctx_Sound` (1181), ctx/retain demos, 34 migration docs | ~800-2000 + doc debt | mixed |
+| L | **Concept inventory** — retire/extract stepping-stones off the converged path | `NamedGlobalSign` (653), deleted `TD_Side_Eff_Ctx_Sound`, ctx/retain demos, 34 migration docs | ~800-2000 + doc debt | mixed |
 
 ---
 
@@ -343,7 +343,7 @@ directory:
 | Proposed subfolder | Files | What it is |
 | ------------------ | ----- | ---------- |
 | `Solver/Core/` (the TD-side spine) | `Strategy_Tree_Monad`, `TD_Side_CFG`, `TD_Side_Tree`, `TD_Side_RHS_Generator`, `TD_Side_Eff_Bounds`, `TD_Side_Eff_Interface`, `TD_Side_Eff_Pipeline`, `TD_Side_Eff_Sound`, `TD_Side_Eff_Soundness` | strategy-tree monad + effectful generator + monotonicity + the base collecting-soundness theorem |
-| `Solver/Context/` (context & digest reads) | `Context_Domain`, `Global_Cmp_Read`, `Digest_Global_Read`, `Digest_Keyed_Writer`, `Digest_Keyed_Writer_Sound`, `TD_Side_Eff_Ctx_Sound`, `TD_Side_Eff_Cmp_Sound`, `TD_Side_Eff_Cmp_Pull`, `TD_Side_Eff_Cmp_Gen` | context-indexed / cmp-filtered / digest-refined global read and its soundness |
+| `Solver/Context/` (context & digest reads) | `Context_Domain`, `Global_Cmp_Read`, `Digest_Global_Read`, `Digest_Keyed_Writer`, `Digest_Keyed_Writer_Sound`, `TD_Side_Eff_Ctx_Shared`, `TD_Side_Eff_Cmp_Sound`, `TD_Side_Eff_Cmp_Pull`, `TD_Side_Eff_Cmp_Gen` | context-indexed / cmp-filtered / digest-refined global read and its soundness |
 | `Solver/ReachingDefs/` | `Reaching_Defs`, `RD_Set_Edge_Backbone` | the reaching-definitions digest instance |
 | `Solver/Exec/` (executable bridges) | `Exec_Bridge`, `Exec_Cmp_Bridge`, `Exec_Ctx_Bridge`, `Solver_Side_RG` | `'a st` mirror + `fun_of_st` transport (the target of item **A**) |
 
@@ -432,7 +432,7 @@ retiring the spine does not.
 | Concept | Files (lines) | Signal | Recommendation |
 | ------- | ------------- | ------ | -------------- |
 | **Named-global sign** | `Instances/NamedGlobalSign/Sign_Named_Global_Eff` (653) | zero importers; README "soundness in progress"; an earlier *mixed-flow named-global* design the keyed-digest kernel converged past | **Decide: finish or extract.** If the digest kernel supersedes named-globals, extract to a branch/sibling the way the classical spine was (`voblint-formalization-classical`). A 653-line "in progress" island off the converged path is the clearest retire candidate. |
-| **`TD_Side_Eff_Ctx_Sound`** | `Generic/Solver/TD_Side_Eff_Ctx_Sound` (1181) | largest solver file; consumed by **one** demo (`Exec_Sign_Ctx_Gen_Run`) | **Verify reducibility.** The context-indexed pullback soundness may now be a corollary of the digest kernel's ctx-collapse (open-doc table row "ctx-collapse → bridge → cmp read"). If so, shrink to a thin corollary. Lower confidence — it may be the canonical "pure context-sensitivity" thesis statement; confirm before touching. |
+| **`TD_Side_Eff_Ctx_Shared`** | `Generic/Solver/Context/Goblint/Read/Support/TD_Side_Eff_Ctx_Shared` | shared context helpers reused by DG / keyed / digest / clean | **Keep.** The deleted `TD_Side_Eff_Ctx_Sound` backbone no longer exists; this row tracks the extracted helpers only. |
 | **Retain path** | `Exec_Sign_Cmp_Keyed_Retain_Run` (154) | zero importers; publish-and-erase is the *accepted* design (`DGC_ALIGNMENT`), retain was the explored alternative; absent from the `DIGEST_TWO_FAMILIES` pointer table | **Keep only as documented contrast, else retire.** If it illustrates the publish/retain precision boundary, add one `text` sentence saying so and cite it from the boundary doc; otherwise it is a dead exploration. |
 | **Context-only run demos** | `Exec_Sign_Ctx_Run` (77), `Exec_Sign_Ctx_Seeded_Run` (156), `Exec_Sign_Ctx_Gen_Run` (208) | three demos of context-only analysis now that the two digest families are the headline; `Ctx_Seeded` is frame-entry seeding whose frame-locality question the mode family (`MODE_AGREE`) now answers | **Consolidate to one canonical context demo.** Keep the clearest witness that context separates; fold the others' distinct points into it or retire. Demos are cheap, so this is low-urgency — but three overlapping context runs dilute the "here is the story" reading. |
 
@@ -487,7 +487,8 @@ correct for a `by eval` witness. They demonstrate the converged design; they sta
 7. **L** — orthogonal to A-H, do whenever. **L.0 first: do not prune the
    context/cmp substrate** (verified load-bearing). L.1 NamedGlobalSign decision and
    L.3 doc consolidation are the highest-value, lowest-risk parts; L.2 is a
-   verify-then-maybe-merge; `TD_Side_Eff_Ctx_Sound` reducibility needs a careful
+   verify-then-maybe-merge; the deleted `TD_Side_Eff_Ctx_Sound` reducibility claim
+   needs a careful
    check against the in-progress digest-discharge work before any edit.
 
 Gate every step on a green `isabelle build -v -N -d ~/afp/thys -d

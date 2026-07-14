@@ -157,9 +157,9 @@ lemma entry_store_route_eq:
   by (simp add: entry_store_ctx.route_def)
 ```
 
-`prep = id`, `cmp = (subseteq)`, `'c = store set`. `route` collapses to the existing
-`entry_store_ec` — Stack B's soundness theorem
-(`semantic_entry_store_ctx_analysis_sound`) is unchanged.
+`prep = id`, `cmp = (subseteq)`, `'c = store set`. This historical entry-store
+interpretation has been deleted; the current architecture routes DG / keyed /
+digest / clean analyses over the shared `TD_Side_Eff_Ctx_Shared` backbone instead.
 
 **Keyed-context generator** — `Exec_Sign_Cmp_Keyed_Run.thy`. The executable keyed
 routing `kw_ec :: bool => sign abs_state => bool` is cc-free; at the two kernel use
@@ -223,11 +223,9 @@ special case of the new one.
 
 ### Proofs that replayed unchanged
 
-- **Stack B** — `semantic_entry_store_ctx_analysis_sound` (`TD_Side_Eff_Ctx_Sound.thy`)
-  proves the **same statement**. It is re-exposed through the locale by the
-  `entry_store_ctx` interpretation (`prep = id`, `cmp = (subseteq)`,
-  `'c = store set`); `entry_store_route_eq` shows `route` collapses to
-  `entry_store_ec`, so the soundness theorem is untouched.
+- **Historical Stack B** — the entry-store interpretation has been deleted. The
+  current architecture routes DG / keyed / digest / clean analyses over the shared
+  `TD_Side_Eff_Ctx_Shared` backbone instead.
 - **Finite keyed example** — `Exec_Sign_Cmp_Keyed_Run.thy` computes the **same
   executable results** (`by eval` witnesses unchanged); only the two `rt`-shape wraps
   were mechanical.

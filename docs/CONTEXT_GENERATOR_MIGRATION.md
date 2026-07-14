@@ -1,5 +1,7 @@
 # Migration to the Goblint-Aligned Analysis Architecture
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed below has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 **Status:** Implemented 2026-07-12. See *Implementation Findings & Corrections* below — the
 original plan mis-stated the dependency graph and has been corrected to match the code.
 
@@ -842,4 +844,3 @@ lemma seed_generalises:
 - The named Phase-1 audit files never existed; a single real `CTX_DEPENDENCY_AUDIT.md` was
   produced instead. `STRUCTURAL_AUDIT.md` / `ENTER_DIVERGENCE_TRACE.md` /
   `GENERATOR_INVENTORY_BEFORE_MIGRATION.md` are not created (they never existed to archive).
-

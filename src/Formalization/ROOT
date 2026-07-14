@@ -50,7 +50,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Trace_Digest_Precision
     Example_Trace_Digest_Combine
     Example_Trace_Digest_ReachingCompat
-    Example_Entry_Store_Context_Precision
     Example_Global_Ctx_Read_Precision
     Example_Sign_Mode_Digest
     Example_Interval_Mode_Digest

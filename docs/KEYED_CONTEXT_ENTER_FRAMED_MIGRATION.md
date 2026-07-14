@@ -1,5 +1,7 @@
 # Keyed context generator — framed `EA_Enter`, filtered from the intra fold
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this plan has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Status: **DONE.** Authored + executed 2026-07-01. `Voblint_Formalization`
 batch-green, no sorry, ASCII gate clean. Touches the keyed-global context
 generator (`side_cfg_T_eff_cmp` / `_st`), the `sound_effectful_transfer` locale,
@@ -167,7 +169,8 @@ precision does.
 - `src/Analysis/Generic/Solver/TD_Side_Eff_Cmp_Gen.thy` — filtered fold + seed,
   enter/non-enter split, re-threaded `collect_sound`.
 - `src/Analysis/Generic/Solver/Exec_Cmp_Bridge.thy` — executable mirror.
-- `src/Analysis/Generic/Solver/TD_Side_Eff_Ctx_Sound.thy` — `inl_slot_globals_bot_ctx`.
+- `src/Analysis/Generic/Solver/Context/Goblint/Read/Support/TD_Side_Eff_Ctx_Shared.thy` —
+  `inl_slot_globals_bot_ctx`.
 - `src/Analysis/Instances/Sign/Sign_Side_Soundness.thy` — `fresh_frame_sign`,
   `sign_sound_etf_unit_framed`.
 - `src/Analysis/Instances/Sign/Exec_Sign_Cmp_Keyed_Gen_Run.thy` — seeding combine,

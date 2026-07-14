@@ -1,5 +1,5 @@
 theory TD_Side_Eff_Cmp_Sound
-  imports TD_Side_Eff_Ctx_Sound Global_Cmp_Read Context_Domain
+  imports Global_Cmp_Read Context_Domain
     "Voblint_Analysis.Ctx_Collect_Backbone"
 begin
 
@@ -283,24 +283,4 @@ theorem collect_ctx_sound_route:
 
 end
 
-section \<open>Instance: the semantic entry-store route (\<open>prep = id\<close> shim)\<close>
-
-text \<open>
-  \<^locale>\<open>context_domain\<close> is instantiable.  The semantic entry-store route
-  (\<open>TD_Side_Eff_Ctx_Sound\<close>) is the call-site-agnostic \<open>prep = id\<close> shim: its digest
-  order is \<open>(\<subseteq>)\<close> and its global pot is a single \<^typ>\<open>unit\<close> slot, so \<open>route\<close>
-  collapses to \<^const>\<open>entry_store_ec\<close>.  This is the backward-compatible instance
-  that leaves \<open>semantic_entry_store_ctx_analysis_sound\<close> unchanged --- it certifies
-  that the richer interface subsumes the prior cc-free routing helper.
-\<close>
-
-interpretation entry_store_ctx:
-  context_domain "UNIV :: store set" "\<lambda>cc. id" "\<lambda>cc ctx a. entry_store_ec ctx a"
-    entry_store_entdg "(\<subseteq>)" .
-
-lemma entry_store_route_eq:
-  "entry_store_ctx.route cc ctx a = entry_store_ec ctx a"
-  by (simp add: entry_store_ctx.route_def)
-
 end
-

@@ -180,7 +180,7 @@ here is orientation; §6 fixes exact types, ownership, assumptions, and the CMP 
 - **Generator (`side_cfg_T_eff_cmp`) + routing (`pull_gk`, `traverse_intra_cmp`,
   `side_env`/`side_env_cmp`)** — *high.* Routing lemmas assume the local and global slots carry
   the same `'a`; the `map_sum` pullback splits into `'l`/`'g` halves.
-- **CMP soundness (`TD_Side_Eff_Cmp_Sound`, built on `TD_Side_Eff_Ctx_Sound`)** — *high.* Every
+- **CMP soundness (`TD_Side_Eff_Cmp_Sound`, built on `TD_Side_Eff_Ctx_Shared`)** — *high.* Every
   premise over `\<lbrakk>σ (Inl u) ⊔ glob_env σ\<rbrakk>` must be re-stated over two gammas.
   `post_fixpoint_sound_at_ctx_semantic` and its cmp refinement are the load-bearing theorems.
 - **Axis B alone** — *low/moderate.* It reorganizes existing obligations behind a locale without

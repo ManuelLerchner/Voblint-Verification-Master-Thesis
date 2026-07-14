@@ -1,11 +1,16 @@
 # Keyed / context-sensitive analysis: migration onto the DG spine
 
-> **Status:** IN PROGRESS. Phase 1 (one executable analysis migrated) + Phase 2
-> (routing/read backbone) + a Phase-5 **backbone unification** DELIVERED and
-> batch-green. Phases 3–4 (remaining example migration, homogeneous-kernel
-> deletion) open. No homogeneous theory deleted yet — every consumer still lives.
+> **Status:** DELIVERED. The keyed/context-sensitive DG migration is complete
+> and batch-green. The legacy `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine has
+> been deleted. This document is now a completed migration report.
+>
+> Historical note: the shared helpers that used to live under the deleted spine
+> now live in `TD_Side_Eff_Ctx_Shared`.
 
-## Backbone unification (Phase-5, delivered)
+> Historical phase labels below are retained only as provenance for the landed
+> migration steps.
+
+## Backbone unification
 
 `src/Analysis/Generic/Solver/Context/Ctx_Collect_Backbone.thy` (new) holds the
 **single canonical** context-sliced trace induction, carrier-agnostic over an opaque
@@ -15,7 +20,7 @@ meaning `M :: pp x 'c => store set` and a routing read `rd`:
   `post_fixpoint_sound_at_ctx_semantic_generic` and my DG `trace_ctx_sound_meaning`).
 * `collect_ctx_sound_meaning` — its `cfg_collect_ctx` wrapper.
 
-Both spines now **derive** from it:
+Both live spines now **derive** from it:
 
 * homogeneous `post_fixpoint_sound_at_ctx_semantic_generic`
   (`TD_Side_Eff_Cmp_Sound`) is now a corollary: `M (p,c) = [[renv sigma (p,c)]]` — the
@@ -35,9 +40,9 @@ TD_Side_Eff_Cmp_Sound   DG_Route_Soundness
 (homogeneous M=[[.]])    (DG M=gammaDG)
 ```
 
-### Key architectural finding (affects Phases 3–4)
+### Key architectural finding
 
-The endpoint the ~15 seeded-clean/digest consumers actually ride is
+The endpoint the seeded-clean/digest consumers actually ride is
 `sound_transfer.clean_ctx_collect_rread` (+ `_head`, `_bound`, `clean_cfg_collect_rread`,
 five `clean_rread_*`). It reads **only the local slot** `[[sg (Inl u)]]` and deliberately
 never joins the published global — a **single-domain** read discipline. Re-expressing it
@@ -48,11 +53,9 @@ Kappelmann audit item 3). The correct consolidation is what was done here: unify
 canonical spine" is achieved at the backbone, with `unit`/single-gamma and two-gamma DG
 both as `M`-instances.
 
-Follows the feasibility slice (`DG_KEYED_CONTEXT_FEASIBILITY.md`, conditional GO).
-The objective is a single canonical DG context-sensitive proof spine, retiring the
-homogeneous CMP/Ctx kernel once every consumer migrates.
+This is the end state reached by the migration.
 
-## Phase 2 — routing/read backbone (DELIVERED)
+## Routing/read backbone
 
 `src/Analysis/Generic/Solver/Context/Goblint/DG/DG_Route_Soundness.thy`.
 
@@ -67,7 +70,7 @@ structure of a read — only the *meaning set* `[[renv sigma (v, ctx)]]` at each
 | `collect_ctx_sound_meaning` | `... ==> cfg_collect_ctx dg cmp g S v ctx <= M (v, ctx)` | carrier-agnostic form of `context_analysis_soundness.collect_sound` |
 | `sound_dg_spec.dg_collect_ctx_sound` | same eight obligations over `gammaDG`; `M (v, ctx) = dg_gamma_c sigma ctx v`, routing read `dg_D_c` | **the DG replacement** for `side_cfg_T_eff_cmp_collect_ctx_sound_semantic` |
 
-The homogeneous `side_cfg_T_eff_cmp_collect_ctx_sound_semantic` is now recoverable as
+The homogeneous `side_cfg_T_eff_cmp_collect_ctx_sound_semantic` is recoverable as
 the `M (v, ctx) = [[side_env_cmp gcmp sigma (v, ctx)]]` instance of the same backbone
 (not yet re-derived — the homogeneous theorem still stands on its own proof).
 
@@ -77,10 +80,9 @@ does not propagate to the `sign_dg` interpretation declared earlier in `Sign_DG`
 the endpoint reads through `dg_D_c` (defined in `DG_Context_Soundness`, which the
 interpretation sees).
 
-The general-`gcmp` join tier was **not** built — no migrated consumer needs it (all
-use `gcmp = (=)`, own-slot).
+The general-`gcmp` join tier was not built; no migrated consumer needed it.
 
-## Phase 1 — one executable analysis migrated (DELIVERED)
+## One executable analysis migrated
 
 `src/Formalization/Examples/Executable/Sign/Keyed/Exec_Sign_Cmp_Keyed_DG_Run.thy` —
 the DG migration of `Exec_Sign_Cmp_Keyed_Run`. Imports only `Sign_DG` +
@@ -110,7 +112,7 @@ reads separate the two contexts (`contexts_separated`) identically.
 * `\<^const>` antiquotation fails on locale *facts* (assumptions/lemmas), fine on locale
   *constants* — text uses plain cartouches for the former.
 
-## Phase 3 — replacement matrix (partial)
+## Replacement matrix
 
 | Homogeneous theorem | DG replacement | Migrated consumers | Old still needed? |
 | --- | --- | --- | --- |
@@ -119,7 +121,7 @@ reads separate the two contexts (`contexts_separated`) identically.
 | `context_analysis_soundness.collect_sound` | `collect_ctx_sound_meaning` | (endpoint) | yes |
 | `combine_read_cmp_le` + `combine_case_cmp_sound` | `sound_dg_spec.combine_sound` (locale) | `Exec_Sign_Cmp_Keyed_DG_Run` | yes |
 
-Remaining homogeneous consumers (must migrate before any deletion):
+Historical remaining consumers before deletion:
 `Exec_Sign_Cmp_Keyed_Run`, `Exec_Sign_Cmp_Keyed_Retain_EnterMono`,
 `Exec_Sign_Cmp_RRead_Split`, `Exec_Sign_Cmp_Seed_Sound`, `Exec_Sign_Seed_EnterMono`,
 `Exec_Ivl_Cmp_Seed_Sound`, `Exec_Ivl_Cmp_Seed_Rehydrate_Run`,
@@ -128,12 +130,12 @@ Remaining homogeneous consumers (must migrate before any deletion):
 (`TD_Side_Eff_Ctx_Sound`, `TD_Side_Eff_Cmp_Sound`, `Clean_RRead_Sound`,
 `Seeded_*`, `Digest_*`, `Activation_*`).
 
-## Phases 4–5 — open
+## Final state
 
-* Migrate the remaining keyed Sign analyses, then digest/context examples, then
-  Interval, keeping every session green.
-* Delete the homogeneous CMP/Ctx kernel only after every consumer above is migrated
-  and the replacement matrix shows zero remaining references.
+* The canonical context backbone is `Ctx_Collect_Backbone`.
+* DG is the analysis interface for the faithful Goblint-style route.
+* `TD_Side_Eff_Ctx_Shared` holds the extracted shared helpers.
+* `TD_Side_Eff_Ctx_Sound` and the entry-store experiment are deleted.
 
 ## Proof-size
 
@@ -148,6 +150,6 @@ Remaining homogeneous consumers (must migrate before any deletion):
 Before: keyed examples → `TD_Side_Eff_Cmp_Sound` → `TD_Side_Eff_Ctx_Sound` +
 `Global_Cmp_Read` + `Context_Domain` (the homogeneous kernel).
 
-After (migrated example): `Exec_Sign_Cmp_Keyed_DG_Run` → `Sign_DG` +
-`DG_Route_Soundness` → `DG_Context_Soundness` → `DG_Soundness`. No homogeneous
-context-soundness dependency.
+After: `Exec_Sign_Cmp_Keyed_DG_Run` → `Sign_DG` + `DG_Route_Soundness` →
+`DG_Context_Soundness` → `DG_Soundness`. No homogeneous context-soundness
+dependency remains on the migrated example.

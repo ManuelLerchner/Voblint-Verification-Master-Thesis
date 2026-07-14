@@ -125,15 +125,20 @@ The context-sensitive analyses are **one layered tower**, not competing spines;
 five theorems close end-to-end soundness. Architecture diagram: repository
 `README.md` (§ Architecture).
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` entry-store spine
+was deleted. Shared context-collection helpers now live in
+`TD_Side_Eff_Ctx_Shared`.
+
 **Canonical end-to-end chain** — each step reuses the soundness of the one below:
 
 `cfg_collect_trace` → `Constraint_System_Sound` → `TD_Side_Eff_Soundness`
-(`side_analyse_eff_collect_sound_exit_pruned`) → entry-context
-(`TD_Side_Eff_Ctx_Sound.semantic_entry_store_ctx_analysis_sound`) → keyed/combine
+(`side_analyse_eff_collect_sound_exit_pruned`) → shared context backbone
+(`TD_Side_Eff_Ctx_Shared`) → keyed/combine
 (`TD_Side_Eff_Cmp_Sound.post_fixpoint_sound_at_ctx_semantic_cmp_final`) →
-seeded-clean (`Clean_RRead_Sound.clean_ctx_collect_rread_head_bound`) →
-activation collecting (`Seeded_Activation_Sound.seeded_activation_collecting_sound`)
-→ `twf`/`twfr` witness (`Activation_Witness_From`) → recursive soundness
+digest / clean (`Digest_Global_Read`, `Value_Digest_Reader`,
+`Clean_RRead_Sound.clean_ctx_collect_rread_head_bound`) → activation collecting
+(`Seeded_Activation_Sound.seeded_activation_collecting_sound`) → `twf`/`twfr`
+witness (`Activation_Witness_From`) → recursive soundness
 (`Example_Rdiv_Twfr_Sound.rdiv_witness_G_over_approximated`).
 
 Steps two through five lie inside the dependency cone of the recursive flagship

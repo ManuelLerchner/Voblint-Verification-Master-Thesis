@@ -1,5 +1,7 @@
 # Discharging the generic ENTRY/EDGE generator-to-collecting bounds for the digest read
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this migration has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 > **Status: IN PROGRESS — superset-reader class closed (batch-green).** Scopes the one
 > item `DIGEST_TWO_FAMILIES.md` §6 and `OPEN_PROBLEMS.md` leave open for *every* digest
 > instance: the generic `ENTRY` / `EDGE` generator-to-collecting bounds on the

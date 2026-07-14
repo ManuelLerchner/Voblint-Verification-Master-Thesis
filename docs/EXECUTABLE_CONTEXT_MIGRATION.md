@@ -1,5 +1,7 @@
 # Executable semantic-context migration plan (S4 runnability axis)
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this plan has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 > **Agent entry point:** `SEMANTIC_CONTEXT_MIGRATION.md` (Track B / S0–S4).
 > This file is the S4 detail: turning the *proven-sound* semantic entry-state
 > context analysis into a *generator-driven executable* one. Source of truth for

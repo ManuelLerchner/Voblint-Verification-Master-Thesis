@@ -1,5 +1,7 @@
 # CTX Dependency-Cone Audit (2026-07-12)
 
+Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this audit has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
+
 Produced during execution of the context-generator migration. This is the real
 dependency audit; the file of this name referenced by the original migration plan never
 existed. Import edges are taken directly from the `theory ... imports ... begin` headers.

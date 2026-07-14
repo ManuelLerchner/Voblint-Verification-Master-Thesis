@@ -143,9 +143,13 @@ interpretations of that stack.
 **Canonical end-to-end chain** — each step reuses the soundness of the one below:
 
 `cfg_collect_trace` → `Constraint_System_Sound` → `TD_Side_Eff_Soundness` →
-`TD_Side_Eff_Ctx_Sound` → `TD_Side_Eff_Cmp_Sound` → `Clean_RRead_Sound` →
-`Seeded_Clean_Ctx_Collect` → `Seeded_Activation_Sound` →
-`Activation_Witness_From` → `Example_Rdiv_Twfr_Sound`.
+`TD_Side_Eff_Ctx_Shared` → DG / keyed / digest / clean soundness
+(`TD_Side_Eff_Cmp_Sound`, `Digest_Global_Read`, `Value_Digest_Reader`,
+`Clean_RRead_Sound`) → `Seeded_Clean_Ctx_Collect` → `Seeded_Activation_Sound`
+→ `Activation_Witness_From` → `Example_Rdiv_Twfr_Sound`.
+
+The retired `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` entry-store spine is deleted.
+The shared context-collection helpers now live in `TD_Side_Eff_Ctx_Shared`.
 
 Five theorems close the loop end-to-end: the base flow-sensitive theorem,
 context-indexed soundness, keyed/combine soundness, seeded activation soundness,

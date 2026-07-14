@@ -189,13 +189,11 @@ text \<open>
   \<open>tf_enter tf (caller slot) = \<bottom>\<close> --- false.
 
   \<^bold>\<open>Why the retain infrastructure does not transfer.\<close>  The retain spine closes
-  \<open>cfg_collect_ctx\<close> (\<open>semantic_entry_store_ctx_analysis_sound\<close>,
-  \<^theory>\<open>Voblint_Analysis.TD_Side_Eff_Ctx_Sound\<close>) precisely because it \<^emph>\<open>uses the
-  transfer at enter edges\<close> (\<open>entry_store_ec ctx a = edge_collect EA_Enter \<lbrakk>a\<rbrakk>\<close>): the
-  enter edge flows \<open>tf_enter\<close> into the callee under the caller context, which
-  \<^const>\<open>side_env_ctx\<close> (the Obs read) covers.  The clean seeded generator \<^emph>\<open>replaces\<close>
-  that enter transfer with the seed to obtain the R_read local-only precision --- which
-  is exactly why the enter-edge \<open>EDGE_BOUND\<close> no longer holds for it.
+  \<open>cfg_collect_ctx\<close> precisely because it \<^emph>\<open>uses the transfer at enter edges\<close>
+  (\<open>entry_store_ec ctx a = edge_collect EA_Enter \<lbrakk>a\<rbrakk>\<close>): the enter edge flows
+  \<open>tf_enter\<close> into the callee under the caller context.  The clean seeded generator
+  \<^emph>\<open>replaces\<close> that enter transfer with the seed to obtain the R_read local-only precision ---
+  which is exactly why the enter-edge \<open>EDGE_BOUND\<close> no longer holds for it.
 
   \<^bold>\<open>The single missing generic result\<close> is therefore a \<^emph>\<open>context-switching R_read trace
   digest\<close>: a \<open>dg\<close> / \<open>cmp\<close> that (a) assigns a callee-entry-reaching trace the callee

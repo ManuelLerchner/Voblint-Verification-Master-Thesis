@@ -1,5 +1,5 @@
 theory TD_Side_Eff_Cmp_Pull
-  imports TD_Side_Eff_Cmp_Sound
+  imports TD_Side_Eff_Ctx_Shared TD_Side_Eff_Sound TD_Side_Eff_Cmp_Sound
 begin
 
 section \<open>Keyed-global pullback: collecting soundness for the cmp-filtered read\<close>
@@ -7,9 +7,7 @@ section \<open>Keyed-global pullback: collecting soundness for the cmp-filtered 
 text \<open>
   The reusable heart of a keyed-global (\<open>cmp\<close>-filtered) context generator.  The
   unit-context spine reduces context soundness to the monovariant
-  \<open>post_fixpoint_sound_at_eff\<close> through the pullback \<^const>\<open>pull_ctx\<close>:
-  \<open>side_env_ctx sigma (v, ctx) = side_env (pull_ctx ctx sigma) v\<close>, copying the global
-  slots verbatim.
+  \<open>post_fixpoint_sound_at_eff\<close> through the pullback \<^const>\<open>pull_ctx\<close>.
 
   Keyed globals read \<^emph>\<open>several\<close> slots per context (\<^const>\<open>glob_env_cmp\<close> joins the
   \<open>cmp\<close>-compatible \<^term>\<open>Inr k\<close>), so the read is context-dependent.  The intra
@@ -44,7 +42,7 @@ lemma pull_cmp_Inr:
 text \<open>
   The masked join-all read at the pullback is the \<open>cmp\<close>-filtered read: incompatible
   slots contribute \<^term>\<open>bot\<close>, compatible ones their own value, so the two joins
-  agree.  Keyed analogue of \<open>side_env_ctx_pull\<close>'s verbatim slot copy.
+  agree.  Keyed analogue of the unit-context pullback law.
 \<close>
 
 lemma glob_env_pull_cmp:
@@ -213,4 +211,3 @@ lemma cmp_entry_sound:
 end
 
 end
-
