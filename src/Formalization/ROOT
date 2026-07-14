@@ -19,6 +19,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Mixed_Flow_Sound
     Twfr_Reach_Read
     Exec_Sign_Run
+    Exec_Sign_DG_Run
     Exec_Sign_Cmp_Keyed_DG_Run
     Exec_Sign_Cmp_Seed_Enter
     Exec_Sign_Cmp_Seed_Sound

@@ -83,5 +83,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Exec_Sound
     Sign_DG
     Mixed_Sign_Interval
+    Exec_DG_Bridge
     Value_Digest_Read
     Analysis_GraphViz
