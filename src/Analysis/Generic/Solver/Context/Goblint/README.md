@@ -31,8 +31,6 @@ Generic digest bridges and writer scaffolding.
 | `TD_Side_Eff_Cmp_Pull.thy` | cmp pullback discharge |
 | `TD_Side_Eff_Cmp_Gen.thy` | keyed generator bridge |
 | `Value_Digest_Reader.thy` | generic value-projected reader |
-| `Digest_Keyed_Writer.thy` | keyed writer |
-| `Digest_Keyed_Writer_Sound.thy` | keyed writer soundness |
 
 ## `Routing/`
 

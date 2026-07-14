@@ -20,8 +20,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Twfr_Reach_Read
     Exec_Sign_Run
     Exec_Sign_Cmp_Keyed_DG_Run
-    Exec_Sign_Cmp_Keyed_Gen_Run
-    Exec_Sign_Cmp_Keyed_Retain_Run
+    Exec_Sign_Cmp_Shared
     Exec_Sign_Cmp_Keyed_Retain_EnterMono
     Exec_Sign_Cmp_RRead_Split
     Exec_Sign_Cmp_Seed_Enter
@@ -50,15 +49,9 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Trace_Digest_Combine
     Example_Trace_Digest_ReachingCompat
     Example_Global_Ctx_Read_Precision
-    Example_Sign_Mode_Digest
-    Example_Interval_Mode_Digest
-    Example_Interval_Recursion_Digest
     Example_Interval_Recursion_Convergence
     Example_Interval_Recursion_Rehydrate
     Example_Rdiv_Twfr_Sound
-    Example_Mode_Value_Digest_Showcase
-    Example_Digest_Pipeline_Showcase
-    Example_Finite_Sign_Context_Analysis
     Example_Seed_Clean_Context
     Example_Side_Execute
     Example_Side_Branch_Calls

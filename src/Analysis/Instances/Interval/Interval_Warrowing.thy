@@ -164,7 +164,7 @@ text \<open>Standard interval narrowing: when the recomputed value \<open>b\<clo
   local counter reads \<open>[0, 20]\<close> under \<open>join\<close>, \<open>per_origin\<close> and \<open>warrow\<close> alike).  It does not
   help a \<^emph>\<open>flow-insensitive global\<close>: there the guard never bounds the value written back to
   the slot, so \<open>[0, +inf]\<close> is a genuine fixpoint and narrowing has nothing smaller to descend
-  to (see \<open>Example_Interval_Recursion_Digest\<close>).\<close>
+  to.\<close>
 fun narrow_ivl_td :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   "narrow_ivl_td (Ivl l1 u1) (Ivl l2 u2) =
      Ivl (if l1 = MinInf then l2 else l1) (if u1 = PlusInf then u2 else u1)"

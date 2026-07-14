@@ -1,5 +1,5 @@
 theory Example_Seed_Clean_Context
-  imports Exec_Sign_Cmp_Seed_Sound
+  imports Exec_Sign_Cmp_Shared Exec_Sign_Cmp_Seed_Sound
 begin
 
 section \<open>The Goblint-faithful seeded-clean spine on a two-call program\<close>
@@ -68,7 +68,10 @@ theorem seed_clean_example_sharper_than_retain:
    \<and> lookup_st (snd kgen_seed_clean_solution (Inr (Abs_st (SBot, SBot, [(''G'', SPos)])))) ''G'' = SPos
    \<and> lookup_st (snd kgen_retain_solution (Inr kgen_ctx_merged)) ''G'' = SNonNeg
    \<and> SZero < SNonNeg \<and> SPos < SNonNeg"
-  using kgen_seed_clean_precision retain_keyed_merged_G sign_strict_precision by simp
+  using kgen_seed_clean_precision sign_strict_precision
+  unfolding kgen_retain_solution_def kgen_retain_eqs_def kgen_cfg_def kgen_ec_def
+    kgen_ctx_merged_def
+  by eval
 
 text \<open>
   \<^bold>\<open>Summary.\<close>  The seeded-clean spine is the Goblint-faithful model: it keeps globals

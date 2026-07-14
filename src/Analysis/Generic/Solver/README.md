@@ -44,7 +44,7 @@ This layer wires `part_post_solution` to `is_post_fixpoint` via
 `Exec_Bridge` (`'a st` fold mirror + `fun_of_st` simulation + the generic
 `part_post_solution_st_to_abs_transport`), `Exec_Ctx_Bridge`, `Exec_Cmp_Bridge`
 (executable generator variants and their transport), and `Solver_Side_RG` (reach-global
-lemmas). `Digest_Keyed_Writer{,_Sound}` in `Context/` imports this chain.
+lemmas).
 
 `Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`, `warrow`)
 behind one `side_solver` signature; `run_menu eqs entry k var` reads one slot's variable

@@ -114,8 +114,7 @@ text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open
   narrowing (fill an infinite bound from the guard-refined value) plus the backward guard
   filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
   (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
-  machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>
-  (\<open>Example_Interval_Recursion_Digest\<close>).\<close>
+  machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
 value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl 2) ''x''"
 
 lemma loop_head_across_update_rules:

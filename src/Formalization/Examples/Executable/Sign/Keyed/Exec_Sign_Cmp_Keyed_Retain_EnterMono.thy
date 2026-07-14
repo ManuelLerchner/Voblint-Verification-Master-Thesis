@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_Keyed_Retain_EnterMono
-  imports Exec_Sign_Cmp_Keyed_Retain_Run "Voblint_Analysis.TD_Side_Eff_Cmp_Sound"
+  imports Exec_Sign_Cmp_Shared "Voblint_Analysis.TD_Side_Eff_Cmp_Sound"
 begin
 
 section \<open>Why ENTER_MONO fails for the value-keyed retain routing\<close>
@@ -125,4 +125,3 @@ text \<open>
 \<close>
 
 end
-

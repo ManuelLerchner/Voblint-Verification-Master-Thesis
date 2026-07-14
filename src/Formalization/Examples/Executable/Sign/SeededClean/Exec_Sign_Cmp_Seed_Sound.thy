@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_Seed_Sound
-  imports Exec_Sign_Cmp_Seed_Enter
+  imports Exec_Sign_Cmp_Shared Exec_Sign_Cmp_Seed_Enter
 begin
 
 section \<open>Sign instantiates the generic seeded-clean R_read spine\<close>
@@ -104,7 +104,10 @@ theorem rread_strictly_sharper_than_retain:
    \<and> lookup_st (snd kgen_rread_solution (Inr (Abs_st (SBot, SBot, [(''G'', SPos)])))) ''G'' = SPos
    \<and> lookup_st (snd kgen_retain_solution (Inr kgen_ctx_merged)) ''G'' = SNonNeg
    \<and> SZero < SNonNeg \<and> SPos < SNonNeg"
-  using kgen_rread_contexts_points retain_keyed_merged_G sign_strict_precision by simp
+  using kgen_rread_contexts_points sign_strict_precision
+  unfolding kgen_retain_solution_def kgen_retain_eqs_def kgen_cfg_def kgen_ec_def
+    kgen_ctx_merged_def
+  by eval
 
 section \<open>Executable reduction: the intra-edge bound is a generator theorem\<close>
 

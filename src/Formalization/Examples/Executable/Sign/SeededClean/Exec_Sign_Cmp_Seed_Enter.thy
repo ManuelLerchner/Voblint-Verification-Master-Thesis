@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_Seed_Enter
-  imports Exec_Sign_Cmp_RRead_Split Twfr_Reach_Read
+  imports Exec_Sign_Cmp_Shared Exec_Sign_Cmp_RRead_Split Twfr_Reach_Read
 begin
 
 section \<open>Goblint-faithful enter: seed the callee-entry local from the context\<close>

@@ -1,5 +1,5 @@
 theory Exec_Sign_Cmp_RRead_Split
-  imports Exec_Sign_Cmp_Keyed_Retain_EnterMono Voblint_Analysis.Clean_RRead_Sound
+  imports Exec_Sign_Cmp_Shared Voblint_Analysis.Clean_RRead_Sound
 begin
 
 section \<open>The D/G/C read split: R_read / G_read / Obs\<close>
@@ -97,26 +97,6 @@ text \<open>
 
 text \<open>The clean executable edge \<^const>\<open>clean_edge_tree_st\<close> is domain-generic
   (\<^theory>\<open>Voblint_Analysis.Exec_Bridge\<close>); Sign only names the instance.\<close>
-
-definition sign_etf_clean_st :: "(unit, sign st) effectful_st_transfer" where
-  "sign_etf_clean_st = \<lparr>
-    etf_st_nop        = clean_edge_tree_st (sign_tf_st EA_Nop),
-    etf_st_assign     = (\<lambda>x e. clean_edge_tree_st (sign_tf_st (EA_Assign x e))),
-    etf_st_assume     = (\<lambda>b. clean_edge_tree_st (sign_tf_st (EA_Assume b))),
-    etf_st_assume_not = (\<lambda>b. clean_edge_tree_st (sign_tf_st (EA_AssumeNot b))),
-    etf_st_enter      = clean_edge_tree_st (sign_tf_st EA_Enter),
-    etf_st_combine    = unit_combine_tree_st
-  \<rparr>"
-
-definition kgen_combine_rread :: "pp \<Rightarrow> pp \<Rightarrow> sign st \<Rightarrow> (pp \<times> sign st, sign st, sign st) strategy_tree" where
-  "kgen_combine_rread cc ex ctx =
-     QueryL (cc, ctx) (\<lambda>sc. QueryG ctx (\<lambda>g.
-       let callee = kgen_ec ctx sc in
-       Side callee (restrict_global_st sc)
-         (QueryL (ex, callee) (\<lambda>se.
-           let res = restrict_local_st sc \<squnion> restrict_global_st (se \<squnion> g) in
-           Side ctx (restrict_global_st res)
-             (Answer (restrict_local_st res))))))"
 
 definition kgen_rread_eqs :: "(pp \<times> sign st, sign st, sign st) eqsT" where
   "kgen_rread_eqs = side_cfg_T_eff_cmp_st id
