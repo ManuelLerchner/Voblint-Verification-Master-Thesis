@@ -140,10 +140,15 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
   `Instances/Mixed/Mixed_Sign_Interval.thy` (Sign `D`, Interval `G`) is the
   first genuinely mixed analysis: sound (`mixed_si_post_solution_collect_sound`)
   and executable (`Example_Mixed_Sign_Interval_GraphViz.thy`).
-- **Next boundary:** generalize native soundness beyond abstract-state-shaped
-  `D`/`G`, then port the context/digest tower from the homogeneous
-  `effectful_domain_transfer` API. Audit + staged plan (N1–N4):
-  `docs/DGCV_LAYER_MIGRATION.md`; limitation tables:
+- **Next boundary:** consolidate the remaining paper-alignment work on top of
+  the now-delivered DG spine. Caller-state-dependent `enter` is already
+  realized by `DG_Context_Soundness.thy` / `Sign_DG.thy`; keyed global access is
+  already exhibited by `Global_Cmp_Read.thy`, `Digest_Global_Read.thy`, and
+  `Sign_Named_Global_Eff.thy`. The remaining work is to unify these witnesses
+  into a single D/G/C/V story where it pays off, not to invent new semantics.
+  N5 is the concrete consolidation slice; see `docs/DGCV_LAYER_MIGRATION.md`
+  for the file order and first shared-lemma targets.
+  Audit record: `docs/DGCV_LAYER_MIGRATION.md`; limitation tables:
   `docs/SPLIT_STATE_MIGRATION.md`.
 
 ### Trace-context analysis (planned — umbrella)

@@ -425,11 +425,14 @@ simplified interface, not gaps in paper fidelity.
    exists; Sign and Interval both have native DG context probes, and the
    interval executable keyed regression now uses the DG-native witness
    `Exec_Ivl_Cmp_Keyed_DG_Run`.
-2. **N4 remains** only as post-migration consolidation: inventory surviving
-   homogeneous helpers, delete dead wrappers, and thin any unavoidable
-   adapters. Caller-`D`-dependent `enter`, paper-order call-constraint
-   generation, keyed `V -> G` reads, finite keyed writes, and broader D/G/C/V
-   generalization stay outside N4 as separate feature work.
+2. **N4 is delivered**: the remaining dead executable bridge was deleted, the
+   docs now describe the historical cleanup correctly, and no live `_st`-bridge
+   consumer remains.
+3. **Next work is consolidation, not new semantics**: caller-`D`-dependent
+   `enter` is already realized by the DG witnesses, and keyed global access is
+   already shown by the current read/write examples. Any further work here
+   should unify those witnesses where that reduces duplication; it does not need
+   a new architecture story.
 
 ---
 
@@ -554,6 +557,60 @@ language cannot support it or where it is a separate large effort:
    formulation.
 6. Keep multi-analysis products/sums, queries, threads, and quasi-lattices
    explicitly out of scope.
+
+## 9. N5 — consolidation plan (on top of the delivered migration)
+
+N5 is a **proof-shape consolidation** pass, not a semantics change. It starts
+from the delivered DG/keyed/digest/clean witnesses and removes repeated proof
+plumbing where the current tree still says the same thing in several files.
+
+### 9.1 File order
+
+1. `DG_Context_Soundness.thy`
+2. `DG_Route_Soundness.thy`
+3. `Sign_DG.thy`
+4. `Interval_DG.thy`
+5. `Retain_Analysis.thy`
+6. `Global_Cmp_Read.thy`
+7. `Digest_Global_Read.thy`
+8. `Value_Digest_Reader.thy`
+9. `Sign_Named_Global_Eff.thy`
+
+### 9.2 First shared-lemma targets
+
+Start with the DG collecting spine:
+
+- factor the repeated post-solution-to-collecting soundness pattern around
+  `dg_gamma_c` / `dg_gamma` into one reusable helper;
+- keep `DG_Context_Soundness.collect_sound_reader` as the base reader lemma and
+  make the per-context theorem a thin instantiation of it;
+- collapse identical `dg_D_c` / `dg_G_c` / `dg_gamma_c` accessor setup where the
+  same diagonal context-keying pattern is repeated.
+
+Then move to the instance files:
+
+- keep `Sign_DG.thy` and `Interval_DG.thy` as one-line interpretation wrappers
+  plus their named endpoints;
+- keep `Retain_Analysis.thy` as the only place that needs the product-carrier
+  retain-specific proof shape;
+- leave `Sign_Named_Global_Eff.thy` separate unless its `sideg_tree` witness can
+  share a generic named-global reader lemma with `Global_Cmp_Read.thy`.
+
+### 9.3 What not to do
+
+- Do not change the DG semantics.
+- Do not turn N5 into a new D/G/C/V interface design.
+- Do not pull feature work into the cleanup pass.
+- Do not touch the already-delivered `_st` retirement unless a live consumer
+  appears.
+
+### 9.4 Exit criteria
+
+- repeated proof skeletons are factored into shared lemmas;
+- instance theories are thin wrappers;
+- docs and roadmap name N5 as consolidation only;
+- `Voblint_Analysis` and `Voblint_Formalization` still build green;
+- no new `sorry`.
 
 ### 8.6 Thesis claim
 
