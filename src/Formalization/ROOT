@@ -14,7 +14,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     "Examples/Tooling"
   theories
     Voblint
-    Compiler_Correctness_Prototype
+    Compiler_Correctness
     Trace_Analysis_Sound
     Mixed_Flow_Sound
     Twfr_Reach_Read

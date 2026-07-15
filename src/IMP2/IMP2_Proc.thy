@@ -455,7 +455,7 @@ proof -
     using step_call_raw by (simp add: bind_formals_def)
   from run[unfolded pcompletes_def] step_scope have tail:
     "psteps \<Pi> (Seq c (RestoreInternal None), enter_state s, [Frame s None]) (SKIP, t, [])"
-    by (meson star.cases)
+    by (metis Pair_inject ScopeSE com.distinct(9) star.cases)
   show ?thesis
     unfolding pcompletes_def using step_call tail by (meson star.step)
 qed

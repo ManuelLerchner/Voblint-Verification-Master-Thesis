@@ -4,6 +4,7 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     "Dijkstra_Shortest_Path"
   directories
     "Collecting"
+    "Compiler"
   theories
     CFG_Def
     CFG_Path
@@ -14,3 +15,8 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     CFG_Prune
     CFG_Collect_Runs
     CFG_Collect_Activation
+    Compile_Invariants
+    Control_Residual
+    Located_Exec
+    Control_Simulation
+    Located_Reaches

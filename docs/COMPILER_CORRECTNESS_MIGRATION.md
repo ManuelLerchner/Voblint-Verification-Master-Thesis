@@ -1,7 +1,7 @@
 # Compiler correctness: source-level soundness of `compile_prog`
 
 > **Status (2026-07-13): complete for the headline finite-prefix theorem.**
-> `Compiler_Correctness_Prototype.thy` proves the located weak simulation from
+> `Compiler_Correctness.thy` proves the located weak simulation from
 > IMP2 `psteps` through `compile_prog`, connects located CFG execution to
 > `cfg_collect`, and instantiates the result with the verified side solver. The
 > concrete theorem `concrete_source_reaches_side_analyse_eff` covers every finite
@@ -107,7 +107,7 @@ per-point).**
 
 **Exit projection** — `cfg_runs_to` in `CFG_Collect_Runs.thy`.
 
-**Located CFG execution is implemented.** `Compiler_Correctness_Prototype.thy`
+**Located CFG execution is implemented.** `Compiler_Correctness.thy`
 defines `cstep` with an explicit stack and proves that its reflexive-transitive
 closure preserves `located_sound`. `control_at`, `frames_match`, and
 `concrete_program_match` provide the source-to-CFG matching relation.
@@ -326,7 +326,7 @@ the existing recursion theory) — it is the running example for both phases.
 
 ## Implemented proof chain
 
-`Compiler_Correctness_Prototype.thy` contains the required Phase-2 components:
+`Compiler_Correctness.thy` contains the required Phase-2 components:
 
 - `cstep`, `located_sound`, and `csteps_preserve_located_sound` connect located
   CFG runs to `cfg_collect`.

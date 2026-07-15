@@ -40,6 +40,10 @@ lemma count_prog_translated:
 lemma source_count_prog: "source_com count_prog"
   by (simp add: count_prog_def)
 
+(* count_prog is call-free, so it stays inside the AFP-translatable subset. *)
+lemma bridge_count_prog: "bridge_com count_prog"
+  by (simp add: count_prog_def)
+
 (* Total-correctness spec of the translation, discharged by IMP2's VCG.
    The invariant/variant reference only the current state (n is never modified,
    so the VCG's modifies-analysis keeps it fixed), letting us fold the plain
@@ -71,9 +75,9 @@ proof -
     where bs: "big_step (to_imp2_pi Map.empty) (to_imp2_com count_prog, s) t"
       and q:  "t ''i'' 0 = s ''n'' 0"
     by (auto simp: wp_def)
-  have sp: "source_pi Map.empty" by (simp add: source_pi_def)
+  have sp: "bridge_pi Map.empty" by (simp add: bridge_pi_def)
   have "pcompletes Map.empty count_prog (proj0 s) (proj0 t)"
-    using backward_sim[OF bs sp refl source_count_prog] .
+    using backward_sim[OF bs sp refl bridge_count_prog] .
   moreover have "proj0 t ''i'' = s ''n'' 0" using q by (simp add: proj0_def)
   ultimately show ?thesis by blast
 qed

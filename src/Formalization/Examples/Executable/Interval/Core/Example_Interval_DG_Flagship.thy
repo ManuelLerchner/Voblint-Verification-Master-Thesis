@@ -45,7 +45,7 @@ text \<open>
   It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st\<close>
   (\<open>Ivl_Exec\<close>), the executable D/G bridge (\<open>Exec_DG_Bridge\<close>), the native interval
   D/G soundness endpoint (\<open>Interval_DG\<close>), the compiler-correctness simulation
-  (\<open>Compiler_Correctness_Prototype\<close>), and the vendored warrowing solver.
+  (\<open>Compiler_Correctness\<close>), and the vendored warrowing solver.
 \<close>
 
 theory Example_Interval_DG_Flagship
@@ -58,7 +58,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_CFG.CFG_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
-    Compiler_Correctness_Prototype
+    Compiler_Correctness
 begin
 
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
@@ -292,7 +292,7 @@ subsection \<open>10. Lifting soundness to IMP2 source runs (compiler correctnes
 
 text \<open>
   Sections 1--9 bound the \<^emph>\<open>collecting semantics\<close> of the compiled CFG.  The
-  compiler-correctness simulation (\<open>Compiler_Correctness_Prototype\<close>) closes the
+  compiler-correctness simulation (\<open>Compiler_Correctness\<close>) closes the
   last gap to the source: every terminating-or-partial IMP2 small-step run
   (\<open>psteps\<close>) of the program is reproduced on the compiled CFG, so the concrete
   state it reaches lands in \<open>cfg_collect\<close> --- and therefore, by

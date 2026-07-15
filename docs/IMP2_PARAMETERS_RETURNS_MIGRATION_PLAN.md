@@ -1,6 +1,8 @@
 # IMP2 native parameters and return values — migration plan
 
-Status: design agreed in principle, not implemented.
+Status: design agreed; source, CFG, and compiler-correctness layers implemented.
+The `Voblint_Analysis` session is not yet migrated — see
+`COMBINE_METADATA_MIGRATION.md` for current status and the remaining slices.
 
 This document records the current migration plan for extending the procedural
 IMP2 language with native call-by-value parameters and activation-local return
@@ -73,7 +75,7 @@ The key theories are:
 - `src/IMP2/IMP2_Notation.thy`
 - `src/IMP2/IMP2_Bridge.thy`
 - `src/CFG/IMP2_Proc_to_CFG.thy`
-- `src/Formalization/Pipeline/Compiler_Correctness_Prototype.thy`
+- `src/Formalization/Pipeline/Compiler_Correctness.thy`
 
 Concrete call semantics today:
 
@@ -378,7 +380,7 @@ source-to-CFG compiler simulation.
 Main hotspots:
 
 - `src/IMP2/IMP2_Bridge.thy`
-- `src/Formalization/Pipeline/Compiler_Correctness_Prototype.thy`
+- `src/Formalization/Pipeline/Compiler_Correctness.thy`
 
 Reasons:
 

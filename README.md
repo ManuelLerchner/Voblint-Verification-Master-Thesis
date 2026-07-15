@@ -193,7 +193,7 @@ Four Isabelle sessions build in order:
 The concrete semantic target is the interprocedural collecting semantics
 `cfg_collect`. The strongest reusable source-to-analysis theorem is
 `source_reaches_side_analyse_eff`
-(`src/Formalization/Pipeline/Compiler_Correctness_Prototype.thy`): for a real
+(`src/Formalization/Pipeline/Compiler_Correctness.thy`): for a real
 IMP2 run, the compiled CFG, and a sound solver instance, the abstract result
 contains the matched concrete state at some CFG point.
 
