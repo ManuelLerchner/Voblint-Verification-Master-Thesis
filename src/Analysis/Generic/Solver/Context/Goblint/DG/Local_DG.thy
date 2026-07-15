@@ -32,8 +32,8 @@ where
      dgs_assign     = (\<lambda>x e d _. ((), apply_tf tf (EA_Assign x e) d)),
      dgs_assume     = (\<lambda>b d _. ((), apply_tf tf (EA_Assume b) d)),
      dgs_assume_not = (\<lambda>b d _. ((), apply_tf tf (EA_AssumeNot b) d)),
-     dgs_enter      = (\<lambda>d _. ((), apply_tf tf EA_Enter d)),
-     dgs_combine    = (\<lambda>dc de _. ((), combine_abs dc de)) \<rparr>"
+     dgs_enter      = (\<lambda>xs es d _. ((), apply_tf tf (EA_Enter xs es) d)),
+     dgs_combine    = (\<lambda>dst dc de _. ((), combine_collect_abs dst dc de)) \<rparr>"
 
 definition local_gamma :: "'a::sound_domain abs_state \<Rightarrow> unit \<Rightarrow> store set" where
   "local_gamma d u = \<lbrakk>d\<rbrakk>"
@@ -43,7 +43,7 @@ lemma dg_spec_step_local:
   unfolding local_dg_spec_def by (cases a) simp_all
 
 lemma dgs_combine_local:
-  "dgs_combine (local_dg_spec tf) dc de g = ((), combine_abs dc de)"
+  "dgs_combine (local_dg_spec tf) dst dc de g = ((), combine_collect_abs dst dc de)"
   unfolding local_dg_spec_def by simp
 
 lemma local_gamma_mono:
@@ -65,12 +65,12 @@ next
           \<subseteq> (case dg_spec_step (local_dg_spec tf) a d g of (g', d') \<Rightarrow> local_gamma d' g')"
     by (simp add: dg_spec_step_local local_gamma_def)
 next
-  fix s t :: store and dc de :: "'a abs_state" and g :: unit
+  fix s t :: store and dst and dc de :: "'a abs_state" and g :: unit
   assume "s \<in> local_gamma dc g" and "t \<in> local_gamma de g"
-  hence "combine_states s t \<in> \<lbrakk>combine_abs dc de\<rbrakk>"
-    unfolding local_gamma_def by (rule combine_states_sound)
-  thus "combine_states s t
-          \<in> (case dgs_combine (local_dg_spec tf) dc de g of (g', d') \<Rightarrow> local_gamma d' g')"
+  hence "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst dc de\<rbrakk>"
+    unfolding local_gamma_def by (rule combine_collect_sound)
+  thus "combine_collect dst s t
+          \<in> (case dgs_combine (local_dg_spec tf) dst dc de g of (g', d') \<Rightarrow> local_gamma d' g')"
     by (simp add: dgs_combine_local local_gamma_def)
 qed
 
@@ -107,17 +107,18 @@ theorem clean_ctx_collect_rread_via_dg:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
         \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
-    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+    and COMB: "\<And>ctx cl ex v dst tau rho. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+        \<Longrightarrow> combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
@@ -134,7 +135,8 @@ proof -
             \<Longrightarrow> s \<in> local_dg.dg_gamma_c (local_sigma loc) ctx (cfg_entry g)"
       using ENTRY by (simp add: gam)
   next
-    show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    show "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+            \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
             \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> local_dg.dg_gamma_c (local_sigma loc) ctx v"
       using PROC_ENTRY by (simp add: gam)
   next
@@ -146,25 +148,25 @@ proof -
       by (rule edge_of_bound[OF EDGE_BOUND[OF e] lt' st])
     thus "s' \<in> local_dg.dg_gamma_c (local_sigma loc) ctx v'" by (simp add: gam)
   next
-    fix ctx cl ex v' tau rho
-    assume c: "(cl, ex, v') \<in> combines g"
+    fix ctx cl ex v' dst tau rho
+    assume c: "(cl, ex, v', dst) \<in> combines g"
       and ct: "last tau \<in> local_dg.dg_gamma_c (local_sigma loc) ctx cl"
       and ce: "last rho \<in> local_dg.dg_gamma_c (local_sigma loc)
                   (rt cl ctx (local_dg.dg_D_c (local_sigma loc) ctx cl)) ex"
     from ct have ct': "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>" by (simp add: gam)
     from ce have ce': "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
       by (simp add: gam dval)
-    have "<last tau|last rho> \<in> \<lbrakk>sg (Inl (v', ctx))\<rbrakk>" by (rule COMB[OF c ct' ce'])
-    thus "<last tau|last rho> \<in> local_dg.dg_gamma_c (local_sigma loc) ctx v'"
+    have "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v', ctx))\<rbrakk>" by (rule COMB[OF c ct' ce'])
+    thus "combine_collect dst (last tau) (last rho) \<in> local_dg.dg_gamma_c (local_sigma loc) ctx v'"
       by (simp add: gam)
   next
     show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
       using DG_INTRA by blast
   next
-    show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    show "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
       using DG_RETURN by blast
   next
-    show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    show "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
       using DG_CALLEE by blast
   next
     fix ctx cl s
@@ -187,17 +189,18 @@ lemma clean_ctx_collect_rread_is_dg_corollary:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
         \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
-    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+    and COMB: "\<And>ctx cl ex v dst tau rho. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+        \<Longrightarrow> combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"

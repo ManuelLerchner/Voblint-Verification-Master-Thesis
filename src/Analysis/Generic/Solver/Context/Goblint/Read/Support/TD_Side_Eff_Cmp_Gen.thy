@@ -56,7 +56,9 @@ text \<open>
 \<close>
 
 definition side_cfg_T_eff_cmp ::
-  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+  "('c \<Rightarrow> 'g)
+   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+        \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
    \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
    \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
@@ -69,7 +71,7 @@ where
                           map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u)))
                         (non_enter_predecessor_list g v);
-            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
+            comb  = map (\<lambda>(cc, ex, dst). cmb c dst cc ex) (combine_predecessor_list g v);
             t = side_rhs_fold_ctx acc0 (intra @ comb)
         in if v = cfg_entry g then Side (gkey c) (restrict_global s0) t else t)"
 
@@ -88,12 +90,14 @@ lemma eq_side_cfg_T_eff_cmp:
               map_gtree (\<lambda>_. gkey ctx)
                 (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
             (non_enter_predecessor_list g v)
-        @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
+        @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v))"
   unfolding side_cfg_T_eff_cmp_def
   by (simp add: traverse_side_rhs_fold_ctx Let_def)
 
 definition side_cfg_T_eff_cmp_seed ::
-  "('c \<Rightarrow> 'g) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+  "('c \<Rightarrow> 'g)
+   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+        \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
    \<Rightarrow> ('c \<Rightarrow> 'a abs_state) \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
 where
@@ -104,7 +108,7 @@ where
             intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u)))
                         (non_enter_predecessor_list g v);
-            comb  = map (\<lambda>(cc, ex). cmb c cc ex) (combine_predecessor_list g v);
+            comb  = map (\<lambda>(cc, ex, dst). cmb c dst cc ex) (combine_predecessor_list g v);
             t = side_rhs_fold_ctx acc0 (intra @ comb)
         in if v = cfg_entry g then Side (gkey c) (restrict_global s0) t else t)"
 
@@ -115,7 +119,7 @@ lemma eq_side_cfg_T_eff_cmp_seed:
        \<sigma>
        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
              (non_enter_predecessor_list g v)
-        @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
+        @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v))"
   by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
 
 text \<open>
@@ -241,7 +245,7 @@ lemma sides_fold_le_side_cfg_T_eff_cmp:
            (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                              (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                 (non_enter_predecessor_list g v)
-            @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)))
+            @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)))
            \<sigma> (Inr gg)
          \<le> sides_of_rhs (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
              \<sigma> (Inr gg)"
@@ -280,7 +284,7 @@ lemma side_cfg_T_eff_cmp_edge_le:
   assumes pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
       and v: "(v, ctx) \<in> vars"
       and e: "(u, a, v) \<in> edges g"
-      and ane: "a \<noteq> EA_Enter"
+      and ane: "\<not> is_enter_action a"
       and fin: "finite (edges g)"
   shows "etf_full (apply_etf etf a u) (pull_gk gkey ctx \<sigma>)
            \<le> side_env (pull_gk gkey ctx \<sigma>) v"
@@ -296,7 +300,7 @@ proof -
        \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                        (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                    (non_enter_predecessor_list g v)
-              @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v))"
+              @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v))"
     using mem by force
   have loc: "traverse_rhs (apply_etf etf a u) (pull_gk gkey ctx \<sigma>)
                \<le> \<sigma> (Inl (v, ctx))"
@@ -325,7 +329,7 @@ proof -
                      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                              (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                           (non_enter_predecessor_list g v)
-                      @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)))
+                      @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)))
                      \<sigma> (Inr (gkey ctx))"
       by (rule sides_le_side_rhs_fold_ctx[OF memtree])
     also have "\<dots> \<le> sides_of_rhs (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
@@ -454,11 +458,11 @@ text \<open>Per-tree domination for a keyed fixed-combine tree: its traverse has
 lemma restrict_global_traverse_unit_combine_intra:
   fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
   shows "restrict_global (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-              (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex))) \<sigma>) = \<bottom>"
+              (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree dst cc ex))) \<sigma>) = \<bottom>"
 proof -
   have "restrict_global (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-             (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree cc ex))) \<sigma>)
-        = restrict_global (traverse_rhs (unit_combine_tree cc ex) (pull_gk gkey ctx \<sigma>))"
+             (map_ltree (\<lambda>w. (w, ctx)) (unit_combine_tree dst cc ex))) \<sigma>)
+        = restrict_global (traverse_rhs (unit_combine_tree dst cc ex) (pull_gk gkey ctx \<sigma>))"
     by (simp add: traverse_intra_pull_gk)
   also have "\<dots> = \<bottom>"
     by (simp add: traverse_unit_combine_tree restrict_global_restrict_local_bot)
@@ -480,19 +484,20 @@ lemma side_cfg_T_eff_cmp_enter_le:
   assumes frm: "sound_effectful_transfer_framed etf fresh_frame"
       and pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
       and v: "(v, ctx) \<in> vars"
-      and e: "(u, EA_Enter, v) \<in> edges g"
+      and e: "(u, EA_Enter xs es, v) \<in> edges g"
+      and loc: "local_formals xs"
       and fin: "finite (edges g)"
       and inr: "inr_slot_locals_bot_ctx \<sigma>"
       and inl: "inl_slot_globals_bot_ctx \<sigma>"
-  shows "etf_full (apply_etf etf EA_Enter u) (pull_gk gkey ctx \<sigma>)
+  shows "etf_full (apply_etf etf (EA_Enter xs es) u) (pull_gk gkey ctx \<sigma>)
            \<le> side_env (pull_gk gkey ctx \<sigma>) v"
 proof -
   have fe: "is_frame_entry g v"
   proof -
-    have "(u, EA_Enter) \<in> set (predecessor_list g v)"
+    have "(u, EA_Enter xs es) \<in> set (predecessor_list g v)"
       using e by (simp add: set_predecessor_list[OF fin] predecessors_def)
-    hence "(u, EA_Enter) \<in> set (enter_predecessor_list g v)"
-      by (rule enter_predecessor_list_mem)
+    hence "(u, EA_Enter xs es) \<in> set (enter_predecessor_list g v)"
+      by (rule enter_predecessor_list_mem) (simp add: is_enter_action_def)
     thus ?thesis by (auto simp: is_frame_entry_def)
   qed
   have posteq: "eq (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma>
@@ -508,7 +513,7 @@ proof -
     also have "\<dots> \<le> \<sigma> (Inl (v, ctx))" by (rule posteq)
     finally show ?thesis .
   qed
-  have enter_le: "etf_full (etf_enter etf u) (pull_gk gkey ctx \<sigma>)
+  have enter_le: "etf_full (etf_enter etf xs es u) (pull_gk gkey ctx \<sigma>)
                     \<le> fresh_frame \<squnion> glob_env (pull_gk gkey ctx \<sigma>)"
   proof -
     have "inr_slot_locals_bot (pull_gk gkey ctx \<sigma>)"
@@ -516,10 +521,10 @@ proof -
     moreover have "inl_slot_globals_bot (pull_gk gkey ctx \<sigma>)"
       by (rule inl_slot_globals_bot_pull_gk[OF inl])
     ultimately show ?thesis
-      using sound_effectful_transfer_framed.etf_enter_framed_le[OF frm] by blast
+      using sound_effectful_transfer_framed.etf_enter_framed_le[OF frm] loc by blast
   qed
-  have "etf_full (apply_etf etf EA_Enter u) (pull_gk gkey ctx \<sigma>)
-        = etf_full (etf_enter etf u) (pull_gk gkey ctx \<sigma>)" by simp
+  have "etf_full (apply_etf etf (EA_Enter xs es) u) (pull_gk gkey ctx \<sigma>)
+        = etf_full (etf_enter etf xs es u) (pull_gk gkey ctx \<sigma>)" by simp
   also have "\<dots> \<le> fresh_frame \<squnion> glob_env (pull_gk gkey ctx \<sigma>)" by (rule enter_le)
   also have "\<dots> = fresh_frame \<squnion> \<sigma> (Inr (gkey ctx))"
     by (simp add: glob_env_unit pull_gk_Inr)
@@ -544,19 +549,20 @@ lemma side_cfg_T_eff_cmp_enter_le_le:
   assumes frm: "sound_effectful_transfer_framed_le etf fresh_frame"
       and pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
       and v: "(v, ctx) \<in> vars"
-      and e: "(u, EA_Enter, v) \<in> edges g"
+      and e: "(u, EA_Enter xs es, v) \<in> edges g"
+      and loc: "local_formals xs"
       and fin: "finite (edges g)"
       and inr: "inr_slot_locals_bot_ctx \<sigma>"
       and inl: "inl_glob_le_keyed_ctx gkey \<sigma>"
-  shows "etf_full (apply_etf etf EA_Enter u) (pull_gk gkey ctx \<sigma>)
+  shows "etf_full (apply_etf etf (EA_Enter xs es) u) (pull_gk gkey ctx \<sigma>)
            \<le> side_env (pull_gk gkey ctx \<sigma>) v"
 proof -
   have fe: "is_frame_entry g v"
   proof -
-    have "(u, EA_Enter) \<in> set (predecessor_list g v)"
+    have "(u, EA_Enter xs es) \<in> set (predecessor_list g v)"
       using e by (simp add: set_predecessor_list[OF fin] predecessors_def)
-    hence "(u, EA_Enter) \<in> set (enter_predecessor_list g v)"
-      by (rule enter_predecessor_list_mem)
+    hence "(u, EA_Enter xs es) \<in> set (enter_predecessor_list g v)"
+      by (rule enter_predecessor_list_mem) (simp add: is_enter_action_def)
     thus ?thesis by (auto simp: is_frame_entry_def)
   qed
   have posteq: "eq (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma>
@@ -572,7 +578,7 @@ proof -
     also have "\<dots> \<le> \<sigma> (Inl (v, ctx))" by (rule posteq)
     finally show ?thesis .
   qed
-  have enter_le: "etf_full (etf_enter etf u) (pull_gk gkey ctx \<sigma>)
+  have enter_le: "etf_full (etf_enter etf xs es u) (pull_gk gkey ctx \<sigma>)
                     \<le> fresh_frame \<squnion> glob_env (pull_gk gkey ctx \<sigma>)"
   proof -
     have "inr_slot_locals_bot (pull_gk gkey ctx \<sigma>)"
@@ -580,10 +586,10 @@ proof -
     moreover have "inl_glob_le_glob_env (pull_gk gkey ctx \<sigma>)"
       by (rule inl_glob_le_glob_env_pull_gk[OF inl])
     ultimately show ?thesis
-      using sound_effectful_transfer_framed_le.etf_enter_framed_glob_le[OF frm] by blast
+      using sound_effectful_transfer_framed_le.etf_enter_framed_glob_le[OF frm] loc by blast
   qed
-  have "etf_full (apply_etf etf EA_Enter u) (pull_gk gkey ctx \<sigma>)
-        = etf_full (etf_enter etf u) (pull_gk gkey ctx \<sigma>)" by simp
+  have "etf_full (apply_etf etf (EA_Enter xs es) u) (pull_gk gkey ctx \<sigma>)
+        = etf_full (etf_enter etf xs es u) (pull_gk gkey ctx \<sigma>)" by simp
   also have "\<dots> \<le> fresh_frame \<squnion> glob_env (pull_gk gkey ctx \<sigma>)" by (rule enter_le)
   also have "\<dots> = fresh_frame \<squnion> \<sigma> (Inr (gkey ctx))"
     by (simp add: glob_env_unit pull_gk_Inr)
@@ -596,7 +602,7 @@ qed
 
 text \<open>
   The combine analogue, for the conservative keyed combine builder
-  \<open>cmb c cc ex = map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex))\<close>.
+  \<open>cmb c cc ex = map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex))\<close>.
   Same proof shape as the edge bound, over \<^const>\<open>etf_combine\<close> and the combine
   predecessor list.
 \<close>
@@ -606,49 +612,49 @@ lemma side_cfg_T_eff_cmp_combine_le:
     and etf :: "(unit, 'a) effectful_domain_transfer"
   assumes pp: "part_post_solution
                  (side_cfg_T_eff_cmp gkey
-                    (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                        (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                    (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                        (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                     g etf fresh_frame bot0 s0) x \<sigma> vars"
       and v: "(ret, ctx) \<in> vars"
-      and e: "(cc, ex, ret) \<in> combines g"
+      and e: "(cc, ex, ret, dst) \<in> combines g"
       and finC: "finite (combines g)"
-  shows "etf_full (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
+  shows "etf_full (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
            \<le> side_env (pull_gk gkey ctx \<sigma>) ret"
 proof -
-  let ?cmb = "\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex))"
+  let ?cmb = "\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex))"
   have posteq: "eq (side_cfg_T_eff_cmp gkey ?cmb g etf fresh_frame bot0 s0) (ret, ctx) \<sigma>
                   \<le> \<sigma> (Inl (ret, ctx))"
     using pp v by auto
-  have mem: "(cc, ex) \<in> set (combine_predecessor_list g ret)"
-    using e by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_def)
+  have mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g ret)"
+    using e by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_eq)
   have memtree:
-    "map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf cc ex))
+    "map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf dst cc ex))
        \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                        (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                    (non_enter_predecessor_list g ret)
-              @ map (\<lambda>(cc, ex). ?cmb ctx cc ex) (combine_predecessor_list g ret))"
+              @ map (\<lambda>(cc, ex, dst). ?cmb ctx dst cc ex) (combine_predecessor_list g ret))"
     using mem by force
-  have loc: "traverse_rhs (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
+  have loc: "traverse_rhs (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
                \<le> \<sigma> (Inl (ret, ctx))"
   proof -
-    have "traverse_rhs (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
+    have "traverse_rhs (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
             = traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-                (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf cc ex))) \<sigma>"
+                (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf dst cc ex))) \<sigma>"
       by (rule traverse_intra_pull_gk[symmetric])
     also have "\<dots> \<le> eq (side_cfg_T_eff_cmp gkey ?cmb g etf fresh_frame bot0 s0) (ret, ctx) \<sigma>"
       unfolding eq_side_cfg_T_eff_cmp by (rule traverse_le_side_acc_ctx[OF memtree])
     also have "\<dots> \<le> \<sigma> (Inl (ret, ctx))" by (rule posteq)
     finally show ?thesis .
   qed
-  have glob: "all_sides (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
+  have glob: "all_sides (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
                 \<le> \<sigma> (Inr (gkey ctx))"
   proof -
-    have "all_sides (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
-            = sides_of_rhs (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>) (Inr ())"
+    have "all_sides (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
+            = sides_of_rhs (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>) (Inr ())"
       by (rule all_sides_eq_sides_Inr_unit)
     also have "\<dots> = sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-                     (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf cc ex))) \<sigma> (Inr (gkey ctx))"
+                     (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf dst cc ex))) \<sigma> (Inr (gkey ctx))"
       by (rule sides_intra_pull_gk[symmetric])
     also have "\<dots> \<le> sides_of_rhs (side_rhs_fold_ctx
                      ((if ret = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
@@ -656,7 +662,7 @@ proof -
                      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                              (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                           (non_enter_predecessor_list g ret)
-                      @ map (\<lambda>(cc, ex). ?cmb ctx cc ex) (combine_predecessor_list g ret)))
+                      @ map (\<lambda>(cc, ex, dst). ?cmb ctx dst cc ex) (combine_predecessor_list g ret)))
                      \<sigma> (Inr (gkey ctx))"
       by (rule sides_le_side_rhs_fold_ctx[OF memtree])
     also have "\<dots> \<le> sides_of_rhs (side_cfg_T_eff_cmp gkey ?cmb g etf fresh_frame bot0 s0 (ret, ctx))
@@ -666,9 +672,9 @@ proof -
       by (rule side_post_solution_le_global_cmp[OF pp v])
     finally show ?thesis .
   qed
-  have "etf_full (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
-        = traverse_rhs (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
-          \<squnion> all_sides (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)"
+  have "etf_full (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
+        = traverse_rhs (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
+          \<squnion> all_sides (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)"
     by (simp add: etf_full_def)
   also have "\<dots> \<le> \<sigma> (Inl (ret, ctx)) \<squnion> \<sigma> (Inr (gkey ctx))"
     using loc glob by (rule sup_mono)
@@ -748,7 +754,7 @@ proof -
                   (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                           (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                        (non_enter_predecessor_list g ?ent)
-                   @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g ?ent)))
+                   @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g ?ent)))
                   \<sigma> (Inr (gkey ctx))
                 \<squnion> restrict_global s0"
     unfolding side_cfg_T_eff_cmp_def by (simp add: Let_def)
@@ -788,17 +794,19 @@ text \<open>
 \<close>
 
 definition switching_combine_sound ::
-  "('c \<Rightarrow> 'g::finite) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+  "('c \<Rightarrow> 'g::finite)
+   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+        \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
    \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> bool"
 where
   "switching_combine_sound gkey cmb g etf fresh_frame bot0 s0 \<equiv>
-     (\<forall>(\<sigma> :: pp \<times> 'c + 'g \<Rightarrow> 'a abs_state) x vars ctx cc ex ret.
+     (\<forall>(\<sigma> :: pp \<times> 'c + 'g \<Rightarrow> 'a abs_state) x vars ctx cc ex ret dst.
         part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars
         \<longrightarrow> inl_slot_globals_bot_ctx \<sigma>
         \<longrightarrow> (ret, ctx) \<in> vars
-        \<longrightarrow> (cc, ex, ret) \<in> combines g
-        \<longrightarrow> etf_full (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
+        \<longrightarrow> (cc, ex, ret, dst) \<in> combines g
+        \<longrightarrow> etf_full (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
               \<le> side_env (pull_gk gkey ctx \<sigma>) ret)"
 
 text \<open>
@@ -812,7 +820,7 @@ lemma fixed_combine_satisfies_switching_combine_sound:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes "finite (combines g)"
   shows "switching_combine_sound gkey
-           (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+           (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
            g etf fresh_frame bot0 s0"
   unfolding switching_combine_sound_def
   by (blast intro: side_cfg_T_eff_cmp_combine_le[OF _ _ _ assms])
@@ -824,24 +832,26 @@ text \<open>
   fixed combine satisfies it by the same @{thm [source] side_cfg_T_eff_cmp_combine_le}.
 \<close>
 definition switching_combine_sound_le ::
-  "('c \<Rightarrow> 'g::finite) \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+  "('c \<Rightarrow> 'g::finite)
+   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+        \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
    \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> bool"
 where
   "switching_combine_sound_le gkey cmb g etf fresh_frame bot0 s0 \<equiv>
-     (\<forall>(\<sigma> :: pp \<times> 'c + 'g \<Rightarrow> 'a abs_state) x vars ctx cc ex ret.
+     (\<forall>(\<sigma> :: pp \<times> 'c + 'g \<Rightarrow> 'a abs_state) x vars ctx cc ex ret dst.
         part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars
         \<longrightarrow> inl_glob_le_keyed_ctx gkey \<sigma>
         \<longrightarrow> (ret, ctx) \<in> vars
-        \<longrightarrow> (cc, ex, ret) \<in> combines g
-        \<longrightarrow> etf_full (etf_combine etf cc ex) (pull_gk gkey ctx \<sigma>)
+        \<longrightarrow> (cc, ex, ret, dst) \<in> combines g
+        \<longrightarrow> etf_full (etf_combine etf dst cc ex) (pull_gk gkey ctx \<sigma>)
               \<le> side_env (pull_gk gkey ctx \<sigma>) ret)"
 
 lemma fixed_combine_satisfies_switching_combine_sound_le:
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes "finite (combines g)"
   shows "switching_combine_sound_le gkey
-           (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+           (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
            g etf fresh_frame bot0 s0"
   unfolding switching_combine_sound_le_def
   by (blast intro: side_cfg_T_eff_cmp_combine_le[OF _ _ _ assms])
@@ -870,8 +880,9 @@ theorem side_cfg_T_eff_cmp_collect_sound_gen:
     and pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
     and finE: "finite (edges g)"
     and finC: "finite (combines g)"
+    and wf_enter: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
     and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars"
-    and cover_comb: "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    and cover_comb: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
     and cover_entry: "(cfg_entry g, ctx) \<in> vars"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
 proof -
@@ -883,21 +894,24 @@ proof -
     fix u a w assume e: "(u, a, w) \<in> edges g"
     show "etf_full (apply_etf etf a u) (pull_gk gkey ctx \<sigma>)
             \<le> side_env (pull_gk gkey ctx \<sigma>) w"
-    proof (cases "a = EA_Enter")
+    proof (cases "is_enter_action a")
       case True
-      with e have e': "(u, EA_Enter, w) \<in> edges g" by simp
-      have "etf_full (apply_etf etf EA_Enter u) (pull_gk gkey ctx \<sigma>)
+      then obtain xs es where a_eq: "a = EA_Enter xs es"
+        by (cases a) (auto simp: is_enter_action_def)
+      with e have e': "(u, EA_Enter xs es, w) \<in> edges g" by simp
+      have "etf_full (apply_etf etf (EA_Enter xs es) u) (pull_gk gkey ctx \<sigma>)
               \<le> side_env (pull_gk gkey ctx \<sigma>) w"
-        by (rule side_cfg_T_eff_cmp_enter_le[OF stf pp cover_edge[OF e] e' finE inr inl])
-      thus ?thesis using True by simp
+        by (rule side_cfg_T_eff_cmp_enter_le[OF stf pp cover_edge[OF e] e'
+              wf_enter[OF e'] finE inr inl])
+      thus ?thesis using a_eq by simp
     next
       case False
       show ?thesis
         by (rule side_cfg_T_eff_cmp_edge_le[OF pp cover_edge[OF e] e False finE])
     qed
   next
-    fix c ex ret assume cm: "(c, ex, ret) \<in> combines g"
-    show "etf_full (etf_combine etf c ex) (pull_gk gkey ctx \<sigma>)
+    fix c ex ret dst assume cm: "(c, ex, ret, dst) \<in> combines g"
+    show "etf_full (etf_combine etf dst c ex) (pull_gk gkey ctx \<sigma>)
             \<le> side_env (pull_gk gkey ctx \<sigma>) ret"
       using comb_sound cover_comb[OF cm] cm pp inl
       unfolding switching_combine_sound_def by blast
@@ -931,8 +945,9 @@ theorem side_cfg_T_eff_cmp_collect_sound_gen_le:
     and pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
     and finE: "finite (edges g)"
     and finC: "finite (combines g)"
+    and wf_enter: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
     and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars"
-    and cover_comb: "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    and cover_comb: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
     and cover_entry: "(cfg_entry g, ctx) \<in> vars"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
 proof -
@@ -944,21 +959,24 @@ proof -
     fix u a w assume e: "(u, a, w) \<in> edges g"
     show "etf_full (apply_etf etf a u) (pull_gk gkey ctx \<sigma>)
             \<le> side_env (pull_gk gkey ctx \<sigma>) w"
-    proof (cases "a = EA_Enter")
+    proof (cases "is_enter_action a")
       case True
-      with e have e': "(u, EA_Enter, w) \<in> edges g" by simp
-      have "etf_full (apply_etf etf EA_Enter u) (pull_gk gkey ctx \<sigma>)
+      then obtain xs es where a_eq: "a = EA_Enter xs es"
+        by (cases a) (auto simp: is_enter_action_def)
+      with e have e': "(u, EA_Enter xs es, w) \<in> edges g" by simp
+      have "etf_full (apply_etf etf (EA_Enter xs es) u) (pull_gk gkey ctx \<sigma>)
               \<le> side_env (pull_gk gkey ctx \<sigma>) w"
-        by (rule side_cfg_T_eff_cmp_enter_le_le[OF stf pp cover_edge[OF e] e' finE inr inl])
-      thus ?thesis using True by simp
+        by (rule side_cfg_T_eff_cmp_enter_le_le[OF stf pp cover_edge[OF e] e'
+              wf_enter[OF e'] finE inr inl])
+      thus ?thesis using a_eq by simp
     next
       case False
       show ?thesis
         by (rule side_cfg_T_eff_cmp_edge_le[OF pp cover_edge[OF e] e False finE])
     qed
   next
-    fix c ex ret assume cm: "(c, ex, ret) \<in> combines g"
-    show "etf_full (etf_combine etf c ex) (pull_gk gkey ctx \<sigma>)
+    fix c ex ret dst assume cm: "(c, ex, ret, dst) \<in> combines g"
+    show "etf_full (etf_combine etf dst c ex) (pull_gk gkey ctx \<sigma>)
             \<le> side_env (pull_gk gkey ctx \<sigma>) ret"
       using comb_sound cover_comb[OF cm] cm pp inl
       unfolding switching_combine_sound_le_def by blast
@@ -988,19 +1006,20 @@ corollary side_cfg_T_eff_cmp_collect_sound:
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp gkey
-                  (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                  (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                   g etf fresh_frame bot0 s0) x \<sigma> vars"
     and finE: "finite (edges g)"
     and finC: "finite (combines g)"
+    and wf_enter: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
     and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars"
-    and cover_comb: "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    and cover_comb: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
     and cover_entry: "(cfg_entry g, ctx) \<in> vars"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
 proof (rule side_cfg_T_eff_cmp_collect_sound_gen)
   show "sound_effectful_transfer_framed etf fresh_frame" by (rule stf)
   show "switching_combine_sound gkey
-          (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+          (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
           g etf fresh_frame bot0 s0"
     by (rule fixed_combine_satisfies_switching_combine_sound[OF finC])
   show "gcmp ctx (gkey ctx)" using single by auto
@@ -1009,14 +1028,17 @@ proof (rule side_cfg_T_eff_cmp_collect_sound_gen)
   show "S \<le> \<lbrakk>s0\<rbrakk>" by (rule S_sound)
   show "part_post_solution
           (side_cfg_T_eff_cmp gkey
-             (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                 (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+             (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                 (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
              g etf fresh_frame bot0 s0) x \<sigma> vars"
     by (rule pp)
   show "finite (edges g)" by (rule finE)
   show "finite (combines g)" by (rule finC)
+  show "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
+    by (rule wf_enter)
   show "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars" by (rule cover_edge)
-  show "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars" by (rule cover_comb)
+  show "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    by (rule cover_comb)
   show "(cfg_entry g, ctx) \<in> vars" by (rule cover_entry)
 qed
 
@@ -1036,25 +1058,27 @@ corollary side_cfg_T_eff_cmp_collect_sound_eq:
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp id
-                  (\<lambda>c cc ex. map_gtree (\<lambda>_. c)
-                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                  (\<lambda>c dst cc ex. map_gtree (\<lambda>_. c)
+                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                   g etf fresh_frame bot0 s0) x \<sigma> vars"
     and finE: "finite (edges g)"
     and finC: "finite (combines g)"
+    and wf_enter: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
     and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars"
-    and cover_comb: "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    and cover_comb: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
     and cover_entry: "(cfg_entry g, ctx) \<in> vars"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp (=) \<sigma> (v0, ctx)\<rbrakk>"
 proof -
   have pp': "part_post_solution
                (side_cfg_T_eff_cmp id
-                  (\<lambda>c cc ex. map_gtree (\<lambda>_. id c)
-                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                  (\<lambda>c dst cc ex. map_gtree (\<lambda>_. id c)
+                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                   g etf fresh_frame bot0 s0) x \<sigma> vars"
     using pp by simp
   show ?thesis
     by (rule side_cfg_T_eff_cmp_collect_sound
-          [OF stf _ inr inl S_sound pp' finE finC cover_edge cover_comb cover_entry]) auto
+          [OF stf _ inr inl S_sound pp' finE finC wf_enter cover_edge cover_comb
+             cover_entry]) auto
 qed
 
 text \<open>
@@ -1077,18 +1101,20 @@ corollary side_cfg_T_eff_cmp_collect_ctx_sound:
     and S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp gkey
-                  (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                  (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                      (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                   g etf fresh_frame bot0 s0) x \<sigma> vars"
     and finE: "finite (edges g)"
     and finC: "finite (combines g)"
+    and wf_enter: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
     and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ctx) \<in> vars"
-    and cover_comb: "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
+    and cover_comb: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> (ret, ctx) \<in> vars"
     and cover_entry: "(cfg_entry g, ctx) \<in> vars"
   shows "cfg_collect_ctx dg cmp g S v0 ctx \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
 proof (rule order_trans[OF cfg_collect_ctx_le])
   show "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp \<sigma> (v0, ctx)\<rbrakk>"
-    using stf single inr inl S_sound pp finE finC cover_edge cover_comb cover_entry
+    using stf single inr inl S_sound pp finE finC wf_enter cover_edge cover_comb
+      cover_entry
     by (rule side_cfg_T_eff_cmp_collect_sound)
 qed
 

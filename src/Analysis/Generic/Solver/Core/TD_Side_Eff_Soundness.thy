@@ -30,7 +30,7 @@ text \<open>dep_aux of the fold is acc-independent when the per-tree skeletons a
 lemma dep_aux_side_rhs_fold_eff_acc_indep:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-      and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+      and comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "dep_aux \<sigma> (side_rhs_fold_eff etf acc1 es cs)
        = dep_aux \<sigma> (side_rhs_fold_eff etf acc2 es cs)"
   by (rule dep_aux_side_rhs_fold_eff_indep[OF edge_static comb_static])
@@ -69,7 +69,7 @@ text \<open>The combine queries (call queries) survive the edge prefix.\<close>
 lemma dep_aux_side_rhs_fold_eff_nil_sub_es:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-      and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+      and comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "dep_aux \<sigma> (side_rhs_fold_eff etf acc [] cs)
        \<subseteq> dep_aux \<sigma> (side_rhs_fold_eff etf acc es cs)"
 proof (induction es arbitrary: acc)
@@ -90,10 +90,10 @@ qed
 
 lemma Inl_dep_aux_side_rhs_fold_eff_call:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes comb_dep: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes comb_dep: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-      and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  assumes mem: "(cc, ex) \<in> set cs"
+      and comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
+  assumes mem: "(cc, ex, dst) \<in> set cs"
   shows "Inl cc \<in> dep_aux \<sigma> (side_rhs_fold_eff etf acc es cs)"
 proof -
   have nil: "Inl cc \<in> dep_aux \<sigma> (side_rhs_fold_eff etf acc [] cs)"
@@ -102,18 +102,18 @@ proof -
     case Nil thus ?case by simp
   next
     case (Cons x cs)
-    obtain c2 e2 where x: "x = (c2, e2)" by (cases x)
+    obtain c2 e2 d2 where x: "x = (c2, e2, d2)" by (cases x)
     show ?case
-    proof (cases "(c2, e2) = (cc, ex)")
+    proof (cases "(c2, e2, d2) = (cc, ex, dst)")
       case True
-      have "Inl c2 \<in> dep_aux \<sigma> (etf_combine etf c2 e2)" by (rule comb_dep)
-      then have "Inl cc \<in> dep_aux \<sigma> (etf_combine etf c2 e2)" using True by simp
+      have "Inl c2 \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" by (rule comb_dep)
+      then have "Inl cc \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" using True by simp
       thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
     next
       case False
-      have mem': "(cc, ex) \<in> set cs" using Cons.prems x False by auto
+      have mem': "(cc, ex, dst) \<in> set cs" using Cons.prems x False by auto
       have "Inl cc \<in> dep_aux \<sigma> (side_rhs_fold_eff etf
-              (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) [] cs)"
+              (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) [] cs)"
         by (rule Cons.IH[OF mem'])
       thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
     qed
@@ -125,10 +125,10 @@ qed
 
 lemma Inl_dep_aux_side_rhs_fold_eff_exit:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes comb_dep: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes comb_dep: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-      and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
-  assumes mem: "(cc, ex) \<in> set cs"
+      and comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
+  assumes mem: "(cc, ex, dst) \<in> set cs"
   shows "Inl ex \<in> dep_aux \<sigma> (side_rhs_fold_eff etf acc es cs)"
 proof -
   have nil: "Inl ex \<in> dep_aux \<sigma> (side_rhs_fold_eff etf acc [] cs)"
@@ -137,18 +137,18 @@ proof -
     case Nil thus ?case by simp
   next
     case (Cons x cs)
-    obtain c2 e2 where x: "x = (c2, e2)" by (cases x)
+    obtain c2 e2 d2 where x: "x = (c2, e2, d2)" by (cases x)
     show ?case
-    proof (cases "(c2, e2) = (cc, ex)")
+    proof (cases "(c2, e2, d2) = (cc, ex, dst)")
       case True
-      have "Inl e2 \<in> dep_aux \<sigma> (etf_combine etf c2 e2)" by (rule comb_dep)
-      then have "Inl ex \<in> dep_aux \<sigma> (etf_combine etf c2 e2)" using True by simp
+      have "Inl e2 \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" by (rule comb_dep)
+      then have "Inl ex \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" using True by simp
       thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
     next
       case False
-      have mem': "(cc, ex) \<in> set cs" using Cons.prems x False by auto
+      have mem': "(cc, ex, dst) \<in> set cs" using Cons.prems x False by auto
       have "Inl ex \<in> dep_aux \<sigma> (side_rhs_fold_eff etf
-              (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) [] cs)"
+              (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) [] cs)"
         by (rule Cons.IH[OF mem'])
       thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
     qed
@@ -180,16 +180,16 @@ lemma dep_side_rhs_tree_eff_combine:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and c ex w :: pp and gseed :: 'g
   assumes finC: "finite (combines g)"
-  assumes ce: "(c, ex, w) \<in> combines g"
-  assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes ce: "(c, ex, w, dst) \<in> combines g"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "c \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> w
        \<and> ex \<in> dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> w"
 proof -
-  have mem: "(c, ex) \<in> set (combine_predecessor_list g w)"
-    using ce by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_def)
+  have mem: "(c, ex, dst) \<in> set (combine_predecessor_list g w)"
+    using ce by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_eq)
   have dc: "Inl c \<in> dep_aux \<sigma> (make_side_rhs_tree_eff g etf bot0 s0 gseed w)"
     unfolding dep_aux_make_side_rhs_tree_eff
     by (rule Inl_dep_aux_side_rhs_fold_eff_call[OF comb_dep1 edge_static comb_static mem])
@@ -207,15 +207,15 @@ lemma cfg_reaches_imp_trans_dep_or_eq_side_eff:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   assumes reach: "cfg_reaches g w v0"
   shows "w = v0 \<or> w \<in> trans_dep\<^sub>L (side_cfg_T_eff g etf bot0 s0 gseed) \<sigma> v0"
 proof -
   from reach have "(w, v0) \<in> {(u, z). cfg_succ g u z}\<^sup>*"
-    unfolding cfg_reaches_def .
+    unfolding cfg_reaches_def by (simp add: cfg_succ_def)
   thus ?thesis
   proof (induction rule: converse_rtrancl_induct)
     case base
@@ -227,9 +227,12 @@ proof -
     proof -
       from su consider
         (e) a where "(y, a, z) \<in> edges g"
-        | (cc) e where "(y, e, z) \<in> combines g"
-        | (ce) c where "(c, y, z) \<in> combines g"
-        unfolding cfg_succ_def by blast
+        | (cc) e d where "(y, e, z, d) \<in> combines g"
+        | (ce) c d where "(c, y, z, d) \<in> combines g"
+        unfolding cfg_succ_def cfg_succ_rel_def
+        by (auto simp: combine_call_node_def combine_exit_node_def
+                       combine_return_node_def
+                 split: prod.splits)
       then show ?thesis
       proof cases
         case e
@@ -269,10 +272,10 @@ lemma side_cone_in_vars_eff:
   assumes fin: "finite (edges g)"
   assumes finC: "finite (combines g)"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   assumes reach: "cfg_reaches g w v0"
   shows "w \<in> vars"
 proof -
@@ -403,10 +406,10 @@ theorem side_collect_sound_exit_pruned_eff:
   assumes finC: "finite (combines g)"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   assumes inr: "inr_slot_locals_bot \<sigma>"
   shows "cfg_collect g S (cfg_exit g)
          \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
@@ -432,18 +435,19 @@ proof -
       by (rule etf_combined_le_eff[OF pp wv ed_g fin])
   qed
   have combine_le:
-    "\<And>c ex ret. (c, ex, ret) \<in> combines pg \<Longrightarrow>
-       etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines pg \<Longrightarrow>
+       etf_full (etf_combine etf dst c ex) \<sigma> \<le> side_env \<sigma> ret"
   proof -
-    fix c ex ret assume cmb: "(c, ex, ret) \<in> combines pg"
-    have cmb2: "(c, ex, ret) \<in> combines (prune_to g (cfg_exit g))"
+    fix c ex ret dst assume cmb: "(c, ex, ret, dst) \<in> combines pg"
+    have cmb2: "(c, ex, ret, dst) \<in> combines (prune_to g (cfg_exit g))"
       using cmb by (simp add: pg_def prune_cfg_def)
-    have uce_g: "(c, ex, ret) \<in> combines g" using cmb2 by auto
-    have r_cone: "cfg_reaches g ret (cfg_exit g)" using cmb2 by (simp add: cone_def)
+    have uce_g: "(c, ex, ret, dst) \<in> combines g" using cmb2 by auto
+    have r_cone: "cfg_reaches g ret (cfg_exit g)"
+      using cmb2 by (simp add: cone_def combine_return_node_def)
     have rv: "ret \<in> vars"
       by (rule side_cone_in_vars_eff[OF pp fin finC edge_dep comb_dep1 comb_dep2
             edge_static comb_static r_cone])
-    show "etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
+    show "etf_full (etf_combine etf dst c ex) \<sigma> \<le> side_env \<sigma> ret"
       by (rule etf_combine_combined_le_eff[OF pp rv uce_g finC])
   qed
   have entry_pg: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry pg)\<rbrakk>"
@@ -496,14 +500,14 @@ theorem side_analyse_eff_collect_sound_exit_pruned_gen:
                   (cfg_exit (compile_prog \<Pi> ps main))"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
-  assumes comb_dep1: "\<And>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
-  assumes comb_dep2: "\<And>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   shows "cfg_collect (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
          \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed
               (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
@@ -583,7 +587,7 @@ lemma cone_compatible_etf_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
-  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   shows "cone_compatible_etf etf"
 proof -
   interpret mixed_rhs_generator etf F by (unfold_locales; simp add: edge comb)
@@ -595,7 +599,7 @@ lemma threefold_mono_unit_transfer:
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
-  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
 proof -
@@ -603,7 +607,7 @@ proof -
   proof
     show "\<And>a u. apply_etf etf a u = local_edge_tree (F a) u
                 \<or> apply_etf etf a u = unit_edge_tree (F a) u" by (simp add: edge)
-    show "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex" by (rule comb)
+    show "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex" by (rule comb)
     show "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2" by (rule mono)
   qed
   show ?thesis by (rule threefold_mono)
@@ -615,7 +619,7 @@ lemma cone_compatible_etf_local_unit_transfer:
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action a then local_edge_tree (F a) u
      else unit_edge_tree (F a) u)"
-  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   shows "cone_compatible_etf etf"
 proof -
   interpret mixed_rhs_generator etf F by (unfold_locales; simp add: edge comb)
@@ -629,7 +633,7 @@ lemma threefold_mono_local_unit_transfer:
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action a then local_edge_tree (F a) u
      else unit_edge_tree (F a) u)"
-  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
 proof -
@@ -637,7 +641,7 @@ proof -
   proof
     show "\<And>a u. apply_etf etf a u = local_edge_tree (F a) u
                 \<or> apply_etf etf a u = unit_edge_tree (F a) u" by (simp add: edge)
-    show "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex" by (rule comb)
+    show "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex" by (rule comb)
     show "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2" by (rule mono)
   qed
   show ?thesis by (rule threefold_mono)

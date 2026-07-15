@@ -79,6 +79,9 @@ text \<open>
   edge    : extend by one CFG edge (covers intra edges and enter edges).
   combine : at a combine entry, append the callee body trace to the caller
             trace and then append one store produced by \<open>combine_collect\<close>.
+            The callee trace starts at the caller-derived enter store recorded
+            by \<open>call_enter_store\<close>, so \<open>tl rho\<close> avoids recording that call
+            transition twice.
 \<close>
 inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool" for g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness g S v [s]"
@@ -89,9 +92,10 @@ inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Right
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness g S u tr
          \<Longrightarrow> edge_step a (last tr) = Some s'
          \<Longrightarrow> trace_witness g S v (tr @ [s'])"
-| combine: "(c, ex, v, dst, rex) \<in> combines g \<Longrightarrow> trace_witness g S c tau
+| combine: "(c, ex, v, dst) \<in> combines g \<Longrightarrow> trace_witness g S c tau
             \<Longrightarrow> trace_witness g S ex \<rho>
-            \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last \<rho>)
+            \<Longrightarrow> r = combine_collect dst (last tau) (last \<rho>)
+            \<Longrightarrow> call_enter_store g c (last tau) (hd \<rho>)
             \<Longrightarrow> trace_witness g S v
                   (tau @ tl \<rho> @ [r])"
 
@@ -124,7 +128,7 @@ next
   case (edge u a v tr s')
   then show ?case by (auto intro!: trace_witness.intros)
 next
-  case (combine c ex v dst rex tau \<rho> r)
+  case (combine c ex v dst tau \<rho> r)
   then show ?case by (auto intro!: trace_witness.intros)
 qed
 
@@ -154,9 +158,12 @@ next
     using edge_sub edge.hyps(1) edge.IH
     by (auto intro!: trace_witness.intros)
 next
-  case (combine c ex v dst rex tau \<rho> r)
+  case (combine c ex v dst tau \<rho> r)
+  have enter: "call_enter_store g c (last tau) (hd \<rho>)"
+    using edge_sub combine.hyps(5)
+    unfolding call_enter_store_def by blast
   then show ?case
-    using comb_sub combine.hyps(1) combine.IH
+    using comb_sub combine.hyps(1,4) combine.IH
     by (auto intro!: trace_witness.intros)
 qed
 
@@ -252,10 +259,11 @@ qed
 
 
 lemma trace_witness_combineI:
-  assumes comb: "(c, ex, v, dst, rex) \<in> combines g"
+  assumes comb: "(c, ex, v, dst) \<in> combines g"
   assumes caller: "trace_witness g S c tau"
   assumes callee: "trace_witness g S ex rho"
-  assumes ret: "r \<in> combine_collect dst rex (last tau) (last rho)"
+  assumes ret: "r = combine_collect dst (last tau) (last rho)"
+  assumes enter: "call_enter_store g c (last tau) (hd rho)"
   shows "trace_witness g S v (tau @ tl rho @ [r])"
   using assms trace_witness.combine by blast
 
@@ -320,10 +328,10 @@ next
   then have "s' \<in> cfg_collect g S v" using cfg_collect_post by blast
   then show ?case by simp
 next
-  case (combine c ex v dst rex tau rho r)
+  case (combine c ex v dst tau rho r)
   have ih1: "last tau \<in> cfg_collect g S c" using combine.IH(1) .
   have ih2: "last rho \<in> cfg_collect g S ex" using combine.IH(2) .
-  have h: "(c, ex, v, dst, rex) \<in> combines g" using combine.hyps(1) .
+  have h: "(c, ex, v, dst) \<in> combines g" using combine.hyps(1) .
   have "r \<in> collect_combine_pp g (cfg_collect g S) v"
     using collect_combine_pp_member[OF h refl ih1 ih2 combine.hyps(4)] .
   then have "r \<in> cfg_collect_F g S (cfg_collect g S) v"
@@ -360,9 +368,10 @@ inductive trace_witness_d ::
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness_d dg cmp g S u tr
          \<Longrightarrow> edge_step a (last tr) = Some s'
          \<Longrightarrow> trace_witness_d dg cmp g S v (tr @ [s'])"
-| combine: "(c, ex, v, dst, rex) \<in> combines g \<Longrightarrow> trace_witness_d dg cmp g S c tau
+| combine: "(c, ex, v, dst) \<in> combines g \<Longrightarrow> trace_witness_d dg cmp g S c tau
             \<Longrightarrow> trace_witness_d dg cmp g S ex rho
-            \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last rho)
+            \<Longrightarrow> r = combine_collect dst (last tau) (last rho)
+            \<Longrightarrow> call_enter_store g c (last tau) (hd rho)
             \<Longrightarrow> cmp (dg tau) (dg rho)
             \<Longrightarrow> trace_witness_d dg cmp g S v
                   (tau @ tl rho @ [r])"
@@ -383,7 +392,7 @@ next
   case (edge u a v tr s')
   then show ?case by (intro trace_witness.edge) auto
 next
-  case (combine c ex v dst rex tau rho r)
+  case (combine c ex v dst tau rho r)
   then show ?case by (intro trace_witness.combine) auto
 qed
 
@@ -450,10 +459,11 @@ next
 qed
 
 lemma trace_witness_d_combineI:
-  assumes comb: "(c, ex, v, dst, rex) \<in> combines g"
+  assumes comb: "(c, ex, v, dst) \<in> combines g"
   assumes caller: "trace_witness_d dg cmp g S c tau"
   assumes callee: "trace_witness_d dg cmp g S ex rho"
-  assumes ret: "r \<in> combine_collect dst rex (last tau) (last rho)"
+  assumes ret: "r = combine_collect dst (last tau) (last rho)"
+  assumes enter: "call_enter_store g c (last tau) (hd rho)"
   assumes compat: "cmp (dg tau) (dg rho)"
   shows "trace_witness_d dg cmp g S v (tau @ tl rho @ [r])"
   using assms trace_witness_d.combine by blast
@@ -544,7 +554,7 @@ locale context_transfer =
       "edge_step a (last tr) = Some s' \<Longrightarrow> cmp (dg tr) c
         \<Longrightarrow> cmp (dg (tr @ [s'])) (step_ctx c a (last tr))"
     and comb_ok:
-      "r \<in> combine_collect dst rex (last tau) (last rho) \<Longrightarrow> cmp (dg tau) c1 \<Longrightarrow> cmp (dg rho) c2
+      "r = combine_collect dst (last tau) (last rho) \<Longrightarrow> cmp (dg tau) c1 \<Longrightarrow> cmp (dg rho) c2
         \<Longrightarrow> cmp (dg (tau @ tl rho @ [r])) (comb_ctx c1 c2)"
 begin
 
@@ -557,9 +567,10 @@ inductive trace_witness_ctx ::
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness_ctx g S u c tr
       \<Longrightarrow> edge_step a (last tr) = Some s'
       \<Longrightarrow> trace_witness_ctx g S v (step_ctx c a (last tr)) (tr @ [s'])"
-| combine: "(cl, ex, v, dst, rex) \<in> combines g \<Longrightarrow> trace_witness_ctx g S cl c1 tau
+| combine: "(cl, ex, v, dst) \<in> combines g \<Longrightarrow> trace_witness_ctx g S cl c1 tau
       \<Longrightarrow> trace_witness_ctx g S ex c2 rho
-      \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last rho)
+      \<Longrightarrow> r = combine_collect dst (last tau) (last rho)
+      \<Longrightarrow> call_enter_store g cl (last tau) (hd rho)
       \<Longrightarrow> trace_witness_ctx g S v (comb_ctx c1 c2)
             (tau @ tl rho @ [r])"
 
@@ -576,7 +587,7 @@ next
   case (edge u a v c tr s')
   then show ?case by (intro trace_witness.edge) auto
 next
-  case (combine cl ex v dst rex c1 tau c2 rho r)
+  case (combine cl ex v dst c1 tau c2 rho r)
   then show ?case by (intro trace_witness.combine) auto
 qed
 
@@ -593,7 +604,7 @@ next
   case (edge u a v c tr s')
   then show ?case by (auto intro: step_ok)
 next
-  case (combine cl ex v dst rex c1 tau c2 rho r)
+  case (combine cl ex v dst c1 tau c2 rho r)
   then show ?case by (auto intro: comb_ok)
 qed
 

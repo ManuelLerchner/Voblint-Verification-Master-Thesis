@@ -116,16 +116,16 @@ next
       by (rule cfg_witness.edge[OF ev wu edge.hyps(3)])
   qed
 next
-  case (combine c ex v dst rex Sa sto t u)
+  case (combine c ex v dst Sa sto t u)
   show ?case
   proof (rule impI)
     assume rv: "cfg_reaches g v v0"
     have call_pred: "\<exists>ct\<in>combines g. combine_call_node ct = c \<and> combine_return_node ct = v"
-      using combine.hyps(1) by (intro bexI[of _ "(c, ex, v, dst, rex)"]) (auto simp: combine_call_node_def combine_return_node_def)
+      using combine.hyps(1) by (intro bexI[of _ "(c, ex, v, dst)"]) (auto simp: combine_call_node_def combine_return_node_def)
     have csucc: "cfg_succ g c v"
       unfolding cfg_succ_def cfg_succ_rel_def using call_pred by blast
     have exit_pred: "\<exists>ct\<in>combines g. combine_exit_node ct = ex \<and> combine_return_node ct = v"
-      using combine.hyps(1) by (intro bexI[of _ "(c, ex, v, dst, rex)"]) (auto simp: combine_exit_node_def combine_return_node_def)
+      using combine.hyps(1) by (intro bexI[of _ "(c, ex, v, dst)"]) (auto simp: combine_exit_node_def combine_return_node_def)
     have exsucc: "cfg_succ g ex v"
       unfolding cfg_succ_def cfg_succ_rel_def using exit_pred by blast
     have rc: "cfg_reaches g c v0"
@@ -136,9 +136,9 @@ next
       using combine.IH(1) rc by blast
     have wex: "cfg_witness (prune_to g v0) Sa ex t"
       using combine.IH(2) rex' by blast
-    have rv': "cfg_reaches g (combine_return_node (c, ex, v, dst, rex)) v0"
+    have rv': "cfg_reaches g (combine_return_node (c, ex, v, dst)) v0"
       using combine.hyps(1) rv by (simp add: combine_return_node_def)
-    have cv: "(c, ex, v, dst, rex) \<in> combines (prune_to g v0)"
+    have cv: "(c, ex, v, dst) \<in> combines (prune_to g v0)"
       using combine.hyps(1) rv' by (simp add: cone_def)
     show "cfg_witness (prune_to g v0) Sa v u"
       by (rule cfg_witness.combine[OF cv wc wex combine.hyps(4)])
@@ -239,13 +239,13 @@ next
       cc: "compile \<Pi> lay c (Suc n) = (m, ein, exin, Ein, Cin)"
     and res: "en = n" "ex = m"
              "E = Ein \<union> {(n, EA_Enter [] [], ein)}"
-             "C = Cin \<union> {(n, exin, m, None, None)}"
+             "C = Cin \<union> {(n, exin, m, None)}"
     using Scope.prems by (auto split: prod.splits)
-  have comb: "(n, exin, m, None, None) \<in> C"
+  have comb: "(n, exin, m, None) \<in> C"
     using res by auto
-  have comb_cfg: "(n, exin, m, None, None) \<in> combines (mk_cfg en ex E C)"
+  have comb_cfg: "(n, exin, m, None) \<in> combines (mk_cfg en ex E C)"
     using comb res by simp
-  have r: "cfg_reaches (mk_cfg en ex E C) (combine_call_node (n, exin, m, None, None)) (combine_return_node (n, exin, m, None, None))"
+  have r: "cfg_reaches (mk_cfg en ex E C) (combine_call_node (n, exin, m, None)) (combine_return_node (n, exin, m, None))"
     using comb_cfg by (rule cfg_reaches_combine_call)
   show ?case using r res by (simp add: combine_call_node_def combine_return_node_def)
 next
@@ -271,18 +271,18 @@ next
       have eq:
         "(n + 2, n, n + 1,
           {(n, EA_Enter (formals decl) actuals, en_p)},
-          {(n, ex_p, n + 1, dst, result decl)}) = (n', en, ex, E, C)"
+          {(n, ex_p, n + 1, dst)}) = (n', en, ex, E, C)"
         using Call.prems by auto
       have en_n[simp]: "en = n" and ex_n[simp]: "ex = n + 1"
         using eq by simp_all
       have E_n[simp]: "E = {(n, EA_Enter (formals decl) actuals, en_p)}"
-        and C_n[simp]: "C = {(n, ex_p, n + 1, dst, result decl)}"
+        and C_n[simp]: "C = {(n, ex_p, n + 1, dst)}"
         using eq by simp_all
-      have comb: "(n, ex_p, n + 1, dst, result decl) \<in> C"
+      have comb: "(n, ex_p, n + 1, dst) \<in> C"
         by simp
-      have comb_cfg: "(n, ex_p, n + 1, dst, result decl) \<in> combines (mk_cfg en ex E C)"
+      have comb_cfg: "(n, ex_p, n + 1, dst) \<in> combines (mk_cfg en ex E C)"
         using comb by simp
-      have r: "cfg_reaches (mk_cfg en ex E C) (combine_call_node (n, ex_p, n + 1, dst, result decl)) (combine_return_node (n, ex_p, n + 1, dst, result decl))"
+      have r: "cfg_reaches (mk_cfg en ex E C) (combine_call_node (n, ex_p, n + 1, dst)) (combine_return_node (n, ex_p, n + 1, dst))"
         using comb_cfg by (rule cfg_reaches_combine_call)
       have r': "cfg_reaches (mk_cfg en ex E C) n (n + 1)"
         using r by (simp add: combine_call_node_def combine_return_node_def)
@@ -290,7 +290,7 @@ next
     qed
   qed
 next
-  case (RestoreInternal r)
+  case Restore
   then have [simp]: "n' = n" "en = n" "ex = n" "E = {}" "C = {}"
     by simp_all
   show ?case

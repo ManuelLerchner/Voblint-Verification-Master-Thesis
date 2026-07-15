@@ -65,7 +65,7 @@ lemma dep_aux_side_cfg_T_eff_cmp_seed:
    = (\<Union>t\<in>set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                         (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                 (non_enter_predecessor_list g v)
-              @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)).
+              @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)).
         dep_aux sg t)"
   by (simp add: side_cfg_T_eff_cmp_seed_def Let_def dep_aux_side_rhs_fold_ctx)
 
@@ -82,7 +82,7 @@ proof -
   let ?trees = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                       (map_ltree (\<lambda>w. (w, ctx)) (apply_etf (clean_etf_of_transfer tf) a u)))
                   (non_enter_predecessor_list g v)
-                @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)"
+                @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)"
   have d: "Inl (u, ctx) \<in> dep_aux sg ?t" by (rule Inl_dep_aux_intra_summand)
   have m: "?t \<in> set ?trees" using assms by (force intro: rev_image_eqI)
   have "Inl (u, ctx) \<in> (\<Union>t\<in>set ?trees. dep_aux sg t)" using d m by blast
@@ -91,18 +91,18 @@ proof -
 qed
 
 text \<open>\<^bold>\<open>Combine dependencies (task 2), supplied per combine.\<close>  If the combine tree
-  \<^term>\<open>cmb ctx cc ex\<close> reads the caller call node and the routed callee exit --- as the
+  \<^term>\<open>cmb ctx dst cc ex\<close> reads the caller call node and the routed callee exit --- as the
   rehydrating combine does --- both are dependencies of the return node \<open>(v, ctx)\<close>.\<close>
 lemma Inl_dep_L_combine_summand:
-  assumes mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-    and dep: "Inl w \<in> dep_aux sg (cmb ctx cc ex)"
+  assumes mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
+    and dep: "Inl w \<in> dep_aux sg (cmb ctx dst cc ex)"
   shows "w \<in> dep\<^sub>L (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) sg (v, ctx)"
 proof -
   let ?trees = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                       (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                   (non_enter_predecessor_list g v)
-                @ map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)"
-  have m: "cmb ctx cc ex \<in> set ?trees" using mem by (force intro: rev_image_eqI)
+                @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)"
+  have m: "cmb ctx dst cc ex \<in> set ?trees" using mem by (force intro: rev_image_eqI)
   have "Inl w \<in> (\<Union>t\<in>set ?trees. dep_aux sg t)" using dep m by blast
   thus ?thesis
     unfolding dep\<^sub>L_def dep_def by (simp add: dep_aux_side_cfg_T_eff_cmp_seed)
@@ -137,8 +137,8 @@ lemma combine_dep_in_vars:
   assumes pp: "part_post_solution
                  (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) x sg vars"
     and cov: "(v, ctx) \<in> vars"
-    and mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-    and dep: "Inl w \<in> dep_aux sg (cmb ctx cc ex)"
+    and mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
+    and dep: "Inl w \<in> dep_aux sg (cmb ctx dst cc ex)"
   shows "w \<in> vars"
 proof -
   have "w \<in> dep\<^sub>L (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) sg (v, ctx)"
@@ -220,8 +220,8 @@ lemma combine_reaches_frame_in_vars:
   assumes pp: "part_post_solution
                  (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g (clean_etf_of_transfer tf) bot0 s0) x sg vars"
     and cov: "(v, ctx) \<in> vars"
-    and mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-    and dep: "Inl (ex, cex) \<in> dep_aux sg (cmb ctx cc ex)"
+    and mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
+    and dep: "Inl (ex, cex) \<in> dep_aux sg (cmb ctx dst cc ex)"
     and reach: "(fe, ex) \<in> (intra_pred_rel g)\<^sup>*"
   shows "(fe, cex) \<in> vars"
 proof -
@@ -237,7 +237,7 @@ text \<open>\<open>act_reach g cmb sg q p\<close>: the unknown \<open>p\<close> 
   activation rules into one relation:
 
     \<^item> \<^bold>\<open>intra\<close> --- a non-\<^const>\<open>EA_Enter\<close> predecessor \<open>(u, ctx)\<close> of a reached \<open>(v, ctx)\<close>;
-    \<^item> \<^bold>\<open>combine\<close> --- any unknown \<open>w\<close> the combine tree \<open>cmb ctx cc ex\<close> of a reached return
+    \<^item> \<^bold>\<open>combine\<close> --- any unknown \<open>w\<close> the combine tree \<open>cmb ctx dst cc ex\<close> of a reached return
       node \<open>(v, ctx)\<close> reads (the caller call node and the routed callee exit).
 
   The \<^bold>\<open>enter\<close> rule is not a separate constructor: a callee frame entry is reached by a
@@ -247,17 +247,17 @@ text \<open>\<open>act_reach g cmb sg q p\<close>: the unknown \<open>p\<close> 
   never forward along the (seed-replaced) enter edge.\<close>
 
 inductive act_reach ::
-  "cfg \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a::bot abs_state) strategy_tree)
+  "cfg \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a::bot abs_state) strategy_tree)
    \<Rightarrow> (pp \<times> 'c + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> (pp \<times> 'c) \<Rightarrow> (pp \<times> 'c) \<Rightarrow> bool"
   for g :: cfg
-    and cmb :: "'c \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree"
+    and cmb :: "'c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree"
     and sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a abs_state"
 where
   base: "act_reach g cmb sg q q"
 | intra: "act_reach g cmb sg q (v, ctx) \<Longrightarrow> (u, a) \<in> set (non_enter_predecessor_list g v)
       \<Longrightarrow> act_reach g cmb sg q (u, ctx)"
-| combine: "act_reach g cmb sg q (v, ctx) \<Longrightarrow> (cc, ex) \<in> set (combine_predecessor_list g v)
-      \<Longrightarrow> Inl w \<in> dep_aux sg (cmb ctx cc ex) \<Longrightarrow> act_reach g cmb sg q w"
+| combine: "act_reach g cmb sg q (v, ctx) \<Longrightarrow> (cc, ex, dst) \<in> set (combine_predecessor_list g v)
+      \<Longrightarrow> Inl w \<in> dep_aux sg (cmb ctx dst cc ex) \<Longrightarrow> act_reach g cmb sg q w"
 
 text \<open>\<^bold>\<open>Task 1 --- the generic dependency-reachability theorem.\<close>  Every unknown reachable
   from a solved query through the activation dependency graph is itself solved.  The proof
@@ -314,8 +314,8 @@ text \<open>\<^bold>\<open>Task 2 --- the enter rule, direct.\<close>  From a re
   now a single \<open>act_reach\<close> derivation rather than an external chaining of bridge lemmas.\<close>
 lemma act_reach_enter:
   assumes r: "act_reach g cmb sg q (v, ctx)"
-    and mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-    and dep: "Inl (ex, cex) \<in> dep_aux sg (cmb ctx cc ex)"
+    and mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
+    and dep: "Inl (ex, cex) \<in> dep_aux sg (cmb ctx dst cc ex)"
     and body: "(fe, ex) \<in> (intra_pred_rel g)\<^sup>*"
   shows "act_reach g cmb sg q (fe, cex)"
 proof -
@@ -343,8 +343,8 @@ lemma cov_frame_from_query:
   assumes pp: "part_post_solution
                  (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g (clean_etf_of_transfer tf) bot0 s0) x sg vars"
     and cov: "(v, ctx) \<in> vars"
-    and mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-    and dep: "Inl (ex, cex) \<in> dep_aux sg (cmb ctx cc ex)"
+    and mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
+    and dep: "Inl (ex, cex) \<in> dep_aux sg (cmb ctx dst cc ex)"
     and reach: "(fe, ex) \<in> (intra_pred_rel g)\<^sup>*"
   shows "(fe, cex) \<in> vars"
   by (rule combine_reaches_frame_in_vars[OF pp cov mem dep reach])
@@ -361,7 +361,7 @@ lemma q_edge_from_pp:
   assumes fin: "finite (edges g)"
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g (clean_etf_of_transfer tf) bot0 s0) x sg vars"
-    and e: "(u, a, v) \<in> edges g" and ne: "a \<noteq> EA_Enter"
+    and e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
     and cov: "(v, kc) \<in> vars"
   shows "(u, kc) \<in> vars"
 proof -
@@ -377,12 +377,12 @@ lemma combine_edge_dep_in_vars:
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) x sg vars"
     and cov: "(v, ctx) \<in> vars"
-    and c: "(cc, ex, v) \<in> combines g"
-    and dep: "Inl w \<in> dep_aux sg (cmb ctx cc ex)"
+    and c: "(cc, ex, v, dst) \<in> combines g"
+    and dep: "Inl w \<in> dep_aux sg (cmb ctx dst cc ex)"
   shows "w \<in> vars"
 proof -
-  have "(cc, ex) \<in> combine_predecessors g v" using c unfolding combine_predecessors_def by blast
-  hence "(cc, ex) \<in> set (combine_predecessor_list g v)" using fin by simp
+  have "(cc, ex, dst) \<in> combine_predecessors g v" using c unfolding combine_predecessors_eq by blast
+  hence "(cc, ex, dst) \<in> set (combine_predecessor_list g v)" using fin by simp
   thus ?thesis by (rule combine_dep_in_vars[OF pp cov _ dep])
 qed
 
@@ -400,22 +400,22 @@ lemma trace_witness_act_nonempty:
 
 lemma trace_witness_act_hd_initial:
   assumes "trace_witness_act enterc combc seedc g S v ctx tr"
-  shows "hd tr \<in> S \<union> enter_state ` S"
+  shows "hd tr \<in> S \<union> (\<Union>xs es. edge_collect (EA_Enter xs es) S)"
   using assms
 proof (induction rule: trace_witness_act.induct)
   case (entry v s) thus ?case by simp
 next
-  case (proc_entry v s) thus ?case by simp
+  case (proc_entry xs es v s) thus ?case by auto
 next
   case (intra u a v c tr s')
   have "tr \<noteq> []" using intra.hyps(3) by (rule trace_witness_act_nonempty)
   thus ?case using intra.IH by simp
 next
-  case (enter u v c tau)
+  case (enter u xs es v c tau s')
   have "tau \<noteq> []" using enter.hyps(2) by (rule trace_witness_act_nonempty)
   thus ?case using enter.IH by simp
 next
-  case (combine cl ex v c1 tau rho)
+  case (combine cl ex v dst c1 tau c2 rho r)
   have "tau \<noteq> []" using combine.hyps(2) by (rule trace_witness_act_nonempty)
   thus ?case using combine.IH(1) by simp
 qed

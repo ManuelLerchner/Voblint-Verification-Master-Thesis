@@ -15,19 +15,19 @@ subsection \<open>Shared combine-tree infrastructure\<close>
 
 locale sound_rhs_generator_base =
   fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
 begin
 
 lemma dep_aux_comb_call:
-  "Inl cc \<in> dep_aux \<sigma> (etf_combine etf cc ex)"
+  "Inl cc \<in> dep_aux \<sigma> (etf_combine etf dst cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
 lemma dep_aux_comb_exit:
-  "Inl ex \<in> dep_aux \<sigma> (etf_combine etf cc ex)"
+  "Inl ex \<in> dep_aux \<sigma> (etf_combine etf dst cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
 lemma comb_inr:
-  "\<And>cc ex \<sigma> g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr g))"
+  "\<And>cc ex dst \<sigma> g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr g))"
   unfolding comb by (rule sides_inr_local_bot_unit_combine_tree)
 
 end
@@ -36,7 +36,7 @@ locale sound_rhs_generator_static = sound_rhs_generator_base
 begin
 
 lemma static_deps_comb:
-  "static_deps (etf_combine etf cc ex)"
+  "static_deps (etf_combine etf dst cc ex)"
   by (simp add: comb static_deps_def unit_combine_tree_def Let_def)
 
 end
@@ -88,9 +88,9 @@ lemma dep_aux_edge:
 lemma cone_compatible:
   "cone_compatible_etf etf"
   unfolding cone_compatible_etf_def
-  using dep_aux_edge static_deps_edge dep_aux_comb_call dep_aux_comb_exit
-        static_deps_comb edge_inr comb_inr
-  by blast
+  by (intro conjI allI)
+     (rule dep_aux_edge, rule dep_aux_comb_call, rule dep_aux_comb_exit,
+      rule static_deps_edge, rule static_deps_comb, rule edge_inr, rule comb_inr)
 
 end
 
@@ -120,9 +120,9 @@ lemma is_mono_eq:
         by (intro restrict_local_mono F_mono sup_mono; simp add: le le_funD)
     qed
   qed
-  subgoal for cc ex s1 s2
+  subgoal for cc ex dst s1 s2
     by (simp add: comb traverse_unit_combine_tree)
-       (intro restrict_local_mono sup_mono; simp add: le_funD)
+       (intro restrict_local_mono combine_collect_abs_mono sup_mono; simp add: le_funD)
   done
 
 lemma mono_sides:
@@ -159,13 +159,13 @@ lemma mono_sides:
       qed
     qed
   qed
-  subgoal for cc ex s1 s2
+  subgoal for cc ex dst s1 s2
   proof -
     assume le: "s1 \<le> s2"
-    show "sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
+    show "sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
     proof (rule le_funI)
       fix k
-      show "sides_of_rhs (etf_combine etf cc ex) s1 k \<le> sides_of_rhs (etf_combine etf cc ex) s2 k"
+      show "sides_of_rhs (etf_combine etf dst cc ex) s1 k \<le> sides_of_rhs (etf_combine etf dst cc ex) s2 k"
       proof (cases k)
         case (Inl x)
         show ?thesis
@@ -176,7 +176,8 @@ lemma mono_sides:
           using Inr le
           by (cases y)
              (simp add: comb sides_unit_combine_tree_Inr,
-              rule restrict_global_mono, intro sup_mono; simp add: le_fun_def)
+              rule restrict_global_mono, rule combine_collect_abs_mono;
+              intro sup_mono; simp add: le_fun_def)
       qed
     qed
   qed

@@ -49,10 +49,11 @@ where
       \<Longrightarrow> edge_step (EA_Enter xs es) (last tau) = Some s'
       \<Longrightarrow> trace_witness_act enterc combc seedc g S v
             (enterc c (last tau)) (tau @ [s'])"
-| combine: "(cl, ex, v, dst, rex) \<in> combines g
+| combine: "(cl, ex, v, dst) \<in> combines g
       \<Longrightarrow> trace_witness_act enterc combc seedc g S cl c1 tau
       \<Longrightarrow> trace_witness_act enterc combc seedc g S ex c2 rho
-      \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last rho)
+      \<Longrightarrow> r = combine_collect dst (last tau) (last rho)
+      \<Longrightarrow> call_enter_store g cl (last tau) (hd rho)
       \<Longrightarrow> trace_witness_act enterc combc seedc g S v
             (combc c1 c2) (tau @ tl rho @ [r])"
 
@@ -83,20 +84,22 @@ lemma act_enter_routes_ctx:
 text \<open>Task 5 --- combine resumes the caller context via \<open>combc c1 c2\<close>, where \<open>c2\<close>
   is the callee context threaded through the activation witness.\<close>
 lemma act_combine_ctx:
-  assumes "(cl, ex, v, dst, rex) \<in> combines g"
+  assumes "(cl, ex, v, dst) \<in> combines g"
     and "trace_witness_act enterc combc seedc g S cl c1 tau"
     and "trace_witness_act enterc combc seedc g S ex c2 rho"
-    and "r \<in> combine_collect dst rex (last tau) (last rho)"
+    and "r = combine_collect dst (last tau) (last rho)"
+    and "call_enter_store g cl (last tau) (hd rho)"
   shows "trace_witness_act enterc combc seedc g S v
            (combc c1 c2) (tau @ tl rho @ [r])"
   by (rule trace_witness_act.combine[OF assms])
 
 text \<open>With a caller-projecting return map the resumed context IS the caller context.\<close>
 lemma act_combine_resumes_caller:
-  assumes "(cl, ex, v, dst, rex) \<in> combines g"
+  assumes "(cl, ex, v, dst) \<in> combines g"
     and "trace_witness_act enterc (\<lambda>c1 c2. c1) seedc g S cl c1 tau"
     and "trace_witness_act enterc (\<lambda>c1 c2. c1) seedc g S ex c2 rho"
-    and "r \<in> combine_collect dst rex (last tau) (last rho)"
+    and "r = combine_collect dst (last tau) (last rho)"
+    and "call_enter_store g cl (last tau) (hd rho)"
   shows "trace_witness_act enterc (\<lambda>c1 c2. c1) seedc g S v
            c1 (tau @ tl rho @ [r])"
   using trace_witness_act.combine[OF assms] by simp
@@ -119,7 +122,7 @@ next
   case (enter u xs es v c tau s')
   then show ?case by (auto intro: trace_witness.edge)
 next
-  case (combine cl ex v dst rex c1 tau c2 rho r)
+  case (combine cl ex v dst c1 tau c2 rho r)
   then show ?case by (auto intro: trace_witness.combine)
 qed
 

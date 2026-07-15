@@ -110,7 +110,9 @@ proof -
   have w0: "twfr enterc combc seed_cfg 0 (seed_locg 0 seed_ctx_zero) 0
               (seed_locg 0 seed_ctx_zero) [gk 0]"
     by (rule twfr.start)
-  show ?thesis using twfr.intra[OF seed_e_0_1 _ w0] by (simp add: step_assign_incr)
+  have no_enter: "\<not> is_enter_action (EA_Assign ''G'' (Plus (IMP2_Syntax.V ''G'') (IMP2_Syntax.N 1)))"
+    by (simp add: is_enter_action_def)
+  show ?thesis using twfr.intra[OF seed_e_0_1 no_enter w0] by (simp add: step_assign_incr)
 qed
 
 theorem seed_wit_sound:

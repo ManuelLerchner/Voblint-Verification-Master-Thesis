@@ -11,10 +11,16 @@ begin
   them on exit via combine_states (globals from the callee's final store,
   locals from the saved frame).
 
-  The restore boundary is made explicit by the runtime-only marker
-  RestoreInternal: the frame stack alone cannot locate a scope's end inside a
-  Seq, so entry rewrites Scope/Call to a Seq ending in RestoreInternal. It
-  never appears in source programs.
+  The restore boundary is made explicit by the runtime-only marker Restore: the
+  frame stack alone cannot locate a scope's end inside a Seq, so entry rewrites
+  Scope/Call to a Seq ending in Restore. It never appears in source programs.
+
+  A procedure's result expression is not carried by Restore. Following Goblint
+  (base.ml: return / combine_assign), call entry appends an assignment of the
+  result expression to the reserved local ret_var at the end of the callee body,
+  and Restore assigns ret_var's callee-exit value to the caller's destination.
+  ret_var is local, so the callee's copy is dropped by combine_states and the
+  caller's own copy is restored from the frame.
 *)
 
 datatype com =
@@ -25,7 +31,7 @@ datatype com =
   | While  bexp com
   | Scope  com
   | Call   "vname option" pname "aexp list"
-  | RestoreInternal "aexp option"
+  | Restore
 
 record proc_decl =
   formals :: "vname list"
@@ -35,8 +41,18 @@ record proc_decl =
 abbreviation proc_decl_legacy :: "com => proc_decl" where
   "proc_decl_legacy c \<equiv> \<lparr>formals = [], body = c, result = None\<rparr>"
 
-abbreviation Restore :: com where
-  "Restore \<equiv> RestoreInternal None"
+(* Reserved local holding a procedure's result across the restore boundary.
+   Goblint's return_varinfo. Local, so it never escapes into the caller. *)
+definition ret_var :: vname where
+  "ret_var = ''#ret''"
+
+lemma ret_var_not_global [simp]: "\<not> is_global ret_var"
+  by (simp add: ret_var_def is_global_def)
+
+(* Callee control: run the body, then publish the result into ret_var. *)
+fun with_result :: "com => aexp option => com" where
+  "with_result c None = c"
+| "with_result c (Some e) = Seq c (Assign ret_var e)"
 
 (* Procedure table: names to declarations. *)
 type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
@@ -48,10 +64,12 @@ definition bind_formals :: "vname list \<Rightarrow> int list \<Rightarrow> stor
   "bind_formals xs vs s =
      fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
-fun combine_assign :: "vname option \<Rightarrow> int option \<Rightarrow> store \<Rightarrow> store option" where
-  "combine_assign None _ s = Some s"
-| "combine_assign (Some x) (Some v) s = Some (s(x := v))"
-| "combine_assign (Some x) None s = None"
+(* Goblint's combine_assign: write the returned value into the destination, or
+   leave the caller untouched when the call discards it. Total: the value is read
+   out of ret_var, which every store maps. *)
+fun combine_assign :: "vname option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
+  "combine_assign None _ s = s"
+| "combine_assign (Some x) v s = s(x := v)"
 
 (* -- Frame-stack small-step ----------------------------------------- *)
 
@@ -69,7 +87,7 @@ where
 | While:   "pstep \<Pi> (While b c, s, frs)
                       (If b (Seq c (While b c)) SKIP, s, frs)"
 | Scope:   "pstep \<Pi> (Scope c, s, frs)
-              (Seq c (RestoreInternal None), enter_state s, Frame s None # frs)"
+              (Seq c Restore, enter_state s, Frame s None # frs)"
 | Call:    "\<Pi> p = Some decl
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
@@ -77,14 +95,12 @@ where
              \<Longrightarrow> vals = map (\<lambda>e. aval e s) actuals
              \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state s)
              \<Longrightarrow> pstep \<Pi> (Call dst p actuals, s, frs)
-                 (Seq (body decl) (RestoreInternal (result decl)),
+                 (Seq (with_result (body decl) (result decl)) Restore,
                   callee,
                   Frame s dst # frs)"
-| RestoreNone:
-    "pstep \<Pi> (RestoreInternal r, s, Frame fr None # frs) (SKIP, <fr|s>, frs)"
-| RestoreSome:
-    "pstep \<Pi> (RestoreInternal (Some e), s, Frame fr (Some x) # frs)
-       (SKIP, (<fr|s>)(x := aval e s), frs)"
+| RestoreStep:
+    "pstep \<Pi> (Restore, s, Frame fr dst # frs)
+       (SKIP, combine_assign dst (s ret_var) (<fr|s>), frs)"
 
 abbreviation
   psteps :: "proc_table \<Rightarrow> com \<times> store \<times> frame list
@@ -109,7 +125,7 @@ inductive_cases ScopeSE[elim!]:
 inductive_cases CallSE[elim]:
   "pstep \<Pi> (Call dst p actuals, s, frs) cfg"
 inductive_cases RestoreSE[elim!]:
-  "pstep \<Pi> (RestoreInternal r, s, frs) cfg"
+  "pstep \<Pi> (Restore, s, frs) cfg"
 
 lemma bind_formals_nonformal:
   assumes "x \<notin> set xs"
@@ -252,11 +268,8 @@ proof (induction rule: pstep.induct)
   case Assign
   show ?case by (simp only: fst_conv snd_conv) (rule pstep.Assign)
 next
-  case RestoreNone
-  show ?case by (simp only: fst_conv snd_conv append_Cons) (rule pstep.RestoreNone)
-next
-  case RestoreSome
-  show ?case by (simp only: fst_conv snd_conv append_Cons) (rule pstep.RestoreSome)
+  case RestoreStep
+  show ?case by (simp only: fst_conv snd_conv append_Cons) (rule pstep.RestoreStep)
 next
   case Seq2
   then show ?case by auto
@@ -301,53 +314,56 @@ lemma psteps_frame_mono:
 
 (* -- Scope and Call termination ------------------------------------- *)
 
-lemma psteps_Seq_Restore_None_body:
-  assumes "psteps \<Pi> (c, s0, [Frame fr None]) (SKIP, t', [Frame fr None])"
-  shows "psteps \<Pi> (Seq c (RestoreInternal r), s0, [Frame fr None])
-           (SKIP, <fr|t'>, [])"
+(* One restore rule covers both scopes and result-bearing calls: the destination
+   rides in the frame and the value in ret_var. *)
+lemma psteps_Seq_Restore_body:
+  assumes "psteps \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
+  shows "psteps \<Pi> (Seq c Restore, s0, [Frame fr dst])
+           (SKIP, combine_assign dst (t' ret_var) (<fr|t'>), [])"
 proof -
   have body_seq:
-    "psteps \<Pi> (Seq c (RestoreInternal r), s0, [Frame fr None])
-       (Seq SKIP (RestoreInternal r), t', [Frame fr None])"
+    "psteps \<Pi> (Seq c Restore, s0, [Frame fr dst])
+       (Seq SKIP Restore, t', [Frame fr dst])"
     using psteps_Seq2[OF assms] .
   have step_seq1:
-    "pstep \<Pi> (Seq SKIP (RestoreInternal r), t', [Frame fr None])
-       (RestoreInternal r, t', [Frame fr None])"
+    "pstep \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
+       (Restore, t', [Frame fr dst])"
     by (rule Seq1)
   have step_restore:
-    "pstep \<Pi> (RestoreInternal r, t', [Frame fr None]) (SKIP, <fr|t'>, [])"
-    by (rule RestoreNone)
+    "pstep \<Pi> (Restore, t', [Frame fr dst])
+       (SKIP, combine_assign dst (t' ret_var) (<fr|t'>), [])"
+    by (rule RestoreStep)
   have tail:
-    "psteps \<Pi> (Seq SKIP (RestoreInternal r), t', [Frame fr None])
-       (SKIP, <fr|t'>, [])"
+    "psteps \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
+       (SKIP, combine_assign dst (t' ret_var) (<fr|t'>), [])"
     using step_seq1 step_restore by (meson star.refl star.step)
   show ?thesis using body_seq tail by (rule star_trans)
 qed
 
-lemma psteps_Seq_Restore_Some_body:
-  assumes "psteps \<Pi> (c, s0, [Frame fr (Some x)])
-             (SKIP, t', [Frame fr (Some x)])"
-  shows "psteps \<Pi> (Seq c (RestoreInternal (Some e)), s0, [Frame fr (Some x)])
-           (SKIP, (<fr|t'>)(x := aval e t'), [])"
+(* Publishing the result leaves everything but ret_var alone, and ret_var is
+   local, so the restored caller store is unaffected by it. *)
+lemma psteps_with_result_Some:
+  assumes "psteps \<Pi> (c, s0, frs) (SKIP, t', frs)"
+  shows "psteps \<Pi> (with_result c (Some e), s0, frs)
+           (SKIP, t'(ret_var := aval e t'), frs)"
 proof -
   have body_seq:
-    "psteps \<Pi> (Seq c (RestoreInternal (Some e)), s0, [Frame fr (Some x)])
-       (Seq SKIP (RestoreInternal (Some e)), t', [Frame fr (Some x)])"
+    "psteps \<Pi> (Seq c (Assign ret_var e), s0, frs)
+       (Seq SKIP (Assign ret_var e), t', frs)"
     using psteps_Seq2[OF assms] .
-  have step_seq1:
-    "pstep \<Pi> (Seq SKIP (RestoreInternal (Some e)), t', [Frame fr (Some x)])
-       (RestoreInternal (Some e), t', [Frame fr (Some x)])"
-    by (rule Seq1)
-  have step_restore:
-    "pstep \<Pi> (RestoreInternal (Some e), t', [Frame fr (Some x)])
-       (SKIP, (<fr|t'>)(x := aval e t'), [])"
-    by (rule RestoreSome)
   have tail:
-    "psteps \<Pi> (Seq SKIP (RestoreInternal (Some e)), t', [Frame fr (Some x)])
-       (SKIP, (<fr|t'>)(x := aval e t'), [])"
-    using step_seq1 step_restore by (meson star.refl star.step)
-  show ?thesis using body_seq tail by (rule star_trans)
+    "psteps \<Pi> (Seq SKIP (Assign ret_var e), t', frs)
+       (SKIP, t'(ret_var := aval e t'), frs)"
+    by (meson Seq1 Assign star.refl star.step)
+  from body_seq tail have "psteps \<Pi> (Seq c (Assign ret_var e), s0, frs)
+       (SKIP, t'(ret_var := aval e t'), frs)"
+    by (rule star_trans)
+  then show ?thesis by simp
 qed
+
+lemma combine_states_ret_var_irrelevant [simp]:
+  "<fr|t(ret_var := v)> = <fr|t>"
+  by (rule ext) simp
 
 lemma pcompletes_Scope:
   assumes body: "pcompletes \<Pi> c (enter_state s) t'"
@@ -355,7 +371,7 @@ lemma pcompletes_Scope:
   unfolding pcompletes_def
   apply (rule star.step)
    apply (rule Scope)
-  using psteps_Seq_Restore_None_body[OF psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s None]"]]
+  using psteps_Seq_Restore_body[OF psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s None]"]]
   by simp
 
 lemma pcompletes_Call_none:
@@ -371,20 +387,34 @@ proof (rule star.step)
   let ?vals = "map (\<lambda>e. aval e s) actuals"
   let ?callee = "bind_formals (formals decl) ?vals (enter_state s)"
   show "pstep \<Pi> (Call dst p actuals, s, [])
-          (Seq (body decl) (RestoreInternal (result decl)), ?callee, [Frame s dst])"
+          (Seq (with_result (body decl) (result decl)) Restore, ?callee, [Frame s dst])"
     using p arity distinct_formals no_ret
     by (intro Call[where vals = ?vals and callee = ?callee]) auto
   have framed:
-    "psteps \<Pi> (body decl, ?callee, [Frame s dst]) (SKIP, t', [Frame s dst])"
-    using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s dst]"] by simp
-  have framed_none:
     "psteps \<Pi> (body decl, ?callee, [Frame s None]) (SKIP, t', [Frame s None])"
-    using no_ret framed by simp
+    using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s None]"] by simp
+  (* The result, if any, only lands in ret_var, which the restore drops. *)
+  have published:
+    "\<exists>t''. psteps \<Pi> (with_result (body decl) (result decl), ?callee, [Frame s None])
+             (SKIP, t'', [Frame s None]) \<and> <s|t''> = <s|t'>"
+  proof (cases "result decl")
+    case None
+    then show ?thesis using framed by auto
+  next
+    case (Some e)
+    then show ?thesis
+      using psteps_with_result_Some[OF framed, where e = e] by auto
+  qed
+  then obtain t'' where
+    pub: "psteps \<Pi> (with_result (body decl) (result decl), ?callee, [Frame s None])
+            (SKIP, t'', [Frame s None])" and
+    agree: "<s|t''> = <s|t'>" by blast
   have restored:
-    "psteps \<Pi> (Seq (body decl) (RestoreInternal (result decl)), ?callee, [Frame s None])
+    "psteps \<Pi> (Seq (with_result (body decl) (result decl)) Restore, ?callee, [Frame s None])
        (SKIP, <s|t'>, [])"
-    by (rule psteps_Seq_Restore_None_body[OF framed_none])
-  from no_ret restored show "psteps \<Pi> (Seq (body decl) (RestoreInternal (result decl)), ?callee, [Frame s dst])
+    using psteps_Seq_Restore_body[OF pub] agree by simp
+  from no_ret restored
+  show "psteps \<Pi> (Seq (with_result (body decl) (result decl)) Restore, ?callee, [Frame s dst])
           (SKIP, <s|t'>, [])"
     by simp
 qed
@@ -402,16 +432,20 @@ proof (rule star.step)
   let ?vals = "map (\<lambda>a. aval a s) actuals"
   let ?callee = "bind_formals (formals decl) ?vals (enter_state s)"
   show "pstep \<Pi> (Call (Some x) p actuals, s, [])
-          (Seq (body decl) (RestoreInternal (result decl)), ?callee, [Frame s (Some x)])"
+          (Seq (with_result (body decl) (result decl)) Restore, ?callee, [Frame s (Some x)])"
     using p arity distinct_formals ret
     by (intro Call[where vals = ?vals and callee = ?callee]) auto
   have framed:
     "psteps \<Pi> (body decl, ?callee, [Frame s (Some x)]) (SKIP, t', [Frame s (Some x)])"
     using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s (Some x)]"] by simp
-  show "psteps \<Pi> (Seq (body decl) (RestoreInternal (result decl)), ?callee, [Frame s (Some x)])
+  (* The callee publishes the result into ret_var, which the restore reads back. *)
+  have pub:
+    "psteps \<Pi> (with_result (body decl) (result decl), ?callee, [Frame s (Some x)])
+       (SKIP, t'(ret_var := aval e t'), [Frame s (Some x)])"
+    using ret psteps_with_result_Some[OF framed, where e = e] by simp
+  show "psteps \<Pi> (Seq (with_result (body decl) (result decl)) Restore, ?callee, [Frame s (Some x)])
           (SKIP, (<s|t'>)(x := aval e t'), [])"
-    using ret framed
-    by simp (rule psteps_Seq_Restore_Some_body)
+    using psteps_Seq_Restore_body[OF pub] by simp
 qed
 
 lemma pcompletes_Legacy_Call:
@@ -435,27 +469,35 @@ lemma pcompletes_Scope_Call_legacy:
 proof -
   have step_scope:
     "pstep \<Pi> (Scope c, s, [])
-       (Seq c (RestoreInternal None), enter_state s, [Frame s None])"
+       (Seq c Restore, enter_state s, [Frame s None])"
     by (rule Scope)
   have p': "\<Pi> p = Some \<lparr>formals = [], body = c, result = None\<rparr>"
     using p by simp
   have step_call_raw:
     "pstep \<Pi> (Call None p [], s, [])
-       (Seq (body \<lparr>formals = [], body = c, result = None\<rparr>)
-            (RestoreInternal (result \<lparr>formals = [], body = c, result = None\<rparr>)),
+       (Seq (with_result (body \<lparr>formals = [], body = c, result = None\<rparr>)
+                         (result \<lparr>formals = [], body = c, result = None\<rparr>))
+            Restore,
         bind_formals (formals \<lparr>formals = [], body = c, result = None\<rparr>) [] (enter_state s),
         [Frame s None])"
     using p'
     by (intro pstep.Call[where vals = "[]"
                               and callee = "bind_formals (formals \<lparr>formals = [], body = c, result = None\<rparr>) [] (enter_state s)"])
        auto
+  (* A legacy procedure has no result, so with_result leaves the body alone and
+     the call enters exactly the configuration a Scope enters. *)
   have step_call:
     "pstep \<Pi> (Call None p [], s, [])
-       (Seq c (RestoreInternal None), enter_state s, [Frame s None])"
+       (Seq c Restore, enter_state s, [Frame s None])"
     using step_call_raw by (simp add: bind_formals_def)
-  from run[unfolded pcompletes_def] step_scope have tail:
-    "psteps \<Pi> (Seq c (RestoreInternal None), enter_state s, [Frame s None]) (SKIP, t, [])"
-    by (metis Pair_inject ScopeSE com.distinct(9) star.cases)
+  from run[unfolded pcompletes_def] have tail:
+    "psteps \<Pi> (Seq c Restore, enter_state s, [Frame s None]) (SKIP, t, [])"
+  (* Only the step case survives: Scope c is not SKIP, and ScopeSE pins the
+     successor configuration. *)
+  proof (cases rule: star.cases)
+    case (step y)
+    then show ?thesis by auto
+  qed
   show ?thesis
     unfolding pcompletes_def using step_call tail by (meson star.step)
 qed

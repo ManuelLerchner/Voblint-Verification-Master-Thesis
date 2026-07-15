@@ -62,6 +62,44 @@ proof -
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
+text \<open>
+  The keyed read for a call that also publishes a return value: Goblint's
+  \<open>combine_assign\<close> writes the callee's \<^const>\<open>ret_var\<close> slot into the destination
+  variable on top of \<^const>\<open>combine_abs\<close>.  \<^const>\<open>combine_read_cmp\<close> is the
+  \<open>dst = None\<close> case.
+\<close>
+
+definition combine_collect_read_cmp ::
+  "vname option \<Rightarrow> ('c \<Rightarrow> 'g \<Rightarrow> bool)
+   \<Rightarrow> (pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c) \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state"
+where
+  "combine_collect_read_cmp dst gcmp sigma rt cl ex ctx =
+     combine_collect_abs dst
+       (side_env_cmp gcmp sigma (cl, ctx))
+       (side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))))"
+
+lemma combine_collect_read_cmp_None:
+  "combine_collect_read_cmp None gcmp sigma rt cl ex ctx
+     = combine_read_cmp gcmp sigma rt cl ex ctx"
+  unfolding combine_collect_read_cmp_def combine_read_cmp_def combine_collect_abs_def
+  by simp
+
+lemma combine_collect_case_cmp_sound:
+  fixes sigma :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
+  assumes caller: "last tau \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>"
+  assumes callee: "last rho \<in> \<lbrakk>side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx)))\<rbrakk>"
+  assumes bound: "combine_collect_read_cmp dst gcmp sigma rt cl ex ctx
+                    \<le> side_env_cmp gcmp sigma (v, ctx)"
+  shows "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
+proof -
+  have "combine_collect dst (last tau) (last rho)
+          \<in> \<lbrakk>combine_collect_read_cmp dst gcmp sigma rt cl ex ctx\<rbrakk>"
+    unfolding combine_collect_read_cmp_def
+    using caller callee by (rule combine_collect_sound)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
 section \<open>Generator bound: reducing the reassembly bound to CMP_SOUND\<close>
 
 text \<open>
@@ -104,6 +142,58 @@ proof (rule le_funI)
   qed
 qed
 
+text \<open>
+  With a destination variable the pointwise split gains one case: at \<open>dst\<close>
+  itself the read carries the callee's \<^const>\<open>ret_var\<close> slot rather than
+  the class-split value, so covering it is a separate obligation \<open>RET_SOUND\<close>
+  --- the read-side counterpart of Goblint's \<open>combine_assign\<close>.
+\<close>
+
+lemma combine_collect_read_cmp_le:
+  fixes sigma :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
+  assumes LOCAL_POST:
+    "\<And>x. \<not> is_global x \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
+  assumes CMP_SOUND:
+    "\<And>x. is_global x
+       \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
+             \<le> side_env_cmp gcmp sigma (v, ctx) x"
+  assumes RET_SOUND:
+    "\<And>y. dst = Some y
+       \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) ret_var
+             \<le> side_env_cmp gcmp sigma (v, ctx) y"
+  shows "combine_collect_read_cmp dst gcmp sigma rt cl ex ctx
+           \<le> side_env_cmp gcmp sigma (v, ctx)"
+proof (cases dst)
+  case None
+  show ?thesis
+    unfolding None combine_collect_read_cmp_None
+    by (rule combine_read_cmp_le[where gcmp=gcmp and sigma=sigma and rt=rt and cl=cl
+            and ex=ex and ctx=ctx and v=v, OF LOCAL_POST CMP_SOUND])
+next
+  case (Some y)
+  have base: "combine_read_cmp gcmp sigma rt cl ex ctx \<le> side_env_cmp gcmp sigma (v, ctx)"
+    by (rule combine_read_cmp_le[where gcmp=gcmp and sigma=sigma and rt=rt and cl=cl
+            and ex=ex and ctx=ctx and v=v, OF LOCAL_POST CMP_SOUND])
+  show ?thesis
+  proof (rule le_funI)
+    fix x
+    show "combine_collect_read_cmp dst gcmp sigma rt cl ex ctx x
+            \<le> side_env_cmp gcmp sigma (v, ctx) x"
+    proof (cases "x = y")
+      case True
+      then show ?thesis
+        using Some RET_SOUND[of y]
+        unfolding combine_collect_read_cmp_def combine_collect_abs_def by simp
+    next
+      case False
+      then show ?thesis
+        using Some le_funD[OF base, of x]
+        unfolding combine_collect_read_cmp_def combine_collect_abs_def
+          combine_read_cmp_def by simp
+    qed
+  qed
+qed
+
 section \<open>Context-sliced collecting soundness (keyed globals)\<close>
 
 text \<open>
@@ -134,18 +224,23 @@ theorem side_cfg_T_eff_cmp_collect_ctx_sound_semantic:
     and gcmp :: "'c \<Rightarrow> 'g \<Rightarrow> bool"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+    and CMP_SOUND: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
               \<le> side_env_cmp gcmp sigma (v, ctx) x"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) ret_var
+              \<le> side_env_cmp gcmp sigma (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> []
+        \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp sigma (cl, ctx)))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
@@ -164,7 +259,8 @@ proof -
             \<Longrightarrow> s \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>) (cfg_entry g, ctx)"
       using ENTRY by simp
   next
-    show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    show "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
             \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>) (v, ctx)"
       using PROC_ENTRY by simp
   next
@@ -173,34 +269,42 @@ proof -
             \<Longrightarrow> s' \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>) (v, ctx)"
       using EDGE by simp
   next
-    fix ctx cl ex v' tau rho
-    assume comb: "(cl, ex, v') \<in> combines g"
+    fix ctx cl ex v' dst tau rho
+    assume comb: "(cl, ex, v', dst) \<in> combines g"
       and caller0: "last tau \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>) (cl, ctx)"
       and callee0: "last rho \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>)
                       (ex, rt cl ctx ((\<lambda>(p, c). route_read_cmp sigma (p, c)) (cl, ctx)))"
     from caller0 have caller: "last tau \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>" by simp
     from callee0 have callee: "last rho \<in> \<lbrakk>side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx)))\<rbrakk>"
       by simp
-    have bound: "combine_read_cmp gcmp sigma rt cl ex ctx \<le> side_env_cmp gcmp sigma (v', ctx)"
-    proof (rule combine_read_cmp_le)
+    have bound: "combine_collect_read_cmp dst gcmp sigma rt cl ex ctx
+                   \<le> side_env_cmp gcmp sigma (v', ctx)"
+    proof (rule combine_collect_read_cmp_le)
       fix x assume "\<not> is_global x"
       thus "sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v', ctx)) x" by (rule LOCAL_POST[OF comb])
     next
       fix x assume "is_global x"
       thus "side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
               \<le> side_env_cmp gcmp sigma (v', ctx) x" by (rule CMP_SOUND[OF comb])
+    next
+      fix y assume "dst = Some y"
+      thus "side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) ret_var
+              \<le> side_env_cmp gcmp sigma (v', ctx) y" by (rule RET_SOUND[OF comb])
     qed
-    have "<last tau|last rho> \<in> \<lbrakk>side_env_cmp gcmp sigma (v', ctx)\<rbrakk>"
-      by (rule combine_case_cmp_sound[OF caller callee bound])
-    thus "<last tau|last rho> \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>) (v', ctx)" by simp
+    have "combine_collect dst (last tau) (last rho)
+            \<in> \<lbrakk>side_env_cmp gcmp sigma (v', ctx)\<rbrakk>"
+      by (rule combine_collect_case_cmp_sound[OF caller callee bound])
+    thus "combine_collect dst (last tau) (last rho)
+            \<in> (\<lambda>(p, c). \<lbrakk>side_env_cmp gcmp sigma (p, c)\<rbrakk>) (v', ctx)" by simp
   next
     show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
       using DG_INTRA by blast
   next
-    show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    show "\<And>tau rho dst. tau \<noteq> []
+        \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
       using DG_RETURN by blast
   next
-    show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    show "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
       using DG_CALLEE by blast
   next
     fix ctx cl s
@@ -234,13 +338,66 @@ lemma head_digest_DG_INTRA:
   by (simp add: head_digest_def)
 
 lemma head_digest_DG_RETURN:
-  "tau \<noteq> [] \<Longrightarrow> head_digest f (tau @ tl rho @ [<last tau|last rho>]) = head_digest f tau"
+  "tau \<noteq> []
+     \<Longrightarrow> head_digest f (tau @ tl rho @ [combine_collect dst (last tau) (last rho)])
+         = head_digest f tau"
   by (simp add: head_digest_def)
 
+text \<open>
+  Writing a local into a store leaves any global-only digest unchanged, so
+  binding the (local) formals over the entered store does not move the digest.
+\<close>
+lemma bind_formals_local_invariant:
+  assumes "local_formals xs"
+    and finv: "\<And>st x v. \<not> is_global x \<Longrightarrow> f (st(x := v)) = f st"
+  shows "f (bind_formals xs vs s) = f s"
+  using assms(1)
+proof (induction xs arbitrary: vs s)
+  case Nil
+  show ?case by (simp add: bind_formals_def)
+next
+  case (Cons x xs)
+  note IH = Cons.IH
+  have nx: "\<not> is_global x" and lf: "local_formals xs"
+    using Cons.prems by (auto simp: local_formals_def)
+  show ?case
+  proof (cases vs)
+    case Nil
+    thus ?thesis by (simp add: bind_formals_def)
+  next
+    case (Cons v vs')
+    have "f (bind_formals (x # xs) vs s) = f (bind_formals xs vs' (s(x := v)))"
+      using Cons by (simp add: bind_formals_def)
+    also have "\<dots> = f (s(x := v))" by (rule IH[OF lf])
+    also have "\<dots> = f s" by (rule finv[OF nx])
+    finally show ?thesis .
+  qed
+qed
+
+text \<open>
+  A freshly entered callee's head store is the caller-derived enter store with
+  the (local) formals bound to the passed actuals.  For a global-only digest
+  \<open>f\<close> (insensitive to local writes) and enter edges with local formals, the head
+  digest of the callee run is the caller's enter digest \<open>f \<circ> enter_state\<close>.
+\<close>
 lemma head_digest_DG_CALLEE:
-  "rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau)
-     \<Longrightarrow> head_digest f rho = (f \<circ> enter_state) (last tau)"
-  by (simp add: head_digest_def)
+  assumes rho: "rho \<noteq> []"
+    and enter: "call_enter_store g cl (last tau) (hd rho)"
+    and wf: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
+    and finv: "\<And>st x v. \<not> is_global x \<Longrightarrow> f (st(x := v)) = f st"
+  shows "head_digest f rho = (f \<circ> enter_state) (last tau)"
+proof -
+  from enter obtain pe xs es where
+    e: "(cl, EA_Enter xs es, pe) \<in> edges g"
+    and hdrho: "hd rho = bind_formals xs (map (\<lambda>e. aval e (last tau)) es) (enter_state (last tau))"
+    unfolding call_enter_store_def by blast
+  have "head_digest f rho
+      = f (bind_formals xs (map (\<lambda>e. aval e (last tau)) es) (enter_state (last tau)))"
+    using hdrho by (simp add: head_digest_def)
+  also have "\<dots> = f (enter_state (last tau))"
+    by (rule bind_formals_local_invariant[OF wf[OF e] finv])
+  finally show ?thesis by simp
+qed
 
 section \<open>Interface-level soundness: the A7.1 theorem over \<^locale>\<open>context_domain\<close>\<close>
 
@@ -262,24 +419,30 @@ theorem collect_ctx_sound_route:
     and dg :: "store list \<Rightarrow> 'c" and gcmp :: "'c \<Rightarrow> 'g \<Rightarrow> bool"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+    and CMP_SOUND: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> side_env_cmp gcmp sigma (ex, route cl ctx (route_read_cmp sigma (cl, ctx))) x
               \<le> side_env_cmp gcmp sigma (v, ctx) x"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> side_env_cmp gcmp sigma (ex, route cl ctx (route_read_cmp sigma (cl, ctx))) ret_var
+              \<le> side_env_cmp gcmp sigma (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> []
+        \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (route cl ctx (route_read_cmp sigma (cl, ctx)))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
   by (rule side_cfg_T_eff_cmp_collect_ctx_sound_semantic
         [where rt = route and entdg = entdg and cmp = cmp and gcmp = gcmp and dg = dg,
-         OF ENTRY PROC_ENTRY EDGE LOCAL_POST CMP_SOUND DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO])
+         OF ENTRY PROC_ENTRY EDGE LOCAL_POST CMP_SOUND RET_SOUND DG_INTRA DG_RETURN
+            DG_CALLEE ENTER_MONO])
 
 end
 

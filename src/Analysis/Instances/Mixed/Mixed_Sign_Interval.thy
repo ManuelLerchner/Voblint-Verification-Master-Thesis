@@ -29,10 +29,10 @@ where
   "mixed_si_step a d g = (apply_tf ivl_tf a g, apply_tf sign_tf a d)"
 
 definition mixed_si_combine ::
-  "sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
+  "vname option \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
    \<Rightarrow> ivl abs_state \<times> sign abs_state"
 where
-  "mixed_si_combine dc de g = (combine_abs g g, combine_abs dc de)"
+  "mixed_si_combine dst dc de g = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
 
 definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
   "mixed_si_spec = \<lparr>
@@ -40,7 +40,7 @@ definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
     dgs_assign     = (\<lambda>x e. mixed_si_step (EA_Assign x e)),
     dgs_assume     = (\<lambda>b. mixed_si_step (EA_Assume b)),
     dgs_assume_not = (\<lambda>b. mixed_si_step (EA_AssumeNot b)),
-    dgs_enter      = mixed_si_step EA_Enter,
+    dgs_enter      = (\<lambda>xs es. mixed_si_step (EA_Enter xs es)),
     dgs_combine    = mixed_si_combine
   \<rparr>"
 
@@ -49,18 +49,18 @@ lemma mixed_si_spec_step [simp]:
   unfolding mixed_si_spec_def by (cases a) simp_all
 
 lemma mixed_si_spec_combine [simp]:
-  "dgs_combine mixed_si_spec dc de g = mixed_si_combine dc de g"
+  "dgs_combine mixed_si_spec dst dc de g = mixed_si_combine dst dc de g"
   unfolding mixed_si_spec_def by simp
 
 definition mixed_si_cmb ::
-  "unit \<Rightarrow> pp \<Rightarrow> pp
+  "unit \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
         (sign abs_state, ivl abs_state) dg_state) strategy_tree"
 where
-  "mixed_si_cmb ctx cc ex =
+  "mixed_si_cmb ctx dst cc ex =
      map_gtree (\<lambda>_. ())
        (map_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree mixed_si_spec cc ex))"
+         (dg_spec_combine_tree mixed_si_spec dst cc ex))"
 
 definition mixed_si_generator ::
   "cfg \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
@@ -147,11 +147,11 @@ where
         apply_tf sign_tf a (mixed_si_D sigma u) \<le> mixed_si_D sigma v) \<and>
      (\<forall>u a v. (u, a, v) \<in> edges g \<longrightarrow>
         apply_tf ivl_tf a (mixed_si_G sigma) \<le> mixed_si_G sigma) \<and>
-     (\<forall>cc ex v. (cc, ex, v) \<in> combines g \<longrightarrow>
-        combine_abs (mixed_si_D sigma cc) (mixed_si_D sigma ex)
+     (\<forall>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<longrightarrow>
+        combine_collect_abs dst (mixed_si_D sigma cc) (mixed_si_D sigma ex)
           \<le> mixed_si_D sigma v) \<and>
-     (\<forall>cc ex v. (cc, ex, v) \<in> combines g \<longrightarrow>
-        combine_abs (mixed_si_G sigma) (mixed_si_G sigma)
+     (\<forall>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<longrightarrow>
+        combine_collect_abs dst (mixed_si_G sigma) (mixed_si_G sigma)
           \<le> mixed_si_G sigma)"
 
 lemma mixed_si_postfix_dg:
@@ -168,9 +168,9 @@ theorem mixed_si_post_solution_postfix:
     and cover_edge:
       "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> (v, ()) \<in> vars"
     and cover_combine:
-      "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow> (v, ()) \<in> vars"
+      "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow> (v, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter"
+    and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
   shows "mixed_si_postfix g s0d s0g sigma"
   unfolding mixed_si_postfix_dg
@@ -198,10 +198,10 @@ corollary mixed_si_post_solution_collect_sound:
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
     and cover_combine:
-      "\<And>cc ex w. (cc, ex, w) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
+      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
     and finE: "finite (edges g)"
     and no_enter:
-      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter"
+      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
@@ -217,4 +217,3 @@ section \<open>Executable instance\<close>
 instance st :: (bounded_warrowing) bounded_warrowing ..
 
 end
-

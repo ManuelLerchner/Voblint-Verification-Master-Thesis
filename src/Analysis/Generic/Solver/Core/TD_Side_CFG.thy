@@ -34,6 +34,10 @@ lemma restrict_local_global_join:
   "restrict_local \<sigma> \<squnion> restrict_global \<sigma> = \<sigma>"
   unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
 
+lemma restrict_global_local_join:
+  "restrict_global \<sigma> \<squnion> restrict_local \<sigma> = \<sigma>"
+  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
+
 lemma restrict_local_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> restrict_local (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
      \<le> restrict_local sigma2"
@@ -160,11 +164,12 @@ where
    ex, and the global; reassemble locals-from-caller + globals-from-callee
    (= combine_abs) and split into a local Answer and a global Side. *)
 definition unit_combine_tree ::
-  "pp => pp => (pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  "vname option => pp => pp
+   => (pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
 where
-  "unit_combine_tree cc ex =
+  "unit_combine_tree dst cc ex =
      QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
-       let res = restrict_local (sc \<squnion> g) \<squnion> restrict_global (se \<squnion> g) in
+       let res = combine_collect_abs dst (sc \<squnion> g) (se \<squnion> g) in
        Side () (restrict_global res)
          (Answer (restrict_local res)))))"
 
@@ -188,24 +193,37 @@ lemma etf_full_unit_edge_tree:
 
 
 
-(* The unit-global combine tree returns the caller's locals as its Answer. *)
+(* The unit-global combine tree returns the combined locals as its Answer; unlike
+   a plain combine_env these include the destination when the call assigns one. *)
 lemma traverse_unit_combine_tree:
-  "traverse_rhs (unit_combine_tree cc ex) \<sigma> = restrict_local (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))"
-  unfolding unit_combine_tree_def by (simp add: Let_def restrict_local_combine_eq)
+  "traverse_rhs (unit_combine_tree dst cc ex) \<sigma>
+     = restrict_local (combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+                                              (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
+  unfolding unit_combine_tree_def by (simp add: Let_def)
 
-(* The unit-global combine tree contributes the callee-exit globals to the global slot. *)
+(* The unit-global combine tree contributes the combined globals to the global slot. *)
 lemma sides_unit_combine_tree_Inr:
-  "sides_of_rhs (unit_combine_tree cc ex) \<sigma> (Inr ()) =
-   restrict_global (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
-  unfolding unit_combine_tree_def by (simp add: Let_def restrict_global_combine_eq)
+  "sides_of_rhs (unit_combine_tree dst cc ex) \<sigma> (Inr ()) =
+   restrict_global (combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+                                            (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
+  unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_unit_combine_tree:
-  "etf_full (unit_combine_tree cc ex) \<sigma>
-   = \<langle>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())|\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rangle>"
-  unfolding etf_full_def unit_combine_tree_def
-  by (simp add: all_sides_eq_sides_Inr_unit[unfolded unit_combine_tree_def] Let_def
-        restrict_local_combine_eq restrict_global_combine_eq restrict_combine combine_abs_def)
+  "etf_full (unit_combine_tree dst cc ex) \<sigma>
+   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+       (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
+proof -
+  let ?res = "combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+                (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
+  have "etf_full (unit_combine_tree dst cc ex) \<sigma>
+          = restrict_local ?res \<squnion> restrict_global ?res"
+    unfolding etf_full_def unit_combine_tree_def
+    by (simp add: Let_def)
+  also have "\<dots> = ?res"
+    by (rule restrict_local_global_join)
+  finally show ?thesis .
+qed
 
 
 subsection \<open>Local-only effectful edge trees\<close>
@@ -389,14 +407,14 @@ lemma sides_inr_local_bot_local_edge_tree:
   unfolding local_edge_tree_def local_bot_on_locals_def by simp
 
 lemma sides_inr_local_bot_unit_combine_tree:
-  "local_bot_on_locals (sides_of_rhs (unit_combine_tree cc ex) \<sigma> (Inr g))"
+  "local_bot_on_locals (sides_of_rhs (unit_combine_tree dst cc ex) \<sigma> (Inr g))"
 proof (cases "g = ()")
   case True
   show ?thesis unfolding True sides_unit_combine_tree_Inr
     by (rule local_bot_on_locals_restrict_global)
 next
   case False
-  have bot: "sides_of_rhs (unit_combine_tree cc ex) \<sigma> (Inr g) = bot"
+  have bot: "sides_of_rhs (unit_combine_tree dst cc ex) \<sigma> (Inr g) = bot"
     unfolding unit_combine_tree_def using False by simp
   show ?thesis unfolding local_bot_on_locals_def bot by simp
 qed
@@ -522,7 +540,7 @@ where
     etf_assign     = (\<lambda>x e u. unit_edge_tree (apply_tf tf (EA_Assign x e)) u),
     etf_assume     = (\<lambda>b u. unit_edge_tree (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. unit_edge_tree (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>u. unit_edge_tree (apply_tf tf EA_Enter) u),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree (apply_tf tf (EA_Enter xs es)) u),
     etf_combine    = unit_combine_tree
   \<rparr>"
 
@@ -541,7 +559,7 @@ where
     etf_assign     = (\<lambda>x e. mixed_etf_edge_tree tf (EA_Assign x e)),
     etf_assume     = (\<lambda>b. mixed_etf_edge_tree tf (EA_Assume b)),
     etf_assume_not = (\<lambda>b. mixed_etf_edge_tree tf (EA_AssumeNot b)),
-    etf_enter      = mixed_etf_edge_tree tf EA_Enter,
+    etf_enter      = (\<lambda>xs es. mixed_etf_edge_tree tf (EA_Enter xs es)),
     etf_combine    = unit_combine_tree
   \<rparr>"
 
@@ -551,7 +569,7 @@ lemma apply_etf_unit_of_transfer:
   unfolding unit_etf_of_transfer_def by (cases a) simp_all
 
 lemma etf_combine_unit_of_transfer:
-  "etf_combine (unit_etf_of_transfer tf) cc ex = unit_combine_tree cc ex"
+  "etf_combine (unit_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
 lemma apply_etf_mixed_of_transfer:
@@ -559,7 +577,7 @@ lemma apply_etf_mixed_of_transfer:
   unfolding mixed_etf_of_transfer_def by (cases a) simp_all
 
 lemma etf_combine_mixed_of_transfer:
-  "etf_combine (mixed_etf_of_transfer tf) cc ex = unit_combine_tree cc ex"
+  "etf_combine (mixed_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
   unfolding mixed_etf_of_transfer_def by simp
 
 lemma mixed_etf_edge_tree_local:
@@ -622,8 +640,9 @@ lemma in_gamma_unit_edge_tree_enter:
   fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
   assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree (apply_tf tf EA_Enter) u) \<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+           \<in> \<lbrakk>etf_collecting_full
+           (unit_edge_tree (apply_tf tf (EA_Enter xs es)) u) \<sigma>\<rbrakk>"
   using tf_sound_enter[rule_format, OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 
@@ -775,20 +794,22 @@ proof -
            intro: in_gamma_unit_edge_tree_assume_not)
 
   next
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              enter_state s \<in> \<lbrakk>etf_collecting_full
-                (etf_enter (unit_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
+              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+                \<in> \<lbrakk>etf_collecting_full
+                (etf_enter (unit_etf_of_transfer tf) xs es u) \<sigma>\<rbrakk>)"
       by (auto simp add: unit_etf_of_transfer_def glob_env_unit
            intro: in_gamma_unit_edge_tree_enter)
 
   next
-    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              <s|t> \<in> \<lbrakk>etf_full (etf_combine (unit_etf_of_transfer tf) cc ex) \<sigma>\<rbrakk>)"
+              combine_collect dst s t
+                \<in> \<lbrakk>etf_full (etf_combine (unit_etf_of_transfer tf) dst cc ex) \<sigma>\<rbrakk>)"
       by (auto simp add: etf_combine_unit_of_transfer etf_full_unit_combine_tree
-           intro: combine_states_sound)
+           intro: combine_collect_sound)
   qed
 qed
 
@@ -839,20 +860,22 @@ proof -
           loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def)
 
   next
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              enter_state s \<in> \<lbrakk>etf_collecting_full
-                (etf_enter (mixed_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
+              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+                \<in> \<lbrakk>etf_collecting_full
+                (etf_enter (mixed_etf_of_transfer tf) xs es u) \<sigma>\<rbrakk>)"
       by (auto simp add: mixed_etf_of_transfer_def local_edge_action.simps
            mixed_etf_edge_tree_unit glob_env_unit
            intro: in_gamma_unit_edge_tree_enter)
   next
-    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              <s|t> \<in> \<lbrakk>etf_full (etf_combine (mixed_etf_of_transfer tf) cc ex) \<sigma>\<rbrakk>)"
+              combine_collect dst s t
+                \<in> \<lbrakk>etf_full (etf_combine (mixed_etf_of_transfer tf) dst cc ex) \<sigma>\<rbrakk>)"
       by (auto simp add: etf_combine_mixed_of_transfer etf_full_unit_combine_tree
-           intro: combine_states_sound)
+           intro: combine_collect_sound)
   qed
 qed
 

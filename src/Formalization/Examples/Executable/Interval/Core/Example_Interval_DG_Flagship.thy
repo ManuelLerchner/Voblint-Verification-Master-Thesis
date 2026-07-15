@@ -113,8 +113,8 @@ lemma flagship_combines: "combines flagship_cfg = {}" by (simp add: flagship_cfg
 
 lemma flagship_finE: "finite (edges flagship_cfg)" by (simp add: flagship_edges)
 lemma flagship_finC: "finite (combines flagship_cfg)" by (simp add: flagship_combines)
-lemma flagship_no_enter: "\<And>u a w. (u, a, w) \<in> edges flagship_cfg \<Longrightarrow> a \<noteq> EA_Enter"
-  by (auto simp: flagship_edges)
+lemma flagship_no_enter: "\<And>u a w. (u, a, w) \<in> edges flagship_cfg \<Longrightarrow> \<not> is_enter_action a"
+  by (auto simp: flagship_edges is_enter_action_def split: edge_action.splits)
 
 subsection \<open>3. The analysis specification (interval, as an executable D/G analysis)\<close>
 
@@ -133,8 +133,8 @@ lemma ivl_Hstep:
   by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
 
 lemma ivl_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dc de g)
-     = dgs_combine (unit_dg_spec ivl_tf) (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
+  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de g)
+     = dgs_combine (unit_dg_spec ivl_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
   by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
 
 text \<open>The executable generator's abstract image is exactly the native \<open>ivl_dg.dg_gen\<close>.\<close>
@@ -237,7 +237,7 @@ lemma flagship_cover_entry: "(cfg_entry flagship_cfg, ()) \<in> fst flagship_sol
   using flagship_cover_all flagship_entry by simp
 lemma flagship_cover_edge: "\<And>u a w. (u, a, w) \<in> edges flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
   using flagship_cover_all by (auto simp: flagship_edges)
-lemma flagship_cover_combine: "\<And>cc ex w. (cc, ex, w) \<in> combines flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
+lemma flagship_cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
   by (simp add: flagship_combines)
 
 lemma flagship_sound0:

@@ -479,7 +479,7 @@ next
   case (ScopeHead body n)
   have source_result:
       "(residual', s', frs') =
-       (IMP2_Proc.com.Seq body (IMP2_Proc.com.RestoreInternal None),
+       (IMP2_Proc.com.Seq body (IMP2_Proc.com.Restore),
         enter_state s, Frame s None # frs)"
     using ScopeHead.prems(6)
     by (rule ScopeSE) simp
@@ -490,13 +490,13 @@ next
   have shape:
       "ex = n1 \<and>
        (n, EA_Enter [] [], body_en) \<in> E \<and>
-       (n, body_ex, n1, None, None) \<in> C"
+       (n, body_ex, n1, None) \<in> C"
     using ScopeHead.prems(1) body_comp by auto
   have enter_edge:
       "(n, EA_Enter [] [], body_en) \<in> edges g"
     using ScopeHead.prems(2) shape by blast
   have combine:
-      "(n, body_ex, n1, None, None) \<in> combines g"
+      "(n, body_ex, n1, None) \<in> combines g"
     using ScopeHead.prems(3) shape by blast
   have concrete:
       "cstep g (n, s, stk)
@@ -514,13 +514,13 @@ next
       entry by simp
   have raw_location:
       "control_at Pi lay (IMP2_Proc.com.Scope body) n
-        (IMP2_Proc.com.Seq body (IMP2_Proc.com.RestoreInternal None))
+        (IMP2_Proc.com.Seq body (IMP2_Proc.com.Restore))
         body_en ([] @ [(n, ex, None)])"
     by (rule control_at.ScopeBody[
           OF ScopeHead.prems(1) body_control])
   have located:
       "control_at Pi lay (IMP2_Proc.com.Scope body) n
-        (IMP2_Proc.com.Seq body (IMP2_Proc.com.RestoreInternal None))
+        (IMP2_Proc.com.Seq body (IMP2_Proc.com.Restore))
         body_en [(n, n1, None)]"
     using raw_location shape by simp
   have matched:
@@ -543,7 +543,7 @@ next
   have parent_shape:
       "scope_ex = body_n \<and>
        E = insert (n, EA_Enter [] [], body_en) Eb \<and>
-       C = insert (n, body_ex, body_n, None, None) Cb"
+       C = insert (n, body_ex, body_n, None) Cb"
     using ScopeBody.prems(1) ScopeBody.hyps(1) body_comp by auto
   have sub_edges: "Eb \<subseteq> edges g"
     using ScopeBody.prems(2) parent_shape by blast
@@ -558,7 +558,7 @@ next
     assume residual_skip: "residual = IMP2_Proc.com.SKIP"
        and source_result:
          "(residual', s', frs') =
-          (IMP2_Proc.com.RestoreInternal None, s, frs)"
+          (IMP2_Proc.com.Restore, s, frs)"
     have input_frames:
         "frames_match
           (sites @ ([(n, scope_ex, None)] @ suffix)) frs stk"
@@ -573,11 +573,11 @@ next
       by blast
     have raw_location:
         "control_at Pi lay (IMP2_Proc.com.Scope body) n
-          (IMP2_Proc.com.RestoreInternal None) body_ex [(n, body_n, None)]"
+          (IMP2_Proc.com.Restore) body_ex [(n, body_n, None)]"
       by (rule control_at.ScopeRestore[OF body_comp])
     have located:
         "control_at Pi lay (IMP2_Proc.com.Scope body) n
-          (IMP2_Proc.com.RestoreInternal None) body_ex [(n, scope_ex, None)]"
+          (IMP2_Proc.com.Restore) body_ex [(n, scope_ex, None)]"
       using raw_location parent_shape by simp
     show ?case
       apply (rule exI[of _ body_ex])
@@ -590,7 +590,7 @@ next
     fix inner' t frs1
     assume source_result:
         "(residual', s', frs') =
-         (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal None),
+         (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.Restore),
           t, frs1)"
        and inner_step:
          "pstep Pi (residual, s, frs) (inner', t, frs1)"
@@ -612,7 +612,7 @@ next
       by blast
     have raw_location:
         "control_at Pi lay (IMP2_Proc.com.Scope body) n
-          (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal None))
+          (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.Restore))
           v' (inner_sites @ [(n, scope_ex, None)])"
       by (rule control_at.ScopeBody[
             OF ScopeBody.hyps(1) inner_control])
@@ -628,33 +628,36 @@ next
   case (ScopeRestore body n body_n body_en body_ex Eb Cb)
   have parent_shape:
       "ex = body_n \<and>
-       (n, body_ex, body_n, None, None) \<in> C"
+       (n, body_ex, body_n, None) \<in> C"
     using ScopeRestore.prems(1) ScopeRestore.hyps(1) by auto
-  have combine: "(n, body_ex, body_n, None, None) \<in> combines g"
+  have combine: "(n, body_ex, body_n, None) \<in> combines g"
     using ScopeRestore.prems(3) parent_shape by blast
   show ?case
   proof (rule RestoreSE[OF ScopeRestore.prems(6)])
-    fix saved outer r
-    assume source_frames: "frs = Frame saved None # outer"
+    fix saved d outer
+    assume source_frames: "frs = Frame saved d # outer"
        and source_result:
          "(residual', s', frs') =
           (IMP2_Proc.com.SKIP,
-           IMP2_Globals.combine_states saved s, outer)"
+           combine_assign d (s ret_var) (IMP2_Globals.combine_states saved s),
+           outer)"
     have stack_shape:
         "\<exists>stk0.
           stk = (n, body_n, saved) # stk0 \<and>
+          d = None \<and>
           frames_match suffix outer stk0"
       using ScopeRestore.prems(5) source_frames
       by (cases stk) auto
     then obtain stk0 where concrete_stack:
         "stk = (n, body_n, saved) # stk0"
+        and d_none: "d = None"
         and outer_frames: "frames_match suffix outer stk0"
       by blast
     have concrete:
         "cstep g (body_ex, s, stk)
           (body_n, IMP2_Globals.combine_states saved s, stk0)"
       unfolding concrete_stack
-      by (rule cstep.ReturnNone[OF combine])
+      by (rule cstep.Return[OF combine, simplified])
     have run:
         "star (cstep g) (body_ex, s, stk)
           (body_n, IMP2_Globals.combine_states saved s, stk0)"
@@ -671,7 +674,7 @@ next
       and result_store:
         "s' = IMP2_Globals.combine_states saved s"
       and result_frames: "frs' = outer"
-      using source_result by simp_all
+      using source_result d_none by simp_all
     show ?case
       apply (rule exI[of _ body_n])
       apply (rule exI[of _ "[]"])
@@ -682,10 +685,6 @@ next
       using result_cmd located apply simp
       using result_frames outer_frames apply simp
       done
-  next
-    fix e fr x frs
-    assume "None = Some e"
-    then show ?case by simp
   qed
 next
   case ScopeDone
@@ -698,8 +697,8 @@ next
      and return_ok: "(\<exists>x. dst = Some x) \<longrightarrow> (\<exists>y. result decl = Some y)"
      and source_result:
        "(residual', s', frs') =
-        (IMP2_Proc.com.Seq (body decl)
-           (IMP2_Proc.com.RestoreInternal (result decl)),
+        (IMP2_Proc.com.Seq (with_result (body decl) (result decl))
+           (IMP2_Proc.com.Restore),
          bind_formals (formals decl) (map (\<lambda>e. IMP2_Expr.aval e s) actuals) (enter_state s),
          Frame s dst # frs)"
     using CallHead.prems(6)
@@ -708,7 +707,7 @@ next
     using CallHead.prems(4)
     unfolding proc_layout_sound_def
     by (elim conjE) assumption
-  have source_body: "source_com (body decl)"
+  have source_body: "source_com (with_result (body decl) (result decl))"
     using source_pi decl unfolding source_pi_def by auto
   have layout_complete:
       "\<forall>p decl. Pi p = Some decl \<longrightarrow>
@@ -725,25 +724,25 @@ next
         Pi p = Some decl \<longrightarrow>
         lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
         (\<exists>finish.
-          compile Pi lay (body decl) en =
+          compile Pi lay (with_result (body decl) (result decl)) en =
             (finish, en, ex, Ep, Cp)) \<and>
         Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g"
     using CallHead.prems(4)
     unfolding proc_layout_sound_def
     by (elim conjE) assumption
   obtain finish where body_comp:
-      "compile Pi lay (body decl) proc_en =
+      "compile Pi lay (with_result (body decl) (result decl)) proc_en =
        (finish, proc_en, proc_ex, Ep, Cp)"
     using layout_fragments[rule_format, OF decl lookup] by blast
   have call_shape:
       "(n, EA_Enter (formals decl) actuals, proc_en) \<in> E \<and>
-       (n, proc_ex, n + 1, dst, result decl) \<in> C"
+       (n, proc_ex, n + 1, dst) \<in> C"
     using CallHead.prems(1) decl lookup by auto
   have enter_edge:
       "(n, EA_Enter (formals decl) actuals, proc_en) \<in> edges g"
     using CallHead.prems(2) call_shape by blast
   have combine:
-      "(n, proc_ex, n + 1, dst, result decl) \<in> combines g"
+      "(n, proc_ex, n + 1, dst) \<in> combines g"
     using CallHead.prems(3) call_shape by blast
   have concrete:
       "cstep g (n, s, stk)
@@ -759,19 +758,19 @@ next
          (n, n + 1, s) # stk)"
     by (rule cstep_star_single[OF concrete])
   have body_control:
-      "control_at Pi lay (body decl) proc_en (body decl) proc_en []"
+      "control_at Pi lay (with_result (body decl) (result decl)) proc_en (with_result (body decl) (result decl)) proc_en []"
     by (rule control_at_initial[OF source_body])
   have raw_location:
       "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
-        (IMP2_Proc.com.Seq (body decl)
-           (IMP2_Proc.com.RestoreInternal (result decl)))
+        (IMP2_Proc.com.Seq (with_result (body decl) (result decl))
+           (IMP2_Proc.com.Restore))
         proc_en ([] @ [(n, n + 1, dst)])"
     by (rule control_at.CallBody[
           OF decl lookup body_comp body_control])
   have located:
       "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
-        (IMP2_Proc.com.Seq (body decl)
-           (IMP2_Proc.com.RestoreInternal (result decl)))
+        (IMP2_Proc.com.Seq (with_result (body decl) (result decl))
+           (IMP2_Proc.com.Restore))
         proc_en [(n, n + 1, dst)]"
     using raw_location by simp
   have matched:
@@ -784,13 +783,13 @@ next
   case (CallBody p decl proc_en proc_ex Ns Ep Cp n1 body_en Eb Cb residual v sites dst actuals n)
   have proc_sound:
       "(\<exists>finish.
-         compile Pi lay (body decl) proc_en =
+         compile Pi lay (with_result (body decl) (result decl)) proc_en =
            (finish, proc_en, proc_ex, Ep, Cp)) \<and>
        Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g"
     using CallBody.prems(4) CallBody.hyps(1,2)
     unfolding proc_layout_sound_def by blast
   then obtain finish where canonical:
-      "compile Pi lay (body decl) proc_en =
+      "compile Pi lay (with_result (body decl) (result decl)) proc_en =
        (finish, proc_en, proc_ex, Ep, Cp)"
       and proc_edges: "Ep \<subseteq> edges g"
       and proc_combines: "Cp \<subseteq> combines g"
@@ -810,7 +809,7 @@ next
     assume residual_skip: "residual = IMP2_Proc.com.SKIP"
        and source_result:
          "(residual', s', frs') =
-          (IMP2_Proc.com.RestoreInternal (result decl), s, frs)"
+          (IMP2_Proc.com.Restore, s, frs)"
     have input_frames:
         "frames_match
           (sites @ ([(n, n + 1, dst)] @ suffix)) frs stk"
@@ -825,7 +824,7 @@ next
       by blast
     have located:
         "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
-          (IMP2_Proc.com.RestoreInternal (result decl)) proc_ex [(n, n + 1, dst)]"
+          (IMP2_Proc.com.Restore) proc_ex [(n, n + 1, dst)]"
       using CallBody.hyps(1,2)
       by (rule control_at.CallRestore)
     show ?case
@@ -839,7 +838,7 @@ next
     fix inner' t frs1
     assume source_result:
         "(residual', s', frs') =
-         (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal (result decl)),
+         (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.Restore),
           t, frs1)"
        and inner_step:
          "pstep Pi (residual, s, frs) (inner', t, frs1)"
@@ -850,7 +849,7 @@ next
     obtain v' inner_sites stk' where run:
         "star (cstep g) (v, s, stk) (v', t, stk')"
         and inner_control:
-          "control_at Pi lay (body decl) proc_en inner' v' inner_sites"
+          "control_at Pi lay (with_result (body decl) (result decl)) proc_en inner' v' inner_sites"
         and matched:
           "frames_match
             (inner_sites @ ([(n, n + 1, dst)] @ suffix))
@@ -861,7 +860,7 @@ next
       by blast
     have raw_location:
         "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
-          (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal (result decl)))
+          (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.Restore))
           v' (inner_sites @ [(n, n + 1, dst)])"
       by (rule control_at.CallBody[
             OF CallBody.hyps(1) CallBody.hyps(2)
@@ -878,144 +877,64 @@ next
 next
   case (CallRestore p decl proc_en proc_ex Ns Ep Cp dst actuals n)
   have combine_dst:
-      "(n, proc_ex, n + 1, dst, result decl) \<in> combines g"
+      "(n, proc_ex, n + 1, dst) \<in> combines g"
     using CallRestore.prems(1,3) CallRestore.hyps(1,2) by auto
   have located:
       "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
         IMP2_Proc.com.SKIP (n + 1) []"
     using CallRestore.hyps(1,2) by (rule control_at.CallDone)
   show ?case
-  proof (cases dst)
-    case None
-    have dst_none: "dst = None"
-      using None by simp
+  proof (rule RestoreSE[OF CallRestore.prems(6)])
+    fix saved d outer
+    assume source_frames: "frs = Frame saved d # outer"
+       and source_result:
+         "(residual', s', frs') =
+          (IMP2_Proc.com.SKIP,
+           combine_assign d (s ret_var) (IMP2_Globals.combine_states saved s),
+           outer)"
+    have stack_shape:
+        "\<exists>stk0.
+          stk = (n, n + 1, saved) # stk0 \<and>
+          d = dst \<and>
+          frames_match suffix outer stk0"
+      using CallRestore.prems(5) source_frames
+      by (cases stk) auto
+    then obtain stk0 where concrete_stack:
+        "stk = (n, n + 1, saved) # stk0"
+        and d_eq: "d = dst"
+        and outer_frames: "frames_match suffix outer stk0"
+      by blast
+    have concrete:
+        "cstep g (proc_ex, s, stk)
+          (n + 1,
+           combine_assign dst (s ret_var)
+             (IMP2_Globals.combine_states saved s),
+           stk0)"
+      unfolding concrete_stack
+      by (rule cstep.Return[OF combine_dst])
+    have run:
+        "star (cstep g) (proc_ex, s, stk)
+          (n + 1,
+           combine_assign dst (s ret_var)
+             (IMP2_Globals.combine_states saved s),
+           stk0)"
+      by (rule cstep_star_single[OF concrete])
+    have result_cmd: "residual' = IMP2_Proc.com.SKIP"
+      and result_store:
+        "s' = combine_assign dst (s ret_var)
+                (IMP2_Globals.combine_states saved s)"
+      and result_frames: "frs' = outer"
+      using source_result d_eq by simp_all
     show ?thesis
-    proof (rule RestoreSE[OF CallRestore.prems(6)])
-      fix saved outer r
-      assume source_frames: "frs = Frame saved None # outer"
-         and source_result:
-           "(residual', s', frs') =
-            (IMP2_Proc.com.SKIP,
-             IMP2_Globals.combine_states saved s, outer)"
-      have stack_shape:
-          "\<exists>stk0.
-            stk = (n, n + 1, saved) # stk0 \<and>
-            frames_match suffix outer stk0"
-        using CallRestore.prems(5) source_frames dst_none
-        by (cases stk) auto
-      then obtain stk0 where concrete_stack:
-          "stk = (n, n + 1, saved) # stk0"
-          and outer_frames: "frames_match suffix outer stk0"
-        by blast
-      have combine_none:
-          "(n, proc_ex, n + 1, None, result decl) \<in> combines g"
-        using combine_dst dst_none by simp
-      have concrete:
-          "cstep g (proc_ex, s, stk)
-            (n + 1, IMP2_Globals.combine_states saved s, stk0)"
-        unfolding concrete_stack
-        using combine_none by (rule cstep.ReturnNone)
-      have run:
-          "star (cstep g) (proc_ex, s, stk)
-            (n + 1, IMP2_Globals.combine_states saved s, stk0)"
-        by (rule cstep_star_single[OF concrete])
-      have result_cmd: "residual' = IMP2_Proc.com.SKIP"
-        and result_store:
-          "s' = IMP2_Globals.combine_states saved s"
-        and result_frames: "frs' = outer"
-        using source_result by simp_all
-      show ?thesis
-        apply (rule exI[of _ "n + 1"])
-        apply (rule exI[of _ "[]"])
-        apply (rule exI[of _ stk0])
-        apply (intro conjI)
-         apply (subst result_store)
-         apply (rule run)
-        using result_cmd located apply simp
-        using result_frames outer_frames apply simp
-        done
-    next
-      fix saved outer x e
-      assume source_frames: "frs = Frame saved (Some x) # outer"
-         and result_expr: "result decl = Some e"
-         and source_result:
-           "(residual', s', frs') =
-            (IMP2_Proc.com.SKIP,
-             (IMP2_Globals.combine_states saved s)(x := IMP2_Expr.aval e s),
-             outer)"
-      from CallRestore.prems(5) source_frames dst_none
-      show ?thesis by (cases stk) auto
-    qed
-  next
-    case (Some ret_x)
-    have dst_some: "dst = Some ret_x"
-      using Some by simp
-    show ?thesis
-    proof (rule RestoreSE[OF CallRestore.prems(6)])
-      fix saved outer r
-      assume source_frames: "frs = Frame saved None # outer"
-         and source_result:
-           "(residual', s', frs') =
-            (IMP2_Proc.com.SKIP,
-             IMP2_Globals.combine_states saved s, outer)"
-      from CallRestore.prems(5) source_frames dst_some
-      show ?thesis by (cases stk) auto
-    next
-      fix saved outer x e
-      assume source_frames: "frs = Frame saved (Some x) # outer"
-         and result_expr: "result decl = Some e"
-         and source_result:
-           "(residual', s', frs') =
-            (IMP2_Proc.com.SKIP,
-             (IMP2_Globals.combine_states saved s)(x := IMP2_Expr.aval e s),
-             outer)"
-      have stack_shape:
-          "\<exists>stk0.
-            stk = (n, n + 1, saved) # stk0 \<and>
-            x = ret_x \<and>
-            frames_match suffix outer stk0"
-        using CallRestore.prems(5) source_frames dst_some
-        by (cases stk) auto
-      then obtain stk0 where concrete_stack:
-          "stk = (n, n + 1, saved) # stk0"
-          and x_eq: "x = ret_x"
-          and outer_frames: "frames_match suffix outer stk0"
-        by blast
-      have combine_some:
-          "(n, proc_ex, n + 1, Some ret_x, Some e) \<in> combines g"
-        using combine_dst dst_some result_expr by simp
-      have concrete:
-          "cstep g (proc_ex, s, stk)
-            (n + 1,
-             (IMP2_Globals.combine_states saved s)
-               (ret_x := IMP2_Expr.aval e s),
-             stk0)"
-        unfolding concrete_stack
-        using combine_some by (rule cstep.ReturnSome)
-      have run:
-          "star (cstep g) (proc_ex, s, stk)
-            (n + 1,
-             (IMP2_Globals.combine_states saved s)
-               (ret_x := IMP2_Expr.aval e s),
-             stk0)"
-        by (rule cstep_star_single[OF concrete])
-      have result_cmd: "residual' = IMP2_Proc.com.SKIP"
-        and result_store:
-          "s' = (IMP2_Globals.combine_states saved s)
-                  (ret_x := IMP2_Expr.aval e s)"
-        and result_frames: "frs' = outer"
-        using source_result x_eq by simp_all
-      show ?thesis
-        apply (rule exI[of _ "n + 1"])
-        apply (rule exI[of _ "[]"])
-        apply (rule exI[of _ stk0])
-        apply (intro conjI)
-         apply (subst result_store)
-         apply (rule run)
-        using result_cmd located apply simp
-        using result_frames outer_frames apply simp
-        done
-    qed
+      apply (rule exI[of _ "n + 1"])
+      apply (rule exI[of _ "[]"])
+      apply (rule exI[of _ stk0])
+      apply (intro conjI)
+       apply (subst result_store)
+       apply (rule run)
+      using result_cmd located apply simp
+      using result_frames outer_frames apply simp
+      done
   qed
 next
   case CallDone
@@ -1082,7 +1001,7 @@ proof -
       Pi p = Some decl \<longrightarrow>
       lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
       (\<exists>finish.
-        compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)) \<and>
+        compile Pi lay (with_result (body decl) (result decl)) en = (finish, en, ex, Ep, Cp)) \<and>
       Ep \<subseteq> edges (compile_prog Pi ps main) \<and>
       Cp \<subseteq> combines (compile_prog Pi ps main)"
     proof (intro allI impI)
@@ -1090,12 +1009,12 @@ proof -
       assume decl: "Pi p = Some decl"
       assume lookup: "lay p = Some (en, ex, Ns, Ep, Cp)"
       obtain finish where compiled_body:
-          "compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)"
+          "compile Pi lay (with_result (body decl) (result decl)) en = (finish, en, ex, Ep, Cp)"
         using compile_procs_list_body[OF wf procs decl lookup] by blast
       have fragment: "Ep \<subseteq> Eproc \<and> Cp \<subseteq> Cproc"
         by (rule compile_procs_list_fragment[OF procs lookup])
       show "(\<exists>finish.
-          compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)) \<and>
+          compile Pi lay (with_result (body decl) (result decl)) en = (finish, en, ex, Ep, Cp)) \<and>
           Ep \<subseteq> edges (compile_prog Pi ps main) \<and>
           Cp \<subseteq> combines (compile_prog Pi ps main)"
         using compiled_body fragment edge_sets combine_sets by blast

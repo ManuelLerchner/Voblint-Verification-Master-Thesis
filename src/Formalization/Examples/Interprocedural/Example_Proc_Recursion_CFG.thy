@@ -29,25 +29,25 @@ definition proc_layout_regression_cfg :: cfg where
        (prog_main proc_layout_regression_prog)"
 
 lemma proc_layout_regression_direct_recursion:
-  "(1, EA_Enter, 0) \<in> edges proc_layout_regression_cfg \<and>
-   (1, 5, 2) \<in> combines proc_layout_regression_cfg"
+  "(1, EA_Enter [] [], 0) \<in> edges proc_layout_regression_cfg \<and>
+   (1, 5, 2, None) \<in> combines proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
 lemma proc_layout_regression_mutual_recursion:
-  "(6, EA_Enter, 8) \<in> edges proc_layout_regression_cfg \<and>
-   (8, EA_Enter, 6) \<in> edges proc_layout_regression_cfg \<and>
-   (6, 9, 7) \<in> combines proc_layout_regression_cfg \<and>
-   (8, 7, 9) \<in> combines proc_layout_regression_cfg"
+  "(6, EA_Enter [] [], 8) \<in> edges proc_layout_regression_cfg \<and>
+   (8, EA_Enter [] [], 6) \<in> edges proc_layout_regression_cfg \<and>
+   (6, 9, 7, None) \<in> combines proc_layout_regression_cfg \<and>
+   (8, 7, 9, None) \<in> combines proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
 lemma proc_layout_regression_forward_call:
-  "(6, EA_Enter, 8) \<in> edges proc_layout_regression_cfg \<and>
-   (6, 9, 7) \<in> combines proc_layout_regression_cfg"
+  "(6, EA_Enter [] [], 8) \<in> edges proc_layout_regression_cfg \<and>
+   (6, 9, 7, None) \<in> combines proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
 lemma proc_layout_regression_ordinary_call:
-  "(16, EA_Enter, 10) \<in> edges proc_layout_regression_cfg \<and>
-   (16, 11, 17) \<in> combines proc_layout_regression_cfg"
+  "(16, EA_Enter [] [], 10) \<in> edges proc_layout_regression_cfg \<and>
+   (16, 11, 17, None) \<in> combines proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
 lemma proc_layout_regression_regions:

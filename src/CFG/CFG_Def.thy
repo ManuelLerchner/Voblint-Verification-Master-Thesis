@@ -57,16 +57,19 @@ derive linorder bexp
    semantics. *)
 derive linorder edge_action
 
-type_synonym combine_info = "pp * pp * pp * vname option * aexp option"
+type_synonym combine_info = "pp * pp * pp * vname option"
 
 definition combine_call_node :: "combine_info \<Rightarrow> pp" where
-  "combine_call_node ci = (case ci of (call, ex, ret, dst, rex) \<Rightarrow> call)"
+  "combine_call_node ci = (case ci of (call, ex, ret, dst) \<Rightarrow> call)"
 
 definition combine_exit_node :: "combine_info \<Rightarrow> pp" where
-  "combine_exit_node ci = (case ci of (call, ex, ret, dst, rex) \<Rightarrow> ex)"
+  "combine_exit_node ci = (case ci of (call, ex, ret, dst) \<Rightarrow> ex)"
 
 definition combine_return_node :: "combine_info \<Rightarrow> pp" where
-  "combine_return_node ci = (case ci of (call, ex, ret, dst, rex) \<Rightarrow> ret)"
+  "combine_return_node ci = (case ci of (call, ex, ret, dst) \<Rightarrow> ret)"
+
+definition combine_dst :: "combine_info \<Rightarrow> vname option" where
+  "combine_dst ci = (case ci of (call, ex, ret, dst) \<Rightarrow> dst)"
 
 subsection \<open>CFG record (extension of AFP graph)\<close>
 
@@ -132,9 +135,19 @@ qed
 definition combine_info_predecessors :: "cfg \<Rightarrow> pp \<Rightarrow> combine_info set" where
   "combine_info_predecessors g v = {ci \<in> combines g. combine_return_node ci = v}"
 
-definition combine_predecessors :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) set" where
+definition combine_predecessors ::
+    "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp \<times> vname option) set" where
   "combine_predecessors g v =
-     (\<lambda>ci. (combine_call_node ci, combine_exit_node ci)) ` combine_info_predecessors g v"
+     (\<lambda>ci. (combine_call_node ci, combine_exit_node ci, combine_dst ci))
+       ` combine_info_predecessors g v"
+
+lemma combine_predecessors_eq:
+  "combine_predecessors g v =
+     {(c, ex, dst) | c ex dst. (c, ex, v, dst) \<in> combines g}"
+  unfolding combine_predecessors_def combine_info_predecessors_def
+    combine_call_node_def combine_exit_node_def combine_return_node_def
+    combine_dst_def
+  by (auto simp: image_iff)
 
 lemma finite_combine_predecessors:
   assumes "finite (combines g)"
@@ -279,9 +292,10 @@ lemma cfg_combines_list_code [code]:
 
 definition combine_info_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> combine_info list" where
   "combine_info_predecessor_list g v =
-     filter (\<lambda>(_, _, ret, _, _). ret = v) (cfg_combines_list g)"
+     filter (\<lambda>(_, _, ret, _). ret = v) (cfg_combines_list g)"
 
-definition combine_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp) list" where
+definition combine_predecessor_list ::
+    "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp \<times> vname option) list" where
   "combine_predecessor_list g v = sorted_list_of_set (combine_predecessors g v)"
 
 lemma set_cfg_combines_list[simp]:
@@ -322,7 +336,7 @@ lemma distinct_combine_predecessor_list[simp]:
   by simp
 
 lemma combine_predecessor_list_Nil_if_no_in:
-  assumes "\<And>c e dst rex. (c, e, v, dst, rex) \<notin> combines g"
+  assumes "\<And>c e dst. (c, e, v, dst) \<notin> combines g"
   shows "combine_predecessor_list g v = []"
 proof -
   have "combine_info_predecessors g v = {}"
@@ -342,7 +356,7 @@ value "cfg_edges_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {})"
 value "predecessor_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {}) 1"
 value "predecessor_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {}) 0"
 
-value "cfg_combines_list (mk_cfg 2 3 {(2, EA_Enter [] [], 0)} {(2, 1, 3, None, None)})"
-value "combine_predecessor_list (mk_cfg 2 3 {(2, EA_Enter [] [], 0)} {(2, 1, 3, None, None)}) 3"
+value "cfg_combines_list (mk_cfg 2 3 {(2, EA_Enter [] [], 0)} {(2, 1, 3, None)})"
+value "combine_predecessor_list (mk_cfg 2 3 {(2, EA_Enter [] [], 0)} {(2, 1, 3, None)}) 3"
 
 end

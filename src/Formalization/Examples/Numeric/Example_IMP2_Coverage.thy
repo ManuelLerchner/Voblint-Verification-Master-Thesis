@@ -37,8 +37,8 @@ definition loop_prog :: "IMP2_Proc.com" where
 
 (* while (true) never reaches a final state. *)
 lemma while_true_no_bigstep:
-  "Semantics.big_step \<pi> (cmd, s) t \<Longrightarrow> cmd = Syntax.While (Syntax.Bc True) body \<Longrightarrow> False"
-proof (induction arbitrary: body rule: big_step_induct)
+  "Semantics.big_step \<pi> (cmd, s) t \<Longrightarrow> cmd = Syntax.While (Syntax.Bc True) loop_body \<Longrightarrow> False"
+proof (induction arbitrary: loop_body rule: big_step_induct)
   case (WhileFalse b s')
   then show ?case by auto
 next

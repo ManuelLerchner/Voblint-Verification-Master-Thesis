@@ -76,8 +76,8 @@ lemma cfg_witness_gamma_eff:
     "\<And>u a w. (u, a, w) \<in> edges g
        \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
   assumes combine_le:
-    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
-       etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
+       etf_full (etf_combine etf dst c ex) \<sigma> \<le> side_env \<sigma> ret"
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
   assumes S_le: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes wit: "cfg_witness g S v st"
@@ -102,13 +102,17 @@ proof -
       using etf_collecting_full_le_side_env[OF step_le[OF edge(1)]] .
     show ?case using gamma_state_mono[OF collect_le] step1 by blast
   next
-    case (combine c ex v S s t)
+    case (combine c ex v dst S s t u)
     have sc: "s \<in> \<lbrakk>side_env \<sigma> c\<rbrakk>" and tc: "t \<in> \<lbrakk>side_env \<sigma> ex\<rbrakk>"
       apply (auto simp add: combine.IH(1) combine.prems)
       by (simp add: combine.IH(2) combine.prems)
-    have step: "<s|t> \<in> \<lbrakk>etf_full (etf_combine etf c ex) \<sigma>\<rbrakk>"
+    have step: "combine_collect dst s t
+                  \<in> \<lbrakk>etf_full (etf_combine etf dst c ex) \<sigma>\<rbrakk>"
       using etf_sound_combine inr sc tc unfolding side_env_def by auto
-    show ?case using gamma_state_mono[OF combine_le[OF combine(1)]] step by blast
+    have u_eq: "u = combine_collect dst s t" using combine.hyps(4) .
+    show ?case
+      unfolding u_eq
+      using gamma_state_mono[OF combine_le[OF combine.hyps(1)]] step by blast
   qed
 qed
 
@@ -128,8 +132,8 @@ theorem post_fixpoint_sound_at_eff:
     "\<And>u a w. (u, a, w) \<in> edges g
        \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
   assumes combine_le:
-    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
-       etf_full (etf_combine etf c ex) \<sigma> \<le> side_env \<sigma> ret"
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
+       etf_full (etf_combine etf dst c ex) \<sigma> \<le> side_env \<sigma> ret"
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 proof

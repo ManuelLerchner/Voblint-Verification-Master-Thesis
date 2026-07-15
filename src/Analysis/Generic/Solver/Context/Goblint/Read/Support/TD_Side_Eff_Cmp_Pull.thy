@@ -122,8 +122,8 @@ theorem post_fixpoint_sound_at_cmp_pull:
        \<Longrightarrow> etf_full (apply_etf etf a u) (pull_cmp gcmp ctx sigma)
              \<le> side_env_cmp gcmp sigma (w, ctx)"
   assumes combine_le:
-    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
-       etf_full (etf_combine etf c ex) (pull_cmp gcmp ctx sigma)
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
+       etf_full (etf_combine etf dst c ex) (pull_cmp gcmp ctx sigma)
          \<le> side_env_cmp gcmp sigma (ret, ctx)"
   assumes entry_le: "s0 \<le> side_env_cmp gcmp sigma (cfg_entry g, ctx)"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env_cmp gcmp sigma (v0, ctx)\<rbrakk>"
@@ -136,8 +136,8 @@ proof -
             \<le> side_env (pull_cmp gcmp ctx sigma) w"
       using step_le[OF e] by (simp add: side_env_cmp_pull)
   next
-    fix c ex ret assume cm: "(c, ex, ret) \<in> combines g"
-    show "etf_full (etf_combine etf c ex) (pull_cmp gcmp ctx sigma)
+    fix c ex ret dst assume cm: "(c, ex, ret, dst) \<in> combines g"
+    show "etf_full (etf_combine etf dst c ex) (pull_cmp gcmp ctx sigma)
             \<le> side_env (pull_cmp gcmp ctx sigma) ret"
       using combine_le[OF cm] by (simp add: side_env_cmp_pull)
   next

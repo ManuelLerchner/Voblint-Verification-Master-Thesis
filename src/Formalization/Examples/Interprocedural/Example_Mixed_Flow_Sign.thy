@@ -39,52 +39,52 @@ definition sign_init_s0 :: "sign abs_state" where
 corollary sign_mixed_flow_sound_and_optimal:
   fixes S :: "store set" and tr :: "store list"
   assumes dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p''))
+    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call None ''p'' []))
        sign_etf bot sign_init_s0 ()
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
   assumes S_sound: "S \<le> \<lbrakk>sign_init_s0\<rbrakk>"
   assumes tr_in:
-    "tr \<in> cfg_collect_trace (compile_prog inc_pi [''p''] (Call ''p'')) S
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
+    "tr \<in> cfg_collect_trace (compile_prog inc_pi [''p''] (Call None ''p'' [])) S
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
   shows
     "\<forall>x. (last tr) x \<in> gamma
-       (side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf
+       (side_analyse_eff inc_pi [''p''] (Call None ''p'' []) sign_etf
           bot sign_init_s0 ()
-          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))) x)"
+          (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))) x)"
     and
     "least_part_post_solution
-       (side_cfg_T_eff (compile_prog inc_pi [''p''] (Call ''p''))
+       (side_cfg_T_eff (compile_prog inc_pi [''p''] (Call None ''p'' []))
           sign_etf bot sign_init_s0 ())
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))
        (td_cfg_side_solver_eff.nu_at
-          (compile_prog inc_pi [''p''] (Call ''p''))
+          (compile_prog inc_pi [''p''] (Call None ''p'' []))
           sign_etf bot sign_init_s0 ()
-          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))
+          (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))))
        (td_cfg_side_solver_eff.stabl_at
-          (compile_prog inc_pi [''p''] (Call ''p''))
+          (compile_prog inc_pi [''p''] (Call None ''p'' []))
           sign_etf bot sign_init_s0 ()
-          (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
+          (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))))"
 proof -
   note result = mixed_flow_analysis_optimal
     [OF refl refl sign_sound_etf sign_etf_threefold_mono sign_etf_cone_compatible
         dom S_sound tr_in]
   show "\<forall>x. (last tr) x \<in> gamma
-         (side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf
+         (side_analyse_eff inc_pi [''p''] (Call None ''p'' []) sign_etf
             bot sign_init_s0 ()
-            (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))) x)"
+            (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))) x)"
     using result(1) .
   show "least_part_post_solution
-         (side_cfg_T_eff (compile_prog inc_pi [''p''] (Call ''p''))
+         (side_cfg_T_eff (compile_prog inc_pi [''p''] (Call None ''p'' []))
             sign_etf bot sign_init_s0 ())
-         (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))
+         (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))
          (td_cfg_side_solver_eff.nu_at
-            (compile_prog inc_pi [''p''] (Call ''p''))
+            (compile_prog inc_pi [''p''] (Call None ''p'' []))
             sign_etf bot sign_init_s0 ()
-            (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))
+            (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))))
          (td_cfg_side_solver_eff.stabl_at
-            (compile_prog inc_pi [''p''] (Call ''p''))
+            (compile_prog inc_pi [''p''] (Call None ''p'' []))
             sign_etf bot sign_init_s0 ()
-            (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))))"
+            (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))))"
     using result(2) .
 qed
 
@@ -98,18 +98,18 @@ corollary sign_mixed_flow_sound_from_pp:
   fixes \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" and S :: "store set" and tr :: "store list"
   assumes pp:
     "part_post_solution
-       (side_cfg_T_eff (compile_prog inc_pi [''p''] (Call ''p''))
+       (side_cfg_T_eff (compile_prog inc_pi [''p''] (Call None ''p'' []))
           sign_etf bot sign_init_s0 ())
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))) \<sigma> vars"
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))) \<sigma> vars"
   assumes entry:
-    "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry (compile_prog inc_pi [''p''] (Call ''p'')))\<rbrakk>"
+    "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry (compile_prog inc_pi [''p''] (Call None ''p'' [])))\<rbrakk>"
   assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes tr_in:
-    "tr \<in> cfg_collect_trace (compile_prog inc_pi [''p''] (Call ''p'')) S
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
+    "tr \<in> cfg_collect_trace (compile_prog inc_pi [''p''] (Call None ''p'' [])) S
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
   shows
     "\<forall>x. (last tr) x \<in> gamma
-       (side_env \<sigma> (cfg_exit (compile_prog inc_pi [''p''] (Call ''p''))) x)"
+       (side_env \<sigma> (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' []))) x)"
   by (rule mixed_flow_analysis_sound
         [OF sign_sound_etf pp entry sign_etf_cone_compatible
             compile_prog_finite[THEN conjunct1]
@@ -117,4 +117,3 @@ corollary sign_mixed_flow_sound_from_pp:
             inr tr_in])
 
 end
-

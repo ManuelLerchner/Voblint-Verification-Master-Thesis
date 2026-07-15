@@ -15,14 +15,14 @@ inductive twf ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> trace \<Rightarrow> bool"
   for enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and combc :: "'c \<Rightarrow> 'c \<Rightarrow> 'c" and g :: cfg where
   start: "twf enterc combc g v ctx v ctx [s]"
-| intra: "(u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter
+| intra: "(u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
       \<Longrightarrow> twf enterc combc g w wc u kc tr
       \<Longrightarrow> edge_step a (last tr) = Some s'
       \<Longrightarrow> twf enterc combc g w wc v kc (tr @ [s'])"
-| enter: "(u, EA_Enter, v) \<in> edges g
+| enter: "(u, EA_Enter xs es, v) \<in> edges g
       \<Longrightarrow> twf enterc combc g w wc u kc tau
       \<Longrightarrow> twf enterc combc g w wc v (enterc kc (last tau)) (tau @ [enter_state (last tau)])"
-| combine: "(cl, ex, v) \<in> combines g \<Longrightarrow> (cl, EA_Enter, fe) \<in> edges g
+| combine: "(cl, ex, v, dst) \<in> combines g \<Longrightarrow> (cl, EA_Enter xs es, fe) \<in> edges g
       \<Longrightarrow> twf enterc combc g w wc cl kc1 tau
       \<Longrightarrow> twf enterc combc g fe (enterc kc1 (last tau)) ex (enterc kc1 (last tau)) rho
       \<Longrightarrow> hd rho = enter_state (last tau)
@@ -39,12 +39,12 @@ text \<open>Conditional soundness: if the START store is sound at the start unkn
 theorem twf_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and combc :: "'c \<Rightarrow> 'c \<Rightarrow> 'c"
-  assumes EDGE: "\<And>u a v c s s'. (u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter
+  assumes EDGE: "\<And>u a v c s s'. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and SEED_G: "\<And>u v c s. (u, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
+    and SEED_G: "\<And>u v c s xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> enter_state s \<in> \<lbrakk>sg (Inl (v, enterc c s))\<rbrakk>"
-    and COMB: "\<And>cl ex v c1 s t. (cl, ex, v) \<in> combines g
+    and COMB: "\<And>cl ex v dst c1 s t. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, enterc c1 s))\<rbrakk>
         \<Longrightarrow> <s|t> \<in> \<lbrakk>sg (Inl (v, combc c1 (enterc c1 s)))\<rbrakk>"
     and wit: "twf enterc combc g w wc v ctx tr"
@@ -61,14 +61,14 @@ next
     by (rule EDGE[OF intra.hyps(1,2) _ intra.hyps(4)])
   thus ?case using twf_nonempty[OF intra.hyps(3)] by simp
 next
-  case (enter u v w wc c tau)
+  case (enter u xs es v w wc c tau)
   have "last tau \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>"
     using enter.IH enter.prems twf_nonempty[OF enter.hyps(2)] by simp
   hence "enter_state (last tau) \<in> \<lbrakk>sg (Inl (v, enterc c (last tau)))\<rbrakk>"
     by (rule SEED_G[OF enter.hyps(1)])
   thus ?case using twf_nonempty[OF enter.hyps(2)] by simp
 next
-  case (combine cl ex v fe w wc c1 tau rho)
+  case (combine cl ex v dst xs es fe w wc c1 tau rho)
   have tau_ne: "tau \<noteq> []" by (rule twf_nonempty[OF combine.hyps(3)])
   have caller: "last tau \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>"
     using combine.IH(1) combine.prems tau_ne by simp
@@ -89,8 +89,8 @@ text \<open>The callee side of a combine can be supplied by a suffix witness tha
 
 
 lemma twf_combine_reuses_callee_suffix:
-  assumes cmb: "(cl, ex, v) \<in> combines g"
-    and en: "(cl, EA_Enter, fe) \<in> edges g"
+  assumes cmb: "(cl, ex, v, dst) \<in> combines g"
+    and en: "(cl, EA_Enter xs es, fe) \<in> edges g"
     and caller: "twf enterc combc g w wc cl kc tau"
     and callee: "twf enterc combc g fe (enterc kc (last tau)) ex (enterc kc (last tau)) rho"
     and hd: "hd rho = enter_state (last tau)"
@@ -113,11 +113,11 @@ inductive twfr ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> trace \<Rightarrow> bool"
   for enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and combc :: "'c \<Rightarrow> 'c \<Rightarrow> 'c" and g :: cfg where
   start: "twfr enterc combc g v ctx v ctx [s]"
-| intra: "(u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter
+| intra: "(u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
       \<Longrightarrow> twfr enterc combc g w wc u kc tr
       \<Longrightarrow> edge_step a (last tr) = Some s'
       \<Longrightarrow> twfr enterc combc g w wc v kc (tr @ [s'])"
-| combine: "(cl, ex, v) \<in> combines g \<Longrightarrow> (cl, EA_Enter, fe) \<in> edges g
+| combine: "(cl, ex, v, dst) \<in> combines g \<Longrightarrow> (cl, EA_Enter xs es, fe) \<in> edges g
       \<Longrightarrow> twfr enterc combc g w wc cl kc1 tau
       \<Longrightarrow> twfr enterc combc g fe (enterc kc1 (last tau)) ex (enterc kc1 (last tau)) rho
       \<Longrightarrow> hd rho = enter_state (last tau)
@@ -151,18 +151,18 @@ theorem twfr_sound_seeded:
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp_seed gkey cmb (cover_seed pz fs) g
                   (clean_etf_of_transfer tf) bot0 s0) x sg vars"
-    and q_edge: "\<And>u a v kc. (u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter
+    and q_edge: "\<And>u a v kc. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
         \<Longrightarrow> (v, kc) \<in> vars \<Longrightarrow> (u, kc) \<in> vars"
-    and q_caller: "\<And>cl ex v kc. (cl, ex, v) \<in> combines g \<Longrightarrow> (v, kc) \<in> vars \<Longrightarrow> (cl, kc) \<in> vars"
-    and q_callee: "\<And>cl ex v kc s. (cl, ex, v) \<in> combines g \<Longrightarrow> (v, kc) \<in> vars
+    and q_caller: "\<And>cl ex v dst kc. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> (v, kc) \<in> vars \<Longrightarrow> (cl, kc) \<in> vars"
+    and q_callee: "\<And>cl ex v dst kc s. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> (v, kc) \<in> vars
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, kc))\<rbrakk> \<Longrightarrow> (ex, enterc kc s) \<in> vars"
-    and q_frame: "\<And>cl ex fe v kc s. (cl, ex, v) \<in> combines g \<Longrightarrow> (cl, EA_Enter, fe) \<in> edges g
+    and q_frame: "\<And>cl ex fe v dst kc s xs es. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> (cl, EA_Enter xs es, fe) \<in> edges g
         \<Longrightarrow> (v, kc) \<in> vars \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, kc))\<rbrakk> \<Longrightarrow> (fe, enterc kc s) \<in> vars"
-    and SEED_glob: "\<And>u v kc s xx. (u, EA_Enter, v) \<in> edges g \<Longrightarrow> (u, kc) \<in> vars
+    and SEED_glob: "\<And>u v kc s xx xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> (u, kc) \<in> vars
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
         \<Longrightarrow> is_global xx \<Longrightarrow> s xx \<in> gamma (fs (enterc kc s) xx)"
     and zero: "(0::int) \<in> gamma pz"
-    and COMB_BOUND: "\<And>cl ex v kc s. (cl, ex, v) \<in> combines g \<Longrightarrow> (v, kc) \<in> vars
+    and COMB_BOUND: "\<And>cl ex v dst kc s. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> (v, kc) \<in> vars
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, kc))\<rbrakk>
         \<Longrightarrow> \<langle>sg (Inl (cl, kc))|sg (Inl (ex, enterc kc s))\<rangle> \<le> sg (Inl (v, kc))"
     and wit: "twfr enterc (\<lambda>c1 c2. c1) g w wc v ctx tr"
@@ -181,7 +181,7 @@ next
     using seeded_activation_edge[OF fin pp intra.prems(1) intra.hyps(1) intra.hyps(2)
             last_tr intra.hyps(4)] by simp
 next
-  case (combine cl ex v fe w wc kc1 tau rho)
+  case (combine cl ex v dst xs es fe w wc kc1 tau rho)
   have q: "(v, kc1) \<in> vars" using combine.prems(1) by simp
   have tau_ne: "tau \<noteq> []" by (rule twfr_nonempty[OF combine.hyps(3)])
   have hd_tau: "hd tau \<in> \<lbrakk>sg (Inl (w, wc))\<rbrakk>" using combine.prems(2) tau_ne by simp
@@ -205,8 +205,7 @@ next
   have bnd: "\<langle>sg (Inl (cl, kc1))|sg (Inl (ex, enterc kc1 (last tau)))\<rangle> \<le> sg (Inl (v, kc1))"
     by (rule COMB_BOUND[OF combine.hyps(1) q caller])
   have "<last tau|last rho> \<in> \<lbrakk>sg (Inl (v, kc1))\<rbrakk>"
-    using seeded_activation_comb[where enterc = enterc and combc = "\<lambda>c1 c2. c1", OF bnd caller callee]
-    by simp
+    using bnd combine_states_sound[OF caller callee] gamma_state_mono by blast
   thus ?case by (simp add: combine_states_def)
 qed
 

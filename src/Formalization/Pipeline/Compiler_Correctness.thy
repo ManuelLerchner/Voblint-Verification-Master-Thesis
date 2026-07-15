@@ -103,7 +103,8 @@ proof -
   have initial: "{s} \<le> \<lbrakk>s0\<rbrakk>"
     using init by simp
   have "cfg_collect g {s} v \<le> \<lbrakk>env v\<rbrakk>"
-    by (meson fin finC initial post_fixpoint_sound)
+    using post_fixpoint_sound[OF fin finC post initial]
+    by blast
   then have "t \<in> \<lbrakk>env v\<rbrakk>"
     using collected by blast
   then show ?thesis
@@ -153,19 +154,19 @@ proof -
       by (rule etf_combined_le_eff[OF pp _ edge_g fin])
   qed
   have combine_le:
-    "\<And>call ex ret dst rex.
-        (call, ex, ret, dst, rex) \<in> combines pg \<Longrightarrow>
-        etf_full (etf_combine etf call ex) \<sigma> \<le> side_env \<sigma> ret"
+    "\<And>call ex ret dst.
+        (call, ex, ret, dst) \<in> combines pg \<Longrightarrow>
+        etf_full (etf_combine etf dst call ex) \<sigma> \<le> side_env \<sigma> ret"
   proof -
-    fix call ex ret dst rex
-    assume combine_pg: "(call, ex, ret, dst, rex) \<in> combines pg"
-    have combine_g: "(call, ex, ret, dst, rex) \<in> combines g"
+    fix call ex ret dst
+    assume combine_pg: "(call, ex, ret, dst) \<in> combines pg"
+    have combine_g: "(call, ex, ret, dst) \<in> combines g"
       using combine_pg by (simp add: pg_def)
     have reaches: "cfg_reaches g ret v"
-      using combine_pg by (simp add: pg_def cone_def)
+      using combine_pg by (simp add: pg_def cone_def combine_return_node_def)
     have "ret \<in> vars"
       by (rule side_cone_in_vars_eff_cone[OF pp fin finC cone reaches])
-    then show "etf_full (etf_combine etf call ex) \<sigma> \<le> side_env \<sigma> ret"
+    then show "etf_full (etf_combine etf dst call ex) \<sigma> \<le> side_env \<sigma> ret"
       by (rule etf_combine_combined_le_eff[OF pp _ combine_g finC])
   qed
   have entry_pg: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry pg)\<rbrakk>"

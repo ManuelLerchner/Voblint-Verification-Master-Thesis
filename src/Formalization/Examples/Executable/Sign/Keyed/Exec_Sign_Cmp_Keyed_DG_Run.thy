@@ -84,9 +84,11 @@ definition kw_res :: "bool \<Rightarrow> sign abs_state" where
                   \<squnion> restrict_global (kw_locg 1 ctx \<squnion> kw_slot ctx)"
 
 lemma unit_comb_eval:
-  "dgs_combine (unit_dg_spec sign_tf) (kw_locg 0 ctx) (kw_locg 1 ctx) (kw_slot ctx)
+  "dgs_combine (unit_dg_spec sign_tf) None (kw_locg 0 ctx) (kw_locg 1 ctx) (kw_slot ctx)
      = (restrict_global (kw_res ctx), restrict_local (kw_res ctx))"
-  by (simp add: unit_dg_spec_def unit_combine_step_def kw_res_def Let_def)
+  unfolding unit_dg_spec_def unit_combine_step_def kw_res_def
+            combine_collect_abs_def combine_abs_def
+  by (auto simp: Let_def restrict_local_def restrict_global_def fun_eq_iff split: if_splits)
 
 lemma gamma_unit_restrict: "gamma_unit (restrict_local r) (restrict_global r) = \<lbrakk>r\<rbrakk>"
   by (simp add: gamma_unit_def restrict_local_global_join)
@@ -116,7 +118,27 @@ proof -
   have t': "t \<in> gamma_unit (kw_locg 1 ctx) (kw_slot ctx)"
     using t by (simp add: sign_dg.dg_gamma_c_def dg_D_val dg_G_val)
   have "<s|t> \<in> gamma_unit (restrict_local (kw_res ctx)) (restrict_global (kw_res ctx))"
-    using sign_dg.combine_sound[OF s' t'] unit_comb_eval by auto
+  proof -
+    have comb_sound0:
+      "combine_collect None s t \<in>
+        (case dgs_combine (unit_dg_spec sign_tf) None (kw_locg 0 ctx) (kw_locg 1 ctx) (kw_slot ctx) of
+           (g', d') \<Rightarrow> gamma_unit d' g')"
+      by (rule sign_dg.combine_sound[OF s' t', where dst = None])
+    have comb_eval:
+      "dgs_combine (unit_dg_spec sign_tf) None (kw_locg 0 ctx) (kw_locg 1 ctx) (kw_slot ctx)
+       = (restrict_global (kw_res ctx), restrict_local (kw_res ctx))"
+      by (rule unit_comb_eval)
+    have comb_gamma:
+      "(case dgs_combine (unit_dg_spec sign_tf) None (kw_locg 0 ctx) (kw_locg 1 ctx) (kw_slot ctx) of
+          (g', d') \<Rightarrow> gamma_unit d' g')
+       = gamma_unit (restrict_local (kw_res ctx)) (restrict_global (kw_res ctx))"
+      using comb_eval by simp
+    have comb_sound:
+      "<s|t> \<in> gamma_unit (restrict_local (kw_res ctx)) (restrict_global (kw_res ctx))"
+      using comb_sound0 comb_gamma by (simp add: combine_collect_def)
+    show ?thesis
+      by (rule comb_sound)
+  qed
   then have "<s|t> \<in> \<lbrakk>kw_res ctx\<rbrakk>" by (simp add: gamma_unit_restrict)
   then have "<s|t> \<in> \<lbrakk>kw_locg 2 ctx \<squnion> kw_slot ctx\<rbrakk>"
     using gamma_state_mono[OF kw_res_le] by blast
@@ -126,12 +148,12 @@ qed
 
 text \<open>
   The switching-combine premise of \<open>sound_dg_spec.dg_collect_ctx_sound\<close> in its exact
-  shape, at this witness (route \<open>rt = (\<lambda>cc. kw_ec)\<close>, combine set \<open>{(0, 1, 2)}\<close>).  The
+  shape, at this witness (route \<open>rt = (\<lambda>cc. kw_ec)\<close>, combine set \<open>{(0, 1, 2, None)}\<close>).  The
   derived callee context collapses to the caller context, so it reduces to
   \<open>dg_combine_obligation\<close>.
 \<close>
 lemma dg_COMB_premise:
-  assumes comb: "(cl, ex, v) \<in> {(0::pp, 1::pp, 2::pp)}"
+  assumes comb: "(cl, ex, v, dst) \<in> {(0::pp, 1::pp, 2::pp, None)}"
     and caller: "last tau \<in> sign_dg.dg_gamma_c kw_dg ctx cl"
     and callee: "last rho \<in> sign_dg.dg_gamma_c kw_dg
                     ((\<lambda>cc. kw_ec) cl ctx (sign_dg.dg_D_c kw_dg ctx cl)) ex"

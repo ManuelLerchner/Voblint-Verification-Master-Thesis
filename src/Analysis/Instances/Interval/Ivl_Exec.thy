@@ -140,9 +140,9 @@ lift_definition enter_ivl_st :: "ivl st \<Rightarrow> ivl st"
   is "\<lambda>(dl, dg, ps). (Ivl MinInf PlusInf, dg, filter (\<lambda>(x, _). is_global x) ps)"
   by (auto simp: eq_st_def fun_rep_enter_ivl_rep fun_eq_iff)
 
-lemma enter_ivl_st_commute:
-  "fun_of_st (enter_ivl_st s) = enter_ivl (fun_of_st s)"
-  unfolding enter_ivl_def
+lemma enter_frame_ivl_st_commute:
+  "fun_of_st (enter_ivl_st s) = enter_frame_ivl (fun_of_st s)"
+  unfolding enter_frame_ivl_def
   by transfer (simp add: fun_rep_enter_ivl_rep)
 
 subsection \<open>Executable transfer function and seeds\<close>
@@ -152,7 +152,9 @@ fun ivl_tf_st :: "edge_action \<Rightarrow> ivl st \<Rightarrow> ivl st" where
   | "ivl_tf_st (EA_Assign x a) s = update_st s x (aval_ivl a (lookup_st s))"
   | "ivl_tf_st (EA_Assume b) s = assume_ivl_st b s"
   | "ivl_tf_st (EA_AssumeNot b) s = assume_not_ivl_st b s"
-  | "ivl_tf_st EA_Enter s = enter_ivl_st s"
+  | "ivl_tf_st (EA_Enter xs es) s =
+     bind_formals_abs_st xs (map (\<lambda>e. aval_ivl e (lookup_st s)) es)
+       (enter_ivl_st s)"
 
 lift_definition top_ivl_st :: "ivl st" is "(Ivl MinInf PlusInf, Ivl MinInf PlusInf, [])" .
 
@@ -191,8 +193,9 @@ next
   then show ?thesis
     by (simp add: ivl_tf_def assume_not_ivl_st_commute)
 next
-  case EA_Enter
-  then show ?thesis by (simp add: ivl_tf_def enter_ivl_st_commute)
+  case (EA_Enter xs es)
+  then show ?thesis
+    by (simp add: ivl_tf_def enter_ivl_def enter_frame_ivl_st_commute)
 qed
 
 subsection \<open>Executable effectful transfer record\<close>
@@ -203,7 +206,8 @@ definition ivl_etf_st :: "(unit, ivl st) effectful_st_transfer" where
     etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (ivl_tf_st (EA_Assign x e))),
     etf_st_assume     = (\<lambda>b. unit_edge_tree_st (ivl_tf_st (EA_Assume b))),
     etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (ivl_tf_st (EA_AssumeNot b))),
-    etf_st_enter      = unit_edge_tree_st (ivl_tf_st EA_Enter),
+    etf_st_enter      =
+      (\<lambda>xs es. unit_edge_tree_st (ivl_tf_st (EA_Enter xs es))),
     etf_st_combine    = unit_combine_tree_st
   \<rparr>"
 
@@ -212,7 +216,7 @@ lemma ivl_etf_st_edge_tree:
   unfolding ivl_etf_st_def by (cases a) simp_all
 
 lemma ivl_etf_st_combine_tree:
-  "etf_combine_st ivl_etf_st cc ex = unit_combine_tree_st cc ex"
+  "etf_combine_st ivl_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
   unfolding ivl_etf_st_def by simp
 
 value "lookup_st (ivl_tf_st (EA_Assume (Less (IMP2_Syntax.V ''x'') (IMP2_Syntax.N 20)))

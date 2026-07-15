@@ -33,7 +33,8 @@ proof -
   define edge_vals where
     "edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u)) (predecessors g v)"
   define comb_vals where
-    "comb_vals = image (\<lambda>(c, e). \<langle>env c|env e\<rangle>) (combine_predecessors g v)"
+    "comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
+                       (combine_predecessors g v)"
   define base where
     "base = (if v = cfg_entry g then insert s0 (edge_vals \<union> comb_vals)
             else edge_vals \<union> comb_vals)"
@@ -49,22 +50,24 @@ proof -
     using sup_fold_ge_state[OF fin_base mem_base] unfolding abs_join_set_def by simp
   also have "\<dots> = rhs g tf (\<squnion>) bot s0 env v"
     unfolding rhs_def Let_def base_def edge_vals_def comb_vals_def
-      predecessors_def combine_predecessors_def by simp
+      predecessors_def combine_predecessors_eq by simp
   finally show ?thesis .
 qed
 
-lemma combine_abs_le_rhs:
+lemma combine_collect_abs_le_rhs:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes finE: "finite (edges g)"
   assumes finC: "finite (combines g)"
-  assumes uce: "(c, e, v) \<in> combines g"
-  shows "\<langle>env c|env e\<rangle> \<le> rhs g tf (\<squnion>) bot s0 env v"
+  assumes uce: "(c, ex, v, dst) \<in> combines g"
+  shows "combine_collect_abs dst (env c) (env ex)
+           \<le> rhs g tf (\<squnion>) bot s0 env v"
 proof -
   define edge_vals where
     "edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u)) (predecessors g v)"
   define comb_vals where
-    "comb_vals = image (\<lambda>(c, e). \<langle>env c|env e\<rangle>) (combine_predecessors g v)"
+    "comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
+                       (combine_predecessors g v)"
   define base where
     "base = (if v = cfg_entry g then insert s0 (edge_vals \<union> comb_vals)
             else edge_vals \<union> comb_vals)"
@@ -74,13 +77,17 @@ proof -
     unfolding comb_vals_def using finC by (simp add: finite_combine_predecessors)
   have fin_base: "finite base"
     unfolding base_def using fin_edge fin_comb by simp
-  have mem_base: "\<langle>env c|env e\<rangle> \<in> base"
-    using uce unfolding base_def comb_vals_def combine_predecessors_def by auto
-  have "\<langle>env c|env e\<rangle> \<le> abs_join_set (\<squnion>) bot base"
+  have mem_comb: "combine_collect_abs dst (env c) (env ex) \<in> comb_vals"
+    unfolding comb_vals_def combine_predecessors_eq
+    using uce by (intro image_eqI[where x = "(c, ex, dst)"]) auto
+  have mem_base: "combine_collect_abs dst (env c) (env ex) \<in> base"
+    using mem_comb unfolding base_def by auto
+  have "combine_collect_abs dst (env c) (env ex)
+          \<le> abs_join_set (\<squnion>) bot base"
     using sup_fold_ge_state[OF fin_base mem_base] unfolding abs_join_set_def by simp
   also have "\<dots> = rhs g tf (\<squnion>) bot s0 env v"
     unfolding rhs_def Let_def base_def edge_vals_def comb_vals_def
-      predecessors_def combine_predecessors_def by simp
+      predecessors_def combine_predecessors_eq by simp
   finally show ?thesis .
 qed
 
@@ -94,7 +101,8 @@ proof -
   define edge_vals where
     "edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u)) (predecessors g (cfg_entry g))"
   define comb_vals where
-    "comb_vals = image (\<lambda>(c, e). \<langle>env c|env e\<rangle>) (combine_predecessors g (cfg_entry g))"
+    "comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
+                       (combine_predecessors g (cfg_entry g))"
   define base where "base = insert s0 (edge_vals \<union> comb_vals)"
   have fin_edge: "finite edge_vals"
     unfolding edge_vals_def using finE by (simp add: finite_predecessors)
@@ -107,7 +115,7 @@ proof -
     using sup_fold_ge_state[OF fin_base mem_base] unfolding abs_join_set_def by simp
   also have "\<dots> = rhs g tf (\<squnion>) bot s0 env (cfg_entry g)"
     unfolding rhs_def Let_def base_def edge_vals_def comb_vals_def
-      predecessors_def combine_predecessors_def by simp
+      predecessors_def combine_predecessors_eq by simp
   finally show ?thesis .
 qed
 
@@ -141,10 +149,10 @@ next
     unfolding EA_AssumeNot apply_tf.simps edge_collect.simps
     using tf_sound_assume_not by blast
 next
-  case EA_Enter
-  then show ?thesis
+  case (EA_Enter xs es)
+  show ?thesis
     unfolding EA_Enter apply_tf.simps edge_collect.simps
-    using tf_sound_enter by auto
+    using tf_sound_enter by blast
 qed
 
 text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer
@@ -194,17 +202,18 @@ lemma collect_combine_pp_abstract_sound:
 proof
   fix x
   assume xin: "x \<in> collect_combine_pp g (\<lambda>v. \<lbrakk>env v\<rbrakk>) v"
-  from xin obtain c ex ret s t where
-        h: "(c, ex, ret) \<in> combines g" "ret = v"
+  from xin obtain c ex ret dst s t where
+        h: "(c, ex, ret, dst) \<in> combines g" "ret = v"
     and st: "s \<in> \<lbrakk>env c\<rbrakk>" "t \<in> \<lbrakk>env ex\<rbrakk>"
-    and x: "x = <s|t>"
+    and x: "x = combine_collect dst s t"
     unfolding collect_combine_pp_def by blast
-  have step: "x \<in> \<lbrakk>\<langle>env c|env ex\<rangle>\<rbrakk>"
-    using combine_states_sound[OF st] x by simp
-  have uce: "(c, ex, v) \<in> combines g"
+  have step: "x \<in> \<lbrakk>combine_collect_abs dst (env c) (env ex)\<rbrakk>"
+    using combine_collect_sound[OF st] x by simp
+  have uce: "(c, ex, v, dst) \<in> combines g"
     using h(1,2) by force
-  have le_rhs: "\<langle>env c|env ex\<rangle> \<le> rhs g tf (\<squnion>) bot s0 env v"
-    by (rule combine_abs_le_rhs[OF fin finC uce])
+  have le_rhs: "combine_collect_abs dst (env c) (env ex)
+                  \<le> rhs g tf (\<squnion>) bot s0 env v"
+    by (rule combine_collect_abs_le_rhs[OF fin finC uce])
   have le_env: "rhs g tf (\<squnion>) bot s0 env v \<le> env v"
     using post_fp unfolding is_post_fixpoint_def by simp
   show "x \<in> \<lbrakk>env v\<rbrakk>"
@@ -218,8 +227,8 @@ lemma cfg_witness_gamma:
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
   assumes combine_le:
-    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
-       \<langle>env c|env ex\<rangle> \<le> env ret"
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
+       combine_collect_abs dst (env c) (env ex) \<le> env ret"
   assumes entry_le: "s0 \<le> env (cfg_entry g)"
   assumes S_le: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes wit: "cfg_witness g S v st"
@@ -245,13 +254,18 @@ proof -
     qed
     show ?case using gamma_state_mono[OF step_le[OF edge(1)]] step1 by blast
   next
-    case (combine c ex v S s t)
+    case (combine c ex v dst S s t u)
     have sc: "s \<in> \<lbrakk>env c\<rbrakk>" and tc: "t \<in> \<lbrakk>env ex\<rbrakk>"
       apply (auto simp add: combine.IH(1) combine.prems)
       by (simp add: combine.IH(2) combine.prems)
-    have step: "<s|t> \<in> \<lbrakk>\<langle>env c|env ex\<rangle>\<rbrakk>"
-      using combine_states_sound[OF sc tc] by simp
-    show ?case using gamma_state_mono[OF combine_le[OF combine(1)]] step by blast
+    have step: "combine_collect dst s t
+                  \<in> \<lbrakk>combine_collect_abs dst (env c) (env ex)\<rbrakk>"
+      using combine_collect_sound[OF sc tc] by simp
+    have u_eq: "u = combine_collect dst s t"
+      using combine.hyps(4) .
+    show ?case
+      unfolding u_eq
+      using gamma_state_mono[OF combine_le[OF combine.hyps(1)]] step by blast
   qed
 qed
 
@@ -264,8 +278,8 @@ lemma post_fixpoint_sound_at:
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
   assumes combine_le:
-    "\<And>c ex ret. (c, ex, ret) \<in> combines g \<Longrightarrow>
-       \<langle>env c|env ex\<rangle> \<le> env ret"
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
+       combine_collect_abs dst (env c) (env ex) \<le> env ret"
   assumes entry_le: "s0 \<le> env (cfg_entry g)"
   shows "cfg_collect g S v0 \<le> \<lbrakk>env v0\<rbrakk>"
 proof -

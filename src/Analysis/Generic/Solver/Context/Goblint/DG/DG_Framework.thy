@@ -212,22 +212,22 @@ theorem dg_edge_tree_side_pure_G:
 text \<open>Procedure-return combine: two \<open>D\<close> inputs (caller, callee exit), one \<open>G\<close>.\<close>
 
 definition dg_combine_tree ::
-  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dl \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
-   \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
+  "(vname option \<Rightarrow> 'dl::bounded_semilattice_sup_bot \<Rightarrow> 'dl \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
-  "dg_combine_tree comb cc ex =
+  "dg_combine_tree comb dst cc ex =
      QueryL cc (\<lambda>dc. QueryL ex (\<lambda>de. QueryG () (\<lambda>g.
-       Side () (DG bot (fst (comb (locals dc) (locals de) (globs g))))
-         (Answer (DG (snd (comb (locals dc) (locals de) (globs g))) bot)))))"
+       Side () (DG bot (fst (comb dst (locals dc) (locals de) (globs g))))
+         (Answer (DG (snd (comb dst (locals dc) (locals de) (globs g))) bot)))))"
 
 lemma traverse_dg_combine_tree:
-  "traverse_rhs (dg_combine_tree comb cc ex) \<tau>
-   = DG (snd (comb (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ()))))) bot"
+  "traverse_rhs (dg_combine_tree comb dst cc ex) \<tau>
+   = DG (snd (comb dst (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ()))))) bot"
   unfolding dg_combine_tree_def by simp
 
 lemma sides_dg_combine_tree_Inr:
-  "sides_of_rhs (dg_combine_tree comb cc ex) \<tau> (Inr ())
-   = DG bot (fst (comb (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ())))))"
+  "sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau> (Inr ())
+   = DG bot (fst (comb dst (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ())))))"
   unfolding dg_combine_tree_def by (simp add: Let_def)
 
 subsection \<open>The analysis interface: a Goblint-Spec-shaped record\<close>
@@ -243,8 +243,8 @@ record ('dl, 'dg) dg_spec =
   dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assume     :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assume_not :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_enter      :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_combine    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_combine    :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
 
 fun dg_spec_step ::
   "('dl, 'dg, 'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -253,7 +253,7 @@ where
 | "dg_spec_step S (EA_Assign x e)  = dgs_assign S x e"
 | "dg_spec_step S (EA_Assume b)    = dgs_assume S b"
 | "dg_spec_step S (EA_AssumeNot b) = dgs_assume_not S b"
-| "dg_spec_step S EA_Enter         = dgs_enter S"
+| "dg_spec_step S (EA_Enter xs es)  = dgs_enter S xs es"
 
 definition apply_dg_spec ::
   "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
@@ -263,9 +263,9 @@ where
 
 definition dg_spec_combine_tree ::
   "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
-   \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
+   \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
-  "dg_spec_combine_tree S cc ex = dg_combine_tree (dgs_combine S) cc ex"
+  "dg_spec_combine_tree S dst cc ex = dg_combine_tree (dgs_combine S) dst cc ex"
 
 subsection \<open>The homogeneous unit analysis\<close>
 
@@ -276,11 +276,11 @@ text \<open>
 \<close>
 
 definition unit_combine_step ::
-  "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
+  "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
    \<Rightarrow> 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step dc de g =
-     (let res = restrict_local (dc \<squnion> g) \<squnion> restrict_global (de \<squnion> g)
+  "unit_combine_step dst dc de g =
+     (let res = combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)
       in (restrict_global res, restrict_local res))"
 
 definition unit_dg_spec ::
@@ -291,7 +291,7 @@ where
     dgs_assign     = (\<lambda>x e. unit_step (apply_tf tf (EA_Assign x e))),
     dgs_assume     = (\<lambda>b. unit_step (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = unit_step (apply_tf tf EA_Enter),
+    dgs_enter      = (\<lambda>xs es. unit_step (apply_tf tf (EA_Enter xs es))),
     dgs_combine    = unit_combine_step
   \<rparr>"
 
@@ -330,7 +330,7 @@ subsection \<open>The heterogeneous seeded CMP generator\<close>
 
 definition side_cfg_T_eff_cmp_seed_dg ::
   "('c \<Rightarrow> 'k)
-   \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
    \<Rightarrow> ('c \<Rightarrow> 'd)
    \<Rightarrow> cfg
@@ -345,7 +345,7 @@ where
             intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
                         (non_enter_predecessor_list g v);
-            comb = map (\<lambda>(cc, ex). cmb c cc ex)
+            comb = map (\<lambda>(cc, ex, dst). cmb c dst cc ex)
                        (combine_predecessor_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb)
         in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
@@ -360,7 +360,7 @@ lemma eq_side_cfg_T_eff_cmp_seed_dg:
      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
               (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
            (non_enter_predecessor_list g v)
-      @ map (\<lambda>(cc, ex). cmb ctx cc ex)
+      @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex)
             (combine_predecessor_list g v))) bot"
   by (simp add: side_cfg_T_eff_cmp_seed_dg_def Let_def
         traverse_side_rhs_fold_dg)

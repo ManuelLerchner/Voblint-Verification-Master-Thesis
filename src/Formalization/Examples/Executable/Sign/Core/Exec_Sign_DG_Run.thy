@@ -36,8 +36,8 @@ lemma sign_Hstep:
   by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute sign_tf_st_commute)
 
 lemma sign_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st sign_tf_st) dc de g)
-     = dgs_combine (unit_dg_spec sign_tf) (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
+  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st sign_tf_st) dst dc de g)
+     = dgs_combine (unit_dg_spec sign_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
   by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
 
 text \<open>The executable generator's abstract image is exactly the native \<open>sign_dg.dg_gen\<close>.\<close>
@@ -69,8 +69,8 @@ lemma gEx_entry: "cfg_entry gEx = 0"
   by (simp add: gEx_def mk_cfg_def)
 lemma gEx_finE: "finite (edges gEx)" by (simp add: gEx_edges)
 lemma gEx_finC: "finite (combines gEx)" by (simp add: gEx_combines)
-lemma gEx_no_enter: "\<And>u a w. (u, a, w) \<in> edges gEx \<Longrightarrow> a \<noteq> EA_Enter"
-  by (auto simp: gEx_edges)
+lemma gEx_no_enter: "\<And>u a w. (u, a, w) \<in> edges gEx \<Longrightarrow> \<not> is_enter_action a"
+  by (auto simp: gEx_edges is_enter_action_def split: edge_action.splits)
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign st, sign st) dg_state) strategy_tree" where
   "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st) gEx bot cinit_sign_st cinit_sign_st"
@@ -124,7 +124,7 @@ lemma dgEx_cover_2: "((2::pp), ()) \<in> fst dgEx_sol"
   unfolding dgEx_sol_def by eval
 lemma dgEx_cover_edge: "\<And>u a w. (u, a, w) \<in> edges gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
   using dgEx_cover_1 dgEx_cover_2 by (auto simp: gEx_edges)
-lemma dgEx_cover_combine: "\<And>cc ex w. (cc, ex, w) \<in> combines gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
+lemma dgEx_cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
   by (simp add: gEx_combines)
 lemma dgEx_sound0: "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_sign_st \<squnion> fun_of_st cinit_sign_st\<rbrakk>"
   by (simp add: fun_of_st_cinit_sign_st cinit_stores_def gamma_state_def sup.idem)

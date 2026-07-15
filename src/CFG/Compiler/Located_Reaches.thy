@@ -56,40 +56,23 @@ proof -
       unfolding located_sound_def
       by (auto intro: cfg_collect_edge_step)
   next
-    case (ReturnNone call ex ret r t s stk)
+    case (Return call ex ret dst t s stk)
     have src_mem: "s \<in> cfg_collect g S call"
       and ex_mem: "t \<in> cfg_collect g S ex"
       and tail_sound: "stack_sound g S stk"
-      using assms(1) ReturnNone unfolding located_sound_def by auto
+      using assms(1) Return unfolding located_sound_def by auto
     have combine_mem:
-        "IMP2_Globals.combine_states s t \<in> combine_collect None r s t"
+        "combine_assign dst (t ret_var) (IMP2_Globals.combine_states s t)
+          = combine_collect dst s t"
       unfolding combine_collect_def by simp
-    have combine: "(call, ex, ret, None, r) \<in> combines g"
-      using ReturnNone by simp
+    have combine: "(call, ex, ret, dst) \<in> combines g"
+      using Return by simp
     have ret_mem:
-        "IMP2_Globals.combine_states s t \<in> cfg_collect g S ret"
-      by (rule cfg_collect_combine[OF combine refl src_mem ex_mem combine_mem])
-    show ?thesis
-      using ReturnNone tail_sound ret_mem
-      unfolding located_sound_def by auto
-  next
-    case (ReturnSome call ex ret x e t s stk)
-    have src_mem: "s \<in> cfg_collect g S call"
-      and ex_mem: "t \<in> cfg_collect g S ex"
-      and tail_sound: "stack_sound g S stk"
-      using assms(1) ReturnSome unfolding located_sound_def by auto
-    have combine_mem:
-        "(IMP2_Globals.combine_states s t)(x := IMP2_Expr.aval e t)
-          \<in> combine_collect (Some x) (Some e) s t"
-      unfolding combine_collect_def by simp
-    have combine: "(call, ex, ret, Some x, Some e) \<in> combines g"
-      using ReturnSome by simp
-    have ret_mem:
-        "(IMP2_Globals.combine_states s t)(x := IMP2_Expr.aval e t)
+        "combine_assign dst (t ret_var) (IMP2_Globals.combine_states s t)
           \<in> cfg_collect g S ret"
       by (rule cfg_collect_combine[OF combine refl src_mem ex_mem combine_mem])
     show ?thesis
-      using ReturnSome tail_sound ret_mem
+      using Return tail_sound ret_mem
       unfolding located_sound_def by auto
   qed
 qed
@@ -125,29 +108,17 @@ next
   then show ?thesis
     by (auto intro: cfg_reaches_edge)
 next
-  case (ReturnNone call ex ret r t s stk)
-  have combine: "(call, ex, ret, None, r) \<in> combines g"
-    using ReturnNone by simp
+  case (Return call ex ret dst t s stk)
+  have combine: "(call, ex, ret, dst) \<in> combines g"
+    using Return by simp
   have reach_ct:
-      "cfg_reaches g (combine_exit_node (call, ex, ret, None, r))
-         (combine_return_node (call, ex, ret, None, r))"
+      "cfg_reaches g (combine_exit_node (call, ex, ret, dst))
+         (combine_return_node (call, ex, ret, dst))"
     using combine by (rule cfg_reaches_combine_exit)
   have reach: "cfg_reaches g ex ret"
     using reach_ct by (simp add: combine_exit_node_def combine_return_node_def)
   then show ?thesis
-    using ReturnNone by simp
-next
-  case (ReturnSome call ex ret x e t s stk)
-  have combine: "(call, ex, ret, Some x, Some e) \<in> combines g"
-    using ReturnSome by simp
-  have reach_ct:
-      "cfg_reaches g (combine_exit_node (call, ex, ret, Some x, Some e))
-         (combine_return_node (call, ex, ret, Some x, Some e))"
-    using combine by (rule cfg_reaches_combine_exit)
-  have reach: "cfg_reaches g ex ret"
-    using reach_ct by (simp add: combine_exit_node_def combine_return_node_def)
-  then show ?thesis
-    using ReturnSome by simp
+    using Return by simp
 qed
 
 lemma csteps_imp_cfg_reaches:

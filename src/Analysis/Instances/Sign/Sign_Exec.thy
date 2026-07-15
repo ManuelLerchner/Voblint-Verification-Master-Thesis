@@ -149,9 +149,9 @@ lift_definition enter_sign_st :: "sign st \<Rightarrow> sign st"
   is "\<lambda>(dl, dg, ps). (STop, dg, filter (\<lambda>(x, _). is_global x) ps)"
   by (auto simp: eq_st_def fun_rep_enter_sign_rep fun_eq_iff)
 
-lemma enter_sign_st_commute:
-  "fun_of_st (enter_sign_st s) = enter_sign (fun_of_st s)"
-  unfolding enter_sign_def
+lemma enter_frame_sign_st_commute:
+  "fun_of_st (enter_sign_st s) = enter_frame_sign (fun_of_st s)"
+  unfolding enter_frame_sign_def
   by transfer (simp add: fun_rep_enter_sign_rep)
 
 subsection \<open>The executable sign transfer function\<close>
@@ -161,7 +161,9 @@ fun sign_tf_st :: "edge_action \<Rightarrow> sign st \<Rightarrow> sign st" wher
   | "sign_tf_st (EA_Assign x a) s = update_st s x (aval_sign a (lookup_st s))"
   | "sign_tf_st (EA_Assume b) s = assume_sign_st b s"
   | "sign_tf_st (EA_AssumeNot b) s = assume_not_sign_st b s"
-  | "sign_tf_st EA_Enter s = enter_sign_st s"
+  | "sign_tf_st (EA_Enter xs es) s =
+     bind_formals_abs_st xs (map (\<lambda>e. aval_sign e (lookup_st s)) es)
+       (enter_sign_st s)"
 
 subsection \<open>Sound input seed: top everywhere\<close>
 
@@ -223,8 +225,9 @@ next
   then show ?thesis apply (auto simp add: sign_tf_def)
     using assume_not_sign_st_commute by presburger
 next
-  case EA_Enter
-  then show ?thesis by (simp add: sign_tf_def enter_sign_st_commute)
+  case (EA_Enter xs es)
+  then show ?thesis
+    by (simp add: sign_tf_def enter_sign_def enter_frame_sign_st_commute)
 qed
 
 subsection \<open>Executable effectful transfer record\<close>
@@ -235,7 +238,8 @@ definition sign_etf_st :: "(unit, sign st) effectful_st_transfer" where
     etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (sign_tf_st (EA_Assign x e))),
     etf_st_assume     = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_Assume b))),
     etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_AssumeNot b))),
-    etf_st_enter      = unit_edge_tree_st (sign_tf_st EA_Enter),
+    etf_st_enter      =
+      (\<lambda>xs es. unit_edge_tree_st (sign_tf_st (EA_Enter xs es))),
     etf_st_combine    = unit_combine_tree_st
   \<rparr>"
 
@@ -244,7 +248,7 @@ lemma sign_etf_st_edge_tree:
   unfolding sign_etf_st_def by (cases a) simp_all
 
 lemma sign_etf_st_combine_tree:
-  "etf_combine_st sign_etf_st cc ex = unit_combine_tree_st cc ex"
+  "etf_combine_st sign_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
   unfolding sign_etf_st_def by simp
 
 lemma sign_etf_st_exists_unit:

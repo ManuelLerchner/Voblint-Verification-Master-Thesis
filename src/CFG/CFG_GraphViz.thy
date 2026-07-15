@@ -79,7 +79,7 @@ definition edge_to_dot :: "pp \<times> edge_action \<times> pp \<Rightarrow> str
 
 definition combine_to_dot :: "combine_info \<Rightarrow> string" where
   "combine_to_dot t =
-     (case t of (call, ex, ret, dst, rex) \<Rightarrow>
+     (case t of (call, ex, ret, dst) \<Rightarrow>
         ''  '' @ string_of_nat ex @ '' -> '' @ string_of_nat ret
               @ '' [style=dashed,color=blue,label=''
               @ dq @ ''combine via call@'' @ string_of_nat call @ dq @ ''];'' @ nl)"
@@ -91,7 +91,7 @@ fun enter_targets :: "(pp \<times> edge_action \<times> pp) list \<Rightarrow> p
 
 fun combine_exits :: "combine_info list \<Rightarrow> pp list" where
   "combine_exits [] = []"
-| "combine_exits ((call, ex, ret, dst, rex) # cs) = ex # combine_exits cs"
+| "combine_exits ((call, ex, ret, dst) # cs) = ex # combine_exits cs"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
   "proc_entry_pps_list g = enter_targets (cfg_edges_list g)"

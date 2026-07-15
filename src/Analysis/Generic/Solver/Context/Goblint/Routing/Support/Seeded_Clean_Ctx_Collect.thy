@@ -38,7 +38,7 @@ lemma traverse_intra_clean:
 subsection \<open>The intra edge bound and the seed bound, from any post-solution\<close>
 
 lemma edge_in_non_enter_pred:
-  assumes "finite (edges g)" and "(u, a, v) \<in> edges g" and "a \<noteq> EA_Enter"
+  assumes "finite (edges g)" and "(u, a, v) \<in> edges g" and "\<not> is_enter_action a"
   shows "(u, a) \<in> set (non_enter_predecessor_list g v)"
 proof (rule non_enter_predecessor_list_mem[OF _ assms(3)])
   have "(u, a, v) \<in> set (cfg_edges_list g)" using assms(1,2) set_cfg_edges_list by blast
@@ -57,12 +57,12 @@ theorem seeded_clean_edge_bound:
     and pp: "part_post_solution
                (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g (clean_etf_of_transfer tf) bot0 s0) x sg vars"
     and cov: "(v, ctx) \<in> vars"
-    and e: "(u, a, v) \<in> edges g" and ne: "a \<noteq> EA_Enter"
+    and e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
   shows "apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
 proof -
   let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf (clean_etf_of_transfer tf) a u)))
                     (non_enter_predecessor_list g v)"
-  let ?comb = "map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)"
+  let ?comb = "map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)"
   let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>)"
   have mem: "(u, a) \<in> set (non_enter_predecessor_list g v)"
@@ -96,7 +96,7 @@ theorem seeded_clean_seed_bound:
 proof -
   let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf (clean_etf_of_transfer tf) a u)))
                     (non_enter_predecessor_list g v)"
-  let ?comb = "map (\<lambda>(cc, ex). cmb ctx cc ex) (combine_predecessor_list g v)"
+  let ?comb = "map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)"
   let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>)"
   have "frame_seed ctx \<le> ?acc0" using fe by simp

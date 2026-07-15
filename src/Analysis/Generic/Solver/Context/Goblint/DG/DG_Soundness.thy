@@ -126,9 +126,9 @@ lemma cfg_collect_semantic_postfix:
       "\<And>u a v s. \<lbrakk>(u, a, v) \<in> edges g;
         s \<in> edge_collect a (B u)\<rbrakk> \<Longrightarrow> s \<in> B v"
     and combine:
-      "\<And>cc ex v s t. \<lbrakk>(cc, ex, v) \<in> combines g;
+      "\<And>cc ex v dst s t. \<lbrakk>(cc, ex, v, dst) \<in> combines g;
         s \<in> B cc; t \<in> B ex\<rbrakk> \<Longrightarrow>
-        combine_states s t \<in> B v"
+        combine_collect dst s t \<in> B v"
   shows "cfg_collect g S0 v \<subseteq> B v"
 proof (rule cfg_collect_post_fixpoint_sound)
   show "cfg_collect_F g S0 B \<le> B"
@@ -151,20 +151,20 @@ locale sound_dg_spec =
            (g', d') \<Rightarrow> gammaDG d' g')"
     and combine_sound:
       "\<lbrakk>s \<in> gammaDG dc g; t \<in> gammaDG de g\<rbrakk> \<Longrightarrow>
-        combine_states s t \<in>
-          (case dgs_combine S dc de g of
+        combine_collect dst s t \<in>
+          (case dgs_combine S dst dc de g of
              (g', d') \<Rightarrow> gammaDG d' g')"
 begin
 
 definition dg_cmb ::
-  "unit \<Rightarrow> pp \<Rightarrow> pp
+  "unit \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
         ('D, 'G) dg_state) strategy_tree"
 where
-  "dg_cmb ctx cc ex =
+  "dg_cmb ctx dst cc ex =
      map_gtree (\<lambda>_. ())
        (map_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree S cc ex))"
+         (dg_spec_combine_tree S dst cc ex))"
 
 definition dg_gen ::
   "cfg \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'G
@@ -205,7 +205,7 @@ where
      map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
        (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u)))
        (non_enter_predecessor_list g v)
-     @ map (\<lambda>(cc, ex). dg_cmb () cc ex)
+     @ map (\<lambda>(cc, ex, dst). dg_cmb () dst cc ex)
        (combine_predecessor_list g v)"
 
 definition dg_acc ::
@@ -246,11 +246,11 @@ where
      (\<forall>u a v. (u, a, v) \<in> edges g \<longrightarrow>
         fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))
           \<le> dg_G sigma) \<and>
-     (\<forall>cc ex v. (cc, ex, v) \<in> combines g \<longrightarrow>
-        snd (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+     (\<forall>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<longrightarrow>
+        snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
           (dg_G sigma)) \<le> dg_D sigma v) \<and>
-     (\<forall>cc ex v. (cc, ex, v) \<in> combines g \<longrightarrow>
-        fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+     (\<forall>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<longrightarrow>
+        fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
           (dg_G sigma)) \<le> dg_G sigma)"
 
 lemma dg_edge_tree_local:
@@ -274,16 +274,16 @@ lemma dg_edge_tree_global:
       sum.map_comp o_def)
 
 lemma dg_combine_tree_local:
-  "locals (traverse_rhs (dg_cmb () cc ex) sigma)
-   = snd (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+  "locals (traverse_rhs (dg_cmb () dst cc ex) sigma)
+   = snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
        (dg_G sigma))"
   unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
   by (subst traverse_intra_cmp)
     (simp add: traverse_dg_combine_tree)
 
 lemma dg_combine_tree_global:
-  "globs (sides_of_rhs (dg_cmb () cc ex) sigma (Inr ()))
-   = fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+  "globs (sides_of_rhs (dg_cmb () dst cc ex) sigma (Inr ()))
+   = fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
        (dg_G sigma))"
   unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
   by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_combine_tree_Inr
@@ -297,9 +297,9 @@ theorem dg_post_solution_postfix:
     and cover_edge:
       "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> (v, ()) \<in> vars"
     and cover_combine:
-      "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow> (v, ()) \<in> vars"
+      "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow> (v, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter"
+    and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
   shows "dg_postfix g s0d s0g sigma"
 proof -
@@ -414,27 +414,27 @@ proof -
   qed
 
   have combine_tree_mem:
-    "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-      dg_cmb () cc ex \<in> set (dg_trees g v)"
+    "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+      dg_cmb () dst cc ex \<in> set (dg_trees g v)"
   proof -
-    fix cc ex v
-    assume comb: "(cc, ex, v) \<in> combines g"
-    have "(cc, ex) \<in> set (combine_predecessor_list g v)"
+    fix cc ex v dst
+    assume comb: "(cc, ex, v, dst) \<in> combines g"
+    have "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
       using comb
       by (simp add: set_combine_predecessor_list[OF finC]
-          combine_predecessors_def)
-    then show "dg_cmb () cc ex \<in> set (dg_trees g v)"
-      by (auto simp: dg_trees_def)
+          combine_predecessors_eq)
+    then show "dg_cmb () dst cc ex \<in> set (dg_trees g v)"
+      by (force simp: dg_trees_def)
   qed
 
   have combineD:
-    "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-      snd (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+      snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma)) \<le> dg_D sigma v"
   proof -
-    fix cc ex v
-    assume comb: "(cc, ex, v) \<in> combines g"
-    have "snd (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    fix cc ex v dst
+    assume comb: "(cc, ex, v, dst) \<in> combines g"
+    have "snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
           (dg_G sigma))
         \<le> side_acc_dg (dg_acc g bot0 s0d v)
           sigma (dg_trees g v)"
@@ -446,18 +446,18 @@ proof -
     also have "... \<le> dg_D sigma v"
       using eq_le[OF cover_combine[OF comb]]
       by (simp add: dg_D_def less_eq_dg_state_def)
-    finally show "snd (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    finally show "snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma)) \<le> dg_D sigma v" .
   qed
 
   have combineG:
-    "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-      fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+      fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma)) \<le> dg_G sigma"
   proof -
-    fix cc ex v
-    assume comb: "(cc, ex, v) \<in> combines g"
-    have "fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    fix cc ex v dst
+    assume comb: "(cc, ex, v, dst) \<in> combines g"
+    have "fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
           (dg_G sigma))
         \<le> globs (sides_of_rhs
           (side_rhs_fold_dg (dg_acc g bot0 s0d v)
@@ -472,7 +472,7 @@ proof -
     also have "... \<le> dg_G sigma"
       using sides_le[OF cover_combine[OF comb], THEN le_funD, of "Inr ()"]
       by (simp add: dg_G_def less_eq_dg_state_def)
-    finally show "fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    finally show "fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma)) \<le> dg_G sigma" .
   qed
 
@@ -531,32 +531,32 @@ next
   then show "s \<in> dg_gamma sigma w"
     using out unfolding dg_gamma_def by blast
 next
-  fix cc ex w s t
-  assume comb: "(cc, ex, w) \<in> combines g"
+  fix cc ex w dst s t
+  assume comb: "(cc, ex, w, dst) \<in> combines g"
     and sin: "s \<in> dg_gamma sigma cc"
     and tin: "t \<in> dg_gamma sigma ex"
   obtain g' d' where cmb:
-      "dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+      "dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma) = (g', d')"
-    by (cases "dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+    by (cases "dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
           (dg_G sigma)") blast
   have sin': "s \<in> gammaDG (dg_D sigma cc) (dg_G sigma)"
     using sin unfolding dg_gamma_def .
   have tin': "t \<in> gammaDG (dg_D sigma ex) (dg_G sigma)"
     using tin unfolding dg_gamma_def .
   have out0:
-      "combine_states s t \<in>
-        (case dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+      "combine_collect dst s t \<in>
+        (case dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
             (dg_G sigma) of
           (g', d') \<Rightarrow> gammaDG d' g')"
     by (rule combine_sound[OF sin' tin'])
-  have out: "combine_states s t \<in> gammaDG d' g'"
+  have out: "combine_collect dst s t \<in> gammaDG d' g'"
     using out0 cmb by simp
   have combineD:
-      "snd (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+      "snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma)) \<le> dg_D sigma w"
     and combineG:
-      "fst (dgs_combine S (dg_D sigma cc) (dg_D sigma ex)
+      "fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma)) \<le> dg_G sigma"
     using pf comb unfolding dg_postfix_def by blast+
   have d_le: "d' \<le> dg_D sigma w"
@@ -565,7 +565,7 @@ next
   have "gammaDG d' g' \<subseteq>
       gammaDG (dg_D sigma w) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
-  then show "combine_states s t \<in> dg_gamma sigma w"
+  then show "combine_collect dst s t \<in> dg_gamma sigma w"
     using out unfolding dg_gamma_def by blast
 qed
 
@@ -577,10 +577,10 @@ corollary dg_post_solution_collect_sound:
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
     and cover_combine:
-      "\<And>cc ex w. (cc, ex, w) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
+      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
     and finE: "finite (edges g)"
     and no_enter:
-      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> a \<noteq> EA_Enter"
+      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
   shows "cfg_collect g S0 v \<subseteq> dg_gamma sigma v"
@@ -617,8 +617,9 @@ where
                                apply_tf tfD (EA_Assume b) d)),
     dgs_assume_not = (\<lambda>b d g. (apply_tf tfG (EA_AssumeNot b) g,
                                apply_tf tfD (EA_AssumeNot b) d)),
-    dgs_enter      = (\<lambda>d g. (apply_tf tfG EA_Enter g, apply_tf tfD EA_Enter d)),
-    dgs_combine    = (\<lambda>dc de g. (combine_abs g g, combine_abs dc de))
+    dgs_enter      = (\<lambda>xs es d g. (apply_tf tfG (EA_Enter xs es) g,
+                                   apply_tf tfD (EA_Enter xs es) d)),
+    dgs_combine    = (\<lambda>dst dc de g. (combine_collect_abs dst g g, combine_collect_abs dst dc de))
   \<rparr>"
 
 lemma dg_spec_step_indep [simp]:
@@ -627,8 +628,8 @@ lemma dg_spec_step_indep [simp]:
   unfolding indep_dg_spec_def by (cases a) simp_all
 
 lemma dgs_combine_indep [simp]:
-  "dgs_combine (indep_dg_spec tfD tfG) dc de g
-   = (combine_abs g g, combine_abs dc de)"
+  "dgs_combine (indep_dg_spec tfD tfG) dst dc de g
+   = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
   unfolding indep_dg_spec_def by simp
 
 lemma sound_dg_spec_indep:
@@ -659,18 +660,16 @@ lemma sound_dg_spec_indep:
       using d_sound g_input g_transfer
       unfolding gamma_dg_def by auto
   qed
-  subgoal for s dc g t de
+  subgoal premises prems for s dc g t de dst
   proof -
-    assume sin: "s \<in> gamma_dg dc g"
-      and tin: "t \<in> gamma_dg de g"
-    have d_sound:
-        "combine_states s t \<in> \<lbrakk>combine_abs dc de\<rbrakk>"
-      using combine_states_sound sin tin
-      unfolding gamma_dg_def by blast
-    have g_sound:
-        "combine_states s t \<in> \<lbrakk>combine_abs g g\<rbrakk>"
-      using combine_states_sound sin tin
-      unfolding gamma_dg_def by blast
+    from prems have sc: "s \<in> \<lbrakk>dc\<rbrakk>" and sg: "s \<in> \<lbrakk>g\<rbrakk>"
+      unfolding gamma_dg_def by blast+
+    from prems have tc: "t \<in> \<lbrakk>de\<rbrakk>" and tg: "t \<in> \<lbrakk>g\<rbrakk>"
+      unfolding gamma_dg_def by blast+
+    have d_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst dc de\<rbrakk>"
+      by (rule combine_collect_sound[OF sc tc])
+    have g_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst g g\<rbrakk>"
+      by (rule combine_collect_sound[OF sg tg])
     show ?thesis
       using d_sound g_sound unfolding gamma_dg_def by simp
   qed
@@ -704,14 +703,13 @@ lemma sound_dg_spec_unit:
     using sound_transfer.edge_collect_apply_tf_sound[OF sound,
       where a = a]
     by (simp add: Let_def restrict_local_global_join)
-  subgoal for s dc g t de
+  subgoal premises prems for s dc g t de dst
   proof -
-    assume sin: "s \<in> gamma_unit dc g"
-      and tin: "t \<in> gamma_unit de g"
-    have "combine_states s t \<in>
-        \<lbrakk>combine_abs (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
-      using combine_states_sound sin tin
-      unfolding gamma_unit_def by blast
+    from prems have sc: "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" and tc: "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>"
+      unfolding gamma_unit_def by blast+
+    have "combine_collect dst s t \<in>
+        \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+      by (rule combine_collect_sound[OF sc tc])
     then show ?thesis
       unfolding unit_dg_spec_def unit_combine_step_def gamma_unit_def
       by (simp add: Let_def restrict_local_global_join

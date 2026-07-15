@@ -30,7 +30,7 @@ proof (induction es arbitrary: acc1 acc2 cs)
     case Nil then show ?case by simp
   next
     case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
+    obtain cc ex dst where x: "x = (cc, ex, dst)" by (cases x)
     show ?case unfolding x
       using Cons.IH[OF sup_mono[OF Cons.prems order_refl]] by (simp add: sup_fun_def)
   qed
@@ -48,8 +48,8 @@ lemma side_acc_eff_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
   assumes comb_mono:
-    "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
-       traverse_rhs (etf_combine etf cc ex) s1 \<le> traverse_rhs (etf_combine etf cc ex) s2"
+    "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
+       traverse_rhs (etf_combine etf dst cc ex) s1 \<le> traverse_rhs (etf_combine etf dst cc ex) s2"
   assumes sigma_le: "sigma1 \<le> sigma2"
   shows "side_acc_eff etf acc sigma1 es cs \<le> side_acc_eff etf acc sigma2 es cs"
 proof (induction es arbitrary: acc cs)
@@ -59,17 +59,17 @@ proof (induction es arbitrary: acc cs)
     case Nil show ?case by simp
   next
     case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have c_le: "traverse_rhs (etf_combine etf cc ex) sigma1
-                  \<le> traverse_rhs (etf_combine etf cc ex) sigma2"
+    obtain cc ex dst where x: "x = (cc, ex, dst)" by (cases x)
+    have c_le: "traverse_rhs (etf_combine etf dst cc ex) sigma1
+                  \<le> traverse_rhs (etf_combine etf dst cc ex) sigma2"
       by (rule comb_mono[OF sigma_le])
     have step1:
-      "side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma1 [] cs
-       \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma2 [] cs"
+      "side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma1) sigma1 [] cs
+       \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma1) sigma2 [] cs"
       by (rule Cons.IH)
     have step2:
-      "side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) sigma2 [] cs
-       \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma2) sigma2 [] cs"
+      "side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma1) sigma2 [] cs
+       \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma2) sigma2 [] cs"
       by (rule side_acc_eff_mono_acc[OF sup_mono[OF order_refl c_le]])
     show ?case unfolding x using order_trans[OF step1 step2] by simp
   qed
@@ -100,8 +100,8 @@ lemma side_cfg_T_eff_is_mono_eq_gen:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
   assumes comb_mono:
-    "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
-       traverse_rhs (etf_combine etf cc ex) s1 \<le> traverse_rhs (etf_combine etf cc ex) s2"
+    "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
+       traverse_rhs (etf_combine etf dst cc ex) s1 \<le> traverse_rhs (etf_combine etf dst cc ex) s2"
   shows "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
   unfolding is_mono_eq_def
 proof (intro allI impI)
@@ -131,11 +131,11 @@ proof (induction es arbitrary: acc1 acc2 cs)
     case Nil show ?case by simp
   next
     case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
+    obtain cc ex dst where x: "x = (cc, ex, dst)" by (cases x)
     have step: "sides_of_rhs (side_rhs_fold_eff etf
-                  (acc1 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma>
+                  (acc1 \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>) [] cs) \<sigma>
               = sides_of_rhs (side_rhs_fold_eff etf
-                  (acc2 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma>"
+                  (acc2 \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>) [] cs) \<sigma>"
       by (rule Cons.IH)
     show ?case unfolding x side_rhs_fold_eff.simps
       using step by (simp add: sides_of_rhs_seqcomp)
@@ -159,8 +159,8 @@ lemma sides_side_rhs_fold_eff_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (apply_etf etf a u) s1 \<le> sides_of_rhs (apply_etf etf a u) s2"
   assumes comb_sides_mono:
-    "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
-       sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
+    "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
+       sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
   assumes sigma_le: "sigma1 \<le> sigma2"
   shows "sides_of_rhs (side_rhs_fold_eff etf acc es cs) sigma1
          \<le> sides_of_rhs (side_rhs_fold_eff etf acc es cs) sigma2"
@@ -171,19 +171,19 @@ proof (induction es arbitrary: acc cs)
     case Nil show ?case by simp
   next
     case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have g_le: "sides_of_rhs (etf_combine etf cc ex) sigma1
-                  \<le> sides_of_rhs (etf_combine etf cc ex) sigma2"
+    obtain cc ex dst where x: "x = (cc, ex, dst)" by (cases x)
+    have g_le: "sides_of_rhs (etf_combine etf dst cc ex) sigma1
+                  \<le> sides_of_rhs (etf_combine etf dst cc ex) sigma2"
       by (rule comb_sides_mono[OF sigma_le])
     have ih: "sides_of_rhs (side_rhs_fold_eff etf
-                (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) [] cs) sigma1
+                (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma1) [] cs) sigma1
             \<le> sides_of_rhs (side_rhs_fold_eff etf
-                (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) [] cs) sigma2"
+                (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma1) [] cs) sigma2"
       by (rule Cons.IH)
     have rest_le: "sides_of_rhs (side_rhs_fold_eff etf
-                     (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma1) [] cs) sigma1
+                     (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma1) [] cs) sigma1
                  \<le> sides_of_rhs (side_rhs_fold_eff etf
-                     (acc \<squnion> traverse_rhs (etf_combine etf cc ex) sigma2) [] cs) sigma2"
+                     (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) sigma2) [] cs) sigma2"
       using ih sides_side_rhs_fold_eff_acc_indep by metis
     show ?case unfolding x side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp) (rule sup_mono[OF g_le rest_le])
@@ -228,8 +228,8 @@ lemma side_cfg_T_eff_mono_sides_gen:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (apply_etf etf a u) s1 \<le> sides_of_rhs (apply_etf etf a u) s2"
   assumes comb_sides_mono:
-    "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
-       sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
+    "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
+       sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
   shows "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
 proof (unfold mono_sides_def, intro allI impI)
   fix w :: pp and \<sigma>1 \<sigma>2 :: "pp + 'g \<Rightarrow> 'a abs_state"
@@ -270,7 +270,7 @@ text \<open>
 lemma dep_aux_side_rhs_fold_eff_indep:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-      and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+      and comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "dep_aux \<sigma>1 (side_rhs_fold_eff etf acc1 es cs)
        = dep_aux \<sigma>2 (side_rhs_fold_eff etf acc2 es cs)"
 proof (induction es arbitrary: acc1 acc2 cs \<sigma>1 \<sigma>2)
@@ -280,13 +280,13 @@ proof (induction es arbitrary: acc1 acc2 cs \<sigma>1 \<sigma>2)
     case Nil show ?case by simp
   next
     case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have e: "dep_aux \<sigma>1 (etf_combine etf cc ex) = dep_aux \<sigma>2 (etf_combine etf cc ex)"
+    obtain cc ex dst where x: "x = (cc, ex, dst)" by (cases x)
+    have e: "dep_aux \<sigma>1 (etf_combine etf dst cc ex) = dep_aux \<sigma>2 (etf_combine etf dst cc ex)"
       using comb_static unfolding static_deps_def by blast
     have ih: "dep_aux \<sigma>1 (side_rhs_fold_eff etf
-                (acc1 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>1) [] cs)
+                (acc1 \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>1) [] cs)
             = dep_aux \<sigma>2 (side_rhs_fold_eff etf
-                (acc2 \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>2) [] cs)"
+                (acc2 \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>2) [] cs)"
       by (rule Cons.IH)
     show ?case unfolding x side_rhs_fold_eff.simps
       by (simp add: dep_aux_seqcomp e ih)
@@ -318,7 +318,7 @@ lemma side_cfg_T_eff_mono_deps_gen:
     and etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and bot0 s0 :: "'a abs_state" and gseed :: 'g
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-      and comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+      and comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "mono_deps (side_cfg_T_eff g etf bot0 s0 gseed)"
   unfolding mono_deps_def side_cfg_T_eff_def dep_def
   apply clarify
@@ -339,8 +339,8 @@ proof (induction es arbitrary: acc cs)
     case Nil show ?case by simp
   next
     case (Cons x cs)
-    obtain cc ex where x: "x = (cc, ex)" by (cases x)
-    have "acc \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) \<sigma> [] cs"
+    obtain cc ex dst where x: "x = (cc, ex, dst)" by (cases x)
+    have "acc \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>) \<sigma> [] cs"
       by (meson Cons.IH sup_ge1 order_trans)
     then show ?case unfolding x by (simp only: side_acc_eff.simps)
   qed
@@ -397,26 +397,26 @@ qed
 
 lemma traverse_le_side_acc_eff_combine_nil:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "(cc, ex) \<in> set cs \<Longrightarrow>
-         traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] cs"
+  shows "(cc, ex, dst) \<in> set cs \<Longrightarrow>
+         traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] cs"
 proof (induction cs arbitrary: acc)
   case Nil thus ?case by simp
 next
   case (Cons x cs)
-  obtain c2 e2 where x: "x = (c2, e2)" by (cases x)
-  from Cons.prems x consider (hd) "(cc, ex) = (c2, e2)" | (tl) "(cc, ex) \<in> set cs" by auto
+  obtain c2 e2 d2 where x: "x = (c2, e2, d2)" by (cases x)
+  from Cons.prems x consider (hd) "(cc, ex, dst) = (c2, e2, d2)" | (tl) "(cc, ex, dst) \<in> set cs" by auto
   then show ?case
   proof cases
     case hd
-    then have cc2: "cc = c2" and exe2: "ex = e2" by auto
-    have "traverse_rhs (etf_combine etf c2 e2) \<sigma>
-          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) \<sigma> [] cs"
+    then have cc2: "cc = c2" and exe2: "ex = e2" and dd2: "dst = d2" by auto
+    have "traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>
+          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) \<sigma> [] cs"
       using side_acc_eff_ge_acc sup_ge2 order_trans by blast
-    thus ?thesis unfolding x cc2 exe2 by (simp only: side_acc_eff.simps)
+    thus ?thesis unfolding x cc2 exe2 dd2 by (simp only: side_acc_eff.simps)
   next
     case tl
-    have "traverse_rhs (etf_combine etf cc ex) \<sigma>
-          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) \<sigma> [] cs"
+    have "traverse_rhs (etf_combine etf dst cc ex) \<sigma>
+          \<le> side_acc_eff etf (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) \<sigma> [] cs"
       by (rule Cons.IH[OF tl])
     thus ?thesis unfolding x by (simp only: side_acc_eff.simps)
   qed
@@ -424,8 +424,8 @@ qed
 
 lemma traverse_le_side_acc_eff_combine:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes "(cc, ex) \<in> set cs"
-  shows "traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> es cs"
+  assumes "(cc, ex, dst) \<in> set cs"
+  shows "traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> es cs"
   using traverse_le_side_acc_eff_combine_nil[OF assms] side_acc_eff_es_mono
   by (rule order_trans)
 
@@ -459,26 +459,26 @@ qed
 
 lemma sides_le_side_rhs_fold_eff_combine_nil:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  shows "(cc, ex) \<in> set cs \<Longrightarrow>
-         sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr gg)
+  shows "(cc, ex, dst) \<in> set cs \<Longrightarrow>
+         sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr gg)
            \<le> sides_of_rhs (side_rhs_fold_eff etf acc [] cs) \<sigma> (Inr gg)"
 proof (induction cs arbitrary: acc)
   case Nil thus ?case by simp
 next
   case (Cons x cs)
-  obtain c2 e2 where x: "x = (c2, e2)" by (cases x)
-  from Cons.prems x consider (hd) "(cc, ex) = (c2, e2)" | (tl) "(cc, ex) \<in> set cs" by auto
+  obtain c2 e2 d2 where x: "x = (c2, e2, d2)" by (cases x)
+  from Cons.prems x consider (hd) "(cc, ex, dst) = (c2, e2, d2)" | (tl) "(cc, ex, dst) \<in> set cs" by auto
   then show ?case
   proof cases
     case hd
-    then have cc2: "cc = c2" and exe2: "ex = e2" by auto
-    show ?thesis unfolding x cc2 exe2 side_rhs_fold_eff.simps
+    then have cc2: "cc = c2" and exe2: "ex = e2" and dd2: "dst = d2" by auto
+    show ?thesis unfolding x cc2 exe2 dd2 side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp_at) (rule sup_ge1)
   next
     case tl
-    have ih: "sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr gg)
+    have ih: "sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr gg)
           \<le> sides_of_rhs (side_rhs_fold_eff etf
-               (acc \<squnion> traverse_rhs (etf_combine etf c2 e2) \<sigma>) [] cs) \<sigma> (Inr gg)"
+               (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) [] cs) \<sigma> (Inr gg)"
       by (rule Cons.IH[OF tl])
     show ?thesis unfolding x side_rhs_fold_eff.simps
       by (simp only: sides_of_rhs_seqcomp_at) (rule le_supI2[OF ih])
@@ -511,8 +511,8 @@ qed
 
 lemma sides_le_side_rhs_fold_eff_combine:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes "(cc, ex) \<in> set cs"
-  shows "sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr gg)
+  assumes "(cc, ex, dst) \<in> set cs"
+  shows "sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr gg)
          \<le> sides_of_rhs (side_rhs_fold_eff etf acc es cs) \<sigma> (Inr gg)"
   using sides_le_side_rhs_fold_eff_combine_nil[OF assms]
         sides_side_rhs_fold_eff_es_mono
@@ -598,31 +598,31 @@ lemma etf_combine_combined_le_eff:
     and gseed :: 'g
   assumes pp:   "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma> vars"
       and v:    "v \<in> vars"
-      and e:    "(cc, ex, v) \<in> combines g"
+      and e:    "(cc, ex, v, dst) \<in> combines g"
       and finC: "finite (combines g)"
-  shows "etf_full (etf_combine etf cc ex) \<sigma> \<le> side_env \<sigma> v"
+  shows "etf_full (etf_combine etf dst cc ex) \<sigma> \<le> side_env \<sigma> v"
 proof -
-  have mem: "(cc, ex) \<in> set (combine_predecessor_list g v)"
-    using e by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_def)
-  have loc: "traverse_rhs (etf_combine etf cc ex) \<sigma> \<le> \<sigma> (Inl v)"
+  have mem: "(cc, ex, dst) \<in> set (combine_predecessor_list g v)"
+    using e by (simp add: set_combine_predecessor_list[OF finC] combine_predecessors_eq)
+  have loc: "traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> \<sigma> (Inl v)"
     using traverse_le_side_acc_eff_combine[OF mem]
           side_post_solution_le_local_eff[OF pp v]
     by (rule order_trans)
-  have glob_name: "\<And>gg. sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr gg) \<le> \<sigma> (Inr gg)"
+  have glob_name: "\<And>gg. sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr gg) \<le> \<sigma> (Inr gg)"
     using sides_le_side_rhs_fold_eff_combine[OF mem]
           sides_fold_le_side_cfg_T_eff
           side_post_solution_le_global_eff[OF pp v]
     by (meson order_trans)
-  have glob: "all_sides (etf_combine etf cc ex) \<sigma> \<le> glob_env \<sigma>"
+  have glob: "all_sides (etf_combine etf dst cc ex) \<sigma> \<le> glob_env \<sigma>"
   proof -
-    have "all_sides (etf_combine etf cc ex) \<sigma>
-          \<le> glob_env (sides_of_rhs (etf_combine etf cc ex) \<sigma>)"
+    have "all_sides (etf_combine etf dst cc ex) \<sigma>
+          \<le> glob_env (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>)"
       by (rule all_sides_le_glob_env_sides)
     also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono_Inr) (rule glob_name)
     finally show ?thesis .
   qed
-  have "etf_full (etf_combine etf cc ex) \<sigma>
-        = traverse_rhs (etf_combine etf cc ex) \<sigma> \<squnion> all_sides (etf_combine etf cc ex) \<sigma>"
+  have "etf_full (etf_combine etf dst cc ex) \<sigma>
+        = traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<squnion> all_sides (etf_combine etf dst cc ex) \<sigma>"
     by (simp add: etf_full_def)
   also have "\<dots> \<le> \<sigma> (Inl v) \<squnion> glob_env \<sigma>" using loc glob by (rule sup_mono)
   finally show ?thesis unfolding side_env_def .
@@ -681,7 +681,7 @@ lemma sides_side_rhs_fold_eff_Inr_local_bot:
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   shows "local_bot_on_locals (sides_of_rhs (side_rhs_fold_eff etf acc ps cs) \<sigma> (Inr u))"
 proof (induction ps arbitrary: acc cs)
   case Nil
@@ -691,12 +691,12 @@ proof (induction ps arbitrary: acc cs)
     show ?case unfolding local_bot_on_locals_def by simp
   next
     case (Cons ce cs)
-    obtain cc ex where ce: "ce = (cc, ex)" by (cases ce)
-    have tree: "local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma> (Inr u))"
+    obtain cc ex dst where ce: "ce = (cc, ex, dst)" by (cases ce)
+    have tree: "local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr u))"
       by (rule comb_inr)
     have rest: "local_bot_on_locals
           (sides_of_rhs (side_rhs_fold_eff etf
-             (acc \<squnion> traverse_rhs (etf_combine etf cc ex) \<sigma>) [] cs) \<sigma> (Inr u))"
+             (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>) [] cs) \<sigma> (Inr u))"
       by (rule Cons.IH)
     show ?case unfolding ce side_rhs_fold_eff.simps sides_of_rhs_seqcomp_at
       by (rule local_bot_join[OF tree rest])
@@ -720,7 +720,7 @@ lemma sides_make_side_rhs_tree_eff_Inr_local_bot:
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   shows "local_bot_on_locals (sides_of_rhs (make_side_rhs_tree_eff g etf bot0 s0 gseed v) \<sigma> (Inr u))"
   unfolding make_side_rhs_tree_eff_def Let_def
   apply (cases "v = cfg_entry g")
@@ -737,7 +737,7 @@ lemma sides_side_cfg_T_eff_Inr_local_bot:
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   shows "local_bot_on_locals (sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed v) \<sigma> (Inr u))"
   unfolding side_cfg_T_eff_def
   by (rule sides_make_side_rhs_tree_eff_Inr_local_bot[OF edge_inr comb_inr])
@@ -749,9 +749,9 @@ lemma part_post_solution_strip_inr_globals_eff:
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   assumes mono_eq: "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
   assumes mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
   shows "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x (strip_inr_globals \<sigma>) vars"
@@ -848,9 +848,9 @@ lemma least_part_post_solution_inr_slot_locals_bot_eff:
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   assumes mono_eq: "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
   assumes mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
   shows "inr_slot_locals_bot \<sigma>"

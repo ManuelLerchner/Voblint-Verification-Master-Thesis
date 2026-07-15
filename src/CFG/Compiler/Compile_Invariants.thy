@@ -63,7 +63,7 @@ where
      in (n1 + 1, n, n1))"
 | "compile_endpoint_shape Pi lay (IMP2_Proc.com.Call dst p actuals) n =
     (case (Pi p, lay p) of (Some decl, Some info) \<Rightarrow> (n + 2, n, n + 1) | _ \<Rightarrow> (n + 2, n, n))"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.RestoreInternal r) n = (n, n, n)"
+| "compile_endpoint_shape Pi lay IMP2_Proc.com.Restore n = (n, n, n)"
 
 lemma compile_endpoints_eq_shape:
   "compile_endpoints \<Pi> lay cmd n = compile_endpoint_shape \<Pi> lay cmd n"
@@ -107,7 +107,7 @@ proof -
       using domain
       apply (cases "lay1 p"; cases "lay2 p") apply(auto) by (metis option.simps(5))
   next
-    case (RestoreInternal r)
+    case Restore
     then show ?case by simp
   qed
 show ?thesis
@@ -194,7 +194,7 @@ next
     qed
   qed
 next
-  case (RestoreInternal r)
+  case Restore
   show ?case by simp
 qed
 
@@ -214,9 +214,9 @@ next
   obtain decl where decl: "\<Pi> a = Some decl"
     using Cons.prems(3) by auto
   obtain n1 en ex E C where comp:
-      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (body decl) n =
+      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (with_result (body decl) (result decl)) n =
         (n1, en, ex, E, C)"
-    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (body decl) n") auto
+    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (with_result (body decl) (result decl)) n") auto
   have rec:
       "compile_procs_layout \<Pi> ps
         (lay(a := Some (en, ex, {n..<n1}, {}, {}))) n1 =
@@ -268,9 +268,9 @@ next
     case (Some decl)
     note proc = Some
     obtain k en ex E C where comp:
-        "compile Pi (known_proc_layout Pi (a # ps) lay) (body decl) n =
+        "compile Pi (known_proc_layout Pi (a # ps) lay) (with_result (body decl) (result decl)) n =
           (k, en, ex, E, C)"
-      by (cases "compile Pi (known_proc_layout Pi (a # ps) lay) (body decl) n")
+      by (cases "compile Pi (known_proc_layout Pi (a # ps) lay) (with_result (body decl) (result decl)) n")
          auto
     show ?thesis
     proof (cases "lay a")
@@ -318,10 +318,10 @@ next
     using Cons.prems(3) by auto
   obtain k head_en head_ex head_E head_C where comp:
       "compile Pi (known_proc_layout Pi (a # ps) in_lay)
-        (body head_decl) n =
+        (with_result (body head_decl) (result head_decl)) n =
         (k, head_en, head_ex, head_E, head_C)"
     by (cases "compile Pi
-      (known_proc_layout Pi (a # ps) in_lay) (body head_decl) n") auto
+      (known_proc_layout Pi (a # ps) in_lay) (with_result (body head_decl) (result head_decl)) n") auto
   define next_lay where
     "next_lay =
       in_lay(a := Some (head_en, head_ex, {n..<k}, {}, {}))"
@@ -373,8 +373,8 @@ next
     case (Some decl)
     note proc = Some
     obtain k en ex Ea Ca where comp:
-        "compile \<Pi> base_lay (body decl) n = (k, en, ex, Ea, Ca)"
-      by (cases "compile \<Pi> base_lay (body decl) n") auto
+        "compile \<Pi> base_lay (with_result (body decl) (result decl)) n = (k, en, ex, Ea, Ca)"
+      by (cases "compile \<Pi> base_lay (with_result (body decl) (result decl)) n") auto
     show ?thesis
     proof (cases "lay a")
       case None
@@ -417,7 +417,7 @@ lemma compile_procs_bodies_lookup:
       and lookup:
         "out_lay p = Some (en, ex, Ns, Ep, Cp)"
   shows "\<exists>start finish.
-    compile Pi base_lay (body decl) start = (finish, en, ex, Ep, Cp)"
+    compile Pi base_lay (with_result (body decl) (result decl)) start = (finish, en, ex, Ep, Cp)"
   using distinct fresh bodies member proc lookup
 proof (induction ps arbitrary: in_lay n n' out_lay E C p decl
     en ex Ns Ep Cp)
@@ -441,9 +441,9 @@ next
     case (Some head_decl)
     note head = Some
     obtain k head_en head_ex head_E head_C where comp:
-        "compile Pi base_lay (body head_decl) n =
+        "compile Pi base_lay (with_result (body head_decl) (result head_decl)) n =
           (k, head_en, head_ex, head_E, head_C)"
-      by (cases "compile Pi base_lay (body head_decl) n") auto
+      by (cases "compile Pi base_lay (with_result (body head_decl) (result head_decl)) n") auto
     define next_lay where
       "next_lay =
         in_lay(a := Some
@@ -515,9 +515,9 @@ next
   obtain decl where decl: "\<Pi> a = Some decl"
     using Cons.prems(4) by auto
   obtain k en1 ex1 E1 C1 where first:
-      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (body decl) start =
+      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (with_result (body decl) (result decl)) start =
         (k, en1, ex1, E1, C1)"
-    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (body decl) start")
+    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (with_result (body decl) (result decl)) start")
        auto
   define next_lay where
     "next_lay = in_lay(a := Some (en1, ex1, {start..<k}, {}, {}))"
@@ -527,8 +527,8 @@ next
     by (simp add: next_lay_def)
 
   obtain k' en2 ex2 E2 C2 where second:
-      "compile \<Pi> base_lay (body decl) start = (k', en2, ex2, E2, C2)"
-    by (cases "compile \<Pi> base_lay (body decl) start") auto
+      "compile \<Pi> base_lay (with_result (body decl) (result decl)) start = (k', en2, ex2, E2, C2)"
+    by (cases "compile \<Pi> base_lay (with_result (body decl) (result decl)) start") auto
   define next_full where
     "next_full =
       in_full(a := Some (en2, ex2, {start..<k'}, E2, C2))"
@@ -708,8 +708,8 @@ next
     case (Some decl)
     note proc = Some
     obtain n1 en1 ex1 E1 C1 where comp:
-        "compile \<Pi> base_lay (body decl) n = (n1, en1, ex1, E1, C1)"
-      by (cases "compile \<Pi> base_lay (body decl) n") auto
+        "compile \<Pi> base_lay (with_result (body decl) (result decl)) n = (n1, en1, ex1, E1, C1)"
+      by (cases "compile \<Pi> base_lay (with_result (body decl) (result decl)) n") auto
     show ?thesis
     proof (cases "in_lay a")
       case None
@@ -769,7 +769,7 @@ lemma compile_call_defined:
   shows "compile \<Pi> lay (Call dst p actuals) n =
     (n + 2, n, n + 1,
       {(n, EA_Enter (formals decl) actuals, en)},
-      {(n, ex, n + 1, dst, result decl)})"
+      {(n, ex, n + 1, dst)})"
 using proc layout by simp
 
 end

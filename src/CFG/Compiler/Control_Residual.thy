@@ -80,12 +80,12 @@ where
        (n1, en, scope_ex, E, C) \<Longrightarrow>
      control_at Pi lay cbody (n + 1) residual v sites \<Longrightarrow>
      control_at Pi lay (IMP2_Proc.com.Scope cbody) n
-       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.RestoreInternal None))
+       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.Restore))
        v (sites @ [(n, scope_ex, None)])"
 | ScopeRestore:
     "compile Pi lay cbody (n + 1) = (n1, en, body_ex, E, C) \<Longrightarrow>
      control_at Pi lay (IMP2_Proc.com.Scope cbody) n
-       (IMP2_Proc.com.RestoreInternal None) body_ex [(n, n1, None)]"
+       (IMP2_Proc.com.Restore) body_ex [(n, n1, None)]"
 | ScopeDone:
     "compile Pi lay (IMP2_Proc.com.Scope cbody) n =
        (n1, en, scope_ex, E, C) \<Longrightarrow>
@@ -97,17 +97,17 @@ where
 | CallBody:
     "Pi p = Some decl \<Longrightarrow>
      lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
-     compile Pi lay (body decl) proc_en =
+     compile Pi lay (with_result (body decl) (result decl)) proc_en =
        (n1, body_en, proc_ex, E, C) \<Longrightarrow>
-     control_at Pi lay (body decl) proc_en residual v sites \<Longrightarrow>
+     control_at Pi lay (with_result (body decl) (result decl)) proc_en residual v sites \<Longrightarrow>
      control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
-       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.RestoreInternal (result decl)))
+       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.Restore))
        v (sites @ [(n, n + 1, dst)])"
 | CallRestore:
     "Pi p = Some decl \<Longrightarrow>
      lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
      control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
-       (IMP2_Proc.com.RestoreInternal (result decl)) proc_ex [(n, n + 1, dst)]"
+       (IMP2_Proc.com.Restore) proc_ex [(n, n + 1, dst)]"
 
 | CallDone:
     "Pi p = Some decl \<Longrightarrow>
@@ -151,7 +151,7 @@ next
   case Call
   show ?case by (rule control_at.CallHead)
 next
-  case (RestoreInternal r)
+  case Restore
   then show ?case by simp
 qed
 
@@ -189,7 +189,7 @@ next
   case Call
   then show ?case by (simp split: option.splits)
 next
-  case (RestoreInternal r)
+  case Restore
   then show ?case by simp
 qed
 
@@ -216,7 +216,7 @@ lemma compile_procs_list_body:
       and lookup:
         "full_lay p = Some (en, ex, Ns, Ep, Cp)"
   shows "\<exists>finish.
-    compile Pi full_lay (body decl) en = (finish, en, ex, Ep, Cp)"
+    compile Pi full_lay (with_result (body decl) (result decl)) en = (finish, en, ex, Ep, Cp)"
 proof -
   obtain nbase base_lay where layout:
       "compile_procs_layout Pi ps (\<lambda>_. None) 0 =
@@ -230,26 +230,26 @@ proof -
   have distinct: "distinct ps"
     using wf by (auto simp: wf_compile_input_def)
   have compiled_info:
-      "\<exists>start finish. compile Pi base_lay (body decl) start =
+      "\<exists>start finish. compile Pi base_lay (with_result (body decl) (result decl)) start =
         (finish, en, ex, Ep, Cp)"
     by (rule compile_procs_bodies_lookup[
           OF distinct _ bodies member proc lookup])
        simp
   then obtain start finish where compiled_base:
-      "compile Pi base_lay (body decl) start =
+      "compile Pi base_lay (with_result (body decl) (result decl)) start =
         (finish, en, ex, Ep, Cp)"
     by blast
   have agree: "layouts_agree base_lay full_lay"
     by (rule compile_procs_pass_layouts_agree[
           OF wf layout bodies])
   have same:
-      "compile Pi base_lay (body decl) start =
-       compile Pi full_lay (body decl) start"
+      "compile Pi base_lay (with_result (body decl) (result decl)) start =
+       compile Pi full_lay (with_result (body decl) (result decl)) start"
     by (rule compile_layouts_agree[OF agree])
   have start: "start = en"
     by (rule sym, rule compile_entry_eq[OF compiled_base])
   have compiled_full:
-      "compile Pi full_lay (body decl) start =
+      "compile Pi full_lay (with_result (body decl) (result decl)) start =
         (finish, en, ex, Ep, Cp)"
     using compiled_base same by simp
   show ?thesis

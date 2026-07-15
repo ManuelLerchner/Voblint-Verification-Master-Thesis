@@ -36,17 +36,17 @@ definition side_proc_global_s0 :: "sign abs_state" where
 theorem proc_global_side_sign_analysis:
   fixes s t :: store
   assumes s_sound: "s \<in> \<lbrakk>side_proc_global_s0\<rbrakk>"
-  assumes runs: "cfg_runs_to inc_pi [''p''] (Call ''p'') s t"
+  assumes runs: "cfg_runs_to inc_pi [''p''] (Call None ''p'' []) s t"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call ''p'')) sign_etf bot
+    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call None ''p'' [])) sign_etf bot
        side_proc_global_s0 ()
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
-  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (Call ''p'') sign_etf bot side_proc_global_s0 ()
-         (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))\<rbrakk>"
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
+  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (Call None ''p'' []) sign_etf bot side_proc_global_s0 ()
+         (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))\<rbrakk>"
 proof -
   have collect_exit:
-    "t \<in> cfg_collect (compile_prog inc_pi [''p''] (Call ''p'')) {s}
-       (cfg_exit (compile_prog inc_pi [''p''] (Call ''p'')))"
+    "t \<in> cfg_collect (compile_prog inc_pi [''p''] (Call None ''p'' [])) {s}
+       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
     using runs unfolding cfg_runs_to_def
     by metis
   show ?thesis
@@ -59,7 +59,7 @@ definition inc_procs :: "pname list" where
   "inc_procs = [''p'']"
 
 definition inc_main :: com where
-  "inc_main = Call ''p''"
+  "inc_main = Call None ''p'' []"
 
 definition inc_prog :: imp_prog where
   "inc_prog = (inc_procs, inc_pi, inc_main)"

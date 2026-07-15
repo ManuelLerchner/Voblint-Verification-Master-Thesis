@@ -99,7 +99,7 @@ fun to_imp2_com :: "IMP2_Proc.com => Syntax.com" where
 | "to_imp2_com (IMP2_Proc.com.Scope c) = Syntax.Scope (to_imp2_com c)"
 | "to_imp2_com (IMP2_Proc.com.Call None p []) = Syntax.PCall p"
 | "to_imp2_com (IMP2_Proc.com.Call dst p actuals) = Syntax.SKIP"
-| "to_imp2_com (IMP2_Proc.com.RestoreInternal r) = Syntax.SKIP"
+| "to_imp2_com IMP2_Proc.com.Restore = Syntax.SKIP"
 
 definition to_imp2_pi :: "proc_table => Syntax.program" where
   "to_imp2_pi \<Pi> = (%p. map_option (%decl. Syntax.Scope (to_imp2_com (body decl))) (\<Pi> p))"
@@ -197,7 +197,7 @@ lemma proj0_null_combine:
 (* -- Source programs: user syntax vs AFP-bridge subset ---------------- *)
 
 (*
-  RestoreInternal is runtime-only and never appears in source programs.
+  Restore is runtime-only and never appears in source programs.
   source_com captures that broad source-language property. The AFP bridge is
   stricter: direct translation to parameterless PCall only covers the legacy
   subset with nullary calls and procedures without formals or results.
@@ -211,10 +211,15 @@ fun source_com :: "IMP2_Proc.com => bool" where
 | "source_com (IMP2_Proc.com.While b c) = source_com c"
 | "source_com (IMP2_Proc.com.Scope c) = source_com c"
 | "source_com (IMP2_Proc.com.Call dst p actuals) = True"
-| "source_com (IMP2_Proc.com.RestoreInternal r) = False"
+| "source_com IMP2_Proc.com.Restore = False"
 
 definition source_pi :: "proc_table => bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
+
+(* Publishing the result appends an assignment, which stays in the source language. *)
+lemma source_com_with_result [simp]:
+  "source_com (with_result c r) = source_com c"
+  by (cases r) auto
 
 fun bridge_com :: "IMP2_Proc.com => bool" where
   "bridge_com IMP2_Proc.com.SKIP = True"
@@ -225,7 +230,7 @@ fun bridge_com :: "IMP2_Proc.com => bool" where
 | "bridge_com (IMP2_Proc.com.Scope c) = bridge_com c"
 | "bridge_com (IMP2_Proc.com.Call None p []) = True"
 | "bridge_com (IMP2_Proc.com.Call dst p actuals) = False"
-| "bridge_com (IMP2_Proc.com.RestoreInternal r) = False"
+| "bridge_com IMP2_Proc.com.Restore = False"
 
 definition bridge_pi :: "proc_table => bool" where
   "bridge_pi \<Pi> =

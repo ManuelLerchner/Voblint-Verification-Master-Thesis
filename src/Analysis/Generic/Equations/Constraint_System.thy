@@ -1,5 +1,7 @@
 theory Constraint_System
-  imports "Voblint_CFG.CFG_Def" Abstract_Domain "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr" "TD.Basics_side"
+  imports "Voblint_CFG.CFG_Def" "Voblint_CFG.CFG_Collect" Abstract_Domain
+    "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Proc"
+    "TD.Basics_side"
 begin
 
 section \<open>Equation system over a CFG\<close>
@@ -37,7 +39,7 @@ record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)"
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
-  tf_enter     :: "('a abs_state) => ('a abs_state)"
+  tf_enter     :: "vname list => aexp list => ('a abs_state) => ('a abs_state)"
 
 subsection \<open>Apply transfer function to one edge\<close>
 
@@ -49,7 +51,7 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Assign x a)     \<sigma> = tf_assign tf x a \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
-  | "apply_tf tf EA_Enter            \<sigma> = tf_enter tf \<sigma>"
+  | "apply_tf tf (EA_Enter xs es)    \<sigma> = tf_enter tf xs es \<sigma>"
 
 subsection \<open>Abstract join over a set\<close>
 
@@ -292,6 +294,154 @@ proof -
     using Vc Ve by auto
 qed
 
+text \<open>
+  Abstract counterpart of @{const bind_formals}: bind each formal to the abstract
+  value of the matching actual.  Mirrors Goblint's make_entry, which evaluates the
+  arguments in the caller and binds them to the callee's formals.
+\<close>
+definition bind_formals_abs ::
+    "vname list \<Rightarrow> 'a list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "bind_formals_abs xs avs \<sigma> = fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (zip xs avs) \<sigma>"
+
+lemma gamma_state_upd:
+  fixes \<sigma> :: "'a::sound_domain abs_state"
+  assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and v: "v \<in> gamma a"
+  shows "s(x := v) \<in> \<lbrakk>\<sigma>(x := a)\<rbrakk>"
+  using s v unfolding gamma_state_def by auto
+
+text \<open>
+  Binding formals preserves soundness: pointwise-sound actual values bound to the
+  same formals yield a sound entry state.
+\<close>
+lemma bind_formals_abs_sound:
+  fixes \<sigma> :: "'a::sound_domain abs_state"
+  assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+    and vals: "list_all2 (\<lambda>v a. v \<in> gamma a) vs avs"
+  shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals_abs xs avs \<sigma>\<rbrakk>"
+  using vals s
+proof (induction xs arbitrary: vs avs s \<sigma>)
+  case Nil
+  then show ?case
+    by (simp add: bind_formals_def bind_formals_abs_def)
+next
+  case (Cons x xs)
+  show ?case
+  proof (cases vs)
+    case Nil
+    then show ?thesis
+      using Cons.prems
+      by (simp add: bind_formals_def bind_formals_abs_def)
+  next
+    case (Cons v vs')
+    then obtain a avs' where avs: "avs = a # avs'"
+      using Cons.prems(1) by (cases avs) auto
+    have v_a: "v \<in> gamma a"
+      using Cons.prems(1) unfolding Cons avs by simp
+    have rest: "list_all2 (\<lambda>v a. v \<in> gamma a) vs' avs'"
+      using Cons.prems(1) unfolding Cons avs by simp
+    have upd: "s(x := v) \<in> \<lbrakk>\<sigma>(x := a)\<rbrakk>"
+      by (rule gamma_state_upd[OF Cons.prems(2) v_a])
+    have "bind_formals xs vs' (s(x := v))
+            \<in> \<lbrakk>bind_formals_abs xs avs' (\<sigma>(x := a))\<rbrakk>"
+      by (rule Cons.IH[OF rest upd])
+    then show ?thesis
+      unfolding Cons avs bind_formals_def bind_formals_abs_def by simp
+  qed
+qed
+
+lemma bind_formals_abs_mono:
+  fixes \<sigma>1 \<sigma>2 :: "'a::order abs_state"
+  assumes base: "\<sigma>1 \<le> \<sigma>2"
+    and vals: "list_all2 (\<le>) avs1 avs2"
+  shows "bind_formals_abs xs avs1 \<sigma>1 \<le> bind_formals_abs xs avs2 \<sigma>2"
+  using vals base
+proof (induction xs arbitrary: avs1 avs2 \<sigma>1 \<sigma>2)
+  case Nil
+  then show ?case by (simp add: bind_formals_abs_def)
+next
+  case (Cons x xs)
+  show ?case
+  proof (cases avs1)
+    case Nil
+    then show ?thesis
+      using Cons.prems by (simp add: bind_formals_abs_def)
+  next
+    case (Cons a avs1')
+    then obtain b avs2' where avs2: "avs2 = b # avs2'"
+      using Cons.prems(1) by (cases avs2) auto
+    have ab: "a \<le> b" using Cons.prems(1) unfolding Cons avs2 by simp
+    have rest: "list_all2 (\<le>) avs1' avs2'"
+      using Cons.prems(1) unfolding Cons avs2 by simp
+    have upd: "\<sigma>1(x := a) \<le> \<sigma>2(x := b)"
+      using Cons.prems(2) ab by (simp add: le_fun_def)
+    show ?thesis
+      unfolding Cons avs2
+      using Cons.IH[OF rest upd]
+      by (simp add: bind_formals_abs_def fun_upd_def)
+  qed
+qed
+
+text \<open>
+  Abstract counterpart of @{const combine_assign}: write the callee's return slot
+  into the caller's destination, or leave the caller untouched when the call
+  discards its result.
+\<close>
+fun combine_assign_abs ::
+    "vname option \<Rightarrow> 'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+    "combine_assign_abs None _ \<sigma> = \<sigma>"
+  | "combine_assign_abs (Some x) v \<sigma> = \<sigma>(x := v)"
+
+text \<open>
+  Abstract counterpart of @{const combine_collect}: Goblint's combine_env
+  (@{const combine_abs}) followed by combine_assign, reading the callee's
+  @{const ret_var}.  The result is published through the ordinary state update,
+  so no domain-specific return machinery is needed.
+\<close>
+definition combine_collect_abs ::
+    "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "combine_collect_abs dst \<sigma>c \<sigma>e = combine_assign_abs dst (\<sigma>e ret_var) \<langle>\<sigma>c|\<sigma>e\<rangle>"
+
+lemma combine_collect_abs_mono:
+  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
+  assumes c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
+  shows "combine_collect_abs dst \<sigma>c1 \<sigma>e1 \<le> combine_collect_abs dst \<sigma>c2 \<sigma>e2"
+proof (cases dst)
+  case None
+  then show ?thesis
+    using c e by (simp add: combine_collect_abs_def combine_abs_def le_fun_def)
+next
+  case (Some x)
+  then show ?thesis
+    using c e by (simp add: combine_collect_abs_def combine_abs_def le_fun_def)
+qed
+
+text \<open>
+  Soundness of the abstract combine including result publication.  A pure
+  @{class sound_domain} fact: the destination slot is sound because the callee's
+  @{const ret_var} slot is, and every other slot is handled by
+  @{thm combine_states_sound}.
+\<close>
+lemma combine_collect_sound:
+  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
+  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst \<sigma>c \<sigma>e\<rbrakk>"
+proof (cases dst)
+  case None
+  then show ?thesis
+    using combine_states_sound[OF sc se]
+    by (simp add: combine_collect_def combine_collect_abs_def)
+next
+  case (Some x)
+  have base: "<s|t> \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
+    by (rule combine_states_sound[OF sc se])
+  have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
+    using se unfolding gamma_state_def by auto
+  show ?thesis
+    using base ret Some
+    unfolding gamma_state_def combine_collect_def combine_collect_abs_def
+    by auto
+qed
+
 definition rhs ::
     "cfg
      \<Rightarrow> 'a domain_transfer
@@ -305,8 +455,8 @@ where
   "rhs g tf join_abs bot_abs s0 env v =
      (let edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u))
                           {(u, a) | u a. (u, a, v) \<in> edges g};
-          comb_vals = image (\<lambda>(c, e). \<langle>env c|env e\<rangle>)
-                          {(c, e) | c e. (c, e, v) \<in> combines g};
+          comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
+                          {(c, ex, dst) | c ex dst. (c, ex, v, dst) \<in> combines g};
           base = if v = cfg_entry g
                  then insert s0 (edge_vals \<union> comb_vals)
                  else edge_vals \<union> comb_vals
@@ -402,8 +552,9 @@ locale sound_transfer =
     "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s
        \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
   assumes tf_sound_enter:
-    "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       enter_state s \<in> \<lbrakk>tf_enter tf \<sigma>\<rbrakk>"
+    "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
 
 
 subsection \<open>Effectful transfer function record\<close>
@@ -437,8 +588,8 @@ record ('g, 'd) effectful_domain_transfer =
   etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_assume     :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_assume_not :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_enter      :: "('g, 'd) edge_tf_tree"
-  etf_combine    :: "('g, 'd) combine_tf_tree"
+  etf_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_combine    :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
 
 fun apply_etf ::
   "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
@@ -448,7 +599,7 @@ where
 | "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
 | "apply_etf etf (EA_Assume b)    u = etf_assume etf b u"
 | "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
-| "apply_etf etf EA_Enter         u = etf_enter etf u"
+| "apply_etf etf (EA_Enter xs es) u = etf_enter etf xs es u"
 
 fun local_edge_action :: "edge_action \<Rightarrow> bool" where
   "local_edge_action EA_Nop = True"
@@ -456,7 +607,7 @@ fun local_edge_action :: "edge_action \<Rightarrow> bool" where
     ((~ is_global x) & (~ aexp_mentions_global e))"
 | "local_edge_action (EA_Assume b) = (~ bexp_mentions_global b)"
 | "local_edge_action (EA_AssumeNot b) = (~ bexp_mentions_global b)"
-| "local_edge_action EA_Enter = False"
+| "local_edge_action (EA_Enter xs es) = False"
 
 text \<open>
   @{const local_edge_action}: the edge neither reads nor writes globals (enter and
@@ -765,14 +916,15 @@ locale sound_effectful_transfer =
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
        \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not etf b u) \<sigma>\<rbrakk>)"
   assumes etf_sound_enter:
-    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-         enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter etf u) \<sigma>\<rbrakk>)"
+         bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+           \<in> \<lbrakk>etf_collecting_full (etf_enter etf xs es u) \<sigma>\<rbrakk>)"
   assumes etf_sound_combine:
-    "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
        \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-         <s|t> \<in> \<lbrakk>etf_full (etf_combine etf cc ex) \<sigma>\<rbrakk>)"
+         combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cc ex) \<sigma>\<rbrakk>)"
 
 text \<open>
   The keyed generator filters call-enter edges out of the intra predecessor fold
@@ -783,11 +935,46 @@ text \<open>
   @{const sound_effectful_transfer}'s lower-bound @{text etf_sound_enter}.
 \<close>
 
+text \<open>
+  Formal parameters name locals.  \<^const>\<open>bind_formals_abs\<close> writes each formal
+  into the callee's fresh frame, so a formal naming a global would write a
+  caller-local value into a global slot and break the frame bound.  IMP2 scoping
+  supplies this; the CFG well-formedness discharges it at each enter edge.
+\<close>
+
+definition local_formals :: "vname list \<Rightarrow> bool" where
+  "local_formals xs \<longleftrightarrow> (\<forall>x \<in> set xs. \<not> is_global x)"
+
+lemma local_formals_Nil [simp]: "local_formals []"
+  unfolding local_formals_def by simp
+
+lemma bind_formals_abs_global:
+  assumes "local_formals xs" and "is_global x"
+  shows "bind_formals_abs xs avs \<sigma> x = \<sigma> x"
+  using assms unfolding local_formals_def bind_formals_abs_def
+proof (induction xs arbitrary: avs \<sigma>)
+  case Nil thus ?case by simp
+next
+  case (Cons y ys)
+  show ?case
+  proof (cases avs)
+    case Nil thus ?thesis by simp
+  next
+    case (Cons a rest)
+    have "x \<noteq> y" using Cons.prems(1) Cons.prems(2) by auto
+    then show ?thesis
+      using Cons.IH[of rest "\<sigma>(y := a)"] Cons.prems local.Cons
+      by simp
+  qed
+qed
+
 locale sound_effectful_transfer_framed = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
   assumes etf_enter_framed_le:
-    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow> inl_slot_globals_bot \<sigma> \<longrightarrow>
-       etf_full (etf_enter etf u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
+    "\<forall>xs (es::aexp list) u \<sigma>.
+       local_formals xs \<longrightarrow>
+       inr_slot_locals_bot \<sigma> \<longrightarrow> inl_slot_globals_bot \<sigma> \<longrightarrow>
+       etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
 
 text \<open>
   The snapshot-compatible companion of @{locale sound_effectful_transfer_framed}:
@@ -799,8 +986,10 @@ text \<open>
 locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
   assumes etf_enter_framed_glob_le:
-    "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow> inl_glob_le_glob_env \<sigma> \<longrightarrow>
-       etf_full (etf_enter etf u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
+    "\<forall>xs (es::aexp list) u \<sigma>.
+       local_formals xs \<longrightarrow>
+       inr_slot_locals_bot \<sigma> \<longrightarrow> inl_glob_le_glob_env \<sigma> \<longrightarrow>
+       etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
 
 lemma (in sound_effectful_transfer_framed_le) framed_le_imp_framed:
   "sound_effectful_transfer_framed etf fresh_frame"

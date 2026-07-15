@@ -48,9 +48,9 @@ proof -
 qed
 
 lemma cfg_collect_combine:
-  assumes h: "(c, ex, ret, dst, rex) \<in> combines g" and ret: "ret = v"
+  assumes h: "(c, ex, ret, dst) \<in> combines g" and ret: "ret = v"
       and sc: "s \<in> cfg_collect g S c" and te: "t \<in> cfg_collect g S ex"
-      and xu: "x \<in> combine_collect dst rex s t"
+      and xu: "x = combine_collect dst s t"
   shows "x \<in> cfg_collect g S v"
 proof -
   have mem: "x \<in> collect_combine_pp g (cfg_collect g S) v"

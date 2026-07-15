@@ -32,8 +32,8 @@ lemma combine_program_parts:
   shows "prog_procs combine_program = [''f'']"
     and "prog_table combine_program =
         (\<lambda>_. None)(''f'' := Some
-          (If b_gpath_eq_1 (Assign ''tag'' (N 1)) (Assign ''tag'' (N 2))))"
-    and "prog_main combine_program = Call ''f''"
+          (proc_decl_legacy (If b_gpath_eq_1 (Assign ''tag'' (N 1)) (Assign ''tag'' (N 2)))))"
+    and "prog_main combine_program = Call None ''f'' []"
   by (simp_all add: combine_program_def b_gpath_eq_1_def)
 
 definition combine_g :: cfg where
@@ -41,7 +41,7 @@ definition combine_g :: cfg where
                      (prog_procs combine_program) (prog_main combine_program)"
 
 lemma combine_g_eq_compile:
-  "combine_g = compile_prog combine_pi [''f''] (Call ''f'')"
+  "combine_g = compile_prog combine_pi [''f''] (Call None ''f'' [])"
   by (simp add: combine_g_def combine_pi_def combine_program_parts)
 
 lemma combine_g_full:
@@ -52,15 +52,15 @@ lemma combine_g_full:
       (2, EA_Nop, 5),
       (3, EA_Assign ''tag'' (N 2), 4),
       (4, EA_Nop, 5),
-      (6, EA_Enter, 0)}
-     {(6, 5, 7)}"
+      (6, EA_Enter [] [], 0)}
+     {(6, 5, 7, None)}"
   by (simp add: combine_g_def combine_program_def b_gpath_eq_1_def
             compile_eval_simps Let_def; blast)
 
 lemma combine_g_structure:
   shows "cfg_entry combine_g = 6"
     and "cfg_exit combine_g = 7"
-    and "combines combine_g = {(6, 5, 7)}"
+    and "combines combine_g = {(6, 5, 7, None)}"
   by (simp_all add: combine_g_full)
 
 definition call_pp :: pp where "call_pp = cfg_entry combine_g"
@@ -111,6 +111,15 @@ lemma ent2_tag[simp]: "ent2 ''tag'' = 0"
   by (simp add: ent2_def enter_state_def is_global_def)
 lemma ent3_tag[simp]: "ent3 ''tag'' = 0"
   by (simp add: ent3_def enter_state_def is_global_def)
+
+lemma ent1_in_enter_collect[simp]: "ent1 \<in> edge_collect (EA_Enter [] []) S0"
+  by (fastforce simp: ent1_def S0_def bind_formals_def)
+
+lemma ent2_in_enter_collect[simp]: "ent2 \<in> edge_collect (EA_Enter [] []) S0"
+  by (fastforce simp: ent2_def S0_def bind_formals_def)
+
+lemma ent3_in_enter_collect[simp]: "ent3 \<in> edge_collect (EA_Enter [] []) S0"
+  by (fastforce simp: ent3_def S0_def bind_formals_def)
 
 lemma body1_tag[simp]: "body1 ''tag'' = 1" by (simp add: body1_def)
 lemma body2_tag[simp]: "body2 ''tag'' = 2" by (simp add: body2_def)
@@ -169,9 +178,10 @@ lemma tau3_witness: "trace_witness combine_g S0 call_pp tau3"
 
 lemma rho1_witness: "trace_witness combine_g S0 callee_exit_pp rho1"
 proof -
+  have enter_edge: "(cfg_entry combine_g, EA_Enter [] [], 0) \<in> edges combine_g"
+    by (simp add: combine_g_full)
   have w0: "trace_witness combine_g S0 0 [ent1]"
-    by (intro trace_witness.proc_entry)
-      (auto simp: combine_g_full S0_def image_iff intro: rev_image_eqI[where x = s1])
+    by (rule trace_witness.proc_entry[OF enter_edge ent1_in_enter_collect])
   have w1: "trace_witness combine_g S0 1 [ent1, ent1]"
     using trace_witness.edge[OF _ w0]
     by (auto simp: combine_g_full edge_step.simps b_gpath_eq_1_def)
@@ -186,9 +196,10 @@ qed
 
 lemma rho2_witness: "trace_witness combine_g S0 callee_exit_pp rho2"
 proof -
+  have enter_edge: "(cfg_entry combine_g, EA_Enter [] [], 0) \<in> edges combine_g"
+    by (simp add: combine_g_full)
   have w0: "trace_witness combine_g S0 0 [ent2]"
-    by (intro trace_witness.proc_entry)
-      (auto simp: combine_g_full S0_def image_iff intro: rev_image_eqI[where x = s2])
+    by (rule trace_witness.proc_entry[OF enter_edge ent2_in_enter_collect])
   have w1: "trace_witness combine_g S0 3 [ent2, ent2]"
     using trace_witness.edge[OF _ w0]
     by (auto simp: combine_g_full edge_step.simps b_gpath_eq_1_def)
@@ -203,9 +214,10 @@ qed
 
 lemma rho3_witness: "trace_witness combine_g S0 callee_exit_pp rho3"
 proof -
+  have enter_edge: "(cfg_entry combine_g, EA_Enter [] [], 0) \<in> edges combine_g"
+    by (simp add: combine_g_full)
   have w0: "trace_witness combine_g S0 0 [ent3]"
-    by (intro trace_witness.proc_entry)
-      (auto simp: combine_g_full S0_def image_iff intro: rev_image_eqI[where x = s3])
+    by (rule trace_witness.proc_entry[OF enter_edge ent3_in_enter_collect])
   have w1: "trace_witness combine_g S0 3 [ent3, ent3]"
     using trace_witness.edge[OF _ w0]
     by (auto simp: combine_g_full edge_step.simps b_gpath_eq_1_def)
@@ -232,9 +244,10 @@ lemma tau3_witness_d: "trace_witness_d dg_tag cmp_pair combine_g S0 call_pp tau3
 
 lemma rho1_witness_d: "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho1"
 proof -
+  have enter_edge: "(cfg_entry combine_g, EA_Enter [] [], 0) \<in> edges combine_g"
+    by (simp add: combine_g_full)
   have w0: "trace_witness_d dg_tag cmp_pair combine_g S0 0 [ent1]"
-    by (intro trace_witness_d.proc_entry)
-      (auto simp: combine_g_full S0_def image_iff intro: rev_image_eqI[where x = s1])
+    by (rule trace_witness_d.proc_entry[OF enter_edge ent1_in_enter_collect])
   have w1: "trace_witness_d dg_tag cmp_pair combine_g S0 1 [ent1, ent1]"
     using trace_witness_d.edge[OF _ w0]
     by (auto simp: combine_g_full edge_step.simps b_gpath_eq_1_def)
@@ -249,9 +262,10 @@ qed
 
 lemma rho2_witness_d: "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho2"
 proof -
+  have enter_edge: "(cfg_entry combine_g, EA_Enter [] [], 0) \<in> edges combine_g"
+    by (simp add: combine_g_full)
   have w0: "trace_witness_d dg_tag cmp_pair combine_g S0 0 [ent2]"
-    by (intro trace_witness_d.proc_entry)
-      (auto simp: combine_g_full S0_def image_iff intro: rev_image_eqI[where x = s2])
+    by (rule trace_witness_d.proc_entry[OF enter_edge ent2_in_enter_collect])
   have w1: "trace_witness_d dg_tag cmp_pair combine_g S0 3 [ent2, ent2]"
     using trace_witness_d.edge[OF _ w0]
     by (auto simp: combine_g_full edge_step.simps b_gpath_eq_1_def)
@@ -266,9 +280,10 @@ qed
 
 lemma rho3_witness_d: "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho3"
 proof -
+  have enter_edge: "(cfg_entry combine_g, EA_Enter [] [], 0) \<in> edges combine_g"
+    by (simp add: combine_g_full)
   have w0: "trace_witness_d dg_tag cmp_pair combine_g S0 0 [ent3]"
-    by (intro trace_witness_d.proc_entry)
-      (auto simp: combine_g_full S0_def image_iff intro: rev_image_eqI[where x = s3])
+    by (rule trace_witness_d.proc_entry[OF enter_edge ent3_in_enter_collect])
   have w1: "trace_witness_d dg_tag cmp_pair combine_g S0 3 [ent3, ent3]"
     using trace_witness_d.edge[OF _ w0]
     by (auto simp: combine_g_full edge_step.simps b_gpath_eq_1_def)
@@ -311,15 +326,17 @@ lemma tr1_witness_d:
 proof -
   have w: "trace_witness_d dg_tag cmp_pair combine_g S0 7
             (tau1 @ tl rho1 @ [<last tau1|last rho1>])"
-  proof (rule trace_witness_d.combine[where tau = tau1 and \<rho> = rho1])
-    show "(call_pp, callee_exit_pp, 7) \<in> combines combine_g"
+  proof (rule trace_witness_d.combine[where tau = tau1 and rho = rho1 and dst = None and r = "<last tau1|last rho1>"])
+    show "(call_pp, callee_exit_pp, 7, None) \<in> combines combine_g"
       by (simp add: combine_g_structure combine_g_full call_pp_def callee_exit_pp_def)
     show "trace_witness_d dg_tag cmp_pair combine_g S0 call_pp tau1"
       by (rule tau1_witness_d)
     show "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho1"
       by (rule rho1_witness_d)
-    show "hd rho1 = enter_state (last tau1)"
-      by (simp add: rho1_def tau1_def ent_s1)
+    show "<last tau1|last rho1> = combine_collect None (last tau1) (last rho1)"
+      by (simp add: combine_collect_def)
+    show "call_enter_store combine_g call_pp (last tau1) (hd rho1)"
+      by (simp add: call_enter_store_def combine_g_full rho1_def tau1_def bind_formals_def)
     show "cmp_pair (dg_tag tau1) (dg_tag rho1)"
       by (simp add: cmp_pair_def dg_tag_def tau1_def rho1_def)
   qed
@@ -331,15 +348,17 @@ lemma tr2_witness_d:
 proof -
   have w: "trace_witness_d dg_tag cmp_pair combine_g S0 7
             (tau2 @ tl rho2 @ [<last tau2|last rho2>])"
-  proof (rule trace_witness_d.combine[where tau = tau2 and \<rho> = rho2])
-    show "(call_pp, callee_exit_pp, 7) \<in> combines combine_g"
+  proof (rule trace_witness_d.combine[where tau = tau2 and rho = rho2 and dst = None and r = "<last tau2|last rho2>"])
+    show "(call_pp, callee_exit_pp, 7, None) \<in> combines combine_g"
       by (simp add: combine_g_structure combine_g_full call_pp_def callee_exit_pp_def)
     show "trace_witness_d dg_tag cmp_pair combine_g S0 call_pp tau2"
       by (rule tau2_witness_d)
     show "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho2"
       by (rule rho2_witness_d)
-    show "hd rho2 = enter_state (last tau2)"
-      by (simp add: rho2_def tau2_def ent_s2)
+    show "<last tau2|last rho2> = combine_collect None (last tau2) (last rho2)"
+      by (simp add: combine_collect_def)
+    show "call_enter_store combine_g call_pp (last tau2) (hd rho2)"
+      by (simp add: call_enter_store_def combine_g_full rho2_def tau2_def bind_formals_def)
     show "cmp_pair (dg_tag tau2) (dg_tag rho2)"
       by (simp add: cmp_pair_def dg_tag_def tau2_def rho2_def)
   qed
@@ -407,27 +426,31 @@ proof
     then show False using combine_g_structure by auto
   next
     case (proc_entry s)
-    then have "(cfg_entry combine_g, EA_Enter, 7) \<in> edges combine_g"
-      by simp
-    then show False unfolding combine_g_full by simp
+    then show False by (simp add: combine_g_full)
   next
     case (edge u a tr s')
     then have "(u, a, 7) \<in> edges combine_g" by simp
     then show False unfolding combine_g_full by simp
   next
     case (combine c ex tau rho)
-    then show False
-    proof -
-      from combine have tw: "trace_witness_d dg_tag cmp_pair combine_g S0 call_pp tau"
-        by (auto simp: combine_g_structure combine_g_full call_pp_def)
-      have len: "length tau = 1"
-        using tw by (rule trace_witness_d_call_pp_len)
-      have "tau = tau3" "rho = rho3"
-        using combine_tr3_shape[OF len combine(5)] combine(1) by auto
-      show False
-        using combine(6) not_cmp_pair_tau3_rho3
-        using \<open>rho = rho3\<close> \<open>tau = tau3\<close> by blast
-    qed
+    obtain rho' r where
+      eq: "tau3 @ tl rho3 @ [ret3] = rho @ tl rho' @ [r]"
+      and cmb: "(c, ex, 7, tau) \<in> combines combine_g"
+      and exit: "trace_witness_d dg_tag cmp_pair combine_g S0 ex rho'"
+      and r_def: "r = combine_collect tau (last rho) (last rho')"
+      and call: "call_enter_store combine_g c (last rho) (hd rho')"
+      and cmp: "cmp_pair (dg_tag rho) (dg_tag rho')"
+      using combine by blast
+    have c_eq: "c = call_pp" and ex_eq: "ex = callee_exit_pp" and dst_eq: "tau = None"
+      using cmb by (auto simp: combine_g_structure combine_g_full call_pp_def callee_exit_pp_def)
+    have len: "length rho = 1"
+      using combine(3) c_eq by (simp add: trace_witness_d_call_pp_len)
+    have hd_eq: "hd rho' = enter_state (last rho)"
+      using call c_eq by (auto simp: call_enter_store_def combine_g_full bind_formals_def)
+    have rho_eq: "rho = tau3" and rho'_eq: "rho' = rho3"
+      using combine_tr3_shape[OF len hd_eq eq[symmetric]] by blast+
+    show False
+      using cmp not_cmp_pair_tau3_rho3 rho_eq rho'_eq by simp
   qed
 qed
 
@@ -435,15 +458,17 @@ lemma tr3_witness:
   "trace_witness combine_g S0 7 tr3"
 proof -
   have w: "trace_witness combine_g S0 7 (tau3 @ tl rho3 @ [<last tau3|last rho3>])"
-  proof (rule trace_witness.combine[where tau = tau3 and \<rho> = rho3])
-    show "(call_pp, callee_exit_pp, 7) \<in> combines combine_g"
+  proof (rule trace_witness.combine[where tau = tau3 and \<rho> = rho3 and dst = None and r = "<last tau3|last rho3>"])
+    show "(call_pp, callee_exit_pp, 7, None) \<in> combines combine_g"
       by (simp add: combine_g_structure combine_g_full call_pp_def callee_exit_pp_def)
     show "trace_witness combine_g S0 call_pp tau3"
       by (rule tau3_witness)
     show "trace_witness combine_g S0 callee_exit_pp rho3"
       by (rule rho3_witness)
-    show "hd rho3 = enter_state (last tau3)"
-      by (simp add: rho3_def tau3_def ent_s3)
+    show "<last tau3|last rho3> = combine_collect None (last tau3) (last rho3)"
+      by (simp add: combine_collect_def)
+    show "call_enter_store combine_g call_pp (last tau3) (hd rho3)"
+      by (simp add: call_enter_store_def combine_g_full rho3_def tau3_def bind_formals_def)
   qed
   show ?thesis unfolding tr3_def using w by (simp add: ret3_eq)
 qed
@@ -595,4 +620,3 @@ text \<open>
 \<close>
 
 end
-

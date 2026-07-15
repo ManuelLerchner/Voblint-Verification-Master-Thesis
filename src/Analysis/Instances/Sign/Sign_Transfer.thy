@@ -32,37 +32,71 @@ qed
 
 subsection \<open>Bundled transfer functions\<close>
 
-(* Procedure entry: keep globals, reset locals to Top (unknown). *)
-definition enter_sign :: "sign abs_state => sign abs_state" where
-  "enter_sign \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else STop)"
+(* Procedure entry: keep globals, reset locals to Top (unknown), then bind the
+   formals to the abstract values of the actuals evaluated in the caller. *)
+definition enter_frame_sign :: "sign abs_state => sign abs_state" where
+  "enter_frame_sign \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else STop)"
 
-lemma enter_sign_sound:
+definition enter_sign ::
+    "vname list => aexp list => sign abs_state => sign abs_state" where
+  "enter_sign xs es \<sigma> =
+     bind_formals_abs xs (map (\<lambda>e. aval_sign e \<sigma>) es) (enter_frame_sign \<sigma>)"
+
+lemma enter_frame_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>enter_sign \<sigma>\<rbrakk>"
+  shows "enter_state s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
 proof -
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
     unfolding gamma_state_def by simp
   show ?thesis
-    unfolding gamma_state_def enter_sign_def
+    unfolding gamma_state_def enter_frame_sign_def
     by (intro CollectI allI; cases "is_global x";
         auto simp: enter_state_def V)
 qed
 
-lemma enter_sign_mono:
+lemma enter_sign_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+           \<in> \<lbrakk>enter_sign xs es \<sigma>\<rbrakk>"
+proof -
+  have base: "enter_state s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
+    by (rule enter_frame_sign_sound[OF gs])
+  have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
+    using gs unfolding gamma_state_def by simp
+  have "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_sign e \<sigma>) es)"
+    using V by (simp add: list_all2_conv_all_nth aval_sign_sound)
+  from bind_formals_abs_sound[OF base this]
+  show ?thesis unfolding enter_sign_def .
+qed
+
+lemma enter_frame_sign_mono:
   assumes "s1 \<le> s2"
-  shows "enter_sign s1 \<le> enter_sign s2"
+  shows "enter_frame_sign s1 \<le> enter_frame_sign s2"
 proof (rule le_funI)
   fix x
-  show "enter_sign s1 x \<le> enter_sign s2 x"
+  show "enter_frame_sign s1 x \<le> enter_frame_sign s2 x"
   proof (cases "is_global x")
     assume g: "is_global x"
     from assms have "s1 x \<le> s2 x" by (simp add: le_funD)
-    thus ?thesis using g unfolding enter_sign_def less_eq_sign_def by simp
+    thus ?thesis using g unfolding enter_frame_sign_def less_eq_sign_def by simp
   next
     assume "\<not> is_global x"
-    thus ?thesis unfolding enter_sign_def less_eq_sign_def
+    thus ?thesis unfolding enter_frame_sign_def less_eq_sign_def
       by (simp add: sign_le_refl)
   qed
+qed
+
+lemma enter_sign_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_sign xs es s1 \<le> enter_sign xs es s2"
+  unfolding enter_sign_def
+proof (rule bind_formals_abs_mono)
+  show "enter_frame_sign s1 \<le> enter_frame_sign s2"
+    by (rule enter_frame_sign_mono[OF assms])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_sign e s1) es)
+                       (map (\<lambda>e. aval_sign e s2) es)"
+    using assms by (simp add: list_all2_conv_all_nth aval_sign_mono)
 qed
 
 definition combine_sign :: "sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state" where
@@ -107,7 +141,9 @@ lemma sign_tf_sound_assume_not:
   unfolding sign_tf_def by (simp add: assume_not_sign_sound)
 
 lemma sign_tf_sound_enter:
-  "\<forall>\<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state st \<in> \<lbrakk>tf_enter sign_tf \<sigma>\<rbrakk>"
+  "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
+     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state st)
+       \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
 interpretation sign_sound_tf: sound_transfer sign_tf
@@ -118,7 +154,9 @@ proof unfold_locales
     by (rule sign_tf_sound_assume)
   show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_assume_not)
-  show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state s \<in> \<lbrakk>tf_enter sign_tf \<sigma>\<rbrakk>"
+  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+       \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_enter)
 qed
 

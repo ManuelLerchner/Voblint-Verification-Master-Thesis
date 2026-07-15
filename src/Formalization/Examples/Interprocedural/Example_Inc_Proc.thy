@@ -22,22 +22,22 @@ definition inc_pi :: proc_table where
 
 lemma inc_program_parts:
   shows "prog_procs inc_program = [''p'']"
-    and "prog_table inc_program = (\<lambda>_. None)(''p'' := Some (Assign ''Gx'' (Plus (V ''Gx'') (N 1))))"
-    and "prog_main inc_program = Call ''p''"
+    and "prog_table inc_program = (\<lambda>_. None)(''p'' := Some (proc_decl_legacy (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))))"
+    and "prog_main inc_program = Call None ''p'' []"
   by (simp_all add: inc_program_def)
 
 definition inc_g :: cfg where
   "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) (prog_main inc_program)"
 
 lemma inc_g_eq_compile:
-  "inc_g = compile_prog inc_pi [''p''] (Call ''p'')"
+  "inc_g = compile_prog inc_pi [''p''] (Call None ''p'' [])"
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma inc_g_full:
   "inc_g = mk_cfg 2 3
      {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
-      (2, EA_Enter, 0)}
-     {(2, 1, 3)}"
+      (2, EA_Enter [] [], 0)}
+     {(2, 1, 3, None)}"
   by (simp add: inc_g_def inc_program_def compile_eval_simps Let_def; blast)
 
 lemma inc_g_structure:
@@ -45,8 +45,8 @@ lemma inc_g_structure:
     and "cfg_exit inc_g = 3"
     and "edges inc_g =
        {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
-        (2, EA_Enter, 0)}"
-    and "combines inc_g = {(2, 1, 3)}"
+        (2, EA_Enter [] [], 0)}"
+    and "combines inc_g = {(2, 1, 3, None)}"
   by (simp_all add: inc_g_full)
 
 lemma edge_collect_assign_enter_state:
@@ -74,12 +74,12 @@ proof -
     using cfg_collect_entry by simp
   have s_at_call: "s \<in> cfg_collect ?g ?S 2"
     using entry inc_g_structure(1) by auto
-  have en: "(2, EA_Enter, 0) \<in> edges ?g"
+  have en: "(2, EA_Enter [] [], 0) \<in> edges ?g"
     using inc_g_structure by simp
   have enter: "enter_state s \<in> cfg_collect ?g ?S 0"
   proof (rule cfg_collect_edge[OF en])
-    show "enter_state s \<in> edge_collect EA_Enter (cfg_collect ?g ?S 2)"
-      using s_at_call by simp
+    show "enter_state s \<in> edge_collect (EA_Enter [] []) (cfg_collect ?g ?S 2)"
+      using s_at_call by (auto simp: bind_formals_def)
   qed
   have asg: "(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1) \<in> edges ?g"
     using inc_g_structure by simp
@@ -94,21 +94,24 @@ proof -
   qed
   have body_store: "?body_store \<in> cfg_collect ?g ?S 1"
     using cfg_collect_edge[OF asg edge_asg] by simp
-  have comb: "(2, 1, 3) \<in> combines ?g"
+  have comb: "(2, 1, 3, None) \<in> combines ?g"
     using inc_g_structure by simp
   have g: "is_global ''Gx''"
     by (simp add: is_global_def)
   have "?t = <s|?body_store>"
     using combine_after_enter_global_assign[OF g] by (simp add: enter_state_def)
+  have combined0: "combine_collect None s ?body_store \<in> cfg_collect ?g ?S 3"
+    using cfg_collect_combine[OF comb refl s_at_call body_store] by simp
+  have combined: "<s|?body_store> \<in> cfg_collect ?g ?S 3"
+    using combined0 by (simp add: combine_collect_def)
   show ?thesis
-    using cfg_collect_combine[OF comb refl s_at_call body_store]
-      combine_after_enter_global_assign[OF g]
-    by (simp add: inc_g_structure(2) enter_state_def)
+    using combined `?t = <s|?body_store>`
+    by (simp add: inc_g_structure(2))
 qed
 
 lemma cfg_runs_to_pcall_global_increment:
   fixes s :: store
-  shows "cfg_runs_to inc_pi [''p''] (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "cfg_runs_to inc_pi [''p''] (Call None ''p'' []) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   have "s(''Gx'' := s ''Gx'' + 1)
       \<in> cfg_collect inc_g {s} (cfg_exit inc_g)"
@@ -120,14 +123,14 @@ qed
 
 lemma pcompletes_inc_pcall:
   fixes s :: store
-  shows "pcompletes inc_pi (Call ''p'') s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pcompletes inc_pi (Call None ''p'' []) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have run: "pcompletes inc_pi (Call ''p'') s
+  have run: "pcompletes inc_pi (Call None ''p'' []) s
                 (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
-  proof (rule pcompletes_Call[where c = ?body])
-    show "inc_pi ''p'' = Some ?body"
+  proof (rule pcompletes_Legacy_Call[where c = ?body])
+    show "inc_pi ''p'' = Some (proc_decl_legacy ?body)"
       by (simp add: inc_pi_def inc_program_parts)
     show "pcompletes inc_pi ?body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"

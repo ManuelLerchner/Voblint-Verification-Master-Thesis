@@ -41,7 +41,7 @@ definition clean_etf_of_transfer ::
      etf_assign = (\<lambda>x e. clean_edge_tree (apply_tf tf (EA_Assign x e))),
      etf_assume = (\<lambda>b. clean_edge_tree (apply_tf tf (EA_Assume b))),
      etf_assume_not = (\<lambda>b. clean_edge_tree (apply_tf tf (EA_AssumeNot b))),
-     etf_enter = clean_edge_tree (apply_tf tf EA_Enter),
+     etf_enter = (\<lambda>xs es. clean_edge_tree (apply_tf tf (EA_Enter xs es))),
      etf_combine = unit_combine_tree \<rparr>"
 
 subsection \<open>Denotation of the clean transfer: the base transfer on the local slot\<close>
@@ -127,11 +127,14 @@ qed
 
 lemma clean_rread_enter:
   assumes "s \<in> \<lbrakk>sg (Inl u)\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter (clean_etf_of_transfer tf) u) sg\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+      \<in> \<lbrakk>etf_collecting_full (etf_enter (clean_etf_of_transfer tf) xs es u) sg\<rbrakk>"
 proof -
-  have base: "enter_state s \<in> \<lbrakk>tf_enter tf (sg (Inl u))\<rbrakk>"
+  have base: "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+      \<in> \<lbrakk>tf_enter tf xs es (sg (Inl u))\<rbrakk>"
     using tf_sound_enter assms by blast
-  have "tf_enter tf (sg (Inl u)) \<le> etf_collecting_full (etf_enter (clean_etf_of_transfer tf) u) sg"
+  have "tf_enter tf xs es (sg (Inl u))
+      \<le> etf_collecting_full (etf_enter (clean_etf_of_transfer tf) xs es u) sg"
     by (simp add: clean_etf_of_transfer_def clean_collecting_full_eq)
   thus ?thesis using base gamma_state_mono by blast
 qed
@@ -150,8 +153,8 @@ text \<open>
 lemma clean_cfg_witness_rread:
   assumes step_le: "\<And>u a w. (u, a, w) \<in> edges g
       \<Longrightarrow> etf_full (apply_etf (clean_etf_of_transfer tf) a u) sg \<le> sg (Inl w)"
-    and combine_le: "\<And>c ex ret s t. (c, ex, ret) \<in> combines g
-      \<Longrightarrow> s \<in> \<lbrakk>sg (Inl c)\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl ex)\<rbrakk> \<Longrightarrow> <s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
+    and combine_le: "\<And>c ex ret dst s t. (c, ex, ret, dst) \<in> combines g
+      \<Longrightarrow> s \<in> \<lbrakk>sg (Inl c)\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl ex)\<rbrakk> \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
     and entry_le: "S \<subseteq> \<lbrakk>sg (Inl (cfg_entry g))\<rbrakk>"
     and wit: "cfg_witness g S v st"
   shows "st \<in> \<lbrakk>sg (Inl v)\<rbrakk>"
@@ -167,18 +170,20 @@ proof -
       using edge.hyps su clean_edge_collect_rread edge_collect_mono by blast
     thus ?case using step_le[OF edge.hyps(1)] gamma_state_mono by blast
   next
-    case (combine c ex v S s t)
+    case (combine c ex v dst S s t u)
     have "s \<in> \<lbrakk>sg (Inl c)\<rbrakk>" using combine.IH(1) combine.prems by blast
     moreover have "t \<in> \<lbrakk>sg (Inl ex)\<rbrakk>" using combine.IH(2) combine.prems by blast
-    ultimately show ?case by (rule combine_le[OF combine.hyps(1)])
+    ultimately have "combine_collect dst s t \<in> \<lbrakk>sg (Inl v)\<rbrakk>"
+      by (rule combine_le[OF combine.hyps(1)])
+    thus ?case using combine.hyps(4) by simp
   qed
 qed
 
 theorem clean_cfg_collect_rread:
   assumes step_le: "\<And>u a w. (u, a, w) \<in> edges g
       \<Longrightarrow> etf_full (apply_etf (clean_etf_of_transfer tf) a u) sg \<le> sg (Inl w)"
-    and combine_le: "\<And>c ex ret s t. (c, ex, ret) \<in> combines g
-      \<Longrightarrow> s \<in> \<lbrakk>sg (Inl c)\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl ex)\<rbrakk> \<Longrightarrow> <s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
+    and combine_le: "\<And>c ex ret dst s t. (c, ex, ret, dst) \<in> combines g
+      \<Longrightarrow> s \<in> \<lbrakk>sg (Inl c)\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl ex)\<rbrakk> \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
     and entry_le: "S \<subseteq> \<lbrakk>sg (Inl (cfg_entry g))\<rbrakk>"
   shows "cfg_collect g S v \<subseteq> \<lbrakk>sg (Inl v)\<rbrakk>"
 proof
@@ -206,11 +211,12 @@ text \<open>
 
 lemma combine_abs_bound_sound:
   fixes sc se sr :: "'a abs_state"
-  assumes bound: "\<langle>sc|se\<rangle> \<le> sr"
+  assumes bound: "combine_collect_abs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
-  shows "<s|t> \<in> \<lbrakk>sr\<rbrakk>"
+  shows "combine_collect dst s t \<in> \<lbrakk>sr\<rbrakk>"
 proof -
-  have "<s|t> \<in> \<lbrakk>\<langle>sc|se\<rangle>\<rbrakk>" using sc se by (rule combine_states_sound)
+  have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst sc se\<rbrakk>"
+    using sc se by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
@@ -224,15 +230,18 @@ text \<open>
 theorem clean_cfg_collect_rread_bound:
   assumes step_le: "\<And>u a w. (u, a, w) \<in> edges g
       \<Longrightarrow> etf_full (apply_etf (clean_etf_of_transfer tf) a u) sg \<le> sg (Inl w)"
-    and combine_bound: "\<And>c ex ret. (c, ex, ret) \<in> combines g
-      \<Longrightarrow> \<langle>sg (Inl c)|sg (Inl ex)\<rangle> \<le> sg (Inl ret)"
+    and combine_bound: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g
+      \<Longrightarrow> combine_collect_abs dst (sg (Inl c)) (sg (Inl ex)) \<le> sg (Inl ret)"
     and entry_le: "S \<subseteq> \<lbrakk>sg (Inl (cfg_entry g))\<rbrakk>"
   shows "cfg_collect g S v \<subseteq> \<lbrakk>sg (Inl v)\<rbrakk>"
 proof (rule clean_cfg_collect_rread[OF step_le _ entry_le])
-  fix c ex ret s t
-  assume "(c, ex, ret) \<in> combines g" and "s \<in> \<lbrakk>sg (Inl c)\<rbrakk>" and "t \<in> \<lbrakk>sg (Inl ex)\<rbrakk>"
-  thus "<s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
-    by (rule combine_abs_bound_sound[OF combine_bound])
+  fix c ex ret dst s t
+  assume "(c, ex, ret, dst) \<in> combines g" and "s \<in> \<lbrakk>sg (Inl c)\<rbrakk>" and "t \<in> \<lbrakk>sg (Inl ex)\<rbrakk>"
+  have bound: "combine_collect_abs dst (sg (Inl c)) (sg (Inl ex)) \<le> sg (Inl ret)"
+    by (rule combine_bound[OF \<open>(c, ex, ret, dst) \<in> combines g\<close>])
+  show "combine_collect dst s t \<in> \<lbrakk>sg (Inl ret)\<rbrakk>"
+    using \<open>s \<in> \<lbrakk>sg (Inl c)\<rbrakk>\<close> \<open>t \<in> \<lbrakk>sg (Inl ex)\<rbrakk>\<close>
+    by (rule combine_abs_bound_sound[OF bound])
 qed
 
 subsection \<open>Context-sliced collecting soundness over the local read\<close>
@@ -249,17 +258,18 @@ theorem clean_ctx_collect_rread:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
         \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
-    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+    and COMB: "\<And>ctx cl ex v dst tau rho. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+        \<Longrightarrow> combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
@@ -283,26 +293,27 @@ theorem clean_ctx_collect_rread_bound:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
         \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
-    and COMB_BOUND: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
-        \<Longrightarrow> \<langle>sg (Inl (cl, ctx))|sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rangle> \<le> sg (Inl (v, ctx))"
+    and COMB_BOUND: "\<And>ctx cl ex v dst. (cl, ex, v, dst) \<in> combines g
+        \<Longrightarrow> combine_collect_abs dst (sg (Inl (cl, ctx))) (sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))) \<le> sg (Inl (v, ctx))"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule clean_ctx_collect_rread
       [where sg = sg and rt = rt and dg = dg and cmp = cmp and entdg = entdg and g = g and S = S,
        OF ENTRY PROC_ENTRY EDGE_BOUND _ DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO])
-  fix ctx cl ex v tau rho
-  assume c: "(cl, ex, v) \<in> combines g"
+  fix ctx cl ex v dst tau rho
+  assume c: "(cl, ex, v, dst) \<in> combines g"
     and ct: "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
     and ce: "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
-  show "<last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  show "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule combine_abs_bound_sound[OF COMB_BOUND[OF c] ct ce])
 qed
 
@@ -324,14 +335,17 @@ theorem clean_ctx_collect_rread_head:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (head_digest f [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
         \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
-    and COMB: "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g
+    and COMB: "\<And>ctx cl ex v dst tau rho. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+        \<Longrightarrow> combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and WF_ENTER: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
+    and FINV: "\<And>st x v. \<not> is_global x \<Longrightarrow> f (st(x := v)) = f st"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx (head_digest f) cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
@@ -341,26 +355,27 @@ proof (rule clean_ctx_collect_rread
   show "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
     by (rule ENTRY)
 next
-  show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+  show "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule PROC_ENTRY)
 next
   show "\<And>ctx u a v. (u, a, v) \<in> edges g \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
     by (rule EDGE_BOUND)
 next
-  show "\<And>ctx cl ex v tau rho. (cl, ex, v) \<in> combines g \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
+  show "\<And>ctx cl ex v dst tau rho. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>
-        \<Longrightarrow> <last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+        \<Longrightarrow> combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule COMB)
 next
   show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (head_digest f (tr @ [s'])) ctx \<Longrightarrow> cmp (head_digest f tr) ctx"
     by (rule head_digest_DG_INTRA)
 next
-  show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> head_digest f (tau @ tl rho @ [<last tau|last rho>]) = head_digest f tau"
+  show "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> head_digest f (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = head_digest f tau"
     by (rule head_digest_DG_RETURN)
 next
-  show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> head_digest f rho = f (enter_state (last tau))"
-    by (simp add: head_digest_def)
+  show "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> head_digest f rho = f (enter_state (last tau))"
+    by (rule head_digest_DG_CALLEE[OF _ _ WF_ENTER FINV, unfolded o_def])
 next
   show "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk> \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
     by (rule ENTER_MONO)
@@ -381,23 +396,26 @@ theorem clean_ctx_collect_rread_head_bound:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (head_digest f [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, ctx))\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (head_digest f [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     and EDGE_BOUND: "\<And>ctx u a v. (u, a, v) \<in> edges g
         \<Longrightarrow> apply_tf tf a (sg (Inl (u, ctx))) \<le> sg (Inl (v, ctx))"
-    and COMB_BOUND: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
-        \<Longrightarrow> \<langle>sg (Inl (cl, ctx))|sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rangle> \<le> sg (Inl (v, ctx))"
+    and COMB_BOUND: "\<And>ctx cl ex v dst. (cl, ex, v, dst) \<in> combines g
+        \<Longrightarrow> combine_collect_abs dst (sg (Inl (cl, ctx))) (sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))) \<le> sg (Inl (v, ctx))"
+    and WF_ENTER: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
+    and FINV: "\<And>st x v. \<not> is_global x \<Longrightarrow> f (st(x := v)) = f st"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>
         \<Longrightarrow> cmp (f (enter_state s)) (rt cl ctx (sg (Inl (cl, ctx))))"
   shows "cfg_collect_ctx (head_digest f) cmp g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule clean_ctx_collect_rread_head
       [where sg = sg and f = f and rt = rt and cmp = cmp and g = g and S = S,
-       OF ENTRY PROC_ENTRY EDGE_BOUND _ ENTER_MONO])
-  fix ctx cl ex v tau rho
-  assume c: "(cl, ex, v) \<in> combines g"
+       OF ENTRY PROC_ENTRY EDGE_BOUND _ WF_ENTER FINV ENTER_MONO])
+  fix ctx cl ex v dst tau rho
+  assume c: "(cl, ex, v, dst) \<in> combines g"
     and ct: "last tau \<in> \<lbrakk>sg (Inl (cl, ctx))\<rbrakk>"
     and ce: "last rho \<in> \<lbrakk>sg (Inl (ex, rt cl ctx (sg (Inl (cl, ctx)))))\<rbrakk>"
-  show "<last tau|last rho> \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  show "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule combine_abs_bound_sound[OF COMB_BOUND[OF c] ct ce])
 qed
 

@@ -19,7 +19,8 @@ definition prog_cfg_edges ::
   "prog_cfg_edges \<Pi> ps main = cfg_edges_list (compile_prog \<Pi> ps main)"
 
 definition prog_cfg_combines ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp \<times> pp \<times> pp) list" where
+    "proc_table \<Rightarrow> pname list \<Rightarrow> com
+     \<Rightarrow> (pp \<times> pp \<times> pp \<times> vname option) list" where
   "prog_cfg_combines \<Pi> ps main = cfg_combines_list (compile_prog \<Pi> ps main)"
 
 section \<open>Generic analysis-annotated CFG rendering\<close>
@@ -152,7 +153,8 @@ definition graphviz_of_analysis_auto ::
 definition edges_to_dot_list :: "(pp \<times> edge_action \<times> pp) list \<Rightarrow> string" where
   "edges_to_dot_list Es = concat (map edge_to_dot Es)"
 
-definition combines_to_dot_list :: "(pp \<times> pp \<times> pp) list \<Rightarrow> string" where
+definition combines_to_dot_list ::
+    "(pp \<times> pp \<times> pp \<times> vname option) list \<Rightarrow> string" where
   "combines_to_dot_list Cs = concat (map combine_to_dot Cs)"
 
 definition proc_entry_pps_prog ::
@@ -276,9 +278,9 @@ definition ctx_debug_call_dot ::
         ''callee '' @ (case dst of (_, k) \<Rightarrow> ctx_label k) @ dq @ ''];'' @ nl)"
 
 definition ctx_debug_return_dot ::
-  "('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx) \<Rightarrow> string" where
+  "('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx) * combine_info * (pp * 'ctx) \<Rightarrow> string" where
   "ctx_debug_return_dot ctx_key e =
-     (case e of (src, (call, ex, ret), dst) \<Rightarrow>
+     (case e of (src, (call, ex, ret, cdst), dst) \<Rightarrow>
         ''  '' @ ctx_debug_node_id ctx_key src @ '' -> '' @ ctx_debug_node_id ctx_key dst @
         '' [style=dashed,color=blue,label='' @ dq @ ''return'' @ gv_nl @ ''combine ('' @
         string_of_nat call @ '','' @ string_of_nat ex @ '','' @ string_of_nat ret @
@@ -289,7 +291,7 @@ definition ctx_debug_graphviz ::
    'ctx list \<Rightarrow> (pp * 'ctx) list \<Rightarrow>
    ((pp * 'ctx) * edge_action * (pp * 'ctx)) list \<Rightarrow>
    ((pp * 'ctx) * (pp * 'ctx)) list \<Rightarrow>
-   ((pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx)) list \<Rightarrow> string" where
+   ((pp * 'ctx) * combine_info * (pp * 'ctx)) list \<Rightarrow> string" where
   "ctx_debug_graphviz ctx_key ctx_label node_label node_attrs ks ns intra_edges call_edges return_edges =
      ''digraph CFG_CTX {'' @ nl @
      ''  rankdir=TB;'' @ nl @
@@ -305,7 +307,7 @@ definition ctx_debug_graphviz_with_globals ::
    (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> (pp * 'ctx) list \<Rightarrow>
    ((pp * 'ctx) * edge_action * (pp * 'ctx)) list \<Rightarrow>
    ((pp * 'ctx) * (pp * 'ctx)) list \<Rightarrow>
-   ((pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx)) list \<Rightarrow> string" where
+   ((pp * 'ctx) * combine_info * (pp * 'ctx)) list \<Rightarrow> string" where
   "ctx_debug_graphviz_with_globals ctx_key ctx_label globals_label node_label node_attrs ks ns intra_edges call_edges return_edges =
      ''digraph CFG_CTX {'' @ nl @
      ''  rankdir=TB;'' @ nl @
@@ -330,24 +332,27 @@ definition ctx_debug_same_ctx_intra_edges ::
   "'ctx list \<Rightarrow> (pp * edge_action * pp) list \<Rightarrow> ((pp * 'ctx) * edge_action * (pp * 'ctx)) list" where
   "ctx_debug_same_ctx_intra_edges ks es =
      concat (map (\<lambda>k. concat (map (\<lambda>e. case e of
-       (u, EA_Enter, v) \<Rightarrow> []
+       (u, EA_Enter xs es, v) \<Rightarrow> []
      | (u, a, v) \<Rightarrow> [((u, k), a, (v, k))]) es)) ks)"
 
 definition ctx_debug_same_ctx_call_edges ::
   "'ctx list \<Rightarrow> (pp * edge_action * pp) list \<Rightarrow> ((pp * 'ctx) * (pp * 'ctx)) list" where
   "ctx_debug_same_ctx_call_edges ks es =
      concat (map (\<lambda>k. concat (map (\<lambda>e. case e of
-       (u, EA_Enter, v) \<Rightarrow> [((u, k), (v, k))]
+       (u, EA_Enter xs es, v) \<Rightarrow> [((u, k), (v, k))]
      | _ \<Rightarrow> []) es)) ks)"
 
 definition ctx_debug_same_ctx_return_edges ::
-  "'ctx list \<Rightarrow> (pp * pp * pp) list \<Rightarrow> ((pp * 'ctx) * (pp * pp * pp) * (pp * 'ctx)) list" where
+  "'ctx list \<Rightarrow> combine_info list
+   \<Rightarrow> ((pp * 'ctx) * combine_info * (pp * 'ctx)) list" where
   "ctx_debug_same_ctx_return_edges ks cs =
-     concat (map (\<lambda>k. map (\<lambda>(call, ex, ret). ((ex, k), (call, ex, ret), (ret, k))) cs) ks)"
+     concat (map (\<lambda>k. map (\<lambda>(call, ex, ret, dst).
+       ((ex, k), (call, ex, ret, dst), (ret, k))) cs) ks)"
 
 definition ctx_debug_graphviz_same_ctx_lists ::
   "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow>
-   'ctx list \<Rightarrow> pp list \<Rightarrow> (pp * edge_action * pp) list \<Rightarrow> (pp * pp * pp) list \<Rightarrow> string" where
+   'ctx list \<Rightarrow> pp list \<Rightarrow> (pp * edge_action * pp) list
+   \<Rightarrow> combine_info list \<Rightarrow> string" where
   "ctx_debug_graphviz_same_ctx_lists ctx_key ctx_label node_label node_attrs ks ps es cs =
      ctx_debug_graphviz ctx_key ctx_label node_label node_attrs ks
        (ctx_debug_same_ctx_nodes ks ps)
@@ -358,7 +363,7 @@ definition ctx_debug_graphviz_same_ctx_lists ::
 definition ctx_debug_graphviz_same_ctx_lists_with_globals ::
   "('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow> ('ctx \<Rightarrow> string) \<Rightarrow>
    (pp * 'ctx \<Rightarrow> string) \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> 'ctx list \<Rightarrow> pp list \<Rightarrow>
-   (pp * edge_action * pp) list \<Rightarrow> (pp * pp * pp) list \<Rightarrow> string" where
+   (pp * edge_action * pp) list \<Rightarrow> combine_info list \<Rightarrow> string" where
   "ctx_debug_graphviz_same_ctx_lists_with_globals ctx_key ctx_label globals_label node_label node_attrs ks ps es cs =
      ctx_debug_graphviz_with_globals ctx_key ctx_label globals_label node_label node_attrs ks
        (ctx_debug_same_ctx_nodes ks ps)
@@ -403,7 +408,7 @@ definition ctx_debug_graphviz_same_ctx_cfg_show_lines ::
 
 fun ctx_debug_enter_sources :: "(pp * edge_action * pp) list \<Rightarrow> pp list" where
   "ctx_debug_enter_sources [] = []"
-| "ctx_debug_enter_sources ((src, EA_Enter, _) # es) = src # ctx_debug_enter_sources es"
+| "ctx_debug_enter_sources ((src, EA_Enter xs es', _) # es) = src # ctx_debug_enter_sources es"
 | "ctx_debug_enter_sources (_ # es) = ctx_debug_enter_sources es"
 
 definition ctx_debug_call_source_pps :: "cfg \<Rightarrow> pp list" where

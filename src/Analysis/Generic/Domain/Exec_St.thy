@@ -1,5 +1,6 @@
 theory Exec_St
   imports Abstract_Domain "TD.Update_rules" "Voblint_IMP2.IMP2_Globals"
+    Constraint_System
 begin
 
 class bounded_widening = bounded_semilattice_sup_bot + widening
@@ -539,6 +540,66 @@ lemma lookup_restrict_global_st [simp]:
   "lookup_st (restrict_global_st s) x =
    (if is_global x then lookup_st s x else bot)"
   by transfer (simp add: fun_rep_restrict_global_rep)
+
+text \<open>
+  Executable mirror of @{const combine_assign_abs}: write the callee's return slot
+  into the caller's destination, or leave the caller untouched.
+\<close>
+fun combine_assign_abs_st ::
+    "vname option \<Rightarrow> 'a \<Rightarrow> ('a::bot) st \<Rightarrow> 'a st" where
+    "combine_assign_abs_st None _ s = s"
+  | "combine_assign_abs_st (Some x) v s = update_st s x v"
+
+text \<open>
+  Executable mirror of @{const combine_collect_abs}: combine_env then
+  combine_assign, reading the callee's @{const ret_var}.
+\<close>
+definition combine_collect_abs_st ::
+    "vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  where
+  "combine_collect_abs_st dst sc se =
+     combine_assign_abs_st dst (lookup_st se ret_var) (combine_abs_st sc se)"
+
+text \<open>
+  Executable parameter binding: the \<open>st\<close> mirror of \<^const>\<open>bind_formals_abs\<close>,
+  folding \<^const>\<open>update_st\<close> over the formal/actual pairs.
+\<close>
+
+definition bind_formals_abs_st ::
+    "vname list \<Rightarrow> 'a list \<Rightarrow> ('a::bot) st \<Rightarrow> 'a st" where
+  "bind_formals_abs_st xs avs s = fold (\<lambda>(x, a) t. update_st t x a) (zip xs avs) s"
+
+lemma fun_of_st_update_st [simp]:
+  "fun_of_st (update_st s x v) = (fun_of_st s)(x := v)"
+  by (auto simp: fun_eq_iff)
+
+lemma fun_of_st_fold_update_st:
+  "fun_of_st (fold (\<lambda>(x, a) t. update_st t x a) ps s)
+     = fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (fun_of_st s)"
+  by (induction ps arbitrary: s) auto
+
+lemma fun_of_st_bind_formals_abs_st [simp]:
+  "fun_of_st (bind_formals_abs_st xs avs s) = bind_formals_abs xs avs (fun_of_st s)"
+  unfolding bind_formals_abs_st_def bind_formals_abs_def
+  by (rule fun_of_st_fold_update_st)
+
+lemma fun_of_st_combine_assign_abs_st [simp]:
+  "fun_of_st (combine_assign_abs_st dst v s)
+     = combine_assign_abs dst v (fun_of_st s)"
+  by (cases dst) (auto simp: fun_eq_iff)
+
+lemma fun_of_st_combine_collect_abs_st [simp]:
+  "fun_of_st (combine_collect_abs_st dst sc se)
+     = combine_collect_abs dst (fun_of_st sc) (fun_of_st se)"
+proof -
+  have "fun_of_st (combine_abs_st sc se)
+          = combine_abs (fun_of_st sc) (fun_of_st se)"
+    unfolding combine_abs_st_def combine_abs_def
+    by (rule ext) (simp add: sup_fun_def)
+  then show ?thesis
+    unfolding combine_collect_abs_st_def combine_collect_abs_def by simp
+qed
+
 
 lemma lookup_combine_abs_st [simp]:
   "lookup_st (combine_abs_st sc se) x =

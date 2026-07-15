@@ -54,18 +54,21 @@ theorem vd_collect_ctx_sound_bot:
     and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
     and rt :: "nat \<Rightarrow> 'c \<Rightarrow> 'd abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>vd_obs sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>vd_obs sigma (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>vd_obs sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>vd_obs sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
     and GLOB_BOT: "\<And>gk. local_bot_on_locals (sigma (Inr gk))"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+    and CMP_SOUND: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> vd_obs sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> vd_obs sigma (v, ctx) x"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> vd_obs sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) ret_var \<le> vd_obs sigma (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>vd_obs sigma (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sigma (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>vd_obs sigma (v, ctx)\<rbrakk>"
@@ -100,30 +103,33 @@ theorem vd_collect_ctx_sound_bot_reduced:
     and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
     and rt :: "nat \<Rightarrow> 'c \<Rightarrow> 'd abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>vd_obs sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>vd_obs sigma (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>vd_obs sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>vd_obs sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
     and INR_BOT: "inr_slot_locals_bot_ctx sigma"
     and INL_BOT: "inl_slot_globals_bot_ctx sigma"
-    and DIGEST_AGREE: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
+    and DIGEST_AGREE: "\<And>ctx cl ex v dst. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> decode (sigma (Inl (ex, rt cl ctx (sigma (Inl (cl, ctx))))) proj_var)
               = decode (sigma (Inl (v, ctx)) proj_var)"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> vd_obs sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) ret_var \<le> vd_obs sigma (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>vd_obs sigma (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sigma (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>vd_obs sigma (v, ctx)\<rbrakk>"
 proof -
   have GB: "\<And>gk. local_bot_on_locals (sigma (Inr gk))" by (rule vd_glob_bot_ctx[OF INR_BOT])
-  have CS: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+  have CS: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> vd_obs sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> vd_obs sigma (v, ctx) x"
   proof -
-    fix ctx cl ex v x
-    assume comb: "(cl, ex, v) \<in> combines g" and gx: "is_global x"
+    fix ctx cl ex v dst x
+    assume comb: "(cl, ex, v, dst) \<in> combines g" and gx: "is_global x"
     have ag: "decode (sigma (Inl (ex, rt cl ctx (sigma (Inl (cl, ctx))))) proj_var)
                 = decode (sigma (Inl (v, ctx)) proj_var)"
       by (rule DIGEST_AGREE[OF comb])
@@ -136,7 +142,7 @@ proof -
       by simp
   qed
   show ?thesis
-    using ENTRY PROC_ENTRY EDGE LOCAL_POST GB CS DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO
+    using ENTRY PROC_ENTRY EDGE LOCAL_POST GB CS RET_SOUND DG_INTRA DG_RETURN DG_CALLEE ENTER_MONO
     by (rule vd_collect_ctx_sound_bot)
 qed
 

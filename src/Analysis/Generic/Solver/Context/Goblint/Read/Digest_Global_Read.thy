@@ -170,6 +170,16 @@ where
      \<langle> obs_digest \<sigma> (cl, ctx)
      | obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) \<rangle>"
 
+definition combine_collect_read_obs ::
+  "vname option
+   \<Rightarrow> ((pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c) \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state"
+where
+  "combine_collect_read_obs dst \<sigma> rt cl ex ctx =
+     combine_collect_abs dst
+       (obs_digest \<sigma> (cl, ctx))
+       (obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))))"
+
 text \<open>
   Combine soundness from a reassembly bound: merge caller/callee soundness through
   \<open>combine_states_sound\<close>, then carry to the return unknown by
@@ -185,6 +195,20 @@ lemma combine_case_obs_sound:
 proof -
   have "<last tau|last rho> \<in> \<lbrakk>combine_read_obs \<sigma> rt cl ex ctx\<rbrakk>"
     unfolding combine_read_obs_def using caller callee by (rule combine_states_sound)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
+lemma combine_collect_case_obs_sound:
+  fixes \<sigma> :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  assumes caller: "last tau \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>"
+  assumes callee: "last rho \<in> \<lbrakk>obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx))))\<rbrakk>"
+  assumes bound: "combine_collect_read_obs dst \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v, ctx)"
+  shows "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
+proof -
+  have "combine_collect dst (last tau) (last rho)
+          \<in> \<lbrakk>combine_collect_read_obs dst \<sigma> rt cl ex ctx\<rbrakk>"
+    unfolding combine_collect_read_obs_def
+    using caller callee by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
@@ -227,6 +251,52 @@ proof (rule le_funI)
   qed
 qed
 
+lemma combine_collect_read_obs_le:
+  fixes \<sigma> :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  assumes LOCAL_POST:
+    "\<And>x. \<not> is_global x \<Longrightarrow> \<sigma> (Inl (cl, ctx)) x \<le> \<sigma> (Inl (v, ctx)) x"
+  assumes READER_INCL:
+    "{g. compatible (reader_digest cl ctx) g} \<subseteq> {g. compatible (reader_digest v ctx) g}"
+  assumes CMP_SOUND:
+    "\<And>x. is_global x
+       \<Longrightarrow> obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) x
+             \<le> obs_digest \<sigma> (v, ctx) x"
+  assumes RET_SOUND:
+    "\<And>y. dst = Some y
+       \<Longrightarrow> obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) ret_var
+             \<le> obs_digest \<sigma> (v, ctx) y"
+  shows "combine_collect_read_obs dst \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v, ctx)"
+proof (cases dst)
+  case None
+  have base: "combine_read_obs \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v, ctx)"
+    using LOCAL_POST READER_INCL CMP_SOUND by (rule combine_read_obs_le)
+  have eq: "combine_collect_read_obs dst \<sigma> rt cl ex ctx = combine_read_obs \<sigma> rt cl ex ctx"
+    unfolding None combine_collect_read_obs_def combine_collect_abs_def combine_read_obs_def by simp
+  show ?thesis
+    unfolding eq using base .
+next
+  case (Some y)
+  have base: "combine_read_obs \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v, ctx)"
+    using LOCAL_POST READER_INCL CMP_SOUND
+    by (rule combine_read_obs_le)
+  show ?thesis
+  proof (rule le_funI)
+    fix x
+    show "combine_collect_read_obs dst \<sigma> rt cl ex ctx x \<le> obs_digest \<sigma> (v, ctx) x"
+    proof (cases "x = y")
+      case True
+      then show ?thesis
+        using Some RET_SOUND[of y]
+        unfolding combine_collect_read_obs_def combine_collect_abs_def by simp
+    next
+      case False
+      then show ?thesis
+        using Some le_funD[OF base, of x]
+        unfolding combine_collect_read_obs_def combine_collect_abs_def combine_read_obs_def by simp
+    qed
+  qed
+qed
+
 subsection \<open>Context-sliced collecting soundness\<close>
 
 text \<open>
@@ -243,19 +313,22 @@ theorem obs_digest_collect_ctx_sound:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx
         \<Longrightarrow> s \<in> \<lbrakk>obs_digest \<sigma> (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>obs_digest \<sigma> (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> \<sigma> (Inl (cl, ctx)) x \<le> \<sigma> (Inl (v, ctx)) x"
-    and READER_INCL: "\<And>ctx cl ex v. (cl, ex, v) \<in> combines g
+    and READER_INCL: "\<And>ctx cl ex v dst. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> {g. compatible (reader_digest cl ctx) g} \<subseteq> {g. compatible (reader_digest v ctx) g}"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+    and CMP_SOUND: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) x \<le> obs_digest \<sigma> (v, ctx) x"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) ret_var \<le> obs_digest \<sigma> (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (\<sigma> (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>obs_digest \<sigma> (v, ctx)\<rbrakk>"
@@ -271,7 +344,8 @@ proof -
             \<Longrightarrow> s \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>) (cfg_entry g, ctx)"
       using ENTRY by simp
   next
-    show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    show "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+            \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
             \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>) (v, ctx)"
       using PROC_ENTRY by simp
   next
@@ -280,15 +354,15 @@ proof -
             \<Longrightarrow> s' \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>) (v, ctx)"
       using EDGE by simp
   next
-    fix ctx cl ex v' tau rho
-    assume c: "(cl, ex, v') \<in> combines g"
+    fix ctx cl ex v' dst tau rho
+    assume c: "(cl, ex, v', dst) \<in> combines g"
       and caller0: "last tau \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>) (cl, ctx)"
       and callee0: "last rho \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>)
                       (ex, rt cl ctx ((\<lambda>(p, c). \<sigma> (Inl (p, c))) (cl, ctx)))"
     from caller0 have ct: "last tau \<in> \<lbrakk>obs_digest \<sigma> (cl, ctx)\<rbrakk>" by simp
     from callee0 have ce: "last rho \<in> \<lbrakk>obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx))))\<rbrakk>" by simp
-    have bound: "combine_read_obs \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v', ctx)"
-    proof (rule combine_read_obs_le)
+    have bound: "combine_collect_read_obs dst \<sigma> rt cl ex ctx \<le> obs_digest \<sigma> (v', ctx)"
+    proof (rule combine_collect_read_obs_le)
       fix x assume "\<not> is_global x"
       thus "\<sigma> (Inl (cl, ctx)) x \<le> \<sigma> (Inl (v', ctx)) x" by (rule LOCAL_POST[OF c])
     next
@@ -298,18 +372,22 @@ proof -
       fix x assume "is_global x"
       thus "obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) x \<le> obs_digest \<sigma> (v', ctx) x"
         by (rule CMP_SOUND[OF c])
+    next
+      fix y assume "dst = Some y"
+      thus "obs_digest \<sigma> (ex, rt cl ctx (\<sigma> (Inl (cl, ctx)))) ret_var \<le> obs_digest \<sigma> (v', ctx) y"
+        by (rule RET_SOUND[OF c])
     qed
-    have "<last tau|last rho> \<in> \<lbrakk>obs_digest \<sigma> (v', ctx)\<rbrakk>"
-      by (rule combine_case_obs_sound[OF ct ce bound])
-    thus "<last tau|last rho> \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>) (v', ctx)" by simp
+    have "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>obs_digest \<sigma> (v', ctx)\<rbrakk>"
+      by (rule combine_collect_case_obs_sound[OF ct ce bound])
+    thus "combine_collect dst (last tau) (last rho) \<in> (\<lambda>(p, c). \<lbrakk>obs_digest \<sigma> (p, c)\<rbrakk>) (v', ctx)" by simp
   next
     show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
       using DG_INTRA by blast
   next
-    show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    show "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
       using DG_RETURN by blast
   next
-    show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    show "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
       using DG_CALLEE by blast
   next
     fix ctx cl s
@@ -364,24 +442,68 @@ proof (rule le_funI)
   qed
 qed
 
+lemma combine_collect_read_obs_le_bot:
+  fixes sigma :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  assumes LOCAL_POST: "\<And>x. \<not> is_global x \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
+  assumes GLOB_BOT: "\<And>gk. local_bot_on_locals (sigma (Inr gk))"
+  assumes CMP_SOUND:
+    "\<And>x. is_global x \<Longrightarrow> obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> obs_digest sigma (v, ctx) x"
+  assumes RET_SOUND:
+    "\<And>y. dst = Some y
+       \<Longrightarrow> obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) ret_var \<le> obs_digest sigma (v, ctx) y"
+  shows "combine_collect_read_obs dst sigma rt cl ex ctx \<le> obs_digest sigma (v, ctx)"
+proof (cases dst)
+  case None
+  have base: "combine_read_obs sigma rt cl ex ctx \<le> obs_digest sigma (v, ctx)"
+    using LOCAL_POST GLOB_BOT CMP_SOUND by (rule combine_read_obs_le_bot)
+  have eq: "combine_collect_read_obs dst sigma rt cl ex ctx = combine_read_obs sigma rt cl ex ctx"
+    unfolding None combine_collect_read_obs_def combine_collect_abs_def combine_read_obs_def by simp
+  show ?thesis
+    unfolding eq using base .
+next
+  case (Some y)
+  have base: "combine_read_obs sigma rt cl ex ctx \<le> obs_digest sigma (v, ctx)"
+    using LOCAL_POST GLOB_BOT CMP_SOUND
+    by (rule combine_read_obs_le_bot)
+  show ?thesis
+  proof (rule le_funI)
+    fix x
+    show "combine_collect_read_obs dst sigma rt cl ex ctx x \<le> obs_digest sigma (v, ctx) x"
+    proof (cases "x = y")
+      case True
+      then show ?thesis
+        using Some RET_SOUND[of y]
+        unfolding combine_collect_read_obs_def combine_collect_abs_def by simp
+    next
+      case False
+      then show ?thesis
+        using Some le_funD[OF base, of x]
+        unfolding combine_collect_read_obs_def combine_collect_abs_def combine_read_obs_def by simp
+    qed
+  qed
+qed
+
 text \<open>Context-sliced collecting soundness, \<open>bot\<close>-on-locals variant (unconstrained reader).\<close>
 theorem obs_digest_collect_ctx_sound_bot:
   fixes sigma :: "(pp \<times> 'c) + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and dg :: "store list \<Rightarrow> 'c" and cmp :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>obs_digest sigma (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>obs_digest sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>obs_digest sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
     and GLOB_BOT: "\<And>gk. local_bot_on_locals (sigma (Inr gk))"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+    and CMP_SOUND: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> obs_digest sigma (v, ctx) x"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) ret_var \<le> obs_digest sigma (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>obs_digest sigma (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (sigma (Inl (cl, ctx))))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>obs_digest sigma (v, ctx)\<rbrakk>"
@@ -396,7 +518,8 @@ proof -
             \<Longrightarrow> s \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>) (cfg_entry g, ctx)"
       using ENTRY by simp
   next
-    show "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    show "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+            \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
             \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>) (v, ctx)"
       using PROC_ENTRY by simp
   next
@@ -405,15 +528,15 @@ proof -
             \<Longrightarrow> s' \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>) (v, ctx)"
       using EDGE by simp
   next
-    fix ctx cl ex v' tau rho
-    assume c: "(cl, ex, v') \<in> combines g"
+    fix ctx cl ex v' dst tau rho
+    assume c: "(cl, ex, v', dst) \<in> combines g"
       and caller0: "last tau \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>) (cl, ctx)"
       and callee0: "last rho \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>)
                       (ex, rt cl ctx ((\<lambda>(p, c). sigma (Inl (p, c))) (cl, ctx)))"
     from caller0 have ct: "last tau \<in> \<lbrakk>obs_digest sigma (cl, ctx)\<rbrakk>" by simp
     from callee0 have ce: "last rho \<in> \<lbrakk>obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx))))\<rbrakk>" by simp
-    have bound: "combine_read_obs sigma rt cl ex ctx \<le> obs_digest sigma (v', ctx)"
-    proof (rule combine_read_obs_le_bot)
+    have bound: "combine_collect_read_obs dst sigma rt cl ex ctx \<le> obs_digest sigma (v', ctx)"
+    proof (rule combine_collect_read_obs_le_bot)
       fix x assume "\<not> is_global x"
       thus "sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v', ctx)) x" by (rule LOCAL_POST[OF c])
     next
@@ -422,18 +545,22 @@ proof -
       fix x assume "is_global x"
       thus "obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) x \<le> obs_digest sigma (v', ctx) x"
         by (rule CMP_SOUND[OF c])
+    next
+      fix y assume "dst = Some y"
+      thus "obs_digest sigma (ex, rt cl ctx (sigma (Inl (cl, ctx)))) ret_var \<le> obs_digest sigma (v', ctx) y"
+        by (rule RET_SOUND[OF c])
     qed
-    have "<last tau|last rho> \<in> \<lbrakk>obs_digest sigma (v', ctx)\<rbrakk>"
-      by (rule combine_case_obs_sound[OF ct ce bound])
-    thus "<last tau|last rho> \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>) (v', ctx)" by simp
+    have "combine_collect dst (last tau) (last rho) \<in> \<lbrakk>obs_digest sigma (v', ctx)\<rbrakk>"
+      by (rule combine_collect_case_obs_sound[OF ct ce bound])
+    thus "combine_collect dst (last tau) (last rho) \<in> (\<lambda>(p, c). \<lbrakk>obs_digest sigma (p, c)\<rbrakk>) (v', ctx)" by simp
   next
     show "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
       using DG_INTRA by blast
   next
-    show "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
+    show "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
       using DG_RETURN by blast
   next
-    show "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    show "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
       using DG_CALLEE by blast
   next
     fix ctx cl s
@@ -479,18 +606,22 @@ theorem obs_digest_recovers_cmp_collect:
     and rt :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> 'c" and entdg :: "store \<Rightarrow> 'c"
     and gcmp :: "'c \<Rightarrow> 'g \<Rightarrow> bool"
   assumes ENTRY: "\<And>ctx s. s \<in> S \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (cfg_entry g, ctx)\<rbrakk>"
-    and PROC_ENTRY: "\<And>ctx v s. (cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    and PROC_ENTRY: "\<And>ctx v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
+        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
         \<Longrightarrow> cmp (dg [s]) ctx \<Longrightarrow> s \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
     and EDGE: "\<And>ctx u a v tr s'. (u, a, v) \<in> edges g \<Longrightarrow> edge_step a (last tr) = Some s'
         \<Longrightarrow> last tr \<in> \<lbrakk>side_env_cmp gcmp sigma (u, ctx)\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
-    and LOCAL_POST: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> \<not> is_global x
+    and LOCAL_POST: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> \<not> is_global x
         \<Longrightarrow> sigma (Inl (cl, ctx)) x \<le> sigma (Inl (v, ctx)) x"
-    and CMP_SOUND: "\<And>ctx cl ex v x. (cl, ex, v) \<in> combines g \<Longrightarrow> is_global x
+    and CMP_SOUND: "\<And>ctx cl ex v dst x. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> is_global x
         \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) x
               \<le> side_env_cmp gcmp sigma (v, ctx) x"
+    and RET_SOUND: "\<And>ctx cl ex v dst y. (cl, ex, v, dst) \<in> combines g \<Longrightarrow> dst = Some y
+        \<Longrightarrow> side_env_cmp gcmp sigma (ex, rt cl ctx (route_read_cmp sigma (cl, ctx))) ret_var
+              \<le> side_env_cmp gcmp sigma (v, ctx) y"
     and DG_INTRA: "\<And>tr s' ctx. tr \<noteq> [] \<Longrightarrow> cmp (dg (tr @ [s'])) ctx \<Longrightarrow> cmp (dg tr) ctx"
-    and DG_RETURN: "\<And>tau rho. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [<last tau|last rho>]) = dg tau"
-    and DG_CALLEE: "\<And>tau rho. rho \<noteq> [] \<Longrightarrow> hd rho = enter_state (last tau) \<Longrightarrow> dg rho = entdg (last tau)"
+    and DG_RETURN: "\<And>tau rho dst. tau \<noteq> [] \<Longrightarrow> dg (tau @ tl rho @ [combine_collect dst (last tau) (last rho)]) = dg tau"
+    and DG_CALLEE: "\<And>cl tau rho. rho \<noteq> [] \<Longrightarrow> call_enter_store g cl (last tau) (hd rho) \<Longrightarrow> dg rho = entdg (last tau)"
     and ENTER_MONO: "\<And>ctx cl s. s \<in> \<lbrakk>side_env_cmp gcmp sigma (cl, ctx)\<rbrakk>
         \<Longrightarrow> cmp (entdg s) (rt cl ctx (route_read_cmp sigma (cl, ctx)))"
   shows "cfg_collect_ctx dg cmp g S v ctx \<le> \<lbrakk>side_env_cmp gcmp sigma (v, ctx)\<rbrakk>"
@@ -510,6 +641,7 @@ proof -
     subgoal using LOCAL_POST by simp
     subgoal by simp
     subgoal using CMP_SOUND by (simp add: R route_read_cmp_def)
+    subgoal using RET_SOUND by (simp add: R route_read_cmp_def)
     subgoal using DG_INTRA by simp
     subgoal using DG_RETURN by simp
     subgoal using DG_CALLEE by simp

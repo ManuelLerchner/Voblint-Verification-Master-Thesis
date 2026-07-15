@@ -35,7 +35,7 @@ definition sqr_body :: "IMP2_Proc.com" where
   "sqr_body = \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
 definition proc_pi :: proc_table where
-  "proc_pi = (\<lambda>_. None)(''inc'' := Some inc_body, ''sqr'' := Some sqr_body)"
+  "proc_pi = (\<lambda>_. None)(''inc'' := Some (proc_decl_legacy inc_body), ''sqr'' := Some (proc_decl_legacy sqr_body))"
 
 definition main_prog :: "IMP2_Proc.com" where
   "main_prog = \<lbrakk>
@@ -55,12 +55,12 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes proc_pi (Call ''inc'') s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes proc_pi (Call None ''inc'' []) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have run: "pcompletes proc_pi (Call ''inc'') s
+  have run: "pcompletes proc_pi (Call None ''inc'' []) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
-  proof (rule pcompletes_Call[where c = inc_body])
-    show "proc_pi ''inc'' = Some inc_body"
+  proof (rule pcompletes_Legacy_Call[where c = inc_body])
+    show "proc_pi ''inc'' = Some (proc_decl_legacy inc_body)"
       by (simp add: proc_pi_def)
     show "pcompletes proc_pi inc_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
@@ -80,12 +80,12 @@ proof -
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_pi (Call ''sqr'') s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes proc_pi (Call None ''sqr'' []) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
-  have run: "pcompletes proc_pi (Call ''sqr'') s
+  have run: "pcompletes proc_pi (Call None ''sqr'' []) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
-  proof (rule pcompletes_Call[where c = sqr_body])
-    show "proc_pi ''sqr'' = Some sqr_body"
+  proof (rule pcompletes_Legacy_Call[where c = sqr_body])
+    show "proc_pi ''sqr'' = Some (proc_decl_legacy sqr_body)"
       by (simp add: proc_pi_def)
     show "pcompletes proc_pi sqr_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
@@ -114,10 +114,10 @@ proof -
   have step1: "pcompletes proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
     using pcompletes_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
     by (simp add: pcompletes_def)
-  have step2: "pcompletes proc_pi (Call ''inc'') (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+  have step2: "pcompletes proc_pi (Call None ''inc'' []) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
     using call_inc_result[where s = "s(''Gx'' := 4)"]
     by simp
-  have step3: "pcompletes proc_pi (Call ''sqr'') (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+  have step3: "pcompletes proc_pi (Call None ''sqr'' []) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
     using call_sqr_result[where s = "s(''Gx'' := 5)"]
     by simp
   show ?thesis
@@ -144,10 +144,10 @@ lemma main_cfg_full:
       (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), 3),
       (4, EA_Assign ''Gx'' (N 4), 5),
       (5, EA_Nop, 6),
-      (6, EA_Enter, 0),
+      (6, EA_Enter [] [], 0),
       (7, EA_Nop, 8),
-      (8, EA_Enter, 2)}
-     {(6, 1, 7), (8, 3, 9)}"
+      (8, EA_Enter [] [], 2)}
+     {(6, 1, 7, None), (8, 3, 9, None)}"
   by (simp add: proc_pi_def inc_body_def sqr_body_def main_prog_def
       compile_prog_def compile_prog_with_regions_def compile_procs_list_def Let_def eval_nat_numeral;
       blast)
@@ -160,11 +160,11 @@ lemma main_cfg_edges:
       (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), 3),
       (4, EA_Assign ''Gx'' (N 4), 5),
       (5, EA_Nop, 6),
-      (6, EA_Enter, 0),
+      (6, EA_Enter [] [], 0),
       (7, EA_Nop, 8),
-      (8, EA_Enter, 2)}"
+      (8, EA_Enter [] [], 2)}"
   by (simp add: main_cfg_full)
-lemma main_cfg_combines: "combines main_cfg = {(6, 1, 7), (8, 3, 9)}"
+lemma main_cfg_combines: "combines main_cfg = {(6, 1, 7, None), (8, 3, 9, None)}"
   by (simp add: main_cfg_full)
 
  
@@ -219,14 +219,15 @@ proof (rule allI)
                   {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1))),
                    (2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx''))),
                    (4, EA_Assign ''Gx'' (N 4)),
-                   (5, EA_Nop), (6, EA_Enter), (7, EA_Nop), (8, EA_Enter)})
+                   (5, EA_Nop), (6, EA_Enter [] []), (7, EA_Nop), (8, EA_Enter [] [])})
              \<union>
-             ((\<lambda>(c, e). \<langle>main_prog_env c|main_prog_env e\<rangle>) `
-                  {(6, 1), (8, 3)})"])
+             ((\<lambda>(c, e, dst). combine_collect_abs dst (main_prog_env c) (main_prog_env e)) `
+                  {(6, 1, None), (8, 3, None)})"])
     by (auto split: if_splits
               simp: main_prog_env_def main_prog_s0_def ivl_tf_def assign_ivl_def
                     times_ivl_def normalize_ivl_def less_eq_ivl_def le_fun_def
-                    enter_ivl_def combine_abs_def is_global_def)
+                    enter_ivl_def enter_frame_ivl_def bind_formals_abs_def
+                    combine_collect_abs_def combine_abs_def is_global_def)
 qed
 
 lemma main_prog_gx_exit_ivl:
@@ -278,4 +279,3 @@ ML_val \<open>
 \<close>
 
 end
-

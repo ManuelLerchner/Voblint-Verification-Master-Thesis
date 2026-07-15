@@ -41,15 +41,38 @@ lemma assign_ivl_sound:
 
 subsection \<open>Procedure entry and bundled transfer functions\<close>
 
-text \<open>Procedure entry: keep globals, reset locals to the full interval.\<close>
-definition enter_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_ivl \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else Ivl MinInf PlusInf)"
+text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
+  the formals to the abstract values of the actuals evaluated in the caller.\<close>
+definition enter_frame_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
+  "enter_frame_ivl \<sigma> =
+     (\<lambda>x. if is_global x then \<sigma> x else Ivl MinInf PlusInf)"
+
+definition enter_ivl ::
+    "vname list \<Rightarrow> aexp list \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
+  "enter_ivl xs es \<sigma> =
+     bind_formals_abs xs (map (\<lambda>e. aval_ivl e \<sigma>) es) (enter_frame_ivl \<sigma>)"
+
+lemma enter_frame_ivl_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "enter_state s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
+  using assms unfolding gamma_state_def enter_frame_ivl_def enter_state_def
+  by (intro CollectI allI) auto
 
 lemma enter_ivl_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>enter_ivl \<sigma>\<rbrakk>"
-  using assms unfolding gamma_state_def enter_ivl_def enter_state_def
-  by (intro CollectI allI) auto
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+           \<in> \<lbrakk>enter_ivl xs es \<sigma>\<rbrakk>"
+proof -
+  have base: "enter_state s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
+    by (rule enter_frame_ivl_sound[OF gs])
+  have V: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)"
+    using gs unfolding gamma_state_def by simp
+  have "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_ivl e \<sigma>) es)"
+    using V by (simp add: list_all2_conv_all_nth aval_ivl_sound)
+  from bind_formals_abs_sound[OF base this]
+  show ?thesis unfolding enter_ivl_def .
+qed
 
 definition ivl_tf :: "ivl domain_transfer" where
   "ivl_tf = (| tf_assign     = assign_ivl,
@@ -70,7 +93,9 @@ lemma ivl_tf_sound_assume_not:
   unfolding ivl_tf_def by (simp add: assume_not_ivl_sound)
 
 lemma ivl_tf_sound_enter:
-  "\<forall>\<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state st \<in> \<lbrakk>tf_enter ivl_tf \<sigma>\<rbrakk>"
+  "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
+     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state st)
+       \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
 interpretation ivl_sound_tf: sound_transfer ivl_tf
@@ -81,7 +106,9 @@ proof unfold_locales
     by (rule ivl_tf_sound_assume)
   show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_assume_not)
-  show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. enter_state s \<in> \<lbrakk>tf_enter ivl_tf \<sigma>\<rbrakk>"
+  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+       \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_enter)
 qed
 
@@ -99,20 +126,32 @@ lemma assume_not_ivl_mono:
   unfolding assume_not_ivl_def
   by (rule bfilter_ivl_mono)
 
-lemma enter_ivl_mono:
+lemma enter_frame_ivl_mono:
   assumes "s1 \<le> s2"
-  shows "enter_ivl s1 \<le> enter_ivl s2"
+  shows "enter_frame_ivl s1 \<le> enter_frame_ivl s2"
 proof (rule le_funI)
   fix x
-  show "enter_ivl s1 x \<le> enter_ivl s2 x"
+  show "enter_frame_ivl s1 x \<le> enter_frame_ivl s2 x"
   proof (cases "is_global x")
     case True
     from assms have "s1 x \<le> s2 x" by (simp add: le_funD)
-    with True show ?thesis unfolding enter_ivl_def by simp
+    with True show ?thesis unfolding enter_frame_ivl_def by simp
   next
     case False
-    thus ?thesis unfolding enter_ivl_def by simp
+    thus ?thesis unfolding enter_frame_ivl_def by simp
   qed
+qed
+
+lemma enter_ivl_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_ivl xs es s1 \<le> enter_ivl xs es s2"
+  unfolding enter_ivl_def
+proof (rule bind_formals_abs_mono)
+  show "enter_frame_ivl s1 \<le> enter_frame_ivl s2"
+    by (rule enter_frame_ivl_mono[OF assms])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_ivl e s1) es)
+                       (map (\<lambda>e. aval_ivl e s2) es)"
+    using assms by (simp add: list_all2_conv_all_nth aval_ivl_mono)
 qed
 
 lemma assign_ivl_mono:
@@ -133,6 +172,7 @@ text \<open>
   examples with assume edges also need @{thm [source] assume_ivl_def},
   @{thm [source] assume_not_ivl_def}, @{thm [source] ivl_backward_domain.bfilter.simps};
   examples with procedure calls also need @{thm [source] enter_ivl_def},
+  @{thm [source] enter_frame_ivl_def}, @{thm [source] bind_formals_abs_def},
   @{thm [source] combine_abs_def}, @{thm [source] is_global_def}.
 \<close>
 lemmas ivl_eval_simps =

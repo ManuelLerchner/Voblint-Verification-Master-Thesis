@@ -102,18 +102,14 @@ inductive cstep :: "cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bo
      cstep g (u, s, stk) (v, s', stk)"
 | Call:
     "(call, EA_Enter xs es, en) \<in> edges g \<Longrightarrow>
-     (call, ex, ret, dst, r) \<in> combines g \<Longrightarrow>
+     (call, ex, ret, dst) \<in> combines g \<Longrightarrow>
      edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow>
      cstep g (call, s, stk)
        (en, s', (call, ret, s) # stk)"
-| ReturnNone:
-    "(call, ex, ret, None, r) \<in> combines g \<Longrightarrow>
+| Return:
+    "(call, ex, ret, dst) \<in> combines g \<Longrightarrow>
      cstep g (ex, t, (call, ret, s) # stk)
-       (ret, IMP2_Globals.combine_states s t, stk)"
-| ReturnSome:
-    "(call, ex, ret, Some x, Some e) \<in> combines g \<Longrightarrow>
-     cstep g (ex, t, (call, ret, s) # stk)
-       (ret, (IMP2_Globals.combine_states s t)(x := IMP2_Expr.aval e t), stk)"
+       (ret, combine_assign dst (t ret_var) (IMP2_Globals.combine_states s t), stk)"
 
 
 lemma cstep_star_single:
@@ -182,7 +178,7 @@ where
       Pi p = Some decl \<longrightarrow>
       lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
       (\<exists>finish.
-        compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)) \<and>
+        compile Pi lay (with_result (body decl) (result decl)) en = (finish, en, ex, Ep, Cp)) \<and>
       Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g)"
 
 

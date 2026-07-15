@@ -90,7 +90,7 @@ where
     etf_assign     = (\<lambda>x e u. retain_edge_tree (apply_tf tf (EA_Assign x e)) u),
     etf_assume     = (\<lambda>b u. retain_edge_tree (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. retain_edge_tree (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>u. retain_edge_tree (apply_tf tf EA_Enter) u),
+    etf_enter      = (\<lambda>xs es u. retain_edge_tree (apply_tf tf (EA_Enter xs es)) u),
     etf_combine    = unit_combine_tree
   \<rparr>"
 
@@ -99,7 +99,7 @@ lemma apply_etf_retain_of_transfer:
   unfolding retain_etf_of_transfer_def by (cases a) simp_all
 
 lemma etf_combine_retain_of_transfer:
-  "etf_combine (retain_etf_of_transfer tf) cc ex = unit_combine_tree cc ex"
+  "etf_combine (retain_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
   unfolding retain_etf_of_transfer_def by simp
 
 lemma sound_effectful_transfer_retain_of_transfer:
@@ -141,20 +141,22 @@ proof -
           etf_collecting_full_retain_eq_unit_edge_tree
           intro: in_gamma_unit_edge_tree_assume_not)
   next
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              enter_state s \<in> \<lbrakk>etf_collecting_full
-                (etf_enter (retain_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
+              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+                \<in> \<lbrakk>etf_collecting_full
+                     (etf_enter (retain_etf_of_transfer tf) xs es u) \<sigma>\<rbrakk>)"
       by (auto simp add: retain_etf_of_transfer_def glob_env_unit
           etf_collecting_full_retain_eq_unit_edge_tree
           intro: in_gamma_unit_edge_tree_enter)
   next
-    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              <s|t> \<in> \<lbrakk>etf_full (etf_combine (retain_etf_of_transfer tf) cc ex) \<sigma>\<rbrakk>)"
+              combine_collect dst s t
+                \<in> \<lbrakk>etf_full (etf_combine (retain_etf_of_transfer tf) dst cc ex) \<sigma>\<rbrakk>)"
       by (auto simp add: etf_combine_retain_of_transfer etf_full_unit_combine_tree
-           intro: combine_states_sound)
+           intro: combine_collect_sound)
   qed
 qed
 
@@ -201,25 +203,25 @@ theorem part_solution_imp_inl_glob_le_keyed_ctx:
     and etf :: "(unit, 'a) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes retain_edge: "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
-    and retain_comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+    and retain_comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
     and bot0_glob: "restrict_global bot0 = \<bottom>"
     and frame_glob: "restrict_global fresh_frame = \<bottom>"
     and ps: "part_solution (side_cfg_T_eff_cmp gkey
-                (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                    (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                    (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                 g etf fresh_frame bot0 s0) x \<sigma> vars"
     and v: "(v, ctx) \<in> vars"
     and y: "is_global y"
   shows "\<sigma> (Inl (v, ctx)) y \<le> \<sigma> (Inr (gkey ctx)) y"
 proof -
-  let ?cmb = "\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex))"
+  let ?cmb = "\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex))"
   let ?T = "side_cfg_T_eff_cmp gkey ?cmb g etf fresh_frame bot0 s0"
   let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                 \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>)"
   let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
                         (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
                     (non_enter_predecessor_list g v)"
-  let ?comb = "map (\<lambda>(cc, ex). ?cmb ctx cc ex) (combine_predecessor_list g v)"
+  let ?comb = "map (\<lambda>(cc, ex, dst). ?cmb ctx dst cc ex) (combine_predecessor_list g v)"
   have exact: "eq ?T (v, ctx) \<sigma> = \<sigma> (Inl (v, ctx))" using ps v by auto
   have hyp: "\<And>t. t \<in> set (?intra @ ?comb)
              \<Longrightarrow> restrict_global (traverse_rhs t \<sigma>) \<le> sides_of_rhs t \<sigma> (Inr (gkey ctx))"
@@ -236,8 +238,8 @@ proof -
     next
       case False
       with t have "t \<in> set ?comb" by simp
-      then obtain cc ex where
-        "t = map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf cc ex))"
+      then obtain cc ex dst where
+        "t = map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (etf_combine etf dst cc ex))"
         by auto
       thus ?thesis
         by (simp add: retain_comb restrict_global_traverse_unit_combine_intra)
@@ -287,11 +289,11 @@ lemma inl_glob_le_keyed_ctx_on_vars:
     and etf :: "(unit, 'a) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
-    and "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+    and "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
     and "restrict_global bot0 = \<bottom>" and "restrict_global fresh_frame = \<bottom>"
     and "part_solution (side_cfg_T_eff_cmp gkey
-           (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-               (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+           (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+               (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
            g etf fresh_frame bot0 s0) x \<sigma> vars"
     and "\<And>v ctx. (v, ctx) \<in> vars"
   shows "inl_glob_le_keyed_ctx gkey \<sigma>"
@@ -312,12 +314,12 @@ lemma inl_glob_le_keyed_ctx_full:
     and etf :: "(unit, 'a) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes retain_edge: "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
-    and retain_comb: "\<And>cc ex. etf_combine etf cc ex = unit_combine_tree cc ex"
+    and retain_comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
     and bot0_glob: "restrict_global bot0 = \<bottom>"
     and frame_glob: "restrict_global fresh_frame = \<bottom>"
     and ps: "part_solution (side_cfg_T_eff_cmp gkey
-                (\<lambda>c cc ex. map_gtree (\<lambda>_. gkey c)
-                    (map_ltree (\<lambda>w. (w, c)) (etf_combine etf cc ex)))
+                (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
+                    (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                 g etf fresh_frame bot0 s0) x \<sigma> vars"
     and outside: "\<And>v ctx. (v, ctx) \<notin> vars \<Longrightarrow> \<sigma> (Inl (v, ctx)) = \<bottom>"
   shows "inl_glob_le_keyed_ctx gkey \<sigma>"
@@ -432,14 +434,13 @@ where
 subsection \<open>The heterogeneous retain spec\<close>
 
 definition retain_hetero_combine ::
-  "('a::bounded_semilattice_sup_bot abs_state, 'a abs_state) dg_state
+  "vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot abs_state, 'a abs_state) dg_state
    \<Rightarrow> ('a abs_state, 'a abs_state) dg_state
    \<Rightarrow> 'a abs_state
    \<Rightarrow> 'a abs_state \<times> ('a abs_state, 'a abs_state) dg_state"
 where
-  "retain_hetero_combine dc de g =
-     (let res = restrict_local (merge_dg dc \<squnion> g)
-                \<squnion> restrict_global (merge_dg de \<squnion> g)
+  "retain_hetero_combine dst dc de g =
+     (let res = combine_collect_abs dst (merge_dg dc \<squnion> g) (merge_dg de \<squnion> g)
       in (restrict_global res, split_dg (restrict_local res)))"
 
 
@@ -453,7 +454,8 @@ where
     dgs_assign     = (\<lambda>x e. retain_hetero_step (apply_tf tf (EA_Assign x e))),
     dgs_assume     = (\<lambda>b. retain_hetero_step (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. retain_hetero_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = retain_hetero_step (apply_tf tf EA_Enter),    dgs_combine    = retain_hetero_combine
+    dgs_enter      = (\<lambda>xs es. retain_hetero_step (apply_tf tf (EA_Enter xs es))),
+    dgs_combine    = retain_hetero_combine
   \<rparr>"
 
 
@@ -508,12 +510,12 @@ lemma sound_dg_spec_retain:
       by (simp add: dg_spec_step_retain retain_hetero_step_def Let_def
             gamma_retain_def merge_split_dg)
   qed
-  subgoal for s dc g t de
+  subgoal for s dc g t de dst
   proof -
     assume sin: "s \<in> gamma_retain dc g" and tin: "t \<in> gamma_retain de g"
-    have "combine_states s t
-          \<in> \<lbrakk>combine_abs (merge_dg dc \<squnion> g) (merge_dg de \<squnion> g)\<rbrakk>"
-      using combine_states_sound sin tin unfolding gamma_retain_def by blast
+    have "combine_collect dst s t
+          \<in> \<lbrakk>combine_collect_abs dst (merge_dg dc \<squnion> g) (merge_dg de \<squnion> g)\<rbrakk>"
+      using combine_collect_sound sin tin unfolding gamma_retain_def by blast
     then show ?thesis
       unfolding retain_dg_spec_def retain_hetero_combine_def gamma_retain_def
       by (simp add: Let_def merge_split_dg restrict_local_global_join

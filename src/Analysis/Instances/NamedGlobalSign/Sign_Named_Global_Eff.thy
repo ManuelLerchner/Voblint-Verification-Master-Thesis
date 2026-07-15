@@ -104,18 +104,18 @@ lemma route_tree_etf_full:
 subsection \<open>The flag-routed combine builder\<close>
 
 definition route_combine ::
-  "(sign abs_state \<Rightarrow> gname) \<Rightarrow> pp \<Rightarrow> pp
+  "(sign abs_state \<Rightarrow> gname) \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp, gname, sign abs_state) strategy_tree"
 where
-  "route_combine route cc ex =
+  "route_combine route dst cc ex =
      QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG Gpos (\<lambda>gp. QueryG Gneg (\<lambda>gn.
        let envc = sc \<squnion> gp \<squnion> gn; enve = se \<squnion> gp \<squnion> gn;
-           res = \<langle>envc|enve\<rangle>
+           res = combine_collect_abs dst envc enve
        in Side (route envc) (restrict_global res) (Answer (restrict_local res))))))"
 
 lemma route_combine_etf_full:
-  "etf_full (route_combine route cc ex) \<sigma>
-   = \<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>"
+  "etf_full (route_combine route dst cc ex) \<sigma>
+   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   unfolding etf_full_def route_combine_def
   by (simp add: Let_def restrict_local_global_join glob_env_gname sup_assoc)
 
@@ -137,7 +137,7 @@ definition flag_etf :: "(gname, sign) effectful_domain_transfer" where
        etf_assign     = \<lambda>x a. route_tree flag_route (apply_tf sign_tf (EA_Assign x a)),
        etf_assume     = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assume b)),
        etf_assume_not = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_AssumeNot b)),
-       etf_enter      = route_tree (\<lambda>_. Gpos) (apply_tf sign_tf EA_Enter),
+       etf_enter      = (\<lambda>xs es. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Enter xs es))),
        etf_combine    = route_combine (\<lambda>_. Gpos) \<rparr>"
 
 lemma flag_etf_full_nop:
@@ -160,13 +160,13 @@ lemma flag_etf_full_assume_not:
   unfolding flag_etf_def by (simp add: route_tree_etf_full)
 
 lemma flag_etf_full_enter:
-  "etf_full (etf_enter flag_etf u) \<sigma>
-   = tf_enter sign_tf (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+  "etf_full (etf_enter flag_etf xs es u) \<sigma>
+   = tf_enter sign_tf xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
   unfolding flag_etf_def by (simp add: route_tree_etf_full)
 
 lemma flag_etf_full_combine:
-  "etf_full (etf_combine flag_etf cc ex) \<sigma>
-   = \<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>"
+  "etf_full (etf_combine flag_etf dst cc ex) \<sigma>
+   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   unfolding flag_etf_def by (simp add: route_combine_etf_full)
 
 subsection \<open>Soundness: a non-unit witness of sound_effectful_transfer\<close>
@@ -198,17 +198,18 @@ next
     using sign_tf_sound_assume_not
     by (auto simp add: flag_etf_full_assume_not intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+  show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
           (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter flag_etf u) \<sigma>\<rbrakk>)"
+            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+              \<in> \<lbrakk>etf_collecting_full (etf_enter flag_etf xs es u) \<sigma>\<rbrakk>)"
     using sign_tf_sound_enter
     by (auto simp add: flag_etf_full_enter intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>cc ex \<sigma>.
+  show "\<forall>dst cc ex \<sigma>.
        inr_slot_locals_bot \<sigma> \<longrightarrow>
        (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. <s|t> \<in> \<lbrakk>etf_full (etf_combine flag_etf cc ex) \<sigma>\<rbrakk>) "
-    by (auto simp: flag_etf_full_combine intro: combine_states_sound)
+           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine flag_etf dst cc ex) \<sigma>\<rbrakk>) "
+    by (auto simp: flag_etf_full_combine intro: combine_collect_sound)
 qed
 
 subsection \<open>Precision: the two named slots stay distinct\<close>
@@ -271,20 +272,20 @@ lemma dep_aux_route_tree:
   unfolding route_tree_def by (simp add: Let_def)
 
 lemma traverse_route_combine:
-  "traverse_rhs (route_combine route cc ex) \<sigma>
-   = restrict_local \<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>"
+  "traverse_rhs (route_combine route dst cc ex) \<sigma>
+   = restrict_local (combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>))"
   unfolding route_combine_def
   by (simp add: Let_def glob_env_gname sup_assoc)
 
 lemma sides_route_combine_const:
-  "sides_of_rhs (route_combine (\<lambda>_. gg) cc ex) \<sigma>
+  "sides_of_rhs (route_combine (\<lambda>_. gg) dst cc ex) \<sigma>
    = (\<lambda>_. \<bottom>)(Inr gg
-       := restrict_global \<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>)"
+       := restrict_global (combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)))"
   unfolding route_combine_def
   by (simp add: Let_def glob_env_gname sup_assoc)
 
 lemma dep_aux_route_combine:
-  "dep_aux \<sigma> (route_combine route cc ex) = {Inl cc, Inl ex, Inr Gpos, Inr Gneg}"
+  "dep_aux \<sigma> (route_combine route dst cc ex) = {Inl cc, Inl ex, Inr Gpos, Inr Gneg}"
   unfolding route_combine_def by (simp add: Let_def)
 
 lemma sides_inr_local_bot_route_tree_const:
@@ -302,11 +303,11 @@ qed
 
 lemma sides_inr_local_bot_route_combine_const:
   fixes gg :: gname
-  shows "local_bot_on_locals (sides_of_rhs (route_combine (\<lambda>_. gg) cc ex) \<sigma> (Inr g))"
+  shows "local_bot_on_locals (sides_of_rhs (route_combine (\<lambda>_. gg) dst cc ex) \<sigma> (Inr g))"
 proof (cases "g = gg")
   case True
   show ?thesis
-    using local_bot_on_locals_restrict_global[where \<sigma>="\<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>"]
+    using local_bot_on_locals_restrict_global[where \<sigma>="combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"]
     by (simp add: True sides_route_combine_const)
 next
   case False
@@ -341,7 +342,7 @@ definition named_etf :: "(gname, sign) effectful_domain_transfer" where
        etf_assign     = \<lambda>x a. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assign x a)),
        etf_assume     = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assume b)),
        etf_assume_not = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_AssumeNot b)),
-       etf_enter      = route_tree (\<lambda>_. Gpos) (apply_tf sign_tf EA_Enter),
+       etf_enter      = (\<lambda>xs es. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Enter xs es))),
        etf_combine    = route_combine (\<lambda>_. Gneg) \<rparr>"
 
 lemma apply_etf_named:
@@ -349,7 +350,7 @@ lemma apply_etf_named:
   by (cases a) (simp_all add: named_etf_def)
 
 lemma etf_combine_named:
-  "etf_combine named_etf cc ex = route_combine (\<lambda>_. Gneg) cc ex"
+  "etf_combine named_etf dst cc ex = route_combine (\<lambda>_. Gneg) dst cc ex"
   by (simp add: named_etf_def)
 
 lemma named_edge_inr_local_bot:
@@ -357,7 +358,7 @@ lemma named_edge_inr_local_bot:
   unfolding apply_etf_named by (rule sides_inr_local_bot_route_tree_const)
 
 lemma named_comb_inr_local_bot:
-  "\<And>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine named_etf cc ex) \<sigma>' (Inr g))"
+  "\<And>dst cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine named_etf dst cc ex) \<sigma>' (Inr g))"
   unfolding etf_combine_named by (rule sides_inr_local_bot_route_combine_const)
 
 lemma named_etf_full_nop:
@@ -380,13 +381,13 @@ lemma named_etf_full_assume_not:
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
 lemma named_etf_full_enter:
-  "etf_full (etf_enter named_etf u) \<sigma>
-   = tf_enter sign_tf (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+  "etf_full (etf_enter named_etf xs es u) \<sigma>
+   = tf_enter sign_tf xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
 lemma named_etf_full_combine:
-  "etf_full (etf_combine named_etf cc ex) \<sigma>
-   = \<langle>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>|\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rangle>"
+  "etf_full (etf_combine named_etf dst cc ex) \<sigma>
+   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   unfolding named_etf_def by (simp add: route_combine_etf_full)
 
 theorem named_etf_sound:
@@ -416,16 +417,17 @@ next
     using sign_tf_sound_assume_not
     by (auto simp add: named_etf_full_assume_not intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+  show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
           (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            enter_state s \<in> \<lbrakk>etf_collecting_full (etf_enter named_etf u) \<sigma>\<rbrakk>)"
+            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+              \<in> \<lbrakk>etf_collecting_full (etf_enter named_etf xs es u) \<sigma>\<rbrakk>)"
     using sign_tf_sound_enter
     by (auto simp add: named_etf_full_enter intro: in_gamma_etf_collecting_full)
 next
-  show "\<forall>cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+  show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
           (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. <s|t> \<in> \<lbrakk>etf_full (etf_combine named_etf cc ex) \<sigma>\<rbrakk>)"
-    by (auto simp: named_etf_full_combine intro: combine_states_sound)
+           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine named_etf dst cc ex) \<sigma>\<rbrakk>)"
+    by (auto simp: named_etf_full_combine intro: combine_collect_sound)
 qed
 
 subsection \<open>TD_side preconditions for named_etf (constant routing is monotone)\<close>
@@ -440,10 +442,10 @@ lemma named_traverse_mono:
 
 lemma named_comb_traverse_mono:
   assumes "s1 \<le> s2"
-  shows "traverse_rhs (etf_combine named_etf cc ex) s1
-         \<le> traverse_rhs (etf_combine named_etf cc ex) s2"
+  shows "traverse_rhs (etf_combine named_etf dst cc ex) s1
+         \<le> traverse_rhs (etf_combine named_etf dst cc ex) s2"
   unfolding etf_combine_named traverse_route_combine
-  by (rule restrict_local_mono[OF combine_abs_mono[OF
+  by (rule restrict_local_mono[OF combine_collect_abs_mono[OF
         sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]
         sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]]])
 
@@ -463,12 +465,12 @@ qed
 
 lemma named_comb_sides_mono:
   assumes "s1 \<le> s2"
-  shows "sides_of_rhs (etf_combine named_etf cc ex) s1
-         \<le> sides_of_rhs (etf_combine named_etf cc ex) s2"
+  shows "sides_of_rhs (etf_combine named_etf dst cc ex) s1
+         \<le> sides_of_rhs (etf_combine named_etf dst cc ex) s2"
 proof -
-  have d: "restrict_global \<langle>s1 (Inl cc) \<squnion> glob_env s1|s1 (Inl ex) \<squnion> glob_env s1\<rangle>
-           \<le> restrict_global \<langle>s2 (Inl cc) \<squnion> glob_env s2|s2 (Inl ex) \<squnion> glob_env s2\<rangle>"
-    by (rule restrict_global_mono[OF combine_abs_mono[OF
+  have d: "restrict_global (combine_collect_abs dst (s1 (Inl cc) \<squnion> glob_env s1) (s1 (Inl ex) \<squnion> glob_env s1))
+           \<le> restrict_global (combine_collect_abs dst (s2 (Inl cc) \<squnion> glob_env s2) (s2 (Inl ex) \<squnion> glob_env s2))"
+    by (rule restrict_global_mono[OF combine_collect_abs_mono[OF
           sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]
           sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]]])
   show ?thesis
@@ -479,16 +481,16 @@ qed
 lemma named_edge_static: "static_deps (apply_etf named_etf a u)"
   unfolding apply_etf_named static_deps_def by (simp add: dep_aux_route_tree)
 
-lemma named_comb_static: "static_deps (etf_combine named_etf cc ex)"
+lemma named_comb_static: "static_deps (etf_combine named_etf dst cc ex)"
   unfolding etf_combine_named static_deps_def by (simp add: dep_aux_route_combine)
 
 lemma named_edge_dep: "Inl z \<in> dep_aux \<sigma> (apply_etf named_etf b z)"
   unfolding apply_etf_named by (simp add: dep_aux_route_tree)
 
-lemma named_comb_dep1: "Inl cc \<in> dep_aux \<sigma> (etf_combine named_etf cc ex)"
+lemma named_comb_dep1: "Inl cc \<in> dep_aux \<sigma> (etf_combine named_etf dst cc ex)"
   unfolding etf_combine_named by (simp add: dep_aux_route_combine)
 
-lemma named_comb_dep2: "Inl ex \<in> dep_aux \<sigma> (etf_combine named_etf cc ex)"
+lemma named_comb_dep2: "Inl ex \<in> dep_aux \<sigma> (etf_combine named_etf dst cc ex)"
   unfolding etf_combine_named by (simp add: dep_aux_route_combine)
 
 lemma named_etf_is_mono_eq:

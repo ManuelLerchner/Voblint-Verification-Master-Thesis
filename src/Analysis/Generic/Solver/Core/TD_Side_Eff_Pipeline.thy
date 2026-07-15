@@ -59,16 +59,16 @@ lemma td_cfg_side_solver_eff_gen:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
   assumes comb_mono:
-    "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
-       traverse_rhs (etf_combine etf cc ex) s1 \<le> traverse_rhs (etf_combine etf cc ex) s2"
+    "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
+       traverse_rhs (etf_combine etf dst cc ex) s1 \<le> traverse_rhs (etf_combine etf dst cc ex) s2"
   assumes edge_sides_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (apply_etf etf a u) s1 \<le> sides_of_rhs (apply_etf etf a u) s2"
   assumes comb_sides_mono:
-    "\<And>cc ex s1 s2. s1 \<le> s2 \<Longrightarrow>
-       sides_of_rhs (etf_combine etf cc ex) s1 \<le> sides_of_rhs (etf_combine etf cc ex) s2"
+    "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
+       sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
-  assumes comb_static: "\<And>cc ex. static_deps (etf_combine etf cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "td_cfg_side_solver_eff g etf bot0 s0 gseed"
 proof
   show "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
@@ -105,7 +105,7 @@ theorem side_collect_sound_at_eff:
       and finC: "finite (combines g)"
       and entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
       and edge_cov: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> w \<in> vars"
-      and combine_cov: "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow> ret \<in> vars"
+      and combine_cov: "\<And>cc ex dst ret. (cc, ex, ret, dst) \<in> combines g \<Longrightarrow> ret \<in> vars"
       and inr: "inr_slot_locals_bot \<sigma>"
   shows "cfg_collect g S v0 \<le> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 
@@ -119,11 +119,11 @@ proof -
       by (rule etf_combined_le_eff[OF pp edge_cov[OF ed] ed fin])
   qed
   have combine_le:
-    "\<And>cc ex ret. (cc, ex, ret) \<in> combines g \<Longrightarrow>
-       etf_full (etf_combine etf cc ex) \<sigma> \<le> side_env \<sigma> ret"
+    "\<And>cc ex dst ret. (cc, ex, ret, dst) \<in> combines g \<Longrightarrow>
+       etf_full (etf_combine etf dst cc ex) \<sigma> \<le> side_env \<sigma> ret"
   proof -
-    fix cc ex ret assume cmb: "(cc, ex, ret) \<in> combines g"
-    show "etf_full (etf_combine etf cc ex) \<sigma> \<le> side_env \<sigma> ret"
+    fix cc ex ret dst assume cmb: "(cc, ex, ret, dst) \<in> combines g"
+    show "etf_full (etf_combine etf dst cc ex) \<sigma> \<le> side_env \<sigma> ret"
       by (rule etf_combine_combined_le_eff[OF pp combine_cov[OF cmb] cmb finC])
   qed
   show ?thesis
@@ -149,12 +149,12 @@ definition cone_compatible_etf ::
 where
   "cone_compatible_etf etf \<equiv>
      (\<forall>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)) \<and>
-     (\<forall>c2 e2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)) \<and>
-     (\<forall>c2 e2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)) \<and>
+     (\<forall>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)) \<and>
+     (\<forall>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)) \<and>
      (\<forall>a u. static_deps (apply_etf etf a u)) \<and>
-     (\<forall>cc ex. static_deps (etf_combine etf cc ex)) \<and>
+     (\<forall>cc ex dst. static_deps (etf_combine etf dst cc ex)) \<and>
      (\<forall>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
-     (\<forall>cc ex \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g)))"
+     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g)))"
 
 
 
@@ -164,12 +164,12 @@ lemma cone_compatible_etf_edge_dep:
 
 
 lemma cone_compatible_etf_comb_dep1:
-  "cone_compatible_etf etf \<Longrightarrow> Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  "cone_compatible_etf etf \<Longrightarrow> Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   unfolding cone_compatible_etf_def by auto
 
 
 lemma cone_compatible_etf_comb_dep2:
-  "cone_compatible_etf etf \<Longrightarrow> Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf c2 e2)"
+  "cone_compatible_etf etf \<Longrightarrow> Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_edge_static:
@@ -177,7 +177,7 @@ lemma cone_compatible_etf_edge_static:
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_comb_static:
-  "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_combine etf cc ex)"
+  "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_combine etf dst cc ex)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_edge_inr:
@@ -187,7 +187,7 @@ lemma cone_compatible_etf_edge_inr:
 
 lemma cone_compatible_etf_comb_inr:
   "cone_compatible_etf etf \<Longrightarrow>
-     local_bot_on_locals (sides_of_rhs (etf_combine etf cc ex) \<sigma>' (Inr g))"
+     local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 

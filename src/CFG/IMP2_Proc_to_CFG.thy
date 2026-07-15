@@ -8,8 +8,8 @@ text \<open>
   Whole-program layout:
     - each procedure body compiled once at a fresh offset;
     - call sites get enter edges `(call, EA_Enter formals actuals, proc_entry)`;
-    - returns use combine metadata `(call, proc_exit, return, dst, result)` in
-      `combines g`.
+    - returns use combine metadata `(call, proc_exit, return, dst)` in `combines g`;
+      the callee publishes its result into ret_var, so combine only needs dst.
 \<close>
 
 type_synonym proc_info =
@@ -63,17 +63,17 @@ where
             scope_ex = n'
         in  (n' + 1, n, scope_ex,
              E Un {(n, EA_Enter [] [], en)},
-             C Un {(n, ex, scope_ex, None, None)}))"
+             C Un {(n, ex, scope_ex, None)}))"
 
   | "compile \<Pi> lay (Call dst p actuals) n =
        (case (\<Pi> p, lay p) of
           (Some decl, Some (en_p, ex_p, Ns_p, E_p, C_p)) =>
             (n + 2, n, n + 1,
              {(n, EA_Enter (formals decl) actuals, en_p)},
-             {(n, ex_p, n + 1, dst, result decl)})
+             {(n, ex_p, n + 1, dst)})
         | _ => (n + 2, n, n, {}, {}))"
 
-  | "compile \<Pi> lay (RestoreInternal r) n =
+  | "compile \<Pi> lay Restore n =
        (n, n, n, {}, {})"
 
 definition known_proc_layout :: "proc_table => pname list => proc_layout => proc_layout" where
@@ -92,7 +92,7 @@ where
           None => compile_procs_layout \<Pi> ps lay n
         | Some decl =>
             (let complete_lay = known_proc_layout \<Pi> (p # ps) lay;
-                 (n', en, ex, E, C) = compile \<Pi> complete_lay (body decl) n;
+                 (n', en, ex, E, C) = compile \<Pi> complete_lay (with_result (body decl) (result decl)) n;
                  lay' = (case lay p of
                            None => (lay (p := Some (en, ex, {n..<n'}, {}, {})))
                          | Some _ => lay);
@@ -109,7 +109,7 @@ where
        (case \<Pi> p of
           None => compile_procs_bodies \<Pi> ps base_lay full_lay n
         | Some decl =>
-            (let (n', en, ex, E, C) = compile \<Pi> base_lay (body decl) n;
+            (let (n', en, ex, E, C) = compile \<Pi> base_lay (with_result (body decl) (result decl)) n;
                  full_lay' = (case full_lay p of
                                 None => (full_lay (p := Some (en, ex, {n..<n'}, E, C)))
                               | Some _ => full_lay);
@@ -128,10 +128,6 @@ where
 
 definition edges_endpoint_pps :: "(pp \<times> edge_action \<times> pp) set \<Rightarrow> pp set" where
   "edges_endpoint_pps E = fst ` E \<union> (snd \<circ> snd) ` E"
-
-definition combines_endpoint_pps :: "(pp \<times> pp \<times> pp) set \<Rightarrow> pp set" where
-  "combines_endpoint_pps C =
-     fst ` C \<union> (fst \<circ> snd) ` C \<union> (snd \<circ> snd) ` C"
 
 definition proc_info_pp_list :: "proc_info \<Rightarrow> pp list" where
   "proc_info_pp_list info =
@@ -238,7 +234,7 @@ next
 next
   case (Call dst p actuals) then show ?case by (auto split: option.splits prod.splits)
 next
-  case (RestoreInternal r) then show ?case by auto
+  case Restore then show ?case by auto
 qed
 
 lemma compile_finite:
@@ -271,7 +267,7 @@ next
   case (Call dst p actuals)
   then show ?case by (auto split: option.splits prod.splits)
 next
-  case (RestoreInternal r)
+  case Restore
   then show ?case by auto
 qed
 
@@ -290,7 +286,7 @@ next
   next
     case (Some decl)
     with Cons obtain n1 en ex E0 C0 full_lay1 n2 full_lay2 Eacc Cacc where
-      cp: "compile \<Pi> base_lay (body decl) n = (n1, en, ex, E0, C0)"
+      cp: "compile \<Pi> base_lay (with_result (body decl) (result decl)) n = (n1, en, ex, E0, C0)"
       and rest: "compile_procs_bodies \<Pi> ps base_lay full_lay1 n1 =
                    (n2, full_lay2, Eacc, Cacc)"
       and E: "E = E0 Un Eacc"

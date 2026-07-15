@@ -42,10 +42,10 @@ lemma collect_sound_reader:
         snd (dg_spec_step S a (dD u) dG) \<le> dD v"
     and edgeG: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow>
         fst (dg_spec_step S a (dD u) dG) \<le> dG"
-    and combD: "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-        snd (dgs_combine S (dD cc) (dD ex) dG) \<le> dD v"
-    and combG: "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-        fst (dgs_combine S (dD cc) (dD ex) dG) \<le> dG"
+    and combD: "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+        snd (dgs_combine S dst (dD cc) (dD ex) dG) \<le> dD v"
+    and combG: "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+        fst (dgs_combine S dst (dD cc) (dD ex) dG) \<le> dG"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
   shows "cfg_collect g S0 v \<subseteq> gammaDG (dD v) dG"
 proof (rule cfg_collect_semantic_postfix)
@@ -71,22 +71,22 @@ next
     by (rule gammaDG_mono)
   then show "s \<in> gammaDG (dD w) dG" using out by blast
 next
-  fix cc ex w s t
-  assume comb: "(cc, ex, w) \<in> combines g"
+  fix cc ex w dst s t
+  assume comb: "(cc, ex, w, dst) \<in> combines g"
     and sin: "s \<in> gammaDG (dD cc) dG"
     and tin: "t \<in> gammaDG (dD ex) dG"
   obtain g' d' where cmb:
-      "dgs_combine S (dD cc) (dD ex) dG = (g', d')"
-    by (cases "dgs_combine S (dD cc) (dD ex) dG") blast
-  have "combine_states s t \<in>
-      (case dgs_combine S (dD cc) (dD ex) dG of (g', d') \<Rightarrow> gammaDG d' g')"
+      "dgs_combine S dst (dD cc) (dD ex) dG = (g', d')"
+    by (cases "dgs_combine S dst (dD cc) (dD ex) dG") blast
+  have "combine_collect dst s t \<in>
+      (case dgs_combine S dst (dD cc) (dD ex) dG of (g', d') \<Rightarrow> gammaDG d' g')"
     by (rule combine_sound[OF sin tin])
-  then have out: "combine_states s t \<in> gammaDG d' g'" using cmb by simp
+  then have out: "combine_collect dst s t \<in> gammaDG d' g'" using cmb by simp
   have "d' \<le> dD w" and "g' \<le> dG"
     using combD[OF comb] combG[OF comb] cmb by simp_all
   then have "gammaDG d' g' \<subseteq> gammaDG (dD w) dG"
     by (rule gammaDG_mono)
-  then show "combine_states s t \<in> gammaDG (dD w) dG" using out by blast
+  then show "combine_collect dst s t \<in> gammaDG (dD w) dG" using out by blast
 qed
 
 subsection \<open>Context-keyed accessors and per-context soundness\<close>
@@ -131,11 +131,11 @@ where
      (\<forall>u a v. (u, a, v) \<in> edges g \<longrightarrow>
         fst (dg_spec_step S a (dg_D_c sigma ctx u) (dg_G_c sigma ctx))
           \<le> dg_G_c sigma ctx) \<and>
-     (\<forall>cc ex v. (cc, ex, v) \<in> combines g \<longrightarrow>
-        snd (dgs_combine S (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex)
+     (\<forall>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<longrightarrow>
+        snd (dgs_combine S dst (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex)
               (dg_G_c sigma ctx)) \<le> dg_D_c sigma ctx v) \<and>
-     (\<forall>cc ex v. (cc, ex, v) \<in> combines g \<longrightarrow>
-        fst (dgs_combine S (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex)
+     (\<forall>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<longrightarrow>
+        fst (dgs_combine S dst (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex)
               (dg_G_c sigma ctx)) \<le> dg_G_c sigma ctx)"
 
 theorem dg_postfix_c_collect_sound:
@@ -150,11 +150,11 @@ proof -
         snd (dg_spec_step S a (dg_D_c sigma ctx u) (dg_G_c sigma ctx)) \<le> dg_D_c sigma ctx v"
     and e4: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow>
         fst (dg_spec_step S a (dg_D_c sigma ctx u) (dg_G_c sigma ctx)) \<le> dg_G_c sigma ctx"
-    and e5: "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-        snd (dgs_combine S (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex) (dg_G_c sigma ctx))
+    and e5: "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+        snd (dgs_combine S dst (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex) (dg_G_c sigma ctx))
           \<le> dg_D_c sigma ctx v"
-    and e6: "\<And>cc ex v. (cc, ex, v) \<in> combines g \<Longrightarrow>
-        fst (dgs_combine S (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex) (dg_G_c sigma ctx))
+    and e6: "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow>
+        fst (dgs_combine S dst (dg_D_c sigma ctx cc) (dg_D_c sigma ctx ex) (dg_G_c sigma ctx))
           \<le> dg_G_c sigma ctx"
     unfolding dg_postfix_c_def by blast+
   show ?thesis
@@ -181,4 +181,3 @@ lemma dg_postfix_c_unit: "dg_postfix_c g () = dg_postfix g"
 end
 
 end
-

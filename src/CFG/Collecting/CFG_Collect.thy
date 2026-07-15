@@ -144,17 +144,16 @@ qed
 subsection \<open>Interprocedural combine transfer\<close>
 
 
-definition combine_collect :: "vname option \<Rightarrow> aexp option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store set" where
-  "combine_collect dst rex s t =
-     (case combine_assign dst (map_option (\<lambda>e. aval e t) rex) (combine_states s t) of
-        None \<Rightarrow> {}
-      | Some out \<Rightarrow> {out})"
+(* Goblint's combine_env then combine_assign: restore the caller, then write the
+   callee's ret_var into the destination.  Deterministic, hence a singleton. *)
+definition combine_collect :: "vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
+  "combine_collect dst s t = combine_assign dst (t ret_var) (combine_states s t)"
 
 definition collect_combine_pp :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set" where
   "collect_combine_pp g \<rho> v =
-     \<Union>{ combine_collect dst rex s t
-        | c ex ret dst rex s t.
-            (c, ex, ret, dst, rex) \<in> combines g \<and> ret = v \<and> s \<in> \<rho> c \<and> t \<in> \<rho> ex }"
+     { combine_collect dst s t
+        | c ex ret dst s t.
+            (c, ex, ret, dst) \<in> combines g \<and> ret = v \<and> s \<in> \<rho> c \<and> t \<in> \<rho> ex }"
 
 definition cfg_collect_F :: "cfg \<Rightarrow> store set \<Rightarrow> cenv \<Rightarrow> cenv" where
   "cfg_collect_F g S \<rho> v =
@@ -169,8 +168,8 @@ subsection \<open>Monotonicity\<close>
 
 lemma combine_collect_mono:
   assumes "S \<subseteq> S'" and "T \<subseteq> T'"
-  shows "\<Union>{combine_collect dst rex s t | s t. s \<in> S \<and> t \<in> T}
-         \<subseteq> \<Union>{combine_collect dst rex s t | s t. s \<in> S' \<and> t \<in> T'}"
+  shows "{combine_collect dst s t | s t. s \<in> S \<and> t \<in> T}
+         \<subseteq> {combine_collect dst s t | s t. s \<in> S' \<and> t \<in> T'}"
   using assms by blast
 
 lemma collect_combine_pp_mono:
@@ -232,9 +231,9 @@ proof -
 qed
 
 lemma collect_combine_pp_member:
-  assumes "(c, ex, ret, dst, rex) \<in> combines g" "ret = v"
+  assumes "(c, ex, ret, dst) \<in> combines g" "ret = v"
       and "s \<in> \<rho> c" "t \<in> \<rho> ex"
-      and "x \<in> combine_collect dst rex s t"
+      and "x = combine_collect dst s t"
   shows "x \<in> collect_combine_pp g \<rho> v"
   using assms unfolding collect_combine_pp_def by blast
 
@@ -244,10 +243,10 @@ lemma collect_combine_pp_in_cfg_collect:
 proof
   fix x
   assume xin: "x \<in> collect_combine_pp g \<rho> v"
-  from xin obtain c ex ret dst rex s t where
-        h: "(c, ex, ret, dst, rex) \<in> combines g" "ret = v"
+  from xin obtain c ex ret dst s t where
+        h: "(c, ex, ret, dst) \<in> combines g" "ret = v"
     and st: "s \<in> \<rho> c" "t \<in> \<rho> ex"
-    and xmem: "x \<in> combine_collect dst rex s t"
+    and xmem: "x = combine_collect dst s t"
     unfolding collect_combine_pp_def by blast
   from le have sc: "s \<in> cfg_collect g S c" and tc: "t \<in> cfg_collect g S ex"
     unfolding le_fun_def using st by auto
@@ -265,8 +264,8 @@ inductive cfg_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightar
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> cfg_witness g S v s"
   | edge: "(u, a, v) \<in> edges g \<Longrightarrow> cfg_witness g S u s \<Longrightarrow>
            t \<in> edge_collect a {s} \<Longrightarrow> cfg_witness g S v t"
-  | combine: "(c, ex, v, dst, rex) \<in> combines g \<Longrightarrow> cfg_witness g S c s \<Longrightarrow>
-             cfg_witness g S ex t \<Longrightarrow> u \<in> combine_collect dst rex s t \<Longrightarrow>
+  | combine: "(c, ex, v, dst) \<in> combines g \<Longrightarrow> cfg_witness g S c s \<Longrightarrow>
+             cfg_witness g S ex t \<Longrightarrow> u = combine_collect dst s t \<Longrightarrow>
              cfg_witness g S v u"
 
 definition cfg_collect_paths :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> store set" where
@@ -291,17 +290,17 @@ proof
 qed
 
 lemma cfg_collect_paths_combine:
-  assumes h: "(c, ex, v, dst, rex) \<in> combines g"
-  shows "\<Union>{combine_collect dst rex s t | s t.
+  assumes h: "(c, ex, v, dst) \<in> combines g"
+  shows "{combine_collect dst s t | s t.
            s \<in> cfg_collect_paths g S c \<and> t \<in> cfg_collect_paths g S ex}
          \<subseteq> cfg_collect_paths g S v"
 proof
   fix x
-  assume x: "x \<in> \<Union>{combine_collect dst rex s t | s t.
+  assume x: "x \<in> {combine_collect dst s t | s t.
                     s \<in> cfg_collect_paths g S c \<and> t \<in> cfg_collect_paths g S ex}"
   then obtain s t where
         sc: "cfg_witness g S c s" and te: "cfg_witness g S ex t"
-    and x: "x \<in> combine_collect dst rex s t"
+    and x: "x = combine_collect dst s t"
     unfolding cfg_collect_paths_def by blast
   show "x \<in> cfg_collect_paths g S v"
     unfolding cfg_collect_paths_def using cfg_witness.combine[OF h sc te x] by auto
@@ -318,13 +317,13 @@ proof -
   proof
     fix x
     assume xin: "x \<in> collect_combine_pp g (cfg_collect_paths g S) v"
-    from xin obtain c ex ret dst rex s t where h: "(c, ex, ret, dst, rex) \<in> combines g"
+    from xin obtain c ex ret dst s t where h: "(c, ex, ret, dst) \<in> combines g"
       and rv: "ret = v"
       and st: "s \<in> cfg_collect_paths g S c" "t \<in> cfg_collect_paths g S ex"
-      and x: "x \<in> combine_collect dst rex s t"
+      and x: "x = combine_collect dst s t"
       unfolding collect_combine_pp_def by auto
-    from h rv have h': "(c, ex, v, dst, rex) \<in> combines g" by simp
-    have xin': "x \<in> \<Union>{combine_collect dst rex s t | s t.
+    from h rv have h': "(c, ex, v, dst) \<in> combines g" by simp
+    have xin': "x \<in> {combine_collect dst s t | s t.
                         s \<in> cfg_collect_paths g S c \<and> t \<in> cfg_collect_paths g S ex}"
       using st x by blast
     show "x \<in> cfg_collect_paths g S v"
@@ -371,7 +370,7 @@ proof -
       unfolding cfg_collect_F_def using \<open>t \<in> collect_pp g (cfg_collect g Sa) v\<close> by auto
     then show ?case using cfg_collect_post by blast
   next
-    case (combine c ex v dst rex Sa sto t u)
+    case (combine c ex v dst Sa sto t u)
     have "u \<in> collect_combine_pp g (cfg_collect g Sa) v"
       using collect_combine_pp_member[OF combine(1) refl combine.IH(1) combine.IH(2) combine(4)] .
     have "u \<in> cfg_collect_F g Sa (cfg_collect g Sa) v"

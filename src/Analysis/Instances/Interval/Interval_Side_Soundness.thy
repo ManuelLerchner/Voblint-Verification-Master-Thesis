@@ -19,7 +19,7 @@ lemma ivl_etf_edge_tree:
   unfolding ivl_etf_def apply_etf_unit_of_transfer by simp
 
 lemma ivl_etf_combine_tree:
-  "etf_combine ivl_etf cc ex = unit_combine_tree cc ex"
+  "etf_combine ivl_etf dst cc ex = unit_combine_tree dst cc ex"
   unfolding ivl_etf_def etf_combine_unit_of_transfer by simp
 
 lemma ivl_sound_etf:

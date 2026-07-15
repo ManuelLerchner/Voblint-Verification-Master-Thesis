@@ -108,6 +108,13 @@ parse_translation \<open>
     val c_While  = "IMP2_Proc.com.While"
     val c_Scope  = "IMP2_Proc.com.Scope"
     val c_Call   = "IMP2_Proc.com.Call"
+    val c_proc_decl_legacy = "IMP2_Proc.proc_decl_legacy"
+    val c_None    = "Option.option.None"
+    val c_Some    = "Option.option.Some"
+    val c_fun_upd = "Fun.fun_upd"
+    val c_Pair    = "Product_Type.Pair"
+    val c_Cons    = "List.list.Cons"
+    val c_Nil     = "List.list.Nil"
 
     val c_N      = "IMP2_Syntax.N"
     val c_V      = "IMP2_Syntax.V"
@@ -208,7 +215,7 @@ parse_translation \<open>
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
       | stmt_tr (Const ("_imp2_scope",  _) $ s)     = K c_Scope $ stmts_tr s
       | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _)) =
-          K c_Call $ HOLogic.mk_string p
+          K c_Call $ K c_None $ HOLogic.mk_string p $ K c_Nil
       | stmt_tr t = raise TERM ("IMP2_Notation: stmt_tr", [t])
 
     and com_tr (Const ("_imp2_com_wrap", _) $ s) = stmt_tr s
@@ -216,13 +223,6 @@ parse_translation \<open>
       | com_tr t = raise TERM ("IMP2_Notation: com_tr", [t])
 
 
-
-    val c_None    = "Option.option.None"
-    val c_Some    = "Option.option.Some"
-    val c_fun_upd = "Fun.fun_upd"
-    val c_Pair    = "Product_Type.Pair"
-    val c_Cons    = "List.list.Cons"
-    val c_Nil     = "List.list.Nil"
 
     fun names_of (Const ("_ids_one", _) $ Free (x, _)) = [x]
       | names_of (Const ("_ids_cons", _) $ Free (x, _) $ rest) = x :: names_of rest
@@ -263,7 +263,10 @@ parse_translation \<open>
 
     fun mk_table acc [] = acc
       | mk_table acc ((p, b) :: rest) =
-          mk_table (K c_fun_upd $ acc $ HOLogic.mk_string p $ (K c_Some $ b)) rest
+          mk_table
+            (K c_fun_upd $ acc $ HOLogic.mk_string p
+              $ (K c_Some $ (K c_proc_decl_legacy $ b)))
+            rest
 
     fun mk_names [] = K c_Nil
       | mk_names (n :: ns) = K c_Cons $ HOLogic.mk_string n $ mk_names ns
