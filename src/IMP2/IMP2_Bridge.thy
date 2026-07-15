@@ -91,17 +91,18 @@ lemma bval_to_imp2: "IMP2_Expr.bval e s = Semantics.bval (to_imp2_bexp e) (embed
 *)
 
 fun to_imp2_com :: "IMP2_Proc.com => Syntax.com" where
-  "to_imp2_com IMP2_Proc.com.SKIP           = Syntax.SKIP"
-| "to_imp2_com (IMP2_Proc.com.Assign x a)   = Syntax.AssignIdx x (Syntax.N 0) (to_imp2_aexp a)"
-| "to_imp2_com (IMP2_Proc.com.Seq c1 c2)    = Syntax.Seq (to_imp2_com c1) (to_imp2_com c2)"
-| "to_imp2_com (IMP2_Proc.com.If b c1 c2)   = Syntax.If (to_imp2_bexp b) (to_imp2_com c1) (to_imp2_com c2)"
-| "to_imp2_com (IMP2_Proc.com.While b c)    = Syntax.While (to_imp2_bexp b) (to_imp2_com c)"
-| "to_imp2_com (IMP2_Proc.com.Scope c)      = Syntax.Scope (to_imp2_com c)"
-| "to_imp2_com (IMP2_Proc.com.Call p)       = Syntax.PCall p"
-| "to_imp2_com IMP2_Proc.com.Restore        = Syntax.SKIP"
+  "to_imp2_com IMP2_Proc.com.SKIP = Syntax.SKIP"
+| "to_imp2_com (IMP2_Proc.com.Assign x a) = Syntax.AssignIdx x (Syntax.N 0) (to_imp2_aexp a)"
+| "to_imp2_com (IMP2_Proc.com.Seq c1 c2) = Syntax.Seq (to_imp2_com c1) (to_imp2_com c2)"
+| "to_imp2_com (IMP2_Proc.com.If b c1 c2) = Syntax.If (to_imp2_bexp b) (to_imp2_com c1) (to_imp2_com c2)"
+| "to_imp2_com (IMP2_Proc.com.While b c) = Syntax.While (to_imp2_bexp b) (to_imp2_com c)"
+| "to_imp2_com (IMP2_Proc.com.Scope c) = Syntax.Scope (to_imp2_com c)"
+| "to_imp2_com (IMP2_Proc.com.Call None p []) = Syntax.PCall p"
+| "to_imp2_com (IMP2_Proc.com.Call dst p actuals) = Syntax.SKIP"
+| "to_imp2_com (IMP2_Proc.com.RestoreInternal r) = Syntax.SKIP"
 
 definition to_imp2_pi :: "proc_table => Syntax.program" where
-  "to_imp2_pi \<Pi> = (%p. map_option (%c. Syntax.Scope (to_imp2_com c)) (\<Pi> p))"
+  "to_imp2_pi \<Pi> = (%p. map_option (%decl. Syntax.Scope (to_imp2_com (body decl))) (\<Pi> p))"
 
 (* -- State projection: read every array back at the default index ---- *)
 
@@ -193,26 +194,59 @@ lemma proj0_null_combine:
      (simp add: proj0_def Semantics.combine_states_def Semantics.null_state_def
                 enter_state_def is_global_eq)
 
-(* -- Source programs: no runtime-only Restore ------------------------ *)
+(* -- Source programs: user syntax vs AFP-bridge subset ---------------- *)
 
 (*
-  Restore is a runtime-only marker pushed by Scope/Call; it never occurs in a
-  source program.  source_com pins this down structurally, and source_pi lifts
-  it to every body in a procedure table.
+  RestoreInternal is runtime-only and never appears in source programs.
+  source_com captures that broad source-language property. The AFP bridge is
+  stricter: direct translation to parameterless PCall only covers the legacy
+  subset with nullary calls and procedures without formals or results.
 *)
 
 fun source_com :: "IMP2_Proc.com => bool" where
-  "source_com IMP2_Proc.com.SKIP         = True"
+  "source_com IMP2_Proc.com.SKIP = True"
 | "source_com (IMP2_Proc.com.Assign x a) = True"
-| "source_com (IMP2_Proc.com.Seq c1 c2)  = (source_com c1 \<and> source_com c2)"
+| "source_com (IMP2_Proc.com.Seq c1 c2) = (source_com c1 \<and> source_com c2)"
 | "source_com (IMP2_Proc.com.If b c1 c2) = (source_com c1 \<and> source_com c2)"
-| "source_com (IMP2_Proc.com.While b c)  = source_com c"
-| "source_com (IMP2_Proc.com.Scope c)    = source_com c"
-| "source_com (IMP2_Proc.com.Call p)     = True"
-| "source_com IMP2_Proc.com.Restore      = False"
+| "source_com (IMP2_Proc.com.While b c) = source_com c"
+| "source_com (IMP2_Proc.com.Scope c) = source_com c"
+| "source_com (IMP2_Proc.com.Call dst p actuals) = True"
+| "source_com (IMP2_Proc.com.RestoreInternal r) = False"
 
 definition source_pi :: "proc_table => bool" where
-  "source_pi \<Pi> = (\<forall>p c. \<Pi> p = Some c \<longrightarrow> source_com c)"
+  "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
+
+fun bridge_com :: "IMP2_Proc.com => bool" where
+  "bridge_com IMP2_Proc.com.SKIP = True"
+| "bridge_com (IMP2_Proc.com.Assign x a) = True"
+| "bridge_com (IMP2_Proc.com.Seq c1 c2) = (bridge_com c1 \<and> bridge_com c2)"
+| "bridge_com (IMP2_Proc.com.If b c1 c2) = (bridge_com c1 \<and> bridge_com c2)"
+| "bridge_com (IMP2_Proc.com.While b c) = bridge_com c"
+| "bridge_com (IMP2_Proc.com.Scope c) = bridge_com c"
+| "bridge_com (IMP2_Proc.com.Call None p []) = True"
+| "bridge_com (IMP2_Proc.com.Call dst p actuals) = False"
+| "bridge_com (IMP2_Proc.com.RestoreInternal r) = False"
+
+definition bridge_pi :: "proc_table => bool" where
+  "bridge_pi \<Pi> =
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> formals decl = [] \<and> result decl = None \<and> bridge_com (body decl))"
+
+lemma bridge_com_CallD:
+  assumes "bridge_com (IMP2_Proc.com.Call dst p actuals)"
+  shows "dst = None" and "actuals = []"
+proof -
+  from assms show "dst = None"
+    by (cases dst; cases actuals) simp_all
+  moreover from assms have "dst = None"
+    by (cases dst; cases actuals) simp_all
+  ultimately show "actuals = []"
+    using assms by (cases actuals) simp_all
+qed
+
+lemma bridge_com_Call_legacyE[elim]:
+  assumes "bridge_com (IMP2_Proc.com.Call dst p actuals)"
+  obtains "dst = None" "actuals = []"
+  using assms bridge_com_CallD by blast
 
 (* -- Backward simulation: IMP2 big-step -> our small-step ------------- *)
 
@@ -227,9 +261,9 @@ definition source_pi :: "proc_table => bool" where
 *)
 
 lemma backward_sim_aux:
-  assumes sp: "source_pi \<Pi>"
+  assumes sp: "bridge_pi \<Pi>"
   shows "big_step Pg (cm, S) T ==> Pg = to_imp2_pi \<Pi> ==> cm = to_imp2_com c
-          ==> source_com c ==> pcompletes \<Pi> c (proj0 S) (proj0 T)"
+          ==> bridge_com c ==> pcompletes \<Pi> c (proj0 S) (proj0 T)"
 proof (induction arbitrary: c rule: big_step_induct)
   case (Skip Pg s)
   hence "c = IMP2_Proc.com.SKIP" by (cases c) auto
@@ -260,7 +294,7 @@ next
   then obtain a b where c: "c = IMP2_Proc.com.Seq a b"
       and 1: "cm1 = to_imp2_com a" and 2: "cm2 = to_imp2_com b"
     by (cases c) auto
-  from Seq.prems c have sa: "source_com a" and sb: "source_com b" by auto
+  from Seq.prems c have sa: "bridge_com a" and sb: "bridge_com b" by auto
   have r1: "pcompletes \<Pi> a (proj0 s1) (proj0 s2)"
     using Seq.IH(1)[OF Seq.prems(1) 1 sa] .
   have r2: "pcompletes \<Pi> b (proj0 s2) (proj0 s3)"
@@ -274,7 +308,7 @@ next
       and be: "b = to_imp2_bexp b0" and 1: "cm1 = to_imp2_com a"
       and 2: "cm2 = to_imp2_com d"
     by (cases c) auto
-  from IfTrue.prems c have sa: "source_com a" by auto
+  from IfTrue.prems c have sa: "bridge_com a" by auto
   have guard: "IMP2_Expr.bval b0 (proj0 s)"
     using IfTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
   have bodyrun: "pcompletes \<Pi> a (proj0 s) (proj0 t)"
@@ -288,7 +322,7 @@ next
       and be: "b = to_imp2_bexp b0" and 1: "cm1 = to_imp2_com a"
       and 2: "cm2 = to_imp2_com d"
     by (cases c) auto
-  from IfFalse.prems c have sd: "source_com d" by auto
+  from IfFalse.prems c have sd: "bridge_com d" by auto
   have guard: "\<not> IMP2_Expr.bval b0 (proj0 s)"
     using IfFalse.hyps(1) be by (auto simp: bval_to_imp2_sim)
   have bodyrun: "pcompletes \<Pi> d (proj0 s) (proj0 t)"
@@ -300,7 +334,7 @@ next
   case (Scope Pg cm0 s s')
   then obtain a where c: "c = IMP2_Proc.com.Scope a" and 0: "cm0 = to_imp2_com a"
     by (cases c) auto
-  from Scope.prems c have sa: "source_com a" by auto
+  from Scope.prems c have sa: "bridge_com a" by auto
   have body: "pcompletes \<Pi> a (enter_state (proj0 s)) (proj0 s')"
     using Scope.IH[OF Scope.prems(1) 0 sa] by (simp add: proj0_null_combine)
   have "pcompletes \<Pi> (IMP2_Proc.com.Scope a) (proj0 s)
@@ -325,14 +359,14 @@ next
   then obtain b0 a where c: "c = IMP2_Proc.com.While b0 a"
       and be: "b = to_imp2_bexp b0" and ce: "cm0 = to_imp2_com a"
     by (cases c) auto
-  from WhileTrue.prems c have sa: "source_com a" by auto
+  from WhileTrue.prems c have sa: "bridge_com a" by auto
   have guard: "IMP2_Expr.bval b0 (proj0 s1)"
     using WhileTrue.hyps(1) be by (auto simp: bval_to_imp2_sim)
   have bodyrun: "pcompletes \<Pi> a (proj0 s1) (proj0 s2)"
     using WhileTrue.IH(1)[OF WhileTrue.prems(1) ce sa] .
   have eqw: "Syntax.While b cm0 = to_imp2_com (IMP2_Proc.com.While b0 a)"
     using be ce by simp
-  have sw: "source_com (IMP2_Proc.com.While b0 a)" using sa by simp
+  have sw: "bridge_com (IMP2_Proc.com.While b0 a)" using sa by simp
   have looprun: "pcompletes \<Pi> (IMP2_Proc.com.While b0 a) (proj0 s2) (proj0 s3)"
     using WhileTrue.IH(2)[OF WhileTrue.prems(1) eqw sw] .
   from guard bodyrun looprun
@@ -341,17 +375,20 @@ next
   thus ?case using c by simp
 next
   case (PCall Pg p cbody s t)
-  then have c: "c = IMP2_Proc.com.Call p" by (cases c) auto
-  from PCall.hyps(1) PCall.prems(1) obtain c0 where pip: "\<Pi> p = Some c0"
-      and cb: "cbody = Syntax.Scope (to_imp2_com c0)"
+  then have c: "c = IMP2_Proc.com.Call None p []" by (cases c) auto
+  from PCall.hyps(1) PCall.prems(1) obtain decl where pip: "\<Pi> p = Some decl"
+      and cb: "cbody = Syntax.Scope (to_imp2_com (body decl))"
     by (auto simp: to_imp2_pi_def split: option.splits)
-  from sp pip have s0: "source_com c0" by (auto simp: source_pi_def)
-  have eq: "cbody = to_imp2_com (IMP2_Proc.com.Scope c0)" using cb by simp
-  have sc0: "source_com (IMP2_Proc.com.Scope c0)" using s0 by simp
-  have scoperun: "pcompletes \<Pi> (IMP2_Proc.com.Scope c0) (proj0 s) (proj0 t)"
+  from sp pip have legacy: "formals decl = []" "result decl = None" "bridge_com (body decl)"
+    by (auto simp: bridge_pi_def)
+  have eq: "cbody = to_imp2_com (IMP2_Proc.com.Scope (body decl))" using cb by simp
+  have sc0: "bridge_com (IMP2_Proc.com.Scope (body decl))" using legacy(3) by simp
+  have scoperun: "pcompletes \<Pi> (IMP2_Proc.com.Scope (body decl)) (proj0 s) (proj0 t)"
     using PCall.IH[OF PCall.prems(1) eq sc0] .
-  have "pcompletes \<Pi> (IMP2_Proc.com.Call p) (proj0 s) (proj0 t)"
-    by (rule pcompletes_Scope_Call[OF pip scoperun])
+  have pip_legacy: "\<Pi> p = Some (proc_decl_legacy (body decl))"
+    using pip legacy by simp
+  have "pcompletes \<Pi> (IMP2_Proc.com.Call None p []) (proj0 s) (proj0 t)"
+    using pip_legacy scoperun by (rule pcompletes_Scope_Call_legacy)
   thus ?case using c by simp
 next
   case (PScope Pg pi' cm0 s t)
@@ -369,22 +406,22 @@ qed
 
 theorem backward_sim:
   assumes bs: "big_step (to_imp2_pi \<Pi>) (cm, S) T"
-      and sp: "source_pi \<Pi>"
+      and sp: "bridge_pi \<Pi>"
       and cc: "cm = to_imp2_com c"
-      and sc: "source_com c"
+      and sc: "bridge_com c"
   shows "pcompletes \<Pi> c (proj0 S) (proj0 T)"
   using backward_sim_aux[OF sp bs refl cc sc] .
 
 corollary big_step_imp_pcompletes:
   assumes run: "big_step (to_imp2_pi \<Pi>) (to_imp2_com c, S) T"
-      and sp: "source_pi \<Pi>"
-      and sc: "source_com c"
+      and sp: "bridge_pi \<Pi>"
+      and sc: "bridge_com c"
   shows "pcompletes \<Pi> c (proj0 S) (proj0 T)"
   using backward_sim[OF run sp refl sc] .
 
 lemma ex_big_step_imp_ex_pcompletes:
-  assumes sp: "source_pi \<Pi>"
-      and sc: "source_com c"
+  assumes sp: "bridge_pi \<Pi>"
+      and sc: "bridge_com c"
       and run: "big_step (to_imp2_pi \<Pi>) (to_imp2_com c, S) T"
   shows "\<exists>t. pcompletes \<Pi> c (proj0 S) t"
   using big_step_imp_pcompletes[OF run sp sc] by blast
@@ -400,7 +437,8 @@ text \<open>
 subsection \<open>Executable examples\<close>
 
 value "source_com IMP2_Proc.com.SKIP"
-value "source_com IMP2_Proc.com.Restore"
+value "source_com IMP2_Proc.Restore"
+value "bridge_com (IMP2_Proc.com.Call None ''p'' [])"
 value "source_com (IMP2_Proc.com.Seq IMP2_Proc.com.SKIP IMP2_Proc.com.SKIP)"
 
 value "to_imp2_com IMP2_Proc.com.SKIP"

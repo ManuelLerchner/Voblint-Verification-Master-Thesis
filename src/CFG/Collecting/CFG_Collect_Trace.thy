@@ -38,7 +38,7 @@ fun edge_step :: "edge_action => store => store option" where
   | "edge_step (EA_Assign x a)  s = Some (s(x := aval a s))"
   | "edge_step (EA_Assume b)    s = (if bval b s then Some s else None)"
   | "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
-  | "edge_step EA_Enter           s = Some (enter_state s)"
+  | "edge_step (EA_Enter xs es) s = Some (bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
 
 (* edge_collect on a singleton agrees with edge_step, viewed as an option-set. *)
 lemma edge_collect_single:
@@ -58,11 +58,16 @@ lemma alpha_last_mono:
 subsection \<open>Procedure entry points\<close>
 
 definition proc_entry_pps :: "cfg \<Rightarrow> pp set" where
-  "proc_entry_pps g = {v. \<exists>u. (u, EA_Enter, v) \<in> edges g}"
+  "proc_entry_pps g = {v. \<exists>u xs es. (u, EA_Enter xs es, v) \<in> edges g}"
 
 lemma proc_entry_ppsI:
-  "(u, EA_Enter, v) \<in> edges g \<Longrightarrow> v \<in> proc_entry_pps g"
+  "(u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> v \<in> proc_entry_pps g"
   unfolding proc_entry_pps_def by blast
+
+definition call_enter_store :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "call_enter_store g c s t \<longleftrightarrow>
+     (\<exists>pe xs es. (c, EA_Enter xs es, pe) \<in> edges g \<and>
+       t = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
 
 subsection \<open>Interprocedural trace witness\<close>
 
@@ -70,28 +75,25 @@ text \<open>
   trace_witness g S v tr : tr is a store sequence reaching v.
   entry   : a singleton [s] for s in the initial set, at the CFG entry.
   proc_entry : callee-relative seed [s] at procedure entry pp when the CFG
-            has an enter edge from cfg_entry (call-at-main-entry layout).
-  edge    : extend by one CFG edge (covers intra edges AND enter edges, since
-            EA_Enter is an ordinary edge_action with edge_step EA_Enter s =
-            Some (enter_state s)).
-  combine : at a combine triple (c, ex, ret), append the callee body trace to
-            the caller trace and then append the restored return store
-            combine_states (last tau) (last \<rho>).  The premise hd \<rho> =
-            enter_state (last tau) identifies the callee entry store, so tl \<rho>
-            avoids recording that call transition twice.
+            has an enter edge from cfg_entry.
+  edge    : extend by one CFG edge (covers intra edges and enter edges).
+  combine : at a combine entry, append the callee body trace to the caller
+            trace and then append one store produced by \<open>combine_collect\<close>.
 \<close>
 inductive trace_witness :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace \<Rightarrow> bool" for g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness g S v [s]"
 | proc_entry:
-    "(cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S \<Longrightarrow> trace_witness g S v [s]"
+    "(cfg_entry g, EA_Enter xs es, v) \<in> edges g \<Longrightarrow>
+     s \<in> edge_collect (EA_Enter xs es) S \<Longrightarrow>
+     trace_witness g S v [s]"
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness g S u tr
          \<Longrightarrow> edge_step a (last tr) = Some s'
          \<Longrightarrow> trace_witness g S v (tr @ [s'])"
-| combine: "(c, ex, v) \<in> combines g \<Longrightarrow> trace_witness g S c tau
+| combine: "(c, ex, v, dst, rex) \<in> combines g \<Longrightarrow> trace_witness g S c tau
             \<Longrightarrow> trace_witness g S ex \<rho>
-            \<Longrightarrow> hd \<rho> = enter_state (last tau)
+            \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last \<rho>)
             \<Longrightarrow> trace_witness g S v
-                  (tau @ tl \<rho> @ [<last tau|last \<rho>>])"
+                  (tau @ tl \<rho> @ [r])"
 
 definition cfg_collect_trace :: "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
   "cfg_collect_trace g S v = {tr. trace_witness g S v tr}"
@@ -111,13 +113,18 @@ proof (induction rule: trace_witness.induct)
   case (entry v s)
   then show ?case using entry assms(1) by (auto intro!: trace_witness.entry)
 next
-  case (proc_entry v s)
-  then show ?case using proc_entry assms(1) by (auto intro!: trace_witness.proc_entry)
+  case (proc_entry xs es v s)
+  have enter: "(cfg_entry g, EA_Enter xs es, v) \<in> edges g"
+    using proc_entry.hyps(1) .
+  have s_in: "s \<in> edge_collect (EA_Enter xs es) S"
+    using proc_entry.hyps(2) assms(1) by (meson edge_collect_mono subsetD)
+  show ?case
+    by (rule trace_witness.proc_entry[OF enter s_in])
 next
   case (edge u a v tr s')
   then show ?case by (auto intro!: trace_witness.intros)
 next
-  case (combine c ex v tau \<rho>)
+  case (combine c ex v dst rex tau \<rho> r)
   then show ?case by (auto intro!: trace_witness.intros)
 qed
 
@@ -136,19 +143,18 @@ proof (induction rule: trace_witness.induct)
   case (entry v s)
   then show ?case using entry_eq by (auto intro!: trace_witness.entry)
 next
-  case (proc_entry v s)
-  then have enter': "(cfg_entry g', EA_Enter, v) \<in> edges g'" by simp
-  have enter: "(cfg_entry g, EA_Enter, v) \<in> edges g"
-    using edge_sub enter' entry_eq by auto
-  then show ?case using proc_entry.hyps(2) enter
-    by (intro trace_witness.proc_entry)
+  case (proc_entry xs es v s)
+  have enter: "(cfg_entry g, EA_Enter xs es, v) \<in> edges g"
+    using edge_sub entry_eq proc_entry.hyps(1) by auto
+  show ?case
+    by (rule trace_witness.proc_entry[OF enter proc_entry.hyps(2)])
 next
   case (edge u a v tr s')
   then show ?case
     using edge_sub edge.hyps(1) edge.IH
     by (auto intro!: trace_witness.intros)
 next
-  case (combine c ex v tau \<rho>)
+  case (combine c ex v dst rex tau \<rho> r)
   then show ?case
     using comb_sub combine.hyps(1) combine.IH
     by (auto intro!: trace_witness.intros)
@@ -173,15 +179,15 @@ qed
 
 lemma trace_witness_assign_from_proc_entry:
   fixes g :: cfg and S :: "store set" and ent body :: store and pe ex :: pp
-    and x :: vname and a :: aexp
-  assumes ent_in: "ent \<in> enter_state ` S"
-  assumes enter_edge: "(cfg_entry g, EA_Enter, pe) \<in> edges g"
+    and x :: vname and a :: aexp and xs :: "vname list" and es :: "aexp list"
+  assumes ent_in: "ent \<in> edge_collect (EA_Enter xs es) S"
+  assumes enter_edge: "(cfg_entry g, EA_Enter xs es, pe) \<in> edges g"
   assumes edge: "(pe, EA_Assign x a, ex) \<in> edges g"
   assumes body: "body = ent(x := aval a ent)"
   shows "trace_witness g S ex [ent, body]"
 proof -
   have ent_w: "trace_witness g S pe [ent]"
-    using ent_in enter_edge by (intro trace_witness.proc_entry) simp
+    using ent_in enter_edge by (intro trace_witness.proc_entry)
   show ?thesis
     using body ent_w edge trace_witness.edge by fastforce
 qed
@@ -225,10 +231,10 @@ next
 qed
 
 lemma trace_witness_proc_edges:
-  assumes enter: "(cfg_entry g, EA_Enter, pe) \<in> edges g"
+  assumes enter: "(cfg_entry g, EA_Enter xs es, pe) \<in> edges g"
   assumes path: "trace_edges g u tr v"
   assumes start: "u = pe"
-  assumes init: "hd tr \<in> enter_state ` S"
+  assumes init: "hd tr \<in> edge_collect (EA_Enter xs es) S"
   shows "trace_witness g S v tr"
   using path start init
 proof (induction rule: trace_edges.induct)
@@ -246,13 +252,12 @@ qed
 
 
 lemma trace_witness_combineI:
-  assumes comb: "(c, ex, v) \<in> combines g"
+  assumes comb: "(c, ex, v, dst, rex) \<in> combines g"
   assumes caller: "trace_witness g S c tau"
   assumes callee: "trace_witness g S ex rho"
-  assumes enter: "hd rho = enter_state (last tau)"
-  assumes ret: "r = <last tau|last rho>"
+  assumes ret: "r \<in> combine_collect dst rex (last tau) (last rho)"
   shows "trace_witness g S v (tau @ tl rho @ [r])"
-  using assms trace_witness.combine by fastforce
+  using assms trace_witness.combine by blast
 
 subsection \<open>Interprocedural projection\<close>
 
@@ -262,30 +267,25 @@ text \<open>
   steps as cfg_witness_in_cfg_collect (CFG_Collect), projecting with last.
 \<close>
 
-lemma enter_state_mem_cfg_collect_proc_entry:
-  assumes enter: "(u, EA_Enter, pe) \<in> edges g"
+lemma enter_mem_cfg_collect_proc_entry:
+  assumes enter: "(u, EA_Enter xs es, pe) \<in> edges g"
   assumes sub: "S \<subseteq> cfg_collect g S u"
-  assumes s: "s \<in> enter_state ` S"
+  assumes s: "s \<in> edge_collect (EA_Enter xs es) S"
   shows "s \<in> cfg_collect g S pe"
 proof -
-  obtain s' where s'_in: "s' \<in> S" and s_eq: "s = enter_state s'"
-    using s by blast
-  have "s' \<in> cfg_collect g S u" using sub s'_in by blast
-  have ent_in: "s \<in> edge_collect EA_Enter (cfg_collect g S u)"
-    using s_eq `s' \<in> cfg_collect g S u` by force
-  show ?thesis using cfg_collect_edge[OF enter ent_in] by simp
+  have s_in: "s \<in> edge_collect (EA_Enter xs es) (cfg_collect g S u)"
+    using s edge_collect_mono[OF sub] by blast
+  show ?thesis using cfg_collect_edge[OF enter s_in] by simp
 qed
 
-lemma enter_state_image_subset_cfg_collect_proc_entry:
-  assumes enter: "(cfg_entry g, EA_Enter, pe) \<in> edges g"
-  shows "enter_state ` S \<subseteq> cfg_collect g S pe"
+lemma enter_image_subset_cfg_collect_proc_entry:
+  assumes enter: "(cfg_entry g, EA_Enter xs es, pe) \<in> edges g"
+  shows "edge_collect (EA_Enter xs es) S \<subseteq> cfg_collect g S pe"
 proof
   fix s
-  assume s_in: "s \<in> enter_state ` S"
-  then obtain s' where s'_in: "s' \<in> S" and s_eq: "s = enter_state s'"
-    by blast
+  assume s_in: "s \<in> edge_collect (EA_Enter xs es) S"
   show "s \<in> cfg_collect g S pe"
-    using enter_state_mem_cfg_collect_proc_entry[OF enter cfg_collect_entry s_in]
+    using enter_mem_cfg_collect_proc_entry[OF enter cfg_collect_entry s_in]
     by simp
 qed
 
@@ -297,12 +297,12 @@ proof (induction rule: trace_witness.induct)
   case (entry v s)
   then show ?case using cfg_collect_entry by auto
 next
-  case (proc_entry v s)
-  then have sub: "enter_state ` S \<subseteq> cfg_collect g S v"
-    using enter_state_image_subset_cfg_collect_proc_entry[OF proc_entry.hyps(1)]
+  case (proc_entry xs es v s)
+  then have sub: "edge_collect (EA_Enter xs es) S \<subseteq> cfg_collect g S v"
+    using enter_image_subset_cfg_collect_proc_entry[OF proc_entry.hyps(1)]
     by simp
   then show ?case
-    using proc_entry.hyps(2) sub by (auto simp: subset_iff)
+    using proc_entry.hyps(2) by auto
 next
   case (edge u a v tr s')
   have ih: "last tr \<in> cfg_collect g S u" using edge.IH .
@@ -320,18 +320,19 @@ next
   then have "s' \<in> cfg_collect g S v" using cfg_collect_post by blast
   then show ?case by simp
 next
-  case (combine c ex v tau \<rho>)
+  case (combine c ex v dst rex tau rho r)
   have ih1: "last tau \<in> cfg_collect g S c" using combine.IH(1) .
-  have ih2: "last \<rho> \<in> cfg_collect g S ex" using combine.IH(2) .
-  have h: "(c, ex, v) \<in> combines g" using combine.hyps(1) .
-  have "<last tau|last \<rho>> \<in> collect_combine_pp g (cfg_collect g S) v"
-    using collect_combine_pp_member[OF h refl ih1 ih2] .
-  then have "<last tau|last \<rho>> \<in> cfg_collect_F g S (cfg_collect g S) v"
+  have ih2: "last rho \<in> cfg_collect g S ex" using combine.IH(2) .
+  have h: "(c, ex, v, dst, rex) \<in> combines g" using combine.hyps(1) .
+  have "r \<in> collect_combine_pp g (cfg_collect g S) v"
+    using collect_combine_pp_member[OF h refl ih1 ih2 combine.hyps(4)] .
+  then have "r \<in> cfg_collect_F g S (cfg_collect g S) v"
     unfolding cfg_collect_F_def by auto
-  then have "<last tau|last \<rho>> \<in> cfg_collect g S v"
+  then have "r \<in> cfg_collect g S v"
     using cfg_collect_post by blast
-  then show ?case by (metis last_snoc append_assoc)
+  then show ?case by (simp add: last_appendR)
 qed
+
 
 theorem alpha_last_cfg_collect_trace_le:
   "alpha_last (cfg_collect_trace g S v) \<subseteq> cfg_collect g S v"
@@ -353,16 +354,18 @@ inductive trace_witness_d ::
   for dg :: "trace \<Rightarrow> 'd" and cmp :: "'d \<Rightarrow> 'd \<Rightarrow> bool" and g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness_d dg cmp g S v [s]"
 | proc_entry:
-    "(cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S \<Longrightarrow> trace_witness_d dg cmp g S v [s]"
+    "(cfg_entry g, EA_Enter xs es, v) \<in> edges g \<Longrightarrow>
+     s \<in> edge_collect (EA_Enter xs es) S \<Longrightarrow>
+     trace_witness_d dg cmp g S v [s]"
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness_d dg cmp g S u tr
          \<Longrightarrow> edge_step a (last tr) = Some s'
          \<Longrightarrow> trace_witness_d dg cmp g S v (tr @ [s'])"
-| combine: "(c, ex, v) \<in> combines g \<Longrightarrow> trace_witness_d dg cmp g S c tau
-            \<Longrightarrow> trace_witness_d dg cmp g S ex \<rho>
-            \<Longrightarrow> hd \<rho> = enter_state (last tau)
-            \<Longrightarrow> cmp (dg tau) (dg \<rho>)
+| combine: "(c, ex, v, dst, rex) \<in> combines g \<Longrightarrow> trace_witness_d dg cmp g S c tau
+            \<Longrightarrow> trace_witness_d dg cmp g S ex rho
+            \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last rho)
+            \<Longrightarrow> cmp (dg tau) (dg rho)
             \<Longrightarrow> trace_witness_d dg cmp g S v
-                  (tau @ tl \<rho> @ [<last tau|last \<rho>>])"
+                  (tau @ tl rho @ [r])"
 
 definition cfg_collect_trace_d ::
   "(trace \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> trace set" where
@@ -370,7 +373,19 @@ definition cfg_collect_trace_d ::
 
 lemma trace_witness_d_imp:
   "trace_witness_d dg cmp g S v tr \<Longrightarrow> trace_witness g S v tr"
-  by (induction rule: trace_witness_d.induct) (auto intro: trace_witness.intros)
+proof (induction rule: trace_witness_d.induct)
+  case (entry v s)
+  then show ?case by (intro trace_witness.entry) auto
+next
+  case (proc_entry xs es v s)
+  then show ?case by (intro trace_witness.proc_entry) auto
+next
+  case (edge u a v tr s')
+  then show ?case by (intro trace_witness.edge) auto
+next
+  case (combine c ex v dst rex tau rho r)
+  then show ?case by (intro trace_witness.combine) auto
+qed
 
 theorem cfg_collect_trace_d_subset:
   "cfg_collect_trace_d dg cmp g S v \<subseteq> cfg_collect_trace g S v"
@@ -415,10 +430,10 @@ next
 qed
 
 lemma trace_witness_d_proc_edges:
-  assumes enter: "(cfg_entry g, EA_Enter, pe) \<in> edges g"
+  assumes enter: "(cfg_entry g, EA_Enter xs es, pe) \<in> edges g"
   assumes path: "trace_edges g u tr v"
   assumes start: "u = pe"
-  assumes init: "hd tr \<in> enter_state ` S"
+  assumes init: "hd tr \<in> edge_collect (EA_Enter xs es) S"
   shows "trace_witness_d dg cmp g S v tr"
   using path start init
 proof (induction rule: trace_edges.induct)
@@ -435,14 +450,13 @@ next
 qed
 
 lemma trace_witness_d_combineI:
-  assumes comb: "(c, ex, v) \<in> combines g"
+  assumes comb: "(c, ex, v, dst, rex) \<in> combines g"
   assumes caller: "trace_witness_d dg cmp g S c tau"
   assumes callee: "trace_witness_d dg cmp g S ex rho"
-  assumes enter: "hd rho = enter_state (last tau)"
+  assumes ret: "r \<in> combine_collect dst rex (last tau) (last rho)"
   assumes compat: "cmp (dg tau) (dg rho)"
-  assumes ret: "r = <last tau|last rho>"
   shows "trace_witness_d dg cmp g S v (tau @ tl rho @ [r])"
-  using assms trace_witness_d.combine by fastforce
+  using assms trace_witness_d.combine by blast
 
 lemma reaching_compat_subset:
   "reaching_compat dg cmp d g S v \<subseteq> cfg_collect_trace g S v"
@@ -530,49 +544,65 @@ locale context_transfer =
       "edge_step a (last tr) = Some s' \<Longrightarrow> cmp (dg tr) c
         \<Longrightarrow> cmp (dg (tr @ [s'])) (step_ctx c a (last tr))"
     and comb_ok:
-      "hd rho = enter_state (last tau) \<Longrightarrow> cmp (dg tau) c1 \<Longrightarrow> cmp (dg rho) c2
-        \<Longrightarrow> cmp (dg (tau @ tl rho @ [<last tau|last rho>])) (comb_ctx c1 c2)"
+      "r \<in> combine_collect dst rex (last tau) (last rho) \<Longrightarrow> cmp (dg tau) c1 \<Longrightarrow> cmp (dg rho) c2
+        \<Longrightarrow> cmp (dg (tau @ tl rho @ [r])) (comb_ctx c1 c2)"
 begin
 
 inductive trace_witness_ctx ::
   "cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> trace \<Rightarrow> bool" for g S where
   entry: "v = cfg_entry g \<Longrightarrow> s \<in> S \<Longrightarrow> trace_witness_ctx g S v seed_ctx [s]"
 | proc_entry:
-    "(cfg_entry g, EA_Enter, v) \<in> edges g \<Longrightarrow> s \<in> enter_state ` S
+    "(cfg_entry g, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
       \<Longrightarrow> trace_witness_ctx g S v seed_ctx [s]"
 | edge: "(u, a, v) \<in> edges g \<Longrightarrow> trace_witness_ctx g S u c tr
       \<Longrightarrow> edge_step a (last tr) = Some s'
       \<Longrightarrow> trace_witness_ctx g S v (step_ctx c a (last tr)) (tr @ [s'])"
-| combine: "(cl, ex, v) \<in> combines g \<Longrightarrow> trace_witness_ctx g S cl c1 tau
+| combine: "(cl, ex, v, dst, rex) \<in> combines g \<Longrightarrow> trace_witness_ctx g S cl c1 tau
       \<Longrightarrow> trace_witness_ctx g S ex c2 rho
-      \<Longrightarrow> hd rho = enter_state (last tau)
+      \<Longrightarrow> r \<in> combine_collect dst rex (last tau) (last rho)
       \<Longrightarrow> trace_witness_ctx g S v (comb_ctx c1 c2)
-            (tau @ tl rho @ [<last tau|last rho>])"
+            (tau @ tl rho @ [r])"
 
 text \<open>The context-threaded witness forgets to the plain trace witness.\<close>
 lemma trace_witness_ctx_imp:
   "trace_witness_ctx g S v c tr \<Longrightarrow> trace_witness g S v tr"
-  by (induction rule: trace_witness_ctx.induct) (auto intro: trace_witness.intros)
+proof (induction rule: trace_witness_ctx.induct)
+  case (entry v s)
+  then show ?case by (intro trace_witness.entry) auto
+next
+  case (proc_entry xs es v s)
+  then show ?case by (intro trace_witness.proc_entry) auto
+next
+  case (edge u a v c tr s')
+  then show ?case by (intro trace_witness.edge) auto
+next
+  case (combine cl ex v dst rex c1 tau c2 rho r)
+  then show ?case by (intro trace_witness.combine) auto
+qed
 
 text \<open>The incremental context is \<open>dg\<close>-compatible on every witness trace.\<close>
 lemma context_step_refines_dg:
   "trace_witness_ctx g S v c tr \<Longrightarrow> cmp (dg tr) c"
 proof (induction rule: trace_witness_ctx.induct)
-  case (entry v s) show ?case by (rule seed_ok)
+  case (entry v s)
+  show ?case by (rule seed_ok)
 next
-  case (proc_entry v s) show ?case by (rule seed_ok)
+  case (proc_entry xs es v s)
+  show ?case by (rule seed_ok)
 next
-  case (edge u a v c tr s') then show ?case by (auto intro: step_ok)
+  case (edge u a v c tr s')
+  then show ?case by (auto intro: step_ok)
 next
-  case (combine cl ex v c1 tau c2 rho) then show ?case by (auto intro: comb_ok)
+  case (combine cl ex v dst rex c1 tau c2 rho r)
+  then show ?case by (auto intro: comb_ok)
 qed
 
 text \<open>So the context-threaded collecting is captured by \<open>cfg_collect_ctx\<close> (B0).\<close>
 lemma trace_witness_ctx_in_reaching_compat:
   assumes "trace_witness_ctx g S v c tr"
   shows "tr \<in> reaching_compat dg cmp c g S v"
-  using trace_witness_ctx_imp[OF assms] context_step_refines_dg[OF assms]
-  by (simp add: reaching_compat_def cfg_collect_trace_def)
+  using assms
+  by (auto simp: reaching_compat_def cfg_collect_trace_def dest: trace_witness_ctx_imp context_step_refines_dg)
 
 lemma trace_witness_ctx_last_in_cfg_collect_ctx:
   assumes "trace_witness_ctx g S v c tr"

@@ -42,32 +42,31 @@ where
       (n', en, ex, E, C) \<Rightarrow> (n', en, ex))"
 
 fun compile_endpoint_shape ::
-  "proc_layout \<Rightarrow> IMP2_Proc.com \<Rightarrow> nat
+  "proc_table \<Rightarrow> proc_layout \<Rightarrow> IMP2_Proc.com \<Rightarrow> nat
     \<Rightarrow> nat \<times> pp \<times> pp"
 where
-  "compile_endpoint_shape lay IMP2_Proc.com.SKIP n = (n + 2, n, n + 1)"
-| "compile_endpoint_shape lay (IMP2_Proc.com.Assign x a) n = (n + 2, n, n + 1)"
-| "compile_endpoint_shape lay (IMP2_Proc.com.Seq c1 c2) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape lay c1 n;
-         (n2, en2, ex2) = compile_endpoint_shape lay c2 n1
+  "compile_endpoint_shape Pi lay IMP2_Proc.com.SKIP n = (n + 2, n, n + 1)"
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Assign x a) n = (n + 2, n, n + 1)"
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Seq c1 c2) n =
+    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay c1 n;
+         (n2, en2, ex2) = compile_endpoint_shape Pi lay c2 n1
      in (n2, en1, ex2))"
-| "compile_endpoint_shape lay (IMP2_Proc.com.If b c1 c2) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape lay c1 (n + 1);
-         (n2, en2, ex2) = compile_endpoint_shape lay c2 n1
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.If b c1 c2) n =
+    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay c1 (n + 1);
+         (n2, en2, ex2) = compile_endpoint_shape Pi lay c2 n1
      in (n2 + 1, n, n2))"
-| "compile_endpoint_shape lay (IMP2_Proc.com.While b body) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape lay body (n + 1)
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.While b cbody) n =
+    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay cbody (n + 1)
      in (n1 + 1, n, n1))"
-| "compile_endpoint_shape lay (IMP2_Proc.com.Scope body) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape lay body (n + 1)
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Scope cbody) n =
+    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay cbody (n + 1)
      in (n1 + 1, n, n1))"
-| "compile_endpoint_shape lay (IMP2_Proc.com.Call p) n =
-    (case lay p of None \<Rightarrow> (n + 2, n, n)
-     | Some info \<Rightarrow> (n + 2, n, n + 1))"
-| "compile_endpoint_shape lay IMP2_Proc.com.Restore n = (n, n, n)"
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Call dst p actuals) n =
+    (case (Pi p, lay p) of (Some decl, Some info) \<Rightarrow> (n + 2, n, n + 1) | _ \<Rightarrow> (n + 2, n, n))"
+| "compile_endpoint_shape Pi lay (IMP2_Proc.com.RestoreInternal r) n = (n, n, n)"
 
 lemma compile_endpoints_eq_shape:
-  "compile_endpoints \<Pi> lay cmd n = compile_endpoint_shape lay cmd n"
+  "compile_endpoints \<Pi> lay cmd n = compile_endpoint_shape \<Pi> lay cmd n"
   by (induction cmd arbitrary: n;
       fastforce simp: compile_endpoints_def split: prod.splits option.splits)
 
@@ -79,9 +78,8 @@ lemma compile_endpoints_domain_eq:
     compile_endpoints \<Pi> lay2 cmd n"
 proof -
   have shape:
-      "compile_endpoint_shape lay1 cmd n =
-       compile_endpoint_shape lay2 cmd n"
-  proof (induction cmd arbitrary: n)
+      "compile_endpoint_shape \<Pi> lay1 cmd n =
+       compile_endpoint_shape \<Pi> lay2 cmd n"  proof (induction cmd arbitrary: n)
     case SKIP
     then show ?case by simp
   next
@@ -94,25 +92,25 @@ proof -
     case (If b c1 c2)
     then show ?case by simp
   next
-    case (While b body)
+    case (While b cbody)
     then show ?case by simp
   next
-    case (Scope body)
+    case (Scope cbody)
     then show ?case by simp
   next
-    case (Call p)
+    case (Call dst p actuals)
     have domain:
         "(\<exists>info. lay1 p = Some info) =
          (\<exists>info. lay2 p = Some info)"
       by (rule same_domain)
     show ?case
       using domain
-      by (cases "lay1 p"; cases "lay2 p") auto
+      apply (cases "lay1 p"; cases "lay2 p") apply(auto) by (metis option.simps(5))
   next
-    case Restore
+    case (RestoreInternal r)
     then show ?case by simp
   qed
-  show ?thesis
+show ?thesis
     using shape compile_endpoints_eq_shape by metis
 qed
 
@@ -171,15 +169,32 @@ next
   show ?case
     by (simp add: Scope.IH[OF Scope.prems])
 next
-  case (Call p)
+  case (Call dst p actuals)
   have view: "endpoint_view (lay1 p) = endpoint_view (lay2 p)"
     using Call.prems unfolding layouts_agree_def by blast
   show ?case
-    using view
-    by (cases "lay1 p"; cases "lay2 p")
-       (auto split: prod.splits)
+  proof (cases "Pi p")
+    case None
+    then show ?thesis by simp
+  next
+    case (Some decl)
+    show ?thesis
+    proof (cases "lay1 p")
+      case None
+      with view show ?thesis by (cases "lay2 p") auto
+    next
+      case (Some info1)
+      then obtain en1 ex1 Ns1 E1 C1 where info1[simp]: "info1 = (en1, ex1, Ns1, E1, C1)"
+        by (cases info1)
+      from view Some obtain en2 ex2 Ns2 E2 C2 where info2[simp]: "lay2 p = Some (en2, ex2, Ns2, E2, C2)"
+        and ends: "en1 = en2" "ex1 = ex2"
+        by (cases "lay2 p") auto
+      then show ?thesis using Some ends
+        by (simp split: option.splits prod.splits)
+    qed
+  qed
 next
-  case Restore
+  case (RestoreInternal r)
   show ?case by simp
 qed
 
@@ -196,17 +211,17 @@ proof (induction ps arbitrary: lay n n' lay')
   then show ?case by simp
 next
   case (Cons a ps)
-  obtain body where body: "\<Pi> a = Some body"
+  obtain decl where decl: "\<Pi> a = Some decl"
     using Cons.prems(3) by auto
   obtain n1 en ex E C where comp:
-      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) body n =
+      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (body decl) n =
         (n1, en, ex, E, C)"
-    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) body n") auto
+    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (body decl) n") auto
   have rec:
       "compile_procs_layout \<Pi> ps
         (lay(a := Some (en, ex, {n..<n1}, {}, {}))) n1 =
         (n', lay')"
-    using Cons.prems(4) body comp Cons.prems(2) by simp
+    using Cons.prems(4) decl comp Cons.prems(2) by simp
   have fresh_tail:
       "\<forall>p \<in> set ps.
         (lay(a := Some (en, ex, {n..<n1}, {}, {}))) p = None"
@@ -250,12 +265,12 @@ next
     show ?thesis
       by (rule Cons.IH[OF rec Cons.prems(2)])
   next
-    case (Some cmd)
+    case (Some decl)
     note proc = Some
     obtain k en ex E C where comp:
-        "compile Pi (known_proc_layout Pi (a # ps) lay) cmd n =
+        "compile Pi (known_proc_layout Pi (a # ps) lay) (body decl) n =
           (k, en, ex, E, C)"
-      by (cases "compile Pi (known_proc_layout Pi (a # ps) lay) cmd n")
+      by (cases "compile Pi (known_proc_layout Pi (a # ps) lay) (body decl) n")
          auto
     show ?thesis
     proof (cases "lay a")
@@ -299,14 +314,14 @@ proof (induction ps arbitrary: in_lay n n' out_lay p)
   then show ?case by simp
 next
   case (Cons a ps)
-  obtain head_cmd where head: "Pi a = Some head_cmd"
+  obtain head_decl where head: "Pi a = Some head_decl"
     using Cons.prems(3) by auto
   obtain k head_en head_ex head_E head_C where comp:
       "compile Pi (known_proc_layout Pi (a # ps) in_lay)
-        head_cmd n =
+        (body head_decl) n =
         (k, head_en, head_ex, head_E, head_C)"
     by (cases "compile Pi
-      (known_proc_layout Pi (a # ps) in_lay) head_cmd n") auto
+      (known_proc_layout Pi (a # ps) in_lay) (body head_decl) n") auto
   define next_lay where
     "next_lay =
       in_lay(a := Some (head_en, head_ex, {n..<k}, {}, {}))"
@@ -355,11 +370,11 @@ next
     show ?thesis
       by (rule Cons.IH[OF rec Cons.prems(2)])
   next
-    case (Some cmd)
+    case (Some decl)
     note proc = Some
     obtain k en ex Ea Ca where comp:
-        "compile \<Pi> base_lay cmd n = (k, en, ex, Ea, Ca)"
-      by (cases "compile \<Pi> base_lay cmd n") auto
+        "compile \<Pi> base_lay (body decl) n = (k, en, ex, Ea, Ca)"
+      by (cases "compile \<Pi> base_lay (body decl) n") auto
     show ?thesis
     proof (cases "lay a")
       case None
@@ -398,13 +413,13 @@ lemma compile_procs_bodies_lookup:
         "compile_procs_bodies Pi ps base_lay in_lay n =
           (n', out_lay, E, C)"
       and member: "p \<in> set ps"
-      and body: "Pi p = Some cmd"
+      and proc: "Pi p = Some decl"
       and lookup:
         "out_lay p = Some (en, ex, Ns, Ep, Cp)"
   shows "\<exists>start finish.
-    compile Pi base_lay cmd start = (finish, en, ex, Ep, Cp)"
-  using distinct fresh bodies member body lookup
-proof (induction ps arbitrary: in_lay n n' out_lay E C p cmd
+    compile Pi base_lay (body decl) start = (finish, en, ex, Ep, Cp)"
+  using distinct fresh bodies member proc lookup
+proof (induction ps arbitrary: in_lay n n' out_lay E C p decl
     en ex Ns Ep Cp)
   case Nil
   then show ?case by simp
@@ -423,12 +438,12 @@ next
       by (rule Cons.IH[OF _ _ rec])
          (use Cons.prems neq in auto)
   next
-    case (Some head_cmd)
+    case (Some head_decl)
     note head = Some
     obtain k head_en head_ex head_E head_C where comp:
-        "compile Pi base_lay head_cmd n =
+        "compile Pi base_lay (body head_decl) n =
           (k, head_en, head_ex, head_E, head_C)"
-      by (cases "compile Pi base_lay head_cmd n") auto
+      by (cases "compile Pi base_lay (body head_decl) n") auto
     define next_lay where
       "next_lay =
         in_lay(a := Some
@@ -448,10 +463,10 @@ next
             (head_en, head_ex, {n..<k}, head_E, head_C)"
         by (rule compile_procs_bodies_preserves[OF rec])
            (simp add: next_lay_def)
-      have cmd_eq: "cmd = head_cmd"
+      have decl_eq: "decl = head_decl"
         using Cons.prems(5) head True by simp
       show ?thesis
-        using comp Cons.prems(6) stored True cmd_eq by auto
+        using comp Cons.prems(6) stored True decl_eq by auto
     next
       case False
       have fresh_tail: "\<forall>q \<in> set ps. next_lay q = None"
@@ -497,30 +512,30 @@ proof (induction ps arbitrary: in_lay in_full start n base_lay
   then show ?case by simp
 next
   case (Cons a ps)
-  obtain cmd where cmd: "\<Pi> a = Some cmd"
+  obtain decl where decl: "\<Pi> a = Some decl"
     using Cons.prems(4) by auto
   obtain k en1 ex1 E1 C1 where first:
-      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) cmd start =
+      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (body decl) start =
         (k, en1, ex1, E1, C1)"
-    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) cmd start")
+    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (body decl) start")
        auto
   define next_lay where
     "next_lay = in_lay(a := Some (en1, ex1, {start..<k}, {}, {}))"
   have layout_tail:
       "compile_procs_layout \<Pi> ps next_lay k = (n, base_lay)"
-    using Cons.prems(5) cmd first Cons.prems(2)
+    using Cons.prems(5) decl first Cons.prems(2)
     by (simp add: next_lay_def)
 
   obtain k' en2 ex2 E2 C2 where second:
-      "compile \<Pi> base_lay cmd start = (k', en2, ex2, E2, C2)"
-    by (cases "compile \<Pi> base_lay cmd start") auto
+      "compile \<Pi> base_lay (body decl) start = (k', en2, ex2, E2, C2)"
+    by (cases "compile \<Pi> base_lay (body decl) start") auto
   define next_full where
     "next_full =
       in_full(a := Some (en2, ex2, {start..<k'}, E2, C2))"
   obtain Erest Crest where bodies_tail:
       "compile_procs_bodies \<Pi> ps base_lay next_full k' =
         (n', full_lay, Erest, Crest)"
-    using Cons.prems(6) cmd second Cons.prems(3)
+    using Cons.prems(6) decl second Cons.prems(3)
     by (auto simp: next_full_def split: prod.splits)
 
   have base_domain:
@@ -675,8 +690,7 @@ lemma compile_procs_bodies_fragment:
     "out_lay p = Some (en, ex, Ns, Ep, Cp)"
   shows "in_lay p = Some (en, ex, Ns, Ep, Cp) \<or>
     (Ep \<subseteq> E \<and> Cp \<subseteq> C)"
-using bodies fragment
-proof (induction ps arbitrary: in_lay n n' out_lay E C)
+using assms proof (induction ps arbitrary: in_lay n n' out_lay E C)
   case Nil
   then show ?case by simp
 next
@@ -691,11 +705,11 @@ next
     show ?thesis
       by (rule Cons.IH[OF rec Cons.prems(2)])
   next
-    case (Some body)
+    case (Some decl)
     note proc = Some
     obtain n1 en1 ex1 E1 C1 where comp:
-        "compile \<Pi> base_lay body n = (n1, en1, ex1, E1, C1)"
-      by (cases "compile \<Pi> base_lay body n") auto
+        "compile \<Pi> base_lay (body decl) n = (n1, en1, ex1, E1, C1)"
+      by (cases "compile \<Pi> base_lay (body decl) n") auto
     show ?thesis
     proof (cases "in_lay a")
       case None
@@ -750,11 +764,13 @@ lemma compile_procs_body_fragment_embedding:
   using compile_procs_bodies_fragment[OF bodies fragment] by auto
 
 lemma compile_call_defined:
-  assumes layout: "lay p = Some (en, ex, Ns, Ep, Cp)"
-  shows "compile \<Pi> lay (Call p) n =
+  assumes proc: "\<Pi> p = Some decl"
+      and layout: "lay p = Some (en, ex, Ns, Ep, Cp)"
+  shows "compile \<Pi> lay (Call dst p actuals) n =
     (n + 2, n, n + 1,
-      {(n, EA_Enter, en)}, {(n, ex, n + 1)})"
-using layout by simp
+      {(n, EA_Enter (formals decl) actuals, en)},
+      {(n, ex, n + 1, dst, result decl)})"
+using proc layout by simp
 
 subsection \<open>Residual commands inside compiled fragments\<close>
 
@@ -805,65 +821,67 @@ where
      control_at Pi lay (IMP2_Proc.com.If b c1 c2) n
        IMP2_Proc.com.SKIP ex []"
 | WhileHead:
-    "source_com body \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.While b body) n
-       (IMP2_Proc.com.While b body) n []"
+    "source_com cbody \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.While b cbody) n
+       (IMP2_Proc.com.While b cbody) n []"
 | WhileUnfolded:
-    "source_com body \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.While b body) n
+    "source_com cbody \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.While b cbody) n
        (IMP2_Proc.com.If b
-         (IMP2_Proc.com.Seq body (IMP2_Proc.com.While b body))
+         (IMP2_Proc.com.Seq cbody (IMP2_Proc.com.While b cbody))
          IMP2_Proc.com.SKIP) n []"
 | WhileBody:
-    "source_com body \<Longrightarrow>
-     control_at Pi lay body (n + 1) residual v sites \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.While b body) n
-       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.While b body))
+    "source_com cbody \<Longrightarrow>
+     control_at Pi lay cbody (n + 1) residual v sites \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.While b cbody) n
+       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.While b cbody))
        v sites"
 | WhileDone:
-    "compile Pi lay (IMP2_Proc.com.While b body) n =
+    "compile Pi lay (IMP2_Proc.com.While b cbody) n =
        (n1, en, ex, E, C) \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.While b body) n
+     control_at Pi lay (IMP2_Proc.com.While b cbody) n
        IMP2_Proc.com.SKIP ex []"
 | ScopeHead:
-    "source_com body \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Scope body) n
-       (IMP2_Proc.com.Scope body) n []"
+    "source_com cbody \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.Scope cbody) n
+       (IMP2_Proc.com.Scope cbody) n []"
 | ScopeBody:
-    "compile Pi lay (IMP2_Proc.com.Scope body) n =
+    "compile Pi lay (IMP2_Proc.com.Scope cbody) n =
        (n1, en, scope_ex, E, C) \<Longrightarrow>
-     control_at Pi lay body (n + 1) residual v sites \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Scope body) n
-       (IMP2_Proc.com.Seq residual IMP2_Proc.com.Restore)
+     control_at Pi lay cbody (n + 1) residual v sites \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.Scope cbody) n
+       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.RestoreInternal None))
        v (sites @ [(n, scope_ex)])"
 | ScopeRestore:
-    "compile Pi lay body (n + 1) = (n1, en, body_ex, E, C) \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Scope body) n
-       IMP2_Proc.com.Restore body_ex [(n, n1)]"
+    "compile Pi lay cbody (n + 1) = (n1, en, body_ex, E, C) \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.Scope cbody) n
+       (IMP2_Proc.com.RestoreInternal None) body_ex [(n, n1)]"
 | ScopeDone:
-    "compile Pi lay (IMP2_Proc.com.Scope body) n =
+    "compile Pi lay (IMP2_Proc.com.Scope cbody) n =
        (n1, en, scope_ex, E, C) \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Scope body) n
+     control_at Pi lay (IMP2_Proc.com.Scope cbody) n
        IMP2_Proc.com.SKIP scope_ex []"
 | CallHead:
-    "control_at Pi lay (IMP2_Proc.com.Call p) n
-       (IMP2_Proc.com.Call p) n []"
+    "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+       (IMP2_Proc.com.Call dst p actuals) n []"
 | CallBody:
-    "Pi p = Some body \<Longrightarrow>
+    "Pi p = Some decl \<Longrightarrow>
      lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
-     compile Pi lay body proc_en =
+     compile Pi lay (body decl) proc_en =
        (n1, body_en, proc_ex, E, C) \<Longrightarrow>
-     control_at Pi lay body proc_en residual v sites \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Call p) n
-       (IMP2_Proc.com.Seq residual IMP2_Proc.com.Restore)
+     control_at Pi lay (body decl) proc_en residual v sites \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+       (IMP2_Proc.com.Seq residual (IMP2_Proc.com.RestoreInternal (result decl)))
        v (sites @ [(n, n + 1)])"
 | CallRestore:
-    "lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Call p) n
-       IMP2_Proc.com.Restore proc_ex [(n, n + 1)]"
+    "Pi p = Some decl \<Longrightarrow>
+     lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+       (IMP2_Proc.com.RestoreInternal (result decl)) proc_ex [(n, n + 1)]"
 | CallDone:
-    "lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
-     control_at Pi lay (IMP2_Proc.com.Call p) n
+    "Pi p = Some decl \<Longrightarrow>
+     lay p = Some (proc_en, proc_ex, Ns, Ep, Cp) \<Longrightarrow>
+     control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
        IMP2_Proc.com.SKIP (n + 1) []"
 
 lemma control_at_initial:
@@ -902,12 +920,12 @@ next
   case Call
   show ?case by (rule control_at.CallHead)
 next
-  case Restore
+  case (RestoreInternal r)
   then show ?case by simp
 qed
 
 lemma compile_endpoint_shape_entry:
-  "(case compile_endpoint_shape lay cmd n of
+  "(case compile_endpoint_shape Pi lay cmd n of
       (n', en, ex) \<Rightarrow> en) = n"
 proof (induction cmd arbitrary: n)
   case SKIP
@@ -918,11 +936,11 @@ next
 next
   case (Seq c1 c2)
   obtain n1 en1 ex1 where first:
-      "compile_endpoint_shape lay c1 n = (n1, en1, ex1)"
-    by (cases "compile_endpoint_shape lay c1 n") auto
+      "compile_endpoint_shape Pi lay c1 n = (n1, en1, ex1)"
+    by (cases "compile_endpoint_shape Pi lay c1 n") auto
   obtain n2 en2 ex2 where second:
-      "compile_endpoint_shape lay c2 n1 = (n2, en2, ex2)"
-    by (cases "compile_endpoint_shape lay c2 n1") auto
+      "compile_endpoint_shape Pi lay c2 n1 = (n2, en2, ex2)"
+    by (cases "compile_endpoint_shape Pi lay c2 n1") auto
   have "en1 = n"
     using Seq.IH(1)[of n] first by simp
   then show ?case
@@ -940,7 +958,7 @@ next
   case Call
   then show ?case by (simp split: option.splits)
 next
-  case Restore
+  case (RestoreInternal r)
   then show ?case by simp
 qed
 
@@ -950,12 +968,12 @@ lemma compile_entry_eq:
 proof -
   have shape:
       "compile_endpoints Pi lay cmd n =
-        compile_endpoint_shape lay cmd n"
+        compile_endpoint_shape Pi lay cmd n"
     by (rule compile_endpoints_eq_shape)
   show ?thesis
-    using shape compile_endpoint_shape_entry[of lay cmd n] comp
+    using shape compile_endpoint_shape_entry[of Pi lay cmd n] comp
     unfolding compile_endpoints_def
-    by (cases "compile_endpoint_shape lay cmd n") simp
+    by (cases "compile_endpoint_shape Pi lay cmd n") simp
 qed
 
 lemma compile_procs_list_body:
@@ -963,11 +981,11 @@ lemma compile_procs_list_body:
       and procs:
         "compile_procs_list Pi ps (\<lambda>_. None) 0 =
           (nout, full_lay, Eall, C_all)"
-      and body: "Pi p = Some cmd"
+      and proc: "Pi p = Some decl"
       and lookup:
         "full_lay p = Some (en, ex, Ns, Ep, Cp)"
   shows "\<exists>finish.
-    compile Pi full_lay cmd en = (finish, en, ex, Ep, Cp)"
+    compile Pi full_lay (body decl) en = (finish, en, ex, Ep, Cp)"
 proof -
   obtain nbase base_lay where layout:
       "compile_procs_layout Pi ps (\<lambda>_. None) 0 =
@@ -977,30 +995,30 @@ proof -
         (nout, full_lay, Eall, C_all)"
     using compile_procs_list_decompose[OF procs] by blast
   have member: "p \<in> set ps"
-    using wf body by (auto simp: wf_compile_input_def)
+    using wf proc by (auto simp: wf_compile_input_def)
   have distinct: "distinct ps"
     using wf by (auto simp: wf_compile_input_def)
   have compiled_info:
-      "\<exists>start finish. compile Pi base_lay cmd start =
+      "\<exists>start finish. compile Pi base_lay (body decl) start =
         (finish, en, ex, Ep, Cp)"
     by (rule compile_procs_bodies_lookup[
-          OF distinct _ bodies member body lookup])
+          OF distinct _ bodies member proc lookup])
        simp
   then obtain start finish where compiled_base:
-      "compile Pi base_lay cmd start =
+      "compile Pi base_lay (body decl) start =
         (finish, en, ex, Ep, Cp)"
     by blast
   have agree: "layouts_agree base_lay full_lay"
     by (rule compile_procs_pass_layouts_agree[
           OF wf layout bodies])
   have same:
-      "compile Pi base_lay cmd start =
-       compile Pi full_lay cmd start"
+      "compile Pi base_lay (body decl) start =
+       compile Pi full_lay (body decl) start"
     by (rule compile_layouts_agree[OF agree])
   have start: "start = en"
     by (rule sym, rule compile_entry_eq[OF compiled_base])
   have compiled_full:
-      "compile Pi full_lay cmd start =
+      "compile Pi full_lay (body decl) start =
         (finish, en, ex, Ep, Cp)"
     using compiled_base same by simp
   show ?thesis
@@ -1012,7 +1030,7 @@ lemma compile_procs_list_complete:
       and procs:
         "compile_procs_list Pi ps (\<lambda>_. None) 0 =
           (nout, full_lay, Eall, C_all)"
-      and body: "Pi p = Some cmd"
+      and proc: "Pi p = Some decl"
   shows "\<exists>en ex Ns Ep Cp.
     full_lay p = Some (en, ex, Ns, Ep, Cp)"
 proof -
@@ -1024,7 +1042,7 @@ proof -
         (nout, full_lay, Eall, C_all)"
     using compile_procs_list_decompose[OF procs] by blast
   have member: "p \<in> set ps"
-    using wf body by (auto simp: wf_compile_input_def)
+    using wf proc by (auto simp: wf_compile_input_def)
   have distinct: "distinct ps"
     using wf by (auto simp: wf_compile_input_def)
   have defined: "\<forall>q \<in> set ps. Pi q \<noteq> None"
@@ -1037,7 +1055,7 @@ proof -
   obtain Ns' Ep Cp where full:
       "full_lay p = Some (en, ex, Ns', Ep, Cp)"
     using compile_procs_pass_endpoint_agreement[
-      OF wf layout bodies member body base]
+      OF wf layout bodies member proc base]
     by blast
   show ?thesis using full by blast
 qed
@@ -1051,7 +1069,7 @@ fun frames_match ::
   "frame_site list \<Rightarrow> frame list \<Rightarrow> cframe list \<Rightarrow> bool"
 where
   "frames_match [] [] [] = True"
-| "frames_match ((call, ret) # sites) (saved # frs)
+| "frames_match ((call, ret) # sites) (Frame saved dst # frs)
      ((call', ret', saved') # stk) =
      (call = call' \<and> ret = ret' \<and> saved = saved' \<and>
       frames_match sites frs stk)"
@@ -1137,18 +1155,23 @@ lemma compile_prog_sets:
 inductive cstep :: "cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for g where
   Intra:
     "(u, a, v) \<in> edges g \<Longrightarrow>
-     a \<noteq> EA_Enter \<Longrightarrow>
+     \<not> is_enter_action a \<Longrightarrow>
      edge_step a s = Some s' \<Longrightarrow>
      cstep g (u, s, stk) (v, s', stk)"
 | Call:
-    "(call, EA_Enter, en) \<in> edges g \<Longrightarrow>
-     (call, ex, ret) \<in> combines g \<Longrightarrow>
+    "(call, EA_Enter xs es, en) \<in> edges g \<Longrightarrow>
+     (call, ex, ret, dst, r) \<in> combines g \<Longrightarrow>
+     edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow>
      cstep g (call, s, stk)
-       (en, enter_state s, (call, ret, s) # stk)"
-| Return:
-    "(call, ex, ret) \<in> combines g \<Longrightarrow>
+       (en, s', (call, ret, s) # stk)"
+| ReturnNone:
+    "(call, ex, ret, None, r) \<in> combines g \<Longrightarrow>
      cstep g (ex, t, (call, ret, s) # stk)
        (ret, IMP2_Globals.combine_states s t, stk)"
+| ReturnSome:
+    "(call, ex, ret, Some x, Some e) \<in> combines g \<Longrightarrow>
+     cstep g (ex, t, (call, ret, s) # stk)
+       (ret, (IMP2_Globals.combine_states s t)(x := IMP2_Expr.aval e t), stk)"
 
 
 lemma cstep_star_single:
@@ -1162,25 +1185,25 @@ lemma cstep_star_single:
 lemma cstep_nop:
   assumes edge: "(u, EA_Nop, v) \<in> edges g"
   shows "cstep g (u, s, stk) (v, s, stk)"
-  by (rule cstep.Intra[OF edge]) simp_all
+  by (rule cstep.Intra[OF edge]) (simp_all add: is_enter_action_def)
 
 lemma cstep_assign:
   assumes edge: "(u, EA_Assign x a, v) \<in> edges g"
   shows "cstep g (u, s, stk)
     (v, s(x := IMP2_Expr.aval a s), stk)"
-  by (rule cstep.Intra[OF edge]) simp_all
+  by (rule cstep.Intra[OF edge]) (simp_all add: is_enter_action_def)
 
 lemma cstep_assume:
   assumes edge: "(u, EA_Assume b, v) \<in> edges g"
       and guard: "IMP2_Expr.bval b s"
   shows "cstep g (u, s, stk) (v, s, stk)"
-  by (rule cstep.Intra[OF edge]) (simp_all add: guard)
+  by (rule cstep.Intra[OF edge]) (simp_all add: guard is_enter_action_def)
 
 lemma cstep_assume_not:
   assumes edge: "(u, EA_AssumeNot b, v) \<in> edges g"
       and guard: "\<not> IMP2_Expr.bval b s"
   shows "cstep g (u, s, stk) (v, s, stk)"
-  by (rule cstep.Intra[OF edge]) (simp_all add: guard)
+  by (rule cstep.Intra[OF edge]) (simp_all add: guard is_enter_action_def)
 
 lemma cstep_star_nop_right:
   assumes run: "star (cstep g) cf (u, s, stk)"
@@ -1210,15 +1233,16 @@ definition proc_layout_sound ::
 where
   "proc_layout_sound Pi lay g \<longleftrightarrow>
     source_pi Pi \<and>
-    (\<forall>p body. Pi p = Some body \<longrightarrow>
+    (\<forall>p decl. Pi p = Some decl \<longrightarrow>
       (\<exists>en ex Ns Ep Cp.
         lay p = Some (en, ex, Ns, Ep, Cp))) \<and>
-    (\<forall>p body en ex Ns Ep Cp.
-      Pi p = Some body \<longrightarrow>
+    (\<forall>p decl en ex Ns Ep Cp.
+      Pi p = Some decl \<longrightarrow>
       lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
       (\<exists>finish.
-        compile Pi lay body en = (finish, en, ex, Ep, Cp)) \<and>
+        compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)) \<and>
       Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g)"
+
 
 theorem control_step_simulation:
   assumes compiled:
@@ -1697,8 +1721,8 @@ next
   case (ScopeHead body n)
   have source_result:
       "(residual', s', frs') =
-       (IMP2_Proc.com.Seq body IMP2_Proc.com.Restore,
-        enter_state s, s # frs)"
+       (IMP2_Proc.com.Seq body (IMP2_Proc.com.RestoreInternal None),
+        enter_state s, Frame s None # frs)"
     using ScopeHead.prems(6)
     by (rule ScopeSE) simp
   obtain n1 body_en body_ex Eb Cb where body_comp:
@@ -1707,19 +1731,19 @@ next
     by (cases "compile Pi lay body (n + 1)") auto
   have shape:
       "ex = n1 \<and>
-       (n, EA_Enter, body_en) \<in> E \<and>
-       (n, body_ex, n1) \<in> C"
+       (n, EA_Enter [] [], body_en) \<in> E \<and>
+       (n, body_ex, n1, None, None) \<in> C"
     using ScopeHead.prems(1) body_comp by auto
   have enter_edge:
-      "(n, EA_Enter, body_en) \<in> edges g"
+      "(n, EA_Enter [] [], body_en) \<in> edges g"
     using ScopeHead.prems(2) shape by blast
   have combine:
-      "(n, body_ex, n1) \<in> combines g"
+      "(n, body_ex, n1, None, None) \<in> combines g"
     using ScopeHead.prems(3) shape by blast
   have concrete:
       "cstep g (n, s, stk)
         (body_en, enter_state s, (n, n1, s) # stk)"
-    by (rule cstep.Call[OF enter_edge combine])
+    by (rule cstep.Call[OF enter_edge combine]) (simp add: bind_formals_def)
   have run:
       "star (cstep g) (n, s, stk)
         (body_en, enter_state s, (n, n1, s) # stk)"
@@ -1732,17 +1756,17 @@ next
       entry by simp
   have raw_location:
       "control_at Pi lay (IMP2_Proc.com.Scope body) n
-        (IMP2_Proc.com.Seq body IMP2_Proc.com.Restore)
+        (IMP2_Proc.com.Seq body (IMP2_Proc.com.RestoreInternal None))
         body_en ([] @ [(n, ex)])"
     by (rule control_at.ScopeBody[
           OF ScopeHead.prems(1) body_control])
   have located:
       "control_at Pi lay (IMP2_Proc.com.Scope body) n
-        (IMP2_Proc.com.Seq body IMP2_Proc.com.Restore)
+        (IMP2_Proc.com.Seq body (IMP2_Proc.com.RestoreInternal None))
         body_en [(n, n1)]"
     using raw_location shape by simp
   have matched:
-      "frames_match ([(n, n1)] @ suffix) (s # frs)
+      "frames_match ([(n, n1)] @ suffix) (Frame s None # frs)
         ((n, n1, s) # stk)"
     using ScopeHead.prems(5) by simp
   show ?case
@@ -1760,8 +1784,8 @@ next
     by (cases "compile Pi lay body (n + 1)") auto
   have parent_shape:
       "scope_ex = body_n \<and>
-       E = insert (n, EA_Enter, body_en) Eb \<and>
-       C = insert (n, body_ex, body_n) Cb"
+       E = insert (n, EA_Enter [] [], body_en) Eb \<and>
+       C = insert (n, body_ex, body_n, None, None) Cb"
     using ScopeBody.prems(1) ScopeBody.hyps(1) body_comp by auto
   have sub_edges: "Eb \<subseteq> edges g"
     using ScopeBody.prems(2) parent_shape by blast
@@ -1776,7 +1800,7 @@ next
     assume residual_skip: "residual = IMP2_Proc.com.SKIP"
        and source_result:
          "(residual', s', frs') =
-          (IMP2_Proc.com.Restore, s, frs)"
+          (IMP2_Proc.com.RestoreInternal None, s, frs)"
     have input_frames:
         "frames_match
           (sites @ ([(n, scope_ex)] @ suffix)) frs stk"
@@ -1791,11 +1815,11 @@ next
       by blast
     have raw_location:
         "control_at Pi lay (IMP2_Proc.com.Scope body) n
-          IMP2_Proc.com.Restore body_ex [(n, body_n)]"
+          (IMP2_Proc.com.RestoreInternal None) body_ex [(n, body_n)]"
       by (rule control_at.ScopeRestore[OF body_comp])
     have located:
         "control_at Pi lay (IMP2_Proc.com.Scope body) n
-          IMP2_Proc.com.Restore body_ex [(n, scope_ex)]"
+          (IMP2_Proc.com.RestoreInternal None) body_ex [(n, scope_ex)]"
       using raw_location parent_shape by simp
     show ?case
       apply (rule exI[of _ body_ex])
@@ -1808,7 +1832,7 @@ next
     fix inner' t frs1
     assume source_result:
         "(residual', s', frs') =
-         (IMP2_Proc.com.Seq inner' IMP2_Proc.com.Restore,
+         (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal None),
           t, frs1)"
        and inner_step:
          "pstep Pi (residual, s, frs) (inner', t, frs1)"
@@ -1830,7 +1854,7 @@ next
       by blast
     have raw_location:
         "control_at Pi lay (IMP2_Proc.com.Scope body) n
-          (IMP2_Proc.com.Seq inner' IMP2_Proc.com.Restore)
+          (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal None))
           v' (inner_sites @ [(n, scope_ex)])"
       by (rule control_at.ScopeBody[
             OF ScopeBody.hyps(1) inner_control])
@@ -1846,14 +1870,14 @@ next
   case (ScopeRestore body n body_n body_en body_ex Eb Cb)
   have parent_shape:
       "ex = body_n \<and>
-       (n, body_ex, body_n) \<in> C"
+       (n, body_ex, body_n, None, None) \<in> C"
     using ScopeRestore.prems(1) ScopeRestore.hyps(1) by auto
-  have combine: "(n, body_ex, body_n) \<in> combines g"
+  have combine: "(n, body_ex, body_n, None, None) \<in> combines g"
     using ScopeRestore.prems(3) parent_shape by blast
   show ?case
   proof (rule RestoreSE[OF ScopeRestore.prems(6)])
-    fix saved outer
-    assume source_frames: "frs = saved # outer"
+    fix saved outer r
+    assume source_frames: "frs = Frame saved None # outer"
        and source_result:
          "(residual', s', frs') =
           (IMP2_Proc.com.SKIP,
@@ -1872,7 +1896,7 @@ next
         "cstep g (body_ex, s, stk)
           (body_n, IMP2_Globals.combine_states saved s, stk0)"
       unfolding concrete_stack
-      by (rule cstep.Return[OF combine])
+      by (rule cstep.ReturnNone[OF combine])
     have run:
         "star (cstep g) (body_ex, s, stk)
           (body_n, IMP2_Globals.combine_states saved s, stk0)"
@@ -1897,110 +1921,121 @@ next
       apply (intro conjI)
        apply (subst result_store)
        apply (rule run)
-       using result_cmd located apply simp
+      using result_cmd located apply simp
       using result_frames outer_frames apply simp
       done
+  next
+    fix e fr x frs
+    assume "None = Some e"
+    then show ?case by simp
   qed
 next
   case ScopeDone
   then show ?case by (elim SkipSE)
 next
-  case (CallHead p n)
+  case (CallHead dst p actuals n)
+  case (CallHead dst p actuals n)
+  obtain decl where decl: "Pi p = Some decl"
+     and arity: "length actuals = length (formals decl)"
+     and distinct_formals: "distinct (formals decl)"
+     and return_ok: "(\<exists>x. dst = Some x) \<longrightarrow> (\<exists>y. result decl = Some y)"
+     and source_result:
+       "(residual', s', frs') =
+        (IMP2_Proc.com.Seq (body decl)
+           (IMP2_Proc.com.RestoreInternal (result decl)),
+         bind_formals (formals decl) (map (\<lambda>e. IMP2_Expr.aval e s) actuals) (enter_state s),
+         Frame s dst # frs)"
+    using CallHead.prems(6)
+    by auto
+  have source_pi: "source_pi Pi"
+    using CallHead.prems(4)
+    unfolding proc_layout_sound_def
+    by (elim conjE) assumption
+  have source_body: "source_com (body decl)"
+    using source_pi decl unfolding source_pi_def by auto
+  have layout_complete:
+      "\<forall>p decl. Pi p = Some decl \<longrightarrow>
+        (\<exists>en ex Ns Ep Cp.
+          lay p = Some (en, ex, Ns, Ep, Cp))"
+    using CallHead.prems(4)
+    unfolding proc_layout_sound_def
+    by (elim conjE) assumption
+  obtain proc_en proc_ex Ns Ep Cp where lookup:
+      "lay p = Some (proc_en, proc_ex, Ns, Ep, Cp)"
+    using layout_complete[rule_format, OF decl] by blast
+  have layout_fragments:
+      "\<forall>p decl en ex Ns Ep Cp.
+        Pi p = Some decl \<longrightarrow>
+        lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
+        (\<exists>finish.
+          compile Pi lay (body decl) en =
+            (finish, en, ex, Ep, Cp)) \<and>
+        Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g"
+    using CallHead.prems(4)
+    unfolding proc_layout_sound_def
+    by (elim conjE) assumption
+  obtain finish where body_comp:
+      "compile Pi lay (body decl) proc_en =
+       (finish, proc_en, proc_ex, Ep, Cp)"
+    using layout_fragments[rule_format, OF decl lookup] by blast
+  have call_shape:
+      "(n, EA_Enter (formals decl) actuals, proc_en) \<in> E \<and>
+       (n, proc_ex, n + 1, dst, result decl) \<in> C"
+    using CallHead.prems(1) decl lookup by auto
+  have enter_edge:
+      "(n, EA_Enter (formals decl) actuals, proc_en) \<in> edges g"
+    using CallHead.prems(2) call_shape by blast
+  have combine:
+      "(n, proc_ex, n + 1, dst, result decl) \<in> combines g"
+    using CallHead.prems(3) call_shape by blast
+  have concrete:
+      "cstep g (n, s, stk)
+        (proc_en,
+         bind_formals (formals decl) (map (\<lambda>e. IMP2_Expr.aval e s) actuals) (enter_state s),
+         (n, n + 1, s) # stk)"
+    by (rule cstep.Call[OF enter_edge combine])
+       (simp add: bind_formals_def)
+  have run:
+      "star (cstep g) (n, s, stk)
+        (proc_en,
+         bind_formals (formals decl) (map (\<lambda>e. IMP2_Expr.aval e s) actuals) (enter_state s),
+         (n, n + 1, s) # stk)"
+    by (rule cstep_star_single[OF concrete])
+  have body_control:
+      "control_at Pi lay (body decl) proc_en (body decl) proc_en []"
+    by (rule control_at_initial[OF source_body])
+  have raw_location:
+      "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+        (IMP2_Proc.com.Seq (body decl)
+           (IMP2_Proc.com.RestoreInternal (result decl)))
+        proc_en ([] @ [(n, n + 1)])"
+    by (rule control_at.CallBody[
+          OF decl lookup body_comp body_control])
+  have located:
+      "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+        (IMP2_Proc.com.Seq (body decl)
+           (IMP2_Proc.com.RestoreInternal (result decl)))
+        proc_en [(n, n + 1)]"
+    using raw_location by simp
+  have matched:
+      "frames_match ([(n, n + 1)] @ suffix) (Frame s dst # frs)
+        ((n, n + 1, s) # stk)"
+    using CallHead.prems(5) by simp
   show ?case
-  proof (rule CallSE[OF CallHead.prems(6)])
-    fix body
-    assume body: "Pi p = Some body"
-       and source_result:
-         "(residual', s', frs') =
-          (IMP2_Proc.com.Seq body IMP2_Proc.com.Restore,
-           enter_state s, s # frs)"
-    have source_pi: "source_pi Pi"
-      using CallHead.prems(4)
-      unfolding proc_layout_sound_def
-      by (elim conjE) assumption
-    have source_body: "source_com body"
-      using source_pi body unfolding source_pi_def by auto
-    have layout_complete:
-        "\<forall>p body. Pi p = Some body \<longrightarrow>
-          (\<exists>en ex Ns Ep Cp.
-            lay p = Some (en, ex, Ns, Ep, Cp))"
-      using CallHead.prems(4)
-      unfolding proc_layout_sound_def
-      by (elim conjE) assumption
-    obtain proc_en proc_ex Ns Ep Cp where lookup:
-        "lay p = Some (proc_en, proc_ex, Ns, Ep, Cp)"
-      using layout_complete[rule_format, OF body] by blast
-    have layout_fragments:
-        "\<forall>p body en ex Ns Ep Cp.
-          Pi p = Some body \<longrightarrow>
-          lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
-          (\<exists>finish.
-            compile Pi lay body en =
-              (finish, en, ex, Ep, Cp)) \<and>
-          Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g"
-      using CallHead.prems(4)
-      unfolding proc_layout_sound_def
-      by (elim conjE) assumption
-    obtain finish where body_comp:
-        "compile Pi lay body proc_en =
-         (finish, proc_en, proc_ex, Ep, Cp)"
-      using layout_fragments[rule_format, OF body lookup] by blast
-    have call_shape:
-        "(n, EA_Enter, proc_en) \<in> E \<and>
-         (n, proc_ex, n + 1) \<in> C"
-      using CallHead.prems(1) lookup by auto
-    have enter_edge:
-        "(n, EA_Enter, proc_en) \<in> edges g"
-      using CallHead.prems(2) call_shape by blast
-    have combine:
-        "(n, proc_ex, n + 1) \<in> combines g"
-      using CallHead.prems(3) call_shape by blast
-    have concrete:
-        "cstep g (n, s, stk)
-          (proc_en, enter_state s, (n, n + 1, s) # stk)"
-      by (rule cstep.Call[OF enter_edge combine])
-    have run:
-        "star (cstep g) (n, s, stk)
-          (proc_en, enter_state s, (n, n + 1, s) # stk)"
-      by (rule cstep_star_single[OF concrete])
-    have body_control:
-        "control_at Pi lay body proc_en body proc_en []"
-      by (rule control_at_initial[OF source_body])
-    have raw_location:
-        "control_at Pi lay (IMP2_Proc.com.Call p) n
-          (IMP2_Proc.com.Seq body IMP2_Proc.com.Restore)
-          proc_en ([] @ [(n, n + 1)])"
-      by (rule control_at.CallBody[
-            OF body lookup body_comp body_control])
-    have located:
-        "control_at Pi lay (IMP2_Proc.com.Call p) n
-          (IMP2_Proc.com.Seq body IMP2_Proc.com.Restore)
-          proc_en [(n, n + 1)]"
-      using raw_location by simp
-    have matched:
-        "frames_match ([(n, n + 1)] @ suffix) (s # frs)
-          ((n, n + 1, s) # stk)"
-      using CallHead.prems(5) by simp
-    show ?case
-      apply (rule exI[of _ proc_en])
-      apply (rule exI[of _ "[(n, n + 1)]"])
-      apply (rule exI[of _ "(n, n + 1, s) # stk"])
-      using source_result run located matched
-      apply simp
-      done
-  qed
+    using source_result run located matched by blast
+ 
+   
 next
-  case (CallBody p body proc_en proc_ex Ns Ep Cp n1 body_en Eb Cb
-      residual v sites n)
+  case (CallBody p decl proc_en proc_ex Ns Ep Cp n1 body_en Eb Cb residual v sites dst actuals n)
   have proc_sound:
       "(\<exists>finish.
-         compile Pi lay body proc_en =
+         compile Pi lay (body decl) proc_en =
            (finish, proc_en, proc_ex, Ep, Cp)) \<and>
        Ep \<subseteq> edges g \<and> Cp \<subseteq> combines g"
     using CallBody.prems(4) CallBody.hyps(1,2)
     unfolding proc_layout_sound_def by blast
   then obtain finish where canonical:
-      "compile Pi lay body proc_en =
+      "compile Pi lay (body decl) proc_en =
        (finish, proc_en, proc_ex, Ep, Cp)"
       and proc_edges: "Ep \<subseteq> edges g"
       and proc_combines: "Cp \<subseteq> combines g"
@@ -2020,7 +2055,7 @@ next
     assume residual_skip: "residual = IMP2_Proc.com.SKIP"
        and source_result:
          "(residual', s', frs') =
-          (IMP2_Proc.com.Restore, s, frs)"
+          (IMP2_Proc.com.RestoreInternal (result decl), s, frs)"
     have input_frames:
         "frames_match
           (sites @ ([(n, n + 1)] @ suffix)) frs stk"
@@ -2034,9 +2069,9 @@ next
              residual_skip input_frames]
       by blast
     have located:
-        "control_at Pi lay (IMP2_Proc.com.Call p) n
-          IMP2_Proc.com.Restore proc_ex [(n, n + 1)]"
-      using CallBody.hyps(2)
+        "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+          (IMP2_Proc.com.RestoreInternal (result decl)) proc_ex [(n, n + 1)]"
+      using CallBody.hyps(1,2)
       by (rule control_at.CallRestore)
     show ?case
       apply (rule exI[of _ proc_ex])
@@ -2049,7 +2084,7 @@ next
     fix inner' t frs1
     assume source_result:
         "(residual', s', frs') =
-         (IMP2_Proc.com.Seq inner' IMP2_Proc.com.Restore,
+         (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal (result decl)),
           t, frs1)"
        and inner_step:
          "pstep Pi (residual, s, frs) (inner', t, frs1)"
@@ -2060,7 +2095,7 @@ next
     obtain v' inner_sites stk' where run:
         "star (cstep g) (v, s, stk) (v', t, stk')"
         and inner_control:
-          "control_at Pi lay body proc_en inner' v' inner_sites"
+          "control_at Pi lay (body decl) proc_en inner' v' inner_sites"
         and matched:
           "frames_match
             (inner_sites @ ([(n, n + 1)] @ suffix))
@@ -2070,8 +2105,8 @@ next
              input_frames inner_step]
       by blast
     have raw_location:
-        "control_at Pi lay (IMP2_Proc.com.Call p) n
-          (IMP2_Proc.com.Seq inner' IMP2_Proc.com.Restore)
+        "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+          (IMP2_Proc.com.Seq inner' (IMP2_Proc.com.RestoreInternal (result decl)))
           v' (inner_sites @ [(n, n + 1)])"
       by (rule control_at.CallBody[
             OF CallBody.hyps(1) CallBody.hyps(2)
@@ -2085,60 +2120,97 @@ next
       using source_result run raw_location output_frames by blast
   qed
 next
-  case (CallRestore p proc_en proc_ex Ns Ep Cp n)
-  have call_shape: "(n, proc_ex, n + 1) \<in> C"
-    using CallRestore.prems(1) CallRestore.hyps(1) by auto
-  have combine: "(n, proc_ex, n + 1) \<in> combines g"
-    using CallRestore.prems(3) call_shape by blast
+  case (CallRestore p decl proc_en proc_ex Ns Ep Cp dst actuals n)
+  have combine_dst:
+      "(n, proc_ex, n + 1, dst, result decl) \<in> combines g"
+    using CallRestore.prems(1,3) CallRestore.hyps(1,2) by auto
+  have located:
+      "control_at Pi lay (IMP2_Proc.com.Call dst p actuals) n
+        IMP2_Proc.com.SKIP (n + 1) []"
+    using CallRestore.hyps(1,2) by (rule control_at.CallDone)
   show ?case
-  proof (rule RestoreSE[OF CallRestore.prems(6)])
-    fix saved outer
-    assume source_frames: "frs = saved # outer"
-       and source_result:
-         "(residual', s', frs') =
-          (IMP2_Proc.com.SKIP,
-           IMP2_Globals.combine_states saved s, outer)"
-    have stack_shape:
-        "\<exists>stk0.
-          stk = (n, n + 1, saved) # stk0 \<and>
-          frames_match suffix outer stk0"
-      using CallRestore.prems(5) source_frames
-      by (cases stk) auto
-    then obtain stk0 where concrete_stack:
-        "stk = (n, n + 1, saved) # stk0"
-        and outer_frames: "frames_match suffix outer stk0"
-      by blast
-    have concrete:
-        "cstep g (proc_ex, s, stk)
-          (n + 1, IMP2_Globals.combine_states saved s, stk0)"
-      unfolding concrete_stack
-      by (rule cstep.Return[OF combine])
-    have run:
-        "star (cstep g) (proc_ex, s, stk)
-          (n + 1, IMP2_Globals.combine_states saved s, stk0)"
-      by (rule cstep_star_single[OF concrete])
-    have located:
-        "control_at Pi lay (IMP2_Proc.com.Call p) n
-          IMP2_Proc.com.SKIP (n + 1) []"
-      using CallRestore.hyps(1)
-      by (rule control_at.CallDone)
-    have result_cmd: "residual' = IMP2_Proc.com.SKIP"
-      and result_store:
-        "s' = IMP2_Globals.combine_states saved s"
-      and result_frames: "frs' = outer"
-      using source_result by simp_all
-    show ?case
-      apply (rule exI[of _ "n + 1"])
-      apply (rule exI[of _ "[]"])
-      apply (rule exI[of _ stk0])
-      apply (intro conjI)
-       apply (subst result_store)
-       apply (rule run)
-      using result_cmd located apply simp
-      using result_frames outer_frames apply simp
-      done
+  proof (cases dst)
+    case None
+    have combine:
+        "(n, proc_ex, n + 1, None, result decl) \<in> combines g"
+      using combine_dst None by simp
+    show ?thesis
+    proof (rule RestoreSE[OF CallRestore.prems(6)])
+      fix saved outer r
+      assume source_frames: "frs = Frame saved None # outer"
+         and source_result:
+           "(residual', s', frs') =
+            (IMP2_Proc.com.SKIP,
+             IMP2_Globals.combine_states saved s, outer)"
+      obtain stk0 where concrete_stack:
+          "stk = (n, n + 1, saved) # stk0"
+          and outer_frames: "frames_match suffix outer stk0"
+        using CallRestore.prems(5) source_frames
+        by (cases stk) auto
+      have run:
+          "star (cstep g) (proc_ex, s, stk)
+            (n + 1, IMP2_Globals.combine_states saved s, stk0)"
+        unfolding concrete_stack
+        by (rule cstep_star_single, rule cstep.ReturnNone[OF combine])
+      show ?thesis
+        apply (rule exI[of _ "n + 1"])
+        apply (rule exI[of _ "[]"])
+        apply (rule exI[of _ stk0])
+        using source_result run located outer_frames None
+        apply simp
+        done
+    next
+      fix e saved x outer
+      assume "None = Some e"
+      then show ?thesis by simp
+    qed
+  next
+    case (Some x)
+    show ?thesis
+    proof (rule RestoreSE[OF CallRestore.prems(6)])
+      fix saved outer
+      assume source_frames: "frs = Frame saved None # outer"
+         and source_result:
+           "(residual', s', frs') =
+            (IMP2_Proc.com.SKIP,
+             IMP2_Globals.combine_states saved s, outer)"
+      from Some source_frames show ?thesis by simp
+    next
+      fix e saved x' outer
+      assume source_result:
+           "(residual', s', frs') =
+            (IMP2_Proc.com.SKIP,
+             (IMP2_Globals.combine_states saved s)(x' := IMP2_Expr.aval e s),
+             outer)"
+         and result_eq: "result decl = Some e"
+         and source_frames: "frs = Frame saved (Some x') # outer"
+      from Some source_frames have x_eq: "x' = x" by simp
+      have combine:
+          "(n, proc_ex, n + 1, Some x', Some e) \<in> combines g"
+        using combine_dst Some result_eq x_eq by simp
+      obtain stk0 where concrete_stack:
+          "stk = (n, n + 1, saved) # stk0"
+          and outer_frames: "frames_match suffix outer stk0"
+        using CallRestore.prems(5) source_frames
+        by (cases stk) auto
+      have run:
+          "star (cstep g) (proc_ex, s, stk)
+            (n + 1,
+             (IMP2_Globals.combine_states saved s)(x' := IMP2_Expr.aval e s),
+             stk0)"
+        unfolding concrete_stack
+        by (rule cstep_star_single, rule cstep.ReturnSome[OF combine])
+      show ?thesis
+        apply (rule exI[of _ "n + 1"])
+        apply (rule exI[of _ "[]"])
+        apply (rule exI[of _ stk0])
+        using source_result run located outer_frames Some x_eq
+        apply simp
+        done
+    qed
   qed
-next
+
+
   case CallDone
   then show ?case by (elim SkipSE)
 qed
@@ -2189,38 +2261,39 @@ proof -
   proof (unfold proc_layout_sound_def, intro conjI)
     show "source_pi Pi"
       using wf unfolding wf_compile_input_def by blast
-    show "\<forall>p body. Pi p = Some body \<longrightarrow>
+    show "\<forall>p decl. Pi p = Some decl \<longrightarrow>
       (\<exists>en ex Ns Ep Cp.
         lay p = Some (en, ex, Ns, Ep, Cp))"
     proof (intro allI impI)
-      fix p body
-      assume body: "Pi p = Some body"
+      fix p decl
+      assume decl: "Pi p = Some decl"
       show "\<exists>en ex Ns Ep Cp.
         lay p = Some (en, ex, Ns, Ep, Cp)"
-        using compile_procs_list_complete[OF wf procs body] .
+        using compile_procs_list_complete[OF wf procs decl] .
     qed
-    show "\<forall>p body en ex Ns Ep Cp.
-      Pi p = Some body \<longrightarrow>
+    show "\<forall>p decl en ex Ns Ep Cp.
+      Pi p = Some decl \<longrightarrow>
       lay p = Some (en, ex, Ns, Ep, Cp) \<longrightarrow>
       (\<exists>finish.
-        compile Pi lay body en = (finish, en, ex, Ep, Cp)) \<and>
+        compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)) \<and>
       Ep \<subseteq> edges (compile_prog Pi ps main) \<and>
       Cp \<subseteq> combines (compile_prog Pi ps main)"
     proof (intro allI impI)
-      fix p body en ex Ns Ep Cp
-      assume body: "Pi p = Some body"
+      fix p decl en ex Ns Ep Cp
+      assume decl: "Pi p = Some decl"
       assume lookup: "lay p = Some (en, ex, Ns, Ep, Cp)"
       obtain finish where compiled_body:
-          "compile Pi lay body en = (finish, en, ex, Ep, Cp)"
-        using compile_procs_list_body[OF wf procs body lookup] by blast
+          "compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)"
+        using compile_procs_list_body[OF wf procs decl lookup] by blast
       have fragment: "Ep \<subseteq> Eproc \<and> Cp \<subseteq> Cproc"
         by (rule compile_procs_list_fragment[OF procs lookup])
       show "(\<exists>finish.
-          compile Pi lay body en = (finish, en, ex, Ep, Cp)) \<and>
+          compile Pi lay (body decl) en = (finish, en, ex, Ep, Cp)) \<and>
           Ep \<subseteq> edges (compile_prog Pi ps main) \<and>
           Cp \<subseteq> combines (compile_prog Pi ps main)"
         using compiled_body fragment edge_sets combine_sets by blast
     qed
+  qed
   qed
   have source_step:
       "pstep Pi (residual, s, frs) (residual', s', frs')"

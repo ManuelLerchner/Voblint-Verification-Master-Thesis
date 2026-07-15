@@ -48,13 +48,14 @@ proof -
 qed
 
 lemma cfg_collect_combine:
-  assumes h: "(c, ex, ret) \<in> combines g" and ret: "ret = v"
+  assumes h: "(c, ex, ret, dst, rex) \<in> combines g" and ret: "ret = v"
       and sc: "s \<in> cfg_collect g S c" and te: "t \<in> cfg_collect g S ex"
-  shows "<s|t> \<in> cfg_collect g S v"
+      and xu: "x \<in> combine_collect dst rex s t"
+  shows "x \<in> cfg_collect g S v"
 proof -
-  have mem: "<s|t> \<in> collect_combine_pp g (cfg_collect g S) v"
-    using collect_combine_pp_member[OF h ret sc te] .
-  have step: "<s|t> \<in> cfg_collect_F g S (cfg_collect g S) v"
+  have mem: "x \<in> collect_combine_pp g (cfg_collect g S) v"
+    using collect_combine_pp_member[OF h ret sc te xu] .
+  have step: "x \<in> cfg_collect_F g S (cfg_collect g S) v"
     unfolding cfg_collect_F_def using mem by auto
   show ?thesis using step cfg_collect_post by blast
 qed

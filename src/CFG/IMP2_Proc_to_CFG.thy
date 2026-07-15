@@ -7,18 +7,19 @@ section \<open>Interprocedural CFG compilation for `com` programs\<close>
 text \<open>
   Whole-program layout:
     - each procedure body compiled once at a fresh offset;
-    - call sites get unary enter edges `(call, EA_Enter, proc_entry)`;
-    - returns use combine triples `(call, proc_exit, return)` in `combines g`.
+    - call sites get enter edges `(call, EA_Enter formals actuals, proc_entry)`;
+    - returns use combine metadata `(call, proc_exit, return, dst, result)` in
+      `combines g`.
 \<close>
 
 type_synonym proc_info =
-  "pp * pp * pp set * (pp * edge_action * pp) set * (pp * pp * pp) set"
+  "pp * pp * pp set * (pp * edge_action * pp) set * combine_info set"
 
 type_synonym proc_layout = "pname => proc_info option"
 
 fun compile ::
   "proc_table => proc_layout => com => nat =>
-   nat * pp * pp * (pp * edge_action * pp) set * (pp * pp * pp) set"
+   nat * pp * pp * (pp * edge_action * pp) set * combine_info set"
 where
     "compile \<Pi> lay SKIP n =
        (n + 2, n, n + 1, {(n, EA_Nop, n + 1)}, {})"
@@ -61,18 +62,18 @@ where
        (let (n', en, ex, E, C) = compile \<Pi> lay c (n + 1);
             scope_ex = n'
         in  (n' + 1, n, scope_ex,
-             E Un {(n, EA_Enter, en)},
-             C Un {(n, ex, scope_ex)}))"
+             E Un {(n, EA_Enter [] [], en)},
+             C Un {(n, ex, scope_ex, None, None)}))"
 
-  | "compile \<Pi> lay (Call p) n =
-       (case lay p of
-          None => (n + 2, n, n, {}, {})
-        | Some (en_p, ex_p, Ns_p, E_p, C_p) =>
+  | "compile \<Pi> lay (Call dst p actuals) n =
+       (case (\<Pi> p, lay p) of
+          (Some decl, Some (en_p, ex_p, Ns_p, E_p, C_p)) =>
             (n + 2, n, n + 1,
-             {(n, EA_Enter, en_p)},
-             {(n, ex_p, n + 1)}))"
+             {(n, EA_Enter (formals decl) actuals, en_p)},
+             {(n, ex_p, n + 1, dst, result decl)})
+        | _ => (n + 2, n, n, {}, {}))"
 
-  | "compile \<Pi> lay Restore n =
+  | "compile \<Pi> lay (RestoreInternal r) n =
        (n, n, n, {}, {})"
 
 definition known_proc_layout :: "proc_table => pname list => proc_layout => proc_layout" where
@@ -89,9 +90,9 @@ where
   | "compile_procs_layout \<Pi> (p # ps) lay n =
        (case \<Pi> p of
           None => compile_procs_layout \<Pi> ps lay n
-        | Some body =>
+        | Some decl =>
             (let complete_lay = known_proc_layout \<Pi> (p # ps) lay;
-                 (n', en, ex, E, C) = compile \<Pi> complete_lay body n;
+                 (n', en, ex, E, C) = compile \<Pi> complete_lay (body decl) n;
                  lay' = (case lay p of
                            None => (lay (p := Some (en, ex, {n..<n'}, {}, {})))
                          | Some _ => lay);
@@ -100,15 +101,15 @@ where
 
 fun compile_procs_bodies ::
   "proc_table => pname list => proc_layout => proc_layout => nat =>
-   nat * proc_layout * (pp * edge_action * pp) set * (pp * pp * pp) set"
+   nat * proc_layout * (pp * edge_action * pp) set * combine_info set"
 where
     "compile_procs_bodies \<Pi> [] base_lay full_lay n = (n, full_lay, {}, {})"
 
   | "compile_procs_bodies \<Pi> (p # ps) base_lay full_lay n =
        (case \<Pi> p of
           None => compile_procs_bodies \<Pi> ps base_lay full_lay n
-        | Some body =>
-            (let (n', en, ex, E, C) = compile \<Pi> base_lay body n;
+        | Some decl =>
+            (let (n', en, ex, E, C) = compile \<Pi> base_lay (body decl) n;
                  full_lay' = (case full_lay p of
                                 None => (full_lay (p := Some (en, ex, {n..<n'}, E, C)))
                               | Some _ => full_lay);
@@ -117,7 +118,7 @@ where
 
 definition compile_procs_list ::
   "proc_table => pname list => proc_layout => nat =>
-   nat * proc_layout * (pp * edge_action * pp) set * (pp * pp * pp) set"
+   nat * proc_layout * (pp * edge_action * pp) set * combine_info set"
 where
   "compile_procs_list \<Pi> ps lay n =
      (let (n', base_lay) = compile_procs_layout \<Pi> ps lay n;
@@ -235,9 +236,9 @@ next
     by (auto split: prod.splits)
   show ?case using Scope.IH[OF c] n' by simp
 next
-  case (Call p) then show ?case by (auto split: option.splits prod.splits)
+  case (Call dst p actuals) then show ?case by (auto split: option.splits prod.splits)
 next
-  case Restore then show ?case by auto
+  case (RestoreInternal r) then show ?case by auto
 qed
 
 lemma compile_finite:
@@ -267,10 +268,10 @@ next
   case (Scope c)
   then show ?case by (auto split: prod.splits intro: finite_UnI)
 next
-  case (Call p)
+  case (Call dst p actuals)
   then show ?case by (auto split: option.splits prod.splits)
 next
-  case Restore
+  case (RestoreInternal r)
   then show ?case by auto
 qed
 
@@ -287,9 +288,9 @@ next
     case None
     with Cons show ?thesis by auto
   next
-    case (Some body)
+    case (Some decl)
     with Cons obtain n1 en ex E0 C0 full_lay1 n2 full_lay2 Eacc Cacc where
-      cp: "compile \<Pi> base_lay body n = (n1, en, ex, E0, C0)"
+      cp: "compile \<Pi> base_lay (body decl) n = (n1, en, ex, E0, C0)"
       and rest: "compile_procs_bodies \<Pi> ps base_lay full_lay1 n1 =
                    (n2, full_lay2, Eacc, Cacc)"
       and E: "E = E0 Un Eacc"
@@ -320,7 +321,7 @@ value "cfg_entry (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
 value "cfg_exit  (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
 value "cfg_edges_list (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
 value "cfg_edges_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Assign ''x'' (N 1)))"
-value "cfg_combines_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Call ''f''))"
+value "cfg_combines_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Call None ''f'' []))"
 
 
 

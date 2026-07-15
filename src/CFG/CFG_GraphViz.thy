@@ -57,11 +57,11 @@ fun string_of_bexp :: "bexp \<Rightarrow> string" where
 | "string_of_bexp (Eq   a1 a2)  = string_of_aexp a1 @ ''=='' @ string_of_aexp a2"
 
 fun string_of_action :: "edge_action \<Rightarrow> string" where
-  "string_of_action EA_Nop            = ''nop''"
-| "string_of_action (EA_Assign x a)   = x @ '' := '' @ string_of_aexp a"
-| "string_of_action (EA_Assume b)     = ''[''  @ string_of_bexp b @ '']''"
-| "string_of_action (EA_AssumeNot b)  = ''![''  @ string_of_bexp b @ '']''"
-| "string_of_action EA_Enter           = ''enter''"
+  "string_of_action EA_Nop = ''nop''"
+| "string_of_action (EA_Assign x a) = x @ '' := '' @ string_of_aexp a"
+| "string_of_action (EA_Assume b) = ''['' @ string_of_bexp b @ '']''"
+| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_bexp b @ '']''"
+| "string_of_action (EA_Enter xs es) = ''enter''"
 
 (* -- DOT building blocks ------------------------------------------- *)
 
@@ -70,34 +70,34 @@ definition nl :: string where "nl = [CHR 0x0A]"   (* newline      *)
 
 definition edge_to_dot :: "pp \<times> edge_action \<times> pp \<Rightarrow> string" where
   "edge_to_dot e =
-     (case e of (u, EA_Enter, v) \<Rightarrow>
+     (case e of (u, EA_Enter xs es, v) \<Rightarrow>
         ''  '' @ string_of_nat u @ '' -> '' @ string_of_nat v
               @ '' [color=purple,penwidth=2,label='' @ dq @ ''enter'' @ dq @ ''];'' @ nl
       | (u, a, v) \<Rightarrow>
         ''  '' @ string_of_nat u @ '' -> '' @ string_of_nat v
               @ '' [label='' @ dq @ string_of_action a @ dq @ ''];'' @ nl)"
 
-definition combine_to_dot :: "pp \<times> pp \<times> pp \<Rightarrow> string" where
+definition combine_to_dot :: "combine_info \<Rightarrow> string" where
   "combine_to_dot t =
-     (case t of (call, ex, ret) \<Rightarrow>
+     (case t of (call, ex, ret, dst, rex) \<Rightarrow>
         ''  '' @ string_of_nat ex @ '' -> '' @ string_of_nat ret
               @ '' [style=dashed,color=blue,label=''
               @ dq @ ''combine via call@'' @ string_of_nat call @ dq @ ''];'' @ nl)"
 
 fun enter_targets :: "(pp \<times> edge_action \<times> pp) list \<Rightarrow> pp list" where
   "enter_targets [] = []"
-| "enter_targets ((u, EA_Enter, v) # es) = v # enter_targets es"
+| "enter_targets ((u, EA_Enter xs es, v) # es') = v # enter_targets es'"
 | "enter_targets (_ # es) = enter_targets es"
 
-fun combine_exits :: "(pp \<times> pp \<times> pp) list \<Rightarrow> pp list" where
+fun combine_exits :: "combine_info list \<Rightarrow> pp list" where
   "combine_exits [] = []"
-| "combine_exits ((call, ex, ret) # cs) = ex # combine_exits cs"
+| "combine_exits ((call, ex, ret, dst, rex) # cs) = ex # combine_exits cs"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
   "proc_entry_pps_list g = enter_targets (cfg_edges_list g)"
 
 definition proc_exit_pps_list :: "cfg \<Rightarrow> pp list" where
-  "proc_exit_pps_list g = combine_exits (sorted_list_of_set (combines g))"
+  "proc_exit_pps_list g = combine_exits (cfg_combines_list g)"
 
 fun mem_pp :: "pp \<Rightarrow> pp list \<Rightarrow> bool" where
   "mem_pp v [] = False"
@@ -269,7 +269,7 @@ value "string_of_nat 0"
 value "string_of_action EA_Nop"
 value "string_of_action (EA_Assign ''x'' (N 0))"
 value "string_of_action (EA_Assume (Less (V ''x'') (N 10)))"
-value "string_of_action EA_Enter"
+value "string_of_action (EA_Enter [] [])"
 
 value "pp_plain_label 5"
 
