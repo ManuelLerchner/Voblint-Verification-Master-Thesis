@@ -632,6 +632,26 @@ lemma dgs_combine_indep [simp]:
    = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
   unfolding indep_dg_spec_def by simp
 
+text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
+  product, as a named corollary: applied by @{method rule} at the interpretation
+  boundary instead of positional \<open>for\<close> binders.\<close>
+lemma gamma_dg_combine_sound:
+  assumes sc: "s \<in> gamma_dg dc g" and tc: "t \<in> gamma_dg de g"
+  shows "combine_collect dst s t \<in>
+           (case dgs_combine (indep_dg_spec tfD tfG) dst dc de g of (g', d') \<Rightarrow> gamma_dg d' g')"
+proof -
+  from sc have sc': "s \<in> \<lbrakk>dc\<rbrakk>" and sg: "s \<in> \<lbrakk>g\<rbrakk>"
+    unfolding gamma_dg_def by blast+
+  from tc have tc': "t \<in> \<lbrakk>de\<rbrakk>" and tg: "t \<in> \<lbrakk>g\<rbrakk>"
+    unfolding gamma_dg_def by blast+
+  have d_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst dc de\<rbrakk>"
+    by (rule combine_collect_sound[OF sc' tc'])
+  have g_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst g g\<rbrakk>"
+    by (rule combine_collect_sound[OF sg tg])
+  show ?thesis
+    using d_sound g_sound unfolding gamma_dg_def by simp
+qed
+
 lemma sound_dg_spec_indep:
   assumes soundD: "sound_transfer tfD"
     and soundG: "sound_transfer tfG"
@@ -660,19 +680,7 @@ lemma sound_dg_spec_indep:
       using d_sound g_input g_transfer
       unfolding gamma_dg_def by auto
   qed
-  subgoal premises prems for s dc g t de dst
-  proof -
-    from prems have sc: "s \<in> \<lbrakk>dc\<rbrakk>" and sg: "s \<in> \<lbrakk>g\<rbrakk>"
-      unfolding gamma_dg_def by blast+
-    from prems have tc: "t \<in> \<lbrakk>de\<rbrakk>" and tg: "t \<in> \<lbrakk>g\<rbrakk>"
-      unfolding gamma_dg_def by blast+
-    have d_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst dc de\<rbrakk>"
-      by (rule combine_collect_sound[OF sc tc])
-    have g_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst g g\<rbrakk>"
-      by (rule combine_collect_sound[OF sg tg])
-    show ?thesis
-      using d_sound g_sound unfolding gamma_dg_def by simp
-  qed
+  subgoal premises prems by (rule gamma_dg_combine_sound[OF prems])
   done
 subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
 
@@ -692,6 +700,23 @@ lemma combine_abs_restrict:
   unfolding combine_abs_def restrict_local_def restrict_global_def sup_fun_def
   by (rule ext) simp
 
+text \<open>The combine obligation of @{locale sound_dg_spec} for the diagonal (unit)
+  interpretation, as a named corollary applied by @{method rule} at the
+  interpretation boundary.\<close>
+lemma gamma_unit_combine_sound:
+  assumes sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
+  shows "combine_collect dst s t \<in>
+           (case dgs_combine (unit_dg_spec tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
+proof -
+  from sc have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" unfolding gamma_unit_def by blast
+  from tc have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" unfolding gamma_unit_def by blast
+  have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+    by (rule combine_collect_sound[OF sc' tc'])
+  then show ?thesis
+    unfolding unit_dg_spec_def unit_combine_step_def gamma_unit_def
+    by (simp add: Let_def restrict_local_global_join combine_abs_restrict)
+qed
+
 lemma sound_dg_spec_unit:
   assumes sound: "sound_transfer tf"
   shows "sound_dg_spec (unit_dg_spec tf) gamma_unit"
@@ -703,18 +728,7 @@ lemma sound_dg_spec_unit:
     using sound_transfer.edge_collect_apply_tf_sound[OF sound,
       where a = a]
     by (simp add: Let_def restrict_local_global_join)
-  subgoal premises prems for s dc g t de dst
-  proof -
-    from prems have sc: "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" and tc: "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>"
-      unfolding gamma_unit_def by blast+
-    have "combine_collect dst s t \<in>
-        \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
-      by (rule combine_collect_sound[OF sc tc])
-    then show ?thesis
-      unfolding unit_dg_spec_def unit_combine_step_def gamma_unit_def
-      by (simp add: Let_def restrict_local_global_join
-          combine_abs_restrict)
-  qed
+  subgoal premises prems by (rule gamma_unit_combine_sound[OF prems])
   done
 
 context sound_transfer
