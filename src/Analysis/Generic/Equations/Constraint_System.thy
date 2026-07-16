@@ -416,6 +416,14 @@ next
 qed
 
 text \<open>
+  The binary env-combine is the destination-free instance of the
+  return-threaded combine: with no destination the return slot is not written.
+\<close>
+lemma combine_collect_abs_None:
+  "combine_collect_abs None a b = \<langle>a|b\<rangle>"
+  by (simp add: combine_collect_abs_def)
+
+text \<open>
   Soundness of the abstract combine including result publication.  A pure
   @{class sound_domain} fact: the destination slot is sound because the callee's
   @{const ret_var} slot is, and every other slot is handled by

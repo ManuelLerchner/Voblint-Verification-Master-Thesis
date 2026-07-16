@@ -149,6 +149,11 @@ subsection \<open>Interprocedural combine transfer\<close>
 definition combine_collect :: "vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
   "combine_collect dst s t = combine_assign dst (t ret_var) (combine_states s t)"
 
+text \<open>The binary env-combine is the destination-free instance: with no
+  destination the callee return slot is not written back.\<close>
+lemma combine_collect_None: "combine_collect None s t = <s|t>"
+  by (simp add: combine_collect_def)
+
 definition collect_combine_pp :: "cfg \<Rightarrow> cenv \<Rightarrow> pp \<Rightarrow> store set" where
   "collect_combine_pp g \<rho> v =
      { combine_collect dst s t

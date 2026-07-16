@@ -333,7 +333,7 @@ proof -
     show "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho1"
       by (rule rho1_witness_d)
     show "<last tau1|last rho1> = combine_collect None (last tau1) (last rho1)"
-      by (simp add: combine_collect_def)
+      by (rule combine_collect_None[symmetric])
     show "call_enter_store combine_g call_pp (last tau1) (hd rho1)"
       by (simp add: call_enter_store_def combine_g_full rho1_def tau1_def bind_formals_def)
     show "cmp_pair (dg_tag tau1) (dg_tag rho1)"
@@ -355,7 +355,7 @@ proof -
     show "trace_witness_d dg_tag cmp_pair combine_g S0 callee_exit_pp rho2"
       by (rule rho2_witness_d)
     show "<last tau2|last rho2> = combine_collect None (last tau2) (last rho2)"
-      by (simp add: combine_collect_def)
+      by (rule combine_collect_None[symmetric])
     show "call_enter_store combine_g call_pp (last tau2) (hd rho2)"
       by (simp add: call_enter_store_def combine_g_full rho2_def tau2_def bind_formals_def)
     show "cmp_pair (dg_tag tau2) (dg_tag rho2)"
@@ -465,7 +465,7 @@ proof -
     show "trace_witness combine_g S0 callee_exit_pp rho3"
       by (rule rho3_witness)
     show "<last tau3|last rho3> = combine_collect None (last tau3) (last rho3)"
-      by (simp add: combine_collect_def)
+      by (rule combine_collect_None[symmetric])
     show "call_enter_store combine_g call_pp (last tau3) (hd rho3)"
       by (simp add: call_enter_store_def combine_g_full rho3_def tau3_def bind_formals_def)
   qed
