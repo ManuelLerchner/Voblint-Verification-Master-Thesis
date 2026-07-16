@@ -33,7 +33,7 @@ text \<open>
 \<close>
 
 definition branch_prog :: imp_prog where
-  "branch_prog = \<lbrakk>
+  "branch_prog = program {
      int Ginput, Gresult, Gout;
 
      void compute() {
@@ -51,7 +51,7 @@ definition branch_prog :: imp_prog where
        r := r + 1;
        Gout := 100 * Gresult
      }
-   \<rbrakk>"
+   }"
 
 text \<open>
   The computed abstract state at the exit.  With C-faithful seeding

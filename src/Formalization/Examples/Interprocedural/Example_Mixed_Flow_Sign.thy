@@ -11,11 +11,11 @@ begin
 text \<open>The analyzed program, defined locally so the example is self-contained: a single
   procedure \<open>p\<close> increments the global \<open>Gx\<close>, \<open>main\<close> calls it once.\<close>
 definition inc_program :: imp_prog where
-  "inc_program = \<lbrakk>
+  "inc_program = program {
      int Gx;
      void p() { Gx := Gx + 1 }
      void main() { p() }
-   \<rbrakk>"
+   }"
 
 definition inc_pi :: proc_table where
   "inc_pi = prog_table inc_program"

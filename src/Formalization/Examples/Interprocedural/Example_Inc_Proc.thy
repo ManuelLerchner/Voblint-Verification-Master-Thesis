@@ -11,11 +11,11 @@ text \<open>
 \<close>
 
 definition inc_program :: imp_prog where
-  "inc_program = \<lbrakk>
+  "inc_program = program {
      int Gx;
      void p() { Gx := Gx + 1 }
      void main() { p() }
-   \<rbrakk>"
+   }"
 
 definition inc_pi :: proc_table where
   "inc_pi = prog_table inc_program"
@@ -38,7 +38,7 @@ lemma inc_g_full:
      {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
       (2, EA_Enter [] [], 0)}
      {(2, 1, 3, None)}"
-  by (simp add: inc_g_def inc_program_def compile_eval_simps Let_def; blast)
+  by eval
 
 lemma inc_g_structure:
   shows "cfg_entry inc_g = 2"

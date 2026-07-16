@@ -390,8 +390,9 @@ next
   have sc0: "bridge_com (IMP2_Proc.com.Scope (body decl))" using legacy(3) by simp
   have scoperun: "pcompletes \<Pi> (IMP2_Proc.com.Scope (body decl)) (proj0 s) (proj0 t)"
     using PCall.IH[OF PCall.prems(1) eq sc0] .
-  have pip_legacy: "\<Pi> p = Some (proc_decl_legacy (body decl))"
-    using pip legacy by simp
+  have pip_legacy: "\<Pi> p = Some (proc_decl_of [] (body decl) None)"
+    using pip legacy
+    by (cases decl; simp add: proc_decl_of_def)
   have "pcompletes \<Pi> (IMP2_Proc.com.Call None p []) (proj0 s) (proj0 t)"
     using pip_legacy scoperun by (rule pcompletes_Scope_Call_legacy)
   thus ?case using c by simp

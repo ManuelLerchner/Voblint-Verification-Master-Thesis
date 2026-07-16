@@ -16,13 +16,13 @@ begin
 section \<open>Compiled program\<close>
 
 definition reaching_program :: imp_prog where
-  "reaching_program = \<lbrakk>
+  "reaching_program = program {
      int Gg;
      void main() {
        if (flag < 0) { ls := 1; Gg := 1 } else { ls := 2; Gg := -1 };
        x := Gg
      }
-   \<rbrakk>"
+   }"
 
 definition reaching_pi :: proc_table where
   "reaching_pi = prog_table reaching_program"

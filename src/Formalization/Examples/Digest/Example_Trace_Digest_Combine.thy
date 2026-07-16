@@ -14,13 +14,13 @@ begin
 section \<open>Compiled program\<close>
 
 definition combine_program :: imp_prog where
-  "combine_program = \<lbrakk>
+  "combine_program = program {
      int Gx, Gpath;
      void f() {
        if (Gpath == 1) { tag := 1 } else { tag := 2 }
      }
      void main() { f() }
-   \<rbrakk>"
+   }"
 
 definition combine_pi :: proc_table where
   "combine_pi = prog_table combine_program"
@@ -54,8 +54,7 @@ lemma combine_g_full:
       (4, EA_Nop, 5),
       (6, EA_Enter [] [], 0)}
      {(6, 5, 7, None)}"
-  by (simp add: combine_g_def combine_program_def b_gpath_eq_1_def
-            compile_eval_simps Let_def; blast)
+  by eval
 
 lemma combine_g_structure:
   shows "cfg_entry combine_g = 6"

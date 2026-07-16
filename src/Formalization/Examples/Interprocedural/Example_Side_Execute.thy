@@ -13,7 +13,7 @@ text \<open>
 \<close>
 
 definition x1_prog :: imp_prog where
-  "x1_prog = \<lbrakk> void main() { x := 1 } \<rbrakk>"
+  "x1_prog = program { void main() { x := 1 } }"
 
 text \<open>
   Querying the computed abstract state at the exit (these @{command value} calls

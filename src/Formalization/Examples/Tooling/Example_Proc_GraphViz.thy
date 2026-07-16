@@ -33,7 +33,7 @@ text \<open>
 (* -- Example A: single call -------------------------------------- *)
 
 definition proc_p_body :: com where
-  "proc_p_body = \<lbrakk> Gx := Gx + 1 \<rbrakk>"
+  "proc_p_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
 
 definition proc_table_a :: proc_table where
   "proc_table_a = ((\<lambda>_. None)(''p'' := Some (proc_decl_legacy proc_p_body)))"
@@ -47,13 +47,13 @@ definition procs_a :: "pname list" where
 (* -- Example B: two procedures + branch -------------------------- *)
 
 definition proc_q_body :: com where
-  "proc_q_body = \<lbrakk> Gy := Gy + 1 \<rbrakk>"
+  "proc_q_body = imp \<lbrakk> Gy := Gy + 1 \<rbrakk>"
 
 definition proc_table_b :: proc_table where
   "proc_table_b = (proc_table_a(''q'' := Some (proc_decl_legacy proc_q_body)))"
 
 definition prog_if_calls :: com where
-  "prog_if_calls = \<lbrakk> if (Gx < Gy) { p() } else { q() } \<rbrakk>"
+  "prog_if_calls = imp \<lbrakk> if (Gx < Gy) { p() } else { q() } \<rbrakk>"
 
 definition procs_b :: "pname list" where
   "procs_b = [''p'', ''q'']"

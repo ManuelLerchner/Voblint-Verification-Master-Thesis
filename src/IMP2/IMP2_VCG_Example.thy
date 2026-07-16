@@ -22,7 +22,7 @@ hide_const (open) Syntax.N Syntax.V Syntax.Bc
 *)
 
 definition count_prog :: "IMP2_Proc.com" where
-  "count_prog = \<lbrakk>
+  "count_prog = imp \<lbrakk>
      i := 0;
      while (i < n) { i := i + 1 }
    \<rbrakk>"

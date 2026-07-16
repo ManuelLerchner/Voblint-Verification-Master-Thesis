@@ -11,7 +11,7 @@ text \<open>
 \<close>
 
 definition proc_layout_regression_prog :: imp_prog where
-  "proc_layout_regression_prog = \<lbrakk>
+  "proc_layout_regression_prog = program {
      int G;
      void f() {
        if (G < 1) { f() } else { G := G }
@@ -20,7 +20,7 @@ definition proc_layout_regression_prog :: imp_prog where
      void h() { g() }
      void inc() { G := G + 1 }
      void main() { f(); g(); inc() }
-   \<rbrakk>"
+   }"
 
 definition proc_layout_regression_cfg :: cfg where
   "proc_layout_regression_cfg =

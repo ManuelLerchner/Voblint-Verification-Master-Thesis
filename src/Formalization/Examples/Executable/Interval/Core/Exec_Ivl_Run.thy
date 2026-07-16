@@ -26,7 +26,7 @@ text \<open>
 \<close>
 
 definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog = \<lbrakk>
+  "loop_prog = imp \<lbrakk>
      x := 0;
      while (x < 20) { x := x + 1 }
    \<rbrakk>"

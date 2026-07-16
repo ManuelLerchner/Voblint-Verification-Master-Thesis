@@ -28,7 +28,7 @@ hide_const phase.N
 *)
 
 definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog = \<lbrakk>
+  "loop_prog = imp \<lbrakk>
      x := 1;
      while (true) { x := x + 1 }
    \<rbrakk>"

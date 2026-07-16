@@ -29,16 +29,16 @@ text \<open>
 \<close>
 
 definition inc_body :: "IMP2_Proc.com" where
-  "inc_body = \<lbrakk> Gx := Gx + 1 \<rbrakk>"
+  "inc_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
 
 definition sqr_body :: "IMP2_Proc.com" where
-  "sqr_body = \<lbrakk> Gx := Gx * Gx \<rbrakk>"
+  "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
 definition proc_pi :: proc_table where
   "proc_pi = (\<lambda>_. None)(''inc'' := Some (proc_decl_legacy inc_body), ''sqr'' := Some (proc_decl_legacy sqr_body))"
 
 definition main_prog :: "IMP2_Proc.com" where
-  "main_prog = \<lbrakk>
+  "main_prog = imp \<lbrakk>
      Gx := 4;
      inc();
      sqr()
@@ -148,9 +148,7 @@ lemma main_cfg_full:
       (7, EA_Nop, 8),
       (8, EA_Enter [] [], 2)}
      {(6, 1, 7, None), (8, 3, 9, None)}"
-  by (simp add: proc_pi_def inc_body_def sqr_body_def main_prog_def
-      compile_prog_def compile_prog_with_regions_def compile_procs_list_def Let_def eval_nat_numeral;
-      blast)
+  by eval
 
 lemma main_cfg_entry:   "cfg_entry main_cfg = 4"                    by (simp add: main_cfg_full)
 lemma main_cfg_exit:    "cfg_exit  main_cfg = 9"                    by (simp add: main_cfg_full)

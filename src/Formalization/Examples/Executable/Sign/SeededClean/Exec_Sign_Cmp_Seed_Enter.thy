@@ -19,7 +19,7 @@ text \<open>
 subsection \<open>The program\<close>
 
 definition seed_prog :: imp_prog where
-  "seed_prog = \<lbrakk>
+  "seed_prog = program {
      int G;
 
      void f() {
@@ -31,7 +31,7 @@ definition seed_prog :: imp_prog where
        G := 1;
        f()
      }
-   \<rbrakk>"
+   }"
 
 definition seed_cfg :: cfg where
   "seed_cfg = compile_prog (prog_table seed_prog) (prog_procs seed_prog) (prog_main seed_prog)"

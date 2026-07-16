@@ -38,8 +38,18 @@ record proc_decl =
   body    :: com
   result  :: "aexp option"
 
+definition proc_decl_of :: "vname list => com => aexp option => proc_decl" where
+  "proc_decl_of xs bdy res = \<lparr>formals = xs, body = bdy, result = res\<rparr>"
+
 abbreviation proc_decl_legacy :: "com => proc_decl" where
-  "proc_decl_legacy c \<equiv> \<lparr>formals = [], body = c, result = None\<rparr>"
+  "proc_decl_legacy c \<equiv> proc_decl_of [] c None"
+
+lemma proc_decl_legacy:
+  "formals (proc_decl_legacy c) = []"
+  "body (proc_decl_legacy c) = c"
+  "result (proc_decl_legacy c) = None"
+  "proc_decl_legacy c = proc_decl_of [] c None"
+  by (simp_all add: proc_decl_of_def)
 
 (* Reserved local holding a procedure's result across the restore boundary.
    Goblint's return_varinfo. Local, so it never escapes into the caller. *)
@@ -449,21 +459,23 @@ proof (rule star.step)
 qed
 
 lemma pcompletes_Legacy_Call:
-  assumes p: "\<Pi> p = Some (proc_decl_legacy c)"
+  assumes p: "\<Pi> p = Some (proc_decl_of [] c None)"
       and body: "pcompletes \<Pi> c (enter_state s) t'"
   shows "pcompletes \<Pi> (Call None p []) s (<s|t'>)"
 proof (rule pcompletes_Call_none)
-  show "\<Pi> p = Some (proc_decl_legacy c)" by (rule p)
-  show "length [] = length (formals (proc_decl_legacy c))" by simp
-  show "distinct (formals (proc_decl_legacy c))" by simp
+  show "\<Pi> p = Some (proc_decl_of [] c None)" by (rule p)
+  show "length [] = length (formals (proc_decl_of [] c None))"
+    by (simp add: proc_decl_of_def)
+  show "distinct (formals (proc_decl_of [] c None))"
+    by (simp add: proc_decl_of_def)
   show "None = None" by simp
-  show "pcompletes \<Pi> (body (proc_decl_legacy c))
-          (bind_formals (formals (proc_decl_legacy c)) (map (\<lambda>e. aval e s) []) (enter_state s)) t'"
-    using body by (simp add: bind_formals_def)
+  show "pcompletes \<Pi> (body (proc_decl_of [] c None))
+          (bind_formals (formals (proc_decl_of [] c None)) (map (\<lambda>e. aval e s) []) (enter_state s)) t'"
+    using body by (simp add: proc_decl_of_def bind_formals_def)
 qed
 
 lemma pcompletes_Scope_Call_legacy:
-  assumes p: "\<Pi> p = Some (proc_decl_legacy c)"
+  assumes p: "\<Pi> p = Some (proc_decl_of [] c None)"
       and run: "pcompletes \<Pi> (Scope c) s t"
   shows "pcompletes \<Pi> (Call None p []) s t"
 proof -
@@ -471,25 +483,34 @@ proof -
     "pstep \<Pi> (Scope c, s, [])
        (Seq c Restore, enter_state s, [Frame s None])"
     by (rule Scope)
-  have p': "\<Pi> p = Some \<lparr>formals = [], body = c, result = None\<rparr>"
-    using p by simp
+  have p': "\<Pi> p = Some (proc_decl_of [] c None)"
+    by (rule p)
   have step_call_raw:
     "pstep \<Pi> (Call None p [], s, [])
-       (Seq (with_result (body \<lparr>formals = [], body = c, result = None\<rparr>)
-                         (result \<lparr>formals = [], body = c, result = None\<rparr>))
+       (Seq (with_result (body (proc_decl_of [] c None))
+                         (result (proc_decl_of [] c None)))
             Restore,
-        bind_formals (formals \<lparr>formals = [], body = c, result = None\<rparr>) [] (enter_state s),
+        bind_formals (formals (proc_decl_of [] c None)) [] (enter_state s),
         [Frame s None])"
-    using p'
-    by (intro pstep.Call[where vals = "[]"
-                              and callee = "bind_formals (formals \<lparr>formals = [], body = c, result = None\<rparr>) [] (enter_state s)"])
-       auto
+  proof (rule pstep.Call[where vals = "[]"
+                            and callee = "bind_formals (formals (proc_decl_of [] c None)) [] (enter_state s)"])
+    show "\<Pi> p = Some (proc_decl_of [] c None)" by (rule p')
+    show "length [] = length (formals (proc_decl_of [] c None))"
+      by (simp add: proc_decl_of_def)
+    show "distinct (formals (proc_decl_of [] c None))"
+      by (simp add: proc_decl_of_def)
+    show "\<forall>x. None = Some x \<longrightarrow> result (proc_decl_of [] c None) \<noteq> None"
+      by simp
+    show "[] = map (\<lambda>e. aval e s) []" by simp
+    show "bind_formals (formals (proc_decl_of [] c None)) [] (enter_state s)
+          = bind_formals (formals (proc_decl_of [] c None)) [] (enter_state s)" by simp
+  qed
   (* A legacy procedure has no result, so with_result leaves the body alone and
      the call enters exactly the configuration a Scope enters. *)
   have step_call:
     "pstep \<Pi> (Call None p [], s, [])
        (Seq c Restore, enter_state s, [Frame s None])"
-    using step_call_raw by (simp add: bind_formals_def)
+    using step_call_raw by (simp add: proc_decl_legacy bind_formals_def proc_decl_of_def)
   from run[unfolded pcompletes_def] have tail:
     "psteps \<Pi> (Seq c Restore, enter_state s, [Frame s None]) (SKIP, t, [])"
   (* Only the step case survives: Scope c is not SKIP, and ScopeSE pins the
@@ -503,4 +524,3 @@ proof -
 qed
 
 end
-

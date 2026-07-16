@@ -3,10 +3,11 @@ theory IMP2_Notation
 begin
 
 text \<open>
-  IMP2 quotation bracket: @{text "\<lbrakk> \<dots> \<rbrakk>"} produces a single
+  IMP2 command quotation: @{text "imp \<lbrakk> \<dots> \<rbrakk>"} produces a single
   @{type IMP2_Proc.com} without HOL string quotes or qualified constructor names.
-  (The same bracket with procedure declarations produces a whole @{text imp_prog};
-  see the whole-program form below.)
+  The @{verbatim "imp"} keyword keeps the bracket distinct from Pure's premise
+  brackets. The whole-program form uses an explicit @{verbatim "program"} prefix;
+  see the whole-program form below.
 
   Design is inspired by:
   https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html
@@ -27,7 +28,7 @@ text \<open>
   Example:
   @{verbatim [display]
    "definition loop_prog :: IMP2_Proc.com where
-      \"loop_prog = \<lbrakk>
+      \"loop_prog = imp \<lbrakk>
          x := 0;
          while (x < 20) { x := x + 1 }
        \<rbrakk>\""}
@@ -53,10 +54,13 @@ nonterminal imp2_aexp
 nonterminal imp2_bexp
 nonterminal imp2_gdecl
 nonterminal imp2_ids
+nonterminal imp2_actuals
+nonterminal imp2_formals
+nonterminal imp2_pbody
 nonterminal imp2_funcs
 
 syntax
-  "_IMP2"        :: "imp2_com \<Rightarrow> IMP2_Proc.com"              ("\<lbrakk> _ \<rbrakk>")
+  "_IMP2"        :: "imp2_com \<Rightarrow> IMP2_Proc.com"              ("imp \<lbrakk> _ \<rbrakk>")
 
   "_imp2_skip"   :: imp2_stmt                                  ("skip")
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
@@ -64,23 +68,35 @@ syntax
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
   "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)
   "_imp2_scope"  :: "imp2_stmts \<Rightarrow> imp2_stmt"                   ("scope { _ }"            [61] 61)
-  "_imp2_call"   :: "id \<Rightarrow> imp2_stmt"                         ("_'(')"                  [1000] 61)
+  "_imp2_call0"  :: "id \<Rightarrow> imp2_stmt"                           ("_'(')"                  [1000] 61)
+  "_imp2_call"   :: "id \<Rightarrow> imp2_actuals \<Rightarrow> imp2_stmt"         ("_'( _ ')"               [1000, 0] 61)
+  "_imp2_callret0" :: "id \<Rightarrow> id \<Rightarrow> imp2_stmt"              ("_ := _'(')"              [900, 1000] 61)
+  "_imp2_callret" :: "id \<Rightarrow> id \<Rightarrow> imp2_actuals \<Rightarrow> imp2_stmt"    ("_ := _'( _ ')"           [900, 1000, 0] 61)
+
 
   "_imp2_stmts_one" :: "imp2_stmt \<Rightarrow> imp2_stmts"                  ("_" 61)
   "_imp2_stmts_seq" :: "imp2_stmts \<Rightarrow> imp2_stmt \<Rightarrow> imp2_stmts" ("_; _"                   [61, 61] 61)
 
   "_imp2_com_wrap" :: "imp2_stmt \<Rightarrow> imp2_com"                  ("_" 61)
   "_imp2_seq"    :: "imp2_com \<Rightarrow> imp2_com \<Rightarrow> imp2_com"       ("_; _"                   [60, 61] 60)
+  "_imp2_actuals_one" :: "imp2_aexp \<Rightarrow> imp2_actuals"                    ("_")
+  "_imp2_actuals_cons" :: "imp2_aexp \<Rightarrow> imp2_actuals \<Rightarrow> imp2_actuals" ("_ , _")
+  "_imp2_pbody_stmt" :: "imp2_com \<Rightarrow> imp2_pbody"                      ("_")
+  "_imp2_pbody_ret" :: "imp2_aexp \<Rightarrow> imp2_pbody"                    ("return _")
+  "_imp2_pbody_stmt_ret" :: "imp2_com \<Rightarrow> imp2_aexp \<Rightarrow> imp2_pbody" ("_ ; return _")
 
 
 
-  "_PROG"        :: "imp2_gdecl \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("\<lbrakk> _ _ \<rbrakk>")
-  "_gdecl_none"  :: imp2_gdecl                                    ("")
-  "_gdecl"       :: "imp2_ids \<Rightarrow> imp2_gdecl"                     ("int _ ;")
+  "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }")
+  "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { int _ ; _ }")
   "_ids_one"     :: "id \<Rightarrow> imp2_ids"                             ("_")
   "_ids_cons"    :: "id \<Rightarrow> imp2_ids \<Rightarrow> imp2_ids"                ("_ , _")
+  "_formals_one"  :: "id \<Rightarrow> imp2_formals"                         ("_")
+  "_formals_cons" :: "id \<Rightarrow> imp2_formals \<Rightarrow> imp2_formals"  ("_ , _")
   "_funcs_nil"   :: imp2_funcs                                    ("")
-  "_funcs_cons"  :: "id \<Rightarrow> imp2_com \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _" [0, 0, 0] 0)
+  "_funcs_cons0" :: "id \<Rightarrow> imp2_pbody \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _")
+  "_funcs_cons"  :: "id \<Rightarrow> imp2_formals \<Rightarrow> imp2_pbody \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _")
+
 
   "_imp2_var"    :: "id \<Rightarrow> imp2_aexp"                        ("_"   1000)
   "_imp2_num"    :: "num_const \<Rightarrow> imp2_aexp"                 ("_"   1000)
@@ -108,7 +124,8 @@ parse_translation \<open>
     val c_While  = "IMP2_Proc.com.While"
     val c_Scope  = "IMP2_Proc.com.Scope"
     val c_Call   = "IMP2_Proc.com.Call"
-    val c_proc_decl_legacy = "IMP2_Proc.proc_decl_legacy"
+    val c_proc_decl_of = "IMP2_Proc.proc_decl_of"
+
     val c_None    = "Option.option.None"
     val c_Some    = "Option.option.Some"
     val c_fun_upd = "Fun.fun_upd"
@@ -173,36 +190,54 @@ parse_translation \<open>
     fun neg_num n =
       K c_N $ HOLogic.mk_number HOLogic.intT (~ n)
 
-    fun aexp_tr (Const ("_imp2_var",  _) $ Free (x, _)) =
-          K c_V $ HOLogic.mk_string x
-      | aexp_tr (Const ("_imp2_zero", _)) = K c_N $ HOLogic.mk_number HOLogic.intT 0
-      | aexp_tr (Const ("_imp2_one",  _)) = K c_N $ HOLogic.mk_number HOLogic.intT 1
-      | aexp_tr (Const ("_imp2_num",  _) $ n) =
-          K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)
-      | aexp_tr (Const ("_imp2_uminus", _) $ a) =
-          (case a of
-             Const ("_imp2_num", _) $ n => neg_num (read_num_const n)
-           | Const ("_imp2_zero", _) =>
-               K c_N $ HOLogic.mk_number HOLogic.intT 0
-           | Const ("_imp2_one", _) => neg_num 1
-           | Const ("_imp2_uminus", _) $ b => aexp_tr b
-           | _ =>
-               K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr a)
-      | aexp_tr (Const ("_imp2_plus",  _) $ a $ b) = K c_Plus  $ aexp_tr a $ aexp_tr b
-      | aexp_tr (Const ("_imp2_minus", _) $ a $ b) = K c_Minus $ aexp_tr a $ aexp_tr b
-      | aexp_tr (Const ("_imp2_times", _) $ a $ b) = K c_Times $ aexp_tr a $ aexp_tr b
-      | aexp_tr t = raise TERM ("IMP2_Notation: aexp_tr", [t])
+    fun aexp_tr t =
+      (case Term.strip_comb t of
+         (Const ("_imp2_var", _), [Free (x, _)]) =>
+           K c_V $ HOLogic.mk_string x
+       | (Const ("_imp2_zero", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 0
+       | (Const ("_imp2_one", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 1
+       | (Const ("_imp2_num", _), [n]) =>
+           K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)
+       | (Const ("_imp2_uminus", _), [a]) =>
+           (case Term.strip_comb a of
+              (Const ("_imp2_num", _), [n]) => neg_num (read_num_const n)
+            | (Const ("_imp2_zero", _), []) =>
+                K c_N $ HOLogic.mk_number HOLogic.intT 0
+            | (Const ("_imp2_one", _), []) => neg_num 1
+            | (Const ("_imp2_uminus", _), [b]) => aexp_tr b
+            | _ =>
+                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr a)
+       | (Const ("_imp2_plus", _), [a, b]) => K c_Plus  $ aexp_tr a $ aexp_tr b
+       | (Const ("_imp2_minus", _), [a, b]) => K c_Minus $ aexp_tr a $ aexp_tr b
+       | (Const ("_imp2_times", _), [a, b]) => K c_Times $ aexp_tr a $ aexp_tr b
+       | _ => raise TERM ("IMP2_Notation: aexp_tr", [t]))
 
-    fun bexp_tr (Const ("_imp2_true",  _)) = K c_Bc $ @{term True}
-      | bexp_tr (Const ("_imp2_false", _)) = K c_Bc $ @{term False}
-      | bexp_tr (Const ("_imp2_less",  _) $ a $ b) = K c_Less $ aexp_tr a $ aexp_tr b
-      | bexp_tr (Const ("_imp2_eq",    _) $ a $ b) = K c_Eq   $ aexp_tr a $ aexp_tr b
-      | bexp_tr (Const ("_imp2_not",   _) $ b)     = K c_Not  $ bexp_tr b
-      | bexp_tr (Const ("_imp2_and",   _) $ a $ b) = K c_And  $ bexp_tr a $ bexp_tr b
-      | bexp_tr (Const ("_imp2_or",    _) $ a $ b) = K c_Or   $ bexp_tr a $ bexp_tr b
-      | bexp_tr t = raise TERM ("IMP2_Notation: bexp_tr", [t])
+    fun bexp_tr t =
+      (case Term.strip_comb t of
+         (Const ("_imp2_true", _), []) => K c_Bc $ @{term True}
+       | (Const ("_imp2_false", _), []) => K c_Bc $ @{term False}
+       | (Const ("_imp2_less", _), [a, b]) => K c_Less $ aexp_tr a $ aexp_tr b
+       | (Const ("_imp2_eq", _), [a, b]) => K c_Eq   $ aexp_tr a $ aexp_tr b
+       | (Const ("_imp2_not", _), [b]) => K c_Not $ bexp_tr b
+       | (Const ("_imp2_and", _), [a, b]) => K c_And $ bexp_tr a $ bexp_tr b
+       | (Const ("_imp2_or", _), [a, b]) => K c_Or $ bexp_tr a $ bexp_tr b
+       | _ => raise TERM ("IMP2_Notation: bexp_tr", [t]))
 
-    fun stmts_tr (Const ("_imp2_stmts_one", _) $ s) = stmt_tr s
+    fun actuals_tr (Const ("_imp2_actuals_nil", _)) = K c_Nil
+      | actuals_tr (Const ("_imp2_actuals_one", _) $ a) =
+          K c_Cons $ aexp_tr a $ K c_Nil
+      | actuals_tr (Const ("_imp2_actuals_cons", _) $ a $ rest) =
+          K c_Cons $ aexp_tr a $ actuals_tr rest
+      | actuals_tr t = raise TERM ("IMP2_Notation: actuals_tr", [t])
+
+    (* Keep the raw AST; com_tr / aexp_tr run once, later in mk_table / main.
+       NONE body means a return-only procedure, whose command part is SKIP. *)
+    fun pbody_tr (Const ("_imp2_pbody_stmt", _) $ c) = (SOME c, NONE)
+      | pbody_tr (Const ("_imp2_pbody_ret", _) $ e) = (NONE, SOME e)
+      | pbody_tr (Const ("_imp2_pbody_stmt_ret", _) $ c $ e) = (SOME c, SOME e)
+      | pbody_tr t = raise TERM ("IMP2_Notation: pbody_tr", [t])
+
+    and stmts_tr (Const ("_imp2_stmts_one", _) $ s) = stmt_tr s
       | stmts_tr (Const ("_imp2_stmts_seq", _) $ ss $ s) =
           K c_Seq $ stmts_tr ss $ stmt_tr s
       | stmts_tr t = raise TERM ("IMP2_Notation: stmts_tr", [t])
@@ -214,34 +249,63 @@ parse_translation \<open>
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
       | stmt_tr (Const ("_imp2_scope",  _) $ s)     = K c_Scope $ stmts_tr s
-      | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _)) =
+      | stmt_tr (Const ("_imp2_call0",   _) $ Free (p, _)) =
           K c_Call $ K c_None $ HOLogic.mk_string p $ K c_Nil
+      | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _) $ actuals) =
+          K c_Call $ K c_None $ HOLogic.mk_string p $ actuals_tr actuals
+      | stmt_tr (Const ("_imp2_callret0", _) $ Free (x, _) $ Free (p, _)) =
+          K c_Call $ (K c_Some $ HOLogic.mk_string x) $ HOLogic.mk_string p $ K c_Nil
+      | stmt_tr (Const ("_imp2_callret", _) $ Free (x, _) $ Free (p, _) $ actuals) =
+          K c_Call $ (K c_Some $ HOLogic.mk_string x) $ HOLogic.mk_string p $ actuals_tr actuals
       | stmt_tr t = raise TERM ("IMP2_Notation: stmt_tr", [t])
 
     and com_tr (Const ("_imp2_com_wrap", _) $ s) = stmt_tr s
       | com_tr (Const ("_imp2_seq",    _) $ c1 $ c2) = K c_Seq   $ com_tr c1 $ com_tr c2
       | com_tr t = raise TERM ("IMP2_Notation: com_tr", [t])
 
-
-
-    fun names_of (Const ("_ids_one", _) $ Free (x, _)) = [x]
+    fun names_of (Const ("_ids_nil", _)) = []
+      | names_of (Const ("_ids_one", _) $ Free (x, _)) = [x]
       | names_of (Const ("_ids_cons", _) $ Free (x, _) $ rest) = x :: names_of rest
       | names_of t = raise TERM ("IMP2_Notation: names_of", [t])
+
+    fun formals_of (Const ("_formals_one", _) $ Free (x, _)) = [x]
+      | formals_of (Const ("_formals_cons", _) $ Free (x, _) $ rest) = x :: formals_of rest
+      | formals_of t = raise TERM ("IMP2_Notation: formals_of", [t])
 
     fun ids_tr (Const ("_gdecl_none", _)) = []
       | ids_tr (Const ("_gdecl", _) $ ids) = names_of ids
       | ids_tr t = raise TERM ("IMP2_Notation: ids_tr", [t])
 
     fun funcs_tr (Const ("_funcs_nil", _)) = []
-      | funcs_tr (Const ("_funcs_cons", _) $ Free (f, _) $ body $ rest) =
-          (f, body) :: funcs_tr rest
+      | funcs_tr (Const ("_funcs_cons0", _) $ Free (f, _) $ pbody $ rest) =
+          let
+            val (body, result) = pbody_tr pbody
+          in
+            (f, [], body, result) :: funcs_tr rest
+          end
+      | funcs_tr (Const ("_funcs_cons", _) $ Free (f, _) $ formals $ pbody $ rest) =
+          let
+            val (body, result) = pbody_tr pbody
+          in
+            (f, formals_of formals, body, result) :: funcs_tr rest
+          end
       | funcs_tr t = raise TERM ("IMP2_Notation: funcs_tr", [t])
 
+    fun add_vars_proc (_, _, body, result) acc =
+      let
+        val acc' = (case body of NONE => acc | SOME c => add_vars c acc)
+      in
+        case result of
+          NONE => acc'
+        | SOME e => add_vars e acc'
+      end
+
     (* Variable occurrences in a command AST: reads and assignment targets.
-       Procedure names under _imp2_call are not store variables, so skip them. *)
-    fun add_vars (Const ("_imp2_var", _) $ Free (x, _)) acc = x :: acc
+       Procedure names under call syntax are not store variables, so skip them. *)
+    and add_vars (Const ("_imp2_var", _) $ Free (x, _)) acc = x :: acc
       | add_vars (Const ("_imp2_assign", _) $ Free (x, _) $ a) acc = add_vars a (x :: acc)
-      | add_vars (Const ("_imp2_call", _) $ _) acc = acc
+      | add_vars (Const ("_imp2_call", _) $ _ $ actuals) acc = add_vars actuals acc
+      | add_vars (Const ("_imp2_callret", _) $ Free (x, _) $ _ $ actuals) acc = add_vars actuals (x :: acc)
       | add_vars (t $ u) acc = add_vars u (add_vars t acc)
       | add_vars (Abs (_, _, b)) acc = add_vars b acc
       | add_vars _ acc = acc
@@ -261,44 +325,71 @@ parse_translation \<open>
 
     val empty_table = Abs ("_", dummyT, K c_None)
 
-    fun mk_table acc [] = acc
-      | mk_table acc ((p, b) :: rest) =
-          mk_table
-            (K c_fun_upd $ acc $ HOLogic.mk_string p
-              $ (K c_Some $ (K c_proc_decl_legacy $ b)))
-            rest
-
     fun mk_names [] = K c_Nil
       | mk_names (n :: ns) = K c_Cons $ HOLogic.mk_string n $ mk_names ns
 
+    fun mk_body NONE = K c_SKIP
+      | mk_body (SOME c) = com_tr c
+
+    fun mk_result NONE = K c_None
+      | mk_result (SOME e) = K c_Some $ aexp_tr e
+
+    fun mk_table acc [] = acc
+      | mk_table acc ((p, formals, body, result) :: rest) =
+          mk_table
+            (K c_fun_upd $ acc $ HOLogic.mk_string p
+              $ (K c_Some $ ((K c_proc_decl_of $ mk_names formals)
+                  $ mk_body body $ mk_result result)))
+            rest
+
     (* dummyT constructors only; type inference runs after the translation. *)
-    fun prog_tr gdecl_t funcs_t =
+    fun prog_tr decls funcs_t =
       let
-        val decls = ids_tr gdecl_t
         val funcs = funcs_tr funcs_t
-        val _ = check_globals decls (fold (fn (_, b) => add_vars b) funcs [])
-        val (mains, procs) = List.partition (fn (n, _) => n = "main") funcs
+        val _ = check_globals decls (fold add_vars_proc funcs [])
+        val (mains, procs) = List.partition (fn (n, _, _, _) => n = "main") funcs
         val main_ast =
           (case mains of
-             [(_, b)] => b
+             [("main", [], body, NONE)] => body
+           | [("main", _, _, SOME _)] => error "IMP2 program: main may not return"
+           | [("main", _, _, NONE)] => error "IMP2 program: main must have no formals"
            | [] => error "IMP2 program: missing 'void main() { ... }'"
            | _  => error "IMP2 program: more than one 'void main()'")
-        val names = mk_names (map fst procs)
-        val table = mk_table empty_table (map (fn (n, b) => (n, com_tr b)) procs)
-        val main  = com_tr main_ast
+        val names = mk_names (map (fn (n, _, _, _) => n) procs)
+        val table = mk_table empty_table procs
+        val main  = mk_body main_ast
       in K c_Pair $ names $ (K c_Pair $ table $ main) end
   in
     [("_IMP2", fn _ => fn [t] => com_tr t | _ => raise Match),
-     ("_PROG", fn _ => fn [g, fs] => prog_tr g fs | _ => raise Match)]
+     ("_PROGKW0", fn _ => fn [fs] => prog_tr [] fs | _ => raise Match),
+     ("_PROGKW", fn _ => fn [g, fs] => prog_tr (names_of g) fs | _ => raise Match)]
   end
 \<close>
 
 subsection \<open>Executable examples\<close>
 
-value "\<lbrakk> x := 0 \<rbrakk>"
-value "\<lbrakk> x := 0; y := 1 \<rbrakk>"
-value "\<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
-value "\<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
+value "imp \<lbrakk> x := 0 \<rbrakk>"
+value "imp \<lbrakk> x := 0; y := 1 \<rbrakk>"
+value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
+value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
+
+(* zero-arg baseline *)
+value "(program { void main() { skip } } :: imp_prog)"
+value "(program { int Gx; void ping() { Gx := Gx + 1 } void main() { ping() } } :: imp_prog)"
+
+(* parameter passing, no return *)
+value "(program { void ping(x) { skip } void main() { ping(3) } } :: imp_prog)"
+value "(program { void ping(a, b) { skip } void main() { ping(1, 2) } } :: imp_prog)"
+
+(* parameter + return value, called with return assignment *)
+value "(program { void inc(x) { return x + 1 } void main() { r := inc(5) } } :: imp_prog)"
+value "(program { void add(a, b) { skip; return a + b } void main() { r := add(1, 2) } } :: imp_prog)"
+
+(* zero-arg callee returning a value *)
+value "(program { void get() { return 42 } void main() { r := get() } } :: imp_prog)"
+
+(* proc-table entry: formals + result wired through *)
+value "the (prog_table (program { void inc(x) { return x + 1 } void main() { r := inc(5) } }) ''inc'')"
 
 
 end

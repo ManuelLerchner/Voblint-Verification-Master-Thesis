@@ -22,7 +22,7 @@ text \<open>
 \<close>
 
 definition mixed_graphviz_prog :: com where
-  "mixed_graphviz_prog = \<lbrakk> x := -1; x := 2 \<rbrakk>"
+  "mixed_graphviz_prog = imp \<lbrakk> x := -1; x := 2 \<rbrakk>"
 
 definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =

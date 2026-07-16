@@ -73,7 +73,7 @@ text \<open>
 \<close>
 
 definition flagship_prog :: "IMP2_Proc.com" where
-  "flagship_prog = \<lbrakk> x := 0; while (x < 20) { x := x + 1 } \<rbrakk>"
+  "flagship_prog = imp \<lbrakk> x := 0; while (x < 20) { x := x + 1 } \<rbrakk>"
 
 subsection \<open>2. CFG construction\<close>
 
