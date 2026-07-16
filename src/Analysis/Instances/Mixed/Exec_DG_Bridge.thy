@@ -246,6 +246,13 @@ definition dg_cmb_of ::
 where
   "dg_cmb_of S ctx dst cc ex = map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (dg_spec_combine_tree S dst cc ex))"
 
+text \<open>The combine predecessors of \<open>v\<close>, each wrapped into a unit-context
+  strategy tree.  One name for the tuple-destructuring map reused across the
+  eq / sides / dep commutation goals below.\<close>
+abbreviation dg_combine_trees where
+  "dg_combine_trees S g v \<equiv>
+     map (\<lambda>(cc, ex, dst). dg_cmb_of S () dst cc ex) (combine_predecessor_list g v)"
+
 definition dg_gen_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) eqsT"
@@ -273,9 +280,9 @@ proof -
     by (rule traverse_wrapped_combine_commute[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb])
   have la: "list_all2 (\<lambda>t_st t_abs. fun_of_dg_st (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st))
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_st a u))) (non_enter_predecessor_list g v)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_st () dst cc ex) (combine_predecessor_list g v))
+     @ dg_combine_trees S_st g v)
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_abs a u))) (non_enter_predecessor_list g v)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_abs () dst cc ex) (combine_predecessor_list g v))"
+     @ dg_combine_trees S_abs g v)"
     by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl edge_elem comb_elem split_beta)
   show ?thesis
     unfolding dg_gen_of_def eq_side_cfg_T_eff_cmp_seed_dg
@@ -412,14 +419,14 @@ proof -
   have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. fun_of_dg_st (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st)
              \<and> (\<forall>k. fun_of_dg_st (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st) k))
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_st a u))) (non_enter_predecessor_list g w)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_st () dst cc ex) (combine_predecessor_list g w))
+     @ dg_combine_trees S_st g w)
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_abs a u))) (non_enter_predecessor_list g w)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_abs () dst cc ex) (combine_predecessor_list g w))"
+     @ dg_combine_trees S_abs g w)"
     by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl edge_elem comb_elem split_beta)
   have fold: "\<And>w acc_st k. fun_of_dg_st (sides_of_rhs (side_rhs_fold_dg acc_st (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_st a u))) (non_enter_predecessor_list g w)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_st () dst cc ex) (combine_predecessor_list g w))) \<sigma>_st k)
+     @ dg_combine_trees S_st g w)) \<sigma>_st k)
      = sides_of_rhs (side_rhs_fold_dg (fun_of_st acc_st) (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_abs a u))) (non_enter_predecessor_list g w)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_abs () dst cc ex) (combine_predecessor_list g w))) (fun_of_dg_st \<circ> \<sigma>_st) k"
+     @ dg_combine_trees S_abs g w)) (fun_of_dg_st \<circ> \<sigma>_st) k"
     by (rule sides_side_rhs_fold_dg_commute[OF la])
   have seed: "fun_of_dg_st (DG (bot :: 'a st) s0g) = DG bot (fun_of_st s0g)"
     by (simp add: fun_of_dg_st_def fun_of_st_bot bot_fun_def)
@@ -481,9 +488,9 @@ lemma dep_dg_gen_of_eq:
 proof -
   have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. dep_aux \<sigma>_st t_st = dep_aux \<sigma>_abs t_abs)
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_st a u))) (non_enter_predecessor_list g w)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_st () dst cc ex) (combine_predecessor_list g w))
+     @ dg_combine_trees S_st g w)
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S_abs a u))) (non_enter_predecessor_list g w)
-     @ map (\<lambda>(cc, ex, dst). dg_cmb_of S_abs () dst cc ex) (combine_predecessor_list g w))"
+     @ dg_combine_trees S_abs g w)"
     by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
                    apply_dg_spec_def dg_cmb_of_def dg_spec_combine_tree_def
                    dep_aux_wrapped_edge_eq dep_aux_wrapped_combine_eq)
