@@ -49,9 +49,10 @@ theorem activation_trace_sound:
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and SEED_G: "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
-    and COMB: "\<And>cl ex v dst c1 c2 s t. (cl, ex, v, dst) \<in> combines g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
+    and COMB: "\<And>cl ex v dst c1 s t es. (cl, ex, v, dst) \<in> combines g
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, enterc c1 es))\<rbrakk>
+        \<Longrightarrow> call_enter_store g cl s es
+        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 (enterc c1 es)))\<rbrakk>"
     and wit: "trace_witness_act enterc combc seedc g S v kc tr"
   shows "last tr \<in> \<lbrakk>sg (Inl (v, kc))\<rbrakk>"
   using wit
@@ -81,9 +82,9 @@ next
     by (rule SEED_G[OF enter.hyps(1) enter.IH enter.hyps(3)])
   thus ?case by simp
 next
-  case (combine cl ex v dst c1 tau c2 rho r)
-  have "r \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
-    using COMB[OF combine.hyps(1) combine.IH(1) combine.IH(2)] combine.hyps(4) by simp
+  case (combine cl ex v dst c1 tau rho r)
+  have "r \<in> \<lbrakk>sg (Inl (v, combc c1 (enterc c1 (hd rho))))\<rbrakk>"
+    using COMB[OF combine.hyps(1) combine.IH(1) combine.IH(2) combine.hyps(5)] combine.hyps(4) by simp
   thus ?case by (metis last_appendR snoc_eq_iff_butlast)
 qed
 
@@ -100,9 +101,10 @@ theorem activation_collect_sound:
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and SEED_G: "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
-    and COMB: "\<And>cl ex v dst c1 c2 s t. (cl, ex, v, dst) \<in> combines g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
+    and COMB: "\<And>cl ex v dst c1 s t es. (cl, ex, v, dst) \<in> combines g
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, enterc c1 es))\<rbrakk>
+        \<Longrightarrow> call_enter_store g cl s es
+        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 (enterc c1 es)))\<rbrakk>"
   shows "cfg_collect_ctx_act enterc combc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof
   fix st assume "st \<in> cfg_collect_ctx_act enterc combc seedc g S v ctx"

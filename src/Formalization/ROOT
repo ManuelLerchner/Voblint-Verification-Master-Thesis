@@ -29,6 +29,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship
     Example_Interval_DG_Ctx_Sound
+    Example_Interval_DG_Ctx_Collect
     Exec_Ivl_Cmp_Seed_Sound
     Exec_Ivl_Cmp_Keyed_DG_Run
     Exec_Ivl_Cmp_Seed_Enter

@@ -415,7 +415,7 @@ next
   have "tau \<noteq> []" using enter.hyps(2) by (rule trace_witness_act_nonempty)
   thus ?case using enter.IH by simp
 next
-  case (combine cl ex v dst c1 tau c2 rho r)
+  case (combine cl ex v dst c1 tau rho r)
   have "tau \<noteq> []" using combine.hyps(2) by (rule trace_witness_act_nonempty)
   thus ?case using combine.IH(1) by simp
 qed

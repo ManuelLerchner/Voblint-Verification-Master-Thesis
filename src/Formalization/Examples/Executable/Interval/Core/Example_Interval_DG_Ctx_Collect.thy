@@ -8,12 +8,13 @@ begin
 section \<open>Activation-indexed collecting soundness for the routed interval solution\<close>
 
 text \<open>
-  WORK IN PROGRESS (not in any \<^verbatim>\<open>ROOT\<close>): the connecting theorem between the
-  routed executable post-solution (\<open>twice_ctx_pp_abs\<close>) and the semantic
-  activation-indexed collecting semantics.  It instantiates the generic
-  \<open>activation_collect_sound\<close> and leaves its five obligations as separate milestones,
-  each still \<^theory_text>\<open>sorry\<close>.  This theory is excluded from the batch build until the
-  obligations are discharged.
+  The connecting theorem between the routed executable post-solution
+  (\<open>twice_ctx_pp_abs\<close>) and the semantic activation-indexed collecting semantics.  It
+  instantiates the generic \<open>activation_collect_sound\<close> and discharges its four obligations
+  --- \<open>ENTRY_G\<close>, \<open>EDGE\<close>, \<open>SEED_G\<close>, \<open>COMB\<close> --- as separate lemmas.  Coverage is internalised
+  in the guarded reader \<open>ivl_ctx_sg\<close> (uncovered unknowns denote \<open>{}\<close>), real globals are
+  shared through the single \<open>Global\<close> slot, and the return combine reads the callee exit at
+  the routed context (\<open>ivl_ctx_sg_comb\<close>).
 \<close>
 
 subsection \<open>The semantic context route and the abstract solution projection\<close>
@@ -332,6 +333,305 @@ proof -
     by (simp add: callee_covered_call1 callee_covered_call2)
 qed
 
+subsection \<open>SEED_G: the routed callee entry (enter edges)\<close>
+
+text \<open>Enter callers are covered only under the main context (\<open>bot\<close>): \<open>twice\<close>'s two calls
+  both originate from \<open>main\<close>, the root activation.  Bounded, decidable over the finite
+  solved domain.\<close>
+lemma enter_callers_only_bot:
+  "\<forall>(p, ctx)\<in>fst twice_ctx_sol. (p = 4 \<or> p = 6) \<longrightarrow> ctx = bot"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
+
+text \<open>\<^bold>\<open>The two executable enter bounds.\<close>  At each call site (context \<open>bot\<close>) the executable
+  interval enter transfer's combined output (Answer local state joined with the Side
+  global publication) is below the routed callee-entry local slot joined with the shared
+  global slot.  A single decidable \<open>\<le>\<close> on concrete \<^typ>\<open>ivl st\<close> values per call.\<close>
+lemma enter_st_bound_call1:
+  "snd (dg_spec_step Spoly (EA_Enter [''p''] [IMP2_Syntax.N 3])
+          (locals (snd twice_ctx_sol (Inl (4, bot)))) (globs (snd twice_ctx_sol (Inr Global))))
+   \<squnion> fst (dg_spec_step Spoly (EA_Enter [''p''] [IMP2_Syntax.N 3])
+          (locals (snd twice_ctx_sol (Inl (4, bot)))) (globs (snd twice_ctx_sol (Inr Global))))
+   \<le> locals (snd twice_ctx_sol (Inl (0, ctx_call1))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call1_def Spoly_def by eval
+
+lemma enter_st_bound_call2:
+  "snd (dg_spec_step Spoly (EA_Enter [''p''] [IMP2_Syntax.N 10])
+          (locals (snd twice_ctx_sol (Inl (6, bot)))) (globs (snd twice_ctx_sol (Inr Global))))
+   \<squnion> fst (dg_spec_step Spoly (EA_Enter [''p''] [IMP2_Syntax.N 10])
+          (locals (snd twice_ctx_sol (Inl (6, bot)))) (globs (snd twice_ctx_sol (Inr Global))))
+   \<le> locals (snd twice_ctx_sol (Inl (0, ctx_call2))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call2_def Spoly_def by eval
+
+text \<open>\<^bold>\<open>The enter membership reduction.\<close>  Given the covered caller / callee slots and the
+  executable enter bound, the entered store lies in the routed callee reader.  Structure:
+  \<open>ivl_dg.step_sound\<close> on the enter action lands \<open>s'\<close> in the abstract enter result;
+  \<open>ivl_Hstep\<close> rewrites that result as the \<^const>\<open>fun_of_st\<close> image of the executable step;
+  \<open>fun_of_st\<close> monotonicity lifts the executable \<open>\<le>\<close> to \<open>\<gamma>\<close>-inclusion.\<close>
+lemma enter_membership:
+  assumes covU: "(u, bot) \<in> fst twice_ctx_sol"
+    and covV: "(0, ctx') \<in> fst twice_ctx_sol"
+    and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, bot))\<rbrakk>"
+    and st: "edge_step (EA_Enter xs es) s = Some s'"
+    and bound:
+      "snd (dg_spec_step Spoly (EA_Enter xs es)
+              (locals (snd twice_ctx_sol (Inl (u, bot)))) (globs (snd twice_ctx_sol (Inr Global))))
+       \<squnion> fst (dg_spec_step Spoly (EA_Enter xs es)
+              (locals (snd twice_ctx_sol (Inl (u, bot)))) (globs (snd twice_ctx_sol (Inr Global))))
+       \<le> locals (snd twice_ctx_sol (Inl (0, ctx'))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+  shows "s' \<in> \<lbrakk>ivl_ctx_sg (Inl (0, ctx'))\<rbrakk>"
+proof -
+  let ?D = "locals (snd twice_ctx_sol (Inl (u, bot)))"
+  let ?G = "globs (snd twice_ctx_sol (Inr Global))"
+  let ?L = "locals (snd twice_ctx_sol (Inl (0, ctx')))"
+  let ?d = "fun_of_st ?D" and ?g = "fun_of_st ?G"
+  have sin: "s \<in> gamma_unit ?d ?g"
+    using s covU by (simp add: ivl_ctx_sg_covered gamma_unit_def)
+  have "{s} \<subseteq> gamma_unit ?d ?g" using sin by simp
+  hence "edge_collect (EA_Enter xs es) {s} \<subseteq> edge_collect (EA_Enter xs es) (gamma_unit ?d ?g)"
+    by (rule edge_collect_mono)
+  moreover have "s' \<in> edge_collect (EA_Enter xs es) {s}" using st by (simp add: edge_collect_single)
+  ultimately have "s' \<in> edge_collect (EA_Enter xs es) (gamma_unit ?d ?g)" by blast
+  also have "\<dots> \<subseteq> (case dg_spec_step Sabs (EA_Enter xs es) ?d ?g of (g', d') \<Rightarrow> gamma_unit d' g')"
+    by (rule ivl_dg.step_sound)
+  finally have "s' \<in> gamma_unit (snd (dg_spec_step Sabs (EA_Enter xs es) ?d ?g))
+                                 (fst (dg_spec_step Sabs (EA_Enter xs es) ?d ?g))"
+    by (simp add: case_prod_beta)
+  \<comment> \<open>rewrite the abstract enter result as the fun_of_st image of the executable step\<close>
+  also have "\<dots> = \<lbrakk>fun_of_st (snd (dg_spec_step Spoly (EA_Enter xs es) ?D ?G)
+                        \<squnion> fst (dg_spec_step Spoly (EA_Enter xs es) ?D ?G))\<rbrakk>"
+  proof -
+    have "dg_spec_step Sabs (EA_Enter xs es) ?d ?g
+        = map_prod fun_of_st fun_of_st (dg_spec_step Spoly (EA_Enter xs es) ?D ?G)"
+      unfolding Spoly_def by (rule ivl_Hstep[symmetric])
+    thus ?thesis by (simp add: gamma_unit_def fun_of_st_sup)
+  qed
+  finally have "s' \<in> \<lbrakk>fun_of_st (snd (dg_spec_step Spoly (EA_Enter xs es) ?D ?G)
+                          \<squnion> fst (dg_spec_step Spoly (EA_Enter xs es) ?D ?G))\<rbrakk>" .
+  also have "\<dots> \<subseteq> \<lbrakk>fun_of_st (?L \<squnion> ?G)\<rbrakk>"
+    by (rule gamma_state_mono[OF fun_of_st_mono[OF bound]])
+  also have "\<dots> = \<lbrakk>ivl_ctx_sg (Inl (0, ctx'))\<rbrakk>"
+    using covV by (simp add: ivl_ctx_sg_covered)
+  finally show ?thesis .
+qed
+
+text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes into is the point abstraction of the
+  entered formal \<open>p\<close>: for the two constant-argument calls the entered value is \<open>3\<close> / \<open>10\<close>,
+  so the routed context is exactly \<open>ctx_call1\<close> / \<open>ctx_call2\<close> --- the executable route agrees
+  with the activation route \<^const>\<open>ivl_enterc\<close>.\<close>
+lemma enter_route_exact_call1:
+  assumes "edge_step (EA_Enter [''p''] [IMP2_Syntax.N 3]) s = Some s'"
+  shows "ivl_enterc ctx s' = ctx_call1"
+proof -
+  from assms have "s' = (enter_state s)(''p'' := 3)" by (simp add: bind_formals_def)
+  thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call1_val)
+qed
+
+lemma enter_route_exact_call2:
+  assumes "edge_step (EA_Enter [''p''] [IMP2_Syntax.N 10]) s = Some s'"
+  shows "ivl_enterc ctx s' = ctx_call2"
+proof -
+  from assms have "s' = (enter_state s)(''p'' := 10)" by (simp add: bind_formals_def)
+  thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call2_val)
+qed
+
+text \<open>\<^bold>\<open>SEED_G.\<close>  An \<^const>\<open>EA_Enter\<close> edge lands the entering store in the routed callee-entry
+  reader.  Uncovered caller \<Rightarrow> empty premise; covered caller \<Rightarrow> the call originates from
+  \<open>main\<close> (context \<open>bot\<close>), the routed context is \<open>ctx_call1\<close> / \<open>ctx_call2\<close>
+  (\<open>enter_route_exact\<close>), and \<open>enter_membership\<close> discharges each from the executable enter
+  bound.\<close>
+lemma ivl_ctx_sg_seed:
+  assumes e: "(u, EA_Enter xs es, v) \<in> edges twice_cfg"
+    and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk>"
+    and st: "edge_step (EA_Enter xs es) s = Some s'"
+  shows "s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_enterc ctx s'))\<rbrakk>"
+proof (cases "(u, ctx) \<in> fst twice_ctx_sol")
+  case False
+  hence "\<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk> = {}" by (rule ivl_ctx_sg_uncovered_empty)
+  thus ?thesis using s by simp
+next
+  case True
+  from e consider
+      (c1) "u = 4" "xs = [''p'']" "es = [IMP2_Syntax.N 3]" "v = 0"
+    | (c2) "u = 6" "xs = [''p'']" "es = [IMP2_Syntax.N 10]" "v = 0"
+    unfolding twice_edges by auto
+  thus ?thesis
+  proof cases
+    case c1
+    have ctxb: "ctx = bot" using True enter_callers_only_bot c1 by fastforce
+    have covU: "(4, bot) \<in> fst twice_ctx_sol" using True c1 ctxb by simp
+    have "s' \<in> \<lbrakk>ivl_ctx_sg (Inl (0, ctx_call1))\<rbrakk>"
+      by (rule enter_membership[OF covU callee_covered_call1 _ _ enter_st_bound_call1])
+         (use s st c1 ctxb in simp_all)
+    thus ?thesis using st c1 by (simp add: enter_route_exact_call1)
+  next
+    case c2
+    have ctxb: "ctx = bot" using True enter_callers_only_bot c2 by fastforce
+    have covU: "(6, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
+    have "s' \<in> \<lbrakk>ivl_ctx_sg (Inl (0, ctx_call2))\<rbrakk>"
+      by (rule enter_membership[OF covU callee_covered_call2 _ _ enter_st_bound_call2])
+         (use s st c2 ctxb in simp_all)
+    thus ?thesis using st c2 by (simp add: enter_route_exact_call2)
+  qed
+qed
+
+subsection \<open>COMB: the routed return combine\<close>
+
+text \<open>\<^bold>\<open>The combine membership reduction.\<close>  The return combine of a covered caller with the
+  \<^emph>\<open>routed\<close> callee exit lands in the resumed caller reader --- the combine analogue of
+  \<open>enter_membership\<close>.  \<open>ivl_dg.combine_sound\<close> lands the result in the abstract combine;
+  \<open>ivl_Hcomb\<close> rewrites it as the \<^const>\<open>fun_of_st\<close> image of the executable combine; the
+  executable \<open>\<le>\<close> lifts through \<open>fun_of_st\<close> monotonicity.  Both caller and callee exit read
+  the \<^emph>\<open>same\<close> shared global slot, so \<open>combine_sound\<close> applies at one \<open>g\<close>.\<close>
+lemma combine_membership:
+  assumes covCl: "(cl, bot) \<in> fst twice_ctx_sol"
+    and covEx: "(ex, cc) \<in> fst twice_ctx_sol"
+    and covV: "(v, bot) \<in> fst twice_ctx_sol"
+    and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, bot))\<rbrakk>"
+    and t: "t \<in> \<lbrakk>ivl_ctx_sg (Inl (ex, cc))\<rbrakk>"
+    and bound:
+      "snd (dgs_combine Spoly dst
+              (locals (snd twice_ctx_sol (Inl (cl, bot))))
+              (locals (snd twice_ctx_sol (Inl (ex, cc))))
+              (globs (snd twice_ctx_sol (Inr Global))))
+       \<squnion> fst (dgs_combine Spoly dst
+              (locals (snd twice_ctx_sol (Inl (cl, bot))))
+              (locals (snd twice_ctx_sol (Inl (ex, cc))))
+              (globs (snd twice_ctx_sol (Inr Global))))
+       \<le> locals (snd twice_ctx_sol (Inl (v, bot))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+  shows "combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, bot))\<rbrakk>"
+proof -
+  let ?Dc = "locals (snd twice_ctx_sol (Inl (cl, bot)))"
+  let ?De = "locals (snd twice_ctx_sol (Inl (ex, cc)))"
+  let ?G = "globs (snd twice_ctx_sol (Inr Global))"
+  let ?dc = "fun_of_st ?Dc" and ?de = "fun_of_st ?De" and ?g = "fun_of_st ?G"
+  have sin: "s \<in> gamma_unit ?dc ?g"
+    using s covCl by (simp add: ivl_ctx_sg_covered gamma_unit_def)
+  have tin: "t \<in> gamma_unit ?de ?g"
+    using t covEx by (simp add: ivl_ctx_sg_covered gamma_unit_def)
+  have "combine_collect dst s t
+        \<in> (case dgs_combine Sabs dst ?dc ?de ?g of (g', d') \<Rightarrow> gamma_unit d' g')"
+    by (rule ivl_dg.combine_sound[OF sin tin])
+  hence "combine_collect dst s t
+        \<in> gamma_unit (snd (dgs_combine Sabs dst ?dc ?de ?g)) (fst (dgs_combine Sabs dst ?dc ?de ?g))"
+    by (simp add: case_prod_beta)
+  also have "\<dots> = \<lbrakk>fun_of_st (snd (dgs_combine Spoly dst ?Dc ?De ?G)
+                        \<squnion> fst (dgs_combine Spoly dst ?Dc ?De ?G))\<rbrakk>"
+  proof -
+    have "dgs_combine Sabs dst ?dc ?de ?g
+        = map_prod fun_of_st fun_of_st (dgs_combine Spoly dst ?Dc ?De ?G)"
+      unfolding Spoly_def by (rule ivl_Hcomb[symmetric])
+    thus ?thesis by (simp add: gamma_unit_def fun_of_st_sup)
+  qed
+  finally have "combine_collect dst s t
+        \<in> \<lbrakk>fun_of_st (snd (dgs_combine Spoly dst ?Dc ?De ?G)
+                     \<squnion> fst (dgs_combine Spoly dst ?Dc ?De ?G))\<rbrakk>" .
+  also have "\<dots> \<subseteq> \<lbrakk>fun_of_st (locals (snd twice_ctx_sol (Inl (v, bot))) \<squnion> ?G)\<rbrakk>"
+    by (rule gamma_state_mono[OF fun_of_st_mono[OF bound]])
+  also have "\<dots> = \<lbrakk>ivl_ctx_sg (Inl (v, bot))\<rbrakk>"
+    using covV by (simp add: ivl_ctx_sg_covered)
+  finally show ?thesis .
+qed
+
+text \<open>\<^bold>\<open>The two executable combine bounds\<close> (context \<open>bot\<close> caller, routed callee exit),
+  and the return-node coverage.\<close>
+lemma combine_st_bound_call1:
+  "snd (dgs_combine Spoly (Some ''x'')
+          (locals (snd twice_ctx_sol (Inl (4, bot))))
+          (locals (snd twice_ctx_sol (Inl (3, ctx_call1))))
+          (globs (snd twice_ctx_sol (Inr Global))))
+   \<squnion> fst (dgs_combine Spoly (Some ''x'')
+          (locals (snd twice_ctx_sol (Inl (4, bot))))
+          (locals (snd twice_ctx_sol (Inl (3, ctx_call1))))
+          (globs (snd twice_ctx_sol (Inr Global))))
+   \<le> locals (snd twice_ctx_sol (Inl (5, bot))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call1_def Spoly_def by eval
+
+lemma combine_st_bound_call2:
+  "snd (dgs_combine Spoly (Some ''y'')
+          (locals (snd twice_ctx_sol (Inl (6, bot))))
+          (locals (snd twice_ctx_sol (Inl (3, ctx_call2))))
+          (globs (snd twice_ctx_sol (Inr Global))))
+   \<squnion> fst (dgs_combine Spoly (Some ''y'')
+          (locals (snd twice_ctx_sol (Inl (6, bot))))
+          (locals (snd twice_ctx_sol (Inl (3, ctx_call2))))
+          (globs (snd twice_ctx_sol (Inr Global))))
+   \<le> locals (snd twice_ctx_sol (Inl (7, bot))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call2_def Spoly_def by eval
+
+lemma covered_ret5: "(5, bot) \<in> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
+lemma covered_ret7: "(7, bot) \<in> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
+lemma callee_exit_covered_call1: "(3, ctx_call1) \<in> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call1_def by eval
+lemma callee_exit_covered_call2: "(3, ctx_call2) \<in> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call2_def by eval
+
+text \<open>\<^bold>\<open>enter_route_exact for combine.\<close>  The callee context resumed at a return is the point
+  abstraction of the entered formal linked to the caller by \<^const>\<open>call_enter_store\<close>.  The
+  linked entered store is exactly the enter edge's \<^const>\<open>edge_step\<close> result, so this reuses
+  \<open>enter_route_exact\<close>.\<close>
+lemma comb_route_call1:
+  assumes "call_enter_store twice_cfg 4 s es"
+  shows "ivl_enterc c1 es = ctx_call1"
+proof -
+  have "edge_step (EA_Enter [''p''] [IMP2_Syntax.N 3]) s = Some es"
+    using assms unfolding call_enter_store_def by (auto simp: twice_edges)
+  thus ?thesis by (rule enter_route_exact_call1)
+qed
+
+lemma comb_route_call2:
+  assumes "call_enter_store twice_cfg 6 s es"
+  shows "ivl_enterc c1 es = ctx_call2"
+proof -
+  have "edge_step (EA_Enter [''p''] [IMP2_Syntax.N 10]) s = Some es"
+    using assms unfolding call_enter_store_def by (auto simp: twice_edges)
+  thus ?thesis by (rule enter_route_exact_call2)
+qed
+
+text \<open>\<^bold>\<open>COMB.\<close>  A return combine soundly resumes the caller reader.  Uncovered caller \<Rightarrow>
+  empty premise; covered caller \<Rightarrow> the call site is \<open>main\<close> (context \<open>bot\<close>), the callee
+  exit context is the routed \<open>ctx_call1\<close> / \<open>ctx_call2\<close> (\<open>comb_route\<close>, forced by
+  \<^const>\<open>call_enter_store\<close>), and \<open>combine_membership\<close> discharges each from the executable
+  combine bound.  The impossible pairing (return of call 1 with the callee at
+  \<open>ctx_call2\<close>) is not a real activation return and is no longer a required case.\<close>
+lemma ivl_ctx_sg_comb:
+  assumes c: "(cl, ex, v, dst) \<in> combines twice_cfg"
+    and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
+    and t: "t \<in> \<lbrakk>ivl_ctx_sg (Inl (ex, ivl_enterc c1 es))\<rbrakk>"
+    and ces: "call_enter_store twice_cfg cl s es"
+  shows "combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_combc c1 (ivl_enterc c1 es)))\<rbrakk>"
+proof (cases "(cl, c1) \<in> fst twice_ctx_sol")
+  case False
+  hence "\<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk> = {}" by (rule ivl_ctx_sg_uncovered_empty)
+  thus ?thesis using s by simp
+next
+  case True
+  from c consider (c1) "cl = 4" "ex = 3" "v = 5" "dst = Some ''x''"
+                | (c2) "cl = 6" "ex = 3" "v = 7" "dst = Some ''y''"
+    unfolding twice_combines by auto
+  thus ?thesis
+  proof cases
+    case c1
+    have ctxb: "c1 = bot" using True enter_callers_only_bot c1 by fastforce
+    have route: "ivl_enterc c1 es = ctx_call1" using ces c1 by (simp add: comb_route_call1)
+    have covCl: "(4, bot) \<in> fst twice_ctx_sol" using True c1 ctxb by simp
+    have "combine_collect (Some ''x'') s t \<in> \<lbrakk>ivl_ctx_sg (Inl (5, bot))\<rbrakk>"
+      by (rule combine_membership[OF covCl callee_exit_covered_call1 covered_ret5 _ _ combine_st_bound_call1])
+         (use s t c1 ctxb route in simp_all)
+    thus ?thesis using c1 ctxb route by (simp add: ivl_combc_def)
+  next
+    case c2
+    have ctxb: "c1 = bot" using True enter_callers_only_bot c2 by fastforce
+    have route: "ivl_enterc c1 es = ctx_call2" using ces c2 by (simp add: comb_route_call2)
+    have covCl: "(6, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
+    have "combine_collect (Some ''y'') s t \<in> \<lbrakk>ivl_ctx_sg (Inl (7, bot))\<rbrakk>"
+      by (rule combine_membership[OF covCl callee_exit_covered_call2 covered_ret7 _ _ combine_st_bound_call2])
+         (use s t c2 ctxb route in simp_all)
+    thus ?thesis using c2 ctxb route by (simp add: ivl_combc_def)
+  qed
+qed
+
 subsection \<open>Activation-indexed collecting soundness (obligation scaffold)\<close>
 
 text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at the routed interval
@@ -363,13 +663,14 @@ next
   show "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_enterc c s'))\<rbrakk>"
-    sorry
+    by (rule ivl_ctx_sg_seed)
 next
   \<comment> \<open>COMB --- return combine: combine_sound + the cmb bound from pp.\<close>
-  show "\<And>cl ex v dst c1 c2 s t. (cl, ex, v, dst) \<in> combines twice_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (ex, c2))\<rbrakk>
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_combc c1 c2))\<rbrakk>"
-    sorry
+  show "\<And>cl ex v dst c1 s t es. (cl, ex, v, dst) \<in> combines twice_cfg
+        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (ex, ivl_enterc c1 es))\<rbrakk>
+        \<Longrightarrow> call_enter_store twice_cfg cl s es
+        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_combc c1 (ivl_enterc c1 es)))\<rbrakk>"
+    by (rule ivl_ctx_sg_comb)
 qed
 
 end
