@@ -204,7 +204,7 @@ where
   "dg_trees g v =
      map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
        (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u)))
-       (non_enter_predecessor_list g v)
+       (predecessor_list g v)
      @ map (\<lambda>(cc, ex, dst). dg_cmb () dst cc ex)
        (combine_predecessor_list g v)"
 
@@ -299,7 +299,6 @@ theorem dg_post_solution_postfix:
     and cover_combine:
       "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow> (v, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
   shows "dg_postfix g s0d s0g sigma"
 proof -
@@ -356,10 +355,9 @@ proof -
   proof -
     fix u a v
     assume edge: "(u, a, v) \<in> edges g"
-    have "(u, a) \<in> set (non_enter_predecessor_list g v)"
-      using edge no_enter[OF edge]
-      by (simp add: non_enter_predecessor_list_def
-          set_predecessor_list[OF finE] predecessors_def)
+    have "(u, a) \<in> set (predecessor_list g v)"
+      using edge
+      by (simp add: set_predecessor_list[OF finE] predecessors_def)
     then show "map_gtree (\<lambda>_. ())
         (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
       \<in> set (dg_trees g v)"
@@ -579,15 +577,13 @@ corollary dg_post_solution_collect_sound:
     and cover_combine:
       "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter:
-      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
   shows "cfg_collect g S0 v \<subseteq> dg_gamma sigma v"
 proof -
   have pf: "dg_postfix g s0d s0g sigma"
     by (rule dg_post_solution_postfix
-          [OF pp cover_entry cover_edge cover_combine finE no_enter finC])
+          [OF pp cover_entry cover_edge cover_combine finE finC])
   show ?thesis
     by (rule dg_postfix_collect_sound
           [OF pf finE finC sound0])

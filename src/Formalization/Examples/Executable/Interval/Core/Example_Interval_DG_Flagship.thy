@@ -113,8 +113,6 @@ lemma flagship_combines: "combines flagship_cfg = {}" by (simp add: flagship_cfg
 
 lemma flagship_finE: "finite (edges flagship_cfg)" by (simp add: flagship_edges)
 lemma flagship_finC: "finite (combines flagship_cfg)" by (simp add: flagship_combines)
-lemma flagship_no_enter: "\<And>u a w. (u, a, w) \<in> edges flagship_cfg \<Longrightarrow> \<not> is_enter_action a"
-  by (auto simp: flagship_edges is_enter_action_def split: edge_action.splits)
 
 subsection \<open>3. The analysis specification (interval, as an executable D/G analysis)\<close>
 
@@ -260,7 +258,7 @@ theorem flagship_collect_sound:
   by (rule ivl_dg_post_solution_collect_sound
         [OF flagship_pp_abs[folded ivl_dg_generator_def]
             flagship_cover_entry flagship_cover_edge flagship_cover_combine
-            flagship_finE flagship_no_enter flagship_finC flagship_sound0])
+            flagship_finE flagship_finC flagship_sound0])
 
 subsection \<open>9. Inspecting the certified result\<close>
 

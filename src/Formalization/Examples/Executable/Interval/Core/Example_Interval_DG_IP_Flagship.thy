@@ -1,0 +1,318 @@
+theory Example_Interval_DG_IP_Flagship
+  imports
+    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Analysis.Interval_DG"
+    "Voblint_Analysis.Ivl_Exec"
+    "Voblint_Analysis.Solver_Menu"
+    "Voblint_CFG.IMP2_Proc_to_CFG"
+    "Voblint_CFG.CFG_GraphViz"
+    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_IMP2.IMP2_Bridge"
+    Compiler_Correctness
+begin
+
+no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
+hide_const (open) Syntax.N Syntax.V
+
+definition twice_program :: imp_prog where
+  "twice_program = program {
+     void twice(p) { return p + p }
+     void main() { x := twice(3); y := twice(10) }
+   }"
+
+definition twice_pi :: proc_table where "twice_pi = prog_table twice_program"
+definition twice_procs :: "pname list" where "twice_procs = prog_procs twice_program"
+definition twice_main :: "IMP2_Proc.com" where "twice_main = prog_main twice_program"
+
+definition twice_cfg :: cfg where
+  "twice_cfg = compile_prog twice_pi twice_procs twice_main"
+
+text \<open>
+  The compiled CFG, read off by \<^verbatim>\<open>eval\<close>.  Procedure \<open>twice\<close> occupies nodes
+  \<open>0..3\<close>: entry \<open>0\<close> binds the formal \<open>p\<close>, two \<open>nop\<close>s reach \<open>2\<close>, the return
+  assignment \<open>#ret := p + p\<close> reaches the callee exit \<open>3\<close>.  \<open>main\<close> occupies
+  \<open>4..7\<close>: entry \<open>4\<close> is the first call site (\<open>EA_Enter [p] [3]\<close> into \<open>0\<close>), its
+  return \<open>5\<close> is the second call site's predecessor, \<open>6\<close> is the second call
+  (\<open>EA_Enter [p] [10]\<close> into \<open>0\<close>), and \<open>7\<close> is the exit.  \<^bold>\<open>Both calls enter the
+  same procedure entry \<open>0\<close>\<close> --- this is the monovariant (single-context) view.
+\<close>
+
+lemma twice_entry: "cfg_entry twice_cfg = 4" by eval
+lemma twice_exit:  "cfg_exit twice_cfg = 7"  by eval
+
+lemma twice_edges:
+  "edges twice_cfg =
+     {(0, EA_Nop, 1),
+      (1, EA_Nop, 2),
+      (2, EA_Assign ''#ret'' (Plus (IMP2_Syntax.V ''p'') (IMP2_Syntax.V ''p'')), 3),
+      (4, EA_Enter [''p''] [IMP2_Syntax.N 3], 0),
+      (5, EA_Nop, 6),
+      (6, EA_Enter [''p''] [IMP2_Syntax.N 10], 0)}"
+  by eval
+
+lemma twice_combines:
+  "combines twice_cfg = {(4, 3, 5, Some ''x''), (6, 3, 7, Some ''y'')}"
+  by eval
+
+lemma twice_finE: "finite (edges twice_cfg)" unfolding twice_edges by simp
+lemma twice_finC: "finite (combines twice_cfg)" unfolding twice_combines by simp
+
+subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
+
+lemma ivl_Hstep:
+  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st) a d g)
+     = dg_spec_step (unit_dg_spec ivl_tf) a (fun_of_st d) (fun_of_st g)"
+  by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
+
+lemma ivl_Hcomb:
+  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de g)
+     = dgs_combine (unit_dg_spec ivl_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
+  by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
+
+lemma dg_gen_of_eq_ivl_dg_gen:
+  "dg_gen_of (unit_dg_spec ivl_tf) g bot0 s0d s0g = ivl_dg.dg_gen g bot0 s0d s0g"
+proof -
+  have "dg_cmb_of (unit_dg_spec ivl_tf) = ivl_dg.dg_cmb"
+    by (rule ext)+ (simp add: dg_cmb_of_def ivl_dg.dg_cmb_def)
+  thus ?thesis by (simp add: dg_gen_of_def ivl_dg.dg_gen_def)
+qed
+
+subsection \<open>Equation generation\<close>
+
+definition twice_eqs ::
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
+  "twice_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st) twice_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+
+subsection \<open>Executable solve\<close>
+
+lemma twice_terminates_c:
+  "TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()) \<noteq> None"
+  by eval
+
+definition twice_sol ::
+  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state)" where
+  "twice_sol = TD_side_warrowing_apinis_Interp_solve twice_eqs (cfg_exit twice_cfg, ())"
+
+text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<open>p in [3,10]\<close> at the shared
+  callee entry, \<open>#ret in [6,20]\<close> at the callee exit, and \<open>x = y in [6,20]\<close> at the
+  return sites.\<close>
+
+value "map_option
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''p''),
+                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''#ret''),
+                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x''),
+                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''y''))) [0,1,2,3,4,5,6,7])
+   (TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()))"
+
+subsection \<open>Certified solution (reusing solver correctness)\<close>
+
+lemma twice_solve_dom:
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl st, ivl st) dg_state)
+     twice_eqs (cfg_exit twice_cfg, ())"
+  using twice_terminates_c
+  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
+            TD_side_warrowing_apinis_Interp.solve_c_dom_def
+  by simp
+
+lemma twice_pp_st:
+  "part_post_solution twice_eqs (cfg_exit twice_cfg, ()) (snd twice_sol) (fst twice_sol)"
+  using TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF twice_solve_dom, of "fst twice_sol" "snd twice_sol"]
+  unfolding twice_sol_def by simp
+
+subsection \<open>Transport to the abstract D/G semantics\<close>
+
+lemma twice_pp_abs:
+  "part_post_solution
+     (ivl_dg.dg_gen twice_cfg (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
+        (fun_of_st (restrict_global_st cinit_ivl_st)))
+     (cfg_exit twice_cfg, ()) (fun_of_dg_st \<circ> snd twice_sol) (fst twice_sol)"
+  using part_post_solution_dg_st_to_abs[OF ivl_Hstep ivl_Hcomb twice_pp_st[unfolded twice_eqs_def]]
+  unfolding dg_gen_of_eq_ivl_dg_gen .
+
+subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>
+
+text \<open>
+  The premises of the \<^emph>\<open>generalized\<close> endpoint \<open>ivl_dg_post_solution_collect_sound\<close>:
+  every point is solved (\<^verbatim>\<open>eval\<close>), the graph is finite --- and, crucially,
+  \<^bold>\<open>no \<open>no_enter\<close> premise\<close>: the two \<^const>\<open>EA_Enter\<close> call edges are covered by the
+  same collecting-soundness theorem as ordinary edges.
+\<close>
+
+lemma twice_cover_all: "\<forall>v \<in> {0,1,2,3,4,5,6,7}. ((v::pp), ()) \<in> fst twice_sol"
+  unfolding twice_sol_def twice_eqs_def by eval
+
+lemma twice_cover_entry: "(cfg_entry twice_cfg, ()) \<in> fst twice_sol"
+  using twice_cover_all twice_entry by simp
+lemma twice_cover_edge: "\<And>u a w. (u, a, w) \<in> edges twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
+  using twice_cover_all by (auto simp: twice_edges)
+lemma twice_cover_combine:
+  "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
+  using twice_cover_all by (auto simp: twice_combines)
+
+lemma twice_sound0:
+  "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
+proof -
+  have "fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st) = fun_of_st cinit_ivl_st"
+    by (simp add: fun_of_st_cinit_ivl_st fun_of_st_restrict_global_st restrict_global_def sup_fun_def fun_eq_iff)
+  thus ?thesis
+    by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
+qed
+
+text \<open>
+  \<^bold>\<open>The end-to-end interprocedural theorem.\<close>  Every concrete store reaching any
+  program point \<open>v\<close> in the collecting semantics of \<open>twice_cfg\<close> --- which now
+  includes the callee body reached \<^emph>\<open>through the two call edges\<close> --- is contained
+  in the native D/G concretization of the solver-computed solution.
+\<close>
+
+theorem twice_collect_sound:
+  "cfg_collect twice_cfg cinit_stores v \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
+  by (rule ivl_dg_post_solution_collect_sound
+        [OF twice_pp_abs[folded ivl_dg_generator_def]
+            twice_cover_entry twice_cover_edge twice_cover_combine
+            twice_finE twice_finC twice_sound0])
+
+subsection \<open>Inspecting the certified result\<close>
+
+text \<open>
+  The computed values, on the \<^emph>\<open>same\<close> solution the soundness theorem certifies:
+  the shared callee entry merges both calling contexts (\<open>p in [3,10]\<close>), the return
+  expression evaluates to \<open>[6,20]\<close>, and both destinations receive it.  This is the
+  monovariant answer: sound (\<open>6, 20 in [6,20]\<close>) but merged across the two calls.
+\<close>
+
+lemma twice_p_at_entry:
+  "lookup_st (locals (snd twice_sol (Inl (0::pp, ())))) ''p'' = Ivl (Fin 3) (Fin 10)"
+  unfolding twice_sol_def twice_eqs_def by eval
+
+lemma twice_ret_at_exit:
+  "lookup_st (locals (snd twice_sol (Inl (3::pp, ())))) ''#ret'' = Ivl (Fin 6) (Fin 20)"
+  unfolding twice_sol_def twice_eqs_def by eval
+
+lemma twice_x_computed:
+  "lookup_st (locals (snd twice_sol (Inl (5::pp, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
+  unfolding twice_sol_def twice_eqs_def by eval
+
+lemma twice_y_computed:
+  "lookup_st (locals (snd twice_sol (Inl (7::pp, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
+  unfolding twice_sol_def twice_eqs_def by eval
+
+subsection \<open>Lifting soundness to IMP2 source runs (compiler correctness)\<close>
+
+text \<open>
+  The compiler-correctness simulation closes the gap to the source: every
+  terminating-or-partial IMP2 small-step run of \<open>twice_main\<close> under the procedure
+  table \<open>twice_pi\<close> --- including the two calls into \<open>twice\<close> and the return
+  assignments --- is reproduced on the compiled CFG, so the reached store lands in
+  \<open>cfg_collect\<close> and, by \<open>twice_collect_sound\<close>, inside the solver-computed interval
+  solution.
+\<close>
+
+lemma twice_wf: "wf_compile_input twice_pi twice_procs twice_main"
+  unfolding wf_compile_input_def twice_pi_def twice_procs_def twice_main_def twice_program_def
+  by (simp add: compile_eval_simps source_pi_def proc_decl_of_def)
+
+interpretation twice_sim: compiled_source_simulation
+    twice_pi twice_procs twice_main twice_cfg
+    "concrete_program_match twice_pi twice_procs twice_main"
+proof
+  show "twice_cfg = compile_prog twice_pi twice_procs twice_main"
+    by (simp add: twice_cfg_def)
+  show "wf_compile_input twice_pi twice_procs twice_main" by (rule twice_wf)
+  fix s
+  show "concrete_program_match twice_pi twice_procs twice_main (twice_main, s, []) (cfg_entry twice_cfg, s, [])"
+    using twice_wf unfolding wf_compile_input_def
+    by (simp add: twice_cfg_def concrete_program_initial_match)
+next
+  fix src src' cf
+  assume m: "concrete_program_match twice_pi twice_procs twice_main src cf"
+     and st: "pstep twice_pi src src'"
+  show "\<exists>cf'. star (cstep twice_cfg) cf cf' \<and> concrete_program_match twice_pi twice_procs twice_main src' cf'"
+    using concrete_program_step_match[OF twice_wf m st] by (simp add: twice_cfg_def)
+qed
+
+text \<open>
+  \<^bold>\<open>The source-level capstone.\<close>  For any IMP2 run of \<open>twice_main\<close> under \<open>twice_pi\<close>
+  from a C-faithful initial store, whatever configuration \<open>src'\<close> it reaches matches
+  a CFG point \<open>(v, t, stk)\<close> whose concrete store \<open>t\<close> is contained in the
+  concretization of the solver-computed interval solution.  Soundness holds against
+  the real interprocedural source semantics, not merely the CFG.
+\<close>
+
+theorem twice_source_run_sound:
+  assumes run: "psteps twice_pi (twice_main, s, []) src'"
+      and init: "s \<in> cinit_stores"
+  shows "\<exists>v t stk. concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)
+                   \<and> t \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
+proof -
+  obtain v t stk where m: "concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)"
+      and coll: "t \<in> cfg_collect twice_cfg {s} v"
+    using twice_sim.source_reaches_cfg_collect[OF run] by blast
+  have "cfg_collect twice_cfg {s} v \<subseteq> cfg_collect twice_cfg cinit_stores v"
+    using init by (intro le_funD[OF cfg_collect_mono_S]) auto
+  also have "\<dots> \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
+    by (rule twice_collect_sound)
+  finally show ?thesis using m coll by blast
+qed
+
+subsection \<open>Annotated GraphViz of the computed result\<close>
+
+text \<open>
+  A DOT rendering of \<open>twice_cfg\<close> annotated with the solver-computed intervals.
+  The tooling renders the two \<^const>\<open>EA_Enter\<close> call edges \<^bold>\<open>distinctly\<close> (thick
+  purple, labelled \<open>enter\<close>) and the two combine/return edges as \<^bold>\<open>dashed blue\<close>
+  (labelled \<open>combine via call@N\<close>).  Each node is annotated with \<open>p\<close>, \<open>#ret\<close>,
+  \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>0\<close> shows \<open>p in [3,10]\<close> and the
+  callee exit \<open>3\<close> shows \<open>#ret in [6,20]\<close>, while the return sites \<open>5\<close> / \<open>7\<close> show
+  \<open>x\<close> / \<open>y in [6,20]\<close>.
+\<close>
+
+definition twice_node_label ::
+  "(pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state) \<Rightarrow> pp \<Rightarrow> string" where
+  "twice_node_label sol p =
+     show_nat p @ [CHR 0x5C, CHR 0x6E]
+     @ ''p='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''p'')
+     @ [CHR 0x5C, CHR 0x6E]
+     @ ''#ret='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''#ret'')
+     @ [CHR 0x5C, CHR 0x6E]
+     @ ''x='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''x'')
+     @ [CHR 0x5C, CHR 0x6E]
+     @ ''y='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''y'')"
+
+definition twice_dot :: String.literal where
+  "twice_dot =
+     String.implode
+       (case TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()) of
+          None \<Rightarrow> ''solver did not terminate''
+        | Some sol \<Rightarrow> to_graphviz_labeled (twice_node_label (snd sol)) twice_cfg [] [] [])"
+
+ML_val \<open>writeln (@{code twice_dot})\<close>
+
+text \<open>
+  \<^verbatim>\<open>writeln (@{code twice_dot})\<close> emits the following graph.  Both call edges
+  \<open>4 -> 0\<close> and \<open>6 -> 0\<close> are thick purple \<open>enter\<close> edges into the shared callee
+  entry; the two returns \<open>3 -> 5\<close> / \<open>3 -> 7\<close> are dashed blue combine edges.
+
+  digraph CFG {
+    rankdir=TB;
+    0 [label="0\np=[3,10]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
+    1 [label="1\np=[3,10]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
+    2 [label="2\np=[3,10]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
+    3 [label="3\np=[3,10]\n#ret=[6,20]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
+    4 [shape=doublecircle,color=green,label="4\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
+    5 [label="5\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[6,20]\ny=[-inf,+inf]"];
+    6 [label="6\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[6,20]\ny=[-inf,+inf]"];
+    7 [shape=doublecircle,color=red,label="7\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[6,20]\ny=[6,20]"];
+    0 -> 1 [label="nop"];
+    1 -> 2 [label="nop"];
+    2 -> 3 [label="#ret := (p+p)"];
+    4 -> 0 [color=purple,penwidth=2,label="enter"];
+    5 -> 6 [label="nop"];
+    6 -> 0 [color=purple,penwidth=2,label="enter"];
+    3 -> 5 [style=dashed,color=blue,label="combine via call@4"];
+    3 -> 7 [style=dashed,color=blue,label="combine via call@6"];
+  }
+\<close>
+
+end

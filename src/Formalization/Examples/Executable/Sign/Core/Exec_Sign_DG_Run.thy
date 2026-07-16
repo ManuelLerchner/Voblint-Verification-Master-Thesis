@@ -69,8 +69,6 @@ lemma gEx_entry: "cfg_entry gEx = 0"
   by (simp add: gEx_def mk_cfg_def)
 lemma gEx_finE: "finite (edges gEx)" by (simp add: gEx_edges)
 lemma gEx_finC: "finite (combines gEx)" by (simp add: gEx_combines)
-lemma gEx_no_enter: "\<And>u a w. (u, a, w) \<in> edges gEx \<Longrightarrow> \<not> is_enter_action a"
-  by (auto simp: gEx_edges is_enter_action_def split: edge_action.splits)
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign st, sign st) dg_state) strategy_tree" where
   "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st) gEx bot cinit_sign_st cinit_sign_st"
@@ -139,7 +137,7 @@ theorem dgEx_collect_sound:
   "cfg_collect gEx cinit_stores v \<subseteq> sign_dg_gamma (fun_of_dg_st \<circ> snd dgEx_sol) v"
   by (rule sign_dg_post_solution_collect_sound
         [OF dgEx_pp_abs[folded sign_dg_generator_def]
-            dgEx_cover_entry dgEx_cover_edge dgEx_cover_combine gEx_finE gEx_no_enter gEx_finC dgEx_sound0])
+            dgEx_cover_entry dgEx_cover_edge dgEx_cover_combine gEx_finE gEx_finC dgEx_sound0])
 
 subsection \<open>Inspecting the computed result\<close>
 

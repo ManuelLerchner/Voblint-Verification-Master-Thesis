@@ -344,7 +344,7 @@ where
                    \<squnion> (if is_frame_entry g v then frame_seed c else bot);
             intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
-                        (non_enter_predecessor_list g v);
+                        (predecessor_list g v);
             comb = map (\<lambda>(cc, ex, dst). cmb c dst cc ex)
                        (combine_predecessor_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb)
@@ -359,7 +359,7 @@ lemma eq_side_cfg_T_eff_cmp_seed_dg:
      \<tau>
      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
               (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-           (non_enter_predecessor_list g v)
+           (predecessor_list g v)
       @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex)
             (combine_predecessor_list g v))) bot"
   by (simp add: side_cfg_T_eff_cmp_seed_dg_def Let_def

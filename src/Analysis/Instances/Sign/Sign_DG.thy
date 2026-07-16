@@ -54,14 +54,13 @@ theorem sign_dg_post_solution_collect_sound:
     and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
     and cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
   shows "cfg_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
   unfolding sign_dg_gamma_def
   by (rule sign_dg.dg_post_solution_collect_sound
         [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_combine
-            finE no_enter finC sound0[folded gamma_unit_def]])
+            finE finC sound0[folded gamma_unit_def]])
 
 subsection \<open>Keyed context probe: two Sign contexts, one solution\<close>
 

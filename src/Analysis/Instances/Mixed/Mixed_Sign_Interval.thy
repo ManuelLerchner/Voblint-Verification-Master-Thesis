@@ -170,13 +170,12 @@ theorem mixed_si_post_solution_postfix:
     and cover_combine:
       "\<And>cc ex v dst. (cc, ex, v, dst) \<in> combines g \<Longrightarrow> (v, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter: "\<And>u a v. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
   shows "mixed_si_postfix g s0d s0g sigma"
   unfolding mixed_si_postfix_dg
   by (rule mixed_si.dg_post_solution_postfix
         [OF pp[unfolded mixed_si_generator_dg]
-            cover_entry cover_edge cover_combine finE no_enter finC])
+            cover_entry cover_edge cover_combine finE finC])
 
 theorem mixed_si_postfix_collect_sound:
   assumes pf: "mixed_si_postfix g s0d s0g sigma"
@@ -200,8 +199,6 @@ corollary mixed_si_post_solution_collect_sound:
     and cover_combine:
       "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
     and finE: "finite (edges g)"
-    and no_enter:
-      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> \<not> is_enter_action a"
     and finC: "finite (combines g)"
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
@@ -209,7 +206,7 @@ corollary mixed_si_post_solution_collect_sound:
   unfolding mixed_si_gamma_dg
   apply (rule mixed_si.dg_post_solution_collect_sound
         [OF pp[unfolded mixed_si_generator_dg]
-            cover_entry cover_edge cover_combine finE no_enter finC])
+            cover_entry cover_edge cover_combine finE finC])
   using soundD soundG unfolding gamma_dg_def by auto
 
 section \<open>Executable instance\<close>
