@@ -170,29 +170,6 @@ lemma enter_state_in_cover_seed:
   unfolding gamma_state_def cover_seed_def enter_state_def
   using glob zero by simp
 
-text \<open>A store position outside the bound formals is untouched by \<^const>\<open>bind_formals\<close>.\<close>
-lemma bind_formals_notin:
-  "x \<notin> set xs \<Longrightarrow> bind_formals xs vs st x = st x"
-proof (induction xs arbitrary: vs st)
-  case Nil
-  show ?case by (simp add: bind_formals_def)
-next
-  case (Cons y ys)
-  note prem = Cons.prems and IH = Cons.IH
-  have xy: "x \<noteq> y" and xys: "x \<notin> set ys" using prem by auto
-  show ?case
-  proof (cases vs)
-    case Nil
-    thus ?thesis by (simp add: bind_formals_def)
-  next
-    case (Cons v vs')
-    have "bind_formals (y # ys) vs st x = bind_formals ys vs' (st(y := v)) x"
-      by (simp add: bind_formals_def Cons)
-    also have "\<dots> = (st(y := v)) x" using IH[OF xys] .
-    also have "\<dots> = st x" using xy by simp
-    finally show ?thesis .
-  qed
-qed
 
 text \<open>With value passing the callee-entry locals hold the (arbitrary) actuals, so the
   local seed point must cover every value; then the entered store --- formals bound over
@@ -211,9 +188,8 @@ proof -
     show "bind_formals xs vs (enter_state s) x \<in> gamma (cover_seed pz fs kc x)"
     proof (cases "is_global x")
       case True
-      hence "x \<notin> set xs" using loc by (auto simp: local_formals_def)
-      hence "bind_formals xs vs (enter_state s) x = enter_state s x"
-        by (rule bind_formals_notin)
+      have "bind_formals xs vs (enter_state s) x = enter_state s x"
+        by (rule bind_formals_global[OF loc True])
       also have "\<dots> = s x" using True by (simp add: enter_state_def)
       finally show ?thesis using glob[OF True] True by (simp add: cover_seed_def)
     next

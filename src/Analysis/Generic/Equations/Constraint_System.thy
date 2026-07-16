@@ -975,6 +975,15 @@ definition local_formals :: "vname list \<Rightarrow> bool" where
 lemma local_formals_Nil [simp]: "local_formals []"
   unfolding local_formals_def by simp
 
+text \<open>Concrete companion of \<open>bind_formals_abs_global\<close>: binding local
+  formals leaves the global slots of the store untouched.\<close>
+lemma bind_formals_global:
+  assumes lf: "local_formals xs" and g: "is_global x"
+  shows "bind_formals xs vs s x = s x"
+proof -
+  have "x \<notin> set xs" using lf g by (auto simp: local_formals_def)
+  thus ?thesis by (rule bind_formals_nonformal)
+qed
 lemma bind_formals_abs_global:
   assumes "local_formals xs" and "is_global x"
   shows "bind_formals_abs xs avs \<sigma> x = \<sigma> x"
