@@ -119,6 +119,66 @@ lemma route_combine_etf_full:
   unfolding etf_full_def route_combine_def
   by (simp add: Let_def restrict_local_global_join glob_env_gname sup_assoc)
 
+
+subsection \<open>Shared soundness skeleton for the routed families\<close>
+
+text \<open>Both routed families reassemble the source state and apply the same pure
+  sign step, so \<open>etf_full\<close> collapses to that step regardless of the routing.
+  Given the six collapse facts, the \<open>sound_effectful_transfer\<close> obligations are
+  discharged uniformly -- the routed families below differ only in their
+  routing, not their soundness.\<close>
+lemma route_family_etf_sound:
+  fixes E :: "(gname, sign) effectful_domain_transfer"
+  assumes nop: "\<And>u \<sigma>. etf_full (etf_nop E u) \<sigma> = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
+    and assign: "\<And>x a u \<sigma>. etf_full (etf_assign E x a u) \<sigma>
+                   = tf_assign sign_tf x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+    and assm: "\<And>b u \<sigma>. etf_full (etf_assume E b u) \<sigma>
+                   = tf_assume sign_tf b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+    and assm_not: "\<And>b u \<sigma>. etf_full (etf_assume_not E b u) \<sigma>
+                   = tf_assume_not sign_tf b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+    and enter: "\<And>xs es u \<sigma>. etf_full (etf_enter E xs es u) \<sigma>
+                   = tf_enter sign_tf xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+    and combine: "\<And>dst cc ex \<sigma>. etf_full (etf_combine E dst cc ex) \<sigma>
+                   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
+  shows "sound_effectful_transfer E"
+proof (unfold_locales)
+  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            s \<in> \<lbrakk>etf_collecting_full (etf_nop E u) \<sigma>\<rbrakk>)"
+    by (auto simp add: nop intro: in_gamma_etf_collecting_full)
+next
+  show "\<forall>x a u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            s(x := aval a s)
+              \<in> \<lbrakk>etf_collecting_full (etf_assign E x a u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assign
+    by (auto simp add: assign intro: in_gamma_etf_collecting_full)
+next
+  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume E b u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assume
+    by (auto simp add: assm intro: in_gamma_etf_collecting_full)
+next
+  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
+          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not E b u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_assume_not
+    by (auto simp add: assm_not intro: in_gamma_etf_collecting_full)
+next
+  show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+              \<in> \<lbrakk>etf_collecting_full (etf_enter E xs es u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_enter
+    by (auto simp add: enter intro: in_gamma_etf_collecting_full)
+next
+  show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+       (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
+           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
+             combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine E dst cc ex) \<sigma>\<rbrakk>)"
+    by (auto simp: combine intro: combine_collect_sound)
+qed
 subsection \<open>The flag-routed effectful transfer record\<close>
 
 text \<open>
@@ -173,44 +233,8 @@ subsection \<open>Soundness: a non-unit witness of sound_effectful_transfer\<clo
 
 theorem flag_etf_sound:
   "sound_effectful_transfer flag_etf"
-proof (unfold_locales)
-  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            s \<in> \<lbrakk>etf_collecting_full (etf_nop flag_etf u) \<sigma>\<rbrakk>)"
-    by (auto simp add: flag_etf_full_nop intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>x a u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            s(x := aval a s)
-              \<in> \<lbrakk>etf_collecting_full (etf_assign flag_etf x a u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_assign
-    by (auto simp add: flag_etf_full_assign intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume flag_etf b u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_assume
-    by (auto simp add: flag_etf_full_assume intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not flag_etf b u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_assume_not
-    by (auto simp add: flag_etf_full_assume_not intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
-              \<in> \<lbrakk>etf_collecting_full (etf_enter flag_etf xs es u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_enter
-    by (auto simp add: flag_etf_full_enter intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>dst cc ex \<sigma>.
-       inr_slot_locals_bot \<sigma> \<longrightarrow>
-       (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine flag_etf dst cc ex) \<sigma>\<rbrakk>) "
-    by (auto simp: flag_etf_full_combine intro: combine_collect_sound)
-qed
+  by (rule route_family_etf_sound[OF flag_etf_full_nop flag_etf_full_assign
+        flag_etf_full_assume flag_etf_full_assume_not flag_etf_full_enter flag_etf_full_combine])
 
 subsection \<open>Precision: the two named slots stay distinct\<close>
 
@@ -392,43 +416,8 @@ lemma named_etf_full_combine:
 
 theorem named_etf_sound:
   "sound_effectful_transfer named_etf"
-proof (unfold_locales)
-  show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            s \<in> \<lbrakk>etf_collecting_full (etf_nop named_etf u) \<sigma>\<rbrakk>)"
-    by (auto simp add: named_etf_full_nop intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>x a u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            s(x := aval a s)
-              \<in> \<lbrakk>etf_collecting_full (etf_assign named_etf x a u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_assign
-    by (auto simp add: named_etf_full_assign intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume named_etf b u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_assume
-    by (auto simp add: named_etf_full_assume intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
-          \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not named_etf b u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_assume_not
-    by (auto simp add: named_etf_full_assume_not intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
-              \<in> \<lbrakk>etf_collecting_full (etf_enter named_etf xs es u) \<sigma>\<rbrakk>)"
-    using sign_tf_sound_enter
-    by (auto simp add: named_etf_full_enter intro: in_gamma_etf_collecting_full)
-next
-  show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
-          (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-           \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>. combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine named_etf dst cc ex) \<sigma>\<rbrakk>)"
-    by (auto simp: named_etf_full_combine intro: combine_collect_sound)
-qed
+  by (rule route_family_etf_sound[OF named_etf_full_nop named_etf_full_assign
+        named_etf_full_assume named_etf_full_assume_not named_etf_full_enter named_etf_full_combine])
 
 subsection \<open>TD_side preconditions for named_etf (constant routing is monotone)\<close>
 
