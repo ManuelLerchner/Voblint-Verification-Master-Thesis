@@ -197,28 +197,14 @@ qed
 subsection \<open>Discharging the return combine from an abstract bound\<close>
 
 text \<open>
-  The clean analogue of \<open>combine_case_cmp_sound\<close>: the raw \<open>combine_le\<close> / \<open>COMB\<close>
-  premise (\<open><s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>\<close>, the concrete procedure-return combine) reduces
-  to an \<^emph>\<open>abstract\<close> bound on the reassembled continuation
-  \<^term>\<open>\<langle>sc|se\<rangle> :: 'a abs_state\<close>.  Given \<open>\<langle>sc|se\<rangle> \<le> sr\<close>, any concrete return
-  \<open><s|t>\<close> assembled from a caller store sound for \<open>sc\<close> and a callee-exit store sound
-  for \<open>se\<close> lies in \<open>\<lbrakk>sr\<rbrakk>\<close>: pure \<open>combine_states_sound\<close> carried to the return
-  slot by \<open>gamma_state_mono\<close>.  On the strip combine this bound fails once a
-  callee writes a global that is read back (the returned local has that global at
-  \<open>\<bottom>\<close>, so \<open>\<langle>sc|se\<rangle>\<close> is strictly below the concrete return); on the rehydrating
-  combine (\<^const>\<open>combine_abs\<close> at the return slot) it holds by construction.
+  \<open>combine_abs_bound_sound\<close> (in \<^theory>\<open>Voblint_Analysis.Constraint_System\<close>)
+  reduces the raw \<open>combine_le\<close> / \<open>COMB\<close> premise (the concrete return combine
+  \<open><s|t> \<in> \<lbrakk>sg (Inl ret)\<rbrakk>\<close>) to an abstract bound
+  \<open>combine_collect_abs dst sc se \<le> sr\<close> on the reassembled continuation.  On the
+  rehydrating combine (\<^const>\<open>combine_abs\<close> at the return slot) that bound holds by
+  construction, so no \<open><s|t>\<close> obligation is exposed to the caller.
 \<close>
 
-lemma combine_abs_bound_sound:
-  fixes sc se sr :: "'a abs_state"
-  assumes bound: "combine_collect_abs dst sc se \<le> sr"
-    and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
-  shows "combine_collect dst s t \<in> \<lbrakk>sr\<rbrakk>"
-proof -
-  have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst sc se\<rbrakk>"
-    using sc se by (rule combine_collect_sound)
-  thus ?thesis using gamma_state_mono[OF bound] by blast
-qed
 
 text \<open>
   Flat collecting soundness with the return combine as an abstract bound

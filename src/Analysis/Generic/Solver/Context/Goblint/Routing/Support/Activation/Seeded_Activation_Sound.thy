@@ -290,16 +290,6 @@ proof -
     by (rule edge_of_bound[OF bound s step])
 qed
 
-text \<open>\<open>COMB\<close> discharge: the abstract combine bound (met by the rehydrating combine)
-  carries any concrete return store into the resumed-context slot
-  (\<open>combine_abs_bound_sound\<close>, Goblint \<open>Spec.combine\<close>).\<close>
-lemma seeded_activation_comb:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a abs_state"
-  assumes bound: "combine_collect_abs dst (sg (Inl (cl, c1))) (sg (Inl (ex, c2))) \<le> sg (Inl (v, combc c1 c2))"
-    and sc: "s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>" and se: "t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>"
-  shows "combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
-  using bound combine_collect_sound[OF sc se] gamma_state_mono by blast
-
 subsection \<open>The packaged seeded activation-soundness theorem\<close>
 
 text \<open>
@@ -349,7 +339,7 @@ next
   have bnd: "combine_collect_abs dst (sg (Inl (cl, c1))) (sg (Inl (ex, c2))) \<le> sg (Inl (v, combc c1 c2))"
     by (rule COMB_BOUND[OF c])
   show "combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
-    using bnd combine_collect_sound[OF sc se] gamma_state_mono by blast
+    by (rule combine_abs_bound_sound[OF bnd sc se])
 qed
 
 subsection \<open>The covering-seed packaged theorem: SEED_G reduced to globals + zero-point\<close>
@@ -420,7 +410,7 @@ next
   have bnd: "combine_collect_abs dst (sg (Inl (cl, c1))) (sg (Inl (ex, c2))) \<le> sg (Inl (v, combc c1 c2))"
     by (rule COMB_BOUND[OF c])
   show "combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
-    using bnd combine_collect_sound[OF sc se] gamma_state_mono by blast
+    by (rule combine_abs_bound_sound[OF bnd sc se])
 qed
 
 end

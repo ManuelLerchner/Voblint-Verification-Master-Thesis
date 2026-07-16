@@ -450,6 +450,25 @@ next
     by auto
 qed
 
+text \<open>
+  Discharge the concrete return combine from an abstract bound: given
+  \<open>combine_collect_abs dst sc se \<le> sr\<close>, any concrete return assembled from a
+  caller store sound for \<open>sc\<close> and a callee-exit store sound for \<open>se\<close> lies in
+  \<open>\<lbrakk>sr\<rbrakk>\<close>.  @{thm combine_collect_sound} carried to the bound by
+  @{thm gamma_state_mono}.  The order-theoretic \<open>combine_bound\<close> shape is
+  checkable against a post-solution, so no raw \<open><s|t>\<close> obligation reaches callers.
+\<close>
+lemma combine_abs_bound_sound:
+  fixes sc se sr :: "'a::sound_domain abs_state"
+  assumes bound: "combine_collect_abs dst sc se \<le> sr"
+    and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
+  shows "combine_collect dst s t \<in> \<lbrakk>sr\<rbrakk>"
+proof -
+  have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst sc se\<rbrakk>"
+    using sc se by (rule combine_collect_sound)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
 definition rhs ::
     "cfg
      \<Rightarrow> 'a domain_transfer
