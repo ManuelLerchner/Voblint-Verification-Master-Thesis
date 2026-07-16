@@ -31,14 +31,16 @@ text \<open>
 subsection \<open>Global key: real globals vs callee-entry seed slots\<close>
 
 text \<open>
-  The extended global-key type keeps the two flow-insensitive roles apart.
-  \<open>GlobAt\<close> keys a real per-context global slot (unused by \<open>twice\<close>, which has
-  no globals); \<open>Seed\<close> keys the callee-entry seed slot at a program point
-  under a context.  Pattern matching makes the separation explicit --- the two
+  The extended global-key type keeps the two flow-insensitive roles apart, matching
+  Goblint's constraint system: analysis globals are \<^emph>\<open>shared\<close> across contexts (read
+  and written through a single global unknown, the context never keyed in), while
+  callee-entry local seeds are context-sensitive.  \<open>Global\<close> is the one shared
+  flow-insensitive global slot; \<open>Seed\<close> keys the callee-entry seed slot at a program
+  point under a context.  Pattern matching makes the separation explicit --- the two
   never share a slot.
 \<close>
 
-datatype gk = GlobAt "ivl" | Seed pp "ivl"
+datatype gk = Global | Seed pp "ivl"
 
 subsection \<open>The routed context hooks\<close>
 
@@ -81,7 +83,7 @@ definition cmb_ivl ::
        (case enter_successor_list g cc of
           (w, a) # _ \<Rightarrow>
             QueryL (ex, route_ivl (locals dcl) a) (\<lambda>dex.
-              Side (GlobAt ctx) (DG bot (fst (dgs_combine Spoly dst (locals dcl) (locals dex) bot)))
+              Side Global (DG bot (fst (dgs_combine Spoly dst (locals dcl) (locals dex) bot)))
                 (Answer (DG (snd (dgs_combine Spoly dst (locals dcl) (locals dex) bot)) bot)))
         | [] \<Rightarrow> Answer (DG bot bot)))"
 
@@ -90,7 +92,7 @@ subsection \<open>The routed equation system and its solution\<close>
 definition twice_ctx_eqs ::
   "(pp \<times> ivl, gk, (ivl st, ivl st) dg_state) eqsT" where
   "twice_ctx_eqs =
-     side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list GlobAt
+     side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
        (cmb_ivl twice_cfg) (extra_ivl twice_cfg)
        twice_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 

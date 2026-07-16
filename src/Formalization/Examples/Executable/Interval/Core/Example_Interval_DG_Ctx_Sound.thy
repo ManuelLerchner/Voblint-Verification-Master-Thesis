@@ -91,7 +91,7 @@ definition cmb_abs ::
        (case enter_successor_list g cc of
           (w, a) # _ \<Rightarrow>
             QueryL (ex, route_abs (locals dcl) a) (\<lambda>dex.
-              Side (GlobAt ctx) (DG bot (fst (dgs_combine Sabs dst (locals dcl) (locals dex) bot)))
+              Side Global (DG bot (fst (dgs_combine Sabs dst (locals dcl) (locals dex) bot)))
                 (Answer (DG (snd (dgs_combine Sabs dst (locals dcl) (locals dex) bot)) bot)))
         | [] \<Rightarrow> Answer (DG bot bot)))"
 
@@ -205,7 +205,7 @@ text \<open>The generic bridge \<open>part_post_solution_seed_dg_st_to_abs\<clos
 
 theorem twice_ctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list GlobAt
+     (side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
         (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
         (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st)))
      (cfg_exit twice_cfg, bot) (fun_of_dg_st \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"

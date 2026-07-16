@@ -43,7 +43,7 @@ definition ivl_ctx_sg :: "pp \<times> ivl + gk \<Rightarrow> ivl abs_state" wher
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst twice_ctx_sol
            then locals ((fun_of_dg_st \<circ> snd twice_ctx_sol) (Inl (v, ctx)))
-                \<squnion> globs ((fun_of_dg_st \<circ> snd twice_ctx_sol) (Inr (GlobAt ctx)))
+                \<squnion> globs ((fun_of_dg_st \<circ> snd twice_ctx_sol) (Inr Global))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
@@ -60,7 +60,7 @@ abbreviation sigma_abs :: "pp \<times> ivl + gk \<Rightarrow> (ivl abs_state, iv
   "sigma_abs \<equiv> fun_of_dg_st \<circ> snd twice_ctx_sol"
 
 abbreviation gen_abs :: "(pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
-  "gen_abs \<equiv> side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list GlobAt
+  "gen_abs \<equiv> side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
        (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
        (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st))"
 
@@ -80,7 +80,7 @@ text \<open>The two faces of the guarded reader: on the solved domain it is the 
 lemma ivl_ctx_sg_covered:
   "(v, ctx) \<in> fst twice_ctx_sol
    \<Longrightarrow> ivl_ctx_sg (Inl (v, ctx))
-       = locals (sigma_abs (Inl (v, ctx))) \<squnion> globs (sigma_abs (Inr (GlobAt ctx)))"
+       = locals (sigma_abs (Inl (v, ctx))) \<squnion> globs (sigma_abs (Inr Global))"
   by (simp add: ivl_ctx_sg_def)
 
 lemma ivl_ctx_sg_uncovered_empty:
@@ -158,41 +158,42 @@ lemma twice_fwd_closed:
 subsection \<open>The routed intra edge bound (EDGE, covered branch)\<close>
 
 text \<open>The routed intra edge tree denotes the interval \<^const>\<open>dg_spec_step\<close> read at the
-  context-copied local slot \<open>(u, c)\<close> and the real-global slot \<open>GlobAt c\<close> --- the routed
-  analogue of \<open>dg_edge_tree_local\<close> / \<open>dg_edge_tree_global\<close>.\<close>
+  context-copied local slot \<open>(u, ctx)\<close> and the shared global slot \<open>Global\<close> --- the routed
+  analogue of \<open>dg_edge_tree_local\<close> / \<open>dg_edge_tree_global\<close>.  The global key ignores the
+  context (\<open>gkey = (\<lambda>_. Global)\<close>): analysis globals are flow-insensitive and shared.\<close>
 
 lemma edge_tree_local_ctx:
   "locals (traverse_rhs
-       (map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))) sigma_abs)
-   = snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))"
+       (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))) sigma_abs)
+   = snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))"
   unfolding apply_dg_spec_def
   by (subst traverse_intra_cmp) (simp add: traverse_dg_edge_tree)
 
 lemma edge_tree_global_ctx:
   "globs (sides_of_rhs
-       (map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-       sigma_abs (Inr (GlobAt ctx)))
-   = fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))"
+       (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
+       sigma_abs (Inr Global))
+   = fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))"
 proof -
   have step1:
-    "sides_of_rhs (map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-       sigma_abs (Inr (GlobAt ctx))
+    "sides_of_rhs (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
+       sigma_abs (Inr Global)
      = sides_of_rhs (apply_dg_spec Sabs a u)
-         (\<lambda>z. sigma_abs (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. GlobAt ctx) z)) (Inr ())"
+         (\<lambda>z. sigma_abs (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. Global) z)) (Inr ())"
   proof -
-    have "sides_of_rhs (map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-            sigma_abs (Inr ((\<lambda>_. GlobAt ctx) ()))
+    have "sides_of_rhs (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
+            sigma_abs (Inr ((\<lambda>_. Global) ()))
         = sides_of_rhs (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))
-            (\<lambda>z. sigma_abs (map_sum id (\<lambda>_. GlobAt ctx) z)) (Inr ())"
+            (\<lambda>z. sigma_abs (map_sum id (\<lambda>_. Global) z)) (Inr ())"
       by (rule sides_map_gtree_unit)
     thus ?thesis by (simp add: sides_map_ltree_Inr sum.map_comp o_def)
   qed
-  have "globs (sides_of_rhs (map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-          sigma_abs (Inr (GlobAt ctx)))
+  have "globs (sides_of_rhs (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
+          sigma_abs (Inr Global))
       = globs (sides_of_rhs (apply_dg_spec Sabs a u)
-          (\<lambda>z. sigma_abs (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. GlobAt ctx) z)) (Inr ()))"
+          (\<lambda>z. sigma_abs (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. Global) z)) (Inr ()))"
     by (rule arg_cong[OF step1])
-  also have "\<dots> = fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))"
+  also have "\<dots> = fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))"
     unfolding apply_dg_spec_def by (simp add: sides_dg_edge_tree_Inr)
   finally show ?thesis .
 qed
@@ -206,7 +207,7 @@ abbreviation gen_acc0 :: "pp \<Rightarrow> ivl abs_state" where
 
 abbreviation gen_trees :: "pp \<Rightarrow> ivl \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree list" where
   "gen_trees v ctx \<equiv>
-     map (\<lambda>(u, a). map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
+     map (\<lambda>(u, a). map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
          (non_enter_predecessor_list twice_cfg v)
      @ map (\<lambda>(cc, ex, dst). cmb_abs twice_cfg ctx dst cc ex) (combine_predecessor_list twice_cfg v)
      @ extra_abs twice_cfg ctx v"
@@ -224,14 +225,14 @@ text \<open>\<^bold>\<open>edgeD.\<close>  The interval step's Answer at a cover
 lemma edge_bound_local:
   assumes cov_v: "(v, ctx) \<in> fst twice_ctx_sol"
     and e: "(u, a, v) \<in> edges twice_cfg" and ne: "\<not> is_enter_action a"
-  shows "snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))
+  shows "snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
            \<le> locals (sigma_abs (Inl (v, ctx)))"
 proof -
-  let ?t = "map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))"
+  let ?t = "map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))"
   have pred: "(u, a) \<in> set (non_enter_predecessor_list twice_cfg v)"
     using e ne by (simp add: non_enter_predecessor_list_mem set_predecessor_list[OF twice_finE] predecessors_def)
   hence mem: "?t \<in> set (gen_trees v ctx)" by (force intro: rev_image_eqI)
-  have "snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))
+  have "snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
       = locals (traverse_rhs ?t sigma_abs)"
     by (simp add: edge_tree_local_ctx)
   also have "\<dots> \<le> side_acc_dg (gen_acc0 v) sigma_abs (gen_trees v ctx)"
@@ -249,24 +250,24 @@ text \<open>\<^bold>\<open>edgeG.\<close>  The interval step's Side at a covered
 lemma edge_bound_global:
   assumes cov_v: "(v, ctx) \<in> fst twice_ctx_sol"
     and e: "(u, a, v) \<in> edges twice_cfg" and ne: "\<not> is_enter_action a"
-  shows "fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))
-           \<le> globs (sigma_abs (Inr (GlobAt ctx)))"
+  shows "fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
+           \<le> globs (sigma_abs (Inr Global))"
 proof -
-  let ?t = "map_gtree (\<lambda>_. GlobAt ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))"
+  let ?t = "map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))"
   have pred: "(u, a) \<in> set (non_enter_predecessor_list twice_cfg v)"
     using e ne by (simp add: non_enter_predecessor_list_mem set_predecessor_list[OF twice_finE] predecessors_def)
   hence mem: "?t \<in> set (gen_trees v ctx)" by (force intro: rev_image_eqI)
-  have "fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx)))))
-      = globs (sides_of_rhs ?t sigma_abs (Inr (GlobAt ctx)))"
+  have "fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
+      = globs (sides_of_rhs ?t sigma_abs (Inr Global))"
     by (simp add: edge_tree_global_ctx)
-  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (gen_acc0 v) (gen_trees v ctx)) sigma_abs (Inr (GlobAt ctx)))"
-    using sides_le_side_rhs_fold_dg[OF mem, where k = "Inr (GlobAt ctx)"]
+  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (gen_acc0 v) (gen_trees v ctx)) sigma_abs (Inr Global))"
+    using sides_le_side_rhs_fold_dg[OF mem, where k = "Inr Global"]
     by (simp add: less_eq_dg_state_def)
-  also have "\<dots> \<le> globs (sides_of_rhs (gen_abs (v, ctx)) sigma_abs (Inr (GlobAt ctx)))"
-    using sides_fold_le_gen_abs[where k = "Inr (GlobAt ctx)"]
+  also have "\<dots> \<le> globs (sides_of_rhs (gen_abs (v, ctx)) sigma_abs (Inr Global))"
+    using sides_fold_le_gen_abs[where k = "Inr Global"]
     by (simp add: less_eq_dg_state_def)
-  also have "\<dots> \<le> globs (sigma_abs (Inr (GlobAt ctx)))"
-    using pp_sides_bound[OF cov_v, THEN le_funD, of "Inr (GlobAt ctx)"]
+  also have "\<dots> \<le> globs (sigma_abs (Inr Global))"
+    using pp_sides_bound[OF cov_v, THEN le_funD, of "Inr Global"]
     by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
@@ -288,7 +289,7 @@ next
   case True
   hence cov_v: "(v, ctx) \<in> fst twice_ctx_sol" using e ne by (rule twice_fwd_closed)
   let ?d = "locals (sigma_abs (Inl (u, ctx)))"
-  let ?g = "globs (sigma_abs (Inr (GlobAt ctx)))"
+  let ?g = "globs (sigma_abs (Inr Global))"
   have sin': "s \<in> gamma_unit ?d ?g"
     using sin True by (simp add: ivl_ctx_sg_covered gamma_unit_def)
   have "{s} \<subseteq> gamma_unit ?d ?g" using sin' by simp
@@ -300,11 +301,35 @@ next
   finally have "s' \<in> (case dg_spec_step Sabs a ?d ?g of (g', d') \<Rightarrow> gamma_unit d' g')" .
   hence "s' \<in> gamma_unit (snd (dg_spec_step Sabs a ?d ?g)) (fst (dg_spec_step Sabs a ?d ?g))"
     by (simp add: case_prod_beta)
-  also have "\<dots> \<subseteq> gamma_unit (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr (GlobAt ctx))))"
+  also have "\<dots> \<subseteq> gamma_unit (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
     by (rule gamma_unit_mono[OF edge_bound_local[OF cov_v e ne] edge_bound_global[OF cov_v e ne]])
   also have "\<dots> = \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     using cov_v by (simp add: ivl_ctx_sg_covered gamma_unit_def)
   finally show ?thesis .
+qed
+
+text \<open>
+  \<^bold>\<open>Regression: real globals are shared, not context-indexed.\<close>  The reader combines
+  context-sensitive locals \<open>\<sigma> (Inl (v, ctx))\<close> with the \<^emph>\<open>single\<close> shared global slot
+  \<open>\<sigma> (Inr Global)\<close> --- the same slot for every context (\<open>gkey = (\<lambda>_. Global)\<close>),
+  matching Goblint's flow-insensitive globals.  The initial global value \<open>0\<close> is present
+  at \<open>Global\<close> and is read identically under the main context and both callee contexts,
+  so the entered store's preserved globals are covered without copying global state into
+  any callee context.\<close>
+
+lemma global_init_present:
+  "lookup_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = Ivl (Fin 0) (Fin 0)"
+  unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
+
+lemma global_slot_shared:
+  "ivl_ctx_sg (Inl (0, ctx_call1)) ''Gx'' = ivl_ctx_sg (Inl (0, ctx_call2)) ''Gx''"
+proof -
+  have "lookup_st (locals (snd twice_ctx_sol (Inl (0, ctx_call1)))) ''Gx''
+      = lookup_st (locals (snd twice_ctx_sol (Inl (0, ctx_call2)))) ''Gx''"
+    unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
+  thus ?thesis
+    unfolding ivl_ctx_sg_def
+    by (simp add: callee_covered_call1 callee_covered_call2)
 qed
 
 subsection \<open>Activation-indexed collecting soundness (obligation scaffold)\<close>
