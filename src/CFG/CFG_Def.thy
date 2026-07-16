@@ -279,6 +279,38 @@ lemma enter_predecessor_list_mem:
    \<Longrightarrow> (u, a) \<in> set (enter_predecessor_list g v)"
   unfolding enter_predecessor_list_def by auto
 
+text \<open>
+  The dual enumeration used by the context-sensitive generator: the
+  \<^const>\<open>EA_Enter\<close> edges leaving a call node \<open>u\<close>, each paired with its callee
+  entry point \<open>w\<close>.  A monovariant generator folds enter edges as predecessors of
+  the callee entry; a context-sensitive one instead publishes, from the caller
+  side, a routed callee-entry seed --- for which it enumerates a node's outgoing
+  enters here.
+\<close>
+
+definition enter_successor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
+  "enter_successor_list g u =
+     map (\<lambda>(u', a, w). (w, a))
+       (filter (\<lambda>(u', a, w). u' = u \<and> is_enter_action a) (cfg_edges_list g))"
+
+lemma set_enter_successor_list:
+  assumes "finite (edges g)"
+  shows "set (enter_successor_list g u)
+     = {(w, a) |a w. (u, a, w) \<in> edges g \<and> is_enter_action a}"
+  unfolding enter_successor_list_def
+  using set_cfg_edges_list[OF assms]
+  by (force simp: image_iff)
+
+lemma enter_successor_list_action:
+  "(w, a) \<in> set (enter_successor_list g u) \<Longrightarrow> is_enter_action a"
+  unfolding enter_successor_list_def by auto
+
+lemma enter_successor_list_edge:
+  assumes "finite (edges g)"
+    and "(w, a) \<in> set (enter_successor_list g u)"
+  shows "(u, a, w) \<in> edges g"
+  using assms set_enter_successor_list[OF assms(1)] by auto
+
 (* Stable combine enumeration for the interprocedural TD bridge. *)
 
 definition cfg_combines_list :: "cfg \<Rightarrow> combine_info list" where

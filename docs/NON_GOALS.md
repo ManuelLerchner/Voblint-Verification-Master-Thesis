@@ -35,6 +35,11 @@ backlog live in `docs/ROADMAP.md`; this file is only the "not doing" half.
 
 - **Not re-deriving HOL-IMP.** Built on `HOL-IMP` (`Com`, `Big_Step`); IMP2 is
   the surface. No fresh operational semantics from scratch.
+- **No C/CIL memory semantics in the current scope.** IMP2 has no addresses,
+  pointer aliasing, heap allocation, or C front-end translation theorem. Array
+  syntax is a separate deferred extension; see
+  `docs/ARRAY_SYNTAX_EXTENSION.md` and
+  `docs/GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md`.
 - **No new solver.** The TD solver is vendored and already verified
   (`stilscher/td-verification`); it is not re-proved here.
 - **No unicode in `.thy` sources.** ASCII Isabelle tokens only — batch build

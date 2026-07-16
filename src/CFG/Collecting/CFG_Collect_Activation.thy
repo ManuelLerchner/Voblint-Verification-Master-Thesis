@@ -13,7 +13,9 @@ text \<open>
 
     \<^item> ordinary (non-\<^const>\<open>EA_Enter\<close>) edges keep the context (\<open>intra\<close>);
     \<^item> an \<^const>\<open>EA_Enter\<close> edge switches to the routed callee context
-      \<open>enterc c (last tau)\<close> --- Goblint's \<open>context f (enter ...)\<close> (\<open>enter\<close>);
+      \<open>enterc c s'\<close>, where \<open>s'\<close> is the post-enter callee-entry store --- Goblint's
+      \<open>context f (enter ...)\<close>, which reads the callee state, so argument-bound
+      formals are visible to routing (\<open>enter\<close>);
     \<^item> a combine restores the caller context \<open>combc c1 c2\<close> from the caller's own
       threaded context \<open>c1\<close> --- Goblint's \<open>combine_env\<close> / \<open>combine_assign\<close> (\<open>combine\<close>).
 
@@ -39,7 +41,7 @@ where
 | proc_entry:
     "(cfg_entry g, EA_Enter xs es, v) \<in> edges g \<Longrightarrow>
      s \<in> edge_collect (EA_Enter xs es) S \<Longrightarrow>
-     trace_witness_act enterc combc seedc g S v seedc [s]"
+     trace_witness_act enterc combc seedc g S v (enterc seedc s) [s]"
 | intra: "(u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
       \<Longrightarrow> trace_witness_act enterc combc seedc g S u c tr
       \<Longrightarrow> edge_step a (last tr) = Some s'
@@ -48,7 +50,7 @@ where
       \<Longrightarrow> trace_witness_act enterc combc seedc g S u c tau
       \<Longrightarrow> edge_step (EA_Enter xs es) (last tau) = Some s'
       \<Longrightarrow> trace_witness_act enterc combc seedc g S v
-            (enterc c (last tau)) (tau @ [s'])"
+            (enterc c s') (tau @ [s'])"
 | combine: "(cl, ex, v, dst) \<in> combines g
       \<Longrightarrow> trace_witness_act enterc combc seedc g S cl c1 tau
       \<Longrightarrow> trace_witness_act enterc combc seedc g S ex c2 rho
@@ -72,13 +74,15 @@ lemma act_step_preserves_ctx:
   shows "trace_witness_act enterc combc seedc g S v c (tr @ [s'])"
   by (rule trace_witness_act.intra[OF assms])
 
-text \<open>Task 4 --- a callee entry sits at the routed callee context \<open>enterc c (last tau)\<close>.\<close>
+text \<open>Task 4 --- a callee entry sits at the routed callee context \<open>enterc c s'\<close>,
+  where \<open>s'\<close> is the post-enter callee-entry store (Goblint's \<open>context f (enter ...)\<close>
+  reads the callee state, so the argument-bound formals are visible to routing).\<close>
 lemma act_enter_routes_ctx:
   assumes "(u, EA_Enter xs es, v) \<in> edges g"
     and "trace_witness_act enterc combc seedc g S u c tau"
     and "edge_step (EA_Enter xs es) (last tau) = Some s'"
   shows "trace_witness_act enterc combc seedc g S v
-           (enterc c (last tau)) (tau @ [s'])"
+           (enterc c s') (tau @ [s'])"
   by (rule trace_witness_act.enter[OF assms])
 
 text \<open>Task 5 --- combine resumes the caller context via \<open>combc c1 c2\<close>, where \<open>c2\<close>

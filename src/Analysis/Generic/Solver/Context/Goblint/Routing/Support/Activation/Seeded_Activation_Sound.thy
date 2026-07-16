@@ -23,8 +23,10 @@ text \<open>
   Five purely semantic obligations, each at a FIXED threaded context, discharge
   soundness by induction on \<^const>\<open>trace_witness_act\<close>:
 
-    \<^item> \<open>ENTRY_G\<close> / \<open>PROC_ENTRY_G\<close>: the seed covers the start / procedure-entry stores
-      at the start context \<open>seedc\<close> (Goblint \<open>Spec.enter\<close>);
+    \<^item> \<open>ENTRY_G\<close>: the seed covers the start stores at the start context \<open>seedc\<close>
+      (Goblint \<open>Spec.enter\<close>).  The callee-relative \<open>proc_entry\<close> seed at a call from the
+      CFG entry is \<^emph>\<open>not\<close> a separate obligation: its routed context \<open>enterc seedc s\<close>
+      matches the \<open>enter\<close> rule, so it reduces to \<open>ENTRY_G\<close> stepped through \<open>SEED_G\<close>;
     \<^item> \<open>EDGE\<close>: an ordinary (non-\<^const>\<open>EA_Enter\<close>) edge preserves the context and covers
       the concrete step;
     \<^item> \<open>SEED_G\<close>: an \<^const>\<open>EA_Enter\<close> edge lands the entering store in the seeded callee
@@ -42,14 +44,11 @@ theorem activation_trace_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and combc :: "'c \<Rightarrow> 'c \<Rightarrow> 'c" and seedc :: 'c
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
-    and PROC_ENTRY_G: "\<And>v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
-        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and SEED_G: "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s))\<rbrakk>"
+        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
     and COMB: "\<And>cl ex v dst c1 c2 s t. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
@@ -60,8 +59,17 @@ proof (induction rule: trace_witness_act.induct)
   case (entry v s)
   thus ?case using ENTRY_G by simp
 next
+  \<comment> \<open>The callee-relative seed at a call from the CFG entry.  Its \<^emph>\<open>routed\<close> context
+     \<open>enterc seedc s\<close> is exactly the \<open>enter\<close> rule's target, so it reduces to the
+     start seed \<open>ENTRY_G\<close> stepped through \<open>SEED_G\<close> --- no separate obligation.\<close>
   case (proc_entry xs es v s)
-  thus ?case using PROC_ENTRY_G by simp
+  from proc_entry.hyps(2) obtain s0 where s0: "s0 \<in> S"
+    and seq: "s = bind_formals xs (map (\<lambda>e. aval e s0) es) (enter_state s0)" by auto
+  have step: "edge_step (EA_Enter xs es) s0 = Some s" by (simp add: seq)
+  have "s0 \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>" using ENTRY_G[OF s0] .
+  hence "s \<in> \<lbrakk>sg (Inl (v, enterc seedc s))\<rbrakk>"
+    by (rule SEED_G[OF proc_entry.hyps(1) _ step])
+  thus ?case by simp
 next
   case (intra u a v c tr s')
   have "s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -69,7 +77,7 @@ next
   thus ?case by simp
 next
   case (enter u xs es v c tau s')
-  have "s' \<in> \<lbrakk>sg (Inl (v, enterc c (last tau)))\<rbrakk>"
+  have "s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
     by (rule SEED_G[OF enter.hyps(1) enter.IH enter.hyps(3)])
   thus ?case by simp
 next
@@ -87,14 +95,11 @@ theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and combc :: "'c \<Rightarrow> 'c \<Rightarrow> 'c" and seedc :: 'c
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
-    and PROC_ENTRY_G: "\<And>v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
-        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and SEED_G: "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s))\<rbrakk>"
+        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
     and COMB: "\<And>cl ex v dst c1 c2 s t. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, combc c1 c2))\<rbrakk>"
@@ -106,7 +111,7 @@ proof
     unfolding cfg_collect_ctx_act_def by blast
   show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     unfolding st
-    by (rule activation_trace_sound[OF ENTRY_G PROC_ENTRY_G EDGE SEED_G COMB tr])
+    by (rule activation_trace_sound[OF ENTRY_G EDGE SEED_G COMB tr])
 qed
 
 subsection \<open>Discharging SEED_G and COMB from the closed reductions\<close>
@@ -280,8 +285,8 @@ text \<open>
   \<open>seeded_clean_edge_bound\<close>); \<open>COMB\<close> from the abstract combine bound
   (\<open>combine_abs_bound_sound\<close>, met by the rehydrating combine).  The remaining premises
   are exactly the domain-supplied contract of a seeded context-sensitive analysis:
-  seed \<open>\<gamma>\<close>-soundness at the start / procedure entry / call boundary
-  (\<open>ENTRY_G\<close> / \<open>PROC_ENTRY_G\<close> / \<open>SEED_G\<close>, Goblint \<open>Spec.enter\<close> + \<open>Spec.context\<close>) and the
+  seed \<open>\<gamma>\<close>-soundness at the start and the call boundary
+  (\<open>ENTRY_G\<close> / \<open>SEED_G\<close>, Goblint \<open>Spec.enter\<close> + \<open>Spec.context\<close>) and the
   return combine bound (\<open>COMB_BOUND\<close>, Goblint \<open>Spec.combine\<close>).  No digest, no
   \<open>'c :: finite\<close>, no \<open>eval\<close>: the context is threaded structurally by the witness.
 \<close>
@@ -294,15 +299,12 @@ theorem seeded_activation_collecting_sound:
                (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g (clean_etf_of_transfer tf) bot0 s0) x sg vars"
     and cov_edge: "\<And>kc u a v. (u, a, v) \<in> edges g \<Longrightarrow> (v, kc) \<in> vars"
     and ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
-    and PROC_ENTRY_G: "\<And>v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
-        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
     and SEED_G: "\<And>u v kc s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
-        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc kc s))\<rbrakk>"
+        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc kc s'))\<rbrakk>"
     and COMB_BOUND: "\<And>cl ex v dst c1 c2. (cl, ex, v, dst) \<in> combines g
         \<Longrightarrow> combine_collect_abs dst (sg (Inl (cl, c1))) (sg (Inl (ex, c2))) \<le> sg (Inl (v, combc c1 c2))"
   shows "cfg_collect_ctx_act enterc combc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[OF ENTRY_G PROC_ENTRY_G _ SEED_G])
+proof (rule activation_collect_sound[OF ENTRY_G _ SEED_G])
   fix u a v kc s s'
   assume e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
     and s: "s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>" and step: "edge_step a s = Some s'"
@@ -340,14 +342,11 @@ theorem seeded_activation_collecting_sound_cover:
                   (clean_etf_of_transfer tf) bot0 s0) x sg vars"
     and cov_edge: "\<And>kc u a v s. (u, a, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
         \<Longrightarrow> (v, kc) \<in> vars"
-    and cov_frame: "\<And>kc u v s xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
-        \<Longrightarrow> (v, enterc kc s) \<in> vars"
+    and cov_frame: "\<And>kc u v s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
+        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> (v, enterc kc s') \<in> vars"
     and ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
-    and PROC_ENTRY_G: "\<And>v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
-        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
-    and SEED_glob: "\<And>u v kc s xx xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
-        \<Longrightarrow> is_global xx \<Longrightarrow> s xx \<in> gamma (fs (enterc kc s) xx)"
+    and SEED_glob: "\<And>u v kc s s' xx xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, kc))\<rbrakk>
+        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> is_global xx \<Longrightarrow> s xx \<in> gamma (fs (enterc kc s') xx)"
     and cover: "\<And>n::int. n \<in> gamma pz"
     and wf_enter: "\<And>u xs es w. (u, EA_Enter xs es, w) \<in> edges g \<Longrightarrow> local_formals xs"
     and COMB_BOUND: "\<And>cl ex v dst c1 c2. (cl, ex, v, dst) \<in> combines g
@@ -356,10 +355,6 @@ theorem seeded_activation_collecting_sound_cover:
 proof (rule activation_collect_sound[where enterc = enterc and combc = combc and seedc = seedc
         and sg = sg and S = S and g = g])
   show "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>" by (rule ENTRY_G)
-next
-  show "\<And>v s xs es. (cfg_entry g, EA_Enter xs es, v) \<in> edges g
-        \<Longrightarrow> s \<in> edge_collect (EA_Enter xs es) S
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>" by (rule PROC_ENTRY_G)
 next
   fix u a v kc s s'
   assume e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
@@ -372,13 +367,17 @@ next
     and step: "edge_step (EA_Enter xs es) s = Some s'"
   have s'eq: "s' = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)"
     using step by simp
-  have seedg: "s' \<in> \<lbrakk>cover_seed pz fs (enterc kc s)\<rbrakk>"
-    unfolding s'eq
-    by (rule bind_formals_in_cover_seed[where fs = fs and kc = "enterc kc s" and pz = pz and s = s,
-          OF SEED_glob[OF e s] cover wf_enter[OF e]])
-  show "s' \<in> \<lbrakk>sg (Inl (v, enterc kc s))\<rbrakk>"
-    by (rule seeded_activation_seed[where enterc = enterc and kc = kc and s = s and frame_seed = "cover_seed pz fs",
-          OF pp fin cov_frame[OF e s] e seedg])
+  have seedg: "s' \<in> \<lbrakk>cover_seed pz fs (enterc kc s')\<rbrakk>"
+  proof -
+    have "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+            \<in> \<lbrakk>cover_seed pz fs (enterc kc s')\<rbrakk>"
+      by (rule bind_formals_in_cover_seed[where fs = fs and kc = "enterc kc s'" and pz = pz and s = s,
+            OF SEED_glob[OF e s step] cover wf_enter[OF e]])
+    thus ?thesis using s'eq by simp
+  qed
+  show "s' \<in> \<lbrakk>sg (Inl (v, enterc kc s'))\<rbrakk>"
+    by (rule seeded_activation_seed[where enterc = enterc and kc = kc and s = s' and frame_seed = "cover_seed pz fs",
+          OF pp fin cov_frame[OF e s step] e seedg])
 next
   fix cl ex v dst c1 c2 s t
   assume c: "(cl, ex, v, dst) \<in> combines g"

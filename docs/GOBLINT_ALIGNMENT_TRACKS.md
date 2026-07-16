@@ -7,6 +7,9 @@ runs — see `docs/NEXT_STEPS.md` "Context-sensitivity status"). These three tra
 are the remaining breadth/fidelity/termination work, none a soundness
 prerequisite for the current pipeline.
 
+The wider divergence inventory, rationale, and upstream evidence baseline live in
+`GOBLINT_ALIGNMENT_REGISTER.md`.
+
 | Track | Plan | One line |
 | --- | --- | --- |
 | **M1** | `M1_CALLSTRING_CONTEXT_MIGRATION.md` | Computed k-call-string contexts on the monotone solver |

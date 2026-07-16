@@ -172,8 +172,8 @@ definition dg_gen ::
         ('D, 'G) dg_state) eqsT"
 where
   "dg_gen g bot0 s0d s0g =
-     side_cfg_T_eff_cmp_seed_dg (\<lambda>_. ()) dg_cmb
-       (\<lambda>_. bot) g S bot0 s0d s0g"
+     side_cfg_T_eff_cmp_seed_dg predecessor_list (\<lambda>_. ()) dg_cmb
+       (\<lambda>_ _. []) g S bot0 s0d s0g"
 
 definition dg_D ::
   "(pp \<times> unit + unit \<Rightarrow>

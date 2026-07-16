@@ -32,6 +32,7 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 `HOL_IMP_COMPARISON.md` · `IMP_SYNTAX_NIPKOW_EXTENSION.md` · `cfg-representation.md` ·
 `DIGEST_TWO_FAMILIES.md` (design rationale; Family A / RD retired `92739cf`, mode-only in-tree) · `DIGEST_IN_FIXPOINT_DESIGN.md` ·
 `CONTEXT_DOMAIN_ARCHITECTURE.md` · `DGC_ALIGNMENT_ANALYSIS.md` ·
+`GOBLINT_ALIGNMENT_REGISTER.md` ·
 `ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` · `ROUTE_A7_DECISION_A_vs_C.md` ·
 `ROUTE_A_SWITCHING_COMBINE_MIGRATION.md` · `AFP_IMP2_REUSE_DECISION.md` ·
 `PROCEDURES_EXTENSION_PLAN.md` · `GraphViz-improvements.md` ·

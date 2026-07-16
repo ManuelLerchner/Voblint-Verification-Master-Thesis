@@ -328,40 +328,58 @@ lemma traverse_side_rhs_fold_dg:
 
 subsection \<open>The heterogeneous seeded CMP generator\<close>
 
+text \<open>
+  The one context-generic generator.  Enter handling is routed by three hooks so
+  that a monovariant and a context-sensitive analysis are both instances:
+
+  \<^item> \<open>pred_sel\<close> selects the intra predecessors folded as Answers into a node.  The
+    monovariant instance uses \<^const>\<open>predecessor_list\<close> (an \<^const>\<open>EA_Enter\<close> edge
+    merges into the single callee context); the context-sensitive instance uses
+    \<^const>\<open>non_enter_predecessor_list\<close> and instead publishes routed callee seeds.
+  \<^item> \<open>cmb\<close> is the procedure-return combine tree (already fully abstract: the
+    context-sensitive instance reads the callee exit under the routed context).
+  \<^item> \<open>extra c v\<close> supplies additional per-node trees folded after the intra and
+    combine trees.  Their Answers add to the node's local accumulator and their
+    \<^const>\<open>Side\<close> effects are collected --- this is where a frame-entry seed
+    \<^emph>\<open>read\<close> (a \<^const>\<open>QueryG\<close> of the incoming seed slot) and the caller-side
+    \<^const>\<open>EA_Enter\<close> \<^emph>\<open>publication\<close> (a routed \<^const>\<open>Side\<close> to the callee seed
+    slot) live.  The monovariant instance supplies \<open>\<lambda>_ _. []\<close>.
+\<close>
+
 definition side_cfg_T_eff_cmp_seed_dg ::
-  "('c \<Rightarrow> 'k)
+  "(cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list)
+   \<Rightarrow> ('c \<Rightarrow> 'k)
    \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
-   \<Rightarrow> ('c \<Rightarrow> 'd)
+   \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree list)
    \<Rightarrow> cfg
    \<Rightarrow> ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec
    \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
 where
-  "side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed g S bot0 s0d s0g =
+  "side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb extra g S bot0 s0d s0g =
      (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
-                   \<squnion> (if is_frame_entry g v then frame_seed c else bot);
+        let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
             intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
-                        (predecessor_list g v);
+                        (pred_sel g v);
             comb = map (\<lambda>(cc, ex, dst). cmb c dst cc ex)
                        (combine_predecessor_list g v);
-            t = side_rhs_fold_dg acc0 (intra @ comb)
+            t = side_rhs_fold_dg acc0 (intra @ comb @ extra c v)
         in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
 
 lemma eq_side_cfg_T_eff_cmp_seed_dg:
-  "eq (side_cfg_T_eff_cmp_seed_dg gkey cmb frame_seed g S bot0 s0d s0g)
+  "eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb extra g S bot0 s0d s0g)
       (v, ctx) \<tau> =
    DG (side_acc_dg
-     ((if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
-      \<squnion> (if is_frame_entry g v then frame_seed ctx else bot))
+     (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
      \<tau>
      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
               (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-           (predecessor_list g v)
+           (pred_sel g v)
       @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex)
-            (combine_predecessor_list g v))) bot"
+            (combine_predecessor_list g v)
+      @ extra ctx v)) bot"
   by (simp add: side_cfg_T_eff_cmp_seed_dg_def Let_def
         traverse_side_rhs_fold_dg)
 

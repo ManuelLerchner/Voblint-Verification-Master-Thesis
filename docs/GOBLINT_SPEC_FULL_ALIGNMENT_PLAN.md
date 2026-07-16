@@ -2,6 +2,12 @@
 
 Status: **LONG-TERM / STRETCH** (research findings 2026-06-17, not started).
 
+**Audit update (2026-07-16).** Gap 7 is partially superseded: semantic
+context-indexed unknowns and collecting soundness now exist. The remaining work
+is the executable D/G generator, computed context schemes, and context bounding.
+See `GOBLINT_ALIGNMENT_REGISTER.md` and `GOBLINT_ALIGNMENT_TRACKS.md` for the
+current status and upstream evidence baseline.
+
 The effectful-TF migration (`docs/EFFECTFUL_TF_MIGRATION.md`) closes Gaps 1–2
 (named globals, effectful transfer functions). This document records the remaining
 structural gaps between our proof and Goblint's full `Spec` / `GlobConstrSys`
@@ -14,6 +20,24 @@ deliberately lists these extensions as out of scope for the current thesis axis.
 ---
 
 ## Gap inventory
+
+### Source-language boundary — C memory and CIL front end
+
+**Goblint's input:** C programs represented through CIL, including addresses,
+arrays, heap allocation, casts, and aliasing. Its analyses can state transfer
+functions over that memory model.
+
+**What we do:** scalar IMP2. `ARRAY_SYNTAX_EXTENSION.md` plans array syntax and
+array-read analysis, but does not introduce addresses, pointer aliasing, heap
+allocation, or a C/CIL translation theorem.
+
+**Closure path:** complete the array plan first. Before any C front-end work,
+write a separate design decision fixing the C/CIL fragment, its memory model,
+and the translation-correctness statement. Pointer/alias analysis is a distinct
+domain track after that semantics exists.
+
+**Status:** deliberately deferred. This is not a `Spec` gap: it is a source
+language boundary below the existing CFG and solver interface.
 
 ### Gap 3 — analysis-specific interprocedural combine
 
@@ -167,36 +191,39 @@ abstract domains generally.
 
 ---
 
-### Gap 7 — context sensitivity (`C : Printable.S`)
+### Gap 7 — context sensitivity (`C : Printable.S`) (partially closed)
 
 **Goblint's `LVar.t = node × C.t`** — each local unknown is a pair of CFG node and
 call-string context. Different call sites of the same procedure get different unknowns
 and are analysed with different initial states. This is the main source of
 interprocedural precision in Goblint.
 
-**What we do:** `LVar.t = pp` — bare CFG node. All calls to the same procedure share
-one set of local unknowns. The FI global unknown accumulates contributions from all
-call sites, limiting precision (see §2 example in `EFFECTFUL_TF_MIGRATION.md`).
+**What we do:** semantic context-indexed collection and context-domain contracts
+exist; some executable keyed instances also use `(pp, context)`. The remaining
+gap is a generic executable D/G generator that computes, routes, and seeds the
+callee context at every call, plus computed/bounded context schemes.
 
 **What closing it would require:**
 
-Replace `pp` with `pp × 'ctx` throughout. The constraint system type becomes:
+Finish the generic executable route over `pp × 'ctx` and instantiate it with a
+computed context scheme. The constraint system type is already available in the
+semantic layer:
 
 ```isabelle
 type_synonym ctx_pp = "pp × 'ctx"
 ```
 
-The `compile_prog` / `compile_com` functions would need a context-threading argument.
 The key design question is what `'ctx` is: call-string of bounded depth `k` is the
-standard choice. Context creation happens at `EA_Enter` edges; the TF for `EA_Enter`
-receives the call-string and extends it.
+standard choice. Goblint-style context creation occurs at calls, not by threading
+the context through ordinary CFG edges. The executable generator must publish the
+callee seed to its selected context and read it at the callee entry.
 
 The soundness statement generalises: at each `(node, ctx)` unknown, the abstract
 state over-approximates the concrete stores reachable at `node` via runs consistent
 with call-string `ctx`.
 
-**Effort:** 4–6 weeks for the proof infrastructure. The `compile_prog` / CFG layer
-is currently context-free; threading `'ctx` through would require pervasive changes.
+**Effort:** the semantic proof infrastructure is landed. The remaining generator
+and call-string work is tracked by Route A7 and M1; dynamic bounds are M3b.
 
 ---
 
@@ -231,7 +258,8 @@ For a post-thesis extension:
    aligns with the Octagon track (issue #25).
 4. **Gap 4 (D.t ≠ G.t)** — high effort, low payoff for IMP2 scope; would matter
    for a heap analysis.
-5. **Gap 7 (context sensitivity)** — very high effort, significant precision gain.
+5. **Gap 7 (executable contexts and lifters)** — Route A7/M1/M3b; semantic
+   context sensitivity is already available.
 6. **Gap 7a (inter-analysis queries)** — out of scope.
 
 ---
@@ -241,7 +269,12 @@ For a post-thesis extension:
 | Plan | Closes |
 |---|---|
 | `EFFECTFUL_TF_MIGRATION.md` | Gaps 1–2 |
+| `ARRAY_SYNTAX_EXTENSION.md` | Array-only part of the source-language boundary |
+| `NONDET_HAVOC_MIGRATION.md` | Nondeterministic source expressions needed by relational examples |
 | `RELATIONAL_DOMAIN_PLAN.md` + issue #25 | Requires Gaps 3 + 5 as prerequisites |
+| `OPEN_PROBLEMS.md` P11 + `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` Slice 7 | Per-origin update transport and solver integration |
+| `M1_CALLSTRING_CONTEXT_MIGRATION.md` + `M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Computed and dynamically bounded contexts |
+| `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` Slice 8 | Multi-analysis product/sum and query bus |
 | `INTERVAL_REINTRODUCTION_PLAN.md` | Partial Gap 6 (widening needed for termination) |
 | This document | Gaps 3–7 (long-term) |
 
