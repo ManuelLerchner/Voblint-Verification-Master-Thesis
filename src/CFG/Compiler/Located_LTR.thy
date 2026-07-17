@@ -252,4 +252,54 @@ proof -
   then show ?thesis using m by blast
 qed
 
+subsection \<open>Structural facts and the top-level context\<close>
+
+text \<open>Cheap consequences of the invariant, used to characterise the context of an activation from
+  its runtime frame stack.\<close>
+
+text \<open>A trace has no caller exactly when its activation is at the top level (empty runtime stack).\<close>
+lemma stack_repr_Nil_iff:
+  "stack_repr g stk t \<Longrightarrow> (stk = []) = (caller_of t = None)"
+  by (cases rule: stack_repr.cases) auto
+
+text \<open>The context \<^const>\<open>key\<close> of a callerless activation is the seed --- descending the
+  \<^const>\<open>caller_of\<close> chain (a \<^const>\<open>Resume\<close> of \<^const>\<open>Root\<close> is still callerless).\<close>
+lemma key_caller_of_None:
+  "caller_of t = None \<Longrightarrow> key enterc seedc t = seedc"
+  by (induction t) auto
+
+lemma frames_match_Nil2:
+  "frames_match sites [] stk \<Longrightarrow> stk = []"
+  by (cases sites; cases stk) auto
+
+lemma concrete_program_match_Nil_frames:
+  "concrete_program_match Pi ps main (residual, s, []) (v, s', stk) \<Longrightarrow> stk = []"
+  unfolding concrete_program_match_def
+  by (auto dest: frames_match_Nil2 split: prod.splits)
+
+text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
+  the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
+  existential.  This is the shape a user reads for main-level program points.\<close>
+theorem source_toplevel_in_cfg_collect_ctx_act:
+  assumes wf: "wf_compile_input Pi ps main"
+    and src: "source_com main"
+    and s0: "s0 \<in> S"
+    and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
+  shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
+             \<and> s \<in> cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v seedc"
+proof -
+  let ?g = "compile_prog Pi ps main"
+  from source_run_has_ltr[OF wf src s0 run] obtain v stk t
+    where m: "concrete_program_match Pi ps main (residual, s, []) (v, s, stk)"
+      and rep: "ltr_repr ?g S (v, s, stk) t" by blast
+  have stk0: "stk = []" using concrete_program_match_Nil_frames[OF m] .
+  from rep stk0 have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
+    and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
+  have "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
+  then have key: "key enterc seedc t = seedc" by (rule key_caller_of_None)
+  have "s \<in> cfg_collect_ctx_act enterc seedc ?g S v seedc"
+    using tv sn ss key unfolding cfg_collect_ctx_act_def by blast
+  then show ?thesis using m stk0 by blast
+qed
+
 end
