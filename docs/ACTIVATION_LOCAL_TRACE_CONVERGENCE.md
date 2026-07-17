@@ -133,13 +133,42 @@ datatype ltr =
 
 - `Root` represents the main activation.
 - `Call caller path` represents a callee whose local path starts at the bound entry store;
-  the embedded caller is the exact suspended activation.
-- `Resume caller callee path` represents the exact caller after that exact callee returned.
+  the embedded `caller` is the exact suspended caller activation, **frozen at the call node**
+  (the value it had when it took the enter edge; it is never mutated while suspended).
+- `Resume caller callee path` represents the caller activation continued past a completed call.
+  Its fields carry distinct, load-bearing roles:
+  * `caller` — the **frozen caller at its call node**, exactly the value that spawned `callee`
+    (the same `caller` the `ret` rule read via `caller_of callee`); it is *not* the
+    already-continued caller, and it may itself be a `Call` or a nested `Resume`;
+  * `callee` — the completed callee subtree (retained so `key` can read `key callee` for a
+    general `combc`);
+  * `path` — the caller's **continued** path: `path caller @ [(return_node, return_store)]`.
+  So the "continuation" of the caller lives in the `path` field, while the `caller` field stays
+  the frozen snapshot. This is what lets `caller_of` descend the `caller` field to find the
+  activation that spawned *this* caller: `caller_of (Resume caller _ _) = caller_of caller`.
 
 The closure has four concrete operations: initial trace, intra extension, call creation via the
 enter edge, and return composition. No rule permits an arbitrary callee root. A callee exists
 only because a concrete caller took a concrete `EA_Enter` edge, and a return is legal only
 when the callee's ancestry identifies that caller.
+
+A return must compose **any** completed callee, including one that itself called and resumed
+(the recursion / nested-call case). The return rule therefore recovers the creating caller
+through a structural observer rather than by pattern-matching the callee's outer constructor:
+
+```isabelle
+fun caller_of :: "ltr \<Rightarrow> ltr option" where
+  "caller_of (Root _)           = None"
+| "caller_of (Call caller _)    = Some caller"      -- the frozen caller at the call node
+| "caller_of (Resume caller _ _) = caller_of caller"  -- Resume's caller field is frozen-at-call; descend it
+```
+
+`caller_of` is invariant under `extend` (which never touches the outer constructor's caller
+field) and strictly descends the ancestry, so it is total and well-founded. An activation that
+called and returned is a `Resume`; its caller_of is still recovered, so it can itself be returned
+to *its* caller — this is what makes nested and recursive returns compose (see the worked
+nested example below). Matching the callee as a bare `Call caller cp` would only permit
+returning callees that never called anything, silently excluding recursion.
 
 This makes the relation mirror the existing CFG stack machine directly:
 
@@ -196,7 +225,11 @@ key … (Call parent p) = enterc (key … parent) (entry_store p)
 key … (Resume caller callee _) = combc (key … caller) (key … callee)
 ```
 
-Thus generic `combc` does not force abstract contexts into the foundational trace relation.
+Thus generic `combc` does not force abstract contexts into the foundational trace relation. The
+`Resume` node retains the full `callee` subtree precisely so `key` can read `key callee` at a
+return; the generalized `ret` rule (with `caller = caller_of callee`) keeps that subtree
+available for callees of any constructor, so `combc` stays general without re-introducing the
+two-constructor design's loss of the completed callee.
 
 ## Whole-program traces are derived, not lost
 
@@ -327,16 +360,44 @@ inductive_set valid_ltr :: "cfg => store set => ltr set" for g S where
      ==> Call caller [(fe, se)] \<in> valid_ltr g S"
 
 | ret:
-    "Call caller cp \<in> valid_ltr g S
-     ==> (sink_node caller, sink_node (Call caller cp), v, dst) \<in> combines g
-     ==> r = combine_collect dst (sink_store caller) (sink_store (Call caller cp))
-     ==> Resume caller (Call caller cp) (path caller @ [(v, r)])
+    "callee \<in> valid_ltr g S
+     ==> caller_of callee = Some caller
+     ==> (sink_node caller, sink_node callee, v, dst) \<in> combines g
+     ==> r = combine_collect dst (sink_store caller) (sink_store callee)
+     ==> Resume caller callee (path caller @ [(v, r)])
            \<in> valid_ltr g S"
 ```
+
+The `ret` rule takes an arbitrary completed `callee` and recovers its `caller` by
+`caller_of callee = Some caller`, not by matching `Call caller cp`. This is the fix for nested
+and recursive returns: a callee that itself called another procedure has outer constructor
+`Resume`, which the old `Call caller cp` pattern rejected, so the old rule silently admitted
+only leaf callees (the flat `twice` example never produced a nested `Resume`, which is why it
+appeared to work). The combine triple `(sink_node caller, sink_node callee, v, dst)` still
+pins `sink_node caller` to the call node and `sink_node callee` to the callee exit, and
+`caller = caller_of callee` is uniquely determined by the callee's own ancestry — so no arbitrary
+caller/callee pairing is possible (unlike the broad `cfg_collect` combine functional).
 
 The extra combine premise in `call` is deliberate. It matches `cstep.Call`, which
 requires both an enter edge and its matching combine triple. This prevents the local semantics
 from inventing an activation for a raw enter edge that the CFG stack machine cannot call.
+
+### Worked nested return (`main` -> `f` -> `g`, both return)
+
+```text
+main = Root [(m0, s), (mc, s1)]                     -- main suspended at its call node mc
+f    = Call main [(fe, sef), (fc, s2)]              -- caller_of f = Some main; f at its call node fc
+g    = Call f [(ge, seg), (gx, s3)]                 -- caller_of g = Some f; g at its exit gx
+ret g: caller = caller_of g = f
+       Resume f g (path f @ [(fr, rg)])  = f'       -- caller_of f' = caller_of f = Some main
+f'   = extend f' (fx, s4)                           -- f' now a Resume, at f's exit fx
+ret f': caller = caller_of f' = caller_of f = main      -- KEY: recovered through the Resume
+        Resume main f' (path main @ [(mr, rf)])     -- main resumes; well-formed
+```
+
+The old rule stalls at `ret f'` because `f'` is a `Resume`, not `Call main _`. With `caller_of`
+the caller `main` is recovered from `f'`'s ancestry and the return composes. The construction
+is uniform in recursion depth: each activation, however deeply nested, exposes its caller_of.
 
 The public collecting projection keeps the existing API:
 
@@ -407,8 +468,8 @@ This is the authoritative architectural document.
 
 Start from this document, not from the historical design records. The first implementation task is small and isolated:
 
-1. Create `src/CFG/Collecting/CFG_Local_Trace.thy` in the CFG session. It defines only `ltr`, observers, `extend`, `key`, and `valid_ltr`; it does not change any existing collecting definition.
-2. Use I/Q to check the four constructor goals individually: nonempty paths, `Call` entry equals the `edge_step` result, `extend` preserves entry/ancestry, and `Resume` computes the concrete combine store.
+1. Create `src/CFG/Collecting/CFG_Local_Trace.thy` in the CFG session. It defines only `ltr`, observers (`sink_node`, `sink_store`, `entry_store`, `path`, `caller_of`), `extend`, `key`, and `valid_ltr`; it does not change any existing collecting definition.
+2. Use I/Q to check the four constructor goals individually: nonempty paths, `Call` entry equals the `edge_step` result, `extend` preserves entry/ancestry/`caller_of`, `caller_of` recovers the caller through a `Resume` (nested case), and `Resume` computes the concrete combine store.
 3. Add the new theory to the session ROOT and batch-build `Voblint_CFG`. Do not touch `trace_witness_act`, `Activation_Backbone`, or any solver theory in this first commit.
 4. Only after that green commit, prove the local-trace soundness induction against the existing four obligations. Keep it internal until it has exactly the public statement of `activation_collect_sound`.
 5. Replace the old public implementation only after the DG locale and interval flagship build against the unchanged public theorem names. The source bridge and recursive example precede deletion of the old witness.
@@ -417,9 +478,11 @@ Non-negotiable invariants:
 
 - every callee is created by a concrete caller and an `EA_Enter` edge;
 - that entry store is the result of `edge_step`, retaining `bind_formals`;
-- every return identifies its exact caller structurally;
+- every return identifies its exact caller structurally, through `caller_of callee = Some caller`,
+  for a completed callee of **any** constructor (`Call` or `Resume`) — never by requiring the
+  callee to still be a bare `Call`;
 - contexts are computed by `key`, never stored in `valid_ltr`;
 - `Resume` remains available so generic `combc` can inspect both caller and callee keys;
 - no second public activation collecting API or sibling backbone theorem is introduced.
 
-Stop and report if any invariant cannot be expressed by the four constructors, if the generic backbone needs an obligation beyond `ENTRY_G`, `EDGE`, `SEED_G`, and `COMB`, or if the `cstep` correspondence requires an arbitrary callee start. Those are architecture failures, not invitations to restore the old witness or `twf/twfr`.
+Stop and report if any invariant cannot be expressed by the three constructors, if the generic backbone needs an obligation beyond `ENTRY_G`, `EDGE`, `SEED_G`, and `COMB`, if the `cstep` correspondence requires an arbitrary callee start, or if `caller_of` cannot recover the caller of a nested/recursive callee. Those are architecture failures, not invitations to restore the old witness or `twf/twfr`.
