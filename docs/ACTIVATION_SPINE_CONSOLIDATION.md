@@ -1,6 +1,9 @@
 # Activation Spine Consolidation
 
-Status: **COMPLETED** (2026-07-17, branch `activation-consolidation`, batch-green).
+Status: **COMPLETED historical consolidation** (2026-07-17, branch `activation-consolidation`, batch-green).
+It records the current implemented `trace_witness_act` spine. The planned semantic endpoint is
+[`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md): `valid_ltr`
+becomes the concrete foundation while this document's public DG path is retained.
 Enabler: `DG_Ctx_Activation` (commit `b9156f2`, on `main`) — the DG-native
 discharge of the activation obligations, now the canonical context-sensitive
 proof path.
@@ -41,7 +44,7 @@ Collapse the repository onto a **single canonical context-sensitive activation
 path** and delete the parallel plain-`abs_state` activation architecture that
 predates it.
 
-Target end state:
+Implemented end state of this consolidation:
 
 ```
 CFG_Collect_Activation        (cfg_collect_ctx_act, trace_witness_act)

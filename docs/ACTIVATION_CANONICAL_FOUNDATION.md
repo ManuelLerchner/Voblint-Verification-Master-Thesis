@@ -1,5 +1,10 @@
 # The activation witness as the canonical foundation for seeded soundness
 
+> Historical design record. It describes the then-canonical, currently implemented
+> `trace_witness_act` path. The planned endpoint is
+> [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md):
+> activation-local traces with the same public DG interface.
+
 Design note (Stage 3). Records what the activation-aware development delivers, why it
 is the right foundation for seeded context-sensitive soundness, which digest machinery
 it retires, and the one remaining slice for full end-to-end retirement of the old path.

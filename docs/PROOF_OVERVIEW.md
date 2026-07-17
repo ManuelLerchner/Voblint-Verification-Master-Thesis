@@ -7,6 +7,12 @@ repository contributes, and how the main lemmas connect.
 **Live roadmap and backlog:** `docs/ROADMAP.md` → [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).
 **Keyed context branch:** `docs/KEYED_CONTEXT_CONSOLIDATION.md`.
 
+> **Planned semantic refoundation.** The batch-green spine below currently uses
+> `trace_witness_act`. The intended foundation for compiled, well-bracketed IMP2 CFGs is
+> [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md):
+> `valid_ltr` with monovariant, digest, and context-sensitive collecting as projections.
+> This is design work, not a claim about the current `.thy` implementation.
+
 ---
 
 ## External vs. repository

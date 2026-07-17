@@ -1,5 +1,9 @@
 # Open problems and handoffs
 
+> **Activation semantics direction.** The source-to-context-sensitive bridge is planned over
+> `valid_ltr`, not the re-rooted `trace_witness_act` relation. See
+> [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md).
+
 Catalogue of repo-level problems with stable file:line refs (P1–P10). For *new
 work and extensions*, see `docs/ROADMAP.md` + [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).
 
