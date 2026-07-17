@@ -1,6 +1,7 @@
 theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
+    "Voblint_Analysis.Analysis_GraphViz"
 begin
 
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
@@ -41,6 +42,8 @@ text \<open>
 \<close>
 
 datatype gk = Global | Seed pp "ivl"
+
+
 
 subsection \<open>The routed context hooks\<close>
 
@@ -166,5 +169,107 @@ text \<open>The callee entry is materialized once per routed context and never u
 lemma callee_covered_call1: "(0, ctx_call1) \<in> fst twice_ctx_sol" by eval
 lemma callee_covered_call2: "(0, ctx_call2) \<in> fst twice_ctx_sol" by eval
 lemma callee_not_under_main: "(0, bot) \<notin> fst twice_ctx_sol" by eval
+
+subsection \<open>Context-expanded analysis graph\<close>
+
+
+
+definition twice_ctx_graph_config ::
+  "(ivl, gk, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "twice_ctx_graph_config =
+    \<lparr> local_of = locals,
+      route = (\<lambda>_ ctx action d. route_ivl d action),
+      show_context = string_of_ivl,
+      locals_for_pp = (\<lambda>p.
+        let sc = compiled_procedure_scope twice_pi twice_procs twice_main
+          twice_cfg p
+        in scope_formals sc @ scope_locals sc),
+      return_slot_for_pp = (\<lambda>p.
+        scope_return_slot (compiled_procedure_scope twice_pi twice_procs twice_main
+          twice_cfg p)),
+      globals_to_show = [],
+      show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
+        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+      format_return = (\<lambda>p ctx ret d.
+        if lookup_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (lookup_st d ret)]),
+      show_global = (\<lambda>k vars s. [''(none)'']),
+      show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
+      is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
+      show_internal_globals = False,
+      owner_of = compiled_owner_of twice_pi twice_procs twice_main,
+      cluster_label = (\<lambda>owner ctx.
+        if owner = ''main'' \<and> ctx = bot then ''main / root context''
+        else owner @ '' / context='' @ string_of_ivl ctx)
+    \<rparr>"
+
+definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list" where
+  "twice_ctx_contexts_for_pp p =
+    (if compiled_owner_of twice_pi twice_procs twice_main p = ''main''
+     then [bot] else [ctx_call1, ctx_call2])"
+
+definition twice_ctx_local_graph_domain :: "(pp \<times> ivl + gk) list" where
+  "twice_ctx_local_graph_domain =
+    contextual_graph_domain twice_cfg twice_ctx_contexts_for_pp"
+
+definition twice_ctx_seed_keys :: "gk list" where
+  "twice_ctx_seed_keys = map (\<lambda>ctx. Seed 0 ctx) [ctx_call1, ctx_call2]"
+
+definition twice_ctx_graph_domain :: "(pp \<times> ivl + gk) list" where
+  "twice_ctx_graph_domain =
+    twice_ctx_local_graph_domain @ map Inr twice_ctx_seed_keys"
+
+definition twice_ctx_graph :: "(ivl, gk) analysis_graph" where
+  "twice_ctx_graph =
+    build_analysis_graph twice_ctx_graph_config twice_cfg twice_ctx_graph_domain
+      (snd twice_ctx_sol)"
+
+definition twice_ctx_dot :: String.literal where
+  "twice_ctx_dot =
+    String.implode
+      (analysis_graph_to_dot twice_ctx_graph_config twice_cfg (snd twice_ctx_sol)
+        twice_ctx_graph)"
+
+lemma twice_ctx_graph_wf: "analysis_graph_wf twice_ctx_graph" by eval
+
+lemma twice_ctx_graph_domain_is_covered:
+  "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> fst twice_ctx_sol | Inr _ \<Rightarrow> True)
+    twice_ctx_graph_domain" by eval
+
+lemma twice_ctx_graph_seed_keys_follow_enters:
+  "map (\<lambda>e. case e of (_, EnterEdge _, LocalNode p ctx) \<Rightarrow> Seed p ctx
+                  | _ \<Rightarrow> Global)
+     (filter (\<lambda>e. case e of (_, EnterEdge _, _) \<Rightarrow> True | _ \<Rightarrow> False)
+       (analysis_graph_edges twice_ctx_graph)) = twice_ctx_seed_keys" by eval
+
+lemma twice_ctx_graph_has_both_callees:
+  "LocalNode 0 ctx_call1 \<in> set (analysis_graph_nodes twice_ctx_graph) \<and>
+   LocalNode 0 ctx_call2 \<in> set (analysis_graph_nodes twice_ctx_graph)" by eval
+
+lemma twice_ctx_graph_hides_uncovered_main_callee:
+  "LocalNode 0 bot \<notin> set (analysis_graph_nodes twice_ctx_graph)" by eval
+
+lemma twice_ctx_graph_omits_empty_globals:
+  "filter (\<lambda>n. case n of GlobalNode _ \<Rightarrow> True | _ \<Rightarrow> False)
+    (analysis_graph_nodes twice_ctx_graph) = []" by eval
+
+lemma twice_ctx_graph_enter_edges:
+  "filter (\<lambda>e. case e of (_, EnterEdge _, _) \<Rightarrow> True | _ \<Rightarrow> False)
+    (analysis_graph_edges twice_ctx_graph) =
+    [(LocalNode 4 bot, EnterEdge (EA_Enter [''p''] [IMP2_Syntax.N 3]),
+      LocalNode 0 ctx_call1),
+     (LocalNode 6 bot, EnterEdge (EA_Enter [''p''] [IMP2_Syntax.N 10]),
+      LocalNode 0 ctx_call2)]" by eval
+
+lemma twice_ctx_graph_combine_edges:
+  "filter (\<lambda>e. case e of (_, CombineEdge _ _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
+    (analysis_graph_edges twice_ctx_graph) =
+    [(LocalNode 3 ctx_call1, CombineEdge 4 (Some ''x'') (Some ''#ret''), LocalNode 5 bot),
+     (LocalNode 3 ctx_call2, CombineEdge 6 (Some ''y'') (Some ''#ret''), LocalNode 7 bot)]" by eval
+
+lemma twice_ctx_dot_has_context_clusters:
+  "String.explode twice_ctx_dot \<noteq> []" by eval
+
+ML_val \<open>writeln (@{code twice_ctx_dot})\<close>
 
 end

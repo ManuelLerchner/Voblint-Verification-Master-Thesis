@@ -6,6 +6,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Solver_Menu"
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_CFG.CFG_GraphViz"
+    "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
     Compiler_Correctness
@@ -268,24 +269,44 @@ text \<open>
   \<open>x\<close> / \<open>y in [6,20]\<close>.
 \<close>
 
-definition twice_node_label ::
-  "(pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state) \<Rightarrow> pp \<Rightarrow> string" where
-  "twice_node_label sol p =
-     show_nat p @ [CHR 0x5C, CHR 0x6E]
-     @ ''p='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''p'')
-     @ [CHR 0x5C, CHR 0x6E]
-     @ ''#ret='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''#ret'')
-     @ [CHR 0x5C, CHR 0x6E]
-     @ ''x='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''x'')
-     @ [CHR 0x5C, CHR 0x6E]
-     @ ''y='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''y'')"
+definition twice_graph_config ::
+  "(unit, unit, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "twice_graph_config =
+    \<lparr> local_of = locals,
+      route = (\<lambda>_ _ _ _. ()),
+      show_context = (\<lambda>_. ''unit''),
+      locals_for_pp = (\<lambda>p.
+        let sc = compiled_procedure_scope twice_pi twice_procs twice_main
+          twice_cfg p
+        in scope_formals sc @ scope_locals sc),
+      return_slot_for_pp = (\<lambda>p.
+        scope_return_slot (compiled_procedure_scope twice_pi twice_procs twice_main
+          twice_cfg p)),
+      globals_to_show = [],
+      show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
+        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+      format_return = (\<lambda>p ctx ret d.
+        if lookup_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (lookup_st d ret)]),
+      show_global = (\<lambda>_ vars s. [''(none)'']),
+      show_global_key = (\<lambda>_. ''Global''),
+      is_shared_global = (\<lambda>_. True),
+      show_internal_globals = False,
+      owner_of = compiled_owner_of twice_pi twice_procs twice_main,
+      cluster_label = (\<lambda>owner _. owner @ '' / context=unit'')
+    \<rparr>"
+
+definition twice_graph_domain :: "(pp \<times> unit + unit) list" where
+  "twice_graph_domain =
+    contextual_graph_domain twice_cfg (\<lambda>_. [()])"
 
 definition twice_dot :: String.literal where
   "twice_dot =
      String.implode
        (case TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()) of
           None \<Rightarrow> ''solver did not terminate''
-        | Some sol \<Rightarrow> to_graphviz_labeled (twice_node_label (snd sol)) twice_cfg [] [] [])"
+        | Some sol \<Rightarrow> contextual_analysis_dot twice_graph_config twice_cfg
+            twice_graph_domain (snd sol))"
 
 ML_val \<open>writeln (@{code twice_dot})\<close>
 

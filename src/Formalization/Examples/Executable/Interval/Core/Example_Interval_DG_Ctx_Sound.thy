@@ -1,5 +1,5 @@
 theory Example_Interval_DG_Ctx_Sound
-  imports
+  imports                    
     Example_Interval_DG_Ctx_Flagship
 begin
 

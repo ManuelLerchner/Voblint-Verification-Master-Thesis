@@ -58,37 +58,39 @@ lemma mixed_graphviz_x_is_local:
   "\<not> is_global ''x''"
   by (simp add: is_global_def)
 
-definition mixed_graphviz_label_of_abs_state ::
-  "('a::bot \<Rightarrow> string) \<Rightarrow> vname list \<Rightarrow> 'a abs_state \<Rightarrow> string"
-where
-  "mixed_graphviz_label_of_abs_state pr vars st =
-     join_gv_nl (map (\<lambda>x. x @ ''='' @ pr (st x)) vars)"
 
-definition mixed_graphviz_node_label :: "pp \<times> unit \<Rightarrow> string" where
-  "mixed_graphviz_node_label pc =
-     (case pc of (p, ctx) \<Rightarrow>
-        ''pp'' @ string_of_nat p
-        @ (let l = mixed_graphviz_label_of_abs_state show_val
-                   (cfg_local_vars mixed_graphviz_cfg)
-                   (locals (mixed_graphviz_solution (Inl pc))) in
-           if l = [] then [] else gv_nl @ l))"
 
-definition mixed_graphviz_globals_label :: "unit \<Rightarrow> string" where
-  "mixed_graphviz_globals_label _ =
-     ''flow-insensitive Interval invariant'' @ gv_nl @
-      mixed_graphviz_label_of_abs_state show_val (cfg_local_vars mixed_graphviz_cfg)
-        (globs (mixed_graphviz_solution (Inr ())))"
+definition mixed_graphviz_graph_config ::
+  "(unit, unit, (sign abs_state, ivl abs_state) dg_state, sign abs_state)
+    analysis_graph_config" where
+  "mixed_graphviz_graph_config =
+    \<lparr> local_of = locals,
+      route = (\<lambda>_ _ _ _. ()),
+      show_context = (\<lambda>_. ''unit''),
+      locals_for_pp = (\<lambda>_. cfg_local_vars mixed_graphviz_cfg),
+      return_slot_for_pp = (\<lambda>_. None),
+      globals_to_show = cfg_local_vars mixed_graphviz_cfg,
+      show_local = (\<lambda>_ _ vars st.
+        map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),
+      format_return = (\<lambda>_ _ _ _. []),
+      show_global = (\<lambda>_ vars s.
+        ''flow-insensitive Interval invariant'' #
+          map (\<lambda>x. x @ ''='' @ show_val (globs s x)) vars),
+      show_global_key = (\<lambda>_. ''Global''),
+      is_shared_global = (\<lambda>_. True),
+      show_internal_globals = False,
+      owner_of = (\<lambda>_. ''main''),
+      cluster_label = (\<lambda>_ _. ''mixed Sign answers'')
+    \<rparr>"
+
+definition mixed_graphviz_graph_domain :: "(pp \<times> unit + unit) list" where
+  "mixed_graphviz_graph_domain =
+    contextual_graph_domain mixed_graphviz_cfg (\<lambda>_. [()]) @ [Inr ()]"
 
 definition mixed_graphviz_dot :: String.literal where
   "mixed_graphviz_dot =
-     String.implode
-       (ctx_debug_graphviz_same_ctx_cfg_with_globals
-         (\<lambda>_. ''unit'')
-         (\<lambda>_. ''mixed Sign answers'')
-         mixed_graphviz_globals_label
-         mixed_graphviz_node_label
-         (ctx_debug_default_node_attrs mixed_graphviz_cfg)
-         [()] mixed_graphviz_cfg)"
+     String.implode (contextual_analysis_dot mixed_graphviz_graph_config
+       mixed_graphviz_cfg mixed_graphviz_graph_domain mixed_graphviz_solution)"
 
 ML_val \<open>writeln (@{code mixed_graphviz_dot})\<close>
 

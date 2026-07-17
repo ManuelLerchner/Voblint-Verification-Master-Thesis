@@ -56,6 +56,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Solver_Menu"
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_CFG.CFG_GraphViz"
+    "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
     Compiler_Correctness
@@ -456,17 +457,41 @@ text \<open>
   node labelled with the loop-invariant interval the verified solver computed.
 \<close>
 
-definition flagship_node_label ::
-  "(pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state) \<Rightarrow> pp \<Rightarrow> string" where
-  "flagship_node_label sol p =
-     show_nat p @ [CHR 0x5C, CHR 0x6E] @ ''x='' @ string_of_ivl (lookup_st (locals (sol (Inl (p, ())))) ''x'')"
+definition flagship_graph_config ::
+  "(unit, unit, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "flagship_graph_config =
+    \<lparr> local_of = locals,
+      route = (\<lambda>_ _ _ _. ()),
+      show_context = (\<lambda>_. ''unit''),
+      locals_for_pp = (\<lambda>p.
+        scope_locals (compiled_procedure_scope Map.empty [] flagship_prog
+          flagship_cfg p)),
+      return_slot_for_pp = (\<lambda>p.
+        scope_return_slot (compiled_procedure_scope Map.empty [] flagship_prog
+          flagship_cfg p)),
+      globals_to_show = [],
+      show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
+        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+      format_return = (\<lambda>_ _ _ _. []),
+      show_global = (\<lambda>_ _ _. [''(none)'']),
+      show_global_key = (\<lambda>_. ''Global''),
+      is_shared_global = (\<lambda>_. True),
+      show_internal_globals = False,
+      owner_of = (\<lambda>_. ''main''),
+      cluster_label = (\<lambda>_ _. ''main / root context'')
+    \<rparr>"
+
+definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where
+  "flagship_graph_domain =
+    contextual_graph_domain flagship_cfg (\<lambda>_. [()])"
 
 definition flagship_dot :: String.literal where
   "flagship_dot =
      String.implode
        (case TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()) of
           None \<Rightarrow> ''solver did not terminate''
-        | Some sol \<Rightarrow> to_graphviz_labeled (flagship_node_label (snd sol)) flagship_cfg [] [] [])"
+        | Some sol \<Rightarrow> contextual_analysis_dot flagship_graph_config flagship_cfg
+            flagship_graph_domain (snd sol))"
 
 ML_val \<open>writeln (@{code flagship_dot})\<close>
 
