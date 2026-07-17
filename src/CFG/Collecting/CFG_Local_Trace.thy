@@ -350,7 +350,7 @@ text \<open>
   broad semantics rejects.  The proof reduces a valid trace to a \<^const>\<open>cfg_witness\<close> derivation,
   reusing the existing equivalence \<open>cfg_collect = {s. cfg_witness ...}\<close>.  The context
   projection \<open>key\<close> plays no role here: the inclusion establishes the sink state, and the
-  context filter is a trivial outer restriction (\<open>ltr_ctx_collect_le_cfg_collect\<close>).
+  context filter is a trivial outer restriction (\<open>cfg_collect_ctx_act_le_collect\<close>).
 \<close>
 
 subsection \<open>The caller chain\<close>
@@ -616,20 +616,21 @@ next
   qed
 qed
 
-subsection \<open>Internal context projection\<close>
+subsection \<open>The activation-indexed context collecting\<close>
 
-text \<open>The internal activation-sensitive projection: the sink stores of valid traces reaching \<open>v\<close>
-  whose activation context is \<open>c\<close>.  It is scaffolding under a distinct name; the public
-  \<open>cfg_collect_ctx_act\<close> is untouched until Stage 4.  Its inclusion in \<^const>\<open>cfg_collect\<close> is
-  immediate from the key-free sink inclusion: the \<open>key\<close> filter only removes traces.\<close>
+text \<open>The activation-sensitive collecting: the sink stores of valid traces reaching \<open>v\<close> whose
+  activation context is \<open>c\<close>.  This is the single activation-indexed collecting semantics ---
+  it replaces the former whole-program-witness definition of the same name.  Its inclusion in
+  \<^const>\<open>cfg_collect\<close> is immediate from the key-free sink inclusion: the \<open>key\<close> filter only
+  removes traces.\<close>
 
-definition ltr_ctx_collect ::
+definition cfg_collect_ctx_act ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
-  "ltr_ctx_collect enterc seedc g S v c =
+  "cfg_collect_ctx_act enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
 
-theorem ltr_ctx_collect_le_cfg_collect:
-  "ltr_ctx_collect enterc seedc g S v c \<subseteq> cfg_collect g S v"
-  unfolding ltr_ctx_collect_def using valid_ltr_sink_in_cfg_collect by fastforce
+theorem cfg_collect_ctx_act_le_collect:
+  "cfg_collect_ctx_act enterc seedc g S v c \<subseteq> cfg_collect g S v"
+  unfolding cfg_collect_ctx_act_def using valid_ltr_sink_in_cfg_collect by fastforce
 
 end

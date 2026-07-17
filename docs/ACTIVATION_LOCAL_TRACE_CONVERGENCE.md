@@ -442,37 +442,38 @@ mono_collect g S v =
 
 ## Migration proof boundary and deletion gate
 
-The migration has a deliberately narrow consumer boundary. In the current tree, only these
-live theories mention the activation API or its constructors:
+The migration has a deliberately narrow consumer boundary. After Stage 4 the activation API is
+these theories:
 
-| theory | migration role |
+| theory | role |
 | --- | --- |
-| `CFG_Collect_Activation` | currently defines the old witness and will expose the new projection |
-| `Activation_Backbone` | only proof that directly inducts over the old witness |
-| `DG_Ctx_Activation` | consumes the backbone theorem, not witness constructors |
+| `CFG_Local_Trace` | defines `valid_ltr`, `key`, and the sole public projection `cfg_collect_ctx_act` |
+| `Activation_Local_Sound` | the domain-level engine `valid_ltr_ctx_sound` (internal) |
+| `Activation_Backbone` | the public `activation_collect_sound`, one line from the engine |
+| `DG_Ctx_Activation` | consumes the backbone theorem |
 | `Example_Interval_DG_Ctx_Collect` | consumes the public collecting API and backbone theorem |
 
-Thus the final refoundation changes one proof principle, not the solver interface, equation
-system, domains, or DG obligations. During the transition, the old witness may prove finite
-regression facts such as the existing `twice` inhabitance result. It must not become a new
-dependency.
+The refoundation changed one proof principle, not the solver interface, equation system, domains,
+or DG obligations.
 
 Each stage ends with a green build of the affected session:
 
-1. Introduce `ltr`, `valid_ltr`, observers, `key`, and inversion lemmas in the CFG
+1. **(done)** Introduce `ltr`, `valid_ltr`, observers, `key`, and inversion lemmas in the CFG
    session. No second public collecting name.
-2. Establish the internal local projection and its inclusion in broad `cfg_collect`.
-3. Reprove the existing backbone statements from `valid_ltr` using exactly
-   `ENTRY_G`, `EDGE`, `SEED_G`, and `COMB`.
-4. Replace the implementation of `cfg_collect_ctx_act` while retaining its name and replace
-   the bodies of the existing backbone theorems.
-5. Prove stack decomposition and the recursive source bridge.
-6. Delete the old witness, its collecting definition, collapse/comparison lemmas, temporary
-   projection names, and duplicate temporary proof bodies.
+2. **(done)** Establish the internal local projection and its inclusion in broad `cfg_collect`.
+3. **(done)** Reprove the backbone statement from `valid_ltr` using exactly `ENTRY_G`, `EDGE`,
+   `SEED_G`, and `COMB` (with the stable-context `COMB` output at the caller context).
+4. **(done)** Replace `cfg_collect_ctx_act` with the local-trace projection (retaining the name),
+   redirect `activation_collect_sound` to the engine, and delete the old witness family.
+5. Prove stack decomposition and the recursive source bridge onto the new `cfg_collect_ctx_act`.
+6. **(subsumed by Stage 4)** the old witness, its collecting definition, and helper lemmas are
+   gone; no compatibility layer remains.
 
-Deletion is permitted only when the final backbone and interval flagship build, the recursive
-source bridge reaches the new `cfg_collect_ctx_act`, and no consumer of
-`trace_witness_act` remains outside its defining theory.
+The Stage-4 deletion was safe because an audit confirmed every consumer of the old
+`cfg_collect_ctx_act` / `activation_collect_sound` used only the soundness *upper bound*
+(`\<subseteq> \<gamma>`), which the sink/key projection satisfies under the same four obligations. No
+committed theorem asserted membership or non-emptiness of the old witness collecting, so no
+downstream result depended on behaviour present only in the old semantics. See the Stage-4 note.
 
 ### Stage 1 landed (`CFG_Local_Trace.thy`)
 
@@ -522,15 +523,50 @@ fifth obligation, no free callee-context parameter):
 - `valid_ltr_ctx_chain` / `valid_ltr_ctx_sound` — the soundness induction along the caller chain
   and its sink corollary.
 - `ltr_ctx_collect_sound` — `ltr_ctx_collect enterc seedc g S v c ⊆ γ (sg (Inl (v, c)))`, the
-  Stage-3 statement, aligned **propositionally** (not definitionally) with the public
-  `activation_collect_sound`: same conclusion shape and same four obligations, over the
-  activation-local semantics and stable context.
+  Stage-3 statement (folded into the public `activation_collect_sound` at Stage 4).
 
-`Activation_Local_Sound` is internal scaffolding. The public `activation_collect_sound`,
-`cfg_collect_ctx_act`, `trace_witness_act`, `DG_Ctx_Activation`, the interval flagship, and the
-constraint generator are untouched; Stage 4 swaps the public bodies onto this proof. The DG
-discharge `dg_ctx_act_comb_covered` is already general in the callee/return contexts, so it
-carries the reshaped `COMB` without change.
+At Stage 3 `Activation_Local_Sound` was internal scaffolding beside the untouched old witness.
+
+### Stage 4 landed — the local semantics is the single public collecting
+
+The activation-local semantics is now the *only* public activation collecting semantics.
+
+**Old / new correspondence.** No equality or inclusion between the old `trace_witness_act`
+collecting and the new `valid_ltr`+`key` projection was established or required. The two use
+materially different witness structures: the old combine obtained a callee as an *independently
+re-rooted* callee derivation (see `ACTIVATION_WITNESS_RECONCILIATION.md`), whereas `valid_ltr`
+requires explicit stack-faithful caller linkage (`caller_of callee = Some caller`). Whether either
+semantic inclusion holds would require a separate reconstruction theorem or a concrete
+counterexample — a direct syntactic node-for-node translation failing in one direction does not by
+itself settle the existential question of whether some trace of the other kind reaches the same
+sink. (Note in particular that under the accepted activation-stable `key` a valid trace has no
+context-changing nested return, so the old rule's callee-context-equality restriction is *not* a
+reason `valid_ltr → trace_witness_act` fails; that earlier argument applied only to the rejected
+evolving-context design.)
+
+The migration does not depend on this: the swap is **sound-preserving, not equality-based**. Every
+consumer used only the upper bound `\<subseteq> \<gamma>`, which the sink/key projection satisfies under the
+same four obligations, and an audit found no committed theorem asserting membership or
+non-emptiness of the old collecting. Replacing one sound concrete semantics with the intended one
+is legitimate; the green DAG confirms no formal dependency on the retired witness remains — it does
+not, and need not, prove semantic equivalence.
+
+**What changed.**
+- `cfg_collect_ctx_act` is now defined in `CFG_Local_Trace` as the sink/key projection of
+  `valid_ltr` (the Stage-2/3 `ltr_ctx_collect`, renamed to the public name; `combc` dropped). Single
+  public collecting API; `cfg_collect_ctx_act_le_collect` retained.
+- `activation_collect_sound` (public, `Activation_Backbone`) keeps its name; its statement now uses
+  the new `cfg_collect_ctx_act` and the stable-context `COMB`, and its proof is one line from
+  `valid_ltr_ctx_sound`. The engine `valid_ltr_ctx_sound` lives in `Activation_Local_Sound`.
+
+**Retired.** `CFG_Collect_Activation.thy` deleted in full: `trace_witness_act`,
+`cfg_collect_trace_act`, the old `cfg_collect_ctx_act`, `act_step_preserves_ctx`,
+`act_enter_routes_ctx`, `act_combine_ctx`, `act_combine_resumes_caller`,
+`trace_witness_act_imp_trace_witness`, `act_recursion_*`, and `activation_trace_sound`
+(`Activation_Backbone`). No compatibility layer remains; `combc` is gone from every activation
+context theory. The `Example_Interval_DG_Ctx_Collect` flagship discharges the caller-context `COMB`
+from its existing `ivl_ctx_sg_comb` (since `ivl_combc` is the caller projection). Stage 5 (the
+recursive source bridge) targets this sole `cfg_collect_ctx_act`.
 
 ## Documentation map
 

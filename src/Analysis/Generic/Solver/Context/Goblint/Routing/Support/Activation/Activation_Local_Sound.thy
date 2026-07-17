@@ -15,9 +15,9 @@ text \<open>
   \<open>enterc\<close>-routed context, so the existing callee premise \<open>enterc c1 es\<close> fires without a free
   callee-context parameter.
 
-  This is internal Stage-3 scaffolding: it carries the statement shape of the public
-  \<open>activation_collect_sound\<close> over \<^const>\<open>ltr_ctx_collect\<close>, but does not yet replace it.  No
-  existing collecting definition, backbone theorem, DG discharge, or example is changed.
+  This theory provides the domain-level engine \<open>valid_ltr_ctx_sound\<close>; the public
+  \<open>activation_collect_sound\<close> (in \<open>Activation_Backbone\<close>) is the set-level projection over
+  \<^const>\<open>cfg_collect_ctx_act\<close>, proved by one line from it.
 \<close>
 
 subsection \<open>The return step\<close>
@@ -167,35 +167,6 @@ proof -
   have "\<forall>u \<in> callers t. sink_store u \<in> \<lbrakk>sg (Inl (sink_node u, key enterc seedc u))\<rbrakk>"
     using ENTRY_G EDGE SEED_G COMB t by (rule valid_ltr_ctx_chain)
   then show ?thesis using callers_refl by blast
-qed
-
-subsection \<open>The projection soundness\<close>
-
-text \<open>The internal projection \<^const>\<open>ltr_ctx_collect\<close> lands in the reader slot at each
-  \<open>(pp, context)\<close> --- the Stage-3 statement, matching the shape of \<open>activation_collect_sound\<close>
-  but over the activation-local semantics and stable context.\<close>
-theorem ltr_ctx_collect_sound:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
-    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
-        \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and SEED_G: "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
-    and COMB: "\<And>cl ex v dst c1 s t es. (cl, ex, v, dst) \<in> combines g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, enterc c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store g cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, c1))\<rbrakk>"
-  shows "ltr_ctx_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-proof
-  fix st assume "st \<in> ltr_ctx_collect enterc seedc g S v ctx"
-  then obtain t where t: "t \<in> valid_ltr g S"
-    and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "st = sink_store t"
-    unfolding ltr_ctx_collect_def by blast
-  have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"
-    using ENTRY_G EDGE SEED_G COMB t by (rule valid_ltr_ctx_sound)
-  then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn kc st by simp
 qed
 
 end
