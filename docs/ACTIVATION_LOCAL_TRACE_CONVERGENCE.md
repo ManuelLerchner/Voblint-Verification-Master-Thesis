@@ -226,21 +226,36 @@ but after migration both are defined and proved from `valid_ltr`. The existing
 contract. `DG_Ctx_Activation` remains its DG-native discharge; it is not duplicated by a
 local-trace sibling theorem.
 
-The context projection is computed after the concrete trace exists. In particular, a
-`Resume` value retains both caller and callee ancestry so a general return-context function
-can be recovered:
+The context projection is computed after the concrete trace exists. The activation context is
+**activation-stable**: it is fixed at creation and unchanged by the calls an activation later
+makes and returns from.
 
 ```isabelle
-key … (Root _) = seedc
-key … (Call parent p) = enterc (key … parent) (entry_store p)
-key … (Resume caller callee _) = combc (key … caller) (key … callee)
+key enterc seedc (Root _) = seedc
+key enterc seedc (Call parent p) = enterc (key enterc seedc parent) (entry_store p)
+key enterc seedc (Resume caller callee _) = key enterc seedc caller
 ```
 
-Thus generic `combc` does not force abstract contexts into the foundational trace relation. The
-`Resume` node retains the full `callee` subtree precisely so `key` can read `key callee` at a
-return; the generalized `ret` rule (with `caller = caller_of callee`) keeps that subtree
-available for callees of any constructor, so `combc` stays general without re-introducing the
-two-constructor design's loss of the completed callee.
+This matches Goblint's solver indexing: `Spec.context` is call-only, and `Spec.combine` merges
+abstract *states* but not function contexts, so a resumed caller keeps its own creation context.
+The `Resume` node's retained `callee` subtree plays **no role** in this context. It is kept for
+trace flattening, history projections, and a possible later return-sensitive history *digest*
+computed by a separate map — deliberately distinct from the solver context, which does not depend
+on completed calls.
+
+**Why not a general `combc`-combined context.** An earlier draft set
+`key (Resume caller callee _) = combc (key caller) (key callee)`, retaining the callee subtree so
+`combc` could read `key callee`. That is incompatible with the existing `COMB` obligation for a
+*general* `combc`: `COMB` binds the completed callee at its routed entry context `enterc c1 es`,
+whereas a callee that itself called and resumed would carry `key callee = combc (…)`. The old
+`trace_witness_act` backbone never exposed this because its combine rule structurally required the
+callee sub-witness to *end at* context `enterc c1 (hd rho)`, so a context-changing nested return
+was **unrepresentable** — its `combc`-generality was vacuous on exactly the recursion case. Making
+those traces representable in `valid_ltr` surfaced the choice; the stable model is the
+Goblint-faithful resolution. The alternative (general evolving contexts: keep the `combc` clause,
+generalise `COMB` to a free callee context `c2`, and generate `(v, combc c1 c2)` return-slot
+variables) is a return-sensitive partitioning analysis beyond Goblint's current model, recorded as
+a possible future extension, not the migration target.
 
 ## Whole-program traces are derived, not lost
 
@@ -478,6 +493,44 @@ with `valid_ltr_caller_valid`. Note that `caller_of_unique`
 (`caller_of t = Some c1 \<Longrightarrow> caller_of t = Some c2 \<Longrightarrow> c1 = c2`) is
 **only functional uniqueness** — `caller_of` is a function — and carries no semantic weight; it
 is not the source of the non-invention property.
+
+### Stage 2 landed (`CFG_Local_Trace.thy`)
+
+The internal projection `ltr_ctx_collect` and its inclusion in the broad graph collecting
+semantics are proved:
+
+- `valid_ltr_sink_in_cfg_collect` — the sink store of a valid trace at its sink node lies in
+  `cfg_collect`. Proof: reduce a valid trace to a `cfg_witness` derivation along the finite
+  `callers` chain (needed because `ret` recovers its caller structurally, not as a recursive
+  premise), reusing `cfg_collect = {s. cfg_witness …}`. The `Resume` case discharges the broad
+  combine directly from the frozen caller and retained callee — no re-rooting.
+- `ltr_ctx_collect_le_cfg_collect` — the `key` filter is a trivial outer restriction of that
+  key-free inclusion.
+
+### Stage 3 landed (`CFG_Local_Trace.thy`, `Activation_Local_Sound.thy`)
+
+The context-sensitive soundness backbone is reproved over `valid_ltr` with the stable `key`,
+using exactly the four obligations `ENTRY_G`, `EDGE`, `SEED_G`, `COMB` (with the `COMB` output
+reshaped to the caller context `c1`, since the resumed activation keeps its creation context — no
+fifth obligation, no free callee-context parameter):
+
+- `callee_entry_invariant` (CFG session, domain-free) — the load-bearing fact: for every valid
+  callee, leaf or nested, and its structurally-recovered creator `c`, the callee's stable context
+  is `enterc (key c) (entry_store callee)` and it was born from a concrete `EA_Enter` edge at `c`
+  (`call_enter_store`). This is why the *existing* callee slot `enterc c1 es` fires for nested
+  `Resume` callees without a `combc`-shaped context.
+- `valid_ltr_ctx_chain` / `valid_ltr_ctx_sound` — the soundness induction along the caller chain
+  and its sink corollary.
+- `ltr_ctx_collect_sound` — `ltr_ctx_collect enterc seedc g S v c ⊆ γ (sg (Inl (v, c)))`, the
+  Stage-3 statement, aligned **propositionally** (not definitionally) with the public
+  `activation_collect_sound`: same conclusion shape and same four obligations, over the
+  activation-local semantics and stable context.
+
+`Activation_Local_Sound` is internal scaffolding. The public `activation_collect_sound`,
+`cfg_collect_ctx_act`, `trace_witness_act`, `DG_Ctx_Activation`, the interval flagship, and the
+constraint generator are untouched; Stage 4 swaps the public bodies onto this proof. The DG
+discharge `dg_ctx_act_comb_covered` is already general in the callee/return contexts, so it
+carries the reshaped `COMB` without change.
 
 ## Documentation map
 

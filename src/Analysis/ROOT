@@ -61,6 +61,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Clean_RRead_Sound
     Seed_EnterMono_Lift
     Activation_Backbone
+    Activation_Local_Sound
     Digest_Global_Read
     Value_Digest_Reader
     TD_Side_Eff_Cmp_Pull

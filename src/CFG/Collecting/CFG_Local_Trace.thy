@@ -95,16 +95,22 @@ primrec extend :: "ltr \<Rightarrow> (pp * store) \<Rightarrow> ltr" where
 | "extend (Call c p) x     = Call c (p @ [x])"
 | "extend (Resume c d p) x = Resume c d (p @ [x])"
 
-text \<open>The context is computed from the concrete trace after the fact.  A call routes the
-  caller context on the bound callee-entry store; a return combines the caller and callee
-  contexts.  Routing the context only at a call is this formalization's Goblint adaptation
-  (Goblint's \<open>context\<close> is call-only) and is not part of the cited local-trace paper, which
-  concerns thread-modular concurrency rather than procedure contexts.  A \<^const>\<open>Resume\<close>
-  retains the full callee subtree precisely so \<open>combc\<close> can read \<open>key callee\<close>.\<close>
-fun key :: "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
-  "key enterc combc seedc (Root _)                  = seedc"
-| "key enterc combc seedc (Call parent p)           = enterc (key enterc combc seedc parent) (snd (hd p))"
-| "key enterc combc seedc (Resume caller callee _)  = combc (key enterc combc seedc caller) (key enterc combc seedc callee)"
+text \<open>The activation context is computed from the concrete trace after the fact and is
+  ACTIVATION-STABLE: fixed when the activation is created and unchanged by the calls it later
+  makes and returns from.  \<^const>\<open>Root\<close> carries the seed; a \<^const>\<open>Call\<close> routes the caller
+  context on the bound callee-entry store (Goblint's call-only \<open>context\<close>, read on the entered
+  callee state); a \<^const>\<open>Resume\<close> keeps the resumed caller's own context, so a completed call
+  does not repartition the caller.  This matches Goblint's solver indexing, where
+  \<open>Spec.combine\<close> merges abstract states but not function contexts.
+
+  The retained \<^const>\<open>Resume\<close> callee subtree plays no role in this context.  It is kept for trace
+  flattening, history projections, and a possible later return-sensitive history digest computed
+  by a separate map --- deliberately distinct from the solver context here, which does not
+  depend on completed calls.\<close>
+fun key :: "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
+  "key enterc seedc (Root _)                 = seedc"
+| "key enterc seedc (Call parent p)          = enterc (key enterc seedc parent) (snd (hd p))"
+| "key enterc seedc (Resume caller callee _) = key enterc seedc caller"
 
 subsection \<open>The closure relation\<close>
 
@@ -502,20 +508,128 @@ theorem valid_ltr_sink_in_cfg_collect:
   "t \<in> valid_ltr g S \<Longrightarrow> sink_store t \<in> cfg_collect g S (sink_node t)"
   using valid_ltr_sink_witness cfg_witness_in_cfg_collect by blast
 
+subsection \<open>Stable context entry invariant\<close>
+
+text \<open>\<^const>\<open>extend\<close> never touches the innermost constructor, so it leaves the activation
+  context unchanged when the path is non-empty (in particular for every \<^const>\<open>valid_ltr\<close>
+  member).\<close>
+lemma key_extend_nonempty:
+  "path t \<noteq> [] \<Longrightarrow> key enterc seedc (extend t x) = key enterc seedc t"
+  by (cases t) auto
+
+text \<open>A \<^const>\<open>Resume\<close> continues the caller's path, so it keeps the caller's entry store.\<close>
+lemma entry_store_Resume_caller:
+  "path caller \<noteq> [] \<Longrightarrow>
+     entry_store (Resume caller callee (path caller @ [x])) = entry_store caller"
+  by (simp add: entry_store_def hd_append)
+
+text \<open>
+  The entry invariant that makes the stable context discharge the return obligation.  For every
+  valid callee and every activation \<open>u\<close> in its caller chain, if \<open>u\<close> was created by \<open>c\<close> then
+  \<open>u\<close>'s context is \<open>c\<close>'s context routed on \<open>u\<close>'s bound entry store, and \<open>u\<close> was born from a
+  concrete \<^const>\<open>EA_Enter\<close> edge at \<open>c\<close>'s sink (\<^const>\<open>call_enter_store\<close>).  The chain is needed
+  because a nested \<^const>\<open>Resume\<close> recovers its creator structurally, not as a recursive premise;
+  the property for that creator is read off \<open>u = \<close>the frozen caller, which lies in the callee's
+  chain.  With the stable \<open>key\<close> the two constructor cases (\<^const>\<open>Call\<close> leaf, \<^const>\<open>Resume\<close>
+  nested) collapse to the same \<open>enterc\<close> shape, so a return always sees its callee at an
+  \<open>enterc\<close>-routed context --- exactly the callee slot the backbone \<open>COMB\<close> obligation expects.
+\<close>
+lemma callee_entry_invariant:
+  "callee \<in> valid_ltr g S \<Longrightarrow>
+     \<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c \<longrightarrow>
+       key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+       \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
+proof (induction rule: valid_ltr.induct)
+  case (init s)
+  then show ?case by (simp add: callers_Root)
+next
+  case (intra t a v s')
+  show ?case
+  proof (intro ballI allI impI)
+    fix u c assume uin: "u \<in> callers (extend t (v, s'))" and cof: "caller_of u = Some c"
+    from uin have "u = extend t (v, s') \<or> u \<in> callers t"
+      using callers_extend_subset by blast
+    then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+               \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
+    proof
+      assume u: "u = extend t (v, s')"
+      have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
+      have "caller_of t = Some c" using cof u by simp
+      then have "key enterc seedc t = enterc (key enterc seedc c) (entry_store t)
+                 \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store t)"
+        using intra.IH callers_refl by blast
+      then show ?thesis using u pt by (simp add: key_extend_nonempty)
+    next
+      assume "u \<in> callers t"
+      then show ?thesis using intra.IH cof by blast
+    qed
+  qed
+next
+  case (call caller xs es fe ex ret dst se)
+  show ?case
+  proof (intro ballI allI impI)
+    fix u c assume uin: "u \<in> callers (Call caller [(fe, se)])" and cof: "caller_of u = Some c"
+    from uin have "u = Call caller [(fe, se)] \<or> u \<in> callers caller"
+      by (simp add: callers_Call)
+    then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+               \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
+    proof
+      assume u: "u = Call caller [(fe, se)]"
+      have c_eq: "c = caller" using cof u by simp
+      have ces: "call_enter_store g (sink_node caller) (sink_store caller) se"
+        unfolding call_enter_store_def using call.hyps(2) call.hyps(4) by auto
+      show ?thesis using u c_eq ces by (simp add: entry_store_def)
+    next
+      assume "u \<in> callers caller"
+      then show ?thesis using call.IH cof by blast
+    qed
+  qed
+next
+  case (ret callee caller v dst r)
+  show ?case
+  proof (intro ballI allI impI)
+    fix u c assume uin: "u \<in> callers (Resume caller callee (path caller @ [(v, r)]))"
+      and cof: "caller_of u = Some c"
+    have cvalid: "caller \<in> valid_ltr g S"
+      using ret.hyps(1) ret.hyps(2) valid_ltr_caller_valid by blast
+    have pcaller: "path caller \<noteq> []" using cvalid valid_ltr_path_nonempty by blast
+    from uin have "u = Resume caller callee (path caller @ [(v, r)]) \<or> u \<in> callers callee"
+      using callers_Resume_subset[OF ret.hyps(2)] by blast
+    then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+               \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
+    proof
+      assume u: "u = Resume caller callee (path caller @ [(v, r)])"
+      have cof': "caller_of caller = Some c" using cof u by simp
+      have caller_in: "caller \<in> callers callee"
+        using ret.hyps(2) callers_caller_subset callers_refl by blast
+      have IHc: "key enterc seedc caller = enterc (key enterc seedc c) (entry_store caller)
+                 \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store caller)"
+        using ret.IH caller_in cof' by blast
+      have kres: "key enterc seedc u = key enterc seedc caller" using u by simp
+      have esres: "entry_store u = entry_store caller"
+        using u pcaller by (simp add: entry_store_Resume_caller)
+      show ?thesis using IHc kres esres by simp
+    next
+      assume "u \<in> callers callee"
+      then show ?thesis using ret.IH cof by blast
+    qed
+  qed
+qed
+
 subsection \<open>Internal context projection\<close>
 
 text \<open>The internal activation-sensitive projection: the sink stores of valid traces reaching \<open>v\<close>
-  whose context key is \<open>c\<close>.  It is Stage-2 scaffolding under a distinct name; the public
+  whose activation context is \<open>c\<close>.  It is scaffolding under a distinct name; the public
   \<open>cfg_collect_ctx_act\<close> is untouched until Stage 4.  Its inclusion in \<^const>\<open>cfg_collect\<close> is
   immediate from the key-free sink inclusion: the \<open>key\<close> filter only removes traces.\<close>
 
 definition ltr_ctx_collect ::
-  "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
-  "ltr_ctx_collect enterc combc seedc g S v c =
-     {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc combc seedc t = c}"
+  "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
+  "ltr_ctx_collect enterc seedc g S v c =
+     {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
 
 theorem ltr_ctx_collect_le_cfg_collect:
-  "ltr_ctx_collect enterc combc seedc g S v c \<subseteq> cfg_collect g S v"
+  "ltr_ctx_collect enterc seedc g S v c \<subseteq> cfg_collect g S v"
   unfolding ltr_ctx_collect_def using valid_ltr_sink_in_cfg_collect by fastforce
 
 end
