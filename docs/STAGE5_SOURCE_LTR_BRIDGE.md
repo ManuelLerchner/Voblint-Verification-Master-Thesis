@@ -1,7 +1,22 @@
 # Stage 5 design — source execution to activation-local traces
 
-Status: **design only**. No `.thy` changed by this document. Deliverable requested before
-implementation: the representation invariant and the theorem dependency graph.
+Status: **constructive bridge landed** (milestones 1–3). The `stack_repr` / `ltr_repr` /
+`located_ltr` invariant and the chain `L1 → L2 → L3 → T1 → T2 → T3` are proved and batch-green
+through `Voblint_Formalization`:
+
+- `src/CFG/Compiler/Located_LTR.thy` — `stack_repr` (inductive, no `S`, no combine-existential),
+  `ltr_repr`, `located_ltr`; `ltr_repr_Return` (the load-bearing case), `cstep_preserves_ltr_repr`,
+  `located_ltr_entry`, `csteps_preserve_located_ltr`, and the source bridge `source_run_has_ltr`
+  (T1) / `source_store_in_cfg_collect_ctx_act` (T2). Domain-free, CFG session.
+- `src/Formalization/Pipeline/Source_Activation_Sound.thy` — `source_activation_sound` (T3): a
+  reachable compiled-source store lies in `γ (sg (Inl (v, key enterc seedc t)))` under exactly the
+  four backbone obligations.
+
+Refinements adopted from review: `stack_repr` is inductive and drops both the `S` parameter and the
+combine-existential; the Return branch was implemented first. The secondary `flatten` milestone is
+**not** started (it is not needed by the bridge and deliberately forgets the caller structure the
+return proof relies on). The prose below is the original design; the invariant shape here matches
+what landed.
 
 ## Goal
 
@@ -57,30 +72,30 @@ history. The `ltr` carries the full caller activations. So the correspondence is
 relation** with the `ltr` as the richer object; the `cconf` is its forgetful projection. Existence
 (not uniqueness) of the richer witness is all we need.
 
+`stack_repr` is **inductive** (introduction rules match the `Call` proof, elimination exposes the
+caller in the `Return` proof, induction follows the runtime stack). It takes **no** `S` and **no**
+combine-existential: the exact combine tuple always comes from the `cstep.Call` / `cstep.Return`
+premise at the point of use, and validity w.r.t. `g`/`S` lives in `ltr_repr`. Frame identity is the
+minimal caller-chain correspondence.
+
 ```text
-stack_repr :: cfg => store set => cframe list => ltr => bool
-  stack_repr g S []                     t = (caller_of t = None)
-  stack_repr g S ((call,ret,saved)#stk) t =
-      (EX c. caller_of t = Some c
-             AND sink_node c = call
-             AND sink_store c = saved
-             AND (EX ex dst. (call, ex, ret, dst) : combines g)   -- a pending return triple exists
-             AND stack_repr g S stk c)
+inductive stack_repr :: cfg => cframe list => ltr => bool for g where
+  empty: caller_of t = None ==> stack_repr g [] t
+| frame: caller_of t = Some c ==> sink_node c = call ==> sink_store c = saved
+         ==> stack_repr g stk c ==> stack_repr g ((call, ret, saved) # stk) t
 
 ltr_repr :: cfg => store set => cconf => ltr => bool
   ltr_repr g S (v,s,stk) t =
-      (t : valid_ltr g S
-       AND sink_node t = v
-       AND sink_store t = s
-       AND stack_repr g S stk t)
+      (t : valid_ltr g S AND sink_node t = v AND sink_store t = s AND stack_repr g stk t)
 
 located_ltr g S cf = (EX t. ltr_repr g S cf t)
 ```
 
-`stack_repr` walks `caller_of` in lockstep with the `cframe` list — the invariant is deliberately
-**stack-indexed**, as anticipated. It is the `valid_ltr` analogue of `stack_sound`, replacing
-"`saved : cfg_collect g S call`" with "there is a caller activation `c` whose sink is `(call,
-saved)`."
+`stack_repr` walks `caller_of` in lockstep with the `cframe` list — deliberately **stack-indexed**.
+It is the `valid_ltr` analogue of `stack_sound`, replacing "`saved : cfg_collect g S call`" with
+"there is a caller activation `c` whose sink is `(call, saved)`."  (The `ret` field is retained in
+the `frame` rule only to fix the tuple shape; it is unconstrained, since the pending return triple
+is supplied by the transition, not the invariant.)
 
 ### The requested five-point correspondence, at every execution state
 

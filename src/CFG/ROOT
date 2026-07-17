@@ -19,3 +19,4 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     Located_Exec
     Control_Simulation
     Located_Reaches
+    Located_LTR

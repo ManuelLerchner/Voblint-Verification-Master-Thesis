@@ -12,6 +12,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   theories
     Voblint
     Compiler_Correctness
+    Source_Activation_Sound
     Trace_Analysis_Sound
     Mixed_Flow_Sound
     Exec_Sign_Run
