@@ -5,7 +5,6 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Analysis.Solver_Menu"
     "Voblint_CFG.IMP2_Proc_to_CFG"
-    "Voblint_CFG.CFG_GraphViz"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
@@ -293,7 +292,8 @@ definition twice_graph_config ::
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
       owner_of = compiled_owner_of twice_pi twice_procs twice_main,
-      cluster_label = (\<lambda>owner _. owner @ '' / context=unit'')
+      cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
+      source_text = Some (string_of_program twice_pi twice_procs twice_main)
     \<rparr>"
 
 definition twice_graph_domain :: "(pp \<times> unit + unit) list" where
@@ -310,30 +310,6 @@ definition twice_dot :: String.literal where
 
 ML_val \<open>writeln (@{code twice_dot})\<close>
 
-text \<open>
-  \<^verbatim>\<open>writeln (@{code twice_dot})\<close> emits the following graph.  Both call edges
-  \<open>4 -> 0\<close> and \<open>6 -> 0\<close> are thick purple \<open>enter\<close> edges into the shared callee
-  entry; the two returns \<open>3 -> 5\<close> / \<open>3 -> 7\<close> are dashed blue combine edges.
 
-  digraph CFG {
-    rankdir=TB;
-    0 [label="0\np=[3,10]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
-    1 [label="1\np=[3,10]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
-    2 [label="2\np=[3,10]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
-    3 [label="3\np=[3,10]\n#ret=[6,20]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
-    4 [shape=doublecircle,color=green,label="4\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[-inf,+inf]\ny=[-inf,+inf]"];
-    5 [label="5\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[6,20]\ny=[-inf,+inf]"];
-    6 [label="6\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[6,20]\ny=[-inf,+inf]"];
-    7 [shape=doublecircle,color=red,label="7\np=[-inf,+inf]\n#ret=[-inf,+inf]\nx=[6,20]\ny=[6,20]"];
-    0 -> 1 [label="nop"];
-    1 -> 2 [label="nop"];
-    2 -> 3 [label="#ret := (p+p)"];
-    4 -> 0 [color=purple,penwidth=2,label="enter"];
-    5 -> 6 [label="nop"];
-    6 -> 0 [color=purple,penwidth=2,label="enter"];
-    3 -> 5 [style=dashed,color=blue,label="combine via call@4"];
-    3 -> 7 [style=dashed,color=blue,label="combine via call@6"];
-  }
-\<close>
 
 end

@@ -55,7 +55,6 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Analysis.Solver_Menu"
     "Voblint_CFG.IMP2_Proc_to_CFG"
-    "Voblint_CFG.CFG_GraphViz"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
@@ -478,7 +477,8 @@ definition flagship_graph_config ::
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
-      cluster_label = (\<lambda>_ _. ''main / root context'')
+      cluster_label = (\<lambda>_ _. ''main / root context''),
+      source_text = Some (string_of_program Map.empty [] flagship_prog)
     \<rparr>"
 
 definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where
@@ -495,24 +495,5 @@ definition flagship_dot :: String.literal where
 
 ML_val \<open>writeln (@{code flagship_dot})\<close>
 
-text \<open>
- ML_val \<open>writeln (@{code flagship_dot})\<close> results in the following Graph: (See https://dreampuf.github.io/GraphvizOnline/?engine=dot#digraph%20CFG%20%7B%0A%20%20rankdir%3DTB%3B%0A%20%200%20%5Bshape%3Ddoublecircle%2Ccolor%3Dgreen%2Clabel%3D%220%5Cnx%3D%5B-inf%2C%2Binf%5D%22%5D%3B%0A%20%201%20%5Blabel%3D%221%5Cnx%3D%5B0%2C0%5D%22%5D%3B%0A%20%202%20%5Blabel%3D%222%5Cnx%3D%5B0%2C20%5D%22%5D%3B%0A%20%203%20%5Blabel%3D%223%5Cnx%3D%5B0%2C19%5D%22%5D%3B%0A%20%204%20%5Blabel%3D%224%5Cnx%3D%5B1%2C20%5D%22%5D%3B%0A%20%205%20%5Bshape%3Ddoublecircle%2Ccolor%3Dred%2Clabel%3D%225%5Cnx%3D%5B20%2C20%5D%22%5D%3B%0A%20%200%20-%3E%201%20%5Blabel%3D%22x%20%3A%3D%200%22%5D%3B%0A%20%201%20-%3E%202%20%5Blabel%3D%22nop%22%5D%3B%0A%20%202%20-%3E%203%20%5Blabel%3D%22%5Bx%3C20%5D%22%5D%3B%0A%20%202%20-%3E%205%20%5Blabel%3D%22!%5Bx%3C20%5D%22%5D%3B%0A%20%203%20-%3E%204%20%5Blabel%3D%22x%20%3A%3D%20(x%2B1)%22%5D%3B%0A%20%204%20-%3E%202%20%5Blabel%3D%22nop%22%5D%3B%0A%7D%0A%20%0Aval%20it%20%3D%20()%3A%20unit)
 
- digraph CFG {
-  rankdir=TB;
-  0 [shape=doublecircle,color=green,label="0\nx=[-inf,+inf]"];
-  1 [label="1\nx=[0,0]"];
-  2 [label="2\nx=[0,20]"];
-  3 [label="3\nx=[0,19]"];
-  4 [label="4\nx=[1,20]"];
-  5 [shape=doublecircle,color=red,label="5\nx=[20,20]"];
-  0 -> 1 [label="x := 0"];
-  1 -> 2 [label="nop"];
-  2 -> 3 [label="[x<20]"];
-  2 -> 5 [label="![x<20]"];
-  3 -> 4 [label="x := (x+1)"];
-  4 -> 2 [label="nop"];
-}
-
-\<close>
 end

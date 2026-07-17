@@ -265,14 +265,14 @@ qed
 subsection \<open>DOT output\<close>
 
 text \<open>
-  @{const plain_dot_of_prog_lit} emits the procedural CFG with procedure
-  clusters and entry/exit highlighting.  Annotated interval DOT is not yet
+  @{const raw_cfg_dot_lit} emits the procedural CFG through the canonical
+  graph model and DOT backend.  Annotated interval DOT is not yet
   wired; the exhibited post-fixpoint gives @{thm [source] main_prog_gx_exit_ivl}
   at exit.
 \<close>
 
 ML_val \<open>
-  writeln (@{code plain_dot_of_prog_lit}
+  writeln (@{code raw_cfg_dot_lit}
              @{code proc_pi} @{code main_procs} @{code main_prog})
 \<close>
 

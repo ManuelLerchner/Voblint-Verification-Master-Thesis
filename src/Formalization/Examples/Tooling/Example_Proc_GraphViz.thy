@@ -5,9 +5,8 @@ theory Example_Proc_GraphViz
 begin
 
 text \<open>
-  Two @{const compile_prog} demos exported via @{const plain_dot_of_prog_lit}
-  (procedure clusters from @{const compile_prog_regions}).  These are
-  structural CFG witnesses only; annotated DOT needs an executable analysis
+  Two @{const compile_prog} demos exported via @{const raw_cfg_dot_lit}.
+  These are structural CFG witnesses; annotated DOT requires an executable analysis
   result (see the sign executable examples).
 
   @verbatim\<open>
@@ -63,19 +62,18 @@ definition procs_b :: "pname list" where
 subsection \<open>DOT output\<close>
 
 text \<open>
-  @{const plain_dot_of_prog_lit} bundles @{const compile_prog},
-  @{const compile_prog_regions}, and labeled rendering into one call.
-  The result is a native ML @{text "string"} -- a single @{command ML_val}
-  with @{text "writeln"} suffices.
+  @{const raw_cfg_dot_lit} compiles the program and renders it through the
+  canonical graph model and DOT backend.  The result is a native ML @{text "string"};
+  a single @{command ML_val} call with @{text "writeln"} suffices.
 \<close>
 
 ML_val \<open>
-  writeln (@{code plain_dot_of_prog_lit}
+  writeln (@{code raw_cfg_dot_lit}
              @{code proc_table_a} @{code procs_a} @{code prog_call_p})
 \<close>
 
 ML_val \<open>
-  writeln (@{code plain_dot_of_prog_lit}
+  writeln (@{code raw_cfg_dot_lit}
              @{code proc_table_b} @{code procs_b} @{code prog_if_calls})
 \<close>
 

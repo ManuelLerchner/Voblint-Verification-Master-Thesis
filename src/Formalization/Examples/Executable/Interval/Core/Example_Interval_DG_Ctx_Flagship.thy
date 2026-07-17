@@ -200,7 +200,8 @@ definition twice_ctx_graph_config ::
       owner_of = compiled_owner_of twice_pi twice_procs twice_main,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = bot then ''main / root context''
-        else owner @ '' / context='' @ string_of_ivl ctx)
+        else owner @ '' / context='' @ string_of_ivl ctx),
+      source_text = Some (string_of_program twice_pi twice_procs twice_main)
     \<rparr>"
 
 definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list" where

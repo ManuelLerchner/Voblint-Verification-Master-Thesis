@@ -38,7 +38,7 @@ where
 definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
   "mixed_graphviz_local_value p =
      (\<lambda>v. if v = ''x''
-       then (if p = 0 then SZero else if p = 1 then SNeg else if p = 2 then SPos else STop)
+       then (if p = 0 then SZero else if p = 1 then SNeg else SPos)
        else STop)"
 
 definition mixed_graphviz_global_value :: "unit \<Rightarrow> ivl abs_state" where
@@ -67,9 +67,14 @@ definition mixed_graphviz_graph_config ::
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
-      locals_for_pp = (\<lambda>_. cfg_local_vars mixed_graphviz_cfg),
+      locals_for_pp = (\<lambda>p.
+        let sc = compiled_procedure_scope (\<lambda>_. None) [] mixed_graphviz_prog
+          mixed_graphviz_cfg p
+        in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>_. None),
-      globals_to_show = cfg_local_vars mixed_graphviz_cfg,
+      globals_to_show =
+        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] mixed_graphviz_prog
+          mixed_graphviz_cfg (cfg_entry mixed_graphviz_cfg)),
       show_local = (\<lambda>_ _ vars st.
         map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
@@ -80,7 +85,8 @@ definition mixed_graphviz_graph_config ::
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
-      cluster_label = (\<lambda>_ _. ''mixed Sign answers'')
+      cluster_label = (\<lambda>_ _. ''mixed Sign answers''),
+      source_text = Some (string_of_program (\<lambda>_. None) [] mixed_graphviz_prog)
     \<rparr>"
 
 definition mixed_graphviz_graph_domain :: "(pp \<times> unit + unit) list" where

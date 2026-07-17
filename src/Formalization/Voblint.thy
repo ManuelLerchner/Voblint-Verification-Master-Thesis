@@ -145,8 +145,7 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
 
   \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
-    \<^item> @{theory Voblint_CFG.CFG_GraphViz} --- plain CFG rendering as GraphViz DOT.
-    \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- domain-parameterised annotated CFG DOT export.
+    \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- canonical raw and context-expanded analysis graph export.
     \<^item> @{theory Voblint_Formalization.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; documents the solver-compatible constant route and the conditional-route monotonicity boundary.
 \<close>

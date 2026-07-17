@@ -204,24 +204,60 @@ corollary sign_exec_prog_sound_trace:
 section \<open>Visualisation convenience\<close>
 
 text \<open>
-  One-command annotated CFG rendering for the sign domain.
+  One-command annotated CFG rendering for the sign domain through the canonical
+  context-expanded graph model.  It compiles the program, runs the solver, and
+  adapts the unit context to the explicit presentation domain.
 
-  @{text "sign_annotated_dot_lit"} composes @{const sign_exec_raw} with
-  @{const annotated_dot_of_prog_lit}: it compiles the program, runs the
-  solver, collects assigned variables, and emits an annotated Graphviz
-  DOT string as a native ML @{text "string"} (via @{const String.implode}).
-
-  Typical example-file use -- no @{text "char list"} decoder needed:
+  Typical example-file use:
 
   @{text [display] "ML_val \<open>
     writeln (@{code sign_annotated_dot_prog_lit} @{code my_prog})
   \<close>"}
 \<close>
 
+
+definition sign_graph_config ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow>
+    (unit, unit, sign abs_state, sign abs_state) analysis_graph_config" where
+  "sign_graph_config \<Pi> ps main =
+    \<lparr> local_of = id,
+      route = (\<lambda>_ _ _ _. ()),
+      show_context = (\<lambda>_. ''''),
+      locals_for_pp = (\<lambda>p.
+        let sc = compiled_procedure_scope \<Pi> ps main (compile_prog \<Pi> ps main) p
+        in scope_formals sc @ scope_locals sc),
+      return_slot_for_pp = (\<lambda>p.
+        scope_return_slot (compiled_procedure_scope \<Pi> ps main
+          (compile_prog \<Pi> ps main) p)),
+      globals_to_show = compiled_global_vars (compile_prog \<Pi> ps main),
+      show_local = (\<lambda>_ _ vars s.
+        map (\<lambda>x. x @ ''='' @ show_val (s x)) vars),
+      format_return = (\<lambda>_ _ ret s.
+        if s ret = STop then [] else [''ret='' @ show_val (s ret)]),
+      show_global = (\<lambda>_ vars s.
+        map (\<lambda>x. x @ ''='' @ show_val (s x)) vars),
+      show_global_key = (\<lambda>_. ''Globals''),
+      is_shared_global = (\<lambda>_. True),
+      show_internal_globals = False,
+      owner_of = compiled_owner_of \<Pi> ps main,
+      cluster_label = (\<lambda>owner _. owner),
+      source_text = Some (string_of_program \<Pi> ps main)
+    \<rparr>"
+
+definition sign_graph_solution ::
+  "(pp + unit \<Rightarrow> sign st) \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> sign abs_state)" where
+  "sign_graph_solution sol z =
+    (case z of Inl (p, ()) \<Rightarrow> fun_of_st (sol (Inl p))
+     | Inr () \<Rightarrow> fun_of_st (sol (Inr ())) )"
+
 definition sign_annotated_dot_lit ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> String.literal" where
+  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> String.literal" where
   "sign_annotated_dot_lit \<Pi> ps main =
-     annotated_dot_of_prog_lit \<Pi> ps main (sign_exec_raw \<Pi> ps main)"
+    String.implode
+      (let g = compile_prog \<Pi> ps main;
+           domain = contextual_graph_domain g (\<lambda>_. [()]) @ [Inr ()];
+           sol = sign_graph_solution (sign_exec_raw \<Pi> ps main)
+       in contextual_analysis_dot (sign_graph_config \<Pi> ps main) g domain sol)"
 
 definition sign_annotated_dot_prog_lit :: "imp_prog \<Rightarrow> String.literal" where
   "sign_annotated_dot_prog_lit p =
