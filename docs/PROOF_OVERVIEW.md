@@ -137,20 +137,21 @@ was deleted. Shared context-collection helpers now live in
 (`TD_Side_Eff_Cmp_Sound.post_fixpoint_sound_at_ctx_semantic_cmp_final`) →
 digest / clean (`Digest_Global_Read`, `Value_Digest_Reader`,
 `Clean_RRead_Sound.clean_ctx_collect_rread_head_bound`) → activation collecting
-(`Seeded_Activation_Sound.seeded_activation_collecting_sound`) → `twf`/`twfr`
-witness (`Activation_Witness_From`) → recursive soundness
-(`Example_Rdiv_Twfr_Sound.rdiv_witness_G_over_approximated`).
+(`Activation_Backbone.activation_collect_sound`: `cfg_collect_ctx_act ⊆ γ`) →
+DG-native discharge (`DG_Ctx_Activation.dg_ctx_activation`) → solver-backed
+context-sensitive flagship
+(`Example_Interval_DG_Ctx_Collect.twice_ctx_collect_ctx_act_sound`).
 
-Steps two through five lie inside the dependency cone of the recursive flagship
-`Example_Rdiv_Twfr_Sound`: required support, not alternatives. The mode/value
-digest (`Trace_Analysis_Sound.context_collect_sound` →
-`Example_Sign_Mode_Digest.mode_collect_sound_witness`) is a *separate* proved spine.
+Steps two through the discharge lie inside the dependency cone of the
+context-sensitive flagship `Example_Interval_DG_Ctx_Collect`: required support,
+not alternatives. The mode/value digest (`Trace_Analysis_Sound.context_collect_sound`
+→ `Example_Sign_Mode_Digest.mode_collect_sound_witness`) is a *separate* proved spine.
 
 **Branch roles.** Every non-flagship theory is classified:
 
 | Role | Meaning | Representative |
 | --- | --- | --- |
-| Canonical spine | proved end-to-end soundness | `side_sign_analysis_sound`, `rdiv_witness_G_over_approximated` |
+| Canonical spine | proved end-to-end soundness | `side_sign_analysis_sound`, `twice_ctx_collect_ctx_act_sound` |
 | Required support | inside a flagship's dependency cone | context tower, return rehydration (`rdiv_rehyd_main_return_sound`) |
 | Regression / counterexample | intentional negative fact | `clean_transfer_unsound` (`¬ sound_effectful_transfer sign_etf_clean`) |
 | Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run` |

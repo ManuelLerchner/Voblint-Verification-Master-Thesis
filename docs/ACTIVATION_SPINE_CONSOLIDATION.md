@@ -1,8 +1,33 @@
 # Activation Spine Consolidation
 
-Status: **PROPOSED** (not started). Authored 2026-07-17. Enabler landed:
-`DG_Ctx_Activation` (commit `b9156f2`, on `main`) — the DG-native discharge of
-the activation obligations, now the canonical context-sensitive proof path.
+Status: **COMPLETED** (2026-07-17, branch `activation-consolidation`, batch-green).
+Enabler: `DG_Ctx_Activation` (commit `b9156f2`, on `main`) — the DG-native
+discharge of the activation obligations, now the canonical context-sensitive
+proof path.
+
+## Outcome
+
+Executed in four independently batch-green commits:
+
+| Stage | Commit | What |
+| --- | --- | --- |
+| 1 — extract backbone | `7f5c925` | new `Activation_Backbone.thy` holding `activation_trace_sound` + `activation_collect_sound` (same names/statements); `Seeded_Activation_Sound` and the DG flagship repointed to it |
+| 2 — delete probe cluster | `8dbe4be` | removed the 5 SeededClean runs, `Twfr_Reach_Read`, and `Example_Seed_Clean_Context` (a sibling `twfr` probe the original map missed), their empty dirs, ROOT entries, and doc references |
+| 3 — delete terminal witnesses | `c9810e6` | removed `Activation_Domain_Instances` + ROOT entry |
+| 4 — delete plain family | (this commit) | removed `Seeded_Activation_Sound`, `Seeded_Activation_Reach`, `Activation_Witness_From` + ROOT entries; updated `PROOF_OVERVIEW`, `OPEN_PROBLEMS` |
+
+Net: **~1,750 `.thy` lines removed across 11 files**; one ~155-line backbone
+added. Full `Voblint_Formalization` build green after each stage.
+
+Map corrections found during execution:
+
+- `Example_Seed_Clean_Context` (under `Interprocedural/`) was a further `twfr`
+  probe sibling not in the original list; folded into Stage 2.
+- `Example_Rdiv_Twfr_Sound` (cited in the old `PROOF_OVERVIEW` chain) had already
+  been deleted in a prior commit (`9c229ddf`), so it was not a live consumer.
+- `Seeded_Clean_Ctx_Collect` is now imported by no theory (only ROOT). It still
+  builds and is **kept**, flagged for the separate Phase 2 digest-kernel review —
+  not deleted blindly.
 
 Branch for execution: `activation-consolidation`.
 

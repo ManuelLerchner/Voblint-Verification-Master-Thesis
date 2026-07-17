@@ -56,9 +56,6 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 
 ## Planned / proposed (not started)
 
-`ACTIVATION_SPINE_CONSOLIDATION.md` (delete the plain-`abs_state` activation +
-from-node-witness + SeededClean-probe cluster, ~1500 lines; enabler
-`DG_Ctx_Activation` landed `b9156f2`) ·
 `AFP_IMP2_FORWARD_SIM_MIGRATION.md` · `ARRAY_SYNTAX_EXTENSION.md` ·
 `GHOST_INSTRUMENTATION_MIGRATION.md` · `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` ·
 `NONDET_HAVOC_MIGRATION.md` · `RELATIONAL_DOMAIN_PLAN.md` ·
@@ -69,6 +66,9 @@ from-node-witness + SeededClean-probe cluster, ~1500 lines; enabler
 
 Read for provenance; the code is the current truth. Status is each doc's own.
 
+`ACTIVATION_SPINE_CONSOLIDATION.md` (deleted the plain-`abs_state` activation +
+from-node-witness + SeededClean-probe cluster, ~1,750 lines; DG-native path
+canonical) ·
 `AFP_IMP2_REBASE_MIGRATION.md` · `BACKWARD_ANALYSIS_PLAN.md` ·
 `CLASSICAL_SPINE_RETIREMENT.md` · `CONTEXT_GRAPHVIZ_DEBUG_RENDERER.md` ·
 `DOMAIN_TYPECLASS_MIGRATION.md` · `EFFECTFUL_TF_MIGRATION.md` ·
