@@ -14,9 +14,10 @@ Executed in four independently batch-green commits:
 | 1 — extract backbone | `7f5c925` | new `Activation_Backbone.thy` holding `activation_trace_sound` + `activation_collect_sound` (same names/statements); `Seeded_Activation_Sound` and the DG flagship repointed to it |
 | 2 — delete probe cluster | `8dbe4be` | removed the 5 SeededClean runs, `Twfr_Reach_Read`, and `Example_Seed_Clean_Context` (a sibling `twfr` probe the original map missed), their empty dirs, ROOT entries, and doc references |
 | 3 — delete terminal witnesses | `c9810e6` | removed `Activation_Domain_Instances` + ROOT entry |
-| 4 — delete plain family | (this commit) | removed `Seeded_Activation_Sound`, `Seeded_Activation_Reach`, `Activation_Witness_From` + ROOT entries; updated `PROOF_OVERVIEW`, `OPEN_PROBLEMS` |
+| 4 — delete plain family | `129e0b1` | removed `Seeded_Activation_Sound`, `Seeded_Activation_Reach`, `Activation_Witness_From` + ROOT entries; updated `PROOF_OVERVIEW`, `OPEN_PROBLEMS` |
+| 5 — delete orphaned kernel | (this commit) | removed `Seeded_Clean_Ctx_Collect` (orphaned by Stage 4) + ROOT entry + doc references |
 
-Net: **~1,750 `.thy` lines removed across 11 files**; one ~155-line backbone
+Net: **~1,900 `.thy` lines removed across 12 files**; one ~155-line backbone
 added. Full `Voblint_Formalization` build green after each stage.
 
 Map corrections found during execution:
@@ -25,9 +26,12 @@ Map corrections found during execution:
   probe sibling not in the original list; folded into Stage 2.
 - `Example_Rdiv_Twfr_Sound` (cited in the old `PROOF_OVERVIEW` chain) had already
   been deleted in a prior commit (`9c229ddf`), so it was not a live consumer.
-- `Seeded_Clean_Ctx_Collect` is now imported by no theory (only ROOT). It still
-  builds and is **kept**, flagged for the separate Phase 2 digest-kernel review —
-  not deleted blindly.
+- `Seeded_Clean_Ctx_Collect` was orphaned by Stage 4 (its only consumer was the
+  deleted `Seeded_Activation_Sound`): zero importers, its 8 exported lemmas used by
+  no surviving theory. Confirmed dead by `git grep Seeded_Clean_Ctx_Collect` /
+  `git grep seeded_clean_` (only the theory + ROOT), then **deleted in Stage 5**.
+  The live digest base `Clean_RRead_Sound` (imported by `Seed_EnterMono_Lift`, cited
+  by `Local_DG`) is unaffected and retained.
 
 Branch for execution: `activation-consolidation`.
 
@@ -114,12 +118,16 @@ The plain family exposes three things; none is load-bearing.
 
 ## Retained boundary (NOT this cut)
 
-The **digest kernel** (`Clean_RRead_Sound`, `Seeded_Clean_Ctx_Collect`) and the
-**DG-route** (`DG_Context_Soundness`, `DG_Route_Soundness`) are woven into live
-generic infra (`Local_DG`) and the domain interpretations
+The live **digest base** `Clean_RRead_Sound` and the **DG-route**
+(`DG_Context_Soundness`, `DG_Route_Soundness`) are woven into live generic infra
+(`Local_DG`, `Seed_EnterMono_Lift`) and the domain interpretations
 (`Interval_DG` / `Sign_DG`, which supply the `ivl_dg` interpretation the DG
-flagship needs). They are a *retained spine*, not a parallel one. Their possible
-thinning is a separate Phase 2, out of scope here.
+flagship needs). They are a *retained spine*, not a parallel one.
+
+(`Seeded_Clean_Ctx_Collect` was originally listed here as retained kernel, on the
+assumption it was live infra. Stage 4 removed its only consumer
+(`Seeded_Activation_Sound`), leaving it orphaned; Stage 5 deleted it. The
+assumption was wrong — it was not woven into anything live.)
 
 Do **not** touch:
 
@@ -129,8 +137,8 @@ Do **not** touch:
 
 ## Migration steps
 
-Four stages, each a standalone batch-green commit; order matters (extraction
-first, plain family last).
+Five stages, each a standalone batch-green commit; order matters (extraction
+first, orphaned kernel last).
 
 **Stage 1 — extract backbone.** New `Activation_Backbone.thy` (imports only
 `Voblint_CFG.CFG_Collect_Activation`) holding `activation_trace_sound` +
@@ -148,9 +156,13 @@ pure example removal.)
 
 **Stage 4 — delete plain family.** Remove `Activation_Witness_From`,
 `Seeded_Activation_Reach`, and the remaining `Seeded_Activation_Sound` +
-`ROOT` entries. If `Seeded_Clean_Ctx_Collect` is orphaned after this, note it for
-the Phase 2 digest-kernel review (do not delete blindly). Full batch build +
-grep for dangling imports, theorem references, and obsolete terminology.
+`ROOT` entries. Full batch build + grep for dangling imports, theorem references,
+and obsolete terminology.
+
+**Stage 5 — delete orphaned kernel.** Stage 4 orphaned `Seeded_Clean_Ctx_Collect`
+(its only consumer was `Seeded_Activation_Sound`). Objective check
+(`git grep Seeded_Clean_Ctx_Collect` / `git grep seeded_clean_`: only the theory +
+ROOT) confirmed it dead; remove it + its `ROOT` entry + doc references. Build green.
 
 ## Files / lines removable
 
