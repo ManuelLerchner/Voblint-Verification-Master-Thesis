@@ -135,6 +135,17 @@ datatype ltr =
 - `Call caller path` represents a callee whose local path starts at the bound entry store;
   the embedded `caller` is the exact suspended caller activation, **frozen at the call node**
   (the value it had when it took the enter edge; it is never mutated while suspended).
+
+  Distinguish two invariants of `Call`, so the creation rule is not misread as a shape
+  constraint:
+  * *Creation invariant*: a newly created activation has path `[(fe, se)]`, the single bound
+    entry step produced by the `call` rule (`se = edge_step (EA_Enter ...) ...`).
+  * *Representation invariant*: subsequent intra transitions extend that path, so a valid `Call`
+    has a **non-empty** path whose head is the bound entry store — not necessarily a singleton.
+
+  The Stage-1 theorem is the representation invariant (`valid_ltr_Call_path_nonempty`); the
+  singleton form holds only at the instant of creation. Reading `Call caller [(fe,se)]` in the
+  `call` rule as "every valid `Call` is a singleton" is the misreading this note prevents.
 - `Resume caller callee path` represents the caller activation continued past a completed call.
   Its fields carry distinct, load-bearing roles:
   * `caller` — the **frozen caller at its call node**, exactly the value that spawned `callee`
@@ -447,6 +458,26 @@ Each stage ends with a green build of the affected session:
 Deletion is permitted only when the final backbone and interval flagship build, the recursive
 source bridge reaches the new `cfg_collect_ctx_act`, and no consumer of
 `trace_witness_act` remains outside its defining theory.
+
+### Stage 1 landed (`CFG_Local_Trace.thy`)
+
+Stage 1 is implemented and builds green through `Voblint_Formalization`. The design
+invariants are theorems of `valid_ltr`, not comments:
+
+- `valid_ltr_Call_caller_valid` — a valid `Call` has a valid caller (survives the callee's
+  intra steps);
+- `valid_ltr_Resume_fields` — for any valid `Resume cc dd q`, `dd \<in> valid_ltr` and
+  `caller_of dd = Some cc`: the frozen caller is **forced** by the callee's ancestry, so a
+  return cannot invent a caller;
+- `valid_ltr_caller_valid` — every caller recovered by `caller_of` from a valid trace is valid;
+- `valid_ltr_path_nonempty` / `valid_ltr_Call_path_nonempty` — the representation invariant;
+- `caller_of_extend` — `extend` preserves ancestry.
+
+The "returns cannot invent callers" guarantee is carried by `valid_ltr_Resume_fields` composed
+with `valid_ltr_caller_valid`. Note that `caller_of_unique`
+(`caller_of t = Some c1 \<Longrightarrow> caller_of t = Some c2 \<Longrightarrow> c1 = c2`) is
+**only functional uniqueness** — `caller_of` is a function — and carries no semantic weight; it
+is not the source of the non-invention property.
 
 ## Documentation map
 
