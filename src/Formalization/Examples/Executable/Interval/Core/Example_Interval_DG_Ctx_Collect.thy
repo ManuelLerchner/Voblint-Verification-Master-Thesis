@@ -3,6 +3,7 @@ theory Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_Ctx_Sound
     "Voblint_Analysis.Interval_Point_Digest"
     "Voblint_Analysis.Seeded_Activation_Sound"
+    "Voblint_Analysis.DG_Ctx_Activation"
 begin
 
 section \<open>Activation-indexed collecting soundness for the routed interval solution\<close>
@@ -68,11 +69,6 @@ abbreviation gen_abs :: "(pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg
 lemma pp_eq_bound:
   "(v, ctx) \<in> fst twice_ctx_sol
      \<Longrightarrow> eq gen_abs (v, ctx) sigma_abs \<le> sigma_abs (Inl (v, ctx))"
-  using twice_ctx_pp_abs by simp
-
-lemma pp_sides_bound:
-  "(v, ctx) \<in> fst twice_ctx_sol
-     \<Longrightarrow> sides_of_rhs (gen_abs (v, ctx)) sigma_abs \<le> sigma_abs"
   using twice_ctx_pp_abs by simp
 
 text \<open>The two faces of the guarded reader: on the solved domain it is the transported
@@ -156,158 +152,46 @@ lemma twice_fwd_closed:
   shows "(v, ctx) \<in> fst twice_ctx_sol"
   using twice_fwd_closed_all assms by fastforce
 
-subsection \<open>The routed intra edge bound (EDGE, covered branch)\<close>
+subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
-text \<open>The routed intra edge tree denotes the interval \<^const>\<open>dg_spec_step\<close> read at the
-  context-copied local slot \<open>(u, ctx)\<close> and the shared global slot \<open>Global\<close> --- the routed
-  analogue of \<open>dg_edge_tree_local\<close> / \<open>dg_edge_tree_global\<close>.  The global key ignores the
-  context (\<open>gkey = (\<lambda>_. Global)\<close>): analysis globals are flow-insensitive and shared.\<close>
+text \<open>The routed interval solution is a \<^locale>\<open>dg_ctx_activation\<close> instance: the diagonal
+  interval DG interpretation \<open>ivl_dg\<close> supplies \<^locale>\<open>sound_dg_spec\<close>, \<open>twice_ctx_pp_abs\<close> the
+  post-solution, and the guarded reader / forward closure the remaining axioms.  \<open>EDGE\<close>
+  and the combine transport are then read off as \<open>twice_dg.dg_ctx_act_edge\<close> /
+  \<open>twice_dg.dg_ctx_act_comb_covered\<close> rather than re-proved by hand.\<close>
 
-lemma edge_tree_local_ctx:
-  "locals (traverse_rhs
-       (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))) sigma_abs)
-   = snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))"
-  unfolding apply_dg_spec_def
-  by (subst traverse_intra_cmp) (simp add: traverse_dg_edge_tree)
-
-lemma edge_tree_global_ctx:
-  "globs (sides_of_rhs
-       (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-       sigma_abs (Inr Global))
-   = fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))"
-proof -
-  have step1:
-    "sides_of_rhs (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-       sigma_abs (Inr Global)
-     = sides_of_rhs (apply_dg_spec Sabs a u)
-         (\<lambda>z. sigma_abs (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. Global) z)) (Inr ())"
-  proof -
-    have "sides_of_rhs (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-            sigma_abs (Inr ((\<lambda>_. Global) ()))
-        = sides_of_rhs (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))
-            (\<lambda>z. sigma_abs (map_sum id (\<lambda>_. Global) z)) (Inr ())"
-      by (rule sides_map_gtree_unit)
-    thus ?thesis by (simp add: sides_map_ltree_Inr sum.map_comp o_def)
-  qed
-  have "globs (sides_of_rhs (map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-          sigma_abs (Inr Global))
-      = globs (sides_of_rhs (apply_dg_spec Sabs a u)
-          (\<lambda>z. sigma_abs (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. Global) z)) (Inr ()))"
-    by (rule arg_cong[OF step1])
-  also have "\<dots> = fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))"
-    unfolding apply_dg_spec_def by (simp add: sides_dg_edge_tree_Inr)
-  finally show ?thesis .
-qed
-
-text \<open>Abbreviations for the accumulator and summand list of \<open>gen_abs (v, ctx)\<close>.\<close>
-
-abbreviation gen_acc0 :: "pp \<Rightarrow> ivl abs_state" where
-  "gen_acc0 v \<equiv> (if v = cfg_entry twice_cfg
-                 then fun_of_st (bot::ivl st) \<squnion> fun_of_st cinit_ivl_st
-                 else fun_of_st (bot::ivl st))"
-
-abbreviation gen_trees :: "pp \<Rightarrow> ivl \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree list" where
-  "gen_trees v ctx \<equiv>
-     map (\<lambda>(u, a). map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u)))
-         (non_enter_predecessor_list twice_cfg v)
-     @ map (\<lambda>(cc, ex, dst). cmb_abs twice_cfg ctx dst cc ex) (combine_predecessor_list twice_cfg v)
-     @ extra_abs twice_cfg ctx v"
-
-text \<open>The entry \<^const>\<open>Side\<close> wrapper only adds to the side effects, so the raw fold's sides
-  are below \<open>gen_abs (v, ctx)\<close>'s at every key.\<close>
-lemma sides_fold_le_gen_abs:
-  "sides_of_rhs (side_rhs_fold_dg (gen_acc0 v) (gen_trees v ctx)) sigma_abs k
-   \<le> sides_of_rhs (gen_abs (v, ctx)) sigma_abs k"
-  unfolding side_cfg_T_eff_cmp_seed_dg_def Let_def
-  by (cases "v = cfg_entry twice_cfg") (auto simp: Let_def intro: sup.cobounded1)
-
-text \<open>\<^bold>\<open>edgeD.\<close>  The interval step's Answer at a covered non-enter edge is below the
-  successor local slot --- read through \<open>edge_tree_local_ctx\<close> and \<open>pp_eq_bound\<close>.\<close>
-lemma edge_bound_local:
-  assumes cov_v: "(v, ctx) \<in> fst twice_ctx_sol"
-    and e: "(u, a, v) \<in> edges twice_cfg" and ne: "\<not> is_enter_action a"
-  shows "snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
-           \<le> locals (sigma_abs (Inl (v, ctx)))"
-proof -
-  let ?t = "map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))"
-  have pred: "(u, a) \<in> set (non_enter_predecessor_list twice_cfg v)"
-    using e ne by (simp add: non_enter_predecessor_list_mem set_predecessor_list[OF twice_finE] predecessors_def)
-  hence mem: "?t \<in> set (gen_trees v ctx)" by (force intro: rev_image_eqI)
-  have "snd (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
-      = locals (traverse_rhs ?t sigma_abs)"
-    by (simp add: edge_tree_local_ctx)
-  also have "\<dots> \<le> side_acc_dg (gen_acc0 v) sigma_abs (gen_trees v ctx)"
-    using locals_traverse_le_side_acc_dg[OF mem] .
-  also have "\<dots> = locals (eq gen_abs (v, ctx) sigma_abs)"
-    by (simp add: eq_side_cfg_T_eff_cmp_seed_dg)
-  also have "\<dots> \<le> locals (sigma_abs (Inl (v, ctx)))"
-    using pp_eq_bound[OF cov_v] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
-
-text \<open>\<^bold>\<open>edgeG.\<close>  The interval step's Side at a covered non-enter edge is below the context's
-  real-global slot --- read through \<open>edge_tree_global_ctx\<close>, \<open>sides_fold_le_gen_abs\<close>, and
-  \<open>pp_sides_bound\<close>.\<close>
-lemma edge_bound_global:
-  assumes cov_v: "(v, ctx) \<in> fst twice_ctx_sol"
-    and e: "(u, a, v) \<in> edges twice_cfg" and ne: "\<not> is_enter_action a"
-  shows "fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
-           \<le> globs (sigma_abs (Inr Global))"
-proof -
-  let ?t = "map_gtree (\<lambda>_. Global) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec Sabs a u))"
-  have pred: "(u, a) \<in> set (non_enter_predecessor_list twice_cfg v)"
-    using e ne by (simp add: non_enter_predecessor_list_mem set_predecessor_list[OF twice_finE] predecessors_def)
-  hence mem: "?t \<in> set (gen_trees v ctx)" by (force intro: rev_image_eqI)
-  have "fst (dg_spec_step Sabs a (locals (sigma_abs (Inl (u, ctx)))) (globs (sigma_abs (Inr Global))))
-      = globs (sides_of_rhs ?t sigma_abs (Inr Global))"
-    by (simp add: edge_tree_global_ctx)
-  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (gen_acc0 v) (gen_trees v ctx)) sigma_abs (Inr Global))"
-    using sides_le_side_rhs_fold_dg[OF mem, where k = "Inr Global"]
-    by (simp add: less_eq_dg_state_def)
-  also have "\<dots> \<le> globs (sides_of_rhs (gen_abs (v, ctx)) sigma_abs (Inr Global))"
-    using sides_fold_le_gen_abs[where k = "Inr Global"]
-    by (simp add: less_eq_dg_state_def)
-  also have "\<dots> \<le> globs (sigma_abs (Inr Global))"
-    using pp_sides_bound[OF cov_v, THEN le_funD, of "Inr Global"]
-    by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
-
-text \<open>\<^bold>\<open>EDGE.\<close>  A non-enter edge preserves the context and soundly transfers the
-  guarded reader.  If the source is uncovered its abstraction is empty (vacuous); if it
-  is covered, forward closure (\<open>twice_fwd_closed\<close>) covers the target, and the interval
-  \<^const>\<open>dg_spec_step\<close> soundness (\<open>ivl_dg.step_sound\<close>) transports through the routed edge
-  bounds \<open>edge_bound_local\<close> / \<open>edge_bound_global\<close>.\<close>
-lemma ivl_ctx_sg_edge:
-  assumes e: "(u, a, v) \<in> edges twice_cfg" and ne: "\<not> is_enter_action a"
-    and sin: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk>" and st: "edge_step a s = Some s'"
-  shows "s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
-proof (cases "(u, ctx) \<in> fst twice_ctx_sol")
-  case False
-  hence "\<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk> = {}" by (rule ivl_ctx_sg_uncovered_empty)
-  thus ?thesis using sin by simp
+interpretation twice_dg: dg_ctx_activation Sabs twice_cfg Global
+    "cmb_abs twice_cfg" "extra_abs twice_cfg"
+    "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
+    sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg
+proof
+  show "finite (edges twice_cfg)" by (rule twice_finE)
 next
-  case True
-  hence cov_v: "(v, ctx) \<in> fst twice_ctx_sol" using e ne by (rule twice_fwd_closed)
-  let ?d = "locals (sigma_abs (Inl (u, ctx)))"
-  let ?g = "globs (sigma_abs (Inr Global))"
-  have sin': "s \<in> gamma_unit ?d ?g"
-    using sin True by (simp add: ivl_ctx_sg_covered gamma_unit_def)
-  have "{s} \<subseteq> gamma_unit ?d ?g" using sin' by simp
-  hence "edge_collect a {s} \<subseteq> edge_collect a (gamma_unit ?d ?g)" by (rule edge_collect_mono)
-  moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
-  ultimately have "s' \<in> edge_collect a (gamma_unit ?d ?g)" by blast
-  also have "\<dots> \<subseteq> (case dg_spec_step Sabs a ?d ?g of (g', d') \<Rightarrow> gamma_unit d' g')"
-    by (rule ivl_dg.step_sound)
-  finally have "s' \<in> (case dg_spec_step Sabs a ?d ?g of (g', d') \<Rightarrow> gamma_unit d' g')" .
-  hence "s' \<in> gamma_unit (snd (dg_spec_step Sabs a ?d ?g)) (fst (dg_spec_step Sabs a ?d ?g))"
-    by (simp add: case_prod_beta)
-  also have "\<dots> \<subseteq> gamma_unit (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
-    by (rule gamma_unit_mono[OF edge_bound_local[OF cov_v e ne] edge_bound_global[OF cov_v e ne]])
-  also have "\<dots> = \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
-    using cov_v by (simp add: ivl_ctx_sg_covered gamma_unit_def)
-  finally show ?thesis .
+  show "part_post_solution
+          (side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+             (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
+             (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
+             (fun_of_st (restrict_global_st cinit_ivl_st)))
+          (cfg_exit twice_cfg, bot) sigma_abs (fst twice_ctx_sol)"
+    by (rule twice_ctx_pp_abs)
+next
+  fix v ctx
+  assume "(v, ctx) \<in> fst twice_ctx_sol"
+  thus "ivl_ctx_sg (Inl (v, ctx))
+          = locals (sigma_abs (Inl (v, ctx))) \<squnion> globs (sigma_abs (Inr Global))"
+    by (rule ivl_ctx_sg_covered)
+next
+  fix v ctx
+  assume "(v, ctx) \<notin> fst twice_ctx_sol"
+  thus "\<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk> = {}"
+    by (rule ivl_ctx_sg_uncovered_empty)
+next
+  fix u a v ctx
+  assume "(u, ctx) \<in> fst twice_ctx_sol" "(u, a, v) \<in> edges twice_cfg" "\<not> is_enter_action a"
+  thus "(v, ctx) \<in> fst twice_ctx_sol" by (rule twice_fwd_closed)
 qed
+
+subsection \<open>Shared-global regression facts\<close>
 
 text \<open>
   \<^bold>\<open>Regression: real globals are shared, not context-indexed.\<close>  The reader combines
@@ -503,33 +387,33 @@ proof -
   let ?Dc = "locals (snd twice_ctx_sol (Inl (cl, bot)))"
   let ?De = "locals (snd twice_ctx_sol (Inl (ex, cc)))"
   let ?G = "globs (snd twice_ctx_sol (Inr Global))"
-  let ?dc = "fun_of_st ?Dc" and ?de = "fun_of_st ?De" and ?g = "fun_of_st ?G"
-  have sin: "s \<in> gamma_unit ?dc ?g"
-    using s covCl by (simp add: ivl_ctx_sg_covered gamma_unit_def)
-  have tin: "t \<in> gamma_unit ?de ?g"
-    using t covEx by (simp add: ivl_ctx_sg_covered gamma_unit_def)
-  have "combine_collect dst s t
-        \<in> (case dgs_combine Sabs dst ?dc ?de ?g of (g', d') \<Rightarrow> gamma_unit d' g')"
-    by (rule ivl_dg.combine_sound[OF sin tin])
-  hence "combine_collect dst s t
-        \<in> gamma_unit (snd (dgs_combine Sabs dst ?dc ?de ?g)) (fst (dgs_combine Sabs dst ?dc ?de ?g))"
-    by (simp add: case_prod_beta)
-  also have "\<dots> = \<lbrakk>fun_of_st (snd (dgs_combine Spoly dst ?Dc ?De ?G)
-                        \<squnion> fst (dgs_combine Spoly dst ?Dc ?De ?G))\<rbrakk>"
+  have comm: "dgs_combine Sabs dst (fun_of_st ?Dc) (fun_of_st ?De) (fun_of_st ?G)
+      = map_prod fun_of_st fun_of_st (dgs_combine Spoly dst ?Dc ?De ?G)"
+    unfolding Spoly_def by (rule ivl_Hcomb[symmetric])
+  \<comment> \<open>The only interval-specific step: bridge the executable \<open>Spoly\<close> combine bound to the
+     abstract \<open>Sabs\<close> bound the generic transport reads.\<close>
+  have bound_abs:
+    "snd (dgs_combine Sabs dst (locals (sigma_abs (Inl (cl, bot))))
+            (locals (sigma_abs (Inl (ex, cc)))) (globs (sigma_abs (Inr Global))))
+     \<squnion> fst (dgs_combine Sabs dst (locals (sigma_abs (Inl (cl, bot))))
+            (locals (sigma_abs (Inl (ex, cc)))) (globs (sigma_abs (Inr Global))))
+     \<le> locals (sigma_abs (Inl (v, bot))) \<squnion> globs (sigma_abs (Inr Global))"
   proof -
-    have "dgs_combine Sabs dst ?dc ?de ?g
-        = map_prod fun_of_st fun_of_st (dgs_combine Spoly dst ?Dc ?De ?G)"
-      unfolding Spoly_def by (rule ivl_Hcomb[symmetric])
-    thus ?thesis by (simp add: gamma_unit_def fun_of_st_sup)
+    have "snd (dgs_combine Sabs dst (locals (sigma_abs (Inl (cl, bot))))
+              (locals (sigma_abs (Inl (ex, cc)))) (globs (sigma_abs (Inr Global))))
+         \<squnion> fst (dgs_combine Sabs dst (locals (sigma_abs (Inl (cl, bot))))
+              (locals (sigma_abs (Inl (ex, cc)))) (globs (sigma_abs (Inr Global))))
+       = fun_of_st (snd (dgs_combine Spoly dst ?Dc ?De ?G)
+                    \<squnion> fst (dgs_combine Spoly dst ?Dc ?De ?G))"
+      by (simp add: comm fun_of_st_sup)
+    also have "\<dots> \<le> fun_of_st (locals (snd twice_ctx_sol (Inl (v, bot))) \<squnion> ?G)"
+      by (rule fun_of_st_mono[OF bound])
+    also have "\<dots> = locals (sigma_abs (Inl (v, bot))) \<squnion> globs (sigma_abs (Inr Global))"
+      by (simp add: fun_of_st_sup)
+    finally show ?thesis .
   qed
-  finally have "combine_collect dst s t
-        \<in> \<lbrakk>fun_of_st (snd (dgs_combine Spoly dst ?Dc ?De ?G)
-                     \<squnion> fst (dgs_combine Spoly dst ?Dc ?De ?G))\<rbrakk>" .
-  also have "\<dots> \<subseteq> \<lbrakk>fun_of_st (locals (snd twice_ctx_sol (Inl (v, bot))) \<squnion> ?G)\<rbrakk>"
-    by (rule gamma_state_mono[OF fun_of_st_mono[OF bound]])
-  also have "\<dots> = \<lbrakk>ivl_ctx_sg (Inl (v, bot))\<rbrakk>"
-    using covV by (simp add: ivl_ctx_sg_covered)
-  finally show ?thesis .
+  show ?thesis
+    by (rule twice_dg.dg_ctx_act_comb_covered[OF covCl covEx covV s t bound_abs])
 qed
 
 text \<open>\<^bold>\<open>The two executable combine bounds\<close> (context \<open>bot\<close> caller, routed callee exit),
@@ -653,11 +537,11 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_ente
     unfolding ivl_ctx_sg_covered[OF entry_covered] by (rule gamma_state_sup_ub1)
   finally show "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cfg_entry twice_cfg, bot))\<rbrakk>" .
 next
-  \<comment> \<open>EDGE --- non-enter, context preserved: step_sound + the intra D/G bound from pp.\<close>
+  \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation\<close>.\<close>
   show "\<And>u a v c s s'. (u, a, v) \<in> edges twice_cfg \<Longrightarrow> \<not> is_enter_action a
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
-    by (rule ivl_ctx_sg_edge)
+    by (rule twice_dg.dg_ctx_act_edge)
 next
   \<comment> \<open>SEED_G --- enter routed to \<open>ivl_decode (s' ''p'')\<close>: point_digest + route consistency + seed pub.\<close>
   show "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges twice_cfg

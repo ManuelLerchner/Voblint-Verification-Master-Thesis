@@ -73,6 +73,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Soundness
     DG_Context_Soundness
     DG_Route_Soundness
+    DG_Ctx_Activation
     Local_DG
     Retain_Analysis
     Sign_Side_Soundness
