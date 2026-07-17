@@ -65,7 +65,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Seeded_Activation_Sound
     Seeded_Activation_Reach
     Activation_Witness_From
-    Activation_Domain_Instances
     Digest_Global_Read
     Value_Digest_Reader
     TD_Side_Eff_Cmp_Pull
