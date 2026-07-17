@@ -335,4 +335,187 @@ proof -
        (simp_all add: m_sn f'_sn Cf r2_def)
 qed
 
+section \<open>Inclusion in the broad collecting semantics\<close>
+
+text \<open>
+  Every activation-local sink is a state of the broad graph collecting semantics
+  \<^const>\<open>cfg_collect\<close>: the sink store of a valid trace at its sink node is collected there.
+  This is the Stage-2 semantic obligation --- the local semantics does not admit stores the
+  broad semantics rejects.  The proof reduces a valid trace to a \<^const>\<open>cfg_witness\<close> derivation,
+  reusing the existing equivalence \<open>cfg_collect = {s. cfg_witness ...}\<close>.  The context
+  projection \<open>key\<close> plays no role here: the inclusion establishes the sink state, and the
+  context filter is a trivial outer restriction (\<open>ltr_ctx_collect_le_cfg_collect\<close>).
+\<close>
+
+subsection \<open>The caller chain\<close>
+
+text \<open>
+  The \<open>ret\<close> rule recovers its caller structurally by \<^const>\<open>caller_of\<close>, not as a recursive
+  premise, so \<^const>\<open>valid_ltr\<close> rule induction supplies a witness for the callee but not for the
+  recovered caller.  \<open>callers t\<close> is the finite \<^const>\<open>caller_of\<close> ancestry of \<open>t\<close> (itself and every
+  recovered caller); proving the witness property along the whole chain closes that gap, because the
+  caller a return composes lies in the callee's chain.  Termination descends \<open>size\<close>, since
+  \<^const>\<open>caller_of\<close> strictly shrinks the trace.
+\<close>
+
+lemma caller_of_size: "caller_of t = Some c \<Longrightarrow> size c < size t"
+  by (induction t arbitrary: c) auto
+
+function callers :: "ltr \<Rightarrow> ltr set" where
+  "callers t = insert t (case caller_of t of None \<Rightarrow> {} | Some c \<Rightarrow> callers c)"
+  by pat_completeness auto
+termination callers
+  by (relation "measure size") (auto simp: caller_of_size)
+
+text \<open>\<open>callers.simps\<close> is recursive; never leave it in a simp set (it rewrites \<open>callers c\<close> on
+  its own right-hand side and loops).  These structural facts are what the induction consumes.\<close>
+
+lemma callers_refl: "t \<in> callers t"
+  by (subst callers.simps) simp
+
+lemma callers_caller_subset: "caller_of t = Some c \<Longrightarrow> callers c \<subseteq> callers t"
+  by (subst (2) callers.simps) auto
+
+lemma case_caller_subset:
+  "(case caller_of t of None \<Rightarrow> {} | Some c \<Rightarrow> callers c) \<subseteq> callers t"
+  by (subst (2) callers.simps) auto
+
+lemma callers_Root: "callers (Root p) = {Root p}"
+  by (subst callers.simps) simp
+
+lemma callers_Call: "callers (Call caller p) = insert (Call caller p) (callers caller)"
+  by (subst callers.simps) simp
+
+lemma callers_extend_subset:
+  "callers (extend t x) \<subseteq> insert (extend t x) (callers t)"
+proof -
+  have "callers (extend t x)
+        = insert (extend t x) (case caller_of t of None \<Rightarrow> {} | Some c \<Rightarrow> callers c)"
+    by (subst callers.simps) (simp add: caller_of_extend)
+  also have "... \<subseteq> insert (extend t x) (callers t)"
+    using case_caller_subset by blast
+  finally show ?thesis .
+qed
+
+lemma callers_Resume_subset:
+  assumes "caller_of callee = Some caller"
+  shows "callers (Resume caller callee p) \<subseteq> insert (Resume caller callee p) (callers callee)"
+proof -
+  have "callers (Resume caller callee p)
+        = insert (Resume caller callee p)
+            (case caller_of caller of None \<Rightarrow> {} | Some c \<Rightarrow> callers c)"
+    by (subst callers.simps) simp
+  also have "(case caller_of caller of None \<Rightarrow> {} | Some c \<Rightarrow> callers c) \<subseteq> callers caller"
+    by (rule case_caller_subset)
+  also have "callers caller \<subseteq> callers callee"
+    using assms by (rule callers_caller_subset)
+  finally show ?thesis by blast
+qed
+
+subsection \<open>Sink states are broad witnesses\<close>
+
+text \<open>The witness property holds at every activation of the caller chain.  Rule induction over
+  \<^const>\<open>valid_ltr\<close>: \<open>init\<close> is a \<^const>\<open>cfg_witness\<close> entry; \<open>intra\<close> and \<open>call\<close> append one edge
+  (\<^const>\<open>edge_step\<close> agrees with \<^const>\<open>edge_collect\<close> on a singleton); \<open>ret\<close> discharges the broad
+  \<^const>\<open>cfg_witness\<close> combine directly from the frozen caller and retained callee --- no re-rooting,
+  no reconstruction --- because both witnesses come from the callee's chain.\<close>
+
+lemma callers_witness:
+  "t \<in> valid_ltr g S \<Longrightarrow> \<forall>u \<in> callers t. cfg_witness g S (sink_node u) (sink_store u)"
+proof (induction rule: valid_ltr.induct)
+  case (init s)
+  then show ?case
+    by (simp add: callers_Root sink_node_def sink_store_def cfg_witness.entry)
+next
+  case (intra t a v s')
+  show ?case
+  proof
+    fix u assume "u \<in> callers (extend t (v, s'))"
+    then have "u = extend t (v, s') \<or> u \<in> callers t"
+      using callers_extend_subset by blast
+    then show "cfg_witness g S (sink_node u) (sink_store u)"
+    proof
+      assume u: "u = extend t (v, s')"
+      have wt: "cfg_witness g S (sink_node t) (sink_store t)"
+        using intra.IH callers_refl by blast
+      have "s' \<in> edge_collect a {sink_store t}"
+        using intra.hyps(4) by (simp add: edge_collect_single)
+      then have "cfg_witness g S v s'"
+        using cfg_witness.edge[OF intra.hyps(2) wt] by blast
+      then show ?thesis using u by simp
+    next
+      assume "u \<in> callers t"
+      then show ?thesis using intra.IH by blast
+    qed
+  qed
+next
+  case (call caller xs es fe ex ret dst se)
+  show ?case
+  proof
+    fix u assume "u \<in> callers (Call caller [(fe, se)])"
+    then have "u = Call caller [(fe, se)] \<or> u \<in> callers caller"
+      by (simp add: callers_Call)
+    then show "cfg_witness g S (sink_node u) (sink_store u)"
+    proof
+      assume u: "u = Call caller [(fe, se)]"
+      have wc: "cfg_witness g S (sink_node caller) (sink_store caller)"
+        using call.IH callers_refl by blast
+      have "se \<in> edge_collect (EA_Enter xs es) {sink_store caller}"
+        using call.hyps(4) by (simp add: edge_collect_single)
+      then have "cfg_witness g S fe se"
+        using cfg_witness.edge[OF call.hyps(2) wc] by blast
+      then show ?thesis using u by (simp add: sink_node_def sink_store_def)
+    next
+      assume "u \<in> callers caller"
+      then show ?thesis using call.IH by blast
+    qed
+  qed
+next
+  case (ret callee caller v dst r)
+  show ?case
+  proof
+    fix u assume "u \<in> callers (Resume caller callee (path caller @ [(v, r)]))"
+    then have "u = Resume caller callee (path caller @ [(v, r)]) \<or> u \<in> callers callee"
+      using callers_Resume_subset[OF ret.hyps(2)] by blast
+    then show "cfg_witness g S (sink_node u) (sink_store u)"
+    proof
+      assume u: "u = Resume caller callee (path caller @ [(v, r)])"
+      have wcaller: "cfg_witness g S (sink_node caller) (sink_store caller)"
+        using ret.IH callers_caller_subset[OF ret.hyps(2)] callers_refl by blast
+      have wcallee: "cfg_witness g S (sink_node callee) (sink_store callee)"
+        using ret.IH callers_refl by blast
+      have "cfg_witness g S v r"
+        using cfg_witness.combine[OF ret.hyps(3) wcaller wcallee ret.hyps(4)] .
+      then show ?thesis using u by (simp add: sink_node_def sink_store_def)
+    next
+      assume "u \<in> callers callee"
+      then show ?thesis using ret.IH by blast
+    qed
+  qed
+qed
+
+lemma valid_ltr_sink_witness:
+  "t \<in> valid_ltr g S \<Longrightarrow> cfg_witness g S (sink_node t) (sink_store t)"
+  using callers_witness callers_refl by blast
+
+theorem valid_ltr_sink_in_cfg_collect:
+  "t \<in> valid_ltr g S \<Longrightarrow> sink_store t \<in> cfg_collect g S (sink_node t)"
+  using valid_ltr_sink_witness cfg_witness_in_cfg_collect by blast
+
+subsection \<open>Internal context projection\<close>
+
+text \<open>The internal activation-sensitive projection: the sink stores of valid traces reaching \<open>v\<close>
+  whose context key is \<open>c\<close>.  It is Stage-2 scaffolding under a distinct name; the public
+  \<open>cfg_collect_ctx_act\<close> is untouched until Stage 4.  Its inclusion in \<^const>\<open>cfg_collect\<close> is
+  immediate from the key-free sink inclusion: the \<open>key\<close> filter only removes traces.\<close>
+
+definition ltr_ctx_collect ::
+  "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
+  "ltr_ctx_collect enterc combc seedc g S v c =
+     {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc combc seedc t = c}"
+
+theorem ltr_ctx_collect_le_cfg_collect:
+  "ltr_ctx_collect enterc combc seedc g S v c \<subseteq> cfg_collect g S v"
+  unfolding ltr_ctx_collect_def using valid_ltr_sink_in_cfg_collect by fastforce
+
 end
