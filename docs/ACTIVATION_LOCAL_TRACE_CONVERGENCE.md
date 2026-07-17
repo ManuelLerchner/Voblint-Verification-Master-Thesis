@@ -74,6 +74,53 @@ than at a locals-zeroed store with `p = 0`.
 
 ## Canonical activation-local traces
 
+
+## Relationship to Schwarz et al.
+
+This redesign follows the semantic philosophy of Schwarz et al.: analyses are defined over a
+concrete local-trace semantics rather than over reconstructed global executions.
+
+The difference is what “local” denotes:
+
+| Schwarz et al. | This formalization |
+| --- | --- |
+| one local trace represents a thread-local execution | one local trace represents a procedure activation |
+| creation starts a new thread-local trace | a call starts a parameter-bound callee activation |
+| synchronization relates local thread traces | return composes the callee trace into its suspended caller |
+
+Procedure calls create nested activation traces from concrete stores produced by
+`edge_step (EA_Enter …)`; returns compose exactly those traces back into their callers.
+The local-trace method is therefore adapted from concurrency to sequential interprocedural
+analysis, not introduced as an ad hoc repair of a witness proof.
+
+## Architectural consequence
+
+Defining collecting semantics over activation-local traces removes the need for a separate
+activation witness relation. The source-to-context-sensitive correctness proof follows the
+runtime call stack directly:
+
+```text
+source call push    → concrete callee activation
+source return pop   → concrete Resume caller callee
+```
+
+It no longer reconstructs a callee through an independently re-rooted global execution. This
+is the practical thesis benefit: one concrete semantic object supports the source bridge,
+monovariant collection, digest views, context-sensitive collection, and DG soundness.
+
+## Migration philosophy
+
+The migration is deliberately narrow. It does not rewrite the generic CFG/dataflow framework
+or remove the broad `cfg_collect` / `trace_witness` layer.
+
+During migration, the existing broad collecting semantics and the old activation witness
+remain only as compatibility and regression mechanisms. The redesign replaces the
+activation-sensitive foundation: `valid_ltr` becomes concrete, `cfg_collect_ctx_act`
+becomes its projection, and the existing backbone theorem is reproved over it. Once the
+stack-faithful source bridge, DG flagship, and deletion gate are satisfied, the old activation
+witness is removed. It is scaffolding, never a competing final foundation.
+
+
 For compiled IMP2 CFGs, `valid_ltr` is the planned canonical concrete semantics. Its values
 represent one activation and its concrete ancestry:
 
@@ -376,4 +423,3 @@ Non-negotiable invariants:
 - no second public activation collecting API or sibling backbone theorem is introduced.
 
 Stop and report if any invariant cannot be expressed by the four constructors, if the generic backbone needs an obligation beyond `ENTRY_G`, `EDGE`, `SEED_G`, and `COMB`, or if the `cstep` correspondence requires an arbitrary callee start. Those are architecture failures, not invitations to restore the old witness or `twf/twfr`.
-
