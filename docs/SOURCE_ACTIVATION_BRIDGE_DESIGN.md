@@ -1,6 +1,13 @@
 # Source -> activation-indexed collecting bridge: design note
 
-Status: DESIGN (pre-implementation). No code changed yet.
+Status: SUPERSEDED by `ACTIVATION_WITNESS_RECONCILIATION.md`. Its headline claim (node-7
+slot empty / `twice_ctx_collect_ctx_act_sound` vacuous) was **refuted mechanically**: the
+slot is non-empty (proved `cfg_collect_ctx_act ... 7 bot \<noteq> {}`). The real deficiency is
+faithfulness/compositionality of the witness at nested returns, not emptiness. Read the
+reconciliation note for the corrected analysis and recommendation; the material below is
+kept only for provenance.
+
+Status (original): DESIGN (pre-implementation). No code changed yet.
 
 Goal: from a concrete source run of a compiled procedural program, derive
 membership in the activation-indexed collecting semantics
