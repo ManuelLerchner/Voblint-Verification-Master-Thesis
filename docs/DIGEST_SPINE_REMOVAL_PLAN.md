@@ -459,6 +459,11 @@ Suggested reference:
 archive/relational-digest-experiment
 ```
 
+**Done.** Annotated tag `archive/relational-digest-experiment` created at commit
+`4779e90f` (`feat(cfg): add generic collect_by collector; express activation
+collecting as its instance`) — the last commit holding the complete relational
+digest spine.
+
 No semantic changes.
 
 ### Stage 1 — complete the dependency and theorem ledger
