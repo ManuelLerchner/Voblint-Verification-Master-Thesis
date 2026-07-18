@@ -43,8 +43,8 @@ theory Voblint
     Exec_Sign_Run
     Exec_Sign_DG_Run
     Example_Interval_DG_Flagship
-    Mixed_Flow_Sound
-    Source_Activation_Sound
+    "Voblint_Formalization.Mixed_Flow_Sound"
+    "Voblint_Formalization.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
     Example_Interval_Source_Ctx
     Example_Inc_Proc
@@ -136,25 +136,25 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the recursive source-adequacy bridge \<^verbatim>\<open>source_activation_sound\<close>: any reachable IMP2 source configuration produces a \<^verbatim>\<open>valid_ltr\<close> trace, so a real source run is covered at its activation's own context --- closing \<^verbatim>\<open>source pstep => cstep => valid_ltr => cfg_collect_ctx_act => gamma\<close>.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, and tooling.
-    \<^item> \<^bold>\<open>@{theory Voblint_Formalization.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations are generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result is certified a post-solution and transported to the abstract semantics, and \<^verbatim>\<open>flagship_collect_sound\<close> proves it over-approximates the collecting semantics --- discovering the invariant \<^verbatim>\<open>x in [0,20]\<close>. The compiler-correctness simulation then lifts this to \<^emph>\<open>actual IMP2 source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>). Ends with an analysis-annotated GraphViz rendering.
-    \<^item> @{theory Voblint_Formalization.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver (\<^verbatim>\<open>dgEx_collect_sound\<close>).
-    \<^item> @{theory Voblint_Formalization.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program: the computed interval D/G solution certified against the activation collecting at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_ctx_collect_ctx_act_sound\<close>).
-    \<^item> @{theory Voblint_Formalization.Example_Interval_Source_Ctx} --- the same \<^verbatim>\<open>twice\<close> program certified against \<^emph>\<open>actual source runs\<close> at each activation's own context (\<^verbatim>\<open>twice_source_ctx_run_sound\<close>), strictly sharper than the context-forgetting monovariant capstone.
-    \<^item> @{theory Voblint_Formalization.Example_Inc_Proc} --- shared global-increment procedure witness used by sign, interval, and mixed-flow examples.
-    \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop.
-    \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
-    \<^item> @{theory Voblint_Formalization.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals and flow-insensitive globals.
-    \<^item> @{theory Voblint_Formalization.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment procedure call.
-    \<^item> @{theory Voblint_Formalization.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the shared global-increment procedure call.
-    \<^item> @{theory Voblint_Formalization.Example_Mixed_Flow_Sign} --- application of the mixed-flow soundness and optimality theorem to Sign.
-    \<^item> @{theory Voblint_Formalization.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
-    \<^item> @{theory Voblint_Formalization.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
-    \<^item> @{theory Voblint_Formalization.Example_Guard_Refinement} --- backward guard refinement precision witness.
-    \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
+    \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations are generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result is certified a post-solution and transported to the abstract semantics, and \<^verbatim>\<open>flagship_collect_sound\<close> proves it over-approximates the collecting semantics --- discovering the invariant \<^verbatim>\<open>x in [0,20]\<close>. The compiler-correctness simulation then lifts this to \<^emph>\<open>actual IMP2 source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>). Ends with an analysis-annotated GraphViz rendering.
+    \<^item> @{theory Voblint_Examples.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver (\<^verbatim>\<open>dgEx_collect_sound\<close>).
+    \<^item> @{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program: the computed interval D/G solution certified against the activation collecting at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_ctx_collect_ctx_act_sound\<close>).
+    \<^item> @{theory Voblint_Examples.Example_Interval_Source_Ctx} --- the same \<^verbatim>\<open>twice\<close> program certified against \<^emph>\<open>actual source runs\<close> at each activation's own context (\<^verbatim>\<open>twice_source_ctx_run_sound\<close>), strictly sharper than the context-forgetting monovariant capstone.
+    \<^item> @{theory Voblint_Examples.Example_Inc_Proc} --- shared global-increment procedure witness used by sign, interval, and mixed-flow examples.
+    \<^item> @{theory Voblint_Examples.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop.
+    \<^item> @{theory Voblint_Examples.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
+    \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals and flow-insensitive globals.
+    \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment procedure call.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the shared global-increment procedure call.
+    \<^item> @{theory Voblint_Examples.Example_Mixed_Flow_Sign} --- application of the mixed-flow soundness and optimality theorem to Sign.
+    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
+    \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
+    \<^item> @{theory Voblint_Examples.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
 
   \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
     \<^item> @{theory Voblint_Analysis.Analysis_GraphViz} --- canonical raw and context-expanded analysis graph export.
-    \<^item> @{theory Voblint_Formalization.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
+    \<^item> @{theory Voblint_Examples.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; documents the solver-compatible constant route and the conditional-route monotonicity boundary.
 \<close>
 

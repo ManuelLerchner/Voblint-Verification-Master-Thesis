@@ -12,6 +12,9 @@ trace `valid_ltr` with its activation collector `cfg_collect_ctx_act`.
 | `CFG_Collect_Runs.thy` | `cfg_runs_to` (exit projection) and generic collecting introduction lemmas for edges and combines |
 | `CFG_Local_Trace.thy` | call-structured local trace `valid_ltr`, the generic `collect_by` combinator, and the activation collector `cfg_collect_ctx_act` |
 
+`CFG_Local_Trace` currently extends `CFG_Collect`. A separate activation-local
+session remains a possible future boundary, but is intentionally deferred.
+
 **Specification spine**
 
 - **IP state:** `cfg_collect g S v` — lfp of `cfg_collect_F`; the plain collecting endpoint.

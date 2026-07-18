@@ -1,36 +1,8 @@
 session Voblint_Formalization in "." = "Voblint_Analysis" +
-  description "End-to-end soundness pipeline and examples"
+  description "End-to-end soundness pipeline"
   directories
     "Pipeline"
-    "Examples/Executable/Sign"
-    "Examples/Executable/Interval"
-    "Examples/Interprocedural"
-    "Examples/Numeric"
-    "Examples/Tooling"
   theories
-    Voblint
     Compiler_Correctness
-    Source_Activation_Sound
     Mixed_Flow_Sound
-    Exec_Sign_Run
-    Exec_Sign_DG_Run
-    Exec_Ivl_Run
-    Example_Interval_DG_Flagship
-    Example_Interval_DG_IP_Flagship
-    Example_Interval_DG_Ctx_Flagship
-    Example_Interval_DG_Ctx_Sound
-    Example_Interval_DG_Ctx_Collect
-    Example_Interval_Source_Ctx
-    Example_Inc_Proc
-    Example_Proc_GraphViz
-    Example_Mixed_Sign_Interval_GraphViz
-    Example_Side_Proc_Global
-    Example_Interval_Side_Proc_Global
-    Example_IMP2_Coverage
-    Example_Interval_Loop_Coverage
-    Example_Guard_Refinement
-    Example_Proc_Call
-    Example_Proc_Recursion_CFG
-    Example_Side_Execute
-    Example_Side_Branch_Calls
-    Example_Mixed_Flow_Sign
+    Source_Activation_Sound

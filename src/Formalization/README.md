@@ -1,11 +1,13 @@
-# Voblint_Formalization — end-to-end session
+# Voblint_Formalization — end-to-end soundness session
 
-Top session in the DAG (`Voblint_IMP2` -> `Voblint_CFG` -> `Voblint_Analysis` ->
-`Voblint_Formalization`). Assembles the layers below into the headline result and
-its executable demonstrations.
+Fourth session in the DAG (`Voblint_IMP2` -> `Voblint_CFG` -> `Voblint_Analysis`
+-> `Voblint_Formalization`). Composes the layers below into the headline
+soundness results. Holds theorems only — executable demonstrations and the
+`Voblint` capstone live in the leaf session `Voblint_Examples` (`src/Examples/`),
+so this session builds without the slow codegen/`value` runs.
 
 | Entry | Role |
 | --- | --- |
-| `Voblint.thy` | narrative capstone tying the pieces together; cites the headline results (`mixed_flow_analysis_sound`, `mixed_flow_analysis_optimal`) via `@{thm}` |
-| `Pipeline/` | end-to-end soundness composition (`Pipeline/README.md`) |
-| `Examples/` | executable demos and witnesses (`Examples/README.md`) |
+| `Pipeline/Mixed_Flow_Sound.thy` | mixed flow-sensitive soundness and optimality |
+| `Pipeline/Compiler_Correctness.thy` | source-to-CFG compiler simulation lifting collecting soundness to IMP2 source runs |
+| `Pipeline/Source_Activation_Sound.thy` | recursive source-adequacy bridge into `cfg_collect_ctx_act` |

@@ -8,7 +8,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
-    Compiler_Correctness
+    "Voblint_Formalization.Compiler_Correctness"
 begin
 
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)

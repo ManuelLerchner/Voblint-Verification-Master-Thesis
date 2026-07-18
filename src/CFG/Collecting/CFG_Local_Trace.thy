@@ -1,5 +1,5 @@
 theory CFG_Local_Trace
-  imports CFG_Collect_Runs
+  imports CFG_Collect
 begin
 
 section \<open>Activation-local concrete traces\<close>

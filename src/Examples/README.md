@@ -1,9 +1,13 @@
-# Examples
+# Voblint_Examples — demonstrations and capstone
+
+Leaf session in the DAG, on top of `Voblint_Formalization`. Nothing depends on
+it, so the soundness sessions build without the slow codegen/`value` runs here.
 
 **Main contribution:** Concrete demonstrations — procedural soundness witnesses,
 executable analyzer runs, CFG visualisation, coverage tests, and precision
-comparisons. Not imported by pipeline theories. Grouped into themed subfolders
-(theory names stay flat; `ROOT` declares the directories).
+comparisons. Grouped into themed subfolders (theory names stay flat; `ROOT`
+declares the directories). `Voblint.thy` is the narrative capstone index tying
+every layer together; it lives here because it imports the flagship examples.
 
 ## `Executable/` — code-generated analyzer runs
 
