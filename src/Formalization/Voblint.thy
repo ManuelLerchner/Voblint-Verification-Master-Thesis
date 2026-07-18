@@ -53,9 +53,6 @@ theory Voblint
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
-    Example_Trace_Digest_Precision
-    Example_Trace_Digest_Combine
-    Example_Trace_Digest_ReachingCompat
     Example_Proc_GraphViz
 begin
 
@@ -139,9 +136,6 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
     \<^item> @{theory Voblint_Formalization.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
     \<^item> @{theory Voblint_Formalization.Example_Guard_Refinement} --- backward guard refinement precision witness.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- trace digest precision witness.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Combine} --- combine-side digest filtering: @{const cmp_pair} at the return junction.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_ReachingCompat} --- reader-side @{const reaching_compat}: lockset ghost filters the global read.
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
 
   \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
