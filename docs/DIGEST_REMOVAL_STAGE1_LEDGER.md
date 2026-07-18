@@ -153,7 +153,7 @@ Fan-out is 86 transitively but the **direct** importers split cleanly:
 
 | Direct importer | Uses flat-trace symbols? | Verdict |
 | --- | --- | --- |
-| `Compile_Invariants` | **no** (0 `cfg_collect_trace`/`trace_witness`/`cfg_collect_ctx`) | **placement-only** — import dropped (Stage 2, commit `06aeb6ed`) |
+| `Compile_Invariants` | no digest symbols itself, **but re-exports `edge_step`** | **structural re-export dependency** (not placement-only) — see §4a; `Located_Reaches` reaches `CFG_Collect_Trace` only through it. Import restored; relocate `edge_step` in Stage 3. |
 | `Constraint_System_Sound` | no digest symbols, **but uses `edge_step`** | **structural shared-def dependency** (not placement-only) — see §4a; relocate `edge_step` first, then retarget |
 | `CFG_Local_Trace` (retained core) | **yes** — `imports CFG_Collect_Trace` | **structural** — relocate the shared def it consumes (`path`/`cfg_witness`/`alpha_last`) to a neutral home before deletion |
 | `Sign_Exec_Sound` | yes (Category B) | Stage 2 rebase to `cfg_collect` |
@@ -166,10 +166,27 @@ Fan-out is 86 transitively but the **direct** importers split cleanly:
 structural blocker for deleting `CFG_Collect_Trace`. Stage 5 must first inventory
 what `CFG_Local_Trace` pulls from it and move only the live shared definitions.
 
-### 4a. `Constraint_System_Sound` — corrected classification
+### 4a. `edge_step` — the shared non-digest helper mis-housed in `CFG_Collect_Trace`
 
-The Stage-1 first pass called this placement-only; that was **wrong**. Its
-`edge_of_bound` lemma consumes `edge_step`:
+`edge_step` (`edge_action ⇒ store ⇒ store option`, the store-singleton companion
+of `edge_collect`) and its bridge `edge_collect_single` live in
+`CFG_Collect_Trace` but are **not** digest machinery. Two retained theories
+depend on them, so `CFG_Collect_Trace` cannot lose them until they are relocated
+(Stage 3, natural home `CFG_Collect`):
+
+* **`Constraint_System_Sound`** — its `edge_of_bound` lemma uses `edge_step`
+  directly.
+* **`Compile_Invariants`** — does *not* use `edge_step` itself, but is the sole
+  transitive path by which **`Located_Reaches`** (which proves
+  `edge_step_mem_edge_collect` / `cfg_collect_edge_step`) reaches
+  `CFG_Collect_Trace`. Dropping the import passed I/Q on `Compile_Invariants`
+  (it uses none of those symbols) but **broke the batch build** at
+  `Located_Reaches`/`Located_LTR`. Lesson: an import can be a load-bearing
+  re-export even when the file itself uses nothing from it — only the full build
+  catches this. Import restored; revisit at Stage 3.
+
+Detail on the `Constraint_System_Sound` use — its `edge_of_bound` lemma consumes
+`edge_step`:
 
 ```text
 Constraint_System_Sound
@@ -222,9 +239,10 @@ shared-definition dependency**, not an abort condition and not a digest coupling
 
 ## 7. Stage-2 slices — status and order
 
-**Slice 1 (done, commit `06aeb6ed`):**
+**Slice 1 (commit `06aeb6ed`, partially reverted):**
 
-* `Compile_Invariants` — placement-only `CFG_Collect_Trace` import dropped.
+* `Compile_Invariants` — import drop **reverted** (§4a): it re-exports `edge_step`
+  to `Located_Reaches`; the batch build caught the break. Restore is committed.
 * `Example_IMP2_Coverage` — `loop_head_x_pos` rebased off `cfg_collect_trace`
   onto plain `cfg_collect` via `post_fixpoint_sound`; `Trace_Analysis_Sound`
   import dropped; store conclusion preserved.
