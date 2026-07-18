@@ -56,7 +56,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Soundness
     Activation_Local_Sound
     Activation_Backbone
-    TD_Side_Eff_Cmp_Gen
+    TD_Side_Eff_Keyed_Gen
     DG_Framework
     DG_Soundness
     DG_Context_Soundness

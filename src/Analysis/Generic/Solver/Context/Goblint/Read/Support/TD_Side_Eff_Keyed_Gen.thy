@@ -1,12 +1,12 @@
-theory TD_Side_Eff_Cmp_Gen
+theory TD_Side_Eff_Keyed_Gen
   imports TD_Side_Eff_Ctx_Shared TD_Side_Eff_Sound
 begin
 
 section \<open>Keyed-global generator: routing global writes by context\<close>
 
 text \<open>
-  The concrete generator behind the keyed pullback soundness of
-  \<open>TD_Side_Eff_Cmp_Pull\<close>.  The context generator \<^const>\<open>side_cfg_T_eff_ctx\<close> relabels
+  The concrete functional keyed generator: it routes global writes by context.
+  The context generator \<^const>\<open>side_cfg_T_eff_ctx\<close> relabels
   only the \<^emph>\<open>local\<close> unknowns of a per-edge tree (\<^const>\<open>map_ltree\<close>: \<open>QueryL\<close>
   targets), leaving \<open>QueryG\<close> / \<open>Side\<close> global keys fixed --- so all contexts write
   the same global slot and no per-context global is recoverable.
@@ -47,7 +47,7 @@ lemma dep_aux_map_ltree:
 subsection \<open>The keyed generator\<close>
 
 text \<open>
-  \<open>side_cfg_T_eff_cmp\<close> is \<^const>\<open>side_cfg_T_eff_ctx_seeded\<close>'s keyed sibling: the
+  \<open>side_cfg_T_eff_keyed\<close> is \<^const>\<open>side_cfg_T_eff_ctx_seeded\<close>'s keyed sibling: the
   intra per-edge trees are relabelled locally by context (\<^const>\<open>map_ltree\<close>) and
   their global writes routed to the keyed slot \<^term>\<open>gkey c\<close> (\<^const>\<open>map_gtree\<close>).
   The entry seed writes the initial globals to the entry context's key.  The
@@ -55,7 +55,7 @@ text \<open>
   the value-dependent semantic combine is supplied per instance.
 \<close>
 
-definition side_cfg_T_eff_cmp ::
+definition side_cfg_T_eff_keyed ::
   "('c \<Rightarrow> 'g)
    \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
@@ -63,7 +63,7 @@ definition side_cfg_T_eff_cmp ::
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
    \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
 where
-  "side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 =
+  "side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0 =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                    \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>);
@@ -81,8 +81,8 @@ text \<open>
   and the combine trees.  Mirrors \<open>eq_side_cfg_T_eff_ctx_seeded\<close>.
 \<close>
 
-lemma eq_side_cfg_T_eff_cmp:
-  "eq (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma> =
+lemma eq_side_cfg_T_eff_keyed:
+  "eq (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma> =
      side_acc_ctx
        ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
         \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>)) \<sigma>
@@ -91,17 +91,17 @@ lemma eq_side_cfg_T_eff_cmp:
                 (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
             (non_enter_predecessor_list g v)
         @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v))"
-  unfolding side_cfg_T_eff_cmp_def
+  unfolding side_cfg_T_eff_keyed_def
   by (simp add: traverse_side_rhs_fold_ctx Let_def)
 
-definition side_cfg_T_eff_cmp_seed ::
+definition side_cfg_T_eff_keyed_seed ::
   "('c \<Rightarrow> 'g)
    \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
    \<Rightarrow> ('c \<Rightarrow> 'a abs_state) \<Rightarrow> cfg \<Rightarrow> (unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
 where
-  "side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0 =
+  "side_cfg_T_eff_keyed_seed gkey cmb frame_seed g etf bot0 s0 =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                    \<squnion> (if is_frame_entry g v then frame_seed c else \<bottom>);
@@ -112,15 +112,15 @@ where
             t = side_rhs_fold_ctx acc0 (intra @ comb)
         in if v = cfg_entry g then Side (gkey c) (restrict_global s0) t else t)"
 
-lemma eq_side_cfg_T_eff_cmp_seed:
-  "eq (side_cfg_T_eff_cmp_seed gkey cmb frame_seed g etf bot0 s0) (v, ctx) \<sigma> =
+lemma eq_side_cfg_T_eff_keyed_seed:
+  "eq (side_cfg_T_eff_keyed_seed gkey cmb frame_seed g etf bot0 s0) (v, ctx) \<sigma> =
      side_acc_ctx ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                    \<squnion> (if is_frame_entry g v then frame_seed ctx else \<bottom>))
        \<sigma>
        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u)))
              (non_enter_predecessor_list g v)
         @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v))"
-  by (simp add: side_cfg_T_eff_cmp_seed_def Let_def traverse_side_rhs_fold_ctx)
+  by (simp add: side_cfg_T_eff_keyed_seed_def Let_def traverse_side_rhs_fold_ctx)
 
 text \<open>
   A constant frame seed collapses the seeded generator to the fixed-frame generator:
@@ -129,10 +129,10 @@ text \<open>
   post-fixpoints whenever the seed does not depend on the context.
 \<close>
 
-lemma side_cfg_T_eff_cmp_seed_const:
-  "side_cfg_T_eff_cmp_seed gkey cmb (\<lambda>_. fr) g etf bot0 s0
-     = side_cfg_T_eff_cmp gkey cmb g etf fr bot0 s0"
-  unfolding side_cfg_T_eff_cmp_seed_def side_cfg_T_eff_cmp_def by simp
+lemma side_cfg_T_eff_keyed_seed_const:
+  "side_cfg_T_eff_keyed_seed gkey cmb (\<lambda>_. fr) g etf bot0 s0
+     = side_cfg_T_eff_keyed gkey cmb g etf fr bot0 s0"
+  unfolding side_cfg_T_eff_keyed_seed_def side_cfg_T_eff_keyed_def by simp
 
 
 subsection \<open>Routing: the keyed intra tree reads the context / keyed-slot pullback\<close>
@@ -145,7 +145,7 @@ text \<open>
   pullback, precisely which slots a keyed edge tree consults.
 \<close>
 
-lemma traverse_intra_cmp:
+lemma traverse_intra_keyed:
   "traverse_rhs (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) t)) \<sigma>
    = traverse_rhs t (\<lambda>z. \<sigma> (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. gkey ctx) z))"
   by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree sum.map_comp o_def)
@@ -173,11 +173,11 @@ lemma pull_gk_Inl: "pull_gk gkey ctx \<sigma> (Inl w) = \<sigma> (Inl (w, ctx))"
 lemma pull_gk_Inr: "pull_gk gkey ctx \<sigma> (Inr y) = \<sigma> (Inr (gkey ctx))"
   by (simp add: pull_gk_def)
 
-text \<open>The intra tree denotes \<^const>\<open>apply_etf\<close> against \<^const>\<open>pull_gk\<close> (restating \<open>traverse_intra_cmp\<close>).\<close>
+text \<open>The intra tree denotes \<^const>\<open>apply_etf\<close> against \<^const>\<open>pull_gk\<close> (restating \<open>traverse_intra_keyed\<close>).\<close>
 lemma traverse_intra_pull_gk:
   "traverse_rhs (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) t)) \<sigma>
    = traverse_rhs t (pull_gk gkey ctx \<sigma>)"
-  by (simp add: traverse_intra_cmp pull_gk_def)
+  by (simp add: traverse_intra_keyed pull_gk_def)
 
 text \<open>
   The side commutes: \<^const>\<open>map_ltree\<close> leaves \<open>QueryG\<close> / \<open>Side\<close> keys fixed, so its
@@ -236,7 +236,7 @@ text \<open>
   and a post-solution's global side never exceeds the corresponding slot.
 \<close>
 
-lemma sides_fold_le_side_cfg_T_eff_cmp:
+lemma sides_fold_le_side_cfg_T_eff_keyed:
   shows "sides_of_rhs (side_rhs_fold_ctx
            ((if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
             \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>))
@@ -245,19 +245,19 @@ lemma sides_fold_le_side_cfg_T_eff_cmp:
                 (non_enter_predecessor_list g v)
             @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)))
            \<sigma> (Inr gg)
-         \<le> sides_of_rhs (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
+         \<le> sides_of_rhs (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
              \<sigma> (Inr gg)"
-  unfolding side_cfg_T_eff_cmp_def
+  unfolding side_cfg_T_eff_keyed_def
   by (cases "v = cfg_entry g") (auto simp: Let_def fun_upd_def)
 
-lemma side_post_solution_le_global_cmp:
-  assumes pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
+lemma side_post_solution_le_global_keyed:
+  assumes pp: "part_post_solution (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
       and v: "(v, ctx) \<in> vars"
-  shows "sides_of_rhs (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
+  shows "sides_of_rhs (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
            \<sigma> (Inr gg) \<le> \<sigma> (Inr gg)"
 proof -
   from pp v
-  have "sides_of_rhs (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 (v, ctx)) \<sigma> \<le> \<sigma>"
+  have "sides_of_rhs (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0 (v, ctx)) \<sigma> \<le> \<sigma>"
     by auto
   thus ?thesis by (rule le_funD)
 qed
@@ -266,20 +266,20 @@ subsection \<open>Routing correctness: the keyed edge bound\<close>
 
 text \<open>
   The keyed analogue of \<open>etf_combined_le_ctx\<close> and the crux of generator soundness:
-  at a post-fixpoint of \<^const>\<open>side_cfg_T_eff_cmp\<close> the reassembled per-edge transfer,
+  at a post-fixpoint of \<^const>\<open>side_cfg_T_eff_keyed\<close> the reassembled per-edge transfer,
   read against \<^const>\<open>pull_gk\<close>, sits below the pulled-back read at the edge target.
   The local part is the traverse bound (\<open>traverse_intra_pull_gk\<close> + the post-fixpoint);
   the global part runs the side chain \<open>sides_intra_pull_gk\<close> \<open>\<rightarrow>\<close>
-  \<open>sides_le_side_rhs_fold_ctx\<close> \<open>\<rightarrow>\<close> \<open>sides_fold_le_side_cfg_T_eff_cmp\<close> \<open>\<rightarrow>\<close>
-  \<open>side_post_solution_le_global_cmp\<close>, landing the keyed slot \<open>gkey ctx\<close>.  Because
+  \<open>sides_le_side_rhs_fold_ctx\<close> \<open>\<rightarrow>\<close> \<open>sides_fold_le_side_cfg_T_eff_keyed\<close> \<open>\<rightarrow>\<close>
+  \<open>side_post_solution_le_global_keyed\<close>, landing the keyed slot \<open>gkey ctx\<close>.  Because
   \<^const>\<open>apply_etf\<close> is \<^typ>\<open>unit\<close>-global, \<^const>\<open>all_sides\<close> is that single slot's
   contribution, so no per-key join is needed.
 \<close>
 
-lemma side_cfg_T_eff_cmp_edge_le:
+lemma side_cfg_T_eff_keyed_edge_le:
   fixes \<sigma> :: "pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
     and etf :: "(unit, 'a) effectful_domain_transfer"
-  assumes pp: "part_post_solution (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
+  assumes pp: "part_post_solution (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0) x \<sigma> vars"
       and v: "(v, ctx) \<in> vars"
       and e: "(u, a, v) \<in> edges g"
       and ane: "\<not> is_enter_action a"
@@ -287,7 +287,7 @@ lemma side_cfg_T_eff_cmp_edge_le:
   shows "etf_full (apply_etf etf a u) (pull_gk gkey ctx \<sigma>)
            \<le> side_env (pull_gk gkey ctx \<sigma>) v"
 proof -
-  have posteq: "eq (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma>
+  have posteq: "eq (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma>
                   \<le> \<sigma> (Inl (v, ctx))"
     using pp v by auto
   have mem: "(u, a) \<in> set (non_enter_predecessor_list g v)"
@@ -307,8 +307,8 @@ proof -
             = traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
                 (map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))) \<sigma>"
       by (rule traverse_intra_pull_gk[symmetric])
-    also have "\<dots> \<le> eq (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma>"
-      unfolding eq_side_cfg_T_eff_cmp by (rule traverse_le_side_acc_ctx[OF memtree])
+    also have "\<dots> \<le> eq (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0) (v, ctx) \<sigma>"
+      unfolding eq_side_cfg_T_eff_keyed by (rule traverse_le_side_acc_ctx[OF memtree])
     also have "\<dots> \<le> \<sigma> (Inl (v, ctx))" by (rule posteq)
     finally show ?thesis .
   qed
@@ -330,11 +330,11 @@ proof -
                       @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)))
                      \<sigma> (Inr (gkey ctx))"
       by (rule sides_le_side_rhs_fold_ctx[OF memtree])
-    also have "\<dots> \<le> sides_of_rhs (side_cfg_T_eff_cmp gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
+    also have "\<dots> \<le> sides_of_rhs (side_cfg_T_eff_keyed gkey cmb g etf fresh_frame bot0 s0 (v, ctx))
                      \<sigma> (Inr (gkey ctx))"
-      by (rule sides_fold_le_side_cfg_T_eff_cmp)
+      by (rule sides_fold_le_side_cfg_T_eff_keyed)
     also have "\<dots> \<le> \<sigma> (Inr (gkey ctx))"
-      by (rule side_post_solution_le_global_cmp[OF pp v])
+      by (rule side_post_solution_le_global_keyed[OF pp v])
     finally show ?thesis .
   qed
   have "etf_full (apply_etf etf a u) (pull_gk gkey ctx \<sigma>)

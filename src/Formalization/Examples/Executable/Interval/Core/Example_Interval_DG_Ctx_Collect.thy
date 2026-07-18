@@ -62,7 +62,7 @@ abbreviation sigma_abs :: "pp \<times> ivl + gk \<Rightarrow> (ivl abs_state, iv
   "sigma_abs \<equiv> fun_of_dg_st \<circ> snd twice_ctx_sol"
 
 abbreviation gen_abs :: "(pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
-  "gen_abs \<equiv> side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+  "gen_abs \<equiv> side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
        (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
        (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st))"
 
@@ -101,7 +101,7 @@ lemma entry_locals_ge_s0d:
   shows "fun_of_st cinit_ivl_st \<le> locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))"
 proof -
   have "fun_of_st cinit_ivl_st \<le> locals (eq gen_abs (cfg_entry twice_cfg, bot) sigma_abs)"
-    by (simp add: eq_side_cfg_T_eff_cmp_seed_dg)
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge], simp add: le_supI2)
   also have "\<dots> \<le> locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))"
     using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
@@ -169,7 +169,7 @@ proof
   show "finite (edges twice_cfg)" by (rule twice_finE)
 next
   show "part_post_solution
-          (side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
              (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
              (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
              (fun_of_st (restrict_global_st cinit_ivl_st)))

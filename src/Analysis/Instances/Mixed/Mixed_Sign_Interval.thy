@@ -68,7 +68,7 @@ definition mixed_si_generator ::
         (sign abs_state, ivl abs_state) dg_state) eqsT"
 where
   "mixed_si_generator g bot0 s0d s0g =
-     side_cfg_T_eff_cmp_seed_dg predecessor_list (\<lambda>_. ()) mixed_si_cmb
+     side_cfg_T_eff_keyed_seed_dg predecessor_list (\<lambda>_. ()) mixed_si_cmb
        (\<lambda>_ _. []) g mixed_si_spec bot0 s0d s0g"
 
 definition mixed_si_D ::

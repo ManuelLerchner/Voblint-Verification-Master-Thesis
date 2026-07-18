@@ -8,7 +8,7 @@ section \<open>Context-sensitive interval analysis of \<open>twice\<close> (exec
 
 text \<open>
   The polyvariant companion to \<open>Example_Interval_DG_IP_Flagship\<close>: the \<^emph>\<open>same\<close>
-  generalized D/G generator \<^const>\<open>side_cfg_T_eff_cmp_seed_dg\<close>, instantiated with
+  generalized D/G generator \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>, instantiated with
   routed context hooks instead of the unit-context ones.  Each call to \<open>twice\<close> is
   analyzed under its own abstract calling context, so the two calls no longer merge:
 
@@ -95,7 +95,7 @@ subsection \<open>The routed equation system and its solution\<close>
 definition twice_ctx_eqs ::
   "(pp \<times> ivl, gk, (ivl st, ivl st) dg_state) eqsT" where
   "twice_ctx_eqs =
-     side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
        (cmb_ivl twice_cfg) (extra_ivl twice_cfg)
        twice_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 

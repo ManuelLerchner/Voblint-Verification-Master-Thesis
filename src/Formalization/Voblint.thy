@@ -102,7 +102,7 @@ text \<open>
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain
     \<^verbatim>\<open>G\<close>), which is the canonical context-sensitive backbone.
-    \<^item> @{theory Voblint_Analysis.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> analysis record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> componentwise copy lattice, and the seeded CMP generator \<^verbatim>\<open>side_cfg_T_eff_cmp_seed_dg\<close>.
+    \<^item> @{theory Voblint_Analysis.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> analysis record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> componentwise copy lattice, and the seeded CMP generator \<^verbatim>\<open>side_cfg_T_eff_keyed_seed_dg\<close>.
     \<^item> @{theory Voblint_Analysis.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>, \<^verbatim>\<open>dg_post_solution_collect_sound\<close>).
     \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance (\<^verbatim>\<open>sign_dg_post_solution_collect_sound\<close>).
     \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>).
