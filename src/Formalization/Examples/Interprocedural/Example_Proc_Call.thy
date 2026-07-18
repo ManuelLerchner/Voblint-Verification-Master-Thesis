@@ -8,7 +8,6 @@ theory Example_Proc_Call
     "Voblint_CFG.CFG_Collect"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Constraint_System_Sound"
-    Trace_Analysis_Sound
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
@@ -236,28 +235,30 @@ lemma main_prog_gx_exit_ivl:
 subsection \<open>Interval analysis soundness\<close>
 
 text \<open>
-  For any interprocedural trace that reaches the program exit and whose
-  initial store is in the concretisation of @{const main_prog_s0},
-  the value of @{term \<open>''Gx''\<close>} at the end of the trace lies in
-  @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
+  For any store that reaches the program exit in the collecting semantics and
+  whose initial store is in the concretisation of @{const main_prog_s0},
+  the value of @{term \<open>''Gx''\<close>} lies in @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
 
   The proof applies the generic interprocedural post-fixpoint soundness
-  theorem (@{thm [source] Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound})
+  theorem (@{thm [source] Constraint_System_Sound.sound_transfer.post_fixpoint_sound})
   to the exhibited post-fixpoint @{thm [source] main_prog_postfix [no_vars]}.
 \<close>
 
 theorem main_prog_interval_analysis:
   assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
-  assumes tr: "tr \<in> cfg_collect_trace main_cfg S (cfg_exit main_cfg)"
-  shows "(last tr) ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
+  assumes s: "s \<in> cfg_collect main_cfg S (cfg_exit main_cfg)"
+  shows "s ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (edges main_cfg)" by (simp add: main_cfg_edges)
   have fin_c: "finite (combines main_cfg)" by (simp add: main_cfg_combines)
-  have s0_conv: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
-    using S_sound by simp
-  have "(last tr) ''Gx'' \<in> gamma (main_prog_env (cfg_exit main_cfg) ''Gx'')"
-    by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
-          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix s0_conv tr])
+  have le: "cfg_collect main_cfg S (cfg_exit main_cfg)
+              \<le> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>"
+    using sound_transfer.post_fixpoint_sound
+          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix S_sound]
+    by blast
+  from s le have "s \<in> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>" by blast
+  then have "s ''Gx'' \<in> gamma (main_prog_env (cfg_exit main_cfg) ''Gx'')"
+    unfolding gamma_state_def by blast
   then show ?thesis by (simp add: main_prog_env_def main_cfg_exit)
 qed
 
