@@ -278,3 +278,140 @@ Each stage uses I/Q for theory edits and diagnostics, then the relevant session
 build. R6 and R7 require the full clean session DAG build. Every migration PR
 must state whether `cfg_collect` appears as a legacy comparison, a raw-CFG
 theorem, or an accidental canonical dependency.
+
+## Stage R0 audit — frozen boundary (done)
+
+No theorem was migrated in R0. This section records the classification the exit
+gate requires and freezes the intended meaning of each boundary symbol.
+
+### Frozen meanings
+
+- `cfg_collect` (`CFG_Collect.thy`) is the **broad graph closure**: the least
+  cenv closed under `cfg_collect_F` = entry seed `+` `collect_pp` (edge transfer)
+  `+` `collect_combine_pp`. Its combine component pairs *any* reachable caller
+  store at a call node with *any* reachable callee-exit store sharing that
+  combine triple. It therefore contains **unmatched combine pairs** (`C0 + E1`,
+  `C1 + E0` in the two-call picture). It stays the semantics of arbitrary CFG
+  records and the migration bridge.
+- `cfg_collect_F` is that transformer; its `collect_combine_pp` summand is the
+  unmatched-return over-approximation, by design.
+- `valid_ltr` (`CFG_Local_Trace.thy`) is **stack-faithful**: an inductively
+  closed set of local traces. Its `ret` rule recovers the caller through the
+  completed callee's own activation ancestry (`caller_of callee = Some caller`),
+  so it admits **only matched returns** (`C0 + E0`, `C1 + E1`).
+- `caller_of` is the structural activation-parent recovery, descending the frozen
+  `caller` field of a `Resume`. It is the mechanism that makes returns matched;
+  it must not be weakened.
+- No equality `valid_ltr = cfg_collect` is expected or claimed. The only proved
+  relation is one-directional sink inclusion
+  (`valid_ltr_sink_in_cfg_collect`): every matched-trace sink is a broad-closure
+  state. The converse is false in general and is not a goal.
+- `cfg_collect_ctx_act` is the activation-keyed forgetful projection of
+  `valid_ltr` (`key`-filtered sinks). It is a compatibility view, never an exact
+  activation identity.
+
+### Consumer classification (file-level)
+
+| Class | Files | Boundary symbol |
+| --- | --- | --- |
+| Raw-CFG semantics | `CFG/Collecting/CFG_Collect.thy`, `CFG_Collect_Runs.thy`, `CFG/CFG_Prune.thy` | `cfg_collect`, `cfg_collect_F` |
+| Stack-faithful carrier | `CFG/Collecting/CFG_Local_Trace.thy` | `valid_ltr`, `caller_of`, `key` |
+| Migration bridge | `CFG_Local_Trace.thy` (`valid_ltr_sink_in_cfg_collect`) | `valid_ltr` -> `cfg_collect` |
+| Compiled-program correctness target | `CFG/Compiler/Located_Reaches.thy`, `Located_LTR.thy`; `Formalization/Pipeline/Compiler_Correctness.thy`, `Source_Activation_Sound.thy`, `Mixed_Flow_Sound.thy` | `cfg_collect`, `cfg_collect_ctx_act` |
+| Activation / keyed compatibility | `Analysis/.../Activation/Activation_Backbone.thy`, `Activation_Local_Sound.thy`; `Analysis/.../DG/DG_Context_Soundness.thy`, `DG_Soundness.thy`; `Examples/.../Example_Interval_DG_Ctx_Collect.thy`, `Example_Interval_Source_Ctx.thy` | `cfg_collect_ctx_act`, `valid_ltr` |
+| Source bridge | `IMP2/IMP2_Bridge.thy`; `Formalization/Pipeline/Source_Activation_Sound.thy` | `cfg_collect` |
+| Domain / solver consumer | `Analysis/Generic/Solver/**`, `Analysis/Generic/Equations/**`, `Analysis/Instances/**`, most `Examples/**` | `cfg_collect` |
+
+### Theorem-level anchors stated directly over the boundary
+
+- `valid_ltr`: `valid_ltr_sink_in_cfg_collect`, `valid_ltr_sink_witness`,
+  `nested_valid_ltr_example`, and the structural cluster
+  (`valid_ltr_Call_caller_valid`, `valid_ltr_Resume_fields`,
+  `valid_ltr_caller_valid`, `valid_ltr_path_nonempty`,
+  `valid_ltr_Call_path_nonempty`) in `CFG_Local_Trace.thy`;
+  `valid_ltr_ctx_chain`, `valid_ltr_ctx_sound` in `Activation_Local_Sound.thy`.
+- `cfg_collect_ctx_act`: `cfg_collect_ctx_act_collect_by`,
+  `cfg_collect_ctx_act_le_collect` (`CFG_Local_Trace.thy`);
+  `source_store_in_cfg_collect_ctx_act`,
+  `source_toplevel_in_cfg_collect_ctx_act` (`Located_LTR.thy`).
+- `cfg_collect`: the raw-CFG cluster in `CFG_Collect.thy` (its own fixpoint /
+  witness / paths lemmas) is the definitional home; every compiled-program
+  soundness theorem in the `Formalization/Pipeline` and `Analysis` trees states
+  its concrete target as `cfg_collect g S v`. Migrating those to `ltr_collect`
+  is R5/R6, not R0.
+
+No R0 edit touched any of these statements.
+
+## Progress log
+
+### R1 — `LTR_Collect` (complete)
+
+`src/CFG/Collecting/LTR_Collect.thy`, imports `CFG_Local_Trace` only, listed in
+`src/CFG/ROOT` after `CFG_Local_Trace`. Batch-green in `Voblint_CFG`; no `sorry`.
+
+Definitions: `ltr_F`, `ltr_collect`, `ltr_collect_keyed`.
+
+Theorems: `ltr_F_mono`, `ltr_F_lfp_fold`, `ltr_F_valid_ltr_closed`,
+`lfp_ltr_F_subset_valid_ltr`, `valid_ltr_subset_lfp`, **`valid_ltr_eq_lfp`**
+(`valid_ltr g S = lfp (ltr_F g S)`), `ltr_collect_I`,
+`ltr_collect_keyed_le_collect`, and the three witnesses
+`ltr_collect_intra_witness`, `ltr_collect_call_return_witness`,
+`ltr_collect_nested_witness`.
+
+One naming adaptation from the proposal: the keyed projection binds its reader as
+`keyf`, not `key`, because `key` already names the activation context function in
+`CFG_Local_Trace` and reusing it clashes. `ltr_F`'s four clauses match the
+proposal literally (return premise: `callee : T` and
+`caller_of callee = Some caller`, no `caller : T`).
+
+### R2 — projection laws (complete)
+
+Batch-green in `Voblint_CFG` (which contains both `LTR_Collect` and
+`Located_LTR`); no `sorry`.
+
+- `ltr_collect_keyed_le_collect` retained unchanged.
+- **Union law** (`LTR_Collect.thy`): `ltr_collect_keyed_Union`:
+  `(\<Union>c. ltr_collect_keyed keyf g S v c) = ltr_collect g S v`, i.e.
+  `Union (range (ltr_collect_keyed keyf g S v)) = ltr_collect g S v`. Proved for
+  any total key by `blast`; no finiteness assumption.
+- **Migration bridge** (`LTR_Collect.thy`): `ltr_collect_le_cfg_collect`:
+  `ltr_collect g S v \<subseteq> cfg_collect g S v`, derived from the existing
+  `valid_ltr_sink_in_cfg_collect` (no re-proof of broad reachability). This
+  inclusion is **migration-only and intentionally one-directional**: the converse
+  is false in general because `cfg_collect` admits unmatched combine pairs. It is
+  neither stated nor attempted.
+- **Compatibility** (`LTR_Collect.thy`): `cfg_collect_ctx_act_eq_ltr_collect_keyed`:
+  `cfg_collect_ctx_act enterc seedc g S v c = ltr_collect_keyed (key enterc seedc) g S v c`.
+  `cfg_collect_ctx_act` is a *direct* keyed projection — its definition body is
+  literally `ltr_collect_keyed`'s with `keyf := key enterc seedc` — so the
+  equality holds by unfolding both definitions. No mismatch in argument order,
+  store projection, or key definition. Its public name and existing theorems are
+  unchanged. The activation key stays a quotient of activation structure, not an
+  exact activation identity; a single keyed bucket is not claimed to preserve all
+  activation correlation.
+- **Source projection bridge** (`Located_LTR.thy`, which now also imports
+  `LTR_Collect`): `source_store_in_ltr_collect`. Under exactly the assumptions of
+  the existing local-trace adequacy result (`wf_compile_input Pi ps main`,
+  `source_com main`, `s0 : S`, `star (pstep Pi) (main, s0, []) (residual, s, frs)`),
+  a reached source store `s` lies in `ltr_collect (compile_prog Pi ps main) S v`
+  at the matched target node `v`. Routed source-run → `source_run_has_ltr`
+  `valid_ltr` witness → `ltr_collect_I`; it does not pass through `cfg_collect`.
+  The keyed source theorems `source_store_in_cfg_collect_ctx_act` and
+  `source_toplevel_in_cfg_collect_ctx_act` are unchanged.
+- **Matched-return regression** (`LTR_Collect.thy`): `valid_ltr_Resume_caller_matched`:
+  `Resume caller callee p : valid_ltr g S ==> caller_of callee = Some caller`
+  (corollary of `valid_ltr_Resume_fields`). Every reachable `Resume` recovers its
+  caller from the completed callee, so a return cannot select its caller
+  independently — the property separating `ltr_collect` from the unmatched-combine
+  `cfg_collect`.
+
+No stop condition triggered: the union law needed no finiteness, the bridge used
+only the forward inclusion, `cfg_collect_ctx_act` was a direct keyed projection,
+source adequacy avoided `cfg_collect`, the source theorem reused the existing
+assumptions, and no dependency cycle appeared (`LTR_Collect` sits between
+`CFG_Local_Trace` and `Located_LTR`).
+
+### R3 — not started
+
+The correlation-preserving abstract interface (`gamma_ltr`, the abstraction
+theorem `lfp (ltr_F g S) <= gamma_ltr A`) is deliberately unstarted.

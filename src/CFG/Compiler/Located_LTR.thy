@@ -1,5 +1,5 @@
 theory Located_LTR
-  imports Located_Reaches CFG_Local_Trace
+  imports Located_Reaches CFG_Local_Trace LTR_Collect
 begin
 
 section \<open>Source execution as activation-local traces\<close>
@@ -228,6 +228,30 @@ proof -
   from l obtain t where "ltr_repr ?g S (v, s, stk) t"
     using cf store by (auto simp: located_ltr_def)
   then show ?thesis using m cf store by blast
+qed
+
+text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
+  collecting \<^const>\<open>ltr_collect\<close> at the compiled target node.  It is the key-free view of
+  \<open>source_store_in_cfg_collect_ctx_act\<close>, obtained straight from the \<^const>\<open>valid_ltr\<close>
+  witness of \<open>source_run_has_ltr\<close> --- never through \<^const>\<open>cfg_collect\<close> --- under exactly the
+  local-trace adequacy assumptions.\<close>
+theorem source_store_in_ltr_collect:
+  assumes wf: "wf_compile_input Pi ps main"
+    and src: "source_com main"
+    and s0: "s0 \<in> S"
+    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
+                 \<and> s \<in> ltr_collect (compile_prog Pi ps main) S v"
+proof -
+  from source_run_has_ltr[OF wf src s0 run]
+  obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
+    and rep: "ltr_repr (compile_prog Pi ps main) S (v, s, stk) t" by blast
+  from rep have tv: "t \<in> valid_ltr (compile_prog Pi ps main) S"
+    and sn: "sink_node t = v" and ss: "sink_store t = s"
+    by (auto simp: ltr_repr_def)
+  have "s \<in> ltr_collect (compile_prog Pi ps main) S v"
+    using ltr_collect_I[OF tv] sn ss by simp
+  then show ?thesis using m by blast
 qed
 
 text \<open>The reachable source store lies in the activation-indexed collecting at the stable context
