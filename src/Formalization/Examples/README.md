@@ -14,11 +14,11 @@ concrete program, equation system, or precision witness.
 | Folder | Role |
 | --- | --- |
 | `Executable/Common/` | shared scaffolds for small executable witnesses |
-| `Executable/Sign/Core/` | basic sign `st` codegen and hand-written equation-system probe |
+| `Executable/Sign/` | basic sign `st` codegen and hand-written equation-system probe |
 | `Executable/Sign/Context/` | sign context-sensitive runs and seeded entry witness |
 | `Executable/Sign/Keyed/` | sign keyed support, retain negative regression, and DG-native keyed runs |
 | `Executable/Sign/SeededClean/` | sign D/G/C seeded-clean witnesses |
-| `Executable/Interval/Core/` | interval loop solver run and update-rule menu |
+| `Executable/Interval/` | interval loop solver run and update-rule menu |
 | `Executable/Interval/Context/` | interval context-sensitive runs |
 | `Executable/Interval/SeededClean/` | interval seeded-clean and keyed DG runs |
 
@@ -62,7 +62,7 @@ examples use `plain_dot_of_prog_lit`.
 
 **Backward analysis arc:** `Example_Guard_Refinement` (one guard) → `Example_Interval_Loop_Coverage`
 (full CFG + trace soundness). Eval-only mirror: `Exec_Ivl_Run` in
-`Executable/Interval/Core/`.
+`Executable/Interval/`.
 
 **Executable D/G flagship (interval):** `Example_Interval_DG_Flagship` is the
 canonical end-to-end run — an inline IMP2 counting loop compiled to a CFG, its

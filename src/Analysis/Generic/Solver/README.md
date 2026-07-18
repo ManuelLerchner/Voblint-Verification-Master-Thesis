@@ -10,7 +10,7 @@ The layer is split into three concerns, one subfolder each:
 | Subfolder | Concern |
 | --- | --- |
 | `Core/` | the TD-side strategy-tree spine: monad, generator, monotonicity, base collecting soundness |
-| `Context/` | Goblint-facing context spine: `Goblint/Read`, `Goblint/Read/Support`, `Goblint/Routing`, `Goblint/Routing/Support`, `Goblint/DG` |
+| `Context/` | context-sensitive solver spine: `Context/Activation`, `Context/DG`, `Context/Read` |
 | `Exec/` | executable witnesses and DG-native example support |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
@@ -36,8 +36,8 @@ This layer wires `part_post_solution` to `is_post_fixpoint` via
 
 ## `Context/`
 
-`Context/README.md` is the pointer. The live inventory is in
-`Context/Goblint/README.md`.
+`Context/README.md` is the pointer; per-concern inventories in
+`Context/Activation/README.md`, `Context/DG/README.md`, `Context/Read/README.md`.
 
 ## `Exec/`
 

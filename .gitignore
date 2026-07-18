@@ -4,8 +4,11 @@
 # Isabelle
 .isabelle/
 docs/html/
-*.thy#
-*.thy~
+
+# Editor backups / autosaves (Emacs, vim)
+*~
+\#*\#
+.\#*
 
 # IDEs / editors
 .cursor/

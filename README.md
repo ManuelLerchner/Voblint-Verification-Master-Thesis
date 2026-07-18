@@ -20,7 +20,7 @@ the framework.**
 
 ## ⭐ Flagship Example
 
-`src/Formalization/Examples/Executable/Interval/Core/Example_Interval_DG_Flagship.thy`
+`src/Formalization/Examples/Executable/Interval/Example_Interval_DG_Flagship.thy`
 
 The flagship theory analyzes a counting loop:
 

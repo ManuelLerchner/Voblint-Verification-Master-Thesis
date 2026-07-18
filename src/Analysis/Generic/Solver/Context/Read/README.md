@@ -6,9 +6,7 @@ digest/compatibility read layer was retired (see
 per-context slot directly on the DG spine (`DG/`), so no separate read-interface
 model remains here.
 
-## `Read/Support/`
-
-Generic keyed-context bridge scaffolding.
+Generic keyed-context bridge scaffolding:
 
 | File | Role |
 | --- | --- |

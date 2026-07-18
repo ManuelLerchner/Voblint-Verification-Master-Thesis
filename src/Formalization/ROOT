@@ -2,8 +2,8 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   description "End-to-end soundness pipeline and examples"
   directories
     "Pipeline"
-    "Examples/Executable/Sign/Core"
-    "Examples/Executable/Interval/Core"
+    "Examples/Executable/Sign"
+    "Examples/Executable/Interval"
     "Examples/Interprocedural"
     "Examples/Numeric"
     "Examples/Tooling"
