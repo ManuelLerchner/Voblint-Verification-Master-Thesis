@@ -18,7 +18,7 @@ This layer wires `part_post_solution` to `is_post_fixpoint` via
 `src/Analysis/Generic/Equations/Constraint_System_Sound.thy`.
 
 **Downstream:** `src/Analysis/Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
-`src/Analysis/Instances/Interval/Interval_Side_Soundness.thy`; `src/Formalization/Pipeline/Trace_Analysis_Sound.thy`.
+`src/Analysis/Instances/Interval/Interval_Side_Soundness.thy`; `src/Formalization/Pipeline/Mixed_Flow_Sound.thy`.
 
 ## `Core/`
 

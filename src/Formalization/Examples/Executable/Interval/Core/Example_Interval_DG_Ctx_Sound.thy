@@ -205,7 +205,7 @@ text \<open>The generic bridge \<open>part_post_solution_seed_dg_st_to_abs\<clos
 
 theorem twice_ctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+     (side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
         (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
         (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st)))
      (cfg_exit twice_cfg, bot) (fun_of_dg_st \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"

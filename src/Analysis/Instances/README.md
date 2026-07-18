@@ -27,7 +27,7 @@ part of the reusable analysis instance.
 | --- | --- | --- |
 | `Sign/` | 7-element sign lattice | full soundness + executable + end-to-end |
 | `Interval/` | Interval domain (`ivl`) | full soundness + executable + end-to-end (`side_ivl_analysis_sound`) |
-| `NamedGlobalSign/` | Named-global sign (mixed-flow, side-effecting) | executable + constant-route soundness through the solver; the conditional-flag route is a **documented boundary** (`flag_etf_mono_sides_unprovable`, `oops`) — provably not `mono_sides`, hence not solver-drivable |
+| `NamedGlobalSign/` | Named-global sign (mixed-flow, side-effecting) | executable + constant-route soundness through the side solver (edge→`Gpos`, combine→`Gneg`; monotone routing) |
 | `Mixed/` | Sign answers (`D`) + one flow-insensitive Interval side invariant (`G`) on the heterogeneous `dg_spec` interface | collecting soundness (`mixed_si_post_solution_collect_sound`) + executable solver run; first analysis with two genuinely different domains (see `docs/SPLIT_STATE_MIGRATION.md` §6.6) |
 | `Tooling/` | GraphViz CFG/analysis output | utility, no soundness obligation |
 
@@ -46,11 +46,12 @@ part of the reusable analysis instance.
    already interpreted) for `afilter_mono`/`bfilter_mono` — both proved generically
    in `Generic/Domain/Abstract_Domain`. See `Sign_Domain` / `Interval_Domain` for the
    interpretation shape.
-5. **Context-sensitivity / digests — free.** No per-domain work: `glob_env_cmp`,
-   `side_env_cmp`, `digest_global_read` (`obs_digest`), the cmp/ctx/digest generators,
-   and their soundness are all generic over `'d::bounded_semilattice_sup_bot`. A new
-   domain plugs into them unchanged; only executable witnesses are written per domain,
-   in `src/Formalization/Examples/Executable/`.
+5. **Context-sensitivity — free.** No per-domain work: the DG spine
+   (`sound_dg_spec`, `DG_Context_Soundness`) and the functional keyed generator
+   (`side_cfg_T_eff_keyed_seed_dg`) are generic over
+   `'d::bounded_semilattice_sup_bot`. A new domain plugs into them unchanged as a
+   diagonal `sound_dg_spec` instance; only executable witnesses are written per
+   domain, in `src/Formalization/Examples/Executable/`.
 6. Register the `.thy` files in `src/Analysis/ROOT` (`directories` + `theories`,
    order: domain before soundness before executable witnesses).
 

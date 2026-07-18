@@ -206,7 +206,7 @@ theorem part_solution_imp_inl_glob_le_keyed_ctx:
     and retain_comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
     and bot0_glob: "restrict_global bot0 = \<bottom>"
     and frame_glob: "restrict_global fresh_frame = \<bottom>"
-    and ps: "part_solution (side_cfg_T_eff_cmp gkey
+    and ps: "part_solution (side_cfg_T_eff_keyed gkey
                 (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
                     (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                 g etf fresh_frame bot0 s0) x \<sigma> vars"
@@ -215,7 +215,7 @@ theorem part_solution_imp_inl_glob_le_keyed_ctx:
   shows "\<sigma> (Inl (v, ctx)) y \<le> \<sigma> (Inr (gkey ctx)) y"
 proof -
   let ?cmb = "\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex))"
-  let ?T = "side_cfg_T_eff_cmp gkey ?cmb g etf fresh_frame bot0 s0"
+  let ?T = "side_cfg_T_eff_keyed gkey ?cmb g etf fresh_frame bot0 s0"
   let ?acc0 = "(if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
                 \<squnion> (if is_frame_entry g v then fresh_frame else \<bottom>)"
   let ?intra = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
@@ -250,15 +250,15 @@ proof -
     by (simp add: restrict_global_sup restrict_global_restrict_local_bot restrict_global_bot
           split: if_split)
   have fold_eq: "traverse_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> = eq ?T (v, ctx) \<sigma>"
-    by (simp add: eq_side_cfg_T_eff_cmp traverse_side_rhs_fold_ctx)
+    by (simp add: eq_side_cfg_T_eff_keyed traverse_side_rhs_fold_ctx)
   have sides_le: "sides_of_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> (Inr (gkey ctx))
                     \<le> \<sigma> (Inr (gkey ctx))"
   proof -
     have "sides_of_rhs (side_rhs_fold_ctx ?acc0 (?intra @ ?comb)) \<sigma> (Inr (gkey ctx))
             \<le> sides_of_rhs (?T (v, ctx)) \<sigma> (Inr (gkey ctx))"
-      by (rule sides_fold_le_side_cfg_T_eff_cmp)
+      by (rule sides_fold_le_side_cfg_T_eff_keyed)
     also have "\<dots> \<le> \<sigma> (Inr (gkey ctx))"
-      by (rule side_post_solution_le_global_cmp[OF _ v]) (use ps in auto)
+      by (rule side_post_solution_le_global_keyed[OF _ v]) (use ps in auto)
     finally show ?thesis .
   qed
   have fun_le: "restrict_global (eq ?T (v, ctx) \<sigma>) \<le> \<sigma> (Inr (gkey ctx))"
@@ -291,7 +291,7 @@ lemma inl_glob_le_keyed_ctx_on_vars:
   assumes "\<And>a u. apply_etf etf a u = retain_edge_tree (F a) u"
     and "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
     and "restrict_global bot0 = \<bottom>" and "restrict_global fresh_frame = \<bottom>"
-    and "part_solution (side_cfg_T_eff_cmp gkey
+    and "part_solution (side_cfg_T_eff_keyed gkey
            (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
                (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
            g etf fresh_frame bot0 s0) x \<sigma> vars"
@@ -317,7 +317,7 @@ lemma inl_glob_le_keyed_ctx_full:
     and retain_comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
     and bot0_glob: "restrict_global bot0 = \<bottom>"
     and frame_glob: "restrict_global fresh_frame = \<bottom>"
-    and ps: "part_solution (side_cfg_T_eff_cmp gkey
+    and ps: "part_solution (side_cfg_T_eff_keyed gkey
                 (\<lambda>c dst cc ex. map_gtree (\<lambda>_. gkey c)
                     (map_ltree (\<lambda>w. (w, c)) (etf_combine etf dst cc ex)))
                 g etf fresh_frame bot0 s0) x \<sigma> vars"

@@ -14,8 +14,8 @@ theory Voblint
     "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_CFG.CFG_Collect"
-    "Voblint_CFG.CFG_Collect_Trace"
     "Voblint_CFG.CFG_Collect_Runs"
+    "Voblint_CFG.CFG_Local_Trace"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Abstract_Domain"
     "Voblint_Analysis.Constraint_System"
@@ -32,6 +32,8 @@ theory Voblint
     "Voblint_Analysis.Sign_DG"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Mixed_Sign_Interval"
+    "Voblint_Analysis.Activation_Backbone"
+    "Voblint_Analysis.DG_Ctx_Activation"
     "Voblint_Analysis.Exec_St"
     "Voblint_Analysis.Exec_Bridge"
     "Voblint_Analysis.Exec_DG_Bridge"
@@ -41,8 +43,10 @@ theory Voblint
     Exec_Sign_Run
     Exec_Sign_DG_Run
     Example_Interval_DG_Flagship
-    Trace_Analysis_Sound
     Mixed_Flow_Sound
+    Source_Activation_Sound
+    Example_Interval_DG_Ctx_Collect
+    Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_IMP2_Coverage
     Example_Side_Execute
@@ -53,9 +57,6 @@ theory Voblint
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
-    Example_Trace_Digest_Precision
-    Example_Trace_Digest_Combine
-    Example_Trace_Digest_ReachingCompat
     Example_Proc_GraphViz
 begin
 
@@ -65,7 +66,9 @@ text \<open>
   control-flow graph; the graph induces an effectful equation system; the
   verified TD_side solver computes a partial post-solution; and the resulting
   mixed flow-sensitive abstract state over-approximates the interprocedural
-  trace collecting semantics at every program point.  When the generated
+  collecting semantics at every program point --- plain \<^verbatim>\<open>cfg_collect\<close>
+  context-insensitively, and the activation-indexed \<^verbatim>\<open>cfg_collect_ctx_act\<close>
+  per calling context.  When the generated
   equation system satisfies threefold monotonicity, the solver result is also
   the least partial post-solution.
 
@@ -87,8 +90,8 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Path} --- inductive path predicate and offset infrastructure.
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Collect} --- edge/path transfer functions, pointwise \<^verbatim>\<open>cfg_collect\<close>, and path-to-lfp bridge.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Trace} --- trace-valued and digest-refined collecting semantics.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Runs} --- generic run-to-exit projection into \<^verbatim>\<open>cfg_collect\<close>.
+    \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^verbatim>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the generic \<^verbatim>\<open>collect_by\<close> combinator, and the activation collector \<^verbatim>\<open>cfg_collect_ctx_act\<close> (its \<^verbatim>\<open>key\<close>-indexed projection --- the concrete semantics for context-sensitive soundness).
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning and the reachability cone used by the solver proof.
 
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge.
@@ -108,11 +111,17 @@ text \<open>
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain
     \<^verbatim>\<open>G\<close>), which is the canonical context-sensitive backbone.
-    \<^item> @{theory Voblint_Analysis.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> analysis record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> componentwise copy lattice, and the seeded CMP generator \<^verbatim>\<open>side_cfg_T_eff_cmp_seed_dg\<close>.
+    \<^item> @{theory Voblint_Analysis.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> analysis record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> componentwise copy lattice, and the seeded keyed generator \<^verbatim>\<open>side_cfg_T_eff_keyed_seed_dg\<close>.
     \<^item> @{theory Voblint_Analysis.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>, \<^verbatim>\<open>dg_post_solution_collect_sound\<close>).
     \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance (\<^verbatim>\<open>sign_dg_post_solution_collect_sound\<close>).
     \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>).
     \<^item> @{theory Voblint_Analysis.Mixed_Sign_Interval} --- the mixed flagship: Sign locals with Interval globals, both mixed-domain and context-sensitive (\<^verbatim>\<open>mixed_si_post_solution_collect_sound\<close>).
+
+  \<^bold>\<open>4c. Activation-local concrete semantics.\<close> The concrete object the
+    context-sensitive soundness rides: one trace per procedure activation, with a
+    stable call-only context.  Bridges \<^verbatim>\<open>cfg_collect_ctx_act\<close> to the D/G solution.
+    \<^item> @{theory Voblint_Analysis.Activation_Backbone} --- the generic \<^verbatim>\<open>activation_collect_sound\<close>: over \<^verbatim>\<open>valid_ltr\<close>, the four obligations \<^verbatim>\<open>ENTRY_G\<close>/\<^verbatim>\<open>EDGE\<close>/\<^verbatim>\<open>SEED_G\<close>/\<^verbatim>\<open>COMB\<close> (\<^verbatim>\<open>COMB\<close> landing at the caller context) give \<^verbatim>\<open>cfg_collect_ctx_act ... v c <= gamma(sg (Inl (v, c)))\<close>.
+    \<^item> @{theory Voblint_Analysis.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Analysis.Exec_St} --- executable abstract-state maps for code generation.
@@ -122,13 +131,15 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable Sign IP solver, trace soundness, and annotated DOT entry points.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and optimality statements.
-    \<^item> @{theory Voblint_Formalization.Trace_Analysis_Sound} --- trace-level post-fixpoint soundness and digest-indexed trace reading.
     \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality:
       @{thm [source] mixed_flow_analysis_sound} and @{thm [source] mixed_flow_analysis_optimal}.
+    \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the recursive source-adequacy bridge \<^verbatim>\<open>source_activation_sound\<close>: any reachable IMP2 source configuration produces a \<^verbatim>\<open>valid_ltr\<close> trace, so a real source run is covered at its activation's own context --- closing \<^verbatim>\<open>source pstep => cstep => valid_ltr => cfg_collect_ctx_act => gamma\<close>.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, and tooling.
     \<^item> \<^bold>\<open>@{theory Voblint_Formalization.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations are generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result is certified a post-solution and transported to the abstract semantics, and \<^verbatim>\<open>flagship_collect_sound\<close> proves it over-approximates the collecting semantics --- discovering the invariant \<^verbatim>\<open>x in [0,20]\<close>. The compiler-correctness simulation then lifts this to \<^emph>\<open>actual IMP2 source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>). Ends with an analysis-annotated GraphViz rendering.
     \<^item> @{theory Voblint_Formalization.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver (\<^verbatim>\<open>dgEx_collect_sound\<close>).
+    \<^item> @{theory Voblint_Formalization.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program: the computed interval D/G solution certified against the activation collecting at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_ctx_collect_ctx_act_sound\<close>).
+    \<^item> @{theory Voblint_Formalization.Example_Interval_Source_Ctx} --- the same \<^verbatim>\<open>twice\<close> program certified against \<^emph>\<open>actual source runs\<close> at each activation's own context (\<^verbatim>\<open>twice_source_ctx_run_sound\<close>), strictly sharper than the context-forgetting monovariant capstone.
     \<^item> @{theory Voblint_Formalization.Example_Inc_Proc} --- shared global-increment procedure witness used by sign, interval, and mixed-flow examples.
     \<^item> @{theory Voblint_Formalization.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop.
     \<^item> @{theory Voblint_Formalization.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
@@ -139,9 +150,6 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
     \<^item> @{theory Voblint_Formalization.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
     \<^item> @{theory Voblint_Formalization.Example_Guard_Refinement} --- backward guard refinement precision witness.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Precision} --- trace digest precision witness.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_Combine} --- combine-side digest filtering: @{const cmp_pair} at the return junction.
-    \<^item> @{theory Voblint_Formalization.Example_Trace_Digest_ReachingCompat} --- reader-side @{const reaching_compat}: lockset ghost filters the global read.
     \<^item> @{theory Voblint_Formalization.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
 
   \<^bold>\<open>8. Tooling and research witnesses.\<close> Useful theories outside the core proof spine.
@@ -164,9 +172,10 @@ text \<open>
       \<^verbatim>\<open>cfg_collect g S v <= gamma(sigma) v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
-  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain, Clean and
+  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain and
   the mixed flagship are its instances, and context slicing is factored through
-  \<^verbatim>\<open>Ctx_Collect_Backbone\<close>. The base flow-sensitive spine remains
+  the functional activation spine and its per-context keyed slots. The base
+  flow-sensitive spine remains
   \<^verbatim>\<open>side_analyse_eff_collect_sound_exit_pruned\<close> (Sign \<^verbatim>\<open>side_sign_analysis_sound\<close>,
   Interval \<^verbatim>\<open>side_ivl_analysis_sound\<close>).
 \<close>

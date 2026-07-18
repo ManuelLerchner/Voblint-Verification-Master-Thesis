@@ -22,7 +22,7 @@ theory Exec_DG_Bridge
   imports
     "Voblint_Analysis.DG_Soundness"
     "Voblint_Analysis.Exec_Bridge"
-    "Voblint_Analysis.TD_Side_Eff_Cmp_Gen"
+    "Voblint_Analysis.TD_Side_Eff_Keyed_Gen"
 begin
 
 subsection \<open>The combined warrowing arity for the executable state\<close>
@@ -234,8 +234,8 @@ qed
 subsection \<open>The executable D/G equation generator\<close>
 
 text \<open>
-  The executable generator is the same polymorphic seeded-CMP generator
-  (\<open>side_cfg_T_eff_cmp_seed_dg\<close>) the abstract \<open>sound_dg_spec.dg_gen\<close> uses,
+  The executable generator is the same polymorphic seeded keyed generator
+  (\<open>side_cfg_T_eff_keyed_seed_dg\<close>) the abstract \<open>sound_dg_spec.dg_gen\<close> uses,
   instantiated at an \<open>'a st\<close>-valued analysis spec.  Unit context (\<open>gkey = (\<lambda>_. ())\<close>),
   no procedure-entry seed (\<open>frame_seed = (\<lambda>_. bot)\<close>).
 \<close>
@@ -258,7 +258,7 @@ definition dg_gen_of ::
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) eqsT"
 where
   "dg_gen_of S g bot0 s0d s0g =
-     side_cfg_T_eff_cmp_seed_dg predecessor_list (\<lambda>_. ()) (dg_cmb_of S) (\<lambda>_ _. []) g S bot0 s0d s0g"
+     side_cfg_T_eff_keyed_seed_dg predecessor_list (\<lambda>_. ()) (dg_cmb_of S) (\<lambda>_ _. []) g S bot0 s0d s0g"
 
 subsection \<open>Side-effect commutation for the generator\<close>
 
@@ -553,8 +553,8 @@ lemma eq_seed_dg_commute:
                            = dg_spec_step S_abs a (fun_of_st d) (fun_of_st g')"
       and Hcmb: "\<And>c' dst cc ex. dg_tree_st_commute \<sigma>_st (cmb_st c' dst cc ex) (cmb_abs c' dst cc ex)"
       and Hextra: "\<And>c' w. list_all2 (dg_tree_st_commute \<sigma>_st) (extra_st c' w) (extra_abs c' w)"
-  shows "fun_of_dg_st (eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) (v, ctx) \<sigma>_st)
-       = eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+  shows "fun_of_dg_st (eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) (v, ctx) \<sigma>_st)
+       = eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
                (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g)) (v, ctx) (fun_of_dg_st \<circ> \<sigma>_st)"
 proof -
   have la: "list_all2 (\<lambda>t_st t_abs. fun_of_dg_st (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st))
@@ -564,7 +564,7 @@ proof -
       @ map (\<lambda>(cc, ex, dst). cmb_abs ctx dst cc ex) (combine_predecessor_list g v) @ extra_abs ctx v)"
     by (rule dg_list_commute_trav[OF seed_dg_list_commute[OF Hstep Hcmb Hextra]])
   show ?thesis
-    unfolding eq_side_cfg_T_eff_cmp_seed_dg
+    unfolding eq_side_cfg_T_eff_keyed_seed_dg
     by (simp add: fun_of_st_bot bot_fun_def side_acc_dg_commute[OF la] fun_of_st_sup flip: bot_fun_def)
 qed
 
@@ -574,9 +574,9 @@ lemma sides_seed_dg_commute:
       and Hcmb: "\<And>c' dst cc ex. dg_tree_st_commute \<sigma>_st (cmb_st c' dst cc ex) (cmb_abs c' dst cc ex)"
       and Hextra: "\<And>c' w. list_all2 (dg_tree_st_commute \<sigma>_st) (extra_st c' w) (extra_abs c' w)"
   shows "fun_of_dg_st (sides_of_rhs
-             (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g (v, ctx)) \<sigma>_st k)
+             (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g (v, ctx)) \<sigma>_st k)
        = sides_of_rhs
-             (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+             (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
                 (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g) (v, ctx)) (fun_of_dg_st \<circ> \<sigma>_st) k"
 proof -
   have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. fun_of_dg_st (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st)
@@ -597,7 +597,7 @@ proof -
   have seed: "fun_of_dg_st (DG bot s0g) = DG bot (fun_of_st s0g)"
     by (simp add: fun_of_dg_st_def fun_of_st_bot bot_fun_def)
   show ?thesis
-    unfolding side_cfg_T_eff_cmp_seed_dg_def Let_def
+    unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
     by (simp add: Let_def fun_upd_apply fun_of_dg_st_sup seed fold fun_of_st_sup flip: bot_fun_def)
 qed
 
@@ -606,9 +606,9 @@ lemma dep_seed_dg_eq:
                            = dg_spec_step S_abs a (fun_of_st d) (fun_of_st g')"
       and Hcmb: "\<And>c' dst cc ex. dg_tree_st_commute \<sigma>_st (cmb_st c' dst cc ex) (cmb_abs c' dst cc ex)"
       and Hextra: "\<And>c' w. list_all2 (dg_tree_st_commute \<sigma>_st) (extra_st c' w) (extra_abs c' w)"
-  shows "dep_aux \<sigma>_st (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g (v, ctx))
+  shows "dep_aux \<sigma>_st (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g (v, ctx))
        = dep_aux (fun_of_dg_st \<circ> \<sigma>_st)
-           (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs bot0' s0d' s0g' (v, ctx))"
+           (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs bot0' s0d' s0g' (v, ctx))"
 proof -
   have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st \<circ> \<sigma>_st) t_abs)
     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_st a u))) (pred_sel g w)
@@ -617,7 +617,7 @@ proof -
       @ map (\<lambda>(cc, ex, dst). cmb_abs ctx dst cc ex) (combine_predecessor_list g w) @ extra_abs ctx w)"
     by (rule dg_list_commute_dep[OF seed_dg_list_commute[OF Hstep Hcmb Hextra]])
   show ?thesis
-    unfolding side_cfg_T_eff_cmp_seed_dg_def Let_def
+    unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
     by (simp add: dep_aux_Side dep_aux_side_rhs_fold_dg_commute[OF la])
 qed
 
@@ -638,58 +638,58 @@ theorem part_post_solution_seed_dg_st_to_abs:
       and Hcmb: "\<And>c' dst cc ex. dg_tree_st_commute \<sigma>_st (cmb_st c' dst cc ex) (cmb_abs c' dst cc ex)"
       and Hextra: "\<And>c' w. list_all2 (dg_tree_st_commute \<sigma>_st) (extra_st c' w) (extra_abs c' w)"
       and pp: "part_post_solution
-                 (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) x \<sigma>_st vars"
+                 (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) x \<sigma>_st vars"
   shows "part_post_solution
-           (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+           (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
               (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g)) x (fun_of_dg_st \<circ> \<sigma>_st) vars"
 proof (intro conjI ballI)
   show "x \<in> vars" using pp by simp
 next
   fix u assume u: "u \<in> vars"
   obtain v c where uv: "u = (v, c)" by (cases u) auto
-  have dl: "dep\<^sub>L (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) \<sigma>_st u \<subseteq> vars"
+  have dl: "dep\<^sub>L (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) \<sigma>_st u \<subseteq> vars"
     using pp u by simp
   have "dep_aux (fun_of_dg_st \<circ> \<sigma>_st)
-          (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+          (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g) (v, c))
-      = dep_aux \<sigma>_st (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g (v, c))"
+      = dep_aux \<sigma>_st (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g (v, c))"
     by (rule dep_seed_dg_eq[OF Hstep Hcmb Hextra, symmetric])
-  hence "dep\<^sub>L (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+  hence "dep\<^sub>L (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g)) (fun_of_dg_st \<circ> \<sigma>_st) u
-       = dep\<^sub>L (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) \<sigma>_st u"
+       = dep\<^sub>L (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) \<sigma>_st u"
     unfolding dep\<^sub>L_def dep_def uv by simp
-  thus "dep\<^sub>L (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+  thus "dep\<^sub>L (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g)) (fun_of_dg_st \<circ> \<sigma>_st) u \<subseteq> vars"
     using dl by simp
 next
   fix u assume u: "u \<in> vars"
   obtain v c where uv: "u = (v, c)" by (cases u) auto
-  have le: "eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) u \<sigma>_st
+  have le: "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) u \<sigma>_st
               \<le> \<sigma>_st (Inl u)" using pp u by simp
-  have "eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+  have "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g)) u (fun_of_dg_st \<circ> \<sigma>_st)
-      = fun_of_dg_st (eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) u \<sigma>_st)"
+      = fun_of_dg_st (eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g) u \<sigma>_st)"
     unfolding uv by (simp add: eq_seed_dg_commute[OF Hstep Hcmb Hextra])
   also have "\<dots> \<le> fun_of_dg_st (\<sigma>_st (Inl u))" using le by (rule fun_of_dg_st_mono)
-  finally show "eq (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+  finally show "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g)) u (fun_of_dg_st \<circ> \<sigma>_st)
               \<le> (fun_of_dg_st \<circ> \<sigma>_st) (Inl u)" by simp
 next
   fix u assume u: "u \<in> vars"
   obtain v c where uv: "u = (v, c)" by (cases u) auto
-  have le: "sides_of_rhs (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g u) \<sigma>_st
+  have le: "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g u) \<sigma>_st
               \<le> \<sigma>_st" using pp u by simp
-  show "sides_of_rhs (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+  show "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g) u) (fun_of_dg_st \<circ> \<sigma>_st) \<le> fun_of_dg_st \<circ> \<sigma>_st"
   proof (rule le_funI)
     fix k
-    have "sides_of_rhs (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+    have "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g) u) (fun_of_dg_st \<circ> \<sigma>_st) k
-        = fun_of_dg_st (sides_of_rhs (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g u) \<sigma>_st k)"
+        = fun_of_dg_st (sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_st extra_st g S_st bot0 s0d s0g u) \<sigma>_st k)"
       unfolding uv by (simp add: sides_seed_dg_commute[OF Hstep Hcmb Hextra])
     also have "\<dots> \<le> fun_of_dg_st (\<sigma>_st k)"
       using le[THEN le_funD] by (rule fun_of_dg_st_mono)
-    finally show "sides_of_rhs (side_cfg_T_eff_cmp_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
+    finally show "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb_abs extra_abs g S_abs
              (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g) u) (fun_of_dg_st \<circ> \<sigma>_st) k
                 \<le> (fun_of_dg_st \<circ> \<sigma>_st) k" by simp
   qed
@@ -727,7 +727,7 @@ proof -
   have hc: "\<And>c' dst cc ex. dg_tree_st_commute \<sigma>_st (dg_cmb_of S_st c' dst cc ex) (dg_cmb_of S_abs c' dst cc ex)"
     by (rule dg_tree_st_commute_dg_cmb_of[OF Hcomb])
   from pp have pp':
-    "part_post_solution (side_cfg_T_eff_cmp_seed_dg predecessor_list (\<lambda>_. ()) (dg_cmb_of S_st) (\<lambda>_ _. [])
+    "part_post_solution (side_cfg_T_eff_keyed_seed_dg predecessor_list (\<lambda>_. ()) (dg_cmb_of S_st) (\<lambda>_ _. [])
                            g S_st bot0 s0d s0g) x \<sigma>_st vars"
     unfolding dg_gen_of_def .
   show ?thesis

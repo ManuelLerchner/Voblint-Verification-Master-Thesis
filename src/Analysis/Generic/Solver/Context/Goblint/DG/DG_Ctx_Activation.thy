@@ -5,7 +5,7 @@ begin
 section \<open>DG-native discharge of the activation obligations\<close>
 
 text \<open>
-  The context-sensitive routed \<^const>\<open>side_cfg_T_eff_cmp_seed_dg\<close> spine reads its
+  The context-sensitive routed \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> spine reads its
   solution through the diagonal (unit) DG interpretation \<^const>\<open>gamma_unit\<close> with a
   \<^emph>\<open>single shared\<close> global slot \<open>Inr gk0\<close> (\<open>gkey = (\<lambda>_. gk0)\<close>, flow-insensitive globals as
   in Goblint).  This locale lifts the \<open>EDGE\<close> and combine \<open>COMB\<close> obligations of the
@@ -30,7 +30,7 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'a abs_state"
   assumes finE: "finite (edges g)"
     and pp: "part_post_solution
-               (side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. gk0)
+               (side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. gk0)
                   cmb extra g S bot0 s0d s0g) x0 sigma vars"
     and sg_cov: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> sg (Inl (v, c)) = locals (sigma (Inl (v, c))) \<squnion> globs (sigma (Inr gk0))"
@@ -40,7 +40,7 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('a abs_state, 'a abs_state) dg_state) eqsT" where
-  "Gen \<equiv> side_cfg_T_eff_cmp_seed_dg non_enter_predecessor_list (\<lambda>_. gk0)
+  "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. gk0)
            cmb extra g S bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'a abs_state" where
@@ -78,7 +78,7 @@ lemma edge_tree_local_ctx:
        (map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) sigma)
    = snd (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))"
   unfolding apply_dg_spec_def
-  by (subst traverse_intra_cmp) (simp add: traverse_dg_edge_tree)
+  by (subst traverse_intra_keyed) (simp add: traverse_dg_edge_tree)
 
 lemma edge_tree_global_ctx:
   "globs (sides_of_rhs
@@ -114,7 +114,7 @@ subsection \<open>The entry Side wrapper only grows the sides\<close>
 lemma sides_fold_le_Gen:
   "sides_of_rhs (side_rhs_fold_dg (acc0 v) (trees v ctx)) sigma k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"
-  unfolding side_cfg_T_eff_cmp_seed_dg_def Let_def
+  unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
   by (cases "v = cfg_entry g") (auto simp: Let_def intro: sup.cobounded1)
 
 subsection \<open>EDGE: the routed intra bounds and the guarded transport\<close>
@@ -135,7 +135,7 @@ proof -
   also have "\<dots> \<le> side_acc_dg (acc0 v) sigma (trees v ctx)"
     using locals_traverse_le_side_acc_dg[OF mem] .
   also have "\<dots> = locals (eq Gen (v, ctx) sigma)"
-    by (simp add: eq_side_cfg_T_eff_cmp_seed_dg)
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
   also have "\<dots> \<le> locals (sigma (Inl (v, ctx)))"
     using pp_eq_bound[OF cov_v] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .

@@ -35,6 +35,36 @@ lemma edge_collect_member:
   "x \<in> edge_collect a S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edge_collect a {s})"
   by (cases a) auto
 
+subsection \<open>Single-store step\<close>
+
+text \<open>
+  edge_step is the single-store version of edge_collect: it returns None
+  exactly when an assume edge filters the store out, and Some of the updated
+  store otherwise.
+\<close>
+fun edge_step :: "edge_action => store => store option" where
+    "edge_step EA_Nop           s = Some s"
+  | "edge_step (EA_Assign x a)  s = Some (s(x := aval a s))"
+  | "edge_step (EA_Assume b)    s = (if bval b s then Some s else None)"
+  | "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
+  | "edge_step (EA_Enter xs es) s = Some (bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
+
+(* edge_collect on a singleton agrees with edge_step, viewed as an option-set. *)
+lemma edge_collect_single:
+  "edge_collect a {s} = set_option (edge_step a s)"
+  by (cases a) auto
+
+text \<open>
+  call_enter_store g c s t : t is the callee-entry store produced by a concrete
+  EA_Enter edge leaving c from the caller store s (formals bound to the argument
+  values, then enter_state). A generic compiled-CFG call-entry fact, independent
+  of any trace or digest machinery.
+\<close>
+definition call_enter_store :: "cfg => pp => store => store => bool" where
+  "call_enter_store g c s t \<longleftrightarrow>
+     (\<exists>pe xs es. (c, EA_Enter xs es, pe) \<in> edges g \<and>
+       t = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
+
 subsection \<open>Path transfer\<close>
 
 text \<open>

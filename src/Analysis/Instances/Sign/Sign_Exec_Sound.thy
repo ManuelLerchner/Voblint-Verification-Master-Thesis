@@ -1,6 +1,6 @@
 theory Sign_Exec_Sound
   imports Sign_Exec Sign_Side_Soundness Solver_Side_RG
-          "Voblint_CFG.CFG_Collect_Trace" "TD.TD_side_upd_rule"
+          "TD.TD_side_upd_rule"
           "Voblint_IMP2.IMP2_Notation"
           Analysis_GraphViz
 begin
@@ -138,29 +138,6 @@ proof -
     by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
 qed
 
-text \<open>
-  Soundness against the underlying interprocedural trace semantics: for any
-  C-faithful reaching trace, the value of every variable at the end of the
-  trace is over-approximated.
-\<close>
-
-theorem sign_exec_sound_trace:
-  assumes solves: "sign_exec_terminates \<Pi> ps main"
-  assumes tr: "tr \<in> cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
-                       (cfg_exit (compile_prog \<Pi> ps main))"
-  shows "last tr \<in> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
-proof -
-  from tr have "last tr \<in> alpha_last (cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
-                                        (cfg_exit (compile_prog \<Pi> ps main)))"
-    by (auto simp: alpha_last_def)
-  moreover have "alpha_last (cfg_collect_trace (compile_prog \<Pi> ps main) cinit_stores
-                              (cfg_exit (compile_prog \<Pi> ps main)))
-                 \<le> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
-    using alpha_last_cfg_collect_trace_le sign_exec_sound_collecting[OF solves]
-    by (rule subset_trans)
-  ultimately show ?thesis by blast
-qed
-
 section \<open>Whole-program convenience layer\<close>
 
 text \<open>
@@ -193,13 +170,6 @@ corollary sign_exec_prog_sound_collecting:
            \<le> \<lbrakk>sign_exec_prog p\<rbrakk>"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_collecting)
-
-corollary sign_exec_prog_sound_trace:
-  assumes "sign_terminates_prog p"
-      and "tr \<in> cfg_collect_trace (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))"
-  shows "last tr \<in> \<lbrakk>sign_exec_prog p\<rbrakk>"
-  using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
-  by (rule sign_exec_sound_trace)
 
 section \<open>Visualisation convenience\<close>
 

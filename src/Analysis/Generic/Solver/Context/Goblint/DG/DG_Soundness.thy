@@ -172,7 +172,7 @@ definition dg_gen ::
         ('D, 'G) dg_state) eqsT"
 where
   "dg_gen g bot0 s0d s0g =
-     side_cfg_T_eff_cmp_seed_dg predecessor_list (\<lambda>_. ()) dg_cmb
+     side_cfg_T_eff_keyed_seed_dg predecessor_list (\<lambda>_. ()) dg_cmb
        (\<lambda>_ _. []) g S bot0 s0d s0g"
 
 definition dg_D ::
@@ -220,7 +220,7 @@ lemma eq_dg_gen:
    DG (side_acc_dg (dg_acc g bot0 s0d v)
      sigma (dg_trees g v)) bot"
   unfolding dg_gen_def dg_trees_def dg_acc_def dg_cmb_def
-  by (simp add: eq_side_cfg_T_eff_cmp_seed_dg)
+  by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
 
 lemma sides_fold_le_dg_gen:
   "sides_of_rhs
@@ -228,7 +228,7 @@ lemma sides_fold_le_dg_gen:
         (dg_trees g v)) sigma k
    \<le> sides_of_rhs (dg_gen g bot0 s0d s0g (v, ())) sigma k"
   unfolding dg_gen_def dg_trees_def dg_acc_def dg_cmb_def
-    side_cfg_T_eff_cmp_seed_dg_def
+    side_cfg_T_eff_keyed_seed_dg_def
   by (cases "v = cfg_entry g") (simp_all add: Let_def)
 
 definition dg_postfix ::
@@ -260,7 +260,7 @@ lemma dg_edge_tree_local:
           (apply_dg_spec S a u))) sigma)
    = snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
   unfolding apply_dg_spec_def dg_D_def dg_G_def
-  by (subst traverse_intra_cmp)
+  by (subst traverse_intra_keyed)
     (simp add: traverse_dg_edge_tree)
 
 lemma dg_edge_tree_global:
@@ -278,7 +278,7 @@ lemma dg_combine_tree_local:
    = snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
        (dg_G sigma))"
   unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  by (subst traverse_intra_cmp)
+  by (subst traverse_intra_keyed)
     (simp add: traverse_dg_combine_tree)
 
 lemma dg_combine_tree_global:
@@ -339,7 +339,7 @@ proof -
        sides_of_rhs
          (dg_gen g bot0 s0d s0g (cfg_entry g, ()))
          sigma (Inr ())"
-      unfolding dg_gen_def side_cfg_T_eff_cmp_seed_dg_def
+      unfolding dg_gen_def side_cfg_T_eff_keyed_seed_dg_def
       by (simp add: Let_def less_eq_dg_state_def sup_dg_state_def)
     also have "... \<le> sigma (Inr ())"
       using sides_le[OF cover_entry] by (rule le_funD)

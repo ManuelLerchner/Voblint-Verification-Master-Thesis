@@ -1,21 +1,16 @@
 # Read
 
-Global-read and digest-refinement infrastructure.
-
-| File | Role |
-| --- | --- |
-| `Global_Cmp_Read.thy` | context-filtered global read |
-| `Context_Domain.thy` | context domain and routing base |
-| `Digest_Global_Read.thy` | digest-refined global read kernel |
-| `Clean_RRead_Sound.thy` | clean read-side soundness |
+Keyed-global generator scaffolding for the side-effecting solver. The relational
+digest/compatibility read layer was retired (see
+`docs/DIGEST_SPINE_REMOVAL_PLAN.md`); the retained analyses read their own
+per-context slot directly on the DG spine (`DG/`), so no separate read-interface
+model remains here.
 
 ## `Read/Support/`
 
-Generic digest and keyed-context bridge scaffolding.
+Generic keyed-context bridge scaffolding.
 
 | File | Role |
 | --- | --- |
-| `TD_Side_Eff_Cmp_Sound.thy` | cmp combine layer and soundness |
-| `TD_Side_Eff_Cmp_Pull.thy` | cmp pullback discharge |
-| `TD_Side_Eff_Cmp_Gen.thy` | keyed generator bridge |
-| `Value_Digest_Reader.thy` | generic value-projected reader |
+| `TD_Side_Eff_Ctx_Shared.thy` | shared context-pull helpers |
+| `TD_Side_Eff_Keyed_Gen.thy` | functional keyed-global generator (routes global writes by context) |

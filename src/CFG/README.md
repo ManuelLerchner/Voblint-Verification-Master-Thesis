@@ -16,9 +16,10 @@ infrastructure (`cfg_path`, offsets), and reachability pruning.
 
 Path store folding uses `edges_collect` in [`Collecting/CFG_Collect.thy`](Collecting/CFG_Collect.thy).
 
-**Collecting semantics** (IP fixpoint over stores and traces) live in
-[`Collecting/`](Collecting/) — import **`CFG_Collect`** for interprocedural semantics
-and **`CFG_Collect_Trace`** for trace-valued semantics.
+**Collecting semantics** (IP fixpoint over stores) live in
+[`Collecting/`](Collecting/) — import **`CFG_Collect`** for the plain
+interprocedural `cfg_collect`, and **`CFG_Local_Trace`** for the call-structured
+`valid_ltr` and its activation collector `cfg_collect_ctx_act`.
 
 **Key concepts:** `cfg_entry`, `cfg_exit`, `edges g`, `combines g`; `compile_prog pi ps c`
 produces a single flat CFG with call-site / procedure-exit combine triples.

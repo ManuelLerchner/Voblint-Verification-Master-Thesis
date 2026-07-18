@@ -3,9 +3,7 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   directories
     "Pipeline"
     "Examples/Executable/Sign/Core"
-    "Examples/Executable/Sign/Keyed"
     "Examples/Executable/Interval/Core"
-    "Examples/Digest"
     "Examples/Interprocedural"
     "Examples/Numeric"
     "Examples/Tooling"
@@ -13,12 +11,9 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Voblint
     Compiler_Correctness
     Source_Activation_Sound
-    Trace_Analysis_Sound
     Mixed_Flow_Sound
     Exec_Sign_Run
     Exec_Sign_DG_Run
-    Exec_Sign_Cmp_Keyed_DG_Run
-    Exec_Sign_Mode_Value_Run
     Exec_Ivl_Run
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
@@ -36,10 +31,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Guard_Refinement
     Example_Proc_Call
     Example_Proc_Recursion_CFG
-    Example_Trace_Digest_Precision
-    Example_Trace_Digest_Combine
-    Example_Trace_Digest_ReachingCompat
-    Example_Global_Ctx_Read_Precision
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign
