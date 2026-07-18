@@ -234,7 +234,7 @@ qed
 subsection \<open>The executable D/G equation generator\<close>
 
 text \<open>
-  The executable generator is the same polymorphic seeded-CMP generator
+  The executable generator is the same polymorphic seeded keyed generator
   (\<open>side_cfg_T_eff_keyed_seed_dg\<close>) the abstract \<open>sound_dg_spec.dg_gen\<close> uses,
   instantiated at an \<open>'a st\<close>-valued analysis spec.  Unit context (\<open>gkey = (\<lambda>_. ())\<close>),
   no procedure-entry seed (\<open>frame_seed = (\<lambda>_. bot)\<close>).

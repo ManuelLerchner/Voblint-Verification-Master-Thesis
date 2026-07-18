@@ -326,7 +326,7 @@ lemma traverse_side_rhs_fold_dg:
 
 
 
-subsection \<open>The heterogeneous seeded CMP generator\<close>
+subsection \<open>The heterogeneous seeded keyed generator\<close>
 
 text \<open>
   The one context-generic generator.  Enter handling is routed by three hooks so
