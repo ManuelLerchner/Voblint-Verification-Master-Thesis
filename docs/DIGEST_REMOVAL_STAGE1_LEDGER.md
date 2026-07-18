@@ -310,10 +310,57 @@ Category-B rebasing.
 
 ---
 
+## 9. Stage-4 audit — `cmp`/`gcmp` functional-extraction census
+
+**Headline: the retained analysis path is already functional.** The
+executable/DG/activation soundness path carries **no live relational `cmp`/`gcmp`
+interface**. Verified:
+
+* `DG_Framework` and `DG_Soundness` contain **0** `gcmp`/`side_env_cmp` references.
+* The retained DG generator is `side_cfg_T_eff_cmp` / `side_cfg_T_eff_cmp_seed_dg`,
+  parameterised by `gkey` (functional context key) and `cmb` (combine) — **no `cmp`
+  parameter**. The `_cmp` in the name is legacy, not a relation.
+* Flagships chain through DG-native endpoints (`ivl_dg_post_solution_collect_sound`,
+  `flagship_collect_sound`), never a relational theorem.
+* `DG_Context_Soundness` / `Sign_DG` mention `gcmp` only in **comments** (the
+  `gkey=id, gcmp=(=)` diagonal is implemented functionally).
+
+**Classification of the entire relational `cmp`/`gcmp` surface** (all in the
+deletion cluster — none on the retained path):
+
+| Item | Location | Class | Fate |
+| --- | --- | --- | --- |
+| `side_cfg_T_eff_cmp_collect_sound_gen`, `_sound`, `_sound_eq`, `_ctx_sound` | `TD_Side_Eff_Cmp_Gen` | **dead relational scaffolding** — no rule-level users anywhere | delete with the relational cluster (Stage 5) |
+| `side_cfg_T_eff_cmp_collect_ctx_sound_semantic` + `route_read_cmp`/`combine_read_cmp` | `TD_Side_Eff_Cmp_Sound` | relational, feeds Category-C digest reads | Stage 5 |
+| `pull_cmp`, `post_fixpoint_sound_at_cmp_pull`, `cmp_edge_sound`, `cmp_entry_sound` | `TD_Side_Eff_Cmp_Pull` | relational support for the above | Stage 5 |
+| `glob_env_cmp`, `side_env_cmp` (defs) + `read` lemmas | `Global_Cmp_Read` | relational read defs; used only by digest + the dead theorems | Stage 5 |
+| `obs_digest*`, `glob_env_cmp_*` | `Digest_Global_Read` | Category-C digest | Stage 5 |
+| `read_ctx_*`, `ln (=) …` reads | `Example_Global_Ctx_Read_Precision` | Category-C digest example | Stage 5 |
+
+**Functional core to retain** (already used by `DG_Framework`, no `cmp`): the
+generator algebra in `TD_Side_Eff_Cmp_Gen` — `side_cfg_T_eff_cmp`,
+`side_cfg_T_eff_cmp_seed`, `side_cfg_T_eff_cmp_seed_dg`, `pull_gk`, the
+`traverse`/`sides`/`side_rhs_fold` lemmas, `*_edge_le`/`*_enter_le`/`*_combine_le`,
+`switching_combine_sound`. `TD_Side_Eff_Cmp_Gen` is therefore a **mixed file**
+(functional generator + dead relational theorems).
+
+**Part-C decision (no code change made):** the functional extraction the goal
+envisioned is already realised in-tree — the retained path is functional and
+exposes no `cmp`/`gcmp` parameter. The only residual is splitting the *dead*
+relational scaffolding out of the mixed `TD_Side_Eff_Cmp_Gen`. That split is
+large, touches a core file feeding every DG flagship, and the scaffolding is dead
++ Category-C-coupled, so it is safest performed **as part of the Stage-5 deletion**
+of the relational/digest cluster rather than as a speculative Stage-4 refactor.
+Renaming the functional generator off `_cmp` is likewise best done at that point
+(one mechanical rename, all callers updated together). No retained flagship needs
+either change to be `cmp`-free today.
+
 ## 8. Open items for the next stage
 
 * Confirm exactly which definition `CFG_Local_Trace` consumes from
-  `CFG_Collect_Trace` (§4) — read via I/Q before Stage 5.
+  `CFG_Collect_Trace` (§4) — read via I/Q before Stage 5. **(Done in Stage 4A:
+  it was `call_enter_store`, now relocated to `CFG_Collect`; `CFG_Local_Trace`
+  no longer imports `CFG_Collect_Trace`.)**
 * Verify `dg_postfix_c_collect_sound` has a functional keyed replacement path
   before deleting `DG_Route_Soundness` / the relational `Local_DG` endpoint.
 * Decide neutral destination-theory names for the D1/D2 extractions
