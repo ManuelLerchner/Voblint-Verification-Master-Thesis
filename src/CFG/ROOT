@@ -10,7 +10,6 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     CFG_Path
     IMP2_Proc_to_CFG
     CFG_Collect
-    CFG_Collect_Trace
     CFG_Prune
     CFG_Collect_Runs
     CFG_Local_Trace

@@ -43,9 +43,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_CFG
     Sign_Local_Effects
     Sign_Domain
-    Ctx_Collect_Backbone
-    Global_Cmp_Read
-    Context_Domain
     Strategy_Tree_Monad
     TD_Side_Tree
     Exec_Bridge
@@ -57,21 +54,13 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Pipeline
     TD_Side_RHS_Generator
     TD_Side_Eff_Soundness
-    TD_Side_Eff_Cmp_Sound
-    Clean_RRead_Sound
-    Seed_EnterMono_Lift
     Activation_Local_Sound
     Activation_Backbone
-    Digest_Global_Read
-    Value_Digest_Reader
-    TD_Side_Eff_Cmp_Pull
     TD_Side_Eff_Cmp_Gen
     DG_Framework
     DG_Soundness
     DG_Context_Soundness
-    DG_Route_Soundness
     DG_Ctx_Activation
-    Local_DG
     Retain_Analysis
     Sign_Side_Soundness
     Sign_Named_Global_Eff
@@ -83,5 +72,4 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_DG
     Mixed_Sign_Interval
     Exec_DG_Bridge
-    Value_Digest_Read
     Analysis_GraphViz

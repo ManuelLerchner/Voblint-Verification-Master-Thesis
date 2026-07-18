@@ -71,7 +71,7 @@ text \<open>
   unknowns soundly serves \<^emph>\<open>both\<close> contexts at once: each reads its own local slots
   \<open>Inl (v, True)\<close> / \<open>Inl (v, False)\<close> and its own global \<open>Inr True\<close> / \<open>Inr False\<close>, and
   may be seeded independently (\<open>s0dT\<close>/\<open>s0gT\<close> versus \<open>s0dF\<close>/\<open>s0gF\<close>).  This is exactly the
-  own-slot (\<open>gcmp = (=)\<close>) context sensitivity the keyed examples use, now native on the
+  own-slot context sensitivity the keyed examples use, now native on the
   DG spine.  No solver run or generic solver-equivalence is claimed --- the theorem is
   applied to an abstract post-fixpoint at each context.
 \<close>

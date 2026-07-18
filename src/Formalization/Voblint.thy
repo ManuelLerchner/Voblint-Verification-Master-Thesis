@@ -14,7 +14,6 @@ theory Voblint
     "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_CFG.CFG_Collect"
-    "Voblint_CFG.CFG_Collect_Trace"
     "Voblint_CFG.CFG_Collect_Runs"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Abstract_Domain"
@@ -41,7 +40,6 @@ theory Voblint
     Exec_Sign_Run
     Exec_Sign_DG_Run
     Example_Interval_DG_Flagship
-    Trace_Analysis_Sound
     Mixed_Flow_Sound
     Example_Inc_Proc
     Example_IMP2_Coverage
@@ -84,7 +82,6 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Path} --- inductive path predicate and offset infrastructure.
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Collect} --- edge/path transfer functions, pointwise \<^verbatim>\<open>cfg_collect\<close>, and path-to-lfp bridge.
-    \<^item> @{theory Voblint_CFG.CFG_Collect_Trace} --- trace-valued and digest-refined collecting semantics.
     \<^item> @{theory Voblint_CFG.CFG_Collect_Runs} --- generic run-to-exit projection into \<^verbatim>\<open>cfg_collect\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- dead-procedure pruning and the reachability cone used by the solver proof.
 
@@ -119,7 +116,6 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable Sign IP solver, trace soundness, and annotated DOT entry points.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and optimality statements.
-    \<^item> @{theory Voblint_Formalization.Trace_Analysis_Sound} --- trace-level post-fixpoint soundness and digest-indexed trace reading.
     \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality:
       @{thm [source] mixed_flow_analysis_sound} and @{thm [source] mixed_flow_analysis_optimal}.
 
@@ -158,9 +154,10 @@ text \<open>
       \<^verbatim>\<open>cfg_collect g S v <= gamma(sigma) v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
-  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain, Clean and
+  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain and
   the mixed flagship are its instances, and context slicing is factored through
-  \<^verbatim>\<open>Ctx_Collect_Backbone\<close>. The base flow-sensitive spine remains
+  the functional activation spine and its per-context keyed slots. The base
+  flow-sensitive spine remains
   \<^verbatim>\<open>side_analyse_eff_collect_sound_exit_pruned\<close> (Sign \<^verbatim>\<open>side_sign_analysis_sound\<close>,
   Interval \<^verbatim>\<open>side_ivl_analysis_sound\<close>).
 \<close>

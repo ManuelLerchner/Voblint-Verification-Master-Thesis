@@ -15,11 +15,12 @@ text \<open>
   The reader lemma below is exactly \<open>dg_postfix_collect_sound\<close> with the two accessors
   abstracted.  Instantiating \<open>dD\<close>/\<open>dG\<close> at context-keyed slots (\<open>Inl (v, ctx)\<close> /
   \<open>Inr ctx\<close>) yields per-context soundness for free --- one theorem per reachable
-  context, with no new locale assumption.  This is the \<^emph>\<open>own-slot\<close> (diagonal,
-  \<open>gcmp = (=)\<close>) read the maintained keyed examples use.  Cross-context edges (an
-  \<^const>\<open>EA_Enter\<close> that selects the callee context from the caller state, or a combine
-  that reads a different context's global) are \<^emph>\<open>not\<close> covered here and remain the
-  route / \<open>side_env_cmp\<close> work catalogued in the feasibility report.
+  context, with no new locale assumption.  This is the \<^emph>\<open>own-slot\<close> diagonal read
+  (each context reads exactly its own \<open>Inl (v, ctx)\<close> / \<open>Inr ctx\<close> slots) that the
+  maintained keyed examples use.  Cross-context edges (an \<^const>\<open>EA_Enter\<close> that
+  selects the callee context from the caller state, or a combine that reads a
+  different context's global) are handled by the functional enter/combine routing
+  of the activation spine, not here.
 \<close>
 
 context sound_dg_spec
@@ -94,7 +95,7 @@ subsection \<open>Context-keyed accessors and per-context soundness\<close>
 text \<open>
   Keyed slots: a solution ranges over \<^typ>\<open>pp \<times> 'c + 'c\<close> unknowns.  Point \<open>v\<close> under
   context \<open>ctx\<close> answers in \<open>Inl (v, ctx)\<close>; context \<open>ctx\<close>'s own global lives in
-  \<open>Inr ctx\<close> (the \<open>gkey = id\<close>, \<open>gcmp = (=)\<close> diagonal).  These generalise the \<^typ>\<open>unit\<close>
+  \<open>Inr ctx\<close> (the own-slot diagonal, \<open>gkey = id\<close>).  These generalise the \<^typ>\<open>unit\<close>
   accessors of \<open>DG_Soundness\<close>, which are the \<open>ctx = ()\<close> case.
 \<close>
 

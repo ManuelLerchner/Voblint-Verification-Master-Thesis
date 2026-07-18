@@ -11,7 +11,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Voblint
     Compiler_Correctness
     Source_Activation_Sound
-    Trace_Analysis_Sound
     Mixed_Flow_Sound
     Exec_Sign_Run
     Exec_Sign_DG_Run
