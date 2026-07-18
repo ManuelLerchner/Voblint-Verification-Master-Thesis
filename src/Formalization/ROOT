@@ -2,12 +2,9 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   description "End-to-end soundness pipeline and examples"
   directories
     "Pipeline"
-    "Examples/Executable/Common"
     "Examples/Executable/Sign/Core"
     "Examples/Executable/Sign/Keyed"
-    "Examples/Executable/Sign/SeededClean"
     "Examples/Executable/Interval/Core"
-    "Examples/Executable/Interval/SeededClean"
     "Examples/Digest"
     "Examples/Interprocedural"
     "Examples/Numeric"
@@ -17,12 +14,9 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Compiler_Correctness
     Trace_Analysis_Sound
     Mixed_Flow_Sound
-    Twfr_Reach_Read
     Exec_Sign_Run
     Exec_Sign_DG_Run
     Exec_Sign_Cmp_Keyed_DG_Run
-    Exec_Sign_Cmp_Seed_Enter
-    Exec_Sign_Cmp_Seed_Sound
     Exec_Sign_Mode_Value_Run
     Exec_Ivl_Run
     Example_Interval_DG_Flagship
@@ -30,9 +24,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Interval_DG_Ctx_Flagship
     Example_Interval_DG_Ctx_Sound
     Example_Interval_DG_Ctx_Collect
-    Exec_Ivl_Cmp_Seed_Sound
-    Exec_Ivl_Cmp_Keyed_DG_Run
-    Exec_Ivl_Cmp_Seed_Enter
     Example_Inc_Proc
     Example_Proc_GraphViz
     Example_Mixed_Sign_Interval_GraphViz
@@ -47,7 +38,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Example_Trace_Digest_Combine
     Example_Trace_Digest_ReachingCompat
     Example_Global_Ctx_Read_Precision
-    Example_Seed_Clean_Context
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign

@@ -43,7 +43,6 @@ concrete program, equation system, or precision witness.
 | `Example_Proc_Call.thy` | Interval analysis of `inc`/`sqr` via global `Gx`; structural DOT |
 | `Example_Side_Execute.thy` | Minimal certified sign IP run (`x := 1`) |
 | `Example_Side_Branch_Calls.thy` | Branching procedure called twice; flow-sensitive locals |
-| `Example_Seed_Clean_Context.thy` | Seeded-clean context witness on a two-call program |
 | `Example_Proc_Recursion_CFG.thy` | Recursive procedure CFG layout regression |
 
 Each of the four `inc`-based examples defines its own program locally (self-contained);
@@ -83,12 +82,12 @@ and certified sound by `flagship_collect_sound` (invariant `x in [0,20]`), with
 an analysis-annotated GraphViz rendering. `Exec_Sign_DG_Run` is the Sign analogue
 on the always-join solver.
 
-**Seeded-clean D/G/C spine (interval):** the interval context-sliced R_read soundness
-is `Exec_Ivl_Cmp_Seed_Sound` (`ivl_clean_ctx_collect_rread`), a thin
-instantiation of the generic `Clean_RRead_Sound`. The native DG probe is
-`Exec_Ivl_Cmp_Seed_Enter`; the DG-native keyed witness is
-`Exec_Ivl_Cmp_Keyed_DG_Run`. The retain / `side_env_cmp` interval examples are
-the conservative baseline; their loop / recursion imprecision is
-widening/warrowing-related, not D/G/C-related.
+**Context-sensitive interval spine:** the canonical context-sensitive result is
+`Example_Interval_DG_Ctx_Collect` (`twice_ctx_collect_ctx_act_sound`) — the real
+TD solver's DG-native post-solution certified sound against the activation-indexed
+collecting semantics `cfg_collect_ctx_act` at every program point, via the generic
+`activation_collect_sound` backbone and the `dg_ctx_activation` discharge. The
+retain / `side_env_cmp` interval examples are the conservative baseline; their loop
+/ recursion imprecision is widening/warrowing-related, not D/G/C-related.
 
 **Session entry point:** `Voblint.thy` imports the curated example set for the umbrella document.

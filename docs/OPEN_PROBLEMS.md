@@ -670,6 +670,24 @@ No Sign-specific dischargers were needed: a callee-exit query crosses no return 
 `Twfr_Reach_Read` + the `gk` kit suffice across Sign and Interval.  Migration summary table
 and the canonical-path statement live in `docs/WITNESS_CALCULUS_REPAIR.md`.
 
+**Update (2026-07-17) — twfr / plain-`abs_state` activation cluster retired; DG-native
+path is canonical.**  Everything the 2026-07-11/-07-12 updates above describe as the
+"canonical spine" (the from-node `twf`/`twfr` witness calculus, the whole-run
+`cover_seed` packaging, `seeded_activation_collecting_sound[_cover]`, the
+`Seeded_Activation_Reach` dependency-closure wiring, `Twfr_Reach_Read`, and the
+`Example_Rdiv_Twfr_Sound` / SeededClean probes) has been deleted.  The vacuity finding
+of update 2026-07-11i was the tell: the full-`gamma_state` twfr spine over-approximates
+an empty set on any `restrict_global`-seeded run, so it never carried a non-vacuous
+shipped result on its own.  The surviving, non-vacuous, solver-backed context-sensitive
+result is `Example_Interval_DG_Ctx_Collect.twice_ctx_collect_ctx_act_sound`
+(`cfg_collect_ctx_act` at every program point, real TD post-solution), reached through the
+retained backbone `Activation_Backbone.activation_collect_sound` and the DG-native
+discharge `DG_Ctx_Activation.dg_ctx_activation`.  Open gap unchanged: no source →
+`trace_witness_act` / `cfg_collect_ctx_act` bridge exists (the context-sensitive result is
+not yet lifted to source runs; the monovariant `cfg_collect` source lift in
+`Example_Interval_DG_IP_Flagship` is separate).  Provenance:
+`docs/ACTIVATION_SPINE_CONSOLIDATION.md`.
+
 ---
 
 ## Where to start

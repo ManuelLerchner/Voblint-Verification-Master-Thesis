@@ -66,6 +66,9 @@ open a doc to see its detail. Nothing here is moved or renamed; this is the key.
 
 Read for provenance; the code is the current truth. Status is each doc's own.
 
+`ACTIVATION_SPINE_CONSOLIDATION.md` (deleted the plain-`abs_state` activation +
+from-node-witness + SeededClean-probe cluster, ~1,750 lines; DG-native path
+canonical) ·
 `AFP_IMP2_REBASE_MIGRATION.md` · `BACKWARD_ANALYSIS_PLAN.md` ·
 `CLASSICAL_SPINE_RETIREMENT.md` · `CONTEXT_GRAPHVIZ_DEBUG_RENDERER.md` ·
 `DOMAIN_TYPECLASS_MIGRATION.md` · `EFFECTFUL_TF_MIGRATION.md` ·

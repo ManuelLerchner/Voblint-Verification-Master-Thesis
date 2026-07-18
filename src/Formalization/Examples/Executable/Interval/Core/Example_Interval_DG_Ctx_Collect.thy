@@ -2,7 +2,7 @@ theory Example_Interval_DG_Ctx_Collect
   imports
     Example_Interval_DG_Ctx_Sound
     "Voblint_Analysis.Interval_Point_Digest"
-    "Voblint_Analysis.Seeded_Activation_Sound"
+    "Voblint_Analysis.Activation_Backbone"
     "Voblint_Analysis.DG_Ctx_Activation"
 begin
 
