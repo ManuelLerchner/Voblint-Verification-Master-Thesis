@@ -10,7 +10,13 @@ through `Voblint_Formalization`:
   (T1) / `source_store_in_cfg_collect_ctx_act` (T2). Domain-free, CFG session.
 - `src/Formalization/Pipeline/Source_Activation_Sound.thy` — `source_activation_sound` (T3): a
   reachable compiled-source store lies in `γ (sg (Inl (v, key enterc seedc t)))` under exactly the
-  four backbone obligations.
+  four backbone obligations; plus the witness-free top-level specialisation
+  `source_activation_sound_toplevel` (empty source frame stack ⇒ context resolves to `seedc`).
+- `src/Formalization/Examples/Executable/Interval/Core/Example_Interval_Source_Ctx.thy` — the
+  recursive interval `twice` flagship certified end-to-end: `twice_source_ctx_run_sound` (bounded at
+  the activation's stable interval context, strictly more precise than the monovariant capstone) and
+  `twice_source_toplevel_at_bot` (witness-free, at `⊥`). Plus the structural helpers
+  `stack_repr_Nil_iff` / `key_caller_of_None` behind the top-level elimination.
 
 Refinements adopted from review: `stack_repr` is inductive and drops both the `S` parameter and the
 combine-existential; the Return branch was implemented first. The secondary `flatten` milestone is

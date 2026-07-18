@@ -1,6 +1,14 @@
 # From global witnesses to canonical activation-local semantics
 
-Status: architectural migration design. No `.thy` files changed.
+Status: **implemented and batch-green.** Stages 1–5 plus the concrete instantiation are landed
+(`Voblint_CFG` → `Voblint_Formalization` clean, no `sorry`). The activation-local trace semantics
+`valid_ltr` is the concrete foundation, `cfg_collect_ctx_act` is its sink/`key` projection,
+`activation_collect_sound` rides the four generic obligations, and the recursive source bridge
+`source_activation_sound` closes `source pstep → cstep → valid_ltr → cfg_collect_ctx_act → γ`
+(recursive interval `twice` flagship certified end-to-end). The old whole-program witness
+`trace_witness_act` is deleted. **Deliberately deferred:** `flatten` (whole-program trace view) and
+the `mono_collect` / digest reformulations that ride on it — optional, not on the soundness path.
+This document is retained as the architectural narrative; the "design" framing below is historical.
 
 ## Why the foundation changed
 
@@ -331,24 +339,27 @@ migration is underway.
 
 ## What remains to prove
 
-This is an architectural commitment, not yet a completed semantic consolidation. The decisive
-proof obligations are:
+The decisive obligations are **discharged**; what is left is the optional `flatten` view:
 
-1. Compiled CFGs satisfy the stack-discipline assumptions needed by `valid_ltr`.
-2. `cstep` configurations correspond to nested local activation traces. The desired result is
-   an adequacy/correspondence theorem, not only a one-way soundness simulation.
-3. `flatten` reconstructs the ordered execution history represented by a local trace.
-4. `mono_collect` is derived from `valid_ltr` and supports the monovariant analysis
-   theorems.
-5. `cfg_collect_ctx_act` is derived from `valid_ltr` and supports the existing
-   `Activation_Backbone` and DG result.
-6. Digest reasoning is reformulated as projections or filters over `flatten`.
+1. **(done)** Compiled CFGs satisfy the stack discipline `valid_ltr` needs — the source bridge
+   reuses the compiler's existing `frames_match` / `concrete_program_match` invariants; no new
+   stack-discipline predicate was required.
+2. **(done)** `cstep` configurations correspond to nested local activation traces
+   (`cstep_preserves_ltr_repr`, `source_run_has_ltr`, `Located_LTR.thy`) — a constructive
+   forward correspondence, closed via the existing `pstep → cstep` simulation.
+3. **(deferred)** `flatten` reconstructs the ordered execution history — optional, not started.
+4. **(deferred)** `mono_collect` is derived from `valid_ltr` for the monovariant view — rides on
+   `flatten`; deferred.
+5. **(done)** `cfg_collect_ctx_act` is the sink/`key` projection of `valid_ltr` and supports
+   `Activation_Backbone` (`activation_collect_sound`) and the DG result (`DG_Ctx_Activation`,
+   unchanged).
+6. **(deferred)** Digest reasoning as projections/filters over `flatten` — deferred with `flatten`.
 
-Until the `cstep`/local-trace correspondence is proved, this remains a strong semantic
-hypothesis. If that theorem requires arbitrary callee roots, loses parameter binding, cannot
-represent a general `combc` through concrete return metadata, or needs obligations beyond
-`ENTRY_G`, `EDGE`, `SEED_G`, and `COMB`, stop and reassess. Those would be evidence
-against convergence, rather than routine proof engineering.
+The `cstep`/local-trace correspondence is proved (item 2), so the convergence is no longer a
+hypothesis. None of the stop conditions materialised: no arbitrary callee roots, parameter binding
+retained via `edge_step (EA_Enter …)`, the general-`combc` question resolved by the
+**activation-stable** `key` (call-only, not evolving), and no obligation beyond
+`ENTRY_G`/`EDGE`/`SEED_G`/`COMB` was needed.
 
 ## Thesis formulation
 
@@ -465,7 +476,9 @@ Each stage ends with a green build of the affected session:
    `SEED_G`, and `COMB` (with the stable-context `COMB` output at the caller context).
 4. **(done)** Replace `cfg_collect_ctx_act` with the local-trace projection (retaining the name),
    redirect `activation_collect_sound` to the engine, and delete the old witness family.
-5. Prove stack decomposition and the recursive source bridge onto the new `cfg_collect_ctx_act`.
+5. **(done)** Prove the stack representation invariant (`stack_repr`/`ltr_repr`, `Located_LTR.thy`)
+   and the recursive source bridge `source_activation_sound` onto the new `cfg_collect_ctx_act`,
+   plus the concrete interval-flagship instantiation (`Example_Interval_Source_Ctx.thy`).
 6. **(subsumed by Stage 4)** the old witness, its collecting definition, and helper lemmas are
    gone; no compatibility layer remains.
 
