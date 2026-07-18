@@ -35,9 +35,39 @@ approval_mode = "approve"
 [mcp_servers.isabelle-iq.tools.get_definitions]
 approval_mode = "approve"
 
+[mcp_servers.isabelle-iq.tools.list_files]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_processing_status]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_document_info]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.repl_connect]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.repl_init]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.repl_step]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.repl_remove]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_entities]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_command_info]
+approval_mode = "approve"
+
 [mcp_servers.isabelle-ir]
 url = "http://localhost:9148/mcp"
 
 [mcp_servers.isabelle-ir.http_headers]
 Authorization = "Bearer isabelle-local"
 Accept = "application/json, text/event-stream"
+
+[mcp_servers.isabelle-ir.tools.connect]
+approval_mode = "approve"
