@@ -522,7 +522,7 @@ subsection \<open>Activation-indexed collecting soundness (obligation scaffold)\
 text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at the routed interval
   solution.  Five semantic obligations remain, each a separate milestone; they are
   discharged from \<open>twice_ctx_pp_abs\<close> together with the interval \<^locale>\<open>sound_dg_spec\<close>
-  step / combine soundness, route consistency, and the \<^locale>\<open>point_digest\<close> seed.\<close>
+  step / combine soundness, route consistency, and the \<open>ivl_ctx_sg_seed\<close> enter seed.\<close>
 
 theorem twice_ctx_collect_ctx_act_sound:
   "cfg_collect_ctx_act ivl_enterc bot twice_cfg cinit_stores v ctx
@@ -544,7 +544,7 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
     by (rule twice_dg.dg_ctx_act_edge)
 next
-  \<comment> \<open>SEED_G --- enter routed to \<open>ivl_decode (s' ''p'')\<close>: point_digest + route consistency + seed pub.\<close>
+  \<comment> \<open>SEED_G --- enter routed to \<open>ivl_decode (s' ''p'')\<close>: ivl_ctx_sg_seed (route consistency + seed pub).\<close>
   show "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_enterc c s'))\<rbrakk>"
