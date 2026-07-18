@@ -231,6 +231,26 @@ shared-definition dependency**, not an abort condition and not a digest coupling
 * `Constraint_System_Sound` — **held**: genuine `edge_step` dependency (§4a),
   deferred to the Stage-3 shared-def extraction rather than expanded into here.
 
+**Slices 2–4 (done):**
+
+* `Example_Interval_Loop_Coverage` (`235e0e7c`) — `loop_head_x_bounded` → `cfg_collect`
+  via `post_fixpoint_sound` (`ivl_sound_tf`); import + comments updated.
+* `Example_Proc_Call` (`966c669d`) — `main_prog_interval_analysis` → `cfg_collect`;
+  interprocedural `combines` handled by `is_post_fixpoint`, no witness structure.
+* `Example_Side_Branch_Calls` (`4cd0d5a3`) — redundant trace corollary
+  `ec_certified_sound_trace` replaced by store-level `ec_certified_sound_store`
+  over `cfg_collect` (derived from the pre-existing `ec_certified_sound`).
+  `Sign_Exec_Sound` import retained (its own trace dependency is item 5).
+
+**`Example_Mixed_Flow_Sign` — deferred (coupled to item 6).** Its two corollaries
+wrap `mixed_flow_analysis_sound` / `mixed_flow_analysis_optimal` (in
+`Mixed_Flow_Sound`), which are stated over `cfg_collect_trace` + `last tr` but
+**already prove the pure bound `cfg_collect g S (cfg_exit g) ≤ ⟦side_env σ …⟧`
+internally** (`Mixed_Flow_Sound.thy:49/89`) before wrapping it in `alpha_last`
+trace phrasing. Clean rebase = promote that internal `cfg_collect` bound to the
+theorem statement, then re-point the example. This is generic-soundness work:
+migrate item 4 **together with** item 6, not before it.
+
 **Established rewrite pattern** for remaining Category-B users:
 
 ```text
@@ -245,13 +265,13 @@ per-variable gamma membership
 
 **Remaining order (leaf examples first, generic soundness last):**
 
-1. `Example_Interval_Loop_Coverage`
-2. `Example_Proc_Call`
-3. `Example_Side_Branch_Calls`
-4. `Example_Mixed_Flow_Sign`
-5. `Sign_Exec_Sound`
-6. `Mixed_Flow_Sound`
-7. split `Trace_Analysis_Sound`
+1. ~~`Example_Interval_Loop_Coverage`~~ — done (`235e0e7c`)
+2. ~~`Example_Proc_Call`~~ — done (`966c669d`)
+3. ~~`Example_Side_Branch_Calls`~~ — done (`4cd0d5a3`)
+4. `Example_Mixed_Flow_Sign` — **deferred**, migrate with item 6
+5. `Sign_Exec_Sound` (generic)
+6. `Mixed_Flow_Sound` (generic; expose internal `cfg_collect` bound) + `Example_Mixed_Flow_Sign`
+7. split `Trace_Analysis_Sound` (generic)
 
 Each edit: I/Q inner loop, empty error diagnostics per file; full build only at
 the Stage-2 gate. Leave `edge_step` relocation for Stage 3, not mixed into
