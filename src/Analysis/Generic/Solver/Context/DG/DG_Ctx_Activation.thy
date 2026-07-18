@@ -15,6 +15,14 @@ text \<open>
   \<open>extra\<close>, and the guarded reader \<open>sg\<close>.  The remaining seed obligations \<open>ENTRY_G\<close> /
   \<open>SEED_G\<close> --- which encode the precise demand-driven route --- stay with the concrete
   witness.
+
+  These transport lemmas discharge exactly the \<open>EDGE\<close> and \<open>COMB\<close> premises of the generic
+  \<open>activation_collect_sound\<close>, which is now a projection of the domain-free interface
+  \<open>ltr_gamma\<close> (in \<open>Voblint_CFG.LTR_Abstract\<close>).  The DG layer therefore proves only that
+  its abstract operations satisfy those per-slot premises: it never reconstructs a caller/callee
+  pairing.  The matched caller/callee relation is supplied by \<open>valid_ltr\<close> inside the engine;
+  \<open>dg_ctx_act_comb_covered\<close> transports abstract states at whatever caller / callee-exit / return
+  slots the backbone hands it.
 \<close>
 
 locale dg_ctx_activation = sound_dg_spec S gamma_unit

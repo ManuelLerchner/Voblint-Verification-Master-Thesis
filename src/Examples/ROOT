@@ -25,8 +25,10 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
+    Example_Proc_Call_LTR
     Example_Proc_Recursion_CFG
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign
+    Example_Mixed_Flow_Sign_LTR
     Voblint

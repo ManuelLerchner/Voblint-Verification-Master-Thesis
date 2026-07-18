@@ -411,7 +411,224 @@ source adequacy avoided `cfg_collect`, the source theorem reused the existing
 assumptions, and no dependency cycle appeared (`LTR_Collect` sits between
 `CFG_Local_Trace` and `Located_LTR`).
 
-### R3 — not started
+### R3 — correlation-preserving abstract interface (design spike complete)
 
-The correlation-preserving abstract interface (`gamma_ltr`, the abstraction
-theorem `lfp (ltr_F g S) <= gamma_ltr A`) is deliberately unstarted.
+`src/CFG/Collecting/LTR_Abstract.thy`, imports `LTR_Collect` only; domain-free
+(no `sound_domain`/`abs_state`/solver/DG). Batch-green in `Voblint_CFG`; no
+`sorry`.
+
+Carrier: a context-indexed concretization `acc :: pp => 'c => store set` inside
+`locale ltr_gamma` with the four closure axioms `ROOT / EDGE / SEED / COMB`.
+Selected design is Candidate A (abstract continuation) collapsed to its
+functional core: the continuation of an activation is its context slot, and the
+callee is bound to the caller by the *derivable* law
+`callee-ctx = enterc (caller-ctx) (entry_store callee)` (`callee_entry_invariant`,
+a theorem of `valid_ltr`) — no stored continuation object or activation record.
+
+Theorems: four closure lemmas `root_closed / intra_closed / call_closed /
+return_closed`; `gamma_chain`; **`valid_ltr_subset_gamma_ltr`** and its
+fixed-point form **`lfp_ltr_F_subset_gamma_ltr`** (`lfp (ltr_F g S) <= gamma_ltr`
+via `valid_ltr_eq_lfp`); validation `return_uses_matched_callee`,
+`two_callers_separated`; non-vacuity `ltr_gamma_UNIV`. The correlation originates
+in `valid_ltr` (through `return_closed`/`callee_entry_invariant`), **not** in key
+injectivity — the key may merge activations; the interface only asserts every
+matched trace lands in some bucket.
+
+### R4 — migrate the activation and DG client (complete)
+
+Both consumers now ride on the domain-free interface; batch-green across
+`Voblint_Analysis` and the full dependent DAG including the interval DG context
+flagship; no `sorry`.
+
+- **Activation.** `Activation_Local_Sound` imports `Voblint_CFG.LTR_Abstract` and
+  re-derives the engine `valid_ltr_ctx_sound` by interpreting `ltr_gamma` at
+  `acc v c = [[sg (Inl (v, c))]]` (discharging `ROOT/EDGE/SEED/COMB` from the
+  existing `ENTRY_G/EDGE/SEED_G/COMB`) and projecting
+  `valid_ltr_subset_gamma_ltr`. The duplicate four-case induction
+  (`ret_bound`, `valid_ltr_ctx_chain`) is deleted. `valid_ltr_ctx_sound` keeps
+  its exact statement; `Activation_Backbone.activation_collect_sound` is
+  unchanged and now transitively consumes `LTR_Abstract`.
+- **DG.** `DG_Ctx_Activation` is unchanged in proof; its `dg_ctx_act_edge` /
+  `dg_ctx_act_comb_covered` transport discharges the `EDGE` / `COMB` premises of
+  the now-`LTR_Abstract`-backed `activation_collect_sound` (assembled at the
+  interval flagship, which stays green). DG performs no caller/callee matching —
+  `dg_ctx_act_comb_covered` transports abstract states at whatever slots the
+  backbone hands it; the matched relation is `valid_ltr`'s.
+
+Assumption comparison (public engine): the new `valid_ltr_ctx_sound` has the
+**identical** assumptions and conclusion as before
+(`ENTRY_G/EDGE/SEED_G/COMB/t`); no assumption strengthened or newly exposed. The
+locale `ltr_gamma` axioms are the same four obligations at the concretization
+`acc = (\<lambda>v c. [[sg (Inl (v,c))]])`. `activation_collect_sound` and the
+`cfg_collect_ctx_act` compatibility results keep their names and statements.
+
+No stop condition triggered: the interpretation does not strengthen any public
+theorem; the key is not assumed injective; DG reconstructs no caller/callee
+pairs; no executable solver equation changed; no concrete trace enters executable
+state; no dependency cycle (`LTR_Abstract` sits in `Voblint_CFG`, below the
+analysis layer).
+
+### R5 — migrate generic solver soundness (first migrated theorem landed)
+
+The monovariant compiled-program carrier now has a trace-based sibling stated
+directly over `ltr_collect`, proved through `LTR_Abstract`, beside the retained
+raw-CFG results. Batch-green across `Voblint_Analysis` and the full DAG; no
+`sorry`.
+
+Audit (generic solver spine → `cfg_collect`):
+
+- **raw-CFG generic:** `cfg_collect_F` / `cfg_collect` fixpoint, witness, and
+  `paths` lemmas (`CFG_Collect.thy`); `cfg_collect_post_fixpoint_sound`,
+  `post_fixpoint_sound`, `unified_post_fixpoint_sound` (`Analysis_Sound` /
+  `Constraint_System_Sound`). Retained unchanged.
+- **compiled-program target (monovariant):** `post_fixpoint_sound_at` and the
+  effectful `post_fixpoint_sound_at_eff` used by
+  `side_collect_sound_exit_pruned_eff` (`TD_Side_Eff_Soundness`). These conclude
+  `cfg_collect g S v <= gamma`.
+- **context/keyed target:** `activation_collect_sound` — already over
+  `cfg_collect_ctx_act` (= `ltr_collect_keyed`), trace-based since R4.
+- **executable solver bridge:** the `sound_effectful_transfer` eff spine.
+- **domain-specific:** Sign / Interval / Mixed corollaries (not touched — R6).
+
+Smallest theorem whose conclusion should move: `post_fixpoint_sound_at` (the
+monovariant abstract carrier). Migration boundary chosen there.
+
+New theorems (`Analysis_Sound.thy`, in `sound_transfer`):
+`ltr_post_fixpoint_sound_at` — `ltr_collect g S v0 <= [[env v0]]` from the
+per-step domain premises, via a `ltr_gamma` interpretation at the context-free
+`acc v _ = [[env v]]`; and `unified_ltr_post_fixpoint_sound` — the same from an
+`is_post_fixpoint` witness. The `ROOT/EDGE/SEED/COMB` obligations are discharged
+from the existing `edge_of_bound` / `combine_collect_sound` bounds; `COMB` sees
+only the caller and callee-exit slots of a single combine triple. The proof does
+**not** route `ltr_collect <= cfg_collect` then old `cfg_collect` soundness — that
+bridge is compatibility only. The raw-CFG `post_fixpoint_sound` /
+`unified_post_fixpoint_sound` are kept unchanged beside it.
+
+Recursive validation: `Example_Proc_Call_LTR.thy` (new leaf) restates the
+interval exit result of `Example_Proc_Call` — whose program calls `inc` from two
+sites — over `ltr_collect` via `unified_ltr_post_fixpoint_sound`. It calls
+neither `ltr_collect_le_cfg_collect` nor the broad combine soundness, assumes no
+key injectivity, and changes no solver equation. It lives in a separate leaf
+because importing the trace stack shadows `Example_Proc_Call`'s bare `Call`
+constructor with `ltr.Call`.
+
+No stop condition triggered: the generic per-step premises discharge matched
+`COMB`; the result is not proved by the old `cfg_collect` theorem; no
+caller/callee reconstruction; no concrete trace enters executable state; public
+solver assumptions are unchanged; no domain fact is needed at the generic level.
+
+### R5b — effectful / TD-side solver soundness (trace theorem complete)
+
+The effectful monovariant compiled-program carrier now has a trace-based sibling, beside the
+retained raw-CFG effectful results. Batch-green across `Voblint_Analysis` and the full DAG; no
+`sorry`.
+
+Effectful audit (spine → `cfg_collect`):
+
+- **smallest generic compiled-program theorem:** `post_fixpoint_sound_at_eff`
+  (`TD_Side_Eff_Sound`, in `sound_effectful_transfer`) — from full-`g` per-edge / per-combine
+  effectful bounds it concludes `cfg_collect g S v0 <= [[side_env sigma v0]]`. Its consumers
+  (`side_collect_sound_exit_pruned_eff`, `side_analyse_eff_collect_sound_at`,
+  `side_collect_sound_exit_pruned_eff_cone`) add exit-pruning via `cfg_collect_prune_to_query` /
+  `cfg_collect_prune_exit`.
+- **executable solver bridge:** `side_analyse_eff` / `td_cfg_side_solver_eff` wrappers.
+- **keyed/context system:** already trace-based since R4 (`activation_collect_sound`).
+
+The solver here is genuinely **monovariant**, so the trace target is `ltr_collect g S v`, not the
+keyed `ltr_collect_keyed`.
+
+New theorems:
+
+- `ltr_post_fixpoint_sound_at_eff` (`LTR_TD_Side_Eff_Sound.thy`, in `sound_effectful_transfer`):
+  `ltr_collect g S v0 <= [[side_env sigma v0]]` from the *same* hypotheses as
+  `post_fixpoint_sound_at_eff`, via a `ltr_gamma` interpretation at
+  `acc v _ = [[side_env sigma v]]`. `ROOT/EDGE/SEED/COMB` discharged from
+  `edge_collect_etf_sound` / `etf_collecting_full_le_side_env` / `etf_sound_combine` (helper
+  `edge_step_sound_eff`); `COMB` binds `cl`/`ex` from one combine triple. No `cfg_witness`
+  induction, no `cfg_collect` step.
+- `side_collect_sound_exit_pruned_eff_ltr` and its cone form
+  `..._ltr_cone` (`LTR_TD_Side_Eff_Pruned.thy`): the trace analogue of
+  `side_collect_sound_exit_pruned_eff`. Same cone bound-derivation, ending in
+  `ltr_post_fixpoint_sound_at_eff`, concluding
+  `ltr_collect (prune_cfg g) S (cfg_exit g) <= [[side_env sigma (cfg_exit g)]]`.
+
+**Deferred: the over-`g` lift.** `side_collect_sound_exit_pruned_eff` frames `cfg_collect g <=
+cfg_collect (prune_cfg g)` (`cfg_collect_prune_exit`) to state its result over `g`. The trace
+analogue `ltr_collect g S (cfg_exit g) <= ltr_collect (prune_cfg g) S (cfg_exit g)` is **not a
+pure graph lemma**: `valid_ltr`'s `call` rule couples a callee-enter edge with its matching
+combine triple, so a bare `ltr.Call` lands in the pruned trace set only when the return node also
+reaches the exit — a well-bracketing property, established structurally by `Located_LTR` (source
+runs), not by graph reachability. The pruned trace theorem is therefore stated over
+`prune_cfg g` (the graph the demand-driven solver covers); lifting it to `g` is a source-bridge
+task. The raw-CFG `side_collect_sound_exit_pruned_eff` (over `cfg_collect g`) is retained
+unchanged for that route. This is the R5b boundary, reported rather than routed around by the
+`cfg_collect` bridge.
+
+Recursive validation: `Example_Mixed_Flow_Sign_LTR.sign_mixed_flow_sound_ltr_from_pp` restates the
+self-recursive `inc` procedure's effectful sign exit soundness over
+`ltr_collect (prune_cfg (compile_prog ...))`, via `side_collect_sound_exit_pruned_eff_ltr_cone`,
+from the same post-solution hypotheses as the raw-CFG `sign_mixed_flow_sound_from_pp`. Its proof
+references none of `ltr_collect_le_cfg_collect`, `cfg_collect_post_fixpoint_sound`,
+`post_fixpoint_sound_at_eff`; no key injectivity; no solver-equation change. (A separate leaf: the
+example's compiled terms use a bare `Call`, shadowed by `ltr.Call` under the trace import — the
+statement qualifies `com.Call`.)
+
+No stop condition triggered for the delivered theorems; the over-`g` pruned lift is reported as
+the boundary (per "the source bridge cannot establish adequacy" class), not forced through
+`cfg_collect`.
+
+### R5c — cone-guarded exit soundness over the original CFG (pruning retired)
+
+R5c/R5d first attempted a graph-pruning frame; R5d found its bridge `call_return_reaches` **false**
+for compiled programs (uncalled procedures leave call sites whose continuation cannot reach the
+exit). The resolution was to recognize that pruning was a `cfg_collect`-era artifact: the
+demand-driven solver is cone-restricted, but the *semantics* need not be. Instead of shrinking the
+graph, the cone restriction moves into the abstract guarantee. Batch-green across the full DAG; no
+`sorry`.
+
+Mechanism (`LTR_TD_Side_Eff_Exit.thy`, `Voblint_Analysis`): interpret `ltr_gamma` at the
+cone-guarded concretization
+
+```text
+acc v _ = (if cfg_reaches g v v0 then [[side_env sigma v]] else UNIV)
+```
+
+Each closure axiom splits: off the cone the slot is `UNIV` (trivial); on the cone the source is on
+the cone too (`cfg_reaches_edge_src` / `cfg_reaches_combine_exit_src`, now in `CFG_Prune`), so the
+real `side_env` bound applies — exactly the bound the cone solver computed. `cfg_exit g` reaches
+itself, so the conclusion is unguarded there.
+
+New theorems (`LTR_TD_Side_Eff_Exit.thy`):
+
+- **`ltr_post_fixpoint_sound_at_eff_cone`** — `ltr_collect g S v0 <= [[side_env sigma v0]]` from
+  cone-restricted per-edge / per-combine bounds (hypotheses guarded by `cfg_reaches g _ v0`),
+  precisely what the solver proves. The COMB case derives caller (`cfg_reaches_combine_call` +
+  trans) and callee-exit (`cfg_reaches_combine_exit_src`) cone facts, so both abstract premises use
+  real slots — not just `ret` reachability.
+- **`side_collect_sound_exit_eff_ltr_cone`** — the primary compiled-program corollary, directly
+  over the original `g`: `ltr_collect g S (cfg_exit g) <= [[side_env sigma (cfg_exit g)]]` from the
+  cone post-solution (`side_cone_in_vars_eff` supplies the guarded bounds). **No `prune_cfg`, no
+  `call_return_reaches`, no `cfg_collect`, no compiled-CFG restriction** — holds for arbitrary CFGs.
+
+Validation (`Example_Mixed_Flow_Sign_LTR.sign_mixed_flow_sound_ltr_from_pp`): the recursive `inc`
+procedure's effectful sign exit soundness over `ltr_collect (compile_prog ...)`, over the original
+graph, **with no pruning bridge**. The R5d counterexample is subsumed automatically: a dead
+procedure's call site is off the exit cone, where the guard makes its obligation vacuous, so no
+`call_return_reaches` is needed.
+
+Retired (deleted, all uncommitted from R5c/R5e): `LTR_Prune.thy` (`call_return_reaches`,
+`valid_ltr_prune_to`, `ltr_collect_prune_exit`), the R5e dead-end `LTR_Prune_Exit.thy`
+(`subacts` / `comb_all` trace-local frame), and `LTR_TD_Side_Eff_Pruned.thy` (the pruned-graph
+theorems + the `wb`-conditioned lift). The two reachability helpers moved to `CFG_Prune`. The
+full-graph `ltr_post_fixpoint_sound_at_eff` (`LTR_TD_Side_Eff_Sound.thy`) is kept as the general
+"all edges bounded" effectful trace theorem.
+
+Architecture: `cone-restricted solver post-fixpoint -> cone-guarded concretization -> LTR_Abstract
+over g -> ltr_collect g S exit`. No pruning transformation, no pruning adequacy, no
+`call_return_reaches`, no compiled-CFG restriction, no source-completeness, no change to
+`valid_ltr`, no trace object in executable solver state.
+
+### R6 — not started
+
+Migrating Sign / Interval / Mixed / DG domain corollary statements to the
+projected trace-derived views is deliberately unstarted.

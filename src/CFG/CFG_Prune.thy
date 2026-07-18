@@ -178,6 +178,17 @@ lemma cfg_reaches_combine_exit:
   "ct \<in> combines g \<Longrightarrow> cfg_reaches g (combine_exit_node ct) (combine_return_node ct)"
   by (rule cfg_succ_imp_reaches) (auto simp: cfg_succ_def cfg_succ_rel_def)
 
+text \<open>Backward reachability across a step: if a target reaches \<open>v0\<close> so does its source (edge),
+  and if a combine's return node reaches \<open>v0\<close> so do its call and exit nodes.\<close>
+lemma cfg_reaches_edge_src:
+  "(u, a, v) \<in> edges g \<Longrightarrow> cfg_reaches g v v0 \<Longrightarrow> cfg_reaches g u v0"
+  by (rule cfg_succ_reaches) (auto simp: cfg_succ_def cfg_succ_rel_def)
+
+lemma cfg_reaches_combine_exit_src:
+  "(c, ex, ret, dst) \<in> combines g \<Longrightarrow> cfg_reaches g ret v0 \<Longrightarrow> cfg_reaches g ex v0"
+  by (rule cfg_succ_reaches)
+     (auto simp: cfg_succ_def cfg_succ_rel_def combine_exit_node_def combine_return_node_def)
+
 lemma cfg_reaches_mk_mono:
   assumes "E1 \<subseteq> E2" "C1 \<subseteq> C2"
   assumes "cfg_reaches (mk_cfg a b E1 C1) v w"

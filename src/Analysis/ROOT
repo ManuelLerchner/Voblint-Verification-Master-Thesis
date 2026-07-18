@@ -37,6 +37,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Transfer
     Constraint_System_Sound
     Analysis_Sound
+    LTR_Analysis_Sound
     TD_Side_CFG
     Sign_Local_Effects
     Sign_Domain
@@ -51,6 +52,8 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Pipeline
     TD_Side_RHS_Generator
     TD_Side_Eff_Soundness
+    LTR_TD_Side_Eff_Sound
+    LTR_TD_Side_Eff_Exit
     Activation_Local_Sound
     Activation_Backbone
     TD_Side_Eff_Keyed_Gen
