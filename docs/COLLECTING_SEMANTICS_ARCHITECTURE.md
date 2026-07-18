@@ -1,6 +1,14 @@
 # Collecting-Semantics Architecture Review
 
-Status: design review, no code changed. Verified against `src/` at branch
+Status: **SUPERSEDED (2026-07-18) — historical review.** This review recommended
+*Option B* (make `valid_ltr` canonical and reconstruct the digest world on top of
+it via `flatten`). The project instead **deleted** the relational digest spine
+(see docs/DIGEST_SPINE_REMOVAL_PLAN.md, AD-44) — the witness-merging half of the
+recommendation was not adopted. What was adopted: the generic `collect_by`
+combinator and `valid_ltr` as the single trace foundation (both live). Retained
+as the design analysis that led to the removal decision.
+
+Status (original): design review, no code changed. Verified against `src/` at branch
 `local-trace-semantic`. All `file:line` refs are live at time of writing.
 
 The goal is to decide whether the collecting-semantics layers can be reduced to

@@ -1,6 +1,14 @@
 # Abstract-context audit
 
-Status: architectural review. No theory changes.
+Status: **CONCLUSION REALIZED (2026-07-18) — historical evidence.** This audit
+established that the retained functional analysis is genuinely context-sensitive
+without the relational digest layer. That conclusion is now realized in code: the
+relational digest spine was removed (AD-44, docs/DIGEST_SPINE_REMOVAL_PLAN.md) and
+the context-sensitive guarantees ride the functional keyed generator + native D/G
+spine + activation collector. No migration was pending from this document; it was
+the evidence base for the removal decision. Retained as history.
+
+Status (original): architectural review. No theory changes.
 
 ## Verdict
 

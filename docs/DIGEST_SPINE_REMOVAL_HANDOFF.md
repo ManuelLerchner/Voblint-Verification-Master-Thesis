@@ -1,6 +1,11 @@
 # Digest-spine removal handoff
 
-Status: planning complete. No source-theory removal has started.
+Status: **DONE (2026-07-18).** The removal this handoff planned is fully executed
+across Stages 0–5 — `Voblint_Formalization` batch-green, 0 `sorry`, 0 `oops`, and
+no live `.thy` references to any removed symbol. Outcome record:
+docs/DIGEST_SPINE_REMOVAL_PLAN.md (Stage 6). Archive tag
+`archive/relational-digest-experiment` (`4779e90f`) is the recovery point. This
+document is retained as the historical handoff.
 
 This handoff is for the next agent performing the relational digest-spine removal.
 Read this document with:

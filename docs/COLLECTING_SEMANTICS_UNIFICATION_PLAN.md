@@ -1,6 +1,14 @@
 # Collecting-Semantics Unification Plan (migration decision)
 
-Status: decision document, no code changed. Verified against `src/` at branch
+Status: **PARTIALLY IMPLEMENTED / SUPERSEDED (2026-07-18).** The `collect_by`
+generic collector (this plan's Stage 1) is **implemented** and live
+(`CFG_Local_Trace.thy`, `cfg_collect_ctx_act` is its instance). The
+witness-merging half — `flatten`, redefining `cfg_collect_ctx` as `dg ∘ flatten`,
+folding the digest world into `valid_ltr` — was **not adopted**: the project
+deleted the relational digest spine instead (docs/DIGEST_SPINE_REMOVAL_PLAN.md,
+AD-44), which explicitly supersedes that portion of this plan. Retained as history.
+
+Status (original): decision document, no code changed. Verified against `src/` at branch
 `local-trace-semantic`. A large proof migration is assumed acceptable; the
 objective is **minimum final conceptual and proof complexity**, not minimum diff.
 

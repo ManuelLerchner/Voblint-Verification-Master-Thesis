@@ -1,6 +1,14 @@
 # ContextPolicy migration
 
-Status: proposed post-unification architecture. No code changed.
+Status: **NOT ADOPTED / SUPERSEDED (2026-07-18) — historical proposal.** The
+relational `ContextPolicy` design proposed here was **deliberately not
+implemented** (0 references in `src/`); the digest-spine removal (AD-44,
+docs/DIGEST_SPINE_REMOVAL_PLAN.md) retired the relational context/digest model
+rather than generalizing it. Per the removal handoff, this design is valid only
+if relational digest semantics becomes a project goal again. Retained as decision
+history.
+
+Status (original): proposed post-unification architecture. No code changed.
 
 Related documents:
 
