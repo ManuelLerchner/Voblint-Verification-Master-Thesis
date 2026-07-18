@@ -153,8 +153,8 @@ Fan-out is 86 transitively but the **direct** importers split cleanly:
 
 | Direct importer | Uses flat-trace symbols? | Verdict |
 | --- | --- | --- |
-| `Compile_Invariants` | **no** (0 `cfg_collect_trace`/`trace_witness`/`cfg_collect_ctx`) | **placement-only** — retarget/drop import |
-| `Constraint_System_Sound` | **no** | **placement-only** — retarget/drop import |
+| `Compile_Invariants` | **no** (0 `cfg_collect_trace`/`trace_witness`/`cfg_collect_ctx`) | **placement-only** — import dropped (Stage 2, commit `06aeb6ed`) |
+| `Constraint_System_Sound` | no digest symbols, **but uses `edge_step`** | **structural shared-def dependency** (not placement-only) — see §4a; relocate `edge_step` first, then retarget |
 | `CFG_Local_Trace` (retained core) | **yes** — `imports CFG_Collect_Trace` | **structural** — relocate the shared def it consumes (`path`/`cfg_witness`/`alpha_last`) to a neutral home before deletion |
 | `Sign_Exec_Sound` | yes (Category B) | Stage 2 rebase to `cfg_collect` |
 | `Trace_Analysis_Sound` | yes (Category B, digest + non-digest) | Stage 2 split |
@@ -165,6 +165,32 @@ Fan-out is 86 transitively but the **direct** importers split cleanly:
 **Action:** the retained `CFG_Local_Trace → CFG_Collect_Trace` edge is the single
 structural blocker for deleting `CFG_Collect_Trace`. Stage 5 must first inventory
 what `CFG_Local_Trace` pulls from it and move only the live shared definitions.
+
+### 4a. `Constraint_System_Sound` — corrected classification
+
+The Stage-1 first pass called this placement-only; that was **wrong**. Its
+`edge_of_bound` lemma consumes `edge_step`:
+
+```text
+Constraint_System_Sound
+    └── needs edge_step
+            └── currently located in CFG_Collect_Trace
+```
+
+`edge_step` is the **generic single-edge concrete transfer** (`edge_action ⇒
+store ⇒ store option`), the store-singleton companion of `edge_collect`. It is
+*not* digest machinery: it does not touch `trace_witness`, `cfg_collect_trace`,
+`cfg_collect_ctx`, `cmp`, or digest semantics. So this is a **structural
+shared-definition dependency**, not an abort condition and not a digest coupling.
+
+| Field | Value |
+| --- | --- |
+| previous classification | placement-only (incorrect) |
+| corrected classification | structural shared-definition dependency |
+| consumed symbol | `edge_step` (+ `edge_collect_single` bridge lemma) |
+| semantic role | generic single-edge concrete transfer relation |
+| action | move `edge_step` and its non-trace lemmas to `CFG_Collect` (near `edge_collect`/`cfg_witness`), then retarget `Constraint_System_Sound`'s import |
+| stage | Stage 3 shared-infrastructure extraction, before deleting `CFG_Collect_Trace`; do **not** create a new theory for one def unless the move into `CFG_Collect` would introduce an import cycle |
 
 ---
 
@@ -194,22 +220,42 @@ what `CFG_Local_Trace` pulls from it and move only the live shared definitions.
 
 ---
 
-## 7. Smallest safe Stage-2 slice (recommended first edit)
+## 7. Stage-2 slices — status and order
 
-Migrate the two **placement-only** core importers, which need no proof change and
-immediately shrink the `CFG_Collect_Trace` fan-out:
+**Slice 1 (done, commit `06aeb6ed`):**
 
-1. `Compile_Invariants` — drop/retarget its `CFG_Collect_Trace` import.
-2. `Constraint_System_Sound` — same.
+* `Compile_Invariants` — placement-only `CFG_Collect_Trace` import dropped.
+* `Example_IMP2_Coverage` — `loop_head_x_pos` rebased off `cfg_collect_trace`
+  onto plain `cfg_collect` via `post_fixpoint_sound`; `Trace_Analysis_Sound`
+  import dropped; store conclusion preserved.
+* `Constraint_System_Sound` — **held**: genuine `edge_step` dependency (§4a),
+  deferred to the Stage-3 shared-def extraction rather than expanded into here.
 
-Then the first genuine rebase: **`Example_IMP2_Coverage`** or
-**`Example_Interval_Loop_Coverage`** (Category B, leaf examples using
-`cfg_collect_trace` only to reach a final store) → restate the conclusion over
-`s ∈ cfg_collect g S v`. Leaf examples first isolates the trace-to-`cfg_collect`
-rewrite pattern before touching `Sign_Exec_Sound` / `Trace_Analysis_Sound`.
+**Established rewrite pattern** for remaining Category-B users:
+
+```text
+tr ∈ cfg_collect_trace g S v   ⊢  P (last tr)
+    ↓  (drop the trace; take the reaching store directly)
+s ∈ cfg_collect g S v          ⊢  P s
+    ↓  (discharge via)
+sound_transfer.post_fixpoint_sound  →  cfg_collect g S v ≤ ⟦env v⟧
+    ↓  unfolding gamma_state_def
+per-variable gamma membership
+```
+
+**Remaining order (leaf examples first, generic soundness last):**
+
+1. `Example_Interval_Loop_Coverage`
+2. `Example_Proc_Call`
+3. `Example_Side_Branch_Calls`
+4. `Example_Mixed_Flow_Sign`
+5. `Sign_Exec_Sound`
+6. `Mixed_Flow_Sound`
+7. split `Trace_Analysis_Sound`
 
 Each edit: I/Q inner loop, empty error diagnostics per file; full build only at
-the Stage-2 gate.
+the Stage-2 gate. Leave `edge_step` relocation for Stage 3, not mixed into
+Category-B rebasing.
 
 ---
 
