@@ -14,6 +14,7 @@
 | **Next session / week plan** | `docs/NEXT_STEPS.md` |
 | All declared lemmas/theorems | `rg -n '^(lemma\|theorem) ' src/` |
 | Soundness chain narrative | `docs/PROOF_OVERVIEW.md` |
+| Proposed local-trace semantic refoundation | `docs/LTR_COLLECT_REFOUNDATION_PLAN.md` |
 | Keyed context architecture | `docs/KEYED_CONTEXT_CONSOLIDATION.md` |
 | Per-stage workflow | `docs/PROOF_OVERVIEW.md` (lemma spine) + `src/*/README.md` (per-layer) |
 | Catalogued repo problems (P1–P10) by file:line | `docs/OPEN_PROBLEMS.md` |
