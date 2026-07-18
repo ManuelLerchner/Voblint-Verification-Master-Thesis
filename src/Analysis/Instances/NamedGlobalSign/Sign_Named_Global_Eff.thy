@@ -179,96 +179,6 @@ next
              combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine E dst cc ex) \<sigma>\<rbrakk>)"
     by (auto simp: combine intro: combine_collect_sound)
 qed
-subsection \<open>The flag-routed effectful transfer record\<close>
-
-text \<open>
-  The routing function: route to Gpos when the abstract value of ''Gflag'' in the
-  reassembled state is definitely positive, else to Gneg.  Only the assign tree
-  routes by the flag; the other actions route to a fixed slot (the choice is
-  irrelevant to soundness).
-\<close>
-
-definition flag_route :: "sign abs_state \<Rightarrow> gname" where
-  "flag_route env = (if env ''Gflag'' = SPos then Gpos else Gneg)"
-
-definition flag_etf :: "(gname, sign) effectful_domain_transfer" where
-  "flag_etf =
-     \<lparr> etf_nop        = route_tree (\<lambda>_. Gpos) (apply_tf sign_tf EA_Nop),
-       etf_assign     = \<lambda>x a. route_tree flag_route (apply_tf sign_tf (EA_Assign x a)),
-       etf_assume     = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assume b)),
-       etf_assume_not = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_AssumeNot b)),
-       etf_enter      = (\<lambda>xs es. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Enter xs es))),
-       etf_combine    = route_combine (\<lambda>_. Gpos) \<rparr>"
-
-lemma flag_etf_full_nop:
-  "etf_full (etf_nop flag_etf u) \<sigma> = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-  unfolding flag_etf_def by (simp add: route_tree_etf_full sup_fun_def)
-
-lemma flag_etf_full_assign:
-  "etf_full (etf_assign flag_etf x a u) \<sigma>
-   = tf_assign sign_tf x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
-  unfolding flag_etf_def by (simp add: route_tree_etf_full)
-
-lemma flag_etf_full_assume:
-  "etf_full (etf_assume flag_etf b u) \<sigma>
-   = tf_assume sign_tf b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
-  unfolding flag_etf_def by (simp add: route_tree_etf_full)
-
-lemma flag_etf_full_assume_not:
-  "etf_full (etf_assume_not flag_etf b u) \<sigma>
-   = tf_assume_not sign_tf b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
-  unfolding flag_etf_def by (simp add: route_tree_etf_full)
-
-lemma flag_etf_full_enter:
-  "etf_full (etf_enter flag_etf xs es u) \<sigma>
-   = tf_enter sign_tf xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
-  unfolding flag_etf_def by (simp add: route_tree_etf_full)
-
-lemma flag_etf_full_combine:
-  "etf_full (etf_combine flag_etf dst cc ex) \<sigma>
-   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
-  unfolding flag_etf_def by (simp add: route_combine_etf_full)
-
-subsection \<open>Soundness: a non-unit witness of sound_effectful_transfer\<close>
-
-theorem flag_etf_sound:
-  "sound_effectful_transfer flag_etf"
-  by (rule route_family_etf_sound[OF flag_etf_full_nop flag_etf_full_assign
-        flag_etf_full_assume flag_etf_full_assume_not flag_etf_full_enter flag_etf_full_combine])
-
-subsection \<open>Precision: the two named slots stay distinct\<close>
-
-text \<open>
-  The routing the unit interface cannot express: when the flag is definitely
-  positive, the assign's contribution lands ONLY in the Gpos slot; the Gneg slot
-  receives nothing from this tree.  With a single pot (unit) both contributions
-  would merge and a conflicting later write would force STop; here the slots are
-  kept apart.
-\<close>
-
-lemma flag_assign_routes_pos:
-  assumes "(\<sigma> (Inl u) \<squnion> glob_env \<sigma>) ''Gflag'' = SPos"
-  shows "sides_of_rhs (etf_assign flag_etf x a u) \<sigma> (Inr Gneg) = \<bottom>"
-proof -
-  let ?env = "\<sigma> (Inl u) \<squnion> \<sigma> (Inr Gpos) \<squnion> \<sigma> (Inr Gneg)"
-  have env: "?env = \<sigma> (Inl u) \<squnion> glob_env \<sigma>" by (simp add: glob_env_gname sup_assoc)
-  have "flag_route ?env = Gpos"
-    using assms unfolding flag_route_def env by simp
-  thus ?thesis
-    unfolding flag_etf_def route_tree_def by (simp add: Let_def)
-qed
-
-lemma flag_assign_routes_neg:
-  assumes "(\<sigma> (Inl u) \<squnion> glob_env \<sigma>) ''Gflag'' \<noteq> SPos"
-  shows "sides_of_rhs (etf_assign flag_etf x a u) \<sigma> (Inr Gpos) = \<bottom>"
-proof -
-  let ?env = "\<sigma> (Inl u) \<squnion> \<sigma> (Inr Gpos) \<squnion> \<sigma> (Inr Gneg)"
-  have env: "?env = \<sigma> (Inl u) \<squnion> glob_env \<sigma>" by (simp add: glob_env_gname sup_assoc)
-  have "flag_route ?env = Gneg"
-    using assms unfolding flag_route_def env by simp
-  thus ?thesis
-    unfolding flag_etf_def route_tree_def by (simp add: Let_def)
-qed
 
 subsection \<open>Computational shape of the routed trees\<close>
 
@@ -345,19 +255,13 @@ lemma combine_abs_mono:
 subsection \<open>A monotone named-global witness for the TD_side solver\<close>
 
 text \<open>
-  flag_etf's assign tree routes CONDITIONALLY on the flag's sign, which is not
-  monotone in the solver environment: as \<sigma> grows, ''Gflag'' can move from SPos to
-  STop, flipping the contribution Gpos -> Gneg, so sides_of_rhs is not
-  \<sigma>-monotone and flag_etf fails the TD_side mono_sides precondition.  (The
-  conditional routing stays a sound, precise PER-TREE witness -- flag_etf_sound,
-  flag_assign_routes_pos / _neg above -- it just cannot drive the fixpoint
-  solver.)
-
-  To carry a genuinely named-global analysis THROUGH the real solver, route with
+  To carry a genuinely named-global analysis through the real solver, route with
   CONSTANT slots: edge contributions to Gpos, combine (procedure-return)
   contributions to Gneg.  Both named slots are populated and the routing is
-  monotone, so the three TD_side preconditions discharge from the generic
-  per-tree lemmas in TD_Side_Eff_Bounds.
+  monotone (unlike a routing that depends on the reassembled state, which is not
+  \<sigma>-monotone and fails the TD_side mono_sides precondition), so the three
+  TD_side preconditions discharge from the generic per-tree lemmas in
+  TD_Side_Eff_Bounds.
 \<close>
 
 definition named_etf :: "(gname, sign) effectful_domain_transfer" where
@@ -532,22 +436,6 @@ proof -
   show ?thesis
     using collect collect_exit by blast
 qed
-
-subsection \<open>Why the conditional flag routing cannot drive the solver\<close>
-
-text \<open>
-  For the record: the conditional flag_etf is NOT mono_sides, so the goal below
-  is deliberately abandoned with oops -- it is not a provable obligation, by
-  design.  As sigma grows the reassembled flag value can move SPos -> STop, so
-  flag_route flips the assign contribution Gpos -> Gneg; the side map then drops
-  its Gpos entry, breaking sigma-monotonicity of sides_of_rhs.  This is precisely
-  why the through-solver headline above uses the constant-routed named_etf.
-  flag_etf's value is the per-tree precision it expresses
-  (flag_assign_routes_pos / _neg), not fixpoint-solver compatibility.
-\<close>
-lemma flag_etf_mono_sides_unprovable:
-  "mono_sides (side_cfg_T_eff g flag_etf bot0 s0 gseed)"
-  oops
 
 section \<open>A Goblint man.global / man.sideg witness reading a single named global\<close>
 

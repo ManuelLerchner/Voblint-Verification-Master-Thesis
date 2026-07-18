@@ -1,11 +1,10 @@
 # Named-global sign — mixed-flow, side-effecting
 
 A genuinely effectful sign transfer over named globals. Executable + sound
-through the solver on the constant-route; the conditional-flag route is a
-**documented boundary**: `flag_etf_mono_sides_unprovable` (`oops`) shows it is
-provably not `mono_sides`, hence not solver-drivable. Work in progress — see the
-`NamedGlobalSign/` row in `Instances/README.md`.
+through the solver on the constant route (edge contributions to `Gpos`, combine
+contributions to `Gneg`): both named slots are populated and the routing is
+monotone, so the TD_side preconditions discharge.
 
 | File | Role |
 | --- | --- |
-| `Sign_Named_Global_Eff.thy` | named-global effectful sign transfer; constant-route soundness + the flag-route boundary |
+| `Sign_Named_Global_Eff.thy` | named-global effectful sign transfer; constant-route soundness through the side solver |
