@@ -1,7 +1,7 @@
 theory Example_IMP2_Coverage
   imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect"
     "Voblint_Analysis.Sign_Domain" "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_Analysis_Sound
+    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
 begin
 
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
@@ -20,7 +20,8 @@ hide_const phase.N
     * There is no terminating run, so big_step relates no final state and a
       total-correctness goal is vacuous (loop_no_terminating_run).
     * The sign analyzer still proves x > 0 at the loop head over every reaching
-      trace (loop_head_x_pos), via a post-fixpoint and trace_analysis_sound.
+      store (loop_head_x_pos), via a post-fixpoint and plain cfg_collect
+      soundness (post_fixpoint_sound).
 
   Only the sign domain is used in this witness (interval coverage lives in
   @{theory Voblint_Formalization.Example_Interval_Loop_Coverage}), so the
@@ -134,18 +135,20 @@ abbreviation "loop_head \<equiv> 2"
 
 lemma loop_head_x_pos:
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-  assumes tr: "tr \<in> cfg_collect_trace loop_cfg S loop_head"
-  shows "(last tr) ''x'' > 0"
+  assumes s: "s \<in> cfg_collect loop_cfg S loop_head"
+  shows "s ''x'' > 0"
 proof -
   have fin_e: "finite (edges loop_cfg)"
     by (simp add: loop_cfg_edges)
   have fin_c: "finite (combines loop_cfg)"
     by (simp add: loop_cfg_combines)
-  have s0_conv: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-    using S_sound by simp
-  have "(last tr) ''x'' \<in> gamma (loop_env loop_head ''x'')"
-    by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
-          [OF sign_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])
+  have le: "cfg_collect loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
+    using sound_transfer.post_fixpoint_sound
+          [OF sign_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix S_sound]
+    by blast
+  from s le have "s \<in> \<lbrakk>loop_env loop_head\<rbrakk>" by blast
+  then have "s ''x'' \<in> gamma (loop_env loop_head ''x'')"
+    unfolding gamma_state_def by blast
   then show ?thesis
     by (auto simp: loop_env_def)
 qed

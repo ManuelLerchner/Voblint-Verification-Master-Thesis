@@ -1,7 +1,6 @@
 theory Compile_Invariants
   imports
     CFG_Collect_Runs
-    CFG_Collect_Trace
     CFG_Prune
     "Voblint_IMP2.IMP2_Bridge"
 begin
