@@ -45,11 +45,6 @@ lemma proc_entry_ppsI:
   "(u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> v \<in> proc_entry_pps g"
   unfolding proc_entry_pps_def by blast
 
-definition call_enter_store :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "call_enter_store g c s t \<longleftrightarrow>
-     (\<exists>pe xs es. (c, EA_Enter xs es, pe) \<in> edges g \<and>
-       t = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
-
 subsection \<open>Interprocedural trace witness\<close>
 
 text \<open>

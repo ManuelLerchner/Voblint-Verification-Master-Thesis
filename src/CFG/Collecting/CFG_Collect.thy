@@ -54,6 +54,17 @@ lemma edge_collect_single:
   "edge_collect a {s} = set_option (edge_step a s)"
   by (cases a) auto
 
+text \<open>
+  call_enter_store g c s t : t is the callee-entry store produced by a concrete
+  EA_Enter edge leaving c from the caller store s (formals bound to the argument
+  values, then enter_state). A generic compiled-CFG call-entry fact, independent
+  of any trace or digest machinery.
+\<close>
+definition call_enter_store :: "cfg => pp => store => store => bool" where
+  "call_enter_store g c s t \<longleftrightarrow>
+     (\<exists>pe xs es. (c, EA_Enter xs es, pe) \<in> edges g \<and>
+       t = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
+
 subsection \<open>Path transfer\<close>
 
 text \<open>
