@@ -13,9 +13,10 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     CFG_Collect_Trace
     CFG_Prune
     CFG_Collect_Runs
-    CFG_Collect_Activation
+    CFG_Local_Trace
     Compile_Invariants
     Control_Residual
     Located_Exec
     Control_Simulation
     Located_Reaches
+    Located_LTR

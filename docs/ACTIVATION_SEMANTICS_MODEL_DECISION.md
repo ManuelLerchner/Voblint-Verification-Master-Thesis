@@ -2,6 +2,11 @@
 
 Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` path discussed in this study has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
 
+> Superseded decision. Its parallel-witness conclusion was the best current-code design at the
+> time. The current architectural decision is
+> [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md): concrete
+> activation-local traces, with contexts derived only by projections.
+
 Status: **decision study, no theory changes.** Companion to and supersedes the
 recommendation of `ACTIVATION_SEPARATED_COLLECTING_DESIGN_STUDY.md`, which argued
 "parallel because smallest patch." This study answers the sharper question the patch

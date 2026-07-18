@@ -2,6 +2,10 @@
 
 Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this study has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
 
+> Superseded design study. Its activation-indexed collecting alternative is not the endpoint.
+> See [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) for the
+> single canonical activation-local semantics.
+
 Status: **design only, not implemented.** Source-backed analysis of the least
 invasive way to unblock
 

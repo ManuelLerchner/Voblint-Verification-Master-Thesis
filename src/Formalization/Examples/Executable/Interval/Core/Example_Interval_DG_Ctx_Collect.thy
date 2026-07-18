@@ -119,11 +119,12 @@ text \<open>
   of \<open>twice_cfg\<close> is node \<open>4\<close> (\<open>main\<close>'s entry) whose first statement is a call
   \<open>(4, EA_Enter [''p''] [N 3], 0)\<close>.  The polyvariant solver routes node \<open>0\<close> to the
   argument contexts \<open>[3,3]\<close> / \<open>[10,10]\<close> and leaves \<open>(0, bot)\<close> unpopulated ---
-  \<open>p\<close> there is the bottom interval.  The corrected activation semantics
-  (\<^theory>\<open>Voblint_CFG.CFG_Collect_Activation\<close>) routes the \<open>proc_entry\<close> seed at a call
-  from the CFG entry to \<open>enterc seedc s\<close> (\<open>= [3,3]\<close>), \<^emph>\<open>not\<close> \<open>seedc = bot\<close>, so no
-  obligation forces the callee under the root context.  These witnesses keep that
-  invariant honest: \<open>(0, bot)\<close> remains at \<open>\<bottom>\<close> and is never required.\<close>
+  \<open>p\<close> there is the bottom interval.  The activation-local semantics
+  (\<^theory>\<open>Voblint_CFG.CFG_Local_Trace\<close>) creates a callee only through the \<open>call\<close> rule, whose
+  entry store is \<^const>\<open>edge_step\<close> of the \<^const>\<open>EA_Enter\<close> edge at the routed context
+  \<open>enterc seedc s'\<close> (\<open>= [3,3]\<close>), \<^emph>\<open>not\<close> \<open>seedc = bot\<close>, so no obligation forces the callee under
+  the root context.  These witnesses keep that invariant honest: \<open>(0, bot)\<close> remains at
+  \<open>\<bottom>\<close> and is never required.\<close>
 
 lemma callee_entry_bot_unpopulated:
   "lookup_st (locals (snd twice_ctx_sol (Inl (0, bot)))) ''p'' = \<bottom>"
@@ -524,10 +525,10 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at
   step / combine soundness, route consistency, and the \<^locale>\<open>point_digest\<close> seed.\<close>
 
 theorem twice_ctx_collect_ctx_act_sound:
-  "cfg_collect_ctx_act ivl_enterc ivl_combc bot twice_cfg cinit_stores v ctx
+  "cfg_collect_ctx_act ivl_enterc bot twice_cfg cinit_stores v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_enterc
-        and combc = ivl_combc and seedc = bot and S = cinit_stores and g = twice_cfg])
+        and seedc = bot and S = cinit_stores and g = twice_cfg])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
   fix s assume "s \<in> cinit_stores"
   hence "s \<in> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st by blast
@@ -549,12 +550,13 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_enterc c s'))\<rbrakk>"
     by (rule ivl_ctx_sg_seed)
 next
-  \<comment> \<open>COMB --- return combine: combine_sound + the cmb bound from pp.\<close>
+  \<comment> \<open>COMB --- return combine at the caller context \<open>c1\<close> (the resumed activation keeps its
+     context; \<open>ivl_combc\<close> is the caller projection, so \<open>ivl_ctx_sg_comb\<close> already lands at \<open>c1\<close>).\<close>
   show "\<And>cl ex v dst c1 s t es. (cl, ex, v, dst) \<in> combines twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (ex, ivl_enterc c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store twice_cfg cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, ivl_combc c1 (ivl_enterc c1 es)))\<rbrakk>"
-    by (rule ivl_ctx_sg_comb)
+        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
+    by (rule ivl_ctx_sg_comb[unfolded ivl_combc_def])
 qed
 
 end
