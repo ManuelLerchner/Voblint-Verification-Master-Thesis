@@ -3,7 +3,7 @@ section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 theory Example_Interval_Loop_Coverage
   imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect"
     "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge" Trace_Analysis_Sound
+    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
 begin
 
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
@@ -17,7 +17,7 @@ text \<open>
     \<^verbatim>\<open>x := 0; while (x < 20) { x := x + 1 }\<close>
 
   The interval domain proves the bounded invariant \<^verbatim>\<open>0 <= x <= 20\<close>
-  (i.e. \<^verbatim>\<open>x \<in> [0, 20]\<close>) at the loop head over every reaching trace.  Both bounds
+  (i.e. \<^verbatim>\<open>x \<in> [0, 20]\<close>) at the loop head over every reaching store.  Both bounds
   are interval-specific: the lower bound \<^verbatim>\<open>0\<close> is the joined initial value, and the
   upper bound \<^verbatim>\<open>20\<close> comes from guard refinement -- @{const assume_ivl} narrows
   \<^verbatim>\<open>x\<close> to \<^verbatim>\<open>[.., 19]\<close> on entering the body (\<^verbatim>\<open>x < 20\<close>), so after \<^verbatim>\<open>x := x + 1\<close> and the
@@ -27,7 +27,7 @@ text \<open>
 
   Certified backward-analysis story: @{text "Example_Guard_Refinement"}
   isolates the guard step; this theory carries the same @{const assume_ivl} transfers
-  through the full CFG to a trace-level soundness theorem.
+  through the full CFG to a plain @{const cfg_collect} soundness theorem.
 
   Executable mirror (Kleene / warrowing TD on @{text "ivl st"}, eval only):
   @{text "Exec_Ivl_Run"}.
@@ -137,16 +137,18 @@ abbreviation "loop_head \<equiv> 2"
 
 lemma loop_head_x_bounded:
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-  assumes tr: "tr \<in> cfg_collect_trace loop_cfg S loop_head"
-  shows "0 \<le> (last tr) ''x'' \<and> (last tr) ''x'' \<le> 20"
+  assumes s: "s \<in> cfg_collect loop_cfg S loop_head"
+  shows "0 \<le> s ''x'' \<and> s ''x'' \<le> 20"
 proof -
   have fin_e: "finite (edges loop_cfg)" by (simp add: loop_cfg_edges)
   have fin_c: "finite (combines loop_cfg)" by (simp add: loop_cfg_combines)
-  have s0_conv: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-    using S_sound by simp
-  have "(last tr) ''x'' \<in> gamma (loop_env loop_head ''x'')"
-    by (rule Trace_Analysis_Sound.sound_transfer.reaching_global_read_sound
-          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix s0_conv tr])
+  have le: "cfg_collect loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
+    using sound_transfer.post_fixpoint_sound
+          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix S_sound]
+    by blast
+  from s le have "s \<in> \<lbrakk>loop_env loop_head\<rbrakk>" by blast
+  then have "s ''x'' \<in> gamma (loop_env loop_head ''x'')"
+    unfolding gamma_state_def by blast
   then show ?thesis by (auto simp: loop_env_def)
 qed
 
