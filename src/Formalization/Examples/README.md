@@ -22,16 +22,6 @@ concrete program, equation system, or precision witness.
 | `Executable/Interval/Context/` | interval context-sensitive runs |
 | `Executable/Interval/SeededClean/` | interval seeded-clean and keyed DG runs |
 
-## `Digest/` — recursion and read regressions
-
-| File | Role |
-| --- | --- |
-| `Example_Trace_Digest_Precision.thy` | Digest vs flat collecting precision on a two-path program |
-| `Example_Trace_Digest_Combine.thy` | Combine-side digest filtering: compiled if/else callee, `cmp` blocks path 3 |
-| `Example_Trace_Digest_ReachingCompat.thy` | Reader-side `reaching_compat`: lockset digest filters a global read |
-| `Example_Entry_Store_Context_Precision.thy` | Entry-store context precision |
-| `Example_Global_Ctx_Read_Precision.thy` | Context-indexed global read precision |
-
 ## `Interprocedural/` — procedure-call witnesses
 
 | File | Role |
@@ -87,7 +77,7 @@ on the always-join solver.
 TD solver's DG-native post-solution certified sound against the activation-indexed
 collecting semantics `cfg_collect_ctx_act` at every program point, via the generic
 `activation_collect_sound` backbone and the `dg_ctx_activation` discharge. The
-retain / `side_env_cmp` interval examples are the conservative baseline; their loop
-/ recursion imprecision is widening/warrowing-related, not D/G/C-related.
+retain interval examples are the conservative baseline; their loop / recursion
+imprecision is widening/warrowing-related, not D/G/C-related.
 
 **Session entry point:** `Voblint.thy` imports the curated example set for the umbrella document.

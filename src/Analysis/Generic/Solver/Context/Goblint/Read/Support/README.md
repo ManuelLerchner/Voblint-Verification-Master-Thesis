@@ -1,13 +1,8 @@
 # Read support
 
-Generic digest bridges and writer scaffolding.
-
-These files support the Goblint read story, but they are not direct read-interface
-models themselves.
+Keyed-context bridge scaffolding for the side-effecting solver.
 
 | File | Role |
 | --- | --- |
-| `TD_Side_Eff_Cmp_Sound.thy` | cmp combine layer and soundness |
-| `TD_Side_Eff_Cmp_Pull.thy` | cmp pullback discharge |
-| `TD_Side_Eff_Keyed_Gen.thy` | keyed generator bridge |
-| `Value_Digest_Reader.thy` | generic value-projected reader |
+| `TD_Side_Eff_Ctx_Shared.thy` | shared context-pull helpers |
+| `TD_Side_Eff_Keyed_Gen.thy` | functional keyed-global generator (routes global writes by context) |

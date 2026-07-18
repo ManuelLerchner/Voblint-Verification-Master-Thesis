@@ -1,6 +1,8 @@
 # Digest-Spine Removal Plan
 
-**Status:** proposed cleanup, audit-backed. No removal work has started.
+**Status: DONE.** The relational trace/digest spine was removed across Stages 0–5;
+the full `Voblint_Formalization` build is green with 0 `sorry` and 0 `oops`. See
+the outcome record below.
 
 This plan supersedes:
 
@@ -8,6 +10,62 @@ This plan supersedes:
 * the witness-merging portion of `docs/COLLECTING_SEMANTICS_UNIFICATION_PLAN.md`
 
 The successful generic `collect_by` refactor remains valid and is retained.
+
+## Outcome record (Stage 6)
+
+The removal executed as planned; archive tag
+`archive/relational-digest-experiment` (commit `4779e90f`) is the only recovery
+path for the removed experiment.
+
+**Deleted theories (16 total):**
+
+* trace/digest collecting: `CFG_Collect_Trace`, `Trace_Analysis_Sound`;
+* relational read: `Global_Cmp_Read`, `Digest_Global_Read`, `Context_Domain`,
+  `TD_Side_Eff_Cmp_Pull`, `TD_Side_Eff_Cmp_Sound`, `Value_Digest_Reader`,
+  `Value_Digest_Read`;
+* DG-route chain: `DG_Route_Soundness`, `Local_DG`, `Clean_RRead_Sound`,
+  `Seed_EnterMono_Lift`, `Ctx_Collect_Backbone`;
+* digest examples: `Example_Trace_Digest_{Combine,Precision,ReachingCompat}`,
+  `Example_Global_Ctx_Read_Precision`, `Exec_Sign_Cmp_Keyed_DG_Run`,
+  `Exec_Sign_Mode_Value_Run`.
+
+**Renamed:** `TD_Side_Eff_Cmp_Gen` → `TD_Side_Eff_Keyed_Gen`; the generator and
+its lemmas `side_cfg_T_eff_cmp*` → `side_cfg_T_eff_keyed*`, `traverse_intra_cmp`
+→ `traverse_intra_keyed`, `side_post_solution_le_global_cmp` →
+`side_post_solution_le_global_keyed`. The generator carries no relational `cmp`
+parameter; the `_cmp` naming was legacy.
+
+**Relocated to `CFG_Collect`** (generic, not digest): `edge_step`,
+`edge_collect_single` (Stage 3), `call_enter_store` (Stage 4A).
+
+**Removed capabilities** (intentional, not preservation obligations): relational
+context compatibility (`cmp`/`gcmp`), value-history digests, modular `proc_entry`
+trace seeding, relational global-read filtering (`glob_env_cmp`/`side_env_cmp`/
+`obs_digest`), and the "digest beats flat" precision results.
+
+**Retained architecture** (one functional spine):
+
+~~~text
+CFG concrete collecting semantics ...... cfg_collect
+activation-local concrete semantics .... valid_ltr, cfg_collect_ctx_act (collect_by)
+functional keyed abstract analysis ..... TD_Side_Eff_Keyed_Gen (side_cfg_T_eff_keyed*),
+                                         DG spine (sound_dg_spec, DG_Context_Soundness),
+                                         activation backbone (activation_collect_sound)
+executable analyses .................... Sign / interval / mixed-flow DG flagships
+~~~
+
+Preserved endpoints (all batch-green): `cfg_collect ⊆ γ(meaning σ)`,
+`cfg_collect_ctx_act ⊆ γ(meaning_ctx σ)`, `mixed_flow_analysis_sound/_optimal`,
+`flagship_collect_sound`, `dgEx_collect_sound`, `twice_ctx_collect_ctx_act_sound`,
+`flagship_source_run_sound`.
+
+An unrelated cleanup rode along at the maintainer's request: the deliberately
+`oops`ed `flag_etf_mono_sides_unprovable` and its conditional-routing demo were
+deleted, bringing the repo to 0 `oops`.
+
+---
+
+## Original plan (for the record)
 
 ## Objective
 

@@ -1,6 +1,11 @@
 # Digest-Spine Removal — Stage 1 Dependency & Theorem Ledger
 
-Status: **Stage 1 complete (read-only).** No theory deleted, renamed, or edited.
+Status: **All stages complete (0–5).** The relational trace/digest spine is
+removed; full build green, 0 `sorry`, 0 `oops`. Outcome record in
+`docs/DIGEST_SPINE_REMOVAL_PLAN.md`. This ledger is retained as the working
+record of the dependency analysis that guided the removal.
+
+Status (original): **Stage 1 complete (read-only).** No theory deleted, renamed, or edited.
 Companion to `docs/DIGEST_SPINE_REMOVAL_PLAN.md` (authoritative) and
 `docs/DIGEST_SPINE_REMOVAL_HANDOFF.md`.
 

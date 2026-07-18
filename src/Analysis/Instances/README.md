@@ -46,11 +46,12 @@ part of the reusable analysis instance.
    already interpreted) for `afilter_mono`/`bfilter_mono` — both proved generically
    in `Generic/Domain/Abstract_Domain`. See `Sign_Domain` / `Interval_Domain` for the
    interpretation shape.
-5. **Context-sensitivity / digests — free.** No per-domain work: `glob_env_cmp`,
-   `side_env_cmp`, `digest_global_read` (`obs_digest`), the cmp/ctx/digest generators,
-   and their soundness are all generic over `'d::bounded_semilattice_sup_bot`. A new
-   domain plugs into them unchanged; only executable witnesses are written per domain,
-   in `src/Formalization/Examples/Executable/`.
+5. **Context-sensitivity — free.** No per-domain work: the DG spine
+   (`sound_dg_spec`, `DG_Context_Soundness`) and the functional keyed generator
+   (`side_cfg_T_eff_keyed_seed_dg`) are generic over
+   `'d::bounded_semilattice_sup_bot`. A new domain plugs into them unchanged as a
+   diagonal `sound_dg_spec` instance; only executable witnesses are written per
+   domain, in `src/Formalization/Examples/Executable/`.
 6. Register the `.thy` files in `src/Analysis/ROOT` (`directories` + `theories`,
    order: domain before soundness before executable witnesses).
 
