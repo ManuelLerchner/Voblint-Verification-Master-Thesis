@@ -89,15 +89,15 @@ corollary ec_certified_sound:
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
 text \<open>
-  The same bound against the underlying interprocedural \<open>trace\<close> semantics: the
-  last store of \<^emph>\<open>any\<close> C-faithful trace reaching the exit is over-approximated
-  by the computed result.
+  The store-level reading: \<^emph>\<open>any\<close> store reaching the exit under the
+  interprocedural collecting semantics is over-approximated by the computed
+  result.
 \<close>
 
-corollary ec_certified_sound_trace:
-  assumes "tr \<in> cfg_collect_trace (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
-  shows "last tr \<in> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
-  using assms by (rule sign_exec_prog_sound_trace[OF ec_terminates])
+corollary ec_certified_sound_store:
+  assumes "s \<in> cfg_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
+  shows "s \<in> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
+  using assms ec_certified_sound by blast
 
 text \<open>
   Flow-insensitive global analysis: concrete values of every global at the exit.
