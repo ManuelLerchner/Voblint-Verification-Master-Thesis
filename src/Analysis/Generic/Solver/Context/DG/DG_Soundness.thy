@@ -479,28 +479,31 @@ proof -
     using entryD entryG edgeD edgeG combineD combineG by blast
 qed
 
-theorem dg_postfix_collect_sound:
+text \<open>The three set-valued closure obligations of a \<^const>\<open>dg_postfix\<close> against \<^const>\<open>dg_gamma\<close>,
+  extracted so the same discharge feeds both the \<^const>\<open>cfg_collect\<close> and the trace-native
+  \<open>ltr_collect\<close> endpoints without re-proving the analysis-specific step/combine bounds.\<close>
+
+lemma dg_postfix_gamma_entry:
   assumes pf: "dg_postfix g s0d s0g sigma"
-    and finE: "finite (edges g)"
-    and finC: "finite (combines g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "cfg_collect g S0 v \<subseteq> dg_gamma sigma v"
-proof (rule cfg_collect_semantic_postfix)
-  show "S0 \<subseteq> dg_gamma sigma (cfg_entry g)"
-  proof -
-    have d_le: "s0d \<le> dg_D sigma (cfg_entry g)"
-      and g_le: "s0g \<le> dg_G sigma"
-      using pf unfolding dg_postfix_def by blast+
-    have "gammaDG s0d s0g \<subseteq>
-        gammaDG (dg_D sigma (cfg_entry g)) (dg_G sigma)"
-      by (rule gammaDG_mono[OF d_le g_le])
-    then show ?thesis
-      using sound0 unfolding dg_gamma_def by blast
-  qed
-next
-  fix u a w s
-  assume edge: "(u, a, w) \<in> edges g"
+  shows "S0 \<subseteq> dg_gamma sigma (cfg_entry g)"
+proof -
+  have d_le: "s0d \<le> dg_D sigma (cfg_entry g)"
+    and g_le: "s0g \<le> dg_G sigma"
+    using pf unfolding dg_postfix_def by blast+
+  have "gammaDG s0d s0g \<subseteq>
+      gammaDG (dg_D sigma (cfg_entry g)) (dg_G sigma)"
+    by (rule gammaDG_mono[OF d_le g_le])
+  then show ?thesis
+    using sound0 unfolding dg_gamma_def by blast
+qed
+
+lemma dg_postfix_gamma_edge:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and edge: "(u, a, w) \<in> edges g"
     and sin: "s \<in> edge_collect a (dg_gamma sigma u)"
+  shows "s \<in> dg_gamma sigma w"
+proof -
   obtain g' d' where step:
       "dg_spec_step S a (dg_D sigma u) (dg_G sigma) = (g', d')"
     by (cases "dg_spec_step S a (dg_D sigma u) (dg_G sigma)") blast
@@ -528,11 +531,15 @@ next
     by (rule gammaDG_mono[OF d_le g_le])
   then show "s \<in> dg_gamma sigma w"
     using out unfolding dg_gamma_def by blast
-next
-  fix cc ex w dst s t
-  assume comb: "(cc, ex, w, dst) \<in> combines g"
+qed
+
+lemma dg_postfix_gamma_combine:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and comb: "(cc, ex, w, dst) \<in> combines g"
     and sin: "s \<in> dg_gamma sigma cc"
     and tin: "t \<in> dg_gamma sigma ex"
+  shows "combine_collect dst s t \<in> dg_gamma sigma w"
+proof -
   obtain g' d' where cmb:
       "dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
         (dg_G sigma) = (g', d')"
@@ -565,6 +572,27 @@ next
     by (rule gammaDG_mono[OF d_le g_le])
   then show "combine_collect dst s t \<in> dg_gamma sigma w"
     using out unfolding dg_gamma_def by blast
+qed
+
+theorem dg_postfix_collect_sound:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and finE: "finite (edges g)"
+    and finC: "finite (combines g)"
+    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
+  shows "cfg_collect g S0 v \<subseteq> dg_gamma sigma v"
+proof (rule cfg_collect_semantic_postfix)
+  show "S0 \<subseteq> dg_gamma sigma (cfg_entry g)"
+    by (rule dg_postfix_gamma_entry[OF pf sound0])
+next
+  fix u a w s
+  assume "(u, a, w) \<in> edges g" and "s \<in> edge_collect a (dg_gamma sigma u)"
+  then show "s \<in> dg_gamma sigma w" by (rule dg_postfix_gamma_edge[OF pf])
+next
+  fix cc ex w dst s t
+  assume "(cc, ex, w, dst) \<in> combines g" and "s \<in> dg_gamma sigma cc"
+    and "t \<in> dg_gamma sigma ex"
+  then show "combine_collect dst s t \<in> dg_gamma sigma w"
+    by (rule dg_postfix_gamma_combine[OF pf])
 qed
 
 corollary dg_post_solution_collect_sound:

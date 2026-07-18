@@ -219,10 +219,14 @@ compiled-program semantics.
 
 Move Sign, Interval, Mixed, and DG theorem statements to the projected
 trace-derived collecting views. Their transfer proofs should remain domain-local
-corollaries of the generic interface.
+corollaries of the generic interface. "Migrate" means the flagship and
+source-level chains *terminate* in `ltr_collect` / `ltr_collect_keyed`; the
+raw-`cfg_collect` theorems are retained as compatibility results, not deleted.
 
 Exit gate: all five sessions are batch-green; the theorem statements retain
 their existing user-facing plain and keyed result shapes.
+
+Done — see "R6 — flagship + source chain terminate in the trace semantics" below.
 
 ### Stage R7 — retire the legacy semantic target
 
@@ -628,7 +632,40 @@ over g -> ltr_collect g S exit`. No pruning transformation, no pruning adequacy,
 `call_return_reaches`, no compiled-CFG restriction, no source-completeness, no change to
 `valid_ltr`, no trace object in executable solver state.
 
-### R6 — not started
+### R6 — flagship + source chain terminate in the trace semantics
 
-Migrating Sign / Interval / Mixed / DG domain corollary statements to the
-projected trace-derived views is deliberately unstarted.
+The flagship and source-level correctness chains now terminate in `ltr_collect`
+(monovariant) or `ltr_collect_keyed` (context-sensitive), never routing through
+`ltr_collect_le_cfg_collect`. The raw-`cfg_collect` theorems stay as compatibility
+results.
+
+Keystone: `ltr_collect_semantic_postfix` (`LTR_Abstract`) — the trace-native twin of
+`cfg_collect_semantic_postfix`, same set-valued entry/edge/combine premises, concluded
+over `ltr_collect` through the context-free `ltr_gamma` instance `acc v _ = B v`.
+
+`DG_Soundness` was refactored to expose the three `dg_postfix_gamma_{entry,edge,combine}`
+closure obligations; both the `cfg_collect` endpoint (`dg_postfix_collect_sound`) and the
+trace-native one share them. Trace-native DG endpoints:
+
+- `DG_LTR_Sound` — generic `dg_post_solution_collect_sound_ltr`.
+- `Interval_DG_LTR` / `Sign_DG_LTR` — `ivl_dg` / `sign_dg` endpoints (kept in leaves
+  because importing the trace stack shadows the bare `Call` constructor).
+
+Domain path map (per the R6 goal table):
+
+| path | trace endpoint |
+| ---- | -------------- |
+| monovariant Sign/Interval (plain post-fixpoint) | `unified_ltr_post_fixpoint_sound` (`Example_Proc_Call_LTR`) |
+| effectful Sign/Mixed | `side_collect_sound_exit_eff_ltr_cone` (`Example_Mixed_Flow_Sign_LTR`) |
+| monovariant DG flagships | `ivl_dg`/`sign_dg` `dg_post_solution_collect_sound_ltr` (`Example_Interval_DG_Flagship_LTR`, `Example_Interval_DG_IP_Flagship_LTR`, `Exec_Sign_DG_Run_LTR`) |
+| context-sensitive Interval / DG-context | `activation_collect_sound` -> `cfg_collect_ctx_act` = `ltr_collect_keyed` (already trace-native: `Example_Interval_DG_Ctx_Collect`, `Example_Interval_Source_Ctx`) |
+
+Source chain: `source_reaches_ltr_collect` (`Source_Activation_Sound`) is the monovariant
+source->trace bridge (`source pstep -> valid_ltr -> ltr_collect`), reused by
+`flagship_source_run_sound_ltr` / `twice_source_run_sound_ltr`. The context-sensitive
+source chain (`source_activation_sound`) already terminates in `cfg_collect_ctx_act`.
+
+Review invariants held: executable post-solution reused unchanged; no
+`ltr_collect_le_cfg_collect` in any flagship proof; the single-caller `COMB` obligation
+reads one combine triple, so DG adds no second caller/callee matching; keyed `twice` still
+reads/returns through distinct caller contexts; raw-CFG theorems retained.

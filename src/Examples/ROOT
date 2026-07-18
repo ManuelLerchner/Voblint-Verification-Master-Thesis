@@ -9,9 +9,12 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
   theories
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    Exec_Sign_DG_Run_LTR
     Exec_Ivl_Run
     Example_Interval_DG_Flagship
+    Example_Interval_DG_Flagship_LTR
     Example_Interval_DG_IP_Flagship
+    Example_Interval_DG_IP_Flagship_LTR
     Example_Interval_DG_Ctx_Flagship
     Example_Interval_DG_Ctx_Sound
     Example_Interval_DG_Ctx_Collect

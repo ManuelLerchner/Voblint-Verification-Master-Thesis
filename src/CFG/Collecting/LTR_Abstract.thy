@@ -261,4 +261,56 @@ text \<open>The interface is satisfiable for every graph, seed set, routing, and
 lemma ltr_gamma_UNIV: "ltr_gamma g S (\<lambda>_ _. UNIV) enterc seedc"
   by unfold_locales auto
 
+subsection \<open>Monovariant semantic post-fixpoint\<close>
+
+text \<open>
+  Trace-native analogue of \<open>cfg_collect_semantic_postfix\<close>: from the same set-valued entry / edge /
+  combine closure of a candidate node map \<open>B\<close>, the stack-faithful \<^const>\<open>ltr_collect\<close> is bounded
+  by \<open>B\<close> at every point.  Proved directly through the context-free \<^locale>\<open>ltr_gamma\<close> instance
+  \<open>acc v _ = B v\<close> --- NOT via \<open>ltr_collect_le_cfg_collect\<close> and the broad \<^const>\<open>cfg_collect\<close>
+  closure.  The single-caller \<open>COMB\<close> obligation reads only one combine triple's caller and
+  callee-exit slots.  DG and other set-level endpoints reuse it in place of their final
+  \<^const>\<open>cfg_collect\<close> step, so a computed post-solution certifies soundness against the trace
+  semantics with no graph-closure detour.
+\<close>
+lemma ltr_collect_semantic_postfix:
+  fixes g :: cfg and B :: "pp \<Rightarrow> store set" and S0 :: "store set" and v :: pp
+  assumes entry: "S0 \<subseteq> B (cfg_entry g)"
+    and edge: "\<And>u a w s. (u, a, w) \<in> edges g \<Longrightarrow> s \<in> edge_collect a (B u) \<Longrightarrow> s \<in> B w"
+    and combine: "\<And>cc ex w dst s t. (cc, ex, w, dst) \<in> combines g \<Longrightarrow>
+        s \<in> B cc \<Longrightarrow> t \<in> B ex \<Longrightarrow> combine_collect dst s t \<in> B w"
+  shows "ltr_collect g S0 v \<subseteq> B v"
+proof -
+  interpret G: ltr_gamma g S0 "\<lambda>v _. B v" "\<lambda>_ _. ()" "()"
+  proof (standard, goal_cases ROOT EDGE SEED COMB)
+    case (ROOT s) then show ?case using entry by auto
+  next
+    case (EDGE u a w c s s')
+    have "s' \<in> edge_collect a {s}" using EDGE(4) by (simp add: edge_collect_single)
+    moreover have "{s} \<subseteq> B u" using EDGE(3) by simp
+    ultimately have "s' \<in> edge_collect a (B u)" using edge_collect_mono by blast
+    then show ?case by (simp add: edge[OF EDGE(1)])
+  next
+    case (SEED u w c s s' xs es)
+    have "s' \<in> edge_collect (EA_Enter xs es) {s}"
+      using SEED(3) by (simp add: edge_collect_single)
+    moreover have "{s} \<subseteq> B u" using SEED(2) by simp
+    ultimately have "s' \<in> edge_collect (EA_Enter xs es) (B u)" using edge_collect_mono by blast
+    then show ?case by (simp add: edge[OF SEED(1)])
+  next
+    case (COMB cl ex w dst c1 s t es)
+    have "combine_collect dst s t \<in> B w"
+      by (rule combine[OF COMB(1)]) (use COMB(2,3) in simp_all)
+    then show ?case by simp
+  qed
+  show ?thesis
+  proof
+    fix x assume "x \<in> ltr_collect g S0 v"
+    then obtain u where u: "u \<in> valid_ltr g S0" "sink_node u = v" "sink_store u = x"
+      unfolding ltr_collect_def by blast
+    have "u \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr u(1) by blast
+    then show "x \<in> B v" using u(2,3) by (simp add: G.gamma_ltr_def)
+  qed
+qed
+
 end

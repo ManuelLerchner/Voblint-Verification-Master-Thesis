@@ -127,4 +127,34 @@ proof -
   show ?thesis by (rule source_sound_toplevel_from_collecting_cap[OF wf src s0 run cap])
 qed
 
+subsection \<open>Monovariant source bridge into the trace collecting\<close>
+
+text \<open>
+  The context-forgetting specialisation: a reachable source store lands in the stack-faithful
+  \<^const>\<open>ltr_collect\<close> of the compiled program at its matched point.  It reuses the activation
+  bridge \<open>source_store_in_cfg_collect_ctx_act\<close> at the trivial routing and projects the keyed
+  activation collecting to the monovariant one (\<open>cfg_collect_ctx_act_eq_ltr_collect_keyed\<close>,
+  \<open>ltr_collect_keyed_le_collect\<close>).  This is the source-level endpoint the monovariant D/G flagships
+  compose with \<open>ltr_collect\<close>-terminating soundness --- no \<^const>\<open>cfg_collect\<close> detour.
+\<close>
+theorem source_reaches_ltr_collect:
+  assumes wf: "wf_compile_input Pi ps main"
+    and src: "source_com main"
+    and s0: "s0 \<in> S"
+    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
+                 \<and> s \<in> ltr_collect (compile_prog Pi ps main) S v"
+proof -
+  let ?g = "compile_prog Pi ps main"
+  from source_store_in_cfg_collect_ctx_act[OF wf src s0 run,
+        where enterc = "\<lambda>_ _. ()" and seedc = "()"]
+  obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
+    and mem: "s \<in> cfg_collect_ctx_act (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by blast
+  have "s \<in> ltr_collect_keyed (key (\<lambda>_ _. ()) ()) ?g S v (key (\<lambda>_ _. ()) () t)"
+    using mem by (simp add: cfg_collect_ctx_act_eq_ltr_collect_keyed)
+  then have "s \<in> ltr_collect ?g S v"
+    by (rule subsetD[OF ltr_collect_keyed_le_collect])
+  then show ?thesis using m by blast
+qed
+
 end

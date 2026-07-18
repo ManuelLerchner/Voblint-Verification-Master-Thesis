@@ -60,16 +60,19 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Framework
     DG_Soundness
     DG_Context_Soundness
+    DG_LTR_Sound
     DG_Ctx_Activation
     Retain_Analysis
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness
     Interval_DG
+    Interval_DG_LTR
     Interval_Point_Digest
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
+    Sign_DG_LTR
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz
