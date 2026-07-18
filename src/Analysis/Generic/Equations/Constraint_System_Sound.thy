@@ -1,5 +1,5 @@
 theory Constraint_System_Sound
-  imports Constraint_System "Voblint_CFG.CFG_Collect" "Voblint_CFG.CFG_Collect_Trace"
+  imports Constraint_System "Voblint_CFG.CFG_Collect"
 begin
 
 section \<open>Constraint system: soundness theorem\<close>

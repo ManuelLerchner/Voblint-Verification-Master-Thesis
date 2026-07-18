@@ -166,13 +166,26 @@ Fan-out is 86 transitively but the **direct** importers split cleanly:
 structural blocker for deleting `CFG_Collect_Trace`. Stage 5 must first inventory
 what `CFG_Local_Trace` pulls from it and move only the live shared definitions.
 
-### 4a. `edge_step` — the shared non-digest helper mis-housed in `CFG_Collect_Trace`
+### 4a. `edge_step` — shared non-digest helper (relocated to `CFG_Collect` in Stage 3)
+
+**Stage 3 done.** `edge_step` and `edge_collect_single` were moved from
+`CFG_Collect_Trace` into `CFG_Collect` (beside `edge_collect`/`edge_collect_member`,
+before `edges_collect`). `CFG_Collect` already reached every dependency
+(`IMP2_Proc`/`Expr`/`Globals`, `edge_action`), so no cycle. `CFG_Collect_Trace`
+re-imports `CFG_Collect` and keeps its digest theorems unchanged.
+`Constraint_System_Sound` and `Compile_Invariants` dropped their
+`CFG_Collect_Trace` imports; `Located_Reaches`/`Located_LTR` now get `edge_step`
+from `CFG_Collect` (full build exit 0). `CFG_Local_Trace` keeps its
+`CFG_Collect_Trace` import for the trace-specific `call_enter_store`, but its
+`edge_step` now resolves to `CFG_Collect` — a candidate follow-up (`call_enter_store`
+relocation) noted, out of Stage-3 scope.
+
+Historical context (the pre-Stage-3 situation):
 
 `edge_step` (`edge_action ⇒ store ⇒ store option`, the store-singleton companion
-of `edge_collect`) and its bridge `edge_collect_single` live in
+of `edge_collect`) and its bridge `edge_collect_single` lived in
 `CFG_Collect_Trace` but are **not** digest machinery. Two retained theories
-depend on them, so `CFG_Collect_Trace` cannot lose them until they are relocated
-(Stage 3, natural home `CFG_Collect`):
+depended on them:
 
 * **`Constraint_System_Sound`** — its `edge_of_bound` lemma uses `edge_step`
   directly.
