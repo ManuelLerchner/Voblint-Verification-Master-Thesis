@@ -16,7 +16,7 @@ mixed-flow optimality statements.
 | `reaching_global_read_sound_d` | Digest-indexed variant: soundness for the `reaching_compat dgx rel d` refinement |
 | `digest_read_sound` | Digest-level corollary: `d ∈ dgx '' reaching_compat …` |
 | `flat_env_is_digest_sound` | Per-pp flat abstract env is a valid digest (specialises the digest family to the sign domain) |
-| `mixed_flow_analysis_sound` | Trace-level soundness for any effectful transfer record, given a partial post-solution |
+| `mixed_flow_analysis_sound` | Plain `cfg_collect g S (cfg_exit g) ⊆ γ(side_env σ)` soundness for any effectful transfer record, given a partial post-solution |
 | `mixed_flow_analysis_optimal` | Soundness plus least-partial-post-solution optimality for TD_side on an effectful equation system |
 
 **Context:** `Trace_Analysis_Sound.thy` works inside the `sound_transfer` locale.
