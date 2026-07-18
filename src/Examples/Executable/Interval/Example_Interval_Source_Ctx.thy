@@ -2,7 +2,7 @@ theory Example_Interval_Source_Ctx
   imports
     Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_IP_Flagship
-    Source_Activation_Sound
+    "Voblint_Formalization.Source_Activation_Sound"
 begin
 
 section \<open>Source-level context-sensitive certification for the recursive flagship\<close>

@@ -5,7 +5,7 @@ theory Example_Mixed_Flow_Sign
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_CFG.CFG_Collect_Runs"
     "Voblint_IMP2.IMP2_Notation"
-    Mixed_Flow_Sound
+    "Voblint_Formalization.Mixed_Flow_Sound"
 begin
 
 text \<open>The analyzed program, defined locally so the example is self-contained: a single

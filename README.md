@@ -182,11 +182,15 @@ To instantiate the framework, supply an abstract value type, a concretization
   semantics.
 - `Voblint_Analysis`: domains, equation systems, solver wiring, and executable
   D/G infrastructure.
-- `Voblint_Formalization`: end-to-end theorems, executable examples, and
-  demonstrations.
+- `Voblint_Formalization`: the end-to-end soundness theorems (pipeline
+  composition, compiler correctness, source-activation bridge).
+- `Voblint_Examples`: executable analyzer runs, flagship demonstrations, and the
+  `Voblint` capstone index. A leaf session — nothing depends on it, so the
+  soundness gate builds without paying for the demos.
 
-Four Isabelle sessions build in order:
-`Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization`.
+Five Isabelle sessions build in order:
+`Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` →
+`Voblint_Examples`.
 
 ## Theoretical Foundations
 
@@ -241,7 +245,8 @@ src/
   IMP2/          syntax, procedures, globals/locals, small-step
   CFG/           CFG, IP compilation, paths; Collecting/ - IP collecting semantics
   Analysis/      Generic/ (Domain/ Equations/ Solver/) Instances/ (Voblint_Analysis session)
-  Formalization/ Pipeline/ Examples/ (Voblint_Formalization session)
+  Formalization/ Pipeline/ - end-to-end soundness theorems (Voblint_Formalization session)
+  Examples/      Executable/ Interprocedural/ Numeric/ Tooling/ + Voblint capstone (Voblint_Examples session)
 vendor/
   td-verification/         verified TD solver (submodule, AFP session TD)
   td-verification.patch    local Isabelle2025 compatibility patch

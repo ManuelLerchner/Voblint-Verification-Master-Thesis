@@ -2,6 +2,11 @@
 
 Status: **DONE** 2026-06-12. 4-session DAG live; qualified imports applied; bootstrap build green.
 
+> The DAG has since grown a 5th leaf session `Voblint_Examples` (`src/Examples/`):
+> the `Example_*`/`Exec_*` witnesses and the `Voblint` capstone were split out of
+> `Voblint_Formalization`, which now holds soundness theorems only. This
+> historical record documents the original monolith → 4-session split.
+
 ## Problem
 
 The repo currently builds one monolithic `Voblint_Formalization` session spanning

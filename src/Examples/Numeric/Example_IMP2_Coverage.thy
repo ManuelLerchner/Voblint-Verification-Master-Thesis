@@ -24,7 +24,7 @@ hide_const phase.N
       soundness (post_fixpoint_sound).
 
   Only the sign domain is used in this witness (interval coverage lives in
-  @{theory Voblint_Formalization.Example_Interval_Loop_Coverage}), so the
+  @{theory Voblint_Examples.Example_Interval_Loop_Coverage}), so the
   property is x > 0 (SPos), not x >= 0.
 *)
 
