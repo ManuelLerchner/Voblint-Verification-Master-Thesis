@@ -616,11 +616,32 @@ next
   qed
 qed
 
+subsection \<open>The generic witness collector\<close>
+
+text \<open>\<open>collect_by\<close> is the single collecting scheme: the stores of witnesses in \<open>W\<close>
+  reaching node \<open>v\<close> whose context (under an arbitrary reader \<open>ctx_of\<close>) is \<open>c\<close>.
+  Every collecting semantics in the development is an instance --- plain (trivial context),
+  digest-keyed (\<open>ctx_of = dg \<circ> flatten\<close>), and activation-keyed (\<open>ctx_of = key enterc seedc\<close>).\<close>
+
+definition collect_by ::
+  "'w set \<Rightarrow> ('w \<Rightarrow> pp) \<Rightarrow> ('w \<Rightarrow> store) \<Rightarrow> ('w \<Rightarrow> 'c) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
+  "collect_by W node_of store_of ctx_of v c =
+     {store_of w | w. w \<in> W \<and> node_of w = v \<and> ctx_of w = c}"
+
+lemma collect_byI:
+  "w \<in> W \<Longrightarrow> node_of w = v \<Longrightarrow> ctx_of w = c \<Longrightarrow> store_of w \<in> collect_by W node_of store_of ctx_of v c"
+  unfolding collect_by_def by blast
+
+lemma collect_byE:
+  assumes "s \<in> collect_by W node_of store_of ctx_of v c"
+  obtains w where "w \<in> W" "node_of w = v" "ctx_of w = c" "store_of w = s"
+  using assms unfolding collect_by_def by blast
+
 subsection \<open>The activation-indexed context collecting\<close>
 
 text \<open>The activation-sensitive collecting: the sink stores of valid traces reaching \<open>v\<close> whose
-  activation context is \<open>c\<close>.  This is the single activation-indexed collecting semantics ---
-  it replaces the former whole-program-witness definition of the same name.  Its inclusion in
+  activation context is \<open>c\<close>.  It is the activation instance of \<^const>\<open>collect_by\<close> ---
+  \<open>ctx_of = key enterc seedc\<close> over the canonical witnesses \<^const>\<open>valid_ltr\<close>.  Its inclusion in
   \<^const>\<open>cfg_collect\<close> is immediate from the key-free sink inclusion: the \<open>key\<close> filter only
   removes traces.\<close>
 
@@ -628,6 +649,11 @@ definition cfg_collect_ctx_act ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
   "cfg_collect_ctx_act enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
+
+lemma cfg_collect_ctx_act_collect_by:
+  "cfg_collect_ctx_act enterc seedc g S v c
+     = collect_by (valid_ltr g S) sink_node sink_store (key enterc seedc) v c"
+  unfolding cfg_collect_ctx_act_def collect_by_def by simp
 
 theorem cfg_collect_ctx_act_le_collect:
   "cfg_collect_ctx_act enterc seedc g S v c \<subseteq> cfg_collect g S v"
