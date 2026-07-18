@@ -65,12 +65,27 @@ text \<open>
   interpreter in the style of Goblint.  An IMP2 program is compiled to a
   control-flow graph; the graph induces an effectful equation system; the
   verified TD_side solver computes a partial post-solution; and the resulting
-  mixed flow-sensitive abstract state over-approximates the interprocedural
-  collecting semantics at every program point --- plain \<^verbatim>\<open>cfg_collect\<close>
-  context-insensitively, and the activation-indexed \<^verbatim>\<open>cfg_collect_ctx_act\<close>
-  per calling context.  When the generated
-  equation system satisfies threefold monotonicity, the solver result is also
-  the least partial post-solution.
+  mixed flow-sensitive abstract state over-approximates the \<^emph>\<open>stack-faithful
+  local-trace\<close> collecting semantics at every program point --- monovariant
+  \<^verbatim>\<open>ltr_collect\<close>, and the activation-indexed \<^verbatim>\<open>ltr_collect_keyed\<close>
+  (\<^verbatim>\<open>cfg_collect_ctx_act\<close>) per calling context.  \<^const>\<open>valid_ltr\<close> is
+  the canonical concrete semantics of compiled IMP2 execution: it matches each
+  return with its own caller.  \<^const>\<open>cfg_collect\<close> remains the broad graph
+  semantics for arbitrary CFG records and a one-way compatibility
+  over-approximation (\<^verbatim>\<open>ltr_collect g S v <= cfg_collect g S v\<close>); equality
+  is neither claimed nor desired.  When the generated equation system satisfies
+  threefold monotonicity, the solver result is also the least partial
+  post-solution.
+
+  \<^bold>\<open>Canonical soundness endpoints.\<close>  The trace-native theorem to cite for each
+  path: generic monovariant \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close>; generic
+  effectful exit \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>; generic set-valued
+  closure \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>; context-sensitive
+  \<^verbatim>\<open>activation_collect_sound\<close>; D/G \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>
+  (interval \<^verbatim>\<open>ivl_dg_post_solution_collect_sound_ltr\<close>, sign
+  \<^verbatim>\<open>sign_dg_post_solution_collect_sound_ltr\<close>); source-to-trace
+  \<^verbatim>\<open>source_reaches_ltr_collect\<close> (monovariant) and \<^verbatim>\<open>source_activation_sound\<close>
+  (keyed).  The \<^verbatim>\<open>cfg_collect\<close> analogues are retained as compatibility results.
 
   The proof is layered into four Isabelle sessions.  The list below separates
   the proof spine from executable frontends, DOT exporters, and research

@@ -669,3 +669,55 @@ Review invariants held: executable post-solution reused unchanged; no
 `ltr_collect_le_cfg_collect` in any flagship proof; the single-caller `COMB` obligation
 reads one combine triple, so DG adds no second caller/callee matching; keyed `twice` still
 reads/returns through distinct caller contexts; raw-CFG theorems retained.
+
+### R7 — consolidation (editorial)
+
+R0–R6 are complete and batch-green. R7 is cleanup only: no semantics, solver equations,
+executable results, domain operations, or public theorem assumptions change.
+
+**Canonical naming.**
+
+```text
+compiled IMP2 programs:
+  valid_ltr / ltr_collect / ltr_collect_keyed are canonical.
+
+arbitrary CFG records:
+  cfg_collect remains the broad graph semantics (unmatched-combine closure).
+```
+
+- `cfg_collect_ctx_act` is definitionally the keyed LTR projection
+  (`cfg_collect_ctx_act_eq_ltr_collect_keyed`): a name, not a separate semantics.
+- `ltr_collect_le_cfg_collect` is a one-way compatibility bridge, `ltr_collect g S v <=
+  cfg_collect g S v`. Equality with `cfg_collect` is neither claimed nor desired; the
+  matched-return discipline of `valid_ltr` is strictly sharper.
+- The cone restriction lives in the abstract guarantee (`ltr_post_fixpoint_sound_at_eff_cone`
+  guards `acc` by `cfg_reaches`), never in a graph transformation. There is no LTR pruning.
+
+**Canonical theorem index** (actual names in-tree):
+
+| intended use | theorem | theory |
+| ------------ | ------- | ------ |
+| generic monovariant post-fixpoint | `unified_ltr_post_fixpoint_sound` | `LTR_Analysis_Sound` |
+| generic effectful exit (cone-guarded) | `side_collect_sound_exit_eff_ltr_cone` | `LTR_TD_Side_Eff_Exit` |
+| generic set-valued closure | `ltr_collect_semantic_postfix` | `LTR_Abstract` |
+| generic keyed / context-sensitive | `activation_collect_sound` | `Activation_Backbone` |
+| generic D/G trace endpoint | `dg_post_solution_collect_sound_ltr` | `DG_LTR_Sound` |
+| interval / sign D/G trace endpoint | `ivl_dg_post_solution_collect_sound_ltr` / `sign_dg_post_solution_collect_sound_ltr` | `Interval_DG_LTR` / `Sign_DG_LTR` |
+| source -> plain LTR | `source_reaches_ltr_collect` | `Source_Activation_Sound` |
+| source -> keyed LTR | `source_activation_sound` | `Source_Activation_Sound` |
+| raw / arbitrary CFG | `unified_post_fixpoint_sound`, `dg_post_solution_collect_sound`, `cfg_collect_semantic_postfix`, `ltr_collect_le_cfg_collect` | `Analysis_Sound` / `DG_Soundness` / `LTR_Collect` |
+
+**Compatibility retained (raw-CFG, not deleted):** `cfg_collect` and its endpoints,
+`cfg_collect_ctx_act`, `ltr_collect_le_cfg_collect`, the cfg-level effectful pruning spine
+(`prune_cfg`, `side_analyse_eff_collect_sound_exit_pruned{,_gen}`,
+`side_analyse_eff_collect_sound_at_pruned`), and all `*_collect_sound` example witnesses.
+
+**Removed:** none. No dead theory was found. (`TD_Side_Eff_Ctx_Shared.thy` looks orphaned by
+the top-level ROOT `theories` list, but `TD_Side_Eff_Keyed_Gen` imports it and uses
+`inr_slot_locals_bot_ctx` / `inl_slot_globals_bot_ctx` / `pull_ctx`; it is built as a
+transitive dependency, so it stays.)
+
+**Not retired:** `cfg_collect` stays the canonical *arbitrary-CFG* semantics; only its role as
+the *compiled-program* correctness target is superseded by `ltr_collect`. Deferred to a future
+stage (was "R7 retire the legacy target") — no compiled soundness theorem depends on
+unmatched-combine collecting, but the raw infrastructure is deliberately kept.
