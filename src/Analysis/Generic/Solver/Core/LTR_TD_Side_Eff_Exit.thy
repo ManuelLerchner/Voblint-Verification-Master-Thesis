@@ -113,25 +113,55 @@ proof -
   qed
 qed
 
+theorem ltr_post_fixpoint_sound_in_eff_cone:
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite => 'a::sound_domain abs_state"
+    and S :: "store set" and v0 v :: pp
+    and etf :: "('g, 'a) effectful_domain_transfer"
+  assumes se: "sound_effectful_transfer etf"
+  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes entry: "S <= \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  assumes step_le:
+    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> cfg_reaches g w v0
+       \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> <= side_env \<sigma> w"
+  assumes combine_le:
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> cfg_reaches g ret v0 \<Longrightarrow>
+       etf_full (etf_combine etf dst c ex) \<sigma> <= side_env \<sigma> ret"
+  assumes v0_reach: "cfg_reaches g v v0"
+  shows "ltr_collect g S v \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+proof (rule ltr_post_fixpoint_sound_at_eff_cone[OF se inr entry])
+  fix u a w
+  assume e: "(u, a, w) \<in> edges g" and rw: "cfg_reaches g w v"
+  show "etf_full (apply_etf etf a u) \<sigma> <= side_env \<sigma> w"
+    by (rule step_le[OF e cfg_reaches_trans[OF rw v0_reach]])
+next
+  fix c ex ret dst
+  assume cmb: "(c, ex, ret, dst) \<in> combines g" and rr: "cfg_reaches g ret v"
+  show "etf_full (etf_combine etf dst c ex) \<sigma> <= side_env \<sigma> ret"
+    by (rule combine_le[OF cmb cfg_reaches_trans[OF rr v0_reach]])
+qed
+
 text \<open>
-  The primary exit corollary applies the cone-guarded trace theorem directly to the original CFG.
-  Its cone obligations come from \<^const>\<open>cone_compatible_etf\<close> and solver-variable membership.
+  The solver-facing query-cone theorem discharges the demand-relevant obligations
+  for an arbitrary query node. The exit endpoint below is its standard
+  specialization.
 \<close>
-theorem side_collect_sound_exit_eff_ltr_cone:
+theorem side_collect_sound_in_eff_cone:
+  fixes q v :: pp
   assumes se:    "sound_effectful_transfer etf"
-  assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
+  assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) q \<sigma> vars"
   assumes fin:   "finite (edges g)"
   assumes finC:  "finite (combines g)"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes cone:  "cone_compatible_etf etf"
   assumes inr:   "inr_slot_locals_bot \<sigma>"
-  shows "ltr_collect g S (cfg_exit g) \<subseteq> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  assumes vq:    "cfg_reaches g v q"
+  shows "ltr_collect g S v \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
 proof -
   have step_le:
-    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> cfg_reaches g w (cfg_exit g)
+    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> cfg_reaches g w q
        \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
   proof -
-    fix u a w assume e: "(u, a, w) \<in> edges g" and rw: "cfg_reaches g w (cfg_exit g)"
+    fix u a w assume e: "(u, a, w) \<in> edges g" and rw: "cfg_reaches g w q"
     have wv: "w \<in> vars"
       by (rule side_cone_in_vars_eff[OF pp fin finC
             cone_compatible_etf_edge_dep[OF cone] cone_compatible_etf_comb_dep1[OF cone]
@@ -141,11 +171,11 @@ proof -
       by (rule etf_combined_le_eff[OF pp wv e fin])
   qed
   have combine_le:
-    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> cfg_reaches g ret (cfg_exit g) \<Longrightarrow>
+    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow> cfg_reaches g ret q \<Longrightarrow>
        etf_full (etf_combine etf dst c ex) \<sigma> \<le> side_env \<sigma> ret"
   proof -
     fix c ex ret dst assume cmb: "(c, ex, ret, dst) \<in> combines g"
-      and rr: "cfg_reaches g ret (cfg_exit g)"
+      and rr: "cfg_reaches g ret q"
     have rv: "ret \<in> vars"
       by (rule side_cone_in_vars_eff[OF pp fin finC
             cone_compatible_etf_edge_dep[OF cone] cone_compatible_etf_comb_dep1[OF cone]
@@ -155,8 +185,23 @@ proof -
       by (rule etf_combine_combined_le_eff[OF pp rv cmb finC])
   qed
   show ?thesis
-    by (rule ltr_post_fixpoint_sound_at_eff_cone[OF se inr entry step_le combine_le])
+    by (rule ltr_post_fixpoint_sound_in_eff_cone[OF se inr entry step_le combine_le vq])
 qed
+
+corollary side_collect_sound_exit_eff_ltr_cone:
+  assumes se:    "sound_effectful_transfer etf"
+  assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
+  assumes fin:   "finite (edges g)"
+  assumes finC:  "finite (combines g)"
+  assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  assumes cone:  "cone_compatible_etf etf"
+  assumes inr:   "inr_slot_locals_bot \<sigma>"
+  shows "ltr_collect g S (cfg_exit g) \<subseteq> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  by (rule side_collect_sound_in_eff_cone[OF se pp fin finC entry cone inr cfg_reaches_refl])
+
+
+
+
 theorem side_analyse_eff_collect_sound_exit_ltr:
   fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
     and S :: "store set"

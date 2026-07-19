@@ -68,18 +68,18 @@ text \<open>
   \<^verbatim>\<open>
     IMP2 source program          (pstep: small-step operational semantics)
          |
-         |  compile_prog                          [ FORWARD-SIMULATES ]
+         |  compile_prog                          [ FORWARD SIMULATION ]
          |     control_step_simulation            every source step is matched
          |     concrete_program_step_match        by a run of CFG steps
          v
     compiled CFG  +  located run  (cstep) ------------------------+
          |                                                        |  dg_gen_of
-         |  source_run_has_ltr          [ WITNESS ]               v
+         |  source_run_has_ltr          [ WITNESS CONSTRUCTION ]  v
          |     ltr_repr / stack_repr                       equation system
-         |     (source run has a valid_ltr witness)              |
-         v                                                        |  TD_side solve_c
-    valid_ltr                                                     |  (verified solver,
-      == THE SOLE CONCRETE CFG SEMANTICS ==                       |   computes by eval)
+         |     (source run has a valid_ltr witness)              |  TD_side solve_c
+         v                                                        |  (verified solver,
+    valid_ltr                                                     |   computes by eval)
+      == THE SOLE CONCRETE CFG SEMANTICS ==                       |   query node q
       activation-local traces: Root / Call / Resume,              v
       each return matched to its own caller by caller_of    solution  sigma
          |                                                        |
@@ -92,36 +92,41 @@ text \<open>
          +----------------------< SOUNDNESS >--------------------+
                                      |
                                      v
-       [ ABSTRACT OVER-APPROXIMATION -- the abstract side may lose precision;
+       [ SOUND OVER-APPROXIMATION -- the abstract side may lose precision;
          soundness proves the final inclusion ]
        all-node:   C v            \<subseteq>  gamma (sigma v)
           unified_ltr_post_fixpoint_sound      (monovariant)
           dg_post_solution_collect_sound_ltr   (D/G)
           activation_collect_sound             (per calling context)
-       exit only:  C (cfg_exit g) \<subseteq>  gamma (sigma (cfg_exit g))
-          side_collect_sound_exit_eff_ltr_cone (effectful, cone-guarded)
+       query cone: cfg_reaches g v q
+                   C v            \<subseteq>  gamma (sigma v)
+          side_collect_sound_in_eff_cone       (effectful TD-side)
+          side_collect_sound_exit_eff_ltr_cone (q = cfg_exit g)
   \<close>
 
-  \<^bold>\<open>Reading the diagram.\<close>  The left column is the \<^emph>\<open>concrete\<close> spine, the right column the
-  \<^emph>\<open>abstract\<close> computation; they meet at the soundness inclusion.  Two kinds of arrow:
+  \<^bold>\<open>Reading the diagram.\<close> The stages have distinct mathematical roles:
 
-    \<^item> \<^bold>\<open>[ FORWARD-SIMULATES / PROJECTS ]\<close> --- no abstract-domain approximation occurs here.
-      Compilation is a proved \<^emph>\<open>forward\<close> simulation (\<^verbatim>\<open>control_step_simulation\<close> /
-      \<^verbatim>\<open>concrete_program_step_match\<close>, \<^theory>\<open>Voblint_CFG.Control_Simulation\<close>): every source
-      run has a matching CFG run --- only the source-to-CFG direction is claimed, \<^bold>\<open>not\<close>
-      equivalence, a backward simulation, or absence of extra CFG runs.  A source run then has a
-      \<^const>\<open>valid_ltr\<close> \<^emph>\<open>witness\<close> (\<^verbatim>\<open>source_run_has_ltr\<close>,
-      \<^theory>\<open>Voblint_CFG.Located_LTR\<close>) --- \<^bold>\<open>no adequacy is assumed\<close>.  The collectors are
-      \<^emph>\<open>forgetful\<close> projections: a non-injective key may group several activations under one slot,
-      but every collected store still comes from an actual \<^const>\<open>valid_ltr\<close> --- no abstract stores
-      are introduced.
-    \<^item> \<^bold>\<open>[ ABSTRACT OVER-APPROXIMATION ]\<close> --- the only \<^emph>\<open>semantic\<close> relaxation.  The abstract
-      side may lose precision at several operations (abstract transfer, join, widening, context
-      merging, finite keys); soundness justifies them together by one inclusion,
-      \<open>C v \<subseteq> gamma (sigma v)\<close> --- every concrete store reaching \<open>v\<close> is admitted by the abstract
-      slot: at \<^emph>\<open>every\<close> program point for the plain / keyed / D/G endpoints, and at
-      \<open>cfg_exit g\<close> for the cone-guarded effectful endpoint.  Under threefold monotonicity the solver
-      result is also the \<^emph>\<open>least\<close> partial post-solution (\<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
+    \<^item> \<^bold>\<open>Forward simulation.\<close> Compilation is a proved \<^emph>\<open>forward\<close> simulation
+      (\<^verbatim>\<open>control_step_simulation\<close> / \<^verbatim>\<open>concrete_program_step_match\<close>,
+      \<^theory>\<open>Voblint_CFG.Control_Simulation\<close>): every source run has a matching CFG run.
+      Only the source-to-CFG direction is claimed: no equivalence, backward simulation, or
+      absence of extra CFG runs.
+
+    \<^item> \<^bold>\<open>Witness construction.\<close> A source run has a \<^const>\<open>valid_ltr\<close> witness
+      (\<^verbatim>\<open>source_run_has_ltr\<close>, \<^theory>\<open>Voblint_CFG.Located_LTR\<close>). No adequacy is assumed.
+
+    \<^item> \<^bold>\<open>Concrete projection.\<close> The collectors are forgetful projections. A non-injective key may
+      group several activations under one slot, but every collected store still comes from an
+      actual \<^const>\<open>valid_ltr\<close>; no abstract stores are introduced.
+
+    \<^item> \<^bold>\<open>Sound over-approximation.\<close> The abstract side may lose precision at abstract transfer,
+      join, widening, context merging, and finite keys. Soundness justifies them together by
+      \<open>C v \<subseteq> gamma (sigma v)\<close>. The plain, keyed, and D/G endpoints hold at every program point.
+      The effectful endpoint holds at every node in the queried dependency cone:
+      \<open>cfg_reaches g v q\<close>. The current executable frontend queries \<open>cfg_exit g\<close>, so its public
+      corollary is an exit theorem. Under threefold monotonicity the solver result is also the
+      \<^emph>\<open>least\<close> partial post-solution (\<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
+
 
   No abstract-domain approximation occurs before the final inclusion: the source-to-CFG connection
   is a proved forward simulation and the collectors are projections of valid traces; only \<open>gamma\<close>
@@ -148,7 +153,7 @@ text \<open>
     \<^item> \<^const>\<open>activation_collect\<close> --- the activation-keyed projection, definitionally
       \<^const>\<open>ltr_collect_keyed\<close> at the structural activation key (per calling context).
 
-  The CFG layer contributes only graph structure (edges, paths, reachability, pruning) and the
+  The CFG layer contributes only graph structure (edges, paths, reachability, the exit cone) and the
   concrete store-transfer primitives in \<^theory>\<open>Voblint_CFG.CFG_Transfer\<close>; the abstract
   endpoints, domains, and the source bridge all read the analyser back through these projections.
 
@@ -169,14 +174,13 @@ text \<open>
         domain / solver endpoints   its instantiations (Sign, Interval, mixed, D/G)
   \<close>
 
-  \<^bold>\<open>Canonical theorem map.\<close>  The load-bearing theorems on the chain, and what each gives.
-  The first block is concrete --- a forward simulation and forgetful projections, with no
-  abstract-domain approximation; the second is over-approximation
-  (\<open>concrete \<subseteq> gamma (abstract)\<close>).  Scope matters: the effectful row holds at the program
-  \<^emph>\<open>exit\<close> only, the others at \<^emph>\<open>every\<close> program point.
+  \<^bold>\<open>Canonical theorem map.\<close> The load-bearing theorems on the chain, and what each gives.
+  The first block is concrete: forward simulation, witness construction, and concrete projection.
+  The second is sound over-approximation (\<open>concrete \<subseteq> gamma (abstract)\<close>). The effectful
+  endpoint is query-parametric: its scope is every node in the queried dependency cone.
 
   \<^verbatim>\<open>
-   -- concrete: forward simulation + forgetful projection (no abstraction) --
+   -- concrete: forward simulation, witness construction, concrete projection --
    IMP2 source -> CFG run   control_step_simulation             a source step is forward-simulated
                             concrete_program_step_match          by a run of CFG steps
    CFG run -> local trace   source_run_has_ltr                  every reachable source config has
@@ -185,7 +189,7 @@ text \<open>
    source -> keyed coll.    source_store_in_activation_collect  reached store is in activation_collect
                                                                 at its calling context
 
-   -- over-approximating (concrete stores subset of gamma(abstract)) --
+   -- sound over-approximation (concrete stores subset of gamma(abstract)) --
    generic set-valued       ltr_collect_semantic_postfix        closure premises bound ltr_collect
                                                                 by B, at every node
    plain abstract           unified_ltr_post_fixpoint_sound     a post-fixpoint env covers
@@ -194,27 +198,30 @@ text \<open>
                                                                 traces, every node and context
    D/G endpoint             dg_post_solution_collect_sound_ltr  a computed D/G post-solution covers
                                                                 ltr_collect, at every node
-   effectful EXIT           side_collect_sound_exit_eff_ltr_cone  the demand-driven solver result
-                                                                covers ltr_collect at the EXIT only
+   effectful query cone     side_collect_sound_in_eff_cone      a demand-driven solver result covers
+                                                                ltr_collect where cfg_reaches g v q
+   effectful exit corollary side_collect_sound_exit_eff_ltr_cone  q = cfg_exit g
    source -> abstract       source_activation_sound             composes the keyed bridge with
    (composed)                                                   activation_collect_sound: a reached
                                                                 source store lies in gamma of the slot
   \<close>
 
-  \<^bold>\<open>The complete argument, in one sentence.\<close>  For a well-formed compiled IMP2 program
+  \<^bold>\<open>The complete argument, in one sentence.\<close> For a well-formed compiled IMP2 program
   (\<^verbatim>\<open>wf_compile_input\<close>, \<^verbatim>\<open>source_com\<close>) and any source execution, the compiler
   simulation constructs a \<^const>\<open>valid_ltr\<close> execution in the compiled CFG whose reached store lies
   in the corresponding plain (\<^const>\<open>ltr_collect\<close>) or keyed (\<^const>\<open>activation_collect\<close>) trace
   collection, and a generic solver-soundness theorem places that collection inside the
-  concretization of the computed abstract result.  Hence every concrete source state the execution
-  reaches is \<^emph>\<open>covered\<close> by the analysis --- soundness, not completeness: the abstract result may
+  concretization of the computed abstract result. Hence every concrete source state the execution
+  reaches is \<^emph>\<open>covered\<close> by the analysis: soundness, not completeness. The abstract result may
   admit more, and need not equal the concrete collecting semantics.
 
-  \<^bold>\<open>The cone guard (demand-driven path).\<close>  The effectful solver computes bounds only for
-  nodes that can reach the queried exit.  The concrete semantics still ranges over the
-  \<^emph>\<open>original\<close> CFG; the \<^locale>\<open>ltr_gamma\<close> interpretation reads the real abstract slot on the
-  exit cone and \<^const>\<open>UNIV\<close> off it.  So the cone restriction lives in the abstract guarantee ---
-  no graph-pruning transformation is part of the semantic pipeline.
+  \<^bold>\<open>The cone guard (demand-driven path).\<close> The effectful solver computes bounds for nodes in
+  the dependency cone of its query \<open>q\<close>. The concrete semantics still ranges over the \<^emph>\<open>original\<close>
+  CFG; the \<^locale>\<open>ltr_gamma\<close> interpretation reads the real abstract slot where
+  \<open>cfg_reaches g v q\<close> and \<^const>\<open>UNIV\<close> elsewhere. Thus the query-cone restriction lives in the
+  abstract guarantee; no graph-pruning transformation is part of the semantic pipeline. The current
+  executable frontend chooses \<open>q = cfg_exit g\<close>, which yields the public exit corollary.
+
 
   The proof is layered into four Isabelle sessions.  The index below separates the proof spine from
   executable frontends, DOT exporters, and research witnesses.
@@ -235,7 +242,7 @@ text \<open>
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Transfer} --- the concrete store transformers shared by the semantics: \<^verbatim>\<open>edge_step\<close>, \<^verbatim>\<open>edge_collect\<close>, \<^verbatim>\<open>edges_collect\<close>, \<^verbatim>\<open>combine_collect\<close>, \<^verbatim>\<open>call_enter_store\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>ltr_collect_keyed\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_gamma\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).
-    \<^item> @{theory Voblint_CFG.CFG_Prune} --- graph-level dead-procedure pruning utilities and reachability-cone lemmas (\<^const>\<open>cfg_reaches\<close>, \<^const>\<open>cone\<close>); pruning is \<^emph>\<open>not\<close> part of the concrete semantics or the primary LTR soundness path --- only the reachability lemmas feed the cone guard.
+    \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph reachability (\<^const>\<open>cfg_reaches\<close>) and the backward exit cone (\<^const>\<open>cone\<close>); these feed the cone guard.  No graph is pruned: the cone restriction lives in the abstract concretization, not in a semantics-altering transformation.
 
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
@@ -243,7 +250,11 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, \<^verbatim>\<open>sound_effectful_transfer\<close>.
     \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- per-edge / per-combine transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>), the building blocks of the monovariant trace endpoint \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close> (in \<^verbatim>\<open>LTR_Analysis_Sound\<close>, over \<^const>\<open>ltr_collect\<close>).
     \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, unit-global effectful tree constructors.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- effectful TD_side soundness at the exit cone over \<^const>\<open>ltr_collect\<close> (\<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>), \<^verbatim>\<open>threefold_mono\<close>, \<^verbatim>\<open>cone_compatible_etf\<close>.
+    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- query-cone soundness for the
+      effectful TD_side solver over \<^const>\<open>ltr_collect\<close>
+      (\<^verbatim>\<open>side_collect_sound_in_eff_cone\<close>), with the exit corollary
+      \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>, \<^verbatim>\<open>threefold_mono\<close>, and
+      \<^verbatim>\<open>cone_compatible_etf\<close>.
 
   \<^bold>\<open>4. Concrete domains.\<close> Domain instances used by the proof spine and examples.
     \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice, transfer functions, soundness, monotonicity, display instance.
@@ -314,10 +325,12 @@ text \<open>
   interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain and
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. The base
-  flow-sensitive spine is the cone-guarded exit endpoint
-  \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>, instantiated for Sign and Interval and stated over
-  \<^const>\<open>ltr_collect\<close> on the original CFG --- the cone restriction lives in the abstract
-  concretization guard, not in a graph transformation.
+  flow-sensitive spine is the query-cone endpoint
+  \<^verbatim>\<open>side_collect_sound_in_eff_cone\<close>, instantiated for Sign and Interval over
+  \<^const>\<open>ltr_collect\<close> on the original CFG. Its exit corollary
+  \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close> uses \<open>q = cfg_exit g\<close>. The cone
+  restriction lives in the abstract concretization guard, not in a graph
+  transformation.
 \<close>
 
 end

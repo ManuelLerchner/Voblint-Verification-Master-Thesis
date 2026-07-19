@@ -2,20 +2,17 @@ theory CFG_Prune
   imports IMP2_Proc_to_CFG
 begin
 
-section \<open>Dead-procedure pruning for interprocedural CFGs\<close>
+section \<open>Interprocedural reachability and the exit cone\<close>
 
 text \<open>
-  `compile_prog` unions every procedure's edges/combines into the graph,
-  whether or not the procedure is ever called.  A defined-but-uncalled
-  procedure leaves body nodes that are edge-targets yet cannot reach the
-  program exit -- breaking the ''every program point reaches the exit''
-  well-formedness condition.
+  Graph-level reachability for interprocedural CFGs: the successor relation
+  \<open>cfg_succ\<close> (an edge or a combine-predecessor step), its reflexive-transitive
+  closure \<open>cfg_reaches\<close>, and the backward exit cone \<open>cone\<close>.
 
-  We prune the graph to the backward cone of the exit (the live, reachable
-  nodes), keeping the solver on the full graph.  The collecting value at the
-  exit is unchanged (a witness from entry to exit stays inside the cone), so
-  soundness transports back to the unpruned analysis with no well-formedness
-  hypothesis.
+  These support the demand-driven effectful path, where the solver bounds only nodes that
+  can reach the queried exit.  That restriction lives in the abstract concretization guard
+  (\<open>ltr_post_fixpoint_sound_at_eff_cone\<close>), not in a graph transformation: the concrete
+  semantics stays over the original CFG, so no graph is pruned.
 \<close>
 
 subsection \<open>Interprocedural reachability\<close>
@@ -36,15 +33,6 @@ definition cfg_reaches :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> b
 
 definition cone :: "cfg \<Rightarrow> pp \<Rightarrow> pp set" where
   "cone g v0 = {v. cfg_reaches g v v0}"
-
-definition prune_to :: "cfg \<Rightarrow> pp \<Rightarrow> cfg" where
-  "prune_to g v0 =
-     mk_cfg (cfg_entry g) (cfg_exit g)
-       {e \<in> edges g. snd (snd e) \<in> cone g v0}
-       {ct \<in> combines g. combine_return_node ct \<in> cone g v0}"
-
-definition prune_cfg :: "cfg \<Rightarrow> cfg" where
-  "prune_cfg g = prune_to g (cfg_exit g)"
 
 subsection \<open>reaches basics\<close>
 
@@ -70,25 +58,9 @@ proof -
   thus ?thesis using assms(3) unfolding cfg_reaches_def by blast
 qed
 
-subsection \<open>prune_to selectors\<close>
-
-lemma edges_prune_to[simp]:
-  "edges (prune_to g v0) = {e \<in> edges g. snd (snd e) \<in> cone g v0}"
-  by (simp add: prune_to_def)
-
-lemma combines_prune_to[simp]:
-  "combines (prune_to g v0) = {ct \<in> combines g. combine_return_node ct \<in> cone g v0}"
-  by (simp add: prune_to_def)
-
-lemma cfg_entry_prune_to[simp]: "cfg_entry (prune_to g v0) = cfg_entry g"
-  by (simp add: prune_to_def)
-
-lemma cfg_exit_prune_to[simp]: "cfg_exit (prune_to g v0) = cfg_exit g"
-  by (simp add: prune_to_def)
-
 (* Reachability is discharged by the side solver via dep_side_rhs_tree_* and
    cfg_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_Eff_Soundness).
-   The graph-level pruning frame below is solver-agnostic. *)
+   The reachability lemmas below are solver-agnostic. *)
 
 
 

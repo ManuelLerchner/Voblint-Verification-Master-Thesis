@@ -13,7 +13,7 @@ text \<open>
   soundness against the stack-faithful local-trace collecting @{const ltr_collect}, stated directly
   over the ORIGINAL compiled graph, via @{thm [source] side_collect_sound_exit_eff_ltr_cone}.
 
-  The theorem has NO pruning bridge: no \<open>call_return_reaches\<close>, no \<^const>\<open>prune_cfg\<close>, no
+  The theorem has NO pruning bridge: no \<open>call_return_reaches\<close>, no graph transformation, no
   compiled-CFG well-bracketing hypothesis.  The cone restriction lives in the concretization guard
   of @{thm [source] ltr_post_fixpoint_sound_at_eff_cone}, not in a graph transformation, so a dead
   procedure's call site is simply off the exit cone and imposes no obligation.  The R5d
