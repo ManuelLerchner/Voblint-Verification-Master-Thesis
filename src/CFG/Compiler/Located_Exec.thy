@@ -1,5 +1,5 @@
 theory Located_Exec
-  imports Control_Residual
+  imports Control_Residual CFG_Transfer
 begin
 
 subsection \<open>Located CFG execution\<close>
@@ -93,6 +93,18 @@ lemma compile_prog_sets:
   using procs main_comp
   unfolding compile_prog_def compile_prog_with_regions_def
   by simp_all
+
+lemma cfg_exit_compile_prog:
+  assumes procs:
+    "compile_procs_list Pi ps (\<lambda>_. None) 0 =
+      (nproc, lay, Eproc, Cproc)"
+      and main_comp:
+    "compile Pi lay main nproc =
+      (nend, main_en, main_ex, Emain, Cmain)"
+  shows "cfg_exit (compile_prog Pi ps main) = main_ex"
+  using procs main_comp
+  unfolding compile_prog_def compile_prog_with_regions_def
+  by simp
 
 inductive cstep :: "cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for g where
   Intra:

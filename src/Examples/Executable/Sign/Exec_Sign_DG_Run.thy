@@ -134,7 +134,7 @@ text \<open>
 \<close>
 
 theorem dgEx_collect_sound:
-  "cfg_collect gEx cinit_stores v \<subseteq> sign_dg_gamma (fun_of_dg_st \<circ> snd dgEx_sol) v"
+  "ltr_collect gEx cinit_stores v \<subseteq> sign_dg_gamma (fun_of_dg_st \<circ> snd dgEx_sol) v"
   by (rule sign_dg_post_solution_collect_sound
         [OF dgEx_pp_abs[folded sign_dg_generator_def]
             dgEx_cover_entry dgEx_cover_edge dgEx_cover_combine gEx_finE gEx_finC dgEx_sound0])

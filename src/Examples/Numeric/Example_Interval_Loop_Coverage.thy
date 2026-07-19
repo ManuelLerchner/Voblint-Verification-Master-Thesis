@@ -1,8 +1,8 @@
 section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 
 theory Example_Interval_Loop_Coverage
-  imports Voblint_CFG.CFG_Prune "Voblint_CFG.CFG_Collect"
-    "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.Constraint_System_Sound"
+  imports Voblint_CFG.CFG_Prune
+    "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.LTR_Analysis_Sound"
     "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
 begin
 
@@ -27,7 +27,7 @@ text \<open>
 
   Certified backward-analysis story: @{text "Example_Guard_Refinement"}
   isolates the guard step; this theory carries the same @{const assume_ivl} transfers
-  through the full CFG to a plain @{const cfg_collect} soundness theorem.
+  through the full CFG to the trace-native post-fixpoint soundness theorem.
 
   Executable mirror (Kleene / warrowing TD on @{text "ivl st"}, eval only):
   @{text "Exec_Ivl_Run"}.
@@ -137,13 +137,13 @@ abbreviation "loop_head \<equiv> 2"
 
 lemma loop_head_x_bounded:
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-  assumes s: "s \<in> cfg_collect loop_cfg S loop_head"
+  assumes s: "s \<in> ltr_collect loop_cfg S loop_head"
   shows "0 \<le> s ''x'' \<and> s ''x'' \<le> 20"
 proof -
   have fin_e: "finite (edges loop_cfg)" by (simp add: loop_cfg_edges)
   have fin_c: "finite (combines loop_cfg)" by (simp add: loop_cfg_combines)
-  have le: "cfg_collect loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
-    using sound_transfer.post_fixpoint_sound
+  have le: "ltr_collect loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
+    using sound_transfer.unified_ltr_post_fixpoint_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix S_sound]
     by blast
   from s le have "s \<in> \<lbrakk>loop_env loop_head\<rbrakk>" by blast

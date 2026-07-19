@@ -9,6 +9,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
   theories
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    Exec_Sign_DG_Run_LTR
     Exec_Ivl_Run
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
@@ -25,8 +26,10 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
+    Example_Proc_Call_LTR
     Example_Proc_Recursion_CFG
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign
+    Example_Mixed_Flow_Sign_LTR
     Voblint

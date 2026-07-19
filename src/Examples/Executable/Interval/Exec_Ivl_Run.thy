@@ -21,8 +21,7 @@ text \<open>
   This theory evaluates two fixpoint engines on @{const side_cfg_T_eff_st}:
   bounded Kleene iteration on @{const eq}, and @{const TD_side_warrowing_apinis_Interp_solve}
   (pointwise interval widening on @{typ "ivl st"} for solver termination).
-  Neither is linked to @{const cfg_collect} here; see the manual post-fixpoint
-  and trace soundness proof in that example theory.
+  The example uses the trace-native post-fixpoint soundness theorem.
 \<close>
 
 definition loop_prog :: "IMP2_Proc.com" where

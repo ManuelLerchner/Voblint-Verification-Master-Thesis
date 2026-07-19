@@ -1,5 +1,7 @@
 theory Example_Side_Execute
-  imports "Voblint_Analysis.Sign_Exec_Sound" "Voblint_IMP2.IMP2_Notation"
+  imports "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_Formalization.Source_Activation_Sound"
+    "Voblint_IMP2.IMP2_Notation"
 begin
 
 section \<open>Running the certified sign analyzer on \<open>x := 1\<close>\<close>
@@ -51,9 +53,61 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "cfg_collect (prog_cfg x1_prog) cinit_stores (cfg_exit (prog_cfg x1_prog))
+  "ltr_collect (prog_cfg x1_prog) cinit_stores (cfg_exit (prog_cfg x1_prog))
    \<le> \<lbrakk>sign_exec_prog x1_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
+
+definition x1_s0 :: store where
+  "x1_s0 = (\<lambda>_. 0)"
+
+lemma x1_completed:
+  "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+     (x1_s0(''x'' := 1))"
+  unfolding pcompletes_def
+  apply (simp only: x1_prog_def x1_s0_def fst_conv snd_conv)
+  apply (rule star.step)
+   apply (rule pstep.Assign)
+  by simp
+
+lemma x1_completed_run_collect:
+  "x1_s0(''x'' := 1) \<in>
+    ltr_collect (compile_prog (prog_table x1_prog) (prog_procs x1_prog) (prog_main x1_prog))
+      cinit_stores
+      (cfg_exit (compile_prog (prog_table x1_prog) (prog_procs x1_prog) (prog_main x1_prog)))"
+proof -
+  have init: "x1_s0 \<in> cinit_stores"
+    by (simp add: x1_s0_def cinit_stores_def)
+  have wf: "wf_compile_input (prog_table x1_prog) (prog_procs x1_prog) (prog_main x1_prog)"
+    unfolding wf_compile_input_def source_pi_def x1_prog_def
+    by simp
+  have src: "source_com (prog_main x1_prog)"
+    by (simp add: x1_prog_def)
+  have run:
+    "star (pstep (prog_table x1_prog))
+      (prog_main x1_prog, x1_s0, [])
+      (IMP2_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
+    using x1_completed unfolding pcompletes_def .
+  show ?thesis
+    by (rule source_completes_ltr_collect_exit[OF wf src init run])
+qed
+
+theorem x1_explicit_completed_run_covered:
+  "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+      (x1_s0(''x'' := 1))
+   \<and> x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog x1_prog\<rbrakk>"
+proof
+  show "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+      (x1_s0(''x'' := 1))"
+    by (rule x1_completed)
+next
+  have collect:
+    "x1_s0(''x'' := 1) \<in>
+      ltr_collect (prog_cfg x1_prog) cinit_stores (cfg_exit (prog_cfg x1_prog))"
+    using x1_completed_run_collect
+    by (simp add: prog_cfg_def)
+  show "x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog x1_prog\<rbrakk>"
+    using x1_certified_sound collect by blast
+qed
 
 subsection \<open>Annotated CFG visualisation\<close>
 

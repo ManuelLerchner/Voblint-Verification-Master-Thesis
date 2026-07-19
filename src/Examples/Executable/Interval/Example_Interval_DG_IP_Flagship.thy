@@ -8,7 +8,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
-    "Voblint_Formalization.Compiler_Correctness"
+    "Voblint_Formalization.Source_Activation_Sound"
 begin
 
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
@@ -160,27 +160,19 @@ proof -
 qed
 
 text \<open>
-  \<^bold>\<open>The end-to-end interprocedural theorem.\<close>  Every concrete store reaching any
-  program point \<open>v\<close> in the collecting semantics of \<open>twice_cfg\<close> --- which now
-  includes the callee body reached \<^emph>\<open>through the two call edges\<close> --- is contained
-  in the native D/G concretization of the solver-computed solution.
+  The computed D/G post-solution bounds every stack-faithful local trace, including matched calls
+  and returns, at each CFG point.
 \<close>
 
 theorem twice_collect_sound:
-  "cfg_collect twice_cfg cinit_stores v \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
+  "ltr_collect twice_cfg cinit_stores v
+     \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
   by (rule ivl_dg_post_solution_collect_sound
         [OF twice_pp_abs[folded ivl_dg_generator_def]
             twice_cover_entry twice_cover_edge twice_cover_combine
             twice_finE twice_finC twice_sound0])
 
 subsection \<open>Inspecting the certified result\<close>
-
-text \<open>
-  The computed values, on the \<^emph>\<open>same\<close> solution the soundness theorem certifies:
-  the shared callee entry merges both calling contexts (\<open>p in [3,10]\<close>), the return
-  expression evaluates to \<open>[6,20]\<close>, and both destinations receive it.  This is the
-  monovariant answer: sound (\<open>6, 20 in [6,20]\<close>) but merged across the two calls.
-\<close>
 
 lemma twice_p_at_entry:
   "lookup_st (locals (snd twice_sol (Inl (0::pp, ())))) ''p'' = Ivl (Fin 3) (Fin 10)"
@@ -198,47 +190,11 @@ lemma twice_y_computed:
   "lookup_st (locals (snd twice_sol (Inl (7::pp, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
-subsection \<open>Lifting soundness to IMP2 source runs (compiler correctness)\<close>
-
-text \<open>
-  The compiler-correctness simulation closes the gap to the source: every
-  terminating-or-partial IMP2 small-step run of \<open>twice_main\<close> under the procedure
-  table \<open>twice_pi\<close> --- including the two calls into \<open>twice\<close> and the return
-  assignments --- is reproduced on the compiled CFG, so the reached store lands in
-  \<open>cfg_collect\<close> and, by \<open>twice_collect_sound\<close>, inside the solver-computed interval
-  solution.
-\<close>
+subsection \<open>Source-level soundness\<close>
 
 lemma twice_wf: "wf_compile_input twice_pi twice_procs twice_main"
   unfolding wf_compile_input_def twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (simp add: compile_eval_simps source_pi_def proc_decl_of_def)
-
-interpretation twice_sim: compiled_source_simulation
-    twice_pi twice_procs twice_main twice_cfg
-    "concrete_program_match twice_pi twice_procs twice_main"
-proof
-  show "twice_cfg = compile_prog twice_pi twice_procs twice_main"
-    by (simp add: twice_cfg_def)
-  show "wf_compile_input twice_pi twice_procs twice_main" by (rule twice_wf)
-  fix s
-  show "concrete_program_match twice_pi twice_procs twice_main (twice_main, s, []) (cfg_entry twice_cfg, s, [])"
-    using twice_wf unfolding wf_compile_input_def
-    by (simp add: twice_cfg_def concrete_program_initial_match)
-next
-  fix src src' cf
-  assume m: "concrete_program_match twice_pi twice_procs twice_main src cf"
-     and st: "pstep twice_pi src src'"
-  show "\<exists>cf'. star (cstep twice_cfg) cf cf' \<and> concrete_program_match twice_pi twice_procs twice_main src' cf'"
-    using concrete_program_step_match[OF twice_wf m st] by (simp add: twice_cfg_def)
-qed
-
-text \<open>
-  \<^bold>\<open>The source-level capstone.\<close>  For any IMP2 run of \<open>twice_main\<close> under \<open>twice_pi\<close>
-  from a C-faithful initial store, whatever configuration \<open>src'\<close> it reaches matches
-  a CFG point \<open>(v, t, stk)\<close> whose concrete store \<open>t\<close> is contained in the
-  concretization of the solver-computed interval solution.  Soundness holds against
-  the real interprocedural source semantics, not merely the CFG.
-\<close>
 
 theorem twice_source_run_sound:
   assumes run: "psteps twice_pi (twice_main, s, []) src'"
@@ -246,14 +202,15 @@ theorem twice_source_run_sound:
   shows "\<exists>v t stk. concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)
                    \<and> t \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
 proof -
-  obtain v t stk where m: "concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)"
-      and coll: "t \<in> cfg_collect twice_cfg {s} v"
-    using twice_sim.source_reaches_cfg_collect[OF run] by blast
-  have "cfg_collect twice_cfg {s} v \<subseteq> cfg_collect twice_cfg cinit_stores v"
-    using init by (intro le_funD[OF cfg_collect_mono_S]) auto
-  also have "\<dots> \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
-    by (rule twice_collect_sound)
-  finally show ?thesis using m coll by blast
+  obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
+  have sc: "source_com twice_main" by (simp add: twice_main_def twice_program_def)
+  obtain v stk where m: "concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)"
+      and coll0: "t \<in> ltr_collect (compile_prog twice_pi twice_procs twice_main) cinit_stores v"
+    using source_reaches_ltr_collect[OF twice_wf sc init run[unfolded src']]
+    unfolding src' by blast
+  have coll: "t \<in> ltr_collect twice_cfg cinit_stores v"
+    using coll0 by (simp add: twice_cfg_def)
+  show ?thesis using m coll twice_collect_sound by blast
 qed
 
 subsection \<open>Annotated GraphViz of the computed result\<close>

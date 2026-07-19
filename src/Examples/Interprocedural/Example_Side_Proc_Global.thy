@@ -4,14 +4,12 @@ theory Example_Side_Proc_Global
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Sign_Exec_Sound"
-    "Voblint_CFG.CFG_Collect_Runs"
     "Voblint_IMP2.IMP2_Notation"
 begin
 
 text \<open>
   Side-effecting interprocedural witness: \<open>inc_pi\<close> with a single call to
-  procedure p.  Operational semantics via @{const cfg_runs_to}; soundness via
-  @{const side_analyse_eff} (the effectful side TD solver).
+  procedure p. Its soundness uses the effectful side TD solver.
 \<close>
 
 text \<open>The analyzed program, defined locally so the example is self-contained: a single
@@ -36,31 +34,24 @@ definition side_proc_global_s0 :: "sign abs_state" where
 theorem proc_global_side_sign_analysis:
   fixes s t :: store
   assumes s_sound: "s \<in> \<lbrakk>side_proc_global_s0\<rbrakk>"
-  assumes runs: "cfg_runs_to inc_pi [''p''] (Call None ''p'' []) s t"
+  assumes collect_exit:
+    "t \<in> ltr_collect (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])) {s}
+       (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call None ''p'' [])) sign_etf bot
+    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])) sign_etf bot
        side_proc_global_s0 ()
-       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
-  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (Call None ''p'' []) sign_etf bot side_proc_global_s0 ()
-         (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))\<rbrakk>"
-proof -
-  have collect_exit:
-    "t \<in> cfg_collect (compile_prog inc_pi [''p''] (Call None ''p'' [])) {s}
-       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
-    using runs unfolding cfg_runs_to_def
-    by metis
-  show ?thesis
-    by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
-qed
-
+       (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))"
+  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (IMP2_Proc.Call None ''p'' []) sign_etf bot side_proc_global_s0 ()
+         (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))\<rbrakk>"
+  by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 subsection \<open>Executable sign analysis\<close>
 
 definition inc_procs :: "pname list" where
   "inc_procs = [''p'']"
 
-definition inc_main :: com where
-  "inc_main = Call None ''p'' []"
 
+definition inc_main :: com where
+  "inc_main = IMP2_Proc.Call None ''p'' []"
 definition inc_prog :: imp_prog where
   "inc_prog = (inc_procs, inc_pi, inc_main)"
 
@@ -75,7 +66,7 @@ lemma inc_terminates: "sign_terminates_prog inc_prog"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 corollary inc_certified_sound:
-  "cfg_collect (prog_cfg inc_prog) cinit_stores (cfg_exit (prog_cfg inc_prog))
+  "ltr_collect (prog_cfg inc_prog) cinit_stores (cfg_exit (prog_cfg inc_prog))
    \<le> \<lbrakk>sign_exec_prog inc_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
 

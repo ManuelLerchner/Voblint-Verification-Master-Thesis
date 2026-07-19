@@ -1,5 +1,5 @@
 theory Sign_Side_Soundness
-  imports Sign_Domain TD_Side_Eff_Soundness Retain_Analysis
+  imports Sign_Domain LTR_TD_Side_Eff_Exit Retain_Analysis
 begin
 
 section \<open>Sign domain: effectful transfer instance\<close>
@@ -264,7 +264,7 @@ theorem side_sign_analysis_sound:
   fixes \<Pi> ps main and s t :: store and s0 :: "sign abs_state"
   assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> cfg_collect (compile_prog \<Pi> ps main) {s}
+    "t \<in> ltr_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) sign_etf bot s0 ()
@@ -274,11 +274,11 @@ theorem side_sign_analysis_sound:
 proof -
   have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
   have collect:
-    "cfg_collect (compile_prog \<Pi> ps main) {s}
+    "ltr_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
      \<le> \<lbrakk>side_analyse_eff \<Pi> ps main sign_etf bot s0 ()
            (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
-    by (rule side_analyse_eff_collect_sound_exit_pruned
+    by (rule side_analyse_eff_collect_sound_exit_ltr_cone
           [OF sign_sound_etf sign_etf_threefold_mono sign_etf_cone_compatible
               side_solve_dom gs])
   show ?thesis using collect collect_exit by blast

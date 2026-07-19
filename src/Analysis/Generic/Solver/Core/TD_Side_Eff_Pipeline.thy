@@ -81,56 +81,7 @@ qed
 
 subsection \<open>Collecting soundness from a post-solution\<close>
 
-text \<open>
-  Effectful counterpart of sound_transfer.side_collect_sound_at: a
-  post-solution of the effectful equation system soundly over-approximates the IP
-  collecting semantics at v0.  The per-edge / per-combine bounds are discharged
-  from the post-solution (etf_combined_le_eff / etf_combine_combined_le_eff);
-  coverage (every edge target / combine return is solved) is taken as a hypothesis.
-
-  Generic in the named-global type 'g (finite); the initial globals are seeded
-  into the designated slot gseed at the entry.  The soundness contract is an
-  explicit hypothesis and the generic abstract soundness
-  (post_fixpoint_sound_at_eff) is interpreted at 'g.
-\<close>
-
-theorem side_collect_sound_at_eff:
-  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
-    and bot0 s0 :: "'a abs_state" and v0 :: pp and S :: "store set"
-    and etf :: "('g, 'a) effectful_domain_transfer"
-    and gseed :: 'g
-  assumes se: "sound_effectful_transfer etf"
-      and pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) v0 \<sigma> vars"
-      and fin: "finite (edges g)"
-      and finC: "finite (combines g)"
-      and entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
-      and edge_cov: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> w \<in> vars"
-      and combine_cov: "\<And>cc ex dst ret. (cc, ex, ret, dst) \<in> combines g \<Longrightarrow> ret \<in> vars"
-      and inr: "inr_slot_locals_bot \<sigma>"
-  shows "cfg_collect g S v0 \<le> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
-
-proof -
-  interpret se: sound_effectful_transfer etf by (rule se)
-  have step_le:
-    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
-  proof -
-    fix u a w assume ed: "(u, a, w) \<in> edges g"
-    show "etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
-      by (rule etf_combined_le_eff[OF pp edge_cov[OF ed] ed fin])
-  qed
-  have combine_le:
-    "\<And>cc ex dst ret. (cc, ex, ret, dst) \<in> combines g \<Longrightarrow>
-       etf_full (etf_combine etf dst cc ex) \<sigma> \<le> side_env \<sigma> ret"
-  proof -
-    fix cc ex ret dst assume cmb: "(cc, ex, ret, dst) \<in> combines g"
-    show "etf_full (etf_combine etf dst cc ex) \<sigma> \<le> side_env \<sigma> ret"
-      by (rule etf_combine_combined_le_eff[OF pp combine_cov[OF cmb] cmb finC])
-  qed
-  show ?thesis
-    by (rule se.post_fixpoint_sound_at_eff[OF inr entry step_le combine_le order_refl])
-
-qed
-
+text \<open>Cone-compatibility conditions for cone-restricted effectful soundness.\<close>
 subsection \<open>Cone-compatibility\<close>
 
 text \<open>

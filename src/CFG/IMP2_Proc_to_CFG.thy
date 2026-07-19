@@ -126,19 +126,12 @@ where
       in (n'', full_lay, E, C))"
 
 
-definition edges_endpoint_pps :: "(pp \<times> edge_action \<times> pp) set \<Rightarrow> pp set" where
-  "edges_endpoint_pps E = fst ` E \<union> (snd \<circ> snd) ` E"
-
 definition proc_info_pp_list :: "proc_info \<Rightarrow> pp list" where
   "proc_info_pp_list info =
      (case info of (en, ex, Ns, E, C) \<Rightarrow> sorted_list_of_set ({en, ex} \<union> Ns))"
 
 definition proc_info_nodes :: "proc_info \<Rightarrow> pp set" where
   "proc_info_nodes info = set (proc_info_pp_list info)"
-
-definition com_pp_list ::
-  "proc_info \<Rightarrow> pp list" where
-  "com_pp_list = proc_info_pp_list"
 
 fun fold_proc_pps :: "pname list \<Rightarrow> proc_layout \<Rightarrow> pp set" where
   "fold_proc_pps [] lay = {}"

@@ -1,8 +1,8 @@
 theory Mixed_Sign_Interval
   imports
-    "Voblint_Analysis.DG_Soundness"
+    "Voblint_Analysis.DG_LTR_Sound"
     "Voblint_Analysis.Solver_Menu"
-    "Voblint_Analysis.Analysis_Sound"
+
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Ivl_Exec"
 begin
@@ -183,10 +183,10 @@ theorem mixed_si_postfix_collect_sound:
     and finC: "finite (combines g)"
     and soundD: "S \<le> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<le> \<lbrakk>s0g\<rbrakk>"
-  shows "cfg_collect g S v \<le> mixed_si_gamma sigma v"
+  shows "ltr_collect g S v \<le> mixed_si_gamma sigma v"
   unfolding mixed_si_gamma_dg
-  apply (rule mixed_si.dg_postfix_collect_sound
-        [OF pf[unfolded mixed_si_postfix_dg] finE finC])
+  apply (rule mixed_si.dg_postfix_collect_sound_ltr
+        [OF pf[unfolded mixed_si_postfix_dg]])
   using soundD soundG unfolding gamma_dg_def by blast
 
 corollary mixed_si_post_solution_collect_sound:
@@ -202,9 +202,9 @@ corollary mixed_si_post_solution_collect_sound:
     and finC: "finite (combines g)"
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
-  shows "cfg_collect g S v \<subseteq> mixed_si_gamma sigma v"
+  shows "ltr_collect g S v \<subseteq> mixed_si_gamma sigma v"
   unfolding mixed_si_gamma_dg
-  apply (rule mixed_si.dg_post_solution_collect_sound
+  apply (rule mixed_si.dg_post_solution_collect_sound_ltr
         [OF pp[unfolded mixed_si_generator_dg]
             cover_entry cover_edge cover_combine finE finC])
   using soundD soundG unfolding gamma_dg_def by auto

@@ -5,9 +5,9 @@ theory Example_Proc_Call
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.CFG_Collect"
+
     "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.Constraint_System_Sound"
+    "Voblint_Analysis.LTR_Analysis_Sound"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
@@ -54,9 +54,9 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes proc_pi (Call None ''inc'' []) s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have run: "pcompletes proc_pi (Call None ''inc'' []) s
+  have run: "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Legacy_Call[where c = inc_body])
     show "proc_pi ''inc'' = Some (proc_decl_legacy inc_body)"
@@ -79,9 +79,9 @@ proof -
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_pi (Call None ''sqr'' []) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
-  have run: "pcompletes proc_pi (Call None ''sqr'' []) s
+  have run: "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pcompletes_Legacy_Call[where c = sqr_body])
     show "proc_pi ''sqr'' = Some (proc_decl_legacy sqr_body)"
@@ -113,10 +113,10 @@ proof -
   have step1: "pcompletes proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
     using pcompletes_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
     by (simp add: pcompletes_def)
-  have step2: "pcompletes proc_pi (Call None ''inc'' []) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+  have step2: "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
     using call_inc_result[where s = "s(''Gx'' := 4)"]
     by simp
-  have step3: "pcompletes proc_pi (Call None ''sqr'' []) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+  have step3: "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
     using call_sqr_result[where s = "s(''Gx'' := 5)"]
     by simp
   show ?thesis
@@ -239,21 +239,21 @@ text \<open>
   whose initial store is in the concretisation of @{const main_prog_s0},
   the value of @{term \<open>''Gx''\<close>} lies in @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
 
-  The proof applies the generic interprocedural post-fixpoint soundness
-  theorem (@{thm [source] Constraint_System_Sound.sound_transfer.post_fixpoint_sound})
-  to the exhibited post-fixpoint @{thm [source] main_prog_postfix [no_vars]}.
+
+  The proof applies the generic trace-native post-fixpoint theorem to the exhibited
+  post-fixpoint @{thm [source] main_prog_postfix [no_vars]}.
 \<close>
 
 theorem main_prog_interval_analysis:
   assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
-  assumes s: "s \<in> cfg_collect main_cfg S (cfg_exit main_cfg)"
+  assumes s: "s \<in> ltr_collect main_cfg S (cfg_exit main_cfg)"
   shows "s ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (edges main_cfg)" by (simp add: main_cfg_edges)
   have fin_c: "finite (combines main_cfg)" by (simp add: main_cfg_combines)
-  have le: "cfg_collect main_cfg S (cfg_exit main_cfg)
+  have le: "ltr_collect main_cfg S (cfg_exit main_cfg)
               \<le> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>"
-    using sound_transfer.post_fixpoint_sound
+    using sound_transfer.unified_ltr_post_fixpoint_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix S_sound]
     by blast
   from s le have "s \<in> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>" by blast
