@@ -20,7 +20,7 @@ the framework.**
 
 ## ⭐ Flagship Example
 
-`src/Formalization/Examples/Executable/Interval/Example_Interval_DG_Flagship.thy`
+`src/Examples/Executable/Interval/Example_Interval_DG_Flagship.thy`
 
 The flagship theory analyzes a counting loop:
 
@@ -194,12 +194,13 @@ Five Isabelle sessions build in order:
 
 ## Theoretical Foundations
 
-The concrete semantic target is the interprocedural collecting semantics
-`cfg_collect`. The strongest reusable source-to-analysis theorem is
-`source_reaches_side_analyse_eff`
-(`src/Formalization/Pipeline/Compiler_Correctness.thy`): for a real
+The concrete semantic target is the interprocedural activation-local trace
+collecting semantics `ltr_collect`, the forgetful projection of `valid_ltr`.
+The strongest reusable source-to-analysis theorem is `source_activation_sound`
+(`src/Formalization/Pipeline/Source_Activation_Sound.thy`): for a real
 IMP2 run, the compiled CFG, and a sound solver instance, the abstract result
-contains the matched concrete state at some CFG point.
+contains the matched concrete state at its calling context. Its monovariant
+companion `source_reaches_ltr_collect` lands the reached store in `ltr_collect`.
 
 The native D/G soundness endpoints include
 `sign_dg_post_solution_collect_sound`,
@@ -210,7 +211,7 @@ theory instantiates that path for a solver-computed interval result.
 
 For a more theorem-centric overview, see `docs/PROOF_OVERVIEW.md`,
 `docs/PROOF_PHASES.md`, and the session entry theory
-`src/Formalization/Voblint.thy`.
+`src/Examples/Voblint.thy`.
 
 ## Build
 
@@ -265,7 +266,7 @@ For deeper theory-level detail, start with:
 - `docs/PROOF_OVERVIEW.md` for the big-picture proof story.
 - `docs/PROOF_PHASES.md` for phase status and remaining proof work.
 - `docs/ROADMAP.md` for active backlog and project direction.
-- `src/Formalization/Voblint.thy` for the session-level theory map.
+- `src/Examples/Voblint.thy` for the session-level theory map.
 
 ### Verified dependencies
 

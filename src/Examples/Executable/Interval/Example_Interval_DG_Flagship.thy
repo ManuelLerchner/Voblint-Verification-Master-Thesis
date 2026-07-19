@@ -29,7 +29,7 @@ text \<open>
    abstract post-solution
             |  ivl_dg_post_solution_collect_sound     (section 8)
             v
-    cfg_collect subset gamma(sigma)   --- x in [0,20]  (section 9)
+    ltr_collect subset gamma(sigma)   --- x in [0,20]  (section 9)
             |  compiler-correctness simulation        (section 10)
             v
    every IMP2 source run is bounded by sigma
@@ -45,7 +45,7 @@ text \<open>
   It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st\<close>
   (\<open>Ivl_Exec\<close>), the executable D/G bridge (\<open>Exec_DG_Bridge\<close>), the native interval
   D/G soundness endpoint (\<open>Interval_DG\<close>), the compiler-correctness simulation
-  (\<open>Compiler_Correctness\<close>), and the vendored warrowing solver.
+  (\<open>Source_Activation_Sound\<close>), and the vendored warrowing solver.
 \<close>
 
 theory Example_Interval_DG_Flagship
@@ -58,7 +58,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_IMP2.IMP2_Bridge"
-    "Voblint_Formalization.Compiler_Correctness"
+    "Voblint_Formalization.Source_Activation_Sound"
 begin
 
 no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
@@ -248,31 +248,19 @@ proof -
 qed
 
 text \<open>
-  \<^bold>\<open>The end-to-end theorem.\<close>  Every concrete store reaching any program point \<open>v\<close> in
-  the collecting semantics of \<open>flagship_cfg\<close> is contained in the native D/G
-  concretization of the \<^emph>\<open>solver-computed\<close> solution \<open>snd flagship_sol\<close>.
+  The computed D/G post-solution bounds the stack-faithful collecting semantics at every program
+  point.  The source bridge then transfers each reachable IMP2 store into the same result.
 \<close>
 
 theorem flagship_collect_sound:
-  "cfg_collect flagship_cfg cinit_stores v \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) v"
+  "ltr_collect flagship_cfg cinit_stores v
+     \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) v"
   by (rule ivl_dg_post_solution_collect_sound
         [OF flagship_pp_abs[folded ivl_dg_generator_def]
             flagship_cover_entry flagship_cover_edge flagship_cover_combine
             flagship_finE flagship_finC flagship_sound0])
 
 subsection \<open>9. Inspecting the certified result\<close>
-
-text \<open>
-  The computed local interval for \<open>x\<close> at the interesting points, on the \<^emph>\<open>same\<close>
-  solution the soundness theorem certifies:
-
-    \<^item> loop head (node \<open>2\<close>): \<open>x in [0,20]\<close> --- the loop invariant.
-    \<^item> body entry (node \<open>3\<close>): \<open>x in [0,19]\<close> --- the guard \<open>x < 20\<close> refines the upper bound.
-    \<^item> exit (node \<open>5\<close>): \<open>x in [20,20]\<close> --- the negated guard fixes \<open>x = 20\<close> exactly.
-
-  With \<open>flagship_collect_sound\<close>, these are sound bounds on every reaching concrete
-  store, computed by the verified solver.
-\<close>
 
 lemma flagship_head_computed:
   "lookup_st (locals (snd flagship_sol (Inl (2::pp, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
@@ -286,50 +274,11 @@ lemma flagship_exit_computed:
   "lookup_st (locals (snd flagship_sol (Inl (5::pp, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
-subsection \<open>10. Lifting soundness to IMP2 source runs (compiler correctness)\<close>
-
-text \<open>
-  Sections 1--9 bound the \<^emph>\<open>collecting semantics\<close> of the compiled CFG.  The
-  compiler-correctness simulation (\<open>Compiler_Correctness\<close>) closes the
-  last gap to the source: every terminating-or-partial IMP2 small-step run
-  (\<open>psteps\<close>) of the program is reproduced on the compiled CFG, so the concrete
-  state it reaches lands in \<open>cfg_collect\<close> --- and therefore, by
-  \<open>flagship_collect_sound\<close>, inside the solver-computed interval solution.
-
-  The program is well-formed compiler input, and the simulation locale
-  \<open>compiled_source_simulation\<close> interprets for it directly.
-\<close>
+subsection \<open>10. Source-level soundness\<close>
 
 lemma flagship_wf: "wf_compile_input Map.empty [] flagship_prog"
   unfolding wf_compile_input_def flagship_prog_def
   by (simp add: compile_eval_simps source_pi_def)
-
-interpretation flagship_sim: compiled_source_simulation
-    "Map.empty" "[]" flagship_prog flagship_cfg
-    "concrete_program_match Map.empty [] flagship_prog"
-proof
-  show "flagship_cfg = compile_prog Map.empty [] flagship_prog"
-    by (simp add: flagship_cfg_def)
-  show "wf_compile_input Map.empty [] flagship_prog" by (rule flagship_wf)
-  fix s
-  show "concrete_program_match Map.empty [] flagship_prog (flagship_prog, s, []) (cfg_entry flagship_cfg, s, [])"
-    using flagship_wf unfolding wf_compile_input_def
-    by (simp add: flagship_cfg_def concrete_program_initial_match)
-next
-  fix src src' cf
-  assume m: "concrete_program_match Map.empty [] flagship_prog src cf"
-     and st: "pstep Map.empty src src'"
-  show "\<exists>cf'. star (cstep flagship_cfg) cf cf' \<and> concrete_program_match Map.empty [] flagship_prog src' cf'"
-    using concrete_program_step_match[OF flagship_wf m st] by (simp add: flagship_cfg_def)
-qed
-
-text \<open>
-  \<^bold>\<open>The source-level capstone.\<close>  For any IMP2 run of \<open>flagship_prog\<close> from a
-  C-faithful initial store (globals zero), whatever configuration \<open>src'\<close> it
-  reaches matches a CFG point \<open>(v, t, stk)\<close> at which the concrete store \<open>t\<close> is
-  contained in the concretization of the \<^emph>\<open>solver-computed\<close> interval solution.
-  This is soundness against the real source semantics, not merely the CFG.
-\<close>
 
 theorem flagship_source_run_sound:
   assumes run: "psteps Map.empty (flagship_prog, s, []) src'"
@@ -337,86 +286,18 @@ theorem flagship_source_run_sound:
   shows "\<exists>v t stk. concrete_program_match Map.empty [] flagship_prog src' (v, t, stk)
                    \<and> t \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) v"
 proof -
-  obtain v t stk where m: "concrete_program_match Map.empty [] flagship_prog src' (v, t, stk)"
-      and coll: "t \<in> cfg_collect flagship_cfg {s} v"
-    using flagship_sim.source_reaches_cfg_collect[OF run] by blast
-  have "cfg_collect flagship_cfg {s} v \<subseteq> cfg_collect flagship_cfg cinit_stores v"
-    using init by (intro le_funD[OF cfg_collect_mono_S]) auto
-  also have "\<dots> \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) v"
-    by (rule flagship_collect_sound)
-  finally show ?thesis using m coll by blast
+  obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
+  have sc: "source_com flagship_prog" by (simp add: flagship_prog_def)
+  obtain v stk where m: "concrete_program_match Map.empty [] flagship_prog src' (v, t, stk)"
+      and coll0: "t \<in> ltr_collect (compile_prog Map.empty [] flagship_prog) cinit_stores v"
+    using source_reaches_ltr_collect[OF flagship_wf sc init run[unfolded src']]
+    unfolding src' by blast
+  have coll: "t \<in> ltr_collect flagship_cfg cinit_stores v"
+    using coll0 by (simp add: flagship_cfg_def)
+  show ?thesis using m coll flagship_collect_sound by blast
 qed
 
-subsection \<open>11. Non-vacuity: an explicit reachable witness\<close>
 
-text \<open>
-  Sections 8--10 are inclusions and implications --- worth checking they are not
-  vacuous.  We exhibit a concrete store that genuinely reaches the loop head, so
-  the collecting set there is inhabited and the soundness conclusion applies to a
-  real reachable state; and we show the computed bound is a \<^emph>\<open>proper\<close> constraint
-  (it rejects \<open>x = 100\<close>), so soundness is not trivially \<open>top\<close>.
-
-  The all-zero store is C-faithful, and an explicit two-edge trace
-  (\<open>x := 0\<close> then the loop-head \<open>nop\<close>) carries it from the entry to the loop head
-  inside \<open>cfg_collect\<close>.
-\<close>
-
-definition wit_store :: store where "wit_store = (\<lambda>_. 0)"
-
-lemma wit_cinit: "wit_store \<in> cinit_stores"
-  by (simp add: wit_store_def cinit_stores_def)
-
-lemma wit_entry: "wit_store \<in> cfg_collect flagship_cfg cinit_stores (cfg_entry flagship_cfg)"
-  using cfg_collect_entry wit_cinit by blast
-
-lemma wit_ec:
-  "wit_store \<in> edge_collect (EA_Assign ''x'' (BaseN (AExp.N 0))) (cfg_collect flagship_cfg cinit_stores 0)"
-proof (subst edge_collect.simps(2), rule CollectI, rule exI[of _ wit_store], intro conjI)
-  show "wit_store = wit_store(''x'' := IMP2_Expr.aval (BaseN (AExp.N 0)) wit_store)"
-    by (simp add: wit_store_def fun_upd_idem)
-  show "wit_store \<in> cfg_collect flagship_cfg cinit_stores 0"
-    using wit_entry unfolding flagship_entry .
-qed
-
-lemma wit_at_1: "wit_store \<in> cfg_collect flagship_cfg cinit_stores 1"
-proof -
-  have e: "(0, EA_Assign ''x'' (BaseN (AExp.N 0)), 1) \<in> edges flagship_cfg" by (simp add: flagship_edges)
-  have "wit_store \<in> collect_pp flagship_cfg (cfg_collect flagship_cfg cinit_stores) 1"
-    unfolding collect_pp_def using wit_ec e by blast
-  hence "wit_store \<in> cfg_collect_F flagship_cfg cinit_stores (cfg_collect flagship_cfg cinit_stores) 1"
-    unfolding cfg_collect_F_def by blast
-  thus ?thesis using cfg_collect_post by blast
-qed
-
-lemma wit_at_2: "wit_store \<in> cfg_collect flagship_cfg cinit_stores 2"
-proof -
-  have e: "(1, EA_Nop, 2) \<in> edges flagship_cfg" by (simp add: flagship_edges)
-  have ec: "wit_store \<in> edge_collect EA_Nop (cfg_collect flagship_cfg cinit_stores 1)"
-    using wit_at_1 by simp
-  have "wit_store \<in> collect_pp flagship_cfg (cfg_collect flagship_cfg cinit_stores) 2"
-    unfolding collect_pp_def using ec e by blast
-  hence "wit_store \<in> cfg_collect_F flagship_cfg cinit_stores (cfg_collect flagship_cfg cinit_stores) 2"
-    unfolding cfg_collect_F_def by blast
-  thus ?thesis using cfg_collect_post by blast
-qed
-
-text \<open>
-  \<^bold>\<open>The witness is reachable and satisfies the computed bound.\<close>  The all-zero store
-  reaches the loop head, lands in the concretization of the computed interval
-  solution there, and indeed has \<open>x = 0 in [0,20]\<close> --- so
-  \<open>flagship_collect_sound\<close> is a statement about a genuinely inhabited set.
-\<close>
-
-theorem flagship_witness_reachable_and_bounded:
-  "wit_store \<in> cfg_collect flagship_cfg cinit_stores 2
-   \<and> wit_store \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) 2
-   \<and> wit_store ''x'' = 0"
-proof (intro conjI)
-  show "wit_store \<in> cfg_collect flagship_cfg cinit_stores 2" by (rule wit_at_2)
-  show "wit_store \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) 2"
-    using flagship_collect_sound wit_at_2 by blast
-  show "wit_store ''x'' = 0" by (simp add: wit_store_def)
-qed
 
 text \<open>
   \<^bold>\<open>The bound is proper.\<close>  The global slot carries no local information

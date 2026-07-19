@@ -1,5 +1,5 @@
 theory Retain_Analysis
-  imports DG_Soundness
+  imports DG_LTR_Sound
 begin
 
 section \<open>The retain analysis\<close>
@@ -530,7 +530,7 @@ text \<open>
 \<close>
 
 lemmas retain_post_solution_collect_sound =
-  sound_dg_spec.dg_post_solution_collect_sound[OF sound_dg_spec_retain]
+  sound_dg_spec.dg_post_solution_collect_sound_ltr[OF sound_dg_spec_retain]
 
 
 

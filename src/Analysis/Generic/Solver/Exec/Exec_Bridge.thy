@@ -114,19 +114,6 @@ where
        Side () (restrict_global_st res)
          (Answer (restrict_local_st res)))))"
 
-text \<open>
-  The \<^emph>\<open>clean\<close> (Goblint-sequential) executable edge: writes the base transfer's
-  result to the local slot reading \<^emph>\<open>only\<close> that slot (no \<open>\<squnion> g\<close>), and publishes its
-  global projection.  The executable mirror of the abstract \<open>clean_edge_tree\<close>;
-  \<^const>\<open>unit_edge_tree_st\<close> instead reads \<open>su \<squnion> g\<close>.  Domain-generic --- Sign and
-  interval both instantiate it.
-\<close>
-
-definition clean_edge_tree_st ::
-  "('a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st) \<Rightarrow> 'u \<Rightarrow> ('u, unit, 'a st) strategy_tree" where
-  "clean_edge_tree_st f u =
-     QueryL u (\<lambda>su. let res = f su in Side () (restrict_global_st res) (Answer res))"
-
 lemma traverse_unit_edge_tree_st:
   "traverse_rhs (unit_edge_tree_st f u) \<sigma>_st =
    restrict_local_st (f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))"

@@ -17,7 +17,7 @@ text \<open>
   the single global unknown.
 
   The interprocedural strategy tree and transfer functions live in TD_Side_Tree;
-  monotonicity and solver preconditions live in TD_Side_Eff_Bounds and TD_Side_Eff_Soundness.
+  monotonicity and solver preconditions live in TD_Side_Eff_Bounds and TD_Side_Eff_Cone_Lemmas.
 \<close>
 
 (* Keep only the local (resp. global) component of an abstract state; the other

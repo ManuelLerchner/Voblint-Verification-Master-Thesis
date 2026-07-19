@@ -1,5 +1,5 @@
 theory Mixed_Flow_Sound
-  imports "Voblint_Analysis.Analysis_Sound" "Voblint_Analysis.TD_Side_Eff_Soundness"
+  imports "Voblint_Analysis.LTR_TD_Side_Eff_Exit"
 begin
 
 section \<open>Mixed flow-sensitivity soundness against the collecting semantics\<close>
@@ -42,8 +42,8 @@ theorem mixed_flow_analysis_sound:
   assumes fin:   "finite (edges g)"
   assumes finC:  "finite (combines g)"
   assumes inr: "inr_slot_locals_bot \<sigma>"
-  shows "cfg_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-  by (rule side_collect_sound_exit_pruned_eff_cone[OF se pp fin finC entry cone inr])
+  shows "ltr_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  by (rule side_collect_sound_exit_eff_ltr_cone[OF se pp fin finC entry cone inr])
 
 subsection \<open>Optimal soundness via the TD solver (threefold monotonicity)\<close>
 
@@ -59,7 +59,7 @@ theorem mixed_flow_analysis_optimal:
   assumes dom:   "side_cfg_solve_dom_eff g etf bot s0 gseed (cfg_exit g)"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   shows sound:
-    "cfg_collect g S (cfg_exit g)
+    "ltr_collect g S (cfg_exit g)
        \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
     and optimal:
     "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) (cfg_exit g)
@@ -72,10 +72,10 @@ proof -
           threefold_monoD_deps[OF tfm[unfolded T_eq]]
     by unfold_locales
   show sound:
-    "cfg_collect g S (cfg_exit g)
+    "ltr_collect g S (cfg_exit g)
        \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
     unfolding g_eq
-    by (rule side_analyse_eff_collect_sound_exit_pruned[OF se
+    by (rule side_analyse_eff_collect_sound_exit_ltr_cone[OF se
           tfm[unfolded T_eq g_eq] cone dom[unfolded g_eq] S_sound])
   have opt_full:
     "least_part_post_solution ip.cfg_pkg_eff (cfg_exit g)

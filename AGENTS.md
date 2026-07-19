@@ -16,7 +16,7 @@ You are a formal proof engineer working with Isabelle/jEdit. Your work is surgic
 **REMEMBER: Comments describe the *current* theory, never its history.**
 
 * No "Option-A/B", "Mirrors X", "IP analogue of X", "previously/formerly/used to", "no longer needs", or references to deleted/retired theories (e.g. `TD_Side_Interface`, `TD_IP_Soundness`, intra-spine names). State what the code does now.
-* Comparing to a *still-existing* sibling is fine (`Mirrors cfg_collect_paths`); comparing to a removed one is rot — delete it.
+* Comparing to a *still-existing* sibling is fine (`Mirrors ltr_collect_keyed`); comparing to a removed one is rot — delete it.
 * A "no longer / previously" that describes the *mathematics* (e.g. "after one write the array is no longer the constant array") stays; only project-history framing goes.
 * Prefer Isabelle document structure over comment banners: file-header `(* … *)` → `section ‹…›` + `text ‹…›`; `(* -- X -- *)` separators → `subsection ‹X›`. Keep short why-comments as `(* … *)`. Use ASCII `\<open>`/`\<close>` for cartouches.
 
@@ -27,7 +27,7 @@ You are a formal proof engineer working with Isabelle/jEdit. Your work is surgic
 `IMP2 source → (CFG) → equation system → TD solver → sound abstract result → source bridge / mapped back`.
 
 Vendored `TD` solver (stilscher/td-verification) already verified. Proved: CFG
-collecting semantics (`cfg_collect`), CFG layer, eqsys soundness, abstract domains
+collecting semantics (`ltr_collect`), CFG layer, eqsys soundness, abstract domains
 (Sign → Interval → Octagon stretch), pipeline composition, source-to-analysis bridge.
 Everything we formalize should stay Goblint-faithful and close to the actual
 Goblint repository on GitHub.
@@ -57,7 +57,7 @@ Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); 
 
 ```
 src/IMP2/                  syntax + small-step (README)
-src/CFG/                   CFG core (README); Collecting/ — cfg_collect (README); Compiler/ — source-to-CFG compiler correctness (Analysis-free)
+src/CFG/                   CFG core (README); Collecting/ — ltr_collect / valid_ltr (README); Compiler/ — source-to-CFG compiler correctness (Analysis-free)
 src/Analysis/              Voblint_Analysis session
 src/Analysis/Instances/    concrete domains and effectful transfer records (README)
 src/Analysis/Equations/    constraint systems + soundness (README)
@@ -69,7 +69,7 @@ vendor/td-verification/    TD solver (AFP session `TD`, submodule)
 vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
 ```
 
-`ROOTS` + scattered `ROOT` files define a 5-session DAG: `Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` → `Voblint_Examples` (see `docs/SESSION_DAG_MIGRATION.md`). `Voblint_Formalization` holds only the end-to-end soundness theorems (`Mixed_Flow_Sound`, `Compiler_Correctness`, `Source_Activation_Sound`); the `Example_*`/`Exec_*` witnesses and the `Voblint` capstone were split into the leaf session `Voblint_Examples` (`src/Examples/`), so the soundness gate builds without the slow codegen/`value` demo runs. Cross-session imports use qualified names (`"Voblint_IMP2.IMP2_Syntax"` etc.). `Voblint_IMP2` adds `Deriving` (executable `linorder` for `aexp`/`bexp`/`edge_action`, so CFG edge enumeration code-generates without a list-built mirror); `Voblint_CFG` adds `Dijkstra_Shortest_Path`; `Voblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural side-effecting spine: `Mixed_Flow_Sound`, `TD_Side_Eff_Soundness`, `Sign_Side_Soundness`, `Interval_Side_Soundness`, `Analysis_Sound`, `Compiler_Correctness`, plus `Example_*` witnesses (`Example_Inc_Proc`, `Example_Mixed_Flow_Sign`, `Example_Side_Proc_Global`, `Example_Proc_GraphViz`, `Example_Interval_DG_Flagship`, `Example_Mixed_Sign_Interval_GraphViz`). The source-to-analysis bridge is the reusable IMP2-facing endpoint. The canonical context-sensitive activation path is `Activation_Backbone` (generic `activation_collect_sound`) → `DG_Ctx_Activation` (DG-native discharge) → `Example_Interval_DG_Ctx_Collect` (solver-backed, `cfg_collect_ctx_act`); the functional keyed generator is `TD_Side_Eff_Keyed_Gen` (`side_cfg_T_eff_keyed*`). The relational trace/digest spine (`CFG_Collect_Trace`, `Trace_Analysis_Sound`, `Ctx_Collect_Backbone`, the `cmp`/`gcmp` read cluster, digest examples) was removed (see `docs/DIGEST_SPINE_REMOVAL_PLAN.md`). The plain-`abs_state` activation + `twf`/`twfr` from-node-witness cluster was deleted (see `docs/ACTIVATION_SPINE_CONSOLIDATION.md`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Voblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `voblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The intra-only duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the intra `com` datatype) was then collapsed onto the single IP pipeline; the `com` datatype in `IMP2_Proc.thy` is the extended procedural language (Scope / Call / Restore) used throughout (see `docs/IP_ONLY_CONSOLIDATION.md`).
+`ROOTS` + scattered `ROOT` files define a 5-session DAG: `Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` → `Voblint_Examples` (see `docs/SESSION_DAG_MIGRATION.md`). `Voblint_Formalization` holds only the end-to-end soundness theorems (`Mixed_Flow_Sound`, `Source_Activation_Sound`); the `Example_*`/`Exec_*` witnesses and the `Voblint` capstone were split into the leaf session `Voblint_Examples` (`src/Examples/`), so the soundness gate builds without the slow codegen/`value` demo runs. Cross-session imports use qualified names (`"Voblint_IMP2.IMP2_Syntax"` etc.). `Voblint_IMP2` adds `Deriving` (executable `linorder` for `aexp`/`bexp`/`edge_action`, so CFG edge enumeration code-generates without a list-built mirror); `Voblint_CFG` adds `Dijkstra_Shortest_Path`; `Voblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural side-effecting spine: `Mixed_Flow_Sound`, `Source_Activation_Sound`, `LTR_TD_Side_Eff_Exit`, `Sign_Side_Soundness`, `Interval_Side_Soundness`, `DG_LTR_Sound`, plus `Example_*` witnesses (`Example_Inc_Proc`, `Example_Mixed_Flow_Sign`, `Example_Side_Proc_Global`, `Example_Proc_GraphViz`, `Example_Interval_DG_Flagship`, `Example_Mixed_Sign_Interval_GraphViz`). The source-to-analysis bridge is the reusable IMP2-facing endpoint. The canonical context-sensitive activation path is `Activation_Backbone` (generic `activation_collect_sound`) → `DG_Ctx_Activation` (DG-native discharge) → `Example_Interval_DG_Ctx_Collect` (solver-backed, `activation_collect`); the functional keyed generator is `TD_Side_Eff_Keyed_Gen` (`side_cfg_T_eff_keyed*`). The relational trace/digest spine (`CFG_Collect_Trace`, `Trace_Analysis_Sound`, `Ctx_Collect_Backbone`, the `cmp`/`gcmp` read cluster, digest examples) was removed (see `docs/DIGEST_SPINE_REMOVAL_PLAN.md`). The plain-`abs_state` activation + `twf`/`twfr` from-node-witness cluster was deleted (see `docs/ACTIVATION_SPINE_CONSOLIDATION.md`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Voblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `voblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The intra-only duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the intra `com` datatype) was then collapsed onto the single IP pipeline; the `com` datatype in `IMP2_Proc.thy` is the extended procedural language (Scope / Call / Restore) used throughout (see `docs/IP_ONLY_CONSOLIDATION.md`).
 
 Docs:
 
@@ -100,9 +100,9 @@ Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVE
 
 # CFG path infrastructure
 
-`cfg_path` carries actions (needed for transfer-fn composition); `edges_collect` folds actions over store sets. Compound CFGs compile sub-commands at offset `k > 0`, so sub-paths need shifting through `offset_edges k`; the shift is invisible to `edges_collect`. See `src/CFG/CFG_Path.thy` for the predicate + offset infrastructure and the IP collecting layer in `src/CFG/Collecting/`: `CFG_Collect` (`cfg_collect`, plus generic `edge_step` / `edge_collect_single` / `call_enter_store`), `CFG_Collect_Runs` (`cfg_runs_to` plus generic collecting introduction lemmas), and `CFG_Local_Trace` (call-structured `valid_ltr`, the generic `collect_by` combinator, and the activation collector `cfg_collect_ctx_act`).
+`offset_edges k` shifts sub-command edges for compound CFGs compiled at offset `k > 0`; `src/CFG/CFG_Path.thy` carries this offset infrastructure. The concrete store-transfer primitives (`edge_step`, `edge_collect`, `call_enter_store`, `combine_collect`) live in `src/CFG/CFG_Transfer.thy`. The interprocedural collecting layer is in `src/CFG/Collecting/`: `CFG_Local_Trace` (the call-structured activation-local trace `valid_ltr` — `Root`/`Call`/`Resume` — the generic `collect_by` combinator, and the activation collector `activation_collect`), `LTR_Collect` (the forgetful projections `ltr_collect` / `ltr_collect_keyed` plus `valid_ltr_eq_lfp`), and `LTR_Abstract` (the `ltr_gamma` interface and the keystone `ltr_collect_semantic_postfix`).
 
-**Thesis sentence:** Soundness is stated against interprocedural CFG collecting semantics at **every** program point (`cfg_collect`, and the activation-indexed `cfg_collect_ctx_act` for context-sensitive results). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IP runs correspond to exit reachability (`cfg_runs_to`).
+**Thesis sentence:** Soundness is stated against interprocedural activation-local trace collecting semantics at **every** program point (`ltr_collect`, and the activation-indexed `activation_collect` for context-sensitive results). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IP runs correspond to exit reachability (`source_completes_ltr_collect_exit`).
 
 ---
 
@@ -302,7 +302,7 @@ Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/star
   * Recovery if you slipped and used `Edit`: re-issue the same change via I/Q `write_file str_replace` to sync the buffer.
 * I/Q `write_file`: prefer `str_replace` over `line`/`insert` minimal diff keeps the doc model consistent.
 * I/R: after `.thy` edit → `load_theory(<FQN>)` to re-sync heap.
-* I/R `init` uses fully-qualified imports, e.g. `Voblint_CFG.CFG_Collect`.
+* I/R `init` uses fully-qualified imports, e.g. `Voblint_CFG.CFG_Local_Trace`.
 * I/R `step` one Isar line per call.
 * `sledgehammer` timeout ≤ 15s. Paste back `blast` / `auto` / `meson`. `metis`/`smt` only if fast in batch.
 * `nitpick` via `step`: `lemma … nitpick [timeout=5] oops`.

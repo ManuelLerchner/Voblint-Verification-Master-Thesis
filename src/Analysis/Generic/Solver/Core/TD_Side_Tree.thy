@@ -1,5 +1,5 @@
 theory TD_Side_Tree
-  imports TD_Side_CFG "Voblint_CFG.CFG_Collect" Strategy_Tree_Monad
+  imports TD_Side_CFG "Voblint_CFG.CFG_Transfer" Strategy_Tree_Monad
 begin
 
 section \<open>Side IP solver: constraint system construction and denotation\<close>
@@ -16,7 +16,7 @@ text \<open>
   local part flows on to v's local unknown; the global part is contributed to
   named global slots by per-tree Side nodes.
 
-  Monotonicity / solver preconditions: TD_Side_Eff_Bounds (generic _gen) and TD_Side_Eff_Soundness.
+  Monotonicity / solver preconditions: TD_Side_Eff_Bounds (generic _gen) and TD_Side_Eff_Cone_Lemmas.
   Post-solution bounds for soundness: TD_Side_Eff_Bounds.
 \<close>
 

@@ -80,7 +80,7 @@ text \<open>
 
 theorem sign_exec_sound_collecting:
   assumes solves: "sign_exec_terminates \<Pi> ps main"
-  shows "cfg_collect (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
+  shows "ltr_collect (compile_prog \<Pi> ps main) cinit_stores (cfg_exit (compile_prog \<Pi> ps main))
          \<le> \<lbrakk>sign_exec \<Pi> ps main\<rbrakk>"
 proof -
   define g :: cfg where "g = compile_prog \<Pi> ps main"
@@ -130,9 +130,9 @@ proof -
     by auto
   have entry_cov: "cinit_stores \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
-  have "cfg_collect g cinit_stores (cfg_exit g)
+  have "ltr_collect g cinit_stores (cfg_exit g)
         \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-    by (rule side_collect_sound_exit_pruned_eff_cone
+    by (rule side_collect_sound_exit_eff_ltr_cone
           [OF sign_sound_etf_unit pp_eff fin finC entry_cov cone inr])
   then show ?thesis
     by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
@@ -166,7 +166,7 @@ lemma sign_terminates_prog_via_solve_c:
 
 corollary sign_exec_prog_sound_collecting:
   assumes "sign_terminates_prog p"
-  shows "cfg_collect (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))
+  shows "ltr_collect (prog_cfg p) cinit_stores (cfg_exit (prog_cfg p))
            \<le> \<lbrakk>sign_exec_prog p\<rbrakk>"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_collecting)
