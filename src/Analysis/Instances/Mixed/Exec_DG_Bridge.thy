@@ -246,13 +246,6 @@ definition dg_cmb_of ::
 where
   "dg_cmb_of S ctx dst cc ex = map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (dg_spec_combine_tree S dst cc ex))"
 
-text \<open>The combine predecessors of \<open>v\<close>, each wrapped into a unit-context
-  strategy tree.  One name for the tuple-destructuring map reused across the
-  eq / sides / dep commutation goals below.\<close>
-abbreviation dg_combine_trees where
-  "dg_combine_trees S g v \<equiv>
-     map (\<lambda>(cc, ex, dst). dg_cmb_of S () dst cc ex) (combine_predecessor_list g v)"
-
 definition dg_gen_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) eqsT"
