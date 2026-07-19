@@ -264,14 +264,9 @@ lemma ltr_gamma_UNIV: "ltr_gamma g S (\<lambda>_ _. UNIV) enterc seedc"
 subsection \<open>Monovariant semantic post-fixpoint\<close>
 
 text \<open>
-  Trace-native analogue of \<open>cfg_collect_semantic_postfix\<close>: from the same set-valued entry / edge /
-  combine closure of a candidate node map \<open>B\<close>, the stack-faithful \<^const>\<open>ltr_collect\<close> is bounded
-  by \<open>B\<close> at every point.  Proved directly through the context-free \<^locale>\<open>ltr_gamma\<close> instance
-  \<open>acc v _ = B v\<close> --- NOT via \<open>ltr_collect_le_cfg_collect\<close> and the broad \<^const>\<open>cfg_collect\<close>
-  closure.  The single-caller \<open>COMB\<close> obligation reads only one combine triple's caller and
-  callee-exit slots.  DG and other set-level endpoints reuse it in place of their final
-  \<^const>\<open>cfg_collect\<close> step, so a computed post-solution certifies soundness against the trace
-  semantics with no graph-closure detour.
+  Set-valued entry, edge, and combine closure of a candidate node map \<open>B\<close> bounds the
+  stack-faithful \<^const>\<open>ltr_collect\<close> at every point.  The proof interprets \<^locale>\<open>ltr_gamma\<close> at
+  \<open>acc v _ = B v\<close>; its combine obligation follows one caller and one callee exit.
 \<close>
 lemma ltr_collect_semantic_postfix:
   fixes g :: cfg and B :: "pp \<Rightarrow> store set" and S0 :: "store set" and v :: pp

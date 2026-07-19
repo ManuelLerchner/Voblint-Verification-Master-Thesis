@@ -1,7 +1,7 @@
 section \<open>Example: TD\_side Interval Analysis on a Single Global Increment Call\<close>
 
 theory Example_Interval_Side_Proc_Global
-  imports "Voblint_Analysis.Interval_Side_Soundness" "Voblint_CFG.CFG_Collect_Runs"
+  imports "Voblint_Analysis.Interval_Side_Soundness"
           "Voblint_IMP2.IMP2_Notation"
 begin
 
@@ -35,21 +35,15 @@ definition side_proc_global_ivl_s0 :: "ivl abs_state" where
 theorem proc_global_side_ivl_analysis:
   fixes s t :: store
   assumes s_sound: "s \<in> \<lbrakk>side_proc_global_ivl_s0\<rbrakk>"
-  assumes runs: "cfg_runs_to inc_pi [''p''] (Call None ''p'' []) s t"
+  assumes collect_exit:
+    "t \<in> ltr_collect (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])) {s}
+       (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (Call None ''p'' [])) ivl_etf bot
+    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])) ivl_etf bot
        side_proc_global_ivl_s0 ()
-       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
-  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (Call None ''p'' []) ivl_etf bot side_proc_global_ivl_s0 ()
-         (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))\<rbrakk>"
-proof -
-  have collect_exit:
-    "t \<in> cfg_collect (compile_prog inc_pi [''p''] (Call None ''p'' [])) {s}
-       (cfg_exit (compile_prog inc_pi [''p''] (Call None ''p'' [])))"
-    using runs unfolding cfg_runs_to_def
-    by metis
-  show ?thesis
-    by (rule side_ivl_analysis_sound[OF s_sound collect_exit side_solve_dom])
-qed
+       (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))"
+  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (IMP2_Proc.Call None ''p'' []) ivl_etf bot side_proc_global_ivl_s0 ()
+         (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))\<rbrakk>"
+  by (rule side_ivl_analysis_sound[OF s_sound collect_exit side_solve_dom])
 
 end

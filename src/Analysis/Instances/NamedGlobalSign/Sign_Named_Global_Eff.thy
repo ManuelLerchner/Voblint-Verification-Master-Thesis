@@ -413,7 +413,7 @@ theorem named_analysis_sound:
   fixes \<Pi> ps main and s t :: store and s0 :: "sign abs_state"
   assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> cfg_collect (compile_prog \<Pi> ps main) {s}
+    "t \<in> ltr_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) named_etf bot s0 Gpos
@@ -424,11 +424,11 @@ proof -
   have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>"
     using s_sound by simp
   have collect:
-    "cfg_collect (compile_prog \<Pi> ps main) {s}
+    "ltr_collect (compile_prog \<Pi> ps main) {s}
        (cfg_exit (compile_prog \<Pi> ps main))
      \<le> \<lbrakk>side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
          (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
-    by (rule side_analyse_eff_collect_sound_exit_pruned_gen
+    by (rule side_analyse_eff_collect_sound_exit_ltr
           [OF named_etf_sound named_etf_is_mono_eq named_etf_mono_sides named_etf_mono_deps
               side_solve_dom gs named_edge_dep named_comb_dep1 named_comb_dep2
               named_edge_static named_comb_static

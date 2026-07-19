@@ -1,5 +1,5 @@
 theory Located_LTR
-  imports Located_Reaches CFG_Local_Trace LTR_Collect
+  imports Control_Simulation CFG_Local_Trace LTR_Collect
 begin
 
 section \<open>Source execution as activation-local traces\<close>
@@ -14,9 +14,7 @@ text \<open>
   \<^const>\<open>valid_ltr\<close>'s \<open>intra\<close> / \<open>call\<close> / \<open>ret\<close>, so a source step (a run of \<^const>\<open>cstep\<close>s)
   simply extends the accumulated trace.
 
-  This is the \<^const>\<open>valid_ltr\<close> analogue of \<^const>\<open>located_sound\<close> (\<open>Located_Reaches\<close>), replacing
-  membership in the broad \<^const>\<open>cfg_collect\<close> with a stack-faithful trace whose sink matches the
-  configuration.
+  The representation invariant relates a source-located configuration directly to its stack-faithful trace.
 \<close>
 
 subsection \<open>The representation invariant\<close>
@@ -232,37 +230,15 @@ qed
 
 text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
   collecting \<^const>\<open>ltr_collect\<close> at the compiled target node.  It is the key-free view of
-  \<open>source_store_in_cfg_collect_ctx_act\<close>, obtained straight from the \<^const>\<open>valid_ltr\<close>
-  witness of \<open>source_run_has_ltr\<close> --- never through \<^const>\<open>cfg_collect\<close> --- under exactly the
-  local-trace adequacy assumptions.\<close>
-theorem source_store_in_ltr_collect:
-  assumes wf: "wf_compile_input Pi ps main"
-    and src: "source_com main"
-    and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
-  shows "\<exists>v stk. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
-                 \<and> s \<in> ltr_collect (compile_prog Pi ps main) S v"
-proof -
-  from source_run_has_ltr[OF wf src s0 run]
-  obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
-    and rep: "ltr_repr (compile_prog Pi ps main) S (v, s, stk) t" by blast
-  from rep have tv: "t \<in> valid_ltr (compile_prog Pi ps main) S"
-    and sn: "sink_node t = v" and ss: "sink_store t = s"
-    by (auto simp: ltr_repr_def)
-  have "s \<in> ltr_collect (compile_prog Pi ps main) S v"
-    using ltr_collect_I[OF tv] sn ss by simp
-  then show ?thesis using m by blast
-qed
-
-text \<open>The reachable source store lies in the activation-indexed collecting at the stable context
-  \<^const>\<open>key\<close> of the trace that produced it --- domain-free, ready for any context routing.\<close>
-theorem source_store_in_cfg_collect_ctx_act:
+  \<open>source_store_in_activation_collect\<close>, obtained straight from the \<^const>\<open>valid_ltr\<close>
+  witness of \<open>source_run_has_ltr\<close> under exactly the local-trace adequacy assumptions.\<close>
+theorem source_store_in_activation_collect:
   assumes wf: "wf_compile_input Pi ps main"
     and src: "source_com main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
-                   \<and> s \<in> cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v
+                   \<and> s \<in> activation_collect enterc seedc (compile_prog Pi ps main) S v
                           (key enterc seedc t)"
 proof -
   from source_run_has_ltr[OF wf src s0 run]
@@ -271,8 +247,8 @@ proof -
   from rep have tv: "t \<in> valid_ltr (compile_prog Pi ps main) S"
     and sn: "sink_node t = v" and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  have "s \<in> cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v (key enterc seedc t)"
-    using tv sn ss unfolding cfg_collect_ctx_act_def by blast
+  have "s \<in> activation_collect enterc seedc (compile_prog Pi ps main) S v (key enterc seedc t)"
+    using tv sn ss unfolding activation_collect_def by blast
   then show ?thesis using m by blast
 qed
 
@@ -304,13 +280,13 @@ lemma concrete_program_match_Nil_frames:
 text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
   the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
   existential.  This is the shape a user reads for main-level program points.\<close>
-theorem source_toplevel_in_cfg_collect_ctx_act:
+theorem source_toplevel_in_activation_collect:
   assumes wf: "wf_compile_input Pi ps main"
     and src: "source_com main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
-             \<and> s \<in> cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v seedc"
+             \<and> s \<in> activation_collect enterc seedc (compile_prog Pi ps main) S v seedc"
 proof -
   let ?g = "compile_prog Pi ps main"
   from source_run_has_ltr[OF wf src s0 run] obtain v stk t
@@ -321,8 +297,8 @@ proof -
     and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
   have "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   then have key: "key enterc seedc t = seedc" by (rule key_caller_of_None)
-  have "s \<in> cfg_collect_ctx_act enterc seedc ?g S v seedc"
-    using tv sn ss key unfolding cfg_collect_ctx_act_def by blast
+  have "s \<in> activation_collect enterc seedc ?g S v seedc"
+    using tv sn ss key unfolding activation_collect_def by blast
   then show ?thesis using m stk0 by blast
 qed
 

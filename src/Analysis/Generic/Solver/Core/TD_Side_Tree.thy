@@ -1,5 +1,5 @@
 theory TD_Side_Tree
-  imports TD_Side_CFG "Voblint_CFG.CFG_Collect" Strategy_Tree_Monad
+  imports TD_Side_CFG "Voblint_CFG.CFG_Transfer" Strategy_Tree_Monad
 begin
 
 section \<open>Side IP solver: constraint system construction and denotation\<close>

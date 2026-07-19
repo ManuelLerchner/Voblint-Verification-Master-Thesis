@@ -1,5 +1,5 @@
 theory DG_Soundness
-  imports DG_Framework Analysis_Sound
+  imports DG_Framework Constraint_System_Sound
 begin
 
 section \<open>Native heterogeneous soundness\<close>
@@ -120,21 +120,7 @@ lemma gamma_dg_mono:
   using gamma_state_mono[OF assms(1)] gamma_state_mono[OF assms(2)]
   unfolding gamma_dg_def by blast
 
-lemma cfg_collect_semantic_postfix:
-  assumes entry: "S0 \<subseteq> B (cfg_entry g)"
-    and edge:
-      "\<And>u a v s. \<lbrakk>(u, a, v) \<in> edges g;
-        s \<in> edge_collect a (B u)\<rbrakk> \<Longrightarrow> s \<in> B v"
-    and combine:
-      "\<And>cc ex v dst s t. \<lbrakk>(cc, ex, v, dst) \<in> combines g;
-        s \<in> B cc; t \<in> B ex\<rbrakk> \<Longrightarrow>
-        combine_collect dst s t \<in> B v"
-  shows "cfg_collect g S0 v \<subseteq> B v"
-proof (rule cfg_collect_post_fixpoint_sound)
-  show "cfg_collect_F g S0 B \<le> B"
-    unfolding cfg_collect_F_def collect_pp_def collect_combine_pp_def
-      le_fun_def    using entry edge combine by auto
-qed
+
 
 subsection \<open>Analysis-parametric heterogeneous soundness\<close>
 
@@ -479,9 +465,8 @@ proof -
     using entryD entryG edgeD edgeG combineD combineG by blast
 qed
 
-text \<open>The three set-valued closure obligations of a \<^const>\<open>dg_postfix\<close> against \<^const>\<open>dg_gamma\<close>,
-  extracted so the same discharge feeds both the \<^const>\<open>cfg_collect\<close> and the trace-native
-  \<open>ltr_collect\<close> endpoints without re-proving the analysis-specific step/combine bounds.\<close>
+text \<open>The three set-valued closure obligations of a \<^const>\<open>dg_postfix\<close> against
+  \<^const>\<open>dg_gamma\<close> discharge the trace-native collecting endpoint.\<close>
 
 lemma dg_postfix_gamma_entry:
   assumes pf: "dg_postfix g s0d s0g sigma"
@@ -574,48 +559,7 @@ proof -
     using out unfolding dg_gamma_def by blast
 qed
 
-theorem dg_postfix_collect_sound:
-  assumes pf: "dg_postfix g s0d s0g sigma"
-    and finE: "finite (edges g)"
-    and finC: "finite (combines g)"
-    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "cfg_collect g S0 v \<subseteq> dg_gamma sigma v"
-proof (rule cfg_collect_semantic_postfix)
-  show "S0 \<subseteq> dg_gamma sigma (cfg_entry g)"
-    by (rule dg_postfix_gamma_entry[OF pf sound0])
-next
-  fix u a w s
-  assume "(u, a, w) \<in> edges g" and "s \<in> edge_collect a (dg_gamma sigma u)"
-  then show "s \<in> dg_gamma sigma w" by (rule dg_postfix_gamma_edge[OF pf])
-next
-  fix cc ex w dst s t
-  assume "(cc, ex, w, dst) \<in> combines g" and "s \<in> dg_gamma sigma cc"
-    and "t \<in> dg_gamma sigma ex"
-  then show "combine_collect dst s t \<in> dg_gamma sigma w"
-    by (rule dg_postfix_gamma_combine[OF pf])
-qed
 
-corollary dg_post_solution_collect_sound:
-  assumes pp:
-      "part_post_solution (dg_gen g bot0 s0d s0g)
-        x sigma vars"
-    and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_combine:
-      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
-    and finE: "finite (edges g)"
-    and finC: "finite (combines g)"
-    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "cfg_collect g S0 v \<subseteq> dg_gamma sigma v"
-proof -
-  have pf: "dg_postfix g s0d s0g sigma"
-    by (rule dg_post_solution_postfix
-          [OF pp cover_entry cover_edge cover_combine finE finC])
-  show ?thesis
-    by (rule dg_postfix_collect_sound
-          [OF pf finE finC sound0])
-qed
 
 end
 

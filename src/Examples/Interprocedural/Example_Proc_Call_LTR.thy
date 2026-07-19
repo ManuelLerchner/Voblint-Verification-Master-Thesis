@@ -14,10 +14,8 @@ text \<open>
   \<^const>\<open>ltr_collect\<close>.
 
   The proof applies the trace-based \<open>unified_ltr_post_fixpoint_sound\<close> to the post-fixpoint
-  \<open>main_prog_postfix\<close> already exhibited there.  It does NOT invoke
-  \<open>ltr_collect_le_cfg_collect\<close> and does NOT use the broad \<^const>\<open>cfg_collect\<close> combine soundness
-  as its final semantic step: soundness comes from \<^const>\<open>valid_ltr\<close>'s matched return rule inside
-  \<^locale>\<open>ltr_gamma\<close>, so each of the two returns recovers its own caller rather than pairing every
+  \<open>main_prog_postfix\<close> supplies the transfer closure.  Soundness follows from
+  \<^const>\<open>valid_ltr\<close>'s matched return rule inside the trace-native endpoint.
   reachable caller with every reachable callee exit.  No key injectivity is assumed and no solver
   equation is changed.
 

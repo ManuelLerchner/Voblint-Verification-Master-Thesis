@@ -15,9 +15,7 @@ text \<open>
   \<open>callee \<in> T\<close> together with \<open>caller_of callee = Some caller\<close>, and nothing more.
   It does not add \<open>caller \<in> T\<close> as a premise, so a return still recovers its caller
   from the completed callee's own activation ancestry, never by an independent
-  choice.  This is what keeps returns matched: \<^const>\<open>cfg_collect\<close> pairs any caller
-  at a call node with any callee exit sharing the combine triple, whereas here the
-  caller is forced through \<^const>\<open>caller_of\<close>.
+  choice. The caller is recovered structurally through \<^const>\<open>caller_of\<close>.
 
   No solver, DG, or abstract-domain theory is imported.  This is a pure CFG-layer
   semantic theory, sitting directly above \<^theory>\<open>Voblint_CFG.CFG_Local_Trace\<close>.
@@ -138,32 +136,18 @@ theorem ltr_collect_keyed_Union:
   "(\<Union>c. ltr_collect_keyed keyf g S v c) = ltr_collect g S v"
   unfolding ltr_collect_keyed_def ltr_collect_def by blast
 
-text \<open>Migration bridge: every local-trace collecting state is a broad-closure state, via the
-  key-free sink inclusion \<open>valid_ltr_sink_in_cfg_collect\<close>.  This is intentionally
-  one-directional; the converse is false in general (\<^const>\<open>cfg_collect\<close> admits unmatched combine
-  pairs) and is not attempted.\<close>
-theorem ltr_collect_le_cfg_collect:
-  "ltr_collect g S v \<subseteq> cfg_collect g S v"
-  unfolding ltr_collect_def using valid_ltr_sink_in_cfg_collect by fastforce
 
-subsection \<open>Compatibility with the activation-keyed projection\<close>
 
-text \<open>\<^const>\<open>cfg_collect_ctx_act\<close> is definitionally \<open>ltr_collect_keyed\<close> instantiated at the
-  activation \<^const>\<open>key\<close>: same carrier \<^const>\<open>valid_ltr\<close>, same sink node and store, same key filter.
-  The activation key is a quotient of activation structure, not an exact activation identity, and a
-  single keyed bucket need not preserve all activation correlation; this equation only renames the
-  reader.\<close>
-theorem cfg_collect_ctx_act_eq_ltr_collect_keyed:
-  "cfg_collect_ctx_act enterc seedc g S v c
+subsection \<open>Activation-keyed projection\<close>
+
+theorem activation_collect_eq_ltr_collect_keyed:
+  "activation_collect enterc seedc g S v c
      = ltr_collect_keyed (key enterc seedc) g S v c"
-  unfolding cfg_collect_ctx_act_def ltr_collect_keyed_def by simp
+  unfolding activation_collect_def ltr_collect_keyed_def by simp
 
 subsection \<open>Matched returns\<close>
 
-text \<open>The return-correlation regression: in every reachable \<^const>\<open>Resume\<close>, the frozen caller is
-  exactly the one \<^const>\<open>caller_of\<close> recovers from the completed callee.  A return therefore cannot
-  select its caller independently of the callee it composes --- this is the property that
-  distinguishes \<^const>\<open>ltr_collect\<close> from the unmatched-combine \<^const>\<open>cfg_collect\<close>.\<close>
+text \<open>Every reachable \<^const>\<open>Resume\<close> preserves the caller recovered from its completed callee.\<close>
 theorem valid_ltr_Resume_caller_matched:
   "Resume caller callee p \<in> valid_ltr g S \<Longrightarrow> caller_of callee = Some caller"
   using valid_ltr_Resume_fields by blast

@@ -5,25 +5,11 @@ begin
 section \<open>End-to-end source-level activation soundness\<close>
 
 text \<open>
-  The final composition of the activation-local spine: a reachable store of a compiled source
-  program is bounded by the abstract analysis at the STABLE activation context of the trace that
-  produced it.  It chains the stack-faithful source bridge \<open>source_store_in_cfg_collect_ctx_act\<close>
-  (\<open>Located_LTR\<close>) --- source execution reaches a valid \<^const>\<open>valid_ltr\<close> trace whose sink is the
-  current store at context \<^const>\<open>key\<close> --- with the domain-level backbone
-  \<open>activation_collect_sound\<close>.  The four semantic obligations are exactly the backbone's; no
-  compiler, solver, or domain assumption is added.
+  A reachable store of a compiled source program is bounded by the abstract analysis at the stable
+  activation context of the trace that produced it.  The composition joins the stack-faithful source
+  bridge \<open>source_store_in_activation_collect\<close> with \<open>activation_collect_sound\<close>.
 \<close>
 
-subsection \<open>Generic composition from a collecting cap\<close>
-
-text \<open>
-  The reusable endpoint: given any collecting cap --- a family bounding
-  \<^const>\<open>cfg_collect_ctx_act\<close> at every point and context by \<^term>\<open>sg\<close> --- a reachable source
-  store is bounded at the STABLE activation context that produced it.  A future analysis proves
-  only such a cap; source-level soundness reuses this composition verbatim.  It extracts the trace
-  witness once via \<open>source_store_in_cfg_collect_ctx_act\<close> and applies the cap at \<^term>\<open>v\<close> and
-  \<^term>\<open>key enterc seedc t\<close>.
-\<close>
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
@@ -31,15 +17,15 @@ theorem source_sound_from_collecting_cap:
     and src: "source_com main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
-    and cap: "\<And>v ctx. cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v ctx
+    and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps main"
-  from source_store_in_cfg_collect_ctx_act[OF wf src s0 run, where enterc=enterc and seedc=seedc]
+  from source_store_in_activation_collect[OF wf src s0 run, where enterc=enterc and seedc=seedc]
   obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
-    and mem: "s \<in> cfg_collect_ctx_act enterc seedc ?g S v (key enterc seedc t)"
+    and mem: "s \<in> activation_collect enterc seedc ?g S v (key enterc seedc t)"
     by blast
   have "s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
     using cap[of v "key enterc seedc t"] mem by blast
@@ -55,15 +41,15 @@ theorem source_sound_toplevel_from_collecting_cap:
     and src: "source_com main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
-    and cap: "\<And>v ctx. cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v ctx
+    and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps main"
-  from source_toplevel_in_cfg_collect_ctx_act[OF wf src s0 run, where enterc=enterc and seedc=seedc]
+  from source_toplevel_in_activation_collect[OF wf src s0 run, where enterc=enterc and seedc=seedc]
   obtain v where m: "concrete_program_match Pi ps main (residual, s, []) (v, s, [])"
-    and mem: "s \<in> cfg_collect_ctx_act enterc seedc ?g S v seedc" by blast
+    and mem: "s \<in> activation_collect enterc seedc ?g S v seedc" by blast
   have "s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>" using cap[of v seedc] mem by blast
   then show ?thesis using m by blast
 qed
@@ -91,7 +77,7 @@ theorem source_activation_sound:
   shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v ctx
+  have cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE SEED_G COMB])
   show ?thesis by (rule source_sound_from_collecting_cap[OF wf src s0 run cap])
@@ -121,7 +107,7 @@ theorem source_activation_sound_toplevel:
   shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. cfg_collect_ctx_act enterc seedc (compile_prog Pi ps main) S v ctx
+  have cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE SEED_G COMB])
   show ?thesis by (rule source_sound_toplevel_from_collecting_cap[OF wf src s0 run cap])
@@ -130,13 +116,10 @@ qed
 subsection \<open>Monovariant source bridge into the trace collecting\<close>
 
 text \<open>
-  The context-forgetting specialisation: a reachable source store lands in the stack-faithful
-  \<^const>\<open>ltr_collect\<close> of the compiled program at its matched point.  It reuses the activation
-  bridge \<open>source_store_in_cfg_collect_ctx_act\<close> at the trivial routing and projects the keyed
-  activation collecting to the monovariant one (\<open>cfg_collect_ctx_act_eq_ltr_collect_keyed\<close>,
-  \<open>ltr_collect_keyed_le_collect\<close>).  This is the source-level endpoint the monovariant D/G flagships
-  compose with \<open>ltr_collect\<close>-terminating soundness --- no \<^const>\<open>cfg_collect\<close> detour.
+  The context-forgetting specialisation projects the activation collector at trivial routing to
+  \<^const>\<open>ltr_collect_keyed\<close>, then to \<^const>\<open>ltr_collect\<close>.
 \<close>
+
 theorem source_reaches_ltr_collect:
   assumes wf: "wf_compile_input Pi ps main"
     and src: "source_com main"
@@ -146,12 +129,12 @@ theorem source_reaches_ltr_collect:
                  \<and> s \<in> ltr_collect (compile_prog Pi ps main) S v"
 proof -
   let ?g = "compile_prog Pi ps main"
-  from source_store_in_cfg_collect_ctx_act[OF wf src s0 run,
+  from source_store_in_activation_collect[OF wf src s0 run,
         where enterc = "\<lambda>_ _. ()" and seedc = "()"]
   obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
-    and mem: "s \<in> cfg_collect_ctx_act (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by blast
+    and mem: "s \<in> activation_collect (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by blast
   have "s \<in> ltr_collect_keyed (key (\<lambda>_ _. ()) ()) ?g S v (key (\<lambda>_ _. ()) () t)"
-    using mem by (simp add: cfg_collect_ctx_act_eq_ltr_collect_keyed)
+    using mem by (simp add: activation_collect_eq_ltr_collect_keyed)
   then have "s \<in> ltr_collect ?g S v"
     by (rule subsetD[OF ltr_collect_keyed_le_collect])
   then show ?thesis using m by blast

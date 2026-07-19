@@ -524,8 +524,8 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at
   discharged from \<open>twice_ctx_pp_abs\<close> together with the interval \<^locale>\<open>sound_dg_spec\<close>
   step / combine soundness, route consistency, and the \<open>ivl_ctx_sg_seed\<close> enter seed.\<close>
 
-theorem twice_ctx_collect_ctx_act_sound:
-  "cfg_collect_ctx_act ivl_enterc bot twice_cfg cinit_stores v ctx
+theorem twice_activation_collect_sound:
+  "activation_collect ivl_enterc bot twice_cfg cinit_stores v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_enterc
         and seedc = bot and S = cinit_stores and g = twice_cfg])

@@ -6,7 +6,7 @@ section \<open>Generic soundness of the activation-indexed collecting semantics\
 
 text \<open>
   Soundness of a seeded context-sensitive analysis stated directly against the activation-indexed
-  collecting semantics \<^const>\<open>cfg_collect_ctx_act\<close> --- the sink/key projection of the concrete
+  projection \<^const>\<open>activation_collect\<close> --- the sink/key projection of the concrete
   activation-local traces \<^const>\<open>valid_ltr\<close>.  The context is ACTIVATION-STABLE: it is fixed when
   an activation is created (routed at \<^const>\<open>EA_Enter\<close>) and unchanged by the calls it later makes
   and returns from, matching Goblint's call-only \<open>Spec.context\<close>.  The backbone therefore needs no
@@ -50,12 +50,12 @@ theorem activation_collect_sound:
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, enterc c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store g cl s es
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, c1))\<rbrakk>"
-  shows "cfg_collect_ctx_act enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  shows "activation_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof
-  fix st assume "st \<in> cfg_collect_ctx_act enterc seedc g S v ctx"
+  fix st assume "st \<in> activation_collect enterc seedc g S v ctx"
   then obtain t where t: "t \<in> valid_ltr g S"
     and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "st = sink_store t"
-    unfolding cfg_collect_ctx_act_def by blast
+    unfolding activation_collect_def by blast
   have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"
     using ENTRY_G EDGE SEED_G COMB t by (rule valid_ltr_ctx_sound)
   then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn kc st by simp

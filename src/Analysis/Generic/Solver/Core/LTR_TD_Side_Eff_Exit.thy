@@ -8,12 +8,8 @@ text \<open>
   Effectful solver soundness at the program exit, stated directly over the original CFG's
   stack-faithful collecting \<^const>\<open>ltr_collect\<close> --- with no graph transformation, no
   \<open>call_return_reaches\<close> bridge, and no compiled-CFG restriction.
-
-  Pruning was a graph-structure artifact of the \<^const>\<open>cfg_collect\<close> proof chain: the raw-CFG
-  effectful theorem demanded per-edge bounds everywhere, while the demand-driven solver bounds only
-  the exit cone, so the graph was shrunk to the cone to match.  With local-trace semantics the cone
-  restriction is intrinsic: a trace reaching \<open>v0\<close> visits only nodes that reach \<open>v0\<close>.  We move the
-  cone from the graph into the abstract guarantee, interpreting \<^locale>\<open>ltr_gamma\<close> at the
+  The cone theorem restricts the effectful solver obligations to demand-relevant nodes.
+  It is a graph-structure result used by the trace-native exit endpoint.
   cone-guarded concretization
 
   \<^item> \<open>acc v _ = (if cfg_reaches g v v0 then \<lbrakk>side_env \<sigma> v\<rbrakk> else UNIV)\<close>.
@@ -118,17 +114,10 @@ proof -
 qed
 
 text \<open>
-  The primary compiled-program exit corollary: from an effectful post-solution covering the exit
-  cone, soundness against \<^const>\<open>ltr_collect\<close> at \<^term>\<open>cfg_exit g\<close>, directly over the original
-  graph.  The five dependency/static obligations come from a single \<^const>\<open>cone_compatible_etf\<close>
-  hypothesis; the cone solver supplies the guarded per-edge / per-combine bounds because each cone
-  node is a solver variable (\<open>side_cone_in_vars_eff\<close>).  No \<^const>\<open>prune_cfg\<close>, no
-  \<open>call_return_reaches\<close>, no \<^const>\<open>cfg_collect\<close>; holds for arbitrary CFGs, compiled or not.
+  The primary exit corollary applies the cone-guarded trace theorem directly to the original CFG.
+  Its cone obligations come from \<^const>\<open>cone_compatible_etf\<close> and solver-variable membership.
 \<close>
 theorem side_collect_sound_exit_eff_ltr_cone:
-  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
-    and bot0 s0 :: "'a abs_state" and S :: "store set"
-    and etf :: "('g, 'a) effectful_domain_transfer" and gseed :: 'g
   assumes se:    "sound_effectful_transfer etf"
   assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
   assumes fin:   "finite (edges g)"
@@ -168,5 +157,111 @@ proof -
   show ?thesis
     by (rule ltr_post_fixpoint_sound_at_eff_cone[OF se inr entry step_le combine_le])
 qed
+theorem side_analyse_eff_collect_sound_exit_ltr:
+  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
+    and S :: "store set"
+    and etf :: "('g::finite, 'a) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes se: "sound_effectful_transfer etf"
+  assumes mono_eq: "is_mono_eq (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes mono_sides: "mono_sides (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes mono_deps: "mono_deps (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes dom: "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) etf bot s0 gseed
+                  (cfg_exit (compile_prog \<Pi> ps main))"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
+  assumes edge_inr:
+    "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  assumes comb_inr:
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+  shows "ltr_collect (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
+         \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed
+              (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+proof -
+  interpret se: sound_effectful_transfer etf by (rule se)
+  define g where "g = compile_prog \<Pi> ps main"
+  define v0 where "v0 = cfg_exit g"
+  interpret ip: td_cfg_side_solver_eff g etf bot s0 gseed
+    using mono_eq mono_sides mono_deps unfolding g_def by unfold_locales
+  define \<sigma> where "\<sigma> = ip.nu_at v0"
+  have fin: "finite (edges g)" unfolding g_def using compile_prog_finite by simp
+  have finC: "finite (combines g)" unfolding g_def using compile_prog_finite by simp
+  have dom': "side_cfg_solve_dom_eff g etf bot s0 gseed v0"
+    using dom unfolding g_def v0_def by simp
+  have pp: "part_post_solution (side_cfg_T_eff g etf bot s0 gseed) v0 \<sigma> (ip.stabl_at v0)"
+    using ip.part_post_at_cfg[OF dom'] unfolding \<sigma>_def by simp
+  have entry_reach: "cfg_reaches g (cfg_entry g) v0"
+    using compile_prog_entry_cfg_reaches_exit unfolding g_def v0_def by simp
+  have entry_in: "cfg_entry g \<in> ip.stabl_at v0"
+    by (rule side_cone_in_vars_eff[OF pp fin finC edge_dep comb_dep1 comb_dep2
+          edge_static comb_static entry_reach])
+  have entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
+    by (rule s0_le_side_env_entry_eff[OF pp entry_in])
+  have entry_cov: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+    using S_sound gamma_state_mono[OF entry_le] by blast
+  have least: "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) v0 \<sigma> (ip.stabl_at v0)"
+    by (metis (mono_tags, opaque_lifting) dom' ip.cfg_pkg_eff_eq ip.least_part_post_at_cfg
+        local.\<sigma>_def)
+  have inr: "inr_slot_locals_bot \<sigma>"
+    by (metis comb_inr comb_static edge_inr edge_static g_def least
+        least_part_post_solution_inr_slot_locals_bot_eff mono_eq mono_sides)
+  have collect: "ltr_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  proof (rule ltr_post_fixpoint_sound_at_eff_cone[OF se inr entry_cov])
+    fix u a w
+    assume e: "(u, a, w) \<in> edges g" and rw: "cfg_reaches g w (cfg_exit g)"
+    have wv': "w \<in> ip.stabl_at (cfg_exit g)"
+      by (rule side_cone_in_vars_eff[OF pp[unfolded v0_def] fin finC edge_dep comb_dep1 comb_dep2
+            edge_static comb_static rw])
+    have wv: "w \<in> ip.stabl_at v0"
+      using wv' unfolding v0_def by simp
+    show "etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> w"
+      by (rule etf_combined_le_eff[OF pp wv e fin])
+  next
+    fix c ex ret dst
+    assume cmb: "(c, ex, ret, dst) \<in> combines g"
+      and rr: "cfg_reaches g ret (cfg_exit g)"
+    have rv': "ret \<in> ip.stabl_at (cfg_exit g)"
+      by (rule side_cone_in_vars_eff[OF pp[unfolded v0_def] fin finC edge_dep comb_dep1 comb_dep2
+            edge_static comb_static rr])
+    have rv: "ret \<in> ip.stabl_at v0"
+      using rv' unfolding v0_def by simp
+    show "etf_full (etf_combine etf dst c ex) \<sigma> \<le> side_env \<sigma> ret"
+      by (rule etf_combine_combined_le_eff[OF pp rv cmb finC])
+  qed
+  have analyse_eq:
+    "side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g) = side_env \<sigma> (cfg_exit g)"
+    unfolding side_analyse_eff_def \<sigma>_def v0_def g_def by simp
+  show ?thesis using collect analyse_eq by (simp add: g_def)
+qed
+corollary side_analyse_eff_collect_sound_exit_ltr_cone:
+  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
+    and S :: "store set"
+    and etf :: "('g::finite, 'a) effectful_domain_transfer"
+    and gseed :: 'g
+  assumes se: "sound_effectful_transfer etf"
+  assumes tfm: "threefold_mono (side_cfg_T_eff (compile_prog \<Pi> ps main) etf bot s0 gseed)"
+  assumes cone: "cone_compatible_etf etf"
+  assumes dom: "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) etf bot s0 gseed
+                  (cfg_exit (compile_prog \<Pi> ps main))"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  shows "ltr_collect (compile_prog \<Pi> ps main) S (cfg_exit (compile_prog \<Pi> ps main))
+         \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed
+              (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+  by (rule side_analyse_eff_collect_sound_exit_ltr[OF se
+        threefold_monoD_eq[OF tfm] threefold_monoD_sides[OF tfm]
+        threefold_monoD_deps[OF tfm] dom S_sound
+        cone_compatible_etf_edge_dep[OF cone]
+        cone_compatible_etf_comb_dep1[OF cone]
+        cone_compatible_etf_comb_dep2[OF cone]
+        cone_compatible_etf_edge_static[OF cone]
+        cone_compatible_etf_comb_static[OF cone]
+        cone_compatible_etf_edge_inr[OF cone]
+        cone_compatible_etf_comb_inr[OF cone]])
+
+
 
 end

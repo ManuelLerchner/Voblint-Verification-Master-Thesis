@@ -1,5 +1,5 @@
 theory CFG_Prune
-  imports CFG_Collect IMP2_Proc_to_CFG
+  imports IMP2_Proc_to_CFG
 begin
 
 section \<open>Dead-procedure pruning for interprocedural CFGs\<close>
@@ -90,72 +90,7 @@ lemma cfg_exit_prune_to[simp]: "cfg_exit (prune_to g v0) = cfg_exit g"
    cfg_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_Eff_Soundness).
    The graph-level pruning frame below is solver-agnostic. *)
 
-subsection \<open>Collect frame: witness transport\<close>
 
-lemma cfg_witness_prune_to:
-  assumes "cfg_witness g S v t"
-  shows "cfg_reaches g v v0 \<longrightarrow> cfg_witness (prune_to g v0) S v t"
-  using assms
-proof (induction rule: cfg_witness.induct)
-  case (entry v s Sa)
-  then show ?case by (auto intro: cfg_witness.entry)
-next
-  case (edge u a v Sa s t)
-  show ?case
-  proof (rule impI)
-    assume rv: "cfg_reaches g v v0"
-    have usucc: "cfg_succ g u v"
-      using edge.hyps(1) unfolding cfg_succ_def cfg_succ_rel_def by blast
-    have ruv: "cfg_reaches g u v0"
-      using cfg_succ_reaches[OF usucc rv] .
-    have wu: "cfg_witness (prune_to g v0) Sa u s"
-      using edge.IH ruv by blast
-    have ev: "(u, a, v) \<in> edges (prune_to g v0)"
-      using edge.hyps(1) rv by (simp add: cone_def)
-    show "cfg_witness (prune_to g v0) Sa v t"
-      by (rule cfg_witness.edge[OF ev wu edge.hyps(3)])
-  qed
-next
-  case (combine c ex v dst Sa sto t u)
-  show ?case
-  proof (rule impI)
-    assume rv: "cfg_reaches g v v0"
-    have call_pred: "\<exists>ct\<in>combines g. combine_call_node ct = c \<and> combine_return_node ct = v"
-      using combine.hyps(1) by (intro bexI[of _ "(c, ex, v, dst)"]) (auto simp: combine_call_node_def combine_return_node_def)
-    have csucc: "cfg_succ g c v"
-      unfolding cfg_succ_def cfg_succ_rel_def using call_pred by blast
-    have exit_pred: "\<exists>ct\<in>combines g. combine_exit_node ct = ex \<and> combine_return_node ct = v"
-      using combine.hyps(1) by (intro bexI[of _ "(c, ex, v, dst)"]) (auto simp: combine_exit_node_def combine_return_node_def)
-    have exsucc: "cfg_succ g ex v"
-      unfolding cfg_succ_def cfg_succ_rel_def using exit_pred by blast
-    have rc: "cfg_reaches g c v0"
-      using cfg_succ_reaches[OF csucc rv] .
-    have rex': "cfg_reaches g ex v0"
-      using cfg_succ_reaches[OF exsucc rv] .
-    have wc: "cfg_witness (prune_to g v0) Sa c sto"
-      using combine.IH(1) rc by blast
-    have wex: "cfg_witness (prune_to g v0) Sa ex t"
-      using combine.IH(2) rex' by blast
-    have rv': "cfg_reaches g (combine_return_node (c, ex, v, dst)) v0"
-      using combine.hyps(1) rv by (simp add: combine_return_node_def)
-    have cv: "(c, ex, v, dst) \<in> combines (prune_to g v0)"
-      using combine.hyps(1) rv' by (simp add: cone_def)
-    show "cfg_witness (prune_to g v0) Sa v u"
-      by (rule cfg_witness.combine[OF cv wc wex combine.hyps(4)])
-  qed
-qed
-
-lemma cfg_collect_prune_exit:
-  "cfg_collect g S (cfg_exit g) \<subseteq> cfg_collect (prune_cfg g) S (cfg_exit g)"
-proof
-  fix t assume "t \<in> cfg_collect g S (cfg_exit g)"
-  then have wg: "cfg_witness g S (cfg_exit g) t"
-    by (simp add: cfg_collect_eq_paths cfg_collect_paths_def)
-  have wp: "cfg_witness (prune_to g (cfg_exit g)) S (cfg_exit g) t"
-    using cfg_witness_prune_to[OF wg] cfg_reaches_refl by blast
-  show "t \<in> cfg_collect (prune_cfg g) S (cfg_exit g)"
-    using wp by (simp add: prune_cfg_def cfg_collect_eq_paths cfg_collect_paths_def)
-qed
 
 subsection \<open>Entry reaches exit for compile_prog\<close>
 

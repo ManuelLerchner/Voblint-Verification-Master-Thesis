@@ -16,7 +16,7 @@ text \<open>
 
   This theory provides the domain-level engine \<open>valid_ltr_ctx_sound\<close>; the public
   \<open>activation_collect_sound\<close> (in \<open>Activation_Backbone\<close>) is the set-level projection over
-  \<^const>\<open>cfg_collect_ctx_act\<close>, proved by one line from it.
+  \<^const>\<open>activation_collect\<close>, proved by one line from it.
 \<close>
 
 subsection \<open>The abstract interface at the domain concretization\<close>

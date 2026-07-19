@@ -5,20 +5,11 @@ begin
 section \<open>Trace-native D/G collecting soundness\<close>
 
 text \<open>
-  The D/G post-solution endpoint restated over the stack-faithful local-trace collecting
-  \<open>ltr_collect\<close> instead of the broad \<open>cfg_collect\<close>.  It reuses the analysis-specific closure
-  obligations \<open>dg_postfix_gamma_entry\<close> / \<open>dg_postfix_gamma_edge\<close> / \<open>dg_postfix_gamma_combine\<close>
-  verbatim --- the only change is the final semantic step, \<open>ltr_collect_semantic_postfix\<close> in place
-  of \<open>cfg_collect_semantic_postfix\<close>.  Soundness therefore rides on \<open>valid_ltr\<close>'s matched return
-  rule (inside \<open>ltr_gamma\<close>), NOT on \<open>ltr_collect_le_cfg_collect\<close>: each return recovers its own
-  caller rather than pairing every reachable caller with every callee exit.  The single-caller
-  \<open>COMB\<close> obligation reads exactly one combine triple's caller and callee-exit slots, so no second
-  caller/callee matching argument is introduced.  The \<open>cfg_collect\<close> endpoints in
-  \<^theory>\<open>Voblint_Analysis.DG_Soundness\<close> remain available as compatibility results.
-
-  Kept in a separate leaf so that importing the trace stack (which brings \<open>ltr.Call\<close> into scope,
-  shadowing the bare \<open>Call\<close> constructor) does not touch the wide D/G consumer theories.
+  The D/G post-solution endpoint is stated over the stack-faithful local-trace collector
+  \<^const>\<open>ltr_collect\<close>.  Its entry, edge, and combine closure obligations feed
+  \<open>ltr_collect_semantic_postfix\<close>; matched returns are supplied by \<^const>\<open>valid_ltr\<close>.
 \<close>
+
 
 context sound_dg_spec
 begin

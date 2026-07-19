@@ -1,5 +1,5 @@
 theory Located_Exec
-  imports Control_Residual
+  imports Control_Residual CFG_Transfer
 begin
 
 subsection \<open>Located CFG execution\<close>

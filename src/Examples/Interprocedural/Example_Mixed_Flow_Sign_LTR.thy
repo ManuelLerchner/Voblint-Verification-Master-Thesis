@@ -22,10 +22,8 @@ text \<open>
   survives with no side condition.
 
   The proof reuses exactly the effectful post-solution hypotheses of the raw-CFG corollary
-  @{thm [source] sign_mixed_flow_sound_from_pp}.  It references neither
-  \<open>ltr_collect_le_cfg_collect\<close> nor \<open>cfg_collect_post_fixpoint_sound\<close> nor the raw-CFG
-  \<open>post_fixpoint_sound_at_eff\<close>: soundness flows through @{const valid_ltr}'s matched return rule
-  inside \<^locale>\<open>ltr_gamma\<close>, so each recursive return recovers its own caller rather than pairing all
+  @{thm [source] sign_mixed_flow_sound_from_pp}.  Soundness flows through
+  @{const valid_ltr}'s matched return rule inside the trace-native endpoint.
   callers with all callee exits.  It changes no solver equation.
 
   This theory is a separate leaf because importing the trace stack brings @{const ltr.Call} into

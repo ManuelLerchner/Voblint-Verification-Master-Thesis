@@ -36,7 +36,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Constraint_System
     Sign_Transfer
     Constraint_System_Sound
-    Analysis_Sound
     LTR_Analysis_Sound
     TD_Side_CFG
     Sign_Local_Effects
@@ -59,7 +58,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Keyed_Gen
     DG_Framework
     DG_Soundness
-    DG_Context_Soundness
     DG_LTR_Sound
     DG_Ctx_Activation
     Retain_Analysis
@@ -67,12 +65,10 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Named_Global_Eff
     Interval_Side_Soundness
     Interval_DG
-    Interval_DG_LTR
     Interval_Point_Digest
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
-    Sign_DG_LTR
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz

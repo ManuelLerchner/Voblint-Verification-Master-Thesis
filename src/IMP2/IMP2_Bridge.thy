@@ -405,9 +405,8 @@ qed
   Headline restatement: the analyzer's soundness is now expressible against AFP
   IMP2's standard concrete semantics.  Whenever the translated source program
   terminates under IMP2 big-step, our small-step semantics reaches the same
-  final store (read back through proj0).  Composed with the existing pipeline
-  soundness (stated against pcompletes / cfg_collect), this transfers soundness to
-  AFP IMP2 with no further proof obligation on the analyzer side.
+  final store (read back through proj0).  Composed with trace-native pipeline
+  soundness, this transfers soundness to AFP IMP2 with no further analyzer obligation.
 *)
 
 theorem backward_sim:

@@ -1,28 +1,17 @@
 theory LTR_Analysis_Sound
-  imports Analysis_Sound "Voblint_CFG.LTR_Abstract"
+  imports Constraint_System_Sound "Voblint_CFG.LTR_Abstract"
 begin
 
 section \<open>Solver soundness against the stack-faithful semantics\<close>
 
 text \<open>
-  The trace-based compiled-program carrier.  It states monovariant solver soundness directly
-  against the stack-faithful local-trace collecting \<^const>\<open>ltr_collect\<close>, and proves it through the
-  domain-free interface \<^locale>\<open>ltr_gamma\<close> (\<^theory>\<open>Voblint_CFG.LTR_Abstract\<close>): the matched
-  caller/callee relation is supplied by \<^const>\<open>valid_ltr\<close>'s return rule inside the interface, not
-  reconstructed here.  The proof does NOT go through \<open>ltr_collect_le_cfg_collect\<close> followed by the
-  broad \<^const>\<open>cfg_collect\<close> soundness --- that bridge is compatibility only.  Instead
-  \<^locale>\<open>ltr_gamma\<close> is interpreted at the context-free concretization \<open>acc v _ = \<lbrakk>env v\<rbrakk>\<close>,
-  discharging \<open>ROOT\<close> / \<open>EDGE\<close> / \<open>SEED\<close> / \<open>COMB\<close> from the same per-step domain bounds the raw-CFG
-  proof uses (\<open>edge_of_bound\<close>, \<open>combine_collect_sound\<close>); the \<open>COMB\<close> obligation only ever
-  sees the caller and callee-exit slots of a single combine triple.
-
-  The raw-CFG results \<open>post_fixpoint_sound\<close> / \<open>unified_post_fixpoint_sound\<close> (over
-  \<^const>\<open>cfg_collect\<close>) are retained unchanged in \<^theory>\<open>Voblint_Analysis.Analysis_Sound\<close>.  This
-  theory sits in a separate file because importing the trace stack brings \<^const>\<open>ltr.Call\<close> into
-  scope, which shadows the bare \<open>Call\<close> constructor used in monovariant CFG examples; keeping the
-  trace-based statement here leaves \<^theory>\<open>Voblint_Analysis.Analysis_Sound\<close>'s wide consumer set
-  unaffected.
+  Monovariant solver soundness is stated directly against the stack-faithful local-trace collector
+  \<^const>\<open>ltr_collect\<close>.  The proof interprets \<^locale>\<open>ltr_gamma\<close> at the context-free
+  concretization \<open>acc v _ = \<lbrakk>env v\<rbrakk>\<close>, discharging ROOT, EDGE, SEED, and COMB from the
+  transfer bounds.  Each COMB obligation follows one concrete caller/callee return.
 \<close>
+
+
 
 context sound_transfer
 begin

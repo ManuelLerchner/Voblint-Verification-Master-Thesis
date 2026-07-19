@@ -3,6 +3,5 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   directories
     "Pipeline"
   theories
-    Compiler_Correctness
     Mixed_Flow_Sound
     Source_Activation_Sound

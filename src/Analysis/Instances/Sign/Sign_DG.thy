@@ -1,6 +1,6 @@
 theory Sign_DG
   imports
-    "Voblint_Analysis.DG_Context_Soundness"
+    "Voblint_Analysis.DG_LTR_Sound"
     Sign_Transfer
 begin
 
@@ -43,9 +43,7 @@ where
   "sign_dg_generator g bot0 s0d s0g = sign_dg.dg_gen g bot0 s0d s0g"
 
 text \<open>
-  Collecting soundness from a post-solution of the configured generator, with the same
-  \<^const>\<open>cfg_collect\<close> statement the homogeneous Sign path proved --- no restatement of
-  candidate-solution premises.
+  Trace-native collecting soundness from a post-solution of the configured generator.
 \<close>
 
 theorem sign_dg_post_solution_collect_sound:
@@ -56,35 +54,10 @@ theorem sign_dg_post_solution_collect_sound:
     and finE: "finite (edges g)"
     and finC: "finite (combines g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
-  shows "cfg_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
+  shows "ltr_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
   unfolding sign_dg_gamma_def
-  by (rule sign_dg.dg_post_solution_collect_sound
+  by (rule sign_dg.dg_post_solution_collect_sound_ltr
         [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_combine
             finE finC sound0[folded gamma_unit_def]])
-
-subsection \<open>Keyed context probe: two Sign contexts, one solution\<close>
-
-text \<open>
-  A minimal witness that the context-keyed fiberwise theorem
-  \<open>sound_dg_spec.dg_postfix_c_collect_sound\<close> fires at Sign with a nontrivial context
-  (here \<^typ>\<open>bool\<close>, two contexts).  One solution \<open>sigma\<close> over \<^typ>\<open>pp \<times> bool + bool\<close>
-  unknowns soundly serves \<^emph>\<open>both\<close> contexts at once: each reads its own local slots
-  \<open>Inl (v, True)\<close> / \<open>Inl (v, False)\<close> and its own global \<open>Inr True\<close> / \<open>Inr False\<close>, and
-  may be seeded independently (\<open>s0dT\<close>/\<open>s0gT\<close> versus \<open>s0dF\<close>/\<open>s0gF\<close>).  This is exactly the
-  own-slot context sensitivity the keyed examples use, now native on the
-  DG spine.  No solver run or generic solver-equivalence is claimed --- the theorem is
-  applied to an abstract post-fixpoint at each context.
-\<close>
-
-lemma sign_dg_two_context_sound:
-  fixes sigma :: "pp \<times> bool + bool \<Rightarrow> (sign abs_state, sign abs_state) dg_state"
-  assumes pfT: "sign_dg.dg_postfix_c g True s0dT s0gT sigma"
-    and pfF: "sign_dg.dg_postfix_c g False s0dF s0gF sigma"
-    and soundT: "S \<subseteq> \<lbrakk>s0dT \<squnion> s0gT\<rbrakk>"
-    and soundF: "S \<subseteq> \<lbrakk>s0dF \<squnion> s0gF\<rbrakk>"
-  shows "cfg_collect g S v \<subseteq> sign_dg.dg_gamma_c sigma True v"
-    and "cfg_collect g S v \<subseteq> sign_dg.dg_gamma_c sigma False v"
-   apply (rule sign_dg.dg_postfix_c_collect_sound[OF pfT soundT[folded gamma_unit_def]])
-  by (rule sign_dg.dg_postfix_c_collect_sound[OF pfF soundF[folded gamma_unit_def]])
 
 end

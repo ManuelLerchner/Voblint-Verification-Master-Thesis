@@ -5,27 +5,12 @@ begin
 section \<open>Effectful solver soundness against the stack-faithful semantics\<close>
 
 text \<open>
-  The effectful analogue of \<open>Voblint_Analysis.LTR_Analysis_Sound\<close>: a post-fixpoint of the
-  effectful equation system soundly over-approximates the stack-faithful local-trace collecting
-  \<^const>\<open>ltr_collect\<close>, stated directly over traces and proved through the domain-free interface
-  \<^locale>\<open>ltr_gamma\<close> (\<^theory>\<open>Voblint_CFG.LTR_Abstract\<close>).
-
-  Where the raw-CFG \<open>post_fixpoint_sound_at_eff\<close> concludes \<open>cfg_collect g S v0 <= gamma\<close> through the
-  \<^const>\<open>cfg_witness\<close> induction, this concludes \<open>ltr_collect g S v0 <= gamma\<close> by interpreting
-  \<^locale>\<open>ltr_gamma\<close> at the context-free concretization \<open>acc v _ = \<lbrakk>side_env sigma v\<rbrakk>\<close>.  The four
-  closure obligations are discharged from exactly the effectful per-step bounds the raw-CFG proof
-  uses (\<open>edge_collect_etf_sound\<close>, \<open>etf_collecting_full_le_side_env\<close>, \<open>etf_sound_combine\<close>); the
-  \<open>COMB\<close> obligation only ever sees the caller and callee-exit slots of a single combine triple, so
-  no caller/callee product is reconstructed --- the matched relation is supplied by
-  \<^const>\<open>valid_ltr\<close>.  The proof does NOT route \<open>ltr_collect_le_cfg_collect\<close> then the broad
-  \<^const>\<open>cfg_collect\<close> soundness --- that bridge is compatibility only.
-
-  The raw-CFG \<open>post_fixpoint_sound_at_eff\<close> (over \<^const>\<open>cfg_collect\<close>) and its pruned consumers
-  (\<open>side_collect_sound_exit_pruned_eff\<close>, \<open>side_analyse_eff_collect_sound_at\<close>) are retained
-  unchanged.  This theory sits in a separate leaf: importing the trace stack brings
-  \<^const>\<open>ltr.Call\<close> into scope, which shadows the bare \<open>Call\<close> constructor used in monovariant CFG
-  examples, so the trace-based statement is kept off the effectful spine's wide consumer set.
+  Effectful equation-system soundness over the stack-faithful local-trace collector
+  \<^const>\<open>ltr_collect\<close>.  The proof interprets \<^locale>\<open>ltr_gamma\<close> at
+  \<open>acc v _ = \<lbrakk>side_env sigma v\<rbrakk>\<close>.  EDGE, SEED, and COMB are discharged by the
+  effectful per-step bounds; each return uses one caller and one callee exit.
 \<close>
+
 
 context sound_effectful_transfer
 begin
@@ -50,10 +35,8 @@ proof -
   finally show ?thesis using m by blast
 qed
 
-text \<open>Effectful collecting soundness at a program point, stated over the stack-faithful
-  \<^const>\<open>ltr_collect\<close>.  Mirrors \<open>post_fixpoint_sound_at_eff\<close>, with the same hypotheses, but its
-  conclusion is over traces and its proof rides on \<^locale>\<open>ltr_gamma\<close> rather than the broad
-  \<^const>\<open>cfg_witness\<close> induction.\<close>
+text \<open>Effectful collecting soundness at a program point is stated over the stack-faithful
+  \<^const>\<open>ltr_collect\<close> and proved through \<^locale>\<open>ltr_gamma\<close>.\<close>
 theorem ltr_post_fixpoint_sound_at_eff:
   fixes g :: cfg and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state"
     and s0 :: "'a abs_state" and S :: "store set" and v0 :: pp
