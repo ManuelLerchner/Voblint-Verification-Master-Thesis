@@ -36,11 +36,12 @@ text \<open>
   \<^item> \<open>Root p\<close> --- the main activation, with local path \<open>p\<close>.
   \<^item> \<open>Call caller p\<close> --- a callee whose local path \<open>p\<close> starts at the parameter-bound entry
     store; \<open>caller\<close> is the exact suspended caller, frozen at the call node.
-  \<^item> \<open>Resume caller callee p\<close> --- a caller continued past a completed call.  \<open>caller\<close> is the
-    frozen caller at its call node (exactly the value that spawned \<open>callee\<close>, possibly itself a
-    \<open>Call\<close> or a nested \<open>Resume\<close>); \<open>callee\<close> is the retained completed callee subtree (so
-    \<open>key\<close> can read its context for a general return map); \<open>p\<close> is the caller's continued
-    path.
+  \<^item> \<open>Resume current callee p\<close> --- the activation continued past a completed call.  \<open>current\<close>
+    is that activation frozen at its call node (exactly the value that spawned \<open>callee\<close>,
+    possibly itself a \<open>Call\<close> or a nested \<open>Resume\<close>): it was the caller when the call was made
+    and is the current execution context once the call returns.  \<open>callee\<close> is the retained
+    completed callee subtree (so \<open>key\<close> can read its context for a general return map); \<open>p\<close>
+    is the continued path.
 \<close>
 
 datatype ltr =
@@ -84,7 +85,7 @@ text \<open>
 fun caller_of :: "ltr \<Rightarrow> ltr option" where
   "caller_of (Root _)            = None"
 | "caller_of (Call caller _)     = Some caller"
-| "caller_of (Resume caller _ _) = caller_of caller"
+| "caller_of (Resume current _ _) = caller_of current"
 
 subsection \<open>Extension and context projection\<close>
 
@@ -110,7 +111,7 @@ text \<open>The activation context is computed from the concrete trace after the
 fun key :: "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
   "key enterc seedc (Root _)                 = seedc"
 | "key enterc seedc (Call parent p)          = enterc (key enterc seedc parent) (snd (hd p))"
-| "key enterc seedc (Resume caller callee _) = key enterc seedc caller"
+| "key enterc seedc (Resume current callee _) = key enterc seedc current"
 
 subsection \<open>The closure relation\<close>
 
@@ -504,39 +505,16 @@ next
   qed
 qed
 
-subsection \<open>The generic witness collector\<close>
-
-text \<open>\<open>collect_by\<close> is the single collecting scheme: the stores of witnesses in \<open>W\<close>
-  reaching node \<open>v\<close> whose context (under an arbitrary reader \<open>ctx_of\<close>) is \<open>c\<close>.
-  Every collecting semantics in the development is an instance --- plain (trivial context),
-  digest-keyed (\<open>ctx_of = dg \<circ> flatten\<close>), and activation-keyed (\<open>ctx_of = key enterc seedc\<close>).\<close>
-
-definition collect_by ::
-  "'w set \<Rightarrow> ('w \<Rightarrow> pp) \<Rightarrow> ('w \<Rightarrow> store) \<Rightarrow> ('w \<Rightarrow> 'c) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
-  "collect_by W node_of store_of ctx_of v c =
-     {store_of w | w. w \<in> W \<and> node_of w = v \<and> ctx_of w = c}"
-
-lemma collect_byI:
-  "w \<in> W \<Longrightarrow> node_of w = v \<Longrightarrow> ctx_of w = c \<Longrightarrow> store_of w \<in> collect_by W node_of store_of ctx_of v c"
-  unfolding collect_by_def by blast
-
-lemma collect_byE:
-  assumes "s \<in> collect_by W node_of store_of ctx_of v c"
-  obtains w where "w \<in> W" "node_of w = v" "ctx_of w = c" "store_of w = s"
-  using assms unfolding collect_by_def by blast
-
 subsection \<open>The activation-indexed context collecting\<close>
-text \<open>The activation-sensitive collecting consists of sink stores of valid traces reaching \<open>v\<close> whose activation context is \<open>c\<close>. It is the activation instance of \<^const>\<open>collect_by\<close> with \<open>ctx_of = key enterc seedc\<close>.\<close>
+text \<open>The activation-sensitive collecting is the sink stores of valid traces reaching \<open>v\<close>
+  whose activation context is \<open>c\<close>.  It projects the concrete semantics \<^const>\<open>valid_ltr\<close>:
+  keep the witnesses that land at node \<open>v\<close> with context \<open>c\<close> under \<^const>\<open>key\<close>, then read
+  their sink stores --- the only observation an abstract interpreter approximates.\<close>
 
 definition activation_collect ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> store set" where
   "activation_collect enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
-
-lemma activation_collect_collect_by:
-  "activation_collect enterc seedc g S v c
-     = collect_by (valid_ltr g S) sink_node sink_store (key enterc seedc) v c"
-  unfolding activation_collect_def collect_by_def by simp
 
 
 

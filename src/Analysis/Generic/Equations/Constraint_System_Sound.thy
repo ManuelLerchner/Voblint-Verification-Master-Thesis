@@ -123,22 +123,22 @@ proof (cases a)
 next
   case (EA_Assign x ax)
   show ?thesis
-    unfolding EA_Assign apply_tf.simps edge_collect.simps
+    unfolding EA_Assign apply_tf.simps edge_collect_simps
     using tf_sound_assign by blast
 next
   case (EA_Assume b)
   show ?thesis
-    unfolding EA_Assume apply_tf.simps edge_collect.simps
+    unfolding EA_Assume apply_tf.simps edge_collect_simps
     using tf_sound_assume by blast
 next
   case (EA_AssumeNot b)
   show ?thesis
-    unfolding EA_AssumeNot apply_tf.simps edge_collect.simps
+    unfolding EA_AssumeNot apply_tf.simps edge_collect_simps
     using tf_sound_assume_not by blast
 next
   case (EA_Enter xs es)
   show ?thesis
-    unfolding EA_Enter apply_tf.simps edge_collect.simps
+    unfolding EA_Enter apply_tf.simps edge_collect_simps
     using tf_sound_enter by blast
 qed
 

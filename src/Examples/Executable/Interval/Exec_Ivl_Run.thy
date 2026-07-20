@@ -1,10 +1,7 @@
 theory Exec_Ivl_Run
   imports Voblint_Analysis.Ivl_Exec Voblint_Analysis.Solver_Menu "Voblint_CFG.IMP2_Proc_to_CFG"
-            "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
+            "Voblint_IMP2.IMP2_Notation"
 begin
-
-no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
-hide_const (open) Syntax.N Syntax.V
 
 section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
 

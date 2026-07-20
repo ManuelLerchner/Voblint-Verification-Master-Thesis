@@ -1,5 +1,5 @@
 theory Constraint_System
-  imports "Voblint_CFG.CFG_Def" "Voblint_CFG.CFG_Transfer" Abstract_Domain
+  imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" Abstract_Domain
     "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Proc"
     "TD.Basics_side"
 begin

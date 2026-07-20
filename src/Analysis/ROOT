@@ -33,6 +33,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Interval_Print
     Interval_Domain
     Ivl_Exec
+    CFG_Enumeration
     Constraint_System
     Sign_Transfer
     Constraint_System_Sound

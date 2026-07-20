@@ -3,12 +3,10 @@ section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 theory Example_Interval_Loop_Coverage
   imports Voblint_CFG.CFG_Prune
     "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.LTR_Analysis_Sound"
-    "Voblint_IMP2.IMP2_Notation" "Voblint_IMP2.IMP2_Bridge"
+    "Voblint_IMP2.IMP2_Notation"
 begin
 
-(* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)
-no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
-hide_const (open) Syntax.N Syntax.V
+(* Disambiguate our N abbreviation from the phase datatype constructor. *)
 hide_const phase.N
 
 text \<open>

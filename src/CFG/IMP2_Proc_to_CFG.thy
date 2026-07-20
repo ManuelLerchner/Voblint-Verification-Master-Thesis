@@ -31,8 +31,8 @@ where
        (let (n1, en1, ex1, E1, C1) = compile \<Pi> lay c1 n;
             (n2, en2, ex2, E2, C2) = compile \<Pi> lay c2 n1
         in  (n2, en1, ex2, 
-             E1 Un (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) Un E2,
-             C1 Un C2))"
+             E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2,
+             C1 \<union> C2))"
 
   | "compile \<Pi> lay (If b c1 c2) n =
        (let en  = n;
@@ -42,10 +42,10 @@ where
         in  (n2 + 1, en, xn,
              {(en, EA_Assume b,    en1),
               (en, EA_AssumeNot b, en2)}
-             Un E1 Un E2
-             Un {(ex1, EA_Nop, xn),
+             \<union> E1 \<union> E2
+             \<union> {(ex1, EA_Nop, xn),
                  (ex2, EA_Nop, xn)},
-             C1 Un C2))"
+             C1 \<union> C2))"
 
   | "compile \<Pi> lay (While b c) n =
        (let head = n;
@@ -54,16 +54,16 @@ where
         in  (n1 + 1, head, xn,
              {(head, EA_Assume b,    en1),
               (head, EA_AssumeNot b, xn)}
-             Un E1
-             Un {(ex1, EA_Nop, head)},
+             \<union> E1
+             \<union> {(ex1, EA_Nop, head)},
              C1))"
 
   | "compile \<Pi> lay (Scope c) n =
        (let (n', en, ex, E, C) = compile \<Pi> lay c (n + 1);
             scope_ex = n'
         in  (n' + 1, n, scope_ex,
-             E Un {(n, EA_Enter [] [], en)},
-             C Un {(n, ex, scope_ex, None)}))"
+             E \<union> {(n, EA_Enter [] [], en)},
+             C \<union> {(n, ex, scope_ex, None)}))"
 
   | "compile \<Pi> lay (Call dst p actuals) n =
        (case (\<Pi> p, lay p) of
@@ -114,8 +114,27 @@ where
                                 None => (full_lay (p := Some (en, ex, {n..<n'}, E, C)))
                               | Some _ => full_lay);
                  (n'', full_lay'', Eacc, Cacc) = compile_procs_bodies \<Pi> ps base_lay full_lay' n'
-             in  (n'', full_lay'', E Un Eacc, C Un Cacc)))"
+             in  (n'', full_lay'', E \<union> Eacc, C \<union> Cacc)))"
 
+text \<open>
+  Two-pass procedure compilation.
+
+  Pass 1 (@{const compile_procs_layout}) records each procedure's entry, exit,
+  and node range with empty edge sets, so that a @{term Call} in any body can
+  resolve its callee's entry/exit -- including mutual and self recursion.
+
+  Pass 2 (@{const compile_procs_bodies}) recompiles every body against that
+  fixed layout (@{term base_lay}) to emit the real edges. Two choices below are
+  deliberate, not oversights:
+  \<^item> the accumulator starts from the caller-supplied @{term lay} (fresh, all
+    @{term None}), not from @{term base_lay}; the per-procedure update writes
+    only when the entry is still @{term None}, so seeding it with the already
+    @{term Some} @{term base_lay} would skip every procedure and drop all edges.
+  \<^item> the body pass restarts the counter at @{term n}, not at pass 1's final
+    @{term n'}; since @{const compile}'s counter is layout-independent (lemma
+    \<^verbatim>\<open>compile_counter_indep\<close> below) this reproduces the identical
+    node numbering pass 1 stored, keeping the @{term "{n..<n'}"} ranges valid.
+\<close>
 definition compile_procs_list ::
   "proc_table => pname list => proc_layout => nat =>
    nat * proc_layout * (pp * edge_action * pp) set * combine_info set"
@@ -230,6 +249,19 @@ next
   case Restore then show ?case by auto
 qed
 
+text \<open>
+  The counter returned by @{const compile} is fixed by the command structure
+  alone: the layout only supplies entry/exit targets for edges, never fresh
+  node numbers (even the @{term Call} clause returns @{term "n + 2"} in both
+  branches). This is what makes the two-pass @{const compile_procs_list} sound:
+  the body pass re-runs @{const compile} from the same start counter as the
+  layout pass and reproduces the identical node ranges @{term "{n..<n'}"}.
+\<close>
+lemma compile_counter_indep:
+  "fst (compile \<Pi> lay c n) = fst (compile \<Pi> lay' c n)"
+  by (induction c arbitrary: n rule: com.induct)
+     (auto split: prod.splits option.splits, (metis fst_conv)+)
+
 lemma compile_finite:
   "compile \<Pi> lay c n = (n', en, ex, E, C) \<Longrightarrow> finite E \<and> finite C"
 proof (induction c arbitrary: n n' en ex E C rule: com.induct)
@@ -243,8 +275,8 @@ next
   then obtain n1 en1 ex1 E1 C1 n2 en2 ex2 E2 C2 where
     c1: "compile \<Pi> lay c1 n = (n1, en1, ex1, E1, C1)"
     and c2: "compile \<Pi> lay c2 n1 = (n2, en2, ex2, E2, C2)"
-    and E: "E = E1 Un (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) Un E2"
-    and C: "C = C1 Un C2"
+    and E: "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2"
+    and C: "C = C1 \<union> C2"
     by (auto split: prod.splits)
   show ?case unfolding E C using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] by simp
 next
@@ -282,8 +314,8 @@ next
       cp: "compile \<Pi> base_lay (with_result (body decl) (result decl)) n = (n1, en, ex, E0, C0)"
       and rest: "compile_procs_bodies \<Pi> ps base_lay full_lay1 n1 =
                    (n2, full_lay2, Eacc, Cacc)"
-      and E: "E = E0 Un Eacc"
-      and C: "C = C0 Un Cacc"
+      and E: "E = E0 \<union> Eacc"
+      and C: "C = C0 \<union> Cacc"
       by (auto split: prod.splits option.splits)
     from compile_finite[OF cp] Cons.IH[OF rest] show ?thesis
       unfolding E C by simp
@@ -308,9 +340,6 @@ subsection \<open>Executable examples\<close>
 
 value "cfg_entry (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
 value "cfg_exit  (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
-value "cfg_edges_list (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
-value "cfg_edges_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Assign ''x'' (N 1)))"
-value "cfg_combines_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Call None ''f'' []))"
 
 
 

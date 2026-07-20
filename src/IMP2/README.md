@@ -12,9 +12,10 @@ semantics, and a bridge to AFP IMP2 for the thesis reference anchor.
 | `IMP2_Expr.thy`         | `aval`, `bval` — expression evaluation only; leaf cases delegate to HOL-IMP `AExp` / `BExp`                        |
 | `HOL_IMP_Countable.thy` | Countability for wrapped HOL-IMP `AExp` / `BExp` types                                                             |
 | `IMP2_Globals.thy`      | `combine_states <s\|t>`, `enter_state`, `is_global`; `pname` type synonym                                          |
-| `IMP2_Proc.thy`         | Extended `com` with Scope / Call / Restore; `proc_table`; `pstep` (frame-stack small-step, `→ₚ`), `psteps` (`→ₚ*`) |
+| `IMP2_Proc.thy`         | Extended `com` with Scope / Call / Restore; `proc_table`; `pstep` (frame-stack small-step, `→ₚ`), `psteps` (`→ₚ*`); `source_com` / `source_pi` source-program admissibility |
 | `IMP2_Notation.thy`     | Concrete-syntax quotations used by examples                                                        |
-| `IMP2_Bridge.thy`       | One-way bridge: our `com` / `store` → AFP `IMP2` (expression embedding + scalar-array state embedding)             |
+| `IMP2_Bridge_Expr.thy`  | One-way expression + state embedding: our `aexp` / `bexp` / `store` → AFP `IMP2` (`embed`, `proj0`, `to_imp2_aexp/bexp`) |
+| `IMP2_Bridge_Cmd.thy`   | Command translation + backward simulation for the parameterless subset (`to_imp2_com`, `bridge_com/pi`, `backward_sim`) |
 | `IMP2_VCG_Example.thy`  | Example showing IMP2's own VCG and our analyzer agreeing on one program                                            |
 
 **Key concepts:**

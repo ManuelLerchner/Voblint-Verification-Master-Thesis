@@ -35,27 +35,27 @@ lemma edge_collect_etf_sound:
 proof (cases a)
   case EA_Nop
   show ?thesis
-    unfolding EA_Nop apply_etf.simps edge_collect.simps side_env_def
+    unfolding EA_Nop apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_nop inr by auto
 next
   case (EA_Assign x ax)
   show ?thesis
-    unfolding EA_Assign apply_etf.simps edge_collect.simps side_env_def
+    unfolding EA_Assign apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_assign inr by auto
 next
   case (EA_Assume b)
   show ?thesis
-    unfolding EA_Assume apply_etf.simps edge_collect.simps side_env_def
+    unfolding EA_Assume apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_assume inr by auto
 next
   case (EA_AssumeNot b)
   show ?thesis
-    unfolding EA_AssumeNot apply_etf.simps edge_collect.simps side_env_def
+    unfolding EA_AssumeNot apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_assume_not inr by auto
 next
   case EA_Enter
   show ?thesis
-    unfolding EA_Enter apply_etf.simps edge_collect.simps side_env_def
+    unfolding EA_Enter apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_enter inr by auto
 qed
 

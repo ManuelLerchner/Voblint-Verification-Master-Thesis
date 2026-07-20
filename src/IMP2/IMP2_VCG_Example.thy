@@ -1,5 +1,5 @@
 theory IMP2_VCG_Example
-  imports IMP2_Bridge IMP2_Notation "IMP2.IMP2_VCG"
+  imports IMP2_Bridge_Cmd IMP2_Notation "IMP2.IMP2_VCG"
 begin
 
 (* Suppress AFP/IMP2 Syntax names that shadow our IMP2_Syntax abbreviations. *)

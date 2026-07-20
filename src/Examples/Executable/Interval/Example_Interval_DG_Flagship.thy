@@ -57,12 +57,8 @@ theory Example_Interval_DG_Flagship
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_IMP2.IMP2_Bridge"
     "Voblint_Formalization.Source_Activation_Sound"
 begin
-
-no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
-hide_const (open) Syntax.N Syntax.V
 
 subsection \<open>1. The program (inline IMP2 source)\<close>
 

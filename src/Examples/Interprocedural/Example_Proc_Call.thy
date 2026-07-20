@@ -269,7 +269,7 @@ text \<open>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-             @{code proc_pi} @{code main_procs} @{code main_prog})
+              @{code proc_pi} @{code main_procs} @{code main_prog})
 \<close>
 
 end
