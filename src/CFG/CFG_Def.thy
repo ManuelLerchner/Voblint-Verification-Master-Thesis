@@ -60,6 +60,17 @@ definition combine_dst :: "combine_info \<Rightarrow> vname option" where
 
 subsection \<open>CFG record\<close>
 
+text \<open>
+  The record separates two concerns.  Its semantic interface --- the distinguished
+  locations \<open>cfg_entry\<close> and \<open>cfg_exit\<close> with the transition relations \<open>edges\<close> and
+  \<open>combines\<close> --- is the labelled transition system the concrete semantics rides on:
+  \<open>valid_ltr\<close>'s closure rules read \<open>cfg_entry\<close>, \<open>edges\<close>, and \<open>combines\<close>, while
+  \<open>cfg_exit\<close> names the end location at which termination/exit reachability is stated.
+  The one non-semantic field, \<open>nodes\<close>, is read only by tooling (reachability pruning,
+  finiteness bookkeeping, visualization); it is always the \<open>mk_cfg\<close>-derived node set,
+  never supplied independently.  Solver edge/predecessor enumeration lives in a
+  separate theory in the analysis session.
+\<close>
 record cfg =
   nodes     :: "pp set"
   edges     :: "(pp \<times> edge_action \<times> pp) set"

@@ -125,6 +125,17 @@ text \<open>
   recovers its caller by \<^const>\<open>caller_of\<close>, not by matching the callee's outer constructor, so
   it composes nested and recursive returns.
 \<close>
+
+text \<open>
+  The closure rules read only the transition-system core of a \<^typ>\<open>cfg\<close>: the entry
+  location \<^const>\<open>cfg_entry\<close>, the transition relation \<^const>\<open>edges\<close>, and the
+  call/return matching relation \<^const>\<open>combines\<close>.  The exit location \<^const>\<open>cfg_exit\<close>
+  is not read by these rules; it is the distinguished end location at which exit
+  reachability is stated elsewhere.  The \<^const>\<open>nodes\<close> field is never read by the
+  semantics at all --- it exists only for tooling.  So although the parameter has type
+  \<^typ>\<open>cfg\<close>, this is a semantics over a labelled transition system, not over any graph
+  representation.
+\<close>
 inductive_set valid_ltr :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set" for g S where
   init:
     "s \<in> S
