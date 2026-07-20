@@ -41,16 +41,6 @@ record proc_decl =
 definition proc_decl_of :: "vname list => com => aexp option => proc_decl" where
   "proc_decl_of xs bdy res = \<lparr>formals = xs, body = bdy, result = res\<rparr>"
 
-abbreviation proc_decl_legacy :: "com => proc_decl" where
-  "proc_decl_legacy c \<equiv> proc_decl_of [] c None"
-
-lemma proc_decl_legacy:
-  "formals (proc_decl_legacy c) = []"
-  "body (proc_decl_legacy c) = c"
-  "result (proc_decl_legacy c) = None"
-  "proc_decl_legacy c = proc_decl_of [] c None"
-  by (simp_all add: proc_decl_of_def)
-
 (* Reserved local holding a procedure's result across the restore boundary.
    Goblint's return_varinfo. Local, so it never escapes into the caller. *)
 definition ret_var :: vname where
@@ -137,6 +127,11 @@ inductive_cases CallSE[elim]:
 inductive_cases RestoreSE[elim!]:
   "pstep \<Pi> (Restore, s, frs) cfg"
 
+(* Structured induction over pstep-runs: split_format states each case on the
+   (c, s, frs) components rather than an anonymous configuration product. *)
+lemmas star_pstep_induct =
+  star.induct[of "pstep \<Pi>", split_format(complete), case_names refl step]
+
 lemma bind_formals_nonformal:
   assumes "x \<notin> set xs"
   shows "bind_formals xs vs s x = s x"
@@ -163,33 +158,10 @@ text \<open>
 fun pfinal :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
   "pfinal (c, s, frs) = (c = SKIP \<and> frs = [])"
 
-lemma pfinalD[elim]:
-  assumes "pfinal (c, s, frs)"
-  shows "c = SKIP \<and> frs = []"
-  using assms unfolding pfinal.simps by simp
-
-lemma pfinal_iff_SKIP_empty[simp]:
-  "pfinal (c, s, frs) = (c = SKIP \<and> frs = [])"
-  unfolding pfinal.simps by simp
-
-definition pno_step :: "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" where
-  "pno_step \<Pi> cfg \<longleftrightarrow> \<not> (\<exists>cfg'. pstep \<Pi> cfg cfg')"
-
-lemma pfinal_imp_pno_step:
-  assumes pf: "pfinal (c, s, frs)"
-  shows "pno_step \<Pi> (c, s, frs)"
-  using pf unfolding pno_step_def pfinal.simps
-  by (auto elim!: SkipSE)
-
 definition pcompletes :: "proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "pcompletes \<Pi> c s t = psteps \<Pi> (c, s, []) (SKIP, t, [])"
 
-lemma pcompletes_iff_small_termination:
-  "pcompletes \<Pi> c s t \<longleftrightarrow>
-     (\<exists>cfg. psteps \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
-  unfolding pcompletes_def by auto
-
-lemma pcompletes_iff_reaches_pfinal[simp]:
+lemma pcompletes_iff_small_termination[simp]:
   "pcompletes \<Pi> c s t \<longleftrightarrow>
      (\<exists>cfg. psteps \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
   unfolding pcompletes_def by auto
@@ -202,28 +174,14 @@ lemma pcompletes_assign: "pcompletes \<Pi> (Assign x a) s (s(x := aval a s))"
 
 (* -- Sequencing lifts through the small-step --------------------------- *)
 
-lemma psteps_Seq2_cfg:
-  assumes "star (pstep \<Pi>) X Y"
-  shows "star (pstep \<Pi>)
-           (Seq (fst X) c2, fst (snd X), snd (snd X))
-           (Seq (fst Y) c2, fst (snd Y), snd (snd Y))"
-  using assms
-proof (induction rule: star.induct)
-  case (refl a)
-  show ?case by (rule star.refl)
-next
-  case (step a b c)
-  obtain ca sa fa where a: "a = (ca, sa, fa)" by (cases a) auto
-  obtain cb sb fb where b: "b = (cb, sb, fb)" by (cases b) auto
-  from step.hyps(1) a b have "pstep \<Pi> (ca, sa, fa) (cb, sb, fb)" by simp
-  hence "pstep \<Pi> (Seq ca c2, sa, fa) (Seq cb c2, sb, fb)" by (rule Seq2)
-  with step.IH a b show ?case by (auto intro: star.step)
-qed
-
 lemma psteps_Seq2:
   "star (pstep \<Pi>) (c1, s, frs) (c1', s', frs')
    \<Longrightarrow> star (pstep \<Pi>) (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
-  using psteps_Seq2_cfg[where X = "(c1, s, frs)" and Y = "(c1', s', frs')"] by simp
+proof (induction rule: star_pstep_induct)
+  case refl show ?case by (rule star.refl)
+next
+  case step then show ?case by (meson Seq2 star.step)
+qed
 
 (* -- Structural composition of terminating runs ---------------------- *)
 
@@ -269,52 +227,21 @@ qed
 
 (* -- Frame-stack extension ------------------------------------------ *)
 
-lemma pstep_frame_extend_cfg:
-  assumes "pstep \<Pi> X Y"
-  shows "pstep \<Pi> (fst X, fst (snd X), snd (snd X) @ extra)
-                  (fst Y, fst (snd Y), snd (snd Y) @ extra)"
-  using assms
-proof (induction rule: pstep.induct)
-  case Assign
-  show ?case by (simp only: fst_conv snd_conv) (rule pstep.Assign)
-next
-  case RestoreStep
-  show ?case by (simp only: fst_conv snd_conv append_Cons) (rule pstep.RestoreStep)
-next
-  case Seq2
-  then show ?case by auto
-qed simp_all
-
 lemma pstep_frame_extend:
   "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
    pstep \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
-  using pstep_frame_extend_cfg[where X = "(c, s, frs)" and Y = "(c', s', frs')"]
-  by simp
-
-lemma psteps_frame_extend_cfg:
-  assumes "star (pstep \<Pi>) X Y"
-  shows "star (pstep \<Pi>)
-           (fst X, fst (snd X), snd (snd X) @ extra)
-           (fst Y, fst (snd Y), snd (snd Y) @ extra)"
-  using assms
-proof (induction rule: star.induct)
-  case (refl a)
-  show ?case by (rule star.refl)
-next
-  case (step a b d)
-  obtain ca sa fa where a: "a = (ca, sa, fa)" by (cases a) auto
-  obtain cb sb fb where b: "b = (cb, sb, fb)" by (cases b) auto
-  from step.hyps(1) a b have "pstep \<Pi> (ca, sa, fa) (cb, sb, fb)" by simp
-  hence "pstep \<Pi> (ca, sa, fa @ extra) (cb, sb, fb @ extra)"
-    by (rule pstep_frame_extend)
-  with step.IH a b show ?case by (auto intro: star.step)
-qed
+  by (induction "(c, s, frs)" "(c', s', frs')"
+        arbitrary: c s frs c' s' frs' rule: pstep.induct)
+     (auto intro: pstep.intros)
 
 lemma psteps_frame_extend:
   "psteps \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
    psteps \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
-  using psteps_frame_extend_cfg[where X = "(c, s, frs)" and Y = "(c', s', frs')"]
-  by simp
+proof (induction rule: star_pstep_induct)
+  case refl show ?case by (rule star.refl)
+next
+  case step then show ?case by (meson pstep_frame_extend star.step)
+qed
 
 lemma psteps_frame_mono:
   "psteps \<Pi> (c, s, []) (SKIP, t, []) \<Longrightarrow>
@@ -458,7 +385,7 @@ proof (rule star.step)
     using psteps_Seq_Restore_body[OF pub] by simp
 qed
 
-lemma pcompletes_Legacy_Call:
+lemma pcompletes_Call_parameterless:
   assumes p: "\<Pi> p = Some (proc_decl_of [] c None)"
       and body: "pcompletes \<Pi> c (enter_state s) t'"
   shows "pcompletes \<Pi> (Call None p []) s (<s|t'>)"
@@ -474,7 +401,7 @@ proof (rule pcompletes_Call_none)
     using body by (simp add: proc_decl_of_def bind_formals_def)
 qed
 
-lemma pcompletes_Scope_Call_legacy:
+lemma pcompletes_Scope_Call_parameterless:
   assumes p: "\<Pi> p = Some (proc_decl_of [] c None)"
       and run: "pcompletes \<Pi> (Scope c) s t"
   shows "pcompletes \<Pi> (Call None p []) s t"
@@ -505,12 +432,12 @@ proof -
     show "bind_formals (formals (proc_decl_of [] c None)) [] (enter_state s)
           = bind_formals (formals (proc_decl_of [] c None)) [] (enter_state s)" by simp
   qed
-  (* A legacy procedure has no result, so with_result leaves the body alone and
-     the call enters exactly the configuration a Scope enters. *)
+  (* A parameterless procedure has no result, so with_result leaves the body
+     alone and the call enters exactly the configuration a Scope enters. *)
   have step_call:
     "pstep \<Pi> (Call None p [], s, [])
        (Seq c Restore, enter_state s, [Frame s None])"
-    using step_call_raw by (simp add: proc_decl_legacy bind_formals_def proc_decl_of_def)
+    using step_call_raw by (simp add: bind_formals_def proc_decl_of_def)
   from run[unfolded pcompletes_def] have tail:
     "psteps \<Pi> (Seq c Restore, enter_state s, [Frame s None]) (SKIP, t, [])"
   (* Only the step case survives: Scope c is not SKIP, and ScopeSE pins the
@@ -522,5 +449,32 @@ proof -
   show ?thesis
     unfolding pcompletes_def using step_call tail by (meson star.step)
 qed
+
+subsection \<open>Source-program admissibility\<close>
+
+text \<open>
+  Restore is runtime-only and never appears in source programs. source_com
+  captures that source-language property; source_pi lifts it to every procedure
+  body of a table. These are the well-formedness predicates the compiler and the
+  end-to-end soundness theorems run on.
+\<close>
+
+fun source_com :: "com => bool" where
+  "source_com SKIP = True"
+| "source_com (Assign x a) = True"
+| "source_com (Seq c1 c2) = (source_com c1 \<and> source_com c2)"
+| "source_com (If b c1 c2) = (source_com c1 \<and> source_com c2)"
+| "source_com (While b c) = source_com c"
+| "source_com (Scope c) = source_com c"
+| "source_com (Call dst p actuals) = True"
+| "source_com Restore = False"
+
+definition source_pi :: "proc_table => bool" where
+  "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
+
+(* Publishing the result appends an assignment, which stays in the source language. *)
+lemma source_com_with_result [simp]:
+  "source_com (with_result c r) = source_com c"
+  by (cases r) auto
 
 end

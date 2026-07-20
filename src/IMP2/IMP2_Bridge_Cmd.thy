@@ -1,94 +1,36 @@
-theory IMP2_Bridge
-  imports IMP2_Proc "IMP2.Semantics"
+theory IMP2_Bridge_Cmd
+  imports IMP2_Bridge_Expr
 begin
 
-(*
-  One-way bridge: our structural expressions/state -> AFP IMP2.
+section \<open>Command translation and backward simulation to AFP IMP2\<close>
 
-  Direction is strict: structural -> IMP2. We never read IMP2's reflected
-  int=>int=>int operators back, so the analyzer stays executable. See
-  docs/AFP_IMP2_REBASE_MIGRATION.md (Phase 1) and AFP_IMP2_REUSE_DECISION.md.
+text \<open>
+  Compatibility layer for the parameterless subset of our procedure language.
+  to_imp2_com translates that subset to AFP IMP2's com; backward_sim pulls every
+  terminating AFP IMP2 run of a translated source command back into our
+  frame-stack small-step semantics, read through proj0. bridge_com / bridge_pi
+  pin down the translatable subset (nullary calls, procedures without formals or
+  result).
 
-  Two structural gaps bridged here:
-    1. Operators: our tags Plus/Minus/Times/Less/Eq/And/Or map forward to
-       IMP2's reflected Binop (+), Cmpop (<), BBinop conj, ...
-    2. State: our scalar store (vname => int) embeds into IMP2's array state
-       (vname => int => int) as an index-agnostic constant array. Our
-       expressions never index, so the array dimension is inert and the
-       default scalar index (IMP2 uses N 0) never matters.
+  Our richer language --- procedures with parameters, return values, and the
+  explicit runtime Restore --- is defined independently; only this subset
+  reduces to AFP IMP2.
+\<close>
 
-  Qualified names disambiguate the heavy clash between three layers:
-    - ours      : IMP2_Syntax.aexp/bexp, IMP2_Expr.aval/bval
-    - Nipkow    : AExp.aexp/aval, BExp.bexp/bval (wrapped under BaseN/BaseB)
-    - AFP IMP2  : Syntax.aexp/bexp, Semantics.aval/bval/state
-*)
+subsection \<open>Command translation\<close>
 
-(* -- State embedding ------------------------------------------------- *)
+text \<open>
+  Assignment goes to an array write at the default index \<open>N 0\<close>; \<open>Call None p []\<close>
+  maps to IMP2's PCall. Restore is runtime-only and never appears in source
+  programs; it and the parameterised calls map to SKIP for totality and are
+  never reached on translated source.
 
-(* Scalar store as an index-agnostic constant array. *)
-definition embed :: "store => (vname => int => int)" where
-  "embed s = (%x i. s x)"
-
-(* -- Nipkow leaf -> IMP2 (BaseN/BaseB wrap whole Nipkow subtrees) ----- *)
-
-fun nip_aexp :: "AExp.aexp => Syntax.aexp" where
-  "nip_aexp (AExp.N n)      = Syntax.N n"
-| "nip_aexp (AExp.V x)      = Syntax.Vidx x (Syntax.N 0)"
-| "nip_aexp (AExp.Plus a b) = Syntax.Binop (+) (nip_aexp a) (nip_aexp b)"
-
-lemma aval_nip: "AExp.aval a s = Semantics.aval (nip_aexp a) (embed s)"
-  by (induction a) (simp_all add: embed_def)
-
-fun nip_bexp :: "BExp.bexp => Syntax.bexp" where
-  "nip_bexp (BExp.Bc v)      = Syntax.Bc v"
-| "nip_bexp (BExp.Not b)     = Syntax.Not (nip_bexp b)"
-| "nip_bexp (BExp.And b1 b2) = Syntax.BBinop conj (nip_bexp b1) (nip_bexp b2)"
-| "nip_bexp (BExp.Less a b)  = Syntax.Cmpop (<) (nip_aexp a) (nip_aexp b)"
-
-lemma bval_nip: "BExp.bval b s = Semantics.bval (nip_bexp b) (embed s)"
-  by (induction b) (simp_all add: aval_nip)
-
-(* -- Our (extended) expressions -> IMP2 ------------------------------ *)
-
-fun to_imp2_aexp :: "IMP2_Syntax.aexp => Syntax.aexp" where
-  "to_imp2_aexp (BaseN a)              = nip_aexp a"
-| "to_imp2_aexp (IMP2_Syntax.Plus a b) = Syntax.Binop (+) (to_imp2_aexp a) (to_imp2_aexp b)"
-| "to_imp2_aexp (Minus a b)            = Syntax.Binop (-) (to_imp2_aexp a) (to_imp2_aexp b)"
-| "to_imp2_aexp (Times a b)            = Syntax.Binop times (to_imp2_aexp a) (to_imp2_aexp b)"
-
-lemma aval_to_imp2: "IMP2_Expr.aval e s = Semantics.aval (to_imp2_aexp e) (embed s)"
-  by (induction e) (simp_all add: aval_nip)
-
-fun to_imp2_bexp :: "IMP2_Syntax.bexp => Syntax.bexp" where
-  "to_imp2_bexp (BaseB b)              = nip_bexp b"
-| "to_imp2_bexp (IMP2_Syntax.Not b)    = Syntax.Not (to_imp2_bexp b)"
-| "to_imp2_bexp (IMP2_Syntax.And b1 b2) = Syntax.BBinop conj (to_imp2_bexp b1) (to_imp2_bexp b2)"
-| "to_imp2_bexp (Or b1 b2)             = Syntax.BBinop disj (to_imp2_bexp b1) (to_imp2_bexp b2)"
-| "to_imp2_bexp (IMP2_Syntax.Less a b) = Syntax.Cmpop (<) (to_imp2_aexp a) (to_imp2_aexp b)"
-| "to_imp2_bexp (Eq a b)               = Syntax.Cmpop (=) (to_imp2_aexp a) (to_imp2_aexp b)"
-
-lemma bval_to_imp2: "IMP2_Expr.bval e s = Semantics.bval (to_imp2_bexp e) (embed s)"
-  by (induction e) (simp_all add: aval_to_imp2 bval_nip)
-
-(* -- Commands --------------------------------------------------------- *)
-
-(*
-  to_imp2_com maps our procedure-extended command language to IMP2's com.
-  Assignment goes to an array write at the default index N 0; Call maps to
-  IMP2's PCall. Restore is runtime-only (never in source programs); it is
-  mapped to SKIP for totality and never reached on translated source.
-
-  Procedure-table translation wraps every body in Syntax.Scope: our Call
-  saves/restores the caller's locals via the frame stack, and IMP2's PCall
-  has no scope of its own, so the scoping must live in the translated body.
-
-  Scope/Call entry matches IMP2 exactly: pstep Scope/Call zeros the locals
-  on entry (enter_state s = <<>|s>) and restores the caller's locals on exit
-  via the frame stack (<fr|s'>). IMP2's SCOPE does the same (<<>|s> on entry,
-  <s|s'> on exit). The translation is a faithful correspondence for the full
-  language; the forward command/collecting simulation covers the full language
-  including scope and call.
-*)
+  Procedure-table translation wraps every body in \<open>Syntax.Scope\<close>: our Call
+  saves/restores the caller's locals via the frame stack, and IMP2's PCall has
+  no scope of its own, so the scoping lives in the translated body. Scope/Call
+  entry matches IMP2 exactly: entry zeros the locals (\<open>enter_state s\<close>) and exit
+  restores the caller's locals via the frame stack, mirroring IMP2's SCOPE.
+\<close>
 
 fun to_imp2_com :: "IMP2_Proc.com => Syntax.com" where
   "to_imp2_com IMP2_Proc.com.SKIP = Syntax.SKIP"
@@ -104,22 +46,13 @@ fun to_imp2_com :: "IMP2_Proc.com => Syntax.com" where
 definition to_imp2_pi :: "proc_table => Syntax.program" where
   "to_imp2_pi \<Pi> = (%p. map_option (%decl. Syntax.Scope (to_imp2_com (body decl))) (\<Pi> p))"
 
-(* -- State projection: read every array back at the default index ---- *)
+subsection \<open>Assignment agreement at the default array index\<close>
 
-definition proj0 :: "(vname => int => int) => store" where
-  "proj0 S = (%x. S x 0)"
-
-lemma proj0_embed: "proj0 (embed s) = s"
-  by (simp add: proj0_def embed_def)
-
-(* -- Per-command agreement: assignment at the default array index ----- *)
-
-(*
-  An assignment translates to an IMP2 array write at index 0. From an
-  embedded state, IMP2's big-step produces the array updated at index 0;
-  projecting back at index 0 recovers exactly our scalar update
-  s(x := aval a s).
-*)
+text \<open>
+  An assignment translates to an IMP2 array write at index 0. From an embedded
+  state, IMP2's big-step produces the array updated at index 0; projecting back
+  at index 0 recovers exactly our scalar update \<open>s(x := aval a s)\<close>.
+\<close>
 
 lemma to_imp2_Assign_bigstep:
   "Semantics.big_step P (to_imp2_com (IMP2_Proc.com.Assign x a), embed s)
@@ -138,88 +71,12 @@ lemma proj0_Assign:
      = s(x := IMP2_Expr.aval a s)"
   by (rule ext) (simp add: proj0_def embed_def)
 
-(* -- Expression agreement under projection ----------------------------- *)
+subsection \<open>Translatable subset\<close>
 
-(*
-  embed is not preserved by IMP2 array assignment: an assignment writes only
-  index 0, so after one write the array is no longer the constant array embed
-  produces. The right invariant for a command simulation is therefore the
-  weaker projection relation proj0 S = s, not strict S = embed s.
-
-  Our translated expressions only ever read index 0 (Vidx x (N 0)), so the
-  expression agreement holds under the projection relation alone. These
-  generalise aval_to_imp2 / bval_to_imp2 (recovered by proj0_embed) and are
-  the reusable core for a command/collecting simulation.
-*)
-
-lemma aval_nip_sim:
-  "proj0 S = s ==> Semantics.aval (nip_aexp a) S = AExp.aval a s"
-  by (induction a) (auto simp: proj0_def fun_eq_iff)
-
-lemma aval_to_imp2_sim:
-  "proj0 S = s ==> Semantics.aval (to_imp2_aexp e) S = IMP2_Expr.aval e s"
-  by (induction e) (simp_all add: aval_nip_sim)
-
-lemma bval_nip_sim:
-  "proj0 S = s ==> Semantics.bval (nip_bexp b) S = BExp.bval b s"
-  by (induction b) (simp_all add: aval_nip_sim)
-
-lemma bval_to_imp2_sim:
-  "proj0 S = s ==> Semantics.bval (to_imp2_bexp e) S = IMP2_Expr.bval e s"
-  by (induction e) (simp_all add: aval_to_imp2_sim bval_nip_sim)
-
-(* -- Locals/globals split agrees with IMP2 --------------------------- *)
-
-(*
-  Our is_global (IMP2_Globals) now matches AFP IMP2's is_global (Syntax)
-  exactly: the empty name and names starting with 'G' are global, all others
-  local.  Hence combine_states / enter_state correspond on the nose under
-  proj0, with no side condition on variable names.
-*)
-
-lemma is_global_eq: "Syntax.is_global x = IMP2_Globals.is_global x"
-  by (cases x rule: Syntax.is_global.cases) (auto simp: is_global_def)
-
-(* Projecting an IMP2 state combination at index 0 is our state combination. *)
-lemma proj0_combine_states:
-  "proj0 (Semantics.combine_states S T)
-     = IMP2_Globals.combine_states (proj0 S) (proj0 T)"
-  by (rule ext)
-     (simp add: proj0_def Semantics.combine_states_def is_global_eq)
-
-(* Projecting IMP2's scope-entry state recovers our enter_state. *)
-lemma proj0_null_combine:
-  "proj0 (Semantics.combine_states Semantics.null_state s) = enter_state (proj0 s)"
-  by (rule ext)
-     (simp add: proj0_def Semantics.combine_states_def Semantics.null_state_def
-                enter_state_def is_global_eq)
-
-(* -- Source programs: user syntax vs AFP-bridge subset ---------------- *)
-
-(*
-  Restore is runtime-only and never appears in source programs.
-  source_com captures that broad source-language property. The AFP bridge is
-  stricter: direct translation to parameterless PCall only covers the
-  parameterless subset with nullary calls and procedures without formals or results.
-*)
-
-fun source_com :: "IMP2_Proc.com => bool" where
-  "source_com IMP2_Proc.com.SKIP = True"
-| "source_com (IMP2_Proc.com.Assign x a) = True"
-| "source_com (IMP2_Proc.com.Seq c1 c2) = (source_com c1 \<and> source_com c2)"
-| "source_com (IMP2_Proc.com.If b c1 c2) = (source_com c1 \<and> source_com c2)"
-| "source_com (IMP2_Proc.com.While b c) = source_com c"
-| "source_com (IMP2_Proc.com.Scope c) = source_com c"
-| "source_com (IMP2_Proc.com.Call dst p actuals) = True"
-| "source_com IMP2_Proc.com.Restore = False"
-
-definition source_pi :: "proc_table => bool" where
-  "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
-
-(* Publishing the result appends an assignment, which stays in the source language. *)
-lemma source_com_with_result [simp]:
-  "source_com (with_result c r) = source_com c"
-  by (cases r) auto
+text \<open>
+  The AFP bridge covers only the parameterless subset: direct translation to
+  parameterless PCall, procedures without formals or result, and nullary calls.
+\<close>
 
 fun bridge_com :: "IMP2_Proc.com => bool" where
   "bridge_com IMP2_Proc.com.SKIP = True"
@@ -253,17 +110,16 @@ lemma bridge_com_Call_parameterlessE[elim]:
   obtains "dst = None" "actuals = []"
   using assms bridge_com_CallD by blast
 
-(* -- Backward simulation: IMP2 big-step -> our small-step ------------- *)
+subsection \<open>Backward simulation: IMP2 big-step into our small-step\<close>
 
-(*
-  Every terminating AFP IMP2 run of a translated source command is reproduced
-  by our frame-stack small-step semantics, read back through proj0.  The proof
-  is by rule induction on IMP2's big-step derivation; each rule maps to the
-  matching pcompletes combinator.  source_pi pins down that procedure bodies are
-  source commands (no runtime-only Restore); the runtime-only IMP2 commands
-  (ArrayCpy, CLEAR, Assign_Locals, PScope) are never in the range of
-  to_imp2_com and hence vacuous.
-*)
+text \<open>
+  Every terminating AFP IMP2 run of a translated source command is reproduced by
+  our frame-stack small-step semantics, read back through proj0. The proof is by
+  rule induction on IMP2's big-step derivation; each rule maps to the matching
+  pcompletes combinator. bridge_pi pins down that procedure bodies are in the
+  translatable subset; the runtime-only IMP2 commands (ArrayCpy, CLEAR,
+  Assign_Locals, PScope) are never in the range of to_imp2_com and hence vacuous.
+\<close>
 
 lemma backward_sim_aux:
   assumes sp: "bridge_pi \<Pi>"
@@ -401,13 +257,14 @@ next
   thus ?case by (cases c) auto
 qed
 
-(*
-  Headline restatement: the analyzer's soundness is now expressible against AFP
-  IMP2's standard concrete semantics.  Whenever the translated source program
+text \<open>
+  Headline restatement: the analyzer's soundness is expressible against AFP
+  IMP2's standard concrete semantics. Whenever the translated source program
   terminates under IMP2 big-step, our small-step semantics reaches the same
-  final store (read back through proj0).  Composed with trace-native pipeline
-  soundness, this transfers soundness to AFP IMP2 with no further analyzer obligation.
-*)
+  final store (read back through proj0). Composed with trace-native pipeline
+  soundness, this transfers soundness to AFP IMP2 with no further analyzer
+  obligation.
+\<close>
 
 theorem backward_sim:
   assumes bs: "big_step (to_imp2_pi \<Pi>) (cm, S) T"
@@ -433,24 +290,18 @@ lemma ex_big_step_imp_ex_pcompletes:
 
 text \<open>
   Concrete Semantics equates big-step termination with reaching a final
-  small-step configuration.  Here @{term pcompletes_iff_small_termination} is
-  the small-step side (reach @{term pfinal}); @{term ex_big_step_imp_ex_pcompletes}
-  is the big-to-small direction.  The converse (every @{term pcompletes} run
-  comes from a @{term big_step}) is forward simulation (Track A, open).
+  small-step configuration. Here @{term pcompletes_iff_small_termination} is the
+  small-step side (reach @{term pfinal}); @{term ex_big_step_imp_ex_pcompletes}
+  is the big-to-small direction. The converse (every @{term pcompletes} run comes
+  from a @{term big_step}) is forward simulation (Track A, open).
 \<close>
 
 subsection \<open>Executable examples\<close>
 
-value "source_com IMP2_Proc.com.SKIP"
-value "source_com IMP2_Proc.Restore"
 value "bridge_com (IMP2_Proc.com.Call None ''p'' [])"
-value "source_com (IMP2_Proc.com.Seq IMP2_Proc.com.SKIP IMP2_Proc.com.SKIP)"
 
 value "to_imp2_com IMP2_Proc.com.SKIP"
 value "to_imp2_com (IMP2_Proc.com.Scope IMP2_Proc.com.SKIP)"
 value "to_imp2_com (IMP2_Proc.com.Seq IMP2_Proc.com.SKIP IMP2_Proc.com.SKIP)"
-
-value "embed (\<lambda>_. 5::int) ''x'' 0"
-value "proj0 (\<lambda>v (n::int). 7::int) ''x''"
 
 end

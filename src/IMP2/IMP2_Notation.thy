@@ -35,17 +35,21 @@ text \<open>
 \<close>
 
 text \<open>
-  Whole-program form.  \<^verbatim>\<open>\<lbrakk> proc f { .. } proc g { .. } main { .. } \<rbrakk>\<close>
+  Whole-program form.  \<^verbatim>\<open>program { void f(..) { .. } void main() { .. } }\<close>
   bundles the procedure-name list, the procedure table, and the main command
-  into one \<^verbatim>\<open>imp_prog\<close>, ready for
+  into one \<^verbatim>\<open>imp_prog\<close> record, ready for
   \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) (prog_main p)\<close>.
 \<close>
 
-type_synonym imp_prog = "pname list \<times> proc_table \<times> com"
+record imp_prog =
+  prog_procs :: "pname list"
+  prog_table :: proc_table
+  prog_main  :: com
 
-abbreviation prog_procs :: "imp_prog \<Rightarrow> pname list" where "prog_procs p \<equiv> fst p"
-abbreviation prog_table :: "imp_prog \<Rightarrow> proc_table" where "prog_table p \<equiv> fst (snd p)"
-abbreviation prog_main  :: "imp_prog \<Rightarrow> com"        where "prog_main p \<equiv> snd (snd p)"
+lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps pi m) = ps"
+  and prog_table_make [simp]: "prog_table (imp_prog.make ps pi m) = pi"
+  and prog_main_make  [simp]: "prog_main  (imp_prog.make ps pi m) = m"
+  by (simp_all add: imp_prog.make_def)
 
 nonterminal imp2_com
 nonterminal imp2_stmt
@@ -129,7 +133,7 @@ parse_translation \<open>
     val c_None    = "Option.option.None"
     val c_Some    = "Option.option.Some"
     val c_fun_upd = "Fun.fun_upd"
-    val c_Pair    = "Product_Type.Pair"
+    val c_imp_prog = "IMP2_Notation.imp_prog.make"
     val c_Cons    = "List.list.Cons"
     val c_Nil     = "List.list.Nil"
 
@@ -323,6 +327,11 @@ parse_translation \<open>
                 else error ("IMP2 program: global(s) used but not declared: " ^ commas_quote undeclared)
       in () end
 
+    fun check_distinct kind xs =
+      (case duplicates (op =) xs of
+         [] => ()
+       | ds => error ("IMP2 program: duplicate " ^ kind ^ ": " ^ commas_quote ds))
+
     val empty_table = Abs ("_", dummyT, K c_None)
 
     fun mk_names [] = K c_Nil
@@ -346,6 +355,10 @@ parse_translation \<open>
     fun prog_tr decls funcs_t =
       let
         val funcs = funcs_tr funcs_t
+        val _ = check_distinct "procedure" (map (fn (n, _, _, _) => n) funcs)
+        val _ = check_distinct "declared global" decls
+        val _ = List.app (fn (n, formals, _, _) =>
+                  check_distinct ("formal parameter of " ^ quote n) formals) funcs
         val _ = check_globals decls (fold add_vars_proc funcs [])
         val (mains, procs) = List.partition (fn (n, _, _, _) => n = "main") funcs
         val main_ast =
@@ -358,7 +371,7 @@ parse_translation \<open>
         val names = mk_names (map (fn (n, _, _, _) => n) procs)
         val table = mk_table empty_table procs
         val main  = mk_body main_ast
-      in K c_Pair $ names $ (K c_Pair $ table $ main) end
+      in K c_imp_prog $ names $ table $ main end
   in
     [("_IMP2", fn _ => fn [t] => com_tr t | _ => raise Match),
      ("_PROGKW0", fn _ => fn [fs] => prog_tr [] fs | _ => raise Match),

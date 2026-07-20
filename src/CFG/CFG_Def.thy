@@ -1,6 +1,5 @@
 theory CFG_Def
   imports "Voblint_IMP2.IMP2_Syntax" "HOL-Library.Countable" "HOL-Library.Product_Lexorder"
-          "Dijkstra_Shortest_Path.Graph"
 begin
 
 section \<open>Control-flow graph definition\<close>
@@ -11,11 +10,10 @@ text \<open>
     - Edges carry edge actions: assignments, branch assumptions, or no-ops.
     - Each edge (u, a, v) means: ''go from u to v, performing action a''.
 
-  A `cfg` is a record-extension of AFP's `Dijkstra_Shortest_Path.Graph.graph`,
-  inheriting the `nodes` and `edges` selectors and adding `cfg_entry`,
-  `cfg_exit`.  Use the smart constructor `mk_cfg en ex E` to build CFGs:
-  it auto-computes `nodes` from the edges plus endpoints so that
-  `valid_graph` holds by construction.
+  A `cfg` is a record with `nodes`, `edges`, `cfg_entry`, `cfg_exit`, and
+  `combines`.  Use the smart constructor `mk_cfg en ex E C` to build CFGs:
+  it auto-computes `nodes` from the edges plus endpoints, so every edge and
+  combine endpoint is a node by construction.
 
   Translation from IMP2 to CFG is in IMP2_Proc_to_CFG.thy.
   The equation system over a CFG is in Equations/Constraint_System.thy.
@@ -71,9 +69,11 @@ definition combine_return_node :: "combine_info \<Rightarrow> pp" where
 definition combine_dst :: "combine_info \<Rightarrow> vname option" where
   "combine_dst ci = (case ci of (call, ex, ret, dst) \<Rightarrow> dst)"
 
-subsection \<open>CFG record (extension of AFP graph)\<close>
+subsection \<open>CFG record\<close>
 
-record cfg = "(pp, edge_action) graph" +
+record cfg =
+  nodes     :: "pp set"
+  edges     :: "(pp \<times> edge_action \<times> pp) set"
   cfg_entry :: pp
   cfg_exit  :: pp
   combines  :: "combine_info set"
@@ -95,10 +95,6 @@ definition mk_cfg ::
 
 declare mk_cfg_def[simp]
 
-lemma mk_cfg_valid_graph: "valid_graph (graph.truncate (mk_cfg en ex E C))"
-  unfolding valid_graph_def graph.truncate_def mk_cfg_def
-  by (simp add: image_comp inf_sup_aci(5) sup.left_commute sup.orderI)
-
 (* Affine shift along program points compile c (n+k) is compile c n with all pp+k. *)
 
 definition offset_edges :: "nat \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> edge_action \<times> pp) set" where
@@ -107,15 +103,6 @@ definition offset_edges :: "nat \<Rightarrow> (pp \<times> edge_action \<times> 
 lemma offset_edges_Un[simp]:
   "offset_edges k (A \<union> B) = offset_edges k A \<union> offset_edges k B"
   unfolding offset_edges_def by force
-
-lemma offset_edges_insert_shift:
-  "offset_edges k (insert ((u::nat), a, (v::nat)) S) =
-   insert (u + k, a, v + k) (offset_edges k S)"
-  unfolding offset_edges_def by auto
-
-lemma in_offset_edges_iff:
-  "((u + k::nat, a, v + k) \<in> offset_edges k E) \<longleftrightarrow> (u, a, v) \<in> E"
-  unfolding offset_edges_def by (force simp: prod_eq_iff)
 
 subsection \<open>Derived notions\<close>
 
@@ -322,10 +309,6 @@ lemma cfg_combines_list_code [code]:
   unfolding cfg_combines_list_def
   by (cases "finite (combines g)") auto
 
-definition combine_info_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> combine_info list" where
-  "combine_info_predecessor_list g v =
-     filter (\<lambda>(_, _, ret, _). ret = v) (cfg_combines_list g)"
-
 definition combine_predecessor_list ::
     "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp \<times> vname option) list" where
   "combine_predecessor_list g v = sorted_list_of_set (combine_predecessors g v)"
@@ -339,19 +322,6 @@ lemma distinct_cfg_combines_list[simp]:
   assumes "finite (combines g)"
   shows "distinct (cfg_combines_list g)"
   unfolding cfg_combines_list_def using assms by simp
-
-lemma set_combine_info_predecessor_list[simp]:
-  assumes "finite (combines g)"
-  shows "set (combine_info_predecessor_list g v) = combine_info_predecessors g v"
-  unfolding combine_info_predecessor_list_def combine_info_predecessors_def combine_return_node_def
-  using assms set_cfg_combines_list[OF assms]
-  by auto
-
-lemma distinct_combine_info_predecessor_list[simp]:
-  assumes "finite (combines g)"
-  shows "distinct (combine_info_predecessor_list g v)"
-  unfolding combine_info_predecessor_list_def
-  using distinct_filter distinct_cfg_combines_list assms by simp
 
 lemma set_combine_predecessor_list[simp]:
   assumes "finite (combines g)"

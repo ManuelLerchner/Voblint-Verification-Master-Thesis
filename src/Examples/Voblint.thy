@@ -9,7 +9,7 @@ theory Voblint
     "Voblint_IMP2.IMP2_Globals"
     "Voblint_IMP2.IMP2_Proc"
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_IMP2.IMP2_Bridge"
+    "Voblint_IMP2.IMP2_Bridge_Cmd"
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"

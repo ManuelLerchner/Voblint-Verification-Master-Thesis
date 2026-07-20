@@ -64,7 +64,7 @@ lemma x1_completed:
   "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0(''x'' := 1))"
   unfolding pcompletes_def
-  apply (simp only: x1_prog_def x1_s0_def fst_conv snd_conv)
+  apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
   apply (rule star.step)
    apply (rule pstep.Assign)
   by simp

@@ -3,17 +3,12 @@ section \<open>Example: Procedure Calls --- Increment and Square\<close>
 theory Example_Proc_Call
   imports
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_IMP2.IMP2_Bridge"
     "Voblint_CFG.CFG_Prune"
 
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.LTR_Analysis_Sound"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
-
-no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
-hide_const (open) Syntax.N Syntax.V Syntax.Assign Semantics.aval Semantics.bval
-hide_const phase.N
 
 text \<open>
   Two parameterless procedures communicate through the global variable
@@ -34,7 +29,7 @@ definition sqr_body :: "IMP2_Proc.com" where
   "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
 definition proc_pi :: proc_table where
-  "proc_pi = (\<lambda>_. None)(''inc'' := Some (proc_decl_legacy inc_body), ''sqr'' := Some (proc_decl_legacy sqr_body))"
+  "proc_pi = (\<lambda>_. None)(''inc'' := Some (proc_decl_of [] inc_body None), ''sqr'' := Some (proc_decl_of [] sqr_body None))"
 
 definition main_prog :: "IMP2_Proc.com" where
   "main_prog = imp \<lbrakk>
@@ -58,8 +53,8 @@ lemma call_inc_result:
 proof -
   have run: "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
-  proof (rule pcompletes_Legacy_Call[where c = inc_body])
-    show "proc_pi ''inc'' = Some (proc_decl_legacy inc_body)"
+  proof (rule pcompletes_Call_parameterless[where c = inc_body])
+    show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body None)"
       by (simp add: proc_pi_def)
     show "pcompletes proc_pi inc_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
@@ -83,8 +78,8 @@ lemma call_sqr_result:
 proof -
   have run: "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
-  proof (rule pcompletes_Legacy_Call[where c = sqr_body])
-    show "proc_pi ''sqr'' = Some (proc_decl_legacy sqr_body)"
+  proof (rule pcompletes_Call_parameterless[where c = sqr_body])
+    show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body None)"
       by (simp add: proc_pi_def)
     show "pcompletes proc_pi sqr_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
