@@ -306,8 +306,7 @@ proof unfold_locales
 next
   fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
   assume "\<sigma>1 \<le> \<sigma>2"
-  thus "  apply(cases r)
-aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
+  thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
 next
   fix x1 x2 y1 y2 :: sign and res :: bool
   assume "x1 \<le> x2" and "y1 \<le> y2"
