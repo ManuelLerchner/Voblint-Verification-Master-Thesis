@@ -43,9 +43,12 @@ text \<open>
   graph target is \<open>FunctionResult p\<close> (enforced by \<open>wf_cfg\<close>), which is why return
   summarisation is ordinary predecessor folding over \<open>FunctionResult p\<close>.
 
-  \<open>call_action\<close> labels call edges.  \<open>CallEdge dst args\<close> records the caller destination
-  variable and the actual arguments; the callee identity and the continuation are the two
-  target nodes of the \<open>calls\<close> tuple, not payload of the action.
+  \<open>call_action\<close> labels call edges.  \<open>CallEdge dst formals args\<close> records the caller
+  destination variable, the callee's formal parameter names, and the actual arguments; the
+  callee identity and the continuation are the two target nodes of the \<open>calls\<close> tuple, not
+  payload of the action.  Carrying \<open>formals\<close> on the edge lets the caller-side entry transfer
+  \<open>call_enter\<close> bind actuals to formals without consulting a procedure table, keeping the
+  trace kernel independent of the source declaration environment.
 \<close>
 
 datatype edge_action =
@@ -56,7 +59,7 @@ datatype edge_action =
   | EA_Ret      "aexp option" pname
 
 datatype call_action =
-    CallEdge "vname option" "aexp list"
+    CallEdge "vname option" "vname list" "aexp list"
 
 instance edge_action :: countable
   by countable_datatype
@@ -102,6 +105,30 @@ definition combine_collect :: "vname option \<Rightarrow> store \<Rightarrow> st
 
 lemma combine_collect_None: "combine_collect None s t = <s|t>"
   by (simp add: combine_collect_def)
+
+subsection \<open>Call-entry transfer\<close>
+
+text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in the caller store,
+  the callee locals are reset (\<^const>\<open>enter_state\<close>, globals preserved), and the resulting
+  values are bound to the callee formals.  All payload comes from the \<open>CallEdge\<close>, so the
+  transfer needs no procedure table.  This is exactly the callee-entry store produced by the
+  source \<^const>\<open>pstep\<close> \<open>Call\<close> rule (see \<open>call_enter_eq_source_call_store\<close>).\<close>
+
+definition call_enter :: "call_action \<Rightarrow> store \<Rightarrow> store" where
+  "call_enter ca s =
+     (case ca of CallEdge dst pars actuals \<Rightarrow>
+        bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state s))"
+
+lemma call_enter_CallEdge:
+  "call_enter (CallEdge dst pars actuals) s
+     = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+  by (simp add: call_enter_def)
+
+text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
+  formals to bind.\<close>
+lemma call_enter_Nil [simp]:
+  "call_enter (CallEdge dst [] []) s = enter_state s"
+  by (simp add: call_enter_CallEdge bind_formals_def)
 
 subsection \<open>Structural selectors\<close>
 
@@ -234,8 +261,8 @@ definition demo_cfg :: cfg where
          { (FunctionEntry dpf, EA_Ret None dpf, FunctionResult dpf),
            (Statement 0,      EA_Ret None dpf, FunctionResult dpf) },
        calls =
-         { (Statement 10, CallEdge None [], FunctionEntry dpf, Statement 99),
-           (Statement 20, CallEdge None [], FunctionEntry dpf, Statement 99) },
+         { (Statement 10, CallEdge None [] [], FunctionEntry dpf, Statement 99),
+           (Statement 20, CallEdge None [] [], FunctionEntry dpf, Statement 99) },
        cfg_entry = FunctionEntry dmain \<rparr>"
 
 lemmas demo_defs = demo_cfg_def dmain_def dpf_def
@@ -252,8 +279,8 @@ lemma demo_returns_converge:
 
 text \<open>(7) Two distinct call sites share one continuation.\<close>
 lemma demo_shared_continuation:
-  "(Statement 10, CallEdge None [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
-  "(Statement 20, CallEdge None [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
+  "(Statement 10, CallEdge None [] [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
+  "(Statement 20, CallEdge None [] [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
   "Statement 10 \<noteq> Statement 20"
   by (simp_all add: demo_defs)
 

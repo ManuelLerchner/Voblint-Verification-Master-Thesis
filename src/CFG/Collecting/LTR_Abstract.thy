@@ -38,10 +38,11 @@ locale ltr_gamma =
   assumes ROOT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) seedc"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> acc v c"
-    and CALL: "\<And>u dst args p cont c s. (u, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> enter_state s \<in> acc (FunctionEntry p) (enterc c (enter_state s))"
-    and COMB: "\<And>cl dst args p cont c1 s t es.
-        (cl, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
+    and CALL: "\<And>u dst pars args p cont c s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> call_enter (CallEdge dst pars args) s
+              \<in> acc (FunctionEntry p) (enterc c (call_enter (CallEdge dst pars args) s))"
+    and COMB: "\<And>cl dst pars args p cont c1 s t es.
+        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc cl c1 \<Longrightarrow> t \<in> acc (FunctionResult p) (enterc c1 es)
         \<Longrightarrow> call_enter_store g cl s es
         \<Longrightarrow> combine_collect dst s t \<in> acc cont c1"
@@ -78,12 +79,13 @@ text \<open>\<open>call_closed\<close>: the entered store is admitted in the cal
   context \<open>enterc (key caller) (enter_state (sink_store caller))\<close> --- exactly \<^const>\<open>key\<close>
   of the new \<^const>\<open>Call\<close>.\<close>
 lemma call_closed:
-  assumes e: "(sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+  assumes e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and ihc: "bnd caller"
-  shows "bnd (Call caller [(FunctionEntry p, enter_state (sink_store caller))])"
+  shows "bnd (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
 proof -
-  have "enter_state (sink_store caller)
-          \<in> acc (FunctionEntry p) (enterc (key enterc seedc caller) (enter_state (sink_store caller)))"
+  have "call_enter (CallEdge dst pars args) (sink_store caller)
+          \<in> acc (FunctionEntry p)
+                (enterc (key enterc seedc caller) (call_enter (CallEdge dst pars args) (sink_store caller)))"
     by (rule CALL[OF e ihc])
   then show ?thesis by (simp add: sink_node_def sink_store_def)
 qed
@@ -95,7 +97,7 @@ lemma return_closed:
   assumes callee_val: "callee \<in> valid_ltr g S"
     and cof: "caller_of callee = Some caller"
     and res: "sink_node callee = FunctionResult p"
-    and comb: "(sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+    and comb: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and ih_caller: "bnd caller"
     and ih_callee: "bnd callee"
   shows "bnd (Resume caller callee
@@ -144,16 +146,16 @@ next
     qed
   qed
 next
-  case (call caller dst args p cont)
+  case (call caller dst pars args p cont)
   show ?case
   proof
-    fix u assume "u \<in> callers (Call caller [(FunctionEntry p, enter_state (sink_store caller))])"
-    then have "u = Call caller [(FunctionEntry p, enter_state (sink_store caller))]
+    fix u assume "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
+    then have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
                 \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "bnd u"
     proof
-      assume u: "u = Call caller [(FunctionEntry p, enter_state (sink_store caller))]"
+      assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       have ihc: "bnd caller" using call.IH callers_refl by blast
       show ?thesis unfolding u
         by (rule call_closed[OF call.hyps(2) ihc])
@@ -163,7 +165,7 @@ next
     qed
   qed
 next
-  case (ret callee caller p dst args cont)
+  case (ret callee caller p dst pars args cont)
   show ?case
   proof
     fix u assume "u \<in> callers (Resume caller callee
@@ -237,7 +239,7 @@ text \<open>At any reachable return, the callee consumed is the one \<^const>\<o
 theorem return_uses_matched_callee:
   assumes res: "Resume caller callee p \<in> valid_ltr g S"
     and rn: "sink_node callee = FunctionResult pp"
-    and comb: "(sink_node caller, CallEdge dst args, FunctionEntry pp, cont) \<in> calls g"
+    and comb: "(sink_node caller, CallEdge dst pars args, FunctionEntry pp, cont) \<in> calls g"
   shows "caller_of callee = Some caller
        \<and> sink_store callee
            \<in> acc (FunctionResult pp) (enterc (key enterc seedc caller) (entry_store callee))
@@ -270,8 +272,8 @@ theorem two_callers_separated:
     and r1: "Resume caller1 callee1 p1 \<in> valid_ltr g S"
     and rn0: "sink_node callee0 = FunctionResult q0"
     and rn1: "sink_node callee1 = FunctionResult q1"
-    and c0: "(sink_node caller0, CallEdge dst0 args0, FunctionEntry q0, cont) \<in> calls g"
-    and c1: "(sink_node caller1, CallEdge dst1 args1, FunctionEntry q1, cont) \<in> calls g"
+    and c0: "(sink_node caller0, CallEdge dst0 pars0 args0, FunctionEntry q0, cont) \<in> calls g"
+    and c1: "(sink_node caller1, CallEdge dst1 pars1 args1, FunctionEntry q1, cont) \<in> calls g"
     and dist: "key enterc seedc caller0 \<noteq> key enterc seedc caller1"
   shows "combine_collect dst0 (sink_store caller0) (sink_store callee0)
            \<in> acc cont (key enterc seedc caller0)
@@ -302,9 +304,9 @@ lemma ltr_collect_semantic_postfix:
   fixes g :: cfg and B :: "cfg_node \<Rightarrow> store set" and S0 :: "store set" and v :: cfg_node
   assumes entry: "S0 \<subseteq> B (cfg_entry g)"
     and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g \<Longrightarrow> s \<in> B u \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> B w"
-    and call: "\<And>u dst args p cont s. (u, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B u \<Longrightarrow> enter_state s \<in> B (FunctionEntry p)"
-    and combine: "\<And>cl dst args p cont s t. (cl, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
+    and call: "\<And>u dst pars args p cont s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> B u \<Longrightarrow> call_enter (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
+    and combine: "\<And>cl dst pars args p cont s t. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p) \<Longrightarrow> combine_collect dst s t \<in> B cont"
   shows "ltr_collect g S0 v \<subseteq> B v"
 proof -

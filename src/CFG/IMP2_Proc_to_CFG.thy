@@ -32,55 +32,59 @@ text \<open>
 
 subsection \<open>Command compilation\<close>
 
-text \<open>\<open>compile p c n\<close> returns \<open>(n', entry, normal_exit, intra_edges, call_edges)\<close>, allocating
-  \<open>Statement\<close> indices in the counter range \<open>[n, n')\<close>.\<close>
+text \<open>\<open>compile \<Pi> p c n\<close> returns \<open>(n', entry, normal_exit, intra_edges, call_edges)\<close>,
+  allocating \<open>Statement\<close> indices in the counter range \<open>[n, n')\<close>.  The procedure table
+  \<open>\<Pi>\<close> is threaded so a \<^const>\<open>Call\<close> can label its \<open>CallEdge\<close> with the callee's declared
+  formals; every other clause ignores it.\<close>
 
 fun compile ::
-  "pname \<Rightarrow> com \<Rightarrow> nat
+  "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node \<times> cfg_node
         \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
-  "compile p SKIP n = (Suc n, Statement n, Statement n, {}, {})"
-| "compile p (Assign x a) n =
+  "compile \<Pi> p SKIP n = (Suc n, Statement n, Statement n, {}, {})"
+| "compile \<Pi> p (Assign x a) n =
      (Suc (Suc n), Statement n, Statement (Suc n),
       {(Statement n, EA_Assign x a, Statement (Suc n))}, {})"
-| "compile p (Seq c1 c2) n =
-     (let (n1, en1, ex1, E1, K1) = compile p c1 n;
-          (n2, en2, ex2, E2, K2) = compile p c2 n1
+| "compile \<Pi> p (Seq c1 c2) n =
+     (let (n1, en1, ex1, E1, K1) = compile \<Pi> p c1 n;
+          (n2, en2, ex2, E2, K2) = compile \<Pi> p c2 n1
       in (n2, en1, ex2,
           E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2,
           K1 \<union> K2))"
-| "compile p (If b c1 c2) n =
-     (let (n1, en1, ex1, E1, K1) = compile p c1 (Suc n);
-          (n2, en2, ex2, E2, K2) = compile p c2 n1
+| "compile \<Pi> p (If b c1 c2) n =
+     (let (n1, en1, ex1, E1, K1) = compile \<Pi> p c1 (Suc n);
+          (n2, en2, ex2, E2, K2) = compile \<Pi> p c2 n1
       in (Suc n2, Statement n, Statement n2,
           {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
             \<union> E1 \<union> E2
             \<union> {(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)},
           K1 \<union> K2))"
-| "compile p (While b c) n =
-     (let (n1, en1, ex1, E1, K1) = compile p c (Suc n)
+| "compile \<Pi> p (While b c) n =
+     (let (n1, en1, ex1, E1, K1) = compile \<Pi> p c (Suc n)
       in (Suc n1, Statement n, Statement n1,
           {(Statement n, EA_Assume b, en1),
            (Statement n, EA_AssumeNot b, Statement n1),
            (ex1, EA_Nop, Statement n)} \<union> E1,
           K1))"
-| "compile p (Scope c) n =
-     (let (n1, en, ex, E, K) = compile p c (Suc n)
+| "compile \<Pi> p (Scope c) n =
+     (let (n1, en, ex, E, K) = compile \<Pi> p c (Suc n)
       in (Suc n1, Statement n, Statement n1,
           {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E,
           K))"
-| "compile p (Call dst q actuals) n =
+| "compile \<Pi> p (Call dst q actuals) n =
      (Suc (Suc n), Statement n, Statement (Suc n),
       {},
-      {(Statement n, CallEdge dst actuals, FunctionEntry q, Statement (Suc n))})"
-| "compile p (Return e) n =
+      {(Statement n,
+        CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+        FunctionEntry q, Statement (Suc n))})"
+| "compile \<Pi> p (Return e) n =
      (Suc (Suc n), Statement n, Statement (Suc n),
       {(Statement n, EA_Ret e p, FunctionResult p)},
       {})"
-| "compile p Restore n = (Suc n, Statement n, Statement n, {}, {})"
-| "compile p Unwind n = (Suc n, Statement n, Statement n, {}, {})"
+| "compile \<Pi> p Restore n = (Suc n, Statement n, Statement n, {}, {})"
+| "compile \<Pi> p Unwind n = (Suc n, Statement n, Statement n, {}, {})"
 
 subsection \<open>Procedure and program compilation\<close>
 
@@ -88,12 +92,12 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   normal fall-through publishes the declared result through \<open>EA_Ret (result decl) p\<close>.\<close>
 
 definition compile_proc ::
-  "pname \<Rightarrow> proc_decl \<Rightarrow> nat
+  "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
-  "compile_proc p decl n =
-     (let (n', ben, bex, E, K) = compile p (body decl) n
+  "compile_proc \<Pi> p decl n =
+     (let (n', ben, bex, E, K) = compile \<Pi> p (body decl) n
       in (n',
           insert (FunctionEntry p, EA_Nop, ben)
             (insert (bex, EA_Ret (result decl) p, FunctionResult p) E),
@@ -109,7 +113,7 @@ where
      (case \<Pi> p of
         None \<Rightarrow> compile_procs \<Pi> ps n
       | Some decl \<Rightarrow>
-          (let (n1, E, K) = compile_proc p decl n;
+          (let (n1, E, K) = compile_proc \<Pi> p decl n;
                (n2, E', K') = compile_procs \<Pi> ps n1
            in (n2, E \<union> E', K \<union> K')))"
 
@@ -123,44 +127,44 @@ definition compile_prog ::
 where
   "compile_prog \<Pi> ps mnm main =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc mnm (proc_decl_of [] main None) n1
+          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main None) n1
       in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>)"
 
 subsection \<open>Counter monotonicity and statement ranges\<close>
 
 lemma compile_counter_mono:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> n \<le> n'"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> n \<le> n'"
 proof (induction c arbitrary: n n' en ex E K rule: com.induct)
   case (Seq c1 c2)
   then obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)" and n': "n' = n2"
+    c1: "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
+    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)" and n': "n' = n2"
     by (auto split: prod.splits)
   from Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] n' show ?case by simp
 next
   case (If b c1 c2)
   then obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)" and n': "n' = Suc n2"
+    c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)" and n': "n' = Suc n2"
     by (auto split: prod.splits)
   from If.IH(1)[OF c1] If.IH(2)[OF c2] n' show ?case by simp
 next
   case (While b c)
   then obtain n1 en1 ex1 E1 K1 where
-    c1: "compile p c (Suc n) = (n1, en1, ex1, E1, K1)" and n': "n' = Suc n1"
+    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)" and n': "n' = Suc n1"
     by (auto split: prod.splits)
   from While.IH[OF c1] n' show ?case by simp
 next
   case (Scope c)
   then obtain n1 en1 ex1 E1 K1 where
-    c1: "compile p c (Suc n) = (n1, en1, ex1, E1, K1)" and n': "n' = Suc n1"
+    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)" and n': "n' = Suc n1"
     by (auto split: prod.splits)
   from Scope.IH[OF c1] n' show ?case by simp
 qed (auto split: prod.splits option.splits)
 
 text \<open>The entry and normal-exit nodes are \<open>Statement\<close> nodes inside the counter range.\<close>
 lemma compile_entry_exit_stmt:
-  "compile p c n = (n', en, ex, E, K)
+  "compile \<Pi> p c n = (n', en, ex, E, K)
    \<Longrightarrow> (\<exists>k. en = Statement k \<and> n \<le> k \<and> k < n') \<and> (\<exists>k. ex = Statement k \<and> n \<le> k \<and> k < n')"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
      (auto split: prod.splits dest: compile_counter_mono,
@@ -188,7 +192,7 @@ lemma frag_stmts_mono:
   by (auto simp: frag_stmts_def)
 
 lemma compile_frag_stmts_range:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
 proof (induction c arbitrary: n n' en ex E K rule: com.induct)
   case SKIP then show ?case by (simp add: frag_stmts_def)
 next
@@ -196,8 +200,8 @@ next
 next
   case (Seq c1 c2)
   from Seq.prems obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)"
+    c1: "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
+    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
     and n': "n' = n2"
     and E: "E = E1 \<union> ((if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2)"
     and K: "K = K1 \<union> ({} \<union> K2)"
@@ -222,8 +226,8 @@ next
 next
   case (If b c1 c2)
   from If.prems obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)"
+    c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
     and n': "n' = Suc n2"
     and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
                   \<union> ({(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}
@@ -258,7 +262,7 @@ next
 next
   case (While b c)
   from While.prems obtain n1 en1 ex1 E1 K1 where
-    c1: "compile p c (Suc n) = (n1, en1, ex1, E1, K1)"
+    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)"
     and n': "n' = Suc n1"
     and E: "E = {(Statement n, EA_Assume b, en1),
                  (Statement n, EA_AssumeNot b, Statement n1),
@@ -284,7 +288,7 @@ next
 next
   case (Scope c)
   from Scope.prems obtain n1 en ex E1 K1 where
-    c1: "compile p c (Suc n) = (n1, en, ex, E1, K1)"
+    c1: "compile \<Pi> p c (Suc n) = (n1, en, ex, E1, K1)"
     and n': "n' = Suc n1"
     and E: "E = {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E1"
     and K: "K = {} \<union> K1"
@@ -317,12 +321,12 @@ qed
 subsection \<open>Finiteness\<close>
 
 lemma compile_finite:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> finite E \<and> finite K"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> finite E \<and> finite K"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
      (auto split: prod.splits)
 
 lemma compile_proc_finite:
-  "compile_proc p decl n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_finite)
 
 lemma compile_procs_finite:
@@ -337,7 +341,7 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
       and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
@@ -357,34 +361,34 @@ subsection \<open>Edge shapes for well-formedness\<close>
 
 text \<open>Every emitted call edge targets a \<open>FunctionEntry\<close>; a call is never an intra edge.\<close>
 lemma compile_call_ce_entry:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
      (auto split: prod.splits if_splits)
 
 text \<open>No intra edge enters a \<open>FunctionEntry\<close> node.\<close>
 lemma compile_intra_tgt_not_entry:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
      (auto split: prod.splits if_splits dest: compile_entry_exit_stmt)
 
 text \<open>Every \<open>EA_Ret\<close> edge lands on the matching \<open>FunctionResult\<close> --- the enclosing
   procedure name in the action equals the one in the target node.\<close>
 lemma compile_ret_wf:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E \<Longrightarrow> v = FunctionResult q"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E \<Longrightarrow> v = FunctionResult q"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
      (auto split: prod.splits if_splits)
 
 lemma compile_proc_call_ce_entry:
-  "compile_proc p decl n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_call_ce_entry)
 
 lemma compile_proc_intra_tgt_not_entry:
-  "compile_proc p decl n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
   by (auto simp: compile_proc_def Let_def split: prod.splits
        dest: compile_intra_tgt_not_entry compile_entry_exit_stmt)
 
 lemma compile_proc_ret_wf:
-  "compile_proc p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E \<Longrightarrow> v = FunctionResult q"
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E \<Longrightarrow> v = FunctionResult q"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_ret_wf)
 
 lemma compile_procs_call_ce_entry:
@@ -399,7 +403,7 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     from Cons.prems(2) K
@@ -419,7 +423,7 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and E: "E = E0 \<union> E'"
       by (auto split: prod.splits)
     from Cons.prems(2) E
@@ -439,7 +443,7 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and E: "E = E0 \<union> E'"
       by (auto split: prod.splits)
     from Cons.prems(2) E
@@ -454,7 +458,7 @@ proof -
   obtain n1 Eprocs Kprocs where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have g: "compile_prog \<Pi> ps mnm main =
              \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>"
@@ -483,5 +487,40 @@ proof -
   qed
 qed
 
-end
 
+subsection \<open>Call-entry transfer agrees with the source semantics\<close>
+
+text \<open>The compiler emits, for a call to a declared procedure, a single \<open>CallEdge\<close> carrying
+  the callee's formal parameters (looked up in the procedure table) and the actual argument
+  expressions.\<close>
+lemma compile_Call_calls:
+  assumes "\<Pi> q = Some decl"
+  shows "snd (snd (snd (snd (compile \<Pi> p (Call dst q actuals) n))))
+           = {(Statement n, CallEdge dst (formals decl) actuals, FunctionEntry q, Statement (Suc n))}"
+  using assms by simp
+
+text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on that edge produces exactly the
+  callee-entry store of the source \<^const>\<open>pstep\<close> \<open>Call\<close> rule: the actuals are evaluated in the
+  caller store \<open>s\<close>, the callee locals are reset by \<^const>\<open>enter_state\<close>, and the values are
+  \<^const>\<open>bind_formals\<close>-bound to the formals.  This is the first Stage-5B obligation: the
+  refined trace call-entry equals the source \<open>Call\<close> callee store.\<close>
+lemma call_enter_eq_source_call_store:
+  "call_enter (CallEdge dst (formals decl) actuals) s
+     = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+  by (simp add: call_enter_CallEdge)
+
+text \<open>Combined: traversing the compiled call edge lands the callee at the source callee-entry
+  store.\<close>
+lemma compile_call_enter_eq_source:
+  assumes "\<Pi> q = Some decl"
+    and "(cs, CallEdge dst pars actuals, FunctionEntry q, af)
+           \<in> snd (snd (snd (snd (compile \<Pi> p (Call dst q actuals) n))))"
+  shows "call_enter (CallEdge dst pars actuals) s
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+proof -
+  from assms(2) have "pars = formals decl" by (simp add: assms(1))
+  then show ?thesis by (simp add: call_enter_eq_source_call_store)
+qed
+
+
+end

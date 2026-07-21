@@ -43,13 +43,13 @@ subsection \<open>Return edges and call-freeness\<close>
 text \<open>(10) Every source \<open>Return e\<close> in a procedure body \<open>p\<close> compiles to an intra edge
   reaching \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
 lemma compile_return_edge:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> returns_in e c
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> returns_in e c
    \<Longrightarrow> \<exists>k. (Statement k, EA_Ret e p, FunctionResult p) \<in> E"
 proof (induction c arbitrary: n n' en ex E K rule: com.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)"
+    c1: "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
+    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
     and E: "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2"
     by (auto split: prod.splits)
   from Seq.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
@@ -57,8 +57,8 @@ proof (induction c arbitrary: n n' en ex E K rule: com.induct)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)"
+    c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
     and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
                   \<union> E1 \<union> E2 \<union> {(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}"
     by (auto split: prod.splits)
@@ -67,7 +67,7 @@ next
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 ex1 E1 K1 where
-    c1: "compile p c (Suc n) = (n1, en1, ex1, E1, K1)"
+    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)"
     and E: "E = {(Statement n, EA_Assume b, en1),
                  (Statement n, EA_AssumeNot b, Statement n1),
                  (ex1, EA_Nop, Statement n)} \<union> E1"
@@ -77,7 +77,7 @@ next
 next
   case (Scope c)
   from Scope.prems(1) obtain n1 en ex E1 K1 where
-    c1: "compile p c (Suc n) = (n1, en, ex, E1, K1)"
+    c1: "compile \<Pi> p c (Suc n) = (n1, en, ex, E1, K1)"
     and E: "E = {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E1"
     by (auto split: prod.splits)
   from Scope.prems(2) have "returns_in e c" by simp
@@ -88,12 +88,12 @@ qed auto
 
 text \<open>(15) A call-free command compiles to an empty \<open>calls\<close> set.\<close>
 lemma compile_no_call:
-  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
+  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
      (auto split: prod.splits if_splits)
 
 lemma compile_proc_no_call:
-  "compile_proc p decl n = (n', E, K) \<Longrightarrow> \<not> has_call (body decl) \<Longrightarrow> K = {}"
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> \<not> has_call (body decl) \<Longrightarrow> K = {}"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_no_call)
 
 text \<open>(15) A program whose procedure bodies and main are all call-free compiles to
@@ -111,7 +111,7 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     have "K0 = {}" using compile_proc_no_call[OF cp] Cons.prems(2) Some by auto
@@ -128,7 +128,7 @@ proof -
   obtain n1 Eprocs Kprocs where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have "Kprocs = {}" using compile_procs_no_call[OF procs] assms(1) by simp
   moreover have "Kmain = {}"
@@ -140,11 +140,11 @@ qed
 subsection \<open>Statement-range disjointness of distinct procedures\<close>
 
 lemma compile_proc_frag_range:
-  "compile_proc p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
 proof -
-  assume "compile_proc p decl n = (n', E, K)"
+  assume "compile_proc \<Pi> p decl n = (n', E, K)"
   then obtain ben bex Eb where
-    cb: "compile p (body decl) n = (n', ben, bex, Eb, K)"
+    cb: "compile \<Pi> p (body decl) n = (n', ben, bex, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, ben)
                   (insert (bex, EA_Ret (result decl) p, FunctionResult p) Eb)"
     by (auto simp: compile_proc_def Let_def split: prod.splits)
@@ -182,7 +182,7 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
       by (auto split: prod.splits)
     have "n \<le> n1"
@@ -204,7 +204,7 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc p decl n = (n1, E0, K0)"
+      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
       and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
       and n': "n' = n2" and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
@@ -224,7 +224,7 @@ qed
 text \<open>(7) Statement ranges of distinct procedures are disjoint: the first procedure's
   statements precede the counter at which the rest begins, and the rest's follow it.\<close>
 theorem compile_procs_head_disjoint:
-  assumes "compile_proc p decl n = (n1, E0, K0)"
+  assumes "compile_proc \<Pi> p decl n = (n1, E0, K0)"
     and "compile_procs \<Pi> ps n1 = (n2, E', K')"
   shows "frag_stmts E0 K0 \<inter> frag_stmts E' K' = {}"
 proof -
@@ -258,7 +258,7 @@ text \<open>(5) / (6) Each compiled procedure has a single entry node \<open>Fun
   are emitted by \<open>compile_proc\<close>, and both nodes are keyed by the procedure name (distinct
   procedures get distinct nodes).\<close>
 theorem inv5_6_proc_entry_result_edges:
-  assumes "compile_proc p decl n = (n', E, K)"
+  assumes "compile_proc \<Pi> p decl n = (n', E, K)"
   shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
        \<and> (\<exists>bex. (bex, EA_Ret (result decl) p, FunctionResult p) \<in> E)"
   using assms by (auto simp: compile_proc_def Let_def split: prod.splits)
@@ -283,7 +283,7 @@ text \<open>(10) is \<open>compile_return_edge\<close> above.  (11) dead code af
   the return fragment's normal-exit node has no incoming intra edge, so a following
   command wired from it is off every return-to-result path.\<close>
 theorem inv11_return_exit_unreached:
-  "(u, a, Statement (Suc n)) \<notin> fst (snd (snd (snd (compile p (Return e) n))))"
+  "(u, a, Statement (Suc n)) \<notin> fst (snd (snd (snd (compile \<Pi> p (Return e) n))))"
   by simp
 
 text \<open>(12) Normal fall-through reaches the procedure result --- the \<open>compile_proc\<close>
@@ -292,7 +292,7 @@ lemmas inv12_fallthrough = inv5_6_proc_entry_result_edges
 
 text \<open>(13) Multiple returns converge: two \<open>Return\<close> branches both reach \<open>FunctionResult p\<close>.\<close>
 theorem inv13_multi_return_converge:
-  assumes "compile p (If b (Return e1) (Return e2)) n = (n', en, ex, E, K)"
+  assumes "compile \<Pi> p (If b (Return e1) (Return e2)) n = (n', en, ex, E, K)"
   shows "(\<exists>k. (Statement k, EA_Ret e1 p, FunctionResult p) \<in> E)
        \<and> (\<exists>k. (Statement k, EA_Ret e2 p, FunctionResult p) \<in> E)"
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
@@ -300,8 +300,8 @@ theorem inv13_multi_return_converge:
 text \<open>(14) A recursive call targets the caller procedure's own \<open>FunctionEntry\<close>, while its
   call site and continuation stay ordinary statement nodes.\<close>
 theorem inv14_recursion_edge:
-  "(Statement n, CallEdge None [], FunctionEntry p, Statement (Suc n))
-     \<in> snd (snd (snd (snd (compile p (Call None p []) n))))"
+  "(Statement n, CallEdge None (case \<Pi> p of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p, Statement (Suc n))
+     \<in> snd (snd (snd (snd (compile \<Pi> p (Call None p []) n))))"
   by simp
 
 text \<open>(15) is \<open>compile_prog_flat\<close> above.  (16) the program entry is the main entry node.\<close>
@@ -345,7 +345,7 @@ text \<open>Early return in a scope: the compiled fragment reaches \<open>Functi
   \<open>EA_Ret (Some e) p\<close>, and the dead code's wired-in entry (the return's normal-exit) has no
   incoming edge --- so \<open>dead\<close> is off the return-to-result path.\<close>
 lemma ex_return_in_scope:
-  assumes "compile p (Scope (Seq (Return (Some e)) (Assign yv ay))) n = (n', en, ex, E, K)"
+  assumes "compile \<Pi> p (Scope (Seq (Return (Some e)) (Assign yv ay))) n = (n', en, ex, E, K)"
   shows "\<exists>k. (Statement k, EA_Ret (Some e) p, FunctionResult p) \<in> E"
   using compile_return_edge[OF assms] by simp
 
@@ -357,17 +357,17 @@ lemmas ex_multi_return = inv13_multi_return_converge
 text \<open>Normal fall-through (a procedure without an explicit return) reaches the same result
   node through the declared-result edge.\<close>
 lemma ex_fallthrough:
-  assumes "compile_proc p (proc_decl_of [] SKIP None) n = (n', E, K)"
+  assumes "compile_proc \<Pi> p (proc_decl_of [] SKIP None) n = (n', E, K)"
   shows "\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E"
   using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
 
 text \<open>Nested calls: two distinct call edges, distinct continuations, correct entry nodes,
   and no call action in \<open>intra\<close> (by typing).\<close>
 lemma ex_nested_calls:
-  "(Statement n, CallEdge (Some r1) [], FunctionEntry p1, Statement (Suc n))
-      \<in> snd (snd (snd (snd (compile q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
-   \<and> (Statement (Suc (Suc n)), CallEdge (Some r2) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
-      \<in> snd (snd (snd (snd (compile q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
+  "(Statement n, CallEdge (Some r1) (case \<Pi> p1 of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p1, Statement (Suc n))
+      \<in> snd (snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
+   \<and> (Statement (Suc (Suc n)), CallEdge (Some r2) (case \<Pi> p2 of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
+      \<in> snd (snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
    \<and> Statement (Suc n) \<noteq> Statement (Suc (Suc (Suc n)))"
   by (simp add: Let_def)
 

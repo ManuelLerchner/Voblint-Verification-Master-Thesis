@@ -119,13 +119,14 @@ inductive_set valid_ltr :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set" f
      \<Longrightarrow> extend t (v, s') \<in> valid_ltr g S"
 | call:
     "caller \<in> valid_ltr g S
-     \<Longrightarrow> (sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
-     \<Longrightarrow> Call caller [(FunctionEntry p, enter_state (sink_store caller))] \<in> valid_ltr g S"
+     \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+     \<Longrightarrow> Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+         \<in> valid_ltr g S"
 | ret:
     "callee \<in> valid_ltr g S
      \<Longrightarrow> caller_of callee = Some caller
      \<Longrightarrow> sink_node callee = FunctionResult p
-     \<Longrightarrow> (sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
+     \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
      \<Longrightarrow> Resume caller callee
            (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
          \<in> valid_ltr g S"
@@ -312,11 +313,11 @@ text \<open>(1) Call provenance: every \<^const>\<open>Call\<close> activation i
   of \<open>calls g\<close> leaving its caller's node.\<close>
 lemma valid_ltr_Call_provenance:
   assumes "Call caller q \<in> valid_ltr g S"
-  shows "\<exists>dst args p cont. (sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+  shows "\<exists>dst pars args p cont. (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
 proof -
   have "u \<in> valid_ltr g S \<Longrightarrow>
           \<forall>ca q. u = Call ca q \<longrightarrow>
-            (\<exists>dst args p cont. (sink_node ca, CallEdge dst args, FunctionEntry p, cont) \<in> calls g)"
+            (\<exists>dst pars args p cont. (sink_node ca, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g)"
     for u
   proof (induction rule: valid_ltr.induct)
     case (intra t a v s')
@@ -325,10 +326,10 @@ proof -
       fix ca q assume "extend t (v, s') = Call ca q"
       then obtain q' where "t = Call ca q'" by (cases t) auto
       with intra.IH show
-        "\<exists>dst args p cont. (sink_node ca, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+        "\<exists>dst pars args p cont. (sink_node ca, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
         by blast
     qed
-  qed auto
+  qed blast+
   with assms show ?thesis by blast
 qed
 
@@ -336,16 +337,16 @@ text \<open>(2) Entry correctness: a called activation begins at the callee-entr
   by a concrete call edge.\<close>
 lemma valid_ltr_Call_entry_node:
   assumes "Call caller q \<in> valid_ltr g S"
-  shows "\<exists>dst args p cont. (sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
+  shows "\<exists>dst pars args p cont. (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
           \<and> fst (hd q) = FunctionEntry p"
 proof -
   have "u \<in> valid_ltr g S \<Longrightarrow>
           \<forall>ca q. u = Call ca q \<longrightarrow>
-            (\<exists>dst args p cont. (sink_node ca, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
+            (\<exists>dst pars args p cont. (sink_node ca, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
                \<and> fst (hd q) = FunctionEntry p)"
     for u
   proof (induction rule: valid_ltr.induct)
-    case (call caller dst args p cont)
+    case (call caller dst pars args p cont)
     then show ?case by auto
   next
     case (intra t a v s')
@@ -357,7 +358,7 @@ proof -
       moreover have "q' \<noteq> []" using t intra.hyps(1) valid_ltr_Call_path_nonempty by blast
       ultimately have "hd q = hd q'" by (simp add: hd_append)
       with intra.IH t show
-        "\<exists>dst args p cont. (sink_node ca, CallEdge dst args, FunctionEntry p, cont) \<in> calls g
+        "\<exists>dst pars args p cont. (sink_node ca, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
            \<and> fst (hd q) = FunctionEntry p"
         by fastforce
     qed
@@ -373,13 +374,13 @@ text \<open>(4) Return matching: a \<^const>\<open>Resume\<close> exists only af
   \<open>FunctionResult p\<close> of a concrete call edge.\<close>
 lemma valid_ltr_Resume_matching:
   assumes "Resume caller callee q \<in> valid_ltr g S"
-  shows "\<exists>dst args p cont. sink_node callee = FunctionResult p
-          \<and> (sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+  shows "\<exists>dst pars args p cont. sink_node callee = FunctionResult p
+          \<and> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
 proof -
   have "u \<in> valid_ltr g S \<Longrightarrow>
           \<forall>cc dd q. u = Resume cc dd q \<longrightarrow>
-            (\<exists>dst args p cont. sink_node dd = FunctionResult p
-               \<and> (sink_node cc, CallEdge dst args, FunctionEntry p, cont) \<in> calls g)"
+            (\<exists>dst pars args p cont. sink_node dd = FunctionResult p
+               \<and> (sink_node cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g)"
     for u
   proof (induction rule: valid_ltr.induct)
     case (intra t a v s')
@@ -388,8 +389,8 @@ proof -
       fix cc dd q assume "extend t (v, s') = Resume cc dd q"
       then obtain q' where "t = Resume cc dd q'" by (cases t) auto
       with intra.IH show
-        "\<exists>dst args p cont. sink_node dd = FunctionResult p
-           \<and> (sink_node cc, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+        "\<exists>dst pars args p cont. sink_node dd = FunctionResult p
+           \<and> (sink_node cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
         by blast
     qed
   qed auto
@@ -406,7 +407,7 @@ lemma valid_ltr_ret_continuation:
   assumes "callee \<in> valid_ltr g S"
     and "caller_of callee = Some caller"
     and "sink_node callee = FunctionResult p"
-    and "(sink_node caller, CallEdge dst args, FunctionEntry p, cont) \<in> calls g"
+    and "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   shows "sink_node (Resume caller callee
            (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))
          = cont"
@@ -429,10 +430,10 @@ proof (induction rule: valid_ltr.induct)
   then obtain p where "t = Root p" by blast
   then show ?case by (cases t) auto
 next
-  case (call caller dst args p cont)
+  case (call caller dst pars args p cont)
   then show ?case using assms(1) by (simp add: flat_cfg_def)
 next
-  case (ret callee caller p dst args cont)
+  case (ret callee caller p dst pars args cont)
   then show ?case using assms(1) by (simp add: flat_cfg_def)
 qed simp
 
@@ -465,19 +466,19 @@ next
     qed
   qed
 next
-  case (call caller dst args p cont)
+  case (call caller dst pars args p cont)
   have ce: "FunctionEntry p \<in> cfg_nodes g"
     using call.hyps(2) call_endpoints_in_nodes by blast
   show ?case
   proof (intro ballI)
-    fix u ns assume uin: "u \<in> callers (Call caller [(FunctionEntry p, enter_state (sink_store caller))])"
+    fix u ns assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
       and nsin: "ns \<in> set (path u)"
-    from uin have "u = Call caller [(FunctionEntry p, enter_state (sink_store caller))]
+    from uin have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "fst ns \<in> cfg_nodes g"
     proof
-      assume "u = Call caller [(FunctionEntry p, enter_state (sink_store caller))]"
+      assume "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       then show ?thesis using nsin ce by auto
     next
       assume "u \<in> callers caller"
@@ -485,7 +486,7 @@ next
     qed
   qed
 next
-  case (ret callee caller p dst args cont)
+  case (ret callee caller p dst pars args cont)
   have contn: "cont \<in> cfg_nodes g" using ret.hyps(4) call_endpoints_in_nodes by blast
   have cin: "caller \<in> callers callee"
     using ret.hyps(2) callers_caller_subset callers_refl by blast
@@ -544,9 +545,9 @@ proof
   next
     case (intra t a v s') then show ?case using valid_ltr.intra by blast
   next
-    case (call caller dst args p cont) then show ?case using valid_ltr.call by blast
+    case (call caller dst pars args p cont) then show ?case using valid_ltr.call by blast
   next
-    case (ret callee caller p dst args cont) then show ?case using valid_ltr.ret by blast
+    case (ret callee caller p dst pars args cont) then show ?case using valid_ltr.ret by blast
   qed
 qed
 
@@ -567,11 +568,11 @@ proof
       then obtain s where "s \<in> S" "t \<in> valid_ltr g {s}" by auto
       then show ?case using valid_ltr.intra[OF _ intra.hyps(2,3)] by auto
     next
-      case (call caller dst args p cont)
+      case (call caller dst pars args p cont)
       then obtain s where "s \<in> S" "caller \<in> valid_ltr g {s}" by auto
       then show ?case using valid_ltr.call[OF _ call.hyps(2)] by auto
     next
-      case (ret callee caller p dst args cont)
+      case (ret callee caller p dst pars args cont)
       then obtain s where "s \<in> S" "callee \<in> valid_ltr g {s}" by auto
       then show ?case using valid_ltr.ret[OF _ ret.hyps(2,3,4)] by auto
     qed
@@ -592,8 +593,8 @@ subsection \<open>Stable context entry invariant\<close>
 
 definition call_enter_store :: "cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "call_enter_store g c s t \<longleftrightarrow>
-     (\<exists>dst args p cont. (c, CallEdge dst args, FunctionEntry p, cont) \<in> calls g)
-     \<and> t = enter_state s"
+     (\<exists>dst pars args p cont. (c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<and> t = call_enter (CallEdge dst pars args) s)"
 
 lemma key_extend_nonempty:
   "path t \<noteq> [] \<Longrightarrow> key enterc seedc (extend t x) = key enterc seedc t"
@@ -638,21 +639,21 @@ next
     qed
   qed
 next
-  case (call caller dst args p cont)
+  case (call caller dst pars args p cont)
   show ?case
   proof (intro ballI allI impI)
-    fix u c assume uin: "u \<in> callers (Call caller [(FunctionEntry p, enter_state (sink_store caller))])"
+    fix u c assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
       and cof: "caller_of u = Some c"
-    from uin have "u = Call caller [(FunctionEntry p, enter_state (sink_store caller))]
+    from uin have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
     proof
-      assume u: "u = Call caller [(FunctionEntry p, enter_state (sink_store caller))]"
+      assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       have c_eq: "c = caller" using cof u by simp
       have ces: "call_enter_store g (sink_node caller) (sink_store caller)
-                   (enter_state (sink_store caller))"
+                   (call_enter (CallEdge dst pars args) (sink_store caller))"
         unfolding call_enter_store_def using call.hyps(2) by blast
       show ?thesis using u c_eq ces by (simp add: entry_store_def)
     next
@@ -661,7 +662,7 @@ next
     qed
   qed
 next
-  case (ret callee caller p dst args cont)
+  case (ret callee caller p dst pars args cont)
   show ?case
   proof (intro ballI allI impI)
     fix u c assume uin: "u \<in> callers (Resume caller callee
@@ -722,8 +723,8 @@ definition nest_cfg :: cfg where
          { (FunctionEntry pg, EA_Ret None pg, FunctionResult pg),
            (Statement 200,    EA_Ret None pf, FunctionResult pf) },
        calls =
-         { (FunctionEntry mn, CallEdge None [], FunctionEntry pf, Statement 100),
-           (FunctionEntry pf, CallEdge None [], FunctionEntry pg, Statement 200) },
+         { (FunctionEntry mn, CallEdge None [] [], FunctionEntry pf, Statement 100),
+           (FunctionEntry pf, CallEdge None [] [], FunctionEntry pg, Statement 200) },
        cfg_entry = FunctionEntry mn \<rparr>"
 
 lemmas nest_defs = nest_cfg_def mn_def pf_def pg_def
@@ -740,15 +741,15 @@ proof -
     unfolding main0_def by (rule valid_ltr.init[OF s0])
   have m_sn: "sink_node main0 = FunctionEntry mn"
     by (simp add: main0_def nest_defs)
-  have ecall_f: "(sink_node main0, CallEdge None [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
+  have ecall_f: "(sink_node main0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
     by (simp add: m_sn nest_defs)
-  define f0 where "f0 = Call main0 [(FunctionEntry pf, enter_state (sink_store main0))]"
+  define f0 where "f0 = Call main0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store main0))]"
   have f_mem: "f0 \<in> valid_ltr nest_cfg S"
     unfolding f0_def by (rule valid_ltr.call[OF main_mem ecall_f])
   have f_sn: "sink_node f0 = FunctionEntry pf" by (simp add: f0_def)
-  have ecall_g: "(sink_node f0, CallEdge None [], FunctionEntry pg, Statement 200) \<in> calls nest_cfg"
+  have ecall_g: "(sink_node f0, CallEdge None [] [], FunctionEntry pg, Statement 200) \<in> calls nest_cfg"
     by (simp add: f_sn nest_defs)
-  define g0 where "g0 = Call f0 [(FunctionEntry pg, enter_state (sink_store f0))]"
+  define g0 where "g0 = Call f0 [(FunctionEntry pg, call_enter (CallEdge None [] []) (sink_store f0))]"
   have g_mem: "g0 \<in> valid_ltr nest_cfg S"
     unfolding g0_def by (rule valid_ltr.call[OF f_mem ecall_g])
   have g_sn: "sink_node g0 = FunctionEntry pg" by (simp add: g0_def)
@@ -778,7 +779,7 @@ proof -
     unfolding f2_def by (rule valid_ltr.intra[OF f'_mem eRf stRf])
   have f2_sn: "sink_node f2 = FunctionResult pf" by (simp add: f2_def)
   have f2_caller: "caller_of f2 = Some main0" by (simp add: f2_def f'_def f0_def)
-  have ecall_f2: "(sink_node main0, CallEdge None [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
+  have ecall_f2: "(sink_node main0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
     by (simp add: m_sn nest_defs)
   define final where
     "final = Resume main0 f2 (path main0 @ [(Statement 100, combine_collect None (sink_store main0) (sink_store f2))])"
@@ -804,7 +805,7 @@ definition mret_cfg :: cfg where
            (FunctionEntry pf, EA_AssumeNot bpos, Statement 1),
            (Statement 1,      EA_Ret None pf,    FunctionResult pf) },
        calls =
-         { (FunctionEntry mn, CallEdge None [], FunctionEntry pf, Statement 100) },
+         { (FunctionEntry mn, CallEdge None [] [], FunctionEntry pf, Statement 100) },
        cfg_entry = FunctionEntry mn \<rparr>"
 
 lemmas mret_defs = mret_cfg_def mn_def pf_def bpos_def
@@ -827,9 +828,9 @@ proof -
   \<comment> \<open>positive branch through Statement 0\<close>
   have R0: "r0 \<in> valid_ltr mret_cfg UNIV" unfolding r0_def by (rule valid_ltr.init) simp
   have m0: "sink_node r0 = FunctionEntry mn" by (simp add: r0_def mret_defs)
-  have ec0: "(sink_node r0, CallEdge None [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
+  have ec0: "(sink_node r0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
     by (simp add: m0 mret_defs)
-  define k0 where "k0 = Call r0 [(FunctionEntry pf, enter_state (sink_store r0))]"
+  define k0 where "k0 = Call r0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r0))]"
   have K0: "k0 \<in> valid_ltr mret_cfg UNIV" unfolding k0_def by (rule valid_ltr.call[OF R0 ec0])
   have k0_sn: "sink_node k0 = FunctionEntry pf" by (simp add: k0_def)
   have k0_ss: "sink_store k0 = enter_state s0" by (simp add: k0_def r0_def)
@@ -849,9 +850,9 @@ proof -
   \<comment> \<open>negative branch through Statement 1\<close>
   have R1: "r1 \<in> valid_ltr mret_cfg UNIV" unfolding r1_def by (rule valid_ltr.init) simp
   have m1: "sink_node r1 = FunctionEntry mn" by (simp add: r1_def mret_defs)
-  have ec1: "(sink_node r1, CallEdge None [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
+  have ec1: "(sink_node r1, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
     by (simp add: m1 mret_defs)
-  define k1 where "k1 = Call r1 [(FunctionEntry pf, enter_state (sink_store r1))]"
+  define k1 where "k1 = Call r1 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r1))]"
   have K1: "k1 \<in> valid_ltr mret_cfg UNIV" unfolding k1_def by (rule valid_ltr.call[OF R1 ec1])
   have k1_sn: "sink_node k1 = FunctionEntry pf" by (simp add: k1_def)
   have k1_ss: "sink_store k1 = enter_state s1" by (simp add: k1_def r1_def)
@@ -904,7 +905,7 @@ definition rec_cfg :: cfg where
            (Statement 0,      EA_Ret None pr,    FunctionResult pr),
            (FunctionEntry pr, EA_Assume bpos,    Statement 1) },
        calls =
-         { (Statement 1, CallEdge None [], FunctionEntry pr, Statement 200) },
+         { (Statement 1, CallEdge None [] [], FunctionEntry pr, Statement 200) },
        cfg_entry = FunctionEntry pr \<rparr>"
 
 lemmas rec_defs = rec_cfg_def pr_def bpos_def
@@ -930,9 +931,9 @@ proof -
   have OUTER: "outer \<in> valid_ltr rec_cfg UNIV"
     unfolding outer_def by (rule valid_ltr.intra[OF R eA stepA])
   have so: "sink_node outer = Statement 1" by (simp add: outer_def)
-  have ecall: "(sink_node outer, CallEdge None [], FunctionEntry pr, Statement 200) \<in> calls rec_cfg"
+  have ecall: "(sink_node outer, CallEdge None [] [], FunctionEntry pr, Statement 200) \<in> calls rec_cfg"
     by (simp add: so rec_defs)
-  define inner where "inner = Call outer [(FunctionEntry pr, enter_state (sink_store outer))]"
+  define inner where "inner = Call outer [(FunctionEntry pr, call_enter (CallEdge None [] []) (sink_store outer))]"
   have INNER: "inner \<in> valid_ltr rec_cfg UNIV"
     unfolding inner_def by (rule valid_ltr.call[OF OUTER ecall])
   have si: "sink_node inner = FunctionEntry pr" by (simp add: inner_def)
