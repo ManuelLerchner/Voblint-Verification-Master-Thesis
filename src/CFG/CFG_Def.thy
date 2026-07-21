@@ -1,33 +1,51 @@
 theory CFG_Def
-  imports "Voblint_IMP2.IMP2_Syntax" "HOL-Library.Countable" "HOL-Library.Product_Lexorder"
+  imports "Voblint_IMP2.IMP2_Proc" "HOL-Library.Countable"
 begin
 
-section \<open>Control-flow graph definition\<close>
+section \<open>Procedure-aware control-flow graph\<close>
 
 text \<open>
-  A \<open>cfg\<close> is an interprocedural control-flow graph over program points:
-    - an entry location and an exit location,
-    - a set of \<open>edges\<close> (u, a, v), meaning ''go from u to v performing action a'',
-    - a set of \<open>combines\<close> matching call sites to their return targets.
-  Program points are natural numbers, allocated during translation.  Build one with the
-  constructor \<open>mk_cfg en ex E C\<close>.
+  A \<open>cfg\<close> is an interprocedural control-flow graph over two disjoint transition
+  relations, one per phenomenon:
+    \<^item> \<open>intra\<close> --- ordinary context-preserving flow, labelled by an \<open>edge_action\<close> that is
+      a total within-context store transformer.  Executed by \<open>edge_step\<close>.
+    \<^item> \<open>calls\<close> --- context-crossing calls, labelled by a \<open>call_action\<close> and carrying the
+      call-site, the callee entry node, and the continuation node.
 
-  Translation from IMP2 to CFG is in IMP2_Proc_to_CFG.thy.
-  The equation system over a CFG is in Equations/Constraint_System.thy.
+  Nodes are procedure-aware: \<open>FunctionEntry p\<close> and \<open>FunctionResult p\<close> are first-class
+  nodes, not keyed side slots.  There is no global exit node and no call/return matching
+  side relation: a call edge already names its callee entry and its continuation, and a
+  return is an ordinary intra edge into \<open>FunctionResult p\<close>.  Calls carry incompatible
+  typing from intra flow, so \<open>edge_step\<close> has no call case and \<open>intra\<close> can never carry a
+  call --- by typing, not by a side condition.
+
+  Translation from IMP2 to CFG and the collecting/equation layers ride on this structure.
 \<close>
 
-subsection \<open>Program points\<close>
+subsection \<open>Nodes\<close>
 
 type_synonym pp = nat
 
-subsection \<open>Edge actions\<close>
+datatype cfg_node =
+    Statement pp
+  | FunctionEntry pname
+  | FunctionResult pname
+
+instance cfg_node :: countable
+  by countable_datatype
+
+subsection \<open>Edge actions and call actions\<close>
 
 text \<open>
-  Each edge carries one of:
-    EA_Nop          -- unconditional edge (no state change)
-    EA_Assign x a   -- assignment: state updated as s(x := aval a s)
-    EA_Assume b     -- assume b holds: filter states where bval b s = True
-    EA_AssumeNot b  -- assume b fails: filter states where bval b s = False
+  \<open>edge_action\<close> labels intra flow.  It has no call constructor: every action is a total
+  store transformer within one activation, so an intra edge can never denote a call.  A
+  \<open>EA_Ret e p\<close> writes the return value into \<open>ret_var\<close> in the callee's own context; its
+  graph target is \<open>FunctionResult p\<close> (enforced by \<open>wf_cfg\<close>), which is why return
+  summarisation is ordinary predecessor folding over \<open>FunctionResult p\<close>.
+
+  \<open>call_action\<close> labels call edges.  \<open>CallEdge dst args\<close> records the caller destination
+  variable and the actual arguments; the callee identity and the continuation are the two
+  target nodes of the \<open>calls\<close> tuple, not payload of the action.
 \<close>
 
 datatype edge_action =
@@ -35,71 +53,201 @@ datatype edge_action =
   | EA_Assign   vname aexp
   | EA_Assume   bexp
   | EA_AssumeNot bexp
-  | EA_Enter    "vname list" "aexp list"
-      (* call/scope entry: initialize fresh callee locals from caller actuals *)
+  | EA_Ret      "aexp option" pname
+
+datatype call_action =
+    CallEdge "vname option" "aexp list"
 
 instance edge_action :: countable
   by countable_datatype
 
-type_synonym combine_info = "pp * pp * pp * vname option"
+instance call_action :: countable
+  by countable_datatype
 
-definition combine_call_node :: "combine_info \<Rightarrow> pp" where
-  "combine_call_node ci = (case ci of (call, ex, ret, dst) \<Rightarrow> call)"
-
-definition combine_exit_node :: "combine_info \<Rightarrow> pp" where
-  "combine_exit_node ci = (case ci of (call, ex, ret, dst) \<Rightarrow> ex)"
-
-definition combine_return_node :: "combine_info \<Rightarrow> pp" where
-  "combine_return_node ci = (case ci of (call, ex, ret, dst) \<Rightarrow> ret)"
-
-definition combine_dst :: "combine_info \<Rightarrow> vname option" where
-  "combine_dst ci = (case ci of (call, ex, ret, dst) \<Rightarrow> dst)"
-
-subsection \<open>CFG record\<close>
+subsection \<open>CFG record: two relations\<close>
 
 text \<open>
-  The record is exactly the interprocedural control-flow structure the concrete semantics
-  rides on: the distinguished locations \<open>cfg_entry\<close> and \<open>cfg_exit\<close>, the labelled
-  transition relation \<open>edges\<close>, and the call/return matching relation \<open>combines\<close> --- a
-  \<open>(call, exit, return, dst)\<close> tuple linking three program points, not a labelled edge.
-  \<open>valid_ltr\<close>'s closure rules read \<open>cfg_entry\<close>, \<open>edges\<close>, and
-  \<open>combines\<close>; \<open>cfg_exit\<close> names the end location at which termination/exit reachability
-  is stated.  The record carries no derived or tooling fields: the node set a graph walk
-  would need is reconstructed from \<open>edges\<close> where required (e.g. visualization), and solver
-  edge/predecessor enumeration lives in a separate theory in the analysis session.
+  \<open>calls\<close> is a four-place relation \<open>(call_site, act, callee_entry, continuation)\<close>: the
+  callee entry and the continuation are ordinary nodes, kept explicit so no matching side
+  relation is needed.  The flat (call-free) CFG is exactly the \<open>calls = {}\<close> fragment, so
+  every fact quantified over \<open>intra\<close> is verbatim a flat-CFG fact.
 \<close>
+
 record cfg =
-  edges     :: "(pp \<times> edge_action \<times> pp) set"
-  cfg_entry :: pp
-  cfg_exit  :: pp
-  combines  :: "combine_info set"
+  intra     :: "(cfg_node \<times> edge_action \<times> cfg_node) set"
+  calls     :: "(cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+  cfg_entry :: cfg_node
 
-subsection \<open>CFG construction\<close>
+subsection \<open>Intra edge execution\<close>
 
-definition mk_cfg ::
-  "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> combine_info set \<Rightarrow> cfg" where
-  "mk_cfg entry exit E C =
-     \<lparr> edges = E, cfg_entry = entry, cfg_exit = exit, combines = C \<rparr>"
+text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
+  every constructor and has no call case; guards are the only source of \<open>None\<close>.\<close>
 
-declare mk_cfg_def[simp]
+fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store option" where
+  "edge_step EA_Nop s = Some s"
+| "edge_step (EA_Assign x a) s = Some (s(x := aval a s))"
+| "edge_step (EA_Assume b) s = (if bval b s then Some s else None)"
+| "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
+| "edge_step (EA_Ret e p) s =
+     Some (s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)))"
 
-(* Affine shift along program points compile c (n+k) is compile c n with all pp+k. *)
+subsection \<open>Structural selectors\<close>
 
-definition offset_edges :: "nat \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> (pp \<times> edge_action \<times> pp) set" where
-  "offset_edges k E = (\<lambda>(u,a,v). (u + k, a, v + k)) ` E"
+definition intra_successors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
+  "intra_successors g u = {v. \<exists>a. (u, a, v) \<in> intra g}"
 
-lemma offset_edges_Un[simp]:
-  "offset_edges k (A \<union> B) = offset_edges k A \<union> offset_edges k B"
-  unfolding offset_edges_def by force
+definition intra_predecessors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
+  "intra_predecessors g v = {u. \<exists>a. (u, a, v) \<in> intra g}"
 
-subsection \<open>Edge-action classification\<close>
+definition call_edges_from :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (call_action \<times> cfg_node \<times> cfg_node) set" where
+  "call_edges_from g u = {(act, ce, after). (u, act, ce, after) \<in> calls g}"
 
-definition is_enter_action :: "edge_action \<Rightarrow> bool" where
-  "is_enter_action a = (case a of EA_Enter _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
+definition call_edges_to_entry :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
+  "call_edges_to_entry g ce = {(u, act, after). (u, act, ce, after) \<in> calls g}"
 
-subsection \<open>Executable examples\<close>
+definition call_continuations :: "cfg \<Rightarrow> cfg_node set" where
+  "call_continuations g = {after. \<exists>u act ce. (u, act, ce, after) \<in> calls g}"
 
-value "cfg_entry (mk_cfg 0 2 {(0, EA_Nop, 1), (1, EA_Nop, 2)} {})"
-value "cfg_exit  (mk_cfg 0 2 {(0, EA_Nop, 1), (1, EA_Nop, 2)} {})"
+definition procedure_entry :: "pname \<Rightarrow> cfg_node" where
+  "procedure_entry p = FunctionEntry p"
+
+definition procedure_result :: "pname \<Rightarrow> cfg_node" where
+  "procedure_result p = FunctionResult p"
+
+subsection \<open>Node set (derived, not stored)\<close>
+
+text \<open>\<open>cfg_nodes\<close> is reconstructed from the endpoints of \<open>intra\<close>, every node occurring in
+  \<open>calls\<close>, and \<open>cfg_entry\<close>.  It is not a record field.\<close>
+
+definition cfg_nodes :: "cfg \<Rightarrow> cfg_node set" where
+  "cfg_nodes g =
+     {u. \<exists>a v. (u, a, v) \<in> intra g}
+     \<union> {v. \<exists>u a. (u, a, v) \<in> intra g}
+     \<union> {u. \<exists>act ce after. (u, act, ce, after) \<in> calls g}
+     \<union> {ce. \<exists>u act after. (u, act, ce, after) \<in> calls g}
+     \<union> {after. \<exists>u act ce. (u, act, ce, after) \<in> calls g}
+     \<union> {cfg_entry g}"
+
+subsection \<open>Flatness and well-formedness\<close>
+
+definition flat_cfg :: "cfg \<Rightarrow> bool" where
+  "flat_cfg g \<longleftrightarrow> calls g = {}"
+
+text \<open>\<open>wf_cfg\<close> is structural only: call edges enter procedure-entry nodes; no intra edge
+  enters a procedure-entry node (so a callee is reached only across a call); and a return
+  action lands on the matching procedure result.  No compiler-correctness or
+  source-semantic property is included.\<close>
+
+definition wf_cfg :: "cfg \<Rightarrow> bool" where
+  "wf_cfg g \<longleftrightarrow>
+     (\<forall>u act ce after. (u, act, ce, after) \<in> calls g \<longrightarrow> (\<exists>p. ce = FunctionEntry p))
+   \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (\<forall>p. v \<noteq> FunctionEntry p))
+   \<and> (\<forall>u e p v. (u, EA_Ret e p, v) \<in> intra g \<longrightarrow> v = FunctionResult p)"
+
+subsection \<open>Structural invariants\<close>
+
+text \<open>(1) Every \<open>intra\<close> endpoint is a node.\<close>
+lemma intra_endpoints_in_nodes:
+  assumes "(u, a, v) \<in> intra g"
+  shows "u \<in> cfg_nodes g" and "v \<in> cfg_nodes g"
+  using assms by (auto simp: cfg_nodes_def)
+
+text \<open>(2) Every call site, callee entry, and continuation is a node.\<close>
+lemma call_endpoints_in_nodes:
+  assumes "(u, act, ce, after) \<in> calls g"
+  shows "u \<in> cfg_nodes g" and "ce \<in> cfg_nodes g" and "after \<in> cfg_nodes g"
+  using assms by (auto simp: cfg_nodes_def)
+
+text \<open>(3) The entry is a node.\<close>
+lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
+  by (simp add: cfg_nodes_def)
+
+text \<open>(4) A flat CFG is exactly the call-free fragment; its nodes are the intra endpoints
+  and the entry.\<close>
+lemma flat_cfg_iff: "flat_cfg g \<longleftrightarrow> calls g = {}"
+  by (simp add: flat_cfg_def)
+
+lemma cfg_nodes_flat:
+  assumes "flat_cfg g"
+  shows "cfg_nodes g =
+           {u. \<exists>a v. (u, a, v) \<in> intra g} \<union> {v. \<exists>u a. (u, a, v) \<in> intra g} \<union> {cfg_entry g}"
+  using assms by (auto simp: cfg_nodes_def flat_cfg_def)
+
+text \<open>(5) Procedure entry and procedure result are distinct nodes.\<close>
+lemma procedure_entry_neq_result: "procedure_entry p \<noteq> procedure_result q"
+  by (simp add: procedure_entry_def procedure_result_def)
+
+text \<open>(6) Under \<open>wf_cfg\<close>, call edges target procedure-entry nodes.\<close>
+lemma wf_call_targets_entry:
+  assumes "wf_cfg g" and "(u, act, ce, after) \<in> calls g"
+  shows "\<exists>p. ce = FunctionEntry p"
+  using assms by (fastforce simp: wf_cfg_def)
+
+text \<open>(9) Under \<open>wf_cfg\<close>, no intra edge enters a procedure entry: a callee is reachable
+  only across a call, never by traversing \<open>intra\<close>.\<close>
+lemma wf_intra_not_into_entry:
+  assumes "wf_cfg g" and "(u, a, v) \<in> intra g"
+  shows "v \<noteq> FunctionEntry p"
+  using assms by (auto simp: wf_cfg_def)
+
+lemma wf_no_intra_call:
+  assumes "wf_cfg g"
+  shows "FunctionEntry p \<notin> intra_successors g u"
+  using assms wf_intra_not_into_entry by (fastforce simp: intra_successors_def)
+
+text \<open>(10) \<open>edge_step\<close> is total on \<open>edge_action\<close>: it is defined for every constructor and
+  fails only on a failed guard.\<close>
+lemma edge_step_fail_iff:
+  "edge_step a s = None \<longleftrightarrow>
+     (\<exists>b. a = EA_Assume b \<and> \<not> bval b s) \<or> (\<exists>b. a = EA_AssumeNot b \<and> bval b s)"
+  by (cases a) auto
+
+lemma edge_step_ret_target:
+  assumes "wf_cfg g" and "(u, EA_Ret e p, v) \<in> intra g"
+  shows "v = FunctionResult p"
+  using assms by (auto simp: wf_cfg_def)
+
+subsection \<open>A well-formed witness: shared continuations and converging returns\<close>
+
+text \<open>Procedure \<open>dpf\<close> reaches \<open>FunctionResult dpf\<close> from two distinct nodes (returns
+  converge, (8)); it is called from two distinct sites that share one continuation
+  \<open>Statement 99\<close> (continuations need not be unique, (7)).\<close>
+
+definition dmain :: pname where "dmain = ''main''"
+definition dpf :: pname where "dpf = ''f''"
+
+definition demo_cfg :: cfg where
+  "demo_cfg =
+     \<lparr> intra =
+         { (FunctionEntry dpf, EA_Ret None dpf, FunctionResult dpf),
+           (Statement 0,      EA_Ret None dpf, FunctionResult dpf) },
+       calls =
+         { (Statement 10, CallEdge None [], FunctionEntry dpf, Statement 99),
+           (Statement 20, CallEdge None [], FunctionEntry dpf, Statement 99) },
+       cfg_entry = FunctionEntry dmain \<rparr>"
+
+lemmas demo_defs = demo_cfg_def dmain_def dpf_def
+
+lemma demo_wf: "wf_cfg demo_cfg"
+  by (auto simp: wf_cfg_def demo_defs)
+
+text \<open>(8) Two distinct return edges converge into one \<open>FunctionResult\<close>.\<close>
+lemma demo_returns_converge:
+  "(FunctionEntry dpf, EA_Ret None dpf, FunctionResult dpf) \<in> intra demo_cfg"
+  "(Statement 0, EA_Ret None dpf, FunctionResult dpf) \<in> intra demo_cfg"
+  "FunctionEntry dpf \<noteq> Statement 0"
+  by (simp_all add: demo_defs)
+
+text \<open>(7) Two distinct call sites share one continuation.\<close>
+lemma demo_shared_continuation:
+  "(Statement 10, CallEdge None [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
+  "(Statement 20, CallEdge None [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
+  "Statement 10 \<noteq> Statement 20"
+  by (simp_all add: demo_defs)
+
+lemma demo_continuation_join:
+  "Statement 99 \<in> call_continuations demo_cfg"
+  by (auto simp: call_continuations_def demo_defs)
 
 end
+

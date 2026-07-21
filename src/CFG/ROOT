@@ -1,19 +1,11 @@
 session Voblint_CFG in "." = "Voblint_IMP2" +
-  description "CFG construction and collecting semantics"
-  directories
-    "Collecting"
-    "Compiler"
+  description "Procedure-aware CFG core (two-relation design)"
   theories
     CFG_Def
-    CFG_Path
-    IMP2_Proc_to_CFG
-    CFG_Transfer
-    CFG_Prune
-    CFG_Local_Trace
-    LTR_Collect
-    LTR_Abstract
-    Compile_Invariants
-    Control_Residual
-    Located_Exec
-    Control_Simulation
-    Located_LTR
+  (* Stage 3+: re-add each theory here as it is migrated onto the two-relation
+     procedure-aware CFG (valid_ltr, collecting, compiler correctness). They still
+     reference the retired single-edge-set representation and are not built yet:
+       CFG_Path IMP2_Proc_to_CFG CFG_Transfer CFG_Prune
+       Collecting/CFG_Local_Trace Collecting/LTR_Collect Collecting/LTR_Abstract
+       Compiler/Compile_Invariants Compiler/Control_Residual Compiler/Located_Exec
+       Compiler/Control_Simulation Compiler/Located_LTR *)
