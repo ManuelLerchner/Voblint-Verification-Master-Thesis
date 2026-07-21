@@ -91,6 +91,18 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store option" wh
 | "edge_step (EA_Ret e p) s =
      Some (s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)))"
 
+subsection \<open>Return-value transfer\<close>
+
+text \<open>Return-value rehydration at the caller: write the callee's \<open>ret_var\<close> into the
+  destination over the combined store (callee globals, caller locals).  It is fixed by the
+  call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
+
+definition combine_collect :: "vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
+  "combine_collect dst s t = combine_assign dst (t ret_var) (combine_states s t)"
+
+lemma combine_collect_None: "combine_collect None s t = <s|t>"
+  by (simp add: combine_collect_def)
+
 subsection \<open>Structural selectors\<close>
 
 definition intra_successors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
