@@ -1,15 +1,16 @@
 session Voblint_CFG in "." = "Voblint_IMP2" +
-  description "Procedure-aware CFG core and activation-local trace semantics"
+  description "Procedure-aware CFG core, trace semantics, and collecting layer"
   directories
     "Collecting"
   theories
     CFG_Def
     CFG_Local_Trace
-  (* Stage 4+: re-add each theory here as it is migrated onto the two-relation
-     procedure-aware CFG (collecting semantics, compiler correctness). They still
+    LTR_Collect
+    LTR_Abstract
+  (* Stage 5+: re-add each theory here as it is migrated onto the two-relation
+     procedure-aware CFG (compiler correctness, then analysis/solver). They still
      reference the retired single-edge-set representation and are not built yet:
        IMP2_Proc_to_CFG CFG_Transfer CFG_Prune
-       Collecting/LTR_Collect Collecting/LTR_Abstract
        Compiler/Compile_Invariants Compiler/Control_Residual Compiler/Located_Exec
        Compiler/Control_Simulation Compiler/Located_LTR
      CFG_Path (nat-offset path infrastructure) is retired in Stage 3: nat-offset
