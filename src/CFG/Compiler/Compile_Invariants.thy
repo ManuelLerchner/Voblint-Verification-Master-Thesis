@@ -1,773 +1,378 @@
 theory Compile_Invariants
-  imports
-
-    CFG_Prune
+  imports IMP2_Proc_to_CFG
 begin
 
-
-section \<open>Source-to-analysis compiler-correctness prototype\<close>
+section \<open>Structural invariants of the procedure-aware compiler\<close>
 
 text \<open>
-  This theory fixes the interfaces of the source-to-analysis proof before the
-  compiler simulation is implemented. The graph and solver layers are stated
-  independently of the matching-state relation used by the compiler proof.
+  The sixteen structural obligations of Stage 5A, plus the parameter-binding exhibit and
+  the five regression examples.  Everything here is about node/edge shape --- the full
+  source-to-\<open>valid_ltr\<close> simulation is Stage 5B.
 \<close>
 
-subsection \<open>Compiler input\<close>
+subsection \<open>Compiler input well-formedness\<close>
 
-definition wf_compile_input :: "proc_table \<Rightarrow> pname list \<Rightarrow> IMP2_Proc.com \<Rightarrow> bool" where
-  "wf_compile_input \<Pi> ps main \<longleftrightarrow>
-     distinct ps \<and>
-     set ps = {p. \<Pi> p \<noteq> None} \<and>
-     source_pi \<Pi> \<and>
-     source_com main"
+text \<open>The main procedure name is kept disjoint from the declared procedures, so
+  \<open>FunctionEntry mnm\<close> / \<open>FunctionResult mnm\<close> never collide with a callee's nodes.\<close>
+definition wf_compile_input ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "wf_compile_input \<Pi> ps mnm main \<longleftrightarrow>
+     distinct ps \<and> set ps = {p. \<Pi> p \<noteq> None} \<and> mnm \<notin> set ps
+   \<and> source_pi \<Pi> \<and> source_com main"
 
-subsection \<open>Two-pass compiler invariants\<close>
+subsection \<open>Syntactic occurrence predicates\<close>
 
-definition layout_domain_exact ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> proc_layout \<Rightarrow> bool"
-where
-  "layout_domain_exact \<Pi> ps lay \<longleftrightarrow>
-     (\<forall>p. (\<exists>info. lay p = Some info) \<longleftrightarrow>
-       p \<in> set ps \<and> \<Pi> p \<noteq> None)"
+fun has_call :: "com \<Rightarrow> bool" where
+  "has_call (Call _ _ _) = True"
+| "has_call (Seq c1 c2) = (has_call c1 \<or> has_call c2)"
+| "has_call (If _ c1 c2) = (has_call c1 \<or> has_call c2)"
+| "has_call (While _ c) = has_call c"
+| "has_call (Scope c) = has_call c"
+| "has_call _ = False"
 
-definition compile_endpoints ::
-  "proc_table \<Rightarrow> proc_layout \<Rightarrow> IMP2_Proc.com \<Rightarrow> nat
-    \<Rightarrow> nat \<times> pp \<times> pp"
-where
-  "compile_endpoints \<Pi> lay cmd n =
-    (case compile \<Pi> lay cmd n of
-      (n', en, ex, E, C) \<Rightarrow> (n', en, ex))"
+fun returns_in :: "aexp option \<Rightarrow> com \<Rightarrow> bool" where
+  "returns_in e (Return e') = (e = e')"
+| "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
+| "returns_in e (If _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
+| "returns_in e (While _ c) = returns_in e c"
+| "returns_in e (Scope c) = returns_in e c"
+| "returns_in e _ = False"
 
-fun compile_endpoint_shape ::
-  "proc_table \<Rightarrow> proc_layout \<Rightarrow> IMP2_Proc.com \<Rightarrow> nat
-    \<Rightarrow> nat \<times> pp \<times> pp"
-where
-  "compile_endpoint_shape Pi lay IMP2_Proc.com.SKIP n = (n + 2, n, n + 1)"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Assign x a) n = (n + 2, n, n + 1)"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Seq c1 c2) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay c1 n;
-         (n2, en2, ex2) = compile_endpoint_shape Pi lay c2 n1
-     in (n2, en1, ex2))"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.If b c1 c2) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay c1 (n + 1);
-         (n2, en2, ex2) = compile_endpoint_shape Pi lay c2 n1
-     in (n2 + 1, n, n2))"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.While b cbody) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay cbody (n + 1)
-     in (n1 + 1, n, n1))"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Scope cbody) n =
-    (let (n1, en1, ex1) = compile_endpoint_shape Pi lay cbody (n + 1)
-     in (n1 + 1, n, n1))"
-| "compile_endpoint_shape Pi lay (IMP2_Proc.com.Call dst p actuals) n =
-    (case (Pi p, lay p) of (Some decl, Some info) \<Rightarrow> (n + 2, n, n + 1) | _ \<Rightarrow> (n + 2, n, n))"
-| "compile_endpoint_shape Pi lay IMP2_Proc.com.Restore n = (n, n, n)"
+subsection \<open>Return edges and call-freeness\<close>
 
-lemma compile_endpoints_eq_shape:
-  "compile_endpoints \<Pi> lay cmd n = compile_endpoint_shape \<Pi> lay cmd n"
-  by (induction cmd arbitrary: n;
-      fastforce simp: compile_endpoints_def split: prod.splits option.splits)
-
-lemma compile_endpoints_domain_eq:
-  assumes same_domain:
-    "\<And>p. (\<exists>info. lay1 p = Some info) \<longleftrightarrow>
-          (\<exists>info. lay2 p = Some info)"
-  shows "compile_endpoints \<Pi> lay1 cmd n =
-    compile_endpoints \<Pi> lay2 cmd n"
-proof -
-  have shape:
-      "compile_endpoint_shape \<Pi> lay1 cmd n =
-       compile_endpoint_shape \<Pi> lay2 cmd n"  proof (induction cmd arbitrary: n)
-    case SKIP
-    then show ?case by simp
-  next
-    case (Assign x a)
-    then show ?case by simp
-  next
-    case (Seq c1 c2)
-    then show ?case by simp
-  next
-    case (If b c1 c2)
-    then show ?case by simp
-  next
-    case (While b cbody)
-    then show ?case by simp
-  next
-    case (Scope cbody)
-    then show ?case by simp
-  next
-    case (Call dst p actuals)
-    have domain:
-        "(\<exists>info. lay1 p = Some info) =
-         (\<exists>info. lay2 p = Some info)"
-      by (rule same_domain)
-    show ?case
-      using domain
-      apply (cases "lay1 p"; cases "lay2 p") apply(auto) by (metis option.simps(5))
-  next
-    case Restore
-    then show ?case by simp
-  qed
-show ?thesis
-    using shape compile_endpoints_eq_shape by metis
-qed
-
-lemma compile_endpoints_definedness:
-  fixes cmd :: IMP2_Proc.com
-  assumes same_domain:
-    "\<And>p. (\<exists>info. lay1 p = Some info) \<longleftrightarrow>
-          (\<exists>info. lay2 p = Some info)"
-      and first:
-    "compile \<Pi> lay1 cmd n = (n1, en1, ex1, E1, C1)"
-      and second:
-    "compile \<Pi> lay2 cmd n = (n2, en2, ex2, E2, C2)"
-  shows "n1 = n2 \<and> en1 = en2 \<and> ex1 = ex2"
-proof -
-  have eq: "compile_endpoints \<Pi> lay1 cmd n =
-      compile_endpoints \<Pi> lay2 cmd n"
-    by (rule compile_endpoints_domain_eq[OF same_domain])
-  show ?thesis
-    using eq first second unfolding compile_endpoints_def by simp
-qed
-
-fun endpoint_view :: "proc_info option \<Rightarrow> (pp \<times> pp) option"
-where
-  "endpoint_view None = None"
-| "endpoint_view (Some (en, ex, Ns, E, C)) = Some (en, ex)"
-
-definition layouts_agree :: "proc_layout \<Rightarrow> proc_layout \<Rightarrow> bool"
-where
-  "layouts_agree lay1 lay2 \<longleftrightarrow>
-    (\<forall>p. endpoint_view (lay1 p) = endpoint_view (lay2 p))"
-
-lemma compile_layouts_agree:
-  assumes agree: "layouts_agree lay1 lay2"
-  shows "compile Pi lay1 cmd n = compile Pi lay2 cmd n"
-  using agree
-proof (induction cmd arbitrary: n)
-  case SKIP
-  show ?case by simp
-next
-  case Assign
-  show ?case by simp
-next
+text \<open>(10) Every source \<open>Return e\<close> in a procedure body \<open>p\<close> compiles to an intra edge
+  reaching \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
+lemma compile_return_edge:
+  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> returns_in e c
+   \<Longrightarrow> \<exists>k. (Statement k, EA_Ret e p, FunctionResult p) \<in> E"
+proof (induction c arbitrary: n n' en ex E K rule: com.induct)
   case (Seq c1 c2)
-  show ?case
-    by (simp add: Seq.IH(1)[OF Seq.prems] Seq.IH(2)[OF Seq.prems])
+  from Seq.prems(1) obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
+    c1: "compile p c1 n = (n1, en1, ex1, E1, K1)"
+    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)"
+    and E: "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2"
+    by (auto split: prod.splits)
+  from Seq.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
+  then show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] E by auto
 next
-  case If
-  show ?case
-    by (simp add: If.IH(1)[OF If.prems] If.IH(2)[OF If.prems])
+  case (If b c1 c2)
+  from If.prems(1) obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
+    c1: "compile p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    and c2: "compile p c2 n1 = (n2, en2, ex2, E2, K2)"
+    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+                  \<union> E1 \<union> E2 \<union> {(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}"
+    by (auto split: prod.splits)
+  from If.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
+  then show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] E by auto
 next
-  case While
-  show ?case
-    by (simp add: While.IH[OF While.prems])
+  case (While b c)
+  from While.prems(1) obtain n1 en1 ex1 E1 K1 where
+    c1: "compile p c (Suc n) = (n1, en1, ex1, E1, K1)"
+    and E: "E = {(Statement n, EA_Assume b, en1),
+                 (Statement n, EA_AssumeNot b, Statement n1),
+                 (ex1, EA_Nop, Statement n)} \<union> E1"
+    by (auto split: prod.splits)
+  from While.prems(2) have "returns_in e c" by simp
+  then show ?case using While.IH[OF c1] E by auto
 next
-  case Scope
-  show ?case
-    by (simp add: Scope.IH[OF Scope.prems])
+  case (Scope c)
+  from Scope.prems(1) obtain n1 en ex E1 K1 where
+    c1: "compile p c (Suc n) = (n1, en, ex, E1, K1)"
+    and E: "E = {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E1"
+    by (auto split: prod.splits)
+  from Scope.prems(2) have "returns_in e c" by simp
+  then show ?case using Scope.IH[OF c1] E by auto
 next
-  case (Call dst p actuals)
-  have view: "endpoint_view (lay1 p) = endpoint_view (lay2 p)"
-    using Call.prems unfolding layouts_agree_def by blast
+  case (Return e') then show ?case by (auto split: if_splits)
+qed auto
+
+text \<open>(15) A call-free command compiles to an empty \<open>calls\<close> set.\<close>
+lemma compile_no_call:
+  "compile p c n = (n', en, ex, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
+  by (induction c arbitrary: n n' en ex E K rule: com.induct)
+     (auto split: prod.splits if_splits)
+
+lemma compile_proc_no_call:
+  "compile_proc p decl n = (n', E, K) \<Longrightarrow> \<not> has_call (body decl) \<Longrightarrow> K = {}"
+  by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_no_call)
+
+text \<open>(15) A program whose procedure bodies and main are all call-free compiles to
+  \<open>calls = {}\<close> --- the flat-CFG fragment.\<close>
+lemma compile_procs_no_call:
+  "compile_procs \<Pi> ps n = (n', E, K)
+   \<Longrightarrow> (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> \<not> has_call (body decl)) \<Longrightarrow> K = {}"
+proof (induction ps arbitrary: n n' E K)
+  case Nil then show ?case by simp
+next
+  case (Cons p ps)
   show ?case
-  proof (cases "Pi p")
-    case None
-    then show ?thesis by simp
+  proof (cases "\<Pi> p")
+    case None with Cons show ?thesis by simp
   next
     case (Some decl)
-    show ?thesis
-    proof (cases "lay1 p")
-      case None
-      with view show ?thesis by (cases "lay2 p") auto
-    next
-      case (Some info1)
-      then obtain en1 ex1 Ns1 E1 C1 where info1[simp]: "info1 = (en1, ex1, Ns1, E1, C1)"
-        by (cases info1)
-      from view Some obtain en2 ex2 Ns2 E2 C2 where info2[simp]: "lay2 p = Some (en2, ex2, Ns2, E2, C2)"
-        and ends: "en1 = en2" "ex1 = ex2"
-        by (cases "lay2 p") auto
-      then show ?thesis using Some ends
-        by (simp split: option.splits prod.splits)
-    qed
-  qed
-next
-  case Restore
-  show ?case by simp
-qed
-
-lemma compile_procs_layout_domain:
-  assumes distinct: "distinct ps"
-      and fresh: "\<forall>p \<in> set ps. lay p = None"
-      and defined: "\<forall>p \<in> set ps. \<Pi> p \<noteq> None"
-      and result: "compile_procs_layout \<Pi> ps lay n = (n', lay')"
-  shows "(\<exists>info. lay' q = Some info) \<longleftrightarrow>
-    (\<exists>info. lay q = Some info) \<or> q \<in> set ps"
-using distinct fresh defined result
-proof (induction ps arbitrary: lay n n' lay')
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  obtain decl where decl: "\<Pi> a = Some decl"
-    using Cons.prems(3) by auto
-  obtain n1 en ex E C where comp:
-      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (with_result (body decl) (result decl)) n =
-        (n1, en, ex, E, C)"
-    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) lay) (with_result (body decl) (result decl)) n") auto
-  have rec:
-      "compile_procs_layout \<Pi> ps
-        (lay(a := Some (en, ex, {n..<n1}, {}, {}))) n1 =
-        (n', lay')"
-    using Cons.prems(4) decl comp Cons.prems(2) by simp
-  have fresh_tail:
-      "\<forall>p \<in> set ps.
-        (lay(a := Some (en, ex, {n..<n1}, {}, {}))) p = None"
-    using Cons.prems(1,2) by auto
-  have defined_tail: "\<forall>p \<in> set ps. \<Pi> p \<noteq> None"
-    using Cons.prems(3) by auto
-  have tail:
-      "(\<exists>info. lay' q = Some info) \<longleftrightarrow>
-       (\<exists>info. (lay(a := Some (en, ex, {n..<n1}, {}, {}))) q =
-          Some info) \<or> q \<in> set ps"
-    by (rule Cons.IH[OF _ fresh_tail defined_tail rec])
-       (use Cons.prems(1) in auto)
-  show ?case
-    using tail Cons.prems(2) by auto
-qed
-
-lemma compile_procs_layout_domain_exact:
-  assumes wf: "wf_compile_input \<Pi> ps main"
-      and layout:
-        "compile_procs_layout \<Pi> ps (\<lambda>_. None) 0 = (n, lay)"
-  shows "layout_domain_exact \<Pi> ps lay"
-  using wf layout
-    compile_procs_layout_domain[of ps "\<lambda>_. None" \<Pi> 0 n lay]
-  by (auto simp: wf_compile_input_def layout_domain_exact_def)
-
-lemma compile_procs_layout_preserves:
-  assumes result: "compile_procs_layout Pi ps lay n = (n', lay')"
-      and present: "lay p = Some info"
-  shows "lay' p = Some info"
-  using result present
-proof (induction ps arbitrary: lay n n' lay')
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  show ?case
-  proof (cases "Pi a")
-    case None
-    have rec: "compile_procs_layout Pi ps lay n = (n', lay')"
-      using Cons.prems(1) None by simp
-    show ?thesis
-      by (rule Cons.IH[OF rec Cons.prems(2)])
-  next
-    case (Some decl)
-    note proc = Some
-    obtain k en ex E C where comp:
-        "compile Pi (known_proc_layout Pi (a # ps) lay) (with_result (body decl) (result decl)) n =
-          (k, en, ex, E, C)"
-      by (cases "compile Pi (known_proc_layout Pi (a # ps) lay) (with_result (body decl) (result decl)) n")
-         auto
-    show ?thesis
-    proof (cases "lay a")
-      case None
-      note absent = None
-      have rec:
-          "compile_procs_layout Pi ps
-            (lay(a := Some (en, ex, {n..<k}, {}, {}))) k =
-            (n', lay')"
-        using Cons.prems(1) proc comp absent by simp
-      have neq: "p \<noteq> a"
-        using Cons.prems(2) absent by auto
-      have updated:
-          "(lay(a := Some (en, ex, {n..<k}, {}, {}))) p = Some info"
-        using Cons.prems(2) neq by simp
-      show ?thesis
-        by (rule Cons.IH[OF rec updated])
-    next
-      case (Some current)
-      note present_a = Some
-      have rec: "compile_procs_layout Pi ps lay k = (n', lay')"
-        using Cons.prems(1) proc comp present_a by simp
-      show ?thesis
-        by (rule Cons.IH[OF rec Cons.prems(2)])
-    qed
+    with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
+      cp: "compile_proc p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
+      by (auto split: prod.splits)
+    have "K0 = {}" using compile_proc_no_call[OF cp] Cons.prems(2) Some by auto
+    moreover have "K' = {}" using Cons.IH[OF rest] Cons.prems(2) by auto
+    ultimately show ?thesis using K by simp
   qed
 qed
 
-lemma compile_procs_layout_member:
-  assumes distinct: "distinct ps"
-      and fresh: "\<forall>q \<in> set ps. in_lay q = None"
-      and defined: "\<forall>q \<in> set ps. Pi q \<noteq> None"
-      and result:
-        "compile_procs_layout Pi ps in_lay n = (n', out_lay)"
-      and member: "p \<in> set ps"
-  shows "\<exists>en ex Ns.
-    out_lay p = Some (en, ex, Ns, {}, {})"
-  using distinct fresh defined result member
-proof (induction ps arbitrary: in_lay n n' out_lay p)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  obtain head_decl where head: "Pi a = Some head_decl"
-    using Cons.prems(3) by auto
-  obtain k head_en head_ex head_E head_C where comp:
-      "compile Pi (known_proc_layout Pi (a # ps) in_lay)
-        (with_result (body head_decl) (result head_decl)) n =
-        (k, head_en, head_ex, head_E, head_C)"
-    by (cases "compile Pi
-      (known_proc_layout Pi (a # ps) in_lay) (with_result (body head_decl) (result head_decl)) n") auto
-  define next_lay where
-    "next_lay =
-      in_lay(a := Some (head_en, head_ex, {n..<k}, {}, {}))"
-  have rec:
-      "compile_procs_layout Pi ps next_lay k = (n', out_lay)"
-    using Cons.prems(4) head comp Cons.prems(2)
-    by (simp add: next_lay_def)
-  show ?case
-  proof (cases "p = a")
-    case True
-    have stored:
-        "out_lay a =
-          Some (head_en, head_ex, {n..<k}, {}, {})"
-      by (rule compile_procs_layout_preserves[OF rec])
-         (simp add: next_lay_def)
-    then show ?thesis
-      using True by blast
-  next
-    case False
-    have fresh_tail: "\<forall>q \<in> set ps. next_lay q = None"
-      using Cons.prems(1,2)
-      by (auto simp: next_lay_def)
-    show ?thesis
-      by (rule Cons.IH[OF _ fresh_tail _ rec])
-         (use Cons.prems False in auto)
-  qed
-qed
-
-lemma compile_procs_bodies_preserves:
-  assumes result:
-    "compile_procs_bodies \<Pi> ps base_lay lay n = (n', lay', E, C)"
-      and present: "lay p = Some info"
-  shows "lay' p = Some info"
-  using result present
-proof (induction ps arbitrary: lay n n' lay' E C)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  show ?case
-  proof (cases "\<Pi> a")
-    case None
-    have rec:
-        "compile_procs_bodies \<Pi> ps base_lay lay n = (n', lay', E, C)"
-      using Cons.prems(1) None by simp
-    show ?thesis
-      by (rule Cons.IH[OF rec Cons.prems(2)])
-  next
-    case (Some decl)
-    note proc = Some
-    obtain k en ex Ea Ca where comp:
-        "compile \<Pi> base_lay (with_result (body decl) (result decl)) n = (k, en, ex, Ea, Ca)"
-      by (cases "compile \<Pi> base_lay (with_result (body decl) (result decl)) n") auto
-    show ?thesis
-    proof (cases "lay a")
-      case None
-      note absent = None
-      obtain Erest Crest where rec:
-          "compile_procs_bodies \<Pi> ps base_lay
-            (lay(a := Some (en, ex, {n..<k}, Ea, Ca))) k =
-            (n', lay', Erest, Crest)"
-        using Cons.prems(1) proc comp absent
-        by (auto split: prod.splits)
-      have neq: "p \<noteq> a"
-        using Cons.prems(2) absent by auto
-      have updated:
-          "(lay(a := Some (en, ex, {n..<k}, Ea, Ca))) p = Some info"
-        using Cons.prems(2) neq by simp
-      show ?thesis
-        by (rule Cons.IH[OF rec updated])
-    next
-      case (Some current)
-      note present_a = Some
-      obtain Erest Crest where rec:
-          "compile_procs_bodies \<Pi> ps base_lay lay k =
-            (n', lay', Erest, Crest)"
-        using Cons.prems(1) proc comp present_a
-        by (auto split: prod.splits)
-      show ?thesis
-        by (rule Cons.IH[OF rec Cons.prems(2)])
-    qed
-  qed
-qed
-
-lemma compile_procs_bodies_lookup:
-  assumes distinct: "distinct ps"
-      and fresh: "\<forall>q \<in> set ps. in_lay q = None"
-      and bodies:
-        "compile_procs_bodies Pi ps base_lay in_lay n =
-          (n', out_lay, E, C)"
-      and member: "p \<in> set ps"
-      and proc: "Pi p = Some decl"
-      and lookup:
-        "out_lay p = Some (en, ex, Ns, Ep, Cp)"
-  shows "\<exists>start finish.
-    compile Pi base_lay (with_result (body decl) (result decl)) start = (finish, en, ex, Ep, Cp)"
-  using distinct fresh bodies member proc lookup
-proof (induction ps arbitrary: in_lay n n' out_lay E C p decl
-    en ex Ns Ep Cp)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  show ?case
-  proof (cases "Pi a")
-    case None
-    have neq: "p \<noteq> a"
-      using Cons.prems(5) None by auto
-    have rec:
-        "compile_procs_bodies Pi ps base_lay in_lay n =
-          (n', out_lay, E, C)"
-      using Cons.prems(3) None by simp
-    show ?thesis
-      by (rule Cons.IH[OF _ _ rec])
-         (use Cons.prems neq in auto)
-  next
-    case (Some head_decl)
-    note head = Some
-    obtain k head_en head_ex head_E head_C where comp:
-        "compile Pi base_lay (with_result (body head_decl) (result head_decl)) n =
-          (k, head_en, head_ex, head_E, head_C)"
-      by (cases "compile Pi base_lay (with_result (body head_decl) (result head_decl)) n") auto
-    define next_lay where
-      "next_lay =
-        in_lay(a := Some
-          (head_en, head_ex, {n..<k}, head_E, head_C))"
-    have absent: "in_lay a = None"
-      using Cons.prems(2) by simp
-    obtain Erest Crest where rec:
-        "compile_procs_bodies Pi ps base_lay next_lay k =
-          (n', out_lay, Erest, Crest)"
-      using Cons.prems(3) head comp absent
-      by (auto simp: next_lay_def split: prod.splits)
-    show ?thesis
-    proof (cases "p = a")
-      case True
-      have stored:
-          "out_lay a = Some
-            (head_en, head_ex, {n..<k}, head_E, head_C)"
-        by (rule compile_procs_bodies_preserves[OF rec])
-           (simp add: next_lay_def)
-      have decl_eq: "decl = head_decl"
-        using Cons.prems(5) head True by simp
-      show ?thesis
-        using comp Cons.prems(6) stored True decl_eq by auto
-    next
-      case False
-      have fresh_tail: "\<forall>q \<in> set ps. next_lay q = None"
-        using Cons.prems(1,2)
-        by (auto simp: next_lay_def)
-      show ?thesis
-        by (rule Cons.IH[OF _ fresh_tail rec])
-           (use Cons.prems False in auto)
-    qed
-  qed
-qed
-
-lemma compile_procs_bodies_outside:
-  assumes result:
-    "compile_procs_bodies Pi ps base_lay in_lay n =
-      (n', out_lay, E, C)"
-      and outside: "p \<notin> set ps"
-      and absent: "in_lay p = None"
-  shows "out_lay p = None"
-  using result outside absent
-  by (induction ps arbitrary: in_lay n n' out_lay E C)
-     (auto split: option.splits prod.splits)
-
-lemma compile_procs_pass_endpoint_agreement_general:
-  assumes distinct: "distinct ps"
-      and fresh_layout: "\<forall>q \<in> set ps. in_lay q = None"
-      and fresh_bodies: "\<forall>q \<in> set ps. in_full q = None"
-      and defined: "\<forall>q \<in> set ps. \<Pi> q \<noteq> None"
-      and layout:
-        "compile_procs_layout \<Pi> ps in_lay start = (n, base_lay)"
-      and bodies:
-        "compile_procs_bodies \<Pi> ps base_lay in_full start =
-          (n', full_lay, E, C)"
-      and member: "p \<in> set ps"
-      and base:
-        "base_lay p = Some (en, ex, Ns, {}, {})"
-  shows "\<exists>Ns' Ep Cp.
-    full_lay p = Some (en, ex, Ns', Ep, Cp)"
-  using distinct fresh_layout fresh_bodies defined layout bodies member base
-proof (induction ps arbitrary: in_lay in_full start n base_lay
-    n' full_lay E C p en ex Ns)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  obtain decl where decl: "\<Pi> a = Some decl"
-    using Cons.prems(4) by auto
-  obtain k en1 ex1 E1 C1 where first:
-      "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (with_result (body decl) (result decl)) start =
-        (k, en1, ex1, E1, C1)"
-    by (cases "compile \<Pi> (known_proc_layout \<Pi> (a # ps) in_lay) (with_result (body decl) (result decl)) start")
-       auto
-  define next_lay where
-    "next_lay = in_lay(a := Some (en1, ex1, {start..<k}, {}, {}))"
-  have layout_tail:
-      "compile_procs_layout \<Pi> ps next_lay k = (n, base_lay)"
-    using Cons.prems(5) decl first Cons.prems(2)
-    by (simp add: next_lay_def)
-
-  obtain k' en2 ex2 E2 C2 where second:
-      "compile \<Pi> base_lay (with_result (body decl) (result decl)) start = (k', en2, ex2, E2, C2)"
-    by (cases "compile \<Pi> base_lay (with_result (body decl) (result decl)) start") auto
-  define next_full where
-    "next_full =
-      in_full(a := Some (en2, ex2, {start..<k'}, E2, C2))"
-  obtain Erest Crest where bodies_tail:
-      "compile_procs_bodies \<Pi> ps base_lay next_full k' =
-        (n', full_lay, Erest, Crest)"
-    using Cons.prems(6) decl second Cons.prems(3)
-    by (auto simp: next_full_def split: prod.splits)
-
-  have base_domain:
-      "(\<exists>info. base_lay q = Some info) \<longleftrightarrow>
-       (\<exists>info. in_lay q = Some info) \<or> q \<in> set (a # ps)"
-    for q
-    by (rule compile_procs_layout_domain[OF Cons.prems(1)
-          Cons.prems(2) Cons.prems(4) Cons.prems(5)])
-  have same_domain:
-      "\<And>q. (\<exists>info. known_proc_layout \<Pi> (a # ps) in_lay q = Some info) \<longleftrightarrow>
-            (\<exists>info. base_lay q = Some info)"
-    using base_domain Cons.prems(4)
-    by (auto simp: known_proc_layout_def split: option.splits)
-  have endpoints: "k = k' \<and> en1 = en2 \<and> ex1 = ex2"
-    by (rule compile_endpoints_definedness[OF same_domain first second])
-
-  show ?case
-  proof (cases "p = a")
-    case True
-    have base_head:
-        "base_lay a = Some (en1, ex1, {start..<k}, {}, {})"
-      by (rule compile_procs_layout_preserves[OF layout_tail])
-         (simp add: next_lay_def)
-    have endpoint_values: "en = en1 \<and> ex = ex1"
-      using Cons.prems(8) base_head True by simp
-    have full_head:
-        "full_lay a = Some (en2, ex2, {start..<k'}, E2, C2)"
-      by (rule compile_procs_bodies_preserves[OF bodies_tail])
-         (simp add: next_full_def)
-    show ?thesis
-      using endpoints endpoint_values full_head True by auto
-  next
-    case False
-    have fresh_layout_tail: "\<forall>q \<in> set ps. next_lay q = None"
-      using Cons.prems(1,2) by (auto simp: next_lay_def)
-    have fresh_bodies_tail: "\<forall>q \<in> set ps. next_full q = None"
-      using Cons.prems(1,3) by (auto simp: next_full_def)
-    have bodies_tail_aligned:
-        "compile_procs_bodies \<Pi> ps base_lay next_full k =
-          (n', full_lay, Erest, Crest)"
-      using bodies_tail endpoints by simp
-    show ?thesis
-      by (rule Cons.IH[OF _ fresh_layout_tail fresh_bodies_tail _
-            layout_tail bodies_tail_aligned])
-         (use Cons.prems False in auto)
-  qed
-qed
-
-lemma compile_procs_pass_endpoint_agreement:
-  assumes wf: "wf_compile_input \<Pi> ps main"
-      and layout:
-        "compile_procs_layout \<Pi> ps (\<lambda>_. None) 0 = (n, base_lay)"
-      and bodies:
-        "compile_procs_bodies \<Pi> ps base_lay (\<lambda>_. None) 0 =
-          (n', full_lay, E, C)"
-      and member: "p \<in> set ps"
-      and body: "\<Pi> p = Some cmd"
-      and base:
-        "base_lay p = Some (en, ex, Ns, {}, {})"
-  shows "\<exists>Ns' Ep Cp.
-    full_lay p = Some (en, ex, Ns', Ep, Cp)"
-  proof (rule compile_procs_pass_endpoint_agreement_general[
-      OF _ _ _ _ layout bodies member base])
-    show "distinct ps"
-      using wf by (auto simp: wf_compile_input_def)
-    show "\<forall>q\<in>set ps. (\<lambda>_. None) q = None" by simp
-    show "\<forall>q\<in>set ps. (\<lambda>_. None) q = None" by simp
-    show "\<forall>q\<in>set ps. \<Pi> q \<noteq> None"
-      using wf by (auto simp: wf_compile_input_def)
-  qed
-
-lemma compile_procs_pass_layouts_agree:
-  assumes wf: "wf_compile_input Pi ps main"
-      and layout:
-        "compile_procs_layout Pi ps (\<lambda>_. None) 0 =
-          (n, base_lay)"
-      and bodies:
-        "compile_procs_bodies Pi ps base_lay (\<lambda>_. None) 0 =
-          (n', full_lay, E, C)"
-  shows "layouts_agree base_lay full_lay"
-proof (unfold layouts_agree_def, intro allI)
-  fix p
-  show "endpoint_view (base_lay p) = endpoint_view (full_lay p)"
-  proof (cases "p \<in> set ps")
-    case True
-    obtain cmd where body: "Pi p = Some cmd"
-      using wf True
-      by (auto simp: wf_compile_input_def)
-    have distinct: "distinct ps"
-      using wf by (auto simp: wf_compile_input_def)
-    have defined: "\<forall>q\<in>set ps. Pi q \<noteq> None"
-      using wf by (auto simp: wf_compile_input_def)
-    have member_info:
-        "\<exists>en ex Ns. base_lay p = Some (en, ex, Ns, {}, {})"
-      by (rule compile_procs_layout_member[
-            OF distinct _ defined layout True])
-         simp
-    then obtain en ex Ns where base:
-        "base_lay p = Some (en, ex, Ns, {}, {})"
-      by blast
-    obtain Ns' Ep Cp where full:
-        "full_lay p = Some (en, ex, Ns', Ep, Cp)"
-      using compile_procs_pass_endpoint_agreement[
-        OF wf layout bodies True body base] by blast
-    show ?thesis
-      using base full by simp
-  next
-    case False
-    have base_none: "base_lay p = None"
-      using compile_procs_layout_domain_exact[OF wf layout] False
-      unfolding layout_domain_exact_def
-      by (cases "base_lay p") auto
-    have full_none: "full_lay p = None"
-      by (rule compile_procs_bodies_outside[OF bodies False]) simp
-    show ?thesis
-      using base_none full_none by simp
-  qed
-qed
-
-
-lemma compile_procs_list_decompose:
-  assumes result:
-    "compile_procs_list Pi ps (\<lambda>_. None) 0 =
-      (nout, full_lay, E, C)"
-  shows "\<exists>nbase base_lay.
-    compile_procs_layout Pi ps (\<lambda>_. None) 0 =
-      (nbase, base_lay) \<and>
-    compile_procs_bodies Pi ps base_lay (\<lambda>_. None) 0 =
-      (nout, full_lay, E, C)"
+theorem compile_prog_flat:
+  assumes "\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> \<not> has_call (body decl)"
+    and "\<not> has_call main"
+  shows "flat_cfg (compile_prog \<Pi> ps mnm main)"
 proof -
-  obtain nbase base_lay where layout:
-      "compile_procs_layout Pi ps (\<lambda>_. None) 0 =
-        (nbase, base_lay)"
-    by (cases "compile_procs_layout Pi ps (\<lambda>_. None) 0") auto
-  obtain nbody body_lay Ebody Cbody where bodies:
-      "compile_procs_bodies Pi ps base_lay (\<lambda>_. None) 0 =
-        (nbody, body_lay, Ebody, Cbody)"
-    by (cases "compile_procs_bodies Pi ps base_lay
-      (\<lambda>_. None) 0") auto
-  show ?thesis
-    using result layout bodies
-    unfolding compile_procs_list_def
-    by simp
+  obtain n1 Eprocs Kprocs where
+    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
+  obtain n2 Emain Kmain where
+    mainc: "compile_proc mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
+    by (metis prod_cases3)
+  have "Kprocs = {}" using compile_procs_no_call[OF procs] assms(1) by simp
+  moreover have "Kmain = {}"
+    using compile_proc_no_call[OF mainc] assms(2) by (simp add: proc_decl_of_def)
+  ultimately show ?thesis
+    unfolding flat_cfg_def compile_prog_def by (simp add: procs mainc Let_def)
 qed
 
+subsection \<open>Statement-range disjointness of distinct procedures\<close>
 
-lemma compile_procs_bodies_fragment:
-  assumes bodies:
-    "compile_procs_bodies \<Pi> ps base_lay in_lay n =
-      (n', out_lay, E, C)"
-      and fragment:
-    "out_lay p = Some (en, ex, Ns, Ep, Cp)"
-  shows "in_lay p = Some (en, ex, Ns, Ep, Cp) \<or>
-    (Ep \<subseteq> E \<and> Cp \<subseteq> C)"
-using assms proof (induction ps arbitrary: in_lay n n' out_lay E C)
-  case Nil
-  then show ?case by simp
+lemma compile_proc_frag_range:
+  "compile_proc p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
+proof -
+  assume "compile_proc p decl n = (n', E, K)"
+  then obtain ben bex Eb where
+    cb: "compile p (body decl) n = (n', ben, bex, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, ben)
+                  (insert (bex, EA_Ret (result decl) p, FunctionResult p) Eb)"
+    by (auto simp: compile_proc_def Let_def split: prod.splits)
+  obtain kb where ben: "ben = Statement kb" "n \<le> kb" "kb < n'"
+    using compile_entry_exit_stmt[OF cb] by blast
+  obtain kc where bex: "bex = Statement kc" "n \<le> kc" "kc < n'"
+    using compile_entry_exit_stmt[OF cb] by blast
+  have body: "frag_stmts Eb K \<subseteq> {n..<n'}" using compile_frag_stmts_range[OF cb] .
+  have Eunfold: "E = {(FunctionEntry p, EA_Nop, ben),
+                      (bex, EA_Ret (result decl) p, FunctionResult p)} \<union> Eb"
+    using E by auto
+  have lit: "frag_stmts {(FunctionEntry p, EA_Nop, ben),
+                (bex, EA_Ret (result decl) p, FunctionResult p)} {} \<subseteq> {n..<n'}"
+    using ben bex by (auto simp: frag_stmts_def)
+  have "frag_stmts E K
+          = frag_stmts ({(FunctionEntry p, EA_Nop, ben),
+              (bex, EA_Ret (result decl) p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
+    using Eunfold by simp
+  also have "... = frag_stmts {(FunctionEntry p, EA_Nop, ben),
+                (bex, EA_Ret (result decl) p, FunctionResult p)} {} \<union> frag_stmts Eb K"
+    by (rule frag_stmts_Un)
+  also have "... \<subseteq> {n..<n'}" using lit body by fastforce
+  finally show ?thesis .
+qed
+
+lemma compile_procs_counter_mono:
+  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
+proof (induction ps arbitrary: n n' E K)
+  case Nil then show ?case by simp
 next
-  case (Cons a ps)
+  case (Cons p ps)
   show ?case
-  proof (cases "\<Pi> a")
-    case None
-    have rec:
-        "compile_procs_bodies \<Pi> ps base_lay in_lay n =
-          (n', out_lay, E, C)"
-      using Cons.prems(1) None by simp
-    show ?thesis
-      by (rule Cons.IH[OF rec Cons.prems(2)])
+  proof (cases "\<Pi> p")
+    case None with Cons show ?thesis by simp
   next
     case (Some decl)
-    note proc = Some
-    obtain n1 en1 ex1 E1 C1 where comp:
-        "compile \<Pi> base_lay (with_result (body decl) (result decl)) n = (n1, en1, ex1, E1, C1)"
-      by (cases "compile \<Pi> base_lay (with_result (body decl) (result decl)) n") auto
-    show ?thesis
-    proof (cases "in_lay a")
-      case None
-      obtain n2 lay2 E2 C2 where rec:
-          "compile_procs_bodies \<Pi> ps base_lay
-            (in_lay(a := Some (en1, ex1, {n..<n1}, E1, C1))) n1 =
-            (n2, lay2, E2, C2)"
-        by (cases "compile_procs_bodies \<Pi> ps base_lay
-          (in_lay(a := Some (en1, ex1, {n..<n1}, E1, C1))) n1") auto
-      have final:
-          "n' = n2 \<and> out_lay = lay2 \<and> E = E1 \<union> E2 \<and> C = C1 \<union> C2"
-        using Cons.prems(1) proc comp None rec by simp
-      have tail:
-          "(in_lay(a := Some (en1, ex1, {n..<n1}, E1, C1))) p =
-             Some (en, ex, Ns, Ep, Cp) \<or>
-           Ep \<subseteq> E2 \<and> Cp \<subseteq> C2"
-        by (rule Cons.IH[OF rec])
-           (use Cons.prems(2) final in auto)
-      show ?thesis
-        using tail final None by (cases "p = a") auto
-    next
-      case (Some old)
-      note present = Some
-      obtain n2 lay2 E2 C2 where rec:
-          "compile_procs_bodies \<Pi> ps base_lay in_lay n1 =
-            (n2, lay2, E2, C2)"
-        by (cases "compile_procs_bodies \<Pi> ps base_lay in_lay n1") auto
-      have final:
-          "n' = n2 \<and> out_lay = lay2 \<and> E = E1 \<union> E2 \<and> C = C1 \<union> C2"
-        using Cons.prems(1) proc comp present rec by simp
-      have tail:
-          "in_lay p = Some (en, ex, Ns, Ep, Cp) \<or>
-           Ep \<subseteq> E2 \<and> Cp \<subseteq> C2"
-        by (rule Cons.IH[OF rec])
-           (use Cons.prems(2) final in auto)
-      show ?thesis
-        using tail final by auto
-    qed
+    with Cons.prems obtain n1 E0 K0 n2 E' K' where
+      cp: "compile_proc p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
+      by (auto split: prod.splits)
+    have "n \<le> n1"
+      using cp by (auto simp: compile_proc_def Let_def split: prod.splits
+                        dest: compile_counter_mono)
+    with Cons.IH[OF rest] n' show ?thesis by simp
   qed
 qed
 
-lemma compile_procs_body_fragment_embedding:
-  assumes wf: "wf_compile_input \<Pi> ps main"
-      and layout:
-        "compile_procs_layout \<Pi> ps (\<lambda>_. None) 0 = (n, base_lay)"
-      and bodies:
-        "compile_procs_bodies \<Pi> ps base_lay (\<lambda>_. None) 0 =
-          (n', full_lay, E, C)"
-      and fragment:
-        "full_lay p = Some (en, ex, Ns, Ep, Cp)"
-  shows "Ep \<subseteq> E \<and> Cp \<subseteq> C"
-  using compile_procs_bodies_fragment[OF bodies fragment] by auto
+lemma compile_procs_frag_range:
+  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
+proof (induction ps arbitrary: n n' E K)
+  case Nil then show ?case by (simp add: frag_stmts_def)
+next
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None with Cons show ?thesis by simp
+  next
+    case (Some decl)
+    with Cons.prems obtain n1 E0 K0 n2 E' K' where
+      cp: "compile_proc p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+      and n': "n' = n2" and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
+      by (auto split: prod.splits)
+    have m1: "n \<le> n1"
+      using cp by (auto simp: compile_proc_def Let_def split: prod.splits
+                        dest: compile_counter_mono)
+    have m2: "n1 \<le> n2" using compile_procs_counter_mono[OF rest] .
+    have r0: "frag_stmts E0 K0 \<subseteq> {n..<n1}" using compile_proc_frag_range[OF cp] .
+    have r': "frag_stmts E' K' \<subseteq> {n1..<n2}" using Cons.IH[OF rest] .
+    have "frag_stmts E K = frag_stmts E0 K0 \<union> frag_stmts E' K'"
+      unfolding E K by (rule frag_stmts_Un)
+    also have "... \<subseteq> {n..<n2}" using r0 r' m1 m2 by fastforce
+    finally show ?thesis unfolding n' .
+  qed
+qed
 
-lemma compile_call_defined:
-  assumes proc: "\<Pi> p = Some decl"
-      and layout: "lay p = Some (en, ex, Ns, Ep, Cp)"
-  shows "compile \<Pi> lay (Call dst p actuals) n =
-    (n + 2, n, n + 1,
-      {(n, EA_Enter (formals decl) actuals, en)},
-      {(n, ex, n + 1, dst)})"
-using proc layout by simp
+text \<open>(7) Statement ranges of distinct procedures are disjoint: the first procedure's
+  statements precede the counter at which the rest begins, and the rest's follow it.\<close>
+theorem compile_procs_head_disjoint:
+  assumes "compile_proc p decl n = (n1, E0, K0)"
+    and "compile_procs \<Pi> ps n1 = (n2, E', K')"
+  shows "frag_stmts E0 K0 \<inter> frag_stmts E' K' = {}"
+proof -
+  have "frag_stmts E0 K0 \<subseteq> {n..<n1}" using compile_proc_frag_range[OF assms(1)] .
+  moreover have "frag_stmts E' K' \<subseteq> {n1..<n2}" using compile_procs_frag_range[OF assms(2)] .
+  ultimately show ?thesis by fastforce
+qed
+
+subsection \<open>The sixteen structural obligations, assembled\<close>
+
+text \<open>(1) The compiled CFG is well-formed.\<close>
+lemmas inv1_wf = compile_prog_wf
+
+text \<open>(2) Every call edge targets a \<open>FunctionEntry\<close>.\<close>
+theorem inv2_calls_to_entry:
+  "(u, act, ce, af) \<in> calls (compile_prog \<Pi> ps mnm main) \<Longrightarrow> \<exists>p. ce = FunctionEntry p"
+  using wf_call_targets_entry[OF compile_prog_wf] .
+
+text \<open>(3) No intra edge enters a \<open>FunctionEntry\<close>.\<close>
+theorem inv3_no_intra_into_entry:
+  "(u, a, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v \<noteq> FunctionEntry q"
+  using wf_intra_not_into_entry[OF compile_prog_wf] .
+
+text \<open>(4) Every \<open>EA_Ret e p\<close> edge targets \<open>FunctionResult p\<close>.\<close>
+theorem inv4_ret_to_result:
+  "(u, EA_Ret e p, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v = FunctionResult p"
+  using edge_step_ret_target[OF compile_prog_wf] .
+
+text \<open>(5) / (6) Each compiled procedure has a single entry node \<open>FunctionEntry p\<close> and a
+  single result node \<open>FunctionResult p\<close>: the entry edge and the fall-through result edge
+  are emitted by \<open>compile_proc\<close>, and both nodes are keyed by the procedure name (distinct
+  procedures get distinct nodes).\<close>
+theorem inv5_6_proc_entry_result_edges:
+  assumes "compile_proc p decl n = (n', E, K)"
+  shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
+       \<and> (\<exists>bex. (bex, EA_Ret (result decl) p, FunctionResult p) \<in> E)"
+  using assms by (auto simp: compile_proc_def Let_def split: prod.splits)
+
+theorem inv5_6_entry_result_distinct:
+  "p \<noteq> q \<Longrightarrow> FunctionEntry p \<noteq> FunctionEntry q \<and> FunctionResult p \<noteq> FunctionResult q"
+  by simp
+
+text \<open>(8) Every call continuation is a CFG node.\<close>
+theorem inv8_continuation_in_nodes:
+  "(u, act, ce, af) \<in> calls (compile_prog \<Pi> ps mnm main)
+   \<Longrightarrow> af \<in> cfg_nodes (compile_prog \<Pi> ps mnm main)"
+  using call_endpoints_in_nodes(3) .
+
+text \<open>(9) Calls appear only in \<open>calls\<close>, never in \<open>intra\<close>: by typing an intra edge cannot
+  carry a call, so no \<open>FunctionEntry\<close> is an intra successor.\<close>
+theorem inv9_no_intra_call:
+  "FunctionEntry p \<notin> intra_successors (compile_prog \<Pi> ps mnm main) u"
+  using wf_no_intra_call[OF compile_prog_wf] .
+
+text \<open>(10) is \<open>compile_return_edge\<close> above.  (11) dead code after a return is unreachable:
+  the return fragment's normal-exit node has no incoming intra edge, so a following
+  command wired from it is off every return-to-result path.\<close>
+theorem inv11_return_exit_unreached:
+  "(u, a, Statement (Suc n)) \<notin> fst (snd (snd (snd (compile p (Return e) n))))"
+  by simp
+
+text \<open>(12) Normal fall-through reaches the procedure result --- the \<open>compile_proc\<close>
+  fall-through edge of \<open>inv5_6_proc_entry_result_edges\<close>.\<close>
+lemmas inv12_fallthrough = inv5_6_proc_entry_result_edges
+
+text \<open>(13) Multiple returns converge: two \<open>Return\<close> branches both reach \<open>FunctionResult p\<close>.\<close>
+theorem inv13_multi_return_converge:
+  assumes "compile p (If b (Return e1) (Return e2)) n = (n', en, ex, E, K)"
+  shows "(\<exists>k. (Statement k, EA_Ret e1 p, FunctionResult p) \<in> E)
+       \<and> (\<exists>k. (Statement k, EA_Ret e2 p, FunctionResult p) \<in> E)"
+  using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
+
+text \<open>(14) A recursive call targets the caller procedure's own \<open>FunctionEntry\<close>, while its
+  call site and continuation stay ordinary statement nodes.\<close>
+theorem inv14_recursion_edge:
+  "(Statement n, CallEdge None [], FunctionEntry p, Statement (Suc n))
+     \<in> snd (snd (snd (snd (compile p (Call None p []) n))))"
+  by simp
+
+text \<open>(15) is \<open>compile_prog_flat\<close> above.  (16) the program entry is the main entry node.\<close>
+theorem inv16_entry_is_main:
+  "cfg_entry (compile_prog \<Pi> ps mnm main) = FunctionEntry mnm"
+  unfolding compile_prog_def by (simp add: Let_def split: prod.splits)
+
+subsection \<open>Parameter-binding exhibit: naive entry assignments are wrong\<close>
+
+text \<open>
+  The trace kernel enters a callee at \<^const>\<open>enter_state\<close> (locals reset to zero, globals
+  kept), and the true parameter binding is \<^const>\<open>bind_formals\<close> with the actuals evaluated
+  in the CALLER store.  A naive scheme that instead emits the formal-binding assignments at
+  the callee entry --- evaluating each actual in the already-entered callee store --- is
+  incorrect: an actual that reads a caller local sees the reset value \<open>0\<close>, not the caller's.
+
+  Concretely, for the single formal \<open>x\<close> bound to the actual \<open>V ''y''\<close> where \<open>y\<close> is a caller
+  local holding \<open>5\<close>: the correct binding gives \<open>x = 5\<close>, the naive callee-entry assignment
+  gives \<open>x = 0\<close>.  This is why the compiler keeps the actuals on the \<open>CallEdge\<close> (evaluated in
+  the caller store by the entry transfer) rather than compiling them into callee-entry
+  assignments.
+\<close>
+text \<open>The root cause, at the store level: \<^const>\<open>enter_state\<close> resets a caller local to
+  \<open>0\<close>.  So an actual argument that reads a caller local, if evaluated in the entered callee
+  store (the naive scheme), yields \<open>0\<close> instead of the caller value --- the correct binding
+  evaluates the actual in the caller store (\<^const>\<open>bind_formals\<close> over
+  \<open>map (\<lambda>e. aval e caller) actuals\<close>).  This is why the compiler carries the actuals on the
+  \<open>CallEdge\<close> for the caller-side entry transfer, rather than compiling them into callee-entry
+  assignments.\<close>
+lemma naive_entry_binding_wrong:
+  "\<exists>s :: store. \<exists>x. \<not> is_global x \<and> enter_state s x \<noteq> s x"
+proof (intro exI conjI)
+  show "\<not> is_global ''y''" by (simp add: is_global_def)
+  show "enter_state ((\<lambda>_. 0)(''y'' := (5 :: int))) ''y'' \<noteq> ((\<lambda>_. 0)(''y'' := (5 :: int))) ''y''"
+    by (simp add: enter_state_def is_global_def)
+qed
+
+subsection \<open>Regression examples\<close>
+
+text \<open>Early return in a scope: the compiled fragment reaches \<open>FunctionResult p\<close> through
+  \<open>EA_Ret (Some e) p\<close>, and the dead code's wired-in entry (the return's normal-exit) has no
+  incoming edge --- so \<open>dead\<close> is off the return-to-result path.\<close>
+lemma ex_return_in_scope:
+  assumes "compile p (Scope (Seq (Return (Some e)) (Assign yv ay))) n = (n', en, ex, E, K)"
+  shows "\<exists>k. (Statement k, EA_Ret (Some e) p, FunctionResult p) \<in> E"
+  using compile_return_edge[OF assms] by simp
+
+lemmas ex_dead_after_return_unreached = inv11_return_exit_unreached
+
+text \<open>Two returns in an \<open>if\<close> converge at one \<open>FunctionResult p\<close>.\<close>
+lemmas ex_multi_return = inv13_multi_return_converge
+
+text \<open>Normal fall-through (a procedure without an explicit return) reaches the same result
+  node through the declared-result edge.\<close>
+lemma ex_fallthrough:
+  assumes "compile_proc p (proc_decl_of [] SKIP None) n = (n', E, K)"
+  shows "\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E"
+  using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
+
+text \<open>Nested calls: two distinct call edges, distinct continuations, correct entry nodes,
+  and no call action in \<open>intra\<close> (by typing).\<close>
+lemma ex_nested_calls:
+  "(Statement n, CallEdge (Some r1) [], FunctionEntry p1, Statement (Suc n))
+      \<in> snd (snd (snd (snd (compile q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
+   \<and> (Statement (Suc (Suc n)), CallEdge (Some r2) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
+      \<in> snd (snd (snd (snd (compile q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
+   \<and> Statement (Suc n) \<noteq> Statement (Suc (Suc (Suc n)))"
+  by (simp add: Let_def)
+
+text \<open>A recursive \<open>CallEdge\<close> targets the caller's own \<open>FunctionEntry\<close>.\<close>
+lemmas ex_recursion = inv14_recursion_edge
 
 end
+

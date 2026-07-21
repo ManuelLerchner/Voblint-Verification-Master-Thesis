@@ -1,18 +1,21 @@
 session Voblint_CFG in "." = "Voblint_IMP2" +
-  description "Procedure-aware CFG core, trace semantics, and collecting layer"
+  description "Procedure-aware CFG: core, trace, collecting, and structural compiler"
   directories
     "Collecting"
+    "Compiler"
   theories
     CFG_Def
     CFG_Local_Trace
     LTR_Collect
     LTR_Abstract
-  (* Stage 5+: re-add each theory here as it is migrated onto the two-relation
-     procedure-aware CFG (compiler correctness, then analysis/solver). They still
+    IMP2_Proc_to_CFG
+    Compile_Invariants
+  (* Stage 5B+: re-add each theory here as it is migrated onto the two-relation
+     procedure-aware CFG (compiler simulation, then analysis/solver). They still
      reference the retired single-edge-set representation and are not built yet:
-       IMP2_Proc_to_CFG CFG_Transfer CFG_Prune
-       Compiler/Compile_Invariants Compiler/Control_Residual Compiler/Located_Exec
+       CFG_Transfer CFG_Prune
+       Compiler/Control_Residual Compiler/Located_Exec
        Compiler/Control_Simulation Compiler/Located_LTR
-     CFG_Path (nat-offset path infrastructure) is retired in Stage 3: nat-offset
-     renumbering is obsolete under procedure-aware cfg_node nodes. Stage 5 reintroduces
-     cfg_node-aware offsetting when the compiler layer is migrated. *)
+     CFG_Path (nat-offset path infrastructure) was retired in Stage 3; the
+     procedure-aware compiler allocates cfg_node Statement indices directly, so no
+     separate offset layer is needed. *)
