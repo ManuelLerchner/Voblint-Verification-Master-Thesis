@@ -41,6 +41,19 @@ out of scope — a vendor hypothesis, not ours. Write up.
 
 ---
 
+## Research-gap reconciliation (2026-07)
+
+The *Second-Pass Research-Gap Audit* is reconciled into `docs/ROADMAP.md` "Research-gap
+reconciliation" (milestone table T1/A1/A2/E1/E2/P1–P3/G1, acceptance criteria, corrected
+dependency order). **Unblocked near-term** (independent of the P5 termination refactor):
+
+- **A1** — bundled `run_analysis_source_sound` (hide the 4–5-step manual chain).
+- **E2** — a non-exit query witness for `side_collect_sound_in_eff_cone`.
+
+Then **A2** (domain-registration API) → **E1** (Parity, which validates A2). The termination
+milestone **T1** stays gated on P5 + a missing `TD_side` termination corollary — do not treat it
+as a cheap win.
+
 ## Next goals (short horizon)
 
 | Priority | Goal | Payoff |

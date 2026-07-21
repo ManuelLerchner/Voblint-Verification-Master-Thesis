@@ -57,12 +57,8 @@ theory Example_Interval_DG_Flagship
     "Voblint_CFG.IMP2_Proc_to_CFG"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_IMP2.IMP2_Bridge"
-    "Voblint_Formalization.Source_Activation_Sound"
+    "Voblint_Formalization.DG_Domain_Registration"
 begin
-
-no_notation Syntax.Assign (\<open>_ ::= _\<close> [1000, 61] 61)
-hide_const (open) Syntax.N Syntax.V
 
 subsection \<open>1. The program (inline IMP2 source)\<close>
 
@@ -117,33 +113,13 @@ lemma flagship_finC: "finite (combines flagship_cfg)" by (simp add: flagship_com
 subsection \<open>3. The analysis specification (interval, as an executable D/G analysis)\<close>
 
 text \<open>
-  Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>.  Its executable
-  mirror at \<open>ivl st\<close> is \<open>unit_dg_spec_st ivl_tf_st\<close> --- built generically by the
-  bridge from the executable interval transfer \<open>ivl_tf_st\<close>.  The two transport
-  obligations (step and combine commute with the abstract spec through
-  \<open>fun_of_st\<close>) follow from the bridge's generic lemmas; only \<open>ivl_tf_st_commute\<close> is
-  interval-specific --- the combine lemma is domain-agnostic.
+  Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
+  mirror \<open>unit_dg_spec_st ivl_tf_st\<close>.  The registration \<^locale>\<open>unit_dg_exec_analysis\<close>
+  --- interpreted as \<open>ivl_reg\<close> in \<open>DG_Domain_Registration\<close> from \<open>ivl_is_sound_transfer\<close>
+  and \<open>ivl_tf_st_commute\<close> alone --- discharges the transport, soundness, and
+  solver-crossing obligations generically.  This example supplies only the program,
+  the executable solve, and the coverage witnesses.
 \<close>
-
-lemma ivl_Hstep:
-  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st) a d g)
-     = dg_spec_step (unit_dg_spec ivl_tf) a (fun_of_st d) (fun_of_st g)"
-  by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
-
-lemma ivl_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de g)
-     = dgs_combine (unit_dg_spec ivl_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
-  by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
-
-text \<open>The executable generator's abstract image is exactly the native \<open>ivl_dg.dg_gen\<close>.\<close>
-
-lemma dg_gen_of_eq_ivl_dg_gen:
-  "dg_gen_of (unit_dg_spec ivl_tf) g bot0 s0d s0g = ivl_dg.dg_gen g bot0 s0d s0g"
-proof -
-  have "dg_cmb_of (unit_dg_spec ivl_tf) = ivl_dg.dg_cmb"
-    by (rule ext)+ (simp add: dg_cmb_of_def ivl_dg.dg_cmb_def)
-  thus ?thesis by (simp add: dg_gen_of_def ivl_dg.dg_gen_def)
-qed
 
 subsection \<open>4. Equation generation\<close>
 
@@ -180,47 +156,7 @@ value "map_option
    (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x''))) [0,1,2,3,4,5])
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
-subsection \<open>6. Certified solution (reusing solver correctness)\<close>
-
-text \<open>
-  Termination gives the solver-domain predicate, and the vendored solver's
-  \<^emph>\<open>correctness theorem\<close> \<open>TD_side_warrowing_apinis_Interp.partial_post_solution\<close>
-  turns the computed result into a partial post-solution.  \<^bold>\<open>The equations are not
-  re-checked\<close> --- solver correctness is reused.
-\<close>
-
-lemma flagship_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl st, ivl st) dg_state)
-     flagship_eqs (cfg_exit flagship_cfg, ())"
-  using flagship_terminates_c
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  by simp
-
-lemma flagship_pp_st:
-  "part_post_solution flagship_eqs (cfg_exit flagship_cfg, ()) (snd flagship_sol) (fst flagship_sol)"
-  using TD_side_warrowing_apinis_Interp.partial_post_solution
-          [OF flagship_solve_dom, of "fst flagship_sol" "snd flagship_sol"]
-  unfolding flagship_sol_def by simp
-
-subsection \<open>7. Transport to the abstract D/G semantics\<close>
-
-text \<open>
-  The bridge theorem \<open>part_post_solution_dg_st_to_abs\<close> maps the computed \<open>ivl st\<close>-valued
-  post-solution through \<open>fun_of_dg_st\<close> to a post-solution of the abstract
-  \<open>ivl_dg.dg_gen\<close> --- unknowns, \<open>vars\<close>, and dependencies unchanged, only values
-  transported.
-\<close>
-
-lemma flagship_pp_abs:
-  "part_post_solution
-     (ivl_dg.dg_gen flagship_cfg (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
-        (fun_of_st (restrict_global_st cinit_ivl_st)))
-     (cfg_exit flagship_cfg, ()) (fun_of_dg_st \<circ> snd flagship_sol) (fst flagship_sol)"
-  using part_post_solution_dg_st_to_abs[OF ivl_Hstep ivl_Hcomb flagship_pp_st[unfolded flagship_eqs_def]]
-  unfolding dg_gen_of_eq_ivl_dg_gen .
-
-subsection \<open>8. Soundness: the computed analysis over-approximates the collecting semantics\<close>
+subsection \<open>8. Soundness premises for the registered endpoint\<close>
 
 text \<open>
   The premises of the generic native endpoint \<open>ivl_dg_post_solution_collect_sound\<close>:
@@ -248,17 +184,10 @@ proof -
 qed
 
 text \<open>
-  The computed D/G post-solution bounds the stack-faithful collecting semantics at every program
-  point.  The source bridge then transfers each reachable IMP2 store into the same result.
+  The coverage facts, finiteness, and the seed-soundness \<open>flagship_sound0\<close> are the
+  instance premises the bundled endpoint (section 10) consumes; the collecting-soundness
+  and transport steps are discharged inside it.
 \<close>
-
-theorem flagship_collect_sound:
-  "ltr_collect flagship_cfg cinit_stores v
-     \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) v"
-  by (rule ivl_dg_post_solution_collect_sound
-        [OF flagship_pp_abs[folded ivl_dg_generator_def]
-            flagship_cover_entry flagship_cover_edge flagship_cover_combine
-            flagship_finE flagship_finC flagship_sound0])
 
 subsection \<open>9. Inspecting the certified result\<close>
 
@@ -274,27 +203,39 @@ lemma flagship_exit_computed:
   "lookup_st (locals (snd flagship_sol (Inl (5::pp, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
-subsection \<open>10. Source-level soundness\<close>
+subsection \<open>10. Source-level soundness (one registered step)\<close>
+
+text \<open>
+  The registered endpoint \<open>ivl_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
+  solver success \<open>flagship_terminates_c\<close> directly into a source-level guarantee: every
+  reachable IMP2 store is bounded by the computed interval at its matched program point,
+  read through the semantic accessor \<open>ivl_reg.gamma\<close>.  No transport lemma,
+  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
+\<close>
 
 lemma flagship_wf: "wf_compile_input Map.empty [] flagship_prog"
   unfolding wf_compile_input_def flagship_prog_def
   by (simp add: compile_eval_simps source_pi_def)
 
 theorem flagship_source_run_sound:
-  assumes run: "psteps Map.empty (flagship_prog, s, []) src'"
+  assumes run: "psteps Map.empty (flagship_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores"
-  shows "\<exists>v t stk. concrete_program_match Map.empty [] flagship_prog src' (v, t, stk)
-                   \<and> t \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) v"
+  shows "\<exists>v stk. concrete_program_match Map.empty [] flagship_prog (residual, t, frs) (v, t, stk)
+                 \<and> t \<in> ivl_reg.gamma (snd flagship_sol) v"
 proof -
-  obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have sc: "source_com flagship_prog" by (simp add: flagship_prog_def)
-  obtain v stk where m: "concrete_program_match Map.empty [] flagship_prog src' (v, t, stk)"
-      and coll0: "t \<in> ltr_collect (compile_prog Map.empty [] flagship_prog) cinit_stores v"
-    using source_reaches_ltr_collect[OF flagship_wf sc init run[unfolded src']]
-    unfolding src' by blast
-  have coll: "t \<in> ltr_collect flagship_cfg cinit_stores v"
-    using coll0 by (simp add: flagship_cfg_def)
-  show ?thesis using m coll flagship_collect_sound by blast
+  show ?thesis
+    unfolding flagship_sol_def flagship_eqs_def flagship_cfg_def
+    by (rule ivl_reg.run_source_sound
+          [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
+              flagship_wf sc
+              flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+              flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+              flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+              flagship_finE[unfolded flagship_cfg_def]
+              flagship_finC[unfolded flagship_cfg_def]
+              flagship_sound0[folded gamma_unit_def]
+              init run])
 qed
 
 

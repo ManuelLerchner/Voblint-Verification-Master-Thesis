@@ -141,6 +141,14 @@ modulo one named TD hypothesis (P1: `side_cfg_solve_dom_eff`).
   `Instances/Mixed/Mixed_Sign_Interval.thy` (Sign `D`, Interval `G`) is the
   first genuinely mixed analysis: sound (`mixed_si_post_solution_collect_sound`)
   and executable (`Example_Mixed_Sign_Interval_GraphViz.thy`).
+  **Scope of "complete" (2026-07 audit):** what is generic is the D/G *carrier*
+  transport (`('l × 'g) dg_state`, `indep_dg_spec`, `gamma_dg_combine_sound`).
+  `Mixed_Sign_Interval` is a **hand-written instance** — `mixed_si_step` /
+  `mixed_si_combine` / `mixed_si_spec` are defined by hand and interpreted directly;
+  it is the **independent (direct) product** (`mixed_si_spec_indep`, γ-intersection)
+  with **no reduction operator**. There is **no** generic `domain × domain ⇒ domain`
+  constructor and **no** reduced product. Those are tracked as **P1–P3** in
+  "Research-gap reconciliation" below; do not read "complete" as "generic composition".
 - **Next boundary:** consolidate the remaining paper-alignment work on top of
   the now-delivered DG spine. Caller-state-dependent `enter` is already
   realized by `DG_Context_Soundness.thy` / `Sign_DG.thy`; keyed global access is
@@ -239,13 +247,138 @@ Both are legitimate. The choice should be explicit before the two-layer split la
 
 ### Total correctness
 
-Gated on P5 (vendored `TD_warrow_mono_term` demands `finite (UNIV :: 'pp set)`). Three routes documented in `docs/OPEN_PROBLEMS.md` §P5. Partial correctness with named TD assumptions is a defensible thesis stance.
+Gated on P5. Verified against the vendor (2026-07 audit): **every** vendored termination
+corollary — `TD_plain_term.terminating`, `TD_term.terminating`, `TD_widen_term.terminating`,
+`TD_wn_phases_term.solve_termination`, `TD_warrow_mono_term.TD_warrow_terminating` — requires
+**both** `acc` (`wf {(y,x::'d). less x y}`, i.e. the value order is well-founded / finite
+ascending chains) **and** `finite_vars` (`finite (UNIV :: 'x set)`, a finite unknown *type*);
+see `vendor/td-verification/Basics.thy:754`, `TD_warrow.thy:3240,3260`. Two consequences the
+roadmap must not paper over:
+
+1. **Finite domain height is necessary but not sufficient.** `acc` alone does not discharge
+   `solve_dom`; `finite_vars` is a separate requirement. The repo's unknowns are `(pp × 'c) + 'g`
+   with `pp = nat` — an infinite type — so `finite_vars` is currently unmet. Closing it is the
+   P5 finite-unknown-type refactor (routes (a)/(b) in `docs/P1_TOTAL_CORRECTNESS_ROUTE.md`),
+   multi-week spine work, not "polish".
+2. **The side solver has no termination corollary.** The current spine rides `TD_side`
+   (`TD_side_mono` / `TD_side_upd_rule`), which the vendor gives monotonicity but **no**
+   `TD_side_term`. Termination would have to come from a `TD_side ↔ TD_warrow` equivalence
+   (then still gated on `finite_vars`) or a bespoke well-founded argument for the side algorithm.
+
+Partial correctness with the named `solve_dom` hypothesis (P1) is a defensible thesis stance.
+The finite-height milestone is tracked as **T1** in "Research-gap reconciliation" below, with these
+blockers stated up front. Interval never satisfies `acc` (infinite height) — its convergence is
+warrowing + per-run `eval`, never a finite-height argument.
 
 ### Thesis writeup
 
 `docs/PROOF_OVERVIEW.md` is the prose-level pipeline-narrative source. The thesis chapter lifts from it; cross-references to `.thy` files are by file path, not by lemma name (those drift; `rg` finds them).
 
 ---
+
+## Research-gap reconciliation (2026-07 audit)
+
+Source: the *Second-Pass Research-Gap Audit* (theorem-level, read-only). Every confirmed gap is
+reconciled here into one of `DONE / ACTIVE / PLANNED / STRETCH / NON-GOAL / UNDECIDED`, with a
+theorem-level completion criterion. This subsection is the current view; where it conflicts with
+older narrative above or in migration docs, it wins, and the conflict is listed under
+"Contradictions resolved".
+
+### Verified termination reality (read from the vendor, not assumed)
+
+The audit checked the vendor before proposing any termination milestone (see the expanded "Total
+correctness" section above). Bottom line: **no total termination result exists in-repo**
+(`rg generated_solver_terminates|solver_terminates src/ vendor/` → none), every executable example
+discharges `solve_dom` individually `by eval` on `solve_c`, and `threefold_mono`
+(`= is_mono_eq ∧ mono_sides ∧ mono_deps`, `TD_Side_Eff_Pipeline.thy:38`) is a **soundness /
+least-solution** precondition consumed independently of the `solve_dom` hypothesis
+(`LTR_TD_Side_Eff_Exit.thy:211-214`) — it does **not** prove termination.
+
+### Final research-work table
+
+| ID | Item | Status | Priority | Depends on | Theorem-level completion criterion | Scope |
+|----|------|--------|----------|-----------|-------------------------------------|-------|
+| T1 | Sign finite-height ⇒ `solve_dom` (unconditional Sign soundness) | PLANNED | Framework research | P5 (finite unknown type) **and** a `TD_side` termination corollary or `TD_side↔TD_warrow` bridge | A `solve_dom`-shaped theorem for `side_cfg_T_eff … sign_etf …` with **no** `solve_dom` hypothesis, discharged from `acc`(sign) + `finite_vars`(reachable pp) + `threefold_mono`; then `side_sign_analysis_sound` restated with the `side_solve_dom` premise removed | thesis-if-P5-lands / else long-term |
+| A1 | Bundled `run_analysis_source_sound` (hide the 4–5-step manual chain) | **DONE** (committed, batch-green) | Near-term | none (bundles existing partial-correctness chain) | ✔ `dg_exec_run_source_sound` (global) + `dg_run_source_sound_abs` / `dg_gen_of_eq` (in `sound_dg_spec`) in `src/Formalization/Pipeline/Run_Analysis_Sound.thy`; query-parametric; the flagship's `flagship_source_run_sound` is now a single `rule dg_exec_run_source_sound` with the `solve_dom`/`partial_post_solution`/transport/collect/source chain removed | thesis |
+| A2 | Domain-registration API (essential obligations in, plumbing derived) | **DONE** (committed, batch-green) | Framework validation | A1 (shares the export shape) | ✔ `unit_dg_exec_analysis` locale (`src/Formalization/Pipeline/Run_Analysis_Sound.thy`): inputs are exactly `{domain_transfer + sound_transfer, tf_st + per-action commute, solver solve/solve_c + part_post_solution}`; outputs the generic transport lemmas `unit_dg_Hstep`/`unit_dg_Hcomb`, a semantic accessor `gamma`, and the end-to-end `run_source_sound` — no `strategy_tree`/`ltree`/`gtree`/`Inl-Inr`/`Hstep`/`Hcomb` in the derived theorem. Registered for both domains in `DG_Domain_Registration.thy` (`ivl_reg`, `sign_reg`) by `unfold_locales`. `Example_Interval_DG_Flagship` migrated: `flagship_source_run_sound` is a single `rule ivl_reg.run_source_sound`. Sign validated by `sign_reg` interpretation succeeding with no interval-specific input. Residual tree/`Inl-Inr`/`fun_of_dg_st` mentions remain only in the equation-system definition and slot-reading inspection/non-vacuity lemmas, not in the source-soundness theorem | publication |
+| E1 | Parity — second finite-height analysis (validation instance) | PLANNED | Framework validation | A2 (must register through it) | `parity` domain + `gamma` + `sound_transfer` + `tf_mono`; a registered `side_parity_analysis_sound`; an executable example with a non-trivial parity result; if T1 has landed, termination inherited without a fresh `by eval`. **Failure signal:** any copy of Sign-specific tree plumbing ⇒ A2 incomplete | publication |
+| E2 | Non-exit query witness (demand-driven usability) | PLANNED | Near-term | none | An executable example instantiating `side_collect_sound_in_eff_cone` (`LTR_TD_Side_Eff_Exit.thy:148`) at a `v ≠ cfg_exit`, with `solve_c … = Some σ`, a non-trivial abstract value at `v`, an anti-vacuity statement, and the cone-soundness link | thesis |
+| P1 | Generic direct-product constructor (`domain × domain ⇒ domain`) | PLANNED | Medium-term | none (parallel track) | A generic construction giving lattice/`gamma`/transfer of a pair from two `sound_domain`s, with a generic direct-product soundness lemma that `Mixed_Sign_Interval` instantiates (replacing its hand-written `mixed_si_*`) | publication |
+| P2 | Reduced-product locale (reduction operator) | STRETCH | Medium-term | P1 | A `reduction` operator interface + soundness of reduced transfer (`γ(reduce d) = γ(d)`, reduce monotone/reductive), end-to-end on one instantiated product | publication |
+| P3 | Relational / product flagship | STRETCH | Medium-term | P2 (and, for octagon, the two-layer split) | An end-to-end instantiated product analysis with a computed non-trivial result and source-level soundness | publication / long-term |
+| G1 | Framework-effort evaluation | UNDECIDED → publication task | Publication | A2, E1 | Not a theorem: a measured comparison (essential-lemma count, solver-glue count, shared-vs-copied across Sign/Interval/Parity, tree-concept leakage before/after A2, termination theorems reused). Classified as a publication/evaluation task, not implementation | publication |
+| — | Constant propagation / Taint | NON-GOAL (current scope) | — | — | Faithfulness breadth only; taint needs the inter-analysis query gap (`GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md`). Not on the critical path | long-term |
+| — | Broad generic solver-totality (any finite-height + monotone ⇒ terminates) | STRETCH | — | P5 + `TD_side` termination theory | Would need a generic `TD_side_term`-style result; the vendor proves this only for plain/warrow/wn solvers, not the side solver. Do not promise the general theorem | long-term |
+| — | Octagon end-to-end | STRETCH | — | P1, P2, two-layer split | See "Octagon / relational domains" above; 4–6 weeks, no Isabelle prior art | long-term |
+
+### Dependency order (corrected — supported by the theories, not the candidate order)
+
+The audit's candidate order led with T1; that is wrong. T1 is the heaviest item and is *blocked*
+(P5 + missing `TD_side` termination), while A1 and E2 are cheap, independent, and unblocked. Parity
+(E1) should follow the registration API (A2), so it *validates* rather than *copies* it. Product
+work is an independent parallel track.
+
+```
+NEAR-TERM (unblocked, cheap):
+   A1  bundled run-analysis soundness  ─┐
+   E2  non-exit query witness  ─────────┘   (independent of everything)
+
+FRAMEWORK VALIDATION:
+   A1 ──▶ A2  domain-registration API ──▶ E1  Parity  (Parity witnesses A2; and T1 if T1 has landed)
+
+TERMINATION (heavy, blocked — parallel, not a prerequisite for the above):
+   P5 finite unknown type  +  TD_side termination corollary ──▶ T1  Sign finite-height ⇒ solve_dom
+
+PRODUCTS (independent parallel track):
+   P1 direct product ──▶ P2 reduced product ──▶ P3 relational/product flagship
+```
+
+Rationale for the four ordering questions the task poses: **the bundle precedes termination** (A1
+needs only the existing partial-correctness chain, not `solve_dom` totality); **the registration
+API precedes Parity** (E1's value is as an A2 validator — copying Sign plumbing is the failure
+signal); **Parity is not required to prove T1** (T1's blocker is domain-independent P5 /
+`TD_side_term`, though Parity is a good second witness once T1 lands); **product work is
+independent** and can run in parallel with everything.
+
+### Scope placement
+
+- **Current thesis:** A1, E2, and T1 *iff* the P5 refactor is undertaken (otherwise T1 stays a
+  named hypothesis — the defensible partial-correctness stance).
+- **Follow-up publication:** A2, E1, P1, G1 — the "framework is genuinely reusable" claim.
+- **Long-term framework development:** P2, P3, octagon, constant-propagation/taint, broad
+  solver-totality.
+
+### Contradictions resolved (2026-07)
+
+- **"solver termination is established"** — never asserted here, but the "Total correctness"
+  section now states the two unmet vendor requirements (`finite_vars`, no `TD_side_term`) instead
+  of implying `finite (UNIV::'pp set)` is the only blocker.
+- **"product composition is generic"** — the "Heterogeneous D/G framework (complete)" bullet now
+  distinguishes the generic D/G *carrier* transport from the **hand-written** `Mixed_Sign_Interval`
+  instance, and records that no reduced product / generic domain-product exists (P1–P3).
+- **"the API is already minimal and fully packaged"** — the obligation set is near-minimal
+  (`DOMAIN_INTERFACE_MINIMIZATION.md`). Packaging closed by A2 (**DONE**): the `unit_dg_exec_analysis`
+  registration locale exports `run_source_sound` with `strategy_tree` / `ltree` / `gtree` / `Inl-Inr` /
+  `Hstep` / `Hcomb` absent from the derived theorem; residual mentions survive only in equation-system
+  definitions and slot-reading inspection lemmas.
+- **"examples demonstrate arbitrary query points"** — every executable example queries `cfg_exit`;
+  the query-parametric theorem exists but has no non-exit witness. Tracked as E2.
+- **"source-level soundness through one direct theorem"** — the shapes exist
+  (`source_activation_sound`, `source_reaches_ltr_collect`, `side_analyse_eff_collect_sound_exit_ltr`)
+  but are not bundled; examples chain 4–5 theorems by hand. Tracked as A1.
+- **M3 T1 "safe, cheap win"** — corrected in `docs/M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md`:
+  T1 is gated on P5 and a missing `TD_side` termination corollary, exactly as that doc's own T2 row
+  cautioned.
+
+### Remaining uncertainties (feasibility not established from the solver theories)
+
+- Whether a `TD_side` termination corollary is derivable at all — via a `TD_side ↔ TD_warrow`
+  equivalence, or a bespoke well-founded argument for the side algorithm. The vendor provides
+  termination only for the plain / warrow / wn solvers (`TD_*_term` locales), **not** `TD_side`.
+  Until this is checked, **do not claim finite height implies `solve_dom` for the side solver.**
+- Whether the P5 finite-unknown-type refactor is compatible with the `pp = nat` linear-order /
+  `predecessor_list` machinery without a multi-week spine retype (route (a) in
+  `P1_TOTAL_CORRECTNESS_ROUTE.md`).
 
 ## How to keep this file current
 

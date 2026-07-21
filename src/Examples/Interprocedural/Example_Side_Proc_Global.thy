@@ -53,7 +53,7 @@ definition inc_procs :: "pname list" where
 definition inc_main :: com where
   "inc_main = IMP2_Proc.Call None ''p'' []"
 definition inc_prog :: imp_prog where
-  "inc_prog = (inc_procs, inc_pi, inc_main)"
+  "inc_prog = imp_prog.make inc_procs inc_pi inc_main"
 
 
 value "sign_exec_prog inc_prog ''Gx''"

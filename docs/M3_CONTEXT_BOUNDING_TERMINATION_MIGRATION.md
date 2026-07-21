@@ -85,7 +85,7 @@ context-bounding construction; any lifter model.
 
 | ID | Obligation / risk | Severity | Note |
 | --- | --- | --- | --- |
-| T1 | Sign ascending chains stabilize ⇒ `solve_dom` | Low | finite height (6); standard well-founded argument. The safe, cheap win. |
+| T1 | Sign ascending chains stabilize ⇒ `solve_dom` | ~~Low~~ **Med-High** | **Corrected (2026-07 audit).** Not a cheap win. The vendored termination corollaries (`TD_*_term`) need `acc` **and** `finite_vars: finite (UNIV :: 'x set)`; the repo's unknowns are `pp = nat` (infinite type), so this is gated on P5, and there is **no `TD_side_term`** to instantiate — see T2 (which flagged exactly this) and `docs/ROADMAP.md` "Total correctness" / "Research-gap reconciliation" (item T1). Finite height alone does not close it. |
 | T2 | The height-induction connects to the vendored solver's `solve_dom` shape | Med | the solver's termination predicate must be *derivable*, not merely "the lattice is finite" — check the exact `TD_side` obligation shape before promising T1 closes P1 |
 | T3 | Loopfree Callstring lifter: finitely-many-contexts proof | Med | idempotent frame-collapse; finiteness of the image set |
 | T4 | Context Gas: monotone context wrapper + finite gas ⇒ finite contexts | Med-High | decrementing gas is a well-founded measure; interaction with `mono_sides` when gas hits zero (context collapse) needs care |

@@ -1,7 +1,5 @@
 session Voblint_CFG in "." = "Voblint_IMP2" +
   description "CFG construction and collecting semantics"
-  sessions
-    "Dijkstra_Shortest_Path"
   directories
     "Collecting"
     "Compiler"

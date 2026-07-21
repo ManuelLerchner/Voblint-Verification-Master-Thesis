@@ -4,13 +4,33 @@ begin
 
 section \<open>Concrete CFG transfer primitives\<close>
 
-fun edge_collect :: "edge_action => store set => store set" where
-    "edge_collect EA_Nop S = S"
-  | "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s \<in> S}"
-  | "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> bval b s}"
-  | "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> bval b s}"
-  | "edge_collect (EA_Enter xs es) S =
+fun edge_step :: "edge_action => store => store option" where
+    "edge_step EA_Nop s = Some s"
+  | "edge_step (EA_Assign x a) s = Some (s(x := aval a s))"
+  | "edge_step (EA_Assume b) s = (if bval b s then Some s else None)"
+  | "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
+  | "edge_step (EA_Enter xs es) s =
+       Some (bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
+
+definition edge_collect :: "edge_action => store set => store set" where
+  "edge_collect a S = {t. \<exists>s\<in>S. edge_step a s = Some t}"
+
+text \<open>\<^const>\<open>edge_step\<close> is the single primitive semantics of an edge action.
+  \<^const>\<open>edge_collect\<close> is its pointwise lift to store sets --- the successors of any source
+  store in \<open>S\<close> --- so the set transformer is derived and the two cannot drift.\<close>
+
+lemma edge_collect_simps [simp]:
+  "edge_collect EA_Nop S = S"
+  "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s \<in> S}"
+  "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> bval b s}"
+  "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> bval b s}"
+  "edge_collect (EA_Enter xs es) S =
        {bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) | s. s \<in> S}"
+  unfolding edge_collect_def by (auto split: if_splits)
+
+lemma edge_collect_single:
+  "edge_collect a {s} = set_option (edge_step a s)"
+  by (cases a) (auto split: if_splits)
 
 lemma edge_collect_empty_set[simp]: "edge_collect a {} = {}"
   by (cases a) auto
@@ -22,18 +42,6 @@ lemma edge_collect_mono:
 
 lemma edge_collect_member:
   "x \<in> edge_collect a S \<longleftrightarrow> (\<exists>s\<in>S. x \<in> edge_collect a {s})"
-  by (cases a) auto
-
-fun edge_step :: "edge_action => store => store option" where
-    "edge_step EA_Nop s = Some s"
-  | "edge_step (EA_Assign x a) s = Some (s(x := aval a s))"
-  | "edge_step (EA_Assume b) s = (if bval b s then Some s else None)"
-  | "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
-  | "edge_step (EA_Enter xs es) s =
-       Some (bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s))"
-
-lemma edge_collect_single:
-  "edge_collect a {s} = set_option (edge_step a s)"
   by (cases a) auto
 
 definition call_enter_store :: "cfg => pp => store => store => bool" where

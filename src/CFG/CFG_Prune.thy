@@ -59,7 +59,7 @@ proof -
 qed
 
 (* Reachability is discharged by the side solver via dep_side_rhs_tree_* and
-   cfg_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_Eff_Soundness).
+   cfg_reaches_imp_trans_dep_or_eq_side_eff (TD_Side_Eff_Cone_Lemmas).
    The reachability lemmas below are solver-agnostic. *)
 
 

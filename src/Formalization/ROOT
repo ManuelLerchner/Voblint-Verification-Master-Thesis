@@ -5,3 +5,5 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   theories
     Mixed_Flow_Sound
     Source_Activation_Sound
+    Run_Analysis_Sound
+    DG_Domain_Registration

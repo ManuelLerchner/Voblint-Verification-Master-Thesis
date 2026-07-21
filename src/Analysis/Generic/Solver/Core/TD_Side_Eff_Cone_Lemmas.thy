@@ -1,8 +1,8 @@
-theory TD_Side_Eff_Soundness
+theory TD_Side_Eff_Cone_Lemmas
   imports TD_Side_RHS_Generator "Voblint_CFG.CFG_Prune"
 begin
 
-section \<open>Standalone effectful side IP solver: collecting soundness with pruning\<close>
+section \<open>Dependency and cone lemmas for the effectful side IP solver (pruning)\<close>
 
 text \<open>
   Standalone effectful IP collecting soundness with pruning, built on

@@ -9,7 +9,7 @@ theory Voblint
     "Voblint_IMP2.IMP2_Globals"
     "Voblint_IMP2.IMP2_Proc"
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_IMP2.IMP2_Bridge"
+    "Voblint_IMP2.IMP2_Bridge_Cmd"
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"
@@ -21,7 +21,7 @@ theory Voblint
     "Voblint_Analysis.Constraint_System"
     "Voblint_Analysis.Constraint_System_Sound"
     "Voblint_Analysis.TD_Side_CFG"
-    "Voblint_Analysis.TD_Side_Eff_Soundness"
+    "Voblint_Analysis.TD_Side_Eff_Cone_Lemmas"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Interval_Domain"
@@ -233,7 +233,7 @@ text \<open>
     \<^item> @{theory Voblint_IMP2.IMP2_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_IMP2.IMP2_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
     \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
-    \<^item> @{theory Voblint_IMP2.IMP2_Bridge} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pcompletes\<close>.
+    \<^item> @{theory Voblint_IMP2.IMP2_Bridge_Cmd} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pcompletes\<close>.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
@@ -250,7 +250,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, \<^verbatim>\<open>sound_effectful_transfer\<close>.
     \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- per-edge / per-combine transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>), the building blocks of the monovariant trace endpoint \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close> (in \<^verbatim>\<open>LTR_Analysis_Sound\<close>, over \<^const>\<open>ltr_collect\<close>).
     \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, unit-global effectful tree constructors.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Soundness} --- query-cone soundness for the
+    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Cone_Lemmas} --- query-cone soundness for the
       effectful TD_side solver over \<^const>\<open>ltr_collect\<close>
       (\<^verbatim>\<open>side_collect_sound_in_eff_cone\<close>), with the exit corollary
       \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>, \<^verbatim>\<open>threefold_mono\<close>, and
@@ -288,7 +288,7 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable IMP2 source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling.
-    \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result certified a post-solution and transported to the abstract semantics; \<^verbatim>\<open>flagship_collect_sound\<close> proves it over-approximates \<^const>\<open>ltr_collect\<close> --- discovering \<^verbatim>\<open>x in [0,20]\<close> --- and the compiler simulation lifts this to \<^emph>\<open>actual source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>).
+    \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result certified a post-solution; the reusable bundle \<^verbatim>\<open>dg_exec_run_source_sound\<close> transports it to the abstract semantics, proves it over-approximates \<^const>\<open>ltr_collect\<close> --- discovering \<^verbatim>\<open>x in [0,20]\<close> --- and lifts the guarantee to \<^emph>\<open>actual source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>).
     \<^item> @{theory Voblint_Examples.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program certified against \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_activation_collect_sound\<close>).
     \<^item> @{theory Voblint_Examples.Example_Interval_Source_Ctx} --- \<^verbatim>\<open>twice\<close> certified against \<^emph>\<open>actual source runs\<close> at each activation's own context, strictly sharper than the monovariant capstone.

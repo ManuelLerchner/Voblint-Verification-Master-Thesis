@@ -1,5 +1,5 @@
 theory LTR_TD_Side_Eff_Exit
-  imports TD_Side_Eff_Soundness LTR_TD_Side_Eff_Sound
+  imports TD_Side_Eff_Cone_Lemmas LTR_TD_Side_Eff_Sound
 begin
 
 section \<open>Cone-guarded effectful exit soundness over the original CFG\<close>

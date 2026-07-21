@@ -33,6 +33,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Interval_Print
     Interval_Domain
     Ivl_Exec
+    CFG_Enumeration
     Constraint_System
     Sign_Transfer
     Constraint_System_Sound
@@ -50,7 +51,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     TD_Side_Eff_Interface
     TD_Side_Eff_Pipeline
     TD_Side_RHS_Generator
-    TD_Side_Eff_Soundness
+    TD_Side_Eff_Cone_Lemmas
     LTR_TD_Side_Eff_Sound
     LTR_TD_Side_Eff_Exit
     Activation_Local_Sound
