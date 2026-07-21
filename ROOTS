@@ -1,5 +1,6 @@
 src/IMP2
 src/CFG
+src/CFG/Proto
 src/Analysis
 src/Formalization
 src/Examples

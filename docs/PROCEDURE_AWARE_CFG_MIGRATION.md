@@ -3,12 +3,13 @@
 **Status:** Design / RFC — **baseline** (revision 2, frozen as the migration
 reference). Not scheduled. No theory changes proposed as part of this document.
 **Author:** investigation follow-up to AD-46.
-**Companion artifacts:** `scratchpad/procedure_aware_cfg_investigation.md` (findings),
-`scratchpad/Proc_CFG_Prototype.thy` (verified single-relation prototype).
-**Sole open mechanization task:** re-check the kernel in the **two-relation** form
-(`intra`/`calls`, I.4) to promote I.4 from **[P]** to **[PROTO]**. The single-relation
-prototype already validates the return rule, the multi-return join, and recursive
-nesting; the two-relation split is argued, not yet mechanized.
+**Companion artifact:** `src/CFG/Proto/Proc_CFG_Prototype.thy` (mechanized two-relation
+kernel, session `Voblint_Proto`, batch-green).
+**Kernel mechanization: done (Stage 0).** I.4 is promoted **[P] -> [PROTO]**. The
+two-relation form (`intra`/`calls`) is checked on the real trace algebra: `edge_step` is
+total with no call case (calls untraversable by typing), and `protoA`, `protoB1`,
+`protoB2`, `protoRet`, `proto_multireturn_join`, `proto_recursion_nesting` are proved on
+the two-relation datatype — no `combines`, no inert `Proc` action.
 
 This document specifies, in full, how the repository would migrate from the current
 **normalized single-exit** procedural CFG to a **procedure-aware** CFG with
@@ -411,9 +412,9 @@ I governs** and the affected Part II sections carry a pointer.
 > The concrete, node-by-node plan. It is written **in the two-relation /
 > control-effect form derived in Part I** — one design, no precedence rules. Part I
 > gives the *why* (the Φ1/Φ2/Φ3 derivation); Part II gives the *what* (datatypes,
-> equations, proof-impact table, staged roadmap). The one place a claim is still
-> argued rather than mechanized is the `intra`/`calls` split (I.4, tagged **[P]**);
-> the single-relation prototype (Appendix A) mechanizes everything else.
+> equations, proof-impact table, staged roadmap). The `intra`/`calls` split (I.4) is now
+> mechanized (**[PROTO]**, Stage 0, `src/CFG/Proto/Proc_CFG_Prototype.thy`); the whole
+> kernel is checked.
 
 ## 1. Motivation
 
@@ -759,11 +760,11 @@ The flat CFG is the `calls = {}` fragment (I.6), so every node-parametric theore
 | CIL-style `Fundec` record instead of `pname` | unnecessary; `pname` suffices |
 | Separate `proc_cfg` type + `flat_cfg`, or a derived view | rejected in favour of one enriched type with `calls = {}` = flat CFG (I.6) |
 
-**[PROTO]** The single-relation prototype (`Proc_CFG_Prototype.thy`, `pnode` +
-`paction` with `PProc`/`PRet`, no `combines`) validates the return rule, the
-multi-return join, and recursive nesting — all lemmas green. **[P]** The two-relation
-split (`intra`/`calls`) above is the derived kernel (I.4); its own mechanization is the
-one remaining task noted in the header.
+**[PROTO]** The two-relation kernel (`src/CFG/Proto/Proc_CFG_Prototype.thy`, `cfg_node` +
+separate `edge_action`/`call_action`, two-relation `cfg` record, no `combines`) validates
+the return rule, the multi-return join, and recursive nesting on the real trace algebra —
+all lemmas green in session `Voblint_Proto`. `edge_step` is total with no call case, so the
+`Intra` rule cannot traverse a call by typing; there is no inert `Proc`/`PProc` action.
 
 ---
 
@@ -1234,7 +1235,7 @@ allowed only within an in-progress stage, never at a stage boundary.
 
 | Stage | Content | Modified theories | Expected breakage | Exit criterion |
 | ----- | ------- | ----------------- | ----------------- | -------------- |
-| **0** | This document (frozen baseline); mechanize the two-relation kernel to promote I.4 to **[PROTO]**; open GitHub issues per stage | docs + `scratchpad/` prototype | none | doc merged, AD row added, two-relation kernel green |
+| **0** | **Done.** Frozen baseline; two-relation kernel mechanized, I.4 promoted to **[PROTO]** | docs + `src/CFG/Proto/Proc_CFG_Prototype.thy` (session `Voblint_Proto`) | none | two-relation kernel batch-green, no `sorry`; all six prototype lemmas proved |
 | **1** | `Return` source semantics | `IMP2_Proc` (+`IMP2_Syntax` if surface syntax) | all `pstep` lemmas; `pcompletes_*`, `psteps_Seq2`; frame-kind tag | `pstep` metatheory green; `Return` runs terminate correctly (unit `value` checks) |
 | **2** | Compiler | `IMP2_Proc_to_CFG`, `CFG_Def` (nodes + `intra`/`calls`), `Compile_Invariants` | `compile.simps`, finiteness, range lemmas; delete `combines` lemmas | compiled CFG well-formed; compiler-correctness simulation (`Located_LTR`, I.7) re-proved with the `Return` case |
 | **3** | Procedure-aware CFG structure | `CFG_Def`, `CFG_Transfer`, `CFG_Path` | `edge_step` cases (total on `intra`); `calls` relation; path/offset infra | CFG layer green; `Ret` (intra) / `CallEdge` (calls) transfer lemmas proved |
@@ -1327,23 +1328,24 @@ redesign was declined.**
 
 ---
 
-### Appendix A — prototype lemma inventory (`Proc_CFG_Prototype.thy`, all green)
+### Appendix A — kernel lemma inventory (`src/CFG/Proto/Proc_CFG_Prototype.thy`, all green)
 
 | Lemma | Establishes |
 | ----- | ----------- |
-| `valid_ptr` (inductive) | activation-local semantics with **no `combines`** |
-| `protoA` | call step reads only the `Proc` edge |
+| `valid_ptr` (inductive) | activation-local semantics with **no `combines`**; `Intra` reads `intra`, `Call`/`Ret` read `calls` |
+| `protoA` | every `Call` activation's caller took a `calls` edge (invariant survives intra extension); `intra` plays no role in forming a call |
 | `protoB1` / `protoB2` | two distinct return sites each reach `FunctionResult f` |
-| `protoRet` | return rule: continuation + dst + procedure match from the `Proc` edge |
-| `proto_multireturn_join` | both sites join at `FunctionResult`, same continuation |
+| `protoRet` | return rule: continuation + dst + procedure recovered from the single `CallEdge` |
+| `proto_multireturn_join` | both sites resume at the same continuation `Statement 100` via the one call edge (they do not share a caller — one activation, one branch) |
 | `proto_recursion_nesting` | two same-procedure activations distinct + nested via `caller_of` |
 
-**Scope of the prototype.** These lemmas are the **single-relation** kernel (one
-`edges` set with an intra-inert `PProc` action). They mechanize the return rule, the
-multi-return join, and recursive nesting — i.e. everything in the design that does not
-depend on the `intra`/`calls` split. The **two-relation** kernel of I.4 (which removes
-the inert action and makes `edge_step` total) is the sole remaining mechanization task
-(Stage 0); until it is checked, I.4 carries **[P]**, not **[PROTO]**.
+**Scope of the kernel.** This is the **two-relation** kernel (separate `edge_action` /
+`call_action`, `intra` / `calls` relations, `cfg_node` with real `FunctionEntry` /
+`FunctionResult` nodes). `edge_step` is total on `intra` actions with no call case, so the
+`Intra` rule cannot traverse a call by typing — no inert `Proc`/`PProc`, no `combines`. It
+mechanizes the return rule, the multi-return join, and recursive nesting on the real trace
+algebra. Deferred to later stages: actual-to-formal parameter binding (the entry store is
+`enter_state`), and the source/compiler bridge.
 
 ### Appendix B — verified-fact index
 
