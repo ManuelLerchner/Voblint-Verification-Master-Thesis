@@ -41,6 +41,8 @@ fun to_imp2_com :: "IMP2_Proc.com => Syntax.com" where
 | "to_imp2_com (IMP2_Proc.com.Scope c) = Syntax.Scope (to_imp2_com c)"
 | "to_imp2_com (IMP2_Proc.com.Call None p []) = Syntax.PCall p"
 | "to_imp2_com (IMP2_Proc.com.Call dst p actuals) = Syntax.SKIP"
+| "to_imp2_com (IMP2_Proc.com.Return e) = Syntax.SKIP"
+| "to_imp2_com IMP2_Proc.com.Unwind = Syntax.SKIP"
 | "to_imp2_com IMP2_Proc.com.Restore = Syntax.SKIP"
 
 definition to_imp2_pi :: "proc_table => Syntax.program" where
@@ -87,6 +89,8 @@ fun bridge_com :: "IMP2_Proc.com => bool" where
 | "bridge_com (IMP2_Proc.com.Scope c) = bridge_com c"
 | "bridge_com (IMP2_Proc.com.Call None p []) = True"
 | "bridge_com (IMP2_Proc.com.Call dst p actuals) = False"
+| "bridge_com (IMP2_Proc.com.Return e) = False"
+| "bridge_com IMP2_Proc.com.Unwind = False"
 | "bridge_com IMP2_Proc.com.Restore = False"
 
 definition bridge_pi :: "proc_table => bool" where

@@ -73,7 +73,10 @@ fun string_of_com :: "com \<Rightarrow> string" where
       None \<Rightarrow> p @ ''('' @ join_source '', '' (map string_of_aexp es) @ '')''
     | Some x \<Rightarrow> x @ '' := '' @ p @ ''(''
         @ join_source '', '' (map string_of_aexp es) @ '')'')"
+| "string_of_com (Return (Some e)) = ''return '' @ string_of_aexp e"
+| "string_of_com (Return None) = ''return''"
 | "string_of_com Restore = ''restore''"
+| "string_of_com Unwind = ''<unwind>''"
 
 definition string_of_proc_decl :: "pname \<Rightarrow> proc_decl \<Rightarrow> string" where
   "string_of_proc_decl p decl =
