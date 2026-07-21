@@ -5,15 +5,12 @@ begin
 section \<open>Control-flow graph definition\<close>
 
 text \<open>
-  A CFG represents a program as a directed graph where:
-    - Nodes are program points (natural numbers, allocated during translation).
-    - Edges carry edge actions: assignments, branch assumptions, or no-ops.
-    - Each edge (u, a, v) means: ''go from u to v, performing action a''.
-
-  A `cfg` is a record with `nodes`, `edges`, `cfg_entry`, `cfg_exit`, and
-  `combines`.  Use the smart constructor `mk_cfg en ex E C` to build CFGs:
-  it auto-computes `nodes` from the edges plus endpoints, so every edge and
-  combine endpoint is a node by construction.
+  A \<open>cfg\<close> is an interprocedural control-flow graph over program points:
+    - an entry location and an exit location,
+    - a set of \<open>edges\<close> (u, a, v), meaning ''go from u to v performing action a'',
+    - a set of \<open>combines\<close> matching call sites to their return targets.
+  Program points are natural numbers, allocated during translation.  Build one with the
+  constructor \<open>mk_cfg en ex E C\<close>.
 
   Translation from IMP2 to CFG is in IMP2_Proc_to_CFG.thy.
   The equation system over a CFG is in Equations/Constraint_System.thy.
@@ -61,18 +58,17 @@ definition combine_dst :: "combine_info \<Rightarrow> vname option" where
 subsection \<open>CFG record\<close>
 
 text \<open>
-  The record separates two concerns.  Its semantic interface --- the distinguished
-  locations \<open>cfg_entry\<close> and \<open>cfg_exit\<close> with the transition relations \<open>edges\<close> and
-  \<open>combines\<close> --- is the labelled transition system the concrete semantics rides on:
-  \<open>valid_ltr\<close>'s closure rules read \<open>cfg_entry\<close>, \<open>edges\<close>, and \<open>combines\<close>, while
-  \<open>cfg_exit\<close> names the end location at which termination/exit reachability is stated.
-  The one non-semantic field, \<open>nodes\<close>, is read only by tooling (reachability pruning,
-  finiteness bookkeeping, visualization); it is always the \<open>mk_cfg\<close>-derived node set,
-  never supplied independently.  Solver edge/predecessor enumeration lives in a
-  separate theory in the analysis session.
+  The record is exactly the interprocedural control-flow structure the concrete semantics
+  rides on: the distinguished locations \<open>cfg_entry\<close> and \<open>cfg_exit\<close>, the labelled
+  transition relation \<open>edges\<close>, and the call/return matching relation \<open>combines\<close> --- a
+  \<open>(call, exit, return, dst)\<close> tuple linking three program points, not a labelled edge.
+  \<open>valid_ltr\<close>'s closure rules read \<open>cfg_entry\<close>, \<open>edges\<close>, and
+  \<open>combines\<close>; \<open>cfg_exit\<close> names the end location at which termination/exit reachability
+  is stated.  The record carries no derived or tooling fields: the node set a graph walk
+  would need is reconstructed from \<open>edges\<close> where required (e.g. visualization), and solver
+  edge/predecessor enumeration lives in a separate theory in the analysis session.
 \<close>
 record cfg =
-  nodes     :: "pp set"
   edges     :: "(pp \<times> edge_action \<times> pp) set"
   cfg_entry :: pp
   cfg_exit  :: pp
@@ -83,15 +79,7 @@ subsection \<open>CFG construction\<close>
 definition mk_cfg ::
   "pp \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action \<times> pp) set \<Rightarrow> combine_info set \<Rightarrow> cfg" where
   "mk_cfg entry exit E C =
-     \<lparr> nodes = ({entry, exit} \<union> fst ` E \<union> (snd \<circ> snd) ` E
-                  \<union> combine_call_node ` C
-                  \<union> combine_exit_node ` C
-                  \<union> combine_return_node ` C),
-       edges = E,
-       cfg_entry = entry,
-       cfg_exit = exit,
-       combines = C
-     \<rparr>"
+     \<lparr> edges = E, cfg_entry = entry, cfg_exit = exit, combines = C \<rparr>"
 
 declare mk_cfg_def[simp]
 
