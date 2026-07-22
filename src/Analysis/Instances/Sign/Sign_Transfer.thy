@@ -179,8 +179,8 @@ lemma assume_not_sign_mono:
 
 lemma sign_tf_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf sign_tf a s1 \<le> apply_tf sign_tf a s2"
-  apply (cases a)
-  by (auto simp: sign_tf_def assign_sign_mono assume_sign_mono assume_not_sign_mono
-           enter_sign_mono)
+  by (cases a)
+     (auto simp: sign_tf_def assign_sign_mono assume_sign_mono assume_not_sign_mono
+                 enter_sign_mono split: option.splits)
 
 end
