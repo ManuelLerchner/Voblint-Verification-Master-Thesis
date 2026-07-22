@@ -1,5 +1,11 @@
 # Scope reconciliation design
 
+> Superseded by `docs/BRIDGE_RETIREMENT_AND_SCOPE_REMOVAL.md`: retiring the
+> AFP-IMP2 bridge removes the only constraint that forced `Scope` to keep its
+> IMP2-faithful reset/restore, so `Scope` is now slated for **removal** rather than
+> reconciliation. This document is retained for the semantic analysis and the audit
+> witness it motivated (`IMP2_Scope_Audit`).
+
 Prerequisite for the source→CFG simulation (Stage 5B.2b). The simulation wants an
 invariant relating a source runtime configuration to a compiled execution. Across
 a source `Scope`, the store transformation the source performs is not modelled by
