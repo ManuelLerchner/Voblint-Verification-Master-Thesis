@@ -9,7 +9,6 @@ theory Voblint
     "Voblint_IMP2.IMP2_Globals"
     "Voblint_IMP2.IMP2_Proc"
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_IMP2.IMP2_Bridge_Cmd"
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"
@@ -48,7 +47,6 @@ theory Voblint
     Example_Interval_DG_Ctx_Collect
     Example_Interval_Source_Ctx
     Example_Inc_Proc
-    Example_IMP2_Coverage
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Side_Proc_Global

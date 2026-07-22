@@ -21,7 +21,6 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Mixed_Sign_Interval_GraphViz
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
-    Example_IMP2_Coverage
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
