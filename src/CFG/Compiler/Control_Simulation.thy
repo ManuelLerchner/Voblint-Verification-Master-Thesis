@@ -1190,27 +1190,37 @@ text \<open>
 definition compiled_at :: "proc_table \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> nat \<Rightarrow> bool" where
   "compiled_at \<Pi> g p c0 n \<longleftrightarrow>
      (\<exists>n' en ex E K. compile \<Pi> p c0 n = (n', en, ex, E, K)
-        \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g)"
+        \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
+        \<and> (ex, EA_Ret None p, FunctionResult p) \<in> intra g)"
 
 lemma compiled_atI:
   "compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow>
-   compiled_at \<Pi> g p c0 n"
+   (ex, EA_Ret None p, FunctionResult p) \<in> intra g \<Longrightarrow> compiled_at \<Pi> g p c0 n"
   unfolding compiled_at_def by blast
 
 lemma compiled_atE [elim]:
   assumes "compiled_at \<Pi> g p c0 n"
   obtains n' en ex E K where
     "compile \<Pi> p c0 n = (n', en, ex, E, K)" "E \<subseteq> intra g" "K \<subseteq> calls g"
+    "(ex, EA_Ret None p, FunctionResult p) \<in> intra g"
   using assms unfolding compiled_at_def by blast
 
-text \<open>Focused projections: read a single edge inclusion off a \<^const>\<open>compiled_at\<close> witness paired
-  with the concrete compile tuple, without reopening the existential.\<close>
+text \<open>Focused projections: read a single fact off a \<^const>\<open>compiled_at\<close> witness paired with the
+  concrete compile tuple, without reopening the existential.  The exit projection gives the
+  fragment's fall-through \<^term>\<open>EA_Ret None p\<close> edge into \<^term>\<open>FunctionResult p\<close> at this exact offset ---
+  the edge the callee-completion path needs but which lives only in \<open>procs_compiled\<close> at the
+  procedure's compile offset.\<close>
 lemma compiled_at_intra:
   "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> E \<subseteq> intra g"
   unfolding compiled_at_def by auto
 
 lemma compiled_at_calls:
   "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> K \<subseteq> calls g"
+  unfolding compiled_at_def by auto
+
+lemma compiled_at_exit:
+  "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow>
+   (ex, EA_Ret None p, FunctionResult p) \<in> intra g"
   unfolding compiled_at_def by auto
 
 inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store \<times> frame list
@@ -1866,8 +1876,10 @@ proof -
     cbody: "compile \<Pi> q (body decl) m = (m', en_q, ex_q, E_q, K_q)"
       and E_qsub: "E_q \<subseteq> intra g" and K_qsub: "K_q \<subseteq> calls g"
       and entry: "(FunctionEntry q, EA_Nop, en_q) \<in> intra g"
+      and exitq: "(ex_q, EA_Ret None q, FunctionResult q) \<in> intra g"
       and srcbody: "source_com (body decl)" by metis
-  have caccq: "compiled_at \<Pi> g q (body decl) m" by (rule compiled_atI[OF cbody E_qsub K_qsub])
+  have caccq: "compiled_at \<Pi> g q (body decl) m"
+    by (rule compiled_atI[OF cbody E_qsub K_qsub exitq])
   have cstep2: "cstep g (FunctionEntry q, ?callee, [(Statement (Suc k), dst, s)])
                         (en_q, ?callee, [(Statement (Suc k), dst, s)])"
     using cstep_nop[OF entry] .
