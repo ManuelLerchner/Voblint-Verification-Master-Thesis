@@ -10,11 +10,12 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     LTR_Abstract
     IMP2_Proc_to_CFG
     Compile_Invariants
+    Control_Residual
+    Located_Exec
   (* Stage 5B+: re-add each theory here as it is migrated onto the two-relation
      procedure-aware CFG (compiler simulation, then analysis/solver). They still
      reference the retired single-edge-set representation and are not built yet:
        CFG_Transfer CFG_Prune
-       Compiler/Control_Residual Compiler/Located_Exec
        Compiler/Control_Simulation Compiler/Located_LTR
      CFG_Path (nat-offset path infrastructure) was retired in Stage 3; the
      procedure-aware compiler allocates cfg_node Statement indices directly, so no
