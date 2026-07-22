@@ -540,7 +540,7 @@ where
     etf_assign     = (\<lambda>x e u. unit_edge_tree (apply_tf tf (EA_Assign x e)) u),
     etf_assume     = (\<lambda>b u. unit_edge_tree (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. unit_edge_tree (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>xs es u. unit_edge_tree (apply_tf tf (EA_Enter xs es)) u),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree (tf_enter tf xs es) u),
     etf_combine    = unit_combine_tree
   \<rparr>"
 
@@ -559,14 +559,16 @@ where
     etf_assign     = (\<lambda>x e. mixed_etf_edge_tree tf (EA_Assign x e)),
     etf_assume     = (\<lambda>b. mixed_etf_edge_tree tf (EA_Assume b)),
     etf_assume_not = (\<lambda>b. mixed_etf_edge_tree tf (EA_AssumeNot b)),
-    etf_enter      = (\<lambda>xs es. mixed_etf_edge_tree tf (EA_Enter xs es)),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree (tf_enter tf xs es) u),
     etf_combine    = unit_combine_tree
   \<rparr>"
 
 
 lemma apply_etf_unit_of_transfer:
   "apply_etf (unit_etf_of_transfer tf) a u = unit_edge_tree (apply_tf tf a) u"
-  unfolding unit_etf_of_transfer_def by (cases a) simp_all
+  unfolding unit_etf_of_transfer_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 lemma etf_combine_unit_of_transfer:
   "etf_combine (unit_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
@@ -574,7 +576,9 @@ lemma etf_combine_unit_of_transfer:
 
 lemma apply_etf_mixed_of_transfer:
   "apply_etf (mixed_etf_of_transfer tf) a u = mixed_etf_edge_tree tf a u"
-  unfolding mixed_etf_of_transfer_def by (cases a) simp_all
+  unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 lemma etf_combine_mixed_of_transfer:
   "etf_combine (mixed_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
@@ -642,7 +646,7 @@ lemma in_gamma_unit_edge_tree_enter:
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
            \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree (apply_tf tf (EA_Enter xs es)) u) \<sigma>\<rbrakk>"
+           (unit_edge_tree (tf_enter tf xs es) u) \<sigma>\<rbrakk>"
   using tf_sound_enter[rule_format, OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 

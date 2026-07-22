@@ -166,6 +166,20 @@ proof -
   finally show ?thesis using m by blast
 qed
 
+text \<open>Call-entry companion of \<open>edge_of_bound\<close>: if the abstract enter transfer over \<open>A\<close> is
+  dominated by \<open>B\<close>, the concrete callee-entry store built from a caller store in \<open>[[A]]\<close> lies
+  in \<open>[[B]]\<close>.  The enter analogue of the intra \<open>edge_of_bound\<close>, shared by the LTR and DG
+  call-routing soundness spines.\<close>
+lemma call_enter_of_bound:
+  assumes bound: "tf_enter tf pars args A \<le> B"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>"
+  shows "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
+proof -
+  have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
+    using tf_sound_enter[rule_format, OF s] by (simp add: call_enter_CallEdge)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
 
 
 

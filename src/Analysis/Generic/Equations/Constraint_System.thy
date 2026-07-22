@@ -54,12 +54,24 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Ret e p)        \<sigma> =
        (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> tf_assign tf ret_var a \<sigma>)"
 
+text \<open>\<^const>\<open>EA_Ret\<close> reuses the ordinary transfer of the assignment it publishes: a void return
+  is the \<^const>\<open>EA_Nop\<close> identity, a value return is the \<^const>\<open>EA_Assign\<close> to \<^const>\<open>ret_var\<close>.
+  These point-free identities let effectful factories dispatch \<^const>\<open>EA_Ret\<close> through the
+  \<open>nop\<close>/\<open>assign\<close> record fields.\<close>
+lemma apply_tf_EA_Ret_None:
+  "apply_tf tf (EA_Ret None p) = apply_tf tf EA_Nop"
+  by (simp add: fun_eq_iff)
+
+lemma apply_tf_EA_Ret_Some:
+  "apply_tf tf (EA_Ret (Some a) p) = apply_tf tf (EA_Assign ret_var a)"
+  by (simp add: fun_eq_iff)
+
 subsection \<open>Abstract join over a set\<close>
 
 text \<open>
   Fold join_abs over a finite set of abstract states.
   Requires comp_fun_commute join_abs for the result to be order-independent.
-  Finiteness of the predecessor set follows from finite (edges g).
+  Finiteness of the predecessor set follows from finite (intra g) and finite (calls g).
 \<close>
 
 definition abs_join_set ::
@@ -637,7 +649,9 @@ fun local_edge_action :: "edge_action \<Rightarrow> bool" where
     ((~ is_global x) & (~ aexp_mentions_global e))"
 | "local_edge_action (EA_Assume b) = (~ bexp_mentions_global b)"
 | "local_edge_action (EA_AssumeNot b) = (~ bexp_mentions_global b)"
-| "local_edge_action (EA_Ret e p) = False"
+| "local_edge_action (EA_Ret e p) =
+    (case e of None \<Rightarrow> True
+     | Some a \<Rightarrow> ((~ is_global ret_var) & (~ aexp_mentions_global a)))"
 
 text \<open>
   @{const local_edge_action}: the edge neither reads nor writes globals (enter and
