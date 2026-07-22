@@ -40,15 +40,20 @@ theorem valid_ltr_ctx_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
-    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> edges g \<Longrightarrow> \<not> is_enter_action a
+    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and SEED_G: "\<And>u v c s s' xs es. (u, EA_Enter xs es, v) \<in> edges g \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> edge_step (EA_Enter xs es) s = Some s' \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, enterc c s'))\<rbrakk>"
-    and COMB: "\<And>cl ex v dst c1 s t es. (cl, ex, v, dst) \<in> combines g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (ex, enterc c1 es))\<rbrakk>
+    and CALL: "\<And>u dst pars args p cont c s.
+        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
+        \<Longrightarrow> call_enter (CallEdge dst pars args) s
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p,
+                          enterc c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+    and COMB: "\<And>cl dst pars args p cont c1 s t es.
+        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store g cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, c1))\<rbrakk>"
+        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
     and t: "t \<in> valid_ltr g S"
   shows "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"
 proof -
@@ -56,7 +61,7 @@ proof -
     apply unfold_locales
     apply (blast intro: ENTRY_G)
     apply (blast intro: EDGE)
-    apply (blast intro: SEED_G)
+    apply (blast intro: CALL)
     apply (blast intro: COMB)
     done
   from t have "t \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr by blast

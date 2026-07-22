@@ -24,10 +24,8 @@ text \<open>
 
 subsection \<open>Nodes\<close>
 
-type_synonym pp = nat
-
 datatype cfg_node =
-    Statement pp
+    Statement nat
   | FunctionEntry pname
   | FunctionResult pname
 

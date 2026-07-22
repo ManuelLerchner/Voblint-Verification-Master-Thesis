@@ -51,7 +51,8 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Assign x a)     \<sigma> = tf_assign tf x a \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
-  | "apply_tf tf (EA_Enter xs es)    \<sigma> = tf_enter tf xs es \<sigma>"
+  | "apply_tf tf (EA_Ret e p)        \<sigma> =
+       (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> tf_assign tf ret_var a \<sigma>)"
 
 subsection \<open>Abstract join over a set\<close>
 
@@ -480,13 +481,14 @@ definition rhs ::
      \<Rightarrow> 'a abs_state"
 where
   "rhs g tf join_abs bot_abs s0 env v =
-     (let edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u))
-                          {(u, a) | u a. (u, a, v) \<in> edges g};
-          comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
-                          {(c, ex, dst) | c ex dst. (c, ex, v, dst) \<in> combines g};
+     (let intra_vals = (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v;
+          entry_vals = (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
+                          ` entry_calls g v;
+          ret_vals  = (\<lambda>(c, dst, ex). combine_collect_abs dst (env c) (env ex))
+                          ` return_calls g v;
           base = if v = cfg_entry g
-                 then insert s0 (edge_vals \<union> comb_vals)
-                 else edge_vals \<union> comb_vals
+                 then insert s0 (intra_vals \<union> entry_vals \<union> ret_vals)
+                 else intra_vals \<union> entry_vals \<union> ret_vals
       in  abs_join_set join_abs bot_abs base)"
 
 definition is_post_fixpoint ::
@@ -626,7 +628,8 @@ where
 | "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
 | "apply_etf etf (EA_Assume b)    u = etf_assume etf b u"
 | "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
-| "apply_etf etf (EA_Enter xs es) u = etf_enter etf xs es u"
+| "apply_etf etf (EA_Ret e p) u =
+     (case e of None \<Rightarrow> etf_nop etf u | Some a \<Rightarrow> etf_assign etf ret_var a u)"
 
 fun local_edge_action :: "edge_action \<Rightarrow> bool" where
   "local_edge_action EA_Nop = True"
@@ -634,7 +637,7 @@ fun local_edge_action :: "edge_action \<Rightarrow> bool" where
     ((~ is_global x) & (~ aexp_mentions_global e))"
 | "local_edge_action (EA_Assume b) = (~ bexp_mentions_global b)"
 | "local_edge_action (EA_AssumeNot b) = (~ bexp_mentions_global b)"
-| "local_edge_action (EA_Enter xs es) = False"
+| "local_edge_action (EA_Ret e p) = False"
 
 text \<open>
   @{const local_edge_action}: the edge neither reads nor writes globals (enter and

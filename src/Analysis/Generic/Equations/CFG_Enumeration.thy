@@ -5,283 +5,170 @@ begin
 section \<open>Solver-facing CFG enumeration\<close>
 
 text \<open>
-  Backward predecessor relations and deterministic edge/combine enumeration over a
-  compiled CFG.  These are the equation-generation and code-generation views the TD
+  Backward predecessor relations and deterministic edge enumeration over a compiled
+  two-relation CFG.  These are the equation-generation and code-generation views the TD
   solver reads to build and evaluate the constraint system; they are not part of the
-  concrete CFG semantics --- \<open>valid_ltr\<close> never refers to them.  They live in the
-  analysis session, next to the constraint system that consumes them, so that
-  \<^theory>\<open>Voblint_CFG.CFG_Def\<close> carries only the control-flow relation and its label
-  classification.
+  concrete CFG semantics --- \<open>valid_ltr\<close> never refers to them.  Ordinary control flow is
+  enumerated over \<^const>\<open>intra\<close>; procedure calls --- entry routing and return combining ---
+  over \<^const>\<open>calls\<close>.  There is no unified edge set and no separate combine relation: a
+  return is recovered from the same \<^const>\<open>calls\<close> tuple that created the activation.
 \<close>
 
 subsection \<open>Executable orders\<close>
 
-(* bexp linorder is required for edge_action below; derived here (not in
-   IMP2_Syntax) so IMP2 stays warning-free. *)
+(* Structural linear orders (AFP Deriving) so the intra and calls sets enumerate
+   deterministically via sorted_list_of_set. bexp/edge_action label intra edges;
+   call_action labels call edges; cfg_node is the shared node type. Not part of the
+   IMP2/CFG semantics --- purely for code-generated solver enumeration. *)
 derive linorder bexp
-
-(* Executable structural linear order on edge actions (AFP Deriving), used to
-   enumerate edge sets deterministically via @{const sorted_list_of_set} in
-   @{const cfg_edges_list} / @{const predecessor_list}. Code-generates, so the
-   predecessor lookups feeding the TD bridge run directly. Not part of the IMP2
-   semantics. *)
 derive linorder edge_action
+derive linorder call_action
+derive linorder cfg_node
 
-subsection \<open>Predecessors\<close>
+subsection \<open>Intra predecessors\<close>
 
-definition predecessors :: "cfg => pp => (pp * edge_action) set" where
-  "predecessors g v = {(u, a) | u a. (u, a, v) : edges g}"
+text \<open>The ordinary incoming transitions of a node: an intra edge is a total store
+  transformer within one activation, so this is the transfer fold the equation system runs
+  at every node --- including the \<^term>\<open>EA_Ret e p\<close> edges into \<^term>\<open>FunctionResult p\<close>, by
+  which return values are summarised as ordinary predecessor folding.\<close>
 
-lemma finite_predecessors:
-  assumes "finite (edges g)"
-  shows "finite (predecessors g v)"
-proof  -
-  have "predecessors g v \<subseteq> (\<lambda>e :: pp \<times> edge_action \<times> pp. (fst e, fst (snd e))) ` edges g"
-    unfolding predecessors_def by force
-  then show ?thesis
-    using assms finite_subset finite_imageI by blast
-qed
+definition intra_predecessors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) set" where
+  "intra_predecessors g v = {(u, a). (u, a, v) \<in> intra g}"
 
-definition combine_info_predecessors :: "cfg \<Rightarrow> pp \<Rightarrow> combine_info set" where
-  "combine_info_predecessors g v = {ci \<in> combines g. combine_return_node ci = v}"
+lemma intra_predecessors_iff:
+  "(u, a) \<in> intra_predecessors g v \<longleftrightarrow> (u, a, v) \<in> intra g"
+  by (simp add: intra_predecessors_def)
 
-definition combine_predecessors ::
-    "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp \<times> vname option) set" where
-  "combine_predecessors g v =
-     (\<lambda>ci. (combine_call_node ci, combine_exit_node ci, combine_dst ci))
-       ` combine_info_predecessors g v"
-
-lemma combine_predecessors_eq:
-  "combine_predecessors g v =
-     {(c, ex, dst) | c ex dst. (c, ex, v, dst) \<in> combines g}"
-  unfolding combine_predecessors_def combine_info_predecessors_def
-    combine_call_node_def combine_exit_node_def combine_return_node_def
-    combine_dst_def
-  by (auto simp: image_iff)
-
-lemma finite_combine_predecessors:
-  assumes "finite (combines g)"
-  shows "finite (combine_predecessors g v)"
+lemma finite_intra_predecessors:
+  assumes "finite (intra g)"
+  shows "finite (intra_predecessors g v)"
 proof -
-  have "finite (combine_info_predecessors g v)"
-    using assms unfolding combine_info_predecessors_def by auto
-  then show ?thesis
-    unfolding combine_predecessors_def by blast
+  have "intra_predecessors g v
+          \<subseteq> (\<lambda>e :: cfg_node \<times> edge_action \<times> cfg_node. (fst e, fst (snd e))) ` intra g"
+    unfolding intra_predecessors_def by force
+  then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-subsection \<open>Edge and predecessor enumeration\<close>
+subsection \<open>Call-entry enumeration\<close>
 
-(* Stable edge enumeration for the TD bridge: sort by (source, action, target). *)
+text \<open>The call tuples whose callee entry is the queried node \<open>v\<close> (a \<^term>\<open>FunctionEntry p\<close>).
+  The continuation does not affect the callee-entry state, so it is projected away; the
+  entry contribution is the caller state routed through the call action's parameter
+  binding (\<open>tf_enter\<close>).\<close>
 
-definition cfg_edges_list :: "cfg \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where
-  "cfg_edges_list g =
-     (if finite (edges g) then sorted_list_of_set (edges g) else [])"
+definition entry_calls :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) set" where
+  "entry_calls g v = {(c, ca). \<exists>k. (c, ca, v, k) \<in> calls g}"
 
-(* Drop the finiteness guard for code generation: sorted_list_of_set already
-   yields [] on an infinite set, so the guarded and unguarded forms agree.
-   Without this the generated code would have to decide finite (edges g). *)
-lemma cfg_edges_list_code [code]:
-  "cfg_edges_list g = sorted_list_of_set (edges g)"
-  unfolding cfg_edges_list_def
-  by (cases "finite (edges g)") auto
+lemma entry_calls_iff:
+  "(c, ca) \<in> entry_calls g v \<longleftrightarrow> (\<exists>k. (c, ca, v, k) \<in> calls g)"
+  by (simp add: entry_calls_def)
 
-definition predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
-  "predecessor_list g v =
-     map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g))"
-
-lemma set_cfg_edges_list[simp]:
-  assumes "finite (edges g)"
-  shows "set (cfg_edges_list g) = edges g"
-  unfolding cfg_edges_list_def using assms by simp
-
-lemma distinct_cfg_edges_list[simp]:
-  assumes "finite (edges g)"
-  shows "distinct (cfg_edges_list g)"
-  unfolding cfg_edges_list_def using assms by simp
-
-lemma set_predecessor_list[simp]:
-  assumes "finite (edges g)"
-  shows "set (predecessor_list g v) = predecessors g v"
+lemma finite_entry_calls:
+  assumes "finite (calls g)"
+  shows "finite (entry_calls g v)"
 proof -
-  show ?thesis
-    unfolding predecessor_list_def predecessors_def
-    using assms set_cfg_edges_list[OF assms]
-    by (force simp: image_iff)
+  have "entry_calls g v
+          \<subseteq> (\<lambda>e :: cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node. (fst e, fst (snd e))) ` calls g"
+    unfolding entry_calls_def by force
+  then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-lemma distinct_predecessor_list[simp]:
-  assumes "finite (edges g)"
-  shows "distinct (predecessor_list g v)"
+subsection \<open>Return enumeration\<close>
+
+text \<open>The call tuples whose continuation is the queried node \<open>v\<close>, each paired with the
+  caller destination and the callee's \<^term>\<open>FunctionResult p\<close> exit node --- recovered from
+  the callee entry \<^term>\<open>FunctionEntry p\<close>, so no separate combine relation is needed.  The
+  return contribution is the caller state and the callee-exit state assembled by
+  \<open>combine_collect_abs\<close>.  The final component is returned directly so clients need not
+  rebuild the result node.\<close>
+
+definition return_calls ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> vname option \<times> cfg_node) set" where
+  "return_calls g v =
+     {(c, dst, FunctionResult p) | c dst formals actuals p.
+        (c, CallEdge dst formals actuals, FunctionEntry p, v) \<in> calls g}"
+
+lemma return_calls_iff:
+  "(c, dst, r) \<in> return_calls g v
+     \<longleftrightarrow> (\<exists>formals actuals p. r = FunctionResult p
+             \<and> (c, CallEdge dst formals actuals, FunctionEntry p, v) \<in> calls g)"
+  by (auto simp: return_calls_def)
+
+lemma finite_return_calls:
+  assumes "finite (calls g)"
+  shows "finite (return_calls g v)"
 proof -
-  have dist_filt: "distinct (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g))"
-    using distinct_filter distinct_cfg_edges_list assms by simp
-  have inj: "inj_on (\<lambda>(u, a, w). (u, a)) (set (filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g)))"
-    by (auto simp: inj_on_def)
-  show ?thesis
-    unfolding predecessor_list_def distinct_map
-    using dist_filt inj by simp
+  have "return_calls g v
+          \<subseteq> (\<lambda>(c, ca, ce, k).
+                (c, case ca of CallEdge dst _ _ \<Rightarrow> dst,
+                    case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce)) ` calls g"
+    unfolding return_calls_def by (force split: prod.splits)
+  then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-lemma predecessor_list_Nil_if_no_in:
-  assumes "\<And>u a. (u, a, v) \<notin> edges g"
-  shows "predecessor_list g v = []"
-proof -
-  have "filter (\<lambda>(u, a, w). w = v) (cfg_edges_list g) = []"
-  proof (cases "finite (edges g)")
-    case True
-    then show ?thesis
-      using assms set_cfg_edges_list[OF True]
-      by (force simp: cfg_edges_list_def filter_empty_conv)
-  next
-    case False
-    then show ?thesis
-      by (simp add: cfg_edges_list_def)
-  qed
-  then show ?thesis
-    unfolding predecessor_list_def by simp
-qed
+subsection \<open>Executable enumeration\<close>
 
-subsection \<open>Frame-entry predecessor split\<close>
+text \<open>Stable list views for the TD bridge: the intra and call edge sets sorted by their
+  structural order, and the queried-node projections built by filtering.\<close>
 
-text \<open>
-  A frame-entry node is the target of some \<^const>\<open>EA_Enter\<close> edge (a procedure
-  or scope entry -- the IMP2-to-CFG compiler emits this edge shape for both
-  ``Call`` and ``Scope``).  Splitting \<^const>\<open>predecessor_list\<close> into its
-  \<^const>\<open>EA_Enter\<close>
-  and non-\<^const>\<open>EA_Enter\<close> parts lets a context-sensitive generator seed a
-  frame-entry node's locals from the call context while still folding in any
-  other predecessor (e.g. a loop backedge, when the frame entry coincides with
-  a loop head) through the ordinary transfer.
-\<close>
+definition cfg_intra_list :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
+  "cfg_intra_list g =
+     (if finite (intra g) then sorted_list_of_set (intra g) else [])"
 
-definition enter_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
-  "enter_predecessor_list g v = filter (\<lambda>(u, a). is_enter_action a) (predecessor_list g v)"
+lemma cfg_intra_list_code [code]:
+  "cfg_intra_list g = sorted_list_of_set (intra g)"
+  unfolding cfg_intra_list_def by (cases "finite (intra g)") auto
 
-definition non_enter_predecessor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
-  "non_enter_predecessor_list g v = filter (\<lambda>(u, a). \<not> is_enter_action a) (predecessor_list g v)"
+definition cfg_calls_list ::
+    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
+  "cfg_calls_list g =
+     (if finite (calls g) then sorted_list_of_set (calls g) else [])"
 
-definition is_frame_entry :: "cfg \<Rightarrow> pp \<Rightarrow> bool" where
-  "is_frame_entry g v = (enter_predecessor_list g v \<noteq> [])"
+lemma cfg_calls_list_code [code]:
+  "cfg_calls_list g = sorted_list_of_set (calls g)"
+  unfolding cfg_calls_list_def by (cases "finite (calls g)") auto
 
-lemma set_predecessor_list_enter_split:
-  "set (predecessor_list g v)
-     = set (enter_predecessor_list g v) \<union> set (non_enter_predecessor_list g v)"
-  unfolding enter_predecessor_list_def non_enter_predecessor_list_def by auto
+lemma set_cfg_intra_list [simp]:
+  "finite (intra g) \<Longrightarrow> set (cfg_intra_list g) = intra g"
+  unfolding cfg_intra_list_def by simp
 
-lemma enter_predecessor_list_action:
-  "(u, a) \<in> set (enter_predecessor_list g v) \<Longrightarrow> is_enter_action a"
-  unfolding enter_predecessor_list_def by auto
+lemma set_cfg_calls_list [simp]:
+  "finite (calls g) \<Longrightarrow> set (cfg_calls_list g) = calls g"
+  unfolding cfg_calls_list_def by simp
 
-lemma non_enter_predecessor_list_action:
-  "(u, a) \<in> set (non_enter_predecessor_list g v) \<Longrightarrow> \<not> is_enter_action a"
-  unfolding non_enter_predecessor_list_def by auto
+definition intra_predecessor_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) list" where
+  "intra_predecessor_list g v =
+     map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_intra_list g))"
 
-lemma non_enter_predecessor_list_mem:
-  "(u, a) \<in> set (predecessor_list g v) \<Longrightarrow> \<not> is_enter_action a
-   \<Longrightarrow> (u, a) \<in> set (non_enter_predecessor_list g v)"
-  unfolding non_enter_predecessor_list_def by auto
+lemma set_intra_predecessor_list [simp]:
+  assumes "finite (intra g)"
+  shows "set (intra_predecessor_list g v) = intra_predecessors g v"
+  unfolding intra_predecessor_list_def intra_predecessors_def
+  using set_cfg_intra_list[OF assms] by (force simp: image_iff)
 
-lemma enter_predecessor_list_mem:
-  "(u, a) \<in> set (predecessor_list g v)
-   \<Longrightarrow> is_enter_action a
-   \<Longrightarrow> (u, a) \<in> set (enter_predecessor_list g v)"
-  unfolding enter_predecessor_list_def by auto
+definition entry_call_list :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
+  "entry_call_list g v =
+     map (\<lambda>(c, ca, ce, k). (c, ca)) (filter (\<lambda>(c, ca, ce, k). ce = v) (cfg_calls_list g))"
 
-text \<open>
-  The dual enumeration used by the context-sensitive generator: the
-  \<^const>\<open>EA_Enter\<close> edges leaving a call node \<open>u\<close>, each paired with its callee
-  entry point \<open>w\<close>.  A monovariant generator folds enter edges as predecessors of
-  the callee entry; a context-sensitive one instead publishes, from the caller
-  side, a routed callee-entry seed --- for which it enumerates a node's outgoing
-  enters here.
-\<close>
+lemma set_entry_call_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (entry_call_list g v) = entry_calls g v"
+  unfolding entry_call_list_def entry_calls_def
+  using set_cfg_calls_list[OF assms] by (force simp: image_iff)
 
-definition enter_successor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
-  "enter_successor_list g u =
-     map (\<lambda>(u', a, w). (w, a))
-       (filter (\<lambda>(u', a, w). u' = u \<and> is_enter_action a) (cfg_edges_list g))"
+definition return_call_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> vname option \<times> cfg_node) list" where
+  "return_call_list g v =
+     map (\<lambda>(c, ca, ce, k). (c, case ca of CallEdge dst _ _ \<Rightarrow> dst,
+                              case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce))
+       (filter (\<lambda>(c, ca, ce, k). k = v \<and> (\<exists>p. ce = FunctionEntry p)) (cfg_calls_list g))"
 
-lemma set_enter_successor_list:
-  assumes "finite (edges g)"
-  shows "set (enter_successor_list g u)
-     = {(w, a) |a w. (u, a, w) \<in> edges g \<and> is_enter_action a}"
-  unfolding enter_successor_list_def
-  using set_cfg_edges_list[OF assms]
-  by (force simp: image_iff)
-
-lemma enter_successor_list_action:
-  "(w, a) \<in> set (enter_successor_list g u) \<Longrightarrow> is_enter_action a"
-  unfolding enter_successor_list_def by auto
-
-lemma enter_successor_list_edge:
-  assumes "finite (edges g)"
-    and "(w, a) \<in> set (enter_successor_list g u)"
-  shows "(u, a, w) \<in> edges g"
-  using assms set_enter_successor_list[OF assms(1)] by auto
-
-subsection \<open>Combine enumeration\<close>
-
-(* Stable combine enumeration for the interprocedural TD bridge. *)
-
-definition cfg_combines_list :: "cfg \<Rightarrow> combine_info list" where
-  "cfg_combines_list g =
-     (if finite (combines g) then sorted_list_of_set (combines g) else [])"
-
-lemma cfg_combines_list_code [code]:
-  "cfg_combines_list g = sorted_list_of_set (combines g)"
-  unfolding cfg_combines_list_def
-  by (cases "finite (combines g)") auto
-
-definition combine_predecessor_list ::
-    "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> pp \<times> vname option) list" where
-  "combine_predecessor_list g v = sorted_list_of_set (combine_predecessors g v)"
-
-lemma set_cfg_combines_list[simp]:
-  assumes "finite (combines g)"
-  shows "set (cfg_combines_list g) = combines g"
-  unfolding cfg_combines_list_def using assms by simp
-
-lemma distinct_cfg_combines_list[simp]:
-  assumes "finite (combines g)"
-  shows "distinct (cfg_combines_list g)"
-  unfolding cfg_combines_list_def using assms by simp
-
-lemma set_combine_predecessor_list[simp]:
-  assumes "finite (combines g)"
-  shows "set (combine_predecessor_list g v) = combine_predecessors g v"
-  unfolding combine_predecessor_list_def
-  using assms finite_combine_predecessors[OF assms]
-  by simp
-
-lemma distinct_combine_predecessor_list[simp]:
-  assumes "finite (combines g)"
-  shows "distinct (combine_predecessor_list g v)"
-  unfolding combine_predecessor_list_def
-  using assms finite_combine_predecessors[OF assms]
-  by simp
-
-lemma combine_predecessor_list_Nil_if_no_in:
-  assumes "\<And>c e dst. (c, e, v, dst) \<notin> combines g"
-  shows "combine_predecessor_list g v = []"
-proof -
-  have "combine_info_predecessors g v = {}"
-    using assms unfolding combine_info_predecessors_def combine_return_node_def by auto
-  hence "combine_predecessors g v = {}"
-    unfolding combine_predecessors_def by simp
-  then show ?thesis
-    unfolding combine_predecessor_list_def by simp
-qed
-
-subsection \<open>Executable examples\<close>
-
-value "cfg_edges_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {})"
-value "predecessor_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {}) 1"
-value "predecessor_list (mk_cfg 0 1 {(0, EA_Nop, 1)} {}) 0"
-value "cfg_combines_list (mk_cfg 2 3 {(2, EA_Enter [] [], 0)} {(2, 1, 3, None)})"
-value "combine_predecessor_list (mk_cfg 2 3 {(2, EA_Enter [] [], 0)} {(2, 1, 3, None)}) 3"
-
-value "cfg_edges_list (compile_prog (\<lambda>_. None) [] IMP2_Proc.com.SKIP)"
-value "cfg_edges_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Assign ''x'' (N 1)))"
-value "cfg_combines_list (compile_prog (\<lambda>_. None) [] (IMP2_Proc.com.Call None ''f'' []))"
+lemma set_return_call_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (return_call_list g v) = return_calls g v"
+  unfolding return_call_list_def return_calls_def
+  using set_cfg_calls_list[OF assms]
+  by (auto simp: image_iff split: call_action.splits cfg_node.splits) blast+
 
 end
