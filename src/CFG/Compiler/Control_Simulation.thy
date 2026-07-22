@@ -969,29 +969,64 @@ lemma proc_activationD [elim]:
 subsection \<open>The caller continuation after a call\<close>
 
 text \<open>
-  A call site's caller has, after the call, a residual continuation \<^term>\<open>after\<close>: the source
-  commands sequenced after the call.  \<^term>\<open>seq_after c ao\<close> appends it when present.  A \<^emph>\<open>tail-position\<close>
-  call (the call is the caller's last command, including the top-level entry call) has no such
-  continuation --- \<^term>\<open>ao = None\<close> --- and the caller resumes at bare \<^const>\<open>SKIP\<close>; an ordinary
-  call carries \<^term>\<open>ao = Some after\<close> and resumes at \<^term>\<open>Seq SKIP after\<close>.  Both cases run through
-  the same activation machinery (the frame is pushed and popped identically); only the caller's
-  leftover source differs.
+  A call site's caller has, after the call, a finite left-spine of residual continuations
+  \<^term>\<open>afters\<close>: the source commands sequenced after the call, in execution order, collected while
+  descending the current activation's left-associated \<^const>\<open>Seq\<close> spine.  \<^term>\<open>seq_after c afters\<close>
+  wraps them around the active head \<open>c\<close>, appending each in order:
+  \<^term>\<open>seq_after c [s3, s4] = Seq (Seq c s3) s4\<close>.  A \<^emph>\<open>tail-position\<close> call (the call is the caller's
+  last command, including the top-level entry call) has no continuation --- \<^term>\<open>afters = []\<close> ---
+  and the caller resumes at bare \<open>c\<close>; a call with pending commands carries them in \<open>afters\<close> and the
+  caller resumes at \<^term>\<open>seq_after SKIP afters\<close>.  Every case runs through the same activation
+  machinery (the frame is pushed and popped identically); only the caller's leftover source differs.
+  The continuation list is orthogonal to \<open>csim\<close>'s recursive nesting: \<open>afters\<close> holds pending commands
+  \<^emph>\<open>inside one activation\<close>, while recursive nesting holds suspended \<^emph>\<open>caller activations\<close>.
 \<close>
-fun seq_after :: "com \<Rightarrow> com option \<Rightarrow> com" where
-  "seq_after c None = c"
-| "seq_after c (Some after) = Seq c after"
+fun seq_after :: "com \<Rightarrow> com list \<Rightarrow> com" where
+  "seq_after c [] = c"
+| "seq_after c (a # as) = seq_after (Seq c a) as"
 
-text \<open>A \<^const>\<open>seq_after\<close> equals a bare \<^const>\<open>Restore\<close> only in the tail-position shape
-  (\<^term>\<open>ao = None\<close>) with a \<^const>\<open>Restore\<close> head --- the discriminator the returning inversions use.\<close>
+text \<open>Appending continuation lists composes the wrappers.\<close>
+lemma seq_after_append: "seq_after (seq_after c xs) ys = seq_after c (xs @ ys)"
+  by (induction xs arbitrary: c) auto
+
+text \<open>A single trailing continuation is one \<^const>\<open>Seq\<close> layer; a nonempty list exposes its outermost
+  \<^const>\<open>Seq\<close> at the last element.\<close>
+lemma seq_after_singleton [simp]: "seq_after c [a] = Seq c a"
+  by simp
+
+lemma seq_after_snoc: "seq_after c (xs @ [a]) = Seq (seq_after c xs) a"
+  by (simp add: seq_after_append[symmetric])
+
+text \<open>\<^const>\<open>seq_after\<close> heads with a bare atom only in the empty-continuation shape: a nonempty
+  continuation list always exposes an outermost \<^const>\<open>Seq\<close>.  These discriminators drive the
+  returning inversions.\<close>
+lemma seq_after_eq_SKIP_iff [simp]:
+  "(seq_after c afters = SKIP) = (c = SKIP \<and> afters = [])"
+  "(SKIP = seq_after c afters) = (c = SKIP \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
 lemma seq_after_eq_Restore_iff [simp]:
-  "(seq_after c ao = Restore) = (c = Restore \<and> ao = None)"
-  "(Restore = seq_after c ao) = (c = Restore \<and> ao = None)"
-  by (cases ao; auto)+
+  "(seq_after c afters = Restore) = (c = Restore \<and> afters = [])"
+  "(Restore = seq_after c afters) = (c = Restore \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
 
 lemma seq_after_eq_Unwind_iff [simp]:
-  "(seq_after c ao = Unwind) = (c = Unwind \<and> ao = None)"
-  "(Unwind = seq_after c ao) = (c = Unwind \<and> ao = None)"
-  by (cases ao; auto)+
+  "(seq_after c afters = Unwind) = (c = Unwind \<and> afters = [])"
+  "(Unwind = seq_after c afters) = (c = Unwind \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
+text \<open>A step of the active head lifts through all pending continuations unchanged.\<close>
+lemma pstep_seq_after_cong:
+  "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
+   pstep \<Pi> (seq_after c afters, s, frs) (seq_after c' afters, s', frs')"
+proof (induction afters arbitrary: c c')
+  case Nil then show ?case by simp
+next
+  case (Cons a as)
+  have "pstep \<Pi> (Seq c a, s, frs) (Seq c' a, s', frs')"
+    by (rule pstep.Seq2[OF Cons.prems])
+  from Cons.IH[OF this] show ?case by simp
+qed
 
 subsection \<open>The returning (frame-pop) source shapes\<close>
 
@@ -1066,15 +1101,15 @@ inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store
      csim \<Pi> g (c, s, []) (v, s, [])"
 | Nested:
     "csim \<Pi> g (inner, s, frs) (v, s, stk) \<Longrightarrow>
-     control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont \<Longrightarrow> compiled_at \<Pi> g pc c0c nc \<Longrightarrow>
+     control_at \<Pi> pc c0c nc (seq_after SKIP afters) cont \<Longrightarrow> compiled_at \<Pi> g pc c0c nc \<Longrightarrow>
      proc_activation \<Pi> pc c0c \<Longrightarrow>
-     csim \<Pi> g (seq_after (Seq inner Restore) ao, s, frs @ [Frame caller dst])
+     csim \<Pi> g (seq_after (Seq inner Restore) afters, s, frs @ [Frame caller dst])
               (v, s, stk @ [(cont, dst, caller)])"
 | Returning:
     "pop_ready w \<Longrightarrow>
-     control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont \<Longrightarrow> compiled_at \<Pi> g pc c0c nc \<Longrightarrow>
+     control_at \<Pi> pc c0c nc (seq_after SKIP afters) cont \<Longrightarrow> compiled_at \<Pi> g pc c0c nc \<Longrightarrow>
      proc_activation \<Pi> pc c0c \<Longrightarrow>
-     csim \<Pi> g (seq_after w ao, callee, [Frame caller dst])
+     csim \<Pi> g (seq_after w afters, callee, [Frame caller dst])
               (FunctionResult p, callee, [(cont, dst, caller)])"
 
 inductive_cases csim_NilE: "csim \<Pi> g (c, s, []) cfgc"
@@ -1182,6 +1217,12 @@ fun is_returning :: "com \<Rightarrow> bool" where
 | "is_returning (Seq c1 c2) = is_returning c1"
 | "is_returning _ = False"
 
+text \<open>Pending continuations do not affect the returning classifier: it descends the leftmost spine
+  to the active head, which \<^const>\<open>seq_after\<close> leaves untouched.\<close>
+lemma is_returning_seq_after [simp]:
+  "is_returning (seq_after c afters) = is_returning c"
+  by (induction afters arbitrary: c) auto
+
 text \<open>Ordinary location never produces a returning command: \<^const>\<open>control_at\<close> locates only source
   residuals, never \<^const>\<open>Restore\<close> or \<^const>\<open>Unwind\<close> at any depth of leftmost nesting.\<close>
 lemma control_at_not_returning:
@@ -1257,10 +1298,44 @@ next
     using uw unwinding_not_SKIP[OF uw] by (auto elim!: SeqSE dest: pstep_unwinding[OF uw])
 qed (use assms(1) in auto)
 
+text \<open>A step of a \<^const>\<open>seq_after\<close> spine whose active head \<open>w\<close> is neither \<^const>\<open>SKIP\<close> nor
+  \<^const>\<open>Unwind\<close> descends to a step of \<open>w\<close>, with the pending continuations \<open>afters\<close> riding along
+  unchanged.  Proved by \<open>rev_induct\<close>: the outermost \<^const>\<open>Seq\<close> peels off (its left component, a
+  \<^const>\<open>seq_after\<close> with active head \<open>w\<close>, is never \<^const>\<open>SKIP\<close> / \<^const>\<open>Unwind\<close>) and the induction
+  hypothesis descends the remaining spine.\<close>
+lemma pstep_seq_after_headD:
+  assumes step: "pstep \<Pi> (seq_after w afters, s, frs) src'"
+      and wsk: "w \<noteq> SKIP" and wunw: "w \<noteq> Unwind"
+  obtains h' s' fz where
+    "src' = (seq_after h' afters, s', fz)"
+    "pstep \<Pi> (w, s, frs) (h', s', fz)"
+proof -
+  have "\<exists>h' s' fz. src' = (seq_after h' afters, s', fz) \<and> pstep \<Pi> (w, s, frs) (h', s', fz)"
+    using step
+  proof (induction afters arbitrary: src' rule: rev_induct)
+    case Nil
+    then obtain h' s' fz where "src' = (h', s', fz)" "pstep \<Pi> (w, s, frs) (h', s', fz)"
+      by (cases src') auto
+    then show ?case by auto
+  next
+    case (snoc a xs)
+    from snoc.prems have "pstep \<Pi> (Seq (seq_after w xs) a, s, frs) src'"
+      by (simp add: seq_after_snoc)
+    then obtain B' s' fz where
+      A: "src' = (Seq B' a, s', fz)"
+        and B: "pstep \<Pi> (seq_after w xs, s, frs) (B', s', fz)"
+      using wsk wunw by (auto elim!: SeqSE)
+    from snoc.IH[OF B] obtain h' where
+      "B' = seq_after h' xs" "pstep \<Pi> (w, s, frs) (h', s', fz)" by auto
+    then show ?case using A by (auto simp: seq_after_snoc)
+  qed
+  then show ?thesis using that by blast
+qed
+
 subsection \<open>Base return completion (frame pop or unwind propagation)\<close>
 
 text \<open>
-  One \<^const>\<open>pstep\<close> of a base returning activation \<^term>\<open>seq_after w ao\<close> (\<^term>\<open>pop_ready w\<close>, framed by
+  One \<^const>\<open>pstep\<close> of a base returning activation \<^term>\<open>seq_after w afters\<close> (\<^term>\<open>pop_ready w\<close>, framed by
   the single caller frame, CFG at \<^term>\<open>FunctionResult p\<close>) is matched by a \<^const>\<open>star\<close> of \<^const>\<open>cstep\<close>:
     \<^enum> \<^emph>\<open>pop\<close>: the frame is popped, source resumes at \<^term>\<open>seq_after SKIP ao\<close> with the combined store,
       and the CFG performs exactly one return \<^const>\<open>cstep\<close> to \<open>cont\<close>, rebuilt as a \<open>Base\<close> activation;
@@ -1271,32 +1346,19 @@ text \<open>
 \<close>
 lemma csim_returning_base_completion:
   assumes pr: "pop_ready w"
-      and loc: "control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont"
+      and loc: "control_at \<Pi> pc c0c nc (seq_after SKIP afters) cont"
       and cacc: "compiled_at \<Pi> g pc c0c nc"
       and pa: "proc_activation \<Pi> pc c0c"
-      and step: "pstep \<Pi> (seq_after w ao, callee, [Frame caller dst]) src'"
+      and step: "pstep \<Pi> (seq_after w afters, callee, [Frame caller dst]) src'"
   shows "\<exists>cfg'. star (cstep g) (FunctionResult p, callee, [(cont, dst, caller)]) cfg'
               \<and> csim \<Pi> g src' cfg'"
 proof -
   have wsk: "w \<noteq> SKIP" using pr by (rule pop_ready_not_SKIP)
   have wunw: "w \<noteq> Unwind" using pr by (rule pop_ready_not_Unwind)
   obtain h' s' frs' where
-    src': "src' = (seq_after h' ao, s', frs')"
+    src': "src' = (seq_after h' afters, s', frs')"
       and hstep: "pstep \<Pi> (w, callee, [Frame caller dst]) (h', s', frs')"
-  proof (cases ao)
-    case None
-    obtain hc sc fc where sc: "src' = (hc, sc, fc)" by (cases src')
-    have "pstep \<Pi> (w, callee, [Frame caller dst]) (hc, sc, fc)" using step by (simp add: None sc)
-    moreover have "src' = (seq_after hc ao, sc, fc)" by (simp add: None sc)
-    ultimately show ?thesis by (auto intro: that)
-  next
-    case (Some after)
-    from step Some have "pstep \<Pi> (Seq w after, callee, [Frame caller dst]) src'" by simp
-    then obtain h' s' frs' where
-      "src' = (Seq h' after, s', frs')" "pstep \<Pi> (w, callee, [Frame caller dst]) (h', s', frs')"
-      using wsk wunw by (auto elim!: SeqSE)
-    with Some show ?thesis by (auto intro: that)
-  qed
+    by (rule pstep_seq_after_headD[OF step wsk wunw])
   let ?rs = "combine_collect dst caller callee"
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
   proof
@@ -1304,14 +1366,14 @@ proof -
     hence h': "h' = SKIP" "s' = ?rs" "frs' = []" by (auto simp: combine_collect_def)
     have "cstep g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
       by (rule cstep.Return)
-    moreover have "csim \<Pi> g (seq_after SKIP ao, ?rs, []) (cont, ?rs, [])"
+    moreover have "csim \<Pi> g (seq_after SKIP afters, ?rs, []) (cont, ?rs, [])"
       by (rule csim.Base[OF loc cacc pa])
     ultimately show ?thesis using src' h' by (auto intro: cstep_star_single)
   next
     assume "\<exists>w'. (h', s', frs') = (w', callee, [Frame caller dst]) \<and> pop_ready w'"
     then obtain w' where h': "h' = w'" "s' = callee" "frs' = [Frame caller dst]"
         and pr': "pop_ready w'" by auto
-    have "csim \<Pi> g (seq_after w' ao, callee, [Frame caller dst])
+    have "csim \<Pi> g (seq_after w' afters, callee, [Frame caller dst])
                    (FunctionResult p, callee, [(cont, dst, caller)])"
       by (rule csim.Returning[OF pr' loc cacc pa])
     with src' h' show ?thesis by (auto intro: star.refl)
@@ -1389,33 +1451,43 @@ next
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
-text \<open>Stepping a returning \<open>Nested\<close> command descends into the callee residual: a csim'd \<open>inner\<close> is
-  never \<^const>\<open>SKIP\<close> (it is returning) nor \<^const>\<open>Unwind\<close>, so the outer sequencing fires \<open>Seq2\<close> and the
-  caller continuation \<open>ao\<close> and the trailing \<^const>\<open>Restore\<close> ride along unchanged.\<close>
+text \<open>Stepping a returning \<open>Nested\<close> command descends the outer \<^const>\<open>Seq\<close> spine to the callee
+  residual: a csim'd \<open>inner\<close> is never \<^const>\<open>SKIP\<close> (it is returning) nor \<^const>\<open>Unwind\<close>, so the
+  innermost sequencing fires \<open>Seq2\<close> and the pending continuations \<open>afters\<close> and the trailing
+  \<^const>\<open>Restore\<close> ride along unchanged.  Proved by \<open>rev_induct\<close> on \<open>afters\<close>: the outermost
+  \<^const>\<open>Seq\<close> peels off (its left component, a \<^const>\<open>seq_after\<close>, is never \<^const>\<open>SKIP\<close> / \<^const>\<open>Unwind\<close>)
+  and the induction hypothesis descends the remaining spine.\<close>
 lemma pstep_seq_after_seq_restore:
-  assumes step: "pstep \<Pi> (seq_after (Seq inner Restore) ao, s, frs) src'"
+  assumes step: "pstep \<Pi> (seq_after (Seq inner Restore) afters, s, frs) src'"
       and nsk: "inner \<noteq> SKIP" and nunw: "inner \<noteq> Unwind"
   obtains inner' s' fz where
-    "src' = (seq_after (Seq inner' Restore) ao, s', fz)"
+    "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
     "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
-proof (cases ao)
-  case None
-  from step None have "pstep \<Pi> (Seq inner Restore, s, frs) src'" by simp
-  then obtain inner' s' fz where
-    "src' = (Seq inner' Restore, s', fz)" "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
-    using nsk nunw by (auto elim!: SeqSE)
-  with None show ?thesis by (auto intro: that)
-next
-  case (Some after)
-  from step Some have "pstep \<Pi> (Seq (Seq inner Restore) after, s, frs) src'" by simp
-  then obtain c1' s' fz where
-    A: "src' = (Seq c1' after, s', fz)"
-      and B: "pstep \<Pi> (Seq inner Restore, s, frs) (c1', s', fz)"
-    by (auto elim!: SeqSE)
-  from B nsk nunw obtain inner' where
-    "c1' = Seq inner' Restore" "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
-    by (auto elim!: SeqSE)
-  with A Some show ?thesis by (auto intro: that)
+proof -
+  have "\<exists>inner' s' fz. src' = (seq_after (Seq inner' Restore) afters, s', fz)
+          \<and> pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+    using step
+  proof (induction afters arbitrary: src' rule: rev_induct)
+    case Nil
+    from Nil.prems have "pstep \<Pi> (Seq inner Restore, s, frs) src'" by simp
+    then obtain inner' s' fz where
+      "src' = (Seq inner' Restore, s', fz)" "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+      using nsk nunw by (auto elim!: SeqSE)
+    then show ?case by auto
+  next
+    case (snoc a xs)
+    from snoc.prems have "pstep \<Pi> (Seq (seq_after (Seq inner Restore) xs) a, s, frs) src'"
+      by (simp add: seq_after_snoc)
+    then obtain B' s' fz where
+      A: "src' = (Seq B' a, s', fz)"
+        and B: "pstep \<Pi> (seq_after (Seq inner Restore) xs, s, frs) (B', s', fz)"
+      by (auto elim!: SeqSE)
+    from snoc.IH[OF B] obtain inner' where
+      "B' = seq_after (Seq inner' Restore) xs" "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+      by auto
+    then show ?case using A by (auto simp: seq_after_snoc)
+  qed
+  then show ?thesis using that by blast
 qed
 
 text \<open>
@@ -1439,8 +1511,8 @@ next
                                          Returning.hyps(4) Returning.prems(2)]
   show ?case .
 next
-  case (Nested inner s0 frs0 v0 stk0 pc c0c nc ao cont caller dst)
-  have retinner: "is_returning inner" using Nested.prems(1) by (cases ao) auto
+  case (Nested inner s0 frs0 v0 stk0 pc c0c nc afters cont caller dst)
+  have retinner: "is_returning inner" using Nested.prems(1) by simp
   have nsk: "inner \<noteq> SKIP" using retinner by auto
   have nunw: "inner \<noteq> Unwind"
   proof
@@ -1450,7 +1522,7 @@ next
   have frsne: "frs0 \<noteq> []"
     using csim_returning_frames_nonempty[OF Nested.hyps(1) retinner] by simp
   obtain inner' s' fz where
-    src': "src' = (seq_after (Seq inner' Restore) ao, s', fz)"
+    src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
       and stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(2) nsk nunw])
   from pstep_frame_restrict[OF stepin refl frsne] obtain fz' where
@@ -1463,7 +1535,7 @@ next
   have cstepN: "star (cstep g) (v0, s0, stk0 @ [(cont, dst, caller)])
                                (v', s', stk' @ [(cont, dst, caller)])"
     using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
-  have "csim \<Pi> g (seq_after (Seq inner' Restore) ao, s', fz' @ [Frame caller dst])
+  have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
                  (v', s', stk' @ [(cont, dst, caller)])"
     by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)])
   then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
@@ -1523,23 +1595,6 @@ lemma procs_compiled_source_com:
   shows "source_com (body decl)"
   using assms by (blast elim: procs_compiled_proc)
 
-text \<open>A declared procedure's body carries a \<^const>\<open>compiled_at\<close> witness at its compile offset:
-  the offset the entry \<^term>\<open>EA_Nop\<close> edge lands on and the callee \<open>Base\<close> is located at.\<close>
-lemma procs_compiled_body_compiled_at:
-  assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
-  obtains n en where
-    "compiled_at \<Pi> g p (body decl) n"
-    "en = fst (snd (compile \<Pi> p (body decl) n))"
-    "(FunctionEntry p, EA_Nop, en) \<in> intra g"
-proof -
-  from procs_compiled_proc[OF assms] obtain n n' en ex E K where
-    c: "compile \<Pi> p (body decl) n = (n', en, ex, E, K)"
-      and Es: "E \<subseteq> intra g" and Ks: "K \<subseteq> calls g"
-      and en: "(FunctionEntry p, EA_Nop, en) \<in> intra g" by metis
-  show ?thesis
-    by (rule that[OF compiled_atI[OF c Es Ks] _ en]) (simp add: c)
-qed
-
 section \<open>Call preservation\<close>
 
 text \<open>
@@ -1548,15 +1603,17 @@ text \<open>
   \<^term>\<open>EA_Nop\<close> to the callee body's entry --- and adds exactly one \<open>Nested\<close> layer: the callee body
   becomes a fresh \<open>Base\<close> activation (located at its entry by \<open>control_at_initial\<close>, a real
   procedure by \<^const>\<open>proc_activation\<close>), and the caller resumes at its located post-call residual
-  \<^term>\<open>seq_after SKIP ao\<close> --- bare \<^const>\<open>SKIP\<close> for a tail call (\<^term>\<open>ao = None\<close>), \<^term>\<open>Seq SKIP after\<close>
-  for an ordinary call.  Everything the callee needs (edge inclusions, entry wiring, body
-  source-ness) comes from the single \<^const>\<open>procs_compiled\<close> certificate.
+  \<^term>\<open>seq_after SKIP afters\<close> --- bare \<^const>\<open>SKIP\<close> for a tail call (\<^term>\<open>afters = []\<close>), a nonempty
+  \<^const>\<open>seq_after\<close> spine when pending continuations follow the call.  Everything the callee needs
+  (edge inclusions, entry wiring, body source-ness) comes from the single \<^const>\<open>procs_compiled\<close>
+  certificate.  This is the low-level helper: the caller's post-call location \<^term>\<open>seq_after SKIP afters\<close>
+  is supplied as a hypothesis; \<open>csim_call_preservation\<close> derives it from the located call residual.
 \<close>
 
 lemma csim_call_base:
   assumes pc: "procs_compiled \<Pi> g"
       and loc: "control_at \<Pi> p c0 n (Call dst q actuals) v"
-      and callerSKIP: "control_at \<Pi> p c0 n (seq_after SKIP ao) (Statement (Suc k))"
+      and callerSKIP: "control_at \<Pi> p c0 n (seq_after SKIP afters) (Statement (Suc k))"
       and vk: "v = Statement k"
       and cacc: "compiled_at \<Pi> g p c0 n"
       and pa: "proc_activation \<Pi> p c0"
@@ -1564,7 +1621,7 @@ lemma csim_call_base:
       and arity: "length actuals = length (formals decl)"
       and distinct: "distinct (formals decl)"
   shows "\<exists>cfg'. star (cstep g) (v, s, [])  cfg'
-              \<and> csim \<Pi> g (seq_after (Seq (body decl) Restore) ao,
+              \<and> csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
                           bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
                           [Frame s dst]) cfg'"
 proof -
@@ -1595,10 +1652,10 @@ proof -
     using decl unfolding proc_activation_def by blast
   have baseCallee: "csim \<Pi> g (body decl, ?callee, []) (en_q, ?callee, [])"
     by (rule csim.Base[OF control_at_initial[OF srcbody, of \<Pi> q m, folded compile_entry_node[OF cbody]] caccq paq])
-  have "csim \<Pi> g (seq_after (Seq (body decl) Restore) ao, ?callee, [] @ [Frame s dst])
+  have "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters, ?callee, [] @ [Frame s dst])
                  (en_q, ?callee, [] @ [(Statement (Suc k), dst, s)])"
     by (rule csim.Nested[OF baseCallee callerSKIP cacc pa])
-  then have "csim \<Pi> g (seq_after (Seq (body decl) Restore) ao, ?callee, [Frame s dst])
+  then have "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters, ?callee, [Frame s dst])
                       (en_q, ?callee, [(Statement (Suc k), dst, s)])" by simp
   with star show ?thesis by blast
 qed
@@ -1609,9 +1666,8 @@ text \<open>
   The configuration \<^term>\<open>(Seq SKIP Restore, callee, [Frame caller dst])\<close> --- a just-entered callee
   whose caller called in tail position (the caller resumes at bare \<^const>\<open>SKIP\<close>, and the whole
   activation is a callee body followed by \<^const>\<open>Restore\<close> with no trailing continuation) --- is the \<^const>\<open>pstep\<close>
-  successor of a base tail-call \<^term>\<open>(Call dst q [], s, [])\<close>.  Before the \<^term>\<open>com option\<close>
-  generalisation it was in no \<open>csim\<close> relation; now it is the \<^term>\<open>ao = None\<close> instance of \<open>Nested\<close>:
-  the callee \<^const>\<open>SKIP\<close> is the \<open>Base\<close> activation and the resumed caller is located at \<open>cont\<close>.
+  successor of a base tail-call \<^term>\<open>(Call dst q [], s, [])\<close>.  It is the \<^term>\<open>afters = []\<close> instance
+  of \<open>Nested\<close>: the callee \<^const>\<open>SKIP\<close> is the \<open>Base\<close> activation and the resumed caller is located at \<open>cont\<close>.
 \<close>
 lemma csim_tailcall_callee_entry:
   assumes callee: "control_at \<Pi> p c0 n SKIP v"
@@ -1625,8 +1681,8 @@ lemma csim_tailcall_callee_entry:
 proof -
   have base: "csim \<Pi> g (SKIP, callee, []) (v, callee, [])"
     by (rule csim.Base[OF callee calleecacc calleepa])
-  have caller': "control_at \<Pi> pc c0c nc (seq_after SKIP None) cont" using caller by simp
-  have "csim \<Pi> g (seq_after (Seq SKIP Restore) None, callee, [] @ [Frame caller dst])
+  have caller': "control_at \<Pi> pc c0c nc (seq_after SKIP []) cont" using caller by simp
+  have "csim \<Pi> g (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst])
                  (v, callee, [] @ [(cont, dst, caller)])"
     by (rule csim.Nested[OF base caller' callercacc callerpa])
   thus ?thesis by simp
