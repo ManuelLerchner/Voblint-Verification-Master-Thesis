@@ -1147,6 +1147,63 @@ next
   ultimately show ?case using k by blast
 qed simp_all
 
+text \<open>Located return with pending continuations: a source \<^const>\<open>Return\<close> at the bottom-left of a
+  \<^const>\<open>seq_after\<close> spine sits on the compiled \<^term>\<open>EA_Ret e p\<close> edge the compiler emitted at the
+  return node.  Generalises \<open>control_at_return_edge\<close> (its \<^term>\<open>afters = []\<close> instance); the
+  \<open>SeqLeft\<close> / \<open>WhileBody\<close> cases peel the outermost continuation and the passthrough cases keep it.\<close>
+lemma control_at_seq_after_return_edge:
+  "control_at \<Pi> p c0 n r v \<Longrightarrow> r = seq_after (Return e) afters \<Longrightarrow>
+   compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow>
+   \<exists>k. v = Statement k \<and> (Statement k, EA_Ret e p, FunctionResult p) \<in> E"
+proof (induction arbitrary: afters n' en ex E K rule: control_at.induct)
+  case (ReturnHead e' n0 afters)
+  then show ?case by auto
+next
+  case (SeqLeft c1 n0 r v c2 afters)
+  obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Return e) xs"
+    using SeqLeft.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
+  obtain n1 en1 ex1 E1 K1 where c1c: "compile \<Pi> p c1 n0 = (n1, en1, ex1, E1, K1)"
+    by (metis prod_cases5)
+  from SeqLeft.IH[OF req c1c] obtain k where
+    k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E1" by blast
+  from SeqLeft.prems(2) c1c have "E1 \<subseteq> E" by (auto split: prod.splits)
+  then show ?case using k by blast
+next
+  case (SeqRight c1 n n1 en1 ex1 E1 K1 c2 r v afters)
+  obtain n2 en2 ex2 E2 K2 where c2c: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (metis prod_cases5)
+  from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain k where
+    k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E2" by blast
+  from SeqRight.prems(2) SeqRight.hyps(1) c2c have "E2 \<subseteq> E" by (auto split: prod.splits)
+  then show ?case using k by blast
+next
+  case (IfLeft c1 n r v b c2 afters)
+  obtain n1 en1 ex1 E1 K1 where c1c: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    by (metis prod_cases5)
+  from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain k where
+    k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E1" by blast
+  from IfLeft.prems(2) c1c have "E1 \<subseteq> E" by (auto split: prod.splits)
+  then show ?case using k by blast
+next
+  case (IfRight c1 n n1 en1 ex1 E1 K1 c2 r v b afters)
+  obtain n2 en2 ex2 E2 K2 where c2c: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (metis prod_cases5)
+  from IfRight.IH[OF IfRight.prems(1) c2c] obtain k where
+    k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E2" by blast
+  from IfRight.prems(2) IfRight.hyps(1) c2c have "E2 \<subseteq> E" by (auto split: prod.splits)
+  then show ?case using k by blast
+next
+  case (WhileBody c n0 r v b afters)
+  obtain xs where afx: "afters = xs @ [While b c]" and req: "r = seq_after (Return e) xs"
+    using WhileBody.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
+  obtain n1 en1 ex1 E1 K1 where cc: "compile \<Pi> p c (Suc n0) = (n1, en1, ex1, E1, K1)"
+    by (metis prod_cases5)
+  from WhileBody.IH[OF req cc] obtain k where
+    k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E1" by blast
+  from WhileBody.prems(2) cc have "E1 \<subseteq> E" by (auto split: prod.splits)
+  then show ?case using k by blast
+qed simp_all
+
 subsection \<open>The returning (frame-pop) source shapes\<close>
 
 text \<open>
