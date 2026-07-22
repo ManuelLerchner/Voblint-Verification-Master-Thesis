@@ -117,6 +117,7 @@ next
   ultimately show ?case using k by blast
 qed simp_all
 
+
 text \<open>A located \<^const>\<open>Return\<close> sits on the compiled \<^term>\<open>EA_Ret\<close> edge into
   \<^term>\<open>FunctionResult p\<close> --- the enclosing procedure's result node.\<close>
 lemma control_at_return_edge:
@@ -1015,6 +1016,34 @@ lemma seq_after_eq_Unwind_iff [simp]:
   "(Unwind = seq_after c afters) = (c = Unwind \<and> afters = [])"
   by (induction afters arbitrary: c; auto)+
 
+text \<open>\<^const>\<open>seq_after\<close> heads with any non-\<^const>\<open>Seq\<close> atom only in the empty-continuation shape:
+  a nonempty continuation always exposes an outermost \<^const>\<open>Seq\<close>.  These drive the leaf cases of the
+  located-call induction.\<close>
+lemma seq_after_eq_Assign_iff [simp]:
+  "(seq_after c afters = Assign x a) = (c = Assign x a \<and> afters = [])"
+  "(Assign x a = seq_after c afters) = (c = Assign x a \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
+lemma seq_after_eq_If_iff [simp]:
+  "(seq_after c afters = If b c1 c2) = (c = If b c1 c2 \<and> afters = [])"
+  "(If b c1 c2 = seq_after c afters) = (c = If b c1 c2 \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
+lemma seq_after_eq_While_iff [simp]:
+  "(seq_after c afters = While b cw) = (c = While b cw \<and> afters = [])"
+  "(While b cw = seq_after c afters) = (c = While b cw \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
+lemma seq_after_eq_Return_iff [simp]:
+  "(seq_after c afters = Return e) = (c = Return e \<and> afters = [])"
+  "(Return e = seq_after c afters) = (c = Return e \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
+lemma seq_after_eq_Call_iff [simp]:
+  "(seq_after c afters = Call dst q actuals) = (c = Call dst q actuals \<and> afters = [])"
+  "(Call dst q actuals = seq_after c afters) = (c = Call dst q actuals \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
 text \<open>A step of the active head lifts through all pending continuations unchanged.\<close>
 lemma pstep_seq_after_cong:
   "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
@@ -1027,6 +1056,96 @@ next
     by (rule pstep.Seq2[OF Cons.prems])
   from Cons.IH[OF this] show ?case by simp
 qed
+
+text \<open>Located call with pending continuations: when the caller's active residual is a \<^const>\<open>Call\<close>
+  at the bottom-left of a \<^const>\<open>seq_after\<close> spine (the call site with its right-siblings \<open>afters\<close>),
+  the compiled call edge is still the one the compiler emitted at the call node, and the source step
+  re-locates \<^term>\<open>seq_after SKIP afters\<close> --- \<^const>\<open>SKIP\<close> followed by the same pending continuations
+  --- at the post-call node.  Generalises \<open>control_at_call_edge\<close> (its \<^term>\<open>afters = []\<close> instance):
+  the \<open>SeqLeft\<close> / \<open>WhileBody\<close> cases peel the outermost continuation, the passthrough cases keep it, and
+  the leaf cases are impossible (a \<^const>\<open>seq_after\<close> spine never equals a non-\<^const>\<open>Seq\<close> atom unless
+  its head does and the list is empty).\<close>
+lemma control_at_seq_after_call_edge:
+  "control_at \<Pi> p c0 n r v \<Longrightarrow> r = seq_after (Call dst q actuals) afters \<Longrightarrow>
+   compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow>
+   \<exists>k. v = Statement k
+       \<and> (Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+          FunctionEntry q, Statement (Suc k)) \<in> K
+       \<and> control_at \<Pi> p c0 n (seq_after SKIP afters) (Statement (Suc k))"
+proof (induction arbitrary: afters n' en ex E K rule: control_at.induct)
+  case (CallHead dst' q' actuals' n0 afters)
+  then show ?case by (auto intro: control_at.CallDone)
+next
+  case (SeqLeft c1 n0 r v c2 afters)
+  obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Call dst q actuals) xs"
+    using SeqLeft.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
+  obtain n1 en1 ex1 E1 K1 where c1c: "compile \<Pi> p c1 n0 = (n1, en1, ex1, E1, K1)"
+    by (metis prod_cases5)
+  from SeqLeft.IH[OF req c1c] obtain k where
+    k: "v = Statement k"
+       "(Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+         FunctionEntry q, Statement (Suc k)) \<in> K1"
+       "control_at \<Pi> p c1 n0 (seq_after SKIP xs) (Statement (Suc k))" by blast
+  from SeqLeft.prems(2) c1c have "K1 \<subseteq> K" by (auto split: prod.splits)
+  moreover have "control_at \<Pi> p (Seq c1 c2) n0 (seq_after SKIP afters) (Statement (Suc k))"
+    using control_at.SeqLeft[OF k(3)] by (simp add: afx seq_after_snoc)
+  ultimately show ?case using k by blast
+next
+  case (SeqRight c1 n n1 en1 ex1 E1 K1 c2 r v afters)
+  obtain n2 en2 ex2 E2 K2 where c2c: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (metis prod_cases5)
+  from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain k where
+    k: "v = Statement k"
+       "(Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+         FunctionEntry q, Statement (Suc k)) \<in> K2"
+       "control_at \<Pi> p c2 n1 (seq_after SKIP afters) (Statement (Suc k))" by blast
+  from SeqRight.prems(2) SeqRight.hyps(1) c2c have "K2 \<subseteq> K" by (auto split: prod.splits)
+  moreover have "control_at \<Pi> p (Seq c1 c2) n (seq_after SKIP afters) (Statement (Suc k))"
+    using control_at.SeqRight[OF SeqRight.hyps(1) k(3)] .
+  ultimately show ?case using k by blast
+next
+  case (IfLeft c1 n r v b c2 afters)
+  obtain n1 en1 ex1 E1 K1 where c1c: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    by (metis prod_cases5)
+  from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain k where
+    k: "v = Statement k"
+       "(Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+         FunctionEntry q, Statement (Suc k)) \<in> K1"
+       "control_at \<Pi> p c1 (Suc n) (seq_after SKIP afters) (Statement (Suc k))" by blast
+  from IfLeft.prems(2) c1c have "K1 \<subseteq> K" by (auto split: prod.splits)
+  moreover have "control_at \<Pi> p (If b c1 c2) n (seq_after SKIP afters) (Statement (Suc k))"
+    using control_at.IfLeft[OF k(3)] .
+  ultimately show ?case using k by blast
+next
+  case (IfRight c1 n n1 en1 ex1 E1 K1 c2 r v b afters)
+  obtain n2 en2 ex2 E2 K2 where c2c: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (metis prod_cases5)
+  from IfRight.IH[OF IfRight.prems(1) c2c] obtain k where
+    k: "v = Statement k"
+       "(Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+         FunctionEntry q, Statement (Suc k)) \<in> K2"
+       "control_at \<Pi> p c2 n1 (seq_after SKIP afters) (Statement (Suc k))" by blast
+  from IfRight.prems(2) IfRight.hyps(1) c2c have "K2 \<subseteq> K" by (auto split: prod.splits)
+  moreover have "control_at \<Pi> p (If b c1 c2) n (seq_after SKIP afters) (Statement (Suc k))"
+    using control_at.IfRight[OF IfRight.hyps(1) k(3)] .
+  ultimately show ?case using k by blast
+next
+  case (WhileBody c n0 r v b afters)
+  obtain xs where afx: "afters = xs @ [While b c]"
+      and req: "r = seq_after (Call dst q actuals) xs"
+    using WhileBody.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
+  obtain n1 en1 ex1 E1 K1 where cc: "compile \<Pi> p c (Suc n0) = (n1, en1, ex1, E1, K1)"
+    by (metis prod_cases5)
+  from WhileBody.IH[OF req cc] obtain k where
+    k: "v = Statement k"
+       "(Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+         FunctionEntry q, Statement (Suc k)) \<in> K1"
+       "control_at \<Pi> p c (Suc n0) (seq_after SKIP xs) (Statement (Suc k))" by blast
+  from WhileBody.prems(2) cc have "K1 \<subseteq> K" by (auto split: prod.splits)
+  moreover have "control_at \<Pi> p (While b c) n0 (seq_after SKIP afters) (Statement (Suc k))"
+    using control_at.WhileBody[OF k(3)] by (simp add: afx seq_after_snoc)
+  ultimately show ?case using k by blast
+qed simp_all
 
 subsection \<open>The returning (frame-pop) source shapes\<close>
 
@@ -1222,6 +1341,49 @@ text \<open>Pending continuations do not affect the returning classifier: it des
 lemma is_returning_seq_after [simp]:
   "is_returning (seq_after c afters) = is_returning c"
   by (induction afters arbitrary: c) auto
+
+subsection \<open>The call-redex source shape\<close>
+
+text \<open>\<open>head_call c\<close> holds when the leftmost-innermost of \<open>c\<close> is a \<^const>\<open>Call\<close>: the shape of an
+  active residual whose next \<^const>\<open>pstep\<close> fires the call.  Like \<^const>\<open>is_returning\<close> it descends the
+  leftmost \<^const>\<open>Seq\<close> spine and so is insensitive to \<^const>\<open>seq_after\<close> wrapping and to whether the
+  activation is a \<open>Base\<close> or a \<open>Nested\<close> inner.\<close>
+fun head_call :: "com \<Rightarrow> bool" where
+  "head_call (Call dst q actuals) = True"
+| "head_call (Seq c1 c2) = head_call c1"
+| "head_call _ = False"
+
+lemma head_call_seq_after [simp]:
+  "head_call (seq_after c afters) = head_call c"
+  by (induction afters arbitrary: c) auto
+
+lemma head_call_not_SKIP: "head_call c \<Longrightarrow> c \<noteq> SKIP"
+  by (cases c) auto
+
+lemma head_call_not_Unwind: "head_call c \<Longrightarrow> c \<noteq> Unwind"
+  by (cases c) auto
+
+text \<open>A call-headed residual is exactly a \<^const>\<open>Call\<close> at the bottom-left of a \<^const>\<open>seq_after\<close>
+  spine; the spine is the pending continuations collected up the leftmost path.\<close>
+lemma head_call_seq_after_form:
+  "head_call c \<Longrightarrow> \<exists>dst q actuals afters. c = seq_after (Call dst q actuals) afters"
+proof (induction c)
+  case (Seq c1 c2)
+  from Seq.prems have "head_call c1" by simp
+  from Seq.IH(1)[OF this] obtain dst q actuals afters where
+    "c1 = seq_after (Call dst q actuals) afters" by blast
+  then have "Seq c1 c2 = seq_after (Call dst q actuals) (afters @ [c2])"
+    by (simp add: seq_after_snoc)
+  then show ?case by blast
+qed auto
+
+text \<open>The returning phase is never call-headed: an \<^const>\<open>unwinding\<close> spine heads with \<^const>\<open>Unwind\<close>
+  and a \<^const>\<open>pop_ready\<close> body with \<^const>\<open>Restore\<close> or that spine --- neither is a \<^const>\<open>Call\<close>.\<close>
+lemma unwinding_not_head_call: "unwinding u \<Longrightarrow> \<not> head_call u"
+  by (induction u rule: unwinding.induct) auto
+
+lemma pop_ready_not_head_call: "pop_ready w \<Longrightarrow> \<not> head_call w"
+  by (cases w rule: pop_ready.cases) (auto simp: unwinding_not_head_call)
 
 text \<open>Ordinary location never produces a returning command: \<^const>\<open>control_at\<close> locates only source
   residuals, never \<^const>\<open>Restore\<close> or \<^const>\<open>Unwind\<close> at any depth of leftmost nesting.\<close>
@@ -1612,9 +1774,7 @@ text \<open>
 
 lemma csim_call_base:
   assumes pc: "procs_compiled \<Pi> g"
-      and loc: "control_at \<Pi> p c0 n (Call dst q actuals) v"
-      and callerSKIP: "control_at \<Pi> p c0 n (seq_after SKIP afters) (Statement (Suc k))"
-      and vk: "v = Statement k"
+      and loc: "control_at \<Pi> p c0 n (seq_after (Call dst q actuals) afters) v"
       and cacc: "compiled_at \<Pi> g p c0 n"
       and pa: "proc_activation \<Pi> p c0"
       and decl: "\<Pi> q = Some decl"
@@ -1628,13 +1788,16 @@ proof -
   let ?callee = "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
   from cacc obtain n' en ex E K where comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
       and Ksub: "K \<subseteq> calls g" by (auto simp: compiled_at_def)
-  from call_transition_located[OF loc comp Ksub decl, where s = s and stk = "[]"]
-  obtain k' where vk': "v = Statement k'"
-    and cstep1: "cstep g (Statement k', s, [])
+  from control_at_seq_after_call_edge[OF loc refl comp] obtain k where
+    vk: "v = Statement k"
+    and edgeK: "(Statement k, CallEdge dst (case \<Pi> q of Some d \<Rightarrow> formals d | None \<Rightarrow> []) actuals,
+                 FunctionEntry q, Statement (Suc k)) \<in> K"
+    and callerSKIP: "control_at \<Pi> p c0 n (seq_after SKIP afters) (Statement (Suc k))" by blast
+  have edge: "(Statement k, CallEdge dst (formals decl) actuals, FunctionEntry q, Statement (Suc k))
+                \<in> calls g" using edgeK Ksub by (auto simp: decl)
+  have cstep1: "cstep g (Statement k, s, [])
            (FunctionEntry q, call_enter (CallEdge dst (formals decl) actuals) s,
-            [(Statement (Suc k'), dst, s)])"
-    and callerSKIP': "control_at \<Pi> p c0 n SKIP (Statement (Suc k'))" by blast
-  have kk: "k' = k" using vk vk' by simp
+            [(Statement (Suc k), dst, s)])" by (rule cstep.Call[OF edge])
   have ce: "call_enter (CallEdge dst (formals decl) actuals) s = ?callee"
     by (rule call_enter_eq_source_call_store)
   from procs_compiled_proc[OF pc decl] obtain m m' en_q ex_q E_q K_q where
@@ -1647,7 +1810,7 @@ proof -
                         (en_q, ?callee, [(Statement (Suc k), dst, s)])"
     using cstep_nop[OF entry] .
   have star: "star (cstep g) (v, s, []) (en_q, ?callee, [(Statement (Suc k), dst, s)])"
-    using cstep1[unfolded ce kk] cstep2 vk by (simp add: cstep_star_single star.step)
+    using cstep1[unfolded ce] cstep2 vk by (simp add: cstep_star_single star.step)
   have paq: "proc_activation \<Pi> q (body decl)"
     using decl unfolding proc_activation_def by blast
   have baseCallee: "csim \<Pi> g (body decl, ?callee, []) (en_q, ?callee, [])"
@@ -1658,6 +1821,102 @@ proof -
   then have "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters, ?callee, [Frame s dst])
                       (en_q, ?callee, [(Statement (Suc k), dst, s)])" by simp
   with star show ?thesis by blast
+qed
+
+text \<open>Call-specific frame restriction: a call-headed step only \<^emph>\<open>pushes\<close> a frame, so an extra
+  bottom segment rides along even when the active part is empty (unlike the general
+  \<open>pstep_frame_restrict\<close>, which needs a non-empty active stack to exclude a pop).  The
+  pop cases (\<open>RestoreStep\<close> / \<open>UnwindAct\<close> / \<open>ISeq1\<close>) are impossible because a call-headed command
+  never heads with \<^const>\<open>SKIP\<close> / \<^const>\<open>Restore\<close> / \<^const>\<open>Unwind\<close>.\<close>
+lemma pstep_call_frame_restrict:
+  "pstep \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> head_call c \<Longrightarrow> fr = frs @ extra \<Longrightarrow>
+   \<exists>frs''. frs' = frs'' @ extra \<and> pstep \<Pi> (c, s, frs) (c', s', frs'')"
+proof (induction "(c, s, fr)" "(c', s', frs')"
+       arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
+  case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
+  from Seq2.prems(1) have "head_call c1" by simp
+  from Seq2.hyps(2)[OF this Seq2.prems(2)] obtain frs'' where
+    ih: "f1' = frs'' @ extra" "pstep \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
+  show ?case by (rule exI[of _ frs'']) (use ih in \<open>auto intro: pstep.Seq2\<close>)
+next
+  case (Call p decl actuals dst vals callee s1 frs0 frs)
+  then show ?case by (auto intro: pstep.Call)
+qed (auto intro: pstep.intros)
+
+section \<open>Full call preservation\<close>
+
+text \<open>
+  A source \<^const>\<open>Call\<close> redex in the active layer of any \<open>csim\<close> configuration is simulated by a
+  \<^const>\<open>star\<close> of \<^const>\<open>cstep\<close>s ending in a \<open>csim\<close> configuration --- the deep lift of
+  \<open>csim_call_base\<close> through any number of outer \<open>Nested\<close> wrappers.  The active layer is either a
+  \<open>Base\<close> (the call fires directly, adding one \<open>Nested\<close> callee layer via \<open>csim_call_base\<close>) or the inner
+  activation of a \<open>Nested\<close> stack (the call is deeper; the outer wrappers ride along and the induction
+  hypothesis descends).  The \<open>Returning\<close> case is vacuous: a \<^const>\<open>pop_ready\<close> body is never
+  call-headed.  Mirrors \<open>csim_returning_completion\<close>, with \<^const>\<open>head_call\<close> in place of
+  \<^const>\<open>is_returning\<close> and \<open>csim_call_base\<close> in place of \<open>csim_returning_base_completion\<close>.
+\<close>
+theorem csim_call_completion:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_compiled \<Pi> g \<Longrightarrow> head_call c \<Longrightarrow>
+   pstep \<Pi> (c, s, frs) src' \<Longrightarrow>
+   \<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
+  case (Base p c0 n cc vv ss)
+  from head_call_seq_after_form[OF Base.prems(2)] obtain dst q actuals afters where
+    ceq: "cc = seq_after (Call dst q actuals) afters" by blast
+  have step: "pstep \<Pi> (seq_after (Call dst q actuals) afters, ss, []) src'"
+    using Base.prems(3) ceq by simp
+  have w1: "Call dst q actuals \<noteq> SKIP" by simp
+  have w2: "Call dst q actuals \<noteq> Unwind" by simp
+  obtain h' s' fz where
+    src': "src' = (seq_after h' afters, s', fz)"
+      and pcall: "pstep \<Pi> (Call dst q actuals, ss, []) (h', s', fz)"
+    by (rule pstep_seq_after_headD[OF step w1 w2])
+  from pcall obtain decl where
+    qdecl: "\<Pi> q = Some decl" and ar: "length actuals = length (formals decl)"
+      and di: "distinct (formals decl)"
+      and heq: "h' = Seq (body decl) Restore"
+      and seq: "s' = bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals) (enter_state ss)"
+      and fzeq: "fz = [Frame ss dst]"
+    by (auto elim!: CallSE)
+  have loc': "control_at \<Pi> p c0 n (seq_after (Call dst q actuals) afters) vv"
+    using Base.hyps(1) ceq by simp
+  from csim_call_base[OF Base.prems(1) loc' Base.hyps(2) Base.hyps(3) qdecl ar di, where s = ss]
+  obtain cfg' where
+    cstar: "star (cstep g) (vv, ss, []) cfg'"
+      and csimr: "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
+               bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals) (enter_state ss),
+               [Frame ss dst]) cfg'" by blast
+  from csimr have "csim \<Pi> g src' cfg'" by (simp add: src' heq seq fzeq)
+  with cstar show ?case by blast
+next
+  case (Returning w pc c0c nc afters cont callee caller dst p)
+  from Returning.prems(2) have "head_call w" by simp
+  with pop_ready_not_head_call[OF Returning.hyps(1)] show ?case by simp
+next
+  case (Nested inner s0 frs0 v0 stk0 pc c0c nc afters cont caller dst)
+  have headinner: "head_call inner" using Nested.prems(2) by simp
+  have nsk: "inner \<noteq> SKIP" using headinner by (rule head_call_not_SKIP)
+  have nunw: "inner \<noteq> Unwind" using headinner by (rule head_call_not_Unwind)
+  obtain inner' s' fz where
+    src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
+      and stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+    by (rule pstep_seq_after_seq_restore[OF Nested.prems(3) nsk nunw])
+  from pstep_call_frame_restrict[OF stepin headinner refl] obtain fz' where
+    fz: "fz = fz' @ [Frame caller dst]"
+      and stepin': "pstep \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+  from Nested.hyps(2)[OF Nested.prems(1) headinner stepin'] obtain v' t' stk' where
+    cstepin: "star (cstep g) (v0, s0, stk0) (v', t', stk')"
+      and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
+  have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
+  have cstepN: "star (cstep g) (v0, s0, stk0 @ [(cont, dst, caller)])
+                               (v', s', stk' @ [(cont, dst, caller)])"
+    using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
+  have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
+                 (v', s', stk' @ [(cont, dst, caller)])"
+    by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)])
+  then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
+    by (simp add: src' fz)
+  with cstepN show ?case by blast
 qed
 
 section \<open>Regression: the tail-position callee entry is representable\<close>
