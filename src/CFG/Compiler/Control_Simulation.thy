@@ -910,5 +910,288 @@ proof
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
 
+section \<open>The recursive source-command / CFG-stack relation\<close>
+
+text \<open>
+  \<open>csim\<close> relates a source configuration \<^term>\<open>(c, s, frs)\<close> to a CFG configuration
+  \<^term>\<open>(v, s, stk)\<close> with literal store equality (the same \<open>s\<close>).  It bridges the two
+  continuation representations: the source keeps every suspended caller's continuation nested
+  inside the single command \<open>c\<close> (defunctionalized as \<^term>\<open>Seq (Seq inner Restore) after\<close>
+  wrappings, one per activation), while the CFG keeps them as continuation nodes on the frame
+  stack.
+
+  The nesting runs outermost-first: after \<open>main\<close> calls \<open>f\<close> calls \<open>g\<close>, the command is
+  \<open>Seq (Seq (Seq (Seq C Restore) B) Restore) A\<close> with \<open>A\<close> the outermost (main's) continuation and
+  \<open>C\<close> the active (g's) residual.  So the \<^emph>\<open>top\<close> command layer pairs with the \<^emph>\<open>last\<close> (outermost)
+  frame, and the active node/store thread unchanged down to the \<open>Base\<close> case.
+    \<^item> \<open>Base\<close> --- one activation: the active residual \<open>c\<close> is located at \<open>v\<close> and the frame
+      stacks are empty.
+    \<^item> \<open>Nested\<close> --- peel the outermost caller: the command's top layer
+      \<^term>\<open>Seq (Seq inner Restore) after\<close> and the last frame \<^term>\<open>Frame caller dst\<close> pair with the
+      CFG's last frame \<^term>\<open>(cont, dst, caller)\<close>; the caller's post-call residual
+      \<^term>\<open>Seq SKIP after\<close> is located at the continuation node \<open>cont\<close>; and the remaining inner
+      structure is related recursively.
+\<close>
+
+text \<open>
+  \<open>csim\<close> has three constructors --- one per source phase.  \<open>Base\<close> and \<open>Nested\<close>
+  cover \<^emph>\<open>ordinary\<close> execution (residuals located by \<^const>\<open>control_at\<close> at \<^term>\<open>Statement\<close>
+  nodes).  \<open>Returning\<close> covers the \<^emph>\<open>return-in-progress\<close> phase: once a callee's body has
+  completed (fall-through), the innermost source layer is \<^term>\<open>Seq Restore after\<close> and the CFG
+  sits at \<^term>\<open>FunctionResult p\<close>, one \<^const>\<open>cstep\<close> return away from resuming the caller.  Like
+  \<open>Base\<close> it is an innermost constructor (an alternative to it), wrapped by any number of
+  outer \<open>Nested\<close> layers.  It carries exactly the \<^emph>\<open>one\<close> frame the return pops (the immediate
+  caller's save); the outer callers' frames are consumed by the wrapping \<open>Nested\<close> layers.  Its
+  premise locates the \<^emph>\<open>resumed caller\<close> --- the ordinary residual \<^term>\<open>Seq SKIP after\<close> the return
+  will land in, at the continuation node \<open>cont\<close> --- so return completion pops the single frame and
+  the caller resumes as a \<open>Base\<close> activation (the outer \<open>Nested\<close> wrapping is untouched).  The active
+  store is a free rider (\<^const>\<open>control_at\<close> is store-independent).
+\<close>
+
+inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store \<times> frame list
+                    \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool" for \<Pi> g where
+  Base:
+    "control_at \<Pi> p c0 n c v \<Longrightarrow> csim \<Pi> g (c, s, []) (v, s, [])"
+| Nested:
+    "csim \<Pi> g (inner, s, frs) (v, s, stk) \<Longrightarrow>
+     control_at \<Pi> pc c0c nc (Seq SKIP after) cont \<Longrightarrow>
+     csim \<Pi> g (Seq (Seq inner Restore) after, s, frs @ [Frame caller dst])
+              (v, s, stk @ [(cont, dst, caller)])"
+| Returning:
+    "control_at \<Pi> pc c0c nc (Seq SKIP after) cont \<Longrightarrow>
+     csim \<Pi> g (Seq Restore after, callee, [Frame caller dst])
+              (FunctionResult p, callee, [(cont, dst, caller)])"
+
+inductive_cases csim_NilE: "csim \<Pi> g (c, s, []) cfgc"
+inductive_cases csim_cfg_NilE: "csim \<Pi> g srcc (v, t, [])"
+
+subsection \<open>Derived structural facts\<close>
+
+text \<open>The relation forces literal store equality (encoded by the shared \<open>s\<close>).\<close>
+lemma csim_store_eq:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> s = t"
+  by (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c frs v stk rule: csim.induct) auto
+
+text \<open>\<^const>\<open>act_frames\<close> distributes over append (single frame constructor).\<close>
+lemma act_frames_append:
+  "act_frames (xs @ ys) = act_frames xs @ act_frames ys"
+  by (induction xs rule: act_frames.induct) auto
+
+lemma frames_match_snoc:
+  "frames_match frs stk \<Longrightarrow>
+   frames_match (frs @ [Frame caller dst]) (stk @ [(cont, dst, caller)])"
+  by (simp add: frames_match_def act_frames_append cframe_act_def)
+
+text \<open>\<open>csim\<close> strengthens \<^const>\<open>frames_match\<close>: the source and CFG stacks correspond one-for-one.\<close>
+lemma csim_frames_match:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> frames_match frs stk"
+proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct)
+  case (Base p c0 n c v s)
+  then show ?case by (simp add: frames_match_Nil)
+next
+  case (Nested inner s frs v stk pc c0c nc after cont caller dst)
+  from Nested.hyps(2) show ?case by (simp add: frames_match_snoc)
+next
+  case Returning
+  show ?case by (simp add: frames_match_def cframe_act_def)
+qed
+
+text \<open>The stacks have equal length.\<close>
+lemma csim_length:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> length frs = length stk"
+  by (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct) auto
+
+subsection \<open>Empty-stack inversions\<close>
+
+text \<open>An empty CFG stack forces an empty source stack and a located base activation.\<close>
+lemma csim_cfg_Nil_baseD:
+  "csim \<Pi> g (c, s, frs) (v, t, []) \<Longrightarrow>
+   frs = [] \<and> s = t \<and> (\<exists>p c0 n. control_at \<Pi> p c0 n c v)"
+  by (blast elim: csim_cfg_NilE)
+
+text \<open>An empty source stack forces an empty CFG stack and a located base activation.\<close>
+lemma csim_Nil_baseD:
+  "csim \<Pi> g (c, s, []) (v, t, stk) \<Longrightarrow>
+   stk = [] \<and> s = t \<and> (\<exists>p c0 n. control_at \<Pi> p c0 n c v)"
+  by (blast elim: csim_NilE)
+
+subsection \<open>Returning-mode inversions\<close>
+
+text \<open>Ordinary location never produces a \<^const>\<open>Restore\<close>-headed residual: \<^const>\<open>control_at\<close>
+  locates only source residuals, and \<^const>\<open>Restore\<close> is a runtime-only marker.  This is what
+  distinguishes an ordinary \<open>Base\<close> from the returning phase.\<close>
+lemma control_at_no_restore:
+  "control_at \<Pi> p c0 n r v \<Longrightarrow> r \<noteq> Restore \<and> (\<forall>after. r \<noteq> Seq Restore after)"
+  by (induction rule: control_at.induct) auto
+
+text \<open>A source command of the form \<^term>\<open>Seq Restore after\<close> can only come from the
+  \<open>Returning\<close> constructor: \<open>Base\<close> is excluded (ordinary location never heads with
+  \<^const>\<open>Restore\<close>), and \<open>Nested\<close> heads with \<^term>\<open>Seq (Seq inner Restore) after\<close>.  The
+  inversion exposes exactly the returning structure: the final source/CFG frames, the callee
+  store, the destination, the procedure result node, and the resumed-caller relation.\<close>
+lemma csim_restore_exists:
+  "csim \<Pi> g (Seq Restore after, callee, frs) (v, t, stk) \<Longrightarrow>
+   (\<exists>cont caller dst p pc c0c nc.
+      frs = [Frame caller dst] \<and> stk = [(cont, dst, caller)] \<and>
+      v = FunctionResult p \<and> t = callee \<and>
+      control_at \<Pi> pc c0c nc (Seq SKIP after) cont)"
+  by (erule csim.cases) (auto dest: control_at_no_restore)
+
+lemma csim_restoreD [elim]:
+  assumes "csim \<Pi> g (Seq Restore after, callee, frs) (v, t, stk)"
+  obtains cont caller dst p pc c0c nc where
+    "frs = [Frame caller dst]" "stk = [(cont, dst, caller)]"
+    "v = FunctionResult p" "t = callee"
+    "control_at \<Pi> pc c0c nc (Seq SKIP after) cont"
+  using csim_restore_exists[OF assms] by blast
+
+text \<open>The returning phase requires non-empty stacks (the final caller frame is present).\<close>
+lemma csim_restore_stacks_nonempty [elim]:
+  assumes "csim \<Pi> g (Seq Restore after, callee, frs) (v, t, stk)"
+  shows "frs \<noteq> [] \<and> stk \<noteq> []"
+  using assms by (auto elim: csim_restoreD)
+
+text \<open>The returning phase sits at a \<^term>\<open>FunctionResult\<close> node.\<close>
+lemma csim_restore_at_result [elim]:
+  assumes "csim \<Pi> g (Seq Restore after, callee, frs) (v, t, stk)"
+  shows "\<exists>p. v = FunctionResult p"
+  using assms by (auto elim: csim_restoreD)
+
+subsection \<open>Return completion (returning \<open>\<rightarrow>\<close> ordinary)\<close>
+
+text \<open>
+  The clean payoff of the two-mode design.  A source step of a returning config
+  \<^term>\<open>Seq Restore after\<close> is a single \<^const>\<open>Restore\<close> pop (through one \<open>Seq2\<close>): the
+  source resumes at \<^term>\<open>Seq SKIP after\<close> with the combined store, the CFG performs exactly one
+  \<^const>\<open>cstep\<close> return from \<^term>\<open>FunctionResult p\<close> to the continuation \<open>cont\<close>, and the resumed
+  config is a \<open>Base\<close> activation rebuilt from the located caller (the \<open>Returning\<close> layer
+  is removed, not re-derived).  Both sides land on the same store \<^const>\<open>combine_collect\<close>.
+\<close>
+lemma csim_restore_completion:
+  assumes csim: "csim \<Pi> g (Seq Restore after, callee, frs) (v, t, stk)"
+      and step: "pstep \<Pi> (Seq Restore after, callee, frs) src'"
+  shows "\<exists>cfg'. cstep g (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+proof -
+  from csim obtain cont caller dst p pc c0c nc where
+    F: "frs = [Frame caller dst]" "stk = [(cont, dst, caller)]"
+       "v = FunctionResult p" "t = callee"
+       "control_at \<Pi> pc c0c nc (Seq SKIP after) cont"
+    by (blast elim: csim_restoreD)
+  let ?rs = "combine_collect dst caller callee"
+  from step F(1) have "pstep \<Pi> (Seq Restore after, callee, [Frame caller dst]) src'" by simp
+  then have src': "src' = (Seq SKIP after, ?rs, [])"
+    by (auto elim!: SeqSE simp: combine_collect_def)
+  have cfg: "cstep g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
+    by (rule cstep.Return)
+  have "csim \<Pi> g (Seq SKIP after, ?rs, []) (cont, ?rs, [])"
+    by (rule csim.Base[OF F(5)])
+  with cfg src' F(2,3,4) show ?thesis by auto
+qed
+
+subsection \<open>Returning commands and the deep lift\<close>
+
+text \<open>\<open>is_returning c\<close> holds when the leftmost-innermost of \<open>c\<close> is \<^const>\<open>Restore\<close> --- the shape of
+  every returning-phase command, ordinary or \<open>Nested\<close>-wrapped.\<close>
+fun is_returning :: "com \<Rightarrow> bool" where
+  "is_returning Restore = True"
+| "is_returning (Seq c1 c2) = is_returning c1"
+| "is_returning _ = False"
+
+text \<open>Ordinary location never produces a returning command (strengthens
+  \<open>control_at_no_restore\<close> to any depth of leftmost nesting).\<close>
+lemma control_at_not_returning:
+  "control_at \<Pi> p c0 n r v \<Longrightarrow> \<not> is_returning r"
+  by (induction rule: control_at.induct) auto
+
+text \<open>Frame restriction: a single \<^const>\<open>pstep\<close> touches only the head region of the frame stack,
+  so a bottom segment \<open>extra\<close> rides along unchanged when the active part \<open>frs\<close> is non-empty.  This
+  bridges the \<open>Nested\<close> snoc (the inner step threads all frames) to the induction hypothesis
+  (stated on the inner frames alone).\<close>
+lemma pstep_frame_restrict:
+  "pstep \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> fr = frs @ extra \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
+   \<exists>frs''. frs' = frs'' @ extra \<and> pstep \<Pi> (c, s, frs) (c', s', frs'')"
+proof (induction "(c, s, fr)" "(c', s', frs')"
+       arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
+  case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
+  from Seq2.hyps(2)[OF Seq2.prems] obtain frs'' where
+    ih: "f1' = frs'' @ extra" "pstep \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
+  show ?case
+    by (rule exI[of _ frs'']) (use ih in \<open>auto intro: pstep.Seq2\<close>)
+next
+  case (Call p decl actuals dst vals callee s1 frs0 frs)
+  then show ?case by (auto intro: pstep.Call)
+next
+  case (RestoreStep s1 fr0 dst frs0 frs)
+  from RestoreStep.prems obtain frs1 where "frs = Frame fr0 dst # frs1" "frs0 = frs1 @ extra"
+    by (auto simp: Cons_eq_append_conv)
+  then show ?case by (auto intro: pstep.RestoreStep)
+next
+  case (UnwindAct s1 fr0 dst frs0 frs)
+  from UnwindAct.prems obtain frs1 where "frs = Frame fr0 dst # frs1" "frs0 = frs1 @ extra"
+    by (auto simp: Cons_eq_append_conv)
+  then show ?case by (auto intro: pstep.UnwindAct)
+qed (auto intro: pstep.intros)
+
+text \<open>The CFG dual: a single \<^const>\<open>cstep\<close> also touches only the head of the CFG stack, so an
+  extra bottom segment rides along unchanged (no non-emptiness needed --- the return step already
+  requires a non-empty stack).\<close>
+lemma cstep_frame_extend:
+  "cstep g (u, s, stk) (u', s', stk') \<Longrightarrow> cstep g (u, s, stk @ E) (u', s', stk' @ E)"
+  by (erule cstep.cases) (auto intro: cstep.intros)
+
+text \<open>A returning-phase config has non-empty stacks: the frame the return pops is present.\<close>
+lemma csim_returning_frames_nonempty:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> frs \<noteq> [] \<and> stk \<noteq> []"
+  by (erule csim.cases) (auto dest: control_at_not_returning)
+
+subsection \<open>Deep return completion through \<open>Nested\<close> wrappers\<close>
+
+text \<open>
+  Return completion propagates through any number of unchanged outer \<open>Nested\<close> wrappers.  The
+  source step descends the outer \<open>Seq2\<close> spine to the innermost returning activation and pops its
+  frame; the CFG performs the single \<^const>\<open>cstep\<close> return at that activation, and the outer wrappers
+  are rebuilt unchanged.  Proved by induction on \<open>csim\<close>: \<open>Base\<close> is vacuous
+  (\<open>control_at_not_returning\<close>), \<open>Returning\<close> is \<open>csim_restore_completion\<close>, and
+  \<open>Nested\<close> descends via \<open>pstep_frame_restrict\<close> / \<open>cstep_frame_extend\<close> and the IH.
+\<close>
+lemma csim_returning_completion:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> pstep \<Pi> (c, s, frs) src' \<Longrightarrow>
+   \<exists>cfg'. cstep g (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
+  case (Base p c0 n cc vv ss)
+  from control_at_not_returning[OF Base.hyps] Base.prems(1) show ?case by simp
+next
+  case (Returning pc c0c nc after cont callee caller dst p)
+  have "csim \<Pi> g (Seq Restore after, callee, [Frame caller dst])
+                 (FunctionResult p, callee, [(cont, dst, caller)])"
+    by (rule csim.Returning[OF Returning.hyps])
+  from csim_restore_completion[OF this Returning.prems(2)] show ?case .
+next
+  case (Nested inner s0 frs0 v0 stk0 pc c0c nc after cont caller dst)
+  have retinner: "is_returning inner" using Nested.prems(1) by simp
+  have frsne: "frs0 \<noteq> []"
+    using csim_returning_frames_nonempty[OF Nested.hyps(1) retinner] by simp
+  from Nested.prems(2) retinner
+  obtain inner' s' fz where
+    stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and src': "src' = (Seq (Seq inner' Restore) after, s', fz)"
+    by (auto elim!: SeqSE)
+  from pstep_frame_restrict[OF stepin refl frsne] obtain fz' where
+    fz: "fz = fz' @ [Frame caller dst]"
+      and stepin': "pstep \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+  from Nested.hyps(2)[OF retinner stepin'] obtain v' t' stk' where
+    cstepin: "cstep g (v0, s0, stk0) (v', t', stk')"
+      and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
+  have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
+  have cstepN: "cstep g (v0, s0, stk0 @ [(cont, dst, caller)]) (v', s', stk' @ [(cont, dst, caller)])"
+    using cstep_frame_extend[OF cstepin] teq by simp
+  have "csim \<Pi> g (Seq (Seq inner' Restore) after, s', fz' @ [Frame caller dst])
+                 (v', s', stk' @ [(cont, dst, caller)])"
+    by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3)])
+  then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
+    by (simp add: src' fz)
+  with cstepN show ?case by blast
+qed
+
 end
 
