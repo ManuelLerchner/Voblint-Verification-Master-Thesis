@@ -80,11 +80,11 @@ end
 
 text \<open>Executable-facing combined env at each pp (entry query).\<close>
 definition side_analyse_eff ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> com
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
      \<Rightarrow> ('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
      \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp \<Rightarrow> 'a abs_state"
 where
-  "side_analyse_eff \<Pi> ps main etf bot0 s0 gseed v =
-     side_env (td_cfg_side_solver_eff.nu_at (compile_prog \<Pi> ps main) etf bot0 s0 gseed v) v"
+  "side_analyse_eff \<Pi> ps mnm main etf bot0 s0 gseed v =
+     side_env (td_cfg_side_solver_eff.nu_at (compile_prog \<Pi> ps mnm main) etf bot0 s0 gseed v) v"
 
 end

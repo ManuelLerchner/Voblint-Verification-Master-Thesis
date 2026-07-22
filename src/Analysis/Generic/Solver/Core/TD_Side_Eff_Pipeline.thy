@@ -58,25 +58,32 @@ lemma td_cfg_side_solver_eff_gen:
   assumes edge_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
+  assumes enter_mono:
+    "\<And>cl fs as s1 s2. s1 \<le> s2 \<Longrightarrow>
+       traverse_rhs (etf_enter etf fs as cl) s1 \<le> traverse_rhs (etf_enter etf fs as cl) s2"
   assumes comb_mono:
     "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (etf_combine etf dst cc ex) s1 \<le> traverse_rhs (etf_combine etf dst cc ex) s2"
   assumes edge_sides_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (apply_etf etf a u) s1 \<le> sides_of_rhs (apply_etf etf a u) s2"
+  assumes enter_sides_mono:
+    "\<And>cl fs as s1 s2. s1 \<le> s2 \<Longrightarrow>
+       sides_of_rhs (etf_enter etf fs as cl) s1 \<le> sides_of_rhs (etf_enter etf fs as cl) s2"
   assumes comb_sides_mono:
     "\<And>cc ex dst s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
+  assumes enter_static: "\<And>cl fs as. static_deps (etf_enter etf fs as cl)"
   assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "td_cfg_side_solver_eff g etf bot0 s0 gseed"
 proof
   show "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
-    by (rule side_cfg_T_eff_is_mono_eq_gen[OF edge_mono comb_mono])
+    by (rule side_cfg_T_eff_is_mono_eq_gen[OF edge_mono enter_mono comb_mono])
   show "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
-    by (rule side_cfg_T_eff_mono_sides_gen[OF edge_sides_mono comb_sides_mono])
+    by (rule side_cfg_T_eff_mono_sides_gen[OF edge_sides_mono enter_sides_mono comb_sides_mono])
   show "mono_deps (side_cfg_T_eff g etf bot0 s0 gseed)"
-    by (rule side_cfg_T_eff_mono_deps_gen[OF edge_static comb_static])
+    by (rule side_cfg_T_eff_mono_deps_gen[OF edge_static enter_static comb_static])
 qed
 
 subsection \<open>Collecting soundness from a post-solution\<close>
@@ -102,10 +109,13 @@ where
      (\<forall>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)) \<and>
      (\<forall>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)) \<and>
      (\<forall>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)) \<and>
+     (\<forall>cl fs as \<sigma>'. Inl cl \<in> dep_aux \<sigma>' (etf_enter etf fs as cl)) \<and>
      (\<forall>a u. static_deps (apply_etf etf a u)) \<and>
      (\<forall>cc ex dst. static_deps (etf_combine etf dst cc ex)) \<and>
+     (\<forall>cl fs as. static_deps (etf_enter etf fs as cl)) \<and>
      (\<forall>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
-     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g)))"
+     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))) \<and>
+     (\<forall>cl fs as \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g)))"
 
 
 
@@ -139,6 +149,19 @@ lemma cone_compatible_etf_edge_inr:
 lemma cone_compatible_etf_comb_inr:
   "cone_compatible_etf etf \<Longrightarrow>
      local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_enter_dep:
+  "cone_compatible_etf etf \<Longrightarrow> Inl cl \<in> dep_aux \<sigma>' (etf_enter etf fs as cl)"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_enter_static:
+  "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_enter etf fs as cl)"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_enter_inr:
+  "cone_compatible_etf etf \<Longrightarrow>
+     local_bot_on_locals (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 
