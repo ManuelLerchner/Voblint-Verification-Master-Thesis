@@ -1563,14 +1563,40 @@ either duplicated in the core or dead: `edge_step` / `combine_collect` now live 
 last `CFG_Path` client — is superseded by the located `csim` simulation. Only
 `edge_collect`, the pointwise set-lift of the core `edge_step`, remains.
 
-**Not yet migrated** (still on `nat` nodes and the retired single `edges`
-relation; `Voblint_Analysis` stays red): the next blockers are
-`CFG_Enumeration.predecessors` (`{(u,a). (u,a,v) ∈ edges g}`) and the `nat` vs
-`cfg_node` node-type clash in `Activation_Local_Sound`, i.e. the
-`Constraint_System(_Sound)` / `Activation_*` / `DG_*` cluster (design §6, §10, §11).
-`src/Examples/Voblint.thy` also still imports `CFG_Path` directly. These are
-deliberately left for the next dependency layer, not folded into the transfer
-migration.
+The constraint and activation **foundation cluster** is migrated to `cfg_node`
+and the Goblint-style enter/combine equation (green in `Voblint_Analysis`):
+
+- **`pp`** — `CFG_Def`'s `Statement` now carries `nat` directly (the payload was
+  never an opaque index); the analysis gets one `type_synonym pp = cfg_node` in
+  `Abstract_Domain`, retyping every solver index without per-site churn.
+- **`CFG_Enumeration`** — `intra_predecessors` (over `intra g`), `entry_calls`
+  and `return_calls` (over `calls g`, the latter reading `FunctionResult p` off
+  the callee entry); the retired `predecessors`/`combines`/`EA_Enter`/`mk_cfg`
+  enumerators are gone.
+- **`apply_tf` / `rhs`** — `apply_tf` is intra-only (`EA_Ret` = `tf_assign` at
+  `ret_var`, no `tf_ret` field; the `domain_transfer` record and both transfer
+  instances are unchanged). `rhs` is a finite join over three explicit sources:
+  intra `apply_tf`, callee-entry `tf_enter`, continuation `combine_collect_abs`
+  reading `env (FunctionResult p)`. No unified edge set, no `combines` relation.
+- **`Constraint_System_Sound`** — per-constraint lower bounds (`apply_tf_le_rhs`,
+  `tf_enter_le_rhs`, `combine_abs_le_rhs`, `s0_le_rhs_entry`) plus the `EA_Ret`
+  per-edge soundness. Local constraint soundness only; interprocedural
+  completeness stays with `valid_ltr`.
+- **`Activation_Local_Sound` / `Activation_Backbone`** — realigned to the
+  already-migrated `ltr_gamma` (EDGE over `intra`, CALL/COMB over `calls`); now
+  thin interpretation layers, no re-run of the `valid_ltr` induction.
+
+Monovariant precision note: a monovariant `rhs` shares one `env (FunctionResult
+p)` across all call sites, so two calls to the same procedure join their callee
+summaries — sound (call-specific restoration/assignment via the `calls` tuple)
+but not exact. Per-call separation is the keyed/context-sensitive layer's job.
+
+**Not yet migrated** (`Voblint_Analysis` still red downstream): the first
+remaining blockers are `LTR_Analysis_Sound` (the rhs-soundness client, still on
+the old equation shape), the effectful solver bridge `TD_Side_CFG` /
+`TD_Side_Tree` (`apply_etf`'s `EA_Enter` unit constructor, `etf_*`), the `DG_*`
+cluster, and the executable/example stack. `CFG_Prune` and `src/Examples/Voblint`
+still reference the retired `CFG_Path` / `edges` / `pp=nat`.
 
 ---
 
