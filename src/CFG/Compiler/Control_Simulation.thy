@@ -1446,6 +1446,11 @@ lemma intra_step_frame_eq:
   by (induction "(c, s, frs)" "(c', s', frs')" arbitrary: c s frs c' s' frs'
       rule: intra_step.induct) auto
 
+lemma intra_step_not_returning:
+  "intra_step \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> is_returning c"
+  by (induction "(c, s, frs)" "(c', s', frs')" arbitrary: c s frs c' s' frs'
+      rule: intra_step.induct) auto
+
 lemma pstep_intra_classify:
   "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow> \<not> is_returning c \<Longrightarrow>
    intra_step \<Pi> (c, s, frs) (c', s', frs')"
@@ -1991,6 +1996,133 @@ next
   then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
     by (simp add: src' fz)
   with cstepN show ?case by blast
+qed
+
+section \<open>Intra-procedural preservation and callee fall-through\<close>
+
+text \<open>An \<^const>\<open>intra_step\<close> of a \<open>Nested\<close> activation's outer command descends the \<^const>\<open>seq_after\<close>
+  spine to its \<^term>\<open>Seq inner Restore\<close> core: either the callee has completed (\<open>inner = SKIP\<close>, the
+  \<open>ISeq1\<close> fall-through exposing \<^const>\<open>Restore\<close>) or the callee takes one more intra step (all with the
+  frame stack unchanged, since intra steps ignore frames).\<close>
+lemma intra_step_seq_after_seq_restore:
+  "intra_step \<Pi> (seq_after (Seq inner Restore) afters, s, frs) src' \<Longrightarrow>
+   (inner = SKIP \<and> src' = (seq_after Restore afters, s, frs))
+   \<or> (\<exists>inner' s'. src' = (seq_after (Seq inner' Restore) afters, s', frs)
+        \<and> intra_step \<Pi> (inner, s, frs) (inner', s', frs))"
+proof (induction afters arbitrary: src' rule: rev_induct)
+  case Nil
+  obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
+  from Nil.prems sc have "intra_step \<Pi> (Seq inner Restore, s, frs) (c', s', frs')" by simp
+  from intra_Seq_cases[OF this] show ?case by (auto simp: sc)
+next
+  case (snoc a xs)
+  obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
+  from snoc.prems sc
+  have "intra_step \<Pi> (Seq (seq_after (Seq inner Restore) xs) a, s, frs) (c', s', frs')"
+    by (simp add: seq_after_snoc)
+  from intra_Seq_cases[OF this] obtain B' where
+    A: "c' = Seq B' a" "frs' = frs"
+      and B: "intra_step \<Pi> (seq_after (Seq inner Restore) xs, s, frs) (B', s', frs)"
+    by auto
+  from snoc.IH[OF B] show ?case
+  proof
+    assume "inner = SKIP \<and> (B', s', frs) = (seq_after Restore xs, s, frs)"
+    then show ?case using A sc by (auto simp: seq_after_snoc)
+  next
+    assume "\<exists>inner' s''. (B', s', frs) = (seq_after (Seq inner' Restore) xs, s'', frs)
+              \<and> intra_step \<Pi> (inner, s, frs) (inner', s'', frs)"
+    then show ?case using A sc by (auto simp: seq_after_snoc)
+  qed
+qed
+
+text \<open>
+  An \<^const>\<open>intra_step\<close> of any \<open>csim\<close> configuration is simulated by a \<^const>\<open>star\<close> of \<^const>\<open>cstep\<close>s
+  ending in a \<open>csim\<close> configuration.  Three shapes:
+    \<^enum> a \<open>Base\<close> activation makes an ordinary intra step (\<open>intra_step_simulation\<close> relocates it);
+    \<^enum> a \<open>Nested\<close> callee makes an ordinary intra step (descend, rebuild the wrapper);
+    \<^enum> a \<open>Nested\<close> callee \<^emph>\<open>completes\<close> (\<open>inner = SKIP\<close>): the \<open>ISeq1\<close> fall-through exposes \<^const>\<open>Restore\<close>,
+      the CFG runs the completed callee to its exit (\<open>control_at_skip_to_exit\<close>) and takes the
+      \<^term>\<open>EA_Ret None p\<close> edge into \<^term>\<open>FunctionResult p\<close> (\<open>compiled_at_exit\<close>), landing in a
+      \<open>Returning\<close> activation.
+  The \<open>Returning\<close> case is vacuous: an intra step never fires on a \<^const>\<open>pop_ready\<close> source.
+\<close>
+theorem csim_intra_completion:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_compiled \<Pi> g \<Longrightarrow>
+   intra_step \<Pi> (c, s, frs) src' \<Longrightarrow>
+   \<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
+  case (Base p c0 n cc vv ss)
+  obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
+  from Base.prems(2) sc have istep: "intra_step \<Pi> (cc, ss, []) (c', s', frs')" by simp
+  from Base.hyps(3) obtain decl where pdecl: "\<Pi> p = Some decl" "c0 = body decl"
+    by (rule proc_activationD)
+  have srcbody: "source_com c0"
+    using procs_compiled_source_com[OF Base.prems(1) \<open>\<Pi> p = Some decl\<close>] \<open>c0 = body decl\<close> by simp
+  from Base.hyps(2) obtain n' en ex E K where comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
+      and Esub: "E \<subseteq> intra g" by (auto simp: compiled_at_def)
+  from intra_step_simulation[OF Base.hyps(1) istep comp Esub srcbody, where stk = "[]"]
+  obtain v' where feq: "frs' = []" and loc': "control_at \<Pi> p c0 n c' v'"
+      and cstar: "star (cstep g) (vv, ss, []) (v', s', [])" by blast
+  have "csim \<Pi> g (c', s', []) (v', s', [])" by (rule csim.Base[OF loc' Base.hyps(2) Base.hyps(3)])
+  with cstar show ?case using sc feq by auto
+next
+  case (Returning w pc c0c nc afters cont callee caller dst p)
+  from Returning.prems(2) have "\<not> is_returning (seq_after w afters)"
+    by (cases src') (auto dest: intra_step_not_returning)
+  with Returning.hyps(1) show ?case by (simp add: pop_ready_is_returning)
+next
+  case (Nested inner s0 frs0 v0 stk0 pc c0c nc afters cont caller dst)
+  from Nested.prems(2)
+  have "intra_step \<Pi> (seq_after (Seq inner Restore) afters, s0, frs0 @ [Frame caller dst]) src'" .
+  from intra_step_seq_after_seq_restore[OF this] show ?case
+  proof
+    assume fall: "inner = SKIP \<and> src' = (seq_after Restore afters, s0, frs0 @ [Frame caller dst])"
+    then have innerSKIP: "inner = SKIP" and src': "src' = (seq_after Restore afters, s0, frs0 @ [Frame caller dst])"
+      by auto
+    have baseInner: "csim \<Pi> g (SKIP, s0, frs0) (v0, s0, stk0)" using Nested.hyps(1) innerSKIP by simp
+    from baseInner obtain pin c0in nin where
+      ctrl: "control_at \<Pi> pin c0in nin SKIP v0" and cacc: "compiled_at \<Pi> g pin c0in nin"
+        and frs0nil: "frs0 = []" and stk0nil: "stk0 = []"
+    proof (cases rule: csim.cases)
+      case (Base p2 c02 n2) with that show ?thesis by auto
+    qed simp_all
+    from cacc obtain n' en ex E K where comp: "compile \<Pi> pin c0in nin = (n', en, ex, E, K)"
+      and Esub: "E \<subseteq> intra g" and exitedge: "(ex, EA_Ret None pin, FunctionResult pin) \<in> intra g"
+      by (auto simp: compiled_at_def)
+    have star1: "star (cstep g) (v0, s0, [(cont, dst, caller)]) (ex, s0, [(cont, dst, caller)])"
+      by (rule control_at_skip_to_exit[OF ctrl refl comp Esub])
+    have "cstep g (ex, s0, [(cont, dst, caller)]) (FunctionResult pin, s0, [(cont, dst, caller)])"
+      using cstep.Intra[OF exitedge edge_step_EA_Ret_ret_store] by simp
+    with star1 have star: "star (cstep g) (v0, s0, [(cont, dst, caller)])
+                             (FunctionResult pin, s0, [(cont, dst, caller)])"
+      by (meson star_trans cstep_star_single)
+    have "csim \<Pi> g (seq_after Restore afters, s0, [Frame caller dst])
+                   (FunctionResult pin, s0, [(cont, dst, caller)])"
+      by (rule csim.Returning[OF _ Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)]) simp
+    then have "csim \<Pi> g src' (FunctionResult pin, s0, [(cont, dst, caller)])"
+      using src' frs0nil by simp
+    with star show ?case using stk0nil by auto
+  next
+    assume "\<exists>inner' s'. src' = (seq_after (Seq inner' Restore) afters, s', frs0 @ [Frame caller dst])
+              \<and> intra_step \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', frs0 @ [Frame caller dst])"
+    then obtain inner' s' where
+      src': "src' = (seq_after (Seq inner' Restore) afters, s', frs0 @ [Frame caller dst])"
+        and stepin: "intra_step \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', frs0 @ [Frame caller dst])"
+      by blast
+    from intra_step_any_frame[OF stepin] have stepin': "intra_step \<Pi> (inner, s0, frs0) (inner', s', frs0)" .
+    from Nested.hyps(2)[OF Nested.prems(1) stepin'] obtain v' t' stk' where
+      cstepin: "star (cstep g) (v0, s0, stk0) (v', t', stk')"
+        and csimin: "csim \<Pi> g (inner', s', frs0) (v', t', stk')" by auto
+    have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
+    have cstepN: "star (cstep g) (v0, s0, stk0 @ [(cont, dst, caller)])
+                                 (v', s', stk' @ [(cont, dst, caller)])"
+      using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
+    have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', frs0 @ [Frame caller dst])
+                   (v', s', stk' @ [(cont, dst, caller)])"
+      by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)])
+    then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])" by (simp add: src')
+    with cstepN show ?case by blast
+  qed
 qed
 
 section \<open>Regression: the tail-position callee entry is representable\<close>
