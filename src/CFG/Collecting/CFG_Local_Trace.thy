@@ -21,8 +21,8 @@ text \<open>
   Semantic boundary.  The trace represents only procedure-activation structure.  Lexical
   scopes are compiled into \<open>intra\<close> control flow and are not activations.  The intended
   correspondence for the later compiler proof (not proved here) is: a source
-  \<open>ActivationFrame\<close> corresponds to \<open>Call\<close>/\<open>Resume\<close> structure; a source \<open>LexicalFrame\<close>
-  to \<open>intra\<close> execution; a source \<open>Unwind\<close> to the path to \<open>EA_Ret\<close> / \<open>FunctionResult\<close>.
+  a source activation frame corresponds to \<open>Call\<close>/\<open>Resume\<close> structure; a source
+  \<open>Unwind\<close> to the path to \<open>EA_Ret\<close> / \<open>FunctionResult\<close>.
 
   Call-entry and return-value transfer are the established concrete primitives:
   \<^const>\<open>enter_state\<close> (globals preserved, locals reset to zero) at a call, and

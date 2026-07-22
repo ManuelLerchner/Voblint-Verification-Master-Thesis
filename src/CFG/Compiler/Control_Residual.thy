@@ -7,17 +7,13 @@ section \<open>Located control inside a compiled procedure fragment\<close>
 text \<open>
   \<open>control_at \<Pi> p c n residual v\<close> relates a source runtime residual command to the CFG node
   it currently sits at, inside the fragment obtained by \<open>compile \<Pi> p c n\<close> (procedure \<open>p\<close>,
-  source original command \<open>c\<close>, base counter \<open>n\<close>).  It is a pure control relation: it fixes
-  the node, not the store, so it is stable under the store transformations that the source
-  performs but the flattened CFG does not (scope-local reset).  Store agreement is a separate
-  simulation-stage concern.
+  source original command \<open>c\<close>, base counter \<open>n\<close>).  It is a pure control relation: it fixes the
+  node, not the store; store agreement is a separate simulation-stage concern.
 
-  The relation covers one activation's control.  A \<^const>\<open>Scope\<close> is a lexical frame: it is
-  flattened into ordinary intra flow, so its running residual \<open>Seq r Restore\<close> stays inside the
-  same fragment and never creates an activation.  A \<^const>\<open>Call\<close> crosses into a different
-  procedure fragment; \<open>control_at\<close> for the call fragment therefore records only the call site
-  and the post-return continuation node, while the callee body is located by \<open>control_at\<close> for
-  the callee, tied to the caller through the activation stack of the located executor \<open>cstep\<close>.
+  The relation covers one activation's control.  A \<^const>\<open>Call\<close> crosses into a different
+  procedure fragment; \<open>control_at\<close> for the call fragment records only the call site and the
+  post-return continuation node, while the callee body is located by \<open>control_at\<close> for the
+  callee, tied to the caller through the activation stack of the located executor \<open>cstep\<close>.
 \<close>
 
 subsection \<open>The compiled entry node is the base counter\<close>
@@ -35,14 +31,11 @@ text \<open>
   Residual coverage.  For each source form the located clauses fix which node the residual
   occupies; runtime-only forms are handled as follows.
     \<^item> \<^const>\<open>SKIP\<close>, assignment, sequence (before and after left completion), conditionals,
-      loops, scope entry, call site, entered continuation, and explicit \<^const>\<open>Return\<close> all map
-      to a compiled node.
-    \<^item> lexical restoration (\<^const>\<open>Restore\<close> inside a \<^const>\<open>Scope\<close>) maps to the body exit node,
-      whose outgoing closing \<^term>\<open>EA_Nop\<close> edge is the concrete restoration step; there is no
-      separate node.
-    \<^item> \<^const>\<open>Unwind\<close> is not located here: once a \<^const>\<open>Return\<close> fires the CFG control is already
-      at \<^term>\<open>FunctionResult p\<close> (through the \<^term>\<open>EA_Ret\<close> edge) and the remaining unwinding is
-      an invariant between the source frame stack and the activation stack, discharged by the
+      loops, call site, entered continuation, and explicit \<^const>\<open>Return\<close> all map to a
+      compiled node.
+    \<^item> \<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> are runtime-only activation markers, not located
+      here: once a \<^const>\<open>Return\<close> fires the CFG control is already at \<^term>\<open>FunctionResult p\<close>
+      (through the \<^term>\<open>EA_Ret\<close> edge) and the remaining activation return is discharged by the
       located executor \<open>cstep\<close>, not by a fragment node.
 \<close>
 
@@ -86,17 +79,6 @@ where
 | WhileDone:
     "compile \<Pi> p (While b c) n = (n', en, ex, E, K) \<Longrightarrow>
      control_at \<Pi> p (While b c) n SKIP ex"
-| ScopeHead:
-    "control_at \<Pi> p (Scope c) n (Scope c) (Statement n)"
-| ScopeBody:
-    "control_at \<Pi> p c (Suc n) r v \<Longrightarrow>
-     control_at \<Pi> p (Scope c) n (Seq r Restore) v"
-| ScopeRestore:
-    "compile \<Pi> p c (Suc n) = (n1, en, bex, E, K) \<Longrightarrow>
-     control_at \<Pi> p (Scope c) n Restore bex"
-| ScopeDone:
-    "compile \<Pi> p (Scope c) n = (n', en, ex, E, K) \<Longrightarrow>
-     control_at \<Pi> p (Scope c) n SKIP ex"
 | CallHead:
     "control_at \<Pi> p (Call dst q actuals) n (Call dst q actuals) (Statement n)"
 | CallDone:
@@ -122,8 +104,6 @@ next
   case (If b c1 c2) show ?case by (rule control_at.IfHead)
 next
   case (While b c) show ?case by (rule control_at.WhileHead)
-next
-  case (Scope c) show ?case by (rule control_at.ScopeHead)
 next
   case (Call dst q actuals) show ?case by (rule control_at.CallHead)
 next

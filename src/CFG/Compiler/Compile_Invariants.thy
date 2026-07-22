@@ -27,7 +27,6 @@ fun has_call :: "com \<Rightarrow> bool" where
 | "has_call (Seq c1 c2) = (has_call c1 \<or> has_call c2)"
 | "has_call (If _ c1 c2) = (has_call c1 \<or> has_call c2)"
 | "has_call (While _ c) = has_call c"
-| "has_call (Scope c) = has_call c"
 | "has_call _ = False"
 
 fun returns_in :: "aexp option \<Rightarrow> com \<Rightarrow> bool" where
@@ -35,7 +34,6 @@ fun returns_in :: "aexp option \<Rightarrow> com \<Rightarrow> bool" where
 | "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
 | "returns_in e (If _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
 | "returns_in e (While _ c) = returns_in e c"
-| "returns_in e (Scope c) = returns_in e c"
 | "returns_in e _ = False"
 
 subsection \<open>Return edges and call-freeness\<close>
@@ -74,14 +72,6 @@ next
     by (auto split: prod.splits)
   from While.prems(2) have "returns_in e c" by simp
   then show ?case using While.IH[OF c1] E by auto
-next
-  case (Scope c)
-  from Scope.prems(1) obtain n1 en ex E1 K1 where
-    c1: "compile \<Pi> p c (Suc n) = (n1, en, ex, E1, K1)"
-    and E: "E = {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E1"
-    by (auto split: prod.splits)
-  from Scope.prems(2) have "returns_in e c" by simp
-  then show ?case using Scope.IH[OF c1] E by auto
 next
   case (Return e') then show ?case by (auto split: if_splits)
 qed auto
@@ -341,11 +331,11 @@ qed
 
 subsection \<open>Regression examples\<close>
 
-text \<open>Early return in a scope: the compiled fragment reaches \<open>FunctionResult p\<close> through
+text \<open>Early return before dead code: the compiled fragment reaches \<open>FunctionResult p\<close> through
   \<open>EA_Ret (Some e) p\<close>, and the dead code's wired-in entry (the return's normal-exit) has no
   incoming edge --- so \<open>dead\<close> is off the return-to-result path.\<close>
-lemma ex_return_in_scope:
-  assumes "compile \<Pi> p (Scope (Seq (Return (Some e)) (Assign yv ay))) n = (n', en, ex, E, K)"
+lemma ex_return_before_dead:
+  assumes "compile \<Pi> p (Seq (Return (Some e)) (Assign yv ay)) n = (n', en, ex, E, K)"
   shows "\<exists>k. (Statement k, EA_Ret (Some e) p, FunctionResult p) \<in> E"
   using compile_return_edge[OF assms] by simp
 

@@ -97,8 +97,7 @@ text \<open>The source frame stack carries both lexical (scope) and activation (
 
 fun act_frames :: "frame list \<Rightarrow> (store \<times> vname option) list" where
   "act_frames [] = []"
-| "act_frames (Frame s d ActivationFrame # frs) = (s, d) # act_frames frs"
-| "act_frames (Frame s d LexicalFrame # frs) = act_frames frs"
+| "act_frames (Frame s d # frs) = (s, d) # act_frames frs"
 
 definition cframe_act :: "cframe \<Rightarrow> store \<times> vname option" where
   "cframe_act cf = (case cf of (cont, d, s) \<Rightarrow> (s, d))"
@@ -112,21 +111,16 @@ definition frames_match :: "frame list \<Rightarrow> cframe list \<Rightarrow> b
 lemma frames_match_Nil [simp]: "frames_match [] []"
   by (simp add: frames_match_def)
 
-text \<open>A lexical frame adds no activation: it is invisible to the CFG stack.\<close>
-lemma frames_match_lexical [simp]:
-  "frames_match (Frame s d LexicalFrame # frs) stk = frames_match frs stk"
-  by (simp add: frames_match_def)
-
 text \<open>An activation frame matches the top CFG activation on caller store and destination.\<close>
 lemma frames_match_activation:
-  "frames_match (Frame s d ActivationFrame # frs) ((cont, d, s) # stk)
+  "frames_match (Frame s d # frs) ((cont, d, s) # stk)
      = frames_match frs stk"
   by (simp add: frames_match_def cframe_act_def)
 
 text \<open>Call entry creates exactly one child activation on top of the preserved caller stack.\<close>
 lemma frames_match_call:
   "frames_match frs stk \<Longrightarrow>
-   frames_match (Frame caller dst ActivationFrame # frs) ((cont, dst, caller) # stk)"
+   frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
   by (simp add: frames_match_activation)
 
 subsection \<open>Fragment edge lemmas\<close>
@@ -141,40 +135,40 @@ lemma compile_seq_call_edge:
           Statement (Suc n)) \<in> K"
   using assms by (auto split: prod.splits)
 
-text \<open>An early \<^const>\<open>Return\<close> inside a scoped body compiles to an \<^term>\<open>EA_Ret\<close> edge from the
+text \<open>An early \<^const>\<open>Return\<close> in a sequence compiles to an \<^term>\<open>EA_Ret\<close> edge from the
   return's node straight to \<^term>\<open>FunctionResult p\<close> --- located returns target the enclosing
   function result.  The dead code after the return sits behind a separate node the return
   edge bypasses.\<close>
-lemma compile_scope_return_edge:
-  "compile \<Pi> p (Scope (Seq (Return (Some e)) dead)) n = (n', en, ex, E, K) \<Longrightarrow>
-   (Statement (Suc n), EA_Ret (Some e) p, FunctionResult p) \<in> E"
+lemma compile_seq_return_edge:
+  "compile \<Pi> p (Seq (Return (Some e)) dead) n = (n', en, ex, E, K) \<Longrightarrow>
+   (Statement n, EA_Ret (Some e) p, FunctionResult p) \<in> E"
   by (auto split: prod.splits)
 
 subsection \<open>Regression example: early return skips dead code\<close>
 
 text \<open>
-  A configuration inside \<^term>\<open>Scope (Seq (Return (Some e)) dead)\<close> is located at the return's
+  A configuration inside \<^term>\<open>Seq (Return (Some e)) dead\<close> is located at the return's
   node, and a single \<^const>\<open>cstep\<close> along the compiled \<^term>\<open>EA_Ret\<close> edge reaches
   \<^term>\<open>FunctionResult p\<close> --- publishing \<open>e\<close> into \<^const>\<open>ret_var\<close> --- without ever locating the
   dead code (\<^term>\<open>FunctionResult p\<close> is not a \<^term>\<open>Statement\<close> node, so it is disjoint from the
   \<open>dead\<close> fragment).
 \<close>
 theorem example_early_return_skips_dead:
-  assumes comp: "compile \<Pi> p (Scope (Seq (Return (Some e)) dead)) n = (n', en, ex, E, K)"
+  assumes comp: "compile \<Pi> p (Seq (Return (Some e)) dead) n = (n', en, ex, E, K)"
       and sub: "E \<subseteq> intra g"
-  shows "control_at \<Pi> p (Scope (Seq (Return (Some e)) dead)) n
-           (Seq (Seq (Return (Some e)) dead) Restore) (Statement (Suc n))"
-    and "cstep g (Statement (Suc n), s, stk)
+  shows "control_at \<Pi> p (Seq (Return (Some e)) dead) n
+           (Seq (Return (Some e)) dead) (Statement n)"
+    and "cstep g (Statement n, s, stk)
            (FunctionResult p, s(ret_var := aval e s), stk)"
     and "\<forall>k. FunctionResult p \<noteq> Statement k"
 proof -
-  show "control_at \<Pi> p (Scope (Seq (Return (Some e)) dead)) n
-          (Seq (Seq (Return (Some e)) dead) Restore) (Statement (Suc n))"
-    by (rule control_at.ScopeBody[OF control_at.SeqLeft[OF control_at.ReturnHead]])
-  have "(Statement (Suc n), EA_Ret (Some e) p, FunctionResult p) \<in> intra g"
-    using compile_scope_return_edge[OF comp] sub by blast
+  show "control_at \<Pi> p (Seq (Return (Some e)) dead) n
+          (Seq (Return (Some e)) dead) (Statement n)"
+    by (rule control_at.SeqLeft[OF control_at.ReturnHead])
+  have "(Statement n, EA_Ret (Some e) p, FunctionResult p) \<in> intra g"
+    using compile_seq_return_edge[OF comp] sub by blast
   from cstep_ret[OF this]
-  show "cstep g (Statement (Suc n), s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
+  show "cstep g (Statement n, s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
     by simp
   show "\<forall>k. FunctionResult p \<noteq> Statement k" by simp
 qed
@@ -207,7 +201,7 @@ text \<open>The frame bookkeeping of the nested call: the child activation sits 
   activation is unchanged beneath it.\<close>
 lemma example_nested_call_frames:
   "frames_match frs stk \<Longrightarrow>
-   frames_match (Frame caller (Some rin) ActivationFrame # frs)
+   frames_match (Frame caller (Some rin) # frs)
      ((Statement (Suc n), Some rin, caller) # stk)"
   by (rule frames_match_call)
 

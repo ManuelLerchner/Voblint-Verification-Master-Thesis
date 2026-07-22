@@ -71,7 +71,6 @@ syntax
   "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
   "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)
-  "_imp2_scope"  :: "imp2_stmts \<Rightarrow> imp2_stmt"                   ("scope { _ }"            [61] 61)
   "_imp2_call0"  :: "id \<Rightarrow> imp2_stmt"                           ("_'(')"                  [1000] 61)
   "_imp2_call"   :: "id \<Rightarrow> imp2_actuals \<Rightarrow> imp2_stmt"         ("_'( _ ')"               [1000, 0] 61)
   "_imp2_callret0" :: "id \<Rightarrow> id \<Rightarrow> imp2_stmt"              ("_ := _'(')"              [900, 1000] 61)
@@ -126,7 +125,6 @@ parse_translation \<open>
     val c_Seq    = "IMP2_Proc.com.Seq"
     val c_If     = "IMP2_Proc.com.If"
     val c_While  = "IMP2_Proc.com.While"
-    val c_Scope  = "IMP2_Proc.com.Scope"
     val c_Call   = "IMP2_Proc.com.Call"
     val c_proc_decl_of = "IMP2_Proc.proc_decl_of"
 
@@ -252,7 +250,6 @@ parse_translation \<open>
       | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
-      | stmt_tr (Const ("_imp2_scope",  _) $ s)     = K c_Scope $ stmts_tr s
       | stmt_tr (Const ("_imp2_call0",   _) $ Free (p, _)) =
           K c_Call $ K c_None $ HOLogic.mk_string p $ K c_Nil
       | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _) $ actuals) =

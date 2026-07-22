@@ -68,11 +68,6 @@ where
            (Statement n, EA_AssumeNot b, Statement n1),
            (ex1, EA_Nop, Statement n)} \<union> E1,
           K1))"
-| "compile \<Pi> p (Scope c) n =
-     (let (n1, en, ex, E, K) = compile \<Pi> p c (Suc n)
-      in (Suc n1, Statement n, Statement n1,
-          {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E,
-          K))"
 | "compile \<Pi> p (Call dst q actuals) n =
      (Suc (Suc n), Statement n, Statement (Suc n),
       {},
@@ -154,12 +149,6 @@ next
     c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)" and n': "n' = Suc n1"
     by (auto split: prod.splits)
   from While.IH[OF c1] n' show ?case by simp
-next
-  case (Scope c)
-  then obtain n1 en1 ex1 E1 K1 where
-    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)" and n': "n' = Suc n1"
-    by (auto split: prod.splits)
-  from Scope.IH[OF c1] n' show ?case by simp
 qed (auto split: prod.splits option.splits)
 
 text \<open>The entry and normal-exit nodes are \<open>Statement\<close> nodes inside the counter range.\<close>
@@ -282,29 +271,6 @@ next
   have "frag_stmts E K = frag_stmts {(Statement n, EA_Assume b, en1),
                  (Statement n, EA_AssumeNot b, Statement n1),
                  (ex1, EA_Nop, Statement n)} {} \<union> frag_stmts E1 K1"
-    unfolding E K by (rule frag_stmts_Un)
-  also have "... \<subseteq> {n..<Suc n1}" using lit r1 m1 by fastforce
-  finally show ?case unfolding n' .
-next
-  case (Scope c)
-  from Scope.prems obtain n1 en ex E1 K1 where
-    c1: "compile \<Pi> p c (Suc n) = (n1, en, ex, E1, K1)"
-    and n': "n' = Suc n1"
-    and E: "E = {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} \<union> E1"
-    and K: "K = {} \<union> K1"
-    by (auto split: prod.splits)
-  have m1: "Suc n \<le> n1" using compile_counter_mono[OF c1] .
-  have r1: "frag_stmts E1 K1 \<subseteq> {Suc n..<n1}" using Scope.IH[OF c1] .
-  obtain k where en: "en = Statement k" "Suc n \<le> k" "k < n1"
-    using compile_entry_exit_stmt[OF c1] by blast
-  obtain ka where ex: "ex = Statement ka" "Suc n \<le> ka" "ka < n1"
-    using compile_entry_exit_stmt[OF c1] by blast
-  have lit: "frag_stmts {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} {}
-               \<subseteq> {n..<Suc n1}"
-    using en ex m1 by (auto simp: frag_stmts_def)
-  have "frag_stmts E K
-          = frag_stmts {(Statement n, EA_Nop, en), (ex, EA_Nop, Statement n1)} {}
-              \<union> frag_stmts E1 K1"
     unfolding E K by (rule frag_stmts_Un)
   also have "... \<subseteq> {n..<Suc n1}" using lit r1 m1 by fastforce
   finally show ?case unfolding n' .
@@ -538,15 +504,15 @@ text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> repr
   callee \<^const>\<open>ret_var\<close> written into the destination.  \<open>caller\<close> is the saved caller store in
   the activation frame, \<open>callee\<close> the callee-exit store.\<close>
 lemma combine_collect_eq_source_unwind:
-  assumes "pstep \<Pi> (Seq Unwind Restore, callee, Frame caller dst ActivationFrame # frs)
+  assumes "pstep \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
                     (SKIP, s', frs)"
   shows "s' = combine_collect dst caller callee"
   using assms by (auto simp: combine_collect_def)
 
 text \<open>The same combine also matches the normal-completion \<open>Restore\<close> step, which fires once the
-  callee body has reduced to \<^const>\<open>SKIP\<close>: the frame kind does not change the combined store.\<close>
+  callee body has reduced to \<^const>\<open>SKIP\<close>: the combined store is fixed by the destination and stores.\<close>
 lemma combine_collect_eq_source_restore:
-  assumes "pstep \<Pi> (Restore, callee, Frame caller dst k # frs) (SKIP, s', frs)"
+  assumes "pstep \<Pi> (Restore, callee, Frame caller dst # frs) (SKIP, s', frs)"
   shows "s' = combine_collect dst caller callee"
   using assms by (auto simp: combine_collect_def)
 

@@ -67,7 +67,6 @@ fun string_of_com :: "com \<Rightarrow> string" where
     @ '') else ('' @ string_of_com c2 @ '')''"
 | "string_of_com (While b c) =
     ''while ('' @ string_of_bexp b @ '') do ('' @ string_of_com c @ '')''"
-| "string_of_com (Scope c) = ''scope ('' @ string_of_com c @ '')''"
 | "string_of_com (Call dst p es) =
     (case dst of
       None \<Rightarrow> p @ ''('' @ join_source '', '' (map string_of_aexp es) @ '')''
