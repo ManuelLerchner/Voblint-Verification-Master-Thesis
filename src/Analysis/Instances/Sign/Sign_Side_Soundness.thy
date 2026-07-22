@@ -83,13 +83,8 @@ lemma sign_sound_etf_retain:
   by (rule sound_effectful_transfer_retain_of_transfer [OF sign_is_sound_transfer])
 
 lemma sign_etf_retain_enter:
-  "etf_enter sign_etf_retain xs es u = retain_edge_tree (apply_tf sign_tf (EA_Enter xs es)) u"
-proof -
-  have "etf_enter sign_etf_retain xs es u = apply_etf sign_etf_retain (EA_Enter xs es) u" by simp
-  also have "\<dots> = retain_edge_tree (apply_tf sign_tf (EA_Enter xs es)) u"
-    by (rule sign_etf_retain_edge_tree)
-  finally show ?thesis .
-qed
+  "etf_enter sign_etf_retain xs es u = retain_edge_tree (tf_enter sign_tf xs es) u"
+  by (simp add: sign_etf_retain_def retain_etf_of_transfer_def)
 
 text \<open>
   The fresh callee frame for the sign enter transfer: locals reset to @{term STop}
@@ -106,13 +101,8 @@ lemma sign_le_STop [simp]: "(a::sign) \<le> STop"
   by (cases a) (simp_all add: less_eq_sign_def)
 
 lemma sign_etf_unit_enter:
-  "etf_enter sign_etf_unit xs es u = unit_edge_tree (apply_tf sign_tf (EA_Enter xs es)) u"
-proof -
-  have "etf_enter sign_etf_unit xs es u = apply_etf sign_etf_unit (EA_Enter xs es) u" by simp
-  also have "\<dots> = unit_edge_tree (apply_tf sign_tf (EA_Enter xs es)) u"
-    by (rule sign_etf_unit_edge_tree)
-  finally show ?thesis .
-qed
+  "etf_enter sign_etf_unit xs es u = unit_edge_tree (tf_enter sign_tf xs es) u"
+  by (simp add: sign_etf_unit_def unit_etf_of_transfer_def)
 
 lemma sign_sound_etf_unit_framed:
   "sound_effectful_transfer_framed sign_etf_unit fresh_frame_sign"

@@ -90,13 +90,15 @@ where
     etf_assign     = (\<lambda>x e u. retain_edge_tree (apply_tf tf (EA_Assign x e)) u),
     etf_assume     = (\<lambda>b u. retain_edge_tree (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. retain_edge_tree (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>xs es u. retain_edge_tree (apply_tf tf (EA_Enter xs es)) u),
+    etf_enter      = (\<lambda>xs es u. retain_edge_tree (tf_enter tf xs es) u),
     etf_combine    = unit_combine_tree
   \<rparr>"
 
 lemma apply_etf_retain_of_transfer:
   "apply_etf (retain_etf_of_transfer tf) a u = retain_edge_tree (apply_tf tf a) u"
-  unfolding retain_etf_of_transfer_def by (cases a) simp_all
+  unfolding retain_etf_of_transfer_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 lemma etf_combine_retain_of_transfer:
   "etf_combine (retain_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
@@ -454,7 +456,7 @@ where
     dgs_assign     = (\<lambda>x e. retain_hetero_step (apply_tf tf (EA_Assign x e))),
     dgs_assume     = (\<lambda>b. retain_hetero_step (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. retain_hetero_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (\<lambda>xs es. retain_hetero_step (apply_tf tf (EA_Enter xs es))),
+    dgs_enter      = (\<lambda>xs es. retain_hetero_step (tf_enter tf xs es)),
     dgs_combine    = retain_hetero_combine
   \<rparr>"
 

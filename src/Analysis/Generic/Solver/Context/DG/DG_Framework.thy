@@ -253,7 +253,8 @@ where
 | "dg_spec_step S (EA_Assign x e)  = dgs_assign S x e"
 | "dg_spec_step S (EA_Assume b)    = dgs_assume S b"
 | "dg_spec_step S (EA_AssumeNot b) = dgs_assume_not S b"
-| "dg_spec_step S (EA_Enter xs es)  = dgs_enter S xs es"
+| "dg_spec_step S (EA_Ret e p) =
+     (case e of None \<Rightarrow> dgs_nop S | Some a \<Rightarrow> dgs_assign S ret_var a)"
 
 definition apply_dg_spec ::
   "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
@@ -291,13 +292,15 @@ where
     dgs_assign     = (\<lambda>x e. unit_step (apply_tf tf (EA_Assign x e))),
     dgs_assume     = (\<lambda>b. unit_step (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (\<lambda>xs es. unit_step (apply_tf tf (EA_Enter xs es))),
+    dgs_enter      = (\<lambda>xs es. unit_step (tf_enter tf xs es)),
     dgs_combine    = unit_combine_step
   \<rparr>"
 
 lemma dg_spec_step_unit:
   "dg_spec_step (unit_dg_spec tf) a = unit_step (apply_tf tf a)"
-  unfolding unit_dg_spec_def by (cases a) simp_all
+  unfolding unit_dg_spec_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 
 
@@ -333,16 +336,16 @@ text \<open>
   that a monovariant and a context-sensitive analysis are both instances:
 
   \<^item> \<open>pred_sel\<close> selects the intra predecessors folded as Answers into a node.  The
-    monovariant instance uses \<^const>\<open>predecessor_list\<close> (an \<^const>\<open>EA_Enter\<close> edge
-    merges into the single callee context); the context-sensitive instance uses
-    \<^const>\<open>non_enter_predecessor_list\<close> and instead publishes routed callee seeds.
+    monovariant instance uses \<^const>\<open>intra_predecessor_list\<close> over \<^const>\<open>intra\<close>; a
+    callee entry over \<^const>\<open>calls\<close> merges into the single callee context, while the
+    context-sensitive instance instead publishes routed callee seeds.
   \<^item> \<open>cmb\<close> is the procedure-return combine tree (already fully abstract: the
     context-sensitive instance reads the callee exit under the routed context).
   \<^item> \<open>extra c v\<close> supplies additional per-node trees folded after the intra and
     combine trees.  Their Answers add to the node's local accumulator and their
     \<^const>\<open>Side\<close> effects are collected --- this is where a frame-entry seed
     \<^emph>\<open>read\<close> (a \<^const>\<open>QueryG\<close> of the incoming seed slot) and the caller-side
-    \<^const>\<open>EA_Enter\<close> \<^emph>\<open>publication\<close> (a routed \<^const>\<open>Side\<close> to the callee seed
+    call-entry \<^emph>\<open>publication\<close> (a routed \<^const>\<open>Side\<close> to the callee seed
     slot) live.  The monovariant instance supplies \<open>\<lambda>_ _. []\<close>.
 \<close>
 
@@ -363,8 +366,8 @@ where
             intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
                         (pred_sel g v);
-            comb = map (\<lambda>(cc, ex, dst). cmb c dst cc ex)
-                       (combine_predecessor_list g v);
+            comb = map (\<lambda>(cc, dst, ex). cmb c dst cc ex)
+                       (return_call_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb @ extra c v)
         in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
 
@@ -377,8 +380,8 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg:
      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
               (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
            (pred_sel g v)
-      @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex)
-            (combine_predecessor_list g v)
+      @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex)
+            (return_call_list g v)
       @ extra ctx v)) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
         traverse_side_rhs_fold_dg)

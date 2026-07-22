@@ -270,7 +270,7 @@ definition named_etf :: "(gname, sign) effectful_domain_transfer" where
        etf_assign     = \<lambda>x a. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assign x a)),
        etf_assume     = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assume b)),
        etf_assume_not = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_AssumeNot b)),
-       etf_enter      = (\<lambda>xs es. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Enter xs es))),
+       etf_enter      = (\<lambda>xs es. route_tree (\<lambda>_. Gpos) (tf_enter sign_tf xs es)),
        etf_combine    = route_combine (\<lambda>_. Gneg) \<rparr>"
 
 lemma apply_etf_named:

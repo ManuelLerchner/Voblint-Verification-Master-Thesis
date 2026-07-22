@@ -585,8 +585,8 @@ where
                                apply_tf tfD (EA_Assume b) d)),
     dgs_assume_not = (\<lambda>b d g. (apply_tf tfG (EA_AssumeNot b) g,
                                apply_tf tfD (EA_AssumeNot b) d)),
-    dgs_enter      = (\<lambda>xs es d g. (apply_tf tfG (EA_Enter xs es) g,
-                                   apply_tf tfD (EA_Enter xs es) d)),
+    dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
+                                   tf_enter tfD xs es d)),
     dgs_combine    = (\<lambda>dst dc de g. (combine_collect_abs dst g g, combine_collect_abs dst dc de))
   \<rparr>"
 
