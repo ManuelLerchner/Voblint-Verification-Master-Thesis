@@ -409,16 +409,9 @@ inductive_cases intra_WhileE:  "intra_step \<Pi> (While b c, s, frs) y"
 inductive_cases intra_CallE:   "intra_step \<Pi> (Call dst q actuals, s, frs) y"
 inductive_cases intra_ReturnE: "intra_step \<Pi> (Return e, s, frs) y"
 
-text \<open>Every intra step is a source small step.\<close>
-lemma intra_step_pstep: "intra_step \<Pi> x y \<Longrightarrow> pstep \<Pi> x y"
-  by (induction rule: intra_step.induct) (auto intro: pstep.intros pstep.Seq2)
 
 text \<open>Destructured inversions: each intra step of a compound has exactly the expected outcomes.\<close>
 
-lemma intra_Assign_case:
-  "intra_step \<Pi> (Assign x a, s, frs) (c', s', frs') \<Longrightarrow>
-   c' = SKIP \<and> s' = s(x := aval a s) \<and> frs' = frs"
-  by (auto elim: intra_AssignE)
 
 lemma intra_Seq_cases:
   "intra_step \<Pi> (Seq c1 c2, s, frs) (c', s', frs') \<Longrightarrow>
@@ -431,10 +424,6 @@ lemma intra_If_cases:
    (bval b s \<and> c' = c1 \<and> s' = s \<and> frs' = frs) \<or> (\<not> bval b s \<and> c' = c2 \<and> s' = s \<and> frs' = frs)"
   by (auto elim: intra_IfE)
 
-lemma intra_While_case:
-  "intra_step \<Pi> (While b c, s, frs) (c', s', frs') \<Longrightarrow>
-   c' = If b (Seq c (While b c)) SKIP \<and> s' = s \<and> frs' = frs"
-  by (auto elim: intra_WhileE)
 
 subsection \<open>Intra-step simulation\<close>
 
@@ -677,86 +666,6 @@ lemma frames_match_Cons_iff:
   "frames_match (Frame s dst # frs) ((cont, dst, s) # stk) = frames_match frs stk"
   by (simp add: frames_match_def cframe_act_def)
 
-subsection \<open>Continuation-node correspondence\<close>
-
-text \<open>The continuation node recorded on a CFG call frame is exactly where \<^const>\<open>control_at\<close>
-  locates the caller's post-call residual (the call replaced by \<^const>\<open>SKIP\<close>).  This is read off
-  \<open>control_at_call_edge\<close>: the same \<open>Statement (Suc k)\<close> both carries the emitted call edge's
-  continuation and locates the caller residual \<^const>\<open>SKIP\<close>.\<close>
-lemma call_continuation_control:
-  assumes "control_at \<Pi> p c0 n (Call dst q actuals) v"
-      and "compile \<Pi> p c0 n = (n', en, ex, E, K)"
-  shows "\<exists>k. v = Statement k
-          \<and> (Statement k, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
-             FunctionEntry q, Statement (Suc k)) \<in> K
-          \<and> control_at \<Pi> p c0 n SKIP (Statement (Suc k))"
-  using control_at_call_edge[OF assms(1) refl assms(2)] .
-
-subsection \<open>Call transition\<close>
-
-text \<open>
-  A source \<^const>\<open>Call\<close> step is simulated by exactly one interprocedural \<^const>\<open>cstep\<close> along the
-  compiled call edge.  The four conclusions are the required call correspondences:
-    \<^enum> the source \<^const>\<open>pstep\<close> evaluates the actuals in the caller store \<open>s\<close>, resets callee locals
-      with \<^const>\<open>enter_state\<close>, and pushes \<^term>\<open>Frame s dst\<close>;
-    \<^enum> the CFG \<^const>\<open>cstep\<close> traverses the call edge, applies \<^const>\<open>call_enter\<close>, reaches
-      \<^term>\<open>FunctionEntry q\<close>, and pushes \<^term>\<open>(cont, dst, s)\<close>;
-    \<^enum> the CFG callee-entry store equals the source callee-entry store literally
-      (\<open>call_enter_eq_source_call_store\<close>);
-    \<^enum> the pushed frames correspond and the tails stay matched (\<open>frames_match_Cons_iff\<close>).
-\<close>
-lemma call_transition:
-  assumes decl: "\<Pi> q = Some decl"
-      and arity: "length actuals = length (formals decl)"
-      and distinct: "distinct (formals decl)"
-      and edge: "(u, CallEdge dst (formals decl) actuals, FunctionEntry q, cont) \<in> calls g"
-      and fm: "frames_match frs stk"
-  shows "pstep \<Pi> (Call dst q actuals, s, frs)
-           (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
-            Frame s dst # frs)"       (is ?src)
-    and "cstep g (u, s, stk)
-           (FunctionEntry q,
-            call_enter (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"  (is ?cfg)
-    and "call_enter (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"  (is ?store)
-    and "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"                        (is ?frames)
-proof -
-  show ?src
-    using decl arity distinct
-    by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
-  show ?cfg by (rule cstep.Call[OF edge])
-  show ?store by (rule call_enter_eq_source_call_store)
-  show ?frames using fm by (simp add: frames_match_Cons_iff)
-qed
-
-text \<open>Located form: when the caller residual is the call at node \<open>v\<close>, the call edge of the transition
-  is the compiler-emitted one and the continuation node locates the caller's post-call residual.\<close>
-lemma call_transition_located:
-  assumes loc: "control_at \<Pi> p c0 n (Call dst q actuals) v"
-      and comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
-      and Ksub: "K \<subseteq> calls g"
-      and decl: "\<Pi> q = Some decl"
-  obtains k where "v = Statement k"
-    and "cstep g (Statement k, s, stk)
-           (FunctionEntry q, call_enter (CallEdge dst (formals decl) actuals) s,
-            (Statement (Suc k), dst, s) # stk)"
-    and "control_at \<Pi> p c0 n SKIP (Statement (Suc k))"
-proof -
-  from control_at_call_edge[OF loc refl comp] obtain k where
-    k: "v = Statement k"
-       "(Statement k, CallEdge dst (case \<Pi> q of Some d \<Rightarrow> formals d | None \<Rightarrow> []) actuals,
-         FunctionEntry q, Statement (Suc k)) \<in> K"
-       "control_at \<Pi> p c0 n SKIP (Statement (Suc k))" by blast
-  have kd: "(Statement k, CallEdge dst (formals decl) actuals, FunctionEntry q, Statement (Suc k))
-              \<in> K"
-    using k(2) by (simp add: decl)
-  have edge: "(Statement k, CallEdge dst (formals decl) actuals, FunctionEntry q, Statement (Suc k))
-                \<in> calls g"
-    using kd Ksub by blast
-  show ?thesis
-    by (rule that[OF k(1) cstep.Call[OF edge] k(3)])
-qed
 
 subsection \<open>Return initiation\<close>
 
@@ -775,140 +684,15 @@ lemma ret_store_Some [simp]: "ret_store (Some e) s = s(ret_var := aval e s)"
 lemma edge_step_EA_Ret_ret_store: "edge_step (EA_Ret e p) s = Some (ret_store e s)"
   by (simp add: ret_store_def)
 
-text \<open>
-  Return initiation: a source \<^const>\<open>Return\<close> and the emitted \<^term>\<open>EA_Ret e p\<close> edge both evaluate
-  \<open>e\<close> in the same store \<open>s\<close> and enter the returning phase, the source at \<^const>\<open>Unwind\<close> and the CFG
-  at \<^term>\<open>FunctionResult p\<close>, with the identical published store \<^const>\<open>ret_store\<close> and the frame
-  stack untouched.  Neither semantics pops a frame here; the returning-mode invariant is
-  established at \<^term>\<open>FunctionResult p\<close>.
-\<close>
-lemma return_initiation:
-  assumes loc: "control_at \<Pi> p c0 n (Return e) v"
-      and comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
-      and sub: "E \<subseteq> intra g"
-  obtains k where "v = Statement k"
-    and "pstep \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
-    and "cstep g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
-proof -
-  from control_at_return_edge[OF loc refl comp] obtain k where
-    k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E" by blast
-  have edge: "(Statement k, EA_Ret e p, FunctionResult p) \<in> intra g" using k(2) sub by blast
-  have src: "pstep \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
-    by (cases e) (auto simp: ret_store_def)
-  have cfg: "cstep g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
-    using cstep.Intra[OF edge edge_step_EA_Ret_ret_store] .
-  show ?thesis by (rule that[OF k(1) src cfg])
-qed
 
-subsection \<open>Return completion and normal fall-through\<close>
 
-text \<open>
-  Return completion: from the returning-mode invariant (source at \<^const>\<open>Restore\<close> with the
-  callee store, CFG at \<^term>\<open>FunctionResult p\<close>) and a matching top frame, both semantics pop
-  exactly the immediate caller frame and resume at the same store \<^const>\<open>combine_collect\<close> --- the
-  callee globals kept, caller locals restored, the return value written to the destination.  The
-  resumed source residual is \<^const>\<open>SKIP\<close> and the resumed CFG node is the frame's continuation
-  \<open>cont\<close>; the tails stay matched.  This is the normal fall-through form (the callee body has
-  reduced to \<^const>\<open>SKIP\<close>, so the runtime step is a bare \<^const>\<open>Restore\<close>).
-\<close>
-lemma return_completion_restore:
-  assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  shows "pstep \<Pi> (Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect dst caller callee, frs)"
-    and "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect dst caller callee, stk)"
-    and "frames_match frs stk"
-proof -
-  show "pstep \<Pi> (Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect dst caller callee, frs)"
-    using pstep.RestoreStep by (simp add: combine_collect_def)
-  show "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-          (cont, combine_collect dst caller callee, stk)"
-    by (rule cstep.Return)
-  show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
-qed
+subsection \<open>The empty-stack return guard\<close>
 
-text \<open>
-  Explicit-return completion: the same pop, reached through a \<^term>\<open>Seq Unwind Restore\<close> step ---
-  a source \<^const>\<open>Return\<close> has already produced \<^const>\<open>Unwind\<close> and the dead code after it is
-  discarded.  The resumed store and the matched CFG return are identical to the fall-through case,
-  so a single \<^const>\<open>cstep\<close> return serves both.
-\<close>
-lemma return_completion_unwind:
-  assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  shows "pstep \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect dst caller callee, frs)"
-    and "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect dst caller callee, stk)"
-    and "frames_match frs stk"
-proof -
-  show "pstep \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect dst caller callee, frs)"
-    using pstep.UnwindAct by (simp add: combine_collect_def)
-  show "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-          (cont, combine_collect dst caller callee, stk)"
-    by (rule cstep.Return)
-  show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
-qed
-
-text \<open>The resumed CFG node \<open>cont\<close> is an ordinary caller location: it is where \<^const>\<open>control_at\<close>
-  locates the caller's post-call \<^const>\<open>SKIP\<close> residual (from the originating call).  Combined with
-  the completion lemmas, the return resumes the caller in ordinary mode with the combined store.\<close>
-lemma return_resumes_ordinary:
-  assumes call: "control_at \<Pi> p_caller c0 n (Call dst q actuals) (Statement kc)"
-      and comp: "compile \<Pi> p_caller c0 n = (n', en, ex, E, K)"
-  shows "control_at \<Pi> p_caller c0 n SKIP (Statement (Suc kc))"
-proof -
-  from control_at_call_edge[OF call refl comp] show ?thesis by blast
-qed
-
-subsection \<open>Top-level completion and the empty-stack guard\<close>
-
-text \<open>
-  A completed whole-program run is \<^const>\<open>SKIP\<close> with an empty source frame stack; it corresponds
-  to the compiled main-exit node with an empty CFG frame stack.  The frame correspondence is the
-  empty match.  Completion is a boundary condition, kept out of the frame-pop lemmas.
-\<close>
-lemma toplevel_completion_frames:
-  "frames_match [] []"
-  by (rule frames_match_Nil)
-
-text \<open>The returning-mode markers cannot complete on an empty frame stack: a \<^const>\<open>Restore\<close> or a
-  bare \<^const>\<open>Unwind\<close> with no activation to pop is stuck, so a return never escapes its nearest
-  activation into successful whole-program completion.  This is the guard that a \<^const>\<open>Return\<close> or
-  unwind configuration with an empty stack is not a good exit.\<close>
-
-lemma pstep_Restore_empty_stuck: "\<not> pstep \<Pi> (Restore, s, []) x"
-  by (auto elim: RestoreSE)
+text \<open>A bare \<^const>\<open>Unwind\<close> is stuck --- a return with no activation to pop cannot step.\<close>
 
 lemma pstep_Unwind_stuck: "\<not> pstep \<Pi> (Unwind, s, frs) x"
   by (auto elim: UnwindSE)
 
-text \<open>Consequently a bare \<^const>\<open>Unwind\<close> is never a completing configuration, and a source
-  \<^const>\<open>Return\<close> on the empty (whole-program) stack cannot complete: it steps to \<^const>\<open>Unwind\<close>,
-  which is stuck.  A returning configuration with an empty stack is excluded from successful
-  completion.\<close>
-lemma Unwind_not_pcompletes: "\<not> pcompletes \<Pi> Unwind s t"
-  unfolding pcompletes_def
-proof
-  assume "star (pstep \<Pi>) (Unwind, s, []) (SKIP, t, [])"
-  then show False
-    by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
-qed
-
-lemma Return_empty_not_pcompletes: "\<not> pcompletes \<Pi> (Return e) s t"
-  unfolding pcompletes_def
-proof
-  assume "star (pstep \<Pi>) (Return e, s, []) (SKIP, t, [])"
-  then obtain y where step: "pstep \<Pi> (Return e, s, []) y"
-      and rest: "star (pstep \<Pi>) y (SKIP, t, [])"
-    by (cases rule: star.cases) auto
-  from step have "y = (Unwind, ret_store e s, [])"
-    by (cases e) (auto elim: ReturnSE simp: ret_store_def)
-  with rest have "star (pstep \<Pi>) (Unwind, ret_store e s, []) (SKIP, t, [])" by simp
-  then show False
-    by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
-qed
 
 section \<open>The recursive source-command / CFG-stack relation\<close>
 
@@ -1044,18 +828,6 @@ lemma seq_after_eq_Call_iff [simp]:
   "(Call dst q actuals = seq_after c afters) = (c = Call dst q actuals \<and> afters = [])"
   by (induction afters arbitrary: c; auto)+
 
-text \<open>A step of the active head lifts through all pending continuations unchanged.\<close>
-lemma pstep_seq_after_cong:
-  "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
-   pstep \<Pi> (seq_after c afters, s, frs) (seq_after c' afters, s', frs')"
-proof (induction afters arbitrary: c c')
-  case Nil then show ?case by simp
-next
-  case (Cons a as)
-  have "pstep \<Pi> (Seq c a, s, frs) (Seq c' a, s', frs')"
-    by (rule pstep.Seq2[OF Cons.prems])
-  from Cons.IH[OF this] show ?case by simp
-qed
 
 lemma source_com_seq_afterD:
   "source_com (seq_after c afters) \<Longrightarrow>
@@ -1289,18 +1061,10 @@ lemma compiled_atE [elim]:
     "(ex, EA_Ret None p, FunctionResult p) \<in> intra g"
   using assms unfolding compiled_at_def by blast
 
-text \<open>Focused projections: read a single fact off a \<^const>\<open>compiled_at\<close> witness paired with the
-  concrete compile tuple, without reopening the existential.  The exit projection gives the
-  fragment's fall-through \<^term>\<open>EA_Ret None p\<close> edge into \<^term>\<open>FunctionResult p\<close> at this exact offset ---
-  the edge the callee-completion path needs but which lives only in \<open>procs_compiled\<close> at the
-  procedure's compile offset.\<close>
-lemma compiled_at_intra:
-  "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> E \<subseteq> intra g"
-  unfolding compiled_at_def by auto
-
-lemma compiled_at_calls:
-  "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> K \<subseteq> calls g"
-  unfolding compiled_at_def by auto
+text \<open>Focused exit projection: read the fall-through \<^term>\<open>EA_Ret None p\<close> edge into
+  \<^term>\<open>FunctionResult p\<close> off a \<^const>\<open>compiled_at\<close> witness paired with the concrete compile
+  tuple, without reopening the existential.  This is the edge the callee-completion path needs but
+  which otherwise lives only in \<open>procs_compiled\<close> at the procedure's compile offset.\<close>
 
 lemma compiled_at_exit:
   "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow>
@@ -1345,32 +1109,10 @@ lemma frames_match_snoc:
    frames_match (frs @ [Frame caller dst]) (stk @ [(cont, dst, caller)])"
   by (simp add: frames_match_def act_frames_append cframe_act_def)
 
-text \<open>\<open>csim\<close> strengthens \<^const>\<open>frames_match\<close>: the source and CFG stacks correspond one-for-one.\<close>
-lemma csim_frames_match:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> frames_match frs stk"
-proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct)
-  case (Base p c0 n c v s)
-  then show ?case by (simp add: frames_match_Nil)
-next
-  case (Nested inner s frs v stk pc c0c nc after cont caller dst)
-  from Nested.hyps(2) show ?case by (simp add: frames_match_snoc)
-next
-  case Returning
-  show ?case by (simp add: frames_match_def cframe_act_def)
-qed
 
-text \<open>The stacks have equal length.\<close>
-lemma csim_length:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> length frs = length stk"
-  by (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct) auto
 
 subsection \<open>Empty-stack inversions\<close>
 
-text \<open>An empty CFG stack forces an empty source stack and a located base activation.\<close>
-lemma csim_cfg_Nil_baseD:
-  "csim \<Pi> g (c, s, frs) (v, t, []) \<Longrightarrow>
-   frs = [] \<and> s = t \<and> (\<exists>p c0 n. control_at \<Pi> p c0 n c v)"
-  by (blast elim: csim_cfg_NilE)
 
 text \<open>An empty source stack forces an empty CFG stack and a located base activation.\<close>
 lemma csim_Nil_baseD:
@@ -1512,22 +1254,7 @@ lemma unwinding_not_head_return: "unwinding u \<Longrightarrow> \<not> head_retu
 lemma pop_ready_not_head_return: "pop_ready w \<Longrightarrow> \<not> head_return w"
   by (cases w rule: pop_ready.cases) (auto simp: unwinding_not_head_return)
 
-subsection \<open>Source well-formedness: no return at the base activation\<close>
-
-text \<open>\<open>no_return c\<close> holds when the source command \<open>c\<close> contains no \<^const>\<open>Return\<close>.  A well-formed
-  \<^emph>\<open>main\<close> body is \<open>no_return\<close>: an explicit \<^const>\<open>Return\<close> is meaningful only inside a called
-  procedure, where a caller frame exists to restore.  It seeds the runtime invariant \<open>source_wf\<close>
-  below --- a \<open>no_return\<close> source command is \<open>ret_guarded\<close> at the base activation --- but is not
-  itself preserved by \<^const>\<open>pstep\<close>, since a frame pop can expose a return buried in a continuation.\<close>
-fun no_return :: "com \<Rightarrow> bool" where
-  "no_return (Return e) = False"
-| "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
-| "no_return (If b c1 c2) = (no_return c1 \<and> no_return c2)"
-| "no_return (While b c) = no_return c"
-| "no_return _ = True"
-
-lemma no_return_not_head_return: "no_return c \<Longrightarrow> \<not> head_return c"
-  by (induction c) auto
+subsection \<open>Source well-formedness: the base-activation return guard\<close>
 
 text \<open>\<open>ret_guarded rok c\<close> is the deep source-only well-formedness check: an explicit \<^const>\<open>Return\<close>
   (or an in-flight \<^const>\<open>Unwind\<close>) is admissible only where \<open>rok\<close> holds --- inside a called
@@ -1568,11 +1295,6 @@ text \<open>The runtime invariant: the active command is \<^const>\<open>ret_gua
 definition source_wf :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
   "source_wf cfg \<longleftrightarrow> (case cfg of (c, s, frs) \<Rightarrow> ret_guarded False c)"
 
-lemma source_wfI: "ret_guarded False c \<Longrightarrow> source_wf (c, s, frs)"
-  by (simp add: source_wf_def)
-
-lemma source_wfD: "source_wf (c, s, frs) \<Longrightarrow> ret_guarded False c"
-  by (simp add: source_wf_def)
 
 text \<open>Base discharge: a \<^const>\<open>source_com\<close> active command of a \<open>source_wf\<close> configuration never heads with
   \<^const>\<open>Return\<close>.  In \<open>csim_step\<close> the \<open>Base\<close> case supplies \<^const>\<open>source_com\<close> (a located residual),
@@ -1876,32 +1598,6 @@ next
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
-lemma csim_nested_lift:
-  assumes run: "star (cstep g) (v, s, stk) (v', s', stk')"
-      and sim: "csim \<Pi> g (inner', s', frs) (v', t', stk')"
-      and caller: "control_at \<Pi> pc c0c nc (seq_after SKIP afters) cont"
-      and cacc: "compiled_at \<Pi> g pc c0c nc"
-      and pa: "proc_activation \<Pi> pc c0c"
-  shows "star (cstep g) (v, s, stk @ [(cont, dst, caller_store)])
-           (v', s', stk' @ [(cont, dst, caller_store)])
-       \<and> csim \<Pi> g
-           (seq_after (Seq inner' Restore) afters, s',
-             frs @ [Frame caller_store dst])
-           (v', s', stk' @ [(cont, dst, caller_store)])"
-proof -
-  have teq: "t' = s'" using csim_store_eq[OF sim] by simp
-  have lifted:
-    "star (cstep g) (v, s, stk @ [(cont, dst, caller_store)])
-       (v', s', stk' @ [(cont, dst, caller_store)])"
-    using cstep_star_frame_extend[OF run, of "[(cont, dst, caller_store)]"] teq by simp
-  have rel:
-    "csim \<Pi> g
-       (seq_after (Seq inner' Restore) afters, s',
-         frs @ [Frame caller_store dst])
-       (v', s', stk' @ [(cont, dst, caller_store)])"
-    by (rule csim.Nested[OF sim[unfolded teq] caller cacc pa])
-  show ?thesis using lifted rel by blast
-qed
 
 text \<open>Stepping a returning \<open>Nested\<close> command descends the outer \<^const>\<open>Seq\<close> spine to the callee
   residual: a csim'd \<open>inner\<close> is never \<^const>\<open>SKIP\<close> (it is returning) nor \<^const>\<open>Unwind\<close>, so the
@@ -2029,17 +1725,6 @@ lemma procs_compiled_proc:
     "source_com (body decl)"
   using assms unfolding procs_compiled_def by blast
 
-text \<open>The fall-through exit edge of a declared procedure is present in \<open>g\<close>.\<close>
-lemma procs_compiled_exit:
-  assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
-  shows "\<exists>ex. (ex, EA_Ret None p, FunctionResult p) \<in> intra g"
-  using assms by (blast elim: procs_compiled_proc)
-
-text \<open>The entry edge of a declared procedure is present in \<open>g\<close>.\<close>
-lemma procs_compiled_entry:
-  assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
-  shows "\<exists>en. (FunctionEntry p, EA_Nop, en) \<in> intra g"
-  using assms by (blast elim: procs_compiled_proc)
 
 text \<open>A declared procedure's body is a source command.\<close>
 lemma procs_compiled_source_com:
@@ -2552,81 +2237,7 @@ theorem csim_star:
   shows "\<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
   using csim_run[OF PC RUN SIM WF] .
 
-subsection \<open>Regression: base-activation well-formedness\<close>
 
-text \<open>A return-free source \<^emph>\<open>main\<close> body seeds \<open>source_wf\<close> at the empty stack --- the well-formed
-  starting configuration of a whole run.\<close>
-lemma ret_guarded_False_no_return:
-  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> ret_guarded False c"
-  by (induction c) (auto split: if_splits)
-
-lemma source_wf_main:
-  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> source_wf (c, s, [])"
-  by (simp add: source_wf_def ret_guarded_False_no_return)
-
-text \<open>A \<^const>\<open>Return\<close> reachable at the base activation is rejected by \<open>source_wf\<close> --- both a bare
-  top-level return and one buried behind a base-activation continuation (the exact shape a frame pop
-  would expose).  The raw semantics does step it, to a stuck \<^term>\<open>(Unwind, s', [])\<close>, but the initial
-  configuration already fails well-formedness.\<close>
-lemma source_wf_return_main_rejected: "\<not> source_wf (Return e, s, [])"
-  by (simp add: source_wf_def)
-
-lemma source_wf_seq_return_main_rejected: "\<not> source_wf (Seq SKIP (Return e), s, [])"
-  by (simp add: source_wf_def)
-
-lemma return_main_stuck_but_rejected:
-  "pstep \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> \<not> source_wf (Return e, s, [])"
-  by (cases e) (auto simp: source_wf_def ret_store_def)
-
-text \<open>A \<^const>\<open>Return\<close> inside a called activation (under a \<^const>\<open>Restore\<close> boundary, with a caller
-  frame) is accepted: this is where an explicit return is meaningful.\<close>
-lemma source_wf_return_in_callee:
-  "source_wf (Seq (Return e) Restore, s, [Frame caller dst])"
-  by (simp add: source_wf_def)
-
-text \<open>The invariant is closed under \<^const>\<open>pstep\<close> (\<open>source_wf_pstep\<close>) and finite runs.\<close>
-lemma source_wf_psteps:
-  assumes "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and "star (pstep \<Pi>) sc sc'" and "source_wf sc"
-  shows "source_wf sc'"
-  using assms(2,3)
-proof (induction rule: star.induct)
-  case (step a b c)
-  obtain c0 s0 f0 where a: "a = (c0, s0, f0)" by (cases a)
-  obtain c1 s1 f1 where b: "b = (c1, s1, f1)" by (cases b)
-  from step.prems a have "source_wf (c0, s0, f0)" by simp
-  from source_wf_pstep[OF assms(1) _ this] step.hyps(1) a b
-  have "source_wf (c1, s1, f1)" by simp
-  with step.IH b show ?case by simp
-qed simp
-
-section \<open>Regression: the tail-position callee entry is representable\<close>
-
-text \<open>
-  The configuration \<^term>\<open>(Seq SKIP Restore, callee, [Frame caller dst])\<close> --- a just-entered callee
-  whose caller called in tail position (the caller resumes at bare \<^const>\<open>SKIP\<close>, and the whole
-  activation is a callee body followed by \<^const>\<open>Restore\<close> with no trailing continuation) --- is the \<^const>\<open>pstep\<close>
-  successor of a base tail-call \<^term>\<open>(Call dst q [], s, [])\<close>.  It is the \<^term>\<open>afters = []\<close> instance
-  of \<open>Nested\<close>: the callee \<^const>\<open>SKIP\<close> is the \<open>Base\<close> activation and the resumed caller is located at \<open>cont\<close>.
-\<close>
-lemma csim_tailcall_callee_entry:
-  assumes callee: "control_at \<Pi> p c0 n SKIP v"
-      and calleecacc: "compiled_at \<Pi> g p c0 n"
-      and calleepa: "proc_activation \<Pi> p c0"
-      and caller: "control_at \<Pi> pc c0c nc SKIP cont"
-      and callercacc: "compiled_at \<Pi> g pc c0c nc"
-      and callerpa: "proc_activation \<Pi> pc c0c"
-  shows "csim \<Pi> g (Seq SKIP Restore, callee, [Frame caller dst])
-                  (v, callee, [(cont, dst, caller)])"
-proof -
-  have base: "csim \<Pi> g (SKIP, callee, []) (v, callee, [])"
-    by (rule csim.Base[OF callee calleecacc calleepa])
-  have caller': "control_at \<Pi> pc c0c nc (seq_after SKIP []) cont" using caller by simp
-  have "csim \<Pi> g (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst])
-                 (v, callee, [] @ [(cont, dst, caller)])"
-    by (rule csim.Nested[OF base caller' callercacc callerpa])
-  thus ?thesis by simp
-qed
 
 end
 

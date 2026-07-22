@@ -1529,35 +1529,48 @@ This is the forward simulation.
 
 ---
 
-# The current issue
+# Status — forward simulation complete
 
-The bug is **inside `csim`**.
+The fact the bridge was missing is now carried by `csim`: the constructor premise
+`compiled_at Pi g p c0 n` witnesses that the located fragment `c0`, compiled at the
+**exact** offset `n` that `control_at` uses, is embedded in graph `g` (its `intra`
+edges in `intra g`, its `calls` edges in `calls g`, plus the fall-through
+`FunctionResult` exit edge). With that, preservation goes through:
 
-Currently it remembers things like
+- **`csim_step`** — one `pstep` from a `csim`-related, `source_wf` configuration is
+  matched by a `cstep*` into a `csim`-related successor (four-way redex dispatch:
+  call / return-initiation / returning / intra).
+- **`csim_star`** — the finite-run lift.
+- **Invariant.** `source_wf (c,_,_) = ret_guarded False c` is a CFG-free, source-only
+  well-formedness guard: a `Return` is admissible only inside a called activation,
+  permission being granted by a right-child `Restore` of a `Seq`. It is preserved by
+  `pstep` (`source_wf_pstep`) and closed under runs (`source_wf_psteps`). The shallow
+  `frs = [] --> no_return c` guard was rejected — a `Restore` step can pop the last
+  frame and expose a base-activation return, which the deep `ret_guarded` still rejects.
 
-```
-I'm executing
+Layout: `Control_Simulation` holds the load-bearing spine ending at `csim_step` /
+`csim_star`; the standalone correspondence witnesses and well-formedness regressions
+live in the sibling leaf theory `Control_Simulation_Regression`. `Voblint_CFG` builds
+green with zero `sorry`.
 
-Assign x e
-```
+## Analysis-side migration — in progress
 
-at
+The first analysis-side layer, `CFG_Transfer`, is migrated off the retired
+`CFG_Path` and back into `Voblint_CFG` (green). Its pre-migration content was
+either duplicated in the core or dead: `edge_step` / `combine_collect` now live in
+`CFG_Def` (with `EA_Ret` for the retired `EA_Enter`), `call_enter_store` in
+`CFG_Local_Trace`, and the whole-path `edges_collect` / `offset_path` fold — the
+last `CFG_Path` client — is superseded by the located `csim` simulation. Only
+`edge_collect`, the pointwise set-lift of the core `edge_step`, remains.
 
-```
-node 42
-```
-
-But it doesn't remember
-
-```
-node 42 belongs to THIS compiled procedure in graph g
-```
-
-That missing fact is why the preservation proof can't continue.
-
-Neither `pstep` nor `cstep` are wrong.
-
-The bridge between them wasn't strong enough.
+**Not yet migrated** (still on `nat` nodes and the retired single `edges`
+relation; `Voblint_Analysis` stays red): the next blockers are
+`CFG_Enumeration.predecessors` (`{(u,a). (u,a,v) ∈ edges g}`) and the `nat` vs
+`cfg_node` node-type clash in `Activation_Local_Sound`, i.e. the
+`Constraint_System(_Sound)` / `Activation_*` / `DG_*` cluster (design §6, §10, §11).
+`src/Examples/Voblint.thy` also still imports `CFG_Path` directly. These are
+deliberately left for the next dependency layer, not folded into the transfer
+migration.
 
 ---
 
