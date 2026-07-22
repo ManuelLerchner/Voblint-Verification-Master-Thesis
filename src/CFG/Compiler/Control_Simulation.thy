@@ -1023,19 +1023,57 @@ lemma pop_ready_not_SKIP: "pop_ready w \<Longrightarrow> w \<noteq> SKIP"
 lemma pop_ready_not_Unwind: "pop_ready w \<Longrightarrow> w \<noteq> Unwind"
   by (cases w rule: pop_ready.cases) auto
 
+subsection \<open>Compile-into-\<open>g\<close> evidence for an active fragment\<close>
+
+text \<open>
+  \<open>compiled_at Pi g p c0 n\<close> witnesses that the fragment \<open>c0\<close>, compiled at the exact offset
+  \<open>n\<close>, is embedded in the target graph \<open>g\<close>: its intra edges lie in \<^term>\<open>intra g\<close> and its call
+  edges in \<^term>\<open>calls g\<close>.  \<open>csim\<close> carries it on every activation at the \<^emph>\<open>same\<close> \<open>n\<close> that
+  \<^const>\<open>control_at\<close> uses, so the located node and the fragment's edges are genuinely present in
+  \<open>g\<close>.  Compilation is shift-parametric --- the offset is not fixed by the syntax --- so graph
+  membership at the chosen offset is the missing fact, and this predicate supplies it.
+\<close>
+definition compiled_at :: "proc_table \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> nat \<Rightarrow> bool" where
+  "compiled_at \<Pi> g p c0 n \<longleftrightarrow>
+     (\<exists>n' en ex E K. compile \<Pi> p c0 n = (n', en, ex, E, K)
+        \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g)"
+
+lemma compiled_atI:
+  "compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow>
+   compiled_at \<Pi> g p c0 n"
+  unfolding compiled_at_def by blast
+
+lemma compiled_atE [elim]:
+  assumes "compiled_at \<Pi> g p c0 n"
+  obtains n' en ex E K where
+    "compile \<Pi> p c0 n = (n', en, ex, E, K)" "E \<subseteq> intra g" "K \<subseteq> calls g"
+  using assms unfolding compiled_at_def by blast
+
+text \<open>Focused projections: read a single edge inclusion off a \<^const>\<open>compiled_at\<close> witness paired
+  with the concrete compile tuple, without reopening the existential.\<close>
+lemma compiled_at_intra:
+  "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> E \<subseteq> intra g"
+  unfolding compiled_at_def by auto
+
+lemma compiled_at_calls:
+  "compiled_at \<Pi> g p c0 n \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K) \<Longrightarrow> K \<subseteq> calls g"
+  unfolding compiled_at_def by auto
+
 inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store \<times> frame list
                     \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool" for \<Pi> g where
   Base:
-    "control_at \<Pi> p c0 n c v \<Longrightarrow> proc_activation \<Pi> p c0 \<Longrightarrow>
+    "control_at \<Pi> p c0 n c v \<Longrightarrow> compiled_at \<Pi> g p c0 n \<Longrightarrow> proc_activation \<Pi> p c0 \<Longrightarrow>
      csim \<Pi> g (c, s, []) (v, s, [])"
 | Nested:
     "csim \<Pi> g (inner, s, frs) (v, s, stk) \<Longrightarrow>
-     control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont \<Longrightarrow> proc_activation \<Pi> pc c0c \<Longrightarrow>
+     control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont \<Longrightarrow> compiled_at \<Pi> g pc c0c nc \<Longrightarrow>
+     proc_activation \<Pi> pc c0c \<Longrightarrow>
      csim \<Pi> g (seq_after (Seq inner Restore) ao, s, frs @ [Frame caller dst])
               (v, s, stk @ [(cont, dst, caller)])"
 | Returning:
     "pop_ready w \<Longrightarrow>
-     control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont \<Longrightarrow> proc_activation \<Pi> pc c0c \<Longrightarrow>
+     control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont \<Longrightarrow> compiled_at \<Pi> g pc c0c nc \<Longrightarrow>
+     proc_activation \<Pi> pc c0c \<Longrightarrow>
      csim \<Pi> g (seq_after w ao, callee, [Frame caller dst])
               (FunctionResult p, callee, [(cont, dst, caller)])"
 
@@ -1099,7 +1137,8 @@ text \<open>A base activation's active residual originates from a real procedure
   the ordinary and fall-through preservation cases read off to reach \<open>procs_compiled\<close>.\<close>
 lemma csim_base_procD:
   assumes "csim \<Pi> g (c, s, []) (v, t, stk)"
-  obtains p c0 n where "control_at \<Pi> p c0 n c v" "proc_activation \<Pi> p c0"
+  obtains p c0 n where
+    "control_at \<Pi> p c0 n c v" "compiled_at \<Pi> g p c0 n" "proc_activation \<Pi> p c0"
   using assms by (blast elim: csim_NilE)
 
 subsection \<open>Returning-mode inversions\<close>
@@ -1233,6 +1272,7 @@ text \<open>
 lemma csim_returning_base_completion:
   assumes pr: "pop_ready w"
       and loc: "control_at \<Pi> pc c0c nc (seq_after SKIP ao) cont"
+      and cacc: "compiled_at \<Pi> g pc c0c nc"
       and pa: "proc_activation \<Pi> pc c0c"
       and step: "pstep \<Pi> (seq_after w ao, callee, [Frame caller dst]) src'"
   shows "\<exists>cfg'. star (cstep g) (FunctionResult p, callee, [(cont, dst, caller)]) cfg'
@@ -1265,7 +1305,7 @@ proof -
     have "cstep g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
       by (rule cstep.Return)
     moreover have "csim \<Pi> g (seq_after SKIP ao, ?rs, []) (cont, ?rs, [])"
-      by (rule csim.Base[OF loc pa])
+      by (rule csim.Base[OF loc cacc pa])
     ultimately show ?thesis using src' h' by (auto intro: cstep_star_single)
   next
     assume "\<exists>w'. (h', s', frs') = (w', callee, [Frame caller dst]) \<and> pop_ready w'"
@@ -1273,7 +1313,7 @@ proof -
         and pr': "pop_ready w'" by auto
     have "csim \<Pi> g (seq_after w' ao, callee, [Frame caller dst])
                    (FunctionResult p, callee, [(cont, dst, caller)])"
-      by (rule csim.Returning[OF pr' loc pa])
+      by (rule csim.Returning[OF pr' loc cacc pa])
     with src' h' show ?thesis by (auto intro: star.refl)
   qed
 qed
@@ -1396,7 +1436,7 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
 next
   case (Returning w pc c0c nc ao cont callee caller dst p)
   from csim_returning_base_completion[OF Returning.hyps(1) Returning.hyps(2) Returning.hyps(3)
-                                         Returning.prems(2)]
+                                         Returning.hyps(4) Returning.prems(2)]
   show ?case .
 next
   case (Nested inner s0 frs0 v0 stk0 pc c0c nc ao cont caller dst)
@@ -1425,7 +1465,7 @@ next
     using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
   have "csim \<Pi> g (seq_after (Seq inner' Restore) ao, s', fz' @ [Frame caller dst])
                  (v', s', stk' @ [(cont, dst, caller)])"
-    by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4)])
+    by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)])
   then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])"
     by (simp add: src' fz)
   with cstepN show ?case by blast
@@ -1483,6 +1523,23 @@ lemma procs_compiled_source_com:
   shows "source_com (body decl)"
   using assms by (blast elim: procs_compiled_proc)
 
+text \<open>A declared procedure's body carries a \<^const>\<open>compiled_at\<close> witness at its compile offset:
+  the offset the entry \<^term>\<open>EA_Nop\<close> edge lands on and the callee \<open>Base\<close> is located at.\<close>
+lemma procs_compiled_body_compiled_at:
+  assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
+  obtains n en where
+    "compiled_at \<Pi> g p (body decl) n"
+    "en = fst (snd (compile \<Pi> p (body decl) n))"
+    "(FunctionEntry p, EA_Nop, en) \<in> intra g"
+proof -
+  from procs_compiled_proc[OF assms] obtain n n' en ex E K where
+    c: "compile \<Pi> p (body decl) n = (n', en, ex, E, K)"
+      and Es: "E \<subseteq> intra g" and Ks: "K \<subseteq> calls g"
+      and en: "(FunctionEntry p, EA_Nop, en) \<in> intra g" by metis
+  show ?thesis
+    by (rule that[OF compiled_atI[OF c Es Ks] _ en]) (simp add: c)
+qed
+
 section \<open>Call preservation\<close>
 
 text \<open>
@@ -1501,8 +1558,7 @@ lemma csim_call_base:
       and loc: "control_at \<Pi> p c0 n (Call dst q actuals) v"
       and callerSKIP: "control_at \<Pi> p c0 n (seq_after SKIP ao) (Statement (Suc k))"
       and vk: "v = Statement k"
-      and comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
-      and Ksub: "K \<subseteq> calls g"
+      and cacc: "compiled_at \<Pi> g p c0 n"
       and pa: "proc_activation \<Pi> p c0"
       and decl: "\<Pi> q = Some decl"
       and arity: "length actuals = length (formals decl)"
@@ -1513,6 +1569,8 @@ lemma csim_call_base:
                           [Frame s dst]) cfg'"
 proof -
   let ?callee = "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+  from cacc obtain n' en ex E K where comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
+      and Ksub: "K \<subseteq> calls g" by (auto simp: compiled_at_def)
   from call_transition_located[OF loc comp Ksub decl, where s = s and stk = "[]"]
   obtain k' where vk': "v = Statement k'"
     and cstep1: "cstep g (Statement k', s, [])
@@ -1524,8 +1582,10 @@ proof -
     by (rule call_enter_eq_source_call_store)
   from procs_compiled_proc[OF pc decl] obtain m m' en_q ex_q E_q K_q where
     cbody: "compile \<Pi> q (body decl) m = (m', en_q, ex_q, E_q, K_q)"
+      and E_qsub: "E_q \<subseteq> intra g" and K_qsub: "K_q \<subseteq> calls g"
       and entry: "(FunctionEntry q, EA_Nop, en_q) \<in> intra g"
       and srcbody: "source_com (body decl)" by metis
+  have caccq: "compiled_at \<Pi> g q (body decl) m" by (rule compiled_atI[OF cbody E_qsub K_qsub])
   have cstep2: "cstep g (FunctionEntry q, ?callee, [(Statement (Suc k), dst, s)])
                         (en_q, ?callee, [(Statement (Suc k), dst, s)])"
     using cstep_nop[OF entry] .
@@ -1534,10 +1594,10 @@ proof -
   have paq: "proc_activation \<Pi> q (body decl)"
     using decl unfolding proc_activation_def by blast
   have baseCallee: "csim \<Pi> g (body decl, ?callee, []) (en_q, ?callee, [])"
-    by (rule csim.Base[OF control_at_initial[OF srcbody, of \<Pi> q m, folded compile_entry_node[OF cbody]] paq])
+    by (rule csim.Base[OF control_at_initial[OF srcbody, of \<Pi> q m, folded compile_entry_node[OF cbody]] caccq paq])
   have "csim \<Pi> g (seq_after (Seq (body decl) Restore) ao, ?callee, [] @ [Frame s dst])
                  (en_q, ?callee, [] @ [(Statement (Suc k), dst, s)])"
-    by (rule csim.Nested[OF baseCallee callerSKIP pa])
+    by (rule csim.Nested[OF baseCallee callerSKIP cacc pa])
   then have "csim \<Pi> g (seq_after (Seq (body decl) Restore) ao, ?callee, [Frame s dst])
                       (en_q, ?callee, [(Statement (Suc k), dst, s)])" by simp
   with star show ?thesis by blast
@@ -1555,18 +1615,20 @@ text \<open>
 \<close>
 lemma csim_tailcall_callee_entry:
   assumes callee: "control_at \<Pi> p c0 n SKIP v"
+      and calleecacc: "compiled_at \<Pi> g p c0 n"
       and calleepa: "proc_activation \<Pi> p c0"
       and caller: "control_at \<Pi> pc c0c nc SKIP cont"
+      and callercacc: "compiled_at \<Pi> g pc c0c nc"
       and callerpa: "proc_activation \<Pi> pc c0c"
   shows "csim \<Pi> g (Seq SKIP Restore, callee, [Frame caller dst])
                   (v, callee, [(cont, dst, caller)])"
 proof -
   have base: "csim \<Pi> g (SKIP, callee, []) (v, callee, [])"
-    by (rule csim.Base[OF callee calleepa])
+    by (rule csim.Base[OF callee calleecacc calleepa])
   have caller': "control_at \<Pi> pc c0c nc (seq_after SKIP None) cont" using caller by simp
   have "csim \<Pi> g (seq_after (Seq SKIP Restore) None, callee, [] @ [Frame caller dst])
                  (v, callee, [] @ [(cont, dst, caller)])"
-    by (rule csim.Nested[OF base caller' callerpa])
+    by (rule csim.Nested[OF base caller' callercacc callerpa])
   thus ?thesis by simp
 qed
 
