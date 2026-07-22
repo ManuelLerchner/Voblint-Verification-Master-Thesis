@@ -126,6 +126,7 @@ parse_translation \<open>
     val c_If     = "IMP2_Proc.com.If"
     val c_While  = "IMP2_Proc.com.While"
     val c_Call   = "IMP2_Proc.com.Call"
+    val c_Return = "IMP2_Proc.com.Return"
     val c_proc_decl_of = "IMP2_Proc.proc_decl_of"
 
     val c_None    = "Option.option.None"
@@ -337,15 +338,20 @@ parse_translation \<open>
     fun mk_body NONE = K c_SKIP
       | mk_body (SOME c) = com_tr c
 
-    fun mk_result NONE = K c_None
-      | mk_result (SOME e) = K c_Some $ aexp_tr e
+    (* A trailing "return e" becomes an explicit Return command appended to the body;
+       the procedure declaration carries no separate result field. *)
+    fun mk_body_ret NONE NONE = K c_SKIP
+      | mk_body_ret (SOME c) NONE = com_tr c
+      | mk_body_ret NONE (SOME e) = K c_Return $ (K c_Some $ aexp_tr e)
+      | mk_body_ret (SOME c) (SOME e) =
+          K c_Seq $ com_tr c $ (K c_Return $ (K c_Some $ aexp_tr e))
 
     fun mk_table acc [] = acc
       | mk_table acc ((p, formals, body, result) :: rest) =
           mk_table
             (K c_fun_upd $ acc $ HOLogic.mk_string p
               $ (K c_Some $ ((K c_proc_decl_of $ mk_names formals)
-                  $ mk_body body $ mk_result result)))
+                  $ mk_body_ret body result)))
             rest
 
     (* dummyT constructors only; type inference runs after the translation. *)

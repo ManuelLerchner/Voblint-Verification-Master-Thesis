@@ -22,7 +22,7 @@ definition inc_pi :: proc_table where
 
 lemma inc_program_parts:
   shows "prog_procs inc_program = [''p'']"
-    and "prog_table inc_program = (\<lambda>_. None)(''p'' := Some (proc_decl_of [] (Assign ''Gx'' (Plus (V ''Gx'') (N 1))) None))"
+    and "prog_table inc_program = (\<lambda>_. None)(''p'' := Some (proc_decl_of [] (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))))"
     and "prog_main inc_program = Call None ''p'' []"
   by (simp_all add: inc_program_def)
 
@@ -75,7 +75,7 @@ proof -
   have run: "pcompletes inc_pi (Call None ''p'' []) s
                 (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
-    show "inc_pi ''p'' = Some (proc_decl_of [] ?body None)"
+    show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
       by (simp add: inc_pi_def inc_program_parts)
     show "pcompletes inc_pi ?body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"

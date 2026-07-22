@@ -80,9 +80,7 @@ fun string_of_com :: "com \<Rightarrow> string" where
 definition string_of_proc_decl :: "pname \<Rightarrow> proc_decl \<Rightarrow> string" where
   "string_of_proc_decl p decl =
     ''procedure '' @ p @ ''('' @ join_source '', '' (formals decl) @ ''):''
-    @ source_nl @ string_of_com (body decl)
-    @ (case result decl of None \<Rightarrow> [] | Some e \<Rightarrow>
-         source_nl @ ''return '' @ string_of_aexp e)"
+    @ source_nl @ string_of_com (body decl)"
 
 definition string_of_program ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> string" where

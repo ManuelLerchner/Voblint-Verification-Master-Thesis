@@ -217,11 +217,11 @@ theorem example_normal_fallthrough:
   assumes comp: "compile_proc \<Pi> p decl n = (n', E, K)"
       and body: "body decl = Assign x a"
   shows "control_at \<Pi> p (body decl) n SKIP (Statement (Suc n))"
-    and "(Statement (Suc n), EA_Ret (result decl) p, FunctionResult p) \<in> E"
+    and "(Statement (Suc n), EA_Ret None p, FunctionResult p) \<in> E"
 proof -
   show "control_at \<Pi> p (body decl) n SKIP (Statement (Suc n))"
     unfolding body by (rule control_at.AssignDone)
-  show "(Statement (Suc n), EA_Ret (result decl) p, FunctionResult p) \<in> E"
+  show "(Statement (Suc n), EA_Ret None p, FunctionResult p) \<in> E"
     using comp by (auto simp: compile_proc_def Let_def body split: prod.splits)
 qed
 

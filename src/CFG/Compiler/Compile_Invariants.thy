@@ -118,7 +118,7 @@ proof -
   obtain n1 Eprocs Kprocs where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have "Kprocs = {}" using compile_procs_no_call[OF procs] assms(1) by simp
   moreover have "Kmain = {}"
@@ -136,7 +136,7 @@ proof -
   then obtain ben bex Eb where
     cb: "compile \<Pi> p (body decl) n = (n', ben, bex, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, ben)
-                  (insert (bex, EA_Ret (result decl) p, FunctionResult p) Eb)"
+                  (insert (bex, EA_Ret None p, FunctionResult p) Eb)"
     by (auto simp: compile_proc_def Let_def split: prod.splits)
   obtain kb where ben: "ben = Statement kb" "n \<le> kb" "kb < n'"
     using compile_entry_exit_stmt[OF cb] by blast
@@ -144,17 +144,17 @@ proof -
     using compile_entry_exit_stmt[OF cb] by blast
   have body: "frag_stmts Eb K \<subseteq> {n..<n'}" using compile_frag_stmts_range[OF cb] .
   have Eunfold: "E = {(FunctionEntry p, EA_Nop, ben),
-                      (bex, EA_Ret (result decl) p, FunctionResult p)} \<union> Eb"
+                      (bex, EA_Ret None p, FunctionResult p)} \<union> Eb"
     using E by auto
   have lit: "frag_stmts {(FunctionEntry p, EA_Nop, ben),
-                (bex, EA_Ret (result decl) p, FunctionResult p)} {} \<subseteq> {n..<n'}"
+                (bex, EA_Ret None p, FunctionResult p)} {} \<subseteq> {n..<n'}"
     using ben bex by (auto simp: frag_stmts_def)
   have "frag_stmts E K
           = frag_stmts ({(FunctionEntry p, EA_Nop, ben),
-              (bex, EA_Ret (result decl) p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
+              (bex, EA_Ret None p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
     using Eunfold by simp
   also have "... = frag_stmts {(FunctionEntry p, EA_Nop, ben),
-                (bex, EA_Ret (result decl) p, FunctionResult p)} {} \<union> frag_stmts Eb K"
+                (bex, EA_Ret None p, FunctionResult p)} {} \<union> frag_stmts Eb K"
     by (rule frag_stmts_Un)
   also have "... \<subseteq> {n..<n'}" using lit body by fastforce
   finally show ?thesis .
@@ -250,7 +250,7 @@ text \<open>(5) / (6) Each compiled procedure has a single entry node \<open>Fun
 theorem inv5_6_proc_entry_result_edges:
   assumes "compile_proc \<Pi> p decl n = (n', E, K)"
   shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
-       \<and> (\<exists>bex. (bex, EA_Ret (result decl) p, FunctionResult p) \<in> E)"
+       \<and> (\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E)"
   using assms by (auto simp: compile_proc_def Let_def split: prod.splits)
 
 theorem inv5_6_entry_result_distinct:
@@ -347,7 +347,7 @@ lemmas ex_multi_return = inv13_multi_return_converge
 text \<open>Normal fall-through (a procedure without an explicit return) reaches the same result
   node through the declared-result edge.\<close>
 lemma ex_fallthrough:
-  assumes "compile_proc \<Pi> p (proc_decl_of [] SKIP None) n = (n', E, K)"
+  assumes "compile_proc \<Pi> p (proc_decl_of [] SKIP) n = (n', E, K)"
   shows "\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E"
   using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
 

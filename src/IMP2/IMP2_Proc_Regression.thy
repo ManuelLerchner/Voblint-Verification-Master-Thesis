@@ -19,7 +19,7 @@ text \<open>\<open>main:  x := 5;  call f()\<close>, with \<open>f:  x := 9\<clo
   local \<open>x\<close>, but the call discards callee locals (\<open><caller|callee>\<close> keeps caller locals), so
   after the call the caller's \<open>x\<close> is still 5.\<close>
 theorem caller_local_isolated:
-  assumes p: "\<Pi> pf = Some (proc_decl_of [] (Assign ''x'' (BaseN (AExp.N 9))) None)"
+  assumes p: "\<Pi> pf = Some (proc_decl_of [] (Assign ''x'' (BaseN (AExp.N 9))))"
   shows "\<exists>t. pcompletes \<Pi> (Seq (Assign ''x'' (BaseN (AExp.N 5))) (Call None pf [])) s0 t
              \<and> t ''x'' = 5"
 proof -
@@ -53,7 +53,7 @@ subsection \<open>Global propagation\<close>
 text \<open>\<open>f:  Gg := 9\<close> (fall through).  A callee's global write survives the return
   (\<open><caller|callee>\<close> keeps callee globals), so after the call \<open>Gg\<close> is 9.\<close>
 theorem global_propagated:
-  assumes p: "\<Pi> pf = Some (proc_decl_of [] (Assign ''Gg'' (BaseN (AExp.N 9))) None)"
+  assumes p: "\<Pi> pf = Some (proc_decl_of [] (Assign ''Gg'' (BaseN (AExp.N 9))))"
   shows "\<exists>t. pcompletes \<Pi> (Call None pf []) s0 t \<and> t ''Gg'' = 9"
 proof -
   have body: "pcompletes \<Pi> (Assign ''Gg'' (BaseN (AExp.N 9)))
@@ -73,22 +73,19 @@ qed
 
 subsection \<open>Return-value propagation\<close>
 
-text \<open>\<open>x := f()\<close> with \<open>f\<close> declaring result \<open>7\<close>: the returned value is assigned to the caller
+text \<open>\<open>x := f()\<close> with \<open>f: return 7\<close>: the explicitly returned value is assigned to the caller
   destination \<open>x\<close> after locals are restored.\<close>
 theorem return_value_propagated:
-  assumes p: "\<Pi> pf = Some (proc_decl_of [] SKIP (Some (BaseN (AExp.N 7))))"
+  assumes p: "\<Pi> pf = Some (proc_decl_of [] (Return (Some (BaseN (AExp.N 7)))))"
   shows "\<exists>t. pcompletes \<Pi> (Call (Some ''x'') pf []) s0 t \<and> t ''x'' = 7"
 proof -
-  have body: "pcompletes \<Pi> (body (proc_decl_of [] SKIP (Some (BaseN (AExp.N 7)))))
-               (bind_formals (formals (proc_decl_of [] SKIP (Some (BaseN (AExp.N 7)))))
-                 (map (\<lambda>a. aval a s0) []) (enter_state s0)) (enter_state s0)"
-    by (simp add: proc_decl_of_def bind_formals_def pcompletes_skip)
-  have call: "pcompletes \<Pi> (Call (Some ''x'') pf []) s0
-               ((<s0 | enter_state s0>)(''x'' := aval (BaseN (AExp.N 7)) (enter_state s0)))"
-    by (rule pcompletes_Call_some[OF p _ _ _ body]) (simp_all add: proc_decl_of_def)
-  have "((<s0 | enter_state s0>)(''x'' := aval (BaseN (AExp.N 7)) (enter_state s0))) ''x'' = 7"
-    by simp
-  with call show ?thesis by blast
+  let ?e = "BaseN (AExp.N 7)"
+  let ?t = "(<s0 | (enter_state s0)(ret_var := aval ?e (enter_state s0))>)
+              (''x'' := aval ?e (enter_state s0))"
+  have call: "psteps \<Pi> (Call (Some ''x'') pf [], s0, []) (SKIP, ?t, [])"
+    using p by (rule call_return_completes[where x = "''x''" and s = s0 and frs = "[]"])
+  have "?t ''x'' = 7" by simp
+  with call show ?thesis unfolding pcompletes_def by blast
 qed
 
 subsection \<open>Early return skips dead code\<close>
@@ -132,7 +129,7 @@ definition rec_body :: com where
         SKIP"
 
 theorem bounded_recursion_completes:
-  assumes p: "\<Pi> ''r'' = Some (proc_decl_of [] rec_body None)"
+  assumes p: "\<Pi> ''r'' = Some (proc_decl_of [] rec_body)"
   shows "\<exists>t. pcompletes \<Pi> (Call None ''r'' []) ((\<lambda>_. 0)(''Gx'' := 1)) t \<and> t ''Gx'' = 0"
 proof -
   let ?s0 = "(\<lambda>_. 0)(''Gx'' := 1)"

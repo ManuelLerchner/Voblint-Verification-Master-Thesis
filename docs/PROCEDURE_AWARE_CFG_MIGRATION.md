@@ -1363,3 +1363,215 @@ algebra. Deferred to later stages: actual-to-formal parameter binding (the entry
 | `rhs` / `comb_vals` over `combines` | `Constraint_System.thy:472-489` |
 | two-sort routing `Inl`/`Inr` | `Exec_Bridge.thy` (Inl/Inr gseed) |
 | Goblint `node0`/`edge`/`constraints` | `kb/wiki/concepts/goblint-interprocedural-cfg.md` (live-fetched) |
+
+---
+
+At a high level, those are the three layers of the correctness proof.
+
+```
+Source program
+      |
+    pstep
+      |
+      |  csim
+      |
+    cstep
+      |
+Compiled CFG
+```
+
+Each has a different role.
+
+---
+
+## 1. `pstep` — source semantics
+
+This defines how the source language executes.
+
+For example,
+
+```text
+x := 1;
+y := 2;
+```
+
+executes as
+
+```
+(x:=1; y:=2)
+      │
+   pstep
+      ▼
+(y:=2)
+      │
+   pstep
+      ▼
+Skip
+```
+
+It knows about:
+
+* assignments
+* calls
+* returns
+* unwind
+* restore
+* activation frames
+
+It says nothing about CFG nodes.
+
+---
+
+## 2. `cstep` — CFG semantics
+
+This executes the compiled graph.
+
+Instead of commands, the state is something like
+
+```
+(node, store, activation stack)
+```
+
+For example,
+
+```
+node 10
+    │
+ cstep
+    ▼
+node 11
+    │
+ cstep
+    ▼
+node 12
+```
+
+It doesn't know what an `Assign` command is—it only follows CFG edges.
+
+---
+
+## 3. `csim` — the bridge
+
+`csim` relates one source configuration to one CFG configuration.
+
+For example,
+
+```
+Source:
+
+x := 1;
+y := 2
+```
+
+might correspond to
+
+```
+CFG:
+
+node 10
+```
+
+After one source step:
+
+```
+y := 2
+```
+
+should correspond to
+
+```
+node 11
+```
+
+`csim` is the statement:
+
+> "These two states represent the same execution."
+
+---
+
+# The theorem you're proving
+
+The central theorem is essentially
+
+```
+csim S C
+∧
+S --pstep--> S'
+```
+
+implies
+
+```
+C --cstep*--> C'
+```
+
+and
+
+```
+csim S' C'
+```
+
+Diagrammatically:
+
+```
+      pstep
+ S ----------> S'
+ |             |
+ | csim        | csim
+ |             |
+ ▼             ▼
+ C ----------> C'
+      cstep*
+```
+
+This is the forward simulation.
+
+---
+
+# The current issue
+
+The bug is **inside `csim`**.
+
+Currently it remembers things like
+
+```
+I'm executing
+
+Assign x e
+```
+
+at
+
+```
+node 42
+```
+
+But it doesn't remember
+
+```
+node 42 belongs to THIS compiled procedure in graph g
+```
+
+That missing fact is why the preservation proof can't continue.
+
+Neither `pstep` nor `cstep` are wrong.
+
+The bridge between them wasn't strong enough.
+
+---
+
+So yes, conceptually your architecture is now:
+
+```
+Source semantics
+      pstep
+         │
+         │
+      csim
+         │
+         │
+Compiled CFG semantics
+      cstep
+```
+
+and nearly all of the recent work (the `Returning` phase, `pop_ready`, activation-local traces, and now `compiled_at`) has been about strengthening the **middle layer (`csim`)** until it contains exactly the information needed to prove that every `pstep` can be simulated by `cstep`.

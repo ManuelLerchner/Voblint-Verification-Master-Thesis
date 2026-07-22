@@ -180,8 +180,7 @@ definition compiled_procedure_scope ::
          fs = if owner = ''main'' then [] else
            (case decl of None \<Rightarrow> [] | Some d \<Rightarrow> formals d);
          ret = if owner = ''main'' then None else
-           (case decl of None \<Rightarrow> None
-            | Some d \<Rightarrow> (case result d of None \<Rightarrow> None | Some _ \<Rightarrow> Some ret_var));
+           Some ret_var;
          ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> is_global x)
            (owner_assigned_vars g (compiled_owner_of \<Pi> ps main) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"

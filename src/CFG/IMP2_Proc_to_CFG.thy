@@ -84,7 +84,9 @@ where
 subsection \<open>Procedure and program compilation\<close>
 
 text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> and \<open>FunctionResult p\<close>; the
-  normal fall-through publishes the declared result through \<open>EA_Ret (result decl) p\<close>.\<close>
+  normal fall-through returns without a value through \<open>EA_Ret None p\<close>.  A value is published only
+  by an explicit source \<open>Return e\<close>, which compiles to its own \<open>EA_Ret (Some e) p\<close> edge inside the
+  body.\<close>
 
 definition compile_proc ::
   "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
@@ -95,7 +97,7 @@ where
      (let (n', ben, bex, E, K) = compile \<Pi> p (body decl) n
       in (n',
           insert (FunctionEntry p, EA_Nop, ben)
-            (insert (bex, EA_Ret (result decl) p, FunctionResult p) E),
+            (insert (bex, EA_Ret None p, FunctionResult p) E),
           K))"
 
 fun compile_procs ::
@@ -122,7 +124,7 @@ definition compile_prog ::
 where
   "compile_prog \<Pi> ps mnm main =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main None) n1
+          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main) n1
       in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>)"
 
 subsection \<open>Counter monotonicity and statement ranges\<close>
@@ -424,7 +426,7 @@ proof -
   obtain n1 Eprocs Kprocs where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main None) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have g: "compile_prog \<Pi> ps mnm main =
              \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>"

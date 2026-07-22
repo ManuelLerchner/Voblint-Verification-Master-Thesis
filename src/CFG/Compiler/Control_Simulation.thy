@@ -708,11 +708,10 @@ lemma call_transition:
   assumes decl: "\<Pi> q = Some decl"
       and arity: "length actuals = length (formals decl)"
       and distinct: "distinct (formals decl)"
-      and dstok: "\<forall>x. dst = Some x \<longrightarrow> result decl \<noteq> None"
       and edge: "(u, CallEdge dst (formals decl) actuals, FunctionEntry q, cont) \<in> calls g"
       and fm: "frames_match frs stk"
   shows "pstep \<Pi> (Call dst q actuals, s, frs)
-           (Seq (with_result (body decl) (result decl)) Restore,
+           (Seq (body decl) Restore,
             bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
             Frame s dst # frs)"       (is ?src)
     and "cstep g (u, s, stk)
@@ -723,7 +722,7 @@ lemma call_transition:
     and "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"                        (is ?frames)
 proof -
   show ?src
-    using decl arity distinct dstok
+    using decl arity distinct
     by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
   show ?cfg by (rule cstep.Call[OF edge])
   show ?store by (rule call_enter_eq_source_call_store)
@@ -1451,7 +1450,7 @@ definition procs_compiled :: "proc_table \<Rightarrow> cfg \<Rightarrow> bool" w
            compile \<Pi> p (body decl) n = (n', en, ex, E, K)
          \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
          \<and> (FunctionEntry p, EA_Nop, en) \<in> intra g
-         \<and> (ex, EA_Ret (result decl) p, FunctionResult p) \<in> intra g
+         \<and> (ex, EA_Ret None p, FunctionResult p) \<in> intra g
          \<and> source_com (body decl)))"
 
 text \<open>Projection: the compiled fragment of a declared procedure's body, with its edge inclusions
@@ -1462,14 +1461,14 @@ lemma procs_compiled_proc:
     "compile \<Pi> p (body decl) n = (n', en, ex, E, K)"
     "E \<subseteq> intra g" "K \<subseteq> calls g"
     "(FunctionEntry p, EA_Nop, en) \<in> intra g"
-    "(ex, EA_Ret (result decl) p, FunctionResult p) \<in> intra g"
+    "(ex, EA_Ret None p, FunctionResult p) \<in> intra g"
     "source_com (body decl)"
   using assms unfolding procs_compiled_def by blast
 
 text \<open>The fall-through exit edge of a declared procedure is present in \<open>g\<close>.\<close>
 lemma procs_compiled_exit:
   assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
-  shows "\<exists>ex. (ex, EA_Ret (result decl) p, FunctionResult p) \<in> intra g"
+  shows "\<exists>ex. (ex, EA_Ret None p, FunctionResult p) \<in> intra g"
   using assms by (blast elim: procs_compiled_proc)
 
 text \<open>The entry edge of a declared procedure is present in \<open>g\<close>.\<close>
@@ -1483,6 +1482,66 @@ lemma procs_compiled_source_com:
   assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
   shows "source_com (body decl)"
   using assms by (blast elim: procs_compiled_proc)
+
+section \<open>Call preservation\<close>
+
+text \<open>
+  A source \<^const>\<open>Call\<close> in head position of the active (base) residual is simulated by a
+  \<^const>\<open>star\<close> of two \<^const>\<open>cstep\<close>s --- the call edge to \<^term>\<open>FunctionEntry q\<close> and the entry
+  \<^term>\<open>EA_Nop\<close> to the callee body's entry --- and adds exactly one \<open>Nested\<close> layer: the callee body
+  becomes a fresh \<open>Base\<close> activation (located at its entry by \<open>control_at_initial\<close>, a real
+  procedure by \<^const>\<open>proc_activation\<close>), and the caller resumes at its located post-call residual
+  \<^term>\<open>seq_after SKIP ao\<close> --- bare \<^const>\<open>SKIP\<close> for a tail call (\<^term>\<open>ao = None\<close>), \<^term>\<open>Seq SKIP after\<close>
+  for an ordinary call.  Everything the callee needs (edge inclusions, entry wiring, body
+  source-ness) comes from the single \<^const>\<open>procs_compiled\<close> certificate.
+\<close>
+
+lemma csim_call_base:
+  assumes pc: "procs_compiled \<Pi> g"
+      and loc: "control_at \<Pi> p c0 n (Call dst q actuals) v"
+      and callerSKIP: "control_at \<Pi> p c0 n (seq_after SKIP ao) (Statement (Suc k))"
+      and vk: "v = Statement k"
+      and comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
+      and Ksub: "K \<subseteq> calls g"
+      and pa: "proc_activation \<Pi> p c0"
+      and decl: "\<Pi> q = Some decl"
+      and arity: "length actuals = length (formals decl)"
+      and distinct: "distinct (formals decl)"
+  shows "\<exists>cfg'. star (cstep g) (v, s, [])  cfg'
+              \<and> csim \<Pi> g (seq_after (Seq (body decl) Restore) ao,
+                          bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
+                          [Frame s dst]) cfg'"
+proof -
+  let ?callee = "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+  from call_transition_located[OF loc comp Ksub decl, where s = s and stk = "[]"]
+  obtain k' where vk': "v = Statement k'"
+    and cstep1: "cstep g (Statement k', s, [])
+           (FunctionEntry q, call_enter (CallEdge dst (formals decl) actuals) s,
+            [(Statement (Suc k'), dst, s)])"
+    and callerSKIP': "control_at \<Pi> p c0 n SKIP (Statement (Suc k'))" by blast
+  have kk: "k' = k" using vk vk' by simp
+  have ce: "call_enter (CallEdge dst (formals decl) actuals) s = ?callee"
+    by (rule call_enter_eq_source_call_store)
+  from procs_compiled_proc[OF pc decl] obtain m m' en_q ex_q E_q K_q where
+    cbody: "compile \<Pi> q (body decl) m = (m', en_q, ex_q, E_q, K_q)"
+      and entry: "(FunctionEntry q, EA_Nop, en_q) \<in> intra g"
+      and srcbody: "source_com (body decl)" by metis
+  have cstep2: "cstep g (FunctionEntry q, ?callee, [(Statement (Suc k), dst, s)])
+                        (en_q, ?callee, [(Statement (Suc k), dst, s)])"
+    using cstep_nop[OF entry] .
+  have star: "star (cstep g) (v, s, []) (en_q, ?callee, [(Statement (Suc k), dst, s)])"
+    using cstep1[unfolded ce kk] cstep2 vk by (simp add: cstep_star_single star.step)
+  have paq: "proc_activation \<Pi> q (body decl)"
+    using decl unfolding proc_activation_def by blast
+  have baseCallee: "csim \<Pi> g (body decl, ?callee, []) (en_q, ?callee, [])"
+    by (rule csim.Base[OF control_at_initial[OF srcbody, of \<Pi> q m, folded compile_entry_node[OF cbody]] paq])
+  have "csim \<Pi> g (seq_after (Seq (body decl) Restore) ao, ?callee, [] @ [Frame s dst])
+                 (en_q, ?callee, [] @ [(Statement (Suc k), dst, s)])"
+    by (rule csim.Nested[OF baseCallee callerSKIP pa])
+  then have "csim \<Pi> g (seq_after (Seq (body decl) Restore) ao, ?callee, [Frame s dst])
+                      (en_q, ?callee, [(Statement (Suc k), dst, s)])" by simp
+  with star show ?thesis by blast
+qed
 
 section \<open>Regression: the tail-position callee entry is representable\<close>
 
