@@ -1385,6 +1385,68 @@ lemma unwinding_not_head_call: "unwinding u \<Longrightarrow> \<not> head_call u
 lemma pop_ready_not_head_call: "pop_ready w \<Longrightarrow> \<not> head_call w"
   by (cases w rule: pop_ready.cases) (auto simp: unwinding_not_head_call)
 
+subsection \<open>The return-initiation source shape\<close>
+
+text \<open>\<open>head_return c\<close> holds when the leftmost-innermost of \<open>c\<close> is a source \<^const>\<open>Return\<close>: the shape
+  whose next \<^const>\<open>pstep\<close> initiates a return (\<^const>\<open>Return\<close> \<open>-->\<close> \<^const>\<open>Unwind\<close>).  Like the other head
+  classifiers it descends the leftmost \<^const>\<open>Seq\<close> spine.\<close>
+fun head_return :: "com \<Rightarrow> bool" where
+  "head_return (Return e) = True"
+| "head_return (Seq c1 c2) = head_return c1"
+| "head_return _ = False"
+
+lemma head_return_seq_after [simp]:
+  "head_return (seq_after c afters) = head_return c"
+  by (induction afters arbitrary: c) auto
+
+lemma head_return_not_SKIP: "head_return c \<Longrightarrow> c \<noteq> SKIP"
+  by (cases c) auto
+
+lemma head_return_seq_after_form:
+  "head_return c \<Longrightarrow> \<exists>e afters. c = seq_after (Return e) afters"
+proof (induction c)
+  case (Seq c1 c2)
+  from Seq.prems have "head_return c1" by simp
+  from Seq.IH(1)[OF this] obtain e afters where "c1 = seq_after (Return e) afters" by blast
+  then have "Seq c1 c2 = seq_after (Return e) (afters @ [c2])" by (simp add: seq_after_snoc)
+  then show ?case by blast
+qed auto
+
+lemma unwinding_not_head_return: "unwinding u \<Longrightarrow> \<not> head_return u"
+  by (induction u rule: unwinding.induct) auto
+
+lemma pop_ready_not_head_return: "pop_ready w \<Longrightarrow> \<not> head_return w"
+  by (cases w rule: pop_ready.cases) (auto simp: unwinding_not_head_return)
+
+subsection \<open>Source-step classification\<close>
+
+text \<open>Every \<^const>\<open>pstep\<close> of a command that is neither call-, return-, nor returning-headed is an
+  \<^const>\<open>intra_step\<close>: the four head classifiers exhaust the redex kinds a source step can fire.
+  The \<open>Seq2\<close> case descends the leftmost spine (all four classifiers agree with their head).\<close>
+text \<open>\<^const>\<open>intra_step\<close> ignores the frame stack: no intra rule inspects or changes frames, so a step
+  holds under any frame stack.  This lets a \<open>Nested\<close> descent restrict an inner intra step to the
+  inner frames even when they are empty.\<close>
+lemma intra_step_any_frame:
+  "intra_step \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> intra_step \<Pi> (c, s, fr) (c', s', fr)"
+  by (induction "(c, s, frs)" "(c', s', frs')" arbitrary: c s frs c' s' frs'
+      rule: intra_step.induct) (auto intro: intra_step.intros)
+
+lemma intra_step_frame_eq:
+  "intra_step \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> frs' = frs"
+  by (induction "(c, s, frs)" "(c', s', frs')" arbitrary: c s frs c' s' frs'
+      rule: intra_step.induct) auto
+
+lemma pstep_intra_classify:
+  "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow> \<not> is_returning c \<Longrightarrow>
+   intra_step \<Pi> (c, s, frs) (c', s', frs')"
+proof (induction "(c, s, frs)" "(c', s', frs')"
+       arbitrary: c s frs c' s' frs' rule: pstep.induct)
+  case (Seq2 c1 s1 f1 c1' s1' f1' c2)
+  from Seq2.prems have "\<not> head_call c1" "\<not> head_return c1" "\<not> is_returning c1" by auto
+  from Seq2.hyps(2)[OF this] have ih: "intra_step \<Pi> (c1, s1, f1) (c1', s1', f1')" .
+  from intra_step_frame_eq[OF ih] ih show ?case by (auto intro: intra_step.ISeq2)
+qed (auto intro: intra_step.intros)
+
 text \<open>Ordinary location never produces a returning command: \<^const>\<open>control_at\<close> locates only source
   residuals, never \<^const>\<open>Restore\<close> or \<^const>\<open>Unwind\<close> at any depth of leftmost nesting.\<close>
 lemma control_at_not_returning:
