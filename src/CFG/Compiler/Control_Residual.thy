@@ -133,5 +133,21 @@ lemma control_at_done_Assign:
   "control_at \<Pi> p (Assign x a) n SKIP (Statement (Suc n))"
   by (rule control_at.AssignDone)
 
+subsection \<open>Located residuals remain source commands\<close>
+
+lemma control_at_source_com:
+  assumes "control_at \<Pi> p c0 n r v" and "source_com c0"
+  shows "source_com r"
+  using assms
+  by (induction rule: control_at.induct) auto
+
+lemma source_com_no_Restore:
+  "source_com c \<Longrightarrow> c \<noteq> Restore"
+  by (cases c) auto
+
+lemma source_com_no_Unwind:
+  "source_com c \<Longrightarrow> c \<noteq> Unwind"
+  by (cases c) auto
+
 end
 

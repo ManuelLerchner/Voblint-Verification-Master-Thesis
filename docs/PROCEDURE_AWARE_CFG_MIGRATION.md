@@ -1,7 +1,8 @@
 # Procedure-aware CFG migration — architecture design document
 
-**Status:** Design / RFC — **baseline** (revision 2, frozen as the migration
-reference). Not scheduled. No theory changes proposed as part of this document.
+**Status:** Migration reference (revision 2). The procedure-aware CFG and
+source-level `Return` migration is being implemented; retain evidence tags as the
+record of which design claims have been mechanized.
 **Author:** investigation follow-up to AD-46.
 **Companion artifact:** `src/CFG/Proto/Proc_CFG_Prototype.thy` (mechanized two-relation
 kernel, session `Voblint_Proto`, batch-green).
@@ -1351,8 +1352,8 @@ algebra. Deferred to later stages: actual-to-formal parameter binding (the entry
 
 | Fact | Location |
 | ---- | -------- |
-| `com` has no return; constructors | `IMP2_Proc.thy:26` |
-| `result :: aexp option`; `with_result` | `IMP2_Proc.thy:39,53` |
+| `com` includes `Return "aexp option"`; constructors | `IMP2_Proc.thy:26-35` |
+| `Return` publishes through `ret_var`; no declared result field | `IMP2_Proc.thy:38-56` |
 | `ret_var` local | `IMP2_Proc.thy:46,49` |
 | `pstep` rules incl. `Scope`/`Call`/`RestoreStep`; `Frame s dst` | `IMP2_Proc.thy:81-103` |
 | `pfinal` / `pcompletes` | `IMP2_Proc.thy:158-167` |

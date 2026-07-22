@@ -1057,6 +1057,33 @@ next
   from Cons.IH[OF this] show ?case by simp
 qed
 
+lemma source_com_seq_afterD:
+  "source_com (seq_after c afters) \<Longrightarrow>
+   source_com c \<and> (\<forall>a \<in> set afters. source_com a)"
+proof (induction afters arbitrary: c)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a afters)
+  have h: "source_com (seq_after (Seq c a) afters)"
+    using Cons.prems by simp
+  from Cons.IH[OF h] have h1: "source_com (Seq c a)"
+    and h2: "\<forall>b \<in> set afters. source_com b" by blast+
+  from h1 h2 show ?case by auto
+qed
+
+lemma control_at_head_return_afters_no_Restore:
+  assumes "control_at \<Pi> p c0 n (seq_after (Return e) afters) v"
+      and "source_com c0"
+  shows "\<forall>a \<in> set afters. a \<noteq> Restore"
+proof
+  fix a
+  assume ain: "a \<in> set afters"
+  from control_at_source_com[OF assms] source_com_seq_afterD
+  have "source_com a" using ain by blast
+  then show "a \<noteq> Restore" by (rule source_com_no_Restore)
+qed
+
 text \<open>Located call with pending continuations: when the caller's active residual is a \<^const>\<open>Call\<close>
   at the bottom-left of a \<^const>\<open>seq_after\<close> spine (the call site with its right-siblings \<open>afters\<close>),
   the compiled call edge is still the one the compiler emitted at the call node, and the source step
@@ -1489,10 +1516,9 @@ subsection \<open>Source well-formedness: no return at the base activation\<clos
 
 text \<open>\<open>no_return c\<close> holds when the source command \<open>c\<close> contains no \<^const>\<open>Return\<close>.  A well-formed
   \<^emph>\<open>main\<close> body is \<open>no_return\<close>: an explicit \<^const>\<open>Return\<close> is meaningful only inside a called
-  procedure, where a caller frame exists to restore.  The runtime invariant \<open>source_wf (c, s, frs)\<close>
-  requires \<open>no_return\<close> of the active command precisely at the base activation (\<open>frs = []\<close>),
-  so a base configuration never heads with \<^const>\<open>Return\<close> --- ruling out the stuck top-level return
-  \<open>(Return e, s, []) --> (Unwind, _, [])\<close> without extending \<open>csim\<close> to represent it.\<close>
+  procedure, where a caller frame exists to restore.  It seeds the runtime invariant \<open>source_wf\<close>
+  below --- a \<open>no_return\<close> source command is \<open>ret_guarded\<close> at the base activation --- but is not
+  itself preserved by \<^const>\<open>pstep\<close>, since a frame pop can expose a return buried in a continuation.\<close>
 fun no_return :: "com \<Rightarrow> bool" where
   "no_return (Return e) = False"
 | "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
@@ -1503,15 +1529,83 @@ fun no_return :: "com \<Rightarrow> bool" where
 lemma no_return_not_head_return: "no_return c \<Longrightarrow> \<not> head_return c"
   by (induction c) auto
 
-definition source_wf :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
-  "source_wf cfg \<longleftrightarrow> (case cfg of (c, s, frs) \<Rightarrow> frs = [] \<longrightarrow> no_return c)"
+text \<open>\<open>ret_guarded rok c\<close> is the deep source-only well-formedness check: an explicit \<^const>\<open>Return\<close>
+  (or an in-flight \<^const>\<open>Unwind\<close>) is admissible only where \<open>rok\<close> holds --- inside a called
+  activation.  Permission is \<^emph>\<open>granted by the activation tail\<close>: the right child \<^const>\<open>Restore\<close> of a
+  \<^const>\<open>Seq\<close> marks a callee body, so its left child is checked with \<open>rok = True\<close>, whereas ordinary
+  continuations inherit the ambient \<open>rok\<close>.  A bare \<^const>\<open>Restore\<close> (the transient tail after the
+  callee body reduces to \<^const>\<open>SKIP\<close>) is always admissible.  Crucially this looks \<^emph>\<open>behind\<close>
+  \<^const>\<open>Restore\<close> boundaries: a \<^const>\<open>Return\<close> hidden in a base-activation continuation is rejected,
+  which a head-only check misses --- exactly the configuration a frame pop would later surface at
+  the base.\<close>
+fun ret_guarded :: "bool \<Rightarrow> com \<Rightarrow> bool" where
+  "ret_guarded rok SKIP = True"
+| "ret_guarded rok (Assign x a) = True"
+| "ret_guarded rok (Seq c1 c2) =
+     (if c2 = Restore then ret_guarded True c1
+      else ret_guarded rok c1 \<and> ret_guarded rok c2)"
+| "ret_guarded rok (If b c1 c2) = (ret_guarded rok c1 \<and> ret_guarded rok c2)"
+| "ret_guarded rok (While b c) = ret_guarded rok c"
+| "ret_guarded rok (Call dst p actuals) = True"
+| "ret_guarded rok (Return e) = rok"
+| "ret_guarded rok Restore = True"
+| "ret_guarded rok Unwind = rok"
 
-lemma source_wfI: "(frs = [] \<Longrightarrow> no_return c) \<Longrightarrow> source_wf (c, s, frs)"
+text \<open>A source command permits returns everywhere once \<open>rok\<close> holds (no \<^const>\<open>Restore\<close> tails and no
+  bare \<^const>\<open>Unwind\<close> occur), so a compiled procedure body is admissible the instant it is entered.\<close>
+lemma ret_guarded_True_source: "source_com c \<Longrightarrow> ret_guarded True c"
+  by (induction c) (auto split: if_splits)
+
+text \<open>At the base activation (\<open>rok = False\<close>) a source command with no return is not \<^const>\<open>head_return\<close>:
+  the leftmost-innermost redex is never \<^const>\<open>Return\<close>.\<close>
+lemma ret_guarded_False_source_not_head_return:
+  "source_com c \<Longrightarrow> ret_guarded False c \<Longrightarrow> \<not> head_return c"
+  by (induction c) (auto split: if_splits)
+
+text \<open>The runtime invariant: the active command is \<^const>\<open>ret_guarded\<close> at the base activation (returns
+  forbidden until a call opens one).  Unlike a head-only guard this is preserved by \<^const>\<open>pstep\<close>,
+  because it already forbids the base-activation returns that a frame pop would expose.\<close>
+definition source_wf :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
+  "source_wf cfg \<longleftrightarrow> (case cfg of (c, s, frs) \<Rightarrow> ret_guarded False c)"
+
+lemma source_wfI: "ret_guarded False c \<Longrightarrow> source_wf (c, s, frs)"
   by (simp add: source_wf_def)
 
-lemma source_wf_head_return_frames:
-  "source_wf (c, s, frs) \<Longrightarrow> head_return c \<Longrightarrow> frs \<noteq> []"
-  by (auto simp: source_wf_def dest: no_return_not_head_return)
+lemma source_wfD: "source_wf (c, s, frs) \<Longrightarrow> ret_guarded False c"
+  by (simp add: source_wf_def)
+
+text \<open>Base discharge: a \<^const>\<open>source_com\<close> active command of a \<open>source_wf\<close> configuration never heads with
+  \<^const>\<open>Return\<close>.  In \<open>csim_step\<close> the \<open>Base\<close> case supplies \<^const>\<open>source_com\<close> (a located residual),
+  so a return-headed \<open>Base\<close> is impossible and any return initiation runs with a nonempty frame.\<close>
+lemma source_wf_source_not_head_return:
+  "source_wf (c, s, frs) \<Longrightarrow> source_com c \<Longrightarrow> \<not> head_return c"
+  by (auto simp: source_wf_def ret_guarded_False_source_not_head_return)
+
+text \<open>\<^const>\<open>ret_guarded\<close> is preserved by every \<^const>\<open>pstep\<close> at any permission level: a rule induction
+  where \<open>Call\<close> enters a source body (admissible by \<open>ret_guarded_True_source\<close>) and \<open>Seq2\<close> descends the
+  active spine, re-permitting the callee side across a \<^const>\<open>Restore\<close> tail.  Hence \<open>source_wf\<close> holds
+  of the successor configuration.\<close>
+lemma ret_guarded_pstep:
+  assumes bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
+      and step: "pstep \<Pi> (c, s, frs) (c', s', frs')"
+  shows "\<forall>rok. ret_guarded rok c \<longrightarrow> ret_guarded rok c'"
+  using step
+proof (induction "(c, s, frs)" "(c', s', frs')"
+       arbitrary: c s frs c' s' frs' rule: pstep.induct)
+  case Call
+  then show ?case using bodies ret_guarded_True_source by auto
+next
+  case (Seq2 c1 s1 f1 c1' s1' f1' c2)
+  have ih: "\<forall>rok. ret_guarded rok c1 \<longrightarrow> ret_guarded rok c1'" by (rule Seq2.hyps(2))
+  show ?case using ih by (auto split: if_splits)
+qed (auto split: if_splits)
+
+lemma source_wf_pstep:
+  assumes bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
+      and step: "pstep \<Pi> (c, s, frs) (c', s', frs')"
+      and wf: "source_wf (c, s, frs)"
+  shows "source_wf (c', s', frs')"
+  using ret_guarded_pstep[OF bodies step] wf by (simp add: source_wf_def)
 
 text \<open>\<^const>\<open>unwinding\<close> of an \<^const>\<open>Unwind\<close> spine holds exactly when the pending continuations carry
   no \<^const>\<open>Restore\<close> marker --- true for the source continuations of a \<^const>\<open>control_at\<close> residual, so
@@ -1782,6 +1876,33 @@ next
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
+lemma csim_nested_lift:
+  assumes run: "star (cstep g) (v, s, stk) (v', s', stk')"
+      and sim: "csim \<Pi> g (inner', s', frs) (v', t', stk')"
+      and caller: "control_at \<Pi> pc c0c nc (seq_after SKIP afters) cont"
+      and cacc: "compiled_at \<Pi> g pc c0c nc"
+      and pa: "proc_activation \<Pi> pc c0c"
+  shows "star (cstep g) (v, s, stk @ [(cont, dst, caller_store)])
+           (v', s', stk' @ [(cont, dst, caller_store)])
+       \<and> csim \<Pi> g
+           (seq_after (Seq inner' Restore) afters, s',
+             frs @ [Frame caller_store dst])
+           (v', s', stk' @ [(cont, dst, caller_store)])"
+proof -
+  have teq: "t' = s'" using csim_store_eq[OF sim] by simp
+  have lifted:
+    "star (cstep g) (v, s, stk @ [(cont, dst, caller_store)])
+       (v', s', stk' @ [(cont, dst, caller_store)])"
+    using cstep_star_frame_extend[OF run, of "[(cont, dst, caller_store)]"] teq by simp
+  have rel:
+    "csim \<Pi> g
+       (seq_after (Seq inner' Restore) afters, s',
+         frs @ [Frame caller_store dst])
+       (v', s', stk' @ [(cont, dst, caller_store)])"
+    by (rule csim.Nested[OF sim[unfolded teq] caller cacc pa])
+  show ?thesis using lifted rel by blast
+qed
+
 text \<open>Stepping a returning \<open>Nested\<close> command descends the outer \<^const>\<open>Seq\<close> spine to the callee
   residual: a csim'd \<open>inner\<close> is never \<^const>\<open>SKIP\<close> (it is returning) nor \<^const>\<open>Unwind\<close>, so the
   innermost sequencing fires \<open>Seq2\<close> and the pending continuations \<open>afters\<close> and the trailing
@@ -1925,6 +2046,8 @@ lemma procs_compiled_source_com:
   assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
   shows "source_com (body decl)"
   using assms by (blast elim: procs_compiled_proc)
+
+
 
 section \<open>Call preservation\<close>
 
@@ -2216,6 +2339,266 @@ next
     with cstepN show ?case by blast
   qed
 qed
+
+section \<open>Return initiation\<close>
+
+text \<open>
+  A source \<^const>\<open>Return\<close> in head position (\<^const>\<open>head_return\<close>) fires \<open>Return e --> Unwind\<close>, turning
+  the innermost callee activation into its returning phase.  On the CFG side the callee moves in one
+  \<open>Intra\<close> step along the \<^term>\<open>EA_Ret e p\<close> edge from the return statement's node to
+  \<^term>\<open>FunctionResult p\<close>, and the enclosing \<open>Nested\<close> wrapper becomes \<open>Returning\<close>: its body is now
+  \<^term>\<open>Seq (seq_after Unwind cafters) Restore\<close>, which is \<^const>\<open>pop_ready\<close> because the callee's
+  pending continuations \<open>cafters\<close> --- source residuals of a \<^const>\<open>control_at\<close> location --- carry no
+  \<^const>\<open>Restore\<close> (\<open>control_at_head_return_afters_no_Restore\<close>, \<open>unwinding_seq_after_Unwind\<close>).  The
+  \<open>frs \<noteq> []\<close> premise excludes the ill-formed base \<^const>\<open>Return\<close> (a stuck top-level return); \<open>csim_step\<close>
+  discharges it from \<open>source_wf\<close>.  Deeper wrappers ride along unchanged via the induction hypothesis,
+  exactly as in \<open>csim_returning_completion\<close>.
+\<close>
+theorem csim_return_init_completion:
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_compiled \<Pi> g \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
+   head_return c \<Longrightarrow> pstep \<Pi> (c, s, frs) src' \<Longrightarrow>
+   \<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
+  case (Base p c0 n cc vv ss)
+  from Base.prems(2) show ?case by simp
+next
+  case (Returning w pc c0c nc afters cont callee caller dst p)
+  from Returning.prems(3) pop_ready_not_head_return[OF Returning.hyps(1)]
+  show ?case by simp
+next
+  case (Nested inner s0 frs0 v0 stk0 pc c0c nc afters cont caller dst)
+  have hr_inner: "head_return inner" using Nested.prems(3) by simp
+  have nsk: "inner \<noteq> SKIP" using hr_inner by (rule head_return_not_SKIP)
+  have nunw: "inner \<noteq> Unwind" using hr_inner by auto
+  obtain inner' s' fz where
+    src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
+      and stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+    by (rule pstep_seq_after_seq_restore[OF Nested.prems(4) nsk nunw])
+  show ?case
+  proof (cases "frs0 = []")
+    case True
+    have baseInner: "csim \<Pi> g (inner, s0, []) (v0, s0, stk0)" using Nested.hyps(1) True by simp
+    from csim_base_procD[OF baseInner] obtain pin c0in nin where
+      ctrl: "control_at \<Pi> pin c0in nin inner v0" and cacc: "compiled_at \<Pi> g pin c0in nin"
+        and pa: "proc_activation \<Pi> pin c0in" .
+    have stk0nil: "stk0 = []" using csim_Nil_baseD[OF baseInner] by simp
+    from pa obtain decl where pdecl: "\<Pi> pin = Some decl" "c0in = body decl"
+      by (rule proc_activationD)
+    have srcc0: "source_com c0in"
+      using procs_compiled_source_com[OF Nested.prems(1) \<open>\<Pi> pin = Some decl\<close>] \<open>c0in = body decl\<close>
+      by simp
+    obtain e cafters where innerform: "inner = seq_after (Return e) cafters"
+      using head_return_seq_after_form[OF hr_inner] by blast
+    \<comment> \<open>the head step is @{text \<open>Return e --> Unwind\<close>}, leaving the continuations \<open>cafters\<close>\<close>
+    have stepin1: "pstep \<Pi> (seq_after (Return e) cafters, s0, [Frame caller dst]) (inner', s', fz)"
+      using stepin True innerform by simp
+    obtain h' where inner'form: "inner' = seq_after h' cafters"
+        and hstep: "pstep \<Pi> (Return e, s0, [Frame caller dst]) (h', s', fz)"
+      by (rule pstep_seq_after_headD[OF stepin1]) auto
+    have hUnw: "h' = Unwind" and s'eq: "s' = ret_store e s0" and fzeq: "fz = [Frame caller dst]"
+      using hstep by (cases e; auto simp: ret_store_def)+
+    \<comment> \<open>the callee continuations carry no \<open>Restore\<close>, so the \<open>Unwind\<close> spine is \<open>pop_ready\<close>\<close>
+    have noRest: "\<forall>a \<in> set cafters. a \<noteq> Restore"
+      by (rule control_at_head_return_afters_no_Restore[OF ctrl[unfolded innerform] srcc0])
+    have popready: "pop_ready (Seq (seq_after Unwind cafters) Restore)"
+      using unwinding_seq_after_Unwind[OF noRest] by simp
+    \<comment> \<open>CFG: one \<open>Intra\<close> step along the return edge to @{term \<open>FunctionResult pin\<close>}\<close>
+    from cacc obtain n' en ex E K where comp: "compile \<Pi> pin c0in nin = (n', en, ex, E, K)"
+        and Esub: "E \<subseteq> intra g" by (auto simp: compiled_at_def)
+    obtain k where vk: "v0 = Statement k"
+        and edge: "(Statement k, EA_Ret e pin, FunctionResult pin) \<in> E"
+      using control_at_seq_after_return_edge[OF ctrl[unfolded innerform] refl comp] by blast
+    have edgeg: "(Statement k, EA_Ret e pin, FunctionResult pin) \<in> intra g" using edge Esub by blast
+    have cstep1: "cstep g (Statement k, s0, [(cont, dst, caller)])
+                          (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
+      using cstep.Intra[OF edgeg edge_step_EA_Ret_ret_store] .
+    \<comment> \<open>the enclosing wrapper becomes @{text Returning}\<close>
+    have rel: "csim \<Pi> g
+        (seq_after (Seq (seq_after Unwind cafters) Restore) afters, ret_store e s0, [Frame caller dst])
+        (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
+      by (rule csim.Returning[OF popready Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)])
+    have srcshape: "src' = (seq_after (Seq (seq_after Unwind cafters) Restore) afters,
+                            ret_store e s0, [Frame caller dst])"
+      using src' inner'form hUnw s'eq fzeq by simp
+    have "star (cstep g) (v0, s0, stk0 @ [(cont, dst, caller)])
+                         (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
+      using cstep1 vk stk0nil by (auto intro: cstep_star_single)
+    with rel srcshape show ?thesis by auto
+  next
+    case False
+    from pstep_frame_restrict[OF stepin refl False] obtain fz' where
+      fz: "fz = fz' @ [Frame caller dst]"
+        and stepin': "pstep \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+    from Nested.hyps(2)[OF Nested.prems(1) False hr_inner stepin'] obtain v' t' stk' where
+      cstepin: "star (cstep g) (v0, s0, stk0) (v', t', stk')"
+        and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
+    have teq: "t' = s'" using csim_store_eq[OF csimin] by simp
+    have cstepN: "star (cstep g) (v0, s0, stk0 @ [(cont, dst, caller)])
+                                 (v', s', stk' @ [(cont, dst, caller)])"
+      using cstep_star_frame_extend[OF cstepin, of "[(cont, dst, caller)]"] teq by simp
+    have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
+                   (v', s', stk' @ [(cont, dst, caller)])"
+      by (rule csim.Nested[OF csimin[unfolded teq] Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)])
+    then have "csim \<Pi> g src' (v', s', stk' @ [(cont, dst, caller)])" by (simp add: src' fz)
+    with cstepN show ?thesis by blast
+  qed
+qed
+
+section \<open>Single-step and finite-execution forward simulation\<close>
+
+text \<open>A return in head position runs with a nonempty frame stack: only a \<open>Base\<close> activation has an
+  empty stack, and its located residual is a source command, so \<open>source_wf\<close> forbids it from heading
+  with \<^const>\<open>Return\<close>.  This is where \<open>source_wf\<close> discharges the nonempty-frame side condition of
+  \<open>csim_return_init_completion\<close> --- confined to the return-initiation branch of \<open>csim_step\<close>.\<close>
+lemma csim_head_return_frames:
+  assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
+      and PC: "procs_compiled \<Pi> g"
+      and WF: "source_wf (c, s, frs)"
+      and RET: "head_return c"
+  shows "frs \<noteq> []"
+proof (rule ccontr)
+  assume "\<not> frs \<noteq> []"
+  hence "csim \<Pi> g (c, s, []) (v, t, stk)" using SIM by simp
+  from csim_base_procD[OF this] obtain p c0 n where
+    ctrl: "control_at \<Pi> p c0 n c v" and pa: "proc_activation \<Pi> p c0" by blast
+  from pa obtain decl where pdecl: "\<Pi> p = Some decl" "c0 = body decl"
+    by (rule proc_activationD)
+  have "source_com c0"
+    using procs_compiled_source_com[OF PC \<open>\<Pi> p = Some decl\<close>] \<open>c0 = body decl\<close> by simp
+  hence "source_com c" using control_at_source_com[OF ctrl] by simp
+  from source_wf_source_not_head_return[OF WF this] RET show False by simp
+qed
+
+text \<open>
+  One-step forward simulation.  Every source \<^const>\<open>pstep\<close> from a \<open>csim\<close>-related, \<open>source_wf\<close>
+  configuration is matched by a \<^const>\<open>star\<close> of target \<^const>\<open>cstep\<close>s landing in a \<open>csim\<close>-related
+  successor.  The proof is the four-way redex classification (\<open>head_call\<close> / \<open>head_return\<close> /
+  \<open>is_returning\<close> / otherwise-intra) dispatched to the four completion theorems; \<open>source_wf\<close> is used
+  only to supply the nonempty frame for the return-initiation branch.  The public statement exposes
+  none of the internal classifiers, compile tuples, offsets, or frame conditions.
+\<close>
+theorem csim_step:
+  assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
+      and PC: "procs_compiled \<Pi> g"
+      and WF: "source_wf (c, s, frs)"
+      and STEP: "pstep \<Pi> (c, s, frs) src'"
+  shows "\<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+proof -
+  consider (call) "head_call c" | (ret) "head_return c" | (returning) "is_returning c"
+    | (intra) "\<not> head_call c" "\<not> head_return c" "\<not> is_returning c" by blast
+  then show ?thesis
+  proof cases
+    case call
+    from csim_call_completion[OF SIM PC call STEP] show ?thesis .
+  next
+    case ret
+    from csim_head_return_frames[OF SIM PC WF ret]
+    have "frs \<noteq> []" .
+    from csim_return_init_completion[OF SIM PC this ret STEP] show ?thesis .
+  next
+    case returning
+    from csim_returning_completion[OF SIM returning STEP] show ?thesis .
+  next
+    case intra
+    obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
+    have "intra_step \<Pi> (c, s, frs) (c', s', frs')"
+      by (rule pstep_intra_classify[OF STEP[unfolded sc] intra(1) intra(2) intra(3)])
+    from csim_intra_completion[OF SIM PC this] show ?thesis by (simp add: sc)
+  qed
+qed
+
+text \<open>
+  Finite-execution forward simulation.  A whole \<^const>\<open>pstep\<close> run from a \<open>csim\<close>-related, \<open>source_wf\<close>
+  configuration is matched by a \<^const>\<open>cstep\<close> run into a \<open>csim\<close>-related successor.  Induction on the
+  source run: \<open>csim_step\<close> advances one step, \<open>source_wf_pstep\<close> re-establishes the invariant for the
+  next step, and \<open>star_trans\<close> composes the target runs.
+\<close>
+lemma csim_run:
+  assumes PC: "procs_compiled \<Pi> g"
+      and RUN: "star (pstep \<Pi>) sc sc'"
+      and SIM: "csim \<Pi> g sc dg"
+      and WF: "source_wf sc"
+  shows "\<exists>dg'. star (cstep g) dg dg' \<and> csim \<Pi> g sc' dg'"
+  using RUN SIM WF
+proof (induction arbitrary: dg rule: star.induct)
+  case (refl a)
+  obtain v0 t0 k0 where "dg = (v0, t0, k0)" by (cases dg)
+  with refl show ?case by (auto intro: star.refl)
+next
+  case (step a b cc)
+  obtain c0 s0 f0 where a: "a = (c0, s0, f0)" by (cases a)
+  obtain c1 s1 f1 where b: "b = (c1, s1, f1)" by (cases b)
+  obtain v0 t0 k0 where dgd: "dg = (v0, t0, k0)" by (cases dg)
+  have SIMa: "csim \<Pi> g (c0, s0, f0) (v0, t0, k0)" using step.prems(1) a dgd by simp
+  have WFa: "source_wf (c0, s0, f0)" using step.prems(2) a by simp
+  have STEP: "pstep \<Pi> (c0, s0, f0) (c1, s1, f1)" using step.hyps(1) a b by simp
+  from csim_step[OF SIMa PC WFa STEP] obtain dg1 where
+    run1: "star (cstep g) (v0, t0, k0) dg1" and sim1: "csim \<Pi> g (c1, s1, f1) dg1" by blast
+  have bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
+    using procs_compiled_source_com[OF PC] .
+  have WFb: "source_wf b" using source_wf_pstep[OF bodies STEP WFa] b by simp
+  have sim1b: "csim \<Pi> g b dg1" using sim1 b by simp
+  from step.IH[OF sim1b WFb] obtain dg' where
+    run2: "star (cstep g) dg1 dg'" and sim2: "csim \<Pi> g cc dg'" by blast
+  from run1 run2 have "star (cstep g) (v0, t0, k0) dg'" by (rule star_trans)
+  with sim2 show ?case using dgd by blast
+qed
+
+theorem csim_star:
+  assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
+      and PC: "procs_compiled \<Pi> g"
+      and WF: "source_wf (c, s, frs)"
+      and RUN: "star (pstep \<Pi>) (c, s, frs) src'"
+  shows "\<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+  using csim_run[OF PC RUN SIM WF] .
+
+subsection \<open>Regression: base-activation well-formedness\<close>
+
+text \<open>A return-free source \<^emph>\<open>main\<close> body seeds \<open>source_wf\<close> at the empty stack --- the well-formed
+  starting configuration of a whole run.\<close>
+lemma ret_guarded_False_no_return:
+  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> ret_guarded False c"
+  by (induction c) (auto split: if_splits)
+
+lemma source_wf_main:
+  "no_return c \<Longrightarrow> source_com c \<Longrightarrow> source_wf (c, s, [])"
+  by (simp add: source_wf_def ret_guarded_False_no_return)
+
+text \<open>A \<^const>\<open>Return\<close> reachable at the base activation is rejected by \<open>source_wf\<close> --- both a bare
+  top-level return and one buried behind a base-activation continuation (the exact shape a frame pop
+  would expose).  The raw semantics does step it, to a stuck \<^term>\<open>(Unwind, s', [])\<close>, but the initial
+  configuration already fails well-formedness.\<close>
+lemma source_wf_return_main_rejected: "\<not> source_wf (Return e, s, [])"
+  by (simp add: source_wf_def)
+
+lemma source_wf_seq_return_main_rejected: "\<not> source_wf (Seq SKIP (Return e), s, [])"
+  by (simp add: source_wf_def)
+
+lemma return_main_stuck_but_rejected:
+  "pstep \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> \<not> source_wf (Return e, s, [])"
+  by (cases e) (auto simp: source_wf_def ret_store_def)
+
+text \<open>A \<^const>\<open>Return\<close> inside a called activation (under a \<^const>\<open>Restore\<close> boundary, with a caller
+  frame) is accepted: this is where an explicit return is meaningful.\<close>
+lemma source_wf_return_in_callee:
+  "source_wf (Seq (Return e) Restore, s, [Frame caller dst])"
+  by (simp add: source_wf_def)
+
+text \<open>The invariant is closed under \<^const>\<open>pstep\<close> (\<open>source_wf_pstep\<close>) and finite runs.\<close>
+lemma source_wf_psteps:
+  assumes "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
+      and "star (pstep \<Pi>) sc sc'" and "source_wf sc"
+  shows "source_wf sc'"
+  using assms(2,3)
+proof (induction rule: star.induct)
+  case (step a b c)
+  obtain c0 s0 f0 where a: "a = (c0, s0, f0)" by (cases a)
+  obtain c1 s1 f1 where b: "b = (c1, s1, f1)" by (cases b)
+  from step.prems a have "source_wf (c0, s0, f0)" by simp
+  from source_wf_pstep[OF assms(1) _ this] step.hyps(1) a b
+  have "source_wf (c1, s1, f1)" by simp
+  with step.IH b show ?case by simp
+qed simp
 
 section \<open>Regression: the tail-position callee entry is representable\<close>
 
