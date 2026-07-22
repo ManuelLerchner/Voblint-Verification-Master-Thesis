@@ -1485,6 +1485,41 @@ lemma unwinding_not_head_return: "unwinding u \<Longrightarrow> \<not> head_retu
 lemma pop_ready_not_head_return: "pop_ready w \<Longrightarrow> \<not> head_return w"
   by (cases w rule: pop_ready.cases) (auto simp: unwinding_not_head_return)
 
+subsection \<open>Source well-formedness: no return at the base activation\<close>
+
+text \<open>\<open>no_return c\<close> holds when the source command \<open>c\<close> contains no \<^const>\<open>Return\<close>.  A well-formed
+  \<^emph>\<open>main\<close> body is \<open>no_return\<close>: an explicit \<^const>\<open>Return\<close> is meaningful only inside a called
+  procedure, where a caller frame exists to restore.  The runtime invariant \<open>source_wf (c, s, frs)\<close>
+  requires \<open>no_return\<close> of the active command precisely at the base activation (\<open>frs = []\<close>),
+  so a base configuration never heads with \<^const>\<open>Return\<close> --- ruling out the stuck top-level return
+  \<open>(Return e, s, []) --> (Unwind, _, [])\<close> without extending \<open>csim\<close> to represent it.\<close>
+fun no_return :: "com \<Rightarrow> bool" where
+  "no_return (Return e) = False"
+| "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
+| "no_return (If b c1 c2) = (no_return c1 \<and> no_return c2)"
+| "no_return (While b c) = no_return c"
+| "no_return _ = True"
+
+lemma no_return_not_head_return: "no_return c \<Longrightarrow> \<not> head_return c"
+  by (induction c) auto
+
+definition source_wf :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
+  "source_wf cfg \<longleftrightarrow> (case cfg of (c, s, frs) \<Rightarrow> frs = [] \<longrightarrow> no_return c)"
+
+lemma source_wfI: "(frs = [] \<Longrightarrow> no_return c) \<Longrightarrow> source_wf (c, s, frs)"
+  by (simp add: source_wf_def)
+
+lemma source_wf_head_return_frames:
+  "source_wf (c, s, frs) \<Longrightarrow> head_return c \<Longrightarrow> frs \<noteq> []"
+  by (auto simp: source_wf_def dest: no_return_not_head_return)
+
+text \<open>\<^const>\<open>unwinding\<close> of an \<^const>\<open>Unwind\<close> spine holds exactly when the pending continuations carry
+  no \<^const>\<open>Restore\<close> marker --- true for the source continuations of a \<^const>\<open>control_at\<close> residual, so
+  an explicit return's \<^const>\<open>Unwind\<close> is genuinely a \<^const>\<open>pop_ready\<close> frame-pop.\<close>
+lemma unwinding_seq_after_Unwind:
+  "(\<forall>a \<in> set afters. a \<noteq> Restore) \<Longrightarrow> unwinding (seq_after Unwind afters)"
+  by (induction afters rule: rev_induct) (auto simp: seq_after_snoc)
+
 subsection \<open>Source-step classification\<close>
 
 text \<open>Every \<^const>\<open>pstep\<close> of a command that is neither call-, return-, nor returning-headed is an
