@@ -48,13 +48,47 @@ record imp_prog =
 definition prog_procs :: "imp_prog => pname list" where
   "prog_procs p = map fst (proc_rep p)"
 
+text \<open>
+  \<open>prog_main_name\<close> is the entry procedure's name.  The \<^verbatim>\<open>program\<close> parser identifies the
+  entry by exactly this name and rejects formals on it, so it is fixed by construction.
+\<close>
+
+definition prog_main_name :: pname where
+  "prog_main_name = ''main''"
+
+text \<open>
+  \<open>prog_table\<close> is the \<^emph>\<open>complete\<close> declaration environment: the declared procedures
+  plus the entry procedure itself.  \<^const>\<open>prog_procs\<close> stays the non-entry names, so the
+  pair is exactly what \<open>wf_compile_input\<close> asks for --- the entry is declared, and the name
+  list is its complement.
+\<close>
+
 definition prog_table :: "imp_prog => proc_table" where
-  "prog_table p = map_of (proc_rep p)"
+  "prog_table p =
+     (map_of (proc_rep p))(prog_main_name \<mapsto> proc_decl_of [] (prog_main p))"
+
+lemma prog_table_main [simp]:
+  "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
+  by (simp add: prog_table_def)
+
+lemma prog_table_other:
+  "q \<noteq> prog_main_name \<Longrightarrow> prog_table p q = map_of (proc_rep p) q"
+  by (simp add: prog_table_def)
+
+lemma dom_prog_table:
+  "dom (prog_table p) = insert prog_main_name (set (prog_procs p))"
+  by (auto simp: prog_table_def prog_procs_def dom_map_of_conv_image_fst)
+
+lemma source_pi_prog_table:
+  assumes "source_pi (map_of (proc_rep p))" and "source_com (prog_main p)"
+  shows "source_pi (prog_table p)"
+  using assms by (auto simp: source_pi_def prog_table_def proc_decl_of_def split: if_splits)
 
 lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m) = map fst ps"
   by (simp add: prog_procs_def imp_prog.make_def)
 
-lemma prog_table_make [simp]: "prog_table (imp_prog.make ps m) = map_of ps"
+lemma prog_table_make [simp]:
+  "prog_table (imp_prog.make ps m) = (map_of ps)(prog_main_name \<mapsto> proc_decl_of [] m)"
   by (simp add: prog_table_def imp_prog.make_def)
 
 lemma prog_main_make [simp]: "prog_main (imp_prog.make ps m) = m"

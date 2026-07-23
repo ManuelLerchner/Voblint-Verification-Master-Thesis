@@ -16,10 +16,11 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     Control_Simulation
     Compile_Certificate
     CFG_Prune
-  theories [quick_and_dirty]
-    (* Source-to-local-trace bridge (csim -> valid_ltr).  Fully proved except the
-       one isolated procedure-locality obligation valid_ltr_entry_result_eq, whose
-       discharge needs the per-procedure node-classification / edge-locality theory. *)
+    (* Per-procedure node classification and edge locality; carries
+       valid_ltr_entry_result_eq, the activation procedure-locality theorem. *)
+    Compile_Locality
+    (* Source-to-local-trace bridge (csim -> valid_ltr), and the completed-run
+       exit reachability it feeds. *)
     Located_LTR
   (* Stage 5B+ notes:
      CFG_Path (nat-offset path infrastructure) was retired in Stage 3; the

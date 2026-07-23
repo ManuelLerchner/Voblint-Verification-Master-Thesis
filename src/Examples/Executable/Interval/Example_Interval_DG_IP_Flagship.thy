@@ -16,12 +16,7 @@ definition twice_program :: imp_prog where
      void main() { x := twice(3); y := twice(10) }
    }"
 
-text \<open>\<^const>\<open>prog_table\<close> holds the declared procedures only, while \<^const>\<open>wf_compile_input\<close>
-  wants the entry procedure declared too, so \<open>main\<close> is added explicitly.  It is never called,
-  so neither the compiled graph nor \<^const>\<open>pstep\<close> is affected.\<close>
-
-definition twice_pi :: proc_table where
-  "twice_pi = (prog_table twice_program)(''main'' \<mapsto> proc_decl_of [] (prog_main twice_program))"
+definition twice_pi :: proc_table where "twice_pi = prog_table twice_program"
 definition twice_procs :: "pname list" where "twice_procs = prog_procs twice_program"
 definition twice_main :: "IMP2_Proc.com" where "twice_main = prog_main twice_program"
 
@@ -229,7 +224,7 @@ subsection \<open>Source-level soundness\<close>
 
 lemma twice_wf: "wf_compile_input twice_pi twice_procs ''main'' twice_main"
   unfolding wf_compile_input_def twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (auto simp: source_pi_def proc_decl_of_def split: if_splits)
+  by (auto simp: source_pi_def proc_decl_of_def prog_main_name_def split: if_splits)
 
 theorem twice_source_run_sound:
   assumes run: "star (pstep twice_pi) (twice_main, s, []) src'"

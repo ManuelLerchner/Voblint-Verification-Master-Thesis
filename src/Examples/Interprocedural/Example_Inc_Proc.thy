@@ -22,7 +22,9 @@ definition inc_pi :: proc_table where
 
 lemma inc_program_parts:
   shows "prog_procs inc_program = [''p'']"
-    and "prog_table inc_program = map_of [(''p'', proc_decl_of [] (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>))]"
+    and "prog_table inc_program =
+           [''p'' \<mapsto> proc_decl_of [] (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>),
+            prog_main_name \<mapsto> proc_decl_of [] (imp \<lbrakk> p() \<rbrakk>)]"
     and "prog_main inc_program = imp \<lbrakk> p() \<rbrakk>"
   by (simp_all add: inc_program_def)
 
@@ -84,7 +86,7 @@ proof -
                 (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
     show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
-      by (simp add: inc_pi_def inc_program_parts)
+      by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
     show "pcompletes inc_pi ?body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
     proof -
