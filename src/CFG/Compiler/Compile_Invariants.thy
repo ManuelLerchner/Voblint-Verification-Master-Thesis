@@ -5,9 +5,9 @@ begin
 section \<open>Structural invariants of the procedure-aware compiler\<close>
 
 text \<open>
-  The sixteen structural obligations of Stage 5A, plus the parameter-binding exhibit and
-  the five regression examples.  Everything here is about node/edge shape --- the full
-  source-to-\<open>valid_ltr\<close> simulation is Stage 5B.
+  The sixteen structural obligations of Stage 5A, plus the parameter-binding exhibit.
+  Everything here is about node/edge shape --- the full source-to-\<open>valid_ltr\<close>
+  simulation is Stage 5B.
 \<close>
 
 subsection \<open>Compiler input well-formedness\<close>
@@ -329,40 +329,6 @@ proof (intro exI conjI)
     by (simp add: enter_state_def is_global_def)
 qed
 
-subsection \<open>Regression examples\<close>
-
-text \<open>Early return before dead code: the compiled fragment reaches \<open>FunctionResult p\<close> through
-  \<open>EA_Ret (Some e) p\<close>, and the dead code's wired-in entry (the return's normal-exit) has no
-  incoming edge --- so \<open>dead\<close> is off the return-to-result path.\<close>
-lemma ex_return_before_dead:
-  assumes "compile \<Pi> p (Seq (Return (Some e)) (Assign yv ay)) n = (n', en, ex, E, K)"
-  shows "\<exists>k. (Statement k, EA_Ret (Some e) p, FunctionResult p) \<in> E"
-  using compile_return_edge[OF assms] by simp
-
-lemmas ex_dead_after_return_unreached = inv11_return_exit_unreached
-
-text \<open>Two returns in an \<open>if\<close> converge at one \<open>FunctionResult p\<close>.\<close>
-lemmas ex_multi_return = inv13_multi_return_converge
-
-text \<open>Normal fall-through (a procedure without an explicit return) reaches the same result
-  node through the declared-result edge.\<close>
-lemma ex_fallthrough:
-  assumes "compile_proc \<Pi> p (proc_decl_of [] SKIP) n = (n', E, K)"
-  shows "\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E"
-  using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
-
-text \<open>Nested calls: two distinct call edges, distinct continuations, correct entry nodes,
-  and no call action in \<open>intra\<close> (by typing).\<close>
-lemma ex_nested_calls:
-  "(Statement n, CallEdge (Some r1) (case \<Pi> p1 of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p1, Statement (Suc n))
-      \<in> snd (snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
-   \<and> (Statement (Suc (Suc n)), CallEdge (Some r2) (case \<Pi> p2 of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
-      \<in> snd (snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 [])) n))))
-   \<and> Statement (Suc n) \<noteq> Statement (Suc (Suc (Suc n)))"
-  by (simp add: Let_def)
-
-text \<open>A recursive \<open>CallEdge\<close> targets the caller's own \<open>FunctionEntry\<close>.\<close>
-lemmas ex_recursion = inv14_recursion_edge
 
 end
 

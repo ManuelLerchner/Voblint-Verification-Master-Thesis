@@ -25,6 +25,10 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Guard_Refinement
     Example_Proc_Call
     Example_Proc_Recursion_CFG
+    Example_IMP2_Proc_Regression
+    Example_LTR_Collect_Regression
+    Example_Compile_Regression
+    Example_Control_Simulation_Regression
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign

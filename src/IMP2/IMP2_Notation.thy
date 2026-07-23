@@ -68,6 +68,7 @@ syntax
 
   "_imp2_skip"   :: imp2_stmt                                  ("skip")
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
+  "_imp2_return" :: "imp2_aexp \<Rightarrow> imp2_stmt"                  ("return _"               61)
   "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
   "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)
@@ -85,8 +86,7 @@ syntax
   "_imp2_actuals_one" :: "imp2_aexp \<Rightarrow> imp2_actuals"                    ("_")
   "_imp2_actuals_cons" :: "imp2_aexp \<Rightarrow> imp2_actuals \<Rightarrow> imp2_actuals" ("_ , _")
   "_imp2_pbody_stmt" :: "imp2_com \<Rightarrow> imp2_pbody"                      ("_")
-  "_imp2_pbody_ret" :: "imp2_aexp \<Rightarrow> imp2_pbody"                    ("return _")
-  "_imp2_pbody_stmt_ret" :: "imp2_com \<Rightarrow> imp2_aexp \<Rightarrow> imp2_pbody" ("_ ; return _")
+
 
 
 
@@ -233,11 +233,8 @@ parse_translation \<open>
           K c_Cons $ aexp_tr a $ actuals_tr rest
       | actuals_tr t = raise TERM ("IMP2_Notation: actuals_tr", [t])
 
-    (* Keep the raw AST; com_tr / aexp_tr run once, later in mk_table / main.
-       NONE body means a return-only procedure, whose command part is SKIP. *)
+    (* Keep procedure bodies as raw command ASTs until program validation and lowering. *)
     fun pbody_tr (Const ("_imp2_pbody_stmt", _) $ c) = (SOME c, NONE)
-      | pbody_tr (Const ("_imp2_pbody_ret", _) $ e) = (NONE, SOME e)
-      | pbody_tr (Const ("_imp2_pbody_stmt_ret", _) $ c $ e) = (SOME c, SOME e)
       | pbody_tr t = raise TERM ("IMP2_Notation: pbody_tr", [t])
 
     and stmts_tr (Const ("_imp2_stmts_one", _) $ s) = stmt_tr s
@@ -248,6 +245,7 @@ parse_translation \<open>
     and stmt_tr (Const ("_imp2_skip",   _)) = K c_SKIP
       | stmt_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
           K c_Assign $ HOLogic.mk_string x $ aexp_tr a
+      | stmt_tr (Const ("_imp2_return", _) $ e) = K c_Return $ (K c_Some $ aexp_tr e)
       | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
@@ -312,6 +310,11 @@ parse_translation \<open>
       | add_vars (Abs (_, _, b)) acc = add_vars b acc
       | add_vars _ acc = acc
 
+    fun has_return (Const ("_imp2_return", _) $ _) = true
+      | has_return (t $ u) = has_return t orelse has_return u
+      | has_return (Abs (_, _, b)) = has_return b
+      | has_return _ = false
+
     fun is_gname x = size x > 0 andalso String.sub (x, 0) = #"G"
 
     fun check_globals decls used =
@@ -366,7 +369,9 @@ parse_translation \<open>
         val (mains, procs) = List.partition (fn (n, _, _, _) => n = "main") funcs
         val main_ast =
           (case mains of
-             [("main", [], body, NONE)] => body
+             [("main", [], NONE, NONE)] => NONE
+           | [("main", [], SOME body, NONE)] =>
+               if has_return body then error "IMP2 program: main may not return" else SOME body
            | [("main", _, _, SOME _)] => error "IMP2 program: main may not return"
            | [("main", _, _, NONE)] => error "IMP2 program: main must have no formals"
            | [] => error "IMP2 program: missing 'void main() { ... }'"
@@ -388,6 +393,12 @@ value "imp \<lbrakk> x := 0 \<rbrakk>"
 value "imp \<lbrakk> x := 0; y := 1 \<rbrakk>"
 value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
+value "imp \<lbrakk> return 7 \<rbrakk>"
+value "(program {
+  int Gx;
+  void f() { if (Gx < 0) { return 1 } else { skip } }
+  void main() { f() }
+} :: imp_prog)"
 
 (* zero-arg baseline *)
 value "(program { void main() { skip } } :: imp_prog)"
