@@ -12,12 +12,16 @@ text \<open>
 
 subsection \<open>Compiler input well-formedness\<close>
 
-text \<open>The main procedure name is kept disjoint from the declared procedures, so
-  \<open>FunctionEntry mnm\<close> / \<open>FunctionResult mnm\<close> never collide with a callee's nodes.\<close>
+text \<open>\<open>mnm\<close> names the distinguished entry procedure, declared in \<open>\<Pi>\<close> with an empty
+  formal list and body \<open>main\<close>.  The callee list \<open>ps\<close> enumerates the other declared
+  procedures (\<open>dom \<Pi>\<close> minus \<open>mnm\<close>), so \<open>FunctionEntry mnm\<close> / \<open>FunctionResult mnm\<close>
+  never collide with a callee's nodes, yet \<open>FunctionEntry mnm\<close> is an ordinary
+  \<open>proc_activation \<Pi> mnm main\<close> activation.\<close>
 definition wf_compile_input ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
   "wf_compile_input \<Pi> ps mnm main \<longleftrightarrow>
-     distinct ps \<and> set ps = {p. \<Pi> p \<noteq> None} \<and> mnm \<notin> set ps
+     distinct ps \<and> set ps = {p. \<Pi> p \<noteq> None} - {mnm} \<and> mnm \<notin> set ps
+   \<and> \<Pi> mnm = Some (proc_decl_of [] main)
    \<and> source_pi \<Pi> \<and> source_com main"
 
 subsection \<open>Syntactic occurrence predicates\<close>

@@ -14,6 +14,7 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     Control_Residual
     Located_Exec
     Control_Simulation
+    Compile_Certificate
     CFG_Prune
   (* Stage 5B+: re-add each theory here as it is migrated onto the two-relation
      procedure-aware CFG (analysis/solver). They still reference the retired
