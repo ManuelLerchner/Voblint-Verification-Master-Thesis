@@ -82,7 +82,7 @@ definition rec_body :: com where
 
 theorem bounded_recursion_completes:
   assumes p: "\<Pi> ''r'' = Some (proc_decl_of [] rec_body)"
-  shows "\<exists>t. pcompletes \<Pi> (Call None ''r'' []) ((\<lambda>_. 0)(''Gx'' := 1)) t \<and> t ''Gx'' = 0"
+  shows "\<exists>t. pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ((\<lambda>_. 0)(''Gx'' := 1)) t \<and> t ''Gx'' = 0"
 proof -
   let ?s0 = "(\<lambda>_. 0)(''Gx'' := 1)"
   let ?e0 = "enter_state ?s0"
@@ -92,13 +92,13 @@ proof -
     by (simp add: enter_state_def is_global_def)
   have inner_body: "pcompletes \<Pi> rec_body ?ei ?ei"
     unfolding rec_body_def by (rule pcompletes_IfFalse[OF inner_guard pcompletes_skip])
-  have inner_call: "pcompletes \<Pi> (Call None ''r'' []) ?e1 (<?e1 | ?ei>)"
+  have inner_call: "pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (<?e1 | ?ei>)"
     by (rule pcompletes_Call_parameterless[OF p inner_body])
   have outer_guard: "bval (Less (BaseN (AExp.N 0)) (BaseN (AExp.V ''Gx''))) ?e0"
     by (simp add: enter_state_def is_global_def)
-  have dec: "pcompletes \<Pi> (Assign ''Gx'' (Minus (BaseN (AExp.V ''Gx'')) (BaseN (AExp.N 1)))) ?e0 ?e1"
+  have dec: "pcompletes \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0 ?e1"
   proof -
-    have "pcompletes \<Pi> (Assign ''Gx'' (Minus (BaseN (AExp.V ''Gx'')) (BaseN (AExp.N 1)))) ?e0
+    have "pcompletes \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0
             (?e0(''Gx'' := aval (Minus (BaseN (AExp.V ''Gx'')) (BaseN (AExp.N 1))) ?e0))"
       by (rule pcompletes_assign)
     thus ?thesis by (simp add: enter_state_def is_global_def)
@@ -106,7 +106,7 @@ proof -
   have outer_body: "pcompletes \<Pi> rec_body ?e0 (<?e1 | ?ei>)"
     unfolding rec_body_def
     by (rule pcompletes_IfTrue[OF outer_guard pcompletes_Seq[OF dec inner_call]])
-  have outer_call: "pcompletes \<Pi> (Call None ''r'' []) ?s0 (<?s0 | <?e1 | ?ei>>)"
+  have outer_call: "pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?s0 (<?s0 | <?e1 | ?ei>>)"
     by (rule pcompletes_Call_parameterless[OF p outer_body])
   have "(<?s0 | <?e1 | ?ei>>) ''Gx'' = 0"
     by (simp add: is_global_def enter_state_def)

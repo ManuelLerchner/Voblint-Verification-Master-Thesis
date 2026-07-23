@@ -52,9 +52,9 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have run: "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) s
+  have run: "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body)"
@@ -62,7 +62,7 @@ proof -
     show "pcompletes proc_pi inc_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pcompletes proc_pi (Assign ''Gx'' (Plus (V ''Gx'') (N 1)))
+      have "pcompletes proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
                (enter_state s)
                ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
         by (rule pcompletes_assign)
@@ -77,9 +77,9 @@ proof -
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
-  have run: "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) s
+  have run: "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
                 (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body)"
@@ -87,7 +87,7 @@ proof -
     show "pcompletes proc_pi sqr_body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
     proof -
-      have "pcompletes proc_pi (Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')))
+      have "pcompletes proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
                (enter_state s)
                ((enter_state s)(''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s)))"
         by (rule pcompletes_assign)
@@ -108,13 +108,13 @@ text \<open>
 theorem main_prog_result:
   "pcompletes proc_pi main_prog s (s(''Gx'' := 25))"
 proof -
-  have step1: "pcompletes proc_pi (Assign ''Gx'' (N 4)) s (s(''Gx'' := 4))"
+  have step1: "pcompletes proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s(''Gx'' := 4))"
     using pcompletes_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
     by (simp add: pcompletes_def)
-  have step2: "pcompletes proc_pi (IMP2_Proc.Call None ''inc'' []) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+  have step2: "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
     using call_inc_result[where s = "s(''Gx'' := 4)"]
     by simp
-  have step3: "pcompletes proc_pi (IMP2_Proc.Call None ''sqr'' []) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+  have step3: "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
     using call_sqr_result[where s = "s(''Gx'' := 5)"]
     by simp
   show ?thesis
