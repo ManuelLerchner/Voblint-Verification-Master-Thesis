@@ -1,5 +1,5 @@
 theory Located_LTR
-  imports Compile_Certificate CFG_Local_Trace LTR_Collect
+  imports Compile_Certificate Compile_Locality CFG_Local_Trace LTR_Collect
 begin
 
 section \<open>Source execution as activation-local traces\<close>
@@ -15,17 +15,10 @@ text \<open>
 
 subsection \<open>Procedure locality of a valid activation\<close>
 
-text \<open>An activation's own local \<^const>\<open>path\<close> stays inside one compiled procedure fragment: if it
-  enters at \<^term>\<open>FunctionEntry p\<close> and sinks at \<^term>\<open>FunctionResult q\<close> then \<open>p = q\<close>.  This is the
-  one structural obligation of the return case --- \<open>valid_ltr.ret\<close> pins the resumed call edge
-  to the callee's \<^term>\<open>FunctionResult\<close>, so the \<^const>\<open>FunctionEntry\<close> recorded in the frame must
-  agree with the node the return fires at.\<close>
-lemma valid_ltr_entry_result_eq:
-  assumes "t \<in> valid_ltr (compile_prog \<Pi> ps mnm main) S"
-    and "fst (hd (path t)) = FunctionEntry p"
-    and "sink_node t = FunctionResult q"
-  shows "p = q"
-  sorry
+text \<open>The imported theorem \<open>valid_ltr_entry_result_eq\<close> establishes that an activation's
+  local \<^const>\<open>path\<close> stays inside one compiled procedure fragment: an entry
+  \<^term>\<open>FunctionEntry p\<close> and a sink \<^term>\<open>FunctionResult q\<close> have \<open>p = q\<close>.\<close>
+
 
 subsection \<open>The representation invariant\<close>
 
@@ -66,7 +59,8 @@ text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops 
   \<open>valid_ltr_entry_result_eq\<close> --- so the trace composes by \<open>valid_ltr.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma ltr_repr_Return:
-  assumes rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S
                   (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
   shows "ltr_repr (compile_prog \<Pi> ps mnm main) S
            (cont, combine_collect dst caller tst, stk)
@@ -84,7 +78,7 @@ proof -
     and stkc: "stack_repr ?g stk c"
     by (cases rule: stack_repr.cases) auto
   have cvalid: "c \<in> valid_ltr ?g S" using valid_ltr_caller_valid[OF t0v cof] .
-  have pq: "p = q" using valid_ltr_entry_result_eq[OF t0v entryp sn0] .
+  have pq: "p = q" using valid_ltr_entry_result_eq[OF wf t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
   let ?r = "combine_collect dst caller tst"
   let ?t' = "Resume c t0 (path c @ [(cont, ?r)])"
@@ -107,7 +101,8 @@ subsection \<open>The invariant is preserved by located CFG steps\<close>
 text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_ltr\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>ltr_repr_Return\<close>).\<close>
 lemma cstep_preserves_ltr_repr:
-  assumes step: "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and step: "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
     and rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
   shows "\<exists>t'. ltr_repr (compile_prog \<Pi> ps mnm main) S cf' t'"
   using step rep
@@ -154,7 +149,7 @@ next
   from rep Return(1)
   have rep': "ltr_repr (compile_prog \<Pi> ps mnm main) S
                 (FunctionResult q, tst, (cont, dst, caller) # stk') t" by simp
-  from ltr_repr_Return[OF rep'] show ?thesis using Return(2) by auto
+  from ltr_repr_Return[OF wf rep'] show ?thesis using Return(2) by auto
 qed
 
 lemma located_ltr_entry:
@@ -169,29 +164,31 @@ proof -
 qed
 
 lemma cstep_preserves_located_ltr:
-  assumes "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
     and "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
   shows "located_ltr (compile_prog \<Pi> ps mnm main) S cf'"
 proof -
-  from assms(1) obtain t where "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
+  from assms(2) obtain t where "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
     by (auto simp: located_ltr_def)
   then obtain t' where "ltr_repr (compile_prog \<Pi> ps mnm main) S cf' t'"
-    using cstep_preserves_ltr_repr[OF assms(2)] by blast
+    using cstep_preserves_ltr_repr[OF wf assms(3)] by blast
   then show ?thesis by (auto simp: located_ltr_def)
 qed
 
 lemma csteps_preserve_located_ltr:
-  assumes "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
     and "star (cstep (compile_prog \<Pi> ps mnm main)) cf cf'"
   shows "located_ltr (compile_prog \<Pi> ps mnm main) S cf'"
-  using assms(2) assms(1)
+  using assms(3) assms(2)
 proof (induction rule: star.induct)
   case (refl a)
   then show ?case .
 next
   case (step a b c)
   have "located_ltr (compile_prog \<Pi> ps mnm main) S b"
-    by (rule cstep_preserves_located_ltr[OF step.prems step.hyps(1)])
+    by (rule cstep_preserves_located_ltr[OF wf step.prems step.hyps(1)])
   then show ?case by (rule step.IH)
 qed
 
@@ -266,14 +263,14 @@ proof -
     by (simp add: inv16_entry_is_main)
   have step0: "cstep ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
   have loc_en: "located_ltr ?g S (en, s0, [])"
-    by (rule cstep_preserves_located_ltr[OF loc0 step0])
+    by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
     where run_c: "star (cstep ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
     by blast
   obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
   have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
   have loc_v: "located_ltr ?g S (v, s, stk)"
-    using csteps_preserve_located_ltr[OF loc_en run_c] cf' store by simp
+    using csteps_preserve_located_ltr[OF wf loc_en run_c] cf' store by simp
   from loc_v obtain t where "ltr_repr ?g S (v, s, stk) t" by (auto simp: located_ltr_def)
   then show ?thesis using sim' cf' store by blast
 qed
