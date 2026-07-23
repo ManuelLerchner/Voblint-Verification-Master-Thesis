@@ -26,7 +26,7 @@ definition mixed_graphviz_prog :: com where
 
 definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =
-     compile_prog (\<lambda>_. None) [] mixed_graphviz_prog"
+     compile_prog (\<lambda>_. None) [] ''main'' mixed_graphviz_prog"
 
 definition mixed_graphviz_eqs ::
   "(pp \<times> unit, unit, (sign abs_state, ivl abs_state) dg_state) eqsT"
@@ -38,7 +38,12 @@ where
 definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
   "mixed_graphviz_local_value p =
      (\<lambda>v. if v = ''x''
-       then (if p = 0 then SZero else if p = 1 then SNeg else SPos)
+       then (case p of
+         FunctionEntry _ \<Rightarrow> SZero
+       | Statement 0 \<Rightarrow> SZero
+       | Statement 1 \<Rightarrow> SNeg
+       | Statement 2 \<Rightarrow> SPos
+       | FunctionResult _ \<Rightarrow> SPos)
        else STop)"
 
 definition mixed_graphviz_global_value :: "unit \<Rightarrow> ivl abs_state" where
@@ -68,12 +73,12 @@ definition mixed_graphviz_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope (\<lambda>_. None) [] mixed_graphviz_prog
+        let sc = compiled_procedure_scope (\<lambda>_. None) [] ''main'' mixed_graphviz_prog
           mixed_graphviz_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>_. None),
       globals_to_show =
-        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] mixed_graphviz_prog
+        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] ''main'' mixed_graphviz_prog
           mixed_graphviz_cfg (cfg_entry mixed_graphviz_cfg)),
       show_local = (\<lambda>_ _ vars st.
         map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),

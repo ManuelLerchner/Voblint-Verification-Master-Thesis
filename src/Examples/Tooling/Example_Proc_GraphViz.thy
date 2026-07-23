@@ -4,6 +4,9 @@ theory Example_Proc_GraphViz
   imports "Voblint_IMP2.IMP2_Notation" "Voblint_Analysis.Analysis_GraphViz"
 begin
 
+definition dot_main_name :: pname where
+  "dot_main_name = ''main''"
+
 text \<open>
   Two @{const compile_prog} demos exported via @{const raw_cfg_dot_lit}.
   These are structural CFG witnesses; annotated DOT requires an executable analysis
@@ -69,12 +72,12 @@ text \<open>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-             @{code proc_table_a} @{code procs_a} @{code prog_call_p})
+             @{code proc_table_a} @{code procs_a} @{code dot_main_name} @{code prog_call_p})
 \<close>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-             @{code proc_table_b} @{code procs_b} @{code prog_if_calls})
+             @{code proc_table_b} @{code procs_b} @{code dot_main_name} @{code prog_if_calls})
 \<close>
 
 end

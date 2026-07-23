@@ -285,10 +285,10 @@ definition flagship_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope Map.empty [] flagship_prog
+        scope_locals (compiled_procedure_scope Map.empty [] ''main'' flagship_prog
           flagship_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope Map.empty [] flagship_prog
+        scope_return_slot (compiled_procedure_scope Map.empty [] ''main'' flagship_prog
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.

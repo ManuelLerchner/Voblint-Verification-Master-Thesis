@@ -10,6 +10,9 @@ theory Example_Proc_Call
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
+definition main_cfg_name :: pname where
+  "main_cfg_name = ''main''"
+
 text \<open>
   Two parameterless procedures communicate through the global variable
   @{term \<open>''Gx''\<close>}.  Variable names starting with \<open>G\<close> are global:
@@ -269,7 +272,7 @@ text \<open>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-              @{code proc_pi} @{code main_procs} @{code main_prog})
+              @{code proc_pi} @{code main_procs} @{code main_cfg_name} @{code main_prog})
 \<close>
 
 end

@@ -181,11 +181,11 @@ definition twice_ctx_graph_config ::
       route = (\<lambda>_ ctx action d. route_ivl d action),
       show_context = string_of_ivl,
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_pi twice_procs twice_main
+        let sc = compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_pi twice_procs twice_main
+        scope_return_slot (compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -197,7 +197,7 @@ definition twice_ctx_graph_config ::
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
-      owner_of = compiled_owner_of twice_pi twice_procs twice_main,
+      owner_of = compiled_owner_of twice_pi twice_procs ''main'' twice_main,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = bot then ''main / root context''
         else owner @ '' / context='' @ string_of_ivl ctx),
@@ -206,7 +206,7 @@ definition twice_ctx_graph_config ::
 
 definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list" where
   "twice_ctx_contexts_for_pp p =
-    (if compiled_owner_of twice_pi twice_procs twice_main p = ''main''
+    (if compiled_owner_of twice_pi twice_procs ''main'' twice_main p = ''main''
      then [bot] else [ctx_call1, ctx_call2])"
 
 definition twice_ctx_local_graph_domain :: "(pp \<times> ivl + gk) list" where

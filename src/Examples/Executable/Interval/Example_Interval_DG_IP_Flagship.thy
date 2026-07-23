@@ -228,11 +228,11 @@ definition twice_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_pi twice_procs twice_main
+        let sc = compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_pi twice_procs twice_main
+        scope_return_slot (compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -244,7 +244,7 @@ definition twice_graph_config ::
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
-      owner_of = compiled_owner_of twice_pi twice_procs twice_main,
+      owner_of = compiled_owner_of twice_pi twice_procs ''main'' twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
       source_text = Some (string_of_program twice_pi twice_procs twice_main)
     \<rparr>"
