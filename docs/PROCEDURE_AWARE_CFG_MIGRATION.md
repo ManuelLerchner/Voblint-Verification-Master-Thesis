@@ -1615,3 +1615,47 @@ Compiled CFG semantics
 ```
 
 and nearly all of the recent work (the `Returning` phase, `pop_ready`, activation-local traces, and now `compiled_at`) has been about strengthening the **middle layer (`csim`)** until it contains exactly the information needed to prove that every `pstep` can be simulated by `cstep`.
+
+## Downstream effectful stack — 2026-07 progress
+
+Committed after the foundation (`cc540920`), three-source (intra / entry / combine)
+migration of the monovariant effectful solver stack:
+
+* `TD_Side_Eff_Bounds` — `side_acc_eff` / `side_rhs_fold_eff` monotonicity, sides
+  acc-independence + mono, deps, fold upper bounds, and the `strip_inr_globals`
+  least-post-solution machinery restated over the three-list accumulator; new
+  `etf_enter_combined_le_eff` (CALL contribution at `FunctionEntry`) beside the
+  edge and combine closures, all over `intra g` / `calls g`.
+* `TD_Side_Eff_Sound` — `edge_collect_etf_sound` dispatches `EA_Ret`
+  (`None` -> nop, `Some a` -> assign `ret_var`) in place of the retired `EA_Enter`.
+* `TD_Side_Eff_Interface` — `side_analyse_eff` threads the main-proc name
+  (`compile_prog` gained a `pname` argument).
+* `TD_Side_Eff_Pipeline` — `cone_compatible_etf` gains entry dep / static / inr
+  conjuncts (+ accessors); `td_cfg_side_solver_eff_gen` carries enter mono / sides
+  / static obligations.
+* `TD_Side_RHS_Generator` — `mixed_rhs_generator` carries a `unit_edge_tree` enter
+  source (`Fe`) with cone-compat and threefold-mono discharge.
+
+All five are I/Q-clean (per-file `get_diagnostics` empty).  Combine-obligation
+quantifier order in the `*_gen` lemmas is `cc dst ex`; the term stays
+`etf_combine etf dst cc ex`.
+
+### Next coherent sub-project: the cone pillar
+
+`TD_Side_Eff_Cone_Lemmas` (and thus `LTR_TD_Side_Eff_Exit`) is blocked on
+`CFG_Prune`, which is written entirely against the retired single-edge-set
+compiler (`mk_cfg en ex E C`, `EA_Enter`, `combine_call_node/exit/return`,
+`compile_prog_with_regions_def`).  Rebuilding it on the procedure-aware compiler
+requires:
+
+* redefining `cfg_succ_rel` over `intra g` / `calls g` with the entry edge
+  (call site `c` -> `FunctionEntry p`) and the two combine edges
+  (`c` -> continuation `k`, `FunctionResult p` -> `k`);
+* re-proving `compile_entry_cfg_reaches_exit` against the new
+  `compile` / `compile_proc` / `compile_procs` output shapes (FunctionEntry /
+  FunctionResult nodes, `CallEdge`, no `EA_Enter`);
+* adding `CFG_Prune` to the `Voblint_CFG` session ROOT and re-verifying that
+  session.
+
+This is a CFG-layer reachability reconstruction, not downstream propagation, and
+is the natural next unit of work.
