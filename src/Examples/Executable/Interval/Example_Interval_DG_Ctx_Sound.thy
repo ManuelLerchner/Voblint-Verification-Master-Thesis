@@ -27,11 +27,12 @@ abbreviation Sabs :: "(ivl abs_state, ivl abs_state) dg_spec" where
 text \<open>The post-enter callee state and its context projection, abstractly.  These
   mirror \<^const>\<open>entered_ivl\<close> / \<^const>\<open>route_ivl\<close> on \<^typ>\<open>ivl abs_state\<close>.\<close>
 
-definition entered_abs :: "ivl abs_state \<Rightarrow> edge_action \<Rightarrow> ivl abs_state" where
-  "entered_abs d a = snd (dg_spec_step Sabs a d bot)"
+definition entered_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl abs_state" where
+  "entered_abs d ca =
+     (case ca of CallEdge dst fs as \<Rightarrow> snd (dgs_enter Sabs fs as d bot))"
 
-definition route_abs :: "ivl abs_state \<Rightarrow> edge_action \<Rightarrow> ivl" where
-  "route_abs d a = entered_abs d a ''p''"
+definition route_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
+  "route_abs d ca = entered_abs d ca ''p''"
 
 subsection \<open>The route-consistency core\<close>
 
@@ -41,17 +42,21 @@ text \<open>The post-enter callee state commutes with the refinement morphism: t
   global slot defaulted to \<open>bot\<close>.\<close>
 
 lemma entered_commute:
-  "fun_of_st (entered_ivl s a) = entered_abs (fun_of_st s) a"
-proof -
-  have step: "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st) a s bot)
-              = dg_spec_step Sabs a (fun_of_st s) (fun_of_st bot)"
-    by (rule ivl_Hstep)
-  have "fun_of_st (snd (dg_spec_step (unit_dg_spec_st ivl_tf_st) a s bot))
-      = snd (map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st) a s bot))"
+  "fun_of_st (entered_ivl s ca) = entered_abs (fun_of_st s) ca"
+proof (cases ca)
+  case (CallEdge dst fs as)
+  have enter: "map_prod fun_of_st fun_of_st
+                 (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as s bot)
+               = dgs_enter Sabs fs as (fun_of_st s) (fun_of_st bot)"
+    by (rule ivl_Henter)
+  have "fun_of_st (snd (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as s bot))
+      = snd (map_prod fun_of_st fun_of_st
+               (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as s bot))"
     by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dg_spec_step Sabs a (fun_of_st s) (fun_of_st bot))"
-    by (simp add: step)
+  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_st s) (fun_of_st bot))"
+    by (simp add: enter)
   finally show ?thesis
+    using CallEdge
     by (simp add: entered_ivl_def entered_abs_def Spoly_def fun_of_st_bot bot_fun_def)
 qed
 
@@ -62,7 +67,7 @@ text \<open>The route-consistency corollary: the abstract route on a pushed-forw
   callee state.\<close>
 
 lemma route_commute:
-  "route_abs (fun_of_st s) a = route_ivl s a"
+  "route_abs (fun_of_st s) ca = route_ivl s ca"
   by (simp add: route_abs_def route_ivl_def entered_commute[symmetric])
 
 subsection \<open>The abstract routed enter-seed and combine trees\<close>
@@ -74,23 +79,23 @@ text \<open>The abstract mirrors of \<^const>\<open>extra_ivl\<close> / \<^const
 definition extra_abs ::
   "cfg \<Rightarrow> ivl \<Rightarrow> pp \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree list" where
   "extra_abs g ctx v =
-     (if is_frame_entry g v
+     (if is_function_entry v
         then [QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot))]
         else [])
-     @ map (\<lambda>(w, a).
+     @ map (\<lambda>(w, ca, k).
              QueryL (v, ctx) (\<lambda>d.
-               Side (Seed w (route_abs (locals d) a)) (DG bot (entered_abs (locals d) a))
+               Side (Seed w (route_abs (locals d) ca)) (DG bot (entered_abs (locals d) ca))
                  (Answer (DG bot bot))))
-           (enter_successor_list g v)"
+           (call_successor_list g v)"
 
 definition cmb_abs ::
   "cfg \<Rightarrow> ivl \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree" where
   "cmb_abs g ctx dst cc ex =
      QueryL (cc, ctx) (\<lambda>dcl.
-       (case enter_successor_list g cc of
-          (w, a) # _ \<Rightarrow>
-            QueryL (ex, route_abs (locals dcl) a) (\<lambda>dex.
+       (case call_successor_list g cc of
+          (w, ca, k) # _ \<Rightarrow>
+            QueryL (ex, route_abs (locals dcl) ca) (\<lambda>dex.
               Side Global (DG bot (fst (dgs_combine Sabs dst (locals dcl) (locals dex) bot)))
                 (Answer (DG (snd (dgs_combine Sabs dst (locals dcl) (locals dex) bot)) bot)))
         | [] \<Rightarrow> Answer (DG bot bot)))"
@@ -130,11 +135,13 @@ lemma dgs_combine_snd_commute:
   "fun_of_st (snd (dgs_combine Spoly dst dc de bot))
      = snd (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) bot)"
 proof -
-  have step: "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de bot)
+  have step: "map_prod fun_of_st fun_of_st
+                (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot)
               = dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot)"
     by (rule ivl_Hcomb)
-  have "fun_of_st (snd (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de bot))
-      = snd (map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de bot))"
+  have "fun_of_st (snd (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))
+      = snd (map_prod fun_of_st fun_of_st
+               (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))"
     by (metis snd_conv map_prod_simp surj_pair)
   also have "\<dots> = snd (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot))"
     by (simp add: step)
@@ -145,11 +152,11 @@ lemma dgs_combine_fst_commute:
   "fun_of_st (fst (dgs_combine Spoly dst dc de bot))
      = fst (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) bot)"
 proof -
-  have step: "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de bot)
+  have step: "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot)
               = dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot)"
     by (rule ivl_Hcomb)
-  have "fun_of_st (fst (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de bot))
-      = fst (map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de bot))"
+  have "fun_of_st (fst (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))
+      = fst (map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))"
     by (metis fst_conv map_prod_simp surj_pair)
   also have "\<dots> = fst (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot))"
     by (simp add: step)
@@ -157,14 +164,14 @@ proof -
 qed
 
 text \<open>The destination-aware return combine transports.  The callee exit is read
-  under \<^term>\<open>route_ivl (locals dcl) a\<close> --- the \<^emph>\<open>same\<close> context selected at the
-  matching call site's enter --- carried over literally by \<open>route_commute\<close>; the two
+  under \<^term>\<open>route_ivl (locals dcl) ca\<close> --- the \<^emph>\<open>same\<close> context selected at the
+  matching call site's call edge --- carried over literally by \<open>route_commute\<close>; the two
   combine outputs transport through \<open>dgs_combine_fst_commute\<close> / \<open>_snd_commute\<close>.\<close>
 
 lemma dg_tree_st_commute_cmb:
   "dg_tree_st_commute env (cmb_ivl g ctx dst cc ex) (cmb_abs g ctx dst cc ex)"
   unfolding cmb_ivl_def cmb_abs_def
-  by (cases "enter_successor_list g cc")
+  by (cases "call_successor_list g cc")
      (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
                     route_commute dgs_combine_fst_commute dgs_combine_snd_commute
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff
@@ -205,7 +212,7 @@ text \<open>The generic bridge \<open>part_post_solution_seed_dg_st_to_abs\<clos
 
 theorem twice_ctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
         (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
         (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st)))
      (cfg_exit twice_cfg, bot) (fun_of_dg_st \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"

@@ -69,26 +69,50 @@ lemma x1_completed:
    apply (rule pstep.Assign)
   by simp
 
+text \<open>
+  \<^const>\<open>prog_table\<close> carries the declared procedures only, while \<^const>\<open>wf_compile_input\<close> wants
+  the entry procedure declared too, so \<open>main\<close> is added explicitly.  The program is call-free, so
+  the compiled graph does not depend on the table at all (\<open>x1_pi_cfg\<close>), and \<^const>\<open>pstep\<close> never
+  consults it.
+\<close>
+
+definition x1_pi :: proc_table where
+  "x1_pi = (prog_table x1_prog)(''main'' \<mapsto> proc_decl_of [] (prog_main x1_prog))"
+
+lemma x1_pi_only: "x1_pi p \<noteq> None \<Longrightarrow> p = ''main''"
+  by (auto simp: x1_pi_def x1_prog_def split: if_splits)
+
+lemma x1_pi_cfg:
+  "compile_prog x1_pi (prog_procs x1_prog) ''main'' (prog_main x1_prog) = prog_cfg ''main'' x1_prog"
+  unfolding prog_cfg_def x1_pi_def x1_prog_def by eval
+
+lemma x1_completed_pi:
+  "pcompletes x1_pi (prog_main x1_prog) x1_s0 (x1_s0(''x'' := 1))"
+  unfolding pcompletes_def
+  apply (simp only: x1_prog_def x1_s0_def prog_main_make)
+  apply (rule star.step)
+   apply (rule pstep.Assign)
+  by simp
+
 lemma x1_completed_run_collect:
-  "x1_s0(''x'' := 1) \<in>
-    ltr_collect (compile_prog (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog))
-      cinit_stores
-      (cfg_exit (compile_prog (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog)))"
+  "x1_s0(''x'' := 1)
+     \<in> ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))"
 proof -
   have init: "x1_s0 \<in> cinit_stores"
     by (simp add: x1_s0_def cinit_stores_def)
-  have wf: "wf_compile_input (prog_table x1_prog) (prog_procs x1_prog) (prog_main x1_prog)"
-    unfolding wf_compile_input_def source_pi_def x1_prog_def
-    by simp
+  have wf: "wf_compile_input x1_pi (prog_procs x1_prog) ''main'' (prog_main x1_prog)"
+    unfolding wf_compile_input_def x1_pi_def x1_prog_def
+    by (auto simp: source_pi_def proc_decl_of_def split: if_splits)
   have src: "source_com (prog_main x1_prog)"
     by (simp add: x1_prog_def)
+  have swf: "source_wf (prog_main x1_prog, x1_s0, [])"
+    by (simp add: source_wf_def x1_prog_def)
   have run:
-    "star (pstep (prog_table x1_prog))
-      (prog_main x1_prog, x1_s0, [])
+    "star (pstep x1_pi) (prog_main x1_prog, x1_s0, [])
       (IMP2_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
-    using x1_completed unfolding pcompletes_def .
-  show ?thesis
-    by (rule source_completes_ltr_collect_exit[OF wf src init run])
+    using x1_completed_pi unfolding pcompletes_def .
+  from source_completes_ltr_collect_exit[OF wf src swf init x1_pi_only run]
+  show ?thesis unfolding x1_pi_cfg .
 qed
 
 theorem x1_explicit_completed_run_covered:
@@ -116,8 +140,10 @@ text \<open>
   with per-program-point sign abstract states on each node label.
 \<close>
 
+definition x1_mnm :: pname where "x1_mnm = ''main''"
+
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code x1_prog})
+  writeln (@{code sign_annotated_dot_prog_lit} @{code x1_mnm} @{code x1_prog})
 \<close>
 
 end

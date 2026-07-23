@@ -133,6 +133,68 @@ lemma control_at_done_Assign:
   "control_at \<Pi> p (Assign x a) n SKIP (Statement (Suc n))"
   by (rule control_at.AssignDone)
 
+text \<open>
+  The general form.  A completed residual is not in general located \<^emph>\<open>at\<close> the fragment exit:
+  \<open>control_at.IfLeft\<close> leaves it at the taken branch's exit, one \<^const>\<open>EA_Nop\<close> short of the
+  join.  What does hold is that it \<^emph>\<open>reaches\<close> the exit along intra flow, and that every edge
+  crossed on the way is store-preserving --- the join edges the compiler emits are literally
+  \<^const>\<open>EA_Nop\<close>, so \<open>s\<close> is the same at both ends.
+\<close>
+
+lemma compile_control_at_SKIP_exit_path:
+  "control_at \<Pi> p c0 n SKIP v \<Longrightarrow> compile \<Pi> p c0 n = (n', en, ex, E, K)
+   \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> intra_path g (v, s) (ex, s)"
+proof (induction c0 n "SKIP :: com" v arbitrary: n' en ex E K rule: control_at.induct)
+  case (Skip n)
+  then show ?case by (auto intro: star.refl)
+next
+  case (AssignDone x a n)
+  then show ?case by (simp add: star.refl)
+next
+  case (CallDone dst q actuals n)
+  then show ?case by (simp add: star.refl)
+next
+  case (IfDone b c1 c2 n n0 en0 ex0 E0 K0)
+  then show ?case by (simp add: star.refl)
+next
+  case (WhileDone b c n n0 en0 ex0 E0 K0)
+  then show ?case by (simp add: star.refl)
+next
+  case (SeqRight c1 n n1 en1 ex1 E1 K1 c2 v)
+  obtain n2 en2 ex2 E2 K2 where c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (cases "compile \<Pi> p c2 n1") auto
+  from SeqRight.prems(1) SeqRight.hyps(1) c2
+  have ex: "ex = ex2" and Esub: "E2 \<subseteq> E" by (auto simp: Let_def)
+  show ?case unfolding ex
+    by (rule SeqRight.hyps(3)[OF c2]) (use Esub SeqRight.prems(2) in blast)
+next
+  case (IfLeft c1 n v b c2)
+  obtain n1 en1 ex1 E1 K1 where c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
+    by (cases "compile \<Pi> p c1 (Suc n)") auto
+  obtain n2 en2 ex2 E2 K2 where c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (cases "compile \<Pi> p c2 n1") auto
+  from IfLeft.prems(1) c1 c2
+  have ex: "ex = Statement n2" and Esub: "E1 \<subseteq> E" and join: "(ex1, EA_Nop, Statement n2) \<in> E"
+    by (auto simp: Let_def)
+  have p1: "intra_path g (v, s) (ex1, s)"
+    by (rule IfLeft.hyps(2)[OF c1]) (use Esub IfLeft.prems(2) in blast)
+  have p2: "intra_path g (ex1, s) (Statement n2, s)"
+    by (rule intra_path_nop) (use join IfLeft.prems(2) in blast)
+  show ?case unfolding ex by (rule star_trans[OF p1 p2])
+next
+  case (IfRight c1 n n1 en1 ex1 E1 K1 c2 v b)
+  obtain n2 en2 ex2 E2 K2 where c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+    by (cases "compile \<Pi> p c2 n1") auto
+  from IfRight.prems(1) IfRight.hyps(1) c2
+  have ex: "ex = Statement n2" and Esub: "E2 \<subseteq> E" and join: "(ex2, EA_Nop, Statement n2) \<in> E"
+    by (auto simp: Let_def)
+  have p1: "intra_path g (v, s) (ex2, s)"
+    by (rule IfRight.hyps(3)[OF c2]) (use Esub IfRight.prems(2) in blast)
+  have p2: "intra_path g (ex2, s) (Statement n2, s)"
+    by (rule intra_path_nop) (use join IfRight.prems(2) in blast)
+  show ?case unfolding ex by (rule star_trans[OF p1 p2])
+qed
+
 subsection \<open>Located residuals remain source commands\<close>
 
 lemma control_at_source_com:

@@ -12,6 +12,6 @@ end-to-end soundness theorem tying the concrete run to the abstract result.
 | `Example_Proc_Call.thy` | canonical spine | two procedures (`inc` / `sqr`) via a global; `main_prog_interval_analysis` + CFG combine structure |
 | `Example_Side_Branch_Calls.thy` | canonical spine | branching procedure called twice; flow-sensitive locals (`ec_certified_sound_store`) |
 | `Example_Mixed_Flow_Sign.thy` | canonical spine | `mixed_flow_analysis_sound` / `_optimal` applied to sign |
-| `Example_Proc_Recursion_CFG.thy` | regression | recursive procedure CFG layout regression (`proc_layout_regression_regions`) |
+| `Example_Proc_Recursion_CFG.thy` | regression | recursive procedure CFG layout regression (`proc_layout_regression_blocks`) |
 
 Role vocabulary: repository `README.md` § Architecture.

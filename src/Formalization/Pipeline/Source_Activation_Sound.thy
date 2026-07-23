@@ -1,5 +1,6 @@
 theory Source_Activation_Sound
   imports "Voblint_Analysis.Activation_Backbone" "Voblint_CFG.Located_LTR"
+    "Voblint_CFG.CFG_Prune"
 begin
 
 section \<open>End-to-end source-level activation soundness\<close>
@@ -152,6 +153,71 @@ proof -
   then have "s \<in> ltr_collect ?g S v"
     by (rule subsetD[OF ltr_collect_keyed_le_collect])
   then show ?thesis using m by blast
+qed
+
+subsection \<open>Completed runs reach a procedure result\<close>
+
+text \<open>
+  A source run that has completed at the top level (residual \<^const>\<open>SKIP\<close>, empty frame stack)
+  is collected at the \<^const>\<open>FunctionResult\<close> of the activation it completed.  Two structural
+  facts do the work, both from the CFG layer: the located node reaches its fragment exit along
+  store-preserving intra flow (\<open>compile_control_at_SKIP_exit_path\<close>), and \<^const>\<open>compiled_at\<close>
+  supplies the fall-through \<^term>\<open>EA_Ret None p\<close> edge from that exit into
+  \<^term>\<open>FunctionResult p\<close>.
+
+  The procedure \<open>p\<close> stays existential: \<open>csim.Base\<close> records that \<^emph>\<open>some\<close> declared procedure is
+  active, not that it is the entry procedure.  Callers pin \<open>p = mnm\<close> from their own declaration
+  environment --- see \<open>source_completes_ltr_collect_exit\<close>.
+\<close>
+
+theorem source_completes_ltr_collect_result:
+  fixes mnm :: pname
+  assumes wf: "wf_compile_input Pi ps mnm main"
+    and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
+    and s0: "s0 \<in> S"
+    and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
+  shows "\<exists>p. Pi p \<noteq> None
+             \<and> s \<in> ltr_collect (compile_prog Pi ps mnm main) S (FunctionResult p)"
+proof -
+  let ?g = "compile_prog Pi ps mnm main"
+  from source_reaches_ltr_collect[OF wf src swf s0 run]
+  obtain v stk where sim: "csim Pi ?g (SKIP, s, []) (v, s, stk)"
+    and mem: "s \<in> ltr_collect ?g S v" by blast
+  from sim obtain p c0 n where
+    ca: "control_at Pi p c0 n SKIP v" and cat: "compiled_at Pi ?g p c0 n"
+    and pa: "proc_activation Pi p c0"
+    by (blast elim: csim_NilE)
+  from cat obtain n' en ex E K where
+    cc: "compile Pi p c0 n = (n', en, ex, E, K)" and Esub: "E \<subseteq> intra ?g"
+    and ret: "(ex, EA_Ret None p, FunctionResult p) \<in> intra ?g" by (rule compiled_atE)
+  have "s \<in> ltr_collect ?g S ex"
+    by (rule ltr_collect_intra_path
+              [OF compile_control_at_SKIP_exit_path[OF ca cc Esub] mem])
+  then have "s \<in> ltr_collect ?g S (FunctionResult p)"
+    by (rule ltr_collect_intra_step[OF _ ret]) simp
+  moreover from pa have "Pi p \<noteq> None" by (auto elim: proc_activationD)
+  ultimately show ?thesis by blast
+qed
+
+text \<open>Whole-program completion: when \<open>mnm\<close> is the only declared procedure the activation is
+  forced, and its \<^const>\<open>FunctionResult\<close> is \<^const>\<open>cfg_exit\<close>.\<close>
+
+corollary source_completes_ltr_collect_exit:
+  fixes mnm :: pname
+  assumes wf: "wf_compile_input Pi ps mnm main"
+    and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
+    and s0: "s0 \<in> S"
+    and only: "\<And>p. Pi p \<noteq> None \<Longrightarrow> p = mnm"
+    and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
+  shows "s \<in> ltr_collect (compile_prog Pi ps mnm main) S
+              (cfg_exit (compile_prog Pi ps mnm main))"
+proof -
+  from source_completes_ltr_collect_result[OF wf src swf s0 run]
+  obtain p where decl: "Pi p \<noteq> None"
+    and mem: "s \<in> ltr_collect (compile_prog Pi ps mnm main) S (FunctionResult p)" by blast
+  from only[OF decl] mem show ?thesis by (simp add: cfg_exit_compile_prog)
 qed
 
 end

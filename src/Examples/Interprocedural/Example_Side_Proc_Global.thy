@@ -52,6 +52,8 @@ definition inc_procs :: "pname list" where
 
 definition inc_main :: com where
   "inc_main = imp \<lbrakk> p() \<rbrakk>"
+definition inc_prog_mnm :: pname where "inc_prog_mnm = ''main''"
+
 definition inc_prog :: imp_prog where
   "inc_prog = imp_prog.make [(''p'', the (inc_pi ''p''))] inc_main"
 
@@ -79,7 +81,7 @@ text \<open>
 
 
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code inc_prog})
+  writeln (@{code sign_annotated_dot_prog_lit} @{code inc_prog_mnm} @{code inc_prog})
 \<close>
 
 end

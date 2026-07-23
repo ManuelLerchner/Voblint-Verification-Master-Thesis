@@ -230,7 +230,7 @@ text \<open>
     \<^item> @{theory Voblint_IMP2.IMP2_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_IMP2.IMP2_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
     \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
-    \<^item> @{theory Voblint_IMP2.IMP2_Bridge_Cmd} --- backward simulation from AFP IMP2 big-step to \<^verbatim>\<open>pcompletes\<close>.
+    \<^item> @{theory Voblint_IMP2.IMP2_Source_Print} --- source rendering used by the GraphViz tooling.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
@@ -289,7 +289,6 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program certified against \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_activation_collect_sound\<close>).
     \<^item> @{theory Voblint_Examples.Example_Interval_Source_Ctx} --- \<^verbatim>\<open>twice\<close> certified against \<^emph>\<open>actual source runs\<close> at each activation's own context, strictly sharper than the monovariant capstone.
     \<^item> @{theory Voblint_Examples.Example_Inc_Proc} --- shared global-increment procedure witness.
-    \<^item> @{theory Voblint_Examples.Example_IMP2_Coverage} --- Sign analysis on a non-terminating loop.
     \<^item> @{theory Voblint_Examples.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.

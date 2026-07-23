@@ -141,6 +141,50 @@ lemma ltr_collect_keyed_le_collect:
   "ltr_collect_keyed keyf g S v c \<subseteq> ltr_collect g S v"
   unfolding ltr_collect_keyed_def ltr_collect_def by blast
 
+text \<open>
+  \<^const>\<open>ltr_collect\<close> is closed under intra flow: extending a witness trace by one
+  \<^const>\<open>intra\<close> edge is \<open>valid_ltr.intra\<close>.  Closure under \<^emph>\<open>call\<close> and \<^emph>\<open>return\<close> steps is
+  deliberately absent here --- \<open>valid_ltr.ret\<close> requires the popped activation to be the
+  witness trace's own caller, which a bare CFG step does not supply.
+\<close>
+
+lemma ltr_collect_intra_step:
+  assumes s: "s \<in> ltr_collect g S u"
+    and e: "(u, a, v) \<in> intra g"
+    and st: "edge_step a s = Some s'"
+  shows "s' \<in> ltr_collect g S v"
+proof -
+  from s obtain t where t: "t \<in> valid_ltr g S" and n: "sink_node t = u" and w: "sink_store t = s"
+    by (rule ltr_collect_E)
+  have "extend t (v, s') \<in> valid_ltr g S"
+    by (rule valid_ltr.intra[OF t]) (use e st n w in simp_all)
+  from ltr_collect_I[OF this] show ?thesis by simp
+qed
+
+text \<open>The whole-path form: an \<^const>\<open>intra_path\<close> transports a collected store to its endpoint.\<close>
+
+lemma ltr_collect_intra_path_pair:
+  "intra_path g x y \<Longrightarrow> snd x \<in> ltr_collect g S (fst x) \<Longrightarrow> snd y \<in> ltr_collect g S (fst y)"
+proof (induction rule: star.induct)
+  case (refl x)
+  then show ?case by simp
+next
+  case (step x y z)
+  obtain u s where x: "x = (u, s)" by (cases x)
+  obtain w s1 where y: "y = (w, s1)" by (cases y)
+  from step.hyps(1) x y obtain a where
+    e: "(u, a, w) \<in> intra g" and st: "edge_step a s = Some s1"
+    by (auto elim: cfg_intra_stepE)
+  have "s1 \<in> ltr_collect g S w"
+    using step.prems x by (auto intro: ltr_collect_intra_step[OF _ e st])
+  then show ?case using step.IH y by simp
+qed
+
+lemma ltr_collect_intra_path:
+  assumes "intra_path g (u, s) (v, s')" and "s \<in> ltr_collect g S u"
+  shows "s' \<in> ltr_collect g S v"
+  using ltr_collect_intra_path_pair[OF assms(1)] assms(2) by simp
+
 lemma collect_result_eq:
   "collect_result g S p = ltr_collect g S (FunctionResult p)"
   by (simp add: collect_result_def)

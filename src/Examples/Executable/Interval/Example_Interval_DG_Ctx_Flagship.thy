@@ -50,42 +50,55 @@ subsection \<open>The routed context hooks\<close>
 definition Spoly :: "(ivl st, ivl st) dg_spec" where
   "Spoly = unit_dg_spec_st ivl_tf_st ivl_enter_st"
 
-text \<open>The callee-entry local store produced by an \<^const>\<open>EA_Enter\<close> action from a
-  caller-local state (globals defaulted to \<open>bot\<close>: \<open>twice\<close> has none).\<close>
-definition entered_ivl :: "ivl st \<Rightarrow> edge_action \<Rightarrow> ivl st" where
-  "entered_ivl d a = snd (dg_spec_step Spoly a d bot)"
+text \<open>Outgoing call edges of a node, as callee entry / call action / continuation.  The
+  procedure-aware \<^const>\<open>calls\<close> relation records all three on the edge, so no separate
+  matching relation is consulted.\<close>
+definition call_successor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> call_action \<times> pp) list" where
+  "call_successor_list g v =
+     map (\<lambda>(c, ca, ce, k). (ce, ca, k)) (filter (\<lambda>(c, ca, ce, k). c = v) (cfg_calls_list g))"
+
+text \<open>A frame entry is a \<^const>\<open>FunctionEntry\<close> node: the seed slot lives there.\<close>
+fun is_function_entry :: "cfg_node \<Rightarrow> bool" where
+  "is_function_entry (FunctionEntry _) = True"
+| "is_function_entry _ = False"
+
+text \<open>The callee-entry local store produced by a \<^const>\<open>CallEdge\<close> from a caller-local
+  state (globals defaulted to \<open>bot\<close>: \<open>twice\<close> has none).\<close>
+definition entered_ivl :: "ivl st \<Rightarrow> call_action \<Rightarrow> ivl st" where
+  "entered_ivl d ca =
+     (case ca of CallEdge dst fs as \<Rightarrow> snd (dgs_enter Spoly fs as d bot))"
 
 text \<open>The routing function: the context a call selects is the entered value of the
   formal \<open>''p''\<close>.\<close>
-definition route_ivl :: "ivl st \<Rightarrow> edge_action \<Rightarrow> ivl" where
-  "route_ivl d a = lookup_st (entered_ivl d a) ''p''"
+definition route_ivl :: "ivl st \<Rightarrow> call_action \<Rightarrow> ivl" where
+  "route_ivl d ca = lookup_st (entered_ivl d ca) ''p''"
 
 text \<open>Extra per-node trees: a frame-entry seed \<^emph>\<open>read\<close> (of the incoming seed slot)
-  and, for every outgoing \<^const>\<open>EA_Enter\<close>, a caller-side routed \<^emph>\<open>publication\<close>
+  and, for every outgoing call edge, a caller-side routed \<^emph>\<open>publication\<close>
   of the entered store into the callee's seed slot.\<close>
 definition extra_ivl ::
   "cfg \<Rightarrow> ivl \<Rightarrow> pp \<Rightarrow> (pp \<times> ivl, gk, (ivl st, ivl st) dg_state) strategy_tree list" where
   "extra_ivl g ctx v =
-     (if is_frame_entry g v
+     (if is_function_entry v
         then [QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot))]
         else [])
-     @ map (\<lambda>(w, a).
+     @ map (\<lambda>(w, ca, k).
              QueryL (v, ctx) (\<lambda>d.
-               Side (Seed w (route_ivl (locals d) a)) (DG bot (entered_ivl (locals d) a))
+               Side (Seed w (route_ivl (locals d) ca)) (DG bot (entered_ivl (locals d) ca))
                  (Answer (DG bot bot))))
-           (enter_successor_list g v)"
+           (call_successor_list g v)"
 
 text \<open>The routing combine: the callee exit is read under the context selected at the
-  \<^emph>\<open>same\<close> call site (recomputed from \<open>cc\<close>'s own \<^const>\<open>EA_Enter\<close> edge), so the return
+  \<^emph>\<open>same\<close> call site (recomputed from \<open>cc\<close>'s own call edge), so the return
   reads the matching callee context rather than a merge.\<close>
 definition cmb_ivl ::
   "cfg \<Rightarrow> ivl \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> ivl, gk, (ivl st, ivl st) dg_state) strategy_tree" where
   "cmb_ivl g ctx dst cc ex =
      QueryL (cc, ctx) (\<lambda>dcl.
-       (case enter_successor_list g cc of
-          (w, a) # _ \<Rightarrow>
-            QueryL (ex, route_ivl (locals dcl) a) (\<lambda>dex.
+       (case call_successor_list g cc of
+          (w, ca, k) # _ \<Rightarrow>
+            QueryL (ex, route_ivl (locals dcl) ca) (\<lambda>dex.
               Side Global (DG bot (fst (dgs_combine Spoly dst (locals dcl) (locals dex) bot)))
                 (Answer (DG (snd (dgs_combine Spoly dst (locals dcl) (locals dex) bot)) bot)))
         | [] \<Rightarrow> Answer (DG bot bot)))"
@@ -95,7 +108,7 @@ subsection \<open>The routed equation system and its solution\<close>
 definition twice_ctx_eqs ::
   "(pp \<times> ivl, gk, (ivl st, ivl st) dg_state) eqsT" where
   "twice_ctx_eqs =
-     side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
        (cmb_ivl twice_cfg) (extra_ivl twice_cfg)
        twice_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 
@@ -111,12 +124,12 @@ lemma twice_ctx_terminates:
 subsection \<open>The two calling contexts are distinct\<close>
 
 definition ctx_call1 :: ivl where
-  "ctx_call1 = route_ivl (locals (snd twice_ctx_sol (Inl (4, bot))))
-                 (EA_Enter [''p''] [IMP2_Syntax.N 3])"
+  "ctx_call1 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 2, bot))))
+                 (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3])"
 
 definition ctx_call2 :: ivl where
-  "ctx_call2 = route_ivl (locals (snd twice_ctx_sol (Inl (6, bot))))
-                 (EA_Enter [''p''] [IMP2_Syntax.N 10])"
+  "ctx_call2 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 4, bot))))
+                 (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10])"
 
 lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
   by eval
@@ -126,49 +139,55 @@ lemma ctx_call2_val: "ctx_call2 = Ivl (Fin 10) (Fin 10)" by eval
 
 subsection \<open>Per-context exact results\<close>
 
-text \<open>Callee entry (node 0) parameter, per context.\<close>
+text \<open>Callee entry parameter, per context.\<close>
 lemma call1_p_at_entry:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (0, ctx_call1)))) ''p'' = Ivl (Fin 3) (Fin 3)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''p''
+     = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma call2_p_at_entry:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (0, ctx_call2)))) ''p'' = Ivl (Fin 10) (Fin 10)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''p''
+     = Ivl (Fin 10) (Fin 10)"
   by eval
 
-text \<open>Callee exit (node 3) return channel, per context --- \<^emph>\<open>not\<close> merged.\<close>
+text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged.\<close>
 lemma call1_ret_at_exit:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (3, ctx_call1)))) ''#ret'' = Ivl (Fin 6) (Fin 6)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call1)))) ''#ret''
+     = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma call2_ret_at_exit:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (3, ctx_call2)))) ''#ret'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2)))) ''#ret''
+     = Ivl (Fin 20) (Fin 20)"
   by eval
 
 text \<open>Caller destinations after each return.\<close>
 lemma x_computed:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (5, bot)))) ''x'' = Ivl (Fin 6) (Fin 6)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (Statement 3, bot)))) ''x'' = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma y_computed:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (7, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (Statement 5, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
   by eval
 
 subsection \<open>Seed slots and coverage\<close>
 
 text \<open>Each call publishes the entered store into its own context's seed slot.\<close>
 lemma seed_call1:
-  "lookup_st (globs (snd twice_ctx_sol (Inr (Seed 0 ctx_call1)))) ''p'' = Ivl (Fin 3) (Fin 3)"
+  "lookup_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call1)))) ''p''
+     = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma seed_call2:
-  "lookup_st (globs (snd twice_ctx_sol (Inr (Seed 0 ctx_call2)))) ''p'' = Ivl (Fin 10) (Fin 10)"
+  "lookup_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call2)))) ''p''
+     = Ivl (Fin 10) (Fin 10)"
   by eval
 
 text \<open>The callee entry is materialized once per routed context and never under the
   main context: the two calls are analyzed separately.\<close>
-lemma callee_covered_call1: "(0, ctx_call1) \<in> fst twice_ctx_sol" by eval
-lemma callee_covered_call2: "(0, ctx_call2) \<in> fst twice_ctx_sol" by eval
-lemma callee_not_under_main: "(0, bot) \<notin> fst twice_ctx_sol" by eval
+lemma callee_covered_call1: "(FunctionEntry ''twice'', ctx_call1) \<in> fst twice_ctx_sol" by eval
+lemma callee_covered_call2: "(FunctionEntry ''twice'', ctx_call2) \<in> fst twice_ctx_sol" by eval
+lemma callee_not_under_main: "(FunctionEntry ''twice'', bot) \<notin> fst twice_ctx_sol" by eval
 
 subsection \<open>Context-expanded analysis graph\<close>
 
@@ -214,7 +233,8 @@ definition twice_ctx_local_graph_domain :: "(pp \<times> ivl + gk) list" where
     contextual_graph_domain twice_cfg twice_ctx_contexts_for_pp"
 
 definition twice_ctx_seed_keys :: "gk list" where
-  "twice_ctx_seed_keys = map (\<lambda>ctx. Seed 0 ctx) [ctx_call1, ctx_call2]"
+  "twice_ctx_seed_keys =
+     map (\<lambda>ctx. Seed (FunctionEntry ''twice'') ctx) [ctx_call1, ctx_call2]"
 
 definition twice_ctx_graph_domain :: "(pp \<times> ivl + gk) list" where
   "twice_ctx_graph_domain =
@@ -244,11 +264,13 @@ lemma twice_ctx_graph_seed_keys_follow_enters:
        (analysis_graph_edges twice_ctx_graph)) = twice_ctx_seed_keys" by eval
 
 lemma twice_ctx_graph_has_both_callees:
-  "LocalNode 0 ctx_call1 \<in> set (analysis_graph_nodes twice_ctx_graph) \<and>
-   LocalNode 0 ctx_call2 \<in> set (analysis_graph_nodes twice_ctx_graph)" by eval
+  "LocalNode (FunctionEntry ''twice'') ctx_call1 \<in> set (analysis_graph_nodes twice_ctx_graph) \<and>
+   LocalNode (FunctionEntry ''twice'') ctx_call2 \<in> set (analysis_graph_nodes twice_ctx_graph)"
+  by eval
 
 lemma twice_ctx_graph_hides_uncovered_main_callee:
-  "LocalNode 0 bot \<notin> set (analysis_graph_nodes twice_ctx_graph)" by eval
+  "LocalNode (FunctionEntry ''twice'') bot \<notin> set (analysis_graph_nodes twice_ctx_graph)"
+  by eval
 
 lemma twice_ctx_graph_omits_empty_globals:
   "filter (\<lambda>n. case n of GlobalNode _ \<Rightarrow> True | _ \<Rightarrow> False)
@@ -257,16 +279,21 @@ lemma twice_ctx_graph_omits_empty_globals:
 lemma twice_ctx_graph_enter_edges:
   "filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
     (analysis_graph_edges twice_ctx_graph) =
-    [(LocalNode 4 bot, EnterEdge ''twice'' (EA_Enter [''p''] [IMP2_Syntax.N 3]),
-      LocalNode 0 ctx_call1),
-     (LocalNode 6 bot, EnterEdge ''twice'' (EA_Enter [''p''] [IMP2_Syntax.N 10]),
-      LocalNode 0 ctx_call2)]" by eval
+    [(LocalNode (Statement 2) bot,
+      EnterEdge ''twice'' (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3]),
+      LocalNode (FunctionEntry ''twice'') ctx_call1),
+     (LocalNode (Statement 4) bot,
+      EnterEdge ''twice'' (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10]),
+      LocalNode (FunctionEntry ''twice'') ctx_call2)]" by eval
 
 lemma twice_ctx_graph_combine_edges:
   "filter (\<lambda>e. case e of (_, CombineEdge _ _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
     (analysis_graph_edges twice_ctx_graph) =
-    [(LocalNode 3 ctx_call1, CombineEdge 4 (Some ''x'') (Some ''#ret''), LocalNode 5 bot),
-     (LocalNode 3 ctx_call2, CombineEdge 6 (Some ''y'') (Some ''#ret''), LocalNode 7 bot)]" by eval
+    [(LocalNode (FunctionResult ''twice'') ctx_call1,
+      CombineEdge (Statement 2) (Some ''x'') (Some ''#ret''), LocalNode (Statement 3) bot),
+     (LocalNode (FunctionResult ''twice'') ctx_call2,
+      CombineEdge (Statement 4) (Some ''y'') (Some ''#ret''), LocalNode (Statement 5) bot)]"
+  by eval
 
 lemma twice_ctx_dot_has_context_clusters:
   "String.explode twice_ctx_dot \<noteq> []" by eval

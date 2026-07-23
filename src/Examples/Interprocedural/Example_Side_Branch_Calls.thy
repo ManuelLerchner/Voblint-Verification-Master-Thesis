@@ -32,6 +32,8 @@ text \<open>
   @{text "main"}.
 \<close>
 
+definition branch_prog_mnm :: pname where "branch_prog_mnm = ''main''"
+
 definition branch_prog :: imp_prog where
   "branch_prog = program {
      int Ginput, Gresult, Gout;
@@ -174,7 +176,7 @@ text \<open>
 \<close>
 
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code branch_prog})
+  writeln (@{code sign_annotated_dot_prog_lit} @{code branch_prog_mnm} @{code branch_prog})
 \<close>
 
 end

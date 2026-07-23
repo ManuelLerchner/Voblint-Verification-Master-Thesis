@@ -92,6 +92,53 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store option" wh
 | "edge_step (EA_Ret e p) s =
      Some (s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)))"
 
+subsection \<open>Intra-only execution paths\<close>
+
+text \<open>
+  \<open>intra_path\<close> is the reflexive-transitive closure of \<^const>\<open>edge_step\<close> along \<^const>\<open>intra\<close>
+  edges, on \<open>(node, store)\<close> pairs.  It deliberately excludes \<^const>\<open>calls\<close>: an intra path
+  never pushes or pops an activation, so it lifts to the collecting semantics without any
+  stack-representation side condition, and to a stack-preserving CFG run at any stack.
+\<close>
+
+text \<open>One intra transition on a \<open>(node, store)\<close> pair.  \<open>intra_path\<close> is its \<^const>\<open>star\<close>, so
+  reflexivity, transitivity and the induction rule come from \<^theory>\<open>HOL-IMP.Star\<close> rather than
+  from a bespoke closure.  The name avoids \<open>intra_step\<close>, which is the \<^emph>\<open>source\<close>-level
+  \<^const>\<open>pstep\<close> fragment.\<close>
+
+definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
+  "cfg_intra_step g p q \<longleftrightarrow>
+     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> edge_step a (snd p) = Some (snd q))"
+
+abbreviation intra_path :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
+  "intra_path g \<equiv> star (cfg_intra_step g)"
+
+lemma cfg_intra_stepI:
+  "(u, a, v) \<in> intra g \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> cfg_intra_step g (u, s) (v, s')"
+  by (auto simp: cfg_intra_step_def)
+
+lemma cfg_intra_stepE:
+  assumes "cfg_intra_step g (u, s) (v, s')"
+  obtains a where "(u, a, v) \<in> intra g" "edge_step a s = Some s'"
+  using assms by (auto simp: cfg_intra_step_def)
+
+lemma intra_path_single:
+  "(u, a, v) \<in> intra g \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> intra_path g (u, s) (v, s')"
+  by (intro star_step1 cfg_intra_stepI)
+
+lemma intra_path_nop:
+  "(u, EA_Nop, v) \<in> intra g \<Longrightarrow> intra_path g (u, s) (v, s)"
+  by (rule intra_path_single[where a = EA_Nop]) simp_all
+
+text \<open>Widening the graph preserves intra paths: only membership in \<^const>\<open>intra\<close> is used.\<close>
+lemma cfg_intra_step_mono:
+  "cfg_intra_step g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> cfg_intra_step g2 x y"
+  by (auto simp: cfg_intra_step_def)
+
+lemma intra_path_mono:
+  "intra_path g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> intra_path g2 x y"
+  by (induction rule: star.induct) (auto intro: star.step cfg_intra_step_mono)
+
 subsection \<open>Return-value transfer\<close>
 
 text \<open>Return-value rehydration at the caller: write the callee's \<open>ret_var\<close> into the

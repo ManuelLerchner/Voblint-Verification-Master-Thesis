@@ -1,7 +1,7 @@
 section \<open>Example support: global increment procedure\<close>
 
 theory Example_Inc_Proc
-  imports "Voblint_CFG.CFG_Transfer" "Voblint_IMP2.IMP2_Notation"
+  imports "Voblint_CFG.CFG_Transfer" "Voblint_CFG.CFG_Prune" "Voblint_IMP2.IMP2_Notation"
 begin
 
 text \<open>
@@ -34,20 +34,28 @@ lemma inc_g_eq_compile:
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma inc_g_full:
-  "inc_g = mk_cfg 2 3
-     {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
-      (2, EA_Enter [] [], 0)}
-     {(2, 1, 3, None)}"
+  "inc_g =
+     \<lparr> intra =
+         {(FunctionEntry ''p'', EA_Nop, Statement 0),
+          (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
+          (Statement 1, EA_Ret None ''p'', FunctionResult ''p''),
+          (FunctionEntry ''main'', EA_Nop, Statement 2),
+          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
+       calls = {(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3)},
+       cfg_entry = FunctionEntry ''main'' \<rparr>"
   by eval
 
 lemma inc_g_structure:
-  shows "cfg_entry inc_g = 2"
-    and "cfg_exit inc_g = 3"
-    and "edges inc_g =
-       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
-        (2, EA_Enter [] [], 0)}"
-    and "combines inc_g = {(2, 1, 3, None)}"
-  by (simp_all add: inc_g_full)
+  shows "cfg_entry inc_g = FunctionEntry ''main''"
+    and "cfg_exit inc_g = FunctionResult ''main''"
+    and "intra inc_g =
+       {(FunctionEntry ''p'', EA_Nop, Statement 0),
+        (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
+        (Statement 1, EA_Ret None ''p'', FunctionResult ''p''),
+        (FunctionEntry ''main'', EA_Nop, Statement 2),
+        (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
+    and "calls inc_g = {(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3)}"
+  by (simp_all add: inc_g_full cfg_exit_def)
 
 lemma edge_collect_assign_enter_state:
   fixes s :: store and x :: vname and a :: aexp

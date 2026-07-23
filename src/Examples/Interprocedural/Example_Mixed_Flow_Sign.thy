@@ -108,7 +108,7 @@ corollary sign_mixed_flow_sound_from_pp:
         [OF sign_sound_etf pp entry sign_etf_cone_compatible
             compile_prog_finite[THEN conjunct1]
             compile_prog_finite[THEN conjunct2]
-            inr])
+            compile_prog_wf inr])
 
 end
 

@@ -4,7 +4,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Analysis.Solver_Menu"
-    "Voblint_CFG.IMP2_Proc_to_CFG"
+    "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_Formalization.Source_Activation_Sound"
@@ -16,7 +16,12 @@ definition twice_program :: imp_prog where
      void main() { x := twice(3); y := twice(10) }
    }"
 
-definition twice_pi :: proc_table where "twice_pi = prog_table twice_program"
+text \<open>\<^const>\<open>prog_table\<close> holds the declared procedures only, while \<^const>\<open>wf_compile_input\<close>
+  wants the entry procedure declared too, so \<open>main\<close> is added explicitly.  It is never called,
+  so neither the compiled graph nor \<^const>\<open>pstep\<close> is affected.\<close>
+
+definition twice_pi :: proc_table where
+  "twice_pi = (prog_table twice_program)(''main'' \<mapsto> proc_decl_of [] (prog_main twice_program))"
 definition twice_procs :: "pname list" where "twice_procs = prog_procs twice_program"
 definition twice_main :: "IMP2_Proc.com" where "twice_main = prog_main twice_program"
 
@@ -24,41 +29,49 @@ definition twice_cfg :: cfg where
   "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
 
 text \<open>
-  The compiled CFG, read off by \<^verbatim>\<open>eval\<close>.  Procedure \<open>twice\<close> occupies nodes
-  \<open>0..3\<close>: entry \<open>0\<close> binds the formal \<open>p\<close>, two \<open>nop\<close>s reach \<open>2\<close>, the return
-  assignment \<open>#ret := p + p\<close> reaches the callee exit \<open>3\<close>.  \<open>main\<close> occupies
-  \<open>4..7\<close>: entry \<open>4\<close> is the first call site (\<open>EA_Enter [p] [3]\<close> into \<open>0\<close>), its
-  return \<open>5\<close> is the second call site's predecessor, \<open>6\<close> is the second call
-  (\<open>EA_Enter [p] [10]\<close> into \<open>0\<close>), and \<open>7\<close> is the exit.  \<^bold>\<open>Both calls enter the
-  same procedure entry \<open>0\<close>\<close> --- this is the monovariant (single-context) view.
+  The compiled CFG, read off by \<^verbatim>\<open>eval\<close>.  Procedure \<open>twice\<close> runs between
+  \<open>FunctionEntry ''twice''\<close> and \<open>FunctionResult ''twice''\<close>, occupying statements \<open>0..1\<close>:
+  the body's \<open>return p + p\<close> publishes through \<open>EA_Ret\<close> at statement \<open>0\<close>, and statement \<open>1\<close>
+  is the void fall-through return.  \<open>main\<close> occupies statements \<open>2..5\<close>: \<open>2\<close> is the first
+  call site (continuing at \<open>3\<close>), \<open>4\<close> is the second (continuing at \<open>5\<close>).
+  \<^bold>\<open>Both call edges name the same callee entry \<open>FunctionEntry ''twice''\<close>\<close> --- this is the
+  monovariant (single-context) view.
 \<close>
 
-lemma twice_entry: "cfg_entry twice_cfg = 4" by eval
-lemma twice_exit:  "cfg_exit twice_cfg = 7"  by eval
+lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry ''main''" by eval
+lemma twice_exit: "cfg_exit twice_cfg = FunctionResult ''main''"
+  by (simp add: cfg_exit_def twice_entry)
 
-lemma twice_edges:
-  "edges twice_cfg =
-     {(0, EA_Nop, 1),
-      (1, EA_Nop, 2),
-      (2, EA_Assign ''#ret'' (Plus (IMP2_Syntax.V ''p'') (IMP2_Syntax.V ''p'')), 3),
-      (4, EA_Enter [''p''] [IMP2_Syntax.N 3], 0),
-      (5, EA_Nop, 6),
-      (6, EA_Enter [''p''] [IMP2_Syntax.N 10], 0)}"
+lemma twice_intra:
+  "intra twice_cfg =
+     {(FunctionEntry ''twice'', EA_Nop, Statement 0),
+      (Statement 0,
+       EA_Ret (Some (Plus (IMP2_Syntax.V ''p'') (IMP2_Syntax.V ''p''))) ''twice'',
+       FunctionResult ''twice''),
+      (Statement 1, EA_Ret None ''twice'', FunctionResult ''twice''),
+      (FunctionEntry ''main'', EA_Nop, Statement 2),
+      (Statement 3, EA_Nop, Statement 4),
+      (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')}"
   by eval
 
-lemma twice_combines:
-  "combines twice_cfg = {(4, 3, 5, Some ''x''), (6, 3, 7, Some ''y'')}"
+lemma twice_calls:
+  "calls twice_cfg =
+     {(Statement 2, CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3],
+       FunctionEntry ''twice'', Statement 3),
+      (Statement 4, CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10],
+       FunctionEntry ''twice'', Statement 5)}"
   by eval
 
-lemma twice_finE: "finite (edges twice_cfg)" unfolding twice_edges by simp
-lemma twice_finC: "finite (combines twice_cfg)" unfolding twice_combines by simp
+lemma twice_finE: "finite (intra twice_cfg)" unfolding twice_intra by simp
+lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_calls by simp
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
 lemma ivl_Hstep:
   "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st ivl_enter_st) a d g)
      = dg_spec_step (unit_dg_spec ivl_tf) a (fun_of_st d) (fun_of_st g)"
-  by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
+  by (simp add: dg_spec_step_unit_st[OF ivl_tf_st_ret_None ivl_tf_st_ret_Some]
+                dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
 
 
 lemma ivl_Henter:
@@ -78,9 +91,11 @@ lemma ivl_Hcomb:
 lemma dg_gen_of_eq_ivl_dg_gen:
   "dg_gen_of (unit_dg_spec ivl_tf) g bot0 s0d s0g = ivl_dg.dg_gen g bot0 s0d s0g"
 proof -
-  have "dg_cmb_of (unit_dg_spec ivl_tf) = ivl_dg.dg_cmb"
+  have cmb: "dg_cmb_of (unit_dg_spec ivl_tf) = ivl_dg.dg_cmb"
     by (rule ext)+ (simp add: dg_cmb_of_def ivl_dg.dg_cmb_def)
-  thus ?thesis by (simp add: dg_gen_of_def ivl_dg.dg_gen_def)
+  have extra: "dg_extra_of (unit_dg_spec ivl_tf) g = ivl_dg.dg_extra g"
+    by (rule ext)+ (simp add: dg_extra_of_def ivl_dg.dg_extra_def ivl_dg.dg_enter_def)
+  show ?thesis by (simp add: dg_gen_of_def ivl_dg.dg_gen_def cmb extra)
 qed
 
 subsection \<open>Equation generation\<close>
@@ -107,7 +122,10 @@ value "map_option
    (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''p''),
                        string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''#ret''),
                        string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x''),
-                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''y''))) [0,1,2,3,4,5,6,7])
+                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''y'')))
+            ([FunctionEntry ''twice'', FunctionResult ''twice'',
+              FunctionEntry ''main'', FunctionResult ''main'']
+             @ map Statement [0,1,2,3,4,5]))
    (TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()))"
 
 subsection \<open>Certified solution (reusing solver correctness)\<close>
@@ -141,20 +159,29 @@ subsection \<open>Soundness: the computed analysis over-approximates the collect
 text \<open>
   The premises of the \<^emph>\<open>generalized\<close> endpoint \<open>ivl_dg_post_solution_collect_sound\<close>:
   every point is solved (\<^verbatim>\<open>eval\<close>), the graph is finite --- and, crucially,
-  \<^bold>\<open>no \<open>no_enter\<close> premise\<close>: the two \<^const>\<open>EA_Enter\<close> call edges are covered by the
-  same collecting-soundness theorem as ordinary edges.
+  \<^bold>\<open>no \<open>no_enter\<close> premise\<close>: the two \<^const>\<open>CallEdge\<close> entries are covered by the
+  same collecting-soundness theorem as ordinary intra edges.
 \<close>
 
-lemma twice_cover_all: "\<forall>v \<in> {0,1,2,3,4,5,6,7}. ((v::pp), ()) \<in> fst twice_sol"
+lemma twice_cover_all:
+  "\<forall>v \<in> {FunctionEntry ''twice'', FunctionResult ''twice'',
+           FunctionEntry ''main'', FunctionResult ''main'',
+           Statement 0, Statement 1, Statement 2, Statement 3, Statement 4, Statement 5}.
+     (v, ()) \<in> fst twice_sol"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_cover_entry: "(cfg_entry twice_cfg, ()) \<in> fst twice_sol"
   using twice_cover_all twice_entry by simp
-lemma twice_cover_edge: "\<And>u a w. (u, a, w) \<in> edges twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
-  using twice_cover_all by (auto simp: twice_edges)
+lemma twice_cover_edge: "\<And>u a w. (u, a, w) \<in> intra twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
+  using twice_cover_all by (auto simp: twice_intra)
+lemma twice_cover_enter:
+  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls twice_cfg
+     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst twice_sol"
+  using twice_cover_all by (auto simp: twice_calls)
 lemma twice_cover_combine:
-  "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
-  using twice_cover_all by (auto simp: twice_combines)
+  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls twice_cfg
+     \<Longrightarrow> (k, ()) \<in> fst twice_sol"
+  using twice_cover_all by (auto simp: twice_calls)
 
 lemma twice_sound0:
   "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
@@ -175,60 +202,68 @@ theorem twice_collect_sound:
      \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
   by (rule ivl_dg_post_solution_collect_sound
         [OF twice_pp_abs[folded ivl_dg_generator_def]
-            twice_cover_entry twice_cover_edge twice_cover_combine
+            twice_cover_entry twice_cover_edge twice_cover_enter twice_cover_combine
             twice_finE twice_finC twice_sound0])
 
 subsection \<open>Inspecting the certified result\<close>
 
 lemma twice_p_at_entry:
-  "lookup_st (locals (snd twice_sol (Inl (0::pp, ())))) ''p'' = Ivl (Fin 3) (Fin 10)"
+  "lookup_st (locals (snd twice_sol (Inl (FunctionEntry ''twice'', ())))) ''p''
+     = Ivl (Fin 3) (Fin 10)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_ret_at_exit:
-  "lookup_st (locals (snd twice_sol (Inl (3::pp, ())))) ''#ret'' = Ivl (Fin 6) (Fin 20)"
+  "lookup_st (locals (snd twice_sol (Inl (FunctionResult ''twice'', ())))) ''#ret''
+     = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_x_computed:
-  "lookup_st (locals (snd twice_sol (Inl (5::pp, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
+  "lookup_st (locals (snd twice_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_y_computed:
-  "lookup_st (locals (snd twice_sol (Inl (7::pp, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
+  "lookup_st (locals (snd twice_sol (Inl (Statement 5, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 subsection \<open>Source-level soundness\<close>
 
-lemma twice_wf: "wf_compile_input twice_pi twice_procs twice_main"
+lemma twice_wf: "wf_compile_input twice_pi twice_procs ''main'' twice_main"
   unfolding wf_compile_input_def twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (simp add: compile_eval_simps source_pi_def proc_decl_of_def)
+  by (auto simp: source_pi_def proc_decl_of_def split: if_splits)
 
 theorem twice_source_run_sound:
-  assumes run: "psteps twice_pi (twice_main, s, []) src'"
+  assumes run: "star (pstep twice_pi) (twice_main, s, []) src'"
       and init: "s \<in> cinit_stores"
-  shows "\<exists>v t stk. concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)
+  shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
                    \<and> t \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have sc: "source_com twice_main" by (simp add: twice_main_def twice_program_def)
-  obtain v stk where m: "concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)"
+  have swf: "source_wf (twice_main, s, [])"
+    by (simp add: source_wf_def twice_main_def twice_program_def)
+  obtain v stk where
+      m: "csim twice_pi (compile_prog twice_pi twice_procs ''main'' twice_main)
+             (residual, t, frs) (v, t, stk)"
       and coll0: "t \<in> ltr_collect (compile_prog twice_pi twice_procs ''main'' twice_main) cinit_stores v"
-    using source_reaches_ltr_collect[OF twice_wf sc init run[unfolded src']]
-    unfolding src' by blast
+    using source_reaches_ltr_collect[OF twice_wf sc swf init run[unfolded src']]
+    by blast
   have coll: "t \<in> ltr_collect twice_cfg cinit_stores v"
     using coll0 by (simp add: twice_cfg_def)
-  show ?thesis using m coll twice_collect_sound by blast
+  from m have m': "csim twice_pi twice_cfg src' (v, t, stk)"
+    unfolding src' by (simp add: twice_cfg_def)
+  show ?thesis using m' coll twice_collect_sound by blast
 qed
 
 subsection \<open>Annotated GraphViz of the computed result\<close>
 
 text \<open>
   A DOT rendering of \<open>twice_cfg\<close> annotated with the solver-computed intervals.
-  The tooling renders the two \<^const>\<open>EA_Enter\<close> call edges \<^bold>\<open>distinctly\<close> (thick
+  The tooling renders the two \<^const>\<open>CallEdge\<close> entries \<^bold>\<open>distinctly\<close> (thick
   purple, labelled \<open>enter\<close>) and the two combine/return edges as \<^bold>\<open>dashed blue\<close>
   (labelled \<open>combine via call@N\<close>).  Each node is annotated with \<open>p\<close>, \<open>#ret\<close>,
-  \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>0\<close> shows \<open>p in [3,10]\<close> and the
-  callee exit \<open>3\<close> shows \<open>#ret in [6,20]\<close>, while the return sites \<open>5\<close> / \<open>7\<close> show
-  \<open>x\<close> / \<open>y in [6,20]\<close>.
+  \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>FunctionEntry ''twice''\<close> shows
+  \<open>p in [3,10]\<close> and \<open>FunctionResult ''twice''\<close> shows \<open>#ret in [6,20]\<close>, while the
+  continuations \<open>3\<close> / \<open>5\<close> show \<open>x\<close> / \<open>y in [6,20]\<close>.
 \<close>
 
 definition twice_graph_config ::

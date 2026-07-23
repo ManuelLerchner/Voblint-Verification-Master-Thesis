@@ -54,7 +54,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Analysis.Solver_Menu"
-    "Voblint_CFG.IMP2_Proc_to_CFG"
+    "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_Formalization.DG_Domain_Registration"
@@ -74,41 +74,56 @@ definition flagship_prog :: "IMP2_Proc.com" where
 subsection \<open>2. CFG construction\<close>
 
 text \<open>
-  The source compiles to an interprocedural CFG by \<open>compile_prog\<close>.  Nodes:
-  entry \<open>0\<close>, \<open>x := 0\<close> to \<open>1\<close>, loop head \<open>2\<close>, the guard \<open>x < 20\<close> to body \<open>3\<close> / exit
-  \<open>5\<close>, increment \<open>x := x + 1\<close> to \<open>4\<close>, back-edge to \<open>2\<close>.  \<open>flagship_cfg_eq\<close> proves the
-  compilation equals the explicit graph; the annotated rendering is in section 10.
+  The source compiles to an interprocedural CFG by \<open>compile_prog\<close>.  The whole program is
+  the body of \<open>main\<close>, so it runs between \<open>FunctionEntry ''main''\<close> and
+  \<open>FunctionResult ''main''\<close>; inside, \<open>x := 0\<close> reaches statement \<open>1\<close>, the loop head is \<open>2\<close>,
+  the guard \<open>x < 20\<close> branches to body \<open>3\<close> or exit \<open>5\<close>, the increment reaches \<open>4\<close>, and \<open>4\<close>
+  jumps back to \<open>2\<close>.  \<open>flagship_cfg_eq\<close> proves the compilation equals the explicit graph;
+  the annotated rendering is in section 10.
 \<close>
 
+text \<open>The declaration environment holds exactly \<open>main\<close>: there are no other procedures, and
+  \<^const>\<open>wf_compile_input\<close> requires the entry procedure to be declared.\<close>
+
+definition flagship_pi :: proc_table where
+  "flagship_pi = Map.empty(''main'' \<mapsto> proc_decl_of [] flagship_prog)"
+
 definition flagship_cfg :: cfg where
-  "flagship_cfg = compile_prog Map.empty [] ''main'' flagship_prog"
+  "flagship_cfg = compile_prog flagship_pi [] ''main'' flagship_prog"
 
 lemma flagship_cfg_eq:
-  "flagship_cfg = mk_cfg 0 5
-     {(0, EA_Assign ''x'' (BaseN (AExp.N 0)), 1),
-      (1, EA_Nop, 2),
-      (2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 3),
-      (2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 5),
-      (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), 4),
-      (4, EA_Nop, 2)}
-     {}"
-  unfolding flagship_cfg_def flagship_prog_def
-  by (simp add: compile_eval_simps; blast)
+  "flagship_cfg =
+     \<lparr> intra =
+         {(FunctionEntry ''main'', EA_Nop, Statement 0),
+          (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
+          (Statement 1, EA_Nop, Statement 2),
+          (Statement 2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
+          (Statement 2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 5),
+          (Statement 3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 4),
+          (Statement 4, EA_Nop, Statement 2),
+          (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')},
+       calls = {},
+       cfg_entry = FunctionEntry ''main'' \<rparr>"
+  unfolding flagship_cfg_def flagship_pi_def flagship_prog_def by eval
 
-lemma flagship_entry: "cfg_entry flagship_cfg = 0" by (simp add: flagship_cfg_eq mk_cfg_def)
-lemma flagship_exit: "cfg_exit flagship_cfg = 5" by (simp add: flagship_cfg_eq mk_cfg_def)
-lemma flagship_edges: "edges flagship_cfg =
-     {(0, EA_Assign ''x'' (BaseN (AExp.N 0)), 1),
-      (1, EA_Nop, 2),
-      (2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 3),
-      (2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), 5),
-      (3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), 4),
-      (4, EA_Nop, 2)}"
-  by (simp add: flagship_cfg_eq mk_cfg_def)
-lemma flagship_combines: "combines flagship_cfg = {}" by (simp add: flagship_cfg_eq mk_cfg_def)
+lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry ''main''"
+  by (simp add: flagship_cfg_eq)
+lemma flagship_exit: "cfg_exit flagship_cfg = FunctionResult ''main''"
+  by (simp add: flagship_cfg_eq cfg_exit_def)
+lemma flagship_intra: "intra flagship_cfg =
+     {(FunctionEntry ''main'', EA_Nop, Statement 0),
+      (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
+      (Statement 1, EA_Nop, Statement 2),
+      (Statement 2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
+      (Statement 2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 5),
+      (Statement 3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 4),
+      (Statement 4, EA_Nop, Statement 2),
+      (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')}"
+  by (simp add: flagship_cfg_eq)
+lemma flagship_calls: "calls flagship_cfg = {}" by (simp add: flagship_cfg_eq)
 
-lemma flagship_finE: "finite (edges flagship_cfg)" by (simp add: flagship_edges)
-lemma flagship_finC: "finite (combines flagship_cfg)" by (simp add: flagship_combines)
+lemma flagship_finE: "finite (intra flagship_cfg)" by (simp add: flagship_intra)
+lemma flagship_finC: "finite (calls flagship_cfg)" by (simp add: flagship_calls)
 
 subsection \<open>3. The analysis specification (interval, as an executable D/G analysis)\<close>
 
@@ -153,7 +168,8 @@ definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + 
 text \<open>The computed local interval for \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x''))) [0,1,2,3,4,5])
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x'')))
+            (map Statement [0,1,2,3,4,5]))
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
 subsection \<open>8. Soundness premises for the registered endpoint\<close>
@@ -164,15 +180,24 @@ text \<open>
   is finite and enter-free, and the concrete initial stores are covered by the seed.
 \<close>
 
-lemma flagship_cover_all: "\<forall>v \<in> {0,1,2,3,4,5}. ((v::pp), ()) \<in> fst flagship_sol"
+lemma flagship_cover_all:
+  "\<forall>v \<in> {Statement 0, Statement 1, Statement 2, Statement 3, Statement 4, Statement 5,
+           FunctionEntry ''main'', FunctionResult ''main''}.
+     (v, ()) \<in> fst flagship_sol"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_cover_entry: "(cfg_entry flagship_cfg, ()) \<in> fst flagship_sol"
   using flagship_cover_all flagship_entry by simp
-lemma flagship_cover_edge: "\<And>u a w. (u, a, w) \<in> edges flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
-  using flagship_cover_all by (auto simp: flagship_edges)
-lemma flagship_cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
-  by (simp add: flagship_combines)
+lemma flagship_cover_edge: "\<And>u a w. (u, a, w) \<in> intra flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
+  using flagship_cover_all by (auto simp: flagship_intra)
+lemma flagship_cover_enter:
+  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls flagship_cfg
+     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst flagship_sol"
+  by (simp add: flagship_calls)
+lemma flagship_cover_combine:
+  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls flagship_cfg
+     \<Longrightarrow> (k, ()) \<in> fst flagship_sol"
+  by (simp add: flagship_calls)
 
 lemma flagship_sound0:
   "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
@@ -192,15 +217,15 @@ text \<open>
 subsection \<open>9. Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (2::pp, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  "lookup_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_body_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (3::pp, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "lookup_st (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_exit_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (5::pp, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_st (locals (snd flagship_sol (Inl (Statement 5, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 subsection \<open>10. Source-level soundness (one registered step)\<close>
@@ -213,29 +238,32 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>
 
-lemma flagship_wf: "wf_compile_input Map.empty [] flagship_prog"
-  unfolding wf_compile_input_def flagship_prog_def
-  by (simp add: compile_eval_simps source_pi_def)
+lemma flagship_wf: "wf_compile_input flagship_pi [] ''main'' flagship_prog"
+  unfolding wf_compile_input_def flagship_pi_def flagship_prog_def
+  by (auto simp: source_pi_def proc_decl_of_def split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "psteps Map.empty (flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep flagship_pi) (flagship_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores"
-  shows "\<exists>v stk. concrete_program_match Map.empty [] flagship_prog (residual, t, frs) (v, t, stk)
+  shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> ivl_reg.gamma (snd flagship_sol) v"
 proof -
   have sc: "source_com flagship_prog" by (simp add: flagship_prog_def)
+  have swf: "source_wf (flagship_prog, s, [])"
+    by (simp add: source_wf_def flagship_prog_def)
   show ?thesis
     unfolding flagship_sol_def flagship_eqs_def flagship_cfg_def
     by (rule ivl_reg.run_source_sound
           [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
-              flagship_wf sc
+              flagship_wf sc swf
               flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+              flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]
-              init run])
+              init run[unfolded flagship_cfg_def]])
 qed
 
 
@@ -251,17 +279,17 @@ lemma glob_x_at_2: "lookup_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma head_x_bound:
-  "(locals ((fun_of_dg_st \<circ> snd flagship_sol) (Inl (2, ())))
+  "(locals ((fun_of_dg_st \<circ> snd flagship_sol) (Inl (Statement 2, ())))
     \<squnion> globs ((fun_of_dg_st \<circ> snd flagship_sol) (Inr ()))) ''x'' = Ivl (Fin 0) (Fin 20)"
 proof -
-  have L: "fun_of_st (locals (snd flagship_sol (Inl (2, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  have L: "fun_of_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed by simp
   have G: "fun_of_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot" by (rule glob_x_at_2)
   show ?thesis by (simp add: fun_of_dg_st_simps sup_fun_def L G)
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) 2"
+  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) (Statement 2)"
   unfolding ivl_dg_gamma_def ivl_dg.dg_gamma_def gamma_unit_def gamma_state_def
             ivl_dg.dg_D_def ivl_dg.dg_G_def
   apply (simp only: mem_Collect_eq not_all)
