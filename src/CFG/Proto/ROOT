@@ -1,4 +1,0 @@
-session Voblint_Proto in "." = "Voblint_IMP2" +
-  description "Stage 0: two-relation procedure-aware CFG kernel prototype"
-  theories
-    Proc_CFG_Prototype
