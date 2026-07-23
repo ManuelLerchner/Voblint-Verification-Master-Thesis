@@ -1659,3 +1659,50 @@ requires:
 
 This is a CFG-layer reachability reconstruction, not downstream propagation, and
 is the natural next unit of work.
+
+## Cone pillar — 2026-07 (committed)
+
+The backward-reachability / dependency-cone / exit-soundness pillar is rebuilt on
+`intra` / `calls` and committed.
+
+### `cfg_succ_rel` (CFG_Prune) — a derived analysis-dependency relation
+
+`cfg_succ_rel g` is **not** the concrete execution relation.  It is the static
+successor/dependency graph the pruning and cone proofs run on, with four sources:
+
+* `INTRA`        `(u,a,v) in intra g`                 gives `u -> v`  (ordinary flow);
+* `ENTRY`        `(c,ca,FunctionEntry p,k) in calls g` gives `c -> FunctionEntry p`
+  (the callee entry's abstract state depends on the caller, routed through `etf_enter`);
+* `COMB_CALLER`  same call                            gives `c -> k`
+  (the continuation depends on the saved caller state via `etf_combine`);
+* `COMB_RESULT`  same call                            gives `FunctionResult p -> k`
+  (the continuation depends on the callee result, the second `etf_combine` argument).
+
+`c -> k` does **not** mean execution skips the callee; it is the combine dependency
+of the continuation on the caller.  `FunctionResult p -> k` is the callee-result
+combine dependency.  Neither is added to `intra g`.
+
+`cfg_exit g = FunctionResult` of the entry procedure (`FunctionEntry mnm -> FunctionResult mnm`).
+
+### Compiler reachability
+
+`compile_reaches`: a compiled command's entry reaches its exit **or** (via an early
+`Return`) the enclosing `FunctionResult`, by induction over `com` against an ambient
+graph (`E subseteq intra g`, `K subseteq calls g`).  Lifted through `compile_proc`
+(`FunctionEntry p` reaches `FunctionResult p`) to
+`compile_prog_entry_cfg_reaches_exit`.  `Voblint_CFG` builds green with `CFG_Prune`
+registered.
+
+### Cone and exit soundness
+
+* `TD_Side_Eff_Cone_Lemmas`: three-source dep folds, `dep_side_rhs_tree_eff_enter`
+  (new entry dependency), four-way `cfg_reaches_imp_trans_dep_or_eq_side_eff`
+  (`cfg_succ_rel_cases`, `wf_cfg` giving the `FunctionEntry` target).
+* `LTR_TD_Side_Eff_Sound`: `call_enter_sound_eff` bridge; ltr_gamma discharge over
+  ROOT/EDGE/CALL/COMB.
+* `LTR_TD_Side_Eff_Exit`: cone-guarded exit soundness, `mnm`-threaded
+  `side_analyse_eff`, `cfg_exit`, `compile_prog_wf`.
+
+All four are I/Q-clean; `CFG_Prune` is batch-green.  The remaining `Voblint_Analysis`
+downstream (DG spine, instances, GraphViz, Formalization pipeline) is not yet migrated,
+so the full Analysis session does not build yet.
