@@ -165,43 +165,70 @@ text \<open>
   supplies the fall-through \<^term>\<open>EA_Ret None p\<close> edge from that exit into
   \<^term>\<open>FunctionResult p\<close>.
 
-  The procedure \<open>p\<close> stays existential: \<open>csim.Base\<close> records that \<^emph>\<open>some\<close> declared procedure is
-  active, not that it is the entry procedure.  Callers pin \<open>p = mnm\<close> from their own declaration
-  environment --- see \<open>source_completes_ltr_collect_exit\<close>.
+  The witness is kept: the completing activation is the \<^emph>\<open>root\<close> one (empty frame stack, so
+  \<^const>\<open>caller_of\<close> is \<^const>\<open>None\<close>), which is what pins its procedure --- see
+  \<open>source_completes_ltr_collect_exit\<close>.  Projecting into \<^const>\<open>ltr_collect\<close> first would lose
+  that: the collection at a \<^const>\<open>FunctionResult\<close> deliberately merges every activation of
+  that procedure.
 \<close>
 
-theorem source_completes_ltr_collect_result:
+theorem source_completes_valid_ltr_result:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and src: "source_com main"
     and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
-  shows "\<exists>p. Pi p \<noteq> None
-             \<and> s \<in> ltr_collect (compile_prog Pi ps mnm main) S (FunctionResult p)"
+  shows "\<exists>t p. t \<in> valid_ltr (compile_prog Pi ps mnm main) S
+               \<and> caller_of t = None
+               \<and> fst (hd (path t)) = cfg_entry (compile_prog Pi ps mnm main)
+               \<and> sink_node t = FunctionResult p
+               \<and> sink_store t = s"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_reaches_ltr_collect[OF wf src swf s0 run]
-  obtain v stk where sim: "csim Pi ?g (SKIP, s, []) (v, s, stk)"
-    and mem: "s \<in> ltr_collect ?g S v" by blast
+  from source_run_has_ltr[OF wf s0 swf run]
+  obtain v stk t where sim: "csim Pi ?g (SKIP, s, []) (v, s, stk)"
+    and rep: "ltr_repr ?g S (v, s, stk) t" by blast
+  have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
+  from rep stk0 have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = v"
+    and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
+    by (auto simp: ltr_repr_def)
+  have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
+  have hd_t: "fst (hd (path t)) = cfg_entry ?g" by (rule valid_ltr_caller_None_entry[OF tv cof])
+  \<comment> \<open>the located node of a completed activation is its procedure's result\<close>
   from sim obtain p c0 n where
     ca: "control_at Pi p c0 n SKIP v" and cat: "compiled_at Pi ?g p c0 n"
-    and pa: "proc_activation Pi p c0"
     by (blast elim: csim_NilE)
   from cat obtain n' en ex E K where
     cc: "compile Pi p c0 n = (n', en, ex, E, K)" and Esub: "E \<subseteq> intra ?g"
     and ret: "(ex, EA_Ret None p, FunctionResult p) \<in> intra ?g" by (rule compiled_atE)
-  have "s \<in> ltr_collect ?g S ex"
-    by (rule ltr_collect_intra_path
-              [OF compile_control_at_SKIP_exit_path[OF ca cc Esub] mem])
-  then have "s \<in> ltr_collect ?g S (FunctionResult p)"
-    by (rule ltr_collect_intra_step[OF _ ret]) simp
-  moreover from pa have "Pi p \<noteq> None" by (auto elim: proc_activationD)
-  ultimately show ?thesis by blast
+  \<comment> \<open>the whole extension is intra flow, so it stays inside this same (root) activation\<close>
+  have path_to_ret: "intra_path ?g (sink_node t, sink_store t) (FunctionResult p, s)"
+  proof -
+    have a: "intra_path ?g (sink_node t, sink_store t) (ex, s)"
+      using compile_control_at_SKIP_exit_path[OF ca cc Esub] sn ss by simp
+    have b: "intra_path ?g (ex, s) (FunctionResult p, s)"
+      by (rule intra_path_single[OF ret]) simp
+    from a b show ?thesis by (rule star_trans)
+  qed
+  from valid_ltr_intra_path_extend[OF path_to_ret tv]
+  obtain t' where t'v: "t' \<in> valid_ltr ?g S" and t'n: "sink_node t' = FunctionResult p"
+    and t's: "sink_store t' = s" and t'c: "caller_of t' = caller_of t"
+    and t'h: "fst (hd (path t')) = fst (hd (path t))" by blast
+  show ?thesis
+  proof (intro exI conjI)
+    show "t' \<in> valid_ltr ?g S" by (rule t'v)
+    show "caller_of t' = None" using t'c cof by simp
+    show "fst (hd (path t')) = cfg_entry ?g" using t'h hd_t by simp
+    show "sink_node t' = FunctionResult p" by (rule t'n)
+    show "sink_store t' = s" by (rule t's)
+  qed
 qed
 
-text \<open>Whole-program completion: when \<open>mnm\<close> is the only declared procedure the activation is
-  forced, and its \<^const>\<open>FunctionResult\<close> is \<^const>\<open>cfg_exit\<close>.\<close>
+text \<open>Whole-program completion.  The completing activation is the root one, so it entered at
+  \<^term>\<open>FunctionEntry mnm\<close>; activation procedure locality (\<open>valid_ltr_entry_result_eq\<close>) then
+  forces its result node to be \<^term>\<open>FunctionResult mnm\<close> \<open>= cfg_exit\<close>.  No assumption about the
+  \<^emph>\<open>number\<close> of declared procedures is needed: a program may call as many as it likes.\<close>
 
 corollary source_completes_ltr_collect_exit:
   fixes mnm :: pname
@@ -209,15 +236,19 @@ corollary source_completes_ltr_collect_exit:
     and src: "source_com main"
     and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
-    and only: "\<And>p. Pi p \<noteq> None \<Longrightarrow> p = mnm"
     and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
   shows "s \<in> ltr_collect (compile_prog Pi ps mnm main) S
               (cfg_exit (compile_prog Pi ps mnm main))"
 proof -
-  from source_completes_ltr_collect_result[OF wf src swf s0 run]
-  obtain p where decl: "Pi p \<noteq> None"
-    and mem: "s \<in> ltr_collect (compile_prog Pi ps mnm main) S (FunctionResult p)" by blast
-  from only[OF decl] mem show ?thesis by (simp add: cfg_exit_compile_prog)
+  let ?g = "compile_prog Pi ps mnm main"
+  from source_completes_valid_ltr_result[OF wf src swf s0 run]
+  obtain t p where tv: "t \<in> valid_ltr ?g S" and hd_t: "fst (hd (path t)) = cfg_entry ?g"
+    and sn: "sink_node t = FunctionResult p" and ss: "sink_store t = s" by blast
+  have "fst (hd (path t)) = FunctionEntry mnm"
+    using hd_t by (simp add: compile_prog_def Let_def split: prod.splits)
+  from valid_ltr_entry_result_eq[OF wf tv this sn] have "mnm = p" .
+  with sn ss tv show ?thesis
+    by (metis cfg_exit_compile_prog ltr_collect_I)
 qed
 
 end

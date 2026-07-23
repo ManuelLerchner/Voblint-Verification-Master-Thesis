@@ -246,6 +246,57 @@ next
   then show ?case using Resume.IH(1)[OF cv] by simp
 qed
 
+text \<open>A callerless activation is the root one, and its local \<^const>\<open>path\<close> starts at
+  \<^const>\<open>cfg_entry\<close>: \<open>init\<close> is the only rule that creates a trace with no caller, \<open>intra\<close>
+  appends (leaving the head fixed), and \<open>ret\<close> resumes the caller's own path.\<close>
+text \<open>A \<^const>\<open>Root\<close> activation starts at \<^const>\<open>cfg_entry\<close>: \<open>init\<close> creates it there and
+  \<open>intra\<close> only appends.\<close>
+lemma valid_ltr_Root_entry:
+  "u \<in> valid_ltr g S \<Longrightarrow> u = Root p \<Longrightarrow> fst (hd p) = cfg_entry g"
+proof (induction arbitrary: p rule: valid_ltr.induct)
+  case (intra t a v s')
+  from intra.prems obtain p' where t: "t = Root p'" and p: "p = p' @ [(v, s')]"
+    by (cases t) auto
+  have "fst (hd p') = cfg_entry g" using intra.IH[OF t] .
+  moreover have "p' \<noteq> []" using valid_ltr_path_nonempty[OF intra.hyps(1)] t by simp
+  ultimately show ?case using p by simp
+qed auto
+
+text \<open>A \<^const>\<open>Resume\<close> extends its caller's own local path, so both share a head node.\<close>
+lemma valid_ltr_Resume_path:
+  "u \<in> valid_ltr g S \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path cc @ xs \<and> xs \<noteq> []"
+proof (induction arbitrary: cc dd q rule: valid_ltr.induct)
+  case (intra t a v s')
+  from intra.prems obtain q' where t: "t = Resume cc dd q'" and q: "q = q' @ [(v, s')]"
+    by (cases t) auto
+  from intra.IH[OF t] obtain xs where "q' = path cc @ xs" by blast
+  then show ?case using q by auto
+qed auto
+
+text \<open>A callerless activation is the root one, and its local \<^const>\<open>path\<close> starts at
+  \<^const>\<open>cfg_entry\<close>.  The \<^const>\<open>Resume\<close> case needs the caller's own entry, which term
+  induction supplies (the caller is a subterm) --- rule induction would only offer the callee.\<close>
+lemma valid_ltr_caller_None_entry:
+  "t \<in> valid_ltr g S \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path t)) = cfg_entry g"
+proof (induction t)
+  case (Root p)
+  then show ?case using valid_ltr_Root_entry[OF Root.prems(1) refl] by simp
+next
+  case (Call caller p)
+  then show ?case by simp
+next
+  case (Resume caller callee q)
+  from valid_ltr_Resume_fields[OF Resume.prems(1) refl]
+  have cd: "callee \<in> valid_ltr g S" "caller_of callee = Some caller" by auto
+  have cv: "caller \<in> valid_ltr g S" using Resume.IH(2)[OF cd(1)] cd(2)
+    using valid_ltr_caller_valid[OF cd(1) cd(2)] by simp
+  from Resume.prems(2) have "caller_of caller = None" by simp
+  with Resume.IH(1)[OF cv] have hcaller: "fst (hd (path caller)) = cfg_entry g" by simp
+  from valid_ltr_Resume_path[OF Resume.prems(1) refl] obtain xs where
+    q: "q = path caller @ xs" by blast
+  show ?case using hcaller q valid_ltr_path_nonempty[OF cv] by simp
+qed
+
 lemma caller_of_unique:
   "caller_of t = Some c1 \<Longrightarrow> caller_of t = Some c2 \<Longrightarrow> c1 = c2"
   by simp

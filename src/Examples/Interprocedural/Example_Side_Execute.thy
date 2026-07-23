@@ -79,9 +79,6 @@ text \<open>
 definition x1_pi :: proc_table where
   "x1_pi = (prog_table x1_prog)(''main'' \<mapsto> proc_decl_of [] (prog_main x1_prog))"
 
-lemma x1_pi_only: "x1_pi p \<noteq> None \<Longrightarrow> p = ''main''"
-  by (auto simp: x1_pi_def x1_prog_def split: if_splits)
-
 lemma x1_pi_cfg:
   "compile_prog x1_pi (prog_procs x1_prog) ''main'' (prog_main x1_prog) = prog_cfg ''main'' x1_prog"
   unfolding prog_cfg_def x1_pi_def x1_prog_def by eval
@@ -111,7 +108,7 @@ proof -
     "star (pstep x1_pi) (prog_main x1_prog, x1_s0, [])
       (IMP2_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
     using x1_completed_pi unfolding pcompletes_def .
-  from source_completes_ltr_collect_exit[OF wf src swf init x1_pi_only run]
+  from source_completes_ltr_collect_exit[OF wf src swf init run]
   show ?thesis unfolding x1_pi_cfg .
 qed
 

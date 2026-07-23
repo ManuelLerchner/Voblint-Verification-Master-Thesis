@@ -234,13 +234,32 @@ proof (rule allI)
     using finite_intra_predecessors[of main_cfg v] finite_entry_calls[of main_cfg v]
           finite_return_calls[of main_cfg v]
     by (simp add: main_cfg_intra main_cfg_calls)
-  have le: "\<And>t. t \<in> ?I \<union> ?E \<union> ?R \<Longrightarrow> t \<le> main_prog_env v"
+  \<comment> \<open>one bounded \<open>auto\<close> per constraint source: a single sweep over all three blows up
+     on the nested \<^const>\<open>main_prog_env\<close> conditionals\<close>
+  have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> main_prog_env v"
+  proof -
+    fix t assume "t \<in> ?I"
+    then obtain u a where e: "(u, a, v) \<in> intra main_cfg"
+      and t: "t = apply_tf ivl_tf a (main_prog_env u)"
+      by (auto simp: intra_predecessors_def)
+    from e[unfolded main_cfg_intra] show "t \<le> main_prog_env v"
+      unfolding t
+      by (elim insertE emptyE)
+         (simp_all add: main_prog_env_def ivl_tf_def assign_ivl_def times_ivl_def
+                        normalize_ivl_def less_eq_ivl_def le_fun_def)
+  qed
+  have leE: "\<And>t. t \<in> ?E \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
-             simp: intra_predecessors_def entry_calls_def return_calls_def
-                   main_cfg_intra main_cfg_calls main_prog_env_def ivl_tf_def
-                   assign_ivl_def times_ivl_def normalize_ivl_def less_eq_ivl_def le_fun_def
+             simp: entry_calls_def main_cfg_calls main_prog_env_def ivl_tf_def
                    enter_ivl_def enter_frame_ivl_def bind_formals_abs_def
-                   combine_collect_abs_def combine_abs_def is_global_def)
+                   less_eq_ivl_def le_fun_def is_global_def)
+  have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
+    by (auto split: if_splits
+             simp: return_calls_def main_cfg_calls main_prog_env_def
+                   combine_collect_abs_def combine_abs_def normalize_ivl_def
+                   less_eq_ivl_def le_fun_def is_global_def)
+  have le: "\<And>t. t \<in> ?I \<union> ?E \<union> ?R \<Longrightarrow> t \<le> main_prog_env v"
+    using leI leE leR by blast
   show "rhs main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env v \<le> main_prog_env v"
   proof (cases "v = cfg_entry main_cfg")
     case True

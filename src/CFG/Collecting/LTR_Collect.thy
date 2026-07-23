@@ -185,6 +185,46 @@ lemma ltr_collect_intra_path:
   shows "s' \<in> ltr_collect g S v"
   using ltr_collect_intra_path_pair[OF assms(1)] assms(2) by simp
 
+text \<open>
+  The activation-preserving form.  Following an \<^const>\<open>intra_path\<close> only \<open>extend\<close>s the trace, so
+  the resulting witness is the \<^emph>\<open>same\<close> activation: same caller and same entry node.  Callers
+  that must know \<^emph>\<open>which\<close> activation reached a node need this, not \<open>ltr_collect_intra_path\<close> ---
+  the collection at a node merges every activation that reaches it.
+\<close>
+
+lemma valid_ltr_intra_path_extend_pair:
+  "intra_path g x y \<Longrightarrow> t \<in> valid_ltr g S \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
+   \<Longrightarrow> \<exists>t'. t' \<in> valid_ltr g S \<and> sink_node t' = fst y \<and> sink_store t' = snd y
+            \<and> caller_of t' = caller_of t \<and> fst (hd (path t')) = fst (hd (path t))"
+proof (induction arbitrary: t rule: star.induct)
+  case (refl x)
+  then show ?case by blast
+next
+  case (step x y z)
+  obtain u s where x: "x = (u, s)" by (cases x)
+  obtain w s1 where y: "y = (w, s1)" by (cases y)
+  from step.hyps(1) x y obtain a where
+    e: "(u, a, w) \<in> intra g" and st: "edge_step a s = Some s1"
+    by (auto elim: cfg_intra_stepE)
+  have ext: "extend t (w, s1) \<in> valid_ltr g S"
+    by (rule valid_ltr.intra[OF step.prems(1)])
+       (use e st step.prems(2,3) x in simp_all)
+  have hd_ext: "fst (hd (path (extend t (w, s1)))) = fst (hd (path t))"
+    using valid_ltr_path_nonempty[OF step.prems(1)] by simp
+  from step.IH[OF ext] y obtain t' where
+    "t' \<in> valid_ltr g S" "sink_node t' = fst z" "sink_store t' = snd z"
+    "caller_of t' = caller_of (extend t (w, s1))"
+    "fst (hd (path t')) = fst (hd (path (extend t (w, s1))))" by auto
+  then show ?case using hd_ext by auto
+qed
+
+lemma valid_ltr_intra_path_extend:
+  assumes p: "intra_path g (sink_node t, sink_store t) (v, s')"
+    and t: "t \<in> valid_ltr g S"
+  obtains t' where "t' \<in> valid_ltr g S" "sink_node t' = v" "sink_store t' = s'"
+    "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
+  using valid_ltr_intra_path_extend_pair[OF p t] by auto
+
 lemma collect_result_eq:
   "collect_result g S p = ltr_collect g S (FunctionResult p)"
   by (simp add: collect_result_def)
