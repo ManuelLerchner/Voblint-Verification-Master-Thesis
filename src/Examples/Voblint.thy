@@ -11,8 +11,6 @@ theory Voblint
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_CFG.CFG_Def"
     "Voblint_CFG.IMP2_Proc_to_CFG"
-
-
     "Voblint_CFG.CFG_Local_Trace"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Abstract_Domain"
@@ -24,7 +22,6 @@ theory Voblint
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Interval_Side_Soundness"
-
     "Voblint_Analysis.DG_Framework"
     "Voblint_Analysis.DG_Soundness"
     "Voblint_Analysis.Sign_DG"
@@ -58,47 +55,71 @@ theory Voblint
 begin
 
 text \<open>
+  \<^verbatim>\<open>
+____   ____   ___.   .__  .__        __
+\   \ /   /___\_ |__ |  | |__| _____/  |_
+ \   Y   /  _ \| __ \|  | |  |/    \   __\
+  \     (  <_> ) \_\ \  |_|  |   |  \  |
+   \___/ \____/|___  /____/__|___|  /__|
+                   \/             \/
+  \<close>
+\<close>
+
+text \<open>
   \<^bold>\<open>What this development proves.\<close>  An end-to-end soundness proof for a Goblint-style abstract
   interpreter for IMP2, machine-checked from the source operational semantics to the
   \<^emph>\<open>computed\<close> analysis result.  The whole pipeline, each arrow a theorem:
 
   \<^verbatim>\<open>
-    IMP2 source program          (pstep: small-step operational semantics)
+  +--------------------------------------------------------------------------+
+  |                         CONCRETE SOURCE WORLD                            |
+  +--------------------------------------------------------------------------+
+  |  IMP2 source program                                                    |
+  |      |                                                                   |
+  |      | compile_prog                                                     |
+  |      | control_step_simulation / concrete_program_step_match            |
+  |      v                                                                   |
+  |  compiled CFG + located cstep run                                       |
+  |      |                                                                   |
+  |      | source_run_has_ltr                                                |
+  |      v                                                                   |
+  |  valid_ltr                                                              |
+  |  activation-local execution: Root / Call / Resume                       |
+  |  caller/callee correlation exists only here                             |
+  +------+-------------------------------------------------------------------+
          |
-         |  compile_prog                          [ FORWARD SIMULATION ]
-         |     control_step_simulation            every source step is matched
-         |     concrete_program_step_match        by a run of CFG steps
+         | forgetful projection: no abstract stores introduced
          v
-    compiled CFG  +  located run  (cstep) ------------------------+
-         |                                                        |  dg_gen_of
-         |  source_run_has_ltr          [ WITNESS CONSTRUCTION ]  v
-         |     ltr_repr / stack_repr                       equation system
-         |     (source run has a valid_ltr witness)              |  TD_side solve_c
-         v                                                        |  (verified solver,
-    valid_ltr                                                     |   computes by eval)
-      == THE SOLE CONCRETE CFG SEMANTICS ==                       |   query node q
-      activation-local traces: Root / Call / Resume,              v
-      each return matched to its own caller by caller_of    solution  sigma
-         |                                                        |
-         |  sink / key projection    [ CONCRETE PROJECTION ]     |  part_post_solution
-         |     (forgetful; no abstract stores introduced)        |  (solver-certified)
-         v                                                        v
-    ltr_collect / ltr_collect_keyed /                     abstract post-solution
-    activation_collect                                            |
-         |                                                        |
-         +----------------------< SOUNDNESS >--------------------+
-                                     |
-                                     v
-       [ SOUND OVER-APPROXIMATION -- the abstract side may lose precision;
-         soundness proves the final inclusion ]
-       all-node:   C v            \<subseteq>  gamma (sigma v)
-          unified_ltr_post_fixpoint_sound      (monovariant)
-          dg_post_solution_collect_sound_ltr   (D/G)
-          activation_collect_sound             (per calling context)
-       query cone: cfg_reaches g v q
-                   C v            \<subseteq>  gamma (sigma v)
-          side_collect_sound_in_eff_cone       (effectful TD-side)
-          side_collect_sound_exit_eff_ltr_cone (q = cfg_exit g)
+  +--------------------------------------------------------------------------+
+  |                         CONCRETE COLLECTIONS                             |
+  +--------------------------------------------------------------------------+
+  |  ltr_collect               stores by CFG node                            |
+  |  ltr_collect_keyed         stores by node and arbitrary trace key        |
+  |  activation_collect        stores by node and activation context         |
+  +-----------------------------------+--------------------------------------+
+                                      |
+                                      | soundness: concrete subset gamma(abs)
+                                      v
+  +--------------------------------------------------------------------------+
+  |                         ABSTRACT ANALYSIS WORLD                          |
+  +--------------------------------------------------------------------------+
+  |  compiled CFG --dg_gen_of--> equation system --solve_c--> solution sigma |
+  |                                                        |                 |
+  |                                                        | certified       |
+  |                                                        v                 |
+  |                                               abstract post-solution     |
+  +--------------------------------------------------------------------------+
+  |  All nodes:                                                              |
+  |    C v \<subseteq> gamma (sigma v)                                                 |
+  |    unified_ltr_post_fixpoint_sound       monovariant                     |
+  |    dg_post_solution_collect_sound_ltr    D/G                             |
+  |    activation_collect_sound              per calling context             |
+  |                                                                          |
+  |  Demand-driven query cone:                                               |
+  |    cfg_reaches g v q \<Longrightarrow> C v \<subseteq> gamma (sigma v)                             |
+  |    side_collect_sound_in_eff_cone                                        |
+  |    side_collect_sound_exit_eff_ltr_cone  when q = cfg_exit g             |
+  +--------------------------------------------------------------------------+
   \<close>
 
   \<^bold>\<open>Reading the diagram.\<close> The stages have distinct mathematical roles:
@@ -317,7 +338,7 @@ text \<open>
       \<open>ltr_collect g S v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
-  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, Retain and
+  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, and
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. The base
   flow-sensitive spine is the query-cone endpoint
