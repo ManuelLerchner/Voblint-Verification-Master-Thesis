@@ -133,7 +133,7 @@ text \<open>
   @{text "(8, 3, 9)"} (return from @{text sqr}).
 \<close>
 
-abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_prog"
+abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_cfg_name main_prog"
 
 lemma main_cfg_full:
   "main_cfg = mk_cfg 4 9

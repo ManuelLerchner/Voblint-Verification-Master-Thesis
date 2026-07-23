@@ -21,7 +21,7 @@ definition twice_procs :: "pname list" where "twice_procs = prog_procs twice_pro
 definition twice_main :: "IMP2_Proc.com" where "twice_main = prog_main twice_program"
 
 definition twice_cfg :: cfg where
-  "twice_cfg = compile_prog twice_pi twice_procs twice_main"
+  "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
 
 text \<open>
   The compiled CFG, read off by \<^verbatim>\<open>eval\<close>.  Procedure \<open>twice\<close> occupies nodes
@@ -56,12 +56,22 @@ lemma twice_finC: "finite (combines twice_cfg)" unfolding twice_combines by simp
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
 lemma ivl_Hstep:
-  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st) a d g)
+  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st ivl_enter_st) a d g)
      = dg_spec_step (unit_dg_spec ivl_tf) a (fun_of_st d) (fun_of_st g)"
   by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
 
+
+lemma ivl_Henter:
+  "map_prod fun_of_st fun_of_st
+      (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) xs es d g)
+    = dgs_enter (unit_dg_spec ivl_tf) xs es (fun_of_st d) (fun_of_st g)"
+  unfolding unit_dg_spec_st_def unit_dg_spec_def
+  apply simp
+  apply (rule unit_step_st_commute)
+  by (simp add: ivl_enter_st_commute)
+
 lemma ivl_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st) dst dc de g)
+  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g)
      = dgs_combine (unit_dg_spec ivl_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
   by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
 
@@ -77,7 +87,7 @@ subsection \<open>Equation generation\<close>
 
 definition twice_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
-  "twice_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st) twice_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+  "twice_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) twice_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
 
@@ -123,7 +133,7 @@ lemma twice_pp_abs:
      (ivl_dg.dg_gen twice_cfg (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
         (fun_of_st (restrict_global_st cinit_ivl_st)))
      (cfg_exit twice_cfg, ()) (fun_of_dg_st \<circ> snd twice_sol) (fst twice_sol)"
-  using part_post_solution_dg_st_to_abs[OF ivl_Hstep ivl_Hcomb twice_pp_st[unfolded twice_eqs_def]]
+  using part_post_solution_dg_st_to_abs[OF ivl_Hstep ivl_Henter ivl_Hcomb twice_pp_st[unfolded twice_eqs_def]]
   unfolding dg_gen_of_eq_ivl_dg_gen .
 
 subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>
@@ -201,7 +211,7 @@ proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have sc: "source_com twice_main" by (simp add: twice_main_def twice_program_def)
   obtain v stk where m: "concrete_program_match twice_pi twice_procs twice_main src' (v, t, stk)"
-      and coll0: "t \<in> ltr_collect (compile_prog twice_pi twice_procs twice_main) cinit_stores v"
+      and coll0: "t \<in> ltr_collect (compile_prog twice_pi twice_procs ''main'' twice_main) cinit_stores v"
     using source_reaches_ltr_collect[OF twice_wf sc init run[unfolded src']]
     unfolding src' by blast
   have coll: "t \<in> ltr_collect twice_cfg cinit_stores v"
@@ -246,7 +256,7 @@ definition twice_graph_config ::
       show_internal_globals = False,
       owner_of = compiled_owner_of twice_pi twice_procs ''main'' twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
-      source_text = Some (string_of_program twice_pi twice_procs twice_main)
+      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main)
     \<rparr>"
 
 definition twice_graph_domain :: "(pp \<times> unit + unit) list" where
@@ -266,3 +276,5 @@ ML_val \<open>writeln (@{code twice_dot})\<close>
 
 
 end
+
+

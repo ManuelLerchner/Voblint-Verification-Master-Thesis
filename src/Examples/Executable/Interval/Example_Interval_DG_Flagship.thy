@@ -81,7 +81,7 @@ text \<open>
 \<close>
 
 definition flagship_cfg :: cfg where
-  "flagship_cfg = compile_prog Map.empty [] flagship_prog"
+  "flagship_cfg = compile_prog Map.empty [] ''main'' flagship_prog"
 
 lemma flagship_cfg_eq:
   "flagship_cfg = mk_cfg 0 5
@@ -132,7 +132,7 @@ text \<open>
 \<close>
 
 definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st) flagship_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+  "flagship_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) flagship_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 
 subsection \<open>5. Executable solve\<close>
 
@@ -300,7 +300,7 @@ definition flagship_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (string_of_program Map.empty [] flagship_prog)
+      source_text = Some (pretty_string_of_program Map.empty [] flagship_prog)
     \<rparr>"
 
 definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where
@@ -319,3 +319,5 @@ ML_val \<open>writeln (@{code flagship_dot})\<close>
 
 
 end
+
+

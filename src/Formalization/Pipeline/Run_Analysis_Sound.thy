@@ -47,17 +47,17 @@ lemma dg_gen_of_eq:
 subsection \<open>Semantic core: abstract post-solution to source bound\<close>
 
 theorem dg_run_source_sound_abs:
-  fixes Pi :: proc_table and s0 t :: store
+  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
   assumes wf: "wf_compile_input Pi ps main"
     and src: "source_com main"
-    and pp: "part_post_solution (dg_gen (compile_prog Pi ps main) bot0 s0d s0g) x sigma vars"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps main), ()) \<in> vars"
+    and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> edges (compile_prog Pi ps main) \<Longrightarrow> (w, ()) \<in> vars"
+      "\<And>u a w. (u, a, w) \<in> edges (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
     and cover_combine:
-      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines (compile_prog Pi ps main) \<Longrightarrow> (w, ()) \<in> vars"
-    and finE: "finite (edges (compile_prog Pi ps main))"
-    and finC: "finite (combines (compile_prog Pi ps main))"
+      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
+    and finE: "finite (edges (compile_prog Pi ps mnm main))"
+    and finC: "finite (combines (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep Pi) (main, s0, []) (residual, t, frs)"
@@ -66,8 +66,8 @@ theorem dg_run_source_sound_abs:
 proof -
   from source_reaches_ltr_collect[OF wf src s0mem run]
   obtain v stk where m: "concrete_program_match Pi ps main (residual, t, frs) (v, t, stk)"
-    and coll: "t \<in> ltr_collect (compile_prog Pi ps main) S0 v" by blast
-  have "ltr_collect (compile_prog Pi ps main) S0 v \<subseteq> dg_gamma sigma v"
+    and coll: "t \<in> ltr_collect (compile_prog Pi ps mnm main) S0 v" by blast
+  have "ltr_collect (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
     by (rule dg_post_solution_collect_sound_ltr
           [OF pp cover_entry cover_edge cover_combine finE finC sound0])
   then show ?thesis using m coll by blast
@@ -85,7 +85,7 @@ text \<open>
 \<close>
 
 theorem dg_exec_run_source_sound:
-  fixes Pi :: proc_table and s0 t :: store
+  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
     and S_st :: "('d1::bounded_semilattice_sup_bot st, 'g1::bounded_semilattice_sup_bot st) dg_spec"
     and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
     and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
@@ -96,16 +96,16 @@ theorem dg_exec_run_source_sound:
     and Hcomb: "\<And>dst dc de g. map_prod fun_of_st fun_of_st (dgs_combine S_st dst dc de g)
                         = dgs_combine S_abs dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
     and pp_st: "part_post_solution
-                  (dg_gen_of S_st (compile_prog Pi ps main) bot0 s0d s0g) x sigma_st vars"
+                  (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input Pi ps main"
     and src: "source_com main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps main), ()) \<in> vars"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> edges (compile_prog Pi ps main) \<Longrightarrow> (w, ()) \<in> vars"
+      "\<And>u a w. (u, a, w) \<in> edges (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
     and cover_combine:
-      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines (compile_prog Pi ps main) \<Longrightarrow> (w, ()) \<in> vars"
-    and finE: "finite (edges (compile_prog Pi ps main))"
-    and finC: "finite (combines (compile_prog Pi ps main))"
+      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
+    and finE: "finite (edges (compile_prog Pi ps mnm main))"
+    and finC: "finite (combines (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (fun_of_st s0d) (fun_of_st s0g)"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep Pi) (main, s0, []) (residual, t, frs)"
@@ -114,12 +114,12 @@ theorem dg_exec_run_source_sound:
 proof -
   interpret sds: sound_dg_spec S_abs gammaDG by (rule sds)
   have pp_abs: "part_post_solution
-      (dg_gen_of S_abs (compile_prog Pi ps main)
+      (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g))
       x (fun_of_dg_st \<circ> sigma_st) vars"
     by (rule part_post_solution_dg_st_to_abs[OF Hstep Hcomb pp_st])
   have pp_gen: "part_post_solution
-      (sds.dg_gen (compile_prog Pi ps main)
+      (sds.dg_gen (compile_prog Pi ps mnm main)
          (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g))
       x (fun_of_dg_st \<circ> sigma_st) vars"
     using pp_abs unfolding sds.dg_gen_of_eq .
@@ -186,18 +186,18 @@ lemma sds: "sound_dg_spec (unit_dg_spec tf) gamma_unit"
   by (rule sound_dg_spec_unit[OF tf_sound])
 
 theorem run_source_sound:
-  fixes Pi :: proc_table and ps main and s0 t :: store and bot0 s0d s0g :: "'a st"
-  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st tf_st) (compile_prog Pi ps main) bot0 s0d s0g"
+  fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a st"
+  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st tf_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input Pi ps main"
     and src: "source_com main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps main), ()) \<in> fst (solve eqs x)"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
     and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> edges (compile_prog Pi ps main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
+      "\<And>u a w. (u, a, w) \<in> edges (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
     and cover_combine:
-      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines (compile_prog Pi ps main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
-    and finE: "finite (edges (compile_prog Pi ps main))"
-    and finC: "finite (combines (compile_prog Pi ps main))"
+      "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
+    and finE: "finite (edges (compile_prog Pi ps mnm main))"
+    and finC: "finite (combines (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_unit (fun_of_st s0d) (fun_of_st s0g)"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep Pi) (main, s0, []) (residual, t, frs)"
@@ -218,3 +218,5 @@ qed
 end
 
 end
+
+

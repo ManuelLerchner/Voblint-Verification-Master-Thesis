@@ -41,7 +41,7 @@ definition proc_table_a :: proc_table where
   "proc_table_a = ((\<lambda>_. None)(''p'' := Some (proc_decl_of [] proc_p_body)))"
 
 definition prog_call_p :: com where
-  "prog_call_p = Call None ''p'' []"
+  "prog_call_p = imp \<lbrakk> p() \<rbrakk>"
 
 definition procs_a :: "pname list" where
   "procs_a = [''p'']"

@@ -91,4 +91,43 @@ definition string_of_program ::
     @ [''main: '' @ string_of_com main])"
 
 
+fun source_indent :: "nat \<Rightarrow> string" where
+  "source_indent 0 = []"
+| "source_indent (Suc n) = ''  '' @ source_indent n"
+
+fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list" where
+  "pretty_source_lines_com n SKIP = [source_indent n @ ''skip'']"
+| "pretty_source_lines_com n (Assign x e) =
+    [source_indent n @ x @ '' := '' @ string_of_aexp e]"
+| "pretty_source_lines_com n (Seq c1 c2) =
+    pretty_source_lines_com n c1 @ pretty_source_lines_com n c2"
+| "pretty_source_lines_com n (If b c1 c2) =
+    [source_indent n @ ''if ('' @ string_of_bexp b @ '') then'']
+    @ pretty_source_lines_com (n + 2) c1
+    @ [source_indent n @ ''else'']
+    @ pretty_source_lines_com (n + 2) c2"
+| "pretty_source_lines_com n (While b c) =
+    [source_indent n @ ''while ('' @ string_of_bexp b @ '') do'']
+    @ pretty_source_lines_com (n + 2) c"
+| "pretty_source_lines_com n (Call dst p es) =
+    [source_indent n @ string_of_com (Call dst p es)]"
+| "pretty_source_lines_com n (Return e) =
+    [source_indent n @ string_of_com (Return e)]"
+| "pretty_source_lines_com n Restore = [source_indent n @ ''restore'']"
+| "pretty_source_lines_com n Unwind = [source_indent n @ ''<unwind>'']"
+
+definition pretty_source_lines_proc :: "pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
+  "pretty_source_lines_proc p decl =
+    (''procedure '' @ p @ ''('' @ join_source '', '' (formals decl) @ ''):'')
+    # pretty_source_lines_com 2 (body decl)"
+
+definition pretty_string_of_program ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> string" where
+  "pretty_string_of_program \<Pi> ps main =
+    join_source source_nl
+      (concat (map (\<lambda>p. case \<Pi> p of
+        None \<Rightarrow> [''procedure '' @ p @ '' <missing>'']
+      | Some decl \<Rightarrow> pretty_source_lines_proc p decl) ps)
+      @ [''main:''] @ pretty_source_lines_com 2 main)"
+
 end

@@ -48,7 +48,7 @@ datatype gk = Global | Seed pp "ivl"
 subsection \<open>The routed context hooks\<close>
 
 definition Spoly :: "(ivl st, ivl st) dg_spec" where
-  "Spoly = unit_dg_spec_st ivl_tf_st"
+  "Spoly = unit_dg_spec_st ivl_tf_st ivl_enter_st"
 
 text \<open>The callee-entry local store produced by an \<^const>\<open>EA_Enter\<close> action from a
   caller-local state (globals defaulted to \<open>bot\<close>: \<open>twice\<close> has none).\<close>
@@ -201,7 +201,7 @@ definition twice_ctx_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = bot then ''main / root context''
         else owner @ '' / context='' @ string_of_ivl ctx),
-      source_text = Some (string_of_program twice_pi twice_procs twice_main)
+      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main)
     \<rparr>"
 
 definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list" where
@@ -238,9 +238,9 @@ lemma twice_ctx_graph_domain_is_covered:
     twice_ctx_graph_domain" by eval
 
 lemma twice_ctx_graph_seed_keys_follow_enters:
-  "map (\<lambda>e. case e of (_, EnterEdge _, LocalNode p ctx) \<Rightarrow> Seed p ctx
+  "map (\<lambda>e. case e of (_, EnterEdge _ _, LocalNode p ctx) \<Rightarrow> Seed p ctx
                   | _ \<Rightarrow> Global)
-     (filter (\<lambda>e. case e of (_, EnterEdge _, _) \<Rightarrow> True | _ \<Rightarrow> False)
+     (filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
        (analysis_graph_edges twice_ctx_graph)) = twice_ctx_seed_keys" by eval
 
 lemma twice_ctx_graph_has_both_callees:
@@ -255,11 +255,11 @@ lemma twice_ctx_graph_omits_empty_globals:
     (analysis_graph_nodes twice_ctx_graph) = []" by eval
 
 lemma twice_ctx_graph_enter_edges:
-  "filter (\<lambda>e. case e of (_, EnterEdge _, _) \<Rightarrow> True | _ \<Rightarrow> False)
+  "filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
     (analysis_graph_edges twice_ctx_graph) =
-    [(LocalNode 4 bot, EnterEdge (EA_Enter [''p''] [IMP2_Syntax.N 3]),
+    [(LocalNode 4 bot, EnterEdge ''twice'' (EA_Enter [''p''] [IMP2_Syntax.N 3]),
       LocalNode 0 ctx_call1),
-     (LocalNode 6 bot, EnterEdge (EA_Enter [''p''] [IMP2_Syntax.N 10]),
+     (LocalNode 6 bot, EnterEdge ''twice'' (EA_Enter [''p''] [IMP2_Syntax.N 10]),
       LocalNode 0 ctx_call2)]" by eval
 
 lemma twice_ctx_graph_combine_edges:

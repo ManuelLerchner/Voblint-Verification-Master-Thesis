@@ -10,7 +10,6 @@ theory Voblint
     "Voblint_IMP2.IMP2_Proc"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_CFG.CFG_Def"
-    "Voblint_CFG.CFG_Path"
     "Voblint_CFG.IMP2_Proc_to_CFG"
 
 
@@ -236,7 +235,6 @@ text \<open>
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node/edge types, predecessor enumeration, finite code lists.
-    \<^item> @{theory Voblint_CFG.CFG_Path} --- inductive path predicate and offset infrastructure.
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Transfer} --- the concrete store transformers shared by the semantics: \<^verbatim>\<open>edge_step\<close>, \<^verbatim>\<open>edge_collect\<close>, \<^verbatim>\<open>edges_collect\<close>, \<^verbatim>\<open>combine_collect\<close>, \<^verbatim>\<open>call_enter_store\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>ltr_collect_keyed\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_gamma\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).

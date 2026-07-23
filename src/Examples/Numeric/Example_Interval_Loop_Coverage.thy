@@ -39,7 +39,7 @@ definition loop_prog :: "IMP2_Proc.com" where
 
 subsection \<open>The compiled CFG\<close>
 
-abbreviation "loop_cfg \<equiv> compile_prog Map.empty [] loop_prog"
+abbreviation "loop_cfg \<equiv> compile_prog Map.empty [] ''main'' loop_prog"
 
 lemma loop_cfg_full:
   "loop_cfg = mk_cfg 0 5
@@ -151,3 +151,5 @@ proof -
 qed
 
 end
+
+

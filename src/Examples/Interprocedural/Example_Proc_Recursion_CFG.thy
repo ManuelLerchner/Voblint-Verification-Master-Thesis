@@ -26,7 +26,7 @@ definition proc_layout_regression_cfg :: cfg where
   "proc_layout_regression_cfg =
      compile_prog (prog_table proc_layout_regression_prog)
        (prog_procs proc_layout_regression_prog)
-       (prog_main proc_layout_regression_prog)"
+       ''main'' (prog_main proc_layout_regression_prog)"
 
 lemma proc_layout_regression_direct_recursion:
   "(1, EA_Enter [] [], 0) \<in> edges proc_layout_regression_cfg \<and>

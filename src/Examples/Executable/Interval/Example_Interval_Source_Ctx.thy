@@ -30,7 +30,7 @@ theorem twice_source_ctx_run_sound:
            \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, key ivl_enterc bot t))\<rbrakk>"
 proof -
   have cap: "\<And>v ctx. activation_collect ivl_enterc bot
-                      (compile_prog twice_pi twice_procs twice_main) cinit_stores v ctx
+                      (compile_prog twice_pi twice_procs ''main'' twice_main) cinit_stores v ctx
                     \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
@@ -47,7 +47,7 @@ theorem twice_source_toplevel_at_bot:
              \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, bot))\<rbrakk>"
 proof -
   have cap: "\<And>v ctx. activation_collect ivl_enterc bot
-                      (compile_prog twice_pi twice_procs twice_main) cinit_stores v ctx
+                      (compile_prog twice_pi twice_procs ''main'' twice_main) cinit_stores v ctx
                     \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
@@ -55,3 +55,5 @@ proof -
 qed
 
 end
+
+

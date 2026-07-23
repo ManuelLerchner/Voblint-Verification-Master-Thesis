@@ -38,18 +38,27 @@ text \<open>
   Whole-program form.  \<^verbatim>\<open>program { void f(..) { .. } void main() { .. } }\<close>
   bundles the procedure-name list, the procedure table, and the main command
   into one \<^verbatim>\<open>imp_prog\<close> record, ready for
-  \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) (prog_main p)\<close>.
+  \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)\<close>.
 \<close>
 
 record imp_prog =
-  prog_procs :: "pname list"
-  prog_table :: proc_table
-  prog_main  :: com
+  proc_rep :: "(pname * proc_decl) list"
+  prog_main :: com
 
-lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps pi m) = ps"
-  and prog_table_make [simp]: "prog_table (imp_prog.make ps pi m) = pi"
-  and prog_main_make  [simp]: "prog_main  (imp_prog.make ps pi m) = m"
-  by (simp_all add: imp_prog.make_def)
+definition prog_procs :: "imp_prog => pname list" where
+  "prog_procs p = map fst (proc_rep p)"
+
+definition prog_table :: "imp_prog => proc_table" where
+  "prog_table p = map_of (proc_rep p)"
+
+lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m) = map fst ps"
+  by (simp add: prog_procs_def imp_prog.make_def)
+
+lemma prog_table_make [simp]: "prog_table (imp_prog.make ps m) = map_of ps"
+  by (simp add: prog_table_def imp_prog.make_def)
+
+lemma prog_main_make [simp]: "prog_main (imp_prog.make ps m) = m"
+  by (simp add: imp_prog.make_def)
 
 nonterminal imp2_com
 nonterminal imp2_stmt
@@ -135,6 +144,7 @@ parse_translation \<open>
     val c_imp_prog = "IMP2_Notation.imp_prog.make"
     val c_Cons    = "List.list.Cons"
     val c_Nil     = "List.list.Nil"
+    val c_Pair    = "Product_Type.Pair"
 
     val c_N      = "IMP2_Syntax.N"
     val c_V      = "IMP2_Syntax.V"
@@ -349,13 +359,12 @@ parse_translation \<open>
       | mk_body_ret (SOME c) (SOME e) =
           K c_Seq $ com_tr c $ (K c_Return $ (K c_Some $ aexp_tr e))
 
-    fun mk_table acc [] = acc
-      | mk_table acc ((p, formals, body, result) :: rest) =
-          mk_table
-            (K c_fun_upd $ acc $ HOLogic.mk_string p
-              $ (K c_Some $ ((K c_proc_decl_of $ mk_names formals)
-                  $ mk_body_ret body result)))
-            rest
+    fun mk_proc_rep [] = K c_Nil
+      | mk_proc_rep ((p, formals, body, result) :: rest) =
+          K c_Cons
+            $ (K c_Pair $ HOLogic.mk_string p
+                $ ((K c_proc_decl_of $ mk_names formals) $ mk_body_ret body result))
+            $ mk_proc_rep rest
 
     (* dummyT constructors only; type inference runs after the translation. *)
     fun prog_tr decls funcs_t =
@@ -376,10 +385,9 @@ parse_translation \<open>
            | [("main", _, _, NONE)] => error "IMP2 program: main must have no formals"
            | [] => error "IMP2 program: missing 'void main() { ... }'"
            | _  => error "IMP2 program: more than one 'void main()'")
-        val names = mk_names (map (fn (n, _, _, _) => n) procs)
-        val table = mk_table empty_table procs
-        val main  = mk_body main_ast
-      in K c_imp_prog $ names $ table $ main end
+        val proc_rep = mk_proc_rep procs
+        val main = mk_body main_ast
+      in K c_imp_prog $ proc_rep $ main end
   in
     [("_IMP2", fn _ => fn [t] => com_tr t | _ => raise Match),
      ("_PROGKW0", fn _ => fn [fs] => prog_tr [] fs | _ => raise Match),

@@ -28,21 +28,13 @@ definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =
      compile_prog (\<lambda>_. None) [] ''main'' mixed_graphviz_prog"
 
-definition mixed_graphviz_eqs ::
-  "(pp \<times> unit, unit, (sign abs_state, ivl abs_state) dg_state) eqsT"
-where
-  "mixed_graphviz_eqs =
-     mixed_si_generator mixed_graphviz_cfg bot
-       (fun_of_st top_sign_st) (fun_of_st top_ivl_st)"
-
 definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
   "mixed_graphviz_local_value p =
      (\<lambda>v. if v = ''x''
        then (case p of
          FunctionEntry _ \<Rightarrow> SZero
-       | Statement 0 \<Rightarrow> SZero
-       | Statement 1 \<Rightarrow> SNeg
-       | Statement 2 \<Rightarrow> SPos
+       | Statement n \<Rightarrow>
+           (if n = 0 then SZero else if n = 1 then SNeg else SPos)
        | FunctionResult _ \<Rightarrow> SPos)
        else STop)"
 
@@ -56,7 +48,7 @@ where
   "mixed_graphviz_solution z =
      (case z of
         Inl (p, ()) \<Rightarrow> DG (mixed_graphviz_local_value p) (mixed_graphviz_global_value ())
-      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (cfg_exit mixed_graphviz_cfg))
+      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (FunctionResult ''main''))
                     (mixed_graphviz_global_value ()))"
 
 lemma mixed_graphviz_x_is_local:
@@ -91,12 +83,13 @@ definition mixed_graphviz_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''mixed Sign answers''),
-      source_text = Some (string_of_program (\<lambda>_. None) [] mixed_graphviz_prog)
+      source_text = Some (pretty_string_of_program (\<lambda>_. None) [] mixed_graphviz_prog)
     \<rparr>"
 
 definition mixed_graphviz_graph_domain :: "(pp \<times> unit + unit) list" where
   "mixed_graphviz_graph_domain =
     contextual_graph_domain mixed_graphviz_cfg (\<lambda>_. [()]) @ [Inr ()]"
+
 
 definition mixed_graphviz_dot :: String.literal where
   "mixed_graphviz_dot =

@@ -38,7 +38,7 @@ definition loop_cfg :: cfg where
      {}"
 
 lemma loop_cfg_compiles:
-  "loop_cfg = compile_prog Map.empty [] loop_prog"
+  "loop_cfg = compile_prog Map.empty [] ''main'' loop_prog"
   by (simp add: loop_cfg_def loop_prog_def; simp add: compile_eval_simps; blast)
 
 lemma loop_cfg_entry [simp]: "cfg_entry loop_cfg = 0"
@@ -121,3 +121,5 @@ lemma loop_head_across_update_rules:
   unfolding loop_ivl_eqs_def run_menu_def solver_menu_def by eval
 
 end
+
+

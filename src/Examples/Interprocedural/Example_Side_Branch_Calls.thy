@@ -62,18 +62,18 @@ text \<open>
   result is \<open>SNonNeg\<close> (\<open>\<ge> 0\<close>), not \<open>STop\<close>.
 \<close>
 
-value "sign_exec_prog branch_prog ''Gresult''"
-value "sign_exec_prog branch_prog ''Gout''"
+value "sign_exec_prog ''main'' branch_prog ''Gresult''"
+value "sign_exec_prog ''main'' branch_prog ''Gout''"
 
 lemma ec_result_nonnneg:
-  "sign_exec_prog branch_prog ''Gresult'' = SNonNeg"
+  "sign_exec_prog ''main'' branch_prog ''Gresult'' = SNonNeg"
   by eval
 
 text \<open>Termination is proved, not assumed: the executable side solver returns a
   result, so by @{thm sign_terminates_prog_via_solve_c} the program is in the
   solver's domain.\<close>
 
-lemma ec_terminates: "sign_terminates_prog branch_prog"
+lemma ec_terminates: "sign_terminates_prog ''main'' branch_prog"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 text \<open>
@@ -84,8 +84,8 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))
-   \<le> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
+  "ltr_collect (prog_cfg ''main'' branch_prog) cinit_stores (cfg_exit (prog_cfg ''main'' branch_prog))
+   \<le> \<lbrakk>sign_exec_prog ''main'' branch_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
 text \<open>
@@ -95,8 +95,8 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
-  shows "s \<in> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
+  assumes "s \<in> ltr_collect (prog_cfg ''main'' branch_prog) cinit_stores (cfg_exit (prog_cfg ''main'' branch_prog))"
+  shows "s \<in> \<lbrakk>sign_exec_prog ''main'' branch_prog\<rbrakk>"
   using assms ec_certified_sound by blast
 
 text \<open>
@@ -105,7 +105,7 @@ text \<open>
   C-faithful initialisation seed (\<open>SZero\<close> for globals).
 \<close>
 
-value "sign_exec_prog branch_prog ''Ginput''"
+value "sign_exec_prog ''main'' branch_prog ''Ginput''"
 
 text \<open>
   \<open>Ginput\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
@@ -114,10 +114,10 @@ text \<open>
 \<close>
 
 lemma ec_ginput_top:
-  "sign_exec_prog branch_prog ''Ginput'' = STop"
+  "sign_exec_prog ''main'' branch_prog ''Ginput'' = STop"
   by eval
 
-value "sign_exec_prog branch_prog ''Gout''"
+value "sign_exec_prog ''main'' branch_prog ''Gout''"
 
 text \<open>
   \<open>Gout\<close> is computed as \<open>100 * Gresult\<close>.  With \<open>Gresult = SNonNeg\<close>
@@ -126,13 +126,13 @@ text \<open>
 \<close>
 
 lemma ec_gout_nonnneg:
-  "sign_exec_prog branch_prog ''Gout'' = SNonNeg"
+  "sign_exec_prog ''main'' branch_prog ''Gout'' = SNonNeg"
   by eval
 
-value "sign_exec_prog branch_prog ''r''"
+value "sign_exec_prog ''main'' branch_prog ''r''"
 
 lemma ec_r_pos:
-  "sign_exec_prog branch_prog ''r'' = SPos"
+  "sign_exec_prog ''main'' branch_prog ''r'' = SPos"
   by eval
 
 text \<open>
@@ -178,3 +178,5 @@ ML_val \<open>
 \<close>
 
 end
+
+
