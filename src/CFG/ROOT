@@ -16,10 +16,12 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     Control_Simulation
     Compile_Certificate
     CFG_Prune
-  (* Stage 5B+: re-add each theory here as it is migrated onto the two-relation
-     procedure-aware CFG (analysis/solver). They still reference the retired
-     single-edge-set representation and are not built yet:
-       Compiler/Located_LTR
+  theories [quick_and_dirty]
+    (* Source-to-local-trace bridge (csim -> valid_ltr).  Fully proved except the
+       one isolated procedure-locality obligation valid_ltr_entry_result_eq, whose
+       discharge needs the per-procedure node-classification / edge-locality theory. *)
+    Located_LTR
+  (* Stage 5B+ notes:
      CFG_Path (nat-offset path infrastructure) was retired in Stage 3; the
      procedure-aware compiler allocates cfg_node Statement indices directly, so no
      separate offset layer is needed.  CFG_Transfer was migrated: its edge_step /

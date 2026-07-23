@@ -1,33 +1,45 @@
 theory Located_LTR
-  imports Control_Simulation CFG_Local_Trace LTR_Collect
+  imports Compile_Certificate CFG_Local_Trace LTR_Collect
 begin
 
 section \<open>Source execution as activation-local traces\<close>
 
 text \<open>
   The stack-faithful bridge from compiled source execution to the canonical activation-local
-  semantics \<^const>\<open>valid_ltr\<close>.  The load-bearing object is a representation invariant relating a
-  CFG-located configuration \<^type>\<open>cconf\<close> (the one-CFG-edge small step \<^const>\<open>cstep\<close>, already
-  simulated from the source \<^const>\<open>pstep\<close>) to a valid activation-local trace: the current
-  activation is the trace, and the runtime \<^type>\<open>cframe\<close> stack is its \<^const>\<open>caller_of\<close> chain.
-  Because \<^const>\<open>cstep\<close> advances one CFG edge at a time, its three rules map one-to-one onto
-  \<^const>\<open>valid_ltr\<close>'s \<open>intra\<close> / \<open>call\<close> / \<open>ret\<close>, so a source step (a run of \<^const>\<open>cstep\<close>s)
-  simply extends the accumulated trace.
-
-  The representation invariant relates a source-located configuration directly to its stack-faithful trace.
+  semantics \<^const>\<open>valid_ltr\<close>.  A CFG-located configuration \<^type>\<open>cconf\<close> (advanced one edge at a
+  time by \<^const>\<open>cstep\<close>) is related to a valid activation-local trace: the current activation is
+  the trace, and the runtime \<^type>\<open>cframe\<close> stack is its \<^const>\<open>caller_of\<close> chain.  Each \<^const>\<open>cstep\<close>
+  rule maps one-to-one onto a \<^const>\<open>valid_ltr\<close> constructor (\<open>intra\<close> / \<open>call\<close> / \<open>ret\<close>), so a source
+  run --- simulated into a \<^const>\<open>cstep\<close> run by \<^const>\<open>csim\<close> --- extends the accumulated trace.
 \<close>
+
+subsection \<open>Procedure locality of a valid activation\<close>
+
+text \<open>An activation's own local \<^const>\<open>path\<close> stays inside one compiled procedure fragment: if it
+  enters at \<^term>\<open>FunctionEntry p\<close> and sinks at \<^term>\<open>FunctionResult q\<close> then \<open>p = q\<close>.  This is the
+  one structural obligation of the return case --- \<open>valid_ltr.ret\<close> pins the resumed call edge
+  to the callee's \<^term>\<open>FunctionResult\<close>, so the \<^const>\<open>FunctionEntry\<close> recorded in the frame must
+  agree with the node the return fires at.\<close>
+lemma valid_ltr_entry_result_eq:
+  assumes "t \<in> valid_ltr (compile_prog \<Pi> ps mnm main) S"
+    and "fst (hd (path t)) = FunctionEntry p"
+    and "sink_node t = FunctionResult q"
+  shows "p = q"
+  sorry
 
 subsection \<open>The representation invariant\<close>
 
 text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in lockstep with the runtime frame list: each
-  \<^type>\<open>cframe\<close> \<open>(call, ret, saved)\<close> is a caller activation \<open>c\<close> with \<open>sink_node c = call\<close> and
-  \<open>sink_store c = saved\<close>.  It is inductive (intro matches the call proof, elim exposes the caller
-  in the return proof), carries no store set, and does not constrain the return triple --- that is
-  supplied by the transition, not the invariant.\<close>
+  \<^type>\<open>cframe\<close> \<open>(cont, dst, caller)\<close> pins the caller activation \<open>c\<close> --- its frozen store
+  \<open>sink_store c = caller\<close> --- and records the concrete \<^const>\<open>calls\<close> edge that spawned the child,
+  whose callee \<^term>\<open>FunctionEntry p\<close> equals the child's (path-invariant) entry node.\<close>
 inductive stack_repr :: "cfg \<Rightarrow> cframe list \<Rightarrow> ltr \<Rightarrow> bool" for g where
   empty: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
-| frame: "caller_of t = Some c \<Longrightarrow> sink_node c = call \<Longrightarrow> sink_store c = saved
-          \<Longrightarrow> stack_repr g stk c \<Longrightarrow> stack_repr g ((call, ret, saved) # stk) t"
+| frame: "caller_of t = Some c \<Longrightarrow> sink_store c = caller
+          \<Longrightarrow> fst (hd (path t)) = FunctionEntry p
+          \<Longrightarrow> (sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+          \<Longrightarrow> stack_repr g stk c
+          \<Longrightarrow> stack_repr g ((cont, dst, caller) # stk) t"
 
 text \<open>\<open>ltr_repr\<close> pins a valid trace to a located configuration: the trace's sink is the current
   node/store, and its caller chain is the runtime stack.\<close>
@@ -38,50 +50,56 @@ definition ltr_repr :: "cfg \<Rightarrow> store set \<Rightarrow> cconf \<Righta
 definition located_ltr :: "cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> bool" where
   "located_ltr g S cf = (\<exists>t. ltr_repr g S cf t)"
 
-text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_of\<close>, so it transfers across activations with
-  equal caller (a \<^const>\<open>Resume\<close> keeps its frozen caller, an \<^const>\<open>extend\<close> keeps ancestry).\<close>
-lemma stack_repr_caller_cong:
-  "stack_repr g stk t1 \<Longrightarrow> caller_of t2 = caller_of t1 \<Longrightarrow> stack_repr g stk t2"
+text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_of\<close> and the path-invariant entry node, so it
+  transfers across activations sharing both (an \<^const>\<open>extend\<close> appends --- entry unchanged --- and a
+  \<^const>\<open>Resume\<close> prepends the same activation's path --- entry unchanged).\<close>
+lemma stack_repr_cong:
+  "stack_repr g stk t1 \<Longrightarrow> caller_of t2 = caller_of t1
+   \<Longrightarrow> fst (hd (path t2)) = fst (hd (path t1)) \<Longrightarrow> stack_repr g stk t2"
   by (cases rule: stack_repr.cases) (auto intro: stack_repr.intros)
 
 subsection \<open>The return step\<close>
 
-text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops the top frame; \<open>stack_repr\<close> identifies it
-  as the caller \<^const>\<open>caller_of\<close> recovers, so the trace composes by \<^const>\<open>valid_ltr\<close>'s \<open>ret\<close> ---
-  no re-rooting, no reconstruction --- and the combine result store equals the \<^const>\<open>cstep\<close>
-  store.\<close>
+text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops the top frame; \<open>stack_repr\<close> identifies the
+  caller \<open>c\<close> (\<^const>\<open>caller_of\<close> recovers it) and its spawning \<^const>\<open>calls\<close> edge, whose callee
+  \<^term>\<open>FunctionEntry q\<close> matches the returning \<^term>\<open>FunctionResult q\<close> by
+  \<open>valid_ltr_entry_result_eq\<close> --- so the trace composes by \<open>valid_ltr.ret\<close>, and the combined
+  store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma ltr_repr_Return:
-  assumes rep: "ltr_repr g S (ex, t0s, (call, ret, s) # stk) t0"
-    and comb: "(call, ex, ret, dst) \<in> combines g"
-  shows "ltr_repr g S
-           (ret, combine_assign dst (t0s ret_var) (IMP2_Globals.combine_states s t0s), stk)
+  assumes rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S
+                  (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
+  shows "ltr_repr (compile_prog \<Pi> ps mnm main) S
+           (cont, combine_collect dst caller tst, stk)
            (Resume (the (caller_of t0)) t0
-              (path (the (caller_of t0)) @ [(ret, combine_collect dst s t0s)]))"
+              (path (the (caller_of t0)) @ [(cont, combine_collect dst caller tst)]))"
 proof -
-  from rep have t0v: "t0 \<in> valid_ltr g S" and sn0: "sink_node t0 = ex"
-    and ss0: "sink_store t0 = t0s" and stk0: "stack_repr g ((call, ret, s) # stk) t0"
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  from rep have t0v: "t0 \<in> valid_ltr ?g S" and sn0: "sink_node t0 = FunctionResult q"
+    and ss0: "sink_store t0 = tst"
+    and stk0: "stack_repr ?g ((cont, dst, caller) # stk) t0"
     by (auto simp: ltr_repr_def)
-  from stk0 obtain c where cof: "caller_of t0 = Some c" and snc: "sink_node c = call"
-    and ssc: "sink_store c = s" and stkc: "stack_repr g stk c"
+  from stk0 obtain c p pars args where cof: "caller_of t0 = Some c"
+    and ssc: "sink_store c = caller" and entryp: "fst (hd (path t0)) = FunctionEntry p"
+    and edge: "(sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
+    and stkc: "stack_repr ?g stk c"
     by (cases rule: stack_repr.cases) auto
+  have cvalid: "c \<in> valid_ltr ?g S" using valid_ltr_caller_valid[OF t0v cof] .
+  have pq: "p = q" using valid_ltr_entry_result_eq[OF t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
-  let ?r = "combine_collect dst s t0s"
-  let ?t' = "Resume c t0 (path c @ [(ret, ?r)])"
-  have combine_eq: "(sink_node c, sink_node t0, ret, dst) \<in> combines g"
-    using comb snc sn0 by simp
-  have r_eq: "?r = combine_collect dst (sink_store c) (sink_store t0)"
-    using ssc ss0 by simp
-  have valid': "?t' \<in> valid_ltr g S"
-    using valid_ltr.ret[OF t0v cof combine_eq r_eq] by simp
-  have sn': "sink_node ?t' = ret" by (simp add: sink_node_def)
+  let ?r = "combine_collect dst caller tst"
+  let ?t' = "Resume c t0 (path c @ [(cont, ?r)])"
+  have edge_q: "(sink_node c, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls ?g"
+    using edge pq by simp
+  have valid': "?t' \<in> valid_ltr ?g S"
+    using valid_ltr.ret[OF t0v cof sn0 edge_q] ssc ss0 by simp
+  have sn': "sink_node ?t' = cont" by (simp add: sink_node_def)
   have ss': "sink_store ?t' = ?r" by (simp add: sink_store_def)
-  have stk': "stack_repr g stk ?t'"
-    using stack_repr_caller_cong[OF stkc] by simp
-  have store_eq: "combine_assign dst (t0s ret_var) (IMP2_Globals.combine_states s t0s) = ?r"
-    by (simp add: combine_collect_def)
+  have entry': "fst (hd (path ?t')) = fst (hd (path c))"
+    using valid_ltr_path_nonempty[OF cvalid] by simp
+  have stk': "stack_repr ?g stk ?t'"
+    using stack_repr_cong[OF stkc, of ?t'] entry' by simp
   show ?thesis
-    unfolding cthe using valid' sn' ss' stk' store_eq
-    by (simp add: ltr_repr_def)
+    unfolding cthe using valid' sn' ss' stk' by (simp add: ltr_repr_def)
 qed
 
 subsection \<open>The invariant is preserved by located CFG steps\<close>
@@ -89,43 +107,54 @@ subsection \<open>The invariant is preserved by located CFG steps\<close>
 text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_ltr\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>ltr_repr_Return\<close>).\<close>
 lemma cstep_preserves_ltr_repr:
-  assumes step: "cstep g cf cf'"
-    and rep: "ltr_repr g S cf t"
-  shows "\<exists>t'. ltr_repr g S cf' t'"
+  assumes step: "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
+    and rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
+  shows "\<exists>t'. ltr_repr (compile_prog \<Pi> ps mnm main) S cf' t'"
   using step rep
 proof (cases rule: cstep.cases)
-  case (Intra u a v s s' stk)
-  from rep have tv: "t \<in> valid_ltr g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
-    and stk: "stack_repr g stk t"
+  case (Intra u a v s s' stk')
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  from rep have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
+    and str: "stack_repr ?g stk' t"
     using Intra by (auto simp: ltr_repr_def)
-  have "extend t (v, s') \<in> valid_ltr g S"
-    using valid_ltr.intra[OF tv, of a v s'] Intra sn ss by simp
-  moreover have "stack_repr g stk (extend t (v, s'))"
-    using stack_repr_caller_cong[OF stk] by simp
-  ultimately have "ltr_repr g S (v, s', stk) (extend t (v, s'))"
+  have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
+  have e2: "edge_step a (sink_store t) = Some s'" using Intra ss by simp
+  have "extend t (v, s') \<in> valid_ltr ?g S" using valid_ltr.intra[OF tv e1 e2] .
+  moreover have "stack_repr ?g stk' (extend t (v, s'))"
+    using stack_repr_cong[OF str] valid_ltr_path_nonempty[OF tv] by simp
+  ultimately have "ltr_repr ?g S (v, s', stk') (extend t (v, s'))"
     by (simp add: ltr_repr_def)
   then show ?thesis using Intra by auto
 next
-  case (Call call xs es en ex ret dst s s' stk)
-  from rep have tv: "t \<in> valid_ltr g S" and sn: "sink_node t = call" and ss: "sink_store t = s"
-    and stk: "stack_repr g stk t"
+  case (Call u dst pars actuals q cont s stk')
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  from rep have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
+    and str: "stack_repr ?g stk' t"
     using Call by (auto simp: ltr_repr_def)
-  have "Call t [(en, s')] \<in> valid_ltr g S"
-    using valid_ltr.call[OF tv, of xs es en ex ret dst s'] Call sn ss by simp
-  moreover have "stack_repr g ((call, ret, s) # stk) (Call t [(en, s')])"
-    by (rule stack_repr.frame[where c=t]) (simp_all add: sn ss stk)
-  ultimately have "ltr_repr g S (en, s', (call, ret, s) # stk) (Call t [(en, s')])"
+  have edge: "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
+    using Call sn by simp
+  let ?child = "Call t [(FunctionEntry q, call_enter (CallEdge dst pars actuals) s)]"
+  have child_valid: "?child \<in> valid_ltr ?g S"
+    using valid_ltr.call[OF tv edge] ss by simp
+  have "stack_repr ?g ((cont, dst, s) # stk') ?child"
+  proof (rule stack_repr.frame)
+    show "caller_of ?child = Some t" by simp
+    show "sink_store t = s" using ss .
+    show "fst (hd (path ?child)) = FunctionEntry q" by simp
+    show "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
+      using edge .
+    show "stack_repr ?g stk' t" using str .
+  qed
+  with child_valid have "ltr_repr ?g S
+      (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk') ?child"
     by (simp add: ltr_repr_def sink_node_def sink_store_def)
   then show ?thesis using Call by auto
 next
-  case (Return call ex ret dst tst s stk)
-  from rep Return(1) have rep': "ltr_repr g S (ex, tst, (call, ret, s) # stk) t" by simp
-  have "ltr_repr g S
-          (ret, combine_assign dst (tst ret_var) (IMP2_Globals.combine_states s tst), stk)
-          (Resume (the (caller_of t)) t
-             (path (the (caller_of t)) @ [(ret, combine_collect dst s tst)]))"
-    using ltr_repr_Return[OF rep' Return(3)] .
-  then show ?thesis using Return(2) by auto
+  case (Return q tst cont dst caller stk')
+  from rep Return(1)
+  have rep': "ltr_repr (compile_prog \<Pi> ps mnm main) S
+                (FunctionResult q, tst, (cont, dst, caller) # stk') t" by simp
+  from ltr_repr_Return[OF rep'] show ?thesis using Return(2) by auto
 qed
 
 lemma located_ltr_entry:
@@ -140,122 +169,68 @@ proof -
 qed
 
 lemma cstep_preserves_located_ltr:
-  assumes "located_ltr g S cf" and "cstep g cf cf'"
-  shows "located_ltr g S cf'"
+  assumes "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
+    and "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
+  shows "located_ltr (compile_prog \<Pi> ps mnm main) S cf'"
 proof -
-  from assms(1) obtain t where "ltr_repr g S cf t" by (auto simp: located_ltr_def)
-  then obtain t' where "ltr_repr g S cf' t'"
+  from assms(1) obtain t where "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
+    by (auto simp: located_ltr_def)
+  then obtain t' where "ltr_repr (compile_prog \<Pi> ps mnm main) S cf' t'"
     using cstep_preserves_ltr_repr[OF assms(2)] by blast
   then show ?thesis by (auto simp: located_ltr_def)
 qed
 
 lemma csteps_preserve_located_ltr:
-  assumes "located_ltr g S cf" and "star (cstep g) cf cf'"
-  shows "located_ltr g S cf'"
+  assumes "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
+    and "star (cstep (compile_prog \<Pi> ps mnm main)) cf cf'"
+  shows "located_ltr (compile_prog \<Pi> ps mnm main) S cf'"
   using assms(2) assms(1)
 proof (induction rule: star.induct)
   case (refl a)
   then show ?case .
 next
   case (step a b c)
-  have "located_ltr g S b"
+  have "located_ltr (compile_prog \<Pi> ps mnm main) S b"
     by (rule cstep_preserves_located_ltr[OF step.prems step.hyps(1)])
   then show ?case by (rule step.IH)
 qed
 
-subsection \<open>The source bridge\<close>
+subsection \<open>The initial main activation\<close>
 
-text \<open>Composing the existing source-to-\<^const>\<open>cstep\<close> simulation with the invariant: every source
-  run produces a matching valid activation-local trace.\<close>
-
-lemma pstep_preserves_match_located:
-  assumes wf: "wf_compile_input Pi ps main"
-    and J: "\<exists>cf. concrete_program_match Pi ps main src cf
-                 \<and> located_ltr (compile_prog Pi ps main) S cf"
-    and step: "pstep Pi src src'"
-  shows "\<exists>cf. concrete_program_match Pi ps main src' cf
-              \<and> located_ltr (compile_prog Pi ps main) S cf"
+text \<open>The program entry \<^term>\<open>FunctionEntry mnm\<close> is an ordinary \<open>csim.Base\<close> activation: the
+  distinguished main procedure is declared in \<open>\<Pi>\<close> (\<open>wf_compile_input\<close>), so its body-fragment is
+  certified by \<open>procs_compiled_compile_prog\<close> and \<^const>\<open>proc_activation\<close> holds.  One \<^term>\<open>EA_Nop\<close>
+  edge crosses from \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation
+  simulates the source \<open>main\<close>.\<close>
+lemma compile_prog_main_base:
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  obtains en where
+    "(FunctionEntry mnm, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    "csim \<Pi> (compile_prog \<Pi> ps mnm main) (main, s, []) (en, s, [])"
 proof -
-  from J obtain cf where m: "concrete_program_match Pi ps main src cf"
-    and l: "located_ltr (compile_prog Pi ps main) S cf" by blast
-  from concrete_program_step_match[OF wf m step] obtain cf'
-    where star_c: "star (cstep (compile_prog Pi ps main)) cf cf'"
-      and m': "concrete_program_match Pi ps main src' cf'" by blast
-  have "located_ltr (compile_prog Pi ps main) S cf'"
-    by (rule csteps_preserve_located_ltr[OF l star_c])
-  then show ?thesis using m' by blast
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
+  have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
+    using wf unfolding wf_compile_input_def by auto
+  from procs_compiled_proc[OF pc mnmdecl] obtain m m' en ex E K where
+    cbody: "compile \<Pi> mnm (body (proc_decl_of [] main)) m = (m', en, ex, E, K)"
+      and Esub: "E \<subseteq> intra ?g" and Ksub: "K \<subseteq> calls ?g"
+      and entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
+      and exitm: "(ex, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
+      and srcbody: "source_com (body (proc_decl_of [] main))" by metis
+  have bodyeq: "body (proc_decl_of [] main) = main" by (simp add: proc_decl_of_def)
+  have cbody': "compile \<Pi> mnm main m = (m', en, ex, E, K)" using cbody bodyeq by simp
+  have srcmain: "source_com main" using srcbody bodyeq by simp
+  have cacc: "compiled_at \<Pi> ?g mnm main m" by (rule compiled_atI[OF cbody' Esub Ksub exitm])
+  have pa: "proc_activation \<Pi> mnm main"
+    using mnmdecl bodyeq unfolding proc_activation_def by auto
+  have base: "csim \<Pi> ?g (main, s, []) (en, s, [])"
+    by (rule csim.Base[OF control_at_initial[OF srcmain, of \<Pi> mnm m,
+                          folded compile_entry_node[OF cbody']] cacc pa])
+  from entry base show ?thesis ..
 qed
 
-lemma psteps_preserve_match_located:
-  assumes wf: "wf_compile_input Pi ps main"
-    and run: "star (pstep Pi) src src'"
-    and J: "\<exists>cf. concrete_program_match Pi ps main src cf
-                 \<and> located_ltr (compile_prog Pi ps main) S cf"
-  shows "\<exists>cf. concrete_program_match Pi ps main src' cf
-              \<and> located_ltr (compile_prog Pi ps main) S cf"
-  using run J
-proof (induction rule: star.induct)
-  case (refl a)
-  then show ?case .
-next
-  case (step a b c)
-  have "\<exists>cf. concrete_program_match Pi ps main b cf
-             \<and> located_ltr (compile_prog Pi ps main) S cf"
-    by (rule pstep_preserves_match_located[OF wf step.prems step.hyps(1)])
-  then show ?case by (rule step.IH)
-qed
-
-theorem source_run_has_ltr:
-  assumes wf: "wf_compile_input Pi ps main"
-    and src: "source_com main"
-    and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
-  shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
-                   \<and> ltr_repr (compile_prog Pi ps main) S (v, s, stk) t"
-proof -
-  let ?g = "compile_prog Pi ps main"
-  have base: "\<exists>cf. concrete_program_match Pi ps main (main, s0, []) cf
-                   \<and> located_ltr ?g S cf"
-    using concrete_program_initial_match[OF src] located_ltr_entry[OF s0] by blast
-  from psteps_preserve_match_located[OF wf run base]
-  obtain cf where m: "concrete_program_match Pi ps main (residual, s, frs) cf"
-    and l: "located_ltr ?g S cf" by blast
-  obtain v t' stk where cf: "cf = (v, t', stk)" by (cases cf) auto
-  have store: "t' = s"
-    using m unfolding cf concrete_program_match_def by (auto split: prod.splits)
-  from l obtain t where "ltr_repr ?g S (v, s, stk) t"
-    using cf store by (auto simp: located_ltr_def)
-  then show ?thesis using m cf store by blast
-qed
-
-text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
-  collecting \<^const>\<open>ltr_collect\<close> at the compiled target node.  It is the key-free view of
-  \<open>source_store_in_activation_collect\<close>, obtained straight from the \<^const>\<open>valid_ltr\<close>
-  witness of \<open>source_run_has_ltr\<close> under exactly the local-trace adequacy assumptions.\<close>
-theorem source_store_in_activation_collect:
-  assumes wf: "wf_compile_input Pi ps main"
-    and src: "source_com main"
-    and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
-  shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
-                   \<and> s \<in> activation_collect enterc seedc (compile_prog Pi ps main) S v
-                          (key enterc seedc t)"
-proof -
-  from source_run_has_ltr[OF wf src s0 run]
-  obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
-    and rep: "ltr_repr (compile_prog Pi ps main) S (v, s, stk) t" by blast
-  from rep have tv: "t \<in> valid_ltr (compile_prog Pi ps main) S"
-    and sn: "sink_node t = v" and ss: "sink_store t = s"
-    by (auto simp: ltr_repr_def)
-  have "s \<in> activation_collect enterc seedc (compile_prog Pi ps main) S v (key enterc seedc t)"
-    using tv sn ss unfolding activation_collect_def by blast
-  then show ?thesis using m by blast
-qed
-
-subsection \<open>Structural facts and the top-level context\<close>
-
-text \<open>Cheap consequences of the invariant, used to characterise the context of an activation from
-  its runtime frame stack.\<close>
+subsection \<open>Top-level structural facts of the invariant\<close>
 
 text \<open>A trace has no caller exactly when its activation is at the top level (empty runtime stack).\<close>
 lemma stack_repr_Nil_iff:
@@ -268,94 +243,87 @@ lemma key_caller_of_None:
   "caller_of t = None \<Longrightarrow> key enterc seedc t = seedc"
   by (induction t) auto
 
-lemma frames_match_Nil2:
-  "frames_match sites [] stk \<Longrightarrow> stk = []"
-  by (cases sites; cases stk) auto
+subsection \<open>The source bridge\<close>
 
-lemma concrete_program_match_Nil_frames:
-  "concrete_program_match Pi ps main (residual, s, []) (v, s', stk) \<Longrightarrow> stk = []"
-  unfolding concrete_program_match_def
-  by (auto dest: frames_match_Nil2 split: prod.splits)
+text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star\<close> (the source-to-\<^const>\<open>cstep\<close>
+  simulation) and the located invariant: every source run produces a matching valid
+  activation-local trace at the simulated node.\<close>
+theorem source_run_has_ltr:
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and s0: "s0 \<in> S"
+    and swf: "source_wf (main, s0, [])"
+    and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
+                   \<and> ltr_repr (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
+proof -
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
+  obtain en where entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
+    and base: "csim \<Pi> ?g (main, s0, []) (en, s0, [])"
+    by (rule compile_prog_main_base[OF wf])
+  have loc0: "located_ltr (compile_prog \<Pi> ps mnm main) S (FunctionEntry mnm, s0, [])"
+    using located_ltr_entry[OF s0, of "compile_prog \<Pi> ps mnm main"]
+    by (simp add: inv16_entry_is_main)
+  have step0: "cstep ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
+  have loc_en: "located_ltr ?g S (en, s0, [])"
+    by (rule cstep_preserves_located_ltr[OF loc0 step0])
+  from csim_star[OF base pc swf run] obtain cf'
+    where run_c: "star (cstep ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
+    by blast
+  obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
+  have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
+  have loc_v: "located_ltr ?g S (v, s, stk)"
+    using csteps_preserve_located_ltr[OF loc_en run_c] cf' store by simp
+  from loc_v obtain t where "ltr_repr ?g S (v, s, stk) t" by (auto simp: located_ltr_def)
+  then show ?thesis using sim' cf' store by blast
+qed
+
+text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
+  collecting \<^const>\<open>activation_collect\<close> at the simulated node, keyed by the witness trace.\<close>
+theorem source_store_in_activation_collect:
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and s0: "s0 \<in> S"
+    and swf: "source_wf (main, s0, [])"
+    and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
+                   \<and> s \<in> activation_collect enterc seedc (compile_prog \<Pi> ps mnm main) S v
+                          (key enterc seedc t)"
+proof -
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  from source_run_has_ltr[OF wf s0 swf run] obtain v stk t
+    where sim: "csim \<Pi> ?g (residual, s, frs) (v, s, stk)"
+      and rep: "ltr_repr ?g S (v, s, stk) t" by blast
+  from rep have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
+    by (auto simp: ltr_repr_def)
+  have "s \<in> activation_collect enterc seedc ?g S v (key enterc seedc t)"
+    using tv sn ss unfolding activation_collect_def by blast
+  then show ?thesis using sim by blast
+qed
 
 text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
   the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
   existential.  This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
-  assumes wf: "wf_compile_input Pi ps main"
-    and src: "source_com main"
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
-  shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect enterc seedc (compile_prog Pi ps main) S v seedc"
+    and swf: "source_wf (main, s0, [])"
+    and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, [])"
+  shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
+             \<and> s \<in> activation_collect enterc seedc (compile_prog \<Pi> ps mnm main) S v seedc"
 proof -
-  let ?g = "compile_prog Pi ps main"
-  from source_run_has_ltr[OF wf src s0 run] obtain v stk t
-    where m: "concrete_program_match Pi ps main (residual, s, []) (v, s, stk)"
+  let ?g = "compile_prog \<Pi> ps mnm main"
+  from source_run_has_ltr[OF wf s0 swf run] obtain v stk t
+    where sim: "csim \<Pi> ?g (residual, s, []) (v, s, stk)"
       and rep: "ltr_repr ?g S (v, s, stk) t" by blast
-  have stk0: "stk = []" using concrete_program_match_Nil_frames[OF m] .
+  have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
   from rep stk0 have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
   have "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   then have key: "key enterc seedc t = seedc" by (rule key_caller_of_None)
   have "s \<in> activation_collect enterc seedc ?g S v seedc"
     using tv sn ss key unfolding activation_collect_def by blast
-  then show ?thesis using m stk0 by blast
-qed
-
-subsection \<open>Completed top-level runs reach the compiled exit\<close>
-
-text \<open>A store present at a matched CFG node lies in the trace collecting there --- the key-free
-  reading of \<^const>\<open>located_ltr\<close>.\<close>
-lemma located_ltr_imp_ltr_collect:
-  assumes "located_ltr g S (v, s, stk)"
-  shows "s \<in> ltr_collect g S v"
-proof -
-  from assms obtain t where "ltr_repr g S (v, s, stk) t"
-    by (auto simp: located_ltr_def)
-  then have tv: "t \<in> valid_ltr g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
-    by (auto simp: ltr_repr_def)
-  from ltr_collect_I[OF tv] sn ss show ?thesis by simp
-qed
-
-text \<open>A completed top-level source run lands its final store in \<^const>\<open>ltr_collect\<close> at the compiled
-  exit node.  The matched node \<open>v\<close> may be an inner branch or loop-body exit rather than the program
-  exit; \<open>control_finish_simulation\<close> drives a store-preserving \<^const>\<open>cstep\<close> run from \<open>v\<close> to the
-  exit, and \<^const>\<open>located_ltr\<close> is closed under \<^const>\<open>cstep\<close>.\<close>
-theorem source_completes_ltr_collect_exit:
-  assumes wf: "wf_compile_input Pi ps main"
-    and src: "source_com main"
-    and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (IMP2_Proc.com.SKIP, s, [])"
-  shows "s \<in> ltr_collect (compile_prog Pi ps main) S
-              (cfg_exit (compile_prog Pi ps main))"
-proof -
-  let ?g = "compile_prog Pi ps main"
-  from source_run_has_ltr[OF wf src s0 run]
-  obtain v stk t where m:
-      "concrete_program_match Pi ps main (IMP2_Proc.com.SKIP, s, []) (v, s, stk)"
-    and rep: "ltr_repr ?g S (v, s, stk) t" by blast
-  from m obtain nproc lay Eproc Cproc nend main_en main_ex Emain Cmain sites
-    where procs:
-        "compile_procs_list Pi ps (\<lambda>_. None) 0 = (nproc, lay, Eproc, Cproc)"
-      and main_comp:
-        "compile Pi lay main nproc = (nend, main_en, main_ex, Emain, Cmain)"
-      and control:
-        "control_at Pi lay main nproc IMP2_Proc.com.SKIP v sites"
-      and fr: "frames_match sites [] stk"
-    unfolding concrete_program_match_def by (auto split: prod.splits)
-  have Esub: "Emain \<subseteq> edges ?g"
-    by (auto simp: compile_prog_sets(1)[OF procs main_comp])
-  have fr2: "frames_match (sites @ []) [] stk" using fr by simp
-  obtain stk' where run_c: "star (cstep ?g) (v, s, stk) (main_ex, s, stk')"
-    using control_finish_simulation[OF main_comp Esub control refl fr2, where s = s]
-    by blast
-  have loc_v: "located_ltr ?g S (v, s, stk)"
-    using rep by (auto simp: located_ltr_def)
-  have "located_ltr ?g S (main_ex, s, stk')"
-    by (rule csteps_preserve_located_ltr[OF loc_v run_c])
-  from located_ltr_imp_ltr_collect[OF this]
-  have "s \<in> ltr_collect ?g S main_ex" .
-  then show ?thesis by (simp add: cfg_exit_compile_prog[OF procs main_comp])
+  then show ?thesis using sim stk0 by blast
 qed
 
 end
+
