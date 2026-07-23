@@ -275,11 +275,21 @@ definition named_etf :: "(gname, sign) effectful_domain_transfer" where
 
 lemma apply_etf_named:
   "apply_etf named_etf a u = route_tree (\<lambda>_. Gpos) (apply_tf sign_tf a) u"
-  by (cases a) (simp_all add: named_etf_def)
+  by (cases a)
+     (simp_all add: named_etf_def apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+        split: option.splits)
 
 lemma etf_combine_named:
   "etf_combine named_etf dst cc ex = route_combine (\<lambda>_. Gneg) dst cc ex"
   by (simp add: named_etf_def)
+
+lemma etf_enter_named:
+  "etf_enter named_etf fs as cl = route_tree (\<lambda>_. Gpos) (tf_enter sign_tf fs as) cl"
+  by (simp add: named_etf_def)
+
+lemma named_enter_mono:
+  "s1 \<le> s2 \<Longrightarrow> tf_enter sign_tf fs as s1 \<le> tf_enter sign_tf fs as s2"
+  by (simp add: sign_tf_def enter_sign_mono)
 
 lemma named_edge_inr_local_bot:
   "\<And>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf named_etf a u) \<sigma>' (Inr g))"
@@ -386,17 +396,49 @@ lemma named_comb_dep1: "Inl cc \<in> dep_aux \<sigma> (etf_combine named_etf dst
 lemma named_comb_dep2: "Inl ex \<in> dep_aux \<sigma> (etf_combine named_etf dst cc ex)"
   unfolding etf_combine_named by (simp add: dep_aux_route_combine)
 
+lemma named_enter_traverse_mono:
+  assumes "s1 \<le> s2"
+  shows "traverse_rhs (etf_enter named_etf fs as cl) s1
+         \<le> traverse_rhs (etf_enter named_etf fs as cl) s2"
+  unfolding etf_enter_named traverse_route_tree
+  by (rule restrict_local_mono[OF named_enter_mono[OF
+        sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]]])
+
+lemma named_enter_sides_mono:
+  assumes "s1 \<le> s2"
+  shows "sides_of_rhs (etf_enter named_etf fs as cl) s1
+         \<le> sides_of_rhs (etf_enter named_etf fs as cl) s2"
+proof -
+  have d: "restrict_global (tf_enter sign_tf fs as (s1 (Inl cl) \<squnion> glob_env s1))
+           \<le> restrict_global (tf_enter sign_tf fs as (s2 (Inl cl) \<squnion> glob_env s2))"
+    by (rule restrict_global_mono[OF named_enter_mono[OF
+          sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]]])
+  show ?thesis
+    unfolding etf_enter_named sides_route_tree_const
+    using d by (auto simp: le_fun_def)
+qed
+
+lemma named_enter_static: "static_deps (etf_enter named_etf fs as cl)"
+  unfolding etf_enter_named static_deps_def by (simp add: dep_aux_route_tree)
+
+lemma named_enter_dep: "Inl cl \<in> dep_aux \<sigma> (etf_enter named_etf fs as cl)"
+  unfolding etf_enter_named by (simp add: dep_aux_route_tree)
+
+lemma named_enter_inr_local_bot:
+  "\<And>fs as cl \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_enter named_etf fs as cl) \<sigma>' (Inr g))"
+  unfolding etf_enter_named by (rule sides_inr_local_bot_route_tree_const)
+
 lemma named_etf_is_mono_eq:
   "is_mono_eq (side_cfg_T_eff g named_etf bot0 s0 gseed)"
-  by (rule side_cfg_T_eff_is_mono_eq_gen[OF named_traverse_mono named_comb_traverse_mono])
+  by (rule side_cfg_T_eff_is_mono_eq_gen[OF named_traverse_mono named_enter_traverse_mono named_comb_traverse_mono])
 
 lemma named_etf_mono_sides:
   "mono_sides (side_cfg_T_eff g named_etf bot0 s0 gseed)"
-  by (rule side_cfg_T_eff_mono_sides_gen[OF named_sides_mono named_comb_sides_mono])
+  by (rule side_cfg_T_eff_mono_sides_gen[OF named_sides_mono named_enter_sides_mono named_comb_sides_mono])
 
 lemma named_etf_mono_deps:
   "mono_deps (side_cfg_T_eff g named_etf bot0 s0 gseed)"
-  by (rule side_cfg_T_eff_mono_deps_gen[OF named_edge_static named_comb_static])
+  by (rule side_cfg_T_eff_mono_deps_gen[OF named_edge_static named_enter_static named_comb_static])
 
 subsection \<open>Headline: a named-global analysis sound through the real side solver\<close>
 
@@ -410,29 +452,30 @@ text \<open>
 \<close>
 
 theorem named_analysis_sound:
-  fixes \<Pi> ps main and s t :: store and s0 :: "sign abs_state"
+  fixes \<Pi> ps mnm main and s t :: store and s0 :: "sign abs_state"
   assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect (compile_prog \<Pi> ps main) {s}
-       (cfg_exit (compile_prog \<Pi> ps main))"
+    "t \<in> ltr_collect (compile_prog \<Pi> ps mnm main) {s}
+       (cfg_exit (compile_prog \<Pi> ps mnm main))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) named_etf bot s0 Gpos
-       (cfg_exit (compile_prog \<Pi> ps main))"
-  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
-         (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps mnm main) named_etf bot s0 Gpos
+       (cfg_exit (compile_prog \<Pi> ps mnm main))"
+  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps mnm main named_etf bot s0 Gpos
+         (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
 proof -
   have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>"
     using s_sound by simp
   have collect:
-    "ltr_collect (compile_prog \<Pi> ps main) {s}
-       (cfg_exit (compile_prog \<Pi> ps main))
-     \<le> \<lbrakk>side_analyse_eff \<Pi> ps main named_etf bot s0 Gpos
-         (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+    "ltr_collect (compile_prog \<Pi> ps mnm main) {s}
+       (cfg_exit (compile_prog \<Pi> ps mnm main))
+     \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main named_etf bot s0 Gpos
+         (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
     by (rule side_analyse_eff_collect_sound_exit_ltr
           [OF named_etf_sound named_etf_is_mono_eq named_etf_mono_sides named_etf_mono_deps
-              side_solve_dom gs named_edge_dep named_comb_dep1 named_comb_dep2
-              named_edge_static named_comb_static
-              named_edge_inr_local_bot named_comb_inr_local_bot])
+              side_solve_dom gs
+              named_edge_dep named_enter_dep named_comb_dep1 named_comb_dep2
+              named_edge_static named_enter_static named_comb_static
+              named_edge_inr_local_bot named_enter_inr_local_bot named_comb_inr_local_bot])
   show ?thesis
     using collect collect_exit by blast
 qed
@@ -530,3 +573,5 @@ lemma gamma_side_env_g_subset_side_env:
   by (rule gamma_state_mono[OF side_env_g_le_side_env])
 
 end
+
+

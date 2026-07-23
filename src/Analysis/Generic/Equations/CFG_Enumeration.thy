@@ -162,7 +162,9 @@ definition return_call_list ::
   "return_call_list g v =
      map (\<lambda>(c, ca, ce, k). (c, case ca of CallEdge dst _ _ \<Rightarrow> dst,
                               case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce))
-       (filter (\<lambda>(c, ca, ce, k). k = v \<and> (\<exists>p. ce = FunctionEntry p)) (cfg_calls_list g))"
+       (filter (\<lambda>(c, ca, ce, k).
+          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
+         (cfg_calls_list g))"
 
 lemma set_return_call_list [simp]:
   assumes "finite (calls g)"

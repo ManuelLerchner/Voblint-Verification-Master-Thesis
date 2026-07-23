@@ -214,7 +214,7 @@ definition sign_graph_config ::
       show_internal_globals = False,
       owner_of = compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (string_of_program \<Pi> ps main)
+      source_text = Some (pretty_string_of_program \<Pi> ps main)
     \<rparr>"
 
 definition sign_graph_solution ::

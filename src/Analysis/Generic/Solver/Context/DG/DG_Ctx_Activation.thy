@@ -36,19 +36,19 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'a abs_state"
-  assumes finE: "finite (edges g)"
+  assumes finE: "finite (intra g)"
     and pp: "part_post_solution
-               (side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. gk0)
+               (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
                   cmb extra g S bot0 s0d s0g) x0 sigma vars"
     and sg_cov: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> sg (Inl (v, c)) = locals (sigma (Inl (v, c))) \<squnion> globs (sigma (Inr gk0))"
     and sg_uncov: "\<And>v c. (v, c) \<notin> vars \<Longrightarrow> \<lbrakk>sg (Inl (v, c))\<rbrakk> = {}"
-    and fwd: "\<And>u a v c. (u, c) \<in> vars \<Longrightarrow> (u, a, v) \<in> edges g
-        \<Longrightarrow> \<not> is_enter_action a \<Longrightarrow> (v, c) \<in> vars"
+    and fwd: "\<And>u a v c. (u, c) \<in> vars \<Longrightarrow> (u, a, v) \<in> intra g
+        \<Longrightarrow> (v, c) \<in> vars"
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('a abs_state, 'a abs_state) dg_state) eqsT" where
-  "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg non_enter_predecessor_list (\<lambda>_. gk0)
+  "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
            cmb extra g S bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'a abs_state" where
@@ -58,8 +58,8 @@ abbreviation trees :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('a abs_state, 'a abs_state) dg_state) strategy_tree list" where
   "trees v ctx \<equiv>
      map (\<lambda>(u, a). map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-         (non_enter_predecessor_list g v)
-     @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)
+         (intra_predecessor_list g v)
+     @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex) (return_call_list g v)
      @ extra ctx v"
 
 subsection \<open>Post-solution elimination\<close>
@@ -129,13 +129,13 @@ subsection \<open>EDGE: the routed intra bounds and the guarded transport\<close
 
 lemma edge_bound_local:
   assumes cov_v: "(v, ctx) \<in> vars"
-    and e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
+    and e: "(u, a, v) \<in> intra g"
   shows "snd (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
            \<le> locals (sigma (Inl (v, ctx)))"
 proof -
   let ?t = "map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))"
-  have pred: "(u, a) \<in> set (non_enter_predecessor_list g v)"
-    using e ne by (simp add: non_enter_predecessor_list_mem set_predecessor_list[OF finE] predecessors_def)
+  have pred: "(u, a) \<in> set (intra_predecessor_list g v)"
+    using e by (simp add: set_intra_predecessor_list[OF finE] intra_predecessors_def)
   hence mem: "?t \<in> set (trees v ctx)" by (force intro: rev_image_eqI)
   have "snd (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
       = locals (traverse_rhs ?t sigma)"
@@ -151,13 +151,13 @@ qed
 
 lemma edge_bound_global:
   assumes cov_v: "(v, ctx) \<in> vars"
-    and e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
+    and e: "(u, a, v) \<in> intra g"
   shows "fst (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
            \<le> globs (sigma (Inr gk0))"
 proof -
   let ?t = "map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))"
-  have pred: "(u, a) \<in> set (non_enter_predecessor_list g v)"
-    using e ne by (simp add: non_enter_predecessor_list_mem set_predecessor_list[OF finE] predecessors_def)
+  have pred: "(u, a) \<in> set (intra_predecessor_list g v)"
+    using e by (simp add: set_intra_predecessor_list[OF finE] intra_predecessors_def)
   hence mem: "?t \<in> set (trees v ctx)" by (force intro: rev_image_eqI)
   have "fst (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
       = globs (sides_of_rhs ?t sigma (Inr gk0))"
@@ -175,7 +175,7 @@ proof -
 qed
 
 theorem dg_ctx_act_edge:
-  assumes e: "(u, a, v) \<in> edges g" and ne: "\<not> is_enter_action a"
+  assumes e: "(u, a, v) \<in> intra g"
     and sin: "s \<in> \<lbrakk>sg (Inl (u, ctx))\<rbrakk>" and st: "edge_step a s = Some s'"
   shows "s' \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (cases "(u, ctx) \<in> vars")
@@ -184,7 +184,7 @@ proof (cases "(u, ctx) \<in> vars")
   thus ?thesis using sin by simp
 next
   case True
-  hence cov_v: "(v, ctx) \<in> vars" using e ne by (rule fwd)
+  hence cov_v: "(v, ctx) \<in> vars" using e by (rule fwd)
   let ?d = "locals (sigma (Inl (u, ctx)))"
   let ?g = "globs (sigma (Inr gk0))"
   have sin': "s \<in> gamma_unit ?d ?g"
@@ -199,7 +199,7 @@ next
   hence "s' \<in> gamma_unit (snd (dg_spec_step S a ?d ?g)) (fst (dg_spec_step S a ?d ?g))"
     by (simp add: case_prod_beta)
   also have "\<dots> \<subseteq> gamma_unit (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
-    by (rule gamma_unit_mono[OF edge_bound_local[OF cov_v e ne] edge_bound_global[OF cov_v e ne]])
+    by (rule gamma_unit_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
   also have "\<dots> = \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     using cov_v by (simp add: sg_cov gamma_unit_def)
   finally show ?thesis .

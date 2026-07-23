@@ -147,14 +147,19 @@ lemma enter_frame_ivl_st_commute:
 
 subsection \<open>Executable transfer function and seeds\<close>
 
-fun ivl_tf_st :: "edge_action \<Rightarrow> ivl st \<Rightarrow> ivl st" where
+definition ivl_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> ivl st \<Rightarrow> ivl st" where
+  "ivl_enter_st xs es s =
+     bind_formals_abs_st xs (map (\<lambda>e. aval_ivl e (lookup_st s)) es) (enter_ivl_st s)"
+
+lemma ivl_enter_st_commute:
+  "fun_of_st (ivl_enter_st xs es s) = tf_enter ivl_tf xs es (fun_of_st s)"
+  by (simp add: ivl_enter_st_def ivl_tf_def enter_ivl_def enter_frame_ivl_st_commute)fun ivl_tf_st :: "edge_action \<Rightarrow> ivl st \<Rightarrow> ivl st" where
     "ivl_tf_st EA_Nop s = s"
   | "ivl_tf_st (EA_Assign x a) s = update_st s x (aval_ivl a (lookup_st s))"
   | "ivl_tf_st (EA_Assume b) s = assume_ivl_st b s"
   | "ivl_tf_st (EA_AssumeNot b) s = assume_not_ivl_st b s"
-  | "ivl_tf_st (EA_Enter xs es) s =
-     bind_formals_abs_st xs (map (\<lambda>e. aval_ivl e (lookup_st s)) es)
-       (enter_ivl_st s)"
+  | "ivl_tf_st (EA_Ret None p) s = s"
+  | "ivl_tf_st (EA_Ret (Some a) p) s = update_st s ret_var (aval_ivl a (lookup_st s))"
 
 lift_definition top_ivl_st :: "ivl st" is "(Ivl MinInf PlusInf, Ivl MinInf PlusInf, [])" .
 
@@ -193,10 +198,19 @@ next
   then show ?thesis
     by (simp add: ivl_tf_def assume_not_ivl_st_commute)
 next
-  case (EA_Enter xs es)
+  case (EA_Ret e p)
   then show ?thesis
-    by (simp add: ivl_tf_def enter_ivl_def enter_frame_ivl_st_commute)
+    by (cases e) (simp_all add: ivl_tf_def assign_ivl_def fun_of_st_update
+        apply_tf_EA_Ret_None apply_tf_EA_Ret_Some)
 qed
+
+lemma ivl_tf_st_ret_None:
+  "ivl_tf_st (EA_Ret None p) = ivl_tf_st EA_Nop"
+  by (rule ext) simp
+
+lemma ivl_tf_st_ret_Some:
+  "ivl_tf_st (EA_Ret (Some a) p) = ivl_tf_st (EA_Assign ret_var a)"
+  by (rule ext) simp
 
 subsection \<open>Executable effectful transfer record\<close>
 
@@ -207,13 +221,13 @@ definition ivl_etf_st :: "(unit, ivl st) effectful_st_transfer" where
     etf_st_assume     = (\<lambda>b. unit_edge_tree_st (ivl_tf_st (EA_Assume b))),
     etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (ivl_tf_st (EA_AssumeNot b))),
     etf_st_enter      =
-      (\<lambda>xs es. unit_edge_tree_st (ivl_tf_st (EA_Enter xs es))),
+      (\<lambda>xs es. unit_edge_tree_st (ivl_enter_st xs es)),
     etf_st_combine    = unit_combine_tree_st
   \<rparr>"
 
 lemma ivl_etf_st_edge_tree:
   "apply_etf_st ivl_etf_st a u = unit_edge_tree_st (ivl_tf_st a) u"
-  unfolding ivl_etf_st_def by (cases a) simp_all
+  unfolding ivl_etf_st_def by (cases a) (simp_all add: ivl_tf_st_ret_None ivl_tf_st_ret_Some split: option.splits)
 
 lemma ivl_etf_st_combine_tree:
   "etf_combine_st ivl_etf_st dst cc ex = unit_combine_tree_st dst cc ex"

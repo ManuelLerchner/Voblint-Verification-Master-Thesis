@@ -49,15 +49,20 @@ text \<open>
 theorem sign_dg_post_solution_collect_sound:
   assumes pp: "part_post_solution (sign_dg_generator g bot0 s0d s0g) x sigma vars"
     and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
-    and finE: "finite (edges g)"
-    and finC: "finite (combines g)"
+    and cover_edge: "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
+         \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra g)"
+    and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
   shows "ltr_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
   unfolding sign_dg_gamma_def
   by (rule sign_dg.dg_post_solution_collect_sound_ltr
-        [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_combine
-            finE finC sound0[folded gamma_unit_def]])
+        [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_enter cover_combine
+            finI finC sound0[folded gamma_unit_def]])
 
 end

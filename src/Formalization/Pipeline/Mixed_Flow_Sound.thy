@@ -39,19 +39,20 @@ theorem mixed_flow_analysis_sound:
   assumes pp:    "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes cone:  "cone_compatible_etf etf"
-  assumes fin:   "finite (edges g)"
-  assumes finC:  "finite (combines g)"
+  assumes fin:   "finite (intra g)"
+  assumes finC:  "finite (calls g)"
+  assumes wf:    "wf_cfg g"
   assumes inr: "inr_slot_locals_bot \<sigma>"
   shows "ltr_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-  by (rule side_collect_sound_exit_eff_ltr_cone[OF se pp fin finC entry cone inr])
+  by (rule side_collect_sound_exit_eff_ltr_cone[OF se pp fin finC wf entry cone inr])
 
 subsection \<open>Optimal soundness via the TD solver (threefold monotonicity)\<close>
 
 theorem mixed_flow_analysis_optimal:
-  fixes \<Pi> ps main and s0 :: "'a::sound_domain abs_state"
+  fixes \<Pi> ps mnm main and s0 :: "'a::sound_domain abs_state"
     and etf :: "('g::finite, 'a) effectful_domain_transfer" and gseed :: 'g
     and S :: "store set"
-  assumes g_eq:  "g = compile_prog \<Pi> ps main"
+  assumes g_eq:  "g = compile_prog \<Pi> ps mnm main"
   assumes T_eq:  "T = side_cfg_T_eff g etf bot s0 gseed"
   assumes se:    "sound_effectful_transfer etf"
   assumes tfm:   "threefold_mono T"
@@ -60,7 +61,7 @@ theorem mixed_flow_analysis_optimal:
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   shows sound:
     "ltr_collect g S (cfg_exit g)
-       \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+       \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
     and optimal:
     "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) (cfg_exit g)
        (td_cfg_side_solver_eff.nu_at g etf bot s0 gseed (cfg_exit g))
@@ -73,7 +74,7 @@ proof -
     by unfold_locales
   show sound:
     "ltr_collect g S (cfg_exit g)
-       \<le> \<lbrakk>side_analyse_eff \<Pi> ps main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+       \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
     unfolding g_eq
     by (rule side_analyse_eff_collect_sound_exit_ltr_cone[OF se
           tfm[unfolded T_eq g_eq] cone dom[unfolded g_eq] S_sound])
@@ -91,3 +92,5 @@ qed
 
 
 end
+
+

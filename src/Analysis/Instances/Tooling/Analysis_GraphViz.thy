@@ -56,6 +56,7 @@ fun graphviz_html_text :: "string \<Rightarrow> string" where
   "graphviz_html_text [] = []"
 | "graphviz_html_text (ch # rest) =
     (if ch = CHR 0x0A then ''<BR ALIGN='' @ dq @ ''LEFT'' @ dq @ ''/>''
+     else if ch = CHR 0x20 then ''&#160;''
      else if ch = CHR 0x26 then ''&amp;''
      else if ch = CHR 0x3C then ''&lt;''
      else if ch = CHR 0x3E then ''&gt;''
@@ -63,9 +64,10 @@ fun graphviz_html_text :: "string \<Rightarrow> string" where
 
 definition source_html_label :: "string \<Rightarrow> string" where
   "source_html_label src =
-    ''<<TABLE BORDER='' @ dq @ ''1'' @ dq @ '' CELLBORDER='' @ dq @ ''0'' @ dq
-    @ '' CELLPADDING='' @ dq @ ''8'' @ dq @ ''><TR><TD ALIGN='' @ dq @ ''LEFT'' @ dq
-    @ ''><FONT FACE='' @ dq @ ''Menlo'' @ dq
+    ''<<TABLE BORDER='' @ dq @ ''1'' @ dq @ '' CELLBORDER='' @ dq @ ''0'' @ dq    @ '' CELLPADDING='' @ dq @ ''8'' @ dq
+    @ ''><TR><TD ALIGN='' @ dq @ ''LEFT'' @ dq @ '' WIDTH='' @ dq @ ''260'' @ dq
+    @ '' FIXEDSIZE='' @ dq @ ''FALSE'' @ dq
+    @ ''><FONT FACE='' @ dq @ ''Menlo'' @ dq @ '' POINT-SIZE='' @ dq @ ''10'' @ dq
     @ ''>'' @ graphviz_html_text src @ ''</FONT></TD></TR></TABLE>>''"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
@@ -105,7 +107,7 @@ datatype ('ctx, 'g) analysis_node =
 
 datatype analysis_edge_kind =
     IntraEdge edge_action
-  | EnterEdge call_action
+  | EnterEdge pname call_action
   | CombineEdge pp "vname option" "vname option"
   | GlobalReadEdge
   | GlobalWriteEdge
@@ -300,7 +302,7 @@ definition analysis_enter_edges ::
           let callee_ctx = route cfg u (snd src_ctx) ca
               (local_of cfg (sol (Inl src_ctx)))
           in if local_node_member covered entry callee_ctx
-             then [(LocalNode u (snd src_ctx), EnterEdge ca,
+             then [(LocalNode u (snd src_ctx), EnterEdge (owner_of cfg entry) ca,
                     LocalNode entry callee_ctx)]
              else []
         else []) (cfg_calls_list g))) covered)"
@@ -452,8 +454,8 @@ definition analysis_nodes_in_cluster ::
 definition graphviz_point_label :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
   "graphviz_point_label g p =
     (case p of
-      FunctionEntry owner \<Rightarrow> ''start_'' @ owner
-    | FunctionResult owner \<Rightarrow> ''end_'' @ owner
+      FunctionEntry owner \<Rightarrow> ''entry_'' @ owner
+    | FunctionResult owner \<Rightarrow> ''exit_'' @ owner
     | Statement _ \<Rightarrow> string_of_cfg_node p)"
 
 definition contextual_node_label ::
@@ -496,17 +498,19 @@ definition enter_action_label :: "call_action \<Rightarrow> string" where
 definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
   "source_action_label g a =
     (case a of EA_Assign x e \<Rightarrow>
-       if x = ret_var then ''ret := '' @ string_of_aexp e else string_of_action a
-     | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
-     | _ \<Rightarrow> string_of_action a)"
+       if x = ret_var then ''ret := '' @ string_of_aexp e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_bexp b
+    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_bexp b @ '')''
+    | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
+    | _ \<Rightarrow> string_of_action a)"
 
 definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> string" where
   "analysis_edge_attrs g kind =
     (case kind of
       IntraEdge a \<Rightarrow> ''label='' @ dq @ source_action_label g a @ dq
-    | EnterEdge a \<Rightarrow> ''color=purple,penwidth=2,weight=10,label='' @ dq
-        @ enter_action_label a @ dq
-    | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,label='' @ dq
+    | EnterEdge callee a \<Rightarrow> ''color=purple,penwidth=2,weight=10,label='' @ dq
+        @ ''call '' @ callee @ ''('' @
+          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')'' @ dq
+    | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
              (Some x, Some r) \<Rightarrow> ''resume / '' @ x @ '' := '' @ r
            | (Some x, None) \<Rightarrow> ''resume / '' @ x
@@ -534,7 +538,7 @@ definition analysis_cluster_dot ::
     (let members = analysis_nodes_in_cluster cfg cluster ns
      in ''  subgraph '' @ analysis_cluster_id clusters cluster @ '' {'' @ nl
       @ ''    label='' @ dq @ analysis_cluster_label cfg cluster @ dq @ '';'' @ nl
-      @ ''    style=filled; color=lightgrey; fillcolor=white;'' @ nl
+      @ ''    style=rounded; color=gray70; penwidth=1;'' @ nl
       @ concat (map (\<lambda>n. ''    '' @ analysis_node_id cfg ns n @ '' [''
           @ analysis_node_attrs g n
           @ (case n of SourceNode _ \<Rightarrow> '',label='' @ source_html_label
@@ -559,9 +563,9 @@ definition analysis_graph_to_dot ::
     (case graph of (clusters, ns, es) \<Rightarrow>
       if analysis_graph_wf graph then
         ''digraph AnalysisCFG {'' @ nl
-        @ ''  rankdir=TB;'' @ nl
-        @ ''  newrank=true; splines=polyline; nodesep=0.5; ranksep=0.7;'' @ nl
-        @ ''  node [fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl
+        @ ''  graph [rankdir=TB,newrank=true,splines=polyline,nodesep=0.5,ranksep=0.7,fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl
+        @ ''  node [shape=box,style=filled,fillcolor=lightgreen,fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl
+        @ ''  edge [fontname='' @ dq @ ''Menlo'' @ dq @ '',fontsize=10,arrowsize=0.8];'' @ nl
         @ concat (map (analysis_cluster_dot cfg g clusters ns es sol) clusters)
         @ concat (map (analysis_edge_dot cfg g ns) es)
         @ ''}'' @ nl
@@ -591,7 +595,7 @@ definition raw_cfg_graph_config ::
       show_internal_globals = False,
       owner_of = compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (string_of_program \<Pi> ps main)
+      source_text = Some (pretty_string_of_program \<Pi> ps main)
     \<rparr>"
 
 definition raw_cfg_dot ::
