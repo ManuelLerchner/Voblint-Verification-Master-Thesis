@@ -13,20 +13,21 @@ text \<open>
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps main"
+  assumes wf: "wf_compile_input Pi ps mnm main"
     and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
     and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-  shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
+  shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_store_in_activation_collect
-         [where wf_compile_input=wf_compile_input and mnm=mnm and enterc=enterc and seedc=seedc,
-          OF wf src s0 run]
-  obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
+         [where mnm=mnm and enterc=enterc and seedc=seedc,
+          OF wf s0 swf run]
+  obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
     and mem: "s \<in> activation_collect enterc seedc ?g S v (key enterc seedc t)"
     by meson
   have "s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
@@ -39,18 +40,19 @@ text \<open>The witness-free specialisation of the composition at top-level prog
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps main"
+  assumes wf: "wf_compile_input Pi ps mnm main"
     and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
     and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-  shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
+  shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_toplevel_in_activation_collect[where wf_compile_input=wf_compile_input and mnm=mnm and enterc=enterc and seedc=seedc, OF wf src s0 run]
-  obtain v where m: "concrete_program_match Pi ps main (residual, s, []) (v, s, [])"
+  from source_toplevel_in_activation_collect[where mnm=mnm and enterc=enterc and seedc=seedc, OF wf s0 swf run]
+  obtain v where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])"
     and mem: "s \<in> activation_collect enterc seedc ?g S v seedc" by blast
   have "s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>" using cap[of v seedc] mem by blast
   then show ?thesis using m by blast
@@ -61,8 +63,9 @@ subsection \<open>Backbone corollaries: discharge the four obligations to build 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps main"
+  assumes wf: "wf_compile_input Pi ps mnm main"
     and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
@@ -79,13 +82,13 @@ theorem source_activation_sound:
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store (compile_prog Pi ps mnm main) cl x es
         \<Longrightarrow> combine_collect dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "\<exists>v stk t. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
+  shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
 proof -
   have cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
-  show ?thesis by (rule source_sound_from_collecting_cap[where wf_compile_input=wf_compile_input and mnm=mnm, OF wf src s0 run cap])
+  show ?thesis by (rule source_sound_from_collecting_cap[where mnm=mnm, OF wf src swf s0 run cap])
 qed
 
 text \<open>The witness-free specialisation at top-level program points: a store reached with an empty
@@ -94,8 +97,9 @@ text \<open>The witness-free specialisation at top-level program points: a store
 theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps main"
+  assumes wf: "wf_compile_input Pi ps mnm main"
     and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
@@ -112,13 +116,13 @@ theorem source_activation_sound_toplevel:
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store (compile_prog Pi ps mnm main) cl x es
         \<Longrightarrow> combine_collect dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "\<exists>v. concrete_program_match Pi ps main (residual, s, []) (v, s, [])
+  shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -
   have cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
-  show ?thesis by (rule source_sound_toplevel_from_collecting_cap[where wf_compile_input=wf_compile_input and mnm=mnm, OF wf src s0 run cap])
+  show ?thesis by (rule source_sound_toplevel_from_collecting_cap[where mnm=mnm, OF wf src swf s0 run cap])
 qed
 
 subsection \<open>Monovariant source bridge into the trace collecting\<close>
@@ -130,17 +134,18 @@ text \<open>
 
 theorem source_reaches_ltr_collect:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input Pi ps main"
+  assumes wf: "wf_compile_input Pi ps mnm main"
     and src: "source_com main"
+    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
-  shows "\<exists>v stk. concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                  \<and> s \<in> ltr_collect (compile_prog Pi ps mnm main) S v"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_store_in_activation_collect[where wf_compile_input=wf_compile_input and mnm=mnm and enterc = "\<lambda>_ _. ()" and seedc = "()",
-        OF wf src s0 run]
-  obtain v stk t where m: "concrete_program_match Pi ps main (residual, s, frs) (v, s, stk)"
+  from source_store_in_activation_collect[where mnm=mnm and enterc = "\<lambda>_ _. ()" and seedc = "()",
+        OF wf s0 swf run]
+  obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
     and mem: "s \<in> activation_collect (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by meson
   have "s \<in> ltr_collect_keyed (key (\<lambda>_ _. ()) ()) ?g S v (key (\<lambda>_ _. ()) () t)"
     using mem by (simp add: activation_collect_eq_ltr_collect_keyed)

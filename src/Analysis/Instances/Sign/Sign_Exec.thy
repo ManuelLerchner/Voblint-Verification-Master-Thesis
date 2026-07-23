@@ -282,6 +282,16 @@ lemma sign_enter_st_commute:
       (enter_frame_sign (fun_of_st s))"
   by (simp add: enter_frame_sign_st_commute)
 
+text \<open>Named executable caller-entry transfer and its \<^const>\<open>tf_enter\<close>-shaped commutation ---
+  the D/G registration endpoint's \<open>enter_st\<close> parameter (mirrors \<open>ivl_enter_st\<close>).\<close>
+definition sign_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> sign st \<Rightarrow> sign st" where
+  "sign_enter_st xs es s =
+     bind_formals_abs_st xs (map (\<lambda>e. aval_sign e (lookup_st s)) es) (enter_sign_st s)"
+
+lemma sign_enter_st_commute':
+  "fun_of_st (sign_enter_st xs es s) = tf_enter sign_tf xs es (fun_of_st s)"
+  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_frame_sign_st_commute)
+
 lemma sign_etf_st_exists_unit:
   "\<And>a u. \<exists>f. apply_etf_st sign_etf_st a u = unit_edge_tree_st f u"
   using sign_etf_st_edge_tree by blast
