@@ -1,30 +1,22 @@
 # Equation systems
 
-Turn a CFG plus abstract domain into a constraint system (`rhs :: pp => (pp => abs_state) => abs_state`)
-and prove that any post-fixpoint soundly over-approximates collecting semantics `cfg_collect`.
-
-**Theories**
+This layer turns a procedure-aware CFG and abstract transfer interface into an
+equation system, then proves that every post-solution covers activation-local
+collecting semantics.
 
 | File | Role |
 | --- | --- |
-| `Constraint_System.thy` | `domain_transfer`, `apply_tf`, `rhs`, `is_post_fixpoint`, `rhs_mono`; `cinit_stores` C-faithful seed |
-| `Constraint_System_Sound.thy` | `apply_tf_le_rhs`, `s0_le_rhs_entry`, `edge_collect_apply_tf_sound`; `post_fixpoint_sound_at` |
-| `Analysis_Sound.thy` | `unified_post_fixpoint_sound` — single soundness engine via `cfg_collect_post_fixpoint_sound` |
+| `Constraint_System.thy` | Abstract transfers, `rhs_edge_sources`, `rhs_entry_sources`, `rhs_combine_sources`, their union `rhs_sources`, executable `rhs`, and post-fixpoints |
+| `Constraint_System_Sound.thy` | Per-contribution soundness and mathematical RHS characterization |
+| `LTR_Analysis_Sound.thy` | Post-fixpoint soundness against `ltr_collect` |
+| `CFG_Enumeration.thy` | Executable finite enumeration of graph predecessors |
 
-**Key concepts**
+Each node equation joins three kinds of contribution:
 
-One equation per program point: join over predecessor edges + combine triples.
-`is_post_fixpoint g tf join bot s0 env` means `∀v. rhs g tf join bot s0 env v ≤ env v`.
-`unified_post_fixpoint_sound` constructs the `cfg_collect_F` witness and applies the fixpoint lemma.
+1. an ordinary local predecessor transformed by its edge action;
+2. a callee-entry state constructed from a call site;
+3. a resumed caller state built from the caller and completed callee.
 
-**Imports:** `Constraint_System` → `Generic/Domain/Abstract_Domain`, CFG layer.
-`Analysis_Sound` → `Constraint_System_Sound`.
-
-**Downstream:** `src/Analysis/Generic/Solver/Core/TD_Side_Eff_Soundness.thy` bridges `part_post_solution`
-to `is_post_fixpoint` via the reach cone.
-
-## Scope
-
-Models a **single-domain, interprocedural, side-effecting** equation system matching the
-AFP `TD_side` solver. Structural extensions (per-unknown domains, digests, context refinement,
-`demand`/`Queries`, multi-analysis product) are out of scope — see `docs/NON_GOALS.md`.
+Executable equations and their soundness characterization share the same
+contribution-family definitions. Solver layers consume those definitions
+without introducing another concrete semantics.

@@ -16,10 +16,9 @@ text \<open>
 
 subsection \<open>Executable orders\<close>
 
-(* Structural linear orders (AFP Deriving) so the intra and calls sets enumerate
-   deterministically via sorted_list_of_set. bexp/edge_action label intra edges;
-   call_action labels call edges; cfg_node is the shared node type. Not part of the
-   IMP2/CFG semantics --- purely for code-generated solver enumeration. *)
+text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
+  enumeration of intra and call relations. They affect only solver representation, not
+  CFG semantics.\<close>
 derive linorder bexp
 derive linorder edge_action
 derive linorder call_action

@@ -21,9 +21,10 @@ text \<open>
     termination (narrow/warrow locals).  Terminates on unbounded loops; over-approximates
     globals (collapses digest partitions).
 
-  Not on the menu: \<^const>\<open>TD_side_warrowing_per_origin_Interp_solve\<close> (widen per origin ---
-  the ideal for a loop plus a precise digest, but it does not code-generate here, P11) and
-  \<^const>\<open>TD_side_bounded_narrowing_Interp_solve\<close> (untested on these systems).
+  The menu omits \<^const>\<open>TD_side_warrowing_per_origin_Interp_solve\<close> because that
+  interpretation does not code-generate for these equation systems.  It also omits
+  \<^const>\<open>TD_side_bounded_narrowing_Interp_solve\<close>, whose executable contract is not
+  established here.
 \<close>
 
 subsection \<open>Generic: executable termination yields a post-solution, for every update rule\<close>

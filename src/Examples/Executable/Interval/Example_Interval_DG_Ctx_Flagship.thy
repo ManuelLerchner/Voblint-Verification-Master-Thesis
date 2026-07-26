@@ -7,39 +7,24 @@ begin
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
 
 text \<open>
-  The polyvariant companion to \<open>Example_Interval_DG_IP_Flagship\<close>: the \<^emph>\<open>same\<close>
-  generalized D/G generator \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>, instantiated with
-  routed context hooks instead of the unit-context ones.  Each call to \<open>twice\<close> is
-  analyzed under its own abstract calling context, so the two calls no longer merge:
+  The generalized D/G generator is instantiated with routed context hooks.  Each call
+  to \<open>twice\<close> receives the abstract entry value of formal \<open>p\<close> as its context:
 
-  \<^item> \<open>twice(3)\<close> is analyzed at context \<open>[3,3]\<close>, giving \<open>#ret = [6,6]\<close> and \<open>x = [6,6]\<close>;
-  \<^item> \<open>twice(10)\<close> is analyzed at context \<open>[10,10]\<close>, giving \<open>#ret = [20,20]\<close> and \<open>y = [20,20]\<close>.
+  \<^item> \<open>twice(3)\<close> uses context \<open>[3,3]\<close> and computes \<open>#ret = [6,6]\<close> and \<open>x = [6,6]\<close>;
+  \<^item> \<open>twice(10)\<close> uses context \<open>[10,10]\<close> and computes \<open>#ret = [20,20]\<close> and \<open>y = [20,20]\<close>.
 
-  The monovariant flagship merges both calls into \<open>p = [3,10]\<close>, \<open>#ret = [6,20]\<close>.
-
-  Context representation.  A context is the abstract value of the callee's formal
-  parameter at entry --- the entry-store digest projected to \<open>''p''\<close>.  For \<open>twice\<close>
-  (one formal, two constant arguments) this is finite and stable.  The general
-  interval instance needs a canonicalizing / finite routing function; an arbitrary
-  interval state is not a safe context key for recursive or widening-heavy programs.
-
-  This theory certifies the executable computation (\<^theory_text>\<open>by eval\<close> on the vendored
-  warrowing solver).  The collecting-soundness certificate for the routed solution
-  (via \<open>sound_dg_spec.dg_collect_ctx_sound\<close>) is tracked separately in
-  \<open>docs/ROUTE_A7_EXECUTABLE_DG_MIGRATION.md\<close>.
+  The two repeated calls remain separate, whereas unit context joins their formal and
+  return values.  This entry-value key is finite for the two constant call sites.  A
+  general interval analysis needs a finite canonical context representation because
+  arbitrary interval states may grow under recursion and widening.
 \<close>
 
 subsection \<open>Global key: real globals vs callee-entry seed slots\<close>
 
-text \<open>
-  The extended global-key type keeps the two flow-insensitive roles apart, matching
-  Goblint's constraint system: analysis globals are \<^emph>\<open>shared\<close> across contexts (read
-  and written through a single global unknown, the context never keyed in), while
-  callee-entry local seeds are context-sensitive.  \<open>Global\<close> is the one shared
-  flow-insensitive global slot; \<open>Seed\<close> keys the callee-entry seed slot at a program
-  point under a context.  Pattern matching makes the separation explicit --- the two
-  never share a slot.
-\<close>
+text \<open>The global-key type separates shared analysis globals from
+  context-sensitive callee-entry seeds. \<open>Global\<close> denotes the single
+  flow-insensitive slot; \<open>Seed\<close> keys an entry seed by program point and context.
+  Distinct constructors prevent the two roles from sharing a solver unknown.\<close>
 
 datatype gk = Global | Seed pp "ivl"
 

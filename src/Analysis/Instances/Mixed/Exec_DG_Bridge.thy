@@ -1,21 +1,12 @@
 section \<open>Executable transport for the native D/G spine\<close>
 
 text \<open>
-  The reusable bridge that lets the verified always-join solver run on the
-  carrier-opaque D/G equation system and certify the computed result against the
-  abstract \<open>sound_dg_spec\<close> soundness endpoints.
+  The verified solver uses the executable association-list carrier \<open>'a st\<close>, while soundness
+  is stated over function-valued abstract states.  \<open>fun_of_dg_st\<close> lifts the refinement
+  morphism \<open>fun_of_st\<close> to the D/G product and commutes with equation evaluation.
 
-  The abstract analysis state \<open>'a abs_state\<close> (\<open>vname \<Rightarrow> 'a\<close>) does not
-  code-generate.  The executable two-region association-list quotient
-  \<open>'a st\<close> (\<open>Voblint_Analysis.Exec_St\<close>) does, and \<open>fun_of_st\<close>
-  is the refinement morphism back to \<open>'a abs_state\<close>.  This theory lifts that
-  morphism to the D/G product carrier \<open>('a st, 'b st) dg_state\<close> and proves the
-  structural commutation lemmas the equation-system transport needs.
-
-  Because the D/G lattice operations on \<open>('a, 'b) dg_state\<close> are all
-  componentwise (\<open>Voblint_Analysis.DG_Framework\<close>), the executable carrier
-  inherits every solver-required operation --- \<open>\<le>\<close>, \<open>\<squnion>\<close>, \<open>\<bottom>\<close>, \<open>=\<close>, widening ---
-  componentwise from the \<open>'a st\<close> instances for free.
+  D/G lattice operations are componentwise, so the product inherits the order, join, bottom,
+  equality, and widening operations required by the solver.
 \<close>
 
 theory Exec_DG_Bridge
@@ -28,21 +19,9 @@ begin
 subsection \<open>The combined warrowing arity for the executable state\<close>
 
 text \<open>
-  The always-join solver does not perform genuine widening for a finite domain
-  such as Sign, but the vendored \<open>TD.TD_side\<close> locale still fixes a warrowing
-  value lattice, so its value type is constrained by \<open>bounded_warrowing\<close>.
-  The base spine runs the solver at \<open>'a st\<close>, which needs only the separate
-  \<open>warrowing\<close> arity (\<open>Voblint_Analysis.Exec_St\<close>).  The D/G carrier needs
-  \<open>('a, 'b) dg_state\<close> in \<open>warrowing\<close>, which \<open>Voblint_Analysis.DG_Framework\<close>
-  provides only bundled as \<open>bounded_warrowing\<close>, requiring both components in
-  \<open>bounded_warrowing\<close>.  That combined arity for \<open>st\<close> was not previously
-  registered; it follows solely from the already declared
-  \<open>st :: (bounded_semilattice_sup_bot) bounded_semilattice_sup_bot\<close> and
-  \<open>st :: (bounded_warrowing) warrowing\<close> instances (a trivial \<open>..\<close>).
-
-  It is placed here rather than in \<open>Voblint_Analysis.Exec_St\<close> to keep it next
-  to its sole DG consumer and avoid a core-theory rebuild; it is a generally-valid
-  instance that could later migrate upstream.
+  The D/G product requires each executable component to satisfy
+  \<open>bounded_warrowing\<close>.  The association-list carrier already provides the required bottom,
+  join, and warrowing operations, so the combined instance follows directly.
 \<close>
 
 instance st :: (bounded_warrowing) bounded_warrowing ..
@@ -79,11 +58,9 @@ lemma fun_of_dg_st_mono:
 subsection \<open>Executable unit (diagonal) step and combine\<close>
 
 text \<open>
-  The executable mirrors of \<open>unit_step\<close> / \<open>unit_combine_step\<close>
-  (\<open>Voblint_Analysis.DG_Framework\<close>), operating on \<open>'a st\<close>, together with
-  their commutation through \<open>fun_of_st\<close>.  These are domain-agnostic: any
-  executable transfer mirror \<open>tf_st\<close> commuting with \<open>apply_tf tf\<close> yields a
-  commuting DG step.
+  Executable diagonal step and combine operations act on \<open>'a st\<close>.  Their proofs are
+  domain-independent: any executable transfer that commutes through \<open>fun_of_st\<close> yields a
+  commuting D/G step.
 \<close>
 
 definition unit_step_st ::

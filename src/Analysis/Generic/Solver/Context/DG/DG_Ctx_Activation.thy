@@ -5,24 +5,14 @@ begin
 section \<open>DG-native discharge of the activation obligations\<close>
 
 text \<open>
-  The context-sensitive routed \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> spine reads its
-  solution through the diagonal (unit) DG interpretation \<^const>\<open>gamma_unit\<close> with a
-  \<^emph>\<open>single shared\<close> global slot \<open>Inr gk0\<close> (\<open>gkey = (\<lambda>_. gk0)\<close>, flow-insensitive globals as
-  in Goblint).  This locale lifts the \<open>EDGE\<close> and combine \<open>COMB\<close> obligations of the
-  activation backbone \<open>activation_collect_sound\<close> off any
-  \<^const>\<open>part_post_solution\<close> of that generator, generic over the domain (its
-  \<^locale>\<open>sound_transfer\<close> / diagonal \<^locale>\<open>sound_dg_spec\<close>), the routing hooks \<open>cmb\<close> /
-  \<open>extra\<close>, and the guarded reader \<open>sg\<close>.  The remaining seed obligations \<open>ENTRY_G\<close> /
-  \<open>SEED_G\<close> --- which encode the precise demand-driven route --- stay with the concrete
-  witness.
+  The routed generator interprets solutions through \<^const>\<open>gamma_unit\<close> with one shared
+  global slot \<open>Inr gk0\<close>.  This locale derives the edge and combine closure obligations from a
+  \<^const>\<open>part_post_solution\<close>, a sound D/G specification, the routing hooks, and a guarded
+  solution reader.  Concrete analyses supply the entry and callee-seed coverage obligations.
 
-  These transport lemmas discharge exactly the \<open>EDGE\<close> and \<open>COMB\<close> premises of the generic
-  \<open>activation_collect_sound\<close>, which is now a projection of the domain-free interface
-  \<open>ltr_gamma\<close> (in \<open>Voblint_CFG.LTR_Abstract\<close>).  The DG layer therefore proves only that
-  its abstract operations satisfy those per-slot premises: it never reconstructs a caller/callee
-  pairing.  The matched caller/callee relation is supplied by \<open>valid_ltr\<close> inside the engine;
-  \<open>dg_ctx_act_comb_covered\<close> transports abstract states at whatever caller / callee-exit / return
-  slots the backbone hands it.
+  The D/G layer transports abstract states at the caller, callee-result, and continuation
+  slots.  The trace semantics supplies the matched caller/callee relation, so this layer does
+  not reconstruct activation pairing.
 \<close>
 
 locale dg_ctx_activation = sound_dg_spec S gamma_unit

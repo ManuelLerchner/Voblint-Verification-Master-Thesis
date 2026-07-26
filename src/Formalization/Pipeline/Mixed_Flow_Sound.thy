@@ -4,30 +4,12 @@ begin
 
 section \<open>Mixed flow-sensitivity soundness against the collecting semantics\<close>
 
-text \<open>
-  The interprocedural analysis is mixed flow-sensitive:
-  - locals are flow-sensitive  (one unknown per program point, indexed by pp)
-  - globals are flow-insensitive (one unknown per global name, joined over all
-    contributions via side effects, read back as glob_env)
-
-  Two theorems are provided at the plain collecting-semantics level.
-
-  mixed_flow_analysis_sound: generic soundness given any partial post-solution.
-  No threefold monotonicity required; the caller supplies sigma directly.
-  This is the minimal soundness result: any over-approximating fixpoint works.
-
-  mixed_flow_analysis_optimal: soundness via the TD solver, plus the optimality
-  guarantee that the solver's environment is the *least* partial post-solution.
-  Requires threefold_mono (paper Def. 7) and cone_compatible_etf.  The
-  mono_sides component of threefold_mono is the monotone-routing precondition
-  that excludes non-monotone conditional side-routing (flag_etf, Meeting 7 s3).
-
-  side_analyse_eff ... v x unfolds to
-    side_env (nu_at ...) v x = (nu_at ...) (Inl v) x |_| glob_env (nu_at ...) x
-  The local component is flow-sensitive (indexed by v).  The global component is
-  flow-insensitive: all named-global side contributions are joined through
-  glob_env before reads at any program point.
-\<close>
+text \<open>Local answers are indexed by program point, while side effects join into one
+  unknown per global name. \<open>mixed_flow_analysis_sound\<close> accepts any partial
+  post-solution. \<open>mixed_flow_analysis_optimal\<close> obtains the least partial
+  post-solution from the solver under @{const threefold_mono} and
+  @{const cone_compatible_etf}. Monotonicity of side effects rules out routing decisions
+  that reverse when the input environment grows.\<close>
 
 subsection \<open>Generic soundness from any partial post-solution\<close>
 

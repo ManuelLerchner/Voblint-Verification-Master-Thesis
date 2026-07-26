@@ -21,10 +21,9 @@ text \<open>
     \<^item> a return/resume fires at \<^term>\<open>FunctionResult\<close>, pops the top activation, and lands at its
       recorded continuation with the combined store \<^const>\<open>combine_collect\<close>.
 
-  A return does not use any \<open>FunctionResult p --> cont\<close> intra edge (there is none): the
-  continuation is recovered from the activation stack, so a single \<^term>\<open>FunctionResult\<close> node
-  serves every caller.  Lexical scope frames create no activation --- they are flattened into
-  intra flow --- so the stack holds one entry per \<^emph>\<open>call\<close>, never per scope.
+  A return does not use a \<open>FunctionResult p --> cont\<close> intra edge.  The activation stack
+  supplies the continuation, so one \<^term>\<open>FunctionResult\<close> node serves every caller and
+  the stack contains one entry per call.
 \<close>
 
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
@@ -91,9 +90,8 @@ lemma cstep_star_nop_right:
 
 subsection \<open>Activation-stack matching\<close>
 
-text \<open>The source frame stack carries both lexical (scope) and activation (call) frames; only
-  activation frames cross a procedure boundary and thus appear on the CFG stack.  \<open>act_frames\<close>
-  projects a source stack to its activation frames, recording caller store and destination.\<close>
+text \<open>Both stacks record procedure activations.  \<open>act_frames\<close> removes the CFG-only
+  continuation component and retains the caller store and destination used by the source.\<close>
 
 fun act_frames :: "frame list \<Rightarrow> (store \<times> vname option) list" where
   "act_frames [] = []"

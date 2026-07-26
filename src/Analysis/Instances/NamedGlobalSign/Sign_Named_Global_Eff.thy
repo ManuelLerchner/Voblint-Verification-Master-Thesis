@@ -4,40 +4,15 @@ begin
 
 section \<open>A genuinely effectful, named-global Sign transfer\<close>
 
-text \<open>
-  This theory exhibits a NON-unit, genuinely effectful witness of the
-  sound_effectful_transfer contract -- closing the instantiation gap for the
-  'g::finite generalisation of the effectful interface.  It demonstrates both
-  capabilities the single-pot unit interface lacks:
+text \<open>The effectful transfer routes contributions to two distinct global
+  unknowns. Its assignment tree reads the abstract value of @{text "''Gflag''"} and
+  selects a target from its sign. Reassembling the state joins every side contribution,
+  so routing preserves soundness while keeping unrelated fixed-point slots separate.\<close>
 
-  - Gap 1 (named globals): contributions are routed to one of two distinct global
-    unknowns (Gpos / Gneg) rather than a single pot.
-  - Gap 2 (effectful transfer): the assign tree READS the abstract value of the
-    flag variable ''Gflag'' (via the queried global environment) and routes the
-    contribution conditionally on its sign.
-
-  Soundness is clean: etf_full joins ALL Side contributions (all_sides), so the
-  routing target does not change the reassembled full result -- it is always the
-  pure sign_tf result on the queried source state.  The precision benefit is in
-  the per-slot fixed-point values, which stay distinct (Sign_Named_Global_precise
-  below): a query of one named unknown is not polluted by the other.
-\<close>
-
-text \<open>
-  Seidl et al. (FM 2026) notation, for this theory:
-
-  - the effectful edge transfer [[e]] : D[u] -> E -> (E x D[v]) is route_tree /
-    apply_etf named_etf; its full reassembled result etf_full is the paper's
-    (E x D[v]) recombined;
-  - the named global unknowns G are the two slots Gpos / Gneg (the analysis-defined
-    GVar.t of a single analysis);
-  - man.global g is QueryG g / side_env_g (read one slot), man.sideg g d is
-    Side g d (write one slot);
-  - the paper constraint (eta, eta[u]) >= f eta is se_constraint_holds; the
-    post-solution obligation is discharged through the side TD solver in
-    named_analysis_sound.
-
-\<close>
+text \<open>\<open>route_tree\<close> queries the local unknown and selected global slots;
+  \<open>apply_etf\<close> evaluates the transfer; and \<open>etf_full\<close> rejoins its answer and side effects.
+  \<open>se_constraint_holds\<close> states the corresponding post-solution bound used by the solver
+  soundness theorem.\<close>
 
 subsection \<open>A two-element global-name type\<close>
 
@@ -480,18 +455,11 @@ proof -
     using collect collect_exit by blast
 qed
 
-section \<open>A Goblint man.global / man.sideg witness reading a single named global\<close>
+section \<open>Reading and writing one named global\<close>
 
-text \<open>
-  The routed trees above reassemble the source state from ALL named globals
-  (glob_env).  Goblint's manager interface is finer: a transfer reads one
-  selected global via man.global g and writes one selected global via
-  man.sideg g'.  sideg_tree is that shape -- it queries exactly the local
-  unknown and the single named global gread, so its source read is side_env_g
-  (not the joined side_env), and it Sides the global part to the single named
-  slot gwrite.  Soundness is stated against side_env_g, closing the practical gap
-  between the paper's man.global / man.sideg and the repo examples.
-\<close>
+text \<open>\<open>sideg_tree\<close> queries the local unknown and exactly one named global, then
+  routes the global result to one selected slot. Its soundness statement therefore uses
+  \<open>side_env_g\<close> rather than the join of every global slot.\<close>
 
 definition sideg_tree ::
   "gname \<Rightarrow> gname \<Rightarrow> (sign abs_state \<Rightarrow> sign abs_state) \<Rightarrow> pp

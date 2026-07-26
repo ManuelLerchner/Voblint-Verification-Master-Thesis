@@ -6,19 +6,10 @@ begin
 
 section \<open>Sign on the heterogeneous DG spine\<close>
 
-text \<open>
-  The monovariant Sign analysis as a native \<^locale>\<open>sound_dg_spec\<close> instance --- the
-  same carrier-opaque spine the mixed Sign/Interval analysis and Retain ride.
-  Sign is the \<^emph>\<open>diagonal\<close> case: answer and side domains coincide
-  (\<open>D = G = sign abs_state\<close>), so the spec is \<^const>\<open>unit_dg_spec\<close> and the joint
-  concretization is \<^const>\<open>gamma_unit\<close>.  The entry frame is the caller's \<open>D\<close> read by the
-  FM 2026 caller-state \<open>enter\<close>: \<^const>\<open>unit_dg_spec\<close>'s \<open>dgs_enter\<close> is \<^const>\<open>unit_step\<close>
-  applied to the sign transfer, which consumes \<open>d \<squnion> g\<close> --- the caller state --- with
-  no context-indexed seed.
-
-  Every generator and collecting fact is inherited from the locale; the sign-specific
-  content is only \<open>sign_is_sound_transfer\<close>.
-\<close>
+text \<open>Sign is the diagonal D/G instance: answers and side effects use the same
+  abstract-state domain. The entry transfer therefore combines the caller answer and
+  global side effect before binding parameters. All generator and collecting results
+  follow from the generic locale; only transfer soundness is domain-specific.\<close>
 
 interpretation sign_dg: sound_dg_spec "unit_dg_spec sign_tf" gamma_unit
   by (rule sound_dg_spec_unit[OF sign_is_sound_transfer])

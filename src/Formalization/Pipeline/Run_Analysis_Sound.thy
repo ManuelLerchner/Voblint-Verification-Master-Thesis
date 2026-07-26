@@ -52,8 +52,6 @@ subsection \<open>Semantic core: abstract post-solution to source bound\<close>
 theorem dg_run_source_sound_abs:
   fixes Pi :: proc_table and mnm :: pname and s0 t :: store
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
@@ -72,7 +70,7 @@ theorem dg_run_source_sound_abs:
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> dg_gamma sigma v"
 proof -
-  from source_reaches_ltr_collect[OF wf src swf s0mem run]
+  from source_reaches_ltr_collect[OF wf s0mem run]
   obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)"
     and coll: "t \<in> ltr_collect (compile_prog Pi ps mnm main) S0 v" by blast
   have "ltr_collect (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
@@ -104,12 +102,9 @@ theorem dg_exec_run_source_sound:
     and Henter: "\<And>xs es d g. map_prod fun_of_st fun_of_st (dgs_enter S_st xs es d g)
                         = dgs_enter S_abs xs es (fun_of_st d) (fun_of_st g)"
     and Hcomb: "\<And>dst dc de g. map_prod fun_of_st fun_of_st (dgs_combine S_st dst dc de g)
-                        = dgs_combine S_abs dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
-    and pp_st: "part_post_solution
+                        = dgs_combine S_abs dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"    and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
@@ -140,21 +135,21 @@ proof -
     using pp_abs unfolding sds.dg_gen_of_eq .
   show ?thesis
     by (rule sds.dg_run_source_sound_abs
-          [OF wf src swf pp_gen cover_entry cover_edge cover_enter cover_combine
+          [OF wf pp_gen cover_entry cover_edge cover_enter cover_combine
           finI finC sound0 s0mem run])
 qed
 
-section \<open>Domain-registration layer (A2)\<close>
+section \<open>Registered executable D/G analyses\<close>
 
-subsection \<open>Generic executable-to-abstract transport for diagonal unit specs\<close>
+subsection \<open>Executable-to-abstract transport for diagonal unit specifications\<close>
 
 text \<open>
   For a diagonal (unit) D/G analysis the two transport-commutation hypotheses of
   \<^theory_text>\<open>dg_exec_run_source_sound\<close> are \<^emph>\<open>derivable\<close>: the combine side holds
   unconditionally, and the step side reduces to the single primitive per-action
   commutation of the executable transfer \<^term>\<open>tf_st\<close> with its abstract image
-  \<^term>\<open>apply_tf tf\<close>.  These two lemmas replace the per-instance \<open>_Hstep\<close> / \<open>_Hcomb\<close>
-  boilerplate.
+  \<^term>\<open>apply_tf tf\<close>.  The generic lemmas keep this transport argument in the
+  registration interface rather than in individual analyses.
 \<close>
 
 lemma unit_dg_Hstep:
@@ -216,11 +211,8 @@ lemma sds: "sound_dg_spec (unit_dg_spec tf) gamma_unit"
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a st"
-  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"
-  assumes SOLVE: "solve_c eqs x \<noteq> None"
+  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"  assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
@@ -245,7 +237,7 @@ proof -
     by (rule dg_exec_run_source_sound
           [OF sds unit_dg_Hstep[OF tf_commute ret_none ret_some]
               unit_dg_Henter[OF enter_commute] unit_dg_Hcomb
-              pp_st[unfolded eqs_def] wf src swf
+              pp_st[unfolded eqs_def] wf
               cover_entry[unfolded eqs_def] cover_edge[unfolded eqs_def]
               cover_enter[unfolded eqs_def] cover_combine[unfolded eqs_def]
               finI finC sound0 s0mem run])

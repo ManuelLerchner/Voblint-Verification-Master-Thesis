@@ -3,16 +3,15 @@ theory IMP2_Notation
 begin
 
 text \<open>
-  IMP2 command quotation: @{text "imp \<lbrakk> \<dots> \<rbrakk>"} produces a single
-  @{type IMP2_Proc.com} without HOL string quotes or qualified constructor names.
-  The @{verbatim "imp"} keyword keeps the bracket distinct from Pure's premise
-  brackets. The whole-program form uses an explicit @{verbatim "program"} prefix;
-  see the whole-program form below.
+  The \<open>imp \<lbrakk> ... \<rbrakk>\<close> quotation produces an \<^typ>\<open>IMP2_Proc.com\<close> without
+  HOL string quotes or qualified constructor names.  The \<open>imp\<close> keyword distinguishes
+  command quotation from Pure premises; whole programs use the explicit \<open>program\<close> prefix.
 
   Design is inspired by:
   https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html
   and 
   https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5
+
 
   Inside the bracket:
   - bare identifiers become @{const V} literals (HOL string literals via @{type vname})

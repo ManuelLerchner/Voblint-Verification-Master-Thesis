@@ -125,13 +125,13 @@ proof (rule allI)
     then have "loop_s0 \<le> loop_env v"
       by (simp add: loop_cfg_entry loop_s0_def loop_env_def)
     with True finI leI show ?thesis
-      unfolding rhs_def Let_def loop_entry_calls loop_return_calls
-      by (auto intro!: abs_join_set_le)
+      unfolding rhs_def Let_def
+      by (auto simp: loop_entry_calls loop_return_calls intro!: abs_join_set_le)
   next
     case False
     with finI leI show ?thesis
-      unfolding rhs_def Let_def loop_entry_calls loop_return_calls
-      by (auto intro!: abs_join_set_le)
+      unfolding rhs_def Let_def
+      by (auto simp: loop_entry_calls loop_return_calls intro!: abs_join_set_le)
   qed
 qed
 

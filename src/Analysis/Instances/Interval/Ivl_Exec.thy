@@ -153,7 +153,9 @@ definition ivl_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> ivl
 
 lemma ivl_enter_st_commute:
   "fun_of_st (ivl_enter_st xs es s) = tf_enter ivl_tf xs es (fun_of_st s)"
-  by (simp add: ivl_enter_st_def ivl_tf_def enter_ivl_def enter_frame_ivl_st_commute)fun ivl_tf_st :: "edge_action \<Rightarrow> ivl st \<Rightarrow> ivl st" where
+  by (simp add: ivl_enter_st_def ivl_tf_def enter_ivl_def enter_frame_ivl_st_commute)
+
+fun ivl_tf_st :: "edge_action \<Rightarrow> ivl st \<Rightarrow> ivl st" where
     "ivl_tf_st EA_Nop s = s"
   | "ivl_tf_st (EA_Assign x a) s = update_st s x (aval_ivl a (lookup_st s))"
   | "ivl_tf_st (EA_Assume b) s = assume_ivl_st b s"

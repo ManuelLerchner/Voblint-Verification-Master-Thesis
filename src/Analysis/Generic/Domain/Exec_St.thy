@@ -21,10 +21,9 @@ text \<open>
   pipeline routinely needs states that are uniform-but-different on the two
   classes: the sound input seed \<open>s0 = (\<lambda>_. top)\<close> is \<open>(top, top, [])\<close>;
   @{term \<open>restrict_local s\<close>} is \<open>bot\<close> on every global and \<open>s\<close> on every local;
-  @{term \<open>restrict_global s\<close>} the converse.  A single hardwired default (the
-  earlier \<open>bot\<close>-only design) cannot represent any of these with non-empty
-  concretization, because \<open>gamma (bot) = {}\<close> forces \<open>gamma_state = {}\<close> on any
-  cofinitely-\<open>bot\<close> state.
+  @{term \<open>restrict_global s\<close>} the converse.  A single hardwired default cannot
+  represent these states with non-empty concretization, because \<open>gamma (bot) = {}\<close>
+  forces \<open>gamma_state = {}\<close> on any cofinitely-\<open>bot\<close> state.
 
   Instances: order, bounded_semilattice_sup_bot, equal (via antisymmetry),
   widening / narrowing / warrowing pointwise on the value domain.
@@ -468,7 +467,7 @@ subsection \<open>Refinement: 'a st vs 'a abs_state\<close>
 
 text \<open>
   \<open>fun_of_st :: 'a st => 'a abs_state\<close> converts the executable representation to
-  the abstract one (\<open>vname => 'a\<close>), used to state the bridge lemma (S4).
+  the abstract function state used by representation-refinement lemmas.
 \<close>
 
 abbreviation fun_of_st :: "('a::bot) st \<Rightarrow> 'a abs_state" where

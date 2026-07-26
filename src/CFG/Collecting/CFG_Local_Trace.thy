@@ -5,30 +5,16 @@ begin
 section \<open>Activation-local concrete traces\<close>
 
 text \<open>
-  A concrete, analysis-independent reference semantics for the procedure-aware CFG.  A value
-  of type \<open>ltr\<close> represents one procedure activation together with its concrete ancestry:
-  its local path of \<open>(cfg_node, store)\<close> pairs, the caller it was created from, and --- once
-  it has returned into a caller --- the completed callee it composed.  Local traces are the
-  concrete objects; activation contexts are computed afterwards by a projection (\<open>key\<close>),
-  never stored inside the trace.
+  An \<open>ltr\<close> represents one procedure activation and its concrete ancestry.  Its local
+  path contains \<open>(cfg_node, store)\<close> pairs; structural constructors record the
+  suspended caller and, after resumption, the completed callee.  Activation contexts
+  are projections of this structure rather than fields stored in the trace.
 
-  The trace rides on the two relations of \<^typ>\<open>cfg\<close>: \<open>intra\<close> for context-preserving
-  extension (including \<open>EA_Ret\<close> reaching \<open>FunctionResult p\<close>) and \<open>calls\<close> for entering a
-  callee and for recovering the continuation at return.  There is no call/return matching
-  side relation and no exit node: a \<open>calls\<close> edge already names the callee entry and the
-  continuation, and a return is an ordinary \<open>intra\<close> step into \<open>FunctionResult p\<close>.
-
-  Semantic boundary.  The trace represents only procedure-activation structure.  Lexical
-  scopes are compiled into \<open>intra\<close> control flow and are not activations.  The intended
-  correspondence for the later compiler proof (not proved here) is: a source
-  a source activation frame corresponds to \<open>Call\<close>/\<open>Resume\<close> structure; a source
-  \<open>Unwind\<close> to the path to \<open>EA_Ret\<close> / \<open>FunctionResult\<close>.
-
-  Call-entry and return-value transfer are the established concrete primitives:
-  \<^const>\<open>enter_state\<close> (globals preserved, locals reset to zero) at a call, and
-  \<^const>\<open>combine_collect\<close> (callee globals, caller locals, callee \<open>ret_var\<close> written into
-  the destination) at a return.  Actual-to-formal parameter binding is not performed in the
-  trace kernel; it is compiled into \<open>intra\<close> edges and belongs to the compiler stage.
+  Local flow follows \<open>intra\<close>, including \<open>EA_Ret\<close> into the matching
+  \<open>FunctionResult\<close>.  A \<open>calls\<close> tuple supplies the call site, callee entry, and
+  continuation.  The call rule builds the parameter-bound entry store with
+  \<^const>\<open>call_enter\<close>.  The resume rule combines caller locals, callee globals,
+  and the return value with \<^const>\<open>combine_collect\<close>.
 \<close>
 
 subsection \<open>The datatype\<close>
@@ -337,7 +323,7 @@ lemma callers_extend_subset:
 proof -
   have "callers (extend t x)
         = insert (extend t x) (case caller_of t of None \<Rightarrow> {} | Some c \<Rightarrow> callers c)"
-    by (subst callers.simps) (simp add: caller_of_extend)
+    by (subst callers.simps) simp
   also have "... \<subseteq> insert (extend t x) (callers t)"
     using case_caller_subset by blast
   finally show ?thesis .
@@ -758,241 +744,7 @@ definition activation_collect ::
   "activation_collect enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
 
-subsection \<open>Witness: nested returns resume the immediate caller\<close>
 
-text \<open>A two-level program \<open>main -> f -> g\<close> where \<open>g\<close> returns into \<open>f\<close> and \<open>f\<close> returns into
-  \<open>main\<close>.  It exercises every rule and shows \<open>g\<close>'s return resumes \<open>f\<close> (the nearest
-  activation), while \<open>f\<close>'s return recovers \<open>main\<close> through the resumed \<open>f\<close>.\<close>
-
-definition mn :: pname where "mn = ''main''"
-definition pf :: pname where "pf = ''f''"
-definition pg :: pname where "pg = ''g''"
-
-definition nest_cfg :: cfg where
-  "nest_cfg =
-     \<lparr> intra =
-         { (FunctionEntry pg, EA_Ret None pg, FunctionResult pg),
-           (Statement 200,    EA_Ret None pf, FunctionResult pf) },
-       calls =
-         { (FunctionEntry mn, CallEdge None [] [], FunctionEntry pf, Statement 100),
-           (FunctionEntry pf, CallEdge None [] [], FunctionEntry pg, Statement 200) },
-       cfg_entry = FunctionEntry mn \<rparr>"
-
-lemmas nest_defs = nest_cfg_def mn_def pf_def pg_def
-
-lemma nested_valid_ltr_example:
-  assumes s0: "s0 \<in> S"
-  shows "\<exists>main0 f0 g1 f' final.
-           g1 \<in> valid_ltr nest_cfg S \<and> caller_of g1 = Some f0
-         \<and> f' \<in> valid_ltr nest_cfg S \<and> caller_of f' = Some main0
-         \<and> final \<in> valid_ltr nest_cfg S \<and> sink_node final = Statement 100"
-proof -
-  define main0 where "main0 = Root [(cfg_entry nest_cfg, s0)]"
-  have main_mem: "main0 \<in> valid_ltr nest_cfg S"
-    unfolding main0_def by (rule valid_ltr.init[OF s0])
-  have m_sn: "sink_node main0 = FunctionEntry mn"
-    by (simp add: main0_def nest_defs)
-  have ecall_f: "(sink_node main0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
-    by (simp add: m_sn nest_defs)
-  define f0 where "f0 = Call main0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store main0))]"
-  have f_mem: "f0 \<in> valid_ltr nest_cfg S"
-    unfolding f0_def by (rule valid_ltr.call[OF main_mem ecall_f])
-  have f_sn: "sink_node f0 = FunctionEntry pf" by (simp add: f0_def)
-  have ecall_g: "(sink_node f0, CallEdge None [] [], FunctionEntry pg, Statement 200) \<in> calls nest_cfg"
-    by (simp add: f_sn nest_defs)
-  define g0 where "g0 = Call f0 [(FunctionEntry pg, call_enter (CallEdge None [] []) (sink_store f0))]"
-  have g_mem: "g0 \<in> valid_ltr nest_cfg S"
-    unfolding g0_def by (rule valid_ltr.call[OF f_mem ecall_g])
-  have g_sn: "sink_node g0 = FunctionEntry pg" by (simp add: g0_def)
-  have eRg: "(sink_node g0, EA_Ret None pg, FunctionResult pg) \<in> intra nest_cfg"
-    by (simp add: g_sn nest_defs)
-  have stRg: "edge_step (EA_Ret None pg) (sink_store g0) = Some (sink_store g0)"
-    by simp
-  define g1 where "g1 = extend g0 (FunctionResult pg, sink_store g0)"
-  have g1_mem: "g1 \<in> valid_ltr nest_cfg S"
-    unfolding g1_def by (rule valid_ltr.intra[OF g_mem eRg stRg])
-  have g1_sn: "sink_node g1 = FunctionResult pg" by (simp add: g1_def)
-  have g1_caller: "caller_of g1 = Some f0" by (simp add: g1_def g0_def)
-  \<comment> \<open>g returns into f (the immediate caller), not main\<close>
-  define f' where
-    "f' = Resume f0 g1 (path f0 @ [(Statement 200, combine_collect None (sink_store f0) (sink_store g1))])"
-  have f'_mem: "f' \<in> valid_ltr nest_cfg S"
-    unfolding f'_def
-    by (rule valid_ltr.ret[OF g1_mem g1_caller g1_sn], simp add: f_sn nest_defs)
-  have f'_sn: "sink_node f' = Statement 200" by (simp add: f'_def sink_node_def)
-  have f'_caller: "caller_of f' = Some main0" by (simp add: f'_def f0_def)
-  have eRf: "(sink_node f', EA_Ret None pf, FunctionResult pf) \<in> intra nest_cfg"
-    by (simp add: f'_sn nest_defs)
-  have stRf: "edge_step (EA_Ret None pf) (sink_store f') = Some (sink_store f')"
-    by simp
-  define f2 where "f2 = extend f' (FunctionResult pf, sink_store f')"
-  have f2_mem: "f2 \<in> valid_ltr nest_cfg S"
-    unfolding f2_def by (rule valid_ltr.intra[OF f'_mem eRf stRf])
-  have f2_sn: "sink_node f2 = FunctionResult pf" by (simp add: f2_def)
-  have f2_caller: "caller_of f2 = Some main0" by (simp add: f2_def f'_def f0_def)
-  have ecall_f2: "(sink_node main0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
-    by (simp add: m_sn nest_defs)
-  define final where
-    "final = Resume main0 f2 (path main0 @ [(Statement 100, combine_collect None (sink_store main0) (sink_store f2))])"
-  have final_mem: "final \<in> valid_ltr nest_cfg S"
-    unfolding final_def by (rule valid_ltr.ret[OF f2_mem f2_caller f2_sn ecall_f2])
-  have final_sn: "sink_node final = Statement 100" by (simp add: final_def sink_node_def)
-  from g1_mem g1_caller f'_mem f'_caller final_mem final_sn show ?thesis by blast
-qed
-
-subsection \<open>Witness: multiple return paths into one result\<close>
-
-text \<open>Procedure \<open>pf\<close> reaches \<open>FunctionResult pf\<close> through two distinct intra branches;
-  \<open>main\<close> calls it with continuation \<open>Statement 100\<close>.  Both branches resume through that same
-  continuation.\<close>
-
-definition bpos :: bexp where "bpos = Less (BaseN (AExp.N 0)) (BaseN (AExp.V ''Gx''))"
-
-definition mret_cfg :: cfg where
-  "mret_cfg =
-     \<lparr> intra =
-         { (FunctionEntry pf, EA_Assume bpos,    Statement 0),
-           (Statement 0,      EA_Ret None pf,    FunctionResult pf),
-           (FunctionEntry pf, EA_AssumeNot bpos, Statement 1),
-           (Statement 1,      EA_Ret None pf,    FunctionResult pf) },
-       calls =
-         { (FunctionEntry mn, CallEdge None [] [], FunctionEntry pf, Statement 100) },
-       cfg_entry = FunctionEntry mn \<rparr>"
-
-lemmas mret_defs = mret_cfg_def mn_def pf_def bpos_def
-
-lemma multi_return_join:
-  "\<exists>t1 t2 c1 c2.
-      t1 \<in> valid_ltr mret_cfg UNIV \<and> t2 \<in> valid_ltr mret_cfg UNIV \<and> t1 \<noteq> t2
-    \<and> sink_node t1 = FunctionResult pf \<and> sink_node t2 = FunctionResult pf
-    \<and> caller_of t1 = Some c1 \<and> caller_of t2 = Some c2
-    \<and> Resume c1 t1 (path c1 @ [(Statement 100, combine_collect None (sink_store c1) (sink_store t1))])
-        \<in> valid_ltr mret_cfg UNIV
-    \<and> Resume c2 t2 (path c2 @ [(Statement 100, combine_collect None (sink_store c2) (sink_store t2))])
-        \<in> valid_ltr mret_cfg UNIV"
-proof -
-  define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
-  define s1 :: store where "s1 = (\<lambda>_. 0)"
-  define r0 where "r0 = Root [(cfg_entry mret_cfg, s0)]"
-  define r1 where "r1 = Root [(cfg_entry mret_cfg, s1)]"
-
-  \<comment> \<open>positive branch through Statement 0\<close>
-  have R0: "r0 \<in> valid_ltr mret_cfg UNIV" unfolding r0_def by (rule valid_ltr.init) simp
-  have m0: "sink_node r0 = FunctionEntry mn" by (simp add: r0_def mret_defs)
-  have ec0: "(sink_node r0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
-    by (simp add: m0 mret_defs)
-  define k0 where "k0 = Call r0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r0))]"
-  have K0: "k0 \<in> valid_ltr mret_cfg UNIV" unfolding k0_def by (rule valid_ltr.call[OF R0 ec0])
-  have k0_sn: "sink_node k0 = FunctionEntry pf" by (simp add: k0_def)
-  have k0_ss: "sink_store k0 = enter_state s0" by (simp add: k0_def r0_def)
-  have eA0: "(sink_node k0, EA_Assume bpos, Statement 0) \<in> intra mret_cfg"
-    by (simp add: k0_sn mret_defs)
-  have stA0: "edge_step (EA_Assume bpos) (sink_store k0) = Some (sink_store k0)"
-    by (simp add: k0_ss s0_def mret_defs enter_state_def is_global_def)
-  define c0 where "c0 = extend k0 (Statement 0, sink_store k0)"
-  have C0: "c0 \<in> valid_ltr mret_cfg UNIV" unfolding c0_def by (rule valid_ltr.intra[OF K0 eA0 stA0])
-  have c0_sn: "sink_node c0 = Statement 0" by (simp add: c0_def)
-  have eR0: "(sink_node c0, EA_Ret None pf, FunctionResult pf) \<in> intra mret_cfg"
-    by (simp add: c0_sn mret_defs)
-  have stR0: "edge_step (EA_Ret None pf) (sink_store c0) = Some (sink_store c0)" by simp
-  define t1 where "t1 = extend c0 (FunctionResult pf, sink_store c0)"
-  have T1: "t1 \<in> valid_ltr mret_cfg UNIV" unfolding t1_def by (rule valid_ltr.intra[OF C0 eR0 stR0])
-
-  \<comment> \<open>negative branch through Statement 1\<close>
-  have R1: "r1 \<in> valid_ltr mret_cfg UNIV" unfolding r1_def by (rule valid_ltr.init) simp
-  have m1: "sink_node r1 = FunctionEntry mn" by (simp add: r1_def mret_defs)
-  have ec1: "(sink_node r1, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
-    by (simp add: m1 mret_defs)
-  define k1 where "k1 = Call r1 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r1))]"
-  have K1: "k1 \<in> valid_ltr mret_cfg UNIV" unfolding k1_def by (rule valid_ltr.call[OF R1 ec1])
-  have k1_sn: "sink_node k1 = FunctionEntry pf" by (simp add: k1_def)
-  have k1_ss: "sink_store k1 = enter_state s1" by (simp add: k1_def r1_def)
-  have eA1: "(sink_node k1, EA_AssumeNot bpos, Statement 1) \<in> intra mret_cfg"
-    by (simp add: k1_sn mret_defs)
-  have stA1: "edge_step (EA_AssumeNot bpos) (sink_store k1) = Some (sink_store k1)"
-    by (simp add: k1_ss s1_def mret_defs enter_state_def is_global_def)
-  define c1 where "c1 = extend k1 (Statement 1, sink_store k1)"
-  have C1: "c1 \<in> valid_ltr mret_cfg UNIV" unfolding c1_def by (rule valid_ltr.intra[OF K1 eA1 stA1])
-  have c1_sn: "sink_node c1 = Statement 1" by (simp add: c1_def)
-  have eR1: "(sink_node c1, EA_Ret None pf, FunctionResult pf) \<in> intra mret_cfg"
-    by (simp add: c1_sn mret_defs)
-  have stR1: "edge_step (EA_Ret None pf) (sink_store c1) = Some (sink_store c1)" by simp
-  define t2 where "t2 = extend c1 (FunctionResult pf, sink_store c1)"
-  have T2: "t2 \<in> valid_ltr mret_cfg UNIV" unfolding t2_def by (rule valid_ltr.intra[OF C1 eR1 stR1])
-
-  have sn1: "sink_node t1 = FunctionResult pf" by (simp add: t1_def)
-  have sn2: "sink_node t2 = FunctionResult pf" by (simp add: t2_def)
-  have ct1: "caller_of t1 = Some r0" by (simp add: t1_def c0_def k0_def)
-  have ct2: "caller_of t2 = Some r1" by (simp add: t2_def c1_def k1_def)
-
-  \<comment> \<open>distinct: the two branches traverse different nodes\<close>
-  have neq: "t1 \<noteq> t2"
-    by (simp add: t1_def t2_def c0_def c1_def k0_def k1_def)
-
-  have res1: "Resume r0 t1
-      (path r0 @ [(Statement 100, combine_collect None (sink_store r0) (sink_store t1))])
-        \<in> valid_ltr mret_cfg UNIV"
-    by (rule valid_ltr.ret[OF T1 ct1 sn1 ec0])
-  have res2: "Resume r1 t2
-      (path r1 @ [(Statement 100, combine_collect None (sink_store r1) (sink_store t2))])
-        \<in> valid_ltr mret_cfg UNIV"
-    by (rule valid_ltr.ret[OF T2 ct2 sn2 ec1])
-
-  from T1 T2 neq sn1 sn2 ct1 ct2 res1 res2 show ?thesis by blast
-qed
-
-subsection \<open>Witness: recursion nesting\<close>
-
-text \<open>A self-recursive procedure \<open>pr\<close>: at its entry it returns (\<open>Gx <= 0\<close>) or calls itself
-  (\<open>Gx > 0\<close>) at continuation \<open>Statement 200\<close>.  Two activations of \<open>pr\<close> are distinct and
-  correctly nested via \<^const>\<open>caller_of\<close>.\<close>
-
-definition pr :: pname where "pr = ''r''"
-
-definition rec_cfg :: cfg where
-  "rec_cfg =
-     \<lparr> intra =
-         { (FunctionEntry pr, EA_AssumeNot bpos, Statement 0),
-           (Statement 0,      EA_Ret None pr,    FunctionResult pr),
-           (FunctionEntry pr, EA_Assume bpos,    Statement 1) },
-       calls =
-         { (Statement 1, CallEdge None [] [], FunctionEntry pr, Statement 200) },
-       cfg_entry = FunctionEntry pr \<rparr>"
-
-lemmas rec_defs = rec_cfg_def pr_def bpos_def
-
-lemma recursion_nesting:
-  "\<exists>outer inner.
-      outer \<in> valid_ltr rec_cfg UNIV \<and> inner \<in> valid_ltr rec_cfg UNIV
-    \<and> outer \<noteq> inner
-    \<and> caller_of inner = Some outer
-    \<and> caller_of outer = None
-    \<and> sink_node outer = Statement 1
-    \<and> sink_node inner = FunctionEntry pr"
-proof -
-  define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
-  define root where "root = Root [(cfg_entry rec_cfg, s0)]"
-  have R: "root \<in> valid_ltr rec_cfg UNIV" unfolding root_def by (rule valid_ltr.init) simp
-  have rt_sn: "sink_node root = FunctionEntry pr" by (simp add: root_def rec_defs)
-  have eA: "(sink_node root, EA_Assume bpos, Statement 1) \<in> intra rec_cfg"
-    by (simp add: rt_sn rec_defs)
-  have stepA: "edge_step (EA_Assume bpos) (sink_store root) = Some (sink_store root)"
-    by (simp add: root_def rec_defs s0_def enter_state_def is_global_def)
-  define outer where "outer = extend root (Statement 1, sink_store root)"
-  have OUTER: "outer \<in> valid_ltr rec_cfg UNIV"
-    unfolding outer_def by (rule valid_ltr.intra[OF R eA stepA])
-  have so: "sink_node outer = Statement 1" by (simp add: outer_def)
-  have ecall: "(sink_node outer, CallEdge None [] [], FunctionEntry pr, Statement 200) \<in> calls rec_cfg"
-    by (simp add: so rec_defs)
-  define inner where "inner = Call outer [(FunctionEntry pr, call_enter (CallEdge None [] []) (sink_store outer))]"
-  have INNER: "inner \<in> valid_ltr rec_cfg UNIV"
-    unfolding inner_def by (rule valid_ltr.call[OF OUTER ecall])
-  have si: "sink_node inner = FunctionEntry pr" by (simp add: inner_def)
-  have ci: "caller_of inner = Some outer" by (simp add: inner_def)
-  have co: "caller_of outer = None" by (simp add: outer_def root_def)
-  have neq: "outer \<noteq> inner" by (simp add: outer_def inner_def)
-  from OUTER INNER neq ci co so si show ?thesis by blast
-qed
 
 end
 

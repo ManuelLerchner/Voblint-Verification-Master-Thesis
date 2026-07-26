@@ -123,9 +123,9 @@ Examples
 ```
 
 * **`IMP2/`**: Syntax, procedures, globals/locals, small-step semantics
-* **`CFG/`**: CFG compilation, paths, interprocedural collecting semantics
+* **`CFG/`**: Procedure-aware CFG compilation, activation-local traces, and collecting semantics
 * **`Analysis/`**: Generic D/G framework, domains, solver interface, executable analyses
-* **`Formalization/`**: End-to-end soundness theorems and compiler correctness
+* **`Formalization/`**: End-to-end solver, collecting-semantics, and source-level soundness
 * **`Examples/`**: Executable runs, flagship demos, and GraphViz tooling
 * **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches
 * **`docs/`**: Proof overview, phase tracking, and agent workflow notes

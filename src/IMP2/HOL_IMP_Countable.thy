@@ -3,7 +3,7 @@ theory HOL_IMP_Countable
           "Deriving.Compare_Order_Instances"
 begin
 
-(* Upstream HOL-IMP countable instances (separate theory avoids arity-fact clash). *)
+text \<open>A separate theory keeps the two countability instances from sharing generated arity facts.\<close>
 
 instance AExp.aexp :: countable
   by countable_datatype
@@ -11,10 +11,9 @@ instance AExp.aexp :: countable
 instance BExp.bexp :: countable
   by countable_datatype
 
-(* Executable structural linear orders for the wrapped Nipkow expression types
-   (AFP Deriving). Isolated here so the generated comparator constants
-   (partial_comparator_aexp etc.) do not clash with the same-base-name
-   IMP2_Syntax.aexp / IMP2_Syntax.bexp derivations. *)
+text \<open>These structural orders make the wrapped expression types executable.
+  Keeping them here prevents their generated comparator names from colliding with the
+  extended expression types.\<close>
 derive linorder "AExp.aexp"
 derive linorder "BExp.bexp"
 

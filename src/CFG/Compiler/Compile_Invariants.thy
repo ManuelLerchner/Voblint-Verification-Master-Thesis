@@ -5,9 +5,10 @@ begin
 section \<open>Structural invariants of the procedure-aware compiler\<close>
 
 text \<open>
-  The sixteen structural obligations of Stage 5A, plus the parameter-binding exhibit.
-  Everything here is about node/edge shape --- the full source-to-\<open>valid_ltr\<close>
-  simulation is Stage 5B.
+  The compiler preserves procedure boundaries, separates call edges from ordinary
+  control flow, and allocates disjoint statement ranges. These properties connect
+  source commands to activation-local traces without exposing compiler counters to
+  semantic clients.
 \<close>
 
 subsection \<open>Compiler input well-formedness\<close>
@@ -20,9 +21,35 @@ text \<open>\<open>mnm\<close> names the distinguished entry procedure, declared
 definition wf_compile_input ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
   "wf_compile_input \<Pi> ps mnm main \<longleftrightarrow>
-     distinct ps \<and> set ps = {p. \<Pi> p \<noteq> None} - {mnm} \<and> mnm \<notin> set ps
-   \<and> \<Pi> mnm = Some (proc_decl_of [] main)
-   \<and> source_pi \<Pi> \<and> source_com main"
+     distinct ps \<and>
+     set ps = {p. \<Pi> p \<noteq> None} - {mnm} \<and>
+     mnm \<notin> set ps \<and>
+     wf_source_program \<Pi> mnm main"
+
+lemma wf_compile_input_source_program:
+  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> wf_source_program \<Pi> mnm main"
+  by (simp add: wf_compile_input_def)
+
+lemma wf_compile_input_main_exists:
+  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
+  using wf_compile_input_source_program wf_source_program_main_exists by blast
+
+lemma wf_compile_input_source_pi:
+  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> source_pi \<Pi>"
+  using wf_compile_input_source_program wf_source_program_source_pi by blast
+
+lemma wf_compile_input_source_com:
+  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> source_com main"
+  using wf_compile_input_source_program wf_source_program_source_com by blast
+
+lemma wf_compile_input_no_return:
+  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> no_return main"
+  using wf_compile_input_source_program wf_source_program_no_return by blast
+
+lemma wf_compile_input_decl:
+  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> \<Pi> p = Some decl
+   \<Longrightarrow> wf_proc_decl \<Pi> decl"
+  using wf_compile_input_source_program wf_source_program_decl by blast
 
 subsection \<open>Syntactic occurrence predicates\<close>
 
@@ -42,8 +69,8 @@ fun returns_in :: "aexp option \<Rightarrow> com \<Rightarrow> bool" where
 
 subsection \<open>Return edges and call-freeness\<close>
 
-text \<open>(10) Every source \<open>Return e\<close> in a procedure body \<open>p\<close> compiles to an intra edge
-  reaching \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
+text \<open>Every source \<open>Return e\<close> in procedure \<open>p\<close> compiles to an intra edge that
+  reaches \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
 lemma compile_return_edge:
   "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> returns_in e c
    \<Longrightarrow> \<exists>k. (Statement k, EA_Ret e p, FunctionResult p) \<in> E"
@@ -80,7 +107,7 @@ next
   case (Return e') then show ?case by (auto split: if_splits)
 qed auto
 
-text \<open>(15) A call-free command compiles to an empty \<open>calls\<close> set.\<close>
+text \<open>A call-free command compiles to an empty \<open>calls\<close> set.\<close>
 lemma compile_no_call:
   "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
   by (induction c arbitrary: n n' en ex E K rule: com.induct)
@@ -90,8 +117,8 @@ lemma compile_proc_no_call:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> \<not> has_call (body decl) \<Longrightarrow> K = {}"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_no_call)
 
-text \<open>(15) A program whose procedure bodies and main are all call-free compiles to
-  \<open>calls = {}\<close> --- the flat-CFG fragment.\<close>
+text \<open>A program whose procedure bodies and main are call-free compiles to the flat
+  fragment characterized by \<open>calls = {}\<close>.\<close>
 lemma compile_procs_no_call:
   "compile_procs \<Pi> ps n = (n', E, K)
    \<Longrightarrow> (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> \<not> has_call (body decl)) \<Longrightarrow> K = {}"
@@ -215,8 +242,8 @@ next
   qed
 qed
 
-text \<open>(7) Statement ranges of distinct procedures are disjoint: the first procedure's
-  statements precede the counter at which the rest begins, and the rest's follow it.\<close>
+text \<open>Statement ranges of distinct procedures are disjoint: one fragment ends at the
+  counter from which the next fragment allocates its statements.\<close>
 theorem compile_procs_head_disjoint:
   assumes "compile_proc \<Pi> p decl n = (n1, E0, K0)"
     and "compile_procs \<Pi> ps n1 = (n2, E', K')"
@@ -227,30 +254,28 @@ proof -
   ultimately show ?thesis by fastforce
 qed
 
-subsection \<open>The sixteen structural obligations, assembled\<close>
+subsection \<open>Public compiler invariants\<close>
 
-text \<open>(1) The compiled CFG is well-formed.\<close>
+text \<open>Every compiled program satisfies the generic CFG well-formedness conditions.\<close>
 lemmas inv1_wf = compile_prog_wf
 
-text \<open>(2) Every call edge targets a \<open>FunctionEntry\<close>.\<close>
+text \<open>Every call edge targets a procedure entry node.\<close>
 theorem inv2_calls_to_entry:
   "(u, act, ce, af) \<in> calls (compile_prog \<Pi> ps mnm main) \<Longrightarrow> \<exists>p. ce = FunctionEntry p"
   using wf_call_targets_entry[OF compile_prog_wf] .
 
-text \<open>(3) No intra edge enters a \<open>FunctionEntry\<close>.\<close>
+text \<open>Procedure entry nodes are reached only through call edges.\<close>
 theorem inv3_no_intra_into_entry:
   "(u, a, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v \<noteq> FunctionEntry q"
   using wf_intra_not_into_entry[OF compile_prog_wf] .
 
-text \<open>(4) Every \<open>EA_Ret e p\<close> edge targets \<open>FunctionResult p\<close>.\<close>
+text \<open>A return edge for procedure \<open>p\<close> targets its matching result node.\<close>
 theorem inv4_ret_to_result:
   "(u, EA_Ret e p, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v = FunctionResult p"
   using edge_step_ret_target[OF compile_prog_wf] .
 
-text \<open>(5) / (6) Each compiled procedure has a single entry node \<open>FunctionEntry p\<close> and a
-  single result node \<open>FunctionResult p\<close>: the entry edge and the fall-through result edge
-  are emitted by \<open>compile_proc\<close>, and both nodes are keyed by the procedure name (distinct
-  procedures get distinct nodes).\<close>
+text \<open>Each procedure has entry and result nodes keyed by its name.  The wrapper emits
+  the entry edge and the fall-through result edge, while distinct names yield distinct nodes.\<close>
 theorem inv5_6_proc_entry_result_edges:
   assumes "compile_proc \<Pi> p decl n = (n', E, K)"
   shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
@@ -261,44 +286,43 @@ theorem inv5_6_entry_result_distinct:
   "p \<noteq> q \<Longrightarrow> FunctionEntry p \<noteq> FunctionEntry q \<and> FunctionResult p \<noteq> FunctionResult q"
   by simp
 
-text \<open>(8) Every call continuation is a CFG node.\<close>
+text \<open>Every call continuation belongs to the compiled CFG.\<close>
 theorem inv8_continuation_in_nodes:
   "(u, act, ce, af) \<in> calls (compile_prog \<Pi> ps mnm main)
    \<Longrightarrow> af \<in> cfg_nodes (compile_prog \<Pi> ps mnm main)"
   using call_endpoints_in_nodes(3) .
 
-text \<open>(9) Calls appear only in \<open>calls\<close>, never in \<open>intra\<close>: by typing an intra edge cannot
-  carry a call, so no \<open>FunctionEntry\<close> is an intra successor.\<close>
+text \<open>Calls inhabit the separate \<open>calls\<close> relation.  Intra edges cannot carry call actions
+  or reach procedure entry nodes.\<close>
 theorem inv9_no_intra_call:
   "FunctionEntry p \<notin> intra_successors (compile_prog \<Pi> ps mnm main) u"
   using wf_no_intra_call[OF compile_prog_wf] .
 
-text \<open>(10) is \<open>compile_return_edge\<close> above.  (11) dead code after a return is unreachable:
-  the return fragment's normal-exit node has no incoming intra edge, so a following
-  command wired from it is off every return-to-result path.\<close>
+text \<open>The normal-exit node of a return fragment has no incoming intra edge.  A command
+  connected after that exit therefore lies outside every return-to-result path.\<close>
 theorem inv11_return_exit_unreached:
   "(u, a, Statement (Suc n)) \<notin> fst (snd (snd (snd (compile \<Pi> p (Return e) n))))"
   by simp
 
-text \<open>(12) Normal fall-through reaches the procedure result --- the \<open>compile_proc\<close>
-  fall-through edge of \<open>inv5_6_proc_entry_result_edges\<close>.\<close>
+text \<open>Normal fall-through reaches the procedure result through the edge emitted by
+  \<open>compile_proc\<close>.\<close>
 lemmas inv12_fallthrough = inv5_6_proc_entry_result_edges
 
-text \<open>(13) Multiple returns converge: two \<open>Return\<close> branches both reach \<open>FunctionResult p\<close>.\<close>
+text \<open>Return branches of the same procedure converge at \<open>FunctionResult p\<close>.\<close>
 theorem inv13_multi_return_converge:
   assumes "compile \<Pi> p (If b (Return e1) (Return e2)) n = (n', en, ex, E, K)"
   shows "(\<exists>k. (Statement k, EA_Ret e1 p, FunctionResult p) \<in> E)
        \<and> (\<exists>k. (Statement k, EA_Ret e2 p, FunctionResult p) \<in> E)"
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
 
-text \<open>(14) A recursive call targets the caller procedure's own \<open>FunctionEntry\<close>, while its
-  call site and continuation stay ordinary statement nodes.\<close>
+text \<open>A self-call targets the procedure's own entry node; its call site and continuation
+  remain ordinary statement nodes.\<close>
 theorem inv14_recursion_edge:
   "(Statement n, CallEdge None (case \<Pi> p of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p, Statement (Suc n))
      \<in> snd (snd (snd (snd (compile \<Pi> p (Call None p []) n))))"
   by simp
 
-text \<open>(15) is \<open>compile_prog_flat\<close> above.  (16) the program entry is the main entry node.\<close>
+text \<open>The program entry is the entry node of the distinguished root procedure.\<close>
 theorem inv16_entry_is_main:
   "cfg_entry (compile_prog \<Pi> ps mnm main) = FunctionEntry mnm"
   unfolding compile_prog_def by (simp add: Let_def split: prod.splits)
@@ -306,25 +330,10 @@ theorem inv16_entry_is_main:
 subsection \<open>Parameter-binding exhibit: naive entry assignments are wrong\<close>
 
 text \<open>
-  The trace kernel enters a callee at \<^const>\<open>enter_state\<close> (locals reset to zero, globals
-  kept), and the true parameter binding is \<^const>\<open>bind_formals\<close> with the actuals evaluated
-  in the CALLER store.  A naive scheme that instead emits the formal-binding assignments at
-  the callee entry --- evaluating each actual in the already-entered callee store --- is
-  incorrect: an actual that reads a caller local sees the reset value \<open>0\<close>, not the caller's.
-
-  Concretely, for the single formal \<open>x\<close> bound to the actual \<open>V ''y''\<close> where \<open>y\<close> is a caller
-  local holding \<open>5\<close>: the correct binding gives \<open>x = 5\<close>, the naive callee-entry assignment
-  gives \<open>x = 0\<close>.  This is why the compiler keeps the actuals on the \<open>CallEdge\<close> (evaluated in
-  the caller store by the entry transfer) rather than compiling them into callee-entry
-  assignments.
+  Call actions retain their actual expressions because parameter binding evaluates them in
+  the caller store.  Evaluating them after \<^const>\<open>enter_state\<close> would read reset local
+  variables.  The witness below isolates this store-level distinction.
 \<close>
-text \<open>The root cause, at the store level: \<^const>\<open>enter_state\<close> resets a caller local to
-  \<open>0\<close>.  So an actual argument that reads a caller local, if evaluated in the entered callee
-  store (the naive scheme), yields \<open>0\<close> instead of the caller value --- the correct binding
-  evaluates the actual in the caller store (\<^const>\<open>bind_formals\<close> over
-  \<open>map (\<lambda>e. aval e caller) actuals\<close>).  This is why the compiler carries the actuals on the
-  \<open>CallEdge\<close> for the caller-side entry transfer, rather than compiling them into callee-entry
-  assignments.\<close>
 lemma naive_entry_binding_wrong:
   "\<exists>s :: store. \<exists>x. \<not> is_global x \<and> enter_state s x \<noteq> s x"
 proof (intro exI conjI)

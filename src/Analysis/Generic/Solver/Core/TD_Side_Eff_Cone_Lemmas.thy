@@ -55,18 +55,18 @@ next
     case True
     have "Inl w \<in> dep_aux \<sigma> (apply_etf etf b w)" by (rule edge_dep)
     then have "Inl u \<in> dep_aux \<sigma> (apply_etf etf b w)" using True by simp
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   next
     case False
     have mem': "(u, a) \<in> set es" using Cons.prems x False by auto
     have "Inl u \<in> dep_aux \<sigma> (side_rhs_fold_eff etf
             (acc \<squnion> traverse_rhs (apply_etf etf b w) \<sigma>) es ens cs)"
       by (rule Cons.IH[OF mem'])
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   qed
 qed
 
-text \<open>Later phases survive the edge prefix and the enter prefix.\<close>
+text \<open>Prepending edge or entry contributions preserves dependencies of the remaining fold.\<close>
 
 lemma dep_aux_side_rhs_fold_eff_sub_es:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
@@ -87,7 +87,7 @@ next
   also have "... \<subseteq> dep_aux \<sigma> (side_rhs_fold_eff etf ?acc' es ens cs)"
     by (rule Cons.IH)
   also have "... \<subseteq> dep_aux \<sigma> (side_rhs_fold_eff etf acc (x # es) ens cs)"
-    unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by auto
+    unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by auto
   finally show ?case .
 qed
 
@@ -110,7 +110,7 @@ next
   also have "... \<subseteq> dep_aux \<sigma> (side_rhs_fold_eff etf ?acc' [] ens cs)"
     by (rule Cons.IH)
   also have "... \<subseteq> dep_aux \<sigma> (side_rhs_fold_eff etf acc [] (x # ens) cs)"
-    unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by auto
+    unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by auto
   finally show ?case .
 qed
 
@@ -132,14 +132,14 @@ next
     case True
     have "Inl c2 \<in> dep_aux \<sigma> (etf_enter etf f2 a2 c2)" by (rule enter_dep)
     then have "Inl cl \<in> dep_aux \<sigma> (etf_enter etf f2 a2 c2)" using True by simp
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   next
     case False
     have mem': "(cl, fs, as) \<in> set ens" using Cons.prems x False by auto
     have "Inl cl \<in> dep_aux \<sigma> (side_rhs_fold_eff etf
             (acc \<squnion> traverse_rhs (etf_enter etf f2 a2 c2) \<sigma>) [] ens cs)"
       by (rule Cons.IH[OF mem'])
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   qed
 qed
 
@@ -173,14 +173,14 @@ next
     case True
     have "Inl c2 \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" by (rule comb_dep)
     then have "Inl cc \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" using True by simp
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   next
     case False
     have mem': "(cc, dst, ex) \<in> set cs" using Cons.prems x False by auto
     have "Inl cc \<in> dep_aux \<sigma> (side_rhs_fold_eff etf
             (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) [] [] cs)"
       by (rule Cons.IH[OF mem'])
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   qed
 qed
 
@@ -200,14 +200,14 @@ next
     case True
     have "Inl e2 \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" by (rule comb_dep)
     then have "Inl ex \<in> dep_aux \<sigma> (etf_combine etf d2 c2 e2)" using True by simp
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   next
     case False
     have mem': "(cc, dst, ex) \<in> set cs" using Cons.prems x False by auto
     have "Inl ex \<in> dep_aux \<sigma> (side_rhs_fold_eff etf
             (acc \<squnion> traverse_rhs (etf_combine etf d2 c2 e2) \<sigma>) [] [] cs)"
       by (rule Cons.IH[OF mem'])
-    thus ?thesis unfolding x side_rhs_fold_eff.simps dep_aux_seqcomp by simp
+    thus ?thesis unfolding x side_rhs_fold_eff_simps dep_aux_seqcomp by simp
   qed
 qed
 

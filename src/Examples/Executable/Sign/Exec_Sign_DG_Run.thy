@@ -40,7 +40,7 @@ lemma sign_Henter:
       (dgs_enter (unit_dg_spec_st sign_tf_st sign_enter_st) xs es d g)
      = dgs_enter (unit_dg_spec sign_tf) xs es (fun_of_st d) (fun_of_st g)"
   unfolding unit_dg_spec_st_def unit_dg_spec_def
-  by simp (rule unit_step_st_commute, simp add: sign_enter_st_commute')
+  by simp (rule unit_step_st_commute, simp add: sign_enter_st_commute)
 
 lemma sign_Hcomb:
   "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st sign_tf_st sign_enter_st) dst dc de g)
@@ -176,12 +176,8 @@ theorem dgEx_collect_sound:
 
 subsection \<open>Inspecting the computed result\<close>
 
-text \<open>
-  The computed local and global slots at the exit, read back executably.  The naive
-  diagonal Sign analysis merges the local and global halves at each edge, so it over-
-  approximates to \<open>STop\<close> here --- sound, if imprecise; the retain / digest analyses
-  recover per-slot precision.
-\<close>
+text \<open>The diagonal Sign instance joins local answers and global side effects at
+  each edge. The executable result is therefore sound but imprecise at the exit.\<close>
 
 lemma dgEx_inspect:
   "map_option (\<lambda>sol. (lookup_st (locals (snd sol (Inl (Statement 2, ())))) ''x'',

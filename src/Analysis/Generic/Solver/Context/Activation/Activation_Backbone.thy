@@ -4,37 +4,19 @@ begin
 
 section \<open>Generic soundness of the activation-indexed collecting semantics\<close>
 
-text \<open>
-  Soundness of a seeded context-sensitive analysis stated directly against the activation-indexed
-  projection \<^const>\<open>activation_collect\<close> --- the sink/key projection of the concrete
-  activation-local traces \<^const>\<open>valid_ltr\<close>.  The context is ACTIVATION-STABLE: it is fixed when
-  an activation is created (routed at a \<^const>\<open>calls\<close> edge) and unchanged by the calls it later
-  makes and returns from, matching Goblint's call-only \<open>Spec.context\<close>.  The backbone therefore needs
-  no digest-propagation machinery: the context is structural.
-
-  Domain- and generator-agnostic: it depends only on the abstract-domain concretisation and the
-  local-trace engine \<open>valid_ltr_ctx_sound\<close>, and every context-sensitive activation soundness result
-  rides on it.
-\<close>
+text \<open>The activation key is fixed when a call creates an activation and remains
+  unchanged across its local steps and nested calls. This structural key lets
+  @{const activation_collect} project concrete local traces without propagating an
+  auxiliary digest. The soundness argument depends only on concretization and the
+  activation-local trace rules.\<close>
 
 subsection \<open>The domain-independent backbone\<close>
 
-text \<open>
-  Purely semantic obligations, each at a FIXED activation context, discharge soundness through the
-  local-trace engine:
-
-    - \<open>ENTRY_G\<close>: the seed covers the start stores at the start context \<open>seedc\<close> (Goblint
-      \<open>Spec.enter\<close>);
-    - \<open>EDGE\<close>: an ordinary \<^const>\<open>intra\<close> edge preserves the context and covers the concrete step;
-    - \<open>CALL\<close>: a \<^const>\<open>calls\<close> edge lands the routed entering store in the seeded callee slot at the
-      routed callee context \<open>enterc c s'\<close> (Goblint \<open>Spec.context\<close> + the seed);
-    - \<open>COMB\<close>: a combine reassembles the caller store and the routed callee-exit store into the
-      return slot at the CALLER context \<open>c1\<close> --- Goblint's \<open>Spec.combine\<close> merges abstract states,
-      not function contexts, so the resumed caller keeps its own context.
-
-  Domain-independent: parameterised over \<open>sg\<close>, the routing \<open>enterc\<close> and the start context
-  \<open>seedc\<close>.  A return map \<open>combc\<close> is not a parameter --- the stable context is the caller's.
-\<close>
+text \<open>Four local obligations connect the abstract solution to the trace rules.
+  The root seed covers initial stores; ordinary edges preserve the activation key; calls
+  cover the entered store at the routed callee key; and return combination writes to the
+  original caller key. The theorem is parameterized by the solution reader, entry routing,
+  and root key. No return-key function is needed because the caller key is stable.\<close>
 
 theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"

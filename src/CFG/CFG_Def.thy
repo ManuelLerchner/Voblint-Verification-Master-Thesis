@@ -180,23 +180,7 @@ subsection \<open>Structural selectors\<close>
 definition intra_successors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
   "intra_successors g u = {v. \<exists>a. (u, a, v) \<in> intra g}"
 
-definition intra_predecessors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node set" where
-  "intra_predecessors g v = {u. \<exists>a. (u, a, v) \<in> intra g}"
 
-definition call_edges_from :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (call_action \<times> cfg_node \<times> cfg_node) set" where
-  "call_edges_from g u = {(act, ce, after). (u, act, ce, after) \<in> calls g}"
-
-definition call_edges_to_entry :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
-  "call_edges_to_entry g ce = {(u, act, after). (u, act, ce, after) \<in> calls g}"
-
-definition call_continuations :: "cfg \<Rightarrow> cfg_node set" where
-  "call_continuations g = {after. \<exists>u act ce. (u, act, ce, after) \<in> calls g}"
-
-definition procedure_entry :: "pname \<Rightarrow> cfg_node" where
-  "procedure_entry p = FunctionEntry p"
-
-definition procedure_result :: "pname \<Rightarrow> cfg_node" where
-  "procedure_result p = FunctionResult p"
 
 subsection \<open>Node set (derived, not stored)\<close>
 
@@ -230,24 +214,23 @@ definition wf_cfg :: "cfg \<Rightarrow> bool" where
 
 subsection \<open>Structural invariants\<close>
 
-text \<open>(1) Every \<open>intra\<close> endpoint is a node.\<close>
+text \<open>Every local-edge endpoint is part of the derived node set.\<close>
 lemma intra_endpoints_in_nodes:
   assumes "(u, a, v) \<in> intra g"
   shows "u \<in> cfg_nodes g" and "v \<in> cfg_nodes g"
   using assms by (auto simp: cfg_nodes_def)
 
-text \<open>(2) Every call site, callee entry, and continuation is a node.\<close>
+text \<open>Every call site, callee entry, and continuation is part of the derived node set.\<close>
 lemma call_endpoints_in_nodes:
   assumes "(u, act, ce, after) \<in> calls g"
   shows "u \<in> cfg_nodes g" and "ce \<in> cfg_nodes g" and "after \<in> cfg_nodes g"
   using assms by (auto simp: cfg_nodes_def)
 
-text \<open>(3) The entry is a node.\<close>
+text \<open>The distinguished graph entry is always part of the derived node set.\<close>
 lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
   by (simp add: cfg_nodes_def)
 
-text \<open>(4) A flat CFG is exactly the call-free fragment; its nodes are the intra endpoints
-  and the entry.\<close>
+text \<open>A flat CFG has only local-edge endpoints and the distinguished entry.\<close>
 lemma flat_cfg_iff: "flat_cfg g \<longleftrightarrow> calls g = {}"
   by (simp add: flat_cfg_def)
 
@@ -257,18 +240,15 @@ lemma cfg_nodes_flat:
            {u. \<exists>a v. (u, a, v) \<in> intra g} \<union> {v. \<exists>u a. (u, a, v) \<in> intra g} \<union> {cfg_entry g}"
   using assms by (auto simp: cfg_nodes_def flat_cfg_def)
 
-text \<open>(5) Procedure entry and procedure result are distinct nodes.\<close>
-lemma procedure_entry_neq_result: "procedure_entry p \<noteq> procedure_result q"
-  by (simp add: procedure_entry_def procedure_result_def)
 
-text \<open>(6) Under \<open>wf_cfg\<close>, call edges target procedure-entry nodes.\<close>
+
+text \<open>A well-formed call targets a procedure-entry node.\<close>
 lemma wf_call_targets_entry:
   assumes "wf_cfg g" and "(u, act, ce, after) \<in> calls g"
   shows "\<exists>p. ce = FunctionEntry p"
   using assms by (fastforce simp: wf_cfg_def)
 
-text \<open>(9) Under \<open>wf_cfg\<close>, no intra edge enters a procedure entry: a callee is reachable
-  only across a call, never by traversing \<open>intra\<close>.\<close>
+text \<open>A well-formed local edge cannot enter a procedure.  Callee entry occurs only across a call.\<close>
 lemma wf_intra_not_into_entry:
   assumes "wf_cfg g" and "(u, a, v) \<in> intra g"
   shows "v \<noteq> FunctionEntry p"
@@ -279,8 +259,7 @@ lemma wf_no_intra_call:
   shows "FunctionEntry p \<notin> intra_successors g u"
   using assms wf_intra_not_into_entry by (fastforce simp: intra_successors_def)
 
-text \<open>(10) \<open>edge_step\<close> is total on \<open>edge_action\<close>: it is defined for every constructor and
-  fails only on a failed guard.\<close>
+text \<open>Every edge action has a transfer; only an unsatisfied guard returns \<open>None\<close>.\<close>
 lemma edge_step_fail_iff:
   "edge_step a s = None \<longleftrightarrow>
      (\<exists>b. a = EA_Assume b \<and> \<not> bval b s) \<or> (\<exists>b. a = EA_AssumeNot b \<and> bval b s)"
@@ -291,47 +270,7 @@ lemma edge_step_ret_target:
   shows "v = FunctionResult p"
   using assms by (auto simp: wf_cfg_def)
 
-subsection \<open>A well-formed witness: shared continuations and converging returns\<close>
 
-text \<open>Procedure \<open>dpf\<close> reaches \<open>FunctionResult dpf\<close> from two distinct nodes (returns
-  converge, (8)); it is called from two distinct sites that share one continuation
-  \<open>Statement 99\<close> (continuations need not be unique, (7)).\<close>
-
-definition dmain :: pname where "dmain = ''main''"
-definition dpf :: pname where "dpf = ''f''"
-
-definition demo_cfg :: cfg where
-  "demo_cfg =
-     \<lparr> intra =
-         { (FunctionEntry dpf, EA_Ret None dpf, FunctionResult dpf),
-           (Statement 0,      EA_Ret None dpf, FunctionResult dpf) },
-       calls =
-         { (Statement 10, CallEdge None [] [], FunctionEntry dpf, Statement 99),
-           (Statement 20, CallEdge None [] [], FunctionEntry dpf, Statement 99) },
-       cfg_entry = FunctionEntry dmain \<rparr>"
-
-lemmas demo_defs = demo_cfg_def dmain_def dpf_def
-
-lemma demo_wf: "wf_cfg demo_cfg"
-  by (auto simp: wf_cfg_def demo_defs)
-
-text \<open>(8) Two distinct return edges converge into one \<open>FunctionResult\<close>.\<close>
-lemma demo_returns_converge:
-  "(FunctionEntry dpf, EA_Ret None dpf, FunctionResult dpf) \<in> intra demo_cfg"
-  "(Statement 0, EA_Ret None dpf, FunctionResult dpf) \<in> intra demo_cfg"
-  "FunctionEntry dpf \<noteq> Statement 0"
-  by (simp_all add: demo_defs)
-
-text \<open>(7) Two distinct call sites share one continuation.\<close>
-lemma demo_shared_continuation:
-  "(Statement 10, CallEdge None [] [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
-  "(Statement 20, CallEdge None [] [], FunctionEntry dpf, Statement 99) \<in> calls demo_cfg"
-  "Statement 10 \<noteq> Statement 20"
-  by (simp_all add: demo_defs)
-
-lemma demo_continuation_join:
-  "Statement 99 \<in> call_continuations demo_cfg"
-  by (auto simp: call_continuations_def demo_defs)
 
 end
 

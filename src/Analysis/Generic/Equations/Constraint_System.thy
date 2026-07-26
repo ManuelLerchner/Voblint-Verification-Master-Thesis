@@ -308,9 +308,8 @@ proof -
 qed
 
 text \<open>
-  Abstract counterpart of @{const bind_formals}: bind each formal to the abstract
-  value of the matching actual.  Mirrors Goblint's make_entry, which evaluates the
-  arguments in the caller and binds them to the callee's formals.
+  Formal binding evaluates actual arguments in the caller state and assigns each
+  abstract value to the matching callee formal.
 \<close>
 definition bind_formals_abs ::
     "vname list \<Rightarrow> 'a list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -405,10 +404,9 @@ fun combine_assign_abs ::
   | "combine_assign_abs (Some x) v \<sigma> = \<sigma>(x := v)"
 
 text \<open>
-  Abstract counterpart of @{const combine_collect}: Goblint's combine_env
-  (@{const combine_abs}) followed by combine_assign, reading the callee's
-  @{const ret_var}.  The result is published through the ordinary state update,
-  so no domain-specific return machinery is needed.
+  Return combination joins caller locals with callee globals and then assigns the
+  callee's @{const ret_var} to the optional destination.  The ordinary abstract
+  state update publishes the result without domain-specific return machinery.
 \<close>
 definition combine_collect_abs ::
     "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -482,6 +480,66 @@ proof -
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
+text \<open>
+  Each predecessor kind contributes a set of abstract states.  Keeping the
+  families separate gives downstream proofs precise introduction rules; their
+  union is the single source of truth used by the executable right-hand side.
+\<close>
+
+definition rhs_edge_sources ::
+    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
+     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
+  "rhs_edge_sources g tf env v =
+     (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v"
+
+definition rhs_entry_sources ::
+    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
+     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
+  "rhs_entry_sources g tf env v =
+     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
+       ` entry_calls g v"
+
+definition rhs_combine_sources ::
+    "cfg \<Rightarrow> (pp \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
+  "rhs_combine_sources g env v =
+     (\<lambda>(c, dst, ex). combine_collect_abs dst (env c) (env ex)) ` return_calls g v"
+
+definition rhs_sources ::
+    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
+     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
+  "rhs_sources g tf env v =
+     rhs_edge_sources g tf env v \<union>
+     rhs_entry_sources g tf env v \<union>
+     rhs_combine_sources g env v"
+
+lemma rhs_sources_characterization [simp]:
+  "rhs_sources g tf env v =
+     (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v \<union>
+     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
+       ` entry_calls g v \<union>
+     (\<lambda>(c, dst, ex). combine_collect_abs dst (env c) (env ex))
+       ` return_calls g v"
+  unfolding rhs_sources_def rhs_edge_sources_def rhs_entry_sources_def
+    rhs_combine_sources_def by simp
+
+lemma rhs_edge_sources_iff:
+  "x \<in> rhs_edge_sources g tf env v \<longleftrightarrow>
+   (\<exists>u a. (u, a, v) \<in> intra g \<and> x = apply_tf tf a (env u))"
+  unfolding rhs_edge_sources_def intra_predecessors_def by auto
+
+lemma rhs_entry_sourcesI:
+  assumes "(c, CallEdge dst fs as, v, k) \<in> calls g"
+  shows "tf_enter tf fs as (env c) \<in> rhs_entry_sources g tf env v"
+  unfolding rhs_entry_sources_def entry_calls_def
+  using assms by (force simp: image_iff)
+
+lemma rhs_combine_sourcesI:
+  assumes "(c, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
+  shows "combine_collect_abs dst (env c) (env (FunctionResult p))
+         \<in> rhs_combine_sources g env v"
+  unfolding rhs_combine_sources_def return_calls_def
+  using assms by (force simp: image_iff)
+
 definition rhs ::
     "cfg
      \<Rightarrow> 'a domain_transfer
@@ -493,15 +551,9 @@ definition rhs ::
      \<Rightarrow> 'a abs_state"
 where
   "rhs g tf join_abs bot_abs s0 env v =
-     (let intra_vals = (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v;
-          entry_vals = (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
-                          ` entry_calls g v;
-          ret_vals  = (\<lambda>(c, dst, ex). combine_collect_abs dst (env c) (env ex))
-                          ` return_calls g v;
-          base = if v = cfg_entry g
-                 then insert s0 (intra_vals \<union> entry_vals \<union> ret_vals)
-                 else intra_vals \<union> entry_vals \<union> ret_vals
-      in  abs_join_set join_abs bot_abs base)"
+     abs_join_set join_abs bot_abs
+       (if v = cfg_entry g then insert s0 (rhs_sources g tf env v)
+        else rhs_sources g tf env v)"
 
 definition is_post_fixpoint ::
     "cfg
@@ -552,10 +604,8 @@ qed
 
 
 text \<open>
-  Key soundness statement for the constraint system:
-  If env is a post-fixpoint (env v <= rhs ... env v for all v),
-  then env overapproximates the CFG collecting semantics.
-  Proved in Constraint_System_Sound.thy.
+  A valuation that bounds every equation right-hand side is a post-fixpoint.
+  Such valuations overapproximate the corresponding CFG collecting semantics.
 \<close>
 
 subsection \<open>C-faithful initial store set\<close>
@@ -746,9 +796,9 @@ proof -
 qed
 
 text \<open>
-  Per-name monotonicity of glob_env: it reads only the named-global slots, so a
-  pointwise bound on the Inr components alone suffices.  Used to route a per-name
-  side bound (sides_of_rhs t \<sigma> (Inr g) \<le> \<sigma> (Inr g)) into a global-env bound.
+  @{const glob_env} reads only named-global slots.  A pointwise bound on those
+  components therefore lifts every per-name side bound to the joined global
+  environment.
 \<close>
 lemma glob_env_mono_Inr:
   assumes "\<And>p. \<sigma>1 (Inr p) \<le> \<sigma>2 (Inr p)"
@@ -797,8 +847,8 @@ proof -
 qed
 
 text \<open>
-  Drop the UNIV-based definitional code equation: it folds over an abstract UNIV
-  and is not executable.  glob_env_code (enum) is the executable replacement.
+  @{thm glob_env_code} supplies the executable equation by folding over the finite
+  enumeration.  The set-based definition remains the mathematical interface.
 \<close>
 declare glob_env_def [code del]
 
@@ -841,16 +891,13 @@ next
     unfolding all_sides.simps(4) by (rule sup_least)
 qed
 
-subsection \<open>Paper equation (1): the side-effecting constraint over a strategy tree\<close>
+subsection \<open>Side-effecting constraint for a strategy tree\<close>
 
 text \<open>
-  Seidl et al. (FM 2026) write a local unknown's constraint as
-  \<open>(eta, eta[u]) >= f eta\<close>: the valuation must cover both the local contribution
-  and every global side effect the same right-hand side produces.  Over a
-  @{typ \<open>('x,'g,'d) strategy_tree\<close>} the local contribution is @{const traverse_rhs}
-  and the per-name side effects are @{const sides_of_rhs}, so the paper's
-  constraint for the tree at unknown @{term u} is exactly the conjunction below.
-  It is the per-unknown body of the vendored @{term part_post_solution}.
+  A valuation covers a strategy tree when it bounds both the tree's local answer
+  and every side contribution produced during the same traversal.  The local
+  unknown bounds @{const traverse_rhs}; the complete valuation bounds
+  @{const sides_of_rhs} pointwise.
 \<close>
 
 definition se_constraint_holds ::
@@ -860,8 +907,8 @@ where
      traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<and> sides_of_rhs t \<sigma> \<le> \<sigma>"
 
 text \<open>
-  A post-solution unknown satisfies the paper constraint: the local answer is
-  covered and the side map is subsumed.
+  A post-solution covers the local answer and subsumes every emitted side
+  contribution.
 \<close>
 lemma part_post_solution_imp_se_constraint_holds:
   assumes "part_post_solution T x \<sigma> vars" and "u \<in> vars"
@@ -869,10 +916,9 @@ lemma part_post_solution_imp_se_constraint_holds:
   using assms unfolding se_constraint_holds_def by auto
 
 text \<open>
-  The reverse decomposition: @{const part_post_solution} is precisely
-  well-foundedness of the local dependencies plus the paper constraint holding at
-  every unknown.  This is the sense in which @{const se_constraint_holds}
-  specialises the post-fixpoint shape to a single unknown.
+  @{const part_post_solution} decomposes into well-founded local dependencies and
+  the side-effecting constraint at every unknown.  @{const se_constraint_holds}
+  isolates the per-unknown post-fixpoint obligation.
 \<close>
 lemma part_post_solution_iff_se_constraint_holds:
   "part_post_solution T x \<sigma> vars \<longleftrightarrow>
@@ -880,11 +926,9 @@ lemma part_post_solution_iff_se_constraint_holds:
   unfolding se_constraint_holds_def by auto
 
 text \<open>
-  The paper constraint bounds the reassembled full post-state @{const etf_full} by
-  the local unknown joined with the global environment (the read
-  @{term \<open>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<close>}, later named @{text side_env}).  This is the
-  effectful reading of equation (1): once the side map is subsumed, the total of
-  the tree's contributions is below the flow-insensitive global value.
+  Once the side map is subsumed, the reassembled post-state @{const etf_full} is
+  bounded by the local unknown joined with @{const glob_env}.  The latter collects
+  the flow-insensitive global contributions visible to the traversal.
 \<close>
 lemma se_constraint_holds_imp_etf_full_le_env:
   fixes t :: "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"

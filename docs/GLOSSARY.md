@@ -1,92 +1,80 @@
 # Glossary
 
-Project-specific terms, grounded in the `.thy` sources. Each entry names where
-the term is defined so it can be checked against the code, not memory.
+The source theories are authoritative. File references identify the defining
+layer without embedding line numbers that drift.
 
-## Pipeline shape
+## Source language
 
-`IMP AST -> CFG -> equation system -> TD solver -> sound abstract result -> mapped back`.
-The analyzer rides only on the side-effecting solver (`TD.TD_side`); soundness is
-stated against interprocedural CFG collecting semantics at every program point.
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `com` | Procedural command language: structured commands, calls, explicit returns, and internal restoration commands. | `src/IMP2/IMP2_Proc.thy` |
+| `proc_decl` | Procedure declaration containing formal parameters and a body. | `src/IMP2/IMP2_Proc.thy` |
+| `proc_table` | Partial map from procedure names to declarations. | `src/IMP2/IMP2_Proc.thy` |
+| `frame` | Saved caller store and optional return destination. | `src/IMP2/IMP2_Proc.thy` |
+| `pstep` / `psteps` | Small-step execution over a command, store, and activation-frame stack. | `src/IMP2/IMP2_Proc.thy` |
+| `pcompletes` | Terminating source execution with an empty frame stack. | `src/IMP2/IMP2_Proc.thy` |
+| `source_com` | Syntactic source-command restriction excluding runtime-only commands. | `src/IMP2/IMP2_Proc.thy` |
+| `wf_source_com` | Whole-program-aware command check for declared calls, arity, and reserved-variable exclusion. | `src/IMP2/IMP2_Proc.thy` |
+| `value_providing` | Conservative syntactic predicate: no fall-through or void return and at least one value return. | `src/IMP2/IMP2_Proc.thy` |
+| `wf_source_program` | Source contract for declarations, calls, returns, reserved variables, and a fall-through-only main. | `src/IMP2/IMP2_Proc.thy` |
+| `ret_var` | Reserved internal channel carrying an explicit return value during unwinding. | `src/IMP2/IMP2_Proc.thy` |
+| `enter_state` | Callee store with caller globals and fresh local variables. | `src/IMP2/IMP2_Globals.thy` |
+| `combine_states` | Restored caller locals combined with callee globals. | `src/IMP2/IMP2_Globals.thy` |
 
-## Languages and stores
+## Procedure-aware CFG
 
-| Term                                           | Meaning                                                                                                                                                 | Source                |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `com`                                          | The procedural IMP language used throughout: `SKIP`, `Assign`, `Seq`, `If`, `While`, `Scope`, `Call`, `Restore`. Not the intra-only datatype (retired). | `IMP2_Proc.thy:20`    |
-| `Scope`                                        | Local scope: save locals, restore on exit.                                                                                                              | `IMP2_Proc.thy`       |
-| `Call`                                         | Call a parameterless procedure from the table.                                                                                                          | `IMP2_Proc.thy`       |
-| `Restore`                                      | Runtime-only frame pop, restoring caller locals.                                                                                                        | `IMP2_Proc.thy`       |
-| `proc_table`                                   | `pname => com option` — procedure names to bodies.                                                                                                      | `IMP2_Proc.thy:31`    |
-| `frame`                                        | A caller's `store`, whose locals are restored on return.                                                                                                | `IMP2_Proc.thy:34`    |
-| `store`                                        | `vname => int` — concrete program state.                                                                                                                | `IMP2_Syntax.thy:26`  |
-| `pname`                                        | `string` — procedure name.                                                                                                                              | `IMP2_Globals.thy:17` |
-| `is_global` / `combine_states` / `enter_state` | Global-variable handling: globals survive scope entry; locals are reset.                                                                                | `IMP2_Globals.thy`    |
-| `pcompletes`                                     | Procedural completion: `proc_table => com => store => store => bool`; reaches `pfinal`. See `pcompletes_iff_small_termination`. | `IMP2_Proc.thy` |
-| `aval` / `bval`                                | Concrete arithmetic / boolean expression evaluation.                                                                                                    | `IMP2_Expr.thy`       |
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `cfg_node` | `Statement n`, `FunctionEntry p`, or `FunctionResult p`. | `src/CFG/CFG_Def.thy` |
+| `edge_action` | Local CFG transfer, including assignments, assumptions, no-op flow, and matching procedure returns. | `src/CFG/CFG_Def.thy` |
+| `intra` | Ordinary procedure-local CFG edges. | `src/CFG/CFG_Def.thy` |
+| `calls` | Call-site relation containing the call action, callee entry, and continuation. | `src/CFG/CFG_Def.thy` |
+| `wf_cfg` | Generic structural well-formedness conditions for a CFG. | `src/CFG/CFG_Def.thy` |
+| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/CFG/IMP2_Proc_to_CFG.thy` |
+| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/CFG/IMP2_Proc_to_CFG.thy` |
+| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/CFG/IMP2_Proc_to_CFG.thy` |
+| `compile_cert` | Compiler certificate exposing generated layout and ownership facts. | `src/CFG/Compiler/Compile_Certificate.thy` |
+| `wf_compile_input` | Canonical static contract for accepted source programs. | `src/CFG/Compiler/Compile_Invariants.thy` |
 
-## CFG layer
+## Activation-local semantics
 
-| Term                                    | Meaning                                                                                               | Source                                 |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `pp`                                    | Program point, `= nat`.                                                                               | `CFG_Def.thy:26`                       |
-| `cfg`                                   | A `(pp, edge_action) graph` record plus entry/exit and procedure wiring.                              | `CFG_Def.thy:67`                       |
-| `edge_action`                           | Edge label: `EA_Nop`, `EA_Assign`, `EA_Assume`, `EA_AssumeNot`, `EA_Enter`.                           | `CFG_Def.thy:38`                       |
-| `EA_Enter`                              | Call/scope entry: reset locals, keep globals.                                                         | `CFG_Def.thy`                          |
-| `mk_cfg` / `mk_cfg`                  | CFG constructors (intra / interprocedural).                                                           | `CFG_Def.thy:74,85`                    |
-| `offset_edges k`                        | Shift sub-command edges to offset `k > 0` when compiling compound CFGs; invisible to `edges_collect`. | `CFG_Def.thy:99`                       |
-| `predecessors` / `combine_predecessors` | Incoming edges / call-combine predecessors of a point.                                                | `CFG_Def.thy:117,130`                  |
-| `compile_prog`                          | Compile a program + procedure table into a `cfg`.                                                     | `IMP2_Proc_to_CFG.thy`                 |
-| `cfg_path`                              | Inductive predicate carrying actions along a path (needed for transfer-fn composition).               | `CFG_Path.thy:20`                      |
-| `cfg_prune`                             | Prune the CFG (exit reachability).                                                                    | `CFG_Prune.thy`                        |
-| `to_graphviz`                           | Emit DOT for a CFG (clusters per procedure region).                                                   | `CFG_GraphViz.thy:169`                 |
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
+| `ltr_collect_keyed` | Reachable sink stores grouped by an activation key. | `src/CFG/Collecting/LTR_Collect.thy` |
+| `activation_collect` | Sink stores indexed by activation context. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
 
-## Collecting semantics
+## Abstract interpretation
 
-| Term                                  | Meaning                                                                                   | Source                        |
-| ------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------- |
-| `cenv`                                | Collecting environment: program point to reachable store set.                             | `CFG_Collect_*`               |
-| `edges_collect`                       | Fold edge actions over a store set along a path.                                          | `CFG_Collect.thy`             |
-| `cfg_collect_F`                       | One-step collecting functional over ordinary edges and combine triples.                    | `CFG_Collect.thy`             |
-| `cfg_collect`                         | Interprocedural collecting semantics — the soundness target at every point.                | `CFG_Collect.thy`             |
-| `cfg_collect_trace`                | Trace-level IP collecting: covers partial and non-terminating behaviour, no final store.  | `CFG_Collect_Trace.thy:63` |
-| `cfg_runs_to`                         | Terminating IP runs correspond to exit reachability. Import `CFG_Collect_Runs` for it. | `CFG_Collect_Runs.thy`     |
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `abs_state` | Pointwise abstract variable environment. | `src/Analysis/Generic/Equations/Constraint_System.thy` |
+| `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Analysis/Generic/Domain/Abstract_Domain.thy` |
+| `domain_transfer` | Pure abstract transfers for CFG actions, entry, and return combination. | `src/Analysis/Generic/Equations/Constraint_System.thy` |
+| `effectful_domain_transfer` | Strategy-tree-producing transfers used by the side-effecting solver. | `src/Analysis/Generic/Equations/Constraint_System.thy` |
+| `rhs` | Equation right-hand side built from local-edge, entry, and return-combine contributions. | `src/Analysis/Generic/Equations/Constraint_System.thy` |
+| `is_post_fixpoint` | Abstract environment closed under every equation contribution. | `src/Analysis/Generic/Equations/Constraint_System.thy` |
+| `TD_side` | Vendored verified side-effecting top-down solver used by executable analyses. | `vendor/td-verification` |
 
-## Abstract domains
+## D/G framework
 
-| Term                              | Meaning                                                                              | Source                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| `abs_state`                       | Abstract program state: `vname => 'a` (pointwise order).                             | `Constraint_System.thy`                            |
-| `sound_domain` / `sound_transfer` | Semantic gamma-axioms a domain must satisfy; transfer-function soundness locale.     | `Abstract_Domain.thy`, `Constraint_System.thy:528` |
-| `sign`                            | Sign domain (`STop` concretizes both positive and negative).                         | `Sign_Domain.thy`                                  |
-| `ivl` / `eint`                    | Interval domain; extended integers `MinInf`/`Fin`/`PlusInf`.                         | `Interval_Domain.thy:21,50`                        |
-| `gamma_ivl`                       | Concretization of an interval to an `int set`.                                       | `Interval_Domain.thy:93`                           |
-| `widen` / `narrow`                | Widening / narrowing operators (termination of the fixpoint).                        | `Exec_St.thy:314,326`, `Interval_Domain.thy:195`   |
-| `domain_transfer` / `apply_tf`    | Record of transfer functions per edge action; its application.                       | `Constraint_System.thy:36,44`                      |
-| `st` / `st_rep`                   | Executable abstract-state representation (default + assoc list) for code generation. | `Exec_St.thy:31`                                   |
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Analysis/Generic/Solver/Context/DG/DG_Framework.thy` |
+| `G` | Analysis-chosen shared fact routed through global side effects. | `src/Analysis/Generic/Solver/Context/DG/DG_Framework.thy` |
+| `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Analysis/Generic/Solver/Context/DG/DG_Framework.thy` |
+| `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Analysis/Generic/Solver/Context/DG/DG_Framework.thy` |
+| `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Generic/Solver/Exec/Exec_DG_Bridge.thy` |
+| `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Analysis/Generic/Solver/Context/DG/DG_Soundness.thy` |
 
-## Equation system and solver
+## Source-facing endpoints
 
-| Term                                       | Meaning                                                                                 | Source                                            |
-| ------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `rhs` / `combine_abs`                      | Interprocedural RHS and the call-combine of abstract states.                            | `Constraint_System.thy`                           |
-| `is_post_fixpoint`                         | Soundness target: a post-fixpoint over-approximates the collecting semantics.           | `Constraint_System.thy`                           |
-| `TD` / `TD_side`                           | Vendored verified top-down solver; only the side-effecting variant is used.             | `vendor/td-verification`                          |
-| `effectful_domain_transfer` / `apply_etf`  | Native transfer record for TD_side: strategy-tree producers for edges and combines.     | `Constraint_System.thy`                           |
-| `side_env` / `side_analyse_eff`            | Side-solver environment and the effectful analysis entry point.                         | `TD_Side_CFG.thy`, `TD_Side_Eff_Interface.thy`    |
-| `glob_env_cmp` / `side_env_cmp`            | Context-compatible global read: join only the global slots compatible with the current context. | `Global_Cmp_Read.thy`                    |
-| `sound_effectful_transfer_framed`          | Strengthening of effectful transfer soundness with an enter upper bound by a fresh frame plus globals. | `Constraint_System.thy`, `Sign_Side_Soundness.thy` |
-| `side_cfg_T_eff_cmp`                       | Abstract keyed-global equation-system generator; the former executable `_st` bridge is retired. | `TD_Side_Eff_Cmp_Gen.thy` |
-| `td_cfg_side_solver_eff`                   | Locale wrapping the effectful side solver for CFG use.                                  | `TD_Side_Eff_Interface.thy`                       |
-| `restrict_local` / `restrict_global`       | Split an abstract state into local / global parts across a call.                        | `TD_Side_CFG.thy:25,29`                           |
-
-## Headline soundness theorems
-
-| Theorem                                                      | Claim                                                          | Source                                                             |
-| ------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `post_fixpoint_sound`                                     | A post-fixpoint soundly over-approximates `cfg_collect`.    | `Constraint_System_Sound.thy:208`                               |
-| `side_collect_sound_at_eff`                                  | The effectful side solver's result is sound at every program point. | `TD_Side_Eff_Pipeline.thy`                                 |
-| `side_collect_sound_exit_pruned_eff`                         | Soundness at the exit of the pruned CFG.                       | `TD_Side_Eff_Soundness.thy`                                     |
-| `side_sign_analysis_sound` / `side_ivl_analysis_sound`       | End-to-end soundness instantiated at sign / interval.          | `Sign_Side_Soundness.thy`, `Interval_Side_Soundness.thy` |
-| `trace_analysis_sound`                                    | Trace-level soundness covering partial / non-terminating runs. | `Trace_Analysis_Sound.thy:28`                                   |
-| `mixed_flow_analysis_sound` / `mixed_flow_analysis_optimal` | Trace-level mixed-flow soundness and TD_side least-partial-post-solution optimality. | `Mixed_Flow_Sound.thy` |
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Formalization/Pipeline/Source_Activation_Sound.thy` |
+| `dg_exec_run_source_sound` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Formalization/Pipeline/Run_Analysis_Sound.thy` |
+| `mixed_flow_analysis_sound` | Mixed local/global analysis soundness. | `src/Formalization/Pipeline/Mixed_Flow_Sound.thy` |

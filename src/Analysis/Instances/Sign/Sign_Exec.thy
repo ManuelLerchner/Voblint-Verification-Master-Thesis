@@ -9,13 +9,9 @@ instance sign :: bounded_warrowing ..
 
 
 text \<open>
-  The generic S4 effectful transport (\<open>Exec_Bridge.part_post_solution_st_to_abs_eff\<close>) is
-  parameterised over an executable transfer mirror \<open>tf_st\<close> with the commutation
-  hypothesis \<open>fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)\<close>.  This theory
-  discharges that obligation for the sign domain: \<open>sign_tf_st\<close> mirrors
-  \<open>apply_tf sign_tf\<close> at \<open>sign st\<close>, action by action, and \<open>sign_tf_st_commute\<close>
-  proves the commutation.  This is the single domain-specific piece of S4; every
-  other ingredient is generic in the value domain.
+  Executable transport requires the finite-map transfer to commute with its
+  abstract-state interpretation. The sign transfer proves this once, action by
+  action; the generic bridge supplies the remaining solver transport.
 \<close>
 
 lemma fun_of_st_update:
@@ -240,17 +236,23 @@ qed
 
 subsection \<open>Executable effectful transfer record\<close>
 
+text \<open>The named caller-entry transfer is shared by the effectful transfer record and the D/G
+  registration, so executable entry semantics has one implementation.\<close>
+definition sign_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> sign st \<Rightarrow> sign st" where
+  "sign_enter_st xs es s =
+     bind_formals_abs_st xs (map (\<lambda>e. aval_sign e (lookup_st s)) es) (enter_sign_st s)"
+
+lemma sign_enter_st_commute:
+  "fun_of_st (sign_enter_st xs es s) = tf_enter sign_tf xs es (fun_of_st s)"
+  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_frame_sign_st_commute)
+
 definition sign_etf_st :: "(unit, sign st) effectful_st_transfer" where
   "sign_etf_st = \<lparr>
     etf_st_nop        = unit_edge_tree_st (sign_tf_st EA_Nop),
     etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (sign_tf_st (EA_Assign x e))),
     etf_st_assume     = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_Assume b))),
     etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_AssumeNot b))),
-    etf_st_enter      =
-      (\<lambda>xs es. unit_edge_tree_st (\<lambda>s.
-        bind_formals_abs_st xs (map (\<lambda>e. aval_sign e (lookup_st s)) es)
-          (enter_sign_st s))),
-
+    etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st (sign_enter_st xs es)),
     etf_st_combine    = unit_combine_tree_st
   \<rparr>"
 
@@ -262,35 +264,14 @@ lemma sign_etf_st_combine_tree:
   "etf_combine_st sign_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
   unfolding sign_etf_st_def by simp
 
-
-
 lemma sign_etf_st_enter_tree:
-  "etf_st_enter sign_etf_st xs es u =
-    unit_edge_tree_st (\<lambda>s. bind_formals_abs_st xs
-      (map (\<lambda>e. aval_sign e (lookup_st s)) es) (enter_sign_st s)) u"
+  "etf_st_enter sign_etf_st xs es u = unit_edge_tree_st (sign_enter_st xs es) u"
   unfolding sign_etf_st_def by simp
 
 lemma sign_etf_st_enter_exists_unit:
   "\<And>u xs es. \<exists>f. etf_st_enter sign_etf_st xs es u = unit_edge_tree_st f u"
   using sign_etf_st_enter_tree by blast
 
-lemma sign_enter_st_commute:
-  "fun_of_st
-    (bind_formals_abs_st xs (map (\<lambda>e. aval_sign e (lookup_st s)) es)
-      (enter_sign_st s)) =
-    bind_formals_abs xs (map (\<lambda>e. aval_sign e (fun_of_st s)) es)
-      (enter_frame_sign (fun_of_st s))"
-  by (simp add: enter_frame_sign_st_commute)
-
-text \<open>Named executable caller-entry transfer and its \<^const>\<open>tf_enter\<close>-shaped commutation ---
-  the D/G registration endpoint's \<open>enter_st\<close> parameter (mirrors \<open>ivl_enter_st\<close>).\<close>
-definition sign_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> sign st \<Rightarrow> sign st" where
-  "sign_enter_st xs es s =
-     bind_formals_abs_st xs (map (\<lambda>e. aval_sign e (lookup_st s)) es) (enter_sign_st s)"
-
-lemma sign_enter_st_commute':
-  "fun_of_st (sign_enter_st xs es s) = tf_enter sign_tf xs es (fun_of_st s)"
-  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_frame_sign_st_commute)
 
 lemma sign_etf_st_exists_unit:
   "\<And>a u. \<exists>f. apply_etf_st sign_etf_st a u = unit_edge_tree_st f u"

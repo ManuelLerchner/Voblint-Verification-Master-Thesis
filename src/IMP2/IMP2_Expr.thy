@@ -2,16 +2,11 @@ theory IMP2_Expr
   imports IMP2_Syntax IMP2_Globals "HOL-IMP.AExp" "HOL-IMP.BExp" "HOL-IMP.Star"
 begin
 
-(*
-  IMP2 -- expression evaluation.
+section \<open>Expression evaluation\<close>
 
-  aval/bval evaluate the IMP2 expression extensions, delegating
-  BaseN/BaseB to Nipkow's HOL-IMP AExp/BExp.
-
-  The actual small-step relation `pstep` lives in IMP2_Proc.thy;
-  this module is expression evaluation only.  `HOL-IMP.Star` is
-  re-exported here so `pstep`'s `star` closure resolves downstream.
-*)
+text \<open>The extended evaluators delegate wrapped base expressions to the imported
+  arithmetic and Boolean evaluators. This theory also re-exports the reflexive-transitive
+  closure used by the procedure small-step relation.\<close>
 
 (* -- Expression Evaluation -------------------------------------- *)
 

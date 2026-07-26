@@ -10,4 +10,4 @@ so this session builds without the slow codegen/`value` runs.
 | --- | --- |
 | `Pipeline/Mixed_Flow_Sound.thy` | mixed flow-sensitive soundness and optimality |
 | `Pipeline/Compiler_Correctness.thy` | source-to-CFG compiler simulation lifting collecting soundness to IMP2 source runs |
-| `Pipeline/Source_Activation_Sound.thy` | recursive source-adequacy bridge into `cfg_collect_ctx_act` |
+| `Pipeline/Source_Activation_Sound.thy` | source-adequacy bridge into activation-indexed collecting semantics |

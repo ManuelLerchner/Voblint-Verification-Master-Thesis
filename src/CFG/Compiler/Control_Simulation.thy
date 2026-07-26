@@ -1295,6 +1295,14 @@ text \<open>The runtime invariant: the active command is \<^const>\<open>ret_gua
 definition source_wf :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
   "source_wf cfg \<longleftrightarrow> (case cfg of (c, s, frs) \<Rightarrow> ret_guarded False c)"
 
+text \<open>A well-formed root command establishes the runtime return guard because it contains
+  neither runtime markers nor a source return.\<close>
+lemma source_com_no_return_source_wf:
+  assumes "source_com c" and "no_return c"
+  shows "source_wf (c, s, frs)"
+  using assms
+  unfolding source_wf_def
+  by (induction c) (auto split: if_splits)
 
 text \<open>Base discharge: a \<^const>\<open>source_com\<close> active command of a \<open>source_wf\<close> configuration never heads with
   \<^const>\<open>Return\<close>.  In \<open>csim_step\<close> the \<open>Base\<close> case supplies \<^const>\<open>source_com\<close> (a located residual),
@@ -1376,8 +1384,9 @@ lemma control_at_not_returning:
   "control_at \<Pi> p c0 n r v \<Longrightarrow> \<not> is_returning r"
   by (induction rule: control_at.induct) auto
 
-text \<open>Both frame-pop classifiers refine \<open>is_returning\<close>: the deep lift depends only on this stable
-  classifier, not on the recursive \<open>unwinding\<close> / \<open>pop_ready\<close> shapes.\<close>
+text \<open>\<open>is_returning\<close> classifies the active head.  The \<open>unwinding\<close> and
+  \<open>pop_ready\<close> predicates refine that class with the nested residual shape needed by frame-pop
+  proofs; they deliberately overlap instead of forming a phase partition.\<close>
 lemma unwinding_is_returning: "unwinding u \<Longrightarrow> is_returning u"
   by (induction u rule: unwinding.induct) auto
 

@@ -8,31 +8,15 @@ definition dot_main_name :: pname where
   "dot_main_name = ''main''"
 
 text \<open>
-  Two @{const compile_prog} demos exported via @{const raw_cfg_dot_lit}.
-  These are structural CFG witnesses; annotated DOT requires an executable analysis
-  result (see the sign executable examples).
+  Two @{const compile_prog} results are exported through @{const raw_cfg_dot_lit}.
+  The first graph has one procedure call.  The second has two procedures selected by
+  a conditional in main.
 
-  @verbatim\<open>
-  Example A (simple):
-    proc p { Gx := Gx + 1 }
-    main { call p }
-
-  Example B (multi-procedure, conditional calls):
-    proc p { Gx := Gx + 1 }
-    proc q { Gy := Gy + 1 }
-    main {
-      if Gx < Gy then call p else call q
-    }
-  \<close>
-
-  Visual legend (see also docs/GraphViz-improvements.md):
-  green double circle = program entry/exit;
-  green box = procedure entry (target of @{term EA_Enter});
-  red box = procedure exit (middle of a @{term combines} triple);
-  purple thick edge = enter; dashed blue = combine.
+  Green double circles mark procedure entries.  Red double circles mark procedure
+  results.  Purple solid edges enter callees; dashed blue edges resume callers.
 \<close>
 
-(* -- Example A: single call -------------------------------------- *)
+subsection \<open>Single call\<close>
 
 definition proc_p_body :: com where
   "proc_p_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
@@ -46,7 +30,7 @@ definition prog_call_p :: com where
 definition procs_a :: "pname list" where
   "procs_a = [''p'']"
 
-(* -- Example B: two procedures + branch -------------------------- *)
+subsection \<open>Conditional calls to two procedures\<close>
 
 definition proc_q_body :: com where
   "proc_q_body = imp \<lbrakk> Gy := Gy + 1 \<rbrakk>"
@@ -60,7 +44,7 @@ definition prog_if_calls :: com where
 definition procs_b :: "pname list" where
   "procs_b = [''p'', ''q'']"
 
-(* -- DOT output -------------------------------------------------- *)
+subsection \<open>DOT output\<close>
 
 subsection \<open>DOT output\<close>
 

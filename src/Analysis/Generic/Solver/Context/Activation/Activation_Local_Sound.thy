@@ -5,18 +5,13 @@ begin
 section \<open>Soundness of the activation-local context collecting\<close>
 
 text \<open>
-  The context-sensitive soundness engine, obtained as a projection of the domain-free interface
-  \<^locale>\<open>ltr_gamma\<close> (\<^theory>\<open>Voblint_CFG.LTR_Abstract\<close>).  It discharges the same four semantic
-  obligations as \<open>activation_collect_sound\<close> (\<open>ENTRY_G\<close>, \<open>EDGE\<close>, \<open>SEED_G\<close>, \<open>COMB\<close>), with one
-  reshape: because the resumed activation keeps its creation context, a return is checked at the
-  CALLER context \<open>c1\<close> rather than at a \<open>combc\<close>-combined context.  That reshape --- and the callee
-  slot read at an \<open>enterc\<close>-routed context via \<open>callee_entry_invariant\<close> --- is now the
-  locale's \<open>COMB\<close> / \<open>return_closed\<close> obligation, so this theory only instantiates the interface
-  rather than re-running the \<^const>\<open>valid_ltr\<close> induction.
+  The \<^locale>\<open>ltr_gamma\<close> interface turns four local closure obligations into
+  context-sensitive trace soundness.  A resumed activation keeps its creation context, so
+  combine closure checks the caller at that context and reads the callee result at the context
+  selected by \<open>enterc\<close>.
 
-  This theory provides the domain-level engine \<open>valid_ltr_ctx_sound\<close>; the public
-  \<open>activation_collect_sound\<close> (in \<open>Activation_Backbone\<close>) is the set-level projection over
-  \<^const>\<open>activation_collect\<close>, proved by one line from it.
+  \<open>valid_ltr_ctx_sound\<close> is the domain-level engine.  Its set-level projection yields soundness
+  for \<^const>\<open>activation_collect\<close> without repeating the trace induction.
 \<close>
 
 subsection \<open>The abstract interface at the domain concretization\<close>

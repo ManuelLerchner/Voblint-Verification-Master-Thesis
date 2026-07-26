@@ -20,11 +20,10 @@ text \<open>
 
 subsection \<open>The semantic context route and the abstract solution projection\<close>
 
-text \<open>The concrete (semantic) context selection, forced Goblint-faithfully: a call
-  enters the context that is the point abstraction of the callee formal in the
-  \<^emph>\<open>entered\<close> store; the return resumes the caller context; the root context is \<open>bot\<close>.
-  \<open>ivl_ctx_sg\<close> reads the routed solution's local slot joined with its real-global
-  slot --- the single \<^typ>\<open>ivl abs_state\<close> that \<open>activation_collect_sound\<close> wants.\<close>
+text \<open>A call selects the point abstraction of the callee formal in the entered
+  store. Returns resume the caller context, and the root uses @{const bot}.
+  \<open>ivl_ctx_sg\<close> joins the routed local slot with the shared global slot expected by
+  @{thm activation_collect_sound}.\<close>
 
 definition ivl_enterc :: "ivl \<Rightarrow> store \<Rightarrow> ivl" where
   "ivl_enterc ctx s = ivl_decode (s ''p'')"
@@ -138,8 +137,8 @@ lemma main_first_stmt_is_call:
 subsection \<open>Solved-domain closure facts\<close>
 
 text \<open>\<^bold>\<open>Forward closure along intra edges.\<close>  Every \<^const>\<open>intra\<close> successor of a solved node
-  stays solved \<^emph>\<open>at the same context\<close>.  No \<open>is_enter_action\<close> side condition is needed: an
-  \<^const>\<open>intra\<close> edge can no longer denote a call, by typing.  This is not a generic solver
+  stays solved \<^emph>\<open>at the same context\<close>.  No \<open>is_enter_action\<close> side condition is needed because
+  \<^const>\<open>intra\<close> and call edges have distinct types.  This is not a generic solver
   invariant --- it holds because every \<open>twice\<close> node reaches the exit, so the exit query's
   backward cone materialises the whole intra-context chain.  It is a decidable closed check
   over the finite solved domain and the finite edge set (\<^bold>\<open>all\<close> solved contexts, not the two
@@ -195,14 +194,9 @@ qed
 
 subsection \<open>Shared-global regression facts\<close>
 
-text \<open>
-  \<^bold>\<open>Regression: real globals are shared, not context-indexed.\<close>  The reader combines
-  context-sensitive locals \<open>\<sigma> (Inl (v, ctx))\<close> with the \<^emph>\<open>single\<close> shared global slot
-  \<open>\<sigma> (Inr Global)\<close> --- the same slot for every context (\<open>gkey = (\<lambda>_. Global)\<close>),
-  matching Goblint's flow-insensitive globals.  The initial global value \<open>0\<close> is present
-  at \<open>Global\<close> and is read identically under the main context and both callee contexts,
-  so the entered store's preserved globals are covered without copying global state into
-  any callee context.\<close>
+text \<open>The reader combines context-sensitive locals with one shared global slot.
+  The initial global value @{text 0} is therefore identical in the root and both callee
+  contexts, without copying global state into context-indexed unknowns.\<close>
 
 lemma global_init_present:
   "lookup_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = Ivl (Fin 0) (Fin 0)"
@@ -488,8 +482,8 @@ text \<open>\<^bold>\<open>COMB.\<close>  A return combine soundly resumes the c
   empty premise; covered caller \<Rightarrow> the call site is \<open>main\<close> (context \<open>bot\<close>), the callee
   exit context is the routed \<open>ctx_call1\<close> / \<open>ctx_call2\<close> (\<open>comb_route\<close>, forced by
   \<^const>\<open>call_enter_store\<close>), and \<open>combine_membership\<close> discharges each from the executable
-  combine bound.  The impossible pairing (return of call 1 with the callee at
-  \<open>ctx_call2\<close>) is not a real activation return and is no longer a required case.\<close>
+  combine bound.  A return from call 1 cannot use the callee activation at
+  \<open>ctx_call2\<close> because the structural caller link fixes the matching activation.\<close>
 lemma ivl_ctx_sg_comb:
   assumes c: "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls twice_cfg"
     and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"

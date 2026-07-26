@@ -5,15 +5,13 @@ begin
 section \<open>Located control inside a compiled procedure fragment\<close>
 
 text \<open>
-  \<open>control_at \<Pi> p c n residual v\<close> relates a source runtime residual command to the CFG node
-  it currently sits at, inside the fragment obtained by \<open>compile \<Pi> p c n\<close> (procedure \<open>p\<close>,
-  source original command \<open>c\<close>, base counter \<open>n\<close>).  It is a pure control relation: it fixes the
-  node, not the store; store agreement is a separate simulation-stage concern.
+  \<open>control_at \<Pi> p c n residual v\<close> locates a runtime residual at node \<open>v\<close> inside the
+  fragment compiled from command \<open>c\<close> of procedure \<open>p\<close> at base counter \<open>n\<close>.  The relation
+  describes control only; the simulation states store agreement separately.
 
-  The relation covers one activation's control.  A \<^const>\<open>Call\<close> crosses into a different
-  procedure fragment; \<open>control_at\<close> for the call fragment records only the call site and the
-  post-return continuation node, while the callee body is located by \<open>control_at\<close> for the
-  callee, tied to the caller through the activation stack of the located executor \<open>cstep\<close>.
+  A call crosses procedure fragments.  The caller fragment records its call site and
+  continuation, while the callee fragment locates the callee body.  The activation stack of
+  \<open>cstep\<close> connects both locations.
 \<close>
 
 subsection \<open>The compiled entry node is the base counter\<close>
@@ -126,19 +124,16 @@ lemma control_at_node_stmt:
 
 subsection \<open>Normal completion is located at the fragment exit\<close>
 
-text \<open>A source command whose body can fall through (contains no \<^const>\<open>Return\<close> on the
-  completing path) is, once reduced to \<^const>\<open>SKIP\<close>, located at the fragment's normal-exit
-  node.  The lemma is stated for the shapes the fall-through example needs.\<close>
+text \<open>A falling-through assignment reduced to \<^const>\<open>SKIP\<close> is located at the fragment's
+  normal-exit node.  Composite commands use the path characterization below.\<close>
 lemma control_at_done_Assign:
   "control_at \<Pi> p (Assign x a) n SKIP (Statement (Suc n))"
   by (rule control_at.AssignDone)
 
 text \<open>
-  The general form.  A completed residual is not in general located \<^emph>\<open>at\<close> the fragment exit:
-  \<open>control_at.IfLeft\<close> leaves it at the taken branch's exit, one \<^const>\<open>EA_Nop\<close> short of the
-  join.  What does hold is that it \<^emph>\<open>reaches\<close> the exit along intra flow, and that every edge
-  crossed on the way is store-preserving --- the join edges the compiler emits are literally
-  \<^const>\<open>EA_Nop\<close>, so \<open>s\<close> is the same at both ends.
+  A completed residual may remain at a taken branch's exit, one \<^const>\<open>EA_Nop\<close> edge before
+  the fragment join.  It reaches the normal exit through store-preserving join edges, so the
+  store agrees at both ends of the path.
 \<close>
 
 lemma compile_control_at_SKIP_exit_path:

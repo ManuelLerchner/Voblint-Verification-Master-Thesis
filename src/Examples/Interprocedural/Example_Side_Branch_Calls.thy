@@ -140,7 +140,7 @@ lemma ec_r_pos:
 text \<open>
   Precision summary.
 
-  \<^bold>\<open>What the analysis now computes (C-faithful seed + 7-element lattice):\<close>
+  \<^bold>\<open>Computed result with the concrete-faithful seed and seven-element lattice:\<close>
 
   \<^item> \<open>Ginput = STop\<close>: writes \<open>5\<close> and \<open>-3\<close> have opposite signs; their join is
     \<open>STop\<close> regardless of the seed.
@@ -152,15 +152,15 @@ text \<open>
 
   \<^item> \<open>Gout = SNonNeg\<close>: \<open>SPos * SNonNeg = SNonNeg\<close>, joined against \<open>SZero\<close>.
 
-  \<^bold>\<open>Remaining precision gap:\<close>
+  \<^bold>\<open>Precision limitation:\<close>
 
   \<open>SNonNeg\<close> includes \<open>0\<close>, so the analysis cannot certify \<open>Gresult \<noteq> 0\<close> -- the
-  check needed to justify the original \<open>100 / Gresult\<close>.  That would require
+  check needed to justify a division such as \<open>100 / Gresult\<close>.  That would require
   knowing \<open>Gresult\<close> is strictly positive (\<open>SPos\<close>), which in turn requires
   knowing the initial write of \<open>0\<close> is overwritten before the exit (flow
   sensitivity on globals, not modelled here).
 
-  \<^bold>\<open>What stays precise:\<close>
+  \<^bold>\<open>Local precision:\<close>
 
   The local variable @{text "x"} inside @{term compute} is analysed flow-sensitively.
   On the then-branch @{text "x = 1 + 1 = 2"} and on the else-branch @{text "x = 1 + 2 = 3"};

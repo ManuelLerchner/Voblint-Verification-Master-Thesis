@@ -4,22 +4,11 @@ begin
 
 section \<open>Side-effecting solver keeps \<open>Inr\<close> slots globally restricted\<close>
 
-text \<open>
-  Domain-generic addition to the vendored \<open>always_join\<close> side solver
-  (@{theory TD.TD_side_upd_rule}).  For any equation system whose reachable \<open>Side\<close>
-  contributions are all \<open>restrict_global_st\<close>-shaped (\<open>side_rg\<close>), the solver keeps
-  every global slot \<open>Inr g\<close> \<open>restrict_global_st\<close>-shaped: it starts from \<open>bot\<close> and
-  only ever joins such contributions, and the shape is closed under join
-  (\<open>restrict_global_st_sup_restrict_global_st\<close>).
-
-  This yields \<open>inr_slot_locals_bot\<close> for the executable solution without appealing
-  to leastness, which \<open>always_join\<close> does not provide.  Nothing here is
-  \<open>sign\<close>-specific; it is stated over an arbitrary @{typ \<open>'a::bounded_warrowing st\<close>}
-  equation system.  It is kept in its own theory so that a breaking change in the
-  vendored solver is easy to localise.  It is not pushed upstream because the
-  invariant is phrased through \<open>restrict_global_st\<close>, our domain-side projection,
-  rather than an abstract idempotent join-endomorphism.
-\<close>
+text \<open>If every reachable side contribution is fixed by
+  @{const restrict_global_st}, the solver keeps every global slot in that image: slots
+  start at bottom, joins preserve the image, and only such contributions reach them.
+  This yields \<open>inr_slot_locals_bot\<close> without a least-solution argument. The proof is
+  domain-generic but intentionally phrased at the executable bridge's state projection.\<close>
 
 definition rg_val :: "('a::bot) st \<Rightarrow> bool" where
   "rg_val d \<longleftrightarrow> restrict_global_st d = d"

@@ -2,7 +2,7 @@ theory Exec_Bridge
   imports Exec_St TD_Side_Eff_Bounds TD_Side_RHS_Generator Constraint_System
 begin
 
-section \<open>S4 bridge: fun_of_st homomorphisms and executable equation-system transport\<close>
+section \<open>Executable equation-system refinement\<close>
 
 text \<open>
   Generic (domain-agnostic) bridge between executable st side-effecting equation
@@ -42,7 +42,7 @@ lemma restrict_global_st_combine_abs_st [simp]:
   "restrict_global_st (combine_abs_st A B) = restrict_global_st B"
   by (simp add: combine_abs_st_def fun_of_st_inject restrict_global_combine_eq)
  
-(* Split lemmas for combine_abs_st projections used by effectful executable trees. *)
+text \<open>Effectful executable trees use these projection identities to split combined states.\<close>
 lemma restrict_local_st_split [simp]:
   "restrict_local_st (restrict_local_st A \<squnion> restrict_global_st B) = restrict_local_st A"
   by (simp add: combine_abs_st_def[symmetric])
@@ -92,8 +92,8 @@ where
 subsection \<open>Unit-global executable effectful trees\<close>
 
 text \<open>
-  Executable counterparts of @{const unit_edge_tree} and @{const unit_combine_tree}
-  from @{theory Voblint_Analysis.TD_Side_CFG}, with payloads at @{typ "'a st"}.
+  The executable edge and combine trees preserve the unit-global routing shape
+  while representing abstract states with @{typ "'a st"}.
 \<close>
 
 definition unit_edge_tree_st ::
@@ -281,7 +281,19 @@ qed
 
 subsection \<open>Effectful executable fold\<close>
 
-fun side_acc_eff_st ::
+definition side_contribution_trees_st ::
+  "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
+   \<Rightarrow> (pp \<times> edge_action) list
+   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname option \<times> pp) list
+   \<Rightarrow> (pp, 'g, 'a st) strategy_tree list"
+where
+  "side_contribution_trees_st etf es ens cs =
+     map (\<lambda>(u, a). apply_etf_st etf a u) es @
+     map (\<lambda>(cl, fs, as). etf_st_enter etf fs as cl) ens @
+     map (\<lambda>(cc, dst, ex). etf_combine_st etf dst cc ex) cs"
+
+definition side_acc_eff_st ::
   "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
    \<Rightarrow> 'a st
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a st)
@@ -289,17 +301,10 @@ fun side_acc_eff_st ::
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a st"
 where
-  "side_acc_eff_st etf acc \<sigma> [] [] [] = acc"
-| "side_acc_eff_st etf acc \<sigma> ((u, a) # ps) ens cs =
-     side_acc_eff_st etf (acc \<squnion> traverse_rhs (apply_etf_st etf a u) \<sigma>) \<sigma> ps ens cs"
-| "side_acc_eff_st etf acc \<sigma> [] ((cl, fs, as) # ens) cs =
-     side_acc_eff_st etf
-       (acc \<squnion> traverse_rhs (etf_st_enter etf fs as cl) \<sigma>) \<sigma> [] ens cs"
-| "side_acc_eff_st etf acc \<sigma> [] [] ((cc, dst, ex) # cs) =
-     side_acc_eff_st etf
-       (acc \<squnion> traverse_rhs (etf_combine_st etf dst cc ex) \<sigma>) \<sigma> [] [] cs"
+  "side_acc_eff_st etf acc \<sigma> es ens cs =
+     fold_rhs_values acc \<sigma> (side_contribution_trees_st etf es ens cs)"
 
-fun side_rhs_fold_eff_st ::
+definition side_rhs_fold_eff_st ::
   "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
    \<Rightarrow> 'a st
    \<Rightarrow> (pp \<times> edge_action) list
@@ -307,16 +312,31 @@ fun side_rhs_fold_eff_st ::
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a st) strategy_tree"
 where
+  "side_rhs_fold_eff_st etf acc es ens cs =
+     fold_rhs_trees acc (side_contribution_trees_st etf es ens cs)"
+
+lemma side_acc_eff_st_simps [simp]:
+  "side_acc_eff_st etf acc \<sigma> [] [] [] = acc"
+  "side_acc_eff_st etf acc \<sigma> ((u, a) # es) ens cs =
+     side_acc_eff_st etf (acc \<squnion> traverse_rhs (apply_etf_st etf a u) \<sigma>) \<sigma> es ens cs"
+  "side_acc_eff_st etf acc \<sigma> [] ((cl, fs, as) # ens) cs =
+     side_acc_eff_st etf (acc \<squnion> traverse_rhs (etf_st_enter etf fs as cl) \<sigma>) \<sigma> [] ens cs"
+  "side_acc_eff_st etf acc \<sigma> [] [] ((cc, dst, ex) # cs) =
+     side_acc_eff_st etf (acc \<squnion> traverse_rhs (etf_combine_st etf dst cc ex) \<sigma>) \<sigma> [] [] cs"
+  by (simp_all add: side_acc_eff_st_def side_contribution_trees_st_def)
+
+lemma side_rhs_fold_eff_st_simps [simp]:
   "side_rhs_fold_eff_st etf acc [] [] [] = Answer acc"
-| "side_rhs_fold_eff_st etf acc ((u, a) # ps) ens cs =
+  "side_rhs_fold_eff_st etf acc ((u, a) # es) ens cs =
      seqcomp_tree (apply_etf_st etf a u)
-       (\<lambda>res. side_rhs_fold_eff_st etf (acc \<squnion> res) ps ens cs)"
-| "side_rhs_fold_eff_st etf acc [] ((cl, fs, as) # ens) cs =
+       (\<lambda>res. side_rhs_fold_eff_st etf (acc \<squnion> res) es ens cs)"
+  "side_rhs_fold_eff_st etf acc [] ((cl, fs, as) # ens) cs =
      seqcomp_tree (etf_st_enter etf fs as cl)
        (\<lambda>res. side_rhs_fold_eff_st etf (acc \<squnion> res) [] ens cs)"
-| "side_rhs_fold_eff_st etf acc [] [] ((cc, dst, ex) # cs) =
+  "side_rhs_fold_eff_st etf acc [] [] ((cc, dst, ex) # cs) =
      seqcomp_tree (etf_combine_st etf dst cc ex)
        (\<lambda>res. side_rhs_fold_eff_st etf (acc \<squnion> res) [] [] cs)"
+  by (simp_all add: side_rhs_fold_eff_st_def side_contribution_trees_st_def)
 
 definition make_side_rhs_tree_eff_st ::
   "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
@@ -336,14 +356,21 @@ definition side_cfg_T_eff_st ::
 where
   "side_cfg_T_eff_st g etf bot0_st s0_st gseed = make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed"
 
+lemma side_rg_fold_rhs_trees:
+  assumes "\<And>t. t \<in> set ts \<Longrightarrow> side_rg t"
+  shows "side_rg (fold_rhs_trees acc ts)"
+  using assms
+  by (induction ts arbitrary: acc) (auto intro: side_rg_seqcomp)
+
 lemma side_rg_side_rhs_fold_eff_st:
   assumes "\<And>a u. side_rg (apply_etf_st etf a u)"
     and "\<And>cl fs as. side_rg (etf_st_enter etf fs as cl)"
     and "\<And>cc ex dst. side_rg (etf_combine_st etf dst cc ex)"
   shows "side_rg (side_rhs_fold_eff_st etf acc es ens cs)"
-  using assms
-  by (induction etf acc es ens cs rule: side_rhs_fold_eff_st.induct)
-     (auto intro: side_rg_seqcomp)
+  unfolding side_rhs_fold_eff_st_def
+  apply (rule side_rg_fold_rhs_trees)
+  unfolding side_contribution_trees_st_def
+  using assms by (auto split: prod.splits)
 
 lemma side_rg_make_side_rhs_tree_eff_st:
   assumes "\<And>a u. side_rg (apply_etf_st etf a u)"
@@ -356,8 +383,8 @@ lemma side_rg_make_side_rhs_tree_eff_st:
 lemma traverse_side_rhs_fold_eff_st:
   "traverse_rhs (side_rhs_fold_eff_st etf acc es ens cs) \<sigma>_st =
    side_acc_eff_st etf acc \<sigma>_st es ens cs"
-  by (induction etf acc es ens cs rule: side_rhs_fold_eff_st.induct)
-     (simp_all add: traverse_seqcomp)
+  unfolding side_rhs_fold_eff_st_def side_acc_eff_st_def
+  by (rule traverse_fold_rhs_trees)
 
 lemma eq_side_cfg_T_eff_st:
   "eq (side_cfg_T_eff_st g etf bot0_st s0_st gseed) v \<sigma>_st =
@@ -368,6 +395,59 @@ lemma eq_side_cfg_T_eff_st:
   by (simp add: traverse_side_rhs_fold_eff_st Let_def)
 
 subsection \<open>Tree denotation commutation for folds\<close>
+
+
+lemma side_contribution_trees_rel:
+  assumes edge: "\<And>u a. (u, a) \<in> set es \<Longrightarrow>
+      R (apply_etf_st etf_st a u) (apply_etf etf a u)"
+    and enter: "\<And>cl fs as. (cl, fs, as) \<in> set ens \<Longrightarrow>
+      R (etf_st_enter etf_st fs as cl) (etf_enter etf fs as cl)"
+    and combine: "\<And>cc dst ex. (cc, dst, ex) \<in> set cs \<Longrightarrow>
+      R (etf_combine_st etf_st dst cc ex) (etf_combine etf dst cc ex)"
+  shows "list_all2 R
+      (side_contribution_trees_st etf_st es ens cs)
+      (side_contribution_trees etf es ens cs)"
+proof -
+  have edges: "list_all2 R
+      (map (\<lambda>(u, a). apply_etf_st etf_st a u) es)
+      (map (\<lambda>(u, a). apply_etf etf a u) es)"
+    using edge by (induction es) (auto split: prod.splits)
+  have entries: "list_all2 R
+      (map (\<lambda>(cl, fs, as). etf_st_enter etf_st fs as cl) ens)
+      (map (\<lambda>(cl, fs, as). etf_enter etf fs as cl) ens)"
+    using enter by (induction ens) (auto split: prod.splits)
+  have combines: "list_all2 R
+      (map (\<lambda>(cc, dst, ex). etf_combine_st etf_st dst cc ex) cs)
+      (map (\<lambda>(cc, dst, ex). etf_combine etf dst cc ex) cs)"
+    using combine by (induction cs) (auto split: prod.splits)
+  have suffix: "list_all2 R
+      (map (\<lambda>(cl, fs, as). etf_st_enter etf_st fs as cl) ens @
+       map (\<lambda>(cc, dst, ex). etf_combine_st etf_st dst cc ex) cs)
+      (map (\<lambda>(cl, fs, as). etf_enter etf fs as cl) ens @
+       map (\<lambda>(cc, dst, ex). etf_combine etf dst cc ex) cs)"
+    by (rule list_all2_appendI[OF entries combines])
+  show ?thesis
+    unfolding side_contribution_trees_st_def side_contribution_trees_def
+    by (rule list_all2_appendI[OF edges suffix])
+qed
+lemma fold_rhs_values_fun_of_st:
+  assumes rel: "list_all2
+    (\<lambda>t_st t. \<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
+                         traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) ts_st ts"
+  shows "fun_of_st (fold_rhs_values acc_st \<sigma>_st ts_st) =
+         fold_rhs_values (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) ts"
+  using rel
+proof (induction arbitrary: acc_st)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t_st ts_st t ts)
+  have head: "fun_of_st (traverse_rhs t_st \<sigma>_st) =
+              traverse_rhs t (fun_of_st \<circ> \<sigma>_st)"
+    using Cons.hyps(1) by blast
+  show ?case
+    by (simp add: fun_of_st_sup head Cons.IH sup_fun_def comp_def)
+qed
 
 lemma side_acc_eff_st_fun_of_st:
   fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
@@ -383,82 +463,106 @@ lemma side_acc_eff_st_fun_of_st:
                 = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
   shows "fun_of_st (side_acc_eff_st etf_st acc_st \<sigma>_st es ens cs) =
          side_acc_eff etf (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) es ens cs"
-  using assms by (induction etf_st acc_st \<sigma>_st es ens cs rule: side_acc_eff_st.induct)
-     (simp_all add: fun_of_st_sup tr_edge tr_enter tr_comb)
+proof -
+  have trees: "list_all2
+      (\<lambda>t_st t. \<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
+                           traverse_rhs t (fun_of_st \<circ> \<sigma>_st))
+      (side_contribution_trees_st etf_st es ens cs)
+      (side_contribution_trees etf es ens cs)"
+    apply (rule side_contribution_trees_rel)
+      subgoal using tr_edge by blast
+      subgoal using tr_enter by blast
+      subgoal using tr_comb by blast
+    done
+  show ?thesis
+    unfolding side_acc_eff_st_def side_acc_eff_def
+    by (rule fold_rhs_values_fun_of_st[OF trees])
+qed
+
+lemma sides_fold_rhs_trees_acc_indep:
+  "sides_of_rhs (fold_rhs_trees acc1 ts) \<sigma> =
+   sides_of_rhs (fold_rhs_trees acc2 ts) \<sigma>"
+proof (induction ts arbitrary: acc1 acc2)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t ts)
+  show ?case
+  proof (rule ext)
+    fix x
+    have rest:
+      "sides_of_rhs
+         (fold_rhs_trees (acc1 \<squnion> traverse_rhs t \<sigma>) ts) \<sigma> x =
+       sides_of_rhs
+         (fold_rhs_trees (acc2 \<squnion> traverse_rhs t \<sigma>) ts) \<sigma> x"
+      using Cons.IH[of "acc1 \<squnion> traverse_rhs t \<sigma>"
+                       "acc2 \<squnion> traverse_rhs t \<sigma>"]
+      by (rule fun_cong)
+    show "sides_of_rhs (fold_rhs_trees acc1 (t # ts)) \<sigma> x =
+          sides_of_rhs (fold_rhs_trees acc2 (t # ts)) \<sigma> x"
+      by (simp add: sides_of_rhs_seqcomp_at rest)
+  qed
+qed
 
 lemma sides_side_rhs_fold_eff_st_acc_indep:
   fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
   shows "sides_of_rhs (side_rhs_fold_eff_st etf_st acc1 es ens cs) \<sigma>
          = sides_of_rhs (side_rhs_fold_eff_st etf_st acc2 es ens cs) \<sigma>"
-proof (induction es arbitrary: acc1 acc2 ens cs)
-  case Nil
-  show ?case
-  proof (induction ens arbitrary: acc1 acc2 cs)
-    case Nil
-    show ?case
-    proof (induction cs arbitrary: acc1 acc2)
-      case Nil show ?case by simp
-    next
-      case (Cons x cs)
-      obtain cc dst ex where x: "x = (cc, dst, ex)" by (cases x)
-      have step: "sides_of_rhs (side_rhs_fold_eff_st etf_st
-                    (acc1 \<squnion> traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>) [] [] cs) \<sigma>
-                = sides_of_rhs (side_rhs_fold_eff_st etf_st
-                    (acc2 \<squnion> traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>) [] [] cs) \<sigma>"
-        by (rule Cons.IH)
-      show ?case unfolding x side_rhs_fold_eff_st.simps
-        using step by (simp add: sides_of_rhs_seqcomp)
-    qed
-  next
-    case (Cons x ens)
-    obtain cl fs as where x: "x = (cl, fs, as)" by (cases x)
-    have step: "sides_of_rhs (side_rhs_fold_eff_st etf_st
-                  (acc1 \<squnion> traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>) [] ens cs) \<sigma>
-              = sides_of_rhs (side_rhs_fold_eff_st etf_st
-                  (acc2 \<squnion> traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>) [] ens cs) \<sigma>"
-      by (rule Cons.IH)
-    show ?case unfolding x side_rhs_fold_eff_st.simps
-      using step by (simp add: sides_of_rhs_seqcomp)
-  qed
-next
-  case (Cons x es)
-  obtain u a where x: "x = (u, a)" by (cases x)
-  have step: "sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (acc1 \<squnion> traverse_rhs (apply_etf_st etf_st a u) \<sigma>) es ens cs) \<sigma>
-            = sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (acc2 \<squnion> traverse_rhs (apply_etf_st etf_st a u) \<sigma>) es ens cs) \<sigma>"
-    by (rule Cons.IH)
-  show ?case unfolding x side_rhs_fold_eff_st.simps
-    using step by (simp add: sides_of_rhs_seqcomp)
-qed
+  unfolding side_rhs_fold_eff_st_def
+  by (rule sides_fold_rhs_trees_acc_indep)
+
 
 lemma sides_eff_fold_st_edge_step:
   "sides_of_rhs (side_rhs_fold_eff_st etf_st acc ((u, a) # es) ens cs) \<sigma> gk
    = sides_of_rhs (apply_etf_st etf_st a u) \<sigma> gk
      \<squnion> sides_of_rhs (side_rhs_fold_eff_st etf_st acc es ens cs) \<sigma> gk"
-  by (metis (no_types, lifting) side_rhs_fold_eff_st.simps(2) sides_of_rhs_seqcomp_at
+  by (metis (no_types, lifting) side_rhs_fold_eff_st_simps(2) sides_of_rhs_seqcomp_at
       sides_side_rhs_fold_eff_st_acc_indep)
 
 lemma sides_eff_fold_st_enter_step:
   "sides_of_rhs (side_rhs_fold_eff_st etf_st acc [] ((cl, fs, as) # ens) cs) \<sigma> gk
    = sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma> gk
      \<squnion> sides_of_rhs (side_rhs_fold_eff_st etf_st acc [] ens cs) \<sigma> gk"
-  by (metis (no_types, lifting) side_rhs_fold_eff_st.simps(3) sides_of_rhs_seqcomp_at
+  by (metis (no_types, lifting) side_rhs_fold_eff_st_simps(3) sides_of_rhs_seqcomp_at
       sides_side_rhs_fold_eff_st_acc_indep)
 
 lemma sides_eff_fold_st_combine_step:
   "sides_of_rhs (side_rhs_fold_eff_st etf_st acc [] [] ((cc, dst, ex) # cs)) \<sigma> gk
    = sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma> gk
      \<squnion> sides_of_rhs (side_rhs_fold_eff_st etf_st acc [] [] cs) \<sigma> gk"
-  by (metis (no_types, lifting) side_rhs_fold_eff_st.simps(4) sides_of_rhs_seqcomp_at
+  by (metis (no_types, lifting) side_rhs_fold_eff_st_simps(4) sides_of_rhs_seqcomp_at
       sides_side_rhs_fold_eff_st_acc_indep)
+
+lemma fold_rhs_trees_sides_fun_of_st:
+  assumes rel: "list_all2
+    (\<lambda>t_st t. \<forall>\<sigma>_st gk. fun_of_st (sides_of_rhs t_st \<sigma>_st gk) =
+                            sides_of_rhs t (fun_of_st \<circ> \<sigma>_st) gk) ts_st ts"
+  shows "fun_of_st (sides_of_rhs (fold_rhs_trees acc_st ts_st) \<sigma>_st gk) =
+         sides_of_rhs (fold_rhs_trees acc ts) (fun_of_st \<circ> \<sigma>_st) gk"
+  using rel
+proof (induction arbitrary: acc_st acc)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t_st ts_st t ts)
+  have head: "fun_of_st (sides_of_rhs t_st \<sigma>_st gk) =
+              sides_of_rhs t (fun_of_st \<circ> \<sigma>_st) gk"
+    using Cons.hyps(1) by blast
+  have rest: "fun_of_st (sides_of_rhs
+        (fold_rhs_trees (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) ts_st) \<sigma>_st gk) =
+      sides_of_rhs (fold_rhs_trees (acc \<squnion> traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) ts)
+        (fun_of_st \<circ> \<sigma>_st) gk"
+    by (rule Cons.IH)
+  show ?case
+    by (simp add: sides_of_rhs_seqcomp_at fun_of_st_sup head rest comp_def)
+qed
 
 lemma side_rhs_fold_eff_st_sides_fun_of_st:
   fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes sd_edge:
     "\<And>a u \<sigma>_st gk. fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gk)
-               = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) gk"
+                = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) gk"
   assumes sd_enter:
     "\<And>cl fs as \<sigma>_st gk. fun_of_st (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gk)
                 = sides_of_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st) gk"
@@ -468,47 +572,58 @@ lemma side_rhs_fold_eff_st_sides_fun_of_st:
   shows "fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st acc es ens cs) \<sigma>_st gk)
          = sides_of_rhs (side_rhs_fold_eff etf (fun_of_st acc) es ens cs)
              (fun_of_st \<circ> \<sigma>_st) gk"
-using assms proof (induction es arbitrary: acc ens cs)
+proof -
+  have trees: "list_all2
+      (\<lambda>t_st t. \<forall>\<sigma>_st gk. fun_of_st (sides_of_rhs t_st \<sigma>_st gk) =
+                              sides_of_rhs t (fun_of_st \<circ> \<sigma>_st) gk)
+      (side_contribution_trees_st etf_st es ens cs)
+      (side_contribution_trees etf es ens cs)"
+    apply (rule side_contribution_trees_rel)
+      subgoal using sd_edge by blast
+      subgoal using sd_enter by blast
+      subgoal using sd_comb by blast
+    done
+  show ?thesis
+    unfolding side_rhs_fold_eff_st_def side_rhs_fold_eff_def
+    by (rule fold_rhs_trees_sides_fun_of_st[OF trees])
+qed
+
+
+lemma fold_rhs_trees_dep_fun_of_st:
+  assumes rel: "list_all2
+    (\<lambda>t_st t.
+      (\<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
+                    traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) \<and>
+      (\<forall>\<sigma>1 \<sigma>2. dep_aux \<sigma>1 t_st = dep_aux \<sigma>2 t)) ts_st ts"
+  shows "dep_aux \<sigma>_st (fold_rhs_trees acc_st ts_st) =
+         dep_aux (fun_of_st \<circ> \<sigma>_st) (fold_rhs_trees (fun_of_st acc_st) ts)"
+  using rel
+proof (induction arbitrary: acc_st \<sigma>_st)
   case Nil
-  show ?case
-  proof (induction ens arbitrary: acc cs)
-    case Nil
-    show ?case
-    proof (induction cs arbitrary: acc)
-      case Nil thus ?case by simp
-    next
-      case (Cons x cs)
-      obtain cc dst ex where x: "x = (cc, dst, ex)" by (cases x)
-      have ih: "fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st acc [] [] cs) \<sigma>_st gk)
-              = sides_of_rhs (side_rhs_fold_eff etf (fun_of_st acc) [] [] cs)
-                  (fun_of_st \<circ> \<sigma>_st) gk"
-        by (rule Cons.IH)
-      show ?case unfolding x
-        by (metis (no_types, lifting) fun_of_st_sup ih sd_comb side_rhs_fold_eff.simps(4)
-            sides_eff_fold_st_combine_step sides_of_rhs_seqcomp_at sides_side_rhs_fold_eff_acc_indep)
-    qed
-  next
-    case (Cons x ens)
-    obtain cl fs as where x: "x = (cl, fs, as)" by (cases x)
-    have ih: "fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st acc [] ens cs) \<sigma>_st gk)
-            = sides_of_rhs (side_rhs_fold_eff etf (fun_of_st acc) [] ens cs)
-                (fun_of_st \<circ> \<sigma>_st) gk"
-      by (rule Cons.IH)
-    show ?case unfolding x
-      by (metis (no_types, lifting) fun_of_st_sup ih sd_enter side_rhs_fold_eff.simps(3)
-          sides_eff_fold_st_enter_step sides_of_rhs_seqcomp_at sides_side_rhs_fold_eff_acc_indep)
-  qed
+  then show ?case by simp
 next
-  case (Cons x es)
-  obtain u a where x: "x = (u, a)" by (cases x)
-  have ih: "fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st acc es ens cs) \<sigma>_st gk)
-          = sides_of_rhs (side_rhs_fold_eff etf (fun_of_st acc) es ens cs)
-              (fun_of_st \<circ> \<sigma>_st) gk"
-    using Cons.IH Cons.prems(3) sd_edge sd_enter by blast
+  case (Cons t_st ts_st t ts)
+  have dep: "dep_aux \<sigma>_st t_st = dep_aux (fun_of_st \<circ> \<sigma>_st) t"
+    using Cons.hyps(1) by blast
+  have tr: "fun_of_st (traverse_rhs t_st \<sigma>_st) =
+            traverse_rhs t (fun_of_st \<circ> \<sigma>_st)"
+    using Cons.hyps(1) by blast
+  have acc_tr: "fun_of_st (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) =
+      fun_of_st acc_st \<squnion> traverse_rhs t (fun_of_st \<circ> \<sigma>_st)"
+    by (simp add: fun_of_st_sup tr)
+  have ih': "dep_aux \<sigma>_st
+        (fold_rhs_trees (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) ts_st) =
+      dep_aux (fun_of_st \<circ> \<sigma>_st)
+        (fold_rhs_trees (fun_of_st (acc_st \<squnion> traverse_rhs t_st \<sigma>_st)) ts)"
+    by (rule Cons.IH)
+  have ih: "dep_aux \<sigma>_st
+        (fold_rhs_trees (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) ts_st) =
+      dep_aux (fun_of_st \<circ> \<sigma>_st)
+        (fold_rhs_trees (fun_of_st acc_st \<squnion>
+          traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) ts)"
+    using ih' acc_tr by simp
   show ?case
-    by (metis (no_types, lifting) fun_of_st_sup ih sd_edge
-        side_rhs_fold_eff.simps(2) sides_eff_fold_st_edge_step sides_of_rhs_seqcomp_at
-        sides_side_rhs_fold_eff_acc_indep x)
+    by (simp add: dep_aux_seqcomp dep ih comp_def)
 qed
 
 lemma dep_aux_side_rhs_fold_eff_st_eq:
@@ -534,94 +649,24 @@ lemma dep_aux_side_rhs_fold_eff_st_eq:
                 = dep_aux \<sigma>2 (etf_combine etf dst cc ex)"
   shows "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st acc es ens cs)
        = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf (fun_of_st acc) es ens cs)"
-proof (induction es arbitrary: acc ens cs \<sigma>_st)
-  case Nil
-  show ?case
-  proof (induction ens arbitrary: acc cs \<sigma>_st)
-    case Nil
-    show ?case
-    proof (induction cs arbitrary: acc \<sigma>_st)
-      case Nil show ?case by simp
-    next
-      case (Cons x cs)
-      obtain cc dst ex where x: "x = (cc, dst, ex)" by (cases x)
-      have e: "dep_aux \<sigma>_st (etf_combine_st etf_st dst cc ex)
-              = dep_aux (fun_of_st \<circ> \<sigma>_st) (etf_combine etf dst cc ex)"
-        by (rule dep_comb)
-      have tr: "fun_of_st (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-               = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
-        by (rule tr_comb)
-      have acc_tr:
-        "fun_of_st (acc \<squnion> traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-         = fun_of_st acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
-        by (simp only: fun_of_st_sup tr)
-      have ih': "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st
-                  (acc \<squnion> traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st) [] [] cs)
-              = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf
-                  (fun_of_st (acc \<squnion> traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)) [] [] cs)"
-        by (rule Cons.IH)
-      have ih: "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st
-                  (acc \<squnion> traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st) [] [] cs)
-              = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf
-                  (fun_of_st acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)) [] [] cs)"
-        using ih' acc_tr by simp
-      show ?case
-        by (metis (no_types, lifting) dep_aux_seqcomp e ih side_rhs_fold_eff.simps(4)
-            side_rhs_fold_eff_st.simps(4) x)
-    qed
-  next
-    case (Cons x ens)
-    obtain cl fs as where x: "x = (cl, fs, as)" by (cases x)
-    have e: "dep_aux \<sigma>_st (etf_st_enter etf_st fs as cl)
-            = dep_aux (fun_of_st \<circ> \<sigma>_st) (etf_enter etf fs as cl)"
-      by (rule dep_enter)
-    have tr: "fun_of_st (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-             = traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
-      by (rule tr_enter)
-    have acc_tr:
-      "fun_of_st (acc \<squnion> traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-       = fun_of_st acc \<squnion> traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
-      by (simp only: fun_of_st_sup tr)
-    have ih': "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st
-                (acc \<squnion> traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st) [] ens cs)
-            = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf
-                (fun_of_st (acc \<squnion> traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)) [] ens cs)"
-      by (rule Cons.IH)
-    have ih: "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st
-                (acc \<squnion> traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st) [] ens cs)
-            = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf
-                (fun_of_st acc \<squnion> traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)) [] ens cs)"
-      using ih' acc_tr by simp
-    show ?case
-      by (metis (no_types, lifting) dep_aux_seqcomp e ih side_rhs_fold_eff.simps(3)
-          side_rhs_fold_eff_st.simps(3) x)
-  qed
-next
-  case (Cons x es)
-  obtain u a where x: "x = (u, a)" by (cases x)
-  have e: "dep_aux \<sigma>_st (apply_etf_st etf_st a u)
-          = dep_aux (fun_of_st \<circ> \<sigma>_st) (apply_etf etf a u)"
-    by (rule dep_edge)
-  have tr: "fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-           = traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
-    by (rule tr_edge)
-  have acc_tr:
-    "fun_of_st (acc \<squnion> traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-     = fun_of_st acc \<squnion> traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
-    by (simp only: fun_of_st_sup tr)
-  have ih': "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st
-              (acc \<squnion> traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st) es ens cs)
-          = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf
-              (fun_of_st (acc \<squnion> traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)) es ens cs)"
-    by (rule Cons.IH)
-  have ih: "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st
-              (acc \<squnion> traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st) es ens cs)
-          = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf
-              (fun_of_st acc \<squnion> traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)) es ens cs)"
-    using ih' acc_tr by simp
-  show ?case unfolding x side_rhs_fold_eff_st.simps
-    by (simp add: dep_aux_seqcomp e ih comp_def)
+proof -
+  have trees: "list_all2
+      (\<lambda>t_st t.
+        (\<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
+                      traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) \<and>
+        (\<forall>\<sigma>1 \<sigma>2. dep_aux \<sigma>1 t_st = dep_aux \<sigma>2 t))
+      (side_contribution_trees_st etf_st es ens cs)
+      (side_contribution_trees etf es ens cs)"
+    apply (rule side_contribution_trees_rel)
+      subgoal using tr_edge dep_edge by blast
+      subgoal using tr_enter dep_enter by blast
+      subgoal using tr_comb dep_comb by blast
+    done
+  show ?thesis
+    unfolding side_rhs_fold_eff_st_def side_rhs_fold_eff_def
+    by (rule fold_rhs_trees_dep_fun_of_st[OF trees])
 qed
+
 
 lemma dep_aux_make_side_rhs_tree_eff_st_eq:
   fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"

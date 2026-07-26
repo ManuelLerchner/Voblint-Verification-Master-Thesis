@@ -208,7 +208,7 @@ proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
   have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
-    using wf unfolding wf_compile_input_def by auto
+    by (rule wf_compile_input_main_exists[OF wf])
   from procs_compiled_proc[OF pc mnmdecl] obtain m m' en ex E K where
     cbody: "compile \<Pi> mnm (body (proc_decl_of [] main)) m = (m', en, ex, E, K)"
       and Esub: "E \<subseteq> intra ?g" and Ksub: "K \<subseteq> calls ?g"
@@ -248,13 +248,13 @@ text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star
 theorem source_run_has_ltr:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and swf: "source_wf (main, s0, [])"
     and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> ltr_repr (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
+  have swf: "source_wf (main, s0, [])" by (rule wf_compile_input_source_wf[OF wf])
   obtain en where entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
     and base: "csim \<Pi> ?g (main, s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
@@ -280,14 +280,13 @@ text \<open>The plain projected source bridge: a reachable source store lies in 
 theorem source_store_in_activation_collect:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and swf: "source_wf (main, s0, [])"
     and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> activation_collect enterc seedc (compile_prog \<Pi> ps mnm main) S v
                           (key enterc seedc t)"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from source_run_has_ltr[OF wf s0 swf run] obtain v stk t
+  from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, frs) (v, s, stk)"
       and rep: "ltr_repr ?g S (v, s, stk) t" by blast
   from rep have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
@@ -303,13 +302,12 @@ text \<open>The witness-free top-level result: a store reached with an empty sou
 theorem source_toplevel_in_activation_collect:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and swf: "source_wf (main, s0, [])"
     and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> activation_collect enterc seedc (compile_prog \<Pi> ps mnm main) S v seedc"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from source_run_has_ltr[OF wf s0 swf run] obtain v stk t
+  from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, []) (v, s, stk)"
       and rep: "ltr_repr ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp

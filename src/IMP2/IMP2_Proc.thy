@@ -2,26 +2,17 @@ theory IMP2_Proc
   imports IMP2_Expr IMP2_Globals
 begin
 
-(*
-  Procedure-extended command language `com` with a frame-stack small-step
-  semantics, defined separately from the scalar command type `com`.
+section \<open>Procedure commands and activation frames\<close>
 
-  Procedures may now declare call-by-value formals and an optional final result
-  expression. A Call saves the caller's locals on entry and restores them on exit
-  via combine_states (globals from the callee's final store, locals from the saved
-  frame).
-
-  The restore boundary is made explicit by the runtime-only marker Restore: the
-  frame stack alone cannot locate a call's end inside a Seq, so entry rewrites a
-  Call to a Seq ending in Restore. It never appears in source programs.
-
-  A procedure's result expression is not carried by Restore. Following Goblint
-  (base.ml: return / combine_assign), call entry appends an assignment of the
-  result expression to the reserved local ret_var at the end of the callee body,
-  and Restore assigns ret_var's callee-exit value to the caller's destination.
-  ret_var is local, so the callee's copy is dropped by combine_states and the
-  caller's own copy is restored from the frame.
-*)
+text \<open>
+  A call evaluates actual arguments in the caller store, binds them in a fresh
+  callee activation, and saves the caller store with the optional destination.
+  The runtime marker \<open>Restore\<close> identifies the activation boundary inside
+  sequential syntax. An explicit \<open>Return\<close> publishes its value through
+  \<open>ret_var\<close> and replaces pending callee commands with \<open>Unwind\<close>.
+  Restoration keeps callee globals, restores caller locals, and writes the
+  published value when the call has a destination.
+\<close>
 
 datatype com =
     SKIP
@@ -35,8 +26,8 @@ datatype com =
   | Unwind
 
 text \<open>
-  \<^const>\<open>Return\<close> is the source-level early return (Goblint's \<open>Ret of Exp option\<close>):
-  it publishes the optional value into \<open>ret_var\<close> and unwinds the current activation.
+  \<^const>\<open>Return\<close> is the source-level early return. It publishes an optional
+  value into \<open>ret_var\<close> and unwinds the current activation.
   \<^const>\<open>Unwind\<close> is a runtime-only marker (like \<^const>\<open>Restore\<close>, never in source
   programs): once a \<^const>\<open>Return\<close> has fired, the computation is in \<^const>\<open>Unwind\<close>
   state, discarding pending statements up to the nearest enclosing activation frame.
@@ -49,10 +40,11 @@ record proc_decl =
 definition proc_decl_of :: "vname list => com => proc_decl" where
   "proc_decl_of xs bdy = \<lparr>formals = xs, body = bdy\<rparr>"
 
-(* Reserved local holding a procedure's result across the restore boundary.
-   Goblint's return_varinfo. Local, so it never escapes into the caller: a
-   procedure publishes a value only by an explicit Return, and a value-less
-   fall-through leaves ret_var at its enter_state initial 0. *)
+text \<open>
+  The reserved local \<open>ret_var\<close> carries a published result to the restore
+  boundary. It is absent from source programs and local to the callee activation.
+  A value-less fall-through therefore leaves it at the initial value zero.
+\<close>
 definition ret_var :: vname where
   "ret_var = ''#ret''"
 
@@ -69,9 +61,10 @@ definition bind_formals :: "vname list \<Rightarrow> int list \<Rightarrow> stor
   "bind_formals xs vs s =
      fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
-(* Goblint's combine_assign: write the returned value into the destination, or
-   leave the caller untouched when the call discards it. Total: the value is read
-   out of ret_var, which every store maps. *)
+text \<open>
+  \<open>combine_assign\<close> writes the published value when a destination exists.
+  A destination-less call discards the value and leaves the caller store unchanged.
+\<close>
 fun combine_assign :: "vname option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
   "combine_assign None _ s = s"
 | "combine_assign (Some x) v s = s(x := v)"
@@ -484,13 +477,13 @@ proof -
 qed
 
 
-subsection \<open>Source-program admissibility\<close>
+section \<open>Source-program well-formedness\<close>
 
 text \<open>
-  Restore is runtime-only and never appears in source programs. source_com
-  captures that source-language property; source_pi lifts it to every procedure
-  body of a table. These are the well-formedness predicates the compiler and the
-  end-to-end soundness theorems run on.
+  Source syntax excludes the runtime markers \<^const>\<open>Restore\<close> and
+  \<^const>\<open>Unwind\<close>. The reserved \<^const>\<open>ret_var\<close> belongs to the
+  call mechanism, so source expressions, assignments, destinations, and formal
+  parameters cannot mention it.
 \<close>
 
 fun source_com :: "com => bool" where
@@ -506,5 +499,158 @@ fun source_com :: "com => bool" where
 
 definition source_pi :: "proc_table => bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
+
+fun aexp_n_mentions :: "vname => AExp.aexp => bool" where
+  "aexp_n_mentions x (AExp.N _) = False"
+| "aexp_n_mentions x (AExp.V y) = (x = y)"
+| "aexp_n_mentions x (AExp.Plus a b) = (aexp_n_mentions x a \<or> aexp_n_mentions x b)"
+
+fun aexp_mentions :: "vname => aexp => bool" where
+  "aexp_mentions x (BaseN a) = aexp_n_mentions x a"
+| "aexp_mentions x (Plus a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+| "aexp_mentions x (Minus a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+| "aexp_mentions x (Times a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+
+fun bexp_n_mentions :: "vname => BExp.bexp => bool" where
+  "bexp_n_mentions x (BExp.Bc _) = False"
+| "bexp_n_mentions x (BExp.Not b) = bexp_n_mentions x b"
+| "bexp_n_mentions x (BExp.And b1 b2) = (bexp_n_mentions x b1 \<or> bexp_n_mentions x b2)"
+| "bexp_n_mentions x (BExp.Less a b) = (aexp_n_mentions x a \<or> aexp_n_mentions x b)"
+
+fun bexp_mentions :: "vname => bexp => bool" where
+  "bexp_mentions x (BaseB b) = bexp_n_mentions x b"
+| "bexp_mentions x (Not b) = bexp_mentions x b"
+| "bexp_mentions x (And b1 b2) = (bexp_mentions x b1 \<or> bexp_mentions x b2)"
+| "bexp_mentions x (Or b1 b2) = (bexp_mentions x b1 \<or> bexp_mentions x b2)"
+| "bexp_mentions x (Less a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+| "bexp_mentions x (Eq a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+
+definition source_aexp :: "aexp => bool" where
+  "source_aexp a \<longleftrightarrow> \<not> aexp_mentions ret_var a"
+
+definition source_bexp :: "bexp => bool" where
+  "source_bexp b \<longleftrightarrow> \<not> bexp_mentions ret_var b"
+
+definition valid_formal :: "vname => bool" where
+  "valid_formal x \<longleftrightarrow> \<not> is_global x \<and> x \<noteq> ret_var"
+
+subsection \<open>Procedure result contract\<close>
+
+text \<open>
+  Declarations carry no return-kind annotation. A body is a value provider when
+  every syntactic way to finish the body reaches \<^const>\<open>Return\<close> with a value.
+  The analysis is conservative: a loop may fall through because its guard may be
+  false, and a call resumes normally after its callee completes.
+\<close>
+
+fun may_fallthrough :: "com => bool" where
+  "may_fallthrough SKIP = True"
+| "may_fallthrough (Assign _ _) = True"
+| "may_fallthrough (Seq c1 c2) = (may_fallthrough c1 \<and> may_fallthrough c2)"
+| "may_fallthrough (If _ c1 c2) = (may_fallthrough c1 \<or> may_fallthrough c2)"
+| "may_fallthrough (While _ _) = True"
+| "may_fallthrough (Call _ _ _) = True"
+| "may_fallthrough (Return _) = False"
+| "may_fallthrough Restore = False"
+| "may_fallthrough Unwind = False"
+
+fun may_return_none :: "com => bool" where
+  "may_return_none (Seq c1 c2) =
+     (may_return_none c1 \<or> (may_fallthrough c1 \<and> may_return_none c2))"
+| "may_return_none (If _ c1 c2) = (may_return_none c1 \<or> may_return_none c2)"
+| "may_return_none (While _ c) = may_return_none c"
+| "may_return_none (Return e) = (e = None)"
+| "may_return_none _ = False"
+
+fun may_return_value :: "com => bool" where
+  "may_return_value (Seq c1 c2) =
+     (may_return_value c1 \<or> (may_fallthrough c1 \<and> may_return_value c2))"
+| "may_return_value (If _ c1 c2) = (may_return_value c1 \<or> may_return_value c2)"
+| "may_return_value (While _ c) = may_return_value c"
+| "may_return_value (Return e) = (e \<noteq> None)"
+| "may_return_value _ = False"
+
+definition value_providing :: "com => bool" where
+  "value_providing c \<longleftrightarrow>
+     source_com c \<and> \<not> may_fallthrough c \<and>
+     \<not> may_return_none c \<and> may_return_value c"
+
+subsection \<open>Commands, declarations, and programs\<close>
+
+text \<open>
+  Every call names a declared procedure and supplies one actual per formal. A
+  destination requires a value-providing callee; a destination-less call may
+  discard a published value. Procedure formals are distinct local names, and the
+  distinguished root command contains no return.
+\<close>
+
+fun wf_source_com :: "proc_table => com => bool" where
+  "wf_source_com \<Pi> SKIP = True"
+| "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_aexp a)"
+| "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
+| "wf_source_com \<Pi> (If b c1 c2) =
+     (source_bexp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
+| "wf_source_com \<Pi> (While b c) = (source_bexp b \<and> wf_source_com \<Pi> c)"
+| "wf_source_com \<Pi> (Call dst p actuals) =
+     (case \<Pi> p of
+        None \<Rightarrow> False
+      | Some decl \<Rightarrow>
+          length actuals = length (formals decl) \<and>
+          list_all source_aexp actuals \<and>
+          (case dst of
+             None \<Rightarrow> True
+           | Some x \<Rightarrow> x \<noteq> ret_var \<and> value_providing (body decl)))"
+| "wf_source_com \<Pi> (Return e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_aexp a)"
+| "wf_source_com \<Pi> Restore = False"
+| "wf_source_com \<Pi> Unwind = False"
+
+fun no_return :: "com => bool" where
+  "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
+| "no_return (If _ c1 c2) = (no_return c1 \<and> no_return c2)"
+| "no_return (While _ c) = no_return c"
+| "no_return (Return _) = False"
+| "no_return _ = True"
+
+definition wf_proc_decl :: "proc_table => proc_decl => bool" where
+  "wf_proc_decl \<Pi> decl \<longleftrightarrow>
+     distinct (formals decl) \<and>
+     list_all valid_formal (formals decl) \<and>
+     wf_source_com \<Pi> (body decl)"
+
+definition wf_source_program :: "proc_table => pname => com => bool" where
+  "wf_source_program \<Pi> mnm main \<longleftrightarrow>
+     \<Pi> mnm = Some (proc_decl_of [] main) \<and>
+     wf_source_com \<Pi> main \<and> no_return main \<and>
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<Pi> decl)"
+
+lemma wf_source_com_source_com:
+  "wf_source_com \<Pi> c \<Longrightarrow> source_com c"
+  by (induction c) (auto split: option.splits)
+
+lemma wf_source_program_main_exists:
+  "wf_source_program \<Pi> mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
+  by (simp add: wf_source_program_def)
+
+lemma wf_source_program_main:
+  "wf_source_program \<Pi> mnm main \<Longrightarrow> wf_source_com \<Pi> main"
+  by (simp add: wf_source_program_def)
+
+lemma wf_source_program_no_return:
+  "wf_source_program \<Pi> mnm main \<Longrightarrow> no_return main"
+  by (simp add: wf_source_program_def)
+
+lemma wf_source_program_decl:
+  "wf_source_program \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl
+   \<Longrightarrow> wf_proc_decl \<Pi> decl"
+  by (simp add: wf_source_program_def)
+
+lemma wf_source_program_source_pi:
+  "wf_source_program \<Pi> mnm main \<Longrightarrow> source_pi \<Pi>"
+  unfolding wf_source_program_def source_pi_def wf_proc_decl_def
+  using wf_source_com_source_com by blast
+
+lemma wf_source_program_source_com:
+  "wf_source_program \<Pi> mnm main \<Longrightarrow> source_com main"
+  using wf_source_program_main wf_source_com_source_com by blast
 
 end

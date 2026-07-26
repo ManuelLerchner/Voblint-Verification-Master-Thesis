@@ -1,32 +1,43 @@
 # IMP2
 
-**Main contribution:** The source language layer — IMP2 with parameterless procedures
-and a locals/globals split. Provides the `com` datatype, frame-stack small-step
-semantics, and a bridge to AFP IMP2 for the thesis reference anchor.
+This session defines the scalar procedural source language used by Voblint.
+Procedures have parameters, explicit calls and returns, global/local store
+separation, and a frame-stack small-step semantics.
 
-**Theories**
+| File | Role |
+| --- | --- |
+| `IMP2_Syntax.thy` | Arithmetic and Boolean expressions plus structured base commands |
+| `IMP2_Expr.thy` | Expression evaluation |
+| `HOL_IMP_Countable.thy` | Countability instances for wrapped HOL-IMP expression types |
+| `IMP2_Globals.thy` | Global-variable convention, fresh callee stores, caller/callee state combination |
+| `IMP2_Proc.thy` | Procedural commands, declarations, frames, small-step execution, and source syntax predicates |
+| `IMP2_Notation.thy` | Concrete command syntax used by theories and examples |
+| `IMP2_Source_Print.thy` | Executable source pretty-printer |
 
-| File                    | Role                                                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `IMP2_Syntax.thy`       | Base `com` (SKIP, Assign, Seq, If, While), `aexp`, `bexp` datatypes; countability instances; HOL-IMP leaf wraps    |
-| `IMP2_Expr.thy`         | `aval`, `bval` — expression evaluation only; leaf cases delegate to HOL-IMP `AExp` / `BExp`                        |
-| `HOL_IMP_Countable.thy` | Countability for wrapped HOL-IMP `AExp` / `BExp` types                                                             |
-| `IMP2_Globals.thy`      | `combine_states <s\|t>`, `enter_state`, `is_global`; `pname` type synonym                                          |
-| `IMP2_Proc.thy`         | Extended `com` with Scope / Call / Restore; `proc_table`; `pstep` (frame-stack small-step, `→ₚ`), `psteps` (`→ₚ*`); `source_com` / `source_pi` source-program admissibility |
-| `IMP2_Notation.thy`     | Concrete-syntax quotations used by examples                                                        |
-| `IMP2_Bridge_Expr.thy`  | One-way expression + state embedding: our `aexp` / `bexp` / `store` → AFP `IMP2` (`embed`, `proj0`, `to_imp2_aexp/bexp`) |
-| `IMP2_Bridge_Cmd.thy`   | Command translation + backward simulation for the parameterless subset (`to_imp2_com`, `bridge_com/pi`, `backward_sim`) |
-| `IMP2_VCG_Example.thy`  | Example showing IMP2's own VCG and our analyzer agreeing on one program                                            |
+## Procedure behavior
 
-**Key concepts:**
+`Call dst p args` evaluates the actual parameters in the caller, initializes a
+fresh callee store, binds the formals of `p`, and saves the caller store and
+optional destination in a frame.
 
-- `com` in `IMP2_Proc.thy` — SKIP, Assign, Seq, If, While, Scope, Call, Restore.
-- `proc_table = pname ⇒ com option`; `frame = store`.
-- `pstep pi (c, s, frs) (c', s', frs')` — frame-stack small-step; `Restore` pops frame and restores locals via `combine_states`.
-- `is_global x` — variable `x` is global iff it is empty or starts with `'G'`.
-- `combine_states s t = <s|t>` — locals from `s`, globals from `t`.
-- `enter_state s` — globals from `s`, locals reset to 0.
+`Return (Some e)` publishes the value of `e` through the reserved return
+channel. `Return None` performs a void return. Both enter `Unwind`, which
+discards pending commands in the current activation until `Restore` combines
+callee globals with caller locals and pops the frame.
 
-**Downstream:** `src/CFG/IMP2_Proc_to_CFG.thy` compiles `com` programs with a
-`proc_table` to interprocedural CFGs; `src/CFG/Collecting/CFG_Collect_Runs.thy`
-defines `cfg_runs_to`.
+Falling off the end of a procedure is a void completion. The distinguished main
+activation has no caller and therefore terminates only by fall-through; accepted
+source programs contain no return in main.
+
+`wf_source_program` checks declared call targets, arity, formal names,
+reserved-variable use, return behavior, and root-return exclusion.
+`wf_compile_input` adds the finite, duplicate-free procedure enumeration used
+by compilation. A destination-bearing call requires a `value_providing` body:
+one with no syntactic fall-through or void return and at least one value
+return. Calls without a destination may ignore either kind of completion.
+
+## Store convention
+
+A variable is global when its name is empty or begins with `G`. `enter_state`
+keeps globals and clears locals. `combine_states caller callee` restores caller
+locals and keeps callee globals.

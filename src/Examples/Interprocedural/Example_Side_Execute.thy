@@ -77,16 +77,14 @@ proof -
     by (simp add: x1_s0_def cinit_stores_def)
   have wf: "wf_compile_input (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog)"
     unfolding wf_compile_input_def x1_prog_def
-    by (auto simp: source_pi_def proc_decl_of_def prog_main_name_def split: if_splits)
-  have src: "source_com (prog_main x1_prog)"
-    by (simp add: x1_prog_def)
-  have swf: "source_wf (prog_main x1_prog, x1_s0, [])"
-    by (simp add: source_wf_def x1_prog_def)
+    by (auto simp: wf_source_program_def wf_proc_decl_def source_aexp_def
+          proc_decl_of_def prog_main_name_def ret_var_def split: if_splits)
+
   have run:
     "star (pstep (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
       (IMP2_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
     using x1_completed unfolding pcompletes_def .
-  from source_completes_ltr_collect_exit[OF wf src swf init run]
+  from source_completes_ltr_collect_exit[OF wf init run]
   show ?thesis unfolding prog_cfg_def .
 qed
 

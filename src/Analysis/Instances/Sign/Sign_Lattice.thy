@@ -83,7 +83,7 @@ proof
     unfolding less_eq_sign_def by (rule sign_le_trans)
 qed
 
-(* bot instance: required so abs_state = vname => sign has bot, enabling AFP mlup *)
+text \<open>The bottom instance lifts pointwise to abstract states and enables monotone least-upper-bound iteration.\<close>
 instantiation sign :: bot begin
 definition "bot_sign = SBot"
 instance ..

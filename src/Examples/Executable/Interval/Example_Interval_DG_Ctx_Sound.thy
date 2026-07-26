@@ -6,17 +6,10 @@ begin
 section \<open>Route consistency and the abstract transport of the context-sensitive solution\<close>
 
 text \<open>
-  Phase 3 of the interval vertical slice.  The executable routed generator
-  \<^const>\<open>twice_ctx_eqs\<close> is transported to an abstract context-indexed post-solution
-  through the generic bridge \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>.
-
-  The only instance-specific obligations the generic transport leaves open are the
-  bundled tree-commutation hypotheses \<open>Hcmb\<close> and \<open>Hextra\<close> --- exactly the layers
-  where a context is routed.  Both are discharged from a \<^emph>\<open>single\<close> route-consistency
-  core: the abstract route computed on the pushed-forward callee state equals the
-  executable route.  Enter publication, the activation context, and the combine
-  callee-exit lookup all read the same route, so the executable and abstract
-  \<^const>\<open>Side\<close> targets coincide rather than agreeing by accident.
+  The executable routed equations are transported to an abstract context-indexed
+  post-solution.  Entry publication, activation selection, and callee-result lookup
+  use one route function.  Proving that route commutes with representation transport
+  therefore discharges both strategy-tree commutation obligations.
 \<close>
 
 subsection \<open>The abstract routed hooks\<close>

@@ -22,10 +22,5 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     (* Source-to-local-trace bridge (csim -> valid_ltr), and the completed-run
        exit reachability it feeds. *)
     Located_LTR
-  (* Stage 5B+ notes:
-     CFG_Path (nat-offset path infrastructure) was retired in Stage 3; the
-     procedure-aware compiler allocates cfg_node Statement indices directly, so no
-     separate offset layer is needed.  CFG_Transfer was migrated: its edge_step /
-     combine_collect / call_enter_store moved into the core (CFG_Def,
-     CFG_Local_Trace) and its whole-path edges_collect / offset_path fold is
-     superseded by the located csim simulation; only edge_collect remains. *)
+  (* Statement indices are allocated directly in the procedure-aware node space.
+     Located simulation supplies the path structure used by compiler soundness. *)

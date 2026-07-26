@@ -7,13 +7,10 @@ begin
 hide_const (open) Update_rules.N
 
 text \<open>
-  Backward analysis is sound without being useful: the pre-migration identity
-  assume transfer already satisfied @{term tf_assume}.  The payoff is
-  \emph{precision}.  This theory exhibits the gap on a single guard and one
-  loop-body step --- the same pattern that makes the bounded-loop example
-  (@{file "Example_Interval_Loop_Coverage.thy"}) stabilise at @{text "[0,20]"}.
-  Sign cannot express either bound; interval backward filtering on
-  @{text "x < n"} is where the difference shows up.
+  The identity assumption transfer is sound but imprecise.  Backward guard
+  refinement intersects the incoming interval with the states satisfying the
+  guard, which preserves the bounded loop invariant through one body step.
+  Sign cannot express the numeric bounds; interval filtering exposes the gain.
 \<close>
 
 subsection \<open>Setup: loop-head abstract state and identity baseline\<close>
@@ -23,10 +20,7 @@ definition sigma_x :: "ivl \<Rightarrow> ivl abs_state" where
 
 abbreviation "sigma_loop_head \<equiv> sigma_x (Ivl (Fin 0) (Fin 20))"
 
-text \<open>
-  Pre-migration assume: leave the abstract state unchanged (still sound, but
-  imprecise).
-\<close>
+text \<open>The identity baseline leaves the abstract state unchanged.\<close>
 definition assume_ivl_identity :: "bexp \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
   "assume_ivl_identity _ sigma = sigma"
 

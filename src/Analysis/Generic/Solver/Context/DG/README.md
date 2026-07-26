@@ -1,11 +1,21 @@
-# DG
+# D/G framework
 
-D/G framework, context-sensitive soundness, and retain analysis.
+The D/G framework separates flow-sensitive local facts (`D`) from information
+published through global side effects (`G`). Analyses choose both carriers,
+their transfer and communication operations, and an optional activation
+context.
 
 | File | Role |
 | --- | --- |
-| `DG_Framework.thy` | heterogeneous DG framework core + seeded keyed generator |
-| `DG_Soundness.thy` | heterogeneous DG soundness (unit context) |
-| `DG_Context_Soundness.thy` | context-keyed accessors + per-context collecting soundness (`collect_sound_reader`, `dg_postfix_c_collect_sound`) |
-| `DG_Ctx_Activation.thy` | DG-native discharge of the activation obligations (`activation_collect_sound`) |
-| `Retain_Analysis.thy` | retain analysis on the DG interface |
+| `DG_Framework.thy` | D/G specification, equation trees, and keyed generator |
+| `DG_Soundness.thy` | Post-solution and collecting-semantics soundness |
+| `DG_LTR_Sound.thy` | Local-trace collecting soundness |
+| `DG_Context_Soundness.thy` | Context-indexed readers and keyed collecting soundness |
+| `DG_Ctx_Activation.thy` | D/G discharge of activation-collecting obligations |
+
+This is the supported modular-analysis interface. Homogeneous analyses use the
+same carrier for `D` and `G`; mixed analyses use independent carriers.
+
+Retain is intentionally absent. Its routing discipline differed from this
+interface. Native D/G analyses cover the intended modular-analysis role without
+claiming semantic equivalence to Retain.

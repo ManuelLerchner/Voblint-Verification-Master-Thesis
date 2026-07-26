@@ -27,7 +27,7 @@ interpretation sign_reg:
   unit_dg_exec_analysis sign_tf sign_tf_st sign_enter_st
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
   by unfold_locales
-     (rule sign_is_sound_transfer sign_tf_st_commute sign_enter_st_commute'
+     (rule sign_is_sound_transfer sign_tf_st_commute sign_enter_st_commute
            sign_tf_st_ret_none sign_tf_st_ret_some
            TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 

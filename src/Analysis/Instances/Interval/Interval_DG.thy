@@ -7,10 +7,9 @@ begin
 section \<open>Interval on the heterogeneous DG spine\<close>
 
 text \<open>
-  Interval is a diagonal DG instance: answer and side domains both use the
-  existing interval carrier, so the native interface is \<^const>\<open>unit_dg_spec\<close>.
-  The resulting collecting theorem has the same statement shape as the
-  homogeneous exit theorem, but it is now derived from \<^locale>\<open>sound_dg_spec\<close>.
+  Interval uses the same carrier for local answers and global side effects.  The diagonal
+  specification \<^const>\<open>unit_dg_spec\<close> therefore provides its D/G operations, while
+  \<^locale>\<open>sound_dg_spec\<close> supplies collecting soundness.
 \<close>
 
 interpretation ivl_dg: sound_dg_spec "unit_dg_spec ivl_tf" gamma_unit

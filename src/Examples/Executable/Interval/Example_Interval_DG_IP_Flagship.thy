@@ -7,7 +7,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_IMP2.IMP2_Notation"
-    "Voblint_Formalization.Source_Activation_Sound"
+    "Voblint_Formalization.DG_Domain_Registration"
 begin
 
 definition twice_program :: imp_prog where
@@ -62,26 +62,12 @@ lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_calls by simp
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
-lemma ivl_Hstep:
-  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st ivl_tf_st ivl_enter_st) a d g)
-     = dg_spec_step (unit_dg_spec ivl_tf) a (fun_of_st d) (fun_of_st g)"
-  by (simp add: dg_spec_step_unit_st[OF ivl_tf_st_ret_None ivl_tf_st_ret_Some]
-                dg_spec_step_unit unit_step_st_commute ivl_tf_st_commute)
+lemmas ivl_Hstep =
+  unit_dg_Hstep[OF ivl_tf_st_commute ivl_tf_st_ret_None ivl_tf_st_ret_Some]
 
+lemmas ivl_Henter = unit_dg_Henter[OF ivl_enter_st_commute]
 
-lemma ivl_Henter:
-  "map_prod fun_of_st fun_of_st
-      (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) xs es d g)
-    = dgs_enter (unit_dg_spec ivl_tf) xs es (fun_of_st d) (fun_of_st g)"
-  unfolding unit_dg_spec_st_def unit_dg_spec_def
-  apply simp
-  apply (rule unit_step_st_commute)
-  by (simp add: ivl_enter_st_commute)
-
-lemma ivl_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec ivl_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
-  by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
+lemmas ivl_Hcomb = unit_dg_Hcomb
 
 lemma dg_gen_of_eq_ivl_dg_gen:
   "dg_gen_of (unit_dg_spec ivl_tf) g bot0 s0d s0g = ivl_dg.dg_gen g bot0 s0d s0g"
@@ -182,7 +168,7 @@ lemma twice_sound0:
   "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
 proof -
   have "fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st) = fun_of_st cinit_ivl_st"
-    by (simp add: fun_of_st_cinit_ivl_st fun_of_st_restrict_global_st restrict_global_def sup_fun_def fun_eq_iff)
+    by (simp add: fun_of_st_cinit_ivl_st restrict_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 qed
@@ -223,30 +209,38 @@ lemma twice_y_computed:
 subsection \<open>Source-level soundness\<close>
 
 lemma twice_wf: "wf_compile_input twice_pi twice_procs ''main'' twice_main"
-  unfolding wf_compile_input_def twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (auto simp: source_pi_def proc_decl_of_def prog_main_name_def split: if_splits)
+  unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
+    twice_pi_def twice_procs_def twice_main_def twice_program_def
+  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def
+      value_providing_def source_aexp_def ret_var_def is_global_def
+      split: if_splits option.splits)
 
 theorem twice_source_run_sound:
   assumes run: "star (pstep twice_pi) (twice_main, s, []) src'"
       and init: "s \<in> cinit_stores"
   shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
-                   \<and> t \<in> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
+                   \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
-  have sc: "source_com twice_main" by (simp add: twice_main_def twice_program_def)
-  have swf: "source_wf (twice_main, s, [])"
-    by (simp add: source_wf_def twice_main_def twice_program_def)
-  obtain v stk where
-      m: "csim twice_pi (compile_prog twice_pi twice_procs ''main'' twice_main)
-             (residual, t, frs) (v, t, stk)"
-      and coll0: "t \<in> ltr_collect (compile_prog twice_pi twice_procs ''main'' twice_main) cinit_stores v"
-    using source_reaches_ltr_collect[OF twice_wf sc swf init run[unfolded src']]
-    by blast
-  have coll: "t \<in> ltr_collect twice_cfg cinit_stores v"
-    using coll0 by (simp add: twice_cfg_def)
-  from m have m': "csim twice_pi twice_cfg src' (v, t, stk)"
-    unfolding src' by (simp add: twice_cfg_def)
-  show ?thesis using m' coll twice_collect_sound by blast
+  have cert:
+    "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
+       \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"
+    unfolding twice_cfg_def twice_sol_def twice_eqs_def
+    apply (rule ivl_reg.run_source_sound
+      [where Pi=twice_pi and ps=twice_procs and mnm="''main''" and main=twice_main])
+    apply (rule twice_terminates_c[unfolded twice_eqs_def twice_cfg_def])
+    apply (rule twice_wf)
+    apply (rule twice_cover_entry[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
+    apply (erule twice_cover_edge[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
+    apply (erule twice_cover_enter[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
+    apply (erule twice_cover_combine[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
+    apply (rule twice_finE[unfolded twice_cfg_def])
+    apply (rule twice_finC[unfolded twice_cfg_def])
+    apply (rule twice_sound0[folded gamma_unit_def])
+    apply (rule init)
+    apply (rule run[unfolded src'])
+    done
+  show ?thesis using cert src' by blast
 qed
 
 subsection \<open>Annotated GraphViz of the computed result\<close>

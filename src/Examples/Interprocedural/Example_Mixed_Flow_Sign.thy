@@ -86,9 +86,8 @@ proof -
     using result(2) .
 qed
 text \<open>
-  The post-solution corollary also needs finite (edges g) and finite (combines g).
-  Both follow from compile_prog_finite when g is a compiled program -- a
-  structural property of the CFG construction, not the analysis.
+  The post-solution corollary needs finite local-edge and call relations.  The
+  compiler supplies both properties independently of the chosen analysis.
 \<close>
 
 corollary sign_mixed_flow_sound_from_pp:

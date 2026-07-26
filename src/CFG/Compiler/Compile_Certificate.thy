@@ -4,6 +4,13 @@ begin
 
 section \<open>The static compiler certificate for a whole compiled program\<close>
 
+text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
+lemma wf_compile_input_source_wf:
+  assumes "wf_compile_input \<Pi> ps mnm main"
+  shows "source_wf (main, s, [])"
+  using wf_compile_input_source_com[OF assms] wf_compile_input_no_return[OF assms]
+  by (rule source_com_no_return_source_wf)
+
 text \<open>
   \<^const>\<open>procs_compiled\<close> is the static compiler-correctness certificate \<^const>\<open>csim\<close> reads: every
   procedure declared in \<open>\<Pi>\<close> has its body-fragment, entry \<open>EA_Nop\<close> wiring and \<open>EA_Ret None\<close> exit
@@ -75,8 +82,10 @@ proof (intro allI impI)
   have intra_g: "intra ?g = Eprocs \<union> Emain" and calls_g: "calls ?g = Kprocs \<union> Kmain"
     unfolding compile_prog_def by (simp_all add: procs mainc Let_def)
   from wf have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
-    and mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)" and spi: "source_pi \<Pi>"
     unfolding wf_compile_input_def by auto
+  have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
+    by (rule wf_compile_input_main_exists[OF wf])
+  have spi: "source_pi \<Pi>" by (rule wf_compile_input_source_pi[OF wf])
   have srccom: "source_com (body decl)" using spi pd unfolding source_pi_def by blast
   have frag: "\<exists>m m' Ef Kf. compile_proc \<Pi> p decl m = (m', Ef, Kf)
                 \<and> Ef \<subseteq> intra ?g \<and> Kf \<subseteq> calls ?g"

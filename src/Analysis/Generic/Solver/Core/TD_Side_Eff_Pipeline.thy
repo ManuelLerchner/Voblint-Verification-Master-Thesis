@@ -4,36 +4,17 @@ begin
 
 section \<open>Standalone effectful pipeline\<close>
 
-text \<open>
-  Ties the three strands together for an arbitrary etf:
-
-    * the TD_side solver interface (td_cfg_side_solver_eff) is discharged from a
-      per-tree monotonicity / static-dependency contract (Step 1);
-    * the per-edge / per-combine post-fixpoint bounds are discharged from a
-      part_post_solution (Step 2);
-    * collecting soundness follows from the sound_effectful_transfer contract via
-      post_fixpoint_sound_at_eff.
-
-  A genuinely effectful analysis (named globals, conditional sides, custom return)
-  supplies the per-tree contracts directly, e.g. via seqcomp_mono /
-  static_deps_seqcomp on its construction.
-\<close>
+text \<open>The pipeline derives the solver interface from monotonicity and static
+  dependencies of each strategy tree. A partial post-solution bounds every contribution,
+  and a sound effectful transfer turns those bounds into collecting-semantics soundness.
+  Effectful analyses discharge the tree contracts compositionally.\<close>
 
 subsection \<open>Threefold monotonicity\<close>
 
-text \<open>
-  threefold_mono bundles the three TD_side preconditions required for the
-  solver to converge to a partial post-solution (paper Definition 7).
-
-  is_mono_eq: the equation value is monotone in the environment.
-  mono_sides: the side-effect map is monotone in the environment.
-  mono_deps: the dependency skeleton is a shrinking function of the
-             environment (larger env => smaller or equal dep set).
-
-  These three conditions together let the TD_side solver use the
-  optimized destab_opt=True strategy and guarantee a least partial
-  post-solution.
-\<close>
+text \<open>\<open>threefold_mono\<close> bundles the conditions required by the optimized
+  solver: equation values and side effects are monotone in the environment, while
+  dependency sets can only shrink as the environment grows. Together they guarantee a
+  least partial post-solution.\<close>
 
 definition threefold_mono ::
   "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> bool"

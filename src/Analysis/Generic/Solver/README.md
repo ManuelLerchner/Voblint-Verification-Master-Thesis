@@ -1,9 +1,9 @@
 # TD solver bridge (side-effecting, interprocedural)
 
 Connect the vendored **TD side** solver (`vendor/td-verification`, session `TD`, theory `TD_side`)
-to the interprocedural CFG and effectful `rhs` format.
-`side_analyse_eff pi ps c etf bot s0 v` is proved sound against `cfg_collect` at `v`
-(`side_analyse_eff_collect_sound_exit_pruned_gen`).
+to the procedure-aware CFG and effectful equation format. Solver post-solutions
+are connected to activation-local collecting semantics at nodes covered by the
+query dependency cone.
 
 The layer is split into three concerns, one subfolder each:
 
@@ -47,7 +47,7 @@ lemmas). The D/G product carrier is executable through `Exec_DG_Bridge`
 (`fun_of_dg_st`, `dg_gen_of`, `part_post_solution_dg_st_to_abs`), which lets the
 verified solver run on D/G equations; executable examples use it directly.
 
-`Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`, `warrow`)
-behind one `side_solver` signature; `run_menu eqs entry k var` reads one slot's variable
-under every discipline in a single `value`/lemma. Currently an executable convenience only
-— soundness per rule is the subject of `docs/UPDATE_RULE_FORMALIZATION_PLAN.md`.
+`Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`,
+`warrow`) behind one `side_solver` signature. `run_menu eqs entry k var` reads
+one slot under every discipline. A rule participates in a certified endpoint
+only when its solver adapter yields the required partial post-solution theorem.

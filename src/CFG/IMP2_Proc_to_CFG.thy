@@ -20,8 +20,8 @@ text \<open>
        unreachable exit node).
 
   Control effects and their source counterparts:
-    \<^item> source lexical restoration (\<open>Scope\<close> / \<open>Restore\<close>) becomes ordinary intra flow ---
-       \<open>Scope\<close> is a transparent \<open>EA_Nop\<close>-bracketed block (Goblint flattens lexical frames);
+    \<^item> source lexical restoration (\<open>Scope\<close> / \<open>Restore\<close>) becomes ordinary intra flow;
+      \<open>Scope\<close> is represented by transparent \<open>EA_Nop\<close> brackets;
     \<^item> source \<open>Return\<close> / \<open>Unwind\<close> become an explicit \<open>EA_Ret\<close> edge into \<open>FunctionResult\<close>;
     \<^item> source activation handling becomes \<open>FunctionResult\<close> + the \<open>calls\<close>-edge continuation.
 
@@ -470,8 +470,8 @@ lemma compile_Call_calls:
 text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on that edge produces exactly the
   callee-entry store of the source \<^const>\<open>pstep\<close> \<open>Call\<close> rule: the actuals are evaluated in the
   caller store \<open>s\<close>, the callee locals are reset by \<^const>\<open>enter_state\<close>, and the values are
-  \<^const>\<open>bind_formals\<close>-bound to the formals.  This is the first Stage-5B obligation: the
-  refined trace call-entry equals the source \<open>Call\<close> callee store.\<close>
+  \<^const>\<open>bind_formals\<close>-bound to the formals.  The resulting store is exactly the
+  source \<open>Call\<close> callee store used by the local-trace call rule.\<close>
 lemma call_enter_eq_source_call_store:
   "call_enter (CallEdge dst (formals decl) actuals) s
      = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"

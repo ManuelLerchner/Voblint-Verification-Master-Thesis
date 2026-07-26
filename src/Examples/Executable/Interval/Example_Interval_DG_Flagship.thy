@@ -60,7 +60,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
-subsection \<open>1. The program (inline IMP2 source)\<close>
+subsection \<open>The IMP2 source program\<close>
 
 text \<open>
   A bounded counting loop: initialise \<open>x\<close> to \<open>0\<close>, increment while \<open>x < 20\<close>.  On
@@ -71,7 +71,7 @@ text \<open>
 definition flagship_prog :: "IMP2_Proc.com" where
   "flagship_prog = imp \<lbrakk> x := 0; while (x < 20) { x := x + 1 } \<rbrakk>"
 
-subsection \<open>2. CFG construction\<close>
+subsection \<open>CFG construction\<close>
 
 text \<open>
   The source compiles to an interprocedural CFG by \<open>compile_prog\<close>.  The whole program is
@@ -125,7 +125,7 @@ lemma flagship_calls: "calls flagship_cfg = {}" by (simp add: flagship_cfg_eq)
 lemma flagship_finE: "finite (intra flagship_cfg)" by (simp add: flagship_intra)
 lemma flagship_finC: "finite (calls flagship_cfg)" by (simp add: flagship_calls)
 
-subsection \<open>3. The analysis specification (interval, as an executable D/G analysis)\<close>
+subsection \<open>Executable interval D/G specification\<close>
 
 text \<open>
   Intervals form the diagonal D/G analysis \<open>D = G = ivl abs_state\<close>, with executable
@@ -136,7 +136,7 @@ text \<open>
   the executable solve, and the coverage witnesses.
 \<close>
 
-subsection \<open>4. Equation generation\<close>
+subsection \<open>Equation generation\<close>
 
 text \<open>
   The generic D/G generator \<open>dg_gen_of\<close> turns the CFG into an equation system over
@@ -149,7 +149,7 @@ text \<open>
 definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
   "flagship_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) flagship_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 
-subsection \<open>5. Executable solve\<close>
+subsection \<open>Executable solve\<close>
 
 text \<open>
   The vendored \<open>TD_side_warrowing_apinis_Interp_solve_c\<close> --- pointwise interval
@@ -172,7 +172,7 @@ value "map_option
             (map Statement [0,1,2,3,4,5]))
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
-subsection \<open>8. Soundness premises for the registered endpoint\<close>
+subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
   The premises of the generic native endpoint \<open>ivl_dg_post_solution_collect_sound\<close>:
@@ -214,7 +214,7 @@ text \<open>
   and transport steps are discharged inside it.
 \<close>
 
-subsection \<open>9. Inspecting the certified result\<close>
+subsection \<open>Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
   "lookup_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
@@ -228,7 +228,7 @@ lemma flagship_exit_computed:
   "lookup_st (locals (snd flagship_sol (Inl (Statement 5, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
-subsection \<open>10. Source-level soundness (one registered step)\<close>
+subsection \<open>Source-level soundness through the registered analysis\<close>
 
 text \<open>
   The registered endpoint \<open>ivl_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
@@ -239,8 +239,10 @@ text \<open>
 \<close>
 
 lemma flagship_wf: "wf_compile_input flagship_pi [] ''main'' flagship_prog"
-  unfolding wf_compile_input_def flagship_pi_def flagship_prog_def
-  by (auto simp: source_pi_def proc_decl_of_def split: if_splits)
+  unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
+    flagship_pi_def flagship_prog_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+      split: if_splits)
 
 theorem flagship_source_run_sound:
   assumes run: "star (pstep flagship_pi) (flagship_prog, s, []) (residual, t, frs)"
@@ -248,14 +250,11 @@ theorem flagship_source_run_sound:
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> ivl_reg.gamma (snd flagship_sol) v"
 proof -
-  have sc: "source_com flagship_prog" by (simp add: flagship_prog_def)
-  have swf: "source_wf (flagship_prog, s, [])"
-    by (simp add: source_wf_def flagship_prog_def)
   show ?thesis
     unfolding flagship_sol_def flagship_eqs_def flagship_cfg_def
     by (rule ivl_reg.run_source_sound
           [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
-              flagship_wf sc swf
+              flagship_wf
               flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
@@ -297,7 +296,7 @@ theorem flagship_head_bound_proper:
   using head_x_bound apply (simp add: fun_of_dg_st_simps sup_fun_def)
   done
 
-subsection \<open>12. Annotated GraphViz of the computed result\<close>
+subsection \<open>Annotated GraphViz of the computed result\<close>
 
 text \<open>
   A DOT rendering of \<open>flagship_cfg\<close> with each node annotated by the computed

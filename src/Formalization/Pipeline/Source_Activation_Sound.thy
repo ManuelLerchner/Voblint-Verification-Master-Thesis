@@ -15,8 +15,6 @@ theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
     and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
@@ -27,7 +25,7 @@ proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_store_in_activation_collect
          [where mnm=mnm and enterc=enterc and seedc=seedc,
-          OF wf s0 swf run]
+          OF wf s0 run]
   obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
     and mem: "s \<in> activation_collect enterc seedc ?g S v (key enterc seedc t)"
     by meson
@@ -42,8 +40,6 @@ theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
     and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
@@ -52,7 +48,7 @@ theorem source_sound_toplevel_from_collecting_cap:
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_toplevel_in_activation_collect[where mnm=mnm and enterc=enterc and seedc=seedc, OF wf s0 swf run]
+  from source_toplevel_in_activation_collect[where mnm=mnm and enterc=enterc and seedc=seedc, OF wf s0 run]
   obtain v where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])"
     and mem: "s \<in> activation_collect enterc seedc ?g S v seedc" by blast
   have "s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>" using cap[of v seedc] mem by blast
@@ -65,8 +61,6 @@ theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
@@ -89,7 +83,7 @@ proof -
   have cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
-  show ?thesis by (rule source_sound_from_collecting_cap[where mnm=mnm, OF wf src swf s0 run cap])
+  show ?thesis by (rule source_sound_from_collecting_cap[where mnm=mnm, OF wf s0 run cap])
 qed
 
 text \<open>The witness-free specialisation at top-level program points: a store reached with an empty
@@ -99,8 +93,6 @@ theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
@@ -123,7 +115,7 @@ proof -
   have cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
-  show ?thesis by (rule source_sound_toplevel_from_collecting_cap[where mnm=mnm, OF wf src swf s0 run cap])
+  show ?thesis by (rule source_sound_toplevel_from_collecting_cap[where mnm=mnm, OF wf s0 run cap])
 qed
 
 subsection \<open>Monovariant source bridge into the trace collecting\<close>
@@ -136,8 +128,6 @@ text \<open>
 theorem source_reaches_ltr_collect:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
@@ -145,7 +135,7 @@ theorem source_reaches_ltr_collect:
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_store_in_activation_collect[where mnm=mnm and enterc = "\<lambda>_ _. ()" and seedc = "()",
-        OF wf s0 swf run]
+        OF wf s0 run]
   obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
     and mem: "s \<in> activation_collect (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by meson
   have "s \<in> ltr_collect_keyed (key (\<lambda>_ _. ()) ()) ?g S v (key (\<lambda>_ _. ()) () t)"
@@ -175,8 +165,6 @@ text \<open>
 theorem source_completes_valid_ltr_result:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
   shows "\<exists>t p. t \<in> valid_ltr (compile_prog Pi ps mnm main) S
@@ -186,7 +174,7 @@ theorem source_completes_valid_ltr_result:
                \<and> sink_store t = s"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_run_has_ltr[OF wf s0 swf run]
+  from source_run_has_ltr[OF wf s0 run]
   obtain v stk t where sim: "csim Pi ?g (SKIP, s, []) (v, s, stk)"
     and rep: "ltr_repr ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
@@ -233,15 +221,13 @@ text \<open>Whole-program completion.  The completing activation is the root one
 corollary source_completes_ltr_collect_exit:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
-    and src: "source_com main"
-    and swf: "source_wf (main, s0, [])"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
   shows "s \<in> ltr_collect (compile_prog Pi ps mnm main) S
               (cfg_exit (compile_prog Pi ps mnm main))"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_completes_valid_ltr_result[OF wf src swf s0 run]
+  from source_completes_valid_ltr_result[OF wf s0 run]
   obtain t p where tv: "t \<in> valid_ltr ?g S" and hd_t: "fst (hd (path t)) = cfg_entry ?g"
     and sn: "sink_node t = FunctionResult p" and ss: "sink_store t = s" by blast
   have "fst (hd (path t)) = FunctionEntry mnm"

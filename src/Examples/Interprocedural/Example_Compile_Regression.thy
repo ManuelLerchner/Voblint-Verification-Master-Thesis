@@ -93,4 +93,82 @@ proof -
     using comp by (auto simp: compile_proc_def Let_def body split: prod.splits)
 qed
 
+
+section \<open>Compiler-input contract regressions\<close>
+
+lemma unknown_call_rejected:
+  assumes "\<Pi> p = None"
+  shows "\<not> wf_source_com \<Pi> (Call dst p actuals)"
+  using assms by simp
+
+lemma wrong_call_arity_rejected:
+  assumes "\<Pi> p = Some decl" and "length actuals \<noteq> length (formals decl)"
+  shows "\<not> wf_source_com \<Pi> (Call dst p actuals)"
+  using assms by simp
+
+lemma reserved_formal_rejected:
+  "\<not> wf_proc_decl \<Pi> (proc_decl_of [ret_var] SKIP)"
+  by (simp add: wf_proc_decl_def proc_decl_of_def valid_formal_def)
+
+lemma duplicate_formals_rejected:
+  "\<not> wf_proc_decl \<Pi> (proc_decl_of [x, x] SKIP)"
+  by (simp add: wf_proc_decl_def proc_decl_of_def)
+
+lemma global_formal_rejected:
+  assumes "is_global x"
+  shows "\<not> wf_proc_decl \<Pi> (proc_decl_of [x] SKIP)"
+  using assms by (simp add: wf_proc_decl_def proc_decl_of_def valid_formal_def)
+
+lemma reserved_assignment_rejected:
+  "\<not> wf_source_com \<Pi> (Assign ret_var a)"
+  by simp
+
+lemma reserved_read_rejected:
+  "\<not> wf_source_com \<Pi> (Assign x (V ret_var))"
+  by (simp add: source_aexp_def)
+
+lemma root_return_rejected:
+  "\<not> wf_compile_input \<Pi> ps mnm (Return e)"
+  by (simp add: wf_compile_input_def wf_source_program_def)
+
+lemma value_call_requires_value_provider:
+  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)"
+  shows "\<not> wf_source_com \<Pi> (Call (Some x) p [])"
+  using assms by (simp add: proc_decl_of_def value_providing_def)
+
+lemma void_call_accepted:
+  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)"
+  shows "wf_source_com \<Pi> (Call None p [])"
+  using assms by (simp add: proc_decl_of_def)
+
+lemma value_call_accepted:
+  assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))"
+      and "x \<noteq> ret_var"
+  shows "wf_source_com \<Pi> (Call (Some x) p [])"
+  using assms
+  by (simp add: proc_decl_of_def value_providing_def source_aexp_def)
+
+lemma ignored_value_call_accepted:
+  assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))"
+  shows "wf_source_com \<Pi> (Call None p [])"
+  using assms by (simp add: proc_decl_of_def)
+
+definition fallthrough_pi :: proc_table where
+  "fallthrough_pi p =
+     (if p = ''main'' then Some (proc_decl_of [] SKIP) else None)"
+
+lemma main_fallthrough_accepted:
+  "wf_compile_input fallthrough_pi [] ''main'' SKIP"
+  by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
+        wf_proc_decl_def proc_decl_of_def)
+
+lemma missing_main_rejected:
+  assumes "\<Pi> mnm = None"
+  shows "\<not> wf_compile_input \<Pi> ps mnm main"
+  using assms
+  by (auto simp: wf_compile_input_def wf_source_program_def)
+
+lemma duplicate_procedure_names_rejected:
+  "\<not> wf_compile_input \<Pi> [p, p] mnm main"
+  by (simp add: wf_compile_input_def)
 end

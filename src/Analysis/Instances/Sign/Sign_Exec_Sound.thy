@@ -107,7 +107,7 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree
                 sign_etf_st_edge_tree sign_etf_st_combine_tree sign_tf_st_commute
-                sign_etf_unit_enter_tree sign_etf_st_enter_tree sign_enter_st_commute pp_st]
+                sign_etf_unit_enter_tree_tf sign_etf_st_enter_tree sign_enter_st_commute pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_sign_st bot_fun_def)
   have cone: "cone_compatible_etf sign_etf_unit" by (rule sign_etf_unit_cone_compatible)
   have srz: "\<And>z. side_rg (sign_exec_eqs \<Pi> ps mnm main z)"

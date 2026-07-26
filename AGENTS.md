@@ -2,541 +2,283 @@
 
 # AGENTS.md
 
-You are a formal proof engineer working with Isabelle/jEdit. Your work is surgical, clearly structured, and well-documented. Step back regularly and ask: Could my proofs be cleaned up, accelerated, or simplified? Could they be broken into smaller lemmas?
+Work as a formal proof engineer in Isabelle/HOL. Match the surrounding theory's
+structure, naming, comment density, and proof style. Prefer small, explicit
+proof steps whose batch behavior is predictable.
 
-<tone_preference>
-Keep outputs reasonably concise. Focus on substance, and spend most of the response on the main answer. When explaining something, give a high-level summary unless an in-depth explanation is specifically requested. Match the length of written deliverables to what the task needs without padding with filler sections or redundant summaries.
-</tone_preference>
+## Load context when needed
 
-**REMEMBER: NEVER create/read/write `.thy` files via host `fs_read`/`fs_write` (`Read`/`Edit`/`Write`). ALWAYS go through the I/Q MCP server (`write_file` / `read_file` / `open_file`). I/R `repl_edit` if jEdit is down.** Exception: the very first creation of a brand-new `.thy` not yet tracked by jEdit follow with `open_file`.
+Keep this file as the project contract. Load detailed guidance only for the
+task at hand:
 
-**REMEMBER: Before each proof, ask: short & simple, or not?**
+- Before reading, editing, or proving anything in a `.thy` file, read
+  `docs/ISABELLE_AGENT_NOTES.md`.
+- For the proof architecture and intended claims, read
+  `docs/PROOF_OVERVIEW.md` and `docs/PROOF_PHASES.md`.
+- For current terminology and defining layers, read `docs/GLOSSARY.md`.
+- For scope and priorities, read `docs/ROADMAP.md`, `docs/NEXT_STEPS.md`, and
+  `docs/NON_GOALS.md`.
+- For an area-specific task, read the nearest `README.md`.
+- Use `.thy` files as the source of truth for definitions, theorem statements,
+  and proof status. Do not copy drifting lemma inventories into this file.
 
-* Short & simple → `by …` or apply-style Isar.
-* Not → structured Isar.
-* Apply-style: 1–2 tactics at a time, inspect, proceed. Never replace entire scripts.
-* Structured Isar: top-down. Sketch with `sorry` placeholders. Fill one at a time. If a `sorry` is complex, hoist it as a separate lemma or open a `proof -` subproof.
+## Project contract
 
-**REMEMBER: Comments describe the *current* theory, never its history.**
+Voblint verifies this pipeline:
 
-* No "Option-A/B", "Mirrors X", "IP analogue of X", "previously/formerly/used to", "no longer needs", or references to deleted/retired theories (e.g. `TD_Side_Interface`, `TD_IP_Soundness`, intra-spine names). State what the code does now.
-* Comparing to a *still-existing* sibling is fine (`Mirrors ltr_collect_keyed`); comparing to a removed one is rot — delete it.
-* A "no longer / previously" that describes the *mathematics* (e.g. "after one write the array is no longer the constant array") stays; only project-history framing goes.
-* Prefer Isabelle document structure over comment banners: file-header `(* … *)` → `section ‹…›` + `text ‹…›`; `(* -- X -- *)` separators → `subsection ‹X›`. Keep short why-comments as `(* … *)`. Use ASCII `\<open>`/`\<close>` for cartouches.
-
----
-
-# Operational Guardrails for Agentic Execution
-
-* **Task Scope & Over-Verification:** Deliver what was asked, at the scope intended. Make routine judgment calls yourself, and check in only when different readings of the request would lead to materially different work. Finish the whole task, and stop short of actions that are clearly beyond what was asked. Avoid adding manual verification checks or redundant self-correction commands; rely on built-in capabilities.
-* **Subagent Delegation:** Delegate to a subagent only for large tasks that are genuinely independent and parallelizable, such as a wide multi-file investigation. Do not delegate work you can finish yourself in a handful of tool calls, and do not use subagents to verify your own work. Keep spawn counts low.
-* **Output Artifact Hygiene:** Avoid including internal system indicators, diagnostic chatter, or system XML tags in your visible responses. Keep narration minimal: announce brief updates only when shifting direction or uncovering critical findings, and lead with outcomes.
-
----
-
-# Project goal
-
-`IMP2 source → (CFG) → equation system → TD solver → sound abstract result → source bridge / mapped back`.
-
-Vendored `TD` solver (stilscher/td-verification) already verified. Proved: CFG
-collecting semantics (`ltr_collect`), CFG layer, eqsys soundness, abstract domains
-(Sign → Interval → Octagon stretch), pipeline composition, source-to-analysis bridge.
-Everything we formalize should stay Goblint-faithful and close to the actual
-Goblint repository on GitHub.
-
----
-
-# Locked decisions
-
-| Topic            | Decision                                             |
-| ---------------- | ---------------------------------------------------- |
-| Assistant        | Isabelle/HOL, HOL-IMP                                |
-| Solver           | vendored `TD` (td-verification)                      |
-| Solver interface | `rhs :: pp => (pp => abs_state) => abs_state`        |
-| Domains          | Sign → Interval → Octagon (stretch)                  |
-| Joins            | `Finite_Set.fold` (needs comm + assoc, finite edges) |
-| Order            | `'a::ord` pointwise on states                        |
-
-Open: future IMP vs IMP2 scope only — current code is IMP2.
-
-Decided since v0: CFG layer wins (`Direct_Equations` deleted as P10, off-path); interval instance is already in-tree, with remaining work on precision / termination engineering.
-
-**Live roadmap and backlog: `docs/ROADMAP.md` + [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).** Issues, dependencies, per-phase status, and Blazy-2013-inspired extensions live there, not in this file.
-
----
-
-# Repository layout
-
-```
-src/IMP2/                  syntax + small-step (README)
-src/CFG/                   CFG core (README); Collecting/ — ltr_collect / valid_ltr (README); Compiler/ — source-to-CFG compiler correctness (Analysis-free)
-src/Analysis/              Voblint_Analysis session
-src/Analysis/Instances/    concrete domains and effectful transfer records (README)
-src/Analysis/Equations/    constraint systems + soundness (README)
-src/Analysis/Solver/       TD solver bridge (README)
-src/Formalization/         Voblint_Formalization session (end-to-end soundness theorems)
-src/Formalization/Pipeline/ end-to-end soundness + source bridge (README)
-src/Examples/              Voblint_Examples session: executable demos, flagships, Voblint capstone (README)
-vendor/td-verification/    TD solver (AFP session `TD`, submodule)
-vendor/autocorrode/        I/Q + I/R MCP servers (submodule; scripts wire iq/, ir/)
+```text
+IMP2 source -> CFG -> equation system -> TD solver
+            -> sound abstract result -> source-level result
 ```
 
-`ROOTS` + scattered `ROOT` files define a 5-session DAG: `Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` → `Voblint_Examples` (see `docs/SESSION_DAG_MIGRATION.md`). `Voblint_Formalization` holds only the end-to-end soundness theorems (`Mixed_Flow_Sound`, `Source_Activation_Sound`); the `Example_*`/`Exec_*` witnesses and the `Voblint` capstone were split into the leaf session `Voblint_Examples` (`src/Examples/`), so the soundness gate builds without the slow codegen/`value` demo runs. Cross-session imports use qualified names (`"Voblint_IMP2.IMP2_Syntax"` etc.). `Voblint_IMP2` adds `Deriving` (executable `linorder` for `aexp`/`bexp`/`edge_action`, so CFG edge enumeration code-generates without a list-built mirror); `Voblint_CFG` adds `Dijkstra_Shortest_Path`; `Voblint_Analysis` adds `TD`. The analysis rides **only** on the side-effecting solver (`TD.TD_side`); the plain top-down solver (`TD.TD_plain`) and its spine were retired (see `docs/TD_SIDE_ONLY_MIGRATION.md`). Top-level theories are the interprocedural side-effecting spine: `Mixed_Flow_Sound`, `Source_Activation_Sound`, `LTR_TD_Side_Eff_Exit`, `Sign_Side_Soundness`, `Interval_Side_Soundness`, `DG_LTR_Sound`, plus `Example_*` witnesses (`Example_Inc_Proc`, `Example_Mixed_Flow_Sign`, `Example_Side_Proc_Global`, `Example_Proc_GraphViz`, `Example_Interval_DG_Flagship`, `Example_Mixed_Sign_Interval_GraphViz`). The source-to-analysis bridge is the reusable IMP2-facing endpoint. The canonical context-sensitive activation path is `Activation_Backbone` (generic `activation_collect_sound`) → `DG_Ctx_Activation` (DG-native discharge) → `Example_Interval_DG_Ctx_Collect` (solver-backed, `activation_collect`); the functional keyed generator is `TD_Side_Eff_Keyed_Gen` (`side_cfg_T_eff_keyed*`). The relational trace/digest spine (`CFG_Collect_Trace`, `Trace_Analysis_Sound`, `Ctx_Collect_Backbone`, the `cmp`/`gcmp` read cluster, digest examples) was removed (see `docs/DIGEST_SPINE_REMOVAL_PLAN.md`). The plain-`abs_state` activation + `twf`/`twfr` from-node-witness cluster was deleted (see `docs/ACTIVATION_SPINE_CONSOLIDATION.md`). The intra-procedural (classical) spine — plain `TD_Soundness`, intra `Sign`/`Interval` analysis, `Pipeline`, the old `Voblint_Formalization` headline theory, intra examples — was extracted to the sibling repo `voblint-formalization-classical` and removed here (see `docs/CLASSICAL_SPINE_RETIREMENT.md`). The intra-only duplication (intra side soundness, the `to_cfg` cone, the intra solver fold, the intra `com` datatype) was then collapsed onto the single IP pipeline; the `com` datatype in `IMP2_Proc.thy` is the extended procedural language (Scope / Call / Restore) used throughout (see `docs/IP_ONLY_CONSOLIDATION.md`).
+The formalization should remain faithful to Goblint's architecture and, where a
+claim depends on analyzer behavior, to the actual Goblint source.
 
-Docs:
+`valid_ltr` defines the activation-local interprocedural trace semantics.
+Soundness targets every program point: `ltr_collect` is the
+context-insensitive projection, while `activation_collect` retains activation
+keys for context-sensitive results. `ltr_collect_semantic_postfix` connects a
+semantic post-fixpoint to `ltr_collect`; `source_completes_ltr_collect_exit`
+connects terminating source runs to compiled exit reachability. These are
+semantic anchors, not a proof-status inventory.
 
-* `docs/PROOF_PHASES.md` — steps, exit criteria, sorry inventory
-* `docs/PROOF_OVERVIEW.md` — big picture
-* `docs/ROADMAP.md` — live backlog (mirrors GitHub Project 8)
-* `docs/NON_GOALS.md` — what the project deliberately does NOT do (each tied to a decision doc)
-* `docs/GLOSSARY.md` — project terms with `file:line` references
-* `docs/NEXT_STEPS.md`, `docs/OPEN_PROBLEMS.md` — short-horizon + open items
-* `docs/HOL_IMP_COMPARISON.md`, `docs/IMP_SYNTAX_NIPKOW_EXTENSION.md`, `docs/cfg-representation.md` — design references
-* `docs/ISABELLE_AGENT_NOTES.md` — MCP / Isabelle traps
-* `docs/html/` — Isabelle browser info (generated by `make html`)
+Locked decisions:
 
----
+| Topic | Decision |
+| --- | --- |
+| Logic | Isabelle/HOL over HOL-IMP |
+| Source language | IMP2 |
+| Solver | Vendored verified `TD` solver |
+| Solver interface | `rhs :: pp => (pp => abs_state) => abs_state` |
+| Analysis path | Procedure-aware CFG and generic D/G pipeline |
+| Domains | Sign, Interval, then Octagon as a stretch goal |
+| Joins | `Finite_Set.fold` with finite edges, commutativity, and associativity |
+| State order | Pointwise `'a::ord` |
 
-# Proof status
+The procedure-aware CFG and generic D/G route are the sole analysis path. Sign,
+Interval, and mixed Sign/Interval instances use the side-effecting verified
+solver.
 
-Don't hardcode lemma lists here they drift. Source of truth = the `.thy` files.
+The five-session dependency chain is:
 
-```bash
-rg -n '^\s*sorry' src/            # live sorry inventory
-rg -n '^(lemma|theorem) ' src/    # all declared statements
+```text
+Voblint_IMP2 -> Voblint_CFG -> Voblint_Analysis
+             -> Voblint_Formalization -> Voblint_Examples
 ```
 
-Phases, exit criteria, big-picture plan: `docs/PROOF_PHASES.md`, `docs/PROOF_OVERVIEW.md`.
+Cross-session theory imports use qualified names.
+`Voblint_Formalization` contains the reusable soundness endpoints.
+`Voblint_Examples` contains executable runs, regressions, code generation,
+GraphViz output, and the `Voblint` capstone.
 
----
+The procedural language includes calls, explicit returns, and runtime-only
+restore/unwind commands. CFGs separate local `intra` edges from the `calls`
+relation and use `FunctionEntry` and `FunctionResult` nodes. Concrete transfer
+primitives live in `src/CFG/CFG_Transfer.thy`; activation-local semantics live
+under `src/CFG/Collecting/`.
 
-# CFG path infrastructure
+## Theory-file boundary
 
-`offset_edges k` shifts sub-command edges for compound CFGs compiled at offset `k > 0`; `src/CFG/CFG_Path.thy` carries this offset infrastructure. The concrete store-transfer primitives (`edge_step`, `edge_collect`, `call_enter_store`, `combine_collect`) live in `src/CFG/CFG_Transfer.thy`. The interprocedural collecting layer is in `src/CFG/Collecting/`: `CFG_Local_Trace` (the call-structured activation-local trace `valid_ltr` — `Root`/`Call`/`Resume` — the generic `collect_by` combinator, and the activation collector `activation_collect`), `LTR_Collect` (the forgetful projections `ltr_collect` / `ltr_collect_keyed` plus `valid_ltr_eq_lfp`), and `LTR_Abstract` (the `ltr_gamma` interface and the keystone `ltr_collect_semantic_postfix`).
+Never use host filesystem read or edit tools on tracked `.thy` files. Isabelle/
+jEdit owns their document state; host access can create stale-buffer and
+phantom-proof failures.
 
-**Thesis sentence:** Soundness is stated against interprocedural activation-local trace collecting semantics at **every** program point (`ltr_collect`, and the activation-indexed `activation_collect` for context-sensitive results). The analyzer's post-fixpoint soundly over-approximates that semantics. Terminating IP runs correspond to exit reachability (`source_completes_ltr_collect_exit`).
+- Use I/Q `open_file`, `read_file`, and `write_file`.
+- If jEdit is unavailable, use I/R `repl_edit`.
+- A brand-new, untracked theory may be created once through the host, then must
+  immediately be opened in I/Q.
+- After an I/Q write: save, run
+  `scripts/normalize_isabelle_ascii.py`, reopen the file, and check diagnostics.
+- Write Isabelle symbols in ASCII source form. Unicode is allowed in comments,
+  but not in theory syntax.
 
----
+If an actual I/Q or I/R call fails, report it and request
+`rtk ./scripts/start-both.sh` or `rtk ./scripts/start-ir.sh`. Do not substitute
+a batch build for contextual proof development.
 
-# Workflow: MCP first, build to verify
+## Proof development
 
-**Default: I/Q (or I/R) for any development.** Read state before editing. Use `explore` to trial-run tactics. **Do not run `isabelle build` while iterating** — build only when the user asks, or once at the end of the complete task or migration.
+Before each proof, decide whether it is short and simple.
 
-Why: Isabelle proof state is contextual (locales, assumptions, simp set). Textual edits compile against a different goal than you reasoned about. Read state, then edit. Full-session batch build is slow, hides which command failed, and tempts disk/buffer drift when used as a debug loop.
+- Short proofs: use `by ...` or apply-style Isar, one or two tactics at a time.
+- Longer proofs: sketch structured Isar top-down, isolate hard obligations, and
+  fill placeholders individually.
+- If a valid obligation is difficult, repair the proof or strengthen its
+  invariant. Before changing the architecture, establish that the intended
+  theorem is false and try to produce a small `nitpick [timeout=5]`
+  counterexample.
 
-## Hard rules (agents)
+Comments explain the current theory and why a choice matters. Do not preserve
+project history in source comments: avoid references to removed theories,
+retired paths, former names, or migration alternatives. Use Isabelle document
+structure (`section`, `subsection`, and `text`) for exposition.
 
-| Do                                                                           | Don't                                                        |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `open_file` → `get_diagnostics` / `get_command_info` on the theory you touch | `isabelle build` after every edit or to “see if it compiles” |
-| `explore` / `get_context_info` before non-trivial proof changes              | Host `Read`/`Edit`/`Write` on tracked `.thy` files           |
-| `write_file` → `save_file` → `normalize_isabelle_ascii.py` → `open_file`     | Assume I/Q buffer == on-disk file without `save_file`        |
-| One failing command at a time via I/Q diagnostics                            | Full rebuild to locate a failure I/Q already names by line   |
-| Batch build once: user request, CI, or the **complete** task/migration is green in I/Q | Batch build between migration stages or as a substitute for `get_diagnostics` / `explore` |
+- Comparisons to a still-existing sibling definition or lemma are valid.
+- Temporal language that describes the mathematics is valid. Remove only
+  project-history framing.
 
-**If I/Q is up:** debugging a proof or syntax error = I/Q only, until `get_diagnostics` (scope=file, severity=error) is empty on every file you changed.
+## Batch-friendly proof habits
 
-**If I/Q is down:** say so and ask for `./scripts/start-both.sh` (or `./scripts/start-ir.sh`); use I/R `repl_edit` — still no full build as first resort.
+These rules keep interactive development fast and make the final batch build a
+reliable one-shot gate.
 
-## I/Q loop (per edit)
+### Workflow
 
-1. `open_file` (view the theory you edit).
-2. `write_file` (`str_replace`, small diff).
-3. `save_file` on that path.
-4. `python3 scripts/normalize_isabelle_ascii.py <file>` then `open_file` again.
-5. `get_diagnostics` (or `get_command_info` on the edited line range).
-6. If proof work: `explore` on the failing command; repeat from step 2.
+- **I/Q inner loop, batch outer gate.** Debug one failing command through
+  `get_diagnostics` and `explore`. Run the batch build once the complete task or
+  migration is file-clean, when the user requests it, or at the commit gate.
+  Do not build between stages or tactic changes.
+- **I/Q is not completion.** Interactive checking can finish a step while
+  subgoals remain or accept an invalid intro rule. Empty file diagnostics mean
+  ready for batch, not proved.
+- **Batch is completion.** Show the green verbose build log before calling proof
+  work done.
 
-## I/Q recommended pattern (AutoCorrode iq/README)
+### Automation that batch tolerates
 
-**Good:** inspect state often (`get_context_info`, `get_command_info`); `explore` before mutating; small proofs; ask current subgoal often; `get_proof_blocks` for scope reads.
+- Prefer small, named case-split or decomposition lemmas with
+  `by (rule ...)` or `cases rule: ...` over `auto elim!:` on inductive
+  predicates.
+- Prefer bounded tactics such as `simp only:` and `auto simp:` with an explicit
+  lemma set over unbounded automation on large imported rule sets.
+- Prefer structured Isar with explicit `show` subgoals over long `[OF ...]`
+  chains when facts must align exactly.
+- When a subgoal resists one line of automation, hoist a helper lemma. Do not
+  widen `auto` or `simp` to force it.
 
-**Bad:** blind `sledgehammer`; one-shot huge scripts; rewriting without state inspection; back-to-back `write_file`s without re-reading goal; **`isabelle build` mid-task**.
+### Locale and constant shapes
 
-**Strongly prefer:** `explore`, `get_context_info`, `get_proof_blocks` over direct file edits or batch build.
+- Theorems inside locales use locale-qualified constants. Callers outside often
+  need the same fully applied global shape as the target lemma.
+- Before `theorem_callee[OF ...]`, compare interpretation-local premises with
+  fully applied global premises. A shape mismatch fails even when the
+  mathematics agrees.
+- Surface concrete corollaries through global definitions, small expansion
+  lemmas, or an `interpretation` block instead of repeating fragile unfolds.
 
-## When build is appropriate
+### Sledgehammer in batch
 
-* User explicitly asks for a build / CI check.
-* Final verification after **all** edited theories report no errors in I/Q.
-* Heap refresh after large structural change (imports, session `ROOT`, new theory entry).
-* Commit gate (CI).
-
-## Claiming work done
-
-**Never claim a proof is fixed based on the I/Q interactive checker alone.** Interactive passes diverge from batch silently. The gate is a clean `isabelle build` output — show the user the green build log before declaring done.
-
-After any `write_file`, re-read the file from disk (or re-run `get_diagnostics`) to confirm the edit persisted. Buffer-sync lag and `save_file` timeouts have caused phantom fixes; verify the disk state before proceeding.
-
-### Status words are load-bearing
-
-- **"committed"** means it is in `git`. Nothing is committed unless you ran `git commit`. Code that builds green but lives only in the working tree is **"landed"**, not committed.
-- A **phase / theorem is "done"** only when the *theorem it was about* is stated and proved. A green build with the theorem still absent (or replaced by `by eval` computation) is progress, not completion — say which. Don't declare victory on the strength of a build when the semantic claim doesn't exist yet.
-- Report faithfully: `done` = stated, proved, batch-green; `landed` = builds, not committed; `in progress` = obligation isolated but open. Prefer these to "completed."
-
-### Report shape
-
-Progress reports are technical status, not essays. Default to four lines:
-
-```
-Done:      <what is now true>
-Reason:    <one-line why / mechanism>
-Blockers:  <remaining obligations, most-load-bearing first>
-Next:      <the next proof / step>
-```
-
-Expand only when the user asks for detail. Excellent content at 3x the needed length is a defect, not a courtesy.
-
-### When a proof obstacle appears, fix the proof — not the architecture
-
-A discharged-but-hard obligation (a coverage side-condition, a stubborn `simp`, a missing commute lemma) is a proof-engineering task. **Do not redesign the framework to route around it** unless the theorem is *genuinely false* (find a concrete counterexample / `nitpick` witness first). Hoist a helper lemma, strengthen an invariant, or narrow automation. Redesign is the last resort here, not the first.
-
-Build command (from repo root, after bootstrap heaps exist):
-
-```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
-```
-
-Always pass `-v` so per-theory progress streams live. Pass `-N` to parallelise within each session. With warm heaps an incremental build touches only the changed session(s) + dependents.
-
-**Bootstrap** (fresh clone, no heaps yet — run once in order):
-
-```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 Voblint_IMP2
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 -d src/CFG Voblint_CFG
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -d src/IMP2 -d src/CFG -d src/Analysis Voblint_Analysis
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
-```
-
-To build only a sub-layer (e.g., working only on CFG, after bootstrap):
-
-```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_CFG
-```
-
-`sorry` in batch needs `options [quick_and_dirty]` in the relevant `ROOT`.
-
-### Build timeout policy
-
-**If the build runs > 40s with warm heaps, assume an infinite loop or a slow `metis`/`smt` reconstruction, not slow compilation.** Top culprits, in order:
-
-* **`metis` / `smt` blow-up** — sledgehammer-suggested `metis [...]` calls that run fast interactively but balloon in batch. Most common cause of build hangs in this repo.
-* **`auto` + `elim!` on inductive case rules** — path predicates, grammars, and other large `inductive` libraries; often fine in I/Q, loops in batch.
-* `simp` / `auto` / `fastforce` rewriting in both directions.
-* A recursive `lemma [simp]` declaration.
-* A freshly added congruence / `[intro]` rule that triggers nontermination.
-
-Diagnosis:
-
-1. Don't wait it out — kill the build.
-2. Check the streaming `-v` output (or `Monitor` on the task file). The last `Running <Theory> ...` line names the file that hangs; the next silent gap is the stuck command.
-3. If `-v` output is ambiguous, rerun with `isabelle build -v -v ...` (extra `-v` shows per-command timings) or open the theory in I/Q and step to the offending lemma.
-4. Fix: bound the automation (`simp only:`, narrow `auto simp: ...` lemma set), undo the bad `[simp]`/`[intro]` attribute, or split the proof.
-
-Never bump the build timeout to mask a hang — that hides a real regression and rots into a multi-minute baseline.
-
-### Batch-friendly proof habits
-
-Patterns that keep iteration in I/Q and batch as a one-shot gate:
-
-**Workflow**
-
-* **I/Q inner loop, batch outer gate.** Debug one failing command via `get_diagnostics` / `explore`. Run `isabelle build` once when the complete task or migration is file-clean — not between stages or after tactic changes.
-* **I/Q is not completion.** Interactive checking can mark a step finished while subgoals remain, or accept bogus intro rules. Treat empty file diagnostics as “ready for batch”, not “proved”.
-* **Batch is completion.** Show a green `-v` log before calling work done.
-
-**Automation that batch tolerates**
-
-* Prefer **small, named case-split or decomposition lemmas** + `by (rule …)` / `cases rule: …` over `auto elim!: …` on inductive predicates.
-* Prefer **bounded** tactics: `simp only: …`, `auto simp: …` with an explicit lemma set — not unbounded `simp` / `auto` on large imported rule sets.
-* Prefer **structured Isar** (`proof (rule …)` with explicit `show` subgoals) over long `[OF …]` chains when facts must line up exactly.
-* When a subgoal resists one line of automation, **hoist a helper lemma** — do not widen `auto`/`simp` to force it.
-
-**Locale and constant shapes**
-
-* Theorems inside locales use locale-qualified constants; callers outside often need the **same global shape** the target lemma expects.
-* Before `theorem_callee[OF …]`, check whether premises use **interpretation-local** names vs **fully applied global** names — mismatch fails `OF` even when the mathematics is the same.
-* Surface **concrete corollaries** (global definitions, one-line expansion lemmas, or an `interpretation` block) at locale boundaries instead of repeating fragile unfolds at every use site.
-
-**Sledgehammer in batch**
-
-* Default paste-back: `blast`, `auto`, `meson`.
-* `metis` / `smt` only after batch confirms they finish quickly — they are a leading hang source.
+- Try Sledgehammer first on every non-trivial subgoal with a timeout of at most
+  15 seconds.
+- Prefer paste-backs using `blast`, `auto`, or `meson`.
+- Keep `metis` and `smt` only after the batch build confirms they reconstruct
+  quickly; they are a leading source of build hangs.
 
 ## ASCII-only `.thy` sources
 
-**Never write unicode Isabelle symbols in `.thy` files.** I/Q's editor tolerates them; `isabelle build` (batch) rejects them with "Inner lexical error". Always use ASCII forms:
+Never write Unicode Isabelle symbols in theory syntax. I/Q accepts and may
+serialize them, while the batch parser rejects them with an inner lexical
+error.
 
-| Use                       | Not       |
-| ------------------------- | --------- |
-| `\<Longrightarrow>`       | `⟹`       |
-| `\<Rightarrow>`           | `⇒`       |
-| `\<And>`                  | `⋀`       |
-| `\<in>`                   | `∈`       |
-| `\<not>`                  | `¬`       |
-| `\<noteq>`                | `≠`       |
-| `\<forall>`               | `∀`       |
-| `\<exists>`               | `∃`       |
-| `\<le>` / `\<ge>`         | `≤` / `≥` |
-| `\<subseteq>`             | `⊆`       |
-| `\<union>` / `\<inter>`   | `∪` / `∩` |
+| Use | Avoid |
+| --- | --- |
+| `\<Longrightarrow>` | `⟹` |
+| `\<Rightarrow>` | `⇒` |
+| `\<And>` | `⋀` |
+| `\<in>` | `∈` |
+| `\<not>` | `¬` |
+| `\<noteq>` | `≠` |
+| `\<forall>` / `\<exists>` | `∀` / `∃` |
+| `\<le>` / `\<ge>` | `≤` / `≥` |
+| `\<subseteq>` | `⊆` |
+| `\<union>` / `\<inter>` | `∪` / `∩` |
 | `\<lbrakk>` / `\<rbrakk>` | `⟦` / `⟧` |
-| `\<dots>`                 | `…`       |
+| `\<dots>` | `…` |
+| `\<open>` / `\<close>` | `‹` / `›` |
 
-Unicode in comments is fine. Pre-commit hook (`.git/hooks/pre-commit` → `scripts/check_isabelle_ascii.py`) blocks commits with non-ASCII outside comments.
+Unicode in comments is allowed. `.git/hooks/pre-commit` runs
+`scripts/check_isabelle_ascii.py` and rejects non-ASCII theory syntax.
 
-**I/Q normalises tokens to unicode on write.** Even when you pass ASCII forms (`\<lambda>`, `\<open>`) in `write_file`, I/Q's editor may serialise them back as `λ`, `‹`. After any `write_file` to a `.thy` source, normalise to ASCII and re-sync the buffer:
+I/Q may serialize ASCII input such as `\<lambda>` and `\<open>` as Unicode.
+After every `write_file`:
 
-```bash
-python3 scripts/normalize_isabelle_ascii.py <file>
+1. `save_file`.
+2. Normalize the saved source:
+
+   ```bash
+   rtk python3 scripts/normalize_isabelle_ascii.py path/to/Theory.thy
+   ```
+
+3. Reopen the file so jEdit reads the normalized text.
+4. Check diagnostics again.
+
+Skipping the reopen can leave I/Q checking text that differs from the batch
+input.
+
+## Autoformalization audit (Kappelmann et al., 2026)
+
+Run this audit before declaring a theorem done. These errors can survive a
+successful batch build.
+
+1. **Locale ordering.** Never assume `P c` before `c` is defined; Isabelle can
+   instantiate the assumption to derive a contradiction. Define `c`, prove
+   `P c`, then interpret or introduce the locale with that fact.
+2. **Instantiation gap.** Abstract locale theorems do not establish the
+   concrete result without an `interpretation`, suitable `[where ...]`
+   instantiation, or named concrete corollary.
+3. **False abstraction.** Prove invariance under abstract orders,
+   enumerations, and strategies, or remove those parameters.
+4. **Definition-statement drift.** Compare the theorem with
+   `docs/PROOF_OVERVIEW.md`. Check for internal annotations presented as output,
+   an operational `coverageTest` substituted for a declarative property, or a
+   dropped well-typedness condition.
+5. **Reusable statement shape.** Prefer `fixes`, `assumes`, and `shows` over
+   `\<forall>x. P x \<longrightarrow> Q x` so callers can use `[where ...]` and
+   `[OF ...]`.
+6. **Sledgehammer use.** Try Sledgehammer on every non-trivial subgoal. Prefer
+   `blast`, `auto`, and `meson`; retain `metis` only when reconstruction is fast
+   in batch.
+7. **Generalization through existing theory.** Replace ad hoc duplicates with
+   relevant AFP or Isabelle results, including fixpoint, well-foundedness,
+   independence-system, matroid, `Order.Lattice_Prelims`, and `HOL-Algebra`
+   results.
+8. **Two-stage review.** First review locale ordering, instantiation,
+   abstraction, statement alignment, and statement shape. Then perform a
+   hostile peer review that tries to exploit those assumptions.
+
+Human review remains important for locale ordering, false abstraction, and
+definition-statement drift. Proof status lives in `docs/PROOF_PHASES.md`; keep
+lemma inventories out of this file.
+
+## Status reporting
+
+The build commands and slow-build diagnosis live in
+`docs/ISABELLE_AGENT_NOTES.md`.
+
+Status terms have exact meanings:
+
+- **done**: the requested theorem exists, is proved, and passes the batch build.
+- **landed**: the change passes its required checks but is not committed.
+- **committed**: `git commit` has recorded the change.
+- **in progress**: an obligation remains open or final verification has not run.
+
+A green build does not complete a missing theorem or replace a semantic claim
+with an executable example.
+
+Use this compact progress format when it fits:
+
+```text
+Done:      <what is now true>
+Reason:    <mechanism>
+Blockers:  <remaining obligations>
+Next:      <next proof or step>
 ```
 
-then `open_file` again so jEdit picks up the normalised content. Skipping this step means the file looks fine in I/Q but fails the batch build.
+## Accuracy
 
----
+Verify claims against the repository or the cited primary source before stating
+them. This includes:
 
-# MCP servers
+- analyzer behavior or Goblint alignment;
+- paper content or quotations;
+- whether a definition or lemma exists;
+- claims that correctness is inherited or follows from another layer;
+- proof completion.
 
-Two servers vendored. Config in `.mcp.json` + `.claude/settings.local.json` (`enabledMcpjsonServers`). Token: `isabelle-local`.
+Flag unresolved uncertainty and name the file or source that must settle it.
 
-| Server        | Port | When                                                                                                                   |
-| ------------- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
-| `isabelle-iq` | 8765 | jEdit running doc-aware: diagnostics, sorry positions, `explore`, `get_context_info`, structured edits. **Preferred.** |
-| `isabelle-ir` | 9148 | jEdit not running headless REPL: `step`, `sledgehammer`, `find_theorems`.                                              |
+## Host commands
 
-Start: `./scripts/start-both.sh` (I/Q + I/R together preferred), `./scripts/start-iq.sh` (jEdit + I/Q only), or `./scripts/start-ir.sh` (headless REPL only).
-
-## Standing rules
-
-* Authenticate I/Q or connect I/R with `token=isabelle-local` before other server calls. Report a connection failure when an actual call fails; do not run a separate availability probe.
-* **Always edit `.thy` via I/Q `write_file`** (or I/R `repl_edit`). Never use the host `Edit`/`Write` tool on `.thy` files jEdit's buffer caches stale content even after `open_file`, so subsequent `read_file` / diagnostics / `explore` run against the old text.
-  * Exception: the very first creation of a brand-new `.thy` not yet tracked by jEdit. Follow with `open_file` so jEdit picks it up.
-  * Recovery if you slipped and used `Edit`: re-issue the same change via I/Q `write_file str_replace` to sync the buffer.
-* I/Q `write_file`: prefer `str_replace` over `line`/`insert` minimal diff keeps the doc model consistent.
-* I/R: after `.thy` edit → `load_theory(<FQN>)` to re-sync heap.
-* I/R `init` uses fully-qualified imports, e.g. `Voblint_CFG.CFG_Local_Trace`.
-* I/R `step` one Isar line per call.
-* `sledgehammer` timeout ≤ 15s. Paste back `blast` / `auto` / `meson`. `metis`/`smt` only if fast in batch.
-* `nitpick` via `step`: `lemma … nitpick [timeout=5] oops`.
-* `explore` ≠ `repl_step`. `explore` does not persist; `repl_step` commits.
-* `explore query='proof'` needs `Isar_Explore` imported. Session-qualified `src/` lives in session `Voblint_Formalization`, so unqualified `Isar_Explore` resolves wrong. `sledgehammer` / `find_theorems` queries don't need the import.
-
-Traps: `docs/ISABELLE_AGENT_NOTES.md`.
-
----
-
-# Isabelle pitfalls
-
-**Avoid:** simp loops; unnamed assumptions; giant automation blasts; full-script rewrites.
-
-**Fixes:** `subst` instead of global simp; `monoD[OF …]`; `=` not `↔`; one Isar line per MCP `step` call.
-
-**Syntax:**
-
-* `(* … *)` inside `"…"` is HOL, not a comment.
-* Numeral literals can't be `fun` patterns.
-* `inv` clashes with `Hilbert_Choice.inv`.
-* `ALL j >= n.` invalid → `ALL j. n <= j --> …`.
-* Free vars may resolve to imported constants. `c` is especially risky because
-  `Dijkstra_Shortest_Path` imports an edge-cost constant `c`; bind intended
-  variables with `fixes` or rename them (`ctx`, `cmd`, `cost`) before debugging
-  strange type errors.
-* Don't use Isar keywords (`back`, `prefer`, `defer`, `then`, `with`, `also`, `finally`) as `have`/`obtain` labels. `back` → cryptic "proposition expected, end-of-input" past the line.
-* `induction … rule: big_step.induct` binds case patterns in **textual** order of the rule, not conclusion order. Wrong order → type-clash (store typed as `com`). HOL-IMP IfTrue / IfFalse / WhileTrue: read rule body.
-
-**HOL-IMP:**
-
-* `ROOT` parent: `= "HOL-IMP" +`. Imports: `"HOL-IMP.Com"`, `"HOL-IMP.Big_Step"`.
-* Big-step infix: `(c,s) ⇒ t`. Existential exec: `apply (rule exI)` before `Assign`/`Seq`.
-
----
-
-# Searching (rg vs grep)
-
-`rg` never rewrites matched text. If `rg` and `grep -R` disagree on hit counts, the cause is **default filtering**, not corruption: `rg` skips `.gitignore`d and hidden paths by default, `grep -R` searches everything. In this repo the gap is usually `.claude/worktrees/` (a git worktree, ignored) and `.git/`.
-
-* Trust `rg`. Don't switch to `grep` because counts differ — widen `rg` instead.
-* `rg --no-ignore PAT` — include `.gitignore`d files.
-* `rg -uu PAT` — include ignored **and** hidden (matches `grep -R` coverage, plus `.git/`).
-* `rg -uu --glob '!.git' PAT` — everything except `.git/`.
-
----
-
-# Development loop
-
-1. State lemma, insert `sorry`.
-2. Open in MCP; read current goal via `get_context_info`.
-3. Trial tactics with `explore` / `sledgehammer`.
-4. Commit working tactic to `.thy`.
-5. Split helpers when complexity grows.
-6. Replace `sorry`.
-7. Final `isabelle build` to confirm.
-
----
-
-# Autoformalization audit (Kappelmann et al., 2026)
-
-Run before declaring a theorem done. These survive batch-build.
-
-1. **Locale ordering.** Never `assumes P c` before `c` is defined assumption can be instantiated to derive contradictions. Define → prove `P c` as lemma → introduce locale with proven assumption.
-2. **Instantiation gap.** Theorems inside abstract locales are useless without `interpretation` / `[where …]` to the concrete object. Surface concrete corollaries as named lemmas. Most common silent gap.
-3. **False abstraction.** Parameters over orders/enumerations/strategies must be either *proven* invariant or removed. Don't claim generality you don't have.
-4. **Definition–statement drift.** Re-read statements vs `docs/PROOF_OVERVIEW.md`. Watch: theorem about *internal annotations* vs *output*; operational `coverageTest` smuggled into declarative claim; dropped well-typedness condition. Proof assistant can't catch these.
-5. **Structured Isar over `∀x. P x ⟶ Q x`.** Use `fixes x assumes "P x" shows "Q x"`. Reusable via `[where x=…]` / `[OF …]`.
-6. **Use sledgehammer really.** Default: try `sledgehammer` first on every non-trivial subgoal. Paste back `blast`/`auto`/`meson`; `metis` only if reconstructs fast.
-7. **Generalisation via hint.** Ad-hoc proofs duplicating AFP material → reduce to existing generic theory (AFP fixpoint / well-founded; independence systems / matroids; `Order.Lattice_Prelims`, `HOL-Algebra`).
-8. **Two-stage review before done.** (a) Self-review items 1–5. (b) Simulated hostile peer review. Does not replace human review 1, 3, 4 slip through agent reviews.
-
-Proof status lives in `docs/PROOF_PHASES.md` (sorry inventory) do not duplicate lemma lists in this file.
-
----
-
-# Accuracy & Verification
-
-**Never assert facts about analyzer behavior, paper contents, or proof correctness without first verifying against the repo or source.** Flag uncertainty explicitly ("I believe X — verify against `src/Y`") rather than stating it as fact.
-
-Specific cases that require a source lookup before claiming:
-
-* "inherits correctness" or "soundness follows from …"
-* Quoted paper passages or attributed claims
-* "Real analyzers also …" statements about VobLint behavior
-* Whether a particular lemma or definition exists in a given theory
-
-<!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
-
-## Golden Rule
-
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
-
-**Important**: Even in command chains with `&&`, use `rtk`:
-```bash
-# ❌ Wrong
-git add . && git commit -m "msg" && git push
-
-# ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
-```
-
-## RTK Commands by Workflow
-
-### Build & Compile (80-90% savings)
-```bash
-rtk cargo build         # Cargo build output
-rtk cargo check         # Cargo check output
-rtk cargo clippy        # Clippy warnings grouped by file (80%)
-rtk tsc                 # TypeScript errors grouped by file/code (83%)
-rtk lint                # ESLint/Biome violations grouped (84%)
-rtk prettier --check    # Files needing format only (70%)
-rtk next build          # Next.js build with route metrics (87%)
-```
-
-### Test (60-99% savings)
-```bash
-rtk cargo test          # Cargo test failures only (90%)
-rtk go test             # Go test failures only (90%)
-rtk jest                # Jest failures only (99.5%)
-rtk vitest              # Vitest failures only (99.5%)
-rtk playwright test     # Playwright failures only (94%)
-rtk pytest              # Python test failures only (90%)
-rtk rake test           # Ruby test failures only (90%)
-rtk rspec               # RSpec test failures only (60%)
-rtk test <cmd>          # Generic test wrapper - failures only
-```
-
-### Git (59-80% savings)
-```bash
-rtk git status          # Compact status
-rtk git log             # Compact log (works with all git flags)
-rtk git diff            # Compact diff (80%)
-rtk git show            # Compact show (80%)
-rtk git add             # Ultra-compact confirmations (59%)
-rtk git commit          # Ultra-compact confirmations (59%)
-rtk git push            # Ultra-compact confirmations
-rtk git pull            # Ultra-compact confirmations
-rtk git branch          # Compact branch list
-rtk git fetch           # Compact fetch
-rtk git stash           # Compact stash
-rtk git worktree        # Compact worktree
-```
-
-Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
-
-### GitHub (26-87% savings)
-```bash
-rtk gh pr view <num>    # Compact PR view (87%)
-rtk gh pr checks        # Compact PR checks (79%)
-rtk gh run list         # Compact workflow runs (82%)
-rtk gh issue list       # Compact issue list (80%)
-rtk gh api              # Compact API responses (26%)
-```
-
-### JavaScript/TypeScript Tooling (70-90% savings)
-```bash
-rtk pnpm list           # Compact dependency tree (70%)
-rtk pnpm outdated       # Compact outdated packages (80%)
-rtk pnpm install        # Compact install output (90%)
-rtk npm run <script>    # Compact npm script output
-rtk npx <cmd>           # Compact npx command output
-rtk prisma              # Prisma without ASCII art (88%)
-```
-
-### Files & Search (60-75% savings)
-```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
-rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
-rtk find <pattern>      # Find grouped by directory (70%)
-```
-
-### Analysis & Debug (70-90% savings)
-```bash
-rtk err <cmd>           # Filter errors only from any command
-rtk log <file>          # Deduplicated logs with counts
-rtk json <file>         # JSON structure without values
-rtk deps                # Dependency overview
-rtk env                 # Environment variables compact
-rtk summary <cmd>       # Smart summary of command output
-rtk diff                # Ultra-compact diffs
-```
-
-### Infrastructure (85% savings)
-```bash
-rtk docker ps           # Compact container list
-rtk docker images       # Compact image list
-rtk docker logs <c>     # Deduplicated logs
-rtk kubectl get         # Compact resource list
-rtk kubectl logs        # Deduplicated pod logs
-```
-
-### Network (65-70% savings)
-```bash
-rtk curl <url>          # Compact HTTP responses (70%)
-rtk wget <url>          # Compact download output (65%)
-```
-
-### Meta Commands
-```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-rtk discover            # Analyze Claude Code sessions for missed RTK usage
-rtk proxy <cmd>         # Run command without filtering (for debugging)
-rtk init                # Add RTK instructions to CLAUDE.md
-rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
-```
-
-## Token Savings Overview
-
-| Category | Commands | Typical Savings |
-|----------|----------|-----------------|
-| Tests | vitest, playwright, cargo test | 90-99% |
-| Build | next, tsc, lint, prettier | 70-87% |
-| Git | status, log, diff, add, commit | 59-80% |
-| GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
-| Files | ls, read, grep, find | 60-75% |
-| Infrastructure | docker, kubectl | 85% |
-| Network | curl, wget | 65-70% |
-
-Overall average: **60-90% token reduction** on common development operations.
-<!-- /rtk-instructions -->
+Prefix every shell command with `rtk`; it filters supported tools and otherwise
+passes commands through. Use `rtk proxy <command>` only when raw output is
+required. Prefer `rg` for search and `fd` for file discovery.

@@ -112,13 +112,6 @@ proof
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
 
-fun no_return :: "com \<Rightarrow> bool" where
-  "no_return (Return e) = False"
-| "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
-| "no_return (If b c1 c2) = (no_return c1 \<and> no_return c2)"
-| "no_return (While b c) = no_return c"
-| "no_return _ = True"
-
 lemma ret_guarded_False_no_return:
   "no_return c \<Longrightarrow> source_com c \<Longrightarrow> ret_guarded False c"
   by (induction c) (auto split: if_splits)

@@ -4,19 +4,13 @@ begin
 
 section \<open>The D/G framework core\<close>
 
-text \<open>
-  The analysis-agnostic framework boundary, matching Goblint's
-  (\<open>analyses.ml\<close>, \<open>module type Spec\<close>): an analysis chooses a flow-sensitive
-  local domain \<open>D\<close> and a flow-insensitive global domain \<open>G\<close>; the framework
-  transports \<open>Answer : D\<close> and \<open>Side : G\<close> and never copies \<open>G\<close> into \<open>D\<close>.
+text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> and a
+  flow-insensitive side-effect domain \<open>G\<close>. The framework keeps them opaque and stores
+  them in separate components of \<open>dg_state\<close>; it never copies a global component
+  into a local answer.
 
-  \<open>dg_edge_tree\<close> and \<open>dg_combine_tree\<close> carry independent opaque
-  \<open>D\<close> and \<open>G\<close> values, packed into the solver's one value type through the
-  componentwise copy lattice \<open>dg_state\<close>
-  (local unknowns use the \<open>locals\<close> field, global slots the \<open>globs\<close> field).
-  The framework only projects and re-packs these slot fields; it never
-  inspects \<open>D\<close> or \<open>G\<close> themselves.
-\<close>
+  \<open>dg_edge_tree\<close> and \<open>dg_combine_tree\<close> only project and repack those
+  components, so their construction is independent of the concrete domains.\<close>
 
 
 
@@ -230,13 +224,10 @@ lemma sides_dg_combine_tree_Inr:
    = DG bot (fst (comb dst (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ())))))"
   unfolding dg_combine_tree_def by (simp add: Let_def)
 
-subsection \<open>The analysis interface: a Goblint-Spec-shaped record\<close>
+subsection \<open>The analysis interface\<close>
 
-text \<open>
-  What an analysis supplies: one \<open>D \<Rightarrow> G \<Rightarrow> G \<times> D\<close> step per edge action, plus the
-  procedure-return combine.  Mirrors Goblint's per-\<open>Spec\<close> transfer functions over
-  the analysis's own \<open>D\<close> and \<open>G\<close>.
-\<close>
+text \<open>An analysis supplies one answer-and-side-effect transfer per edge action
+  and a separate procedure-return combine.\<close>
 
 record ('dl, 'dg) dg_spec =
   dgs_nop        :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
