@@ -488,8 +488,22 @@ next
     unfolding \<open>a = EA_AssumeNot b\<close> apply_tf.simps
     by (simp add: sign_tf_def; rule assume_not_sign_local_edge_invariant)
 next
-  case EA_Enter
-  then show ?thesis using loc by simp
+  case (EA_Ret e p)
+  show ?thesis
+  proof (cases e)
+    case None
+    then show ?thesis
+      unfolding EA_Ret apply_tf.simps by (auto intro: id_local_edge_invariant)
+  next
+    case (Some e)
+    have gl: "\<not> is_global ret_var"
+      using loc unfolding EA_Ret Some by simp
+    have ng: "\<not> aexp_mentions_global e"
+      using loc unfolding EA_Ret Some by simp
+    show ?thesis
+      unfolding EA_Ret Some apply_tf.simps sign_tf_def
+      by (simp add: sign_tf_def; rule assign_sign_local_edge_invariant[OF gl ng])
+  qed
 qed
 
 end

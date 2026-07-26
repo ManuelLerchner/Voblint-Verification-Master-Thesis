@@ -8,7 +8,7 @@ No domain-specific content lives here.
 | File | Role |
 | --- | --- |
 | `Abstract_Domain.thy` | `sound_domain`, `abstract_domain` (+ `widen`), `gamma_state`, join/fold lemmas |
-| `Split_State.thy` | `('l, 'g) split_state` local/global pair, `merge_state`/`split_state` isomorphism to `'a abs_state` at `'l = 'g`, `gamma_split` (see `docs/SPLIT_STATE_MIGRATION.md`) |
+| `Split_State.thy` | `('l, 'g) split_state` local/global pair, `merge_state`/`split_state` isomorphism to `'a abs_state` at `'l = 'g`, and `gamma_split` |
 | `Exec_St.thy` | `'a st` quotient type (two-region rep), `lookup_st`, `update_st`, order/sup/widening instances |
 
 **Key concepts**

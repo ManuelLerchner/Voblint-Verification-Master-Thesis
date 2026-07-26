@@ -6,19 +6,10 @@ begin
 
 section \<open>Sign on the heterogeneous DG spine\<close>
 
-text \<open>
-  The monovariant Sign analysis as a native \<^locale>\<open>sound_dg_spec\<close> instance --- the
-  same carrier-opaque spine the mixed Sign/Interval analysis and Retain ride.
-  Sign is the \<^emph>\<open>diagonal\<close> case: answer and side domains coincide
-  (\<open>D = G = sign abs_state\<close>), so the spec is \<^const>\<open>unit_dg_spec\<close> and the joint
-  concretization is \<^const>\<open>gamma_unit\<close>.  The entry frame is the caller's \<open>D\<close> read by the
-  FM 2026 caller-state \<open>enter\<close>: \<^const>\<open>unit_dg_spec\<close>'s \<open>dgs_enter\<close> is \<^const>\<open>unit_step\<close>
-  applied to the sign transfer, which consumes \<open>d \<squnion> g\<close> --- the caller state --- with
-  no context-indexed seed.
-
-  Every generator and collecting fact is inherited from the locale; the sign-specific
-  content is only \<open>sign_is_sound_transfer\<close>.
-\<close>
+text \<open>Sign is the diagonal D/G instance: answers and side effects use the same
+  abstract-state domain. The entry transfer therefore combines the caller answer and
+  global side effect before binding parameters. All generator and collecting results
+  follow from the generic locale; only transfer soundness is domain-specific.\<close>
 
 interpretation sign_dg: sound_dg_spec "unit_dg_spec sign_tf" gamma_unit
   by (rule sound_dg_spec_unit[OF sign_is_sound_transfer])
@@ -49,15 +40,20 @@ text \<open>
 theorem sign_dg_post_solution_collect_sound:
   assumes pp: "part_post_solution (sign_dg_generator g bot0 s0d s0g) x sigma vars"
     and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
-    and finE: "finite (edges g)"
-    and finC: "finite (combines g)"
+    and cover_edge: "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
+         \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra g)"
+    and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
   shows "ltr_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
   unfolding sign_dg_gamma_def
   by (rule sign_dg.dg_post_solution_collect_sound_ltr
-        [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_combine
-            finE finC sound0[folded gamma_unit_def]])
+        [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_enter cover_combine
+            finI finC sound0[folded gamma_unit_def]])
 
 end

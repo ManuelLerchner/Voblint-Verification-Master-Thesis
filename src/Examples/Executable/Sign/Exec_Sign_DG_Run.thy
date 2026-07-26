@@ -31,12 +31,19 @@ text \<open>
 \<close>
 
 lemma sign_Hstep:
-  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st sign_tf_st) a d g)
+  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st sign_tf_st sign_enter_st) a d g)
      = dg_spec_step (unit_dg_spec sign_tf) a (fun_of_st d) (fun_of_st g)"
   by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute sign_tf_st_commute)
 
+lemma sign_Henter:
+  "map_prod fun_of_st fun_of_st
+      (dgs_enter (unit_dg_spec_st sign_tf_st sign_enter_st) xs es d g)
+     = dgs_enter (unit_dg_spec sign_tf) xs es (fun_of_st d) (fun_of_st g)"
+  unfolding unit_dg_spec_st_def unit_dg_spec_def
+  by simp (rule unit_step_st_commute, simp add: sign_enter_st_commute)
+
 lemma sign_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st sign_tf_st) dst dc de g)
+  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st sign_tf_st sign_enter_st) dst dc de g)
      = dgs_combine (unit_dg_spec sign_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
   by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
 
@@ -45,33 +52,49 @@ text \<open>The executable generator's abstract image is exactly the native \<op
 lemma dg_gen_of_eq_sign_dg_gen:
   "dg_gen_of (unit_dg_spec sign_tf) g bot0 s0d s0g = sign_dg.dg_gen g bot0 s0d s0g"
 proof -
-  have "dg_cmb_of (unit_dg_spec sign_tf) = sign_dg.dg_cmb"
+  have cmb: "dg_cmb_of (unit_dg_spec sign_tf) = sign_dg.dg_cmb"
     by (rule ext)+ (simp add: dg_cmb_of_def sign_dg.dg_cmb_def)
-  thus ?thesis by (simp add: dg_gen_of_def sign_dg.dg_gen_def)
+  have extra: "dg_extra_of (unit_dg_spec sign_tf) g = sign_dg.dg_extra g"
+    by (rule ext)+ (simp add: dg_extra_of_def sign_dg.dg_extra_def sign_dg.dg_enter_def)
+  show ?thesis by (simp add: dg_gen_of_def sign_dg.dg_gen_def cmb extra)
 qed
 
 subsection \<open>The concrete program and its computed solution\<close>
 
 text \<open>
-  A minimal call-free program \<^verbatim>\<open>x := 1; y := x\<close>: entry \<open>0\<close>, exit \<open>2\<close>, no combines.
+  A minimal call-free program \<^verbatim>\<open>x := 1; y := x\<close> inside \<open>main\<close>: the body occupies
+  \<open>Statement 0\<close>--\<open>Statement 2\<close> between \<open>FunctionEntry ''main''\<close> and
+  \<open>FunctionResult ''main''\<close>, and \<open>calls\<close> is empty.
 \<close>
 
 definition gEx :: cfg where
-  "gEx = mk_cfg 0 2
-     {(0, EA_Assign ''x'' (BaseN (AExp.N 1)), 1),
-      (1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), 2)} {}"
+  "gEx =
+     \<lparr> intra =
+         {(FunctionEntry ''main'', EA_Nop, Statement 0),
+          (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 1)), Statement 1),
+          (Statement 1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), Statement 2),
+          (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')},
+       calls = {},
+       cfg_entry = FunctionEntry ''main'' \<rparr>"
 
-lemma gEx_edges: "edges gEx = {(0, EA_Assign ''x'' (BaseN (AExp.N 1)), 1), (1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), 2)}"
-  by (simp add: gEx_def mk_cfg_def)
-lemma gEx_combines: "combines gEx = {}"
-  by (simp add: gEx_def mk_cfg_def)
-lemma gEx_entry: "cfg_entry gEx = 0"
-  by (simp add: gEx_def mk_cfg_def)
-lemma gEx_finE: "finite (edges gEx)" by (simp add: gEx_edges)
-lemma gEx_finC: "finite (combines gEx)" by (simp add: gEx_combines)
+lemma gEx_intra:
+  "intra gEx =
+     {(FunctionEntry ''main'', EA_Nop, Statement 0),
+      (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 1)), Statement 1),
+      (Statement 1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), Statement 2),
+      (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')}"
+  by (simp add: gEx_def)
+lemma gEx_calls: "calls gEx = {}"
+  by (simp add: gEx_def)
+lemma gEx_entry: "cfg_entry gEx = FunctionEntry ''main''"
+  by (simp add: gEx_def)
+lemma gEx_exit: "cfg_exit gEx = FunctionResult ''main''"
+  by (simp add: gEx_def cfg_exit_def)
+lemma gEx_finE: "finite (intra gEx)" by (simp add: gEx_intra)
+lemma gEx_finC: "finite (calls gEx)" by (simp add: gEx_calls)
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign st, sign st) dg_state) strategy_tree" where
-  "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st) gEx bot cinit_sign_st cinit_sign_st"
+  "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st sign_enter_st) gEx bot cinit_sign_st cinit_sign_st"
 
 definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign st, sign st) dg_state)" where
   "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
@@ -109,21 +132,32 @@ text \<open>
 lemma dgEx_pp_abs:
   "part_post_solution (sign_dg.dg_gen gEx (fun_of_st (bot::sign st)) (fun_of_st cinit_sign_st) (fun_of_st cinit_sign_st))
      (cfg_exit gEx, ()) (fun_of_dg_st \<circ> snd dgEx_sol) (fst dgEx_sol)"
-  using part_post_solution_dg_st_to_abs[OF sign_Hstep sign_Hcomb dgEx_pp_st[unfolded dgEx_eqs_def]]
+  using part_post_solution_dg_st_to_abs
+          [OF sign_Hstep sign_Henter sign_Hcomb dgEx_pp_st[unfolded dgEx_eqs_def]]
   unfolding dg_gen_of_eq_sign_dg_gen .
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
 lemma dgEx_cover_entry: "(cfg_entry gEx, ()) \<in> fst dgEx_sol"
   unfolding dgEx_sol_def gEx_entry by eval
-lemma dgEx_cover_1: "((1::pp), ()) \<in> fst dgEx_sol"
+lemma dgEx_cover_0: "(Statement 0, ()) \<in> fst dgEx_sol"
   unfolding dgEx_sol_def by eval
-lemma dgEx_cover_2: "((2::pp), ()) \<in> fst dgEx_sol"
+lemma dgEx_cover_1: "(Statement 1, ()) \<in> fst dgEx_sol"
   unfolding dgEx_sol_def by eval
-lemma dgEx_cover_edge: "\<And>u a w. (u, a, w) \<in> edges gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
-  using dgEx_cover_1 dgEx_cover_2 by (auto simp: gEx_edges)
-lemma dgEx_cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
-  by (simp add: gEx_combines)
+lemma dgEx_cover_2: "(Statement 2, ()) \<in> fst dgEx_sol"
+  unfolding dgEx_sol_def by eval
+lemma dgEx_cover_result: "(FunctionResult ''main'', ()) \<in> fst dgEx_sol"
+  unfolding dgEx_sol_def by eval
+lemma dgEx_cover_edge: "\<And>u a w. (u, a, w) \<in> intra gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
+  using dgEx_cover_0 dgEx_cover_1 dgEx_cover_2 dgEx_cover_result by (auto simp: gEx_intra)
+lemma dgEx_cover_enter:
+  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
+     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst dgEx_sol"
+  by (simp add: gEx_calls)
+lemma dgEx_cover_combine:
+  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
+     \<Longrightarrow> (k, ()) \<in> fst dgEx_sol"
+  by (simp add: gEx_calls)
 lemma dgEx_sound0: "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_sign_st \<squnion> fun_of_st cinit_sign_st\<rbrakk>"
   by (simp add: fun_of_st_cinit_sign_st cinit_stores_def gamma_state_def sup.idem)
 
@@ -137,19 +171,16 @@ theorem dgEx_collect_sound:
   "ltr_collect gEx cinit_stores v \<subseteq> sign_dg_gamma (fun_of_dg_st \<circ> snd dgEx_sol) v"
   by (rule sign_dg_post_solution_collect_sound
         [OF dgEx_pp_abs[folded sign_dg_generator_def]
-            dgEx_cover_entry dgEx_cover_edge dgEx_cover_combine gEx_finE gEx_finC dgEx_sound0])
+            dgEx_cover_entry dgEx_cover_edge dgEx_cover_enter dgEx_cover_combine
+            gEx_finE gEx_finC dgEx_sound0])
 
 subsection \<open>Inspecting the computed result\<close>
 
-text \<open>
-  The computed local and global slots at the exit, read back executably.  The naive
-  diagonal Sign analysis merges the local and global halves at each edge, so it over-
-  approximates to \<open>STop\<close> here --- sound, if imprecise; the retain / digest analyses
-  recover per-slot precision.
-\<close>
+text \<open>The diagonal Sign instance joins local answers and global side effects at
+  each edge. The executable result is therefore sound but imprecise at the exit.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. (lookup_st (locals (snd sol (Inl (2::pp, ())))) ''x'',
+  "map_option (\<lambda>sol. (lookup_st (locals (snd sol (Inl (Statement 2, ())))) ''x'',
                        lookup_st (globs (snd sol (Inr ()))) ''x''))
      (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (STop, STop)"
   by eval

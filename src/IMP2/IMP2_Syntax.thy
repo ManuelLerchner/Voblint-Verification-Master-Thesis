@@ -2,25 +2,17 @@ theory IMP2_Syntax
   imports Main "HOL-Library.Countable" HOL_IMP_Countable
 begin
 
-(*
-  IMP2 -- Source Language Syntax.
+section \<open>Source-language expressions\<close>
 
-  Design (Approach 1c from docs/IMP_SYNTAX_NIPKOW_EXTENSION.md):
-  We wrap Nipkow's HOL-IMP.AExp/BExp via leaf constructors BaseN/BaseB
-  and keep compound constructors (Plus, Not, And, Or, Less) plus our
-  extensions (Minus, Times, Or, Eq) as native constructors of our own
-  datatype. Nipkow's Plus/And/Less/Not are typed over Nipkow's own
-  datatypes, so we cannot express "Plus over our extended aexp" inside
-  the Base wrap; those compound shared constructors are therefore
-  native here too.
+text \<open>
+  IMP2 wraps the HOL-IMP arithmetic and Boolean leaf constructors in \<open>BaseN\<close> and
+  \<open>BaseB\<close>.  Compound expressions remain native IMP2 constructors because their operands
+  must admit the extended expression language.  Evaluation delegates wrapped leaves to HOL-IMP.
 
-  Reuse payoff (small): for the leaf forms N, V, Bc the abbreviations
-  bind to BaseN/BaseB wraps of Nipkow constructors, and the wrapped
-  cases of aval/bval delegate to AExp.aval/BExp.bval.
-
-  Cost: abbreviations N, V, Bc do not unfold in pattern matches; any
-  fun/case clause that splits on a leaf must spell BaseN (AExp.N _) etc.
-*)
+  The \<open>N\<close>, \<open>V\<close>, and \<open>Bc\<close> abbreviations improve source notation.  Pattern matches
+  use the underlying \<open>BaseN\<close> and \<open>BaseB\<close> constructors because abbreviations do not
+  unfold as datatype patterns.
+\<close>
 
 (* vname aliases HOL-IMP.AExp's type (= string). *)
 type_synonym store = "vname => int"
@@ -28,7 +20,7 @@ type_synonym store = "vname => int"
 (* -- Arithmetic Expressions ---------------------------------------- *)
 
 datatype aexp =
-    BaseN "AExp.aexp"          (* literal / variable / Nipkow Plus subtree *)
+    BaseN "AExp.aexp"          (* wrapped base arithmetic expression       *)
   | Plus  aexp aexp            (* a + b over our (extended) aexp           *)
   | Minus aexp aexp            (* a - b   (extension)                      *)
   | Times aexp aexp            (* a * b   (extension)                      *)
@@ -42,7 +34,7 @@ abbreviation V :: "vname \<Rightarrow> aexp"
 (* -- Boolean Expressions -------------------------------------------- *)
 
 datatype bexp =
-    BaseB "BExp.bexp"          (* boolean constant via Nipkow              *)
+    BaseB "BExp.bexp"          (* wrapped base Boolean expression          *)
   | Not   bexp
   | And   bexp bexp
   | Or    bexp bexp            (* (extension)                              *)
@@ -58,22 +50,14 @@ instance aexp :: countable
 instance bexp :: countable
   by countable_datatype
 
-(* Executable linear order for aexp (AFP Deriving). Used to enumerate CFG edge
-   sets deterministically via sorted_list_of_set without falling back on a
-   non-executable to_nat order. bexp has no comparable use site; deriving its
-   linorder here triggers benign Deriving duplicate-simp warnings. The wrapped
-   Nipkow types AExp.aexp / BExp.bexp carry their linorder instances from
-   HOL_IMP_Countable. *)
+text \<open>The executable linear order gives @{const sorted_list_of_set} a deterministic
+  representation of CFG edge sets. A @{typ bexp} order has no comparable consumer, and
+  deriving one adds duplicate simplification rules.\<close>
 derive linorder aexp
 
-(* -- Short-name printing for clashing constructors --------------------
-   Nipkow's HOL-IMP defines AExp.aexp.Plus and BExp.bexp.Bc, which clash
-   with our IMP2_Syntax.aexp.Plus and the IMP2_Syntax.Bc abbreviation.
-   Without these hides, Isabelle prints fully-qualified names in goals
-   (e.g. "IMP2_Syntax.aexp.Plus", "IMP2_Syntax.Bc"), cluttering proof
-   state and presentation extracts. `(open)` keeps the Nipkow versions
-   reachable via the fully qualified path (AExp.Plus, BExp.Bc) for any
-   code that delegates to Nipkow's aval/bval. *)
+text \<open>The imported and extended expression types share constructor base names.
+  Hiding the imported short names keeps proof states compact while their qualified names
+  remain available to expression evaluation.\<close>
 hide_const (open) AExp.Plus BExp.Bc
 
 end

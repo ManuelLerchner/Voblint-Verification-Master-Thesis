@@ -26,19 +26,16 @@ definition mixed_graphviz_prog :: com where
 
 definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =
-     compile_prog (\<lambda>_. None) [] mixed_graphviz_prog"
-
-definition mixed_graphviz_eqs ::
-  "(pp \<times> unit, unit, (sign abs_state, ivl abs_state) dg_state) eqsT"
-where
-  "mixed_graphviz_eqs =
-     mixed_si_generator mixed_graphviz_cfg bot
-       (fun_of_st top_sign_st) (fun_of_st top_ivl_st)"
+     compile_prog (\<lambda>_. None) [] ''main'' mixed_graphviz_prog"
 
 definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
   "mixed_graphviz_local_value p =
      (\<lambda>v. if v = ''x''
-       then (if p = 0 then SZero else if p = 1 then SNeg else SPos)
+       then (case p of
+         FunctionEntry _ \<Rightarrow> SZero
+       | Statement n \<Rightarrow>
+           (if n = 0 then SZero else if n = 1 then SNeg else SPos)
+       | FunctionResult _ \<Rightarrow> SPos)
        else STop)"
 
 definition mixed_graphviz_global_value :: "unit \<Rightarrow> ivl abs_state" where
@@ -51,7 +48,7 @@ where
   "mixed_graphviz_solution z =
      (case z of
         Inl (p, ()) \<Rightarrow> DG (mixed_graphviz_local_value p) (mixed_graphviz_global_value ())
-      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (cfg_exit mixed_graphviz_cfg))
+      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (FunctionResult ''main''))
                     (mixed_graphviz_global_value ()))"
 
 lemma mixed_graphviz_x_is_local:
@@ -68,12 +65,12 @@ definition mixed_graphviz_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope (\<lambda>_. None) [] mixed_graphviz_prog
+        let sc = compiled_procedure_scope (\<lambda>_. None) [] ''main'' mixed_graphviz_prog
           mixed_graphviz_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>_. None),
       globals_to_show =
-        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] mixed_graphviz_prog
+        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] ''main'' mixed_graphviz_prog
           mixed_graphviz_cfg (cfg_entry mixed_graphviz_cfg)),
       show_local = (\<lambda>_ _ vars st.
         map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),
@@ -86,12 +83,13 @@ definition mixed_graphviz_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''mixed Sign answers''),
-      source_text = Some (string_of_program (\<lambda>_. None) [] mixed_graphviz_prog)
+      source_text = Some (pretty_string_of_program (\<lambda>_. None) [] mixed_graphviz_prog)
     \<rparr>"
 
 definition mixed_graphviz_graph_domain :: "(pp \<times> unit + unit) list" where
   "mixed_graphviz_graph_domain =
     contextual_graph_domain mixed_graphviz_cfg (\<lambda>_. [()]) @ [Inr ()]"
+
 
 definition mixed_graphviz_dot :: String.literal where
   "mixed_graphviz_dot =

@@ -13,13 +13,13 @@ text \<open>
 \<close>
 
 definition prog_cfg_edges ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where
-  "prog_cfg_edges \<Pi> ps main = cfg_edges_list (compile_prog \<Pi> ps main)"
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where
+  "prog_cfg_edges \<Pi> ps mnm main = cfg_intra_list (compile_prog \<Pi> ps mnm main)"
 
-definition prog_cfg_combines ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> com
-     \<Rightarrow> (pp \<times> pp \<times> pp \<times> vname option) list" where
-  "prog_cfg_combines \<Pi> ps main = cfg_combines_list (compile_prog \<Pi> ps main)"
+definition prog_cfg_calls ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp \<times> call_action \<times> pp \<times> pp) list" where
+  "prog_cfg_calls \<Pi> ps mnm main = cfg_calls_list (compile_prog \<Pi> ps mnm main)"
 
 subsection \<open>CFG and DOT helpers\<close>
 
@@ -28,7 +28,15 @@ fun string_of_action :: "edge_action \<Rightarrow> string" where
 | "string_of_action (EA_Assign x a) = x @ '' := '' @ string_of_aexp a"
 | "string_of_action (EA_Assume b) = ''['' @ string_of_bexp b @ '']''"
 | "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_bexp b @ '']''"
-| "string_of_action (EA_Enter xs es) = ''enter''"
+| "string_of_action (EA_Ret None p) = ''return''"
+| "string_of_action (EA_Ret (Some e) p) =
+    ''return '' @ string_of_aexp e"
+
+fun string_of_call_action :: "call_action \<Rightarrow> string" where
+  "string_of_call_action (CallEdge None fs es) =
+    ''call('' @ concat (map string_of_aexp es) @ '')''"
+| "string_of_call_action (CallEdge (Some x) fs es) =
+    x @ '' := call('' @ concat (map string_of_aexp es) @ '')''"
 
 definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
@@ -44,21 +52,33 @@ fun graphviz_label_text :: "string \<Rightarrow> string" where
 | "graphviz_label_text (ch # rest) =
     (if ch = CHR 0x0A then gv_nl else [ch]) @ graphviz_label_text rest"
 
-fun enter_targets :: "(pp \<times> edge_action \<times> pp) list \<Rightarrow> pp list" where
-  "enter_targets [] = []"
-| "enter_targets ((u, EA_Enter xs es, v) # es') = v # enter_targets es'"
-| "enter_targets (_ # es) = enter_targets es"
+fun graphviz_html_text :: "string \<Rightarrow> string" where
+  "graphviz_html_text [] = []"
+| "graphviz_html_text (ch # rest) =
+    (if ch = CHR 0x0A then ''<BR ALIGN='' @ dq @ ''LEFT'' @ dq @ ''/>''
+     else if ch = CHR 0x20 then ''&#160;''
+     else if ch = CHR 0x26 then ''&amp;''
+     else if ch = CHR 0x3C then ''&lt;''
+     else if ch = CHR 0x3E then ''&gt;''
+     else [ch]) @ graphviz_html_text rest"
 
-fun combine_exits :: "combine_info list \<Rightarrow> pp list" where
-  "combine_exits [] = []"
-| "combine_exits ((call, ex, ret, dst) # cs) = ex # combine_exits cs"
+definition source_html_label :: "string \<Rightarrow> string" where
+  "source_html_label src =
+    ''<<TABLE BORDER='' @ dq @ ''1'' @ dq @ '' CELLBORDER='' @ dq @ ''0'' @ dq    @ '' CELLPADDING='' @ dq @ ''8'' @ dq
+    @ ''><TR><TD ALIGN='' @ dq @ ''LEFT'' @ dq @ '' WIDTH='' @ dq @ ''260'' @ dq
+    @ '' FIXEDSIZE='' @ dq @ ''FALSE'' @ dq
+    @ ''><FONT FACE='' @ dq @ ''Menlo'' @ dq @ '' POINT-SIZE='' @ dq @ ''10'' @ dq
+    @ ''>'' @ graphviz_html_text src @ ''</FONT></TD></TR></TABLE>>''"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
-  "proc_entry_pps_list g = enter_targets (cfg_edges_list g)"
+  "proc_entry_pps_list g =
+    map (\<lambda>(_, _, entry, _). entry) (cfg_calls_list g)"
 
 definition proc_exit_pps_list :: "cfg \<Rightarrow> pp list" where
-  "proc_exit_pps_list g = combine_exits (cfg_combines_list g)"
-
+  "proc_exit_pps_list g =
+    map (\<lambda>(_, _, entry, _).
+      case entry of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> entry)
+      (cfg_calls_list g)"
 fun mem_pp :: "pp \<Rightarrow> pp list \<Rightarrow> bool" where
   "mem_pp v [] = False"
 | "mem_pp v (x # xs) = (if v = x then True else mem_pp v xs)"
@@ -87,7 +107,7 @@ datatype ('ctx, 'g) analysis_node =
 
 datatype analysis_edge_kind =
     IntraEdge edge_action
-  | EnterEdge edge_action
+  | EnterEdge pname call_action
   | CombineEdge pp "vname option" "vname option"
   | GlobalReadEdge
   | GlobalWriteEdge
@@ -100,7 +120,7 @@ type_synonym ('ctx, 'g) analysis_graph =
 
 record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   local_of :: "'a \<Rightarrow> 'd"
-  route :: "pp \<Rightarrow> 'ctx \<Rightarrow> edge_action \<Rightarrow> 'd \<Rightarrow> 'ctx"
+  route :: "pp \<Rightarrow> 'ctx \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> 'ctx"
   show_context :: "'ctx \<Rightarrow> string"
   locals_for_pp :: "pp \<Rightarrow> vname list"
   return_slot_for_pp :: "pp \<Rightarrow> vname option"
@@ -120,17 +140,35 @@ fun graphviz_owner_of :: "(string option \<times> pp list) list \<Rightarrow> pp
 | "graphviz_owner_of ((owner, ps) # regions) p =
     (if mem_pp p ps then region_label owner else graphviz_owner_of regions p)"
 
+fun compiled_proc_owner ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> pname option" where
+  "compiled_proc_owner \<Pi> [] n k = None"
+| "compiled_proc_owner \<Pi> (p # ps) n k =
+    (case \<Pi> p of
+      None \<Rightarrow> compiled_proc_owner \<Pi> ps n k
+    | Some decl \<Rightarrow>
+        (let (n', E, K) = compile_proc \<Pi> p decl n
+         in if n \<le> k \<and> k < n' then Some p
+            else compiled_proc_owner \<Pi> ps n' k))"
+
 definition compiled_owner_of ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> string" where
-  "compiled_owner_of \<Pi> ps main p =
-    graphviz_owner_of (compile_prog_regions \<Pi> ps main) p"
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> string" where
+  "compiled_owner_of \<Pi> ps mnm main p =
+    (case p of
+      FunctionEntry owner \<Rightarrow> owner
+    | FunctionResult owner \<Rightarrow> owner
+    | Statement k \<Rightarrow>
+        (case compiled_proc_owner \<Pi> ps 0 k of Some owner \<Rightarrow> owner | None \<Rightarrow> mnm))"
 
 definition cfg_point_list :: "cfg \<Rightarrow> pp list" where
   "cfg_point_list g =
-    remdups (cfg_entry g # cfg_exit g #
-      (concat (map (\<lambda>e. case e of (u, a, v) \<Rightarrow> [u, v]) (cfg_edges_list g))
-       @ concat (map (\<lambda>c. case c of (call, ex, ret, dst) \<Rightarrow> [call, ex, ret])
-           (cfg_combines_list g))))"
+    remdups
+      (cfg_entry g #
+       concat (map (\<lambda>(u, _, v). [u, v]) (cfg_intra_list g)) @
+       concat (map (\<lambda>(call, _, entry, cont).
+         call # entry # cont #
+         (case entry of FunctionEntry p \<Rightarrow> [FunctionResult p] | _ \<Rightarrow> []))
+         (cfg_calls_list g)))"
 
 definition contextual_graph_domain ::
   "cfg \<Rightarrow> (pp \<Rightarrow> 'ctx list) \<Rightarrow> ((pp \<times> 'ctx) + 'g) list" where
@@ -150,11 +188,10 @@ fun graphviz_action_defs :: "edge_action \<Rightarrow> vname list" where
 definition cfg_assigned_vars :: "cfg \<Rightarrow> vname list" where
   "cfg_assigned_vars g =
     remdups
-      (concat (map (\<lambda>e. case e of (_, a, _) \<Rightarrow> graphviz_action_defs a)
-        (cfg_edges_list g))
-       @ concat (map (\<lambda>c. case c of (_, _, _, dst) \<Rightarrow>
-           (case dst of None \<Rightarrow> [] | Some x \<Rightarrow> [x]))
-         (cfg_combines_list g)))"
+      (concat (map (\<lambda>(_, a, _). graphviz_action_defs a) (cfg_intra_list g)) @
+       concat (map (\<lambda>(_, ca, _, _).
+         case ca of CallEdge None _ _ \<Rightarrow> [] | CallEdge (Some x) _ _ \<Rightarrow> [x])
+         (cfg_calls_list g)))"
 
 definition compiled_global_vars :: "cfg \<Rightarrow> vname list" where
   "compiled_global_vars g = filter is_global (cfg_assigned_vars g)"
@@ -163,28 +200,27 @@ definition owner_assigned_vars ::
   "cfg \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> string \<Rightarrow> vname list" where
   "owner_assigned_vars g point_owner owner =
     remdups
-      (concat (map (\<lambda>e. case e of (u, a, v) \<Rightarrow>
-        if point_owner u = owner then graphviz_action_defs a else [])
-        (cfg_edges_list g))
-       @ concat (map (\<lambda>c. case c of (call, ex, ret, dst) \<Rightarrow>
-           if point_owner call = owner then
-             (case dst of None \<Rightarrow> [] | Some x \<Rightarrow> [x])
-           else [])
-         (cfg_combines_list g)))"
+      (concat (map (\<lambda>(u, a, _).
+         if point_owner u = owner then graphviz_action_defs a else [])
+         (cfg_intra_list g)) @
+       concat (map (\<lambda>(call, ca, _, _).
+         if point_owner call = owner then
+           (case ca of CallEdge None _ _ \<Rightarrow> []
+             | CallEdge (Some x) _ _ \<Rightarrow> [x])
+         else []) (cfg_calls_list g)))"
 
 definition compiled_procedure_scope ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
-  "compiled_procedure_scope \<Pi> ps main g p =
-    (let owner = compiled_owner_of \<Pi> ps main p;
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
+  "compiled_procedure_scope \<Pi> ps mnm main g p =
+    (let owner = compiled_owner_of \<Pi> ps mnm main p;
          decl = \<Pi> owner;
-         fs = if owner = ''main'' then [] else
+         fs = if owner = mnm then [] else
            (case decl of None \<Rightarrow> [] | Some d \<Rightarrow> formals d);
-         ret = if owner = ''main'' then None else
-           (case decl of None \<Rightarrow> None
-            | Some d \<Rightarrow> (case result d of None \<Rightarrow> None | Some _ \<Rightarrow> Some ret_var));
+         ret = if owner = mnm then None else Some ret_var;
          ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> is_global x)
-           (owner_assigned_vars g (compiled_owner_of \<Pi> ps main) owner)
+           (owner_assigned_vars g (compiled_owner_of \<Pi> ps mnm main) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
+
 
 definition visible_global ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> 'g \<Rightarrow> bool" where
@@ -249,11 +285,10 @@ definition analysis_intra_edges ::
        ('ctx, 'g) analysis_node) list" where
   "analysis_intra_edges g covered =
     concat (map (\<lambda>src_ctx.
-      concat (map (\<lambda>e. case e of (u, a, v) \<Rightarrow>
-        if fst src_ctx = u \<and> \<not> is_enter_action a \<and>
-           local_node_member covered v (snd src_ctx)
+      concat (map (\<lambda>(u, a, v).
+        if fst src_ctx = u \<and> local_node_member covered v (snd src_ctx)
         then [(LocalNode u (snd src_ctx), IntraEdge a, LocalNode v (snd src_ctx))]
-        else []) (cfg_edges_list g))) covered)"
+        else []) (cfg_intra_list g))) covered)"
 
 definition analysis_enter_edges ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> (pp \<times> 'ctx) list
@@ -262,14 +297,15 @@ definition analysis_enter_edges ::
        ('ctx, 'g) analysis_node) list" where
   "analysis_enter_edges cfg g covered sol =
     concat (map (\<lambda>src_ctx.
-      concat (map (\<lambda>e. case e of (u, a, v) \<Rightarrow>
-        if fst src_ctx = u \<and> is_enter_action a then
-          let callee_ctx = route cfg u (snd src_ctx) a
+      concat (map (\<lambda>(u, ca, entry, _).
+        if fst src_ctx = u then
+          let callee_ctx = route cfg u (snd src_ctx) ca
               (local_of cfg (sol (Inl src_ctx)))
-          in if local_node_member covered v callee_ctx
-             then [(LocalNode u (snd src_ctx), EnterEdge a, LocalNode v callee_ctx)]
+          in if local_node_member covered entry callee_ctx
+             then [(LocalNode u (snd src_ctx), EnterEdge (owner_of cfg entry) ca,
+                    LocalNode entry callee_ctx)]
              else []
-        else []) (cfg_edges_list g))) covered)"
+        else []) (cfg_calls_list g))) covered)"
 
 definition analysis_combine_edges ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> (pp \<times> 'ctx) list
@@ -278,20 +314,21 @@ definition analysis_combine_edges ::
        ('ctx, 'g) analysis_node) list" where
   "analysis_combine_edges cfg g covered sol =
     concat (map (\<lambda>src_ctx.
-      concat (map (\<lambda>c. case c of (call, ex, ret, dst) \<Rightarrow>
-        if fst src_ctx = call then
-          concat (map (\<lambda>e. case e of (u, a, v) \<Rightarrow>
-            if u = call \<and> is_enter_action a then
-              let callee_ctx = route cfg call (snd src_ctx) a
-                  (local_of cfg (sol (Inl src_ctx)))
-              in if local_node_member covered ex callee_ctx \<and>
-                    local_node_member covered ret (snd src_ctx)
-                 then [(LocalNode ex callee_ctx,
-                       CombineEdge call dst (return_slot_for_pp cfg ex),
-                       LocalNode ret (snd src_ctx))]
-                 else []
-            else []) (cfg_edges_list g))
-        else []) (cfg_combines_list g))) covered)"
+      concat (map (\<lambda>c. case c of (call, ca, entry, cont) \<Rightarrow>
+        (case entry of FunctionEntry p \<Rightarrow>
+          if fst src_ctx = call then
+            let callee_ctx = route cfg call (snd src_ctx) ca
+                (local_of cfg (sol (Inl src_ctx)));
+                result = FunctionResult p
+            in if local_node_member covered result callee_ctx \<and>
+                  local_node_member covered cont (snd src_ctx)
+               then [(LocalNode result callee_ctx,
+                      CombineEdge call (case ca of CallEdge dst _ _ \<Rightarrow> dst)
+                        (return_slot_for_pp cfg result),
+                      LocalNode cont (snd src_ctx))]
+               else []
+          else []
+        | _ \<Rightarrow> [])) (cfg_calls_list g))) covered)"
 
 fun analysis_local_domain :: "((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx) list" where
   "analysis_local_domain [] = []"
@@ -346,7 +383,14 @@ definition analysis_graph_wf ::
       distinct ns \<and>
       distinct es \<and>
       list_all (\<lambda>e. case e of (src, _, dst) \<Rightarrow> graph_node_member ns src \<and> graph_node_member ns dst) es)"
+fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
+  "string_of_cfg_node (Statement n) = ''pp'' @ string_of_nat n"
+| "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ p"
+| "string_of_cfg_node (FunctionResult p) = ''result_'' @ p"
 
+definition graphviz_exit :: "cfg \<Rightarrow> cfg_node" where
+  "graphviz_exit g =
+    (case cfg_entry g of FunctionEntry p \<Rightarrow> FunctionResult p | p \<Rightarrow> p)"
 fun analysis_node_position :: "('ctx, 'g) analysis_node list
   \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> nat" where
   "analysis_node_position [] n = 0"
@@ -372,7 +416,7 @@ definition analysis_node_id ::
     \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
   "analysis_node_id cfg ns n =
     (case n of
-      LocalNode p ctx \<Rightarrow> owner_of cfg p @ ''_pp'' @ string_of_nat p @ ''_ctx''
+      LocalNode p ctx \<Rightarrow> owner_of cfg p @ ''_'' @ string_of_cfg_node p @ ''_ctx''
         @ string_of_nat (context_position (remdups (owner_contexts cfg ns))
             (owner_of cfg p, ctx))
     | GlobalNode k \<Rightarrow> ''global_'' @ string_of_nat (analysis_node_position ns n)
@@ -398,18 +442,21 @@ definition analysis_nodes_in_cluster ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'g) analysis_cluster
     \<Rightarrow> ('ctx, 'g) analysis_node list \<Rightarrow> ('ctx, 'g) analysis_node list" where
   "analysis_nodes_in_cluster cfg cluster ns =
-    sort_key (\<lambda>n. case n of LocalNode p ctx \<Rightarrow> p | GlobalNode k \<Rightarrow> 0 | SourceNode src \<Rightarrow> 0)
+    sort_key (analysis_node_position ns)
       (filter (\<lambda>n. case (cluster, n) of
         (ContextCluster owner ctx, LocalNode p ctx') \<Rightarrow> owner = owner_of cfg p \<and> ctx = ctx'
       | (GlobalCluster, GlobalNode _) \<Rightarrow> True
       | (SourceCluster, SourceNode _) \<Rightarrow> True
       | _ \<Rightarrow> False) ns)"
 
+
+
 definition graphviz_point_label :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
   "graphviz_point_label g p =
-    (if p = cfg_entry g \<or> mem_pp p (proc_entry_pps_list g) then ''start''
-     else if p = cfg_exit g \<or> mem_pp p (proc_exit_pps_list g) then ''end''
-     else ''pp'' @ string_of_nat p)"
+    (case p of
+      FunctionEntry owner \<Rightarrow> ''entry_'' @ owner
+    | FunctionResult owner \<Rightarrow> ''exit_'' @ owner
+    | Statement _ \<Rightarrow> string_of_cfg_node p)"
 
 definition contextual_node_label ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
@@ -432,12 +479,12 @@ definition analysis_node_attrs :: "cfg \<Rightarrow> ('ctx, 'g) analysis_node \<
     (case n of
       LocalNode p _ \<Rightarrow>
         if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
-        else if p = cfg_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
-        else if mem_pp p (proc_entry_pps_list g) then ''shape=box,color=green,style=filled,fillcolor=lightgreen''
-        else if mem_pp p (proc_exit_pps_list g) then ''shape=box,color=red,style=filled,fillcolor=lightgreen''
+        else if p = graphviz_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+        else if mem_pp p (proc_entry_pps_list g) then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
+        else if mem_pp p (proc_exit_pps_list g) then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
         else ''shape=box,style=filled,fillcolor=lightgreen''
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
-    | SourceNode _ \<Rightarrow> ''shape=box,color=gray,style=rounded'')" 
+    | SourceNode _ \<Rightarrow> ''shape=plain'')" 
 
 fun enter_bindings :: "vname list \<Rightarrow> aexp list \<Rightarrow> string list" where
   "enter_bindings [] _ = []"
@@ -445,31 +492,29 @@ fun enter_bindings :: "vname list \<Rightarrow> aexp list \<Rightarrow> string l
 | "enter_bindings (x # xs) (e # es) =
     (x @ '' := '' @ string_of_aexp e) # enter_bindings xs es"
 
-definition enter_action_label :: "edge_action \<Rightarrow> string" where
-  "enter_action_label a =
-    (case a of EA_Enter xs es \<Rightarrow>
-       (let bindings = enter_bindings xs es
-        in if bindings = [] then ''enter''
-           else ''enter'' @ gv_nl @ join_gv_nl bindings)
-     | _ \<Rightarrow> string_of_action a)"
+definition enter_action_label :: "call_action \<Rightarrow> string" where
+  "enter_action_label a = string_of_call_action a"
 
-definition source_action_label :: "edge_action \<Rightarrow> string" where
-  "source_action_label a =
+definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
+  "source_action_label g a =
     (case a of EA_Assign x e \<Rightarrow>
-       if x = ret_var then ''ret := '' @ string_of_aexp e else string_of_action a
-     | _ \<Rightarrow> string_of_action a)"
+       if x = ret_var then ''ret := '' @ string_of_aexp e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_bexp b
+    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_bexp b @ '')''
+    | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
+    | _ \<Rightarrow> string_of_action a)"
 
-definition analysis_edge_attrs :: "analysis_edge_kind \<Rightarrow> string" where
-  "analysis_edge_attrs kind =
+definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> string" where
+  "analysis_edge_attrs g kind =
     (case kind of
-      IntraEdge a \<Rightarrow> ''label='' @ dq @ source_action_label a @ dq
-    | EnterEdge a \<Rightarrow> ''color=purple,penwidth=2,label='' @ dq
-        @ enter_action_label a @ dq
-    | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,label='' @ dq
+      IntraEdge a \<Rightarrow> ''label='' @ dq @ source_action_label g a @ dq
+    | EnterEdge callee a \<Rightarrow> ''color=purple,penwidth=2,weight=10,label='' @ dq
+        @ ''call '' @ callee @ ''('' @
+          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')'' @ dq
+    | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
-             (Some x, Some r) \<Rightarrow> x @ '' := '' @ r
-           | (Some x, None) \<Rightarrow> ''return to '' @ x
-           | (None, _) \<Rightarrow> ''return / nop'')
+             (Some x, Some r) \<Rightarrow> ''resume / '' @ x @ '' := '' @ r
+           | (Some x, None) \<Rightarrow> ''resume / '' @ x
+           | (None, _) \<Rightarrow> ''resume'')
         @ dq
     | GlobalReadEdge \<Rightarrow> ''style=dotted,color=gray,label='' @ dq @ ''read global'' @ dq
     | GlobalWriteEdge \<Rightarrow> ''style=dotted,color=gray,label='' @ dq @ ''write global'' @ dq)"
@@ -482,28 +527,7 @@ definition analysis_cluster_label ::
     | GlobalCluster \<Rightarrow> ''Shared globals''
     | SourceCluster \<Rightarrow> ''Source'')"
 
-fun analysis_order_pairs :: "'a list \<Rightarrow> ('a \<times> 'a) list" where
-  "analysis_order_pairs [] = []"
-| "analysis_order_pairs [x] = []"
-| "analysis_order_pairs (x # y # xs) = (x, y) # analysis_order_pairs (y # xs)"
 
-fun analysis_real_edge :: 
-  "(('ctx, 'g) analysis_node \<times> analysis_edge_kind \<times> ('ctx, 'g) analysis_node) list
-    \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> bool" where
-  "analysis_real_edge [] src dst = False"
-| "analysis_real_edge ((src', kind, dst') # es) src dst =
-    (if src = src' \<and> dst = dst' then True else analysis_real_edge es src dst)"
-
-definition analysis_ordering_dot ::
-  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'g) analysis_node list
-    \<Rightarrow> (('ctx, 'g) analysis_node \<times> analysis_edge_kind \<times> ('ctx, 'g) analysis_node) list
-    \<Rightarrow> ('ctx, 'g) analysis_node list \<Rightarrow> string" where
-  "analysis_ordering_dot cfg ns es ordered =
-    concat (map (\<lambda>pair. case pair of (src, dst) \<Rightarrow>
-      ''    '' @ analysis_node_id cfg ns src @ '' -> '' @ analysis_node_id cfg ns dst
-      @ '' [style=invis,weight=10];'' @ nl)
-      (filter (\<lambda>pair. case pair of (src, dst) \<Rightarrow> \<not> analysis_real_edge es src dst)
-        (analysis_order_pairs ordered)))"
 
 definition analysis_cluster_dot ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
@@ -514,21 +538,23 @@ definition analysis_cluster_dot ::
     (let members = analysis_nodes_in_cluster cfg cluster ns
      in ''  subgraph '' @ analysis_cluster_id clusters cluster @ '' {'' @ nl
       @ ''    label='' @ dq @ analysis_cluster_label cfg cluster @ dq @ '';'' @ nl
-      @ ''    style=filled; color=lightgrey; fillcolor=white;'' @ nl
+      @ ''    style=rounded; color=gray70; penwidth=1;'' @ nl
       @ concat (map (\<lambda>n. ''    '' @ analysis_node_id cfg ns n @ '' [''
-          @ analysis_node_attrs g n @ '',label='' @ dq
-          @ graphviz_label_text (contextual_node_label cfg g sol n)
-          @ dq @ ''];'' @ nl) members)
-      @ analysis_ordering_dot cfg ns es members
+          @ analysis_node_attrs g n
+          @ (case n of SourceNode _ \<Rightarrow> '',label='' @ source_html_label
+              (contextual_node_label cfg g sol n)
+             | _ \<Rightarrow> '',label='' @ dq @ graphviz_label_text
+              (contextual_node_label cfg g sol n) @ dq)
+          @ ''];'' @ nl) members)
       @ ''  }'' @ nl)"
 
 definition analysis_edge_dot ::
-  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'g) analysis_node list
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> ('ctx, 'g) analysis_node list
     \<Rightarrow> (('ctx, 'g) analysis_node \<times> analysis_edge_kind \<times> ('ctx, 'g) analysis_node)
     \<Rightarrow> string" where
-  "analysis_edge_dot cfg ns e =
+  "analysis_edge_dot cfg g ns e =
     (case e of (src, kind, dst) \<Rightarrow> ''  '' @ analysis_node_id cfg ns src @ '' -> ''
-      @ analysis_node_id cfg ns dst @ '' ['' @ analysis_edge_attrs kind @ ''];'' @ nl)"
+      @ analysis_node_id cfg ns dst @ '' ['' @ analysis_edge_attrs g kind @ ''];'' @ nl)"
 
 definition analysis_graph_to_dot ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
@@ -537,10 +563,11 @@ definition analysis_graph_to_dot ::
     (case graph of (clusters, ns, es) \<Rightarrow>
       if analysis_graph_wf graph then
         ''digraph AnalysisCFG {'' @ nl
-        @ ''  rankdir=TB;'' @ nl
-        @ ''  node [fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl
+        @ ''  graph [rankdir=TB,newrank=true,splines=polyline,nodesep=0.5,ranksep=0.7,fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl
+        @ ''  node [shape=box,style=filled,fillcolor=lightgreen,fontname='' @ dq @ ''Menlo'' @ dq @ ''];'' @ nl
+        @ ''  edge [fontname='' @ dq @ ''Menlo'' @ dq @ '',fontsize=10,arrowsize=0.8];'' @ nl
         @ concat (map (analysis_cluster_dot cfg g clusters ns es sol) clusters)
-        @ concat (map (analysis_edge_dot cfg ns) es)
+        @ concat (map (analysis_edge_dot cfg g ns) es)
         @ ''}'' @ nl
       else ''digraph AnalysisCFG { invalid_graph }'' @ nl)"
 
@@ -551,8 +578,9 @@ definition contextual_analysis_dot ::
     analysis_graph_to_dot cfg g sol (build_analysis_graph cfg g domain sol)"
 
 definition raw_cfg_graph_config ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
-  "raw_cfg_graph_config \<Pi> ps main =
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
+  "raw_cfg_graph_config \<Pi> ps mnm main =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''''),
@@ -565,22 +593,23 @@ definition raw_cfg_graph_config ::
       show_global_key = (\<lambda>_. ''''),
       is_shared_global = (\<lambda>_. False),
       show_internal_globals = False,
-      owner_of = compiled_owner_of \<Pi> ps main,
+      owner_of = compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (string_of_program \<Pi> ps main)
+      source_text = Some (pretty_string_of_program \<Pi> ps main)
     \<rparr>"
 
 definition raw_cfg_dot ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> string" where
-  "raw_cfg_dot \<Pi> ps main =
-    (let g = compile_prog \<Pi> ps main;
-         cfg = raw_cfg_graph_config \<Pi> ps main;
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> string" where
+  "raw_cfg_dot \<Pi> ps mnm main =
+    (let g = compile_prog \<Pi> ps mnm main;
+         cfg = raw_cfg_graph_config \<Pi> ps mnm main;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_dot cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_dot_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> String.literal" where
-  "raw_cfg_dot_lit \<Pi> ps main = String.implode (raw_cfg_dot \<Pi> ps main)"
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> String.literal" where
+  "raw_cfg_dot_lit \<Pi> ps mnm main =
+    String.implode (raw_cfg_dot \<Pi> ps mnm main)"
 
 end
 

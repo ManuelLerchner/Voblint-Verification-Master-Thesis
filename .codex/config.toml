@@ -68,6 +68,18 @@ approval_mode = "approve"
 [mcp_servers.isabelle-iq.tools.repl_init_from_source]
 approval_mode = "approve"
 
+[mcp_servers.isabelle-iq.tools.get_proof_blocks]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_context_info]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.set_auto_save]
+approval_mode = "approve"
+
+[mcp_servers.isabelle-iq.tools.get_sorry_positions]
+approval_mode = "approve"
+
 [mcp_servers.isabelle-ir]
 url = "http://localhost:9148/mcp"
 

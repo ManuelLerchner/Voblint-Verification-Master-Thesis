@@ -1,281 +1,161 @@
-# Voblint: An Executable and Machine-Checked Framework for Abstract Interpretation in Isabelle/HOL
+<img width="1792" height="592" alt="Gemini_Generated_Image_uv4qywuv4qywuv4q" src="https://github.com/user-attachments/assets/6d58a89f-a92b-4029-9677-83c049254250" />
+
+# Voblint
+
+> **A Generic, Executable, and Machine-Checked Framework for Interprocedural Abstract Interpretation in Isabelle/HOL**
 
 > Master's thesis. Manuel Lerchner, supervised by [@AlexandraGrass](https://www.github.com/AlexandraGrass)
 
 ## Abstract
 
-This repository implements an executable framework for certified abstract
-interpretation in Isabelle/HOL. Analyses are defined once, executed inside
-Isabelle using the verified side-effecting top-down solver of
-[stilscher/td-verification](https://github.com/stilscher/td-verification), and
-the solver computes analysis results that are certified sound once the analysis
-instantiates the framework's soundness obligations. The framework is generic
-over abstract domains and transfer functions. The flagship interval analysis
-computes the invariant `x ∈ [0,20]` for a counting loop, and Isabelle proves
-that this computed result soundly over-approximates every execution of the
-original IMP2 program.
 
-**The analysis result is computed, not supplied, and its soundness is proved by
-the framework.**
+Voblint is a reusable, machine-checked Isabelle/HOL framework for constructing, executing, and verifying generic interprocedural abstract interpreters. Inspired by Goblint's modular D/G architecture, it combines verified compilation from IMP2 programs, activation-local operational semantics, executable equation generation, a verified top-down solver, and end-to-end source-level soundness.
 
-## ⭐ Flagship Example
+Unlike most existing formalizations, Voblint proves properties of the analysis result computed by a verified solver rather than an externally provided fixpoint.
 
-`src/Examples/Executable/Interval/Example_Interval_DG_Flagship.thy`
+## Why Voblint?
 
-The flagship theory analyzes a counting loop:
+* **Computed results:** The verified solver computes the abstract fixpoint inside Isabelle/HOL. All soundness theorems apply directly to this computed result.
+* **Generic by design:** The framework is generic over abstract domains, transfer functions, widening strategies, D/G analyses, and context abstractions.
+* **Context-sensitive:** Analyses are parameterized by arbitrary context keys, enabling monovariant, activation-based, call-string, or custom context abstractions without changing the proof infrastructure.
+* **Executable:** Analyses are not just specified; they run directly inside Isabelle/HOL.
+* **Visualizable:** Executable GraphViz output for certified analysis results.
 
-```c
-x = 0;
-while (x < 20)
-  x++;
-```
+## Foundations
 
-It demonstrates the complete machine-checked chain:
+Voblint is inspired by several complementary lines of work:
+
+* **Goblint** ([Github](https://github.com/goblint/analyzer)) – modular interprocedural abstract interpretation and the D/G analysis architecture.
+* **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)) – reusable abstract interpretation in Isabelle/HOL.
+* **The Top-Down Solver Verified: Building Confidence in Static Analyzers** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)) – executable verified fixpoint solving.
+* **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)) – engineering modular heterogeneous analyses.
+
+## The Certified Execution Pipeline
+
+Voblint proves one continuous end-to-end execution story. The framework bridges the gap between the concrete source code and the computed mathematical fixpoint:
 
 ```text
-IMP2 source
-      ↓
-compile_prog
-      ↓
-CFG
-      ↓
-D/G equation generation
-      ↓
-verified solver
-      ↓
-computed interval solution
-      ↓
-solver correctness
-      ↓
-collecting soundness
-      ↓
-compiler correctness
-      ↓
-source-level guarantee
+            IMP2 Program
+                 │
+                 ▼
+       Verified CFG Compilation
+                 │
+                 ▼
+      Activation-local Semantics
+                 │
+                 ▼
+      Generic D/G Specification
+                 │
+                 ▼
+    Executable Equation Generation
+                 │
+                 ▼
+          Verified TD Solver
+                 │
+                 ▼
+      Computed Abstract Solution
+                 │
+                 ▼
+        Collecting Semantics
+                 │
+                 ▼
+       Source-Level Soundness
+
 ```
-
-Computed result:
-
-| Program point | Certified interval |
-| --- | --- |
-| Loop head | `[0,20]` |
-| Loop body | `[0,19]` |
-| Exit | `[20,20]` |
-
-Isabelle computes these intervals and proves them sound for every execution of
-the flagship source program from a valid initial store.
-
-These intervals are not handwritten; the verified solver produces them during
-evaluation inside Isabelle.
-
-## Why This Matters
-
-Many mechanized abstract-interpretation developments prove soundness assuming
-an abstract solution. This repository executes the verified solver inside
-Isabelle and certifies the computed analysis result. The flagship interval
-example is one instance of a generic D/G framework that also supports
-executable Sign and mixed-domain analyses.
-
-## Contributions
-
-### Scientific contributions
-
-- Verified execution of abstract interpreters inside Isabelle.
-- Machine-checked certification of computed analysis results.
-- Generic D/G framework for Goblint-style abstract interpretation.
-- Source-level soundness via compiler correctness.
-
-### Demonstrated instances
-
-- Executable Sign analysis.
-- Executable Interval analysis.
-- Mixed Sign x Interval analysis.
-- Certified flagship interval example with GraphViz output.
-
-## What Can I Reuse?
-
-To add a new analysis:
-
-- define the abstract domain;
-- define sound transfer functions;
-- instantiate the generic D/G interface.
-
-The framework then:
-
-- generates equations,
-- executes the verified solver,
-- certifies the computed analysis result.
-
-## Certified Execution Pipeline
-
-The repository proves one end-to-end execution story:
-
-Key step: the verified solver computes `σ`.
-
-```text
-IMP2 source
-  → compile_prog
-  → CFG
-  → dg_gen_of
-  → verified solver computes σ
-  → solver correctness yields part_post_solution σ
-  → part_post_solution_dg_st_to_abs
-  → collecting-soundness theorem
-  → compiler-correctness simulation
-  → source-level guarantee
-```
-
-Four distinct claims are established for the flagship:
-
-1. The interval D/G analysis is executable.
-2. The verified solver computes the certified solution.
-3. The computed solution soundly over-approximates CFG collecting semantics.
-4. Compiler correctness lifts that guarantee to source-level IMP2 executions.
-
-The main executable witness is
-`Example_Interval_DG_Flagship.thy`. It proves the computed result non-vacuous,
-shows proper bounds at reachable program points, and ends with an
-analysis-annotated GraphViz rendering.
 
 ## Generic D/G Framework
 
-The flagship is one executable instance of a reusable framework, not a
-special-purpose verified analyzer.
+Voblint's analyses are built on a reusable **D/G framework** inspired by Goblint's modular analysis architecture. Rather than implementing a separate solver and proof for every analysis, Voblint factors analyses into:
 
-The core abstraction is `sound_dg_spec`, the Isabelle image of Goblint's
-[`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)-style split between per-program-point answers `D` and side-published
-facts `G` . An analysis supplies step and combine behavior over opaque carriers;
-the framework generates the equation system, runs the solver, and provides the
-soundness theorem that connects the computed result back to collecting
-semantics.
+- **D** — abstract facts associated with program points,
+- **G** — globally shared analysis information published and consumed across program points.
 
-`Exec_DG_Bridge.thy` gives the executable frontend for this interface:
+The central abstraction is the `sound_dg_spec` locale, an Isabelle/HOL formalization of Goblint's [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)-interface. An analysis instantiates this locale by providing domain-specific transfer, combine, and communication operations over abstract carriers. From this specification, the framework automatically derives:
 
-- executable finite-map carriers for abstract states,
+- executable equation generation,
+- integration with the verified top-down solver,
+- reusable collecting-semantics soundness theorems,
+- reusable source-level correctness theorems,
+- a complete executable analysis pipeline.
+
+This separation allows Sign, Interval, mixed Sign × Interval, and future analyses to reuse the same verified infrastructure while varying only the domain-specific analysis logic.
+
+The executable frontend is provided by `Exec_DG_Bridge.thy`, which implements:
+
+- executable finite-map representations of D/G states,
 - the refinement morphism `fun_of_dg_st`,
-- executable equation generation `dg_gen_of`,
-- transport from solver-computed results to abstract post-solutions via
+- executable equation generation via `dg_gen_of`,
+- transport of solver-computed results to abstract post-solutions through
   `part_post_solution_dg_st_to_abs`.
 
-This is what lets Sign, Interval, and mixed analyses reuse the same certified
-execution pipeline.
+Consequently, adding a new D/G analysis requires only instantiating `sound_dg_spec`; equation generation, solver execution, and the end-to-end correctness proof are inherited from the generic framework.
 
-### Adding a domain
+## Extending Voblint
 
-To instantiate the framework, supply an abstract value type, a concretization
-`gamma`, and sound transfer functions. Sign
-(`src/Analysis/Instances/Sign/Sign_Domain.thy`) is the reference instance.
+The framework is designed to be highly extensible. Rather than proving a new analysis from scratch, you only need to provide domain-specific components:
 
-| Step | What | Reference (sign) |
-| --- | --- | --- |
-| 1 | value type + lattice instance (`bot`, `sup`, `ord`) | `datatype sign`, `instantiation` |
-| 2 | define `gamma`, prove `gamma_bot` / `gamma_mono` | `gamma_sign_mono` |
-| 3 | `interpretation` of the `abstract_domain` locale | `sign_domain` |
-| 4 | define transfer functions, prove they preserve `gamma` | `assign_sign_sound`, `assume_sign_sound` |
-| 5 | apply the interprocedural soundness theorem | `side_sign_analysis_sound` |
+| Extension                     | Required work                         |
+| ----------------------------- | ------------------------------------- |
+| **Abstract domain**           | Define lattice and concretization (γ) |
+| **Transfer functions**        | Prove local soundness                 |
+| **Goblint D/G specification** | Instantiate the generic interface     |
+| **Context abstraction**       | Define a context key                  |
+| **Widening**                  | Provide widening/narrowing operators  |
 
-## Architecture
+## Repository Structure
 
-- `Voblint_IMP2`: IMP2 source semantics, procedures, globals, and the
-  source-to-CFG bridge.
-- `Voblint_CFG`: CFG construction, paths, and interprocedural collecting
-  semantics.
-- `Voblint_Analysis`: domains, equation systems, solver wiring, and executable
-  D/G infrastructure.
-- `Voblint_Formalization`: the end-to-end soundness theorems (pipeline
-  composition, compiler correctness, source-activation bridge).
-- `Voblint_Examples`: executable analyzer runs, flagship demonstrations, and the
-  `Voblint` capstone index. A leaf session — nothing depends on it, so the
-  soundness gate builds without paying for the demos.
+```text
+IMP2
+ │   Source language
+ ▼
+CFG
+ │   Compilation & semantics
+ ▼
+Analysis
+ │   Generic D/G framework
+ ▼
+Formalization
+ │   End-to-end soundness
+ ▼
+Examples
+     Executable analyses & GraphViz
 
-Five Isabelle sessions build in order:
-`Voblint_IMP2` → `Voblint_CFG` → `Voblint_Analysis` → `Voblint_Formalization` →
-`Voblint_Examples`.
+```
 
-## Theoretical Foundations
+* **`IMP2/`**: Syntax, procedures, globals/locals, small-step semantics
+* **`CFG/`**: Procedure-aware CFG compilation, activation-local traces, and collecting semantics
+* **`Analysis/`**: Generic D/G framework, domains, solver interface, executable analyses
+* **`Formalization/`**: End-to-end solver, collecting-semantics, and source-level soundness
+* **`Examples/`**: Executable runs, flagship demos, and GraphViz tooling
+* **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches
+* **`docs/`**: Proof overview, phase tracking, and agent workflow notes
 
-The concrete semantic target is the interprocedural activation-local trace
-collecting semantics `ltr_collect`, the forgetful projection of `valid_ltr`.
-The strongest reusable source-to-analysis theorem is `source_activation_sound`
-(`src/Formalization/Pipeline/Source_Activation_Sound.thy`): for a real
-IMP2 run, the compiled CFG, and a sound solver instance, the abstract result
-contains the matched concrete state at its calling context. Its monovariant
-companion `source_reaches_ltr_collect` lands the reached store in `ltr_collect`.
-
-The native D/G soundness endpoints include
-`sign_dg_post_solution_collect_sound`,
-`ivl_dg_post_solution_collect_sound`, and
-`mixed_si_post_solution_collect_sound`. The executable bridge turns computed
-solver output into the hypotheses these theorems require, and the flagship
-theory instantiates that path for a solver-computed interval result.
-
-For a more theorem-centric overview, see `docs/PROOF_OVERVIEW.md`,
-`docs/PROOF_PHASES.md`, and the session entry theory
-`src/Examples/Voblint.thy`.
-
-## Build
+## Build Instructions
 
 ### Requirements
 
-- [Isabelle](https://isabelle.in.tum.de/) 2025 or newer, with `isabelle` in `$PATH`.
-- A local [AFP](https://www.isa-afp.org/) checkout (`thys/`): transitive deps
-  `Root_Balanced_Tree`, `Dijkstra_Shortest_Path`.
-- GNU `make`, `git`, POSIX tools.
+* **[Isabelle](https://isabelle.in.tum.de/)  2025** (or newer)
+* **[AFP](https://www.isa-afp.org/)** (Archive of Formal Proofs) checkout containing `Root_Balanced_Tree` and `Dijkstra_Shortest_Path`.
+* `make`, `git`, and standard POSIX tools.
 
-Set `AFP` to your AFP `thys/` directory (default `~/afp/thys`):
+### Building
 
-```
+Set `AFP` to your local AFP `thys/` directory (defaults to `~/afp/thys`):
+
+```bash
+# 1. Initialize the TD solver submodule and apply compatibility patches
+make vendor
+
+# 2. Build the main formalization session (sorry-free)
 make AFP=/path/to/afp/thys build
-```
 
-| Target | Role |
-| --- | --- |
-| `make vendor` | init `vendor/td-verification` submodule + apply Isabelle2025 patch |
-| `make build` (default) | build session `Voblint_Formalization` (depends on `vendor`) |
-| `make jedit` | launch Isabelle/jEdit with session roots pre-loaded |
-| `make html` | browser info → `docs/html/` (CI deploys to GitHub Pages on `main`) |
-| `make clean` / `clean-vendor` | remove built heaps / vendored sources |
-
-The checked source tree is sorry-free; `ROOT` files do not enable
-`quick_and_dirty`.
-
-## Repository Layout
+# 3. Launch jEdit with session roots pre-loaded
+make AFP=/path/to/afp/thys jedit
 
 ```
-src/
-  IMP2/          syntax, procedures, globals/locals, small-step
-  CFG/           CFG, IP compilation, paths; Collecting/ - IP collecting semantics
-  Analysis/      Generic/ (Domain/ Equations/ Solver/) Instances/ (Voblint_Analysis session)
-  Formalization/ Pipeline/ - end-to-end soundness theorems (Voblint_Formalization session)
-  Examples/      Executable/ Interprocedural/ Numeric/ Tooling/ + Voblint capstone (Voblint_Examples session)
-vendor/
-  td-verification/         verified TD solver (submodule, AFP session TD)
-  td-verification.patch    local Isabelle2025 compatibility patch
-  autocorrode/             I/Q + I/R MCP servers (via ./scripts/setup.sh)
-docs/          proof overview, phases, roadmap, walkthroughs, generated HTML
-```
 
-The analysis rides on the **side-effecting** solver (`TD.TD_side`). An
-intra-procedural (classical) formulation is developed separately in the sibling
-repo `voblint-formalization-classical`.
+*Note: For details on agent-assisted development using Isabelle/Q and headless Isabelle/R, see `docs/ISABELLE_AGENT_NOTES.md` and the provided `./scripts/setup.sh`.*
 
-## Further Documentation
-
-For deeper theory-level detail, start with:
-
-- `docs/PROOF_OVERVIEW.md` for the big-picture proof story.
-- `docs/PROOF_PHASES.md` for phase status and remaining proof work.
-- `docs/ROADMAP.md` for active backlog and project direction.
-- `src/Examples/Voblint.thy` for the session-level theory map.
-
-### Verified dependencies
-
-| Dependency | Source | Role |
-| --- | --- | --- |
-| `HOL-IMP` | Isabelle distribution | session parent; IMP base |
-| `TD` (`TD_side`, `Basics`, …) | vendored `stilscher/td-verification` + patch | verified top-down solver |
-| `Dijkstra_Shortest_Path` | AFP | CFG graph type |
-| `Root_Balanced_Tree` | AFP | transitive dep of TD |
 
 ### Vendoring the TD solver
 

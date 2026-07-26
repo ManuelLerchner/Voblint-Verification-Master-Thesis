@@ -4,14 +4,10 @@ begin
 
 hide_const (open) Update_rules.N
 
-section \<open>Sign domain compatibility facade\<close>
+section \<open>Integrated Sign domain\<close>
 
-text \<open>
-  This theory preserves the historical sign-domain import surface.  The
-  implementation lives in responsibility-focused theories for the lattice,
-  arithmetic, backward filtering, transfer functions, printing, and local
-  effectful invariants used by the mixed side solver.
-\<close>
+text \<open>This theory provides one import surface for the Sign lattice, arithmetic,
+  backward filtering, transfer functions, printing, and local-effect invariants.\<close>
 
 subsection \<open>Executable examples\<close>
 

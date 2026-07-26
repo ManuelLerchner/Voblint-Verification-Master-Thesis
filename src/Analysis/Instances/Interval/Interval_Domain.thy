@@ -4,14 +4,10 @@ begin
 
 hide_const (open) Update_rules.N
 
-section \<open>Interval domain compatibility facade\<close>
+section \<open>Integrated Interval domain\<close>
 
-text \<open>
-  This theory preserves the historical interval-domain import surface.  The
-  implementation lives in responsibility-focused theories for bounds, lattice
-  structure, widening/narrowing, arithmetic, backward filtering, transfer
-  functions, and printing.
-\<close>
+text \<open>This theory provides one import surface for interval bounds, lattice structure,
+  widening, narrowing, arithmetic, backward filtering, transfers, and printing.\<close>
 
 subsection \<open>Executable examples\<close>
 

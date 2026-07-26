@@ -1,25 +1,22 @@
-# CFG collecting semantics
+# Activation-local collecting semantics
 
-**Main contribution:** The operational collecting specification of programs on the
-compiled CFG: interprocedural lfp `cfg_collect`, and the call-structured local
-trace `valid_ltr` with its activation collector `cfg_collect_ctx_act`.
-
-**Theories (dependency order)**
+The CFG collecting layer uses call-structured local traces as its concrete
+interprocedural semantics.
 
 | File | Role |
 | --- | --- |
-| `CFG_Collect.thy` | `edge_collect`, `edge_step`, `call_enter_store`, `edges_collect`, `collect_pp`, `collect_combine_pp`, `cfg_collect_F`, `cfg_collect`, and the witness/path-to-lfp bridge |
-| `CFG_Collect_Runs.thy` | `cfg_runs_to` (exit projection) and generic collecting introduction lemmas for edges and combines |
-| `CFG_Local_Trace.thy` | call-structured local trace `valid_ltr` and the activation collector `activation_collect` (sink stores of `valid_ltr` traces reaching a node, keyed by `key`) |
+| `CFG_Local_Trace.thy` | `ltr`, `valid_ltr`, caller structure, context keys, and `activation_collect` |
+| `LTR_Collect.thy` | `ltr_collect`, `ltr_collect_keyed`, introduction rules, and least-fixpoint characterization |
+| `LTR_Abstract.thy` | `ltr_gamma` and the generic abstract postfix soundness theorem |
 
-`CFG_Local_Trace` currently extends `CFG_Collect`. A separate activation-local
-session remains a possible future boundary, but is intentionally deferred.
+`valid_ltr` has root, call, and resume constructors. Each trace contains one
+activation-local path and links called activations to their immediate caller.
+Nested and recursive returns therefore resume structurally without encoding an
+unbounded call stack in CFG nodes.
 
-**Specification spine**
+`ltr_collect` forgets activation structure and collects reachable sink stores
+at each node. `activation_collect` retains an analysis-defined activation key.
+These sets are the concrete targets of equation-system and D/G soundness.
 
-- **IP state:** `cfg_collect g S v` — lfp of `cfg_collect_F`; the plain collecting endpoint.
-- **Activation:** `activation_collect enterc seedc g S v c` — sink stores of `valid_ltr` traces reaching `v`, keyed by `key enterc seedc`.
-- **Exit sugar:** `cfg_runs_to pi ps c s t` — definitional abbreviation for membership in `cfg_collect … (cfg_exit …)`.
-
-**Downstream:** `src/Analysis/Generic/Equations/Constraint_System_Sound.thy` — per-step collecting soundness;
-`src/Analysis/Generic/Equations/Analysis_Sound.thy` — post-fixpoint soundness bridges.
+Concrete witness graphs and executable regressions live in
+`src/Examples/Interprocedural/Example_LTR_Collect_Regression.thy`.

@@ -1,19 +1,26 @@
 session Voblint_CFG in "." = "Voblint_IMP2" +
-  description "CFG construction and collecting semantics"
+  description "Procedure-aware CFG: core, trace, collecting, and structural compiler"
   directories
     "Collecting"
     "Compiler"
   theories
     CFG_Def
-    CFG_Path
-    IMP2_Proc_to_CFG
-    CFG_Transfer
-    CFG_Prune
     CFG_Local_Trace
     LTR_Collect
     LTR_Abstract
+    IMP2_Proc_to_CFG
+    CFG_Transfer
     Compile_Invariants
     Control_Residual
     Located_Exec
     Control_Simulation
+    Compile_Certificate
+    CFG_Prune
+    (* Per-procedure node classification and edge locality; carries
+       valid_ltr_entry_result_eq, the activation procedure-locality theorem. *)
+    Compile_Locality
+    (* Source-to-local-trace bridge (csim -> valid_ltr), and the completed-run
+       exit reachability it feeds. *)
     Located_LTR
+  (* Statement indices are allocated directly in the procedure-aware node space.
+     Located simulation supplies the path structure used by compiler soundness. *)

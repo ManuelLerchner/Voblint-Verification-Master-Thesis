@@ -1,89 +1,42 @@
-# Voblint_Examples — demonstrations and capstone
+# Voblint examples
 
-Leaf session in the DAG, on top of `Voblint_Formalization`. Nothing depends on
-it, so the soundness sessions build without the slow codegen/`value` runs here.
+`Voblint_Examples` is the leaf session. It contains executable runs, concrete
+regressions, visualizations, and the narrative capstone. No soundness session
+depends on it.
 
-**Main contribution:** Concrete demonstrations — procedural soundness witnesses,
-executable analyzer runs, CFG visualisation, coverage tests, and precision
-comparisons. Grouped into themed subfolders (theory names stay flat; `ROOT`
-declares the directories). `Voblint.thy` is the narrative capstone index tying
-every layer together; it lives here because it imports the flagship examples.
+## Executable analyses
 
-## `Executable/` — code-generated analyzer runs
-
-Executable runs that evaluate the real TD-side solver through generated code.
-These are examples even when they expose soundness-facing obligations: they fix a
-concrete program, equation system, or precision witness.
-
-| Folder | Role |
+| Area | Role |
 | --- | --- |
-| `Executable/Common/` | shared scaffolds for small executable witnesses |
-| `Executable/Sign/` | basic sign `st` codegen and hand-written equation-system probe |
-| `Executable/Sign/Context/` | sign context-sensitive runs and seeded entry witness |
-| `Executable/Sign/Keyed/` | sign keyed support, retain negative regression, and DG-native keyed runs |
-| `Executable/Sign/SeededClean/` | sign D/G/C seeded-clean witnesses |
-| `Executable/Interval/` | interval loop solver run and update-rule menu |
-| `Executable/Interval/Context/` | interval context-sensitive runs |
-| `Executable/Interval/SeededClean/` | interval seeded-clean and keyed DG runs |
+| `Executable/Sign/` | Sign-domain solver runs and D/G execution |
+| `Executable/Interval/` | Interval solver runs, source certification, and activation-sensitive D/G examples |
 
-## `Interprocedural/` — procedure-call witnesses
+`Example_Interval_Source_Ctx` uses the `twice` program to demonstrate two calls
+to one procedure under distinct contexts. It is interprocedural,
+repeated-call, and context-sensitive; it is not recursive.
+
+## Interprocedural regressions
 
 | File | Role |
 | --- | --- |
-| `Example_Inc_Proc.thy` | The `inc` program (procedure `p` increments global `Gx`) + its run-to-collecting witness lemmas (`cfg_runs_to_pcall_global_increment`) — proves the `cfg_runs_to` the examples below assume |
-| `Example_Side_Proc_Global.thy` | Sign IP on a local copy of `inc`; manual soundness + `sign_exec_prog` + annotated DOT |
-| `Example_Interval_Side_Proc_Global.thy` | Interval IP on a local copy of `inc` (manual post-fixpoint) |
-| `Example_Mixed_Flow_Sign.thy` | `mixed_flow_analysis_sound` / `_optimal` on native `sign_etf`, local copy of `inc` |
-| `Example_Proc_Call.thy` | Interval analysis of `inc`/`sqr` via global `Gx`; structural DOT |
-| `Example_Side_Execute.thy` | Minimal certified sign IP run (`x := 1`) |
-| `Example_Side_Branch_Calls.thy` | Branching procedure called twice; flow-sensitive locals |
-| `Example_Proc_Recursion_CFG.thy` | Recursive procedure CFG layout regression |
+| `Example_IMP2_Proc_Regression.thy` | Source call, return, global propagation, and bounded recursion |
+| `Example_Compile_Regression.thy` | Procedure layout and compiler invariants |
+| `Example_Control_Simulation_Regression.thy` | Located execution and source/CFG control simulation |
+| `Example_LTR_Collect_Regression.thy` | Nested calls, multiple returns, recursion, and local-trace collecting semantics |
+| `Example_Proc_Recursion_CFG.thy` | Direct and mutual recursive CFG layout |
+| `Example_Inc_Proc.thy` | Source-to-CFG execution witness for a global increment |
+| `Example_Side_Proc_Global.thy` | Sign analysis over a procedure call |
+| `Example_Interval_Side_Proc_Global.thy` | Interval analysis over a procedure call |
+| `Example_Mixed_Flow_Sign.thy` | Mixed-flow Sign theorem instantiation |
+| `Example_Proc_Call.thy` | Structural CFG example with calls |
+| `Example_Side_Branch_Calls.thy` | Repeated calls from separate branches |
+| `Example_Side_Execute.thy` | Minimal executable side-solver example |
 
-Each of the four `inc`-based examples defines its own program locally (self-contained);
-`Example_Inc_Proc` is the standalone witness proving what they assume.
+## Numeric and tooling examples
 
-## `Numeric/` — interval / backward numeric
+`Numeric/` demonstrates guard refinement and interval loop coverage.
+`Tooling/` renders procedure CFGs and mixed Sign/Interval results as GraphViz
+DOT.
 
-| File | Role |
-| --- | --- |
-| `Example_Interval_Loop_Coverage.thy` | Bounded loop; backward `assume_ivl` refines body to `[0,19]`; certified trace soundness `[0,20]` at the loop head |
-| `Example_Guard_Refinement.thy` | Backward vs identity assume on `x < 20`; single-guard precision gap |
-| `Example_IMP2_Coverage.thy` | Non-terminating loop; sign coverage via trace soundness |
-
-## `Tooling/`
-
-| File | Role |
-| --- | --- |
-| `Example_Proc_GraphViz.thy` | Plain procedural CFG DOT (`plain_dot_of_prog_lit`; two demo programs) |
-| `Example_Mixed_Sign_Interval_GraphViz.thy` | Mixed Sign/Interval analysis (`Instances/Mixed`) on `x := -1; x := 2`: solver run + `part_post_solution` + expected values (exit answer `SPos`, side invariant `[-1, 2]`); DOT with Sign answers at nodes and the Interval invariant in its own cluster |
-
-## Cross-cutting notes
-
-**GraphViz:** The annotated-DOT renderer (`annotated_dot_of_prog_lit`) and the
-context-clustered `ctx_debug_state_node_label_auto` are generic over any `show_val` domain,
-auto-collecting the program's locals. Sign and interval flagships both use them; structural
-examples use `plain_dot_of_prog_lit`.
-
-**Backward analysis arc:** `Example_Guard_Refinement` (one guard) → `Example_Interval_Loop_Coverage`
-(full CFG + trace soundness). Eval-only mirror: `Exec_Ivl_Run` in
-`Executable/Interval/`.
-
-**Executable D/G flagship (interval):** `Example_Interval_DG_Flagship` is the
-canonical end-to-end run — an inline IMP2 counting loop compiled to a CFG, its
-D/G interval equations generated by `dg_gen_of`, the verified warrowing solver
-computing the solution (`by eval`). The reusable bundle `dg_exec_run_source_sound`
-(`Run_Analysis_Sound`) then transports the result, certifies it over-approximates
-`ltr_collect` (invariant `x in [0,20]`), and lifts the guarantee to actual source
-runs (`flagship_source_run_sound`) in one step. An analysis-annotated GraphViz
-rendering closes the theory. `Exec_Sign_DG_Run` is the Sign analogue on the
-always-join solver.
-
-**Context-sensitive interval spine:** the canonical context-sensitive result is
-`Example_Interval_DG_Ctx_Collect` (`twice_ctx_collect_ctx_act_sound`) — the real
-TD solver's DG-native post-solution certified sound against the activation-indexed
-collecting semantics `cfg_collect_ctx_act` at every program point, via the generic
-`activation_collect_sound` backbone and the `dg_ctx_activation` discharge. The
-retain interval examples are the conservative baseline; their loop / recursion
-imprecision is widening/warrowing-related, not D/G/C-related.
-
-**Session entry point:** `Voblint.thy` imports the curated example set for the umbrella document.
+`Voblint.thy` imports the curated examples and presents the complete certified
+pipeline.

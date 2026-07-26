@@ -53,10 +53,19 @@ next
     unfolding EA_AssumeNot apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_assume_not inr by auto
 next
-  case EA_Enter
+  case (EA_Ret e p)
   show ?thesis
-    unfolding EA_Enter apply_etf.simps edge_collect_simps side_env_def
-    using etf_sound_enter inr by auto
+  proof (cases e)
+    case None
+    show ?thesis
+      unfolding EA_Ret None apply_etf.simps edge_collect_simps side_env_def
+      using etf_sound_nop inr by (auto simp: fun_upd_triv)
+  next
+    case (Some a)
+    show ?thesis
+      unfolding EA_Ret Some apply_etf.simps edge_collect_simps side_env_def
+      using etf_sound_assign inr by auto
+  qed
 qed
 
 

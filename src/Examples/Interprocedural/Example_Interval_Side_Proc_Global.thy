@@ -36,14 +36,17 @@ theorem proc_global_side_ivl_analysis:
   fixes s t :: store
   assumes s_sound: "s \<in> \<lbrakk>side_proc_global_ivl_s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])) {s}
-       (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))"
+    "t \<in> ltr_collect (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) {s}
+       (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])) ivl_etf bot
+    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) ivl_etf bot
        side_proc_global_ivl_s0 ()
-       (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))"
-  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] (IMP2_Proc.Call None ''p'' []) ivl_etf bot side_proc_global_ivl_s0 ()
-         (cfg_exit (compile_prog inc_pi [''p''] (IMP2_Proc.Call None ''p'' [])))\<rbrakk>"
+       (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
+  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) ivl_etf bot side_proc_global_ivl_s0 ()
+         (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
   by (rule side_ivl_analysis_sound[OF s_sound collect_exit side_solve_dom])
 
 end
+
+
+

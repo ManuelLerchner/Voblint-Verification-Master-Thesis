@@ -3,16 +3,15 @@ theory IMP2_Notation
 begin
 
 text \<open>
-  IMP2 command quotation: @{text "imp \<lbrakk> \<dots> \<rbrakk>"} produces a single
-  @{type IMP2_Proc.com} without HOL string quotes or qualified constructor names.
-  The @{verbatim "imp"} keyword keeps the bracket distinct from Pure's premise
-  brackets. The whole-program form uses an explicit @{verbatim "program"} prefix;
-  see the whole-program form below.
+  The \<open>imp \<lbrakk> ... \<rbrakk>\<close> quotation produces an \<^typ>\<open>IMP2_Proc.com\<close> without
+  HOL string quotes or qualified constructor names.  The \<open>imp\<close> keyword distinguishes
+  command quotation from Pure premises; whole programs use the explicit \<open>program\<close> prefix.
 
   Design is inspired by:
   https://awslabs.github.io/AutoCorrode/Unsorted/AutoCorrode/Micro_Rust_Examples.Basic_Micro_Rust.html
   and 
   https://github.com/awslabs/AutoCorrode/blob/e234addc5e67f78cbff63defd24199578e8e1af3/Micro_Rust_Parsing_Frontend/Micro_Rust_Syntax.thy#L5
+
 
   Inside the bracket:
   - bare identifiers become @{const V} literals (HOL string literals via @{type vname})
@@ -38,18 +37,61 @@ text \<open>
   Whole-program form.  \<^verbatim>\<open>program { void f(..) { .. } void main() { .. } }\<close>
   bundles the procedure-name list, the procedure table, and the main command
   into one \<^verbatim>\<open>imp_prog\<close> record, ready for
-  \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) (prog_main p)\<close>.
+  \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)\<close>.
 \<close>
 
 record imp_prog =
-  prog_procs :: "pname list"
-  prog_table :: proc_table
-  prog_main  :: com
+  proc_rep :: "(pname * proc_decl) list"
+  prog_main :: com
 
-lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps pi m) = ps"
-  and prog_table_make [simp]: "prog_table (imp_prog.make ps pi m) = pi"
-  and prog_main_make  [simp]: "prog_main  (imp_prog.make ps pi m) = m"
-  by (simp_all add: imp_prog.make_def)
+definition prog_procs :: "imp_prog => pname list" where
+  "prog_procs p = map fst (proc_rep p)"
+
+text \<open>
+  \<open>prog_main_name\<close> is the entry procedure's name.  The \<^verbatim>\<open>program\<close> parser identifies the
+  entry by exactly this name and rejects formals on it, so it is fixed by construction.
+\<close>
+
+definition prog_main_name :: pname where
+  "prog_main_name = ''main''"
+
+text \<open>
+  \<open>prog_table\<close> is the \<^emph>\<open>complete\<close> declaration environment: the declared procedures
+  plus the entry procedure itself.  \<^const>\<open>prog_procs\<close> stays the non-entry names, so the
+  pair is exactly what \<open>wf_compile_input\<close> asks for --- the entry is declared, and the name
+  list is its complement.
+\<close>
+
+definition prog_table :: "imp_prog => proc_table" where
+  "prog_table p =
+     (map_of (proc_rep p))(prog_main_name \<mapsto> proc_decl_of [] (prog_main p))"
+
+lemma prog_table_main [simp]:
+  "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
+  by (simp add: prog_table_def)
+
+lemma prog_table_other:
+  "q \<noteq> prog_main_name \<Longrightarrow> prog_table p q = map_of (proc_rep p) q"
+  by (simp add: prog_table_def)
+
+lemma dom_prog_table:
+  "dom (prog_table p) = insert prog_main_name (set (prog_procs p))"
+  by (auto simp: prog_table_def prog_procs_def dom_map_of_conv_image_fst)
+
+lemma source_pi_prog_table:
+  assumes "source_pi (map_of (proc_rep p))" and "source_com (prog_main p)"
+  shows "source_pi (prog_table p)"
+  using assms by (auto simp: source_pi_def prog_table_def proc_decl_of_def split: if_splits)
+
+lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m) = map fst ps"
+  by (simp add: prog_procs_def imp_prog.make_def)
+
+lemma prog_table_make [simp]:
+  "prog_table (imp_prog.make ps m) = (map_of ps)(prog_main_name \<mapsto> proc_decl_of [] m)"
+  by (simp add: prog_table_def imp_prog.make_def)
+
+lemma prog_main_make [simp]: "prog_main (imp_prog.make ps m) = m"
+  by (simp add: imp_prog.make_def)
 
 nonterminal imp2_com
 nonterminal imp2_stmt
@@ -68,10 +110,10 @@ syntax
 
   "_imp2_skip"   :: imp2_stmt                                  ("skip")
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
+  "_imp2_return" :: "imp2_aexp \<Rightarrow> imp2_stmt"                  ("return _"               61)
   "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
   "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)
-  "_imp2_scope"  :: "imp2_stmts \<Rightarrow> imp2_stmt"                   ("scope { _ }"            [61] 61)
   "_imp2_call0"  :: "id \<Rightarrow> imp2_stmt"                           ("_'(')"                  [1000] 61)
   "_imp2_call"   :: "id \<Rightarrow> imp2_actuals \<Rightarrow> imp2_stmt"         ("_'( _ ')"               [1000, 0] 61)
   "_imp2_callret0" :: "id \<Rightarrow> id \<Rightarrow> imp2_stmt"              ("_ := _'(')"              [900, 1000] 61)
@@ -86,8 +128,7 @@ syntax
   "_imp2_actuals_one" :: "imp2_aexp \<Rightarrow> imp2_actuals"                    ("_")
   "_imp2_actuals_cons" :: "imp2_aexp \<Rightarrow> imp2_actuals \<Rightarrow> imp2_actuals" ("_ , _")
   "_imp2_pbody_stmt" :: "imp2_com \<Rightarrow> imp2_pbody"                      ("_")
-  "_imp2_pbody_ret" :: "imp2_aexp \<Rightarrow> imp2_pbody"                    ("return _")
-  "_imp2_pbody_stmt_ret" :: "imp2_com \<Rightarrow> imp2_aexp \<Rightarrow> imp2_pbody" ("_ ; return _")
+
 
 
 
@@ -126,8 +167,8 @@ parse_translation \<open>
     val c_Seq    = "IMP2_Proc.com.Seq"
     val c_If     = "IMP2_Proc.com.If"
     val c_While  = "IMP2_Proc.com.While"
-    val c_Scope  = "IMP2_Proc.com.Scope"
     val c_Call   = "IMP2_Proc.com.Call"
+    val c_Return = "IMP2_Proc.com.Return"
     val c_proc_decl_of = "IMP2_Proc.proc_decl_of"
 
     val c_None    = "Option.option.None"
@@ -136,6 +177,7 @@ parse_translation \<open>
     val c_imp_prog = "IMP2_Notation.imp_prog.make"
     val c_Cons    = "List.list.Cons"
     val c_Nil     = "List.list.Nil"
+    val c_Pair    = "Product_Type.Pair"
 
     val c_N      = "IMP2_Syntax.N"
     val c_V      = "IMP2_Syntax.V"
@@ -234,11 +276,8 @@ parse_translation \<open>
           K c_Cons $ aexp_tr a $ actuals_tr rest
       | actuals_tr t = raise TERM ("IMP2_Notation: actuals_tr", [t])
 
-    (* Keep the raw AST; com_tr / aexp_tr run once, later in mk_table / main.
-       NONE body means a return-only procedure, whose command part is SKIP. *)
+    (* Keep procedure bodies as raw command ASTs until program validation and lowering. *)
     fun pbody_tr (Const ("_imp2_pbody_stmt", _) $ c) = (SOME c, NONE)
-      | pbody_tr (Const ("_imp2_pbody_ret", _) $ e) = (NONE, SOME e)
-      | pbody_tr (Const ("_imp2_pbody_stmt_ret", _) $ c $ e) = (SOME c, SOME e)
       | pbody_tr t = raise TERM ("IMP2_Notation: pbody_tr", [t])
 
     and stmts_tr (Const ("_imp2_stmts_one", _) $ s) = stmt_tr s
@@ -249,10 +288,10 @@ parse_translation \<open>
     and stmt_tr (Const ("_imp2_skip",   _)) = K c_SKIP
       | stmt_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
           K c_Assign $ HOLogic.mk_string x $ aexp_tr a
+      | stmt_tr (Const ("_imp2_return", _) $ e) = K c_Return $ (K c_Some $ aexp_tr e)
       | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
-      | stmt_tr (Const ("_imp2_scope",  _) $ s)     = K c_Scope $ stmts_tr s
       | stmt_tr (Const ("_imp2_call0",   _) $ Free (p, _)) =
           K c_Call $ K c_None $ HOLogic.mk_string p $ K c_Nil
       | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _) $ actuals) =
@@ -314,6 +353,11 @@ parse_translation \<open>
       | add_vars (Abs (_, _, b)) acc = add_vars b acc
       | add_vars _ acc = acc
 
+    fun has_return (Const ("_imp2_return", _) $ _) = true
+      | has_return (t $ u) = has_return t orelse has_return u
+      | has_return (Abs (_, _, b)) = has_return b
+      | has_return _ = false
+
     fun is_gname x = size x > 0 andalso String.sub (x, 0) = #"G"
 
     fun check_globals decls used =
@@ -340,16 +384,20 @@ parse_translation \<open>
     fun mk_body NONE = K c_SKIP
       | mk_body (SOME c) = com_tr c
 
-    fun mk_result NONE = K c_None
-      | mk_result (SOME e) = K c_Some $ aexp_tr e
+    (* A trailing "return e" becomes an explicit Return command appended to the body;
+       the procedure declaration carries no separate result field. *)
+    fun mk_body_ret NONE NONE = K c_SKIP
+      | mk_body_ret (SOME c) NONE = com_tr c
+      | mk_body_ret NONE (SOME e) = K c_Return $ (K c_Some $ aexp_tr e)
+      | mk_body_ret (SOME c) (SOME e) =
+          K c_Seq $ com_tr c $ (K c_Return $ (K c_Some $ aexp_tr e))
 
-    fun mk_table acc [] = acc
-      | mk_table acc ((p, formals, body, result) :: rest) =
-          mk_table
-            (K c_fun_upd $ acc $ HOLogic.mk_string p
-              $ (K c_Some $ ((K c_proc_decl_of $ mk_names formals)
-                  $ mk_body body $ mk_result result)))
-            rest
+    fun mk_proc_rep [] = K c_Nil
+      | mk_proc_rep ((p, formals, body, result) :: rest) =
+          K c_Cons
+            $ (K c_Pair $ HOLogic.mk_string p
+                $ ((K c_proc_decl_of $ mk_names formals) $ mk_body_ret body result))
+            $ mk_proc_rep rest
 
     (* dummyT constructors only; type inference runs after the translation. *)
     fun prog_tr decls funcs_t =
@@ -363,15 +411,16 @@ parse_translation \<open>
         val (mains, procs) = List.partition (fn (n, _, _, _) => n = "main") funcs
         val main_ast =
           (case mains of
-             [("main", [], body, NONE)] => body
+             [("main", [], NONE, NONE)] => NONE
+           | [("main", [], SOME body, NONE)] =>
+               if has_return body then error "IMP2 program: main may not return" else SOME body
            | [("main", _, _, SOME _)] => error "IMP2 program: main may not return"
            | [("main", _, _, NONE)] => error "IMP2 program: main must have no formals"
            | [] => error "IMP2 program: missing 'void main() { ... }'"
            | _  => error "IMP2 program: more than one 'void main()'")
-        val names = mk_names (map (fn (n, _, _, _) => n) procs)
-        val table = mk_table empty_table procs
-        val main  = mk_body main_ast
-      in K c_imp_prog $ names $ table $ main end
+        val proc_rep = mk_proc_rep procs
+        val main = mk_body main_ast
+      in K c_imp_prog $ proc_rep $ main end
   in
     [("_IMP2", fn _ => fn [t] => com_tr t | _ => raise Match),
      ("_PROGKW0", fn _ => fn [fs] => prog_tr [] fs | _ => raise Match),
@@ -385,6 +434,12 @@ value "imp \<lbrakk> x := 0 \<rbrakk>"
 value "imp \<lbrakk> x := 0; y := 1 \<rbrakk>"
 value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
+value "imp \<lbrakk> return 7 \<rbrakk>"
+value "(program {
+  int Gx;
+  void f() { if (Gx < 0) { return 1 } else { skip } }
+  void main() { f() }
+} :: imp_prog)"
 
 (* zero-arg baseline *)
 value "(program { void main() { skip } } :: imp_prog)"

@@ -74,8 +74,10 @@ lemma sides_fold_le_side_cfg_T_eff_ctx:
   shows "sides_of_rhs (side_rhs_fold_ctx
            (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
            (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
-                (predecessor_list g v)
-            @ map (\<lambda>(cc, ex, dst). cmb ctx dst cc ex) (combine_predecessor_list g v)))
+                (intra_predecessor_list g v)
+            @ map (\<lambda>(cl, fs, as). map_ltree (\<lambda>w. (w, ctx)) (etf_enter etf fs as cl))
+                (entry_seed_list g v)
+            @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex) (return_call_list g v)))
            \<sigma> (Inr gg)
          \<le> sides_of_rhs (side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed (v, ctx))
              \<sigma> (Inr gg)"

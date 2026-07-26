@@ -61,7 +61,6 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Soundness
     DG_LTR_Sound
     DG_Ctx_Activation
-    Retain_Analysis
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness

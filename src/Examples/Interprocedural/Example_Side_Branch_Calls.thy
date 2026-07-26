@@ -32,6 +32,8 @@ text \<open>
   @{text "main"}.
 \<close>
 
+definition branch_prog_mnm :: pname where "branch_prog_mnm = ''main''"
+
 definition branch_prog :: imp_prog where
   "branch_prog = program {
      int Ginput, Gresult, Gout;
@@ -62,18 +64,18 @@ text \<open>
   result is \<open>SNonNeg\<close> (\<open>\<ge> 0\<close>), not \<open>STop\<close>.
 \<close>
 
-value "sign_exec_prog branch_prog ''Gresult''"
-value "sign_exec_prog branch_prog ''Gout''"
+value "sign_exec_prog ''main'' branch_prog ''Gresult''"
+value "sign_exec_prog ''main'' branch_prog ''Gout''"
 
 lemma ec_result_nonnneg:
-  "sign_exec_prog branch_prog ''Gresult'' = SNonNeg"
+  "sign_exec_prog ''main'' branch_prog ''Gresult'' = SNonNeg"
   by eval
 
 text \<open>Termination is proved, not assumed: the executable side solver returns a
   result, so by @{thm sign_terminates_prog_via_solve_c} the program is in the
   solver's domain.\<close>
 
-lemma ec_terminates: "sign_terminates_prog branch_prog"
+lemma ec_terminates: "sign_terminates_prog ''main'' branch_prog"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 text \<open>
@@ -84,8 +86,8 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))
-   \<le> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
+  "ltr_collect (prog_cfg ''main'' branch_prog) cinit_stores (cfg_exit (prog_cfg ''main'' branch_prog))
+   \<le> \<lbrakk>sign_exec_prog ''main'' branch_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
 text \<open>
@@ -95,8 +97,8 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect (prog_cfg branch_prog) cinit_stores (cfg_exit (prog_cfg branch_prog))"
-  shows "s \<in> \<lbrakk>sign_exec_prog branch_prog\<rbrakk>"
+  assumes "s \<in> ltr_collect (prog_cfg ''main'' branch_prog) cinit_stores (cfg_exit (prog_cfg ''main'' branch_prog))"
+  shows "s \<in> \<lbrakk>sign_exec_prog ''main'' branch_prog\<rbrakk>"
   using assms ec_certified_sound by blast
 
 text \<open>
@@ -105,7 +107,7 @@ text \<open>
   C-faithful initialisation seed (\<open>SZero\<close> for globals).
 \<close>
 
-value "sign_exec_prog branch_prog ''Ginput''"
+value "sign_exec_prog ''main'' branch_prog ''Ginput''"
 
 text \<open>
   \<open>Ginput\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
@@ -114,10 +116,10 @@ text \<open>
 \<close>
 
 lemma ec_ginput_top:
-  "sign_exec_prog branch_prog ''Ginput'' = STop"
+  "sign_exec_prog ''main'' branch_prog ''Ginput'' = STop"
   by eval
 
-value "sign_exec_prog branch_prog ''Gout''"
+value "sign_exec_prog ''main'' branch_prog ''Gout''"
 
 text \<open>
   \<open>Gout\<close> is computed as \<open>100 * Gresult\<close>.  With \<open>Gresult = SNonNeg\<close>
@@ -126,19 +128,19 @@ text \<open>
 \<close>
 
 lemma ec_gout_nonnneg:
-  "sign_exec_prog branch_prog ''Gout'' = SNonNeg"
+  "sign_exec_prog ''main'' branch_prog ''Gout'' = SNonNeg"
   by eval
 
-value "sign_exec_prog branch_prog ''r''"
+value "sign_exec_prog ''main'' branch_prog ''r''"
 
 lemma ec_r_pos:
-  "sign_exec_prog branch_prog ''r'' = SPos"
+  "sign_exec_prog ''main'' branch_prog ''r'' = SPos"
   by eval
 
 text \<open>
   Precision summary.
 
-  \<^bold>\<open>What the analysis now computes (C-faithful seed + 7-element lattice):\<close>
+  \<^bold>\<open>Computed result with the concrete-faithful seed and seven-element lattice:\<close>
 
   \<^item> \<open>Ginput = STop\<close>: writes \<open>5\<close> and \<open>-3\<close> have opposite signs; their join is
     \<open>STop\<close> regardless of the seed.
@@ -150,15 +152,15 @@ text \<open>
 
   \<^item> \<open>Gout = SNonNeg\<close>: \<open>SPos * SNonNeg = SNonNeg\<close>, joined against \<open>SZero\<close>.
 
-  \<^bold>\<open>Remaining precision gap:\<close>
+  \<^bold>\<open>Precision limitation:\<close>
 
   \<open>SNonNeg\<close> includes \<open>0\<close>, so the analysis cannot certify \<open>Gresult \<noteq> 0\<close> -- the
-  check needed to justify the original \<open>100 / Gresult\<close>.  That would require
+  check needed to justify a division such as \<open>100 / Gresult\<close>.  That would require
   knowing \<open>Gresult\<close> is strictly positive (\<open>SPos\<close>), which in turn requires
   knowing the initial write of \<open>0\<close> is overwritten before the exit (flow
   sensitivity on globals, not modelled here).
 
-  \<^bold>\<open>What stays precise:\<close>
+  \<^bold>\<open>Local precision:\<close>
 
   The local variable @{text "x"} inside @{term compute} is analysed flow-sensitively.
   On the then-branch @{text "x = 1 + 1 = 2"} and on the else-branch @{text "x = 1 + 2 = 3"};
@@ -174,7 +176,9 @@ text \<open>
 \<close>
 
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code branch_prog})
+  writeln (@{code sign_annotated_dot_prog_lit} @{code branch_prog_mnm} @{code branch_prog})
 \<close>
 
 end
+
+

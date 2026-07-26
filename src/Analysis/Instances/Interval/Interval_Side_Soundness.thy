@@ -18,6 +18,14 @@ lemma ivl_etf_edge_tree:
   "apply_etf ivl_etf a u = unit_edge_tree (apply_tf ivl_tf a) u"
   unfolding ivl_etf_def apply_etf_unit_of_transfer by simp
 
+lemma ivl_etf_enter_tree:
+  "etf_enter ivl_etf fs as cl = unit_edge_tree (tf_enter ivl_tf fs as) cl"
+  unfolding ivl_etf_def unit_etf_of_transfer_def by simp
+
+lemma ivl_tf_enter_mono:
+  "s1 \<le> s2 \<Longrightarrow> tf_enter ivl_tf fs as s1 \<le> tf_enter ivl_tf fs as s2"
+  by (simp add: ivl_tf_def enter_ivl_mono)
+  
 lemma ivl_etf_combine_tree:
   "etf_combine ivl_etf dst cc ex = unit_combine_tree dst cc ex"
   unfolding ivl_etf_def etf_combine_unit_of_transfer by simp
@@ -28,11 +36,11 @@ lemma ivl_sound_etf:
   by (rule sound_effectful_transfer_unit_of_transfer [OF ivl_is_sound_transfer])
 
 lemma ivl_etf_cone_compatible: "cone_compatible_etf ivl_etf"
-  by (rule cone_compatible_etf_unit_transfer[OF ivl_etf_edge_tree ivl_etf_combine_tree])
+  by (rule cone_compatible_etf_unit_transfer[OF ivl_etf_edge_tree ivl_etf_enter_tree ivl_etf_combine_tree])
 
 lemma ivl_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff g ivl_etf bot0 s0 ())"
-  by (rule threefold_mono_unit_transfer[OF ivl_etf_edge_tree ivl_etf_combine_tree ivl_tf_mono])
+  by (rule threefold_mono_unit_transfer[OF ivl_etf_edge_tree ivl_etf_enter_tree ivl_etf_combine_tree ivl_tf_mono ivl_tf_enter_mono])
 
 section \<open>Interval domain: standalone effectful interprocedural soundness\<close>
 
@@ -44,23 +52,23 @@ text \<open>
 \<close>
 
 theorem side_ivl_analysis_sound:
-  fixes \<Pi> ps main and s t :: store and s0 :: "ivl abs_state"
+  fixes \<Pi> ps mnm main and s t :: store and s0 :: "ivl abs_state"
   assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect (compile_prog \<Pi> ps main) {s}
-       (cfg_exit (compile_prog \<Pi> ps main))"
+    "t \<in> ltr_collect (compile_prog \<Pi> ps mnm main) {s}
+       (cfg_exit (compile_prog \<Pi> ps mnm main))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps main) ivl_etf bot s0 ()
-       (cfg_exit (compile_prog \<Pi> ps main))"
-  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps main ivl_etf bot s0 ()
-         (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps mnm main) ivl_etf bot s0 ()
+       (cfg_exit (compile_prog \<Pi> ps mnm main))"
+  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps mnm main ivl_etf bot s0 ()
+         (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
 proof -
   have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
   have collect:
-    "ltr_collect (compile_prog \<Pi> ps main) {s}
-       (cfg_exit (compile_prog \<Pi> ps main))
-     \<le> \<lbrakk>side_analyse_eff \<Pi> ps main ivl_etf bot s0 ()
-           (cfg_exit (compile_prog \<Pi> ps main))\<rbrakk>"
+    "ltr_collect (compile_prog \<Pi> ps mnm main) {s}
+       (cfg_exit (compile_prog \<Pi> ps mnm main))
+     \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main ivl_etf bot s0 ()
+           (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
     by (rule side_analyse_eff_collect_sound_exit_ltr_cone
           [OF ivl_sound_etf ivl_etf_threefold_mono ivl_etf_cone_compatible
               side_solve_dom gs])
@@ -68,4 +76,6 @@ proof -
 qed
 
 end
+
+
 

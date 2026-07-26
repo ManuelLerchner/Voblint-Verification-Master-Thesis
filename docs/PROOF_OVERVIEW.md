@@ -1,279 +1,97 @@
 # Proof overview
 
-High-level map of the thesis formalization: what is proved elsewhere, what this
-repository contributes, and how the main lemmas connect.
+Voblint proves soundness for the result computed by an executable,
+interprocedural abstract interpreter.
 
-**Status and sorry inventory:** `docs/PROOF_PHASES.md`.
-**Live roadmap and backlog:** `docs/ROADMAP.md` → [GitHub Project 8](https://github.com/users/ManuelLerchner/projects/8).
-**Keyed context branch:** `docs/KEYED_CONTEXT_CONSOLIDATION.md`.
+## Proof chain
 
-> **Planned semantic refoundation.** The batch-green spine below currently uses
-> `trace_witness_act`. The intended foundation for compiled, well-bracketed IMP2 CFGs is
-> [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md):
-> `valid_ltr` with monovariant, digest, and context-sensitive collecting as projections.
-> This is design work, not a claim about the current `.thy` implementation.
-
----
-
-## External vs. repository
-
-| Layer | Source |
-| --- | --- |
-| IMP-style syntax patterns | Isabelle `HOL-IMP` (via wrapped `aexp` / `bexp`) |
-| Top-down solver algorithm | Vendored `TD` session (`vendor/td-verification`, `TD_side`) |
-| Reference concrete semantics (big-step, VCG) | AFP `IMP2` (Lammich & Wimmer) |
-| IMP2 syntax, procedures, globals/locals, CFG, equations, domains, pipeline | This repository |
-
-**Reference-semantics anchor.** Soundness is also expressible against AFP IMP2's
-standard big-step semantics via a one-way bridge (`src/IMP2/IMP2_Bridge.thy`) and
-`src/IMP2/IMP2_VCG_Example.thy`, which shows IMP2's own VCG and our analyzer
-meeting on one program. Details: `docs/AFP_IMP2_REBASE_MIGRATION.md`.
-
-### Scope honesty: pipeline axis, not framework axis
-
-This repository is on the **pipeline / domain-instance axis**: IMP2 AST →
-interprocedural CFG → equation system → AFP side-effecting TD solver → pointwise
-sound abstract result, with sign and interval domain instances. It deliberately does **not**
-model the *framework* Voblint actually uses — `GlobConstrSys` / `DemandGlobConstrSys`
-in `src/constraint/constrSys.ml`. The directly adjacent verified-solver work is
-**Tilscher, Graß, Schwarz, Seidl, *Verifying a Solver for Mixed Flow-Sensitive
-Analyses* (NASA FM 2026)**.
-
----
-
-## Language
-
-The source language (`src/IMP2/`) is IMP2 with parameterless procedures and a
-locals/globals split:
-
-- `com` in `IMP2_Proc.thy` — SKIP, Assign, Seq, If, While, Scope, Call, Restore.
-- `proc_table = pname ⇒ com option`; `pstep` — frame-stack small-step.
-- `IMP2_Globals.thy` — `combine_states <s|t>`, `enter_state`, `is_global`.
-- `compile_prog pi ps c :: cfg` (`IMP2_Proc_to_CFG.thy`) — whole-program CFG with
-  enter edges and combine triples.
-
----
-
-## Specification and soundness
-
-**Collecting spec:** `cfg_collect g S v` — least fixpoint of the interprocedural
-one-step functional over the compiled CFG (`src/CFG/Collecting/CFG_Collect.thy`).
-It includes ordinary edges and `combine_states` triples for call/return.
-
-**Trace spec:** `cfg_collect_trace g S v` — trace-valued interprocedural
-collecting (`CFG_Collect_Trace.thy`). Projection: `alpha_last` collapses traces
-to last stores; `alpha_last (cfg_collect_trace …) ⊆ cfg_collect …`.
-
-**Operational link:** `cfg_runs_to pi ps c s t` — definitional exit projection of
-`cfg_collect` at `cfg_exit (compile_prog …)`; in `CFG_Collect_Runs.thy`.
-
-**Canonical analyzer soundness:**
-
-- `trace_analysis_sound` — `alpha_last (cfg_collect_trace g S v) ⊆ γ(env v)`.
-- `reaching_global_read_sound` — for every reaching trace `tr`, `(last tr) x ∈ γ(env v x)`.
-- `reaching_global_read_sound_d` — digest-indexed variant.
-- `mixed_flow_analysis_sound` — trace-level soundness for any effectful transfer post-solution.
-- `mixed_flow_analysis_optimal` — TD_side soundness plus least partial post-solution under `threefold_mono`.
-
-**Domain instantiation:**
-
-- `side_sign_analysis_sound` / `side_ivl_analysis_sound` — sign / interval analysis at exit, using native `sign_etf` / `ivl_etf`.
-- `sign_mixed_flow_sound_and_optimal` (`Example_Mixed_Flow_Sign.thy`) — concrete mixed-flow theorem application on `inc_pi`.
-
-```mermaid
-flowchart TD
-  subgraph spec ["Specification"]
-    TIP["cfg_collect_trace"]
-    CIP["cfg_collect"]
-    OP["cfg_runs_to (exit projection)"]
-    AL["alpha_last projection"]
-    TIP -->|AL| AL
-    AL -->|subseteq| CIP
-    OP --- CIP
-  end
-  subgraph analysis ["Analysis"]
-    SIDE["side_cfg_T_eff"]
-    SOLVE["TD_side.solve"]
-    PFP["post-solution / post-fixpoint"]
-  end
-  subgraph sound ["Soundness"]
-    TIAS["trace_analysis_sound"]
-    RGR["reaching_global_read_sound"]
-    SIGN["side_sign_analysis_sound"]
-  end
-  CIP --> PFP
-  SIDE --> SOLVE --> PFP
-  PFP --> TIAS --> RGR
-  CIP --> SIGN
+```text
+well-formed IMP2 source
+  -> compiled procedure-aware CFG
+  -> located CFG execution
+  -> valid activation-local trace
+  -> ltr_collect / activation_collect
+  -> abstract post-solution
+  -> verified solver result
 ```
 
----
+Each arrow has a separate responsibility.
 
-## Main theorem chain (sign, exit)
+## Source contract
 
-```
-cfg_runs_to pi ps c s t             -- spec: t at exit of compile_prog pi ps c
-  => t in cfg_collect … exit
-  => t in gamma_state (side_analyse_eff pi ps c sign_etf bot s0 () exit)
-     (side_sign_analysis_sound / proc_global_side_sign_analysis)
-```
+`wf_source_program` validates procedure declarations, call targets, arity,
+formal parameters, reserved-variable exclusion, return behavior, and the
+distinguished main declaration. Main contains no explicit return and completes
+only by ordinary fall-through.
 
-Full chain: `side_sign_analysis_sound` ←
-`side_analyse_eff_collect_sound_exit_pruned` ←
-`side_collect_sound_exit_pruned_eff_cone` ←
-`post_fixpoint_sound_at_eff` ← `CFG_Collect`.
+`wf_compile_input` adds the finite, duplicate-free procedure enumeration needed
+by executable compilation.
 
----
+## Compiler simulation
 
-## Canonical spine and analysis branches
+`compile_prog` builds one CFG with explicit procedure entries and results,
+ordinary local edges, and a separate call relation. Compiler certificates and
+locality lemmas expose node ownership, procedure ranges, call continuations, and
+matching result boundaries.
 
-The context-sensitive analyses are **one layered tower**, not competing spines;
-five theorems close end-to-end soundness. Architecture diagram: repository
-`README.md` (§ Architecture).
+The located execution relation associates a source configuration with a CFG
+node, store, and activation stack. Control simulation shows that each source
+step has a matching located CFG execution.
 
-Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` entry-store spine
-was deleted. Shared context-collection helpers now live in
-`TD_Side_Eff_Ctx_Shared`.
+## Activation-local semantics
 
-**Canonical end-to-end chain** — each step reuses the soundness of the one below:
+`valid_ltr` records one activation and its structural caller chain. Root, call,
+and resume constructors preserve the correlation between a completed callee
+and its immediate caller.
 
-`cfg_collect_trace` → `Constraint_System_Sound` → `TD_Side_Eff_Soundness`
-(`side_analyse_eff_collect_sound_exit_pruned`) → shared context backbone
-(`TD_Side_Eff_Ctx_Shared`) → keyed/combine
-(`TD_Side_Eff_Cmp_Sound.post_fixpoint_sound_at_ctx_semantic_cmp_final`) →
-digest / clean (`Digest_Global_Read`, `Value_Digest_Reader`,
-`Clean_RRead_Sound.clean_ctx_collect_rread_head_bound`) → activation collecting
-(`Activation_Backbone.activation_collect_sound`: `cfg_collect_ctx_act ⊆ γ`) →
-DG-native discharge (`DG_Ctx_Activation.dg_ctx_activation`) → solver-backed
-context-sensitive flagship
-(`Example_Interval_DG_Ctx_Collect.twice_ctx_collect_ctx_act_sound`).
+`ltr_collect` projects valid traces to stores at each node.
+`ltr_collect_keyed` groups those stores by an abstract key.
+`activation_collect` uses the activation context required by context-sensitive
+analyses.
 
-Steps two through the discharge lie inside the dependency cone of the
-context-sensitive flagship `Example_Interval_DG_Ctx_Collect`: required support,
-not alternatives. The mode/value digest (`Trace_Analysis_Sound.context_collect_sound`
-→ `Example_Sign_Mode_Digest.mode_collect_sound_witness`) is a *separate* proved spine.
+## Equation soundness
 
-**Branch roles.** Every non-flagship theory is classified:
+Every equation right-hand side joins three contribution families:
 
-| Role | Meaning | Representative |
-| --- | --- | --- |
-| Canonical spine | proved end-to-end soundness | `side_sign_analysis_sound`, `twice_ctx_collect_ctx_act_sound` |
-| Required support | inside a flagship's dependency cone | context tower, return rehydration (`rdiv_rehyd_main_return_sound`) |
-| Regression / counterexample | intentional negative fact | `clean_transfer_unsound` (`¬ sound_effectful_transfer sign_etf_clean`) |
-| Precision comparison | `eval`-only sharper-than witness | bare `Exec_*_Ctx_Run` |
-| Design evidence | motivates a design; proves no soundness | `Example_Interval_Recursion_Digest` |
+1. ordinary local-edge flow;
+2. callee-entry flow;
+3. caller/callee return combination.
 
-**Retired.** The per-origin-widening experiment (`Origin_State`, `Origin_Lift`,
-`Example_Interval_Recursion_Origin`) was removed: isolated, outside every proved
-soundness endpoint, and its positive precision claim was never machine-checked
-(the per-origin solve exceeds the batch budget and lived only in prose). Its
-machine-checked negative regression `rec_warrowing_widens_to_top` survives
-unchanged in `Example_Interval_Recursion_Digest`.
+The executable RHS and its mathematical characterization share the same source
+definitions. Transfer soundness proves that each concrete trace constructor is
+covered by its corresponding abstract contribution. A post-solution therefore
+covers `ltr_collect`.
 
-## Keyed context branch
+## Solver integration
 
-The keyed-global context branch extends the side-effecting pipeline with
-`glob_env_cmp` / `side_env_cmp`, the framed-enter contract
-`sound_effectful_transfer_framed`, and the keyed generator
-`side_cfg_T_eff_cmp`. Its central theorem is
-`side_cfg_T_eff_cmp_collect_sound`: a post-fixpoint of the keyed generator
-over-approximates `cfg_collect` when each context reads its compatible global
-slot. The finite executable demonstration is
-`Example_Finite_Sign_Context_Analysis.thy`.
+Effectful transfers produce strategy trees for the verified side-effecting
+top-down solver. Executable finite-map states are related to function states by
+representation morphisms. Solver correctness yields a partial post-solution;
+the transport lemmas expose it as an abstract post-solution.
 
-Architecture graph, example review, and remaining debt:
-`docs/KEYED_CONTEXT_CONSOLIDATION.md`.
+Demand-driven guarantees apply to nodes in the dependency cone of the query.
+The equation semantics itself remains defined over the original CFG.
 
----
+## D/G analyses
 
-## Key types
+The D/G interface separates flow-sensitive local facts (`D`) from shared
+side-effect information (`G`). A sound instance supplies local transfer,
+callee-entry, return-combine, publication, and read obligations.
 
-- `com` — IMP2 commands incl. Scope/Call/Restore (`IMP2_Proc.thy`)
-- `proc_table = pname ⇒ com option`; `frame = store`
-- `cfg` — record with `cfg_entry`, `cfg_exit`, `edges`, `combines`
-- `pp = nat` — program points
-- `'a abs_state = vname ⇒ 'a`; `'a domain_transfer` — assign / assume / assume-not
-- `rhs`, `is_post_fixpoint` — interprocedural constraint system (`Constraint_System.thy`)
-- `side_cfg_T_eff` — side-effecting strategy tree (`TD_Side_Tree.thy`)
-- `side_analyse_eff` — solver output function (`TD_Side_Eff_Interface.thy`)
+Unit-context Sign and Interval analyses use the same carrier for `D` and `G`.
+The mixed Sign/Interval instance uses distinct carriers. Context-sensitive
+instances index local facts by activation keys while routing shared information
+through the analysis-defined global interface.
 
-Domains use semantic γ-axioms in `sound_domain` / `abstract_domain` locales.
+## Source-facing result
 
----
+The source theorem composes:
 
-## Lemma spine (by stage)
+- source/CFG simulation;
+- construction of a valid local trace;
+- membership in the appropriate collector;
+- collector coverage by the computed abstract solution.
 
-| Stage | File(s) | Main facts |
-| --- | --- | --- |
-| IMP2 | `IMP2_Syntax`, `IMP2_Expr`, `IMP2_Globals`, `IMP2_Proc` | `aval`, `bval`, `pstep`, `combine_states`, `enter_state` |
-| CFG | `IMP2_Proc_to_CFG` | `compile_prog`, `compile`, call/combine layout |
-| Collecting | `CFG_Collect`, `CFG_Collect_Runs`, `CFG_Collect_Trace` | `cfg_collect`, `cfg_runs_to`, `alpha_last`, trace projection |
-| Equations | `Constraint_System`, `Constraint_System_Sound`, `Analysis_Sound` | `rhs`, `is_post_fixpoint`, `post_fixpoint_sound_at`, `post_fixpoint_sound` |
-| Solver | `TD_Side_Tree`, `TD_Side_Eff_{Sound,Bounds,Interface,Pipeline,Soundness}` | `side_cfg_T_eff`, `side_analyse_eff`, `side_analyse_eff_collect_sound_exit_pruned` |
-| Pipeline | `Trace_Analysis_Sound`, `Mixed_Flow_Sound` | `trace_analysis_sound`, `reaching_global_read_sound`, `mixed_flow_analysis_sound`, `mixed_flow_analysis_optimal` |
-| Domain | `Sign_Domain`, `Interval_Domain`, `Sign_Side_Soundness`, `Interval_Side_Soundness`, `Sign_Exec_Sound` | native `sign_etf` / `ivl_etf`, `side_sign_analysis_sound`, `side_ivl_analysis_sound`, `sign_exec_sound_collecting` |
-| Examples | `Example_Inc_Proc`, `Example_Mixed_Flow_Sign`, `Example_Side_Proc_Global` | shared increment witness, mixed-flow sign application, procedural sign witness |
-
----
-
-## Adding a domain
-
-Same CFG, `rhs`, and `side_analyse_eff` once the domain fits the four-layer interface
-(see `src/Analysis/Instances/README.md` for the detailed chain):
-
-1. **Type class layer.** Instantiate `'a :: bounded_semilattice_sup_bot` — gives `⊥`, `⊔`, `≤` and lifts them pointwise to `'a abs_state` for free via HOL's `fun` instances.
-2. **Locale layer.** `interpretation … : abstract_domain gamma widen` and `interpretation … : sound_transfer gamma tf`. All derived lemmas (monotonicity, entry coverage, `side_collect_sound_ip_exit_pruned`) become available prefixed by the interpretation name.
-3. **Effectful transfer layer.** Define a native `X_etf :: (unit, X) effectful_domain_transfer`; prove `sound_effectful_transfer X_etf`, `cone_compatible_etf X_etf`, and `threefold_mono (side_cfg_T_eff g X_etf bot0 s0 ())`.
-4. **Executable bridge.** Define an `'a st` mirror `tf_st` and prove `fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)`. Define a domain-specific C seed `cinit_X_st` where globals default to the abstract zero and locals default to `⊤`.
-5. **End-to-end.** Define `X_exec_eqs` using the executable mirror. The soundness proof follows the pattern in `Sign_Exec_Sound.thy` — wrap solver output → lift via commutation → cover entry from `cinit_stores` → apply the effectful soundness engine.
-
-**`cinit_stores`** (`Constraint_System.thy`): the shared C-faithful initial store set
-`{s. ∀x. is_global x → s x = 0}`. Every domain's soundness theorem is stated against
-this set (not `UNIV`) when a domain-specific seed satisfying `cinit_stores ⊆ γ(seed)` exists.
-
-**Limits:** finite predecessor joins, monotone transfer functions, side solver termination.
-
----
-
-## TD hypothesis on sign soundness
-
-The sign end-to-end theorem (`side_sign_analysis_sound`) assumes:
-
-- **`side_cfg_solve_dom_eff g sign_etf bot s0 () v`** — per-pp solve termination.
-  This is `TD_side.solve_dom … v`, gated on monotonicity of `side_cfg_T_eff` (proved).
-
-This is an operational obligation on the vendored solver, not a gap in `post_fixpoint_sound`.
-
----
-
-## Design decisions
-
-### Point-map vs exit-only
-
-**Point-map** (`trace_analysis_sound`): sound at every reachable `v`.
-**Exit-only** (`side_sign_analysis_sound`): special case `v = cfg_exit`.
-
-### Why not AST annotations
-
-Exit-only AST annotations cannot express assignment soundness in general.
-The CFG + post-fixpoint story is the main theorem.
-
-### Intra-procedural spine
-
-The classical (intra-procedural) spine — plain `TD_Soundness`, intra `Sign`/`Interval`
-analysis, `Pipeline`, `voblint_sign_sound` — was extracted to the sibling repo
-`voblint-formalization-classical` and removed here.
-See `docs/CLASSICAL_SPINE_RETIREMENT.md`.
-
----
-
-## Thesis target (one paragraph)
-
-For any IMP2 program with procedures `(pi, ps, c)`, if `tr` is a reaching
-interprocedural trace at program point `v` from initial store `s` (equivalently
-`cfg_runs_to pi ps c s (last tr)` at exit), and the TD side solver yields a stable
-assignment `env` on `compile_prog pi ps c`, then `(last tr) x ∈ γ(env v x)` for
-every variable `x` and every reachable `v`, for a domain with proved transfer
-soundness. The projection `alpha_last` is a soundness-preserving morphism: the
-trace-level spec soundly refines to the state-level spec, which the analyzer
-over-approximates.
+The conclusion is soundness: every reached source store belongs to the
+concretization of a computed abstract slot. The result may contain additional
+stores; no completeness claim is made.

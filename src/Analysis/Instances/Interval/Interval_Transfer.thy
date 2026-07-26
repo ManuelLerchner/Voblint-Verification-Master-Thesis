@@ -162,7 +162,7 @@ lemma ivl_tf_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf ivl_tf a s1 \<le> apply_tf ivl_tf a s2"
   by (cases a)
      (auto simp: ivl_tf_def assign_ivl_mono assume_ivl_mono assume_not_ivl_mono
-                 enter_ivl_mono)
+                 enter_ivl_mono split: option.splits)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.

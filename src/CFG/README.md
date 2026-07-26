@@ -1,25 +1,40 @@
-# CFG (core)
+# CFG
 
-**Main contribution:** Control-flow graphs as labelled graphs over program points,
-interprocedural compilation from IMP2 with procedures (`compile_prog`), path
-infrastructure (`cfg_path`, offsets), and reachability pruning.
+This session defines procedure-aware control-flow graphs, compiles IMP2 source
+programs, and connects compiled executions to activation-local collecting
+semantics.
 
-**Theories**
+## Core
 
 | File | Role |
 | --- | --- |
-| `CFG_Def.thy` | `cfg`, `pp`, edge actions (`EA_Assign`, `EA_Assume`, `EA_AssumeNot`, `EA_Nop`, `EA_Enter`); `combines` triples |
-| `CFG_Path.thy` | `cfg_path`, `offset_path`, `cfg_path_offset` (nested compile shifting) |
-| `IMP2_Proc_to_CFG.thy` | `compile_prog pi ps c :: cfg`; whole-program layout with enter edges and combine triples; `compile` on `com` |
-| `CFG_Prune.thy` | `cfg_reaches`, reachability pruning (`CFG_Prune`); used by solver soundness |
-| `CFG_GraphViz.thy` | Pretty-printing / Graphviz export (tooling) |
+| `CFG_Def.thy` | CFG nodes, local edge actions, call relation, graph well-formedness |
+| `CFG_Transfer.thy` | Concrete edge, call-entry, and caller/callee combination operations |
+| `IMP2_Proc_to_CFG.thy` | Command, procedure, and whole-program compilation |
+| `CFG_Prune.thy` | Reachability and graph pruning |
 
-Path store folding uses `edges_collect` in [`Collecting/CFG_Collect.thy`](Collecting/CFG_Collect.thy).
+`intra` contains local edges. `calls` records a call site, call action, callee
+entry, and continuation. `FunctionEntry p` and `FunctionResult p` are explicit
+procedure boundaries.
 
-**Collecting semantics** (IP fixpoint over stores) live in
-[`Collecting/`](Collecting/) — import **`CFG_Collect`** for the plain
-interprocedural `cfg_collect`, and **`CFG_Local_Trace`** for the call-structured
-`valid_ltr` and its activation collector `cfg_collect_ctx_act`.
+## Compiler proofs
 
-**Key concepts:** `cfg_entry`, `cfg_exit`, `edges g`, `combines g`; `compile_prog pi ps c`
-produces a single flat CFG with call-site / procedure-exit combine triples.
+| File | Role |
+| --- | --- |
+| `Compiler/Compile_Certificate.thy` | Reusable facts extracted from one successful compiler run |
+| `Compiler/Compile_Locality.thy` | Procedure ownership, node ranges, and separation |
+| `Compiler/Compile_Invariants.thy` | Static compiler-input contract and generated-CFG invariants |
+| `Compiler/Located_Exec.thy` | Source configurations located at CFG nodes |
+| `Compiler/Control_Residual.thy` | Source residuals associated with compiled nodes |
+| `Compiler/Control_Simulation.thy` | Forward simulation from source steps to located CFG execution |
+
+## Collecting semantics
+
+| File | Role |
+| --- | --- |
+| `Collecting/CFG_Local_Trace.thy` | `valid_ltr`, activation structure, contexts, and `activation_collect` |
+| `Collecting/LTR_Collect.thy` | `ltr_collect`, keyed projection, and least-fixpoint characterization |
+| `Collecting/LTR_Abstract.thy` | Abstract coverage interface for local-trace collecting semantics |
+
+Core theories contain generic semantics and reusable lemmas. Concrete CFGs and
+trace witnesses live in the `Voblint_Examples` session.

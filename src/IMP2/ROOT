@@ -1,7 +1,6 @@
 session Voblint_IMP2 in "." = "HOL-IMP" +
   description "IMP2 syntax, small-step, and procedure language"
   sessions
-    IMP2
     Deriving
   theories
     HOL_IMP_Countable
@@ -11,6 +10,3 @@ session Voblint_IMP2 in "." = "HOL-IMP" +
     IMP2_Proc
     IMP2_Source_Print
     IMP2_Notation
-    IMP2_Bridge_Expr
-    IMP2_Bridge_Cmd
-    IMP2_VCG_Example

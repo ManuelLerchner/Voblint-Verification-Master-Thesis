@@ -6,9 +6,11 @@ section \<open>Solver soundness against the stack-faithful semantics\<close>
 
 text \<open>
   Monovariant solver soundness is stated directly against the stack-faithful local-trace collector
-  \<^const>\<open>ltr_collect\<close>.  The proof interprets \<^locale>\<open>ltr_gamma\<close> at the context-free
-  concretization \<open>acc v _ = \<lbrakk>env v\<rbrakk>\<close>, discharging ROOT, EDGE, SEED, and COMB from the
-  transfer bounds.  Each COMB obligation follows one concrete caller/callee return.
+  \<^const>\<open>ltr_collect\<close>.  The bound is discharged through \<open>ltr_collect_semantic_postfix\<close> at the
+  context-free candidate \<open>B v = \<lbrakk>env v\<rbrakk>\<close>: ROOT from the entry bound, EDGE from \<^const>\<open>apply_tf\<close>
+  soundness, CALL from \<^const>\<open>tf_enter\<close> soundness, and COMB from \<^const>\<open>combine_collect_abs\<close>
+  soundness.  The three transfer sources are the intra predecessors, the callee-entry
+  contributions over \<^const>\<open>calls\<close>, and the return combines over \<^const>\<open>calls\<close>.
 \<close>
 
 
@@ -21,80 +23,76 @@ lemma ltr_post_fixpoint_sound_at:
     and S :: "store set" and v0 :: pp
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes step_le:
-    "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+    "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+  assumes call_le:
+    "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
+       tf_enter tf fs as (env c) \<le> env (FunctionEntry p)"
   assumes combine_le:
-    "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
-       combine_collect_abs dst (env c) (env ex) \<le> env ret"
+    "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
+       combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> env cont"
   assumes entry_le: "s0 \<le> env (cfg_entry g)"
   shows "ltr_collect g S v0 \<subseteq> \<lbrakk>env v0\<rbrakk>"
-proof -
-  interpret G: ltr_gamma g S "\<lambda>v _. \<lbrakk>env v\<rbrakk>" "\<lambda>_ _. ()" "()"
-  proof (standard, goal_cases ROOT EDGE SEED COMB)
-    case (ROOT s)
-    then show ?case using S_sound gamma_state_mono[OF entry_le] by blast
-  next
-    case (EDGE u a v c s s')
-    show ?case by (rule edge_of_bound[OF step_le[OF EDGE(1)] EDGE(3) EDGE(4)])
-  next
-    case (SEED u v c s s' xs es)
-    show ?case by (rule edge_of_bound[OF step_le[OF SEED(1)] SEED(2) SEED(3)])
-  next
-    case (COMB cl ex v dst c1 s t es)
-    have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst (env cl) (env ex)\<rbrakk>"
-      using combine_collect_sound[OF COMB(2) COMB(3)] by simp
-    then show ?case
-      using gamma_state_mono[OF combine_le[OF COMB(1)]] by blast
-  qed
-  show ?thesis
-  proof
-    fix x assume "x \<in> ltr_collect g S v0"
-    then obtain u where u: "u \<in> valid_ltr g S" "sink_node u = v0" "sink_store u = x"
-      unfolding ltr_collect_def by blast
-    have "u \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr u(1) by blast
-    then have "sink_store u \<in> \<lbrakk>env (sink_node u)\<rbrakk>" by (simp add: G.gamma_ltr_def)
-    then show "x \<in> \<lbrakk>env v0\<rbrakk>" using u(2,3) by simp
-  qed
+proof (rule ltr_collect_semantic_postfix)
+  show "S \<subseteq> \<lbrakk>env (cfg_entry g)\<rbrakk>"
+    using S_sound gamma_state_mono[OF entry_le] by blast
+next
+  fix u a w s s'
+  assume "(u, a, w) \<in> intra g" and "s \<in> \<lbrakk>env u\<rbrakk>" and "edge_step a s = Some s'"
+  then show "s' \<in> \<lbrakk>env w\<rbrakk>" by (rule edge_of_bound[OF step_le])
+next
+  fix u dst pars args p cont s
+  assume e: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and s: "s \<in> \<lbrakk>env u\<rbrakk>"
+  show "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>env (FunctionEntry p)\<rbrakk>"
+    by (rule call_enter_of_bound[OF call_le[OF e] s])
+next
+  fix cl dst pars args p cont s t
+  assume e: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and s: "s \<in> \<lbrakk>env cl\<rbrakk>" and t: "t \<in> \<lbrakk>env (FunctionResult p)\<rbrakk>"
+  show "combine_collect dst s t \<in> \<lbrakk>env cont\<rbrakk>"
+    by (rule combine_abs_bound_sound[OF combine_le[OF e] s t])
 qed
 
 theorem unified_ltr_post_fixpoint_sound:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
-  assumes fin: "finite (edges g)"
-  assumes finC: "finite (combines g)"
+  assumes finI: "finite (intra g)"
+  assumes finC: "finite (calls g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   shows "ltr_collect g S v \<subseteq> \<lbrakk>env v\<rbrakk>"
 proof -
-  have step_le: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+  have step_le: "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
   proof -
-    fix u a w assume e: "(u, a, w) \<in> edges g"
+    fix u a w assume e: "(u, a, w) \<in> intra g"
     have "apply_tf tf a (env u) \<le> rhs g tf (\<squnion>) bot s0 env w"
-      by (rule apply_tf_le_rhs[OF fin finC e])
+      by (rule apply_tf_le_rhs[OF finI finC e])
     also have "\<dots> \<le> env w" using post_fp unfolding is_post_fixpoint_def by simp
     finally show "apply_tf tf a (env u) \<le> env w" .
   qed
-  have combine_le: "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
-       combine_collect_abs dst (env c) (env ex) \<le> env ret"
+  have call_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
+       tf_enter tf fs as (env c) \<le> env (FunctionEntry p)"
   proof -
-    fix c ex ret dst assume ce: "(c, ex, ret, dst) \<in> combines g"
-    have "combine_collect_abs dst (env c) (env ex) \<le> rhs g tf (\<squnion>) bot s0 env ret"
-      by (rule combine_collect_abs_le_rhs[OF fin finC ce])
-    also have "\<dots> \<le> env ret" using post_fp unfolding is_post_fixpoint_def by simp
-    finally show "combine_collect_abs dst (env c) (env ex) \<le> env ret" .
+    fix c dst fs as p cont assume e: "(c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g"
+    have "tf_enter tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env (FunctionEntry p)"
+      by (rule tf_enter_le_rhs[OF finI finC e])
+    also have "\<dots> \<le> env (FunctionEntry p)" using post_fp unfolding is_post_fixpoint_def by simp
+    finally show "tf_enter tf fs as (env c) \<le> env (FunctionEntry p)" .
+  qed
+  have combine_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
+       combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> env cont"
+  proof -
+    fix c dst fs as p cont assume e: "(c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g"
+    have "combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> rhs g tf (\<squnion>) bot s0 env cont"
+      by (rule combine_abs_le_rhs[OF finI finC e])
+    also have "\<dots> \<le> env cont" using post_fp unfolding is_post_fixpoint_def by simp
+    finally show "combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> env cont" .
   qed
   have entry_le: "s0 \<le> env (cfg_entry g)"
-    using s0_le_rhs_entry[OF fin finC]
+    using s0_le_rhs_entry[OF finI finC]
           post_fp[unfolded is_post_fixpoint_def, rule_format, of "cfg_entry g"]
     by (rule order_trans)
   show ?thesis
-  proof (rule ltr_post_fixpoint_sound_at)
-    show "S \<le> \<lbrakk>s0\<rbrakk>" by (rule S_sound)
-    show "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
-      by (rule step_le)
-    show "\<And>c ex ret dst. (c, ex, ret, dst) \<in> combines g \<Longrightarrow>
-            combine_collect_abs dst (env c) (env ex) \<le> env ret"
-      by (rule combine_le)
-    show "s0 \<le> env (cfg_entry g)" by (rule entry_le)
-  qed
+    by (rule ltr_post_fixpoint_sound_at[OF S_sound step_le call_le combine_le entry_le])
 qed
 
 end

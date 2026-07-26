@@ -9,112 +9,124 @@ text \<open>
 
 subsection \<open>Per-step rhs bounds (no gamma needed)\<close>
 
+text \<open>The equation right-hand side is a finite join over ordinary edges,
+  procedure entries, and return combinations.  One shared family definition
+  determines both the executable equation and these soundness bounds.\<close>
+
+lemma finite_rhs_edge_sources:
+  assumes "finite (intra g)"
+  shows "finite (rhs_edge_sources g tf env v)"
+  unfolding rhs_edge_sources_def
+  using assms finite_intra_predecessors by blast
+
+lemma finite_rhs_entry_sources:
+  assumes "finite (calls g)"
+  shows "finite (rhs_entry_sources g tf env v)"
+  unfolding rhs_entry_sources_def
+  using assms finite_entry_calls by blast
+
+lemma finite_rhs_combine_sources:
+  assumes "finite (calls g)"
+  shows "finite (rhs_combine_sources g env v)"
+  unfolding rhs_combine_sources_def
+  using assms finite_return_calls by blast
+
+lemma finite_rhs_sources:
+  assumes "finite (intra g)" and "finite (calls g)"
+  shows "finite (rhs_sources g tf env v)"
+  unfolding rhs_sources_def
+  using finite_rhs_edge_sources finite_rhs_entry_sources finite_rhs_combine_sources assms
+  by blast
+
+lemma rhs_eq_join_sources:
+  "rhs g tf (\<squnion>) bot s0 env v =
+     abs_join_set (\<squnion>) bot
+       (if v = cfg_entry g then insert s0 (rhs_sources g tf env v)
+        else rhs_sources g tf env v)"
+  unfolding rhs_def by simp
+
+lemma le_rhs_of_mem:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+  assumes finI: "finite (intra g)" and finC: "finite (calls g)"
+    and mem: "x \<in> rhs_sources g tf env v"
+  shows "x \<le> rhs g tf (\<squnion>) bot s0 env v"
+proof -
+  have fin: "finite (rhs_sources g tf env v)"
+    by (rule finite_rhs_sources[OF finI finC])
+  show ?thesis
+  proof (cases "v = cfg_entry g")
+    case True
+    have "x \<le> abs_join_set (\<squnion>) bot (insert s0 (rhs_sources g tf env v))"
+      using sup_fold_ge_state[OF _ insertI2[OF mem]] fin unfolding abs_join_set_def by simp
+    thus ?thesis using True by (simp add: rhs_eq_join_sources)
+  next
+    case False
+    have "x \<le> abs_join_set (\<squnion>) bot (rhs_sources g tf env v)"
+      using sup_fold_ge_state[OF fin mem] unfolding abs_join_set_def by simp
+    thus ?thesis using False by (simp add: rhs_eq_join_sources)
+  qed
+qed
+
 lemma apply_tf_le_rhs:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
-  assumes finE: "finite (edges g)"
-  assumes finC: "finite (combines g)"
-  assumes uav: "(u, a, v) \<in> edges g"
+  assumes finI: "finite (intra g)" and finC: "finite (calls g)"
+    and uav: "(u, a, v) \<in> intra g"
   shows "apply_tf tf a (env u) \<le> rhs g tf (\<squnion>) bot s0 env v"
-proof -
-  define edge_vals where
-    "edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u)) (predecessors g v)"
-  define comb_vals where
-    "comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
-                       (combine_predecessors g v)"
-  define base where
-    "base = (if v = cfg_entry g then insert s0 (edge_vals \<union> comb_vals)
-            else edge_vals \<union> comb_vals)"
-  have fin_edge: "finite edge_vals"
-    unfolding edge_vals_def using finE by (simp add: finite_predecessors)
-  have fin_comb: "finite comb_vals"
-    unfolding comb_vals_def using finC by (simp add: finite_combine_predecessors)
-  have fin_base: "finite base"
-    unfolding base_def using fin_edge fin_comb by simp
-  have mem_base: "apply_tf tf a (env u) \<in> base"
-    using uav unfolding base_def edge_vals_def predecessors_def by auto
-  have "apply_tf tf a (env u) \<le> abs_join_set (\<squnion>) bot base"
-    using sup_fold_ge_state[OF fin_base mem_base] unfolding abs_join_set_def by simp
-  also have "\<dots> = rhs g tf (\<squnion>) bot s0 env v"
-    unfolding rhs_def Let_def base_def edge_vals_def comb_vals_def
-      predecessors_def combine_predecessors_eq by simp
-  finally show ?thesis .
+proof (rule le_rhs_of_mem[OF finI finC])
+  show "apply_tf tf a (env u) \<in> rhs_sources g tf env v"
+    unfolding rhs_sources_def
+    using uav rhs_edge_sources_iff by blast
 qed
 
-lemma combine_collect_abs_le_rhs:
+lemma tf_enter_le_rhs:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
-  assumes finE: "finite (edges g)"
-  assumes finC: "finite (combines g)"
-  assumes uce: "(c, ex, v, dst) \<in> combines g"
-  shows "combine_collect_abs dst (env c) (env ex)
+  assumes finI: "finite (intra g)" and finC: "finite (calls g)"
+    and uce: "(c, CallEdge dst fs as, v, k) \<in> calls g"
+  shows "tf_enter tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env v"
+proof (rule le_rhs_of_mem[OF finI finC])
+  have "tf_enter tf fs as (env c) \<in> rhs_entry_sources g tf env v"
+    by (rule rhs_entry_sourcesI[OF uce])
+  thus "tf_enter tf fs as (env c) \<in> rhs_sources g tf env v"
+    unfolding rhs_sources_def by blast
+qed
+
+lemma combine_abs_le_rhs:
+  fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
+    and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  assumes finI: "finite (intra g)" and finC: "finite (calls g)"
+    and uce: "(c, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
+  shows "combine_collect_abs dst (env c) (env (FunctionResult p))
            \<le> rhs g tf (\<squnion>) bot s0 env v"
-proof -
-  define edge_vals where
-    "edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u)) (predecessors g v)"
-  define comb_vals where
-    "comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
-                       (combine_predecessors g v)"
-  define base where
-    "base = (if v = cfg_entry g then insert s0 (edge_vals \<union> comb_vals)
-            else edge_vals \<union> comb_vals)"
-  have fin_edge: "finite edge_vals"
-    unfolding edge_vals_def using finE by (simp add: finite_predecessors)
-  have fin_comb: "finite comb_vals"
-    unfolding comb_vals_def using finC by (simp add: finite_combine_predecessors)
-  have fin_base: "finite base"
-    unfolding base_def using fin_edge fin_comb by simp
-  have mem_comb: "combine_collect_abs dst (env c) (env ex) \<in> comb_vals"
-    unfolding comb_vals_def combine_predecessors_eq
-    using uce by (intro image_eqI[where x = "(c, ex, dst)"]) auto
-  have mem_base: "combine_collect_abs dst (env c) (env ex) \<in> base"
-    using mem_comb unfolding base_def by auto
-  have "combine_collect_abs dst (env c) (env ex)
-          \<le> abs_join_set (\<squnion>) bot base"
-    using sup_fold_ge_state[OF fin_base mem_base] unfolding abs_join_set_def by simp
-  also have "\<dots> = rhs g tf (\<squnion>) bot s0 env v"
-    unfolding rhs_def Let_def base_def edge_vals_def comb_vals_def
-      predecessors_def combine_predecessors_eq by simp
-  finally show ?thesis .
+proof (rule le_rhs_of_mem[OF finI finC])
+  have "combine_collect_abs dst (env c) (env (FunctionResult p))
+        \<in> rhs_combine_sources g env v"
+    by (rule rhs_combine_sourcesI[OF uce])
+  thus "combine_collect_abs dst (env c) (env (FunctionResult p))
+        \<in> rhs_sources g tf env v"
+    unfolding rhs_sources_def by blast
 qed
 
 lemma s0_le_rhs_entry:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
-  assumes finE: "finite (edges g)"
-  assumes finC: "finite (combines g)"
+  assumes finI: "finite (intra g)" and finC: "finite (calls g)"
   shows "s0 \<le> rhs g tf (\<squnion>) bot s0 env (cfg_entry g)"
 proof -
-  define edge_vals where
-    "edge_vals = image (\<lambda>(u, a). apply_tf tf a (env u)) (predecessors g (cfg_entry g))"
-  define comb_vals where
-    "comb_vals = image (\<lambda>(c, ex, dst). combine_collect_abs dst (env c) (env ex))
-                       (combine_predecessors g (cfg_entry g))"
-  define base where "base = insert s0 (edge_vals \<union> comb_vals)"
-  have fin_edge: "finite edge_vals"
-    unfolding edge_vals_def using finE by (simp add: finite_predecessors)
-  have fin_comb: "finite comb_vals"
-    unfolding comb_vals_def using finC by (simp add: finite_combine_predecessors)
-  have fin_base: "finite base"
-    unfolding base_def using fin_edge fin_comb by simp
-  have mem_base: "s0 \<in> base" unfolding base_def by simp
-  have "s0 \<le> abs_join_set (\<squnion>) bot base"
-    using sup_fold_ge_state[OF fin_base mem_base] unfolding abs_join_set_def by simp
-  also have "\<dots> = rhs g tf (\<squnion>) bot s0 env (cfg_entry g)"
-    unfolding rhs_def Let_def base_def edge_vals_def comb_vals_def
-      predecessors_def combine_predecessors_eq by simp
-  finally show ?thesis .
+  let ?base = "insert s0 (rhs_sources g tf env (cfg_entry g))"
+  have fin: "finite ?base" using finite_rhs_sources[OF finI finC] by simp
+  have "s0 \<le> abs_join_set (\<squnion>) bot ?base"
+    using sup_fold_ge_state[OF fin insertI1] unfolding abs_join_set_def by simp
+  thus ?thesis by (simp add: rhs_eq_join_sources)
 qed
-
-subsection \<open>Per-step soundness and the main theorem\<close>
 
 subsection \<open>Per-step soundness and the main theorem\<close>
 
 context sound_transfer
 begin
 
-(* Per-edge soundness: edge_collect on concretisation factors through
-   apply_tf in the abstract domain. *)
+text \<open>Concrete edge collection factors through its abstract transfer.\<close>
 lemma edge_collect_apply_tf_sound:
   shows "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
 proof (cases a)
@@ -136,10 +148,17 @@ next
     unfolding EA_AssumeNot apply_tf.simps edge_collect_simps
     using tf_sound_assume_not by blast
 next
-  case (EA_Enter xs es)
+  case (EA_Ret e p)
   show ?thesis
-    unfolding EA_Enter apply_tf.simps edge_collect_simps
-    using tf_sound_enter by blast
+  proof (cases e)
+    case None
+    then show ?thesis unfolding EA_Ret by (auto simp: edge_collect_def)
+  next
+    case (Some a)
+    show ?thesis
+      unfolding EA_Ret Some apply_tf.simps edge_collect_simps option.simps
+      using tf_sound_assign by blast
+  qed
 qed
 
 text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer
@@ -157,6 +176,20 @@ proof -
   also have "... \<subseteq> \<lbrakk>apply_tf tf a A\<rbrakk>" by (rule edge_collect_apply_tf_sound)
   also have "... \<subseteq> \<lbrakk>B\<rbrakk>" using gamma_state_mono[OF bound] by blast
   finally show ?thesis using m by blast
+qed
+
+text \<open>Call-entry companion of \<open>edge_of_bound\<close>: if the abstract enter transfer over \<open>A\<close> is
+  dominated by \<open>B\<close>, the concrete callee-entry store built from a caller store in \<open>[[A]]\<close> lies
+  in \<open>[[B]]\<close>.  The enter analogue of the intra \<open>edge_of_bound\<close>, shared by the LTR and DG
+  call-routing soundness spines.\<close>
+lemma call_enter_of_bound:
+  assumes bound: "tf_enter tf pars args A \<le> B"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>"
+  shows "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
+proof -
+  have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
+    using tf_sound_enter[rule_format, OF s] by (simp add: call_enter_CallEdge)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
 

@@ -1,8 +1,14 @@
 theory Abstract_Domain
   imports "Voblint_IMP2.IMP2_Syntax" "Voblint_IMP2.IMP2_Expr" "TD.Update_rules"
+    "Voblint_CFG.CFG_Def"
 begin
 
 hide_const (open) Update_rules.N
+
+text \<open>The solver unknown for a program point is a CFG node.  Analysis-facing code keeps the
+  short name \<open>pp\<close> for it; a return node is \<^term>\<open>FunctionResult p\<close>, a callee entry
+  \<^term>\<open>FunctionEntry p\<close>, an ordinary location \<^term>\<open>Statement n\<close>.\<close>
+type_synonym pp = cfg_node
 
 unbundle lattice_syntax
 
@@ -32,10 +38,9 @@ lemma comp_fun_commute_sup:
   "comp_fun_commute ((\<squnion>) :: 'a::semilattice_sup \<Rightarrow> 'a \<Rightarrow> 'a)"
   by unfold_locales (simp add: fun_eq_iff sup_left_commute)
 
-(* P3 discharge: pointwise sup on abs_state is comp_fun_idem.  Follows from
-   the standard `comp_fun_idem_sup` because (vname => 'a) inherits
-   semilattice_sup pointwise from 'a.  Used downstream to drop the
-   `comp_fun_idem (ac_join cfg)` assumption from pipeline theorems. *)
+text \<open>Pointwise join on abstract states is idempotent because the value-domain
+  semilattice structure lifts pointwise.  Finite folds can therefore use the
+  standard idempotent-join laws without a separate state-level assumption.\<close>
 lemma join_state_comp_fun_idem:
   "comp_fun_idem ((\<squnion>) ::
      'a::semilattice_sup abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)"

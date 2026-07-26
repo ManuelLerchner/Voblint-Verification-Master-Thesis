@@ -7,10 +7,9 @@ begin
 section \<open>Interval on the heterogeneous DG spine\<close>
 
 text \<open>
-  Interval is a diagonal DG instance: answer and side domains both use the
-  existing interval carrier, so the native interface is \<^const>\<open>unit_dg_spec\<close>.
-  The resulting collecting theorem has the same statement shape as the
-  homogeneous exit theorem, but it is now derived from \<^locale>\<open>sound_dg_spec\<close>.
+  Interval uses the same carrier for local answers and global side effects.  The diagonal
+  specification \<^const>\<open>unit_dg_spec\<close> therefore provides its D/G operations, while
+  \<^locale>\<open>sound_dg_spec\<close> supplies collecting soundness.
 \<close>
 
 interpretation ivl_dg: sound_dg_spec "unit_dg_spec ivl_tf" gamma_unit
@@ -37,15 +36,20 @@ text \<open>
 theorem ivl_dg_post_solution_collect_sound:
   assumes pp: "part_post_solution (ivl_dg_generator g bot0 s0d s0g) x sigma vars"
     and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge: "\<And>u a w. (u, a, w) \<in> edges g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_combine: "\<And>cc ex w dst. (cc, ex, w, dst) \<in> combines g \<Longrightarrow> (w, ()) \<in> vars"
-    and finE: "finite (edges g)"
-    and finC: "finite (combines g)"
+    and cover_edge: "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
+         \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra g)"
+    and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
   shows "ltr_collect g S0 v \<subseteq> ivl_dg_gamma sigma v"
   unfolding ivl_dg_gamma_def
   by (rule ivl_dg.dg_post_solution_collect_sound_ltr
-        [OF pp[unfolded ivl_dg_generator_def] cover_entry cover_edge cover_combine
-            finE finC sound0[folded gamma_unit_def]])
+        [OF pp[unfolded ivl_dg_generator_def] cover_entry cover_edge cover_enter cover_combine
+            finI finC sound0[folded gamma_unit_def]])
 
 end

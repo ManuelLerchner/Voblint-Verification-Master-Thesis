@@ -1,7 +1,7 @@
 section \<open>Example support: global increment procedure\<close>
 
 theory Example_Inc_Proc
-  imports "Voblint_CFG.CFG_Transfer" "Voblint_IMP2.IMP2_Notation"
+  imports "Voblint_CFG.CFG_Transfer" "Voblint_CFG.CFG_Prune" "Voblint_IMP2.IMP2_Notation"
 begin
 
 text \<open>
@@ -22,32 +22,42 @@ definition inc_pi :: proc_table where
 
 lemma inc_program_parts:
   shows "prog_procs inc_program = [''p'']"
-    and "prog_table inc_program = (\<lambda>_. None)(''p'' := Some (proc_decl_of [] (Assign ''Gx'' (Plus (V ''Gx'') (N 1))) None))"
-    and "prog_main inc_program = Call None ''p'' []"
+    and "prog_table inc_program =
+           [''p'' \<mapsto> proc_decl_of [] (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>),
+            prog_main_name \<mapsto> proc_decl_of [] (imp \<lbrakk> p() \<rbrakk>)]"
+    and "prog_main inc_program = imp \<lbrakk> p() \<rbrakk>"
   by (simp_all add: inc_program_def)
 
 definition inc_g :: cfg where
-  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) (prog_main inc_program)"
+  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) ''main'' (prog_main inc_program)"
 
 lemma inc_g_eq_compile:
-  "inc_g = compile_prog inc_pi [''p''] (Call None ''p'' [])"
+  "inc_g = compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)"
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma inc_g_full:
-  "inc_g = mk_cfg 2 3
-     {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
-      (2, EA_Enter [] [], 0)}
-     {(2, 1, 3, None)}"
+  "inc_g =
+     \<lparr> intra =
+         {(FunctionEntry ''p'', EA_Nop, Statement 0),
+          (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
+          (Statement 1, EA_Ret None ''p'', FunctionResult ''p''),
+          (FunctionEntry ''main'', EA_Nop, Statement 2),
+          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
+       calls = {(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3)},
+       cfg_entry = FunctionEntry ''main'' \<rparr>"
   by eval
 
 lemma inc_g_structure:
-  shows "cfg_entry inc_g = 2"
-    and "cfg_exit inc_g = 3"
-    and "edges inc_g =
-       {(0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), 1),
-        (2, EA_Enter [] [], 0)}"
-    and "combines inc_g = {(2, 1, 3, None)}"
-  by (simp_all add: inc_g_full)
+  shows "cfg_entry inc_g = FunctionEntry ''main''"
+    and "cfg_exit inc_g = FunctionResult ''main''"
+    and "intra inc_g =
+       {(FunctionEntry ''p'', EA_Nop, Statement 0),
+        (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
+        (Statement 1, EA_Ret None ''p'', FunctionResult ''p''),
+        (FunctionEntry ''main'', EA_Nop, Statement 2),
+        (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
+    and "calls inc_g = {(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3)}"
+  by (simp_all add: inc_g_full cfg_exit_def)
 
 lemma edge_collect_assign_enter_state:
   fixes s :: store and x :: vname and a :: aexp
@@ -68,15 +78,15 @@ lemma combine_after_enter_global_assign:
 
 lemma pcompletes_inc_pcall:
   fixes s :: store
-  shows "pcompletes inc_pi (Call None ''p'' []) s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pcompletes inc_pi (imp \<lbrakk> p() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  let ?body = "Assign ''Gx'' (Plus (V ''Gx'') (N 1))"
+  let ?body = "imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have run: "pcompletes inc_pi (Call None ''p'' []) s
+  have run: "pcompletes inc_pi (imp \<lbrakk> p() \<rbrakk>) s
                 (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
-    show "inc_pi ''p'' = Some (proc_decl_of [] ?body None)"
-      by (simp add: inc_pi_def inc_program_parts)
+    show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
+      by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
     show "pcompletes inc_pi ?body (enter_state s)
              ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
     proof -
