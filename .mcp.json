@@ -28,7 +28,7 @@
         "-d",
         "/Users/manuellerchner/git/goblint-formalization",
         "-l",
-        "Voblint_Formalization"
+        "Voblint_IMP2"
       ]
     }
   }

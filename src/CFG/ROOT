@@ -9,6 +9,9 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     LTR_Collect
     LTR_Abstract
     IMP2_Proc_to_CFG
+    (* Static allocation size of a compiled fragment: csize and compile_next_id,
+       strengthening compile_counter_mono from an inequality to an equation. *)
+    Compile_Size
     CFG_Transfer
     Compile_Invariants
     Control_Residual

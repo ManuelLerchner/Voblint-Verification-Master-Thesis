@@ -1199,7 +1199,60 @@ For each program record, before and after: statement node count, dead
 (non-forward-reachable) node count, intra edge count, call edge count, count of
 `EA_Nop` edges, and the reachable node sequence of one concrete run.
 
-Hand-evaluated for the three most diagnostic cases:
+### Measured baseline (Phase 1, landed)
+
+`src/Examples/Interprocedural/Example_Compile_Baseline.thy` records this
+executably against the current compiler and is green in
+`isabelle build Voblint_Examples`. Rows are `cfg_report`, i.e.
+`(nodes, dead, intra, nops, calls)`.
+
+**Counting convention.** These are *whole-program totals*: `nodes` includes
+`FunctionEntry`/`FunctionResult` for every procedure, and `nops` includes the
+per-procedure `FunctionEntry -nop->` bracket. Each shape below is the body of
+`f` with `main` reduced to a single call, so `main`'s contribution is constant
+across rows. The per-fragment figures quoted later in this section count
+*statement* nodes and *non-bracket* nops only — both conventions appear, so
+compare like with like.
+
+| # | Program | nodes | dead | intra | nops | calls | dead nodes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `skip` body | 7 | 0 | 4 | 2 | 1 | — |
+| 2 | `x := 1` | 8 | 0 | 5 | 2 | 1 | — |
+| 3 | `return 1` | 8 | **1** | 5 | 2 | 1 | `S1` |
+| 4 | `return 1; x := 2` | 10 | **3** | 7 | 3 | 1 | `S1 S2 S3` |
+| 5 | both branches return | 12 | **3** | 10 | 4 | 1 | `S2 S4 S5` |
+| 6 | one branch returns | 12 | **1** | 10 | 4 | 1 | `S2` |
+| 7 | loop body returns | 10 | **1** | 8 | 3 | 1 | `S2` |
+| 8 | nested `if` | 16 | 0 | 15 | 6 | 1 | — |
+| 9 | one call | 8 | 0 | 5 | 2 | 1 | — |
+| 10 | recursive factorial | 16 | **3** | 13 | 6 | 2 | `S2 S6 S7` |
+| 11 | nested calls | 12 | 0 | 7 | 3 | 2 | — |
+| 12 | two call sites, one callee | 14 | 0 | 8 | 4 | 3 | — |
+| 13 | statements after guaranteed return | 14 | **5** | 12 | 5 | 1 | `S2 S4 S5 S6 S7` |
+| 14 | `main` only | 3 | 0 | 2 | 1 | 0 | — |
+| 15 | `Restore` / `Unwind` | n/a | n/a | n/a | n/a | n/a | rejected by `wf_compile_input` |
+
+**The measurement confirms the diagnosis exactly.** Dead nodes appear in
+programs 3, 4, 5, 6, 7, 10, 13 — precisely the seven containing a `Return` — and
+in no other program. Every `Return`-free program has zero dead nodes regardless
+of nesting depth (see 8, 11, 12). The dead-node count is a function of `Return`
+occurrences and their position, which is what §2 predicted from the type
+signature alone.
+
+Program 13 is the worst measured case: `if b then return 1 else return 2; z := 9`
+yields **5** dead nodes out of 14 — two `Return` exits, the merge node, and the
+two nodes of the unreachable `z := 9`. Note the mix: three are
+compiler-invented, two are source-level dead code. Only the first kind is the
+redesign's target.
+
+Factorial's dead set is confirmed as exactly `{Statement 2, Statement 6,
+Statement 7}` — the `pp2` / `pp6` / `pp7` of the original report — and its nop
+edges as `S2->S7`, `S4->S5`, `S6->S7`, `S9->S10` plus the two entry brackets,
+i.e. two dead joins and two reachable pass-throughs.
+
+### Hand-evaluated per-fragment comparison
+
+Statement nodes and non-bracket nops only:
 
 | Program | Now: nodes / dead / nops | New: nodes / dead / nops |
 | --- | --- | --- |
@@ -1492,3 +1545,159 @@ The risks are not in the continuation idea. They are in `control_at`, the
 locality lemmas, the two long completion theorems in `Control_Simulation.thy`,
 and the node-index-sensitive examples — which is where the phase boundaries and
 the §7 impact matrix put the attention.
+
+---
+
+## Implementation status
+
+### Landed
+
+**Phase 1 — regression baseline.** `src/Examples/Interprocedural/Example_Compile_Baseline.thy`
+(313 lines), registered in `src/Examples/ROOT`, green in
+`isabelle build Voblint_Examples`. Contains:
+
+- executable structural successors (`succ_list`), one clause per source of
+  `cfg_succ_rel`: INTRA, ENTRY, COMB_CALLER, COMB_RESULT;
+- node inventory, entry-rooted forward reachability (`reach_from`, `reach_list`),
+  dead-node and nop-edge projections;
+- `cfg_report` — the `(nodes, dead, intra, nops, calls)` row per program;
+- all 15 regression programs of §9, with the measured table recorded there;
+- the observable-trace machinery of §11: `step_label`, `step_exec`,
+  `run_labels`, `observable`, `trace_from_entry`. Verified end to end — factorial
+  from a zero store yields 8 nested `LCall ''fac''`, the base-case return, then 8
+  `LRet ''fac''` unwinds.
+
+**Phase 2 — reachability pruning for rendering.**
+`src/Examples/Tooling/Example_Pruned_GraphViz.thy`, registered in
+`src/Examples/ROOT`. Defines `prune_cfg` (keep an intra edge when both endpoints
+are entry-reachable; keep a call edge when its site is) plus `pruned_cfg_dot` /
+`pruned_cfg_dot_lit`, which reuse the existing `contextual_analysis_dot` with the
+pruned graph substituted — the renderer itself is untouched.
+
+Proved rather than merely asserted:
+
+- `prune_cfg_intra_subset`, `prune_cfg_calls_subset` — pruning only deletes, so
+  every fact quantified over `intra`/`calls` transfers;
+- `prune_cfg_entry` — the graph entry is preserved;
+- `prune_cfg_wf`, `prune_cfg_wf_compile_prog` — `wf_cfg` is inherited, because it
+  is a conjunction of universally quantified edge conditions.
+
+Measured on factorial: node count 16 to 13, `dead_list` from
+`[Statement 2, Statement 6, Statement 7]` to `[]`, nop edges from 6 to 4 (the two
+dead joins `S2->S7` and `S6->S7` removed; the two reachable pass-throughs
+`S4->S5`, `S9->S10` correctly retained, since only Phase 4 can remove those).
+The pruned DOT is strictly shorter than `raw_cfg_dot` and both still
+code-generate.
+
+Intended final home: `prune_cfg` beside `cfg_reaches` in `CFG_Prune.thy`, the
+renderer wrapper beside `raw_cfg_dot` in `Analysis_GraphViz.thy`. It sits in
+`src/Examples` for the tooling reason below, not by design.
+
+**Phase 3 — `csize` and `compile_next_id`.** `src/CFG/Compiler/Compile_Size.thy`,
+registered in `src/CFG/ROOT`. Proves
+`compile Pi p c n = (n', en, ex, E, K) ==> n' = n + csize c` for the current
+compiler, plus `compile_fst_next_id` and `compile_counter_mono_via_csize`
+(showing the existing inequality is a consequence).
+
+Deviation from the plan, deliberate: `csize` lives in its own theory rather than
+inside `IMP2_Proc_to_CFG.thy`. Reason is tooling, not design — see below. When
+`IMP2_Proc_to_CFG.thy` becomes editable, `csize` should move into it directly
+above `compile`, because Phase 4's `Seq` clause has to *call* `csize`, and a
+definition cannot be used by a theory it imports. `Compile_Size.thy` then
+collapses into that file and its ROOT entry is removed. Until then the split is
+harmless: Phase 3's only consumer is Phase 4.
+
+**Phase 4 prototype — design validated before the rewrite.**
+`src/Examples/Interprocedural/Example_CPS_Prototype.thy`, registered in
+`src/Examples/ROOT`. `compile_k` / `compile_proc_k` / `compile_procs_k` /
+`compile_prog_k` implement §6 verbatim, beside the current compiler rather than
+replacing it, purely to check the rules and the arithmetic against measured
+graphs. It is deleted when `compile` is rewritten.
+
+Proved:
+
+- **`compile_k_next_id`** — `n' = n + ksize c`. This is the trusted-arithmetic
+  obligation of §5, the one real risk in the forward-numbering choice, and it
+  goes through by the same induction skeleton as the current
+  `compile_counter_mono`.
+- **`compile_k_entry`** — `en = Statement n` still holds for every command, so
+  `compile_entry_node` survives the redesign unchanged.
+- **`compile_k_E_shape`** — a target is an allocated `Statement`, the own
+  `FunctionResult p`, or **the continuation**. §7 predicted exactly this extra
+  disjunct, and it is what lets the "no intra edge enters a procedure entry"
+  condition be proved without dragging a side condition through the induction.
+  Note the proof needs explicit `consider`/`cases` per branch: `auto` cannot
+  chain the two-premise IH, matching the existing `compile_E_shape` style.
+- **`compile_prog_k_wf`** — `wf_cfg (compile_prog_k Pi ps mnm main)`. The
+  continuation-passing output satisfies the same three structural conditions as
+  today's, with the command-level continuation hypothesis discharged at
+  procedure level by the epilogue being a `Statement` node, exactly as §7
+  claimed.
+- `compile_k_Return_ignores_continuation` — `Return`'s fragment is independent
+  of `k`.
+
+Measured, `(nodes, dead, intra, nops, calls)`, current then
+continuation-passing:
+
+| # | Program | current | CPS | dead |
+| --- | --- | --- | --- | --- |
+| 1 | `skip` body | (7, 0, 4, 2, 1) | (8, 0, 5, 3, 1) | 0 → 0 |
+| 2 | `x := 1` | (8, 0, 5, 2, 1) | (8, 0, 5, 2, 1) | 0 → 0 |
+| 3 | `return 1` | (8, 1, 5, 2, 1) | (8, 1, 5, 2, 1) | 1 → 1 |
+| 4 | `return 1; x := 2` | (10, 3, 7, 3, 1) | (9, 2, 6, 2, 1) | 3 → 2 |
+| 5 | both branches return | (12, 3, 10, 4, 1) | (10, 1, 8, 2, 1) | **3 → 1** |
+| 6 | one branch returns | (12, 1, 10, 4, 1) | (10, 0, 8, 2, 1) | **1 → 0** |
+| 7 | loop body returns | (10, 1, 8, 3, 1) | (9, 0, 7, 2, 1) | **1 → 0** |
+| 8 | nested `if` | (16, 0, 15, 6, 1) | (12, 0, 11, 2, 1) | 0 → 0 |
+| 9 | one call | (8, 0, 5, 2, 1) | (8, 0, 5, 2, 1) | 0 → 0 |
+| 10 | recursive factorial | (16, 3, 13, 6, 2) | (12, 1, 9, 2, 2) | **3 → 1** |
+| 11 | nested calls | (12, 0, 7, 3, 2) | (12, 0, 7, 3, 2) | 0 → 0 |
+| 12 | two call sites | (14, 0, 8, 4, 3) | (13, 0, 7, 3, 3) | 0 → 0 |
+| 13 | after guaranteed return | (14, 5, 12, 5, 1) | (11, 2, 9, 2, 1) | **5 → 2** |
+| 14 | `main` only | (3, 0, 2, 1, 0) | (4, 0, 3, 2, 0) | 0 → 0 |
+
+Confirmations:
+
+- **Factorial lands exactly on the §9 prediction.** 8 statement nodes (12 total),
+  `dead_list = [Statement 4]` — the single `fac` epilogue — and nop edges reduced
+  to the two procedure-entry brackets. Zero glue nops.
+- **The `calls` column is identical in every row.** The call relation is
+  untouched, as required.
+- **Glue nops are eliminated everywhere.** Every remaining `EA_Nop` is a
+  procedure-entry bracket or a source `SKIP`; the nop count drops to the number
+  of procedures in every program that has no source `SKIP`.
+- **Observable traces are equal** for programs 2, 6 and 10 (factorial checked to
+  200 steps, covering all 8 recursive activations and their unwinds). The
+  redesign changes node identities, not behaviour.
+- **The two predicted regressions are real.** Programs 1 and 14 gain one node,
+  because a `skip` body and its epilogue are separate nodes where the current
+  compiler collapses them. §12 question 2 flagged this; it is now measured rather
+  than suspected.
+- **Residual dead nodes are exactly the epilogues of non-falling-through
+  procedures** (rows 3, 5, 10) plus genuine source-level dead code (rows 4, 13).
+  This is what Phase 6's lazy epilogue removes, and it confirms that no
+  compiler-invented dead node survives for any falling-through procedure.
+
+### Blocked, and the one-line fix
+
+Phases 2, 4, and the `IMP2_Proc_to_CFG.thy` half of Phase 3 all need edits to
+theories that the PIDE MCP server treats as read-only:
+
+```
+Cannot edit base session theory Voblint_CFG.IMP2_Proc_to_CFG
+```
+
+Cause: `.mcp.json` launched the server with `-l Voblint_Formalization`, so every
+repo theory sits inside the prebuilt base heap. Only files *outside* that heap
+are editable — which is why the two theories above could be created as new files
+and checked normally.
+
+Fix applied to `.mcp.json`: base logic changed from `Voblint_Formalization` to
+`Voblint_IMP2`. That leaves the `Voblint_IMP2` heap warm (nothing in Phases 2–4
+touches `src/IMP2`) while making `src/CFG`, `src/Analysis`, `src/Formalization`
+and `src/Examples` load dynamically and therefore editably. All five session
+heaps are present, so the rebase costs nothing to build.
+
+**The change needs an MCP server restart to take effect** — a config edit alone
+does not rebase a running server, and a session cannot restart its own MCP
+connection.
