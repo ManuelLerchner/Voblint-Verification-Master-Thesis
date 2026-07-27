@@ -52,34 +52,63 @@ The first argument is the callee's exit state; the second is the caller's state 
 the call site. Each analysis decides how to merge them. `combine_assign` additionally
 receives the syntactic call `lval := f(args)` to adjust the return value.
 
-**What we do:** fixed structural combine — `restrict_local` of caller joined with
-`restrict_global` of callee. This works for Sign and Interval (per-variable domains
-commute with the split) but breaks for relational domains: an octagon relating local
-`x` to global `G` cannot be split by variable name without losing the constraint.
+**Audit update (2026-07-27).** This gap is not uniform across the codebase. There
+are two distinct call/return combine sites, at different degrees of readiness.
 
-**What closing it would require:**
-
-Add `combine_env` and `combine_assign` fields to `effectful_domain_transfer` (or a
-new `interprocedural_domain_transfer` record). The `combining` locale in
-`Constraint_System_IP_Sound.thy` currently hardwires `restrict_local`/`restrict_global`;
-it would need to be parameterised over an abstract `combine` operation with axioms:
+**Already closed, in the context-sensitive DG layer.** `dg_spec`
+(`DG_Framework.thy:232`) carries combine as a record field:
 
 ```isabelle
-locale combining_domain =
-  fixes combine :: "'a abs_state => 'a abs_state => 'a abs_state"
-  assumes combine_sound:
-    "\<forall>s_caller s_callee.
-       s_caller \<in> gamma_state local_pre \<Longrightarrow>
-       s_callee \<in> gamma_state callee_exit \<Longrightarrow>
-       combine_states s_caller s_callee \<in> gamma_state (combine local_pre callee_exit)"
+dgs_combine :: "vname option => 'dl => 'dl => 'dg => 'dg \<times> 'dl"
 ```
 
-The soundness proof for `post_fixpoint_sound_at_ip` would then discharge this
-obligation rather than applying the hardwired split lemmas.
+`sound_dg_spec.combine_sound` (`DG_Soundness.thy:138-142`) is proved generically
+over `dgs_combine S` for an arbitrary `dg_spec S` - no analysis-specific
+instantiation is assumed at the locale level. The Interval context flagship's
+`cmb_ivl` already calls `dgs_combine Spoly dst ...`
+(`Example_Interval_DG_Ctx_Flagship.thy:87-88`) rather than inlining a structural
+split. Every current instance (`unit_dg_spec`, the Interval flagship, Mixed
+Sign/Interval) happens to set `dgs_combine` to the structural split
+(`unit_combine_step`, `DG_Framework.thy:270-276`, built from
+`combine_collect_abs`), but that is a choice of instance, not a limitation of the
+interface. A relational instance needs no `DG_Framework.thy` change - only a new
+`dgs_combine` value and a `combine_sound` proof for it. `gammaDG :: 'D => 'G =>
+store set` already concretizes the pair jointly, so it does not presuppose a
+per-variable-splittable domain.
 
-**Effort:** 2–3 weeks. Touches `Constraint_System.thy`,
-`Constraint_System_IP_Sound.thy`, `Analysis_Sound.thy`, all domain soundness
-interpretations, and the interprocedural combine lemmas in `CFG_Collect_IP_Adeq.thy`.
+**Still open, in the flat/context-insensitive constraint system.**
+`combine_abs_le_rhs` (`Constraint_System_Sound.thy:95-109`) calls
+`combine_collect_abs` (`Constraint_System.thy:411-413`) directly, with no record
+field or locale parameter to override it. This is the layer
+`LTR_Analysis_Sound.thy:86` builds the project's context-insensitive soundness
+spine on (`ltr_collect`, per `CLAUDE.md`'s project contract). This is the real
+remaining target of Gap 3.
+
+**What closing the flat-layer gap would require:**
+
+Add a `combine :: vname option => 'a abs_state => 'a abs_state => 'a abs_state`
+field to `domain_transfer` (or a new record), defaulting to `combine_collect_abs`
+so every existing Sign/Interval instance is unchanged. Re-state `rhs`/
+`rhs_combine_sources` (`Constraint_System.thy`) and `combine_abs_le_rhs`
+(`Constraint_System_Sound.thy`) over the abstract field, and re-prove
+`combine_states_sound`/`combine_collect_sound` as the soundness obligation a new
+`combine` instance must discharge - structurally parallel to
+`sound_dg_spec.combine_sound` above, not a new design. `LTR_Analysis_Sound.thy:86`
+and its consumers need the added combine-soundness hypothesis threaded through.
+
+Do not read the DG layer's `dgs_combine` as evidence that this half is done -
+it is a separate spine with its own hardwired call.
+
+**Effort:** medium, scoped to `Constraint_System.thy`, `Constraint_System_Sound.thy`,
+`LTR_Analysis_Sound.thy`, and domain soundness interpretations that feed the
+flat/context-insensitive spine. Substantially less than the original 2-3 week
+estimate, since the DG-layer half no longer needs this work.
+
+Related: `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md` G2/M2 - a DG-layer defect in
+the same call/return lifecycle, but in context *routing* (which slot entry and
+return read/write), not in combine. Routing and combine are separate concerns:
+G2/M2 fixes which slot is read; this gap fixes what happens with the two values
+once found. Fixing one does not fix the other.
 
 ---
 
@@ -252,8 +281,10 @@ For a post-thesis extension:
 
 1. **Gap 6 (termination, Sign case)** — cheapest, closes an honest gap, gives a
    stronger theorem for Sign.
-2. **Gap 3 (analysis-specific combine)** — medium effort, prerequisite for
-   relational domain soundness at procedure boundaries.
+2. **Gap 3 (analysis-specific combine, flat layer only)** — medium effort,
+   prerequisite for relational domain soundness at procedure boundaries in the
+   context-insensitive spine. The context-sensitive DG layer already supports
+   this through `dgs_combine`.
 3. **Gap 5 (abstract state type class)** — high effort, prerequisite for octagons;
    aligns with the Octagon track (issue #25).
 4. **Gap 4 (D.t ≠ G.t)** — high effort, low payoff for IMP2 scope; would matter
@@ -271,7 +302,8 @@ For a post-thesis extension:
 | `EFFECTFUL_TF_MIGRATION.md` | Gaps 1–2 |
 | `ARRAY_SYNTAX_EXTENSION.md` | Array-only part of the source-language boundary |
 | `NONDET_HAVOC_MIGRATION.md` | Nondeterministic source expressions needed by relational examples |
-| `RELATIONAL_DOMAIN_PLAN.md` + issue #25 | Requires Gaps 3 + 5 as prerequisites |
+| `RELATIONAL_DOMAIN_PLAN.md` + issue #25 | Requires Gaps 3 (flat layer) + 5 as prerequisites |
+| `SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md` G2/M2 | DG-layer context routing - adjacent to Gap 3, not a substitute for it |
 | `OPEN_PROBLEMS.md` P11 + `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` Slice 7 | Per-origin update transport and solver integration |
 | `M1_CALLSTRING_CONTEXT_MIGRATION.md` + `M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Computed and dynamically bounded contexts |
 | `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` Slice 8 | Multi-analysis product/sum and query bus |
