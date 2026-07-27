@@ -223,24 +223,31 @@ text \<open>
 \<close>
 
 definition dg_cmb_of ::
-  "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> unit \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec
+     \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree"
 where
-  "dg_cmb_of S ctx dst cc ex = map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (dg_spec_combine_tree S dst cc ex))"
+  "dg_cmb_of S route ctx ca cc ex =
+     (case ca of CallEdge dst _ _ \<Rightarrow>
+       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (dg_spec_combine_tree S dst cc ex)))"
 
 definition dg_extra_of ::
-  "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg \<Rightarrow> unit \<Rightarrow> pp
+  "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg
+     \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree list"
 where
-  "dg_extra_of S g ctx v =
+  "dg_extra_of S g route ctx v =
      map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow>
        map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx))
-         (dg_edge_tree (dgs_enter S fs as) cl))) (entry_call_list g v)"definition dg_gen_of ::
+         (dg_edge_tree (dgs_enter S fs as) cl))) (entry_call_list g v)"
+
+definition dg_gen_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) eqsT"
 where
   "dg_gen_of S g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (dg_cmb_of S) (dg_extra_of S g) g S bot0 s0d s0g"
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
+       (\<lambda>_ _ _ _. ()) (dg_cmb_of S) (dg_extra_of S g) g S bot0 s0d s0g"
 
 subsection \<open>Side-effect commutation for the generator\<close>
 

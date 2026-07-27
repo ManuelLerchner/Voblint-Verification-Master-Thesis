@@ -56,21 +56,22 @@ lemma mixed_si_spec_step [simp]:
   by (cases a) (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 definition mixed_si_cmb ::
-  "unit \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "(pp \<Rightarrow> unit \<Rightarrow> sign abs_state \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) strategy_tree"
 where
-  "mixed_si_cmb ctx dst cc ex =
-     map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree mixed_si_spec dst cc ex))"
+  "mixed_si_cmb route ctx ca cc ex =
+     (case ca of CallEdge dst _ _ \<Rightarrow>
+       map_gtree (\<lambda>_. ())
+         (map_ltree (\<lambda>w. (w, ctx))
+           (dg_spec_combine_tree mixed_si_spec dst cc ex)))"
 
 definition mixed_si_extra ::
-  "cfg \<Rightarrow> unit \<Rightarrow> pp
+  "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> sign abs_state \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) strategy_tree list"
 where
-  "mixed_si_extra g ctx v =
+  "mixed_si_extra g route ctx v =
      map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow>
        map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx))
          (dg_edge_tree (dgs_enter mixed_si_spec fs as) cl))) (entry_call_list g v)"
@@ -81,8 +82,8 @@ definition mixed_si_generator ::
        (sign abs_state, ivl abs_state) dg_state) eqsT"
 where
   "mixed_si_generator g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) mixed_si_cmb
-       (mixed_si_extra g) g mixed_si_spec bot0 s0d s0g"
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
+       (\<lambda>_ _ _ _. ()) mixed_si_cmb (mixed_si_extra g) g mixed_si_spec bot0 s0d s0g"
 
 definition mixed_si_D ::
   "(pp \<times> unit + unit \<Rightarrow>

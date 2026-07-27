@@ -27,6 +27,10 @@ definition entered_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow>
 definition route_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
   "route_abs d ca = entered_abs d ca ''p''"
 
+text \<open>The generic 4-argument routing hook, mirroring \<^const>\<open>route_ivl_gen\<close>.\<close>
+definition route_abs_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
+  "route_abs_gen u ctx d ca = route_abs d ca"
+
 subsection \<open>The route-consistency core\<close>
 
 text \<open>The post-enter callee state commutes with the refinement morphism: the entered
@@ -63,6 +67,10 @@ lemma route_commute:
   "route_abs (fun_of_st s) ca = route_ivl s ca"
   by (simp add: route_abs_def route_ivl_def entered_commute[symmetric])
 
+lemma route_commute_gen:
+  "route_ivl_gen u ctx s ca = route_abs_gen u ctx (fun_of_st s) ca"
+  by (simp add: route_ivl_gen_def route_abs_gen_def route_commute)
+
 subsection \<open>The abstract routed enter-seed and combine trees\<close>
 
 text \<open>The abstract mirrors of \<^const>\<open>extra_ivl\<close> / \<^const>\<open>cmb_ivl\<close>, over
@@ -70,28 +78,27 @@ text \<open>The abstract mirrors of \<^const>\<open>extra_ivl\<close> / \<^const
   \<^const>\<open>entered_abs\<close> and the abstract combine \<^const>\<open>Sabs\<close>.\<close>
 
 definition extra_abs ::
-  "cfg \<Rightarrow> ivl \<Rightarrow> pp \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree list" where
-  "extra_abs g ctx v =
+  "cfg \<Rightarrow> (pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl) \<Rightarrow> ivl \<Rightarrow> pp
+     \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree list" where
+  "extra_abs g rt ctx v =
      (if is_function_entry v
         then [QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot))]
         else [])
      @ map (\<lambda>(w, ca, k).
              QueryL (v, ctx) (\<lambda>d.
-               Side (Seed w (route_abs (locals d) ca)) (DG bot (entered_abs (locals d) ca))
+               Side (Seed w (rt v ctx (locals d) ca)) (DG bot (entered_abs (locals d) ca))
                  (Answer (DG bot bot))))
            (call_successor_list g v)"
 
 definition cmb_abs ::
-  "cfg \<Rightarrow> ivl \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "cfg \<Rightarrow> (pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl) \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree" where
-  "cmb_abs g ctx dst cc ex =
-     QueryL (cc, ctx) (\<lambda>dcl.
-       (case call_successor_list g cc of
-          (w, ca, k) # _ \<Rightarrow>
-            QueryL (ex, route_abs (locals dcl) ca) (\<lambda>dex.
-              Side Global (DG bot (fst (dgs_combine Sabs dst (locals dcl) (locals dex) bot)))
-                (Answer (DG (snd (dgs_combine Sabs dst (locals dcl) (locals dex) bot)) bot)))
-        | [] \<Rightarrow> Answer (DG bot bot)))"
+  "cmb_abs g rt ctx ca cc ex =
+     (case ca of CallEdge dst _ _ \<Rightarrow>
+       QueryL (cc, ctx) (\<lambda>dcl.
+         QueryL (ex, rt cc ctx (locals dcl) ca) (\<lambda>dex.
+           Side Global (DG bot (fst (dgs_combine Sabs dst (locals dcl) (locals dex) bot)))
+             (Answer (DG (snd (dgs_combine Sabs dst (locals dcl) (locals dex) bot)) bot)))))"
 
 subsection \<open>Per-tree transport commutation\<close>
 
@@ -162,20 +169,19 @@ text \<open>The destination-aware return combine transports.  The callee exit is
   combine outputs transport through \<open>dgs_combine_fst_commute\<close> / \<open>_snd_commute\<close>.\<close>
 
 lemma dg_tree_st_commute_cmb:
-  "dg_tree_st_commute env (cmb_ivl g ctx dst cc ex) (cmb_abs g ctx dst cc ex)"
-  unfolding cmb_ivl_def cmb_abs_def
-  by (cases "call_successor_list g cc")
+  "dg_tree_st_commute env (cmb_ivl g route_ivl_gen ctx ca cc ex) (cmb_abs g route_abs_gen ctx ca cc ex)"
+  unfolding cmb_ivl_def cmb_abs_def route_ivl_gen_def route_abs_gen_def
+  by (cases ca)
      (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
                     route_commute dgs_combine_fst_commute dgs_combine_snd_commute
-                    dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff
-              split: prod.splits)
+                    dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 text \<open>The per-node \<open>extra\<close> list transports elementwise: the optional frame-entry
   read and every routed enter publication.\<close>
 
 lemma hextra_commute:
-  "list_all2 (dg_tree_st_commute env) (extra_ivl g ctx w) (extra_abs g ctx w)"
-  unfolding extra_ivl_def extra_abs_def
+  "list_all2 (dg_tree_st_commute env) (extra_ivl g route_ivl_gen ctx w) (extra_abs g route_abs_gen ctx w)"
+  unfolding extra_ivl_def extra_abs_def route_ivl_gen_def route_abs_gen_def
   by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
                  dg_tree_st_commute_frame_read dg_tree_st_commute_enter_pub)
 
@@ -205,14 +211,33 @@ text \<open>The generic bridge \<open>part_post_solution_seed_dg_st_to_abs\<clos
 
 theorem twice_ctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
         (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
         (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st)))
      (cfg_exit twice_cfg, bot) (fun_of_dg_st \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"
-  using part_post_solution_seed_dg_st_to_abs
-          [OF ivl_Hstep dg_tree_st_commute_cmb hextra_commute
-              twice_ctx_pp_st[unfolded twice_ctx_eqs_def Spoly_def]]
-  by simp
+proof -
+  have pp': "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
+          (cmb_ivl twice_cfg) (extra_ivl twice_cfg) twice_cfg Spoly
+          bot cinit_ivl_st (restrict_global_st cinit_ivl_st))
+       (cfg_exit twice_cfg, bot) (snd twice_ctx_sol) (fst twice_ctx_sol)"
+    using twice_ctx_pp_st unfolding twice_ctx_eqs_def by simp
+  text \<open>\<open>ivl_Hstep\<close> is stated for the generic \<open>unit_dg_spec_st ivl_tf_st ?enter_st\<close>
+    shape; \<open>Spoly\<close> hides that shape behind a \<open>definition\<close>, so plain rule resolution
+    cannot unify the two without folding \<open>Spoly_def\<close> back in first.\<close>
+  have ivl_Hstep_ctx:
+    "map_prod fun_of_st fun_of_st (dg_spec_step Spoly a d g') =
+       dg_spec_step Sabs a (fun_of_st d) (fun_of_st g')" for a d g'
+    unfolding Spoly_def by (rule ivl_Hstep)
+  show ?thesis
+    by (rule part_post_solution_seed_dg_st_to_abs
+          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
+             and route_st = route_ivl_gen and route_abs = route_abs_gen
+             and cmb_st = "cmb_ivl twice_cfg" and cmb_abs = "cmb_abs twice_cfg"
+             and extra_st = "extra_ivl twice_cfg" and extra_abs = "extra_abs twice_cfg"
+             and g = twice_cfg and S_st = Spoly and S_abs = Sabs,
+           OF ivl_Hstep_ctx route_commute_gen dg_tree_st_commute_cmb hextra_commute pp'])
+qed
 
 
 end

@@ -61,7 +61,7 @@ abbreviation sigma_abs :: "pp \<times> ivl + gk \<Rightarrow> (ivl abs_state, iv
   "sigma_abs \<equiv> fun_of_dg_st \<circ> snd twice_ctx_sol"
 
 abbreviation gen_abs :: "(pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
-  "gen_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+  "gen_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
        (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
        (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st))"
 
@@ -161,7 +161,7 @@ text \<open>The routed interval solution is a \<^locale>\<open>dg_ctx_activation
   and the combine transport are then read off as \<open>twice_dg.dg_ctx_act_edge\<close> /
   \<open>twice_dg.dg_ctx_act_comb_covered\<close> rather than re-proved by hand.\<close>
 
-interpretation twice_dg: dg_ctx_activation Sabs twice_cfg Global
+interpretation twice_dg: dg_ctx_activation Sabs twice_cfg Global route_abs_gen
     "cmb_abs twice_cfg" "extra_abs twice_cfg"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg
@@ -169,7 +169,7 @@ proof
   show "finite (intra twice_cfg)" by (rule twice_finE)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
              (cmb_abs twice_cfg) (extra_abs twice_cfg) twice_cfg Sabs
              (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
              (fun_of_st (restrict_global_st cinit_ivl_st)))
