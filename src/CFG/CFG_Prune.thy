@@ -165,87 +165,77 @@ lemma cfg_exit_compile_prog:
 subsection \<open>Compiled entry reaches its exit or its procedure result\<close>
 
 text \<open>Along the derived successor relation, a compiled command's entry reaches either
-  its fall-through exit or (via an early \<open>Return\<close>) the enclosing procedure's
+  its continuation or (via an early \<open>Return\<close>) the enclosing procedure's
   \<open>FunctionResult\<close>.  A call site reaches its continuation through the COMB_CALLER
   dependency, so no callee fragment is needed.\<close>
 lemma compile_reaches:
   fixes g :: cfg
-  shows "compile \<Pi> p c n = (n', en, ex, E, K)
+  shows "compile \<Pi> p c k n = (n', en, E, K)
      \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g
-     \<Longrightarrow> cfg_reaches g en ex \<or> cfg_reaches g en (FunctionResult p)"
-proof (induction c arbitrary: n n' en ex E K)
+     \<Longrightarrow> cfg_reaches g en k \<or> cfg_reaches g en (FunctionResult p)"
+proof (induction c arbitrary: k n n' en E K)
   case SKIP
-  then have "en = ex" by (auto split: prod.splits)
-  then show ?case by (simp add: cfg_reaches_refl)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
+  then show ?case ..
 next
   case (Assign x a)
-  then have en: "en = Statement n" and ex: "ex = Statement (Suc n)"
-    and mem: "(Statement n, EA_Assign x a, Statement (Suc n)) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Assign x a, k) \<in> intra g"
     by (auto split: prod.splits)
-  from mem have "cfg_reaches g en ex" unfolding en ex by (rule cfg_reaches_intra)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
 next
   case (Seq c1 c2)
-  obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-      c1': "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2': "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
-    and res: "en = en1" "ex = ex2"
-             "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2"
-             "K = K1 \<union> K2"
-    using Seq.prems(1) by (auto split: prod.splits)
+  obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2': "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    and res: "en = en1" "E = E1 \<union> E2" "K = K1 \<union> K2"
+    using Seq.prems(1) by (auto simp: Let_def split: prod.splits)
   have E1g: "E1 \<subseteq> intra g" and E2g: "E2 \<subseteq> intra g" using res Seq.prems(2) by auto
   have K1g: "K1 \<subseteq> calls g" and K2g: "K2 \<subseteq> calls g" using res Seq.prems(3) by auto
-  have step12: "cfg_reaches g ex1 en2"
-  proof (cases "ex1 = en2")
-    case True then show ?thesis by (simp add: cfg_reaches_refl)
-  next
-    case False
-    then have "(ex1, EA_Nop, en2) \<in> intra g" using res Seq.prems(2) by auto
-    then show ?thesis by (rule cfg_reaches_intra)
-  qed
-  consider (r1) "cfg_reaches g en1 ex1" | (res1) "cfg_reaches g en1 (FunctionResult p)"
+  have en2: "en2 = Statement (n + csize c1)" using compile_entry[OF c2'] .
+  consider (r1) "cfg_reaches g en1 (Statement (n + csize c1))"
+    | (res1) "cfg_reaches g en1 (FunctionResult p)"
     using Seq.IH(1)[OF c1' E1g K1g] by blast
   then show ?case
   proof cases
     case res1 then show ?thesis using res by simp
   next
     case r1
-    consider (r2) "cfg_reaches g en2 ex2" | (res2) "cfg_reaches g en2 (FunctionResult p)"
+    consider (r2) "cfg_reaches g en2 k" | (res2) "cfg_reaches g en2 (FunctionResult p)"
       using Seq.IH(2)[OF c2' E2g K2g] by blast
     then show ?thesis
     proof cases
       case r2
-      have "cfg_reaches g en1 ex2" by (meson r1 step12 r2 cfg_reaches_trans)
+      have "cfg_reaches g en1 k" using r1 r2 en2 by (meson cfg_reaches_trans)
       then show ?thesis using res by simp
     next
       case res2
-      have "cfg_reaches g en1 (FunctionResult p)" by (meson r1 step12 res2 cfg_reaches_trans)
+      have "cfg_reaches g en1 (FunctionResult p)" using r1 res2 en2
+        by (meson cfg_reaches_trans)
       then show ?thesis using res by simp
     qed
   qed
 next
   case (If b c1 c2)
-  obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-      c1': "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2': "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
-    and res: "en = Statement n" "ex = Statement n2"
+  obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1': "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2': "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    and res: "en = Statement n"
              "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-                    \<union> E1 \<union> E2
-                    \<union> {(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}"
+                    \<union> E1 \<union> E2"
              "K = K1 \<union> K2"
     using If.prems(1) by (auto split: prod.splits)
   have E1g: "E1 \<subseteq> intra g" and K1g: "K1 \<subseteq> calls g" using res If.prems(2,3) by auto
   have e_en1: "cfg_reaches g (Statement n) en1"
     using res If.prems(2) by (auto intro: cfg_reaches_intra)
-  have ex1_ex: "cfg_reaches g ex1 (Statement n2)"
-    using res If.prems(2) by (auto intro: cfg_reaches_intra)
-  consider (r1) "cfg_reaches g en1 ex1" | (res1) "cfg_reaches g en1 (FunctionResult p)"
+  consider (r1) "cfg_reaches g en1 k" | (res1) "cfg_reaches g en1 (FunctionResult p)"
     using If.IH(1)[OF c1' E1g K1g] by blast
   then show ?case
   proof cases
     case r1
-    have "cfg_reaches g (Statement n) (Statement n2)"
-      by (meson e_en1 r1 ex1_ex cfg_reaches_trans)
+    have "cfg_reaches g (Statement n) k" by (meson e_en1 r1 cfg_reaches_trans)
     then show ?thesis using res by simp
   next
     case res1
@@ -255,22 +245,19 @@ next
   qed
 next
   case (While b c)
-  obtain n1 en1 ex1 E1 K1 where
-      res: "en = Statement n" "ex = Statement n1"
-           "(Statement n, EA_AssumeNot b, Statement n1) \<in> E"
-    using While.prems(1) by (auto split: prod.splits)
-  have "(Statement n, EA_AssumeNot b, Statement n1) \<in> intra g"
+  have res: "en = Statement n" "(Statement n, EA_AssumeNot b, k) \<in> E"
+    using While.prems(1) by (auto split: prod.splits)  have "(Statement n, EA_AssumeNot b, k) \<in> intra g"
     using res While.prems(2) by blast
-  then have "cfg_reaches g en ex" unfolding res(1,2) by (rule cfg_reaches_intra)
+  then have "cfg_reaches g en k" unfolding res(1) by (rule cfg_reaches_intra)
   then show ?case ..
 next
   case (Call dst q actuals)
-  have en: "en = Statement n" and ex: "ex = Statement (Suc n)"
+  have en: "en = Statement n"
     and mem: "(Statement n,
                 CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
-                FunctionEntry q, Statement (Suc n)) \<in> calls g"
+                FunctionEntry q, k) \<in> calls g"
     using Call.prems by (auto split: prod.splits)
-  from mem have "cfg_reaches g en ex" unfolding en ex by (rule cfg_reaches_comb_caller)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_comb_caller)
   then show ?case ..
 next
   case (Return e)
@@ -281,12 +268,16 @@ next
   then show ?case ..
 next
   case Restore
-  then have "en = ex" by (auto split: prod.splits)
-  then show ?case by (simp add: cfg_reaches_refl)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
+  then show ?case ..
 next
   case Unwind
-  then have "en = ex" by (auto split: prod.splits)
-  then show ?case by (simp add: cfg_reaches_refl)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
+  then show ?case ..
 qed
 
 lemma compile_proc_reaches_result:
@@ -295,23 +286,25 @@ lemma compile_proc_reaches_result:
       and "E \<subseteq> intra g" "K \<subseteq> calls g"
   shows "cfg_reaches g (FunctionEntry p) (FunctionResult p)"
 proof -
-  obtain n0 ben bex Eb Kb where
-      body: "compile \<Pi> p (body decl) n = (n0, ben, bex, Eb, Kb)"
+  let ?r = "n + csize (body decl)"
+  obtain n0 ben Eb Kb where
+      body: "compile \<Pi> p (body decl) (Statement ?r) n = (n0, ben, Eb, Kb)"
     and E_eq: "E = insert (FunctionEntry p, EA_Nop, ben)
-                     (insert (bex, EA_Ret None p, FunctionResult p) Eb)"
+                     (insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb)"
     and K_eq: "K = Kb"
-    using assms(1) unfolding compile_proc_def by (auto split: prod.splits)
+    using assms(1) unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
   have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by auto
   have Kbg: "Kb \<subseteq> calls g" using K_eq assms(3) by simp
   have entry_ben: "cfg_reaches g (FunctionEntry p) ben"
     using E_eq assms(2) by (auto intro: cfg_reaches_intra)
-  have bex_res: "cfg_reaches g bex (FunctionResult p)"
+  have epi_res: "cfg_reaches g (Statement ?r) (FunctionResult p)"
     using E_eq assms(2) by (auto intro: cfg_reaches_intra)
-  consider (r) "cfg_reaches g ben bex" | (res) "cfg_reaches g ben (FunctionResult p)"
+  consider (r) "cfg_reaches g ben (Statement ?r)"
+    | (res) "cfg_reaches g ben (FunctionResult p)"
     using compile_reaches[OF body Ebg Kbg] by blast
   then show ?thesis
   proof cases
-    case r show ?thesis by (meson entry_ben r bex_res cfg_reaches_trans)
+    case r show ?thesis by (meson entry_ben r epi_res cfg_reaches_trans)
   next
     case res show ?thesis by (meson entry_ben res cfg_reaches_trans)
   qed

@@ -17,157 +17,154 @@ text \<open>
 definition pfn :: "pname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> cfg_node set" where
   "pfn r m m' = insert (FunctionEntry r) (insert (FunctionResult r) (Statement ` {m..<m'}))"
 
-lemma compile_entry_is_start:
-  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> en = Statement n"
-  by (induction c arbitrary: n n' en ex E K rule: com.induct)
-     (auto split: prod.splits if_splits)
+lemmas compile_entry_is_start = compile_entry
 
 subsection \<open>Edge node shapes\<close>
 
-text \<open>A body intra edge sources at a \<^term>\<open>Statement\<close> and targets a \<^term>\<open>Statement\<close> or the own
-  \<^term>\<open>FunctionResult p\<close>.\<close>
-lemma compile_E_shape:
-  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> (u, a, v) \<in> E
-   \<Longrightarrow> (\<exists>k. u = Statement k) \<and> (v = FunctionResult p \<or> (\<exists>k. v = Statement k))"
-proof (induction c arbitrary: n n' en ex E K)
+text \<open>The command-level shapes come from the compiler theory: an intra edge sources at a
+  \<^term>\<open>Statement\<close> and targets a \<^term>\<open>Statement\<close>, the own \<^term>\<open>FunctionResult p\<close>, or the
+  fragment's continuation (\<open>compile_E_shape\<close>).  The continuation alternative is the only
+  addition of continuation passing, and it disappears at procedure level, where the
+  continuation is the epilogue \<^term>\<open>Statement\<close> node inside the procedure's own range.\<close>
+
+text \<open>A compiled body reaches a result node only through a return action for the same
+  procedure --- provided the fragment's continuation is not itself a result node, which holds
+  for every procedure body (its continuation is the epilogue).\<close>
+lemma compile_result_target:
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, a, FunctionResult q) \<in> E
+   \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> q = p \<and> (\<exists>e. a = EA_Ret e p)"
+proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
-  then obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
-    and E: "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2"
-    by (auto split: prod.splits)
-  from Seq.prems(2) E consider "(u,a,v) \<in> E1" | "(u,a,v) \<in> E2"
-    | "ex1 = u \<and> en2 = v \<and> ex1 \<noteq> en2" by (auto split: if_splits)
+  from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    and E: "E = E1 \<union> E2"
+    by (rule compile_SeqE)
+  from Seq.prems(2) E consider "(u, a, FunctionResult q) \<in> E1"
+    | "(u, a, FunctionResult q) \<in> E2" by auto
   then show ?case
   proof cases
-    case 1 then show ?thesis using Seq.IH(1)[OF c1] by blast
+    case 1 then show ?thesis using Seq.IH(1)[OF c1] by simp
   next
-    case 2 then show ?thesis using Seq.IH(2)[OF c2] by blast
-  next
-    case 3
-    then show ?thesis
-      using compile_entry_exit_stmt[OF c1] compile_entry_exit_stmt[OF c2] by auto
+    case 2 then show ?thesis using Seq.IH(2)[OF c2] Seq.prems(3) by simp
   qed
 next
   case (If b c1 c2)
-  then obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-                \<union> E1 \<union> E2 \<union> {(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}"
-    by (auto split: prod.splits)
-  from If.prems(2) E consider "(u,a,v) \<in> E1" | "(u,a,v) \<in> E2"
-    | "(u,a,v) \<in> {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2),
-                   (ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}" by auto
+  from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and c2: "compile \<Pi> p c2 k (Suc n + csize c1)
+               = (n2, Statement (Suc n + csize c1), E2, K2)"
+    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    by (rule compile_IfE)
+  from If.prems(2) E consider "(u, a, FunctionResult q) \<in> E1"
+    | "(u, a, FunctionResult q) \<in> E2" by auto
   then show ?case
   proof cases
-    case 1 then show ?thesis using If.IH(1)[OF c1] by blast
+    case 1 then show ?thesis using If.IH(1)[OF c1] If.prems(3) by simp
   next
-    case 2 then show ?thesis using If.IH(2)[OF c2] by blast
-  next
-    case 3
-    then show ?thesis
-      using compile_entry_exit_stmt[OF c1] compile_entry_exit_stmt[OF c2] by auto
+    case 2 then show ?thesis using If.IH(2)[OF c2] If.prems(3) by simp
   qed
 next
   case (While b c)
-  then obtain n1 en1 ex1 E1 K1 where
-    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)"
-    and E: "E = {(Statement n, EA_Assume b, en1),
-                 (Statement n, EA_AssumeNot b, Statement n1),
-                 (ex1, EA_Nop, Statement n)} \<union> E1"
-    by (auto split: prod.splits)
-  from While.prems(2) E consider "(u,a,v) \<in> E1"
-    | "(u,a,v) \<in> {(Statement n, EA_Assume b, en1),
-                  (Statement n, EA_AssumeNot b, Statement n1),
-                  (ex1, EA_Nop, Statement n)}" by auto
-  then show ?case
-  proof cases
-    case 1 then show ?thesis using While.IH[OF c1] by blast
-  next
-    case 2 then show ?thesis using compile_entry_exit_stmt[OF c1] by auto
-  qed
-qed (auto split: if_splits)
+  from While.prems(1) obtain n1 E1 K1 where
+    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    by (rule compile_WhileE)
+  from While.prems(2,3) E have "(u, a, FunctionResult q) \<in> E1" by auto
+  then show ?case using While.IH[OF c1] by simp
+qed (auto split: option.splits)
 
-text \<open>A compiled body reaches a result node only through a return action for the same procedure.\<close>
-lemma compile_result_target:
-  assumes comp: "compile \<Pi> p c n = (n', en, ex, E, K)"
-    and edge: "(u, a, FunctionResult q) \<in> E"
-  shows "q = p \<and> (\<exists>e. a = EA_Ret e p)"
-  using comp edge
-  by (induction c arbitrary: n n' en ex E K)
-     (auto split: prod.splits if_splits dest: compile_entry_is_start)
-
-text \<open>A call edge sources at a \<^term>\<open>Statement\<close>, targets a \<^term>\<open>FunctionEntry\<close>, and continues at a
-  \<^term>\<open>Statement\<close>.\<close>
+text \<open>A call edge sources at a \<^term>\<open>Statement\<close>, targets a \<^term>\<open>FunctionEntry\<close>, and continues
+  at a \<^term>\<open>Statement\<close> or at the fragment's continuation.\<close>
 lemma compile_K_shape:
-  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> (u, ce, tgt, af) \<in> K
-   \<Longrightarrow> (\<exists>k. u = Statement k) \<and> (\<exists>q. tgt = FunctionEntry q) \<and> (\<exists>k. af = Statement k)"
-proof (induction c arbitrary: n n' en ex E K)
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ce, tgt, af) \<in> K
+   \<Longrightarrow> (\<exists>j. u = Statement j) \<and> (\<exists>q. tgt = FunctionEntry q)
+       \<and> (af = k \<or> (\<exists>j. af = Statement j))"
+proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
-  then obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)" and K: "K = K1 \<union> K2"
-    by (auto split: prod.splits)
+  from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    and K: "K = K1 \<union> K2"
+    by (rule compile_SeqE)
   from Seq.prems(2) K show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] by auto
 next
   case (If b c1 c2)
-  then obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)" and K: "K = K1 \<union> K2"
-    by (auto split: prod.splits)
+  from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and c2: "compile \<Pi> p c2 k (Suc n + csize c1)
+               = (n2, Statement (Suc n + csize c1), E2, K2)"
+    and K: "K = K1 \<union> K2"
+    by (rule compile_IfE)
   from If.prems(2) K show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] by auto
 next
   case (While b c)
-  then obtain n1 en1 ex1 E1 K1 where
-    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)" and K: "K = K1"
-    by (auto split: prod.splits)
+  from While.prems(1) obtain n1 E1 K1 where
+    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and K: "K = K1"
+    by (rule compile_WhileE)
   from While.prems(2) K show ?case using While.IH[OF c1] by auto
 qed (auto split: if_splits)
 
 text \<open>Source well-formedness ensures that every compiled call enters a declared procedure.\<close>
 lemma compile_call_target_declared:
-  assumes comp: "compile \<Pi> p c n = (n', en, ex, E, K)"
+  assumes comp: "compile \<Pi> p c k n = (n', en, E, K)"
     and wf: "wf_source_com \<Pi> c"
     and edge: "(u, ce, FunctionEntry q, af) \<in> K"
   shows "\<Pi> q \<noteq> None"
   using comp wf edge
-  by (induction c arbitrary: n n' en ex E K)
-     (auto split: prod.splits option.splits)
+  by (induction c arbitrary: k n n' en E K)
+     (auto simp: Let_def split: prod.splits option.splits)
 
 subsection \<open>Edges keep endpoints in one fragment\<close>
 
+text \<open>Command level: both endpoints lie in the fragment's own node set or are its
+  continuation.  At procedure level (below) the continuation is the epilogue node, which is
+  inside the fragment's range, so the extra alternative collapses and the procedure-level
+  statements are exactly the fragment-locality ones the activation proofs use.\<close>
+
 lemma compile_intra_pfn:
-  assumes cp: "compile \<Pi> p c n = (n', en, ex, E, K)" and e: "(u, a, v) \<in> E"
-  shows "u \<in> pfn p n n' \<and> v \<in> pfn p n n'"
+  assumes cp: "compile \<Pi> p c k n = (n', en, E, K)" and e: "(u, a, v) \<in> E"
+  shows "u \<in> insert k (pfn p n n') \<and> v \<in> insert k (pfn p n n')"
 proof -
-  have rng: "frag_stmts E K \<subseteq> {n..<n'}" using compile_frag_stmts_range[OF cp] .
+  have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
   from compile_E_shape[OF cp e] obtain ku where u: "u = Statement ku"
-    and vshape: "v = FunctionResult p \<or> (\<exists>kv. v = Statement kv)" by blast
+    and vshape: "v = k \<or> v = FunctionResult p \<or> (\<exists>kv. v = Statement kv)" by blast
   have "ku \<in> frag_stmts E K" using e u unfolding frag_stmts_def by blast
-  hence uin: "u \<in> pfn p n n'" using rng u by (auto simp: pfn_def)
-  have vin: "v \<in> pfn p n n'"
-  proof (cases "v = FunctionResult p")
-    case True then show ?thesis by (simp add: pfn_def)
+  hence uin: "u \<in> insert k (pfn p n n')" using rng u by (auto simp: pfn_def)
+  have vin: "v \<in> insert k (pfn p n n')"
+  proof (cases "v = k \<or> v = FunctionResult p")
+    case True then show ?thesis by (auto simp: pfn_def)
   next
     case False
     then obtain kv where v: "v = Statement kv" using vshape by blast
     have "kv \<in> frag_stmts E K" using e v unfolding frag_stmts_def by blast
-    then show ?thesis using rng v by (auto simp: pfn_def)
+    then show ?thesis using rng v False by (auto simp: pfn_def)
   qed
   from uin vin show ?thesis ..
 qed
 
 lemma compile_calls_pfn:
-  assumes cp: "compile \<Pi> p c n = (n', en, ex, E, K)" and e: "(u, ce, tgt, af) \<in> K"
-  shows "u \<in> pfn p n n' \<and> af \<in> pfn p n n'"
+  assumes cp: "compile \<Pi> p c k n = (n', en, E, K)" and e: "(u, ce, tgt, af) \<in> K"
+  shows "u \<in> insert k (pfn p n n') \<and> af \<in> insert k (pfn p n n')"
 proof -
-  have rng: "frag_stmts E K \<subseteq> {n..<n'}" using compile_frag_stmts_range[OF cp] .
-  from compile_K_shape[OF cp e] obtain ku kaf where u: "u = Statement ku"
-    and af: "af = Statement kaf" by blast
+  have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
+  from compile_K_shape[OF cp e] obtain ku where u: "u = Statement ku"
+    and afshape: "af = k \<or> (\<exists>kaf. af = Statement kaf)" by blast
   have "ku \<in> frag_stmts E K" using e u unfolding frag_stmts_def by blast
-  moreover have "kaf \<in> frag_stmts E K" using e af unfolding frag_stmts_def by blast
-  ultimately show ?thesis using rng u af by (auto simp: pfn_def)
+  hence uin: "u \<in> insert k (pfn p n n')" using rng u by (auto simp: pfn_def)
+  have "af \<in> insert k (pfn p n n')"
+  proof (cases "af = k")
+    case True then show ?thesis by simp
+  next
+    case False
+    then obtain kaf where af: "af = Statement kaf" using afshape by blast
+    have "kaf \<in> frag_stmts E K" using e af unfolding frag_stmts_def by blast
+    then show ?thesis using rng af False by (auto simp: pfn_def)
+  qed
+  with uin show ?thesis ..
 qed
 
 text \<open>The procedure wrapper keeps its wiring edges (entry \<^term>\<open>EA_Nop\<close>, fall-through
@@ -177,37 +174,46 @@ lemma compile_proc_entry_target:
     and e: "(FunctionEntry p, EA_Nop, en) \<in> E"
   shows "en = Statement n"
 proof -
-  obtain ben bex Eb where cb: "compile \<Pi> p (body decl) n = (n', ben, bex, Eb, K)"
-    and E: "E = insert (FunctionEntry p, EA_Nop, ben)
-                  (insert (bex, EA_Ret None p, FunctionResult p) Eb)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
+  from cp obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+    by (rule compile_procE)
   have body: "\<And>a v. (FunctionEntry p, a, v) \<notin> Eb"
     using compile_E_shape[OF cb] by blast
-  have exit: "\<exists>k. bex = Statement k" using compile_entry_exit_stmt[OF cb] by auto
-  have "en = ben" using e E body exit by auto
-  then show ?thesis using compile_entry_is_start[OF cb] by simp
+  from e E body show ?thesis by auto
 qed
 
 lemma compile_proc_intra_pfn:
   assumes cp: "compile_proc \<Pi> r decl n = (n', E, K)" and e: "(u, a, v) \<in> E"
   shows "u \<in> pfn r n n' \<and> v \<in> pfn r n n'"
 proof -
-  obtain en ex Eb where cb: "compile \<Pi> r (body decl) n = (n', en, ex, Eb, K)"
-    and E: "E = insert (FunctionEntry r, EA_Nop, en)
-                  (insert (ex, EA_Ret None r, FunctionResult r) Eb)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have wiring: "en \<in> pfn r n n' \<and> ex \<in> pfn r n n'"
-    using compile_entry_exit_stmt[OF cb] by (auto simp: pfn_def)
-  consider "(u, a, v) = (FunctionEntry r, EA_Nop, en)"
-    | "(u, a, v) = (ex, EA_Ret None r, FunctionResult r)" | "(u, a, v) \<in> Eb"
+  from cp obtain Eb where
+    cb: "compile \<Pi> r (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry r, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb)"
+    and n': "n' = Suc (n + csize (body decl))"
+    by (rule compile_procE)
+  have kin: "Statement (n + csize (body decl)) \<in> pfn r n n'"
+    using n' by (auto simp: pfn_def)
+  have entryin: "Statement n \<in> pfn r n n'"
+    using n' csize_pos[of "body decl"] by (auto simp: pfn_def)
+  have inner: "insert (Statement (n + csize (body decl)))
+                 (pfn r n (n + csize (body decl))) \<subseteq> pfn r n n'"
+    using n' by (auto simp: pfn_def)
+  consider "(u, a, v) = (FunctionEntry r, EA_Nop, Statement n)"
+    | "(u, a, v) = (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r)"
+    | "(u, a, v) \<in> Eb"
     using e E by auto
   then show ?thesis
   proof cases
-    case 1 then show ?thesis using wiring by (auto simp: pfn_def)
+    case 1 then show ?thesis using entryin by (auto simp: pfn_def)
   next
-    case 2 then show ?thesis using wiring by (auto simp: pfn_def)
+    case 2 then show ?thesis using kin by (auto simp: pfn_def)
   next
-    case 3 then show ?thesis using compile_intra_pfn[OF cb] by blast
+    case 3 then show ?thesis using compile_intra_pfn[OF cb] inner by blast
   qed
 qed
 
@@ -217,26 +223,43 @@ lemma compile_proc_result_target:
   assumes comp: "compile_proc \<Pi> p decl n = (n', E, K)"
     and edge: "(u, a, FunctionResult q) \<in> E"
   shows "q = p \<and> (\<exists>e. a = EA_Ret e p)"
-  using comp edge
-  unfolding compile_proc_def
-  by (auto split: prod.splits dest: compile_result_target compile_entry_is_start)
+proof -
+  from comp obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+    by (rule compile_procE)
+  show ?thesis using edge E compile_result_target[OF cb] by auto
+qed
 
 lemma compile_proc_call_target_declared:
   assumes comp: "compile_proc \<Pi> p decl n = (n', E, K)"
     and wf: "wf_proc_decl \<Pi> decl"
     and edge: "(u, ce, FunctionEntry q, af) \<in> K"
   shows "\<Pi> q \<noteq> None"
-  using comp wf edge
-  unfolding compile_proc_def wf_proc_decl_def
-  by (auto split: prod.splits dest: compile_call_target_declared)
+proof -
+  from comp obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    by (rule compile_procE)
+  show ?thesis
+    using compile_call_target_declared[OF cb _ edge] wf by (simp add: wf_proc_decl_def)
+qed
 
 lemma compile_proc_calls_pfn:
   assumes cp: "compile_proc \<Pi> r decl n = (n', E, K)" and e: "(u, ce, tgt, af) \<in> K"
   shows "u \<in> pfn r n n' \<and> af \<in> pfn r n n'"
 proof -
-  obtain en ex Eb where cb: "compile \<Pi> r (body decl) n = (n', en, ex, Eb, K)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  show ?thesis using compile_calls_pfn[OF cb e] .
+  from cp obtain Eb where
+    cb: "compile \<Pi> r (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and n': "n' = Suc (n + csize (body decl))"
+    by (rule compile_procE)
+  have inner: "insert (Statement (n + csize (body decl)))
+                 (pfn r n (n + csize (body decl))) \<subseteq> pfn r n n'"
+    using n' by (auto simp: pfn_def)
+  show ?thesis using compile_calls_pfn[OF cb e] inner by blast
 qed
 
 lemma compile_proc_counter_mono: "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> n \<le> n'"
@@ -300,13 +323,14 @@ lemma compile_proc_entry_mem:
   assumes cp: "compile_proc \<Pi> q decl n = (n', E, K)" and e: "(FunctionEntry r, a, v) \<in> E"
   shows "r = q"
 proof -
-  obtain en ex Eb where cb: "compile \<Pi> q (body decl) n = (n', en, ex, Eb, K)"
-    and E: "E = insert (FunctionEntry q, EA_Nop, en)
-                  (insert (ex, EA_Ret None q, FunctionResult q) Eb)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have "\<exists>k. ex = Statement k" using compile_entry_exit_stmt[OF cb] by auto
-  moreover have "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
-  ultimately show ?thesis using e E by auto
+  from cp obtain Eb where
+    cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb)"
+    by (rule compile_procE)
+  have "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
+  then show ?thesis using e E by auto
 qed
 
 lemma compile_proc_entry_unique:
@@ -314,14 +338,15 @@ lemma compile_proc_entry_unique:
     and e1: "(FunctionEntry r, a1, v1) \<in> E" and e2: "(FunctionEntry r, a2, v2) \<in> E"
   shows "v1 = v2"
 proof -
-  obtain en ex Eb where cb: "compile \<Pi> q (body decl) n = (n', en, ex, Eb, K)"
-    and E: "E = insert (FunctionEntry q, EA_Nop, en)
-                  (insert (ex, EA_Ret None q, FunctionResult q) Eb)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have exs: "\<exists>k. ex = Statement k" using compile_entry_exit_stmt[OF cb] by auto
+  from cp obtain Eb where
+    cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb)"
+    by (rule compile_procE)
   have nb: "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
-  from e1 E exs nb have "v1 = en" by auto
-  moreover from e2 E exs nb have "v2 = en" by auto
+  from e1 E nb have "v1 = Statement n" by auto
+  moreover from e2 E nb have "v2 = Statement n" by auto
   ultimately show ?thesis by simp
 qed
 
@@ -459,14 +484,15 @@ lemma compile_proc_no_result_source:
     and e: "(FunctionResult r, a, v) \<in> E"
   shows False
 proof -
-  obtain en ex Eb where cb: "compile \<Pi> p (body decl) n = (n', en, ex, Eb, K)"
-    and E: "E = insert (FunctionEntry p, EA_Nop, en)
-                  (insert (ex, EA_Ret None p, FunctionResult p) Eb)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have ex_stmt: "\<exists>k. ex = Statement k" using compile_entry_exit_stmt[OF cb] by auto
+  from cp obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+    by (rule compile_procE)
   have body: "\<And>b w. (FunctionResult r, b, w) \<notin> Eb"
     using compile_E_shape[OF cb] by blast
-  show False using e E ex_stmt body by auto
+  show False using e E body by auto
 qed
 
 lemma compile_procs_no_result_source:
@@ -555,8 +581,10 @@ lemma compile_proc_calls_source_stmt:
     and e: "(u, ce, tgt, af) \<in> K"
   shows "\<exists>k. u = Statement k"
 proof -
-  obtain en ex Eb where cb: "compile \<Pi> p (body decl) n = (n', en, ex, Eb, K)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
+  from cp obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    by (rule compile_procE)
   show ?thesis using compile_K_shape[OF cb e] by blast
 qed
 

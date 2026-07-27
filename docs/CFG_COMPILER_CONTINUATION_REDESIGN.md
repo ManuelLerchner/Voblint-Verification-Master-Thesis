@@ -1678,26 +1678,74 @@ Confirmations:
   This is what Phase 6's lazy epilogue removes, and it confirms that no
   compiler-invented dead node survives for any falling-through procedure.
 
-### Blocked, and the one-line fix
+### Editability, resolved
 
-Phases 2, 4, and the `IMP2_Proc_to_CFG.thy` half of Phase 3 all need edits to
-theories that the PIDE MCP server treats as read-only:
+Phases 2, 4, and the `IMP2_Proc_to_CFG.thy` half of Phase 3 needed edits to
+theories the PIDE MCP server treated as read-only (`Cannot edit base session
+theory Voblint_CFG.IMP2_Proc_to_CFG`), because `.mcp.json` launched the server
+with `-l Voblint_Formalization` and every repo theory sat inside the prebuilt
+base heap.
 
-```
-Cannot edit base session theory Voblint_CFG.IMP2_Proc_to_CFG
-```
+Fix: base logic changed to `Voblint_IMP2`, which keeps the `Voblint_IMP2` heap
+warm while making `src/CFG`, `src/Analysis`, `src/Formalization` and
+`src/Examples` load dynamically. After the server restart the compiler theory is
+editable and Phase 4 proceeds.
 
-Cause: `.mcp.json` launched the server with `-l Voblint_Formalization`, so every
-repo theory sits inside the prebuilt base heap. Only files *outside* that heap
-are editable — which is why the two theories above could be created as new files
-and checked normally.
+### Phase 4, in progress
 
-Fix applied to `.mcp.json`: base logic changed from `Voblint_Formalization` to
-`Voblint_IMP2`. That leaves the `Voblint_IMP2` heap warm (nothing in Phases 2–4
-touches `src/IMP2`) while making `src/CFG`, `src/Analysis`, `src/Formalization`
-and `src/Examples` load dynamically and therefore editably. All five session
-heaps are present, so the rebase costs nothing to build.
+The continuation-passing `compile` / `compile_proc` are landed in
+`IMP2_Proc_to_CFG.thy` together with the arithmetic and shape lemmas the
+dependent files consume. Repair order follows §8; each file below is I/Q-clean
+(zero diagnostics), which is *ready for batch*, not proved — the batch build is
+the gate and has not run yet.
 
-**The change needs an MCP server restart to take effect** — a config edit alone
-does not rebase a running server, and a session cannot restart its own MCP
-connection.
+| File | State |
+| --- | --- |
+| `IMP2_Proc_to_CFG.thy` | clean: `csize`, `compile_next_id`, `compile_entry`, `kstmt`, `compile_frag_stmts_range`, `compile_E_shape`, `compile_SeqE`/`compile_IfE`/`compile_WhileE`/`compile_procE`, `compile_prog_wf` |
+| `CFG_Prune.thy` | clean: `compile_reaches` now "entry reaches the continuation or the result" |
+| `Compile_Invariants.thy` | clean: `inv11_return_exit_unreached` replaced by `inv11_return_ignores_continuation` |
+| `Control_Residual.thy` | clean: `control_at` carries the continuation; `compile_control_at_SKIP_exit_path` lost its join hops |
+| `Control_Simulation.thy` | in progress |
+| `Compile_Locality.thy` | in progress |
+| `Located_LTR.thy`, `Source_Activation_Sound.thy`, examples | not started |
+
+Two decisions taken during the repair that the plan above did not anticipate:
+
+**`csize` moved into `IMP2_Proc_to_CFG.thy` and `Compile_Size.thy` was deleted**
+(with its `ROOT` entry), exactly as §"Landed" predicted would be needed once the
+compiler theory became editable: the `Seq` clause has to *call* `csize`.
+
+**`Restore` and `Unwind` emit a nop to their continuation, not nothing.** §6
+proposed "allocate one node, emit no edges" as the faithful port of the current
+stubs. That reading is wrong: the old clauses returned *entry = exit*, i.e. the
+fragment was transparent and control flowed through it. Under continuation
+passing, transparency is `Statement n --EA_Nop--> k`; emitting nothing makes the
+node a dead end instead. The difference is observable in `compile_reaches`, and
+through it in `compile_prog_entry_cfg_reaches_exit`, which is consumed
+unconditionally by the analysis layer (`LTR_TD_Side_Eff_Exit`,
+`Sign_Exec_Sound`). Emitting nothing would force a `source_com` hypothesis onto
+that theorem and ripple into the analysis — the outcome the plan exists to
+avoid. Both clauses remain unreachable for source programs, so this is a choice
+between two vacuous translations; the transparent one is the one that keeps the
+downstream statements intact.
+
+Decisions unchanged: the four-place `calls` relation, `edge_action`, and every
+analysis framework definition are untouched.
+
+### New shapes worth knowing
+
+- `compiled_at \<Pi> g p c0 k n` and `control_at \<Pi> p c0 k n r v` both carry
+  the continuation, and `procs_compiled` existentially quantifies it. At
+  procedure level the continuation is the epilogue node, so the fall-through
+  return edge is stated from `k` — replacing the old `ex`.
+- `compile_frag_stmts_range` reads
+  `frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k`, with
+  `kstmt` the continuation's index (empty unless it is a `Statement`).
+- Command-level locality is `insert k (pfn p n n')` on both endpoints; at
+  procedure level `k` is inside the range and the statement collapses to the
+  original `pfn p n n'`.
+- `compile_SeqE` / `compile_IfE` / `compile_WhileE` / `compile_procE` are the
+  destructuring rules every dependent proof now uses instead of
+  `(auto split: prod.splits)` over the compile clauses. They carry the entry
+  equalities and the `csize` arithmetic, which is what removes the auxiliary
+  `compile ... = (...)` premises the old `control_at` rules had to thread.
