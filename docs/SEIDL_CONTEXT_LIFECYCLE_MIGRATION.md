@@ -16,6 +16,11 @@ Related local docs:
   prerequisite for it; M1 is currently unimplementable as written.
 - `SEMANTIC_CONTEXT_MIGRATION.md` - the landed entry-state context spine.
 - `SPLIT_STATE_MIGRATION.md` - context for G4.
+- `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` - Gap 3 is the sibling half of the
+  call/return lifecycle: it parameterizes the *combine* of caller/callee
+  `abs_state` values at the return slot G2 identifies. G2 fixes which slot is
+  read (one routing key for entry and return); Gap 3 fixes what happens with
+  the two values found there. Independent migrations, same boundary.
 
 The paper's claim is that the context policy is a plug-in: change `context`,
 leave the analysis specification and the call/return mechanism alone. The
@@ -91,6 +96,14 @@ Two problems, both structural rather than accidental:
   list, so a node with more than one call edge routes the return to the wrong
   callee context. Compiled CFGs emit one call edge per `Call` node, so this does
   not bite today; it is latent.
+
+Scope boundary: G2 is only about the routing key `'c`, i.e. which slot the
+return reads. What the return does with the caller and callee `abs_state`
+values once it has found that slot - today a fixed structural
+`restrict_local`/`restrict_global` split - is out of scope here. That merge is
+`GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 3, and it is what blocks relational
+domains at procedure boundaries. Fixing G2 does not fix Gap 3, and Gap 3 does
+not need G2 fixed first.
 
 ### G3 - no generic soundness for routed seeds
 
