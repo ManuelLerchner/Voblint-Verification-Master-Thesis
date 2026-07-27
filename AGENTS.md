@@ -83,6 +83,10 @@ Never use host filesystem read or edit tools on tracked `.thy` files. Isabelle/
 jEdit owns their document state; host access can create stale-buffer and
 phantom-proof failures.
 
+- Authenticate once per I/Q connection before any other I/Q tool: call
+  `authenticate` with token `isabelle-local` (matches `IQ_AUTH_TOKEN` in
+  `scripts/start-iq.sh`). Every I/Q call fails with "Not authenticated" until
+  this runs.
 - Use I/Q `open_file`, `read_file`, and `write_file`.
 - If jEdit is unavailable, use I/R `repl_edit`.
 - A brand-new, untracked theory may be created once through the host, then must
