@@ -343,27 +343,29 @@ text \<open>
 definition side_cfg_T_eff_keyed_seed_dg ::
   "(cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list)
    \<Rightarrow> ('c \<Rightarrow> 'k)
-   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
-   \<Rightarrow> ('c \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree list)
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+        \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree list)
    \<Rightarrow> cfg
    \<Rightarrow> ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec
    \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
 where
-  "side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb extra g S bot0 s0d s0g =
+  "side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
             intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
                             (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
                         (pred_sel g v);
-            comb = map (\<lambda>(cc, dst, ex). cmb c dst cc ex)
-                       (return_call_list g v);
-            t = side_rhs_fold_dg acc0 (intra @ comb @ extra c v)
+            comb = map (\<lambda>(cc, ca, ex). cmb route c ca cc ex)
+                       (return_call_action_list g v);
+            t = side_rhs_fold_dg acc0 (intra @ comb @ extra route c v)
         in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg:
-  "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey cmb extra g S bot0 s0d s0g)
+  "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)
       (v, ctx) \<tau> =
    DG (side_acc_dg
      (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
@@ -371,9 +373,9 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg:
      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
               (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
            (pred_sel g v)
-      @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex)
-            (return_call_list g v)
-      @ extra ctx v)) bot"
+      @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex)
+            (return_call_action_list g v)
+      @ extra route ctx v)) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
         traverse_side_rhs_fold_dg)
 
