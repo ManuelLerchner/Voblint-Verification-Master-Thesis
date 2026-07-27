@@ -18,7 +18,6 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_Proc_GraphViz
-    Example_Pruned_GraphViz
     Example_Mixed_Sign_Interval_GraphViz
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global

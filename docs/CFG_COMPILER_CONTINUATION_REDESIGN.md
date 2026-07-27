@@ -1523,14 +1523,13 @@ direction and nothing else:
 | Continuation becomes an input; `Return` ignores it | 4 | core |
 | `exit` leaves the result tuple | 4 | core |
 | `csize` for forward source-ordered numbering | 3 | prerequisite, trade-off stated (§5) |
-| Always-allocated per-procedure epilogue | 4 | core, conservative |
 | Four-place `calls` relation | — | **unchanged** |
 | `Restore` / `Unwind` edges | — | **unchanged** (§6) |
 | `edge_action` constructors | — | **unchanged** (§5) |
 | Analysis framework definitions | — | **unchanged** |
 | `entry` leaves the result tuple | 7 | deferred cleanup |
-| Lazy epilogue | 6 | deferred, needs `compile_continuation_unused` |
-| Presentation pruning | 2, revisited in 5 | optional and temporary |
+| Lazy epilogue | 6 | landed (`fe5e9733`): `IfDone`/`SeqRight` guarded by `falls_through`, epilogue edge conditional |
+| Presentation pruning | 2 | rejected: hid the compiler-level issue instead of fixing it; removed |
 | Old-vs-new observable-trace comparison | 1, 4, deleted in 5 | confidence check, not a gate |
 
 No analysis framework definition requires changes; examples and node-index
@@ -1567,31 +1566,14 @@ the §7 impact matrix put the attention.
   from a zero store yields 8 nested `LCall ''fac''`, the base-case return, then 8
   `LRet ''fac''` unwinds.
 
-**Phase 2 — reachability pruning for rendering.**
-`src/Examples/Tooling/Example_Pruned_GraphViz.thy`, registered in
-`src/Examples/ROOT`. Defines `prune_cfg` (keep an intra edge when both endpoints
-are entry-reachable; keep a call edge when its site is) plus `pruned_cfg_dot` /
-`pruned_cfg_dot_lit`, which reuse the existing `contextual_analysis_dot` with the
-pruned graph substituted — the renderer itself is untouched.
-
-Proved rather than merely asserted:
-
-- `prune_cfg_intra_subset`, `prune_cfg_calls_subset` — pruning only deletes, so
-  every fact quantified over `intra`/`calls` transfers;
-- `prune_cfg_entry` — the graph entry is preserved;
-- `prune_cfg_wf`, `prune_cfg_wf_compile_prog` — `wf_cfg` is inherited, because it
-  is a conjunction of universally quantified edge conditions.
-
-Measured on factorial: node count 16 to 13, `dead_list` from
-`[Statement 2, Statement 6, Statement 7]` to `[]`, nop edges from 6 to 4 (the two
-dead joins `S2->S7` and `S6->S7` removed; the two reachable pass-throughs
-`S4->S5`, `S9->S10` correctly retained, since only Phase 4 can remove those).
-The pruned DOT is strictly shorter than `raw_cfg_dot` and both still
-code-generate.
-
-Intended final home: `prune_cfg` beside `cfg_reaches` in `CFG_Prune.thy`, the
-renderer wrapper beside `raw_cfg_dot` in `Analysis_GraphViz.thy`. It sits in
-`src/Examples` for the tooling reason below, not by design.
+**Phase 2 — reachability pruning for rendering, rejected.** An earlier draft
+added a `prune_cfg` rendering filter (`src/Examples/Tooling/
+Example_Pruned_GraphViz.thy`, now removed) that dropped entry-unreachable nodes
+from the DOT output without touching the compiler. It reduced the factorial
+render's dead-node count to zero, but issue #64's acceptance criteria are about
+the compiled graph, not the rendered projection of it — approach 3 from the
+issue, not the continuation-passing approach this document commits to. Phase 6
+below removes the epilogue at the source instead.
 
 **Phase 3 — `csize` and `compile_next_id`.** `src/CFG/Compiler/Compile_Size.thy`,
 registered in `src/CFG/ROOT`. Proves
@@ -1691,13 +1673,12 @@ warm while making `src/CFG`, `src/Analysis`, `src/Formalization` and
 `src/Examples` load dynamically. After the server restart the compiler theory is
 editable and Phase 4 proceeds.
 
-### Phase 4, in progress
+### Phase 4, landed
 
 The continuation-passing `compile` / `compile_proc` are landed in
 `IMP2_Proc_to_CFG.thy` together with the arithmetic and shape lemmas the
-dependent files consume. Repair order follows §8; each file below is I/Q-clean
-(zero diagnostics), which is *ready for batch*, not proved — the batch build is
-the gate and has not run yet.
+dependent files consume. Repair order followed §8; every file below is clean
+and the batch build (`Voblint_Formalization` and `Voblint_Examples`) is green.
 
 | File | State |
 | --- | --- |
@@ -1710,7 +1691,7 @@ the gate and has not run yet.
 | `Compile_Locality.thy` | clean: fragments identified by `compile_proc \<Pi> r d m = (m', Ep, Kp)` plus the entry edge into `Statement m` |
 | `Located_LTR.thy` | clean: `compile_prog_main_base` reads the epilogue node off `procs_compiled_proc` |
 | `Source_Activation_Sound.thy` | clean: the completed-run path runs to the epilogue node, then the `EA_Ret` edge |
-| examples | not started (deferred) |
+| examples | landed: index-bearing regressions regenerated |
 
 Two decisions taken during the repair that the plan above did not anticipate:
 
@@ -1765,12 +1746,22 @@ analysis framework definition are untouched.
   equalities and the `csize` arithmetic, which is what removes the auxiliary
   `compile ... = (...)` premises the old `control_at` rules had to thread.
 
-## 12. The unreachable epilogue, and why it is still there
+## 12. The unreachable epilogue, and how it was closed
 
-The factorial example shows `fac` with an epilogue node (`pp4`) that nothing
+The factorial example used to show `fac` with an epilogue node that nothing
 targets: every path through the body ends in an explicit `return`. `main`'s
-epilogue (`pp7`) is reachable, because `main` falls off its end. Goblint
-allocates its pseudo-return node lazily (§3), so its CFG would not show `pp4`.
+epilogue is reachable, because `main` falls off its end. Goblint allocates its
+pseudo-return node lazily (§3); this section originally recorded why the same
+move was blocked here, and then how commit `fe5e9733` closed it.
+
+**Resolved.** `IfDone` in `Control_Residual.thy` is now guarded by
+`falls_through (If b c1 c2)` and `SeqRight` by `falls_through c1`, which makes
+`control_at_SKIP_imp_falls_through` provable — a located `SKIP` now witnesses
+that its command can complete normally. `compile_proc` emits the
+`(k, EA_Ret None p, FunctionResult p)` edge only when `falls_through (body
+decl)`; otherwise it still reserves the counter slot without wiring it, so
+`csize`/`pfn`/`frag_stmts` keep their statements unchanged. `procs_compiled`'s
+two consumers take the conditional edge. `dead_list factorial_cfg` is `[]`.
 
 ### What is proved
 
@@ -1818,49 +1809,44 @@ ownership lemma then keeps its exact current statement, and the node disappears
 from the rendered CFG because no edge mentions it. Spending one `nat` is much
 cheaper than making the counter arithmetic conditional.
 
-### The blocker
+### What blocked it, and how it closed
 
-`procs_compiled` requires, for every declared procedure,
+`procs_compiled` used to require, for every declared procedure,
 
 ```isabelle
 (k, EA_Ret None p, FunctionResult p) \<in> intra g
 ```
 
-Two places consume it: the `Nested`/`inner = SKIP` case of
+unconditionally. Two places consumed it: the `Nested`/`inner = SKIP` case of
 `csim_intra_completion`, where a completed callee runs to `k` and takes the
-edge, and `source_completes_valid_ltr_result`. Both hold only
+edge, and `source_completes_valid_ltr_result`. Both held only
 `control_at \<Pi> p c0 k n SKIP v`, so conditioning the epilogue on
-`falls_through` needs
+`falls_through` needed
 
 ```isabelle
 control_at \<Pi> p c0 k n SKIP v ==> falls_through c0
 ```
 
-which is false, and false on exactly the factorial shape
-(`control_at_SKIP_not_falls_through` in `Control_Residual.thy`):
+which was false before the guard, on exactly the factorial shape:
 
 ```isabelle
 control_at \<Pi> p (If b (Return e1) (Return e2)) k n SKIP k
   \<and> \<not> falls_through (If b (Return e1) (Return e2))
 ```
 
-`IfDone` carries no premise and `SeqRight` does not require the left command to
-have completed normally. `control_at` says where a residual sits, not whether
-that location is reachable.
+`IfDone` carried no premise and `SeqRight` did not require the left command to
+have completed normally, so `control_at` said where a residual sits without
+saying whether that location was reachable.
 
-### What closing it would take
+Commit `fe5e9733` closed it: `IfDone` is now guarded by
+`falls_through (If b c1 c2)` and `SeqRight` by `falls_through c1` --- both true
+of every reachable configuration --- and `control_at_SKIP_imp_falls_through`
+goes through by induction on the strengthened relation. `control_at` is
+strictly stronger and every theorem in this section keeps its statement.
 
-Nothing weakens, and the analysis interface is untouched. Guard `IfDone` with
-`falls_through (If b c1 c2)` and `SeqRight` with `falls_through c1` --- both
-true of every reachable configuration --- and the converse lemma goes through by
-induction on the strengthened relation. `control_at` then becomes strictly
-stronger and every theorem listed above keeps its statement.
-
-The cost is discharging the new premises at each construction site inside
-`Control_Simulation.thy`: roughly eight `SeqRight` and five `*Done` sites, in
-`intra_step_simulation`, `control_at_skip_to_exit` and the four `csim_*`
-completion theorems. The one non-local site is the `Seq SKIP c2 --> c2` step,
-where `control_at.SeqRight[OF control_at_initial[OF src2]]` is applied with no
-`falls_through c1` in context; it is recoverable from the `SeqLeft`
-sub-derivation through the same lemma, so the induction is well-founded rather
-than circular.
+The new premises are discharged at each construction site inside
+`Control_Simulation.thy` (the `SeqRight` and `*Done` sites across
+`intra_step_simulation`, `control_at_skip_to_exit`, and the four `csim_*`
+completion theorems). The one non-local site, the `Seq SKIP c2 --> c2` step,
+recovers `falls_through c1` from the `SeqLeft` sub-derivation rather than from
+context, so the induction is well-founded rather than circular.
