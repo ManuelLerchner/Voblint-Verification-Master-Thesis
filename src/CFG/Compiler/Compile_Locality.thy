@@ -17,7 +17,6 @@ text \<open>
 definition pfn :: "pname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> cfg_node set" where
   "pfn r m m' = insert (FunctionEntry r) (insert (FunctionResult r) (Statement ` {m..<m'}))"
 
-lemmas compile_entry_is_start = compile_entry
 
 subsection \<open>Edge node shapes\<close>
 
@@ -183,6 +182,19 @@ proof -
   have body: "\<And>a v. (FunctionEntry p, a, v) \<notin> Eb"
     using compile_E_shape[OF cb] by blast
   from e E body show ?thesis by auto
+qed
+
+text \<open>The entry wiring edge of a compiled procedure targets the first statement index of its
+  fragment.  This is the shape that identifies a fragment by its start counter alone.\<close>
+lemma compile_proc_entry_edge:
+  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+  shows "(FunctionEntry p, EA_Nop, Statement n) \<in> E"
+proof -
+  from cp obtain Eb where
+    E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+    by (rule compile_procE)
+  show ?thesis using E by simp
 qed
 
 lemma compile_proc_intra_pfn:
@@ -902,13 +914,13 @@ lemma compile_procs_intra_owner:
   assumes cps: "compile_procs \<Pi> ps n = (n', E, K)"
     and distinct: "distinct ps"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)"
-    and ent: "(FunctionEntry r, EA_Nop, en) \<in> E"
+    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> E"
     and uin: "u \<in> pfn r m m'"
     and edge: "(u, a, v) \<in> E"
   shows "v \<in> pfn r m m'"
   using cps distinct decl cb ent uin edge
-proof (induction ps arbitrary: n n' E K m m' en ex Eb Kb u a v)
+proof (induction ps arbitrary: n n' E K m m' Ep Kp u a v)
   case Nil then show ?case by simp
 next
   case (Cons q qs)
@@ -927,18 +939,13 @@ next
     proof (cases "r = q")
       case True
       with Cons.prems(3) Some have dd: "d = dq" by simp
-      obtain en0 ex0 Eb0 where cb0: "compile \<Pi> q (body dq) n = (n1, en0, ex0, Eb0, K0)"
-        and E0: "E0 = insert (FunctionEntry q, EA_Nop, en0)
-          (insert (ex0, EA_Ret None q, FunctionResult q) Eb0)"
-        using cp0 unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-      have ent0: "(FunctionEntry q, EA_Nop, en0) \<in> E"
-        using E E0 by auto
-      have entq: "(FunctionEntry q, EA_Nop, en) \<in> E" using Cons.prems(5) True by simp
-      have eneq: "en = en0"
-        using compile_procs_entry_unique[OF Cons.prems(1) Cons.prems(2) entq ent0] .
+      have ent0: "(FunctionEntry q, EA_Nop, Statement n) \<in> E"
+        using E compile_proc_entry_edge[OF cp0] by auto
+      have entq: "(FunctionEntry q, EA_Nop, Statement m) \<in> E" using Cons.prems(5) True by simp
       have mn: "m = n"
-        using compile_entry_is_start[OF Cons.prems(4)] compile_entry_is_start[OF cb0] eneq True dd by simp
-      have mout: "m' = n1" using Cons.prems(4) cb0 True dd mn by simp
+        using compile_procs_entry_unique[OF Cons.prems(1) Cons.prems(2) entq ent0] by simp
+      have mout: "m' = n1" using Cons.prems(4) cp0 True dd mn by simp
+
       from Cons.prems(7) E consider "(u, a, v) \<in> E0" | "(u, a, v) \<in> E'" by auto
       then show ?thesis
       proof cases
@@ -952,9 +959,10 @@ next
       qed
     next
       case False
-      have enttail: "(FunctionEntry r, EA_Nop, en) \<in> E'"
+      have enttail: "(FunctionEntry r, EA_Nop, Statement m) \<in> E'"
       proof -
-        from Cons.prems(5) E consider "(FunctionEntry r, EA_Nop, en) \<in> E0" | "(FunctionEntry r, EA_Nop, en) \<in> E'" by auto
+        from Cons.prems(5) E consider "(FunctionEntry r, EA_Nop, Statement m) \<in> E0"
+          | "(FunctionEntry r, EA_Nop, Statement m) \<in> E'" by auto
         then show ?thesis
         proof cases
           case 1
@@ -967,7 +975,8 @@ next
       have lower: "n1 \<le> m"
       proof -
         have "m \<in> frag_stmts E' K'"
-          using enttail compile_entry_is_start[OF Cons.prems(4)] unfolding frag_stmts_def by auto
+          using enttail unfolding frag_stmts_def by auto
+
         then show ?thesis using compile_procs_frag_range[OF rest] by auto
       qed
       have dqs: "distinct qs" using Cons.prems(2) by simp
@@ -990,13 +999,13 @@ lemma compile_procs_calls_owner:
   assumes cps: "compile_procs \<Pi> ps n = (n', E, K)"
     and distinct: "distinct ps"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)"
-    and ent: "(FunctionEntry r, EA_Nop, en) \<in> E"
+    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> E"
     and uin: "u \<in> pfn r m m'"
     and edge: "(u, ce, tgt, af) \<in> K"
   shows "af \<in> pfn r m m'"
   using cps distinct decl cb ent uin edge
-proof (induction ps arbitrary: n n' E K m m' en ex Eb Kb u ce tgt af)
+proof (induction ps arbitrary: n n' E K m m' Ep Kp u ce tgt af)
   case Nil then show ?case by simp
 next
   case (Cons q qs)
@@ -1015,17 +1024,13 @@ next
     proof (cases "r = q")
       case True
       with Cons.prems(3) Some have dd: "d = dq" by simp
-      obtain en0 ex0 Eb0 where cb0: "compile \<Pi> q (body dq) n = (n1, en0, ex0, Eb0, K0)"
-        and E0: "E0 = insert (FunctionEntry q, EA_Nop, en0)
-          (insert (ex0, EA_Ret None q, FunctionResult q) Eb0)"
-        using cp0 unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-      have ent0: "(FunctionEntry q, EA_Nop, en0) \<in> E" using E E0 by auto
-      have entq: "(FunctionEntry q, EA_Nop, en) \<in> E" using Cons.prems(5) True by simp
-      have eneq: "en = en0"
-        using compile_procs_entry_unique[OF Cons.prems(1) Cons.prems(2) entq ent0] .
+      have ent0: "(FunctionEntry q, EA_Nop, Statement n) \<in> E"
+        using E compile_proc_entry_edge[OF cp0] by auto
+      have entq: "(FunctionEntry q, EA_Nop, Statement m) \<in> E" using Cons.prems(5) True by simp
       have mn: "m = n"
-        using compile_entry_is_start[OF Cons.prems(4)] compile_entry_is_start[OF cb0] eneq True dd by simp
-      have mout: "m' = n1" using Cons.prems(4) cb0 True dd mn by simp
+        using compile_procs_entry_unique[OF Cons.prems(1) Cons.prems(2) entq ent0] by simp
+      have mout: "m' = n1" using Cons.prems(4) cp0 True dd mn by simp
+
       from Cons.prems(7) K consider "(u, ce, tgt, af) \<in> K0" | "(u, ce, tgt, af) \<in> K'" by auto
       then show ?thesis
       proof cases
@@ -1039,9 +1044,10 @@ next
       qed
     next
       case False
-      have enttail: "(FunctionEntry r, EA_Nop, en) \<in> E'"
+      have enttail: "(FunctionEntry r, EA_Nop, Statement m) \<in> E'"
       proof -
-        from Cons.prems(5) E consider "(FunctionEntry r, EA_Nop, en) \<in> E0" | "(FunctionEntry r, EA_Nop, en) \<in> E'" by auto
+        from Cons.prems(5) E consider "(FunctionEntry r, EA_Nop, Statement m) \<in> E0"
+          | "(FunctionEntry r, EA_Nop, Statement m) \<in> E'" by auto
         then show ?thesis
         proof cases
           case 1
@@ -1054,7 +1060,8 @@ next
       have lower: "n1 \<le> m"
       proof -
         have "m \<in> frag_stmts E' K'"
-          using enttail compile_entry_is_start[OF Cons.prems(4)] unfolding frag_stmts_def by auto
+          using enttail unfolding frag_stmts_def by auto
+
         then show ?thesis using compile_procs_frag_range[OF rest] by auto
       qed
       have dqs: "distinct qs" using Cons.prems(2) by simp
@@ -1178,26 +1185,22 @@ lemma compile_procs_fragment_bounds_from_entry:
   assumes procs: "compile_procs \<Pi> ps n = (n', E, K)"
     and distinct: "distinct ps"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)"
-    and ent: "(FunctionEntry r, EA_Nop, en) \<in> E"
+    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> E"
     and rin: "r \<in> set ps"
   shows "m' \<le> n'"
 proof -
-  obtain m0 m0' Ep Kp where cp0: "compile_proc \<Pi> r d m0 = (m0', Ep, Kp)"
-    and bnds: "n \<le> m0" "m0' \<le> n'" and sub: "Ep \<subseteq> E" "Kp \<subseteq> K"
+  obtain m0 m0' Ep0 Kp0 where cp0: "compile_proc \<Pi> r d m0 = (m0', Ep0, Kp0)"
+    and bnds: "n \<le> m0" "m0' \<le> n'" and sub: "Ep0 \<subseteq> E" "Kp0 \<subseteq> K"
     using compile_procs_member[OF procs rin decl] by blast
-  obtain en0 ex0 Eb0 where cb0: "compile \<Pi> r (body d) m0 = (m0', en0, ex0, Eb0, Kp)"
-    and Ep: "Ep = insert (FunctionEntry r, EA_Nop, en0)
-      (insert (ex0, EA_Ret None r, FunctionResult r) Eb0)"
-    using cp0 unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have ent0: "(FunctionEntry r, EA_Nop, en0) \<in> E" using sub(1) Ep by auto
-  have eneq: "en = en0"
-    using compile_procs_entry_unique[OF procs distinct ent ent0] .
+  have ent0: "(FunctionEntry r, EA_Nop, Statement m0) \<in> E"
+    using sub(1) compile_proc_entry_edge[OF cp0] by auto
   have mm: "m = m0"
-    using compile_entry_is_start[OF cb] compile_entry_is_start[OF cb0] eneq by simp
-  have mout: "m' = m0'" using cb cb0 mm by simp
+    using compile_procs_entry_unique[OF procs distinct ent ent0] by simp
+  have mout: "m' = m0'" using cb cp0 mm by simp
   show ?thesis using bnds(2) mout by simp
 qed
+
 
 text \<open>Given a genuine procedure fragment (declared body, included edges, entry wiring) and a node
   in it, every intra edge leaving that node, and every call leaving it, lands its
@@ -1205,8 +1208,8 @@ text \<open>Given a genuine procedure fragment (declared body, included edges, e
 lemma frag_edge_intra:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)"
-    and ent: "(FunctionEntry r, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
     and uin: "u \<in> pfn r m m'"
     and e: "(u, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
   shows "v \<in> pfn r m m'"
@@ -1223,23 +1226,16 @@ proof -
   show ?thesis
   proof (cases "r = mnm")
     case True
-    obtain en0 ex0 Eb0 where cb0:
-        "compile \<Pi> mnm (body (proc_decl_of [] main)) n1 = (n2, en0, ex0, Eb0, Kmain)"
-      and Emain: "Emain = insert (FunctionEntry mnm, EA_Nop, en0)
-        (insert (ex0, EA_Ret None mnm, FunctionResult mnm) Eb0)"
-      using mainc unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-    have entmain: "(FunctionEntry mnm, EA_Nop, en0) \<in> Emain" using Emain by auto
-    have entmain': "(FunctionEntry mnm, EA_Nop, en0) \<in> intra (compile_prog \<Pi> ps mnm main)"
-      using EI entmain by auto
+    have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
+      using EI compile_proc_entry_edge[OF mainc] by auto
     have dd: "d = proc_decl_of [] main"
       using decl True wf_compile_input_main_exists[OF wf] by simp
-    have entr: "(FunctionEntry mnm, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using ent True by simp
-    have eneq: "en = en0"
-      using compile_prog_entry_out_unique[OF wf entr entmain'] .
     have mn: "m = n1"
-      using compile_entry_is_start[OF cb] compile_entry_is_start[OF cb0] eneq True dd by simp
-    have mout: "m' = n2" using cb cb0 True dd mn by simp
+      using compile_prog_entry_out_unique[OF wf entr entmain'] by simp
+    have mout: "m' = n2" using cb mainc True dd mn by simp
+
     have uinmain: "u \<in> pfn mnm n1 n2" using uin True mn mout by simp
     from e EI consider "(u, a, v) \<in> Eprocs" | "(u, a, v) \<in> Emain" by auto
     then show ?thesis
@@ -1254,10 +1250,11 @@ proof -
   next
     case False
     have rin: "r \<in> set ps" using decl setps False by auto
-    have entprocs: "(FunctionEntry r, EA_Nop, en) \<in> Eprocs"
+    have entprocs: "(FunctionEntry r, EA_Nop, Statement m) \<in> Eprocs"
     proof -
-      from ent EI consider "(FunctionEntry r, EA_Nop, en) \<in> Eprocs"
-        | "(FunctionEntry r, EA_Nop, en) \<in> Emain" by auto
+      from ent EI consider "(FunctionEntry r, EA_Nop, Statement m) \<in> Eprocs"
+        | "(FunctionEntry r, EA_Nop, Statement m) \<in> Emain" by auto
+
       then show ?thesis
       proof cases
         case 1 then show ?thesis .
@@ -1286,8 +1283,8 @@ qed
 lemma frag_edge_calls:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and decl: "\<Pi> r = Some d"
-    and cb: "compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)"
-    and ent: "(FunctionEntry r, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    and ent: "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
     and uin: "u \<in> pfn r m m'"
     and e: "(u, ce, tgt, af) \<in> calls (compile_prog \<Pi> ps mnm main)"
   shows "af \<in> pfn r m m'"
@@ -1304,23 +1301,16 @@ proof -
   show ?thesis
   proof (cases "r = mnm")
     case True
-    obtain en0 ex0 Eb0 where cb0:
-        "compile \<Pi> mnm (body (proc_decl_of [] main)) n1 = (n2, en0, ex0, Eb0, Kmain)"
-      and Emain: "Emain = insert (FunctionEntry mnm, EA_Nop, en0)
-        (insert (ex0, EA_Ret None mnm, FunctionResult mnm) Eb0)"
-      using mainc unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-    have entmain: "(FunctionEntry mnm, EA_Nop, en0) \<in> Emain" using Emain by auto
-    have entmain': "(FunctionEntry mnm, EA_Nop, en0) \<in> intra (compile_prog \<Pi> ps mnm main)"
-      using EI entmain by auto
+    have entmain': "(FunctionEntry mnm, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
+      using EI compile_proc_entry_edge[OF mainc] by auto
     have dd: "d = proc_decl_of [] main"
       using decl True wf_compile_input_main_exists[OF wf] by simp
-    have entr: "(FunctionEntry mnm, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
+    have entr: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
       using ent True by simp
-    have eneq: "en = en0"
-      using compile_prog_entry_out_unique[OF wf entr entmain'] .
     have mn: "m = n1"
-      using compile_entry_is_start[OF cb] compile_entry_is_start[OF cb0] eneq True dd by simp
-    have mout: "m' = n2" using cb cb0 True dd mn by simp
+      using compile_prog_entry_out_unique[OF wf entr entmain'] by simp
+    have mout: "m' = n2" using cb mainc True dd mn by simp
+
     have uinmain: "u \<in> pfn mnm n1 n2" using uin True mn mout by simp
     from e KC consider "(u, ce, tgt, af) \<in> Kprocs" | "(u, ce, tgt, af) \<in> Kmain" by auto
     then show ?thesis
@@ -1335,10 +1325,11 @@ proof -
   next
     case False
     have rin: "r \<in> set ps" using decl setps False by auto
-    have entprocs: "(FunctionEntry r, EA_Nop, en) \<in> Eprocs"
+    have entprocs: "(FunctionEntry r, EA_Nop, Statement m) \<in> Eprocs"
     proof -
-      from ent EI consider "(FunctionEntry r, EA_Nop, en) \<in> Eprocs"
-        | "(FunctionEntry r, EA_Nop, en) \<in> Emain" by auto
+      from ent EI consider "(FunctionEntry r, EA_Nop, Statement m) \<in> Eprocs"
+        | "(FunctionEntry r, EA_Nop, Statement m) \<in> Emain" by auto
+
       then show ?thesis
       proof cases
         case 1 then show ?thesis .
@@ -1365,26 +1356,63 @@ qed
 
 subsection \<open>Procedure locality of a valid activation\<close>
 
+text \<open>Every declared procedure of a compiled program owns a fragment, identified by the start
+  counter its entry wiring edge points at.\<close>
+lemma compile_prog_proc_frag:
+  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+    and decl: "\<Pi> q = Some d"
+  obtains m m' Ep Kp where
+    "compile_proc \<Pi> q d m = (m', Ep, Kp)"
+    "(FunctionEntry q, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+proof -
+  obtain n1 Eprocs Kprocs n2 Emain Kmain where
+      procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    and mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    and EI: "intra (compile_prog \<Pi> ps mnm main) = Eprocs \<union> Emain"
+    and KC: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    by (rule compile_prog_intra_split)
+  show thesis
+  proof (cases "q = mnm")
+    case True
+    have dd: "d = proc_decl_of [] main"
+      using decl True wf_compile_input_main_exists[OF wf] by simp
+    have "(FunctionEntry q, EA_Nop, Statement n1) \<in> intra (compile_prog \<Pi> ps mnm main)"
+      using EI compile_proc_entry_edge[OF mainc] True by auto
+    then show ?thesis using that[of n1 n2 Emain Kmain] mainc True dd by simp
+  next
+    case False
+    have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
+      using wf unfolding wf_compile_input_def by auto
+    have rin: "q \<in> set ps" using decl setps False by auto
+    obtain m m' Ep Kp where cp0: "compile_proc \<Pi> q d m = (m', Ep, Kp)" and sub: "Ep \<subseteq> Eprocs"
+      using compile_procs_member[OF procs rin decl] by blast
+    have "(FunctionEntry q, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
+      using EI sub compile_proc_entry_edge[OF cp0] by auto
+    then show ?thesis using that cp0 by blast
+  qed
+qed
+
 text \<open>\<open>frag_ok u\<close>: the activation \<open>u\<close> either lies wholly inside a genuine procedure fragment
   (declared body, entry wiring, all path nodes in the fragment) or is a single-node activation
   stuck at an undeclared \<^term>\<open>FunctionEntry\<close> --- which can never advance and never reaches a
   \<^term>\<open>FunctionResult\<close>.\<close>
 definition frag_ok :: "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> ltr \<Rightarrow> bool" where
   "frag_ok \<Pi> ps mnm main u \<longleftrightarrow>
-     (\<exists>r d m m' en ex Eb Kb. \<Pi> r = Some d
-        \<and> compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)
-        \<and> (FunctionEntry r, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)
+     (\<exists>r d m m' Ep Kp. \<Pi> r = Some d
+        \<and> compile_proc \<Pi> r d m = (m', Ep, Kp)
+        \<and> (FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)
         \<and> fst (hd (path u)) = FunctionEntry r
         \<and> (\<forall>nd \<in> fst ` set (path u). nd \<in> pfn r m m'))
    \<or> (\<exists>p s. path u = [(FunctionEntry p, s)] \<and> \<Pi> p = None)"
 
 lemma frag_okI_frag:
-  assumes "\<Pi> r = Some d" "compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)"
-    "(FunctionEntry r, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
+  assumes "\<Pi> r = Some d" "compile_proc \<Pi> r d m = (m', Ep, Kp)"
+    "(FunctionEntry r, EA_Nop, Statement m) \<in> intra (compile_prog \<Pi> ps mnm main)"
     "fst (hd (path u)) = FunctionEntry r"
     "\<And>nd. nd \<in> fst ` set (path u) \<Longrightarrow> nd \<in> pfn r m m'"
   shows "frag_ok \<Pi> ps mnm main u"
   unfolding frag_ok_def using assms by blast
+
 
 lemma sink_in_path_nodes:
   "t \<in> valid_ltr g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
@@ -1399,18 +1427,19 @@ lemma valid_ltr_frag_callers:
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
   show ?thesis using t
   proof (induction rule: valid_ltr.induct)
     case (init s)
     have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
       by (rule wf_compile_input_main_exists[OF wf])
-    from procs_compiled_proc[OF pc mnmdecl] obtain m m' en ex Eb Kb where
-      cb: "compile \<Pi> mnm (body (proc_decl_of [] main)) m = (m', en, ex, Eb, Kb)"
-      and ent: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g" by metis
+    obtain m m' Ep Kp where
+      cb: "compile_proc \<Pi> mnm (proc_decl_of [] main) m = (m', Ep, Kp)"
+      and ent: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra ?g"
+      by (rule compile_prog_proc_frag[OF wf mnmdecl])
     have "frag_ok \<Pi> ps mnm main (Root [(cfg_entry ?g, s)])"
       by (rule frag_okI_frag[OF mnmdecl cb ent])
          (simp_all add: inv16_entry_is_main pfn_def)
+
     then show ?case by (simp add: callers_Root)
   next
     case (intra t a v s')
@@ -1427,12 +1456,13 @@ proof -
         have ft: "frag_ok \<Pi> ps mnm main t" using intra.IH callers_refl by blast
         from ft[unfolded frag_ok_def] show ?thesis
         proof (elim disjE exE conjE)
-          fix r d mm mm' en ex Eb Kb
+          fix r d mm mm' Ep Kp
           assume decl: "\<Pi> r = Some d"
-            and cb: "compile \<Pi> r (body d) mm = (mm', en, ex, Eb, Kb)"
-            and ent: "(FunctionEntry r, EA_Nop, en) \<in> intra ?g"
+            and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
+            and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
             and hd_r: "fst (hd (path t)) = FunctionEntry r"
             and nodes_t: "\<forall>nd \<in> fst ` set (path t). nd \<in> pfn r mm mm'"
+
           have snk: "sink_node t \<in> pfn r mm mm'"
             using sink_in_path_nodes[OF intra.hyps(1)] nodes_t by blast
           have v_in: "v \<in> pfn r mm mm'"
@@ -1470,9 +1500,11 @@ proof -
           show ?thesis unfolding True frag_ok_def using None by fastforce
         next
           case (Some d)
-          from procs_compiled_proc[OF pc Some] obtain m m' en ex Eb Kb where
-            cb: "compile \<Pi> p (body d) m = (m', en, ex, Eb, Kb)"
-            and ent: "(FunctionEntry p, EA_Nop, en) \<in> intra ?g" by metis
+          obtain m m' Ep Kp where
+            cb: "compile_proc \<Pi> p d m = (m', Ep, Kp)"
+            and ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g"
+            by (rule compile_prog_proc_frag[OF wf Some])
+
           show ?thesis unfolding True
             by (rule frag_okI_frag[OF Some cb ent]) (simp_all add: pfn_def)
         qed
@@ -1500,12 +1532,13 @@ proof -
         have fc: "frag_ok \<Pi> ps mnm main caller" using ret.IH cin by blast
         from fc[unfolded frag_ok_def] show ?thesis
         proof (elim disjE exE conjE)
-          fix r d mm mm' en ex Eb Kb
+          fix r d mm mm' Ep Kp
           assume decl: "\<Pi> r = Some d"
-            and cb: "compile \<Pi> r (body d) mm = (mm', en, ex, Eb, Kb)"
-            and ent: "(FunctionEntry r, EA_Nop, en) \<in> intra ?g"
+            and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
+            and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
             and hd_r: "fst (hd (path caller)) = FunctionEntry r"
             and nodes_c: "\<forall>nd \<in> fst ` set (path caller). nd \<in> pfn r mm mm'"
+
           have snk: "sink_node caller \<in> pfn r mm mm'"
             by (meson cv nodes_c sink_in_path_nodes)
           have cont_in: "cont \<in> pfn r mm mm'"
@@ -1539,7 +1572,7 @@ proof -
     using valid_ltr_frag_callers[OF wf t] callers_refl by blast
   then show ?thesis unfolding frag_ok_def
   proof (elim disjE exE conjE)
-    fix r d m m' en0 ex Eb Kb
+    fix r d m m' Ep Kp
     assume "fst (hd (path t)) = FunctionEntry r"
       and nodes: "\<forall>nd \<in> fst ` set (path t). nd \<in> pfn r m m'"
     have rp: "r = p" using \<open>fst (hd (path t)) = FunctionEntry r\<close> en by simp

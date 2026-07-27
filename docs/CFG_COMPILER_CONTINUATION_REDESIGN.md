@@ -1705,9 +1705,12 @@ the gate and has not run yet.
 | `CFG_Prune.thy` | clean: `compile_reaches` now "entry reaches the continuation or the result" |
 | `Compile_Invariants.thy` | clean: `inv11_return_exit_unreached` replaced by `inv11_return_ignores_continuation` |
 | `Control_Residual.thy` | clean: `control_at` carries the continuation; `compile_control_at_SKIP_exit_path` lost its join hops |
-| `Control_Simulation.thy` | in progress |
-| `Compile_Locality.thy` | in progress |
-| `Located_LTR.thy`, `Source_Activation_Sound.thy`, examples | not started |
+| `Control_Simulation.thy` | clean: `compiled_at`, `csim`, `procs_compiled` carry the continuation |
+| `Compile_Certificate.thy` | clean: destructuring replaced by `compile_procE` |
+| `Compile_Locality.thy` | clean: fragments identified by `compile_proc \<Pi> r d m = (m', Ep, Kp)` plus the entry edge into `Statement m` |
+| `Located_LTR.thy` | clean: `compile_prog_main_base` reads the epilogue node off `procs_compiled_proc` |
+| `Source_Activation_Sound.thy` | clean: the completed-run path runs to the epilogue node, then the `EA_Ret` edge |
+| examples | not started (deferred) |
 
 Two decisions taken during the repair that the plan above did not anticipate:
 
@@ -1728,6 +1731,18 @@ that theorem and ripple into the analysis — the outcome the plan exists to
 avoid. Both clauses remain unreachable for source programs, so this is a choice
 between two vacuous translations; the transparent one is the one that keeps the
 downstream statements intact.
+
+**Procedure fragments are identified by `compile_proc`, not by the body's
+`compile` call.** Every locality lemma used to carry a hypothesis
+`compile \<Pi> r (body d) m = (m', en, ex, Eb, Kb)` whose only job was to fix the
+fragment's counter range and name its entry node. Under continuation passing the
+fragment also contains the epilogue node, so the body's range `[m, m + csize)`
+is one short: the right interval is `compile_proc`'s own `[m, Suc (m + csize))`.
+Restating the hypothesis as `compile_proc \<Pi> r d m = (m', Ep, Kp)`, with the
+entry edge written literally as `(FunctionEntry r, EA_Nop, Statement m)`, makes
+the range correct by construction and drops the separate "the entry node is the
+start counter" step from every proof that used it. `frag_ok` and
+`compile_prog_proc_frag` follow the same shape.
 
 Decisions unchanged: the four-place `calls` relation, `edge_action`, and every
 analysis framework definition are untouched.
