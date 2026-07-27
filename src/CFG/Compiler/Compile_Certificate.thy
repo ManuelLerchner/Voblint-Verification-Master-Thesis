@@ -106,19 +106,27 @@ proof (intro allI impI)
   qed
   from frag obtain m m' Ef Kf where cp: "compile_proc \<Pi> p decl m = (m', Ef, Kf)"
     and Esub: "Ef \<subseteq> intra ?g" and Ksub: "Kf \<subseteq> calls ?g" by blast
-  obtain nn en ex Eb where cb: "compile \<Pi> p (body decl) m = (nn, en, ex, Eb, Kf)"
-    and Edef: "Ef = insert (FunctionEntry p, EA_Nop, en)
-                     (insert (ex, EA_Ret None p, FunctionResult p) Eb)"
-    using cp unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by auto
-  have ent: "(FunctionEntry p, EA_Nop, en) \<in> intra ?g" using Edef Esub by auto
-  have ext: "(ex, EA_Ret None p, FunctionResult p) \<in> intra ?g" using Edef Esub by auto
-  show "\<exists>n n' en ex E K. compile \<Pi> p (body decl) n = (n', en, ex, E, K)
+  from cp obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (m + csize (body decl))) m
+           = (m + csize (body decl), Statement m, Eb, Kf)"
+    and Edef: "Ef = insert (FunctionEntry p, EA_Nop, Statement m)
+                 (if falls_through (body decl)
+                  then insert (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+                  else Eb)"
+    by (rule compile_procE)
+  have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by (auto split: if_splits)
+  have ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g" using Edef Esub by auto
+  have ext: "falls_through (body decl) \<longrightarrow>
+               (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
+    using Edef Esub by auto
+  show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
           \<and> (FunctionEntry p, EA_Nop, en) \<in> intra ?g
-          \<and> (ex, EA_Ret None p, FunctionResult p) \<in> intra ?g
+          \<and> (falls_through (body decl) \<longrightarrow>
+               (k, EA_Ret None p, FunctionResult p) \<in> intra ?g)
           \<and> source_com (body decl)"
     using cb Ebsub Ksub ent ext srccom by blast
+
 qed
 
 end

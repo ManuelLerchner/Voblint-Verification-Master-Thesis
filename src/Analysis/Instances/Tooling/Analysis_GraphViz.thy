@@ -109,6 +109,7 @@ datatype analysis_edge_kind =
     IntraEdge edge_action
   | EnterEdge pname call_action
   | CombineEdge pp "vname option" "vname option"
+  | CallToReturnEdge pname
   | GlobalReadEdge
   | GlobalWriteEdge
 
@@ -330,6 +331,30 @@ definition analysis_combine_edges ::
           else []
         | _ \<Rightarrow> [])) (cfg_calls_list g))) covered)"
 
+text \<open>
+  Call sites and their continuations already share a context: @{term cont} is
+  the fourth component of every @{term calls} tuple (@{file
+  "../../../CFG/CFG_Def.thy"}). This edge is purely presentational -- it draws
+  that pairing directly, alongside the real interprocedural path through
+  @{term EnterEdge} and @{term CombineEdge}, so a call site and its
+  return-site stay visually linked even when the callee cluster sits
+  elsewhere in the diagram.
+\<close>
+
+definition analysis_call_to_return_edges ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> (pp \<times> 'ctx) list
+    \<Rightarrow> (('ctx, 'g) analysis_node \<times> analysis_edge_kind \<times>
+       ('ctx, 'g) analysis_node) list" where
+  "analysis_call_to_return_edges cfg g covered =
+    concat (map (\<lambda>src_ctx.
+      concat (map (\<lambda>c. case c of (call, _, entry, cont) \<Rightarrow>
+        (case entry of FunctionEntry p \<Rightarrow>
+          if fst src_ctx = call \<and> local_node_member covered cont (snd src_ctx)
+          then [(LocalNode call (snd src_ctx), CallToReturnEdge p,
+                 LocalNode cont (snd src_ctx))]
+          else []
+        | _ \<Rightarrow> [])) (cfg_calls_list g))) covered)"
+
 fun analysis_local_domain :: "((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx) list" where
   "analysis_local_domain [] = []"
 | "analysis_local_domain (Inl pc # domain) = pc # analysis_local_domain domain"
@@ -353,7 +378,8 @@ definition build_analysis_graph_parts ::
            @ analysis_source_cluster ns,
          ns,
          analysis_intra_edges g covered @ analysis_enter_edges cfg g covered sol
-           @ analysis_combine_edges cfg g covered sol))"
+           @ analysis_combine_edges cfg g covered sol
+           @ analysis_call_to_return_edges cfg g covered))"
 
 text \<open>The graph domain is an executable presentation choice.  Solver coverage remains
   extensional and can be checked propositionally by clients.\<close>
@@ -516,6 +542,8 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
            | (Some x, None) \<Rightarrow> ''resume / '' @ x
            | (None, _) \<Rightarrow> ''resume'')
         @ dq
+    | CallToReturnEdge callee \<Rightarrow> ''style=dotted,color=gray40,constraint=false,label='' @ dq
+        @ ''resume-site'' @ dq
     | GlobalReadEdge \<Rightarrow> ''style=dotted,color=gray,label='' @ dq @ ''read global'' @ dq
     | GlobalWriteEdge \<Rightarrow> ''style=dotted,color=gray,label='' @ dq @ ''write global'' @ dq)"
 

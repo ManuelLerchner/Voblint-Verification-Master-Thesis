@@ -46,12 +46,10 @@ lemma loop_cfg_full:
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
           (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-          (Statement 1, EA_Nop, Statement 2),
-          (Statement 2, EA_Assume (Less (V ''x'') (N 20)), Statement 3),
-          (Statement 2, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 5),
-          (Statement 3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 4),
-          (Statement 4, EA_Nop, Statement 2),
-          (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')},
+          (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
+          (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
+          (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
+          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
   by eval
@@ -66,12 +64,10 @@ lemma loop_cfg_intra:
   "intra loop_cfg =
      {(FunctionEntry ''main'', EA_Nop, Statement 0),
       (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-      (Statement 1, EA_Nop, Statement 2),
-      (Statement 2, EA_Assume (Less (V ''x'') (N 20)), Statement 3),
-      (Statement 2, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 5),
-      (Statement 3, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 4),
-      (Statement 4, EA_Nop, Statement 2),
-      (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')}"
+      (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
+      (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
+      (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
+      (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
   by (simp add: loop_cfg_full)
 
 subsection \<open>An exhibited interval post-fixpoint\<close>
@@ -80,18 +76,19 @@ definition loop_s0 :: "ivl abs_state" where
   "loop_s0 = (\<lambda>_. Ivl MinInf PlusInf)"
 
 text \<open>
-  After \<^verbatim>\<open>x := 0\<close> node 1 holds \<^verbatim>\<open>x \<in> [0,0]\<close>; the loop head (node 2) stabilises
-  at \<^verbatim>\<open>[0,20]\<close>.  Guard refinement narrows the body entry (node 3) to \<^verbatim>\<open>[0,19]\<close>, so
-  after \<^verbatim>\<open>x := x + 1\<close> node 4 holds \<^verbatim>\<open>[1,20]\<close>; joined with \<^verbatim>\<open>[0,0]\<close> this is exactly the
-  loop-head value -- a finite (non-widened) fixpoint.  Other variables stay at
-  the full interval.
+  The loop head (node 1) stabilises at \<^verbatim>\<open>[0,20]\<close>: the join of \<^verbatim>\<open>x := 0\<close> flowing in
+  directly from node 0 and \<^verbatim>\<open>x := x + 1\<close> flowing back from the body.  Guard
+  refinement narrows the body entry (node 2) to \<^verbatim>\<open>[0,19]\<close>; applying the body's
+  own assignment to that value gives \<^verbatim>\<open>[1,20]\<close>, which joined with the initial
+  \<^verbatim>\<open>[0,0]\<close> is exactly the loop-head value -- a finite (non-widened) fixpoint.
+  Neither intermediate join operand needs its own node: the continuation-passing
+  compiler routes both edges directly into the loop head, so \<^const>\<open>rhs\<close> computes
+  the join on the fly. Other variables stay at the full interval.
 \<close>
 definition loop_env :: "pp \<Rightarrow> ivl abs_state" where
   "loop_env v =
-     (if v = Statement 1 then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 0) (Fin 0))
-      else if v = Statement 3 then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 0) (Fin 19))
-      else if v = Statement 4 then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 1) (Fin 20))
-      else if v \<in> {Statement 2, Statement 5}
+     (if v = Statement 2 then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 0) (Fin 19))
+      else if v \<in> {Statement 1, Statement 3}
         then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 0) (Fin 20))
       else (\<lambda>_. Ivl MinInf PlusInf))"
 
@@ -145,10 +142,10 @@ text \<open>
   @{text "Example_Guard_Refinement"}).
 \<close>
 
-abbreviation "loop_body_entry \<equiv> Statement 3"
+abbreviation "loop_body_entry \<equiv> Statement 2"
 
 lemma loop_body_x_from_assume:
-  "tf_assume ivl_tf (Less (V ''x'') (N 20)) (loop_env (Statement 2)) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "tf_assume ivl_tf (Less (V ''x'') (N 20)) (loop_env (Statement 1)) ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding ivl_tf_def assume_ivl_def loop_env_def
   by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
         ivl_backward_domain.afilter.simps aval_ivl.simps aval_ivl_hol.simps meet_ivl.simps)
@@ -160,7 +157,7 @@ lemma loop_body_entry_x:
 subsection \<open>Soundness: @{text "0 \<le> x \<le> 20"} at the loop head\<close>
 
 text \<open>The loop head is the assume node where @{term \<open>x < 20\<close>} is checked.\<close>
-abbreviation "loop_head \<equiv> Statement 2"
+abbreviation "loop_head \<equiv> Statement 1"
 
 lemma loop_head_x_bounded:
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"

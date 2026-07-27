@@ -19,6 +19,17 @@
         "IQ_MCP_ALLOWED_ROOTS": "/Users/manuellerchner/git/goblint-formalization",
         "IQ_MCP_ALLOWED_READ_ROOTS": "/Users/manuellerchner/git/goblint-formalization"
       }
+    },
+    "isabelle-pide-mcp": {
+      "command": "isabelle",
+      "args": [
+        "pide_mcp",
+        "-v",
+        "-d",
+        "/Users/manuellerchner/git/goblint-formalization",
+        "-l",
+        "Voblint_IMP2"
+      ]
     }
   }
 }

@@ -184,20 +184,25 @@ proof -
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   have hd_t: "fst (hd (path t)) = cfg_entry ?g" by (rule valid_ltr_caller_None_entry[OF tv cof])
   \<comment> \<open>the located node of a completed activation is its procedure's result\<close>
-  from sim obtain p c0 n where
-    ca: "control_at Pi p c0 n SKIP v" and cat: "compiled_at Pi ?g p c0 n"
+  from sim obtain p c0 k n where
+    ca: "control_at Pi p c0 k n SKIP v" and cat: "compiled_at Pi ?g p c0 k n"
     by (blast elim: csim_NilE)
-  from cat obtain n' en ex E K where
-    cc: "compile Pi p c0 n = (n', en, ex, E, K)" and Esub: "E \<subseteq> intra ?g"
-    and ret: "(ex, EA_Ret None p, FunctionResult p) \<in> intra ?g" by (rule compiled_atE)
+  \<comment> \<open>a completed activation witnesses that its fragment can fall through, which is exactly
+      when the epilogue return edge exists\<close>
+  have ft: "falls_through c0" by (rule control_at_SKIP_imp_falls_through[OF ca])
+  from cat obtain n' en E K where
+    cc: "compile Pi p c0 k n = (n', en, E, K)" and Esub: "E \<subseteq> intra ?g"
+    and ret: "(k, EA_Ret None p, FunctionResult p) \<in> intra ?g"
+    using ft by (auto simp: compiled_at_def)
   \<comment> \<open>the whole extension is intra flow, so it stays inside this same (root) activation\<close>
   have path_to_ret: "intra_path ?g (sink_node t, sink_store t) (FunctionResult p, s)"
   proof -
-    have a: "intra_path ?g (sink_node t, sink_store t) (ex, s)"
+    have a: "intra_path ?g (sink_node t, sink_store t) (k, s)"
       using compile_control_at_SKIP_exit_path[OF ca cc Esub] sn ss by simp
-    have b: "intra_path ?g (ex, s) (FunctionResult p, s)"
+    have b: "intra_path ?g (k, s) (FunctionResult p, s)"
       by (rule intra_path_single[OF ret]) simp
     from a b show ?thesis by (rule star_trans)
+
   qed
   from valid_ltr_intra_path_extend[OF path_to_ret tv]
   obtain t' where t'v: "t' \<in> valid_ltr ?g S" and t'n: "sink_node t' = FunctionResult p"

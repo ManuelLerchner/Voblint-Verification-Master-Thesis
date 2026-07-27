@@ -12,7 +12,7 @@ text \<open>
 
   The executable transfer @{const ivl_tf_st} applies the same backward guard
   filters as @{const assume_ivl} (via @{const assume_ivl_st} / @{const bfilter_ivl_st})
-  on @{const EA_Assume} edges.  Node~3 therefore reads @{text "[0,19]"} because
+  on @{const EA_Assume} edges.  Node~2 therefore reads @{text "[0,19]"} because
   @{text "x < 20"} refines @{text "x"} at the loop head --- not because of widening.
 
   This theory evaluates two fixpoint engines on @{const side_cfg_T_eff_st}:
@@ -32,12 +32,10 @@ definition loop_cfg :: cfg where
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
           (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
-          (Statement 1, EA_Nop, Statement 2),
-          (Statement 2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
-          (Statement 2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 5),
-          (Statement 3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 4),
-          (Statement 4, EA_Nop, Statement 2),
-          (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')},
+          (Statement 1, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 2),
+          (Statement 1, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
+          (Statement 2, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 1),
+          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
 
@@ -71,24 +69,24 @@ fun loop_iter_sig :: "nat \<Rightarrow> (pp + unit \<Rightarrow> ivl st) \<Right
 definition loop_ivl_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
   "loop_ivl_sol =
      ({FunctionEntry ''main'', FunctionResult ''main''}
-        \<union> Statement ` {0, 1, 2, 3, 4, 5},
+        \<union> Statement ` {0, 1, 2, 3},
       loop_iter_sig 100 loop_sig0)"
 
 definition loop_ivl_at :: "pp \<Rightarrow> ivl" where
   "loop_ivl_at pp = lookup_st (snd loop_ivl_sol (Inl pp)) ''x''"
 
-text \<open>Loop head (node 2): @{text "[0,20]"}.  Body entry (node 3): @{text "[0,19]"} from
+text \<open>Loop head (node 1): @{text "[0,20]"}.  Body entry (node 2): @{text "[0,19]"} from
   @{const EA_Assume} backward refinement on @{text "x < 20"}.\<close>
+value "string_of_ivl (loop_ivl_at (Statement 1))"
 value "string_of_ivl (loop_ivl_at (Statement 2))"
 value "string_of_ivl (loop_ivl_at (Statement 3))"
-value "string_of_ivl (loop_ivl_at (Statement 5))"
 
 lemma loop_head_ivl:
-  "loop_ivl_at (Statement 2) = Ivl (Fin 0) (Fin 20)"
+  "loop_ivl_at (Statement 1) = Ivl (Fin 0) (Fin 20)"
   by eval
 
 lemma loop_body_ivl:
-  "loop_ivl_at (Statement 3) = Ivl (Fin 0) (Fin 19)"
+  "loop_ivl_at (Statement 2) = Ivl (Fin 0) (Fin 19)"
   by eval
 
 definition loop_ivl_td_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
@@ -99,15 +97,15 @@ definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
 
 text \<open>Widening TD (Apinis warrowing): same intervals as bounded Kleene --- backward
   filters carry the precision; widening is solver infrastructure only on this program.\<close>
+value "string_of_ivl (loop_ivl_td_at (Statement 1))"
 value "string_of_ivl (loop_ivl_td_at (Statement 2))"
-value "string_of_ivl (loop_ivl_td_at (Statement 3))"
 
 lemma loop_head_ivl_td:
-  "loop_ivl_td_at (Statement 2) = Ivl (Fin 0) (Fin 20)"
+  "loop_ivl_td_at (Statement 1) = Ivl (Fin 0) (Fin 20)"
   by eval
 
 lemma loop_body_ivl_td:
-  "loop_ivl_td_at (Statement 3) = Ivl (Fin 0) (Fin 19)"
+  "loop_ivl_td_at (Statement 2) = Ivl (Fin 0) (Fin 19)"
   by eval
 
 subsection \<open>The loop under every update rule at once\<close>
@@ -118,10 +116,10 @@ text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open
   filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
   (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
   machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
-value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 2)) ''x''"
+value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) ''x''"
 
 lemma loop_head_across_update_rules:
-  "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 2)) ''x''
+  "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) ''x''
      = [(STR ''join'',       Ivl (Fin 0) (Fin 20)),
         (STR ''per_origin'', Ivl (Fin 0) (Fin 20)),
         (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"

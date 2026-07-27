@@ -72,34 +72,32 @@ subsection \<open>Return edges and call-freeness\<close>
 text \<open>Every source \<open>Return e\<close> in procedure \<open>p\<close> compiles to an intra edge that
   reaches \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
 lemma compile_return_edge:
-  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> returns_in e c
-   \<Longrightarrow> \<exists>k. (Statement k, EA_Ret e p, FunctionResult p) \<in> E"
-proof (induction c arbitrary: n n' en ex E K rule: com.induct)
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> returns_in e c
+   \<Longrightarrow> \<exists>j. (Statement j, EA_Ret e p, FunctionResult p) \<in> E"
+proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
-  from Seq.prems(1) obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile \<Pi> p c1 n = (n1, en1, ex1, E1, K1)"
-    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
-    and E: "E = E1 \<union> (if ex1 = en2 then {} else {(ex1, EA_Nop, en2)}) \<union> E2"
-    by (auto split: prod.splits)
+  from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    and E: "E = E1 \<union> E2"
+    by (auto simp: Let_def split: prod.splits)
   from Seq.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
   then show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] E by auto
 next
   case (If b c1 c2)
-  from If.prems(1) obtain n1 en1 ex1 E1 K1 n2 en2 ex2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Suc n) = (n1, en1, ex1, E1, K1)"
-    and c2: "compile \<Pi> p c2 n1 = (n2, en2, ex2, E2, K2)"
+  from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+    c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
-                  \<union> E1 \<union> E2 \<union> {(ex1, EA_Nop, Statement n2), (ex2, EA_Nop, Statement n2)}"
+                  \<union> E1 \<union> E2"
     by (auto split: prod.splits)
   from If.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
   then show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] E by auto
 next
   case (While b c)
-  from While.prems(1) obtain n1 en1 ex1 E1 K1 where
-    c1: "compile \<Pi> p c (Suc n) = (n1, en1, ex1, E1, K1)"
-    and E: "E = {(Statement n, EA_Assume b, en1),
-                 (Statement n, EA_AssumeNot b, Statement n1),
-                 (ex1, EA_Nop, Statement n)} \<union> E1"
+  from While.prems(1) obtain n1 en1 E1 K1 where
+    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1"
     by (auto split: prod.splits)
   from While.prems(2) have "returns_in e c" by simp
   then show ?case using While.IH[OF c1] E by auto
@@ -109,10 +107,9 @@ qed auto
 
 text \<open>A call-free command compiles to an empty \<open>calls\<close> set.\<close>
 lemma compile_no_call:
-  "compile \<Pi> p c n = (n', en, ex, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
-  by (induction c arbitrary: n n' en ex E K rule: com.induct)
-     (auto split: prod.splits if_splits)
-
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
+  by (induction c arbitrary: k n n' en E K rule: com.induct)
+     (auto simp: Let_def split: prod.splits if_splits)
 lemma compile_proc_no_call:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> \<not> has_call (body decl) \<Longrightarrow> K = {}"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_no_call)
@@ -163,32 +160,35 @@ subsection \<open>Statement-range disjointness of distinct procedures\<close>
 lemma compile_proc_frag_range:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
 proof -
-  assume "compile_proc \<Pi> p decl n = (n', E, K)"
-  then obtain ben bex Eb where
-    cb: "compile \<Pi> p (body decl) n = (n', ben, bex, Eb, K)"
-    and E: "E = insert (FunctionEntry p, EA_Nop, ben)
-                  (insert (bex, EA_Ret None p, FunctionResult p) Eb)"
-    by (auto simp: compile_proc_def Let_def split: prod.splits)
-  obtain kb where ben: "ben = Statement kb" "n \<le> kb" "kb < n'"
-    using compile_entry_exit_stmt[OF cb] by blast
-  obtain kc where bex: "bex = Statement kc" "n \<le> kc" "kc < n'"
-    using compile_entry_exit_stmt[OF cb] by blast
-  have body: "frag_stmts Eb K \<subseteq> {n..<n'}" using compile_frag_stmts_range[OF cb] .
-  have Eunfold: "E = {(FunctionEntry p, EA_Nop, ben),
-                      (bex, EA_Ret None p, FunctionResult p)} \<union> Eb"
-    using E by auto
-  have lit: "frag_stmts {(FunctionEntry p, EA_Nop, ben),
-                (bex, EA_Ret None p, FunctionResult p)} {} \<subseteq> {n..<n'}"
-    using ben bex by (auto simp: frag_stmts_def)
+  assume A: "compile_proc \<Pi> p decl n = (n', E, K)"
+  define r where "r = n + csize (body decl)"
+  from A obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement r) n = (r, Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+                  (if falls_through (body decl)
+                   then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
+                   else Eb)"
+    and n': "n' = Suc r"
+    unfolding r_def by (rule compile_procE)
+  have body: "frag_stmts Eb K \<subseteq> {n..<n'}"
+    using compile_frag_stmts_range[OF cb] n' compile_counter_mono[OF cb] by auto
+  have lit: "frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
+                (Statement r, EA_Ret None p, FunctionResult p)} {} \<subseteq> {n..<n'}"
+    using n' r_def compile_counter_mono[OF cb] by (auto simp: frag_stmts_def)
+  \<comment> \<open>the epilogue edge may be absent, so bound \<open>E\<close> by the set that always contains it\<close>
+  have Esub: "E \<subseteq> {(FunctionEntry p, EA_Nop, Statement n),
+                      (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb"
+    using E by (auto split: if_splits)
   have "frag_stmts E K
-          = frag_stmts ({(FunctionEntry p, EA_Nop, ben),
-              (bex, EA_Ret None p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
-    using Eunfold by simp
-  also have "... = frag_stmts {(FunctionEntry p, EA_Nop, ben),
-                (bex, EA_Ret None p, FunctionResult p)} {} \<union> frag_stmts Eb K"
+          \<subseteq> frag_stmts ({(FunctionEntry p, EA_Nop, Statement n),
+              (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
+    by (rule frag_stmts_mono[OF Esub]) simp
+  also have "... = frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
+                (Statement r, EA_Ret None p, FunctionResult p)} {} \<union> frag_stmts Eb K"
     by (rule frag_stmts_Un)
   also have "... \<subseteq> {n..<n'}" using lit body by fastforce
   finally show ?thesis .
+
 qed
 
 lemma compile_procs_counter_mono:
@@ -274,13 +274,33 @@ theorem inv4_ret_to_result:
   "(u, EA_Ret e p, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v = FunctionResult p"
   using edge_step_ret_target[OF compile_prog_wf] .
 
-text \<open>Each procedure has entry and result nodes keyed by its name.  The wrapper emits
-  the entry edge and the fall-through result edge, while distinct names yield distinct nodes.\<close>
+text \<open>Each procedure has entry and result nodes keyed by its name.  The wrapper emits the entry
+  edge, and the procedure always carries some return edge into its result: the fall-through
+  \<^term>\<open>EA_Ret None\<close> from the epilogue when the body can complete normally, and otherwise an
+  explicit \<^term>\<open>EA_Ret e\<close> from inside the body (\<open>compile_returns_edge\<close>).  Distinct names yield
+  distinct nodes.\<close>
 theorem inv5_6_proc_entry_result_edges:
   assumes "compile_proc \<Pi> p decl n = (n', E, K)"
   shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
-       \<and> (\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E)"
-  using assms by (auto simp: compile_proc_def Let_def split: prod.splits)
+       \<and> (\<exists>bex e. (bex, EA_Ret e p, FunctionResult p) \<in> E)"
+proof -
+  from assms obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+                 (if falls_through (body decl)
+                  then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+                  else Eb)"
+    by (rule compile_procE)
+  have "\<exists>bex e. (bex, EA_Ret e p, FunctionResult p) \<in> E"
+  proof (cases "falls_through (body decl)")
+    case True then show ?thesis using E by auto
+  next
+    case False
+    then show ?thesis using compile_returns_edge[OF cb] E by auto
+  qed
+  then show ?thesis using E by auto
+qed
 
 theorem inv5_6_entry_result_distinct:
   "p \<noteq> q \<Longrightarrow> FunctionEntry p \<noteq> FunctionEntry q \<and> FunctionResult p \<noteq> FunctionResult q"
@@ -298,10 +318,10 @@ theorem inv9_no_intra_call:
   "FunctionEntry p \<notin> intra_successors (compile_prog \<Pi> ps mnm main) u"
   using wf_no_intra_call[OF compile_prog_wf] .
 
-text \<open>The normal-exit node of a return fragment has no incoming intra edge.  A command
-  connected after that exit therefore lies outside every return-to-result path.\<close>
-theorem inv11_return_exit_unreached:
-  "(u, a, Statement (Suc n)) \<notin> fst (snd (snd (snd (compile \<Pi> p (Return e) n))))"
+text \<open>A \<open>Return\<close> fragment ignores its continuation: it emits its result edge and nothing
+  else, so no node exists to carry a control flow the source does not have.\<close>
+theorem inv11_return_ignores_continuation:
+  "compile \<Pi> p (Return e) k n = compile \<Pi> p (Return e) k' n"
   by simp
 
 text \<open>Normal fall-through reaches the procedure result through the edge emitted by
@@ -310,16 +330,17 @@ lemmas inv12_fallthrough = inv5_6_proc_entry_result_edges
 
 text \<open>Return branches of the same procedure converge at \<open>FunctionResult p\<close>.\<close>
 theorem inv13_multi_return_converge:
-  assumes "compile \<Pi> p (If b (Return e1) (Return e2)) n = (n', en, ex, E, K)"
-  shows "(\<exists>k. (Statement k, EA_Ret e1 p, FunctionResult p) \<in> E)
-       \<and> (\<exists>k. (Statement k, EA_Ret e2 p, FunctionResult p) \<in> E)"
+  assumes "compile \<Pi> p (If b (Return e1) (Return e2)) k n = (n', en, E, K)"
+  shows "(\<exists>j. (Statement j, EA_Ret e1 p, FunctionResult p) \<in> E)
+       \<and> (\<exists>j. (Statement j, EA_Ret e2 p, FunctionResult p) \<in> E)"
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
 
-text \<open>A self-call targets the procedure's own entry node; its call site and continuation
-  remain ordinary statement nodes.\<close>
+text \<open>A self-call targets the procedure's own entry node; its call site is an ordinary
+  statement node and its continuation is the caller's own next program point.\<close>
 theorem inv14_recursion_edge:
-  "(Statement n, CallEdge None (case \<Pi> p of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p, Statement (Suc n))
-     \<in> snd (snd (snd (snd (compile \<Pi> p (Call None p []) n))))"
+  "(Statement n, CallEdge None (case \<Pi> p of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [],
+    FunctionEntry p, k)
+     \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
   by simp
 
 text \<open>The program entry is the entry node of the distinguished root procedure.\<close>

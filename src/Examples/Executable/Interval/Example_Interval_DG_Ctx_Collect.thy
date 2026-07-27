@@ -221,7 +221,7 @@ text \<open>Enter callers are covered only under the main context (\<open>bot\<c
   solved domain.\<close>
 lemma enter_callers_only_bot:
   "\<forall>(p, ctx)\<in>fst twice_ctx_sol.
-     (p = Statement 2 \<or> p = Statement 4) \<longrightarrow> ctx = bot"
+     (p = Statement 2 \<or> p = Statement 3) \<longrightarrow> ctx = bot"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
 
 text \<open>\<^bold>\<open>The two executable enter bounds.\<close>  At each call site (context \<open>bot\<close>) the executable
@@ -241,10 +241,10 @@ lemma enter_st_bound_call1:
 
 lemma enter_st_bound_call2:
   "snd (dgs_enter Spoly [''p''] [IMP2_Syntax.N 10]
-          (locals (snd twice_ctx_sol (Inl (Statement 4, bot))))
+          (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
           (globs (snd twice_ctx_sol (Inr Global))))
    \<squnion> fst (dgs_enter Spoly [''p''] [IMP2_Syntax.N 10]
-          (locals (snd twice_ctx_sol (Inl (Statement 4, bot))))
+          (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
           (globs (snd twice_ctx_sol (Inr Global))))
    \<le> locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))
        \<squnion> globs (snd twice_ctx_sol (Inr Global))"
@@ -341,7 +341,7 @@ next
   let ?s' = "call_enter (CallEdge dst xs es) s"
   from e consider
       (c1) "u = Statement 2" "xs = [''p'']" "es = [IMP2_Syntax.N 3]" "p = ''twice''"
-    | (c2) "u = Statement 4" "xs = [''p'']" "es = [IMP2_Syntax.N 10]" "p = ''twice''"
+    | (c2) "u = Statement 3" "xs = [''p'']" "es = [IMP2_Syntax.N 10]" "p = ''twice''"
     unfolding twice_calls by auto
   thus ?thesis
   proof cases
@@ -355,7 +355,7 @@ next
   next
     case c2
     have ctxb: "ctx = bot" using True enter_callers_only_bot c2 by fastforce
-    have covU: "(Statement 4, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
+    have covU: "(Statement 3, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
     have "?s' \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry ''twice'', ctx_call2))\<rbrakk>"
       by (rule enter_membership[OF covU callee_covered_call2 _ _ enter_st_bound_call2])
          (use s c2 ctxb in simp_all)
@@ -437,19 +437,19 @@ lemma combine_st_bound_call1:
 
 lemma combine_st_bound_call2:
   "snd (dgs_combine Spoly (Some ''y'')
-          (locals (snd twice_ctx_sol (Inl (Statement 4, bot))))
+          (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
           (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2))))
           (globs (snd twice_ctx_sol (Inr Global))))
    \<squnion> fst (dgs_combine Spoly (Some ''y'')
-          (locals (snd twice_ctx_sol (Inl (Statement 4, bot))))
+          (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
           (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2))))
           (globs (snd twice_ctx_sol (Inr Global))))
-   \<le> locals (snd twice_ctx_sol (Inl (Statement 5, bot))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
+   \<le> locals (snd twice_ctx_sol (Inl (Statement 4, bot))) \<squnion> globs (snd twice_ctx_sol (Inr Global))"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call2_def Spoly_def by eval
 
 lemma covered_ret5: "(Statement 3, bot) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
-lemma covered_ret7: "(Statement 5, bot) \<in> fst twice_ctx_sol"
+lemma covered_ret7: "(Statement 4, bot) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
 lemma callee_exit_covered_call1: "(FunctionResult ''twice'', ctx_call1) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call1_def by eval
@@ -470,7 +470,7 @@ proof -
 qed
 
 lemma comb_route_call2:
-  assumes "call_enter_store twice_cfg (Statement 4) s es"
+  assumes "call_enter_store twice_cfg (Statement 3) s es"
   shows "ivl_enterc c1 es = ctx_call2"
 proof -
   have "es = call_enter (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10]) s"
@@ -498,7 +498,7 @@ next
   case True
   from c consider
       (c1) "cl = Statement 2" "p = ''twice''" "v = Statement 3" "dst = Some ''x''"
-    | (c2) "cl = Statement 4" "p = ''twice''" "v = Statement 5" "dst = Some ''y''"
+    | (c2) "cl = Statement 3" "p = ''twice''" "v = Statement 4" "dst = Some ''y''"
     unfolding twice_calls by auto
   thus ?thesis
   proof cases
@@ -514,8 +514,8 @@ next
     case c2
     have ctxb: "c1 = bot" using True enter_callers_only_bot c2 by fastforce
     have route: "ivl_enterc c1 es = ctx_call2" using ces c2 by (simp add: comb_route_call2)
-    have covCl: "(Statement 4, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
-    have "combine_collect (Some ''y'') s t \<in> \<lbrakk>ivl_ctx_sg (Inl (Statement 5, bot))\<rbrakk>"
+    have covCl: "(Statement 3, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
+    have "combine_collect (Some ''y'') s t \<in> \<lbrakk>ivl_ctx_sg (Inl (Statement 4, bot))\<rbrakk>"
       by (rule combine_membership[OF covCl callee_exit_covered_call2 covered_ret7 _ _ combine_st_bound_call2])
          (use s t c2 ctxb route in simp_all)
     thus ?thesis using c2 ctxb by simp
