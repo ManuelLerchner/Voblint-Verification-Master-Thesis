@@ -113,7 +113,7 @@ definition ctx_call1 :: ivl where
                  (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3])"
 
 definition ctx_call2 :: ivl where
-  "ctx_call2 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 4, bot))))
+  "ctx_call2 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
                  (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10])"
 
 lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
@@ -152,7 +152,7 @@ lemma x_computed:
   by eval
 
 lemma y_computed:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (Statement 5, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_st (locals (snd twice_ctx_sol (Inl (Statement 4, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
   by eval
 
 subsection \<open>Seed slots and coverage\<close>
@@ -267,7 +267,7 @@ lemma twice_ctx_graph_enter_edges:
     [(LocalNode (Statement 2) bot,
       EnterEdge ''twice'' (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3]),
       LocalNode (FunctionEntry ''twice'') ctx_call1),
-     (LocalNode (Statement 4) bot,
+     (LocalNode (Statement 3) bot,
       EnterEdge ''twice'' (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10]),
       LocalNode (FunctionEntry ''twice'') ctx_call2)]" by eval
 
@@ -277,7 +277,7 @@ lemma twice_ctx_graph_combine_edges:
     [(LocalNode (FunctionResult ''twice'') ctx_call1,
       CombineEdge (Statement 2) (Some ''x'') (Some ''#ret''), LocalNode (Statement 3) bot),
      (LocalNode (FunctionResult ''twice'') ctx_call2,
-      CombineEdge (Statement 4) (Some ''y'') (Some ''#ret''), LocalNode (Statement 5) bot)]"
+      CombineEdge (Statement 3) (Some ''y'') (Some ''#ret''), LocalNode (Statement 4) bot)]"
   by eval
 
 lemma twice_ctx_dot_has_context_clusters:

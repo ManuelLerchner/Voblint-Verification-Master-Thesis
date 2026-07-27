@@ -76,10 +76,10 @@ subsection \<open>CFG construction\<close>
 text \<open>
   The source compiles to an interprocedural CFG by \<open>compile_prog\<close>.  The whole program is
   the body of \<open>main\<close>, so it runs between \<open>FunctionEntry ''main''\<close> and
-  \<open>FunctionResult ''main''\<close>; inside, \<open>x := 0\<close> reaches statement \<open>1\<close>, the loop head is \<open>2\<close>,
-  the guard \<open>x < 20\<close> branches to body \<open>3\<close> or exit \<open>5\<close>, the increment reaches \<open>4\<close>, and \<open>4\<close>
-  jumps back to \<open>2\<close>.  \<open>flagship_cfg_eq\<close> proves the compilation equals the explicit graph;
-  the annotated rendering is in section 10.
+  \<open>FunctionResult ''main''\<close>; inside, \<open>x := 0\<close> falls directly into the loop head \<open>1\<close> (the
+  continuation-passing compiler needs no separate join node), the guard \<open>x < 20\<close> branches
+  to body \<open>2\<close> or exit \<open>3\<close>, and the increment at \<open>2\<close> jumps back to \<open>1\<close>.  \<open>flagship_cfg_eq\<close>
+  proves the compilation equals the explicit graph; the annotated rendering is in section 10.
 \<close>
 
 text \<open>The declaration environment holds exactly \<open>main\<close>: there are no other procedures, and
@@ -96,12 +96,10 @@ lemma flagship_cfg_eq:
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
           (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
-          (Statement 1, EA_Nop, Statement 2),
-          (Statement 2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
-          (Statement 2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 5),
-          (Statement 3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 4),
-          (Statement 4, EA_Nop, Statement 2),
-          (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')},
+          (Statement 1, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 2),
+          (Statement 1, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
+          (Statement 2, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 1),
+          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
   unfolding flagship_cfg_def flagship_pi_def flagship_prog_def by eval
@@ -113,12 +111,10 @@ lemma flagship_exit: "cfg_exit flagship_cfg = FunctionResult ''main''"
 lemma flagship_intra: "intra flagship_cfg =
      {(FunctionEntry ''main'', EA_Nop, Statement 0),
       (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
-      (Statement 1, EA_Nop, Statement 2),
-      (Statement 2, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
-      (Statement 2, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 5),
-      (Statement 3, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 4),
-      (Statement 4, EA_Nop, Statement 2),
-      (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')}"
+      (Statement 1, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 2),
+      (Statement 1, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
+      (Statement 2, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 1),
+      (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
   by (simp add: flagship_cfg_eq)
 lemma flagship_calls: "calls flagship_cfg = {}" by (simp add: flagship_cfg_eq)
 
@@ -169,7 +165,7 @@ text \<open>The computed local interval for \<open>x\<close> at every node --- \
 
 value "map_option
    (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x'')))
-            (map Statement [0,1,2,3,4,5]))
+            (map Statement [0,1,2,3]))
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
 subsection \<open>Soundness premises for the registered endpoint\<close>
@@ -181,7 +177,7 @@ text \<open>
 \<close>
 
 lemma flagship_cover_all:
-  "\<forall>v \<in> {Statement 0, Statement 1, Statement 2, Statement 3, Statement 4, Statement 5,
+  "\<forall>v \<in> {Statement 0, Statement 1, Statement 2, Statement 3,
            FunctionEntry ''main'', FunctionResult ''main''}.
      (v, ()) \<in> fst flagship_sol"
   unfolding flagship_sol_def flagship_eqs_def by eval
@@ -217,15 +213,15 @@ text \<open>
 subsection \<open>Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  "lookup_st (locals (snd flagship_sol (Inl (Statement 1, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_body_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "lookup_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_exit_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (Statement 5, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_st (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 subsection \<open>Source-level soundness through the registered analysis\<close>
@@ -269,26 +265,26 @@ qed
 
 text \<open>
   \<^bold>\<open>The bound is proper.\<close>  The global slot carries no local information
-  (\<open>glob_x_at_2\<close>), so the loop-head concretization constrains \<open>x\<close> to exactly
+  (\<open>glob_x_at_head\<close>), so the loop-head concretization constrains \<open>x\<close> to exactly
   \<open>[0,20]\<close> and rejects, e.g., a store with \<open>x = 100\<close>.  The guarantee therefore says
   something --- it is not the trivial \<open>gamma top = UNIV\<close>.
 \<close>
 
-lemma glob_x_at_2: "lookup_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+lemma glob_x_at_head: "lookup_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma head_x_bound:
-  "(locals ((fun_of_dg_st \<circ> snd flagship_sol) (Inl (Statement 2, ())))
+  "(locals ((fun_of_dg_st \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ())))
     \<squnion> globs ((fun_of_dg_st \<circ> snd flagship_sol) (Inr ()))) ''x'' = Ivl (Fin 0) (Fin 20)"
 proof -
-  have L: "fun_of_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  have L: "fun_of_st (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed by simp
-  have G: "fun_of_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot" by (rule glob_x_at_2)
+  have G: "fun_of_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot" by (rule glob_x_at_head)
   show ?thesis by (simp add: fun_of_dg_st_simps sup_fun_def L G)
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) (Statement 2)"
+  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) (Statement (Suc 0))"
   unfolding ivl_dg_gamma_def ivl_dg.dg_gamma_def gamma_unit_def gamma_state_def
             ivl_dg.dg_D_def ivl_dg.dg_G_def
   apply (simp only: mem_Collect_eq not_all)

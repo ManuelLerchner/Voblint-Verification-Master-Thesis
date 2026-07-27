@@ -39,8 +39,8 @@ proof -
 qed
 
 lemma return_initiation:
-  assumes loc: "control_at \<Pi> p c0 n (Return e) v"
-      and comp: "compile \<Pi> p c0 n = (n', en, ex, E, K)"
+  assumes loc: "control_at \<Pi> p c0 kk n (Return e) v"
+      and comp: "compile \<Pi> p c0 kk n = (n', en, E, K)"
       and sub: "E \<subseteq> intra g"
   obtains k where "v = Statement k"
     and "pstep \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
@@ -150,18 +150,18 @@ proof (induction rule: star.induct)
 qed simp
 
 lemma csim_tailcall_callee_entry:
-  assumes callee: "control_at \<Pi> p c0 n SKIP v"
-      and calleecacc: "compiled_at \<Pi> g p c0 n"
+  assumes callee: "control_at \<Pi> p c0 k n SKIP v"
+      and calleecacc: "compiled_at \<Pi> g p c0 k n"
       and calleepa: "proc_activation \<Pi> p c0"
-      and caller: "control_at \<Pi> pc c0c nc SKIP cont"
-      and callercacc: "compiled_at \<Pi> g pc c0c nc"
+      and caller: "control_at \<Pi> pc c0c kc nc SKIP cont"
+      and callercacc: "compiled_at \<Pi> g pc c0c kc nc"
       and callerpa: "proc_activation \<Pi> pc c0c"
   shows "csim \<Pi> g (Seq SKIP Restore, callee, [Frame caller dst])
                   (v, callee, [(cont, dst, caller)])"
 proof -
   have base: "csim \<Pi> g (SKIP, callee, []) (v, callee, [])"
     by (rule csim.Base[OF callee calleecacc calleepa])
-  have caller': "control_at \<Pi> pc c0c nc (seq_after SKIP []) cont" using caller by simp
+  have caller': "control_at \<Pi> pc c0c kc nc (seq_after SKIP []) cont" using caller by simp
   have "csim \<Pi> g (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst])
                  (v, callee, [] @ [(cont, dst, caller)])"
     by (rule csim.Nested[OF base caller' callercacc callerpa])

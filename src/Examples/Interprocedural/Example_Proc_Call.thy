@@ -131,7 +131,7 @@ text \<open>
   starting at statement 4.  Each procedure is bracketed by its own
   @{const FunctionEntry} / @{const FunctionResult}; each call edge names its callee
   entry and its continuation, so the two calls are
-  @{text "6 -> inc, continue at 7"} and @{text "8 -> sqr, continue at 9"}.
+  @{text "5 -> inc, continue at 6"} and @{text "6 -> sqr, continue at 7"}.
 \<close>
 
 abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_cfg_name main_prog"
@@ -147,12 +147,10 @@ lemma main_cfg_full:
           (Statement 3, EA_Ret None ''sqr'', FunctionResult ''sqr''),
           (FunctionEntry ''main'', EA_Nop, Statement 4),
           (Statement 4, EA_Assign ''Gx'' (N 4), Statement 5),
-          (Statement 5, EA_Nop, Statement 6),
-          (Statement 7, EA_Nop, Statement 8),
-          (Statement 9, EA_Ret None ''main'', FunctionResult ''main'')},
+          (Statement 7, EA_Ret None ''main'', FunctionResult ''main'')},
        calls =
-         {(Statement 6, CallEdge None [] [], FunctionEntry ''inc'', Statement 7),
-          (Statement 8, CallEdge None [] [], FunctionEntry ''sqr'', Statement 9)},
+         {(Statement 5, CallEdge None [] [], FunctionEntry ''inc'', Statement 6),
+          (Statement 6, CallEdge None [] [], FunctionEntry ''sqr'', Statement 7)},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
   by (simp add: main_cfg_name_def) eval
 
@@ -170,14 +168,12 @@ lemma main_cfg_intra:
       (Statement 3, EA_Ret None ''sqr'', FunctionResult ''sqr''),
       (FunctionEntry ''main'', EA_Nop, Statement 4),
       (Statement 4, EA_Assign ''Gx'' (N 4), Statement 5),
-      (Statement 5, EA_Nop, Statement 6),
-      (Statement 7, EA_Nop, Statement 8),
-      (Statement 9, EA_Ret None ''main'', FunctionResult ''main'')}"
+      (Statement 7, EA_Ret None ''main'', FunctionResult ''main'')}"
   by (simp add: main_cfg_full)
 lemma main_cfg_calls:
   "calls main_cfg =
-     {(Statement 6, CallEdge None [] [], FunctionEntry ''inc'', Statement 7),
-      (Statement 8, CallEdge None [] [], FunctionEntry ''sqr'', Statement 9)}"
+     {(Statement 5, CallEdge None [] [], FunctionEntry ''inc'', Statement 6),
+      (Statement 6, CallEdge None [] [], FunctionEntry ''sqr'', Statement 7)}"
   by (simp add: main_cfg_full)
 
  
@@ -200,22 +196,22 @@ text \<open>
 
   Node groupings:
   @{text "4"} -- main body entry, before @{text "Gx := 4"};
-  @{text "5"}, @{text "6"} -- after @{text "Gx := 4"} and the call site to inc;
-  @{text "0"} -- inc body entry (reached through the call edge from 6);
+  @{text "5"} -- after @{text "Gx := 4"}, which is also the call site to inc;
+  @{text "0"} -- inc body entry (reached through the call edge from 5);
   @{text "1"} -- inc body exit, feeding @{term \<open>FunctionResult ''inc''\<close>};
-  @{text "7"}, @{text "8"} -- continuation after inc and the call site to sqr;
+  @{text "6"} -- continuation after inc, which is also the call site to sqr;
   @{text "2"}, @{text "3"} -- sqr body entry and exit;
-  @{text "9"} -- continuation after sqr, feeding @{term \<open>FunctionResult ''main''\<close>}.
+  @{text "7"} -- continuation after sqr, feeding @{term \<open>FunctionResult ''main''\<close>}.
 \<close>
 
 definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
   "main_prog_env v x =
-     (if v \<in> {Statement 5, Statement 6, FunctionEntry ''inc'', Statement 0} \<and> x = ''Gx''
+     (if v \<in> {Statement 5, FunctionEntry ''inc'', Statement 0} \<and> x = ''Gx''
         then Ivl (Fin 4) (Fin 4)
-      else if v \<in> {Statement 1, FunctionResult ''inc'', Statement 7, Statement 8,
+      else if v \<in> {Statement 1, FunctionResult ''inc'', Statement 6,
                    FunctionEntry ''sqr'', Statement 2} \<and> x = ''Gx''
         then Ivl (Fin 5) (Fin 5)
-      else if v \<in> {Statement 3, FunctionResult ''sqr'', Statement 9,
+      else if v \<in> {Statement 3, FunctionResult ''sqr'', Statement 7,
                    FunctionResult ''main''} \<and> x = ''Gx''
         then Ivl (Fin 25) (Fin 25)
       else Ivl MinInf PlusInf)"

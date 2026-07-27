@@ -25,12 +25,13 @@ definition twice_cfg :: cfg where
 
 text \<open>
   The compiled CFG, read off by \<^verbatim>\<open>eval\<close>.  Procedure \<open>twice\<close> runs between
-  \<open>FunctionEntry ''twice''\<close> and \<open>FunctionResult ''twice''\<close>, occupying statements \<open>0..1\<close>:
-  the body's \<open>return p + p\<close> publishes through \<open>EA_Ret\<close> at statement \<open>0\<close>, and statement \<open>1\<close>
-  is the void fall-through return.  \<open>main\<close> occupies statements \<open>2..5\<close>: \<open>2\<close> is the first
-  call site (continuing at \<open>3\<close>), \<open>4\<close> is the second (continuing at \<open>5\<close>).
-  \<^bold>\<open>Both call edges name the same callee entry \<open>FunctionEntry ''twice''\<close>\<close> --- this is the
-  monovariant (single-context) view.
+  \<open>FunctionEntry ''twice''\<close> and \<open>FunctionResult ''twice''\<close>: the body's \<open>return p + p\<close>
+  publishes through \<open>EA_Ret\<close> at statement \<open>0\<close>.  \<open>twice\<close> never falls through, so the
+  continuation-passing compiler reserves no epilogue edge --- statement \<open>1\<close> is an
+  unused index, not a node of the compiled graph.  \<open>main\<close> occupies statements \<open>2..4\<close>:
+  \<open>2\<close> is the first call site, continuing directly at \<open>3\<close>, which is also the second
+  call site, continuing at \<open>4\<close>.  \<^bold>\<open>Both call edges name the same callee entry
+  \<open>FunctionEntry ''twice''\<close>\<close> --- this is the monovariant (single-context) view.
 \<close>
 
 lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry ''main''" by eval
@@ -43,18 +44,16 @@ lemma twice_intra:
       (Statement 0,
        EA_Ret (Some (Plus (IMP2_Syntax.V ''p'') (IMP2_Syntax.V ''p''))) ''twice'',
        FunctionResult ''twice''),
-      (Statement 1, EA_Ret None ''twice'', FunctionResult ''twice''),
       (FunctionEntry ''main'', EA_Nop, Statement 2),
-      (Statement 3, EA_Nop, Statement 4),
-      (Statement 5, EA_Ret None ''main'', FunctionResult ''main'')}"
+      (Statement 4, EA_Ret None ''main'', FunctionResult ''main'')}"
   by eval
 
 lemma twice_calls:
   "calls twice_cfg =
      {(Statement 2, CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3],
        FunctionEntry ''twice'', Statement 3),
-      (Statement 4, CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10],
-       FunctionEntry ''twice'', Statement 5)}"
+      (Statement 3, CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10],
+       FunctionEntry ''twice'', Statement 4)}"
   by eval
 
 lemma twice_finE: "finite (intra twice_cfg)" unfolding twice_intra by simp
@@ -106,7 +105,7 @@ value "map_option
                        string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''y'')))
             ([FunctionEntry ''twice'', FunctionResult ''twice'',
               FunctionEntry ''main'', FunctionResult ''main'']
-             @ map Statement [0,1,2,3,4,5]))
+             @ map Statement [0,2,3,4]))
    (TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()))"
 
 subsection \<open>Certified solution (reusing solver correctness)\<close>
@@ -147,7 +146,7 @@ text \<open>
 lemma twice_cover_all:
   "\<forall>v \<in> {FunctionEntry ''twice'', FunctionResult ''twice'',
            FunctionEntry ''main'', FunctionResult ''main'',
-           Statement 0, Statement 1, Statement 2, Statement 3, Statement 4, Statement 5}.
+           Statement 0, Statement 2, Statement 3, Statement 4}.
      (v, ()) \<in> fst twice_sol"
   unfolding twice_sol_def twice_eqs_def by eval
 
@@ -203,7 +202,7 @@ lemma twice_x_computed:
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_y_computed:
-  "lookup_st (locals (snd twice_sol (Inl (Statement 5, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
+  "lookup_st (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 subsection \<open>Source-level soundness\<close>
@@ -252,7 +251,7 @@ text \<open>
   (labelled \<open>combine via call@N\<close>).  Each node is annotated with \<open>p\<close>, \<open>#ret\<close>,
   \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>FunctionEntry ''twice''\<close> shows
   \<open>p in [3,10]\<close> and \<open>FunctionResult ''twice''\<close> shows \<open>#ret in [6,20]\<close>, while the
-  continuations \<open>3\<close> / \<open>5\<close> show \<open>x\<close> / \<open>y in [6,20]\<close>.
+  continuations \<open>3\<close> / \<open>4\<close> show \<open>x\<close> / \<open>y in [6,20]\<close>.
 \<close>
 
 definition twice_graph_config ::
