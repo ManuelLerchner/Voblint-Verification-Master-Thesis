@@ -209,17 +209,22 @@ proof -
   have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
   have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
     by (rule wf_compile_input_main_exists[OF wf])
-  from procs_compiled_proc[OF pc mnmdecl] obtain k m m' en E K where
+  obtain k m m' en E K where
     cbody: "compile \<Pi> mnm (body (proc_decl_of [] main)) k m = (m', en, E, K)"
       and Esub: "E \<subseteq> intra ?g" and Ksub: "K \<subseteq> calls ?g"
       and entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
-      and exitm: "(k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
-      and srcbody: "source_com (body (proc_decl_of [] main))" by metis
+      and exitm: "falls_through (body (proc_decl_of [] main)) \<longrightarrow>
+                    (k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
+      and srcbody: "source_com (body (proc_decl_of [] main))"
+    by (rule procs_compiled_proc[OF pc mnmdecl])
   have bodyeq: "body (proc_decl_of [] main) = main" by (simp add: proc_decl_of_def)
   have cbody': "compile \<Pi> mnm main k m = (m', en, E, K)" using cbody bodyeq by simp
   have srcmain: "source_com main" using srcbody bodyeq by simp
+  have exitm': "falls_through main \<longrightarrow> (k, EA_Ret None mnm, FunctionResult mnm) \<in> intra ?g"
+    using exitm bodyeq by simp
   have cacc: "compiled_at \<Pi> ?g mnm main k m"
-    by (rule compiled_atI[OF cbody' Esub Ksub exitm])
+    by (rule compiled_atI[OF cbody' Esub Ksub exitm'])
+
   have pa: "proc_activation \<Pi> mnm main"
     using mnmdecl bodyeq unfolding proc_activation_def by auto
   have base: "csim \<Pi> ?g (main, s, []) (en, s, [])"

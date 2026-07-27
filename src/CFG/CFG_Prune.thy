@@ -443,28 +443,32 @@ lemma compile_proc_reaches_result:
   shows "cfg_reaches g (FunctionEntry p) (FunctionResult p)"
 proof -
   let ?r = "n + csize (body decl)"
-  obtain n0 ben Eb Kb where
-      body: "compile \<Pi> p (body decl) (Statement ?r) n = (n0, ben, Eb, Kb)"
-    and E_eq: "E = insert (FunctionEntry p, EA_Nop, ben)
-                     (insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb)"
-    and K_eq: "K = Kb"
-    using assms(1) unfolding compile_proc_def by (auto simp: Let_def split: prod.splits)
-  have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by auto
-  have Kbg: "Kb \<subseteq> calls g" using K_eq assms(3) by simp
-  have entry_ben: "cfg_reaches g (FunctionEntry p) ben"
+  obtain Eb where
+      body: "compile \<Pi> p (body decl) (Statement ?r) n = (?r, Statement n, Eb, K)"
+    and E_eq: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+                     (if falls_through (body decl)
+                      then insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb
+                      else Eb)"
+    by (rule compile_procE[OF assms(1)])
+  have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by (auto split: if_splits)
+  have entry_ben: "cfg_reaches g (FunctionEntry p) (Statement n)"
     using E_eq assms(2) by (auto intro: cfg_reaches_intra)
-  have epi_res: "cfg_reaches g (Statement ?r) (FunctionResult p)"
-    using E_eq assms(2) by (auto intro: cfg_reaches_intra)
-  consider (r) "cfg_reaches g ben (Statement ?r)"
-    | (res) "cfg_reaches g ben (FunctionResult p)"
-    using compile_reaches[OF body Ebg Kbg] by blast
-  then show ?thesis
-  proof cases
-    case r show ?thesis by (meson entry_ben r epi_res cfg_reaches_trans)
+  show ?thesis
+  proof (cases "falls_through (body decl)")
+    case True
+    have epi_res: "cfg_reaches g (Statement ?r) (FunctionResult p)"
+      using E_eq assms(2) True by (auto intro: cfg_reaches_intra)
+    have "cfg_reaches g (Statement n) (Statement ?r)"
+      using compile_reaches_falls_through[OF body Ebg assms(3) True] .
+    with entry_ben epi_res show ?thesis by (meson cfg_reaches_trans)
   next
-    case res show ?thesis by (meson entry_ben res cfg_reaches_trans)
+    case False
+    have "cfg_reaches g (Statement n) (FunctionResult p)"
+      using compile_reaches_returns[OF body Ebg assms(3) False] .
+    with entry_ben show ?thesis by (meson cfg_reaches_trans)
   qed
 qed
+
 
 theorem compile_prog_entry_cfg_reaches_exit:
   "cfg_reaches (compile_prog \<Pi> ps mnm main)

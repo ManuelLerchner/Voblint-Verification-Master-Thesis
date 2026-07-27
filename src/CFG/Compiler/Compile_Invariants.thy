@@ -162,30 +162,33 @@ lemma compile_proc_frag_range:
 proof -
   assume A: "compile_proc \<Pi> p decl n = (n', E, K)"
   define r where "r = n + csize (body decl)"
-  from A obtain n0 ben Eb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (n0, ben, Eb, K)"
-    and E: "E = insert (FunctionEntry p, EA_Nop, ben)
-                  (insert (Statement r, EA_Ret None p, FunctionResult p) Eb)"
+  from A obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement r) n = (r, Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+                  (if falls_through (body decl)
+                   then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
+                   else Eb)"
     and n': "n' = Suc r"
-    unfolding r_def by (auto simp: compile_proc_def Let_def split: prod.splits)
-  have ben: "ben = Statement n" using compile_entry[OF cb] .
-  have n0: "n0 = r" using compile_next_id[OF cb] unfolding r_def by simp
+    unfolding r_def by (rule compile_procE)
   have body: "frag_stmts Eb K \<subseteq> {n..<n'}"
-    using compile_frag_stmts_range[OF cb] n0 n' compile_counter_mono[OF cb] by auto  have lit: "frag_stmts {(FunctionEntry p, EA_Nop, ben),
+    using compile_frag_stmts_range[OF cb] n' compile_counter_mono[OF cb] by auto
+  have lit: "frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
                 (Statement r, EA_Ret None p, FunctionResult p)} {} \<subseteq> {n..<n'}"
-    using ben n' n0 compile_counter_mono[OF cb] by (auto simp: frag_stmts_def)
-  have Eunfold: "E = {(FunctionEntry p, EA_Nop, ben),
+    using n' r_def compile_counter_mono[OF cb] by (auto simp: frag_stmts_def)
+  \<comment> \<open>the epilogue edge may be absent, so bound \<open>E\<close> by the set that always contains it\<close>
+  have Esub: "E \<subseteq> {(FunctionEntry p, EA_Nop, Statement n),
                       (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb"
-    using E by auto
+    using E by (auto split: if_splits)
   have "frag_stmts E K
-          = frag_stmts ({(FunctionEntry p, EA_Nop, ben),
+          \<subseteq> frag_stmts ({(FunctionEntry p, EA_Nop, Statement n),
               (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
-    using Eunfold by simp
-  also have "... = frag_stmts {(FunctionEntry p, EA_Nop, ben),
+    by (rule frag_stmts_mono[OF Esub]) simp
+  also have "... = frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
                 (Statement r, EA_Ret None p, FunctionResult p)} {} \<union> frag_stmts Eb K"
     by (rule frag_stmts_Un)
   also have "... \<subseteq> {n..<n'}" using lit body by fastforce
   finally show ?thesis .
+
 qed
 
 lemma compile_procs_counter_mono:
@@ -271,13 +274,33 @@ theorem inv4_ret_to_result:
   "(u, EA_Ret e p, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v = FunctionResult p"
   using edge_step_ret_target[OF compile_prog_wf] .
 
-text \<open>Each procedure has entry and result nodes keyed by its name.  The wrapper emits
-  the entry edge and the fall-through result edge, while distinct names yield distinct nodes.\<close>
+text \<open>Each procedure has entry and result nodes keyed by its name.  The wrapper emits the entry
+  edge, and the procedure always carries some return edge into its result: the fall-through
+  \<^term>\<open>EA_Ret None\<close> from the epilogue when the body can complete normally, and otherwise an
+  explicit \<^term>\<open>EA_Ret e\<close> from inside the body (\<open>compile_returns_edge\<close>).  Distinct names yield
+  distinct nodes.\<close>
 theorem inv5_6_proc_entry_result_edges:
   assumes "compile_proc \<Pi> p decl n = (n', E, K)"
   shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
-       \<and> (\<exists>bex. (bex, EA_Ret None p, FunctionResult p) \<in> E)"
-  using assms by (auto simp: compile_proc_def Let_def split: prod.splits)
+       \<and> (\<exists>bex e. (bex, EA_Ret e p, FunctionResult p) \<in> E)"
+proof -
+  from assms obtain Eb where
+    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+           = (n + csize (body decl), Statement n, Eb, K)"
+    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
+                 (if falls_through (body decl)
+                  then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+                  else Eb)"
+    by (rule compile_procE)
+  have "\<exists>bex e. (bex, EA_Ret e p, FunctionResult p) \<in> E"
+  proof (cases "falls_through (body decl)")
+    case True then show ?thesis using E by auto
+  next
+    case False
+    then show ?thesis using compile_returns_edge[OF cb] E by auto
+  qed
+  then show ?thesis using E by auto
+qed
 
 theorem inv5_6_entry_result_distinct:
   "p \<noteq> q \<Longrightarrow> FunctionEntry p \<noteq> FunctionEntry q \<and> FunctionResult p \<noteq> FunctionResult q"

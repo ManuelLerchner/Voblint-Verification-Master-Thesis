@@ -177,11 +177,15 @@ proof -
     cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               else Eb)"
+
     by (rule compile_procE)
   have body: "\<And>a v. (FunctionEntry p, a, v) \<notin> Eb"
     using compile_E_shape[OF cb] by blast
-  from e E body show ?thesis by auto
+  from e E body show ?thesis by (auto split: if_splits)
+
 qed
 
 text \<open>The entry wiring edge of a compiled procedure targets the first statement index of its
@@ -192,7 +196,10 @@ lemma compile_proc_entry_edge:
 proof -
   from cp obtain Eb where
     E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               else Eb)"
+
     by (rule compile_procE)
   show ?thesis using E by simp
 qed
@@ -205,8 +212,11 @@ proof -
     cb: "compile \<Pi> r (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry r, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb
+               else Eb)"
     and n': "n' = Suc (n + csize (body decl))"
+
     by (rule compile_procE)
   have kin: "Statement (n + csize (body decl)) \<in> pfn r n n'"
     using n' by (auto simp: pfn_def)
@@ -218,7 +228,8 @@ proof -
   consider "(u, a, v) = (FunctionEntry r, EA_Nop, Statement n)"
     | "(u, a, v) = (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r)"
     | "(u, a, v) \<in> Eb"
-    using e E by auto
+    using e E by (auto split: if_splits)
+
   then show ?thesis
   proof cases
     case 1 then show ?thesis using entryin by (auto simp: pfn_def)
@@ -240,9 +251,12 @@ proof -
     cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               else Eb)"
     by (rule compile_procE)
-  show ?thesis using edge E compile_result_target[OF cb] by auto
+  show ?thesis using edge E compile_result_target[OF cb] by (auto split: if_splits)
+
 qed
 
 lemma compile_proc_call_target_declared:
@@ -339,10 +353,13 @@ proof -
     cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
+               else Eb)"
     by (rule compile_procE)
   have "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
-  then show ?thesis using e E by auto
+  then show ?thesis using e E by (auto split: if_splits)
+
 qed
 
 lemma compile_proc_entry_unique:
@@ -354,11 +371,14 @@ proof -
     cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
+               else Eb)"
     by (rule compile_procE)
   have nb: "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
-  from e1 E nb have "v1 = Statement n" by auto
-  moreover from e2 E nb have "v2 = Statement n" by auto
+  from e1 E nb have "v1 = Statement n" by (auto split: if_splits)
+  moreover from e2 E nb have "v2 = Statement n" by (auto split: if_splits)
+
   ultimately show ?thesis by simp
 qed
 
@@ -500,11 +520,14 @@ proof -
     cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
-              (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               else Eb)"
     by (rule compile_procE)
   have body: "\<And>b w. (FunctionResult r, b, w) \<notin> Eb"
     using compile_E_shape[OF cb] by blast
-  show False using e E body by auto
+  show False using e E body by (auto split: if_splits)
+
 qed
 
 lemma compile_procs_no_result_source:

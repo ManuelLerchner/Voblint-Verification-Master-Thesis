@@ -151,7 +151,17 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   \<open>FunctionResult p\<close> directly as the body continuation would let a trailing assignment target
   the result node, losing \<open>compile_result_target\<close>.  It is allocated \<^emph>\<open>after\<close> the body, so
   statement indices stay in source order and \<open>r\<close> lies inside the procedure's own counter
-  range --- which is what keeps edge locality a statement about one fragment.\<close>
+  range --- which is what keeps edge locality a statement about one fragment.
+
+  The epilogue is wired only when the body can reach it, that is when
+  \<^const>\<open>falls_through\<close> holds.  A body all of whose paths end in an explicit \<^const>\<open>Return\<close>
+  leaves \<open>Statement r\<close> with no edges at all, so it is not a node of the compiled graph --- nodes
+  exist extensionally, through the edges that mention them.  \<open>compile_reaches_returns\<close> supplies
+  the reachability that the epilogue edge would otherwise have carried.
+
+  The counter still advances past \<open>r\<close> in both cases.  Reserving the index costs one \<open>nat\<close> and
+  keeps every \<^const>\<open>csize\<close> equation, fragment range and procedure interval independent of
+  \<^const>\<open>falls_through\<close>.\<close>
 
 definition compile_proc ::
   "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
@@ -163,8 +173,11 @@ where
           (n', ben, E, K) = compile \<Pi> p (body decl) (Statement r) n
       in (Suc r,
           insert (FunctionEntry p, EA_Nop, ben)
-            (insert (Statement r, EA_Ret None p, FunctionResult p) E),
+            (if falls_through (body decl)
+             then insert (Statement r, EA_Ret None p, FunctionResult p) E
+             else E),
           K))"
+
 
 fun compile_procs ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> nat
@@ -354,6 +367,42 @@ lemma frag_stmts_mono:
   "E \<subseteq> E' \<Longrightarrow> K \<subseteq> K' \<Longrightarrow> frag_stmts E K \<subseteq> frag_stmts E' K'"
   by (auto simp: frag_stmts_def)
 
+text \<open>A fragment that cannot complete normally contains an explicit return edge.  This is the
+  counterpart of the epilogue: where \<^const>\<open>falls_through\<close> fails, the body itself already carries
+  an edge into \<^term>\<open>FunctionResult p\<close>, so the procedure keeps a return edge either way.\<close>
+lemma compile_returns_edge:
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> \<not> falls_through c
+   \<Longrightarrow> \<exists>u e. (u, EA_Ret e p, FunctionResult p) \<in> E"
+proof (induction c arbitrary: k n n' en E K)
+  case (Seq c1 c2)
+  obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2': "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    and res: "E = E1 \<union> E2"
+    using Seq.prems(1) by (auto simp: Let_def split: prod.splits)
+  show ?case
+  proof (cases "falls_through c1")
+    case False
+    show ?thesis using Seq.IH(1)[OF c1' False] res by blast
+  next
+    case True
+    have "\<not> falls_through c2" using Seq.prems(2) True by simp
+    then show ?thesis using Seq.IH(2)[OF c2'] res by blast
+  qed
+next
+  case (If b c1 c2)
+  obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1': "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and res: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+                    \<union> E1 \<union> E2"
+    using If.prems(1) by (auto split: prod.splits)
+  have "\<not> falls_through c1" using If.prems(2) by simp
+  then show ?case using If.IH(1)[OF c1'] res by blast
+next
+  case (Return e)
+  then show ?case by (auto split: prod.splits)
+qed simp_all
+
 lemma compile_frag_stmts_range:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
@@ -426,7 +475,9 @@ lemma compile_procE:
     "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
        = (n + csize (body decl), Statement n, Eb, K)"
     "E = insert (FunctionEntry p, EA_Nop, Statement n)
-           (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
+           (if falls_through (body decl)
+            then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+            else Eb)"
     "n' = Suc (n + csize (body decl))"
 proof -
   define r where "r = n + csize (body decl)"
@@ -437,10 +488,13 @@ proof -
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from assms cb e i
   have "E = insert (FunctionEntry p, EA_Nop, Statement n)
-              (insert (Statement r, EA_Ret None p, FunctionResult p) Eb)"
+              (if falls_through (body decl)
+               then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
+               else Eb)"
     "K = Kb" "n' = Suc r"
     unfolding compile_proc_def r_def by (auto simp: Let_def)
   with cb e i show ?thesis unfolding r_def by (auto intro: that)
+
 qed
 
 subsection \<open>Finiteness\<close>
@@ -580,14 +634,16 @@ lemma compile_proc_call_ce_entry:
 
 lemma compile_proc_intra_tgt_not_entry:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
-  by (auto simp: compile_proc_def Let_def split: prod.splits
+  by (auto simp: compile_proc_def Let_def split: prod.splits if_splits
        dest: compile_E_shape compile_entry)
 
 lemma compile_proc_ret_wf:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E
    \<Longrightarrow> v = FunctionResult q"
-  by (auto simp: compile_proc_def Let_def split: prod.splits
+  by (auto simp: compile_proc_def Let_def split: prod.splits if_splits
        dest: compile_ret_wf)
+
+
 lemma compile_procs_call_ce_entry:
   "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
 proof (induction ps arbitrary: n n' E K)

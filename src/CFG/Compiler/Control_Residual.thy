@@ -52,7 +52,8 @@ where
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
 | SeqRight:
-    "control_at \<Pi> p c2 k (n + csize c1) r v \<Longrightarrow>
+    "falls_through c1 \<Longrightarrow>
+     control_at \<Pi> p c2 k (n + csize c1) r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n r v"
 | IfHead:
     "control_at \<Pi> p (If b c1 c2) k n (If b c1 c2) (Statement n)"
@@ -63,7 +64,8 @@ where
     "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n r v"
 | IfDone:
-    "control_at \<Pi> p (If b c1 c2) k n SKIP k"
+    "falls_through (If b c1 c2) \<Longrightarrow>
+     control_at \<Pi> p (If b c1 c2) k n SKIP k"
 | WhileHead:
     "control_at \<Pi> p (While b c) k n (While b c) (Statement n)"
 | WhileUnfolded:
@@ -81,22 +83,21 @@ where
 | ReturnHead:
     "control_at \<Pi> p (Return e) k n (Return e) (Statement n)"
 
-text \<open>\<^const>\<open>control_at\<close> over-approximates: it fixes where a residual sits without tracking
-  whether that location is dynamically reachable.  \<open>IfDone\<close> carries no premise, and \<open>SeqRight\<close>
-  does not require the left command to have completed normally, so a conditional whose branches
-  both \<^const>\<open>Return\<close> still admits a \<^const>\<open>SKIP\<close> residual at its continuation.  A located
-  \<^const>\<open>SKIP\<close> therefore does not imply \<^const>\<open>falls_through\<close> of the command it is located in.
+text \<open>The two \<^const>\<open>falls_through\<close> premises above are semantic side conditions on normal
+  completion, not proof conveniences.  Control enters \<open>c2\<close> of a \<^const>\<open>Seq\<close> only after \<open>c1\<close> has
+  completed normally, and a conditional completes normally only through a branch that can.
+  Without them the predicate admits residual locations no execution can occupy --- a conditional
+  whose branches both \<^const>\<open>Return\<close> would still be allowed a \<^const>\<open>SKIP\<close> residual at its
+  continuation.
 
-  This is what blocks a lazily allocated procedure epilogue.  \<open>compiled_at\<close> supplies the
-  \<^term>\<open>EA_Ret None p\<close> edge unconditionally, and the callee-completion case of
-  \<open>csim_intra_completion\<close> reads it off a \<^const>\<open>SKIP\<close> residual; making the epilogue conditional
-  on \<^const>\<open>falls_through\<close> would need the converse of this lemma.  Recovering it means guarding
-  \<open>IfDone\<close> with \<^term>\<open>falls_through (If b c1 c2)\<close> and \<open>SeqRight\<close> with \<^term>\<open>falls_through c1\<close>,
-  and discharging those premises at every construction site.\<close>
-lemma control_at_SKIP_not_falls_through:
-  "control_at \<Pi> p (If b (Return e1) (Return e2)) k n SKIP k
-     \<and> \<not> falls_through (If b (Return e1) (Return e2))"
-  by (simp add: control_at.IfDone)
+  The pay-off is the converse below: a located \<^const>\<open>SKIP\<close> witnesses that its command can
+  complete normally.  This is what lets \<open>compile_proc\<close> allocate the epilogue lazily, since the
+  \<^term>\<open>EA_Ret None p\<close> edge is then needed exactly when some execution can reach it.\<close>
+lemma control_at_SKIP_imp_falls_through:
+  assumes "control_at \<Pi> p c k n SKIP v"
+  shows "falls_through c"
+  using assms by (induction c k n "SKIP :: com" v rule: control_at.induct) auto
+
 
 subsection \<open>Initial location\<close>
 
@@ -171,11 +172,12 @@ next
   case (WhileDone b c k n)
   then show ?case by (simp add: star.refl)
 next
-  case (SeqRight c2 k n c1 v)
+  case (SeqRight c1 c2 k n v)
   obtain n2 en2 E2 K2 where c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     by (cases "compile \<Pi> p c2 k (n + csize c1)") auto
   from SeqRight.prems(1) c2 have Esub: "E2 \<subseteq> E" by (auto simp: Let_def split: prod.splits)
-  show ?case by (rule SeqRight.hyps(2)[OF c2]) (use Esub SeqRight.prems(2) in blast)
+  show ?case by (rule SeqRight.hyps(3)[OF c2]) (use Esub SeqRight.prems(2) in blast)
+
 next
   case (IfLeft c1 k n v b c2)
   obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
