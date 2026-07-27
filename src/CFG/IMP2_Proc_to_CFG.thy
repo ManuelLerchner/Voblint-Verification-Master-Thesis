@@ -54,6 +54,26 @@ fun csize :: "com \<Rightarrow> nat" where
 lemma csize_pos: "0 < csize c"
   by (induction c) auto
 
+subsection \<open>Normal completion\<close>
+
+text \<open>\<open>falls_through c\<close>: control can leave the fragment of \<open>c\<close> through its continuation, rather
+  than only through an explicit \<^const>\<open>Return\<close>.  It is a syntactic over-approximation of the
+  dynamic property --- \<open>While\<close> is counted as falling through because its guard may fail on the
+  first test, and a branch that is never taken still contributes.  The two directions
+  \<open>compile_reaches_falls_through\<close> and \<open>compile_reaches_returns\<close> turn it into the reachability
+  facts the procedure wrapper needs, and \<open>compile_proc\<close> uses it to decide whether the epilogue
+  node is worth allocating.\<close>
+fun falls_through :: "com \<Rightarrow> bool" where
+  "falls_through SKIP = True"
+| "falls_through (Assign x a) = True"
+| "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
+| "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
+| "falls_through (While b c) = True"
+| "falls_through (Call dst q actuals) = True"
+| "falls_through (Return e) = False"
+| "falls_through Restore = True"
+| "falls_through Unwind = True"
+
 subsection \<open>Command compilation\<close>
 
 text \<open>\<open>compile \<Pi> p c k n\<close> returns \<open>(n', entry, intra_edges, call_edges)\<close>, allocating

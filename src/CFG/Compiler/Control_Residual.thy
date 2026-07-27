@@ -81,6 +81,23 @@ where
 | ReturnHead:
     "control_at \<Pi> p (Return e) k n (Return e) (Statement n)"
 
+text \<open>\<^const>\<open>control_at\<close> over-approximates: it fixes where a residual sits without tracking
+  whether that location is dynamically reachable.  \<open>IfDone\<close> carries no premise, and \<open>SeqRight\<close>
+  does not require the left command to have completed normally, so a conditional whose branches
+  both \<^const>\<open>Return\<close> still admits a \<^const>\<open>SKIP\<close> residual at its continuation.  A located
+  \<^const>\<open>SKIP\<close> therefore does not imply \<^const>\<open>falls_through\<close> of the command it is located in.
+
+  This is what blocks a lazily allocated procedure epilogue.  \<open>compiled_at\<close> supplies the
+  \<^term>\<open>EA_Ret None p\<close> edge unconditionally, and the callee-completion case of
+  \<open>csim_intra_completion\<close> reads it off a \<^const>\<open>SKIP\<close> residual; making the epilogue conditional
+  on \<^const>\<open>falls_through\<close> would need the converse of this lemma.  Recovering it means guarding
+  \<open>IfDone\<close> with \<^term>\<open>falls_through (If b c1 c2)\<close> and \<open>SeqRight\<close> with \<^term>\<open>falls_through c1\<close>,
+  and discharging those premises at every construction site.\<close>
+lemma control_at_SKIP_not_falls_through:
+  "control_at \<Pi> p (If b (Return e1) (Return e2)) k n SKIP k
+     \<and> \<not> falls_through (If b (Return e1) (Return e2))"
+  by (simp add: control_at.IfDone)
+
 subsection \<open>Initial location\<close>
 
 text \<open>A source command is initially located at its entry node \<open>Statement n\<close>.\<close>

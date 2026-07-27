@@ -1764,3 +1764,103 @@ analysis framework definition are untouched.
   `(auto split: prod.splits)` over the compile clauses. They carry the entry
   equalities and the `csize` arithmetic, which is what removes the auxiliary
   `compile ... = (...)` premises the old `control_at` rules had to thread.
+
+## 12. The unreachable epilogue, and why it is still there
+
+The factorial example shows `fac` with an epilogue node (`pp4`) that nothing
+targets: every path through the body ends in an explicit `return`. `main`'s
+epilogue (`pp7`) is reachable, because `main` falls off its end. Goblint
+allocates its pseudo-return node lazily (§3), so its CFG would not show `pp4`.
+
+### What is proved
+
+`falls_through :: com => bool` (in `IMP2_Proc_to_CFG.thy`, beside `csize`) is
+the syntactic over-approximation of "control can leave this fragment through its
+continuation": `Seq` conjoins, `If` disjoins, `While` is `True` (the guard may
+fail on the first test), `Return` is `False`.
+
+Two lemmas in `CFG_Prune.thy` refine `compile_reaches` into its two disjuncts:
+
+```isabelle
+compile_reaches_falls_through:
+  compile ... = (n', en, E, K) ==> E <= intra g ==> K <= calls g
+    ==> falls_through c ==> cfg_reaches g en k
+compile_reaches_returns:
+  compile ... = (n', en, E, K) ==> E <= intra g ==> K <= calls g
+    ==> ~ falls_through c ==> cfg_reaches g en (FunctionResult p)
+```
+
+**This settles the reachability question: a lazy epilogue would not put a side
+condition on `compile_prog_entry_cfg_reaches_exit`.** A body that never falls
+through still reaches `FunctionResult p` along its explicit `EA_Ret` edges, so
+`compile_proc_reaches_result` splits on `falls_through` and the whole-program
+theorem keeps its current unconditional statement. The enabling detail is that
+`cfg_succ_rel` already relates a call site directly to its continuation
+(`COMB_CALLER`), so no callee-termination fact is needed.
+
+### What "do not allocate the epilogue" has to mean
+
+Not "emit no edges mentioning the continuation". That is false:
+
+```isabelle
+compile \<Pi> p (Seq (Return e) (Assign x a)) k n
+```
+
+has `~ falls_through`, yet the dead `Assign` still emits
+`Statement (Suc n) --EA_Assign x a--> k`. The continuation is referenced, from
+an unreachable node. The usable invariant is reachability, not absence of
+references --- which is what `compile_reaches_returns` gives.
+
+So the change is to drop the `EA_Ret None p` edge, and to keep the counter:
+`compile_proc` should still return `Suc (n + csize (body decl))`, reserving the
+epilogue index without wiring it. Every `csize`, `pfn`, `frag_stmts` and
+ownership lemma then keeps its exact current statement, and the node disappears
+from the rendered CFG because no edge mentions it. Spending one `nat` is much
+cheaper than making the counter arithmetic conditional.
+
+### The blocker
+
+`procs_compiled` requires, for every declared procedure,
+
+```isabelle
+(k, EA_Ret None p, FunctionResult p) \<in> intra g
+```
+
+Two places consume it: the `Nested`/`inner = SKIP` case of
+`csim_intra_completion`, where a completed callee runs to `k` and takes the
+edge, and `source_completes_valid_ltr_result`. Both hold only
+`control_at \<Pi> p c0 k n SKIP v`, so conditioning the epilogue on
+`falls_through` needs
+
+```isabelle
+control_at \<Pi> p c0 k n SKIP v ==> falls_through c0
+```
+
+which is false, and false on exactly the factorial shape
+(`control_at_SKIP_not_falls_through` in `Control_Residual.thy`):
+
+```isabelle
+control_at \<Pi> p (If b (Return e1) (Return e2)) k n SKIP k
+  \<and> \<not> falls_through (If b (Return e1) (Return e2))
+```
+
+`IfDone` carries no premise and `SeqRight` does not require the left command to
+have completed normally. `control_at` says where a residual sits, not whether
+that location is reachable.
+
+### What closing it would take
+
+Nothing weakens, and the analysis interface is untouched. Guard `IfDone` with
+`falls_through (If b c1 c2)` and `SeqRight` with `falls_through c1` --- both
+true of every reachable configuration --- and the converse lemma goes through by
+induction on the strengthened relation. `control_at` then becomes strictly
+stronger and every theorem listed above keeps its statement.
+
+The cost is discharging the new premises at each construction site inside
+`Control_Simulation.thy`: roughly eight `SeqRight` and five `*Done` sites, in
+`intra_step_simulation`, `control_at_skip_to_exit` and the four `csim_*`
+completion theorems. The one non-local site is the `Seq SKIP c2 --> c2` step,
+where `control_at.SeqRight[OF control_at_initial[OF src2]]` is applied with no
+`falls_through c1` in context; it is recoverable from the `SeqLeft`
+sub-derivation through the same lemma, so the induction is well-founded rather
+than circular.
