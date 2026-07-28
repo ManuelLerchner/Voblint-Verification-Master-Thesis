@@ -1,6 +1,24 @@
 # Relational Domain Support
 
-Status: **PLANNED** (Approach A chosen). Authored 2026-06-14. Not yet started.
+Status: **SUPERSEDED.** Authored 2026-06-14. Superseded 2026-07-28 by
+`docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md`.
+
+This plan's Approach A locale (`rel_domain`, below) targets `gamma_state` in
+`Constraint_System.thy` — the flat equation-system spine. Per `AGENTS.md`,
+Sign/Interval/Mixed do not execute through that spine; they run through
+`DG_Framework.thy`/`DG_Soundness.thy`. Tracing that layer directly shows its
+soundness locale (`sound_dg_spec`) is *already* a locale over an opaque,
+arbitrary joint concretization — the same shape Approach A proposes to build,
+one layer over from where this plan points. The superseding document also
+corrects this plan's stale file citations (`TD_Side_IP_Eff_Soundness.thy`,
+`Trace_IP_Analysis_Sound.thy`, `TD_Side_Eff_Soundness.thy`,
+`Trace_Analysis_Sound.thy` — none exist in the current tree) and works out a
+concrete minimal executable instance end to end.
+
+This plan's own reasoning about *why* nonrelationality is hardwired (the
+five spots below) and the IP-combine scoping decision remain accurate and
+are reused directly by the superseding document. Kept for that reasoning and
+for history; do not treat "Approach A chosen" as current.
 
 ## Goal
 
