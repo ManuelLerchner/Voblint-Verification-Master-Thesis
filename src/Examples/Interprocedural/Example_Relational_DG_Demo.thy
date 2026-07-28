@@ -13,9 +13,9 @@ begin
 section \<open>End-to-end demo: a relational analysis on the same executable pipeline as Interval\<close>
 
 text \<open>
-  Gap 5 feasibility, execution phase.  \<^file>\<open>../../Analysis/Instances/Mixed/Rel_Order_Domain.thy\<close>
-  interprets \<^locale>\<open>sound_dg_spec\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational
-  carrier, with zero DG-framework changes -- the mathematical half of the claim.
+  \<^file>\<open>../../Analysis/Instances/Mixed/Rel_Order_Domain.thy\<close> interprets
+  \<^locale>\<open>sound_dg_spec\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational carrier,
+  with zero DG-framework changes -- the mathematical half of the claim.
   This file is the executable half: the same CFG, the same generic \<open>dg_gen_of\<close>
   generator, and the same vendored solver that runs Interval also run \<open>relc\<close>,
   end to end, with a genuinely different observable result.

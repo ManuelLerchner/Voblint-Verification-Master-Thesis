@@ -1,14 +1,17 @@
 # Gap 5: relational domain architecture — design decision document
 
-Status: **Option 4 architecturally validated** — see "Architectural
-validation (completed)" at the end of this document. `Rel_Order_Domain.thy`
-is a batch-green `sound_dg_spec` interpretation over a non-`abs_state`
-relational carrier, with zero changes to the DG framework. The design
-analysis below predates that prototype; every claim it makes is traced
-against the current tree (`goblint-alignment-mixed-flow-tutorial`) as of the
-session that wrote it, not against the prior planning documents' assumptions
-about it. Several of those assumptions turned out to be stale — flagged
-explicitly where found.
+Status: **Option 4 architecturally and executably validated** — see
+"Architectural validation (completed)" and "Executable validation
+(completed)" at the end of this document. `Rel_Order_Domain.thy` is a
+batch-green `sound_dg_spec` interpretation over a non-`abs_state` relational
+carrier, with zero changes to the DG framework, and it now runs end to end
+through the real `dg_gen_of`/vendored-solver pipeline on a compiled IMP2
+program (`Example_Relational_DG_Demo.thy`). The design analysis below
+predates both prototypes; every claim it makes is traced against the current
+tree (`goblint-alignment-mixed-flow-tutorial`) as of the session that wrote
+it, not against the prior planning documents' assumptions about it. Several
+of those assumptions turned out to be stale — flagged explicitly where
+found.
 
 ## Executive summary — the finding that changes the shape of the decision
 
@@ -1079,8 +1082,128 @@ Interval/Mixed instance are untouched.
 
 This empirically validates the architectural claim underlying Option 4:
 `sound_dg_spec` admits genuinely relational carriers, and a new relational
-analysis is a new interpretation, not a framework migration. Remaining work
-toward a useful relational domain (closure/precision, an executable
-representation, richer domains such as octagon) is domain-implementation
-work, per the "Deep dive" and "Minimal Isabelle design sketch" sections
-above — not further architecture work.
+analysis is a new interpretation, not a framework migration. The executable
+follow-through below settles the representation question this section
+originally deferred to "domain-implementation work"; richer domains (real
+closure, octagon) remain domain-implementation work, per the "Deep dive"
+and "Minimal Isabelle design sketch" sections above — not further
+architecture work.
+
+---
+
+## Executable validation (completed)
+
+`Rel_Order_Domain.thy` and a new end-to-end example,
+`src/Examples/Interprocedural/Example_Relational_DG_Demo.thy`, extend the
+mathematical validation above to execution: a genuinely relational analysis
+runs through the *same* executable pipeline Sign and Interval use, computes
+a real result via the vendored solver, and that result is read back out and
+compared against Interval's on the identical program.
+
+### The representation question resolved differently than the "Deep dive" predicted
+
+The deep-dive section above sketched `relc` as `(svar * svar) => eint`, a
+function type needing an `Exec_St.thy`-style quotient/override-list bridge
+to become executable — mirroring how `abs_state` needs `'a st`. Building the
+real thing surfaced a better answer for *this* carrier shape: `relc` is a
+`datatype relc = Bot | RelC "(vname * vname) set"`, a finite `HOL.set`, not
+a function. HOL's stock executable-set library (`List.set`/`List.coset`
+dual representation) already makes `'a set` code-generatable for
+`'a::equal`, so `relc`'s lattice operations (`sup`, `<=`, `insert`, filter)
+are executable *directly*, with no bespoke representation type at all —
+narrower than the deep dive's own prediction, in the sense that the reusable
+`Exec_St.thy` *pattern* (finite representation + implicit default) was
+right in spirit, but a full quotient type was not needed for this
+particular finite-set-shaped carrier.
+
+**One real bug found and fixed, worth recording precisely.** The first
+version used `bot_relc = RelC UNIV` ("every pair known ordered," matching
+`RELATIONAL_DOMAIN_PLAN.md`'s own original `bot = UNIV` choice for the toy
+order domain). This type-checked, passed `sound_dg_spec`'s interpretation,
+and even evaluated correctly under `value` for hand-picked finite examples —
+but running it through the real vendored solver raised `exception Match` in
+the generated SML the first time a genuine `Coset`/`Coset` combination
+arose at runtime. HOL's executable-set library does not give every set
+operation a code equation for every `Set`/`Coset` combination over an
+infinite element type such as `vname`. The fix: make `bot` an explicit
+separate constructor (`Bot`) rather than a materialized "set of everything,"
+so `RelC`'s field is always genuinely finite and never a `Coset`. This is a
+concrete instance of the general risk the design-decision section above
+already flagged in the abstract ("the ordering direction is easy to get
+wrong... double-check against a concrete numeric example") — here the
+concrete failure mode was representation-level, not direction-level, and
+only showed up under actual execution, not under proof or hand-picked
+`value` tests. Anyone building a further relational domain on `bounded_semilattice_sup_bot`
+with a set-valued carrier should test the *executable* path against the
+real solver, not just `value` on hand-built examples, before trusting it.
+
+### Wiring: zero new pipeline, reused verbatim
+
+`Example_Relational_DG_Demo.thy` compiles a full `program { void main() {
+if (x < y) { z := 1 } else { z := 0 } } }` block (not an inline `imp`
+stub — the same `compile_prog`/`prog_table`/`prog_main` route every other
+full-program example uses), builds its equation system via the *existing*
+`dg_gen_of rel_order_spec` (the same generic function `Exec_DG_Bridge.thy`
+already provides for Sign/Interval, applied to a different `dg_spec`
+value — no new generator, no new bridge file), and solves it with the
+*existing* `TD_side_always_join_Interp_solve` from `Solver_Menu.thy` (the
+same solver `Sign_Exec_Sound.thy` already uses). The one type-class gap
+that surfaced: the vendored `TD_side_upd_rule` locale fixes its equation
+value type at sort `{bounded_semilattice_sup_bot, warrowing}` uniformly —
+every entry in the solver menu needs it, not only the `warrow` entry, even
+though this demo's CFG is loop-free and never actually widens. `relc` picked
+up `warrowing` the same way Interval's `ivl` did: `widen = sup` (reusing
+the join laws already proved), `narrow a b = b` (the simplest sound
+choice — "accept the incoming value, refine nothing"). A second, easy-to-miss
+gap: `bounded_warrowing` is a *named* class the solver's generated code
+checks by name, not the raw sort intersection, and Isabelle does not
+compose that registration automatically from the two separate instances —
+needs its own `instance relc :: bounded_warrowing ..` line, one line, easy
+to forget, silently blocks the whole pipeline with a sort-mismatch error
+until found.
+
+### The comparison, computed
+
+At the CFG point immediately after the guard's true branch (`x < y`,
+before `z := 1` executes), with `x`/`y` unconstrained at entry:
+
+```
+Interval:  x = [-inf, +inf], y = [-inf, +inf]   (guard taught it nothing)
+relc:      x <= y                                (guard recorded directly)
+```
+
+Interval's own `assume` transfer narrows a variable's interval only using
+the *other* operand's current bound; with both unbounded, `x < y` supplies
+no new bound for either side — a real, not contrived, limitation, not a
+weak-Interval strawman. `relc`'s `assume_step` reads the guard's syntactic
+shape independent of either variable's current abstract value, so it
+records the relation regardless. This is the concrete demonstration of the
+mathematical point the deep-dive's Section 1 argued in the abstract
+("interval genuinely learns nothing when both are unconstrained").
+
+**The false branch is precise too**, added after the initial demo: the
+original `dgs_assume_not_rel` was a pure no-op (`(g, d)` unchanged),
+discarding the negated guard entirely — deliberately imprecise, per the
+Gap 5 feasibility scope, but leaving one easy, sound improvement on the
+table for no reason. `assume_not_step` reads `not (x < y)` as `y <= x`,
+the mirror image of `assume_step`'s one precise case, proved by an
+almost line-for-line copy of the same case-split proof. At the point after
+the *false* branch, `relc` now records `y <= x`; Interval still learns
+nothing on that branch either, for the identical reason.
+
+### What this does and does not demonstrate
+
+Demonstrated: a relational analysis is a first-class citizen of this
+framework's executable pipeline from formalization through execution,
+sharing the CFG compiler, the equation generator, and the solver verbatim
+with Sign and Interval, with no parallel infrastructure anywhere.
+
+Not demonstrated, and not in scope here: no interprocedural precision
+(`dgs_enter`/`dgs_combine_env` still havoc unconditionally, per the
+Gap 5 feasibility scope's own explicit mandate); no closure (the domain
+still cannot derive `x <= z` from `x <= y` and `y <= z`); no source-level
+soundness theorem for this specific example (the batch-green result rests
+on the general `sound_dg_spec` interpretation proved earlier in this
+document, not on a bespoke `..._source_run_sound` theorem the way the
+Interval flagship has one). Closing any of these is a further, separate,
+optional increment — not a blocker discovered by this exercise.

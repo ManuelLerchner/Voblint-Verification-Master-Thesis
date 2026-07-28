@@ -222,8 +222,12 @@ type-class-generalized and must become pair projection instead.
 
 ### Gap 5 — `'a abs_state = vname -> 'a` excludes relational domains
 
-**Status: design decision made, not yet implemented.** Full investigation,
-option comparison, and a worked minimal-instance sketch live in
+**Status: architecture and executability both validated.** `Rel_Order_Domain.thy`
+interprets `sound_dg_spec` over `relc`, a non-`abs_state` relational carrier,
+with zero DG-framework changes, *and* runs end to end through the real
+`dg_gen_of`/vendored-solver pipeline (`Example_Relational_DG_Demo.thy`) on a
+compiled IMP2 program, batch-green. Full investigation, option comparison,
+and the executable follow-through live in
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md`. This section summarizes
 the finding; that document is the source of truth for detail.
 
@@ -381,14 +385,15 @@ For a post-thesis extension:
    (`rhs`/`rhs_sources`/`LTR_Analysis_Sound.thy`) routes through it. The DG
    layer's `dgs_combine` is analysis-parametrized but still single-phase;
    revisit only alongside a relational DG instance (see Gap 3's own section).
-3. **Gap 5 (relational domains)** — architecture decision made
-   (2026-07-28, `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md`): add a new
-   `dg_spec` instance against the already-generic `sound_dg_spec` locale, no
-   spine/type-class migration required. A minimal executable instance is
-   low effort (days-to-low-weeks); Goblint-parity octagon remains
+3. **Gap 5 (relational domains)** — first instance built and executable
+   (2026-07-28, `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md`): a new
+   `dg_spec` instance (`relc`, a deliberately imprecise two-variable
+   order-constraint domain) against the already-generic `sound_dg_spec`
+   locale, no spine/type-class migration, and it runs through the real
+   `dg_gen_of`/vendored-solver pipeline end to end
+   (`Example_Relational_DG_Demo.thy`). Goblint-parity octagon remains
    weeks-to-months and is a separate, later decision (aligns with the
-   Octagon track, issue #25). Not yet implemented — awaiting go-ahead to
-   build the first instance.
+   Octagon track, issue #25).
 4. ~~**Gap 4 (D.t ≠ G.t)**~~ — mostly closed (2026-07-28): the D/G layer
    (`dg_spec`, `dg_state`) already types locals and globals independently and
    `Mixed_Sign_Interval.thy` exercises it. Remaining: context-sensitive DG

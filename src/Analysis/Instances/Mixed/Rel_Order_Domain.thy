@@ -12,13 +12,13 @@ text \<open>
   is still relational (a pair of variables, not one) and not \<open>abs_state\<close>
   (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier).
 
-  The purpose of this file is not a useful analysis.  It is a feasibility
-  check for the Gap 5 architecture decision
-  (\<^file>\<open>../../../../docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md\<close>): can a
-  non-\<open>abs_state\<close> carrier discharge \<^locale>\<open>sound_dg_spec\<close> with zero changes
-  to the DG framework.  Every transfer below is deliberately the most
-  imprecise sound choice (forget on assign, havoc on call) except for one
-  precise \<open>assume\<close> case, which is enough to make the carrier genuinely
+  The purpose of this file is not a useful analysis.  It demonstrates that a
+  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec\<close> with zero
+  changes to the DG framework
+  (\<^file>\<open>../../../../docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md\<close>).
+  Every transfer below is deliberately the most imprecise sound choice
+  (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
+  \<open>assume_not\<close> pair, which is enough to make the carrier genuinely
   relational.
 \<close>
 
@@ -291,8 +291,7 @@ subsection \<open>The transfer functions\<close>
 
 text \<open>Every step except the two precise \<open>assume\<close>/\<open>assume_not\<close> cases above
   is sound by forgetting or by leaving the carrier untouched -- deliberately
-  imprecise, per the Gap 5 feasibility scope: no closure, no normalization,
-  havoc-based calls.\<close>
+  imprecise: no closure, no normalization, havoc-based calls.\<close>
 
 definition dgs_nop_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_nop_rel d g = (g, d)"
