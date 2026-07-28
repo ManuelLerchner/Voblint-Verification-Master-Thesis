@@ -2,7 +2,15 @@
 
 > **Status:** Stage 0 (implicit-method `proof` cleanup) complete and
 > batch-verified. Stages 1+ (classical-reasoner tagging, `unfolding` removal)
-> not started.
+> not started. Two rounds of external review are incorporated below. Round 1
+> adjusted the exit criterion's "every definition" language (§7), immediate
+> vs. usage-driven tagging (§5, §6), and the Stage 1/2 order (§6) —
+> lowest-risk file first to validate the workflow before touching the
+> foundational core. Round 2 added a concrete "tag justified" threshold and
+> `[intro]`-caution note (§5), a definition-interface template (§5), a
+> semantic-documentation requirement for exported definitions (§5, §7), a
+> warning-baseline discipline alongside the existing timing regression check
+> (§5, §7), and an explicit migration stop condition (§6).
 
 **Question answered here:** does the current theory tree follow the
 proof-engineering skills' rules on definitions, theorem tagging, and proof
@@ -131,13 +139,16 @@ verified incrementally — violates this repo's own batch-gate discipline ("add
 material incrementally," "isolate hard obligations") and its scope-discipline
 rule.
 
-**B — targeted, ordered by leverage.** Fix the highest-density files first,
-one at a time: add missing characterization lemmas, tag them, replace
-`unfolding` at call sites with the tagged lemma or the correct explicit
-method, batch-build green before moving to the next file. Leave low-density
-files (`Examples/*`, single-digit counts) as backlog. Bounded, reviewable
-diffs; matches the existing workflow; highest-leverage fix (the shared core)
-lands first.
+**B — targeted, ordered by leverage and risk.** Fix the lowest-risk file first
+to validate the recipe (`TD_Side_CFG.thy` — characterization lemmas already
+exist, so the stage is mostly tagging plus call-site rewrites), then the
+foundational-but-dangerous core (`Constraint_System.thy`/`Split_State.thy`,
+which every downstream instance imports), then the architectural core
+(`DG_Soundness.thy`), then the remaining density-ordered files. Leave
+low-density files (`Examples/*`, single-digit counts) as backlog. Bounded,
+reviewable diffs; matches the existing workflow; risk-controlled order so a
+bad tag is caught on the file where it's cheapest to diagnose, not the one
+where it's most expensive.
 
 **Recommendation: B.**
 
@@ -148,7 +159,7 @@ already names two of the five standard slow-build causes as tagging mistakes:
 "a recursive `[simp]` declaration" and "a new `[intro]` or congruence rule that
 triggers repeatedly." A `[simp]` or `[intro]` attribute changes the default
 simp set / claset for **every downstream theory that imports the file**, so a
-bad tag on a Stage 1 file (`Constraint_System.thy`, `Split_State.thy`) can
+bad tag on a Stage 2 file (`Constraint_System.thy`, `Split_State.thy`) can
 silently slow down or loop proofs in Sign, Interval, Mixed, and every example —
 files that are never touched by the diff. This section is binding for every
 stage below, not just a suggestion.
@@ -173,14 +184,82 @@ stage below, not just a suggestion.
   "triggers repeatedly" case in the slow-build note; classical-reasoner search
   is combinatorial in the rule count, so the risk scales with how deep the
   file sits in the import graph, not with how it looks locally.
-- Prefer the narrowest applicable variant (`[dest]` over `[elim]` over
-  `[intro]`) when the rule's shape allows it — destruction rules only fire
-  when their pattern is already present, elimination/introduction rules can
-  fire speculatively.
+- Narrowness is not a fixed ranking of `[dest]` over `[elim]` over `[intro]`
+  — it depends on the rule's shape. A structural intro for a simple inductive
+  predicate (e.g. `wf a ==> wf b ==> wf (a, b)`) is cheap: its premises are as
+  specific as its conclusion, so it does not widen search. An intro whose
+  premise is a large invariant (e.g. `HugeInvariant x ==> ...`) pollutes
+  classical search because `blast`/`auto` will try to prove that invariant
+  speculatively at every matching goal shape. Judge each rule by what its
+  premises force the reasoner to attempt, not by its `[intro]`/`[dest]`
+  category alone.
 - If a lemma is only needed at a handful of call sites, leave it untagged and
   pass it explicitly (`simp add: foo`, `intro: foo`) at those sites instead —
   this is the proof-development skill's own fallback ("manually pass the
   rules") for concepts that aren't worked with constantly.
+
+**Tagging is usage-driven, not immediate.** A new characterization lemma does
+not get a global attribute the moment it is proved. Sequence:
+
+1. Prove the lemma untagged.
+2. Cite it explicitly at its call sites (`simp add: foo`, `intro: foo`,
+   `by (rule foo)`) while chasing the current `unfolding` site.
+3. Tag once the lemma clears all of: cited explicitly in at least 3 unrelated
+   proofs (different theorems, not repeats of the same proof shape), its
+   rewrite/inference direction is the one every call site already wants (no
+   site fights the direction), and step 4 of the procedure below shows no
+   timing regression from the trial tag. Below that bar, keep it explicit —
+   an occasional citation is cheaper than a global attribute nobody would
+   have chosen from the usage pattern alone.
+
+This avoids the alternative failure mode: proving a lemma once, tagging it
+immediately on the assumption it will be canonical, and slowly accumulating a
+simp set nobody would have chosen if the usage pattern had been visible
+first.
+
+**Definition-interface template.** Not every exported definition needs every
+lemma below — this is a search pattern for what to look for, not a checklist
+to fill in completely.
+
+- Predicate: `foo_iff`, `foo_cases`, `foo_intro`, `foo_dest`.
+- Function: `foo_apply` (unfolding one step, for recursive/pattern-matched
+  definitions), `foo_mono`, `foo_cong`.
+- Order/domain (lattice, gamma function, abstract state): `foo_bot`,
+  `foo_sup`, `foo_mono`, `foo_gamma`.
+
+**Semantic documentation.** Every exported definition, inductive, locale, and
+non-trivial characterization lemma introduced or modified during the
+migration gets a nearby `text` block stating its semantic role and any
+non-obvious design choice — why this representation, not an alternative one.
+Purely-internal helpers are exempt, same as the tagging exemption above.
+Explain why, not what — restating the definition in prose is redundant with
+the definition itself:
+
+```isabelle
+text \<open>
+  The edge semantics separates executable transfer from feasibility
+  checking. An assume edge does not modify the abstract state; it only
+  removes states violating the guard, so failure is \<open>None\<close>
+  rather than a dedicated error state.
+\<close>
+definition edge_step where ...
+
+text \<open>
+  Kept as the public interface instead of unfolding \<open>edge_step\<close>
+  at downstream call sites.
+\<close>
+lemma edge_step_fail_iff: ...
+```
+
+**Warning-baseline discipline.** Duplicate-`[simp]` and similar Isabelle
+warnings are the same failure mode as an unjustified tag, one step removed:
+they mean two rules rewrite the same head symbol, or an attribute was added
+that the simplifier already had covered. Record the baseline warning count
+for a theory before a stage touches it; the stage must not increase it. If a
+new warning appears, resolve it (drop the redundant tag, pick one canonical
+rewrite direction) before moving to the next lemma — do not let migration
+work itself accumulate the noise it exists to remove. §3.4 tracks the
+repo-wide baseline audit this depends on.
 
 **Procedure, every stage:**
 
@@ -194,23 +273,55 @@ stage below, not just a suggestion.
 4. Watch wall-clock time per theory during that build. Per the existing
    slow-build note, more than ~40s of silence on a warm heap signals proof
    search blow-up from the just-added tag, not a legitimate slow proof.
-5. On any regression (new failure, new timeout, or a proof that previously
-   took seconds now taking much longer), revert that one tag
+   Record the per-theory timing (`isabelle build -v` already prints it) for
+   the file being tagged and its direct importers before and after the tag,
+   not just a pass/fail read — a proof that still closes but got noticeably
+   slower is a regression the binary gate misses. `isabelle build -v -v`
+   additionally prints per-command timings if a single theory's slowdown
+   needs to be localized to one proof. Compare the warning count from the
+   same build against the pre-tag baseline (§5, warning-baseline discipline)
+   — a new duplicate-simp or similar warning is a regression even when
+   timing and the pass/fail result look clean.
+5. On any regression (new failure, new timeout, a proof that previously took
+   seconds now taking much longer, a materially larger simp/classical search
+   recorded in step 4, or a new warning), revert that one tag
    (`declare foo[simp del]` or drop the attribute) before continuing — do not
    push forward and "fix it later." Diagnose which downstream proof's
-   automation changed before retrying with a narrower attribute (e.g. `[dest]`
-   instead of `[elim]`) or no attribute at all.
-6. Only move to the next lemma once the full downstream build is green again.
+   automation changed before retrying with a narrower attribute (e.g.
+   `[dest]` instead of `[elim]`), a `named_theorems`-scoped rule set instead
+   of a global one, or no attribute at all.
+6. Only move to the next lemma once the full downstream build is green again,
+   with no timing regression flagged in step 4.
 
 This makes each stage slower per lemma but keeps blame isolated to one
 attribute at a time, which is the entire point of doing this file-by-file
 rather than as a whole-repo sweep (§4, Approach A).
 
+**`named_theorems` for locally-scoped automation.** A global `[intro]`/`[simp]`
+is not the only option. For rule families that only need to fire within a
+specific proof cluster — the DG/context activation machinery is the likely
+candidate, since its rules are shaped to unify broadly within that layer but
+have no business firing in, say, an Interval domain proof — declare a
+`named_theorems` set and tag into that instead of the global claset/simpset:
+
+```isabelle
+named_theorems dg_ctx_intros
+
+lemma foo_intro [dg_ctx_intros]: ...
+```
+
+then call it explicitly (`blast intro: dg_ctx_intros`) or add it to a local
+`simp`/`intro` call at the point of use, rather than to every `auto`/`blast`
+repo-wide. This keeps the classical-reasoner search space bounded to the
+layer that actually needs the rule, which matters most for exactly the files
+this migration is most cautious about (§5 above, Stage 1/2 candidates).
+
 ## 6. Migration stages
 
 Each stage ends in a green `isabelle-verify` batch build before the next
-starts. Any lemma proved while chasing an unfolding site gets `[simp]`/
-`[intro]`/`[dest]` immediately, so the gap does not reopen.
+starts. Tagging is usage-driven per §5, not automatic on proof — a lemma
+proved while chasing an unfolding site is cited explicitly first and only
+tagged once its call-site pattern justifies it.
 
 ### Stage 0 — implicit-method `proof` cleanup — DONE
 
@@ -231,20 +342,24 @@ on a disjunctive fact), `subsetI` (`A \<subseteq> B`), `notI` (`\<not> P`),
 `unfold_locales` (`interpretation`/`interpret` proofs). Batch-verified green
 via `rtk make build`.
 
-### Stage 1 — `Constraint_System.thy` + `Split_State.thy`
+### Stage 1 — `TD_Side_CFG.thy`
+
+Lowest risk of the large files, and goes first per the external review: it
+validates the recipe on a file where the highest-risk step is already
+partly done. Characterization lemmas already exist for the heaviest-unfolded
+names (`restrict_local`/`restrict_global`/`local_bot_on_locals`). Mostly
+tagging plus rewriting call sites to cite the existing lemma instead of
+re-unfolding.
+
+### Stage 2 — `Constraint_System.thy` + `Split_State.thy`
 
 Most foundational: `wf_split`/`merge_state`/`split_state`/`gamma_state`/
-`glob_env`/`abs_join_set` feed every downstream instance. Add missing
+`glob_env`/`abs_join_set` feed every downstream instance. Highest blast
+radius if a tag misfires, so it runs after Stage 1 has confirmed the
+tagging-safety procedure (§5) against a real file. Add missing
 characterization lemmas (closure, monotonicity, `_iff` forms where the
-definition is a predicate), tag `[simp]`/`[intro]`/`[dest]`, replace
-`unfolding` at call sites with the tagged lemma.
-
-### Stage 2 — `TD_Side_CFG.thy`
-
-Lowest risk of the large files: characterization lemmas already exist for the
-heaviest-unfolded names (`restrict_local`/`restrict_global`/
-`local_bot_on_locals`). Mostly tagging plus rewriting call sites to cite the
-existing lemma instead of re-unfolding.
+definition is a predicate), tag per §5's usage-driven rule, replace
+`unfolding` at call sites with the tagged lemma or an explicit citation.
 
 ### Stage 3 — `DG_Soundness.thy`
 
@@ -273,16 +388,45 @@ with the same recipe.
 (single digit `unfolding` counts). Lower payoff; defer past the core-cluster
 work above.
 
+### Stop condition
+
+A hygiene pass has no natural end unless one is stated. Stage 7 stops, and
+the migration is finished, once all three hold:
+
+- every high-density core file identified in §3.2 has gone through Stages
+  1–6;
+- every remaining `unfolding X_def` site is a local implementation choice
+  inside a definition's own theory, not a re-derivation of a fact usable
+  elsewhere (§7's `unfolding` exit criterion already codifies this per-site,
+  this is the repo-wide version);
+- further extraction of characterization lemmas would not measurably improve
+  proof stability or readability at the remaining sites — judged, not
+  swept for exhaustively.
+
+Do not keep chasing single-digit backlog files past this point; that is
+scope creep the plan itself warns against (§8).
+
 ## 7. Exit criteria
 
-- Every definition introduced in a Stage 1–6 file has at least one tagged
-  (`[simp]`, `[intro]`, `[dest]`, or explicitly-cited-untagged-with-reason)
-  characterization lemma before any proof in that file unfolds it.
+- Every definition **used outside its defining theory** in a Stage 1–6 file
+  has an appropriate interface: a characterization lemma (tagged per §5's
+  usage-driven rule, or explicitly cited if usage doesn't yet justify a
+  global attribute) or a documented, judged-not-worth-extracting `unfolding`.
+  Purely-internal definitions (helpers that only package an invariant for
+  their own theory) are exempt — not every definition earns a public API, and
+  requiring one for all 676 would manufacture simp rules nobody would
+  otherwise choose.
 - `unfolding X_def` remains only where no reusable property exists yet and is
   judged not worth extracting (documented inline, not silently left).
 - 0 bare `proof` commands in Stage 0's files.
+- Every non-trivial exported definition or characterization lemma introduced
+  or modified during the migration has a nearby `text` block explaining its
+  semantic purpose and design constraints (§5, semantic documentation) —
+  purely-internal definitions are exempt, same as the interface-lemma
+  criterion above.
 - `Voblint_Analysis` and `Voblint_Formalization` batch-build green after each
-  stage; 0 new `sorry`.
+  stage, with no per-theory timing regression and no new build warning
+  flagged per §5 step 4 (warning-baseline discipline); 0 new `sorry`.
 
 ## 8. What not to do
 
