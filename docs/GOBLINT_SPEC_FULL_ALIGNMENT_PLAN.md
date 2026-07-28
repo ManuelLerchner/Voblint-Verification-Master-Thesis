@@ -76,33 +76,60 @@ interface. A relational instance needs no `DG_Framework.thy` change - only a new
 store set` already concretizes the pair jointly, so it does not presuppose a
 per-variable-splittable domain.
 
-**Still open, in the flat/context-insensitive constraint system.**
-`combine_abs_le_rhs` (`Constraint_System_Sound.thy:95-109`) calls
-`combine_collect_abs` (`Constraint_System.thy:411-413`) directly, with no record
-field or locale parameter to override it. This is the layer
-`LTR_Analysis_Sound.thy:86` builds the project's context-insensitive soundness
-spine on (`ltr_collect`, per `CLAUDE.md`'s project contract). This is the real
-remaining target of Gap 3.
+**Closed (2026-07-28), in the flat/context-insensitive constraint system.**
+Comparison against Goblint's actual `master` source (`src/framework/analyses.ml`,
+`src/framework/constraints.ml`) showed the real interface is split in two:
+`combine_env` merges caller/callee environments (may unify, filter by taint,
+raise `Deadcode` - see the Apron `relationAnalysis.apron.ml` evidence below), and
+the separate `combine_assign` then writes the return value into the lval, run
+*against `combine_env`'s output*. Under this project's function-based
+`'a abs_state = vname => 'a` representation, the return-value write
+(`combine_assign_abs`, `Constraint_System.thy:401-404`) is already
+domain-agnostic - it is a plain `dst := v` update, with no case where a domain
+needs to see anything but the value being written. Only the environment-merge
+half needed to become analysis-specific.
 
-**What closing the flat-layer gap would require:**
+`domain_transfer` (`Constraint_System.thy:38-43`) gained a
+`tf_combine :: 'a abs_state => 'a abs_state => 'a abs_state` field, alongside the
+existing `tf_assign`/`tf_assume`/`tf_assume_not`/`tf_enter`. `sound_transfer`
+(`Constraint_System.thy:634-650`) gained the matching `tf_sound_combine`
+assumption, proving `tf_combine tf` over-approximates the fixed concrete
+`combine_states` (`CFG_Def.thy:148-149`) - the one true operational return
+semantics, unchanged and not analysis-owned. `tf_combine_collect_abs`
+(`Constraint_System.thy`) is the new per-analysis return combine
+(`combine_assign_abs dst (se ret_var) (tf_combine tf sc se)`); the fixed
+`combine_collect_abs`/`combine_abs` are untouched and remain the default every
+non-generic consumer (DG-layer defaults, `TD_Side_CFG.thy`,
+`Sign_Named_Global_Eff.thy`, `Exec_St.thy`/`Exec_Bridge.thy`) still uses directly.
+`rhs_combine_sources`/`rhs_sources` (`Constraint_System.thy`),
+`combine_of_bound` (new, `Constraint_System_Sound.thy`, mirroring
+`call_enter_of_bound`), `tf_combine_le_rhs` (renamed from `combine_abs_le_rhs`),
+and `LTR_Analysis_Sound.thy`'s COMB obligation (`ltr_post_fixpoint_sound_at`,
+`unified_ltr_post_fixpoint_sound`) all route through it.  `sign_tf`/`ivl_tf`
+(`Sign_Transfer.thy`, `Interval_Transfer.thy`) set `tf_combine` to the existing
+default (`combine_sign`/`combine_abs`), so both instances are behaviorally
+unchanged - Sign and Interval do not yet exercise a non-default merge, but any
+future analysis with a relational or otherwise non-structural env-merge now can,
+without touching the DG layer, the solver, or any existing instance.
 
-Add a `combine :: vname option => 'a abs_state => 'a abs_state => 'a abs_state`
-field to `domain_transfer` (or a new record), defaulting to `combine_collect_abs`
-so every existing Sign/Interval instance is unchanged. Re-state `rhs`/
-`rhs_combine_sources` (`Constraint_System.thy`) and `combine_abs_le_rhs`
-(`Constraint_System_Sound.thy`) over the abstract field, and re-prove
-`combine_states_sound`/`combine_collect_sound` as the soundness obligation a new
-`combine` instance must discharge - structurally parallel to
-`sound_dg_spec.combine_sound` above, not a new design. `LTR_Analysis_Sound.thy:86`
-and its consumers need the added combine-soundness hypothesis threaded through.
+**Deferred: the DG layer's `dgs_combine` has the same single-phase shape.**
+`dgs_combine` (`DG_Framework.thy:238`) is analysis-*parametrized* (Site A was
+already closed in that sense, per the earlier audit above) but is still a single
+call, with no `combine_env`/`combine_assign` split - the same architectural gap
+just closed at the flat layer. This is not a blocking gap today: no DG instance
+needs it, since Sign/Interval/Mixed all use the structural default
+(`unit_combine_step`, built from `combine_collect_abs`) and no relational DG
+instance exists. Revisit alongside Octagon or any other relational domain
+(`AGENTS.md`'s locked-decisions table lists it as a stretch goal); do not conflate
+"Site A is analysis-parametrized" with "Site A matches Goblint's phase
+structure" - they are independent properties, and only the first has ever held
+for Site A.
 
-Do not read the DG layer's `dgs_combine` as evidence that this half is done -
-it is a separate spine with its own hardwired call.
-
-**Effort:** medium, scoped to `Constraint_System.thy`, `Constraint_System_Sound.thy`,
-`LTR_Analysis_Sound.thy`, and domain soundness interpretations that feed the
-flat/context-insensitive spine. Substantially less than the original 2-3 week
-estimate, since the DG-layer half no longer needs this work.
+**Effort:** landed. Touched `Constraint_System.thy`, `Constraint_System_Sound.thy`,
+`LTR_Analysis_Sound.thy`, `Sign_Transfer.thy`, `Interval_Transfer.thy`, and one
+example (`Example_Proc_Call.thy`, which had manually inlined the old
+`combine_collect_abs` shape to verify a post-fixpoint). `Voblint_Analysis`,
+`Voblint_Formalization`, and `Voblint_Examples` all batch-build green.
 
 Related: `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md` G2/M2 - a DG-layer defect in
 the same call/return lifecycle, but in context *routing* (which slot entry and
@@ -281,10 +308,12 @@ For a post-thesis extension:
 
 1. **Gap 6 (termination, Sign case)** — cheapest, closes an honest gap, gives a
    stronger theorem for Sign.
-2. **Gap 3 (analysis-specific combine, flat layer only)** — medium effort,
-   prerequisite for relational domain soundness at procedure boundaries in the
-   context-insensitive spine. The context-sensitive DG layer already supports
-   this through `dgs_combine`.
+2. ~~**Gap 3 (analysis-specific combine, flat layer only)**~~ — closed
+   (2026-07-28): `domain_transfer` carries `tf_combine`, `sound_transfer` carries
+   `tf_sound_combine`, and the flat/context-insensitive spine
+   (`rhs`/`rhs_sources`/`LTR_Analysis_Sound.thy`) routes through it. The DG
+   layer's `dgs_combine` is analysis-parametrized but still single-phase;
+   revisit only alongside a relational DG instance (see Gap 3's own section).
 3. **Gap 5 (abstract state type class)** — high effort, prerequisite for octagons;
    aligns with the Octagon track (issue #25).
 4. **Gap 4 (D.t ≠ G.t)** — high effort, low payoff for IMP2 scope; would matter
