@@ -152,27 +152,49 @@ Locals and globals can have completely different lattice types. A pointer analys
 might use `D.t = vname -> points_to_set` for locals and `G.t = heap_cell -> value_set`
 for globals. The two domains never need to be compared or joined directly.
 
-**What we do:** both local unknowns (`σ(Inl v)`) and global unknowns (`σ(Inr g)`)
-have type `'a abs_state = vname -> 'a`. Same type, same index set.
+**Audit update (2026-07-28).** The line above is only true of the older
+flat/monovariant track (`Constraint_System.thy`, `TD_Side_CFG.thy`). The D/G
+layer already closes this gap.
 
-**What closing it would require:**
+`dg_state` (`DG_Framework.thy:36`) has two independent type parameters:
+`datatype ('l, 'g) dg_state = DG (locals: 'l) (globs: 'g)`, with a
+componentwise lattice order (`DG_Framework.thy:38-105`). `dg_spec`
+(`DG_Framework.thy:232-238`) types every field over independent `'dl`/`'dg`,
+constrained only to `bounded_semilattice_sup_bot` - not to `abs_state` at
+all. `sound_dg_spec` (`DG_Soundness.thy:127-147`) fixes
+`'D`/`'G :: bounded_semilattice_sup_bot` and `gammaDG :: 'D => 'G => store
+set` independently, with no assumption forcing them equal.
 
-Introduce a type parameter `'g_val` for the global domain, separate from `'a` for
-the local domain. The constraint system becomes:
+This is exercised, not just type-checked: `indep_dg_spec :: 'd::sound_domain
+domain_transfer => 'g::sound_domain domain_transfer => ('d abs_state, 'g
+abs_state) dg_spec` (`DG_Soundness.thy:727-730`) is instantiated at
+`mixed_si_spec :: (sign abs_state, ivl abs_state) dg_spec`
+(`Mixed_Sign_Interval.thy:43-44`) - local unknowns tracked by Sign, global
+unknowns tracked by Interval, genuinely different lattices, proved sound
+(`mixed_si_spec_indep`, `Mixed_Sign_Interval.thy:119-127`) and batch-green.
 
-```isabelle
-type_synonym ('a, 'g_val) combined_state =
-  "(pp + 'g) => ('a abs_state + 'g_val)"
-```
+The vendored `TD_side` solver (`vendor/td-verification/`) does fix one value
+type `'d` per `strategy_tree`/state map (`TD_side.thy:16-22`,
+`Basics_side.thy:94-97`) - `dg_state` is exactly the "flatten to one type at
+the interface boundary" workaround this section's own text names as the
+alternative to a vendor rewrite. Already built, already proven.
 
-or equivalently, two separate maps `σ_local : pp => 'a abs_state` and
-`σ_global : 'g => 'g_val`. Strategy trees then have two `Answer` payload types.
-The vendored solver would need to be generalised (or the flattening to a single type
-done at the interface boundary, as Goblint's `Var2` does).
+**What remains open:** `dg_ctx_activation` (`DG_Ctx_Activation.thy:18-19`,
+Track 1's context-sensitive/routed locale) only interprets `sound_dg_spec` at
+the homogeneous `('a abs_state, 'a abs_state) dg_spec` - combining real
+`'D != 'G` with context-sensitivity is unexercised. Also open: `mixed_si_spec`'s
+`'D`/`'G` are both still `abs_state`-shaped (pointwise, different value
+lattices); a structurally different index set (Goblint's `heap_cell ->
+value_set` example) needs Gap 5's abstract-state work first.
 
-**Effort:** 3–4 weeks. High foundational cost; touches nearly every theory file.
-The current single-type approach is a pragmatic simplification worth keeping for
-the thesis.
+**Effort:** the type-level gap is closed. Extending it to
+context-sensitivity: ~1-2 weeks, since the surrounding DG-layer
+infrastructure never assumed homogeneity (`DG_Soundness.thy` has zero
+`is_global` occurrences). Retiring the older homogeneous flat track, if
+wanted, should reuse `Split_State.thy`'s existing `('l,'g) split_state`
+pair type and isomorphism lemmas rather than a new type from scratch - except
+`restrict_local_global_join` (`TD_Side_CFG.thy:33-35`), which cannot be
+type-class-generalized and must become pair projection instead.
 
 ---
 
@@ -315,9 +337,13 @@ For a post-thesis extension:
    layer's `dgs_combine` is analysis-parametrized but still single-phase;
    revisit only alongside a relational DG instance (see Gap 3's own section).
 3. **Gap 5 (abstract state type class)** — high effort, prerequisite for octagons;
-   aligns with the Octagon track (issue #25).
-4. **Gap 4 (D.t ≠ G.t)** — high effort, low payoff for IMP2 scope; would matter
-   for a heap analysis.
+   aligns with the Octagon track (issue #25). Three separate designs exist
+   (this doc, `RELATIONAL_DOMAIN_PLAN.md`, issue #19) with no reconciliation
+   between them - resolving which one to build is a decision, not a task.
+4. ~~**Gap 4 (D.t ≠ G.t)**~~ — mostly closed (2026-07-28): the D/G layer
+   (`dg_spec`, `dg_state`) already types locals and globals independently and
+   `Mixed_Sign_Interval.thy` exercises it. Remaining: context-sensitive DG
+   with `D ≠ G` is unexercised (~1-2 weeks, see Gap 4's own section).
 5. **Gap 7 (executable contexts and lifters)** — Route A7/M1/M3b; semantic
    context sensitivity is already available.
 6. **Gap 7a (inter-analysis queries)** — out of scope.
