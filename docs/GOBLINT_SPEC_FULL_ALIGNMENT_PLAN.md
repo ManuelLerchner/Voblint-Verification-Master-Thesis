@@ -179,21 +179,43 @@ type `'d` per `strategy_tree`/state map (`TD_side.thy:16-22`,
 the interface boundary" workaround this section's own text names as the
 alternative to a vendor rewrite. Already built, already proven.
 
-**What remains open:** `dg_ctx_activation` (`DG_Ctx_Activation.thy:18-19`,
-Track 1's context-sensitive/routed locale) only interprets `sound_dg_spec` at
-the homogeneous `('a abs_state, 'a abs_state) dg_spec` - combining real
-`'D != 'G` with context-sensitivity is unexercised. Also open: `mixed_si_spec`'s
-`'D`/`'G` are both still `abs_state`-shaped (pointwise, different value
-lattices); a structurally different index set (Goblint's `heap_cell ->
-value_set` example) needs Gap 5's abstract-state work first.
+**What remains open (audit refined 2026-07-28).** `dg_ctx_activation`
+(`DG_Ctx_Activation.thy:18-19`, Track 1's context-sensitive/routed locale)
+only interprets `sound_dg_spec` at the homogeneous
+`('a abs_state, 'a abs_state) dg_spec` - combining real `'D != 'G` with
+context-sensitivity is unexercised. The earlier `is_global`-occurrence check
+was the wrong signal for this file - the real blocker is `gamma_unit d g =
+\<lbrakk>d \<squnion> g\<rbrakk>` (`DG_Soundness.thy`), which requires `d`/`g` to share one type
+to type-check `d \<squnion> g` at all. This is not a peripheral dependency: every
+non-trivial lemma in `DG_Ctx_Activation.thy` routes through it -
+`sg_cov`'s own assumption (`sg (Inl (v,c)) = locals (sigma (Inl (v,c))) \<squnion>
+globs (sigma (Inr gk0))`, line 35), `dg_ctx_act_edge`
+(lines 168-197), and `dg_ctx_act_comb_covered` (lines 208-241) all build their
+soundness chain through `gamma_unit`/`gamma_unit_mono` specifically, not
+through the already-heterogeneous `sound_dg_spec.gammaDG`/`gamma_dg`
+(`DG_Soundness.thy:106-109`, already independent-typed and already exercised
+by `indep_dg_spec`). The locale's own `sg` parameter is typed
+`pp \<times> 'c + 'k \<Rightarrow> 'a abs_state` - homogeneous by construction, not just by an
+unexercised choice. A heterogeneous version needs a new locale built on
+`gamma_dg` (already proven monotone, already sound) with `sg`'s type and
+every routing lemma redesigned around it, not a re-instantiation of the
+existing one. Also open: `mixed_si_spec`'s `'D`/`'G` are both still
+`abs_state`-shaped (pointwise, different value lattices); a structurally
+different index set (Goblint's `heap_cell -> value_set` example) needs Gap
+5's abstract-state work first.
 
-**Effort:** the type-level gap is closed. Extending it to
-context-sensitivity: ~1-2 weeks, since the surrounding DG-layer
-infrastructure never assumed homogeneity (`DG_Soundness.thy` has zero
-`is_global` occurrences). Retiring the older homogeneous flat track, if
-wanted, should reuse `Split_State.thy`'s existing `('l,'g) split_state`
-pair type and isomorphism lemmas rather than a new type from scratch - except
-`restrict_local_global_join` (`TD_Side_CFG.thy:33-35`), which cannot be
+**Effort:** the type-level gap is closed. Extending it to context-sensitivity
+is new locale architecture, not a mechanical generalization - comparable in
+size to `DG_Ctx_Activation.thy` itself (245 lines), reusing `gamma_dg`'s
+already-proven pieces but redesigning `sg`'s type and every `dg_ctx_act_*`
+proof around it. No current instance needs this (the one context-sensitive
+instance, the Interval flagship, is itself homogeneous); building it now
+would be ahead of an actual requirement. Revisit when a context-sensitive
+heterogeneous analysis is actually planned. Retiring the older homogeneous
+flat track, if wanted, should reuse `Split_State.thy`'s existing
+`('l,'g) split_state` pair type and isomorphism lemmas rather than a new type
+from scratch - except `restrict_local_global_join` (`TD_Side_CFG.thy:33-35`),
+which cannot be
 type-class-generalized and must become pair projection instead.
 
 ---
