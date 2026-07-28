@@ -68,11 +68,14 @@ lemma apply_tf_EA_Ret_Some:
   by (simp add: fun_eq_iff)
 
 text \<open>Closure principle for any family built by applying a single transfer function
-  and post-processing the result the same way at every action: once the Nop/Assign/
-  Assume/AssumeNot cases agree, the \<open>EA_Ret\<close> case follows for free from the two facts
-  above, since every family in this codebase reuses the underlying assignment transfer
-  for a value return. Deliberately left untagged: F and H are schematic, so tagging
-  this \<open>[simp]\<close>/\<open>[dest]\<close>/\<open>[intro]\<close> would let it fire against any equality of this shape.\<close>
+  and post-processing the result the same way at every action. @{const apply_tf}
+  already reduces \<open>EA_Ret\<close> to \<open>EA_Nop\<close> / \<open>EA_Assign\<close> unconditionally
+  (@{thm [source] apply_tf_EA_Ret_None} / @{thm [source] apply_tf_EA_Ret_Some}); \<open>F\<close> is
+  schematic, so it needs the same reduction as an explicit hypothesis (\<open>ret_none\<close> /
+  \<open>ret_some\<close>) -- every family in this codebase reuses the underlying assignment transfer
+  for a value return, so the hypothesis is free to discharge at each call site.
+  Deliberately left untagged: F and H are schematic, so tagging this
+  \<open>[simp]\<close>/\<open>[dest]\<close>/\<open>[intro]\<close> would let it fire against any equality of this shape.\<close>
 lemma apply_tf_wrap_eqI:
   fixes tf :: "'a domain_transfer"
     and F :: "edge_action \<Rightarrow> 'y"

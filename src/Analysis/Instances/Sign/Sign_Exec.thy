@@ -120,25 +120,17 @@ subsection \<open>The executable sign transfer function\<close>
 
 theorem sign_tf_st_commute:
   "fun_of_st (sign_tf_st a s) = apply_tf sign_tf a (fun_of_st s)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by simp
-next
-  case (EA_Assign x e)
-  then show ?thesis
+proof (rule apply_tf_wrap_eqI[where H = "\<lambda>f. f (fun_of_st s)"])
+  show "\<And>p. fun_of_st (sign_tf_st (EA_Ret None p) s) = fun_of_st (sign_tf_st EA_Nop s)" by simp
+  show "\<And>a p. fun_of_st (sign_tf_st (EA_Ret (Some a) p) s) = fun_of_st (sign_tf_st (EA_Assign ret_var a) s)"
+    by simp
+  show "fun_of_st (sign_tf_st EA_Nop s) = apply_tf sign_tf EA_Nop (fun_of_st s)" by simp
+  show "\<And>x e. fun_of_st (sign_tf_st (EA_Assign x e) s) = apply_tf sign_tf (EA_Assign x e) (fun_of_st s)"
     by (simp add: sign_tf_def assign_sign_def fun_of_st_update_st)
-next
-  case (EA_Assume b)
-  then show ?thesis
+  show "\<And>b. fun_of_st (sign_tf_st (EA_Assume b) s) = apply_tf sign_tf (EA_Assume b) (fun_of_st s)"
     by (simp add: sign_tf_def assume_sign_st_commute)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis apply (auto simp add: sign_tf_def)
-    using assume_not_sign_st_commute by presburger
-next
-  case (EA_Ret e p)
-  then show ?thesis
-    by (cases e) (simp_all add: sign_tf_def fun_of_st_update_st assign_sign_def)
+  show "\<And>b. fun_of_st (sign_tf_st (EA_AssumeNot b) s) = apply_tf sign_tf (EA_AssumeNot b) (fun_of_st s)"
+    by (simp add: sign_tf_def assume_not_sign_st_commute)
 qed
 
 subsection \<open>Executable effectful transfer record\<close>
