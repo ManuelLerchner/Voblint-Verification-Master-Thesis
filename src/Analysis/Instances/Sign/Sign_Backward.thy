@@ -47,7 +47,7 @@ end
 declare inf_sign_def [simp]
 
 instance sign :: semilattice_inf
-proof
+proof intro_classes
   fix x y z :: sign
   show "x \<sqinter> y \<le> x"
     by (cases x; cases y; auto simp: less_eq_sign_def)

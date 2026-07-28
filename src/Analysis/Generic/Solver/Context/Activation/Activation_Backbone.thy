@@ -37,7 +37,7 @@ theorem activation_collect_sound:
         \<Longrightarrow> call_enter_store g cl s es
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "activation_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-proof
+proof (rule subsetI)
   fix st assume "st \<in> activation_collect enterc seedc g S v ctx"
   then obtain t where t: "t \<in> valid_ltr g S"
     and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "st = sink_store t"

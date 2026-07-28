@@ -1,9 +1,8 @@
 # Proof hygiene — skill-compliance audit and migration plan
 
-> **Status:** audit complete, migration not started. This document records a
-> static compliance pass against the proof-engineering skills
-> (`isabelle-formalization`, `isabelle-proof-development`) and lays out a
-> phased, batch-verifiable fix. No `.thy` file has been touched yet.
+> **Status:** Stage 0 (implicit-method `proof` cleanup) complete and
+> batch-verified. Stages 1+ (classical-reasoner tagging, `unfolding` removal)
+> not started.
 
 **Question answered here:** does the current theory tree follow the
 proof-engineering skills' rules on definitions, theorem tagging, and proof
@@ -11,8 +10,9 @@ style, and if not, what changes bring it into alignment without inflating
 scope? **Partially.** Documentation, proof structuring, import hygiene, and
 statement shape are already compliant. Two independent gaps survive: near-zero
 classical-reasoner tagging paired with heavy `unfolding`-based re-derivation,
-and 50 implicit-method `proof` steps in exactly the theorems this repo calls
-its semantic anchors.
+and (originally reported as 50, corrected to 63 — see §3.3) implicit-method
+`proof` steps in exactly the theorems this repo calls its semantic anchors.
+The second gap is now closed (Stage 0, §6).
 
 ---
 
@@ -81,20 +81,31 @@ proof authors then re-derive the same fact via `unfolding` instead of reusing
 it (`TD_Side_CFG.thy`), or because no reusable fact was ever proved
 (`DG_Soundness.thy` and the `Constraint_System`/`Split_State` cluster).
 
-### 3.3 Implicit-method `proof` (50 sites)
+### 3.3 Implicit-method `proof` (63 sites, corrected from 50)
 
 The style guide is explicit: "do not use implicit proof methods in `proof`;
-use `proof -` or `proof <method>`." 50 bare `proof` commands survive, and they
-are concentrated in the theorems this repo's own `CLAUDE.md` names as semantic
+use `proof -` or `proof <method>`." The original count here was produced by
+`rg -n '^\s*proof\s*$'`, which only matches a bare `proof` alone on its own
+line. It silently misses `instance ... proof` and `interpret X ... proof`
+written on a single line — a common shape in this repo's typeclass instance
+and locale-interpretation proofs. The corrected pattern,
+`rg -noP '(?<![\w.])proof(?=\s*$)'`, found 13 additional real sites (2 false
+positives inside `text` blocks excluded) across `Exec_St.thy` (+3, on top of
+the 6 already counted), `Sign_Lattice.thy` (+4), `Interval_Lattice.thy` (+3),
+and one file the original sweep missed entirely, `Interval_Warrowing.thy` (1).
+63 real sites total, all fixed as of this pass (Stage 0 complete). They were
+concentrated in the theorems this repo's own `CLAUDE.md` names as semantic
 anchors:
 
 | File | bare `proof` count |
 | --- | --- |
 | `CFG/Collecting/LTR_Abstract.thy` | 10 (includes steps inside `valid_ltr_subset_gamma_ltr`, `activation_collect_subset_acc`) |
 | `CFG/Collecting/CFG_Local_Trace.thy` | 9 |
-| `Analysis/Generic/Domain/Exec_St.thy` | 6 |
+| `Analysis/Generic/Domain/Exec_St.thy` | 9 |
 | `CFG/Compiler/Control_Simulation.thy` | 5 |
-| 16 other files | 1–2 each |
+| `Analysis/Instances/Sign/Sign_Lattice.thy` | 6 |
+| `Analysis/Instances/Interval/Interval_Lattice.thy` | 5 |
+| 19 other files | 1–3 each |
 
 Bare `proof` silently applies whichever single introduction rule Isabelle
 picks as default — it is not purely cosmetic the way `proof -` (which opens no
@@ -201,17 +212,24 @@ Each stage ends in a green `isabelle-verify` batch build before the next
 starts. Any lemma proved while chasing an unfolding site gets `[simp]`/
 `[intro]`/`[dest]` immediately, so the gap does not reopen.
 
-### Stage 0 — implicit-method `proof` cleanup
+### Stage 0 — implicit-method `proof` cleanup — DONE
 
 Files: `LTR_Abstract.thy`, `CFG_Local_Trace.thy`, `Exec_St.thy`,
-`Control_Simulation.thy`, then the 16 single/double-occurrence files.
-Per site: identify the rule the bare `proof` currently applies (via
-`get_state`/`explore` on the open goal), then rewrite as `proof (rule ...)`,
-`proof (induction ...)`, `proof (cases ...)`, or `proof -` as appropriate.
-Effort: low per site, moderate in aggregate (50 sites). Risk: low — purely
-disambiguating an existing step, no new proof content. Highest priority
-because it sits in the theorems the project calls semantic anchors
-(`valid_ltr`, `ltr_collect`, `activation_collect`).
+`Control_Simulation.thy`, then the 19 single/double/triple-occurrence files
+(count corrected mid-stage from 16 — see §3.3). Per site: identify the rule
+the bare `proof` currently applies (via `get_state` on the open goal), then
+rewrite as `proof (rule ...)`, `proof intro_classes`, `proof unfold_locales`,
+or `proof -` as appropriate. Effort: low per site, moderate in aggregate (63
+sites, corrected from 50 — see §3.3). Risk: low — purely disambiguating an
+existing step, no new proof content. Highest priority because it sits in the
+theorems the project calls semantic anchors (`valid_ltr`, `ltr_collect`,
+`activation_collect`).
+
+Rules applied, by shape: `ballI` (`\<forall>x\<in>A. P x`), `disjE` (case split
+on a disjunctive fact), `subsetI` (`A \<subseteq> B`), `notI` (`\<not> P`),
+`iffI` / `allI` / `conjI`, `intro_classes` (typeclass `instance` proofs),
+`unfold_locales` (`interpretation`/`interpret` proofs). Batch-verified green
+via `rtk make build`.
 
 ### Stage 1 — `Constraint_System.thy` + `Split_State.thy`
 

@@ -42,7 +42,7 @@ end
 declare less_eq_eint_def [simp]
 
 instance eint :: linorder
-proof
+proof intro_classes
   fix x y z :: eint
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding less_eint_def less_eq_eint_def by simp
   show "x \<le> x"                           unfolding less_eq_eint_def by (rule eint_le_refl)

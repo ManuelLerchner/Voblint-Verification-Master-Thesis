@@ -165,7 +165,7 @@ interpretation twice_dg: dg_ctx_activation Sabs twice_cfg Global route_abs_gen
     "cmb_abs twice_cfg" "extra_abs twice_cfg"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg
-proof
+proof unfold_locales
   show "finite (intra twice_cfg)" by (rule twice_finE)
 next
   show "part_post_solution

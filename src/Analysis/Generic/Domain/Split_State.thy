@@ -113,7 +113,7 @@ lemma merge_state_le_iff:
   assumes wf1: "wf_split lg1"
   shows "merge_state lg1 \<le> merge_state lg2 \<longleftrightarrow>
          fst lg1 \<le> fst lg2 \<and> snd lg1 \<le> snd lg2"
-proof
+proof (rule iffI)
   assume le: "merge_state lg1 \<le> merge_state lg2"
   have l: "fst lg1 x \<le> fst lg2 x" for x
   proof (cases "is_global x")

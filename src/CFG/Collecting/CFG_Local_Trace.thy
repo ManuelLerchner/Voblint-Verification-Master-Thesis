@@ -493,7 +493,7 @@ next
     from uin have "u = extend t (v, s') \<or> u \<in> callers t"
       using callers_extend_subset by blast
     then show "fst ns \<in> cfg_nodes g"
-    proof
+    proof (rule disjE)
       assume u: "u = extend t (v, s')"
       have "ns \<in> set (path t) \<or> ns = (v, s')" using nsin u by auto
       then show ?thesis using intra.IH callers_refl vnode by auto
@@ -514,7 +514,7 @@ next
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "fst ns \<in> cfg_nodes g"
-    proof
+    proof (rule disjE)
       assume "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       then show ?thesis using nsin ce by auto
     next
@@ -538,7 +538,7 @@ next
                     \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "fst ns \<in> cfg_nodes g"
-    proof
+    proof (rule disjE)
       assume u: "u = Resume caller callee
                    (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
       have "ns \<in> set (path caller) \<or> fst ns = cont" using nsin u by auto
@@ -574,7 +574,7 @@ text \<open>Enlarging the initial store set only adds traces.\<close>
 lemma valid_ltr_mono_S:
   assumes "S \<subseteq> S'"
   shows "valid_ltr g S \<subseteq> valid_ltr g S'"
-proof
+proof (rule subsetI)
   fix t assume "t \<in> valid_ltr g S"
   then show "t \<in> valid_ltr g S'"
   proof (induction rule: valid_ltr.induct)
@@ -593,9 +593,9 @@ text \<open>Every trace is seeded by a single initial store: the valid set is th
   ancestry, so caller and callee share the seed --- the \<open>ret\<close> case needs only the callee.\<close>
 lemma valid_ltr_eq_UN_singleton:
   "valid_ltr g S = (\<Union>s\<in>S. valid_ltr g {s})"
-proof
+proof (rule equalityI)
   show "valid_ltr g S \<subseteq> (\<Union>s\<in>S. valid_ltr g {s})"
-  proof
+  proof (rule subsetI)
     fix t assume "t \<in> valid_ltr g S"
     then show "t \<in> (\<Union>s\<in>S. valid_ltr g {s})"
     proof (induction rule: valid_ltr.induct)
@@ -662,7 +662,7 @@ next
       using callers_extend_subset by blast
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
-    proof
+    proof (rule disjE)
       assume u: "u = extend t (v, s')"
       have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
       have "caller_of t = Some c" using cof u by simp
@@ -686,7 +686,7 @@ next
       by (simp add: callers_Call)
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
-    proof
+    proof (rule disjE)
       assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       have c_eq: "c = caller" using cof u by simp
       have ces: "call_enter_store g (sink_node caller) (sink_store caller)
@@ -714,7 +714,7 @@ next
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
-    proof
+    proof (rule disjE)
       assume u: "u = Resume caller callee
           (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
       have cof': "caller_of caller = Some c" using cof u by simp

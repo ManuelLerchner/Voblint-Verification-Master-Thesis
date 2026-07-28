@@ -73,7 +73,7 @@ text \<open>The converse follows by \<^const>\<open>valid_ltr\<close> rule induc
   least fixed point.\<close>
 lemma valid_ltr_subset_lfp:
   "valid_ltr g S \<subseteq> lfp (ltr_F g S)"
-proof
+proof (rule subsetI)
   fix t assume "t \<in> valid_ltr g S"
   then show "t \<in> lfp (ltr_F g S)"
   proof (induction rule: valid_ltr.induct)

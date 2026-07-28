@@ -592,7 +592,7 @@ qed
 
 lemma compile_prog_no_result_source:
   "(FunctionResult r, a, v) \<notin> intra (compile_prog \<Pi> ps mnm main)"
-proof
+proof (rule notI)
   assume e: "(FunctionResult r, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
