@@ -120,7 +120,8 @@ definition sign_tf :: "sign domain_transfer" where
   "sign_tf = (| tf_assign     = assign_sign,
                 tf_assume     = assume_sign,
                 tf_assume_not = assume_not_sign,
-                tf_enter      = enter_sign |)"
+                tf_enter      = enter_sign,
+                tf_combine    = combine_sign |)"
 
 text \<open>
   The four transfer-function soundness facts for the sign domain, bundled once
@@ -146,6 +147,10 @@ lemma sign_tf_sound_enter:
        \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
+lemma sign_tf_sound_combine:
+  "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine sign_tf \<sigma>c \<sigma>e\<rbrakk>"
+  unfolding sign_tf_def using combine_sign_sound by simp
+
 interpretation sign_sound_tf: sound_transfer sign_tf
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
@@ -158,10 +163,14 @@ proof unfold_locales
      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
        \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
     by (rule sign_tf_sound_enter)
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine sign_tf \<sigma>c \<sigma>e\<rbrakk>"
+    by (rule sign_tf_sound_combine)
 qed
 
 lemma sign_is_sound_transfer: "sound_transfer sign_tf"
-  by (unfold_locales) (fact sign_tf_sound_assign sign_tf_sound_assume sign_tf_sound_assume_not sign_tf_sound_enter)+
+  by (unfold_locales)
+     (fact sign_tf_sound_assign sign_tf_sound_assume sign_tf_sound_assume_not
+           sign_tf_sound_enter sign_tf_sound_combine)+
 
 lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"

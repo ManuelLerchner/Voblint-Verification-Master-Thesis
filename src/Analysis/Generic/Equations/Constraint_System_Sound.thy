@@ -27,7 +27,7 @@ lemma finite_rhs_entry_sources:
 
 lemma finite_rhs_combine_sources:
   assumes "finite (calls g)"
-  shows "finite (rhs_combine_sources g env v)"
+  shows "finite (rhs_combine_sources g tf env v)"
   unfolding rhs_combine_sources_def
   using assms finite_return_calls by blast
 
@@ -92,18 +92,18 @@ proof (rule le_rhs_of_mem[OF finI finC])
     unfolding rhs_sources_def by blast
 qed
 
-lemma combine_abs_le_rhs:
+lemma tf_combine_le_rhs:
   fixes g :: cfg and tf :: "'a::bounded_semilattice_sup_bot domain_transfer"
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes finI: "finite (intra g)" and finC: "finite (calls g)"
     and uce: "(c, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
-  shows "combine_collect_abs dst (env c) (env (FunctionResult p))
+  shows "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p))
            \<le> rhs g tf (\<squnion>) bot s0 env v"
 proof (rule le_rhs_of_mem[OF finI finC])
-  have "combine_collect_abs dst (env c) (env (FunctionResult p))
-        \<in> rhs_combine_sources g env v"
+  have "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p))
+        \<in> rhs_combine_sources g tf env v"
     by (rule rhs_combine_sourcesI[OF uce])
-  thus "combine_collect_abs dst (env c) (env (FunctionResult p))
+  thus "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p))
         \<in> rhs_sources g tf env v"
     unfolding rhs_sources_def by blast
 qed
@@ -189,6 +189,37 @@ lemma call_enter_of_bound:
 proof -
   have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
     using tf_sound_enter[rule_format, OF s] by (simp add: call_enter_CallEdge)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
+text \<open>Return-combine companion of \<open>edge_of_bound\<close>/\<open>call_enter_of_bound\<close>: if the
+  per-analysis return combine over \<open>A\<close>, \<open>B\<close> is dominated by \<open>C\<close>, the concrete
+  return combine of stores sound for \<open>A\<close>, \<open>B\<close> lies in \<open>[[C]]\<close>.  Discharged from
+  \<open>tf_sound_combine\<close> exactly as \<open>call_enter_of_bound\<close> is discharged from
+  \<open>tf_sound_enter\<close>; the return-value write itself needs no analysis-specific
+  soundness fact, as \<^const>\<open>combine_assign_abs\<close> is unconditionally sound.\<close>
+lemma combine_of_bound:
+  assumes bound: "tf_combine_collect_abs tf dst A B \<le> C"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>" and t: "t \<in> \<lbrakk>B\<rbrakk>"
+  shows "combine_collect dst s t \<in> \<lbrakk>C\<rbrakk>"
+proof -
+  have step: "combine_collect dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst A B\<rbrakk>"
+  proof (cases dst)
+    case None
+    then show ?thesis
+      using tf_sound_combine[rule_format, OF s t]
+      by (simp add: combine_collect_def tf_combine_collect_abs_def)
+  next
+    case (Some x)
+    have base: "combine_states s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
+      using tf_sound_combine[rule_format, OF s t] .
+    have ret: "t ret_var \<in> gamma (B ret_var)"
+      using t unfolding gamma_state_def by auto
+    show ?thesis
+      using base ret Some
+      unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
+      by auto
+  qed
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 

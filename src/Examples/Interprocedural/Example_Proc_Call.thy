@@ -224,7 +224,7 @@ proof (rule allI)
   let ?I = "(\<lambda>(u, a). apply_tf ivl_tf a (main_prog_env u)) ` intra_predecessors main_cfg v"
   let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter ivl_tf fs as (main_prog_env c))
               ` entry_calls main_cfg v"
-  let ?R = "(\<lambda>(c, dst, ex). combine_collect_abs dst (main_prog_env c) (main_prog_env ex))
+  let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs ivl_tf dst (main_prog_env c) (main_prog_env ex))
               ` return_calls main_cfg v"
   have fin: "finite (?I \<union> ?E \<union> ?R)"
     using finite_intra_predecessors[of main_cfg v] finite_entry_calls[of main_cfg v]
@@ -252,7 +252,7 @@ proof (rule allI)
   have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: return_calls_def main_cfg_calls main_prog_env_def
-                   combine_collect_abs_def combine_abs_def normalize_ivl_def
+                   tf_combine_collect_abs_def ivl_tf_def combine_abs_def normalize_ivl_def
                    less_eq_ivl_def le_fun_def is_global_def)
   have le: "\<And>t. t \<in> ?I \<union> ?E \<union> ?R \<Longrightarrow> t \<le> main_prog_env v"
     using leI leE leR by blast

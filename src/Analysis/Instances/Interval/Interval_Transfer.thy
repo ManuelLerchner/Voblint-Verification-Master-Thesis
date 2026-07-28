@@ -78,7 +78,8 @@ definition ivl_tf :: "ivl domain_transfer" where
   "ivl_tf = (| tf_assign     = assign_ivl,
                tf_assume     = assume_ivl,
                tf_assume_not = assume_not_ivl,
-               tf_enter      = enter_ivl |)"
+               tf_enter      = enter_ivl,
+               tf_combine    = combine_abs |)"
 
 lemma ivl_tf_sound_assign:
   "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
@@ -98,6 +99,10 @@ lemma ivl_tf_sound_enter:
        \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
+lemma ivl_tf_sound_combine:
+  "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine ivl_tf \<sigma>c \<sigma>e\<rbrakk>"
+  unfolding ivl_tf_def by (simp add: combine_states_sound)
+
 interpretation ivl_sound_tf: sound_transfer ivl_tf
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
@@ -110,10 +115,14 @@ proof unfold_locales
      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
        \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
     by (rule ivl_tf_sound_enter)
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine ivl_tf \<sigma>c \<sigma>e\<rbrakk>"
+    by (rule ivl_tf_sound_combine)
 qed
 
 lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
-  by (unfold_locales) (fact ivl_tf_sound_assign ivl_tf_sound_assume ivl_tf_sound_assume_not ivl_tf_sound_enter)+
+  by (unfold_locales)
+     (fact ivl_tf_sound_assign ivl_tf_sound_assume ivl_tf_sound_assume_not
+           ivl_tf_sound_enter ivl_tf_sound_combine)+
 
 
 lemma assume_ivl_mono:
