@@ -42,36 +42,37 @@ lemma assign_ivl_sound:
 subsection \<open>Procedure entry and bundled transfer functions\<close>
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
-  the formals to the abstract values of the actuals evaluated in the caller.\<close>
+  the formals to the abstract values of the actuals evaluated in the caller.
+  Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised by
+  ivl_top as the domain's fully-imprecise reset value.\<close>
 definition enter_frame_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_frame_ivl \<sigma> =
-     (\<lambda>x. if is_global x then \<sigma> x else Ivl MinInf PlusInf)"
+  "enter_frame_ivl = enter_frame_D ivl_top"
 
 definition enter_ivl ::
     "vname list \<Rightarrow> aexp list \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_ivl xs es \<sigma> =
-     bind_formals_abs xs (map (\<lambda>e. aval_ivl e \<sigma>) es) (enter_frame_ivl \<sigma>)"
+  "enter_ivl = enter_D ivl_top aval_ivl"
 
 lemma enter_frame_ivl_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
-  using assms unfolding gamma_state_def enter_frame_ivl_def enter_state_def
-  by (intro CollectI allI) auto
+  unfolding enter_frame_ivl_def
+proof (rule enter_frame_D_sound[OF gs])
+  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
+qed
 
 lemma enter_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
            \<in> \<lbrakk>enter_ivl xs es \<sigma>\<rbrakk>"
-proof -
-  have base: "enter_state s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
-    by (rule enter_frame_ivl_sound[OF gs])
+  unfolding enter_ivl_def
+proof (rule enter_D_sound[OF gs])
+  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
+next
   have V: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)"
     using gs unfolding gamma_state_def by simp
-  have "list_all2 (\<lambda>v a. v \<in> gamma a)
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
           (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_ivl e \<sigma>) es)"
     using V by (simp add: list_all2_conv_all_nth aval_ivl_sound)
-  from bind_formals_abs_sound[OF base this]
-  show ?thesis unfolding enter_ivl_def .
 qed
 
 definition ivl_tf :: "ivl domain_transfer" where
@@ -99,30 +100,23 @@ lemma ivl_tf_sound_enter:
        \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
-lemma ivl_tf_sound_combine:
-  "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine ivl_tf \<sigma>c \<sigma>e\<rbrakk>"
-  unfolding ivl_tf_def by (simp add: combine_states_sound)
-
 interpretation ivl_sound_tf: sound_transfer ivl_tf
-proof unfold_locales
-  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
-    by (rule ivl_tf_sound_assign)
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
-    by (rule ivl_tf_sound_assume)
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
-    by (rule ivl_tf_sound_assume_not)
-  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
-       \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
-    by (rule ivl_tf_sound_enter)
-  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine ivl_tf \<sigma>c \<sigma>e\<rbrakk>"
-    by (rule ivl_tf_sound_combine)
+proof (rule sound_transferI)
+  show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
+    using ivl_tf_sound_assign by blast
+  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
+    using ivl_tf_sound_assume by blast
+  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
+    using ivl_tf_sound_assume_not by blast
+  show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
+    using ivl_tf_sound_enter by blast
+  show "tf_combine ivl_tf = combine_abs"
+    unfolding ivl_tf_def by simp
 qed
 
 lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
-  by (unfold_locales)
-     (fact ivl_tf_sound_assign ivl_tf_sound_assume ivl_tf_sound_assume_not
-           ivl_tf_sound_enter ivl_tf_sound_combine)+
+  by (rule ivl_sound_tf.sound_transfer_axioms)
 
 
 lemma assume_ivl_mono:
@@ -138,26 +132,13 @@ lemma assume_not_ivl_mono:
 lemma enter_frame_ivl_mono:
   assumes "s1 \<le> s2"
   shows "enter_frame_ivl s1 \<le> enter_frame_ivl s2"
-proof (rule le_funI)
-  fix x
-  show "enter_frame_ivl s1 x \<le> enter_frame_ivl s2 x"
-  proof (cases "is_global x")
-    case True
-    from assms have "s1 x \<le> s2 x" by (simp add: le_funD)
-    with True show ?thesis unfolding enter_frame_ivl_def by simp
-  next
-    case False
-    thus ?thesis unfolding enter_frame_ivl_def by simp
-  qed
-qed
+  unfolding enter_frame_ivl_def by (rule enter_frame_D_mono[OF assms])
 
 lemma enter_ivl_mono:
   assumes "s1 \<le> s2"
   shows "enter_ivl xs es s1 \<le> enter_ivl xs es s2"
   unfolding enter_ivl_def
-proof (rule bind_formals_abs_mono)
-  show "enter_frame_ivl s1 \<le> enter_frame_ivl s2"
-    by (rule enter_frame_ivl_mono[OF assms])
+proof (rule enter_D_mono[OF assms])
   show "list_all2 (\<le>) (map (\<lambda>e. aval_ivl e s1) es)
                        (map (\<lambda>e. aval_ivl e s2) es)"
     using assms by (simp add: list_all2_conv_all_nth aval_ivl_mono)

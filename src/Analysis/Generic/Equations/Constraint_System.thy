@@ -422,6 +422,68 @@ next
 qed
 
 text \<open>
+  Generic procedure-entry frame: reset locals to a fixed, fully-imprecise
+  \<open>top_val\<close>, keep globals, then bind the formals via @{const bind_formals_abs}.
+  Every domain's own enter-frame construction (Sign's @{text enter_frame_sign},
+  Interval's @{text enter_frame_ivl}) is this same shape, differing only in
+  which value stands for "unknown" -- so this is parameterised over that one
+  value rather than duplicated per domain.
+\<close>
+definition enter_frame_D :: "'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "enter_frame_D top_val \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else top_val)"
+
+lemma enter_frame_D_sound:
+  fixes top_val :: "'a::sound_domain"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
+  shows "enter_state s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
+  unfolding gamma_state_def enter_frame_D_def enter_state_def
+  using gamma_stateD[OF gs] top_full by auto
+
+lemma enter_frame_D_mono:
+  fixes top_val :: "'a::order"
+  assumes "\<sigma>1 \<le> \<sigma>2"
+  shows "enter_frame_D top_val \<sigma>1 \<le> enter_frame_D top_val \<sigma>2"
+proof (rule le_funI)
+  fix x
+  show "enter_frame_D top_val \<sigma>1 x \<le> enter_frame_D top_val \<sigma>2 x"
+  proof (cases "is_global x")
+    case True
+    with assms show ?thesis unfolding enter_frame_D_def by (simp add: le_funD)
+  next
+    case False
+    then show ?thesis unfolding enter_frame_D_def by simp
+  qed
+qed
+
+definition enter_D ::
+  "'a \<Rightarrow> (aexp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> aexp list
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "enter_D top_val aval_abs xs es \<sigma> =
+     bind_formals_abs xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D top_val \<sigma>)"
+
+lemma enter_D_sound:
+  fixes top_val :: "'a::sound_domain"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
+    and vals: "list_all2 (\<lambda>v a. v \<in> gamma a)
+                 (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+           \<in> \<lbrakk>enter_D top_val aval_abs xs es \<sigma>\<rbrakk>"
+proof -
+  have base: "enter_state s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
+    by (rule enter_frame_D_sound[OF gs top_full])
+  from bind_formals_abs_sound[OF base vals]
+  show ?thesis unfolding enter_D_def .
+qed
+
+lemma enter_D_mono:
+  fixes top_val :: "'a::order"
+  assumes base: "\<sigma>1 \<le> \<sigma>2"
+    and vals: "list_all2 (\<le>) (map (\<lambda>e. aval_abs e \<sigma>1) es) (map (\<lambda>e. aval_abs e \<sigma>2) es)"
+  shows "enter_D top_val aval_abs xs es \<sigma>1 \<le> enter_D top_val aval_abs xs es \<sigma>2"
+  unfolding enter_D_def
+  by (rule bind_formals_abs_mono[OF enter_frame_D_mono[OF base] vals])
+
+text \<open>
   Abstract counterpart of @{const combine_assign}: write the callee's return slot
   into the caller's destination, or leave the caller untouched when the call
   discards its result.
@@ -733,6 +795,39 @@ lemma tf_sound_combineD:
   using tf_sound_combine by blast
 
 end
+
+text \<open>
+  Discharges @{locale sound_transfer} from the five fully-applied soundness
+  facts a domain proves anyway (matching @{text tf_sound_assignD} etc.'s
+  shape), plus a check that @{const tf_combine} is the standard @{const
+  combine_abs}. Every domain's @{text combine} field is @{const combine_abs}
+  today (verified for Sign and Interval); making that a checked premise here
+  turns a silently-repeated per-domain proof of @{text combine_states_sound}
+  into a required, visible fact. A domain with a genuinely different combine
+  cannot use this rule and falls back to `unfold_locales` directly, as before.
+\<close>
+lemma sound_transferI:
+  fixes tf :: "'a::sound_domain domain_transfer"
+  assumes assign: "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    and assm: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    and assm_not: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    and enter: "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    and combine: "tf_combine tf = combine_abs"
+  shows "sound_transfer tf"
+proof unfold_locales
+  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    using assign by blast
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    using assm by blast
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    using assm_not by blast
+  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    using enter by blast
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+    unfolding combine using combine_states_sound by blast
+qed
 
 
 subsection \<open>Effectful transfer function record\<close>

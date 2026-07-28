@@ -39,23 +39,13 @@ lemma assume_not_sign_st_commute:
 
 subsection \<open>Enter mirror (reset locals to top, keep globals)\<close>
 
-lemma fun_rep_enter_sign_rep:
-  "fun_rep_st ((\<lambda>(dl, dg, ps). (STop, dg, filter (\<lambda>(x, _). is_global x) ps)) r)
-   = (\<lambda>x. if is_global x then fun_rep_st r x else STop)"
-proof -
-  obtain dl dg ps where r: "r = (dl, dg, ps)" using prod_cases3 by blast
-  show ?thesis unfolding r
-    by (rule ext) (auto simp: map_of_filter_key split: option.split)
-qed
-
-lift_definition enter_sign_st :: "sign st \<Rightarrow> sign st"
-  is "\<lambda>(dl, dg, ps). (STop, dg, filter (\<lambda>(x, _). is_global x) ps)"
-  by (auto simp: eq_st_def fun_rep_enter_sign_rep fun_eq_iff)
+definition enter_sign_st :: "sign st \<Rightarrow> sign st" where
+  "enter_sign_st = enter_frame_D_st STop"
 
 lemma enter_frame_sign_st_commute:
   "fun_of_st (enter_sign_st s) = enter_frame_sign (fun_of_st s)"
-  unfolding enter_frame_sign_def
-  by transfer (simp add: fun_rep_enter_sign_rep)
+  unfolding enter_sign_st_def enter_frame_sign_def
+  by (rule fun_of_st_enter_frame_D_st)
 
 subsection \<open>The executable sign transfer function\<close>
 
@@ -143,7 +133,8 @@ definition sign_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> si
 
 lemma sign_enter_st_commute:
   "fun_of_st (sign_enter_st xs es s) = tf_enter sign_tf xs es (fun_of_st s)"
-  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_frame_sign_st_commute)
+  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_D_def
+                enter_frame_sign_def enter_frame_sign_st_commute)
 
 definition sign_etf_st :: "(unit, sign st) effectful_st_transfer" where
   "sign_etf_st = \<lparr>

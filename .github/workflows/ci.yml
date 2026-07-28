@@ -70,6 +70,7 @@ jobs:
               ISABELLE=/home/isabelle/Isabelle/bin/isabelle
               make vendor
               make html AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              make lint AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
             '
 
       - name: Upload GitHub Pages site

@@ -38,23 +38,13 @@ lemma assume_not_ivl_st_commute:
 
 subsection \<open>Enter mirror\<close>
 
-lemma fun_rep_enter_ivl_rep:
-  "fun_rep_st ((\<lambda>(dl, dg, ps). (Ivl MinInf PlusInf, dg, filter (\<lambda>(x, _). is_global x) ps)) r)
-   = (\<lambda>x. if is_global x then fun_rep_st r x else Ivl MinInf PlusInf)"
-proof -
-  obtain dl dg ps where r: "r = (dl, dg, ps)" using prod_cases3 by blast
-  show ?thesis unfolding r
-    by (rule ext) (auto simp: map_of_filter_key split: option.split)
-qed
-
-lift_definition enter_ivl_st :: "ivl st \<Rightarrow> ivl st"
-  is "\<lambda>(dl, dg, ps). (Ivl MinInf PlusInf, dg, filter (\<lambda>(x, _). is_global x) ps)"
-  by (auto simp: eq_st_def fun_rep_enter_ivl_rep fun_eq_iff)
+definition enter_ivl_st :: "ivl st \<Rightarrow> ivl st" where
+  "enter_ivl_st = enter_frame_D_st ivl_top"
 
 lemma enter_frame_ivl_st_commute:
   "fun_of_st (enter_ivl_st s) = enter_frame_ivl (fun_of_st s)"
-  unfolding enter_frame_ivl_def
-  by transfer (simp add: fun_rep_enter_ivl_rep)
+  unfolding enter_ivl_st_def enter_frame_ivl_def
+  by (rule fun_of_st_enter_frame_D_st)
 
 subsection \<open>Executable transfer function and seeds\<close>
 
@@ -64,7 +54,8 @@ definition ivl_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> ivl
 
 lemma ivl_enter_st_commute:
   "fun_of_st (ivl_enter_st xs es s) = tf_enter ivl_tf xs es (fun_of_st s)"
-  by (simp add: ivl_enter_st_def ivl_tf_def enter_ivl_def enter_frame_ivl_st_commute)
+  by (simp add: ivl_enter_st_def ivl_tf_def enter_ivl_def enter_D_def
+                enter_frame_ivl_def enter_frame_ivl_st_commute)
 
 fun ivl_tf_st :: "edge_action \<Rightarrow> ivl st \<Rightarrow> ivl st" where
     "ivl_tf_st EA_Nop s = s"

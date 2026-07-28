@@ -526,6 +526,36 @@ lift_definition restrict_global_st :: "('a::bot) st \<Rightarrow> 'a st"
   is "\<lambda>(dl, dg, ps). (bot, dg, filter (\<lambda>(x, _). is_global x) ps)"
   by (auto simp: eq_st_def fun_rep_restrict_global_rep fun_eq_iff)
 
+text \<open>
+  Executable mirror of @{const enter_frame_D} (Constraint_System.thy): keep
+  globals, reset locals to a fixed value instead of @{const bot}.  Same shape
+  as @{const restrict_global_st}, parameterised over the local default so
+  every domain's own enter-frame executable construction (Sign's, Interval's)
+  is this one operation applied to its own top value.
+\<close>
+
+lemma fun_rep_enter_frame_D_rep:
+  "fun_rep_st ((\<lambda>(dl, dg, ps). (top_val, dg, filter (\<lambda>(x, _). is_global x) ps)) r)
+   = (\<lambda>x. if is_global x then fun_rep_st r x else top_val)"
+proof -
+  obtain dl dg ps where r: "r = (dl, dg, ps)" using prod_cases3 by blast
+  show ?thesis unfolding r
+    by (rule ext) (auto simp: map_of_filter_key split: option.split)
+qed
+
+lift_definition enter_frame_D_st :: "'a \<Rightarrow> ('a::bot) st \<Rightarrow> 'a st"
+  is "\<lambda>top_val (dl, dg, ps). (top_val, dg, filter (\<lambda>(x, _). is_global x) ps)"
+  by (auto simp: eq_st_def fun_rep_enter_frame_D_rep fun_eq_iff)
+
+lemma lookup_enter_frame_D_st [simp]:
+  "lookup_st (enter_frame_D_st top_val s) x =
+   (if is_global x then lookup_st s x else top_val)"
+  by transfer (simp add: fun_rep_enter_frame_D_rep)
+
+lemma fun_of_st_enter_frame_D_st:
+  "fun_of_st (enter_frame_D_st top_val s) = enter_frame_D top_val (fun_of_st s)"
+  unfolding enter_frame_D_def by (rule ext) simp
+
 definition combine_abs_st ::
     "('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st \<Rightarrow> 'a st"
   where "combine_abs_st sc se = restrict_local_st sc \<squnion> restrict_global_st se"

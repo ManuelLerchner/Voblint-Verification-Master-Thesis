@@ -74,3 +74,5 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_DG_Bridge
     Analysis_GraphViz
     Rel_Order_Domain
+  document_files
+    "root.bib"
