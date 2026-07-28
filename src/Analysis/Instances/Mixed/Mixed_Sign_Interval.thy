@@ -2,6 +2,7 @@ theory Mixed_Sign_Interval
   imports
     "Voblint_Analysis.DG_LTR_Sound"
     "Voblint_Analysis.Solver_Menu"
+    "Voblint_Analysis.Exec_DG_Bridge"
 
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Ivl_Exec"
@@ -66,35 +67,31 @@ lemma mixed_si_spec_step [simp]:
   unfolding mixed_si_spec_def mixed_si_step_def
   by (cases a) (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
+text \<open>Mixed's combine, entry-seed, and equation-generator trees are the generic
+  D/G executable helpers (@{const dg_cmb_of}, @{const dg_extra_of},
+  @{const dg_gen_of} in @{text Exec_DG_Bridge}) instantiated at @{const mixed_si_spec};
+  no per-domain reimplementation is needed.\<close>
+
 definition mixed_si_cmb ::
   "(pp \<Rightarrow> unit \<Rightarrow> sign abs_state \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) strategy_tree"
 where
-  "mixed_si_cmb route ctx ca cc ex =
-     (case ca of CallEdge dst _ _ \<Rightarrow>
-       map_gtree (\<lambda>_. ())
-         (map_ltree (\<lambda>w. (w, ctx))
-           (dg_spec_combine_tree mixed_si_spec dst cc ex)))"
+  "mixed_si_cmb = dg_cmb_of mixed_si_spec"
 
 definition mixed_si_extra ::
   "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> sign abs_state \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) strategy_tree list"
 where
-  "mixed_si_extra g route ctx v =
-     map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow>
-       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx))
-         (dg_edge_tree (dgs_enter mixed_si_spec fs as) cl))) (entry_call_list g v)"
+  "mixed_si_extra = dg_extra_of mixed_si_spec"
 
 definition mixed_si_generator ::
   "cfg \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) eqsT"
 where
-  "mixed_si_generator g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
-       (\<lambda>_ _ _ _. ()) mixed_si_cmb (mixed_si_extra g) g mixed_si_spec bot0 s0d s0g"
+  "mixed_si_generator = dg_gen_of mixed_si_spec"
 
 definition mixed_si_D ::
   "(pp \<times> unit + unit \<Rightarrow>
@@ -140,16 +137,17 @@ interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
 
 lemma mixed_si_cmb_dg:
   "mixed_si_cmb = mixed_si.dg_cmb"
-  by (simp add: fun_eq_iff mixed_si_cmb_def mixed_si.dg_cmb_def)
+  by (simp add: fun_eq_iff mixed_si_cmb_def dg_cmb_of_def mixed_si.dg_cmb_def)
 
 lemma mixed_si_extra_dg:
   "mixed_si_extra = mixed_si.dg_extra"
-  by (simp add: fun_eq_iff mixed_si_extra_def mixed_si.dg_extra_def
+  by (simp add: fun_eq_iff mixed_si_extra_def dg_extra_of_def mixed_si.dg_extra_def
         mixed_si.dg_enter_def)
 
 lemma mixed_si_generator_dg:
   "mixed_si_generator = mixed_si.dg_gen"
-  by (simp add: fun_eq_iff mixed_si_generator_def mixed_si.dg_gen_def
+  by (simp add: fun_eq_iff mixed_si_generator_def dg_gen_of_def mixed_si.dg_gen_def
+        mixed_si_cmb_def[symmetric] mixed_si_extra_def[symmetric]
         mixed_si_cmb_dg mixed_si_extra_dg)
 
 lemma mixed_si_D_dg:

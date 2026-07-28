@@ -126,11 +126,6 @@ lemma join_sign_least: "sign_le a csg \<Longrightarrow> sign_le b csg \<Longrigh
 lemma join_sign_comm:  "join_sign a b = join_sign b a"                 by (cases a; cases b) simp_all
 lemma join_sign_assoc: "join_sign a (join_sign b csg) = join_sign (join_sign a b) csg"  by (cases a; cases b; cases csg) simp_all
 
-subsection \<open>Widening (identity for finite domain: widen = join)\<close>
-
-definition widen_sign_abs :: "sign => sign => sign" where
-  "widen_sign_abs a b = join_sign a b"
-
 subsection \<open>Abstract arithmetic operations\<close>
 
 subsection \<open>Typeclass instances\<close>

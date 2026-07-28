@@ -36,42 +36,10 @@ lemma inr_slot_locals_bot_pull_ctx:
   "inr_slot_locals_bot_ctx \<sigma> \<Longrightarrow> inr_slot_locals_bot (pull_ctx ctx \<sigma>)"
   by (simp add: inr_slot_locals_bot_ctx_def inr_slot_locals_bot_def pull_ctx_Inr)
 
-definition inl_slot_globals_bot_ctx ::
-  "(pp \<times> 'c + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
-where
-  "inl_slot_globals_bot_ctx \<sigma> =
-     (\<forall>v. \<forall>x. is_global x \<longrightarrow> \<sigma> (Inl v) x = bot)"
 
-subsection \<open>Fold lemmas for the context-side builder\<close>
-
-lemma sides_le_side_rhs_fold_ctx:
-  fixes \<sigma> :: "pp \<times> 'c + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
-  shows "t \<in> set ts \<Longrightarrow>
-         sides_of_rhs t \<sigma> (Inr gg)
-           \<le> sides_of_rhs (side_rhs_fold_ctx acc ts) \<sigma> (Inr gg)"
-proof (induction ts arbitrary: acc)
-  case Nil thus ?case by simp
-next
-  case (Cons t' ts)
-  from Cons.prems consider (hd) "t = t'" | (tl) "t \<in> set ts" by auto
-  then show ?case
-  proof cases
-    case hd
-    show ?thesis unfolding hd side_rhs_fold_ctx.simps
-      by (simp only: sides_of_rhs_seqcomp_at) (rule sup_ge1)
-  next
-    case tl
-    have ih: "sides_of_rhs t \<sigma> (Inr gg)
-            \<le> sides_of_rhs
-                 (side_rhs_fold_ctx (acc \<squnion> traverse_rhs t' \<sigma>) ts) \<sigma> (Inr gg)"
-      by (rule Cons.IH[OF tl])
-    show ?thesis unfolding side_rhs_fold_ctx.simps
-      by (simp only: sides_of_rhs_seqcomp_at) (rule le_supI2[OF ih])
-  qed
-qed
 
 lemma sides_fold_le_side_cfg_T_eff_ctx:
-  shows "sides_of_rhs (side_rhs_fold_ctx
+  shows "sides_of_rhs (fold_rhs_trees
            (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
            (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
                 (intra_predecessor_list g v)

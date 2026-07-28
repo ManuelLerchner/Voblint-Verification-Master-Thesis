@@ -28,9 +28,6 @@ text \<open>A call selects the point abstraction of the callee formal in the ent
 definition ivl_enterc :: "ivl \<Rightarrow> store \<Rightarrow> ivl" where
   "ivl_enterc ctx s = ivl_decode (s ''p'')"
 
-definition ivl_combc :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "ivl_combc c1 c2 = c1"
-
 text \<open>The reader is guarded by the \<^emph>\<open>solved domain\<close> \<open>fst twice_ctx_sol\<close>: the solver
   returns a partial solution, so an unknown outside \<open>vars\<close> is an artefact of the total
   implementation function and must denote no states.  A covered \<^const>\<open>Inl\<close> slot reads

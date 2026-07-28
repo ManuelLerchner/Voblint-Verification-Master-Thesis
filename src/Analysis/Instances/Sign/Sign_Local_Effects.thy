@@ -220,7 +220,7 @@ next
     show "afilter_sign (Plus e1 e2) a (?suL \<squnion> g) =
           restrict_local (afilter_sign (Plus e1 e2) a ?suL) \<squnion> g"
       using av1 av2 inv2 inv1 s2_local
-      by (simp add: Let_def case_prod_beta)
+      by (simp add: Let_def case_prod_beta inv_conservative_def)
   qed
 next
   case (Minus e1 e2)
@@ -257,7 +257,7 @@ next
       using local_edge_invariantD[OF Minus.IH(1)[OF ng1] lb] .
     show "afilter_sign (Minus e1 e2) a (?suL \<squnion> g) =
           restrict_local (afilter_sign (Minus e1 e2) a ?suL) \<squnion> g"
-      using av1 av2 inv2 inv1 s2_local by auto
+      using av1 av2 inv2 inv1 s2_local by (simp add: inv_conservative_def)
   qed
 next
   case (Times e1 e2)
@@ -295,7 +295,7 @@ next
     show "afilter_sign (Times e1 e2) a (?suL \<squnion> g) =
           restrict_local (afilter_sign (Times e1 e2) a ?suL) \<squnion> g"
       using av1 av2 inv2 inv1 s2_local
-      by (simp add: Let_def case_prod_beta)
+      by (simp add: Let_def case_prod_beta inv_conservative_def)
   qed
 qed
 

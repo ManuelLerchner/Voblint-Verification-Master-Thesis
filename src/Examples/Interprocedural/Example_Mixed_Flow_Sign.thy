@@ -5,19 +5,8 @@ theory Example_Mixed_Flow_Sign
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_Formalization.Mixed_Flow_Sound"
+    Example_Inc_Proc
 begin
-
-text \<open>The analyzed program, defined locally so the example is self-contained: a single
-  procedure \<open>p\<close> increments the global \<open>Gx\<close>, \<open>main\<close> calls it once.\<close>
-definition inc_program :: imp_prog where
-  "inc_program = program {
-     int Gx;
-     void p() { Gx := Gx + 1 }
-     void main() { p() }
-   }"
-
-definition inc_pi :: proc_table where
-  "inc_pi = prog_table inc_program"
 
 text \<open>
   Demonstrates the top-level collecting-semantics theorem applied to the sign

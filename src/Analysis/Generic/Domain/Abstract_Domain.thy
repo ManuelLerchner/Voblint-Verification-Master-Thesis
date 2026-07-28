@@ -424,6 +424,26 @@ qed
 
 end
 
+subsection \<open>Conservative inverse operator\<close>
+
+text \<open>
+  A domain that is too coarse for useful arithmetic inversion (e.g. sign,
+  which cannot narrow either operand of a plus/minus/times from its result)
+  instantiates @{term inv_plus} / @{term inv_minus} / @{term inv_times} with
+  this shared no-op: both operands pass through unchanged. Any
+  @{class sound_domain} discharges its soundness for free, so domains share
+  one proof instead of each restating the same trivial obligation.
+\<close>
+
+definition inv_conservative :: "'a => 'a => 'a => 'a * 'a" where
+  "inv_conservative r a1 a2 = (a1, a2)"
+
+lemma inv_conservative_sound:
+  fixes a1 a2 :: "'a::sound_domain"
+  assumes "n1 \<in> gamma a1" and "n2 \<in> gamma a2"
+  shows "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+  using assms by (simp add: inv_conservative_def)
+
 subsection \<open>Monotone backward-analysis locale\<close>
 
 text \<open>

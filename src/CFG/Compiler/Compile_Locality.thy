@@ -753,58 +753,6 @@ proof -
   qed
 qed
 
-subsection \<open>Compiler-specific graph certificate\<close>
-
-text \<open>
-  Generic graph well-formedness permits clients with their own result-node discipline.
-  A compiled graph additionally ties entry and call targets to declarations, forbids
-  outgoing result edges, and admits only matching return actions into result nodes.
-  The fragment-local lemmas below establish ownership of ordinary sources and call
-  continuations within disjoint compiler ranges.
-\<close>
-definition compiled_cfg_wf :: "proc_table \<Rightarrow> cfg \<Rightarrow> bool" where
-  "compiled_cfg_wf \<Pi> g \<longleftrightarrow>
-     wf_cfg g \<and>
-     procs_compiled \<Pi> g \<and>
-     (\<forall>p a v. (FunctionEntry p, a, v) \<in> intra g \<longrightarrow> \<Pi> p \<noteq> None) \<and>
-     (\<forall>p a v. (FunctionResult p, a, v) \<notin> intra g) \<and>
-     (\<forall>u a p. (u, a, FunctionResult p) \<in> intra g \<longrightarrow> (\<exists>e. a = EA_Ret e p)) \<and>
-     (\<forall>u ce p af. (u, ce, FunctionEntry p, af) \<in> calls g \<longrightarrow> \<Pi> p \<noteq> None)"
-
-theorem compiled_cfg_wf_compile_prog:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
-  shows "compiled_cfg_wf \<Pi> (compile_prog \<Pi> ps mnm main)"
-  unfolding compiled_cfg_wf_def
-proof (intro conjI)
-  show "wf_cfg (compile_prog \<Pi> ps mnm main)" by (rule compile_prog_wf)
-  show "procs_compiled \<Pi> (compile_prog \<Pi> ps mnm main)"
-    by (rule procs_compiled_compile_prog[OF wf])
-  show "\<forall>p a v. (FunctionEntry p, a, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<longrightarrow> \<Pi> p \<noteq> None"
-    using compile_prog_entry_declared[OF wf] by blast
-  show "\<forall>p a v. (FunctionResult p, a, v) \<notin> intra (compile_prog \<Pi> ps mnm main)"
-    by (simp add: compile_prog_no_result_source)
-  show "\<forall>u a p. (u, a, FunctionResult p) \<in> intra (compile_prog \<Pi> ps mnm main) \<longrightarrow>
-           (\<exists>e. a = EA_Ret e p)"
-    using compile_prog_result_target by blast
-  show "\<forall>u ce p af. (u, ce, FunctionEntry p, af) \<in> calls (compile_prog \<Pi> ps mnm main) \<longrightarrow>
-           \<Pi> p \<noteq> None"
-    using compile_prog_call_target_declared[OF wf] by blast
-qed
-
-lemma compiled_cfg_wf_result_targetD:
-  assumes "compiled_cfg_wf \<Pi> g" and "(u, a, FunctionResult p) \<in> intra g"
-  obtains e where "a = EA_Ret e p"
-  using assms unfolding compiled_cfg_wf_def by blast
-
-lemma compiled_cfg_wf_entry_declaredD:
-  assumes "compiled_cfg_wf \<Pi> g" and "(FunctionEntry p, a, v) \<in> intra g"
-  shows "\<Pi> p \<noteq> None"
-  using assms unfolding compiled_cfg_wf_def by blast
-
-lemma compiled_cfg_wf_call_declaredD:
-  assumes "compiled_cfg_wf \<Pi> g" and "(u, ce, FunctionEntry p, af) \<in> calls g"
-  shows "\<Pi> p \<noteq> None"
-  using assms unfolding compiled_cfg_wf_def by blast
 
 subsection \<open>Edges stay in the activation fragment\<close>
 

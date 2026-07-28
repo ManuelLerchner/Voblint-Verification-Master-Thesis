@@ -77,18 +77,6 @@ fun string_of_com :: "com \<Rightarrow> string" where
 | "string_of_com Restore = ''restore''"
 | "string_of_com Unwind = ''<unwind>''"
 
-definition string_of_proc_decl :: "pname \<Rightarrow> proc_decl \<Rightarrow> string" where
-  "string_of_proc_decl p decl =
-    ''procedure '' @ p @ ''('' @ join_source '', '' (formals decl) @ ''):''
-    @ source_nl @ string_of_com (body decl)"
-
-definition string_of_program ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> string" where
-  "string_of_program \<Pi> ps main =
-    join_source source_nl (map (\<lambda>p. case \<Pi> p of
-      None \<Rightarrow> ''procedure '' @ p @ '' <missing>''
-    | Some decl \<Rightarrow> string_of_proc_decl p decl) ps
-    @ [''main: '' @ string_of_com main])"
 
 
 fun source_indent :: "nat \<Rightarrow> string" where

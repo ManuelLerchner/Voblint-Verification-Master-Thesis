@@ -64,10 +64,10 @@ subsection \<open>Backward-analysis: inverse operators\<close>
 
 text \<open>
   Per the backward-domain plan, @{text inv_less_sign} provides sign-specific
-  refinement when a guard @{text "e1 < e2"} is known true or false.
-  @{text inv_plus_sign}, @{text inv_minus_sign}, @{text inv_times_sign} are
-  conservative (identity): sign is too coarse for useful arithmetic inversion;
-  the structural bfilter propagation (And/Or/Not/Eq) is where sign gains.
+  refinement when a guard @{text "e1 < e2"} is known true or false. Plus/minus/times
+  are too coarse for useful arithmetic inversion in sign, so they instantiate the
+  shared @{const inv_conservative} (identity) instead of a per-domain no-op; the
+  structural bfilter propagation (And/Or/Not/Eq) is where sign gains.
 \<close>
 
 fun inv_less_sign :: "bool => sign => sign => sign * sign" where
@@ -84,15 +84,6 @@ fun inv_less_sign :: "bool => sign => sign => sign * sign" where
                   else a2
         in (a1', a2'))"
 
-fun inv_plus_sign :: "sign => sign => sign => sign * sign" where
-  "inv_plus_sign _ a1 a2 = (a1, a2)"
-
-fun inv_minus_sign :: "sign => sign => sign => sign * sign" where
-  "inv_minus_sign _ a1 a2 = (a1, a2)"
-
-fun inv_times_sign :: "sign => sign => sign => sign * sign" where
-  "inv_times_sign _ a1 a2 = (a1, a2)"
-
 lemma inv_less_sign_sound:
   "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> (n1 < n2) = res
    \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_less_sign res a1 a2))
@@ -100,29 +91,11 @@ lemma inv_less_sign_sound:
   by (cases res; cases a1; cases a2;
       auto simp: less_eq_sign_def; linarith)
 
-lemma inv_plus_sign_sound:
-  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 + n2 \<in> gamma_sign r
-   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_plus_sign r a1 a2))
-     \<and> n2 \<in> gamma_sign (snd (inv_plus_sign r a1 a2))"
-  by simp
-
-lemma inv_minus_sign_sound:
-  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 - n2 \<in> gamma_sign r
-   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_minus_sign r a1 a2))
-     \<and> n2 \<in> gamma_sign (snd (inv_minus_sign r a1 a2))"
-  by simp
-
-lemma inv_times_sign_sound:
-  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> n1 * n2 \<in> gamma_sign r
-   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_times_sign r a1 a2))
-     \<and> n2 \<in> gamma_sign (snd (inv_times_sign r a1 a2))"
-  by simp
-
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation sign_backward_domain:
     backward_domain meet_sign aval_sign
-                    inv_less_sign inv_plus_sign inv_minus_sign inv_times_sign
+                    inv_less_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
@@ -151,27 +124,18 @@ next
 next
   fix n1 n2 :: int and a1 a2 r :: sign
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
-  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
-  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
-  have h3: "n1 + n2 \<in> gamma_sign r" using H3 by simp
-  show "n1 \<in> gamma (fst (inv_plus_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus_sign r a1 a2))"
-    using inv_plus_sign_sound[OF h1 h2 h3] by simp
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
 next
   fix n1 n2 :: int and a1 a2 r :: sign
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
-  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
-  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
-  have h3: "n1 - n2 \<in> gamma_sign r" using H3 by simp
-  show "n1 \<in> gamma (fst (inv_minus_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus_sign r a1 a2))"
-    using inv_minus_sign_sound[OF h1 h2 h3] by simp
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
 next
   fix n1 n2 :: int and a1 a2 r :: sign
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
-  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
-  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
-  have h3: "n1 * n2 \<in> gamma_sign r" using H3 by simp
-  show "n1 \<in> gamma (fst (inv_times_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times_sign r a1 a2))"
-    using inv_times_sign_sound[OF h1 h2 h3] by simp
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
 qed
 
 text \<open>
@@ -309,7 +273,7 @@ text \<open>
 context begin
 interpretation sign_bdm:
   backward_domain_mono meet_sign aval_sign
-                       inv_less_sign inv_plus_sign inv_minus_sign inv_times_sign
+                       inv_less_sign inv_conservative inv_conservative inv_conservative
 proof unfold_locales
   fix a1 a2 b1 b2 :: sign
   assume "a1 \<le> a2" and "b1 \<le> b2"
@@ -328,18 +292,9 @@ next
 next
   fix r1 r2 x1 x2 y1 y2 :: sign
   assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_plus_sign r1 x1 y1) \<le> fst (inv_plus_sign r2 x2 y2) \<and>
-        snd (inv_plus_sign r1 x1 y1) \<le> snd (inv_plus_sign r2 x2 y2)" by simp
-next
-  fix r1 r2 x1 x2 y1 y2 :: sign
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_minus_sign r1 x1 y1) \<le> fst (inv_minus_sign r2 x2 y2) \<and>
-        snd (inv_minus_sign r1 x1 y1) \<le> snd (inv_minus_sign r2 x2 y2)" by simp
-next
-  fix r1 r2 x1 x2 y1 y2 :: sign
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_times_sign r1 x1 y1) \<le> fst (inv_times_sign r2 x2 y2) \<and>
-        snd (inv_times_sign r1 x1 y1) \<le> snd (inv_times_sign r2 x2 y2)" by simp
+  thus "fst (inv_conservative r1 x1 y1) \<le> fst (inv_conservative r2 x2 y2) \<and>
+        snd (inv_conservative r1 x1 y1) \<le> snd (inv_conservative r2 x2 y2)"
+    by (simp add: inv_conservative_def)
 qed
 
 lemma afilter_sign_mono:

@@ -413,94 +413,6 @@ lemma traverse_rhs_map_ltree:
   by (induction t) auto
 
 
-subsection \<open>Context-indexed fold over per-point trees\<close>
-
-text \<open>
-  Context-indexed trees contributing to one unknown \<open>(v, c)\<close> are folded with
-  \<open>seqcomp_tree\<close>, joining their local answers.  Intra-edge trees use static
-  relabelling, while return/combine trees may route queries through a context
-  computed from the caller state.  Value-dependent routing does not satisfy
-  \<open>static_deps\<close>, so such equation systems use warrowing.
-\<close>
-
-fun side_rhs_fold_ctx ::
-  "'d::bounded_semilattice_sup_bot
-   \<Rightarrow> (pp \<times> 'c, 'g, 'd) strategy_tree list
-   \<Rightarrow> (pp \<times> 'c, 'g, 'd) strategy_tree"
-where
-  "side_rhs_fold_ctx acc [] = Answer acc"
-| "side_rhs_fold_ctx acc (t # ts) =
-     seqcomp_tree t (\<lambda>res. side_rhs_fold_ctx (acc \<squnion> res) ts)"
-
-fun side_acc_ctx ::
-  "'d::bounded_semilattice_sup_bot \<Rightarrow> (pp \<times> 'c + 'g \<Rightarrow> 'd)
-   \<Rightarrow> (pp \<times> 'c, 'g, 'd) strategy_tree list \<Rightarrow> 'd"
-where
-  "side_acc_ctx acc \<sigma> [] = acc"
-| "side_acc_ctx acc \<sigma> (t # ts) = side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>) \<sigma> ts"
-
-lemma traverse_side_rhs_fold_ctx:
-  "traverse_rhs (side_rhs_fold_ctx acc ts) \<sigma> = side_acc_ctx acc \<sigma> ts"
-  by (induction ts arbitrary: acc) (simp_all add: traverse_seqcomp)
-
-
-subsection \<open>Conservativity at the trivial context\<close>
-
-text \<open>
-  With the single context \<open>()\<close>, every local query is relabelled to its unique
-  context copy.  Return/combine routing then becomes static, and the relabelled
-  equation has the same denotation as the context-insensitive equation under the
-  canonical pullback from \<open>pp \<times> unit\<close> to \<open>pp\<close>.
-\<close>
-
-definition side_cfg_T_eff_ctx_unit ::
-  "cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
-   \<Rightarrow> (pp \<times> unit, 'g, 'a abs_state) eqsT"
-where
-  "side_cfg_T_eff_ctx_unit g etf bot0 s0 gseed =
-     (\<lambda>x. map_ltree (\<lambda>u. (u, ())) (side_cfg_T_eff g etf bot0 s0 gseed (fst x)))"
-
-theorem context_eqsystem_conservative:
-  "eq (side_cfg_T_eff_ctx_unit g etf bot0 s0 gseed) (v, ()) \<sigma>
-   = eq (side_cfg_T_eff g etf bot0 s0 gseed) v
-        (\<lambda>z. \<sigma> (map_sum (\<lambda>u. (u, ())) id z))"
-  unfolding side_cfg_T_eff_ctx_unit_def
-  by (simp add: traverse_rhs_map_ltree)
-
-
-subsection \<open>Value-dependent semantic combine\<close>
-
-text \<open>
-  A context-indexed combine first queries the caller, computes the callee context
-  from that abstract state, and then queries the matching callee exit.  The query
-  target therefore depends on a preceding query result.  Non-constant context
-  functions do not satisfy \<open>static_deps\<close> and require warrowing; the constant unit
-  context reduces to static relabelling of the context-insensitive combine.
-\<close>
-
-definition unit_combine_tree_ctx ::
-  "('c \<Rightarrow> 'a abs_state \<Rightarrow> 'c) \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> 'c
-   \<Rightarrow> (pp \<times> 'c, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
-where
-  "unit_combine_tree_ctx ec cc ex ctx =
-     QueryL (cc, ctx) (\<lambda>sc. QueryG () (\<lambda>g. QueryL (ex, ec ctx (sc \<squnion> g)) (\<lambda>se.
-       let res = restrict_local (sc \<squnion> g) \<squnion> restrict_global (se \<squnion> g) in
-       Side () (restrict_global res)
-         (Answer (restrict_local res)))))"
-
-lemma traverse_unit_combine_tree_ctx:
-  "traverse_rhs (unit_combine_tree_ctx ec cc ex ctx) \<sigma> =
-     (let sc = \<sigma> (Inl (cc, ctx)); g = \<sigma> (Inr ()); se = \<sigma> (Inl (ex, ec ctx (sc \<squnion> g)))
-      in restrict_local (restrict_local (sc \<squnion> g) \<squnion> restrict_global (se \<squnion> g)))"
-  unfolding unit_combine_tree_ctx_def by (simp add: Let_def)
-
-lemma unit_combine_tree_ctx_unit_traverse:
-  "traverse_rhs (unit_combine_tree_ctx (\<lambda>_ _. ()) cc ex ()) \<sigma>
-   = traverse_rhs (map_ltree (\<lambda>u. (u, ())) (unit_combine_tree None cc ex)) \<sigma>"
-  unfolding unit_combine_tree_ctx_def unit_combine_tree_def
-  by (simp add: Let_def combine_collect_abs_def combine_abs_eq_restrict)
-
 
 subsection \<open>General context-indexed equation system\<close>
 
@@ -509,46 +421,8 @@ text \<open>
   context \<open>c\<close>.  Return/combine trees come from the supplied builder \<open>cmb\<close>, which
   may route the callee-exit query through a context computed from the caller state.
   Keeping \<open>cmb\<close> explicit separates context routing from the domain transfer record.
-
-  With the unit context and a statically relabelled combine builder, the assembled
-  equation system coincides with the unit reindexing of the context-insensitive
-  system.
 \<close>
 
-lemma map_ltree_seqcomp:
-  "map_ltree h (seqcomp_tree t k)
-   = seqcomp_tree (map_ltree h t) (\<lambda>d. map_ltree h (k d))"
-  by (induction t) auto
-
-lemma map_ltree_side_rhs_fold_eff:
-  "map_ltree h (side_rhs_fold_eff etf acc preds ens combs)
-   = side_rhs_fold_ctx acc
-       (map (\<lambda>(u, a). map_ltree h (apply_etf etf a u)) preds
-        @ map (\<lambda>(cl, fs, as). map_ltree h (etf_enter etf fs as cl)) ens
-        @ map (\<lambda>(cc, dst, ex). map_ltree h (etf_combine etf dst cc ex)) combs)"
-proof (induction preds arbitrary: acc)
-  case Nil
-  show ?case
-  proof (induction ens arbitrary: acc)
-    case Nil
-    show ?case
-    proof (induction combs arbitrary: acc)
-      case Nil show ?case by simp
-    next
-      case (Cons cx cs)
-      obtain cc dst ex where "cx = (cc, dst, ex)" by (cases cx)
-      with Cons show ?case by (simp add: map_ltree_seqcomp sup_fun_def)
-    qed
-  next
-    case (Cons ex ens)
-    obtain cl fs as where "ex = (cl, fs, as)" by (cases ex)
-    with Cons show ?case by (simp add: map_ltree_seqcomp sup_fun_def)
-  qed
-next
-  case (Cons p ps)
-  obtain u a where "p = (u, a)" by (cases p)
-  with Cons show ?case by (simp add: map_ltree_seqcomp sup_fun_def)
-qed
 
 definition side_cfg_T_eff_ctx ::
   "('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
@@ -565,52 +439,20 @@ where
             enter = map (\<lambda>(cl, fs, as). map_ltree (\<lambda>w. (w, c)) (etf_enter etf fs as cl))
                         (entry_seed_list g v);
             comb  = map (\<lambda>(cc, dst, ex). cmb c dst cc ex) (return_call_list g v);
-            t = side_rhs_fold_ctx acc0 (intra @ enter @ comb)
+            t = fold_rhs_trees acc0 (intra @ enter @ comb)
         in if v = cfg_entry g then Side gseed (restrict_global s0) t else t)"
 
-theorem side_cfg_T_eff_ctx_collapses_unit:
-  "side_cfg_T_eff_ctx
-      (\<lambda>_ dst cc ex. map_ltree (\<lambda>u. (u, ())) (etf_combine etf dst cc ex))
-      g etf bot0 s0 gseed (v, ())
-   = side_cfg_T_eff_ctx_unit g etf bot0 s0 gseed (v, ())"
-proof -
-  let ?h = "\<lambda>u::pp. (u, ())"
-  have fold:
-    "side_rhs_fold_ctx acc0
-        (map (\<lambda>(u, a). map_ltree ?h (apply_etf etf a u)) (intra_predecessor_list g v)
-         @ map (\<lambda>(cl, fs, as). map_ltree ?h (etf_enter etf fs as cl)) (entry_seed_list g v)
-         @ map (\<lambda>(cc, dst, ex). map_ltree ?h (etf_combine etf dst cc ex))
-               (return_call_list g v))
-     = map_ltree ?h
-         (side_rhs_fold_eff etf acc0 (intra_predecessor_list g v)
-            (entry_seed_list g v) (return_call_list g v))" for acc0 v
-    by (simp add: map_ltree_side_rhs_fold_eff)
-  show ?thesis
-  proof (cases "v = cfg_entry g")
-    case True
-    thus ?thesis
-      unfolding side_cfg_T_eff_ctx_def side_cfg_T_eff_ctx_unit_def
-                side_cfg_T_eff_def make_side_rhs_tree_eff_def
-      by (simp add: fold Let_def)
-  next
-    case False
-    thus ?thesis
-      unfolding side_cfg_T_eff_ctx_def side_cfg_T_eff_ctx_unit_def
-                side_cfg_T_eff_def make_side_rhs_tree_eff_def
-      by (simp add: fold Let_def)
-  qed
-qed
 
 text \<open>
   Denotation of the context-indexed equation system at \<open>(v, c)\<close>, mirroring
   \<open>eq_side_cfg_T_eff\<close>: the entry \<open>Side\<close> wrapper is denotation-transparent, so the
-  value of the unknown is the \<open>side_acc_ctx\<close> fold over the intra (relabelled) and
+  value of the unknown is the \<open>fold_rhs_values\<close> fold over the intra (relabelled) and
   combine (instance \<open>cmb\<close>) trees.  This is the form the soundness chain reads.
 \<close>
 
 lemma eq_side_cfg_T_eff_ctx:
   "eq (side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> =
-     side_acc_ctx
+     fold_rhs_values
        (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0) \<sigma>
        (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
             (intra_predecessor_list g v)
@@ -618,7 +460,7 @@ lemma eq_side_cfg_T_eff_ctx:
             (entry_seed_list g v)
         @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex) (return_call_list g v))"
   unfolding side_cfg_T_eff_ctx_def
-  by (simp add: traverse_side_rhs_fold_ctx Let_def)
+  by (simp add: traverse_fold_rhs_trees Let_def)
 
 
 subsection \<open>Bounds on the context fold\<close>
@@ -629,9 +471,9 @@ text \<open>
   tree list makes these properties independent of the contribution source.
 \<close>
 
-lemma side_acc_ctx_mono_acc:
+lemma fold_rhs_values_mono_seed:
   fixes acc1 acc2 :: "'a::bounded_semilattice_sup_bot abs_state"
-  shows "acc1 \<le> acc2 \<Longrightarrow> side_acc_ctx acc1 \<sigma> ts \<le> side_acc_ctx acc2 \<sigma> ts"
+  shows "acc1 \<le> acc2 \<Longrightarrow> fold_rhs_values acc1 \<sigma> ts \<le> fold_rhs_values acc2 \<sigma> ts"
 proof (induction ts arbitrary: acc1 acc2)
   case Nil then show ?case by simp
 next
@@ -640,21 +482,21 @@ next
     using Cons.IH[OF sup_mono[OF Cons.prems order_refl]] by (simp add: sup_fun_def)
 qed
 
-lemma side_acc_ctx_ge_acc:
+lemma fold_rhs_values_ge_acc:
   fixes acc :: "'a::bounded_semilattice_sup_bot abs_state"
-  shows "acc \<le> side_acc_ctx acc \<sigma> ts"
+  shows "acc \<le> fold_rhs_values acc \<sigma> ts"
 proof (induction ts arbitrary: acc)
   case Nil then show ?case by simp
 next
   case (Cons t ts)
   have "acc \<le> acc \<squnion> traverse_rhs t \<sigma>" by simp
-  also have "\<dots> \<le> side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>) \<sigma> ts" by (rule Cons.IH)
+  also have "\<dots> \<le> fold_rhs_values (acc \<squnion> traverse_rhs t \<sigma>) \<sigma> ts" by (rule Cons.IH)
   finally show ?case by simp
 qed
 
-lemma traverse_le_side_acc_ctx:
+lemma traverse_le_fold_rhs_values:
   fixes acc :: "'a::bounded_semilattice_sup_bot abs_state"
-  shows "t \<in> set ts \<Longrightarrow> traverse_rhs t \<sigma> \<le> side_acc_ctx acc \<sigma> ts"
+  shows "t \<in> set ts \<Longrightarrow> traverse_rhs t \<sigma> \<le> fold_rhs_values acc \<sigma> ts"
 proof (induction ts arbitrary: acc)
   case Nil then show ?case by simp
 next
@@ -663,24 +505,24 @@ next
   proof (cases "t = t'")
     case True
     have "traverse_rhs t \<sigma> \<le> acc \<squnion> traverse_rhs t' \<sigma>" using True by simp
-    also have "\<dots> \<le> side_acc_ctx (acc \<squnion> traverse_rhs t' \<sigma>) \<sigma> ts"
-      by (rule side_acc_ctx_ge_acc)
+    also have "\<dots> \<le> fold_rhs_values (acc \<squnion> traverse_rhs t' \<sigma>) \<sigma> ts"
+      by (rule fold_rhs_values_ge_acc)
     finally show ?thesis by simp
   next
     case False
     with Cons.prems have "t \<in> set ts" by simp
-    then have "traverse_rhs t \<sigma> \<le> side_acc_ctx (acc \<squnion> traverse_rhs t' \<sigma>) \<sigma> ts"
+    then have "traverse_rhs t \<sigma> \<le> fold_rhs_values (acc \<squnion> traverse_rhs t' \<sigma>) \<sigma> ts"
       by (rule Cons.IH)
     then show ?thesis by simp
   qed
 qed
 
-lemma side_acc_ctx_mono:
+lemma fold_rhs_values_mono_sigma:
   fixes acc :: "'a::bounded_semilattice_sup_bot abs_state"
   assumes tree_mono:
     "\<And>t s1 s2. t \<in> set ts \<Longrightarrow> s1 \<le> s2 \<Longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
   assumes sig: "\<sigma>1 \<le> \<sigma>2"
-  shows "side_acc_ctx acc \<sigma>1 ts \<le> side_acc_ctx acc \<sigma>2 ts"
+  shows "fold_rhs_values acc \<sigma>1 ts \<le> fold_rhs_values acc \<sigma>2 ts"
   using tree_mono
 proof (induction ts arbitrary: acc)
   case Nil then show ?case by simp
@@ -689,13 +531,13 @@ next
   have hd_le: "traverse_rhs t \<sigma>1 \<le> traverse_rhs t \<sigma>2"
     using Cons.prems[of t] sig by simp
   have step1:
-    "side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>1) \<sigma>1 ts
-       \<le> side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>1) \<sigma>2 ts"
+    "fold_rhs_values (acc \<squnion> traverse_rhs t \<sigma>1) \<sigma>1 ts
+       \<le> fold_rhs_values (acc \<squnion> traverse_rhs t \<sigma>1) \<sigma>2 ts"
     by (rule Cons.IH) (use Cons.prems in simp)
   have step2:
-    "side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>1) \<sigma>2 ts
-       \<le> side_acc_ctx (acc \<squnion> traverse_rhs t \<sigma>2) \<sigma>2 ts"
-    by (rule side_acc_ctx_mono_acc[OF sup_mono[OF order_refl hd_le]])
+    "fold_rhs_values (acc \<squnion> traverse_rhs t \<sigma>1) \<sigma>2 ts
+       \<le> fold_rhs_values (acc \<squnion> traverse_rhs t \<sigma>2) \<sigma>2 ts"
+    by (rule fold_rhs_values_mono_seed[OF sup_mono[OF order_refl hd_le]])
   show ?case using order_trans[OF step1 step2] by simp
 qed
 
@@ -719,49 +561,9 @@ lemma post_sol_tree_le_ctx:
 proof -
   have "traverse_rhs t \<sigma>
           \<le> eq (side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed) (v, ctx) \<sigma>"
-    unfolding eq_side_cfg_T_eff_ctx by (rule traverse_le_side_acc_ctx[OF mem])
+    unfolding eq_side_cfg_T_eff_ctx by (rule traverse_le_fold_rhs_values[OF mem])
   then show ?thesis using post by (rule order_trans)
 qed
 
-
-subsection \<open>Frame-entry context seeding\<close>
-
-text \<open>
-  A frame-entry equation may seed locals directly from its context while taking
-  globals from the queried caller state.  This preserves the local/global split:
-  context data determines the callee frame, and caller flow supplies shared state.
-  Ordinary intra predecessors continue to use their edge transfers.
-\<close>
-
-definition side_cfg_T_eff_ctx_seeded ::
-  "('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
-     \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
-   \<Rightarrow> ('c \<Rightarrow> 'a abs_state)
-   \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
-   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
-where
-  "side_cfg_T_eff_ctx_seeded cmb ent g etf bot0 s0 gseed =
-     (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0);
-            intra = map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u))
-                        (intra_predecessor_list g v);
-            enter = map (\<lambda>(u, a). QueryL (u, c) (\<lambda>s. Answer (combine_abs (ent c) s)))
-                        (entry_call_list g v);
-            comb  = map (\<lambda>(cc, dst, ex). cmb c dst cc ex) (return_call_list g v);
-            t = side_rhs_fold_ctx acc0 (intra @ enter @ comb)
-        in if v = cfg_entry g then Side gseed (restrict_global s0) t else t)"
-
-lemma eq_side_cfg_T_eff_ctx_seeded:
-  "eq (side_cfg_T_eff_ctx_seeded cmb ent g etf bot0 s0 gseed) (v, ctx) \<sigma> =
-     side_acc_ctx
-       (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0) \<sigma>
-       (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
-            (intra_predecessor_list g v)
-        @ map (\<lambda>(u, a). QueryL (u, ctx) (\<lambda>s. Answer (combine_abs (ent ctx) s)))
-              (entry_call_list g v)
-        @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex) (return_call_list g v))"
-  unfolding side_cfg_T_eff_ctx_seeded_def
-  by (simp add: traverse_side_rhs_fold_ctx Let_def)
 
 end

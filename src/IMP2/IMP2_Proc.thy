@@ -500,30 +500,26 @@ fun source_com :: "com => bool" where
 definition source_pi :: "proc_table => bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
 
-fun aexp_n_mentions :: "vname => AExp.aexp => bool" where
-  "aexp_n_mentions x (AExp.N _) = False"
-| "aexp_n_mentions x (AExp.V y) = (x = y)"
-| "aexp_n_mentions x (AExp.Plus a b) = (aexp_n_mentions x a \<or> aexp_n_mentions x b)"
+text \<open>
+  Occurrence of one specific variable is the same syntax-directed walk as
+  @{const aexp_mentions_global} (\<open>IMP2_Expr\<close>), with the leaf predicate
+  specialised to an equality test instead of @{const is_global}.
+\<close>
 
-fun aexp_mentions :: "vname => aexp => bool" where
-  "aexp_mentions x (BaseN a) = aexp_n_mentions x a"
-| "aexp_mentions x (Plus a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
-| "aexp_mentions x (Minus a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
-| "aexp_mentions x (Times a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+definition aexp_n_mentions :: "vname => AExp.aexp => bool" where
+  "aexp_n_mentions x = aexp_n_mentions_where ((=) x)"
 
-fun bexp_n_mentions :: "vname => BExp.bexp => bool" where
-  "bexp_n_mentions x (BExp.Bc _) = False"
-| "bexp_n_mentions x (BExp.Not b) = bexp_n_mentions x b"
-| "bexp_n_mentions x (BExp.And b1 b2) = (bexp_n_mentions x b1 \<or> bexp_n_mentions x b2)"
-| "bexp_n_mentions x (BExp.Less a b) = (aexp_n_mentions x a \<or> aexp_n_mentions x b)"
+definition aexp_mentions :: "vname => aexp => bool" where
+  "aexp_mentions x = aexp_mentions_where ((=) x)"
 
-fun bexp_mentions :: "vname => bexp => bool" where
-  "bexp_mentions x (BaseB b) = bexp_n_mentions x b"
-| "bexp_mentions x (Not b) = bexp_mentions x b"
-| "bexp_mentions x (And b1 b2) = (bexp_mentions x b1 \<or> bexp_mentions x b2)"
-| "bexp_mentions x (Or b1 b2) = (bexp_mentions x b1 \<or> bexp_mentions x b2)"
-| "bexp_mentions x (Less a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
-| "bexp_mentions x (Eq a b) = (aexp_mentions x a \<or> aexp_mentions x b)"
+definition bexp_n_mentions :: "vname => BExp.bexp => bool" where
+  "bexp_n_mentions x = bexp_n_mentions_where ((=) x)"
+
+definition bexp_mentions :: "vname => bexp => bool" where
+  "bexp_mentions x = bexp_mentions_where ((=) x)"
+
+lemmas mentions_defs [simp] =
+  aexp_n_mentions_def aexp_mentions_def bexp_n_mentions_def bexp_mentions_def
 
 definition source_aexp :: "aexp => bool" where
   "source_aexp a \<longleftrightarrow> \<not> aexp_mentions ret_var a"

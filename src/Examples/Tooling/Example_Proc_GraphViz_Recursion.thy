@@ -4,6 +4,7 @@ theory Example_Proc_GraphViz_Recursion
   imports
     "Voblint_IMP2.IMP2_Notation"
     "Voblint_Analysis.Analysis_GraphViz"
+    Example_Compile_Baseline
 begin
 
 definition dot_main_name :: pname where
@@ -19,27 +20,10 @@ text \<open>
   Dashed blue edges resume callers.
 \<close>
 
-subsection \<open>Recursive factorial program\<close>
-
-definition factorial_program :: imp_prog where
-  "factorial_program = program {
-
-     void fac(n) {
-       if (n < 2) {
-         return 1
-       } else {
-         tmp := fac(n - 1);
-         return n * tmp
-       }
-     }
-
-     void main() {
-       N := 8;
-       r := fac(N)
-     }
-   }"
-
 subsection \<open>Compiled CFG\<close>
+
+text \<open>@{const factorial_program} is the shared recursive-factorial witness from
+  @{text Example_Compile_Baseline}.\<close>
 
 definition factorial_cfg :: cfg where
   "factorial_cfg =
