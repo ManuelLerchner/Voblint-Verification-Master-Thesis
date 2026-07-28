@@ -137,26 +137,20 @@ lemma sign_enter_st_commute:
                 enter_frame_sign_def enter_frame_sign_st_commute)
 
 definition sign_etf_st :: "(unit, sign st) effectful_st_transfer" where
-  "sign_etf_st = \<lparr>
-    etf_st_nop        = unit_edge_tree_st (sign_tf_st EA_Nop),
-    etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (sign_tf_st (EA_Assign x e))),
-    etf_st_assume     = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_Assume b))),
-    etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_AssumeNot b))),
-    etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st (sign_enter_st xs es)),
-    etf_st_combine    = unit_combine_tree_st
-  \<rparr>"
+  "sign_etf_st = unit_etf_st_of_transfer sign_tf_st sign_enter_st"
 
 lemma sign_etf_st_edge_tree:
   "apply_etf_st sign_etf_st a u = unit_edge_tree_st (sign_tf_st a) u"
-  unfolding sign_etf_st_def by (cases a) (auto simp: sign_etf_st_def split: option.splits)
+  unfolding sign_etf_st_def
+  by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_ret_none sign_tf_st_ret_some])
 
 lemma sign_etf_st_combine_tree:
   "etf_combine_st sign_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  unfolding sign_etf_st_def by simp
+  unfolding sign_etf_st_def by (rule etf_combine_st_unit_of_transfer)
 
 lemma sign_etf_st_enter_tree:
   "etf_st_enter sign_etf_st xs es u = unit_edge_tree_st (sign_enter_st xs es) u"
-  unfolding sign_etf_st_def by simp
+  unfolding sign_etf_st_def by (rule etf_st_enter_unit_of_transfer)
 
 lemma sign_etf_st_enter_exists_unit:
   "\<And>u xs es. \<exists>f. etf_st_enter sign_etf_st xs es u = unit_edge_tree_st f u"

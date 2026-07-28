@@ -70,19 +70,6 @@ lemma prog_table_main [simp]:
   "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
   by (simp add: prog_table_def)
 
-lemma prog_table_other:
-  "q \<noteq> prog_main_name \<Longrightarrow> prog_table p q = map_of (proc_rep p) q"
-  by (simp add: prog_table_def)
-
-lemma dom_prog_table:
-  "dom (prog_table p) = insert prog_main_name (set (prog_procs p))"
-  by (auto simp: prog_table_def prog_procs_def dom_map_of_conv_image_fst)
-
-lemma source_pi_prog_table:
-  assumes "source_pi (map_of (proc_rep p))" and "source_com (prog_main p)"
-  shows "source_pi (prog_table p)"
-  using assms by (auto simp: source_pi_def prog_table_def proc_decl_of_def split: if_splits)
-
 lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m) = map fst ps"
   by (simp add: prog_procs_def imp_prog.make_def)
 
@@ -269,8 +256,7 @@ parse_translation \<open>
        | (Const ("_imp2_or", _), [a, b]) => K c_Or $ bexp_tr a $ bexp_tr b
        | _ => raise TERM ("IMP2_Notation: bexp_tr", [t]))
 
-    fun actuals_tr (Const ("_imp2_actuals_nil", _)) = K c_Nil
-      | actuals_tr (Const ("_imp2_actuals_one", _) $ a) =
+    fun actuals_tr (Const ("_imp2_actuals_one", _) $ a) =
           K c_Cons $ aexp_tr a $ K c_Nil
       | actuals_tr (Const ("_imp2_actuals_cons", _) $ a $ rest) =
           K c_Cons $ aexp_tr a $ actuals_tr rest
@@ -381,9 +367,6 @@ parse_translation \<open>
     fun mk_names [] = K c_Nil
       | mk_names (n :: ns) = K c_Cons $ HOLogic.mk_string n $ mk_names ns
 
-    fun mk_body NONE = K c_SKIP
-      | mk_body (SOME c) = com_tr c
-
     (* A trailing "return e" becomes an explicit Return command appended to the body;
        the procedure declaration carries no separate result field. *)
     fun mk_body_ret NONE NONE = K c_SKIP
@@ -419,7 +402,7 @@ parse_translation \<open>
            | [] => error "IMP2 program: missing 'void main() { ... }'"
            | _  => error "IMP2 program: more than one 'void main()'")
         val proc_rep = mk_proc_rep procs
-        val main = mk_body main_ast
+        val main = mk_body_ret main_ast NONE
       in K c_imp_prog $ proc_rep $ main end
   in
     [("_IMP2", fn _ => fn [t] => com_tr t | _ => raise Match),

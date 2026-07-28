@@ -6,7 +6,7 @@ interprocedural semantics.
 | File | Role |
 | --- | --- |
 | `CFG_Local_Trace.thy` | `ltr`, `valid_ltr`, caller structure, context keys, and `activation_collect` |
-| `LTR_Collect.thy` | `ltr_collect`, `ltr_collect_keyed`, introduction rules, and least-fixpoint characterization |
+| `LTR_Collect.thy` | `ltr_collect`, introduction rules, and least-fixpoint characterization |
 | `LTR_Abstract.thy` | `ltr_gamma` and the generic abstract postfix soundness theorem |
 
 `valid_ltr` has root, call, and resume constructors. Each trace contains one

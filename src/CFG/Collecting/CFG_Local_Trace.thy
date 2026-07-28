@@ -283,10 +283,6 @@ next
   show ?case using hcaller q valid_ltr_path_nonempty[OF cv] by simp
 qed
 
-lemma caller_of_unique:
-  "caller_of t = Some c1 \<Longrightarrow> caller_of t = Some c2 \<Longrightarrow> c1 = c2"
-  by simp
-
 lemma valid_ltr_Call_path_nonempty:
   "Call caller p \<in> valid_ltr g S \<Longrightarrow> p \<noteq> []"
   using valid_ltr_path_nonempty by fastforce

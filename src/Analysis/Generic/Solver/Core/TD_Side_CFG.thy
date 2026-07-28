@@ -389,13 +389,6 @@ proof (intro allI impI)
     by (simp add: restrict_local_sup sup_assoc sup_left_commute sup_commute)
 qed
 
-definition local_env_independent ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> bool"
-where
-  "local_env_independent f \<longleftrightarrow>
-     (\<forall>su g. local_bot_on_locals g \<longrightarrow>
-        f (su \<squnion> g) = f (restrict_local su \<squnion> g))"
-
 definition local_edge_tree ::
   "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (unit, 'a) edge_tf_tree"
@@ -556,20 +549,6 @@ lemma Inl_dep_aux_local_edge_tree:
   "Inl u \<in> dep_aux \<sigma> (local_edge_tree f u)"
   unfolding local_edge_tree_def by simp
 
-lemma local_env_independent_side_env:
-  fixes f :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
-    and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and u :: pp
-  assumes ind: "local_env_independent f"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
-  shows "f (side_env \<sigma> u) = f (restrict_local (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
-proof -
-  have gb: "local_bot_on_locals (glob_env \<sigma>)"
-    using inr glob_env_local_bot inr_slot_locals_bot_imp by blast
-  show ?thesis
-    using ind[unfolded local_env_independent_def, rule_format, OF gb]
-    unfolding side_env_def by simp
-qed
-
 subsection \<open>Effectful transfer record factories\<close>
 
 definition unit_etf_of_transfer ::
@@ -689,28 +668,6 @@ lemma in_gamma_unit_edge_tree_enter:
            (unit_edge_tree (tf_enter tf xs es) u) \<sigma>\<rbrakk>"
   using tf_sound_enterD[OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
-
-lemma in_gamma_local_edge_tree:
-  fixes f :: "'a abs_state \<Rightarrow> 'a abs_state"
-    and u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inv: "local_edge_invariant f"
-  assumes ind: "local_env_independent f"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
-  assumes gamma: "s \<in> \<lbrakk>f (side_env \<sigma> u)\<rbrakk>"
-  shows "s \<in> \<lbrakk>etf_collecting_full (local_edge_tree f u) \<sigma>\<rbrakk>"
-proof -
-  have lb: "local_bot_on_locals (\<sigma> (Inr ()))"
-    using inr_slot_locals_bot_imp[OF inr] .
-  have env: "f (side_env \<sigma> u) =
-              f (restrict_local (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
-    using local_env_independent_side_env[OF ind inr] .
-  have st: "s \<in> \<lbrakk>f (restrict_local (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)\<rbrakk>"
-    using gamma env by simp
-  have le: "f (restrict_local (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>) \<le>
-            etf_collecting_full (local_edge_tree f u) \<sigma>"
-    by (rule local_edge_invariant_le_etf_collecting_full[of f \<sigma> u, OF inv lb])
-  show ?thesis using st le gamma_state_mono by blast
-qed
 
 lemma in_gamma_local_edge_tree_nop:
   fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store

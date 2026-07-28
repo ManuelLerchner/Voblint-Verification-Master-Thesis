@@ -78,16 +78,6 @@ lemma cstep_call:
      (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
   by (rule cstep.Call)
 
-lemma cstep_return:
-  "cstep g (FunctionResult q, t, (cont, dst, caller) # stk)
-     (cont, combine_collect dst caller t, stk)"
-  by (rule cstep.Return)
-
-lemma cstep_star_nop_right:
-  "star (cstep g) cf (u, s, stk) \<Longrightarrow> (u, EA_Nop, v) \<in> intra g \<Longrightarrow>
-   star (cstep g) cf (v, s, stk)"
-  by (meson star_trans cstep_star_single cstep_nop)
-
 subsection \<open>Activation-stack matching\<close>
 
 text \<open>Both stacks record procedure activations.  \<open>act_frames\<close> removes the CFG-only

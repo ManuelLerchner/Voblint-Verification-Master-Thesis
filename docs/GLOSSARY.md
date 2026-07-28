@@ -44,8 +44,7 @@ layer without embedding line numbers that drift.
 | `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
-| `ltr_collect_keyed` | Reachable sink stores grouped by an activation key. | `src/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | Sink stores indexed by activation context. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/CFG_Local_Trace.thy` |
 | `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
 
 ## Abstract interpretation

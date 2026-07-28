@@ -23,49 +23,16 @@ text \<open>
   reachable transfer.
 \<close>
 
-definition mixed_si_step ::
-  "edge_action \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
-   \<Rightarrow> ivl abs_state \<times> sign abs_state"
-where
-  "mixed_si_step a d g = (apply_tf ivl_tf a g, apply_tf sign_tf a d)"
-
-definition mixed_si_enter ::
-  "vname list \<Rightarrow> aexp list \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
-   \<Rightarrow> ivl abs_state \<times> sign abs_state"
-where
-  "mixed_si_enter xs es d g = (tf_enter ivl_tf xs es g, tf_enter sign_tf xs es d)"
-
-text \<open>Split the same way \<^const>\<open>indep_dg_spec\<close> is split: the sign (local) and
-  interval (global) channels stay orthogonal, each combined against itself/its
-  own peer with no cross-mixing.\<close>
-definition mixed_si_combine_env ::
-  "sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<times> sign abs_state"
-where
-  "mixed_si_combine_env dc de g = (combine_abs g g, combine_abs dc de)"
-
-definition mixed_si_combine_assign ::
-  "vname option \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<times> sign abs_state
-   \<Rightarrow> ivl abs_state \<times> sign abs_state"
-where
-  "mixed_si_combine_assign dst de g merged =
-     (combine_assign_abs dst (g ret_var) (fst merged),
-      combine_assign_abs dst (de ret_var) (snd merged))"
+text \<open>Sign advances the local slot, Interval the global slot, independently ---
+  exactly \<^const>\<open>indep_dg_spec\<close> instantiated at the two domain transfers, so no
+  per-analysis re-derivation of the step/enter/combine fields is needed.\<close>
 
 definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
-  "mixed_si_spec = \<lparr>
-    dgs_nop        = mixed_si_step EA_Nop,
-    dgs_assign     = (\<lambda>x e. mixed_si_step (EA_Assign x e)),
-    dgs_assume     = (\<lambda>b. mixed_si_step (EA_Assume b)),
-    dgs_assume_not = (\<lambda>b. mixed_si_step (EA_AssumeNot b)),
-    dgs_enter      = mixed_si_enter,
-    dgs_combine_env    = mixed_si_combine_env,
-    dgs_combine_assign = mixed_si_combine_assign
-  \<rparr>"
+  "mixed_si_spec = indep_dg_spec sign_tf ivl_tf"
 
 lemma mixed_si_spec_step [simp]:
-  "dg_spec_step mixed_si_spec a d g = mixed_si_step a d g"
-  unfolding mixed_si_spec_def mixed_si_step_def
-  by (cases a) (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
+  "dg_spec_step mixed_si_spec a d g = (apply_tf ivl_tf a g, apply_tf sign_tf a d)"
+  unfolding mixed_si_spec_def by (rule dg_spec_step_indep)
 
 text \<open>Mixed's combine, entry-seed, and equation-generator trees are the generic
   D/G executable helpers (@{const dg_cmb_of}, @{const dg_extra_of},
@@ -124,14 +91,8 @@ text \<open>
   inherited from the locale; no analysis-specific collecting proof remains.
 \<close>
 
-lemma mixed_si_spec_indep:
-  "mixed_si_spec = indep_dg_spec sign_tf ivl_tf"
-  unfolding mixed_si_spec_def indep_dg_spec_def
-  by (simp add: fun_eq_iff mixed_si_step_def mixed_si_enter_def
-                mixed_si_combine_env_def mixed_si_combine_assign_def)
-
 interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
-  unfolding mixed_si_spec_indep
+  unfolding mixed_si_spec_def
   by (rule sound_dg_spec_indep
         [OF sign_is_sound_transfer ivl_is_sound_transfer])
 
@@ -164,7 +125,7 @@ sublocale mixed_si_api \<subseteq> sound_dg_spec mixed_si_spec gamma_dg
        and "sound_dg_spec.dg_postfix mixed_si_spec = mixed_si_postfix"
 proof -
   have main: "sound_dg_spec mixed_si_spec gamma_dg"
-    unfolding mixed_si_spec_indep
+    unfolding mixed_si_spec_def
     by (rule sound_dg_spec_indep[OF sign_is_sound_transfer ivl_is_sound_transfer])
   have D: "sound_dg_spec.dg_D = mixed_si_D"
     by (simp add: fun_eq_iff mixed_si_D_def mixed_si.dg_D_def)

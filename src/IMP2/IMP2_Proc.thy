@@ -506,20 +506,14 @@ text \<open>
   specialised to an equality test instead of @{const is_global}.
 \<close>
 
-definition aexp_n_mentions :: "vname => AExp.aexp => bool" where
-  "aexp_n_mentions x = aexp_n_mentions_where ((=) x)"
-
 definition aexp_mentions :: "vname => aexp => bool" where
   "aexp_mentions x = aexp_mentions_where ((=) x)"
-
-definition bexp_n_mentions :: "vname => BExp.bexp => bool" where
-  "bexp_n_mentions x = bexp_n_mentions_where ((=) x)"
 
 definition bexp_mentions :: "vname => bexp => bool" where
   "bexp_mentions x = bexp_mentions_where ((=) x)"
 
 lemmas mentions_defs [simp] =
-  aexp_n_mentions_def aexp_mentions_def bexp_n_mentions_def bexp_mentions_def
+  aexp_mentions_def bexp_mentions_def
 
 definition source_aexp :: "aexp => bool" where
   "source_aexp a \<longleftrightarrow> \<not> aexp_mentions ret_var a"
