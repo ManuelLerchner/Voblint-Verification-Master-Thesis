@@ -229,13 +229,33 @@ subsection \<open>The analysis interface\<close>
 text \<open>An analysis supplies one answer-and-side-effect transfer per edge action
   and a separate procedure-return combine.\<close>
 
+text \<open>
+  Procedure-return combine is split the same way Goblint's \<open>Spec\<close> splits it:
+  an environment merge (\<open>dgs_combine_env\<close>, caller-local + callee-exit-local +
+  global, no destination) followed by a return-value assign
+  (\<open>dgs_combine_assign\<close>, reads the callee-exit's return slot, writes the
+  destination, and packages the two-typed \<open>('dg, 'dl)\<close> answer).  \<open>'dl\<close>/\<open>'dg\<close>
+  stay fully opaque -- the framework does not assume either field can share
+  a generic assign the way the flat layer's \<open>abs_state\<close>-typed
+  \<open>combine_assign_abs\<close> can, so both halves are analysis-supplied.\<close>
+
 record ('dl, 'dg) dg_spec =
   dgs_nop        :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assume     :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assume_not :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_combine    :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_combine_env    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_combine_assign :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"
+
+text \<open>The composed combine, in the pre-split curried shape every existing
+  caller already uses fully applied (\<open>dgs_combine S dst dc de g\<close>).  Kept as
+  a plain definition, not a record field, so the split above is the single
+  source of truth and this cannot drift out of sync with it.\<close>
+definition dgs_combine ::
+  "('dl, 'dg) dg_spec \<Rightarrow> vname option \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+where
+  "dgs_combine S dst dc de g = dgs_combine_assign S dst de g (dgs_combine_env S dc de g)"
 
 fun dg_spec_step ::
   "('dl, 'dg, 'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -267,12 +287,24 @@ text \<open>
   publishes the global restriction and returns the local restriction.
 \<close>
 
-definition unit_combine_step ::
-  "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
+text \<open>The unit env-merge computes the structural local/global merge and
+  packages it the same way \<^const>\<open>unit_step\<close> packages every other edge, but
+  writes no return value yet.  The unit assign reconstitutes the full state
+  from that packaging, writes the callee-exit's return slot, and re-splits --
+  matching \<^const>\<open>combine_collect_abs\<close> exactly once composed.\<close>
+definition unit_combine_step_env ::
+  "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
    \<Rightarrow> 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step dst dc de g =
-     (let res = combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)
+  "unit_combine_step_env dc de g =
+     (let m = combine_abs (dc \<squnion> g) (de \<squnion> g) in (restrict_global m, restrict_local m))"
+
+definition unit_combine_step_assign ::
+  "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state
+   \<Rightarrow> 'a abs_state \<times> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
+where
+  "unit_combine_step_assign dst de g merged =
+     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var) (fst merged \<squnion> snd merged)
       in (restrict_global res, restrict_local res))"
 
 definition unit_dg_spec ::
@@ -284,8 +316,26 @@ where
     dgs_assume     = (\<lambda>b. unit_step (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step (apply_tf tf (EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step (tf_enter tf xs es)),
-    dgs_combine    = unit_combine_step
+    dgs_combine_env    = unit_combine_step_env,
+    dgs_combine_assign = unit_combine_step_assign
   \<rparr>"
+
+text \<open>The pre-split combine value is recovered by composition, matching
+  \<^const>\<open>combine_collect_abs\<close> exactly -- the split changes packaging, not
+  the computed answer.\<close>
+lemma dgs_combine_unit_dg_spec:
+  "dgs_combine (unit_dg_spec tf) dst dc de g =
+     (let res = combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)
+      in (restrict_global res, restrict_local res))"
+proof -
+  have join_back: "restrict_global \<langle>dc \<squnion> g|de \<squnion> g\<rangle> \<squnion> restrict_local \<langle>dc \<squnion> g|de \<squnion> g\<rangle>
+                    = \<langle>dc \<squnion> g|de \<squnion> g\<rangle>"
+    using restrict_local_global_join by (simp add: sup.commute)
+  show ?thesis
+    unfolding dgs_combine_def unit_dg_spec_def unit_combine_step_env_def
+      unit_combine_step_assign_def combine_collect_abs_def Let_def
+    by (simp add: join_back)
+qed
 
 lemma dg_spec_step_unit:
   "dg_spec_step (unit_dg_spec tf) a = unit_step (apply_tf tf a)"

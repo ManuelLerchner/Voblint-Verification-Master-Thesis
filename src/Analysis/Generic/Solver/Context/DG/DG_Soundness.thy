@@ -739,7 +739,10 @@ where
                                apply_tf tfD (EA_AssumeNot b) d)),
     dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
                                    tf_enter tfD xs es d)),
-    dgs_combine    = (\<lambda>dst dc de g. (combine_collect_abs dst g g, combine_collect_abs dst dc de))
+    dgs_combine_env    = (\<lambda>dc de g. (combine_abs g g, combine_abs dc de)),
+    dgs_combine_assign = (\<lambda>dst de g merged.
+      (combine_assign_abs dst (g ret_var) (fst merged),
+       combine_assign_abs dst (de ret_var) (snd merged)))
   \<rparr>"
 
 lemma dg_spec_step_indep [simp]:
@@ -751,7 +754,7 @@ lemma dg_spec_step_indep [simp]:
 lemma dgs_combine_indep [simp]:
   "dgs_combine (indep_dg_spec tfD tfG) dst dc de g
    = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
-  unfolding indep_dg_spec_def by simp
+  unfolding dgs_combine_def indep_dg_spec_def combine_collect_abs_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
   product, as a named corollary: applied by @{method rule} at the interpretation
@@ -855,7 +858,7 @@ proof -
   have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
-    unfolding unit_dg_spec_def unit_combine_step_def gamma_unit_def
+    unfolding dgs_combine_unit_dg_spec gamma_unit_def
     by (simp add: Let_def restrict_local_global_join combine_abs_restrict)
 qed
 

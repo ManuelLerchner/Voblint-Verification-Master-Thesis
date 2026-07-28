@@ -170,7 +170,7 @@ lemma unit_dg_Henter:
 lemma unit_dg_Hcomb:
   "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
      = dgs_combine (unit_dg_spec tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
-  by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_combine_step_st_commute)
+  by (rule unit_combine_step_st_commute)
 
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
 

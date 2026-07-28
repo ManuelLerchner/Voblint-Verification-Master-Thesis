@@ -68,11 +68,21 @@ definition unit_step_st ::
 where
   "unit_step_st f d g = (let res = f (d \<squnion> g) in (restrict_global_st res, restrict_local_st res))"
 
-definition unit_combine_step_st ::
-  "(vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> 'a st \<times> 'a st)"
+text \<open>Executable mirror of the abstract-side \<^const>\<open>unit_combine_step_env\<close>/
+  \<^const>\<open>unit_combine_step_assign\<close> split.\<close>
+definition unit_combine_step_st_env ::
+  "('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> 'a st \<times> 'a st"
 where
-  "unit_combine_step_st dst dc de g =
-     (let res = combine_collect_abs_st dst (dc \<squnion> g) (de \<squnion> g)
+  "unit_combine_step_st_env dc de g =
+     (let m = combine_abs_st (dc \<squnion> g) (de \<squnion> g)
+      in (restrict_global_st m, restrict_local_st m))"
+
+definition unit_combine_step_st_assign ::
+  "vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st \<Rightarrow> 'a st \<times> 'a st
+   \<Rightarrow> 'a st \<times> 'a st"
+where
+  "unit_combine_step_st_assign dst de g merged =
+     (let res = combine_assign_abs_st dst (lookup_st (de \<squnion> g) ret_var) (fst merged \<squnion> snd merged)
       in (restrict_global_st res, restrict_local_st res))"
 
 lemma unit_step_st_commute:
@@ -81,13 +91,6 @@ lemma unit_step_st_commute:
            = unit_step f_abs (fun_of_st d) (fun_of_st g)"
   by (simp add: unit_step_st_def unit_step_def assms fun_of_st_sup
                 fun_of_st_restrict_local_st fun_of_st_restrict_global_st Let_def)
-
-lemma unit_combine_step_st_commute:
-  "map_prod fun_of_st fun_of_st (unit_combine_step_st dst dc de g)
-     = unit_combine_step dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
-  by (simp add: unit_combine_step_st_def unit_combine_step_def fun_of_st_sup
-                fun_of_st_restrict_local_st fun_of_st_restrict_global_st Let_def
-                restrict_local_combine_eq restrict_global_combine_eq)
 
 definition unit_dg_spec_st ::
   "(edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st)
@@ -100,8 +103,19 @@ where
     dgs_assume     = (\<lambda>b. unit_step_st (tf_st (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step_st (tf_st (EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
-    dgs_combine    = unit_combine_step_st
+    dgs_combine_env    = unit_combine_step_st_env,
+    dgs_combine_assign = unit_combine_step_st_assign
   \<rparr>"
+
+lemma unit_combine_step_st_commute:
+  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
+     = dgs_combine (unit_dg_spec tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
+  unfolding dgs_combine_def
+    unit_dg_spec_st_def unit_combine_step_st_env_def unit_combine_step_st_assign_def
+    unit_dg_spec_def unit_combine_step_env_def unit_combine_step_assign_def
+  by (simp add: Let_def fun_of_st_sup fun_of_st_restrict_local_st fun_of_st_restrict_global_st
+                fun_of_st_combine_abs_st fun_of_st_combine_assign_abs_st
+                restrict_local_combine_eq restrict_global_combine_eq combine_abs_restrict)
 
 lemma dg_spec_step_unit_st:
   assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"

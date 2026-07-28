@@ -34,11 +34,21 @@ definition mixed_si_enter ::
 where
   "mixed_si_enter xs es d g = (tf_enter ivl_tf xs es g, tf_enter sign_tf xs es d)"
 
-definition mixed_si_combine ::
-  "vname option \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
+text \<open>Split the same way \<^const>\<open>indep_dg_spec\<close> is split: the sign (local) and
+  interval (global) channels stay orthogonal, each combined against itself/its
+  own peer with no cross-mixing.\<close>
+definition mixed_si_combine_env ::
+  "sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<times> sign abs_state"
+where
+  "mixed_si_combine_env dc de g = (combine_abs g g, combine_abs dc de)"
+
+definition mixed_si_combine_assign ::
+  "vname option \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<times> sign abs_state
    \<Rightarrow> ivl abs_state \<times> sign abs_state"
 where
-  "mixed_si_combine dst dc de g = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
+  "mixed_si_combine_assign dst de g merged =
+     (combine_assign_abs dst (g ret_var) (fst merged),
+      combine_assign_abs dst (de ret_var) (snd merged))"
 
 definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
   "mixed_si_spec = \<lparr>
@@ -47,7 +57,8 @@ definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
     dgs_assume     = (\<lambda>b. mixed_si_step (EA_Assume b)),
     dgs_assume_not = (\<lambda>b. mixed_si_step (EA_AssumeNot b)),
     dgs_enter      = mixed_si_enter,
-    dgs_combine    = mixed_si_combine
+    dgs_combine_env    = mixed_si_combine_env,
+    dgs_combine_assign = mixed_si_combine_assign
   \<rparr>"
 
 lemma mixed_si_spec_step [simp]:
@@ -119,7 +130,8 @@ text \<open>
 lemma mixed_si_spec_indep:
   "mixed_si_spec = indep_dg_spec sign_tf ivl_tf"
   unfolding mixed_si_spec_def indep_dg_spec_def
-  by (simp add: fun_eq_iff mixed_si_step_def mixed_si_enter_def mixed_si_combine_def)
+  by (simp add: fun_eq_iff mixed_si_step_def mixed_si_enter_def
+                mixed_si_combine_env_def mixed_si_combine_assign_def)
 
 interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
   unfolding mixed_si_spec_indep
