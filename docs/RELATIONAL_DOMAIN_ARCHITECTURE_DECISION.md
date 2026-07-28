@@ -1,9 +1,14 @@
 # Gap 5: relational domain architecture — design decision document
 
-No code written. Every claim below is traced against the current tree
-(`goblint-alignment-mixed-flow-tutorial`) as of this session, not against the
-prior planning documents' assumptions about it. Several of those assumptions
-turned out to be stale — flagged explicitly where found.
+Status: **Option 4 architecturally validated** — see "Architectural
+validation (completed)" at the end of this document. `Rel_Order_Domain.thy`
+is a batch-green `sound_dg_spec` interpretation over a non-`abs_state`
+relational carrier, with zero changes to the DG framework. The design
+analysis below predates that prototype; every claim it makes is traced
+against the current tree (`goblint-alignment-mixed-flow-tutorial`) as of the
+session that wrote it, not against the prior planning documents' assumptions
+about it. Several of those assumptions turned out to be stale — flagged
+explicitly where found.
 
 ## Executive summary — the finding that changes the shape of the decision
 
@@ -1042,3 +1047,40 @@ codebase pattern (`fun`-instance lattice inheritance, the `le_fun_def`/
 `sup_fun_def` soundness-proof shape, `Exec_St.thy`'s quotient/override-list
 executable bridge) or a small, bounded, Sign/Interval-sized proof obligation
 — nothing in this sketch required inventing new proof infrastructure.
+
+---
+
+## Architectural validation (completed)
+
+The sketch above was built out as a real, checked prototype:
+`src/Analysis/Instances/Relational/Rel_Order_Domain.thy`. It tracks a finite
+set of known `x <= y` facts between pairs of variables (`relc`, a wrapped
+`(vname * vname) set` with a reverse-subset order, intersection join, and a
+`bounded_semilattice_sup_bot` instance), with no closure and no
+normalization — the deliberately-minimal, deliberately-imprecise scope this
+document's Option 4/2 recommendation called for. The carrier is not
+`abs_state` and contains no `vname => 'a` function type anywhere.
+
+```isabelle
+interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel
+proof
+  ... (* gammaDG_mono, step_sound, combine_sound, enter_sound *)
+qed
+```
+
+All four `sound_dg_spec` obligations are discharged. Batch build of
+`Voblint_Analysis` (and, incidentally, the downstream `Voblint_Formalization`
+and `Voblint_Examples` sessions, which re-verified clean in the same run)
+finished exit code 0, zero `FAILED`/error/`sorry` anywhere in the log.
+`git diff --stat` against the rest of the framework shows exactly one line
+changed outside the new file: `src/Analysis/ROOT` registering the theory
+name. `DG_Framework.thy`, `DG_Soundness.thy`, and every existing Sign/
+Interval/Mixed instance are untouched.
+
+This empirically validates the architectural claim underlying Option 4:
+`sound_dg_spec` admits genuinely relational carriers, and a new relational
+analysis is a new interpretation, not a framework migration. Remaining work
+toward a useful relational domain (closure/precision, an executable
+representation, richer domains such as octagon) is domain-implementation
+work, per the "Deep dive" and "Minimal Isabelle design sketch" sections
+above — not further architecture work.
