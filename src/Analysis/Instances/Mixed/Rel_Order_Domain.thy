@@ -235,12 +235,64 @@ next
   qed
 qed
 
+text \<open>The negated-guard counterpart: \<open>\<not>(x < y)\<close> is \<open>y \<le> x\<close>, the mirror image
+  of \<open>assume_step\<close>'s one precise case, recorded on the false branch instead
+  of discarded.  Every other shape falls back exactly as \<open>assume_step\<close>
+  does.\<close>
+
+definition assume_not_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
+  "assume_not_step b d =
+     (case d of
+        Bot \<Rightarrow> Bot
+      | RelC ps \<Rightarrow>
+          (case b of
+             Less (BaseN (AExp.V x)) (BaseN (AExp.V y)) \<Rightarrow> RelC (insert (y, x) ps)
+           | _ \<Rightarrow> RelC ps))"
+
+lemma assume_not_step_sound:
+  assumes "s \<in> gamma_rel d" "\<not> bval b s"
+  shows "s \<in> gamma_rel (assume_not_step b d)"
+proof (cases d)
+  case Bot
+  with assms(1) show ?thesis by simp
+next
+  case (RelC ps)
+  note d_eq = RelC
+  show ?thesis
+  proof (cases b)
+    case (Less a1 a2)
+    show ?thesis
+    proof (cases "\<exists>x y. a1 = BaseN (AExp.V x) \<and> a2 = BaseN (AExp.V y)")
+      case True
+      then obtain x y where xy: "a1 = BaseN (AExp.V x)" "a2 = BaseN (AExp.V y)" by blast
+      have "\<not> s x < s y" using assms(2) Less xy by simp
+      then show ?thesis
+        using assms(1) d_eq unfolding assume_not_step_def d_eq Less xy by auto
+    next
+      case False
+      then show ?thesis
+        using assms(1) d_eq Less unfolding assume_not_step_def
+        by (auto split: aexp.splits AExp.aexp.splits)
+    qed
+  next
+    case (BaseB bb) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+  next
+    case (Not b') then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+  next
+    case (And b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+  next
+    case (Or b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+  next
+    case (Eq a1 a2) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+  qed
+qed
+
 subsection \<open>The transfer functions\<close>
 
-text \<open>Every step except the one precise \<open>assume\<close> case above is sound by
-  forgetting or by leaving the carrier untouched -- deliberately imprecise,
-  per the Gap 5 feasibility scope: no closure, no normalization, havoc-based
-  calls.\<close>
+text \<open>Every step except the two precise \<open>assume\<close>/\<open>assume_not\<close> cases above
+  is sound by forgetting or by leaving the carrier untouched -- deliberately
+  imprecise, per the Gap 5 feasibility scope: no closure, no normalization,
+  havoc-based calls.\<close>
 
 definition dgs_nop_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_nop_rel d g = (g, d)"
@@ -252,7 +304,7 @@ definition dgs_assume_rel :: "bexp \<Rightarrow> relc \<Rightarrow> relc \<Right
   "dgs_assume_rel b d g = (g, assume_step b d)"
 
 definition dgs_assume_not_rel :: "bexp \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_assume_not_rel b d g = (g, d)"
+  "dgs_assume_not_rel b d g = (g, assume_not_step b d)"
 
 definition dgs_enter_rel :: "vname list \<Rightarrow> aexp list \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_enter_rel xs es dc g = (top_relc, top_relc)"
@@ -312,7 +364,15 @@ qed
 lemma dgs_assume_not_rel_sound:
   "edge_collect (EA_AssumeNot b) (gammaDG_rel d g) \<subseteq>
      (case dgs_assume_not_rel b d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-  unfolding dgs_assume_not_rel_def by auto
+proof -
+  have "edge_collect (EA_AssumeNot b) (gammaDG_rel d g)
+      = {s. s \<in> gammaDG_rel d g \<and> \<not> bval b s}"
+    by simp
+  also have "... \<subseteq> gamma_rel (assume_not_step b d) \<inter> gamma_rel g"
+    using assume_not_step_sound unfolding gammaDG_rel_def by blast
+  finally show ?thesis
+    unfolding dgs_assume_not_rel_def gammaDG_rel_def by simp
+qed
 
 lemma dgs_ret_rel_sound:
   "edge_collect (EA_Ret e p) (gammaDG_rel d g) \<subseteq>

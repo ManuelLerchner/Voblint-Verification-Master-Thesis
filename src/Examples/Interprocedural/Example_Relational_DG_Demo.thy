@@ -121,10 +121,18 @@ lemma demo_ivl_y_at_branch:
   "lookup_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'' = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
-text \<open>\<open>relc\<close>, at the very same point, has recorded the pair directly.\<close>
+text \<open>\<open>relc\<close>, at the very same point, has recorded the pair directly.
+  The false branch is precise too: \<open>assume_not_step\<close> reads \<open>\<not>(x < y)\<close> as
+  \<open>y \<le> x\<close>, the mirror image of the true branch's transfer -- Interval's
+  guard transfer stays uninformative on both branches for the same reason
+  it was on the true one.\<close>
 
 lemma demo_rel_learns_xy:
   "relc_has ''x'' ''y'' (locals (snd demo_rel_sol (Inl (Statement 1, ()))))"
+  unfolding demo_rel_sol_def demo_rel_eqs_def by eval
+
+lemma demo_rel_learns_yx:
+  "relc_has ''y'' ''x'' (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 text \<open>Side by side, evaluated in one call: Interval's two bounds stay
