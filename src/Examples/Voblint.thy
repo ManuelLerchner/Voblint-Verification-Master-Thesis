@@ -52,6 +52,7 @@ theory Voblint
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_GraphViz
+    Example_Relational_DG_Demo
 begin
 
 text \<open>
@@ -223,6 +224,14 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
+    \<^item> @{theory Voblint_Examples.Example_Relational_DG_Demo} --- an execution
+      witness, not a soundness-certified result: a compiled full-program
+      `if (x < y) { z := 1 } else { z := 0 }` runs through the *same*
+      \<^verbatim>\<open>dg_gen_of\<close>/vendored-solver pipeline as Sign/Interval, this time
+      over \<^verbatim>\<open>Voblint_Analysis.Rel_Order_Domain\<close>'s non-\<^verbatim>\<open>abs_state\<close>
+      relational carrier; the computed result is compared against
+      Interval's on the identical program and rendered, raw and
+      analysis-annotated, via GraphViz.
 
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
     \<^item> @{theory Voblint_Examples.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.

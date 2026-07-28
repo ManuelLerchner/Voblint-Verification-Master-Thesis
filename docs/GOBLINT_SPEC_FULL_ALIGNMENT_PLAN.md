@@ -222,37 +222,64 @@ type-class-generalized and must become pair projection instead.
 
 ### Gap 5 — `'a abs_state = vname -> 'a` excludes relational domains
 
-**The structural issue:** our abstract state is a point-wise function `vname -> 'a`.
-This is a product domain — each variable is tracked independently. Relational domains
-(octagons, polyhedra, affine equality) represent joint constraints over the entire
-variable set as a single opaque object, not as independent per-variable values.
+**Status: architecture and executability both validated.** `Rel_Order_Domain.thy`
+interprets `sound_dg_spec` over `relc`, a non-`abs_state` relational carrier,
+with zero DG-framework changes, *and* runs end to end through the real
+`dg_gen_of`/vendored-solver pipeline (`Example_Relational_DG_Demo.thy`) on a
+compiled IMP2 program, batch-green. Full investigation, option comparison,
+and the executable follow-through live in
+`docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md`. This section summarizes
+the finding; that document is the source of truth for detail.
 
-**What closing it would require:**
+**The structural issue, restated precisely.** `'a abs_state = vname -> 'a`
+is nonrelational at the *flat equation-system spine*
+(`Constraint_System.thy`) — true, and the type-class sketch this section
+used to propose closing it there is real, correct engineering. But per this
+project's own contract, Sign/Interval/Mixed do not execute through that
+spine; they run through `DG_Framework.thy`/`DG_Soundness.thy`. Tracing that
+layer directly shows its soundness locale, `sound_dg_spec`, is **already**
+a locale over an opaque, arbitrary joint concretization
+(`fixes S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec" and gammaDG :: "'D => 'G => store set"`,
+`DG_Soundness.thy:127-147`) — no `abs_state`, no pointwise structure
+required by the locale itself. What's box-only is every existing
+*interpretation* of it (`unit_dg_spec`, `indep_dg_spec`, `mixed_si_spec`
+all *choose* `'dl`/`'dg = _ abs_state`), not the framework.
 
-Replace `type_synonym 'a abs_state = "vname => 'a"` with an abstract type class:
+**What closing it actually requires: a new `dg_spec` instance, not a
+spine migration.** A relational domain is a new `'dl`/`'dg` type, a
+`dgs_assign`/`dgs_assume`/`dgs_assume_not`/`dgs_enter`/`dgs_combine_env`/
+`dgs_combine_assign` implementation, and a `gammaDG` discharging
+`sound_dg_spec`'s four obligations — zero edits to `Constraint_System.thy`,
+`DG_Framework.thy`, `DG_Soundness.thy`, or any existing Sign/Interval/Mixed
+proof. The type-class migration this section previously proposed remains a
+legitimate refactor of the flat spine on its own merits, but is not a
+prerequisite: this project already built and later did not keep a
+type-class `abs_state` once (`docs/DOMAIN_TYPECLASS_MIGRATION.md`, status
+"DONE," predating the `Domains/` -> `Generic/` restructuring), which is
+independent evidence against treating it as required groundwork here.
 
-```isabelle
-class abstract_state =
-  fixes gamma_state :: "'a => store set"
-  fixes join_state :: "'a => 'a => 'a"
-  fixes bot_state :: "'a"
-  fixes apply_assign :: "vname => aexp => 'a => 'a"
-  fixes apply_assume :: "bexp => 'a => 'a"
-```
+**Effort, decomposed** (previously a flat 4-6 weeks; the decision doc breaks
+this down by what's actually being built):
 
-Every downstream lemma that pattern-matches on `σ x` (for some variable `x`) would
-need to be re-stated in terms of `gamma_state` only, not on the internal structure
-of the state. The collecting semantics side remains concrete (`store = vname -> int`);
-the abstract side becomes opaque.
+- A minimal, sound, executable, octagon-*shaped* domain (no closure, no
+  Goblint-precision parity): days-to-low-weeks — comparable to a single new
+  Sign/Interval-sized instance file, because skipping closure and accepting
+  a conservative interprocedural combine (both fine for a first instance)
+  removes the two things that make relational domains hard in the
+  literature.
+- Goblint-parity octagon (real DBM closure, Miné's full transfer-function
+  case table): weeks-to-months — matches epic #25's own estimate; "no
+  reusable Isabelle prior art... mechanization from scratch" (epic #25's own
+  words), the genuinely hard part, unaffected by which architecture option
+  is chosen.
+- A literal Apron-backed domain: not comparably scoped — requires inventing
+  a certifying-oracle trust architecture around an unverified external
+  library, a different kind of project.
 
-This is a substantial architectural change. `restrict_local`/`restrict_global` also
-rely on the product structure; they would be replaced by abstract `project_local` /
-`project_global` operations with soundness axioms.
-
-**Effort:** 4–6 weeks. Prerequisite for octagons.
-
-**Note:** the Octagon track (`docs/RELATIONAL_DOMAIN_PLAN.md`, issue #25) already
-lists this as a blocker.
+**Note:** the Octagon track (`docs/RELATIONAL_DOMAIN_PLAN.md`, issue #25)
+lists a two-layer split as a blocker; `RELATIONAL_DOMAIN_PLAN.md` is now
+marked superseded by the decision doc above for the same reason — its
+Approach A also targeted the flat spine.
 
 ---
 
@@ -358,10 +385,15 @@ For a post-thesis extension:
    (`rhs`/`rhs_sources`/`LTR_Analysis_Sound.thy`) routes through it. The DG
    layer's `dgs_combine` is analysis-parametrized but still single-phase;
    revisit only alongside a relational DG instance (see Gap 3's own section).
-3. **Gap 5 (abstract state type class)** — high effort, prerequisite for octagons;
-   aligns with the Octagon track (issue #25). Three separate designs exist
-   (this doc, `RELATIONAL_DOMAIN_PLAN.md`, issue #19) with no reconciliation
-   between them - resolving which one to build is a decision, not a task.
+3. **Gap 5 (relational domains)** — first instance built and executable
+   (2026-07-28, `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md`): a new
+   `dg_spec` instance (`relc`, a deliberately imprecise two-variable
+   order-constraint domain) against the already-generic `sound_dg_spec`
+   locale, no spine/type-class migration, and it runs through the real
+   `dg_gen_of`/vendored-solver pipeline end to end
+   (`Example_Relational_DG_Demo.thy`). Goblint-parity octagon remains
+   weeks-to-months and is a separate, later decision (aligns with the
+   Octagon track, issue #25).
 4. ~~**Gap 4 (D.t ≠ G.t)**~~ — mostly closed (2026-07-28): the D/G layer
    (`dg_spec`, `dg_state`) already types locals and globals independently and
    `Mixed_Sign_Interval.thy` exercises it. Remaining: context-sensitive DG
