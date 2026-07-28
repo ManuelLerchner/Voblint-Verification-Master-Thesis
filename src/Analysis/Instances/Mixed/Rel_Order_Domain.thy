@@ -24,42 +24,54 @@ text \<open>
 
 subsection \<open>The carrier and its lattice\<close>
 
-datatype relc = RelC (pairs: "(vname \<times> vname) set")
+datatype relc = Bot | RelC "(vname \<times> vname) set"
 
 text \<open>Order is reverse inclusion on the constraint set: more known pairs is
   more information, hence lower (more precise) in the abstract-interpretation
-  order.  \<open>sup\<close> keeps only the pairs both sides agree on, and \<open>bot\<close> is the
-  (contradictory, for at least two distinct variables) set of every pair --
-  no instance in this file ever needs \<open>bot\<close>'s concretization, only the
-  algebraic laws \<^class>\<open>bounded_semilattice_sup_bot\<close> demands.\<close>
+  order.  \<open>sup\<close> keeps only the pairs both sides agree on.
+
+  \<open>bot\<close> is a separate explicit constructor rather than \<open>RelC UNIV\<close> (the
+  most-constrained set, "every pair known ordered"): representing \<open>UNIV\<close>
+  forces the code generator to use the \<open>Coset\<close> branch of HOL's executable-set
+  representation, and the stock library does not give every set operation
+  (subset test among them) a code equation for every \<open>Set\<close>/\<open>Coset\<close>
+  combination over an infinite element type such as \<open>vname\<close> -- confirmed
+  directly: \<open>RelC UNIV\<close> batch-checked and even unit-tested via \<open>value\<close>
+  cleanly, but running it through the solver raised \<open>exception Match\<close> in
+  the generated code the first time a genuine \<open>Coset\<close>/\<open>Coset\<close> combination
+  arose. Keeping \<open>RelC\<close>'s field always finite avoids the gap entirely: no
+  value this file ever constructs is a \<open>Coset\<close>.\<close>
 
 instantiation relc :: bounded_semilattice_sup_bot
 begin
 
-definition less_eq_relc :: "relc \<Rightarrow> relc \<Rightarrow> bool" where
-  "less_eq_relc a b \<longleftrightarrow> pairs b \<subseteq> pairs a"
+fun less_eq_relc :: "relc \<Rightarrow> relc \<Rightarrow> bool" where
+  "less_eq_relc Bot _ = True"
+| "less_eq_relc (RelC _) Bot = False"
+| "less_eq_relc (RelC a) (RelC b) = (b \<subseteq> a)"
 
 definition less_relc :: "relc \<Rightarrow> relc \<Rightarrow> bool" where
   "less_relc a b \<longleftrightarrow> a \<le> b \<and> \<not> b \<le> a"
 
-definition sup_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where
-  "sup_relc a b = RelC (pairs a \<inter> pairs b)"
+fun sup_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where
+  "sup_relc Bot b = b"
+| "sup_relc a Bot = a"
+| "sup_relc (RelC a) (RelC b) = RelC (a \<inter> b)"
 
 definition bot_relc :: relc where
-  "bot_relc = RelC UNIV"
+  "bot_relc = Bot"
 
 instance
 proof
   fix x y z :: relc
   show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x" by (simp add: less_relc_def)
-  show "x \<le> x" by (simp add: less_eq_relc_def)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by (auto simp: less_eq_relc_def)
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
-    by (auto simp: less_eq_relc_def relc.expand)
-  show "x \<le> x \<squnion> y" by (auto simp: less_eq_relc_def sup_relc_def)
-  show "y \<le> x \<squnion> y" by (auto simp: less_eq_relc_def sup_relc_def)
-  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x" by (auto simp: less_eq_relc_def sup_relc_def)
-  show "bot \<le> x" by (auto simp: less_eq_relc_def bot_relc_def)
+  show "x \<le> x" by (cases x) simp_all
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by (cases x; cases y; cases z) auto
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" by (cases x; cases y) auto
+  show "x \<le> x \<squnion> y" by (cases x; cases y) auto
+  show "y \<le> x \<squnion> y" by (cases x; cases y) auto
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x" by (cases x; cases y; cases z) auto
+  show "bot \<le> x" by (cases x) (simp_all add: bot_relc_def)
 qed
 
 end
@@ -93,19 +105,57 @@ qed
 
 end
 
+text \<open>Registers the sort intersection under its named synonym -- the vendored
+  solver's \<open>TD_side_upd_rule\<close> locale is generated against \<open>bounded_warrowing\<close>
+  by name, not the raw \<open>{bounded_semilattice_sup_bot, warrowing}\<close> sort, and
+  Isabelle does not compose that registration automatically from the two
+  separate instances above.  \<^type>\<open>dg_state\<close> already carries the same
+  explicit step generically (\<open>DG_Framework.thy\<close>) once its component types
+  have it.\<close>
+instance relc :: bounded_warrowing ..
+
 definition top_relc :: relc where
   "top_relc = RelC {}"
 
 subsection \<open>Concretization\<close>
 
-definition gamma_rel :: "relc \<Rightarrow> store set" where
-  "gamma_rel d = {s. \<forall>(x, y) \<in> pairs d. s x \<le> s y}"
+fun gamma_rel :: "relc \<Rightarrow> store set" where
+  "gamma_rel Bot = {}"
+| "gamma_rel (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
+
+text \<open>Executable membership reader, the \<open>relc\<close> analogue of \<^const>\<open>lookup_st\<close>
+  for downstream examples.  \<open>Bot\<close> answers \<open>True\<close> for every pair: its
+  concretization is empty, so every fact holds of it vacuously -- consistent
+  with \<^const>\<open>gamma_rel\<close>, and it never needs to materialize \<open>UNIV\<close>.\<close>
+fun relc_has :: "vname \<Rightarrow> vname \<Rightarrow> relc \<Rightarrow> bool" where
+  "relc_has x y Bot = True"
+| "relc_has x y (RelC ps) = ((x, y) \<in> ps)"
+
+text \<open>Pretty-printer, the \<open>relc\<close> analogue of Interval's \<open>string_of_ivl\<close> for
+  GraphViz/console display.  \<open>vname \<times> vname\<close> is \<open>linorder\<close> (via
+  \<open>HOL-Library.Product_Lexorder\<close>, already imported transitively by every
+  file in this session that touches \<^typ>\<open>cfg\<close>), so \<^const>\<open>sorted_list_of_set\<close>
+  gives a deterministic, executable enumeration -- the same device this
+  project already relies on for CFG edge sets.\<close>
+
+fun string_of_pairs :: "(vname \<times> vname) list \<Rightarrow> string" where
+  "string_of_pairs [] = ''''"
+| "string_of_pairs [(x, y)] = x @ ''<='' @ y"
+| "string_of_pairs ((x, y) # p # ps) = x @ ''<='' @ y @ '', '' @ string_of_pairs (p # ps)"
+
+definition string_of_relc :: "relc \<Rightarrow> string" where
+  "string_of_relc d =
+     (case d of
+        Bot \<Rightarrow> ''BOT''
+      | RelC ps \<Rightarrow>
+          (if ps = {} then ''(no known relations)''
+           else string_of_pairs (sorted_list_of_set ps)))"
 
 definition gammaDG_rel :: "relc \<Rightarrow> relc \<Rightarrow> store set" where
   "gammaDG_rel d g = gamma_rel d \<inter> gamma_rel g"
 
 lemma gamma_rel_top [simp]: "gamma_rel top_relc = UNIV"
-  unfolding gamma_rel_def top_relc_def by simp
+  unfolding top_relc_def by simp
 
 lemma gammaDG_rel_top [simp]: "gammaDG_rel top_relc top_relc = UNIV"
   unfolding gammaDG_rel_def by simp
@@ -113,7 +163,7 @@ lemma gammaDG_rel_top [simp]: "gammaDG_rel top_relc top_relc = UNIV"
 lemma gamma_rel_mono:
   assumes "d \<le> d'"
   shows "gamma_rel d \<subseteq> gamma_rel d'"
-  using assms unfolding less_eq_relc_def gamma_rel_def by auto
+  using assms by (cases d; cases d') auto
 
 lemma gammaDG_rel_mono:
   assumes "d \<le> d'" "g \<le> g'"
@@ -123,13 +173,14 @@ lemma gammaDG_rel_mono:
 
 subsection \<open>Forgetting a variable -- the one lemma every imprecise fallback reuses\<close>
 
-definition forget_relc :: "vname \<Rightarrow> relc \<Rightarrow> relc" where
-  "forget_relc x d = RelC {(a, b) \<in> pairs d. a \<noteq> x \<and> b \<noteq> x}"
+fun forget_relc :: "vname \<Rightarrow> relc \<Rightarrow> relc" where
+  "forget_relc x Bot = Bot"
+| "forget_relc x (RelC ps) = RelC {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
 
 lemma forget_relc_sound:
   assumes "s \<in> gamma_rel d"
   shows "s(x := v) \<in> gamma_rel (forget_relc x d)"
-  using assms unfolding gamma_rel_def forget_relc_def by auto
+  using assms by (cases d) auto
 
 subsection \<open>The one precise transfer: recognizing a bare-variable strict order test\<close>
 
@@ -139,46 +190,49 @@ text \<open>Matches patterns must use the underlying \<^const>\<open>BaseN\<clos
 
 definition assume_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_step b d =
-     (case b of
-        Less (BaseN (AExp.V x)) (BaseN (AExp.V y)) \<Rightarrow> RelC (insert (x, y) (pairs d))
-      | _ \<Rightarrow> d)"
+     (case d of
+        Bot \<Rightarrow> Bot
+      | RelC ps \<Rightarrow>
+          (case b of
+             Less (BaseN (AExp.V x)) (BaseN (AExp.V y)) \<Rightarrow> RelC (insert (x, y) ps)
+           | _ \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound:
   assumes "s \<in> gamma_rel d" "bval b s"
   shows "s \<in> gamma_rel (assume_step b d)"
-proof (cases b)
-  case (Less a1 a2)
+proof (cases d)
+  case Bot
+  with assms(1) show ?thesis by simp
+next
+  case (RelC ps)
+  note d_eq = RelC
   show ?thesis
-  proof (cases "\<exists>x y. a1 = BaseN (AExp.V x) \<and> a2 = BaseN (AExp.V y)")
-    case True
-    then obtain x y where xy: "a1 = BaseN (AExp.V x)" "a2 = BaseN (AExp.V y)" by blast
-    have "s x < s y"
-      using assms(2) Less xy by simp
-    then have "pairs (assume_step b d) = insert (x, y) (pairs d)"
-      unfolding assume_step_def Less xy by simp
-    then show ?thesis
-      using assms(1) \<open>s x < s y\<close> unfolding gamma_rel_def by auto
+  proof (cases b)
+    case (Less a1 a2)
+    show ?thesis
+    proof (cases "\<exists>x y. a1 = BaseN (AExp.V x) \<and> a2 = BaseN (AExp.V y)")
+      case True
+      then obtain x y where xy: "a1 = BaseN (AExp.V x)" "a2 = BaseN (AExp.V y)" by blast
+      have "s x < s y" using assms(2) Less xy by simp
+      then show ?thesis
+        using assms(1) d_eq unfolding assume_step_def d_eq Less xy by auto
+    next
+      case False
+      then show ?thesis
+        using assms(1) d_eq Less unfolding assume_step_def
+        by (auto split: aexp.splits AExp.aexp.splits)
+    qed
   next
-    case False
-    then show ?thesis
-      using assms(1) Less unfolding assume_step_def gamma_rel_def
-      by (auto split: aexp.splits AExp.aexp.splits)
+    case (BaseB bb) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
+  next
+    case (Not b') then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
+  next
+    case (And b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
+  next
+    case (Or b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
+  next
+    case (Eq a1 a2) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
   qed
-next
-  case (BaseB bb)
-  then show ?thesis using assms(1) unfolding assume_step_def gamma_rel_def by simp
-next
-  case (Not b')
-  then show ?thesis using assms(1) unfolding assume_step_def gamma_rel_def by simp
-next
-  case (And b1 b2)
-  then show ?thesis using assms(1) unfolding assume_step_def gamma_rel_def by simp
-next
-  case (Or b1 b2)
-  then show ?thesis using assms(1) unfolding assume_step_def gamma_rel_def by simp
-next
-  case (Eq a1 a2)
-  then show ?thesis using assms(1) unfolding assume_step_def gamma_rel_def by simp
 qed
 
 subsection \<open>The transfer functions\<close>

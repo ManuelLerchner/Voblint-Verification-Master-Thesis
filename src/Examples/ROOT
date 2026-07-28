@@ -37,4 +37,5 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign
+    Example_Relational_DG_Demo
     Voblint
