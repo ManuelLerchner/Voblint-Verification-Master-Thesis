@@ -13,32 +13,17 @@ text \<open>
   @{const local_edge_invariant} only.
 \<close>
 
-lemma aval_sign_hol_restrict_su:
-  assumes ng: "\<not> aexp_n_mentions_global a"
-  shows "aval_sign_hol a (su \<squnion> g) = aval_sign_hol a (restrict_local su \<squnion> g)"
-  using ng
-proof (induction a)
-  case (V x)
-  then show ?case
-    by (cases "is_global x") (auto simp: restrict_local_def sup_fun_def)
-next
-  case (Plus a b)
-  then show ?case by (simp add: sup_fun_def)
-next
-  case (N n)
-  then show ?case by simp
-qed
-
 lemma aval_sign_restrict_su:
   assumes ng: "\<not> aexp_mentions_global a"
   shows "aval_sign a (su \<squnion> g) = aval_sign a ((restrict_local su) \<squnion> g)"
   using ng
 proof (induction a)
-  case (BaseN a)
-  have ng': "\<not> aexp_n_mentions_global a"
-    using BaseN by (simp)
+  case (N n)
+  then show ?case by simp
+next
+  case (V x)
   then show ?case
-    using aval_sign_hol_restrict_su[OF ng'] by (simp add: sup_fun_def)
+    by (cases "is_global x") (auto simp: restrict_local_def sup_fun_def)
 next
   case (Plus a b)
   then show ?case by (simp add: sup_fun_def)
@@ -50,36 +35,19 @@ next
   then show ?case by (simp add: sup_fun_def)
 qed
 
-lemma aval_sign_hol_restrict_local_bot:
-  assumes ng: "\<not> aexp_n_mentions_global a"
-    and lb: "local_bot_on_locals g"
-  shows "aval_sign_hol a ((restrict_local su) \<squnion> g) = aval_sign_hol a (restrict_local su)"
-  using ng lb
-proof (induction a)
-  case (V x)
-  then show ?case
-    unfolding local_bot_on_locals_def restrict_local_def sup_fun_def
-    by (auto split: if_split_asm)
-next
-  case (Plus a b)
-  then show ?case by (simp add: sup_fun_def)
-next
-  case (N n)
-  then show ?case by simp
-qed
-
 lemma aval_sign_restrict_local_bot:
   assumes ng: "\<not> aexp_mentions_global a"
     and lb: "local_bot_on_locals g"
   shows "aval_sign a ((restrict_local su) \<squnion> g) = aval_sign a (restrict_local su)"
   using ng lb
 proof (induction a)
-  case (BaseN a)
-  have ng': "\<not> aexp_n_mentions_global a"
-    using BaseN by (simp)
+  case (N n)
+  then show ?case by simp
+next
+  case (V x)
   then show ?case
-    using aval_sign_hol_restrict_local_bot[OF ng' lb]
-    by (simp add: sup_fun_def)
+    unfolding local_bot_on_locals_def restrict_local_def sup_fun_def
+    by (auto split: if_split_asm)
 next
   case (Plus a b)
   then show ?case by (simp add: sup_fun_def)
@@ -164,26 +132,16 @@ lemma afilter_sign_local_edge_invariant:
   shows "local_edge_invariant (\<lambda>\<sigma>. afilter_sign e a \<sigma>)"
   using ng
 proof (induction e arbitrary: a)
-  case (BaseN aexp)
-  show ?case
-  proof (cases aexp)
-    case (V x)
-    then show ?thesis
-      using BaseN.prems
-      unfolding local_edge_invariant_def sign_backward_domain.afilter.simps
-        restrict_local_def local_bot_on_locals_def sup_fun_def
-      by (auto split: if_split_asm)
-  next
-    case (N n)
-    then show ?thesis
-      unfolding local_edge_invariant_def restrict_local_def local_bot_on_locals_def sup_fun_def
-      by auto
-  next
-    case (Plus e1 e2)
-    then show ?thesis
-      unfolding local_edge_invariant_def restrict_local_def local_bot_on_locals_def sup_fun_def
-      by auto
-  qed
+  case (N n)
+  then show ?case
+    unfolding local_edge_invariant_def restrict_local_def local_bot_on_locals_def sup_fun_def
+    by auto
+next
+  case (V x)
+  then show ?case
+    unfolding local_edge_invariant_def sign_backward_domain.afilter.simps
+      restrict_local_def local_bot_on_locals_def sup_fun_def
+    by (auto split: if_split_asm)
 next
   case (Plus e1 e2)
   then have ng1: "\<not> aexp_mentions_global e1" and ng2: "\<not> aexp_mentions_global e2"
@@ -304,7 +262,7 @@ lemma bfilter_sign_local_edge_invariant:
   shows "local_edge_invariant (\<lambda>\<sigma>. bfilter_sign b res \<sigma>)"
   using ng
 proof (induction b arbitrary: res)
-  case (BaseB b)
+  case (Bc b)
   show ?case
     by (simp add: id_local_edge_invariant)
 next

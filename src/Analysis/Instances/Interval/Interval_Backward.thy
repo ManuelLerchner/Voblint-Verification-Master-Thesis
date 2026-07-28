@@ -6,28 +6,18 @@ section \<open>Interval backward filtering\<close>
 
 subsection \<open>Abstract expression evaluation\<close>
 
-fun aval_ivl_hol :: "AExp.aexp => (vname => ivl) => ivl" where
-    "aval_ivl_hol (AExp.N n)      \<sigma> = Ivl (Fin n) (Fin n)"
-  | "aval_ivl_hol (AExp.V x)      \<sigma> = \<sigma> x"
-  | "aval_ivl_hol (AExp.Plus a b) \<sigma> = aval_ivl_hol a \<sigma> + aval_ivl_hol b \<sigma>"
-
 fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
-    "aval_ivl (BaseN a)    \<sigma> = aval_ivl_hol a \<sigma>"
+    "aval_ivl (N n)        \<sigma> = Ivl (Fin n) (Fin n)"
+  | "aval_ivl (V x)        \<sigma> = \<sigma> x"
   | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
   | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
   | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
-
-lemma aval_ivl_hol_sound:
-  "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
-   \<Longrightarrow> AExp.aval a s \<in> gamma_ivl (aval_ivl_hol a \<sigma>)"
-  by (induction a; simp add: ivl_plus_sound)
 
 lemma aval_ivl_sound:
   "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
    \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a \<sigma>)"
   by (induction a;
-      simp add: aval_ivl_hol_sound
-                ivl_plus_sound ivl_minus_sound ivl_times_sound)
+      simp add: ivl_plus_sound ivl_minus_sound ivl_times_sound)
 
 subsection \<open>Backward inverse operators\<close>
 
@@ -155,15 +145,10 @@ text \<open>
 lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute
 lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
 
-lemma aval_ivl_hol_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl_hol a sigma1 \<le> aval_ivl_hol a sigma2"
-  by (induction a arbitrary: sigma1 sigma2)
-     (auto simp: ivl_plus_mono le_funD)
-
 lemma aval_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl a sigma1 \<le> aval_ivl a sigma2"
   by (induction a arbitrary: sigma1 sigma2)
-     (auto simp: aval_ivl_hol_mono ivl_plus_mono ivl_minus_mono ivl_times_mono)
+     (auto simp: ivl_plus_mono ivl_minus_mono ivl_times_mono le_funD)
 
 
 lemma inv_less_ivl_mono:

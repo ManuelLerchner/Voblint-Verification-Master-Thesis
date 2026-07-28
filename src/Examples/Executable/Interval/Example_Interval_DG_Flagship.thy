@@ -60,6 +60,8 @@ theory Example_Interval_DG_Flagship
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 subsection \<open>The IMP2 source program\<close>
 
 text \<open>
@@ -95,10 +97,10 @@ lemma flagship_cfg_eq:
   "flagship_cfg =
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
-          (Statement 1, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 2),
-          (Statement 1, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
-          (Statement 2, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 1),
+          (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
+          (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
+          (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
+          (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
           (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
@@ -110,10 +112,10 @@ lemma flagship_exit: "cfg_exit flagship_cfg = FunctionResult ''main''"
   by (simp add: flagship_cfg_eq cfg_exit_def)
 lemma flagship_intra: "intra flagship_cfg =
      {(FunctionEntry ''main'', EA_Nop, Statement 0),
-      (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 0)), Statement 1),
-      (Statement 1, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 2),
-      (Statement 1, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.N 20))), Statement 3),
-      (Statement 2, EA_Assign ''x'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1))), Statement 1),
+      (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
+      (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
+      (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
+      (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
       (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
   by (simp add: flagship_cfg_eq)
 lemma flagship_calls: "calls flagship_cfg = {}" by (simp add: flagship_cfg_eq)

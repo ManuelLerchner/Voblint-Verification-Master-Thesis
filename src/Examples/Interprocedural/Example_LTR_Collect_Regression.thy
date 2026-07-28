@@ -130,7 +130,7 @@ text \<open>Procedure \<open>pf\<close> reaches \<open>FunctionResult pf\<close>
   \<open>main\<close> calls it with continuation \<open>Statement 100\<close>.  Both branches resume through that same
   continuation.\<close>
 
-definition bpos :: bexp where "bpos = Less (BaseN (AExp.N 0)) (BaseN (AExp.V ''Gx''))"
+definition bpos :: bexp where "bpos = Less (N 0) (V ''Gx'')"
 
 definition mret_cfg :: cfg where
   "mret_cfg =

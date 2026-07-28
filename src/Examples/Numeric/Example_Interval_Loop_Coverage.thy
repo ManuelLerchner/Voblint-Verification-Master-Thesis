@@ -6,7 +6,7 @@ theory Example_Interval_Loop_Coverage
     "Voblint_IMP2.IMP2_Notation"
 begin
 
-(* Disambiguate our N abbreviation from the phase datatype constructor. *)
+(* Disambiguate our N constructor from the phase datatype constructor. *)
 hide_const phase.N
 
 text \<open>
@@ -148,7 +148,7 @@ lemma loop_body_x_from_assume:
   "tf_assume ivl_tf (Less (V ''x'') (N 20)) (loop_env (Statement 1)) ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding ivl_tf_def assume_ivl_def loop_env_def
   by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
-        ivl_backward_domain.afilter.simps aval_ivl.simps aval_ivl_hol.simps meet_ivl.simps)
+        ivl_backward_domain.afilter.simps aval_ivl.simps meet_ivl.simps)
 
 lemma loop_body_entry_x:
   "loop_env loop_body_entry ''x'' = Ivl (Fin 0) (Fin 19)"

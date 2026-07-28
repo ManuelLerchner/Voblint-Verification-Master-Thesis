@@ -19,7 +19,7 @@ context backward_domain
 begin
 
 fun afilter_st :: "aexp \<Rightarrow> 'a \<Rightarrow> 'a st \<Rightarrow> 'a st" where
-    "afilter_st (BaseN (AExp.V x)) a s =
+    "afilter_st (V x) a s =
        update_st s x (meet a (lookup_st s x))"
   | "afilter_st (Plus e1 e2) a s =
        (let (a1, a2) = inv_plus a (aval_abs e1 (lookup_st s)) (aval_abs e2 (lookup_st s))
@@ -53,8 +53,11 @@ fun bfilter_st :: "bexp \<Rightarrow> bool \<Rightarrow> 'a st \<Rightarrow> 'a 
 lemma afilter_st_commute:
   "fun_of_st (afilter_st e a s) = afilter e a (fun_of_st s)"
 proof (induction e arbitrary: a s)
-  case (BaseN x)
-  show ?case by (cases x; simp)
+  case (N n)
+  then show ?case by simp
+next
+  case (V x)
+  then show ?case by simp
 next
   case (Plus e1 e2)
   show ?case by (simp add: Plus.IH split: prod.splits)
@@ -69,7 +72,7 @@ qed
 lemma bfilter_st_commute:
   "fun_of_st (bfilter_st b res s) = bfilter b res (fun_of_st s)"
 proof (induction b arbitrary: res s)
-  case (BaseB x)
+  case (Bc x)
   then show ?case by simp
 next
   case (Not b)

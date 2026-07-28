@@ -167,7 +167,7 @@ text \<open>
 \<close>
 lemmas ivl_eval_simps =
   ivl_tf_def assign_ivl_def
-  aval_ivl.simps aval_ivl_hol.simps
+  aval_ivl.simps
   plus_ivl.simps plus_eint.simps
   less_eq_ivl_def le_fun_def
 

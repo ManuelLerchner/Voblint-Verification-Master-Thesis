@@ -6,21 +6,21 @@ section \<open>Examples: native activation semantics\<close>
 
 theorem caller_local_isolated:
   assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> x := 9 \<rbrakk>))"
-  shows "\<exists>t. pcompletes \<Pi> (Seq (Assign ''x'' (BaseN (AExp.N 5))) (Call None pf [])) s0 t
+  shows "\<exists>t. pcompletes \<Pi> (Seq (Assign ''x'' (N 5)) (Call None pf [])) s0 t
              \<and> t ''x'' = 5"
 proof -
   let ?s1 = "s0(''x'' := 5)"
   have a: "pcompletes \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0 ?s1"
   proof -
     have "pcompletes \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0
-            (s0(''x'' := aval (BaseN (AExp.N 5)) s0))" by (rule pcompletes_assign)
+            (s0(''x'' := aval (N 5) s0))" by (rule pcompletes_assign)
     thus ?thesis by simp
   qed
   have body: "pcompletes \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>)
                (enter_state ?s1) ((enter_state ?s1)(''x'' := 9))"
   proof -
     have "pcompletes \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>) (enter_state ?s1)
-            ((enter_state ?s1)(''x'' := aval (BaseN (AExp.N 9)) (enter_state ?s1)))"
+            ((enter_state ?s1)(''x'' := aval (N 9) (enter_state ?s1)))"
       by (rule pcompletes_assign)
     thus ?thesis by simp
   qed
@@ -42,7 +42,7 @@ proof -
                (enter_state s0) ((enter_state s0)(''Gg'' := 9))"
   proof -
     have "pcompletes \<Pi> (imp \<lbrakk> Gg := 9 \<rbrakk>) (enter_state s0)
-            ((enter_state s0)(''Gg'' := aval (BaseN (AExp.N 9)) (enter_state s0)))"
+            ((enter_state s0)(''Gg'' := aval (N 9) (enter_state s0)))"
       by (rule pcompletes_assign)
     thus ?thesis by simp
   qed
@@ -57,7 +57,7 @@ theorem return_value_propagated:
   assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> return 7 \<rbrakk>))"
   shows "\<exists>t. pcompletes \<Pi> (Call (Some ''x'') pf []) s0 t \<and> t ''x'' = 7"
 proof -
-  let ?e = "BaseN (AExp.N 7)"
+  let ?e = "N 7"
   let ?t = "(<s0 | (enter_state s0)(ret_var := aval ?e (enter_state s0))>)
               (''x'' := aval ?e (enter_state s0))"
   have call: "psteps \<Pi> (Call (Some ''x'') pf [], s0, []) (imp \<lbrakk> skip \<rbrakk>, ?t, [])"
@@ -88,18 +88,18 @@ proof -
   let ?e0 = "enter_state ?s0"
   let ?e1 = "?e0(''Gx'' := 0)"
   let ?ei = "enter_state ?e1"
-  have inner_guard: "\<not> bval (Less (BaseN (AExp.N 0)) (BaseN (AExp.V ''Gx''))) ?ei"
+  have inner_guard: "\<not> bval (Less (N 0) (V ''Gx'')) ?ei"
     by (simp add: enter_state_def is_global_def)
   have inner_body: "pcompletes \<Pi> rec_body ?ei ?ei"
     unfolding rec_body_def by (rule pcompletes_IfFalse[OF inner_guard pcompletes_skip])
   have inner_call: "pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (<?e1 | ?ei>)"
     by (rule pcompletes_Call_parameterless[OF p inner_body])
-  have outer_guard: "bval (Less (BaseN (AExp.N 0)) (BaseN (AExp.V ''Gx''))) ?e0"
+  have outer_guard: "bval (Less (N 0) (V ''Gx'')) ?e0"
     by (simp add: enter_state_def is_global_def)
   have dec: "pcompletes \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0 ?e1"
   proof -
     have "pcompletes \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0
-            (?e0(''Gx'' := aval (Minus (BaseN (AExp.V ''Gx'')) (BaseN (AExp.N 1))) ?e0))"
+            (?e0(''Gx'' := aval (Minus (V ''Gx'') (N 1)) ?e0))"
       by (rule pcompletes_assign)
     thus ?thesis by (simp add: enter_state_def is_global_def)
   qed

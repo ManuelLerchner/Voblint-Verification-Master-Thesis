@@ -2,6 +2,8 @@ theory Exec_Sign_Run
   imports Voblint_Analysis.Exec_St Voblint_Analysis.Sign_Domain "TD.TD_side_upd_rule"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 section \<open>Codegen probe: does sign st execute?\<close>
 
 instance sign :: bounded_warrowing ..
@@ -44,9 +46,9 @@ text \<open>
 
 fun sign_eqs :: "pp \<Rightarrow> (pp, glob, sign st) strategy_tree" where
   "sign_eqs P0 = Answer bot"
-| "sign_eqs P1 = QueryL P0 (\<lambda>s. Answer (assign_st s ''x'' (BaseN (AExp.N 1))))"
+| "sign_eqs P1 = QueryL P0 (\<lambda>s. Answer (assign_st s ''x'' (N 1)))"
 | "sign_eqs P2 = QueryL P1 (\<lambda>s. Answer
-     (assign_st s ''y'' (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.V ''x'')))))"
+     (assign_st s ''y'' (Plus (V ''x'') (V ''x''))))"
 
 definition sign_solution :: "pp set \<times> (pp + glob \<Rightarrow> sign st)" where
   "sign_solution = TD_side_always_join_Interp_solve sign_eqs P2"

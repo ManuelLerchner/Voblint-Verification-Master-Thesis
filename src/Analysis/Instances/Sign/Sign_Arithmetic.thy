@@ -79,13 +79,9 @@ fun sign_of_int :: "int => sign" where
 lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
   by (auto split: if_splits)
 
-fun aval_sign_hol :: "AExp.aexp => (vname => sign) => sign" where
-    "aval_sign_hol (AExp.N n)      \<sigma> = sign_of_int n"
-  | "aval_sign_hol (AExp.V x)      \<sigma> = \<sigma> x"
-  | "aval_sign_hol (AExp.Plus a b) \<sigma> = aval_sign_hol a \<sigma> + aval_sign_hol b \<sigma>"
-
 fun aval_sign :: "aexp => (vname => sign) => sign" where
-    "aval_sign (BaseN a)    \<sigma> = aval_sign_hol a \<sigma>"
+    "aval_sign (N n)        \<sigma> = sign_of_int n"
+  | "aval_sign (V x)        \<sigma> = \<sigma> x"
   | "aval_sign (Plus  a b)  \<sigma> = aval_sign a \<sigma> + aval_sign b \<sigma>"
   | "aval_sign (Minus a b)  \<sigma> = aval_sign a \<sigma> - aval_sign b \<sigma>"
   | "aval_sign (Times a b)  \<sigma> = aval_sign a \<sigma> * aval_sign b \<sigma>"
@@ -106,16 +102,11 @@ lemma sign_times_sound:
   using assms by (cases a; cases b; auto simp: mult_neg_neg mult_neg_pos mult_pos_neg
                                                 zero_le_mult_iff mult_le_0_iff)
 
-lemma aval_sign_hol_sound:
-  "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))
-   \<Longrightarrow> AExp.aval a s \<in> gamma_sign (aval_sign_hol a \<sigma>)"
-  by (induction a arbitrary: s \<sigma>; simp add: sign_of_int_gamma sign_plus_sound)
-
 lemma aval_sign_sound:
   "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))
    \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a \<sigma>)"
   by (induction a arbitrary: s \<sigma>;
-      simp add: aval_sign_hol_sound sign_plus_sound sign_minus_sound sign_times_sound)
+      simp add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound)
 
 lemma sign_plus_mono1:
   "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::sign)"
@@ -151,16 +142,10 @@ lemma sign_plus_combine_mono:
   "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 + b1 \<le> a2 + (b2::sign)"
   by (meson order.trans sign_plus_mono1 sign_plus_mono2)
 
-lemma aval_sign_hol_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> aval_sign_hol a sigma1 \<le> aval_sign_hol a sigma2"
-  apply (induction a arbitrary: sigma1 sigma2)
-  by(auto simp add: sign_plus_combine_mono le_funD)
- 
-
 lemma aval_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> aval_sign a sigma1 \<le> aval_sign a sigma2"
   apply (induction a arbitrary: sigma1 sigma2)
-  apply(auto simp add: sign_plus_combine_mono aval_sign_hol_mono)
+  apply(auto simp add: sign_plus_combine_mono le_funD)
   apply (meson order.trans sign_minus_mono1 sign_minus_mono2)
   by (meson dual_order.trans sign_times_mono1 sign_times_mono2)
 

@@ -10,6 +10,8 @@ theory Example_Relational_DG_Demo
     "Voblint_IMP2.IMP2_Notation"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 section \<open>End-to-end demo: a relational analysis on the same executable pipeline as Interval\<close>
 
 text \<open>
@@ -54,10 +56,10 @@ lemma demo_cfg_eq:
   "demo_cfg =
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assume (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.V ''y''))), Statement 1),
-          (Statement 0, EA_AssumeNot (Less (BaseN (AExp.V ''x'')) (BaseN (AExp.V ''y''))), Statement 2),
-          (Statement 1, EA_Assign ''z'' (BaseN (AExp.N 1)), Statement 3),
-          (Statement 2, EA_Assign ''z'' (BaseN (AExp.N 0)), Statement 3),
+          (Statement 0, EA_Assume (Less (V ''x'') (V ''y'')), Statement 1),
+          (Statement 0, EA_AssumeNot (Less (V ''x'') (V ''y'')), Statement 2),
+          (Statement 1, EA_Assign ''z'' (N 1), Statement 3),
+          (Statement 2, EA_Assign ''z'' (N 0), Statement 3),
           (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"

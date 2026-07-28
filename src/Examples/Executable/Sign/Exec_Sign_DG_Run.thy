@@ -25,6 +25,8 @@ theory Exec_Sign_DG_Run
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 subsection \<open>The concrete program and its compiled CFG\<close>
 
 text \<open>
@@ -48,8 +50,8 @@ lemma gEx_eq:
   "gEx =
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 1)), Statement 1),
-          (Statement 1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), Statement 2),
+          (Statement 0, EA_Assign ''x'' (N 1), Statement 1),
+          (Statement 1, EA_Assign ''y'' (V ''x''), Statement 2),
           (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
@@ -58,8 +60,8 @@ lemma gEx_eq:
 lemma gEx_intra:
   "intra gEx =
      {(FunctionEntry ''main'', EA_Nop, Statement 0),
-      (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 1)), Statement 1),
-      (Statement 1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), Statement 2),
+      (Statement 0, EA_Assign ''x'' (N 1), Statement 1),
+      (Statement 1, EA_Assign ''y'' (V ''x''), Statement 2),
       (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')}"
   by (simp add: gEx_eq)
 lemma gEx_calls: "calls gEx = {}"

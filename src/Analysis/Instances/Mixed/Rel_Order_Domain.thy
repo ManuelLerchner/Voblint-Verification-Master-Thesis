@@ -184,17 +184,13 @@ lemma forget_relc_sound:
 
 subsection \<open>The one precise transfer: recognizing a bare-variable strict order test\<close>
 
-text \<open>Matches patterns must use the underlying \<^const>\<open>BaseN\<close>/\<^const>\<open>AExp.V\<close>
-  constructors: \<^const>\<open>V\<close> is an abbreviation and does not unfold in a
-  pattern match.\<close>
-
 definition assume_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_step b d =
      (case d of
         Bot \<Rightarrow> Bot
       | RelC ps \<Rightarrow>
           (case b of
-             Less (BaseN (AExp.V x)) (BaseN (AExp.V y)) \<Rightarrow> RelC (insert (x, y) ps)
+             Less (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound:
@@ -210,9 +206,9 @@ next
   proof (cases b)
     case (Less a1 a2)
     show ?thesis
-    proof (cases "\<exists>x y. a1 = BaseN (AExp.V x) \<and> a2 = BaseN (AExp.V y)")
+    proof (cases "\<exists>x y. a1 = V x \<and> a2 = V y")
       case True
-      then obtain x y where xy: "a1 = BaseN (AExp.V x)" "a2 = BaseN (AExp.V y)" by blast
+      then obtain x y where xy: "a1 = V x" "a2 = V y" by blast
       have "s x < s y" using assms(2) Less xy by simp
       then show ?thesis
         using assms(1) d_eq unfolding assume_step_def d_eq Less xy by auto
@@ -220,10 +216,10 @@ next
       case False
       then show ?thesis
         using assms(1) d_eq Less unfolding assume_step_def
-        by (auto split: aexp.splits AExp.aexp.splits)
+        by (auto split: aexp.splits)
     qed
   next
-    case (BaseB bb) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
+    case (Bc bb) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
   next
     case (Not b') then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
   next
@@ -246,7 +242,7 @@ definition assume_not_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
         Bot \<Rightarrow> Bot
       | RelC ps \<Rightarrow>
           (case b of
-             Less (BaseN (AExp.V x)) (BaseN (AExp.V y)) \<Rightarrow> RelC (insert (y, x) ps)
+             Less (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_not_step_sound:
@@ -262,9 +258,9 @@ next
   proof (cases b)
     case (Less a1 a2)
     show ?thesis
-    proof (cases "\<exists>x y. a1 = BaseN (AExp.V x) \<and> a2 = BaseN (AExp.V y)")
+    proof (cases "\<exists>x y. a1 = V x \<and> a2 = V y")
       case True
-      then obtain x y where xy: "a1 = BaseN (AExp.V x)" "a2 = BaseN (AExp.V y)" by blast
+      then obtain x y where xy: "a1 = V x" "a2 = V y" by blast
       have "\<not> s x < s y" using assms(2) Less xy by simp
       then show ?thesis
         using assms(1) d_eq unfolding assume_not_step_def d_eq Less xy by auto
@@ -272,10 +268,10 @@ next
       case False
       then show ?thesis
         using assms(1) d_eq Less unfolding assume_not_step_def
-        by (auto split: aexp.splits AExp.aexp.splits)
+        by (auto split: aexp.splits)
     qed
   next
-    case (BaseB bb) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+    case (Bc bb) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
   next
     case (Not b') then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
   next

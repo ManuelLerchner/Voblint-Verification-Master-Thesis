@@ -1,9 +1,9 @@
-session Voblint_IMP2 in "." = "HOL-IMP" +
+session Voblint_IMP2 in "." = HOL +
   description "IMP2 syntax, small-step, and procedure language"
   sessions
     Deriving
+    "HOL-IMP"
   theories
-    HOL_IMP_Countable
     IMP2_Syntax
     IMP2_Globals
     IMP2_Expr

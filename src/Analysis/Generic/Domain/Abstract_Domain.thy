@@ -211,7 +211,7 @@ locale backward_domain =
 begin
 
 fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
-    "afilter (BaseN (AExp.V x)) a \<sigma> = \<sigma>(x := meet a (\<sigma> x))"
+    "afilter (V x) a \<sigma> = \<sigma>(x := meet a (\<sigma> x))"
   | "afilter (Plus  e1 e2) a \<sigma> =
        (let (a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
@@ -241,21 +241,21 @@ lemma afilter_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
   shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: a \<sigma>)
-  case (BaseN a')
-  show ?case proof (cases a')
-    case (V x)
-    have sx_a: "s x \<in> gamma a"
-      using BaseN.prems(2) V by simp
-    have sx_s: "s x \<in> gamma (\<sigma> x)"
-      using gamma_stateD[OF BaseN.prems(1)] by simp
-    show ?thesis
-      unfolding V gamma_state_def afilter.simps
-    proof (intro CollectI allI)
-      fix y show "s y \<in> gamma ((\<sigma>(x := meet a (\<sigma> x))) y)"
-        using meet_sound[OF sx_a sx_s] gamma_stateD[OF BaseN.prems(1)]
-        by (cases "y = x") auto
-    qed
-  qed (auto simp: BaseN.prems(1))
+  case (N n)
+  then show ?case by simp
+next
+  case (V x)
+  have sx_a: "s x \<in> gamma a"
+    using V.prems(2) by simp
+  have sx_s: "s x \<in> gamma (\<sigma> x)"
+    using gamma_stateD[OF V.prems(1)] by simp
+  show ?case
+    unfolding gamma_state_def afilter.simps
+  proof (intro CollectI allI)
+    fix y show "s y \<in> gamma ((\<sigma>(x := meet a (\<sigma> x))) y)"
+      using meet_sound[OF sx_a sx_s] gamma_stateD[OF V.prems(1)]
+      by (cases "y = x") auto
+  qed
 next
   case (Plus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
@@ -307,7 +307,7 @@ lemma bfilter_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "bval b s = res"
   shows "s \<in> \<lbrakk>bfilter b res \<sigma>\<rbrakk>"
 using assms proof (induction b arbitrary: res \<sigma>)
-  case (BaseB b') thus ?case by simp
+  case (Bc b') thus ?case by simp
 next
   case (Not b)
   have bv': "bval b s = (\<not> res)" using Not.prems(2) by (auto)
@@ -507,23 +507,22 @@ lemma bfilter_Less_unfold:
 lemma afilter_mono:
   "a1 \<le> a2 \<Longrightarrow> \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> afilter e a1 \<sigma>1 \<le> afilter e a2 \<sigma>2"
 proof (induction e arbitrary: a1 a2 \<sigma>1 \<sigma>2)
-  case (BaseN a')
+  case (N n)
+  then show ?case by simp
+next
+  case (V x)
   show ?case
-  proof (cases a')
-    case (V x)
-    show ?thesis
-      unfolding V afilter.simps
-    proof (rule le_funI)
-      fix y
-      show "(\<sigma>1(x := meet a1 (\<sigma>1 x))) y \<le> (\<sigma>2(x := meet a2 (\<sigma>2 x))) y"
-      proof (cases "y = x")
-        case True
-        thus ?thesis using meet_mono[OF BaseN.prems(1) le_funD[OF BaseN.prems(2)]] by simp
-      next
-        case False thus ?thesis using le_funD[OF BaseN.prems(2)] by simp
-      qed
+    unfolding afilter.simps
+  proof (rule le_funI)
+    fix y
+    show "(\<sigma>1(x := meet a1 (\<sigma>1 x))) y \<le> (\<sigma>2(x := meet a2 (\<sigma>2 x))) y"
+    proof (cases "y = x")
+      case True
+      thus ?thesis using meet_mono[OF V.prems(1) le_funD[OF V.prems(2)]] by simp
+    next
+      case False thus ?thesis using le_funD[OF V.prems(2)] by simp
     qed
-  qed (use BaseN.prems(2) in simp_all)
+  qed
 next
   case (Plus e1 e2)
   have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
@@ -571,7 +570,7 @@ qed
 lemma bfilter_mono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
-  case (BaseB b') thus ?case by simp
+  case (Bc b') thus ?case by simp
 next
   case (Not b) show ?case unfolding bfilter.simps by (rule Not.IH[OF Not.prems])
 next
