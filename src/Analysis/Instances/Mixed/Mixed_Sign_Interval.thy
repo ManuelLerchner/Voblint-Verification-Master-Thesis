@@ -135,34 +135,6 @@ interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
   by (rule sound_dg_spec_indep
         [OF sign_is_sound_transfer ivl_is_sound_transfer])
 
-lemma mixed_si_cmb_dg:
-  "mixed_si_cmb = mixed_si.dg_cmb"
-  by (simp add: fun_eq_iff mixed_si_cmb_def dg_cmb_of_def mixed_si.dg_cmb_def)
-
-lemma mixed_si_extra_dg:
-  "mixed_si_extra = mixed_si.dg_extra"
-  by (simp add: fun_eq_iff mixed_si_extra_def dg_extra_of_def mixed_si.dg_extra_def
-        mixed_si.dg_enter_def)
-
-lemma mixed_si_generator_dg:
-  "mixed_si_generator = mixed_si.dg_gen"
-  by (simp add: fun_eq_iff mixed_si_generator_def dg_gen_of_def mixed_si.dg_gen_def
-        mixed_si_cmb_def[symmetric] mixed_si_extra_def[symmetric]
-        mixed_si_cmb_dg mixed_si_extra_dg)
-
-lemma mixed_si_D_dg:
-  "mixed_si_D = mixed_si.dg_D"
-  by (simp add: fun_eq_iff mixed_si_D_def mixed_si.dg_D_def)
-
-lemma mixed_si_G_dg:
-  "mixed_si_G = mixed_si.dg_G"
-  by (simp add: fun_eq_iff mixed_si_G_def mixed_si.dg_G_def)
-
-lemma mixed_si_gamma_dg:
-  "mixed_si_gamma = mixed_si.dg_gamma"
-  by (simp add: fun_eq_iff mixed_si_gamma_def mixed_si.dg_gamma_def
-        gamma_dg_def mixed_si_D_dg mixed_si_G_dg)
-
 definition mixed_si_postfix ::
   "cfg \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
    \<Rightarrow> (pp \<times> unit + unit \<Rightarrow>
@@ -172,9 +144,56 @@ where
   "mixed_si_postfix g s0d s0g sigma =
      mixed_si.dg_postfix g s0d s0g sigma"
 
-lemma mixed_si_postfix_dg:
-  "mixed_si_postfix = mixed_si.dg_postfix"
-  by (simp add: fun_eq_iff mixed_si_postfix_def)
+text \<open>
+  Public DG API for the Sign/Interval mixed analysis, mirroring
+  \<open>Sign_DG.thy\<close>/\<open>Interval_DG.thy\<close>'s pattern.  The sublocale interpretation
+  rewrites facts inherited from @{locale sound_dg_spec} into this native
+  vocabulary in one step, replacing the per-constant bridging lemmas above
+  with a single rewrite obligation each; the exported theorems below then
+  cite the generic facts directly, with no manual unfold/fold.
+\<close>
+locale mixed_si_api
+
+sublocale mixed_si_api \<subseteq> sound_dg_spec mixed_si_spec gamma_dg
+  rewrites "sound_dg_spec.dg_D = mixed_si_D"
+       and "sound_dg_spec.dg_G = mixed_si_G"
+       and "sound_dg_spec.dg_gamma gamma_dg = mixed_si_gamma"
+       and "sound_dg_spec.dg_cmb mixed_si_spec = mixed_si_cmb"
+       and "sound_dg_spec.dg_extra mixed_si_spec = mixed_si_extra"
+       and "sound_dg_spec.dg_gen mixed_si_spec = mixed_si_generator"
+       and "sound_dg_spec.dg_postfix mixed_si_spec = mixed_si_postfix"
+proof -
+  have main: "sound_dg_spec mixed_si_spec gamma_dg"
+    unfolding mixed_si_spec_indep
+    by (rule sound_dg_spec_indep[OF sign_is_sound_transfer ivl_is_sound_transfer])
+  have D: "sound_dg_spec.dg_D = mixed_si_D"
+    by (simp add: fun_eq_iff mixed_si_D_def mixed_si.dg_D_def)
+  have G: "sound_dg_spec.dg_G = mixed_si_G"
+    by (simp add: fun_eq_iff mixed_si_G_def mixed_si.dg_G_def)
+  have gamma: "sound_dg_spec.dg_gamma gamma_dg = mixed_si_gamma"
+    by (simp add: fun_eq_iff mixed_si_gamma_def mixed_si.dg_gamma_def gamma_dg_def D G)
+  have cmb: "sound_dg_spec.dg_cmb mixed_si_spec = mixed_si_cmb"
+    by (simp add: fun_eq_iff mixed_si_cmb_def dg_cmb_of_def mixed_si.dg_cmb_def)
+  have extra: "sound_dg_spec.dg_extra mixed_si_spec = mixed_si_extra"
+    by (simp add: fun_eq_iff mixed_si_extra_def dg_extra_of_def mixed_si.dg_extra_def
+             mixed_si.dg_enter_def)
+  have gen: "sound_dg_spec.dg_gen mixed_si_spec = mixed_si_generator"
+    by (simp add: fun_eq_iff mixed_si_generator_def dg_gen_of_def mixed_si.dg_gen_def
+             cmb extra mixed_si_cmb_def mixed_si_extra_def)
+  have postfix: "sound_dg_spec.dg_postfix mixed_si_spec = mixed_si_postfix"
+    by (simp add: fun_eq_iff mixed_si_postfix_def)
+  show "sound_dg_spec mixed_si_spec gamma_dg" by (fact main)
+  show "sound_dg_spec.dg_D = mixed_si_D" by (fact D)
+  show "sound_dg_spec.dg_G = mixed_si_G" by (fact G)
+  show "sound_dg_spec.dg_gamma gamma_dg = mixed_si_gamma" by (fact gamma)
+  show "sound_dg_spec.dg_cmb mixed_si_spec = mixed_si_cmb" by (fact cmb)
+  show "sound_dg_spec.dg_extra mixed_si_spec = mixed_si_extra" by (fact extra)
+  show "sound_dg_spec.dg_gen mixed_si_spec = mixed_si_generator" by (fact gen)
+  show "sound_dg_spec.dg_postfix mixed_si_spec = mixed_si_postfix" by (fact postfix)
+qed
+
+context mixed_si_api
+begin
 
 theorem mixed_si_post_solution_postfix:
   assumes pp:
@@ -192,19 +211,15 @@ theorem mixed_si_post_solution_postfix:
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
   shows "mixed_si_postfix g s0d s0g sigma"
-  unfolding mixed_si_postfix_dg
-  by (rule mixed_si.dg_post_solution_postfix
-        [OF pp[unfolded mixed_si_generator_dg]
-            cover_entry cover_edge cover_enter cover_combine finI finC])
+  by (rule dg_post_solution_postfix
+        [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
 
 theorem mixed_si_postfix_collect_sound:
   assumes pf: "mixed_si_postfix g s0d s0g sigma"
     and soundD: "S \<le> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<le> \<lbrakk>s0g\<rbrakk>"
   shows "ltr_collect g S v \<le> mixed_si_gamma sigma v"
-  unfolding mixed_si_gamma_dg
-  apply (rule mixed_si.dg_postfix_collect_sound_ltr
-        [OF pf[unfolded mixed_si_postfix_dg]])
+  apply (rule dg_postfix_collect_sound_ltr[OF pf])
   using soundD soundG unfolding gamma_dg_def by blast
 
 corollary mixed_si_post_solution_collect_sound:
@@ -225,11 +240,13 @@ corollary mixed_si_post_solution_collect_sound:
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
   shows "ltr_collect g S v \<subseteq> mixed_si_gamma sigma v"
-  unfolding mixed_si_gamma_dg
-  apply (rule mixed_si.dg_post_solution_collect_sound_ltr
-        [OF pp[unfolded mixed_si_generator_dg]
-            cover_entry cover_edge cover_enter cover_combine finI finC])
+  apply (rule dg_post_solution_collect_sound_ltr
+        [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
   using soundD soundG unfolding gamma_dg_def by auto
+
+end
+
+interpretation mixed_si_api .
 
 section \<open>Executable instance\<close>
 
