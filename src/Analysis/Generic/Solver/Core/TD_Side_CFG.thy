@@ -144,6 +144,15 @@ definition side_env ::
   "(pp + 'g::finite => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
   "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> glob_env \<sigma>"
 
+(* The base unfold: 23 call sites across the solver core previously reached
+   past this definition via unfolding side_env_def. Left untagged: a locale
+   abbreviation (ltr_gamma.gamma_ltr) is itself stated in terms of side_env,
+   and eagerly expanding side_env elsewhere breaks the term-shape matching
+   that abbreviation's own unfold relies on -- cite explicitly instead. *)
+lemma side_env_apply:
+  "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> glob_env \<sigma>"
+  unfolding side_env_def by (rule refl)
+
 (* Reading a single named global g combined with the locals at v. *)
 definition side_env_g ::
   "(pp + 'g => 'a::bounded_semilattice_sup_bot abs_state) => 'g => pp => 'a abs_state"
@@ -650,7 +659,7 @@ lemma in_gamma_unit_edge_tree_assign:
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (apply_tf tf (EA_Assign x e)) u) \<sigma>\<rbrakk>"
-  using tf_sound_assign[rule_format, OF s]
+  using tf_sound_assignD[OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 
 lemma in_gamma_unit_edge_tree_assume:
@@ -659,7 +668,7 @@ lemma in_gamma_unit_edge_tree_assume:
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "bval b s"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (apply_tf tf (EA_Assume b)) u) \<sigma>\<rbrakk>"
-  using tf_sound_assume[rule_format, OF s hb]
+  using tf_sound_assumeD[OF s hb]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 
 lemma in_gamma_unit_edge_tree_assume_not:
@@ -668,7 +677,7 @@ lemma in_gamma_unit_edge_tree_assume_not:
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "\<not> bval b s"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (apply_tf tf (EA_AssumeNot b)) u) \<sigma>\<rbrakk>"
-  using tf_sound_assume_not[rule_format, OF s hb]
+  using tf_sound_assume_notD[OF s hb]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 
 lemma in_gamma_unit_edge_tree_enter:
@@ -678,7 +687,7 @@ lemma in_gamma_unit_edge_tree_enter:
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
            \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (tf_enter tf xs es) u) \<sigma>\<rbrakk>"
-  using tf_sound_enter[rule_format, OF s]
+  using tf_sound_enterD[OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 
 lemma in_gamma_local_edge_tree:
@@ -731,7 +740,7 @@ proof -
   have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     by (simp add: side_env_def glob_env_unit)
   have st: "s(x := aval e s) \<in> \<lbrakk>apply_tf tf (EA_Assign x e) (side_env \<sigma> u) \<rbrakk>"
-    using tf_sound_assign[rule_format, OF s] unfolding env apply_tf.simps by simp
+    using tf_sound_assignD[OF s] unfolding env apply_tf.simps by simp
   have le: "apply_tf tf (EA_Assign x e) (side_env \<sigma> u) \<le>
             etf_collecting_full (local_edge_tree (apply_tf tf (EA_Assign x e)) u) \<sigma>"
     using local_edge_invariant_side_env_eq[OF inv inr]
@@ -753,7 +762,7 @@ proof -
   have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     by (simp add: side_env_def glob_env_unit)
   have st: "s \<in> \<lbrakk>apply_tf tf (EA_Assume b) (side_env \<sigma> u)\<rbrakk>"
-    using tf_sound_assume[rule_format, OF s hb] unfolding env apply_tf.simps by simp
+    using tf_sound_assumeD[OF s hb] unfolding env apply_tf.simps by simp
   have le: "apply_tf tf (EA_Assume b) (side_env \<sigma> u) \<le>
             etf_collecting_full (local_edge_tree (apply_tf tf (EA_Assume b)) u) \<sigma>"
     using local_edge_invariant_side_env_eq[OF inv inr]
@@ -775,7 +784,7 @@ proof -
   have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     by (simp add: side_env_def glob_env_unit)
   have st: "s \<in> \<lbrakk>apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u)\<rbrakk>"
-    using tf_sound_assume_not[rule_format, OF s hb] unfolding env apply_tf.simps by simp
+    using tf_sound_assume_notD[OF s hb] unfolding env apply_tf.simps by simp
   have le: "apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u) \<le>
             etf_collecting_full (local_edge_tree (apply_tf tf (EA_AssumeNot b)) u) \<sigma>"
     using local_edge_invariant_side_env_eq[OF inv inr]

@@ -299,7 +299,7 @@ proof -
   from rep have tv: "t \<in> valid_ltr ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
   have "s \<in> activation_collect enterc seedc ?g S v (key enterc seedc t)"
-    using tv sn ss unfolding activation_collect_def by blast
+    using activation_collect_I[OF tv sn refl] ss by simp
   then show ?thesis using sim by blast
 qed
 
@@ -323,7 +323,7 @@ proof -
   have "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   then have key: "key enterc seedc t = seedc" by (rule key_caller_of_None)
   have "s \<in> activation_collect enterc seedc ?g S v seedc"
-    using tv sn ss key unfolding activation_collect_def by blast
+    using activation_collect_I[OF tv sn key] ss by simp
   then show ?thesis using sim stk0 by blast
 qed
 

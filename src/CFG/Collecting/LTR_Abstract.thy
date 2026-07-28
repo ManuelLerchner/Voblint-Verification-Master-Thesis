@@ -103,15 +103,16 @@ lemma return_closed:
   shows "bnd (Resume caller callee
                (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
 proof -
-  have inst: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)
-              \<and> call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
-    using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof] .
+  have key_eq: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+    using callee_entry_invariant_keyD[OF callee_val cof] .
+  have call_enter: "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
+    using callee_entry_invariant_call_enterD[OF callee_val cof] .
   have ih_callee': "sink_store callee
         \<in> acc (FunctionResult p) (enterc (key enterc seedc caller) (entry_store callee))"
-    using ih_callee inst[THEN conjunct1] res by simp
+    using ih_callee key_eq res by simp
   have "combine_collect dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
-    by (rule COMB[OF comb ih_caller ih_callee' inst[THEN conjunct2]])
+    by (rule COMB[OF comb ih_caller ih_callee' call_enter])
   then show ?thesis by (simp add: sink_node_def sink_store_def)
 qed
 
@@ -226,7 +227,7 @@ proof (rule subsetI)
   fix x assume "x \<in> activation_collect enterc seedc g S v c"
   then obtain t where t: "t \<in> valid_ltr g S" "sink_node t = v" "key enterc seedc t = c"
     "sink_store t = x"
-    unfolding activation_collect_def by blast
+    by (rule activation_collect_E)
   have "bnd t" using valid_ltr_subset_gamma_ltr t(1) by (auto simp: gamma_ltr_def)
   then show "x \<in> acc v c" using t(2,3,4) by simp
 qed
@@ -253,15 +254,16 @@ proof -
     using valid_ltr_subset_gamma_ltr caller_v by (auto simp: gamma_ltr_def)
   have bcl: "bnd callee"
     using valid_ltr_subset_gamma_ltr cv by (auto simp: gamma_ltr_def)
-  have inst: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)
-              \<and> call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
-    using callee_entry_invariant[OF cv, THEN bspec, OF callers_refl, rule_format, OF cof] .
+  have key_eq: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+    using callee_entry_invariant_keyD[OF cv cof] .
+  have call_enter: "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
+    using callee_entry_invariant_call_enterD[OF cv cof] .
   have mid: "sink_store callee
         \<in> acc (FunctionResult pp) (enterc (key enterc seedc caller) (entry_store callee))"
-    using bcl inst[THEN conjunct1] rn by simp
+    using bcl key_eq rn by simp
   have res_bound: "combine_collect dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
-    by (rule COMB[OF comb bc mid inst[THEN conjunct2]])
+    by (rule COMB[OF comb bc mid call_enter])
   show ?thesis using cof mid res_bound by blast
 qed
 

@@ -184,11 +184,8 @@ next
   hence "edge_collect a {s} \<subseteq> edge_collect a (gamma_unit ?d ?g)" by (rule edge_collect_mono)
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
   ultimately have "s' \<in> edge_collect a (gamma_unit ?d ?g)" by blast
-  also have "\<dots> \<subseteq> (case dg_spec_step S a ?d ?g of (g', d') \<Rightarrow> gamma_unit d' g')"
-    by (rule step_sound)
-  finally have "s' \<in> (case dg_spec_step S a ?d ?g of (g', d') \<Rightarrow> gamma_unit d' g')" .
   hence "s' \<in> gamma_unit (snd (dg_spec_step S a ?d ?g)) (fst (dg_spec_step S a ?d ?g))"
-    by (simp add: case_prod_beta)
+    using step_sound_fs by blast
   also have "\<dots> \<subseteq> gamma_unit (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
     by (rule gamma_unit_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
   also have "\<dots> = \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
@@ -227,11 +224,8 @@ proof -
   have tin: "t \<in> gamma_unit ?De ?G"
     using t covEx by (simp add: sg_cov gamma_unit_def)
   have "combine_collect dst s t
-        \<in> (case dgs_combine S dst ?Dc ?De ?G of (g', d') \<Rightarrow> gamma_unit d' g')"
-    by (rule combine_sound[OF sin tin])
-  hence "combine_collect dst s t
         \<in> gamma_unit (snd (dgs_combine S dst ?Dc ?De ?G)) (fst (dgs_combine S dst ?Dc ?De ?G))"
-    by (simp add: case_prod_beta)
+    using combine_sound_fs[OF sin tin] .
   also have "\<dots> \<subseteq> gamma_unit (locals (sigma (Inl (v, cv)))) ?G"
     unfolding gamma_unit_def
     by (rule gamma_state_mono) (rule bound[unfolded gamma_unit_def])

@@ -734,6 +734,25 @@ next
   qed
 qed
 
+(* The two conjuncts of callee_entry_invariant, specialized to u = callee (via
+   callers_refl) instead of quantified over every ancestor; downstream proofs
+   cite these directly instead of repeating the
+   [OF ..., THEN bspec, OF callers_refl, rule_format, OF ...] instantiation
+   chain and then splitting the result via THEN conjunct1/2. *)
+lemma callee_entry_invariant_keyD:
+  assumes callee_val: "callee \<in> valid_ltr g S"
+    and cof: "caller_of callee = Some caller"
+  shows "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+  using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
+  by (rule conjunct1)
+
+lemma callee_entry_invariant_call_enterD:
+  assumes callee_val: "callee \<in> valid_ltr g S"
+    and cof: "caller_of callee = Some caller"
+  shows "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
+  using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
+  by (rule conjunct2)
+
 subsection \<open>The activation-indexed context collecting\<close>
 
 text \<open>The activation-sensitive collecting is the sink stores of valid traces reaching \<open>v\<close>
@@ -743,6 +762,17 @@ definition activation_collect ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
   "activation_collect enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
+
+lemma activation_collect_I:
+  "t \<in> valid_ltr g S \<Longrightarrow> sink_node t = v \<Longrightarrow> key enterc seedc t = c
+   \<Longrightarrow> sink_store t \<in> activation_collect enterc seedc g S v c"
+  unfolding activation_collect_def by blast
+
+text \<open>Every collected state has a valid trace witness at the given activation key.\<close>
+lemma activation_collect_E:
+  assumes "s \<in> activation_collect enterc seedc g S v c"
+  obtains t where "t \<in> valid_ltr g S" "sink_node t = v" "key enterc seedc t = c" "sink_store t = s"
+  using assms unfolding activation_collect_def by blast
 
 
 

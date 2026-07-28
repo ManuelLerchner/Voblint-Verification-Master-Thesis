@@ -705,6 +705,35 @@ locale sound_transfer =
   assumes tf_sound_combine:
     "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
 
+text \<open>Fully-applied destructors for the five raw \<forall>-quantified assumptions above;
+  cited instead of the [rule_format, OF ...] instantiation chain at every call
+  site (or, outside a sound_transfer context, sound_transfer.tf_sound_*D[OF ...]).\<close>
+context sound_transfer
+begin
+
+lemma tf_sound_assignD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  using tf_sound_assign by blast
+
+lemma tf_sound_assumeD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+  using tf_sound_assume by blast
+
+lemma tf_sound_assume_notD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+  using tf_sound_assume_not by blast
+
+lemma tf_sound_enterD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+  using tf_sound_enter by blast
+
+lemma tf_sound_combineD:
+  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+  using tf_sound_combine by blast
+
+end
+
 
 subsection \<open>Effectful transfer function record\<close>
 
