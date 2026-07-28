@@ -21,12 +21,12 @@ text \<open>
   flow-insensitive Interval invariant in a separate cluster.
 \<close>
 
-definition mixed_graphviz_prog :: com where
-  "mixed_graphviz_prog = imp \<lbrakk> x := -1; x := 2 \<rbrakk>"
+definition mixed_graphviz_prog :: imp_prog where
+  "mixed_graphviz_prog = program { void main() { x := -1; x := 2 } }"
 
 definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =
-     compile_prog (\<lambda>_. None) [] ''main'' mixed_graphviz_prog"
+     compile_prog (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)"
 
 definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
   "mixed_graphviz_local_value p =
@@ -65,12 +65,12 @@ definition mixed_graphviz_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope (\<lambda>_. None) [] ''main'' mixed_graphviz_prog
+        let sc = compiled_procedure_scope (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
           mixed_graphviz_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>_. None),
       globals_to_show =
-        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] ''main'' mixed_graphviz_prog
+        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
           mixed_graphviz_cfg (cfg_entry mixed_graphviz_cfg)),
       show_local = (\<lambda>_ _ vars st.
         map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),
@@ -83,7 +83,7 @@ definition mixed_graphviz_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''mixed Sign answers''),
-      source_text = Some (pretty_string_of_program (\<lambda>_. None) [] mixed_graphviz_prog)
+      source_text = Some (pretty_string_of_program (\<lambda>_. None) [] (prog_main mixed_graphviz_prog))
     \<rparr>"
 
 definition mixed_graphviz_graph_domain :: "(pp \<times> unit + unit) list" where

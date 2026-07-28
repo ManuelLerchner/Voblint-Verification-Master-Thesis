@@ -530,7 +530,7 @@ lemma threefold_mono_unit_transfer:
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
 proof -
   interpret mixed_rhs_generator_mono etf F Fe
-  proof
+  proof unfold_locales
     show "\<And>a u. apply_etf etf a u = local_edge_tree (F a) u
                 \<or> apply_etf etf a u = unit_edge_tree (F a) u" by (simp add: edge)
     show "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree (Fe fs as) cl" by (rule enter)
@@ -572,7 +572,7 @@ lemma threefold_mono_local_unit_transfer:
   shows "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
 proof -
   interpret mixed_rhs_generator_mono etf F Fe
-  proof
+  proof unfold_locales
     show "\<And>a u. apply_etf etf a u = local_edge_tree (F a) u
                 \<or> apply_etf etf a u = unit_edge_tree (F a) u" by (simp add: edge)
     show "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree (Fe fs as) cl" by (rule enter)

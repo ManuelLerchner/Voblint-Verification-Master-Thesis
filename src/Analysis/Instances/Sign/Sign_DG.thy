@@ -25,13 +25,35 @@ definition sign_dg_gamma ::
   "(pp \<times> unit + unit \<Rightarrow> (sign abs_state, sign abs_state) dg_state)
    \<Rightarrow> pp \<Rightarrow> store set"
 where
-  "sign_dg_gamma sigma v = sign_dg.dg_gamma sigma v"
+  "sign_dg_gamma \<equiv> sound_dg_spec.dg_gamma gamma_unit"
 
 definition sign_dg_generator ::
   "cfg \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state
    \<Rightarrow> (pp \<times> unit, unit, (sign abs_state, sign abs_state) dg_state) eqsT"
 where
-  "sign_dg_generator g bot0 s0d s0g = sign_dg.dg_gen g bot0 s0d s0g"
+  "sign_dg_generator \<equiv> sound_dg_spec.dg_gen (unit_dg_spec sign_tf)"
+
+text \<open>
+  Public DG API for the Sign domain.  The sublocale interpretation rewrites
+  facts inherited from @{locale sound_dg_spec} into this native vocabulary, so
+  the exported theorem below cites the generic collecting-soundness fact
+  directly with no manual unfold/fold bridging.  The trailing bare
+  interpretation flattens the locale so consumers see the same top-level
+  names as before; \<open>sign_dg\<close> above stays untouched for the existing
+  \<open>sign_dg.\<close>-qualified call sites.
+\<close>
+locale sign_dg_api
+
+sublocale sign_dg_api \<subseteq> sound_dg_spec "unit_dg_spec sign_tf" gamma_unit
+  rewrites "sound_dg_spec.dg_gamma gamma_unit = sign_dg_gamma"
+       and "sound_dg_spec.dg_gen (unit_dg_spec sign_tf) = sign_dg_generator"
+  apply (rule sound_dg_spec_unit[OF sign_is_sound_transfer])
+   apply (simp add: sign_dg_gamma_def)
+  apply (simp add: sign_dg_generator_def)
+  done
+
+context sign_dg_api
+begin
 
 text \<open>
   Trace-native collecting soundness from a post-solution of the configured generator.
@@ -51,9 +73,12 @@ theorem sign_dg_post_solution_collect_sound:
     and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
   shows "ltr_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
-  unfolding sign_dg_gamma_def
-  by (rule sign_dg.dg_post_solution_collect_sound_ltr
-        [OF pp[unfolded sign_dg_generator_def] cover_entry cover_edge cover_enter cover_combine
+  by (rule dg_post_solution_collect_sound_ltr
+        [OF pp cover_entry cover_edge cover_enter cover_combine
             finI finC sound0[folded gamma_unit_def]])
+
+end
+
+interpretation sign_dg_api .
 
 end

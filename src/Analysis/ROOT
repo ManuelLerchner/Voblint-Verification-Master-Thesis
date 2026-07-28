@@ -23,6 +23,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Backward
     Sign_Print
     Exec_St
+    Exec_Backward
     Split_State
     Interval_Bounds
     Interval_Lattice
@@ -73,3 +74,5 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Exec_DG_Bridge
     Analysis_GraphViz
     Rel_Order_Domain
+  document_files
+    "root.bib"

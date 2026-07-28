@@ -188,7 +188,7 @@ lemma call_enter_of_bound:
   shows "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
 proof -
   have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
-    using tf_sound_enter[rule_format, OF s] by (simp add: call_enter_CallEdge)
+    using tf_sound_enterD[OF s] by (simp add: call_enter_CallEdge)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
@@ -207,12 +207,12 @@ proof -
   proof (cases dst)
     case None
     then show ?thesis
-      using tf_sound_combine[rule_format, OF s t]
+      using tf_sound_combineD[OF s t]
       by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
     case (Some x)
     have base: "combine_states s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
-      using tf_sound_combine[rule_format, OF s t] .
+      using tf_sound_combineD[OF s t] .
     have ret: "t ret_var \<in> gamma (B ret_var)"
       using t unfolding gamma_state_def by auto
     show ?thesis

@@ -103,15 +103,16 @@ lemma return_closed:
   shows "bnd (Resume caller callee
                (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
 proof -
-  have inst: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)
-              \<and> call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
-    using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof] .
+  have key_eq: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+    using callee_entry_invariant_keyD[OF callee_val cof] .
+  have call_enter: "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
+    using callee_entry_invariant_call_enterD[OF callee_val cof] .
   have ih_callee': "sink_store callee
         \<in> acc (FunctionResult p) (enterc (key enterc seedc caller) (entry_store callee))"
-    using ih_callee inst[THEN conjunct1] res by simp
+    using ih_callee key_eq res by simp
   have "combine_collect dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
-    by (rule COMB[OF comb ih_caller ih_callee' inst[THEN conjunct2]])
+    by (rule COMB[OF comb ih_caller ih_callee' call_enter])
   then show ?thesis by (simp add: sink_node_def sink_store_def)
 qed
 
@@ -129,12 +130,12 @@ proof (induction rule: valid_ltr.induct)
 next
   case (intra t a v s')
   show ?case
-  proof
+  proof (rule ballI)
     fix u assume "u \<in> callers (extend t (v, s'))"
     then have "u = extend t (v, s') \<or> u \<in> callers t"
       using callers_extend_subset by blast
     then show "bnd u"
-    proof
+    proof (rule disjE)
       assume u: "u = extend t (v, s')"
       have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
       have iht: "bnd t" using intra.IH callers_refl by blast
@@ -148,13 +149,13 @@ next
 next
   case (call caller dst pars args p cont)
   show ?case
-  proof
+  proof (rule ballI)
     fix u assume "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
     then have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
                 \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "bnd u"
-    proof
+    proof (rule disjE)
       assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       have ihc: "bnd caller" using call.IH callers_refl by blast
       show ?thesis unfolding u
@@ -167,7 +168,7 @@ next
 next
   case (ret callee caller p dst pars args cont)
   show ?case
-  proof
+  proof (rule ballI)
     fix u assume "u \<in> callers (Resume caller callee
         (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
     then have "u = Resume caller callee
@@ -175,7 +176,7 @@ next
                 \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "bnd u"
-    proof
+    proof (rule disjE)
       assume u: "u = Resume caller callee
           (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
       have ih_caller: "bnd caller"
@@ -193,7 +194,7 @@ qed
 text \<open>Every valid trace's sink lies in its own activation slot: \<^const>\<open>valid_ltr\<close> is
   soundly over-approximated by \<open>gamma_ltr\<close>.\<close>
 theorem valid_ltr_subset_gamma_ltr: "valid_ltr g S \<subseteq> gamma_ltr"
-proof
+proof (rule subsetI)
   fix t assume "t \<in> valid_ltr g S"
   then have "\<forall>u \<in> callers t. bnd u" by (rule gamma_chain)
   then have "bnd t" using callers_refl by blast
@@ -210,7 +211,7 @@ text \<open>Node projection: at any node \<open>v\<close>, the concrete collecti
   the abstract slots at \<open>v\<close> over all contexts.\<close>
 theorem ltr_collect_subset_acc_Union:
   "ltr_collect g S v \<subseteq> (\<Union>c. acc v c)"
-proof
+proof (rule subsetI)
   fix x assume "x \<in> ltr_collect g S v"
   then obtain t where t: "t \<in> valid_ltr g S" "sink_node t = v" "sink_store t = x"
     by (rule ltr_collect_E)
@@ -222,11 +223,11 @@ text \<open>Context projection: the context-indexed concrete collection is cover
   slot at that exact context.\<close>
 theorem activation_collect_subset_acc:
   "activation_collect enterc seedc g S v c \<subseteq> acc v c"
-proof
+proof (rule subsetI)
   fix x assume "x \<in> activation_collect enterc seedc g S v c"
   then obtain t where t: "t \<in> valid_ltr g S" "sink_node t = v" "key enterc seedc t = c"
     "sink_store t = x"
-    unfolding activation_collect_def by blast
+    by (rule activation_collect_E)
   have "bnd t" using valid_ltr_subset_gamma_ltr t(1) by (auto simp: gamma_ltr_def)
   then show "x \<in> acc v c" using t(2,3,4) by simp
 qed
@@ -253,15 +254,16 @@ proof -
     using valid_ltr_subset_gamma_ltr caller_v by (auto simp: gamma_ltr_def)
   have bcl: "bnd callee"
     using valid_ltr_subset_gamma_ltr cv by (auto simp: gamma_ltr_def)
-  have inst: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)
-              \<and> call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
-    using callee_entry_invariant[OF cv, THEN bspec, OF callers_refl, rule_format, OF cof] .
+  have key_eq: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+    using callee_entry_invariant_keyD[OF cv cof] .
+  have call_enter: "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
+    using callee_entry_invariant_call_enterD[OF cv cof] .
   have mid: "sink_store callee
         \<in> acc (FunctionResult pp) (enterc (key enterc seedc caller) (entry_store callee))"
-    using bcl inst[THEN conjunct1] rn by simp
+    using bcl key_eq rn by simp
   have res_bound: "combine_collect dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
-    by (rule COMB[OF comb bc mid inst[THEN conjunct2]])
+    by (rule COMB[OF comb bc mid call_enter])
   show ?thesis using cof mid res_bound by blast
 qed
 
@@ -321,7 +323,7 @@ proof -
     case (COMB cl dst args p cont c1 s t es) then show ?case using combine by simp
   qed
   show ?thesis
-  proof
+  proof (rule subsetI)
     fix x assume "x \<in> ltr_collect g S0 v"
     then obtain u where u: "u \<in> valid_ltr g S0" "sink_node u = v" "sink_store u = x"
       by (rule ltr_collect_E)

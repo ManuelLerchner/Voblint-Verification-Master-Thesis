@@ -1,17 +1,19 @@
 section \<open>Running the verified solver on the native D/G spine (Sign)\<close>
 
 text \<open>
-  The first end-to-end certified run on the carrier-opaque D/G equation system.
+  An end-to-end certified run on the carrier-opaque D/G equation system, registered
+  through the \<open>unit_dg_exec_analysis\<close> locale (interpreted as \<open>sign_reg\<close> in
+  \<open>DG_Domain_Registration\<close> from just \<open>sign_is_sound_transfer\<close> and \<open>sign_tf_st_commute\<close>).
   A concrete call-free Sign program is compiled to a CFG; the executable D/G
   generator (\<open>dg_gen_of (unit_dg_spec_st sign_tf_st)\<close>, values in
   \<open>(sign st, sign st) dg_state\<close>) is handed to the vendored always-join TD-side
-  solver; the solver \<^emph>\<open>computes\<close> a partial post-solution; that computed solution is
-  transported value-wise through \<open>fun_of_dg_st\<close> to an abstract post-solution of
-  \<open>sign_dg.dg_gen\<close>; and the native \<open>sound_dg_spec\<close> collecting-soundness endpoint
-  turns it into an over-approximation of the interprocedural collecting semantics.
+  solver; the solver \<^emph>\<open>computes\<close> a partial post-solution.
 
-  The final theorem \<open>dgEx_collect_sound\<close> depends on the \<^emph>\<open>computed\<close> solver result
-  \<open>snd dgEx_sol\<close>, not on any hand-written candidate solution.
+  The final theorem \<open>dgEx_source_run_sound\<close> turns the single \<open>by eval\<close> solver success
+  directly into a source-level guarantee, matching the pattern in
+  \<open>Example_Interval_DG_Flagship\<close>: no transport lemma, \<open>part_post_solution\<close>, \<open>solve_dom\<close>,
+  or \<open>fun_of_dg_st\<close> appears in this file's own proofs.  It depends on the \<^emph>\<open>computed\<close>
+  solver result \<open>snd dgEx_sol\<close>, not on any hand-written candidate solution.
 \<close>
 
 theory Exec_Sign_DG_Run
@@ -19,55 +21,30 @@ theory Exec_Sign_DG_Run
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_DG"
+    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_Formalization.DG_Domain_Registration"
 begin
 
-subsection \<open>Sign as an executable D/G analysis\<close>
-
-text \<open>
-  The diagonal Sign spec (\<open>D = G = sign abs_state\<close>) has an executable mirror at
-  \<open>sign st\<close>: \<open>unit_dg_spec_st sign_tf_st\<close>.  Its step and combine commute with the
-  abstract \<open>unit_dg_spec sign_tf\<close> through \<open>fun_of_st\<close>, discharging the two
-  hypotheses of \<open>part_post_solution_dg_st_to_abs\<close>.
-\<close>
-
-lemma sign_Hstep:
-  "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st sign_tf_st sign_enter_st) a d g)
-     = dg_spec_step (unit_dg_spec sign_tf) a (fun_of_st d) (fun_of_st g)"
-  by (simp add: dg_spec_step_unit_st dg_spec_step_unit unit_step_st_commute sign_tf_st_commute)
-
-lemma sign_Henter:
-  "map_prod fun_of_st fun_of_st
-      (dgs_enter (unit_dg_spec_st sign_tf_st sign_enter_st) xs es d g)
-     = dgs_enter (unit_dg_spec sign_tf) xs es (fun_of_st d) (fun_of_st g)"
-  unfolding unit_dg_spec_st_def unit_dg_spec_def
-  by simp (rule unit_step_st_commute, simp add: sign_enter_st_commute)
-
-lemma sign_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st sign_tf_st sign_enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec sign_tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
-  by (rule unit_combine_step_st_commute)
-
-text \<open>The executable generator's abstract image is exactly the native \<open>sign_dg.dg_gen\<close>.\<close>
-
-lemma dg_gen_of_eq_sign_dg_gen:
-  "dg_gen_of (unit_dg_spec sign_tf) g bot0 s0d s0g = sign_dg.dg_gen g bot0 s0d s0g"
-proof -
-  have cmb: "dg_cmb_of (unit_dg_spec sign_tf) = sign_dg.dg_cmb"
-    by (rule ext)+ (simp add: dg_cmb_of_def sign_dg.dg_cmb_def)
-  have extra: "dg_extra_of (unit_dg_spec sign_tf) g = sign_dg.dg_extra g"
-    by (rule ext)+ (simp add: dg_extra_of_def sign_dg.dg_extra_def sign_dg.dg_enter_def)
-  show ?thesis by (simp add: dg_gen_of_def sign_dg.dg_gen_def cmb extra)
-qed
-
-subsection \<open>The concrete program and its computed solution\<close>
+subsection \<open>The concrete program and its compiled CFG\<close>
 
 text \<open>
   A minimal call-free program \<^verbatim>\<open>x := 1; y := x\<close> inside \<open>main\<close>: the body occupies
   \<open>Statement 0\<close>--\<open>Statement 2\<close> between \<open>FunctionEntry ''main''\<close> and
-  \<open>FunctionResult ''main''\<close>, and \<open>calls\<close> is empty.
+  \<open>FunctionResult ''main''\<close>, and \<open>calls\<close> is empty.  \<open>gEx_eq\<close> proves the compilation
+  equals the explicit graph, matching the source-soundness pattern in
+  \<open>Example_Interval_DG_Flagship\<close>.
 \<close>
 
+definition sign_ex_prog :: imp_prog where
+  "sign_ex_prog = program { void main() { x := 1; y := x } }"
+
+definition sign_ex_pi :: proc_table where
+  "sign_ex_pi = prog_table sign_ex_prog"
+
 definition gEx :: cfg where
+  "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+
+lemma gEx_eq:
   "gEx =
      \<lparr> intra =
          {(FunctionEntry ''main'', EA_Nop, Statement 0),
@@ -76,6 +53,7 @@ definition gEx :: cfg where
           (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
        cfg_entry = FunctionEntry ''main'' \<rparr>"
+  unfolding gEx_def sign_ex_pi_def sign_ex_prog_def by eval
 
 lemma gEx_intra:
   "intra gEx =
@@ -83,13 +61,13 @@ lemma gEx_intra:
       (Statement 0, EA_Assign ''x'' (BaseN (AExp.N 1)), Statement 1),
       (Statement 1, EA_Assign ''y'' (BaseN (AExp.V ''x'')), Statement 2),
       (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')}"
-  by (simp add: gEx_def)
+  by (simp add: gEx_eq)
 lemma gEx_calls: "calls gEx = {}"
-  by (simp add: gEx_def)
+  by (simp add: gEx_eq)
 lemma gEx_entry: "cfg_entry gEx = FunctionEntry ''main''"
-  by (simp add: gEx_def)
+  by (simp add: gEx_eq)
 lemma gEx_exit: "cfg_exit gEx = FunctionResult ''main''"
-  by (simp add: gEx_def cfg_exit_def)
+  by (simp add: gEx_eq cfg_exit_def)
 lemma gEx_finE: "finite (intra gEx)" by (simp add: gEx_intra)
 lemma gEx_finC: "finite (calls gEx)" by (simp add: gEx_calls)
 
@@ -121,20 +99,14 @@ lemma dgEx_pp_st:
   using TD_side_always_join_Interp.partial_post_solution[OF dgEx_solve_dom, of "fst dgEx_sol" "snd dgEx_sol"]
   unfolding dgEx_sol_def by simp
 
-subsection \<open>Transport to the abstract post-solution\<close>
+subsection \<open>Well-formedness of the compiled input\<close>
 
-text \<open>
-  The computed \<open>sign st\<close>-valued post-solution, mapped through \<open>fun_of_dg_st\<close>, is a
-  post-solution of the abstract \<open>sign_dg.dg_gen\<close> --- unknown identities, \<open>vars\<close>, and
-  dependencies unchanged.
-\<close>
-
-lemma dgEx_pp_abs:
-  "part_post_solution (sign_dg.dg_gen gEx (fun_of_st (bot::sign st)) (fun_of_st cinit_sign_st) (fun_of_st cinit_sign_st))
-     (cfg_exit gEx, ()) (fun_of_dg_st \<circ> snd dgEx_sol) (fst dgEx_sol)"
-  using part_post_solution_dg_st_to_abs
-          [OF sign_Hstep sign_Henter sign_Hcomb dgEx_pp_st[unfolded dgEx_eqs_def]]
-  unfolding dg_gen_of_eq_sign_dg_gen .
+lemma dgEx_wf:
+  "wf_compile_input sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+  unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
+    sign_ex_pi_def sign_ex_prog_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+      split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
@@ -161,18 +133,37 @@ lemma dgEx_cover_combine:
 lemma dgEx_sound0: "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_sign_st \<squnion> fun_of_st cinit_sign_st\<rbrakk>"
   by (simp add: fun_of_st_cinit_sign_st cinit_stores_def gamma_state_def sup.idem)
 
+subsection \<open>Source-level soundness through the registered analysis\<close>
+
 text \<open>
-  \<^bold>\<open>The end-to-end theorem.\<close> Every concrete store reaching \<open>v\<close> in the
-  interprocedural collecting semantics of the program is over-approximated by the
-  native D/G concretization of the \<^emph>\<open>solver-computed\<close> solution.
+  The registered endpoint \<open>sign_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
+  solver success \<open>dgEx_terminates_c\<close> directly into a source-level guarantee: every
+  reachable IMP2 store is bounded by the computed Sign answer at its matched program
+  point, read through the semantic accessor \<open>sign_reg.gamma\<close>.  No transport lemma,
+  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof,
+  matching the pattern in \<open>Example_Interval_DG_Flagship\<close>.
 \<close>
 
-theorem dgEx_collect_sound:
-  "ltr_collect gEx cinit_stores v \<subseteq> sign_dg_gamma (fun_of_dg_st \<circ> snd dgEx_sol) v"
-  by (rule sign_dg_post_solution_collect_sound
-        [OF dgEx_pp_abs[folded sign_dg_generator_def]
-            dgEx_cover_entry dgEx_cover_edge dgEx_cover_enter dgEx_cover_combine
-            gEx_finE gEx_finC dgEx_sound0])
+theorem dgEx_source_run_sound:
+  assumes run: "star (pstep sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
+      and init: "s \<in> cinit_stores"
+  shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
+                 \<and> t \<in> sign_reg.gamma (snd dgEx_sol) v"
+proof -
+  show ?thesis
+    unfolding dgEx_sol_def dgEx_eqs_def gEx_def
+    by (rule sign_reg.run_source_sound
+          [OF dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def]
+              dgEx_wf
+              dgEx_cover_entry[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+              dgEx_cover_edge[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+              dgEx_cover_enter[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+              dgEx_cover_combine[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+              gEx_finE[unfolded gEx_def]
+              gEx_finC[unfolded gEx_def]
+              dgEx_sound0[folded gamma_unit_def]
+              init run[unfolded gEx_def]])
+qed
 
 subsection \<open>Inspecting the computed result\<close>
 

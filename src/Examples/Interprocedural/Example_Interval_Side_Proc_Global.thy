@@ -3,19 +3,8 @@ section \<open>Example: TD\_side Interval Analysis on a Single Global Increment 
 theory Example_Interval_Side_Proc_Global
   imports "Voblint_Analysis.Interval_Side_Soundness"
           "Voblint_IMP2.IMP2_Notation"
+          Example_Inc_Proc
 begin
-
-text \<open>The analyzed program, defined locally so the example is self-contained: a single
-  procedure \<open>p\<close> increments the global \<open>Gx\<close>, \<open>main\<close> calls it once.\<close>
-definition inc_program :: imp_prog where
-  "inc_program = program {
-     int Gx;
-     void p() { Gx := Gx + 1 }
-     void main() { p() }
-   }"
-
-definition inc_pi :: proc_table where
-  "inc_pi = prog_table inc_program"
 
 text \<open>
   Interval instance of the side-effecting interprocedural witness: the same

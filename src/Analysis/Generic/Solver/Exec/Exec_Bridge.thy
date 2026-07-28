@@ -1,5 +1,5 @@
 theory Exec_Bridge
-  imports Exec_St TD_Side_Eff_Bounds TD_Side_RHS_Generator Constraint_System
+  imports Exec_Backward TD_Side_Eff_Bounds TD_Side_RHS_Generator Constraint_System
 begin
 
 section \<open>Executable equation-system refinement\<close>
@@ -36,11 +36,11 @@ lemma fun_of_st_inject:
 
 lemma restrict_local_st_combine_abs_st [simp]:
   "restrict_local_st (combine_abs_st A B) = restrict_local_st A"
-  by (simp add: combine_abs_st_def fun_of_st_inject restrict_local_combine_eq)
+  by (simp add: combine_abs_st_def fun_of_st_inject)
  
 lemma restrict_global_st_combine_abs_st [simp]:
   "restrict_global_st (combine_abs_st A B) = restrict_global_st B"
-  by (simp add: combine_abs_st_def fun_of_st_inject restrict_global_combine_eq)
+  by (simp add: combine_abs_st_def fun_of_st_inject)
  
 text \<open>Effectful executable trees use these projection identities to split combined states.\<close>
 lemma restrict_local_st_split [simp]:
@@ -114,6 +114,54 @@ where
        let res = combine_collect_abs_st dst (sc \<squnion> g) (se \<squnion> g) in
        Side () (restrict_global_st res)
          (Answer (restrict_local_st res)))))"
+
+subsection \<open>Unit-global executable transfer-record factory\<close>
+
+text \<open>
+  Executable mirror of the abstract-side @{const unit_etf_of_transfer}: builds an
+  \<open>effectful_st_transfer\<close> record from a single dispatch function and an enter function,
+  both at @{typ "'a st"}.  Domain instances (\<open>Sign_Exec\<close>, \<open>Ivl_Exec\<close>) instantiate this
+  once instead of hand-writing the six-field record.
+\<close>
+
+definition unit_etf_st_of_transfer ::
+  "(edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st)
+   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a st \<Rightarrow> 'a st)
+   \<Rightarrow> (unit, 'a st) effectful_st_transfer"
+where
+  "unit_etf_st_of_transfer tf_st enter_st = \<lparr>
+    etf_st_nop        = unit_edge_tree_st (tf_st EA_Nop),
+    etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (tf_st (EA_Assign x e))),
+    etf_st_assume     = (\<lambda>b. unit_edge_tree_st (tf_st (EA_Assume b))),
+    etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (tf_st (EA_AssumeNot b))),
+    etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st (enter_st xs es)),
+    etf_st_combine    = unit_combine_tree_st
+  \<rparr>"
+
+lemma apply_etf_st_unit_of_transfer:
+  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
+      and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  shows "apply_etf_st (unit_etf_st_of_transfer tf_st enter_st) a u = unit_edge_tree_st (tf_st a) u"
+  unfolding unit_etf_st_of_transfer_def
+  by (cases a) (simp_all add: ret_none ret_some split: option.splits)
+
+lemma etf_combine_st_unit_of_transfer:
+  "etf_combine_st (unit_etf_st_of_transfer tf_st enter_st) dst cc ex = unit_combine_tree_st dst cc ex"
+  unfolding unit_etf_st_of_transfer_def by simp
+
+lemma etf_st_enter_unit_of_transfer:
+  "etf_st_enter (unit_etf_st_of_transfer tf_st enter_st) xs es u = unit_edge_tree_st (enter_st xs es) u"
+  unfolding unit_etf_st_of_transfer_def by simp
+
+lemma etf_st_enter_exists_unit_of_transfer:
+  "\<exists>f. etf_st_enter (unit_etf_st_of_transfer tf_st enter_st) xs es u = unit_edge_tree_st f u"
+  using etf_st_enter_unit_of_transfer by blast
+
+lemma apply_etf_st_exists_unit_of_transfer:
+  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
+      and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  shows "\<exists>f. apply_etf_st (unit_etf_st_of_transfer tf_st enter_st) a u = unit_edge_tree_st f u"
+  using apply_etf_st_unit_of_transfer[OF ret_none ret_some] by blast
 
 lemma traverse_unit_edge_tree_st:
   "traverse_rhs (unit_edge_tree_st f u) \<sigma>_st =

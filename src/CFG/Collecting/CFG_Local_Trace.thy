@@ -283,10 +283,6 @@ next
   show ?case using hcaller q valid_ltr_path_nonempty[OF cv] by simp
 qed
 
-lemma caller_of_unique:
-  "caller_of t = Some c1 \<Longrightarrow> caller_of t = Some c2 \<Longrightarrow> c1 = c2"
-  by simp
-
 lemma valid_ltr_Call_path_nonempty:
   "Call caller p \<in> valid_ltr g S \<Longrightarrow> p \<noteq> []"
   using valid_ltr_path_nonempty by fastforce
@@ -493,7 +489,7 @@ next
     from uin have "u = extend t (v, s') \<or> u \<in> callers t"
       using callers_extend_subset by blast
     then show "fst ns \<in> cfg_nodes g"
-    proof
+    proof (rule disjE)
       assume u: "u = extend t (v, s')"
       have "ns \<in> set (path t) \<or> ns = (v, s')" using nsin u by auto
       then show ?thesis using intra.IH callers_refl vnode by auto
@@ -514,7 +510,7 @@ next
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "fst ns \<in> cfg_nodes g"
-    proof
+    proof (rule disjE)
       assume "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       then show ?thesis using nsin ce by auto
     next
@@ -538,7 +534,7 @@ next
                     \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "fst ns \<in> cfg_nodes g"
-    proof
+    proof (rule disjE)
       assume u: "u = Resume caller callee
                    (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
       have "ns \<in> set (path caller) \<or> fst ns = cont" using nsin u by auto
@@ -574,7 +570,7 @@ text \<open>Enlarging the initial store set only adds traces.\<close>
 lemma valid_ltr_mono_S:
   assumes "S \<subseteq> S'"
   shows "valid_ltr g S \<subseteq> valid_ltr g S'"
-proof
+proof (rule subsetI)
   fix t assume "t \<in> valid_ltr g S"
   then show "t \<in> valid_ltr g S'"
   proof (induction rule: valid_ltr.induct)
@@ -593,9 +589,9 @@ text \<open>Every trace is seeded by a single initial store: the valid set is th
   ancestry, so caller and callee share the seed --- the \<open>ret\<close> case needs only the callee.\<close>
 lemma valid_ltr_eq_UN_singleton:
   "valid_ltr g S = (\<Union>s\<in>S. valid_ltr g {s})"
-proof
+proof (rule equalityI)
   show "valid_ltr g S \<subseteq> (\<Union>s\<in>S. valid_ltr g {s})"
-  proof
+  proof (rule subsetI)
     fix t assume "t \<in> valid_ltr g S"
     then show "t \<in> (\<Union>s\<in>S. valid_ltr g {s})"
     proof (induction rule: valid_ltr.induct)
@@ -662,7 +658,7 @@ next
       using callers_extend_subset by blast
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
-    proof
+    proof (rule disjE)
       assume u: "u = extend t (v, s')"
       have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
       have "caller_of t = Some c" using cof u by simp
@@ -686,7 +682,7 @@ next
       by (simp add: callers_Call)
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
-    proof
+    proof (rule disjE)
       assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
       have c_eq: "c = caller" using cof u by simp
       have ces: "call_enter_store g (sink_node caller) (sink_store caller)
@@ -714,7 +710,7 @@ next
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
-    proof
+    proof (rule disjE)
       assume u: "u = Resume caller callee
           (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
       have cof': "caller_of caller = Some c" using cof u by simp
@@ -734,6 +730,25 @@ next
   qed
 qed
 
+(* The two conjuncts of callee_entry_invariant, specialized to u = callee (via
+   callers_refl) instead of quantified over every ancestor; downstream proofs
+   cite these directly instead of repeating the
+   [OF ..., THEN bspec, OF callers_refl, rule_format, OF ...] instantiation
+   chain and then splitting the result via THEN conjunct1/2. *)
+lemma callee_entry_invariant_keyD:
+  assumes callee_val: "callee \<in> valid_ltr g S"
+    and cof: "caller_of callee = Some caller"
+  shows "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+  using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
+  by (rule conjunct1)
+
+lemma callee_entry_invariant_call_enterD:
+  assumes callee_val: "callee \<in> valid_ltr g S"
+    and cof: "caller_of callee = Some caller"
+  shows "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
+  using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
+  by (rule conjunct2)
+
 subsection \<open>The activation-indexed context collecting\<close>
 
 text \<open>The activation-sensitive collecting is the sink stores of valid traces reaching \<open>v\<close>
@@ -743,6 +758,17 @@ definition activation_collect ::
   "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
   "activation_collect enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
+
+lemma activation_collect_I:
+  "t \<in> valid_ltr g S \<Longrightarrow> sink_node t = v \<Longrightarrow> key enterc seedc t = c
+   \<Longrightarrow> sink_store t \<in> activation_collect enterc seedc g S v c"
+  unfolding activation_collect_def by blast
+
+text \<open>Every collected state has a valid trace witness at the given activation key.\<close>
+lemma activation_collect_E:
+  assumes "s \<in> activation_collect enterc seedc g S v c"
+  obtains t where "t \<in> valid_ltr g S" "sink_node t = v" "key enterc seedc t = c" "sink_store t = s"
+  using assms unfolding activation_collect_def by blast
 
 
 

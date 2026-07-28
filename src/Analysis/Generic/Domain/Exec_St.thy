@@ -85,7 +85,7 @@ proof -
   have sub: "range (\<lambda>n::nat. replicate (Suc n) (CHR ''a'')) \<subseteq> {x. \<not> is_global x}"
     by (auto simp: is_global_def)
   have "infinite (range (\<lambda>n::nat. replicate (Suc n) (CHR ''a'')))"
-  proof
+  proof (rule notI)
     assume "finite (range (\<lambda>n::nat. replicate (Suc n) (CHR ''a'')))"
     then have "finite (UNIV::nat set)" using inj by (metis finite_imageD)
     then show False by simp
@@ -100,7 +100,7 @@ proof -
   have sub: "range (\<lambda>n::nat. replicate (Suc n) (CHR ''G'')) \<subseteq> {x. is_global x}"
     by (auto simp: is_global_def)
   have "infinite (range (\<lambda>n::nat. replicate (Suc n) (CHR ''G'')))"
-  proof
+  proof (rule notI)
     assume "finite (range (\<lambda>n::nat. replicate (Suc n) (CHR ''G'')))"
     then have "finite (UNIV::nat set)" using inj by (metis finite_imageD)
     then show False by simp
@@ -138,10 +138,10 @@ proof (cases r1; cases r2)
   fix dl1 dg1 ps1 dl2 dg2 ps2
   assume r1: "r1 = (dl1, dg1, ps1)" and r2: "r2 = (dl2, dg2, ps2)"
   show ?thesis
-  proof
+  proof (rule iffI)
     assume H: "less_eq_st_rep r1 r2"
     show "\<forall>x. fun_rep_st r1 x \<le> fun_rep_st r2 x"
-    proof
+    proof (rule allI)
       fix x
       show "fun_rep_st r1 x \<le> fun_rep_st r2 x"
       proof (cases "x \<in> set (map fst ps1) \<union> set (map fst ps2)")
@@ -195,7 +195,7 @@ lemma le_st_iff: "(s \<le> t) \<longleftrightarrow> (\<forall>x. lookup_st s x \
   by transfer (rule less_eq_st_rep_iff)
 
 instance st :: (order_bot) order
-proof
+proof intro_classes
   fix s t u :: "('a::order_bot) st"
   show "(s < t) \<longleftrightarrow> (s \<le> t \<and> \<not> t \<le> s)"
     by (simp add: less_st_def)
@@ -278,7 +278,7 @@ instance st :: (order_bot) order_bot
   by standard (rule bot_le_st)
 
 instance st :: (bounded_semilattice_sup_bot) semilattice_sup
-proof
+proof intro_classes
   fix s t u :: "('a::bounded_semilattice_sup_bot) st"
   show "s \<le> s \<squnion> t"
     by (simp add: le_st_iff)
@@ -300,7 +300,7 @@ text \<open>
 
 instantiation st :: (bounded_semilattice_sup_bot) equal begin
 definition "equal_class.equal (s :: ('a::bounded_semilattice_sup_bot) st) t \<longleftrightarrow> s \<le> t \<and> t \<le> s"
-instance proof
+instance proof intro_classes
   fix s t :: "('a::bounded_semilattice_sup_bot) st"
   show "equal_class.equal s t \<longleftrightarrow> (s = t)"
     unfolding equal_st_def by (meson antisym order_refl)
@@ -421,7 +421,7 @@ lemma widen_st_ge2:
   unfolding le_st_iff widen_st_def
   by (intro allI) (subst lookup_widen_st_aux, rule widen_ge2)
 
-instance proof
+instance proof intro_classes
   fix a b :: "('a::bounded_warrowing) st"
   show "a \<le> widen a b" by (rule widen_st_ge1)
   show "b \<le> widen a b" by (rule widen_st_ge2)
@@ -450,7 +450,7 @@ lemma narrow_st_le:
   unfolding le_st_iff narrow_st_def
   by (intro allI impI) (subst lookup_narrow_st_aux, auto intro: narrow_le simp: le_st_iff)
 
-instance proof
+instance proof intro_classes
   fix a b :: "('a::bounded_warrowing) st"
   show "b \<le> a \<Longrightarrow> b \<le> narrow a b" by (rule narrow_st_ge)
   show "b \<le> a \<Longrightarrow> narrow a b \<le> a" by (rule narrow_st_le)
@@ -525,6 +525,36 @@ lift_definition restrict_local_st :: "('a::bot) st \<Rightarrow> 'a st"
 lift_definition restrict_global_st :: "('a::bot) st \<Rightarrow> 'a st"
   is "\<lambda>(dl, dg, ps). (bot, dg, filter (\<lambda>(x, _). is_global x) ps)"
   by (auto simp: eq_st_def fun_rep_restrict_global_rep fun_eq_iff)
+
+text \<open>
+  Executable mirror of @{const enter_frame_D} (Constraint_System.thy): keep
+  globals, reset locals to a fixed value instead of @{const bot}.  Same shape
+  as @{const restrict_global_st}, parameterised over the local default so
+  every domain's own enter-frame executable construction (Sign's, Interval's)
+  is this one operation applied to its own top value.
+\<close>
+
+lemma fun_rep_enter_frame_D_rep:
+  "fun_rep_st ((\<lambda>(dl, dg, ps). (top_val, dg, filter (\<lambda>(x, _). is_global x) ps)) r)
+   = (\<lambda>x. if is_global x then fun_rep_st r x else top_val)"
+proof -
+  obtain dl dg ps where r: "r = (dl, dg, ps)" using prod_cases3 by blast
+  show ?thesis unfolding r
+    by (rule ext) (auto simp: map_of_filter_key split: option.split)
+qed
+
+lift_definition enter_frame_D_st :: "'a \<Rightarrow> ('a::bot) st \<Rightarrow> 'a st"
+  is "\<lambda>top_val (dl, dg, ps). (top_val, dg, filter (\<lambda>(x, _). is_global x) ps)"
+  by (auto simp: eq_st_def fun_rep_enter_frame_D_rep fun_eq_iff)
+
+lemma lookup_enter_frame_D_st [simp]:
+  "lookup_st (enter_frame_D_st top_val s) x =
+   (if is_global x then lookup_st s x else top_val)"
+  by transfer (simp add: fun_rep_enter_frame_D_rep)
+
+lemma fun_of_st_enter_frame_D_st:
+  "fun_of_st (enter_frame_D_st top_val s) = enter_frame_D top_val (fun_of_st s)"
+  unfolding enter_frame_D_def by (rule ext) simp
 
 definition combine_abs_st ::
     "('a::bounded_semilattice_sup_bot) st \<Rightarrow> 'a st \<Rightarrow> 'a st"

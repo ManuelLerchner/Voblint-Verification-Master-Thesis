@@ -73,7 +73,7 @@ instance ..
 end
 
 instance sign :: preorder
-proof
+proof intro_classes
   fix x y z :: sign
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
     unfolding less_sign_def less_eq_sign_def by simp
@@ -126,11 +126,6 @@ lemma join_sign_least: "sign_le a csg \<Longrightarrow> sign_le b csg \<Longrigh
 lemma join_sign_comm:  "join_sign a b = join_sign b a"                 by (cases a; cases b) simp_all
 lemma join_sign_assoc: "join_sign a (join_sign b csg) = join_sign (join_sign a b) csg"  by (cases a; cases b; cases csg) simp_all
 
-subsection \<open>Widening (identity for finite domain: widen = join)\<close>
-
-definition widen_sign_abs :: "sign => sign => sign" where
-  "widen_sign_abs a b = join_sign a b"
-
 subsection \<open>Abstract arithmetic operations\<close>
 
 subsection \<open>Typeclass instances\<close>
@@ -141,7 +136,7 @@ text \<open>
 \<close>
 
 instantiation sign :: order begin
-instance proof
+instance proof intro_classes
   fix x y :: sign
   assume "x \<le> y" "y \<le> x"
   then show "x = y"
@@ -150,7 +145,7 @@ qed
 end
 
 instantiation sign :: order_bot begin
-instance proof
+instance proof intro_classes
   fix x :: sign
   show "bot \<le> x"
     unfolding less_eq_sign_def bot_sign_def by simp
@@ -164,7 +159,7 @@ instance ..
 end
 
 instance sign :: semilattice_sup
-proof
+proof intro_classes
   fix x y z :: sign
   show "x \<le> x \<squnion> y"
     unfolding sup_sign_def less_eq_sign_def by (rule join_sign_ub1)
@@ -186,7 +181,7 @@ definition narrow_sign_td :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
 instantiation sign :: warrowing begin
   definition "widen (a :: sign) b = join_sign a b"
   definition "narrow (a :: sign) b = narrow_sign_td a b"
-instance proof
+instance proof intro_classes
   fix a b :: sign
   show "a \<le> widen a b"
     unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub1)
@@ -203,7 +198,7 @@ subsection \<open>Abstract domain instantiation\<close>
 
 instantiation sign :: sound_domain begin
 definition gamma_abs_sign [simp]: "gamma (a :: sign) = gamma_sign a"
-instance proof
+instance proof intro_classes
   show "gamma (bot :: sign) = {}"
     unfolding bot_sign_def by simp
 next

@@ -49,22 +49,6 @@ lemma combine_nest_right [simp]:
   "<s|<t|u>> = <s|u>"
   by (rule ext) simp
 
-(* Updating a local variable commutes through the locals slot. *)
-lemma combine_upd_local:
-  "\<not> is_global x \<Longrightarrow> (<s|t>)(x := v) = <s(x := v)|t>"
-  by (rule ext) auto
-
-(* Updating a global variable commutes through the globals slot. *)
-lemma combine_upd_global:
-  "is_global x \<Longrightarrow> (<s|t>)(x := v) = <s|t(x := v)>"
-  by (rule ext) auto
-
-(* Case split on the locals/globals provenance of a variable. *)
-lemma combine_cases:
-  obtains (Local) "\<not> is_global n" "<s|t> n = s n"
-        | (Global) "is_global n" "<s|t> n = t n"
-  by (cases "is_global n") auto
-
 subsection \<open>Executable examples\<close>
 
 value "is_global ''Gx''"

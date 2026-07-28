@@ -92,7 +92,7 @@ qed
 
 lemma Unwind_not_pcompletes: "\<not> pcompletes \<Pi> Unwind s t"
   unfolding pcompletes_def
-proof
+proof (rule notI)
   assume "star (pstep \<Pi>) (Unwind, s, []) (SKIP, t, [])"
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
@@ -100,7 +100,7 @@ qed
 
 lemma Return_empty_not_pcompletes: "\<not> pcompletes \<Pi> (Return e) s t"
   unfolding pcompletes_def
-proof
+proof (rule notI)
   assume "star (pstep \<Pi>) (Return e, s, []) (SKIP, t, [])"
   then obtain y where step: "pstep \<Pi> (Return e, s, []) y"
       and rest: "star (pstep \<Pi>) y (SKIP, t, [])"

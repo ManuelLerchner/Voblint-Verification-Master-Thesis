@@ -96,7 +96,7 @@ proof -
     qed
   qed
   show ?thesis
-  proof
+  proof (rule subsetI)
     fix x assume "x \<in> ltr_collect g S v0"
     then obtain u where u: "u \<in> valid_ltr g S" "sink_node u = v0" "sink_store u = x"
       unfolding ltr_collect_def by blast

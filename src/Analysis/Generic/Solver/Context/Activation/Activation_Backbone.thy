@@ -37,11 +37,11 @@ theorem activation_collect_sound:
         \<Longrightarrow> call_enter_store g cl s es
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "activation_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-proof
+proof (rule subsetI)
   fix st assume "st \<in> activation_collect enterc seedc g S v ctx"
   then obtain t where t: "t \<in> valid_ltr g S"
-    and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "st = sink_store t"
-    unfolding activation_collect_def by blast
+    and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "sink_store t = st"
+    by (rule activation_collect_E)
   have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"
     using ENTRY_G EDGE CALL COMB t by (rule valid_ltr_ctx_sound)
   then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn kc st by simp

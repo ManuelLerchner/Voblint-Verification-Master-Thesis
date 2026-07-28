@@ -100,9 +100,8 @@ text \<open>
   without placing an unbounded stack in CFG nodes.
 
   \<^const>\<open>ltr_collect\<close> forgets the activation structure and collects stores by
-  node.  \<^const>\<open>ltr_collect_keyed\<close> groups them by an abstract key, while
-  \<^const>\<open>activation_collect\<close> uses the structural activation context.  All three
-  contain only stores from valid local traces.
+  node, while \<^const>\<open>activation_collect\<close> keys the same collection by the
+  structural activation context.  Both contain only stores from valid local traces.
 \<close>
  
 subsection \<open>Procedure-aware source and CFG\<close>
@@ -163,7 +162,7 @@ text \<open>
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node/edge types, predecessor enumeration, finite code lists.
     \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Transfer} --- the concrete store transformers shared by the semantics: \<^verbatim>\<open>edge_step\<close>, \<^verbatim>\<open>edge_collect\<close>, \<^verbatim>\<open>edges_collect\<close>, \<^verbatim>\<open>combine_collect\<close>, \<^verbatim>\<open>call_enter_store\<close>.
-    \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>ltr_collect_keyed\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_gamma\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).
+    \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_gamma\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph reachability (\<^const>\<open>cfg_reaches\<close>) and the backward exit cone (\<^const>\<open>cone\<close>); these feed the cone guard.  No graph is pruned: the cone restriction lives in the abstract concretization, not in a semantics-altering transformation.
 
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every

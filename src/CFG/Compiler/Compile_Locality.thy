@@ -131,7 +131,7 @@ proof -
   have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
   from compile_E_shape[OF cp e] obtain ku where u: "u = Statement ku"
     and vshape: "v = k \<or> v = FunctionResult p \<or> (\<exists>kv. v = Statement kv)" by blast
-  have "ku \<in> frag_stmts E K" using e u unfolding frag_stmts_def by blast
+  have "ku \<in> frag_stmts E K" using frag_stmts_E_srcI[of ku a v E] e u by simp
   hence uin: "u \<in> insert k (pfn p n n')" using rng u by (auto simp: pfn_def)
   have vin: "v \<in> insert k (pfn p n n')"
   proof (cases "v = k \<or> v = FunctionResult p")
@@ -139,7 +139,7 @@ proof -
   next
     case False
     then obtain kv where v: "v = Statement kv" using vshape by blast
-    have "kv \<in> frag_stmts E K" using e v unfolding frag_stmts_def by blast
+    have "kv \<in> frag_stmts E K" using frag_stmts_E_tgtI[of u a kv E] e v by simp
     then show ?thesis using rng v False by (auto simp: pfn_def)
   qed
   from uin vin show ?thesis ..
@@ -152,7 +152,7 @@ proof -
   have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
   from compile_K_shape[OF cp e] obtain ku where u: "u = Statement ku"
     and afshape: "af = k \<or> (\<exists>kaf. af = Statement kaf)" by blast
-  have "ku \<in> frag_stmts E K" using e u unfolding frag_stmts_def by blast
+  have "ku \<in> frag_stmts E K" using frag_stmts_K_srcI[of ku ce tgt af K E] e u by simp
   hence uin: "u \<in> insert k (pfn p n n')" using rng u by (auto simp: pfn_def)
   have "af \<in> insert k (pfn p n n')"
   proof (cases "af = k")
@@ -160,7 +160,7 @@ proof -
   next
     case False
     then obtain kaf where af: "af = Statement kaf" using afshape by blast
-    have "kaf \<in> frag_stmts E K" using e af unfolding frag_stmts_def by blast
+    have "kaf \<in> frag_stmts E K" using frag_stmts_K_tgtI[of u ce tgt kaf K E] e af by simp
     then show ?thesis using rng af False by (auto simp: pfn_def)
   qed
   with uin show ?thesis ..
@@ -592,7 +592,7 @@ qed
 
 lemma compile_prog_no_result_source:
   "(FunctionResult r, a, v) \<notin> intra (compile_prog \<Pi> ps mnm main)"
-proof
+proof (rule notI)
   assume e: "(FunctionResult r, a, v) \<in> intra (compile_prog \<Pi> ps mnm main)"
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
@@ -623,6 +623,15 @@ proof -
   show ?thesis using compile_K_shape[OF cb e] by blast
 qed
 
+(* A calls-source is always a Statement, never FunctionEntry/FunctionResult; downstream
+   proofs obtain the witness directly instead of case-splitting on u and reproving the
+   two dead cases false each time. *)
+lemma compile_proc_calls_source_stmtE:
+  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+    and e: "(u, ce, tgt, af) \<in> K"
+  obtains k where "u = Statement k"
+  using compile_proc_calls_source_stmt[OF cp e] by blast
+
 lemma compile_procs_calls_source_stmt:
   assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
     and e: "(u, ce, tgt, af) \<in> K"
@@ -652,6 +661,12 @@ next
     qed
   qed
 qed
+
+lemma compile_procs_calls_source_stmtE:
+  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+    and e: "(u, ce, tgt, af) \<in> K"
+  obtains k where "u = Statement k"
+  using compile_procs_calls_source_stmt[OF cp e] by blast
 
 lemma compile_procs_call_target_declared:
   assumes comp: "compile_procs \<Pi> ps n = (n', E, K)"
@@ -738,58 +753,6 @@ proof -
   qed
 qed
 
-subsection \<open>Compiler-specific graph certificate\<close>
-
-text \<open>
-  Generic graph well-formedness permits clients with their own result-node discipline.
-  A compiled graph additionally ties entry and call targets to declarations, forbids
-  outgoing result edges, and admits only matching return actions into result nodes.
-  The fragment-local lemmas below establish ownership of ordinary sources and call
-  continuations within disjoint compiler ranges.
-\<close>
-definition compiled_cfg_wf :: "proc_table \<Rightarrow> cfg \<Rightarrow> bool" where
-  "compiled_cfg_wf \<Pi> g \<longleftrightarrow>
-     wf_cfg g \<and>
-     procs_compiled \<Pi> g \<and>
-     (\<forall>p a v. (FunctionEntry p, a, v) \<in> intra g \<longrightarrow> \<Pi> p \<noteq> None) \<and>
-     (\<forall>p a v. (FunctionResult p, a, v) \<notin> intra g) \<and>
-     (\<forall>u a p. (u, a, FunctionResult p) \<in> intra g \<longrightarrow> (\<exists>e. a = EA_Ret e p)) \<and>
-     (\<forall>u ce p af. (u, ce, FunctionEntry p, af) \<in> calls g \<longrightarrow> \<Pi> p \<noteq> None)"
-
-theorem compiled_cfg_wf_compile_prog:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
-  shows "compiled_cfg_wf \<Pi> (compile_prog \<Pi> ps mnm main)"
-  unfolding compiled_cfg_wf_def
-proof (intro conjI)
-  show "wf_cfg (compile_prog \<Pi> ps mnm main)" by (rule compile_prog_wf)
-  show "procs_compiled \<Pi> (compile_prog \<Pi> ps mnm main)"
-    by (rule procs_compiled_compile_prog[OF wf])
-  show "\<forall>p a v. (FunctionEntry p, a, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<longrightarrow> \<Pi> p \<noteq> None"
-    using compile_prog_entry_declared[OF wf] by blast
-  show "\<forall>p a v. (FunctionResult p, a, v) \<notin> intra (compile_prog \<Pi> ps mnm main)"
-    by (simp add: compile_prog_no_result_source)
-  show "\<forall>u a p. (u, a, FunctionResult p) \<in> intra (compile_prog \<Pi> ps mnm main) \<longrightarrow>
-           (\<exists>e. a = EA_Ret e p)"
-    using compile_prog_result_target by blast
-  show "\<forall>u ce p af. (u, ce, FunctionEntry p, af) \<in> calls (compile_prog \<Pi> ps mnm main) \<longrightarrow>
-           \<Pi> p \<noteq> None"
-    using compile_prog_call_target_declared[OF wf] by blast
-qed
-
-lemma compiled_cfg_wf_result_targetD:
-  assumes "compiled_cfg_wf \<Pi> g" and "(u, a, FunctionResult p) \<in> intra g"
-  obtains e where "a = EA_Ret e p"
-  using assms unfolding compiled_cfg_wf_def by blast
-
-lemma compiled_cfg_wf_entry_declaredD:
-  assumes "compiled_cfg_wf \<Pi> g" and "(FunctionEntry p, a, v) \<in> intra g"
-  shows "\<Pi> p \<noteq> None"
-  using assms unfolding compiled_cfg_wf_def by blast
-
-lemma compiled_cfg_wf_call_declaredD:
-  assumes "compiled_cfg_wf \<Pi> g" and "(u, ce, FunctionEntry p, af) \<in> calls g"
-  shows "\<Pi> p \<noteq> None"
-  using assms unfolding compiled_cfg_wf_def by blast
 
 subsection \<open>Edges stay in the activation fragment\<close>
 
@@ -798,7 +761,7 @@ lemma compile_proc_intra_source_range:
     and e: "(Statement k, a, v) \<in> E"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_E_srcI[OF e] .
   then show ?thesis using compile_proc_frag_range[OF cp] by blast
 qed
 
@@ -807,7 +770,7 @@ lemma compile_proc_calls_source_range:
     and e: "(Statement k, ce, tgt, af) \<in> K"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_K_srcI[OF e] .
   then show ?thesis using compile_proc_frag_range[OF cp] by blast
 qed
 
@@ -816,7 +779,7 @@ lemma compile_procs_intra_source_range:
     and e: "(Statement k, a, v) \<in> E"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_E_srcI[OF e] .
   then show ?thesis using compile_procs_frag_range[OF cp] by blast
 qed
 
@@ -825,7 +788,7 @@ lemma compile_procs_calls_source_range:
     and e: "(Statement k, ce, tgt, af) \<in> K"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_K_srcI[OF e] .
   then show ?thesis using compile_procs_frag_range[OF cp] by blast
 qed
 
@@ -861,23 +824,11 @@ lemma compile_procs_tail_calls_not_head_pfn:
     and e: "(u, ce, tgt, af) \<in> K'"
     and uin: "u \<in> pfn p n n1"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K'" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_procs_calls_source_stmt[OF rest e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K'" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_procs_calls_source_stmt[OF rest e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K'" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_procs_calls_source_stmtE[OF rest e])
+  have e': "(Statement k, ce, tgt, af) \<in> K'" using e u by simp
   have kr: "k \<in> {n1..<n2}" using compile_procs_calls_source_range[OF rest e'] .
-  have kh: "k \<in> {n..<n1}" using uin Statement by (auto simp: pfn_def)
+  have kh: "k \<in> {n..<n1}" using uin u by (auto simp: pfn_def)
   show False using kr kh by auto
 qed
 
@@ -912,23 +863,11 @@ lemma compile_proc_head_calls_not_tail_pfn:
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K0" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K0" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K0" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_proc_calls_source_stmtE[OF cp e])
+  have e': "(Statement k, ce, tgt, af) \<in> K0" using e u by simp
   have kh: "k \<in> {n..<n1}" using compile_proc_calls_source_range[OF cp e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  have kt: "k \<in> {m..<m'}" using uin u by (auto simp: pfn_def)
   show False using kh kt lower by auto
 qed
 
@@ -998,7 +937,7 @@ next
       have lower: "n1 \<le> m"
       proof -
         have "m \<in> frag_stmts E' K'"
-          using enttail unfolding frag_stmts_def by auto
+          using frag_stmts_E_tgtI[OF enttail] .
 
         then show ?thesis using compile_procs_frag_range[OF rest] by auto
       qed
@@ -1083,7 +1022,7 @@ next
       have lower: "n1 \<le> m"
       proof -
         have "m \<in> frag_stmts E' K'"
-          using enttail unfolding frag_stmts_def by auto
+          using frag_stmts_E_tgtI[OF enttail] .
 
         then show ?thesis using compile_procs_frag_range[OF rest] by auto
       qed
@@ -1158,23 +1097,11 @@ lemma compile_procs_head_calls_not_tail_pfn:
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K0" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_procs_calls_source_stmt[OF procs e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K0" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_procs_calls_source_stmt[OF procs e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K0" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_procs_calls_source_stmtE[OF procs e])
+  have e': "(Statement k, ce, tgt, af) \<in> K0" using e u by simp
   have kh: "k \<in> {n..<n1}" using compile_procs_calls_source_range[OF procs e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  have kt: "k \<in> {m..<m'}" using uin u by (auto simp: pfn_def)
   show False using kh kt lower by auto
 qed
 
@@ -1184,23 +1111,11 @@ lemma compile_proc_tail_calls_not_head_pfn:
     and upper: "m' \<le> n1"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K0" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K0" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K0" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_proc_calls_source_stmtE[OF cp e])
+  have e': "(Statement k, ce, tgt, af) \<in> K0" using e u by simp
   have kh: "k \<in> {n1..<n2}" using compile_proc_calls_source_range[OF cp e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  have kt: "k \<in> {m..<m'}" using uin u by (auto simp: pfn_def)
   show False using kh kt upper by auto
 qed
 

@@ -53,12 +53,6 @@ lemma wf_compile_input_decl:
 
 subsection \<open>Syntactic occurrence predicates\<close>
 
-fun has_call :: "com \<Rightarrow> bool" where
-  "has_call (Call _ _ _) = True"
-| "has_call (Seq c1 c2) = (has_call c1 \<or> has_call c2)"
-| "has_call (If _ c1 c2) = (has_call c1 \<or> has_call c2)"
-| "has_call (While _ c) = has_call c"
-| "has_call _ = False"
 
 fun returns_in :: "aexp option \<Rightarrow> com \<Rightarrow> bool" where
   "returns_in e (Return e') = (e = e')"
@@ -105,55 +99,6 @@ next
   case (Return e') then show ?case by (auto split: if_splits)
 qed auto
 
-text \<open>A call-free command compiles to an empty \<open>calls\<close> set.\<close>
-lemma compile_no_call:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> \<not> has_call c \<Longrightarrow> K = {}"
-  by (induction c arbitrary: k n n' en E K rule: com.induct)
-     (auto simp: Let_def split: prod.splits if_splits)
-lemma compile_proc_no_call:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> \<not> has_call (body decl) \<Longrightarrow> K = {}"
-  by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_no_call)
-
-text \<open>A program whose procedure bodies and main are call-free compiles to the flat
-  fragment characterized by \<open>calls = {}\<close>.\<close>
-lemma compile_procs_no_call:
-  "compile_procs \<Pi> ps n = (n', E, K)
-   \<Longrightarrow> (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> \<not> has_call (body decl)) \<Longrightarrow> K = {}"
-proof (induction ps arbitrary: n n' E K)
-  case Nil then show ?case by simp
-next
-  case (Cons p ps)
-  show ?case
-  proof (cases "\<Pi> p")
-    case None with Cons show ?thesis by simp
-  next
-    case (Some decl)
-    with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
-      by (auto split: prod.splits)
-    have "K0 = {}" using compile_proc_no_call[OF cp] Cons.prems(2) Some by auto
-    moreover have "K' = {}" using Cons.IH[OF rest] Cons.prems(2) by auto
-    ultimately show ?thesis using K by simp
-  qed
-qed
-
-theorem compile_prog_flat:
-  assumes "\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> \<not> has_call (body decl)"
-    and "\<not> has_call main"
-  shows "flat_cfg (compile_prog \<Pi> ps mnm main)"
-proof -
-  obtain n1 Eprocs Kprocs where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
-  obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
-    by (metis prod_cases3)
-  have "Kprocs = {}" using compile_procs_no_call[OF procs] assms(1) by simp
-  moreover have "Kmain = {}"
-    using compile_proc_no_call[OF mainc] assms(2) by (simp add: proc_decl_of_def)
-  ultimately show ?thesis
-    unfolding flat_cfg_def compile_prog_def by (simp add: procs mainc Let_def)
-qed
 
 subsection \<open>Statement-range disjointness of distinct procedures\<close>
 
@@ -256,67 +201,6 @@ qed
 
 subsection \<open>Public compiler invariants\<close>
 
-text \<open>Every compiled program satisfies the generic CFG well-formedness conditions.\<close>
-lemmas inv1_wf = compile_prog_wf
-
-text \<open>Every call edge targets a procedure entry node.\<close>
-theorem inv2_calls_to_entry:
-  "(u, act, ce, af) \<in> calls (compile_prog \<Pi> ps mnm main) \<Longrightarrow> \<exists>p. ce = FunctionEntry p"
-  using wf_call_targets_entry[OF compile_prog_wf] .
-
-text \<open>Procedure entry nodes are reached only through call edges.\<close>
-theorem inv3_no_intra_into_entry:
-  "(u, a, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v \<noteq> FunctionEntry q"
-  using wf_intra_not_into_entry[OF compile_prog_wf] .
-
-text \<open>A return edge for procedure \<open>p\<close> targets its matching result node.\<close>
-theorem inv4_ret_to_result:
-  "(u, EA_Ret e p, v) \<in> intra (compile_prog \<Pi> ps mnm main) \<Longrightarrow> v = FunctionResult p"
-  using edge_step_ret_target[OF compile_prog_wf] .
-
-text \<open>Each procedure has entry and result nodes keyed by its name.  The wrapper emits the entry
-  edge, and the procedure always carries some return edge into its result: the fall-through
-  \<^term>\<open>EA_Ret None\<close> from the epilogue when the body can complete normally, and otherwise an
-  explicit \<^term>\<open>EA_Ret e\<close> from inside the body (\<open>compile_returns_edge\<close>).  Distinct names yield
-  distinct nodes.\<close>
-theorem inv5_6_proc_entry_result_edges:
-  assumes "compile_proc \<Pi> p decl n = (n', E, K)"
-  shows "(\<exists>ben. (FunctionEntry p, EA_Nop, ben) \<in> E)
-       \<and> (\<exists>bex e. (bex, EA_Ret e p, FunctionResult p) \<in> E)"
-proof -
-  from assms obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
-           = (n + csize (body decl), Statement n, Eb, K)"
-    and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
-                 (if falls_through (body decl)
-                  then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
-                  else Eb)"
-    by (rule compile_procE)
-  have "\<exists>bex e. (bex, EA_Ret e p, FunctionResult p) \<in> E"
-  proof (cases "falls_through (body decl)")
-    case True then show ?thesis using E by auto
-  next
-    case False
-    then show ?thesis using compile_returns_edge[OF cb] E by auto
-  qed
-  then show ?thesis using E by auto
-qed
-
-theorem inv5_6_entry_result_distinct:
-  "p \<noteq> q \<Longrightarrow> FunctionEntry p \<noteq> FunctionEntry q \<and> FunctionResult p \<noteq> FunctionResult q"
-  by simp
-
-text \<open>Every call continuation belongs to the compiled CFG.\<close>
-theorem inv8_continuation_in_nodes:
-  "(u, act, ce, af) \<in> calls (compile_prog \<Pi> ps mnm main)
-   \<Longrightarrow> af \<in> cfg_nodes (compile_prog \<Pi> ps mnm main)"
-  using call_endpoints_in_nodes(3) .
-
-text \<open>Calls inhabit the separate \<open>calls\<close> relation.  Intra edges cannot carry call actions
-  or reach procedure entry nodes.\<close>
-theorem inv9_no_intra_call:
-  "FunctionEntry p \<notin> intra_successors (compile_prog \<Pi> ps mnm main) u"
-  using wf_no_intra_call[OF compile_prog_wf] .
 
 text \<open>A \<open>Return\<close> fragment ignores its continuation: it emits its result edge and nothing
   else, so no node exists to carry a control flow the source does not have.\<close>
@@ -324,9 +208,6 @@ theorem inv11_return_ignores_continuation:
   "compile \<Pi> p (Return e) k n = compile \<Pi> p (Return e) k' n"
   by simp
 
-text \<open>Normal fall-through reaches the procedure result through the edge emitted by
-  \<open>compile_proc\<close>.\<close>
-lemmas inv12_fallthrough = inv5_6_proc_entry_result_edges
 
 text \<open>Return branches of the same procedure converge at \<open>FunctionResult p\<close>.\<close>
 theorem inv13_multi_return_converge:
@@ -348,20 +229,6 @@ theorem inv16_entry_is_main:
   "cfg_entry (compile_prog \<Pi> ps mnm main) = FunctionEntry mnm"
   unfolding compile_prog_def by (simp add: Let_def split: prod.splits)
 
-subsection \<open>Parameter-binding exhibit: naive entry assignments are wrong\<close>
-
-text \<open>
-  Call actions retain their actual expressions because parameter binding evaluates them in
-  the caller store.  Evaluating them after \<^const>\<open>enter_state\<close> would read reset local
-  variables.  The witness below isolates this store-level distinction.
-\<close>
-lemma naive_entry_binding_wrong:
-  "\<exists>s :: store. \<exists>x. \<not> is_global x \<and> enter_state s x \<noteq> s x"
-proof (intro exI conjI)
-  show "\<not> is_global ''y''" by (simp add: is_global_def)
-  show "enter_state ((\<lambda>_. 0)(''y'' := (5 :: int))) ''y'' \<noteq> ((\<lambda>_. 0)(''y'' := (5 :: int))) ''y''"
-    by (simp add: enter_state_def is_global_def)
-qed
 
 
 end

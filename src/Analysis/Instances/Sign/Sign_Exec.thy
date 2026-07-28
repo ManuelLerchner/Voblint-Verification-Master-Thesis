@@ -14,106 +14,13 @@ text \<open>
   action; the generic bridge supplies the remaining solver transport.
 \<close>
 
-lemma fun_of_st_update:
-  "fun_of_st (update_st s x v) = (fun_of_st s)(x := v)"
-  by (rule ext) (metis fun_upd_apply lookup_update_diff lookup_update_same)
-
-subsection \<open>Assume mirror: executable backward filter on \<open>sign st\<close>\<close>
-
 text \<open>
-  Executable mirrors of the abstract backward filters @{const afilter_sign}
-  and @{const bfilter_sign}, computed on the finite-map state
-  @{typ "sign st"}.  Each commutes with its abstract counterpart through @{const fun_of_st},
-  using @{thm fun_of_st_update} for the variable write, @{thm fun_of_st_sup} for the
-  de Morgan joins, and the structural induction matching the abstract definition.
+  \<open>afilter_sign_st\<close> / \<open>bfilter_sign_st\<close> and their commutation with
+  @{const afilter_sign} / @{const bfilter_sign} through @{const fun_of_st}
+  come from \<open>Sign_Backward\<close> -- the sign specialization of the generic
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>). The
+  commutation induction is proved once there, not per domain.
 \<close>
-
-fun afilter_sign_st :: "aexp => sign => sign st => sign st" where
-    "afilter_sign_st (BaseN (AExp.V x)) a s = update_st s x (meet_sign a (lookup_st s x))"
-  | "afilter_sign_st (Plus  e1 e2) a s =
-       (let (a1, a2) = inv_plus_sign  a (aval_sign e1 (lookup_st s)) (aval_sign e2 (lookup_st s))
-        in afilter_sign_st e1 a1 (afilter_sign_st e2 a2 s))"
-  | "afilter_sign_st (Minus e1 e2) a s =
-       (let (a1, a2) = inv_minus_sign a (aval_sign e1 (lookup_st s)) (aval_sign e2 (lookup_st s))
-        in afilter_sign_st e1 a1 (afilter_sign_st e2 a2 s))"
-  | "afilter_sign_st (Times e1 e2) a s =
-       (let (a1, a2) = inv_times_sign a (aval_sign e1 (lookup_st s)) (aval_sign e2 (lookup_st s))
-        in afilter_sign_st e1 a1 (afilter_sign_st e2 a2 s))"
-  | "afilter_sign_st _ a s = s"
-
-fun bfilter_sign_st :: "bexp => bool => sign st => sign st" where
-    "bfilter_sign_st (Less e1 e2) res s =
-       (let (a1, a2) = inv_less_sign res (aval_sign e1 (lookup_st s)) (aval_sign e2 (lookup_st s))
-        in afilter_sign_st e1 a1 (afilter_sign_st e2 a2 s))"
-  | "bfilter_sign_st (Not b) res s = bfilter_sign_st b (\<not> res) s"
-  | "bfilter_sign_st (And b1 b2) True  s = bfilter_sign_st b1 True  (bfilter_sign_st b2 True  s)"
-  | "bfilter_sign_st (And b1 b2) False s = bfilter_sign_st b1 False s \<squnion> bfilter_sign_st b2 False s"
-  | "bfilter_sign_st (Or  b1 b2) True  s = bfilter_sign_st b1 True  s \<squnion> bfilter_sign_st b2 True  s"
-  | "bfilter_sign_st (Or  b1 b2) False s = bfilter_sign_st b1 False (bfilter_sign_st b2 False s)"
-  | "bfilter_sign_st (Eq  e1 e2) True  s =
-       (let a = meet_sign (aval_sign e1 (lookup_st s)) (aval_sign e2 (lookup_st s))
-        in afilter_sign_st e1 a (afilter_sign_st e2 a s))"
-  | "bfilter_sign_st _ _ s = s"
-
- 
-lemma afilter_sign_st_commute:
-  "fun_of_st (afilter_sign_st e a s) = afilter_sign e a (fun_of_st s)"
-proof (induction e arbitrary: a s)
-  case (BaseN x)
-  show ?case by (cases x; simp add: fun_of_st_update)
-next
-  case (Plus e1 e2)
-  show ?case by (simp add: Plus.IH)
-next
-  case (Minus e1 e2)
-  show ?case by (simp add: Minus.IH)
-next
-  case (Times e1 e2)
-  show ?case by (simp add: Times.IH)
-qed
-
-lemma bfilter_sign_st_commute:
-  "fun_of_st (bfilter_sign_st b res s) = bfilter_sign b res (fun_of_st s)"
-proof (induction b arbitrary: res s)
-  case (BaseB x)
-  then show ?case by simp
-next
-  case (Not b)
-  then show ?case by simp
-next
-  case (And b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: And.IH)
-  next
-    case False
-    then show ?thesis by (simp add: And.IH)
-  qed
-next
-  case (Or b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: Or.IH)
-  next
-    case False
-    then show ?thesis by (simp add: Or.IH)
-  qed
-next
-  case (Less e1 e2)
-  then show ?case by (simp add: afilter_sign_st_commute split: prod.splits)
-next
-  case (Eq e1 e2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: afilter_sign_st_commute Let_def)
-  next
-    case False
-    then show ?thesis by simp
-  qed
-qed
 
 
 definition assume_sign_st :: "bexp => sign st => sign st" where
@@ -132,23 +39,13 @@ lemma assume_not_sign_st_commute:
 
 subsection \<open>Enter mirror (reset locals to top, keep globals)\<close>
 
-lemma fun_rep_enter_sign_rep:
-  "fun_rep_st ((\<lambda>(dl, dg, ps). (STop, dg, filter (\<lambda>(x, _). is_global x) ps)) r)
-   = (\<lambda>x. if is_global x then fun_rep_st r x else STop)"
-proof -
-  obtain dl dg ps where r: "r = (dl, dg, ps)" using prod_cases3 by blast
-  show ?thesis unfolding r
-    by (rule ext) (auto simp: map_of_filter_key split: option.split)
-qed
-
-lift_definition enter_sign_st :: "sign st \<Rightarrow> sign st"
-  is "\<lambda>(dl, dg, ps). (STop, dg, filter (\<lambda>(x, _). is_global x) ps)"
-  by (auto simp: eq_st_def fun_rep_enter_sign_rep fun_eq_iff)
+definition enter_sign_st :: "sign st \<Rightarrow> sign st" where
+  "enter_sign_st = enter_frame_D_st STop"
 
 lemma enter_frame_sign_st_commute:
   "fun_of_st (enter_sign_st s) = enter_frame_sign (fun_of_st s)"
-  unfolding enter_frame_sign_def
-  by transfer (simp add: fun_rep_enter_sign_rep)
+  unfolding enter_sign_st_def enter_frame_sign_def
+  by (rule fun_of_st_enter_frame_D_st)
 
 subsection \<open>The executable sign transfer function\<close>
 
@@ -213,25 +110,17 @@ subsection \<open>The executable sign transfer function\<close>
 
 theorem sign_tf_st_commute:
   "fun_of_st (sign_tf_st a s) = apply_tf sign_tf a (fun_of_st s)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by simp
-next
-  case (EA_Assign x e)
-  then show ?thesis
-    by (simp add: sign_tf_def assign_sign_def fun_of_st_update)
-next
-  case (EA_Assume b)
-  then show ?thesis
+proof (rule apply_tf_wrap_eqI[where H = "\<lambda>f. f (fun_of_st s)"])
+  show "\<And>p. fun_of_st (sign_tf_st (EA_Ret None p) s) = fun_of_st (sign_tf_st EA_Nop s)" by simp
+  show "\<And>a p. fun_of_st (sign_tf_st (EA_Ret (Some a) p) s) = fun_of_st (sign_tf_st (EA_Assign ret_var a) s)"
+    by simp
+  show "fun_of_st (sign_tf_st EA_Nop s) = apply_tf sign_tf EA_Nop (fun_of_st s)" by simp
+  show "\<And>x e. fun_of_st (sign_tf_st (EA_Assign x e) s) = apply_tf sign_tf (EA_Assign x e) (fun_of_st s)"
+    by (simp add: sign_tf_def assign_sign_def fun_of_st_update_st)
+  show "\<And>b. fun_of_st (sign_tf_st (EA_Assume b) s) = apply_tf sign_tf (EA_Assume b) (fun_of_st s)"
     by (simp add: sign_tf_def assume_sign_st_commute)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis apply (auto simp add: sign_tf_def)
-    using assume_not_sign_st_commute by presburger
-next
-  case (EA_Ret e p)
-  then show ?thesis
-    by (cases e) (simp_all add: sign_tf_def fun_of_st_update assign_sign_def)
+  show "\<And>b. fun_of_st (sign_tf_st (EA_AssumeNot b) s) = apply_tf sign_tf (EA_AssumeNot b) (fun_of_st s)"
+    by (simp add: sign_tf_def assume_not_sign_st_commute)
 qed
 
 subsection \<open>Executable effectful transfer record\<close>
@@ -244,29 +133,24 @@ definition sign_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> si
 
 lemma sign_enter_st_commute:
   "fun_of_st (sign_enter_st xs es s) = tf_enter sign_tf xs es (fun_of_st s)"
-  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_frame_sign_st_commute)
+  by (simp add: sign_enter_st_def sign_tf_def enter_sign_def enter_D_def
+                enter_frame_sign_def enter_frame_sign_st_commute)
 
 definition sign_etf_st :: "(unit, sign st) effectful_st_transfer" where
-  "sign_etf_st = \<lparr>
-    etf_st_nop        = unit_edge_tree_st (sign_tf_st EA_Nop),
-    etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (sign_tf_st (EA_Assign x e))),
-    etf_st_assume     = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_Assume b))),
-    etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (sign_tf_st (EA_AssumeNot b))),
-    etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st (sign_enter_st xs es)),
-    etf_st_combine    = unit_combine_tree_st
-  \<rparr>"
+  "sign_etf_st = unit_etf_st_of_transfer sign_tf_st sign_enter_st"
 
 lemma sign_etf_st_edge_tree:
   "apply_etf_st sign_etf_st a u = unit_edge_tree_st (sign_tf_st a) u"
-  unfolding sign_etf_st_def by (cases a) (auto simp: sign_etf_st_def split: option.splits)
+  unfolding sign_etf_st_def
+  by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_ret_none sign_tf_st_ret_some])
 
 lemma sign_etf_st_combine_tree:
   "etf_combine_st sign_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  unfolding sign_etf_st_def by simp
+  unfolding sign_etf_st_def by (rule etf_combine_st_unit_of_transfer)
 
 lemma sign_etf_st_enter_tree:
   "etf_st_enter sign_etf_st xs es u = unit_edge_tree_st (sign_enter_st xs es) u"
-  unfolding sign_etf_st_def by simp
+  unfolding sign_etf_st_def by (rule etf_st_enter_unit_of_transfer)
 
 lemma sign_etf_st_enter_exists_unit:
   "\<And>u xs es. \<exists>f. etf_st_enter sign_etf_st xs es u = unit_edge_tree_st f u"

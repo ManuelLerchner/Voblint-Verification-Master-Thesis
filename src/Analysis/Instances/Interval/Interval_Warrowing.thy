@@ -177,7 +177,7 @@ instantiation ivl :: warrowing begin
   definition "widen (a :: ivl) b =
      (if a = bot then b else if b = bot then a else widen_ivl_core a b)"
   definition "narrow (a :: ivl) b = narrow_ivl_td a b"
-instance proof
+instance proof intro_classes
   fix a b :: ivl
   show "a \<le> widen a b"
   proof (cases "a = bot")

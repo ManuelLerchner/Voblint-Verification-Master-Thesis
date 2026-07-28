@@ -82,7 +82,7 @@ proof -
   have enter:
     "enter_sign xs es = (\<lambda>s. bind_formals_abs xs
       (map (\<lambda>e. aval_sign e s) es) (enter_frame_sign s))"
-    by (rule ext) (simp add: enter_sign_def)
+    by (rule ext) (simp add: enter_sign_def enter_D_def enter_frame_sign_def)
   show ?thesis
     unfolding sign_etf_unit_def unit_etf_of_transfer_def
     by (simp add: sign_tf_def enter)

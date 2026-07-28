@@ -1,5 +1,5 @@
 theory TD_Side_Eff_Keyed_Gen
-  imports TD_Side_Eff_Ctx_Shared TD_Side_Eff_Sound
+  imports TD_Side_Eff_Sound
 begin
 
 section \<open>Global-key tree relabelling\<close>

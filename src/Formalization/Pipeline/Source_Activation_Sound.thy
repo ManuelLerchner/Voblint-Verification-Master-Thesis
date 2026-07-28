@@ -121,8 +121,8 @@ qed
 subsection \<open>Monovariant source bridge into the trace collecting\<close>
 
 text \<open>
-  The context-forgetting specialisation projects the activation collector at trivial routing to
-  \<^const>\<open>ltr_collect_keyed\<close>, then to \<^const>\<open>ltr_collect\<close>.
+  The context-forgetting specialisation projects the activation collector at trivial routing
+  directly to \<^const>\<open>ltr_collect\<close> via \<open>activation_collect_le_ltr_collect\<close>.
 \<close>
 
 theorem source_reaches_ltr_collect:
@@ -138,10 +138,8 @@ proof -
         OF wf s0 run]
   obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
     and mem: "s \<in> activation_collect (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by meson
-  have "s \<in> ltr_collect_keyed (key (\<lambda>_ _. ()) ()) ?g S v (key (\<lambda>_ _. ()) () t)"
-    using mem by (simp add: activation_collect_eq_ltr_collect_keyed)
-  then have "s \<in> ltr_collect ?g S v"
-    by (rule subsetD[OF ltr_collect_keyed_le_collect])
+  have "s \<in> ltr_collect ?g S v"
+    using mem by (rule subsetD[OF activation_collect_le_ltr_collect])
   then show ?thesis using m by blast
 qed
 

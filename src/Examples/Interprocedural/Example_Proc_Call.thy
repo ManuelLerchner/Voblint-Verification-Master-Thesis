@@ -247,8 +247,9 @@ proof (rule allI)
   have leE: "\<And>t. t \<in> ?E \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: entry_calls_def main_cfg_calls main_prog_env_def ivl_tf_def
-                   enter_ivl_def enter_frame_ivl_def bind_formals_abs_def
-                   less_eq_ivl_def le_fun_def is_global_def)
+                   enter_ivl_def enter_frame_ivl_def enter_D_def enter_frame_D_def
+                   ivl_top_def bind_formals_abs_def less_eq_ivl_def le_fun_def
+                   is_global_def)
   have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: return_calls_def main_cfg_calls main_prog_env_def

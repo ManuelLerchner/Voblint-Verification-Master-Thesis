@@ -92,7 +92,7 @@ theorem x1_explicit_completed_run_covered:
   "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))
    \<and> x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
-proof
+proof (rule conjI)
   show "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))"
     by (rule x1_completed)

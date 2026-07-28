@@ -7,10 +7,9 @@ section \<open>Local-trace collecting semantics\<close>
 text \<open>
   The stack-faithful concrete carrier of a procedure-aware CFG is the local-trace set
   \<^const>\<open>valid_ltr\<close>.  This theory presents it as a least fixed point of an explicit
-  monotone set transformer \<open>ltr_F\<close>, defines the plain and keyed forgetful projections of
-  a trace set to a CFG node (\<open>ltr_collect\<close> / \<open>ltr_collect_keyed\<close>, the concrete and
-  context-indexed collectors), and proves the collecting equations, the
-  context-sensitive/insensitive bridge.
+  monotone set transformer \<open>ltr_F\<close>, defines the forgetful projection of a trace set to a
+  CFG node (\<open>ltr_collect\<close>, the concrete collector), and proves the collecting equations,
+  the context-sensitive/insensitive bridge to \<^const>\<open>activation_collect\<close>.
 
   \<open>ltr_F\<close> has exactly the four clauses of \<^const>\<open>valid_ltr\<close> (root, intra step, call,
   return), each reading exactly the relation for its phenomenon: \<open>intra\<close> for local
@@ -73,7 +72,7 @@ text \<open>The converse follows by \<^const>\<open>valid_ltr\<close> rule induc
   least fixed point.\<close>
 lemma valid_ltr_subset_lfp:
   "valid_ltr g S \<subseteq> lfp (ltr_F g S)"
-proof
+proof (rule subsetI)
   fix t assume "t \<in> valid_ltr g S"
   then show "t \<in> lfp (ltr_F g S)"
   proof (induction rule: valid_ltr.induct)
@@ -109,18 +108,13 @@ theorem valid_ltr_eq_lfp:
 subsection \<open>Forgetful projections\<close>
 
 text \<open>\<open>ltr_collect\<close> is the concrete collecting view: the sink stores of valid traces
-  reaching node \<open>v\<close>.  \<open>ltr_collect_keyed\<close> is the context-indexed collector, filtering
-  those by a trace reader \<open>keyf\<close>.  The key type is not required finite; a keyed bucket is
-  not claimed to be an exact activation identity.\<close>
+  reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> (\<open>CFG_Local_Trace\<close>) is the context-indexed
+  collector, filtering those by the structural activation key; the key type is not
+  required finite, so a keyed bucket is not claimed to be an exact activation identity.\<close>
 
 definition ltr_collect :: "cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set" where
   "ltr_collect g S v =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v}"
-
-definition ltr_collect_keyed ::
-  "(ltr \<Rightarrow> 'c) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
-  "ltr_collect_keyed keyf g S v c =
-     {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> keyf t = c}"
 
 text \<open>\<open>collect_result\<close> is a convenience view --- collection at a procedure result --- not a
   distinct mechanism.  Whole-program completion is \<open>collect_result g S main\<close>.\<close>
@@ -136,10 +130,6 @@ lemma ltr_collect_E:
   assumes "s \<in> ltr_collect g S v"
   obtains t where "t \<in> valid_ltr g S" "sink_node t = v" "sink_store t = s"
   using assms unfolding ltr_collect_def by blast
-
-lemma ltr_collect_keyed_le_collect:
-  "ltr_collect_keyed keyf g S v c \<subseteq> ltr_collect g S v"
-  unfolding ltr_collect_keyed_def ltr_collect_def by blast
 
 text \<open>
   \<^const>\<open>ltr_collect\<close> is closed under intra flow: extending a witness trace by one
@@ -338,27 +328,18 @@ lemma ltr_collect_Un_S:
 
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 
-text \<open>The keyed buckets tile the plain view: every trace has a key, so ranging over all keys
-  recovers the unfiltered collecting.  No finiteness assumption.\<close>
-theorem ltr_collect_keyed_Union:
-  "(\<Union>c. ltr_collect_keyed keyf g S v c) = ltr_collect g S v"
-  unfolding ltr_collect_keyed_def ltr_collect_def by blast
-
-theorem activation_collect_eq_ltr_collect_keyed:
-  "activation_collect enterc seedc g S v c
-     = ltr_collect_keyed (key enterc seedc) g S v c"
-  unfolding activation_collect_def ltr_collect_keyed_def by simp
-
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
   "activation_collect enterc seedc g S v c \<subseteq> ltr_collect g S v"
-  unfolding activation_collect_eq_ltr_collect_keyed by (rule ltr_collect_keyed_le_collect)
+  unfolding activation_collect_def ltr_collect_def by blast
 
-text \<open>Bridge (2): context-insensitive collection is the union over contexts.\<close>
+text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
+  has a key, so ranging over all keys recovers the unfiltered collecting.  No finiteness
+  assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
   "ltr_collect g S v = (\<Union>c. activation_collect enterc seedc g S v c)"
-  unfolding activation_collect_eq_ltr_collect_keyed by (rule ltr_collect_keyed_Union[symmetric])
+  unfolding activation_collect_def ltr_collect_def by blast
 
 subsection \<open>Matched returns\<close>
 

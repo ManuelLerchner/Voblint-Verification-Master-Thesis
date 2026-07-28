@@ -28,9 +28,6 @@ text \<open>A call selects the point abstraction of the callee formal in the ent
 definition ivl_enterc :: "ivl \<Rightarrow> store \<Rightarrow> ivl" where
   "ivl_enterc ctx s = ivl_decode (s ''p'')"
 
-definition ivl_combc :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "ivl_combc c1 c2 = c1"
-
 text \<open>The reader is guarded by the \<^emph>\<open>solved domain\<close> \<open>fst twice_ctx_sol\<close>: the solver
   returns a partial solution, so an unknown outside \<open>vars\<close> is an artefact of the total
   implementation function and must denote no states.  A covered \<^const>\<open>Inl\<close> slot reads
@@ -165,7 +162,7 @@ interpretation twice_dg: dg_ctx_activation Sabs twice_cfg Global route_abs_gen
     "cmb_abs twice_cfg" "extra_abs twice_cfg"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg
-proof
+proof unfold_locales
   show "finite (intra twice_cfg)" by (rule twice_finE)
 next
   show "part_post_solution

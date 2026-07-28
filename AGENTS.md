@@ -144,11 +144,33 @@ reliable one-shot gate.
   `by (rule ...)` or `cases rule: ...` over `auto elim!:` on inductive
   predicates.
 - Prefer bounded tactics such as `simp only:` and `auto simp:` with an explicit
-  lemma set over unbounded automation on large imported rule sets.
+  lemma set over unbounded automation on large imported rule sets. This governs
+  proof-site tactic calls, not whether a lemma itself carries an attribute.
+- Default to attributing a new lemma `[simp]`, `[dest]`, `[intro]`, or `[elim]`
+  when its shape naturally fits that role: a rewrite whose RHS is no more
+  complex than its LHS is `[simp]`; a one-step destruct or introduction off a
+  definition's unfolding is `[dest]` or `[intro]`. Tagging lets later call
+  sites cite the lemma by name or let `blast`/`auto` find it, instead of
+  re-unfolding the definition at each site. Leave a lemma bare only when
+  tagging it would be ambiguous or ill-suited: multiple competing rewrite
+  directions, a rule that risks looping with existing simp rules, or a fact
+  whose applicability is genuinely context-dependent.
 - Prefer structured Isar with explicit `show` subgoals over long `[OF ...]`
   chains when facts must align exactly.
 - When a subgoal resists one line of automation, hoist a helper lemma. Do not
   widen `auto` or `simp` to force it.
+- Before tagging a lemma `[simp]`, check whether its LHS pattern overlaps with
+  an existing lemma's LHS that serves a different normal form (a general
+  distributive/homomorphism law competing with a specific combine lemma over
+  the same redex is the classic case). Two rules that both match the same
+  term but stop at different points are non-confluent even when each is
+  individually true. When a batch build surfaces a real regression from such
+  a conflict, fix it at the algebra level: add the missing bridging lemma(s)
+  so every rewrite path reaches the same normal form, rather than reverting
+  the new tag. Once confluent, the general laws can carry `[simp]` again, and
+  any lemma that only restated a special case of that confluent set is dead
+  weight — delete it and its citations rather than keep it as an inert
+  corollary.
 
 ### Locale and constant shapes
 

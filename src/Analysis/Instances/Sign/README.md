@@ -11,7 +11,7 @@ are not part of the reusable instance.
 | --- | --- |
 | `Sign_Lattice.thy` | 7-element sign lattice and order operations |
 | `Sign_Arithmetic.thy` | abstract arithmetic over signs |
-| `Sign_Backward.thy` | backward guard/filter operators |
+| `Sign_Backward.thy` | backward guard/filter operators; names the sign `afilter_sign_st`/`bfilter_sign_st` executable mirror via `Exec_Backward` |
 | `Sign_Print.thy` | display support for examples and DOT output |
 | `Sign_Transfer.thy` | edge transfer record and transfer soundness |
 | `Sign_Local_Effects.thy` | local-effect helpers used by the effectful solver layer |

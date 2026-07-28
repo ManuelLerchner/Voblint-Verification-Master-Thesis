@@ -66,7 +66,7 @@ proof -
     fix u a w assume e: "(u, a, w) \<in> intra g"
     have "apply_tf tf a (env u) \<le> rhs g tf (\<squnion>) bot s0 env w"
       by (rule apply_tf_le_rhs[OF finI finC e])
-    also have "\<dots> \<le> env w" using post_fp unfolding is_post_fixpoint_def by simp
+    also have "\<dots> \<le> env w" using is_post_fixpointD[OF post_fp] .
     finally show "apply_tf tf a (env u) \<le> env w" .
   qed
   have call_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
@@ -75,7 +75,7 @@ proof -
     fix c dst fs as p cont assume e: "(c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g"
     have "tf_enter tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env (FunctionEntry p)"
       by (rule tf_enter_le_rhs[OF finI finC e])
-    also have "\<dots> \<le> env (FunctionEntry p)" using post_fp unfolding is_post_fixpoint_def by simp
+    also have "\<dots> \<le> env (FunctionEntry p)" using is_post_fixpointD[OF post_fp] .
     finally show "tf_enter tf fs as (env c) \<le> env (FunctionEntry p)" .
   qed
   have combine_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
@@ -84,7 +84,7 @@ proof -
     fix c dst fs as p cont assume e: "(c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g"
     have "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> rhs g tf (\<squnion>) bot s0 env cont"
       by (rule tf_combine_le_rhs[OF finI finC e])
-    also have "\<dots> \<le> env cont" using post_fp unfolding is_post_fixpoint_def by simp
+    also have "\<dots> \<le> env cont" using is_post_fixpointD[OF post_fp] .
     finally show "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont" .
   qed
   have entry_le: "s0 \<le> env (cfg_entry g)"

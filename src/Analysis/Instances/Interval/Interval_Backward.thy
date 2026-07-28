@@ -1,5 +1,5 @@
 theory Interval_Backward
-  imports Interval_Arithmetic "Voblint_IMP2.IMP2_Expr"
+  imports Interval_Arithmetic Exec_Backward "Voblint_IMP2.IMP2_Expr"
 begin
 
 section \<open>Interval backward filtering\<close>
@@ -38,8 +38,9 @@ text \<open>
   the upper bound of @{text n2}, and the lower bound of @{text n2} tightens to
   one above the lower bound of @{text n1}.  On the false branch (@{text "n1 \<ge> n2"}),
   @{text n1}\<open>s\<close> lower bound tightens to the lower bound of @{text n2}, and @{text n2}\<open>s\<close>
-  upper bound tightens to the upper bound of @{text n1}.  The remaining inverse
-  operators are conservative (identity) for simplicity.
+  upper bound tightens to the upper bound of @{text n1}.  Plus/minus/times
+  instantiate the shared @{const inv_conservative} (identity) instead of a
+  per-domain no-op.
 \<close>
 
 fun inv_less_ivl :: "bool => ivl => ivl => ivl * ivl" where
@@ -49,15 +50,6 @@ fun inv_less_ivl :: "bool => ivl => ivl => ivl * ivl" where
   | "inv_less_ivl False (Ivl l1 u1) (Ivl l2 u2) =
        (Ivl l1 u1 \<sqinter> Ivl l2 PlusInf,
         Ivl l2 u2 \<sqinter> Ivl MinInf u1)"
-
-fun inv_plus_ivl :: "ivl => ivl => ivl => ivl * ivl" where
-  "inv_plus_ivl _ a1 a2 = (a1, a2)"
-
-fun inv_minus_ivl :: "ivl => ivl => ivl => ivl * ivl" where
-  "inv_minus_ivl _ a1 a2 = (a1, a2)"
-
-fun inv_times_ivl :: "ivl => ivl => ivl => ivl * ivl" where
-  "inv_times_ivl _ a1 a2 = (a1, a2)"
 
 lemma inv_less_ivl_n1_ub:
   "n2 \<in> gamma_ivl (Ivl l2 u2) \<Longrightarrow> n1 < n2
@@ -84,8 +76,8 @@ lemma inv_less_ivl_sound:
   shows "n1 \<in> gamma_ivl (fst (inv_less_ivl res a1 a2))
        \<and> n2 \<in> gamma_ivl (snd (inv_less_ivl res a1 a2))"
 proof -
-  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (cases a1) auto
-  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (cases a2) auto
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
   show ?thesis
   proof (cases res)
     case True
@@ -110,10 +102,12 @@ subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation ivl_backward_domain:
     backward_domain meet_ivl aval_ivl
-                    inv_less_ivl inv_plus_ivl inv_minus_ivl inv_times_ivl
+                    inv_less_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
     and bfilter_ivl = ivl_backward_domain.bfilter
+    and afilter_ivl_st = ivl_backward_domain.afilter_st
+    and bfilter_ivl_st = ivl_backward_domain.bfilter_st
 proof unfold_locales
   fix n :: int and a b :: ivl
   assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
@@ -137,19 +131,29 @@ next
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_plus_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus_ivl r a1 a2))"
-    using H1 H2 by simp
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_minus_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus_ivl r a1 a2))"
-    using H1 H2 by simp
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_times_ivl r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times_ivl r a1 a2))"
-    using H1 H2 by simp
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
 qed
+
+text \<open>
+  Executable @{typ "ivl st"} mirror of \<open>afilter_ivl\<close> / \<open>bfilter_ivl\<close>, and its
+  commutation with the abstract filters through @{const fun_of_st}. Both come
+  from the generic @{locale backward_domain} executable mirror
+  (\<open>Exec_Backward\<close>); no per-domain induction is needed here.
+\<close>
+
+lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute
+lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
 
 lemma aval_ivl_hol_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl_hol a sigma1 \<le> aval_ivl_hol a sigma2"
@@ -167,10 +171,10 @@ lemma inv_less_ivl_mono:
   shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
        \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
 proof -
-  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (cases a1) auto
-  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (cases a2) auto
-  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (cases a1') auto
-  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (cases a2') auto
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
+  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (rule ivl_exhaustE)
+  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (rule ivl_exhaustE)
   from a1[unfolded ha1 ha1' less_eq_ivl_def] have ord1: "eint_le l1' l1" "eint_le u1 u1'" by auto
   from a2[unfolded ha2 ha2' less_eq_ivl_def] have ord2: "eint_le l2' l2" "eint_le u2 u2'" by auto
   show ?thesis
@@ -217,7 +221,7 @@ text \<open>
 context begin
 interpretation ivl_bdm:
   backward_domain_mono meet_ivl aval_ivl
-                       inv_less_ivl inv_plus_ivl inv_minus_ivl inv_times_ivl
+                       inv_less_ivl inv_conservative inv_conservative inv_conservative
 proof unfold_locales
   fix a1 a2 b1 b2 :: ivl
   assume "a1 \<le> a2" and "b1 \<le> b2"
@@ -236,18 +240,10 @@ next
 next
   fix r1 r2 x1 x2 y1 y2 :: ivl
   assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_plus_ivl r1 x1 y1) \<le> fst (inv_plus_ivl r2 x2 y2) \<and>
-        snd (inv_plus_ivl r1 x1 y1) \<le> snd (inv_plus_ivl r2 x2 y2)" by simp
-next
-  fix r1 r2 x1 x2 y1 y2 :: ivl
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_minus_ivl r1 x1 y1) \<le> fst (inv_minus_ivl r2 x2 y2) \<and>
-        snd (inv_minus_ivl r1 x1 y1) \<le> snd (inv_minus_ivl r2 x2 y2)" by simp
-next
-  fix r1 r2 x1 x2 y1 y2 :: ivl
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_times_ivl r1 x1 y1) \<le> fst (inv_times_ivl r2 x2 y2) \<and>
-        snd (inv_times_ivl r1 x1 y1) \<le> snd (inv_times_ivl r2 x2 y2)" by simp
+  thus "fst (inv_conservative r1 x1 y1) \<le> fst (inv_conservative r2 x2 y2) \<and>
+        snd (inv_conservative r1 x1 y1) \<le> snd (inv_conservative r2 x2 y2)"
+    by (simp add: inv_conservative_def)
+
 qed
 
 lemma afilter_ivl_mono:

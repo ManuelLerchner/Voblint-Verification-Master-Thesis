@@ -14,6 +14,11 @@ subsection \<open>Interval type and order\<close>
 
 datatype ivl = Ivl eint eint   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
+(* Named exhaustion, cited instead of `(cases x) auto` at every destructuring site. *)
+lemma ivl_exhaustE:
+  obtains l u where "x = Ivl l u"
+  by (cases x) auto
+
 instantiation ivl :: ord begin
 definition less_eq_ivl :: "ivl => ivl => bool" where
   "(a::ivl) <= b = (case (a, b) of (Ivl l1 u1, Ivl l2 u2) => l2 \<le> l1 \<and> u1 \<le> u2)"
@@ -29,7 +34,7 @@ instance ..
 end
 
 instantiation ivl :: order begin
-instance proof
+instance proof intro_classes
   fix x y z :: ivl
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
     unfolding less_ivl_def by simp
@@ -43,7 +48,7 @@ qed
 end
 
 instantiation ivl :: order_bot begin
-instance proof
+instance proof intro_classes
   fix x :: ivl
   show "bot \<le> x"
     unfolding less_eq_ivl_def bot_ivl_def by (cases x) simp
@@ -120,7 +125,7 @@ instance ..
 end
 
 instance ivl :: semilattice_sup
-proof
+proof intro_classes
   fix x y z :: ivl
   show "x \<le> x \<squnion> y" unfolding sup_ivl_def by (rule join_ivl_le_ub1)
   show "y \<le> x \<squnion> y" unfolding sup_ivl_def by (rule join_ivl_le_ub2)
@@ -183,7 +188,7 @@ proof (cases a; cases b; cases c)
 qed
 
 instance ivl :: semilattice_inf
-proof
+proof intro_classes
   fix x y z :: ivl
   show "x \<sqinter> y \<le> x" by (rule meet_ivl_le_lb1)
   show "x \<sqinter> y \<le> y" by (rule meet_ivl_le_lb2)
@@ -197,7 +202,7 @@ subsection \<open>Abstract domain instantiation\<close>
 
 instantiation ivl :: sound_domain begin
 definition gamma_abs_ivl [simp]: "gamma (a :: ivl) = gamma_ivl a"
-instance proof
+instance proof intro_classes
   show "gamma (bot :: ivl) = {}"
     by (simp add: gamma_ivl_bot)
 next

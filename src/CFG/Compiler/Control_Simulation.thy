@@ -877,7 +877,7 @@ lemma control_at_head_return_afters_no_Restore:
   assumes "control_at \<Pi> p c0 k n (seq_after (Return e) afters) v"
       and "source_com c0"
   shows "\<forall>a \<in> set afters. a \<noteq> Restore"
-proof
+proof (rule ballI)
   fix a
   assume ain: "a \<in> set afters"
   from control_at_source_com[OF assms] source_com_seq_afterD
@@ -1562,7 +1562,7 @@ proof -
     by (rule pstep_seq_after_headD[OF step wsk wunw])
   let ?rs = "combine_collect dst caller callee"
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
-  proof
+  proof (rule disjE)
     assume "(h', s', frs') = (SKIP, combine_assign dst (callee ret_var) (<caller|callee>), [])"
     hence h': "h' = SKIP" "s' = ?rs" "frs' = []" by (auto simp: combine_collect_def)
     have "cstep g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
@@ -1717,7 +1717,7 @@ next
   have retinner: "is_returning inner" using Nested.prems(1) by simp
   have nsk: "inner \<noteq> SKIP" using retinner by auto
   have nunw: "inner \<noteq> Unwind"
-  proof
+  proof (rule notI)
     assume "inner = Unwind"
     with Nested.hyps(1) show False by (blast dest: csim_not_unwind)
   qed
@@ -1987,7 +1987,7 @@ next
       and B: "intra_step \<Pi> (seq_after (Seq inner Restore) xs, s, frs) (B', s', frs)"
     by auto
   from snoc.IH[OF B] show ?case
-  proof
+  proof (rule disjE)
     assume "inner = SKIP \<and> (B', s', frs) = (seq_after Restore xs, s, frs)"
     then show ?case using A sc by (auto simp: seq_after_snoc)
   next
@@ -2037,7 +2037,7 @@ next
   from Nested.prems(2)
   have "intra_step \<Pi> (seq_after (Seq inner Restore) afters, s0, frs0 @ [Frame caller dst]) src'" .
   from intra_step_seq_after_seq_restore[OF this] show ?case
-  proof
+  proof (rule disjE)
     assume fall: "inner = SKIP \<and> src' = (seq_after Restore afters, s0, frs0 @ [Frame caller dst])"
     then have innerSKIP: "inner = SKIP" and src': "src' = (seq_after Restore afters, s0, frs0 @ [Frame caller dst])"
       by auto

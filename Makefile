@@ -13,7 +13,10 @@ TD_PATCH        := vendor/td-verification.patch
 
 AC_DIR          := vendor/autocorrode
 
-.PHONY: all vendor bootstrap build html jedit clean clean-vendor update-autocorrode refresh-td-patch
+LINTER_DIR      := /tmp/isabelle-linter
+LINTER_TAG      := Isabelle2025-2-v1.0.0
+
+.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch
 
 all: build
 
@@ -64,6 +67,19 @@ html: vendor
 	cp -R "$(ISABELLE_HOME_USER)/browser_info/." "$(HTML_DIR)/"
 	touch "$(HTML_DIR)/.nojekyll"
 	@echo "Open $(HTML_DIR)/Unsorted/$(SESSION)/index.html"
+
+# Style-lint our own sessions with the community isabelle-linter
+# (https://github.com/isabelle-prover/isabelle-linter). Installs the CLI-only
+# component on first run (cached across steps by $(LINTER_DIR)); reuses
+# whatever heaps are already built, so run this after `build`/`html` in the
+# same environment rather than cold. -f error fails the build on any
+# error-severity finding -- notably unfinished_proof (sorry/<proof>) and the
+# rest of the afp_mandatory bundle.
+lint: vendor
+	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
+	@test -d $(LINTER_DIR) || git clone --depth 1 --branch $(LINTER_TAG) https://github.com/isabelle-prover/isabelle-linter $(LINTER_DIR)
+	$(ISABELLE) components -u $(LINTER_DIR)/linter_base
+	$(ISABELLE) lint -v -d $(AFP) -d $(TD_DIR) -D . -o lint_bundles=default,afp_mandatory -f error $(SESSIONS)
 
 # Launch jEdit with the right session roots loaded.
 jedit: vendor

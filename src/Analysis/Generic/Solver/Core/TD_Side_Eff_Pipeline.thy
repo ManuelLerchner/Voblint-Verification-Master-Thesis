@@ -58,7 +58,7 @@ lemma td_cfg_side_solver_eff_gen:
   assumes enter_static: "\<And>cl fs as. static_deps (etf_enter etf fs as cl)"
   assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
   shows "td_cfg_side_solver_eff g etf bot0 s0 gseed"
-proof
+proof unfold_locales
   show "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_is_mono_eq_gen[OF edge_mono enter_mono comb_mono])
   show "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"

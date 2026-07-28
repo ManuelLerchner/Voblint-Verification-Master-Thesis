@@ -5,24 +5,13 @@ theory Example_Side_Proc_Global
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_IMP2.IMP2_Notation"
+    Example_Inc_Proc
 begin
 
 text \<open>
   Side-effecting interprocedural witness: \<open>inc_pi\<close> with a single call to
   procedure p. Its soundness uses the effectful side TD solver.
 \<close>
-
-text \<open>The analyzed program, defined locally so the example is self-contained: a single
-  procedure \<open>p\<close> increments the global \<open>Gx\<close>, \<open>main\<close> calls it once.\<close>
-definition inc_program :: imp_prog where
-  "inc_program = program {
-     int Gx;
-     void p() { Gx := Gx + 1 }
-     void main() { p() }
-   }"
-
-definition inc_pi :: proc_table where
-  "inc_pi = prog_table inc_program"
 
 (* A non-trivial initial state: every variable -- including the globals --
    starts at STop, not bot.  The entry seeds the initial globals into the

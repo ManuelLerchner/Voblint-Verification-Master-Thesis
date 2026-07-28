@@ -45,9 +45,8 @@ and resume constructors preserve the correlation between a completed callee
 and its immediate caller.
 
 `ltr_collect` projects valid traces to stores at each node.
-`ltr_collect_keyed` groups those stores by an abstract key.
-`activation_collect` uses the activation context required by context-sensitive
-analyses.
+`activation_collect` groups those same stores by the structural activation
+context required by context-sensitive analyses.
 
 ## Equation soundness
 

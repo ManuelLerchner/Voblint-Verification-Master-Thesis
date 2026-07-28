@@ -67,6 +67,33 @@ lemma apply_tf_EA_Ret_Some:
   "apply_tf tf (EA_Ret (Some a) p) = apply_tf tf (EA_Assign ret_var a)"
   by (simp add: fun_eq_iff)
 
+text \<open>Closure principle for any family built by applying a single transfer function
+  and post-processing the result the same way at every action. @{const apply_tf}
+  already reduces \<open>EA_Ret\<close> to \<open>EA_Nop\<close> / \<open>EA_Assign\<close> unconditionally
+  (@{thm [source] apply_tf_EA_Ret_None} / @{thm [source] apply_tf_EA_Ret_Some}); \<open>F\<close> is
+  schematic, so it needs the same reduction as an explicit hypothesis (\<open>ret_none\<close> /
+  \<open>ret_some\<close>) -- every family in this codebase reuses the underlying assignment transfer
+  for a value return, so the hypothesis is free to discharge at each call site.
+  Deliberately left untagged: F and H are schematic, so tagging this
+  \<open>[simp]\<close>/\<open>[dest]\<close>/\<open>[intro]\<close> would let it fire against any equality of this shape.\<close>
+lemma apply_tf_wrap_eqI:
+  fixes tf :: "'a domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'y"
+    and H :: "('a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> 'y"
+  assumes ret_none: "\<And>p. F (EA_Ret None p) = F EA_Nop"
+    and ret_some: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
+    and nop: "F EA_Nop = H (apply_tf tf EA_Nop)"
+    and assign: "\<And>x e. F (EA_Assign x e) = H (apply_tf tf (EA_Assign x e))"
+    and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
+    and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
+  shows "F a = H (apply_tf tf a)"
+proof (cases a)
+  case (EA_Ret e p)
+  then show ?thesis
+    using ret_none ret_some nop assign
+    by (metis apply_tf_EA_Ret_None apply_tf_EA_Ret_Some option.collapse)
+qed (simp_all add: assms)
+
 subsection \<open>Abstract join over a set\<close>
 
 text \<open>
@@ -395,6 +422,68 @@ next
 qed
 
 text \<open>
+  Generic procedure-entry frame: reset locals to a fixed, fully-imprecise
+  \<open>top_val\<close>, keep globals, then bind the formals via @{const bind_formals_abs}.
+  Every domain's own enter-frame construction (Sign's @{text enter_frame_sign},
+  Interval's @{text enter_frame_ivl}) is this same shape, differing only in
+  which value stands for "unknown" -- so this is parameterised over that one
+  value rather than duplicated per domain.
+\<close>
+definition enter_frame_D :: "'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "enter_frame_D top_val \<sigma> = (\<lambda>x. if is_global x then \<sigma> x else top_val)"
+
+lemma enter_frame_D_sound:
+  fixes top_val :: "'a::sound_domain"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
+  shows "enter_state s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
+  unfolding gamma_state_def enter_frame_D_def enter_state_def
+  using gamma_stateD[OF gs] top_full by auto
+
+lemma enter_frame_D_mono:
+  fixes top_val :: "'a::order"
+  assumes "\<sigma>1 \<le> \<sigma>2"
+  shows "enter_frame_D top_val \<sigma>1 \<le> enter_frame_D top_val \<sigma>2"
+proof (rule le_funI)
+  fix x
+  show "enter_frame_D top_val \<sigma>1 x \<le> enter_frame_D top_val \<sigma>2 x"
+  proof (cases "is_global x")
+    case True
+    with assms show ?thesis unfolding enter_frame_D_def by (simp add: le_funD)
+  next
+    case False
+    then show ?thesis unfolding enter_frame_D_def by simp
+  qed
+qed
+
+definition enter_D ::
+  "'a \<Rightarrow> (aexp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> aexp list
+   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "enter_D top_val aval_abs xs es \<sigma> =
+     bind_formals_abs xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D top_val \<sigma>)"
+
+lemma enter_D_sound:
+  fixes top_val :: "'a::sound_domain"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
+    and vals: "list_all2 (\<lambda>v a. v \<in> gamma a)
+                 (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+           \<in> \<lbrakk>enter_D top_val aval_abs xs es \<sigma>\<rbrakk>"
+proof -
+  have base: "enter_state s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
+    by (rule enter_frame_D_sound[OF gs top_full])
+  from bind_formals_abs_sound[OF base vals]
+  show ?thesis unfolding enter_D_def .
+qed
+
+lemma enter_D_mono:
+  fixes top_val :: "'a::order"
+  assumes base: "\<sigma>1 \<le> \<sigma>2"
+    and vals: "list_all2 (\<le>) (map (\<lambda>e. aval_abs e \<sigma>1) es) (map (\<lambda>e. aval_abs e \<sigma>2) es)"
+  shows "enter_D top_val aval_abs xs es \<sigma>1 \<le> enter_D top_val aval_abs xs es \<sigma>2"
+  unfolding enter_D_def
+  by (rule bind_formals_abs_mono[OF enter_frame_D_mono[OF base] vals])
+
+text \<open>
   Abstract counterpart of @{const combine_assign}: write the callee's return slot
   into the caller's destination, or leave the caller untouched when the call
   discards its result.
@@ -589,6 +678,13 @@ where
   "is_post_fixpoint g tf join_abs bot_abs s0 env =
      (\<forall>v. rhs g tf join_abs bot_abs s0 env v \<le> env v)"
 
+(* The pointwise instance is_post_fixpoint_def unfolds to; downstream
+   proofs cite this instead of re-unfolding the quantified definition. *)
+lemma is_post_fixpointD [dest]:
+  "is_post_fixpoint g tf join_abs bot_abs s0 env
+   \<Longrightarrow> rhs g tf join_abs bot_abs s0 env v \<le> env v"
+  unfolding is_post_fixpoint_def by simp
+
 
 lemma sup_fold_ge_state:
   assumes "finite (A :: 'a::bounded_semilattice_sup_bot abs_state set)"
@@ -670,6 +766,68 @@ locale sound_transfer =
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_combine:
     "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+
+text \<open>Fully-applied destructors for the five raw \<forall>-quantified assumptions above;
+  cited instead of the [rule_format, OF ...] instantiation chain at every call
+  site (or, outside a sound_transfer context, sound_transfer.tf_sound_*D[OF ...]).\<close>
+context sound_transfer
+begin
+
+lemma tf_sound_assignD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  using tf_sound_assign by blast
+
+lemma tf_sound_assumeD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+  using tf_sound_assume by blast
+
+lemma tf_sound_assume_notD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+  using tf_sound_assume_not by blast
+
+lemma tf_sound_enterD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+  using tf_sound_enter by blast
+
+lemma tf_sound_combineD:
+  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+  using tf_sound_combine by blast
+
+end
+
+text \<open>
+  Discharges @{locale sound_transfer} from the five fully-applied soundness
+  facts a domain proves anyway (matching @{text tf_sound_assignD} etc.'s
+  shape), plus a check that @{const tf_combine} is the standard @{const
+  combine_abs}. Every domain's @{text combine} field is @{const combine_abs}
+  today (verified for Sign and Interval); making that a checked premise here
+  turns a silently-repeated per-domain proof of @{text combine_states_sound}
+  into a required, visible fact. A domain with a genuinely different combine
+  cannot use this rule and falls back to `unfold_locales` directly, as before.
+\<close>
+lemma sound_transferI:
+  fixes tf :: "'a::sound_domain domain_transfer"
+  assumes assign: "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    and assm: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    and assm_not: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    and enter: "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    and combine: "tf_combine tf = combine_abs"
+  shows "sound_transfer tf"
+proof unfold_locales
+  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    using assign by blast
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    using assm by blast
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    using assm_not by blast
+  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    using enter by blast
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+    unfolding combine using combine_states_sound by blast
+qed
 
 
 subsection \<open>Effectful transfer function record\<close>
@@ -930,6 +1088,16 @@ where
   "se_constraint_holds t \<sigma> u \<equiv>
      traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<and> sides_of_rhs t \<sigma> \<le> \<sigma>"
 
+(* The two halves of se_constraint_holds, split out so call sites can cite
+   the half they need instead of re-unfolding the conjunction. *)
+lemma se_constraint_holds_local [dest]:
+  "se_constraint_holds t \<sigma> u \<Longrightarrow> traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
+  unfolding se_constraint_holds_def by simp
+
+lemma se_constraint_holds_sides [dest]:
+  "se_constraint_holds t \<sigma> u \<Longrightarrow> sides_of_rhs t \<sigma> \<le> \<sigma>"
+  unfolding se_constraint_holds_def by simp
+
 text \<open>
   A post-solution covers the local answer and subsumes every emitted side
   contribution.
@@ -959,9 +1127,8 @@ lemma se_constraint_holds_imp_etf_full_le_env:
   assumes "se_constraint_holds t \<sigma> u"
   shows "etf_full t \<sigma> \<le> \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
 proof -
-  have loc: "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
-    and sid: "sides_of_rhs t \<sigma> \<le> \<sigma>"
-    using assms unfolding se_constraint_holds_def by auto
+  have loc: "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)" using assms by (rule se_constraint_holds_local)
+  have sid: "sides_of_rhs t \<sigma> \<le> \<sigma>" using assms by (rule se_constraint_holds_sides)
   have "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
     by (rule all_sides_le_glob_env_sides)
   also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono[OF sid])

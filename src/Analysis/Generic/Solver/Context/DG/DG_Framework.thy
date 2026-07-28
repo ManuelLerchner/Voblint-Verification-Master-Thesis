@@ -49,7 +49,7 @@ instance ..
 end
 
 instance dg_state :: (order, order) order
-proof
+proof intro_classes
   fix x y z :: "('a, 'b) dg_state"
   show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x" by (simp add: less_dg_state_def)
   show "x \<le> x" by (simp add: less_eq_dg_state_def)

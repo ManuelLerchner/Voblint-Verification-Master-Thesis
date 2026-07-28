@@ -115,7 +115,7 @@ lemma unit_combine_step_st_commute:
     unit_dg_spec_def unit_combine_step_env_def unit_combine_step_assign_def
   by (simp add: Let_def fun_of_st_sup fun_of_st_restrict_local_st fun_of_st_restrict_global_st
                 fun_of_st_combine_abs_st fun_of_st_combine_assign_abs_st
-                restrict_local_combine_eq restrict_global_combine_eq combine_abs_restrict)
+                combine_abs_eq_restrict)
 
 lemma dg_spec_step_unit_st:
   assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"

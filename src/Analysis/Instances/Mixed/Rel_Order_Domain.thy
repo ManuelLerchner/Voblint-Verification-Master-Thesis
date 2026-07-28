@@ -62,7 +62,7 @@ definition bot_relc :: relc where
   "bot_relc = Bot"
 
 instance
-proof
+proof intro_classes
   fix x y z :: relc
   show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x" by (simp add: less_relc_def)
   show "x \<le> x" by (cases x) simp_all
@@ -95,7 +95,7 @@ definition narrow_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where
   "narrow_relc a b = b"
 
 instance
-proof
+proof intro_classes
   fix a b :: relc
   show "a \<le> a \<nabla> b" by (simp add: widen_relc_def)
   show "b \<le> a \<nabla> b" by (simp add: widen_relc_def)
@@ -436,7 +436,7 @@ lemma dgs_combine_rel_sound:
 subsection \<open>The interpretation\<close>
 
 interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel
-proof
+proof unfold_locales
   fix d d' :: relc and g g' :: relc
   show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_rel d g \<subseteq> gammaDG_rel d' g'"
     by (rule gammaDG_rel_mono)
