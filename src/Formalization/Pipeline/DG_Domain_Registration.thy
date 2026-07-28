@@ -3,6 +3,7 @@ theory DG_Domain_Registration
     Run_Analysis_Sound
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Analysis.Sign_Exec"
+    "Voblint_Analysis.Parity_Exec"
 begin
 
 section \<open>Registered diagonal analyses\<close>
@@ -29,6 +30,14 @@ interpretation sign_reg:
   by unfold_locales
      (rule sign_is_sound_transfer sign_tf_st_commute sign_enter_st_commute
            sign_tf_st_ret_none sign_tf_st_ret_some
+           TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+
+interpretation parity_reg:
+  unit_dg_exec_analysis parity_tf parity_tf_st parity_enter_st
+    "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
+  by unfold_locales
+     (rule parity_is_sound_transfer parity_tf_st_commute parity_enter_st_commute
+           parity_tf_st_ret_none parity_tf_st_ret_some
            TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 
 end
