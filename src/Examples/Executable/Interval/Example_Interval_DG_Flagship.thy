@@ -68,8 +68,8 @@ text \<open>
   The analysis must \<^emph>\<open>discover\<close> the bound, not assume it.
 \<close>
 
-definition flagship_prog :: "IMP2_Proc.com" where
-  "flagship_prog = imp \<lbrakk> x := 0; while (x < 20) { x := x + 1 } \<rbrakk>"
+definition flagship_prog :: imp_prog where
+  "flagship_prog = program { void main() { x := 0; while (x < 20) { x := x + 1 } } }"
 
 subsection \<open>CFG construction\<close>
 
@@ -86,10 +86,10 @@ text \<open>The declaration environment holds exactly \<open>main\<close>: there
   \<^const>\<open>wf_compile_input\<close> requires the entry procedure to be declared.\<close>
 
 definition flagship_pi :: proc_table where
-  "flagship_pi = Map.empty(''main'' \<mapsto> proc_decl_of [] flagship_prog)"
+  "flagship_pi = prog_table flagship_prog"
 
 definition flagship_cfg :: cfg where
-  "flagship_cfg = compile_prog flagship_pi [] ''main'' flagship_prog"
+  "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
 
 lemma flagship_cfg_eq:
   "flagship_cfg =
@@ -234,14 +234,15 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>
 
-lemma flagship_wf: "wf_compile_input flagship_pi [] ''main'' flagship_prog"
+lemma flagship_wf:
+  "wf_compile_input flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     flagship_pi_def flagship_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
       split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "star (pstep flagship_pi) (flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores"
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> ivl_reg.gamma (snd flagship_sol) v"
@@ -308,10 +309,10 @@ definition flagship_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope Map.empty [] ''main'' flagship_prog
+        scope_locals (compiled_procedure_scope Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope Map.empty [] ''main'' flagship_prog
+        scope_return_slot (compiled_procedure_scope Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
@@ -323,7 +324,7 @@ definition flagship_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program Map.empty [] flagship_prog)
+      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog))
     \<rparr>"
 
 definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where

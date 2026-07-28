@@ -21,11 +21,10 @@ text \<open>
   The example uses the trace-native post-fixpoint soundness theorem.
 \<close>
 
-definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog = imp \<lbrakk>
-     x := 0;
-     while (x < 20) { x := x + 1 }
-   \<rbrakk>"
+definition loop_prog :: imp_prog where
+  "loop_prog = program {
+     void main() { x := 0; while (x < 20) { x := x + 1 } }
+   }"
 
 definition loop_cfg :: cfg where
   "loop_cfg =
@@ -40,7 +39,7 @@ definition loop_cfg :: cfg where
        cfg_entry = FunctionEntry ''main'' \<rparr>"
 
 lemma loop_cfg_compiles:
-  "loop_cfg = compile_prog Map.empty [] ''main'' loop_prog"
+  "loop_cfg = compile_prog (prog_table loop_prog) (prog_procs loop_prog) prog_main_name (prog_main loop_prog)"
   by eval
 
 lemma loop_cfg_entry [simp]: "cfg_entry loop_cfg = FunctionEntry ''main''"

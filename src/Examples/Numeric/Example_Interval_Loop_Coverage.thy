@@ -31,15 +31,15 @@ text \<open>
   @{text "Exec_Ivl_Run"}.
 \<close>
 
-definition loop_prog :: "IMP2_Proc.com" where
-  "loop_prog = imp \<lbrakk>
-     x := 0;
-     while (x < 20) { x := x + 1 }
-   \<rbrakk>"
+definition loop_prog :: imp_prog where
+  "loop_prog = program {
+     void main() { x := 0; while (x < 20) { x := x + 1 } }
+   }"
 
 subsection \<open>The compiled CFG\<close>
 
-abbreviation "loop_cfg \<equiv> compile_prog Map.empty [] ''main'' loop_prog"
+abbreviation "loop_cfg \<equiv>
+  compile_prog (prog_table loop_prog) (prog_procs loop_prog) prog_main_name (prog_main loop_prog)"
 
 lemma loop_cfg_full:
   "loop_cfg =
