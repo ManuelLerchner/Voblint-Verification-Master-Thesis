@@ -36,11 +36,11 @@ lemma fun_of_st_inject:
 
 lemma restrict_local_st_combine_abs_st [simp]:
   "restrict_local_st (combine_abs_st A B) = restrict_local_st A"
-  by (simp add: combine_abs_st_def fun_of_st_inject restrict_local_combine_eq)
+  by (simp add: combine_abs_st_def fun_of_st_inject)
  
 lemma restrict_global_st_combine_abs_st [simp]:
   "restrict_global_st (combine_abs_st A B) = restrict_global_st B"
-  by (simp add: combine_abs_st_def fun_of_st_inject restrict_global_combine_eq)
+  by (simp add: combine_abs_st_def fun_of_st_inject)
  
 text \<open>Effectful executable trees use these projection identities to split combined states.\<close>
 lemma restrict_local_st_split [simp]:

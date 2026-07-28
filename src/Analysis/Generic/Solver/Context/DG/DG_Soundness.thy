@@ -120,6 +120,14 @@ lemma gamma_dg_mono:
   using gamma_state_mono[OF assms(1)] gamma_state_mono[OF assms(2)]
   unfolding gamma_dg_def by blast
 
+(* Pointwise duals of gamma_dg_le_D / gamma_dg_le_G, for call sites that need
+   the per-element fact rather than the set inclusion. *)
+lemma gamma_dgD1 [dest]: "s \<in> gamma_dg d g \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk>"
+  using gamma_dg_le_D by blast
+
+lemma gamma_dgD2 [dest]: "s \<in> gamma_dg d g \<Longrightarrow> s \<in> \<lbrakk>g\<rbrakk>"
+  using gamma_dg_le_G by blast
+
 
 
 subsection \<open>Analysis-parametric heterogeneous soundness\<close>
@@ -204,6 +212,14 @@ definition dg_gamma ::
    \<Rightarrow> pp \<Rightarrow> store set"
 where
   "dg_gamma sigma v = gammaDG (dg_D sigma v) (dg_G sigma)"
+
+(* Dest/intro pair for the dg_gamma/gammaDG bridge, cited at the postfix
+   soundness call sites below instead of re-unfolding dg_gamma_def at each. *)
+lemma dg_gammaD [dest]: "s \<in> dg_gamma sigma v \<Longrightarrow> s \<in> gammaDG (dg_D sigma v) (dg_G sigma)"
+  unfolding dg_gamma_def by simp
+
+lemma dg_gammaI [intro]: "s \<in> gammaDG (dg_D sigma v) (dg_G sigma) \<Longrightarrow> s \<in> dg_gamma sigma v"
+  unfolding dg_gamma_def by simp
 
 definition dg_trees ::
   "cfg \<Rightarrow> pp \<Rightarrow>
@@ -342,14 +358,14 @@ proof -
     "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
       eq (dg_gen g bot0 s0d s0g) (v, ()) sigma
         \<le> sigma (Inl (v, ()))"
-    using part_post_solution_imp_se_constraint_holds[OF pp]
-    unfolding se_constraint_holds_def by blast
+    using se_constraint_holds_local[OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    by blast
   have sides_le:
     "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
       sides_of_rhs (dg_gen g bot0 s0d s0g (v, ()))
         sigma \<le> sigma"
-    using part_post_solution_imp_se_constraint_holds[OF pp]
-    unfolding se_constraint_holds_def by blast
+    using se_constraint_holds_sides[OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    by blast
 
   have entryD: "s0d \<le> dg_D sigma (cfg_entry g)"
   proof -
@@ -588,7 +604,7 @@ proof -
       gammaDG (dg_D sigma (cfg_entry g)) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
   then show ?thesis
-    using sound0 unfolding dg_gamma_def by blast
+    using sound0 dg_gammaI by blast
 qed
 
 lemma dg_postfix_gamma_edge:
@@ -627,7 +643,7 @@ proof -
       gammaDG (dg_D sigma w) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
   then show "s \<in> dg_gamma sigma w"
-    using out unfolding dg_gamma_def by blast
+    using out dg_gammaI by blast
 qed
 
 lemma dg_postfix_gamma_call:
@@ -640,7 +656,7 @@ proof -
       "dgs_enter S pars args (dg_D sigma u) (dg_G sigma) = (g', d')"
     by (cases "dgs_enter S pars args (dg_D sigma u) (dg_G sigma)") blast
   have sin': "s \<in> gammaDG (dg_D sigma u) (dg_G sigma)"
-    using sin unfolding dg_gamma_def .
+    using dg_gammaD[OF sin] .
   have out0:
       "call_enter (CallEdge dst pars args) s \<in>
         (case dgs_enter S pars args (dg_D sigma u) (dg_G sigma) of
@@ -667,7 +683,7 @@ proof -
       gammaDG (dg_D sigma (FunctionEntry p)) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
   then show "call_enter (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
-    using out unfolding dg_gamma_def by blast
+    using out dg_gammaI by blast
 qed
 
 lemma dg_postfix_gamma_combine:
@@ -683,9 +699,9 @@ proof -
     by (cases "dgs_combine S dst (dg_D sigma cl) (dg_D sigma (FunctionResult p))
           (dg_G sigma)") blast
   have sin': "s \<in> gammaDG (dg_D sigma cl) (dg_G sigma)"
-    using sin unfolding dg_gamma_def .
+    using dg_gammaD[OF sin] .
   have tin': "t \<in> gammaDG (dg_D sigma (FunctionResult p)) (dg_G sigma)"
-    using tin unfolding dg_gamma_def .
+    using dg_gammaD[OF tin] .
   have out0:
       "combine_collect dst s t \<in>
         (case dgs_combine S dst (dg_D sigma cl) (dg_D sigma (FunctionResult p))
@@ -708,7 +724,7 @@ proof -
       gammaDG (dg_D sigma cont) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
   then show "combine_collect dst s t \<in> dg_gamma sigma cont"
-    using out unfolding dg_gamma_def by blast
+    using out dg_gammaI by blast
 qed
 
 
@@ -764,10 +780,10 @@ lemma gamma_dg_combine_sound:
   shows "combine_collect dst s t \<in>
            (case dgs_combine (indep_dg_spec tfD tfG) dst dc de g of (g', d') \<Rightarrow> gamma_dg d' g')"
 proof -
-  from sc have sc': "s \<in> \<lbrakk>dc\<rbrakk>" and sg: "s \<in> \<lbrakk>g\<rbrakk>"
-    unfolding gamma_dg_def by blast+
-  from tc have tc': "t \<in> \<lbrakk>de\<rbrakk>" and tg: "t \<in> \<lbrakk>g\<rbrakk>"
-    unfolding gamma_dg_def by blast+
+  have sc': "s \<in> \<lbrakk>dc\<rbrakk>" using gamma_dgD1[OF sc] .
+  have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
+  have tc': "t \<in> \<lbrakk>de\<rbrakk>" using gamma_dgD1[OF tc] .
+  have tg: "t \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF tc] .
   have d_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst dc de\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   have g_sound: "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst g g\<rbrakk>"
@@ -784,8 +800,8 @@ lemma gamma_dg_enter_sound:
   shows "call_enter (CallEdge dst pars args) s \<in>
            (case dgs_enter (indep_dg_spec tfD tfG) pars args dc g of (g', d') \<Rightarrow> gamma_dg d' g')"
 proof -
-  from sc have sc': "s \<in> \<lbrakk>dc\<rbrakk>" and sg: "s \<in> \<lbrakk>g\<rbrakk>"
-    unfolding gamma_dg_def by blast+
+  have sc': "s \<in> \<lbrakk>dc\<rbrakk>" using gamma_dgD1[OF sc] .
+  have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
   have d_sound: "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfD pars args dc\<rbrakk>"
     using sound_transfer.tf_sound_enter[OF soundD, rule_format, OF sc']
     by (simp add: call_enter_CallEdge)
@@ -840,10 +856,8 @@ lemma gamma_unit_mono:
   unfolding gamma_unit_def
   by (rule gamma_state_mono) (rule sup_mono[OF assms])
 
-lemma combine_abs_restrict:
-  "combine_abs d e = restrict_local d \<squnion> restrict_global e"
-  unfolding combine_abs_def restrict_local_def restrict_global_def sup_fun_def
-  by (rule ext) simp
+lemma gamma_unitD [dest]: "s \<in> gamma_unit d g \<Longrightarrow> s \<in> \<lbrakk>d \<squnion> g\<rbrakk>"
+  unfolding gamma_unit_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the diagonal (unit)
   interpretation, as a named corollary applied by @{method rule} at the
@@ -853,13 +867,13 @@ lemma gamma_unit_combine_sound:
   shows "combine_collect dst s t \<in>
            (case dgs_combine (unit_dg_spec tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
 proof -
-  from sc have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" unfolding gamma_unit_def by blast
-  from tc have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" unfolding gamma_unit_def by blast
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
   have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     unfolding dgs_combine_unit_dg_spec gamma_unit_def
-    by (simp add: Let_def restrict_local_global_join combine_abs_restrict)
+    by (simp add: Let_def restrict_local_global_join combine_abs_eq_restrict)
 qed
 
 text \<open>The enter obligation of @{locale sound_dg_spec} for the diagonal (unit)
@@ -870,7 +884,7 @@ lemma gamma_unit_enter_sound:
   shows "call_enter (CallEdge dst pars args) s \<in>
            (case dgs_enter (unit_dg_spec tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit d' g')"
 proof -
-  from sc have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" unfolding gamma_unit_def by blast
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
   have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
     using sound_transfer.tf_sound_enter[OF sound, rule_format, OF sc']
     by (simp add: call_enter_CallEdge)

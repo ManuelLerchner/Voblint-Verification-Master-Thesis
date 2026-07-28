@@ -57,13 +57,13 @@ subsection \<open>Post-solution elimination\<close>
 
 lemma pp_eq_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> eq Gen (v, ctx) sigma \<le> sigma (Inl (v, ctx))"
-  using part_post_solution_imp_se_constraint_holds[OF pp]
-  unfolding se_constraint_holds_def by blast
+  using se_constraint_holds_local[OF part_post_solution_imp_se_constraint_holds[OF pp]]
+  by blast
 
 lemma pp_sides_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> sides_of_rhs (Gen (v, ctx)) sigma \<le> sigma"
-  using part_post_solution_imp_se_constraint_holds[OF pp]
-  unfolding se_constraint_holds_def by blast
+  using se_constraint_holds_sides[OF part_post_solution_imp_se_constraint_holds[OF pp]]
+  by blast
 
 subsection \<open>The guarded reader\<close>
 

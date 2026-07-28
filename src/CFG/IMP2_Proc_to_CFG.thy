@@ -367,6 +367,24 @@ lemma frag_stmts_mono:
   "E \<subseteq> E' \<Longrightarrow> K \<subseteq> K' \<Longrightarrow> frag_stmts E K \<subseteq> frag_stmts E' K'"
   by (auto simp: frag_stmts_def)
 
+(* The four structural memberships frag_stmts_def unfolds to; downstream
+   proofs cite these instead of re-unfolding the definition at each site. *)
+lemma frag_stmts_E_srcI [intro]:
+  "(Statement j, a, v) \<in> E \<Longrightarrow> j \<in> frag_stmts E K"
+  unfolding frag_stmts_def by blast
+
+lemma frag_stmts_E_tgtI [intro]:
+  "(u, a, Statement j) \<in> E \<Longrightarrow> j \<in> frag_stmts E K"
+  unfolding frag_stmts_def by blast
+
+lemma frag_stmts_K_srcI:
+  "(Statement j, act, ce, af) \<in> K \<Longrightarrow> j \<in> frag_stmts E K"
+  unfolding frag_stmts_def by blast
+
+lemma frag_stmts_K_tgtI:
+  "(u, act, ce, Statement j) \<in> K \<Longrightarrow> j \<in> frag_stmts E K"
+  unfolding frag_stmts_def by blast
+
 text \<open>A fragment that cannot complete normally contains an explicit return edge.  This is the
   counterpart of the epilogue: where \<^const>\<open>falls_through\<close> fails, the body itself already carries
   an edge into \<^term>\<open>FunctionResult p\<close>, so the procedure keeps a return edge either way.\<close>

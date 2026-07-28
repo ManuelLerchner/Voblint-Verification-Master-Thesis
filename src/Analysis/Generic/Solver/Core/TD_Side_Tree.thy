@@ -499,7 +499,7 @@ lemma unit_combine_tree_ctx_unit_traverse:
   "traverse_rhs (unit_combine_tree_ctx (\<lambda>_ _. ()) cc ex ()) \<sigma>
    = traverse_rhs (map_ltree (\<lambda>u. (u, ())) (unit_combine_tree None cc ex)) \<sigma>"
   unfolding unit_combine_tree_ctx_def unit_combine_tree_def
-  by (simp add: Let_def combine_collect_abs_def combine_abs_def restrict_combine)
+  by (simp add: Let_def combine_collect_abs_def combine_abs_eq_restrict)
 
 
 subsection \<open>General context-indexed equation system\<close>

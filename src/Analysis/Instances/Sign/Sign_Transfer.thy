@@ -19,7 +19,7 @@ lemma assign_sign_sound:
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    unfolding gamma_state_def by simp
+    using gamma_stateD[OF gs] by simp
   show "(s(x := aval a s)) y \<in> gamma ((\<sigma>(x := aval_sign a \<sigma>)) y)"
   proof (cases "y = x")
     case True
@@ -47,7 +47,7 @@ lemma enter_frame_sign_sound:
   shows "enter_state s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
 proof -
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    unfolding gamma_state_def by simp
+    using gamma_stateD[OF gs] by simp
   show ?thesis
     unfolding gamma_state_def enter_frame_sign_def
     by (intro CollectI allI; cases "is_global x";
@@ -62,7 +62,7 @@ proof -
   have base: "enter_state s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
     by (rule enter_frame_sign_sound[OF gs])
   have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    using gs unfolding gamma_state_def by simp
+    using gamma_stateD[OF gs] by simp
   have "list_all2 (\<lambda>v a. v \<in> gamma a)
           (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_sign e \<sigma>) es)"
     using V by (simp add: list_all2_conv_all_nth aval_sign_sound)
@@ -108,9 +108,9 @@ lemma combine_sign_sound:
   shows "<s|t> \<in> \<lbrakk>combine_sign sigma_c sigma_e\<rbrakk>"
 proof -
   from gs have Vc: "\<forall>z. s z \<in> gamma_sign (sigma_c z)"
-    unfolding gamma_state_def by simp
+    using gamma_stateD[OF gs] by simp
   from ge have Ve: "\<forall>z. t z \<in> gamma_sign (sigma_e z)"
-    unfolding gamma_state_def by simp
+    using gamma_stateD[OF ge] by simp
   show ?thesis
     unfolding gamma_state_def combine_sign_def combine_abs_def combine_states_def
     by (intro CollectI allI; cases "is_global x"; auto simp: Vc Ve)

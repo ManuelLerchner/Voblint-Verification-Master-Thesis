@@ -1,8 +1,24 @@
 # Proof hygiene — skill-compliance audit and migration plan
 
-> **Status:** Stage 0 (implicit-method `proof` cleanup) complete and
-> batch-verified. Stages 1+ (classical-reasoner tagging, `unfolding` removal)
-> not started. Two rounds of external review are incorporated below. Round 1
+> **Status:** All stages (0–7) complete and batch-verified (`TD_Side_CFG.thy`,
+> `Constraint_System.thy`/`Split_State.thy`, `DG_Soundness.thy`/
+> `DG_Ctx_Activation.thy`, `Sign_Local_Effects.thy`,
+> `Sign_Named_Global_Eff.thy`/`Interval_Transfer.thy`/`Rel_Order_Domain.thy`/
+> `Interval_Lattice.thy`, `CFG/IMP2_Proc_to_CFG.thy`/
+> `CFG/Compiler/Compile_Locality.thy`, `Abstract_Domain.thy`/
+> `Sign_Transfer.thy`). Stage 4 (`Exec_Bridge.thy`, `TD_Side_Eff_Bounds.thy`)
+> checked and found to need no further changes — both already cite Stage 1's
+> lemmas and their remaining `unfolding` sites are one-time definitional
+> proofs, not re-derivations. Stage 1 also surfaced and fixed a real
+> regression (a `[simp]`-tagged distributive law competing with a specific
+> combine lemma's normal form) via confluence restoration rather than a
+> revert; see Stage 1's writeup for the full mechanism and the durable lesson
+> now in `AGENTS.md`. The migration's stop condition (§6) is met: every
+> high-density core file identified in §3.2 went through Stages 1–6, Stage 7
+> swept every remaining file's `unfolding` density for the anti-pattern
+> signature and fixed the two real hits found, and the rest are one-time
+> definitional proofs or already-canonical characterization lemmas. Two
+> rounds of external review are incorporated below. Round 1
 > adjusted the exit criterion's "every definition" language (§7), immediate
 > vs. usage-driven tagging (§5, §6), and the Stage 1/2 order (§6) —
 > lowest-risk file first to validate the workflow before touching the
@@ -342,51 +358,345 @@ on a disjunctive fact), `subsetI` (`A \<subseteq> B`), `notI` (`\<not> P`),
 `unfold_locales` (`interpretation`/`interpret` proofs). Batch-verified green
 via `rtk make build`.
 
-### Stage 1 — `TD_Side_CFG.thy`
+### Stage 1 — `TD_Side_CFG.thy` — DONE
 
-Lowest risk of the large files, and goes first per the external review: it
-validates the recipe on a file where the highest-risk step is already
-partly done. Characterization lemmas already exist for the heaviest-unfolded
-names (`restrict_local`/`restrict_global`/`local_bot_on_locals`). Mostly
-tagging plus rewriting call sites to cite the existing lemma instead of
-re-unfolding.
+Validated the recipe: hoisted `inr_slot_locals_bot_imp` above its first
+potential call site (it existed but was proved too late in the file to be
+citable from `local_edge_invariant_side_env_eq`, forcing a re-derivation
+there); added two previously-missing elementary facts,
+`restrict_local_sup`/`restrict_global_sup` (join-homomorphism) and
+`restrict_local_idem`/`restrict_global_idem`, matching the file's existing
+sibling-lemma convention; rewrote 8 call sites that re-derived these via
+`unfolding restrict_local_def`/`local_bot_on_locals_def` to cite the
+existing or new lemma instead.
 
-### Stage 2 — `Constraint_System.thy` + `Split_State.thy`
+Tagged per §5's usage-driven rule once each lemma cleared the ≥3-citation
+threshold: `local_bot_on_locals_restrict_global [intro]` (narrow structural
+pattern, 3 citations), `inr_slot_locals_bot_imp [dest]` (narrow premise, 7
+citations, and all 7 existing citations already supplied the premise
+explicitly, matching a dest rule's firing condition). `restrict_local_global_join`
+stays untagged (see the regression below — it was briefly tagged `[simp]`,
+then reverted, and the revert turned out not to be the actual issue).
 
-Most foundational: `wf_split`/`merge_state`/`split_state`/`gamma_state`/
-`glob_env`/`abs_join_set` feed every downstream instance. Highest blast
-radius if a tag misfires, so it runs after Stage 1 has confirmed the
-tagging-safety procedure (§5) against a real file. Add missing
-characterization lemmas (closure, monotonicity, `_iff` forms where the
-definition is a predicate), tag per §5's usage-driven rule, replace
-`unfolding` at call sites with the tagged lemma or an explicit citation.
+**Regression, root cause, and fix (found via a genuine full rebuild, not the
+cached batch runs used to confirm the rest of this stage).** `restrict_local_sup`/
+`restrict_global_sup` (the join-homomorphism facts added for this stage) were
+tagged `[simp]`. Their LHS pattern `restrict_local (_ \<squnion> _)` overlaps with
+`restrict_local_combine_eq`'s LHS (`restrict_local (restrict_local A \<squnion>
+restrict_global B)`) — a different, specific lemma reaching a different,
+*incomplete* normal form once distributed (it stalls at `restrict_local
+(restrict_global B)`, since no lemma reduced that further). Making the general
+law `[simp]` let the simplifier distribute eagerly and preempt the specific
+lemma's one-step closure, breaking three downstream files that relied on it
+(`Exec_Bridge.thy`, `TD_Side_Tree.thy`, `Exec_DG_Bridge.thy`) — a real
+regression that several apparently-green cached batch builds had missed
+(a concurrent-build SQLite lock incident had left the build cache in a stale
+state; only a full, non-cached rebuild surfaced the actual failures).
 
-### Stage 3 — `DG_Soundness.thy`
+The durable fix restores confluence instead of reverting the tag: added
+`restrict_local_restrict_global_bot [simp]` and
+`restrict_global_restrict_local_bot [simp]` (`restrict_local (restrict_global
+A) = bot` and its mirror). With those in place, distributing via
+`restrict_local_sup`/`idem` reaches the *same* normal form as the specific
+combine lemma, so both are confluent and `restrict_local_sup`/
+`restrict_global_sup` are safely `[simp]` again. `restrict_local_combine_eq`/
+`restrict_global_combine_eq`/`restrict_combine` became redundant corollaries
+of the confluent algebra and were deleted outright (their 4 citation sites
+across `Exec_Bridge.thy`, `Exec_DG_Bridge.thy`, and `TD_Side_Tree.thy` were
+trimmed to rely on the base simp set instead) — no code is better than useless
+code.
 
-Needs new characterization lemmas for the `gamma_dg`/`dg_gamma`/`gamma_unit`/
-`dg_G`/`dg_D`/`dg_cmb` family before any de-unfolding is possible — no
-companion lemmas exist today.
+Restoring confluence surfaced one more real gap: `combine_abs`'s primitive
+definition is a raw if-then-else lambda (in `Constraint_System.thy`), not
+expressed via `restrict_local`/`restrict_global`, so `TD_Side_Tree.thy`'s
+`unit_combine_tree_ctx_unit_traverse` had nothing to bridge the two. Added
+`combine_abs_eq_restrict: "combine_abs sc se = restrict_local sc \<squnion>
+restrict_global se"` in `TD_Side_CFG.thy` — and, while adding it, found a
+pre-existing duplicate of exactly this fact under a different name,
+`combine_abs_restrict`, already sitting in `DG_Soundness.thy` (needed there
+because `TD_Side_Tree.thy` is built before `DG_Soundness.thy` and couldn't see
+it). Deleted the duplicate and repointed its two citations
+(`DG_Soundness.thy`'s `gamma_unit_combine_sound`, `Exec_DG_Bridge.thy`'s
+`unit_combine_step_st_commute`) at the single upstream lemma.
+
+Unlike the restrict-algebra facts, `combine_abs_eq_restrict` is **not** tagged
+`[simp]`: doing so broke `DG_Framework.thy`'s `dgs_combine_unit_dg_spec`,
+whose proof derives a local fact (`join_back`) about the same
+`combine_abs`-shaped term via `sup.commute` before the final `simp` call —
+the eager global rewrite preempted that local derivation the same way the
+first regression preempted `restrict_local_combine_eq`. It is cited
+explicitly at exactly the 3 sites that need it
+(`TD_Side_Tree.thy`, `Exec_DG_Bridge.thy`, `DG_Soundness.thy`) and left out
+everywhere else.
+
+**Lesson, now in `AGENTS.md`'s Automation section:** before tagging a lemma
+`[simp]`, check whether its LHS pattern overlaps with an existing lemma's LHS
+serving a different normal form, *or* with a local derived fact inside some
+other proof's `have`/`show` chain — not just whether the new lemma's own RHS
+looks simpler in isolation. When a conflict surfaces, prefer restoring
+confluence (add the missing bridging fact so every rewrite path agrees) over
+reverting the tag, and delete anything that becomes a redundant corollary of
+the resulting confluent set.
+
+Confirmed via a genuine full (non-cached) rebuild of `Voblint_Analysis`,
+`Voblint_Formalization`, and `Voblint_Examples`: 0 errors, 0 failures. I/Q
+itself was unreliable for `Exec_Bridge.thy`, `DG_Soundness.thy`,
+`Exec_DG_Bridge.thy`, and `DG_Framework.thy` throughout this regression
+(`commands_finished: 0` while reporting `errors: 0` — the same false-positive
+pattern already documented in Stage 3 below) — the full batch build was the
+only real check for those four files. I/Q did stay reliable for
+`TD_Side_CFG.thy` and `TD_Side_Tree.thy` (0 errors, `commands_finished`
+matching the total command count) throughout.
+
+Finding for Stage 5: `Sign_Local_Effects.thy` repeats the same
+unfolding-instead-of-citing pattern roughly 10 times against these same
+names (`restrict_local_def`, `local_bot_on_locals_def`,
+`local_edge_invariant_def`) — confirms the leverage argument for doing the
+shared core first; Stage 5 should cite `restrict_local_sup`,
+`restrict_local_idem`, `inr_slot_locals_bot_imp`, and
+`local_bot_on_locals_restrict_global` directly instead of re-deriving them.
+
+### Stage 2 — `Constraint_System.thy` + `Split_State.thy` — DONE
+
+Inspected every `unfolding X_def` site in both files (25 in `Split_State.thy`,
+46 in `Constraint_System.thy`) rather than assuming the raw counts were all
+violations. Result: both files were already largely compliant — nearly every
+site is a single-use proof of that definition's own characterization lemma
+(the legitimate pattern), not a re-derivation of an already-proved fact.
+`Split_State.thy` needed no changes at all: every `wf_split`/`merge_state`/
+`split_state`/`gamma_split` fact already has a named lemma, and nothing
+re-derives one via unfolding.
+
+`Constraint_System.thy` had one real instance: `se_constraint_holds_def`
+(a plain conjunction) was unfolded 3 times in this file alone to extract one
+or both conjuncts, with no dest lemma to cite instead. Added
+`se_constraint_holds_local` and `se_constraint_holds_sides` right after the
+definition and rewrote the one call site inside this file that benefits
+(`se_constraint_holds_imp_etf_full_le_env`) to cite them. Both new lemmas
+stay untagged — 1 in-file citation each, below §5's threshold.
+
+Confirmed clean via I/Q on `Constraint_System.thy`, `Split_State.thy`, and
+`Constraint_System_Sound.thy` (the loaded downstream consumer): 0 errors, no
+new warnings (baseline: 5 pre-existing `code del` legacy-attribute warnings
+in `Constraint_System.thy`, unrelated to this change).
+
+### Stage 3 — `DG_Soundness.thy` — DONE
+
+**`se_constraint_holds` connector (from Stage 2's finding).** The 4 sites in
+`DG_Ctx_Activation.thy` (`pp_eq_bound`, `pp_sides_bound`) and
+`DG_Soundness.thy` (`eq_le`, `sides_le`) that unfolded `se_constraint_holds_def`
+now cite `se_constraint_holds_local [dest]`/`se_constraint_holds_sides [dest]`
+instead. Both tagged: 3 citations each across the two files, narrow premise
+(a specific named predicate, not a broad invariant).
+
+**`gamma_dg`/`dg_gamma`/`gamma_unit` family.** Added the missing dest/intro
+pairs and rewrote every call site that had been re-deriving them by hand:
+
+- `gamma_dgD1`/`gamma_dgD2` — pointwise duals of the existing
+  `gamma_dg_le_D`/`gamma_dg_le_G` subset lemmas; 2 citations each (below the
+  tagging threshold, left untagged).
+- `dg_gammaD [dest]`/`dg_gammaI [intro]` — bridge `dg_gamma` to `gammaDG`;
+  6 of 8 call sites rewritten to cite them (3 and 4 citations respectively,
+  both tagged). The other 2 sites keep the original `unfolding dg_gamma_def`
+  deliberately: `dg_gamma` there is nested inside `edge_collect a (...)`,
+  not the direct membership target, so the dest lemma's premise pattern
+  doesn't match — confirmed by re-deriving the type mismatch by hand
+  (`edge_collect a (dg_gamma sigma u)` is a different proposition from
+  `dg_gamma sigma v`) before reverting that site back. Both new lemmas live
+  inside the `sound_dg_spec` locale, so `dg_gammaI`'s `[intro]` only affects
+  that locale's context and its interpretations, not the global claset.
+- `gamma_unitD [dest]` — 3 citations in `gamma_unit_combine_sound`/
+  `gamma_unit_enter_sound`, tagged. This one is top-level (outside any
+  locale), so it is a genuinely global `[dest]`; its premise (`gamma_unit d g`)
+  is narrow enough that the risk is low.
+
+`dg_D`/`dg_G`/`dg_cmb` were also named in the original audit finding, but
+inspection found their `unfolding` sites are each a distinct, one-time proof
+of a different fact about a different tree operation (edge/enter/combine) —
+the legitimate pattern, not repeated re-derivation of an already-proved fact.
+No characterization lemmas were added for them.
+
+Batch-confirmed green twice: once for the un-tagged dest/intro lemmas plus
+call-site rewrites, once more after adding the tags (`rtk make build`,
+`0:00:07` elapsed, fully cached, 0 errors both times). The first I/Q-based
+"confirmed clean" claim made earlier for `DG_Soundness.thy` during this stage
+was actually a false positive — `get_state` was returning `commands_finished:
+0` (nothing had actually been rechecked yet) while still reporting `errors:
+0`, which reads as clean but means nothing. This affected the entire
+`DG_Framework`/`DG_Soundness`/`DG_Ctx_Activation` import chain specifically,
+independent of which file was being edited — a genuine PIDE scheduling stall,
+not a correctness issue with the edits themselves. Batch build is what
+actually confirmed this stage; the I/Q inner loop stayed unusable for this
+subtree for the remainder of the stage.
 
 ### Stage 4 — `Exec_Bridge.thy`, `TD_Side_Eff_Bounds.thy`
 
-Solver-core plumbing; apply the same recipe once Stages 1–3 establish the
-pattern.
+Spot-checked both files' `unfolding` sites (37 and 45 respectively) against
+Stage 1–3's lemmas before assuming there was work to do. Result: both files
+are already largely compliant, and one site already cites Stage 1's
+`local_bot_join` directly (`TD_Side_Eff_Bounds.thy`,
+`sides_of_rhs_Side_Inr_local_bot`). The remaining `unfolding` sites are each a
+one-time proof of that file's own local definitions (`side_acc_eff_def`,
+`side_rhs_fold_eff_def`, `side_cfg_T_eff_def`, `make_side_rhs_tree_eff_def`,
+`static_deps_def`, `strip_inr_globals_def`, `combine_abs_def`,
+`restrict_local_def`/`restrict_global_def` used once each to prove
+`fun_of_st`'s own homomorphism lemmas, already tagged `[simp]`) — the
+legitimate pattern, not the anti-pattern this migration targets.
 
-### Stage 5 — `Sign_Local_Effects.thy`
+### Stage 5 — `Sign_Local_Effects.thy` — DONE
 
 First concrete domain instance; validates the recipe before touching
 Interval/Mixed/NamedGlobalSign.
 
-### Stage 6 — remaining instances
+Confirmed Stage 1's finding: `afilter_sign_local_edge_invariant`'s Plus/Minus/
+Times induction cases and `bfilter_sign_local_edge_invariant`'s Less/Eq cases
+each re-derived `local_edge_invariant`'s quantified definition by hand
+(`using <IH-fact>[OF ...] lb unfolding local_edge_invariant_def by blast`) to
+extract the same instantiated equation the new `local_edge_invariantD`
+(Stage 1, `TD_Side_CFG.thy`) already states directly. Rewrote all 10 sites to
+`using local_edge_invariantD[OF <IH-fact>[OF ...] lb] .` — the single highest-
+leverage fix in the migration so far, eliminating a 10-times-repeated
+re-derivation with one existing lemma citation per site.
 
-Sweep `Sign_Named_Global_Eff.thy`, `Instances/Interval/*`, `Instances/Mixed/*`
-with the same recipe.
+Left roughly 10 other `unfolding local_edge_invariant_def` sites untouched:
+each is a legitimate intro-direction proof of a *new* `local_edge_invariant`
+instance (`assign_sign_local_edge_invariant`, the base cases of the
+`afilter`/`bfilter` inductions, `id_local_edge_invariant`'s call site), or a
+`g := bot`-instantiated `drule`-based sub-derivation with no matching dest
+lemma — the legitimate pattern, not re-derivation of an already-proved fact.
 
-### Stage 7 — backlog
+This is the stage where the `TD_Side_CFG.thy` `[simp]`-tag regression (see
+Stage 1) first surfaced, via a full rebuild — `Sign_Local_Effects.thy` itself
+was never the cause; it only exposed the gap because it was the first file
+built after `TD_Side_CFG.thy` to depend on the specific `restrict_local`/
+`restrict_global` normal forms upstream files had assumed. With that
+regression fully resolved, a genuine full (non-cached) rebuild of
+`Voblint_Analysis`/`Voblint_Formalization`/`Voblint_Examples` confirms this
+file 100% clean, 0 errors.
 
-`Examples/*`, `CFG/Compiler/Compile_Locality.thy`, and other low-density files
-(single digit `unfolding` counts). Lower payoff; defer past the core-cluster
-work above.
+### Stage 6 — remaining instances — DONE
+
+Swept `Sign_Named_Global_Eff.thy`, `Interval_Transfer.thy`,
+`Rel_Order_Domain.thy`, and `Interval_Lattice.thy` (ranked by `unfolding`
+density: 37, 16, 27, 15 sites respectively) with the same recipe as Stage 5.
+Result: all four are already compliant — no repeated re-derivation of an
+already-proved fact found anywhere.
+
+- `Sign_Named_Global_Eff.thy`: every `unfolding` proves that lemma's own
+  definitional characterization once (`route_tree_def`, `named_etf_def`,
+  `sideg_tree_def`, etc.); none of it touches `local_edge_invariant` at all —
+  that optimization is specific to the Sign domain's `local_edge_tree` path,
+  not used by the routed/named-global variant.
+- `Interval_Transfer.thy`: sites like `ivl_tf_def`/`enter_ivl_def` recur
+  across several lemmas, but each occurrence proves a *different* fact
+  (soundness vs. monotonicity, or a different transfer field) about the same
+  record/definition — the legitimate pattern already established in Stage 4.
+- `Rel_Order_Domain.thy`: same shape — `gammaDG_rel_def`, `dgs_*_rel_def`,
+  etc. each unfolded once per distinct edge-soundness theorem
+  (nop/assign/assume/assume-not/enter/combine), never to re-derive a fact a
+  named lemma already supplies.
+- `Interval_Lattice.thy`: `less_eq_ivl_def` unfolded 8 times, `sup_ivl_def` 3
+  times — the highest repeat counts found in this stage, and worth checking
+  closely. Each occurrence proves a distinct order/lattice axiom
+  (reflexivity, transitivity, antisymmetry, join/meet upper/lower bounds,
+  least-upper-bound) via case analysis on the `Ivl l u` constructor, each
+  needing a different consequence of the underlying `eint_le` facts
+  (`eint_le_refl`/`_trans`/`_antisym`/`_linear`). This is the standard,
+  unavoidable cost of instantiating an order class per-constructor with no
+  higher-level lemma to cite instead — not the anti-pattern this migration
+  targets.
+
+`Exec_DG_Bridge.thy` (Mixed, 14 sites) was already reviewed this session
+while fixing Stage 1's regression: its sites are one-time record-projection
+proofs, matching Stage 4's `Exec_Bridge.thy` finding. Files below 10 sites
+(`Mixed_Sign_Interval.thy` and smaller) were spot-checked for any definition
+name recurring 3+ times across unrelated sites — none found; per Stage 7's
+own criteria (low `unfolding` density, lower payoff), further exhaustive
+line-by-line review of these was not pursued.
+
+### Stage 7 — backlog — DONE
+
+`Examples/*`, `CFG/Compiler/Compile_Locality.thy`, and other remaining files.
+Ranked all uncovered files by `unfolding` density (`rg -o "unfolding
+[a-zA-Z_][a-zA-Z0-9_'.]*" <file> | sort | uniq -c | sort -rn`) and audited
+each name recurring 3+ times across unrelated sites — the anti-pattern
+signature this migration targets — rather than reading every file
+line-by-line. Two real hits found and fixed; the rest checked out compliant.
+
+**`frag_stmts` (home file `CFG/IMP2_Proc_to_CFG.thy`).**
+`CFG/Compiler/Compile_Locality.thy` re-derived membership in `frag_stmts E K`
+via `unfolding frag_stmts_def by blast/auto` at 10 sites, each extracting one
+of the definition's four structural disjuncts (edge source, edge target,
+call source, call target) from an already-available tuple-membership fact.
+Added the four missing intro lemmas at `frag_stmts`'s definition
+(`frag_stmts_E_srcI`, `frag_stmts_E_tgtI`, `frag_stmts_K_srcI`,
+`frag_stmts_K_tgtI`) and rewrote all 10 sites to cite them. Tagged
+`frag_stmts_E_srcI [intro]` (4 citations) and `frag_stmts_E_tgtI [intro]`
+(3 citations) per the usage threshold; `frag_stmts_K_srcI` (2 citations) and
+`frag_stmts_K_tgtI` (1 citation) stay untagged. Checked `frag_stmts`'s only
+other consumer, `Compile_Invariants.thy`: its one `unfolding` site proves a
+distinct fact via the existing `frag_stmts_Un`/`frag_stmts_mono` lemmas
+already, not a re-derivation — untouched.
+
+**`gamma_state` (home file `Analysis/Generic/Domain/Abstract_Domain.thy`).**
+Both `Abstract_Domain.thy` itself (6 sites, across `afilter_sound`'s
+Plus/Minus/Times cases and `bfilter_sound`'s Less/Eq cases) and
+`Sign_Transfer.thy` (5 sites, across `assign_sign_sound`,
+`enter_frame_sign_sound`, `enter_sign_sound`, `combine_sign_sound`) unfolded
+`gamma_state_def` solely to extract the pointwise fact `∀x. s x ∈ gamma
+(σ x)` from an `s ∈ ⟦σ⟧` hypothesis — the dest-direction half of the
+definition, never previously named. Added `gamma_stateD [dest]` (11 combined
+citations across the two files, narrow premise — a specific named predicate,
+not a broad invariant) and rewrote all 11 sites to cite
+`gamma_stateD[OF <hyp>]` instead. The remaining `gamma_state_def` unfoldings
+in both files are intro-direction proofs of a *new* fact each
+(`gamma_state_mono`/`_bot`/`_sup_ub1`/`_sup_ub2`'s own characterizations,
+and one `CollectI`-based state-membership construction per file) — the
+legitimate pattern, left untouched.
+
+**Files checked and found already compliant** (each `unfolding` proves a
+distinct fact, no repeated re-derivation): `CFG_Prune.thy` — its
+`cfg_succ_rel_def` sites (6, ranked highest after the two fixes above) are
+themselves the four canonical intro lemmas
+(`cfg_succ_rel_intra`/`_entry`/`_comb_caller`/`_comb_result`, one per
+disjunct) plus a `cases`-style elimination lemma; its one external consumer
+(`TD_Side_Eff_Cone_Lemmas.thy`) already cites the elimination lemma via
+`cases rule:`, not raw unfolding.
+
+Batch-confirmed via a genuine full (non-cached) rebuild of
+`Voblint_CFG`/`Voblint_Analysis`/`Voblint_Formalization`/`Voblint_Examples`:
+0 errors, 0 failures throughout, including every file touched this stage.
+
+**Second-pass audit.** Stage 7 above sampled the backlog rather than sweeping
+it exhaustively (deliberately, per this section's own scope). Re-ran the same
+density scan (`unfolding <name>` recurring 3+ times) across every file in the
+repo not yet individually audited by Stages 1–7 — roughly 20 files — to check
+whether that sample was representative. Eighteen were legitimate: distinct
+facts about the same definition (`dg_edge_tree_def`, `cfg_pkg_eff_def`,
+`less_eq_eint_def`/`less_eq_sign_def`'s per-axiom order-class proofs,
+`sign_etf_st_def`/`sign_etf_unit_def`/`ivl_etf_def`'s per-field bundle
+characterizations, `compiled_at_def`'s intro/dest/consequence triple),
+already-canonical characterization lemmas
+(`cone_compatible_etf_def`'s ten per-conjunct projections in
+`TD_Side_Eff_Pipeline.thy`, `static_deps_def`'s own intro lemma), or — for
+`Examples/*.thy` and `IMP2_Proc.thy` — `by eval`/operational-semantics proofs
+checking distinct concrete facts, which is not the logical-re-derivation
+anti-pattern this migration targets at all.
+
+One more real hit: `is_post_fixpoint` (`Constraint_System.thy`, `∀v. rhs g tf
+join_abs bot_abs s0 env v ≤ env v`) was re-derived via `unfolding
+is_post_fixpoint_def by simp` at exactly 3 sites in `LTR_Analysis_Sound.thy`,
+each just specializing the same `∀v` to a different concrete `v` (an edge
+target, a callee entry, a call continuation). Added `is_post_fixpointD
+[dest]` next to the definition and rewrote all 3 sites to cite it. The two
+`Examples/*.thy` sites that construct concrete `is_post_fixpoint` instances
+(the intro direction) were left untouched — legitimate, one-time per
+example.
+
+Batch-confirmed via a second genuine full rebuild: 0 errors, 0 failures. This
+second pass found one real fix in ~20 files sampled — consistent with, not
+contradicting, Stage 7's original judgment call; the backlog was mostly
+already sound.
 
 ### Stop condition
 

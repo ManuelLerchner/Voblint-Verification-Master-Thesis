@@ -589,6 +589,13 @@ where
   "is_post_fixpoint g tf join_abs bot_abs s0 env =
      (\<forall>v. rhs g tf join_abs bot_abs s0 env v \<le> env v)"
 
+(* The pointwise instance is_post_fixpoint_def unfolds to; downstream
+   proofs cite this instead of re-unfolding the quantified definition. *)
+lemma is_post_fixpointD [dest]:
+  "is_post_fixpoint g tf join_abs bot_abs s0 env
+   \<Longrightarrow> rhs g tf join_abs bot_abs s0 env v \<le> env v"
+  unfolding is_post_fixpoint_def by simp
+
 
 lemma sup_fold_ge_state:
   assumes "finite (A :: 'a::bounded_semilattice_sup_bot abs_state set)"
@@ -930,6 +937,16 @@ where
   "se_constraint_holds t \<sigma> u \<equiv>
      traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<and> sides_of_rhs t \<sigma> \<le> \<sigma>"
 
+(* The two halves of se_constraint_holds, split out so call sites can cite
+   the half they need instead of re-unfolding the conjunction. *)
+lemma se_constraint_holds_local [dest]:
+  "se_constraint_holds t \<sigma> u \<Longrightarrow> traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
+  unfolding se_constraint_holds_def by simp
+
+lemma se_constraint_holds_sides [dest]:
+  "se_constraint_holds t \<sigma> u \<Longrightarrow> sides_of_rhs t \<sigma> \<le> \<sigma>"
+  unfolding se_constraint_holds_def by simp
+
 text \<open>
   A post-solution covers the local answer and subsumes every emitted side
   contribution.
@@ -959,9 +976,8 @@ lemma se_constraint_holds_imp_etf_full_le_env:
   assumes "se_constraint_holds t \<sigma> u"
   shows "etf_full t \<sigma> \<le> \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
 proof -
-  have loc: "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)"
-    and sid: "sides_of_rhs t \<sigma> \<le> \<sigma>"
-    using assms unfolding se_constraint_holds_def by auto
+  have loc: "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)" using assms by (rule se_constraint_holds_local)
+  have sid: "sides_of_rhs t \<sigma> \<le> \<sigma>" using assms by (rule se_constraint_holds_sides)
   have "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
     by (rule all_sides_le_glob_env_sides)
   also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono[OF sid])

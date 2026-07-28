@@ -96,6 +96,13 @@ lemma gamma_state_sup_ub2:
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
 
+(* The pointwise projection gamma_state_def unfolds to; downstream proofs
+   cite this instead of re-unfolding the definition at each site. *)
+lemma gamma_stateD [dest]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<forall>x. s x \<in> gamma (\<sigma> x)"
+  for \<sigma> :: "'a::sound_domain abs_state"
+  unfolding gamma_state_def by simp
+
 lemma sup_fold_ge:
   fixes S :: "'a::bounded_semilattice_sup_bot set"
   assumes "finite S" and "x \<in> S"
@@ -240,12 +247,12 @@ using assms proof (induction e arbitrary: a \<sigma>)
     have sx_a: "s x \<in> gamma a"
       using BaseN.prems(2) V by simp
     have sx_s: "s x \<in> gamma (\<sigma> x)"
-      using BaseN.prems(1) unfolding gamma_state_def by simp
+      using gamma_stateD[OF BaseN.prems(1)] by simp
     show ?thesis
       unfolding V gamma_state_def afilter.simps
     proof (intro CollectI allI)
       fix y show "s y \<in> gamma ((\<sigma>(x := meet a (\<sigma> x))) y)"
-        using meet_sound[OF sx_a sx_s] BaseN.prems(1)[unfolded gamma_state_def]
+        using meet_sound[OF sx_a sx_s] gamma_stateD[OF BaseN.prems(1)]
         by (cases "y = x") auto
     qed
   qed (auto simp: BaseN.prems(1))
@@ -253,7 +260,7 @@ next
   case (Plus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Plus.prems(1) unfolding gamma_state_def by simp
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Plus.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by simp
@@ -268,7 +275,7 @@ next
   case (Minus e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Minus.prems(1) unfolding gamma_state_def by simp
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Minus.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by simp
@@ -283,7 +290,7 @@ next
   case (Times e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Times.prems(1) unfolding gamma_state_def by simp
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Times.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by simp
@@ -380,7 +387,7 @@ next
   case (Less e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
     by (cases "inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Less.prems(1) unfolding gamma_state_def by simp
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Less.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by simp
@@ -395,7 +402,7 @@ next
   case (Eq e1 e2)
   show ?case proof (cases res)
     case True
-    have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using Eq.prems(1) unfolding gamma_state_def by simp
+    have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
     have eq: "aval e1 s = aval e2 s" using Eq.prems(2) True by simp
     have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
     have e2a: "aval e1 s \<in> gamma (aval_abs e2 \<sigma>)"

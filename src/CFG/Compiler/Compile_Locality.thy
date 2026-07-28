@@ -131,7 +131,7 @@ proof -
   have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
   from compile_E_shape[OF cp e] obtain ku where u: "u = Statement ku"
     and vshape: "v = k \<or> v = FunctionResult p \<or> (\<exists>kv. v = Statement kv)" by blast
-  have "ku \<in> frag_stmts E K" using e u unfolding frag_stmts_def by blast
+  have "ku \<in> frag_stmts E K" using frag_stmts_E_srcI[of ku a v E] e u by simp
   hence uin: "u \<in> insert k (pfn p n n')" using rng u by (auto simp: pfn_def)
   have vin: "v \<in> insert k (pfn p n n')"
   proof (cases "v = k \<or> v = FunctionResult p")
@@ -139,7 +139,7 @@ proof -
   next
     case False
     then obtain kv where v: "v = Statement kv" using vshape by blast
-    have "kv \<in> frag_stmts E K" using e v unfolding frag_stmts_def by blast
+    have "kv \<in> frag_stmts E K" using frag_stmts_E_tgtI[of u a kv E] e v by simp
     then show ?thesis using rng v False by (auto simp: pfn_def)
   qed
   from uin vin show ?thesis ..
@@ -152,7 +152,7 @@ proof -
   have rng: "frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k" using compile_frag_stmts_range[OF cp] .
   from compile_K_shape[OF cp e] obtain ku where u: "u = Statement ku"
     and afshape: "af = k \<or> (\<exists>kaf. af = Statement kaf)" by blast
-  have "ku \<in> frag_stmts E K" using e u unfolding frag_stmts_def by blast
+  have "ku \<in> frag_stmts E K" using frag_stmts_K_srcI[of ku ce tgt af K E] e u by simp
   hence uin: "u \<in> insert k (pfn p n n')" using rng u by (auto simp: pfn_def)
   have "af \<in> insert k (pfn p n n')"
   proof (cases "af = k")
@@ -160,7 +160,7 @@ proof -
   next
     case False
     then obtain kaf where af: "af = Statement kaf" using afshape by blast
-    have "kaf \<in> frag_stmts E K" using e af unfolding frag_stmts_def by blast
+    have "kaf \<in> frag_stmts E K" using frag_stmts_K_tgtI[of u ce tgt kaf K E] e af by simp
     then show ?thesis using rng af False by (auto simp: pfn_def)
   qed
   with uin show ?thesis ..
@@ -798,7 +798,7 @@ lemma compile_proc_intra_source_range:
     and e: "(Statement k, a, v) \<in> E"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_E_srcI[OF e] .
   then show ?thesis using compile_proc_frag_range[OF cp] by blast
 qed
 
@@ -807,7 +807,7 @@ lemma compile_proc_calls_source_range:
     and e: "(Statement k, ce, tgt, af) \<in> K"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_K_srcI[OF e] .
   then show ?thesis using compile_proc_frag_range[OF cp] by blast
 qed
 
@@ -816,7 +816,7 @@ lemma compile_procs_intra_source_range:
     and e: "(Statement k, a, v) \<in> E"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_E_srcI[OF e] .
   then show ?thesis using compile_procs_frag_range[OF cp] by blast
 qed
 
@@ -825,7 +825,7 @@ lemma compile_procs_calls_source_range:
     and e: "(Statement k, ce, tgt, af) \<in> K"
   shows "k \<in> {n..<n'}"
 proof -
-  have "k \<in> frag_stmts E K" using e unfolding frag_stmts_def by blast
+  have "k \<in> frag_stmts E K" using frag_stmts_K_srcI[OF e] .
   then show ?thesis using compile_procs_frag_range[OF cp] by blast
 qed
 
@@ -998,7 +998,7 @@ next
       have lower: "n1 \<le> m"
       proof -
         have "m \<in> frag_stmts E' K'"
-          using enttail unfolding frag_stmts_def by auto
+          using frag_stmts_E_tgtI[OF enttail] .
 
         then show ?thesis using compile_procs_frag_range[OF rest] by auto
       qed
@@ -1083,7 +1083,7 @@ next
       have lower: "n1 \<le> m"
       proof -
         have "m \<in> frag_stmts E' K'"
-          using enttail unfolding frag_stmts_def by auto
+          using frag_stmts_E_tgtI[OF enttail] .
 
         then show ?thesis using compile_procs_frag_range[OF rest] by auto
       qed

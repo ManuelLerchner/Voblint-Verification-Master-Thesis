@@ -74,21 +74,42 @@ lemma join_abs_state_right_mono:
   by (rule join_mono[OF order_refl acc_le])
 
 
-(* Joining the local restriction of A with the global restriction of B is the
-   abstract combine: locals from A, globals from B. *)
-lemma restrict_combine:
-  "restrict_local A \<squnion> restrict_global B = (\<lambda>x. if is_global x then B x else A x)"
-  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
+(* restrict_local / restrict_global are join-homomorphisms, idempotent, and
+   annihilate each other; together these make the algebra confluent, so a
+   split-state combine such as restrict_local (restrict_local A \<squnion> restrict_global B)
+   = restrict_local A closes by plain simp without a dedicated lemma. *)
+lemma restrict_local_sup [simp]:
+  "restrict_local (A \<squnion> B) = restrict_local A \<squnion> restrict_local B"
+  unfolding restrict_local_def sup_fun_def by (rule ext) simp
 
-(* The combine keeps locals from A and globals from B; its local restriction is
-   restrict_local A, its global restriction restrict_global B. *)
-lemma restrict_local_combine_eq:
-  "restrict_local (restrict_local A \<squnion> restrict_global B) = restrict_local A"
-  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
+lemma restrict_global_sup [simp]:
+  "restrict_global (A \<squnion> B) = restrict_global A \<squnion> restrict_global B"
+  unfolding restrict_global_def sup_fun_def by (rule ext) simp
 
-lemma restrict_global_combine_eq:
-  "restrict_global (restrict_local A \<squnion> restrict_global B) = restrict_global B"
-  unfolding restrict_local_def restrict_global_def sup_fun_def by (rule ext) simp
+lemma restrict_local_idem [simp]:
+  "restrict_local (restrict_local A) = restrict_local A"
+  unfolding restrict_local_def by (rule ext) simp
+
+lemma restrict_global_idem [simp]:
+  "restrict_global (restrict_global A) = restrict_global A"
+  unfolding restrict_global_def by (rule ext) simp
+
+lemma restrict_local_restrict_global_bot [simp]:
+  "restrict_local (restrict_global A) = bot"
+  unfolding restrict_local_def restrict_global_def by (rule ext) simp
+
+lemma restrict_global_restrict_local_bot [simp]:
+  "restrict_global (restrict_local A) = bot"
+  unfolding restrict_local_def restrict_global_def by (rule ext) simp
+
+(* combine_abs's primitive definition is a single if-then-else lambda; this
+   reduces it to the confluent restrict_local/restrict_global algebra so
+   proofs never need to unfold combine_abs_def and re-derive the split by
+   hand. *)
+lemma combine_abs_eq_restrict:
+  "combine_abs sc se = restrict_local sc \<squnion> restrict_global se"
+  unfolding combine_abs_def restrict_local_def restrict_global_def sup_fun_def
+  by (rule ext) simp
 
 
 subsection \<open>Split-state bridge\<close>
@@ -290,6 +311,13 @@ proof (clarify)
     using fold_bot by simp
 qed
 
+(* Every named-global slot of an inr_slot_locals_bot state is itself
+   local-bot; hoisted here (ahead of its first use below) so downstream
+   proofs can cite it instead of re-deriving it from both definitions. *)
+lemma inr_slot_locals_bot_imp [dest]:
+  "inr_slot_locals_bot \<sigma> \<Longrightarrow> local_bot_on_locals (\<sigma> (Inr g))"
+  unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
+
 definition local_edge_invariant ::
   "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> bool"
 where
@@ -297,6 +325,14 @@ where
      (\<forall>su g. local_bot_on_locals g \<longrightarrow>
         f (restrict_local su \<squnion> g) =
         restrict_local (f (restrict_local su)) \<squnion> g)"
+
+(* The direct instantiation of local_edge_invariant's definition, cited by
+   domain instances instead of re-unfolding the quantified definition at
+   every call site. *)
+lemma local_edge_invariantD:
+  "local_edge_invariant f \<Longrightarrow> local_bot_on_locals g \<Longrightarrow>
+   f (restrict_local su \<squnion> g) = restrict_local (f (restrict_local su)) \<squnion> g"
+  unfolding local_edge_invariant_def by blast
 
 lemma local_edge_invariant_local_result:
   assumes inv: "local_edge_invariant f"
@@ -340,9 +376,8 @@ proof (intro allI impI)
     using h lb unfolding local_edge_invariant_def by blast
   show "f (restrict_local su \<squnion> g) \<squnion> h (restrict_local su \<squnion> g) =
         restrict_local (f (restrict_local su) \<squnion> h (restrict_local su)) \<squnion> g"
-    using f_step h_step lb
-    unfolding restrict_local_def local_bot_on_locals_def sup_fun_def
-    by (auto simp: fun_eq_iff sup_assoc sup_left_commute sup_commute)
+    using f_step h_step
+    by (simp add: restrict_local_sup sup_assoc sup_left_commute sup_commute)
 qed
 
 definition local_env_independent ::
@@ -369,7 +404,7 @@ lemma sides_local_edge_tree_Inr:
   "sides_of_rhs (local_edge_tree f u) \<sigma> (Inr ()) = bot"
   unfolding local_edge_tree_def by simp
 
-lemma local_bot_on_locals_restrict_global:
+lemma local_bot_on_locals_restrict_global [intro]:
   "local_bot_on_locals (restrict_global \<sigma>)"
   unfolding restrict_global_def local_bot_on_locals_def by simp
 
@@ -459,7 +494,7 @@ proof -
 qed
 
 lemma id_local_edge_invariant: "local_edge_invariant (\<lambda>env. env)"
-  unfolding local_edge_invariant_def by (auto simp: restrict_local_def sup_fun_def)
+  unfolding local_edge_invariant_def by (simp add: restrict_local_idem)
 
 
 lemma local_edge_invariant_side_env_eq:
@@ -472,13 +507,13 @@ lemma local_edge_invariant_side_env_eq:
     restrict_global (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
 proof -
   have lb: "local_bot_on_locals (\<sigma> (Inr ()))"
-    using inr unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
+    using inr_slot_locals_bot_imp[OF inr] .
   have gb: "local_bot_on_locals (glob_env \<sigma>)"
     unfolding glob_env_unit
-    using inr
-    by (auto intro!: glob_env_local_bot simp: inr_slot_locals_bot_def local_bot_on_locals_def)
+    using inr_slot_locals_bot_imp[OF inr]
+    by (auto intro!: glob_env_local_bot)
   have rg: "local_bot_on_locals (restrict_global (\<sigma> (Inl u)))"
-    by (simp add: local_bot_on_locals_def restrict_global_def)
+    by (rule local_bot_on_locals_restrict_global)
   have g: "local_bot_on_locals (restrict_global (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
     by (rule local_bot_join[OF rg gb])
   have env: "side_env \<sigma> u = restrict_local (\<sigma> (Inl u)) \<squnion>
@@ -511,10 +546,6 @@ qed
 lemma Inl_dep_aux_local_edge_tree:
   "Inl u \<in> dep_aux \<sigma> (local_edge_tree f u)"
   unfolding local_edge_tree_def by simp
-
-lemma inr_slot_locals_bot_imp:
-  "inr_slot_locals_bot \<sigma> \<Longrightarrow> local_bot_on_locals (\<sigma> (Inr g))"
-  unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
 
 lemma local_env_independent_side_env:
   fixes f :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
@@ -696,7 +727,7 @@ lemma in_gamma_local_edge_tree_assign:
            (local_edge_tree (apply_tf tf (EA_Assign x e)) u) \<sigma>\<rbrakk>"
 proof -
   have lb: "local_bot_on_locals (\<sigma> (Inr ()))"
-    using inr unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
+    using inr_slot_locals_bot_imp[OF inr] .
   have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     by (simp add: side_env_def glob_env_unit)
   have st: "s(x := aval e s) \<in> \<lbrakk>apply_tf tf (EA_Assign x e) (side_env \<sigma> u) \<rbrakk>"
@@ -718,7 +749,7 @@ lemma in_gamma_local_edge_tree_assume:
            (local_edge_tree (apply_tf tf (EA_Assume b)) u) \<sigma>\<rbrakk>"
 proof -
   have lb: "local_bot_on_locals (\<sigma> (Inr ()))"
-    using inr unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
+    using inr_slot_locals_bot_imp[OF inr] .
   have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     by (simp add: side_env_def glob_env_unit)
   have st: "s \<in> \<lbrakk>apply_tf tf (EA_Assume b) (side_env \<sigma> u)\<rbrakk>"
@@ -740,7 +771,7 @@ lemma in_gamma_local_edge_tree_assume_not:
            (local_edge_tree (apply_tf tf (EA_AssumeNot b)) u) \<sigma>\<rbrakk>"
 proof -
   have lb: "local_bot_on_locals (\<sigma> (Inr ()))"
-    using inr unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
+    using inr_slot_locals_bot_imp[OF inr] .
   have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     by (simp add: side_env_def glob_env_unit)
   have st: "s \<in> \<lbrakk>apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u)\<rbrakk>"
