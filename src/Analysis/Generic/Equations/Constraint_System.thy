@@ -67,6 +67,30 @@ lemma apply_tf_EA_Ret_Some:
   "apply_tf tf (EA_Ret (Some a) p) = apply_tf tf (EA_Assign ret_var a)"
   by (simp add: fun_eq_iff)
 
+text \<open>Closure principle for any family built by applying a single transfer function
+  and post-processing the result the same way at every action: once the Nop/Assign/
+  Assume/AssumeNot cases agree, the \<open>EA_Ret\<close> case follows for free from the two facts
+  above, since every family in this codebase reuses the underlying assignment transfer
+  for a value return. Deliberately left untagged: F and H are schematic, so tagging
+  this \<open>[simp]\<close>/\<open>[dest]\<close>/\<open>[intro]\<close> would let it fire against any equality of this shape.\<close>
+lemma apply_tf_wrap_eqI:
+  fixes tf :: "'a domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'y"
+    and H :: "('a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> 'y"
+  assumes ret_none: "\<And>p. F (EA_Ret None p) = F EA_Nop"
+    and ret_some: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
+    and nop: "F EA_Nop = H (apply_tf tf EA_Nop)"
+    and assign: "\<And>x e. F (EA_Assign x e) = H (apply_tf tf (EA_Assign x e))"
+    and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
+    and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
+  shows "F a = H (apply_tf tf a)"
+proof (cases a)
+  case (EA_Ret e p)
+  then show ?thesis
+    using ret_none ret_some nop assign
+    by (metis apply_tf_EA_Ret_None apply_tf_EA_Ret_Some option.collapse)
+qed (simp_all add: assms)
+
 subsection \<open>Abstract join over a set\<close>
 
 text \<open>

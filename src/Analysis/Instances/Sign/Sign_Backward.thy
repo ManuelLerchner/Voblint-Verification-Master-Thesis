@@ -1,5 +1,5 @@
 theory Sign_Backward
-  imports Sign_Arithmetic
+  imports Sign_Arithmetic Exec_Backward
 begin
 
 section \<open>Sign backward filtering\<close>
@@ -126,6 +126,8 @@ global_interpretation sign_backward_domain:
   defines
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
+    and afilter_sign_st = sign_backward_domain.afilter_st
+    and bfilter_sign_st = sign_backward_domain.bfilter_st
 proof unfold_locales
   fix n :: int and a b :: sign
   assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
@@ -171,6 +173,16 @@ next
   show "n1 \<in> gamma (fst (inv_times_sign r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times_sign r a1 a2))"
     using inv_times_sign_sound[OF h1 h2 h3] by simp
 qed
+
+text \<open>
+  Executable @{typ "sign st"} mirror of \<open>afilter_sign\<close> / \<open>bfilter_sign\<close>, and
+  its commutation with the abstract filters through @{const fun_of_st}. Both
+  come from the generic @{locale backward_domain} executable mirror
+  (\<open>Exec_Backward\<close>); no per-domain induction is needed here.
+\<close>
+
+lemmas afilter_sign_st_commute = sign_backward_domain.afilter_st_commute
+lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
 
 subsection \<open>Abstract assume\<close>
 

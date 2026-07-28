@@ -14,6 +14,11 @@ subsection \<open>Interval type and order\<close>
 
 datatype ivl = Ivl eint eint   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
+(* Named exhaustion, cited instead of `(cases x) auto` at every destructuring site. *)
+lemma ivl_exhaustE:
+  obtains l u where "x = Ivl l u"
+  by (cases x) auto
+
 instantiation ivl :: ord begin
 definition less_eq_ivl :: "ivl => ivl => bool" where
   "(a::ivl) <= b = (case (a, b) of (Ivl l1 u1, Ivl l2 u2) => l2 \<le> l1 \<and> u1 \<le> u2)"

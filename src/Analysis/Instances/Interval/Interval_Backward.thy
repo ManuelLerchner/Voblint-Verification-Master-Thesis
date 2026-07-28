@@ -1,5 +1,5 @@
 theory Interval_Backward
-  imports Interval_Arithmetic "Voblint_IMP2.IMP2_Expr"
+  imports Interval_Arithmetic Exec_Backward "Voblint_IMP2.IMP2_Expr"
 begin
 
 section \<open>Interval backward filtering\<close>
@@ -84,8 +84,8 @@ lemma inv_less_ivl_sound:
   shows "n1 \<in> gamma_ivl (fst (inv_less_ivl res a1 a2))
        \<and> n2 \<in> gamma_ivl (snd (inv_less_ivl res a1 a2))"
 proof -
-  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (cases a1) auto
-  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (cases a2) auto
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
   show ?thesis
   proof (cases res)
     case True
@@ -114,6 +114,8 @@ global_interpretation ivl_backward_domain:
   defines
     afilter_ivl = ivl_backward_domain.afilter
     and bfilter_ivl = ivl_backward_domain.bfilter
+    and afilter_ivl_st = ivl_backward_domain.afilter_st
+    and bfilter_ivl_st = ivl_backward_domain.bfilter_st
 proof unfold_locales
   fix n :: int and a b :: ivl
   assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
@@ -151,6 +153,16 @@ next
     using H1 H2 by simp
 qed
 
+text \<open>
+  Executable @{typ "ivl st"} mirror of \<open>afilter_ivl\<close> / \<open>bfilter_ivl\<close>, and its
+  commutation with the abstract filters through @{const fun_of_st}. Both come
+  from the generic @{locale backward_domain} executable mirror
+  (\<open>Exec_Backward\<close>); no per-domain induction is needed here.
+\<close>
+
+lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute
+lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
+
 lemma aval_ivl_hol_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl_hol a sigma1 \<le> aval_ivl_hol a sigma2"
   by (induction a arbitrary: sigma1 sigma2)
@@ -167,10 +179,10 @@ lemma inv_less_ivl_mono:
   shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
        \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
 proof -
-  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (cases a1) auto
-  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (cases a2) auto
-  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (cases a1') auto
-  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (cases a2') auto
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
+  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (rule ivl_exhaustE)
+  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (rule ivl_exhaustE)
   from a1[unfolded ha1 ha1' less_eq_ivl_def] have ord1: "eint_le l1' l1" "eint_le u1 u1'" by auto
   from a2[unfolded ha2 ha2' less_eq_ivl_def] have ord2: "eint_le l2' l2" "eint_le u2 u2'" by auto
   show ?thesis

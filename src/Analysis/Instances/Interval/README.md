@@ -10,7 +10,7 @@ The interval domain threaded through the four layers of the
 | `Interval_Lattice.thy` | interval order, lattice, and bot/top structure |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
-| `Interval_Backward.thy` | backward guard/filter operators |
+| `Interval_Backward.thy` | backward guard/filter operators; names the interval `afilter_ivl_st`/`bfilter_ivl_st` executable mirror via `Exec_Backward` |
 | `Interval_Transfer.thy` | edge transfer record and transfer soundness |
 | `Interval_Print.thy` | display support for examples and DOT output |
 | `Interval_Domain.thy` | `abstract_domain` instantiation; `backward_domain_mono` interpretation |

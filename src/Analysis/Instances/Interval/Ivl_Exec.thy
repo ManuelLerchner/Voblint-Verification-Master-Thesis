@@ -14,102 +14,13 @@ text \<open>
   end-to-end soundness theory yet (cf.\ \<open>Sign_Exec_Sound\<close>).
 \<close>
 
-lemma fun_of_st_update:
-  "fun_of_st (update_st s x v) = (fun_of_st s)(x := v)"
-  by (rule ext) (metis fun_upd_apply lookup_update_diff lookup_update_same)
-
-subsection \<open>Backward filter mirror on @{typ "ivl st"}\<close>
-
-fun afilter_ivl_st :: "aexp \<Rightarrow> ivl \<Rightarrow> ivl st \<Rightarrow> ivl st" where
-    "afilter_ivl_st (BaseN (AExp.V x)) a s =
-       update_st s x (meet_ivl a (lookup_st s x))"
-  | "afilter_ivl_st (Plus e1 e2) a s =
-       (let (a1, a2) = inv_plus_ivl a (aval_ivl e1 (lookup_st s)) (aval_ivl e2 (lookup_st s))
-        in afilter_ivl_st e1 a1 (afilter_ivl_st e2 a2 s))"
-  | "afilter_ivl_st (Minus e1 e2) a s =
-       (let (a1, a2) = inv_minus_ivl a (aval_ivl e1 (lookup_st s)) (aval_ivl e2 (lookup_st s))
-        in afilter_ivl_st e1 a1 (afilter_ivl_st e2 a2 s))"
-  | "afilter_ivl_st (Times e1 e2) a s =
-       (let (a1, a2) = inv_times_ivl a (aval_ivl e1 (lookup_st s)) (aval_ivl e2 (lookup_st s))
-        in afilter_ivl_st e1 a1 (afilter_ivl_st e2 a2 s))"
-  | "afilter_ivl_st _ a s = s"
-
-fun bfilter_ivl_st :: "bexp \<Rightarrow> bool \<Rightarrow> ivl st \<Rightarrow> ivl st" where
-    "bfilter_ivl_st (Less e1 e2) res s =
-       (let (a1, a2) = inv_less_ivl res (aval_ivl e1 (lookup_st s)) (aval_ivl e2 (lookup_st s))
-        in afilter_ivl_st e1 a1 (afilter_ivl_st e2 a2 s))"
-  | "bfilter_ivl_st (Not b) res s = bfilter_ivl_st b (\<not> res) s"
-  | "bfilter_ivl_st (And b1 b2) True s =
-       bfilter_ivl_st b1 True (bfilter_ivl_st b2 True s)"
-  | "bfilter_ivl_st (And b1 b2) False s =
-       bfilter_ivl_st b1 False s \<squnion> bfilter_ivl_st b2 False s"
-  | "bfilter_ivl_st (Or b1 b2) True s =
-       bfilter_ivl_st b1 True s \<squnion> bfilter_ivl_st b2 True s"
-  | "bfilter_ivl_st (Or b1 b2) False s =
-       bfilter_ivl_st b1 False (bfilter_ivl_st b2 False s)"
-  | "bfilter_ivl_st (Eq e1 e2) True s =
-       (let a = meet_ivl (aval_ivl e1 (lookup_st s)) (aval_ivl e2 (lookup_st s))
-        in afilter_ivl_st e1 a (afilter_ivl_st e2 a s))"
-  | "bfilter_ivl_st _ _ s = s"
-
-lemma afilter_ivl_st_commute:
-  "fun_of_st (afilter_ivl_st e a s) = afilter_ivl e a (fun_of_st s)"
-proof (induction e arbitrary: a s)
-  case (BaseN x)
-  show ?case by (cases x; simp add: fun_of_st_update)
-next
-  case (Plus e1 e2)
-  show ?case by (simp add: Plus.IH)
-next
-  case (Minus e1 e2)
-  show ?case by (simp add: Minus.IH)
-next
-  case (Times e1 e2)
-  show ?case by (simp add: Times.IH)
-qed
-
-lemma bfilter_ivl_st_commute:
-  "fun_of_st (bfilter_ivl_st b res s) = bfilter_ivl b res (fun_of_st s)"
-proof (induction b arbitrary: res s)
-  case (BaseB x)
-  then show ?case by simp
-next
-  case (Not b)
-  then show ?case by simp
-next
-  case (And b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: And.IH)
-  next
-    case False
-    then show ?thesis by (simp add: And.IH)
-  qed
-next
-  case (Or b1 b2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: Or.IH)
-  next
-    case False
-    then show ?thesis by (simp add: Or.IH)
-  qed
-next
-  case (Less e1 e2)
-  then show ?case by (simp add: afilter_ivl_st_commute split: prod.splits)
-next
-  case (Eq e1 e2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: afilter_ivl_st_commute Let_def)
-  next
-    case False
-    then show ?thesis by simp
-  qed
-qed
+text \<open>
+  \<open>afilter_ivl_st\<close> / \<open>bfilter_ivl_st\<close> and their commutation with
+  @{const afilter_ivl} / @{const bfilter_ivl} through @{const fun_of_st} come
+  from \<open>Interval_Backward\<close> -- the interval specialization of the generic
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>). The
+  commutation induction is proved once there, not per domain.
+\<close>
 
 definition assume_ivl_st :: "bexp \<Rightarrow> ivl st \<Rightarrow> ivl st" where
   "assume_ivl_st b s = bfilter_ivl_st b True s"
@@ -184,26 +95,17 @@ lemma fun_of_st_top_ivl_st:
 
 theorem ivl_tf_st_commute:
   "fun_of_st (ivl_tf_st a s) = apply_tf ivl_tf a (fun_of_st s)"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis by simp
-next
-  case (EA_Assign x e)
-  then show ?thesis
-    by (simp add: ivl_tf_def assign_ivl_def fun_of_st_update)
-next
-  case (EA_Assume b)
-  then show ?thesis
+proof (rule apply_tf_wrap_eqI[where H = "\<lambda>f. f (fun_of_st s)"])
+  show "\<And>p. fun_of_st (ivl_tf_st (EA_Ret None p) s) = fun_of_st (ivl_tf_st EA_Nop s)" by simp
+  show "\<And>a p. fun_of_st (ivl_tf_st (EA_Ret (Some a) p) s) = fun_of_st (ivl_tf_st (EA_Assign ret_var a) s)"
+    by simp
+  show "fun_of_st (ivl_tf_st EA_Nop s) = apply_tf ivl_tf EA_Nop (fun_of_st s)" by simp
+  show "\<And>x e. fun_of_st (ivl_tf_st (EA_Assign x e) s) = apply_tf ivl_tf (EA_Assign x e) (fun_of_st s)"
+    by (simp add: ivl_tf_def assign_ivl_def fun_of_st_update_st)
+  show "\<And>b. fun_of_st (ivl_tf_st (EA_Assume b) s) = apply_tf ivl_tf (EA_Assume b) (fun_of_st s)"
     by (simp add: ivl_tf_def assume_ivl_st_commute)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis
+  show "\<And>b. fun_of_st (ivl_tf_st (EA_AssumeNot b) s) = apply_tf ivl_tf (EA_AssumeNot b) (fun_of_st s)"
     by (simp add: ivl_tf_def assume_not_ivl_st_commute)
-next
-  case (EA_Ret e p)
-  then show ?thesis
-    by (cases e) (simp_all add: ivl_tf_def assign_ivl_def fun_of_st_update
-        apply_tf_EA_Ret_None apply_tf_EA_Ret_Some)
 qed
 
 lemma ivl_tf_st_ret_None:

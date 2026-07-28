@@ -126,10 +126,10 @@ lemma minus_ivl_norm:
 lemma ivl_plus_mono:
   assumes "a1 \<le> a2" "b1 \<le> b2" shows "a1 + b1 \<le> a2 + (b2::ivl)"
 proof -
-  obtain pa qa where na1: "normalize_ivl a1 = Ivl pa qa" by (cases "normalize_ivl a1")
-  obtain ra sa where na2: "normalize_ivl a2 = Ivl ra sa" by (cases "normalize_ivl a2")
-  obtain pb qb where nb1: "normalize_ivl b1 = Ivl pb qb" by (cases "normalize_ivl b1")
-  obtain rb sb where nb2: "normalize_ivl b2 = Ivl rb sb" by (cases "normalize_ivl b2")
+  obtain pa qa where na1: "normalize_ivl a1 = Ivl pa qa" by (rule ivl_exhaustE)
+  obtain ra sa where na2: "normalize_ivl a2 = Ivl ra sa" by (rule ivl_exhaustE)
+  obtain pb qb where nb1: "normalize_ivl b1 = Ivl pb qb" by (rule ivl_exhaustE)
+  obtain rb sb where nb2: "normalize_ivl b2 = Ivl rb sb" by (rule ivl_exhaustE)
   from normalize_ivl_mono[OF assms(1)] na1 na2 have A: "Ivl pa qa \<le> Ivl ra sa" by simp
   from normalize_ivl_mono[OF assms(2)] nb1 nb2 have B: "Ivl pb qb \<le> Ivl rb sb" by simp
   have "Ivl (pa + pb) (qa + qb) \<le> Ivl (ra + rb) (sa + sb)"
@@ -144,10 +144,10 @@ qed
 lemma ivl_minus_mono:
   assumes "a1 \<le> a2" "b1 \<le> b2" shows "a1 - b1 \<le> a2 - (b2::ivl)"
 proof -
-  obtain pa qa where na1: "normalize_ivl a1 = Ivl pa qa" by (cases "normalize_ivl a1")
-  obtain ra sa where na2: "normalize_ivl a2 = Ivl ra sa" by (cases "normalize_ivl a2")
-  obtain pb qb where nb1: "normalize_ivl b1 = Ivl pb qb" by (cases "normalize_ivl b1")
-  obtain rb sb where nb2: "normalize_ivl b2 = Ivl rb sb" by (cases "normalize_ivl b2")
+  obtain pa qa where na1: "normalize_ivl a1 = Ivl pa qa" by (rule ivl_exhaustE)
+  obtain ra sa where na2: "normalize_ivl a2 = Ivl ra sa" by (rule ivl_exhaustE)
+  obtain pb qb where nb1: "normalize_ivl b1 = Ivl pb qb" by (rule ivl_exhaustE)
+  obtain rb sb where nb2: "normalize_ivl b2 = Ivl rb sb" by (rule ivl_exhaustE)
   from normalize_ivl_mono[OF assms(1)] na1 na2 have A: "Ivl pa qa \<le> Ivl ra sa" by simp
   from normalize_ivl_mono[OF assms(2)] nb1 nb2 have B: "Ivl pb qb \<le> Ivl rb sb" by simp
   have "Ivl (pa - qb) (qa - pb) \<le> Ivl (ra - sb) (sa - rb)"

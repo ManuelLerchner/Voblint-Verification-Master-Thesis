@@ -285,6 +285,34 @@ where
         fst (dgs_combine S dst (dg_D sigma c) (dg_D sigma (FunctionResult p))
           (dg_G sigma)) \<le> dg_G sigma)"
 
+(* Stable, order-independent projections out of dg_postfix's 8-way conjunction; each
+   pays the conjunct-navigation cost once here instead of at every call site via a
+   positional [THEN conjunct2, THEN conjunct2, ...] chain that would silently misdirect
+   if a conjunct were ever inserted or reordered. *)
+lemma dg_postfix_edgeD:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and edge: "(u, a, w) \<in> intra g"
+  shows "snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma)) \<le> dg_D sigma w"
+  using pf edge unfolding dg_postfix_def by auto
+
+lemma dg_postfix_edgeG:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and edge: "(u, a, w) \<in> intra g"
+  shows "fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma)) \<le> dg_G sigma"
+  using dg_postfix_def edge pf by fastforce
+
+lemma dg_postfix_enterD:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and ce: "(cc, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
+  shows "snd (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma)) \<le> dg_D sigma (FunctionEntry p)"
+  using pf ce unfolding dg_postfix_def by fastforce
+
+lemma dg_postfix_enterG:
+  assumes pf: "dg_postfix g s0d s0g sigma"
+    and ce: "(cc, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
+  shows "fst (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma)) \<le> dg_G sigma"
+  using pf ce unfolding dg_postfix_def by blast
+
 lemma dg_edge_tree_local:
   "locals (traverse_rhs
       (map_gtree (\<lambda>_. ())
@@ -628,14 +656,11 @@ proof -
   have stepD:
       "snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma))
         \<le> dg_D sigma w"
-    using pf[unfolded dg_postfix_def, THEN conjunct2, THEN conjunct2, THEN conjunct1] edge
-    by blast
+    using dg_postfix_edgeD[OF pf edge] .
   have stepG:
       "fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))
         \<le> dg_G sigma"
-    using pf[unfolded dg_postfix_def, THEN conjunct2, THEN conjunct2, THEN conjunct2,
-        THEN conjunct1] edge
-    by blast
+    using dg_postfix_edgeG[OF pf edge] .
   have d_le: "d' \<le> dg_D sigma w"
     and g_le: "g' \<le> dg_G sigma"
     using stepD stepG step by simp_all
@@ -667,15 +692,11 @@ proof -
   have enterD:
       "snd (dgs_enter S pars args (dg_D sigma u) (dg_G sigma))
         \<le> dg_D sigma (FunctionEntry p)"
-    using pf[unfolded dg_postfix_def, THEN conjunct2, THEN conjunct2, THEN conjunct2,
-        THEN conjunct2, THEN conjunct1] ce
-    by blast
+    using dg_postfix_enterD[OF pf ce] .
   have enterG:
       "fst (dgs_enter S pars args (dg_D sigma u) (dg_G sigma))
         \<le> dg_G sigma"
-    using pf[unfolded dg_postfix_def, THEN conjunct2, THEN conjunct2, THEN conjunct2,
-        THEN conjunct2, THEN conjunct2, THEN conjunct1] ce
-    by blast
+    using dg_postfix_enterG[OF pf ce] .
   have d_le: "d' \<le> dg_D sigma (FunctionEntry p)"
     and g_le: "g' \<le> dg_G sigma"
     using enterD enterG ent by simp_all

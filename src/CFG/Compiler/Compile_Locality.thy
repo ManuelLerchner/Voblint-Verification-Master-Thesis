@@ -623,6 +623,15 @@ proof -
   show ?thesis using compile_K_shape[OF cb e] by blast
 qed
 
+(* A calls-source is always a Statement, never FunctionEntry/FunctionResult; downstream
+   proofs obtain the witness directly instead of case-splitting on u and reproving the
+   two dead cases false each time. *)
+lemma compile_proc_calls_source_stmtE:
+  assumes cp: "compile_proc \<Pi> p decl n = (n', E, K)"
+    and e: "(u, ce, tgt, af) \<in> K"
+  obtains k where "u = Statement k"
+  using compile_proc_calls_source_stmt[OF cp e] by blast
+
 lemma compile_procs_calls_source_stmt:
   assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
     and e: "(u, ce, tgt, af) \<in> K"
@@ -652,6 +661,12 @@ next
     qed
   qed
 qed
+
+lemma compile_procs_calls_source_stmtE:
+  assumes cp: "compile_procs \<Pi> ps n = (n', E, K)"
+    and e: "(u, ce, tgt, af) \<in> K"
+  obtains k where "u = Statement k"
+  using compile_procs_calls_source_stmt[OF cp e] by blast
 
 lemma compile_procs_call_target_declared:
   assumes comp: "compile_procs \<Pi> ps n = (n', E, K)"
@@ -861,23 +876,11 @@ lemma compile_procs_tail_calls_not_head_pfn:
     and e: "(u, ce, tgt, af) \<in> K'"
     and uin: "u \<in> pfn p n n1"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K'" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_procs_calls_source_stmt[OF rest e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K'" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_procs_calls_source_stmt[OF rest e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K'" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_procs_calls_source_stmtE[OF rest e])
+  have e': "(Statement k, ce, tgt, af) \<in> K'" using e u by simp
   have kr: "k \<in> {n1..<n2}" using compile_procs_calls_source_range[OF rest e'] .
-  have kh: "k \<in> {n..<n1}" using uin Statement by (auto simp: pfn_def)
+  have kh: "k \<in> {n..<n1}" using uin u by (auto simp: pfn_def)
   show False using kr kh by auto
 qed
 
@@ -912,23 +915,11 @@ lemma compile_proc_head_calls_not_tail_pfn:
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K0" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K0" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K0" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_proc_calls_source_stmtE[OF cp e])
+  have e': "(Statement k, ce, tgt, af) \<in> K0" using e u by simp
   have kh: "k \<in> {n..<n1}" using compile_proc_calls_source_range[OF cp e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  have kt: "k \<in> {m..<m'}" using uin u by (auto simp: pfn_def)
   show False using kh kt lower by auto
 qed
 
@@ -1158,23 +1149,11 @@ lemma compile_procs_head_calls_not_tail_pfn:
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K0" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_procs_calls_source_stmt[OF procs e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K0" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_procs_calls_source_stmt[OF procs e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K0" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_procs_calls_source_stmtE[OF procs e])
+  have e': "(Statement k, ce, tgt, af) \<in> K0" using e u by simp
   have kh: "k \<in> {n..<n1}" using compile_procs_calls_source_range[OF procs e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  have kt: "k \<in> {m..<m'}" using uin u by (auto simp: pfn_def)
   show False using kh kt lower by auto
 qed
 
@@ -1184,23 +1163,11 @@ lemma compile_proc_tail_calls_not_head_pfn:
     and upper: "m' \<le> n1"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, ce, tgt, af) \<in> K0" using e FunctionEntry by simp
-  have "\<exists>k. FunctionEntry q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, ce, tgt, af) \<in> K0" using e FunctionResult by simp
-  have "\<exists>k. FunctionResult q = Statement k"
-    using compile_proc_calls_source_stmt[OF cp e'] .
-  then show False by simp
-next
-  case (Statement k)
-  have e': "(Statement k, ce, tgt, af) \<in> K0" using e Statement by simp
+proof -
+  obtain k where u: "u = Statement k" by (rule compile_proc_calls_source_stmtE[OF cp e])
+  have e': "(Statement k, ce, tgt, af) \<in> K0" using e u by simp
   have kh: "k \<in> {n1..<n2}" using compile_proc_calls_source_range[OF cp e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  have kt: "k \<in> {m..<m'}" using uin u by (auto simp: pfn_def)
   show False using kh kt upper by auto
 qed
 
