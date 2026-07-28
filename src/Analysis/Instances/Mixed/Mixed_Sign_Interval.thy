@@ -34,11 +34,21 @@ definition mixed_si_enter ::
 where
   "mixed_si_enter xs es d g = (tf_enter ivl_tf xs es g, tf_enter sign_tf xs es d)"
 
-definition mixed_si_combine ::
-  "vname option \<Rightarrow> sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state
+text \<open>Split the same way \<^const>\<open>indep_dg_spec\<close> is split: the sign (local) and
+  interval (global) channels stay orthogonal, each combined against itself/its
+  own peer with no cross-mixing.\<close>
+definition mixed_si_combine_env ::
+  "sign abs_state \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<times> sign abs_state"
+where
+  "mixed_si_combine_env dc de g = (combine_abs g g, combine_abs dc de)"
+
+definition mixed_si_combine_assign ::
+  "vname option \<Rightarrow> sign abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<times> sign abs_state
    \<Rightarrow> ivl abs_state \<times> sign abs_state"
 where
-  "mixed_si_combine dst dc de g = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
+  "mixed_si_combine_assign dst de g merged =
+     (combine_assign_abs dst (g ret_var) (fst merged),
+      combine_assign_abs dst (de ret_var) (snd merged))"
 
 definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
   "mixed_si_spec = \<lparr>
@@ -47,7 +57,8 @@ definition mixed_si_spec :: "(sign abs_state, ivl abs_state) dg_spec" where
     dgs_assume     = (\<lambda>b. mixed_si_step (EA_Assume b)),
     dgs_assume_not = (\<lambda>b. mixed_si_step (EA_AssumeNot b)),
     dgs_enter      = mixed_si_enter,
-    dgs_combine    = mixed_si_combine
+    dgs_combine_env    = mixed_si_combine_env,
+    dgs_combine_assign = mixed_si_combine_assign
   \<rparr>"
 
 lemma mixed_si_spec_step [simp]:
@@ -56,21 +67,22 @@ lemma mixed_si_spec_step [simp]:
   by (cases a) (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 definition mixed_si_cmb ::
-  "unit \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "(pp \<Rightarrow> unit \<Rightarrow> sign abs_state \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) strategy_tree"
 where
-  "mixed_si_cmb ctx dst cc ex =
-     map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree mixed_si_spec dst cc ex))"
+  "mixed_si_cmb route ctx ca cc ex =
+     (case ca of CallEdge dst _ _ \<Rightarrow>
+       map_gtree (\<lambda>_. ())
+         (map_ltree (\<lambda>w. (w, ctx))
+           (dg_spec_combine_tree mixed_si_spec dst cc ex)))"
 
 definition mixed_si_extra ::
-  "cfg \<Rightarrow> unit \<Rightarrow> pp
+  "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> sign abs_state \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
        (sign abs_state, ivl abs_state) dg_state) strategy_tree list"
 where
-  "mixed_si_extra g ctx v =
+  "mixed_si_extra g route ctx v =
      map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow>
        map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx))
          (dg_edge_tree (dgs_enter mixed_si_spec fs as) cl))) (entry_call_list g v)"
@@ -81,8 +93,8 @@ definition mixed_si_generator ::
        (sign abs_state, ivl abs_state) dg_state) eqsT"
 where
   "mixed_si_generator g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) mixed_si_cmb
-       (mixed_si_extra g) g mixed_si_spec bot0 s0d s0g"
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
+       (\<lambda>_ _ _ _. ()) mixed_si_cmb (mixed_si_extra g) g mixed_si_spec bot0 s0d s0g"
 
 definition mixed_si_D ::
   "(pp \<times> unit + unit \<Rightarrow>
@@ -118,7 +130,8 @@ text \<open>
 lemma mixed_si_spec_indep:
   "mixed_si_spec = indep_dg_spec sign_tf ivl_tf"
   unfolding mixed_si_spec_def indep_dg_spec_def
-  by (simp add: fun_eq_iff mixed_si_step_def mixed_si_enter_def mixed_si_combine_def)
+  by (simp add: fun_eq_iff mixed_si_step_def mixed_si_enter_def
+                mixed_si_combine_env_def mixed_si_combine_assign_def)
 
 interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
   unfolding mixed_si_spec_indep

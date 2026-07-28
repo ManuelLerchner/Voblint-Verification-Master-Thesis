@@ -16,6 +16,11 @@ Related local docs:
   prerequisite for it; M1 is currently unimplementable as written.
 - `SEMANTIC_CONTEXT_MIGRATION.md` - the landed entry-state context spine.
 - `SPLIT_STATE_MIGRATION.md` - context for G4.
+- `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` - Gap 3 is the sibling half of the
+  call/return lifecycle: it parameterizes the *combine* of caller/callee
+  `abs_state` values at the return slot G2 identifies. G2 fixes which slot is
+  read (one routing key for entry and return); Gap 3 fixes what happens with
+  the two values found there. Independent migrations, same boundary.
 
 The paper's claim is that the context policy is a plug-in: change `context`,
 leave the analysis specification and the call/return mechanism alone. The
@@ -91,6 +96,34 @@ Two problems, both structural rather than accidental:
   list, so a node with more than one call edge routes the return to the wrong
   callee context. Compiled CFGs emit one call edge per `Call` node, so this does
   not bite today; it is latent.
+
+**Root cause, traced to source (2026-07-27).** `entry_call_list`
+(`CFG_Enumeration.thy:149-151`) keeps the full `call_action` per outgoing call
+edge, and `extra_ivl` uses it directly - no bug on the entry side.
+`return_call_list` (`CFG_Enumeration.thy:159-166`) identifies the *exact*
+matching call edge for a return node: it filters `cfg_calls_list` by
+continuation `k = v`, a unique match, not "first of several." It then discards
+the matched `call_action`, keeping only the projected `dst`:
+
+```isabelle
+return_call_list g v =
+  map (%(c, ca, ce, k). (c, case ca of CallEdge dst _ _ => dst, ...))
+    (filter (%(c, ca, ce, k). k = v & ...) (cfg_calls_list g))
+```
+
+`cmb`'s type (`side_cfg_T_eff_keyed_seed_dg`, `DG_Framework.thy:346`) never
+receives `ca`, so `cmb_ivl` has to recover it by re-querying
+`call_successor_list g cc` and taking the head - a strictly worse substitute
+for information the generator already had at hand and threw away one line
+earlier. The fix is not a new mechanism; it is not discarding `ca`.
+
+Scope boundary: G2 is only about the routing key `'c`, i.e. which slot the
+return reads. What the return does with the caller and callee `abs_state`
+values once it has found that slot - today a fixed structural
+`restrict_local`/`restrict_global` split - is out of scope here. That merge is
+`GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 3, and it is what blocks relational
+domains at procedure boundaries. Fixing G2 does not fix Gap 3, and Gap 3 does
+not need G2 fixed first.
 
 ### G3 - no generic soundness for routed seeds
 
@@ -213,21 +246,32 @@ Existing instances take `%_ c s. ...` and are otherwise unchanged.
 
 ### M2 - one routing parameter (G2)
 
-Add
+Two steps, in order, both required:
 
-```isabelle
-route :: pp => 'c => 'd => call_action => 'c
-```
+1. **Stop discarding `ca`.** Change `return_call_list`'s result type from
+   `(cfg_node * vname option * cfg_node)` to a shape that keeps the matched
+   `call_action` - e.g. `(cfg_node * call_action * cfg_node)`, projecting `dst`
+   at the point of use instead of at enumeration time. The continuation-based
+   filter (`k = v`) does not change; only what survives the `map` does. This
+   alone lets `cmb` receive the one true call edge instead of reconstructing it.
 
-and generate both the seed publication and the combine read from it, so the
-`extra` / `cmb` hooks lose their routing freedom.
+2. **Add the routing parameter.**
+
+   ```isabelle
+   route :: pp => 'c => 'd => call_action => 'c
+   ```
+
+   and generate both the seed publication and the combine read from it, so the
+   `extra` / `cmb` hooks lose their routing freedom.
 
 **Decided: `route` is a parameter of the generator**,
 `side_cfg_T_eff_keyed_seed_dg` (`DG_Framework.thy:343`). The generator is where
 both halves are built, so one parameter there is what makes them synchronized by
 construction; `dg_ctx_activation` should *assume* routing correctness, not
 reconstruct routing itself; and the M3 locale then sits above a generator API
-that already fixes the policy.
+that already fixes the policy. Step 1 is what makes step 2 possible on the
+return side: `route` is only as good as the `call_action` it is given, and
+today's `cmb` does not have the right one.
 
 The alternative - confining `route` to `dg_ctx_activation` - is a smaller diff
 and still binds every context-sensitive instance, but leaves the generator hooks

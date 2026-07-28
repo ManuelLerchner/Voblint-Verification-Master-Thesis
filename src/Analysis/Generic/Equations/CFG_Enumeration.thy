@@ -172,4 +172,65 @@ lemma set_return_call_list [simp]:
   using set_cfg_calls_list[OF assms]
   by (auto simp: image_iff split: call_action.splits cfg_node.splits) blast+
 
+subsection \<open>Return enumeration with the triggering call action\<close>
+
+text \<open>\<^const>\<open>return_call_list\<close> keeps only the caller destination projected from the
+  triggering \<^typ>\<open>call_action\<close>, which is all the flat/context-insensitive combine
+  (\<open>combine_collect_abs\<close>, via \<open>Constraint_System.rhs_combine_sources\<close>) needs.
+  The context-sensitive DG generator needs more: it must route both the callee-entry seed
+  publication and the return-side context read from the \<^emph>\<open>same\<close> call action, and
+  \<^const>\<open>entry_call_list\<close> already keeps \<open>ca\<close> whole on the entry side.  This is the return-side
+  counterpart that does the same --- kept as a separate enumeration rather than widening
+  \<^const>\<open>return_call_list\<close> itself, since that function and its \<^typ>\<open>vname option\<close> shape are
+  also relied on by the flat constraint system and the homogeneous effectful-transfer solver
+  core (\<open>TD_Side_Tree.thy\<close>), which are out of scope for context routing.\<close>
+
+definition return_call_actions ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
+  "return_call_actions g v =
+     {(c, ca, FunctionResult p) | c ca p. (c, ca, FunctionEntry p, v) \<in> calls g}"
+
+lemma return_call_actions_iff:
+  "(c, ca, r) \<in> return_call_actions g v
+     \<longleftrightarrow> (\<exists>p. r = FunctionResult p \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
+  by (auto simp: return_call_actions_def)
+
+lemma finite_return_call_actions:
+  assumes "finite (calls g)"
+  shows "finite (return_call_actions g v)"
+proof -
+  have "return_call_actions g v
+          \<subseteq> (\<lambda>(c, ca, ce, k).
+                (c, ca, case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce)) ` calls g"
+    unfolding return_call_actions_def by (force split: prod.splits)
+  then show ?thesis using assms finite_subset finite_imageI by blast
+qed
+
+definition return_call_action_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) list" where
+  "return_call_action_list g v =
+     map (\<lambda>(c, ca, ce, k). (c, ca,
+                              case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce))
+       (filter (\<lambda>(c, ca, ce, k).
+          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
+         (cfg_calls_list g))"
+
+lemma set_return_call_action_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (return_call_action_list g v) = return_call_actions g v"
+  unfolding return_call_action_list_def return_call_actions_def
+  using set_cfg_calls_list[OF assms]
+  by (auto simp: image_iff split: cfg_node.splits)
+
+text \<open>The two enumerations agree on the destination they can both see: projecting the call
+  action out of the DG-side list recovers the flat-side list exactly.  This is the fact that
+  justifies calling both "the return enumeration for the same edge" rather than two
+  unrelated relations.\<close>
+
+lemma return_call_action_list_dst:
+  "map (\<lambda>(c, ca, ce). (c, case ca of CallEdge dst _ _ \<Rightarrow> dst, ce)) (return_call_action_list g v)
+     = return_call_list g v"
+  unfolding return_call_action_list_def return_call_list_def
+  by (induction "cfg_calls_list g") auto
+
 end

@@ -148,14 +148,15 @@ locale sound_dg_spec =
 begin
 
 definition dg_cmb ::
-  "unit \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "(pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
         ('D, 'G) dg_state) strategy_tree"
 where
-  "dg_cmb ctx dst cc ex =
-     map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ctx))
-         (dg_spec_combine_tree S dst cc ex))"
+  "dg_cmb route ctx ca cc ex =
+     (case ca of CallEdge dst _ _ \<Rightarrow>
+       map_gtree (\<lambda>_. ())
+         (map_ltree (\<lambda>w. (w, ctx))
+           (dg_spec_combine_tree S dst cc ex)))"
 
 definition dg_enter ::
   "unit \<Rightarrow> vname list \<Rightarrow> aexp list \<Rightarrow> pp
@@ -167,10 +168,10 @@ where
          (dg_edge_tree (dgs_enter S fs as) cl))"
 
 definition dg_extra ::
-  "cfg \<Rightarrow> unit \<Rightarrow> pp
+  "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree list"
 where
-  "dg_extra g ctx v =
+  "dg_extra g route ctx v =
      map (\<lambda>(cl, ca). case ca of CallEdge dst fs as \<Rightarrow> dg_enter ctx fs as cl)
          (entry_call_list g v)"
 
@@ -180,8 +181,8 @@ definition dg_gen ::
         ('D, 'G) dg_state) eqsT"
 where
   "dg_gen g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) dg_cmb
-       (dg_extra g) g S bot0 s0d s0g"
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
+       (\<lambda>_ _ _ _. ()) dg_cmb (dg_extra g) g S bot0 s0d s0g"
 
 definition dg_D ::
   "(pp \<times> unit + unit \<Rightarrow>
@@ -213,9 +214,9 @@ where
      map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
        (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u)))
        (intra_predecessor_list g v)
-     @ map (\<lambda>(cc, dst, ex). dg_cmb () dst cc ex)
-       (return_call_list g v)
-     @ dg_extra g () v"
+     @ map (\<lambda>(cc, ca, ex). dg_cmb (\<lambda>_ _ _ _. ()) () ca cc ex)
+       (return_call_action_list g v)
+     @ dg_extra g (\<lambda>_ _ _ _. ()) () v"
 
 definition dg_acc ::
   "cfg \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> pp
@@ -289,15 +290,17 @@ lemma dg_edge_tree_global:
       sum.map_comp o_def)
 
 lemma dg_combine_tree_local:
-  "locals (traverse_rhs (dg_cmb () dst cc ex) sigma)
+  "locals (traverse_rhs (dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) cc ex) sigma)
    = snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
        (dg_G sigma))"
   unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  by (subst traverse_intra_keyed)
-    (simp add: traverse_dg_combine_tree)
+  apply simp
+  apply (subst traverse_intra_keyed)
+  apply (simp add: traverse_dg_combine_tree)
+  done
 
 lemma dg_combine_tree_global:
-  "globs (sides_of_rhs (dg_cmb () dst cc ex) sigma (Inr ()))
+  "globs (sides_of_rhs (dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) cc ex) sigma (Inr ()))
    = fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex)
        (dg_G sigma))"
   unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
@@ -505,13 +508,14 @@ proof -
 
   have combine_tree_mem:
     "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
-      dg_cmb () dst c (FunctionResult p) \<in> set (dg_trees g k)"
+      dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c (FunctionResult p) \<in> set (dg_trees g k)"
   proof -
     fix c dst fs as p k
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
-    have "(c, dst, FunctionResult p) \<in> set (return_call_list g k)"
-      using ce by (auto simp: set_return_call_list[OF finC] return_calls_iff)
-    then show "dg_cmb () dst c (FunctionResult p) \<in> set (dg_trees g k)"
+    have "(c, CallEdge dst fs as, FunctionResult p) \<in> set (return_call_action_list g k)"
+      using ce by (auto simp: set_return_call_action_list[OF finC] return_call_actions_iff)
+    then show "dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c (FunctionResult p)
+        \<in> set (dg_trees g k)"
       by (force simp: dg_trees_def)
   qed
 
@@ -735,7 +739,10 @@ where
                                apply_tf tfD (EA_AssumeNot b) d)),
     dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
                                    tf_enter tfD xs es d)),
-    dgs_combine    = (\<lambda>dst dc de g. (combine_collect_abs dst g g, combine_collect_abs dst dc de))
+    dgs_combine_env    = (\<lambda>dc de g. (combine_abs g g, combine_abs dc de)),
+    dgs_combine_assign = (\<lambda>dst de g merged.
+      (combine_assign_abs dst (g ret_var) (fst merged),
+       combine_assign_abs dst (de ret_var) (snd merged)))
   \<rparr>"
 
 lemma dg_spec_step_indep [simp]:
@@ -747,7 +754,7 @@ lemma dg_spec_step_indep [simp]:
 lemma dgs_combine_indep [simp]:
   "dgs_combine (indep_dg_spec tfD tfG) dst dc de g
    = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
-  unfolding indep_dg_spec_def by simp
+  unfolding dgs_combine_def indep_dg_spec_def combine_collect_abs_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
   product, as a named corollary: applied by @{method rule} at the interpretation
@@ -851,7 +858,7 @@ proof -
   have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
-    unfolding unit_dg_spec_def unit_combine_step_def gamma_unit_def
+    unfolding dgs_combine_unit_dg_spec gamma_unit_def
     by (simp add: Let_def restrict_local_global_join combine_abs_restrict)
 qed
 

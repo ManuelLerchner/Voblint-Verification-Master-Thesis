@@ -8,7 +8,7 @@ text \<open>
   Monovariant solver soundness is stated directly against the stack-faithful local-trace collector
   \<^const>\<open>ltr_collect\<close>.  The bound is discharged through \<open>ltr_collect_semantic_postfix\<close> at the
   context-free candidate \<open>B v = \<lbrakk>env v\<rbrakk>\<close>: ROOT from the entry bound, EDGE from \<^const>\<open>apply_tf\<close>
-  soundness, CALL from \<^const>\<open>tf_enter\<close> soundness, and COMB from \<^const>\<open>combine_collect_abs\<close>
+  soundness, CALL from \<^const>\<open>tf_enter\<close> soundness, and COMB from \<^const>\<open>tf_combine_collect_abs\<close>
   soundness.  The three transfer sources are the intra predecessors, the callee-entry
   contributions over \<^const>\<open>calls\<close>, and the return combines over \<^const>\<open>calls\<close>.
 \<close>
@@ -29,7 +29,7 @@ lemma ltr_post_fixpoint_sound_at:
        tf_enter tf fs as (env c) \<le> env (FunctionEntry p)"
   assumes combine_le:
     "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
-       combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> env cont"
+       tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont"
   assumes entry_le: "s0 \<le> env (cfg_entry g)"
   shows "ltr_collect g S v0 \<subseteq> \<lbrakk>env v0\<rbrakk>"
 proof (rule ltr_collect_semantic_postfix)
@@ -50,7 +50,7 @@ next
   assume e: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> \<lbrakk>env cl\<rbrakk>" and t: "t \<in> \<lbrakk>env (FunctionResult p)\<rbrakk>"
   show "combine_collect dst s t \<in> \<lbrakk>env cont\<rbrakk>"
-    by (rule combine_abs_bound_sound[OF combine_le[OF e] s t])
+    by (rule combine_of_bound[OF combine_le[OF e] s t])
 qed
 
 theorem unified_ltr_post_fixpoint_sound:
@@ -79,13 +79,13 @@ proof -
     finally show "tf_enter tf fs as (env c) \<le> env (FunctionEntry p)" .
   qed
   have combine_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
-       combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> env cont"
+       tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont"
   proof -
     fix c dst fs as p cont assume e: "(c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g"
-    have "combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> rhs g tf (\<squnion>) bot s0 env cont"
-      by (rule combine_abs_le_rhs[OF finI finC e])
+    have "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> rhs g tf (\<squnion>) bot s0 env cont"
+      by (rule tf_combine_le_rhs[OF finI finC e])
     also have "\<dots> \<le> env cont" using post_fp unfolding is_post_fixpoint_def by simp
-    finally show "combine_collect_abs dst (env c) (env (FunctionResult p)) \<le> env cont" .
+    finally show "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont" .
   qed
   have entry_le: "s0 \<le> env (cfg_entry g)"
     using s0_le_rhs_entry[OF finI finC]

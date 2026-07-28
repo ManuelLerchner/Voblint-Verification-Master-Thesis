@@ -15,6 +15,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_DG_Ctx_Flagship
     Example_Interval_DG_Ctx_Sound
     Example_Interval_DG_Ctx_Collect
+    Example_Interval_DG_Ctx_Multi_Call_Regression
     Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_Proc_GraphViz

@@ -52,34 +52,90 @@ The first argument is the callee's exit state; the second is the caller's state 
 the call site. Each analysis decides how to merge them. `combine_assign` additionally
 receives the syntactic call `lval := f(args)` to adjust the return value.
 
-**What we do:** fixed structural combine — `restrict_local` of caller joined with
-`restrict_global` of callee. This works for Sign and Interval (per-variable domains
-commute with the split) but breaks for relational domains: an octagon relating local
-`x` to global `G` cannot be split by variable name without losing the constraint.
+**Audit update (2026-07-27).** This gap is not uniform across the codebase. There
+are two distinct call/return combine sites, at different degrees of readiness.
 
-**What closing it would require:**
-
-Add `combine_env` and `combine_assign` fields to `effectful_domain_transfer` (or a
-new `interprocedural_domain_transfer` record). The `combining` locale in
-`Constraint_System_IP_Sound.thy` currently hardwires `restrict_local`/`restrict_global`;
-it would need to be parameterised over an abstract `combine` operation with axioms:
+**Already closed, in the context-sensitive DG layer.** `dg_spec`
+(`DG_Framework.thy:232`) carries combine as a record field:
 
 ```isabelle
-locale combining_domain =
-  fixes combine :: "'a abs_state => 'a abs_state => 'a abs_state"
-  assumes combine_sound:
-    "\<forall>s_caller s_callee.
-       s_caller \<in> gamma_state local_pre \<Longrightarrow>
-       s_callee \<in> gamma_state callee_exit \<Longrightarrow>
-       combine_states s_caller s_callee \<in> gamma_state (combine local_pre callee_exit)"
+dgs_combine :: "vname option => 'dl => 'dl => 'dg => 'dg \<times> 'dl"
 ```
 
-The soundness proof for `post_fixpoint_sound_at_ip` would then discharge this
-obligation rather than applying the hardwired split lemmas.
+`sound_dg_spec.combine_sound` (`DG_Soundness.thy:138-142`) is proved generically
+over `dgs_combine S` for an arbitrary `dg_spec S` - no analysis-specific
+instantiation is assumed at the locale level. The Interval context flagship's
+`cmb_ivl` already calls `dgs_combine Spoly dst ...`
+(`Example_Interval_DG_Ctx_Flagship.thy:87-88`) rather than inlining a structural
+split. Every current instance (`unit_dg_spec`, the Interval flagship, Mixed
+Sign/Interval) happens to set `dgs_combine` to the structural split
+(`unit_combine_step`, `DG_Framework.thy:270-276`, built from
+`combine_collect_abs`), but that is a choice of instance, not a limitation of the
+interface. A relational instance needs no `DG_Framework.thy` change - only a new
+`dgs_combine` value and a `combine_sound` proof for it. `gammaDG :: 'D => 'G =>
+store set` already concretizes the pair jointly, so it does not presuppose a
+per-variable-splittable domain.
 
-**Effort:** 2–3 weeks. Touches `Constraint_System.thy`,
-`Constraint_System_IP_Sound.thy`, `Analysis_Sound.thy`, all domain soundness
-interpretations, and the interprocedural combine lemmas in `CFG_Collect_IP_Adeq.thy`.
+**Closed (2026-07-28), in the flat/context-insensitive constraint system.**
+Comparison against Goblint's actual `master` source (`src/framework/analyses.ml`,
+`src/framework/constraints.ml`) showed the real interface is split in two:
+`combine_env` merges caller/callee environments (may unify, filter by taint,
+raise `Deadcode` - see the Apron `relationAnalysis.apron.ml` evidence below), and
+the separate `combine_assign` then writes the return value into the lval, run
+*against `combine_env`'s output*. Under this project's function-based
+`'a abs_state = vname => 'a` representation, the return-value write
+(`combine_assign_abs`, `Constraint_System.thy:401-404`) is already
+domain-agnostic - it is a plain `dst := v` update, with no case where a domain
+needs to see anything but the value being written. Only the environment-merge
+half needed to become analysis-specific.
+
+`domain_transfer` (`Constraint_System.thy:38-43`) gained a
+`tf_combine :: 'a abs_state => 'a abs_state => 'a abs_state` field, alongside the
+existing `tf_assign`/`tf_assume`/`tf_assume_not`/`tf_enter`. `sound_transfer`
+(`Constraint_System.thy:634-650`) gained the matching `tf_sound_combine`
+assumption, proving `tf_combine tf` over-approximates the fixed concrete
+`combine_states` (`CFG_Def.thy:148-149`) - the one true operational return
+semantics, unchanged and not analysis-owned. `tf_combine_collect_abs`
+(`Constraint_System.thy`) is the new per-analysis return combine
+(`combine_assign_abs dst (se ret_var) (tf_combine tf sc se)`); the fixed
+`combine_collect_abs`/`combine_abs` are untouched and remain the default every
+non-generic consumer (DG-layer defaults, `TD_Side_CFG.thy`,
+`Sign_Named_Global_Eff.thy`, `Exec_St.thy`/`Exec_Bridge.thy`) still uses directly.
+`rhs_combine_sources`/`rhs_sources` (`Constraint_System.thy`),
+`combine_of_bound` (new, `Constraint_System_Sound.thy`, mirroring
+`call_enter_of_bound`), `tf_combine_le_rhs` (renamed from `combine_abs_le_rhs`),
+and `LTR_Analysis_Sound.thy`'s COMB obligation (`ltr_post_fixpoint_sound_at`,
+`unified_ltr_post_fixpoint_sound`) all route through it.  `sign_tf`/`ivl_tf`
+(`Sign_Transfer.thy`, `Interval_Transfer.thy`) set `tf_combine` to the existing
+default (`combine_sign`/`combine_abs`), so both instances are behaviorally
+unchanged - Sign and Interval do not yet exercise a non-default merge, but any
+future analysis with a relational or otherwise non-structural env-merge now can,
+without touching the DG layer, the solver, or any existing instance.
+
+**Deferred: the DG layer's `dgs_combine` has the same single-phase shape.**
+`dgs_combine` (`DG_Framework.thy:238`) is analysis-*parametrized* (Site A was
+already closed in that sense, per the earlier audit above) but is still a single
+call, with no `combine_env`/`combine_assign` split - the same architectural gap
+just closed at the flat layer. This is not a blocking gap today: no DG instance
+needs it, since Sign/Interval/Mixed all use the structural default
+(`unit_combine_step`, built from `combine_collect_abs`) and no relational DG
+instance exists. Revisit alongside Octagon or any other relational domain
+(`AGENTS.md`'s locked-decisions table lists it as a stretch goal); do not conflate
+"Site A is analysis-parametrized" with "Site A matches Goblint's phase
+structure" - they are independent properties, and only the first has ever held
+for Site A.
+
+**Effort:** landed. Touched `Constraint_System.thy`, `Constraint_System_Sound.thy`,
+`LTR_Analysis_Sound.thy`, `Sign_Transfer.thy`, `Interval_Transfer.thy`, and one
+example (`Example_Proc_Call.thy`, which had manually inlined the old
+`combine_collect_abs` shape to verify a post-fixpoint). `Voblint_Analysis`,
+`Voblint_Formalization`, and `Voblint_Examples` all batch-build green.
+
+Related: `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md` G2/M2 - a DG-layer defect in
+the same call/return lifecycle, but in context *routing* (which slot entry and
+return read/write), not in combine. Routing and combine are separate concerns:
+G2/M2 fixes which slot is read; this gap fixes what happens with the two values
+once found. Fixing one does not fix the other.
 
 ---
 
@@ -96,27 +152,71 @@ Locals and globals can have completely different lattice types. A pointer analys
 might use `D.t = vname -> points_to_set` for locals and `G.t = heap_cell -> value_set`
 for globals. The two domains never need to be compared or joined directly.
 
-**What we do:** both local unknowns (`σ(Inl v)`) and global unknowns (`σ(Inr g)`)
-have type `'a abs_state = vname -> 'a`. Same type, same index set.
+**Audit update (2026-07-28).** The line above is only true of the older
+flat/monovariant track (`Constraint_System.thy`, `TD_Side_CFG.thy`). The D/G
+layer already closes this gap.
 
-**What closing it would require:**
+`dg_state` (`DG_Framework.thy:36`) has two independent type parameters:
+`datatype ('l, 'g) dg_state = DG (locals: 'l) (globs: 'g)`, with a
+componentwise lattice order (`DG_Framework.thy:38-105`). `dg_spec`
+(`DG_Framework.thy:232-238`) types every field over independent `'dl`/`'dg`,
+constrained only to `bounded_semilattice_sup_bot` - not to `abs_state` at
+all. `sound_dg_spec` (`DG_Soundness.thy:127-147`) fixes
+`'D`/`'G :: bounded_semilattice_sup_bot` and `gammaDG :: 'D => 'G => store
+set` independently, with no assumption forcing them equal.
 
-Introduce a type parameter `'g_val` for the global domain, separate from `'a` for
-the local domain. The constraint system becomes:
+This is exercised, not just type-checked: `indep_dg_spec :: 'd::sound_domain
+domain_transfer => 'g::sound_domain domain_transfer => ('d abs_state, 'g
+abs_state) dg_spec` (`DG_Soundness.thy:727-730`) is instantiated at
+`mixed_si_spec :: (sign abs_state, ivl abs_state) dg_spec`
+(`Mixed_Sign_Interval.thy:43-44`) - local unknowns tracked by Sign, global
+unknowns tracked by Interval, genuinely different lattices, proved sound
+(`mixed_si_spec_indep`, `Mixed_Sign_Interval.thy:119-127`) and batch-green.
 
-```isabelle
-type_synonym ('a, 'g_val) combined_state =
-  "(pp + 'g) => ('a abs_state + 'g_val)"
-```
+The vendored `TD_side` solver (`vendor/td-verification/`) does fix one value
+type `'d` per `strategy_tree`/state map (`TD_side.thy:16-22`,
+`Basics_side.thy:94-97`) - `dg_state` is exactly the "flatten to one type at
+the interface boundary" workaround this section's own text names as the
+alternative to a vendor rewrite. Already built, already proven.
 
-or equivalently, two separate maps `σ_local : pp => 'a abs_state` and
-`σ_global : 'g => 'g_val`. Strategy trees then have two `Answer` payload types.
-The vendored solver would need to be generalised (or the flattening to a single type
-done at the interface boundary, as Goblint's `Var2` does).
+**What remains open (audit refined 2026-07-28).** `dg_ctx_activation`
+(`DG_Ctx_Activation.thy:18-19`, Track 1's context-sensitive/routed locale)
+only interprets `sound_dg_spec` at the homogeneous
+`('a abs_state, 'a abs_state) dg_spec` - combining real `'D != 'G` with
+context-sensitivity is unexercised. The earlier `is_global`-occurrence check
+was the wrong signal for this file - the real blocker is `gamma_unit d g =
+\<lbrakk>d \<squnion> g\<rbrakk>` (`DG_Soundness.thy`), which requires `d`/`g` to share one type
+to type-check `d \<squnion> g` at all. This is not a peripheral dependency: every
+non-trivial lemma in `DG_Ctx_Activation.thy` routes through it -
+`sg_cov`'s own assumption (`sg (Inl (v,c)) = locals (sigma (Inl (v,c))) \<squnion>
+globs (sigma (Inr gk0))`, line 35), `dg_ctx_act_edge`
+(lines 168-197), and `dg_ctx_act_comb_covered` (lines 208-241) all build their
+soundness chain through `gamma_unit`/`gamma_unit_mono` specifically, not
+through the already-heterogeneous `sound_dg_spec.gammaDG`/`gamma_dg`
+(`DG_Soundness.thy:106-109`, already independent-typed and already exercised
+by `indep_dg_spec`). The locale's own `sg` parameter is typed
+`pp \<times> 'c + 'k \<Rightarrow> 'a abs_state` - homogeneous by construction, not just by an
+unexercised choice. A heterogeneous version needs a new locale built on
+`gamma_dg` (already proven monotone, already sound) with `sg`'s type and
+every routing lemma redesigned around it, not a re-instantiation of the
+existing one. Also open: `mixed_si_spec`'s `'D`/`'G` are both still
+`abs_state`-shaped (pointwise, different value lattices); a structurally
+different index set (Goblint's `heap_cell -> value_set` example) needs Gap
+5's abstract-state work first.
 
-**Effort:** 3–4 weeks. High foundational cost; touches nearly every theory file.
-The current single-type approach is a pragmatic simplification worth keeping for
-the thesis.
+**Effort:** the type-level gap is closed. Extending it to context-sensitivity
+is new locale architecture, not a mechanical generalization - comparable in
+size to `DG_Ctx_Activation.thy` itself (245 lines), reusing `gamma_dg`'s
+already-proven pieces but redesigning `sg`'s type and every `dg_ctx_act_*`
+proof around it. No current instance needs this (the one context-sensitive
+instance, the Interval flagship, is itself homogeneous); building it now
+would be ahead of an actual requirement. Revisit when a context-sensitive
+heterogeneous analysis is actually planned. Retiring the older homogeneous
+flat track, if wanted, should reuse `Split_State.thy`'s existing
+`('l,'g) split_state` pair type and isomorphism lemmas rather than a new type
+from scratch - except `restrict_local_global_join` (`TD_Side_CFG.thy:33-35`),
+which cannot be
+type-class-generalized and must become pair projection instead.
 
 ---
 
@@ -252,12 +352,20 @@ For a post-thesis extension:
 
 1. **Gap 6 (termination, Sign case)** — cheapest, closes an honest gap, gives a
    stronger theorem for Sign.
-2. **Gap 3 (analysis-specific combine)** — medium effort, prerequisite for
-   relational domain soundness at procedure boundaries.
+2. ~~**Gap 3 (analysis-specific combine, flat layer only)**~~ — closed
+   (2026-07-28): `domain_transfer` carries `tf_combine`, `sound_transfer` carries
+   `tf_sound_combine`, and the flat/context-insensitive spine
+   (`rhs`/`rhs_sources`/`LTR_Analysis_Sound.thy`) routes through it. The DG
+   layer's `dgs_combine` is analysis-parametrized but still single-phase;
+   revisit only alongside a relational DG instance (see Gap 3's own section).
 3. **Gap 5 (abstract state type class)** — high effort, prerequisite for octagons;
-   aligns with the Octagon track (issue #25).
-4. **Gap 4 (D.t ≠ G.t)** — high effort, low payoff for IMP2 scope; would matter
-   for a heap analysis.
+   aligns with the Octagon track (issue #25). Three separate designs exist
+   (this doc, `RELATIONAL_DOMAIN_PLAN.md`, issue #19) with no reconciliation
+   between them - resolving which one to build is a decision, not a task.
+4. ~~**Gap 4 (D.t ≠ G.t)**~~ — mostly closed (2026-07-28): the D/G layer
+   (`dg_spec`, `dg_state`) already types locals and globals independently and
+   `Mixed_Sign_Interval.thy` exercises it. Remaining: context-sensitive DG
+   with `D ≠ G` is unexercised (~1-2 weeks, see Gap 4's own section).
 5. **Gap 7 (executable contexts and lifters)** — Route A7/M1/M3b; semantic
    context sensitivity is already available.
 6. **Gap 7a (inter-analysis queries)** — out of scope.
@@ -271,7 +379,8 @@ For a post-thesis extension:
 | `EFFECTFUL_TF_MIGRATION.md` | Gaps 1–2 |
 | `ARRAY_SYNTAX_EXTENSION.md` | Array-only part of the source-language boundary |
 | `NONDET_HAVOC_MIGRATION.md` | Nondeterministic source expressions needed by relational examples |
-| `RELATIONAL_DOMAIN_PLAN.md` + issue #25 | Requires Gaps 3 + 5 as prerequisites |
+| `RELATIONAL_DOMAIN_PLAN.md` + issue #25 | Requires Gaps 3 (flat layer) + 5 as prerequisites |
+| `SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md` G2/M2 | DG-layer context routing - adjacent to Gap 3, not a substitute for it |
 | `OPEN_PROBLEMS.md` P11 + `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` Slice 7 | Per-origin update transport and solver integration |
 | `M1_CALLSTRING_CONTEXT_MIGRATION.md` + `M3_CONTEXT_BOUNDING_TERMINATION_MIGRATION.md` | Computed and dynamically bounded contexts |
 | `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md` Slice 8 | Multi-analysis product/sum and query bus |

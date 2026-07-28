@@ -18,9 +18,10 @@ text \<open>
 locale dg_ctx_activation = sound_dg_spec S gamma_unit
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec" +
   fixes g :: cfg and gk0 :: 'k
-    and cmb :: "'c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c"
+    and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
-    and extra :: "'c \<Rightarrow> pp
+    and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('a abs_state, 'a abs_state) dg_state) strategy_tree list"
     and bot0 s0d s0g :: "'a abs_state"
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
@@ -29,7 +30,7 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit
   assumes finE: "finite (intra g)"
     and pp: "part_post_solution
                (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
-                  cmb extra g S bot0 s0d s0g) x0 sigma vars"
+                  route cmb extra g S bot0 s0d s0g) x0 sigma vars"
     and sg_cov: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> sg (Inl (v, c)) = locals (sigma (Inl (v, c))) \<squnion> globs (sigma (Inr gk0))"
     and sg_uncov: "\<And>v c. (v, c) \<notin> vars \<Longrightarrow> \<lbrakk>sg (Inl (v, c))\<rbrakk> = {}"
@@ -39,7 +40,7 @@ begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('a abs_state, 'a abs_state) dg_state) eqsT" where
   "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
-           cmb extra g S bot0 s0d s0g"
+           route cmb extra g S bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'a abs_state" where
   "acc0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
@@ -49,8 +50,8 @@ abbreviation trees :: "pp \<Rightarrow> 'c
   "trees v ctx \<equiv>
      map (\<lambda>(u, a). map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
          (intra_predecessor_list g v)
-     @ map (\<lambda>(cc, dst, ex). cmb ctx dst cc ex) (return_call_list g v)
-     @ extra ctx v"
+     @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)
+     @ extra route ctx v"
 
 subsection \<open>Post-solution elimination\<close>
 

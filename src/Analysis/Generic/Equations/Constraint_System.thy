@@ -40,6 +40,7 @@ record 'a domain_transfer =
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
   tf_enter     :: "vname list => aexp list => ('a abs_state) => ('a abs_state)"
+  tf_combine   :: "('a abs_state) => ('a abs_state) => ('a abs_state)"
 
 subsection \<open>Apply transfer function to one edge\<close>
 
@@ -435,6 +436,27 @@ lemma combine_collect_abs_None:
   by (simp add: combine_collect_abs_def)
 
 text \<open>
+  Per-analysis return combine.  \<^const>\<open>combine_collect_abs\<close> fixes the environment
+  merge to \<^const>\<open>combine_abs\<close>; \<open>tf_combine_collect_abs\<close> instead reads the merge
+  from the \<^typ>\<open>'a domain_transfer\<close> in scope, so each analysis may supply its own
+  sound over-approximation of \<^const>\<open>combine_states\<close> instead of the structural
+  local/global split.  The return-value write stays \<^const>\<open>combine_assign_abs\<close>: it is
+  already domain-agnostic under the function-based \<^typ>\<open>'a abs_state\<close> representation,
+  so only the merge step is a per-analysis choice.
+\<close>
+definition tf_combine_collect_abs ::
+    "'a domain_transfer \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign_abs dst (\<sigma>e ret_var) (tf_combine tf \<sigma>c \<sigma>e)"
+
+text \<open>The fixed structural merge is the special case where \<open>tf_combine\<close> is
+  \<^const>\<open>combine_abs\<close>: the general definition specializes to the old one by
+  instantiation, rather than duplicating it.\<close>
+lemma tf_combine_collect_abs_combine_abs:
+  assumes "tf_combine tf = combine_abs"
+  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_collect_abs dst \<sigma>c \<sigma>e"
+  using assms unfolding tf_combine_collect_abs_def combine_collect_abs_def by simp
+
+text \<open>
   Soundness of the abstract combine including result publication.  A pure
   @{class sound_domain} fact: the destination slot is sound because the callee's
   @{const ret_var} slot is, and every other slot is handled by
@@ -500,9 +522,9 @@ definition rhs_entry_sources ::
        ` entry_calls g v"
 
 definition rhs_combine_sources ::
-    "cfg \<Rightarrow> (pp \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_combine_sources g env v =
-     (\<lambda>(c, dst, ex). combine_collect_abs dst (env c) (env ex)) ` return_calls g v"
+    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
+  "rhs_combine_sources g tf env v =
+     (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex)) ` return_calls g v"
 
 definition rhs_sources ::
     "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
@@ -510,14 +532,14 @@ definition rhs_sources ::
   "rhs_sources g tf env v =
      rhs_edge_sources g tf env v \<union>
      rhs_entry_sources g tf env v \<union>
-     rhs_combine_sources g env v"
+     rhs_combine_sources g tf env v"
 
 lemma rhs_sources_characterization [simp]:
   "rhs_sources g tf env v =
      (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v \<union>
      (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
        ` entry_calls g v \<union>
-     (\<lambda>(c, dst, ex). combine_collect_abs dst (env c) (env ex))
+     (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex))
        ` return_calls g v"
   unfolding rhs_sources_def rhs_edge_sources_def rhs_entry_sources_def
     rhs_combine_sources_def by simp
@@ -535,8 +557,8 @@ lemma rhs_entry_sourcesI:
 
 lemma rhs_combine_sourcesI:
   assumes "(c, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
-  shows "combine_collect_abs dst (env c) (env (FunctionResult p))
-         \<in> rhs_combine_sources g env v"
+  shows "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p))
+         \<in> rhs_combine_sources g tf env v"
   unfolding rhs_combine_sources_def return_calls_def
   using assms by (force simp: image_iff)
 
@@ -646,6 +668,8 @@ locale sound_transfer =
     "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+  assumes tf_sound_combine:
+    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
 
 
 subsection \<open>Effectful transfer function record\<close>
