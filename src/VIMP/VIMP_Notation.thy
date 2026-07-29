@@ -62,6 +62,21 @@ lemma declared_global_vars_finite [simp]:
   "finite (set (declared_global_vars p))"
   by simp
 
+text \<open>
+  \<open>declared_global\<close> is the program-relative classifier the migration is
+  building toward: a name is declared-global exactly when it is in that
+  program's declared list.  No existing definition consumes it yet -- it
+  exists so the plumbing above can be checked against concrete programs
+  before anything downstream is asked to switch from \<^const>\<open>is_global\<close>.
+\<close>
+
+definition declared_global :: "imp_prog \<Rightarrow> vname \<Rightarrow> bool" where
+  "declared_global p x \<longleftrightarrow> x \<in> set (declared_global_vars p)"
+
+lemma declared_global_iff [simp]:
+  "declared_global p x \<longleftrightarrow> x \<in> set (declared_global_vars p)"
+  by (simp add: declared_global_def)
+
 definition prog_procs :: "imp_prog => pname list" where
   "prog_procs p = map fst (proc_rep p)"
 
@@ -457,6 +472,19 @@ lemma declared_global_vars_two_names [simp]:
   "declared_global_vars (program { global total, x; void main() { total := x } })
      = [''total'', ''x'']"
   by simp
+
+text \<open>
+  \<open>declared_global\<close> checkpoint: a declared non-\<open>G\<close> name reads as global, an
+  undeclared name -- \<open>G\<close>-spelled or not -- reads as local.  This is exactly
+  the discrimination \<^const>\<open>is_global\<close> cannot make until it is migrated.
+\<close>
+
+lemma declared_global_two_names_examples:
+  "declared_global (program { global total, x; void main() { total := x } }) ''total''"
+  "declared_global (program { global total, x; void main() { total := x } }) ''x''"
+  "\<not> declared_global (program { global total, x; void main() { total := x } }) ''y''"
+  "\<not> declared_global (program { global total, x; void main() { total := x } }) ''Gy''"
+  by simp_all
 
 value "declared_global_vars (program { void main() { skip } } :: imp_prog)"
 
