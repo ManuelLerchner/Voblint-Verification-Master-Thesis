@@ -20,7 +20,7 @@ text \<open>Four local obligations connect the abstract solution to the trace ru
 
 theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
@@ -30,10 +30,10 @@ theorem activation_collect_sound:
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> call_enter (CallEdge dst pars args) s
              \<in> \<lbrakk>sg (Inl (FunctionEntry p,
-                          enterc c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                          enterc u c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc c1 es))\<rbrakk>
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store g cl s es
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "activation_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"

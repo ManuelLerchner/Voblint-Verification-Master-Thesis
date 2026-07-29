@@ -71,7 +71,7 @@ theorem ltr_post_fixpoint_sound_at_eff:
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
   shows "ltr_collect g S v0 \<subseteq> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v _. \<lbrakk>side_env \<sigma> v\<rbrakk>" "\<lambda>_ _. ()" "()"
+  interpret G: ltr_gamma g S "\<lambda>v _. \<lbrakk>side_env \<sigma> v\<rbrakk>" "\<lambda>_ _ _. ()" "()"
   proof (standard, goal_cases ROOT EDGE CALL COMB)
     case (ROOT s)
     then show ?case using S_sound gamma_state_mono[OF entry_le] by blast

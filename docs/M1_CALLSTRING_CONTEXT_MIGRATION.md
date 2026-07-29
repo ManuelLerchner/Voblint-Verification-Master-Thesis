@@ -3,6 +3,16 @@
 Status: **PLANNED, not started.** Optional Goblint-faithfulness breadth. Lands on a
 worktree branch off `main`; `main` stays green throughout.
 
+> **Not the same thing (2026-07-29).** `Example_Interval_DG_CallString.thy`
+> (`Voblint_Examples`) is a *different*, smaller call-string instance, built on
+> the DG/`Activation_Backbone` route (`SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`
+> G1/G2), not on the `CallString k`/digest/`TD_side` machinery this doc plans.
+> It routes `twice`'s two calls by call site (`enterc u ctx s = u`, unbounded
+> depth, no truncation, no monotonicity re-proof for a partitioned unknown
+> space) and proves `activation_collect_sound` for that one program. It
+> satisfies neither this doc's A0–A5 stages nor its precision/termination
+> obligations (R1–R6), and does not reduce this doc's remaining scope.
+
 Detail parent: `TRACE_BASED_FORK_MIGRATION.md` (Track A, slices A1–A5, review
 obligations R1–R6). Umbrella: `TRACE_CONTEXT_ANALYSIS_MIGRATION.md` (shared
 semantic layer B0–B2, target-theorem ladder T1–T12). This doc is the

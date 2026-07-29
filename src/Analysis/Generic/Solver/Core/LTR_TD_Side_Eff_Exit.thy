@@ -41,7 +41,7 @@ theorem ltr_post_fixpoint_sound_at_eff_cone:
 proof -
   interpret se: sound_effectful_transfer etf by (rule se)
   interpret G: ltr_gamma g S "\<lambda>v _. if cfg_reaches g v v0 then \<lbrakk>side_env \<sigma> v\<rbrakk> else UNIV"
-      "\<lambda>_ _. ()" "()"
+      "\<lambda>_ _ _. ()" "()"
   proof (standard, goal_cases ROOT EDGE CALL COMB)
     case (ROOT s)
     show ?case

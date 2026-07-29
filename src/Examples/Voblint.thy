@@ -41,6 +41,7 @@ theory Voblint
     "Voblint_Formalization.Mixed_Flow_Sound"
     "Voblint_Formalization.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
+    Example_Interval_DG_CallString
     Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_Side_Execute
@@ -88,6 +89,47 @@ text \<open>
   behavior.  Forgetful trace projections introduce no abstract states.  Transfer,
   join, routing, and widening occur only on the abstract side and are justified by
   containment in the corresponding concretization.
+\<close>
+
+section \<open>Complete end-to-end analyses\<close>
+
+text \<open>
+  Every theory below compiles a source program, generates its D/G equation system,
+  \<^emph>\<open>computes\<close> a solution with the verified solver (\<open>by eval\<close>), and closes with a soundness
+  theorem over that computed result --- no step is a precision demo, a raw execution
+  witness, or left as an unclosed obligation.  \<^bold>\<open>7. Examples and witnesses\<close> below holds
+  everything else: parallel-capability checks, precision witnesses, tooling, and research
+  demonstrations. Two capability axes, each with its own flagships.
+\<close>
+
+subsection \<open>Basic capability: one domain, the whole pipeline, monovariant\<close>
+
+text \<open>
+  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship}\<close> --- the Interval flagship: a
+    counting loop, compiled, solved, and certified. \<^verbatim>\<open>flagship_source_run_sound\<close> bounds
+    \<^emph>\<open>actual source runs\<close>.
+  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Exec_Sign_DG_Run}\<close> --- the Sign flagship, same pipeline, same
+    always-join solver. \<^verbatim>\<open>dgEx_source_run_sound\<close> is the same source-run bound.
+\<close>
+
+subsection \<open>Context sensitivity: the axis issue \<open>#66\<close> is about\<close>
+
+text \<open>
+  Three routing policies for the same \<open>twice\<close> program (called from two sites), each
+  certified against the same activation-indexed semantics.
+
+  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect}\<close> --- context routed by
+    \<open>ivl_enterc\<close>: the entered formal's point abstraction (partial tabulation,
+    \<^cite>\<open>SeidlEtAl2026\<close> Example 8). \<^verbatim>\<open>twice_activation_collect_sound\<close> bounds
+    \<^const>\<open>activation_collect\<close> at every \<open>(node, context)\<close>.
+  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString}\<close> --- context routed by
+    \<open>route_cs\<close>: the call site itself (1-call-string, \<^cite>\<open>SeidlEtAl2026\<close> Example 7).
+    \<^verbatim>\<open>twice_cs_activation_collect_sound\<close> is the same soundness shape as \<open>Ctx_Collect\<close>, for a
+    routing policy that needed \<open>enterc\<close> widened to see the call site (issue \<open>#66\<close>, G1) to be
+    expressible at all.
+  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_Source_Ctx}\<close> --- the sharpest of the three:
+    bound against \<^emph>\<open>actual source runs\<close> at each activation's own context, not just the
+    collecting semantics, so it is the source-level counterpart of \<open>Ctx_Collect\<close>.
 \<close>
 
 subsection \<open>Activation-local concrete semantics\<close>
@@ -208,11 +250,10 @@ text \<open>
     \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality over \<^const>\<open>ltr_collect\<close> (\<^verbatim>\<open>mixed_flow_analysis_sound\<close> / \<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
     \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
 
-  \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling.
-    \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline VIMP counting loop is compiled, its D/G interval equations generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result certified a post-solution; the reusable bundle \<^verbatim>\<open>dg_exec_run_source_sound\<close> transports it to the abstract semantics, proves it over-approximates \<^const>\<open>ltr_collect\<close> --- discovering \<^verbatim>\<open>x in [0,20]\<close> --- and lifts the guarantee to \<^emph>\<open>actual source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>).
-    \<^item> @{theory Voblint_Examples.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver.
-    \<^item> @{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program certified against \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_activation_collect_sound\<close>).
-    \<^item> @{theory Voblint_Examples.Example_Interval_Source_Ctx} --- \<^verbatim>\<open>twice\<close> certified against \<^emph>\<open>actual source runs\<close> at each activation's own context, strictly sharper than the monovariant capstone.
+  \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling --- the
+    complete end-to-end analyses (\<open>Example_Interval_DG_Flagship\<close>, \<open>Exec_Sign_DG_Run\<close>,
+    \<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_CallString\<close>,
+    \<open>Example_Interval_Source_Ctx\<close>) are indexed separately, above.
     \<^item> @{theory Voblint_Examples.Example_Inc_Proc} --- shared global-increment procedure witness.
     \<^item> @{theory Voblint_Examples.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.

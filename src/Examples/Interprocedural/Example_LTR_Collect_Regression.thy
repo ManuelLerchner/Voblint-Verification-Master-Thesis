@@ -311,13 +311,13 @@ proof -
 qed
 
 text \<open>Recursion: two nested activations of \<open>pr\<close> are distinct structural traces; under the
-  discriminating context \<open>key (\<lambda>c _. Suc c) 0\<close> (call depth) they receive distinct context
+  discriminating context \<open>key (\<lambda>_ c _. Suc c) 0\<close> (call depth) they receive distinct context
   keys.  Built on \<^const>\<open>valid_ltr\<close> witness \<open>recursion_nesting\<close>.\<close>
 lemma ltr_collect_recursion_distinct_ctx:
   "\<exists>outer inner.
       outer \<in> valid_ltr rec_cfg UNIV \<and> inner \<in> valid_ltr rec_cfg UNIV
     \<and> outer \<noteq> inner
-    \<and> key (\<lambda>c _. Suc c) 0 outer \<noteq> key (\<lambda>c _. Suc c) 0 inner"
+    \<and> key (\<lambda>_ c _. Suc c) 0 outer \<noteq> key (\<lambda>_ c _. Suc c) 0 inner"
 proof -
   define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
   define root where "root = Root [(cfg_entry rec_cfg, s0)]"
@@ -337,10 +337,10 @@ proof -
   have INNER: "inner \<in> valid_ltr rec_cfg UNIV"
     unfolding inner_def by (rule valid_ltr.call[OF OUTER ecall])
   have neq: "outer \<noteq> inner" by (simp add: outer_def inner_def)
-  have kouter: "key (\<lambda>c _. Suc c) 0 outer = 0" by (simp add: outer_def root_def)
-  have kinner: "key (\<lambda>c _. Suc c) 0 inner = Suc 0"
+  have kouter: "key (\<lambda>_ c _. Suc c) 0 outer = 0" by (simp add: outer_def root_def)
+  have kinner: "key (\<lambda>_ c _. Suc c) 0 inner = Suc 0"
     by (simp add: inner_def outer_def root_def)
-  have "key (\<lambda>c _. Suc c) 0 outer \<noteq> key (\<lambda>c _. Suc c) 0 inner"
+  have "key (\<lambda>_ c _. Suc c) 0 outer \<noteq> key (\<lambda>_ c _. Suc c) 0 inner"
     using kouter kinner by simp
   then show ?thesis using OUTER INNER neq by blast
 qed

@@ -25,8 +25,8 @@ text \<open>A call selects the point abstraction of the callee formal in the ent
   \<open>ivl_ctx_sg\<close> joins the routed local slot with the shared global slot expected by
   @{thm activation_collect_sound}.\<close>
 
-definition ivl_enterc :: "ivl \<Rightarrow> store \<Rightarrow> ivl" where
-  "ivl_enterc ctx s = ivl_decode (s ''p'')"
+definition ivl_enterc :: "cfg_node \<Rightarrow> ivl \<Rightarrow> store \<Rightarrow> ivl" where
+  "ivl_enterc u ctx s = ivl_decode (s ''p'')"
 
 text \<open>The reader is guarded by the \<^emph>\<open>solved domain\<close> \<open>fst twice_ctx_sol\<close>: the solver
   returns a partial solution, so an unknown outside \<open>vars\<close> is an artefact of the total
@@ -302,7 +302,7 @@ text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes
   with the activation route \<^const>\<open>ivl_enterc\<close>.\<close>
 lemma enter_route_exact_call1:
   assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
-  shows "ivl_enterc ctx s' = ctx_call1"
+  shows "ivl_enterc u ctx s' = ctx_call1"
 proof -
   from assms have "s' = (enter_state s)(''p'' := 3)"
     by (simp add: call_enter_CallEdge bind_formals_def)
@@ -311,7 +311,7 @@ qed
 
 lemma enter_route_exact_call2:
   assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
-  shows "ivl_enterc ctx s' = ctx_call2"
+  shows "ivl_enterc u ctx s' = ctx_call2"
 proof -
   from assms have "s' = (enter_state s)(''p'' := 10)"
     by (simp add: call_enter_CallEdge bind_formals_def)
@@ -328,7 +328,7 @@ lemma ivl_ctx_sg_seed:
     and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk>"
   shows "call_enter (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                 ivl_enterc ctx (call_enter (CallEdge dst xs es) s)))\<rbrakk>"
+                 ivl_enterc u ctx (call_enter (CallEdge dst xs es) s)))\<rbrakk>"
 proof (cases "(u, ctx) \<in> fst twice_ctx_sol")
   case False
   hence "\<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk> = {}" by (rule ivl_ctx_sg_uncovered_empty)
@@ -459,7 +459,7 @@ text \<open>\<^bold>\<open>enter_route_exact for combine.\<close>  The callee co
   \<open>enter_route_exact\<close>.\<close>
 lemma comb_route_call1:
   assumes "call_enter_store twice_cfg (Statement 2) s es"
-  shows "ivl_enterc c1 es = ctx_call1"
+  shows "ivl_enterc u c1 es = ctx_call1"
 proof -
   have "es = call_enter (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
@@ -468,7 +468,7 @@ qed
 
 lemma comb_route_call2:
   assumes "call_enter_store twice_cfg (Statement 3) s es"
-  shows "ivl_enterc c1 es = ctx_call2"
+  shows "ivl_enterc u c1 es = ctx_call2"
 proof -
   have "es = call_enter (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
@@ -484,7 +484,7 @@ text \<open>\<^bold>\<open>COMB.\<close>  A return combine soundly resumes the c
 lemma ivl_ctx_sg_comb:
   assumes c: "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls twice_cfg"
     and s: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
-    and t: "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc c1 es))\<rbrakk>"
+    and t: "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>"
     and ces: "call_enter_store twice_cfg cl s es"
   shows "combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
 proof (cases "(cl, c1) \<in> fst twice_ctx_sol")
@@ -501,7 +501,7 @@ next
   proof cases
     case c1
     have ctxb: "c1 = bot" using True enter_callers_only_bot c1 by fastforce
-    have route: "ivl_enterc c1 es = ctx_call1" using ces c1 by (simp add: comb_route_call1)
+    have route: "ivl_enterc cl c1 es = ctx_call1" using ces c1 by (simp add: comb_route_call1)
     have covCl: "(Statement 2, bot) \<in> fst twice_ctx_sol" using True c1 ctxb by simp
     have "combine_collect (Some ''x'') s t \<in> \<lbrakk>ivl_ctx_sg (Inl (Statement 3, bot))\<rbrakk>"
       by (rule combine_membership[OF covCl callee_exit_covered_call1 covered_ret5 _ _ combine_st_bound_call1])
@@ -510,7 +510,7 @@ next
   next
     case c2
     have ctxb: "c1 = bot" using True enter_callers_only_bot c2 by fastforce
-    have route: "ivl_enterc c1 es = ctx_call2" using ces c2 by (simp add: comb_route_call2)
+    have route: "ivl_enterc cl c1 es = ctx_call2" using ces c2 by (simp add: comb_route_call2)
     have covCl: "(Statement 3, bot) \<in> fst twice_ctx_sol" using True c2 ctxb by simp
     have "combine_collect (Some ''y'') s t \<in> \<lbrakk>ivl_ctx_sg (Inl (Statement 4, bot))\<rbrakk>"
       by (rule combine_membership[OF covCl callee_exit_covered_call2 covered_ret7 _ _ combine_st_bound_call2])
@@ -553,7 +553,7 @@ next
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> call_enter (CallEdge dst pars args) s
              \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                    ivl_enterc c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                    ivl_enterc u c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
     by (rule ivl_ctx_sg_seed)
 next
   \<comment> \<open>COMB --- return combine at the caller context \<open>c1\<close>: the resumed activation keeps its
@@ -561,7 +561,7 @@ next
   show "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc c1 es))\<rbrakk>
+        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store twice_cfg cl s es
         \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_comb)

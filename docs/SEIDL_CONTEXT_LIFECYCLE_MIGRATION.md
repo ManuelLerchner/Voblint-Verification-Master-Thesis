@@ -1,8 +1,11 @@
 # Context lifecycle: one context function from call to return
 
-> **Status:** PLANNED, not started. No theory file has been touched. The findings
-> below were established by reading the current sources; the migration steps are
-> proposals.
+> **Status:** M1 (G1) landed and batch-verified. M2 (G2) was found already
+> implemented at the generator level — this doc's original G2 diagnosis was
+> stale; see the correction in section 2. M3 (G3) and M4 (G4) remain open. A
+> computed 1-call-string instance validating M1 lands in
+> `src/Examples/Executable/Interval/Example_Interval_DG_CallString.thy`
+> (`Voblint_Examples`), tracked in issue #66.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
 Engineering Modularity", FM 2026, LNCS 16557, pp. 446-470, section "Refining
@@ -32,9 +35,18 @@ where one predicate is doing several jobs at once.
 
 ## 1. The gaps
 
-### G1 - the semantic context function cannot see the call site
+### G1 - the semantic context function cannot see the call site — LANDED
 
-`src/CFG/Collecting/CFG_Local_Trace.thy:78`:
+> Widened as described below. `key`'s `Call` case now reads
+> `enterc (sink_node parent) (key enterc seedc parent) (snd (hd p))`. Touched
+> the 9 files that mention `enterc`, exactly as predicted. Batch green on
+> `Voblint_Formalization` and `Voblint_Examples`. Validated by a new call-site
+> instance, `Example_Interval_DG_CallString.thy`: `enterc u ctx s = u` (the
+> paper's Example 7), computed end-to-end and certified against
+> `activation_collect` the same way `Example_Interval_DG_Ctx_Collect.thy`
+> certifies the partial-tabulation instance.
+
+`src/CFG/Collecting/CFG_Local_Trace.thy:78` (original, pre-fix):
 
 ```isabelle
 fun key :: "('c => store => 'c) => 'c => ltr => 'c" where
@@ -74,7 +86,24 @@ still ends at the calling node. No reconstruction is needed.
 
 Then `enterc u ctx _ = take k (u # ctx)` becomes an instance.
 
-### G2 - entry and return compute the route independently
+### G2 - entry and return compute the route independently — RESOLVED (found already fixed)
+
+> **Correction (2026-07-29).** By the time G1 landed, this gap no longer
+> existed in `src/`. `side_cfg_T_eff_keyed_seed_dg` (`DG_Framework.thy:393-415`)
+> already takes one `route :: pp => 'c => 'd => call_action => 'c` parameter
+> and threads the *same* `route` into both `cmb` (the return combine) and
+> `extra` (the entry-seed publication) — see `DG_Framework.thy:412,414`. And
+> `return_call_action_list` (`CFG_Enumeration.thy:188-234`) already keeps the
+> whole matched `call_action` for the return side, as a sibling enumeration to
+> `return_call_list` rather than a widening of it (`return_call_list` stays
+> narrow because the flat constraint system and `TD_Side_Tree.thy`'s
+> homogeneous solver core also read it and don't need `ca`). `route_ivl_gen`
+> (`Example_Interval_DG_Ctx_Flagship.thy:63-64`) is the landed instance of that
+> parameter for the interval flagship; it ignores its `pp`/context arguments,
+> which is why no existing instance had exercised call-site-dependent routing
+> before this issue. The analysis below (as first written) describes the
+> pre-fix state and is kept for the record; the routing duplication and the
+> head-of-list bug it describes do not exist in the current source.
 
 Paper equation (6) uses one `c'` for both halves: publish `enter d` to
 `[start_f, c']`, then read `[ret_f, c']`. Our flagship computes the route twice,
@@ -91,8 +120,8 @@ case call_successor_list g cc of
 
 Two problems, both structural rather than accidental:
 
-* nothing at the type level forces the two `route_ivl` uses to stay in sync;
-* `cmb_ivl` re-derives the call action from the *head* of `cc`'s outgoing call
+- nothing at the type level forces the two `route_ivl` uses to stay in sync;
+- `cmb_ivl` re-derives the call action from the *head* of `cc`'s outgoing call
   list, so a node with more than one call edge routes the return to the wrong
   callee context. Compiled CFGs emit one call edge per `Call` node, so this does
   not bite today; it is latent.
@@ -158,13 +187,13 @@ is_global x = (x = [] or hd x = CHR ''G'')
 An AFP convention: a variable is global because of its first character. Three
 distinct things then collapse onto it.
 
-* **Source storage class.** `valid_formal x = (~ is_global x & x ~= ret_var)`
+- **Source storage class.** `valid_formal x = (~ is_global x & x ~= ret_var)`
   (`VIMP_Proc.thy:535`) makes source well-formedness depend on spelling, and
   `ret_var_not_global` (`:51`) is proved from `is_global_def`.
-* **D/G placement.** `Split_State.thy` and `Exec_St.thy` route facts to the
+- **D/G placement.** `Split_State.thy` and `Exec_St.thy` route facts to the
   flow-sensitive or side-effected component by the same predicate, identically
   for every analysis.
-* **Update strength.** Nothing separates "is a global" from "must be joined
+- **Update strength.** Nothing separates "is a global" from "must be joined
   rather than overwritten".
 
 Selective flow-sensitivity and strong-update points-to (Table 1 rows 2 and 8)
@@ -232,21 +261,31 @@ and its semantic counterpart `enterc` widened to match, per G1.
 
 ## 5. Proposed migration
 
-### M1 - widen the context function (G1)
+### M1 - widen the context function (G1) — DONE
 
-Change `enterc` to `pp => 'c => store => 'c` and thread the call site through
-`key`. Touches the nine files that mention `enterc`: `CFG_Local_Trace`,
+Landed as proposed. Touched exactly the predicted nine files: `CFG_Local_Trace`,
 `LTR_Collect`, `LTR_Abstract`, `Located_LTR`, `Source_Activation_Sound`,
-`Activation_Local_Sound`, `Activation_Backbone`, and the two Interval examples.
+`Activation_Local_Sound`, `Activation_Backbone`, and the two Interval examples
+(`Example_Interval_DG_Ctx_Collect`, `Example_Interval_Source_Ctx`).
 
-Mechanical in most of them. Real reproof in `key`'s `Call` case, the `ltr_gamma`
-interpretation, and the `CALL` / `COMB` statements of `valid_ltr_ctx_sound`.
+Mechanical in most of them, as predicted. Real reproof was in `key`'s `Call`
+case (`callee_entry_invariant` and its two `D`-corollaries), the `ltr_gamma`
+locale's `CALL`/`COMB` assumptions and `call_closed`/`return_closed`, and the
+matching `valid_ltr_ctx_sound`/`activation_collect_sound` restatements — exactly
+the files this section predicted, no others. Two anonymous `ltr_gamma`
+interpretations (`LTR_TD_Side_Eff_Exit.thy`, `LTR_TD_Side_Eff_Sound.thy`) used
+`\<lambda>_ _. ()` positionally and were missed by grepping for `enterc`; the
+batch build (not I/Q) caught both.
 
-Existing instances take `%_ c s. ...` and are otherwise unchanged.
+Existing instances take `%_ c s. ...` (now `%_ _ c s. ...`) and are otherwise
+unchanged. Batch green on `Voblint_Formalization` and `Voblint_Examples`.
 
-### M2 - one routing parameter (G2)
+### M2 - one routing parameter (G2) — already done (see the G2 correction above)
 
-Two steps, in order, both required:
+Historical plan, kept for the record. The two steps below describe what would
+have been needed; both were already present in `src/` by the time this was
+rechecked (2026-07-29) — see the G2 correction note. Two steps, in order, both
+required:
 
 1. **Stop discarding `ca`.** Change `return_call_list`'s result type from
    `(cfg_node * vname option * cfg_node)` to a shape that keeps the matched
@@ -304,6 +343,19 @@ Success criterion: the flagship's routing lemmas in
 `M1_CALLSTRING_CONTEXT_MIGRATION.md` becomes a second interpretation rather than
 a second proof development.
 
+**Still open.** `Example_Interval_DG_CallString.thy` (new, 2026-07-29) is a
+call-site-routed instance built by hand against G1/G2 directly, not through a
+`routed_context` locale — none exists yet. It had to define its own `gk_cs`
+global-key type, its own `extra_cs_st`/`extra_cs_abs`/`cmb_cs_st`/`cmb_cs_abs`
+(structural copies of `extra_ivl`/`cmb_ivl`/`extra_abs`/`cmb_abs` with the
+context type changed), and its own commutation/transport lemmas, even though
+its `route_cs u ctx d ca = u` ignores its data argument and so commutes with
+any representation map for free (`route_cs_commute`, one line). That
+triviality is exactly what a `routed_context` locale should capture once:
+right now it is re-derived per instance. The file is real evidence for this
+locale's payoff, not a substitute for it — it is the second proof development
+M3 is supposed to make unnecessary, not the second interpretation.
+
 ### M4 - replace name-based global detection completely (G4)
 
 A hard migration, not a compatibility refactor. The naming rule is deleted; no
@@ -331,11 +383,11 @@ is derivable, or equivalently so declarations carry explicit parameter, local,
 and global sets. Invariants to establish in `wf_source_program`
 (`VIMP_Proc.thy:620`):
 
-* every referenced variable has a declared storage class;
-* parameters and locals belong to their procedure;
-* globals are declared independently of procedures;
-* classification never inspects spelling;
-* missing or conflicting declarations are rejected.
+- every referenced variable has a declared storage class;
+- parameters and locals belong to their procedure;
+- globals are declared independently of procedures;
+- classification never inspects spelling;
+- missing or conflicting declarations are rejected.
 
 #### M4.1a - remove storage-class assumptions from source well-formedness
 
@@ -640,14 +692,14 @@ make it impossible.
 
 ## 7. Out of scope
 
-* **Digests.** Already tractable as the reduced cardinal power `A => D`: function
+- **Digests.** Already tractable as the reduced cardinal power `A => D`: function
   spaces inherit the pointwise lattice structure the D/G interface requires, so
   the domain instantiates without framework change, with the compatibility
   filter applied inside `dgs_*`. Key-level compatibility instead of in-domain
   filtering would need `dg_edge_tree`'s fixed `QueryG ()`
   (`DG_Framework.thy:174`) generalized to a key list. Tracked as Slice 5 of
   `SEIDL_2026_GOBLINT_ALIGNMENT_MIGRATION.md`.
-* **Concurrency.** Table 1's thread-modular rows need spawn, locks, interference,
+- **Concurrency.** Table 1's thread-modular rows need spawn, locks, interference,
   and a thread-modular trace semantics. IMP2 has none of these. Language
   extension, not a D/G adjustment.
 
@@ -656,6 +708,11 @@ make it impossible.
 Batch build green on `Voblint_Formalization` and `Voblint_Examples`, no `sorry`
 in `src/`, after each of M1, M2, M3, and each M4 sub-step. M1 and M2 land
 together.
+
+**M1/M2 gate met (2026-07-29).** `rtk make build` green for both sessions
+after the `enterc`/`key` widening and the new `Example_Interval_DG_CallString`
+theory (computed 1-call-string instance, GraphViz export, and
+`activation_collect_sound` instantiation). No `sorry` introduced.
 
 M4 additionally requires: `rg "is_global|CHR ''G''" src` clean of semantic hits,
 the M4.8 validation cases proved, the M4 design gate checked against the

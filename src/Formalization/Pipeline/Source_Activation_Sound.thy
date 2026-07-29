@@ -13,7 +13,7 @@ text \<open>
 
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
@@ -38,7 +38,7 @@ text \<open>The witness-free specialisation of the composition at top-level prog
   source frame stack lands at the fixed seed context, no \<^typ>\<open>ltr\<close> witness exposed.\<close>
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
@@ -59,7 +59,7 @@ subsection \<open>Backbone corollaries: discharge the four obligations to build 
 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
@@ -71,10 +71,10 @@ theorem source_activation_sound:
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> call_enter (CallEdge dst pars args) x
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc c (call_enter (CallEdge dst pars args) x)))\<rbrakk>"
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter (CallEdge dst pars args) x)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc c1 es))\<rbrakk>
+        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store (compile_prog Pi ps mnm main) cl x es
         \<Longrightarrow> combine_collect dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
@@ -91,7 +91,7 @@ text \<open>The witness-free specialisation at top-level program points: a store
   context existential exposed.\<close>
 theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
@@ -103,10 +103,10 @@ theorem source_activation_sound_toplevel:
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
         \<Longrightarrow> call_enter (CallEdge dst pars args) x
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc c (call_enter (CallEdge dst pars args) x)))\<rbrakk>"
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter (CallEdge dst pars args) x)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc c1 es))\<rbrakk>
+        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store (compile_prog Pi ps mnm main) cl x es
         \<Longrightarrow> combine_collect dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
@@ -134,10 +134,10 @@ theorem source_reaches_ltr_collect:
                  \<and> s \<in> ltr_collect (compile_prog Pi ps mnm main) S v"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
-  from source_store_in_activation_collect[where mnm=mnm and enterc = "\<lambda>_ _. ()" and seedc = "()",
+  from source_store_in_activation_collect[where mnm=mnm and enterc = "\<lambda>_ _ _. ()" and seedc = "()",
         OF wf s0 run]
   obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
-    and mem: "s \<in> activation_collect (\<lambda>_ _. ()) () ?g S v (key (\<lambda>_ _. ()) () t)" by meson
+    and mem: "s \<in> activation_collect (\<lambda>_ _ _. ()) () ?g S v (key (\<lambda>_ _ _. ()) () t)" by meson
   have "s \<in> ltr_collect ?g S v"
     using mem by (rule subsetD[OF activation_collect_le_ltr_collect])
   then show ?thesis using m by blast

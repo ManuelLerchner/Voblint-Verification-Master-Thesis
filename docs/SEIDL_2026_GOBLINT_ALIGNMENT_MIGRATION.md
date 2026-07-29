@@ -429,9 +429,18 @@ Current infrastructure already supports context-indexed locals and an executable
 state-dependent context bridge. The migration should add a clean theorem-facing
 locale:
 
+> **Amendment (2026-07-29, issue #66/G1).** `context :: 'a abs_state => 'c => 'c`
+> below has no call-site argument, so it cannot express the paper's Example 7
+> (`context_u,f,args _ _ = u`) — the same gap `SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`
+> names G1. That gap is now fixed at the semantic layer: `CFG_Local_Trace.thy`'s
+> `key`/`enterc` take the call-site `pp` (`enterc :: cfg_node => 'c => store => 'c`),
+> validated by a computed instance in `Example_Interval_DG_CallString.thy`. This
+> slice's locale, if built, should fix the same signature gap here and take
+> `context :: pp => 'a abs_state => 'c => 'c`.
+
 ```isabelle
 locale paper_context_call =
-  fixes context :: "'a abs_state => 'c => 'c"
+  fixes context :: "pp => 'a abs_state => 'c => 'c"
   fixes enter :: "'a abs_state => 'a abs_state"
   fixes combine :: "'a abs_state => 'a abs_state => 'a abs_state"
 ```

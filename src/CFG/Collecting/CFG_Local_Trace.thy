@@ -73,11 +73,16 @@ primrec extend :: "ltr \<Rightarrow> (cfg_node * store) \<Rightarrow> ltr" where
 text \<open>The activation context is computed from the concrete trace after the fact and is
   activation-stable: fixed when the activation is created and unchanged by the calls it
   later makes and returns from.  \<^const>\<open>Root\<close> carries the seed; a \<^const>\<open>Call\<close> routes the
-  caller context on the callee-entry store; a \<^const>\<open>Resume\<close> keeps the resumed caller's own
-  context, so a completed call does not repartition the caller.\<close>
-fun key :: "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
+  caller context on the call site and the callee-entry store --- \<open>sink_node parent\<close> is
+  exactly the call site, since \<^const>\<open>extend\<close> only ever appends to the callee path and
+  leaves \<open>parent\<close> frozen there; a \<^const>\<open>Resume\<close> keeps the resumed caller's own context, so
+  a completed call does not repartition the caller.  Exposing the call site to \<open>enterc\<close> is
+  what makes a call-site-keyed context (a k-call-string) expressible as an instance rather
+  than only as a generator-side hook.\<close>
+fun key :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
   "key enterc seedc (Root _)                  = seedc"
-| "key enterc seedc (Call parent p)           = enterc (key enterc seedc parent) (snd (hd p))"
+| "key enterc seedc (Call parent p)           =
+     enterc (sink_node parent) (key enterc seedc parent) (snd (hd p))"
 | "key enterc seedc (Resume current callee _) = key enterc seedc current"
 
 subsection \<open>The closure relation\<close>
@@ -644,7 +649,7 @@ text \<open>For every valid callee and every activation \<open>u\<close> in its 
 lemma callee_entry_invariant:
   "callee \<in> valid_ltr g S \<Longrightarrow>
      \<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c \<longrightarrow>
-       key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+       key enterc seedc u = enterc (sink_node c) (key enterc seedc c) (entry_store u)
        \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
 proof (induction rule: valid_ltr.induct)
   case (init s)
@@ -656,13 +661,13 @@ next
     fix u c assume uin: "u \<in> callers (extend t (v, s'))" and cof: "caller_of u = Some c"
     from uin have "u = extend t (v, s') \<or> u \<in> callers t"
       using callers_extend_subset by blast
-    then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+    then show "key enterc seedc u = enterc (sink_node c) (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
     proof (rule disjE)
       assume u: "u = extend t (v, s')"
       have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
       have "caller_of t = Some c" using cof u by simp
-      then have "key enterc seedc t = enterc (key enterc seedc c) (entry_store t)
+      then have "key enterc seedc t = enterc (sink_node c) (key enterc seedc c) (entry_store t)
                  \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store t)"
         using intra.IH callers_refl by blast
       then show ?thesis using u pt by (simp add: key_extend_nonempty)
@@ -680,7 +685,7 @@ next
     from uin have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
-    then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+    then show "key enterc seedc u = enterc (sink_node c) (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
     proof (rule disjE)
       assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
@@ -708,7 +713,7 @@ next
         (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
                     \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
-    then show "key enterc seedc u = enterc (key enterc seedc c) (entry_store u)
+    then show "key enterc seedc u = enterc (sink_node c) (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
     proof (rule disjE)
       assume u: "u = Resume caller callee
@@ -716,7 +721,7 @@ next
       have cof': "caller_of caller = Some c" using cof u by simp
       have caller_in: "caller \<in> callers callee"
         using ret.hyps(2) callers_caller_subset callers_refl by blast
-      have IHc: "key enterc seedc caller = enterc (key enterc seedc c) (entry_store caller)
+      have IHc: "key enterc seedc caller = enterc (sink_node c) (key enterc seedc c) (entry_store caller)
                  \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store caller)"
         using ret.IH caller_in cof' by blast
       have kres: "key enterc seedc u = key enterc seedc caller" using u by simp
@@ -738,7 +743,8 @@ qed
 lemma callee_entry_invariant_keyD:
   assumes callee_val: "callee \<in> valid_ltr g S"
     and cof: "caller_of callee = Some caller"
-  shows "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+  shows "key enterc seedc callee
+           = enterc (sink_node caller) (key enterc seedc caller) (entry_store callee)"
   using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
   by (rule conjunct1)
 
@@ -755,7 +761,7 @@ text \<open>The activation-sensitive collecting is the sink stores of valid trac
   whose activation context is \<open>c\<close>.\<close>
 
 definition activation_collect ::
-  "('c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
+  "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
   "activation_collect enterc seedc g S v c =
      {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
 

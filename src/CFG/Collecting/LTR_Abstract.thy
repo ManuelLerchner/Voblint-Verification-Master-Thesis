@@ -33,17 +33,17 @@ subsection \<open>The abstract interface\<close>
 locale ltr_gamma =
   fixes g :: cfg and S :: "store set"
     and acc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
-    and enterc :: "'c \<Rightarrow> store \<Rightarrow> 'c"
+    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
     and seedc :: 'c
   assumes ROOT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) seedc"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> acc v c"
     and CALL: "\<And>u dst pars args p cont c s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> call_enter (CallEdge dst pars args) s
-              \<in> acc (FunctionEntry p) (enterc c (call_enter (CallEdge dst pars args) s))"
+              \<in> acc (FunctionEntry p) (enterc u c (call_enter (CallEdge dst pars args) s))"
     and COMB: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> acc cl c1 \<Longrightarrow> t \<in> acc (FunctionResult p) (enterc c1 es)
+        \<Longrightarrow> s \<in> acc cl c1 \<Longrightarrow> t \<in> acc (FunctionResult p) (enterc cl c1 es)
         \<Longrightarrow> call_enter_store g cl s es
         \<Longrightarrow> combine_collect dst s t \<in> acc cont c1"
 begin
@@ -85,7 +85,8 @@ lemma call_closed:
 proof -
   have "call_enter (CallEdge dst pars args) (sink_store caller)
           \<in> acc (FunctionEntry p)
-                (enterc (key enterc seedc caller) (call_enter (CallEdge dst pars args) (sink_store caller)))"
+                (enterc (sink_node caller) (key enterc seedc caller)
+                   (call_enter (CallEdge dst pars args) (sink_store caller)))"
     by (rule CALL[OF e ihc])
   then show ?thesis by (simp add: sink_node_def sink_store_def)
 qed
@@ -103,12 +104,13 @@ lemma return_closed:
   shows "bnd (Resume caller callee
                (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
 proof -
-  have key_eq: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+  have key_eq: "key enterc seedc callee
+      = enterc (sink_node caller) (key enterc seedc caller) (entry_store callee)"
     using callee_entry_invariant_keyD[OF callee_val cof] .
   have call_enter: "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
     using callee_entry_invariant_call_enterD[OF callee_val cof] .
   have ih_callee': "sink_store callee
-        \<in> acc (FunctionResult p) (enterc (key enterc seedc caller) (entry_store callee))"
+        \<in> acc (FunctionResult p) (enterc (sink_node caller) (key enterc seedc caller) (entry_store callee))"
     using ih_callee key_eq res by simp
   have "combine_collect dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
@@ -243,7 +245,7 @@ theorem return_uses_matched_callee:
     and comb: "(sink_node caller, CallEdge dst pars args, FunctionEntry pp, cont) \<in> calls g"
   shows "caller_of callee = Some caller
        \<and> sink_store callee
-           \<in> acc (FunctionResult pp) (enterc (key enterc seedc caller) (entry_store callee))
+           \<in> acc (FunctionResult pp) (enterc (sink_node caller) (key enterc seedc caller) (entry_store callee))
        \<and> combine_collect dst (sink_store caller) (sink_store callee)
            \<in> acc cont (key enterc seedc caller)"
 proof -
@@ -254,12 +256,13 @@ proof -
     using valid_ltr_subset_gamma_ltr caller_v by (auto simp: gamma_ltr_def)
   have bcl: "bnd callee"
     using valid_ltr_subset_gamma_ltr cv by (auto simp: gamma_ltr_def)
-  have key_eq: "key enterc seedc callee = enterc (key enterc seedc caller) (entry_store callee)"
+  have key_eq: "key enterc seedc callee
+      = enterc (sink_node caller) (key enterc seedc caller) (entry_store callee)"
     using callee_entry_invariant_keyD[OF cv cof] .
   have call_enter: "call_enter_store g (sink_node caller) (sink_store caller) (entry_store callee)"
     using callee_entry_invariant_call_enterD[OF cv cof] .
   have mid: "sink_store callee
-        \<in> acc (FunctionResult pp) (enterc (key enterc seedc caller) (entry_store callee))"
+        \<in> acc (FunctionResult pp) (enterc (sink_node caller) (key enterc seedc caller) (entry_store callee))"
     using bcl key_eq rn by simp
   have res_bound: "combine_collect dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
@@ -312,7 +315,7 @@ lemma ltr_collect_semantic_postfix:
         \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p) \<Longrightarrow> combine_collect dst s t \<in> B cont"
   shows "ltr_collect g S0 v \<subseteq> B v"
 proof -
-  interpret G: ltr_gamma g S0 "\<lambda>v _. B v" "\<lambda>_ _. ()" "()"
+  interpret G: ltr_gamma g S0 "\<lambda>v _. B v" "\<lambda>_ _ _. ()" "()"
   proof (standard, goal_cases ROOT EDGE CALL COMB)
     case (ROOT s) then show ?case using entry by auto
   next

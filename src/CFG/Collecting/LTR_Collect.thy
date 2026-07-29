@@ -287,7 +287,8 @@ text \<open>(7) Context transition under call: the child activation receives exa
   produced by the configured enter function.\<close>
 lemma ltr_collect_ctx_call:
   "key enterc seedc (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])
-     = enterc (key enterc seedc caller) (call_enter (CallEdge dst pars args) (sink_store caller))"
+     = enterc (sink_node caller) (key enterc seedc caller)
+         (call_enter (CallEdge dst pars args) (sink_store caller))"
   by simp
 
 text \<open>(8) Context restoration under resume: a resumed trace has the caller's activation
