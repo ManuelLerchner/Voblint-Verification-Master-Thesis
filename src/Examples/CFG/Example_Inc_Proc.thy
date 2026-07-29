@@ -28,6 +28,12 @@ lemma inc_program_parts:
     and "prog_main inc_program = imp \<lbrakk> p() \<rbrakk>"
   by (simp_all add: inc_program_def)
 
+text \<open>\<open>declared_global_vars\<close> for the concrete program: the entry point where the
+  migration's declaration-driven classifier meets a real declared list.\<close>
+lemma inc_program_declared_global_vars [simp]:
+  "declared_global_vars inc_program = [''Gx'']"
+  by (simp add: inc_program_def)
+
 definition inc_g :: cfg where
   "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) ''main'' (prog_main inc_program)"
 

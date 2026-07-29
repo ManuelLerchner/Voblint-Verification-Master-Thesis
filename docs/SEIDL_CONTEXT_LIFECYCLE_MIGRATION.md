@@ -8,6 +8,24 @@
 > `src/Examples/Executable/Interval/Example_Interval_DG_CallString.thy`
 > (`Voblint_Examples`), tracked in issue #66; it now interprets
 > `routed_context` rather than hand-copying `cmb`/`extra`.
+>
+> **M4.1 progress:** `declared_global_vars` and `declared_global`
+> (`VIMP_Notation.thy`) landed as an unconsumed, declaration-driven
+> classifier alongside `is_global` — parser plumbing only, no semantics
+> switched yet. Separately, `combine_states` and `enter_state`
+> (`VIMP_Globals.thy`) were widened to take an explicit `(vname => bool)`
+> classifier instead of closing over `is_global`, with every call site across
+> the compiler, CFG, and analysis layers passing `is_global` explicitly
+> (behavior-preserving; the `<_|_>` mixfix notation was dropped in the same
+> pass since a three-argument operation is not a binary one). An attempt to
+> swap the classifier at a single concrete leaf example
+> (`Example_Inc_Proc.thy`) confirmed the real migration frontier is wider than
+> any one example: `enter_state`, `call_enter`, `combine_collect`, `pstep`,
+> `csim`, `sound_transfer`, and `sound_effectful_transfer` form one semantic
+> interface (cross-session, 7-30 citing files each) that has to move together.
+> `pcompletes_Call` / `pcompletes_Call_parameterless` are not part of that
+> interface — narrow, example-only, safe to leave for later. M4.1a and M4.1b
+> remain open; see M4.5 below for the rename-ordering constraint this implies.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
 Engineering Modularity", FM 2026, LNCS 16557, pp. 446-470, section "Refining
@@ -495,12 +513,35 @@ as a consequence of `x` being local.
 
 #### M4.5 - migrate every example and theorem
 
-18 files carry `''G` literals today, led by `Example_Proc_Call` (35
-occurrences), `Example_VIMP_Proc_Regression` (13), `Example_Inc_Proc` (9),
-`Example_Side_Branch_Calls` (7). Each becomes an explicit declaration. The
-sweep covers source syntax, procedure-table construction, CFG compilation
+21 files under `src/Examples` carry a `G`-prefixed identifier today, led by
+`Example_Proc_Call`, `Example_VIMP_Proc_Regression`, `Example_Inc_Proc`,
+`Example_Side_Branch_Calls`. Each becomes an explicit declaration. The sweep
+covers source syntax, procedure-table construction, CFG compilation
 assumptions, collecting semantics, executable analyses, soundness
 interpretations, flagship examples, source and GraphViz printers, and docs.
+
+**Rename order.** Do not rename the `G`-prefixed globals ahead of the
+classifier migration. Until `enter_state` / `call_enter` / `combine_collect` /
+`pstep` / `csim` / `sound_transfer` / `sound_effectful_transfer` consume a
+declaration-driven classifier, `is_global` is still prefix-based, and the
+prefix is load-bearing: it is what makes a variable persist across a call
+rather than reset. Renaming `Gx` to `x` before that migration does not
+relabel the variable, it reclassifies it from global to local and silently
+changes the program's semantics -- `Example_Inc_Proc.thy`'s
+`pcompletes_inc_pcall` is the concrete case: it exists to prove a global
+increment is visible to the caller after a call, and that visibility is
+exactly what a premature rename removes.
+
+```text
+Before classifier migration: name prefix   == storage classification
+After classifier migration:  declaration   == storage classification
+```
+
+The rename is a consequence of M4.1/M4.1a landing (`declared_global_vars` /
+`declared_global` becoming what `enter_state` and friends actually consume),
+not a prerequisite for it. `declared_global_vars` and `declared_global`
+(`VIMP_Notation.thy`) already exist as an unconsumed classifier for exactly
+this reason -- see the interface table in the M4.1 status note below.
 
 #### M4.6 - delete the old mechanism
 
