@@ -278,6 +278,16 @@ lemma sides_fold_le_dg_gen:
     side_cfg_T_eff_keyed_seed_dg_def
   by (cases "v = cfg_entry g") (simp_all add: Let_def)
 
+text \<open>
+  \<open>dg_postfix\<close> is the DG-specific instance of a semantic post-fixpoint:
+  \<open>sigma\<close> dominates the seed on both projections, and every specification
+  transfer --- \<open>dg_spec_step\<close> on an intra edge, \<open>dgs_enter\<close> on a call entry,
+  \<open>dgs_combine\<close> on a call return --- is bounded on both projections by
+  \<open>sigma\<close> at its target. The eight conjuncts are the two seed bounds plus a
+  D/G pair for each of the three transfer kinds; each has its own named
+  projection lemma below (\<open>dg_postfix_entryD\<close>, \<open>dg_postfix_edgeD\<close>, ...) so
+  callers never navigate the conjunction positionally.
+\<close>
 definition dg_postfix ::
   "cfg \<Rightarrow> 'D \<Rightarrow> 'G
    \<Rightarrow> (pp \<times> unit + unit \<Rightarrow>

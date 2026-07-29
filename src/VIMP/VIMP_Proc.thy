@@ -12,6 +12,12 @@ text \<open>
   \<open>ret_var\<close> and replaces pending callee commands with \<open>Unwind\<close>.
   Restoration keeps callee globals, restores caller locals, and writes the
   published value when the call has a destination.
+
+  \<open>Return\<close> is the source-level early return. It publishes an optional
+  value into \<open>ret_var\<close> and unwinds the current activation.
+  \<open>Unwind\<close> is a runtime-only marker (like \<open>Restore\<close>, never in source
+  programs): once a \<open>Return\<close> has fired, the computation is in \<open>Unwind\<close>
+  state, discarding pending statements up to the nearest enclosing activation frame.
 \<close>
 
 datatype com =
@@ -25,14 +31,10 @@ datatype com =
   | Restore
   | Unwind
 
-text \<open>
-  \<^const>\<open>Return\<close> is the source-level early return. It publishes an optional
-  value into \<open>ret_var\<close> and unwinds the current activation.
-  \<^const>\<open>Unwind\<close> is a runtime-only marker (like \<^const>\<open>Restore\<close>, never in source
-  programs): once a \<^const>\<open>Return\<close> has fired, the computation is in \<^const>\<open>Unwind\<close>
-  state, discarding pending statements up to the nearest enclosing activation frame.
-\<close>
-
+text \<open>A procedure's declared formals and body -- deliberately thin: activation
+  (fresh locals, formal argument binding) happens at the call site via
+  \<^const>\<open>enter_state\<close> plus argument evaluation, not as a field here.
+  \<open>proc_decl\<close> only records what a call site looks up by name.\<close>
 record proc_decl =
   formals :: "vname list"
   body    :: com

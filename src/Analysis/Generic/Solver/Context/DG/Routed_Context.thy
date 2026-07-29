@@ -168,7 +168,7 @@ proof -
   have succ: "(FunctionEntry p, CallEdge dst pars args, cont) \<in> set (call_successor_list g u)"
     using ce by (simp add: set_call_successor_list[OF finC] call_successors_iff)
   have mem: "?t \<in> set (trees u ctx)"
-    unfolding routed_extra_def using succ by (force intro: rev_image_eqI)
+    unfolding routed_extra_def Let_def using succ by (force intro: rev_image_eqI)
   have snd_bound:
     "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
        \<le> globs (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"

@@ -203,6 +203,15 @@ locale unit_dg_exec_analysis =
                       \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
 begin
 
+text \<open>
+  \<open>gamma\<close> is the caller-facing concretization at \<open>v\<close>: convert the executable
+  post-solution \<open>sigma_st\<close> to its semantic function via \<open>fun_of_dg_st\<close>, then
+  read off the set of stores the DG framework's own \<open>dg_gamma\<close> assigns it,
+  instantiated at this locale's context-insensitive \<open>gamma_unit\<close>. This is the
+  accessor \<open>run_source_sound\<close> states its soundness guarantee in terms of, so
+  no \<open>dg_spec_step\<close>/\<open>fun_of_dg_st\<close>/\<open>part_post_solution\<close> plumbing reaches the
+  caller.
+\<close>
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a st, 'a st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
   where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st \<circ> sigma_st) v"
 

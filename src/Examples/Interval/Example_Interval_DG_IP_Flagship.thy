@@ -10,6 +10,20 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
+section \<open>The context-insensitive (monovariant) interval flagship\<close>
+
+text \<open>
+  This is the non-context IP baseline: every call to \<open>twice\<close> is analyzed
+  under a single, shared abstract state at \<open>FunctionEntry ''twice''\<close>,
+  regardless of which call site reached it. It is the flagship the
+  context-sensitive siblings sharpen -- \<open>Example_Interval_DG_Ctx_Flagship\<close>
+  routes by the entered argument's abstract value, \<open>Example_Interval_DG_CallString\<close>
+  routes by call site (a 1-CFA-style call string) -- so run this file first to
+  see the precision loss two calls to the same procedure with different
+  arguments incur when their entry states are forced to join, then compare
+  against the routed variants.
+\<close>
+
 definition twice_program :: imp_prog where
   "twice_program = program {
      void twice(p) { return p + p }

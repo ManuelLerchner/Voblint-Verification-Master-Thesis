@@ -2,16 +2,20 @@ theory VIMP_Globals
   imports VIMP_Syntax
 begin
 
-(*
-  Locals/globals split over the scalar store = vname => int.
+section \<open>Locals and globals over the scalar store\<close>
 
-  A variable is global iff its name starts with 'G'; combine_states <s|t>
-  takes locals from s and globals from t.  This is the splitting used by local
-  scopes and procedure calls: on entry the caller's store is saved, on exit the
-  callee's globals are kept and the caller's locals restored.
+text \<open>
+  The store is a single \<open>vname => int\<close> function; the locals/globals split is a
+  naming convention on top of it, not a separate representation.
+  \<open>is_global\<close> names the split; \<open>combine_states\<close> \<open><s|t>\<close> takes locals from \<open>s\<close>
+  and globals from \<open>t\<close>. This is the splitting a procedure call needs on both
+  ends: on entry the caller's store is saved and locals reset (\<open>enter_state\<close>),
+  on exit the callee's globals are kept and the caller's locals restored
+  (\<open><caller|callee>\<close>).
 
-  Self-contained: depends only on store, not on com / small-step / CFG.
-*)
+  Self-contained: depends only on the store, not on \<open>com\<close>, small-step, or the
+  CFG.
+\<close>
 
 (* Procedure names. *)
 type_synonym pname = string
@@ -22,7 +26,9 @@ text \<open>A variable is global exactly when its name is empty or starts with
 definition is_global :: "vname => bool" where
   "is_global x = (x = [] \<or> hd x = CHR ''G'')"
 
-(* <s|t>: take locals from s, globals from t. *)
+text \<open>\<open><s|t>\<close>: take locals from \<open>s\<close>, globals from \<open>t\<close>. This is the store a
+  procedure call reconstructs on return, so the caller's locals survive the
+  call unless the callee wrote through a global.\<close>
 definition combine_states :: "store => store => store"  ("<_|_>" [0, 0] 1000) where
   "combine_states s t = (\<lambda>n. if is_global n then t n else s n)"
 
@@ -30,7 +36,8 @@ lemma combine_query [simp]:
   "<s|t> n = (if is_global n then t n else s n)"
   unfolding combine_states_def by simp
 
-(* Concrete call/scope entry: globals from s, locals reset to 0. *)
+text \<open>Concrete call/scope entry: globals persist from \<open>s\<close>, locals reset to
+  \<open>0\<close> -- the store a callee starts execution in.\<close>
 definition enter_state :: "store \<Rightarrow> store" where
   "enter_state s = (\<lambda>n. if is_global n then s n else 0)"
 

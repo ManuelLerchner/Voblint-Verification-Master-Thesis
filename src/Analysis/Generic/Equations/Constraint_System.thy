@@ -651,6 +651,12 @@ lemma rhs_combine_sourcesI:
   unfolding rhs_combine_sources_def return_calls_def
   using assms by (force simp: image_iff)
 
+text \<open>
+  \<open>rhs\<close> is the equation system's right-hand side at \<open>v\<close>: the join over
+  \<^const>\<open>rhs_sources\<close>'s abstract predecessor contributions, plus the seed
+  \<open>s0\<close> exactly when \<open>v\<close> is the graph's entry --- the one node with no
+  predecessor edge to supply a starting value otherwise.
+\<close>
 definition rhs ::
     "cfg
      \<Rightarrow> 'a domain_transfer

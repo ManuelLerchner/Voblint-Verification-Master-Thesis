@@ -35,30 +35,21 @@ theorem proc_global_side_sign_analysis:
   by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 subsection \<open>Executable sign analysis\<close>
 
-definition inc_procs :: "pname list" where
-  "inc_procs = [''p'']"
+text \<open>Reuses @{const inc_program} (\<open>Example_Inc_Proc\<close>) directly rather than
+  reconstructing an equivalent @{typ imp_prog} from @{const inc_pi}.\<close>
 
-
-definition inc_main :: com where
-  "inc_main = imp \<lbrakk> p() \<rbrakk>"
-definition inc_prog_mnm :: pname where "inc_prog_mnm = ''main''"
-
-definition inc_prog :: imp_prog where
-  "inc_prog = imp_prog.make [(''p'', the (inc_pi ''p''))] inc_main"
-
-
-value "sign_exec_prog ''main'' inc_prog ''Gx''"
+value "sign_exec_prog ''main'' inc_program ''Gx''"
 
 lemma inc_gx_nonneg:
-  "sign_exec_prog ''main'' inc_prog ''Gx'' = SNonNeg"
+  "sign_exec_prog ''main'' inc_program ''Gx'' = SNonNeg"
   by eval
 
-lemma inc_terminates: "sign_terminates_prog ''main'' inc_prog"
+lemma inc_terminates: "sign_terminates_prog ''main'' inc_program"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 corollary inc_certified_sound:
-  "ltr_collect (prog_cfg ''main'' inc_prog) cinit_stores (cfg_exit (prog_cfg ''main'' inc_prog))
-   \<le> \<lbrakk>sign_exec_prog ''main'' inc_prog\<rbrakk>"
+  "ltr_collect (prog_cfg ''main'' inc_program) cinit_stores (cfg_exit (prog_cfg ''main'' inc_program))
+   \<le> \<lbrakk>sign_exec_prog ''main'' inc_program\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
 
 subsection \<open>Annotated CFG visualisation\<close>
@@ -69,8 +60,10 @@ text \<open>
 \<close>
 
 
+definition inc_prog_mnm :: pname where "inc_prog_mnm = ''main''"
+
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code inc_prog_mnm} @{code inc_prog})
+  writeln (@{code sign_annotated_dot_prog_lit} @{code inc_prog_mnm} @{code inc_program})
 \<close>
 
 end

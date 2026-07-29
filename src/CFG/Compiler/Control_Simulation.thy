@@ -725,42 +725,6 @@ lemma pstep_Unwind_stuck: "\<not> pstep \<Pi> (Unwind, s, frs) x"
 
 section \<open>The recursive source-command / CFG-stack relation\<close>
 
-text \<open>
-  \<open>csim\<close> relates a source configuration \<^term>\<open>(c, s, frs)\<close> to a CFG configuration
-  \<^term>\<open>(v, s, stk)\<close> with literal store equality (the same \<open>s\<close>).  It bridges the two
-  continuation representations: the source keeps every suspended caller's continuation nested
-  inside the single command \<open>c\<close> (defunctionalized as \<^term>\<open>Seq (Seq inner Restore) after\<close>
-  wrappings, one per activation), while the CFG keeps them as continuation nodes on the frame
-  stack.
-
-  The nesting runs outermost-first: after \<open>main\<close> calls \<open>f\<close> calls \<open>g\<close>, the command is
-  \<open>Seq (Seq (Seq (Seq C Restore) B) Restore) A\<close> with \<open>A\<close> the outermost (main's) continuation and
-  \<open>C\<close> the active (g's) residual.  So the \<^emph>\<open>top\<close> command layer pairs with the \<^emph>\<open>last\<close> (outermost)
-  frame, and the active node/store thread unchanged down to the \<open>Base\<close> case.
-    \<^item> \<open>Base\<close> --- one activation: the active residual \<open>c\<close> is located at \<open>v\<close> and the frame
-      stacks are empty.
-    \<^item> \<open>Nested\<close> --- peel the outermost caller: the command's top layer
-      \<^term>\<open>Seq (Seq inner Restore) after\<close> and the last frame \<^term>\<open>Frame caller dst\<close> pair with the
-      CFG's last frame \<^term>\<open>(cont, dst, caller)\<close>; the caller's post-call residual
-      \<^term>\<open>Seq SKIP after\<close> is located at the continuation node \<open>cont\<close>; and the remaining inner
-      structure is related recursively.
-\<close>
-
-text \<open>
-  \<open>csim\<close> has three constructors --- one per source phase.  \<open>Base\<close> and \<open>Nested\<close>
-  cover \<^emph>\<open>ordinary\<close> execution (residuals located by \<^const>\<open>control_at\<close> at \<^term>\<open>Statement\<close>
-  nodes).  \<open>Returning\<close> covers the \<^emph>\<open>return-in-progress\<close> phase: once a callee's body has
-  completed (fall-through), the innermost source layer is \<^term>\<open>Seq Restore after\<close> and the CFG
-  sits at \<^term>\<open>FunctionResult p\<close>, one \<^const>\<open>cstep\<close> return away from resuming the caller.  Like
-  \<open>Base\<close> it is an innermost constructor (an alternative to it), wrapped by any number of
-  outer \<open>Nested\<close> layers.  It carries exactly the \<^emph>\<open>one\<close> frame the return pops (the immediate
-  caller's save); the outer callers' frames are consumed by the wrapping \<open>Nested\<close> layers.  Its
-  premise locates the \<^emph>\<open>resumed caller\<close> --- the ordinary residual \<^term>\<open>Seq SKIP after\<close> the return
-  will land in, at the continuation node \<open>cont\<close> --- so return completion pops the single frame and
-  the caller resumes as a \<open>Base\<close> activation (the outer \<open>Nested\<close> wrapping is untouched).  The active
-  store is a free rider (\<^const>\<open>control_at\<close> is store-independent).
-\<close>
-
 subsection \<open>Real-procedure activation identity\<close>
 
 text \<open>
@@ -1117,6 +1081,39 @@ lemma compiled_at_exit:
   unfolding compiled_at_def by auto
 
 
+text \<open>
+  \<open>csim\<close> relates a source configuration \<^term>\<open>(c, s, frs)\<close> to a CFG configuration
+  \<^term>\<open>(v, s, stk)\<close> with literal store equality (the same \<open>s\<close>).  It bridges the two
+  continuation representations: the source keeps every suspended caller's continuation nested
+  inside the single command \<open>c\<close> (defunctionalized as \<^term>\<open>Seq (Seq inner Restore) after\<close>
+  wrappings, one per activation), while the CFG keeps them as continuation nodes on the frame
+  stack.
+
+  The nesting runs outermost-first: after \<open>main\<close> calls \<open>f\<close> calls \<open>g\<close>, the command is
+  \<open>Seq (Seq (Seq (Seq C Restore) B) Restore) A\<close> with \<open>A\<close> the outermost (main's) continuation and
+  \<open>C\<close> the active (g's) residual.  So the \<^emph>\<open>top\<close> command layer pairs with the \<^emph>\<open>last\<close> (outermost)
+  frame, and the active node/store thread unchanged down to the \<open>Base\<close> case.
+    \<^item> \<open>Base\<close> --- one activation: the active residual \<open>c\<close> is located at \<open>v\<close> and the frame
+      stacks are empty.
+    \<^item> \<open>Nested\<close> --- peel the outermost caller: the command's top layer
+      \<^term>\<open>Seq (Seq inner Restore) after\<close> and the last frame \<^term>\<open>Frame caller dst\<close> pair with the
+      CFG's last frame \<^term>\<open>(cont, dst, caller)\<close>; the caller's post-call residual
+      \<^term>\<open>Seq SKIP after\<close> is located at the continuation node \<open>cont\<close>; and the remaining inner
+      structure is related recursively.
+
+  \<open>csim\<close> has three constructors --- one per source phase.  \<open>Base\<close> and \<open>Nested\<close>
+  cover \<^emph>\<open>ordinary\<close> execution (residuals located by \<^const>\<open>control_at\<close> at \<^term>\<open>Statement\<close>
+  nodes).  \<open>Returning\<close> covers the \<^emph>\<open>return-in-progress\<close> phase: once a callee's body has
+  completed (fall-through), the innermost source layer is \<^term>\<open>Seq Restore after\<close> and the CFG
+  sits at \<^term>\<open>FunctionResult p\<close>, one \<^const>\<open>cstep\<close> return away from resuming the caller.  Like
+  \<open>Base\<close> it is an innermost constructor (an alternative to it), wrapped by any number of
+  outer \<open>Nested\<close> layers.  It carries exactly the \<^emph>\<open>one\<close> frame the return pops (the immediate
+  caller's save); the outer callers' frames are consumed by the wrapping \<open>Nested\<close> layers.  Its
+  premise locates the \<^emph>\<open>resumed caller\<close> --- the ordinary residual \<^term>\<open>Seq SKIP after\<close> the return
+  will land in, at the continuation node \<open>cont\<close> --- so return completion pops the single frame and
+  the caller resumes as a \<open>Base\<close> activation (the outer \<open>Nested\<close> wrapping is untouched).  The active
+  store is a free rider (\<^const>\<open>control_at\<close> is store-independent).
+\<close>
 inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store \<times> frame list
                     \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool" for \<Pi> g where
   Base:

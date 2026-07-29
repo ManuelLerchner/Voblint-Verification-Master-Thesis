@@ -114,6 +114,8 @@ text \<open>Registers the sort intersection under its named synonym -- the vendo
   have it.\<close>
 instance relc :: bounded_warrowing ..
 
+text \<open>\<open>top_relc\<close> is the empty-relation-set top element: vacuously true of
+  every pair, so its concretization is \<open>UNIV\<close> (\<open>gamma_rel_top\<close>).\<close>
 definition top_relc :: relc where
   "top_relc = RelC {}"
 
