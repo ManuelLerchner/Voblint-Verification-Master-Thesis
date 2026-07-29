@@ -13,6 +13,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Generic/Solver/Exec"
     "Instances/Sign"
     "Instances/Interval"
+    "Instances/Parity"
     "Instances/Mixed"
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
@@ -74,6 +75,10 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
+    Parity_Domain
+    Parity_Print
+    Parity_Transfer
+    Parity_Exec
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz
