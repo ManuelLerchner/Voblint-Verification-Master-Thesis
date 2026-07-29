@@ -4,39 +4,26 @@
 regressions, visualizations, and the narrative capstone. No soundness session
 depends on it.
 
-## Executable analyses
+Folders are grouped by abstract domain, not by capability: every analysis in
+this framework runs concretely inside Isabelle/HOL (the executable pipeline is
+a whole-framework property, not a subset of examples), and every analysis is
+built on the same procedure-aware CFG/D-G pipeline (interprocedural reasoning
+is baseline, not opt-in). What actually varies between examples is which
+domain they instantiate and whether their demo program happens to contain a
+procedure call.
 
-| Area | Role |
-| --- | --- |
-| `Executable/Sign/` | Sign-domain solver runs and D/G execution |
-| `Executable/Interval/` | Interval solver runs, source certification, and activation-sensitive D/G examples |
+| Folder | Domain | Contents |
+| --- | --- | --- |
+| `Sign/` | Sign | codegen probes, procedure-call soundness spines |
+| `Interval/` | Interval | codegen probes, flagship D/G runs, context-sensitive (call-string) D/G, procedure-call spines, backward-analysis trace soundness |
+| `Parity/` | Parity | domain-registration validation flagship |
+| `Mixed/` | Relational (non-`abs_state`) | same generic pipeline/solver run against a non-`abs_state` carrier |
+| `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
+| `Tooling/` | domain-agnostic | Graphviz rendering demos, outside the proof spine |
 
-`Example_Interval_Source_Ctx` uses the `twice` program to demonstrate two calls
-to one procedure under distinct contexts. It is interprocedural,
-repeated-call, and context-sensitive; it is not recursive.
-
-## Interprocedural regressions
-
-| File | Role |
-| --- | --- |
-| `Example_VIMP_Proc_Regression.thy` | Source call, return, global propagation, and bounded recursion |
-| `Example_Compile_Regression.thy` | Procedure layout and compiler invariants |
-| `Example_Control_Simulation_Regression.thy` | Located execution and source/CFG control simulation |
-| `Example_LTR_Collect_Regression.thy` | Nested calls, multiple returns, recursion, and local-trace collecting semantics |
-| `Example_Proc_Recursion_CFG.thy` | Direct and mutual recursive CFG layout |
-| `Example_Inc_Proc.thy` | Source-to-CFG execution witness for a global increment |
-| `Example_Side_Proc_Global.thy` | Sign analysis over a procedure call |
-| `Example_Interval_Side_Proc_Global.thy` | Interval analysis over a procedure call |
-| `Example_Mixed_Flow_Sign.thy` | Mixed-flow Sign theorem instantiation |
-| `Example_Proc_Call.thy` | Structural CFG example with calls |
-| `Example_Side_Branch_Calls.thy` | Repeated calls from separate branches |
-| `Example_Side_Execute.thy` | Minimal executable side-solver example |
-
-## Numeric and tooling examples
-
-`Numeric/` demonstrates guard refinement and interval loop coverage.
-`Tooling/` renders procedure CFGs and mixed Sign/Interval results as GraphViz
-DOT.
+Regressions live in this session, not upstream, on purpose: `VIMP` -> `CFG` ->
+`Analysis` -> `Formalization` stay soundness-only, and concrete witness
+programs sit in the one session nothing else builds against.
 
 `Voblint.thy` imports the curated examples and presents the complete certified
 pipeline.

@@ -2,7 +2,7 @@
 
 The interval domain threaded through the four layers of the
 `Instances/README.md` recipe. Executable witnesses live under
-`src/Formalization/Examples/Executable/Interval/`.
+`src/Examples/Interval/`.
 
 | File | Role |
 | --- | --- |

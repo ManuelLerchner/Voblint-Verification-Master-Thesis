@@ -19,4 +19,4 @@ at each node. `activation_collect` retains an analysis-defined activation key.
 These sets are the concrete targets of equation-system and D/G soundness.
 
 Concrete witness graphs and executable regressions live in
-`src/Examples/Interprocedural/Example_LTR_Collect_Regression.thy`.
+`src/Examples/CFG/Example_LTR_Collect_Regression.thy`.

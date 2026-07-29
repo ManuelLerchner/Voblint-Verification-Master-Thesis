@@ -1,14 +1,31 @@
 session Voblint_Examples in "." = "Voblint_Formalization" +
   description "Executable witnesses, flagship demonstrations, and the project capstone index"
   directories
-    "Executable/Interval"
-    "Executable/Sign"
-    "Interprocedural"
-    "Numeric"
+    "Sign"
+    "Interval"
+    "Parity"
+    "Mixed"
+    "CFG"
     "Tooling"
   theories
+    (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
+    Example_Inc_Proc
+    Example_Compile_Baseline
+    Example_Compile_Regression
+    Example_Control_Simulation_Regression
+    Example_LTR_Collect_Regression
+    Example_Proc_Recursion_CFG
+    Example_VIMP_Proc_Regression
+
+    (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    Example_Side_Execute
+    Example_Side_Proc_Global
+    Example_Side_Branch_Calls
+    Example_Mixed_Flow_Sign
+
+    (* Interval *)
     Exec_Ivl_Run
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
@@ -18,24 +35,22 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_DG_Ctx_Multi_Call_Regression
     Example_Interval_DG_CallString
     Example_Interval_Source_Ctx
-    Example_Inc_Proc
-    Example_Proc_GraphViz
-    Example_Mixed_Sign_Interval_GraphViz
-    Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
-    Example_Proc_Recursion_CFG
-    Example_VIMP_Proc_Regression
-    Example_LTR_Collect_Regression
-    Example_Compile_Regression
-    Example_Compile_Baseline
-    Example_Control_Simulation_Regression
-    Example_Side_Execute
-    Example_Side_Branch_Calls
-    Example_Mixed_Flow_Sign
+
+    (* Parity *)
+    Example_Parity_DG_Flagship
+
+    (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo
+
+    (* Tooling *)
+    Example_Proc_GraphViz
+    Example_Proc_GraphViz_Recursion
+    Example_Mixed_Sign_Interval_GraphViz
+
     Voblint
   document_files
     (in "../Analysis/document") "root.bib"
