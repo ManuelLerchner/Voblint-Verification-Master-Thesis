@@ -17,9 +17,9 @@ the worked instance used throughout.
 
 ## 1. The AST — `com`
 
-`src/IMP2/IMP2_Proc.thy:20`. Expressions are `aexp` / `bexp`
-(`src/IMP2/IMP2_Syntax.thy:30,44`); a variable is **global** iff its name is empty
-or starts with `G` (`is_global`, `src/IMP2/IMP2_Globals.thy:24`).
+`src/VIMP/VIMP_Proc.thy:20`. Expressions are `aexp` / `bexp`
+(`src/VIMP/VIMP_Syntax.thy:30,44`); a variable is **global** iff its name is empty
+or starts with `G` (`is_global`, `src/VIMP/VIMP_Globals.thy:24`).
 
 ```
 com = SKIP | Assign vname aexp | Seq com com | If bexp com com | While bexp com
@@ -31,7 +31,7 @@ extension (they produce `EA_Enter` edges and *combine* triples).
 
 ## 2. Compile to a CFG — `compile`
 
-`src/CFG/IMP2_Proc_to_CFG.thy:19`. `compile Π lay c n` returns
+`src/CFG/VIMP_Proc_to_CFG.thy:19`. `compile Π lay c n` returns
 
 ```
 (next_fresh_pp, entry_pp, exit_pp, edges, combines)

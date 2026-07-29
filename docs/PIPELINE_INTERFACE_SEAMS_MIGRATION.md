@@ -33,12 +33,12 @@ The project already has a strong conceptual pipeline and a clean top-level
 session DAG:
 
 ```text
-Voblint_IMP2 -> Voblint_CFG -> Voblint_Analysis -> Voblint_Formalization
+Voblint_VIMP -> Voblint_CFG -> Voblint_Analysis -> Voblint_Formalization
 ```
 
 The theory ownership is mostly aligned with that split:
 
-- `src/IMP2/` owns source syntax and concrete small-step semantics.
+- `src/VIMP/` owns source syntax and concrete small-step semantics.
 - `src/CFG/` owns CFG syntax, compilation, collecting semantics, and compiler
   simulation.
 - `src/Analysis/Generic/` owns abstract-domain interfaces, equation systems,
@@ -55,8 +55,8 @@ representations that downstream theories destructure directly.
 
 Owner theories:
 
-- `src/IMP2/IMP2_Proc.thy`
-- `src/CFG/IMP2_Proc_to_CFG.thy`
+- `src/VIMP/VIMP_Proc.thy`
+- `src/CFG/VIMP_Proc_to_CFG.thy`
 - `src/CFG/CFG_Def.thy`
 
 Current leak:
@@ -201,7 +201,7 @@ This is the core reason parameter/return refactors spread so far.
 ### `enter_state`, `combine_states`, `is_global`: wide but mostly healthy
 
 These appear broadly because they are the actual IMP2 local/global semantics,
-owned by `IMP2_Globals.thy`.
+owned by `VIMP_Globals.thy`.
 
 Why this is not the same problem:
 
@@ -308,7 +308,7 @@ This is ordinary information hiding, applied to Isabelle theories.
 
 Owner:
 
-- `IMP2_Proc.thy`
+- `VIMP_Proc.thy`
 
 Should own:
 
@@ -611,11 +611,11 @@ Goal:
 
 Files:
 
-- `src/IMP2/IMP2_Proc.thy`
+- `src/VIMP/VIMP_Proc.thy`
 - `src/CFG/CFG_Def.thy`
-- optionally `src/CFG/IMP2_Proc_to_CFG.thy`
+- optionally `src/CFG/VIMP_Proc_to_CFG.thy`
 
-Work in `IMP2_Proc.thy`:
+Work in `VIMP_Proc.thy`:
 
 - add wrappers such as:
   - `callee_entry_store`
@@ -1004,7 +1004,7 @@ Observation:
 Candidate split:
 
 ```text
-Voblint_IMP2
+Voblint_VIMP
   -> Voblint_CFG_Core
   -> Voblint_Analysis
 
@@ -1035,7 +1035,7 @@ Recommended order:
 Concrete session sketch:
 
 ```isabelle
-session Voblint_CFG_Core in "src/CFG" = "Voblint_IMP2" +
+session Voblint_CFG_Core in "src/CFG" = "Voblint_VIMP" +
   description "CFG syntax, collecting semantics, and pruning"
   sessions
     "Dijkstra_Shortest_Path"
@@ -1045,7 +1045,7 @@ session Voblint_CFG_Core in "src/CFG" = "Voblint_IMP2" +
     CFG_Def
     CFG_Path
     CFG_GraphViz
-    IMP2_Proc_to_CFG
+    VIMP_Proc_to_CFG
     CFG_Collect
     CFG_Collect_Trace
     CFG_Prune
@@ -1382,7 +1382,7 @@ This migration does not propose:
 The migration is successful when:
 
 1. source/CFG call-return representation changes are absorbed mainly in
-   `IMP2_Proc`, `CFG_Def`, `IMP2_Proc_to_CFG`, and collecting owner theories;
+   `VIMP_Proc`, `CFG_Def`, `VIMP_Proc_to_CFG`, and collecting owner theories;
 2. generic Analysis theories reason through selectors and owner lemmas instead
    of constructor shapes;
 3. examples and tooling stop being major amplifiers of representation churn;

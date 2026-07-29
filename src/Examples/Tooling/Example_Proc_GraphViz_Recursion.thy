@@ -2,7 +2,7 @@ section \<open>Example: recursive interprocedural CFG as Graphviz\<close>
 
 theory Example_Proc_GraphViz_Recursion
   imports
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Analysis.Analysis_GraphViz"
     Example_Compile_Baseline
 begin

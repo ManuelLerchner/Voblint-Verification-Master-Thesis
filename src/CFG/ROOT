@@ -1,4 +1,4 @@
-session Voblint_CFG in "." = "Voblint_IMP2" +
+session Voblint_CFG in "." = "Voblint_VIMP" +
   description "Procedure-aware CFG: core, trace, collecting, and structural compiler"
   directories
     "Collecting"
@@ -8,7 +8,7 @@ session Voblint_CFG in "." = "Voblint_IMP2" +
     CFG_Local_Trace
     LTR_Collect
     LTR_Abstract
-    IMP2_Proc_to_CFG
+    VIMP_Proc_to_CFG
     CFG_Transfer
     Compile_Invariants
     Control_Residual

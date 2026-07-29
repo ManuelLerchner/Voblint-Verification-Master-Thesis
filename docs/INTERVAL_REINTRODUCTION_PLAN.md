@@ -100,7 +100,7 @@ The proof body is unchanged — it calls
 
 Copy `Interval_Domain.thy` into `src/Analysis/Domains/`. Fix imports to the
 current session (`Abstract_Domain`, `Constraint_System`,
-`Voblint_IMP2.IMP2_Expr`, `Voblint_IMP2.IMP2_Globals` — match
+`Voblint_VIMP.VIMP_Expr`, `Voblint_VIMP.VIMP_Globals` — match
 `Sign_Domain`'s import line). Add `Interval_Domain` to `src/Analysis/ROOT` after
 `Sign_Domain`.
 

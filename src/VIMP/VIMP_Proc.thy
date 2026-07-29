@@ -1,5 +1,5 @@
-theory IMP2_Proc
-  imports IMP2_Expr IMP2_Globals
+theory VIMP_Proc
+  imports VIMP_Expr VIMP_Globals
 begin
 
 section \<open>Procedure commands and activation frames\<close>
@@ -502,7 +502,7 @@ definition source_pi :: "proc_table => bool" where
 
 text \<open>
   Occurrence of one specific variable is the same syntax-directed walk as
-  @{const aexp_mentions_global} (\<open>IMP2_Expr\<close>), with the leaf predicate
+  @{const aexp_mentions_global} (\<open>VIMP_Expr\<close>), with the leaf predicate
   specialised to an equality test instead of @{const is_global}.
 \<close>
 

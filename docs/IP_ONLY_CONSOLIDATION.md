@@ -112,11 +112,11 @@ quintet name and has 0 references in `TD_Side_IP_Bounds`; else KEEP.
 After Phases 1-2 nothing analyzes `com` programs. The `com` command datatype
 and its small-step are orphaned; `pcom` becomes the sole language.
 
-- `src/IMP2/IMP2_Expr.thy`: **split**. KEEP `aval`/`bval` (used by
+- `src/VIMP/VIMP_Expr.thy`: **split**. KEEP `aval`/`bval` (used by
   `pcom`'s `pstep`); DELETE the `com` `(c,s) -> (c',s')` small-step relation and
-  its lemmas. (Consider moving `aval`/`bval` into `IMP2_Syntax` so
-  `IMP2_Expr` can go entirely.)
-- `src/IMP2/IMP2_Syntax.thy`: delete the `com` command datatype (keep
+  its lemmas. (Consider moving `aval`/`bval` into `VIMP_Syntax` so
+  `VIMP_Expr` can go entirely.)
+- `src/VIMP/VIMP_Syntax.thy`: delete the `com` command datatype (keep
   `aexp`/`bexp`/`store`).
 - Rename across the surviving IP spine: `pcom -> com`, `pstep -> ...`,
   `compile_pcom -> compile`, `compile_prog -> ...`, `cfg_collect_ip -> ...`
@@ -181,8 +181,8 @@ mention in `TD_Side_IP_Interface` is a comment). The `com`-level
 `Constraint_System_Sound` import `CFG_Runs_To_Bridge -> CFG_Collect_Core` and
 dropped its `to_cfg` `exit_sound` corollary (generic `post_fixpoint_sound_at`
 kept). Found one item the plan missed: `CFG_Collect_Edges` *really* imported
-`IMP2_to_CFG` (for `aval`/`bval`); repointed it to `IMP2_Expr`. Cleaned
-stale `to_cfg` comments in `CFG_GraphViz` and `IMP2_Proc_to_CFG`.
+`IMP2_to_CFG` (for `aval`/`bval`); repointed it to `VIMP_Expr`. Cleaned
+stale `to_cfg` comments in `CFG_GraphViz` and `VIMP_Proc_to_CFG`.
 
 **Phase 3 - TD_Side_CFG trim.** 846 -> 98 lines. Kept the 9 declarations with
 real word-boundary references from the IP spine: `restrict_local`/`_global`
@@ -192,9 +192,9 @@ but they are quintet-free and consumed by `TD_Side_IP_Soundness` - the build
 caught it). The high apparent ref-counts on `side_cfg_T`/`side_acc`/`side_glob`
 were substring matches of the `_ip` variants, not real uses.
 
-**Phase 4 - retire com.** Deleted the `com` datatype from `IMP2_Syntax` and the
+**Phase 4 - retire com.** Deleted the `com` datatype from `VIMP_Syntax` and the
 `com` small-step (relation, lemmas, `inductive_cases`, `code_pred`) from
-`IMP2_Expr`, keeping `aval`/`bval`. `pcom` (separate constructors
+`VIMP_Expr`, keeping `aval`/`bval`. `pcom` (separate constructors
 `PSKIP`/...) is now the sole command language.
 
 **Rename (follow-up slice, same branch).** Done by host `sed` + per-step build

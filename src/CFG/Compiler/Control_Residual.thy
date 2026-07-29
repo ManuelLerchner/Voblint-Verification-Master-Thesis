@@ -1,5 +1,5 @@
 theory Control_Residual
-  imports IMP2_Proc_to_CFG
+  imports VIMP_Proc_to_CFG
 begin
 
 section \<open>Located control inside a compiled procedure fragment\<close>

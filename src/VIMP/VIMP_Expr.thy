@@ -1,5 +1,5 @@
-theory IMP2_Expr
-  imports IMP2_Syntax IMP2_Globals "HOL-IMP.Star"
+theory VIMP_Expr
+  imports VIMP_Syntax VIMP_Globals "HOL-IMP.Star"
 begin
 
 section \<open>Expression evaluation\<close>
@@ -31,7 +31,7 @@ text \<open>
   mention variable x?" are the same syntax-directed walk, differing only in
   the leaf predicate on the mentioned name. Defining the walk once as
   @{text "_where P"} and instantiating @{text P} to @{const is_global} (below)
-  or to an equality test (\<open>IMP2_Proc.aexp_mentions\<close>) avoids two copies of the
+  or to an equality test (\<open>VIMP_Proc.aexp_mentions\<close>) avoids two copies of the
   same recursion.
 \<close>
 

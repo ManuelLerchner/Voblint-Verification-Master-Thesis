@@ -1,5 +1,5 @@
 theory TD_Side_CFG
-  imports Constraint_System_Sound Split_State "Voblint_IMP2.IMP2_Globals" "TD.TD_side"
+  imports Constraint_System_Sound Split_State "Voblint_VIMP.VIMP_Globals" "TD.TD_side"
 begin
 
 (* TD_side defines a record field \<sigma> for its internal state; hide the short

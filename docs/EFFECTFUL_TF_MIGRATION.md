@@ -117,7 +117,7 @@ both gaps together because Gap 2 without Gap 1 has limited practical effect.
 ### Program
 
 ```
-(* IMP2: variables starting with G are global per IMP2_Globals.is_global *)
+(* IMP2: variables starting with G are global per VIMP_Globals.is_global *)
 
 Gflag := 1;
 Gdata := 0;

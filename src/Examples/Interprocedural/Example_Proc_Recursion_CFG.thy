@@ -1,7 +1,7 @@
 section \<open>Example: recursive procedure CFG layout\<close>
 
 theory Example_Proc_Recursion_CFG
-  imports "Voblint_CFG.IMP2_Proc_to_CFG" "Voblint_IMP2.IMP2_Notation"
+  imports "Voblint_CFG.VIMP_Proc_to_CFG" "Voblint_VIMP.VIMP_Notation"
 begin
 
 text \<open>

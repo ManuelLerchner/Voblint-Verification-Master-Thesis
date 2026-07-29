@@ -1,4 +1,4 @@
-theory IMP2_Syntax
+theory VIMP_Syntax
   imports Main "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
 begin
 

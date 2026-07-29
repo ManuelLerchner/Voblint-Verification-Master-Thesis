@@ -42,7 +42,7 @@ read is already determined by the last store.
 ## 3. Interprocedural traces
 
 Procedures split the store into locals and globals
-(`src/IMP2/IMP2_Globals.thy`: `is_global`, `enter_state`, `combine_states`).
+(`src/VIMP/VIMP_Globals.thy`: `is_global`, `enter_state`, `combine_states`).
 Calls are modelled with **enter edges** (a unary `EA_Enter`, `enter_state` keeps
 globals and zeroes locals) and **combine triples** `(call, callee_exit, return)`
 — *not* a flat combine edge, which would need a `⊤` the bounded-semilattice

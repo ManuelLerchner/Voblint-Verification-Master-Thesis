@@ -93,9 +93,9 @@ into the locale later — **but that re-incurs the debt; prefer the gate.**
 | --- | --- | --- |
 | `cfg_collect_trace`, `alpha_last`, `lift` | `CFG/Collecting/CFG_Collect_Trace.thy` | intraprocedural template; `alpha_last` is the projection |
 | `cfg_collect_ip` (state-based) | `CFG/Collecting/CFG_Collect_IP.thy` | the **projection target** of the new lift |
-| `combine_states <s|t>` + algebra | `IMP2/IMP2_Globals.thy` | the `restore` in `combine` (locals from caller, globals from callee) |
-| `pstep` / `pruns_to` / determinism | `IMP2/IMP2_Proc.thy` | the small step each trace step reuses; adequacy witness |
-| `compile_prog`, enter edges, `combines g` triples | `CFG/IMP2_Proc_to_CFG.thy` | the CFG structure `enter`/`combine` thread through |
+| `combine_states <s|t>` + algebra | `IMP2/VIMP_Globals.thy` | the `restore` in `combine` (locals from caller, globals from callee) |
+| `pstep` / `pruns_to` / determinism | `IMP2/VIMP_Proc.thy` | the small step each trace step reuses; adequacy witness |
+| `compile_prog`, enter edges, `combines g` triples | `CFG/VIMP_Proc_to_CFG.thy` | the CFG structure `enter`/`combine` thread through |
 | path-enumeration skeleton | `CFG/Collecting/CFG_Collect_Core.thy` | `cfg_collect_trace_ip` mirrors its lfp/path proofs |
 
 **~80% of the substrate is here.** M3.5 is new *glue*, not a new foundation.

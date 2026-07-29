@@ -1,5 +1,5 @@
 theory Split_State
-  imports Abstract_Domain "Voblint_IMP2.IMP2_Globals"
+  imports Abstract_Domain "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Split local/global abstract states\<close>

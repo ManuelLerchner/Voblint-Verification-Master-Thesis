@@ -1,7 +1,7 @@
 theory Analysis_GraphViz
   imports
-    "Voblint_CFG.IMP2_Proc_to_CFG"
-    "Voblint_IMP2.IMP2_Source_Print"
+    "Voblint_CFG.VIMP_Proc_to_CFG"
+    "Voblint_VIMP.VIMP_Source_Print"
     TD_Side_CFG
     Exec_St
     Abstract_Domain

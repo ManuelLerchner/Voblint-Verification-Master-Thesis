@@ -83,7 +83,7 @@ keep it and structural tags are forced.
 
 ## Consequences
 
-- The structural `aexp`/`bexp` (~30 lines, `IMP2_Syntax`) and each domain's
+- The structural `aexp`/`bexp` (~30 lines, `VIMP_Syntax`) and each domain's
   `aval`/`bval` (4-6 lines, e.g. `aval_sign`) stay hand-maintained. Irreducible.
 - We already reuse the *correct* upstream: Nipkow's structural `HOL-IMP.AExp` /
   `BExp` at the leaves (`BaseN "AExp.aexp"`), extended with `Minus`/`Times`.

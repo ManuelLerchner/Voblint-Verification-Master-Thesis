@@ -44,7 +44,7 @@ Nothing bounds the callee-entry node.
 
 ## Observation
 
-`enter_state` (`IMP2_Globals.thy`) has a stronger semantic property than a
+`enter_state` (`VIMP_Globals.thy`) has a stronger semantic property than a
 generic edge transfer:
 
 ```

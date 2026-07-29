@@ -474,4 +474,4 @@ Recommended:
 - `docs/SEIDL_TRACE_MIGRATION_HANDOFF.md` — M3.5 action traces for write sites
 - `docs/NON_GOALS.md` — `solve_dom` assumed; no optimality
 - `src/Formalization/Pipeline/Trace_Analysis_Sound.thy` — `digest_read_sound`
-- `src/IMP2/IMP2_VCG_Example.thy` — executable validation precedent
+- `src/VIMP/IMP2_VCG_Example.thy` — executable validation precedent

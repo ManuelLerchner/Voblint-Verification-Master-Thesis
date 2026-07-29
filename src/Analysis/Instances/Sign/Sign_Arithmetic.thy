@@ -1,5 +1,5 @@
 theory Sign_Arithmetic
-  imports Sign_Lattice "Voblint_IMP2.IMP2_Expr"
+  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr"
 begin
 
 section \<open>Sign arithmetic\<close>

@@ -1,5 +1,5 @@
 theory CFG_Transfer
-  imports IMP2_Proc_to_CFG
+  imports VIMP_Proc_to_CFG
 begin
 
 section \<open>Per-edge abstract transfer\<close>

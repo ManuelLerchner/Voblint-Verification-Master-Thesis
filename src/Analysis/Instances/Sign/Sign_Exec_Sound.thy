@@ -1,7 +1,7 @@
 theory Sign_Exec_Sound
   imports Sign_Exec Sign_Side_Soundness Solver_Side_RG
           "TD.TD_side_upd_rule"
-          "Voblint_IMP2.IMP2_Notation"
+          "Voblint_VIMP.VIMP_Notation"
           Analysis_GraphViz
 begin
 

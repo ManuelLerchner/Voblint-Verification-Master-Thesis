@@ -6,7 +6,7 @@ theory Example_Compile_Baseline
     "Voblint_CFG.Compile_Invariants"
     "Voblint_CFG.Located_Exec"
     "Voblint_Analysis.CFG_Enumeration"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 text \<open>

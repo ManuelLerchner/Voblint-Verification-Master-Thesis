@@ -3,7 +3,7 @@ section \<open>Example: mixed_flow_analysis_optimal applied to the sign domain\<
 theory Example_Mixed_Flow_Sign
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.Mixed_Flow_Sound"
     Example_Inc_Proc
 begin

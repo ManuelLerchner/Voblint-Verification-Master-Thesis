@@ -167,7 +167,7 @@ value "lookup_st top_sign_st ''x''"
 value "lookup_st cinit_sign_st ''Gx''"
 value "lookup_st cinit_sign_st ''x''"
 
-value "lookup_st (sign_tf_st (EA_Assign ''x'' (IMP2_Syntax.N 1)) top_sign_st) ''x''"
-value "lookup_st (sign_tf_st (EA_Assume (Less (IMP2_Syntax.V ''x'') (IMP2_Syntax.N 0))) cinit_sign_st) ''x''"
+value "lookup_st (sign_tf_st (EA_Assign ''x'' (VIMP_Syntax.N 1)) top_sign_st) ''x''"
+value "lookup_st (sign_tf_st (EA_Assume (Less (VIMP_Syntax.V ''x'') (VIMP_Syntax.N 0))) cinit_sign_st) ''x''"
 
 end

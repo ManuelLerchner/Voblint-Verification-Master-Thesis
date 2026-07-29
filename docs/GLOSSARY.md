@@ -7,19 +7,19 @@ layer without embedding line numbers that drift.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `com` | Procedural command language: structured commands, calls, explicit returns, and internal restoration commands. | `src/IMP2/IMP2_Proc.thy` |
-| `proc_decl` | Procedure declaration containing formal parameters and a body. | `src/IMP2/IMP2_Proc.thy` |
-| `proc_table` | Partial map from procedure names to declarations. | `src/IMP2/IMP2_Proc.thy` |
-| `frame` | Saved caller store and optional return destination. | `src/IMP2/IMP2_Proc.thy` |
-| `pstep` / `psteps` | Small-step execution over a command, store, and activation-frame stack. | `src/IMP2/IMP2_Proc.thy` |
-| `pcompletes` | Terminating source execution with an empty frame stack. | `src/IMP2/IMP2_Proc.thy` |
-| `source_com` | Syntactic source-command restriction excluding runtime-only commands. | `src/IMP2/IMP2_Proc.thy` |
-| `wf_source_com` | Whole-program-aware command check for declared calls, arity, and reserved-variable exclusion. | `src/IMP2/IMP2_Proc.thy` |
-| `value_providing` | Conservative syntactic predicate: no fall-through or void return and at least one value return. | `src/IMP2/IMP2_Proc.thy` |
-| `wf_source_program` | Source contract for declarations, calls, returns, reserved variables, and a fall-through-only main. | `src/IMP2/IMP2_Proc.thy` |
-| `ret_var` | Reserved internal channel carrying an explicit return value during unwinding. | `src/IMP2/IMP2_Proc.thy` |
-| `enter_state` | Callee store with caller globals and fresh local variables. | `src/IMP2/IMP2_Globals.thy` |
-| `combine_states` | Restored caller locals combined with callee globals. | `src/IMP2/IMP2_Globals.thy` |
+| `com` | Procedural command language: structured commands, calls, explicit returns, and internal restoration commands. | `src/VIMP/VIMP_Proc.thy` |
+| `proc_decl` | Procedure declaration containing formal parameters and a body. | `src/VIMP/VIMP_Proc.thy` |
+| `proc_table` | Partial map from procedure names to declarations. | `src/VIMP/VIMP_Proc.thy` |
+| `frame` | Saved caller store and optional return destination. | `src/VIMP/VIMP_Proc.thy` |
+| `pstep` / `psteps` | Small-step execution over a command, store, and activation-frame stack. | `src/VIMP/VIMP_Proc.thy` |
+| `pcompletes` | Terminating source execution with an empty frame stack. | `src/VIMP/VIMP_Proc.thy` |
+| `source_com` | Syntactic source-command restriction excluding runtime-only commands. | `src/VIMP/VIMP_Proc.thy` |
+| `wf_source_com` | Whole-program-aware command check for declared calls, arity, and reserved-variable exclusion. | `src/VIMP/VIMP_Proc.thy` |
+| `value_providing` | Conservative syntactic predicate: no fall-through or void return and at least one value return. | `src/VIMP/VIMP_Proc.thy` |
+| `wf_source_program` | Source contract for declarations, calls, returns, reserved variables, and a fall-through-only main. | `src/VIMP/VIMP_Proc.thy` |
+| `ret_var` | Reserved internal channel carrying an explicit return value during unwinding. | `src/VIMP/VIMP_Proc.thy` |
+| `enter_state` | Callee store with caller globals and fresh local variables. | `src/VIMP/VIMP_Globals.thy` |
+| `combine_states` | Restored caller locals combined with callee globals. | `src/VIMP/VIMP_Globals.thy` |
 
 ## Procedure-aware CFG
 
@@ -30,9 +30,9 @@ layer without embedding line numbers that drift.
 | `intra` | Ordinary procedure-local CFG edges. | `src/CFG/CFG_Def.thy` |
 | `calls` | Call-site relation containing the call action, callee entry, and continuation. | `src/CFG/CFG_Def.thy` |
 | `wf_cfg` | Generic structural well-formedness conditions for a CFG. | `src/CFG/CFG_Def.thy` |
-| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/CFG/IMP2_Proc_to_CFG.thy` |
-| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/CFG/IMP2_Proc_to_CFG.thy` |
-| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/CFG/IMP2_Proc_to_CFG.thy` |
+| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/CFG/VIMP_Proc_to_CFG.thy` |
+| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/CFG/VIMP_Proc_to_CFG.thy` |
+| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/CFG/VIMP_Proc_to_CFG.thy` |
 | `compile_cert` | Compiler certificate exposing generated layout and ownership facts. | `src/CFG/Compiler/Compile_Certificate.thy` |
 | `wf_compile_input` | Canonical static contract for accepted source programs. | `src/CFG/Compiler/Compile_Invariants.thy` |
 

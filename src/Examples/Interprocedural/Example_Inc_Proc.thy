@@ -1,7 +1,7 @@
 section \<open>Example support: global increment procedure\<close>
 
 theory Example_Inc_Proc
-  imports "Voblint_CFG.CFG_Transfer" "Voblint_CFG.CFG_Prune" "Voblint_IMP2.IMP2_Notation"
+  imports "Voblint_CFG.CFG_Transfer" "Voblint_CFG.CFG_Prune" "Voblint_VIMP.VIMP_Notation"
 begin
 
 text \<open>

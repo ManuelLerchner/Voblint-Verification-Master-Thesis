@@ -20,9 +20,9 @@ definition mc_f1 :: pname where "mc_f1 = ''f1''"
 definition mc_f2 :: pname where "mc_f2 = ''f2''"
 
 definition mc_ca1 :: call_action where
-  "mc_ca1 = CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3]"
+  "mc_ca1 = CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]"
 definition mc_ca2 :: call_action where
-  "mc_ca2 = CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10]"
+  "mc_ca2 = CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]"
 
 definition multi_call_cfg :: cfg where
   "multi_call_cfg =

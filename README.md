@@ -9,7 +9,7 @@
 ## Abstract
 
 
-Voblint is a reusable, machine-checked Isabelle/HOL framework for constructing, executing, and verifying generic interprocedural abstract interpreters. Inspired by Goblint's modular D/G architecture, it combines verified compilation from IMP2 programs, activation-local operational semantics, executable equation generation, a verified top-down solver, and end-to-end source-level soundness.
+Voblint is a reusable, machine-checked Isabelle/HOL framework for constructing, executing, and verifying generic interprocedural abstract interpreters. Inspired by Goblint's modular D/G architecture, it combines verified compilation from VIMP programs, activation-local operational semantics, executable equation generation, a verified top-down solver, and end-to-end source-level soundness.
 
 Unlike most existing formalizations, Voblint proves properties of the analysis result computed by a verified solver rather than an externally provided fixpoint.
 
@@ -35,7 +35,7 @@ Voblint is inspired by several complementary lines of work:
 Voblint proves one continuous end-to-end execution story. The framework bridges the gap between the concrete source code and the computed mathematical fixpoint:
 
 ```text
-            IMP2 Program
+            VIMP Program
                  │
                  ▼
        Verified CFG Compilation
@@ -105,7 +105,7 @@ The framework is designed to be highly extensible. Rather than proving a new ana
 ## Repository Structure
 
 ```text
-IMP2
+VIMP
  │   Source language
  ▼
 CFG
@@ -122,7 +122,7 @@ Examples
 
 ```
 
-* **`IMP2/`**: Syntax, procedures, globals/locals, small-step semantics
+* **`VIMP/`**: Syntax, procedures, globals/locals, small-step semantics
 * **`CFG/`**: Procedure-aware CFG compilation, activation-local traces, and collecting semantics
 * **`Analysis/`**: Generic D/G framework, domains, solver interface, executable analyses
 * **`Formalization/`**: End-to-end solver, collecting-semantics, and source-level soundness

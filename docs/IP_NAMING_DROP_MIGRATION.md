@@ -72,7 +72,7 @@ The true intra spine is already gone. What remains:
 | `apply_tf_le_rhs_ip` / `s0_le_rhs_ip_entry` / `combine_abs_le_rhs_ip` | `apply_tf_le_rhs` / `s0_le_rhs_entry` / `combine_abs_le_rhs` | replace deleted intra lemmas of these names |
 | `collect_pp_abstract_sound_ip` / `post_fixpoint_sound_at_ip` / `post_fixpoint_sound_ip` / `ip_witness_gamma` | drop `_ip` / `ip_` | — |
 | `mk_ip_cfg` | `mk_cfg` | collapses with the old dead 3-arg no-combines `mk_cfg`; single 4-arg constructor now |
-| `pruns_to_ip` | `cfg_runs_to` | bare `pruns_to` is the live big-step relation in `IMP2_Proc`; the CFG-collecting-exit relation gets a distinct name |
+| `pruns_to_ip` | `cfg_runs_to` | bare `pruns_to` is the live big-step relation in `VIMP_Proc`; the CFG-collecting-exit relation gets a distinct name |
 | `side_rhs_fold_ip`, `side_acc_ip`, `side_glob_ip`, `side_cfg_T_ip`, `side_analyse_ip`, `cfg_side_T_ip_pkg`, `td_cfg_side_ip_solver`, ... (TD_Side layer) | drop `_ip` | — |
 | `trace_ip_analysis_sound` | `trace_analysis_sound` | — |
 

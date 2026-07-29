@@ -2,7 +2,7 @@
 
 edge_action:            src/CFG/CFG_Def.thy:38
 cfg (edges/combines):   src/CFG/CFG_Def.thy:61
-compile:                src/CFG/IMP2_Proc_to_CFG.thy:19
+compile:                src/CFG/VIMP_Proc_to_CFG.thy:19
 predecessor_list:       src/CFG/CFG_Def.thy:147
 combine_predecessor_list: src/CFG/CFG_Def.thy:260
 
@@ -53,7 +53,7 @@ class Cfg:
 
 
 def compile(c: Com, n: int):
-    """src/CFG/IMP2_Proc_to_CFG.thy:19 — returns (next, entry, exit, edges, combines)."""
+    """src/CFG/VIMP_Proc_to_CFG.thy:19 — returns (next, entry, exit, edges, combines)."""
     if isinstance(c, SKIP):
         return (n + 2, n, n + 1, {(n, EA_Nop(), n + 1)}, set())
 

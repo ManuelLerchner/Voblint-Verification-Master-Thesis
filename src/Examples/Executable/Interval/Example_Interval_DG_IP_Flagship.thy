@@ -6,7 +6,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
@@ -18,7 +18,7 @@ definition twice_program :: imp_prog where
 
 definition twice_pi :: proc_table where "twice_pi = prog_table twice_program"
 definition twice_procs :: "pname list" where "twice_procs = prog_procs twice_program"
-definition twice_main :: "IMP2_Proc.com" where "twice_main = prog_main twice_program"
+definition twice_main :: "VIMP_Proc.com" where "twice_main = prog_main twice_program"
 
 definition twice_cfg :: cfg where
   "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
@@ -42,7 +42,7 @@ lemma twice_intra:
   "intra twice_cfg =
      {(FunctionEntry ''twice'', EA_Nop, Statement 0),
       (Statement 0,
-       EA_Ret (Some (Plus (IMP2_Syntax.V ''p'') (IMP2_Syntax.V ''p''))) ''twice'',
+       EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''twice'',
        FunctionResult ''twice''),
       (FunctionEntry ''main'', EA_Nop, Statement 2),
       (Statement 4, EA_Ret None ''main'', FunctionResult ''main'')}"
@@ -50,9 +50,9 @@ lemma twice_intra:
 
 lemma twice_calls:
   "calls twice_cfg =
-     {(Statement 2, CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3],
+     {(Statement 2, CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3],
        FunctionEntry ''twice'', Statement 3),
-      (Statement 3, CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10],
+      (Statement 3, CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10],
        FunctionEntry ''twice'', Statement 4)}"
   by eval
 

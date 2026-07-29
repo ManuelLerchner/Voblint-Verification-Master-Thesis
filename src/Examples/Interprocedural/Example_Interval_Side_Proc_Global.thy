@@ -2,7 +2,7 @@ section \<open>Example: TD\_side Interval Analysis on a Single Global Increment 
 
 theory Example_Interval_Side_Proc_Global
   imports "Voblint_Analysis.Interval_Side_Soundness"
-          "Voblint_IMP2.IMP2_Notation"
+          "Voblint_VIMP.VIMP_Notation"
           Example_Inc_Proc
 begin
 

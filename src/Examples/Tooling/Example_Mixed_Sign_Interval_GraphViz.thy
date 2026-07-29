@@ -2,17 +2,17 @@ section \<open>Example: flow-sensitive Sign answers and a shared Interval invari
 
 theory Example_Mixed_Sign_Interval_GraphViz
   imports
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Analysis.Mixed_Sign_Interval"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
 text \<open>
-  The program compiles through the ordinary IMP2-to-CFG pipeline.  The variable
+  The program compiles through the ordinary VIMP-to-CFG pipeline.  The variable
   @{text "''x''"} is local according to @{const is_global}.  Per-point answer
   unknowns carry Sign stores, while the single side unknown carries an Interval
   store chosen by this analysis.  The side slot is called @{const globs} by the
-  generic routing layer, but it is not an IMP2 global-variable store.
+  generic routing layer, but it is not an VIMP global-variable store.
 
   Starting from @{text "x = 0"}, execution visits @{text "x = -1"} and finishes
   at @{text "x = 2"}.  The exit Sign answer is therefore positive.  The shared

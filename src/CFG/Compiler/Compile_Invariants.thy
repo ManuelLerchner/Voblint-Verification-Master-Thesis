@@ -1,5 +1,5 @@
 theory Compile_Invariants
-  imports IMP2_Proc_to_CFG
+  imports VIMP_Proc_to_CFG
 begin
 
 section \<open>Structural invariants of the procedure-aware compiler\<close>

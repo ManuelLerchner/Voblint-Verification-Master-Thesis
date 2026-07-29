@@ -1,5 +1,5 @@
 theory Example_Side_Branch_Calls
-  imports "Voblint_Analysis.Sign_Exec_Sound" "Voblint_IMP2.IMP2_Notation"
+  imports "Voblint_Analysis.Sign_Exec_Sound" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Certified sign analyzer on a branching, repeatedly-called procedure\<close>

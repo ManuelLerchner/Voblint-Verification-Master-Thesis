@@ -4,7 +4,7 @@
 > `Constraint_System.thy`/`Split_State.thy`, `DG_Soundness.thy`/
 > `DG_Ctx_Activation.thy`, `Sign_Local_Effects.thy`,
 > `Sign_Named_Global_Eff.thy`/`Interval_Transfer.thy`/`Rel_Order_Domain.thy`/
-> `Interval_Lattice.thy`, `CFG/IMP2_Proc_to_CFG.thy`/
+> `Interval_Lattice.thy`, `CFG/VIMP_Proc_to_CFG.thy`/
 > `CFG/Compiler/Compile_Locality.thy`, `Abstract_Domain.thy`/
 > `Sign_Transfer.thy`). Stage 4 (`Exec_Bridge.thy`, `TD_Side_Eff_Bounds.thy`)
 > checked and found to need no further changes — both already cite Stage 1's
@@ -68,7 +68,7 @@ statements) was caught and retracted during the pass — see §2.
 
 `[intro]`/`[intro!]`/`[intro?]`: **0** hits repo-wide. `[dest]`/`[dest!]`/
 `[dest?]`: **0** hits. `[elim]`/`[elim!]`: 15 hits, 12 of which sit in one file
-(`IMP2/IMP2_Proc.thy`, carried over from the AFP IMP2 base — genuinely
+(`IMP2/VIMP_Proc.thy`, carried over from the AFP IMP2 base — genuinely
 original code contributes only 3). `[simp]`: 120. Against 676 definitions,
 that is effectively zero classical-reasoner coverage.
 
@@ -623,7 +623,7 @@ each name recurring 3+ times across unrelated sites — the anti-pattern
 signature this migration targets — rather than reading every file
 line-by-line. Two real hits found and fixed; the rest checked out compliant.
 
-**`frag_stmts` (home file `CFG/IMP2_Proc_to_CFG.thy`).**
+**`frag_stmts` (home file `CFG/VIMP_Proc_to_CFG.thy`).**
 `CFG/Compiler/Compile_Locality.thy` re-derived membership in `frag_stmts E K`
 via `unfolding frag_stmts_def by blast/auto` at 10 sites, each extracting one
 of the definition's four structural disjuncts (edge source, edge target,
@@ -679,7 +679,7 @@ characterizations, `compiled_at_def`'s intro/dest/consequence triple),
 already-canonical characterization lemmas
 (`cone_compatible_etf_def`'s ten per-conjunct projections in
 `TD_Side_Eff_Pipeline.thy`, `static_deps_def`'s own intro lemma), or — for
-`Examples/*.thy` and `IMP2_Proc.thy` — `by eval`/operational-semantics proofs
+`Examples/*.thy` and `VIMP_Proc.thy` — `by eval`/operational-semantics proofs
 checking distinct concrete facts, which is not the logical-re-derivation
 anti-pattern this migration targets at all.
 

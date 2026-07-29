@@ -4,7 +4,7 @@ theory Example_Side_Proc_Global
   imports
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Sign_Exec_Sound"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     Example_Inc_Proc
 begin
 

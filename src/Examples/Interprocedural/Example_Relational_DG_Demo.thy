@@ -7,7 +7,7 @@ theory Example_Relational_DG_Demo
     "Voblint_Analysis.Solver_Menu"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -32,7 +32,7 @@ text \<open>
   current abstract value.
 \<close>
 
-subsection \<open>The IMP2 source program -- a full program block, not an inline stub\<close>
+subsection \<open>The VIMP source program -- a full program block, not an inline stub\<close>
 
 definition demo_program :: imp_prog where
   "demo_program = program { 

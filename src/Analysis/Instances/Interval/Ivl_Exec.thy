@@ -121,7 +121,7 @@ lemma ivl_etf_st_combine_tree:
   "etf_combine_st ivl_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
   unfolding ivl_etf_st_def by (rule etf_combine_st_unit_of_transfer)
 
-value "lookup_st (ivl_tf_st (EA_Assume (Less (IMP2_Syntax.V ''x'') (IMP2_Syntax.N 20)))
+value "lookup_st (ivl_tf_st (EA_Assume (Less (VIMP_Syntax.V ''x'') (VIMP_Syntax.N 20)))
            (update_st top_ivl_st ''x'' (Ivl (Fin 0) (Fin 20)))) ''x''"
 
 end

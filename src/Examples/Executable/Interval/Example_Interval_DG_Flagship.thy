@@ -1,7 +1,7 @@
 section \<open>Flagship: interval analysis of a counting loop, executed and certified on the D/G spine\<close>
 
 text \<open>
-  \<^bold>\<open>The complete story in one self-contained theory.\<close>  An IMP2 program (given inline
+  \<^bold>\<open>The complete story in one self-contained theory.\<close>  An VIMP program (given inline
   below) is compiled to a CFG; the generic D/G framework generates an equation
   system; the \<^emph>\<open>verified\<close> top-down solver \<^emph>\<open>computes\<close> an interval solution inside
   Isabelle (with interval widening for termination); the computed solution is
@@ -11,7 +11,7 @@ text \<open>
   over-approximates the concrete collecting semantics at every program point.
 
   \<^verbatim>\<open>
-       IMP2 source
+       VIMP source
             |  compile_prog                          (section 2)
             v
           CFG
@@ -32,13 +32,13 @@ text \<open>
     ltr_collect subset gamma(sigma)   --- x in [0,20]  (section 9)
             |  compiler-correctness simulation        (section 10)
             v
-   every IMP2 source run is bounded by sigma
+   every VIMP source run is bounded by sigma
   \<close>
 
   \<^bold>\<open>Every step is machine-checked, and the result is informative:\<close> the analysis
   discovers the loop invariant \<open>x in [0,20]\<close>, the body bound \<open>x in [0,19]\<close>, and the
   exact exit value \<open>x in [20,20]\<close> --- not \<open>top\<close>.  Section 10 lifts soundness from the
-  collecting semantics to \<^emph>\<open>actual IMP2 source runs\<close> via the compiler-correctness
+  collecting semantics to \<^emph>\<open>actual VIMP source runs\<close> via the compiler-correctness
   simulation; section 11 exhibits an explicit reachable state so the guarantee is
   visibly \<^emph>\<open>not vacuous\<close>; section 12 emits an analysis-annotated GraphViz rendering.
 
@@ -56,13 +56,13 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
 hide_const phase.N
-subsection \<open>The IMP2 source program\<close>
+subsection \<open>The VIMP source program\<close>
 
 text \<open>
   A bounded counting loop: initialise \<open>x\<close> to \<open>0\<close>, increment while \<open>x < 20\<close>.  On
@@ -231,7 +231,7 @@ subsection \<open>Source-level soundness through the registered analysis\<close>
 text \<open>
   The registered endpoint \<open>ivl_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
   solver success \<open>flagship_terminates_c\<close> directly into a source-level guarantee: every
-  reachable IMP2 store is bounded by the computed interval at its matched program point,
+  reachable VIMP store is bounded by the computed interval at its matched program point,
   read through the semantic accessor \<open>ivl_reg.gamma\<close>.  No transport lemma,
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>

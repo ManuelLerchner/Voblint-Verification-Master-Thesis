@@ -1,16 +1,16 @@
 (* SPDX-License-Identifier: MIT *)
 
-section \<open>Voblint: a verified abstract interpreter for IMP2\<close>
+section \<open>Voblint: a verified abstract interpreter for VIMP\<close>
 
 theory Voblint
   imports
-    "Voblint_IMP2.IMP2_Syntax"
-    "Voblint_IMP2.IMP2_Expr"
-    "Voblint_IMP2.IMP2_Globals"
-    "Voblint_IMP2.IMP2_Proc"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Syntax"
+    "Voblint_VIMP.VIMP_Expr"
+    "Voblint_VIMP.VIMP_Globals"
+    "Voblint_VIMP.VIMP_Proc"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Def"
-    "Voblint_CFG.IMP2_Proc_to_CFG"
+    "Voblint_CFG.VIMP_Proc_to_CFG"
     "Voblint_CFG.CFG_Local_Trace"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Abstract_Domain"
@@ -70,7 +70,7 @@ section \<open>Certified pipeline\<close>
 
 text \<open>
   \<^bold>\<open>What this development proves.\<close>  An end-to-end soundness proof for a Goblint-style abstract
-  interpreter for IMP2, machine-checked from the source operational semantics to the
+  interpreter for VIMP, machine-checked from the source operational semantics to the
   \<^emph>\<open>computed\<close> analysis result.  The whole pipeline, each arrow a theorem:
 
   \<^verbatim>\<open>
@@ -148,19 +148,19 @@ text \<open>
   The proof is layered into four Isabelle sessions.  The index below separates the proof spine from
   executable frontends, DOT exporters, and research witnesses.
 
-  \<^bold>\<open>1. Language.\<close> IMP2 syntax, small-step semantics, and the procedural extension
+  \<^bold>\<open>1. Language.\<close> VIMP syntax, small-step semantics, and the procedural extension
   (scopes, calls, restores).
-    \<^item> @{theory Voblint_IMP2.IMP2_Syntax} --- AST, variable names, countability.
-    \<^item> @{theory Voblint_IMP2.IMP2_Expr} --- expression evaluation and small-step semantics.
-    \<^item> @{theory Voblint_IMP2.IMP2_Globals} --- global variable names and initial store.
-    \<^item> @{theory Voblint_IMP2.IMP2_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
-    \<^item> @{theory Voblint_IMP2.IMP2_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
-    \<^item> @{theory Voblint_IMP2.IMP2_Source_Print} --- source rendering used by the GraphViz tooling.
+    \<^item> @{theory Voblint_VIMP.VIMP_Syntax} --- AST, variable names, countability.
+    \<^item> @{theory Voblint_VIMP.VIMP_Expr} --- expression evaluation and small-step semantics.
+    \<^item> @{theory Voblint_VIMP.VIMP_Globals} --- global variable names and initial store.
+    \<^item> @{theory Voblint_VIMP.VIMP_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
+    \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
+    \<^item> @{theory Voblint_VIMP.VIMP_Source_Print} --- source rendering used by the GraphViz tooling.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node/edge types, predecessor enumeration, finite code lists.
-    \<^item> @{theory Voblint_CFG.IMP2_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: IMP2 programs to interprocedural CFGs.
+    \<^item> @{theory Voblint_CFG.VIMP_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: VIMP programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Transfer} --- the concrete store transformers shared by the semantics: \<^verbatim>\<open>edge_step\<close>, \<^verbatim>\<open>edge_collect\<close>, \<^verbatim>\<open>edges_collect\<close>, \<^verbatim>\<open>combine_collect\<close>, \<^verbatim>\<open>call_enter_store\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_gamma\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph reachability (\<^const>\<open>cfg_reaches\<close>) and the backward exit cone (\<^const>\<open>cone\<close>); these feed the cone guard.  No graph is pruned: the cone restriction lives in the abstract concretization, not in a semantics-altering transformation.
@@ -206,10 +206,10 @@ text \<open>
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality over \<^const>\<open>ltr_collect\<close> (\<^verbatim>\<open>mixed_flow_analysis_sound\<close> / \<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
-    \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable IMP2 source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
+    \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling.
-    \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline IMP2 counting loop is compiled, its D/G interval equations generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result certified a post-solution; the reusable bundle \<^verbatim>\<open>dg_exec_run_source_sound\<close> transports it to the abstract semantics, proves it over-approximates \<^const>\<open>ltr_collect\<close> --- discovering \<^verbatim>\<open>x in [0,20]\<close> --- and lifts the guarantee to \<^emph>\<open>actual source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>).
+    \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Flagship} --- the flagship end-to-end example.\<close> An inline VIMP counting loop is compiled, its D/G interval equations generated, the verified warrowing solver \<^emph>\<open>computes\<close> the solution (\<^verbatim>\<open>by eval\<close>), the result certified a post-solution; the reusable bundle \<^verbatim>\<open>dg_exec_run_source_sound\<close> transports it to the abstract semantics, proves it over-approximates \<^const>\<open>ltr_collect\<close> --- discovering \<^verbatim>\<open>x in [0,20]\<close> --- and lifts the guarantee to \<^emph>\<open>actual source runs\<close> (\<^verbatim>\<open>flagship_source_run_sound\<close>).
     \<^item> @{theory Voblint_Examples.Exec_Sign_DG_Run} --- the Sign analogue on the always-join solver.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect} --- the recursive \<^verbatim>\<open>twice\<close> program certified against \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close> (\<^verbatim>\<open>twice_activation_collect_sound\<close>).
     \<^item> @{theory Voblint_Examples.Example_Interval_Source_Ctx} --- \<^verbatim>\<open>twice\<close> certified against \<^emph>\<open>actual source runs\<close> at each activation's own context, strictly sharper than the monovariant capstone.
@@ -242,7 +242,7 @@ text \<open>
   every step machine-checked, from source to a soundness theorem over the
   \<^emph>\<open>computed\<close> analysis result:
 
-    \<^item> IMP2 source \<^verbatim>\<open>compile_prog\<close> to a CFG;
+    \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
     \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the solver's own correctness theorem certifies \<^verbatim>\<open>part_post_solution sigma\<close> --- no re-checking;

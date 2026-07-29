@@ -1,7 +1,7 @@
 section \<open>Example: interprocedural CFG (compile_prog) as Graphviz\<close>
 
 theory Example_Proc_GraphViz
-  imports "Voblint_IMP2.IMP2_Notation" "Voblint_Analysis.Analysis_GraphViz"
+  imports "Voblint_VIMP.VIMP_Notation" "Voblint_Analysis.Analysis_GraphViz"
 begin
 
 definition dot_main_name :: pname where

@@ -1,18 +1,18 @@
-"""IMP2 AST — mirrors src/IMP2/IMP2_Syntax.thy and src/IMP2/IMP2_Proc.thy.
+"""VIMP AST — mirrors src/VIMP/VIMP_Syntax.thy and src/VIMP/VIMP_Proc.thy.
 
 Expressions (aexp/bexp) and commands (com). A variable is *global* iff its name
-is empty or starts with 'G' (is_global, src/IMP2/IMP2_Globals.thy:24).
+is empty or starts with 'G' (is_global, src/VIMP/VIMP_Globals.thy:24).
 """
 from __future__ import annotations
 from dataclasses import dataclass
 
 
 def is_global(x: str) -> bool:
-    """src/IMP2/IMP2_Globals.thy:24 — is_global x = (x = [] or hd x = 'G')."""
+    """src/VIMP/VIMP_Globals.thy:24 — is_global x = (x = [] or hd x = 'G')."""
     return x == "" or x[0] == "G"
 
 
-# ---- aexp (src/IMP2/IMP2_Syntax.thy:30) ---------------------------------------
+# ---- aexp (src/VIMP/VIMP_Syntax.thy:30) ---------------------------------------
 class Aexp: ...
 @dataclass(frozen=True)
 class N(Aexp):      n: int              # literal
@@ -26,7 +26,7 @@ class Minus(Aexp):  a: Aexp; b: Aexp
 class Times(Aexp):  a: Aexp; b: Aexp
 
 
-# ---- bexp (src/IMP2/IMP2_Syntax.thy:44) — enough for the demo ------------------
+# ---- bexp (src/VIMP/VIMP_Syntax.thy:44) — enough for the demo ------------------
 class Bexp: ...
 @dataclass(frozen=True)
 class Less(Bexp):   a: Aexp; b: Aexp
@@ -34,7 +34,7 @@ class Less(Bexp):   a: Aexp; b: Aexp
 class Not(Bexp):    b: Bexp
 
 
-# ---- com (src/IMP2/IMP2_Proc.thy:20) — intra core -----------------------------
+# ---- com (src/VIMP/VIMP_Proc.thy:20) — intra core -----------------------------
 class Com: ...
 @dataclass(frozen=True)
 class SKIP(Com): pass

@@ -1,4 +1,4 @@
-# IMP2
+# VIMP
 
 This session defines the scalar procedural source language used by Voblint.
 Procedures have parameters, explicit calls and returns, global/local store
@@ -6,13 +6,13 @@ separation, and a frame-stack small-step semantics.
 
 | File | Role |
 | --- | --- |
-| `IMP2_Syntax.thy` | Arithmetic and Boolean expressions plus structured base commands |
-| `IMP2_Expr.thy` | Expression evaluation |
+| `VIMP_Syntax.thy` | Arithmetic and Boolean expressions plus structured base commands |
+| `VIMP_Expr.thy` | Expression evaluation |
 | `HOL_IMP_Countable.thy` | Countability instances for wrapped HOL-IMP expression types |
-| `IMP2_Globals.thy` | Global-variable convention, fresh callee stores, caller/callee state combination |
-| `IMP2_Proc.thy` | Procedural commands, declarations, frames, small-step execution, and source syntax predicates |
-| `IMP2_Notation.thy` | Concrete command syntax used by theories and examples |
-| `IMP2_Source_Print.thy` | Executable source pretty-printer |
+| `VIMP_Globals.thy` | Global-variable convention, fresh callee stores, caller/callee state combination |
+| `VIMP_Proc.thy` | Procedural commands, declarations, frames, small-step execution, and source syntax predicates |
+| `VIMP_Notation.thy` | Concrete command syntax used by theories and examples |
+| `VIMP_Source_Print.thy` | Executable source pretty-printer |
 
 ## Procedure behavior
 

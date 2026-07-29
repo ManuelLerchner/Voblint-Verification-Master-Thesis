@@ -19,7 +19,7 @@ repeated-call, and context-sensitive; it is not recursive.
 
 | File | Role |
 | --- | --- |
-| `Example_IMP2_Proc_Regression.thy` | Source call, return, global propagation, and bounded recursion |
+| `Example_VIMP_Proc_Regression.thy` | Source call, return, global propagation, and bounded recursion |
 | `Example_Compile_Regression.thy` | Procedure layout and compiler invariants |
 | `Example_Control_Simulation_Regression.thy` | Located execution and source/CFG control simulation |
 | `Example_LTR_Collect_Regression.thy` | Nested calls, multiple returns, recursion, and local-trace collecting semantics |

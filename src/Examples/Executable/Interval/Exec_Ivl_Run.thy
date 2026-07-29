@@ -1,6 +1,6 @@
 theory Exec_Ivl_Run
   imports Voblint_Analysis.Ivl_Exec Voblint_Analysis.Solver_Menu "Voblint_CFG.CFG_Prune"
-            "Voblint_IMP2.IMP2_Notation"
+            "Voblint_VIMP.VIMP_Notation"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)

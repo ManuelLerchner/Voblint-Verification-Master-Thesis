@@ -1,5 +1,5 @@
-theory Example_IMP2_Proc_Regression
-  imports "Voblint_IMP2.IMP2_Notation"
+theory Example_VIMP_Proc_Regression
+  imports "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Examples: native activation semantics\<close>

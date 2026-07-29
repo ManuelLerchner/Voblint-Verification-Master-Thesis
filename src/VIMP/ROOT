@@ -1,0 +1,12 @@
+session Voblint_VIMP in "." = HOL +
+  description "VIMP syntax, small-step, and procedure language"
+  sessions
+    Deriving
+    "HOL-IMP"
+  theories
+    VIMP_Syntax
+    VIMP_Globals
+    VIMP_Expr
+    VIMP_Proc
+    VIMP_Source_Print
+    VIMP_Notation

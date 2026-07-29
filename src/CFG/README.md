@@ -1,6 +1,6 @@
 # CFG
 
-This session defines procedure-aware control-flow graphs, compiles IMP2 source
+This session defines procedure-aware control-flow graphs, compiles VIMP source
 programs, and connects compiled executions to activation-local collecting
 semantics.
 
@@ -10,7 +10,7 @@ semantics.
 | --- | --- |
 | `CFG_Def.thy` | CFG nodes, local edge actions, call relation, graph well-formedness |
 | `CFG_Transfer.thy` | Concrete edge, call-entry, and caller/callee combination operations |
-| `IMP2_Proc_to_CFG.thy` | Command, procedure, and whole-program compilation |
+| `VIMP_Proc_to_CFG.thy` | Command, procedure, and whole-program compilation |
 | `CFG_Prune.thy` | Reachability and graph pruning |
 
 `intra` contains local edges. `calls` records a call site, call action, callee

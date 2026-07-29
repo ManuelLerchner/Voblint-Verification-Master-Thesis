@@ -127,7 +127,7 @@ lemma callee_entry_bot_unpopulated:
   unfolding twice_ctx_sol_def twice_ctx_eqs_def Spoly_def by eval
 
 lemma main_first_stmt_is_call:
-  "(Statement 2, CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3],
+  "(Statement 2, CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3],
     FunctionEntry ''twice'', Statement 3) \<in> calls twice_cfg"
   using twice_calls by simp
 
@@ -226,10 +226,10 @@ text \<open>\<^bold>\<open>The two executable enter bounds.\<close>  At each cal
   global publication) is below the routed callee-entry local slot joined with the shared
   global slot.  A single decidable \<open>\<le>\<close> on concrete \<^typ>\<open>ivl st\<close> values per call.\<close>
 lemma enter_st_bound_call1:
-  "snd (dgs_enter Spoly [''p''] [IMP2_Syntax.N 3]
+  "snd (dgs_enter Spoly [''p''] [VIMP_Syntax.N 3]
           (locals (snd twice_ctx_sol (Inl (Statement 2, bot))))
           (globs (snd twice_ctx_sol (Inr Global))))
-   \<squnion> fst (dgs_enter Spoly [''p''] [IMP2_Syntax.N 3]
+   \<squnion> fst (dgs_enter Spoly [''p''] [VIMP_Syntax.N 3]
           (locals (snd twice_ctx_sol (Inl (Statement 2, bot))))
           (globs (snd twice_ctx_sol (Inr Global))))
    \<le> locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))
@@ -237,10 +237,10 @@ lemma enter_st_bound_call1:
   unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call1_def Spoly_def by eval
 
 lemma enter_st_bound_call2:
-  "snd (dgs_enter Spoly [''p''] [IMP2_Syntax.N 10]
+  "snd (dgs_enter Spoly [''p''] [VIMP_Syntax.N 10]
           (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
           (globs (snd twice_ctx_sol (Inr Global))))
-   \<squnion> fst (dgs_enter Spoly [''p''] [IMP2_Syntax.N 10]
+   \<squnion> fst (dgs_enter Spoly [''p''] [VIMP_Syntax.N 10]
           (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
           (globs (snd twice_ctx_sol (Inr Global))))
    \<le> locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))
@@ -301,7 +301,7 @@ text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes
   so the routed context is exactly \<open>ctx_call1\<close> / \<open>ctx_call2\<close> --- the executable route agrees
   with the activation route \<^const>\<open>ivl_enterc\<close>.\<close>
 lemma enter_route_exact_call1:
-  assumes "s' = call_enter (CallEdge dst [''p''] [IMP2_Syntax.N 3]) s"
+  assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
   shows "ivl_enterc ctx s' = ctx_call1"
 proof -
   from assms have "s' = (enter_state s)(''p'' := 3)"
@@ -310,7 +310,7 @@ proof -
 qed
 
 lemma enter_route_exact_call2:
-  assumes "s' = call_enter (CallEdge dst [''p''] [IMP2_Syntax.N 10]) s"
+  assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
   shows "ivl_enterc ctx s' = ctx_call2"
 proof -
   from assms have "s' = (enter_state s)(''p'' := 10)"
@@ -337,8 +337,8 @@ next
   case True
   let ?s' = "call_enter (CallEdge dst xs es) s"
   from e consider
-      (c1) "u = Statement 2" "xs = [''p'']" "es = [IMP2_Syntax.N 3]" "p = ''twice''"
-    | (c2) "u = Statement 3" "xs = [''p'']" "es = [IMP2_Syntax.N 10]" "p = ''twice''"
+      (c1) "u = Statement 2" "xs = [''p'']" "es = [VIMP_Syntax.N 3]" "p = ''twice''"
+    | (c2) "u = Statement 3" "xs = [''p'']" "es = [VIMP_Syntax.N 10]" "p = ''twice''"
     unfolding twice_calls by auto
   thus ?thesis
   proof cases
@@ -461,7 +461,7 @@ lemma comb_route_call1:
   assumes "call_enter_store twice_cfg (Statement 2) s es"
   shows "ivl_enterc c1 es = ctx_call1"
 proof -
-  have "es = call_enter (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3]) s"
+  have "es = call_enter (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
   thus ?thesis by (rule enter_route_exact_call1)
 qed
@@ -470,7 +470,7 @@ lemma comb_route_call2:
   assumes "call_enter_store twice_cfg (Statement 3) s es"
   shows "ivl_enterc c1 es = ctx_call2"
 proof -
-  have "es = call_enter (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10]) s"
+  have "es = call_enter (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
   thus ?thesis by (rule enter_route_exact_call2)
 qed

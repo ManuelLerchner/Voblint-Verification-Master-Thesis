@@ -14,7 +14,7 @@ text \<open>
   The answer domain D is a flow-sensitive Sign store: every CFG point has its
   own Sign answer.  The side domain G is one flow-insensitive Interval invariant
   shared by every equation.  The name @{const globs} identifies the solver's
-  side slot; it does not restrict G to IMP2 variables satisfying
+  side slot; it does not restrict G to VIMP variables satisfying
   @{const is_global}.  The analysis chooses which facts G contains.
 
   Every edge advances the two abstractions independently.  Its Sign result

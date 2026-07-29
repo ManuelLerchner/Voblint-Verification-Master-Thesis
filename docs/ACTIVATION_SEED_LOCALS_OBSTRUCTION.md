@@ -16,7 +16,7 @@ local slot concretises to the empty set while the concrete `enter_state` has loc
 
 1. **Concrete callee entry has locals 0.**
    `enter_state s = (\<lambda>n. if is_global n then s n else 0)`
-   (`src/IMP2/IMP2_Globals.thy:36`). Every local is 0.
+   (`src/VIMP/VIMP_Globals.thy:36`). Every local is 0.
 
 2. **`gamma_state` is total over all variables.**
    `\<lbrakk>\<sigma>\<rbrakk> = {s. \<forall>x. s x \<in> gamma (\<sigma> x)}`

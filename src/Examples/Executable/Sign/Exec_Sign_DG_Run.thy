@@ -21,7 +21,7 @@ theory Exec_Sign_DG_Run
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_DG"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
@@ -140,7 +140,7 @@ subsection \<open>Source-level soundness through the registered analysis\<close>
 text \<open>
   The registered endpoint \<open>sign_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
   solver success \<open>dgEx_terminates_c\<close> directly into a source-level guarantee: every
-  reachable IMP2 store is bounded by the computed Sign answer at its matched program
+  reachable VIMP store is bounded by the computed Sign answer at its matched program
   point, read through the semantic accessor \<open>sign_reg.gamma\<close>.  No transport lemma,
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof,
   matching the pattern in \<open>Example_Interval_DG_Flagship\<close>.

@@ -1,5 +1,5 @@
 theory Abstract_Domain
-  imports "Voblint_IMP2.IMP2_Syntax" "Voblint_IMP2.IMP2_Expr" "TD.Update_rules"
+  imports "Voblint_VIMP.VIMP_Syntax" "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
     "Voblint_CFG.CFG_Def"
 begin
 

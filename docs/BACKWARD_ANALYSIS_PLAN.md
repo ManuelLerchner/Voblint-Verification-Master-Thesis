@@ -83,7 +83,7 @@ v1 conservatism (by design, sound):
 
 ## The grammar we filter against
 
-Actual IMP2 types (`src/IMP2/IMP2_Syntax.thy:30,44`):
+Actual IMP2 types (`src/VIMP/VIMP_Syntax.thy:30,44`):
 
 ```isabelle
 datatype aexp =
@@ -190,7 +190,7 @@ P6  Interval wire + sound + mono     Interval + Example_Interval_Loop_Coverage
 
 1. **`BaseN`/`BaseB` interiors.** v1 conservative. If real guards bury `Less` under
    `BaseB`, descent must go deeper — check emitted CFG shapes
-   (`src/CFG/IMP2_Proc_to_CFG.thy`).
+   (`src/CFG/VIMP_Proc_to_CFG.thy`).
 2. **Arithmetic inverses.** `inv_plus`/`inv_minus`/`inv_times` are identity on both
    domains; interval arithmetic backward refinement is the next precision step.
 3. **`Times` inverse through zero.** Classic imprecise case; still deferred.

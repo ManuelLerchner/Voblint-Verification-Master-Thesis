@@ -1,6 +1,6 @@
 theory Constraint_System
   imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" Abstract_Domain
-    "Voblint_IMP2.IMP2_Globals" "Voblint_IMP2.IMP2_Expr" "Voblint_IMP2.IMP2_Proc"
+    "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
     "TD.Basics_side"
 begin
 
@@ -1217,7 +1217,7 @@ text \<open>
 text \<open>
   Formal parameters name locals.  \<^const>\<open>bind_formals_abs\<close> writes each formal
   into the callee's fresh frame, so a formal naming a global would write a
-  caller-local value into a global slot and break the frame bound.  IMP2 scoping
+  caller-local value into a global slot and break the frame bound.  VIMP scoping
   supplies this; the CFG well-formedness discharges it at each enter edge.
 \<close>
 

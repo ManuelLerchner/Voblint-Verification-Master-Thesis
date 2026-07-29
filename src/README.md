@@ -1,7 +1,7 @@
 # Voblint formalization (`src/`)
 
-Isabelle/HOL sessions **Voblint_IMP2**, **Voblint_CFG**, **Voblint_Analysis**,
-**Voblint_Formalization**: sound static analysis from IMP2 source with procedures
+Isabelle/HOL sessions **Voblint_VIMP**, **Voblint_CFG**, **Voblint_Analysis**,
+**Voblint_Formalization**: sound static analysis from VIMP source with procedures
 through interprocedural CFG collecting semantics, abstract equations, and the
 vendored **TD side** solver (`vendor/td-verification`, session `TD`) to pipeline
 soundness theorems.
@@ -16,13 +16,13 @@ in the sibling repo `voblint-formalization-classical`.
 **Pipeline (left to right):**
 
 ```
-IMP2 (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD side) → Pipeline → Examples
+VIMP (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD side) → Pipeline → Examples
                     Domains ────────────────────────────────┘
 ```
 
 | Folder | README | Role |
 | --- | --- | --- |
-| [`IMP2/`](IMP2/) | [README](IMP2/README.md) | Source language syntax, procedures, globals/locals split, small-step semantics |
+| [`VIMP/`](VIMP/) | [README](VIMP/README.md) | Source language syntax, procedures, globals/locals split, small-step semantics |
 | [`CFG/`](CFG/) | [README](CFG/README.md) | Control-flow graphs, interprocedural compilation, paths |
 | [`CFG/Collecting/`](CFG/Collecting/) | [README](CFG/Collecting/README.md) | IP collecting semantics (`cfg_collect`), trace collecting, run-to-exit projection |
 | [`Analysis/Generic/Domain/`](Analysis/Generic/Domain/) | [README](Analysis/Generic/Domain/README.md) | Abstract-domain classes and executable state representation |

@@ -1,9 +1,9 @@
-theory IMP2_Notation
-  imports IMP2_Proc
+theory VIMP_Notation
+  imports VIMP_Proc
 begin
 
 text \<open>
-  The \<open>imp \<lbrakk> ... \<rbrakk>\<close> quotation produces an \<^typ>\<open>IMP2_Proc.com\<close> without
+  The \<open>imp \<lbrakk> ... \<rbrakk>\<close> quotation produces an \<^typ>\<open>VIMP_Proc.com\<close> without
   HOL string quotes or qualified constructor names.  The \<open>imp\<close> keyword distinguishes
   command quotation from Pure premises; whole programs use the explicit \<open>program\<close> prefix.
 
@@ -26,7 +26,7 @@ text \<open>
 
   Example:
   @{verbatim [display]
-   "definition loop_prog :: IMP2_Proc.com where
+   "definition loop_prog :: VIMP_Proc.com where
       \"loop_prog = imp \<lbrakk>
          x := 0;
          while (x < 20) { x := x + 1 }
@@ -93,7 +93,7 @@ nonterminal imp2_pbody
 nonterminal imp2_funcs
 
 syntax
-  "_IMP2"        :: "imp2_com \<Rightarrow> IMP2_Proc.com"              ("imp \<lbrakk> _ \<rbrakk>")
+  "_IMP2"        :: "imp2_com \<Rightarrow> VIMP_Proc.com"              ("imp \<lbrakk> _ \<rbrakk>")
 
   "_imp2_skip"   :: imp2_stmt                                  ("skip")
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
@@ -149,35 +149,35 @@ syntax
 
 parse_translation \<open>
   let
-    val c_SKIP   = "IMP2_Proc.com.SKIP"
-    val c_Assign = "IMP2_Proc.com.Assign"
-    val c_Seq    = "IMP2_Proc.com.Seq"
-    val c_If     = "IMP2_Proc.com.If"
-    val c_While  = "IMP2_Proc.com.While"
-    val c_Call   = "IMP2_Proc.com.Call"
-    val c_Return = "IMP2_Proc.com.Return"
-    val c_proc_decl_of = "IMP2_Proc.proc_decl_of"
+    val c_SKIP   = "VIMP_Proc.com.SKIP"
+    val c_Assign = "VIMP_Proc.com.Assign"
+    val c_Seq    = "VIMP_Proc.com.Seq"
+    val c_If     = "VIMP_Proc.com.If"
+    val c_While  = "VIMP_Proc.com.While"
+    val c_Call   = "VIMP_Proc.com.Call"
+    val c_Return = "VIMP_Proc.com.Return"
+    val c_proc_decl_of = "VIMP_Proc.proc_decl_of"
 
     val c_None    = "Option.option.None"
     val c_Some    = "Option.option.Some"
     val c_fun_upd = "Fun.fun_upd"
-    val c_imp_prog = "IMP2_Notation.imp_prog.make"
+    val c_imp_prog = "VIMP_Notation.imp_prog.make"
     val c_Cons    = "List.list.Cons"
     val c_Nil     = "List.list.Nil"
     val c_Pair    = "Product_Type.Pair"
 
-    val c_N      = "IMP2_Syntax.N"
-    val c_V      = "IMP2_Syntax.V"
-    val c_Plus   = "IMP2_Syntax.aexp.Plus"
-    val c_Minus  = "IMP2_Syntax.aexp.Minus"
-    val c_Times  = "IMP2_Syntax.aexp.Times"
+    val c_N      = "VIMP_Syntax.N"
+    val c_V      = "VIMP_Syntax.V"
+    val c_Plus   = "VIMP_Syntax.aexp.Plus"
+    val c_Minus  = "VIMP_Syntax.aexp.Minus"
+    val c_Times  = "VIMP_Syntax.aexp.Times"
 
-    val c_Bc     = "IMP2_Syntax.Bc"
-    val c_Less   = "IMP2_Syntax.bexp.Less"
-    val c_Eq     = "IMP2_Syntax.bexp.Eq"
-    val c_Not    = "IMP2_Syntax.bexp.Not"
-    val c_And    = "IMP2_Syntax.bexp.And"
-    val c_Or     = "IMP2_Syntax.bexp.Or"
+    val c_Bc     = "VIMP_Syntax.Bc"
+    val c_Less   = "VIMP_Syntax.bexp.Less"
+    val c_Eq     = "VIMP_Syntax.bexp.Eq"
+    val c_Not    = "VIMP_Syntax.bexp.Not"
+    val c_And    = "VIMP_Syntax.bexp.And"
+    val c_Or     = "VIMP_Syntax.bexp.Or"
 
     fun K name = Const (name, dummyT)
 
@@ -188,14 +188,14 @@ parse_translation \<open>
           in if name = "One" then 1
              else case Int.fromString name of
                     SOME n => n
-                  | NONE => raise TERM ("IMP2_Notation: not a num leaf", [Const (c, dummyT)])
+                  | NONE => raise TERM ("VIMP_Notation: not a num leaf", [Const (c, dummyT)])
           end
       | dest_num (Const (c, _) $ t) =
           let val name = Long_Name.base_name c
               val n    = dest_num t
           in if name = "Bit0" then 2 * n
              else if name = "Bit1" then 2 * n + 1
-             else raise TERM ("IMP2_Notation: not a num constructor", [Const (c, dummyT) $ t])
+             else raise TERM ("VIMP_Notation: not a num constructor", [Const (c, dummyT) $ t])
           end
       | dest_num t =
           let
@@ -205,7 +205,7 @@ parse_translation \<open>
               | dbg (Abs (s, _, _)) = "Abs[" ^ s ^ "]"
               | dbg (Bound i) = "Bound[" ^ Int.toString i ^ "]"
               | dbg _ = "Other"
-          in raise TERM ("IMP2_Notation: dest_num catchall: " ^ dbg t, [t]) end
+          in raise TERM ("VIMP_Notation: dest_num catchall: " ^ dbg t, [t]) end
 
     fun read_num_const (Const ("_constify", _) $ t) = read_num_const t
       | read_num_const (Const ("_position", _) $ t) = read_num_const t
@@ -213,11 +213,11 @@ parse_translation \<open>
       | read_num_const (Free (s, _)) =
           (case Int.fromString s of
              SOME n => n
-           | NONE => raise TERM ("IMP2_Notation: not a numeral", [Free (s, dummyT)]))
+           | NONE => raise TERM ("VIMP_Notation: not a numeral", [Free (s, dummyT)]))
       | read_num_const (Const (s, _)) =
           (case Int.fromString (Long_Name.base_name s) of
              SOME n => n
-           | NONE => raise TERM ("IMP2_Notation: not a numeral", [Const (s, dummyT)]))
+           | NONE => raise TERM ("VIMP_Notation: not a numeral", [Const (s, dummyT)]))
       | read_num_const t = dest_num t
 
     fun neg_num n =
@@ -243,7 +243,7 @@ parse_translation \<open>
        | (Const ("_imp2_plus", _), [a, b]) => K c_Plus  $ aexp_tr a $ aexp_tr b
        | (Const ("_imp2_minus", _), [a, b]) => K c_Minus $ aexp_tr a $ aexp_tr b
        | (Const ("_imp2_times", _), [a, b]) => K c_Times $ aexp_tr a $ aexp_tr b
-       | _ => raise TERM ("IMP2_Notation: aexp_tr", [t]))
+       | _ => raise TERM ("VIMP_Notation: aexp_tr", [t]))
 
     fun bexp_tr t =
       (case Term.strip_comb t of
@@ -254,22 +254,22 @@ parse_translation \<open>
        | (Const ("_imp2_not", _), [b]) => K c_Not $ bexp_tr b
        | (Const ("_imp2_and", _), [a, b]) => K c_And $ bexp_tr a $ bexp_tr b
        | (Const ("_imp2_or", _), [a, b]) => K c_Or $ bexp_tr a $ bexp_tr b
-       | _ => raise TERM ("IMP2_Notation: bexp_tr", [t]))
+       | _ => raise TERM ("VIMP_Notation: bexp_tr", [t]))
 
     fun actuals_tr (Const ("_imp2_actuals_one", _) $ a) =
           K c_Cons $ aexp_tr a $ K c_Nil
       | actuals_tr (Const ("_imp2_actuals_cons", _) $ a $ rest) =
           K c_Cons $ aexp_tr a $ actuals_tr rest
-      | actuals_tr t = raise TERM ("IMP2_Notation: actuals_tr", [t])
+      | actuals_tr t = raise TERM ("VIMP_Notation: actuals_tr", [t])
 
     (* Keep procedure bodies as raw command ASTs until program validation and lowering. *)
     fun pbody_tr (Const ("_imp2_pbody_stmt", _) $ c) = (SOME c, NONE)
-      | pbody_tr t = raise TERM ("IMP2_Notation: pbody_tr", [t])
+      | pbody_tr t = raise TERM ("VIMP_Notation: pbody_tr", [t])
 
     and stmts_tr (Const ("_imp2_stmts_one", _) $ s) = stmt_tr s
       | stmts_tr (Const ("_imp2_stmts_seq", _) $ ss $ s) =
           K c_Seq $ stmts_tr ss $ stmt_tr s
-      | stmts_tr t = raise TERM ("IMP2_Notation: stmts_tr", [t])
+      | stmts_tr t = raise TERM ("VIMP_Notation: stmts_tr", [t])
 
     and stmt_tr (Const ("_imp2_skip",   _)) = K c_SKIP
       | stmt_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
@@ -286,24 +286,24 @@ parse_translation \<open>
           K c_Call $ (K c_Some $ HOLogic.mk_string x) $ HOLogic.mk_string p $ K c_Nil
       | stmt_tr (Const ("_imp2_callret", _) $ Free (x, _) $ Free (p, _) $ actuals) =
           K c_Call $ (K c_Some $ HOLogic.mk_string x) $ HOLogic.mk_string p $ actuals_tr actuals
-      | stmt_tr t = raise TERM ("IMP2_Notation: stmt_tr", [t])
+      | stmt_tr t = raise TERM ("VIMP_Notation: stmt_tr", [t])
 
     and com_tr (Const ("_imp2_com_wrap", _) $ s) = stmt_tr s
       | com_tr (Const ("_imp2_seq",    _) $ c1 $ c2) = K c_Seq   $ com_tr c1 $ com_tr c2
-      | com_tr t = raise TERM ("IMP2_Notation: com_tr", [t])
+      | com_tr t = raise TERM ("VIMP_Notation: com_tr", [t])
 
     fun names_of (Const ("_ids_nil", _)) = []
       | names_of (Const ("_ids_one", _) $ Free (x, _)) = [x]
       | names_of (Const ("_ids_cons", _) $ Free (x, _) $ rest) = x :: names_of rest
-      | names_of t = raise TERM ("IMP2_Notation: names_of", [t])
+      | names_of t = raise TERM ("VIMP_Notation: names_of", [t])
 
     fun formals_of (Const ("_formals_one", _) $ Free (x, _)) = [x]
       | formals_of (Const ("_formals_cons", _) $ Free (x, _) $ rest) = x :: formals_of rest
-      | formals_of t = raise TERM ("IMP2_Notation: formals_of", [t])
+      | formals_of t = raise TERM ("VIMP_Notation: formals_of", [t])
 
     fun ids_tr (Const ("_gdecl_none", _)) = []
       | ids_tr (Const ("_gdecl", _) $ ids) = names_of ids
-      | ids_tr t = raise TERM ("IMP2_Notation: ids_tr", [t])
+      | ids_tr t = raise TERM ("VIMP_Notation: ids_tr", [t])
 
     fun funcs_tr (Const ("_funcs_nil", _)) = []
       | funcs_tr (Const ("_funcs_cons0", _) $ Free (f, _) $ pbody $ rest) =
@@ -318,7 +318,7 @@ parse_translation \<open>
           in
             (f, formals_of formals, body, result) :: funcs_tr rest
           end
-      | funcs_tr t = raise TERM ("IMP2_Notation: funcs_tr", [t])
+      | funcs_tr t = raise TERM ("VIMP_Notation: funcs_tr", [t])
 
     fun add_vars_proc (_, _, body, result) acc =
       let
@@ -350,17 +350,17 @@ parse_translation \<open>
       let
         val bad = filter_out is_gname decls
         val _ = if null bad then ()
-                else error ("IMP2 program: declared global without 'G' prefix: " ^ commas_quote bad)
+                else error ("VIMP program: declared global without 'G' prefix: " ^ commas_quote bad)
         val undeclared =
           distinct (op =) (filter_out (member (op =) decls) (filter is_gname used))
         val _ = if null undeclared then ()
-                else error ("IMP2 program: global(s) used but not declared: " ^ commas_quote undeclared)
+                else error ("VIMP program: global(s) used but not declared: " ^ commas_quote undeclared)
       in () end
 
     fun check_distinct kind xs =
       (case duplicates (op =) xs of
          [] => ()
-       | ds => error ("IMP2 program: duplicate " ^ kind ^ ": " ^ commas_quote ds))
+       | ds => error ("VIMP program: duplicate " ^ kind ^ ": " ^ commas_quote ds))
 
     val empty_table = Abs ("_", dummyT, K c_None)
 
@@ -396,11 +396,11 @@ parse_translation \<open>
           (case mains of
              [("main", [], NONE, NONE)] => NONE
            | [("main", [], SOME body, NONE)] =>
-               if has_return body then error "IMP2 program: main may not return" else SOME body
-           | [("main", _, _, SOME _)] => error "IMP2 program: main may not return"
-           | [("main", _, _, NONE)] => error "IMP2 program: main must have no formals"
-           | [] => error "IMP2 program: missing 'void main() { ... }'"
-           | _  => error "IMP2 program: more than one 'void main()'")
+               if has_return body then error "VIMP program: main may not return" else SOME body
+           | [("main", _, _, SOME _)] => error "VIMP program: main may not return"
+           | [("main", _, _, NONE)] => error "VIMP program: main must have no formals"
+           | [] => error "VIMP program: missing 'void main() { ... }'"
+           | _  => error "VIMP program: more than one 'void main()'")
         val proc_rep = mk_proc_rep procs
         val main = mk_body_ret main_ast NONE
       in K c_imp_prog $ proc_rep $ main end

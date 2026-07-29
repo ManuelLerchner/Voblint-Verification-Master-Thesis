@@ -149,7 +149,7 @@ to `valid_ltr_ctx_sound`, not float above an uninstantiated theorem.
 
 ### G4 - storage class is inferred from variable spelling
 
-`src/IMP2/IMP2_Globals.thy:23`:
+`src/VIMP/VIMP_Globals.thy:23`:
 
 ```isabelle
 is_global x = (x = [] or hd x = CHR ''G'')
@@ -159,7 +159,7 @@ An AFP convention: a variable is global because of its first character. Three
 distinct things then collapse onto it.
 
 * **Source storage class.** `valid_formal x = (~ is_global x & x ~= ret_var)`
-  (`IMP2_Proc.thy:535`) makes source well-formedness depend on spelling, and
+  (`VIMP_Proc.thy:535`) makes source well-formedness depend on spelling, and
   `ret_var_not_global` (`:51`) is proved from `is_global_def`.
 * **D/G placement.** `Split_State.thy` and `Exec_St.thy` route facts to the
   flow-sensitive or side-effected component by the same predicate, identically
@@ -318,7 +318,7 @@ Independent of M1-M3.
 #### M4.1 - represent storage explicitly
 
 Storage class becomes part of the program, not of `vname`. `proc_decl`
-(`IMP2_Proc.thy:36`) currently carries only `formals` and `body`; extend the
+(`VIMP_Proc.thy:36`) currently carries only `formals` and `body`; extend the
 declaration layer so that
 
 ```isabelle
@@ -329,7 +329,7 @@ storage_of :: proc_table => pname => vname => storage_class option
 
 is derivable, or equivalently so declarations carry explicit parameter, local,
 and global sets. Invariants to establish in `wf_source_program`
-(`IMP2_Proc.thy:620`):
+(`VIMP_Proc.thy:620`):
 
 * every referenced variable has a declared storage class;
 * parameters and locals belong to their procedure;
@@ -339,7 +339,7 @@ and global sets. Invariants to establish in `wf_source_program`
 
 #### M4.1a - remove storage-class assumptions from source well-formedness
 
-Not an implementation detail. `IMP2_Proc.thy:535`:
+Not an implementation detail. `VIMP_Proc.thy:535`:
 
 ```isabelle
 valid_formal x = (~ is_global x & x ~= ret_var)
@@ -428,7 +428,7 @@ as a consequence of `x` being local.
 #### M4.5 - migrate every example and theorem
 
 18 files carry `''G` literals today, led by `Example_Proc_Call` (35
-occurrences), `Example_IMP2_Proc_Regression` (13), `Example_Inc_Proc` (9),
+occurrences), `Example_VIMP_Proc_Regression` (13), `Example_Inc_Proc` (9),
 `Example_Side_Branch_Calls` (7). Each becomes an explicit declaration. The
 sweep covers source syntax, procedure-table construction, CFG compilation
 assumptions, collecting semantics, executable analyses, soundness
@@ -437,7 +437,7 @@ interpretations, flagship examples, source and GraphViz printers, and docs.
 #### M4.6 - delete the old mechanism
 
 Remove `is_global`, the name-prefix lemmas, and every assumption tied to
-`CHR ''G''`; drop `IMP2_Globals.thy` if nothing semantic remains. Gate:
+`CHR ''G''`; drop `VIMP_Globals.thy` if nothing semantic remains. Gate:
 
 ```text
 rg "is_global|CHR ''G''" src

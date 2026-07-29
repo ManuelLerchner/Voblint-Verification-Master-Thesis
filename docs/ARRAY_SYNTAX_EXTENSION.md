@@ -11,11 +11,11 @@ become expressible, runnable, and analyzable.
 ## Why now
 
 `docs/AFP_IMP2_REBASE_MIGRATION.md` Phase 3 anchored soundness to AFP IMP2's
-standard big-step semantics, and `src/IMP2/IMP2_VCG_Example.thy` shows the loop
+standard big-step semantics, and `src/VIMP/IMP2_VCG_Example.thy` shows the loop
 `vcg_cs` ⊕ `backward_sim` composition working end to end. But that example is
 **scalar**: our expressions only ever read array index `0`
 (`to_imp2_aexp (V x) = Vidx x (N 0)`), so a program touching `a[l]` for a
-runtime index `l` cannot be written in `IMP2_Proc.com` at all. That is a
+runtime index `l` cannot be written in `VIMP_Proc.com` at all. That is a
 language-scope boundary, not a proof gap. Closing it is the precondition for any
 array analysis.
 
@@ -24,7 +24,7 @@ array analysis.
 Everything downstream is determined by one choice. Current state:
 
 ```
-store = vname => int                 (* src/IMP2/IMP2_Syntax.thy *)
+store = vname => int                 (* src/VIMP/VIMP_Syntax.thy *)
 ```
 
 IMP2's state is `vname => int => int` (every variable is an array). The scalar
@@ -48,7 +48,7 @@ worth it. The abstract-domain precision is a separate, later dial (C first).
 
 ### Phase A1 - concrete layer + bridge
 
-`src/IMP2/IMP2_Syntax.thy`, `IMP2_Expr.thy`, `IMP2_Proc.thy`,
+`src/VIMP/VIMP_Syntax.thy`, `VIMP_Expr.thy`, `VIMP_Proc.thy`,
 `IMP2_Bridge.thy`:
 
 - `store = vname => int => int`.
@@ -110,5 +110,5 @@ the issue tracker, not the critical path.
 
 Phase A1 only: re-type `store`, add `Vidx` + `ArrAssign`, re-prove the bridge
 agreement lemmas and `backward_sim` array cases, then port a scalar
-`IMP2_VCG_Example` to an array variant. Gate on a green `Voblint_IMP2` build
+`IMP2_VCG_Example` to an array variant. Gate on a green `Voblint_VIMP` build
 before touching the analysis layers.

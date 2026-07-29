@@ -2,7 +2,7 @@ section \<open>Example: Procedure Calls --- Increment and Square\<close>
 
 theory Example_Proc_Call
   imports
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Prune"
 
     "Voblint_Analysis.Interval_Domain"
@@ -25,16 +25,16 @@ text \<open>
   terminates with \<open>Gx = 25\<close> since \<open>(4 + 1)^2 = 25\<close>.
 \<close>
 
-definition inc_body :: "IMP2_Proc.com" where
+definition inc_body :: "VIMP_Proc.com" where
   "inc_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
 
-definition sqr_body :: "IMP2_Proc.com" where
+definition sqr_body :: "VIMP_Proc.com" where
   "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
 definition proc_pi :: proc_table where
   "proc_pi = (\<lambda>_. None)(''inc'' := Some (proc_decl_of [] inc_body), ''sqr'' := Some (proc_decl_of [] sqr_body))"
 
-definition main_prog :: "IMP2_Proc.com" where
+definition main_prog :: "VIMP_Proc.com" where
   "main_prog = imp \<lbrakk>
      Gx := 4;
      inc();
@@ -55,7 +55,7 @@ lemma call_inc_result:
   "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   have run: "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
-                (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
+                (VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body)"
       by (simp add: proc_pi_def)
@@ -71,7 +71,7 @@ proof -
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
-  moreover have "IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)) = s(''Gx'' := s ''Gx'' + 1)"
+  moreover have "VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)) = s(''Gx'' := s ''Gx'' + 1)"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed
@@ -80,7 +80,7 @@ lemma call_sqr_result:
   "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
   have run: "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
-                (IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
+                (VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body)"
       by (simp add: proc_pi_def)
@@ -96,7 +96,7 @@ proof -
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
-  moreover have "IMP2_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+  moreover have "VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed

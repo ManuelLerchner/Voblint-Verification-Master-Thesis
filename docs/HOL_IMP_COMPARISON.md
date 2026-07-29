@@ -181,8 +181,8 @@ wired into `step'` on `acom`. We match **Voblint edge kinds** (`EA_Assign`,
 
 | Topic                   | Location                                                         |
 | ----------------------- | ---------------------------------------------------------------- |
-| Expression evaluation   | `src/IMP2/IMP2_Expr.thy` (`aval`/`bval`, leaf cases via HOL-IMP)  |
-| Small-step semantics    | `src/IMP2/IMP2_Proc.thy` (`pstep`, frame-stack; procedural)      |
+| Expression evaluation   | `src/VIMP/VIMP_Expr.thy` (`aval`/`bval`, leaf cases via HOL-IMP)  |
+| Small-step semantics    | `src/VIMP/VIMP_Proc.thy` (`pstep`, frame-stack; procedural)      |
 | CFG collecting + bridge | `src/CFG/Collecting/` (`CFG_Runs_To_Bridge.thy` entry)           |
 | Minimal domain locale   | `Domains/Abstract_Domain.thy`                                    |
 | Sign instantiation      | `Domains/Sign_Domain.thy`                                        |

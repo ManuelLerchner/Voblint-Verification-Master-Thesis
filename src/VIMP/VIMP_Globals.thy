@@ -1,5 +1,5 @@
-theory IMP2_Globals
-  imports IMP2_Syntax
+theory VIMP_Globals
+  imports VIMP_Syntax
 begin
 
 (*

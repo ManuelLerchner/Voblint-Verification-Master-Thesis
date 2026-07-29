@@ -68,10 +68,10 @@ KB companion (read these for *why*, not just *what*):
 >
 > **Phase 1 (frame-stack route) — substrate + procedure semantics green:**
 >
-> - `src/IMP2/IMP2_Globals.thy` — `pname`, `is_global`, `combine_states` (`<_|_>`)
+> - `src/VIMP/VIMP_Globals.thy` — `pname`, `is_global`, `combine_states` (`<_|_>`)
 >   - the combine algebra (collapse/nest/upd/cases). The Level-1 locals/globals
 >   split over the scalar store; self-contained, no `com` ripple.
-> - `src/IMP2/IMP2_Proc.thy` — procedure-extended command type `pcom`
+> - `src/VIMP/VIMP_Proc.thy` — procedure-extended command type `pcom`
 >   (`PScope`/`PCall`/runtime `PRestore`), `proc_table`, frame-stack `pstep`
 >   small-step, `pstep_deterministic`, and `scope_local_assign_noop` (frame
 >   mechanism validation). Built **additively** (separate from `com`) so the
@@ -116,9 +116,9 @@ KB companion (read these for *why*, not just *what*):
 > `enter_abs`; **return** uses **combine triples** `(call, proc_exit, return)` plus a
 > multi-`Query` RHS (see `docs/PROCEDURES_EXTENSION_PLAN.md` §9.2–§9.4), not a flat
 > combine edge. Abstract combine at call boundaries reuses `restrict_combine` /
-> `combine_states` (already in `TD_Side_CFG.thy` / `IMP2_Globals.thy`).
+> `combine_states` (already in `TD_Side_CFG.thy` / `VIMP_Globals.thy`).
 >
-> Procedure operational substrate so far (`IMP2_Proc.thy`, green): pstep
+> Procedure operational substrate so far (`VIMP_Proc.thy`, green): pstep
 > determinism, `pruns_to` (+ skip/assign), `pstep_PSKIP_stuck`,
 > `combine_after_{local,global}_assign`, `pcall_global_increment`,
 > `psteps_PSeq2` (sequencing lifts through the frame-stack step), plus
@@ -160,7 +160,7 @@ KB companion (read these for *why*, not just *what*):
 > **M1 slice 4 exit (green, 2026-06-07, branch `trace-spike`).** Non-recursive
 > procedural witness end-to-end, sorry-free, full `isabelle build`:
 >
-> - `src/CFG/IMP2_Proc_to_CFG.thy` — `compile_prog`, enter edges + combine triples (CE1).
+> - `src/CFG/VIMP_Proc_to_CFG.thy` — `compile_prog`, enter edges + combine triples (CE1).
 > - `src/CFG/Collecting/CFG_Collect_IP.thy` — `cfg_collect_ip` (interprocedural collecting).
 > - `src/CFG/Collecting/CFG_Collect_IP_Adeq.thy` — L-adeq (`pruns_to_ip`, `pcall_global_increment`).
 > - `src/Solver/TD_CFG_IP_Core.thy` — `make_rhs_tree_ip`, `ip_rhs_tree`, combine queries on plain TD.
@@ -388,8 +388,8 @@ with one global procedure table `pi :: pname ~=> com` passed as a parameter.
 
 This phase delivers Level 1 only; it is the prerequisite for 2 and 3.
 
-**Files:** `src/IMP2/IMP2_Syntax.thy` (add `Scope`/`PCall`, `is_global`,
-`combine_states`; remove `countable` per Step 0), `src/IMP2/IMP2_Expr.thy`
+**Files:** `src/VIMP/VIMP_Syntax.thy` (add `Scope`/`PCall`, `is_global`,
+`combine_states`; remove `countable` per Step 0), `src/VIMP/VIMP_Expr.thy`
 (frame stack + clauses + `runs_to` bridge), `src/CFG/CFG_Def.thy` /
 `src/CFG/IMP2_to_CFG.thy` (call/return edges; recheck `edge_action` needs no order
 once countability is gone). `Collecting`/`Domains`/`Equations`/`Pipeline` **untouched**.
@@ -483,7 +483,7 @@ Do **not** reopen: countability deletion (§4 Step 0), flat `EA_Combine` edges.
 
 New theory; **do not rewrite** `IMP2_to_CFG.thy` / `to_cfg` (spine stays green).
 
-**File:** `src/CFG/IMP2_Proc_to_CFG.thy` (name flexible).
+**File:** `src/CFG/VIMP_Proc_to_CFG.thy` (name flexible).
 
 **Input:** `proc_table` + main `pcom`.
 
@@ -499,7 +499,7 @@ New theory; **do not rewrite** `IMP2_to_CFG.thy` / `to_cfg` (spine stays green).
 
 **Do not** prove soundness in this slice.
 
-Delivered in `src/CFG/IMP2_Proc_to_CFG.thy`.
+Delivered in `src/CFG/VIMP_Proc_to_CFG.thy`.
 
 ### Slice 2 — interprocedural collecting — **Done**
 
@@ -515,7 +515,7 @@ cfg_collect_ip g S v = lfp F  where
         ∪ (if v = entry then S else {})
 ```
 
-Reuse `combine_states` from `IMP2_Globals.thy`.
+Reuse `combine_states` from `VIMP_Globals.thy`.
 
 **First proof target:** operational adequacy for the non-recursive example
 (`pruns_to` ⟹ member of `cfg_collect_ip` at return sites) — **L-adeq** shape from
@@ -552,7 +552,7 @@ global Gx;   proc inc() { Gx := Gx + 1; }
 main() { local x;  x := 5;  inc();  inc(); }
 ```
 
-Operational witness in `IMP2_Proc.thy` (`pcall_global_increment`) + adequacy in
+Operational witness in `VIMP_Proc.thy` (`pcall_global_increment`) + adequacy in
 `CFG_Collect_IP_Adeq.thy`. Soundness: `proc_global_sign_analysis` in
 `Example_Proc_Global.thy` via `td_analyse_ip`. Batch green 2026-06-07.
 
@@ -585,7 +585,7 @@ is optional and orthogonal (M1 slice 4 green; §5 gate passed 2026-06-07).
 ### M1 file map (delivered)
 
 ```
-src/CFG/IMP2_Proc_to_CFG.thy           -- compile_prog; enter + combines (CE1)
+src/CFG/VIMP_Proc_to_CFG.thy           -- compile_prog; enter + combines (CE1)
 src/CFG/Collecting/CFG_Collect_IP.thy  -- cfg_collect_ip
 src/CFG/Collecting/CFG_Collect_IP_Adeq.thy -- L-adeq witness
 src/Equations/Constraint_System_IP_Sound.thy -- IP constraint soundness

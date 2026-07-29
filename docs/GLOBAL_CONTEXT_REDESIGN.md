@@ -21,7 +21,7 @@ rationale for the `cmp`-filtered read the generator now uses.
 
 ## 1. Why the local-context design failed
 
-`enter_state s = (lambda n. if is_global n then s n else 0)` (IMP2_Globals.thy:36)
+`enter_state s = (lambda n. if is_global n then s n else 0)` (VIMP_Globals.thy:36)
 resets every local to `0` and preserves globals. So the concrete locals at a
 frame entry are the constant zero store, identical in every context. Any seed
 keyed to caller locals (`ent = id`) claims callee-entry locals it cannot
@@ -44,7 +44,7 @@ SZero-on-locals`, independent of `ctx`. Entry-local context-sensitivity is
 | globals   | preserved (`s` globals)   | **yes**                     |
 
 Procedures are parameterless and **parameters pass via globals**
-(IMP2_Proc.thy:9). The global environment is the unique channel by which one
+(VIMP_Proc.thy:9). The global environment is the unique channel by which one
 call differs from another and is visible to the callee. So the execution
 context must abstract the **global state at entry**, not the caller locals.
 

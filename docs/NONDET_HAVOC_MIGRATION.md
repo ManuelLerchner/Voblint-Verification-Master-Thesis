@@ -21,7 +21,7 @@ with no ordering or consumption. That removes any oracle/stream state and keeps
   (`store x int stream`) that threads through every layer.
 - **Atomic assignment `x := random()`, not a `random()` aexp leaf.** A
   nondeterministic subexpression would break `aval :: aexp => store => int`
-  (`src/IMP2/IMP2_Expr.thy`) as a total function, poisoning every
+  (`src/VIMP/VIMP_Expr.thy`) as a total function, poisoning every
   expression-evaluation proof. The nondeterministic unit is the whole RHS:
   a dedicated statement `Havoc vname` / edge action `EA_Havoc vname`.
   `aval` / `bval` stay total and deterministic.
@@ -29,15 +29,15 @@ with no ordering or consumption. That removes any oracle/stream state and keeps
   `edge_step :: edge_action => store => store option` becomes set-valued so the
   fan-out happens at the havoc node, matching the intended semantics.
 - **`pstep_deterministic` weakens to havoc-free programs.** It is used in
-  exactly one place (`src/IMP2/IMP2_Proc.thy`, local lemma `n`), so the blast
+  exactly one place (`src/VIMP/VIMP_Proc.thy`, local lemma `n`), so the blast
   radius is small.
 
 ## Where determinism is baked in today
 
 | Layer | File | Construct | Status |
 | --- | --- | --- | --- |
-| Source semantics | `src/IMP2/IMP2_Proc.thy:43` | `pstep` Assign -> `s(x := aval a s)`; `pstep_deterministic` :74 | needs relational `Havoc` rule |
-| Expr | `src/IMP2/IMP2_Expr.thy:18` | `aval :: aexp => store => int` | unchanged (atomic decision) |
+| Source semantics | `src/VIMP/VIMP_Proc.thy:43` | `pstep` Assign -> `s(x := aval a s)`; `pstep_deterministic` :74 | needs relational `Havoc` rule |
+| Expr | `src/VIMP/VIMP_Expr.thy:18` | `aval :: aexp => store => int` | unchanged (atomic decision) |
 | CFG action | `src/CFG/CFG_Def.thy:38` | `datatype edge_action` | add `EA_Havoc` |
 | Concrete collecting | `src/CFG/Collecting/CFG_Collect.thy` | `edge_collect :: edge_action => store set => store set` | already set-valued; add one clause |
 | Trace | `src/CFG/Collecting/CFG_Collect_Trace.thy:27` | `edge_step :: ... => store option` | refactor to `store set` (main proof cost) |
@@ -51,7 +51,7 @@ fan out is the trace layer (`edge_step` is a function) — that is the real work
 
 ### Slice 1 — base language (plumbing)
 
-- `src/IMP2/IMP2_Proc.thy`: add `com` constructor `Havoc vname`. Add relational
+- `src/VIMP/VIMP_Proc.thy`: add `com` constructor `Havoc vname`. Add relational
   `pstep` rule `Havoc: pstep Pi (Havoc x, s, frs) (SKIP, s(x := v), frs)` for all
   `v` (introduces the first nondeterministic `pstep` rule). Add
   `inductive_cases HavocSE`.
@@ -64,9 +64,9 @@ fan out is the trace layer (`edge_step` is a function) — that is the real work
   the structural `linorder` (`derive linorder edge_action`).
 - Add the missing clause in every theory that matches exhaustively on
   `edge_action`: `CFG_GraphViz` (pretty-print `x := random()`),
-  `CFG_Prune`, `IMP2_Proc_to_CFG`, the collecting theories, the
+  `CFG_Prune`, `VIMP_Proc_to_CFG`, the collecting theories, the
   analysis transfers, the examples. Each is a single new case.
-- `src/CFG/IMP2_Proc_to_CFG.thy`: compile `Havoc x` -> `(n, EA_Havoc x, n+1)`.
+- `src/CFG/VIMP_Proc_to_CFG.thy`: compile `Havoc x` -> `(n, EA_Havoc x, n+1)`.
 
 ### Slice 3 — concrete collecting (mechanical)
 

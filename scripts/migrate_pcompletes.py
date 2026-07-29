@@ -11,9 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 
 RENAME_FILES = [
-    SRC / "IMP2" / "IMP2_Proc.thy",
-    SRC / "IMP2" / "IMP2_Bridge.thy",
-    SRC / "IMP2" / "IMP2_VCG_Example.thy",
+    SRC / "VIMP" / "VIMP_Proc.thy",
+    SRC / "VIMP" / "IMP2_Bridge.thy",
+    SRC / "VIMP" / "IMP2_VCG_Example.thy",
     SRC / "Formalization" / "Examples" / "Example_Inc_Proc.thy",
     SRC / "Formalization" / "Examples" / "Example_Proc_Call.thy",
     SRC / "Formalization" / "Voblint.thy",
@@ -84,7 +84,7 @@ def patch_imp2_proc(text: str) -> str:
         "  unfolding pcompletes_def by auto\n"
     )
     if old_iff not in text:
-        raise SystemExit("pcompletes_iff_small_termination block not found in IMP2_Proc.thy")
+        raise SystemExit("pcompletes_iff_small_termination block not found in VIMP_Proc.thy")
     text = text.replace(old_iff, new_iff, 1)
 
     return text
@@ -138,26 +138,26 @@ text \<open>
 def patch_glossary(text: str) -> str:
     text = re.sub(
         r"\| `pruns_to`[^\n]*\n",
-        "| `pcompletes`                                     | Procedural completion: `proc_table => com => store => store => bool`; reaches `pfinal`. See `pcompletes_iff_small_termination`. | `IMP2_Proc.thy` |\n",
+        "| `pcompletes`                                     | Procedural completion: `proc_table => com => store => store => bool`; reaches `pfinal`. See `pcompletes_iff_small_termination`. | `VIMP_Proc.thy` |\n",
         text,
         count=1,
     )
     if "`pfinal`" not in text:
         text = text.replace(
             "| `pstep`",
-            "| `pfinal`                                       | Successful exit configuration: `SKIP` with empty frame stack.                                                                      | `IMP2_Proc.thy`   |\n| `pstep`",
+            "| `pfinal`                                       | Successful exit configuration: `SKIP` with empty frame stack.                                                                      | `VIMP_Proc.thy`   |\n| `pstep`",
             1,
         )
     return text
 
 
 def main() -> int:
-    proc_path = SRC / "IMP2" / "IMP2_Proc.thy"
+    proc_path = SRC / "VIMP" / "VIMP_Proc.thy"
     proc = proc_path.read_text()
     proc_path.write_text(patch_imp2_proc(proc))
     print(f"patched {proc_path.relative_to(ROOT)}")
 
-    bridge_path = SRC / "IMP2" / "IMP2_Bridge.thy"
+    bridge_path = SRC / "VIMP" / "IMP2_Bridge.thy"
     bridge = bridge_path.read_text()
     bridge_path.write_text(patch_imp2_bridge(bridge))
     print(f"patched {bridge_path.relative_to(ROOT)}")

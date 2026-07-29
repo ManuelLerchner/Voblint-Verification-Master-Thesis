@@ -6,7 +6,7 @@ interprocedural abstract interpreter.
 ## Proof chain
 
 ```text
-well-formed IMP2 source
+well-formed VIMP source
   -> compiled procedure-aware CFG
   -> located CFG execution
   -> valid activation-local trace

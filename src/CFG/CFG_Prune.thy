@@ -1,5 +1,5 @@
 theory CFG_Prune
-  imports IMP2_Proc_to_CFG
+  imports VIMP_Proc_to_CFG
 begin
 
 section \<open>Procedure-aware structural reachability and dependency cone\<close>

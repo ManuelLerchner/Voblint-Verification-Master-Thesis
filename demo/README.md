@@ -46,8 +46,8 @@ an unverified approximation, not exercised here.
 
 | file | mirrors |
 | --- | --- |
-| `imp_ast.py` | `IMP2_Syntax.thy`, `IMP2_Proc.thy`, `is_global` |
-| `cfg.py` | `CFG_Def.thy` + `IMP2_Proc_to_CFG.thy:19` (`compile`) |
+| `imp_ast.py` | `VIMP_Syntax.thy`, `VIMP_Proc.thy`, `is_global` |
+| `cfg.py` | `CFG_Def.thy` + `VIMP_Proc_to_CFG.thy:19` (`compile`) |
 | `strategy_tree.py` | `Basics_side.thy` — `traverse_rhs` / `sides_of_rhs` / `dep_aux` |
 | `state.py` | `restrict_local`/`restrict_global`/`side_env`/`combine_abs` |
 | `trees.py` | `unit_edge_tree`, `local_edge_tree`, `unit_combine_tree`, `side_cfg_T_eff` |

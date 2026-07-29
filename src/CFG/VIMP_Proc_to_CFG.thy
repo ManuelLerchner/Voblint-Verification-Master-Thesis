@@ -1,5 +1,5 @@
-theory IMP2_Proc_to_CFG
-  imports CFG_Def "Voblint_IMP2.IMP2_Proc"
+theory VIMP_Proc_to_CFG
+  imports CFG_Def "Voblint_VIMP.VIMP_Proc"
 begin
 
 section \<open>Procedure-aware CFG compilation for \<open>com\<close> programs\<close>

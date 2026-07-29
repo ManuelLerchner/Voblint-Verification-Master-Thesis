@@ -199,7 +199,7 @@ any reach obligation.
 
 **`node_reach_exit` is now fully discharged by dead-procedure pruning
 (`src/CFG/CFG_Prune.thy`); the headline carries no well-formedness hypothesis.**
-The obstruction was the dead procedure: `compile_prog` (`IMP2_Proc_to_CFG.thy`)
+The obstruction was the dead procedure: `compile_prog` (`VIMP_Proc_to_CFG.thy`)
 unions every procedure's edges/combines into the graph via `compile_procs_list`,
 so a procedure in `ps` that is never called has body nodes that are edge-targets
 yet cannot reach `cfg_exit` (e.g. `pi p = Some PSKIP`, `ps = [p]`, `main = PSKIP`:

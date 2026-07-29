@@ -176,7 +176,7 @@ what `CFG_Local_Trace` pulls from it and move only the live shared definitions.
 **Stage 3 done.** `edge_step` and `edge_collect_single` were moved from
 `CFG_Collect_Trace` into `CFG_Collect` (beside `edge_collect`/`edge_collect_member`,
 before `edges_collect`). `CFG_Collect` already reached every dependency
-(`IMP2_Proc`/`Expr`/`Globals`, `edge_action`), so no cycle. `CFG_Collect_Trace`
+(`VIMP_Proc`/`Expr`/`Globals`, `edge_action`), so no cycle. `CFG_Collect_Trace`
 re-imports `CFG_Collect` and keeps its digest theorems unchanged.
 `Constraint_System_Sound` and `Compile_Invariants` dropped their
 `CFG_Collect_Trace` imports; `Located_Reaches`/`Located_LTR` now get `edge_step`

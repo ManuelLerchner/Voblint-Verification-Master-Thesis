@@ -27,7 +27,7 @@ task at hand:
 Voblint verifies this pipeline:
 
 ```text
-IMP2 source -> CFG -> equation system -> TD solver
+VIMP source -> CFG -> equation system -> TD solver
             -> sound abstract result -> source-level result
 ```
 
@@ -47,7 +47,7 @@ Locked decisions:
 | Topic | Decision |
 | --- | --- |
 | Logic | Isabelle/HOL over HOL-IMP |
-| Source language | IMP2 |
+| Source language | VIMP |
 | Solver | Vendored verified `TD` solver |
 | Solver interface | `rhs :: pp => (pp => abs_state) => abs_state` |
 | Analysis path | Procedure-aware CFG and generic D/G pipeline |
@@ -62,7 +62,7 @@ solver.
 The five-session dependency chain is:
 
 ```text
-Voblint_IMP2 -> Voblint_CFG -> Voblint_Analysis
+Voblint_VIMP -> Voblint_CFG -> Voblint_Analysis
              -> Voblint_Formalization -> Voblint_Examples
 ```
 

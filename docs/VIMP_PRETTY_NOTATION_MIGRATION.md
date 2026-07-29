@@ -1,18 +1,18 @@
 # IMP2 Pretty Notation Migration
 
-Status: **DONE** (Tier 3 implemented in `IMP2_Notation.thy`; bracket `⟦ ... ⟧` and whole-program `⟦ proc f { .. } main { .. } ⟧` live). Used in `Example_Side_Execute`, `Example_Proc_Call`, `IMP2_VCG_Example`.
+Status: **DONE** (Tier 3 implemented in `VIMP_Notation.thy`; bracket `⟦ ... ⟧` and whole-program `⟦ proc f { .. } main { .. } ⟧` live). Used in `Example_Side_Execute`, `Example_Proc_Call`, `IMP2_VCG_Example`.
 
 ## Problem
 
 Example programs are written with fully-qualified constructors:
 
 ```isabelle
-definition loop_prog :: "IMP2_Proc.com" where
+definition loop_prog :: "VIMP_Proc.com" where
   "loop_prog =
-     IMP2_Proc.com.Seq
-       (IMP2_Proc.com.Assign ''x'' (BaseN (AExp.N 0)))
-       (IMP2_Proc.com.While (BaseB (BExp.Bc True))
-          (IMP2_Proc.com.Assign ''x''
+     VIMP_Proc.com.Seq
+       (VIMP_Proc.com.Assign ''x'' (BaseN (AExp.N 0)))
+       (VIMP_Proc.com.While (BaseB (BExp.Bc True))
+          (VIMP_Proc.com.Assign ''x''
              (Plus (BaseN (AExp.V ''x'')) (BaseN (AExp.N 1)))))"
 ```
 
@@ -43,22 +43,22 @@ The payoff: you write actual Rust inside the brackets; Isabelle treats it as a t
 
 ### Tier 1 — `notation` (Quick Win, No ML)
 
-Mirror HOL-IMP's `Com.thy` convention in `IMP2_Proc.thy`:
+Mirror HOL-IMP's `Com.thy` convention in `VIMP_Proc.thy`:
 
 ```isabelle
 notation
-  IMP2_Proc.com.Assign ("_ ::= _"           [1000, 61] 61) and
-  IMP2_Proc.com.Seq    ("_;;/ _"             [60, 61] 60) and
-  IMP2_Proc.com.If     ("IF _ THEN _ ELSE _" [0, 0, 61] 61) and
-  IMP2_Proc.com.While  ("WHILE _ DO _"       [0, 61] 61) and
-  IMP2_Proc.com.Scope  ("SCOPE _"            [61] 61) and
-  IMP2_Proc.com.Call   ("CALL _"             [1000] 61)
+  VIMP_Proc.com.Assign ("_ ::= _"           [1000, 61] 61) and
+  VIMP_Proc.com.Seq    ("_;;/ _"             [60, 61] 60) and
+  VIMP_Proc.com.If     ("IF _ THEN _ ELSE _" [0, 0, 61] 61) and
+  VIMP_Proc.com.While  ("WHILE _ DO _"       [0, 61] 61) and
+  VIMP_Proc.com.Scope  ("SCOPE _"            [61] 61) and
+  VIMP_Proc.com.Call   ("CALL _"             [1000] 61)
 ```
 
 Combined with the existing `N`, `V`, `Bc` abbreviations:
 
 ```isabelle
-definition loop_prog :: "IMP2_Proc.com" where
+definition loop_prog :: "VIMP_Proc.com" where
   "loop_prog = ''x'' ::= N 0 ;; WHILE Bc True DO (''x'' ::= Plus (V ''x'') (N 1))"
 ```
 
@@ -86,21 +86,21 @@ syntax
   "_imp_skip"   :: "imp_stm"             ("skip")
   "_imp_scope"  :: "imp_stm \<Rightarrow> imp_stm"  ("scope { _ }")
   "_imp_call"   :: "string \<Rightarrow> imp_stm"   ("call _ ;")
-  "_IMP"        :: "imp_stm \<Rightarrow> IMP2_Proc.com" ("IMP { _ }")
+  "_IMP"        :: "imp_stm \<Rightarrow> VIMP_Proc.com" ("IMP { _ }")
 
 translations
   "IMP { x := a ; rest }" \<rightleftharpoons>
-      "CONST IMP2_Proc.com.Seq (CONST IMP2_Proc.com.Assign x a) (IMP { rest })"
-  "IMP { x := a }"  \<rightleftharpoons> "CONST IMP2_Proc.com.Assign x a"
+      "CONST VIMP_Proc.com.Seq (CONST VIMP_Proc.com.Assign x a) (IMP { rest })"
+  "IMP { x := a }"  \<rightleftharpoons> "CONST VIMP_Proc.com.Assign x a"
   "IMP { while b { body } ; rest }" \<rightleftharpoons>
-      "CONST IMP2_Proc.com.Seq (CONST IMP2_Proc.com.While b (IMP { body })) (IMP { rest })"
+      "CONST VIMP_Proc.com.Seq (CONST VIMP_Proc.com.While b (IMP { body })) (IMP { rest })"
   ...
 ```
 
 Result:
 
 ```isabelle
-definition loop_prog :: "IMP2_Proc.com" where
+definition loop_prog :: "VIMP_Proc.com" where
   "loop_prog = IMP {
      ''x'' := N 0;
      while Bc True { ''x'' := Plus (V ''x'') (N 1) }
@@ -120,7 +120,7 @@ This is IMP2's equivalent of AutoCorrode's `FunctionBody ⟦ ... ⟧`.
 Target syntax:
 
 ```isabelle
-definition loop_prog :: "IMP2_Proc.com" where
+definition loop_prog :: "VIMP_Proc.com" where
   "loop_prog = IMP ⟦
      x := 0;
      while true {
@@ -131,13 +131,13 @@ definition loop_prog :: "IMP2_Proc.com" where
 
 #### Implementation sketch
 
-**Step 1: nonterminals and grammar** (in `IMP2_Notation.thy`)
+**Step 1: nonterminals and grammar** (in `VIMP_Notation.thy`)
 
 ```isabelle
 nonterminal imp2_com imp2_aexp imp2_bexp
 
 syntax
-  "_IMP2"          :: "imp2_com \<Rightarrow> IMP2_Proc.com"  ("IMP _")
+  "_IMP2"          :: "imp2_com \<Rightarrow> VIMP_Proc.com"  ("IMP _")
   "_imp2_seq"      :: "imp2_com \<Rightarrow> imp2_com \<Rightarrow> imp2_com"  ("_; _" [60,61] 60)
   "_imp2_assign"   :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_com"         ("_ := _" [900,61] 61)
   "_imp2_while"    :: "imp2_bexp \<Rightarrow> imp2_com \<Rightarrow> imp2_com"   ("while _ { _ }" [0,61] 61)
@@ -175,13 +175,13 @@ The key job of the parse translation is:
 ```isabelle
 ML \<open>
 fun imp2_aexp_tr (Free (x, _)) =
-      Const (@{const_name IMP2_Syntax.V}, @{typ "vname => aexp"}) $
+      Const (@{const_name VIMP_Syntax.V}, @{typ "vname => aexp"}) $
         HOLogic.mk_string x
   | imp2_aexp_tr (Const (@{syntax_const "_imp2_num"}, _) $ n) =
-      Const (@{const_name IMP2_Syntax.N}, @{typ "int => aexp"}) $
+      Const (@{const_name VIMP_Syntax.N}, @{typ "int => aexp"}) $
         HOLogic.dest_number n |> snd |> HOLogic.mk_number @{typ int}
   | imp2_aexp_tr (Const (@{syntax_const "_imp2_plus"}, _) $ a $ b) =
-      Const (@{const_name IMP2_Syntax.aexp.Plus}, ...) $ imp2_aexp_tr a $ imp2_aexp_tr b
+      Const (@{const_name VIMP_Syntax.aexp.Plus}, ...) $ imp2_aexp_tr a $ imp2_aexp_tr b
   (* ... *)
 
 val imp2_tr : term list -> term = fn [com_term] => imp2_com_tr com_term | _ => raise Match
@@ -208,7 +208,7 @@ Escape hatch for HOL terms (e.g., a computed variable name): `⟪expr⟫` as in 
 
 ## What Already Exists (Use Now, Zero Cost)
 
-`IMP2_Syntax.thy` already defines:
+`VIMP_Syntax.thy` already defines:
 
 | Write this | Expands to |
 |------------|------------|
@@ -222,9 +222,9 @@ The current examples don't use these even though they're already available. This
 
 ## Symbol Safety
 
-`IMP2_Proc` imports `HOL-IMP.Star` (transitive closure), not `HOL-IMP.Com`. HOL-IMP's notation for its own `com` type (`::=`, `;;`, `IF...THEN...ELSE`, `WHILE...DO`) is **never in scope** in any of our sessions. All Tier 1 symbols are free to use.
+`VIMP_Proc` imports `HOL-IMP.Star` (transitive closure), not `HOL-IMP.Com`. HOL-IMP's notation for its own `com` type (`::=`, `;;`, `IF...THEN...ELSE`, `WHILE...DO`) is **never in scope** in any of our sessions. All Tier 1 symbols are free to use.
 
-If a future theory imports `HOL-IMP.Com` directly alongside `IMP2_Proc`, Isabelle disambiguates by type. A `:: "IMP2_Proc.com"` annotation on the definition suffices. Fall back to subscript forms (`::=\<^sub>p`, `;;\<^sub>p`) only if warnings surface.
+If a future theory imports `HOL-IMP.Com` directly alongside `VIMP_Proc`, Isabelle disambiguates by type. A `:: "VIMP_Proc.com"` annotation on the definition suffices. Fall back to subscript forms (`::=\<^sub>p`, `;;\<^sub>p`) only if warnings surface.
 
 ---
 
@@ -233,8 +233,8 @@ If a future theory imports `HOL-IMP.Com` directly alongside `IMP2_Proc`, Isabell
 | Location | Reason |
 |----------|--------|
 | `fun to_imp2_com` equations (`IMP2_Bridge.thy`) | Pattern-match heads require constructors, not notation |
-| `inductive pstep` rule bodies (`IMP2_Proc.thy`) | Same |
-| CFG compilation in `IMP2_Proc_to_CFG.thy` | Pattern-matching throughout |
+| `inductive pstep` rule bodies (`VIMP_Proc.thy`) | Same |
+| CFG compilation in `VIMP_Proc_to_CFG.thy` | Pattern-matching throughout |
 | `loop_cfg_edges` proofs using `EA_Assign`/`EA_Assume` | CFG edge actions, not `com` constructors |
 
 ---
@@ -253,7 +253,7 @@ If a future theory imports `HOL-IMP.Com` directly alongside `IMP2_Proc`, Isabell
 ## Migration Checklist (Tier 1)
 
 - [x] Replace `BaseN (AExp.N _)` → `N _`, `BaseB (BExp.Bc _)` → `Bc _`, `BaseN (AExp.V _)` → `V _` in both example files
-- [x] Add `notation` block to `IMP2_Proc.thy` after `datatype com`
+- [x] Add `notation` block to `VIMP_Proc.thy` after `datatype com`
 - [x] Update example `definition` sites to use the new notation
-- [x] I/Q diagnostics clean on `IMP2_Proc.thy` and both example theories
+- [x] I/Q diagnostics clean on `VIMP_Proc.thy` and both example theories
 - [x] Final gate: `isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization`

@@ -1,5 +1,5 @@
 theory Exec_St
-  imports Abstract_Domain "TD.Update_rules" "Voblint_IMP2.IMP2_Globals"
+  imports Abstract_Domain "TD.Update_rules" "Voblint_VIMP.VIMP_Globals"
     Constraint_System
 begin
 

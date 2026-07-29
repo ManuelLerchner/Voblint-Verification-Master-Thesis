@@ -1,8 +1,8 @@
-theory IMP2_Source_Print
-  imports IMP2_Proc "HOL-Library.Char_ord"
+theory VIMP_Source_Print
+  imports VIMP_Proc "HOL-Library.Char_ord"
 begin
 
-text \<open>Executable source rendering for IMP2 commands and procedure tables.\<close>
+text \<open>Executable source rendering for VIMP commands and procedure tables.\<close>
 
 fun string_of_nat :: "nat \<Rightarrow> string" where
   "string_of_nat n =

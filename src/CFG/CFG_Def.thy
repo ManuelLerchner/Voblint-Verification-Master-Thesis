@@ -1,5 +1,5 @@
 theory CFG_Def
-  imports "Voblint_IMP2.IMP2_Proc" "HOL-Library.Countable"
+  imports "Voblint_VIMP.VIMP_Proc" "HOL-Library.Countable"
 begin
 
 section \<open>Procedure-aware control-flow graph\<close>
@@ -19,7 +19,7 @@ text \<open>
   typing from intra flow, so \<open>edge_step\<close> has no call case and \<open>intra\<close> can never carry a
   call --- by typing, not by a side condition.
 
-  Translation from IMP2 to CFG and the collecting/equation layers ride on this structure.
+  Translation from VIMP to CFG and the collecting/equation layers ride on this structure.
 \<close>
 
 subsection \<open>Nodes\<close>

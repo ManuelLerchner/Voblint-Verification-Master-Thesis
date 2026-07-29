@@ -37,6 +37,6 @@ regressions that state the intended bounds.
 
 ## Richer source language
 
-The verified source is scalar IMP2. Arrays, pointers, and C memory require an
+The verified source is scalar VIMP. Arrays, pointers, and C memory require an
 explicit semantic model and cannot be inherited from the current compiler
 proofs.

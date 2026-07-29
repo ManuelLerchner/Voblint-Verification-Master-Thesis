@@ -1,5 +1,5 @@
 theory Interval_Backward
-  imports Interval_Arithmetic Exec_Backward "Voblint_IMP2.IMP2_Expr"
+  imports Interval_Arithmetic Exec_Backward "Voblint_VIMP.VIMP_Expr"
 begin
 
 section \<open>Interval backward filtering\<close>

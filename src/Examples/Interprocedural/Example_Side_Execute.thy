@@ -1,7 +1,7 @@
 theory Example_Side_Execute
   imports "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Formalization.Source_Activation_Sound"
-    "Voblint_IMP2.IMP2_Notation"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Running the certified sign analyzer on \<open>x := 1\<close>\<close>
@@ -82,7 +82,7 @@ proof -
 
   have run:
     "star (pstep (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
-      (IMP2_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
+      (VIMP_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
     using x1_completed unfolding pcompletes_def .
   from source_completes_ltr_collect_exit[OF wf init run]
   show ?thesis unfolding prog_cfg_def .

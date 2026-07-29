@@ -26,9 +26,9 @@ single combined gamma.
 ## 1. Exact places where local and global are forced to share `'a`
 
 ### 1.1 The state type itself
-- `src/IMP2/IMP2_Syntax.thy:26` — `type_synonym store = "vname => int"`. One concrete store;
+- `src/VIMP/VIMP_Syntax.thy:26` — `type_synonym store = "vname => int"`. One concrete store;
   locals and globals are the same map.
-- `src/IMP2/IMP2_Globals.thy:24` — `is_global :: vname => bool`. The *only* discriminator.
+- `src/VIMP/VIMP_Globals.thy:24` — `is_global :: vname => bool`. The *only* discriminator.
 - `src/Analysis/Generic/Domain/Abstract_Domain.thy:23` — `type_synonym 'a abs_state = "vname => 'a"`.
   One abstract value type `'a` for every variable, local or global.
 - `src/Analysis/Generic/Domain/Abstract_Domain.thy` (`gamma_state`, `\<lbrakk>_\<rbrakk>`) —
@@ -242,7 +242,7 @@ corollary; the existing `Exec_Sign_Cmp_*` spine becomes its first interpretation
 > `dg`/`gcmp` into one `call_spec`. Auditing the actual generator confirmed: (1) the seeded
 > generator uses **context-dependent** `frame_seed :: 'c => 'a abs_state`
 > (`Exec_Cmp_Bridge.thy:55,83`), so `enter` must be `enter_seed :: 'c => 'a abs_state`;
-> (2) `combines g :: (pp × pp × pp) set` (`IMP2_Proc_to_CFG.thy:131`) carries **no destination
+> (2) `combines g :: (pp × pp × pp) set` (`VIMP_Proc_to_CFG.thy:131`) carries **no destination
 > lval**, so `assign_ret` has no referent and is dropped, not stubbed; (3) `dg :: store list => 'c`
 > is a collecting-semantics proof device, not executable call behaviour, so it moves to its own
 > `trace_context_compatibility`; (4) `gcmp` drives the keyed read `side_env_cmp`, i.e. global
@@ -319,7 +319,7 @@ existing constants — no new primitives. `enter_mono` sits in `goblint_analysis
 three consumers: the builder `cmb :: 'c => pp => pp => strategy_tree` (`TD_Side_Eff_Cmp_Gen.thy:53`)
 takes `(context, caller-pp, callee-exit-pp)` and produces a *routing* tree; `etf_combine :: pp => pp
 => strategy_tree` (`Constraint_System.thy:435`) denotes the **site- and context-free** merge
-`<s|t>` (`combine_states`, `IMP2_Globals.thy:28`); `combines g` carries no destination. So the
+`<s|t>` (`combine_states`, `VIMP_Globals.thy:28`); `combines g` carries no destination. So the
 site/context/routing dependence lives in the *builder* and in `ctx_sel` (which derives the callee
 context, `route cc ctx a = ctx_sel cc ctx (prep cc a)`), **not** in the merge. The weakest
 sufficient value-level merge is therefore two states in, one out. Its extension arguments —
@@ -343,7 +343,7 @@ return write-back has no referent in this language yet.
 | `gkey :: 'c => 'g` | `global_routing_spec` | per-instance (unit / keyed) | routing commute `traverse_intra_cmp` (`TD_Side_Eff_Cmp_Gen.thy`) | `side_cfg_T_eff_cmp` `map_gtree` routing | generator config / routing |
 | `gcmp :: 'c => 'g => bool` | `global_routing_spec` | singleton collapse (`Global_Cmp_Read.thy:50,77`) | `side_env_cmp_singleton` | `CMP_SOUND` keyed read | global-store routing |
 | `dg :: store list => 'c` | `trace_context_compatibility` | per-instance `head_digest f` (`TD_Side_Eff_Cmp_Sound.thy:398`) | `dg_intra/return/callee` | `DG_INTRA/RETURN/CALLEE` | **proof infrastructure** (not runtime) |
-| *(dropped)* `assign_ret` | — | no destination lval in `combines g` (`IMP2_Proc_to_CFG.thy:131`) | — | none | deferred until the CFG carries return destinations |
+| *(dropped)* `assign_ret` | — | no destination lval in `combines g` (`VIMP_Proc_to_CFG.thy:131`) | — | none | deferred until the CFG carries return destinations |
 
 ### 6.4 Exact soundness assumptions and the composed corollary
 
@@ -824,7 +824,7 @@ proof work before Stage 1 is **none** (the `seed_const` plan is optional and def
 
 | Symbol | Location |
 |---|---|
-| `store`, `is_global` | `IMP2_Syntax.thy:26`, `IMP2_Globals.thy:24` |
+| `store`, `is_global` | `VIMP_Syntax.thy:26`, `VIMP_Globals.thy:24` |
 | `'a abs_state`, `gamma_state` | `Abstract_Domain.thy:23`, `Abstract_Domain.thy` |
 | `sound_domain`, `abstract_domain` | `Abstract_Domain.thy:46`, `:148` |
 | `effectful_domain_transfer`, `apply_etf` | `Constraint_System.thy:435`, `:443` |

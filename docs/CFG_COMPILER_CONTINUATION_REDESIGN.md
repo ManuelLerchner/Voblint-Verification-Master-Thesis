@@ -18,7 +18,7 @@ Comparison target: Goblint-CIL `src/cfg.ml` at
 | Layer | File | Role |
 | --- | --- | --- |
 | Graph | `src/CFG/CFG_Def.thy` | `cfg_node`, `edge_action`, `call_action`, `cfg` record, `edge_step`, `wf_cfg` |
-| Compiler | `src/CFG/IMP2_Proc_to_CFG.thy` | `compile`, `compile_proc`, `compile_procs`, `compile_prog`, range/finiteness/shape lemmas, `compile_prog_wf` |
+| Compiler | `src/CFG/VIMP_Proc_to_CFG.thy` | `compile`, `compile_proc`, `compile_procs`, `compile_prog`, range/finiteness/shape lemmas, `compile_prog_wf` |
 | Reachability | `src/CFG/CFG_Prune.thy` | `cfg_succ_rel`, `cfg_reaches`, `cone`, `cfg_exit`, `compile_reaches` |
 | Location | `src/CFG/Compiler/Control_Residual.thy` | `control_at`, `compile_entry_node`, `compile_control_at_SKIP_exit_path` |
 | Execution | `src/CFG/Compiler/Located_Exec.thy` | `cstep`, `frames_match` |
@@ -61,7 +61,7 @@ Established facts about the interface:
 `rg` over `src/` shows the 5-tuple is destructured in exactly nine theories:
 
 ```
-src/CFG/IMP2_Proc_to_CFG.thy              37 references
+src/CFG/VIMP_Proc_to_CFG.thy              37 references
 src/CFG/Compiler/Control_Simulation.thy   65
 src/CFG/Compiler/Compile_Locality.thy     40
 src/CFG/Compiler/Control_Residual.thy     15
@@ -875,7 +875,7 @@ An earlier draft of this review proposed giving `Unwind` a real
 `EA_Ret None p -> FunctionResult p` edge on the grounds that it is "closer to
 its meaning". **That was reasoning from intuition, not from `pstep`.** `Unwind`
 is a residual marker used while a return propagates outward through pending
-statements up to the nearest activation frame (`IMP2_Proc.thy:28-34`), and
+statements up to the nearest activation frame (`VIMP_Proc.thy:28-34`), and
 `pstep_Unwind_stuck` (`Control_Simulation.thy:693`) states that `Unwind` has no
 `pstep` successor at all — the frame pop is performed by the `Seq Unwind Restore`
 and bare `Restore` rules, not by `Unwind` itself. Giving it a graph edge would
@@ -936,7 +936,7 @@ the dead-node problem and no part of the plan should touch it.
 Classification: **unchanged**, **local repair** (statement or proof adjusted
 mechanically), **substantial** (structure of the proof changes), **new**.
 
-### `src/CFG/IMP2_Proc_to_CFG.thy`
+### `src/CFG/VIMP_Proc_to_CFG.thy`
 
 | Item | Class | Note |
 | --- | --- | --- |
@@ -1086,7 +1086,7 @@ useful and independently revertible.
 - Add the `action_trace` / `observable` extractors of §11 and record the
   observable trace of one concrete run per program. These are the artifacts the
   old-versus-new comparison uses in Phase 4.
-- Add a short `text` block in `IMP2_Proc_to_CFG.thy` recording the four
+- Add a short `text` block in `VIMP_Proc_to_CFG.thy` recording the four
   meanings of `ex` from §2, so the ambiguity is documented before it is removed.
 - Checkpoint: build green, dead nodes now *visible in the regression data*.
 
@@ -1117,7 +1117,7 @@ Single change to `compile` and `compile_proc` — continuation in, exit out,
 `entry` retained, `Restore`/`Unwind` behaviour untouched — then repair in
 dependency order:
 
-1. `IMP2_Proc_to_CFG.thy` (ranges, finiteness, shapes, `compile_prog_wf`)
+1. `VIMP_Proc_to_CFG.thy` (ranges, finiteness, shapes, `compile_prog_wf`)
 2. `CFG_Prune.thy` (`compile_reaches`)
 3. `Compile_Invariants.thy`, `Compile_Certificate.thy`
 4. `Control_Residual.thy` (`control_at`)
@@ -1153,7 +1153,7 @@ a session boundary in the dependency chain.
 
 - Delete `inv11_return_exit_unreached` and the "commands after the return sit
   behind a fresh unreachable exit node" sentence from the header comment of
-  `IMP2_Proc_to_CFG.thy`.
+  `VIMP_Proc_to_CFG.thy`.
 - Delete the old-versus-new comparison theory. It has done its job; keeping it
   would mean maintaining a dead compiler to compare against.
 - **Decide whether the Phase 2 pruning filter stays.** It is now optional and
@@ -1582,8 +1582,8 @@ compiler, plus `compile_fst_next_id` and `compile_counter_mono_via_csize`
 (showing the existing inequality is a consequence).
 
 Deviation from the plan, deliberate: `csize` lives in its own theory rather than
-inside `IMP2_Proc_to_CFG.thy`. Reason is tooling, not design — see below. When
-`IMP2_Proc_to_CFG.thy` becomes editable, `csize` should move into it directly
+inside `VIMP_Proc_to_CFG.thy`. Reason is tooling, not design — see below. When
+`VIMP_Proc_to_CFG.thy` becomes editable, `csize` should move into it directly
 above `compile`, because Phase 4's `Seq` clause has to *call* `csize`, and a
 definition cannot be used by a theory it imports. `Compile_Size.thy` then
 collapses into that file and its ROOT entry is removed. Until then the split is
@@ -1662,13 +1662,13 @@ Confirmations:
 
 ### Editability, resolved
 
-Phases 2, 4, and the `IMP2_Proc_to_CFG.thy` half of Phase 3 needed edits to
+Phases 2, 4, and the `VIMP_Proc_to_CFG.thy` half of Phase 3 needed edits to
 theories the PIDE MCP server treated as read-only (`Cannot edit base session
-theory Voblint_CFG.IMP2_Proc_to_CFG`), because `.mcp.json` launched the server
+theory Voblint_CFG.VIMP_Proc_to_CFG`), because `.mcp.json` launched the server
 with `-l Voblint_Formalization` and every repo theory sat inside the prebuilt
 base heap.
 
-Fix: base logic changed to `Voblint_IMP2`, which keeps the `Voblint_IMP2` heap
+Fix: base logic changed to `Voblint_VIMP`, which keeps the `Voblint_VIMP` heap
 warm while making `src/CFG`, `src/Analysis`, `src/Formalization` and
 `src/Examples` load dynamically. After the server restart the compiler theory is
 editable and Phase 4 proceeds.
@@ -1676,13 +1676,13 @@ editable and Phase 4 proceeds.
 ### Phase 4, landed
 
 The continuation-passing `compile` / `compile_proc` are landed in
-`IMP2_Proc_to_CFG.thy` together with the arithmetic and shape lemmas the
+`VIMP_Proc_to_CFG.thy` together with the arithmetic and shape lemmas the
 dependent files consume. Repair order followed §8; every file below is clean
 and the batch build (`Voblint_Formalization` and `Voblint_Examples`) is green.
 
 | File | State |
 | --- | --- |
-| `IMP2_Proc_to_CFG.thy` | clean: `csize`, `compile_next_id`, `compile_entry`, `kstmt`, `compile_frag_stmts_range`, `compile_E_shape`, `compile_SeqE`/`compile_IfE`/`compile_WhileE`/`compile_procE`, `compile_prog_wf` |
+| `VIMP_Proc_to_CFG.thy` | clean: `csize`, `compile_next_id`, `compile_entry`, `kstmt`, `compile_frag_stmts_range`, `compile_E_shape`, `compile_SeqE`/`compile_IfE`/`compile_WhileE`/`compile_procE`, `compile_prog_wf` |
 | `CFG_Prune.thy` | clean: `compile_reaches` now "entry reaches the continuation or the result" |
 | `Compile_Invariants.thy` | clean: `inv11_return_exit_unreached` replaced by `inv11_return_ignores_continuation` |
 | `Control_Residual.thy` | clean: `control_at` carries the continuation; `compile_control_at_SKIP_exit_path` lost its join hops |
@@ -1695,7 +1695,7 @@ and the batch build (`Voblint_Formalization` and `Voblint_Examples`) is green.
 
 Two decisions taken during the repair that the plan above did not anticipate:
 
-**`csize` moved into `IMP2_Proc_to_CFG.thy` and `Compile_Size.thy` was deleted**
+**`csize` moved into `VIMP_Proc_to_CFG.thy` and `Compile_Size.thy` was deleted**
 (with its `ROOT` entry), exactly as §"Landed" predicted would be needed once the
 compiler theory became editable: the `Seq` clause has to *call* `csize`.
 
@@ -1765,7 +1765,7 @@ two consumers take the conditional edge. `dead_list factorial_cfg` is `[]`.
 
 ### What is proved
 
-`falls_through :: com => bool` (in `IMP2_Proc_to_CFG.thy`, beside `csize`) is
+`falls_through :: com => bool` (in `VIMP_Proc_to_CFG.thy`, beside `csize`) is
 the syntactic over-approximation of "control can leave this fragment through its
 continuation": `Seq` conjoins, `If` disjoins, `While` is `True` (the guard may
 fail on the first test), `Return` is `False`.

@@ -118,11 +118,11 @@ subsection \<open>The two calling contexts are distinct\<close>
 
 definition ctx_call1 :: ivl where
   "ctx_call1 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 2, bot))))
-                 (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3])"
+                 (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3])"
 
 definition ctx_call2 :: ivl where
   "ctx_call2 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 3, bot))))
-                 (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10])"
+                 (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10])"
 
 lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
   by eval
@@ -273,10 +273,10 @@ lemma twice_ctx_graph_enter_edges:
   "filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
     (analysis_graph_edges twice_ctx_graph) =
     [(LocalNode (Statement 2) bot,
-      EnterEdge ''twice'' (CallEdge (Some ''x'') [''p''] [IMP2_Syntax.N 3]),
+      EnterEdge ''twice'' (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]),
       LocalNode (FunctionEntry ''twice'') ctx_call1),
      (LocalNode (Statement 3) bot,
-      EnterEdge ''twice'' (CallEdge (Some ''y'') [''p''] [IMP2_Syntax.N 10]),
+      EnterEdge ''twice'' (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]),
       LocalNode (FunctionEntry ''twice'') ctx_call2)]" by eval
 
 lemma twice_ctx_graph_combine_edges:

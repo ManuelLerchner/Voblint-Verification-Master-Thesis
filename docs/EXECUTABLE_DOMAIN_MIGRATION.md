@@ -379,7 +379,7 @@ green build is also proof the pipeline executes.
 * `src/CFG/CFG_Def.thy:145-214` — `cfg_edges_list` / `predecessor_list` /
   `combine_predecessor_list` (G1). Edge construction: `ln` / `mk_ip_cfg` (`edges
   (ln en ex E C) = E`), `offset_edges`; the IMP2→CFG `compile` / `compile_prog`
-  is in `src/CFG/IMP2_Proc_to_CFG.thy` (the function to mirror at list level).
+  is in `src/CFG/VIMP_Proc_to_CFG.thy` (the function to mirror at list level).
 * The proven layer-(a) `[code]` lemma currently lives in the probe theory
   `src/Formalization/Examples/Scratch_S2.thy` (not in any `ROOT`). Fold it into
   the Exec CFG theory during S2; delete the scratch.
@@ -410,7 +410,7 @@ returns a concrete list, with no `to_nat`/`linorder` dependency.
    auto simp: sorted_list_of_set.fold_insort_key.infinite`). Delete
    `Scratch_S2.thy`.
 2. Define `compile_edges` mirroring `compile` / `compile_prog`
-   (`src/CFG/IMP2_Proc_to_CFG.thy`) but returning `(pp × edge_action × pp) list`
+   (`src/CFG/VIMP_Proc_to_CFG.thy`) but returning `(pp × edge_action × pp) list`
    (and a `combines` list). Mirror the `offset_edges` / `∪` structure with `map`
    / `@`. Prove `set (compile_edges …) = edges (compile_prog …)` and the
    `combines` analogue by structural induction on `com`.
