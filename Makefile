@@ -49,7 +49,7 @@ bootstrap: vendor
 # Build the top-level session (incremental; requires bootstrap heaps).
 build: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
-	$(ISABELLE) build -v -j8 -o threads=8 -N -d $(AFP) -d $(TD_DIR) -D . $(SESSION)
+	$(ISABELLE) build -v -j12 -o threads=12 -N -d $(AFP) -d $(TD_DIR) -D . $(SESSION)
 
 # HTML browser info for all session theories (see Isabelle System Manual, browser_info).
 # Output is copied to $(HTML_DIR)/ for a repo-local entry point; Isabelle also keeps a
