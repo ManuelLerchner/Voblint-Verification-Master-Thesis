@@ -233,4 +233,42 @@ lemma return_call_action_list_dst:
   unfolding return_call_action_list_def return_call_list_def
   by (induction "cfg_calls_list g") auto
 
+subsection \<open>Outgoing call enumeration (caller perspective)\<close>
+
+text \<open>The call tuples whose call site is the queried node \<open>v\<close>: the entry, action, and
+  continuation of every call \<open>v\<close> makes. This is the caller-side counterpart of
+  \<^const>\<open>entry_calls\<close> (callee-indexed) and \<^const>\<open>return_call_actions\<close>
+  (continuation-indexed) --- routing a call-entry seed publication at its call site needs
+  the callee entry and the whole \<^typ>\<open>call_action\<close> together, which neither of those two
+  enumerations exposes.\<close>
+
+definition call_successors ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
+  "call_successors g v = {(ce, ca, k). (v, ca, ce, k) \<in> calls g}"
+
+lemma call_successors_iff:
+  "(ce, ca, k) \<in> call_successors g v \<longleftrightarrow> (v, ca, ce, k) \<in> calls g"
+  by (simp add: call_successors_def)
+
+lemma finite_call_successors:
+  assumes "finite (calls g)"
+  shows "finite (call_successors g v)"
+proof -
+  have "call_successors g v
+          \<subseteq> (\<lambda>(c, ca, ce, k). (ce, ca, k)) ` calls g"
+    unfolding call_successors_def by force
+  then show ?thesis using assms finite_subset finite_imageI by blast
+qed
+
+definition call_successor_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) list" where
+  "call_successor_list g v =
+     map (\<lambda>(c, ca, ce, k). (ce, ca, k)) (filter (\<lambda>(c, ca, ce, k). c = v) (cfg_calls_list g))"
+
+lemma set_call_successor_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_successor_list g v) = call_successors g v"
+  unfolding call_successor_list_def call_successors_def
+  using set_cfg_calls_list[OF assms] by (force simp: image_iff)
+
 end

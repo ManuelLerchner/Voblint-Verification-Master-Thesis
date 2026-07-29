@@ -2,6 +2,7 @@ theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Analysis_GraphViz"
+    "Voblint_Analysis.Routed_Context"
 begin
 
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
@@ -102,7 +103,7 @@ definition twice_ctx_eqs ::
   "(pp \<times> ivl, gk, (ivl st, ivl st) dg_state) eqsT" where
   "twice_ctx_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
-       (cmb_ivl twice_cfg) (extra_ivl twice_cfg)
+       (routed_cmb Spoly Global) (routed_extra twice_cfg Spoly Seed Global)
        twice_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 
 text \<open>The main context is \<open>bot\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>

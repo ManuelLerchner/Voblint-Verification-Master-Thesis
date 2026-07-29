@@ -1,11 +1,13 @@
 # Context lifecycle: one context function from call to return
 
-> **Status:** M1 (G1) landed and batch-verified. M2 (G2) was found already
-> implemented at the generator level — this doc's original G2 diagnosis was
-> stale; see the correction in section 2. M3 (G3) and M4 (G4) remain open. A
-> computed 1-call-string instance validating M1 lands in
+> **Status:** M1 (G1) and M3 (G3) landed and batch-verified, M3 fully complete
+> (both interpretations). M2 (G2) was found already implemented at the
+> generator level — this doc's original G2 diagnosis was stale; see the
+> correction in section 2. M4 (G4) remains open. A computed 1-call-string
+> instance validating M1 lands in
 > `src/Examples/Executable/Interval/Example_Interval_DG_CallString.thy`
-> (`Voblint_Examples`), tracked in issue #66.
+> (`Voblint_Examples`), tracked in issue #66; it now interprets
+> `routed_context` rather than hand-copying `cmb`/`extra`.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
 Engineering Modularity", FM 2026, LNCS 16557, pp. 446-470, section "Refining
@@ -326,35 +328,49 @@ M1 and M2 are one conceptual change - there must be one sufficiently expressive
 context function for the whole call/return lifecycle - and touch the same call
 and return sites. Doing them separately means editing `key` and the hooks twice.
 
-### M3 - `routed_context` locale (G3)
+### M3 - `routed_context` locale (G3) — DONE (first interpretation)
 
-Fix `route`, assume agreement (3.2), discharge `CALL` and `COMB` once. Then:
+Fix `route`, assume agreement (3.2), discharge `CALL` and `COMB` once.
 
-```isabelle
-interpretation partial_tabulation: routed_context
-  where route = "%_ _ d _. entered_formal d"
+Landed as `Routed_Context.thy`: `routed_cmb`/`routed_extra` fix
+`dg_ctx_activation`'s `cmb`/`extra` to one canonical routed shape, parametric
+in `route` and a seed-key injection `seed_key`. `routed_context_call` and
+`routed_context_comb` discharge CALL and COMB generically, matching
+`valid_ltr_ctx_sound`'s exact obligation shapes. The locale's own new
+obligations are `finC`, `seed_key_ne_gk0`, `route_enterc_agree`, `call_fwd`,
+`comb_fwd`, `call_enter_store_agree` — `dg_ctx_activation`'s own five are
+unchanged and get reused, not reproved, at every interpretation whose
+`cmb`/`extra` instance was already established.
 
-interpretation callstrings: routed_context
-  where route = "%u ctx _ _. take k (u # ctx)"
-```
+`route_enterc_agree` is stated only for a real call edge
+(`(u, CallEdge dst pars args, FunctionEntry p, cont) ∈ calls g`), not an
+arbitrary `call_action`: CALL and COMB only ever invoke it at a matched edge,
+and the unrestricted universal is not provable for an imprecise abstract
+domain off an edge that is not actually present in the program.
 
-Success criterion: the flagship's routing lemmas in
-`Example_Interval_DG_Ctx_Collect.thy` collapse into an interpretation, and
-`M1_CALLSTRING_CONTEXT_MIGRATION.md` becomes a second interpretation rather than
-a second proof development.
+The partial-tabulation flagship (`Example_Interval_DG_Ctx_Flagship.thy`,
+`Example_Interval_DG_Ctx_Sound.thy`, `Example_Interval_DG_Ctx_Collect.thy`)
+now interprets `routed_context` with
+`route = route_ivl_gen`/`route_abs_gen` (the entered formal's point
+abstraction) and `seed_key = Seed`; the old hand-written
+`enter_membership`/`combine_membership` proofs collapse into one-line
+corollaries citing `routed_context_call`/`routed_context_comb`. Batch green on
+`Voblint_Examples`.
 
-**Still open.** `Example_Interval_DG_CallString.thy` (new, 2026-07-29) is a
-call-site-routed instance built by hand against G1/G2 directly, not through a
-`routed_context` locale — none exists yet. It had to define its own `gk_cs`
-global-key type, its own `extra_cs_st`/`extra_cs_abs`/`cmb_cs_st`/`cmb_cs_abs`
-(structural copies of `extra_ivl`/`cmb_ivl`/`extra_abs`/`cmb_abs` with the
-context type changed), and its own commutation/transport lemmas, even though
-its `route_cs u ctx d ca = u` ignores its data argument and so commutes with
-any representation map for free (`route_cs_commute`, one line). That
-triviality is exactly what a `routed_context` locale should capture once:
-right now it is re-derived per instance. The file is real evidence for this
-locale's payoff, not a substitute for it — it is the second proof development
-M3 is supposed to make unnecessary, not the second interpretation.
+**Second interpretation — DONE.** `Example_Interval_DG_CallString.thy` now
+interprets `routed_context` with `route = route_cs`/`enterc = enterc_cs`
+instead of hand-copying `cmb`/`extra`. Both are the constant function `u`
+unconditionally, so `route_enterc_agree` is a bare reflexivity — no coverage
+pinning or numeric case analysis needed, unlike the partial-tabulation
+instance's routing. Deleted `extra_cs_st`/`extra_cs_abs`/`cmb_cs_st`/
+`cmb_cs_abs` (the structural copies of `extra_ivl`/`cmb_ivl`/`extra_abs`/
+`cmb_abs` with the context type changed) and their bespoke commutation
+lemmas, plus `enter_membership_cs`/`combine_membership_cs` and their dead
+numeric helper lemmas, replacing them with one-line corollaries of
+`routed_context_call`/`routed_context_comb`. Batch green on
+`Voblint_Examples`. This closes M3's success criterion: both instances now
+land as interpretations of one locale rather than independent proof
+developments.
 
 ### M4 - replace name-based global detection completely (G4)
 

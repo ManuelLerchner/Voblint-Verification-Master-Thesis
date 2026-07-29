@@ -43,6 +43,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Local_Effects
     Sign_Domain
     Strategy_Tree_Monad
+    Strategy_Tree_Combinators
     TD_Side_Tree
     Exec_Bridge
     Solver_Side_RG
@@ -62,6 +63,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Soundness
     DG_LTR_Sound
     DG_Ctx_Activation
+    Routed_Context
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness
