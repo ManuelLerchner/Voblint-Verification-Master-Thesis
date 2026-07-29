@@ -72,42 +72,54 @@ lemma edge_collect_assign_enter_state:
            \<in> edge_collect (EA_Assign x a) S"
   using assms by auto
 
-lemma aval_plus_gx_on_enter:
-  "aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s) = s ''Gx'' + 1"
-  by (simp add: enter_state_def is_global_def)
+lemma aval_plus_gx_on_enter_declared:
+  "aval (Plus (V ''Gx'') (N 1)) (enter_state (declared_global inc_program) s) = s ''Gx'' + 1"
+  by (simp add: enter_state_def)
 
-lemma combine_after_enter_global_assign:
-  assumes "is_global x"
-  shows "combine_states is_global s ((enter_state is_global s)(x := v)) = s(x := v)"
+lemma combine_after_enter_global_assign_declared:
+  assumes "declared_global inc_program x"
+  shows "combine_states (declared_global inc_program) s
+           ((enter_state (declared_global inc_program) s)(x := v)) = s(x := v)"
   using assms by (auto simp: combine_states_def enter_state_def)
 
-
-
-lemma pcompletes_inc_pcall:
+text \<open>
+  The call completion fact for \<^const>\<open>inc_program\<close>, restated with the declaration-driven
+  classifier \<^term>\<open>declared_global inc_program\<close> in place of the prefix-based
+  \<^const>\<open>is_global\<close>.  The instantiation is the only thing that changed:
+  \<^const>\<open>pstep\<close>/\<^const>\<open>pcompletes\<close> take \<^term>\<open>gs\<close> as an explicit argument, so this proof
+  needed no change to \<open>pcompletes_Call_parameterless\<close> or \<open>pcompletes_assign\<close>
+  themselves, only to which classifier each is applied at.
+\<close>
+lemma pcompletes_inc_pcall_declared:
   fixes s :: store
-  shows "pcompletes is_global inc_pi (imp \<lbrakk> p() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+           (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   let ?body = "imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
-  have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have run: "pcompletes is_global inc_pi (imp \<lbrakk> p() \<rbrakk>) s
-                (combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1)))"
+  have g: "declared_global inc_program ''Gx''" by simp
+  have run: "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+                (combine_states (declared_global inc_program) s
+                  ((enter_state (declared_global inc_program) s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
     show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
       by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
-    show "pcompletes is_global inc_pi ?body (enter_state is_global s)
-             ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))"
+    show "pcompletes (declared_global inc_program) inc_pi ?body
+             (enter_state (declared_global inc_program) s)
+             ((enter_state (declared_global inc_program) s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pcompletes is_global inc_pi ?body (enter_state is_global s)
-               ((enter_state is_global s)
-                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s)))"
+      have "pcompletes (declared_global inc_program) inc_pi ?body
+               (enter_state (declared_global inc_program) s)
+               ((enter_state (declared_global inc_program) s)
+                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state (declared_global inc_program) s)))"
         by (rule pcompletes_assign)
-      thus ?thesis using aval_plus_gx_on_enter by simp
+      thus ?thesis using aval_plus_gx_on_enter_declared by simp
     qed
   qed
   moreover have
-    "combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))
+    "combine_states (declared_global inc_program) s
+       ((enter_state (declared_global inc_program) s)(''Gx'' := s ''Gx'' + 1))
        = s(''Gx'' := s ''Gx'' + 1)"
-    using combine_after_enter_global_assign[OF g] by simp
+    using combine_after_enter_global_assign_declared[OF g] by simp
   ultimately show ?thesis by simp
 qed
 
