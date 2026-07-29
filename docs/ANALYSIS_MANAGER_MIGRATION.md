@@ -585,3 +585,70 @@ It is not authorization to start Phase 2. Section 6's recommendation stands:
 finish Phase 1 (the plain `gs` migration), and revisit this section only
 when a concrete locale or entry point accumulates several always-co-threaded
 parameters in practice, not in anticipation.
+
+### Negative criteria: when not to introduce `analysis_env`
+
+Stated positively, section 7 already says "only when several components
+consistently co-thread." Stated as an explicit gate, so a future reader (or
+agent) skimming this document for license to act cannot mistake "Goblint has
+`man`" for a reason on its own:
+
+> Introduce `analysis_env` only when multiple independently useful
+> components are consistently threaded together through the same
+> high-level interfaces, evidenced by call sites that already pass them
+> as a group. Do not introduce it merely to replace a single explicit
+> parameter, and do not introduce it in anticipation of components that
+> do not exist yet.
+
+Concretely, none of the following justify starting Phase 2 on their own:
+
+- "`gs` is threaded through many files" -- section 1 already established
+  this; volume of call sites is not the same as clustering of *distinct*
+  parameters at those sites.
+- "Goblint has a `man` record" -- section 5's comparison stands: `man` is
+  the right idea for capabilities that are actually static and actually
+  co-threaded, not a template to copy because the reference implementation
+  has one.
+- "It would make future extension easier" -- CLAUDE.md's own standard
+  applies here directly: don't design for hypothetical future requirements;
+  a one-field `record analysis_env = gs :: "vname \<Rightarrow> bool"` is exactly the
+  `analysis_manager` section 2 already rejected, wearing a different name.
+
+The trigger is empirical, not aspirational: a Stage 3/4 diff that already
+shows two or more parameters appearing together at every citing call site is
+sufficient grounds to reopen this document. A clean `gs`-only migration,
+however large, is not.
+
+### Reading `is_global` hits during Stage 3: three categories, not one
+
+Stage 3 (threading `gs` as a `fixes` through `sound_dg_spec`, `ltr_gamma`,
+`routed_context`, and siblings) will re-run the same kind of grep that
+produced section 1's 520-hit count. Not every hit is a Stage 3 target;
+sorting them into three categories up front avoids over-scoping the change:
+
+1. **Semantic parameter.** A call site where `is_global` is the literal
+   classifier argument to `combine_collect`/`call_enter`/`enter_state`/
+   `combine_states`/`cstep`/`pstep`, either directly or inside a locale's
+   `assumes`. This is the Stage 3 target: replace the literal with `gs` and
+   add `gs` to the enclosing locale's `fixes` (or the enclosing lemma's
+   `for`), then instantiate `gs = is_global` at every current caller. Example:
+   `combine_collect is_global dst s t` inside `sound_dg_spec`'s
+   `combine_sound` assumption becomes `combine_collect gs dst s t` with `gs`
+   added to the locale's `fixes`.
+2. **Concrete executable program fact.** A call site where `is_global x` (or
+   `is_global`) is evaluated against a specific, already-fixed program or
+   witness, not passed onward as a classifier -- e.g. an executable example
+   computing over the default prefix-based classifier and printing or
+   asserting on the result. These do not take `gs`; they are testing what
+   `is_global` itself does, not standing in for an arbitrary classifier, and
+   converting them would change what they test.
+3. **Proof-only unfold or simp helper.** `is_global_def`, or a `simp add:
+   is_global_def` / `by (auto simp: is_global_def)` step used to discharge a
+   goal for the concrete `is_global` case. These live inside proof bodies
+   for facts about the concrete classifier and stay as-is; the migration
+   makes them apply after an interpretation-time `gs = is_global` rewrite
+   rather than removing them.
+
+Only category 1 is in scope for Stage 3. A `rg -c is_global` count dropping
+by less than its full 520 after Stage 3 lands is expected, not a sign the
+migration is incomplete -- categories 2 and 3 are meant to stay.
