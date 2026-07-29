@@ -54,6 +54,7 @@ theory Voblint
     Example_Guard_Refinement
     Example_Proc_GraphViz
     Example_Relational_DG_Demo
+    Example_Strategy_Tree_Demo
 begin
 
 text \<open>
@@ -276,6 +277,10 @@ text \<open>
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
     \<^item> @{theory Voblint_Examples.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; the solver-compatible constant route and the conditional-route monotonicity boundary.
+    \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples.Example_Strategy_Tree_Demo} ---
+      \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
+      independent of any abstract domain: a Fibonacci equation tree built with
+      \<^const>\<open>answer\<close> and \<^const>\<open>seqcomp_tree\<close>, run with \<open>traverse_rhs\<close>.
 \<close>
 
 text \<open>

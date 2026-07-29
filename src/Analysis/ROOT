@@ -43,6 +43,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Sign_Local_Effects
     Sign_Domain
     Strategy_Tree_Monad
+    Strategy_Tree_Do
     Strategy_Tree_Combinators
     TD_Side_Tree
     Exec_Bridge

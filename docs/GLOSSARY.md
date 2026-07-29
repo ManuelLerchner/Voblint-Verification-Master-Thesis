@@ -70,6 +70,26 @@ layer without embedding line numbers that drift.
 | `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Generic/Solver/Exec/Exec_DG_Bridge.thy` |
 | `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Analysis/Generic/Solver/Context/DG/DG_Soundness.thy` |
 
+## Strategy-tree equation combinators
+
+Named, zero-cost (`abbreviation`) readings of the verified solver's four
+`strategy_tree` constructors (`QueryL`, `QueryG`, `Side`, `Answer`,
+`vendor/td-verification/Basics_side.thy`). Full design and rationale in
+`docs/DG_COMBINATOR_MIGRATION.md`.
+
+| Term | Meaning | Source |
+| --- | --- | --- |
+| `read_local` | Read a local unknown, continue with its value. | `src/Analysis/Generic/Solver/Core/Strategy_Tree_Combinators.thy` |
+| `read_global` | Read a global unknown, continue with its value. | `src/Analysis/Generic/Solver/Core/Strategy_Tree_Combinators.thy` |
+| `depend_on` | Publish a side value under a global key, continue. | `src/Analysis/Generic/Solver/Core/Strategy_Tree_Combinators.thy` |
+| `answer` | Yield the equation's local result. | `src/Analysis/Generic/Solver/Core/Strategy_Tree_Combinators.thy` |
+| `enter_global` / `enter_local` | The global side effect / local answer half of `dgs_enter`. | `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+| `combine_global` / `combine_local` | The global side effect / local answer half of `dgs_combine`. | `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+| `publish_global` | `depend_on` to the one shared global slot, wrapping the payload as `DG bot x`. | `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+| `publish_seed` | `depend_on` to a routed per-context seed slot -- same primitive as `publish_global`, named for the role. | `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+| `return_local` | Yield the equation's own local contribution, wrapping it as `DG x bot`. | `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+| `with_call` | Destructure a `call_action`'s single constructor once per call site instead of once per `dgs_enter`/`dgs_combine` call. | `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy` |
+
 ## Source-facing endpoints
 
 | Term | Meaning | Source |

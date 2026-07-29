@@ -1,5 +1,5 @@
 theory Sign_Named_Global_Eff
-  imports Sign_Side_Soundness
+  imports Sign_Side_Soundness Strategy_Tree_Combinators
 begin
 
 section \<open>A genuinely effectful, named-global Sign transfer\<close>
@@ -67,9 +67,9 @@ definition route_tree ::
    \<Rightarrow> (pp, gname, sign abs_state) strategy_tree"
 where
   "route_tree route f u =
-     QueryL u (\<lambda>su. QueryG Gpos (\<lambda>gp. QueryG Gneg (\<lambda>gn.
+     read_local u (\<lambda>su. read_global Gpos (\<lambda>gp. read_global Gneg (\<lambda>gn.
        let env = su \<squnion> gp \<squnion> gn; res = f env
-       in Side (route env) (restrict_global res) (Answer (restrict_local res)))))"
+       in depend_on (route env) (restrict_global res) (answer (restrict_local res)))))"
 
 lemma route_tree_etf_full:
   "etf_full (route_tree route f u) \<sigma> = f (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
@@ -83,10 +83,10 @@ definition route_combine ::
    \<Rightarrow> (pp, gname, sign abs_state) strategy_tree"
 where
   "route_combine route dst cc ex =
-     QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG Gpos (\<lambda>gp. QueryG Gneg (\<lambda>gn.
+     read_local cc (\<lambda>sc. read_local ex (\<lambda>se. read_global Gpos (\<lambda>gp. read_global Gneg (\<lambda>gn.
        let envc = sc \<squnion> gp \<squnion> gn; enve = se \<squnion> gp \<squnion> gn;
            res = combine_collect_abs dst envc enve
-       in Side (route envc) (restrict_global res) (Answer (restrict_local res))))))"
+       in depend_on (route envc) (restrict_global res) (answer (restrict_local res))))))"
 
 lemma route_combine_etf_full:
   "etf_full (route_combine route dst cc ex) \<sigma>
