@@ -2,6 +2,7 @@ section \<open>Example support: global increment procedure\<close>
 
 theory Example_Inc_Proc
   imports "Voblint_CFG.CFG_Transfer" "Voblint_CFG.CFG_Prune" "Voblint_VIMP.VIMP_Notation"
+    "Voblint_CFG.Located_Exec"
 begin
 
 text \<open>
@@ -121,6 +122,63 @@ proof -
        = s(''Gx'' := s ''Gx'' + 1)"
     using combine_after_enter_global_assign_declared[OF g] by simp
   ultimately show ?thesis by simp
+qed
+
+text \<open>
+  The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> now takes
+  \<^term>\<open>gs\<close> explicitly (the compiler-layer counterpart of the \<^const>\<open>pstep\<close> migration
+  above), so \<^const>\<open>inc_g\<close> --- unchanged since it is compiled once from \<^term>\<open>inc_program\<close>
+  and carries no classifier of its own --- executes identically under
+  \<^term>\<open>declared_global inc_program\<close>.  The six \<^const>\<open>cstep\<close> transitions retrace
+  \<open>inc_g_structure\<close>'s edges: \<open>main\<close>'s entry \<open>Nop\<close>, the call into \<open>p\<close>, \<open>p\<close>'s entry
+  \<open>Nop\<close>, the increment assignment, \<open>p\<close>'s return, the call's resume, and \<open>main\<close>'s return.
+\<close>
+lemma cstep_inc_pcall_declared:
+  fixes s :: store
+  shows "star (cstep (declared_global inc_program) inc_g) (FunctionEntry ''main'', s, [])
+           (FunctionResult ''main'', s(''Gx'' := s ''Gx'' + 1), [])"
+proof -
+  let ?gs = "declared_global inc_program"
+  have e1: "(FunctionEntry ''main'', EA_Nop, Statement 2) \<in> intra inc_g"
+    and e2: "(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3) \<in> calls inc_g"
+    and e3: "(FunctionEntry ''p'', EA_Nop, Statement 0) \<in> intra inc_g"
+    and e4: "(Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1) \<in> intra inc_g"
+    and e5: "(Statement 1, EA_Ret None ''p'', FunctionResult ''p'') \<in> intra inc_g"
+    and e6: "(Statement 3, EA_Ret None ''main'', FunctionResult ''main'') \<in> intra inc_g"
+    by (simp_all add: inc_g_structure)
+  have g: "?gs ''Gx''" by simp
+  have s1: "cstep ?gs inc_g (FunctionEntry ''main'', s, []) (Statement 2, s, [])"
+    by (rule cstep.Intra[OF e1]) simp
+  have s2: "cstep ?gs inc_g (Statement 2, s, [])
+              (FunctionEntry ''p'', enter_state ?gs s, [(Statement 3, None, s)])"
+    using cstep.Call[OF e2] by simp
+  have s3: "cstep ?gs inc_g (FunctionEntry ''p'', enter_state ?gs s, [(Statement 3, None, s)])
+              (Statement 0, enter_state ?gs s, [(Statement 3, None, s)])"
+    by (rule cstep.Intra[OF e3]) simp
+  have s4: "cstep ?gs inc_g (Statement 0, enter_state ?gs s, [(Statement 3, None, s)])
+              (Statement 1, (enter_state ?gs s)(''Gx'' := s ''Gx'' + 1), [(Statement 3, None, s)])"
+    by (rule cstep.Intra[OF e4]) (simp add: enter_state_def)
+  have s5: "cstep ?gs inc_g
+              (Statement 1, (enter_state ?gs s)(''Gx'' := s ''Gx'' + 1), [(Statement 3, None, s)])
+              (FunctionResult ''p'', (enter_state ?gs s)(''Gx'' := s ''Gx'' + 1), [(Statement 3, None, s)])"
+    by (rule cstep.Intra[OF e5]) (auto simp: ret_var_def)
+  have s6: "cstep ?gs inc_g
+              (FunctionResult ''p'', (enter_state ?gs s)(''Gx'' := s ''Gx'' + 1), [(Statement 3, None, s)])
+              (Statement 3, s(''Gx'' := s ''Gx'' + 1), [])"
+  proof -
+    have ret: "cstep ?gs inc_g
+                 (FunctionResult ''p'', (enter_state ?gs s)(''Gx'' := s ''Gx'' + 1), [(Statement 3, None, s)])
+                 (Statement 3, combine_collect ?gs None s ((enter_state ?gs s)(''Gx'' := s ''Gx'' + 1)), [])"
+      by (rule cstep.Return)
+    have eq: "combine_collect ?gs None s ((enter_state ?gs s)(''Gx'' := s ''Gx'' + 1)) = s(''Gx'' := s ''Gx'' + 1)"
+      by (simp add: combine_collect_None combine_after_enter_global_assign_declared[OF g])
+    show ?thesis using ret eq by simp
+  qed
+  have s7: "cstep ?gs inc_g (Statement 3, s(''Gx'' := s ''Gx'' + 1), [])
+              (FunctionResult ''main'', s(''Gx'' := s ''Gx'' + 1), [])"
+    by (rule cstep.Intra[OF e6]) (auto simp: ret_var_def)
+  from s1 s2 s3 s4 s5 s6 s7 show ?thesis
+    by (meson star.step star_step1)
 qed
 
 end
