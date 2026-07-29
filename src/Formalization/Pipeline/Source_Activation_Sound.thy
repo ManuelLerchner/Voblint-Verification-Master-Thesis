@@ -70,13 +70,13 @@ theorem source_activation_sound:
     and CALL: "\<And>u dst pars args p cont c x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter (CallEdge dst pars args) x
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter (CallEdge dst pars args) x)))\<rbrakk>"
+        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) x
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter is_global (CallEdge dst pars args) x)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store (compile_prog Pi ps mnm main) cl x es
-        \<Longrightarrow> combine_collect dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> combine_collect is_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
 proof -
@@ -102,13 +102,13 @@ theorem source_activation_sound_toplevel:
     and CALL: "\<And>u dst pars args p cont c x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter (CallEdge dst pars args) x
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter (CallEdge dst pars args) x)))\<rbrakk>"
+        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) x
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter is_global (CallEdge dst pars args) x)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store (compile_prog Pi ps mnm main) cl x es
-        \<Longrightarrow> combine_collect dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> combine_collect is_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -

@@ -151,7 +151,7 @@ next
   show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
        (\<forall>s\<in>\<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
            \<forall>t\<in>\<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-             combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine E dst cc ex) \<sigma>\<rbrakk>)"
+             combine_collect is_global dst s t \<in> \<lbrakk>etf_full (etf_combine E dst cc ex) \<sigma>\<rbrakk>)"
     by (auto simp: combine intro: combine_collect_sound)
 qed
 

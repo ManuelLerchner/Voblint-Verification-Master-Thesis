@@ -78,13 +78,13 @@ proof -
     by (simp add: main0_def nest_defs)
   have ecall_f: "(sink_node main0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
     by (simp add: m_sn nest_defs)
-  define f0 where "f0 = Call main0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store main0))]"
+  define f0 where "f0 = Call main0 [(FunctionEntry pf, call_enter is_global (CallEdge None [] []) (sink_store main0))]"
   have f_mem: "f0 \<in> valid_ltr nest_cfg S"
     unfolding f0_def by (rule valid_ltr.call[OF main_mem ecall_f])
   have f_sn: "sink_node f0 = FunctionEntry pf" by (simp add: f0_def)
   have ecall_g: "(sink_node f0, CallEdge None [] [], FunctionEntry pg, Statement 200) \<in> calls nest_cfg"
     by (simp add: f_sn nest_defs)
-  define g0 where "g0 = Call f0 [(FunctionEntry pg, call_enter (CallEdge None [] []) (sink_store f0))]"
+  define g0 where "g0 = Call f0 [(FunctionEntry pg, call_enter is_global (CallEdge None [] []) (sink_store f0))]"
   have g_mem: "g0 \<in> valid_ltr nest_cfg S"
     unfolding g0_def by (rule valid_ltr.call[OF f_mem ecall_g])
   have g_sn: "sink_node g0 = FunctionEntry pg" by (simp add: g0_def)
@@ -99,7 +99,7 @@ proof -
   have g1_caller: "caller_of g1 = Some f0" by (simp add: g1_def g0_def)
   \<comment> \<open>g returns into f (the immediate caller), not main\<close>
   define f' where
-    "f' = Resume f0 g1 (path f0 @ [(Statement 200, combine_collect None (sink_store f0) (sink_store g1))])"
+    "f' = Resume f0 g1 (path f0 @ [(Statement 200, combine_collect is_global None (sink_store f0) (sink_store g1))])"
   have f'_mem: "f' \<in> valid_ltr nest_cfg S"
     unfolding f'_def
     by (rule valid_ltr.ret[OF g1_mem g1_caller g1_sn], simp add: f_sn nest_defs)
@@ -117,7 +117,7 @@ proof -
   have ecall_f2: "(sink_node main0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls nest_cfg"
     by (simp add: m_sn nest_defs)
   define final where
-    "final = Resume main0 f2 (path main0 @ [(Statement 100, combine_collect None (sink_store main0) (sink_store f2))])"
+    "final = Resume main0 f2 (path main0 @ [(Statement 100, combine_collect is_global None (sink_store main0) (sink_store f2))])"
   have final_mem: "final \<in> valid_ltr nest_cfg S"
     unfolding final_def by (rule valid_ltr.ret[OF f2_mem f2_caller f2_sn ecall_f2])
   have final_sn: "sink_node final = Statement 100" by (simp add: final_def sink_node_def)
@@ -150,9 +150,9 @@ lemma multi_return_join:
       t1 \<in> valid_ltr mret_cfg UNIV \<and> t2 \<in> valid_ltr mret_cfg UNIV \<and> t1 \<noteq> t2
     \<and> sink_node t1 = FunctionResult pf \<and> sink_node t2 = FunctionResult pf
     \<and> caller_of t1 = Some c1 \<and> caller_of t2 = Some c2
-    \<and> Resume c1 t1 (path c1 @ [(Statement 100, combine_collect None (sink_store c1) (sink_store t1))])
+    \<and> Resume c1 t1 (path c1 @ [(Statement 100, combine_collect is_global None (sink_store c1) (sink_store t1))])
         \<in> valid_ltr mret_cfg UNIV
-    \<and> Resume c2 t2 (path c2 @ [(Statement 100, combine_collect None (sink_store c2) (sink_store t2))])
+    \<and> Resume c2 t2 (path c2 @ [(Statement 100, combine_collect is_global None (sink_store c2) (sink_store t2))])
         \<in> valid_ltr mret_cfg UNIV"
 proof -
   define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
@@ -165,7 +165,7 @@ proof -
   have m0: "sink_node r0 = FunctionEntry mn" by (simp add: r0_def mret_defs)
   have ec0: "(sink_node r0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
     by (simp add: m0 mret_defs)
-  define k0 where "k0 = Call r0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r0))]"
+  define k0 where "k0 = Call r0 [(FunctionEntry pf, call_enter is_global (CallEdge None [] []) (sink_store r0))]"
   have K0: "k0 \<in> valid_ltr mret_cfg UNIV" unfolding k0_def by (rule valid_ltr.call[OF R0 ec0])
   have k0_sn: "sink_node k0 = FunctionEntry pf" by (simp add: k0_def)
   have k0_ss: "sink_store k0 = enter_state is_global s0" by (simp add: k0_def r0_def)
@@ -187,7 +187,7 @@ proof -
   have m1: "sink_node r1 = FunctionEntry mn" by (simp add: r1_def mret_defs)
   have ec1: "(sink_node r1, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
     by (simp add: m1 mret_defs)
-  define k1 where "k1 = Call r1 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r1))]"
+  define k1 where "k1 = Call r1 [(FunctionEntry pf, call_enter is_global (CallEdge None [] []) (sink_store r1))]"
   have K1: "k1 \<in> valid_ltr mret_cfg UNIV" unfolding k1_def by (rule valid_ltr.call[OF R1 ec1])
   have k1_sn: "sink_node k1 = FunctionEntry pf" by (simp add: k1_def)
   have k1_ss: "sink_store k1 = enter_state is_global s1" by (simp add: k1_def r1_def)
@@ -214,11 +214,11 @@ proof -
     by (simp add: t1_def t2_def c0_def c1_def k0_def k1_def)
 
   have res1: "Resume r0 t1
-      (path r0 @ [(Statement 100, combine_collect None (sink_store r0) (sink_store t1))])
+      (path r0 @ [(Statement 100, combine_collect is_global None (sink_store r0) (sink_store t1))])
         \<in> valid_ltr mret_cfg UNIV"
     by (rule valid_ltr.ret[OF T1 ct1 sn1 ec0])
   have res2: "Resume r1 t2
-      (path r1 @ [(Statement 100, combine_collect None (sink_store r1) (sink_store t2))])
+      (path r1 @ [(Statement 100, combine_collect is_global None (sink_store r1) (sink_store t2))])
         \<in> valid_ltr mret_cfg UNIV"
     by (rule valid_ltr.ret[OF T2 ct2 sn2 ec1])
 
@@ -268,7 +268,7 @@ proof -
   have so: "sink_node outer = Statement 1" by (simp add: outer_def)
   have ecall: "(sink_node outer, CallEdge None [] [], FunctionEntry pr, Statement 200) \<in> calls rec_cfg"
     by (simp add: so rec_defs)
-  define inner where "inner = Call outer [(FunctionEntry pr, call_enter (CallEdge None [] []) (sink_store outer))]"
+  define inner where "inner = Call outer [(FunctionEntry pr, call_enter is_global (CallEdge None [] []) (sink_store outer))]"
   have INNER: "inner \<in> valid_ltr rec_cfg UNIV"
     unfolding inner_def by (rule valid_ltr.call[OF OUTER ecall])
   have si: "sink_node inner = FunctionEntry pr" by (simp add: inner_def)
@@ -292,19 +292,19 @@ proof -
   from multi_return_join obtain t1 t2 c1 c2 where
     T1: "t1 \<in> valid_ltr mret_cfg UNIV" and T2: "t2 \<in> valid_ltr mret_cfg UNIV"
     and sn1: "sink_node t1 = FunctionResult pf" and sn2: "sink_node t2 = FunctionResult pf"
-    and R1: "Resume c1 t1 (path c1 @ [(Statement 100, combine_collect None (sink_store c1) (sink_store t1))])
+    and R1: "Resume c1 t1 (path c1 @ [(Statement 100, combine_collect is_global None (sink_store c1) (sink_store t1))])
                \<in> valid_ltr mret_cfg UNIV"
-    and R2: "Resume c2 t2 (path c2 @ [(Statement 100, combine_collect None (sink_store c2) (sink_store t2))])
+    and R2: "Resume c2 t2 (path c2 @ [(Statement 100, combine_collect is_global None (sink_store c2) (sink_store t2))])
                \<in> valid_ltr mret_cfg UNIV"
     by blast
   have "sink_store t1 \<in> ltr_collect mret_cfg UNIV (FunctionResult pf)"
     using ltr_collect_I[OF T1] sn1 by simp
   moreover have "sink_store t2 \<in> ltr_collect mret_cfg UNIV (FunctionResult pf)"
     using ltr_collect_I[OF T2] sn2 by simp
-  moreover have "combine_collect None (sink_store c1) (sink_store t1)
+  moreover have "combine_collect is_global None (sink_store c1) (sink_store t1)
                    \<in> ltr_collect mret_cfg UNIV (Statement 100)"
     using ltr_collect_I[OF R1] by (simp add: sink_node_def sink_store_def)
-  moreover have "combine_collect None (sink_store c2) (sink_store t2)
+  moreover have "combine_collect is_global None (sink_store c2) (sink_store t2)
                    \<in> ltr_collect mret_cfg UNIV (Statement 100)"
     using ltr_collect_I[OF R2] by (simp add: sink_node_def sink_store_def)
   ultimately show ?thesis by blast
@@ -333,7 +333,7 @@ proof -
   have so: "sink_node outer = Statement 1" by (simp add: outer_def)
   have ecall: "(sink_node outer, CallEdge None [] [], FunctionEntry pr, Statement 200) \<in> calls rec_cfg"
     by (simp add: so rec_defs)
-  define inner where "inner = Call outer [(FunctionEntry pr, call_enter (CallEdge None [] []) (sink_store outer))]"
+  define inner where "inner = Call outer [(FunctionEntry pr, call_enter is_global (CallEdge None [] []) (sink_store outer))]"
   have INNER: "inner \<in> valid_ltr rec_cfg UNIV"
     unfolding inner_def by (rule valid_ltr.call[OF OUTER ecall])
   have neq: "outer \<noteq> inner" by (simp add: outer_def inner_def)

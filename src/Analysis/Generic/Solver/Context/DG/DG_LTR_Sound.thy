@@ -33,13 +33,13 @@ next
   fix u dst pars args p cont s
   assume "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> dg_gamma sigma u"
-  then show "call_enter (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
+  then show "call_enter is_global (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
     by (rule dg_postfix_gamma_call[OF pf])
 next
   fix cl dst pars args p cont s t
   assume "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> dg_gamma sigma cl" and "t \<in> dg_gamma sigma (FunctionResult p)"
-  then show "combine_collect dst s t \<in> dg_gamma sigma cont"
+  then show "combine_collect is_global dst s t \<in> dg_gamma sigma cont"
     by (rule dg_postfix_gamma_combine[OF pf])
 qed
 

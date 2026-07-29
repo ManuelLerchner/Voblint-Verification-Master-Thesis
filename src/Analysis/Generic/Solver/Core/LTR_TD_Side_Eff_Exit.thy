@@ -70,7 +70,7 @@ proof -
       case True
       have ru: "cfg_reaches g u v0" using cfg_reaches_entry_src[OF CALL(1) True] .
       have s_in: "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>" using CALL(2) ru by simp
-      have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>side_env \<sigma> (FunctionEntry p)\<rbrakk>"
+      have "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>side_env \<sigma> (FunctionEntry p)\<rbrakk>"
         by (rule se.call_enter_sound_eff[OF inr enter_le[OF CALL(1) True] s_in])
       then show ?thesis using True by simp
     next
@@ -86,9 +86,9 @@ proof -
         using cfg_reaches_comb_result_src[OF COMB(1) True] .
       have s_in: "s \<in> \<lbrakk>side_env \<sigma> cl\<rbrakk>" using COMB(2) rcl by simp
       have t_in: "t \<in> \<lbrakk>side_env \<sigma> (FunctionResult p)\<rbrakk>" using COMB(3) rex by simp
-      have "combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>\<rbrakk>"
+      have "combine_collect is_global dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>\<rbrakk>"
         using se.etf_sound_combine inr s_in t_in unfolding side_env_def by auto
-      then have "combine_collect dst s t \<in> \<lbrakk>side_env \<sigma> cont\<rbrakk>"
+      then have "combine_collect is_global dst s t \<in> \<lbrakk>side_env \<sigma> cont\<rbrakk>"
         using gamma_state_mono[OF combine_le[OF COMB(1) True]] by blast
       then show ?thesis using True by simp
     next

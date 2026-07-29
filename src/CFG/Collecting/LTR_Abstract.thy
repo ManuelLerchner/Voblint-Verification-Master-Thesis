@@ -39,13 +39,13 @@ locale ltr_gamma =
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> acc v c"
     and CALL: "\<And>u dst pars args p cont c s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> call_enter (CallEdge dst pars args) s
-              \<in> acc (FunctionEntry p) (enterc u c (call_enter (CallEdge dst pars args) s))"
+        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
+              \<in> acc (FunctionEntry p) (enterc u c (call_enter is_global (CallEdge dst pars args) s))"
     and COMB: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc cl c1 \<Longrightarrow> t \<in> acc (FunctionResult p) (enterc cl c1 es)
         \<Longrightarrow> call_enter_store g cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> acc cont c1"
+        \<Longrightarrow> combine_collect is_global dst s t \<in> acc cont c1"
 begin
 
 text \<open>\<open>bnd u\<close>: the sink store of \<open>u\<close> is admitted at \<open>u\<close>'s own node and activation
@@ -81,12 +81,12 @@ text \<open>\<open>call_closed\<close>: the entered store is admitted in the cal
 lemma call_closed:
   assumes e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and ihc: "bnd caller"
-  shows "bnd (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
+  shows "bnd (Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))])"
 proof -
-  have "call_enter (CallEdge dst pars args) (sink_store caller)
+  have "call_enter is_global (CallEdge dst pars args) (sink_store caller)
           \<in> acc (FunctionEntry p)
                 (enterc (sink_node caller) (key enterc seedc caller)
-                   (call_enter (CallEdge dst pars args) (sink_store caller)))"
+                   (call_enter is_global (CallEdge dst pars args) (sink_store caller)))"
     by (rule CALL[OF e ihc])
   then show ?thesis by (simp add: sink_node_def sink_store_def)
 qed
@@ -102,7 +102,7 @@ lemma return_closed:
     and ih_caller: "bnd caller"
     and ih_callee: "bnd callee"
   shows "bnd (Resume caller callee
-               (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
+               (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))]))"
 proof -
   have key_eq: "key enterc seedc callee
       = enterc (sink_node caller) (key enterc seedc caller) (entry_store callee)"
@@ -112,7 +112,7 @@ proof -
   have ih_callee': "sink_store callee
         \<in> acc (FunctionResult p) (enterc (sink_node caller) (key enterc seedc caller) (entry_store callee))"
     using ih_callee key_eq res by simp
-  have "combine_collect dst (sink_store caller) (sink_store callee)
+  have "combine_collect is_global dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
     by (rule COMB[OF comb ih_caller ih_callee' call_enter])
   then show ?thesis by (simp add: sink_node_def sink_store_def)
@@ -152,13 +152,13 @@ next
   case (call caller dst pars args p cont)
   show ?case
   proof (rule ballI)
-    fix u assume "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
-    then have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+    fix u assume "u \<in> callers (Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))])"
+    then have "u = Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]
                 \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "bnd u"
     proof (rule disjE)
-      assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
+      assume u: "u = Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]"
       have ihc: "bnd caller" using call.IH callers_refl by blast
       show ?thesis unfolding u
         by (rule call_closed[OF call.hyps(2) ihc])
@@ -172,15 +172,15 @@ next
   show ?case
   proof (rule ballI)
     fix u assume "u \<in> callers (Resume caller callee
-        (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
+        (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))]))"
     then have "u = Resume caller callee
-        (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+        (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
                 \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "bnd u"
     proof (rule disjE)
       assume u: "u = Resume caller callee
-          (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
+          (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])"
       have ih_caller: "bnd caller"
         using ret.IH ret.hyps(2) callers_caller_subset callers_refl by blast
       have ih_callee: "bnd callee" using ret.IH callers_refl by blast
@@ -246,7 +246,7 @@ theorem return_uses_matched_callee:
   shows "caller_of callee = Some caller
        \<and> sink_store callee
            \<in> acc (FunctionResult pp) (enterc (sink_node caller) (key enterc seedc caller) (entry_store callee))
-       \<and> combine_collect dst (sink_store caller) (sink_store callee)
+       \<and> combine_collect is_global dst (sink_store caller) (sink_store callee)
            \<in> acc cont (key enterc seedc caller)"
 proof -
   from valid_ltr_Resume_fields[OF res refl]
@@ -264,7 +264,7 @@ proof -
   have mid: "sink_store callee
         \<in> acc (FunctionResult pp) (enterc (sink_node caller) (key enterc seedc caller) (entry_store callee))"
     using bcl key_eq rn by simp
-  have res_bound: "combine_collect dst (sink_store caller) (sink_store callee)
+  have res_bound: "combine_collect is_global dst (sink_store caller) (sink_store callee)
           \<in> acc cont (key enterc seedc caller)"
     by (rule COMB[OF comb bc mid call_enter])
   show ?thesis using cof mid res_bound by blast
@@ -280,9 +280,9 @@ theorem two_callers_separated:
     and c0: "(sink_node caller0, CallEdge dst0 pars0 args0, FunctionEntry q0, cont) \<in> calls g"
     and c1: "(sink_node caller1, CallEdge dst1 pars1 args1, FunctionEntry q1, cont) \<in> calls g"
     and dist: "key enterc seedc caller0 \<noteq> key enterc seedc caller1"
-  shows "combine_collect dst0 (sink_store caller0) (sink_store callee0)
+  shows "combine_collect is_global dst0 (sink_store caller0) (sink_store callee0)
            \<in> acc cont (key enterc seedc caller0)
-       \<and> combine_collect dst1 (sink_store caller1) (sink_store callee1)
+       \<and> combine_collect is_global dst1 (sink_store caller1) (sink_store callee1)
            \<in> acc cont (key enterc seedc caller1)
        \<and> key enterc seedc caller0 \<noteq> key enterc seedc caller1"
   using return_uses_matched_callee[OF r0 rn0 c0] return_uses_matched_callee[OF r1 rn1 c1] dist
@@ -310,9 +310,9 @@ lemma ltr_collect_semantic_postfix:
   assumes entry: "S0 \<subseteq> B (cfg_entry g)"
     and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g \<Longrightarrow> s \<in> B u \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> B w"
     and call: "\<And>u dst pars args p cont s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B u \<Longrightarrow> call_enter (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
+        \<Longrightarrow> s \<in> B u \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
     and combine: "\<And>cl dst pars args p cont s t. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p) \<Longrightarrow> combine_collect dst s t \<in> B cont"
+        \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p) \<Longrightarrow> combine_collect is_global dst s t \<in> B cont"
   shows "ltr_collect g S0 v \<subseteq> B v"
 proof -
   interpret G: ltr_gamma g S0 "\<lambda>v _. B v" "\<lambda>_ _ _. ()" "()"

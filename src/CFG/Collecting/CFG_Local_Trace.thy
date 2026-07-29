@@ -111,7 +111,7 @@ inductive_set valid_ltr :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set" f
 | call:
     "caller \<in> valid_ltr g S
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-     \<Longrightarrow> Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+     \<Longrightarrow> Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]
          \<in> valid_ltr g S"
 | ret:
     "callee \<in> valid_ltr g S
@@ -119,7 +119,7 @@ inductive_set valid_ltr :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set" f
      \<Longrightarrow> sink_node callee = FunctionResult p
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
      \<Longrightarrow> Resume caller callee
-           (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+           (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
          \<in> valid_ltr g S"
 
 inductive_cases valid_ltrE:
@@ -447,7 +447,7 @@ lemma valid_ltr_ret_continuation:
     and "sink_node callee = FunctionResult p"
     and "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   shows "sink_node (Resume caller callee
-           (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))
+           (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))]))
          = cont"
   by (simp add: sink_node_def)
 
@@ -509,14 +509,14 @@ next
     using call.hyps(2) call_endpoints_in_nodes by blast
   show ?case
   proof (intro ballI)
-    fix u ns assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
+    fix u ns assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))])"
       and nsin: "ns \<in> set (path u)"
-    from uin have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+    from uin have "u = Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "fst ns \<in> cfg_nodes g"
     proof (rule disjE)
-      assume "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
+      assume "u = Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]"
       then show ?thesis using nsin ce by auto
     next
       assume "u \<in> callers caller"
@@ -532,16 +532,16 @@ next
   proof (intro ballI)
     fix u ns
     assume uin: "u \<in> callers (Resume caller callee
-                    (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
+                    (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))]))"
       and nsin: "ns \<in> set (path u)"
     from uin have "u = Resume caller callee
-                     (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+                     (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
                     \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "fst ns \<in> cfg_nodes g"
     proof (rule disjE)
       assume u: "u = Resume caller callee
-                   (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
+                   (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])"
       have "ns \<in> set (path caller) \<or> fst ns = cont" using nsin u by auto
       then show ?thesis using ret.IH cin contn by auto
     next
@@ -632,7 +632,7 @@ subsection \<open>Stable context entry invariant\<close>
 definition call_enter_store :: "cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "call_enter_store g c s t \<longleftrightarrow>
      (\<exists>dst pars args p cont. (c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<and> t = call_enter (CallEdge dst pars args) s)"
+        \<and> t = call_enter is_global (CallEdge dst pars args) s)"
 
 lemma key_extend_nonempty:
   "path t \<noteq> [] \<Longrightarrow> key enterc seedc (extend t x) = key enterc seedc t"
@@ -680,18 +680,18 @@ next
   case (call caller dst pars args p cont)
   show ?case
   proof (intro ballI allI impI)
-    fix u c assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
+    fix u c assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))])"
       and cof: "caller_of u = Some c"
-    from uin have "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+    from uin have "u = Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]
                     \<or> u \<in> callers caller"
       by (simp add: callers_Call)
     then show "key enterc seedc u = enterc (sink_node c) (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
     proof (rule disjE)
-      assume u: "u = Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]"
+      assume u: "u = Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]"
       have c_eq: "c = caller" using cof u by simp
       have ces: "call_enter_store g (sink_node caller) (sink_store caller)
-                   (call_enter (CallEdge dst pars args) (sink_store caller))"
+                   (call_enter is_global (CallEdge dst pars args) (sink_store caller))"
         unfolding call_enter_store_def using call.hyps(2) by blast
       show ?thesis using u c_eq ces by (simp add: entry_store_def)
     next
@@ -704,20 +704,20 @@ next
   show ?case
   proof (intro ballI allI impI)
     fix u c assume uin: "u \<in> callers (Resume caller callee
-        (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
+        (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))]))"
       and cof: "caller_of u = Some c"
     have cvalid: "caller \<in> valid_ltr g S"
       using ret.hyps(1) ret.hyps(2) valid_ltr_caller_valid by blast
     have pcaller: "path caller \<noteq> []" using cvalid valid_ltr_path_nonempty by blast
     from uin have "u = Resume caller callee
-        (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+        (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
                     \<or> u \<in> callers callee"
       using callers_Resume_subset[OF ret.hyps(2)] by blast
     then show "key enterc seedc u = enterc (sink_node c) (key enterc seedc c) (entry_store u)
                \<and> call_enter_store g (sink_node c) (sink_store c) (entry_store u)"
     proof (rule disjE)
       assume u: "u = Resume caller callee
-          (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])"
+          (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])"
       have cof': "caller_of caller = Some c" using cof u by simp
       have caller_in: "caller \<in> callers callee"
         using ret.hyps(2) callers_caller_subset callers_refl by blast

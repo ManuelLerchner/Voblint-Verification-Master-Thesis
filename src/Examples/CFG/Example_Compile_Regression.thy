@@ -68,7 +68,7 @@ theorem example_nested_call_preserves_outer:
       and sub: "K \<subseteq> calls g"
   shows "cstep g (Statement n, s, outer # stk)
            (FunctionEntry pin,
-            call_enter (CallEdge (Some rin) (formals decl) actuals) s,
+            call_enter is_global (CallEdge (Some rin) (formals decl) actuals) s,
             (Statement (Suc n), Some rin, s) # outer # stk)"
 proof -
   have "(Statement n, CallEdge (Some rin) (formals decl) actuals, FunctionEntry pin,

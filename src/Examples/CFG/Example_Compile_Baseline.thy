@@ -262,7 +262,7 @@ definition step_exec ::
      (case cf of (u, s, stk) \<Rightarrow>
         (case (u, stk) of
            (FunctionResult q, (cont, dst, caller) # rest) \<Rightarrow>
-             Some (LRet q, (cont, combine_collect dst caller s, rest))
+             Some (LRet q, (cont, combine_collect is_global dst caller s, rest))
          | _ \<Rightarrow>
              (case enabled_intra g u s of
                 Some (a, v) \<Rightarrow>
@@ -271,9 +271,8 @@ definition step_exec ::
                    | None \<Rightarrow> None)
               | None \<Rightarrow>
                   (case call_at g u of
-                     Some (ca, FunctionEntry q, k) \<Rightarrow>
-                       Some (LCall q,
-                             (FunctionEntry q, call_enter ca s,
+                     Some (ca, FunctionEntry q, k) \<Rightarrow>                      Some (LCall q,
+                            (FunctionEntry q, call_enter is_global ca s,
                               (k, (case ca of CallEdge dst pars args \<Rightarrow> dst), s) # stk))
                    | _ \<Rightarrow> None))))"
 

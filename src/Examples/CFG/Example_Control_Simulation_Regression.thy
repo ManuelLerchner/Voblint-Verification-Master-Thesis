@@ -16,8 +16,8 @@ lemma call_transition:
             Frame s dst # frs)"
     and "cstep g (u, s, stk)
            (FunctionEntry q,
-            call_enter (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
-    and "call_enter (CallEdge dst (formals decl) actuals) s
+            call_enter is_global (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
+    and "call_enter is_global (CallEdge dst (formals decl) actuals) s
            = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
     and "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
 proof -
@@ -29,9 +29,9 @@ proof -
     by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
   show "cstep g (u, s, stk)
            (FunctionEntry q,
-            call_enter (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
+            call_enter is_global (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     by (rule cstep.Call[OF edge])
-  show "call_enter (CallEdge dst (formals decl) actuals) s
+  show "call_enter is_global (CallEdge dst (formals decl) actuals) s
            = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
     by (rule call_enter_eq_source_call_store)
   show "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
@@ -59,16 +59,16 @@ qed
 lemma return_completion_restore:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
   shows "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect dst caller callee, frs)"
+           (SKIP, combine_collect is_global dst caller callee, frs)"
     and "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect dst caller callee, stk)"
+           (cont, combine_collect is_global dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
   show "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect dst caller callee, frs)"
+          (SKIP, combine_collect is_global dst caller callee, frs)"
     using pstep.RestoreStep by (simp add: combine_collect_def)
   show "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect dst caller callee, stk)"
+           (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
 qed
@@ -76,16 +76,16 @@ qed
 lemma return_completion_unwind:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
   shows "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect dst caller callee, frs)"
+           (SKIP, combine_collect is_global dst caller callee, frs)"
     and "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect dst caller callee, stk)"
+           (cont, combine_collect is_global dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
   show "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect dst caller callee, frs)"
+          (SKIP, combine_collect is_global dst caller callee, frs)"
     using pstep.UnwindAct by (simp add: combine_collect_def)
   show "cstep g (FunctionResult p, callee, (cont, dst,caller) # stk)
-           (cont, combine_collect dst caller callee, stk)"
+           (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
 qed

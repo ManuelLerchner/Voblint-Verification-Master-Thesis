@@ -554,7 +554,7 @@ text \<open>
 lemma combine_collect_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst \<sigma>c \<sigma>e\<rbrakk>"
+  shows "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs dst \<sigma>c \<sigma>e\<rbrakk>"
 proof (cases dst)
   case None
   then show ?thesis
@@ -584,9 +584,9 @@ lemma combine_abs_bound_sound:
   fixes sc se sr :: "'a::sound_domain abs_state"
   assumes bound: "combine_collect_abs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
-  shows "combine_collect dst s t \<in> \<lbrakk>sr\<rbrakk>"
+  shows "combine_collect is_global dst s t \<in> \<lbrakk>sr\<rbrakk>"
 proof -
-  have "combine_collect dst s t \<in> \<lbrakk>combine_collect_abs dst sc se\<rbrakk>"
+  have "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs dst sc se\<rbrakk>"
     using sc se by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
@@ -1213,7 +1213,7 @@ locale sound_effectful_transfer =
     "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
        \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-         combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cc ex) \<sigma>\<rbrakk>)"
+         combine_collect is_global dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cc ex) \<sigma>\<rbrakk>)"
 
 text \<open>
   The keyed generator filters call-enter edges out of the intra predecessor fold

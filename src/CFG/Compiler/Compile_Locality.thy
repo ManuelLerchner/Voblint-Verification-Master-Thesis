@@ -1423,10 +1423,10 @@ proof -
     show ?case
     proof (rule ballI)
       fix u assume uc: "u \<in> callers (Call caller
-              [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
+              [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))])"
       show "frag_ok \<Pi> ps mnm main u"
       proof (cases "u = Call caller
-                       [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]")
+                       [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]")
         case False
         then have "u \<in> callers caller" using uc by (auto simp: callers_Call)
         then show ?thesis using call.IH by blast
@@ -1455,10 +1455,10 @@ proof -
     show ?case
     proof (rule ballI)
       fix u assume uc: "u \<in> callers (Resume caller callee
-              (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
+              (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))]))"
       show "frag_ok \<Pi> ps mnm main u" 
       proof (cases "u = Resume caller callee
-                (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])")
+                (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])")
         case False
         then have "u \<in> callers callee"
           using uc callers_Resume_subset[OF ret.hyps(2)] by blast

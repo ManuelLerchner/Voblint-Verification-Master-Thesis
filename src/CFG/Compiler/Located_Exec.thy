@@ -36,10 +36,10 @@ inductive cstep :: "cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bo
 | Call:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
      cstep g (u, s, stk)
-       (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+       (FunctionEntry q, call_enter is_global (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
 | Return:
     "cstep g (FunctionResult q, t, (cont, dst, caller) # stk)
-       (cont, combine_collect dst caller t, stk)"
+       (cont, combine_collect is_global dst caller t, stk)"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
@@ -75,7 +75,7 @@ lemma cstep_ret:
 lemma cstep_call:
   "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
    cstep g (u, s, stk)
-     (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+     (FunctionEntry q, call_enter is_global (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
   by (rule cstep.Call)
 
 subsection \<open>Activation-stack matching\<close>

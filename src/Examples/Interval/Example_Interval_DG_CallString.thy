@@ -423,9 +423,9 @@ qed
 lemma ivl_ctx_sg_cs_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (u, ctx))\<rbrakk>"
-  shows "call_enter (CallEdge dst xs es) s
+  shows "call_enter is_global (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionEntry p,
-                 enterc_cs u ctx (call_enter (CallEdge dst xs es) s)))\<rbrakk>"
+                 enterc_cs u ctx (call_enter is_global (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule twice_cs_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_cs_comb:
@@ -433,7 +433,7 @@ lemma ivl_ctx_sg_cs_comb:
     and "s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cl, c1))\<rbrakk>"
     and "t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionResult p, enterc_cs cl c1 es))\<rbrakk>"
     and "call_enter_store twice_cfg cl s es"
-  shows "combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c1))\<rbrakk>"
+  shows "combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c1))\<rbrakk>"
   by (rule twice_cs_routed.routed_context_comb[OF assms])
 
 section \<open>The headline theorem: k-call-string activation collecting soundness\<close>
@@ -472,9 +472,9 @@ next
   show "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter (CallEdge dst pars args) s
+        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
              \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionEntry p,
-                    enterc_cs u c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                    enterc_cs u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
     by (rule ivl_ctx_sg_cs_seed)
 next
   \<comment> \<open>COMB --- return combine at the caller's own call-site context.\<close>
@@ -483,7 +483,7 @@ next
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cl, c1))\<rbrakk>
         \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionResult p, enterc_cs cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store twice_cfg cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_cs_comb)
 qed
 

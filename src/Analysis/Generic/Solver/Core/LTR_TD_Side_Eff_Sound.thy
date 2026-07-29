@@ -42,9 +42,9 @@ lemma call_enter_sound_eff:
   assumes inr: "inr_slot_locals_bot \<sigma>"
     and bound: "etf_full (etf_enter etf pars args u) \<sigma> \<le> side_env \<sigma> v"
     and s: "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
-  shows "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+  shows "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>side_env \<sigma> v\<rbrakk>"
 proof -
-  have "call_enter (CallEdge dst pars args) s
+  have "call_enter is_global (CallEdge dst pars args) s
           \<in> \<lbrakk>etf_collecting_full (etf_enter etf pars args u) \<sigma>\<rbrakk>"
     using etf_sound_enter inr s unfolding side_env_def call_enter_CallEdge by auto
   also have "\<lbrakk>etf_collecting_full (etf_enter etf pars args u) \<sigma>\<rbrakk> \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
@@ -85,7 +85,7 @@ proof -
       by (rule call_enter_sound_eff[OF inr enter_le[OF CALL(1)] CALL(2)])
   next
     case (COMB cl dst pars args p cont c1 s t es)
-    have "combine_collect dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>\<rbrakk>"
+    have "combine_collect is_global dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>\<rbrakk>"
       using etf_sound_combine inr COMB(2) COMB(3) unfolding side_env_def by auto
     then show ?case
       using gamma_state_mono[OF combine_le[OF COMB(1)]] by blast

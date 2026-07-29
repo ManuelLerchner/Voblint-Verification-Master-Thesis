@@ -43,13 +43,13 @@ next
   fix u dst pars args p cont s
   assume e: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> \<lbrakk>env u\<rbrakk>"
-  show "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>env (FunctionEntry p)\<rbrakk>"
+  show "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>env (FunctionEntry p)\<rbrakk>"
     by (rule call_enter_of_bound[OF call_le[OF e] s])
 next
   fix cl dst pars args p cont s t
   assume e: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> \<lbrakk>env cl\<rbrakk>" and t: "t \<in> \<lbrakk>env (FunctionResult p)\<rbrakk>"
-  show "combine_collect dst s t \<in> \<lbrakk>env cont\<rbrakk>"
+  show "combine_collect is_global dst s t \<in> \<lbrakk>env cont\<rbrakk>"
     by (rule combine_of_bound[OF combine_le[OF e] s t])
 qed
 

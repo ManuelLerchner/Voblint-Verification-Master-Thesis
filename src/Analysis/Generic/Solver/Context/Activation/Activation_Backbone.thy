@@ -28,14 +28,14 @@ theorem activation_collect_sound:
     and CALL: "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter (CallEdge dst pars args) s
+        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
              \<in> \<lbrakk>sg (Inl (FunctionEntry p,
-                          enterc u c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                          enterc u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store g cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "activation_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule subsetI)
   fix st assume "st \<in> activation_collect enterc seedc g S v ctx"

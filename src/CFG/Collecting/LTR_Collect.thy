@@ -30,11 +30,11 @@ definition ltr_F :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set \<Rightar
       {Root [(cfg_entry g, s)] | s. s \<in> S}
     \<union> {extend t (v, s') | t a v s'.
           t \<in> T \<and> (sink_node t, a, v) \<in> intra g \<and> edge_step a (sink_store t) = Some s'}
-    \<union> {Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+    \<union> {Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]
           | caller dst pars args p cont.
           caller \<in> T \<and> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g}
     \<union> {Resume caller callee
-          (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+          (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
           | callee caller p dst pars args cont.
           callee \<in> T \<and> caller_of callee = Some caller
           \<and> sink_node callee = FunctionResult p
@@ -87,14 +87,14 @@ proof (rule subsetI)
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (call caller dst pars args p cont)
-    have "Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+    have "Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))]
             \<in> ltr_F g S (lfp (ltr_F g S))"
       unfolding ltr_F_def[of g S "lfp (ltr_F g S)"] using call.hyps call.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (ret callee caller p dst pars args cont)
     have "Resume caller callee
-            (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+            (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
             \<in> ltr_F g S (lfp (ltr_F g S))"
       unfolding ltr_F_def[of g S "lfp (ltr_F g S)"] using ret.hyps ret.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
@@ -245,11 +245,11 @@ text \<open>(3) Call entry: a collected call-site state produces the entered sta
 lemma ltr_collect_call:
   assumes "s \<in> ltr_collect g S u"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "call_enter (CallEdge dst pars args) s \<in> ltr_collect g S (FunctionEntry p)"
+  shows "call_enter is_global (CallEdge dst pars args) s \<in> ltr_collect g S (FunctionEntry p)"
 proof -
   from assms(1) obtain t where t: "t \<in> valid_ltr g S" "sink_node t = u" "sink_store t = s"
     by (rule ltr_collect_E)
-  have "Call t [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr g S"
+  have "Call t [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr g S"
     by (rule valid_ltr.call[OF t(1)]) (use assms(2) t(2) in simp)
   from ltr_collect_I[OF this] show ?thesis using t(3) by simp
 qed
@@ -268,10 +268,10 @@ lemma ltr_collect_resume:
   assumes "callee \<in> valid_ltr g S" and "caller_of callee = Some caller"
     and "sink_node callee = FunctionResult p"
     and "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "combine_collect dst (sink_store caller) (sink_store callee) \<in> ltr_collect g S cont"
+  shows "combine_collect is_global dst (sink_store caller) (sink_store callee) \<in> ltr_collect g S cont"
 proof -
   have "Resume caller callee
-          (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+          (path caller @ [(cont, combine_collect is_global dst (sink_store caller) (sink_store callee))])
         \<in> valid_ltr g S"
     by (rule valid_ltr.ret[OF assms])
   from ltr_collect_I[OF this] show ?thesis by (simp add: sink_node_def sink_store_def)
@@ -286,9 +286,9 @@ lemma ltr_collect_ctx_intra_pres:
 text \<open>(7) Context transition under call: the child activation receives exactly the context
   produced by the configured enter function.\<close>
 lemma ltr_collect_ctx_call:
-  "key enterc seedc (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])
+  "key enterc seedc (Call caller [(FunctionEntry p, call_enter is_global (CallEdge dst pars args) (sink_store caller))])
      = enterc (sink_node caller) (key enterc seedc caller)
-         (call_enter (CallEdge dst pars args) (sink_store caller))"
+         (call_enter is_global (CallEdge dst pars args) (sink_store caller))"
   by simp
 
 text \<open>(8) Context restoration under resume: a resumed trace has the caller's activation

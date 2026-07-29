@@ -419,13 +419,13 @@ subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial 
 
 lemma dgs_enter_rel_sound:
   "s \<in> gammaDG_rel dc g \<Longrightarrow>
-     call_enter (CallEdge dst pars args) s \<in>
+     call_enter is_global (CallEdge dst pars args) s \<in>
        (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   unfolding rel_order_spec_def dgs_enter_rel_def by simp
 
 lemma dgs_combine_rel_sound:
   "\<lbrakk>s \<in> gammaDG_rel dc g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
-     combine_collect dst s t \<in>
+     combine_collect is_global dst s t \<in>
        (case dgs_combine rel_order_spec dst dc de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   unfolding dgs_combine_def rel_order_spec_def
     dgs_combine_env_rel_def dgs_combine_assign_rel_def
@@ -446,13 +446,13 @@ next
 next
   fix dst s g dc t de
   show "\<lbrakk>s \<in> gammaDG_rel dc g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
-          combine_collect dst s t \<in>
+          combine_collect is_global dst s t \<in>
             (case dgs_combine rel_order_spec dst dc de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
     by (rule dgs_combine_rel_sound)
 next
   fix dst pars args dc g s
   show "s \<in> gammaDG_rel dc g \<Longrightarrow>
-          call_enter (CallEdge dst pars args) s \<in>
+          call_enter is_global (CallEdge dst pars args) s \<in>
             (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
     by (rule dgs_enter_rel_sound)
 qed

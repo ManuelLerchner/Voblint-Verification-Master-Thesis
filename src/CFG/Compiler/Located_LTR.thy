@@ -63,9 +63,9 @@ lemma ltr_repr_Return:
     and rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S
                   (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
   shows "ltr_repr (compile_prog \<Pi> ps mnm main) S
-           (cont, combine_collect dst caller tst, stk)
+           (cont, combine_collect is_global dst caller tst, stk)
            (Resume (the (caller_of t0)) t0
-              (path (the (caller_of t0)) @ [(cont, combine_collect dst caller tst)]))"
+              (path (the (caller_of t0)) @ [(cont, combine_collect is_global dst caller tst)]))"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from rep have t0v: "t0 \<in> valid_ltr ?g S" and sn0: "sink_node t0 = FunctionResult q"
@@ -80,7 +80,7 @@ proof -
   have cvalid: "c \<in> valid_ltr ?g S" using valid_ltr_caller_valid[OF t0v cof] .
   have pq: "p = q" using valid_ltr_entry_result_eq[OF wf t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
-  let ?r = "combine_collect dst caller tst"
+  let ?r = "combine_collect is_global dst caller tst"
   let ?t' = "Resume c t0 (path c @ [(cont, ?r)])"
   have edge_q: "(sink_node c, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls ?g"
     using edge pq by simp
@@ -128,7 +128,7 @@ next
     using Call by (auto simp: ltr_repr_def)
   have edge: "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
     using Call sn by simp
-  let ?child = "Call t [(FunctionEntry q, call_enter (CallEdge dst pars actuals) s)]"
+  let ?child = "Call t [(FunctionEntry q, call_enter is_global (CallEdge dst pars actuals) s)]"
   have child_valid: "?child \<in> valid_ltr ?g S"
     using valid_ltr.call[OF tv edge] ss by simp
   have "stack_repr ?g ((cont, dst, s) # stk') ?child"
@@ -141,7 +141,7 @@ next
     show "stack_repr ?g stk' t" using str .
   qed
   with child_valid have "ltr_repr ?g S
-      (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk') ?child"
+      (FunctionEntry q, call_enter is_global (CallEdge dst pars actuals) s, (cont, dst, s) # stk') ?child"
     by (simp add: ltr_repr_def sink_node_def sink_store_def)
   then show ?thesis using Call by auto
 next

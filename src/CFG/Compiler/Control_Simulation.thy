@@ -1557,7 +1557,7 @@ proof -
     src': "src' = (seq_after h' afters, s', frs')"
       and hstep: "pstep is_global \<Pi> (w, callee, [Frame caller dst]) (h', s', frs')"
     by (rule pstep_seq_after_headD[OF step wsk wunw])
-  let ?rs = "combine_collect dst caller callee"
+  let ?rs = "combine_collect is_global dst caller callee"
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
   proof (rule disjE)
     assume "(h', s', frs') =
@@ -1831,9 +1831,9 @@ proof -
   have edge: "(Statement j, CallEdge dst (formals decl) actuals, FunctionEntry q, w)
                 \<in> calls g" using edgeK Ksub by (auto simp: decl)
   have cstep1: "cstep g (Statement j, s, [])
-           (FunctionEntry q, call_enter (CallEdge dst (formals decl) actuals) s,
+           (FunctionEntry q, call_enter is_global (CallEdge dst (formals decl) actuals) s,
             [(w, dst, s)])" by (rule cstep.Call[OF edge])
-  have ce: "call_enter (CallEdge dst (formals decl) actuals) s = ?callee"
+  have ce: "call_enter is_global (CallEdge dst (formals decl) actuals) s = ?callee"
     by (rule call_enter_eq_source_call_store)
   obtain kq m m' en_q E_q K_q where
     cbody: "compile \<Pi> q (body decl) kq m = (m', en_q, E_q, K_q)"

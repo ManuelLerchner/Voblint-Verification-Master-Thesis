@@ -807,7 +807,7 @@ proof -
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              combine_collect dst s t
+              combine_collect is_global dst s t
                 \<in> \<lbrakk>etf_full (etf_combine (unit_etf_of_transfer tf) dst cc ex) \<sigma>\<rbrakk>)"
       by (auto simp add: etf_combine_unit_of_transfer etf_full_unit_combine_tree
            intro: combine_collect_sound)
@@ -873,7 +873,7 @@ proof -
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              combine_collect dst s t
+              combine_collect is_global dst s t
                 \<in> \<lbrakk>etf_full (etf_combine (mixed_etf_of_transfer tf) dst cc ex) \<sigma>\<rbrakk>)"
       by (auto simp add: etf_combine_mixed_of_transfer etf_full_unit_combine_tree
            intro: combine_collect_sound)

@@ -226,7 +226,7 @@ text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes
   so the routed context is exactly \<open>ctx_call1\<close> / \<open>ctx_call2\<close> --- the executable route agrees
   with the activation route \<^const>\<open>ivl_enterc\<close>.\<close>
 lemma enter_route_exact_call1:
-  assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
+  assumes "s' = call_enter is_global (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
   shows "ivl_enterc u ctx s' = ctx_call1"
 proof -
   from assms have "s' = (enter_state is_global s)(''p'' := 3)"
@@ -235,7 +235,7 @@ proof -
 qed
 
 lemma enter_route_exact_call2:
-  assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
+  assumes "s' = call_enter is_global (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
   shows "ivl_enterc u ctx s' = ctx_call2"
 proof -
   from assms have "s' = (enter_state is_global s)(''p'' := 10)"
@@ -266,7 +266,7 @@ lemma comb_route_call1:
   assumes "call_enter_store twice_cfg (Statement 2) s es"
   shows "ivl_enterc u c1 es = ctx_call1"
 proof -
-  have "es = call_enter (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
+  have "es = call_enter is_global (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
   thus ?thesis by (rule enter_route_exact_call1)
 qed
@@ -275,7 +275,7 @@ lemma comb_route_call2:
   assumes "call_enter_store twice_cfg (Statement 3) s es"
   shows "ivl_enterc u c1 es = ctx_call2"
 proof -
-  have "es = call_enter (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
+  have "es = call_enter is_global (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
   thus ?thesis by (rule enter_route_exact_call2)
 qed
@@ -366,9 +366,9 @@ qed
 lemma ivl_ctx_sg_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk>"
-  shows "call_enter (CallEdge dst xs es) s
+  shows "call_enter is_global (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                 ivl_enterc u ctx (call_enter (CallEdge dst xs es) s)))\<rbrakk>"
+                 ivl_enterc u ctx (call_enter is_global (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule twice_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_comb:
@@ -376,7 +376,7 @@ lemma ivl_ctx_sg_comb:
     and "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
     and "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>"
     and "call_enter_store twice_cfg cl s es"
-  shows "combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
+  shows "combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
   by (rule twice_routed.routed_context_comb[OF assms])
 
 subsection \<open>Activation-indexed collecting soundness (obligation scaffold)\<close>
@@ -411,9 +411,9 @@ next
   show "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter (CallEdge dst pars args) s
+        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
              \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                    ivl_enterc u c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                    ivl_enterc u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
     by (rule ivl_ctx_sg_seed)
 next
   \<comment> \<open>COMB --- return combine at the caller context \<open>c1\<close>: the resumed activation keeps its
@@ -423,7 +423,7 @@ next
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>
         \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store twice_cfg cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_comb)
 qed
 
