@@ -229,7 +229,7 @@ lemma enter_route_exact_call1:
   assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
   shows "ivl_enterc u ctx s' = ctx_call1"
 proof -
-  from assms have "s' = (enter_state s)(''p'' := 3)"
+  from assms have "s' = (enter_state is_global s)(''p'' := 3)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call1_val)
 qed
@@ -238,7 +238,7 @@ lemma enter_route_exact_call2:
   assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
   shows "ivl_enterc u ctx s' = ctx_call2"
 proof -
-  from assms have "s' = (enter_state s)(''p'' := 10)"
+  from assms have "s' = (enter_state is_global s)(''p'' := 10)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call2_val)
 qed

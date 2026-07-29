@@ -325,7 +325,7 @@ text \<open>
 lemma combine_states_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "<s|t> \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
+  shows "combine_states is_global s t \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
 proof -
   from sc have Vc: "\<forall>z. s z \<in> gamma (\<sigma>c z)"
     unfolding gamma_state_def by auto
@@ -435,7 +435,7 @@ definition enter_frame_D :: "'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_
 lemma enter_frame_D_sound:
   fixes top_val :: "'a::sound_domain"
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
-  shows "enter_state s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
+  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
   unfolding gamma_state_def enter_frame_D_def enter_state_def
   using gamma_stateD[OF gs] top_full by auto
 
@@ -466,10 +466,10 @@ lemma enter_D_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> gamma a)
                  (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>enter_D top_val aval_abs xs es \<sigma>\<rbrakk>"
 proof -
-  have base: "enter_state s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
+  have base: "enter_state is_global s \<in> \<lbrakk>enter_frame_D top_val \<sigma>\<rbrakk>"
     by (rule enter_frame_D_sound[OF gs top_full])
   from bind_formals_abs_sound[OF base vals]
   show ?thesis unfolding enter_D_def .
@@ -562,7 +562,7 @@ proof (cases dst)
     by (simp add: combine_collect_def combine_collect_abs_def)
 next
   case (Some x)
-  have base: "<s|t> \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
+  have base: "combine_states is_global s t \<in> \<lbrakk>\<langle>\<sigma>c|\<sigma>e\<rangle>\<rbrakk>"
     by (rule combine_states_sound[OF sc se])
   have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
     using se unfolding gamma_state_def by auto
@@ -768,10 +768,11 @@ locale sound_transfer =
        \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
   assumes tf_sound_enter:
     "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_combine:
-    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+       combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
 
 text \<open>Fully-applied destructors for the five raw \<forall>-quantified assumptions above;
   cited instead of the [rule_format, OF ...] instantiation chain at every call
@@ -793,11 +794,12 @@ lemma tf_sound_assume_notD:
 
 lemma tf_sound_enterD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+       \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   using tf_sound_enter by blast
 
 lemma tf_sound_combineD:
-  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
   using tf_sound_combine by blast
 
 end
@@ -818,7 +820,8 @@ lemma sound_transferI:
     and assm: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
     and assm_not: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
     and enter: "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     and combine: "tf_combine tf = combine_abs"
   shows "sound_transfer tf"
 proof unfold_locales
@@ -829,9 +832,10 @@ proof unfold_locales
   show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
     using assm_not by blast
   show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+       \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
-  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
     unfolding combine using combine_states_sound by blast
 qed
 
@@ -1203,7 +1207,7 @@ locale sound_effectful_transfer =
   assumes etf_sound_enter:
     "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-         bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+         bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>etf_collecting_full (etf_enter etf xs es u) \<sigma>\<rbrakk>)"
   assumes etf_sound_combine:
     "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>

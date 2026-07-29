@@ -1484,7 +1484,7 @@ text \<open>One \<^const>\<open>pstep\<close> of a \<^const>\<open>pop_ready\<cl
   unwind, staying \<^const>\<open>pop_ready\<close> with store and frame unchanged.\<close>
 lemma pstep_pop_ready_head:
   assumes "pop_ready w" and "pstep \<Pi> (w, s, Frame fr dst # frs) x"
-  shows "x = (SKIP, combine_assign dst (s ret_var) (<fr|s>), frs)
+  shows "x = (SKIP, combine_assign dst (s ret_var) (combine_states is_global fr s), frs)
        \<or> (\<exists>w'. x = (w', s, Frame fr dst # frs) \<and> pop_ready w')"
   using assms
 proof (cases w rule: pop_ready.cases)
@@ -1560,7 +1560,8 @@ proof -
   let ?rs = "combine_collect dst caller callee"
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
   proof (rule disjE)
-    assume "(h', s', frs') = (SKIP, combine_assign dst (callee ret_var) (<caller|callee>), [])"
+    assume "(h', s', frs') =
+              (SKIP, combine_assign dst (callee ret_var) (combine_states is_global caller callee), [])"
     hence h': "h' = SKIP" "s' = ?rs" "frs' = []" by (auto simp: combine_collect_def)
     have "cstep g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
       by (rule cstep.Return)
@@ -1814,10 +1815,12 @@ lemma csim_call_base:
       and distinct: "distinct (formals decl)"
   shows "\<exists>cfg'. star (cstep g) (v, s, [])  cfg'
               \<and> csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
-                          bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
+                          bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
+                            (enter_state is_global s),
                           [Frame s dst]) cfg'"
 proof -
-  let ?callee = "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+  let ?callee =
+    "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
   from cacc obtain n' en E K where comp: "compile \<Pi> p c0 kk n = (n', en, E, K)"
       and Ksub: "K \<subseteq> calls g" by (auto simp: compiled_at_def)
   from control_at_seq_after_call_edge[OF loc refl comp] obtain j w where
@@ -1913,7 +1916,8 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
     qdecl: "\<Pi> q = Some decl" and ar: "length actuals = length (formals decl)"
       and di: "distinct (formals decl)"
       and heq: "h' = Seq (body decl) Restore"
-      and seq: "s' = bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals) (enter_state ss)"
+      and seq: "s' = bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals)
+                        (enter_state is_global ss)"
       and fzeq: "fz = [Frame ss dst]"
     by (auto elim!: CallSE)
   have loc': "control_at \<Pi> p c0 kk n (seq_after (Call dst q actuals) afters) vv"
@@ -1922,7 +1926,8 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
   obtain cfg' where
     cstar: "star (cstep g) (vv, ss, []) cfg'"
       and csimr: "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
-               bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals) (enter_state ss),
+               bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals)
+                 (enter_state is_global ss),
                [Frame ss dst]) cfg'" by blast
   from csimr have "csim \<Pi> g src' cfg'" by (simp add: src' heq seq fzeq)
   with cstar show ?case by blast

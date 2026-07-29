@@ -55,23 +55,27 @@ lemma call_inc_result:
   "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   have run: "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
-                (VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
+                (VIMP_Globals.combine_states is_global s
+                  ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes proc_pi inc_body (enter_state s)
-             ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
+    show "pcompletes proc_pi inc_body (enter_state is_global s)
+             ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))"
     proof -
       have "pcompletes proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
-               (enter_state s)
-               ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
+               (enter_state is_global s)
+               ((enter_state is_global s)
+                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state s) = s ''Gx'' + 1"
+      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s) = s ''Gx'' + 1"
         by (simp add: enter_state_def is_global_def)
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
-  moreover have "VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)) = s(''Gx'' := s ''Gx'' + 1)"
+  moreover have
+    "VIMP_Globals.combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))
+       = s(''Gx'' := s ''Gx'' + 1)"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed
@@ -80,23 +84,28 @@ lemma call_sqr_result:
   "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
   have run: "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
-                (VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
+                (VIMP_Globals.combine_states is_global s
+                  ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes proc_pi sqr_body (enter_state s)
-             ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
+    show "pcompletes proc_pi sqr_body (enter_state is_global s)
+             ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx''))"
     proof -
       have "pcompletes proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
-               (enter_state s)
-               ((enter_state s)(''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s)))"
+               (enter_state is_global s)
+               ((enter_state is_global s)
+                 (''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state is_global s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s) = s ''Gx'' * s ''Gx''"
+      moreover have
+        "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state is_global s) = s ''Gx'' * s ''Gx''"
         by (simp add: enter_state_def is_global_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
-  moreover have "VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+  moreover have
+    "VIMP_Globals.combine_states is_global s
+       ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed

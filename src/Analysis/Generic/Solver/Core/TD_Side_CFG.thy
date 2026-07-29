@@ -663,7 +663,7 @@ lemma in_gamma_unit_edge_tree_enter:
   fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
   assumes inr: "inr_slot_locals_bot \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (tf_enter tf xs es) u) \<sigma>\<rbrakk>"
   using tf_sound_enterD[OF s]
@@ -797,7 +797,7 @@ proof -
   next
     show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
                 \<in> \<lbrakk>etf_collecting_full
                 (etf_enter (unit_etf_of_transfer tf) xs es u) \<sigma>\<rbrakk>)"
       by (auto simp add: unit_etf_of_transfer_def glob_env_unit
@@ -863,7 +863,7 @@ proof -
   next
     show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+              bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
                 \<in> \<lbrakk>etf_collecting_full
                 (etf_enter (mixed_etf_of_transfer tf) xs es u) \<sigma>\<rbrakk>)"
       by (auto simp add: mixed_etf_of_transfer_def local_edge_action.simps

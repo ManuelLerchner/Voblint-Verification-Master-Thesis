@@ -168,7 +168,7 @@ proof -
   define k0 where "k0 = Call r0 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r0))]"
   have K0: "k0 \<in> valid_ltr mret_cfg UNIV" unfolding k0_def by (rule valid_ltr.call[OF R0 ec0])
   have k0_sn: "sink_node k0 = FunctionEntry pf" by (simp add: k0_def)
-  have k0_ss: "sink_store k0 = enter_state s0" by (simp add: k0_def r0_def)
+  have k0_ss: "sink_store k0 = enter_state is_global s0" by (simp add: k0_def r0_def)
   have eA0: "(sink_node k0, EA_Assume bpos, Statement 0) \<in> intra mret_cfg"
     by (simp add: k0_sn mret_defs)
   have stA0: "edge_step (EA_Assume bpos) (sink_store k0) = Some (sink_store k0)"
@@ -190,7 +190,7 @@ proof -
   define k1 where "k1 = Call r1 [(FunctionEntry pf, call_enter (CallEdge None [] []) (sink_store r1))]"
   have K1: "k1 \<in> valid_ltr mret_cfg UNIV" unfolding k1_def by (rule valid_ltr.call[OF R1 ec1])
   have k1_sn: "sink_node k1 = FunctionEntry pf" by (simp add: k1_def)
-  have k1_ss: "sink_store k1 = enter_state s1" by (simp add: k1_def r1_def)
+  have k1_ss: "sink_store k1 = enter_state is_global s1" by (simp add: k1_def r1_def)
   have eA1: "(sink_node k1, EA_AssumeNot bpos, Statement 1) \<in> intra mret_cfg"
     by (simp add: k1_sn mret_defs)
   have stA1: "edge_step (EA_AssumeNot bpos) (sink_store k1) = Some (sink_store k1)"

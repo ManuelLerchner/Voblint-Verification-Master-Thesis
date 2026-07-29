@@ -61,17 +61,18 @@ lemma inc_g_structure:
 
 lemma edge_collect_assign_enter_state:
   fixes s :: store and x :: vname and a :: aexp
-  assumes "enter_state s \<in> S"
-  shows "(enter_state s)(x := aval a (enter_state s)) \<in> edge_collect (EA_Assign x a) S"
+  assumes "enter_state is_global s \<in> S"
+  shows "(enter_state is_global s)(x := aval a (enter_state is_global s))
+           \<in> edge_collect (EA_Assign x a) S"
   using assms by auto
 
 lemma aval_plus_gx_on_enter:
-  "aval (Plus (V ''Gx'') (N 1)) (enter_state s) = s ''Gx'' + 1"
+  "aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s) = s ''Gx'' + 1"
   by (simp add: enter_state_def is_global_def)
 
 lemma combine_after_enter_global_assign:
   assumes "is_global x"
-  shows "<s | (enter_state s)(x := v)> = s(x := v)"
+  shows "combine_states is_global s ((enter_state is_global s)(x := v)) = s(x := v)"
   using assms by (auto simp: combine_states_def enter_state_def)
 
 
@@ -83,20 +84,23 @@ proof -
   let ?body = "imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
   have run: "pcompletes inc_pi (imp \<lbrakk> p() \<rbrakk>) s
-                (<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)>)"
+                (combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
     show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
       by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
-    show "pcompletes inc_pi ?body (enter_state s)
-             ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
+    show "pcompletes inc_pi ?body (enter_state is_global s)
+             ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pcompletes inc_pi ?body (enter_state s)
-               ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
+      have "pcompletes inc_pi ?body (enter_state is_global s)
+               ((enter_state is_global s)
+                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s)))"
         by (rule pcompletes_assign)
       thus ?thesis using aval_plus_gx_on_enter by simp
     qed
   qed
-  moreover have "<s | (enter_state s)(''Gx'' := s ''Gx'' + 1)> = s(''Gx'' := s ''Gx'' + 1)"
+  moreover have
+    "combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))
+       = s(''Gx'' := s ''Gx'' + 1)"
     using combine_after_enter_global_assign[OF g] by simp
   ultimately show ?thesis by simp
 qed

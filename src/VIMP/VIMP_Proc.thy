@@ -90,14 +90,14 @@ where
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
              \<Longrightarrow> vals = map (\<lambda>e. aval e s) actuals
-             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state s)
+             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state is_global s)
              \<Longrightarrow> pstep \<Pi> (Call dst p actuals, s, frs)
                  (Seq (body decl) Restore,
                   callee,
                   Frame s dst # frs)"
 | RestoreStep:
     "pstep \<Pi> (Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign dst (s ret_var) (<fr|s>), frs)"
+       (SKIP, combine_assign dst (s ret_var) (combine_states is_global fr s), frs)"
 | ReturnSome:
     "pstep \<Pi> (Return (Some e), s, frs)
        (Unwind, s(ret_var := aval e s), frs)"
@@ -108,7 +108,7 @@ where
      \<Longrightarrow> pstep \<Pi> (Seq Unwind c2, s, frs) (Unwind, s, frs)"
 | UnwindAct:
     "pstep \<Pi> (Seq Unwind Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign dst (s ret_var) (<fr|s>), frs)"
+       (SKIP, combine_assign dst (s ret_var) (combine_states is_global fr s), frs)"
 
 abbreviation
   psteps :: "proc_table \<Rightarrow> com \<times> store \<times> frame list
@@ -266,7 +266,7 @@ lemma psteps_frame_mono:
 lemma psteps_Seq_Restore_body:
   assumes "psteps \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
   shows "psteps \<Pi> (Seq c Restore, s0, [Frame fr dst])
-           (SKIP, combine_assign dst (t' ret_var) (<fr|t'>), [])"
+           (SKIP, combine_assign dst (t' ret_var) (combine_states is_global fr t'), [])"
 proof -
   have body_seq:
     "psteps \<Pi> (Seq c Restore, s0, [Frame fr dst])
@@ -278,17 +278,17 @@ proof -
     by (rule Seq1)
   have step_restore:
     "pstep \<Pi> (Restore, t', [Frame fr dst])
-       (SKIP, combine_assign dst (t' ret_var) (<fr|t'>), [])"
+       (SKIP, combine_assign dst (t' ret_var) (combine_states is_global fr t'), [])"
     by (rule RestoreStep)
   have tail:
     "psteps \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
-       (SKIP, combine_assign dst (t' ret_var) (<fr|t'>), [])"
+       (SKIP, combine_assign dst (t' ret_var) (combine_states is_global fr t'), [])"
     using step_seq1 step_restore by (meson star.refl star.step)
   show ?thesis using body_seq tail by (rule star_trans)
 qed
 
 lemma combine_states_ret_var_irrelevant [simp]:
-  "<fr|t(ret_var := v)> = <fr|t>"
+  "combine_states is_global fr (t(ret_var := v)) = combine_states is_global fr t"
   by (rule ext) simp
 
 
@@ -302,12 +302,14 @@ lemma pcompletes_Call:
       and arity: "length actuals = length (formals decl)"
       and distinct_formals: "distinct (formals decl)"
       and body: "pcompletes \<Pi> (body decl)
-                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)) t'"
-  shows "pcompletes \<Pi> (Call dst p actuals) s (combine_assign dst (t' ret_var) (<s|t'>))"
+                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
+                     (enter_state is_global s)) t'"
+  shows "pcompletes \<Pi> (Call dst p actuals) s
+           (combine_assign dst (t' ret_var) (combine_states is_global s t'))"
   unfolding pcompletes_def
 proof (rule star.step)
   let ?vals = "map (\<lambda>e. aval e s) actuals"
-  let ?callee = "bind_formals (formals decl) ?vals (enter_state s)"
+  let ?callee = "bind_formals (formals decl) ?vals (enter_state is_global s)"
   show "pstep \<Pi> (Call dst p actuals, s, [])
           (Seq (body decl) Restore, ?callee, [Frame s dst])"
     using p arity distinct_formals
@@ -316,7 +318,7 @@ proof (rule star.step)
     "psteps \<Pi> (body decl, ?callee, [Frame s dst]) (SKIP, t', [Frame s dst])"
     using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s dst]"] by simp
   show "psteps \<Pi> (Seq (body decl) Restore, ?callee, [Frame s dst])
-          (SKIP, combine_assign dst (t' ret_var) (<s|t'>), [])"
+          (SKIP, combine_assign dst (t' ret_var) (combine_states is_global s t'), [])"
     using psteps_Seq_Restore_body[OF framed] by simp
 qed
 
@@ -328,17 +330,19 @@ lemma pcompletes_Call_dst_fallthrough_zero:
       and arity: "length actuals = length (formals decl)"
       and distinct_formals: "distinct (formals decl)"
       and body: "pcompletes \<Pi> (body decl)
-                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)) t'"
+                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
+                     (enter_state is_global s)) t'"
       and fallthrough: "t' ret_var = 0"
-  shows "pcompletes \<Pi> (Call (Some x) p actuals) s ((<s|t'>)(x := 0))"
+  shows "pcompletes \<Pi> (Call (Some x) p actuals) s ((combine_states is_global s t')(x := 0))"
   using pcompletes_Call[OF p arity distinct_formals body, where dst = "Some x"] fallthrough by simp
 
 lemma pcompletes_Call_parameterless:
   assumes p: "\<Pi> p = Some (proc_decl_of [] c)"
-      and body: "pcompletes \<Pi> c (enter_state s) t'"
-  shows "pcompletes \<Pi> (Call None p []) s (<s|t'>)"
+      and body: "pcompletes \<Pi> c (enter_state is_global s) t'"
+  shows "pcompletes \<Pi> (Call None p []) s (combine_states is_global s t')"
 proof -
-  have "pcompletes \<Pi> (Call None p []) s (combine_assign None (t' ret_var) (<s|t'>))"
+  have "pcompletes \<Pi> (Call None p []) s
+          (combine_assign None (t' ret_var) (combine_states is_global s t'))"
   proof (rule pcompletes_Call)
     show "\<Pi> p = Some (proc_decl_of [] c)" by (rule p)
     show "length [] = length (formals (proc_decl_of [] c))"
@@ -346,7 +350,8 @@ proof -
     show "distinct (formals (proc_decl_of [] c))"
       by (simp add: proc_decl_of_def)
     show "pcompletes \<Pi> (body (proc_decl_of [] c))
-            (bind_formals (formals (proc_decl_of [] c)) (map (\<lambda>e. aval e s) []) (enter_state s)) t'"
+            (bind_formals (formals (proc_decl_of [] c)) (map (\<lambda>e. aval e s) [])
+              (enter_state is_global s)) t'"
       using body by (simp add: proc_decl_of_def bind_formals_def)
   qed
   thus ?thesis by simp
@@ -363,10 +368,12 @@ lemma call_return_completes:
   assumes q: "\<Pi> p = Some (proc_decl_of [] (Return (Some e)))"
   shows "psteps \<Pi> (Call (Some x) p [], s, frs)
            (SKIP,
-            (<s | (enter_state s)(ret_var := aval e (enter_state s))>)(x := aval e (enter_state s)),
+            (combine_states is_global s
+              ((enter_state is_global s)(ret_var := aval e (enter_state is_global s))))
+              (x := aval e (enter_state is_global s)),
             frs)"
 proof -
-  let ?se = "enter_state s"
+  let ?se = "enter_state is_global s"
   let ?s' = "?se(ret_var := aval e ?se)"
   let ?F = "Frame s (Some x)"
   have c1: "pstep \<Pi> (Call (Some x) p [], s, frs)
@@ -375,7 +382,7 @@ proof -
     have "pstep \<Pi> (Call (Some x) p [], s, frs)
             (Seq (body (proc_decl_of [] (Return (Some e)))) Restore,
              bind_formals (formals (proc_decl_of [] (Return (Some e))))
-               (map (\<lambda>a. aval a s) []) (enter_state s), ?F # frs)"
+               (map (\<lambda>a. aval a s) []) (enter_state is_global s), ?F # frs)"
       using q by (intro Call) (auto simp: proc_decl_of_def)
     thus ?thesis by (simp add: proc_decl_of_def bind_formals_def)
   qed
@@ -383,10 +390,10 @@ proof -
               (Seq Unwind Restore, ?s', ?F # frs)"
     by (intro pstep.Seq2 pstep.ReturnSome)
   have c4: "pstep \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-              (SKIP, (<s | ?s'>)(x := aval e ?se), frs)"
+              (SKIP, (combine_states is_global s ?s')(x := aval e ?se), frs)"
   proof -
     have "pstep \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-            (SKIP, combine_assign (Some x) (?s' ret_var) (<s | ?s'>), frs)"
+            (SKIP, combine_assign (Some x) (?s' ret_var) (combine_states is_global s ?s'), frs)"
       by (rule UnwindAct)
     thus ?thesis by simp
   qed
@@ -400,25 +407,27 @@ text \<open>
 
 lemma call_return_none_completes:
   assumes q: "\<Pi> p = Some (proc_decl_of [] (Return None))"
-  shows "psteps \<Pi> (Call None p [], s, frs) (SKIP, <s | enter_state s>, frs)"
+  shows "psteps \<Pi> (Call None p [], s, frs)
+           (SKIP, combine_states is_global s (enter_state is_global s), frs)"
 proof -
-  let ?se = "enter_state s"
+  let ?se = "enter_state is_global s"
   let ?F = "Frame s None"
   have c1: "pstep \<Pi> (Call None p [], s, frs) (Seq (Return None) Restore, ?se, ?F # frs)"
   proof -
     have "pstep \<Pi> (Call None p [], s, frs)
             (Seq (body (proc_decl_of [] (Return None))) Restore,
              bind_formals (formals (proc_decl_of [] (Return None)))
-               (map (\<lambda>a. aval a s) []) (enter_state s), ?F # frs)"
+               (map (\<lambda>a. aval a s) []) (enter_state is_global s), ?F # frs)"
       using q by (intro Call) (auto simp: proc_decl_of_def)
     thus ?thesis by (simp add: proc_decl_of_def bind_formals_def)
   qed
   have c2: "pstep \<Pi> (Seq (Return None) Restore, ?se, ?F # frs) (Seq Unwind Restore, ?se, ?F # frs)"
     by (intro pstep.Seq2 pstep.ReturnNone)
-  have c3: "pstep \<Pi> (Seq Unwind Restore, ?se, ?F # frs) (SKIP, <s | ?se>, frs)"
+  have c3: "pstep \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
+              (SKIP, combine_states is_global s ?se, frs)"
   proof -
     have "pstep \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-            (SKIP, combine_assign None (?se ret_var) (<s | ?se>), frs)"
+            (SKIP, combine_assign None (?se ret_var) (combine_states is_global s ?se), frs)"
       by (rule UnwindAct)
     thus ?thesis by simp
   qed
@@ -439,15 +448,17 @@ theorem nested_call_return_trace:
                    (Seq (Call (Some rin) pin []) after))"
   shows "psteps \<Pi> (Call (Some rout) pout [], s0, [])
            (Seq after Restore,
-            (<enter_state s0 |
-              (enter_state (enter_state s0))(ret_var := aval e (enter_state (enter_state s0)))>)
-                (rin := aval e (enter_state (enter_state s0))),
+            (combine_states is_global (enter_state is_global s0)
+              ((enter_state is_global (enter_state is_global s0))
+                (ret_var := aval e (enter_state is_global (enter_state is_global s0)))))
+                (rin := aval e (enter_state is_global (enter_state is_global s0))),
             [Frame s0 (Some rout)])"
 proof -
-  let ?s1 = "enter_state s0"
+  let ?s1 = "enter_state is_global s0"
   let ?Fout = "Frame s0 (Some rout)"
-  let ?inner = "(<?s1 | (enter_state ?s1)(ret_var := aval e (enter_state ?s1))>)
-                  (rin := aval e (enter_state ?s1))"
+  let ?inner = "(combine_states is_global ?s1
+                    ((enter_state is_global ?s1)(ret_var := aval e (enter_state is_global ?s1))))
+                  (rin := aval e (enter_state is_global ?s1))"
   \<comment> \<open>outer call pushes the outer\<close>
   have K01: "pstep \<Pi> (Call (Some rout) pout [], s0, [])
       (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])"
@@ -456,7 +467,7 @@ proof -
             (Seq (body (proc_decl_of [] (Seq (Call (Some rin) pin []) after))) Restore,
              bind_formals (formals (proc_decl_of []
                  (Seq (Call (Some rin) pin []) after)))
-               (map (\<lambda>a. aval a s0) []) (enter_state s0),
+               (map (\<lambda>a. aval a s0) []) (enter_state is_global s0),
              Frame s0 (Some rout) # [])"
       using qout by (intro Call) (auto simp: proc_decl_of_def)
     thus "pstep \<Pi> (Call (Some rout) pout [], s0, [])

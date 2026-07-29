@@ -12,18 +12,18 @@ lemma call_transition:
       and fm: "frames_match frs stk"
   shows "pstep \<Pi> (Call dst q actuals, s, frs)
            (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
+            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s),
             Frame s dst # frs)"
     and "cstep g (u, s, stk)
            (FunctionEntry q,
             call_enter (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     and "call_enter (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
     and "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
 proof -
   show "pstep \<Pi> (Call dst q actuals, s, frs)
            (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s),
+            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s),
             Frame s dst # frs)"
     using decl arity distinct
     by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
@@ -32,7 +32,7 @@ proof -
             call_enter (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     by (rule cstep.Call[OF edge])
   show "call_enter (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
     by (rule call_enter_eq_source_call_store)
   show "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
     using fm by (simp add: frames_match_Cons_iff)

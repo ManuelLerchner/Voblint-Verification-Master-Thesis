@@ -211,7 +211,7 @@ proof -
       by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
     case (Some x)
-    have base: "combine_states s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
+    have base: "combine_states is_global s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
       using tf_sound_combineD[OF s t] .
     have ret: "t ret_var \<in> gamma (B ret_var)"
       using t unfolding gamma_state_def by auto

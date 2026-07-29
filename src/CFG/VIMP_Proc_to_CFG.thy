@@ -776,7 +776,7 @@ text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on
   source \<open>Call\<close> callee store used by the local-trace call rule.\<close>
 lemma call_enter_eq_source_call_store:
   "call_enter (CallEdge dst (formals decl) actuals) s
-     = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+     = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
   by (simp add: call_enter_CallEdge)
 
 text \<open>Combined: traversing the compiled call edge lands the callee at the source callee-entry
@@ -786,7 +786,7 @@ lemma compile_call_enter_eq_source:
     and "(cs, CallEdge dst pars actuals, FunctionEntry q, af)
            \<in> snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))"
   shows "call_enter (CallEdge dst pars actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
 proof -
   from assms(2) have "pars = formals decl" by (simp add: assms(1))
   then show ?thesis by (simp add: call_enter_eq_source_call_store)

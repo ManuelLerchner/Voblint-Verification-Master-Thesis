@@ -143,7 +143,7 @@ next
 next
   show "\<forall>xs es u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
           (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+            bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
               \<in> \<lbrakk>etf_collecting_full (etf_enter E xs es u) \<sigma>\<rbrakk>)"
     using sign_tf_sound_enter
     by (auto simp add: enter intro: in_gamma_etf_collecting_full)

@@ -45,7 +45,7 @@ definition enter_sign ::
 
 lemma enter_frame_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
+  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
   unfolding enter_frame_sign_def
 proof (rule enter_frame_D_sound[OF gs])
   show "gamma STop = UNIV" by simp
@@ -53,7 +53,7 @@ qed
 
 lemma enter_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>enter_sign xs es \<sigma>\<rbrakk>"
   unfolding enter_sign_def
 proof (rule enter_D_sound[OF gs])
@@ -108,7 +108,7 @@ lemma sign_tf_sound_assume_not:
 
 lemma sign_tf_sound_enter:
   "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state st)
+     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state is_global st)
        \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
@@ -121,7 +121,8 @@ proof (rule sound_transferI)
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
     using sign_tf_sound_assume_not by blast
   show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+       \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
     using sign_tf_sound_enter by blast
   show "tf_combine sign_tf = combine_abs"
     unfolding sign_tf_def by simp

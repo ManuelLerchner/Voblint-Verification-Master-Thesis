@@ -26,34 +26,41 @@ text \<open>A variable is global exactly when its name is empty or starts with
 definition is_global :: "vname => bool" where
   "is_global x = (x = [] \<or> hd x = CHR ''G'')"
 
-text \<open>\<open><s|t>\<close>: take locals from \<open>s\<close>, globals from \<open>t\<close>. This is the store a
-  procedure call reconstructs on return, so the caller's locals survive the
-  call unless the callee wrote through a global.\<close>
-definition combine_states :: "store => store => store"  ("<_|_>" [0, 0] 1000) where
-  "combine_states s t = (\<lambda>n. if is_global n then t n else s n)"
+text \<open>
+  \<open>combine_states gs s t\<close>: take locals from \<open>s\<close>, globals from \<open>t\<close>, where
+  \<open>gs\<close> decides the split. This is the store a procedure call reconstructs on
+  return, so the caller's locals survive the call unless the callee wrote
+  through a global. \<open>gs\<close> is an explicit classifier rather than a fixed
+  constant so a caller can supply \<^const>\<open>is_global\<close> today and a
+  declaration-driven classifier once the migration reaches this layer; no
+  mixfix notation, since a genuinely three-argument operation is not a binary
+  one.
+\<close>
+definition combine_states :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
+  "combine_states gs s t = (\<lambda>n. if gs n then t n else s n)"
 
 lemma combine_query [simp]:
-  "<s|t> n = (if is_global n then t n else s n)"
+  "combine_states gs s t n = (if gs n then t n else s n)"
   unfolding combine_states_def by simp
 
 text \<open>Concrete call/scope entry: globals persist from \<open>s\<close>, locals reset to
   \<open>0\<close> -- the store a callee starts execution in.\<close>
-definition enter_state :: "store \<Rightarrow> store" where
-  "enter_state s = (\<lambda>n. if is_global n then s n else 0)"
+definition enter_state :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store" where
+  "enter_state gs s = (\<lambda>n. if gs n then s n else 0)"
 
-(* Combining a store with itself is a no-op. *)
+(* Combining a store with itself is a no-op, for any classifier. *)
 lemma combine_collapse [simp]:
-  "<s|s> = s"
+  "combine_states gs s s = s"
   by (rule ext) simp
 
 (* Nested combines on the left/right collapse: only the outer locals and the
-   innermost globals survive. *)
+   innermost globals survive, for any (single, shared) classifier. *)
 lemma combine_nest_left [simp]:
-  "<<s|t>|u> = <s|u>"
+  "combine_states gs (combine_states gs s t) u = combine_states gs s u"
   by (rule ext) simp
 
 lemma combine_nest_right [simp]:
-  "<s|<t|u>> = <s|u>"
+  "combine_states gs s (combine_states gs t u) = combine_states gs s u"
   by (rule ext) simp
 
 subsection \<open>Executable examples\<close>
@@ -62,10 +69,12 @@ value "is_global ''Gx''"
 value "is_global ''x''"
 value "is_global []"
 
-value "<(\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2) | (\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)> ''x''"
-value "<(\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2) | (\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)> ''Gx''"
+value "combine_states is_global
+         ((\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2)) ((\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)) ''x''"
+value "combine_states is_global
+         ((\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2)) ((\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)) ''Gx''"
 
-value "enter_state ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''x''"
-value "enter_state ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''Gx''"
+value "enter_state is_global ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''x''"
+value "enter_state is_global ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''Gx''"
 
 end
