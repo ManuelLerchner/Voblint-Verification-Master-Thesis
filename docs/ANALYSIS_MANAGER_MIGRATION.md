@@ -652,3 +652,102 @@ sorting them into three categories up front avoids over-scoping the change:
 Only category 1 is in scope for Stage 3. A `rg -c is_global` count dropping
 by less than its full 520 after Stage 3 lands is expected, not a sign the
 migration is incomplete -- categories 2 and 3 are meant to stay.
+
+## 8. Stage 3 execution finding: a deeper root, and a record question re-asked and re-closed
+
+This section records what happened the first time Stage 3 was actually
+attempted, because both the finding and its resolution are durable: the
+finding changes Stage 3's file list, and the resolution is a second,
+independent test of section 7's negative criteria under real pressure rather
+than in the abstract.
+
+### 8.1 The finding: `sound_dg_spec` cannot be widened in place
+
+Attempting Stage 3 as originally scoped -- add `gs` to `sound_dg_spec`'s
+`fixes` and restate `combine_sound`/`enter_sound` generically -- fails at the
+proof, not the statement. `combine_collect_sound` and `combine_states_sound`
+(`src/Analysis/Generic/Equations/Constraint_System.thy:325,554`) are cited by
+`sound_dg_spec`'s assumptions, and their proofs work by unfolding
+`combine_abs`:
+
+```isabelle
+definition combine_abs :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" ("\<langle>_|_\<rangle>") where
+  "combine_abs sc se = (\<lambda>x. if is_global x then se x else sc x)"
+```
+
+`combine_abs` is the abstract-domain-side counterpart of the already-generic
+`combine_states` -- and unlike `combine_states`, it still hardcodes
+`is_global` directly, not as a passed-in classifier. The same is true of
+`enter_frame_D` (line 433), `cinit_stores` (line 749), and the
+`inl_slot_globals_bot`/`inl_glob_le_glob_env` invariant family (lines
+1154-1183). A lemma like `combine_collect_sound` splits the concrete side by
+whatever `gs` it is given, but the abstract side it is proved against always
+splits by `is_global` -- so the lemma is only true when `gs = is_global`.
+Adding `gs` to `sound_dg_spec`'s `fixes` without first fixing this would be
+cosmetic: every interpretation would still secretly require `gs = is_global`,
+undetectably, since nothing in the locale's type would say so.
+
+The fix is mechanical once identified, not a redesign: `combine_states` and
+`enter_state` (`src/VIMP/VIMP_Globals.thy`) already take `gs` explicitly
+(Stage 0). `combine_abs`/`enter_frame_D`/`cinit_stores` are the one layer
+that was never updated to match. Widening them so both the concrete and
+abstract sides split on the *same* `gs` makes `combine_states_sound`'s
+existing proof go through unchanged -- `auto` after unfolding both
+definitions does not care which predicate `gs` denotes, only that both sides
+agree, which they now do by construction. This reclassifies Stage 3 into two
+parts:
+
+- **Stage 3a**: widen `combine_abs`, `enter_frame_D`, `cinit_stores`, and the
+  `inl_*` invariant predicates in `Constraint_System.thy` to take `gs`. This
+  is the actual root; without it, Stage 3b cannot be proved, only stated.
+- **Stage 3b**: widen `sound_dg_spec`, `ltr_gamma`, `routed_context`, and
+  their siblings, as originally planned -- now provable, because their
+  proof obligations bottom out in Stage 3a's generic facts instead of a
+  hardcoded `is_global`.
+
+Stage 3a touches `Constraint_System.thy`'s core soundness definitions, which
+sit adjacent to `Exec_St` -- the representation problem fenced off earlier in
+this migration ("do not touch `Exec_St` yet"). Stage 3a does not touch
+`Exec_St.thy` itself or change `Constraint_System`'s architecture; it widens
+one classifier parameter through definitions that already existed, the same
+arity-only move as every earlier stage. That distinction is what keeps it in
+scope despite the adjacency.
+
+### 8.2 The record question, re-asked and re-closed
+
+Finding that `gs` recurs across more functions than expected
+(`combine_abs`, `enter_frame_D`, `cinit_stores`, on top of `sound_dg_spec`,
+`ltr_gamma`, `routed_context`, `cstep`, `combine_collect`, `call_enter`)
+prompted the question again: does this volume mean `gs` has become a "shared
+analysis capability" in the Goblint `man` sense, justifying an
+`analysis_config`/`analysis_env` record now, introduced small (`gs` alone)
+as "a stable extension point" for capabilities that might join it later?
+
+The answer is still no, and the reason is the same reason section 7's
+negative criteria already gave: volume is not clustering. Every one of
+`combine_abs`, `enter_frame_D`, `cinit_stores`, `sound_dg_spec`, `ltr_gamma`,
+and `routed_context` needs exactly one thing from this family --
+`gs` -- and nothing else. None of their call sites pass `gs` together with a
+second, independently-varying parameter that always travels alongside it;
+`enter_frame_D`'s other parameter, `top_val`, is a domain-specific top
+element (different for Sign vs. Interval) with no relationship to `gs` at
+all, and bundling the two would associate unrelated concerns for no reason.
+Finding the *same* single parameter needed in more places is what every
+earlier stage of this migration looked like (Stage 0: `combine_states`/
+`enter_state`; Stage 1: `combine_collect`/`call_enter`; Stage 2: `cstep`);
+none of those prior recurrences were treated as a clustering signal, and this
+one is not qualitatively different -- it is the same layer of the same
+migration, one level deeper than expected, not a new kind of evidence.
+
+A record introduced now, holding only `gs`, with other fields "added when
+they start clustering," is precisely the shape section 2 named and section
+7's negative criteria ruled out by name: "do not introduce it merely to
+replace a single explicit parameter, and do not introduce it in anticipation
+of components that do not exist yet." Depth of recurrence does not change
+that test. The trigger stays what section 7 already said it was: a call site
+that already needs two or more distinct, independently-sourced parameters
+together, evidenced in the diff, not anticipated in the design. Stage 3a/3b
+do not produce such a call site -- they produce more places that each need
+one classifier. The recommendation from sections 6 and 7 stands unchanged:
+bare `gs`, no record, reassessed here under real pressure and confirmed
+rather than merely repeated.
