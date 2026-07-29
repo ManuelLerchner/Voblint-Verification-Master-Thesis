@@ -229,7 +229,7 @@ lemma twice_wf: "wf_compile_input twice_pi twice_procs ''main'' twice_main"
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:
-  assumes run: "star (pstep twice_pi) (twice_main, s, []) src'"
+  assumes run: "star (pstep is_global twice_pi) (twice_main, s, []) src'"
       and init: "s \<in> cinit_stores"
   shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
                    \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"

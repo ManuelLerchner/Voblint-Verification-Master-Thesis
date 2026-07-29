@@ -61,7 +61,7 @@ definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"
 
 lemma x1_completed:
-  "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0(''x'' := 1))"
   unfolding pcompletes_def
   apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
@@ -81,7 +81,7 @@ proof -
           proc_decl_of_def prog_main_name_def ret_var_def split: if_splits)
 
   have run:
-    "star (pstep (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
+    "star (pstep is_global (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
       (VIMP_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
     using x1_completed unfolding pcompletes_def .
   from source_completes_ltr_collect_exit[OF wf init run]
@@ -89,11 +89,11 @@ proof -
 qed
 
 theorem x1_explicit_completed_run_covered:
-  "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))
    \<and> x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
 proof (rule conjI)
-  show "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  show "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))"
     by (rule x1_completed)
 next

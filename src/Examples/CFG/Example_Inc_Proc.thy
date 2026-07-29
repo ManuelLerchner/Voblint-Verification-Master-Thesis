@@ -85,19 +85,19 @@ lemma combine_after_enter_global_assign:
 
 lemma pcompletes_inc_pcall:
   fixes s :: store
-  shows "pcompletes inc_pi (imp \<lbrakk> p() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
+  shows "pcompletes is_global inc_pi (imp \<lbrakk> p() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
   let ?body = "imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
   have g: "is_global ''Gx''" by (simp add: is_global_def)
-  have run: "pcompletes inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+  have run: "pcompletes is_global inc_pi (imp \<lbrakk> p() \<rbrakk>) s
                 (combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
     show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
       by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
-    show "pcompletes inc_pi ?body (enter_state is_global s)
+    show "pcompletes is_global inc_pi ?body (enter_state is_global s)
              ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pcompletes inc_pi ?body (enter_state is_global s)
+      have "pcompletes is_global inc_pi ?body (enter_state is_global s)
                ((enter_state is_global s)
                  (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s)))"
         by (rule pcompletes_assign)

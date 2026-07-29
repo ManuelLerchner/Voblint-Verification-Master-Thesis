@@ -255,7 +255,7 @@ text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star
 theorem source_run_has_ltr:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> ltr_repr (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
 proof -
@@ -287,7 +287,7 @@ text \<open>The plain projected source bridge: a reachable source store lies in 
 theorem source_store_in_activation_collect:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> activation_collect enterc seedc (compile_prog \<Pi> ps mnm main) S v
                           (key enterc seedc t)"
@@ -309,7 +309,7 @@ text \<open>The witness-free top-level result: a store reached with an empty sou
 theorem source_toplevel_in_activation_collect:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep \<Pi>) (main, s0, []) (residual, s, [])"
+    and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> activation_collect enterc seedc (compile_prog \<Pi> ps mnm main) S v seedc"
 proof -

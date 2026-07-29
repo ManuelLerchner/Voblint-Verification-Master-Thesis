@@ -6,28 +6,28 @@ section \<open>Examples: native activation semantics\<close>
 
 theorem caller_local_isolated:
   assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> x := 9 \<rbrakk>))"
-  shows "\<exists>t. pcompletes \<Pi> (Seq (Assign ''x'' (N 5)) (Call None pf [])) s0 t
+  shows "\<exists>t. pcompletes is_global \<Pi> (Seq (Assign ''x'' (N 5)) (Call None pf [])) s0 t
              \<and> t ''x'' = 5"
 proof -
   let ?s1 = "s0(''x'' := 5)"
-  have a: "pcompletes \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0 ?s1"
+  have a: "pcompletes is_global \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0 ?s1"
   proof -
-    have "pcompletes \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0
+    have "pcompletes is_global \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0
             (s0(''x'' := aval (N 5) s0))" by (rule pcompletes_assign)
     thus ?thesis by simp
   qed
-  have body: "pcompletes \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>)
+  have body: "pcompletes is_global \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>)
                (enter_state is_global ?s1) ((enter_state is_global ?s1)(''x'' := 9))"
   proof -
-    have "pcompletes \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>) (enter_state is_global ?s1)
+    have "pcompletes is_global \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>) (enter_state is_global ?s1)
             ((enter_state is_global ?s1)(''x'' := aval (N 9) (enter_state is_global ?s1)))"
       by (rule pcompletes_assign)
     thus ?thesis by simp
   qed
-  have call: "pcompletes \<Pi> (Call None pf []) ?s1
+  have call: "pcompletes is_global \<Pi> (Call None pf []) ?s1
                 (combine_states is_global ?s1 ((enter_state is_global ?s1)(''x'' := 9)))"
     by (rule pcompletes_Call_parameterless[OF p body])
-  have seq: "pcompletes \<Pi> (Seq (imp \<lbrakk> x := 5 \<rbrakk>) (Call None pf [])) s0
+  have seq: "pcompletes is_global \<Pi> (Seq (imp \<lbrakk> x := 5 \<rbrakk>) (Call None pf [])) s0
                (combine_states is_global ?s1 ((enter_state is_global ?s1)(''x'' := 9)))"
     using pcompletes_Seq[OF a call] .
   have "(combine_states is_global ?s1 ((enter_state is_global ?s1)(''x'' := 9))) ''x'' = 5"
@@ -37,17 +37,17 @@ qed
 
 theorem global_propagated:
   assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> Gg := 9 \<rbrakk>))"
-  shows "\<exists>t. pcompletes \<Pi> (Call None pf []) s0 t \<and> t ''Gg'' = 9"
+  shows "\<exists>t. pcompletes is_global \<Pi> (Call None pf []) s0 t \<and> t ''Gg'' = 9"
 proof -
-  have body: "pcompletes \<Pi> (imp \<lbrakk> Gg := 9 \<rbrakk>)
+  have body: "pcompletes is_global \<Pi> (imp \<lbrakk> Gg := 9 \<rbrakk>)
                (enter_state is_global s0) ((enter_state is_global s0)(''Gg'' := 9))"
   proof -
-    have "pcompletes \<Pi> (imp \<lbrakk> Gg := 9 \<rbrakk>) (enter_state is_global s0)
+    have "pcompletes is_global \<Pi> (imp \<lbrakk> Gg := 9 \<rbrakk>) (enter_state is_global s0)
             ((enter_state is_global s0)(''Gg'' := aval (N 9) (enter_state is_global s0)))"
       by (rule pcompletes_assign)
     thus ?thesis by simp
   qed
-  have call: "pcompletes \<Pi> (Call None pf []) s0
+  have call: "pcompletes is_global \<Pi> (Call None pf []) s0
                 (combine_states is_global s0 ((enter_state is_global s0)(''Gg'' := 9)))"
     by (rule pcompletes_Call_parameterless[OF p body])
   have "(combine_states is_global s0 ((enter_state is_global s0)(''Gg'' := 9))) ''Gg'' = 9"
@@ -57,13 +57,13 @@ qed
 
 theorem return_value_propagated:
   assumes p: "\<Pi> pf = Some (proc_decl_of [] (imp \<lbrakk> return 7 \<rbrakk>))"
-  shows "\<exists>t. pcompletes \<Pi> (Call (Some ''x'') pf []) s0 t \<and> t ''x'' = 7"
+  shows "\<exists>t. pcompletes is_global \<Pi> (Call (Some ''x'') pf []) s0 t \<and> t ''x'' = 7"
 proof -
   let ?e = "N 7"
   let ?t = "(combine_states is_global s0
               ((enter_state is_global s0)(ret_var := aval ?e (enter_state is_global s0))))
               (''x'' := aval ?e (enter_state is_global s0))"
-  have call: "psteps \<Pi> (Call (Some ''x'') pf [], s0, []) (imp \<lbrakk> skip \<rbrakk>, ?t, [])"
+  have call: "psteps is_global \<Pi> (Call (Some ''x'') pf [], s0, []) (imp \<lbrakk> skip \<rbrakk>, ?t, [])"
     using p by (rule call_return_completes[where x = "''x''" and s = s0 and frs = "[]"])
   have "?t ''x'' = 7" by simp
   with call show ?thesis unfolding pcompletes_def by blast
@@ -85,7 +85,7 @@ definition rec_body :: com where
 
 theorem bounded_recursion_completes:
   assumes p: "\<Pi> ''r'' = Some (proc_decl_of [] rec_body)"
-  shows "\<exists>t. pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ((\<lambda>_. 0)(''Gx'' := 1)) t \<and> t ''Gx'' = 0"
+  shows "\<exists>t. pcompletes is_global \<Pi> (imp \<lbrakk> r() \<rbrakk>) ((\<lambda>_. 0)(''Gx'' := 1)) t \<and> t ''Gx'' = 0"
 proof -
   let ?s0 = "(\<lambda>_. 0)(''Gx'' := 1)"
   let ?e0 = "enter_state is_global ?s0"
@@ -93,23 +93,23 @@ proof -
   let ?ei = "enter_state is_global ?e1"
   have inner_guard: "\<not> bval (Less (N 0) (V ''Gx'')) ?ei"
     by (simp add: enter_state_def is_global_def)
-  have inner_body: "pcompletes \<Pi> rec_body ?ei ?ei"
+  have inner_body: "pcompletes is_global \<Pi> rec_body ?ei ?ei"
     unfolding rec_body_def by (rule pcompletes_IfFalse[OF inner_guard pcompletes_skip])
-  have inner_call: "pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (combine_states is_global ?e1 ?ei)"
+  have inner_call: "pcompletes is_global \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (combine_states is_global ?e1 ?ei)"
     by (rule pcompletes_Call_parameterless[OF p inner_body])
   have outer_guard: "bval (Less (N 0) (V ''Gx'')) ?e0"
     by (simp add: enter_state_def is_global_def)
-  have dec: "pcompletes \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0 ?e1"
+  have dec: "pcompletes is_global \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0 ?e1"
   proof -
-    have "pcompletes \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0
+    have "pcompletes is_global \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0
             (?e0(''Gx'' := aval (Minus (V ''Gx'') (N 1)) ?e0))"
       by (rule pcompletes_assign)
     thus ?thesis by (simp add: enter_state_def is_global_def)
   qed
-  have outer_body: "pcompletes \<Pi> rec_body ?e0 (combine_states is_global ?e1 ?ei)"
+  have outer_body: "pcompletes is_global \<Pi> rec_body ?e0 (combine_states is_global ?e1 ?ei)"
     unfolding rec_body_def
     by (rule pcompletes_IfTrue[OF outer_guard pcompletes_Seq[OF dec inner_call]])
-  have outer_call: "pcompletes \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?s0
+  have outer_call: "pcompletes is_global \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?s0
                        (combine_states is_global ?s0 (combine_states is_global ?e1 ?ei))"
     by (rule pcompletes_Call_parameterless[OF p outer_body])
   have "(combine_states is_global ?s0 (combine_states is_global ?e1 ?ei)) ''Gx'' = 0"

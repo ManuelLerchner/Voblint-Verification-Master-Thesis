@@ -200,7 +200,7 @@ lemma parity_wf: "wf_compile_input parity_pi [] ''main'' parity_prog"
       prog_main_name_def split: if_splits)
 
 theorem parity_source_run_sound:
-  assumes run: "star (pstep parity_pi) (parity_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep is_global parity_pi) (parity_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> parity_reg.gamma (snd parity_sol) v"

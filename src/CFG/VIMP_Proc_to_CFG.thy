@@ -798,7 +798,7 @@ subsection \<open>Return transfer agrees with the source semantics\<close>
 text \<open>The \<open>EA_Ret\<close> edge publishes the return value into \<^const>\<open>ret_var\<close> exactly as the
   source \<open>Return\<close> step: \<open>Some e\<close> writes \<open>aval e\<close>, \<open>None\<close> leaves the reserved local.\<close>
 lemma return_publishes_ret_var:
-  assumes "pstep \<Pi> (Return e, s, frs) (Unwind, s', frs)"
+  assumes "pstep is_global \<Pi> (Return e, s, frs) (Unwind, s', frs)"
   shows "edge_step (EA_Ret e p) s = Some s'"
   using assms by (cases e) auto
 
@@ -807,7 +807,7 @@ text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> repr
   callee \<^const>\<open>ret_var\<close> written into the destination.  \<open>caller\<close> is the saved caller store in
   the activation frame, \<open>callee\<close> the callee-exit store.\<close>
 lemma combine_collect_eq_source_unwind:
-  assumes "pstep \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
+  assumes "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
                     (SKIP, s', frs)"
   shows "s' = combine_collect dst caller callee"
   using assms by (auto simp: combine_collect_def)
@@ -815,7 +815,7 @@ lemma combine_collect_eq_source_unwind:
 text \<open>The same combine also matches the normal-completion \<open>Restore\<close> step, which fires once the
   callee body has reduced to \<^const>\<open>SKIP\<close>: the combined store is fixed by the destination and stores.\<close>
 lemma combine_collect_eq_source_restore:
-  assumes "pstep \<Pi> (Restore, callee, Frame caller dst # frs) (SKIP, s', frs)"
+  assumes "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs) (SKIP, s', frs)"
   shows "s' = combine_collect dst caller callee"
   using assms by (auto simp: combine_collect_def)
 

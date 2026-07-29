@@ -16,7 +16,7 @@ theorem source_sound_from_collecting_cap:
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
     and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
@@ -41,7 +41,7 @@ theorem source_sound_toplevel_from_collecting_cap:
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, [])"
     and cap: "\<And>v ctx. activation_collect enterc seedc (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
@@ -62,7 +62,7 @@ theorem source_activation_sound:
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a x = Some x'
@@ -94,7 +94,7 @@ theorem source_activation_sound_toplevel:
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, [])"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, [])"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a x = Some x'
@@ -129,7 +129,7 @@ theorem source_reaches_ltr_collect:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                  \<and> s \<in> ltr_collect (compile_prog Pi ps mnm main) S v"
 proof -
@@ -164,7 +164,7 @@ theorem source_completes_valid_ltr_result:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
+    and run: "star (pstep is_global Pi) (main, s0, []) (SKIP, s, [])"
   shows "\<exists>t p. t \<in> valid_ltr (compile_prog Pi ps mnm main) S
                \<and> caller_of t = None
                \<and> fst (hd (path t)) = cfg_entry (compile_prog Pi ps mnm main)
@@ -225,7 +225,7 @@ corollary source_completes_ltr_collect_exit:
   fixes mnm :: pname
   assumes wf: "wf_compile_input Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep Pi) (main, s0, []) (SKIP, s, [])"
+    and run: "star (pstep is_global Pi) (main, s0, []) (SKIP, s, [])"
   shows "s \<in> ltr_collect (compile_prog Pi ps mnm main) S
               (cfg_exit (compile_prog Pi ps mnm main))"
 proof -

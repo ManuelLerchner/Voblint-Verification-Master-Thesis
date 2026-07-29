@@ -719,7 +719,7 @@ subsection \<open>The empty-stack return guard\<close>
 
 text \<open>A bare \<^const>\<open>Unwind\<close> is stuck --- a return with no activation to pop cannot step.\<close>
 
-lemma pstep_Unwind_stuck: "\<not> pstep \<Pi> (Unwind, s, frs) x"
+lemma pstep_Unwind_stuck: "\<not> pstep is_global \<Pi> (Unwind, s, frs) x"
   by (auto elim: UnwindSE)
 
 
@@ -1360,7 +1360,7 @@ text \<open>\<^const>\<open>ret_guarded\<close> is preserved by every \<^const>\
   of the successor configuration.\<close>
 lemma ret_guarded_pstep:
   assumes bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and step: "pstep \<Pi> (c, s, frs) (c', s', frs')"
+      and step: "pstep is_global \<Pi> (c, s, frs) (c', s', frs')"
   shows "\<forall>rok. ret_guarded rok c \<longrightarrow> ret_guarded rok c'"
   using step
 proof (induction "(c, s, frs)" "(c', s', frs')"
@@ -1375,7 +1375,7 @@ qed (auto split: if_splits)
 
 lemma source_wf_pstep:
   assumes bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and step: "pstep \<Pi> (c, s, frs) (c', s', frs')"
+      and step: "pstep is_global \<Pi> (c, s, frs) (c', s', frs')"
       and wf: "source_wf (c, s, frs)"
   shows "source_wf (c', s', frs')"
   using ret_guarded_pstep[OF bodies step] wf by (simp add: source_wf_def)
@@ -1411,7 +1411,7 @@ lemma intra_step_not_returning:
       rule: intra_step.induct) auto
 
 lemma pstep_intra_classify:
-  "pstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow> \<not> is_returning c \<Longrightarrow>
+  "pstep is_global \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow> \<not> is_returning c \<Longrightarrow>
    intra_step \<Pi> (c, s, frs) (c', s', frs')"
 proof (induction "(c, s, frs)" "(c', s', frs')"
        arbitrary: c s frs c' s' frs' rule: pstep.induct)
@@ -1442,7 +1442,7 @@ text \<open>An \<^const>\<open>unwinding\<close> command only fires the \<open>U
   and reduces to another \<^const>\<open>unwinding\<close> command, leaving store and frames untouched (the dropped
   code never runs).\<close>
 lemma pstep_unwinding:
-  assumes "unwinding u" and "pstep \<Pi> (u, s, frs) (u', s', frs')"
+  assumes "unwinding u" and "pstep is_global \<Pi> (u, s, frs) (u', s', frs')"
   shows "s' = s \<and> frs' = frs \<and> unwinding u'"
   using assms
 proof (induction u arbitrary: u' s' frs')
@@ -1450,7 +1450,7 @@ proof (induction u arbitrary: u' s' frs')
   from Seq.prems(1) have u1w: "unwinding u1" and c2R: "c2 \<noteq> Restore" by auto
   from Seq.prems(2) consider
       (dead) "u' = Unwind" "s' = s" "frs' = frs"
-    | (step) c1' where "u' = Seq c1' c2" "pstep \<Pi> (u1, s, frs) (c1', s', frs')"
+    | (step) c1' where "u' = Seq c1' c2" "pstep is_global \<Pi> (u1, s, frs) (c1', s', frs')"
     using c2R unwinding_not_SKIP[OF u1w] by (auto elim!: SeqSE)
   then show ?case
   proof cases
@@ -1483,7 +1483,7 @@ text \<open>One \<^const>\<open>pstep\<close> of a \<^const>\<open>pop_ready\<cl
   either pops that frame --- resuming at \<^const>\<open>SKIP\<close> with the combined store --- or propagates the
   unwind, staying \<^const>\<open>pop_ready\<close> with store and frame unchanged.\<close>
 lemma pstep_pop_ready_head:
-  assumes "pop_ready w" and "pstep \<Pi> (w, s, Frame fr dst # frs) x"
+  assumes "pop_ready w" and "pstep is_global \<Pi> (w, s, Frame fr dst # frs) x"
   shows "x = (SKIP, combine_assign dst (s ret_var) (combine_states is_global fr s), frs)
        \<or> (\<exists>w'. x = (w', s, Frame fr dst # frs) \<and> pop_ready w')"
   using assms
@@ -1503,29 +1503,29 @@ text \<open>A step of a \<^const>\<open>seq_after\<close> spine whose active hea
   \<^const>\<open>seq_after\<close> with active head \<open>w\<close>, is never \<^const>\<open>SKIP\<close> / \<^const>\<open>Unwind\<close>) and the induction
   hypothesis descends the remaining spine.\<close>
 lemma pstep_seq_after_headD:
-  assumes step: "pstep \<Pi> (seq_after w afters, s, frs) src'"
+  assumes step: "pstep is_global \<Pi> (seq_after w afters, s, frs) src'"
       and wsk: "w \<noteq> SKIP" and wunw: "w \<noteq> Unwind"
   obtains h' s' fz where
     "src' = (seq_after h' afters, s', fz)"
-    "pstep \<Pi> (w, s, frs) (h', s', fz)"
+    "pstep is_global \<Pi> (w, s, frs) (h', s', fz)"
 proof -
-  have "\<exists>h' s' fz. src' = (seq_after h' afters, s', fz) \<and> pstep \<Pi> (w, s, frs) (h', s', fz)"
+  have "\<exists>h' s' fz. src' = (seq_after h' afters, s', fz) \<and> pstep is_global \<Pi> (w, s, frs) (h', s', fz)"
     using step
   proof (induction afters arbitrary: src' rule: rev_induct)
     case Nil
-    then obtain h' s' fz where "src' = (h', s', fz)" "pstep \<Pi> (w, s, frs) (h', s', fz)"
+    then obtain h' s' fz where "src' = (h', s', fz)" "pstep is_global \<Pi> (w, s, frs) (h', s', fz)"
       by (cases src') auto
     then show ?case by auto
   next
     case (snoc a xs)
-    from snoc.prems have "pstep \<Pi> (Seq (seq_after w xs) a, s, frs) src'"
+    from snoc.prems have "pstep is_global \<Pi> (Seq (seq_after w xs) a, s, frs) src'"
       by (simp add: seq_after_snoc)
     then obtain B' s' fz where
       A: "src' = (Seq B' a, s', fz)"
-        and B: "pstep \<Pi> (seq_after w xs, s, frs) (B', s', fz)"
+        and B: "pstep is_global \<Pi> (seq_after w xs, s, frs) (B', s', fz)"
       using wsk wunw by (auto elim!: SeqSE)
     from snoc.IH[OF B] obtain h' where
-      "B' = seq_after h' xs" "pstep \<Pi> (w, s, frs) (h', s', fz)" by auto
+      "B' = seq_after h' xs" "pstep is_global \<Pi> (w, s, frs) (h', s', fz)" by auto
     then show ?case using A by (auto simp: seq_after_snoc)
   qed
   then show ?thesis using that by blast
@@ -1547,7 +1547,7 @@ lemma csim_returning_base_completion:
   assumes pr: "pop_ready w"
       and loc: "control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont"
       and cacc: "compiled_at \<Pi> g pc c0c kc nc"      and pa: "proc_activation \<Pi> pc c0c"
-      and step: "pstep \<Pi> (seq_after w afters, callee, [Frame caller dst]) src'"
+      and step: "pstep is_global \<Pi> (seq_after w afters, callee, [Frame caller dst]) src'"
   shows "\<exists>cfg'. star (cstep g) (FunctionResult p, callee, [(cont, dst, caller)]) cfg'
               \<and> csim \<Pi> g src' cfg'"
 proof -
@@ -1555,7 +1555,7 @@ proof -
   have wunw: "w \<noteq> Unwind" using pr by (rule pop_ready_not_Unwind)
   obtain h' s' frs' where
     src': "src' = (seq_after h' afters, s', frs')"
-      and hstep: "pstep \<Pi> (w, callee, [Frame caller dst]) (h', s', frs')"
+      and hstep: "pstep is_global \<Pi> (w, callee, [Frame caller dst]) (h', s', frs')"
     by (rule pstep_seq_after_headD[OF step wsk wunw])
   let ?rs = "combine_collect dst caller callee"
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
@@ -1584,13 +1584,13 @@ text \<open>Frame restriction: a single \<^const>\<open>pstep\<close> touches on
   bridges the \<open>Nested\<close> snoc (the inner step threads all frames) to the induction hypothesis
   (stated on the inner frames alone).\<close>
 lemma pstep_frame_restrict:
-  "pstep \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> fr = frs @ extra \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
-   \<exists>frs''. frs' = frs'' @ extra \<and> pstep \<Pi> (c, s, frs) (c', s', frs'')"
+  "pstep is_global \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> fr = frs @ extra \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
+   \<exists>frs''. frs' = frs'' @ extra \<and> pstep is_global \<Pi> (c, s, frs) (c', s', frs'')"
 proof (induction "(c, s, fr)" "(c', s', frs')"
        arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
   from Seq2.hyps(2)[OF Seq2.prems] obtain frs'' where
-    ih: "f1' = frs'' @ extra" "pstep \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
+    ih: "f1' = frs'' @ extra" "pstep is_global \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
   show ?case
     by (rule exI[of _ frs'']) (use ih in \<open>auto intro: pstep.Seq2\<close>)
 next
@@ -1658,32 +1658,32 @@ text \<open>Stepping a returning \<open>Nested\<close> command descends the oute
   \<^const>\<open>Seq\<close> peels off (its left component, a \<^const>\<open>seq_after\<close>, is never \<^const>\<open>SKIP\<close> / \<^const>\<open>Unwind\<close>)
   and the induction hypothesis descends the remaining spine.\<close>
 lemma pstep_seq_after_seq_restore:
-  assumes step: "pstep \<Pi> (seq_after (Seq inner Restore) afters, s, frs) src'"
+  assumes step: "pstep is_global \<Pi> (seq_after (Seq inner Restore) afters, s, frs) src'"
       and nsk: "inner \<noteq> SKIP" and nunw: "inner \<noteq> Unwind"
   obtains inner' s' fz where
     "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-    "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+    "pstep is_global \<Pi> (inner, s, frs) (inner', s', fz)"
 proof -
   have "\<exists>inner' s' fz. src' = (seq_after (Seq inner' Restore) afters, s', fz)
-          \<and> pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+          \<and> pstep is_global \<Pi> (inner, s, frs) (inner', s', fz)"
     using step
   proof (induction afters arbitrary: src' rule: rev_induct)
     case Nil
-    from Nil.prems have "pstep \<Pi> (Seq inner Restore, s, frs) src'" by simp
+    from Nil.prems have "pstep is_global \<Pi> (Seq inner Restore, s, frs) src'" by simp
     then obtain inner' s' fz where
-      "src' = (Seq inner' Restore, s', fz)" "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+      "src' = (Seq inner' Restore, s', fz)" "pstep is_global \<Pi> (inner, s, frs) (inner', s', fz)"
       using nsk nunw by (auto elim!: SeqSE)
     then show ?case by auto
   next
     case (snoc a xs)
-    from snoc.prems have "pstep \<Pi> (Seq (seq_after (Seq inner Restore) xs) a, s, frs) src'"
+    from snoc.prems have "pstep is_global \<Pi> (Seq (seq_after (Seq inner Restore) xs) a, s, frs) src'"
       by (simp add: seq_after_snoc)
     then obtain B' s' fz where
       A: "src' = (Seq B' a, s', fz)"
-        and B: "pstep \<Pi> (seq_after (Seq inner Restore) xs, s, frs) (B', s', fz)"
+        and B: "pstep is_global \<Pi> (seq_after (Seq inner Restore) xs, s, frs) (B', s', fz)"
       by (auto elim!: SeqSE)
     from snoc.IH[OF B] obtain inner' where
-      "B' = seq_after (Seq inner' Restore) xs" "pstep \<Pi> (inner, s, frs) (inner', s', fz)"
+      "B' = seq_after (Seq inner' Restore) xs" "pstep is_global \<Pi> (inner, s, frs) (inner', s', fz)"
       by auto
     then show ?case using A by (auto simp: seq_after_snoc)
   qed
@@ -1700,7 +1700,7 @@ text \<open>
   \<open>pstep_frame_restrict\<close> / \<open>cstep_star_frame_extend\<close> and the IH.
 \<close>
 lemma csim_returning_completion:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> pstep \<Pi> (c, s, frs) src' \<Longrightarrow>
+  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> pstep is_global \<Pi> (c, s, frs) src' \<Longrightarrow>
    \<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
@@ -1723,11 +1723,11 @@ next
     using csim_returning_frames_nonempty[OF Nested.hyps(1) retinner] by simp
   obtain inner' s' fz where
     src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-      and stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and stepin: "pstep is_global \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(2) nsk nunw])
   from pstep_frame_restrict[OF stepin refl frsne] obtain fz' where
     fz: "fz = fz' @ [Frame caller dst]"
-      and stepin': "pstep \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+      and stepin': "pstep is_global \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
   from Nested.hyps(2)[OF retinner stepin'] obtain v' t' stk' where
     cstepin: "star (cstep g) (v0, s0, stk0) (v', t', stk')"
       and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
@@ -1870,14 +1870,14 @@ text \<open>Call-specific frame restriction: a call-headed step only \<^emph>\<o
   pop cases (\<open>RestoreStep\<close> / \<open>UnwindAct\<close> / \<open>ISeq1\<close>) are impossible because a call-headed command
   never heads with \<^const>\<open>SKIP\<close> / \<^const>\<open>Restore\<close> / \<^const>\<open>Unwind\<close>.\<close>
 lemma pstep_call_frame_restrict:
-  "pstep \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> head_call c \<Longrightarrow> fr = frs @ extra \<Longrightarrow>
-   \<exists>frs''. frs' = frs'' @ extra \<and> pstep \<Pi> (c, s, frs) (c', s', frs'')"
+  "pstep is_global \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> head_call c \<Longrightarrow> fr = frs @ extra \<Longrightarrow>
+   \<exists>frs''. frs' = frs'' @ extra \<and> pstep is_global \<Pi> (c, s, frs) (c', s', frs'')"
 proof (induction "(c, s, fr)" "(c', s', frs')"
        arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
   from Seq2.prems(1) have "head_call c1" by simp
   from Seq2.hyps(2)[OF this Seq2.prems(2)] obtain frs'' where
-    ih: "f1' = frs'' @ extra" "pstep \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
+    ih: "f1' = frs'' @ extra" "pstep is_global \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
   show ?case by (rule exI[of _ frs'']) (use ih in \<open>auto intro: pstep.Seq2\<close>)
 next
   case (Call p decl actuals dst vals callee s1 frs0 frs)
@@ -1898,19 +1898,19 @@ text \<open>
 \<close>
 theorem csim_call_completion:
   "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_compiled \<Pi> g \<Longrightarrow> head_call c \<Longrightarrow>
-   pstep \<Pi> (c, s, frs) src' \<Longrightarrow>
+   pstep is_global \<Pi> (c, s, frs) src' \<Longrightarrow>
    \<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
   from head_call_seq_after_form[OF Base.prems(2)] obtain dst q actuals afters where
     ceq: "cc = seq_after (Call dst q actuals) afters" by blast
-  have step: "pstep \<Pi> (seq_after (Call dst q actuals) afters, ss, []) src'"
+  have step: "pstep is_global \<Pi> (seq_after (Call dst q actuals) afters, ss, []) src'"
     using Base.prems(3) ceq by simp
   have w1: "Call dst q actuals \<noteq> SKIP" by simp
   have w2: "Call dst q actuals \<noteq> Unwind" by simp
   obtain h' s' fz where
     src': "src' = (seq_after h' afters, s', fz)"
-      and pcall: "pstep \<Pi> (Call dst q actuals, ss, []) (h', s', fz)"
+      and pcall: "pstep is_global \<Pi> (Call dst q actuals, ss, []) (h', s', fz)"
     by (rule pstep_seq_after_headD[OF step w1 w2])
   from pcall obtain decl where
     qdecl: "\<Pi> q = Some decl" and ar: "length actuals = length (formals decl)"
@@ -1942,11 +1942,11 @@ next
   have nunw: "inner \<noteq> Unwind" using headinner by (rule head_call_not_Unwind)
   obtain inner' s' fz where
     src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-      and stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and stepin: "pstep is_global \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(3) nsk nunw])
   from pstep_call_frame_restrict[OF stepin headinner refl] obtain fz' where
     fz: "fz = fz' @ [Frame caller dst]"
-      and stepin': "pstep \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+      and stepin': "pstep is_global \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
   from Nested.hyps(2)[OF Nested.prems(1) headinner stepin'] obtain v' t' stk' where
     cstepin: "star (cstep g) (v0, s0, stk0) (v', t', stk')"
       and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
@@ -2107,7 +2107,7 @@ text \<open>
 \<close>
 theorem csim_return_init_completion:
   "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_compiled \<Pi> g \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
-   head_return c \<Longrightarrow> pstep \<Pi> (c, s, frs) src' \<Longrightarrow>
+   head_return c \<Longrightarrow> pstep is_global \<Pi> (c, s, frs) src' \<Longrightarrow>
    \<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
@@ -2123,7 +2123,7 @@ next
   have nunw: "inner \<noteq> Unwind" using hr_inner by auto
   obtain inner' s' fz where
     src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-      and stepin: "pstep \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and stepin: "pstep is_global \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(4) nsk nunw])
   show ?case
   proof (cases "frs0 = []")
@@ -2143,10 +2143,10 @@ next
     obtain e cafters where innerform: "inner = seq_after (Return e) cafters"
       using head_return_seq_after_form[OF hr_inner] by blast
     \<comment> \<open>the head step is @{text \<open>Return e --> Unwind\<close>}, leaving the continuations \<open>cafters\<close>\<close>
-    have stepin1: "pstep \<Pi> (seq_after (Return e) cafters, s0, [Frame caller dst]) (inner', s', fz)"
+    have stepin1: "pstep is_global \<Pi> (seq_after (Return e) cafters, s0, [Frame caller dst]) (inner', s', fz)"
       using stepin True innerform by simp
     obtain h' where inner'form: "inner' = seq_after h' cafters"
-        and hstep: "pstep \<Pi> (Return e, s0, [Frame caller dst]) (h', s', fz)"
+        and hstep: "pstep is_global \<Pi> (Return e, s0, [Frame caller dst]) (h', s', fz)"
       by (rule pstep_seq_after_headD[OF stepin1]) auto
     have hUnw: "h' = Unwind" and s'eq: "s' = ret_store e s0" and fzeq: "fz = [Frame caller dst]"
       using hstep by (cases e; auto simp: ret_store_def)+
@@ -2181,7 +2181,7 @@ next
     case False
     from pstep_frame_restrict[OF stepin refl False] obtain fz' where
       fz: "fz = fz' @ [Frame caller dst]"
-        and stepin': "pstep \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+        and stepin': "pstep is_global \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
     from Nested.hyps(2)[OF Nested.prems(1) False hr_inner stepin'] obtain v' t' stk' where
       cstepin: "star (cstep g) (v0, s0, stk0) (v', t', stk')"
         and csimin: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
@@ -2235,7 +2235,7 @@ theorem csim_step:
   assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
       and PC: "procs_compiled \<Pi> g"
       and WF: "source_wf (c, s, frs)"
-      and STEP: "pstep \<Pi> (c, s, frs) src'"
+      and STEP: "pstep is_global \<Pi> (c, s, frs) src'"
   shows "\<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
 proof -
   consider (call) "head_call c" | (ret) "head_return c" | (returning) "is_returning c"
@@ -2269,7 +2269,7 @@ text \<open>
 \<close>
 lemma csim_run:
   assumes PC: "procs_compiled \<Pi> g"
-      and RUN: "star (pstep \<Pi>) sc sc'"
+      and RUN: "star (pstep is_global \<Pi>) sc sc'"
       and SIM: "csim \<Pi> g sc dg"
       and WF: "source_wf sc"
   shows "\<exists>dg'. star (cstep g) dg dg' \<and> csim \<Pi> g sc' dg'"
@@ -2285,7 +2285,7 @@ next
   obtain v0 t0 k0 where dgd: "dg = (v0, t0, k0)" by (cases dg)
   have SIMa: "csim \<Pi> g (c0, s0, f0) (v0, t0, k0)" using step.prems(1) a dgd by simp
   have WFa: "source_wf (c0, s0, f0)" using step.prems(2) a by simp
-  have STEP: "pstep \<Pi> (c0, s0, f0) (c1, s1, f1)" using step.hyps(1) a b by simp
+  have STEP: "pstep is_global \<Pi> (c0, s0, f0) (c1, s1, f1)" using step.hyps(1) a b by simp
   from csim_step[OF SIMa PC WFa STEP] obtain dg1 where
     run1: "star (cstep g) (v0, t0, k0) dg1" and sim1: "csim \<Pi> g (c1, s1, f1) dg1" by blast
   have bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
@@ -2302,7 +2302,7 @@ theorem csim_star:
   assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
       and PC: "procs_compiled \<Pi> g"
       and WF: "source_wf (c, s, frs)"
-      and RUN: "star (pstep \<Pi>) (c, s, frs) src'"
+      and RUN: "star (pstep is_global \<Pi>) (c, s, frs) src'"
   shows "\<exists>cfg'. star (cstep g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
   using csim_run[OF PC RUN SIM WF] .
 

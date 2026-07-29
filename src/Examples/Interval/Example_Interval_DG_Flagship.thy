@@ -244,7 +244,7 @@ lemma flagship_wf:
       split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "star (pstep flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep is_global flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores"
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> ivl_reg.gamma (snd flagship_sol) v"

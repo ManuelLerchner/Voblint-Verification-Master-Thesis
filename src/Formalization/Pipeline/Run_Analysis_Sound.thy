@@ -66,7 +66,7 @@ theorem dg_run_source_sound_abs:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep Pi) (main, s0, []) (residual, t, frs)"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> dg_gamma sigma v"
 proof -
@@ -118,7 +118,7 @@ theorem dg_exec_run_source_sound:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (fun_of_st s0d) (fun_of_st s0g)"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep Pi) (main, s0, []) (residual, t, frs)"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st \<circ> sigma_st) v"
 proof -
@@ -235,7 +235,7 @@ theorem run_source_sound:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_unit (fun_of_st s0d) (fun_of_st s0g)"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep Pi) (main, s0, []) (residual, t, frs)"
+    and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> gamma (snd (solve eqs x)) v"
 proof -

@@ -147,7 +147,7 @@ text \<open>
 \<close>
 
 theorem dgEx_source_run_sound:
-  assumes run: "star (pstep sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep is_global sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores"
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
                  \<and> t \<in> sign_reg.gamma (snd dgEx_sol) v"
