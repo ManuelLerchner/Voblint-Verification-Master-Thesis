@@ -47,7 +47,7 @@ theorem example_early_return_skips_dead:
       and sub: "E \<subseteq> intra g"
   shows "control_at \<Pi> p (Seq (Return (Some e)) dead) k n
            (Seq (Return (Some e)) dead) (Statement n)"
-    and "cstep g (Statement n, s, stk)
+    and "cstep is_global g (Statement n, s, stk)
            (FunctionResult p, s(ret_var := aval e s), stk)"
     and "\<forall>k. FunctionResult p \<noteq> Statement k"
 proof -
@@ -57,7 +57,7 @@ proof -
   have "(Statement n, EA_Ret (Some e) p, FunctionResult p) \<in> intra g"
     using compile_seq_return_edge[OF comp] sub by blast
   from cstep_ret[OF this]
-  show "cstep g (Statement n, s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
+  show "cstep is_global g (Statement n, s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
     by simp
   show "\<forall>k. FunctionResult p \<noteq> Statement k" by simp
 qed
@@ -66,7 +66,7 @@ theorem example_nested_call_preserves_outer:
   assumes p: "\<Pi> pin = Some decl"
       and comp: "compile \<Pi> pout (Seq (Call (Some rin) pin actuals) after) k n = (n', en, E, K)"
       and sub: "K \<subseteq> calls g"
-  shows "cstep g (Statement n, s, outer # stk)
+  shows "cstep is_global g (Statement n, s, outer # stk)
            (FunctionEntry pin,
             call_enter is_global (CallEdge (Some rin) (formals decl) actuals) s,
             (Statement (Suc n), Some rin, s) # outer # stk)"

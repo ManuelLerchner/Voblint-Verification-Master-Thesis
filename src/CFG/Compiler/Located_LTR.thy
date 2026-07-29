@@ -102,7 +102,7 @@ text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>ltr_repr_Return\<close>).\<close>
 lemma cstep_preserves_ltr_repr:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
-    and step: "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
+    and step: "cstep is_global (compile_prog \<Pi> ps mnm main) cf cf'"
     and rep: "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
   shows "\<exists>t'. ltr_repr (compile_prog \<Pi> ps mnm main) S cf' t'"
   using step rep
@@ -166,7 +166,7 @@ qed
 lemma cstep_preserves_located_ltr:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
-    and "cstep (compile_prog \<Pi> ps mnm main) cf cf'"
+    and "cstep is_global (compile_prog \<Pi> ps mnm main) cf cf'"
   shows "located_ltr (compile_prog \<Pi> ps mnm main) S cf'"
 proof -
   from assms(2) obtain t where "ltr_repr (compile_prog \<Pi> ps mnm main) S cf t"
@@ -179,7 +179,7 @@ qed
 lemma csteps_preserve_located_ltr:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
     and "located_ltr (compile_prog \<Pi> ps mnm main) S cf"
-    and "star (cstep (compile_prog \<Pi> ps mnm main)) cf cf'"
+    and "star (cstep is_global (compile_prog \<Pi> ps mnm main)) cf cf'"
   shows "located_ltr (compile_prog \<Pi> ps mnm main) S cf'"
   using assms(3) assms(2)
 proof (induction rule: star.induct)
@@ -268,11 +268,11 @@ proof -
   have loc0: "located_ltr (compile_prog \<Pi> ps mnm main) S (FunctionEntry mnm, s0, [])"
     using located_ltr_entry[OF s0, of "compile_prog \<Pi> ps mnm main"]
     by (simp add: inv16_entry_is_main)
-  have step0: "cstep ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
+  have step0: "cstep is_global ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
   have loc_en: "located_ltr ?g S (en, s0, [])"
     by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
-    where run_c: "star (cstep ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
+    where run_c: "star (cstep is_global ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
     by blast
   obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
   have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp

@@ -14,7 +14,7 @@ lemma call_transition:
            (Seq (body decl) Restore,
             bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s),
             Frame s dst # frs)"
-    and "cstep g (u, s, stk)
+    and "cstep is_global g (u, s, stk)
            (FunctionEntry q,
             call_enter is_global (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     and "call_enter is_global (CallEdge dst (formals decl) actuals) s
@@ -27,7 +27,7 @@ proof -
             Frame s dst # frs)"
     using decl arity distinct
     by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
-  show "cstep g (u, s, stk)
+  show "cstep is_global g (u, s, stk)
            (FunctionEntry q,
             call_enter is_global (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     by (rule cstep.Call[OF edge])
@@ -44,14 +44,14 @@ lemma return_initiation:
       and sub: "E \<subseteq> intra g"
   obtains k where "v = Statement k"
     and "pstep is_global \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
-    and "cstep g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
+    and "cstep is_global g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
 proof -
   from control_at_return_edge[OF loc refl comp] obtain k where
     k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E" by blast
   have edge: "(Statement k, EA_Ret e p, FunctionResult p) \<in> intra g" using k(2) sub by blast
   have src: "pstep is_global \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
     by (cases e) (auto simp: ret_store_def)
-  have cfg: "cstep g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
+  have cfg: "cstep is_global g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
     using cstep.Intra[OF edge edge_step_EA_Ret_ret_store] .
   show ?thesis by (rule that[OF k(1) src cfg])
 qed
@@ -60,14 +60,14 @@ lemma return_completion_restore:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
   shows "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs)
            (SKIP, combine_collect is_global dst caller callee, frs)"
-    and "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
+    and "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
   show "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs)
           (SKIP, combine_collect is_global dst caller callee, frs)"
     using pstep.RestoreStep by (simp add: combine_collect_def)
-  show "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
+  show "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
@@ -77,14 +77,14 @@ lemma return_completion_unwind:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
   shows "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
            (SKIP, combine_collect is_global dst caller callee, frs)"
-    and "cstep g (FunctionResult p, callee, (cont, dst, caller) # stk)
+    and "cstep is_global g (FunctionResult p, callee, (cont, dst, caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
   show "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
           (SKIP, combine_collect is_global dst caller callee, frs)"
     using pstep.UnwindAct by (simp add: combine_collect_def)
-  show "cstep g (FunctionResult p, callee, (cont, dst,caller) # stk)
+  show "cstep is_global g (FunctionResult p, callee, (cont, dst,caller) # stk)
            (cont, combine_collect is_global dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_Cons_iff)
