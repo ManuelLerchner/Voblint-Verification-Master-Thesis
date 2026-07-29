@@ -40,9 +40,27 @@ text \<open>
   \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)\<close>.
 \<close>
 
+text \<open>
+  \<open>declared_global_vars\<close> is the program's declared-global list, exactly as
+  the source wrote it -- the parser's sole classification fact.  Named apart
+  from \<open>is_global\<close>/\<open>global_vars\<close> on purpose: it carries no semantic weight
+  yet.  \<^const>\<open>VIMP_Globals.is_global\<close> still decides call/return and D/G
+  routing by spelling.  A later migration wires this list into that decision;
+  until then, do not read \<open>declared_global_vars\<close> where \<open>is_global\<close> is meant.
+
+  A list, not a set: the field is finite by its type, not by an assumption
+  that would otherwise have to be threaded through every lemma about
+  \<open>imp_prog\<close> -- see the finiteness fact just below.
+\<close>
+
 record imp_prog =
   proc_rep :: "(pname * proc_decl) list"
   prog_main :: com
+  declared_global_vars :: "vname list"
+
+lemma declared_global_vars_finite [simp]:
+  "finite (set (declared_global_vars p))"
+  by simp
 
 definition prog_procs :: "imp_prog => pname list" where
   "prog_procs p = map fst (proc_rep p)"
@@ -70,14 +88,17 @@ lemma prog_table_main [simp]:
   "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
   by (simp add: prog_table_def)
 
-lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m) = map fst ps"
+lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m gv) = map fst ps"
   by (simp add: prog_procs_def imp_prog.make_def)
 
 lemma prog_table_make [simp]:
-  "prog_table (imp_prog.make ps m) = (map_of ps)(prog_main_name \<mapsto> proc_decl_of [] m)"
+  "prog_table (imp_prog.make ps m gv) = (map_of ps)(prog_main_name \<mapsto> proc_decl_of [] m)"
   by (simp add: prog_table_def imp_prog.make_def)
 
-lemma prog_main_make [simp]: "prog_main (imp_prog.make ps m) = m"
+lemma prog_main_make [simp]: "prog_main (imp_prog.make ps m gv) = m"
+  by (simp add: imp_prog.make_def)
+
+lemma declared_global_vars_make [simp]: "declared_global_vars (imp_prog.make ps m gv) = gv"
   by (simp add: imp_prog.make_def)
 
 nonterminal imp2_com
@@ -85,7 +106,6 @@ nonterminal imp2_stmt
 nonterminal imp2_stmts
 nonterminal imp2_aexp
 nonterminal imp2_bexp
-nonterminal imp2_gdecl
 nonterminal imp2_ids
 nonterminal imp2_actuals
 nonterminal imp2_formals
@@ -120,7 +140,7 @@ syntax
 
 
   "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }")
-  "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { int _ ; _ }")
+  "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }")
   "_ids_one"     :: "id \<Rightarrow> imp2_ids"                             ("_")
   "_ids_cons"    :: "id \<Rightarrow> imp2_ids \<Rightarrow> imp2_ids"                ("_ , _")
   "_formals_one"  :: "id \<Rightarrow> imp2_formals"                         ("_")
@@ -301,10 +321,6 @@ parse_translation \<open>
       | formals_of (Const ("_formals_cons", _) $ Free (x, _) $ rest) = x :: formals_of rest
       | formals_of t = raise TERM ("VIMP_Notation: formals_of", [t])
 
-    fun ids_tr (Const ("_gdecl_none", _)) = []
-      | ids_tr (Const ("_gdecl", _) $ ids) = names_of ids
-      | ids_tr t = raise TERM ("VIMP_Notation: ids_tr", [t])
-
     fun funcs_tr (Const ("_funcs_nil", _)) = []
       | funcs_tr (Const ("_funcs_cons0", _) $ Free (f, _) $ pbody $ rest) =
           let
@@ -344,23 +360,20 @@ parse_translation \<open>
       | has_return (Abs (_, _, b)) = has_return b
       | has_return _ = false
 
-    fun is_gname x = size x > 0 andalso String.sub (x, 0) = #"G"
-
-    fun check_globals decls used =
-      let
-        val bad = filter_out is_gname decls
-        val _ = if null bad then ()
-                else error ("VIMP program: declared global without 'G' prefix: " ^ commas_quote bad)
-        val undeclared =
-          distinct (op =) (filter_out (member (op =) decls) (filter is_gname used))
-        val _ = if null undeclared then ()
-                else error ("VIMP program: global(s) used but not declared: " ^ commas_quote undeclared)
-      in () end
-
     fun check_distinct kind xs =
       (case duplicates (op =) xs of
          [] => ()
        | ds => error ("VIMP program: duplicate " ^ kind ^ ": " ^ commas_quote ds))
+
+    (* A name cannot be both declared global and a procedure formal: the
+       formal's per-call binding and the global's cross-call persistence are
+       incompatible storage classes for one name. *)
+    fun check_no_global_formal_collision decls funcs =
+      List.app (fn (n, formals, _, _) =>
+        case filter (member (op =) decls) formals of
+          [] => ()
+        | bad => error ("VIMP program: " ^ quote n ^ " declares global(s) as formal(s): "
+                         ^ commas_quote bad)) funcs
 
     val empty_table = Abs ("_", dummyT, K c_None)
 
@@ -390,7 +403,7 @@ parse_translation \<open>
         val _ = check_distinct "declared global" decls
         val _ = List.app (fn (n, formals, _, _) =>
                   check_distinct ("formal parameter of " ^ quote n) formals) funcs
-        val _ = check_globals decls (fold add_vars_proc funcs [])
+        val _ = check_no_global_formal_collision decls funcs
         val (mains, procs) = List.partition (fn (n, _, _, _) => n = "main") funcs
         val main_ast =
           (case mains of
@@ -403,7 +416,8 @@ parse_translation \<open>
            | _  => error "VIMP program: more than one 'void main()'")
         val proc_rep = mk_proc_rep procs
         val main = mk_body_ret main_ast NONE
-      in K c_imp_prog $ proc_rep $ main end
+        val decl_globals = mk_names decls
+      in K c_imp_prog $ proc_rep $ main $ decl_globals end
   in
     [("_IMP2", fn _ => fn [t] => com_tr t | _ => raise Match),
      ("_PROGKW0", fn _ => fn [fs] => prog_tr [] fs | _ => raise Match),
@@ -419,14 +433,32 @@ value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
 value "imp \<lbrakk> return 7 \<rbrakk>"
 value "(program {
-  int Gx;
+  global Gx;
   void f() { if (Gx < 0) { return 1 } else { skip } }
   void main() { f() }
 } :: imp_prog)"
 
 (* zero-arg baseline *)
 value "(program { void main() { skip } } :: imp_prog)"
-value "(program { int Gx; void ping() { Gx := Gx + 1 } void main() { ping() } } :: imp_prog)"
+value "(program { global Gx; void ping() { Gx := Gx + 1 } void main() { ping() } } :: imp_prog)"
+
+text \<open>
+  \<open>declared_global_vars\<close> is preserved from the source declaration, not
+  re-derived from spelling: a declared non-\<open>G\<close> name is faithfully recorded,
+  in declaration order.
+\<close>
+
+lemma declared_global_vars_ping_example [simp]:
+  "declared_global_vars (program { global Gx; void ping() { Gx := Gx + 1 } void main() { ping() } })
+     = [''Gx'']"
+  by simp
+
+lemma declared_global_vars_two_names [simp]:
+  "declared_global_vars (program { global total, x; void main() { total := x } })
+     = [''total'', ''x'']"
+  by simp
+
+value "declared_global_vars (program { void main() { skip } } :: imp_prog)"
 
 (* parameter passing, no return *)
 value "(program { void ping(x) { skip } void main() { ping(3) } } :: imp_prog)"

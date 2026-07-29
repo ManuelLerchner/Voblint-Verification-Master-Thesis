@@ -12,7 +12,7 @@ text \<open>
 
 definition inc_program :: imp_prog where
   "inc_program = program {
-     int Gx;
+     global Gx;
      void p() { Gx := Gx + 1 }
      void main() { p() }
    }"

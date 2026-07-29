@@ -42,7 +42,7 @@ text \<open>
 definition parity_program :: imp_prog where
   "parity_program = program {
 
-      int G;
+      global G;
 
       void main() { 
         x := 0;

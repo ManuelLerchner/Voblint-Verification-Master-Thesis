@@ -36,7 +36,7 @@ definition branch_prog_mnm :: pname where "branch_prog_mnm = ''main''"
 
 definition branch_prog :: imp_prog where
   "branch_prog = program {
-     int Ginput, Gresult, Gout;
+     global Ginput, Gresult, Gout;
 
      void compute() {
        x := 1;
