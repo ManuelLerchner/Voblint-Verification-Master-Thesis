@@ -23,29 +23,57 @@ text \<open>
   unchanged.
 \<close>
 
-abbreviation read_local ::
+abbreviation answer :: "'d \<Rightarrow> ('x, 'g, 'd) strategy_tree" where
+  "answer d \<equiv> Answer d"
+
+text \<open>
+  \<open>read_local\<close>/\<open>read_global\<close> are value-producing: the queried value itself is
+  the tree's answer, so \<open>seqcomp_tree\<close> (bind for this monad,
+  \<open>Strategy_Tree_Monad.thy\<close>, given \<open>do\<close>-notation via \<open>Strategy_Tree_Do.thy\<close>'s
+  \<^verbatim>\<open>adhoc_overloading\<close>) sequences a read directly as
+  \<open>do { d \<leftarrow> read_local key; ... }\<close>. Unfolding \<open>seqcomp_tree\<close>'s two
+  defining equations on a bound read reduces it to exactly the \<open>_cont\<close> form
+  below, so proofs that need the flat constructor shape add
+  \<open>seqcomp_tree.simps\<close> to their simp set once, then proceed as before.
+\<close>
+
+abbreviation read_local :: "'x \<Rightarrow> ('x, 'g, 'd) strategy_tree" where
+  "read_local key \<equiv> QueryL key answer"
+
+abbreviation read_global :: "'g \<Rightarrow> ('x, 'g, 'd) strategy_tree" where
+  "read_global key \<equiv> QueryG key answer"
+
+text \<open>
+  \<open>_cont\<close> suffix: the original continuation-passing shape, kept for direct,
+  single-step low-level use (no bind/do-notation needed) and as the primitive
+  \<open>read_local\<close>/\<open>read_global\<close> themselves compile down to.
+\<close>
+
+abbreviation read_local_cont ::
   "'x \<Rightarrow> ('d \<Rightarrow> ('x, 'g, 'd) strategy_tree) \<Rightarrow> ('x, 'g, 'd) strategy_tree"
 where
-  "read_local key k \<equiv> QueryL key k"
+  "read_local_cont key k \<equiv> QueryL key k"
 
-abbreviation read_global ::
+abbreviation read_global_cont ::
   "'g \<Rightarrow> ('d \<Rightarrow> ('x, 'g, 'd) strategy_tree) \<Rightarrow> ('x, 'g, 'd) strategy_tree"
 where
-  "read_global key k \<equiv> QueryG key k"
+  "read_global_cont key k \<equiv> QueryG key k"
 
 text \<open>
   \<open>depend_on key val cont\<close> publishes \<open>val\<close> as a side effect on the global
   unknown \<open>key\<close> and continues as \<open>cont\<close>. The name reflects the direction an
   equation author reasons in: ``this equation also depends on -- contributes
-  to -- \<open>key\<close>'', not the solver-internal notion of a queued side write.
+  to -- \<open>key\<close>'', not the solver-internal notion of a queued side write. Its
+  trailing continuation is what a do-block statement (no \<open>\<leftarrow>\<close>) needs, so
+  \<open>depend_on\<close> itself keeps this shape rather than gaining a value-producing
+  twin: statement-form combinators built on it (\<open>publish_global\<close>,
+  \<open>publish_seed\<close>, \<open>DG_Transfer_Combinators.thy\<close>) supply \<open>answer bot\<close> as that
+  continuation.
 \<close>
 
 abbreviation depend_on ::
   "'g \<Rightarrow> 'd \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('x, 'g, 'd) strategy_tree"
 where
   "depend_on key val cont \<equiv> Side key val cont"
-
-abbreviation answer :: "'d \<Rightarrow> ('x, 'g, 'd) strategy_tree" where
-  "answer d \<equiv> Answer d"
 
 end

@@ -52,14 +52,28 @@ text \<open>
   \<open>publish_global\<close> and \<open>publish_seed\<close> are \<^const>\<open>depend_on\<close> under the
   same \<^const>\<open>DG\<close> convention, named for which global-key role the
   publication plays; a routed context-sensitive analysis
-  (\<open>Routed_Context\<close>) uses one of each per call.
+  (\<open>Routed_Context\<close>) uses one of each per call. Both are value-producing
+  (no trailing continuation): as a \<open>do\<close>-block statement (no \<open>\<leftarrow>\<close>), the
+  published side effect is what matters and the answer -- \<open>DG bot bot\<close>, the
+  same neutral value every \<open>_cont\<close> caller already supplied by hand -- is
+  discarded by the bind. The \<open>_cont\<close> forms keep the explicit continuation for
+  direct, non-\<open>do\<close> use. No explicit type signature is given -- as with
+  \<open>enter_global\<close>/\<open>combine_global\<close>, an annotated signature forcing both
+  \<^const>\<open>DG\<close> halves to one shared type variable over-constrains unification
+  wherever the caller and callee sides are inferred independently.
 \<close>
 
 abbreviation publish_global where
-  "publish_global key x cont \<equiv> depend_on key (DG bot x) cont"
+  "publish_global key x \<equiv> depend_on key (DG bot x) (answer (DG bot bot))"
 
 abbreviation publish_seed where
-  "publish_seed key x cont \<equiv> depend_on key (DG bot x) cont"
+  "publish_seed key x \<equiv> depend_on key (DG bot x) (answer (DG bot bot))"
+
+abbreviation publish_global_cont where
+  "publish_global_cont key x cont \<equiv> depend_on key (DG bot x) cont"
+
+abbreviation publish_seed_cont where
+  "publish_seed_cont key x cont \<equiv> depend_on key (DG bot x) cont"
 
 abbreviation return_local where
   "return_local x \<equiv> answer (DG x bot)"

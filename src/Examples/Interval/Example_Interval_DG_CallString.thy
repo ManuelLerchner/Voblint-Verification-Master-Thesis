@@ -163,20 +163,22 @@ lemma dg_tree_st_commute_routed_cmb_cs:
 
 lemma dg_tree_st_commute_routed_enter_pub_cs:
   "dg_tree_st_commute env
-     (with_call a (\<lambda>dst fs as.
-        read_local (v, ctx) (\<lambda>d.
-          read_global GlobalCS (\<lambda>gv.
-            publish_global GlobalCS (enter_global Spoly fs as (locals d) (globs gv))
-              (publish_seed (SeedCS w (route_cs v ctx (locals d) a))
-                (enter_local Spoly fs as (locals d) (globs gv))
-                (return_local bot))))))
-     (with_call a (\<lambda>dst fs as.
-        read_local (v, ctx) (\<lambda>d.
-          read_global GlobalCS (\<lambda>gv.
-            publish_global GlobalCS (enter_global Sabs fs as (locals d) (globs gv))
-              (publish_seed (SeedCS w (route_cs v ctx (locals d) a))
-                (enter_local Sabs fs as (locals d) (globs gv))
-                (return_local bot))))))"
+     (with_call a (\<lambda>dst fs as. do {
+        d \<leftarrow> read_local (v, ctx);
+        gv \<leftarrow> read_global GlobalCS;
+        publish_global GlobalCS (enter_global Spoly fs as (locals d) (globs gv));
+        publish_seed (SeedCS w (route_cs v ctx (locals d) a))
+          (enter_local Spoly fs as (locals d) (globs gv));
+        return_local bot
+      }))
+     (with_call a (\<lambda>dst fs as. do {
+        d \<leftarrow> read_local (v, ctx);
+        gv \<leftarrow> read_global GlobalCS;
+        publish_global GlobalCS (enter_global Sabs fs as (locals d) (globs gv));
+        publish_seed (SeedCS w (route_cs v ctx (locals d) a))
+          (enter_local Sabs fs as (locals d) (globs gv));
+        return_local bot
+      }))"
   by (cases a)
      (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
                 route_cs_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen

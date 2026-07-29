@@ -67,7 +67,7 @@ definition route_tree ::
    \<Rightarrow> (pp, gname, sign abs_state) strategy_tree"
 where
   "route_tree route f u =
-     read_local u (\<lambda>su. read_global Gpos (\<lambda>gp. read_global Gneg (\<lambda>gn.
+     read_local_cont u (\<lambda>su. read_global_cont Gpos (\<lambda>gp. read_global_cont Gneg (\<lambda>gn.
        let env = su \<squnion> gp \<squnion> gn; res = f env
        in depend_on (route env) (restrict_global res) (answer (restrict_local res)))))"
 
@@ -83,7 +83,7 @@ definition route_combine ::
    \<Rightarrow> (pp, gname, sign abs_state) strategy_tree"
 where
   "route_combine route dst cc ex =
-     read_local cc (\<lambda>sc. read_local ex (\<lambda>se. read_global Gpos (\<lambda>gp. read_global Gneg (\<lambda>gn.
+     read_local_cont cc (\<lambda>sc. read_local_cont ex (\<lambda>se. read_global_cont Gpos (\<lambda>gp. read_global_cont Gneg (\<lambda>gn.
        let envc = sc \<squnion> gp \<squnion> gn; enve = se \<squnion> gp \<squnion> gn;
            res = combine_collect_abs dst envc enve
        in depend_on (route envc) (restrict_global res) (answer (restrict_local res))))))"

@@ -1,10 +1,12 @@
 # Strategy-tree equation combinators: migration plan
 
-> **Status:** Phase 1 and Phase 2 landed and batch-green. Phase 3's original
-> targets (`extra_ivl`/`cmb_ivl`, `extra_cs`/`cmb_cs`) were migrated onto
-> `routed_cmb`/`routed_extra` by a separate effort; this work retired the
-> resulting dead code and fixed the stale docs it left behind. A further
-> monadic-bind evolution (Stage 2 below) is proposed but not started.
+> **Status:** Phases 1-3 and Stage 2 (monadic `do`-notation) all landed and
+> batch-green. Phase 3's original targets (`extra_ivl`/`cmb_ivl`,
+> `extra_cs`/`cmb_cs`) were migrated onto `routed_cmb`/`routed_extra` by a
+> separate effort; this work retired the resulting dead code and fixed the
+> stale docs it left behind, then made `read_local`/`read_global`/
+> `publish_global`/`publish_seed` value-producing and retrofitted
+> `routed_cmb`/`routed_extra` to `do`-notation.
 
 ## Motivation
 
@@ -174,45 +176,58 @@ documentation:
 - No new proof obligation was introduced by Phase 1 or Phase 2; both are
   confirmed zero-proof-debt renames.
 
-## Stage 2 (proposed, not started): monadic bind and do-notation
+## Stage 2 (delivered): monadic bind and do-notation
 
-A further evolution, raised during review: `Strategy_Tree_Monad.thy` already
-provides `seqcomp_tree`, a real monadic bind (`seqcomp_tree t k` runs `t`,
-passes its answer to `k`) with its own soundness lemmas
-(`traverse_seqcomp`, `sides_of_rhs_seqcomp`, `seqcomp_mono`,
-`static_deps_seqcomp`). The proposal is to make combinators value-producing
-(`read_local key = QueryL key answer` instead of taking a continuation) and
-sequence them with `seqcomp_tree` as `>>=`, so `routed_cmb` could read as:
+`Strategy_Tree_Monad.thy`'s `seqcomp_tree` (`seqcomp_tree t k` runs `t`,
+passes its answer to `k`) is bind for the strategy-tree monad.
+`Strategy_Tree_Do.thy` registers it via `adhoc_overloading Monad_Syntax.bind
+== seqcomp_tree`, giving `do { x <- t; k x }` notation for free —
+`HOL-Library.Monad_Syntax`'s do-block is a pure parser-level translation to
+`seqcomp_tree`, so this part carried the same zero-proof-debt guarantee as
+Phase 1/2.
+
+`read_local`/`read_global` (`Strategy_Tree_Combinators.thy`) and
+`publish_global`/`publish_seed` (`DG_Transfer_Combinators.thy`) became
+value-producing (`read_local key = QueryL key answer`, no trailing
+continuation), so they compose with `do`-notation directly. The original
+continuation-passing forms are kept under `_cont` suffixes
+(`read_local_cont`, `read_global_cont`, `publish_global_cont`,
+`publish_seed_cont`) for direct, single-step use where binding one value
+isn't worth a `do`-block. `routed_cmb` and `routed_extra`
+(`Routed_Context.thy`) are retrofitted to the value-producing style:
 
 ```isabelle
-do {
-  caller_state <- read_local (caller, ctx);
-  callee_state <- read_local (exit, route caller ctx (locals caller_state) ca);
-  globals <- read_global gk0;
-  publish_global gk0 (combine_global S caller_state callee_state globals);
-  return_local (combine_local S caller_state callee_state globals)
-}
+definition routed_cmb ... where
+  "routed_cmb S gk0 route ctx ca cc ex =
+     with_call ca (\<lambda>dst _ _. do {
+       dcl \<leftarrow> read_local (cc, ctx);
+       dex \<leftarrow> read_local (ex, route cc ctx (locals dcl) ca);
+       gv \<leftarrow> read_global gk0;
+       publish_global gk0 (combine_global S dst (locals dcl) (locals dex) (globs gv));
+       return_local (combine_local S dst (locals dcl) (locals dex) (globs gv))
+     })"
 ```
 
-**Why this is a larger step than Phase 1/2, not a continuation of the same
-rename:** every commute/soundness lemma proved so far
-(`dg_tree_st_commute_routed_cmb`, `dg_tree_st_commute_routed_enter_pub`, and
-their `_cs` counterparts) is proved by `unfolding ..._def` followed by
-`(cases ca) (simp add: ...)` — the proof works because unfolding exposes the
-literal nested `QueryL`/`QueryG`/`Side` term and `dg_tree_st_commute` is
-proved compositionally over that exact shape. Rewriting `routed_cmb` to build
-on `seqcomp_tree` changes what unfolding exposes: the goal would be stated
-over `seqcomp_tree`, needing either new lemmas relating `dg_tree_st_commute`
-to `seqcomp_tree` composition (not yet proved anywhere in this codebase) or a
-new unfolding path back to the raw shape before the existing `simp` sets
-apply. This is real proof engineering, not a definitional rename — Phase 1
-and 2's "zero proof debt" claim does not automatically extend to it.
+**The predicted proof cost did not materialize.** The concern going in was
+real: every commute/soundness lemma (`dg_tree_st_commute_routed_cmb`,
+`dg_tree_st_commute_routed_enter_pub`, `hextra_commute_routed`, and the `_cs`
+counterparts, plus `Routed_Context.thy`'s own `routed_seed_publish_bound` /
+`routed_context_call` / `routed_comb_bound` / `routed_context_comb`) works by
+`unfolding ..._def` and simplifying the exposed term, and a `do`-block
+unfolds to nested `seqcomp_tree` applications, not directly to the flat
+`QueryL`/`QueryG`/`Side` shape those proofs were written against. In
+practice, every one of `Routed_Context.thy`'s own lemmas closed with **zero
+changes** after the retrofit — `seqcomp_tree`'s defining equations are
+already active in the default simp set the existing `simp`/`force` calls use,
+so the reduction to the flat shape happens automatically. Only two lemma
+*statements*, whose hand-written terms hardcoded the pre-retrofit
+CPS-application shape (`dg_tree_st_commute_routed_enter_pub` and its `_cs`
+counterpart), needed updating to the new `do`-block text; their proof scripts
+(`by (cases a) (simp add: ...)`) were unchanged. `Sign_Named_Global_Eff.thy`
+(a non-routed, named-global instance) needed only a mechanical swap to the
+`_cont` names to keep compiling, since it wasn't retrofitted to `do`-notation.
 
-Not started. Worth doing if the do-notation readability gain is judged worth
-the new lemma(s); the alternative is stopping at the current CPS-style
-combinator API (Phase 1+2), which is already fully proved and, per review,
-already a substantial readability improvement over raw `strategy_tree`
-construction.
+Net: 6 files changed, batch-green, zero new lemmas.
 
 ## Answers to the feasibility questions from the original proposal
 
@@ -220,8 +235,8 @@ construction.
 | --- | --- |
 | Technically feasible? | Yes — `abbreviation` gives it for free; demonstrated on both `routed_cmb` and `routed_extra`. |
 | Simple wrapper, separate AST, or other? | Simple wrapper (`abbreviation`). A separate AST + compiler was considered and rejected as unnecessary cost for what a rename already solves. |
-| Proof obligations? | None for Phase 1/2 (confirmed — batch-green, only two lemma *statements* needed updating to a provably-equal shape, no new proof strategy). A Stage 2 monadic rewrite would need new lemmas relating `dg_tree_st_commute` to `seqcomp_tree`; not yet attempted. |
-| Worth the migration? | Yes for Phase 1/2, delivered at near-zero proof cost. Phase 3's dead-code retirement was a direct consequence. Stage 2 is an open decision — see above. |
+| Proof obligations? | None for Phase 1/2/Stage 2 (confirmed — batch-green; only two lemma *statements* across the whole migration, including Stage 2's retrofit, needed updating to a provably-equal shape, and zero new lemmas were needed). |
+| Worth the migration? | Yes throughout, delivered at near-zero proof cost including the Stage 2 monadic retrofit. |
 | First migration target? | `routed_cmb`, then `routed_extra` (both done). |
 | Hidden cases needing raw `strategy_tree`? | None found. Every equation still bottoms out in `answer`/`return_local`; the combinators cover the full instruction set. |
 | Interferes with executable solver generation? | No — `abbreviation`s vanish before code generation. |

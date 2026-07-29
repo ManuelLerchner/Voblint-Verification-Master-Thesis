@@ -1,6 +1,6 @@
 theory Routed_Context
   imports DG_Ctx_Activation Strategy_Tree_Combinators DG_Transfer_Combinators
-    "Voblint_CFG.CFG_Local_Trace"
+    Strategy_Tree_Do "Voblint_CFG.CFG_Local_Trace"
 begin
 
 section \<open>One route, CALL and COMB discharged once\<close>
@@ -34,12 +34,13 @@ definition routed_cmb ::
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'd) dg_state) strategy_tree"
 where
   "routed_cmb S gk0 route ctx ca cc ex =
-     with_call ca (\<lambda>dst _ _.
-       read_local (cc, ctx) (\<lambda>dcl.
-         read_local (ex, route cc ctx (locals dcl) ca) (\<lambda>dex.
-           read_global gk0 (\<lambda>gv.
-             publish_global gk0 (combine_global S dst (locals dcl) (locals dex) (globs gv))
-               (return_local (combine_local S dst (locals dcl) (locals dex) (globs gv)))))))"
+     with_call ca (\<lambda>dst _ _. do {
+       dcl \<leftarrow> read_local (cc, ctx);
+       dex \<leftarrow> read_local (ex, route cc ctx (locals dcl) ca);
+       gv \<leftarrow> read_global gk0;
+       publish_global gk0 (combine_global S dst (locals dcl) (locals dex) (globs gv));
+       return_local (combine_local S dst (locals dcl) (locals dex) (globs gv))
+     })"
 
 text \<open>Per node \<open>v\<close>: if \<open>v\<close> is a callee entry, read back its own routed seed; for every
   outgoing call from \<open>v\<close>, publish the entered store into the callee's routed seed slot,
@@ -53,16 +54,18 @@ definition routed_extra ::
    \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'd) dg_state) strategy_tree list"
 where
   "routed_extra g S seed_key gk0 route ctx v =
-     (case v of FunctionEntry _ \<Rightarrow> [read_global (seed_key v ctx) (\<lambda>s. return_local (globs s))]
+     (case v of FunctionEntry _ \<Rightarrow>
+        [do { s \<leftarrow> read_global (seed_key v ctx); return_local (globs s) }]
        | _ \<Rightarrow> [])
      @ map (\<lambda>(w, ca, k).
-             with_call ca (\<lambda>dst fs as.
-               read_local (v, ctx) (\<lambda>d.
-                 read_global gk0 (\<lambda>gv.
-                   publish_global gk0 (enter_global S fs as (locals d) (globs gv))
-                     (publish_seed (seed_key w (route v ctx (locals d) ca))
-                       (enter_local S fs as (locals d) (globs gv))
-                       (return_local bot))))))
+             with_call ca (\<lambda>dst fs as. do {
+               d \<leftarrow> read_local (v, ctx);
+               gv \<leftarrow> read_global gk0;
+               publish_global gk0 (enter_global S fs as (locals d) (globs gv));
+               publish_seed (seed_key w (route v ctx (locals d) ca))
+                 (enter_local S fs as (locals d) (globs gv));
+               return_local bot
+             }))
            (call_successor_list g v)"
 
 subsection \<open>The locale\<close>
