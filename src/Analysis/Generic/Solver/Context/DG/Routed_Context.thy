@@ -35,11 +35,15 @@ definition routed_cmb ::
 where
   "routed_cmb S gk0 route ctx ca cc ex =
      with_call ca (\<lambda>dst _ _. do {
-       dcl \<leftarrow> read_local (cc, ctx);
-       dex \<leftarrow> read_local (ex, route cc ctx (locals dcl) ca);
-       gv \<leftarrow> read_global gk0;
-       publish_global gk0 (combine_global S dst (locals dcl) (locals dex) (globs gv));
-       return_local (combine_local S dst (locals dcl) (locals dex) (globs gv))
+       caller_state \<leftarrow> read_local (cc, ctx);
+       let ctx' = route cc ctx (locals caller_state) ca;
+       callee_state \<leftarrow> read_local (ex, ctx');
+       globals_state \<leftarrow> read_global gk0;
+       let caller = locals caller_state;
+       let callee = locals callee_state;
+       let globals = globs globals_state;
+       publish_global gk0 (combine_global S dst caller callee globals);
+       answer_local (combine_local S dst caller callee globals)
      })"
 
 text \<open>Per node \<open>v\<close>: if \<open>v\<close> is a callee entry, read back its own routed seed; for every
@@ -55,16 +59,18 @@ definition routed_extra ::
 where
   "routed_extra g S seed_key gk0 route ctx v =
      (case v of FunctionEntry _ \<Rightarrow>
-        [do { s \<leftarrow> read_global (seed_key v ctx); return_local (globs s) }]
+        [do { seed_state \<leftarrow> read_global (seed_key v ctx); answer_local (globs seed_state) }]
        | _ \<Rightarrow> [])
      @ map (\<lambda>(w, ca, k).
              with_call ca (\<lambda>dst fs as. do {
-               d \<leftarrow> read_local (v, ctx);
-               gv \<leftarrow> read_global gk0;
-               publish_global gk0 (enter_global S fs as (locals d) (globs gv));
-               publish_seed (seed_key w (route v ctx (locals d) ca))
-                 (enter_local S fs as (locals d) (globs gv));
-               return_local bot
+               entry_state \<leftarrow> read_local (v, ctx);
+               globals_state \<leftarrow> read_global gk0;
+               let entry = locals entry_state;
+               let globals = globs globals_state;
+               publish_global gk0 (enter_global S fs as entry globals);
+               publish_seed (seed_key w (route v ctx entry ca))
+                 (enter_local S fs as entry globals);
+               answer_local bot
              }))
            (call_successor_list g v)"
 
@@ -265,7 +271,7 @@ proof -
   have ret: "(cl, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont c1)"
-    unfolding routed_cmb_def using ret by (force intro: rev_image_eqI)
+    unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
   have snd_bound:
     "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
            (globs (sigma (Inr gk0))))

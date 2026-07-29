@@ -44,7 +44,7 @@ text \<open>
   \<open>locals\<close> half (\<open>routed_extra\<close>'s frame-entry read and \<open>routed_cmb\<close>'s
   final answer, both in \<open>Routed_Context\<close>, return the analysis's own local
   contribution this way). \<open>publish_global\<close>, \<open>publish_seed\<close>, and
-  \<open>return_local\<close> apply that convention so an equation never writes
+  \<open>answer_local\<close> apply that convention so an equation never writes
   \<^const>\<open>DG\<close>, \<open>fst\<close>, or \<open>snd\<close> directly -- each is still a plain
   syntax translation, so unfolding an equation's \<open>_def\<close> exposes exactly the
   \<^const>\<open>DG\<close> term it names.
@@ -75,8 +75,8 @@ abbreviation publish_global_cont where
 abbreviation publish_seed_cont where
   "publish_seed_cont key x cont \<equiv> depend_on key (DG bot x) cont"
 
-abbreviation return_local where
-  "return_local x \<equiv> answer (DG x bot)"
+abbreviation answer_local where
+  "answer_local x \<equiv> answer (DG x bot)"
 
 text \<open>
   \<^typ>\<open>call_action\<close> (\<open>CFG_Def.thy\<close>) has one constructor, so matching it

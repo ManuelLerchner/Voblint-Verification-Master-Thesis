@@ -155,7 +155,7 @@ lemma dg_tree_st_commute_frame_read_cs:
 lemma dg_tree_st_commute_routed_cmb_cs:
   "dg_tree_st_commute env (routed_cmb Spoly GlobalCS route_cs ctx ca cc ex)
                           (routed_cmb Sabs GlobalCS route_cs ctx ca cc ex)"
-  unfolding routed_cmb_def
+  unfolding routed_cmb_def Let_def
   by (cases ca)
      (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
                     route_cs_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
@@ -164,20 +164,20 @@ lemma dg_tree_st_commute_routed_cmb_cs:
 lemma dg_tree_st_commute_routed_enter_pub_cs:
   "dg_tree_st_commute env
      (with_call a (\<lambda>dst fs as. do {
-        d \<leftarrow> read_local (v, ctx);
-        gv \<leftarrow> read_global GlobalCS;
-        publish_global GlobalCS (enter_global Spoly fs as (locals d) (globs gv));
-        publish_seed (SeedCS w (route_cs v ctx (locals d) a))
-          (enter_local Spoly fs as (locals d) (globs gv));
-        return_local bot
+        entry_state \<leftarrow> read_local (v, ctx);
+        globals_state \<leftarrow> read_global GlobalCS;
+        publish_global GlobalCS (enter_global Spoly fs as (locals entry_state) (globs globals_state));
+        publish_seed (SeedCS w (route_cs v ctx (locals entry_state) a))
+          (enter_local Spoly fs as (locals entry_state) (globs globals_state));
+        answer_local bot
       }))
      (with_call a (\<lambda>dst fs as. do {
-        d \<leftarrow> read_local (v, ctx);
-        gv \<leftarrow> read_global GlobalCS;
-        publish_global GlobalCS (enter_global Sabs fs as (locals d) (globs gv));
-        publish_seed (SeedCS w (route_cs v ctx (locals d) a))
-          (enter_local Sabs fs as (locals d) (globs gv));
-        return_local bot
+        entry_state \<leftarrow> read_local (v, ctx);
+        globals_state \<leftarrow> read_global GlobalCS;
+        publish_global GlobalCS (enter_global Sabs fs as (locals entry_state) (globs globals_state));
+        publish_seed (SeedCS w (route_cs v ctx (locals entry_state) a))
+          (enter_local Sabs fs as (locals entry_state) (globs globals_state));
+        answer_local bot
       }))"
   by (cases a)
      (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
@@ -188,7 +188,7 @@ lemma hextra_commute_routed_cs:
   "list_all2 (dg_tree_st_commute env)
      (routed_extra twice_cfg Spoly SeedCS GlobalCS route_cs ctx w)
      (routed_extra twice_cfg Sabs SeedCS GlobalCS route_cs ctx w)"
-  unfolding routed_extra_def
+  unfolding routed_extra_def Let_def
   by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
                  dg_tree_st_commute_frame_read_cs dg_tree_st_commute_routed_enter_pub_cs
            split: cfg_node.split)
