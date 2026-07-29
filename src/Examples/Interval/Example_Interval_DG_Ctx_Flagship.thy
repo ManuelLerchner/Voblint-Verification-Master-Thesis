@@ -64,39 +64,6 @@ text \<open>The generator's routing hook is generic over call site and caller co
 definition route_ivl_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl st \<Rightarrow> call_action \<Rightarrow> ivl" where
   "route_ivl_gen u ctx d ca = route_ivl d ca"
 
-text \<open>Extra per-node trees: a frame-entry seed \<^emph>\<open>read\<close> (of the incoming seed slot)
-  and, for every outgoing call edge, a caller-side routed \<^emph>\<open>publication\<close>
-  of the entered store into the callee's seed slot.  \<open>rt\<close> is the generator's
-  routing hook, threaded in rather than called by name, so the entry publication and
-  the return read (the sibling combine definition below) apply the identical function.\<close>
-definition extra_ivl ::
-  "cfg \<Rightarrow> (pp \<Rightarrow> ivl \<Rightarrow> ivl st \<Rightarrow> call_action \<Rightarrow> ivl) \<Rightarrow> ivl \<Rightarrow> pp
-     \<Rightarrow> (pp \<times> ivl, gk, (ivl st, ivl st) dg_state) strategy_tree list" where
-  "extra_ivl g rt ctx v =
-     (if is_function_entry v
-        then [QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot))]
-        else [])
-     @ map (\<lambda>(w, ca, k).
-             QueryL (v, ctx) (\<lambda>d.
-               Side (Seed w (rt v ctx (locals d) ca)) (DG bot (entered_ivl (locals d) ca))
-                 (Answer (DG bot bot))))
-           (call_successor_list g v)"
-
-text \<open>The routing combine: the callee exit is read under the context routed from the
-  exact call action the generator matched to this return (\<open>ca\<close>, from
-  \<^const>\<open>return_call_action_list\<close>) --- no re-derivation from \<open>cc\<close>'s outgoing
-  edges, so a node with more than one outgoing call edge cannot route the return to
-  the wrong callee.\<close>
-definition cmb_ivl ::
-  "cfg \<Rightarrow> (pp \<Rightarrow> ivl \<Rightarrow> ivl st \<Rightarrow> call_action \<Rightarrow> ivl) \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
-     \<Rightarrow> (pp \<times> ivl, gk, (ivl st, ivl st) dg_state) strategy_tree" where
-  "cmb_ivl g rt ctx ca cc ex =
-     (case ca of CallEdge dst _ _ \<Rightarrow>
-       QueryL (cc, ctx) (\<lambda>dcl.
-         QueryL (ex, rt cc ctx (locals dcl) ca) (\<lambda>dex.
-           Side Global (DG bot (fst (dgs_combine Spoly dst (locals dcl) (locals dex) bot)))
-             (Answer (DG (snd (dgs_combine Spoly dst (locals dcl) (locals dex) bot)) bot)))))"
-
 subsection \<open>The routed equation system and its solution\<close>
 
 definition twice_ctx_eqs ::

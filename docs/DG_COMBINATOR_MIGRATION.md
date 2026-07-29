@@ -1,8 +1,10 @@
 # Strategy-tree equation combinators: migration plan
 
-> **Status:** Phase 1 landed and batch-green
-> (`Strategy_Tree_Combinators.thy`, `routed_cmb` rewritten). Phase 2 and
-> Phase 3 are planned, not started.
+> **Status:** Phase 1 and Phase 2 landed and batch-green. Phase 3's original
+> targets (`extra_ivl`/`cmb_ivl`, `extra_cs`/`cmb_cs`) were migrated onto
+> `routed_cmb`/`routed_extra` by a separate effort; this work retired the
+> resulting dead code and fixed the stale docs it left behind. A further
+> monadic-bind evolution (Stage 2 below) is proposed but not started.
 
 ## Motivation
 
@@ -11,11 +13,12 @@ DG equations are constructed directly with the verified TD solver's four
 `vendor/td-verification/Basics_side.thy:94-99`). An equation that is, in
 substance, "combine the caller state, the routed callee state, and the
 globals" (`routed_cmb`, `src/Analysis/Generic/Solver/Context/DG/Routed_Context.thy`)
-reads as four levels of nameless-lambda nesting over `QueryL`/`QueryG`. The
-solver's instruction set is the right level for the solver; it is not the
-right level for an equation author or a proof reader.
+reads as several levels of nameless-lambda nesting over `QueryL`/`QueryG`,
+with `DG bot (...)`/`fst`/`snd` wrapping and unwrapping the payload at every
+step. The solver's instruction set is the right level for the solver; it is
+not the right level for an equation author or a proof reader.
 
-This plan introduces a thin naming layer over the same four constructors and
+This plan introduces a naming layer over the same four constructors and
 migrates equation constructors onto it, without touching the solver or the
 `strategy_tree` type.
 
@@ -38,22 +41,20 @@ new constant, so it carries no unfolding lemma, no `_def`, and no compiler-
 correctness obligation. Every lemma that already unfolds an equation's `_def`
 and pattern-matches on `QueryL`/`QueryG`/`Side`/`Answer` continues to see
 those constructors and is unaffected by the rename. This is why the Phase 1
-rewrite below needed zero proof changes anywhere downstream of the rewritten
-definition.
+rewrite needed zero proof changes anywhere downstream of the rewritten
+definition — confirmed again for Phase 2's larger rewrite below.
 
 A separate AST with its own compiler (the proposal's other option) would add a
 real semantic layer — a new datatype, a `compile` function, and a compiler-
 correctness theorem relating it back to `strategy_tree` — for a problem that a
-zero-cost rename already solves. That approach is not used here; if a future
-combinator needs actual restructuring (not just renaming), see Phase 2 for
-where that boundary sits.
+zero-cost rename already solves. That approach is not used here.
 
 ## Phase 1 — generic read/side combinators (delivered)
 
 **File:** `src/Analysis/Generic/Solver/Core/Strategy_Tree_Combinators.thy`
-(added to the `theories` list in `src/Analysis/ROOT`, next to
-`Strategy_Tree_Monad`, its natural neighbor: both are generic over any
-`strategy_tree`, independent of the DG framework).
+(in the `theories` list in `src/Analysis/ROOT`, next to `Strategy_Tree_Monad`,
+its natural neighbor: both are generic over any `strategy_tree`, independent
+of the DG framework).
 
 | Combinator | Abbreviates | Role |
 | --- | --- | --- |
@@ -62,86 +63,106 @@ where that boundary sits.
 | `depend_on key val cont` | `Side key val cont` | publish a side value under a global key, continue |
 | `answer d` | `Answer d` | yield the local result |
 
-**Proof of concept:** `routed_cmb`
-(`src/Analysis/Generic/Solver/Context/DG/Routed_Context.thy:30-41`), the
-routed return-combine equation, rewritten from the raw constructors to
-`read_local` / `read_global` / `depend_on` / `answer`. Chosen because it is
-the smallest of the two factories `Routed_Context.thy` already generalizes
-(over `routed_cmb`/`routed_extra`), and because its every use site
-(`routed_seed_publish_bound`, `routed_context_call`, `routed_comb_bound`,
-`routed_context_comb`) unfolds `routed_cmb_def` and pattern-matches on the
-constructors — the sharpest test of the "zero proof debt" claim above.
-
-**Result:** the whole `Routed_Context.thy` locale (`routed_context`, all four
-lemmas and both theorems) batch-checks with no changes beyond the
-`imports` line and the `routed_cmb` body — confirmed by a full
-`Voblint_Analysis` batch build:
-
-```text
-Voblint_Analysis: theory Voblint_Analysis.Strategy_Tree_Combinators 100% (0.023s cumulated time)
-Voblint_Analysis: theory Voblint_Analysis.Routed_Context 100% (1.230s cumulated time)
-Finished Voblint_Analysis (0:01:43 elapsed time, 0:05:52 cpu time, factor 3.39)
-```
-
-## Phase 2 — DG-specific transfer combinators (planned)
+## Phase 2 — DG-specific transfer combinators (delivered)
 
 **File:** `src/Analysis/Generic/Solver/Context/DG/DG_Transfer_Combinators.thy`
-(DG-specific, so it belongs beside `Routed_Context.thy` in
-`Solver/Context/DG/`, not in the generic `Solver/Core/`).
-
-Candidates, all still plain projections and therefore still zero-cost:
+(DG-specific, so it lives beside `Routed_Context.thy` in `Solver/Context/DG/`,
+not the generic `Solver/Core/`).
 
 | Combinator | Wraps | Note |
 | --- | --- | --- |
-| `enter_global S call locals globals` | `fst (dgs_enter S fs as locals globals)` | `dgs_enter` already returns `'dg \<times> 'dl`; these just name the two projections |
-| `enter_local S call locals globals` | `snd (dgs_enter S fs as locals globals)` | |
-| `combine_global S dst caller callee globals` | `fst (dgs_combine S dst caller callee globals)` | `dgs_combine` is itself sugar over `dgs_combine_env`/`dgs_combine_assign` (`DG_Framework.thy:255-258`) — combinators wrap the composed form, matching how every current caller uses it |
-| `combine_local S dst caller callee globals` | `snd (dgs_combine S dst caller callee globals)` | |
+| `enter_global S fs as d g` | `fst (dgs_enter S fs as d g)` | `dgs_enter` already returns `'dg \<times> 'dl`; these just name the two projections |
+| `enter_local S fs as d g` | `snd (dgs_enter S fs as d g)` | |
+| `combine_global S dst dc de g` | `fst (dgs_combine S dst dc de g)` | `dgs_combine` is sugar over `dgs_combine_env`/`dgs_combine_assign` (`DG_Framework.thy:255-258`); this wraps the composed form every caller already uses |
+| `combine_local S dst dc de g` | `snd (dgs_combine S dst dc de g)` | |
+| `publish_global key x cont` | `depend_on key (DG bot x) cont` | publish to the one shared global slot |
+| `publish_seed key x cont` | `depend_on key (DG bot x) cont` | publish to a routed per-context seed slot — same primitive as `publish_global`, named for the role |
+| `return_local x` | `answer (DG x bot)` | yield the equation's own local contribution |
+| `with_call ca (\<lambda>dst fs as. ...)` | `case ca of CallEdge dst fs as \<Rightarrow> ...` | `call_action` has one constructor, so this is a total destructure, named once instead of repeated at every `dgs_enter`/`dgs_combine` call a site makes |
 
-`publish_seed key val cont` (the `Side (seed_key ...) ...` pattern in
-`routed_extra`) is also in scope for this phase — it is `depend_on` from
-Phase 1 specialized to a seed key, so it can be a plain `abbreviation` too.
+**Design note — why `publish_global`/`publish_seed`/`return_local` have no
+declared type signature:** an earlier attempt gave them an explicit signature
+forcing the `dg_state`'s local and global halves to the same type variable
+(matching how `Routed_Context.thy` happens to instantiate them, via a
+homogeneous `('d, 'd) dg_spec`). That over-constrained the *general*
+combinator and broke unification wherever `combine_global`'s and
+`combine_local`'s independently-inferred result types needed to unify through
+it. Leaving the type inferred keeps each combinator's sort constraint scoped
+to only the `dg_state` half it actually touches (`bot`'s half only needs
+`class bot`); callers that need homogeneity (like `Routed_Context.thy`) get it
+from their own signature, not from the combinator.
 
-Because `dgs_enter`/`dgs_combine` already return the pair these combinators
-project, and `fst`/`snd` are `[simp]`, these can very likely also be
-`abbreviation`s (pattern-matching `case ... of CallEdge dst fs as \<Rightarrow> ...`
-around the call cannot be abbreviated away, only the leaf `fst (dgs_enter ...)`
-/ `snd (dgs_enter ...)` calls can). If a candidate combinator turns out to
-need real case-splitting logic that an `abbreviation` cannot express, promote
-just that one to a `definition` and give it an explicit, `[simp]`-tagged
-unfolding lemma rather than widening the whole layer's cost model — the
-Phase 1 rationale above still governs which shape to pick.
+**Migration target:** both `routed_cmb` and `routed_extra`
+(`src/Analysis/Generic/Solver/Context/DG/Routed_Context.thy`), rewritten to
+use the full combinator set — no `DG`, `fst`, `snd`, or raw `QueryL`/`QueryG`/
+`Side`/`Answer` remain in either definition, and the `case ca of CallEdge dst
+fs as \<Rightarrow> ...` match that used to repeat at every `dgs_enter`/`dgs_combine`
+call is now a single `with_call` wrapping the whole per-call-site tree:
 
-**Migration target:** `routed_extra`
-(`Routed_Context.thy:48-67`), the routed entry-seed publication, using
-`read_local`/`read_global`/`depend_on`/`answer` from Phase 1 plus
-`enter_local`/`enter_global`/`publish_seed` from this phase.
+```isabelle
+definition routed_cmb ... where
+  "routed_cmb S gk0 route ctx ca cc ex =
+     with_call ca (\<lambda>dst _ _.
+       read_local (cc, ctx) (\<lambda>dcl.
+         read_local (ex, route cc ctx (locals dcl) ca) (\<lambda>dex.
+           read_global gk0 (\<lambda>gv.
+             publish_global gk0 (combine_global S dst (locals dcl) (locals dex) (globs gv))
+               (return_local (combine_local S dst (locals dcl) (locals dex) (globs gv)))))))"
+```
 
-## Phase 3 — migrate remaining hand-written factories (planned)
+**Result:** the whole `Routed_Context.thy` locale (`routed_context`, all four
+lemmas and both theorems) batch-checks with no proof changes beyond the two
+rewritten definitions and the `imports` line. Three downstream lemmas whose
+*statements* hardcoded the pre-Phase-2 raw-constructor shape of
+`routed_extra`'s per-call tree (`dg_tree_st_commute_routed_enter_pub` in
+`Example_Interval_DG_Ctx_Sound.thy` and its `_cs` counterpart in
+`Example_Interval_DG_CallString.thy`) needed their stated terms updated to the
+new `with_call`-wrapped shape — moving the case split from wrapping only the
+payload to wrapping the whole per-call tree is a provable-equal but not
+definitionally-equal change (both reduce identically once `cases a`
+instantiates the one-constructor `call_action`), so it is a statement update,
+not a proof-strategy change; both proofs still close with the same `(cases a)
+(simp add: ...)`.
 
-Once `routed_cmb`/`routed_extra` read through the combinator layer, every
-analysis that already instantiates them for free (any `routed_context`
-locale interpretation) gets the readability improvement automatically —
-no separate migration step. The remaining work is for analyses that still
-construct their own `cmb`/`extra` by hand instead of going through
-`Routed_Context`:
+## Phase 3 — retire the hand-written factories it replaced (delivered)
 
-- `extra_ivl` / `cmb_ivl` in
-  `src/Examples/Interval/Example_Interval_DG_Ctx_Flagship.thy`;
-- the equivalent hand-written factories in
-  `Example_Interval_DG_CallString.thy`;
-- any other context-sensitive example that has not yet been routed through
-  `Routed_Context`.
+The original plan's Phase 3 targets — `extra_ivl`/`cmb_ivl`
+(`Example_Interval_DG_Ctx_Flagship.thy`) and the `extra_cs`/`cmb_cs` family in
+`Example_Interval_DG_CallString.thy` — were migrated onto
+`routed_cmb`/`routed_extra` by a separate, concurrent effort in this
+repository (see the `routed_context` locale interpretations in
+`Example_Interval_DG_CallString.thy` and the `twice_ctx_eqs` equation system
+in `Example_Interval_DG_Ctx_Flagship.thy`). That migration is what made this
+combinator work's Phase 1/2 rewrites apply to every routed context-sensitive
+analysis for free — an analysis that interprets `routed_context` never
+constructs `cmb`/`extra` itself, so it inherits whatever `routed_cmb`/
+`routed_extra` are built from.
 
-**Note on overlap with in-progress work:** a separate, already in-progress
-migration in this repository is rewriting some of these call sites
-(`twice_ctx_sound` in `Example_Interval_DG_Ctx_Sound.thy`) to use
-`routed_cmb`/`routed_extra` directly instead of `cmb_ivl`/`extra_ivl`/
-`cmb_abs`/`extra_abs`. That work is orthogonal to and compatible with this
-plan: it retires hand-written factories in favor of `Routed_Context`'s
-locale, which is exactly the prerequisite for those call sites to pick up
-Phase 1/2's combinators automatically once they route through it. Phase 3
-here should follow that migration, not duplicate it.
+What that migration left behind was dead code: the old `extra_ivl`/`cmb_ivl`
+definitions in `Example_Interval_DG_Ctx_Flagship.thy` (superseded by
+`routed_extra`/`routed_cmb` in the actual `twice_ctx_eqs`, never referenced
+again), and their abstract-side mirrors `extra_abs`/`cmb_abs` plus three
+commute lemmas built against them (`dg_tree_st_commute_enter_pub`,
+`dg_tree_st_commute_cmb`, `hextra_commute`) in
+`Example_Interval_DG_Ctx_Sound.thy` — all superseded by the routed
+`dg_tree_st_commute_routed_cmb`/`hextra_commute_routed` pair but still present
+and citing definitions the actual proof no longer needs. This work deleted
+both dead pairs and their now-unused supporting lemmas
+(`dgs_combine_snd_commute`/`dgs_combine_fst_commute`, the `bot`-only special
+cases of `_gen` versions still in use), and fixed the resulting dangling
+documentation:
+
+- `Example_Interval_DG_Ctx_Sound.thy`'s final theorem doc comment named
+  `dg_tree_st_commute_cmb`/`hextra_commute` as the "three bundled
+  obligations" — stale even before this cleanup, since the actual `[OF ...]`
+  clause already cited the routed versions (a real definition-statement drift
+  per the autoformalization audit, not just unused code).
+- `Example_Interval_DG_CallString.thy` and
+  `Example_Interval_DG_Ctx_Multi_Call_Regression.thy` had doc-comment
+  `\<^const>\<open>extra_ivl\<close>`/`\<^const>\<open>cmb_ivl\<close>` antiquotations that would have
+  failed to resolve once those constants were deleted; retargeted to
+  `routed_extra`/`routed_cmb`, the constants that now carry the same
+  property those comments describe.
 
 ## What this does not change
 
@@ -150,30 +171,74 @@ here should follow that migration, not duplicate it.
 - Executable / code-generated solver runs are unaffected: `abbreviation`s are
   a parser/printer-level construct and do not appear in generated code at
   all — there is nothing to unfold at code-generation time.
-- No new proof obligation is introduced by Phase 1, and none is expected from
-  Phase 2 as long as its combinators stay plain projections (see the
-  `abbreviation`-vs-`definition` note above).
+- No new proof obligation was introduced by Phase 1 or Phase 2; both are
+  confirmed zero-proof-debt renames.
+
+## Stage 2 (proposed, not started): monadic bind and do-notation
+
+A further evolution, raised during review: `Strategy_Tree_Monad.thy` already
+provides `seqcomp_tree`, a real monadic bind (`seqcomp_tree t k` runs `t`,
+passes its answer to `k`) with its own soundness lemmas
+(`traverse_seqcomp`, `sides_of_rhs_seqcomp`, `seqcomp_mono`,
+`static_deps_seqcomp`). The proposal is to make combinators value-producing
+(`read_local key = QueryL key answer` instead of taking a continuation) and
+sequence them with `seqcomp_tree` as `>>=`, so `routed_cmb` could read as:
+
+```isabelle
+do {
+  caller_state <- read_local (caller, ctx);
+  callee_state <- read_local (exit, route caller ctx (locals caller_state) ca);
+  globals <- read_global gk0;
+  publish_global gk0 (combine_global S caller_state callee_state globals);
+  return_local (combine_local S caller_state callee_state globals)
+}
+```
+
+**Why this is a larger step than Phase 1/2, not a continuation of the same
+rename:** every commute/soundness lemma proved so far
+(`dg_tree_st_commute_routed_cmb`, `dg_tree_st_commute_routed_enter_pub`, and
+their `_cs` counterparts) is proved by `unfolding ..._def` followed by
+`(cases ca) (simp add: ...)` — the proof works because unfolding exposes the
+literal nested `QueryL`/`QueryG`/`Side` term and `dg_tree_st_commute` is
+proved compositionally over that exact shape. Rewriting `routed_cmb` to build
+on `seqcomp_tree` changes what unfolding exposes: the goal would be stated
+over `seqcomp_tree`, needing either new lemmas relating `dg_tree_st_commute`
+to `seqcomp_tree` composition (not yet proved anywhere in this codebase) or a
+new unfolding path back to the raw shape before the existing `simp` sets
+apply. This is real proof engineering, not a definitional rename — Phase 1
+and 2's "zero proof debt" claim does not automatically extend to it.
+
+Not started. Worth doing if the do-notation readability gain is judged worth
+the new lemma(s); the alternative is stopping at the current CPS-style
+combinator API (Phase 1+2), which is already fully proved and, per review,
+already a substantial readability improvement over raw `strategy_tree`
+construction.
 
 ## Answers to the feasibility questions from the original proposal
 
 | Question | Answer |
 | --- | --- |
-| Technically feasible? | Yes — `abbreviation` gives it for free; demonstrated on `routed_cmb`. |
+| Technically feasible? | Yes — `abbreviation` gives it for free; demonstrated on both `routed_cmb` and `routed_extra`. |
 | Simple wrapper, separate AST, or other? | Simple wrapper (`abbreviation`). A separate AST + compiler was considered and rejected as unnecessary cost for what a rename already solves. |
-| Proof obligations? | None for Phase 1 (confirmed). Expected none for Phase 2 if combinators stay plain `fst`/`snd` projections; promote to `definition` + `[simp]` lemma only if a specific combinator needs real restructuring. |
-| Worth the migration? | Yes for Phase 1 (already delivered at near-zero cost). Phase 2 likewise. Phase 3 depends on the separate in-progress `Routed_Context` migration landing first. |
-| First migration target? | `routed_cmb` (done). Next: `routed_extra`. |
-| Hidden cases needing raw `strategy_tree`? | None found. Every equation still bottoms out in `answer`/`Answer`; the combinators cover the full instruction set (`read_local`, `read_global`, `depend_on`, `answer`), so nothing is left needing the raw constructors. |
+| Proof obligations? | None for Phase 1/2 (confirmed — batch-green, only two lemma *statements* needed updating to a provably-equal shape, no new proof strategy). A Stage 2 monadic rewrite would need new lemmas relating `dg_tree_st_commute` to `seqcomp_tree`; not yet attempted. |
+| Worth the migration? | Yes for Phase 1/2, delivered at near-zero proof cost. Phase 3's dead-code retirement was a direct consequence. Stage 2 is an open decision — see above. |
+| First migration target? | `routed_cmb`, then `routed_extra` (both done). |
+| Hidden cases needing raw `strategy_tree`? | None found. Every equation still bottoms out in `answer`/`return_local`; the combinators cover the full instruction set. |
 | Interferes with executable solver generation? | No — `abbreviation`s vanish before code generation. |
 
 ## Batch evidence
 
-Full `Voblint_Analysis` session, including `Strategy_Tree_Combinators.thy` and
-the rewritten `Routed_Context.thy`:
+Full `Voblint_Formalization` build (all sessions, including `Voblint_Analysis`
+and `Voblint_Examples`):
 
 ```text
-Finished Voblint_Analysis (0:01:43 elapsed time, 0:05:52 cpu time, factor 3.39)
+isabelle build -v -j12 -o threads=12 -N -d <afp> -d vendor/td-verification -D . Voblint_Formalization
+... (all sessions) ...
+Finished at Wed Jul 29 16:20:24 GMT+2 2026
 ```
 
-Zero errors, zero warnings, all 254 commands in `Routed_Context.thy` finished
-and fully processed under I/Q diagnostics prior to the batch run.
+Exit code 0. Zero errors across `Strategy_Tree_Combinators.thy`,
+`DG_Transfer_Combinators.thy`, `Routed_Context.thy`,
+`Example_Interval_DG_Ctx_Flagship.thy`, `Example_Interval_DG_Ctx_Sound.thy`,
+`Example_Interval_DG_CallString.thy`, and
+`Example_Interval_DG_Ctx_Multi_Call_Regression.thy`.

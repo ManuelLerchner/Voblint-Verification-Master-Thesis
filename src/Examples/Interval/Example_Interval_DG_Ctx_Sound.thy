@@ -71,35 +71,6 @@ lemma route_commute_gen:
   "route_ivl_gen u ctx s ca = route_abs_gen u ctx (fun_of_st s) ca"
   by (simp add: route_ivl_gen_def route_abs_gen_def route_commute)
 
-subsection \<open>The abstract routed enter-seed and combine trees\<close>
-
-text \<open>The abstract mirrors of \<^const>\<open>extra_ivl\<close> / \<^const>\<open>cmb_ivl\<close>, over
-  \<^typ>\<open>ivl abs_state\<close>: same tree skeleton, routed through \<^const>\<open>route_abs\<close> /
-  \<^const>\<open>entered_abs\<close> and the abstract combine \<^const>\<open>Sabs\<close>.\<close>
-
-definition extra_abs ::
-  "cfg \<Rightarrow> (pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl) \<Rightarrow> ivl \<Rightarrow> pp
-     \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree list" where
-  "extra_abs g rt ctx v =
-     (if is_function_entry v
-        then [QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot))]
-        else [])
-     @ map (\<lambda>(w, ca, k).
-             QueryL (v, ctx) (\<lambda>d.
-               Side (Seed w (rt v ctx (locals d) ca)) (DG bot (entered_abs (locals d) ca))
-                 (Answer (DG bot bot))))
-           (call_successor_list g v)"
-
-definition cmb_abs ::
-  "cfg \<Rightarrow> (pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl) \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
-     \<Rightarrow> (pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) strategy_tree" where
-  "cmb_abs g rt ctx ca cc ex =
-     (case ca of CallEdge dst _ _ \<Rightarrow>
-       QueryL (cc, ctx) (\<lambda>dcl.
-         QueryL (ex, rt cc ctx (locals dcl) ca) (\<lambda>dex.
-           Side Global (DG bot (fst (dgs_combine Sabs dst (locals dcl) (locals dex) bot)))
-             (Answer (DG (snd (dgs_combine Sabs dst (locals dcl) (locals dex) bot)) bot)))))"
-
 subsection \<open>Per-tree transport commutation\<close>
 
 text \<open>The frame-entry seed \<^emph>\<open>read\<close> transports: it reads the seed global slot and
@@ -113,61 +84,9 @@ lemma dg_tree_st_commute_frame_read:
   by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
                 dep_aux_def bot_fun_def)
 
-text \<open>The caller-side routed enter publication transports.  The \<^const>\<open>Side\<close> key
-  \<^term>\<open>Seed w (route_ivl (locals d) a)\<close> is carried over \<^emph>\<open>literally\<close> by
-  \<open>route_commute\<close>, and the published entered store by \<open>entered_commute\<close>;
-  the dependency set is the single read \<^term>\<open>Inl (v, ctx)\<close>, unaffected by routing.\<close>
-
-lemma dg_tree_st_commute_enter_pub:
-  "dg_tree_st_commute env
-     (QueryL (v, ctx) (\<lambda>d. Side (Seed w (route_ivl (locals d) a))
-                             (DG bot (entered_ivl (locals d) a)) (Answer (DG bot bot))))
-     (QueryL (v, ctx) (\<lambda>d. Side (Seed w (route_abs (locals d) a))
-                             (DG bot (entered_abs (locals d) a)) (Answer (DG bot bot))))"
-  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
-                route_commute entered_commute dep_aux_def bot_fun_def
-                fun_upd_apply fun_eq_iff)
-
-text \<open>The return combine commutes componentwise (\<open>ivl_Hcomb\<close> read on each
-  output projection, incoming global slot \<open>bot\<close>).\<close>
-
-lemma dgs_combine_snd_commute:
-  "fun_of_st (snd (dgs_combine Spoly dst dc de bot))
-     = snd (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) bot)"
-proof -
-  have step: "map_prod fun_of_st fun_of_st
-                (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot)
-              = dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot)"
-    by (rule ivl_Hcomb)
-  have "fun_of_st (snd (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))
-      = snd (map_prod fun_of_st fun_of_st
-               (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))"
-    by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot))"
-    by (simp add: step)
-  finally show ?thesis by (simp add: Spoly_def fun_of_st_bot bot_fun_def)
-qed
-
-lemma dgs_combine_fst_commute:
-  "fun_of_st (fst (dgs_combine Spoly dst dc de bot))
-     = fst (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) bot)"
-proof -
-  have step: "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot)
-              = dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot)"
-    by (rule ivl_Hcomb)
-  have "fun_of_st (fst (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))
-      = fst (map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de bot))"
-    by (metis fst_conv map_prod_simp surj_pair)
-  also have "\<dots> = fst (dgs_combine Sabs dst (fun_of_st dc) (fun_of_st de) (fun_of_st bot))"
-    by (simp add: step)
-  finally show ?thesis by (simp add: Spoly_def fun_of_st_bot bot_fun_def)
-qed
-
 text \<open>The return combine commutes componentwise with an arbitrary incoming global
-  slot, not just \<open>bot\<close>: the same \<open>ivl_Hcomb\<close> homomorphism read on each output
-  projection, generalizing \<open>dgs_combine_snd_commute\<close> / \<open>dgs_combine_fst_commute\<close>
-  to a routed combine that reads the shared global through a query instead of
-  discarding it.\<close>
+  slot: the \<open>ivl_Hcomb\<close> homomorphism read on each output projection, for a routed
+  combine that reads the shared global through a query instead of discarding it.\<close>
 
 lemma dgs_combine_snd_commute_gen:
   "fun_of_st (snd (dgs_combine Spoly dst dc de g))
@@ -235,19 +154,6 @@ proof -
   finally show ?thesis by (simp add: Spoly_def)
 qed
 
-text \<open>The destination-aware return combine transports.  The callee exit is read
-  under \<^term>\<open>route_ivl (locals dcl) ca\<close> --- the \<^emph>\<open>same\<close> context selected at the
-  matching call site's call edge --- carried over literally by \<open>route_commute\<close>; the two
-  combine outputs transport through \<open>dgs_combine_fst_commute\<close> / \<open>_snd_commute\<close>.\<close>
-
-lemma dg_tree_st_commute_cmb:
-  "dg_tree_st_commute env (cmb_ivl g route_ivl_gen ctx ca cc ex) (cmb_abs g route_abs_gen ctx ca cc ex)"
-  unfolding cmb_ivl_def cmb_abs_def route_ivl_gen_def route_abs_gen_def
-  by (cases ca)
-     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
-                    route_commute dgs_combine_fst_commute dgs_combine_snd_commute
-                    dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
-
 text \<open>The routed combine tree, reading the shared global through a query instead
   of a fixed \<open>bot\<close>, transports the same way once the extra query commutes: the
   read slot \<open>gk0\<close> is the same key on both carriers, so \<^const>\<open>fun_of_dg_st\<close>
@@ -263,15 +169,6 @@ lemma dg_tree_st_commute_routed_cmb:
                     route_commute dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
-text \<open>The per-node \<open>extra\<close> list transports elementwise: the optional frame-entry
-  read and every routed enter publication.\<close>
-
-lemma hextra_commute:
-  "list_all2 (dg_tree_st_commute env) (extra_ivl g route_ivl_gen ctx w) (extra_abs g route_abs_gen ctx w)"
-  unfolding extra_ivl_def extra_abs_def route_ivl_gen_def route_abs_gen_def
-  by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
-                 dg_tree_st_commute_frame_read dg_tree_st_commute_enter_pub)
-
 text \<open>The routed enter publication --- reading the shared global through a query
   and additionally publishing the enter transfer's own global side-effect to
   \<open>gk0\<close>, on top of the routed local seed --- transports the same way once both
@@ -279,20 +176,20 @@ text \<open>The routed enter publication --- reading the shared global through a
 
 lemma dg_tree_st_commute_routed_enter_pub:
   "dg_tree_st_commute env
-     (QueryL (v, ctx) (\<lambda>d. QueryG Global (\<lambda>gv.
-        Side Global (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                     fst (dgs_enter Spoly fs as (locals d) (globs gv))))
-          (Side (Seed w (route_ivl_gen v ctx (locals d) a))
-            (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                       snd (dgs_enter Spoly fs as (locals d) (globs gv))))
-            (Answer (DG bot bot))))))
-     (QueryL (v, ctx) (\<lambda>d. QueryG Global (\<lambda>gv.
-        Side Global (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                     fst (dgs_enter Sabs fs as (locals d) (globs gv))))
-          (Side (Seed w (route_abs_gen v ctx (locals d) a))
-            (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                       snd (dgs_enter Sabs fs as (locals d) (globs gv))))
-            (Answer (DG bot bot))))))"
+     (with_call a (\<lambda>dst fs as.
+        read_local (v, ctx) (\<lambda>d.
+          read_global Global (\<lambda>gv.
+            publish_global Global (enter_global Spoly fs as (locals d) (globs gv))
+              (publish_seed (Seed w (route_ivl_gen v ctx (locals d) a))
+                (enter_local Spoly fs as (locals d) (globs gv))
+                (return_local bot))))))
+     (with_call a (\<lambda>dst fs as.
+        read_local (v, ctx) (\<lambda>d.
+          read_global Global (\<lambda>gv.
+            publish_global Global (enter_global Sabs fs as (locals d) (globs gv))
+              (publish_seed (Seed w (route_abs_gen v ctx (locals d) a))
+                (enter_local Sabs fs as (locals d) (globs gv))
+                (return_local bot))))))"
   unfolding route_ivl_gen_def route_abs_gen_def
   by (cases a)
      (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
@@ -328,9 +225,9 @@ subsection \<open>Transport to the abstract context-indexed D/G post-solution\<c
 
 text \<open>The generic bridge \<open>part_post_solution_seed_dg_st_to_abs\<close> carries the
   executable routed post-solution to the abstract one.  The three bundled
-  obligations are \<open>ivl_Hstep\<close> (intra edges), \<open>dg_tree_st_commute_cmb\<close> (routed
-  combine), and \<open>hextra_commute\<close> (frame read / routed enter publication) --- the
-  latter two discharged \<^emph>\<open>solely\<close> from route consistency.\<close>
+  obligations are \<open>ivl_Hstep\<close> (intra edges), \<open>dg_tree_st_commute_routed_cmb\<close>
+  (routed combine), and \<open>hextra_commute_routed\<close> (frame read / routed enter
+  publication) -- the latter two discharged solely from route consistency.\<close>
 
 theorem twice_ctx_pp_abs:
   "part_post_solution

@@ -46,8 +46,7 @@ subsection \<open>The routed equation system and its computed solution\<close>
 
 text \<open>The enter-seed and combine trees are the generic \<^const>\<open>routed_cmb\<close>/\<^const>\<open>routed_extra\<close>
   from \<^theory>\<open>Voblint_Analysis.Routed_Context\<close>, instantiated at the call-site route below and
-  the \<open>SeedCS\<close>/\<open>GlobalCS\<close> keys, rather than a hand-copied structural mirror of
-  \<^const>\<open>extra_ivl\<close>/\<^const>\<open>cmb_ivl\<close>.\<close>
+  the \<open>SeedCS\<close>/\<open>GlobalCS\<close> keys, rather than a hand-copied structural mirror.\<close>
 
 text \<open>The root context is \<^const>\<open>cfg_entry\<close> \<open>twice_cfg\<close> --- \<open>main\<close>'s own entry node, the
   paper's distinguished \<open>_main\<close> element.  It is never a call site inside \<open>twice\<close>, so it
@@ -164,20 +163,20 @@ lemma dg_tree_st_commute_routed_cmb_cs:
 
 lemma dg_tree_st_commute_routed_enter_pub_cs:
   "dg_tree_st_commute env
-     (QueryL (v, ctx) (\<lambda>d. QueryG GlobalCS (\<lambda>gv.
-        Side GlobalCS (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                     fst (dgs_enter Spoly fs as (locals d) (globs gv))))
-          (Side (SeedCS w (route_cs v ctx (locals d) a))
-            (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                       snd (dgs_enter Spoly fs as (locals d) (globs gv))))
-            (Answer (DG bot bot))))))
-     (QueryL (v, ctx) (\<lambda>d. QueryG GlobalCS (\<lambda>gv.
-        Side GlobalCS (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                     fst (dgs_enter Sabs fs as (locals d) (globs gv))))
-          (Side (SeedCS w (route_cs v ctx (locals d) a))
-            (DG bot (case a of CallEdge dst fs as \<Rightarrow>
-                       snd (dgs_enter Sabs fs as (locals d) (globs gv))))
-            (Answer (DG bot bot))))))"
+     (with_call a (\<lambda>dst fs as.
+        read_local (v, ctx) (\<lambda>d.
+          read_global GlobalCS (\<lambda>gv.
+            publish_global GlobalCS (enter_global Spoly fs as (locals d) (globs gv))
+              (publish_seed (SeedCS w (route_cs v ctx (locals d) a))
+                (enter_local Spoly fs as (locals d) (globs gv))
+                (return_local bot))))))
+     (with_call a (\<lambda>dst fs as.
+        read_local (v, ctx) (\<lambda>d.
+          read_global GlobalCS (\<lambda>gv.
+            publish_global GlobalCS (enter_global Sabs fs as (locals d) (globs gv))
+              (publish_seed (SeedCS w (route_cs v ctx (locals d) a))
+                (enter_local Sabs fs as (locals d) (globs gv))
+                (return_local bot))))))"
   by (cases a)
      (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
                 route_cs_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen

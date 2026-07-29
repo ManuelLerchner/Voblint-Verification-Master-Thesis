@@ -6,7 +6,7 @@ section \<open>Regression: a call site with more than one outgoing call edge\<cl
 
 text \<open>
   \<open>twice_cfg\<close>'s two calls share one callee entry and never share a call site, so it
-  cannot exercise the case \<^const>\<open>cmb_ivl\<close>'s routing comment warns about: a call site
+  cannot exercise the case \<^const>\<open>routed_cmb\<close>'s routing comment warns about: a call site
   with more than one outgoing call edge, where reconstructing the triggering call action
   from the call site alone (\<^const>\<open>call_successor_list\<close>, taking its head) is ambiguous,
   while \<^const>\<open>return_call_action_list\<close> --- keyed on the return's continuation, not the
@@ -51,7 +51,7 @@ subsection \<open>\<open>call_successor_list\<close> cannot distinguish the two 
 
 text \<open>Both outgoing edges are visible from the shared call site, so a return-side
   reconstruction that only knows the call site --- \<^term>\<open>hd (call_successor_list g cc)\<close>,
-  the pattern \<^const>\<open>cmb_ivl\<close> no longer uses --- returns \<^emph>\<open>the same\<close> call action
+  the pattern \<^const>\<open>routed_cmb\<close> no longer uses --- returns the same call action
   irrespective of which continuation triggered the return.\<close>
 
 lemma multi_call_successor_list_set:
