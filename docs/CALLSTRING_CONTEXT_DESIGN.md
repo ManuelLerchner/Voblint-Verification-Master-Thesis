@@ -496,3 +496,128 @@ monotone TD_side back-end") without needing anything M1's section 4
 and mechanical feasibility, not the precision claim, which needs a deeper
 witness program `twice` does not provide (see the theory's own header
 comment).
+
+## 8. Reusable API extraction (landed)
+
+`src/Analysis/Generic/Solver/Context/DG/Call_String_Context.thy`, alongside
+`Routed_Context.thy` in `src/Analysis/ROOT`. Verified via I/Q (0 errors, 0
+warnings, 23/23 commands) and the full tracked `Voblint_Examples` batch
+build (green). `Example_Interval_DG_CallString_K.thy` now consumes it
+instead of restating `route_2`/`enterc_2` locally (verified again after the
+refactor: I/Q 0 errors/220/220 commands, batch build green).
+
+### API chosen
+
+```isabelle
+type_synonym call_string = "cfg_node list"
+
+definition cs_route :: "nat => pp => call_string => 'd => call_action => call_string" where
+  "cs_route k u ctx d ca = take k (u # ctx)"
+
+definition cs_enterc :: "nat => cfg_node => call_string => store => call_string" where
+  "cs_enterc k u ctx s = take k (u # ctx)"
+
+lemma cs_route_enterc_agree: "cs_route k u ctx d ca = cs_enterc k u ctx s"
+lemma cs_route_indep_of_data: "cs_route k u ctx d ca = cs_route k u ctx d' ca"
+lemma cs_route_length: "length (cs_route k u ctx d ca) <= k"
+lemma cs_enterc_length: "length (cs_enterc k u ctx s) <= k"
+```
+
+`k` is a plain curried `nat` argument, not a locale field — `cs_route 2`
+partially applies to exactly the 4-argument function `routed_context`'s
+`route` parameter expects, so an instance is one application, not one
+interpretation. No `call_string_context` locale was added: a locale earns
+its keep by bundling an `assumes` obligation, and there is none here —
+`cs_route_enterc_agree` is a plain, unconditionally true lemma, not a proof
+obligation tied to a fixed parameter. Wrapping it in a locale would add an
+`interpretation cs2: call_string_context 2` step that plain application
+already avoids for zero benefit, so it was left out per the task's own
+"only if it makes later interpretations cleaner" condition — it does not.
+
+One correction versus the original sketch: `cs_route_indep_of_data`, as
+actually typechecked, turned out to already subsume the `route_2_commute`
+lemma the `k = 2` example needed for its executable-to-abstract transport
+proof (`Spoly`-typed `d` on one side, `Sabs`-typed `d'` on the other) — HOL's
+parametric polymorphism lets the two occurrences of `cs_route` in one
+equality independently instantiate `'d` at different types, so no separate,
+domain-specific commute lemma was needed in the example at all. This is a
+better outcome than planned, not a compromise.
+
+### Why it belongs above `routed_context` but below examples
+
+`cs_route`/`cs_enterc` need only `pp`/`cfg_node`/`call_action`/`store`
+(`Abstract_Domain.thy`, itself domain-agnostic) — no `dg_spec`, no
+`sound_dg_spec`, no `routed_context`, no `TD_side` solver. Nothing about a
+call string requires knowing what a "sound domain" or a "routed context
+policy" *is*; it only needs the CFG-level vocabulary those things are later
+built from. So the file deliberately does not import `Routed_Context.thy`
+or `DG_Ctx_Activation.thy` — it sits *underneath* them in the dependency
+graph even though it is filed next to them in the directory (matching
+`routed_context`'s own concern: *what* the context is, as opposed to *how*
+a concrete analysis reads/writes it). It is "below examples" in the usual
+sense: `Example_Interval_DG_CallString_K.thy` is a *consumer*, supplying
+the domain (`Sabs`/`Spoly`), the program (`twice_cfg`), and the global-key
+type (`gk_2`) that `Call_String_Context.thy` deliberately has no opinion
+about.
+
+### What was intentionally not abstracted
+
+- **`k`'s type.** Stays `nat`, not a HOL type parameter — matches Goblint's
+  `C.t` in spirit (a chosen bound) without paying Goblint's reason for
+  needing it at the type level (section 3).
+- **No locale.** See above — nothing here needs `assumes`.
+- **No global-key type (`gk_2`-shaped).** That is domain/example-specific
+  (differs per analysis: `Global2`/`Seed2` here, `GlobalCS`/`SeedCS` in the
+  `k=1` file); the library only owns the context *value*, not how a
+  particular equation system publishes/reads it.
+- **No `k=1` refactor.** `Example_Interval_DG_CallString.thy`'s `route_cs`
+  uses a bare `cfg_node` context (not `call_string`/list) — `take 1 (u #
+  ctx) = [u]` is isomorphic to `route_cs`'s `u` but not the same *type*, so
+  unifying them would mean changing `route_cs`'s whole file's context type
+  from `cfg_node` to `cfg_node list` throughout (`gk_cs`, `twice_cs_eqs`,
+  every coverage lemma, both interpretations, the graph-export section) —
+  not "straightforward" by the task's own escape clause, so left untouched.
+- **No `k=0`/collapse-to-flat lemma, no monotonic-precision or strictness
+  theorem.** Explicitly out of scope for this task (see below).
+
+### Implementation summary
+
+- **Added:** `src/Analysis/Generic/Solver/Context/DG/Call_String_Context.thy`
+  (69 lines: 1 type synonym, 2 definitions, 4 lemmas, no `sorry`).
+- **Changed:** `src/Analysis/ROOT` (+1 line), `src/Examples/Interval/Example_Interval_DG_CallString_K.thy`
+  (removed the local `route_2`/`route_2_commute`/`route_2_length`/`enterc_2`
+  definitions; every use site now reads `cs_route 2`/`cs_enterc 2`; the
+  `RouteAgree` proof changed from `simp add: route_2_def enterc_2_def` to
+  `rule cs_route_enterc_agree`; the executable-to-abstract transport proof's
+  `route_2_commute` citation became `cs_route_indep_of_data`, unchanged
+  otherwise).
+- **Proofs moved, not just renamed:** `cs_route_enterc_agree` and
+  `cs_route_indep_of_data` are strictly more general than the deleted
+  `route_2`-local facts (parametric in `k`, not fixed at `2`); nothing in
+  the example needed to become more complex to use them.
+- **Examples migrated:** only `Example_Interval_DG_CallString_K.thy`
+  (`k=1`'s file deliberately left alone, see above).
+- **No duplicate definitions remain** — checked by grep across the whole
+  `src/` tree for every new identifier (`cs_route`, `cs_enterc`,
+  `call_string`, and all four lemma names): zero hits outside the two
+  touched files.
+
+### Remaining limitations
+
+Whether generic `k1 <= k2` refinement/precision theorems belong in
+`Call_String_Context.thy` or a separate precision theory: **a separate
+theory**, not this one. `Call_String_Context.thy` currently has zero
+dependency on `routed_context`/`dg_ctx_activation`/any solver machinery,
+which is exactly what makes it reusable across arbitrary future domains and
+programs. A monotonic-precision theorem (`k2 >= k1 ==> analysis(k2) refines
+analysis(k1)`, design doc section 4) is a statement about *analysis
+results* (`gamma`, `sigma`, `part_post_solution`) at two different context
+keyings of the *same* concrete program and domain — it necessarily needs
+`routed_context`/`dg_ctx_activation` in scope, and arguably needs to be
+proved once per concrete instance (or at least once per domain) rather than
+generically over `'d`, since the analysis results being compared are
+domain-typed. Keeping it in this file would reintroduce exactly the
+DG/solver dependency this extraction deliberately avoided. This task
+delivered only the reusable call-string *data* layer, per its own explicit
+scope ("Do not implement precision separation yet") — Stage 3 remains a
+separate, unstarted piece of work.
