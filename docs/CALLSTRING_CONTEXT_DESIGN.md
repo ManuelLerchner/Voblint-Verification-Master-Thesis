@@ -521,6 +521,14 @@ lemma cs_route_enterc_agree: "cs_route k u ctx d ca = cs_enterc k u ctx s"
 lemma cs_route_indep_of_data: "cs_route k u ctx d ca = cs_route k u ctx d' ca"
 lemma cs_route_length: "length (cs_route k u ctx d ca) <= k"
 lemma cs_enterc_length: "length (cs_enterc k u ctx s) <= k"
+
+(* below the bound, pushing is a plain cons, not a truncation *)
+lemma cs_route_no_truncation: "length ctx < k ==> cs_route k u ctx d ca = u # ctx"
+lemma cs_enterc_no_truncation: "length ctx < k ==> cs_enterc k u ctx s = u # ctx"
+
+(* the take k1 ctx_k2 = ctx_k1 fact any future k1<=k2 refinement theorem needs *)
+lemma cs_route_k_mono: "k1 <= k2 ==> take k1 (cs_route k2 u ctx d ca) = cs_route k1 u ctx d ca"
+lemma cs_enterc_k_mono: "k1 <= k2 ==> take k1 (cs_enterc k2 u ctx s) = cs_enterc k1 u ctx s"
 ```
 
 `k` is a plain curried `nat` argument, not a locale field — `cs_route 2`
