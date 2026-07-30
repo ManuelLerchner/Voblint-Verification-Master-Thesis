@@ -5,15 +5,13 @@ begin
 section \<open>A reusable bounded call-string context\<close>
 
 text \<open>
-  The call-string route/enter-context pair extracted from
-  \<^file>\<open>../../../../../Examples/Interval/Example_Interval_DG_CallString_K.thy\<close>'s \<open>k = 2\<close>
-  proof-of-concept, per \<^file>\<open>../../../../../../docs/CALLSTRING_CONTEXT_DESIGN.md\<close>. This
-  theory owns only the call-string \<^emph>\<open>data\<close> and the one closed-term equality that makes
-  \<open>routed_context\<close>'s \<open>route_enterc_agree\<close> obligation trivial for any bound \<open>k\<close> --- it
-  deliberately does not import \<open>Routed_Context.thy\<close> or \<open>DG_Ctx_Activation.thy\<close>, and fixes
-  no domain, no solver, and no CFG. \<open>cs_route\<close>/\<open>cs_enterc\<close> (defined below) plug into
-  \<open>routed_context\<close>'s \<open>route\<close>/\<open>enterc\<close> parameters at whatever concrete instantiation a
-  caller chooses; nothing here decides what that instantiation is.
+  The call-string route/enter-context pair: this theory owns only the call-string
+  \<^emph>\<open>data\<close> and the one closed-term equality that makes \<open>routed_context\<close>'s
+  \<open>route_enterc_agree\<close> obligation trivial for any bound \<open>k\<close> --- it deliberately does not
+  import \<open>Routed_Context.thy\<close> or \<open>DG_Ctx_Activation.thy\<close>, and fixes no domain, no solver, and
+  no CFG. \<open>cs_route\<close>/\<open>cs_enterc\<close> (defined below) plug into \<open>routed_context\<close>'s
+  \<open>route\<close>/\<open>enterc\<close> parameters at whatever concrete instantiation a caller chooses; nothing
+  here decides what that instantiation is.
 \<close>
 
 subsection \<open>The call-string type and its two projections\<close>
@@ -21,7 +19,7 @@ subsection \<open>The call-string type and its two projections\<close>
 text \<open>Most recent call site first, unbounded as a type --- \<open>k\<close> only bounds the \<^emph>\<open>values\<close>
   \<open>cs_route\<close>/\<open>cs_enterc\<close> produce, not the type itself. This mirrors Goblint's
   \<open>C.t\<close> being a value-level choice under a type-level bound only because OCaml forces the
-  bound to be a type; here \<open>k\<close> is ordinary \<^typ>\<open>nat\<close> data (design doc section 3).\<close>
+  bound to be a type; here \<open>k\<close> is ordinary \<^typ>\<open>nat\<close> data.\<close>
 
 type_synonym call_string = "cfg_node list"
 
@@ -42,8 +40,7 @@ definition cs_enterc :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<
 subsection \<open>The two facts every instance needs\<close>
 
 text \<open>\<open>route_enterc_agree\<close>, generically: since neither side reads \<open>d\<close>/\<open>s\<close>, this holds for
-  \<^emph>\<open>any\<close> \<open>k\<close>, \<open>u\<close>, \<open>ctx\<close>, \<open>d\<close>, \<open>ca\<close>, \<open>s\<close> with zero case analysis --- the property design doc
-  section 2 predicted and the \<open>k = 2\<close> proof-of-concept confirmed for one concrete instance.\<close>
+  \<^emph>\<open>any\<close> \<open>k\<close>, \<open>u\<close>, \<open>ctx\<close>, \<open>d\<close>, \<open>ca\<close>, \<open>s\<close> with zero case analysis.\<close>
 
 lemma cs_route_enterc_agree: "cs_route k u ctx d ca = cs_enterc k u ctx s"
   by (simp add: cs_route_def cs_enterc_def)
