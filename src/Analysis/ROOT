@@ -68,6 +68,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Transfer_Combinators
     Routed_Context
     Call_String_Context
+    Call_String_Collecting_Refinement
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness
