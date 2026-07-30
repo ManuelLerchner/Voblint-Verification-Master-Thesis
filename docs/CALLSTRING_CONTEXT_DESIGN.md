@@ -274,8 +274,8 @@ That said, prefer *not* threading `k` as a parameter through reusable
 infrastructure at all. A generic `route_k :: nat => ...` with `k` appearing
 in every downstream lemma statement (`route_k_sound[of k]`, etc.) is fine
 for a small shared lemma or two, but for a concrete witness theory the
-cleaner move — the one the actual Stage-1 POC (`Example_Interval_DG_CallString_K.thy`)
-uses — is to hardcode the bound directly in the definition, exactly the way
+cleaner move — the one the landed witnesses (`src/Examples/Interval/CallString/Example_Interval_DG_CallString_K1.thy`,
+`_K2.thy`) use — is to hardcode the bound directly in the definition, exactly the way
 `route_cs` hardcodes "ignore the context" with no parameter at all:
 
 ```isabelle
@@ -408,9 +408,9 @@ claims:
 
 ## 6. Implementation plan
 
-**Stage 1 — minimal bounded call-string context. DONE, landed.**
-`src/Examples/Interval/Example_Interval_DG_CallString_K.thy` (mirrors
-`Example_Interval_DG_CallString.thy`, no changes to any locale):
+**Stage 1 — minimal bounded call-string context. DONE, landed, later superseded
+(see section 9).** Originally built as `Example_Interval_DG_CallString_K.thy`
+(mirrors `Example_Interval_DG_CallString.thy`, no changes to any locale):
 `route_2`/`enterc_2` definitions, `route_2_commute`, one `routed_context`
 interpretation on `twice_cfg` at a hardcoded `k = 2`, reusing `Sabs`/`ivl_dg`
 unchanged. Wired into `src/Examples/ROOT`, verified both via I/Q (0 errors,
@@ -419,6 +419,14 @@ unchanged. Wired into `src/Examples/ROOT`, verified both via I/Q (0 errors,
 complexity matched the prediction: same shape as the existing 1-call-string
 example, one genuine correction needed (`CallFwd`'s coverage proof, section
 7), otherwise mechanical.
+
+`twice`'s call graph is flat (both calls direct children of `main`), so this
+instance could only demonstrate soundness at `k = 2` — it could never show a
+`k=1` vs `k=2` precision difference, since no two contexts ever differed at
+any bound on that program. Section 9 records the replacement: a nested-call
+program and a matching `k=1`/`k=2` pair that does show the difference. The
+API this section validates (`route`/`enterc` as a `routed_context`
+instantiation, no locale changes) carried over to the replacement unchanged.
 
 **Stage 2 — integrate with the solver.**
 Already done by construction if Stage 1 targets `TD_side_warrowing_apinis_Interp_solve`
@@ -456,29 +464,28 @@ Decision:
   Do not revive the M1 digest/TD_side-extension architecture.
 
 Implement:
-  Example_Interval_DG_CallString_K.thy (Stage 1, done — see below)
-  using: routed_context + route_k + enterc_k
+  a routed_context instance using: route_k + enterc_k
+  (landed as the nested-call witness pair, section 9)
 
 Only revisit digest contexts if future work requires
 value-sensitive contexts (section 5a).
 ```
 
-**Stage 1 has been built, landed, and verified**, not just planned: a
-`k = 2` instance (`route_2 u ctx d ca = take 2 (u # ctx)`) on `twice_cfg`,
-same `Sabs`/`ivl_dg` domain spec, same `TD_side_warrowing_apinis_Interp_solve`
-backend, committed at `src/Examples/Interval/Example_Interval_DG_CallString_K.thy`
-with no changes to `routed_context`, `dg_ctx_activation`, or `sound_dg_spec`.
-Verified twice, independently: interactively via I/Q (0 errors, 228/228
-commands processed) and by a full `Voblint_Examples` batch build confirming
-no regression to any existing example. The one place
-the mechanical claim needed correcting during construction: `route_2`,
-unlike `route_cs`, actually depends on the caller's context (`take k (u #
-ctx)` is not constant in `ctx`), so `CallFwd`'s coverage proof needs the
-same "pin `ctx = []` via `enter_callers_only_root_2` first" step
-`Example_Interval_DG_Ctx_Collect.thy`'s semantic-context route already
-needed and `route_cs`'s route-independent proof did not — a real but small
-correction, caught by the batch build, not a structural problem with option
-B itself.
+**Stage 1 was built, landed, and verified** (later superseded, section 9),
+not just planned: a `k = 2` instance (`route_2 u ctx d ca = take 2 (u #
+ctx)`) on `twice_cfg`, same `Sabs`/`ivl_dg` domain spec, same
+`TD_side_warrowing_apinis_Interp_solve` backend, with no changes to
+`routed_context`, `dg_ctx_activation`, or `sound_dg_spec`. Verified twice,
+independently: interactively via I/Q (0 errors, 228/228 commands processed)
+and by a full `Voblint_Examples` batch build confirming no regression to any
+existing example. The one place the mechanical claim needed correcting
+during construction: `route_2`, unlike `route_cs`, actually depends on the
+caller's context (`take k (u # ctx)` is not constant in `ctx`), so
+`CallFwd`'s coverage proof needs the same "pin `ctx = []` via
+`enter_callers_only_root_2` first" step `Example_Interval_DG_Ctx_Collect.thy`'s
+semantic-context route already needed and `route_cs`'s route-independent
+proof did not — a real but small correction, caught by the batch build, not
+a structural problem with option B itself.
 
 Confirms the core claim from section 1 empirically, not just by locale-
 signature inspection: `route_enterc_agree` is bare reflexivity, no locale
@@ -492,19 +499,27 @@ machinery; this document's option B delivers M1's own stated goal (section
 length-k call string... sound and strictly more precise... keeps the
 monotone TD_side back-end") without needing anything M1's section 4
 ("Missing pieces") lists. "Strictly more precise" still needs Stage 3
-(section 4's two-stage precision theorem) — Stage 1 establishes soundness
-and mechanical feasibility, not the precision claim, which needs a deeper
-witness program `twice` does not provide (see the theory's own header
-comment).
+(section 4's two-stage precision theorem) — Stage 1 established soundness
+and mechanical feasibility, not the precision claim, which needed a deeper
+witness program than `twice` (which cannot show any k=1/k=2 difference at
+all). Section 9 records that deeper witness, now landed: a nested-call
+program with an empirically confirmed strict precision difference. The
+precision *theorem* (section 4's two-stage plan) remains unstarted — the
+witness is the example a future proof would use, not the proof itself.
 
 ## 8. Reusable API extraction (landed)
 
 `src/Analysis/Generic/Solver/Context/DG/Call_String_Context.thy`, alongside
 `Routed_Context.thy` in `src/Analysis/ROOT`. Verified via I/Q (0 errors, 0
 warnings, 23/23 commands) and the full tracked `Voblint_Examples` batch
-build (green). `Example_Interval_DG_CallString_K.thy` now consumes it
-instead of restating `route_2`/`enterc_2` locally (verified again after the
-refactor: I/Q 0 errors/220/220 commands, batch build green).
+build (green). `Example_Interval_DG_CallString_K.thy` (the `twice`-based
+`k=2` POC, since superseded — section 9) consumed it instead of restating
+`route_2`/`enterc_2` locally (verified again after the refactor: I/Q 0
+errors/220/220 commands, batch build green). The nested-call witness pair
+that replaced it (`Example_Interval_DG_CallString_K1.thy`/`_K2.thy`,
+section 9) consumes the same library unchanged, at `cs_route 1`/`cs_route 2`.
+`Call_String_Context.thy` itself is unaffected by that replacement — it was
+frozen before the replacement happened and remains frozen.
 
 ### API chosen
 
@@ -563,10 +578,11 @@ or `DG_Ctx_Activation.thy` — it sits *underneath* them in the dependency
 graph even though it is filed next to them in the directory (matching
 `routed_context`'s own concern: *what* the context is, as opposed to *how*
 a concrete analysis reads/writes it). It is "below examples" in the usual
-sense: `Example_Interval_DG_CallString_K.thy` is a *consumer*, supplying
-the domain (`Sabs`/`Spoly`), the program (`twice_cfg`), and the global-key
-type (`gk_2`) that `Call_String_Context.thy` deliberately has no opinion
-about.
+sense: `Example_Interval_DG_CallString_K1.thy`/`_K2.thy` (originally
+`Example_Interval_DG_CallString_K.thy`, section 9) are *consumers*,
+supplying the domain (`Sabs`/`Spoly`), the program (`nest_cfg`, originally
+`twice_cfg`), and the global-key type (`gk_1`/`gk_2`) that
+`Call_String_Context.thy` deliberately has no opinion about.
 
 ### What was intentionally not abstracted
 
@@ -578,13 +594,17 @@ about.
   (differs per analysis: `Global2`/`Seed2` here, `GlobalCS`/`SeedCS` in the
   `k=1` file); the library only owns the context *value*, not how a
   particular equation system publishes/reads it.
-- **No `k=1` refactor.** `Example_Interval_DG_CallString.thy`'s `route_cs`
-  uses a bare `cfg_node` context (not `call_string`/list) — `take 1 (u #
-  ctx) = [u]` is isomorphic to `route_cs`'s `u` but not the same *type*, so
-  unifying them would mean changing `route_cs`'s whole file's context type
-  from `cfg_node` to `cfg_node list` throughout (`gk_cs`, `twice_cs_eqs`,
-  every coverage lemma, both interpretations, the graph-export section) —
-  not "straightforward" by the task's own escape clause, so left untouched.
+- **No `k=1` refactor of the old file.** `Example_Interval_DG_CallString.thy`'s
+  `route_cs` uses a bare `cfg_node` context (not `call_string`/list) —
+  `take 1 (u # ctx) = [u]` is isomorphic to `route_cs`'s `u` but not the same
+  *type*, so unifying them would mean changing `route_cs`'s whole file's
+  context type from `cfg_node` to `cfg_node list` throughout (`gk_cs`,
+  `twice_cs_eqs`, every coverage lemma, both interpretations, the
+  graph-export section) — not "straightforward" by the task's own escape
+  clause, so left untouched; that file still stands as-is. A *separate*
+  `k=1` witness using `cs_route 1` directly was added later (section 9,
+  `Example_Interval_DG_CallString_K1.thy`) — a new instance on a new
+  program, not a refactor of `route_cs`.
 - **No `k=0`/collapse-to-flat lemma, no monotonic-precision or strictness
   theorem.** Explicitly out of scope for this task (see below).
 
@@ -592,23 +612,27 @@ about.
 
 - **Added:** `src/Analysis/Generic/Solver/Context/DG/Call_String_Context.thy`
   (69 lines: 1 type synonym, 2 definitions, 4 lemmas, no `sorry`).
-- **Changed:** `src/Analysis/ROOT` (+1 line), `src/Examples/Interval/Example_Interval_DG_CallString_K.thy`
-  (removed the local `route_2`/`route_2_commute`/`route_2_length`/`enterc_2`
-  definitions; every use site now reads `cs_route 2`/`cs_enterc 2`; the
-  `RouteAgree` proof changed from `simp add: route_2_def enterc_2_def` to
-  `rule cs_route_enterc_agree`; the executable-to-abstract transport proof's
-  `route_2_commute` citation became `cs_route_indep_of_data`, unchanged
-  otherwise).
+- **Changed (at the time, on the now-superseded `Example_Interval_DG_CallString_K.thy`):**
+  `src/Analysis/ROOT` (+1 line); removed the local
+  `route_2`/`route_2_commute`/`route_2_length`/`enterc_2` definitions; every
+  use site read `cs_route 2`/`cs_enterc 2`; the `RouteAgree` proof changed
+  from `simp add: route_2_def enterc_2_def` to `rule cs_route_enterc_agree`;
+  the executable-to-abstract transport proof's `route_2_commute` citation
+  became `cs_route_indep_of_data`, unchanged otherwise.
 - **Proofs moved, not just renamed:** `cs_route_enterc_agree` and
   `cs_route_indep_of_data` are strictly more general than the deleted
   `route_2`-local facts (parametric in `k`, not fixed at `2`); nothing in
-  the example needed to become more complex to use them.
-- **Examples migrated:** only `Example_Interval_DG_CallString_K.thy`
-  (`k=1`'s file deliberately left alone, see above).
+  the example needed to become more complex to use them. This is why the
+  nested-call replacement (section 9) could consume the same two lemmas
+  unchanged.
+- **Examples now consuming this library:** `Example_Interval_DG_CallString_K1.thy`
+  and `_K2.thy` (`src/Examples/Interval/CallString/`, section 9); the old
+  flat `Example_Interval_DG_CallString.thy` (`route_cs`, `k=1`) deliberately
+  left alone throughout, see above.
 - **No duplicate definitions remain** — checked by grep across the whole
   `src/` tree for every new identifier (`cs_route`, `cs_enterc`,
-  `call_string`, and all four lemma names): zero hits outside the two
-  touched files.
+  `call_string`, and all four lemma names): zero hits outside
+  `Call_String_Context.thy` and its consumers.
 
 ### Remaining limitations
 
@@ -629,3 +653,68 @@ DG/solver dependency this extraction deliberately avoided. This task
 delivered only the reusable call-string *data* layer, per its own explicit
 scope ("Do not implement precision separation yet") — Stage 3 remains a
 separate, unstarted piece of work.
+
+## 9. Nested-call witness (landed, supersedes the flat `twice`-based Stage 1 POC)
+
+**What changed.** `Example_Interval_DG_CallString_K.thy` (the `twice`-based
+`k=2` instance, sections 6-8) is deleted. It is replaced by a pair of
+theories in `src/Examples/Interval/CallString/`:
+
+- `Example_Interval_DG_CallString_K1.thy` -- `cs_route 1`/`cs_enterc 1`
+- `Example_Interval_DG_CallString_K2.thy` -- `cs_route 2`/`cs_enterc 2`,
+  imports the `k=1` file directly to reuse its program, domain spec, and
+  commute lemmas rather than restating them
+
+Both consume `Call_String_Context.thy` unchanged, at the two `k` values, on
+a new program.
+
+**Description.** Not "a k=2 bounded call-string POC" (the old framing,
+which only showed soundness) -- this pair is a **nested-call witness
+demonstrating a strict precision difference between k=1 and k=2**.
+
+**Reason a new program was needed.** `twice`'s call graph is flat: both
+calls are direct children of `main`, so at *any* bound `k` the two call
+sites already differ, and `k=1` already separates them -- there was never a
+`k` at which `twice` could show `k=1` merging what `k=2` keeps apart. A
+witness for a strict `k=1`-vs-`k=2` difference needs one immediate call site
+reached through two different *outer* histories, i.e. genuine nesting:
+
+```text
+main -> f(3)  -> g(3)
+main -> f(10) -> g(10)
+```
+
+`g`'s call site is the same both times (`f`'s single call to `g`); only the
+history one level further out (`f(3)` vs `f(10)`) differs. A 1-call-string
+context sees only `g`'s immediate caller (`f`'s call site) and merges both
+activations; a 2-call-string context also sees which `f`-activation made
+the call, and keeps them apart. This is exactly the mechanism
+`Call_String_Context.thy`'s own `cs_route_no_truncation`/`cs_route_k_mono`
+facts describe, now exercised by an example where it actually bites.
+
+**Observed result**, read off the solved coverage sets and rendered DOT
+output for both theories (`nest_1_sol`/`nest_2_sol`, `nest_1_dot`/`nest_2_dot`):
+
+```text
+k=1:
+  g's two activations merge into one context
+  p = [3, +inf]        (joined -- precision lost)
+
+k=2:
+  g's two activations remain separated
+  p = [3,3]  and  p = [10,10]     (exact -- precision kept)
+```
+
+This is an empirical witness, not a general theorem: it demonstrates that a
+strict difference *can* occur, on this one program, at these two values of
+`k`. It is not a claim about solver precision in general, and no
+`gamma`-level comparison lemma between `nest_1_sol` and `nest_2_sol` has
+been proved -- see section 4's two-stage precision-theorem plan and
+`docs/CALLSTRING_PRECISION_INVESTIGATION.md` for what that would require.
+
+**Status of the rest of section 6-8 relative to this replacement.** The
+architecture claims (routed_context reuse, no locale changes,
+`route_enterc_agree` as reflexivity, the `Call_String_Context.thy` API) are
+unaffected -- the replacement changed the witness *program*, not the
+mechanism. `Call_String_Context.thy` remains frozen and untouched by this
+change.
