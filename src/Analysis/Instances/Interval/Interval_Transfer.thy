@@ -46,11 +46,11 @@ text \<open>Procedure entry: keep globals, reset locals to the full interval, th
   Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised by
   ivl_top as the domain's fully-imprecise reset value.\<close>
 definition enter_frame_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_frame_ivl = enter_frame_D ivl_top"
+  "enter_frame_ivl = enter_frame_D is_global ivl_top"
 
 definition enter_ivl ::
     "vname list \<Rightarrow> aexp list \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_ivl = enter_D ivl_top aval_ivl"
+  "enter_ivl = enter_D is_global ivl_top aval_ivl"
 
 lemma enter_frame_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -80,7 +80,7 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_assume     = assume_ivl,
                tf_assume_not = assume_not_ivl,
                tf_enter      = enter_ivl,
-               tf_combine    = combine_abs |)"
+               tf_combine    = combine_abs is_global |)"
 
 lemma ivl_tf_sound_assign:
   "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
@@ -112,7 +112,7 @@ proof (rule sound_transferI)
      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
        \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
     using ivl_tf_sound_enter by blast
-  show "tf_combine ivl_tf = combine_abs"
+  show "tf_combine ivl_tf = combine_abs is_global"
     unfolding ivl_tf_def by simp
 qed
 

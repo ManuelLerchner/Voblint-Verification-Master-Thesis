@@ -32,7 +32,7 @@ corollary sign_mixed_flow_sound_and_optimal:
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
   assumes S_sound: "S \<le> \<lbrakk>sign_init_s0\<rbrakk>"
   shows
-    "ltr_collect (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
+    "ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
      \<le> \<lbrakk>side_analyse_eff inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) sign_etf
           bot sign_init_s0 ()
@@ -54,7 +54,7 @@ proof -
   note result = mixed_flow_analysis_optimal
     [OF refl refl sign_sound_etf sign_etf_threefold_mono sign_etf_cone_compatible
         dom S_sound]
-  show "ltr_collect (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
+  show "ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
           (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
         \<le> \<lbrakk>side_analyse_eff inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) sign_etf
              bot sign_init_s0 ()
@@ -87,9 +87,9 @@ corollary sign_mixed_flow_sound_from_pp:
           sign_etf bot sign_init_s0 ()) (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))) \<sigma> vars"
   assumes entry:
     "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   shows
-    "ltr_collect (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
+    "ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
      \<le> \<lbrakk>side_env \<sigma> (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
   by (rule mixed_flow_analysis_sound

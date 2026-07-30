@@ -24,7 +24,7 @@ theorem proc_global_side_sign_analysis:
   fixes s t :: store
   assumes s_sound: "s \<in> \<lbrakk>side_proc_global_s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) {s}
+    "t \<in> ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) {s}
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) sign_etf bot
@@ -48,7 +48,7 @@ lemma inc_terminates: "sign_terminates_prog ''main'' inc_program"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 corollary inc_certified_sound:
-  "ltr_collect (prog_cfg ''main'' inc_program) cinit_stores (cfg_exit (prog_cfg ''main'' inc_program))
+  "ltr_collect is_global (prog_cfg ''main'' inc_program) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' inc_program))
    \<le> \<lbrakk>sign_exec_prog ''main'' inc_program\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
 

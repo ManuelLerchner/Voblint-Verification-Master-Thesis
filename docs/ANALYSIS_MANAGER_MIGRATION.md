@@ -8,6 +8,8 @@ manager record (`man`) bundling `gs` and other configuration, threaded through
 Recommendation: continue Option A (keep `gs` as its own explicit parameter).
 Do not introduce a manager record or a configuration locale. Details below.
 
+**Status:** completed in commits `e10b145d` and `7b5c049` (section 10).
+
 ## 0. Where the migration actually stands right now
 
 This matters because part of the task brief's background is stale relative to
@@ -751,3 +753,166 @@ do not produce such a call site -- they produce more places that each need
 one classifier. The recommendation from sections 6 and 7 stands unchanged:
 bare `gs`, no record, reassessed here under real pressure and confirmed
 rather than merely repeated.
+
+## 9. Stage 3a/3b landed: what actually became generic, and a new boundary found
+
+Both stages committed (`refactor(analysis): thread an explicit classifier
+through the abstract split layer`; `refactor(analysis): thread an explicit
+classifier through sound_dg_spec`), batch build green. This section records
+the final shape, since Stage 3b did not land exactly as section 8 planned --
+a second boundary surfaced during execution, on the same pattern as section
+8's own finding, and is worth keeping on the record for the same reason.
+
+### What is now generic
+
+- `combine_abs`, `combine_collect_abs`, `enter_frame_D`, `enter_D`,
+  `cinit_stores`, `inl_slot_globals_bot`, `inr_slot_locals_bot`,
+  `inl_glob_le_glob_env` (`Constraint_System.thy`) -- Stage 3a's root
+  operators, all take `gs` and their proofs carry through unchanged for
+  arbitrary `gs`, exactly as predicted.
+- `sound_dg_spec` (`DG_Soundness.thy`) -- `combine_sound`/`enter_sound` and
+  every derived fact (`combine_sound_fs`, `enter_sound_fs`,
+  `dg_postfix_gamma_call`, `dg_postfix_gamma_combine`) are generic in `gs`.
+  Every current interpretation (`sound_dg_spec_indep`, `sound_dg_spec_unit`,
+  and every domain's `X_dg_api`) still instantiates `gs = is_global`, per
+  the established pattern.
+- `dg_ctx_activation` (`DG_Ctx_Activation.thy`) -- passes `gs` straight
+  through to `sound_dg_spec`; no obligation of its own references `is_global`,
+  so this was a pure arity fix.
+
+### What stays pinned, and why -- a second load-bearing boundary
+
+`ltr_gamma` (`LTR_Abstract.thy`) and `routed_context` (`Routed_Context.thy`)
+do **not** become generic, and the reason is structurally the same one
+section 8 found for `combine_abs`: a lemma's own proof can force a classifier
+to a concrete value even when its *statement* looks like it could be generic.
+
+The attempt: widening `ltr_gamma`'s `CALL`/`COMB` obligations to take `gs`
+looked identical in shape to `sound_dg_spec`'s widening -- the same
+substitution, `call_enter is_global` to `call_enter gs`. The batch build
+caught what a signature-only review would not: `ltr_gamma`'s own internal
+lemmas -- `call_closed`, `return_closed`, and everything reachable from them
+(`valid_ltr_subset_gamma_ltr`, ultimately `activation_collect_sound` and
+`valid_ltr_ctx_sound` in `Activation_Backbone.thy`/`Activation_Local_Sound.thy`)
+-- exist specifically to connect the abstract `acc` to `valid_ltr`'s
+*concrete* trace semantics (`Call`, `Resume`, the `call`/`ret` constructors in
+`CFG_Local_Trace.thy`). `valid_ltr` itself was never widened in this
+migration -- deliberately: it sits at the CFG/Collecting layer, one level
+below everything Stage 1-3 touched, and its `call`/`ret` rules still
+construct their result via literal `call_enter is_global (...)` /
+`combine_collect is_global (...)`. Once `ltr_gamma`'s `CALL`/`COMB` read `gs`
+instead of `is_global`, `call_closed`'s citation of `CALL` no longer unifies
+with its own `shows` clause (which still, necessarily, states a fact about
+`valid_ltr`'s literal `is_global`-built `Call` term) -- `gs`, being a
+genuinely fixed locale parameter inside `ltr_gamma`'s own `begin...end`
+block, cannot be specialized to `is_global` from *inside* that block. The
+batch log surfaced this as a flat `Failed to apply initial proof method`,
+with no hint that the root cause was a locale-genericity/pinned-dependency
+mismatch one layer down -- only re-deriving the dependency chain (`call_closed`
+depends on `CALL`, `CALL`'s shape depends on what `valid_ltr`'s `call` rule
+literally constructs) explained it.
+
+`routed_context` inherits the identical constraint one hop further out:
+its `call_enter_store_agree` obligation is stated directly against
+`call_enter_store` (`CFG_Local_Trace.thy`), whose own definition still
+reads `call_enter is_global (...)`. Any generic-`gs` version of that
+obligation would need `call_enter_store` to also take `gs` -- again, out of
+scope, since that is `valid_ltr`'s own file.
+
+The fix that shipped: revert `ltr_gamma` to pinned, and introduce
+`sound_dg_spec_ltr` (`DG_LTR_Sound.thy`) -- a locale extending
+`sound_dg_spec S gammaDG is_global` with **no new obligations of its own**,
+existing solely to give the one bridge theorem that needs both worlds
+(`dg_postfix_collect_sound_ltr`, which feeds `sound_dg_spec`'s now-generic
+facts into `ltr_collect_semantic_postfix`'s still-pinned premises) a view of
+`sound_dg_spec`'s facts already specialized to `is_global`, without touching
+`sound_dg_spec`'s own genericity or `ltr_gamma`'s pinned shape. Every
+existing `sound_dg_spec ... is_global` sublocale (`sign_dg_api`, `ivl_dg_api`,
+`mixed_si_api`) retargets to `sound_dg_spec_ltr` with the same `rewrites`
+clauses, so no caller-visible name changed.
+
+### The general lesson, stated once
+
+A locale's *signature* looking genericizable is not sufficient evidence that
+it should be. The load-bearing question is always: does anything *inside*
+this locale's own proof obligations reach into a sibling definition that is
+still concrete? `combine_abs` (section 8) and `ltr_gamma` (this section)
+both failed this check on the first attempt, and both failures were
+invisible from the signature alone -- only tracing what the locale's own
+lemmas actually unfold into (`restrict_local`/`restrict_global` for
+`combine_abs`; `valid_ltr`'s `Call`/`Resume` constructors for `ltr_gamma`)
+surfaced it. Before widening the next locale in this family, check what its
+own internal lemmas cite, not just what its own `assumes` block says.
+
+### What remains, if this migration continues further
+
+`valid_ltr`, `call_enter_store`, and the `Call`/`Resume`/`Root`/`Resume`
+inductive-set constructors (`CFG_Local_Trace.thy`) are the one remaining
+hardcoded layer in the classifier chain: VIMP semantics (Stage 0), CFG
+compiler semantics (Stage 1-2), and the D/G abstract soundness layer
+(Stage 3a-3b) are now all generic in `gs`; the activation-local trace
+semantics that sits between the CFG layer and the D/G layer is not. Widening
+it would let `ltr_gamma`/`routed_context` become genuinely generic too,
+closing the boundary this section found. That is a distinct, CFG/Collecting-
+layer migration -- comparable in shape to Stage 2 (`cstep`) -- not started
+here, and not implied by anything in this document to be either urgent or
+in scope for the current work.
+
+## 10. Stage 4 landed: the last hardcoded layer closed
+
+Committed as `refactor(cfg): thread an explicit classifier through valid_ltr
+and its cascade`, batch build green across all five sessions. This closes
+exactly the boundary section 9 named as remaining.
+
+### What is now generic
+
+- `valid_ltr`, `call_enter_store`, `ltr_F`, `ltr_collect`, `collect_result`,
+  `activation_collect` (`CFG_Local_Trace.thy`, `LTR_Collect.thy`) -- the
+  inductive trace relation and its projections all take `gs` in place of the
+  literal `is_global` inside the `Call`/`Resume`/`Root` constructors and the
+  `key`/`sink` projections. Every existing call site now supplies `is_global`
+  explicitly at the point where the surrounding context is still pinned
+  (`cstep`, `pstep`, or a fixed example CFG), rather than the constant being
+  baked into the definition.
+- `ltr_gamma` (`LTR_Abstract.thy`) and `routed_context` (`Routed_Context.thy`)
+  -- section 9's pinned boundary is gone now that `valid_ltr`/
+  `call_enter_store` are generic: `call_closed`/`return_closed` unify against
+  a `gs`-generic `Call`/`Resume` term, so the locales' own `CALL`/`COMB`
+  obligations no longer need to match a literal `is_global`-built term.
+  `valid_ltr_ctx_sound`/`activation_collect_sound`
+  (`Activation_Local_Sound.thy`/`Activation_Backbone.thy`) widened to match.
+- `ltr_repr`/`located_ltr` (`Located_LTR.thy`) gained `gs` in their own
+  definitional signature for the same "extra variables on rhs" reason as
+  every other root definition in this migration, but every usage site in
+  that file stays pinned to `is_global`: the whole file is the bridge from
+  `cstep` execution to trace semantics, and `cstep` itself is still
+  hardcoded (Stage 2's unchanged decision). A generic `ltr_repr gs` would be
+  well-typed but vacuous here -- nothing in the file has a `gs` to hand it
+  other than `is_global`.
+
+### What stays pinned, and why -- unchanged from Stage 2
+
+`cstep`/`pstep` (`Control_Simulation.thy`/`VIMP_Proc.thy`) already take a
+generic `(vname => bool)` parameter in their own signature (Stage 2), but
+every call site still supplies the literal `is_global`, per Stage 2's
+decision, which this migration never revisited. Every file whose obligations
+are stated in terms of a `cstep`/`pstep` run -- `Located_LTR.thy`,
+`Source_Activation_Sound.thy`, and the
+`sound_transfer`/`sound_effectful_transfer` contexts in
+`LTR_Analysis_Sound.thy`/`LTR_TD_Side_Eff_Sound.thy`/
+`LTR_TD_Side_Eff_Exit.thy` -- therefore still supplies `is_global` as a
+literal at its `ltr_collect`/`valid_ltr`/`call_enter_store`/
+`activation_collect` call sites, exactly the same two-tier discipline used
+throughout Stages 3a-4: generic at the root definition, literal at any
+consumer still tied to a pinned sibling.
+
+### Where the classifier chain stands now
+
+Every definition named in this document's section 1 classification now takes
+`gs` in its own signature; `cstep`/`pstep` already did (Stage 2). What
+remains concrete is call-site instantiation, not definitional shape:
+`Located_LTR.thy`'s bridge theorems and every `sound_transfer`/
+`sound_effectful_transfer` context still supply the literal `is_global`.
+Switching to declaration-driven classification (`declared_global P`) is now
+an instantiation change at those call sites, not a semantic rewrite of any
+layer in between -- the goal stated at the top of this document.

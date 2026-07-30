@@ -107,7 +107,7 @@ lemma restrict_global_restrict_local_bot [simp]:
    proofs never need to unfold combine_abs_def and re-derive the split by
    hand. *)
 lemma combine_abs_eq_restrict:
-  "combine_abs sc se = restrict_local sc \<squnion> restrict_global se"
+  "combine_abs is_global sc se = restrict_local sc \<squnion> restrict_global se"
   unfolding combine_abs_def restrict_local_def restrict_global_def sup_fun_def
   by (rule ext) simp
 
@@ -199,7 +199,7 @@ definition unit_combine_tree ::
 where
   "unit_combine_tree dst cc ex =
      QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
-       let res = combine_collect_abs dst (sc \<squnion> g) (se \<squnion> g) in
+       let res = combine_collect_abs is_global dst (sc \<squnion> g) (se \<squnion> g) in
        Side () (restrict_global res)
          (Answer (restrict_local res)))))"
 
@@ -227,24 +227,24 @@ lemma etf_full_unit_edge_tree:
    a plain combine_env these include the destination when the call assigns one. *)
 lemma traverse_unit_combine_tree:
   "traverse_rhs (unit_combine_tree dst cc ex) \<sigma>
-     = restrict_local (combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+     = restrict_local (combine_collect_abs is_global dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                                               (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
   unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree contributes the combined globals to the global slot. *)
 lemma sides_unit_combine_tree_Inr:
   "sides_of_rhs (unit_combine_tree dst cc ex) \<sigma> (Inr ()) =
-   restrict_global (combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+   restrict_global (combine_collect_abs is_global dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                                             (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
   unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_unit_combine_tree:
   "etf_full (unit_combine_tree dst cc ex) \<sigma>
-   = combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+   = combine_collect_abs is_global dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
        (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
 proof -
-  let ?res = "combine_collect_abs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+  let ?res = "combine_collect_abs is_global dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                 (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
   have "etf_full (unit_combine_tree dst cc ex) \<sigma>
           = restrict_local ?res \<squnion> restrict_global ?res"
@@ -324,7 +324,7 @@ qed
    local-bot; hoisted here (ahead of its first use below) so downstream
    proofs can cite it instead of re-deriving it from both definitions. *)
 lemma inr_slot_locals_bot_imp [dest]:
-  "inr_slot_locals_bot \<sigma> \<Longrightarrow> local_bot_on_locals (\<sigma> (Inr g))"
+  "inr_slot_locals_bot is_global \<sigma> \<Longrightarrow> local_bot_on_locals (\<sigma> (Inr g))"
   unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
 
 definition local_edge_invariant ::
@@ -503,7 +503,7 @@ lemma local_edge_invariant_side_env_eq:
   fixes f :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
     and u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
   assumes inv: "local_edge_invariant f"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   shows "f (side_env \<sigma> u) =
     restrict_local (f (restrict_local (\<sigma> (Inl u)))) \<squnion>
     restrict_global (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
@@ -620,7 +620,7 @@ begin
 
 lemma in_gamma_unit_edge_tree_nop:
   fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "s \<in> \<lbrakk>etf_collecting_full (unit_edge_tree (apply_tf tf EA_Nop) u) \<sigma>\<rbrakk>"
 proof -
@@ -634,7 +634,7 @@ qed
 
 lemma in_gamma_unit_edge_tree_assign:
   fixes x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (apply_tf tf (EA_Assign x e)) u) \<sigma>\<rbrakk>"
@@ -643,7 +643,7 @@ lemma in_gamma_unit_edge_tree_assign:
 
 lemma in_gamma_unit_edge_tree_assume:
   fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "bval b s"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (apply_tf tf (EA_Assume b)) u) \<sigma>\<rbrakk>"
@@ -652,7 +652,7 @@ lemma in_gamma_unit_edge_tree_assume:
 
 lemma in_gamma_unit_edge_tree_assume_not:
   fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "\<not> bval b s"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (unit_edge_tree (apply_tf tf (EA_AssumeNot b)) u) \<sigma>\<rbrakk>"
@@ -661,7 +661,7 @@ lemma in_gamma_unit_edge_tree_assume_not:
 
 lemma in_gamma_unit_edge_tree_enter:
   fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>etf_collecting_full
@@ -671,7 +671,7 @@ lemma in_gamma_unit_edge_tree_enter:
 
 lemma in_gamma_local_edge_tree_nop:
   fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (local_edge_tree (apply_tf tf EA_Nop) u) \<sigma>\<rbrakk>"
@@ -687,7 +687,7 @@ qed
 lemma in_gamma_local_edge_tree_assign:
   fixes x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
   assumes inv: "local_edge_invariant (apply_tf tf (EA_Assign x e))"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
            (local_edge_tree (apply_tf tf (EA_Assign x e)) u) \<sigma>\<rbrakk>"
@@ -709,7 +709,7 @@ qed
 lemma in_gamma_local_edge_tree_assume:
   fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
   assumes inv: "local_edge_invariant (apply_tf tf (EA_Assume b))"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "bval b s"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (local_edge_tree (apply_tf tf (EA_Assume b)) u) \<sigma>\<rbrakk>"
@@ -731,7 +731,7 @@ qed
 lemma in_gamma_local_edge_tree_assume_not:
   fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
   assumes inv: "local_edge_invariant (apply_tf tf (EA_AssumeNot b))"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "\<not> bval b s"
   shows "s \<in> \<lbrakk>etf_collecting_full
            (local_edge_tree (apply_tf tf (EA_AssumeNot b)) u) \<sigma>\<rbrakk>"
@@ -762,32 +762,32 @@ proof -
   interpret sound_transfer tf using st .
   show ?thesis
   proof (unfold_locales; unfold glob_env_unit)
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               s \<in> \<lbrakk>etf_collecting_full (etf_nop (unit_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
     proof (intro allI impI ballI)
       fix u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-      assume inr: "inr_slot_locals_bot \<sigma>" and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
+      assume inr: "inr_slot_locals_bot is_global \<sigma>" and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
       show "s \<in> \<lbrakk>etf_collecting_full (etf_nop (unit_etf_of_transfer tf) u) \<sigma>\<rbrakk>"
         using s inr in_gamma_unit_edge_tree_nop
         by (simp add: unit_etf_of_transfer_def glob_env_unit)
     qed
   next
-    show "\<forall>x e u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>x e u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
                 (etf_assign (unit_etf_of_transfer tf) x e u) \<sigma>\<rbrakk>)"
       by (auto simp add: unit_etf_of_transfer_def glob_env_unit
            intro: in_gamma_unit_edge_tree_assign)
   next
-    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
             \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
                   (etf_assume (unit_etf_of_transfer tf) b u) \<sigma>\<rbrakk>)"
       by (auto simp add: unit_etf_of_transfer_def glob_env_unit
            intro: in_gamma_unit_edge_tree_assume)
   next
-    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
             \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
                   (etf_assume_not (unit_etf_of_transfer tf) b u) \<sigma>\<rbrakk>)"
@@ -795,7 +795,7 @@ proof -
            intro: in_gamma_unit_edge_tree_assume_not)
 
   next
-    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
                 \<in> \<lbrakk>etf_collecting_full
@@ -804,7 +804,7 @@ proof -
            intro: in_gamma_unit_edge_tree_enter)
 
   next
-    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               combine_collect is_global dst s t
@@ -825,20 +825,20 @@ proof -
   interpret sound_transfer tf using st .
   show ?thesis
   proof (unfold_locales; unfold glob_env_unit)
-    show "\<forall>u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               s \<in> \<lbrakk>etf_collecting_full (etf_nop (mixed_etf_of_transfer tf) u) \<sigma>\<rbrakk>)"
       by (auto simp add: mixed_etf_of_transfer_def local_edge_action.simps
            mixed_etf_edge_tree_local glob_env_unit
            intro: in_gamma_local_edge_tree_nop)
   next
-    show "\<forall>x e u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>x e u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
                 (etf_assign (mixed_etf_of_transfer tf) x e u) \<sigma>\<rbrakk>)"
     proof (intro allI impI ballI)
       fix x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-      assume inr: "inr_slot_locals_bot \<sigma>"
+      assume inr: "inr_slot_locals_bot is_global \<sigma>"
         and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
       show "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
               (etf_assign (mixed_etf_of_transfer tf) x e u) \<sigma>\<rbrakk>"
@@ -846,14 +846,14 @@ proof -
             loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def s)
     qed
   next
-    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
             \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
                   (etf_assume (mixed_etf_of_transfer tf) b u) \<sigma>\<rbrakk>)"
       by (simp add: glob_env_unit in_gamma_local_edge_tree_assume in_gamma_unit_edge_tree_assume
           loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def)
   next
-    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
             \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
                   (etf_assume_not (mixed_etf_of_transfer tf) b u) \<sigma>\<rbrakk>)"
@@ -861,7 +861,7 @@ proof -
           loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def)
 
   next
-    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
                 \<in> \<lbrakk>etf_collecting_full
@@ -870,7 +870,7 @@ proof -
            mixed_etf_edge_tree_unit glob_env_unit
            intro: in_gamma_unit_edge_tree_enter)
   next
-    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot \<sigma> \<longrightarrow>
+    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
             \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
               combine_collect is_global dst s t

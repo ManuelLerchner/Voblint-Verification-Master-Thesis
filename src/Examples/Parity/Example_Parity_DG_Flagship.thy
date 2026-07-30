@@ -164,7 +164,7 @@ lemma parity_cover_combine:
   by (simp add: parity_calls)
 
 lemma parity_sound0:
-  "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_parity_st \<squnion> fun_of_st (restrict_global_st cinit_parity_st)\<rbrakk>"
+  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_parity_st \<squnion> fun_of_st (restrict_global_st cinit_parity_st)\<rbrakk>"
 proof -
   have "fun_of_st cinit_parity_st \<squnion> fun_of_st (restrict_global_st cinit_parity_st) = fun_of_st cinit_parity_st"
     by (simp add: fun_of_st_cinit_parity_st fun_of_st_restrict_global_st restrict_global_def
@@ -201,7 +201,7 @@ lemma parity_wf: "wf_compile_input parity_pi [] ''main'' parity_prog"
 
 theorem parity_source_run_sound:
   assumes run: "star (pstep is_global parity_pi) (parity_prog, s, []) (residual, t, frs)"
-      and init: "s \<in> cinit_stores"
+      and init: "s \<in> cinit_stores is_global"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> parity_reg.gamma (snd parity_sol) v"
 proof -

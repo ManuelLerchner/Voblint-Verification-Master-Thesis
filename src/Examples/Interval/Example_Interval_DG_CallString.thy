@@ -313,7 +313,7 @@ lemma twice_fwd_closed_cs:
   shows "(v, ctx) \<in> fst twice_cs_sol"
   using twice_fwd_closed_all_cs assms by fastforce
 
-interpretation twice_cs_dg: dg_ctx_activation Sabs twice_cfg GlobalCS route_cs
+interpretation twice_cs_dg: dg_ctx_activation Sabs is_global twice_cfg GlobalCS route_cs
     "routed_cmb Sabs GlobalCS" "routed_extra twice_cfg Sabs SeedCS GlobalCS"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_cs "fst twice_cs_sol" "(cfg_exit twice_cfg, cfg_entry twice_cfg)" ivl_ctx_sg_cs
@@ -379,7 +379,7 @@ text \<open>Both \<open>route_cs\<close> and \<open>enterc_cs\<close> are the co
   partial-tabulation instance's routing needed. \<open>call_fwd\<close> and \<open>comb_fwd\<close> are the same
   coverage facts \<open>ivl_ctx_sg_cs_seed\<close> / \<open>ivl_ctx_sg_cs_comb\<close> used to need by hand.\<close>
 
-interpretation twice_cs_routed: routed_context Sabs twice_cfg GlobalCS route_cs
+interpretation twice_cs_routed: routed_context Sabs is_global twice_cfg GlobalCS route_cs
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_cs "fst twice_cs_sol" "(cfg_exit twice_cfg, cfg_entry twice_cfg)" ivl_ctx_sg_cs
     SeedCS enterc_cs
@@ -432,7 +432,7 @@ lemma ivl_ctx_sg_cs_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cl, c1))\<rbrakk>"
     and "t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionResult p, enterc_cs cl c1 es))\<rbrakk>"
-    and "call_enter_store twice_cfg cl s es"
+    and "call_enter_store is_global twice_cfg cl s es"
   shows "combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c1))\<rbrakk>"
   by (rule twice_cs_routed.routed_context_comb[OF assms])
 
@@ -444,16 +444,16 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> --
   the same activation-collecting semantics as \<open>twice_activation_collect_sound\<close>
   (\<open>Example_Interval_DG_Ctx_Collect\<close>).\<close>
 
-lemma cinit_le_cinit_ivl_st: "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>"
+lemma cinit_le_cinit_ivl_st: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 
 theorem twice_cs_activation_collect_sound:
-  "activation_collect enterc_cs (cfg_entry twice_cfg) twice_cfg cinit_stores v ctx
+  "activation_collect is_global enterc_cs (cfg_entry twice_cfg) twice_cfg (cinit_stores is_global) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and enterc = enterc_cs
-        and seedc = "cfg_entry twice_cfg" and S = cinit_stores and g = twice_cfg])
+        and seedc = "cfg_entry twice_cfg" and S = "cinit_stores is_global" and g = twice_cfg and gs = is_global])
   \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores"
+  fix s assume "s \<in> cinit_stores is_global"
   hence "s \<in> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st by blast
   also have "\<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>
         \<subseteq> \<lbrakk>locals (sigma_cs (Inl (cfg_entry twice_cfg, cfg_entry twice_cfg)))\<rbrakk>"
@@ -482,7 +482,7 @@ next
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cl, c1))\<rbrakk>
         \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionResult p, enterc_cs cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store twice_cfg cl s es
+        \<Longrightarrow> call_enter_store is_global twice_cfg cl s es
         \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_cs_comb)
 qed

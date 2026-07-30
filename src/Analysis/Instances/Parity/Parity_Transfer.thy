@@ -51,11 +51,11 @@ subsection \<open>Bundled transfer functions\<close>
    Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised
    by PTop as the domain's fully-imprecise reset value. *)
 definition enter_frame_parity :: "parity abs_state => parity abs_state" where
-  "enter_frame_parity = enter_frame_D PTop"
+  "enter_frame_parity = enter_frame_D is_global PTop"
 
 definition enter_parity ::
     "vname list => aexp list => parity abs_state => parity abs_state" where
-  "enter_parity = enter_D PTop aval_parity"
+  "enter_parity = enter_D is_global PTop aval_parity"
 
 lemma enter_frame_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -100,7 +100,7 @@ definition parity_tf :: "parity domain_transfer" where
                   tf_assume     = assume_parity,
                   tf_assume_not = assume_not_parity,
                   tf_enter      = enter_parity,
-                  tf_combine    = combine_abs |)"
+                  tf_combine    = combine_abs is_global |)"
 
 text \<open>
   The four transfer-function soundness facts for the parity domain, bundled
@@ -138,7 +138,7 @@ proof (rule sound_transferI)
      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
        \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
     using parity_tf_sound_enter by blast
-  show "tf_combine parity_tf = combine_abs"
+  show "tf_combine parity_tf = combine_abs is_global"
     unfolding parity_tf_def by simp
 qed
 

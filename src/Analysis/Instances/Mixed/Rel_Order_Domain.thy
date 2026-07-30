@@ -433,7 +433,7 @@ lemma dgs_combine_rel_sound:
 
 subsection \<open>The interpretation\<close>
 
-interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel
+interpretation rel_order: sound_dg_spec rel_order_spec gammaDG_rel is_global
 proof unfold_locales
   fix d d' :: relc and g g' :: relc
   show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_rel d g \<subseteq> gammaDG_rel d' g'"

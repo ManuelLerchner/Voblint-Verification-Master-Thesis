@@ -198,7 +198,7 @@ lemma flagship_cover_combine:
   by (simp add: flagship_calls)
 
 lemma flagship_sound0:
-  "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
+  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
 proof -
   have "fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st) = fun_of_st cinit_ivl_st"
     by (simp add: fun_of_st_cinit_ivl_st fun_of_st_restrict_global_st restrict_global_def sup_fun_def fun_eq_iff)
@@ -245,7 +245,7 @@ lemma flagship_wf:
 
 theorem flagship_source_run_sound:
   assumes run: "star (pstep is_global flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
-      and init: "s \<in> cinit_stores"
+      and init: "s \<in> cinit_stores is_global"
   shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
                  \<and> t \<in> ivl_reg.gamma (snd flagship_sol) v"
 proof -

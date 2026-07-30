@@ -132,7 +132,7 @@ lemma dgEx_cover_combine:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
      \<Longrightarrow> (k, ()) \<in> fst dgEx_sol"
   by (simp add: gEx_calls)
-lemma dgEx_sound0: "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_sign_st \<squnion> fun_of_st cinit_sign_st\<rbrakk>"
+lemma dgEx_sound0: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_sign_st \<squnion> fun_of_st cinit_sign_st\<rbrakk>"
   by (simp add: fun_of_st_cinit_sign_st cinit_stores_def gamma_state_def sup.idem)
 
 subsection \<open>Source-level soundness through the registered analysis\<close>
@@ -148,7 +148,7 @@ text \<open>
 
 theorem dgEx_source_run_sound:
   assumes run: "star (pstep is_global sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
-      and init: "s \<in> cinit_stores"
+      and init: "s \<in> cinit_stores is_global"
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
                  \<and> t \<in> sign_reg.gamma (snd dgEx_sol) v"
 proof -

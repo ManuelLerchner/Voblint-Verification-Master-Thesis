@@ -86,7 +86,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect (prog_cfg ''main'' branch_prog) cinit_stores (cfg_exit (prog_cfg ''main'' branch_prog))
+  "ltr_collect is_global (prog_cfg ''main'' branch_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' branch_prog))
    \<le> \<lbrakk>sign_exec_prog ''main'' branch_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
@@ -97,7 +97,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect (prog_cfg ''main'' branch_prog) cinit_stores (cfg_exit (prog_cfg ''main'' branch_prog))"
+  assumes "s \<in> ltr_collect is_global (prog_cfg ''main'' branch_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' branch_prog))"
   shows "s \<in> \<lbrakk>sign_exec_prog ''main'' branch_prog\<rbrakk>"
   using assms ec_certified_sound by blast
 

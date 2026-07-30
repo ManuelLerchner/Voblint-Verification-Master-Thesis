@@ -34,7 +34,7 @@ text \<open>
 
 subsection \<open>The executable generator is the locale generator\<close>
 
-context sound_dg_spec
+context sound_dg_spec_ltr
 begin
 
 lemma dg_cmb_of_eq: "dg_cmb_of S = dg_cmb"
@@ -72,8 +72,8 @@ theorem dg_run_source_sound_abs:
 proof -
   from source_reaches_ltr_collect[OF wf s0mem run]
   obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)"
-    and coll: "t \<in> ltr_collect (compile_prog Pi ps mnm main) S0 v" by blast
-  have "ltr_collect (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
+    and coll: "t \<in> ltr_collect is_global (compile_prog Pi ps mnm main) S0 v" by blast
+  have "ltr_collect is_global (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
     by (rule dg_post_solution_collect_sound_ltr
           [OF pp cover_entry cover_edge cover_enter cover_combine finI finC sound0])
   then show ?thesis using m coll by blast
@@ -96,7 +96,7 @@ theorem dg_exec_run_source_sound:
     and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
     and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
     and bot0 s0d :: "'d1 st" and s0g :: "'g1 st"
-  assumes sds: "sound_dg_spec S_abs gammaDG"
+  assumes sds: "sound_dg_spec_ltr S_abs gammaDG"
     and Hstep: "\<And>a d g. map_prod fun_of_st fun_of_st (dg_spec_step S_st a d g)
                         = dg_spec_step S_abs a (fun_of_st d) (fun_of_st g)"
     and Henter: "\<And>xs es d g. map_prod fun_of_st fun_of_st (dgs_enter S_st xs es d g)
@@ -122,7 +122,7 @@ theorem dg_exec_run_source_sound:
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
                  \<and> t \<in> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st \<circ> sigma_st) v"
 proof -
-  interpret sds: sound_dg_spec S_abs gammaDG by (rule sds)
+  interpret sds: sound_dg_spec_ltr S_abs gammaDG by (rule sds)
   have pp_abs: "part_post_solution
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g))
@@ -215,7 +215,8 @@ text \<open>
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a st, 'a st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
   where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st \<circ> sigma_st) v"
 
-lemma sds: "sound_dg_spec (unit_dg_spec tf) gamma_unit"
+lemma sds: "sound_dg_spec_ltr (unit_dg_spec tf) gamma_unit"
+  unfolding sound_dg_spec_ltr_def
   by (rule sound_dg_spec_unit[OF tf_sound])
 
 theorem run_source_sound:

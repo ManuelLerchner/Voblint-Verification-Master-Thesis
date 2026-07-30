@@ -11,7 +11,7 @@ text \<open>Sign is the diagonal D/G instance: answers and side effects use the 
   global side effect before binding parameters. All generator and collecting results
   follow from the generic locale; only transfer soundness is domain-specific.\<close>
 
-interpretation sign_dg: sound_dg_spec "unit_dg_spec sign_tf" gamma_unit
+interpretation sign_dg: sound_dg_spec "unit_dg_spec sign_tf" gamma_unit is_global
   by (rule sound_dg_spec_unit[OF sign_is_sound_transfer])
 
 subsection \<open>Native endpoint\<close>
@@ -44,11 +44,12 @@ text \<open>
 \<close>
 locale sign_dg_api
 
-sublocale sign_dg_api \<subseteq> sound_dg_spec "unit_dg_spec sign_tf" gamma_unit
+sublocale sign_dg_api \<subseteq> sound_dg_spec_ltr "unit_dg_spec sign_tf" gamma_unit
   rewrites "sound_dg_spec.dg_gamma gamma_unit = sign_dg_gamma"
        and "sound_dg_spec.dg_gen (unit_dg_spec sign_tf) = sign_dg_generator"
-  apply (rule sound_dg_spec_unit[OF sign_is_sound_transfer])
-   apply (simp add: sign_dg_gamma_def)
+  apply (unfold sound_dg_spec_ltr_def)
+   apply (rule sound_dg_spec_unit[OF sign_is_sound_transfer])
+  apply (simp add: sign_dg_gamma_def)
   apply (simp add: sign_dg_generator_def)
   done
 
@@ -72,7 +73,7 @@ theorem sign_dg_post_solution_collect_sound:
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
-  shows "ltr_collect g S0 v \<subseteq> sign_dg_gamma sigma v"
+  shows "ltr_collect is_global g S0 v \<subseteq> sign_dg_gamma sigma v"
   by (rule dg_post_solution_collect_sound_ltr
         [OF pp cover_entry cover_edge cover_enter cover_combine
             finI finC sound0[folded gamma_unit_def]])

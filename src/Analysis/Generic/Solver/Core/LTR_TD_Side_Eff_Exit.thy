@@ -24,7 +24,7 @@ theorem ltr_post_fixpoint_sound_at_eff_cone:
     and S :: "store set" and v0 :: pp
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes se: "sound_effectful_transfer etf"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> cfg_reaches g w v0
@@ -37,11 +37,11 @@ theorem ltr_post_fixpoint_sound_at_eff_cone:
     "\<And>cl dst pars args p cont. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> cfg_reaches g cont v0
        \<Longrightarrow> etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env \<sigma> cont"
-  shows "ltr_collect g S v0 \<subseteq> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
+  shows "ltr_collect is_global g S v0 \<subseteq> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 proof -
   interpret se: sound_effectful_transfer etf by (rule se)
   interpret G: ltr_gamma g S "\<lambda>v _. if cfg_reaches g v v0 then \<lbrakk>side_env \<sigma> v\<rbrakk> else UNIV"
-      "\<lambda>_ _ _. ()" "()"
+      "\<lambda>_ _ _. ()" "()" is_global
   proof (standard, goal_cases ROOT EDGE CALL COMB)
     case (ROOT s)
     show ?case
@@ -97,8 +97,8 @@ proof -
   qed
   show ?thesis
   proof (rule subsetI)
-    fix x assume "x \<in> ltr_collect g S v0"
-    then obtain u where u: "u \<in> valid_ltr g S" "sink_node u = v0" "sink_store u = x"
+    fix x assume "x \<in> ltr_collect is_global g S v0"
+    then obtain u where u: "u \<in> valid_ltr is_global g S" "sink_node u = v0" "sink_store u = x"
       unfolding ltr_collect_def by blast
     have "u \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr u(1) by blast
     then have "sink_store u
@@ -114,7 +114,7 @@ theorem ltr_post_fixpoint_sound_in_eff_cone:
     and S :: "store set" and v0 v :: pp
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes se: "sound_effectful_transfer etf"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes step_le:
     "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> cfg_reaches g w v0
@@ -128,7 +128,7 @@ theorem ltr_post_fixpoint_sound_in_eff_cone:
        \<Longrightarrow> cfg_reaches g cont v0
        \<Longrightarrow> etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env \<sigma> cont"
   assumes v0_reach: "cfg_reaches g v v0"
-  shows "ltr_collect g S v \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+  shows "ltr_collect is_global g S v \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
 proof (rule ltr_post_fixpoint_sound_at_eff_cone[OF se inr entry])
   fix u a w
   assume e: "(u, a, w) \<in> intra g" and rw: "cfg_reaches g w v"
@@ -162,9 +162,9 @@ theorem side_collect_sound_in_eff_cone:
   assumes wf:    "wf_cfg g"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes cone:  "cone_compatible_etf etf"
-  assumes inr:   "inr_slot_locals_bot \<sigma>"
+  assumes inr:   "inr_slot_locals_bot is_global \<sigma>"
   assumes vq:    "cfg_reaches g v q"
-  shows "ltr_collect g S v \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+  shows "ltr_collect is_global g S v \<subseteq> \<lbrakk>side_env \<sigma> v\<rbrakk>"
 proof -
   have step_le:
     "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> cfg_reaches g w q
@@ -212,8 +212,8 @@ corollary side_collect_sound_exit_eff_ltr_cone:
   assumes wf:    "wf_cfg g"
   assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
   assumes cone:  "cone_compatible_etf etf"
-  assumes inr:   "inr_slot_locals_bot \<sigma>"
-  shows "ltr_collect g S (cfg_exit g) \<subseteq> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  assumes inr:   "inr_slot_locals_bot is_global \<sigma>"
+  shows "ltr_collect is_global g S (cfg_exit g) \<subseteq> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
   by (rule side_collect_sound_in_eff_cone[OF se pp fin finC wf entry cone inr cfg_reaches_refl])
 
 theorem side_analyse_eff_collect_sound_exit_ltr:
@@ -241,7 +241,7 @@ theorem side_analyse_eff_collect_sound_exit_ltr:
     "\<And>cl fs as \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
     "\<And>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
-  shows "ltr_collect (compile_prog \<Pi> ps mnm main) S (cfg_exit (compile_prog \<Pi> ps mnm main))
+  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) S (cfg_exit (compile_prog \<Pi> ps mnm main))
          \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main etf bot s0 gseed
               (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
 proof -
@@ -270,14 +270,14 @@ proof -
   have least: "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) v0 \<sigma> (ip.stabl_at v0)"
     by (metis (mono_tags, opaque_lifting) dom' ip.cfg_pkg_eff_eq ip.least_part_post_at_cfg
         local.\<sigma>_def)
-  have inr: "inr_slot_locals_bot \<sigma>"
+  have inr: "inr_slot_locals_bot is_global \<sigma>"
     by (metis comb_inr comb_static edge_inr edge_static enter_inr enter_static g_def least
         least_part_post_solution_inr_slot_locals_bot_eff mono_eq mono_sides)
   have cone: "cone_compatible_etf etf"
     unfolding cone_compatible_etf_def
     by (intro conjI allI edge_dep enter_dep comb_dep1 comb_dep2
           edge_static enter_static comb_static edge_inr comb_inr enter_inr)
-  have collect: "ltr_collect g S (cfg_exit g) \<subseteq> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  have collect: "ltr_collect is_global g S (cfg_exit g) \<subseteq> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     by (rule side_collect_sound_exit_eff_ltr_cone[OF se pp[unfolded v0_def] fin finC wf
           entry_cov cone inr])
   have analyse_eq:
@@ -297,7 +297,7 @@ corollary side_analyse_eff_collect_sound_exit_ltr_cone:
   assumes dom: "side_cfg_solve_dom_eff (compile_prog \<Pi> ps mnm main) etf bot s0 gseed
                   (cfg_exit (compile_prog \<Pi> ps mnm main))"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
-  shows "ltr_collect (compile_prog \<Pi> ps mnm main) S (cfg_exit (compile_prog \<Pi> ps mnm main))
+  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) S (cfg_exit (compile_prog \<Pi> ps mnm main))
          \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main etf bot s0 gseed
               (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
   by (rule side_analyse_eff_collect_sound_exit_ltr[OF se

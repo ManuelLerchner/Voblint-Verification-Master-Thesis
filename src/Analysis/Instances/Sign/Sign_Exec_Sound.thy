@@ -81,7 +81,7 @@ text \<open>
 theorem sign_exec_sound_collecting:
   fixes mnm :: pname
   assumes solves: "sign_exec_terminates \<Pi> ps mnm main"
-  shows "ltr_collect (compile_prog \<Pi> ps mnm main) cinit_stores (cfg_exit (compile_prog \<Pi> ps mnm main))
+  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) (cinit_stores is_global) (cfg_exit (compile_prog \<Pi> ps mnm main))
          \<le> \<lbrakk>sign_exec \<Pi> ps mnm main\<rbrakk>"
 proof -
   define g :: cfg where "g = compile_prog \<Pi> ps mnm main"
@@ -119,7 +119,7 @@ proof -
     unfolding sol_def by simp
   have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_st (snd sol (Inr gg))"
     by (rule TD_side_always_join_solve_Inr_rg[OF dom srz solpair])
-  have inr: "inr_slot_locals_bot \<sigma>"
+  have inr: "inr_slot_locals_bot is_global \<sigma>"
     unfolding \<sigma>_def
     using inr_slot_locals_bot_fun_of_st_restrict_global_st rg by blast
   have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"
@@ -128,12 +128,12 @@ proof -
     by (rule side_cone_in_vars_eff_cone[OF pp_eff fin finC wf cone reach])
   have entry_le: "(\<lambda>x. if is_global x then SZero else STop) \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
-  have seed_cov: "cinit_stores \<subseteq> \<lbrakk>\<lambda>x. if is_global x then SZero else STop\<rbrakk>"
+  have seed_cov: "cinit_stores is_global \<subseteq> \<lbrakk>\<lambda>x. if is_global x then SZero else STop\<rbrakk>"
     unfolding cinit_stores_def gamma_state_def
     by auto
-  have entry_cov: "cinit_stores \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  have entry_cov: "cinit_stores is_global \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
-  have "ltr_collect g cinit_stores (cfg_exit g)
+  have "ltr_collect is_global g (cinit_stores is_global) (cfg_exit g)
         \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
     by (rule side_collect_sound_exit_eff_ltr_cone
           [OF sign_sound_etf_unit pp_eff fin finC wf entry_cov cone inr])
@@ -169,7 +169,7 @@ lemma sign_terminates_prog_via_solve_c:
 
 corollary sign_exec_prog_sound_collecting:
   assumes "sign_terminates_prog mnm p"
-  shows "ltr_collect (prog_cfg mnm p) cinit_stores (cfg_exit (prog_cfg mnm p))
+  shows "ltr_collect is_global (prog_cfg mnm p) (cinit_stores is_global) (cfg_exit (prog_cfg mnm p))
            \<le> \<lbrakk>sign_exec_prog mnm p\<rbrakk>"
   using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
   by (rule sign_exec_sound_collecting)

@@ -24,8 +24,8 @@ theorem mixed_flow_analysis_sound:
   assumes fin:   "finite (intra g)"
   assumes finC:  "finite (calls g)"
   assumes wf:    "wf_cfg g"
-  assumes inr: "inr_slot_locals_bot \<sigma>"
-  shows "ltr_collect g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
+  shows "ltr_collect is_global g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
   by (rule side_collect_sound_exit_eff_ltr_cone[OF se pp fin finC wf entry cone inr])
 
 subsection \<open>Optimal soundness via the TD solver (threefold monotonicity)\<close>
@@ -42,7 +42,7 @@ theorem mixed_flow_analysis_optimal:
   assumes dom:   "side_cfg_solve_dom_eff g etf bot s0 gseed (cfg_exit g)"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   shows sound:
-    "ltr_collect g S (cfg_exit g)
+    "ltr_collect is_global g S (cfg_exit g)
        \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
     and optimal:
     "least_part_post_solution (side_cfg_T_eff g etf bot s0 gseed) (cfg_exit g)
@@ -55,7 +55,7 @@ proof -
           threefold_monoD_deps[OF tfm[unfolded T_eq]]
     by unfold_locales
   show sound:
-    "ltr_collect g S (cfg_exit g)
+    "ltr_collect is_global g S (cfg_exit g)
        \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
     unfolding g_eq
     by (rule side_analyse_eff_collect_sound_exit_ltr_cone[OF se

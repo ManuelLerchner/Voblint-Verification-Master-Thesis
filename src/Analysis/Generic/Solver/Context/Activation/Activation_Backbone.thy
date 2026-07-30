@@ -21,6 +21,7 @@ text \<open>Four local obligations connect the abstract solution to the trace ru
 theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
+    and gs :: "vname \<Rightarrow> bool"
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
@@ -28,18 +29,18 @@ theorem activation_collect_sound:
     and CALL: "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
+        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
              \<in> \<lbrakk>sg (Inl (FunctionEntry p,
-                          enterc u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
+                          enterc u c (call_enter gs (CallEdge dst pars args) s)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store g cl s es
-        \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "activation_collect enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+        \<Longrightarrow> call_enter_store gs g cl s es
+        \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+  shows "activation_collect gs enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect enterc seedc g S v ctx"
-  then obtain t where t: "t \<in> valid_ltr g S"
+  fix st assume "st \<in> activation_collect gs enterc seedc g S v ctx"
+  then obtain t where t: "t \<in> valid_ltr gs g S"
     and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
   have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"

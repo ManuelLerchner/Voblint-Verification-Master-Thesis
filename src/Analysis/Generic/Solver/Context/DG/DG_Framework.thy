@@ -297,7 +297,7 @@ definition unit_combine_step_env ::
    \<Rightarrow> 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_env dc de g =
-     (let m = combine_abs (dc \<squnion> g) (de \<squnion> g) in (restrict_global m, restrict_local m))"
+     (let m = combine_abs is_global (dc \<squnion> g) (de \<squnion> g) in (restrict_global m, restrict_local m))"
 
 definition unit_combine_step_assign ::
   "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state
@@ -325,11 +325,11 @@ text \<open>The pre-split combine value is recovered by composition, matching
   the computed answer.\<close>
 lemma dgs_combine_unit_dg_spec:
   "dgs_combine (unit_dg_spec tf) dst dc de g =
-     (let res = combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)
+     (let res = combine_collect_abs is_global dst (dc \<squnion> g) (de \<squnion> g)
       in (restrict_global res, restrict_local res))"
 proof -
-  have join_back: "restrict_global \<langle>dc \<squnion> g|de \<squnion> g\<rangle> \<squnion> restrict_local \<langle>dc \<squnion> g|de \<squnion> g\<rangle>
-                    = \<langle>dc \<squnion> g|de \<squnion> g\<rangle>"
+  have join_back: "restrict_global (combine_abs is_global (dc \<squnion> g) (de \<squnion> g)) \<squnion> restrict_local (combine_abs is_global (dc \<squnion> g) (de \<squnion> g))
+                    = combine_abs is_global (dc \<squnion> g) (de \<squnion> g)"
     using restrict_local_global_join by (simp add: sup.commute)
   show ?thesis
     unfolding dgs_combine_def unit_dg_spec_def unit_combine_step_env_def

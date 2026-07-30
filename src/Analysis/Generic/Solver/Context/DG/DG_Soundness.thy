@@ -136,6 +136,7 @@ locale sound_dg_spec =
   fixes S :: "('D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
+    and gs :: "vname \<Rightarrow> bool"
   assumes gammaDG_mono:
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow>
         gammaDG d g \<subseteq> gammaDG d' g'"
@@ -145,12 +146,12 @@ locale sound_dg_spec =
            (g', d') \<Rightarrow> gammaDG d' g')"
     and combine_sound:
       "\<lbrakk>s \<in> gammaDG dc g; t \<in> gammaDG de g\<rbrakk> \<Longrightarrow>
-        combine_collect is_global dst s t \<in>
+        combine_collect gs dst s t \<in>
           (case dgs_combine S dst dc de g of
              (g', d') \<Rightarrow> gammaDG d' g')"
     and enter_sound:
       "s \<in> gammaDG dc g \<Longrightarrow>
-        call_enter is_global (CallEdge dst pars args) s \<in>
+        call_enter gs (CallEdge dst pars args) s \<in>
           (case dgs_enter S pars args dc g of
              (g', d') \<Rightarrow> gammaDG d' g')"
 begin
@@ -166,13 +167,13 @@ lemma step_sound_fs:
 
 lemma enter_sound_fs:
   assumes "s \<in> gammaDG dc g"
-  shows "call_enter is_global (CallEdge dst pars args) s \<in>
+  shows "call_enter gs (CallEdge dst pars args) s \<in>
            gammaDG (snd (dgs_enter S pars args dc g)) (fst (dgs_enter S pars args dc g))"
   using enter_sound[OF assms] by (simp add: case_prod_beta)
 
 lemma combine_sound_fs:
   assumes "s \<in> gammaDG dc g" and "t \<in> gammaDG de g"
-  shows "combine_collect is_global dst s t \<in>
+  shows "combine_collect gs dst s t \<in>
            gammaDG (snd (dgs_combine S dst dc de g)) (fst (dgs_combine S dst dc de g))"
   using combine_sound[OF assms] by (simp add: case_prod_beta)
 
@@ -718,11 +719,11 @@ lemma dg_postfix_gamma_call:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> dg_gamma sigma u"
-  shows "call_enter is_global (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
+  shows "call_enter gs (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
 proof -
   have sin': "s \<in> gammaDG (dg_D sigma u) (dg_G sigma)"
     using dg_gammaD[OF sin] .
-  have out: "call_enter is_global (CallEdge dst pars args) s \<in>
+  have out: "call_enter gs (CallEdge dst pars args) s \<in>
                gammaDG (snd (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))
                        (fst (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))"
     using enter_sound_fs[OF sin'] .
@@ -735,7 +736,7 @@ proof -
                 (fst (dgs_enter S pars args (dg_D sigma u) (dg_G sigma)))
       \<subseteq> gammaDG (dg_D sigma (FunctionEntry p)) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
-  then show "call_enter is_global (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
+  then show "call_enter gs (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
     using out dg_gammaI by blast
 qed
 
@@ -744,13 +745,13 @@ lemma dg_postfix_gamma_combine:
     and comb: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> dg_gamma sigma cl"
     and tin: "t \<in> dg_gamma sigma (FunctionResult p)"
-  shows "combine_collect is_global dst s t \<in> dg_gamma sigma cont"
+  shows "combine_collect gs dst s t \<in> dg_gamma sigma cont"
 proof -
   have sin': "s \<in> gammaDG (dg_D sigma cl) (dg_G sigma)"
     using dg_gammaD[OF sin] .
   have tin': "t \<in> gammaDG (dg_D sigma (FunctionResult p)) (dg_G sigma)"
     using dg_gammaD[OF tin] .
-  have out: "combine_collect is_global dst s t \<in>
+  have out: "combine_collect gs dst s t \<in>
       gammaDG (snd (dgs_combine S dst (dg_D sigma cl) (dg_D sigma (FunctionResult p)) (dg_G sigma)))
               (fst (dgs_combine S dst (dg_D sigma cl) (dg_D sigma (FunctionResult p)) (dg_G sigma)))"
     using combine_sound_fs[OF sin' tin'] .
@@ -764,7 +765,7 @@ proof -
                 (fst (dgs_combine S dst (dg_D sigma cl) (dg_D sigma (FunctionResult p)) (dg_G sigma)))
       \<subseteq> gammaDG (dg_D sigma cont) (dg_G sigma)"
     by (rule gammaDG_mono[OF d_le g_le])
-  then show "combine_collect is_global dst s t \<in> dg_gamma sigma cont"
+  then show "combine_collect gs dst s t \<in> dg_gamma sigma cont"
     using out dg_gammaI by blast
 qed
 
@@ -796,7 +797,7 @@ where
                                apply_tf tfD (EA_AssumeNot b) d)),
     dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
                                    tf_enter tfD xs es d)),
-    dgs_combine_env    = (\<lambda>dc de g. (combine_abs g g, combine_abs dc de)),
+    dgs_combine_env    = (\<lambda>dc de g. (combine_abs is_global g g, combine_abs is_global dc de)),
     dgs_combine_assign = (\<lambda>dst de g merged.
       (combine_assign_abs dst (g ret_var) (fst merged),
        combine_assign_abs dst (de ret_var) (snd merged)))
@@ -810,7 +811,7 @@ lemma dg_spec_step_indep [simp]:
 
 lemma dgs_combine_indep [simp]:
   "dgs_combine (indep_dg_spec tfD tfG) dst dc de g
-   = (combine_collect_abs dst g g, combine_collect_abs dst dc de)"
+   = (combine_collect_abs is_global dst g g, combine_collect_abs is_global dst dc de)"
   unfolding dgs_combine_def indep_dg_spec_def combine_collect_abs_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
@@ -825,9 +826,9 @@ proof -
   have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
   have tc': "t \<in> \<lbrakk>de\<rbrakk>" using gamma_dgD1[OF tc] .
   have tg: "t \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF tc] .
-  have d_sound: "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs dst dc de\<rbrakk>"
+  have d_sound: "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs is_global dst dc de\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
-  have g_sound: "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs dst g g\<rbrakk>"
+  have g_sound: "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs is_global dst g g\<rbrakk>"
     by (rule combine_collect_sound[OF sg tg])
   show ?thesis
     using d_sound g_sound unfolding gamma_dg_def by simp
@@ -856,7 +857,7 @@ qed
 lemma sound_dg_spec_indep:
   assumes soundD: "sound_transfer tfD"
     and soundG: "sound_transfer tfG"
-  shows "sound_dg_spec (indep_dg_spec tfD tfG) gamma_dg"
+  shows "sound_dg_spec (indep_dg_spec tfD tfG) gamma_dg is_global"
   apply unfold_locales
   subgoal for d d' g g'
     by (rule gamma_dg_mono)
@@ -910,7 +911,7 @@ lemma gamma_unit_combine_sound:
 proof -
   have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
   have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
-  have "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+  have "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs is_global dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     unfolding dgs_combine_unit_dg_spec gamma_unit_def
@@ -936,7 +937,7 @@ qed
 
 lemma sound_dg_spec_unit:
   assumes sound: "sound_transfer tf"
-  shows "sound_dg_spec (unit_dg_spec tf) gamma_unit"
+  shows "sound_dg_spec (unit_dg_spec tf) gamma_unit is_global"
   apply unfold_locales
   subgoal for d d' g g'
     by (rule gamma_unit_mono)
@@ -952,7 +953,7 @@ lemma sound_dg_spec_unit:
 context sound_transfer
 begin
 
-sublocale dg: sound_dg_spec "unit_dg_spec tf" gamma_unit
+sublocale dg: sound_dg_spec "unit_dg_spec tf" gamma_unit is_global
   by (rule sound_dg_spec_unit[OF sound_transfer_axioms])
 
 end

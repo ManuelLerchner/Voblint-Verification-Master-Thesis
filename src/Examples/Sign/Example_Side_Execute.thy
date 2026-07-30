@@ -53,7 +53,7 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))
+  "ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))
    \<le> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
 
@@ -71,9 +71,9 @@ lemma x1_completed:
 
 lemma x1_completed_run_collect:
   "x1_s0(''x'' := 1)
-     \<in> ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))"
+     \<in> ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))"
 proof -
-  have init: "x1_s0 \<in> cinit_stores"
+  have init: "x1_s0 \<in> cinit_stores is_global"
     by (simp add: x1_s0_def cinit_stores_def)
   have wf: "wf_compile_input (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog)"
     unfolding wf_compile_input_def x1_prog_def
@@ -99,7 +99,7 @@ proof (rule conjI)
 next
   have collect:
     "x1_s0(''x'' := 1) \<in>
-      ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))"
+      ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))"
     using x1_completed_run_collect
     by (simp add: prog_cfg_def)
   show "x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
