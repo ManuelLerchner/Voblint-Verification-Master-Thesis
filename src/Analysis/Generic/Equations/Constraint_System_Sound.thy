@@ -185,9 +185,9 @@ text \<open>Call-entry companion of \<open>edge_of_bound\<close>: if the abstrac
 lemma call_enter_of_bound:
   assumes bound: "tf_enter tf pars args A \<le> B"
     and s: "s \<in> \<lbrakk>A\<rbrakk>"
-  shows "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
+  shows "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
 proof -
-  have "call_enter (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
+  have "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
     using tf_sound_enterD[OF s] by (simp add: call_enter_CallEdge)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
@@ -201,9 +201,9 @@ text \<open>Return-combine companion of \<open>edge_of_bound\<close>/\<open>call
 lemma combine_of_bound:
   assumes bound: "tf_combine_collect_abs tf dst A B \<le> C"
     and s: "s \<in> \<lbrakk>A\<rbrakk>" and t: "t \<in> \<lbrakk>B\<rbrakk>"
-  shows "combine_collect dst s t \<in> \<lbrakk>C\<rbrakk>"
+  shows "combine_collect is_global dst s t \<in> \<lbrakk>C\<rbrakk>"
 proof -
-  have step: "combine_collect dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst A B\<rbrakk>"
+  have step: "combine_collect is_global dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst A B\<rbrakk>"
   proof (cases dst)
     case None
     then show ?thesis
@@ -211,7 +211,7 @@ proof -
       by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
     case (Some x)
-    have base: "combine_states s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
+    have base: "combine_states is_global s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
       using tf_sound_combineD[OF s t] .
     have ret: "t ret_var \<in> gamma (B ret_var)"
       using t unfolding gamma_state_def by auto

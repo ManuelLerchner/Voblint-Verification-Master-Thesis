@@ -55,7 +55,7 @@ theorem side_ivl_analysis_sound:
   fixes \<Pi> ps mnm main and s t :: store and s0 :: "ivl abs_state"
   assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect (compile_prog \<Pi> ps mnm main) {s}
+    "t \<in> ltr_collect is_global (compile_prog \<Pi> ps mnm main) {s}
        (cfg_exit (compile_prog \<Pi> ps mnm main))"
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff (compile_prog \<Pi> ps mnm main) ivl_etf bot s0 ()
@@ -65,7 +65,7 @@ theorem side_ivl_analysis_sound:
 proof -
   have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
   have collect:
-    "ltr_collect (compile_prog \<Pi> ps mnm main) {s}
+    "ltr_collect is_global (compile_prog \<Pi> ps mnm main) {s}
        (cfg_exit (compile_prog \<Pi> ps mnm main))
      \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main ivl_etf bot s0 ()
            (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"

@@ -23,7 +23,7 @@ lemma fun_of_st_restrict_global_st [simp]:
   by (rule ext) simp
 
 lemma fun_of_st_combine_abs_st [simp]:
-  "fun_of_st (combine_abs_st sc se) = combine_abs (fun_of_st sc) (fun_of_st se)"
+  "fun_of_st (combine_abs_st sc se) = combine_abs is_global (fun_of_st sc) (fun_of_st se)"
   unfolding combine_abs_def
   by (rule ext) simp
 
@@ -1145,7 +1145,7 @@ qed
 lemma inr_slot_locals_bot_fun_of_st_restrict_global_st:
   fixes sigma_st :: "pp + unit \<Rightarrow> ('a::bounded_semilattice_sup_bot) st"
   assumes rg: "\<And>gg. sigma_st (Inr gg) = restrict_global_st (sigma_st (Inr gg))"
-  shows "inr_slot_locals_bot (fun_of_st \<circ> sigma_st)"
+  shows "inr_slot_locals_bot is_global (fun_of_st \<circ> sigma_st)"
   unfolding inr_slot_locals_bot_iff_Inr_restrict_global
 proof (intro allI)
   fix gg

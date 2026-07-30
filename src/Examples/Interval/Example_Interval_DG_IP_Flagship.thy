@@ -10,6 +10,20 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Formalization.DG_Domain_Registration"
 begin
 
+section \<open>The context-insensitive (monovariant) interval flagship\<close>
+
+text \<open>
+  This is the non-context IP baseline: every call to \<open>twice\<close> is analyzed
+  under a single, shared abstract state at \<open>FunctionEntry ''twice''\<close>,
+  regardless of which call site reached it. It is the flagship the
+  context-sensitive siblings sharpen -- \<open>Example_Interval_DG_Ctx_Flagship\<close>
+  routes by the entered argument's abstract value, \<open>Example_Interval_DG_CallString\<close>
+  routes by call site (a 1-CFA-style call string) -- so run this file first to
+  see the precision loss two calls to the same procedure with different
+  arguments incur when their entry states are forced to join, then compare
+  against the routed variants.
+\<close>
+
 definition twice_program :: imp_prog where
   "twice_program = program {
      void twice(p) { return p + p }
@@ -164,7 +178,7 @@ lemma twice_cover_combine:
   using twice_cover_all by (auto simp: twice_calls)
 
 lemma twice_sound0:
-  "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
+  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
 proof -
   have "fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st) = fun_of_st cinit_ivl_st"
     by (simp add: fun_of_st_cinit_ivl_st restrict_global_def sup_fun_def fun_eq_iff)
@@ -178,7 +192,7 @@ text \<open>
 \<close>
 
 theorem twice_collect_sound:
-  "ltr_collect twice_cfg cinit_stores v
+  "ltr_collect is_global twice_cfg (cinit_stores is_global) v
      \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
   by (rule ivl_dg_post_solution_collect_sound
         [OF twice_pp_abs[folded ivl_dg_generator_def]
@@ -215,8 +229,8 @@ lemma twice_wf: "wf_compile_input twice_pi twice_procs ''main'' twice_main"
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:
-  assumes run: "star (pstep twice_pi) (twice_main, s, []) src'"
-      and init: "s \<in> cinit_stores"
+  assumes run: "star (pstep is_global twice_pi) (twice_main, s, []) src'"
+      and init: "s \<in> cinit_stores is_global"
   shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
                    \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"
 proof -

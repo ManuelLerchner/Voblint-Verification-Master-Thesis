@@ -145,10 +145,10 @@ text \<open>Return-value rehydration at the caller: write the callee's \<open>re
   destination over the combined store (callee globals, caller locals).  It is fixed by the
   call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
 
-definition combine_collect :: "vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect dst s t = combine_assign dst (t ret_var) (combine_states s t)"
+definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
+  "combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_states gs s t)"
 
-lemma combine_collect_None: "combine_collect None s t = <s|t>"
+lemma combine_collect_None: "combine_collect gs None s t = combine_states gs s t"
   by (simp add: combine_collect_def)
 
 subsection \<open>Call-entry transfer\<close>
@@ -159,20 +159,20 @@ text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in 
   transfer needs no procedure table.  This is exactly the callee-entry store produced by the
   source \<^const>\<open>pstep\<close> \<open>Call\<close> rule (see \<open>call_enter_eq_source_call_store\<close>).\<close>
 
-definition call_enter :: "call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter ca s =
+definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
+  "call_enter gs ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state s))"
+        bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s))"
 
 lemma call_enter_CallEdge:
-  "call_enter (CallEdge dst pars actuals) s
-     = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state s)"
+  "call_enter gs (CallEdge dst pars actuals) s
+     = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
   by (simp add: call_enter_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
   formals to bind.\<close>
 lemma call_enter_Nil [simp]:
-  "call_enter (CallEdge dst [] []) s = enter_state s"
+  "call_enter gs (CallEdge dst [] []) s = enter_state gs s"
   by (simp add: call_enter_CallEdge bind_formals_def)
 
 subsection \<open>Structural selectors\<close>

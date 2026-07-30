@@ -91,7 +91,7 @@ text \<open>
   inherited from the locale; no analysis-specific collecting proof remains.
 \<close>
 
-interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg
+interpretation mixed_si: sound_dg_spec mixed_si_spec gamma_dg is_global
   unfolding mixed_si_spec_def
   by (rule sound_dg_spec_indep
         [OF sign_is_sound_transfer ivl_is_sound_transfer])
@@ -115,7 +115,7 @@ text \<open>
 \<close>
 locale mixed_si_api
 
-sublocale mixed_si_api \<subseteq> sound_dg_spec mixed_si_spec gamma_dg
+sublocale mixed_si_api \<subseteq> sound_dg_spec_ltr mixed_si_spec gamma_dg
   rewrites "sound_dg_spec.dg_D = mixed_si_D"
        and "sound_dg_spec.dg_G = mixed_si_G"
        and "sound_dg_spec.dg_gamma gamma_dg = mixed_si_gamma"
@@ -124,8 +124,8 @@ sublocale mixed_si_api \<subseteq> sound_dg_spec mixed_si_spec gamma_dg
        and "sound_dg_spec.dg_gen mixed_si_spec = mixed_si_generator"
        and "sound_dg_spec.dg_postfix mixed_si_spec = mixed_si_postfix"
 proof -
-  have main: "sound_dg_spec mixed_si_spec gamma_dg"
-    unfolding mixed_si_spec_def
+  have main: "sound_dg_spec_ltr mixed_si_spec gamma_dg"
+    unfolding sound_dg_spec_ltr_def mixed_si_spec_def
     by (rule sound_dg_spec_indep[OF sign_is_sound_transfer ivl_is_sound_transfer])
   have D: "sound_dg_spec.dg_D = mixed_si_D"
     by (simp add: fun_eq_iff mixed_si_D_def mixed_si.dg_D_def)
@@ -143,7 +143,7 @@ proof -
              cmb extra mixed_si_cmb_def mixed_si_extra_def)
   have postfix: "sound_dg_spec.dg_postfix mixed_si_spec = mixed_si_postfix"
     by (simp add: fun_eq_iff mixed_si_postfix_def)
-  show "sound_dg_spec mixed_si_spec gamma_dg" by (fact main)
+  show "sound_dg_spec_ltr mixed_si_spec gamma_dg" by (fact main)
   show "sound_dg_spec.dg_D = mixed_si_D" by (fact D)
   show "sound_dg_spec.dg_G = mixed_si_G" by (fact G)
   show "sound_dg_spec.dg_gamma gamma_dg = mixed_si_gamma" by (fact gamma)
@@ -179,7 +179,7 @@ theorem mixed_si_postfix_collect_sound:
   assumes pf: "mixed_si_postfix g s0d s0g sigma"
     and soundD: "S \<le> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<le> \<lbrakk>s0g\<rbrakk>"
-  shows "ltr_collect g S v \<le> mixed_si_gamma sigma v"
+  shows "ltr_collect is_global g S v \<le> mixed_si_gamma sigma v"
   apply (rule dg_postfix_collect_sound_ltr[OF pf])
   using soundD soundG unfolding gamma_dg_def by blast
 
@@ -200,7 +200,7 @@ corollary mixed_si_post_solution_collect_sound:
     and finC: "finite (calls g)"
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
-  shows "ltr_collect g S v \<subseteq> mixed_si_gamma sigma v"
+  shows "ltr_collect is_global g S v \<subseteq> mixed_si_gamma sigma v"
   apply (rule dg_post_solution_collect_sound_ltr
         [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
   using soundD soundG unfolding gamma_dg_def by auto

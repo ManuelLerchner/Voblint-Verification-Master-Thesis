@@ -46,15 +46,15 @@ text \<open>Procedure entry: keep globals, reset locals to the full interval, th
   Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised by
   ivl_top as the domain's fully-imprecise reset value.\<close>
 definition enter_frame_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_frame_ivl = enter_frame_D ivl_top"
+  "enter_frame_ivl = enter_frame_D is_global ivl_top"
 
 definition enter_ivl ::
     "vname list \<Rightarrow> aexp list \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_ivl = enter_D ivl_top aval_ivl"
+  "enter_ivl = enter_D is_global ivl_top aval_ivl"
 
 lemma enter_frame_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
+  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
   unfolding enter_frame_ivl_def
 proof (rule enter_frame_D_sound[OF gs])
   show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
@@ -62,7 +62,7 @@ qed
 
 lemma enter_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>enter_ivl xs es \<sigma>\<rbrakk>"
   unfolding enter_ivl_def
 proof (rule enter_D_sound[OF gs])
@@ -80,7 +80,7 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_assume     = assume_ivl,
                tf_assume_not = assume_not_ivl,
                tf_enter      = enter_ivl,
-               tf_combine    = combine_abs |)"
+               tf_combine    = combine_abs is_global |)"
 
 lemma ivl_tf_sound_assign:
   "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
@@ -96,7 +96,7 @@ lemma ivl_tf_sound_assume_not:
 
 lemma ivl_tf_sound_enter:
   "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state st)
+     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state is_global st)
        \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: enter_ivl_sound)
 
@@ -109,9 +109,10 @@ proof (rule sound_transferI)
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
     using ivl_tf_sound_assume_not by blast
   show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+       \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
     using ivl_tf_sound_enter by blast
-  show "tf_combine ivl_tf = combine_abs"
+  show "tf_combine ivl_tf = combine_abs is_global"
     unfolding ivl_tf_def by simp
 qed
 

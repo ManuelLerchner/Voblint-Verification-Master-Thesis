@@ -15,8 +15,9 @@ text \<open>
   not reconstruct activation pairing.
 \<close>
 
-locale dg_ctx_activation = sound_dg_spec S gamma_unit
-  for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec" +
+locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
+  for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
+    and gs :: "vname \<Rightarrow> bool" +
   fixes g :: cfg and gk0 :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -214,7 +215,7 @@ lemma dg_ctx_act_comb_covered:
        \<squnion> fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
               (globs (sigma (Inr gk0))))
        \<le> locals (sigma (Inl (v, cv))) \<squnion> globs (sigma (Inr gk0))"
-  shows "combine_collect dst s t \<in> \<lbrakk>sg (Inl (v, cv))\<rbrakk>"
+  shows "combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (v, cv))\<rbrakk>"
 proof -
   let ?Dc = "locals (sigma (Inl (cl, c1)))"
   let ?De = "locals (sigma (Inl (ex, c2)))"
@@ -223,7 +224,7 @@ proof -
     using s covCl by (simp add: sg_cov gamma_unit_def)
   have tin: "t \<in> gamma_unit ?De ?G"
     using t covEx by (simp add: sg_cov gamma_unit_def)
-  have "combine_collect dst s t
+  have "combine_collect gs dst s t
         \<in> gamma_unit (snd (dgs_combine S dst ?Dc ?De ?G)) (fst (dgs_combine S dst ?Dc ?De ?G))"
     using combine_sound_fs[OF sin tin] .
   also have "\<dots> \<subseteq> gamma_unit (locals (sigma (Inl (v, cv)))) ?G"

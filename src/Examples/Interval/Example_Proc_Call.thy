@@ -52,51 +52,60 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes is_global proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have run: "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
-                (VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)))"
+  have run: "pcompletes is_global proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
+                (VIMP_Globals.combine_states is_global s
+                  ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes proc_pi inc_body (enter_state s)
-             ((enter_state s)(''Gx'' := s ''Gx'' + 1))"
+    show "pcompletes is_global proc_pi inc_body (enter_state is_global s)
+             ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pcompletes proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
-               (enter_state s)
-               ((enter_state s)(''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state s)))"
+      have "pcompletes is_global proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
+               (enter_state is_global s)
+               ((enter_state is_global s)
+                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state s) = s ''Gx'' + 1"
+      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s) = s ''Gx'' + 1"
         by (simp add: enter_state_def is_global_def)
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
-  moreover have "VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' + 1)) = s(''Gx'' := s ''Gx'' + 1)"
+  moreover have
+    "VIMP_Globals.combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))
+       = s(''Gx'' := s ''Gx'' + 1)"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes is_global proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
-  have run: "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
-                (VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
+  have run: "pcompletes is_global proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
+                (VIMP_Globals.combine_states is_global s
+                  ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes proc_pi sqr_body (enter_state s)
-             ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx''))"
+    show "pcompletes is_global proc_pi sqr_body (enter_state is_global s)
+             ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx''))"
     proof -
-      have "pcompletes proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
-               (enter_state s)
-               ((enter_state s)(''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s)))"
+      have "pcompletes is_global proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
+               (enter_state is_global s)
+               ((enter_state is_global s)
+                 (''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state is_global s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state s) = s ''Gx'' * s ''Gx''"
+      moreover have
+        "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state is_global s) = s ''Gx'' * s ''Gx''"
         by (simp add: enter_state_def is_global_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
-  moreover have "VIMP_Globals.combine_states s ((enter_state s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+  moreover have
+    "VIMP_Globals.combine_states is_global s
+       ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
     by (rule ext) (simp add: enter_state_def is_global_def)
   ultimately show ?thesis by simp
 qed
@@ -106,15 +115,15 @@ text \<open>
   initial store, regardless of @{term \<open>''Gx''\<close>}'s starting value.
 \<close>
 theorem main_prog_result:
-  "pcompletes proc_pi main_prog s (s(''Gx'' := 25))"
+  "pcompletes is_global proc_pi main_prog s (s(''Gx'' := 25))"
 proof -
-  have step1: "pcompletes proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s(''Gx'' := 4))"
-    using pcompletes_assign[where \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
+  have step1: "pcompletes is_global proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s(''Gx'' := 4))"
+    using pcompletes_assign[where gs = is_global and \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
     by (simp add: pcompletes_def)
-  have step2: "pcompletes proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+  have step2: "pcompletes is_global proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
     using call_inc_result[where s = "s(''Gx'' := 4)"]
     by simp
-  have step3: "pcompletes proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+  have step3: "pcompletes is_global proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
     using call_sqr_result[where s = "s(''Gx'' := 5)"]
     by simp
   show ?thesis
@@ -296,12 +305,12 @@ text \<open>
 
 theorem main_prog_interval_analysis:
   assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
-  assumes s: "s \<in> ltr_collect main_cfg S (cfg_exit main_cfg)"
+  assumes s: "s \<in> ltr_collect is_global main_cfg S (cfg_exit main_cfg)"
   shows "s ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (intra main_cfg)" by (simp add: main_cfg_intra)
   have fin_c: "finite (calls main_cfg)" by (simp add: main_cfg_calls)
-  have le: "ltr_collect main_cfg S (cfg_exit main_cfg)
+  have le: "ltr_collect is_global main_cfg S (cfg_exit main_cfg)
               \<le> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>"
     using sound_transfer.unified_ltr_post_fixpoint_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix S_sound]

@@ -51,15 +51,15 @@ subsection \<open>Bundled transfer functions\<close>
    Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised
    by PTop as the domain's fully-imprecise reset value. *)
 definition enter_frame_parity :: "parity abs_state => parity abs_state" where
-  "enter_frame_parity = enter_frame_D PTop"
+  "enter_frame_parity = enter_frame_D is_global PTop"
 
 definition enter_parity ::
     "vname list => aexp list => parity abs_state => parity abs_state" where
-  "enter_parity = enter_D PTop aval_parity"
+  "enter_parity = enter_D is_global PTop aval_parity"
 
 lemma enter_frame_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state s \<in> \<lbrakk>enter_frame_parity \<sigma>\<rbrakk>"
+  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_parity \<sigma>\<rbrakk>"
   unfolding enter_frame_parity_def
 proof (rule enter_frame_D_sound[OF gs])
   show "gamma PTop = UNIV" by simp
@@ -67,7 +67,7 @@ qed
 
 lemma enter_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s)
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
            \<in> \<lbrakk>enter_parity xs es \<sigma>\<rbrakk>"
   unfolding enter_parity_def
 proof (rule enter_D_sound[OF gs])
@@ -100,7 +100,7 @@ definition parity_tf :: "parity domain_transfer" where
                   tf_assume     = assume_parity,
                   tf_assume_not = assume_not_parity,
                   tf_enter      = enter_parity,
-                  tf_combine    = combine_abs |)"
+                  tf_combine    = combine_abs is_global |)"
 
 text \<open>
   The four transfer-function soundness facts for the parity domain, bundled
@@ -122,7 +122,8 @@ lemma parity_tf_sound_assume_not:
 
 lemma parity_tf_sound_enter:
   "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state st) \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
+     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state is_global st)
+       \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
   unfolding parity_tf_def by (simp add: enter_parity_sound)
 
 interpretation parity_sound_tf: sound_transfer parity_tf
@@ -134,9 +135,10 @@ proof (rule sound_transferI)
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not parity_tf b \<sigma>\<rbrakk>"
     using parity_tf_sound_assume_not by blast
   show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state s) \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+       \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
     using parity_tf_sound_enter by blast
-  show "tf_combine parity_tf = combine_abs"
+  show "tf_combine parity_tf = combine_abs is_global"
     unfolding parity_tf_def by simp
 qed
 

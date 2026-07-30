@@ -89,9 +89,10 @@ text \<open>Beyond \<^locale>\<open>dg_ctx_activation\<close>'s parameters: \<op
   per-instance proof obligation, not a locale theorem.\<close>
 
 locale routed_context =
-  dg_ctx_activation S g gk0 route "routed_cmb S gk0" "routed_extra g S seed_key gk0"
+  dg_ctx_activation S gs g gk0 route "routed_cmb S gk0" "routed_extra g S seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
+    and gs :: "vname \<Rightarrow> bool"
     and g gk0 route bot0 s0d s0g sigma vars x0 sg
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k" +
   fixes enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
@@ -103,7 +104,7 @@ locale routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> s \<in> gamma_unit (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
        \<Longrightarrow> route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
-            = enterc u ctx (call_enter (CallEdge dst pars args) s)"
+            = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
@@ -115,9 +116,9 @@ locale routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
     and call_enter_store_agree:
     "\<And>cl s es dst pars args p cont.
-       call_enter_store g cl s es
+       call_enter_store gs g cl s es
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> es = call_enter (CallEdge dst pars args) s"
+       \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
 lemma le_dg_state_localsD: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
@@ -168,7 +169,7 @@ proof -
   have succ: "(FunctionEntry p, CallEdge dst pars args, cont) \<in> set (call_successor_list g u)"
     using ce by (simp add: set_call_successor_list[OF finC] call_successors_iff)
   have mem: "?t \<in> set (trees u ctx)"
-    unfolding routed_extra_def using succ by (force intro: rev_image_eqI)
+    unfolding routed_extra_def Let_def using succ by (force intro: rev_image_eqI)
   have snd_bound:
     "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
        \<le> globs (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
@@ -220,9 +221,9 @@ qed
 theorem routed_context_call:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> \<lbrakk>sg (Inl (u, ctx))\<rbrakk>"
-  shows "call_enter (CallEdge dst pars args) s
+  shows "call_enter gs (CallEdge dst pars args) s
            \<in> \<lbrakk>sg (Inl (FunctionEntry p,
-                 enterc u ctx (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                 enterc u ctx (call_enter gs (CallEdge dst pars args) s)))\<rbrakk>"
 proof (cases "(u, ctx) \<in> vars")
   case False
   hence "\<lbrakk>sg (Inl (u, ctx))\<rbrakk> = {}" by (rule sg_uncovered_empty)
@@ -236,9 +237,9 @@ next
     using call_fwd[OF True ce] .
   have sin': "s \<in> gamma_unit ?d ?g"
     using sin True by (simp add: sg_cov gamma_unit_def)
-  have route_agree: "?ctx' = enterc u ctx (call_enter (CallEdge dst pars args) s)"
+  have route_agree: "?ctx' = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     using route_enterc_agree[OF True ce sin'] .
-  have "call_enter (CallEdge dst pars args) s
+  have "call_enter gs (CallEdge dst pars args) s
       \<in> \<lbrakk>snd (dgs_enter S pars args ?d ?g) \<squnion> fst (dgs_enter S pars args ?d ?g)\<rbrakk>"
     using enter_sound_fs[OF sin'] by (simp add: gamma_unit_def)
   also have "\<dots> \<subseteq> \<lbrakk>locals (sigma (Inl (FunctionEntry p, ?ctx'))) \<squnion> ?g\<rbrakk>"
@@ -325,8 +326,8 @@ theorem routed_context_comb:
   assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>"
     and t: "t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>"
-    and ces: "call_enter_store g cl s es"
-  shows "combine_collect dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+    and ces: "call_enter_store gs g cl s es"
+  shows "combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
 proof (cases "(cl, c1) \<in> vars")
   case False
   hence "\<lbrakk>sg (Inl (cl, c1))\<rbrakk> = {}" by (rule sg_uncovered_empty)
@@ -338,7 +339,7 @@ next
   let ?ex_ctx = "route cl c1 ?d (CallEdge dst pars args)"
   have sin: "s \<in> gamma_unit ?d ?g"
     using s True by (simp add: sg_cov gamma_unit_def)
-  have es_eq: "es = call_enter (CallEdge dst pars args) s"
+  have es_eq: "es = call_enter gs (CallEdge dst pars args) s"
     using call_enter_store_agree ces ce by blast
   have route_agree: "?ex_ctx = enterc cl c1 es"
     using route_enterc_agree[OF True ce sin] es_eq by simp
@@ -354,7 +355,7 @@ next
       using comb_fwd[OF \<open>(cl, c1) \<in> vars\<close> ce] .
     have tin: "t \<in> gamma_unit (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g"
       using t route_agree True by (simp add: sg_cov gamma_unit_def)
-    have "combine_collect dst s t
+    have "combine_collect gs dst s t
         \<in> \<lbrakk>snd (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g)
              \<squnion> fst (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g)\<rbrakk>"
       using combine_sound_fs[OF sin tin] by (simp add: gamma_unit_def)

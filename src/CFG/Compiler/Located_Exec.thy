@@ -29,53 +29,53 @@ text \<open>
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
-inductive cstep :: "cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for g where
+inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for gs and g where
   Intra:
     "(u, a, v) \<in> intra g \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow>
-     cstep g (u, s, stk) (v, s', stk)"
+     cstep gs g (u, s, stk) (v, s', stk)"
 | Call:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-     cstep g (u, s, stk)
-       (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+     cstep gs g (u, s, stk)
+       (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
 | Return:
-    "cstep g (FunctionResult q, t, (cont, dst, caller) # stk)
-       (cont, combine_collect dst caller t, stk)"
+    "cstep gs g (FunctionResult q, t, (cont, dst, caller) # stk)
+       (cont, combine_collect gs dst caller t, stk)"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
-lemma cstep_star_single: "cstep g cf cf' \<Longrightarrow> star (cstep g) cf cf'"
+lemma cstep_star_single: "cstep gs g cf cf' \<Longrightarrow> star (cstep gs g) cf cf'"
   by (rule star.step[OF _ star.refl])
 
 lemma cstep_nop:
   assumes "(u, EA_Nop, v) \<in> intra g"
-  shows "cstep g (u, s, stk) (v, s, stk)"
+  shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assign:
   assumes "(u, EA_Assign x a, v) \<in> intra g"
-  shows "cstep g (u, s, stk) (v, s(x := aval a s), stk)"
+  shows "cstep gs g (u, s, stk) (v, s(x := aval a s), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
   assumes "(u, EA_Assume b, v) \<in> intra g" and "bval b s"
-  shows "cstep g (u, s, stk) (v, s, stk)"
+  shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (simp add: assms(2))
 
 lemma cstep_assume_not:
   assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> bval b s"
-  shows "cstep g (u, s, stk) (v, s, stk)"
+  shows "cstep gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (simp add: assms(2))
 
 lemma cstep_ret:
   assumes "(u, EA_Ret e q, v) \<in> intra g"
-  shows "cstep g (u, s, stk)
+  shows "cstep gs g (u, s, stk)
      (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_call:
   "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-   cstep g (u, s, stk)
-     (FunctionEntry q, call_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+   cstep gs g (u, s, stk)
+     (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
   by (rule cstep.Call)
 
 subsection \<open>Activation-stack matching\<close>

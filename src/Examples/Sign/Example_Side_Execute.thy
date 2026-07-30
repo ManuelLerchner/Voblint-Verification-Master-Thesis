@@ -53,7 +53,7 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))
+  "ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))
    \<le> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
 
@@ -61,7 +61,7 @@ definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"
 
 lemma x1_completed:
-  "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0(''x'' := 1))"
   unfolding pcompletes_def
   apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
@@ -71,9 +71,9 @@ lemma x1_completed:
 
 lemma x1_completed_run_collect:
   "x1_s0(''x'' := 1)
-     \<in> ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))"
+     \<in> ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))"
 proof -
-  have init: "x1_s0 \<in> cinit_stores"
+  have init: "x1_s0 \<in> cinit_stores is_global"
     by (simp add: x1_s0_def cinit_stores_def)
   have wf: "wf_compile_input (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog)"
     unfolding wf_compile_input_def x1_prog_def
@@ -81,7 +81,7 @@ proof -
           proc_decl_of_def prog_main_name_def ret_var_def split: if_splits)
 
   have run:
-    "star (pstep (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
+    "star (pstep is_global (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
       (VIMP_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
     using x1_completed unfolding pcompletes_def .
   from source_completes_ltr_collect_exit[OF wf init run]
@@ -89,17 +89,17 @@ proof -
 qed
 
 theorem x1_explicit_completed_run_covered:
-  "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))
    \<and> x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
 proof (rule conjI)
-  show "pcompletes (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  show "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))"
     by (rule x1_completed)
 next
   have collect:
     "x1_s0(''x'' := 1) \<in>
-      ltr_collect (prog_cfg ''main'' x1_prog) cinit_stores (cfg_exit (prog_cfg ''main'' x1_prog))"
+      ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))"
     using x1_completed_run_collect
     by (simp add: prog_cfg_def)
   show "x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"

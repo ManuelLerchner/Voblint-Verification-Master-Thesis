@@ -107,7 +107,7 @@ qed
 lemma entry_covered: "(cfg_entry twice_cfg, bot) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def Spoly_def by eval
 
-lemma cinit_le_cinit_ivl_st: "cinit_stores \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>"
+lemma cinit_le_cinit_ivl_st: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 
 text \<open>
@@ -158,7 +158,7 @@ text \<open>The routed interval solution is a \<^locale>\<open>dg_ctx_activation
   and the combine transport are then read off as \<open>twice_dg.dg_ctx_act_edge\<close> /
   \<open>twice_dg.dg_ctx_act_comb_covered\<close> rather than re-proved by hand.\<close>
 
-interpretation twice_dg: dg_ctx_activation Sabs twice_cfg Global route_abs_gen
+interpretation twice_dg: dg_ctx_activation Sabs is_global twice_cfg Global route_abs_gen
     "routed_cmb Sabs Global" "routed_extra twice_cfg Sabs Seed Global"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg
@@ -226,19 +226,19 @@ text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes
   so the routed context is exactly \<open>ctx_call1\<close> / \<open>ctx_call2\<close> --- the executable route agrees
   with the activation route \<^const>\<open>ivl_enterc\<close>.\<close>
 lemma enter_route_exact_call1:
-  assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
+  assumes "s' = call_enter is_global (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
   shows "ivl_enterc u ctx s' = ctx_call1"
 proof -
-  from assms have "s' = (enter_state s)(''p'' := 3)"
+  from assms have "s' = (enter_state is_global s)(''p'' := 3)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call1_val)
 qed
 
 lemma enter_route_exact_call2:
-  assumes "s' = call_enter (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
+  assumes "s' = call_enter is_global (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
   shows "ivl_enterc u ctx s' = ctx_call2"
 proof -
-  from assms have "s' = (enter_state s)(''p'' := 10)"
+  from assms have "s' = (enter_state is_global s)(''p'' := 10)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call2_val)
 qed
@@ -263,19 +263,19 @@ text \<open>\<^bold>\<open>enter_route_exact for combine.\<close>  The callee co
   linked entered store is exactly the enter edge's \<^const>\<open>edge_step\<close> result, so this reuses
   \<open>enter_route_exact\<close>.\<close>
 lemma comb_route_call1:
-  assumes "call_enter_store twice_cfg (Statement 2) s es"
+  assumes "call_enter_store is_global twice_cfg (Statement 2) s es"
   shows "ivl_enterc u c1 es = ctx_call1"
 proof -
-  have "es = call_enter (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
+  have "es = call_enter is_global (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
   thus ?thesis by (rule enter_route_exact_call1)
 qed
 
 lemma comb_route_call2:
-  assumes "call_enter_store twice_cfg (Statement 3) s es"
+  assumes "call_enter_store is_global twice_cfg (Statement 3) s es"
   shows "ivl_enterc u c1 es = ctx_call2"
 proof -
-  have "es = call_enter (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
+  have "es = call_enter is_global (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
     using assms unfolding call_enter_store_def by (auto simp: twice_calls)
   thus ?thesis by (rule enter_route_exact_call2)
 qed
@@ -291,7 +291,7 @@ text \<open>The routed interval solution also interprets \<^locale>\<open>routed
   argument already used by \<open>comb_route_call1\<close> / \<open>comb_route_call2\<close>.  CALL and COMB then
   fall out as the locale's \<open>routed_context_call\<close> / \<open>routed_context_comb\<close>.\<close>
 
-interpretation twice_routed: routed_context Sabs twice_cfg Global route_abs_gen
+interpretation twice_routed: routed_context Sabs is_global twice_cfg Global route_abs_gen
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg Seed ivl_enterc
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
@@ -366,17 +366,17 @@ qed
 lemma ivl_ctx_sg_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk>"
-  shows "call_enter (CallEdge dst xs es) s
+  shows "call_enter is_global (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                 ivl_enterc u ctx (call_enter (CallEdge dst xs es) s)))\<rbrakk>"
+                 ivl_enterc u ctx (call_enter is_global (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule twice_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
     and "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>"
-    and "call_enter_store twice_cfg cl s es"
-  shows "combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
+    and "call_enter_store is_global twice_cfg cl s es"
+  shows "combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
   by (rule twice_routed.routed_context_comb[OF assms])
 
 subsection \<open>Activation-indexed collecting soundness (obligation scaffold)\<close>
@@ -387,12 +387,12 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at
   step / combine soundness, route consistency, and the \<open>ivl_ctx_sg_seed\<close> enter seed.\<close>
 
 theorem twice_activation_collect_sound:
-  "activation_collect ivl_enterc bot twice_cfg cinit_stores v ctx
+  "activation_collect is_global ivl_enterc bot twice_cfg (cinit_stores is_global) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_enterc
-        and seedc = bot and S = cinit_stores and g = twice_cfg])
+        and seedc = bot and S = "cinit_stores is_global" and g = twice_cfg and gs = is_global])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
-  fix s assume "s \<in> cinit_stores"
+  fix s assume "s \<in> cinit_stores is_global"
   hence "s \<in> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st by blast
   also have "\<lbrakk>fun_of_st cinit_ivl_st\<rbrakk> \<subseteq> \<lbrakk>locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))\<rbrakk>"
     by (rule gamma_state_mono[OF entry_locals_ge_s0d[OF entry_covered]])
@@ -411,9 +411,9 @@ next
   show "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter (CallEdge dst pars args) s
+        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
              \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                    ivl_enterc u c (call_enter (CallEdge dst pars args) s)))\<rbrakk>"
+                    ivl_enterc u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
     by (rule ivl_ctx_sg_seed)
 next
   \<comment> \<open>COMB --- return combine at the caller context \<open>c1\<close>: the resumed activation keeps its
@@ -422,8 +422,8 @@ next
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>
         \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store twice_cfg cl s es
-        \<Longrightarrow> combine_collect dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> call_enter_store is_global twice_cfg cl s es
+        \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_comb)
 qed
 

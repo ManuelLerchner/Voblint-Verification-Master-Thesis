@@ -1353,7 +1353,7 @@ lemma frag_okI_frag:
 
 
 lemma sink_in_path_nodes:
-  "t \<in> valid_ltr g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
+  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
   using valid_ltr_path_nonempty by (auto simp: sink_node_def)
 
 text \<open>Every activation in the caller chain of a valid trace is fragment-local.  The property is
@@ -1361,7 +1361,7 @@ text \<open>Every activation in the caller chain of a valid trace is fragment-lo
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
 lemma valid_ltr_frag_callers:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
-    and t: "t \<in> valid_ltr (compile_prog \<Pi> ps mnm main) S"
+    and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
@@ -1423,10 +1423,10 @@ proof -
     show ?case
     proof (rule ballI)
       fix u assume uc: "u \<in> callers (Call caller
-              [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])"
+              [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
       show "frag_ok \<Pi> ps mnm main u"
       proof (cases "u = Call caller
-                       [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]")
+                       [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]")
         case False
         then have "u \<in> callers caller" using uc by (auto simp: callers_Call)
         then show ?thesis using call.IH by blast
@@ -1455,17 +1455,17 @@ proof -
     show ?case
     proof (rule ballI)
       fix u assume uc: "u \<in> callers (Resume caller callee
-              (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))]))"
+              (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
       show "frag_ok \<Pi> ps mnm main u" 
       proof (cases "u = Resume caller callee
-                (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])")
+                (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])")
         case False
         then have "u \<in> callers callee"
           using uc callers_Resume_subset[OF ret.hyps(2)] by blast
         then show ?thesis using ret.IH by blast
       next
         case True
-        have cv: "caller \<in> valid_ltr ?g S"
+        have cv: "caller \<in> valid_ltr gs ?g S"
           using valid_ltr_caller_valid[OF ret.hyps(1) ret.hyps(2)] .
         have fc: "frag_ok \<Pi> ps mnm main caller" using ret.IH cin by blast
         from fc[unfolded frag_ok_def] show ?thesis
@@ -1501,7 +1501,7 @@ text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reac
   \<open>p = q\<close>.\<close>
 lemma valid_ltr_entry_result_eq:
   assumes wf: "wf_compile_input \<Pi> ps mnm main"
-    and t: "t \<in> valid_ltr (compile_prog \<Pi> ps mnm main) S"
+    and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
     and en: "fst (hd (path t)) = FunctionEntry p"
     and sk: "sink_node t = FunctionResult q"
   shows "p = q"

@@ -553,7 +553,7 @@ lemma lookup_enter_frame_D_st [simp]:
   by transfer (simp add: fun_rep_enter_frame_D_rep)
 
 lemma fun_of_st_enter_frame_D_st:
-  "fun_of_st (enter_frame_D_st top_val s) = enter_frame_D top_val (fun_of_st s)"
+  "fun_of_st (enter_frame_D_st top_val s) = enter_frame_D is_global top_val (fun_of_st s)"
   unfolding enter_frame_D_def by (rule ext) simp
 
 definition combine_abs_st ::
@@ -619,10 +619,10 @@ lemma fun_of_st_combine_assign_abs_st [simp]:
 
 lemma fun_of_st_combine_collect_abs_st [simp]:
   "fun_of_st (combine_collect_abs_st dst sc se)
-     = combine_collect_abs dst (fun_of_st sc) (fun_of_st se)"
+     = combine_collect_abs is_global dst (fun_of_st sc) (fun_of_st se)"
 proof -
   have "fun_of_st (combine_abs_st sc se)
-          = combine_abs (fun_of_st sc) (fun_of_st se)"
+          = combine_abs is_global (fun_of_st sc) (fun_of_st se)"
     unfolding combine_abs_st_def combine_abs_def
     by (rule ext) (simp add: sup_fun_def)
   then show ?thesis

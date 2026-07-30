@@ -161,12 +161,12 @@ abbreviation "loop_head \<equiv> Statement 1"
 
 lemma loop_head_x_bounded:
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-  assumes s: "s \<in> ltr_collect loop_cfg S loop_head"
+  assumes s: "s \<in> ltr_collect is_global loop_cfg S loop_head"
   shows "0 \<le> s ''x'' \<and> s ''x'' \<le> 20"
 proof -
   have fin_e: "finite (intra loop_cfg)" by (simp add: loop_cfg_intra)
   have fin_c: "finite (calls loop_cfg)" by (simp add: loop_cfg_calls)
-  have le: "ltr_collect loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
+  have le: "ltr_collect is_global loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
     using sound_transfer.unified_ltr_post_fixpoint_sound
           [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix S_sound]
     by blast

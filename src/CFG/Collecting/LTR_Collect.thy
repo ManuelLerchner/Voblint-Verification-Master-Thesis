@@ -25,16 +25,16 @@ text \<open>
 
 subsection \<open>The constructor transformer\<close>
 
-definition ltr_F :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set \<Rightarrow> ltr set" where
-  "ltr_F g S T =
+definition ltr_F :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> ltr set \<Rightarrow> ltr set" where
+  "ltr_F gs g S T =
       {Root [(cfg_entry g, s)] | s. s \<in> S}
     \<union> {extend t (v, s') | t a v s'.
           t \<in> T \<and> (sink_node t, a, v) \<in> intra g \<and> edge_step a (sink_store t) = Some s'}
-    \<union> {Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
+    \<union> {Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
           | caller dst pars args p cont.
           caller \<in> T \<and> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g}
     \<union> {Resume caller callee
-          (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
           | callee caller p dst pars args cont.
           callee \<in> T \<and> caller_of callee = Some caller
           \<and> sink_node callee = FunctionResult p
@@ -42,16 +42,16 @@ definition ltr_F :: "cfg \<Rightarrow> store set \<Rightarrow> ltr set \<Rightar
 
 subsection \<open>Monotonicity\<close>
 
-lemma ltr_F_mono: "mono (ltr_F g S)"
+lemma ltr_F_mono: "mono (ltr_F gs g S)"
 proof (rule monoI)
   fix T T' :: "ltr set"
   assume "T \<subseteq> T'"
-  then show "ltr_F g S T \<subseteq> ltr_F g S T'"
+  then show "ltr_F gs g S T \<subseteq> ltr_F gs g S T'"
     unfolding ltr_F_def by blast
 qed
 
 lemma ltr_F_lfp_fold:
-  "x \<in> ltr_F g S (lfp (ltr_F g S)) \<Longrightarrow> x \<in> lfp (ltr_F g S)"
+  "x \<in> ltr_F gs g S (lfp (ltr_F gs g S)) \<Longrightarrow> x \<in> lfp (ltr_F gs g S)"
   by (subst lfp_unfold[OF ltr_F_mono]) assumption
 
 subsection \<open>Fixed-point characterization\<close>
@@ -59,50 +59,50 @@ subsection \<open>Fixed-point characterization\<close>
 text \<open>\<open>ltr_F\<close> maps \<^const>\<open>valid_ltr\<close> into itself: each summand is discharged by the
   corresponding \<^const>\<open>valid_ltr\<close> introduction rule.\<close>
 lemma ltr_F_valid_ltr_closed:
-  "ltr_F g S (valid_ltr g S) \<subseteq> valid_ltr g S"
+  "ltr_F gs g S (valid_ltr gs g S) \<subseteq> valid_ltr gs g S"
   unfolding ltr_F_def
   by (blast intro: valid_ltr.intros)
 
 lemma lfp_ltr_F_subset_valid_ltr:
-  "lfp (ltr_F g S) \<subseteq> valid_ltr g S"
+  "lfp (ltr_F gs g S) \<subseteq> valid_ltr gs g S"
   by (rule lfp_lowerbound) (rule ltr_F_valid_ltr_closed)
 
 text \<open>The converse follows by \<^const>\<open>valid_ltr\<close> rule induction: every constructor step lands
-  in \<open>ltr_F g S (lfp (ltr_F g S))\<close> via the induction hypotheses, then folds back into the
+  in \<open>ltr_F gs g S (lfp (ltr_F gs g S))\<close> via the induction hypotheses, then folds back into the
   least fixed point.\<close>
 lemma valid_ltr_subset_lfp:
-  "valid_ltr g S \<subseteq> lfp (ltr_F g S)"
+  "valid_ltr gs g S \<subseteq> lfp (ltr_F gs g S)"
 proof (rule subsetI)
-  fix t assume "t \<in> valid_ltr g S"
-  then show "t \<in> lfp (ltr_F g S)"
+  fix t assume "t \<in> valid_ltr gs g S"
+  then show "t \<in> lfp (ltr_F gs g S)"
   proof (induction rule: valid_ltr.induct)
     case (init s)
-    have "Root [(cfg_entry g, s)] \<in> ltr_F g S (lfp (ltr_F g S))"
-      unfolding ltr_F_def[of g S "lfp (ltr_F g S)"] using init by blast
+    have "Root [(cfg_entry g, s)] \<in> ltr_F gs g S (lfp (ltr_F gs g S))"
+      unfolding ltr_F_def[of gs g S "lfp (ltr_F gs g S)"] using init by blast
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (intra t a v s')
-    have "extend t (v, s') \<in> ltr_F g S (lfp (ltr_F g S))"
-      unfolding ltr_F_def[of g S "lfp (ltr_F g S)"] using intra.hyps intra.IH by blast
+    have "extend t (v, s') \<in> ltr_F gs g S (lfp (ltr_F gs g S))"
+      unfolding ltr_F_def[of gs g S "lfp (ltr_F gs g S)"] using intra.hyps intra.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (call caller dst pars args p cont)
-    have "Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))]
-            \<in> ltr_F g S (lfp (ltr_F g S))"
-      unfolding ltr_F_def[of g S "lfp (ltr_F g S)"] using call.hyps call.IH by blast
+    have "Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
+            \<in> ltr_F gs g S (lfp (ltr_F gs g S))"
+      unfolding ltr_F_def[of gs g S "lfp (ltr_F gs g S)"] using call.hyps call.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (ret callee caller p dst pars args cont)
     have "Resume caller callee
-            (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
-            \<in> ltr_F g S (lfp (ltr_F g S))"
-      unfolding ltr_F_def[of g S "lfp (ltr_F g S)"] using ret.hyps ret.IH by blast
+            (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
+            \<in> ltr_F gs g S (lfp (ltr_F gs g S))"
+      unfolding ltr_F_def[of gs g S "lfp (ltr_F gs g S)"] using ret.hyps ret.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
   qed
 qed
 
 theorem valid_ltr_eq_lfp:
-  "valid_ltr g S = lfp (ltr_F g S)"
+  "valid_ltr gs g S = lfp (ltr_F gs g S)"
   by (rule antisym[OF valid_ltr_subset_lfp lfp_ltr_F_subset_valid_ltr])
 
 subsection \<open>Forgetful projections\<close>
@@ -112,23 +112,23 @@ text \<open>\<open>ltr_collect\<close> is the concrete collecting view: the sink
   collector, filtering those by the structural activation key; the key type is not
   required finite, so a keyed bucket is not claimed to be an exact activation identity.\<close>
 
-definition ltr_collect :: "cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set" where
-  "ltr_collect g S v =
-     {sink_store t | t. t \<in> valid_ltr g S \<and> sink_node t = v}"
+definition ltr_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set" where
+  "ltr_collect gs g S v =
+     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v}"
 
 text \<open>\<open>collect_result\<close> is a convenience view --- collection at a procedure result --- not a
-  distinct mechanism.  Whole-program completion is \<open>collect_result g S main\<close>.\<close>
-definition collect_result :: "cfg \<Rightarrow> store set \<Rightarrow> pname \<Rightarrow> store set" where
-  "collect_result g S p = ltr_collect g S (FunctionResult p)"
+  distinct mechanism.  Whole-program completion is \<open>collect_result gs g S main\<close>.\<close>
+definition collect_result :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> pname \<Rightarrow> store set" where
+  "collect_result gs g S p = ltr_collect gs g S (FunctionResult p)"
 
 lemma ltr_collect_I:
-  "t \<in> valid_ltr g S \<Longrightarrow> sink_store t \<in> ltr_collect g S (sink_node t)"
+  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_store t \<in> ltr_collect gs g S (sink_node t)"
   unfolding ltr_collect_def by blast
 
 text \<open>Every collected state has a valid trace witness.\<close>
 lemma ltr_collect_E:
-  assumes "s \<in> ltr_collect g S v"
-  obtains t where "t \<in> valid_ltr g S" "sink_node t = v" "sink_store t = s"
+  assumes "s \<in> ltr_collect gs g S v"
+  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = s"
   using assms unfolding ltr_collect_def by blast
 
 text \<open>
@@ -139,14 +139,14 @@ text \<open>
 \<close>
 
 lemma ltr_collect_intra_step:
-  assumes s: "s \<in> ltr_collect g S u"
+  assumes s: "s \<in> ltr_collect gs g S u"
     and e: "(u, a, v) \<in> intra g"
     and st: "edge_step a s = Some s'"
-  shows "s' \<in> ltr_collect g S v"
+  shows "s' \<in> ltr_collect gs g S v"
 proof -
-  from s obtain t where t: "t \<in> valid_ltr g S" and n: "sink_node t = u" and w: "sink_store t = s"
+  from s obtain t where t: "t \<in> valid_ltr gs g S" and n: "sink_node t = u" and w: "sink_store t = s"
     by (rule ltr_collect_E)
-  have "extend t (v, s') \<in> valid_ltr g S"
+  have "extend t (v, s') \<in> valid_ltr gs g S"
     by (rule valid_ltr.intra[OF t]) (use e st n w in simp_all)
   from ltr_collect_I[OF this] show ?thesis by simp
 qed
@@ -154,7 +154,7 @@ qed
 text \<open>The whole-path form: an \<^const>\<open>intra_path\<close> transports a collected store to its endpoint.\<close>
 
 lemma ltr_collect_intra_path_pair:
-  "intra_path g x y \<Longrightarrow> snd x \<in> ltr_collect g S (fst x) \<Longrightarrow> snd y \<in> ltr_collect g S (fst y)"
+  "intra_path g x y \<Longrightarrow> snd x \<in> ltr_collect gs g S (fst x) \<Longrightarrow> snd y \<in> ltr_collect gs g S (fst y)"
 proof (induction rule: star.induct)
   case (refl x)
   then show ?case by simp
@@ -165,14 +165,14 @@ next
   from step.hyps(1) x y obtain a where
     e: "(u, a, w) \<in> intra g" and st: "edge_step a s = Some s1"
     by (auto elim: cfg_intra_stepE)
-  have "s1 \<in> ltr_collect g S w"
+  have "s1 \<in> ltr_collect gs g S w"
     using step.prems x by (auto intro: ltr_collect_intra_step[OF _ e st])
   then show ?case using step.IH y by simp
 qed
 
 lemma ltr_collect_intra_path:
-  assumes "intra_path g (u, s) (v, s')" and "s \<in> ltr_collect g S u"
-  shows "s' \<in> ltr_collect g S v"
+  assumes "intra_path g (u, s) (v, s')" and "s \<in> ltr_collect gs g S u"
+  shows "s' \<in> ltr_collect gs g S v"
   using ltr_collect_intra_path_pair[OF assms(1)] assms(2) by simp
 
 text \<open>
@@ -183,8 +183,8 @@ text \<open>
 \<close>
 
 lemma valid_ltr_intra_path_extend_pair:
-  "intra_path g x y \<Longrightarrow> t \<in> valid_ltr g S \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
-   \<Longrightarrow> \<exists>t'. t' \<in> valid_ltr g S \<and> sink_node t' = fst y \<and> sink_store t' = snd y
+  "intra_path g x y \<Longrightarrow> t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
+   \<Longrightarrow> \<exists>t'. t' \<in> valid_ltr gs g S \<and> sink_node t' = fst y \<and> sink_store t' = snd y
             \<and> caller_of t' = caller_of t \<and> fst (hd (path t')) = fst (hd (path t))"
 proof (induction arbitrary: t rule: star.induct)
   case (refl x)
@@ -196,13 +196,13 @@ next
   from step.hyps(1) x y obtain a where
     e: "(u, a, w) \<in> intra g" and st: "edge_step a s = Some s1"
     by (auto elim: cfg_intra_stepE)
-  have ext: "extend t (w, s1) \<in> valid_ltr g S"
+  have ext: "extend t (w, s1) \<in> valid_ltr gs g S"
     by (rule valid_ltr.intra[OF step.prems(1)])
        (use e st step.prems(2,3) x in simp_all)
   have hd_ext: "fst (hd (path (extend t (w, s1)))) = fst (hd (path t))"
     using valid_ltr_path_nonempty[OF step.prems(1)] by simp
   from step.IH[OF ext] y obtain t' where
-    "t' \<in> valid_ltr g S" "sink_node t' = fst z" "sink_store t' = snd z"
+    "t' \<in> valid_ltr gs g S" "sink_node t' = fst z" "sink_store t' = snd z"
     "caller_of t' = caller_of (extend t (w, s1))"
     "fst (hd (path t')) = fst (hd (path (extend t (w, s1))))" by auto
   then show ?case using hd_ext by auto
@@ -210,32 +210,32 @@ qed
 
 lemma valid_ltr_intra_path_extend:
   assumes p: "intra_path g (sink_node t, sink_store t) (v, s')"
-    and t: "t \<in> valid_ltr g S"
-  obtains t' where "t' \<in> valid_ltr g S" "sink_node t' = v" "sink_store t' = s'"
+    and t: "t \<in> valid_ltr gs g S"
+  obtains t' where "t' \<in> valid_ltr gs g S" "sink_node t' = v" "sink_store t' = s'"
     "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
   using valid_ltr_intra_path_extend_pair[OF p t] by auto
 
 lemma collect_result_eq:
-  "collect_result g S p = ltr_collect g S (FunctionResult p)"
+  "collect_result gs g S p = ltr_collect gs g S (FunctionResult p)"
   by (simp add: collect_result_def)
 
 subsection \<open>Collecting equations\<close>
 
 text \<open>(1) Initial stores are collected at \<^const>\<open>cfg_entry\<close>.\<close>
 lemma ltr_collect_init:
-  "s \<in> S \<Longrightarrow> s \<in> ltr_collect g S (cfg_entry g)"
+  "s \<in> S \<Longrightarrow> s \<in> ltr_collect gs g S (cfg_entry g)"
   using ltr_collect_I[OF valid_ltr.init] by simp
 
 text \<open>(2) Intra propagation: a collected source state and a successful \<^const>\<open>edge_step\<close>
   produce a collected target state.\<close>
 lemma ltr_collect_intra:
-  assumes "s \<in> ltr_collect g S u" and "(u, a, v) \<in> intra g"
+  assumes "s \<in> ltr_collect gs g S u" and "(u, a, v) \<in> intra g"
     and "edge_step a s = Some s'"
-  shows "s' \<in> ltr_collect g S v"
+  shows "s' \<in> ltr_collect gs g S v"
 proof -
-  from assms(1) obtain t where t: "t \<in> valid_ltr g S" "sink_node t = u" "sink_store t = s"
+  from assms(1) obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = u" "sink_store t = s"
     by (rule ltr_collect_E)
-  have "extend t (v, s') \<in> valid_ltr g S"
+  have "extend t (v, s') \<in> valid_ltr gs g S"
     by (rule valid_ltr.intra[OF t(1)]) (use assms(2,3) t(2,3) in simp_all)
   from ltr_collect_I[OF this] show ?thesis by simp
 qed
@@ -243,13 +243,13 @@ qed
 text \<open>(3) Call entry: a collected call-site state produces the entered state at the
   callee's \<^const>\<open>FunctionEntry\<close>.\<close>
 lemma ltr_collect_call:
-  assumes "s \<in> ltr_collect g S u"
+  assumes "s \<in> ltr_collect gs g S u"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "call_enter (CallEdge dst pars args) s \<in> ltr_collect g S (FunctionEntry p)"
+  shows "call_enter gs (CallEdge dst pars args) s \<in> ltr_collect gs g S (FunctionEntry p)"
 proof -
-  from assms(1) obtain t where t: "t \<in> valid_ltr g S" "sink_node t = u" "sink_store t = s"
+  from assms(1) obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = u" "sink_store t = s"
     by (rule ltr_collect_E)
-  have "Call t [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr g S"
+  have "Call t [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr gs g S"
     by (rule valid_ltr.call[OF t(1)]) (use assms(2) t(2) in simp)
   from ltr_collect_I[OF this] show ?thesis using t(3) by simp
 qed
@@ -257,22 +257,22 @@ qed
 text \<open>(4) Procedure result: \<^const>\<open>EA_Ret\<close> propagation collects the resulting state at
   \<^const>\<open>FunctionResult\<close> through the ordinary intra rule --- a specialisation of (2).\<close>
 lemma ltr_collect_result_via_ret:
-  assumes "s \<in> ltr_collect g S u" and "(u, EA_Ret e p, FunctionResult p) \<in> intra g"
+  assumes "s \<in> ltr_collect gs g S u" and "(u, EA_Ret e p, FunctionResult p) \<in> intra g"
     and "edge_step (EA_Ret e p) s = Some s'"
-  shows "s' \<in> ltr_collect g S (FunctionResult p)"
+  shows "s' \<in> ltr_collect gs g S (FunctionResult p)"
   by (rule ltr_collect_intra[OF assms])
 
 text \<open>(5) Resume: a collected completed callee activation produces the combined state at the
   exact continuation of its originating call edge.\<close>
 lemma ltr_collect_resume:
-  assumes "callee \<in> valid_ltr g S" and "caller_of callee = Some caller"
+  assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
     and "sink_node callee = FunctionResult p"
     and "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "combine_collect dst (sink_store caller) (sink_store callee) \<in> ltr_collect g S cont"
+  shows "combine_collect gs dst (sink_store caller) (sink_store callee) \<in> ltr_collect gs g S cont"
 proof -
   have "Resume caller callee
-          (path caller @ [(cont, combine_collect dst (sink_store caller) (sink_store callee))])
-        \<in> valid_ltr g S"
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
+        \<in> valid_ltr gs g S"
     by (rule valid_ltr.ret[OF assms])
   from ltr_collect_I[OF this] show ?thesis by (simp add: sink_node_def sink_store_def)
 qed
@@ -286,9 +286,9 @@ lemma ltr_collect_ctx_intra_pres:
 text \<open>(7) Context transition under call: the child activation receives exactly the context
   produced by the configured enter function.\<close>
 lemma ltr_collect_ctx_call:
-  "key enterc seedc (Call caller [(FunctionEntry p, call_enter (CallEdge dst pars args) (sink_store caller))])
+  "key enterc seedc (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])
      = enterc (sink_node caller) (key enterc seedc caller)
-         (call_enter (CallEdge dst pars args) (sink_store caller))"
+         (call_enter gs (CallEdge dst pars args) (sink_store caller))"
   by simp
 
 text \<open>(8) Context restoration under resume: a resumed trace has the caller's activation
@@ -300,31 +300,31 @@ lemma ltr_collect_ctx_resume:
 text \<open>(9) Flat reduction: for \<open>calls g = {}\<close>, no call-derived activation exists, so
   collection is exactly the sink stores of root/intra traces.\<close>
 lemma valid_ltr_flat_no_call:
-  "flat_cfg g \<Longrightarrow> Call caller p \<notin> valid_ltr g S"
+  "flat_cfg g \<Longrightarrow> Call caller p \<notin> valid_ltr gs g S"
   using valid_ltr_flat_root by blast
 
 lemma valid_ltr_flat_no_resume:
-  "flat_cfg g \<Longrightarrow> Resume caller callee p \<notin> valid_ltr g S"
+  "flat_cfg g \<Longrightarrow> Resume caller callee p \<notin> valid_ltr gs g S"
   using valid_ltr_flat_root by blast
 
 lemma ltr_collect_flat:
   assumes "flat_cfg g"
-  shows "ltr_collect g S v = {sink_store t | t. t \<in> valid_ltr g S \<and> (\<exists>q. t = Root q) \<and> sink_node t = v}"
+  shows "ltr_collect gs g S v = {sink_store t | t. t \<in> valid_ltr gs g S \<and> (\<exists>q. t = Root q) \<and> sink_node t = v}"
   using assms valid_ltr_flat_root unfolding ltr_collect_def by blast
 
 text \<open>(10) Node domain: collection outside \<^const>\<open>cfg_nodes\<close> is empty.\<close>
 lemma ltr_collect_outside_nodes:
-  "v \<notin> cfg_nodes g \<Longrightarrow> ltr_collect g S v = {}"
+  "v \<notin> cfg_nodes g \<Longrightarrow> ltr_collect gs g S v = {}"
   using valid_ltr_sink_in_nodes unfolding ltr_collect_def by blast
 
 text \<open>(11) Monotonicity in the initial stores.\<close>
 lemma ltr_collect_mono_S:
-  "S \<subseteq> S' \<Longrightarrow> ltr_collect g S v \<subseteq> ltr_collect g S' v"
+  "S \<subseteq> S' \<Longrightarrow> ltr_collect gs g S v \<subseteq> ltr_collect gs g S' v"
   using valid_ltr_mono_S unfolding ltr_collect_def by blast
 
 text \<open>(12) Union in the initial stores.\<close>
 lemma ltr_collect_Un_S:
-  "ltr_collect g (S \<union> S') v = ltr_collect g S v \<union> ltr_collect g S' v"
+  "ltr_collect gs g (S \<union> S') v = ltr_collect gs g S v \<union> ltr_collect gs g S' v"
   using valid_ltr_Un_S unfolding ltr_collect_def by blast
 
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
@@ -332,14 +332,14 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect enterc seedc g S v c \<subseteq> ltr_collect g S v"
+  "activation_collect gs enterc seedc g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
   has a key, so ranging over all keys recovers the unfiltered collecting.  No finiteness
   assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
-  "ltr_collect g S v = (\<Union>c. activation_collect enterc seedc g S v c)"
+  "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc seedc g S v c)"
   unfolding activation_collect_def ltr_collect_def by blast
 
 subsection \<open>Matched returns\<close>
@@ -347,7 +347,7 @@ subsection \<open>Matched returns\<close>
 text \<open>Every reachable \<^const>\<open>Resume\<close> preserves the caller recovered from its completed
   callee.\<close>
 theorem valid_ltr_Resume_caller_matched:
-  "Resume caller callee p \<in> valid_ltr g S \<Longrightarrow> caller_of callee = Some caller"
+  "Resume caller callee p \<in> valid_ltr gs g S \<Longrightarrow> caller_of callee = Some caller"
   using valid_ltr_Resume_fields by blast
 
 

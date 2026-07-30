@@ -11,13 +11,15 @@ text \<open>
 \<close>
 
 
-context sound_dg_spec
+locale sound_dg_spec_ltr = sound_dg_spec S gammaDG is_global
+  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
 begin
 
 theorem dg_postfix_collect_sound_ltr:
   assumes pf: "dg_postfix g s0d s0g sigma"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect g S0 v \<subseteq> dg_gamma sigma v"
+  shows "ltr_collect is_global g S0 v \<subseteq> dg_gamma sigma v"
 proof (rule ltr_collect_semantic_postfix)
   show "S0 \<subseteq> dg_gamma sigma (cfg_entry g)"
     by (rule dg_postfix_gamma_entry[OF pf sound0])
@@ -33,13 +35,13 @@ next
   fix u dst pars args p cont s
   assume "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> dg_gamma sigma u"
-  then show "call_enter (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
+  then show "call_enter is_global (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
     by (rule dg_postfix_gamma_call[OF pf])
 next
   fix cl dst pars args p cont s t
   assume "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> dg_gamma sigma cl" and "t \<in> dg_gamma sigma (FunctionResult p)"
-  then show "combine_collect dst s t \<in> dg_gamma sigma cont"
+  then show "combine_collect is_global dst s t \<in> dg_gamma sigma cont"
     by (rule dg_postfix_gamma_combine[OF pf])
 qed
 
@@ -58,7 +60,7 @@ corollary dg_post_solution_collect_sound_ltr:
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect g S0 v \<subseteq> dg_gamma sigma v"
+  shows "ltr_collect is_global g S0 v \<subseteq> dg_gamma sigma v"
 proof -
   have pf: "dg_postfix g s0d s0g sigma"
     by (rule dg_post_solution_postfix

@@ -570,7 +570,7 @@ text \<open>
 \<close>
 
 lemma inr_slot_locals_bot_iff_Inr_restrict_global:
-  shows "inr_slot_locals_bot \<sigma> \<longleftrightarrow> (\<forall>g. \<sigma> (Inr g) = restrict_global (\<sigma> (Inr g)))"
+  shows "inr_slot_locals_bot is_global \<sigma> \<longleftrightarrow> (\<forall>g. \<sigma> (Inr g) = restrict_global (\<sigma> (Inr g)))"
   by (metis (no_types, lifting) ext inr_slot_locals_bot_def restrict_global_def)
 
 lemma local_bot_on_locals_eq_restrict_global:
@@ -799,7 +799,7 @@ proof -
 qed
 
 lemma inr_slot_locals_bot_strip:
-  "inr_slot_locals_bot (strip_inr_globals \<sigma>)"
+  "inr_slot_locals_bot is_global (strip_inr_globals \<sigma>)"
   unfolding inr_slot_locals_bot_iff_Inr_restrict_global strip_inr_globals_Inr
   using local_bot_on_locals_eq_restrict_global local_bot_on_locals_restrict_global by auto
 
@@ -818,7 +818,7 @@ lemma least_part_post_solution_inr_slot_locals_bot_eff:
   assumes comb_static: "\<And>cc dst ex. static_deps (etf_combine etf dst cc ex)"
   assumes mono_eq: "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
   assumes mono_sides: "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
-  shows "inr_slot_locals_bot \<sigma>"
+  shows "inr_slot_locals_bot is_global \<sigma>"
 proof -
   from least have pp: "part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma> vars"
       and min: "\<And>\<sigma>'. part_post_solution (side_cfg_T_eff g etf bot0 s0 gseed) x \<sigma>' vars

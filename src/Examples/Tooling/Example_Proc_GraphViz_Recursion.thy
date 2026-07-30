@@ -20,20 +20,11 @@ text \<open>
   Dashed blue edges resume callers.
 \<close>
 
-subsection \<open>Compiled CFG\<close>
+subsection \<open>DOT output\<close>
 
 text \<open>@{const factorial_program} is the shared recursive-factorial witness from
-  @{text Example_Compile_Baseline}.\<close>
-
-definition factorial_cfg :: cfg where
-  "factorial_cfg =
-     compile_prog
-       (prog_table factorial_program)
-       (prog_procs factorial_program)
-       dot_main_name
-       (prog_main factorial_program)"
-
-subsection \<open>DOT output\<close>
+  @{text Example_Compile_Baseline}, which also provides its compiled
+  @{const Example_Compile_Baseline.factorial_cfg} for direct inspection.\<close>
 
 definition factorial_dot :: String.literal where
   "factorial_dot =

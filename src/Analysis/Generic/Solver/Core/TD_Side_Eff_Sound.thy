@@ -29,7 +29,7 @@ text \<open>
 \<close>
 
 lemma edge_collect_etf_sound:
-  assumes inr: "inr_slot_locals_bot \<sigma>"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
   shows "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
    \<subseteq> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"
 proof (cases a)
