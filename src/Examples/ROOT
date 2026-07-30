@@ -37,6 +37,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_DG_CallString
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
+    Call_String_Solver_Refinement
     Example_Interval_Source_Ctx
     Example_Interval_Side_Proc_Global
     Example_Interval_Loop_Coverage
