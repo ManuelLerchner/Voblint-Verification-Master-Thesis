@@ -3,6 +3,7 @@ theory Example_Interval_DG_CallString_K
     Example_Interval_DG_Ctx_Sound
     "Voblint_Analysis.Activation_Backbone"
     "Voblint_Analysis.DG_Ctx_Activation"
+    "Voblint_Analysis.Call_String_Context"
 begin
 
 section \<open>A computed 2-call-string context, routed by truncated call history\<close>
@@ -12,31 +13,18 @@ text \<open>
   bounded k-call-string context work as a plain \<^locale>\<open>routed_context\<close> interpretation, the
   same way \<open>Example_Interval_DG_CallString.thy\<close>'s depth-1, untruncated
   \<open>route_cs\<close> already does? This theory answers that mechanically, at \<open>k = 2\<close>, on the same
-  \<open>twice\<close> program.
+  \<open>twice\<close> program, consuming \<open>Call_String_Context.thy\<close>'s \<open>cs_route\<close>/\<open>cs_enterc\<close> rather than
+  restating them locally.
 
   \<^bold>\<open>What this does and does not show.\<close> \<open>twice\<close>'s two calls are both direct children of
-  \<open>main\<close> (root context \<open>[]\<close>), so \<open>route_2 u [] d ca = take 2 [u] = [u]\<close> --- the 2-call-string
-  contexts computed here are observably isomorphic to the 1-call-string contexts
-  \<open>Example_Interval_DG_CallString.thy\<close> already computes, just list-wrapped.
-  This theory is the design doc's Stage 1 (mechanical: same solver, same domain, no locale
-  changes, trivial \<open>route_enterc_agree\<close>) --- it is deliberately \<^emph>\<open>not\<close> Stage 3 (a precision
-  witness needs a program with real call nesting, so a k=1 and a k=2 context actually differ;
-  \<open>twice\<close> is too shallow for that).
+  \<open>main\<close> (root context \<open>[]\<close>), so \<open>cs_route 2 u [] d ca = take 2 [u] = [u]\<close> --- the
+  2-call-string contexts computed here are observably isomorphic to the 1-call-string contexts
+  \<open>Example_Interval_DG_CallString.thy\<close> already computes, just list-wrapped. This theory is
+  the design doc's Stage 1 (mechanical: same solver, same domain, no locale changes, trivial
+  \<open>route_enterc_agree\<close>) --- it is deliberately \<^emph>\<open>not\<close> Stage 3 (a precision witness needs a
+  program with real call nesting, so a k=1 and a k=2 context actually differ; \<open>twice\<close> is too
+  shallow for that).
 \<close>
-
-subsection \<open>The truncated call-string route\<close>
-
-text \<open>Like \<open>route_cs\<close>, \<open>route_2\<close> ignores the entered data entirely, so it commutes with
-  \<^emph>\<open>any\<close> representation map on \<open>'d\<close> for free --- \<open>take\<close>/\<open>Cons\<close> never touch \<open>'d\<close>.\<close>
-
-definition route_2 :: "pp \<Rightarrow> cfg_node list \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> cfg_node list" where
-  "route_2 u ctx d ca = take 2 (u # ctx)"
-
-lemma route_2_commute: "route_2 u ctx (d::ivl st) ca = route_2 u ctx (fun_of_st d) ca"
-  by (simp add: route_2_def)
-
-lemma route_2_length: "length (route_2 u ctx d ca) \<le> 2"
-  by (simp add: route_2_def)
 
 subsection \<open>A call-string-keyed global-key type\<close>
 
@@ -46,7 +34,7 @@ subsection \<open>The routed equation system and its computed solution\<close>
 
 definition twice_2_eqs :: "(pp \<times> cfg_node list, gk_2, (ivl st, ivl st) dg_state) eqsT" where
   "twice_2_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) route_2
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
        (routed_cmb Spoly Global2) (routed_extra twice_cfg Spoly Seed2 Global2)
        twice_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
 
@@ -105,7 +93,7 @@ lemma callee_exit_covered_call2_2: "(FunctionResult ''twice'', ctx_call2_2) \<in
 section \<open>Abstract transport of the routed solution\<close>
 
 text \<open>Same argument as \<open>Example_Interval_DG_CallString\<close>'s \<open>route_cs\<close> commute lemmas:
-  \<open>route_2\<close> ignores its data argument, so every \<^const>\<open>Side\<close> key computed from it is
+  \<open>cs_route\<close> ignores its data argument, so every \<^const>\<open>Side\<close> key computed from it is
   literally the same term on the executable and the abstract carrier.\<close>
 
 lemma dg_tree_st_commute_frame_read_2:
@@ -116,12 +104,12 @@ lemma dg_tree_st_commute_frame_read_2:
                 dep_aux_def bot_fun_def)
 
 lemma dg_tree_st_commute_routed_cmb_2:
-  "dg_tree_st_commute env (routed_cmb Spoly Global2 route_2 ctx ca cc ex)
-                          (routed_cmb Sabs Global2 route_2 ctx ca cc ex)"
+  "dg_tree_st_commute env (routed_cmb Spoly Global2 (cs_route 2) ctx ca cc ex)
+                          (routed_cmb Sabs Global2 (cs_route 2) ctx ca cc ex)"
   unfolding routed_cmb_def Let_def
   by (cases ca)
      (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
-                    route_2_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
+                    cs_route_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma dg_tree_st_commute_routed_enter_pub_2:
@@ -130,7 +118,7 @@ lemma dg_tree_st_commute_routed_enter_pub_2:
         entry_state \<leftarrow> read_local (v, ctx);
         globals_state \<leftarrow> read_global Global2;
         publish_global Global2 (enter_global Spoly fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed2 w (route_2 v ctx (locals entry_state) a))
+        publish_seed (Seed2 w (cs_route 2 v ctx (locals entry_state) a))
           (enter_local Spoly fs as (locals entry_state) (globs globals_state));
         answer_local bot
       }))
@@ -138,19 +126,19 @@ lemma dg_tree_st_commute_routed_enter_pub_2:
         entry_state \<leftarrow> read_local (v, ctx);
         globals_state \<leftarrow> read_global Global2;
         publish_global Global2 (enter_global Sabs fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed2 w (route_2 v ctx (locals entry_state) a))
+        publish_seed (Seed2 w (cs_route 2 v ctx (locals entry_state) a))
           (enter_local Sabs fs as (locals entry_state) (globs globals_state));
         answer_local bot
       }))"
   by (cases a)
      (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
-                route_2_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
+                cs_route_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
                 dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma hextra_commute_routed_2:
   "list_all2 (dg_tree_st_commute env)
-     (routed_extra twice_cfg Spoly Seed2 Global2 route_2 ctx w)
-     (routed_extra twice_cfg Sabs Seed2 Global2 route_2 ctx w)"
+     (routed_extra twice_cfg Spoly Seed2 Global2 (cs_route 2) ctx w)
+     (routed_extra twice_cfg Sabs Seed2 Global2 (cs_route 2) ctx w)"
   unfolding routed_extra_def Let_def
   by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
                  dg_tree_st_commute_frame_read_2 dg_tree_st_commute_routed_enter_pub_2
@@ -173,13 +161,13 @@ lemma twice_2_pp_st:
 
 theorem twice_2_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) route_2
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
         (routed_cmb Sabs Global2) (routed_extra twice_cfg Sabs Seed2 Global2) twice_cfg Sabs
         (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st)))
      (cfg_exit twice_cfg, []) (fun_of_dg_st \<circ> snd twice_2_sol) (fst twice_2_sol)"
 proof -
   have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) route_2
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
           (routed_cmb Spoly Global2) (routed_extra twice_cfg Spoly Seed2 Global2) twice_cfg Spoly
           bot cinit_ivl_st (restrict_global_st cinit_ivl_st))
        (cfg_exit twice_cfg, []) (snd twice_2_sol) (fst twice_2_sol)"
@@ -191,25 +179,22 @@ proof -
   show ?thesis
     by (rule part_post_solution_seed_dg_st_to_abs
           [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global2"
-             and route_st = route_2 and route_abs = route_2
+             and route_st = "cs_route 2" and route_abs = "cs_route 2"
              and cmb_st = "routed_cmb Spoly Global2" and cmb_abs = "routed_cmb Sabs Global2"
              and extra_st = "routed_extra twice_cfg Spoly Seed2 Global2"
              and extra_abs = "routed_extra twice_cfg Sabs Seed2 Global2"
              and g = twice_cfg and S_st = Spoly and S_abs = Sabs,
-           OF ivl_Hstep_2 route_2_commute dg_tree_st_commute_routed_cmb_2
+           OF ivl_Hstep_2 cs_route_indep_of_data dg_tree_st_commute_routed_cmb_2
               hextra_commute_routed_2 pp'])
 qed
 
 section \<open>Activation-indexed collecting soundness for the 2-call-string-routed solution\<close>
 
-definition enterc_2 :: "cfg_node \<Rightarrow> cfg_node list \<Rightarrow> store \<Rightarrow> cfg_node list" where
-  "enterc_2 u ctx s = take 2 (u # ctx)"
-
 abbreviation sigma_2 :: "pp \<times> cfg_node list + gk_2 \<Rightarrow> (ivl abs_state, ivl abs_state) dg_state" where
   "sigma_2 \<equiv> fun_of_dg_st \<circ> snd twice_2_sol"
 
 abbreviation gen_2_abs :: "(pp \<times> cfg_node list, gk_2, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
-  "gen_2_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) route_2
+  "gen_2_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
        (routed_cmb Sabs Global2) (routed_extra twice_cfg Sabs Seed2 Global2) twice_cfg Sabs
        (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st))"
 
@@ -257,7 +242,7 @@ proof -
   finally show ?thesis .
 qed
 
-interpretation twice_2_dg: dg_ctx_activation Sabs is_global twice_cfg Global2 route_2
+interpretation twice_2_dg: dg_ctx_activation Sabs is_global twice_cfg Global2 "cs_route 2"
     "routed_cmb Sabs Global2" "routed_extra twice_cfg Sabs Seed2 Global2"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_2 "fst twice_2_sol" "(cfg_exit twice_cfg, [])" ivl_ctx_sg_2
@@ -265,7 +250,7 @@ proof unfold_locales
   show "finite (intra twice_cfg)" by (rule twice_finE)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) route_2
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
              (routed_cmb Sabs Global2) (routed_extra twice_cfg Sabs Seed2 Global2) twice_cfg Sabs
              (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
              (fun_of_st (restrict_global_st cinit_ivl_st)))
@@ -287,15 +272,16 @@ next
   thus "(v, ctx) \<in> fst twice_2_sol" by (rule twice_fwd_closed_2)
 qed
 
-text \<open>\<open>route_2\<close> and \<open>enterc_2\<close> are the identical closed term \<open>take 2 (u # ctx)\<close>, so
-  \<open>route_enterc_agree\<close> is bare reflexivity --- exactly the claim
-  \<^file>\<open>../../../docs/CALLSTRING_CONTEXT_DESIGN.md\<close> made about \<open>k > 1\<close> needing no case split on
-  the abstract value, unlike \<open>route_cs\<close>'s already-trivial \<open>k = 1\<close> case.\<close>
+text \<open>\<open>cs_route 2\<close> and \<open>cs_enterc 2\<close> are the identical closed term \<open>take 2 (u # ctx)\<close>, so
+  \<open>route_enterc_agree\<close> is \<open>Call_String_Context.thy\<close>'s \<open>cs_route_enterc_agree\<close> directly ---
+  exactly the claim \<^file>\<open>../../../docs/CALLSTRING_CONTEXT_DESIGN.md\<close> made about \<open>k > 1\<close>
+  needing no case split on the abstract value, unlike \<open>route_cs\<close>'s already-trivial \<open>k = 1\<close>
+  case.\<close>
 
-interpretation twice_2_routed: routed_context Sabs is_global twice_cfg Global2 route_2
+interpretation twice_2_routed: routed_context Sabs is_global twice_cfg Global2 "cs_route 2"
     "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
     sigma_2 "fst twice_2_sol" "(cfg_exit twice_cfg, [])" ivl_ctx_sg_2
-    Seed2 enterc_2
+    Seed2 "cs_enterc 2"
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC
   show ?case by (rule twice_finC)
@@ -304,7 +290,7 @@ next
   show ?case by simp
 next
   case (RouteAgree u ctx dst pars args p cont s)
-  show ?case by (simp add: route_2_def enterc_2_def)
+  show ?case by (rule cs_route_enterc_agree)
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
@@ -316,11 +302,11 @@ next
   proof cases
     case c1
     have ctx0: "ctx = []" using covU c1 enter_callers_only_root_2 by fastforce
-    thus ?thesis using c1 callee_covered_call1_2 by (simp add: route_2_def ctx_call1_2_def)
+    thus ?thesis using c1 callee_covered_call1_2 by (simp add: cs_route_def ctx_call1_2_def)
   next
     case c2
     have ctx0: "ctx = []" using covU c2 enter_callers_only_root_2 by fastforce
-    thus ?thesis using c2 callee_covered_call2_2 by (simp add: route_2_def ctx_call2_2_def)
+    thus ?thesis using c2 callee_covered_call2_2 by (simp add: cs_route_def ctx_call2_2_def)
   qed
 next
   case (CombFwd cl c1 dst pars args p cont)
@@ -340,13 +326,13 @@ lemma ivl_ctx_sg_2_seed:
     and "s \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (u, ctx))\<rbrakk>"
   shows "call_enter is_global (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (FunctionEntry p,
-                 enterc_2 u ctx (call_enter is_global (CallEdge dst xs es) s)))\<rbrakk>"
+                 cs_enterc 2 u ctx (call_enter is_global (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule twice_2_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_2_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (cl, c1))\<rbrakk>"
-    and "t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (FunctionResult p, enterc_2 cl c1 es))\<rbrakk>"
+    and "t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (FunctionResult p, cs_enterc 2 cl c1 es))\<rbrakk>"
     and "call_enter_store is_global twice_cfg cl s es"
   shows "combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (v, c1))\<rbrakk>"
   by (rule twice_2_routed.routed_context_comb[OF assms])
@@ -357,9 +343,9 @@ lemma cinit_le_cinit_ivl_st_2: "cinit_stores is_global \<subseteq> \<lbrakk>fun_
   by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 
 theorem twice_2_activation_collect_sound:
-  "activation_collect is_global enterc_2 [] twice_cfg (cinit_stores is_global) v ctx
+  "activation_collect is_global (cs_enterc 2) [] twice_cfg (cinit_stores is_global) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_2 (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = ivl_ctx_sg_2 and enterc = enterc_2
+proof (rule activation_collect_sound[where sg = ivl_ctx_sg_2 and enterc = "cs_enterc 2"
         and seedc = "[]" and S = "cinit_stores is_global" and g = twice_cfg and gs = is_global])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores is_global"
@@ -383,17 +369,18 @@ next
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (u, c))\<rbrakk>
         \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
              \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (FunctionEntry p,
-                    enterc_2 u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
+                    cs_enterc 2 u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
     by (rule ivl_ctx_sg_2_seed)
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
   show "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (FunctionResult p, enterc_2 cl c1 es))\<rbrakk>
+        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (FunctionResult p, cs_enterc 2 cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store is_global twice_cfg cl s es
         \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_2_comb)
 qed
 
 end
+
