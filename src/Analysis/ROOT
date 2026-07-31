@@ -6,6 +6,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Generic/Domain"
     "Generic/Equations"
     "Generic/Solver/Core"
+    "Generic/Solver/Core/Strategy_Tree"
     "Generic/Solver/Context"
     "Generic/Solver/Context/Activation"
     "Generic/Solver/Context/DG"
@@ -65,6 +66,7 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     DG_Soundness
     DG_LTR_Sound
     DG_Ctx_Activation
+    Context_Refinement
     DG_Transfer_Combinators
     Routed_Context
     Call_String_Context
