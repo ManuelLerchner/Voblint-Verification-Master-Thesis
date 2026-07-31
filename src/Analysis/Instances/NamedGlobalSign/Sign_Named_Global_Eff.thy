@@ -1,5 +1,5 @@
 theory Sign_Named_Global_Eff
-  imports Sign_Side_Soundness Strategy_Tree_Combinators
+  imports Sign_Side_Soundness Voblint_Core.Strategy_Tree_Combinators
 begin
 
 section \<open>A genuinely effectful, named-global Sign transfer\<close>

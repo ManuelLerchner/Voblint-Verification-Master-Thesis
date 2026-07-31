@@ -1,5 +1,5 @@
 theory Interval_Side_Soundness
-  imports Interval_Domain LTR_TD_Side_Eff_Exit
+  imports Interval_Domain Voblint_Core.LTR_TD_Side_Eff_Exit
 begin
 
 section \<open>Interval domain: effectful transfer instance\<close>

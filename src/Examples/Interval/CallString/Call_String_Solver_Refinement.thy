@@ -1,5 +1,5 @@
 theory Call_String_Solver_Refinement
-  imports Example_Interval_DG_CallString_K2 "Voblint_Analysis.Context_Refinement"
+  imports Example_Interval_DG_CallString_K2 "Voblint_Core.Context_Refinement"
 begin
 
 text \<open>

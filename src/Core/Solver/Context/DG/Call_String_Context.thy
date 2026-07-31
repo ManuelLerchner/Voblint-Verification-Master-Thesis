@@ -1,5 +1,5 @@
 theory Call_String_Context
-  imports "Voblint_Analysis.Abstract_Domain"
+  imports Abstract_Domain
 begin
 
 section \<open>A reusable bounded call-string context\<close>

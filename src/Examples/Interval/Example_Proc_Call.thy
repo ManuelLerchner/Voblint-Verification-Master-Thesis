@@ -6,7 +6,7 @@ theory Example_Proc_Call
     "Voblint_CFG.CFG_Prune"
 
     "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.LTR_Analysis_Sound"
+    "Voblint_Core.LTR_Analysis_Sound"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 

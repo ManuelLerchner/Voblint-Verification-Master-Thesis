@@ -53,7 +53,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"

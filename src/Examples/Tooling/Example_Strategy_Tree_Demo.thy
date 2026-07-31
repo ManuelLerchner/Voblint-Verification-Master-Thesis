@@ -1,8 +1,8 @@
 theory Example_Strategy_Tree_Demo
   imports
-    "Voblint_Analysis.Strategy_Tree_Combinators"
-    "Voblint_Analysis.Strategy_Tree_Monad"
-    "Voblint_Analysis.Strategy_Tree_Do"
+    "Voblint_Core.Strategy_Tree_Combinators"
+    "Voblint_Core.Strategy_Tree_Monad"
+    "Voblint_Core.Strategy_Tree_Do"
 begin
 
 section \<open>Strategy trees as a dependency/effect language\<close>

@@ -1,8 +1,8 @@
 theory Run_Analysis_Sound
   imports
     "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.DG_LTR_Sound"
-    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Core.Solver_Menu"
     Source_Activation_Sound
 begin
 

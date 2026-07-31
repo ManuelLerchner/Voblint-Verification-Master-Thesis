@@ -4,7 +4,7 @@ SESSION         := Voblint_Formalization
 # All sessions, so a clean build forces every one to be (re)presented.
 # Isabelle only presents sessions it actually builds; on warm heaps the
 # up-to-date ancestors are skipped and their links render as [brackets].
-SESSIONS        := Voblint_VIMP Voblint_CFG Voblint_Analysis Voblint_Formalization
+SESSIONS        := Voblint_VIMP Voblint_CFG Voblint_Core Voblint_Analysis Voblint_Formalization
 ISABELLE_HOME_USER ?= $(shell $(ISABELLE) getenv -b ISABELLE_HOME_USER 2>/dev/null)
 HTML_DIR        := docs/html
 
@@ -36,14 +36,15 @@ vendor:
 	  fi; \
 	fi
 
-# Bootstrap: build all 4 sessions in topological order (fresh clone, no heaps).
+# Bootstrap: build all 5 sessions in topological order (fresh clone, no heaps).
 # Use -d (not -D) per session to avoid validating downstream sessions before
 # upstream heaps exist.
 bootstrap: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
 	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/VIMP Voblint_VIMP
 	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/VIMP -d src/CFG Voblint_CFG
-	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/VIMP -d src/CFG -d src/Analysis Voblint_Analysis
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/VIMP -d src/CFG -d src/Core Voblint_Core
+	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -d src/VIMP -d src/CFG -d src/Core -d src/Analysis Voblint_Analysis
 	$(ISABELLE) build -v -N -d $(AFP) -d $(TD_DIR) -D . Voblint_Formalization
 
 # Build the top-level session (incremental; requires bootstrap heaps).

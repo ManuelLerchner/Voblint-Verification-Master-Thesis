@@ -1,8 +1,8 @@
 theory Example_Interval_DG_CallString
   imports
     Example_Interval_DG_Ctx_Sound
-    "Voblint_Analysis.Activation_Backbone"
-    "Voblint_Analysis.DG_Ctx_Activation"
+    "Voblint_Core.Activation_Backbone"
+    "Voblint_Core.DG_Ctx_Activation"
 begin
 
 section \<open>A computed 1-call-string context, routed by call site\<close>
@@ -45,7 +45,7 @@ datatype gk_cs = GlobalCS | SeedCS (seedcs_pp: pp) (seedcs_call: cfg_node)
 subsection \<open>The routed equation system and its computed solution\<close>
 
 text \<open>The enter-seed and combine trees are the generic \<^const>\<open>routed_cmb\<close>/\<^const>\<open>routed_extra\<close>
-  from \<^theory>\<open>Voblint_Analysis.Routed_Context\<close>, instantiated at the call-site route below and
+  from \<^theory>\<open>Voblint_Core.Routed_Context\<close>, instantiated at the call-site route below and
   the \<open>SeedCS\<close>/\<open>GlobalCS\<close> keys, rather than a hand-copied structural mirror.\<close>
 
 text \<open>The root context is \<^const>\<open>cfg_entry\<close> \<open>twice_cfg\<close> --- \<open>main\<close>'s own entry node, the

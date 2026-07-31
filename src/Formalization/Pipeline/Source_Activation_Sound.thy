@@ -1,5 +1,5 @@
 theory Source_Activation_Sound
-  imports "Voblint_Analysis.Activation_Backbone" "Voblint_CFG.Located_LTR"
+  imports "Voblint_Core.Activation_Backbone" "Voblint_CFG.Located_LTR"
     "Voblint_CFG.CFG_Prune"
 begin
 

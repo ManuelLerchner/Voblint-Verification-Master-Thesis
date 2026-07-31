@@ -1,6 +1,6 @@
 theory DG_Framework
-  imports "Voblint_Analysis.Exec_Bridge" "Voblint_Analysis.TD_Side_Eff_Keyed_Gen"
-    "Voblint_Analysis.TD_Side_Eff_Pipeline"
+  imports Exec_Bridge TD_Side_Eff_Keyed_Gen
+    TD_Side_Eff_Pipeline
 begin
 
 section \<open>The D/G framework core\<close>
@@ -952,7 +952,7 @@ lemma side_cfg_T_eff_keyed_seed_dg_threefold_mono:
 subsection \<open>TD_side_mono interpretation for an arbitrary generator instance\<close>
 
 text \<open>
-  Mirrors @{const td_cfg_side_solver_eff} (\<^theory>\<open>Voblint_Analysis.TD_Side_Eff_Interface\<close>)
+  Mirrors @{const td_cfg_side_solver_eff} (\<^theory>\<open>Voblint_Core.TD_Side_Eff_Interface\<close>)
   for the flat generator: bundling the nine primitive obligations from the three
   \<open>..._gen\<close> lemmas above as locale assumptions gives a mechanical
   @{locale TD_side_mono} interpretation, hence a least partial post-solution,

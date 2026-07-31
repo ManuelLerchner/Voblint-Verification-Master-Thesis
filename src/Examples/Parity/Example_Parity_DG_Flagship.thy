@@ -20,7 +20,7 @@ theory Example_Parity_DG_Flagship
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Analysis.Parity_Print"
-    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"

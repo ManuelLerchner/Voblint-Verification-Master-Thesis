@@ -1,5 +1,5 @@
 theory Sign_Local_Effects
-  imports Sign_Transfer TD_Side_CFG
+  imports Sign_Transfer Voblint_Core.TD_Side_CFG
 begin
 
 section \<open>Sign local-effectful invariants\<close>

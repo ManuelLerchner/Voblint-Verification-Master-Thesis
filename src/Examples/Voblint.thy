@@ -13,24 +13,24 @@ theory Voblint
     "Voblint_CFG.VIMP_Proc_to_CFG"
     "Voblint_CFG.CFG_Local_Trace"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_Analysis.Abstract_Domain"
-    "Voblint_Analysis.Constraint_System"
-    "Voblint_Analysis.Constraint_System_Sound"
-    "Voblint_Analysis.TD_Side_CFG"
-    "Voblint_Analysis.TD_Side_Eff_Cone_Lemmas"
+    "Voblint_Core.Abstract_Domain"
+    "Voblint_Core.Constraint_System"
+    "Voblint_Core.Constraint_System_Sound"
+    "Voblint_Core.TD_Side_CFG"
+    "Voblint_Core.TD_Side_Eff_Cone_Lemmas"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Interval_Side_Soundness"
-    "Voblint_Analysis.DG_Framework"
-    "Voblint_Analysis.DG_Soundness"
+    "Voblint_Core.DG_Framework"
+    "Voblint_Core.DG_Soundness"
     "Voblint_Analysis.Sign_DG"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Mixed_Sign_Interval"
-    "Voblint_Analysis.Activation_Backbone"
-    "Voblint_Analysis.DG_Ctx_Activation"
-    "Voblint_Analysis.Exec_St"
-    "Voblint_Analysis.Exec_Bridge"
+    "Voblint_Core.Activation_Backbone"
+    "Voblint_Core.DG_Ctx_Activation"
+    "Voblint_Core.Exec_St"
+    "Voblint_Core.Exec_Bridge"
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
@@ -213,11 +213,11 @@ text \<open>
 
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
-    \<^item> @{theory Voblint_Analysis.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
-    \<^item> @{theory Voblint_Analysis.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, \<^verbatim>\<open>sound_effectful_transfer\<close>.
-    \<^item> @{theory Voblint_Analysis.Constraint_System_Sound} --- per-edge / per-combine transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>), the building blocks of the monovariant trace endpoint \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close> (in \<^verbatim>\<open>LTR_Analysis_Sound\<close>, over \<^const>\<open>ltr_collect\<close>).
-    \<^item> @{theory Voblint_Analysis.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, unit-global effectful tree constructors.
-    \<^item> @{theory Voblint_Analysis.TD_Side_Eff_Cone_Lemmas} --- query-cone soundness for the
+    \<^item> @{theory Voblint_Core.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
+    \<^item> @{theory Voblint_Core.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, \<^verbatim>\<open>sound_effectful_transfer\<close>.
+    \<^item> @{theory Voblint_Core.Constraint_System_Sound} --- per-edge / per-combine transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>), the building blocks of the monovariant trace endpoint \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close> (in \<^verbatim>\<open>LTR_Analysis_Sound\<close>, over \<^const>\<open>ltr_collect\<close>).
+    \<^item> @{theory Voblint_Core.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, unit-global effectful tree constructors.
+    \<^item> @{theory Voblint_Core.TD_Side_Eff_Cone_Lemmas} --- query-cone soundness for the
       effectful TD_side solver over \<^const>\<open>ltr_collect\<close>
       (\<^verbatim>\<open>side_collect_sound_in_eff_cone\<close>), with the exit corollary
       \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>, \<^verbatim>\<open>threefold_mono\<close>, and
@@ -232,20 +232,20 @@ text \<open>
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
-    \<^item> @{theory Voblint_Analysis.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> copy lattice, the seeded keyed generator.
-    \<^item> @{theory Voblint_Analysis.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>.
+    \<^item> @{theory Voblint_Core.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> copy lattice, the seeded keyed generator.
+    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>.
     \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance.
     \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>, over \<^const>\<open>ltr_collect\<close>).
     \<^item> @{theory Voblint_Analysis.Mixed_Sign_Interval} --- the mixed flagship: Sign locals with Interval globals, both mixed-domain and context-sensitive.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
-    \<^item> @{theory Voblint_Analysis.Activation_Backbone} --- the generic \<^verbatim>\<open>activation_collect_sound\<close>: over \<^const>\<open>valid_ltr\<close>, four obligations \<^verbatim>\<open>ENTRY_G\<close>/\<^verbatim>\<open>EDGE\<close>/\<^verbatim>\<open>SEED_G\<close>/\<^verbatim>\<open>COMB\<close> (\<^verbatim>\<open>COMB\<close> at the caller context) bound \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close>.
-    \<^item> @{theory Voblint_Analysis.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
+    \<^item> @{theory Voblint_Core.Activation_Backbone} --- the generic \<^verbatim>\<open>activation_collect_sound\<close>: over \<^const>\<open>valid_ltr\<close>, four obligations \<^verbatim>\<open>ENTRY_G\<close>/\<^verbatim>\<open>EDGE\<close>/\<^verbatim>\<open>SEED_G\<close>/\<^verbatim>\<open>COMB\<close> (\<^verbatim>\<open>COMB\<close> at the caller context) bound \<^const>\<open>activation_collect\<close> at every \<^verbatim>\<open>(node, context)\<close>.
+    \<^item> @{theory Voblint_Core.DG_Ctx_Activation} --- DG-native discharge of those four obligations from a \<^verbatim>\<open>sound_dg_spec\<close> post-solution, so a computed D/G solution certifies the activation collecting.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
-    \<^item> @{theory Voblint_Analysis.Exec_St} --- executable abstract-state maps for code generation.
-    \<^item> @{theory Voblint_Analysis.Exec_Bridge} --- commutation bridge from executable states to function states.
+    \<^item> @{theory Voblint_Core.Exec_St} --- executable abstract-state maps for code generation.
+    \<^item> @{theory Voblint_Core.Exec_Bridge} --- commutation bridge from executable states to function states.
     \<^item> @{theory Voblint_Analysis.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable Sign IP solver, trace soundness, annotated DOT entry points.

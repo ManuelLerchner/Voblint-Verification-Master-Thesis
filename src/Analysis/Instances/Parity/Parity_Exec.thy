@@ -1,5 +1,5 @@
 theory Parity_Exec
-  imports Exec_Bridge Parity_Transfer
+  imports Voblint_Core.Exec_Bridge Parity_Transfer
 begin
 
 section \<open>Parity executable seam: transfer mirror and commutation\<close>

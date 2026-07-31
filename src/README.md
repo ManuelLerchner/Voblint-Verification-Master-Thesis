@@ -1,7 +1,7 @@
 # Voblint formalization (`src/`)
 
-Isabelle/HOL sessions **Voblint_VIMP**, **Voblint_CFG**, **Voblint_Analysis**,
-**Voblint_Formalization**: sound static analysis from VIMP source with procedures
+Isabelle/HOL sessions **Voblint_VIMP**, **Voblint_CFG**, **Voblint_Core**,
+**Voblint_Analysis**, **Voblint_Formalization**: sound static analysis from VIMP source with procedures
 through interprocedural CFG collecting semantics, abstract equations, and the
 vendored **TD side** solver (`vendor/td-verification`, session `TD`) to pipeline
 soundness theorems.
@@ -25,12 +25,12 @@ VIMP (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD s
 | [`VIMP/`](VIMP/) | [README](VIMP/README.md) | Source language syntax, procedures, globals/locals split, small-step semantics |
 | [`CFG/`](CFG/) | [README](CFG/README.md) | Control-flow graphs, interprocedural compilation, paths |
 | [`CFG/Collecting/`](CFG/Collecting/) | [README](CFG/Collecting/README.md) | IP collecting semantics (`cfg_collect`), trace collecting, run-to-exit projection |
-| [`Analysis/Generic/Domain/`](Analysis/Generic/Domain/) | [README](Analysis/Generic/Domain/README.md) | Abstract-domain classes and executable state representation |
-| [`Analysis/Generic/Equations/`](Analysis/Generic/Equations/) | [README](Analysis/Generic/Equations/README.md) | CFG -> IP equation system + fixpoint soundness |
-| [`Analysis/Generic/Solver/`](Analysis/Generic/Solver/) | [README](Analysis/Generic/Solver/README.md) | TD side solver bridge (`Core/`, `Context/`, `Exec/`) |
+| [`Core/Domain/`](Core/Domain/) | [README](Core/Domain/README.md) | Abstract-domain classes and executable state representation |
+| [`Core/Equations/`](Core/Equations/) | [README](Core/Equations/README.md) | CFG -> IP equation system + fixpoint soundness |
+| [`Core/Solver/`](Core/Solver/) | [README](Core/Solver/README.md) | TD side solver bridge (`TD_Side/`, `Strategy_Tree/`, `Context/`, `Exec/`) |
 | [`Analysis/Instances/`](Analysis/Instances/) | [README](Analysis/Instances/README.md) | Concrete domains and native effectful transfer records (`sign_etf`, `ivl_etf`) |
 | [`Formalization/Pipeline/`](Formalization/Pipeline/) | [README](Formalization/Pipeline/README.md) | End-to-end soundness and mixed-flow optimality (`trace_analysis_sound`, `mixed_flow_analysis_optimal`) |
-| [`Formalization/Examples/`](Formalization/Examples/) | [README](Formalization/Examples/README.md) | Concrete demonstrations and precision examples |
+| [`Examples/`](Examples/) | [README](Examples/README.md) | Concrete demonstrations and precision examples |
 
 Also at CFG root: `CFG_GraphViz.thy` (Graphviz tooling), `CFG_Prune.thy` (reachability pruning).
 

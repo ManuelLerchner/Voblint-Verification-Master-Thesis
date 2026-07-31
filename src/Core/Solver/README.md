@@ -5,30 +5,38 @@ to the procedure-aware CFG and effectful equation format. Solver post-solutions
 are connected to activation-local collecting semantics at nodes covered by the
 query dependency cone.
 
-The layer is split into three concerns, one subfolder each:
+The layer is split into four concerns, one subfolder each:
 
 | Subfolder | Concern |
 | --- | --- |
-| `Core/` | the TD-side strategy-tree spine: monad, generator, monotonicity, base collecting soundness |
-| `Context/` | context-sensitive solver spine: `Context/Activation`, `Context/DG`, `Context/Read` |
+| `TD_Side/` | the TD-side solver interface: generator, monotonicity, base collecting soundness |
+| `Strategy_Tree/` | the domain-agnostic strategy-tree monad and its combinators |
+| `Context/` | context-sensitive solver spine: `Context/Activation`, `Context/DG`, plus the standalone `Context/TD_Side_Eff_Keyed_Gen.thy` |
 | `Exec/` | executable witnesses and DG-native example support |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).
 This layer wires `part_post_solution` to `is_post_fixpoint` via
-`src/Analysis/Generic/Equations/Constraint_System_Sound.thy`.
+`src/Core/Equations/Constraint_System_Sound.thy`.
 
 **Downstream:** `src/Analysis/Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
 `src/Analysis/Instances/Interval/Interval_Side_Soundness.thy`; `src/Formalization/Pipeline/Mixed_Flow_Sound.thy`.
 
-## `Core/`
+## `TD_Side/`
 
-`Core/README.md` has the file inventory: the TD-side solver interface
-directly, monad plumbing split out under `Core/Strategy_Tree/`.
+`TD_Side/README.md` has the file inventory: the TD-side solver interface built
+directly on the strategy-tree monad.
+
+## `Strategy_Tree/`
+
+`Strategy_Tree/README.md` has the file inventory: the monad, its bind/do-notation
+registration, and reading/side-publishing combinators. Domain-agnostic and
+solver-agnostic — reused directly by `Context/DG/Context_Refinement.thy` and by
+`Examples/Tooling/Example_Strategy_Tree_Demo.thy`.
 
 ## `Context/`
 
 `Context/README.md` is the pointer; per-concern inventories in
-`Context/Activation/README.md`, `Context/DG/README.md`, `Context/Read/README.md`.
+`Context/Activation/README.md` and `Context/DG/README.md`.
 
 ## `Exec/`
 

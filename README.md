@@ -111,8 +111,11 @@ VIMP
 CFG
  │   Compilation & semantics
  ▼
+Core
+ │   Generic D/G framework, domains, solver interface
+ ▼
 Analysis
- │   Generic D/G framework
+ │   Concrete domain instances (Sign, Interval, ...)
  ▼
 Formalization
  │   End-to-end soundness
@@ -124,7 +127,8 @@ Examples
 
 * **`VIMP/`**: Syntax, procedures, globals/locals, small-step semantics
 * **`CFG/`**: Procedure-aware CFG compilation, activation-local traces, and collecting semantics
-* **`Analysis/`**: Generic D/G framework, domains, solver interface, executable analyses
+* **`Core/`**: Generic D/G framework, domains, equations, and the TD solver bridge -- no domain-specific content
+* **`Analysis/`**: Concrete domain instances (Sign, Interval, Parity, mixed Sign x Interval, ...) built on `Core/`
 * **`Formalization/`**: End-to-end solver, collecting-semantics, and source-level soundness
 * **`Examples/`**: Executable runs, flagship demos, and GraphViz tooling
 * **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches

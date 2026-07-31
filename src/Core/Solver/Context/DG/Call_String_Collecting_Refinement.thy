@@ -20,7 +20,7 @@ text \<open>
   bound-\<open>k\<close> push only ever looks at the incoming context through its own \<open>take k\<close>. This is a
   one-line corollary of \<^const>\<open>take\<close>'s min-absorption (\<^const>\<open>List.take\<close> on \<open>take k ctx\<close> at any
   \<open>k' \<le> k\<close> agrees with \<open>take k' ctx\<close> directly), kept local here rather than added to
-  \<^theory>\<open>Voblint_Analysis.Call_String_Context\<close>, which is frozen.
+  \<^theory>\<open>Voblint_Core.Call_String_Context\<close>, which is frozen.
 \<close>
 
 lemma cs_enterc_take_stable: "cs_enterc k u (take k ctx) s = cs_enterc k u ctx s"

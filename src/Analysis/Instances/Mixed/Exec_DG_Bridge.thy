@@ -11,9 +11,9 @@ text \<open>
 
 theory Exec_DG_Bridge
   imports
-    "Voblint_Analysis.DG_Soundness"
-    "Voblint_Analysis.Exec_Bridge"
-    "Voblint_Analysis.TD_Side_Eff_Keyed_Gen"
+    "Voblint_Core.DG_Soundness"
+    "Voblint_Core.Exec_Bridge"
+    "Voblint_Core.TD_Side_Eff_Keyed_Gen"
 begin
 
 subsection \<open>The combined warrowing arity for the executable state\<close>
@@ -128,7 +128,7 @@ subsection \<open>Per-tree traversal commutation\<close>
 
 text \<open>
   The D/G edge and combine trees have closed-form traversals
-  (\<open>Voblint_Analysis.DG_Framework\<close>): the local Answer carries \<open>snd (step \<dots>)\<close>
+  (\<open>Voblint_Core.DG_Framework\<close>): the local Answer carries \<open>snd (step \<dots>)\<close>
   and no global, so \<open>fun_of_dg_st\<close> commutes with the traversal precisely when
   the analysis step commutes componentwise.
 \<close>

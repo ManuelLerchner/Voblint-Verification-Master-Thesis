@@ -1,5 +1,5 @@
 theory Ivl_Exec
-  imports Exec_Bridge Interval_Domain
+  imports Voblint_Core.Exec_Bridge Interval_Domain
 begin
 
 section \<open>Interval executable transfer mirror\<close>
@@ -10,7 +10,7 @@ instance ivl :: bounded_warrowing ..
 text \<open>
   Executable mirror of @{const ivl_tf} on @{typ "ivl st"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>.  Commutation lemmas hook
-  into the generic @{theory Voblint_Analysis.Exec_Bridge} transport; no certified
+  into the generic @{theory Voblint_Core.Exec_Bridge} transport; no certified
   end-to-end soundness theory yet (cf.\ \<open>Sign_Exec_Sound\<close>).
 \<close>
 

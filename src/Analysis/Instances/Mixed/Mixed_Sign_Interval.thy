@@ -1,7 +1,7 @@
 theory Mixed_Sign_Interval
   imports
-    "Voblint_Analysis.DG_LTR_Sound"
-    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Core.Solver_Menu"
     "Voblint_Analysis.Exec_DG_Bridge"
 
     "Voblint_Analysis.Sign_Exec"

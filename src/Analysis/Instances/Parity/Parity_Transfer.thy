@@ -1,5 +1,5 @@
 theory Parity_Transfer
-  imports Parity_Domain Constraint_System "Voblint_VIMP.VIMP_Globals"
+  imports Parity_Domain Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Parity transfer functions\<close>

@@ -5,7 +5,7 @@ theory Example_Compile_Baseline
     "Voblint_CFG.CFG_Prune"
     "Voblint_CFG.Compile_Invariants"
     "Voblint_CFG.Located_Exec"
-    "Voblint_Analysis.CFG_Enumeration"
+    "Voblint_Core.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

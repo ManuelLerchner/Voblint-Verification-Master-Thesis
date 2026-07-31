@@ -1,5 +1,5 @@
 theory Sign_Side_Soundness
-  imports Sign_Domain LTR_TD_Side_Eff_Exit
+  imports Sign_Domain Voblint_Core.LTR_TD_Side_Eff_Exit
 begin
 
 section \<open>Sign domain: effectful transfer instance\<close>

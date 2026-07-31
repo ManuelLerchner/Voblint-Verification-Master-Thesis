@@ -1,5 +1,5 @@
 theory Mixed_Flow_Sound
-  imports "Voblint_Analysis.LTR_TD_Side_Eff_Exit"
+  imports "Voblint_Core.LTR_TD_Side_Eff_Exit"
 begin
 
 section \<open>Mixed flow-sensitivity soundness against the collecting semantics\<close>

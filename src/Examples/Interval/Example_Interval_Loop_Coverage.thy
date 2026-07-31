@@ -2,7 +2,7 @@ section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 
 theory Example_Interval_Loop_Coverage
   imports Voblint_CFG.CFG_Prune
-    "Voblint_Analysis.Interval_Domain" "Voblint_Analysis.LTR_Analysis_Sound"
+    "Voblint_Analysis.Interval_Domain" "Voblint_Core.LTR_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

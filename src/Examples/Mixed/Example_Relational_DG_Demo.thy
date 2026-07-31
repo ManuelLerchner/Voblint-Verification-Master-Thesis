@@ -4,7 +4,7 @@ theory Example_Relational_DG_Demo
     "Voblint_Analysis.Rel_Order_Domain"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Analysis.Solver_Menu"
+    "Voblint_Core.Solver_Menu"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"

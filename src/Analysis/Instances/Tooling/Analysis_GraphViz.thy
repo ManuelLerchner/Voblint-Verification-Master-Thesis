@@ -2,9 +2,9 @@ theory Analysis_GraphViz
   imports
     "Voblint_CFG.VIMP_Proc_to_CFG"
     "Voblint_VIMP.VIMP_Source_Print"
-    TD_Side_CFG
-    Exec_St
-    Abstract_Domain
+    Voblint_Core.TD_Side_CFG
+    Voblint_Core.Exec_St
+    Voblint_Core.Abstract_Domain
 begin
 
 text \<open>

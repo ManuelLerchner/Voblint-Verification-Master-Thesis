@@ -59,12 +59,16 @@ The procedure-aware CFG and generic D/G route are the sole analysis path. Sign,
 Interval, and mixed Sign/Interval instances use the side-effecting verified
 solver.
 
-The five-session dependency chain is:
+The six-session dependency chain is:
 
 ```text
-Voblint_VIMP -> Voblint_CFG -> Voblint_Analysis
+Voblint_VIMP -> Voblint_CFG -> Voblint_Core -> Voblint_Analysis
              -> Voblint_Formalization -> Voblint_Examples
 ```
+
+`Voblint_Core` is the abstract framework: domains, constraint systems, and the
+TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
+each concrete domain instance (Sign, Interval, ...) through it.
 
 Cross-session theory imports use qualified names.
 `Voblint_Formalization` contains the reusable soundness endpoints.

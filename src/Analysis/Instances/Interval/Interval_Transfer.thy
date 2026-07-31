@@ -1,5 +1,5 @@
 theory Interval_Transfer
-  imports Interval_Backward Constraint_System "Voblint_VIMP.VIMP_Globals"
+  imports Interval_Backward Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Interval transfer functions\<close>

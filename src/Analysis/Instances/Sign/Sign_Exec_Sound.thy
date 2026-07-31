@@ -1,5 +1,5 @@
 theory Sign_Exec_Sound
-  imports Sign_Exec Sign_Side_Soundness Solver_Side_RG
+  imports Sign_Exec Sign_Side_Soundness Voblint_Core.Solver_Side_RG
           "TD.TD_side_upd_rule"
           "Voblint_VIMP.VIMP_Notation"
           Analysis_GraphViz
@@ -72,7 +72,7 @@ text \<open>
   \<open>Gresult = SNonNeg\<close> instead of \<open>STop\<close>.
 
   The side solver keeps \<open>Inr\<close> slots globally restricted via
-  @{theory Voblint_Analysis.Solver_Side_RG} (\<open>side_rg\<close> on the eqsys
+  @{theory Voblint_Core.Solver_Side_RG} (\<open>side_rg\<close> on the eqsys
   \<open>\<Longrightarrow>\<close> \<open>TD_side_always_join_solve_Inr_rg\<close> \<open>\<Longrightarrow>\<close> \<open>inr_slot_locals_bot\<close>).
 \<close>
 

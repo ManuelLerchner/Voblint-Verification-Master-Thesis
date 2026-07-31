@@ -1,5 +1,5 @@
 theory Rel_Order_Domain
-  imports DG_Soundness
+  imports Voblint_Core.DG_Soundness
 begin
 
 section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec\<close>\<close>

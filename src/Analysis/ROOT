@@ -1,17 +1,8 @@
-session Voblint_Analysis in "." = "Voblint_CFG" +
-  description "Abstract domains, constraint systems, and TD solver bridge"
+session Voblint_Analysis in "." = "Voblint_Core" +
+  description "Concrete domain instances over the abstract Voblint_Core framework"
   sessions
     TD
   directories
-    "Generic/Domain"
-    "Generic/Equations"
-    "Generic/Solver/Core"
-    "Generic/Solver/Core/Strategy_Tree"
-    "Generic/Solver/Context"
-    "Generic/Solver/Context/Activation"
-    "Generic/Solver/Context/DG"
-    "Generic/Solver/Context/Read"
-    "Generic/Solver/Exec"
     "Instances/Sign"
     "Instances/Interval"
     "Instances/Parity"
@@ -19,14 +10,10 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
   theories
-    Abstract_Domain
     Sign_Lattice
     Sign_Arithmetic
     Sign_Backward
     Sign_Print
-    Exec_St
-    Exec_Backward
-    Split_State
     Interval_Bounds
     Interval_Lattice
     Interval_Warrowing
@@ -36,41 +23,9 @@ session Voblint_Analysis in "." = "Voblint_CFG" +
     Interval_Print
     Interval_Domain
     Ivl_Exec
-    CFG_Enumeration
-    Constraint_System
     Sign_Transfer
-    Constraint_System_Sound
-    LTR_Analysis_Sound
-    TD_Side_CFG
     Sign_Local_Effects
     Sign_Domain
-    Strategy_Tree_Monad
-    Strategy_Tree_Do
-    Strategy_Tree_Combinators
-    TD_Side_Tree
-    Exec_Bridge
-    Solver_Side_RG
-    Solver_Menu
-    TD_Side_Eff_Sound
-    TD_Side_Eff_Bounds
-    TD_Side_Eff_Interface
-    TD_Side_Eff_Pipeline
-    TD_Side_RHS_Generator
-    TD_Side_Eff_Cone_Lemmas
-    LTR_TD_Side_Eff_Sound
-    LTR_TD_Side_Eff_Exit
-    Activation_Local_Sound
-    Activation_Backbone
-    TD_Side_Eff_Keyed_Gen
-    DG_Framework
-    DG_Soundness
-    DG_LTR_Sound
-    DG_Ctx_Activation
-    Context_Refinement
-    DG_Transfer_Combinators
-    Routed_Context
-    Call_String_Context
-    Call_String_Collecting_Refinement
     Sign_Side_Soundness
     Sign_Named_Global_Eff
     Interval_Side_Soundness

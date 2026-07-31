@@ -1,5 +1,5 @@
 theory Exec_Ivl_Run
-  imports Voblint_Analysis.Ivl_Exec Voblint_Analysis.Solver_Menu "Voblint_CFG.CFG_Prune"
+  imports Voblint_Analysis.Ivl_Exec Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
 begin
 

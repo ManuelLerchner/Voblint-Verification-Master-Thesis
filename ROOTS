@@ -1,5 +1,6 @@
 src/VIMP
 src/CFG
+src/Core
 src/Analysis
 src/Formalization
 src/Examples

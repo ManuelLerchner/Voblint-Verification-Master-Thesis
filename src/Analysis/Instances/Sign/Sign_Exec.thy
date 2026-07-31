@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports Exec_Bridge Sign_Domain
+  imports Voblint_Core.Exec_Bridge Sign_Domain
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>

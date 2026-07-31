@@ -2,7 +2,7 @@ theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Analysis_GraphViz"
-    "Voblint_Analysis.Routed_Context"
+    "Voblint_Core.Routed_Context"
 begin
 
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>

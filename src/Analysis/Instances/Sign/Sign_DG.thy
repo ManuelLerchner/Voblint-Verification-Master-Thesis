@@ -1,6 +1,6 @@
 theory Sign_DG
   imports
-    "Voblint_Analysis.DG_LTR_Sound"
+    "Voblint_Core.DG_LTR_Sound"
     Sign_Transfer
 begin
 

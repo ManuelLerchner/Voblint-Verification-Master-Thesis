@@ -1,6 +1,6 @@
 theory Interval_DG
   imports
-    "Voblint_Analysis.DG_LTR_Sound"
+    "Voblint_Core.DG_LTR_Sound"
     Interval_Transfer
 begin
 
