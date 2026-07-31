@@ -42,6 +42,9 @@ theory Voblint
     "Voblint_Formalization.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_CallString
+    Example_Interval_DG_CallString_K1
+    Example_Interval_DG_CallString_K2
+    Call_String_Solver_Refinement
     Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_Side_Execute
@@ -264,6 +267,17 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
+    \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the same \<open>nest\<close>
+      program as \<open>Example_Interval_DG_CallString\<close>, computed and certified at a 1-call-string
+      context (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
+      calls \<open>g\<close> from one, so a 1-call-string cannot separate \<open>g\<close>'s two activations.
+    \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K2} --- the same program at a
+      2-call-string context (\<^verbatim>\<open>nest_2_activation_collect_sound\<close>), which does separate them.
+    \<^item> @{theory Voblint_Examples.Call_String_Solver_Refinement} --- a solver-level refinement
+      witness, not a source-level soundness theorem: projects the computed 2-call-string
+      solution onto the 1-call-string dependency cone (\<^verbatim>\<open>project_sigma\<close>) and proves the
+      projection is itself a \<^verbatim>\<open>part_post_solution\<close> of the 1-call-string equations
+      (\<^verbatim>\<open>project_sigma_part_post_solution\<close>).
     \<^item> @{theory Voblint_Examples.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
     \<^item> @{theory Voblint_Examples.Example_Relational_DG_Demo} --- an execution
       witness, not a soundness-certified result: a compiled full-program
