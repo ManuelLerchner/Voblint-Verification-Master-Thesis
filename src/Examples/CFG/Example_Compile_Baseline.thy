@@ -229,9 +229,9 @@ text \<open>
 \<close>
 
 datatype step_label =
-    LIntra edge_action
-  | LCall pname
-  | LRet pname
+    LIntra (step_action: edge_action)
+  | LCall (step_call_proc: pname)
+  | LRet (step_ret_proc: pname)
 
 type_synonym exec_frame = "cfg_node \<times> vname option \<times> store"
 

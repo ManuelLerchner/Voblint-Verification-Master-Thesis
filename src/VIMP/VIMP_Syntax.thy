@@ -16,21 +16,21 @@ type_synonym store = "vname => int"
 (* -- Arithmetic Expressions ---------------------------------------- *)
 
 datatype aexp =
-    N int
-  | V vname
-  | Plus  aexp aexp
-  | Minus aexp aexp            (* extension *)
-  | Times aexp aexp            (* extension *)
+    N (aexp_lit: int)
+  | V (aexp_var: vname)
+  | Plus  (aexp_lhs: aexp) (aexp_rhs: aexp)
+  | Minus (aexp_lhs: aexp) (aexp_rhs: aexp)
+  | Times (aexp_lhs: aexp) (aexp_rhs: aexp)
 
 (* -- Boolean Expressions -------------------------------------------- *)
 
 datatype bexp =
-    Bc bool
-  | Not   bexp
-  | And   bexp bexp
-  | Or    bexp bexp            (* extension *)
-  | Less  aexp aexp
-  | Eq    aexp aexp            (* extension *)
+    Bc (bexp_lit: bool)
+  | Not (bexp_arg: bexp)
+  | And (bexp_lhs: bexp) (bexp_rhs: bexp)
+  | Or (bexp_lhs: bexp) (bexp_rhs: bexp)
+  | Less (cmp_lhs: aexp) (cmp_rhs: aexp)
+  | Eq (cmp_lhs: aexp) (cmp_rhs: aexp)
 
 instance aexp :: countable
   by countable_datatype

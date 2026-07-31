@@ -12,7 +12,7 @@ text \<open>
 
 subsection \<open>Interval type and order\<close>
 
-datatype ivl = Ivl eint eint   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
+datatype ivl = Ivl (ivl_lower: eint) (ivl_upper: eint)   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
 (* Named exhaustion, cited instead of `(cases x) auto` at every destructuring site. *)
 lemma ivl_exhaustE:

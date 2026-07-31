@@ -6,7 +6,7 @@ section \<open>Interval bounds\<close>
 
 subsection \<open>Extended integers as interval bounds\<close>
 
-datatype eint = MinInf | Fin int | PlusInf
+datatype eint = MinInf | Fin (eint_val: int) | PlusInf
 
 fun eint_le :: "eint => eint => bool" where
     "eint_le MinInf  _       = True"

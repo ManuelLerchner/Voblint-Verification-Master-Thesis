@@ -80,7 +80,7 @@ lemmas ivl_Hcomb = unit_dg_Hcomb
 
 subsection \<open>A call-string-keyed global-key type\<close>
 
-datatype gk_1 = Global1 | Seed1 pp "cfg_node list"
+datatype gk_1 = Global1 | Seed1 (seed1_pp: pp) (seed1_cs: "cfg_node list")
 
 subsection \<open>The routed equation system and its computed solution\<close>
 

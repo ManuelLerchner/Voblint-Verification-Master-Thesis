@@ -96,20 +96,20 @@ text \<open>
 \<close>
 
 datatype ('ctx, 'g) analysis_cluster =
-    ContextCluster string 'ctx
+    ContextCluster (cluster_name: string) (cluster_ctx: 'ctx)
   | GlobalCluster
   | SourceCluster
 
 datatype ('ctx, 'g) analysis_node =
-    LocalNode pp 'ctx
-  | GlobalNode 'g
-  | SourceNode string
+    LocalNode (node_pp: pp) (node_ctx: 'ctx)
+  | GlobalNode (node_glob: 'g)
+  | SourceNode (node_name: string)
 
 datatype analysis_edge_kind =
-    IntraEdge edge_action
-  | EnterEdge pname call_action
-  | CombineEdge pp "vname option" "vname option"
-  | CallToReturnEdge pname
+    IntraEdge (aek_action: edge_action)
+  | EnterEdge (aek_enter_proc: pname) (aek_call: call_action)
+  | CombineEdge (combine_call_pp: pp) (combine_dst: "vname option") (combine_ret: "vname option")
+  | CallToReturnEdge (aek_ctr_proc: pname)
   | GlobalReadEdge
   | GlobalWriteEdge
 

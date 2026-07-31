@@ -40,7 +40,7 @@ subsection \<open>A call-site-keyed global-key type\<close>
 text \<open>Distinct constructor names from \<open>gk\<close> (\<open>Example_Interval_DG_Ctx_Flagship\<close>): both
   theories are imported here, and \<open>Seed\<close> would otherwise be ambiguous.\<close>
 
-datatype gk_cs = GlobalCS | SeedCS pp cfg_node
+datatype gk_cs = GlobalCS | SeedCS (seedcs_pp: pp) (seedcs_call: cfg_node)
 
 subsection \<open>The routed equation system and its computed solution\<close>
 

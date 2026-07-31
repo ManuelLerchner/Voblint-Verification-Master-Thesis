@@ -22,12 +22,12 @@ text \<open>
 
 datatype com =
     SKIP
-  | Assign vname aexp
-  | Seq    com com
-  | If     bexp com com
-  | While  bexp com
-  | Call   "vname option" pname "aexp list"
-  | Return "aexp option"
+  | Assign (assign_var: vname) (assign_rhs: aexp)
+  | Seq    (seq_first: com) (seq_second: com)
+  | If     (if_cond: bexp) (if_then: com) (if_else: com)
+  | While  (while_cond: bexp) (while_body: com)
+  | Call   (call_dest: "vname option") (call_proc: pname) (call_args: "aexp list")
+  | Return (return_val: "aexp option")
   | Restore
   | Unwind
 
@@ -57,7 +57,7 @@ lemma ret_var_not_global [simp]: "\<not> is_global ret_var"
 type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
 
 (* Runtime frame: the caller's store and the optional destination variable. *)
-datatype frame = Frame store "vname option"
+datatype frame = Frame (frame_store: store) (frame_dest: "vname option")
 
 definition bind_formals :: "vname list \<Rightarrow> int list \<Rightarrow> store \<Rightarrow> store" where
   "bind_formals xs vs s =

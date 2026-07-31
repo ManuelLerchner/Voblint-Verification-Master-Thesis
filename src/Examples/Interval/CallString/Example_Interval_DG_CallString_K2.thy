@@ -14,7 +14,7 @@ text \<open>
 
 subsection \<open>A call-string-keyed global-key type\<close>
 
-datatype gk_2 = Global2 | Seed2 pp "cfg_node list"
+datatype gk_2 = Global2 | Seed2 (seed2_pp: pp) (seed2_cs: "cfg_node list")
 
 subsection \<open>The routed equation system and its computed solution\<close>
 

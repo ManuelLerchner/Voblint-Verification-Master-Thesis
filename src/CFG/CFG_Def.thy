@@ -25,9 +25,9 @@ text \<open>
 subsection \<open>Nodes\<close>
 
 datatype cfg_node =
-    Statement nat
-  | FunctionEntry pname
-  | FunctionResult pname
+    Statement (node_stmt: nat)
+  | FunctionEntry (entry_proc: pname)
+  | FunctionResult (result_proc: pname)
 
 instance cfg_node :: countable
   by countable_datatype
@@ -51,13 +51,13 @@ text \<open>
 
 datatype edge_action =
     EA_Nop
-  | EA_Assign   vname aexp
-  | EA_Assume   bexp
-  | EA_AssumeNot bexp
-  | EA_Ret      "aexp option" pname
+  | EA_Assign   (ea_var: vname) (ea_rhs: aexp)
+  | EA_Assume   (ea_cond: bexp)
+  | EA_AssumeNot (ea_cond: bexp)
+  | EA_Ret      (ea_ret_val: "aexp option") (ea_ret_proc: pname)
 
 datatype call_action =
-    CallEdge "vname option" "vname list" "aexp list"
+    CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "aexp list")
 
 instance edge_action :: countable
   by countable_datatype

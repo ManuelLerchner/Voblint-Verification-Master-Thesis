@@ -23,7 +23,7 @@ text \<open>
 
 subsection \<open>The carrier and its lattice\<close>
 
-datatype relc = Bot | RelC "(vname \<times> vname) set"
+datatype relc = Bot | RelC (relc_pairs: "(vname \<times> vname) set")
 
 text \<open>Order is reverse inclusion on the constraint set: more known pairs is
   more information, hence lower (more precise) in the abstract-interpretation

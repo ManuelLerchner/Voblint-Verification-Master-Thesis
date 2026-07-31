@@ -51,8 +51,8 @@ lemma widen_ivl_core_terminates:
   assumes "\<forall>i. widen_ivl_core (f i) (f (Suc i)) = f (Suc i)"
   shows "\<exists>n. \<forall>j. n \<le> j \<longrightarrow> f j = f n"
 proof -
-  define lb where "lb i = (case f i of Ivl l _ \<Rightarrow> l)" for i
-  define ub where "ub i = (case f i of Ivl _ u \<Rightarrow> u)" for i
+  define lb where "lb i = ivl_lower (f i)" for i
+  define ub where "ub i = ivl_upper (f i)" for i
   have f_eq: "f i = Ivl (lb i) (ub i)" for i
     unfolding lb_def ub_def by (cases "f i") simp
   have step:

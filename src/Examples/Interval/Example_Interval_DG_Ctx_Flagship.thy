@@ -27,7 +27,7 @@ text \<open>The global-key type separates shared analysis globals from
   flow-insensitive slot; \<open>Seed\<close> keys an entry seed by program point and context.
   Distinct constructors prevent the two roles from sharing a solver unknown.\<close>
 
-datatype gk = Global | Seed pp "ivl"
+datatype gk = Global | Seed (seed_pp: pp) (seed_ivl: "ivl")
 
 
 

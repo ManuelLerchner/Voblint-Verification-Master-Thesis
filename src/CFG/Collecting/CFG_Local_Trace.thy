@@ -30,8 +30,8 @@ text \<open>
 
 datatype ltr =
     Root "(cfg_node * store) list"
-  | Call ltr "(cfg_node * store) list"
-  | Resume ltr ltr "(cfg_node * store) list"
+  | Call (ltr_caller: ltr) "(cfg_node * store) list"
+  | Resume (ltr_current: ltr) (ltr_callee: ltr) "(cfg_node * store) list"
 
 subsection \<open>Observers\<close>
 
