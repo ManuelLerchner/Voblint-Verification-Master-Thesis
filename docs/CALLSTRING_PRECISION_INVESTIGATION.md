@@ -5,6 +5,20 @@ changed. Question: what is the proof shape for a future
 `Call_String_Precision.thy`, and which comparison object (context /
 unknown-space / semantic-trace / solver-result) carries the least risk?
 
+## Status
+
+The concrete target this investigation converged on in section 10 is proved:
+`project_sigma_part_post_solution` in `Call_String_Solver_Refinement.thy`
+projects the computed 2-call-string solution onto the 1-call-string
+dependency cone and shows the projection is a `part_post_solution` of the
+1-call-string equations, closing the `sides_of_rhs` obligation section 10.4
+identified as the load-bearing check.
+
+That proof enumerates its dependency cone by hand, per witness node, rather
+than by a general construction. `CALLSTRING_PROJECT_SIGMA_GENERALIZATION_DESIGN.md`
+works out what a general construction over arbitrary dependency graphs looks
+like, including the cyclic case this investigation's sections did not reach.
+
 ## 1. Step 1 (context projection) is already available, checked by hand
 
 The proposed commuting diagram —

@@ -21,11 +21,12 @@ text \<open>
   merge. Each downstream case is defined by re-evaluating its own equation with the
   already-widened dependency substituted in directly (never through a self-reference:
   \<open>definition\<close> cannot recurse), the same construction \<^const>\<open>eq\<close> would perform at that
-  node once its inputs are known -- so far only for \<open>Statement 3\<close>, the case that exposed
-  the gap (\<open>project_sigma_eq_statement3\<close>, proved by unfolding both sides to the same
-  term); \<open>FunctionResult ''f''\<close>, \<open>Statement 6\<close>, \<open>Statement 7\<close>, and
-  \<open>FunctionResult ''main''\<close> still need the same treatment before the \<open>_all\<close> lemmas below
-  can close.
+  node once its inputs are known. \<open>project_sigma_eq_statement3\<close> is the case that exposed
+  this pattern, proved by unfolding both sides to the same term; the same treatment
+  closes \<open>FunctionResult ''f''\<close>, \<open>Statement 6\<close>, \<open>Statement 7\<close>, and
+  \<open>FunctionResult ''main''\<close>. The sixteen per-node cases assemble into the headline
+  theorem, \<open>project_sigma_part_post_solution\<close>, which keeps \<open>project_sigma\<close> a
+  \<^verbatim>\<open>part_post_solution\<close> of \<open>nest_1_eqs\<close>.
 \<close>
 
 text \<open>

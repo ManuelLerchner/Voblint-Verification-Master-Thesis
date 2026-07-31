@@ -118,8 +118,14 @@ retired paths, former names, or migration alternatives. Use Isabelle document
 structure (`section`, `subsection`, and `text`) for exposition.
 
 - Comparisons to a still-existing sibling definition or lemma are valid.
-- Temporal language that describes the mathematics is valid. Remove only
-  project-history framing.
+- Temporal language that describes the mathematics is valid (e.g. a compiler
+  phase, an activation's returning phase). Remove only project-history framing.
+- No links to files in comments: no raw or relative paths, no `\<^file>`
+  antiquotations, no `docs/*.md` citations. Reference another theory by name
+  via `@{theory Qualified.Name}` if needed; state everything else inline.
+- No development-stage or migration-plan language: no "Stage 0/1/2", "TODO",
+  "still needs", "so far only", or similar staged/future-work framing. A
+  comment describes the theory as it stands, not the plan to get there.
 
 ## Batch-friendly proof habits
 

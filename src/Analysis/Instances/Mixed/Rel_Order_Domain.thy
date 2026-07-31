@@ -14,8 +14,7 @@ text \<open>
 
   The purpose of this file is not a useful analysis.  It demonstrates that a
   non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec\<close> with zero
-  changes to the DG framework
-  (\<^file>\<open>../../../../docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md\<close>).
+  changes to the DG framework.
   Every transfer below is deliberately the most imprecise sound choice
   (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
   \<open>assume_not\<close> pair, which is enough to make the carrier genuinely
