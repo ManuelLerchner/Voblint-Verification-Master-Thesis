@@ -46,32 +46,10 @@ definition sign_ex_pi :: proc_table where
 definition gEx :: cfg where
   "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
 
-lemma gEx_eq:
-  "gEx =
-     \<lparr> intra =
-         {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''x'' (N 1), Statement 1),
-          (Statement 1, EA_Assign ''y'' (V ''x''), Statement 2),
-          (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')},
-       calls = {},
-       cfg_entry = FunctionEntry ''main'' \<rparr>"
-  unfolding gEx_def sign_ex_pi_def sign_ex_prog_def by eval
-
-lemma gEx_intra:
-  "intra gEx =
-     {(FunctionEntry ''main'', EA_Nop, Statement 0),
-      (Statement 0, EA_Assign ''x'' (N 1), Statement 1),
-      (Statement 1, EA_Assign ''y'' (V ''x''), Statement 2),
-      (Statement 2, EA_Ret None ''main'', FunctionResult ''main'')}"
-  by (simp add: gEx_eq)
-lemma gEx_calls: "calls gEx = {}"
-  by (simp add: gEx_eq)
-lemma gEx_entry: "cfg_entry gEx = FunctionEntry ''main''"
-  by (simp add: gEx_eq)
-lemma gEx_exit: "cfg_exit gEx = FunctionResult ''main''"
-  by (simp add: gEx_eq cfg_exit_def)
-lemma gEx_finE: "finite (intra gEx)" by (simp add: gEx_intra)
-lemma gEx_finC: "finite (calls gEx)" by (simp add: gEx_calls)
+lemma gEx_calls: "calls gEx = {}" by eval
+lemma gEx_entry: "cfg_entry gEx = FunctionEntry ''main''" by eval
+lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
+lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign st, sign st) dg_state) strategy_tree" where
   "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st sign_enter_st) gEx bot cinit_sign_st cinit_sign_st"
@@ -114,16 +92,11 @@ subsection \<open>Collecting-semantics over-approximation from the computed resu
 
 lemma dgEx_cover_entry: "(cfg_entry gEx, ()) \<in> fst dgEx_sol"
   unfolding dgEx_sol_def gEx_entry by eval
-lemma dgEx_cover_0: "(Statement 0, ()) \<in> fst dgEx_sol"
-  unfolding dgEx_sol_def by eval
-lemma dgEx_cover_1: "(Statement 1, ()) \<in> fst dgEx_sol"
-  unfolding dgEx_sol_def by eval
-lemma dgEx_cover_2: "(Statement 2, ()) \<in> fst dgEx_sol"
-  unfolding dgEx_sol_def by eval
-lemma dgEx_cover_result: "(FunctionResult ''main'', ()) \<in> fst dgEx_sol"
+
+lemma dgEx_cover_edge_ball: "\<forall>(u, a, w) \<in> intra gEx. (w, ()) \<in> fst dgEx_sol"
   unfolding dgEx_sol_def by eval
 lemma dgEx_cover_edge: "\<And>u a w. (u, a, w) \<in> intra gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
-  using dgEx_cover_0 dgEx_cover_1 dgEx_cover_2 dgEx_cover_result by (auto simp: gEx_intra)
+  using dgEx_cover_edge_ball by auto
 lemma dgEx_cover_enter:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
      \<Longrightarrow> (FunctionEntry p, ()) \<in> fst dgEx_sol"

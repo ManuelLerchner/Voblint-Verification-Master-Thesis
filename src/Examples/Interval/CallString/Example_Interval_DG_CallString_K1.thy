@@ -39,36 +39,31 @@ definition nest_cfg :: cfg where
   "nest_cfg = compile_prog nest_pi nest_procs ''main'' nest_main"
 
 lemma nest_entry: "cfg_entry nest_cfg = FunctionEntry ''main''" by eval
-lemma nest_exit: "cfg_exit nest_cfg = FunctionResult ''main''"
-  by (simp add: cfg_exit_def nest_entry)
 
 text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Statement 5\<close>, args \<open>3\<close>; \<open>Statement 6\<close>, args \<open>10\<close>).
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
   parameter --- the same source location regardless of which \<open>f\<close> activation runs it.\<close>
 
-lemma nest_intra:
-  "intra nest_cfg =
-     {(FunctionEntry ''f'', EA_Nop, Statement 2),
-      (Statement 3, EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'', FunctionResult ''f''),
-      (FunctionEntry ''g'', EA_Nop, Statement 0),
-      (Statement 0, EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'',
-       FunctionResult ''g''),
-      (FunctionEntry ''main'', EA_Nop, Statement 5),
-      (Statement 7, EA_Ret None ''main'', FunctionResult ''main'')}"
-  by eval
+lemma nest_finE: "finite (intra nest_cfg)" unfolding nest_cfg_def using compile_prog_finite by simp
+lemma nest_finC: "finite (calls nest_cfg)" unfolding nest_cfg_def using compile_prog_finite by simp
 
-lemma nest_calls:
-  "calls nest_cfg =
-     {(Statement 2, CallEdge (Some ''t'') [''p''] [VIMP_Syntax.V ''p''],
-       FunctionEntry ''g'', Statement 3),
-      (Statement 5, CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3],
-       FunctionEntry ''f'', Statement 6),
-      (Statement 6, CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10],
-       FunctionEntry ''f'', Statement 7)}"
-  by eval
+text \<open>The three call edges' shape, computed directly from \<open>nest_cfg\<close>: each call site \<open>u\<close>
+  pins down its callee \<open>p\<close> and continuation \<open>cont\<close>.\<close>
+lemma nest_calls_shape:
+  "\<forall>(u, ca, ce, cont) \<in> calls nest_cfg.
+     case ca of CallEdge dst pars args \<Rightarrow>
+       (case ce of FunctionEntry p \<Rightarrow>
+          (u = Statement 2 \<and> p = ''g'' \<and> cont = Statement 3) \<or>
+          (u = Statement 5 \<and> p = ''f'' \<and> cont = Statement 6) \<or>
+          (u = Statement 6 \<and> p = ''f'' \<and> cont = Statement 7)
+        | _ \<Rightarrow> True)"
+  unfolding nest_cfg_def by eval
 
-lemma nest_finE: "finite (intra nest_cfg)" unfolding nest_intra by simp
-lemma nest_finC: "finite (calls nest_cfg)" unfolding nest_calls by simp
+text \<open>Each call site has exactly one outgoing edge.\<close>
+lemma nest_calls_unique_site:
+  "\<forall>(u1, ca1, ce1, k1) \<in> calls nest_cfg. \<forall>(u2, ca2, ce2, k2) \<in> calls nest_cfg.
+      u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
+  unfolding nest_cfg_def by eval
 
 subsection \<open>The interval domain, executable and abstract\<close>
 
@@ -423,11 +418,16 @@ next
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
-  from ce consider
+  from ce nest_calls_shape have
+    "(u = Statement 2 \<and> p = ''g'' \<and> cont = Statement 3) \<or>
+     (u = Statement 5 \<and> p = ''f'' \<and> cont = Statement 6) \<or>
+     (u = Statement 6 \<and> p = ''f'' \<and> cont = Statement 7)"
+    by fastforce
+  then consider
       (c1) "u = Statement 2" "p = ''g''"
     | (c2) "u = Statement 5" "p = ''f''"
     | (c3) "u = Statement 6" "p = ''f''"
-    unfolding nest_calls by auto
+    by blast
   thus ?case
   proof cases
     case c1
@@ -447,12 +447,13 @@ next
   show ?case
     using ce covCl enter_callers_only_root_main_1 enter_callers_g_1
           covered_ret3_f3_1 covered_ret3_f10_1 covered_ret6_1 covered_ret7_1
-    unfolding nest_calls by auto
+          nest_calls_shape
+    by fastforce
 next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   show ?case
-    using ces ce unfolding call_enter_store_def by (auto simp: nest_calls)
+    using ces ce nest_calls_unique_site unfolding call_enter_store_def by fastforce
 qed
 
 lemma ivl_ctx_sg_1_seed:

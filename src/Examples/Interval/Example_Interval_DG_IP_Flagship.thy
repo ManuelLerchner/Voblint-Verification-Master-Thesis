@@ -38,40 +38,41 @@ definition twice_cfg :: cfg where
   "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
 
 text \<open>
-  The compiled CFG, read off by \<^verbatim>\<open>eval\<close>.  Procedure \<open>twice\<close> runs between
+  The compiled CFG.  Procedure \<open>twice\<close> runs between
   \<open>FunctionEntry ''twice''\<close> and \<open>FunctionResult ''twice''\<close>: the body's \<open>return p + p\<close>
   publishes through \<open>EA_Ret\<close> at statement \<open>0\<close>.  \<open>twice\<close> never falls through, so the
   continuation-passing compiler reserves no epilogue edge --- statement \<open>1\<close> is an
   unused index, not a node of the compiled graph.  \<open>main\<close> occupies statements \<open>2..4\<close>:
   \<open>2\<close> is the first call site, continuing directly at \<open>3\<close>, which is also the second
-  call site, continuing at \<open>4\<close>.  \<^bold>\<open>Both call edges name the same callee entry
-  \<open>FunctionEntry ''twice''\<close>\<close> --- this is the monovariant (single-context) view.
+  call site, continuing at \<open>4\<close>.  Both call edges name the same callee entry
+  \<open>FunctionEntry ''twice''\<close> --- this is the monovariant (single-context) view.
 \<close>
 
 lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry ''main''" by eval
-lemma twice_exit: "cfg_exit twice_cfg = FunctionResult ''main''"
-  by (simp add: cfg_exit_def twice_entry)
 
-lemma twice_intra:
-  "intra twice_cfg =
-     {(FunctionEntry ''twice'', EA_Nop, Statement 0),
-      (Statement 0,
-       EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''twice'',
-       FunctionResult ''twice''),
-      (FunctionEntry ''main'', EA_Nop, Statement 2),
-      (Statement 4, EA_Ret None ''main'', FunctionResult ''main'')}"
-  by eval
+text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
+  pins down its destination variable, callee, arguments, and continuation. Exported for the
+  routed/context-sensitive siblings (\<open>Example_Interval_DG_Ctx_Collect\<close>,
+  \<open>Example_Interval_DG_CallString\<close>), which case-split on the same two call sites.\<close>
+lemma twice_calls_shape:
+  "\<forall>(u, ca, ce, cont) \<in> calls twice_cfg.
+     case ca of CallEdge dst pars args \<Rightarrow>
+       (case ce of FunctionEntry p \<Rightarrow>
+          (u = Statement 2 \<and> dst = Some ''x'' \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 3]
+             \<and> p = ''twice'' \<and> cont = Statement 3) \<or>
+          (u = Statement 3 \<and> dst = Some ''y'' \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 10]
+             \<and> p = ''twice'' \<and> cont = Statement 4)
+        | _ \<Rightarrow> True)"
+  unfolding twice_cfg_def by eval
 
-lemma twice_calls:
-  "calls twice_cfg =
-     {(Statement 2, CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3],
-       FunctionEntry ''twice'', Statement 3),
-      (Statement 3, CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10],
-       FunctionEntry ''twice'', Statement 4)}"
-  by eval
+text \<open>Each call site has exactly one outgoing edge.\<close>
+lemma twice_calls_unique_site:
+  "\<forall>(u1, ca1, ce1, k1) \<in> calls twice_cfg. \<forall>(u2, ca2, ce2, k2) \<in> calls twice_cfg.
+      u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
+  unfolding twice_cfg_def by eval
 
-lemma twice_finE: "finite (intra twice_cfg)" unfolding twice_intra by simp
-lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_calls by simp
+lemma twice_finE: "finite (intra twice_cfg)" unfolding twice_cfg_def using compile_prog_finite by simp
+lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_cfg_def using compile_prog_finite by simp
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
@@ -157,25 +158,28 @@ text \<open>
   same collecting-soundness theorem as ordinary intra edges.
 \<close>
 
-lemma twice_cover_all:
-  "\<forall>v \<in> {FunctionEntry ''twice'', FunctionResult ''twice'',
-           FunctionEntry ''main'', FunctionResult ''main'',
-           Statement 0, Statement 2, Statement 3, Statement 4}.
-     (v, ()) \<in> fst twice_sol"
-  unfolding twice_sol_def twice_eqs_def by eval
-
 lemma twice_cover_entry: "(cfg_entry twice_cfg, ()) \<in> fst twice_sol"
-  using twice_cover_all twice_entry by simp
+  unfolding twice_sol_def twice_eqs_def twice_entry by eval
+
+lemma twice_cover_edge_ball: "\<forall>(u, a, w) \<in> intra twice_cfg. (w, ()) \<in> fst twice_sol"
+  unfolding twice_sol_def twice_eqs_def by eval
 lemma twice_cover_edge: "\<And>u a w. (u, a, w) \<in> intra twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
-  using twice_cover_all by (auto simp: twice_intra)
+  using twice_cover_edge_ball by auto
+
+lemma twice_cover_calls_ball:
+  "\<forall>(c, ca, ce, k) \<in> calls twice_cfg.
+     case ca of CallEdge dst fs as \<Rightarrow>
+       (case ce of FunctionEntry p \<Rightarrow> (FunctionEntry p, ()) \<in> fst twice_sol \<and> (k, ()) \<in> fst twice_sol
+        | _ \<Rightarrow> True)"
+  unfolding twice_sol_def twice_eqs_def by eval
 lemma twice_cover_enter:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls twice_cfg
      \<Longrightarrow> (FunctionEntry p, ()) \<in> fst twice_sol"
-  using twice_cover_all by (auto simp: twice_calls)
+  using twice_cover_calls_ball by fastforce
 lemma twice_cover_combine:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls twice_cfg
      \<Longrightarrow> (k, ()) \<in> fst twice_sol"
-  using twice_cover_all by (auto simp: twice_calls)
+  using twice_cover_calls_ball by fastforce
 
 lemma twice_sound0:
   "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"

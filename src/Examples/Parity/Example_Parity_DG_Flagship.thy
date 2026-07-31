@@ -71,39 +71,11 @@ text \<open>
 definition parity_cfg :: cfg where
   "parity_cfg = compile_prog parity_pi [] ''main'' parity_prog"
 
-lemma parity_cfg_eq:
-  "parity_cfg =
-     \<lparr>intra =
-       {(FunctionEntry ''main'', EA_Nop, Statement 0),
-        (Statement 6, EA_Ret None ''main'', FunctionResult ''main''),
-        (Statement 4, EA_Assign ''y'' (Plus (V ''y'') (N 1)), Statement 2),
-        (Statement 3, EA_Assign ''x'' (Plus (V ''x'') (N 2)), Statement 4),
-        (Statement 2, EA_Assume (Less (V ''x'') (N 20)), Statement 3),
-        (Statement 2, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 5),
-        (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-        (Statement 1, EA_Assign ''y'' (N 1), Statement 2),
-        (Statement 5, EA_Assign ''G'' (Plus (V ''x'') (V ''y'')), Statement 6)},
-       calls = {}, cfg_entry = FunctionEntry ''main''\<rparr>"
-  unfolding parity_cfg_def parity_pi_def parity_prog_def by eval
-
-lemma parity_intra: "intra parity_cfg =
-     {(FunctionEntry ''main'', EA_Nop, Statement 0),
-     (Statement 6, EA_Ret None ''main'', FunctionResult ''main''),
-     (Statement 4, EA_Assign ''y'' (Plus (V ''y'') (N 1)), Statement 2),
-     (Statement 3, EA_Assign ''x'' (Plus (V ''x'') (N 2)), Statement 4),
-     (Statement 2, EA_Assume (Less (V ''x'') (N 20)), Statement 3),
-     (Statement 2, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 5),
-     (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-     (Statement 1, EA_Assign ''y'' (N 1), Statement 2),
-     (Statement 5, EA_Assign ''G'' (Plus (V ''x'') (V ''y'')), Statement 6)}"
-  by (simp add: parity_cfg_eq)
- 
 lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls parity_cfg)"
   unfolding parity_cfg_def
   using compile_prog_finite by auto
 
-lemma parity_calls: "calls parity_cfg = {}"
-  by (simp add: parity_cfg_eq)
+lemma parity_calls: "calls parity_cfg = {}" by eval
 
 subsection \<open>3. Executable parity D/G specification\<close>
 
@@ -151,8 +123,10 @@ lemma parity_cover_entry: "(cfg_entry parity_cfg, ()) \<in> fst parity_sol"
   using parity_cover_all parity_cfg_def
   by (metis insert_iff inv16_entry_is_main)
 
+lemma parity_cover_edge_ball: "\<forall>(u, a, w) \<in> intra parity_cfg. (w, ()) \<in> fst parity_sol"
+  unfolding parity_sol_def parity_eqs_def by eval
 lemma parity_cover_edge: "\<And>u a w. (u, a, w) \<in> intra parity_cfg \<Longrightarrow> (w, ()) \<in> fst parity_sol"
-  using parity_cover_all by (auto simp: parity_intra)
+  using parity_cover_edge_ball by auto
 
 lemma parity_cover_enter:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls parity_cfg

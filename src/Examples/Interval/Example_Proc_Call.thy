@@ -308,8 +308,8 @@ theorem main_prog_interval_analysis:
   assumes s: "s \<in> ltr_collect is_global main_cfg S (cfg_exit main_cfg)"
   shows "s ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
-  have fin_e: "finite (intra main_cfg)" by (simp add: main_cfg_intra)
-  have fin_c: "finite (calls main_cfg)" by (simp add: main_cfg_calls)
+  have fin_e: "finite (intra main_cfg)" using compile_prog_finite by simp
+  have fin_c: "finite (calls main_cfg)" using compile_prog_finite by simp
   have le: "ltr_collect is_global main_cfg S (cfg_exit main_cfg)
               \<le> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>"
     using sound_transfer.unified_ltr_post_fixpoint_sound

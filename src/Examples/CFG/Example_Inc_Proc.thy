@@ -42,30 +42,6 @@ lemma inc_g_eq_compile:
   "inc_g = compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)"
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
-lemma inc_g_full:
-  "inc_g =
-     \<lparr> intra =
-         {(FunctionEntry ''p'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
-          (Statement 1, EA_Ret None ''p'', FunctionResult ''p''),
-          (FunctionEntry ''main'', EA_Nop, Statement 2),
-          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
-       calls = {(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3)},
-       cfg_entry = FunctionEntry ''main'' \<rparr>"
-  by eval
-
-lemma inc_g_structure:
-  shows "cfg_entry inc_g = FunctionEntry ''main''"
-    and "cfg_exit inc_g = FunctionResult ''main''"
-    and "intra inc_g =
-       {(FunctionEntry ''p'', EA_Nop, Statement 0),
-        (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
-        (Statement 1, EA_Ret None ''p'', FunctionResult ''p''),
-        (FunctionEntry ''main'', EA_Nop, Statement 2),
-        (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
-    and "calls inc_g = {(Statement 2, CallEdge None [] [], FunctionEntry ''p'', Statement 3)}"
-  by (simp_all add: inc_g_full cfg_exit_def)
-
 lemma edge_collect_assign_enter_state:
   fixes s :: store and x :: vname and a :: aexp
   assumes "enter_state is_global s \<in> S"
@@ -145,7 +121,7 @@ proof -
     and e4: "(Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1) \<in> intra inc_g"
     and e5: "(Statement 1, EA_Ret None ''p'', FunctionResult ''p'') \<in> intra inc_g"
     and e6: "(Statement 3, EA_Ret None ''main'', FunctionResult ''main'') \<in> intra inc_g"
-    by (simp_all add: inc_g_structure)
+    by eval+
   have g: "?gs ''Gx''" by simp
   have s1: "cstep ?gs inc_g (FunctionEntry ''main'', s, []) (Statement 2, s, [])"
     by (rule cstep.Intra[OF e1]) simp

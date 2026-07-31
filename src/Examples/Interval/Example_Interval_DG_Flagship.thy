@@ -93,35 +93,13 @@ definition flagship_pi :: proc_table where
 definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
 
-lemma flagship_cfg_eq:
-  "flagship_cfg =
-     \<lparr> intra =
-         {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-          (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
-          (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
-          (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
-          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
-       calls = {},
-       cfg_entry = FunctionEntry ''main'' \<rparr>"
-  unfolding flagship_cfg_def flagship_pi_def flagship_prog_def by eval
+lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry ''main''" by eval
+lemma flagship_calls: "calls flagship_cfg = {}" by eval
 
-lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry ''main''"
-  by (simp add: flagship_cfg_eq)
-lemma flagship_exit: "cfg_exit flagship_cfg = FunctionResult ''main''"
-  by (simp add: flagship_cfg_eq cfg_exit_def)
-lemma flagship_intra: "intra flagship_cfg =
-     {(FunctionEntry ''main'', EA_Nop, Statement 0),
-      (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-      (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
-      (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
-      (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
-      (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
-  by (simp add: flagship_cfg_eq)
-lemma flagship_calls: "calls flagship_cfg = {}" by (simp add: flagship_cfg_eq)
-
-lemma flagship_finE: "finite (intra flagship_cfg)" by (simp add: flagship_intra)
-lemma flagship_finC: "finite (calls flagship_cfg)" by (simp add: flagship_calls)
+lemma flagship_finE: "finite (intra flagship_cfg)"
+  unfolding flagship_cfg_def using compile_prog_finite by simp
+lemma flagship_finC: "finite (calls flagship_cfg)"
+  unfolding flagship_cfg_def using compile_prog_finite by simp
 
 subsection \<open>Executable interval D/G specification\<close>
 
@@ -178,16 +156,13 @@ text \<open>
   is finite and enter-free, and the concrete initial stores are covered by the seed.
 \<close>
 
-lemma flagship_cover_all:
-  "\<forall>v \<in> {Statement 0, Statement 1, Statement 2, Statement 3,
-           FunctionEntry ''main'', FunctionResult ''main''}.
-     (v, ()) \<in> fst flagship_sol"
-  unfolding flagship_sol_def flagship_eqs_def by eval
-
 lemma flagship_cover_entry: "(cfg_entry flagship_cfg, ()) \<in> fst flagship_sol"
-  using flagship_cover_all flagship_entry by simp
+  unfolding flagship_sol_def flagship_eqs_def flagship_entry by eval
+
+lemma flagship_cover_edge_ball: "\<forall>(u, a, w) \<in> intra flagship_cfg. (w, ()) \<in> fst flagship_sol"
+  unfolding flagship_sol_def flagship_eqs_def by eval
 lemma flagship_cover_edge: "\<And>u a w. (u, a, w) \<in> intra flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
-  using flagship_cover_all by (auto simp: flagship_intra)
+  using flagship_cover_edge_ball by auto
 lemma flagship_cover_enter:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls flagship_cfg
      \<Longrightarrow> (FunctionEntry p, ()) \<in> fst flagship_sol"

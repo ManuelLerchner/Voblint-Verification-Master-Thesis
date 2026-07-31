@@ -348,7 +348,7 @@ section \<open>SEED_G and COMB: the two calls resumed at their own call site\<cl
 text \<open>\<open>enterc_cs u ctx s = u\<close> unconditionally, so unlike \<open>ivl_ctx_sg_seed\<close> /
   \<open>ivl_ctx_sg_comb\<close> (\<open>Example_Interval_DG_Ctx_Collect\<close>), no \<open>enter_route_exact\<close> /
   \<open>comb_route\<close> lemma is needed to show the routed context is the one the executable bound
-  was computed at: after fixing the call site by the \<open>twice_calls\<close> case split, the context is
+  was computed at: after fixing the call site by the \<open>twice_calls_shape\<close> case split, the context is
   already syntactically \<open>ctx_call1_cs\<close> / \<open>ctx_call2_cs\<close>.  The remaining content --- that the
   executable enter/combine transfer stays under the routed slot --- is exactly the same
   numeric fact as the partial-tabulation instance, re-evaluated against \<^const>\<open>twice_cs_sol\<close>.\<close>
@@ -395,10 +395,13 @@ next
 next
   case (CallFwd u ctx dst pars args p cont)
   note ce = CallFwd(2)
-  from ce consider
+  from ce twice_calls_shape have
+    "(u = Statement 2 \<and> p = ''twice'') \<or> (u = Statement 3 \<and> p = ''twice'')"
+    by fastforce
+  then consider
       (c1) "u = Statement 2" "p = ''twice''"
     | (c2) "u = Statement 3" "p = ''twice''"
-    unfolding twice_calls by auto
+    by blast
   thus ?case
   proof cases
     case c1
@@ -411,13 +414,13 @@ next
   case (CombFwd cl c1 dst pars args p cont)
   note covCl = CombFwd(1) and ce = CombFwd(2)
   show ?case
-    using ce covCl enter_callers_only_root_cs covered_ret5_cs covered_ret7_cs
-    unfolding twice_calls by auto
+    using ce covCl enter_callers_only_root_cs covered_ret5_cs covered_ret7_cs twice_calls_shape
+    by fastforce
 next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   show ?case
-    using ces ce unfolding call_enter_store_def by (auto simp: twice_calls)
+    using ces ce twice_calls_unique_site unfolding call_enter_store_def by fastforce
 qed
 
 lemma ivl_ctx_sg_cs_seed:

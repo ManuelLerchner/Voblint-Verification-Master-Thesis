@@ -129,7 +129,7 @@ lemma callee_entry_bot_unpopulated:
 lemma main_first_stmt_is_call:
   "(Statement 2, CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3],
     FunctionEntry ''twice'', Statement 3) \<in> calls twice_cfg"
-  using twice_calls by simp
+  by eval
 
 subsection \<open>Solved-domain closure facts\<close>
 
@@ -267,7 +267,7 @@ lemma comb_route_call1:
   shows "ivl_enterc u c1 es = ctx_call1"
 proof -
   have "es = call_enter is_global (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
-    using assms unfolding call_enter_store_def by (auto simp: twice_calls)
+    using assms twice_calls_shape unfolding call_enter_store_def by fastforce
   thus ?thesis by (rule enter_route_exact_call1)
 qed
 
@@ -276,7 +276,7 @@ lemma comb_route_call2:
   shows "ivl_enterc u c1 es = ctx_call2"
 proof -
   have "es = call_enter is_global (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
-    using assms unfolding call_enter_store_def by (auto simp: twice_calls)
+    using assms twice_calls_shape unfolding call_enter_store_def by fastforce
   thus ?thesis by (rule enter_route_exact_call2)
 qed
 
@@ -303,10 +303,14 @@ next
 next
   case (RouteAgree u ctx dst pars args p cont s)
   note covU = RouteAgree(1) and ce = RouteAgree(2) and sin = RouteAgree(3)
-  from ce consider
+  from ce twice_calls_shape have
+    "(u = Statement 2 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 3] \<and> p = ''twice'') \<or>
+     (u = Statement 3 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 10] \<and> p = ''twice'')"
+    by fastforce
+  then consider
       (c1) "u = Statement 2" "pars = [''p'']" "args = [VIMP_Syntax.N 3]" "p = ''twice''"
     | (c2) "u = Statement 3" "pars = [''p'']" "args = [VIMP_Syntax.N 10]" "p = ''twice''"
-    unfolding twice_calls by auto
+    by blast
   thus ?case
   proof cases
     case c1
@@ -328,10 +332,14 @@ next
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
-  from ce consider
+  from ce twice_calls_shape have
+    "(u = Statement 2 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 3] \<and> p = ''twice'') \<or>
+     (u = Statement 3 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 10] \<and> p = ''twice'')"
+    by fastforce
+  then consider
       (c1) "u = Statement 2" "pars = [''p'']" "args = [VIMP_Syntax.N 3]" "p = ''twice''"
     | (c2) "u = Statement 3" "pars = [''p'']" "args = [VIMP_Syntax.N 10]" "p = ''twice''"
-    unfolding twice_calls by auto
+    by blast
   thus ?case
   proof cases
     case c1
@@ -354,13 +362,13 @@ next
   case (CombFwd cl c1 dst pars args p cont)
   note covCl = CombFwd(1) and ce = CombFwd(2)
   show ?case
-    using ce covCl enter_callers_only_bot covered_ret5 covered_ret7
-    unfolding twice_calls by auto
+    using ce covCl enter_callers_only_bot covered_ret5 covered_ret7 twice_calls_shape
+    by fastforce
 next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   show ?case
-    using ces ce unfolding call_enter_store_def by (auto simp: twice_calls)
+    using ces ce twice_calls_unique_site unfolding call_enter_store_def by fastforce
 qed
 
 lemma ivl_ctx_sg_seed:

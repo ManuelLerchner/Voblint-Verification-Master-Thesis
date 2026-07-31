@@ -52,22 +52,8 @@ definition demo_pi :: proc_table where
 definition demo_cfg :: cfg where
   "demo_cfg = compile_prog demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)"
 
-lemma demo_cfg_eq:
-  "demo_cfg =
-     \<lparr> intra =
-         {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assume (Less (V ''x'') (V ''y'')), Statement 1),
-          (Statement 0, EA_AssumeNot (Less (V ''x'') (V ''y'')), Statement 2),
-          (Statement 1, EA_Assign ''z'' (N 1), Statement 3),
-          (Statement 2, EA_Assign ''z'' (N 0), Statement 3),
-          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
-       calls = {},
-       cfg_entry = FunctionEntry ''main'' \<rparr>"
-  unfolding demo_cfg_def demo_pi_def demo_program_def by eval
-
-lemma demo_calls: "calls demo_cfg = {}" by (simp add: demo_cfg_eq)
-lemma demo_finE: "finite (intra demo_cfg)" by (simp add: demo_cfg_eq)
-lemma demo_finC: "finite (calls demo_cfg)" by (simp add: demo_calls)
+lemma demo_finE: "finite (intra demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
+lemma demo_finC: "finite (calls demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
 
 text \<open>\<open>Statement 1\<close> is the true branch of the guard, right after the
   \<open>assume\<close> and before \<open>z := 1\<close> -- exactly where \<open>x < y\<close> is freshly known

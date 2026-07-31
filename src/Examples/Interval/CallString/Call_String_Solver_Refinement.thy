@@ -176,8 +176,8 @@ lemma project_sigma_eq_entry_g:
 
 subsection \<open>FunctionResult g -- the return/combine path, per the CFG\<close>
 
-text \<open>\<open>FunctionResult ''g''\<close> is reached only by the intra return edge from \<open>Statement 0\<close>
-  (\<open>nest_intra\<close>); it is never a \<open>return_call_action_list\<close> continuation, so its equation
+text \<open>\<open>FunctionResult ''g''\<close> is reached only by the intra return edge from \<open>Statement 0\<close>;
+  it is never a \<open>return_call_action_list\<close> continuation, so its equation
   carries no COMB fragment. The actual COMB nodes are the call continuations
   (\<open>Statement 3\<close>, \<open>Statement 6\<close>, \<open>Statement 7\<close>).\<close>
 
@@ -535,7 +535,7 @@ qed
 subsection \<open>FunctionResult f -- intra return from Statement 3, both activations\<close>
 
 text \<open>Same shape as \<open>FunctionResult ''g''\<close>: reached only by the intra return edge from
-  \<open>Statement 3\<close> (\<open>nest_intra\<close>), no COMB, no outgoing calls. Its context (\<open>[Statement 5]\<close>
+  \<open>Statement 3\<close>, no COMB, no outgoing calls. Its context (\<open>[Statement 5]\<close>
   or \<open>[Statement 6]\<close>) never merges, but it reads \<open>Statement 3\<close> which does, through
   \<open>project_sigma\<close>'s widened case.\<close>
 

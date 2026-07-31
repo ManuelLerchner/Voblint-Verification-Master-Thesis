@@ -286,11 +286,16 @@ next
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
-  from ce consider
+  from ce nest_calls_shape have
+    "(u = Statement 2 \<and> p = ''g'' \<and> cont = Statement 3) \<or>
+     (u = Statement 5 \<and> p = ''f'' \<and> cont = Statement 6) \<or>
+     (u = Statement 6 \<and> p = ''f'' \<and> cont = Statement 7)"
+    by fastforce
+  then consider
       (c1) "u = Statement 2" "p = ''g''"
     | (c2) "u = Statement 5" "p = ''f''"
     | (c3) "u = Statement 6" "p = ''f''"
-    unfolding nest_calls by auto
+    by blast
   thus ?case
   proof cases
     case c1
@@ -318,12 +323,13 @@ next
   show ?case
     using ce covCl enter_callers_only_root_main_2 enter_callers_g_2
           covered_ret3_f3_2 covered_ret3_f10_2 covered_ret6_2 covered_ret7_2
-    unfolding nest_calls by auto
+          nest_calls_shape
+    by fastforce
 next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   show ?case
-    using ces ce unfolding call_enter_store_def by (auto simp: nest_calls)
+    using ces ce nest_calls_unique_site unfolding call_enter_store_def by fastforce
 qed
 
 lemma ivl_ctx_sg_2_seed:
