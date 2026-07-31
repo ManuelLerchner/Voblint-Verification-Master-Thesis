@@ -371,6 +371,32 @@ exactly the separation the plan asked for.
 
 ### 9.6 What is left before attacking the transfer equations
 
+> **Landed (2026-07-31, issue #45).** `side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen`,
+> `_mono_sides_gen`, `_mono_deps_gen` (`DG_Framework.thy`) discharge the three
+> `TD_side_mono` preconditions for an arbitrary `side_cfg_T_eff_keyed_seed_dg`
+> instance from a per-tree contract on the `pred_sel`/`cmb`/`extra` hooks —
+> mirroring `td_cfg_side_solver_eff_gen` (`TD_Side_Eff_Pipeline.thy`), the same
+> reduction already landed for the flat generator. `side_rhs_fold_dg_mono`,
+> `_sides_mono`, `_static_deps` (also `DG_Framework.thy`) are the underlying
+> fold lemmas, proved by structural induction over the tree list via
+> `seqcomp_mono`/`static_deps_seqcomp` (`Strategy_Tree_Monad.thy`) — no new
+> proof technique beyond what the flat generator's own pipeline used.
+> `side_cfg_T_eff_keyed_seed_dg_threefold_mono` bundles the three into
+> `TD_Side_Eff_Pipeline.thy`'s `threefold_mono`. I/Q clean, no `sorry`, batch
+> green on `Voblint_Examples`. What remains is Step 3: instantiate this pipeline at
+> `nest_2_eqs`'s actual `route`/`cmb`/`extra` (`routed_cmb`/`routed_extra` via
+> `cs_route`, `Example_Interval_DG_CallString_K2.thy`) and discharge the nine
+> primitive obligations concretely — not yet attempted.
+>
+> `threefold_mono` is a precondition, not a precision result: it makes the
+> TD solver's ordering reasoning available for a `side_cfg_T_eff_keyed_seed_dg`
+> instance, but proves nothing about any computed answer, and no analysis
+> gets more precise by this lemma landing. The chain to an actual k=2-vs-k=1
+> precision theorem still needs `least_partial_post_solution` (upgrading the
+> existing `part_post_solution` guarantee once `threefold_mono` is
+> instantiated at `nest_2_eqs`) and a `TD_side` precision theorem built on
+> top of that — both still open.
+
 The one thing not yet located: where `is_mono_eq`/`mono_sides`/`mono_deps`
 (`td_cfg_side_solver_eff`'s three assumptions, `TD_Side_Eff_Interface.thy`)
 get discharged for a `side_cfg_T_eff_keyed_seed_dg`-generated system.

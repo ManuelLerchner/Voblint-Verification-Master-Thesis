@@ -1,5 +1,5 @@
 theory Call_String_Solver_Refinement
-  imports Example_Interval_DG_CallString_K2
+  imports Example_Interval_DG_CallString_K2 "Voblint_Analysis.Context_Refinement"
 begin
 
 text \<open>
@@ -1700,8 +1700,19 @@ lemma project_sigma_sides_all:
 
 lemma project_sigma_part_post_solution:
   "part_post_solution nest_1_eqs (cfg_exit nest_cfg, []) project_sigma (fst nest_1_sol)"
-  using project_sigma_dep_L_all project_sigma_eq_all project_sigma_sides_all
-  by (simp add: nest_entry cfg_exit_def nest_1_vars_list)
+proof (rule projected_part_post_solution)
+  show "\<forall>u \<in> fst nest_1_sol. dep\<^sub>L nest_1_eqs project_sigma u \<subseteq> fst nest_1_sol"
+    by (rule project_sigma_dep_L_all)
+next
+  show "\<forall>u \<in> fst nest_1_sol. eq nest_1_eqs u project_sigma \<le> project_sigma (Inl u)"
+    by (rule project_sigma_eq_all)
+next
+  show "\<forall>u \<in> fst nest_1_sol. sides_of_rhs (nest_1_eqs u) project_sigma \<le> project_sigma"
+    by (rule project_sigma_sides_all)
+next
+  show "(cfg_exit nest_cfg, []) \<in> fst nest_1_sol"
+    by (simp add: nest_entry cfg_exit_def nest_1_vars_list)
+qed
 
 
 end

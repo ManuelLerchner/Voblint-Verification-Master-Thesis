@@ -1,7 +1,40 @@
 # Generalizing `project_sigma`: design
 
-Design only. No `.thy` file was read, edited, or created through host tools;
-`Call_String_Solver_Refinement.thy` was read through I/Q and is untouched.
+> **Stage 0 complete (2026-07-31).** Added `Context_Refinement.thy`
+> (`Voblint_Analysis`). Extracted `projected_part_post_solution` (T1, section
+> 3.2). `Call_String_Solver_Refinement.thy`'s `project_sigma_part_post_solution`
+> now derives from it instead of inlining the argument; the 1600 lines above it
+> are untouched. Batch green on `Voblint_Examples`, no `sorry`.
+>
+> **Stage 1 complete (2026-07-31).** Added `seed_sides`/`seed_rhs` (built from
+> the vendored `seqcomp_tree`) and `post_solution_of_seeded`, the transfer step
+> section 2.2(c) calls "the only real content." **Correction to this design's
+> own T2 sketch (section 3.2):** the unconditional conclusion
+> `fiber_join rho W2 sigma2 \<le> snd sol` is not derivable as stated. Only the
+> restricted form is: `\<forall>u \<in> vars. s (Inl u) \<le> sigma (Inl u)`, where `vars`
+> is the seeded solve's own stable set, not the seed's whole domain --- nothing
+> forces `sigma` to bound the seed at unknowns the solve never reaches. `pi \<le>
+> sigma` everywhere would additionally need the seed's support to land inside
+> `vars`, which is a per-instance fact, not free from this construction. `T2`
+> and `fiber_join` itself are not yet landed; do not attempt the unconditional
+> claim without first closing that gap. Sections below describe the design as
+> originally written; later stages are not yet landed.
+>
+> **Adjacent, on issue #45 (2026-07-31):** section 4.3 below flags that the
+> dual/precision theorem needs `TD_side_mono` at `nest_2_eqs`, blocked on
+> "threefold monotonicity for the keyed-seed DG generator, never located."
+> That generic pipeline is now landed --- `side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen`/
+> `_mono_sides_gen`/`_mono_deps_gen`/`_threefold_mono` (`DG_Framework.thy`),
+> mirroring `td_cfg_side_solver_eff_gen`'s reduction for the flat generator.
+> Batch green on `Voblint_Examples`, no `sorry`. See
+> `docs/CALLSTRING_PRECISION_INVESTIGATION.md` section 9.6. Not yet
+> instantiated at `nest_2_eqs` itself --- that instantiation, not this
+> design's T2/`fiber_join`, is the concrete next step toward the k=2-vs-k=1
+> precision claim. `threefold_mono` is a precondition, not a precision
+> gain: no analysis's computed answer changes. It makes the solver's
+> ordering reasoning available; `least_partial_post_solution` and a
+> `TD_side` precision theorem still have to be built on top before a
+> k=2-vs-k=1 claim exists.
 
 Everything below is checked against the repository. Where a claim is not
 checked, it says so.

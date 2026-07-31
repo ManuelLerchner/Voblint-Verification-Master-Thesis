@@ -1,5 +1,6 @@
 theory DG_Framework
   imports "Voblint_Analysis.Exec_Bridge" "Voblint_Analysis.TD_Side_Eff_Keyed_Gen"
+    "Voblint_Analysis.TD_Side_Eff_Pipeline"
 begin
 
 section \<open>The D/G framework core\<close>
@@ -224,6 +225,99 @@ lemma sides_dg_combine_tree_Inr:
    = DG bot (fst (comb dst (locals (\<tau> (Inl cc))) (locals (\<tau> (Inl ex))) (globs (\<tau> (Inr ())))))"
   unfolding dg_combine_tree_def by (simp add: Let_def)
 
+lemma sides_dg_combine_tree_Inl:
+  "sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau> (Inl v) = bot"
+  unfolding dg_combine_tree_def by (simp add: Let_def)
+
+subsection \<open>Monotonicity and static dependencies of the edge and combine tree shapes\<close>
+
+text \<open>
+  Both tree shapes above have a query structure --- \<open>u\<close>/\<open>()\<close> for the edge
+  tree, \<open>cc\<close>/\<open>ex\<close>/\<open>()\<close> for the combine tree --- fixed independently of any
+  environment value, so their dependency sets are trivially static: no
+  analysis-supplied fact is needed. A jointly monotone \<open>step\<close>/\<open>comb\<close> lifts
+  to a monotone tree the same way, independent of any particular domain
+  --- an analysis only has to prove its own transfer/combine functions
+  monotone, never re-derive tree monotonicity.
+\<close>
+
+lemma static_deps_dg_edge_tree: "static_deps (dg_edge_tree step u)"
+  by (rule static_depsI) (simp add: dg_edge_tree_def)
+
+lemma static_deps_dg_combine_tree: "static_deps (dg_combine_tree comb dst cc ex)"
+  by (rule static_depsI) (simp add: dg_combine_tree_def)
+
+lemma dg_edge_tree_mono:
+  assumes step_mono_snd:
+    "\<And>d1 d2 g1 g2. d1 \<le> d2 \<Longrightarrow> g1 \<le> g2 \<Longrightarrow> snd (step d1 g1) \<le> snd (step d2 g2)"
+    and le: "\<tau>1 \<le> \<tau>2"
+  shows "traverse_rhs (dg_edge_tree step u) \<tau>1 \<le> traverse_rhs (dg_edge_tree step u) \<tau>2"
+proof -
+  have dl: "locals (\<tau>1 (Inl u)) \<le> locals (\<tau>2 (Inl u))"
+    using le[THEN le_funD, of "Inl u"] by (simp add: less_eq_dg_state_def)
+  have dgv: "globs (\<tau>1 (Inr ())) \<le> globs (\<tau>2 (Inr ()))"
+    using le[THEN le_funD, of "Inr ()"] by (simp add: less_eq_dg_state_def)
+  show ?thesis
+    unfolding traverse_dg_edge_tree less_eq_dg_state_def
+    using step_mono_snd[OF dl dgv] by simp
+qed
+
+lemma dg_edge_tree_sides_mono:
+  assumes step_mono_fst:
+    "\<And>d1 d2 g1 g2. d1 \<le> d2 \<Longrightarrow> g1 \<le> g2 \<Longrightarrow> fst (step d1 g1) \<le> fst (step d2 g2)"
+    and le: "\<tau>1 \<le> \<tau>2"
+  shows "sides_of_rhs (dg_edge_tree step u) \<tau>1 \<le> sides_of_rhs (dg_edge_tree step u) \<tau>2"
+proof (rule le_funI)
+  fix k
+  have dl: "locals (\<tau>1 (Inl u)) \<le> locals (\<tau>2 (Inl u))"
+    using le[THEN le_funD, of "Inl u"] by (simp add: less_eq_dg_state_def)
+  have dgv: "globs (\<tau>1 (Inr ())) \<le> globs (\<tau>2 (Inr ()))"
+    using le[THEN le_funD, of "Inr ()"] by (simp add: less_eq_dg_state_def)
+  show "sides_of_rhs (dg_edge_tree step u) \<tau>1 k \<le> sides_of_rhs (dg_edge_tree step u) \<tau>2 k"
+    by (cases k) (simp_all add: sides_dg_edge_tree_Inl sides_dg_edge_tree_Inr
+                                 less_eq_dg_state_def step_mono_fst[OF dl dgv])
+qed
+
+lemma dg_combine_tree_mono:
+  assumes comb_mono_snd:
+    "\<And>dc1 dc2 de1 de2 g1 g2. dc1 \<le> dc2 \<Longrightarrow> de1 \<le> de2 \<Longrightarrow> g1 \<le> g2
+       \<Longrightarrow> snd (comb dst dc1 de1 g1) \<le> snd (comb dst dc2 de2 g2)"
+    and le: "\<tau>1 \<le> \<tau>2"
+  shows "traverse_rhs (dg_combine_tree comb dst cc ex) \<tau>1
+           \<le> traverse_rhs (dg_combine_tree comb dst cc ex) \<tau>2"
+proof -
+  have dc: "locals (\<tau>1 (Inl cc)) \<le> locals (\<tau>2 (Inl cc))"
+    using le[THEN le_funD, of "Inl cc"] by (simp add: less_eq_dg_state_def)
+  have de: "locals (\<tau>1 (Inl ex)) \<le> locals (\<tau>2 (Inl ex))"
+    using le[THEN le_funD, of "Inl ex"] by (simp add: less_eq_dg_state_def)
+  have dgv: "globs (\<tau>1 (Inr ())) \<le> globs (\<tau>2 (Inr ()))"
+    using le[THEN le_funD, of "Inr ()"] by (simp add: less_eq_dg_state_def)
+  show ?thesis
+    unfolding traverse_dg_combine_tree less_eq_dg_state_def
+    using comb_mono_snd[OF dc de dgv] by simp
+qed
+
+lemma dg_combine_tree_sides_mono:
+  assumes comb_mono_fst:
+    "\<And>dc1 dc2 de1 de2 g1 g2. dc1 \<le> dc2 \<Longrightarrow> de1 \<le> de2 \<Longrightarrow> g1 \<le> g2
+       \<Longrightarrow> fst (comb dst dc1 de1 g1) \<le> fst (comb dst dc2 de2 g2)"
+    and le: "\<tau>1 \<le> \<tau>2"
+  shows "sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau>1
+           \<le> sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau>2"
+proof (rule le_funI)
+  fix k
+  have dc: "locals (\<tau>1 (Inl cc)) \<le> locals (\<tau>2 (Inl cc))"
+    using le[THEN le_funD, of "Inl cc"] by (simp add: less_eq_dg_state_def)
+  have de: "locals (\<tau>1 (Inl ex)) \<le> locals (\<tau>2 (Inl ex))"
+    using le[THEN le_funD, of "Inl ex"] by (simp add: less_eq_dg_state_def)
+  have dgv: "globs (\<tau>1 (Inr ())) \<le> globs (\<tau>2 (Inr ()))"
+    using le[THEN le_funD, of "Inr ()"] by (simp add: less_eq_dg_state_def)
+  show "sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau>1 k
+          \<le> sides_of_rhs (dg_combine_tree comb dst cc ex) \<tau>2 k"
+    by (cases k) (simp_all add: sides_dg_combine_tree_Inl sides_dg_combine_tree_Inr
+                                 less_eq_dg_state_def comb_mono_fst[OF dc de dgv])
+qed
+
 subsection \<open>The analysis interface\<close>
 
 text \<open>An analysis supplies one answer-and-side-effect transfer per edge action
@@ -343,6 +437,86 @@ lemma dg_spec_step_unit:
   by (cases a)
      (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
+lemma dgs_enter_unit_dg_spec:
+  "dgs_enter (unit_dg_spec tf) fs as = unit_step (tf_enter tf fs as)"
+  unfolding unit_dg_spec_def by simp
+
+subsection \<open>Monotonicity of the unit analysis, given a monotone domain transfer\<close>
+
+text \<open>
+  A jointly monotone \<open>step\<close> lifts through \<^const>\<open>unit_step\<close> --- the join
+  with the incoming global slot, then the two restrictions, are each
+  monotone on their own. An analysis therefore only has to prove its own
+  \<^const>\<open>apply_tf\<close>/\<^const>\<open>tf_enter\<close> monotone; every \<^const>\<open>unit_dg_spec\<close>
+  built from it inherits monotone \<^const>\<open>dg_spec_step\<close>/\<^const>\<open>dgs_enter\<close>,
+  and \<^const>\<open>dgs_combine\<close> is monotone unconditionally via
+  \<open>combine_collect_abs_mono\<close>, independent of the transfer.
+\<close>
+
+lemma unit_step_fst_mono:
+  assumes f_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> f s1 \<le> f s2"
+    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
+  shows "fst (unit_step f d1 g1) \<le> fst (unit_step f d2 g2)"
+  unfolding unit_step_def Let_def
+  by (simp add: restrict_global_mono[OF f_mono[OF sup_mono[OF d_le g_le]]])
+
+lemma unit_step_snd_mono:
+  assumes f_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> f s1 \<le> f s2"
+    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
+  shows "snd (unit_step f d1 g1) \<le> snd (unit_step f d2 g2)"
+  unfolding unit_step_def Let_def
+  by (simp add: restrict_local_mono[OF f_mono[OF sup_mono[OF d_le g_le]]])
+
+lemma dg_spec_step_unit_dg_spec_fst_mono:
+  assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
+  shows "fst (dg_spec_step (unit_dg_spec tf) a d1 g1)
+           \<le> fst (dg_spec_step (unit_dg_spec tf) a d2 g2)"
+  unfolding dg_spec_step_unit
+  by (rule unit_step_fst_mono[OF tf_mono d_le g_le])
+
+lemma dg_spec_step_unit_dg_spec_snd_mono:
+  assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
+    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
+  shows "snd (dg_spec_step (unit_dg_spec tf) a d1 g1)
+           \<le> snd (dg_spec_step (unit_dg_spec tf) a d2 g2)"
+  unfolding dg_spec_step_unit
+  by (rule unit_step_snd_mono[OF tf_mono d_le g_le])
+
+lemma dgs_enter_unit_dg_spec_fst_mono:
+  assumes tf_enter_mono:
+    "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> tf_enter tf fs as s1 \<le> tf_enter tf fs as s2"
+    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
+  shows "fst (dgs_enter (unit_dg_spec tf) fs as d1 g1)
+           \<le> fst (dgs_enter (unit_dg_spec tf) fs as d2 g2)"
+  unfolding dgs_enter_unit_dg_spec
+  by (rule unit_step_fst_mono[OF tf_enter_mono d_le g_le])
+
+lemma dgs_enter_unit_dg_spec_snd_mono:
+  assumes tf_enter_mono:
+    "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> tf_enter tf fs as s1 \<le> tf_enter tf fs as s2"
+    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
+  shows "snd (dgs_enter (unit_dg_spec tf) fs as d1 g1)
+           \<le> snd (dgs_enter (unit_dg_spec tf) fs as d2 g2)"
+  unfolding dgs_enter_unit_dg_spec
+  by (rule unit_step_snd_mono[OF tf_enter_mono d_le g_le])
+
+lemma dgs_combine_unit_dg_spec_fst_mono:
+  assumes dc_le: "dc1 \<le> dc2" and de_le: "de1 \<le> de2" and g_le: "g1 \<le> g2"
+  shows "fst (dgs_combine (unit_dg_spec tf) dst dc1 de1 g1)
+           \<le> fst (dgs_combine (unit_dg_spec tf) dst dc2 de2 g2)"
+  unfolding dgs_combine_unit_dg_spec Let_def
+  by (simp add: restrict_global_mono
+                combine_collect_abs_mono[OF sup_mono[OF dc_le g_le] sup_mono[OF de_le g_le]])
+
+lemma dgs_combine_unit_dg_spec_snd_mono:
+  assumes dc_le: "dc1 \<le> dc2" and de_le: "de1 \<le> de2" and g_le: "g1 \<le> g2"
+  shows "snd (dgs_combine (unit_dg_spec tf) dst dc1 de1 g1)
+           \<le> snd (dgs_combine (unit_dg_spec tf) dst dc2 de2 g2)"
+  unfolding dgs_combine_unit_dg_spec Let_def
+  by (simp add: restrict_local_mono
+                combine_collect_abs_mono[OF sup_mono[OF dc_le g_le] sup_mono[OF de_le g_le]])
+
 
 
 fun side_rhs_fold_dg ::
@@ -367,6 +541,187 @@ lemma traverse_side_rhs_fold_dg:
   "traverse_rhs (side_rhs_fold_dg acc ts) \<tau> =
    DG (side_acc_dg acc \<tau> ts) bot"
   by (induction ts arbitrary: acc) (simp_all add: traverse_seqcomp)
+
+text \<open>
+  \<open>side_rhs_fold_dg\<close>'s accumulator only ever reaches the terminal \<open>Answer\<close>,
+  so both its answer and its dependency set are monotone, respectively
+  independent, in the accumulator alone --- the recursion skeleton over \<open>ts\<close>
+  never branches on \<open>acc\<close>.  These two lemmas isolate that fact so the
+  environment-monotonicity and static-dependency lemmas below do not have to
+  re-derive it.
+\<close>
+
+lemma side_rhs_fold_dg_acc_mono:
+  "acc1 \<le> acc2
+   \<Longrightarrow> traverse_rhs (side_rhs_fold_dg acc1 ts) sigma \<le> traverse_rhs (side_rhs_fold_dg acc2 ts) sigma"
+proof (induction ts arbitrary: acc1 acc2)
+  case Nil
+  then show ?case by (simp add: less_eq_dg_state_def)
+next
+  case (Cons t ts)
+  from Cons.prems have "acc1 \<squnion> locals (traverse_rhs t sigma) \<le> acc2 \<squnion> locals (traverse_rhs t sigma)"
+    by (rule sup_mono[OF _ order_refl])
+  then show ?case
+    using Cons.IH by (simp add: traverse_seqcomp)
+qed
+
+lemma dep_aux_side_rhs_fold_dg_acc_indep:
+  "dep_aux sigma (side_rhs_fold_dg acc1 ts) = dep_aux sigma (side_rhs_fold_dg acc2 ts)"
+proof (induction ts arbitrary: acc1 acc2)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t ts)
+  show ?case
+    using Cons.IH[of "acc1 \<squnion> locals (traverse_rhs t sigma)" "acc2 \<squnion> locals (traverse_rhs t sigma)"]
+    by (simp add: dep_aux_seqcomp)
+qed
+
+lemma side_rhs_fold_dg_val_mono:
+  "v1 \<le> v2
+   \<Longrightarrow> traverse_rhs (side_rhs_fold_dg (acc \<squnion> locals v1) ts) sigma
+         \<le> traverse_rhs (side_rhs_fold_dg (acc \<squnion> locals v2) ts) sigma"
+proof -
+  assume "v1 \<le> v2"
+  then have "locals v1 \<le> locals v2" unfolding less_eq_dg_state_def by simp
+  then have "acc \<squnion> locals v1 \<le> acc \<squnion> locals v2"
+    by (rule sup_mono[OF order_refl])
+  then show ?thesis by (rule side_rhs_fold_dg_acc_mono)
+qed
+
+text \<open>
+  Environment-monotonicity of the fold, given every folded tree is itself
+  environment-monotone.  \<open>k_mono_val\<close> --- the continuation's monotonicity in
+  the value it receives --- reduces to @{thm side_rhs_fold_dg_acc_mono}, and
+  \<open>k_mono_env\<close> --- for a fixed value --- is the induction hypothesis on the
+  tail, so the only per-tree work @{thm seqcomp_mono} leaves is \<open>t_mono\<close>
+  itself, supplied by the assumption.
+\<close>
+
+lemma side_rhs_fold_dg_mono:
+  assumes tree_mono: "\<forall>t \<in> set ts. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
+  shows "\<And>acc s1 s2. s1 \<le> s2 \<Longrightarrow>
+           traverse_rhs (side_rhs_fold_dg acc ts) s1 \<le> traverse_rhs (side_rhs_fold_dg acc ts) s2"
+using tree_mono proof (induction ts)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t ts)
+  have tail_mono: "\<forall>t' \<in> set ts. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t' s1 \<le> traverse_rhs t' s2"
+    using Cons.prems by simp
+  note IH = Cons.IH[OF _ tail_mono]
+  fix acc s1 s2
+  show "s1 \<le> s2 \<Longrightarrow> traverse_rhs (side_rhs_fold_dg acc (t # ts)) s1
+          \<le> traverse_rhs (side_rhs_fold_dg acc (t # ts)) s2"
+  proof -
+    assume le: "s1 \<le> s2"
+    have t_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
+      using Cons.prems by simp
+    have k_mono_env: "\<And>v s1 s2. s1 \<le> s2 \<Longrightarrow>
+        traverse_rhs (side_rhs_fold_dg (acc \<squnion> locals v) ts) s1
+          \<le> traverse_rhs (side_rhs_fold_dg (acc \<squnion> locals v) ts) s2"
+      using IH by blast
+    have k_mono_val: "\<And>s v1 v2. v1 \<le> v2 \<Longrightarrow>
+        traverse_rhs (side_rhs_fold_dg (acc \<squnion> locals v1) ts) s
+          \<le> traverse_rhs (side_rhs_fold_dg (acc \<squnion> locals v2) ts) s"
+      by (rule side_rhs_fold_dg_val_mono)
+    show "traverse_rhs (side_rhs_fold_dg acc (t # ts)) s1
+            \<le> traverse_rhs (side_rhs_fold_dg acc (t # ts)) s2"
+      using seqcomp_mono[OF t_mono k_mono_env k_mono_val le] by simp
+  qed
+qed
+
+text \<open>
+  Static dependencies of the fold, given every folded tree has static
+  dependencies. The chain at each cons cell relates the two accumulators
+  first by @{thm dep_aux_side_rhs_fold_dg_acc_indep} (their dependency sets
+  agree at a fixed environment regardless of the accumulator), then by the
+  induction hypothesis (the tail's dependency set is itself environment
+  independent).
+\<close>
+
+lemma side_rhs_fold_dg_static_deps:
+  assumes tree_static: "\<forall>t \<in> set ts. static_deps t"
+  shows "static_deps (side_rhs_fold_dg acc ts)"
+  unfolding static_deps_def
+proof (intro allI)
+  fix sigma1 sigma2
+  show "dep_aux sigma1 (side_rhs_fold_dg acc ts) = dep_aux sigma2 (side_rhs_fold_dg acc ts)"
+    using tree_static
+  proof (induction ts arbitrary: acc)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons t ts)
+    have t_static: "dep_aux sigma1 t = dep_aux sigma2 t"
+      using Cons.prems unfolding static_deps_def by simp
+    have tail_static: "\<forall>t' \<in> set ts. static_deps t'"
+      using Cons.prems by simp
+    have "dep_aux sigma1 (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t sigma1)) ts)
+            = dep_aux sigma1 (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t sigma2)) ts)"
+      by (rule dep_aux_side_rhs_fold_dg_acc_indep)
+    also have "\<dots> = dep_aux sigma2 (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t sigma2)) ts)"
+      using Cons.IH[OF tail_static] by simp
+    finally show ?case
+      by (simp add: dep_aux_seqcomp t_static)
+  qed
+qed
+
+text \<open>
+  The fold's Side contributions are carried only by the per-tree Side nodes;
+  the accumulator flows into the final \<open>Answer\<close> (whose own sides are \<open>bot\<close>),
+  so the side map is acc-independent --- the same fact
+  @{thm dep_aux_side_rhs_fold_dg_acc_indep} established for dependencies,
+  mirrored here for sides. This is what lets @{thm side_rhs_fold_dg_mono}'s
+  proof strategy repeat for @{const sides_of_rhs} without also needing
+  @{const traverse_rhs}-monotonicity as a hypothesis.
+\<close>
+
+lemma sides_of_rhs_side_rhs_fold_dg_acc_indep:
+  "sides_of_rhs (side_rhs_fold_dg acc1 ts) sigma = sides_of_rhs (side_rhs_fold_dg acc2 ts) sigma"
+proof (induction ts arbitrary: acc1 acc2)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t ts)
+  show ?case
+    using Cons.IH[of "acc1 \<squnion> locals (traverse_rhs t sigma)" "acc2 \<squnion> locals (traverse_rhs t sigma)"]
+    by (simp add: sides_of_rhs_seqcomp)
+qed
+
+lemma side_rhs_fold_dg_sides_mono:
+  assumes tree_sides_mono: "\<forall>t \<in> set ts. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
+  shows "\<And>acc s1 s2. s1 \<le> s2 \<Longrightarrow>
+           sides_of_rhs (side_rhs_fold_dg acc ts) s1 \<le> sides_of_rhs (side_rhs_fold_dg acc ts) s2"
+using tree_sides_mono proof (induction ts)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons t ts)
+  have tail_sides_mono: "\<forall>t' \<in> set ts. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t' s1 \<le> sides_of_rhs t' s2"
+    using Cons.prems by simp
+  note IH = Cons.IH[OF _ tail_sides_mono]
+  fix acc s1 s2
+  show "s1 \<le> s2 \<Longrightarrow> sides_of_rhs (side_rhs_fold_dg acc (t # ts)) s1
+          \<le> sides_of_rhs (side_rhs_fold_dg acc (t # ts)) s2"
+  proof -
+    assume le: "s1 \<le> s2"
+    have t_sides_mono: "sides_of_rhs t s1 \<le> sides_of_rhs t s2"
+      using Cons.prems le by simp
+    have tail_mono: "sides_of_rhs (side_rhs_fold_dg acc ts) s1
+                        \<le> sides_of_rhs (side_rhs_fold_dg acc ts) s2"
+      using IH le by blast
+    have i1: "sides_of_rhs (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t s1)) ts) s1
+                = sides_of_rhs (side_rhs_fold_dg acc ts) s1"
+      by (rule sides_of_rhs_side_rhs_fold_dg_acc_indep)
+    have i2: "sides_of_rhs (side_rhs_fold_dg (acc \<squnion> locals (traverse_rhs t s2)) ts) s2
+                = sides_of_rhs (side_rhs_fold_dg acc ts) s2"
+      by (rule sides_of_rhs_side_rhs_fold_dg_acc_indep)
+    show "sides_of_rhs (side_rhs_fold_dg acc (t # ts)) s1
+            \<le> sides_of_rhs (side_rhs_fold_dg acc (t # ts)) s2"
+      using sup_mono[OF t_sides_mono tail_mono] by (simp add: sides_of_rhs_seqcomp i1 i2)
+  qed
+qed
 
 
 
@@ -429,7 +784,276 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg:
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
         traverse_side_rhs_fold_dg)
 
+subsection \<open>Threefold monotonicity for an arbitrary generator instance\<close>
 
+text \<open>
+  Mirrors @{thm td_cfg_side_solver_eff_gen} for the flat generator: the three
+  @{const TD_side_mono} preconditions reduce to a per-tree contract on the
+  intra, combine, and extra hooks, discharged once here and reusable at every
+  routing policy --- a routed context policy is then a second interpretation
+  of this reduction, not a second monotonicity proof. The outer @{const Side}
+  wrapper at @{term "cfg_entry g"} is invisible to @{const traverse_rhs} and
+  @{const dep_aux} (a \<^const>\<open>Side\<close> node only ever repackages, never queries);
+  it only has to be threaded through the @{const sides_of_rhs} case via
+  @{thm fun_upd_sup_mono}, mirroring @{thm side_cfg_T_eff_mono_sides_gen}.
+\<close>
+
+lemma side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen:
+  fixes g :: cfg
+    and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
+  assumes intra_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
+        \<le> traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+  assumes comb_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (cmb route c ca cc ex) s1 \<le> traverse_rhs (cmb route c ca cc ex) s2"
+  assumes extra_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs t s1 \<le> traverse_rhs t s2"
+  shows "is_mono_eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+proof -
+  have key: "\<And>v c s1 s2. s1 \<le> s2 \<Longrightarrow>
+      eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s1
+        \<le> eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s2"
+  proof -
+    fix v c s1 s2
+    show "s1 \<le> s2 \<Longrightarrow>
+        eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s1
+          \<le> eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s2"
+    proof -
+      assume le: "s1 \<le> s2"
+      have tree_mono: "\<forall>t \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
+                                  (pred_sel g v)
+                            @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
+                            @ extra route c v).
+                         \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
+        using intra_mono comb_mono extra_mono by auto
+      have step: "traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
+                     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
+                          (pred_sel g v)
+                       @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
+                       @ extra route c v)) s1
+                  \<le> traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
+                     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
+                          (pred_sel g v)
+                       @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
+                       @ extra route c v)) s2"
+        by (rule side_rhs_fold_dg_mono[OF tree_mono le])
+      show "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s1
+            \<le> eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s2"
+        unfolding eq_side_cfg_T_eff_keyed_seed_dg using step
+        by (simp add: traverse_side_rhs_fold_dg)
+    qed
+  qed
+  show ?thesis
+    unfolding is_mono_eq_def using key by fastforce
+qed
+
+lemma side_cfg_T_eff_keyed_seed_dg_mono_sides_gen:
+  fixes g :: cfg
+    and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
+  assumes intra_sides_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
+        \<le> sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+  assumes comb_sides_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
+  assumes extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs t s1 \<le> sides_of_rhs t s2"
+  shows "mono_sides (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+proof -
+  have key: "\<And>v c s1 s2. s1 \<le> s2 \<Longrightarrow>
+      sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s1
+        \<le> sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s2"
+  proof -
+    fix v c s1 s2
+    show "s1 \<le> s2 \<Longrightarrow>
+        sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s1
+          \<le> sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s2"
+    proof -
+      assume le: "s1 \<le> s2"
+      have tree_sides_mono: "\<And>w. \<forall>t \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                                  (pred_sel g w)
+                            @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                            @ extra route c w).
+                         \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
+        using intra_sides_mono comb_sides_mono extra_sides_mono by auto
+      have fold_le: "\<And>acc w. sides_of_rhs (side_rhs_fold_dg acc
+                        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                            (pred_sel g w)
+                          @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                          @ extra route c w)) s1
+                    \<le> sides_of_rhs (side_rhs_fold_dg acc
+                        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                            (pred_sel g w)
+                          @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                          @ extra route c w)) s2"
+        by (rule side_rhs_fold_dg_sides_mono[OF tree_sides_mono le])
+      show "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s1
+            \<le> sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s2"
+        unfolding side_cfg_T_eff_keyed_seed_dg_def
+        by (simp add: Let_def fold_le fun_upd_sup_mono[OF fold_le] split: if_splits)
+    qed
+  qed
+  show ?thesis
+    unfolding mono_sides_def using key by fastforce
+qed
+
+lemma side_cfg_T_eff_keyed_seed_dg_mono_deps_gen:
+  fixes g :: cfg
+    and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
+  assumes intra_static: "\<forall>v c u a. (u, a) \<in> set (pred_sel g v) \<longrightarrow>
+      static_deps (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))"
+  assumes comb_static: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
+      static_deps (cmb route c ca cc ex)"
+  assumes extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
+  shows "mono_deps (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+proof -
+  have key: "\<And>v c s1 s2.
+      dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
+        \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
+  proof -
+    fix v c s1 s2
+    have tree_static: "\<And>w. \<forall>t \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                                (pred_sel g w)
+                          @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                          @ extra route c w).
+                       static_deps t"
+      using intra_static comb_static extra_static by auto
+    have fold_static: "\<And>acc w. static_deps (side_rhs_fold_dg acc
+                      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                          (pred_sel g w)
+                        @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                        @ extra route c w))"      by (rule side_rhs_fold_dg_static_deps[OF tree_static])
+    have deq: "\<And>acc w. dep_aux s1 (side_rhs_fold_dg acc
+                  (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                      (pred_sel g w)
+                    @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                    @ extra route c w))
+                = dep_aux s2 (side_rhs_fold_dg acc
+                  (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
+                      (pred_sel g w)
+                    @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                    @ extra route c w))"
+      using fold_static[unfolded static_deps_def] by blast
+    show "dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
+            \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
+      unfolding dep_def side_cfg_T_eff_keyed_seed_dg_def
+      by (simp add: Let_def deq split: if_splits)
+    qed
+  show ?thesis
+    unfolding mono_deps_def using key by fastforce
+qed
+
+lemma side_cfg_T_eff_keyed_seed_dg_threefold_mono:
+  assumes "is_mono_eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+      and "mono_sides (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+      and "mono_deps (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+  shows "threefold_mono (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
+  unfolding threefold_mono_def using assms by blast
+
+subsection \<open>TD_side_mono interpretation for an arbitrary generator instance\<close>
+
+text \<open>
+  Mirrors @{const td_cfg_side_solver_eff} (\<^theory>\<open>Voblint_Analysis.TD_Side_Eff_Interface\<close>)
+  for the flat generator: bundling the nine primitive obligations from the three
+  \<open>..._gen\<close> lemmas above as locale assumptions gives a mechanical
+  @{locale TD_side_mono} interpretation, hence a least partial post-solution,
+  for any @{const side_cfg_T_eff_keyed_seed_dg} instance --- no per-instance
+  monotonicity proof is needed, only the nine primitive obligations on the
+  concrete \<open>pred_sel\<close>/\<open>cmb\<close>/\<open>extra\<close> hooks.
+\<close>
+
+locale td_cfg_side_solver_dg =
+  fixes pred_sel :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list"
+    and gkey :: "'c \<Rightarrow> 'k"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'd::bounded_semilattice_sup_bot \<Rightarrow> call_action \<Rightarrow> 'c"
+    and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+                  \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h::bounded_semilattice_sup_bot) dg_state) strategy_tree"
+    and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+                  \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree list"
+    and g :: cfg
+    and S :: "('d, 'h) dg_spec"
+    and bot0 s0d :: 'd and s0g :: 'h
+  assumes intra_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
+        \<le> traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+    and comb_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (cmb route c ca cc ex) s1 \<le> traverse_rhs (cmb route c ca cc ex) s2"
+    and extra_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs t s1 \<le> traverse_rhs t s2"
+    and intra_sides_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
+        \<le> sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+    and comb_sides_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
+    and extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs t s1 \<le> sides_of_rhs t s2"
+    and intra_static: "\<forall>v c u a. (u, a) \<in> set (pred_sel g v) \<longrightarrow>
+      static_deps (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))"
+    and comb_static: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
+      static_deps (cmb route c ca cc ex)"
+    and extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
+begin
+
+definition cfg_pkg_dg :: "(pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
+  where "cfg_pkg_dg = side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g"
+
+lemma cfg_pkg_dg_eq[simp]:
+  "cfg_pkg_dg = side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g"
+  unfolding cfg_pkg_dg_def by rule
+
+lemma cfg_pkg_dg_threefold_mono: "threefold_mono cfg_pkg_dg"
+proof -
+  have eq: "is_mono_eq cfg_pkg_dg"
+    unfolding cfg_pkg_dg_def
+    apply (rule side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen)
+    apply (rule intra_mono)
+    apply (rule comb_mono)
+    apply (rule extra_mono)
+    done
+  have sides: "mono_sides cfg_pkg_dg"
+    unfolding cfg_pkg_dg_def
+    apply (rule side_cfg_T_eff_keyed_seed_dg_mono_sides_gen)
+    apply (rule intra_sides_mono)
+    apply (rule comb_sides_mono)
+    apply (rule extra_sides_mono)
+    done
+  have deps: "mono_deps cfg_pkg_dg"
+    unfolding cfg_pkg_dg_def
+    apply (rule side_cfg_T_eff_keyed_seed_dg_mono_deps_gen)
+    apply (rule intra_static)
+    apply (rule comb_static)
+    apply (rule extra_static)
+    done
+  show ?thesis
+    unfolding threefold_mono_def using eq sides deps by blast
+qed
+
+interpretation side: TD_side_mono cfg_pkg_dg
+proof (unfold_locales)
+  show "is_mono_eq cfg_pkg_dg" using cfg_pkg_dg_threefold_mono unfolding threefold_mono_def by blast
+  show "mono_sides cfg_pkg_dg" using cfg_pkg_dg_threefold_mono unfolding threefold_mono_def by blast
+  show "mono_deps cfg_pkg_dg" using cfg_pkg_dg_threefold_mono unfolding threefold_mono_def by blast
+qed
+
+definition stabl_at :: "pp \<times> 'c \<Rightarrow> (pp \<times> 'c) set"
+  where "stabl_at x = fst (side.solve x)"
+
+definition nu_at :: "pp \<times> 'c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> ('d, 'h) dg_state"
+  where "nu_at x = snd (side.solve x)"
+
+lemma solve_prod: "side.solve x = (stabl_at x, nu_at x)"
+  unfolding stabl_at_def nu_at_def by (rule prod_eqI) simp_all
+
+lemma part_post_at:
+  assumes dom: "side.solve_dom x"
+  shows "part_post_solution cfg_pkg_dg x (nu_at x) (stabl_at x)"
+  using side.least_partial_post_solution[OF dom solve_prod] by simp
+
+lemma least_part_post_at:
+  assumes dom: "side.solve_dom x"
+  shows "least_part_post_solution cfg_pkg_dg x (nu_at x) (stabl_at x)"
+  using side.least_partial_post_solution[OF dom solve_prod] by blast
+
+end
 
 text \<open>
   The homogeneous interfaces \\\<^typ>\<open>('g, 'd) edge_tf_tree\<close>,
