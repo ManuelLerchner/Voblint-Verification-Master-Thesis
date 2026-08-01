@@ -228,6 +228,45 @@ qed
 
 
 end
+context sound_transfer_for
+begin
+
+lemma edge_collect_apply_tf_sound_for:
+  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by simp
+next
+  case (EA_Assign x ax)
+  show ?thesis
+    unfolding EA_Assign apply_tf.simps edge_collect_simps
+    using tf_sound_assign_for by blast
+next
+  case (EA_Assume b)
+  show ?thesis
+    unfolding EA_Assume apply_tf.simps edge_collect_simps
+    using tf_sound_assume_for by blast
+next
+  case (EA_AssumeNot b)
+  show ?thesis
+    unfolding EA_AssumeNot apply_tf.simps edge_collect_simps
+    using tf_sound_assume_not_for by blast
+next
+  case (EA_Ret e p)
+  show ?thesis
+  proof (cases e)
+    case None
+    then show ?thesis unfolding EA_Ret by (auto simp: edge_collect_def)
+  next
+    case (Some a)
+    show ?thesis
+      unfolding EA_Ret Some apply_tf.simps edge_collect_simps option.simps
+      using tf_sound_assign_for by blast
+  qed
+qed
+
+end
+
 
 end
 

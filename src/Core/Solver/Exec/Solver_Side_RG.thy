@@ -5,32 +5,53 @@ begin
 section \<open>Side-effecting solver keeps \<open>Inr\<close> slots globally restricted\<close>
 
 text \<open>If every reachable side contribution is fixed by
-  @{const restrict_global_st}, the solver keeps every global slot in that image: slots
+  @{const restrict_global_resolved_q}, the solver keeps every global slot in that image: slots
   start at bottom, joins preserve the image, and only such contributions reach them.
   This yields \<open>inr_slot_locals_bot\<close> without a least-solution argument. The proof is
   domain-generic but intentionally phrased at the executable bridge's state projection.\<close>
 
-definition rg_val :: "('a::bot) st \<Rightarrow> bool" where
-  "rg_val d \<longleftrightarrow> restrict_global_st d = d"
+definition rg_val :: "('a::bot) resolved_st_q \<Rightarrow> bool" where
+  "rg_val d \<longleftrightarrow> (\<forall>x. lookup_resolved_st_q d (Local_Location x) = bot)"
 
-lemma rg_val_bot [simp]: "rg_val (bot :: ('a::bounded_semilattice_sup_bot) st)"
-  unfolding rg_val_def by (rule restrict_global_st_eq_when_lookup_local_bot) simp
+lemma rg_val_bot [simp]:
+  "rg_val (bot :: ('a::bounded_semilattice_sup_bot) resolved_st_q)"
+  by (simp add: rg_val_def)
 
 lemma rg_val_sup:
   assumes "rg_val a" and "rg_val b"
   shows "rg_val (a \<squnion> b)"
-  using assms unfolding rg_val_def
-  by (metis restrict_global_st_sup_restrict_global_st)
+  using assms by (simp add: rg_val_def)
 
-abbreviation rg_state :: "(pp, unit, ('a::bot) st) state \<Rightarrow> bool" where
+lemma rg_val_restrict_global [simp]:
+  "rg_val (restrict_global_resolved_q d)"
+  by (simp add: rg_val_def)
+
+
+lemma rg_val_of_restrict_global:
+  assumes "restrict_global_resolved_q d = d"
+  shows "rg_val d"
+proof -
+  have eq: "d = restrict_global_resolved_q d"
+    using assms by simp
+  show ?thesis
+    unfolding rg_val_def
+    by (subst eq) simp
+qed
+
+lemma rg_val_eq_restrict_global:
+  assumes "rg_val d"
+  shows "d = restrict_global_resolved_q d"
+  using assms
+  unfolding rg_val_def resolved_st_q_eq_iff fun_eq_iff
+  by (auto split: location.splits)
+
+abbreviation rg_state :: "(pp, unit, ('a::bot) resolved_st_q) state \<Rightarrow> bool" where
   "rg_state s \<equiv> (\<forall>g. rg_val (state.\<sigma> s (Inr g)))"
 
-abbreviation rg_sides :: "(unit \<Rightarrow> ('a::bot) st) \<Rightarrow> bool" where
+abbreviation rg_sides :: "(unit \<Rightarrow> ('a::bot) resolved_st_q) \<Rightarrow> bool" where
   "rg_sides sa \<equiv> (\<forall>g. rg_val (sa g))"
-
 lemma TD_side_always_join_rg_ind:
-  fixes T :: "(pp, unit, ('a::bounded_warrowing) st) eqsT"
-  assumes sr: "\<And>z. side_rg (T z)"
+  fixes T :: "(pp, unit, ('a::bounded_warrowing) resolved_st_q) eqsT"  assumes sr: "\<And>z. side_rg (T z)"
   shows
   "TD_side_always_join_Interp.query_dom T x y state ug_state
     \<Longrightarrow> (xd, state', ug_state') = TD_side_always_join_Interp.query T x y state ug_state
@@ -90,7 +111,7 @@ next
   qed
 next
   case (Repeat x state ug_state)
-  have sb: "rg_sides (\<lambda>_. (\<bottom> :: 'a st))" by simp
+  have sb: "rg_sides (\<lambda>_. (\<bottom> :: 'a resolved_st_q))" by simp
   show ?case
     using Repeat.IH(1) Repeat.prems(1)
   proof (cases rule: TD_side_always_join_Interp.repeat_unstable_stable_cases)
@@ -128,9 +149,9 @@ next
       by (rule Eval.IH(4)[OF QueryG(1) QueryG(2) QueryG(4) rgI Eval.prems(3) sgt])
   next
     case (Side_Subsumed y yd t1 sides_acc' d' ug_state1)
-    have sd: "restrict_global_st yd = yd \<and> side_rg t1"
+    have sd: "restrict_global_resolved_q yd = yd \<and> side_rg t1"
       using Eval.prems(4) by (simp add: Side_Subsumed(1))
-    have rgy: "rg_val yd" using sd by (simp add: rg_val_def)
+    have rgy: "rg_val yd" by (rule rg_val_of_restrict_global[OF sd[THEN conjunct1]])
     have rgd: "rg_val d'"
       using Side_Subsumed(2) rg_val_sup[OF Eval.prems(3)[THEN spec] rgy] by simp
     have rgsa': "rg_sides sides_acc'"
@@ -141,9 +162,9 @@ next
                               Side_Subsumed(4) refl Side_Subsumed(6) Eval.prems(2) rgsa' sg1])
   next
     case (Side_Effect y yd t1 d' sides_acc' d'' ug_state1 infl1 stabl1)
-    have sd: "restrict_global_st yd = yd \<and> side_rg t1"
+    have sd: "restrict_global_resolved_q yd = yd \<and> side_rg t1"
       using Eval.prems(4) by (simp add: Side_Effect(1))
-    have rgy: "rg_val yd" using sd by (simp add: rg_val_def)
+    have rgy: "rg_val yd" by (rule rg_val_of_restrict_global[OF sd[THEN conjunct1]])
     have rgd: "rg_val d'"
       using Side_Effect(2) rg_val_sup[OF Eval.prems(3)[THEN spec] rgy] by simp
     have rgsa': "rg_sides sides_acc'"
@@ -175,13 +196,13 @@ text \<open>
 \<close>
 
 lemma TD_side_always_join_solve_Inr_rg:
-  fixes T :: "(pp, unit, ('a::bounded_warrowing) st) eqsT"
-  assumes dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE('a st) T v"
+  fixes T :: "(pp, unit, ('a::bounded_warrowing) resolved_st_q) eqsT"
+  assumes dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE('a resolved_st_q) T v"
   assumes sr: "\<And>z. side_rg (T z)"
   assumes sol: "TD_side_always_join_Interp_solve T v = (vars, sigma)"
-  shows "sigma (Inr g) = restrict_global_st (sigma (Inr g))"
+  shows "sigma (Inr g) = restrict_global_resolved_q (sigma (Inr g))"
 proof -
-  define s0 :: "(pp, unit, 'a st) state" where eq0:
+  define s0 :: "(pp, unit, 'a resolved_st_q) state" where eq0:
     "s0 = TD_side_bounded_narrowing_Interp.init_state
             \<lparr>c := insert v (c TD_side_bounded_narrowing_Interp.init_state)\<rparr>"
   obtain d state ug where iter:
@@ -197,9 +218,14 @@ proof -
     by (simp add: TD_side_warrowing_per_origin_Interp.init_state_def eq0)
   have rg0: "rg_state s0"
     unfolding eq0 by (simp add: TD_side_always_join_Interp.init_state_def)
-  have "rg_state state"
+  have rgs: "rg_state state"
     by (rule TD_side_always_join_rg_ind(2)[OF sr dm iter[symmetric] rg0])
-  then show ?thesis using sig by (simp add: rg_val_def)
+  have rg_sigma: "rg_val (sigma (Inr g))"
+    using rgs sig by simp
+  show ?thesis
+    by (rule rg_val_eq_restrict_global[OF rg_sigma])
 qed
 
 end
+
+

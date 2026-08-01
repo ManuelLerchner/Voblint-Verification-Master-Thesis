@@ -838,6 +838,92 @@ proof unfold_locales
   show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
     unfolding combine using combine_states_sound by blast
 qed
+locale sound_transfer_for =
+  fixes gs :: "vname => bool"
+    and tf :: "'a::sound_domain domain_transfer"
+  assumes tf_sound_assign_for:
+    "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  assumes tf_sound_assume_for:
+    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
+       \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+  assumes tf_sound_assume_not_for:
+    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s
+       \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+  assumes tf_sound_enter_for:
+    "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+  assumes tf_sound_combine_for:
+    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+       combine_states gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+
+context sound_transfer_for
+begin
+
+lemma tf_sound_assign_forD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  using tf_sound_assign_for by blast
+
+lemma tf_sound_assume_forD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+  using tf_sound_assume_for by blast
+
+lemma tf_sound_assume_not_forD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+  using tf_sound_assume_not_for by blast
+
+lemma tf_sound_enter_forD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+       \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+  using tf_sound_enter_for by blast
+
+lemma tf_sound_combine_forD:
+  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+     combine_states gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+  using tf_sound_combine_for by blast
+
+end
+
+lemma sound_transferI_for:
+  fixes gs :: "vname => bool"
+    and tf :: "'a::sound_domain domain_transfer"
+  assumes assign:
+    "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    and assm:
+    "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow>
+       s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    and assm_not:
+    "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow>
+       s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    and enter:
+    "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    and combine:
+    "tf_combine tf = combine_abs gs"
+  shows "sound_transfer_for gs tf"
+proof unfold_locales
+  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+      s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    using assign by blast
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow>
+      s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    using assm by blast
+  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow>
+      s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    using assm_not by blast
+  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    using enter by blast
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+      combine_states gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+    unfolding combine using combine_states_sound by blast
+qed
+
 
 
 subsection \<open>Effectful transfer function record\<close>

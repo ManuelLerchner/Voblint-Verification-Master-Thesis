@@ -30,7 +30,7 @@ seeded keyed generator every context-sensitive/call-string DG analysis uses
 it had no generic monotonicity pipeline; every instance would have had to
 hand-prove `is_mono_eq`/`mono_sides`/`mono_deps` from scratch.
 
-Landed in `src/Analysis/Generic/Solver/Context/DG/DG_Framework.thy`:
+Landed in `src/Core/Solver/Context/DG/DG_Framework.thy`:
 
 - `side_rhs_fold_dg_mono`, `_sides_mono`, `_static_deps` — fold-level
   lemmas, structural induction over the tree list via
@@ -274,7 +274,7 @@ the current vendored `TD_side_mono`.
 
 **Stage 1 — landed, I/Q-clean (batch pending until the final gate, per
 explicit instruction not to batch-build until the end of this effort).**
-`src/Analysis/Generic/Solver/Context/DG/DG_Framework.thy`, new locale
+`src/Core/Solver/Context/DG/DG_Framework.thy`, new locale
 `td_cfg_side_solver_dg` (inserted after
 `side_cfg_T_eff_keyed_seed_dg_threefold_mono`, before the closing
 homogeneous-interfaces text): mirrors `td_cfg_side_solver_eff`

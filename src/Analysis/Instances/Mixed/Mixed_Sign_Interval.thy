@@ -211,6 +211,6 @@ interpretation mixed_si_api .
 
 section \<open>Executable instance\<close>
 
-instance st :: (bounded_warrowing) bounded_warrowing ..
+instance resolved_st_q :: (bounded_warrowing) bounded_warrowing ..
 
 end

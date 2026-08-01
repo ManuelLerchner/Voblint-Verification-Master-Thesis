@@ -18,14 +18,14 @@ datatype gk_2 = Global2 | Seed2 (seed2_pp: pp) (seed2_cs: "cfg_node list")
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
-definition nest_2_eqs :: "(pp \<times> cfg_node list, gk_2, (ivl st, ivl st) dg_state) eqsT" where
+definition nest_2_eqs :: "(pp \<times> cfg_node list, gk_2, (ivl exec_dg_st, ivl exec_dg_st) dg_state) eqsT" where
   "nest_2_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
        (routed_cmb Spoly Global2) (routed_extra nest_cfg Spoly Seed2 Global2)
-       nest_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+       nest_cfg Spoly bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition nest_2_sol ::
-  "(pp \<times> cfg_node list) set \<times> (pp \<times> cfg_node list + gk_2 \<Rightarrow> (ivl st, ivl st) dg_state)" where
+  "(pp \<times> cfg_node list) set \<times> (pp \<times> cfg_node list + gk_2 \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "nest_2_sol = TD_side_warrowing_apinis_Interp_solve nest_2_eqs
                     (cfg_exit nest_cfg, [])"
 
@@ -95,7 +95,7 @@ lemma dg_tree_st_commute_frame_read_2:
   "dg_tree_st_commute env
      (QueryG (Seed2 v ctx) (\<lambda>s. Answer (DG (globs s) bot)))
      (QueryG (Seed2 v ctx) (\<lambda>s. Answer (DG (globs s) bot)))"
-  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
+  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
                 dep_aux_def bot_fun_def)
 
 lemma dg_tree_st_commute_routed_cmb_2:
@@ -103,7 +103,7 @@ lemma dg_tree_st_commute_routed_cmb_2:
                           (routed_cmb Sabs Global2 (cs_route 2) ctx ca cc ex)"
   unfolding routed_cmb_def Let_def
   by (cases ca)
-     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
+     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
                     cs_route_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
@@ -126,7 +126,7 @@ lemma dg_tree_st_commute_routed_enter_pub_2:
         answer_local bot
       }))"
   by (cases a)
-     (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
+     (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
                 cs_route_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
                 dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
@@ -140,7 +140,7 @@ lemma hextra_commute_routed_2:
            split: cfg_node.split)
 
 lemma nest_2_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(gk_2) TYPE((ivl st, ivl st) dg_state)
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(gk_2) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
      nest_2_eqs (cfg_exit nest_cfg, [])"
   using nest_2_terminates
   unfolding TD_side_warrowing_apinis_Interp.term_equivalence
@@ -158,18 +158,18 @@ theorem nest_2_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
         (routed_cmb Sabs Global2) (routed_extra nest_cfg Sabs Seed2 Global2) nest_cfg Sabs
-        (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st)))
+        (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
      (cfg_exit nest_cfg, []) (fun_of_dg_st \<circ> snd nest_2_sol) (fst nest_2_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
           (routed_cmb Spoly Global2) (routed_extra nest_cfg Spoly Seed2 Global2) nest_cfg Spoly
-          bot cinit_ivl_st (restrict_global_st cinit_ivl_st))
+          bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st))
        (cfg_exit nest_cfg, []) (snd nest_2_sol) (fst nest_2_sol)"
     using nest_2_pp_st unfolding nest_2_eqs_def by simp
   have ivl_Hstep_2:
-    "map_prod fun_of_st fun_of_st (dg_spec_step Spoly a d g') =
-       dg_spec_step Sabs a (fun_of_st d) (fun_of_st g')" for a d g'
+    "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step Spoly a d g') =
+       dg_spec_step Sabs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g')" for a d g'
     unfolding Spoly_def by (rule ivl_Hstep)
   show ?thesis
     by (rule part_post_solution_seed_dg_st_to_abs
@@ -190,7 +190,7 @@ abbreviation sigma_2 :: "pp \<times> cfg_node list + gk_2 \<Rightarrow> (ivl abs
 abbreviation gen_2_abs :: "(pp \<times> cfg_node list, gk_2, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
   "gen_2_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
        (routed_cmb Sabs Global2) (routed_extra nest_cfg Sabs Seed2 Global2) nest_cfg Sabs
-       (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st))"
+       (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st))"
 
 lemma pp_eq_bound_2:
   "(v, ctx) \<in> fst nest_2_sol
@@ -225,9 +225,9 @@ lemma ivl_ctx_sg_2_uncovered_empty:
 
 lemma entry_locals_ge_s0d_2:
   assumes cov: "(cfg_entry nest_cfg, []) \<in> fst nest_2_sol"
-  shows "fun_of_st cinit_ivl_st \<le> locals (sigma_2 (Inl (cfg_entry nest_cfg, [])))"
+  shows "fun_of_exec_dg_st cinit_ivl_st \<le> locals (sigma_2 (Inl (cfg_entry nest_cfg, [])))"
 proof -
-  have "fun_of_st cinit_ivl_st
+  have "fun_of_exec_dg_st cinit_ivl_st
           \<le> locals (eq gen_2_abs (cfg_entry nest_cfg, []) sigma_2)"
     by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge_2], simp add: le_supI2)
@@ -238,7 +238,7 @@ qed
 
 interpretation nest_2_dg: dg_ctx_activation Sabs is_global nest_cfg Global2 "cs_route 2"
     "routed_cmb Sabs Global2" "routed_extra nest_cfg Sabs Seed2 Global2"
-    "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
+    "fun_of_exec_dg_st (bot::ivl exec_dg_st)" "fun_of_exec_dg_st cinit_ivl_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)"
     sigma_2 "fst nest_2_sol" "(cfg_exit nest_cfg, [])" ivl_ctx_sg_2
 proof unfold_locales
   show "finite (intra nest_cfg)" by (rule nest_finE)
@@ -246,8 +246,8 @@ next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
              (routed_cmb Sabs Global2) (routed_extra nest_cfg Sabs Seed2 Global2) nest_cfg Sabs
-             (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
-             (fun_of_st (restrict_global_st cinit_ivl_st)))
+             (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st)
+             (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
           (cfg_exit nest_cfg, []) sigma_2 (fst nest_2_sol)"
     by (rule nest_2_pp_abs)
 next
@@ -271,7 +271,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>CallFwd\<close>'s \<open>Stateme
   routing, so each needs its own coverage witness.\<close>
 
 interpretation nest_2_routed: routed_context Sabs is_global nest_cfg Global2 "cs_route 2"
-    "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
+    "fun_of_exec_dg_st (bot::ivl exec_dg_st)" "fun_of_exec_dg_st cinit_ivl_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)"
     sigma_2 "fst nest_2_sol" "(cfg_exit nest_cfg, [])" ivl_ctx_sg_2
     Seed2 "cs_enterc 2"
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
@@ -350,7 +350,7 @@ lemma ivl_ctx_sg_2_comb:
 
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>
 
-lemma cinit_le_cinit_ivl_st_2: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>"
+lemma cinit_le_cinit_ivl_st_2: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 
 theorem nest_2_activation_collect_sound:
@@ -360,8 +360,8 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg_2 and enterc = "cs_en
         and seedc = "[]" and S = "cinit_stores is_global" and g = nest_cfg and gs = is_global])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores is_global"
-  hence "s \<in> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st_2 by blast
-  also have "\<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>
+  hence "s \<in> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st_2 by blast
+  also have "\<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>
         \<subseteq> \<lbrakk>locals (sigma_2 (Inl (cfg_entry nest_cfg, [])))\<rbrakk>"
     by (rule gamma_state_mono[OF entry_locals_ge_s0d_2[OF entry_covered_2]])
   also have "\<dots> \<subseteq> \<lbrakk>ivl_ctx_sg_2 (Inl (cfg_entry nest_cfg, []))\<rbrakk>"
@@ -396,7 +396,7 @@ qed
 section \<open>Call-string-context-expanded analysis graph\<close>
 
 definition nest_2_graph_config ::
-  "(cfg_node list, gk_2, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "(cfg_node list, gk_2, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "nest_2_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>u ctx action d. cs_route 2 u ctx d action),
@@ -410,10 +410,10 @@ definition nest_2_graph_config ::
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if lookup_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (lookup_st d ret)]),
+        if lookup_exec_dg_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (lookup_exec_dg_st d ret)]),
       show_global = (\<lambda>k vars s. [''(none)'']),
       show_global_key = (\<lambda>k. case k of Global2 \<Rightarrow> ''Global'' | Seed2 p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global2 \<Rightarrow> True | Seed2 _ _ \<Rightarrow> False),
@@ -467,3 +467,5 @@ lemma nest_2_dot_nonempty: "String.explode nest_2_dot \<noteq> []" by eval
 ML_val \<open>writeln (@{code nest_2_dot})\<close>
 
 end
+
+

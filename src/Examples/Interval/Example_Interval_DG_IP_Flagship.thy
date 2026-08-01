@@ -96,8 +96,8 @@ qed
 subsection \<open>Equation generation\<close>
 
 definition twice_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
-  "twice_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) twice_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "twice_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) twice_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
 
@@ -106,7 +106,7 @@ lemma twice_terminates_c:
   by eval
 
 definition twice_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "twice_sol = TD_side_warrowing_apinis_Interp_solve twice_eqs (cfg_exit twice_cfg, ())"
 
 text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<open>p in [3,10]\<close> at the shared
@@ -114,10 +114,10 @@ text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<op
   return sites.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''p''),
-                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''#ret''),
-                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x''),
-                       string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''y'')))
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''p''),
+                       string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''#ret''),
+                       string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''x''),
+                       string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''y'')))
             ([FunctionEntry ''twice'', FunctionResult ''twice'',
               FunctionEntry ''main'', FunctionResult ''main'']
              @ map Statement [0,2,3,4]))
@@ -126,7 +126,7 @@ value "map_option
 subsection \<open>Certified solution (reusing solver correctness)\<close>
 
 lemma twice_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl st, ivl st) dg_state)
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
      twice_eqs (cfg_exit twice_cfg, ())"
   using twice_terminates_c
   unfolding TD_side_warrowing_apinis_Interp.term_equivalence
@@ -143,8 +143,8 @@ subsection \<open>Transport to the abstract D/G semantics\<close>
 
 lemma twice_pp_abs:
   "part_post_solution
-     (ivl_dg.dg_gen twice_cfg (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
-        (fun_of_st (restrict_global_st cinit_ivl_st)))
+     (ivl_dg.dg_gen twice_cfg (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st)
+        (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
      (cfg_exit twice_cfg, ()) (fun_of_dg_st \<circ> snd twice_sol) (fst twice_sol)"
   using part_post_solution_dg_st_to_abs[OF ivl_Hstep ivl_Henter ivl_Hcomb twice_pp_st[unfolded twice_eqs_def]]
   unfolding dg_gen_of_eq_ivl_dg_gen .
@@ -182,9 +182,9 @@ lemma twice_cover_combine:
   using twice_cover_calls_ball by fastforce
 
 lemma twice_sound0:
-  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
+  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)\<rbrakk>"
 proof -
-  have "fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st) = fun_of_st cinit_ivl_st"
+  have "fun_of_exec_dg_st cinit_ivl_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st) = fun_of_exec_dg_st cinit_ivl_st"
     by (simp add: fun_of_st_cinit_ivl_st restrict_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
@@ -206,21 +206,21 @@ theorem twice_collect_sound:
 subsection \<open>Inspecting the certified result\<close>
 
 lemma twice_p_at_entry:
-  "lookup_st (locals (snd twice_sol (Inl (FunctionEntry ''twice'', ())))) ''p''
+  "lookup_exec_dg_st (locals (snd twice_sol (Inl (FunctionEntry ''twice'', ())))) ''p''
      = Ivl (Fin 3) (Fin 10)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_ret_at_exit:
-  "lookup_st (locals (snd twice_sol (Inl (FunctionResult ''twice'', ())))) ''#ret''
+  "lookup_exec_dg_st (locals (snd twice_sol (Inl (FunctionResult ''twice'', ())))) ''#ret''
      = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_x_computed:
-  "lookup_st (locals (snd twice_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
+  "lookup_exec_dg_st (locals (snd twice_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_y_computed:
-  "lookup_st (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
+  "lookup_exec_dg_st (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 subsection \<open>Source-level soundness\<close>
@@ -273,7 +273,7 @@ text \<open>
 \<close>
 
 definition twice_graph_config ::
-  "(unit, unit, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "twice_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. ()),
@@ -287,10 +287,10 @@ definition twice_graph_config ::
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if lookup_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (lookup_st d ret)]),
+        if lookup_exec_dg_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (lookup_exec_dg_st d ret)]),
       show_global = (\<lambda>_ vars s. [''(none)'']),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
@@ -317,5 +317,7 @@ ML_val \<open>writeln (@{code twice_dot})\<close>
 
 
 end
+
+
 
 

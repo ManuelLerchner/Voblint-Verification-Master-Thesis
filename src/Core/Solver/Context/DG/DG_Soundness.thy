@@ -935,6 +935,52 @@ proof -
     by (simp add: Let_def restrict_local_global_join)
 qed
 
+lemma gamma_unit_combine_sound_for:
+  assumes sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
+  shows "combine_collect gs dst s t \<in>
+           (case dgs_combine (unit_dg_spec_for gs tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
+proof -
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
+  have "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+    by (rule combine_collect_sound[OF sc' tc'])
+  then show ?thesis
+    unfolding dgs_combine_unit_dg_spec_for gamma_unit_def
+    by (simp add: Let_def restrict_local_for_global_join combine_abs_for_eq_restrict)
+qed
+
+lemma gamma_unit_enter_sound_for:
+  assumes sound: "sound_transfer_for gs tf"
+    and sc: "s \<in> gamma_unit dc g"
+  shows "call_enter gs (CallEdge dst pars args) s \<in>
+           (case dgs_enter (unit_dg_spec_for gs tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit d' g')"
+proof -
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have "call_enter gs (CallEdge dst pars args) s \<in>
+      \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
+    by (simp add: call_enter_CallEdge)
+  then show ?thesis
+    unfolding dgs_enter_unit_dg_spec_for unit_step_for_def gamma_unit_def
+    by (simp add: Let_def restrict_local_for_global_join)
+qed
+
+lemma sound_dg_spec_unit_for:
+  assumes sound: "sound_transfer_for gs tf"
+  shows "sound_dg_spec (unit_dg_spec_for gs tf) gamma_unit gs"
+  apply unfold_locales
+  subgoal for d d' g g'
+    by (rule gamma_unit_mono)
+  subgoal for a d g
+    unfolding gamma_unit_def dg_spec_step_unit_for unit_step_for_def
+    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
+    by (simp add: Let_def restrict_local_for_global_join)
+  subgoal premises prems
+    by (rule gamma_unit_combine_sound_for[OF prems])
+  subgoal premises prems
+    by (rule gamma_unit_enter_sound_for[OF sound prems])
+  done
+
 lemma sound_dg_spec_unit:
   assumes sound: "sound_transfer tf"
   shows "sound_dg_spec (unit_dg_spec tf) gamma_unit is_global"

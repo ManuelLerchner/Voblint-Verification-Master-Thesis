@@ -47,6 +47,20 @@ lemma restrict_global_for_local_join:
   "restrict_global_for gs \<sigma> \<squnion> restrict_local_for gs \<sigma> = \<sigma>"
   unfolding restrict_local_for_def restrict_global_for_def sup_fun_def
   by (rule ext) simp
+lemma restrict_global_for_sup [simp]:
+  "restrict_global_for gs
+      (restrict_local_for gs A \<squnion> restrict_global_for gs B) =
+     restrict_global_for gs B"
+  unfolding restrict_local_for_def restrict_global_for_def sup_fun_def
+  by (rule ext) simp
+
+lemma restrict_local_for_sup [simp]:
+  "restrict_local_for gs
+      (restrict_local_for gs A \<squnion> restrict_global_for gs B) =
+     restrict_local_for gs A"
+  unfolding restrict_local_for_def restrict_global_for_def sup_fun_def
+  by (rule ext) simp
+
 
 
 lemma restrict_local_global_join:
@@ -128,6 +142,13 @@ lemma restrict_global_restrict_local_bot [simp]:
 lemma combine_abs_eq_restrict:
   "combine_abs is_global sc se = restrict_local sc \<squnion> restrict_global se"
   unfolding combine_abs_def restrict_local_def restrict_global_def sup_fun_def
+  by (rule ext) simp
+
+lemma combine_abs_for_eq_restrict:
+  "combine_abs gs sc se =
+     restrict_local_for gs sc \<squnion> restrict_global_for gs se"
+  unfolding combine_abs_def restrict_local_for_def restrict_global_for_def
+    sup_fun_def
   by (rule ext) simp
 
 

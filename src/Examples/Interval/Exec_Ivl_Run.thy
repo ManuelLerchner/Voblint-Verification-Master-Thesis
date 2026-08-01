@@ -19,7 +19,7 @@ text \<open>
 
   This theory evaluates two fixpoint engines on @{const side_cfg_T_eff_st}:
   bounded Kleene iteration on @{const eq}, and @{const TD_side_warrowing_apinis_Interp_solve}
-  (pointwise interval widening on @{typ "ivl st"} for solver termination).
+  (pointwise interval widening on @{typ "ivl resolved_st_q"} for solver termination).
   The example uses the trace-native post-fixpoint soundness theorem.
 \<close>
 
@@ -50,31 +50,31 @@ lemma loop_cfg_entry [simp]: "cfg_entry loop_cfg = FunctionEntry ''main''"
 lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult ''main''"
   by (simp add: loop_cfg_def cfg_exit_def)
 
-definition loop_ivl_eqs :: "(pp, unit, ivl st) eqsT" where
+definition loop_ivl_eqs :: "(pp, unit, ivl resolved_st_q) eqsT" where
   "loop_ivl_eqs = side_cfg_T_eff_st loop_cfg ivl_etf_st bot cinit_ivl_st ()"
 
-definition loop_sig0 :: "pp + unit \<Rightarrow> ivl st" where
+definition loop_sig0 :: "pp + unit \<Rightarrow> ivl resolved_st_q" where
   "loop_sig0 k =
-     (case k of Inl _ \<Rightarrow> bot | Inr () \<Rightarrow> restrict_global_st cinit_ivl_st)"
+     (case k of Inl _ \<Rightarrow> bot | Inr () \<Rightarrow> restrict_global_resolved_q cinit_ivl_st)"
 
-definition loop_kleene_step :: "(pp + unit \<Rightarrow> ivl st) \<Rightarrow> (pp + unit \<Rightarrow> ivl st)" where
+definition loop_kleene_step :: "(pp + unit \<Rightarrow> ivl resolved_st_q) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
   "loop_kleene_step sig =
      (\<lambda>k. case k of
         Inl v \<Rightarrow> eq loop_ivl_eqs v sig
       | Inr () \<Rightarrow> sig (Inr ()))"
 
-fun loop_iter_sig :: "nat \<Rightarrow> (pp + unit \<Rightarrow> ivl st) \<Rightarrow> (pp + unit \<Rightarrow> ivl st)" where
+fun loop_iter_sig :: "nat \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
   "loop_iter_sig 0 sig = sig"
 | "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
 
-definition loop_ivl_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
+definition loop_ivl_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
   "loop_ivl_sol =
      ({FunctionEntry ''main'', FunctionResult ''main''}
         \<union> Statement ` {0, 1, 2, 3},
       loop_iter_sig 100 loop_sig0)"
 
 definition loop_ivl_at :: "pp \<Rightarrow> ivl" where
-  "loop_ivl_at pp = lookup_st (snd loop_ivl_sol (Inl pp)) ''x''"
+  "loop_ivl_at pp = lookup_resolved_st_q (snd loop_ivl_sol (Inl pp)) (location_of is_global ''x'')"
 
 text \<open>Loop head (node 1): @{text "[0,20]"}.  Body entry (node 2): @{text "[0,19]"} from
   @{const EA_Assume} backward refinement on @{text "x < 20"}.\<close>
@@ -90,11 +90,11 @@ lemma loop_body_ivl:
   "loop_ivl_at (Statement 2) = Ivl (Fin 0) (Fin 19)"
   by eval
 
-definition loop_ivl_td_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl st)" where
+definition loop_ivl_td_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
   "loop_ivl_td_sol = TD_side_warrowing_apinis_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg)"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
-  "loop_ivl_td_at pp = lookup_st (snd loop_ivl_td_sol (Inl pp)) ''x''"
+  "loop_ivl_td_at pp = lookup_resolved_st_q (snd loop_ivl_td_sol (Inl pp)) (location_of is_global ''x'')"
 
 text \<open>Widening TD (Apinis warrowing): same intervals as bounded Kleene --- backward
   filters carry the precision; widening is solver infrastructure only on this program.\<close>
@@ -117,15 +117,17 @@ text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open
   filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
   (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
   machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
-value "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) ''x''"
+value "run_menu is_global loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) ''x''"
 
 lemma loop_head_across_update_rules:
-  "run_menu loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) ''x''
+  "run_menu is_global loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) ''x''
      = [(STR ''join'',       Ivl (Fin 0) (Fin 20)),
         (STR ''per_origin'', Ivl (Fin 0) (Fin 20)),
         (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"
   unfolding loop_ivl_eqs_def run_menu_def solver_menu_def by eval
 
 end
+
+
 
 

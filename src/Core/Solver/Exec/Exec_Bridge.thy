@@ -7,55 +7,106 @@ section \<open>Executable equation-system refinement\<close>
 text \<open>
   Generic (domain-agnostic) bridge between executable st side-effecting equation
   systems and abstract abs_state side_cfg_T_eff systems.  Domain theories discharge
-  per-tree traverse and side denotation commutation through fun_of_st.
+  per-tree traverse and side denotation commutation through fun_of_resolved_st_q_for is_global.
 \<close>
 
-subsection \<open>fun_of_st homomorphisms for local/global projections\<close>
+subsection \<open>fun_of_resolved_st_q_for is_global homomorphisms for local/global projections\<close>
 
-lemma fun_of_st_restrict_local_st [simp]:
-  "fun_of_st (restrict_local_st s) = restrict_local (fun_of_st s)"
+lemma fun_of_resolved_st_q_for_restrict_local_abs [simp]:
+  "fun_of_resolved_st_q_for is_global (restrict_local_resolved_q s) = restrict_local (fun_of_resolved_st_q_for is_global s)"
   unfolding restrict_local_def
   by (rule ext) simp
 
-lemma fun_of_st_restrict_global_st [simp]:
-  "fun_of_st (restrict_global_st s) = restrict_global (fun_of_st s)"
+lemma fun_of_resolved_st_q_for_restrict_global_abs [simp]:
+  "fun_of_resolved_st_q_for is_global (restrict_global_resolved_q s) = restrict_global (fun_of_resolved_st_q_for is_global s)"
   unfolding restrict_global_def
   by (rule ext) simp
 
-lemma fun_of_st_combine_abs_st [simp]:
-  "fun_of_st (combine_abs_st sc se) = combine_abs is_global (fun_of_st sc) (fun_of_st se)"
-  unfolding combine_abs_def
-  by (rule ext) simp
+lemma fun_of_resolved_st_q_for_combine_abs [simp]:
+  "fun_of_resolved_st_q_for is_global (combine_resolved_st_q sc se) =
+     combine_abs is_global (fun_of_resolved_st_q_for is_global sc)
+       (fun_of_resolved_st_q_for is_global se)"
+proof (rule ext)
+  fix x
+  show "fun_of_resolved_st_q_for is_global (combine_resolved_st_q sc se) x =
+      combine_abs is_global (fun_of_resolved_st_q_for is_global sc)
+        (fun_of_resolved_st_q_for is_global se) x"
+    by (cases "is_global x"; simp add: combine_abs_def)
+qed
 
-subsection \<open>Injectivity of fun_of_st and combine-identity lemmas\<close>
+subsection \<open>Executable projection identities\<close>
 
-lemma fun_of_st_inject:
-  "fun_of_st s1 = fun_of_st s2 \<Longrightarrow> s1 = s2"
-  by (metis Quotient_rel_abs2 Quotient_st eq_st_def lookup_st.rep_eq)
- 
+lemma restrict_local_resolved_q_combine_resolved_st_q [simp]:
+  "restrict_local_resolved_q (combine_resolved_st_q A B) =
+     restrict_local_resolved_q A"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (restrict_local_resolved_q (combine_resolved_st_q A B)) =
+      lookup_resolved_st_q (restrict_local_resolved_q A)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (restrict_local_resolved_q (combine_resolved_st_q A B)) loc =
+        lookup_resolved_st_q (restrict_local_resolved_q A) loc"
+      by (cases loc; simp)
+  qed
+qed
 
-lemma restrict_local_st_combine_abs_st [simp]:
-  "restrict_local_st (combine_abs_st A B) = restrict_local_st A"
-  by (simp add: combine_abs_st_def fun_of_st_inject)
- 
-lemma restrict_global_st_combine_abs_st [simp]:
-  "restrict_global_st (combine_abs_st A B) = restrict_global_st B"
-  by (simp add: combine_abs_st_def fun_of_st_inject)
- 
+lemma restrict_global_resolved_q_combine_resolved_st_q [simp]:
+  "restrict_global_resolved_q (combine_resolved_st_q A B) =
+     restrict_global_resolved_q B"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (restrict_global_resolved_q (combine_resolved_st_q A B)) =
+      lookup_resolved_st_q (restrict_global_resolved_q B)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (restrict_global_resolved_q (combine_resolved_st_q A B)) loc =
+        lookup_resolved_st_q (restrict_global_resolved_q B) loc"
+      by (cases loc; simp)
+  qed
+qed
+
 text \<open>Effectful executable trees use these projection identities to split combined states.\<close>
-lemma restrict_local_st_split [simp]:
-  "restrict_local_st (restrict_local_st A \<squnion> restrict_global_st B) = restrict_local_st A"
-  by (simp add: combine_abs_st_def[symmetric])
+lemma restrict_local_resolved_q_split [simp]:
+  "restrict_local_resolved_q (restrict_local_resolved_q A \<squnion>
+      restrict_global_resolved_q B) = restrict_local_resolved_q A"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (restrict_local_resolved_q
+      (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) =
+      lookup_resolved_st_q (restrict_local_resolved_q A)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (restrict_local_resolved_q
+        (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) loc =
+        lookup_resolved_st_q (restrict_local_resolved_q A) loc"
+      by (cases loc; simp)
+  qed
+qed
 
-lemma restrict_global_st_split [simp]:
-  "restrict_global_st (restrict_local_st A \<squnion> restrict_global_st B) = restrict_global_st B"
-  by (simp add: combine_abs_st_def[symmetric])
+lemma restrict_global_resolved_q_split [simp]:
+  "restrict_global_resolved_q (restrict_local_resolved_q A \<squnion>
+      restrict_global_resolved_q B) = restrict_global_resolved_q B"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (restrict_global_resolved_q
+      (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) =
+      lookup_resolved_st_q (restrict_global_resolved_q B)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (restrict_global_resolved_q
+        (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) loc =
+        lookup_resolved_st_q (restrict_global_resolved_q B) loc"
+      by (cases loc; simp)
+  qed
+qed
+
+
+
+
+
 
 subsection \<open>Executable effectful transfer record\<close>
 
 text \<open>
   Executable counterpart of the effectful transfer record: per-action strategy-tree
-  producers with payloads at @{typ "'a st"} instead of @{typ "'a abs_state"}.
+  producers with payloads at @{typ "'a resolved_st_q"} instead of @{typ "'a abs_state"}.
 \<close>
 
 type_synonym ('g, 'c) st_edge_tf_tree =
@@ -93,41 +144,41 @@ subsection \<open>Unit-global executable effectful trees\<close>
 
 text \<open>
   The executable edge and combine trees preserve the unit-global routing shape
-  while representing abstract states with @{typ "'a st"}.
+  while representing abstract states with @{typ "'a resolved_st_q"}.
 \<close>
 
 definition unit_edge_tree_st ::
-  "('a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st) \<Rightarrow> (unit, 'a st) st_edge_tf_tree"
+  "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> 'a resolved_st_q) \<Rightarrow> (unit, 'a resolved_st_q) st_edge_tf_tree"
 where
   "unit_edge_tree_st f u =
      QueryL u (\<lambda>su. QueryG () (\<lambda>g.
        let res = f (su \<squnion> g) in
-       Side () (restrict_global_st res)
-         (Answer (restrict_local_st res))))"
+       Side () (restrict_global_resolved_q res)
+         (Answer (restrict_local_resolved_q res))))"
 
 definition unit_combine_tree_st ::
   "vname option \<Rightarrow> pp \<Rightarrow> pp
-   \<Rightarrow> (pp, unit, 'a::bounded_semilattice_sup_bot st) strategy_tree"
+   \<Rightarrow> (pp, unit, 'a::bounded_semilattice_sup_bot resolved_st_q) strategy_tree"
 where
   "unit_combine_tree_st dst cc ex =
      QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
-       let res = combine_collect_abs_st dst (sc \<squnion> g) (se \<squnion> g) in
-       Side () (restrict_global_st res)
-         (Answer (restrict_local_st res)))))"
+       let res = combine_collect_resolved_for_q is_global dst (sc \<squnion> g) (se \<squnion> g) in
+       Side () (restrict_global_resolved_q res)
+         (Answer (restrict_local_resolved_q res)))))"
 
 subsection \<open>Unit-global executable transfer-record factory\<close>
 
 text \<open>
   Executable mirror of the abstract-side @{const unit_etf_of_transfer}: builds an
   \<open>effectful_st_transfer\<close> record from a single dispatch function and an enter function,
-  both at @{typ "'a st"}.  Domain instances (\<open>Sign_Exec\<close>, \<open>Ivl_Exec\<close>) instantiate this
+  both at @{typ "'a resolved_st_q"}.  Domain instances (\<open>Sign_Exec\<close>, \<open>Ivl_Exec\<close>) instantiate this
   once instead of hand-writing the six-field record.
 \<close>
 
 definition unit_etf_st_of_transfer ::
-  "(edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st)
-   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a st \<Rightarrow> 'a st)
-   \<Rightarrow> (unit, 'a st) effectful_st_transfer"
+  "(edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (unit, 'a resolved_st_q) effectful_st_transfer"
 where
   "unit_etf_st_of_transfer tf_st enter_st = \<lparr>
     etf_st_nop        = unit_edge_tree_st (tf_st EA_Nop),
@@ -165,28 +216,28 @@ lemma apply_etf_st_exists_unit_of_transfer:
 
 lemma traverse_unit_edge_tree_st:
   "traverse_rhs (unit_edge_tree_st f u) \<sigma>_st =
-   restrict_local_st (f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))"
+   restrict_local_resolved_q (f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))"
   unfolding unit_edge_tree_st_def by (simp add: Let_def)
 
 lemma sides_unit_edge_tree_st_Inr:
   "sides_of_rhs (unit_edge_tree_st f u) \<sigma>_st (Inr ()) =
-   restrict_global_st (f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))"
+   restrict_global_resolved_q (f (\<sigma>_st (Inl u) \<squnion> \<sigma>_st (Inr ())))"
   unfolding unit_edge_tree_st_def by (simp add: Let_def)
 
 lemma traverse_unit_combine_tree_st:
   "traverse_rhs (unit_combine_tree_st dst cc ex) \<sigma>_st =
-   restrict_local_st (combine_collect_abs_st dst (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))
+   restrict_local_resolved_q (combine_collect_resolved_for_q is_global dst (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))
                                                  (\<sigma>_st (Inl ex) \<squnion> \<sigma>_st (Inr ())))"
   unfolding unit_combine_tree_st_def by (simp add: Let_def)
 
 lemma sides_unit_combine_tree_st_Inr:
   "sides_of_rhs (unit_combine_tree_st dst cc ex) \<sigma>_st (Inr ()) =
-   restrict_global_st (combine_collect_abs_st dst (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))
+   restrict_global_resolved_q (combine_collect_resolved_for_q is_global dst (\<sigma>_st (Inl cc) \<squnion> \<sigma>_st (Inr ()))
                                                   (\<sigma>_st (Inl ex) \<squnion> \<sigma>_st (Inr ())))"
   unfolding unit_combine_tree_st_def by (simp add: Let_def)
 
 lemma dep_aux_unit_edge_tree_st:
-  fixes f :: "'a::bounded_semilattice_sup_bot st \<Rightarrow> 'a st"
+  fixes f :: "'a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> 'a resolved_st_q"
     and g :: "'a abs_state \<Rightarrow> 'a abs_state"
   shows "dep_aux \<sigma>1 (unit_edge_tree_st f u) = dep_aux \<sigma>2 (unit_edge_tree g u)"
   unfolding unit_edge_tree_st_def unit_edge_tree_def Let_def by simp
@@ -198,26 +249,38 @@ lemma dep_aux_unit_combine_tree_st:
 subsection \<open>Globally-restricted side values\<close>
 
 text \<open>
-  \<open>restrict_global_st\<close> is the idempotent projection onto global variables.  A
+  \<open>restrict_global_resolved_q\<close> is the idempotent projection onto global variables.  A
   strategy tree is \<open>side_rg\<close> when every \<open>Side\<close> node it can reach (under any query
   answer) carries a value already fixed by that projection.  Unit trees and the
   executable IP fold satisfy this: every side contribution is a
-  \<open>restrict_global_st ...\<close>.  The side-effecting solver then keeps every \<open>Inr\<close> slot
-  \<open>restrict_global_st\<close>-shaped, since the running join of such values stays shaped
-  (\<open>restrict_global_st_sup_restrict_global_st\<close>, \<open>restrict_global_st\<close> of \<open>bot\<close>).
+  \<open>restrict_global_resolved_q ...\<close>.  The side-effecting solver then keeps every \<open>Inr\<close> slot
+  \<open>restrict_global_resolved_q\<close>-shaped, since the running join of such values stays shaped
+  (\<open>restrict_global_resolved_q_sup_restrict_global_resolved_q\<close>, \<open>restrict_global_resolved_q\<close> of \<open>bot\<close>).
 \<close>
 
-lemma restrict_global_st_idem [simp]:
-  "restrict_global_st (restrict_global_st s) = restrict_global_st s"
-  by (rule st_eqI_lookup) (simp add: lookup_restrict_global_st)
+lemma restrict_global_resolved_q_idem [simp]:
+  "restrict_global_resolved_q (restrict_global_resolved_q s) =
+     restrict_global_resolved_q s"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (restrict_global_resolved_q
+      (restrict_global_resolved_q s)) =
+      lookup_resolved_st_q (restrict_global_resolved_q s)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (restrict_global_resolved_q
+        (restrict_global_resolved_q s)) loc =
+        lookup_resolved_st_q (restrict_global_resolved_q s) loc"
+      by (cases loc; simp)
+  qed
+qed
 
 primrec side_rg ::
-  "('x, 'g, ('a::bot) st) strategy_tree \<Rightarrow> bool"
+  "('x, 'g, ('a::bot) resolved_st_q) strategy_tree \<Rightarrow> bool"
 where
   "side_rg (Answer d) = True"
 | "side_rg (QueryL y f) = (\<forall>v. side_rg (f v))"
 | "side_rg (QueryG y f) = (\<forall>v. side_rg (f v))"
-| "side_rg (Side y d t) = (restrict_global_st d = d \<and> side_rg t)"
+| "side_rg (Side y d t) = (restrict_global_resolved_q d = d \<and> side_rg t)"
 
 lemma side_rg_seqcomp:
   assumes "side_rg t" and "\<And>v. side_rg (k v)"
@@ -249,60 +312,60 @@ lemma sides_unit_combine_tree_st_Inl:
 
 locale sound_rhs_generator_exec = sound_rhs_generator_static +
   fixes F :: "edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
-    and etf_st :: "(unit, 'a st) effectful_st_transfer"
-    and F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
+    and etf_st :: "(unit, 'a resolved_st_q) effectful_st_transfer"
+    and F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
   assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  assumes commute: "\<And>a s. fun_of_st (F_st a s) = F a (fun_of_st s)"
+  assumes commute: "\<And>a s. fun_of_resolved_st_q_for is_global (F_st a s) = F a (fun_of_resolved_st_q_for is_global s)"
 begin
 
 lemma sides_apply_etf_st:
-  "fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st k)
-   = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) k"
+  "fun_of_resolved_st_q_for is_global (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st k)
+   = sides_of_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
 proof (cases k)
   case (Inl u')
   then show ?thesis
     by (simp add: edge_st edge sides_unit_edge_tree_st_Inl sides_unit_edge_tree_Inl
-                  Let_def fun_of_st_bot bot_fun_def)
+                  Let_def bot_fun_def)
 next
   case (Inr g')
   then show ?thesis
     by (simp add: edge_st edge sides_unit_edge_tree_st_Inr sides_unit_edge_tree_Inr
-                  commute fun_of_st_sup o_def Let_def)
+                  commute fun_of_resolved_st_q_for_sup o_def Let_def)
 qed
 
 lemma sides_etf_combine_st:
-  "fun_of_st (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st k)
-   = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st) k"
+  "fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st k)
+   = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
 proof (cases k)
   case (Inl u')
   then show ?thesis
     unfolding comb_st comb
     by (simp add: sides_unit_combine_tree_st_Inl sides_unit_combine_tree_Inl
-                  Let_def fun_of_st_bot bot_fun_def)
+                  Let_def bot_fun_def)
 next
   case (Inr g')
   then show ?thesis
     unfolding comb_st comb
     by (simp add: sides_unit_combine_tree_st_Inr sides_unit_combine_tree_Inr
-                  fun_of_st_sup o_def Let_def)
+                  fun_of_resolved_st_q_for_sup o_def Let_def)
 qed
 
 end
 
 lemma sides_apply_etf_st_unit_transfer:
-  fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot st) effectful_st_transfer"
+  fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot resolved_st_q) effectful_st_transfer"
   fixes etf :: "(unit, 'a) effectful_domain_transfer"
-  fixes F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  fixes F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
   fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
   assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  assumes commute: "\<And>a s. fun_of_st (F_st a s) = F a (fun_of_st s)"
-  shows "fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st k)
-       = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) k"
+  assumes commute: "\<And>a s. fun_of_resolved_st_q_for is_global (F_st a s) = F a (fun_of_resolved_st_q_for is_global s)"
+  shows "fun_of_resolved_st_q_for is_global (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st k)
+       = sides_of_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
 proof -
   interpret sound_rhs_generator_exec etf F etf_st F_st
     using edge comb edge_st comb_st commute by unfold_locales
@@ -310,17 +373,17 @@ proof -
 qed
 
 lemma sides_etf_combine_st_unit_transfer:
-  fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot st) effectful_st_transfer"
+  fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot resolved_st_q) effectful_st_transfer"
   fixes etf :: "(unit, 'a) effectful_domain_transfer"
-  fixes F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  fixes F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
   fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
   assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
-  assumes commute: "\<And>a s. fun_of_st (F_st a s) = F a (fun_of_st s)"
-  shows "fun_of_st (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st k)
-       = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st) k"
+  assumes commute: "\<And>a s. fun_of_resolved_st_q_for is_global (F_st a s) = F a (fun_of_resolved_st_q_for is_global s)"
+  shows "fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st k)
+       = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
 proof -
   interpret sound_rhs_generator_exec etf F etf_st F_st
     using edge comb edge_st comb_st commute by unfold_locales
@@ -330,11 +393,11 @@ qed
 subsection \<open>Effectful executable fold\<close>
 
 definition side_contribution_trees_st ::
-  "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
+  "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
-   \<Rightarrow> (pp, 'g, 'a st) strategy_tree list"
+   \<Rightarrow> (pp, 'g, 'a resolved_st_q) strategy_tree list"
 where
   "side_contribution_trees_st etf es ens cs =
      map (\<lambda>(u, a). apply_etf_st etf a u) es @
@@ -342,23 +405,23 @@ where
      map (\<lambda>(cc, dst, ex). etf_combine_st etf dst cc ex) cs"
 
 definition side_acc_eff_st ::
-  "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
-   \<Rightarrow> 'a st
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'a st)
+  "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer
+   \<Rightarrow> 'a resolved_st_q
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a resolved_st_q)
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a st"
+   \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a resolved_st_q"
 where
   "side_acc_eff_st etf acc \<sigma> es ens cs =
      fold_rhs_values acc \<sigma> (side_contribution_trees_st etf es ens cs)"
 
 definition side_rhs_fold_eff_st ::
-  "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
-   \<Rightarrow> 'a st
+  "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer
+   \<Rightarrow> 'a resolved_st_q
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
-   \<Rightarrow> (pp, 'g, 'a st) strategy_tree"
+   \<Rightarrow> (pp, 'g, 'a resolved_st_q) strategy_tree"
 where
   "side_rhs_fold_eff_st etf acc es ens cs =
      fold_rhs_trees acc (side_contribution_trees_st etf es ens cs)"
@@ -387,20 +450,20 @@ lemma side_rhs_fold_eff_st_simps [simp]:
   by (simp_all add: side_rhs_fold_eff_st_def side_contribution_trees_st_def)
 
 definition make_side_rhs_tree_eff_st ::
-  "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
-   \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> 'g \<Rightarrow> pp
-   \<Rightarrow> (pp, 'g, 'a st) strategy_tree"
+  "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer
+   \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'g \<Rightarrow> pp
+   \<Rightarrow> (pp, 'g, 'a resolved_st_q) strategy_tree"
 where
   "make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed v =
-     (let acc0 = (if v = cfg_entry g then bot0_st \<squnion> restrict_local_st s0_st else bot0_st);
+     (let acc0 = (if v = cfg_entry g then bot0_st \<squnion> restrict_local_resolved_q s0_st else bot0_st);
           t    = side_rhs_fold_eff_st etf acc0
                    (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)
-      in if v = cfg_entry g then Side gseed (restrict_global_st s0_st) t else t)"
+      in if v = cfg_entry g then Side gseed (restrict_global_resolved_q s0_st) t else t)"
 
 definition side_cfg_T_eff_st ::
-  "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer
-   \<Rightarrow> 'a st \<Rightarrow> 'a st \<Rightarrow> 'g
-   \<Rightarrow> (pp, 'g, 'a st) eqsT"
+  "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer
+   \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'g
+   \<Rightarrow> (pp, 'g, 'a resolved_st_q) eqsT"
 where
   "side_cfg_T_eff_st g etf bot0_st s0_st gseed = make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed"
 
@@ -437,7 +500,7 @@ lemma traverse_side_rhs_fold_eff_st:
 lemma eq_side_cfg_T_eff_st:
   "eq (side_cfg_T_eff_st g etf bot0_st s0_st gseed) v \<sigma>_st =
      side_acc_eff_st etf
-       (if v = cfg_entry g then bot0_st \<squnion> restrict_local_st s0_st else bot0_st)
+       (if v = cfg_entry g then bot0_st \<squnion> restrict_local_resolved_q s0_st else bot0_st)
        \<sigma>_st (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)"
   unfolding side_cfg_T_eff_st_def make_side_rhs_tree_eff_st_def
   by (simp add: traverse_side_rhs_fold_eff_st Let_def)
@@ -478,43 +541,43 @@ proof -
     unfolding side_contribution_trees_st_def side_contribution_trees_def
     by (rule list_all2_appendI[OF edges suffix])
 qed
-lemma fold_rhs_values_fun_of_st:
+lemma fold_rhs_values_fun_of_resolved_st_q_for:
   assumes rel: "list_all2
-    (\<lambda>t_st t. \<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
-                         traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) ts_st ts"
-  shows "fun_of_st (fold_rhs_values acc_st \<sigma>_st ts_st) =
-         fold_rhs_values (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) ts"
+    (\<lambda>t_st t. \<forall>\<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs t_st \<sigma>_st) =
+                         traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)) ts_st ts"
+  shows "fun_of_resolved_st_q_for is_global (fold_rhs_values acc_st \<sigma>_st ts_st) =
+         fold_rhs_values (fun_of_resolved_st_q_for is_global acc_st) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) ts"
   using rel
 proof (induction arbitrary: acc_st)
   case Nil
   then show ?case by simp
 next
   case (Cons t_st ts_st t ts)
-  have head: "fun_of_st (traverse_rhs t_st \<sigma>_st) =
-              traverse_rhs t (fun_of_st \<circ> \<sigma>_st)"
+  have head: "fun_of_resolved_st_q_for is_global (traverse_rhs t_st \<sigma>_st) =
+              traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
     using Cons.hyps(1) by blast
   show ?case
-    by (simp add: fun_of_st_sup head Cons.IH sup_fun_def comp_def)
+    by (simp add: fun_of_resolved_st_q_for_sup head Cons.IH sup_fun_def comp_def)
 qed
 
-lemma side_acc_eff_st_fun_of_st:
-  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+lemma side_acc_eff_st_fun_of_resolved_st_q_for:
+  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes tr_edge:
-    "\<And>a u \<sigma>_st. fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-               = traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>a u \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
+               = traverse_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_enter:
-    "\<And>cl fs as \<sigma>_st. fun_of_st (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-                = traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cl fs as \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
+                = traverse_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_comb:
-    "\<And>cc ex dst \<sigma>_st. fun_of_st (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
-  shows "fun_of_st (side_acc_eff_st etf_st acc_st \<sigma>_st es ens cs) =
-         side_acc_eff etf (fun_of_st acc_st) (fun_of_st \<circ> \<sigma>_st) es ens cs"
+    "\<And>cc ex dst \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
+                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
+  shows "fun_of_resolved_st_q_for is_global (side_acc_eff_st etf_st acc_st \<sigma>_st es ens cs) =
+         side_acc_eff etf (fun_of_resolved_st_q_for is_global acc_st) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) es ens cs"
 proof -
   have trees: "list_all2
-      (\<lambda>t_st t. \<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
-                           traverse_rhs t (fun_of_st \<circ> \<sigma>_st))
+      (\<lambda>t_st t. \<forall>\<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs t_st \<sigma>_st) =
+                           traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st))
       (side_contribution_trees_st etf_st es ens cs)
       (side_contribution_trees etf es ens cs)"
     apply (rule side_contribution_trees_rel)
@@ -524,7 +587,7 @@ proof -
     done
   show ?thesis
     unfolding side_acc_eff_st_def side_acc_eff_def
-    by (rule fold_rhs_values_fun_of_st[OF trees])
+    by (rule fold_rhs_values_fun_of_resolved_st_q_for[OF trees])
 qed
 
 lemma sides_fold_rhs_trees_acc_indep:
@@ -553,7 +616,7 @@ next
 qed
 
 lemma sides_side_rhs_fold_eff_st_acc_indep:
-  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
   shows "sides_of_rhs (side_rhs_fold_eff_st etf_st acc1 es ens cs) \<sigma>
          = sides_of_rhs (side_rhs_fold_eff_st etf_st acc2 es ens cs) \<sigma>"
   unfolding side_rhs_fold_eff_st_def
@@ -581,49 +644,49 @@ lemma sides_eff_fold_st_combine_step:
   by (metis (no_types, lifting) side_rhs_fold_eff_st_simps(4) sides_of_rhs_seqcomp_at
       sides_side_rhs_fold_eff_st_acc_indep)
 
-lemma fold_rhs_trees_sides_fun_of_st:
+lemma fold_rhs_trees_sides_fun_of_resolved_st_q_for:
   assumes rel: "list_all2
-    (\<lambda>t_st t. \<forall>\<sigma>_st gk. fun_of_st (sides_of_rhs t_st \<sigma>_st gk) =
-                            sides_of_rhs t (fun_of_st \<circ> \<sigma>_st) gk) ts_st ts"
-  shows "fun_of_st (sides_of_rhs (fold_rhs_trees acc_st ts_st) \<sigma>_st gk) =
-         sides_of_rhs (fold_rhs_trees acc ts) (fun_of_st \<circ> \<sigma>_st) gk"
+    (\<lambda>t_st t. \<forall>\<sigma>_st gk. fun_of_resolved_st_q_for is_global (sides_of_rhs t_st \<sigma>_st gk) =
+                            sides_of_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk) ts_st ts"
+  shows "fun_of_resolved_st_q_for is_global (sides_of_rhs (fold_rhs_trees acc_st ts_st) \<sigma>_st gk) =
+         sides_of_rhs (fold_rhs_trees acc ts) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
   using rel
 proof (induction arbitrary: acc_st acc)
   case Nil
   then show ?case by simp
 next
   case (Cons t_st ts_st t ts)
-  have head: "fun_of_st (sides_of_rhs t_st \<sigma>_st gk) =
-              sides_of_rhs t (fun_of_st \<circ> \<sigma>_st) gk"
+  have head: "fun_of_resolved_st_q_for is_global (sides_of_rhs t_st \<sigma>_st gk) =
+              sides_of_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
     using Cons.hyps(1) by blast
-  have rest: "fun_of_st (sides_of_rhs
+  have rest: "fun_of_resolved_st_q_for is_global (sides_of_rhs
         (fold_rhs_trees (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) ts_st) \<sigma>_st gk) =
-      sides_of_rhs (fold_rhs_trees (acc \<squnion> traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) ts)
-        (fun_of_st \<circ> \<sigma>_st) gk"
+      sides_of_rhs (fold_rhs_trees (acc \<squnion> traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)) ts)
+        (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
     by (rule Cons.IH)
   show ?case
-    by (simp add: sides_of_rhs_seqcomp_at fun_of_st_sup head rest comp_def)
+    by (simp add: sides_of_rhs_seqcomp_at fun_of_resolved_st_q_for_sup head rest comp_def)
 qed
 
-lemma side_rhs_fold_eff_st_sides_fun_of_st:
-  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+lemma side_rhs_fold_eff_st_sides_fun_of_resolved_st_q_for:
+  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes sd_edge:
-    "\<And>a u \<sigma>_st gk. fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gk)
-                = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) gk"
+    "\<And>a u \<sigma>_st gk. fun_of_resolved_st_q_for is_global (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gk)
+                = sides_of_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
   assumes sd_enter:
-    "\<And>cl fs as \<sigma>_st gk. fun_of_st (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gk)
-                = sides_of_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st) gk"
+    "\<And>cl fs as \<sigma>_st gk. fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gk)
+                = sides_of_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
   assumes sd_comb:
-    "\<And>cc ex dst \<sigma>_st gk. fun_of_st (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st gk)
-                = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st) gk"
-  shows "fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st acc es ens cs) \<sigma>_st gk)
-         = sides_of_rhs (side_rhs_fold_eff etf (fun_of_st acc) es ens cs)
-             (fun_of_st \<circ> \<sigma>_st) gk"
+    "\<And>cc ex dst \<sigma>_st gk. fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st gk)
+                = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
+  shows "fun_of_resolved_st_q_for is_global (sides_of_rhs (side_rhs_fold_eff_st etf_st acc es ens cs) \<sigma>_st gk)
+         = sides_of_rhs (side_rhs_fold_eff etf (fun_of_resolved_st_q_for is_global acc) es ens cs)
+             (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
 proof -
   have trees: "list_all2
-      (\<lambda>t_st t. \<forall>\<sigma>_st gk. fun_of_st (sides_of_rhs t_st \<sigma>_st gk) =
-                              sides_of_rhs t (fun_of_st \<circ> \<sigma>_st) gk)
+      (\<lambda>t_st t. \<forall>\<sigma>_st gk. fun_of_resolved_st_q_for is_global (sides_of_rhs t_st \<sigma>_st gk) =
+                              sides_of_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk)
       (side_contribution_trees_st etf_st es ens cs)
       (side_contribution_trees etf es ens cs)"
     apply (rule side_contribution_trees_rel)
@@ -633,59 +696,59 @@ proof -
     done
   show ?thesis
     unfolding side_rhs_fold_eff_st_def side_rhs_fold_eff_def
-    by (rule fold_rhs_trees_sides_fun_of_st[OF trees])
+    by (rule fold_rhs_trees_sides_fun_of_resolved_st_q_for[OF trees])
 qed
 
 
-lemma fold_rhs_trees_dep_fun_of_st:
+lemma fold_rhs_trees_dep_fun_of_resolved_st_q_for:
   assumes rel: "list_all2
     (\<lambda>t_st t.
-      (\<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
-                    traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) \<and>
+      (\<forall>\<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs t_st \<sigma>_st) =
+                    traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)) \<and>
       (\<forall>\<sigma>1 \<sigma>2. dep_aux \<sigma>1 t_st = dep_aux \<sigma>2 t)) ts_st ts"
   shows "dep_aux \<sigma>_st (fold_rhs_trees acc_st ts_st) =
-         dep_aux (fun_of_st \<circ> \<sigma>_st) (fold_rhs_trees (fun_of_st acc_st) ts)"
+         dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) (fold_rhs_trees (fun_of_resolved_st_q_for is_global acc_st) ts)"
   using rel
 proof (induction arbitrary: acc_st \<sigma>_st)
   case Nil
   then show ?case by simp
 next
   case (Cons t_st ts_st t ts)
-  have dep: "dep_aux \<sigma>_st t_st = dep_aux (fun_of_st \<circ> \<sigma>_st) t"
+  have dep: "dep_aux \<sigma>_st t_st = dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) t"
     using Cons.hyps(1) by blast
-  have tr: "fun_of_st (traverse_rhs t_st \<sigma>_st) =
-            traverse_rhs t (fun_of_st \<circ> \<sigma>_st)"
+  have tr: "fun_of_resolved_st_q_for is_global (traverse_rhs t_st \<sigma>_st) =
+            traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
     using Cons.hyps(1) by blast
-  have acc_tr: "fun_of_st (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) =
-      fun_of_st acc_st \<squnion> traverse_rhs t (fun_of_st \<circ> \<sigma>_st)"
-    by (simp add: fun_of_st_sup tr)
+  have acc_tr: "fun_of_resolved_st_q_for is_global (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) =
+      fun_of_resolved_st_q_for is_global acc_st \<squnion> traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
+    by (simp add: fun_of_resolved_st_q_for_sup tr)
   have ih': "dep_aux \<sigma>_st
         (fold_rhs_trees (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) ts_st) =
-      dep_aux (fun_of_st \<circ> \<sigma>_st)
-        (fold_rhs_trees (fun_of_st (acc_st \<squnion> traverse_rhs t_st \<sigma>_st)) ts)"
+      dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+        (fold_rhs_trees (fun_of_resolved_st_q_for is_global (acc_st \<squnion> traverse_rhs t_st \<sigma>_st)) ts)"
     by (rule Cons.IH)
   have ih: "dep_aux \<sigma>_st
         (fold_rhs_trees (acc_st \<squnion> traverse_rhs t_st \<sigma>_st) ts_st) =
-      dep_aux (fun_of_st \<circ> \<sigma>_st)
-        (fold_rhs_trees (fun_of_st acc_st \<squnion>
-          traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) ts)"
+      dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+        (fold_rhs_trees (fun_of_resolved_st_q_for is_global acc_st \<squnion>
+          traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)) ts)"
     using ih' acc_tr by simp
   show ?case
     by (simp add: dep_aux_seqcomp dep ih comp_def)
 qed
 
 lemma dep_aux_side_rhs_fold_eff_st_eq:
-  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes tr_edge:
-    "\<And>a u \<sigma>_st. fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-               = traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>a u \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
+               = traverse_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_enter:
-    "\<And>cl fs as \<sigma>_st. fun_of_st (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-                = traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cl fs as \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
+                = traverse_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_comb:
-    "\<And>cc ex dst \<sigma>_st. fun_of_st (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cc ex dst \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
+                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes dep_edge:
     "\<And>a u \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (apply_etf_st etf_st a u)
                = dep_aux \<sigma>2 (apply_etf etf a u)"
@@ -696,12 +759,12 @@ lemma dep_aux_side_rhs_fold_eff_st_eq:
     "\<And>cc ex dst \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (etf_combine_st etf_st dst cc ex)
                 = dep_aux \<sigma>2 (etf_combine etf dst cc ex)"
   shows "dep_aux \<sigma>_st (side_rhs_fold_eff_st etf_st acc es ens cs)
-       = dep_aux (fun_of_st \<circ> \<sigma>_st) (side_rhs_fold_eff etf (fun_of_st acc) es ens cs)"
+       = dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) (side_rhs_fold_eff etf (fun_of_resolved_st_q_for is_global acc) es ens cs)"
 proof -
   have trees: "list_all2
       (\<lambda>t_st t.
-        (\<forall>\<sigma>_st. fun_of_st (traverse_rhs t_st \<sigma>_st) =
-                      traverse_rhs t (fun_of_st \<circ> \<sigma>_st)) \<and>
+        (\<forall>\<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs t_st \<sigma>_st) =
+                      traverse_rhs t (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)) \<and>
         (\<forall>\<sigma>1 \<sigma>2. dep_aux \<sigma>1 t_st = dep_aux \<sigma>2 t))
       (side_contribution_trees_st etf_st es ens cs)
       (side_contribution_trees etf es ens cs)"
@@ -712,22 +775,22 @@ proof -
     done
   show ?thesis
     unfolding side_rhs_fold_eff_st_def side_rhs_fold_eff_def
-    by (rule fold_rhs_trees_dep_fun_of_st[OF trees])
+    by (rule fold_rhs_trees_dep_fun_of_resolved_st_q_for[OF trees])
 qed
 
 
 lemma dep_aux_make_side_rhs_tree_eff_st_eq:
-  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
     and etf :: "('g, 'a) effectful_domain_transfer"
   assumes tr_edge:
-    "\<And>a u \<sigma>_st. fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-               = traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>a u \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
+               = traverse_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_enter:
-    "\<And>cl fs as \<sigma>_st. fun_of_st (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-                = traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cl fs as \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
+                = traverse_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_comb:
-    "\<And>cc ex dst \<sigma>_st. fun_of_st (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cc ex dst \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
+                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes dep_edge:
     "\<And>a u \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (apply_etf_st etf_st a u)
                = dep_aux \<sigma>2 (apply_etf etf a u)"
@@ -738,8 +801,8 @@ lemma dep_aux_make_side_rhs_tree_eff_st_eq:
     "\<And>cc ex dst \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (etf_combine_st etf_st dst cc ex)
                 = dep_aux \<sigma>2 (etf_combine etf dst cc ex)"
   shows "dep_aux \<sigma>_st (make_side_rhs_tree_eff_st g etf_st bot0_st s0_st gseed v)
-       = dep_aux (fun_of_st \<circ> \<sigma>_st)
-           (make_side_rhs_tree_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed v)"
+       = dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+           (make_side_rhs_tree_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed v)"
 proof (cases "v = cfg_entry g")
   case True
   show ?thesis unfolding make_side_rhs_tree_eff_st_def make_side_rhs_tree_eff_def Let_def
@@ -755,51 +818,51 @@ qed
 subsection \<open>Generic \<open>st\<close> post-solution transport\<close>
 
 text \<open>
-  Every executable generator variant maps its \<open>'a st\<close> post-solution to an abstract
-  \<^const>\<open>part_post_solution\<close> under \<^const>\<open>fun_of_st\<close>, and the lifting is identical:
+  Every executable generator variant maps its \<open>'a resolved_st_q\<close> post-solution to an abstract
+  \<^const>\<open>part_post_solution\<close> under \<^const>\<open>fun_of_resolved_st_q_for\<close>, and the lifting is identical:
   it depends only on three commutation facts about the specific generator --- \<open>eq\<close>,
-  \<open>sides_of_rhs\<close>, and \<open>dep_aux\<close> commute with \<^const>\<open>fun_of_st\<close>.  This lemma packages
+  \<open>sides_of_rhs\<close>, and \<open>dep_aux\<close> commute with \<^const>\<open>fun_of_resolved_st_q_for\<close>.  This lemma packages
   that lifting once; each concrete generator supplies the three facts and applies it.
 \<close>
 
 lemma part_post_solution_st_to_abs_transport:
-  fixes T_st :: "'u \<Rightarrow> ('u, 'g, ('a::bounded_semilattice_sup_bot) st) strategy_tree"
+  fixes T_st :: "'u \<Rightarrow> ('u, 'g, ('a::bounded_semilattice_sup_bot) resolved_st_q) strategy_tree"
     and T_abs :: "'u \<Rightarrow> ('u, 'g, 'a abs_state) strategy_tree"
-  assumes EQ: "\<And>v \<sigma>. fun_of_st (eq T_st v \<sigma>) = eq T_abs v (\<lambda>k. fun_of_st (\<sigma> k))"
-    and SIDES: "\<And>v \<sigma> k. fun_of_st (sides_of_rhs (T_st v) \<sigma> k)
-                  = sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (\<sigma> k)) k"
-    and DEP: "\<And>v \<sigma>. dep_aux \<sigma> (T_st v) = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (T_abs v)"
+  assumes EQ: "\<And>v \<sigma>. fun_of_resolved_st_q_for is_global (eq T_st v \<sigma>) = eq T_abs v (\<lambda>k. fun_of_resolved_st_q_for is_global (\<sigma> k))"
+    and SIDES: "\<And>v \<sigma> k. fun_of_resolved_st_q_for is_global (sides_of_rhs (T_st v) \<sigma> k)
+                  = sides_of_rhs (T_abs v) (\<lambda>k. fun_of_resolved_st_q_for is_global (\<sigma> k)) k"
+    and DEP: "\<And>v \<sigma>. dep_aux \<sigma> (T_st v) = dep_aux (\<lambda>k. fun_of_resolved_st_q_for is_global (\<sigma> k)) (T_abs v)"
     and pp: "part_post_solution T_st x sigma_st vars"
-  shows "part_post_solution T_abs x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+  shows "part_post_solution T_abs x (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) vars"
 proof -
   have x_in: "x \<in> vars" using pp by simp
-  have deps: "\<And>v. dep\<^sub>L T_st sigma_st v = dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v"
+  have deps: "\<And>v. dep\<^sub>L T_st sigma_st v = dep\<^sub>L T_abs (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) v"
     using DEP by (simp add: dep\<^sub>L_def dep_def)
   show ?thesis
   proof (intro conjI x_in ballI conjI)
     fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v \<subseteq> vars"
+    show "dep\<^sub>L T_abs (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) v \<subseteq> vars"
       using pp v_in deps by auto
-    show "eq T_abs v (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k)) (Inl v)"
+    show "eq T_abs v (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) \<le> (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) (Inl v)"
     proof -
       have le_st: "eq T_st v sigma_st \<le> sigma_st (Inl v)" using pp v_in by simp
-      show ?thesis using fun_of_st_mono[OF le_st] EQ by simp
+      show ?thesis using fun_of_resolved_st_q_for_mono[where gs=is_global, OF le_st] EQ by simp
     qed
-    show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k))"
+    show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) \<le> (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k))"
     proof (rule le_funI)
       fix k
       have le_st: "sides_of_rhs (T_st v) sigma_st k \<le> sigma_st k"
         using pp v_in by (simp add: le_fun_def)
-      show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) k
-              \<le> (\<lambda>k. fun_of_st (sigma_st k)) k"
-        using fun_of_st_mono[OF le_st] SIDES by simp
+      show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) k
+              \<le> (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) k"
+        using fun_of_resolved_st_q_for_mono[where gs=is_global, OF le_st] SIDES by simp
     qed
   qed
 qed
 
 text \<open>
   The exact analogue: an \<^emph>\<open>exact\<close> \<^const>\<open>part_solution\<close> of the executable generator maps,
-  under \<^const>\<open>fun_of_st\<close>, to an exact \<^const>\<open>part_solution\<close> of its abstract image.  The
+  under \<^const>\<open>fun_of_resolved_st_q_for\<close>, to an exact \<^const>\<open>part_solution\<close> of its abstract image.  The
   two abbreviations differ only in the \<open>eq\<close> conjunct (\<open>=\<close> vs \<open>\<le>\<close>); the same three
   commutation facts carry it, with the \<open>eq\<close> branch using the equality directly.  This is
   the enabler for certifying a concrete run whose exactness is established per run
@@ -808,36 +871,37 @@ text \<open>
 \<close>
 
 lemma part_solution_st_to_abs_transport:
-  fixes T_st :: "'u \<Rightarrow> ('u, 'g, ('a::bounded_semilattice_sup_bot) st) strategy_tree"
+  fixes T_st :: "'u \<Rightarrow> ('u, 'g, ('a::bounded_semilattice_sup_bot) resolved_st_q) strategy_tree"
     and T_abs :: "'u \<Rightarrow> ('u, 'g, 'a abs_state) strategy_tree"
-  assumes EQ: "\<And>v \<sigma>. fun_of_st (eq T_st v \<sigma>) = eq T_abs v (\<lambda>k. fun_of_st (\<sigma> k))"
-    and SIDES: "\<And>v \<sigma> k. fun_of_st (sides_of_rhs (T_st v) \<sigma> k)
-                  = sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (\<sigma> k)) k"
-    and DEP: "\<And>v \<sigma>. dep_aux \<sigma> (T_st v) = dep_aux (\<lambda>k. fun_of_st (\<sigma> k)) (T_abs v)"
+  assumes EQ: "\<And>v \<sigma>. fun_of_resolved_st_q_for is_global (eq T_st v \<sigma>) = eq T_abs v (\<lambda>k. fun_of_resolved_st_q_for is_global (\<sigma> k))"
+    and SIDES: "\<And>v \<sigma> k. fun_of_resolved_st_q_for is_global (sides_of_rhs (T_st v) \<sigma> k)
+                  = sides_of_rhs (T_abs v) (\<lambda>k. fun_of_resolved_st_q_for is_global (\<sigma> k)) k"
+    and DEP: "\<And>v \<sigma>. dep_aux \<sigma> (T_st v) = dep_aux (\<lambda>k. fun_of_resolved_st_q_for is_global (\<sigma> k)) (T_abs v)"
     and ps: "part_solution T_st x sigma_st vars"
-  shows "part_solution T_abs x (\<lambda>k. fun_of_st (sigma_st k)) vars"
+  shows "part_solution T_abs x (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) vars"
 proof -
   have x_in: "x \<in> vars" using ps by simp
-  have deps: "\<And>v. dep\<^sub>L T_st sigma_st v = dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v"
+  have deps: "\<And>v. dep\<^sub>L T_st sigma_st v = dep\<^sub>L T_abs (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) v"
     using DEP by (simp add: dep\<^sub>L_def dep_def)
   show ?thesis
   proof (intro conjI x_in ballI conjI)
     fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L T_abs (\<lambda>k. fun_of_st (sigma_st k)) v \<subseteq> vars"
+    show "dep\<^sub>L T_abs (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) v \<subseteq> vars"
       using ps v_in deps by auto
-    show "eq T_abs v (\<lambda>k. fun_of_st (sigma_st k)) = (\<lambda>k. fun_of_st (sigma_st k)) (Inl v)"
+    show "eq T_abs v (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) = (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) (Inl v)"
     proof -
       have eq_st: "eq T_st v sigma_st = sigma_st (Inl v)" using ps v_in by simp
-      show ?thesis using arg_cong[where f = fun_of_st, OF eq_st] EQ by simp
+      show ?thesis
+        using EQ[where v=v and \<sigma>=sigma_st] eq_st by simp
     qed
-    show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) \<le> (\<lambda>k. fun_of_st (sigma_st k))"
+    show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) \<le> (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k))"
     proof (rule le_funI)
       fix k
       have le_st: "sides_of_rhs (T_st v) sigma_st k \<le> sigma_st k"
         using ps v_in by (simp add: le_fun_def)
-      show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_st (sigma_st k)) k
-              \<le> (\<lambda>k. fun_of_st (sigma_st k)) k"
-        using fun_of_st_mono[OF le_st] SIDES by simp
+      show "sides_of_rhs (T_abs v) (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) k
+              \<le> (\<lambda>k. fun_of_resolved_st_q_for is_global (sigma_st k)) k"
+        using fun_of_resolved_st_q_for_mono[where gs=is_global, OF le_st] SIDES by simp
     qed
   qed
 qed
@@ -846,28 +910,28 @@ subsection \<open>Transport: executable effectful post-solution to abstract effe
 
 context
   fixes g :: cfg
-  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf_st :: "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
   fixes etf :: "('g, 'a) effectful_domain_transfer"
-  fixes bot0_st s0_st :: "'a st"
+  fixes bot0_st s0_st :: "'a resolved_st_q"
   fixes gseed :: 'g
   assumes tr_edge:
-    "\<And>a u \<sigma>_st. fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-               = traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>a u \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
+               = traverse_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_enter:
-    "\<And>cl fs as \<sigma>_st. fun_of_st (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-                = traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cl fs as \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
+                = traverse_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes tr_comb:
-    "\<And>cc ex dst \<sigma>_st. fun_of_st (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cc ex dst \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
+                = traverse_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   assumes sd_edge:
-    "\<And>a u \<sigma>_st gg. fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gg)
-               = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) gg"
+    "\<And>a u \<sigma>_st gg. fun_of_resolved_st_q_for is_global (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gg)
+               = sides_of_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
   assumes sd_enter:
-    "\<And>cl fs as \<sigma>_st gg. fun_of_st (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gg)
-                = sides_of_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st) gg"
+    "\<And>cl fs as \<sigma>_st gg. fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gg)
+                = sides_of_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
   assumes sd_comb:
-    "\<And>cc ex dst \<sigma>_st gg. fun_of_st (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st gg)
-                = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st) gg"
+    "\<And>cc ex dst \<sigma>_st gg. fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st gg)
+                = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
   assumes dep_edge:
     "\<And>a u \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (apply_etf_st etf_st a u)
                = dep_aux \<sigma>2 (apply_etf etf a u)"
@@ -879,111 +943,111 @@ context
                 = dep_aux \<sigma>2 (etf_combine etf dst cc ex)"
 begin
 
-private lemma fun_of_st_eq_cfg_eff_st:
-  "fun_of_st (eq (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed) v \<sigma>_st) =
-   eq (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed) v (fun_of_st \<circ> \<sigma>_st)"
+private lemma fun_of_resolved_st_q_for_eq_cfg_eff_st:
+  "fun_of_resolved_st_q_for is_global (eq (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed) v \<sigma>_st) =
+   eq (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed) v (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
   unfolding eq_side_cfg_T_eff_st eq_side_cfg_T_eff
-  by (simp add: side_acc_eff_st_fun_of_st[OF tr_edge tr_enter tr_comb])
+  by (simp add: side_acc_eff_st_fun_of_resolved_st_q_for[OF tr_edge tr_enter tr_comb])
 
-private lemma fun_of_st_sides_cfg_eff_st:
-  "fun_of_st (sides_of_rhs (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed v) \<sigma>_st gkey)
-   = sides_of_rhs (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed v)
-       (fun_of_st \<circ> \<sigma>_st) gkey"
+private lemma fun_of_resolved_st_q_for_sides_cfg_eff_st:
+  "fun_of_resolved_st_q_for is_global (sides_of_rhs (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed v) \<sigma>_st gkey)
+   = sides_of_rhs (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed v)
+       (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gkey"
 proof (cases "v = cfg_entry g")
   case True
   have fold_sides:
-    "\<And>gk. fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st (bot0_st \<squnion> restrict_local_st s0_st)
+    "\<And>gk. fun_of_resolved_st_q_for is_global (sides_of_rhs (side_rhs_fold_eff_st etf_st (bot0_st \<squnion> restrict_local_resolved_q s0_st)
         (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g))) \<sigma>_st gk)
-     = sides_of_rhs (side_rhs_fold_eff etf (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+     = sides_of_rhs (side_rhs_fold_eff etf (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
         (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-       (fun_of_st \<circ> \<sigma>_st) gk"
-    by (simp add: side_rhs_fold_eff_st_sides_fun_of_st[OF sd_edge sd_enter sd_comb])
+       (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gk"
+    by (simp add: side_rhs_fold_eff_st_sides_fun_of_resolved_st_q_for[OF sd_edge sd_enter sd_comb])
   show ?thesis unfolding side_cfg_T_eff_st_def side_cfg_T_eff_def
     make_side_rhs_tree_eff_st_def make_side_rhs_tree_eff_def Let_def
   proof (simp add: True)
-    show "fun_of_st ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
-            (bot0_st \<squnion> restrict_local_st s0_st)
+    show "fun_of_resolved_st_q_for is_global ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
+            (bot0_st \<squnion> restrict_local_resolved_q s0_st)
             (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g))) \<sigma>_st
-          in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_st s0_st)) gkey)
+          in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_resolved_q s0_st)) gkey)
           = (let m = sides_of_rhs (side_rhs_fold_eff etf
-                (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+                (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-                (fun_of_st \<circ> \<sigma>_st)
-             in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_st s0_st))) gkey"
+                (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+             in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_resolved_st_q_for is_global s0_st))) gkey"
     proof (cases gkey)
       case (Inl u)
-      have "fun_of_st ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
-              (bot0_st \<squnion> restrict_local_st s0_st)
+      have "fun_of_resolved_st_q_for is_global ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
+              (bot0_st \<squnion> restrict_local_resolved_q s0_st)
               (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g))) \<sigma>_st
-            in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_st s0_st)) (Inl u))
-          = fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st
-              (bot0_st \<squnion> restrict_local_st s0_st)
+            in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_resolved_q s0_st)) (Inl u))
+          = fun_of_resolved_st_q_for is_global (sides_of_rhs (side_rhs_fold_eff_st etf_st
+              (bot0_st \<squnion> restrict_local_resolved_q s0_st)
               (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
             \<sigma>_st (Inl u))"
         by (simp add: Let_def)
       also have "\<dots> = sides_of_rhs (side_rhs_fold_eff etf
-            (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+            (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
             (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-          (fun_of_st \<circ> \<sigma>_st) (Inl u)"
+          (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) (Inl u)"
         by (simp add: fold_sides)
       also have "\<dots> = (let m = sides_of_rhs (side_rhs_fold_eff etf
-              (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+              (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
               (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-            (fun_of_st \<circ> \<sigma>_st)
-          in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_st s0_st))) (Inl u)"
+            (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+          in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_resolved_st_q_for is_global s0_st))) (Inl u)"
         by (simp add: Let_def)
       finally show ?thesis by (simp add: Inl)
     next
       case (Inr gk)
       show ?thesis proof (cases "gk = gseed")
         case True
-        have "fun_of_st ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (bot0_st \<squnion> restrict_local_st s0_st)
+        have "fun_of_resolved_st_q_for is_global ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
+                (bot0_st \<squnion> restrict_local_resolved_q s0_st)
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g))) \<sigma>_st
-              in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_st s0_st)) (Inr gseed))
-            = fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (bot0_st \<squnion> restrict_local_st s0_st)
+              in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_resolved_q s0_st)) (Inr gseed))
+            = fun_of_resolved_st_q_for is_global (sides_of_rhs (side_rhs_fold_eff_st etf_st
+                (bot0_st \<squnion> restrict_local_resolved_q s0_st)
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-              \<sigma>_st (Inr gseed) \<squnion> restrict_global_st s0_st)"
+              \<sigma>_st (Inr gseed) \<squnion> restrict_global_resolved_q s0_st)"
           by (simp add: Let_def True)
-        also have "\<dots> = fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (bot0_st \<squnion> restrict_local_st s0_st)
+        also have "\<dots> = fun_of_resolved_st_q_for is_global (sides_of_rhs (side_rhs_fold_eff_st etf_st
+                (bot0_st \<squnion> restrict_local_resolved_q s0_st)
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-              \<sigma>_st (Inr gseed)) \<squnion> restrict_global (fun_of_st s0_st)"
+              \<sigma>_st (Inr gseed)) \<squnion> restrict_global (fun_of_resolved_st_q_for is_global s0_st)"
           by simp
         also have "\<dots> = sides_of_rhs (side_rhs_fold_eff etf
-              (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+              (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
               (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-            (fun_of_st \<circ> \<sigma>_st) (Inr gseed) \<squnion> restrict_global (fun_of_st s0_st)"
+            (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) (Inr gseed) \<squnion> restrict_global (fun_of_resolved_st_q_for is_global s0_st)"
           by (simp add: fold_sides)
         also have "\<dots> = (let m = sides_of_rhs (side_rhs_fold_eff etf
-                (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+                (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-              (fun_of_st \<circ> \<sigma>_st)
-            in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_st s0_st))) (Inr gseed)"
+              (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+            in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_resolved_st_q_for is_global s0_st))) (Inr gseed)"
           by (simp add: Let_def True)
         finally show ?thesis by (simp add: Inr True)
       next
         case False
-        have "fun_of_st ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (bot0_st \<squnion> restrict_local_st s0_st)
+        have "fun_of_resolved_st_q_for is_global ((let m = sides_of_rhs (side_rhs_fold_eff_st etf_st
+                (bot0_st \<squnion> restrict_local_resolved_q s0_st)
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g))) \<sigma>_st
-              in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_st s0_st)) (Inr gk))
-            = fun_of_st (sides_of_rhs (side_rhs_fold_eff_st etf_st
-                (bot0_st \<squnion> restrict_local_st s0_st)
+              in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global_resolved_q s0_st)) (Inr gk))
+            = fun_of_resolved_st_q_for is_global (sides_of_rhs (side_rhs_fold_eff_st etf_st
+                (bot0_st \<squnion> restrict_local_resolved_q s0_st)
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
               \<sigma>_st (Inr gk))"
           by (simp add: Let_def False)
         also have "\<dots> = sides_of_rhs (side_rhs_fold_eff etf
-              (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+              (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
               (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-            (fun_of_st \<circ> \<sigma>_st) (Inr gk)"
+            (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) (Inr gk)"
           by (simp add: fold_sides)
         also have "\<dots> = (let m = sides_of_rhs (side_rhs_fold_eff etf
-                (fun_of_st bot0_st \<squnion> restrict_local (fun_of_st s0_st))
+                (fun_of_resolved_st_q_for is_global bot0_st \<squnion> restrict_local (fun_of_resolved_st_q_for is_global s0_st))
                 (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g)) (return_call_list g (cfg_entry g)))
-              (fun_of_st \<circ> \<sigma>_st)
-            in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_st s0_st))) (Inr gk)"
+              (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+            in m(Inr gseed := m (Inr gseed) \<squnion> restrict_global (fun_of_resolved_st_q_for is_global s0_st))) (Inr gk)"
           by (simp add: Let_def False)
         finally show ?thesis by (simp add: Inr)
       qed
@@ -994,61 +1058,61 @@ next
   show ?thesis unfolding side_cfg_T_eff_st_def side_cfg_T_eff_def
     make_side_rhs_tree_eff_st_def make_side_rhs_tree_eff_def Let_def
     using False
-    by (simp add: side_rhs_fold_eff_st_sides_fun_of_st[OF sd_edge sd_enter sd_comb])
+    by (simp add: side_rhs_fold_eff_st_sides_fun_of_resolved_st_q_for[OF sd_edge sd_enter sd_comb])
 qed
 
 text \<open>
   An executable post-solution of @{const side_cfg_T_eff_st} maps to a
   @{const part_post_solution} of @{const side_cfg_T_eff} when per-tree traverse,
-  side, and dependency denotations commute through @{const fun_of_st}.
+  side, and dependency denotations commute through @{const fun_of_resolved_st_q_for}.
 \<close>
 
 theorem part_post_solution_st_to_abs_eff:
   assumes pp_st:
     "part_post_solution (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed) x \<sigma>_st vars"
   shows "part_post_solution
-           (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed)
-           x (fun_of_st \<circ> \<sigma>_st) vars"
+           (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed)
+           x (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) vars"
 proof -
   have x_in: "x \<in> vars" using pp_st by simp
   have deps: "\<And>v. v \<in> vars \<Longrightarrow>
       dep\<^sub>L (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed) \<sigma>_st v
-    = dep\<^sub>L (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed)
-             (fun_of_st \<circ> \<sigma>_st) v"
+    = dep\<^sub>L (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed)
+             (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) v"
   proof -
     fix v
     have eq: "dep_aux \<sigma>_st (make_side_rhs_tree_eff_st g etf_st bot0_st s0_st gseed v) =
-              dep_aux (fun_of_st \<circ> \<sigma>_st)
-                (make_side_rhs_tree_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed v)"
+              dep_aux (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)
+                (make_side_rhs_tree_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed v)"
       by (rule dep_aux_make_side_rhs_tree_eff_st_eq[OF tr_edge tr_enter tr_comb dep_edge dep_enter dep_comb])
     show "dep\<^sub>L (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed) \<sigma>_st v =
-          dep\<^sub>L (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed)
-                 (fun_of_st \<circ> \<sigma>_st) v"
+          dep\<^sub>L (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed)
+                 (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) v"
       by (simp add: dep\<^sub>L_def dep_def side_cfg_T_eff_st_def side_cfg_T_eff_def eq)
   qed
   show ?thesis
   proof (intro conjI x_in ballI conjI)
     fix v assume v_in: "v \<in> vars"
-    show "dep\<^sub>L (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed)
-              (fun_of_st \<circ> \<sigma>_st) v \<subseteq> vars"
+    show "dep\<^sub>L (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed)
+              (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) v \<subseteq> vars"
       using pp_st v_in deps[OF v_in] by auto
-    show "eq (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed) v
-             (fun_of_st \<circ> \<sigma>_st) \<le> (fun_of_st \<circ> \<sigma>_st) (Inl v)"
+    show "eq (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed) v
+             (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) \<le> (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) (Inl v)"
     proof -
       have le_st: "eq (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed) v \<sigma>_st
                    \<le> \<sigma>_st (Inl v)"
         using pp_st v_in by simp
       show ?thesis
-        using fun_of_st_mono[OF le_st] fun_of_st_eq_cfg_eff_st[where v=v] by simp
+        using fun_of_resolved_st_q_for_mono[where gs=is_global, OF le_st] fun_of_resolved_st_q_for_eq_cfg_eff_st[where v=v] by simp
     qed
-    show "sides_of_rhs (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed v)
-             (fun_of_st \<circ> \<sigma>_st) \<le> fun_of_st \<circ> \<sigma>_st"
+    show "sides_of_rhs (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed v)
+             (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) \<le> fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st"
     proof (rule le_funI)
       fix k
       show "sides_of_rhs
-               (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) gseed v)
-               (fun_of_st \<circ> \<sigma>_st) k \<le> (fun_of_st \<circ> \<sigma>_st) k"
-        by (metis comp_apply fun_of_st_mono fun_of_st_sides_cfg_eff_st le_funD pp_st v_in)
+               (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) gseed v)
+               (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k \<le> (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
+        by (metis comp_apply fun_of_resolved_st_q_for_mono fun_of_resolved_st_q_for_sides_cfg_eff_st le_funD pp_st v_in)
       
        
     qed
@@ -1059,46 +1123,46 @@ end
 
 lemma part_post_solution_st_to_abs_eff_unit_transfer:
   fixes g :: cfg
-  fixes etf_st :: "(unit, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf_st :: "(unit, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
   fixes etf :: "(unit, 'a) effectful_domain_transfer"
-  fixes F_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  fixes F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
   fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  fixes Fe_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a st \<Rightarrow> 'a st"
+  fixes Fe_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
   fixes Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  fixes bot0_st s0_st :: "'a st"
+  fixes bot0_st s0_st :: "'a resolved_st_q"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
   assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
   assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  assumes commute: "\<And>a s. fun_of_st (F_st a s) = F a (fun_of_st s)"
+  assumes commute: "\<And>a s. fun_of_resolved_st_q_for is_global (F_st a s) = F a (fun_of_resolved_st_q_for is_global s)"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree (Fe fs as) cl"
   assumes enter_st: "\<And>cl fs as. etf_st_enter etf_st fs as cl = unit_edge_tree_st (Fe_st fs as) cl"
-  assumes commute_enter: "\<And>fs as s. fun_of_st (Fe_st fs as s) = Fe fs as (fun_of_st s)"
+  assumes commute_enter: "\<And>fs as s. fun_of_resolved_st_q_for is_global (Fe_st fs as s) = Fe fs as (fun_of_resolved_st_q_for is_global s)"
   assumes pp_st:
     "part_post_solution (side_cfg_T_eff_st g etf_st bot0_st s0_st ()) x \<sigma>_st vars"
   shows "part_post_solution
-           (side_cfg_T_eff g etf (fun_of_st bot0_st) (fun_of_st s0_st) ())
-           x (fun_of_st \<circ> \<sigma>_st) vars"
+           (side_cfg_T_eff g etf (fun_of_resolved_st_q_for is_global bot0_st) (fun_of_resolved_st_q_for is_global s0_st) ())
+           x (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) vars"
 proof -
   interpret sound_rhs_generator_exec etf F etf_st F_st
     using edge comb edge_st comb_st commute by unfold_locales
   have tr_edge:
-    "\<And>a u \<sigma>_st. fun_of_st (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
-     = traverse_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>a u \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (apply_etf_st etf_st a u) \<sigma>_st)
+     = traverse_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
     unfolding edge_st edge traverse_unit_edge_tree_st traverse_unit_edge_tree
     by (simp add: commute o_def Let_def)
   have tr_comb:
-    "\<And>cc ex dst \<sigma>_st. fun_of_st (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
-     = traverse_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cc ex dst \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st)
+     = traverse_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
     unfolding comb_st comb traverse_unit_combine_tree_st traverse_unit_combine_tree
     by (simp add: o_def Let_def)
   have sd_edge:
-    "\<And>a u \<sigma>_st gg. fun_of_st (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gg)
-     = sides_of_rhs (apply_etf etf a u) (fun_of_st \<circ> \<sigma>_st) gg"
+    "\<And>a u \<sigma>_st gg. fun_of_resolved_st_q_for is_global (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gg)
+     = sides_of_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
     using sides_apply_etf_st .
   have sd_comb:
-    "\<And>cc ex dst \<sigma>_st gg. fun_of_st (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st gg)
-     = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_st \<circ> \<sigma>_st) gg"
+    "\<And>cc ex dst \<sigma>_st gg. fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st gg)
+     = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
     using sides_etf_combine_st .
   have dep_edge:
     "\<And>a u \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (apply_etf_st etf_st a u)
@@ -1109,27 +1173,27 @@ proof -
      = dep_aux \<sigma>2 (etf_combine etf dst cc ex)"
     by (subst comb_st, subst comb, simp add: dep_aux_unit_combine_tree_st)
   have tr_enter:
-    "\<And>cl fs as \<sigma>_st. fun_of_st (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
-     = traverse_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st)"
+    "\<And>cl fs as \<sigma>_st. fun_of_resolved_st_q_for is_global (traverse_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st)
+     = traverse_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st)"
     unfolding enter_st enter traverse_unit_edge_tree_st traverse_unit_edge_tree
     by (simp add: commute_enter o_def Let_def)
   have sd_enter:
-    "\<And>cl fs as \<sigma>_st gg. fun_of_st (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gg)
-     = sides_of_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st) gg"
+    "\<And>cl fs as \<sigma>_st gg. fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gg)
+     = sides_of_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
   proof -
-    fix cl fs as and \<sigma>_st :: "pp + unit \<Rightarrow> 'a st" and gg
-    show "fun_of_st (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gg)
-        = sides_of_rhs (etf_enter etf fs as cl) (fun_of_st \<circ> \<sigma>_st) gg"
+    fix cl fs as and \<sigma>_st :: "pp + unit \<Rightarrow> 'a resolved_st_q" and gg
+    show "fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_st_enter etf_st fs as cl) \<sigma>_st gg)
+        = sides_of_rhs (etf_enter etf fs as cl) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) gg"
     proof (cases gg)
       case (Inl u')
       then show ?thesis
         by (simp add: enter_st enter sides_unit_edge_tree_st_Inl sides_unit_edge_tree_Inl
-                      Let_def fun_of_st_bot bot_fun_def)
+                      Let_def bot_fun_def)
     next
       case (Inr g')
       then show ?thesis
         by (simp add: enter_st enter sides_unit_edge_tree_st_Inr sides_unit_edge_tree_Inr
-                      commute_enter fun_of_st_sup o_def Let_def)
+                      commute_enter fun_of_resolved_st_q_for_sup o_def Let_def)
     qed
   qed
   have dep_enter:
@@ -1142,30 +1206,30 @@ proof -
     by simp
 qed
 
-lemma inr_slot_locals_bot_fun_of_st_restrict_global_st:
-  fixes sigma_st :: "pp + unit \<Rightarrow> ('a::bounded_semilattice_sup_bot) st"
-  assumes rg: "\<And>gg. sigma_st (Inr gg) = restrict_global_st (sigma_st (Inr gg))"
-  shows "inr_slot_locals_bot is_global (fun_of_st \<circ> sigma_st)"
+lemma inr_slot_locals_bot_fun_of_resolved_st_q_for_restrict_global_abs:
+  fixes sigma_st :: "pp + unit \<Rightarrow> ('a::bounded_semilattice_sup_bot) resolved_st_q"
+  assumes rg: "\<And>gg. sigma_st (Inr gg) = restrict_global_resolved_q (sigma_st (Inr gg))"
+  shows "inr_slot_locals_bot is_global (fun_of_resolved_st_q_for is_global \<circ> sigma_st)"
   unfolding inr_slot_locals_bot_iff_Inr_restrict_global
 proof (intro allI)
   fix gg
-  show "(fun_of_st \<circ> sigma_st) (Inr gg) = restrict_global ((fun_of_st \<circ> sigma_st) (Inr gg))"
+  show "(fun_of_resolved_st_q_for is_global \<circ> sigma_st) (Inr gg) = restrict_global ((fun_of_resolved_st_q_for is_global \<circ> sigma_st) (Inr gg))"
   proof -
-    have "fun_of_st (sigma_st (Inr gg)) = fun_of_st (restrict_global_st (sigma_st (Inr gg)))"
+    have "fun_of_resolved_st_q_for is_global (sigma_st (Inr gg)) = fun_of_resolved_st_q_for is_global (restrict_global_resolved_q (sigma_st (Inr gg)))"
       using rg by simp
-    thus ?thesis by (simp add: o_def fun_of_st_restrict_global_st)
+    thus ?thesis by (simp add: o_def fun_of_resolved_st_q_for_restrict_global_abs)
   qed
 qed
 
 text \<open>
   The unit equation system has every reachable \<open>Side\<close> contribution
-  \<open>restrict_global_st\<close>-shaped.  This is the structural precondition the
-  side-effecting solver consumes to keep its \<open>Inr\<close> slots \<open>restrict_global_st\<close>-shaped
+  \<open>restrict_global_resolved_q\<close>-shaped.  This is the structural precondition the
+  side-effecting solver consumes to keep its \<open>Inr\<close> slots \<open>restrict_global_resolved_q\<close>-shaped
   (the solver-side induction lives where the side solver's \<open>solve\<close> is in scope).
 \<close>
 
 lemma side_rg_side_cfg_T_eff_st_unit:
-  fixes etf_st :: "(unit, ('a::bounded_semilattice_sup_bot) st) effectful_st_transfer"
+  fixes etf_st :: "(unit, ('a::bounded_semilattice_sup_bot) resolved_st_q) effectful_st_transfer"
   assumes edge_st: "\<And>a u. \<exists>f. apply_etf_st etf_st a u = unit_edge_tree_st f u"
   assumes enter_st: "\<And>cl fs as. \<exists>f. etf_st_enter etf_st fs as cl = unit_edge_tree_st f cl"
   assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
@@ -1183,3 +1247,11 @@ next
 qed
 
 end
+
+
+
+
+
+
+
+

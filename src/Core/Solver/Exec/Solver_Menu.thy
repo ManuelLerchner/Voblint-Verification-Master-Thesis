@@ -60,7 +60,9 @@ text \<open>Read one global/local slot's variable under every solver on the menu
   \<open>eqs\<close> the equation system, \<open>entry\<close> the solver entry unknown, \<open>k\<close> the slot to read
   (e.g. \<^term>\<open>Inr ctx\<close> for a keyed global), \<open>var\<close> the program variable.\<close>
 definition run_menu where
-  "run_menu eqs entry k var =
-     map (\<lambda>(nm, solve). (nm, lookup_st (snd (solve eqs entry) k) var)) solver_menu"
+  "run_menu gs eqs entry k var =
+     map (\<lambda>(nm, solve).
+       (nm, lookup_resolved_st_q (snd (solve eqs entry) k) (location_of gs var)))
+       solver_menu"
 
 end

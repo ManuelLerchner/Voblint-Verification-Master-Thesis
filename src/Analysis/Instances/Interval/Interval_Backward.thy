@@ -136,10 +136,10 @@ next
 qed
 
 text \<open>
-  Executable @{typ "ivl st"} mirror of \<open>afilter_ivl\<close> / \<open>bfilter_ivl\<close>, and its
-  commutation with the abstract filters through @{const fun_of_st}. Both come
-  from the generic @{locale backward_domain} executable mirror
-  (\<open>Exec_Backward\<close>); no per-domain induction is needed here.
+  Executable @{typ "ivl resolved_st_q"} mirror of \<open>afilter_ivl\<close> /
+  \<open>bfilter_ivl\<close>, and its commutation with the abstract filters through
+  @{const fun_of_resolved_st_q_for}. Both come from the generic
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>).
 \<close>
 
 lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute

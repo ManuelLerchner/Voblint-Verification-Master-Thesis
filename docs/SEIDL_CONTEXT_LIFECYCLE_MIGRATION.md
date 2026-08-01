@@ -12,7 +12,12 @@
 > **M4.1/M4.2 progress:** `declared_global_vars` and `declared_global`
 > (`VIMP_Notation.thy`) now feed classifier-based source well-formedness,
 > context-aware store operations, split-state helpers, and D/G routing
-> helpers. The mechanical signature propagation is batch-green. `is_global`
+> helpers. The generic unit D/G specification now carries the classifier
+> through edge transfer and return-combine splitting (`unit_step_for`,
+> `unit_combine_step_env_for`, and `unit_combine_step_assign_for`). The
+> sound-transfer contract now has the matching `sound_transfer_for` locale
+> and constructor for declaration-driven enter/combine semantics.
+> mechanical signature propagation is batch-green. `is_global`
 > remains as a compatibility classifier for consumers outside this
 > checkpoint; the remaining semantic consumers must still move before the
 > naming rule can be deleted. M4.1b and M4.3–M4.8 remain open. See M4.5

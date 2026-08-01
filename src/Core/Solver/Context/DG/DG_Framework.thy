@@ -15,13 +15,67 @@ text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> 
 
 
 
+definition unit_step_for ::
+  "(vname => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_step_for gs f d g =
+     (let res = f (d \<squnion> g) in
+      (restrict_global_for gs res, restrict_local_for gs res))"
+
 definition unit_step ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
+  "('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_step f d g = (let res = f (d \<squnion> g) in (restrict_global res, restrict_local res))"
 
+definition unit_step_resolved_for ::
+  "(vname => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a resolved_st) =>
+   'a resolved_st => 'a resolved_st =>
+   'a resolved_st * 'a resolved_st"
+where
+  "unit_step_resolved_for gs f d g =
+     (let res = f (fun_of_resolved_st_for gs d \<squnion>
+                         fun_of_resolved_st_for gs g)
+      in (restrict_global_resolved res, restrict_local_resolved res))"
 
+lemma unit_step_resolved_for_commute:
+  fixes gs :: "vname => bool"
+    and f :: "'a::bounded_semilattice_sup_bot abs_state => 'a resolved_st"
+    and f_abs :: "'a abs_state => 'a abs_state"
+    and d g :: "'a resolved_st"
+  assumes commute:
+    "\<And>s. fun_of_resolved_st_for gs (f s) = f_abs s"
+  shows
+    "map_prod (fun_of_resolved_st_for gs) (fun_of_resolved_st_for gs)
+       (unit_step_resolved_for gs f d g) =
+     unit_step_for gs f_abs
+       (fun_of_resolved_st_for gs d) (fun_of_resolved_st_for gs g)"
+proof -
+  have global:
+    "fun_of_resolved_st_for gs
+        (restrict_global_resolved
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g))) =
+       restrict_global_for gs
+        (fun_of_resolved_st_for gs
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g)))"
+    unfolding restrict_global_for_def
+    by (rule ext) (simp add: fun_of_resolved_st_for_restrict_global)
+  have local:
+    "fun_of_resolved_st_for gs
+        (restrict_local_resolved
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g))) =
+       restrict_local_for gs
+        (fun_of_resolved_st_for gs
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g)))"
+    unfolding restrict_local_for_def
+    by (rule ext) (simp add: fun_of_resolved_st_for_restrict_local)
+  show ?thesis
+    unfolding unit_step_resolved_for_def unit_step_for_def
+    by (simp only: Let_def map_prod_simp global local commute)
+qed
 
 subsection \<open>A lattice copy type for D-times-G unknown values\<close>
 
@@ -100,8 +154,9 @@ where
 
 instance
   by standard
-    (auto simp: widen_dg_state_def narrow_dg_state_def less_eq_dg_state_def
-      intro: widen_ge1 widen_ge2 narrow_ge narrow_le)
+    (simp_all add: less_eq_dg_state_def widen_dg_state_def narrow_dg_state_def
+      narrowing_class.narrow_ge narrowing_class.narrow_le
+      widening_class.widen_ge1 widening_class.widen_ge2)
 
 end
 
@@ -403,6 +458,17 @@ where
   "unit_combine_step_assign dst de g merged =
      (let res = combine_assign_abs dst ((de \<squnion> g) ret_var) (fst merged \<squnion> snd merged)
       in (restrict_global res, restrict_local res))"
+definition unit_combine_step_assign_for ::
+  "(vname => bool) =>
+   vname option => 'a::bounded_semilattice_sup_bot abs_state
+   => 'a abs_state => 'a abs_state \<times> 'a abs_state
+   => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_combine_step_assign_for gs dst de g merged =
+     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var)
+         (fst merged \<squnion> snd merged)
+      in (restrict_global_for gs res, restrict_local_for gs res))"
+
 
 definition unit_dg_spec ::
   "'a::sound_domain domain_transfer \<Rightarrow> ('a abs_state, 'a abs_state) dg_spec"
@@ -429,14 +495,45 @@ definition unit_dg_spec_for ::
   "(vname => bool) => 'a::sound_domain domain_transfer
    => ('a abs_state, 'a abs_state) dg_spec" where
   "unit_dg_spec_for gs tf = \<lparr>
-    dgs_nop        = unit_step (apply_tf tf EA_Nop),
-    dgs_assign     = (%x e. unit_step (apply_tf tf (EA_Assign x e))),
-    dgs_assume     = (%b. unit_step (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (%b. unit_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (%xs es. unit_step (tf_enter tf xs es)),
+    dgs_nop        = unit_step_for gs (apply_tf tf EA_Nop),
+    dgs_assign     = (%x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
+    dgs_assume     = (%b. unit_step_for gs (apply_tf tf (EA_Assume b))),
+    dgs_assume_not = (%b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
+    dgs_enter      = (%xs es. unit_step_for gs (tf_enter tf xs es)),
     dgs_combine_env    = unit_combine_step_env_for gs,
-    dgs_combine_assign = unit_combine_step_assign
+    dgs_combine_assign = unit_combine_step_assign_for gs
   \<rparr>"
+lemma dgs_combine_unit_dg_spec_for:
+  "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
+     (let res = combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)
+      in (restrict_global_for gs res, restrict_local_for gs res))"
+proof -
+  have env_join:
+    "fst (unit_combine_step_env_for gs dc de g) \<squnion>
+       snd (unit_combine_step_env_for gs dc de g) =
+     combine_abs gs (dc \<squnion> g) (de \<squnion> g)"
+    unfolding unit_combine_step_env_for_def
+    by (simp add: Let_def restrict_global_for_local_join)
+  show ?thesis
+    unfolding dgs_combine_def unit_dg_spec_for_def
+      unit_combine_step_assign_for_def combine_collect_abs_def Let_def
+    by (simp add: env_join)
+qed
+
+lemma dg_spec_step_unit_for:
+  "dg_spec_step (unit_dg_spec_for gs tf) a =
+     unit_step_for gs (apply_tf tf a)"
+  unfolding unit_dg_spec_for_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+       split: option.splits)
+
+lemma dgs_enter_unit_dg_spec_for:
+  "dgs_enter (unit_dg_spec_for gs tf) fs as =
+     unit_step_for gs (tf_enter tf fs as)"
+  unfolding unit_dg_spec_for_def
+  by simp
+
 
 
 text \<open>The pre-split combine value is recovered by composition, matching

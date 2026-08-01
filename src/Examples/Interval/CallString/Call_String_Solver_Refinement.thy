@@ -2,7 +2,31 @@ theory Call_String_Solver_Refinement
   imports Example_Interval_DG_CallString_K2 "Voblint_Core.Context_Refinement"
 begin
 
+lemma st_eqI_lookup:
+  fixes s t :: "('a::bot) resolved_st_q"
+  assumes "\<And>loc. lookup_resolved_st_q s loc = lookup_resolved_st_q t loc"
+  shows "s = t"
+  using assms
+  by (simp add: resolved_st_q_eq_iff fun_eq_iff)
+
+lemma restrict_global_resolved_q_sup_restrict_global_resolved_q:
+  fixes s t :: "('a::bounded_semilattice_sup_bot) resolved_st_q"
+  shows "restrict_global_resolved_q (s \<squnion> t) =
+    restrict_global_resolved_q s \<squnion> restrict_global_resolved_q t"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_sup_resolved_st_q)
+
+lemma restrict_local_resolved_q_sup_restrict_local_resolved_q:
+  fixes s t :: "('a::bounded_semilattice_sup_bot) resolved_st_q"
+  shows "restrict_local_resolved_q (s \<squnion> t) =
+    restrict_local_resolved_q s \<squnion> restrict_local_resolved_q t"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_sup_resolved_st_q)
+
 text \<open>
+
   The merge is not a property of a node's own context fiber; it is a property of
   \<^emph>\<open>dependency reachability\<close> from a node whose fiber genuinely splits. \<open>Statement 0\<close>,
   \<open>FunctionResult ''g''\<close>, and \<open>FunctionEntry ''g''\<close> have two-element k=2 fibers, because
@@ -28,6 +52,11 @@ text \<open>
   theorem, \<open>project_sigma_part_post_solution\<close>, which keeps \<open>project_sigma\<close> a
   \<^verbatim>\<open>part_post_solution\<close> of \<open>nest_1_eqs\<close>.
 \<close>
+lemma bind_formals_resolved_q_singleton:
+  "bind_formals_resolved_q gs [x] [a] s =
+    update_resolved_st_q s (location_of gs x) a"
+  by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
+
 
 text \<open>
   Named closed forms for the downstream-cone values, so \<open>project_sigma\<close> plugs in one
@@ -40,37 +69,37 @@ text \<open>
   fixed.
 \<close>
 
-definition merged_result_g :: "(ivl st, ivl st) dg_state" where
+definition merged_result_g :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "merged_result_g = snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 5]))
                         \<squnion> snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 6]))"
 
-definition statement3_val :: "cfg_node list \<Rightarrow> (ivl st, ivl st) dg_state" where
+definition statement3_val :: "cfg_node list \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "statement3_val ctx1 = DG (combine_local Spoly (Some ''t'')
         (locals (snd nest_2_sol (Inl (Statement 2, ctx1))))
         (locals merged_result_g)
         (globs (snd nest_2_sol (Inr Global2)))) bot"
 
-definition result_f_val :: "cfg_node list \<Rightarrow> (ivl st, ivl st) dg_state" where
+definition result_f_val :: "cfg_node list \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "result_f_val ctx1 = DG (snd (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')
         (locals (statement3_val ctx1)) (globs (snd nest_2_sol (Inr Global2))))) bot"
 
-definition statement6_val :: "(ivl st, ivl st) dg_state" where
+definition statement6_val :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "statement6_val = DG (combine_local Spoly (Some ''x'')
         (locals (snd nest_2_sol (Inl (Statement 5, []))))
         (locals (result_f_val [Statement 5]))
         (globs (snd nest_2_sol (Inr Global2)))) bot"
 
-definition statement7_val :: "(ivl st, ivl st) dg_state" where
+definition statement7_val :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "statement7_val = DG (combine_local Spoly (Some ''y'')
         (locals statement6_val)
         (locals (result_f_val [Statement 6]))
         (globs (snd nest_2_sol (Inr Global2)))) bot"
 
-definition result_main_val :: "(ivl st, ivl st) dg_state" where
+definition result_main_val :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "result_main_val = DG (snd (dg_spec_step Spoly (EA_Ret None ''main'')
         (locals statement7_val) (globs (snd nest_2_sol (Inr Global2))))) bot"
 
-definition project_sigma :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> (ivl st, ivl st) dg_state" where
+definition project_sigma :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state" where
   "project_sigma x =
      (case x of
         Inl (v, ctx1) \<Rightarrow>
@@ -229,9 +258,12 @@ lemma sides_of_rhs_result_g:
   unfolding nest_1_eqs_result_g
   by (simp add: bot_fun_def)
 
-lemma restrict_global_st_update_ret_var:
-  "restrict_global_st (update_st s ret_var v) = restrict_global_st s"
-  by (rule st_eqI_lookup) (auto simp: lookup_restrict_global_st ret_var_not_global)
+lemma restrict_global_resolved_q_update_ret_var:
+  "restrict_global_resolved_q (update_exec_dg_st s ret_var v) = restrict_global_resolved_q s"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_restrict_global_resolved_q ret_var_not_global
+      lookup_resolved_st_q_update_diff location_of_def)
 
 
 
@@ -241,25 +273,28 @@ lemma eq_result_g_concrete_bound:
   unfolding nest_1_eqs_entry_g project_sigma_def nest_1_eqs_result_g
   by eval
 
-lemma restrict_global_st_le: "restrict_global_st s \<le> s"
-  by (simp add: le_st_iff lookup_restrict_global_st)
+lemma restrict_global_resolved_q_le: "restrict_global_resolved_q s \<le> s"
+  apply (simp only: le_resolved_st_q_iff)
+  apply (rule allI)
+  apply (case_tac loc)
+  by simp_all
 
 lemma fst_dgs_assign_ret_g:
-  "fst (dgs_assign Spoly ret_var a d g) = restrict_global_st d \<squnion> restrict_global_st g"
+  "fst (dgs_assign Spoly ret_var a d g) = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
   unfolding Spoly_def unit_dg_spec_st_def unit_step_st_def Let_def
-  by (simp add: restrict_global_st_update_ret_var restrict_global_st_sup_restrict_global_st)
+  by (simp add: restrict_global_resolved_q_update_ret_var restrict_global_resolved_q_sup_restrict_global_resolved_q)
 
 lemma fst_dg_spec_step_ret_g:
-  "fst (dg_spec_step Spoly (EA_Ret (Some a) p) d g) = restrict_global_st d \<squnion> restrict_global_st g"
+  "fst (dg_spec_step Spoly (EA_Ret (Some a) p) d g) = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
   by (simp add: fst_dgs_assign_ret_g)
 
 lemma fst_dgs_nop:
-  "fst (dgs_nop Spoly d g) = restrict_global_st d \<squnion> restrict_global_st g"
+  "fst (dgs_nop Spoly d g) = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
   unfolding Spoly_def unit_dg_spec_st_def unit_step_st_def Let_def
-  by (simp add: restrict_global_st_sup_restrict_global_st)
+  by (simp add: restrict_global_resolved_q_sup_restrict_global_resolved_q)
 
 lemma fst_dg_spec_step_ret_none:
-  "fst (dg_spec_step Spoly (EA_Ret None p) d g) = restrict_global_st d \<squnion> restrict_global_st g"
+  "fst (dg_spec_step Spoly (EA_Ret None p) d g) = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
   by (simp add: fst_dgs_nop)
 
 subsection \<open>The same node, one level down in \<open>nest_2_eqs\<close>, at each child context\<close>
@@ -316,19 +351,19 @@ proof -
   let ?g0 = "snd nest_2_sol (Inr Global2)"
   have d0: "locals (project_sigma (Inl (Statement 0, [Statement 2]))) = locals ?dA \<squnion> locals ?dB"
     by (simp add: project_sigma_def sup_dg_state_def)
-  have restrict_boundA: "restrict_global_st (locals ?dA) \<le> globs ?g0"
+  have restrict_boundA: "restrict_global_resolved_q (locals ?dA) \<le> globs ?g0"
     using part_post_sides_2[OF result_g_covered_2_A,
             unfolded sides_of_rhs_result_g_2[of "[Statement 2, Statement 5]", OF disjI1[OF refl]],
             THEN le_funD, of "Inr Global2"]
     by (simp add: less_eq_dg_state_def fst_dgs_assign_ret_g)
-  have restrict_boundB: "restrict_global_st (locals ?dB) \<le> globs ?g0"
+  have restrict_boundB: "restrict_global_resolved_q (locals ?dB) \<le> globs ?g0"
     using part_post_sides_2[OF result_g_covered_2_B,
             unfolded sides_of_rhs_result_g_2[of "[Statement 2, Statement 6]", OF disjI2[OF refl]],
             THEN le_funD, of "Inr Global2"]
     by (simp add: less_eq_dg_state_def fst_dgs_assign_ret_g)
-  have split_d0: "restrict_global_st (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
-       = restrict_global_st (locals ?dA) \<squnion> restrict_global_st (locals ?dB)"
-    by (simp add: d0 restrict_global_st_sup_restrict_global_st[symmetric])
+  have split_d0: "restrict_global_resolved_q (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
+       = restrict_global_resolved_q (locals ?dA) \<squnion> restrict_global_resolved_q (locals ?dB)"
+    by (simp add: d0 restrict_global_resolved_q_sup_restrict_global_resolved_q[symmetric])
   have key_bound:
     "fst (dg_spec_step Spoly (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
            (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
@@ -338,15 +373,15 @@ proof -
     have "fst (dg_spec_step Spoly (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
              (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
              (globs (project_sigma (Inr Global1))))
-        = restrict_global_st (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
-            \<squnion> restrict_global_st (globs (project_sigma (Inr Global1)))"
+        = restrict_global_resolved_q (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
+            \<squnion> restrict_global_resolved_q (globs (project_sigma (Inr Global1)))"
       by (simp add: fst_dgs_assign_ret_g)
-    also have "\<dots> = restrict_global_st (locals ?dA) \<squnion> restrict_global_st (locals ?dB)
-                       \<squnion> restrict_global_st (globs ?g0)"
-      by (simp add: split_d0 project_sigma_def restrict_global_st_sup_restrict_global_st
+    also have "\<dots> = restrict_global_resolved_q (locals ?dA) \<squnion> restrict_global_resolved_q (locals ?dB)
+                       \<squnion> restrict_global_resolved_q (globs ?g0)"
+      by (simp add: split_d0 project_sigma_def restrict_global_resolved_q_sup_restrict_global_resolved_q
           sup_dg_state_def)
     also have "\<dots> \<le> globs ?g0"
-      by (intro sup_least restrict_boundA restrict_boundB restrict_global_st_le)
+      by (intro sup_least restrict_boundA restrict_boundB restrict_global_resolved_q_le)
     finally show ?thesis by (simp add: project_sigma_def)
   qed
   show ?thesis
@@ -391,36 +426,48 @@ lemma nest_1_eqs_statement3:
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
 
 lemma result_g_local_no_global_5:
-  "restrict_global_st (locals (snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 5])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 5])))) = bot"
   by eval
 
 lemma result_g_local_no_global_6:
-  "restrict_global_st (locals (snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 6])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 6])))) = bot"
   by eval
 
 lemma project_sigma_result_g_local_no_global:
-  "restrict_global_st (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2])))) = bot"
+  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2])))) = bot"
   by (simp add: project_sigma_def merged_result_g_def sup_dg_state_def
-                restrict_global_st_sup_restrict_global_st[symmetric]
+                restrict_global_resolved_q_sup_restrict_global_resolved_q
                 result_g_local_no_global_5 result_g_local_no_global_6)
 
 lemma statement2_no_global: "\<not> is_global ''t''"
   by (simp add: is_global_def)
 
-lemma restrict_global_st_update_var:
-  "\<not> is_global w \<Longrightarrow> restrict_global_st (update_st s w v) = restrict_global_st s"
-  by (rule st_eqI_lookup) (auto simp: lookup_restrict_global_st)
+lemma restrict_global_resolved_q_update_var:
+  "\<not> is_global w \<Longrightarrow> restrict_global_resolved_q (update_exec_dg_st s w v) = restrict_global_resolved_q s"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_restrict_global_resolved_q
+      lookup_resolved_st_q_update_diff location_of_def)
 
-lemma restrict_global_st_split':
-  "restrict_global_st (restrict_global_st B \<squnion> restrict_local_st A) = restrict_global_st B"
-  by (simp add: sup_commute[of "restrict_global_st B"] restrict_global_st_split)
+lemma restrict_global_resolved_q_combine_assign_local:
+  "\<not> is_global w \<Longrightarrow>
+    restrict_global_resolved_q (combine_assign_resolved_q is_global (Some w) v s) =
+    restrict_global_resolved_q s"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_restrict_global_resolved_q
+      lookup_combine_assign_resolved_q location_of_def)
+
+lemma restrict_global_resolved_q_split':
+  "restrict_global_resolved_q (restrict_global_resolved_q B \<squnion> restrict_local_resolved_q A) = restrict_global_resolved_q B"
+  by (simp add: sup_commute[of "restrict_global_resolved_q B"] restrict_global_resolved_q_split)
 
 lemma combine_global_ret_var:
-  "\<not> is_global w \<Longrightarrow> combine_global Spoly (Some w) dc de g = restrict_global_st (de \<squnion> g)"
+  "\<not> is_global w \<Longrightarrow> combine_global Spoly (Some w) dc de g = restrict_global_resolved_q (de \<squnion> g)"
   unfolding Spoly_def unit_dg_spec_st_def dgs_combine_def
             unit_combine_step_st_env_def unit_combine_step_st_assign_def Let_def
-  by (simp add: combine_abs_st_def restrict_local_st_split restrict_global_st_split'
-                restrict_global_st_update_var)
+  by (simp add: combine_abs_def restrict_local_resolved_q_split restrict_global_resolved_q_split'
+                restrict_global_resolved_q_combine_assign_local)
 
 lemma dep_L_statement3:
   "dep\<^sub>L nest_1_eqs project_sigma (Statement 3, ctx)
@@ -450,31 +497,47 @@ lemma project_sigma_eq_statement3:
   unfolding eq_statement3_closed_form project_sigma_def statement3_val_def
   by auto
 
-lemma restrict_local_st_split':
-  "restrict_local_st (restrict_global_st A \<squnion> restrict_local_st B) = restrict_local_st B"
-  by (simp add: sup_commute[of "restrict_global_st A"] restrict_local_st_split)
+lemma restrict_local_resolved_q_split':
+  "restrict_local_resolved_q (restrict_global_resolved_q A \<squnion> restrict_local_resolved_q B) = restrict_local_resolved_q B"
+  by (simp add: sup_commute[of "restrict_global_resolved_q A"] restrict_local_resolved_q_split)
 
 
-lemma restrict_local_st_update_var:
-  "\<not> is_global w \<Longrightarrow> restrict_local_st (update_st s w v) = update_st (restrict_local_st s) w v"
-  by (rule st_eqI_lookup) (auto simp: lookup_restrict_local_st)
+lemma restrict_local_resolved_q_update_var:
+  "\<not> is_global w \<Longrightarrow> restrict_local_resolved_q (update_exec_dg_st s w v) = update_exec_dg_st (restrict_local_resolved_q s) w v"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  apply (case_tac "x1 = w")
+  by (simp_all add: lookup_restrict_local_resolved_q
+      lookup_resolved_st_q_update_diff location_of_def)
+
+lemma restrict_local_resolved_q_combine_assign_local:
+  "\<not> is_global w \<Longrightarrow>
+    restrict_local_resolved_q (combine_assign_resolved_q is_global (Some w) v s) =
+    update_exec_dg_st (restrict_local_resolved_q s) w v"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  apply (case_tac "x1 = w")
+  by (simp_all add: lookup_restrict_local_resolved_q
+      lookup_combine_assign_resolved_q lookup_resolved_st_q_update_diff location_of_def)
 
 lemma combine_local_ret_var:
   "\<not> is_global w \<Longrightarrow> combine_local Spoly (Some w) dc de g
-     = update_st (restrict_local_st (dc \<squnion> g)) w (lookup_st (de \<squnion> g) ret_var)"
+     = update_exec_dg_st (restrict_local_resolved_q (dc \<squnion> g)) w (lookup_exec_dg_st (de \<squnion> g) ret_var)"
   unfolding Spoly_def unit_dg_spec_st_def dgs_combine_def
             unit_combine_step_st_env_def unit_combine_step_st_assign_def Let_def
-  by (simp add: combine_abs_st_def restrict_local_st_split' restrict_global_st_split
-           restrict_local_st_update_var)
+  by (simp add: combine_abs_def restrict_local_resolved_q_split' restrict_global_resolved_q_split
+           restrict_local_resolved_q_combine_assign_local)
 
-lemma restrict_global_st_restrict_local_st:
-  "restrict_global_st (restrict_local_st s) = bot"
-  by (rule st_eqI_lookup) (simp add: lookup_restrict_global_st lookup_restrict_local_st)
+lemma restrict_global_resolved_q_restrict_local_resolved_q:
+  "restrict_global_resolved_q (restrict_local_resolved_q s) = bot"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_restrict_global_resolved_q lookup_restrict_local_resolved_q)
 
 lemma combine_local_no_global:
-  "\<not> is_global w \<Longrightarrow> restrict_global_st (combine_local Spoly (Some w) dc de g) = bot"
-  by (simp add: combine_local_ret_var restrict_global_st_update_var
-                restrict_global_st_restrict_local_st)
+  "\<not> is_global w \<Longrightarrow> restrict_global_resolved_q (combine_local Spoly (Some w) dc de g) = bot"
+  by (simp add: combine_local_ret_var restrict_global_resolved_q_update_var
+                restrict_global_resolved_q_restrict_local_resolved_q)
 
 lemma var_x_no_global: "\<not> is_global ''x''"
   by (simp add: is_global_def)
@@ -518,12 +581,12 @@ proof -
             (locals (project_sigma (Inl (Statement 2, ctx))))
             (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
             (globs (project_sigma (Inr Global1)))
-        = restrict_global_st (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
-            \<squnion> restrict_global_st (globs (project_sigma (Inr Global1)))"
+        = restrict_global_resolved_q (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
+            \<squnion> restrict_global_resolved_q (globs (project_sigma (Inr Global1)))"
       by (simp add: combine_global_ret_var[OF statement2_no_global]
-                    restrict_global_st_sup_restrict_global_st[symmetric])
+                    restrict_global_resolved_q_sup_restrict_global_resolved_q[symmetric])
     also have "\<dots> \<le> globs (project_sigma (Inr Global1))"
-      by (simp add: project_sigma_result_g_local_no_global restrict_global_st_le)
+      by (simp add: project_sigma_result_g_local_no_global restrict_global_resolved_q_le)
     finally show ?thesis .
   qed
   show ?thesis
@@ -605,7 +668,7 @@ lemma sides_of_rhs_result_f:
   by (simp add: bot_fun_def)
 
 lemma statement3_val_local_no_global:
-  "restrict_global_st (locals (statement3_val ctx)) = bot"
+  "restrict_global_resolved_q (locals (statement3_val ctx)) = bot"
   by (simp add: statement3_val_def combine_local_no_global[OF statement2_no_global])
 
 lemma project_sigma_sides_result_f:
@@ -620,12 +683,12 @@ proof -
     have "fst (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')
              (locals (project_sigma (Inl (Statement 3, ctx))))
              (globs (project_sigma (Inr Global1))))
-        = restrict_global_st (locals (project_sigma (Inl (Statement 3, ctx))))
-            \<squnion> restrict_global_st (globs (project_sigma (Inr Global1)))"
+        = restrict_global_resolved_q (locals (project_sigma (Inl (Statement 3, ctx))))
+            \<squnion> restrict_global_resolved_q (globs (project_sigma (Inr Global1)))"
       by (simp add: fst_dg_spec_step_ret_g fst_dgs_assign_ret_g)
     also have "\<dots> \<le> globs (project_sigma (Inr Global1))"
       using assms
-      by (auto simp: project_sigma_def statement3_val_local_no_global restrict_global_st_le)
+      by (auto simp: project_sigma_def statement3_val_local_no_global restrict_global_resolved_q_le)
     finally show ?thesis .
   qed
   show ?thesis
@@ -715,50 +778,62 @@ schematic_goal sides_of_rhs_statement6_form:
 schematic_goal enter_local_n10_form:
   "enter_local Spoly [''p''] [aexp.N 10] d g = ?rhs"
   unfolding Spoly_def unit_dg_spec_st_def unit_step_st_def
-  apply (simp add: Let_def ivl_enter_st_def enter_ivl_st_def bind_formals_abs_st_def)
+  apply (simp add: Let_def ivl_enter_st_def enter_ivl_st_def)
   done
 
-lemma restrict_local_st_enter_frame_D_st_indep:
-  "restrict_local_st (enter_frame_D_st tv s) = restrict_local_st (enter_frame_D_st tv s')"
-  by (rule st_eqI_lookup) (simp add: lookup_restrict_local_st lookup_enter_frame_D_st)
+lemma restrict_local_resolved_q_enter_frame_D_st_indep:
+  "restrict_local_resolved_q (enter_ivl_st s) = restrict_local_resolved_q (enter_ivl_st s')"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_restrict_local_resolved_q enter_ivl_st_def)
 
 lemma var_p_no_global: "\<not> is_global ''p''"
   by (simp add: is_global_def)
 
 lemma enter_local_n10_indep:
   "enter_local Spoly [''p''] [aexp.N 10] d g = enter_local Spoly [''p''] [aexp.N 10] bot bot"
-  unfolding enter_local_n10_form
-  by (simp add: restrict_local_st_update_var[OF var_p_no_global]
-                restrict_local_st_enter_frame_D_st_indep[of ivl_top "d \<squnion> g" bot])
+proof -
+  have h:
+      "restrict_local_resolved_q (enter_frame_D_resolved_q ivl_top (d \<squnion> g)) =
+       restrict_local_resolved_q (enter_frame_D_resolved_q ivl_top bot)"
+    by (rule restrict_local_resolved_q_enter_frame_D_st_indep[unfolded enter_ivl_st_def])
+  show ?thesis
+    unfolding enter_local_n10_form
+    by (simp add: bind_formals_resolved_q_singleton
+                  restrict_local_resolved_q_update_var[OF var_p_no_global] h)
+qed
 
 lemma snd_dg_spec_step_ret_no_global:
-  "restrict_global_st (snd (dg_spec_step Spoly (EA_Ret e p) d g)) = bot"
+  "restrict_global_resolved_q (snd (dg_spec_step Spoly (EA_Ret e p) d g)) = bot"
   unfolding Spoly_def unit_dg_spec_st_def
-  by (cases e) (simp_all add: unit_step_st_def Let_def restrict_global_st_restrict_local_st)
+  by (cases e) (simp_all add: unit_step_st_def Let_def restrict_global_resolved_q_restrict_local_resolved_q)
 
 lemma snd_dgs_assign_no_global:
-  "restrict_global_st (snd (dgs_assign Spoly w a d g)) = bot"
+  "restrict_global_resolved_q (snd (dgs_assign Spoly w a d g)) = bot"
   unfolding Spoly_def unit_dg_spec_st_def
-  by (simp add: unit_step_st_def Let_def restrict_global_st_restrict_local_st)
+  by (simp add: unit_step_st_def Let_def restrict_global_resolved_q_restrict_local_resolved_q)
 
 lemma result_f_val_local_no_global:
-  "restrict_global_st (locals (result_f_val ctx)) = bot"
+  "restrict_global_resolved_q (locals (result_f_val ctx)) = bot"
   by (simp add: result_f_val_def snd_dgs_assign_no_global)
 
-lemma restrict_global_st_enter_frame_D_st:
-  "restrict_global_st (enter_frame_D_st tv s) = restrict_global_st s"
-  by (rule st_eqI_lookup) (simp add: lookup_restrict_global_st lookup_enter_frame_D_st)
+lemma restrict_global_resolved_q_enter_frame_D_st:
+  "restrict_global_resolved_q (enter_ivl_st s) = restrict_global_resolved_q s"
+  apply (rule st_eqI_lookup)
+  apply (case_tac loc)
+  by (simp_all add: lookup_restrict_global_resolved_q enter_ivl_st_def)
 
 lemma enter_global_ret_var:
-  "enter_global Spoly [''p''] [a] d g = restrict_global_st d \<squnion> restrict_global_st g"
+  "enter_global Spoly [''p''] [a] d g = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
   unfolding Spoly_def unit_dg_spec_st_def unit_step_st_def
-  by (simp add: Let_def ivl_enter_st_def enter_ivl_st_def bind_formals_abs_st_def
-                restrict_global_st_update_var[OF var_p_no_global]
-                restrict_global_st_enter_frame_D_st
-                restrict_global_st_sup_restrict_global_st)
+  by (simp add: Let_def ivl_enter_st_def enter_ivl_st_def bind_formals_abs_def
+                bind_formals_resolved_q_singleton
+                restrict_global_resolved_q_update_var[OF var_p_no_global]
+                restrict_global_resolved_q_enter_frame_D_st[unfolded enter_ivl_st_def]
+                restrict_global_resolved_q_sup_restrict_global_resolved_q)
 
 lemma statement6_val_local_no_global:
-  "restrict_global_st (locals statement6_val) = bot"
+  "restrict_global_resolved_q (locals statement6_val) = bot"
   by (simp add: statement6_val_def combine_local_no_global[OF var_x_no_global])
 
 lemma seed_f_6_bound_ground:
@@ -786,7 +861,7 @@ proof -
       unfolding enter_global_ret_var
       using assms
       by (auto simp: project_sigma_def statement6_val_local_no_global
-                     restrict_global_st_sup_restrict_global_st[symmetric] restrict_global_st_le)
+                     restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   next
     show "combine_global Spoly (Some ''x'')
             (locals (project_sigma (Inl (Statement 5, ctx))))
@@ -795,7 +870,7 @@ proof -
           \<le> globs (project_sigma (Inr Global1))"
       unfolding combine_global_ret_var[OF var_x_no_global]
       by (simp add: project_sigma_def result_f_val_local_no_global
-                    restrict_global_st_sup_restrict_global_st[symmetric] restrict_global_st_le)
+                    restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   qed
   have seed_bound: "enter_local Spoly [''p''] [aexp.N 10]
         (locals (project_sigma (Inl (Statement 6, ctx))))
@@ -894,7 +969,7 @@ lemma sides_of_rhs_statement7:
   by (simp add: bot_fun_def)
 
 lemma result_f_val_6_local_no_global:
-  "restrict_global_st (locals (result_f_val [Statement 6])) = bot"
+  "restrict_global_resolved_q (locals (result_f_val [Statement 6])) = bot"
   by (rule result_f_val_local_no_global)
 
 lemma project_sigma_sides_statement7:
@@ -907,7 +982,7 @@ proof -
       \<le> globs (project_sigma (Inr Global1))"
     unfolding combine_global_ret_var[OF var_y_no_global]
     by (simp add: project_sigma_def result_f_val_local_no_global
-                  restrict_global_st_sup_restrict_global_st[symmetric] restrict_global_st_le)
+                  restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   show ?thesis
     unfolding sides_of_rhs_statement7 cs_route_def
     using key_bound
@@ -970,7 +1045,7 @@ lemma sides_of_rhs_result_main:
   by (simp add: bot_fun_def)
 
 lemma statement7_val_local_no_global:
-  "restrict_global_st (locals statement7_val) = bot"
+  "restrict_global_resolved_q (locals statement7_val) = bot"
   by (simp add: statement7_val_def combine_local_no_global[OF var_y_no_global])
 
 lemma project_sigma_sides_result_main:
@@ -982,7 +1057,7 @@ proof -
       \<le> globs (project_sigma (Inr Global1))"
     unfolding fst_dg_spec_step_ret_none
     by (simp add: project_sigma_def statement7_val_local_no_global
-                  restrict_global_st_sup_restrict_global_st[symmetric] restrict_global_st_le)
+                  restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   show ?thesis
     unfolding sides_of_rhs_result_main
     using key_bound by (auto simp: le_fun_def less_eq_dg_state_def bot_fun_def bot_dg_state_def)
@@ -1088,12 +1163,12 @@ lemma project_sigma_dep_L_entry_main:
 
 lemma sides_of_rhs_entry_main:
   "sides_of_rhs (nest_1_eqs (FunctionEntry ''main'', [])) project_sigma
-     = (\<lambda>_. bot)(Inr Global1 := DG bot (restrict_global_st cinit_ivl_st))"
+     = (\<lambda>_. bot)(Inr Global1 := DG bot (restrict_global_resolved_q cinit_ivl_st))"
   unfolding nest_1_eqs_entry_main
   by (simp add: bot_fun_def)
 
 lemma cinit_ivl_st_global_bound:
-  "restrict_global_st cinit_ivl_st \<le> globs (project_sigma (Inr Global1))"
+  "restrict_global_resolved_q cinit_ivl_st \<le> globs (project_sigma (Inr Global1))"
   unfolding project_sigma_def
   by eval
 
@@ -1287,13 +1362,13 @@ lemma seed_le_statement2_6:
 
 
 lemma snd_dgs_nop_no_global:
-  "restrict_global_st (snd (dgs_nop Spoly d g)) = bot"
+  "restrict_global_resolved_q (snd (dgs_nop Spoly d g)) = bot"
   unfolding Spoly_def unit_dg_spec_st_def
-  by (simp add: unit_step_st_def Let_def restrict_global_st_restrict_local_st)
+  by (simp add: unit_step_st_def Let_def restrict_global_resolved_q_restrict_local_resolved_q)
 
 lemma statement2_val_local_no_global:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "restrict_global_st (locals (project_sigma (Inl (Statement 2, ctx)))) = bot"
+  shows "restrict_global_resolved_q (locals (project_sigma (Inl (Statement 2, ctx)))) = bot"
   using assms
 proof
   assume c: "ctx = [Statement 5]"
@@ -1305,7 +1380,7 @@ qed
 
 lemma entry_f_val_local_no_global:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "restrict_global_st (locals (project_sigma (Inl (FunctionEntry ''f'', ctx)))) = bot"
+  shows "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry ''f'', ctx)))) = bot"
   using assms
 proof
   assume c: "ctx = [Statement 5]"
@@ -1353,7 +1428,7 @@ proof -
       \<le> globs (project_sigma (Inr Global1))"
     unfolding enter_global_ret_var fst_dgs_nop
     using statement2_val_local_no_global[OF assms] entry_f_val_local_no_global[OF assms]
-    by (auto simp: restrict_global_st_sup_restrict_global_st[symmetric] restrict_global_st_le)
+    by (auto simp: restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   show ?thesis
     unfolding sides_of_rhs_statement2[OF assms]
     using seed_bound global1_bound
@@ -1398,12 +1473,12 @@ lemma seed_le_statement5:
   by (simp add: less_eq_dg_state_def)
 
 lemma statement5_val_local_no_global:
-  "restrict_global_st (locals (project_sigma (Inl (Statement 5, [])))) = bot"
+  "restrict_global_resolved_q (locals (project_sigma (Inl (Statement 5, [])))) = bot"
   unfolding project_sigma_def
   by eval
 
 lemma entry_main_val_global_bound:
-  "restrict_global_st (locals (project_sigma (Inl (FunctionEntry ''main'', []))))
+  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry ''main'', []))))
      \<le> globs (project_sigma (Inr Global1))"
   unfolding project_sigma_def
   by eval
@@ -1433,7 +1508,7 @@ proof -
       \<le> globs (project_sigma (Inr Global1))"
     unfolding enter_global_ret_var fst_dgs_nop
     using statement5_val_local_no_global entry_main_val_global_bound
-    by (auto simp: restrict_global_st_sup_restrict_global_st[symmetric] restrict_global_st_le)
+    by (auto simp: restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   show ?thesis
     unfolding sides_of_rhs_statement5
     using seed_bound global1_bound
@@ -1448,8 +1523,8 @@ text \<open>\<open>Statement 0\<close> is reached only by the intra \<open>EA_No
   join, already given by \<open>project_sigma\<close>'s first case). Unlike the downstream-cone nodes, its
   value is not a recomputation with a widened input substituted in -- it is literally the
   join of \<open>nest_2_sol\<close>'s own two branches, so the \<open>eq\<close> bound follows the same distributivity
-  argument as \<open>project_sigma_sides_result_g\<close>'s \<open>split_d0\<close> step, applied to \<^const>\<open>restrict_local_st\<close>
-  instead of \<^const>\<open>restrict_global_st\<close>.\<close>
+  argument as \<open>project_sigma_sides_result_g\<close>'s \<open>split_d0\<close> step, applied to \<^const>\<open>restrict_local_resolved_q\<close>
+  instead of \<^const>\<open>restrict_global_resolved_q\<close>.\<close>
 
 lemma statement0_no_comb: "return_call_action_list nest_cfg (Statement 0) = []"
   by eval
@@ -1513,12 +1588,9 @@ lemma eq_le_statement0_6:
   using part_post_eq_2[OF statement0_covered_2_B]
   by (simp add: less_eq_dg_state_def)
 
-lemma restrict_local_st_sup_restrict_local_st:
-  "restrict_local_st (A \<squnion> B) = restrict_local_st A \<squnion> restrict_local_st B"
-  by (rule st_eqI_lookup) (simp add: lookup_restrict_local_st)
 
 lemma eq_le_statement0_5':
-  "restrict_local_st (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))
+  "restrict_local_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))
         \<squnion> globs (snd nest_2_sol (Inr Global2)))
      \<le> locals (snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 5])))"
   using eq_le_statement0_5
@@ -1526,7 +1598,7 @@ lemma eq_le_statement0_5':
                 Spoly_def unit_dg_spec_st_def unit_step_st_def Let_def)
 
 lemma eq_le_statement0_6':
-  "restrict_local_st (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))
+  "restrict_local_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))
         \<squnion> globs (snd nest_2_sol (Inr Global2)))
      \<le> locals (snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 6])))"
   using eq_le_statement0_6
@@ -1548,13 +1620,13 @@ proof -
       \<le> locals (project_sigma (Inl (Statement 0, [Statement 2])))"
   proof -
     have "locals (eq nest_1_eqs (Statement 0, [Statement 2]) project_sigma)
-        = restrict_local_st ((locals ?dA \<squnion> locals ?dB) \<squnion> globs (snd nest_2_sol (Inr Global2)))"
+        = restrict_local_resolved_q ((locals ?dA \<squnion> locals ?dB) \<squnion> globs (snd nest_2_sol (Inr Global2)))"
       by (simp add: nest_1_eqs_statement0 entry_g_split global1_eq Spoly_def unit_dg_spec_st_def
                     unit_step_st_def Let_def)
-    also have "\<dots> = restrict_local_st (locals ?dA \<squnion> globs (snd nest_2_sol (Inr Global2)))
-                    \<squnion> restrict_local_st (locals ?dB \<squnion> globs (snd nest_2_sol (Inr Global2)))"
+    also have "\<dots> = restrict_local_resolved_q (locals ?dA \<squnion> globs (snd nest_2_sol (Inr Global2)))
+                    \<squnion> restrict_local_resolved_q (locals ?dB \<squnion> globs (snd nest_2_sol (Inr Global2)))"
       by (simp add: sup_commute sup_assoc sup_left_commute
-                    restrict_local_st_sup_restrict_local_st)
+                    restrict_local_resolved_q_sup_restrict_local_resolved_q)
     also have "\<dots> \<le> locals (snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 5])))
                     \<squnion> locals (snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 6])))"
       by (intro sup_mono eq_le_statement0_5' eq_le_statement0_6')
@@ -1579,17 +1651,17 @@ lemma sides_of_rhs_statement0:
   by (simp add: bot_fun_def)
 
 lemma entry_g_local_no_global_5:
-  "restrict_global_st (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) = bot"
   by eval
 
 lemma entry_g_local_no_global_6:
-  "restrict_global_st (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) = bot"
   by eval
 
 lemma entry_g_val_local_no_global:
-  "restrict_global_st (locals (project_sigma (Inl (FunctionEntry ''g'', [Statement 2])))) = bot"
+  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry ''g'', [Statement 2])))) = bot"
   by (simp add: project_sigma_def sup_dg_state_def
-                restrict_global_st_sup_restrict_global_st[symmetric]
+                restrict_global_resolved_q_sup_restrict_global_resolved_q
                 entry_g_local_no_global_5 entry_g_local_no_global_6)
 
 lemma project_sigma_sides_statement0:
@@ -1600,7 +1672,7 @@ proof -
         (globs (project_sigma (Inr Global1))))
       \<le> globs (project_sigma (Inr Global1))"
     unfolding fst_dgs_nop
-    by (simp add: entry_g_val_local_no_global restrict_global_st_le)
+    by (simp add: entry_g_val_local_no_global restrict_global_resolved_q_le)
   show ?thesis
     unfolding sides_of_rhs_statement0
     using key_bound by (auto simp: le_fun_def less_eq_dg_state_def bot_fun_def bot_dg_state_def)
@@ -1716,4 +1788,10 @@ qed
 
 
 end
+
+
+
+
+
+
 
