@@ -167,10 +167,10 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>
 
-lemma parity_wf: "wf_compile_input parity_pi [] ''main'' parity_prog"
+lemma parity_wf: "wf_compile_input is_global parity_pi [] ''main'' parity_prog"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     parity_pi_def parity_prog_def parity_program_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def is_global_def
       prog_main_name_def split: if_splits)
 
 theorem parity_source_run_sound:

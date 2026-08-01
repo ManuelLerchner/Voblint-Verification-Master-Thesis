@@ -14,7 +14,7 @@ text \<open>
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
     and cap: "\<And>v ctx. activation_collect is_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
@@ -39,7 +39,7 @@ text \<open>The witness-free specialisation of the composition at top-level prog
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, [])"
     and cap: "\<And>v ctx. activation_collect is_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
@@ -60,7 +60,7 @@ subsection \<open>Backbone corollaries: discharge the four obligations to build 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
@@ -92,7 +92,7 @@ text \<open>The witness-free specialisation at top-level program points: a store
 theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, [])"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
@@ -127,7 +127,7 @@ text \<open>
 
 theorem source_reaches_ltr_collect:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
@@ -162,7 +162,7 @@ text \<open>
 
 theorem source_completes_valid_ltr_result:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (SKIP, s, [])"
   shows "\<exists>t p. t \<in> valid_ltr is_global (compile_prog Pi ps mnm main) S
@@ -223,7 +223,7 @@ text \<open>Whole-program completion.  The completing activation is the root one
 
 corollary source_completes_ltr_collect_exit:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global Pi) (main, s0, []) (SKIP, s, [])"
   shows "s \<in> ltr_collect is_global (compile_prog Pi ps mnm main) S

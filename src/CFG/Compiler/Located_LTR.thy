@@ -59,7 +59,7 @@ text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops 
   \<open>valid_ltr_entry_result_eq\<close> --- so the trace composes by \<open>valid_ltr.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma ltr_repr_Return:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and rep: "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S
                   (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
   shows "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S
@@ -101,7 +101,7 @@ subsection \<open>The invariant is preserved by located CFG steps\<close>
 text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_ltr\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>ltr_repr_Return\<close>).\<close>
 lemma cstep_preserves_ltr_repr:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and step: "cstep is_global (compile_prog \<Pi> ps mnm main) cf cf'"
     and rep: "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S cf t"
   shows "\<exists>t'. ltr_repr is_global (compile_prog \<Pi> ps mnm main) S cf' t'"
@@ -164,7 +164,7 @@ proof -
 qed
 
 lemma cstep_preserves_located_ltr:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf"
     and "cstep is_global (compile_prog \<Pi> ps mnm main) cf cf'"
   shows "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf'"
@@ -177,7 +177,7 @@ proof -
 qed
 
 lemma csteps_preserve_located_ltr:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf"
     and "star (cstep is_global (compile_prog \<Pi> ps mnm main)) cf cf'"
   shows "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf'"
@@ -200,7 +200,7 @@ text \<open>The program entry \<^term>\<open>FunctionEntry mnm\<close> is an ord
   edge crosses from \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation
   simulates the source \<open>main\<close>.\<close>
 lemma compile_prog_main_base:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
   obtains en where
     "(FunctionEntry mnm, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
     "csim \<Pi> (compile_prog \<Pi> ps mnm main) (main, s, []) (en, s, [])"
@@ -253,7 +253,7 @@ text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star
   simulation) and the located invariant: every source run produces a matching valid
   activation-local trace at the simulated node.\<close>
 theorem source_run_has_ltr:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
@@ -285,7 +285,7 @@ qed
 text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
   collecting \<^const>\<open>activation_collect\<close> at the simulated node, keyed by the witness trace.\<close>
 theorem source_store_in_activation_collect:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
@@ -307,7 +307,7 @@ text \<open>The witness-free top-level result: a store reached with an empty sou
   the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
   existential.  This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
-  assumes wf: "wf_compile_input \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])

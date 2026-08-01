@@ -51,7 +51,7 @@ subsection \<open>Semantic core: abstract post-solution to source bound\<close>
 
 theorem dg_run_source_sound_abs:
   fixes Pi :: proc_table and mnm :: pname and s0 t :: store
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
@@ -104,7 +104,7 @@ theorem dg_exec_run_source_sound:
     and Hcomb: "\<And>dst dc de g. map_prod fun_of_st fun_of_st (dgs_combine S_st dst dc de g)
                         = dgs_combine S_abs dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"    and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input Pi ps mnm main"
+    and wf: "wf_compile_input is_global Pi ps mnm main"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
@@ -222,7 +222,7 @@ lemma sds: "sound_dg_spec_ltr (unit_dg_spec tf) gamma_unit"
 theorem run_source_sound:
   fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a st"
   defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"  assumes SOLVE: "solve_c eqs x \<noteq> None"
-    and wf: "wf_compile_input Pi ps mnm main"
+    and wf: "wf_compile_input is_global Pi ps mnm main"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"

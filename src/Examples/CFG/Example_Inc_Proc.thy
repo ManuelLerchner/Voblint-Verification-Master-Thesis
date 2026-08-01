@@ -100,6 +100,13 @@ proof -
   ultimately show ?thesis by simp
 qed
 
+lemma prog_pcompletes_inc_pcall:
+  fixes s :: store
+  shows "prog_pcompletes inc_program (imp \<lbrakk> p() \<rbrakk>) s
+           (s(''Gx'' := s ''Gx'' + 1))"
+  using pcompletes_inc_pcall_declared
+  unfolding prog_pcompletes_def inc_pi_def by simp
+
 text \<open>
   The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> now takes
   \<^term>\<open>gs\<close> explicitly (the compiler-layer counterpart of the \<^const>\<open>pstep\<close> migration

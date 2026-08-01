@@ -225,10 +225,10 @@ lemma twice_y_computed:
 
 subsection \<open>Source-level soundness\<close>
 
-lemma twice_wf: "wf_compile_input twice_pi twice_procs ''main'' twice_main"
+lemma twice_wf: "wf_compile_input is_global twice_pi twice_procs ''main'' twice_main"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def
+  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
       value_providing_def source_aexp_def ret_var_def is_global_def
       split: if_splits option.splits)
 

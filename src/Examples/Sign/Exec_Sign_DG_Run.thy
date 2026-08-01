@@ -82,11 +82,11 @@ lemma dgEx_pp_st:
 subsection \<open>Well-formedness of the compiled input\<close>
 
 lemma dgEx_wf:
-  "wf_compile_input sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+  "wf_compile_input is_global sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     sign_ex_pi_def sign_ex_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
-      split: if_splits)
+      reserved_ret_var_def is_global_def split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 

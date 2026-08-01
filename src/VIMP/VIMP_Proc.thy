@@ -534,8 +534,8 @@ definition source_aexp :: "aexp => bool" where
 definition source_bexp :: "bexp => bool" where
   "source_bexp b \<longleftrightarrow> \<not> bexp_mentions ret_var b"
 
-definition valid_formal :: "vname => bool" where
-  "valid_formal x \<longleftrightarrow> \<not> is_global x \<and> x \<noteq> ret_var"
+definition valid_formal :: "(vname => bool) => vname => bool" where
+  "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x ~= ret_var"
 
 subsection \<open>Procedure result contract\<close>
 
@@ -614,46 +614,50 @@ fun no_return :: "com => bool" where
 | "no_return (Return _) = False"
 | "no_return _ = True"
 
-definition wf_proc_decl :: "proc_table => proc_decl => bool" where
-  "wf_proc_decl \<Pi> decl \<longleftrightarrow>
+definition wf_proc_decl :: "(vname => bool) => proc_table => proc_decl => bool" where
+  "wf_proc_decl gs \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
-     list_all valid_formal (formals decl) \<and>
+     list_all (valid_formal gs) (formals decl) \<and>
      wf_source_com \<Pi> (body decl)"
 
-definition wf_source_program :: "proc_table => pname => com => bool" where
-  "wf_source_program \<Pi> mnm main \<longleftrightarrow>
+definition reserved_ret_var :: "(vname => bool) => bool" where
+  "reserved_ret_var gs \<longleftrightarrow> \<not> gs ret_var"
+
+definition wf_source_program :: "(vname => bool) => proc_table => pname => com => bool" where
+  "wf_source_program gs \<Pi> mnm main \<longleftrightarrow>
+     reserved_ret_var gs \<and>
      \<Pi> mnm = Some (proc_decl_of [] main) \<and>
      wf_source_com \<Pi> main \<and> no_return main \<and>
-     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<Pi> decl)"
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl)"
 
 lemma wf_source_com_source_com:
   "wf_source_com \<Pi> c \<Longrightarrow> source_com c"
   by (induction c) (auto split: option.splits)
 
 lemma wf_source_program_main_exists:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_main:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> wf_source_com \<Pi> main"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> wf_source_com \<Pi> main"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_no_return:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> no_return main"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> no_return main"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_decl:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl
-   \<Longrightarrow> wf_proc_decl \<Pi> decl"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl
+   \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_source_pi:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> source_pi \<Pi>"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_pi \<Pi>"
   unfolding wf_source_program_def source_pi_def wf_proc_decl_def
   using wf_source_com_source_com by blast
 
 lemma wf_source_program_source_com:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> source_com main"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_com main"
   using wf_source_program_main wf_source_com_source_com by blast
 
 end

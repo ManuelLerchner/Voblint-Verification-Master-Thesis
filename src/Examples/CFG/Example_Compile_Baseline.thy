@@ -177,11 +177,11 @@ lemma p15_unwind_not_source: "\<not> source_com Unwind"
   by simp
 
 lemma p15_restore_body_rejected:
-  "\<not> wf_compile_input \<Pi> ps mnm Restore"
+  "~ wf_compile_input is_global \<Pi> ps mnm Restore"
   by (simp add: wf_compile_input_def wf_source_program_def)
 
 lemma p15_unwind_body_rejected:
-  "\<not> wf_compile_input \<Pi> ps mnm Unwind"
+  "~ wf_compile_input is_global \<Pi> ps mnm Unwind"
   by (simp add: wf_compile_input_def wf_source_program_def)
 
 subsection \<open>Recorded baseline\<close>

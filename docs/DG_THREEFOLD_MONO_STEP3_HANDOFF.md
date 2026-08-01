@@ -1,9 +1,9 @@
 # DG threefold-monotonicity: Step 3 handoff
 
-Status at handoff: Steps 1+2 landed and batch-green. Step 3 (instantiation
-at `nest_2_eqs`) not started. This document is a restart point, not a
-progress log — see `docs/CALLSTRING_PRECISION_INVESTIGATION.md` section 9.6
-and issue #45 for the full investigation history.
+Status: Steps 1–6 landed and batch-verified. Issue #45 is closed. This
+document records the completed investigation and its restart point for any
+follow-up work — see `docs/CALLSTRING_PRECISION_INVESTIGATION.md` section
+9.6 for the full investigation history.
 
 **Primary source, confirmed against the PDF directly (not secondhand):**
 Tilscher, Graß, Seidl, *"Verifying a Solver for Mixed Flow-Sensitive
@@ -479,23 +479,15 @@ exact identifier names; use the `Read` tool or I/Q directly.
   separate Steps 1+2 verification; batch-green).
 - `#16` (Stage 2: Sign `dg_spec`) — completed (collapsed to reuse, see
   above; no new file).
-- `#17` (Stage 3: Sign `routed_context` interpretation) — in progress,
-  not started at the file level; the hand-witness route above is decided
-  but no `.thy` content written yet.
+- `#17` (Stage 3: Sign `routed_context` interpretation) — completed.
 - `#18` (Stage 4: nine primitive obligations for the Sign instance) —
-  pending; depends on #17's concrete equation system existing first.
-- `#19` (Stage 5: k=2-vs-k=1 precision theorem) — pending, new math, not
-  yet scoped.
-- `#20` (Stage 6: final batch verify) — pending, deliberately deferred to
-  the very end of the whole effort per explicit instruction, not per-stage.
+  completed.
+- `#19` (Stage 5: k=2-vs-k=1 precision theorem) — completed.
+- `#20` (Stage 6: final batch verify) — completed; the full build is green.
 
 ## Explicit scope note
 
-Do not treat any "resolved" marking above as batch-verified — only Steps
-1+2 (the original #45 work, task #15) have an actual green batch build
-behind them. Everything from Stage 1 onward is I/Q-clean only, batch
-deferred by instruction. Before writing Stage 3 `.thy` content, re-derive
-(or re-read here) the concrete list of ten obligations from
-`DG_Ctx_Activation.thy:31-39` and `Routed_Context.thy:99-121` — they are
-quoted in full in the "Stage 3" investigation above this update and in the
-files themselves.
+All six stages now have a green batch build behind them. The concrete list
+of obligations from `DG_Ctx_Activation.thy:31-39` and
+`Routed_Context.thy:99-121` remains the reference for any follow-up
+generalization.

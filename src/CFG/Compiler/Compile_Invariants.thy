@@ -19,36 +19,36 @@ text \<open>\<open>mnm\<close> names the distinguished entry procedure, declared
   never collide with a callee's nodes, yet \<open>FunctionEntry mnm\<close> is an ordinary
   \<open>proc_activation \<Pi> mnm main\<close> activation.\<close>
 definition wf_compile_input ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "wf_compile_input \<Pi> ps mnm main \<longleftrightarrow>
+  "(vname => bool) => proc_table => pname list => pname => com => bool" where
+  "wf_compile_input gs \<Pi> ps mnm main \<longleftrightarrow>
      distinct ps \<and>
-     set ps = {p. \<Pi> p \<noteq> None} - {mnm} \<and>
+     set ps = {p. \<Pi> p ~= None} - {mnm} \<and>
      mnm \<notin> set ps \<and>
-     wf_source_program \<Pi> mnm main"
+     wf_source_program gs \<Pi> mnm main"
 
 lemma wf_compile_input_source_program:
-  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> wf_source_program \<Pi> mnm main"
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
   by (simp add: wf_compile_input_def)
 
 lemma wf_compile_input_main_exists:
-  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
   using wf_compile_input_source_program wf_source_program_main_exists by blast
 
 lemma wf_compile_input_source_pi:
-  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> source_pi \<Pi>"
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> source_pi \<Pi>"
   using wf_compile_input_source_program wf_source_program_source_pi by blast
 
 lemma wf_compile_input_source_com:
-  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> source_com main"
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> source_com main"
   using wf_compile_input_source_program wf_source_program_source_com by blast
 
 lemma wf_compile_input_no_return:
-  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> no_return main"
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> no_return main"
   using wf_compile_input_source_program wf_source_program_no_return by blast
 
 lemma wf_compile_input_decl:
-  "wf_compile_input \<Pi> ps mnm main \<Longrightarrow> \<Pi> p = Some decl
-   \<Longrightarrow> wf_proc_decl \<Pi> decl"
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> p = Some decl
+   \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
   using wf_compile_input_source_program wf_source_program_decl by blast
 
 subsection \<open>Syntactic occurrence predicates\<close>

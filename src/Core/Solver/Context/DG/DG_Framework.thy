@@ -393,6 +393,9 @@ where
   "unit_combine_step_env dc de g =
      (let m = combine_abs is_global (dc \<squnion> g) (de \<squnion> g) in (restrict_global m, restrict_local m))"
 
+
+
+
 definition unit_combine_step_assign ::
   "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state
    \<Rightarrow> 'a abs_state \<times> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
@@ -413,6 +416,28 @@ where
     dgs_combine_env    = unit_combine_step_env,
     dgs_combine_assign = unit_combine_step_assign
   \<rparr>"
+
+definition unit_combine_step_env_for ::
+  "(vname => bool) =>
+   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state
+   => 'a abs_state => 'a abs_state \<times> 'a abs_state" where
+  "unit_combine_step_env_for gs dc de g =
+     (let m = combine_abs gs (dc \<squnion> g) (de \<squnion> g)
+      in (restrict_global_for gs m, restrict_local_for gs m))"
+
+definition unit_dg_spec_for ::
+  "(vname => bool) => 'a::sound_domain domain_transfer
+   => ('a abs_state, 'a abs_state) dg_spec" where
+  "unit_dg_spec_for gs tf = \<lparr>
+    dgs_nop        = unit_step (apply_tf tf EA_Nop),
+    dgs_assign     = (%x e. unit_step (apply_tf tf (EA_Assign x e))),
+    dgs_assume     = (%b. unit_step (apply_tf tf (EA_Assume b))),
+    dgs_assume_not = (%b. unit_step (apply_tf tf (EA_AssumeNot b))),
+    dgs_enter      = (%xs es. unit_step (tf_enter tf xs es)),
+    dgs_combine_env    = unit_combine_step_env_for gs,
+    dgs_combine_assign = unit_combine_step_assign
+  \<rparr>"
+
 
 text \<open>The pre-split combine value is recovered by composition, matching
   \<^const>\<open>combine_collect_abs\<close> exactly -- the split changes packaging, not

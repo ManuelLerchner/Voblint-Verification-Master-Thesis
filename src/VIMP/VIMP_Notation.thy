@@ -41,16 +41,15 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>declared_global_vars\<close> is the program's declared-global list, exactly as
-  the source wrote it -- the parser's sole classification fact.  Named apart
-  from \<open>is_global\<close>/\<open>global_vars\<close> on purpose: it carries no semantic weight
-  yet.  \<^const>\<open>VIMP_Globals.is_global\<close> still decides call/return and D/G
-  routing by spelling.  A later migration wires this list into that decision;
-  until then, do not read \<open>declared_global_vars\<close> where \<open>is_global\<close> is meant.
+  \<open>declared_global_vars\<close> is the program's declared-global list,
+  exactly as the source wrote it.  Program-context concrete operations use
+  this list through \<open>declared_global\<close>; generic compatibility
+  interfaces retain \<open>VIMP_Globals.is_global\<close> as an explicit
+  classifier instance.
 
   A list, not a set: the field is finite by its type, not by an assumption
   that would otherwise have to be threaded through every lemma about
-  \<open>imp_prog\<close> -- see the finiteness fact just below.
+  \<open>imp_prog\<close>.
 \<close>
 
 record imp_prog =
@@ -63,11 +62,9 @@ lemma declared_global_vars_finite [simp]:
   by simp
 
 text \<open>
-  \<open>declared_global\<close> is the program-relative classifier the migration is
-  building toward: a name is declared-global exactly when it is in that
-  program's declared list.  No existing definition consumes it yet -- it
-  exists so the plumbing above can be checked against concrete programs
-  before anything downstream is asked to switch from \<^const>\<open>is_global\<close>.
+  \<open>declared_global\<close> is the program-relative classifier: a name is
+  declared-global exactly when it is in the program's declared list.
+  The program-context concrete operations below use this classifier.
 \<close>
 
 definition declared_global :: "imp_prog \<Rightarrow> vname \<Rightarrow> bool" where
@@ -76,6 +73,8 @@ definition declared_global :: "imp_prog \<Rightarrow> vname \<Rightarrow> bool" 
 lemma declared_global_iff [simp]:
   "declared_global p x \<longleftrightarrow> x \<in> set (declared_global_vars p)"
   by (simp add: declared_global_def)
+
+
 
 definition prog_procs :: "imp_prog => pname list" where
   "prog_procs p = map fst (proc_rep p)"
@@ -102,6 +101,29 @@ definition prog_table :: "imp_prog => proc_table" where
 lemma prog_table_main [simp]:
   "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
   by (simp add: prog_table_def)
+
+text \<open>Program-context concrete operations use the declaration list carried by \<open>p\<close>.\<close>
+
+definition prog_enter_state :: "imp_prog => store => store" where
+  "prog_enter_state p s = enter_state (declared_global p) s"
+
+definition prog_combine_states :: "imp_prog => store => store => store" where
+  "prog_combine_states p s t = combine_states (declared_global p) s t"
+
+definition prog_pstep ::
+    "imp_prog => (com \<times> store \<times> frame list) =>
+      (com \<times> store \<times> frame list) => bool" where
+  "prog_pstep p = pstep (declared_global p) (prog_table p)"
+
+definition prog_pcompletes ::
+    "imp_prog => com => store => store => bool" where
+  "prog_pcompletes p = pcompletes (declared_global p) (prog_table p)"
+
+definition prog_restrict_local :: "imp_prog => pname => store => store" where
+  "prog_restrict_local p _ s = (%x. if declared_global p x then 0 else s x)"
+
+definition prog_restrict_global :: "imp_prog => store => store" where
+  "prog_restrict_global p s = (%x. if declared_global p x then s x else 0)"
 
 lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m gv) = map fst ps"
   by (simp add: prog_procs_def imp_prog.make_def)

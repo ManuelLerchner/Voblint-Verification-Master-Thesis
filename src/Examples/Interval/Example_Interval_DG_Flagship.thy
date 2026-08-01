@@ -212,10 +212,10 @@ text \<open>
 \<close>
 
 lemma flagship_wf:
-  "wf_compile_input flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
+  "wf_compile_input is_global flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     flagship_pi_def flagship_prog_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def is_global_def
       split: if_splits)
 
 theorem flagship_source_run_sound:

@@ -9,23 +9,14 @@
 > (`Voblint_Examples`), tracked in issue #66; it now interprets
 > `routed_context` rather than hand-copying `cmb`/`extra`.
 >
-> **M4.1 progress:** `declared_global_vars` and `declared_global`
-> (`VIMP_Notation.thy`) landed as an unconsumed, declaration-driven
-> classifier alongside `is_global` — parser plumbing only, no semantics
-> switched yet. Separately, `combine_states` and `enter_state`
-> (`VIMP_Globals.thy`) were widened to take an explicit `(vname => bool)`
-> classifier instead of closing over `is_global`, with every call site across
-> the compiler, CFG, and analysis layers passing `is_global` explicitly
-> (behavior-preserving; the `<_|_>` mixfix notation was dropped in the same
-> pass since a three-argument operation is not a binary one). An attempt to
-> swap the classifier at a single concrete leaf example
-> (`Example_Inc_Proc.thy`) confirmed the real migration frontier is wider than
-> any one example: `enter_state`, `call_enter`, `combine_collect`, `pstep`,
-> `csim`, `sound_transfer`, and `sound_effectful_transfer` form one semantic
-> interface (cross-session, 7-30 citing files each) that has to move together.
-> `pcompletes_Call` / `pcompletes_Call_parameterless` are not part of that
-> interface — narrow, example-only, safe to leave for later. M4.1a and M4.1b
-> remain open; see M4.5 below for the rename-ordering constraint this implies.
+> **M4.1/M4.2 progress:** `declared_global_vars` and `declared_global`
+> (`VIMP_Notation.thy`) now feed classifier-based source well-formedness,
+> context-aware store operations, split-state helpers, and D/G routing
+> helpers. The mechanical signature propagation is batch-green. `is_global`
+> remains as a compatibility classifier for consumers outside this
+> checkpoint; the remaining semantic consumers must still move before the
+> naming rule can be deleted. M4.1b and M4.3–M4.8 remain open. See M4.5
+> below for the rename-ordering constraint.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
 Engineering Modularity", FM 2026, LNCS 16557, pp. 446-470, section "Refining

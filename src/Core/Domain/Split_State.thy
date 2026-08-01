@@ -54,6 +54,33 @@ definition split_state :: "('a::bot) abs_state \<Rightarrow> ('a, 'a) split_stat
      ((\<lambda>x. if is_global x then bot else \<sigma> x),
       (\<lambda>x. if is_global x then \<sigma> x else bot))"
 
+definition wf_split_for ::
+  "(vname => bool) => ('l::bot, 'g::bot) split_state => bool" where
+  "wf_split_for gs lg \<longleftrightarrow>
+     (ALL x. gs x --> fst lg x = bot) &
+     (ALL x. ~ gs x --> snd lg x = bot)"
+
+definition merge_state_for ::
+  "(vname => bool) => ('a, 'a) split_state => 'a abs_state" where
+  "merge_state_for gs lg = (%x. if gs x then snd lg x else fst lg x)"
+
+definition split_state_for ::
+  "(vname => bool) => ('a::bot) abs_state => ('a, 'a) split_state" where
+  "split_state_for gs \<sigma> =
+     ((%x. if gs x then bot else \<sigma> x),
+      (%x. if gs x then \<sigma> x else bot))"
+
+lemma merge_split_for [simp]:
+  "merge_state_for gs (split_state_for gs \<sigma>) = \<sigma>"
+  unfolding merge_state_for_def split_state_for_def
+  by (rule ext) simp
+
+lemma wf_split_split_state_for:
+  "wf_split_for gs (split_state_for gs \<sigma>)"
+  unfolding wf_split_for_def split_state_for_def
+  by simp
+
+
 lemma fst_split_state:
   "fst (split_state \<sigma>) x = (if is_global x then bot else \<sigma> x)"
   unfolding split_state_def by simp
