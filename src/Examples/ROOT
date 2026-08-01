@@ -2,6 +2,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
   description "Executable witnesses, flagship demonstrations, and the project capstone index"
   directories
     "Sign"
+    "Sign/CallString"
     "Interval"
     "Interval/CallString"
     "Interval/Ctx"
@@ -26,6 +27,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign
+    Example_Sign_DG_CallString_K1
+    Example_Sign_DG_CallString_K2
 
     (* Interval *)
     Exec_Ivl_Run

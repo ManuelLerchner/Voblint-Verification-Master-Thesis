@@ -370,6 +370,108 @@ merges `g`'s parameter to `Top` (imprecise: `Pos ⊔ Neg`) while k=2 keeps
 respectively — confirm VIMP's concrete arithmetic-expression syntax
 supports a negative literal (or use `0 - 10`) before hard-coding this.
 
+## Final update: Stages 3-5 landed, by a different route than planned
+
+Everything from "Decided route: skip running any solver. Hand-construct the
+witness..." above (the hand-witnessed-`sigma` plan) was **superseded, not
+executed**. The actual route taken is simpler and stronger, and the
+reasoning above about why is worth recording since it corrects a real
+mistake in this document's own analysis.
+
+**The correction.** This document's Stage 3 section concluded that because
+`TD_side_opt`/`TD_side_mono` (the `abort=True` locale) has no `[code]`
+setup, the only way forward was to hand-type `sigma`/`vars` by hand and
+prove `part_post_solution` clause-by-clause. That conclusion does not
+follow. `part_post_solution` (`Basics_side.thy:337`) is a **pointwise
+predicate on a witness** — `dep_L T sigma u <= vars`, `eq T u sigma <=
+sigma (Inl u)`, `sides_of_rhs (T u) sigma <= sigma`, for each `u : vars` —
+it has nothing to do with monotonicity, `TD_side_mono`, or `TD_side_opt`
+at all. Monotonicity (`threefold_mono`, Stage 1's whole point) is only
+needed to *derive a witness's existence* generically from an equation
+system, via `TD_side_mono`'s `least_partial_post_solution` theorem. If a
+witness is obtained some other way — including by actually running a
+*different*, already-executable solver — `part_post_solution` still needs
+proving, but proving it does not route through `TD_side_mono` at all.
+
+**What actually unlocks Sign, and what the earlier framing missed:**
+`TD_side_upd_rule` (`TD_side_upd_rule.thy:18`) — the *executable* solver
+family Interval's call-string examples already use — is not tied to
+warrowing. It is parameterized by an *update rule*, and the vendored file
+interprets it three ways (`Solver_Menu.thy`): `TD_side_always_join_Interp`
+(plain join, exact, no widening), `TD_side_per_origin_Interp`, and
+`TD_side_warrowing_apinis_Interp` (widening, what Interval uses). Sign is a
+finite lattice (`Sign_Lattice.thy`, 7 elements, ACC trivially), so the
+*plain join* instantiation terminates on any loop-free program and reaches
+the **exact** least fixpoint — no widening step ever fires. Termination is
+one `eval`-checked fact
+(`TD_side_always_join_Interp_solve_c ... != None`), and
+`Solver_Menu.thy`'s `part_post_solution_of_solve_c` turns that single fact
+directly into `part_post_solution`, with no monotonicity argument anywhere
+in the chain. This is the same "does the solver actually run" question the
+Stage 3 section above worried about — it has a positive answer, just not
+through the locale the earlier analysis was looking at.
+
+Concretely, this means: **Sign's call-string examples now mirror
+Interval's file-for-file** (`Example_Sign_DG_CallString_K1/K2.thy` follow
+`Example_Interval_DG_CallString_K1/K2.thy`'s structure exactly), with two
+substitutions — `TD_side_always_join_Interp_solve` instead of
+`TD_side_warrowing_apinis_Interp_solve`, and Sign's executable transfer
+mirror (`Sign_Exec.thy`'s `sign_tf_st`/`sign_enter_st`, already existing,
+no new domain engineering needed — Stage 2's original "collapsed, nothing
+to build" conclusion undersold this: Sign already had *both* the abstract
+`unit_dg_spec sign_tf` *and* the full executable `st`-level mirror before
+this session started). The Stage 1 generic `threefold_mono`/`TD_side_mono`
+infrastructure landed in `DG_Framework.thy` remains correct, valuable,
+general infrastructure for issue #45 (a `side_cfg_T_eff_keyed_seed_dg`
+instance now has a reusable path to `least_partial_post_solution` if a
+future analysis needs the *existence* argument rather than a computed
+witness) — it is simply not on the critical path to this example.
+
+**Result, Stage 5 (the actual precision theorem), stated and proved by
+`eval` + `less_sign_def`:**
+
+```
+g's entry parameter, k=1 (one merged context [Statement 2]):        STop
+g's entry parameter, k=2, context [Statement 2, Statement 5] (f 3):  SPos
+g's entry parameter, k=2, context [Statement 2, Statement 6] (f -10): SNeg
+```
+
+`sign_k2_strictly_more_precise_than_k1_at_g`
+(`Example_Sign_DG_CallString_K2.thy`) proves both `SPos < STop` and
+`SNeg < STop` for the actual computed values — a genuine strict-order
+precision witness, not a projection/refinement argument (contrast
+`Call_String_Solver_Refinement.thy`'s `project_sigma_part_post_solution`,
+which only shows a projected value is *a* valid post-solution, not that it
+is strictly more precise than anything).
+
+**Connection to the paper (Tilscher/Graß/Seidl, Theorem 2, p.17):** the
+paper's optimality theorem is scoped to solver runs "without widening and
+narrowing." The always-join solve on Sign satisfies that scope by
+construction (Sign has no widening operator invoked in this update rule at
+all), so the computed result sits inside the paper's own optimality
+envelope, informally — this project did not re-derive or invoke
+`TD_side_mono`'s formal optimality theorem for this instance (that would
+require the Stage 1 infrastructure plus a fresh `least_partial_post_solution`
+argument, not done here), but the paper's own scoping condition is exactly
+why Sign, not Interval, was the domain that could host a *computed*
+precision witness at all: Interval's call-string examples run only through
+the warrowing update rule, which is precisely the case the paper excludes
+from its optimality guarantee. The Sign example is this project's
+concrete demonstration of *why* that scoping condition in the paper
+matters for context-sensitivity: on a domain where it is satisfiable, call-
+string refinement (k=1 to k=2) has a directly computable, verified effect
+on precision; the paper proves the solver-side half of that story (the
+computed result is trustworthy), and this example supplies the
+analysis-side half (a concrete case where refining context actually
+changes the computed result, and by how much).
+
+Tool note for future sessions: `rtk rg` was found to silently truncate/
+mangle long Isabelle identifiers in its returned output during this
+session (e.g. `unit_dg_Hstep` rendered as `n`, `part_post_solution_seed_dg_st_to_abs`
+rendered as `part_n`) — confirmed by cross-checking against plain `rg` and
+I/Q's own parser (`command_found` field). Do not trust `rtk rg` output for
+exact identifier names; use the `Read` tool or I/Q directly.
+
 ## Task list at handoff
 
 - `#14` (Stage 1: `td_cfg_side_solver_dg` wrapper) — completed, I/Q-clean.

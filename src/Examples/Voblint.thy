@@ -44,6 +44,8 @@ theory Voblint
     Example_Interval_DG_CallString
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
+    Example_Sign_DG_CallString_K1
+    Example_Sign_DG_CallString_K2
     Call_String_Solver_Refinement
     Example_Interval_Source_Ctx
     Example_Inc_Proc
@@ -273,6 +275,20 @@ text \<open>
       calls \<open>g\<close> from one, so a 1-call-string cannot separate \<open>g\<close>'s two activations.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K2} --- the same program at a
       2-call-string context (\<^verbatim>\<open>nest_2_activation_collect_sound\<close>), which does separate them.
+    \<^item> @{theory Voblint_Examples.Example_Sign_DG_CallString_K1} --- the Sign counterpart of the
+      \<open>nest\<close> pair, computed by the plain-join solver (\<^verbatim>\<open>TD_side_always_join_Interp\<close>) rather
+      than warrowing: Sign is finite, so no widening is needed and the computed solution is
+      exact. \<^verbatim>\<open>sign_nest_1_activation_collect_sound\<close> is the same soundness shape at a
+      1-call-string context, where \<open>g\<close>'s two activations (entered with \<open>SPos\<close> and \<open>SNeg\<close>)
+      collapse and join to \<open>STop\<close>.
+    \<^item> @{theory Voblint_Examples.Example_Sign_DG_CallString_K2} --- the 2-call-string sibling
+      (\<^verbatim>\<open>sign_nest_2_activation_collect_sound\<close>), which keeps \<open>g\<close>'s two activations separate
+      at \<open>SPos\<close> and \<open>SNeg\<close>. Because Sign is a finite lattice with an exact computed solution,
+      this pair supports a genuine strict-precision witness that \<open>Call_String_Solver_Refinement\<close>'s
+      projection argument does not state: \<^verbatim>\<open>sign_k2_strictly_more_precise_than_k1_at_g\<close> proves
+      the 2-call-string value at \<open>g\<close>'s entry is strictly below the 1-call-string \<open>STop\<close> merge in
+      the Sign order, for both activations, \<^emph>\<open>computed and compared\<close> rather than argued
+      abstractly.
     \<^item> @{theory Voblint_Examples.Call_String_Solver_Refinement} --- a solver-level refinement
       witness, not a source-level soundness theorem: projects the computed 2-call-string
       solution onto the 1-call-string dependency cone (\<^verbatim>\<open>project_sigma\<close>) and proves the
