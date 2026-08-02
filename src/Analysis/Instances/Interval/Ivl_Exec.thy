@@ -76,6 +76,41 @@ fun ivl_tf_st :: "edge_action \<Rightarrow> ivl resolved_st_q \<Rightarrow> ivl 
        update_resolved_st_q s (location_of is_global ret_var)
          (aval_ivl a (fun_of_resolved_st_q_for is_global s))"
 
+definition assume_ivl_st_for ::
+  "(vname => bool) => bexp => ivl resolved_st_q => ivl resolved_st_q" where
+  "assume_ivl_st_for source_global b s =
+    bfilter_ivl_st source_global b True s"
+
+definition assume_not_ivl_st_for ::
+  "(vname => bool) => bexp => ivl resolved_st_q => ivl resolved_st_q" where
+  "assume_not_ivl_st_for source_global b s =
+    bfilter_ivl_st source_global b False s"
+
+definition ivl_enter_st_for ::
+  "(vname => bool) => vname list => aexp list =>
+   ivl resolved_st_q => ivl resolved_st_q" where
+  "ivl_enter_st_for source_global xs es s =
+    bind_formals_resolved_q source_global xs
+      (map (\<lambda>e. aval_ivl e
+        (fun_of_resolved_st_q_for source_global s)) es)
+      (enter_frame_D_resolved_q ivl_top s)"
+
+fun ivl_tf_st_for ::
+  "(vname => bool) => edge_action =>
+   ivl resolved_st_q => ivl resolved_st_q" where
+    "ivl_tf_st_for source_global EA_Nop s = s"
+  | "ivl_tf_st_for source_global (EA_Assign x a) s =
+       update_resolved_st_q s (location_of source_global x)
+         (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
+  | "ivl_tf_st_for source_global (EA_Assume b) s =
+       assume_ivl_st_for source_global b s"
+  | "ivl_tf_st_for source_global (EA_AssumeNot b) s =
+       assume_not_ivl_st_for source_global b s"
+  | "ivl_tf_st_for source_global (EA_Ret None p) s = s"
+  | "ivl_tf_st_for source_global (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of source_global ret_var)
+         (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
+
 lift_definition top_ivl_st :: "ivl resolved_st_q"
   is "(Ivl MinInf PlusInf, Ivl MinInf PlusInf, [])" .
 

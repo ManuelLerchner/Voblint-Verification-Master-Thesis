@@ -268,6 +268,14 @@ lemma etf_st_enter_unit_of_transfer_placed:
       (enter_st xs es) u"
   unfolding unit_etf_st_of_transfer_placed_def by simp
 
+lemma etf_combine_st_unit_of_transfer_placed:
+  "etf_combine_st
+    (unit_etf_st_of_transfer_placed source_global owner_of locations_of
+      keep_local publish_side tf_st enter_st) dst cc ex =
+    unit_combine_tree_st_placed source_global owner_of locations_of
+      keep_local publish_side dst cc ex"
+  unfolding unit_etf_st_of_transfer_placed_def by simp
+
 lemma traverse_unit_edge_tree_st_placed:
   "traverse_rhs
     (unit_edge_tree_st_placed owner_of locations_of
