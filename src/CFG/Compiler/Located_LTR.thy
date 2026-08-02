@@ -59,16 +59,16 @@ text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops 
   \<open>valid_ltr_entry_result_eq\<close> --- so the trace composes by \<open>valid_ltr.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma ltr_repr_Return:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
-    and rep: "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+    and rep: "ltr_repr source_global (compile_prog \<Pi> ps mnm main) S
                   (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
-  shows "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S
-           (cont, combine_collect is_global dst caller tst, stk)
+  shows "ltr_repr source_global (compile_prog \<Pi> ps mnm main) S
+           (cont, combine_collect source_global dst caller tst, stk)
            (Resume (the (caller_of t0)) t0
-              (path (the (caller_of t0)) @ [(cont, combine_collect is_global dst caller tst)]))"
+              (path (the (caller_of t0)) @ [(cont, combine_collect source_global dst caller tst)]))"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from rep have t0v: "t0 \<in> valid_ltr is_global ?g S" and sn0: "sink_node t0 = FunctionResult q"
+  from rep have t0v: "t0 \<in> valid_ltr source_global ?g S" and sn0: "sink_node t0 = FunctionResult q"
     and ss0: "sink_store t0 = tst"
     and stk0: "stack_repr ?g ((cont, dst, caller) # stk) t0"
     by (auto simp: ltr_repr_def)
@@ -77,14 +77,14 @@ proof -
     and edge: "(sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     and stkc: "stack_repr ?g stk c"
     by (cases rule: stack_repr.cases) auto
-  have cvalid: "c \<in> valid_ltr is_global ?g S" using valid_ltr_caller_valid[OF t0v cof] .
+  have cvalid: "c \<in> valid_ltr source_global ?g S" using valid_ltr_caller_valid[OF t0v cof] .
   have pq: "p = q" using valid_ltr_entry_result_eq[OF wf t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
-  let ?r = "combine_collect is_global dst caller tst"
+  let ?r = "combine_collect source_global dst caller tst"
   let ?t' = "Resume c t0 (path c @ [(cont, ?r)])"
   have edge_q: "(sink_node c, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls ?g"
     using edge pq by simp
-  have valid': "?t' \<in> valid_ltr is_global ?g S"
+  have valid': "?t' \<in> valid_ltr source_global ?g S"
     using valid_ltr.ret[OF t0v cof sn0 edge_q] ssc ss0 by simp
   have sn': "sink_node ?t' = cont" by (simp add: sink_node_def)
   have ss': "sink_store ?t' = ?r" by (simp add: sink_store_def)
@@ -101,35 +101,35 @@ subsection \<open>The invariant is preserved by located CFG steps\<close>
 text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_ltr\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>ltr_repr_Return\<close>).\<close>
 lemma cstep_preserves_ltr_repr:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
-    and step: "cstep is_global (compile_prog \<Pi> ps mnm main) cf cf'"
-    and rep: "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S cf t"
-  shows "\<exists>t'. ltr_repr is_global (compile_prog \<Pi> ps mnm main) S cf' t'"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+    and step: "cstep source_global (compile_prog \<Pi> ps mnm main) cf cf'"
+    and rep: "ltr_repr source_global (compile_prog \<Pi> ps mnm main) S cf t"
+  shows "\<exists>t'. ltr_repr source_global (compile_prog \<Pi> ps mnm main) S cf' t'"
   using step rep
 proof (cases rule: cstep.cases)
   case (Intra u a v s s' stk')
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from rep have tv: "t \<in> valid_ltr is_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
+  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
     using Intra by (auto simp: ltr_repr_def)
   have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
   have e2: "edge_step a (sink_store t) = Some s'" using Intra ss by simp
-  have "extend t (v, s') \<in> valid_ltr is_global ?g S" using valid_ltr.intra[OF tv e1 e2] .
+  have "extend t (v, s') \<in> valid_ltr source_global ?g S" using valid_ltr.intra[OF tv e1 e2] .
   moreover have "stack_repr ?g stk' (extend t (v, s'))"
     using stack_repr_cong[OF str] valid_ltr_path_nonempty[OF tv] by simp
-  ultimately have "ltr_repr is_global ?g S (v, s', stk') (extend t (v, s'))"
+  ultimately have "ltr_repr source_global ?g S (v, s', stk') (extend t (v, s'))"
     by (simp add: ltr_repr_def)
   then show ?thesis using Intra by auto
 next
   case (Call u dst pars actuals q cont s stk')
   let ?g = "compile_prog \<Pi> ps mnm main"
-  from rep have tv: "t \<in> valid_ltr is_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
+  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
     using Call by (auto simp: ltr_repr_def)
   have edge: "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
     using Call sn by simp
-  let ?child = "Call t [(FunctionEntry q, call_enter is_global (CallEdge dst pars actuals) s)]"
-  have child_valid: "?child \<in> valid_ltr is_global ?g S"
+  let ?child = "Call t [(FunctionEntry q, call_enter source_global (CallEdge dst pars actuals) s)]"
+  have child_valid: "?child \<in> valid_ltr source_global ?g S"
     using valid_ltr.call[OF tv edge] ss by simp
   have "stack_repr ?g ((cont, dst, s) # stk') ?child"
   proof (rule stack_repr.frame)
@@ -140,23 +140,23 @@ next
       using edge .
     show "stack_repr ?g stk' t" using str .
   qed
-  with child_valid have "ltr_repr is_global ?g S
-      (FunctionEntry q, call_enter is_global (CallEdge dst pars actuals) s, (cont, dst, s) # stk') ?child"
+  with child_valid have "ltr_repr source_global ?g S
+      (FunctionEntry q, call_enter source_global (CallEdge dst pars actuals) s, (cont, dst, s) # stk') ?child"
     by (simp add: ltr_repr_def sink_node_def sink_store_def)
   then show ?thesis using Call by auto
 next
   case (Return q tst cont dst caller stk')
   from rep Return(1)
-  have rep': "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S
+  have rep': "ltr_repr source_global (compile_prog \<Pi> ps mnm main) S
                 (FunctionResult q, tst, (cont, dst, caller) # stk') t" by simp
   from ltr_repr_Return[OF wf rep'] show ?thesis using Return(2) by auto
 qed
 
 lemma located_ltr_entry:
   assumes "s \<in> S"
-  shows "located_ltr is_global g S (cfg_entry g, s, [])"
+  shows "located_ltr source_global g S (cfg_entry g, s, [])"
 proof -
-  have "ltr_repr is_global g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
+  have "ltr_repr source_global g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
     using assms
     by (auto simp: ltr_repr_def sink_node_def sink_store_def valid_ltr.init
              intro: stack_repr.empty)
@@ -164,30 +164,30 @@ proof -
 qed
 
 lemma cstep_preserves_located_ltr:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
-    and "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf"
-    and "cstep is_global (compile_prog \<Pi> ps mnm main) cf cf'"
-  shows "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf'"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+    and "located_ltr source_global (compile_prog \<Pi> ps mnm main) S cf"
+    and "cstep source_global (compile_prog \<Pi> ps mnm main) cf cf'"
+  shows "located_ltr source_global (compile_prog \<Pi> ps mnm main) S cf'"
 proof -
-  from assms(2) obtain t where "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S cf t"
+  from assms(2) obtain t where "ltr_repr source_global (compile_prog \<Pi> ps mnm main) S cf t"
     by (auto simp: located_ltr_def)
-  then obtain t' where "ltr_repr is_global (compile_prog \<Pi> ps mnm main) S cf' t'"
+  then obtain t' where "ltr_repr source_global (compile_prog \<Pi> ps mnm main) S cf' t'"
     using cstep_preserves_ltr_repr[OF wf assms(3)] by blast
   then show ?thesis by (auto simp: located_ltr_def)
 qed
 
 lemma csteps_preserve_located_ltr:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
-    and "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf"
-    and "star (cstep is_global (compile_prog \<Pi> ps mnm main)) cf cf'"
-  shows "located_ltr is_global (compile_prog \<Pi> ps mnm main) S cf'"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
+    and "located_ltr source_global (compile_prog \<Pi> ps mnm main) S cf"
+    and "star (cstep source_global (compile_prog \<Pi> ps mnm main)) cf cf'"
+  shows "located_ltr source_global (compile_prog \<Pi> ps mnm main) S cf'"
   using assms(3) assms(2)
 proof (induction rule: star.induct)
   case (refl a)
   then show ?case .
 next
   case (step a b c)
-  have "located_ltr is_global (compile_prog \<Pi> ps mnm main) S b"
+  have "located_ltr source_global (compile_prog \<Pi> ps mnm main) S b"
     by (rule cstep_preserves_located_ltr[OF wf step.prems step.hyps(1)])
   then show ?case by (rule step.IH)
 qed
@@ -200,7 +200,7 @@ text \<open>The program entry \<^term>\<open>FunctionEntry mnm\<close> is an ord
   edge crosses from \<^term>\<open>FunctionEntry mnm\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation
   simulates the source \<open>main\<close>.\<close>
 lemma compile_prog_main_base:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
   obtains en where
     "(FunctionEntry mnm, EA_Nop, en) \<in> intra (compile_prog \<Pi> ps mnm main)"
     "csim \<Pi> (compile_prog \<Pi> ps mnm main) (main, s, []) (en, s, [])"
@@ -253,11 +253,11 @@ text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star
   simulation) and the located invariant: every source run produces a matching valid
   activation-local trace at the simulated node.\<close>
 theorem source_run_has_ltr:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> ltr_repr is_global (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
+                   \<and> ltr_repr source_global (compile_prog \<Pi> ps mnm main) S (v, s, stk) t"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   have pc: "procs_compiled \<Pi> ?g" by (rule procs_compiled_compile_prog[OF wf])
@@ -265,40 +265,40 @@ proof -
   obtain en where entry: "(FunctionEntry mnm, EA_Nop, en) \<in> intra ?g"
     and base: "csim \<Pi> ?g (main, s0, []) (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
-  have loc0: "located_ltr is_global (compile_prog \<Pi> ps mnm main) S (FunctionEntry mnm, s0, [])"
-    using located_ltr_entry[OF s0, of "compile_prog \<Pi> ps mnm main"]
+  have loc0: "located_ltr source_global (compile_prog \<Pi> ps mnm main) S (FunctionEntry mnm, s0, [])"
+    using located_ltr_entry[where source_global=source_global and g="compile_prog \<Pi> ps mnm main", OF s0]
     by (simp add: inv16_entry_is_main)
-  have step0: "cstep is_global ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
-  have loc_en: "located_ltr is_global ?g S (en, s0, [])"
+  have step0: "cstep source_global ?g (FunctionEntry mnm, s0, []) (en, s0, [])" by (rule cstep_nop[OF entry])
+  have loc_en: "located_ltr source_global ?g S (en, s0, [])"
     by (rule cstep_preserves_located_ltr[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
-    where run_c: "star (cstep is_global ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
+    where run_c: "star (cstep source_global ?g) (en, s0, []) cf'" and sim': "csim \<Pi> ?g (residual, s, frs) cf'"
     by blast
   obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
   have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
-  have loc_v: "located_ltr is_global ?g S (v, s, stk)"
+  have loc_v: "located_ltr source_global ?g S (v, s, stk)"
     using csteps_preserve_located_ltr[OF wf loc_en run_c] cf' store by simp
-  from loc_v obtain t where "ltr_repr is_global ?g S (v, s, stk) t" by (auto simp: located_ltr_def)
+  from loc_v obtain t where "ltr_repr source_global ?g S (v, s, stk) t" by (auto simp: located_ltr_def)
   then show ?thesis using sim' cf' store by blast
 qed
 
 text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
   collecting \<^const>\<open>activation_collect\<close> at the simulated node, keyed by the witness trace.\<close>
 theorem source_store_in_activation_collect:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> s \<in> activation_collect is_global enterc seedc (compile_prog \<Pi> ps mnm main) S v
+                   \<and> s \<in> activation_collect source_global enterc seedc (compile_prog \<Pi> ps mnm main) S v
                           (key enterc seedc t)"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, frs) (v, s, stk)"
-      and rep: "ltr_repr is_global ?g S (v, s, stk) t" by blast
-  from rep have tv: "t \<in> valid_ltr is_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
+      and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
+  from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  have "s \<in> activation_collect is_global enterc seedc ?g S v (key enterc seedc t)"
+  have "s \<in> activation_collect source_global enterc seedc ?g S v (key enterc seedc t)"
     using activation_collect_I[OF tv sn refl] ss by simp
   then show ?thesis using sim by blast
 qed
@@ -307,25 +307,27 @@ text \<open>The witness-free top-level result: a store reached with an empty sou
   the activation collecting at the fixed seed context --- no \<^typ>\<open>ltr\<close> witness and no context
   existential.  This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global \<Pi>) (main, s0, []) (residual, s, [])"
+    and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect is_global enterc seedc (compile_prog \<Pi> ps mnm main) S v seedc"
+             \<and> s \<in> activation_collect source_global enterc seedc (compile_prog \<Pi> ps mnm main) S v seedc"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
     where sim: "csim \<Pi> ?g (residual, s, []) (v, s, stk)"
-      and rep: "ltr_repr is_global ?g S (v, s, stk) t" by blast
+      and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
-  from rep stk0 have tv: "t \<in> valid_ltr is_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
+  from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
   have "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   then have key: "key enterc seedc t = seedc" by (rule key_caller_of_None)
-  have "s \<in> activation_collect is_global enterc seedc ?g S v seedc"
+  have "s \<in> activation_collect source_global enterc seedc ?g S v seedc"
     using activation_collect_I[OF tv sn key] ss by simp
   then show ?thesis using sim stk0 by blast
 qed
 
 end
+
+
 

@@ -775,8 +775,9 @@ text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on
   \<^const>\<open>bind_formals\<close>-bound to the formals.  The resulting store is exactly the
   source \<open>Call\<close> callee store used by the local-trace call rule.\<close>
 lemma call_enter_eq_source_call_store:
-  "call_enter is_global (CallEdge dst (formals decl) actuals) s
-     = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
+  "call_enter source_global (CallEdge dst (formals decl) actuals) s
+     = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
+       (enter_state source_global s)"
   by (simp add: call_enter_CallEdge)
 
 text \<open>Combined: traversing the compiled call edge lands the callee at the source callee-entry
@@ -785,8 +786,9 @@ lemma compile_call_enter_eq_source:
   assumes "\<Pi> q = Some decl"
     and "(cs, CallEdge dst pars actuals, FunctionEntry q, af)
            \<in> snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))"
-  shows "call_enter is_global (CallEdge dst pars actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state is_global s)"
+  shows "call_enter source_global (CallEdge dst pars actuals) s
+           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
+             (enter_state source_global s)"
 proof -
   from assms(2) have "pars = formals decl" by (simp add: assms(1))
   then show ?thesis by (simp add: call_enter_eq_source_call_store)
@@ -798,7 +800,7 @@ subsection \<open>Return transfer agrees with the source semantics\<close>
 text \<open>The \<open>EA_Ret\<close> edge publishes the return value into \<^const>\<open>ret_var\<close> exactly as the
   source \<open>Return\<close> step: \<open>Some e\<close> writes \<open>aval e\<close>, \<open>None\<close> leaves the reserved local.\<close>
 lemma return_publishes_ret_var:
-  assumes "pstep is_global \<Pi> (Return e, s, frs) (Unwind, s', frs)"
+  assumes "pstep source_global \<Pi> (Return e, s, frs) (Unwind, s', frs)"
   shows "edge_step (EA_Ret e p) s = Some s'"
   using assms by (cases e) auto
 
@@ -807,16 +809,16 @@ text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> repr
   callee \<^const>\<open>ret_var\<close> written into the destination.  \<open>caller\<close> is the saved caller store in
   the activation frame, \<open>callee\<close> the callee-exit store.\<close>
 lemma combine_collect_eq_source_unwind:
-  assumes "pstep is_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
+  assumes "pstep source_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
                     (SKIP, s', frs)"
-  shows "s' = combine_collect is_global dst caller callee"
+  shows "s' = combine_collect source_global dst caller callee"
   using assms by (auto simp: combine_collect_def)
 
 text \<open>The same combine also matches the normal-completion \<open>Restore\<close> step, which fires once the
   callee body has reduced to \<^const>\<open>SKIP\<close>: the combined store is fixed by the destination and stores.\<close>
 lemma combine_collect_eq_source_restore:
-  assumes "pstep is_global \<Pi> (Restore, callee, Frame caller dst # frs) (SKIP, s', frs)"
-  shows "s' = combine_collect is_global dst caller callee"
+  assumes "pstep source_global \<Pi> (Restore, callee, Frame caller dst # frs) (SKIP, s', frs)"
+  shows "s' = combine_collect source_global dst caller callee"
   using assms by (auto simp: combine_collect_def)
 
 

@@ -30,11 +30,28 @@ definition unit_step ::
 where
   "unit_step f d g = (let res = f (d \<squnion> g) in (restrict_global res, restrict_local res))"
 
+definition unit_step_placed ::
+  "(vname => bool) => (vname => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_step_placed keep_local publish_side f d g =
+     (let res = f (d \<squnion> g) in
+      (project_component publish_side res, project_component keep_local res))"
+
+lemma unit_step_for_classic:
+  "unit_step_for storage f d g =
+    unit_step_placed (classic_keep_local storage) (classic_publish_side storage) f d g"
+  unfolding unit_step_for_def unit_step_placed_def project_component_def
+    classic_keep_local_def classic_publish_side_def restrict_global_for_def
+    restrict_local_for_def Let_def
+  by (simp add: fun_eq_iff)
+
 definition unit_step_resolved_for ::
   "(vname => bool) =>
    ('a::bounded_semilattice_sup_bot abs_state => 'a resolved_st) =>
    'a resolved_st => 'a resolved_st =>
-   'a resolved_st * 'a resolved_st"
+   'a resolved_st \<times> 'a resolved_st"
 where
   "unit_step_resolved_for gs f d g =
      (let res = f (fun_of_resolved_st_for gs d \<squnion>
@@ -491,18 +508,98 @@ definition unit_combine_step_env_for ::
      (let m = combine_abs gs (dc \<squnion> g) (de \<squnion> g)
       in (restrict_global_for gs m, restrict_local_for gs m))"
 
+definition unit_combine_step_env_placed ::
+  "(vname => bool) => (vname => bool) => (vname => bool) =>
+   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
+   'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_combine_step_env_placed source_global keep_local publish_side dc de g =
+     (let res = combine_abs source_global (dc \<squnion> g) (de \<squnion> g) in
+      (project_component publish_side res, project_component keep_local res))"
+
+lemma unit_combine_step_env_for_classic:
+  "unit_combine_step_env_for storage dc de g =
+    unit_combine_step_env_placed storage (classic_keep_local storage)
+      (classic_publish_side storage) dc de g"
+  unfolding unit_combine_step_env_for_def unit_combine_step_env_placed_def
+    project_component_def classic_keep_local_def classic_publish_side_def
+    restrict_global_for_def restrict_local_for_def Let_def
+  by (simp add: fun_eq_iff)
+
+definition unit_combine_step_assign_placed ::
+  "(vname => bool) => (vname => bool) => vname option =>
+   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
+   'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_combine_step_assign_placed keep_local publish_side dst de g merged =
+     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var)
+         (fst merged \<squnion> snd merged)
+      in (project_component publish_side res, project_component keep_local res))"
+
+lemma unit_combine_step_assign_for_classic:
+  "unit_combine_step_assign_for storage dst de g merged =
+    unit_combine_step_assign_placed (classic_keep_local storage)
+      (classic_publish_side storage) dst de g merged"
+  unfolding unit_combine_step_assign_for_def unit_combine_step_assign_placed_def
+    project_component_def classic_keep_local_def classic_publish_side_def
+    restrict_global_for_def restrict_local_for_def Let_def
+  by (simp add: fun_eq_iff)
+definition unit_dg_spec_placed ::
+  "(vname => bool) => (vname => bool) => (vname => bool) =>
+   'a::sound_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
+where
+  "unit_dg_spec_placed source_global keep_local publish_side tf = \<lparr>
+    dgs_nop        = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
+    dgs_assign     = (\<lambda>x e. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_Assign x e))),
+    dgs_assume     = (\<lambda>b. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_Assume b))),
+    dgs_assume_not = (\<lambda>b. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_AssumeNot b))),
+    dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
+      (tf_enter tf xs es)),
+    dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
+    dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
+  \<rparr>"
+lemma dg_spec_step_unit_placed:
+  "dg_spec_step (unit_dg_spec_placed source_global keep_local publish_side tf) a =
+    unit_step_placed keep_local publish_side (apply_tf tf a)"
+  unfolding unit_dg_spec_placed_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+       split: option.splits)
+
+lemma dgs_enter_unit_dg_spec_placed:
+  "dgs_enter (unit_dg_spec_placed source_global keep_local publish_side tf) fs as =
+    unit_step_placed keep_local publish_side (tf_enter tf fs as)"
+  unfolding unit_dg_spec_placed_def
+  by simp
+
+
+
+
+
 definition unit_dg_spec_for ::
   "(vname => bool) => 'a::sound_domain domain_transfer
-   => ('a abs_state, 'a abs_state) dg_spec" where
+   => ('a abs_state, 'a abs_state) dg_spec"
+where
   "unit_dg_spec_for gs tf = \<lparr>
     dgs_nop        = unit_step_for gs (apply_tf tf EA_Nop),
-    dgs_assign     = (%x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
-    dgs_assume     = (%b. unit_step_for gs (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (%b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (%xs es. unit_step_for gs (tf_enter tf xs es)),
+    dgs_assign     = (\<lambda>x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
+    dgs_assume     = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_Assume b))),
+    dgs_assume_not = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
+    dgs_enter      = (\<lambda>xs es. unit_step_for gs (tf_enter tf xs es)),
     dgs_combine_env    = unit_combine_step_env_for gs,
     dgs_combine_assign = unit_combine_step_assign_for gs
   \<rparr>"
+lemma unit_dg_spec_for_classic:
+  "unit_dg_spec_for storage tf =
+    unit_dg_spec_placed storage (classic_keep_local storage)
+      (classic_publish_side storage) tf"
+  unfolding unit_dg_spec_for_def unit_dg_spec_placed_def
+  by (simp add: unit_step_for_classic unit_combine_step_env_for_classic
+    unit_combine_step_assign_for_classic fun_eq_iff)
+
 lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
      (let res = combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)

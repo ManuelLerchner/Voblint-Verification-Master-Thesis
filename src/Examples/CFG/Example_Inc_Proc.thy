@@ -103,9 +103,15 @@ qed
 lemma prog_pcompletes_inc_pcall:
   fixes s :: store
   shows "prog_pcompletes inc_program (imp \<lbrakk> p() \<rbrakk>) s
-           (s(''Gx'' := s ''Gx'' + 1))"
-  using pcompletes_inc_pcall_declared
-  unfolding prog_pcompletes_def inc_pi_def by simp
+          (s(''Gx'' := s ''Gx'' + 1))"
+proof -
+  have storage:
+    "storage_global inc_program prog_main_name = declared_global inc_program"
+    by (rule ext) simp
+  show ?thesis
+    using pcompletes_inc_pcall_declared
+    unfolding prog_pcompletes_def inc_pi_def storage by simp
+qed
 
 text \<open>
   The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> now takes

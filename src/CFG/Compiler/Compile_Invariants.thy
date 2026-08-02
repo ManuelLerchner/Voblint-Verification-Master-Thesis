@@ -1,5 +1,5 @@
 theory Compile_Invariants
-  imports VIMP_Proc_to_CFG
+  imports VIMP_Proc_to_CFG "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Structural invariants of the procedure-aware compiler\<close>
@@ -26,10 +26,30 @@ definition wf_compile_input ::
      mnm \<notin> set ps \<and>
      wf_source_program gs \<Pi> mnm main"
 
+
+definition wf_program_compile_input :: "imp_prog => bool" where
+  "wf_program_compile_input p \<longleftrightarrow>
+    wf_compile_input (storage_global p prog_main_name) (prog_table p)
+      (prog_procs p) prog_main_name (prog_main p)"
+
+lemma wf_program_compile_inputD:
+  "wf_program_compile_input p \<Longrightarrow>
+    wf_compile_input (storage_global p prog_main_name) (prog_table p)
+      (prog_procs p) prog_main_name (prog_main p)"
+  by (simp add: wf_program_compile_input_def)
+
+definition compile_program :: "imp_prog => cfg" where
+  "compile_program p =
+    compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
 lemma wf_compile_input_source_program:
   "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
   by (simp add: wf_compile_input_def)
 
+
+lemma wf_program_compile_input_source:
+  "wf_program_compile_input p \<Longrightarrow> wf_program_source p"
+  by (simp add: wf_program_compile_input_def wf_program_source_def
+      wf_compile_input_def)
 lemma wf_compile_input_main_exists:
   "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
   using wf_compile_input_source_program wf_source_program_main_exists by blast

@@ -1,5 +1,5 @@
 theory Exec_Bridge
-  imports Exec_Backward TD_Side_Eff_Bounds TD_Side_RHS_Generator Constraint_System
+  imports Exec_Backward Exec_Placement TD_Side_Eff_Bounds TD_Side_RHS_Generator Constraint_System
 begin
 
 section \<open>Executable equation-system refinement\<close>
@@ -165,6 +165,124 @@ where
        let res = combine_collect_resolved_for_q is_global dst (sc \<squnion> g) (se \<squnion> g) in
        Side () (restrict_global_resolved_q res)
          (Answer (restrict_local_resolved_q res)))))"
+
+subsection \<open>Placement-aware executable trees\<close>
+
+text \<open>
+  The owner and finite location scope are supplied per CFG node.  The executable
+  state remains keyed by @{typ location}; only the placement policy observes the
+  owner-qualified key.
+\<close>
+
+definition unit_edge_tree_st_placed ::
+  "(pp => pname)
+   => (pp => location list)
+   => (scoped_location => bool)
+   => (scoped_location => bool)
+   => ('a::bounded_semilattice_sup_bot resolved_st_q => 'a resolved_st_q)
+   => (unit, 'a resolved_st_q) st_edge_tf_tree"
+where
+  "unit_edge_tree_st_placed owner_of locations_of keep_local publish_side f u =
+    QueryL u (\<lambda>su. QueryG () (\<lambda>g.
+      let res = f (su \<squnion> g) in
+      Side ()
+        (project_resolved_on (owner_of u) (locations_of u) publish_side res)
+        (Answer
+          (project_resolved_on (owner_of u) (locations_of u) keep_local res))))"
+
+definition unit_combine_tree_st_placed ::
+  "(vname => bool)
+   => (pp => pname)
+   => (pp => location list)
+   => (scoped_location => bool)
+   => (scoped_location => bool)
+   => vname option => pp => pp
+   => (pp, unit, 'a::bounded_semilattice_sup_bot resolved_st_q) strategy_tree"
+where
+  "unit_combine_tree_st_placed source_global owner_of locations_of
+      keep_local publish_side dst cc ex =
+    QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
+      let res =
+        combine_collect_resolved_for_q source_global dst (sc \<squnion> g)
+          (se \<squnion> g)
+      in Side ()
+        (project_resolved_on
+          (owner_of cc) (locations_of cc) publish_side res)
+        (Answer
+          (project_resolved_on
+            (owner_of cc) (locations_of cc) keep_local res)))))"
+
+definition unit_etf_st_of_transfer_placed ::
+  "(vname => bool)
+   => (pp => pname)
+   => (pp => location list)
+   => (scoped_location => bool)
+   => (scoped_location => bool)
+   => (edge_action
+     => 'a::bounded_semilattice_sup_bot resolved_st_q
+     => 'a resolved_st_q)
+   => (vname list => aexp list
+     => 'a resolved_st_q => 'a resolved_st_q)
+   => (unit, 'a resolved_st_q) effectful_st_transfer"
+where
+  "unit_etf_st_of_transfer_placed source_global owner_of locations_of
+      keep_local publish_side tf_st enter_st =
+    \<lparr> etf_st_nop =
+        unit_edge_tree_st_placed owner_of locations_of keep_local
+          publish_side (tf_st EA_Nop),
+      etf_st_assign = (\<lambda>x e.
+        unit_edge_tree_st_placed owner_of locations_of keep_local
+          publish_side (tf_st (EA_Assign x e))),
+      etf_st_assume = (\<lambda>b.
+        unit_edge_tree_st_placed owner_of locations_of keep_local
+          publish_side (tf_st (EA_Assume b))),
+      etf_st_assume_not = (\<lambda>b.
+        unit_edge_tree_st_placed owner_of locations_of keep_local
+          publish_side (tf_st (EA_AssumeNot b))),
+      etf_st_enter = (\<lambda>xs es.
+        unit_edge_tree_st_placed owner_of locations_of keep_local
+          publish_side (enter_st xs es)),
+      etf_st_combine =
+        unit_combine_tree_st_placed source_global owner_of locations_of
+          keep_local publish_side \<rparr>"
+
+lemma apply_etf_st_unit_of_transfer_placed:
+  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
+    and ret_some:
+      "\<And>a p. tf_st (EA_Ret (Some a) p) =
+        tf_st (EA_Assign ret_var a)"
+  shows
+    "apply_etf_st
+      (unit_etf_st_of_transfer_placed source_global owner_of locations_of
+        keep_local publish_side tf_st enter_st) a u =
+      unit_edge_tree_st_placed owner_of locations_of keep_local publish_side
+        (tf_st a) u"
+  unfolding unit_etf_st_of_transfer_placed_def
+  by (cases a) (auto simp: ret_none ret_some split: option.splits)
+
+lemma etf_st_enter_unit_of_transfer_placed:
+  "etf_st_enter
+    (unit_etf_st_of_transfer_placed source_global owner_of locations_of
+      keep_local publish_side tf_st enter_st) xs es u =
+    unit_edge_tree_st_placed owner_of locations_of keep_local publish_side
+      (enter_st xs es) u"
+  unfolding unit_etf_st_of_transfer_placed_def by simp
+
+lemma traverse_unit_edge_tree_st_placed:
+  "traverse_rhs
+    (unit_edge_tree_st_placed owner_of locations_of
+      keep_local publish_side f u) sigma_st =
+    project_resolved_on (owner_of u) (locations_of u) keep_local
+      (f (sigma_st (Inl u) \<squnion> sigma_st (Inr ())))"
+  unfolding unit_edge_tree_st_placed_def by (simp add: Let_def)
+
+lemma sides_unit_edge_tree_st_placed_Inr:
+  "sides_of_rhs
+    (unit_edge_tree_st_placed owner_of locations_of
+      keep_local publish_side f u) sigma_st (Inr ()) =
+    project_resolved_on (owner_of u) (locations_of u) publish_side
+      (f (sigma_st (Inl u) \<squnion> sigma_st (Inr ())))"
+  unfolding unit_edge_tree_st_placed_def by (simp add: Let_def)
 
 subsection \<open>Unit-global executable transfer-record factory\<close>
 

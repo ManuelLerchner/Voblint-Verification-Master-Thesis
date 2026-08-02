@@ -73,6 +73,31 @@ definition declared_global :: "imp_prog \<Rightarrow> vname \<Rightarrow> bool" 
 lemma declared_global_iff [simp]:
   "declared_global p x \<longleftrightarrow> x \<in> set (declared_global_vars p)"
   by (simp add: declared_global_def)
+definition storage_of :: "imp_prog => pname => vname => source_location" where
+  "storage_of p owner x =
+    (if declared_global p x then GlobalVar else LocalVar owner)"
+
+definition storage_global :: "imp_prog => pname => vname => bool" where
+  "storage_global p owner x =
+    (case storage_of p owner x of GlobalVar => True | LocalVar _ => False)"
+
+lemma storage_of_global_iff [simp]:
+  "storage_of p owner x = GlobalVar \<longleftrightarrow> declared_global p x"
+  by (simp add: storage_of_def)
+
+lemma storage_of_implicit_local [simp]:
+  "\<not> declared_global p x \<Longrightarrow> storage_of p owner x = LocalVar owner"
+  by (simp add: storage_of_def)
+
+lemma storage_global_iff [simp]:
+  "storage_global p owner x \<longleftrightarrow> declared_global p x"
+  by (simp add: storage_global_def storage_of_def)
+
+
+lemma storage_of_local_iff [simp]:
+  "storage_of p owner x = LocalVar q
+    \<longleftrightarrow> \<not> declared_global p x \<and> owner = q"
+  by (auto simp: storage_of_def split: if_splits)
 
 
 
@@ -102,28 +127,67 @@ lemma prog_table_main [simp]:
   "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
   by (simp add: prog_table_def)
 
-text \<open>Program-context concrete operations use the declaration list carried by \<open>p\<close>.\<close>
+text \<open>
+  The finite variable scope of an activation contains every declared global, the
+  activation's formals and body occurrences, and the reserved return location.
+\<close>
+
+definition scope_vnames :: "imp_prog => pname => vname set" where
+  "scope_vnames p owner =
+    set (declared_global_vars p) \<union> {ret_var} \<union>
+    (case prog_table p owner of
+      None => {} |
+      Some decl => set (formals decl) \<union> com_vnames (body decl))"
+
+lemma finite_scope_vnames [simp]: "finite (scope_vnames p owner)"
+  unfolding scope_vnames_def
+  by (auto split: option.splits)
+
+definition scope_vnames_list :: "imp_prog => pname => vname list" where
+  "scope_vnames_list p owner = sorted_list_of_set (scope_vnames p owner)"
+
+lemma set_scope_vnames_list [simp]:
+  "set (scope_vnames_list p owner) = scope_vnames p owner"
+  unfolding scope_vnames_list_def
+  by simp
+
+
+definition wf_program_source :: "imp_prog => bool" where
+  "wf_program_source p \<longleftrightarrow>
+    wf_source_program (storage_global p prog_main_name) (prog_table p)
+      prog_main_name (prog_main p)"
+
+lemma wf_program_sourceD:
+  "wf_program_source p \<Longrightarrow>
+    wf_source_program (storage_global p prog_main_name) (prog_table p)
+      prog_main_name (prog_main p)"
+  by (simp add: wf_program_source_def)
+text \<open>Program-context concrete operations classify each variable through the program declaration.  Identifiers absent from the global declaration are implicitly local to the supplied owner.\<close>
 
 definition prog_enter_state :: "imp_prog => store => store" where
-  "prog_enter_state p s = enter_state (declared_global p) s"
+  "prog_enter_state p s = enter_state (storage_global p prog_main_name) s"
 
 definition prog_combine_states :: "imp_prog => store => store => store" where
-  "prog_combine_states p s t = combine_states (declared_global p) s t"
+  "prog_combine_states p s t =
+    combine_states (storage_global p prog_main_name) s t"
 
 definition prog_pstep ::
     "imp_prog => (com \<times> store \<times> frame list) =>
       (com \<times> store \<times> frame list) => bool" where
-  "prog_pstep p = pstep (declared_global p) (prog_table p)"
+  "prog_pstep p = pstep (storage_global p prog_main_name) (prog_table p)"
 
 definition prog_pcompletes ::
     "imp_prog => com => store => store => bool" where
-  "prog_pcompletes p = pcompletes (declared_global p) (prog_table p)"
+  "prog_pcompletes p =
+    pcompletes (storage_global p prog_main_name) (prog_table p)"
 
 definition prog_restrict_local :: "imp_prog => pname => store => store" where
-  "prog_restrict_local p _ s = (%x. if declared_global p x then 0 else s x)"
+  "prog_restrict_local p owner s =
+    (%x. if storage_global p owner x then 0 else s x)"
 
 definition prog_restrict_global :: "imp_prog => store => store" where
-  "prog_restrict_global p s = (%x. if declared_global p x then s x else 0)"
+  "prog_restrict_global p s =
+    (%x. if storage_global p prog_main_name x then s x else 0)"
 
 lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m gv) = map fst ps"
   by (simp add: prog_procs_def imp_prog.make_def)

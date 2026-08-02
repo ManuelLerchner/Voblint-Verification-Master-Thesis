@@ -14,10 +14,10 @@ text \<open>
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
-    and cap: "\<And>v ctx. activation_collect is_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
+    and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
+    and cap: "\<And>v ctx. activation_collect source_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
@@ -27,7 +27,7 @@ proof -
          [where mnm=mnm and enterc=enterc and seedc=seedc,
           OF wf s0 run]
   obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
-    and mem: "s \<in> activation_collect is_global enterc seedc ?g S v (key enterc seedc t)"
+    and mem: "s \<in> activation_collect source_global enterc seedc ?g S v (key enterc seedc t)"
     by meson
   have "s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
     using cap[of v "key enterc seedc t"] mem by blast
@@ -39,10 +39,10 @@ text \<open>The witness-free specialisation of the composition at top-level prog
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, [])"
-    and cap: "\<And>v ctx. activation_collect is_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
+    and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, [])"
+    and cap: "\<And>v ctx. activation_collect source_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
@@ -50,7 +50,7 @@ proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_toplevel_in_activation_collect[where mnm=mnm and enterc=enterc and seedc=seedc, OF wf s0 run]
   obtain v where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])"
-    and mem: "s \<in> activation_collect is_global enterc seedc ?g S v seedc" by blast
+    and mem: "s \<in> activation_collect source_global enterc seedc ?g S v seedc" by blast
   have "s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>" using cap[of v seedc] mem by blast
   then show ?thesis using m by blast
 qed
@@ -60,9 +60,9 @@ subsection \<open>Backbone corollaries: discharge the four obligations to build 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a x = Some x'
@@ -70,17 +70,17 @@ theorem source_activation_sound:
     and CALL: "\<And>u dst pars args p cont c x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) x
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter is_global (CallEdge dst pars args) x)))\<rbrakk>"
+        \<Longrightarrow> call_enter source_global (CallEdge dst pars args) x
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter source_global (CallEdge dst pars args) x)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store is_global (compile_prog Pi ps mnm main) cl x es
-        \<Longrightarrow> combine_collect is_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> call_enter_store source_global (compile_prog Pi ps mnm main) cl x es
+        \<Longrightarrow> combine_collect source_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v stk t. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> s \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect is_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
+  have cap: "\<And>v ctx. activation_collect source_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
   show ?thesis by (rule source_sound_from_collecting_cap[where mnm=mnm, OF wf s0 run cap])
@@ -92,9 +92,9 @@ text \<open>The witness-free specialisation at top-level program points: a store
 theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c and mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, [])"
+    and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, [])"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a x = Some x'
@@ -102,17 +102,17 @@ theorem source_activation_sound_toplevel:
     and CALL: "\<And>u dst pars args p cont c x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) x
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter is_global (CallEdge dst pars args) x)))\<rbrakk>"
+        \<Longrightarrow> call_enter source_global (CallEdge dst pars args) x
+             \<in> \<lbrakk>sg (Inl (FunctionEntry p, enterc u c (call_enter source_global (CallEdge dst pars args) x)))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store is_global (compile_prog Pi ps mnm main) cl x es
-        \<Longrightarrow> combine_collect is_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> call_enter_store source_global (compile_prog Pi ps mnm main) cl x es
+        \<Longrightarrow> combine_collect source_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>sg (Inl (v, seedc))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect is_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
+  have cap: "\<And>v ctx. activation_collect source_global enterc seedc (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB])
   show ?thesis by (rule source_sound_toplevel_from_collecting_cap[where mnm=mnm, OF wf s0 run cap])
@@ -127,18 +127,18 @@ text \<open>
 
 theorem source_reaches_ltr_collect:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, s, frs)"
+    and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
-                 \<and> s \<in> ltr_collect is_global (compile_prog Pi ps mnm main) S v"
+                 \<and> s \<in> ltr_collect source_global (compile_prog Pi ps mnm main) S v"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_store_in_activation_collect[where mnm=mnm and enterc = "\<lambda>_ _ _. ()" and seedc = "()",
         OF wf s0 run]
   obtain v stk t where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
-    and mem: "s \<in> activation_collect is_global (\<lambda>_ _ _. ()) () ?g S v (key (\<lambda>_ _ _. ()) () t)" by meson
-  have "s \<in> ltr_collect is_global ?g S v"
+    and mem: "s \<in> activation_collect source_global (\<lambda>_ _ _. ()) () ?g S v (key (\<lambda>_ _ _. ()) () t)" by meson
+  have "s \<in> ltr_collect source_global ?g S v"
     using mem by (rule subsetD[OF activation_collect_le_ltr_collect])
   then show ?thesis using m by blast
 qed
@@ -162,10 +162,10 @@ text \<open>
 
 theorem source_completes_valid_ltr_result:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (SKIP, s, [])"
-  shows "\<exists>t p. t \<in> valid_ltr is_global (compile_prog Pi ps mnm main) S
+    and run: "star (pstep source_global Pi) (main, s0, []) (SKIP, s, [])"
+  shows "\<exists>t p. t \<in> valid_ltr source_global (compile_prog Pi ps mnm main) S
                \<and> caller_of t = None
                \<and> fst (hd (path t)) = cfg_entry (compile_prog Pi ps mnm main)
                \<and> sink_node t = FunctionResult p
@@ -174,9 +174,9 @@ proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_run_has_ltr[OF wf s0 run]
   obtain v stk t where sim: "csim Pi ?g (SKIP, s, []) (v, s, stk)"
-    and rep: "ltr_repr is_global ?g S (v, s, stk) t" by blast
+    and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using csim_Nil_baseD[OF sim] by simp
-  from rep stk0 have tv: "t \<in> valid_ltr is_global ?g S" and sn: "sink_node t = v"
+  from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v"
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: ltr_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
@@ -203,12 +203,12 @@ proof -
 
   qed
   from valid_ltr_intra_path_extend[OF path_to_ret tv]
-  obtain t' where t'v: "t' \<in> valid_ltr is_global ?g S" and t'n: "sink_node t' = FunctionResult p"
+  obtain t' where t'v: "t' \<in> valid_ltr source_global ?g S" and t'n: "sink_node t' = FunctionResult p"
     and t's: "sink_store t' = s" and t'c: "caller_of t' = caller_of t"
     and t'h: "fst (hd (path t')) = fst (hd (path t))" by blast
   show ?thesis
   proof (intro exI conjI)
-    show "t' \<in> valid_ltr is_global ?g S" by (rule t'v)
+    show "t' \<in> valid_ltr source_global ?g S" by (rule t'v)
     show "caller_of t' = None" using t'c cof by simp
     show "fst (hd (path t')) = cfg_entry ?g" using t'h hd_t by simp
     show "sink_node t' = FunctionResult p" by (rule t'n)
@@ -223,15 +223,15 @@ text \<open>Whole-program completion.  The completing activation is the root one
 
 corollary source_completes_ltr_collect_exit:
   fixes mnm :: pname
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
+  assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
-    and run: "star (pstep is_global Pi) (main, s0, []) (SKIP, s, [])"
-  shows "s \<in> ltr_collect is_global (compile_prog Pi ps mnm main) S
+    and run: "star (pstep source_global Pi) (main, s0, []) (SKIP, s, [])"
+  shows "s \<in> ltr_collect source_global (compile_prog Pi ps mnm main) S
               (cfg_exit (compile_prog Pi ps mnm main))"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_completes_valid_ltr_result[OF wf s0 run]
-  obtain t p where tv: "t \<in> valid_ltr is_global ?g S" and hd_t: "fst (hd (path t)) = cfg_entry ?g"
+  obtain t p where tv: "t \<in> valid_ltr source_global ?g S" and hd_t: "fst (hd (path t)) = cfg_entry ?g"
     and sn: "sink_node t = FunctionResult p" and ss: "sink_store t = s" by blast
   have "fst (hd (path t)) = FunctionEntry mnm"
     using hd_t by (simp add: compile_prog_def Let_def split: prod.splits)
@@ -241,5 +241,7 @@ proof -
 qed
 
 end
+
+
 
 

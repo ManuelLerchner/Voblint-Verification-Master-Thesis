@@ -53,6 +53,10 @@ definition ret_var :: vname where
 lemma ret_var_not_global [simp]: "\<not> is_global ret_var"
   by (simp add: ret_var_def is_global_def)
 
+datatype source_location =
+    LocalVar pname
+  | GlobalVar
+
 (* Procedure table: names to declarations. *)
 type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
 
@@ -498,6 +502,81 @@ text \<open>
   call mechanism, so source expressions, assignments, destinations, and formal
   parameters cannot mention it.
 \<close>
+
+subsection \<open>Finite syntactic variable sets\<close>
+
+fun aexp_vnames :: "aexp => vname set" where
+  "aexp_vnames (N _) = {}"
+| "aexp_vnames (V x) = {x}"
+| "aexp_vnames (Plus a b) = aexp_vnames a \<union> aexp_vnames b"
+| "aexp_vnames (Minus a b) = aexp_vnames a \<union> aexp_vnames b"
+| "aexp_vnames (Times a b) = aexp_vnames a \<union> aexp_vnames b"
+
+fun bexp_vnames :: "bexp => vname set" where
+  "bexp_vnames (Bc _) = {}"
+| "bexp_vnames (Not b) = bexp_vnames b"
+| "bexp_vnames (And b1 b2) = bexp_vnames b1 \<union> bexp_vnames b2"
+| "bexp_vnames (Or b1 b2) = bexp_vnames b1 \<union> bexp_vnames b2"
+| "bexp_vnames (Less a b) = aexp_vnames a \<union> aexp_vnames b"
+| "bexp_vnames (Eq a b) = aexp_vnames a \<union> aexp_vnames b"
+
+fun com_vnames :: "com => vname set" where
+  "com_vnames SKIP = {}"
+| "com_vnames (Assign x a) = insert x (aexp_vnames a)"
+| "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
+| "com_vnames (If b c1 c2) =
+    bexp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
+| "com_vnames (While b c) = bexp_vnames b \<union> com_vnames c"
+| "com_vnames (Call dst _ actuals) =
+    (case dst of None => {} | Some x => {x}) \<union>
+    \<Union> (set (map aexp_vnames actuals))"
+| "com_vnames (Return None) = {}"
+| "com_vnames (Return (Some a)) = aexp_vnames a"
+| "com_vnames Restore = {}"
+| "com_vnames Unwind = {}"
+
+lemma finite_aexp_vnames [simp]: "finite (aexp_vnames a)"
+  by (induction a) auto
+
+lemma finite_bexp_vnames [simp]: "finite (bexp_vnames b)"
+  by (induction b) auto
+
+lemma finite_com_vnames [simp]: "finite (com_vnames c)"
+proof (induction c)
+  case SKIP
+  then show ?case by simp
+next
+  case Assign
+  then show ?case by simp
+next
+  case Seq
+  then show ?case by simp
+next
+  case If
+  then show ?case by simp
+next
+  case While
+  then show ?case by simp
+next
+  case Call
+  then show ?case by (auto split: option.splits)
+next
+  case (Return opt)
+  show ?case
+  proof (cases opt)
+    case None
+    then show ?thesis by simp
+  next
+    case (Some a)
+    then show ?thesis by simp
+  qed
+next
+  case Restore
+  then show ?case by simp
+next
+  case Unwind
+  then show ?case by simp
+qed
 
 fun source_com :: "com => bool" where
   "source_com SKIP = True"

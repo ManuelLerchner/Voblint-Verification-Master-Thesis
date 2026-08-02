@@ -6,7 +6,7 @@ section \<open>The static compiler certificate for a whole compiled program\<clo
 
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
 lemma wf_compile_input_source_wf:
-  assumes "wf_compile_input is_global \<Pi> ps mnm main"
+  assumes "wf_compile_input source_global \<Pi> ps mnm main"
   shows "source_wf (main, s, [])"
   using wf_compile_input_source_com[OF assms] wf_compile_input_no_return[OF assms]
   by (rule source_com_no_return_source_wf)
@@ -68,7 +68,7 @@ text \<open>A well-formed compiled program satisfies the static \<^const>\<open>
   the entry node \<open>FunctionEntry mnm\<close> is an ordinary \<^const>\<open>proc_activation\<close>, so \<open>csim.Base\<close>
   applies to the initial main activation uniformly with every other procedure.\<close>
 theorem procs_compiled_compile_prog:
-  assumes wf: "wf_compile_input is_global \<Pi> ps mnm main"
+  assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
   shows "procs_compiled \<Pi> (compile_prog \<Pi> ps mnm main)"
   unfolding procs_compiled_def
 proof (intro allI impI)
