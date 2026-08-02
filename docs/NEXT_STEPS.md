@@ -17,9 +17,12 @@ precision example requires it. Preserve the generic separation between local
 
 ## Domain composition
 
-Factor reusable product construction from the mixed Sign/Interval instance.
-Treat reduced products as separate work with explicit reduction and
-concretization obligations.
+No generic reduced-product constructor is planned. `sound_dg_spec`'s carriers
+are already opaque, and `Rel_Order_Domain.thy` demonstrates a non-`abs_state`
+instance against the unmodified framework; see
+`docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) for the settled
+architecture. New heterogeneous or relational analyses are added directly
+against `sound_dg_spec`, not through a shared product/reduction layer.
 
 ## Numeric precision
 

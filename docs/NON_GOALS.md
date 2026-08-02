@@ -10,6 +10,10 @@ The following claims are outside the supported framework.
 - No plain top-down solver pipeline. Executable analyses use the side-effecting
   verified solver.
 - No parallel classical intra-procedural pipeline.
+- No unconditional termination proof. Soundness theorems are conditional on
+  the explicit `solve_dom`/`side_solve_dom` hypothesis; discharging that
+  hypothesis (e.g. via lattice-height induction for Sign, or a widening
+  termination argument for Interval) is out of scope.
 - No generic reduced-product constructor. The mixed Sign/Interval instance is a
   concrete D/G analysis.
 - No guarantee that every abstract context choice is finite or precise.

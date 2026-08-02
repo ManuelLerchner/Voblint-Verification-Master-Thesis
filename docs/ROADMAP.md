@@ -77,9 +77,11 @@ more precise shared-state communication. Keep routing generic over the `D` and
 
 ### Domain composition
 
-The mixed Sign/Interval instance demonstrates heterogeneous carriers. A reusable
-product or reduced-product constructor remains separate work and must state its
-concretization and reduction obligations explicitly.
+The mixed Sign/Interval instance demonstrates heterogeneous carriers.
+`docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) settled this: no
+shared product/reduction layer is planned. `sound_dg_spec`'s carriers are
+already opaque, so new heterogeneous or relational analyses (e.g.
+`Rel_Order_Domain.thy`) are added directly against it.
 
 ### Numeric precision
 
