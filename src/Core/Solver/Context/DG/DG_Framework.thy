@@ -944,6 +944,47 @@ qed
 
 
 
+subsection \<open>The representation-neutral keyed generator\<close>
+
+text \<open>The keyed generator constructs the equation shape from supplied tree hooks.  Each hook receives the CFG nodes that determine its source and destination; routing and representation choices remain outside the generator.\<close>
+
+definition side_cfg_T_eff_keyed_seed_trees ::
+  "(cfg => pp => (pp \<times> edge_action) list)
+   => ('c => 'k)
+   => ('c => pp => edge_action => pp
+        => (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
+          'h::bounded_semilattice_sup_bot) dg_state) strategy_tree)
+   => ('c => pp => call_action => pp => pp
+        => (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
+   => ('c => pp => call_action => pp
+        => (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
+   => cfg => 'd => 'd => 'h
+   => (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
+where
+  "side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+      g bot0 s0d s0g =
+    (\<lambda>(v, ctx).
+      let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
+          intra = map (\<lambda>(u, action). edge_tree ctx u action v) (pred_sel g v);
+          combine = map (\<lambda>(call, action, exit). combine_tree ctx call action exit v)
+            (return_call_action_list g v);
+          enter = map (\<lambda>(call, action). enter_tree ctx call action v)
+            (entry_call_list g v);
+          tree = side_rhs_fold_dg acc0 (intra @ combine @ enter)
+      in if v = cfg_entry g then Side (gkey ctx) (DG bot s0g) tree else tree)"
+
+lemma eq_side_cfg_T_eff_keyed_seed_trees:
+  "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+      g bot0 s0d s0g) (v, ctx) sigma =
+    DG (side_acc_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0) sigma
+      (map (\<lambda>(u, action). edge_tree ctx u action v) (pred_sel g v)
+       @ map (\<lambda>(call, action, exit). combine_tree ctx call action exit v)
+           (return_call_action_list g v)
+       @ map (\<lambda>(call, action). enter_tree ctx call action v)
+           (entry_call_list g v))) bot"
+  by (simp add: side_cfg_T_eff_keyed_seed_trees_def Let_def
+    traverse_side_rhs_fold_dg)
+
 subsection \<open>The heterogeneous seeded keyed generator\<close>
 
 text \<open>

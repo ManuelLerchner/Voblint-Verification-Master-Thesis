@@ -773,6 +773,461 @@ qed
 
 end
 
+subsection \<open>Hook-parametric D/G soundness\<close>
+
+definition dg_hook_D ::
+  "((pp \<times> unit + unit) \<Rightarrow> ('D::bounded_semilattice_sup_bot,
+    'G::bounded_semilattice_sup_bot) dg_state) \<Rightarrow> pp \<Rightarrow> 'D"
+where
+  "dg_hook_D sigma v = locals (sigma (Inl (v, ())))"
+
+definition dg_hook_G ::
+  "((pp \<times> unit + unit) \<Rightarrow> ('D::bounded_semilattice_sup_bot,
+    'G::bounded_semilattice_sup_bot) dg_state) \<Rightarrow> 'G"
+where
+  "dg_hook_G sigma = globs (sigma (Inr ()))"
+
+definition dg_hook_gamma ::
+  "('D::bounded_semilattice_sup_bot \<Rightarrow>
+     'G::bounded_semilattice_sup_bot \<Rightarrow> store set)
+   \<Rightarrow> ((pp \<times> unit + unit) \<Rightarrow> ('D, 'G) dg_state)
+   \<Rightarrow> pp \<Rightarrow> store set"
+where
+  "dg_hook_gamma gammaDG sigma v =
+    gammaDG (dg_hook_D sigma v) (dg_hook_G sigma)"
+
+locale sound_dg_hooks =
+  fixes gammaDG :: "'D::bounded_semilattice_sup_bot \<Rightarrow>
+      'G::bounded_semilattice_sup_bot \<Rightarrow> store set"
+    and gs :: "vname \<Rightarrow> bool"
+    and edge_tree :: "pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow>
+      (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+    and combine_tree :: "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow>
+      (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+    and enter_tree :: "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow>
+      (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+  assumes gammaDG_mono:
+      "\<And>d d' g g'. \<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow>
+        gammaDG d g \<subseteq> gammaDG d' g'"
+    and edge_hook_sound:
+      "\<And>sigma source action destination.
+        edge_collect action (dg_hook_gamma gammaDG sigma source) \<subseteq>
+          gammaDG
+            (locals (traverse_rhs
+              (edge_tree source action destination) sigma))
+            (globs (sides_of_rhs
+              (edge_tree source action destination) sigma (Inr ())))"
+    and enter_hook_sound:
+      "\<And>sigma caller dst fs args callee s.
+        s \<in> dg_hook_gamma gammaDG sigma caller \<Longrightarrow>
+        call_enter gs (CallEdge dst fs args) s \<in>
+          gammaDG
+            (locals (traverse_rhs
+              (enter_tree caller (CallEdge dst fs args)
+                (FunctionEntry callee)) sigma))
+            (globs (sides_of_rhs
+              (enter_tree caller (CallEdge dst fs args)
+                (FunctionEntry callee)) sigma (Inr ())))"
+    and combine_hook_sound:
+      "\<And>sigma caller dst fs args callee continuation s t.
+        \<lbrakk>s \<in> dg_hook_gamma gammaDG sigma caller;
+          t \<in> dg_hook_gamma gammaDG sigma (FunctionResult callee)\<rbrakk>
+        \<Longrightarrow> combine_collect gs dst s t \<in>
+          gammaDG
+            (locals (traverse_rhs
+              (combine_tree caller (CallEdge dst fs args)
+                (FunctionResult callee) continuation) sigma))
+            (globs (sides_of_rhs
+              (combine_tree caller (CallEdge dst fs args)
+                (FunctionResult callee) continuation) sigma (Inr ())))"
+begin
+
+definition hook_trees ::
+  "cfg \<Rightarrow> pp \<Rightarrow>
+   (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree list"
+where
+  "hook_trees g v =
+     map (\<lambda>(u, a). edge_tree u a v) (intra_predecessor_list g v)
+     @ map (\<lambda>(c, ca, ex). combine_tree c ca ex v)
+       (return_call_action_list g v)
+     @ map (\<lambda>(c, ca). enter_tree c ca v)
+       (entry_call_list g v)"
+
+definition hook_gen ::
+  "cfg \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'G \<Rightarrow>
+   (pp \<times> unit, unit, ('D, 'G) dg_state) eqsT"
+where
+  "hook_gen g bot0 s0d s0g =
+    side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
+      (\<lambda>_ u a v. edge_tree u a v)
+      (\<lambda>_ c ca ex v. combine_tree c ca ex v)
+      (\<lambda>_ c ca v. enter_tree c ca v)
+      g bot0 s0d s0g"
+
+definition hook_acc ::
+  "cfg \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> pp \<Rightarrow> 'D"
+where
+  "hook_acc g bot0 s0d v =
+    (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
+
+lemma eq_hook_gen:
+  "eq (hook_gen g bot0 s0d s0g) (v, ()) sigma =
+   DG (side_acc_dg (hook_acc g bot0 s0d v)
+     sigma (hook_trees g v)) bot"
+  unfolding hook_gen_def hook_trees_def hook_acc_def
+  by (simp add: eq_side_cfg_T_eff_keyed_seed_trees)
+
+lemma sides_fold_le_hook_gen:
+  "sides_of_rhs
+      (side_rhs_fold_dg (hook_acc g bot0 s0d v)
+        (hook_trees g v)) sigma k
+   \<le> sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma k"
+  unfolding hook_gen_def hook_trees_def hook_acc_def
+    side_cfg_T_eff_keyed_seed_trees_def
+  by (cases "v = cfg_entry g") (simp_all add: Let_def)
+
+definition hook_postfix ::
+  "cfg \<Rightarrow> 'D \<Rightarrow> 'G
+   \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> ('D, 'G) dg_state)
+   \<Rightarrow> bool"
+where
+  "hook_postfix g s0d s0g sigma \<longleftrightarrow>
+     s0d \<le> dg_hook_D sigma (cfg_entry g) \<and>
+     s0g \<le> dg_hook_G sigma \<and>
+     (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow>
+       edge_collect a (dg_hook_gamma gammaDG sigma u)
+         \<subseteq> dg_hook_gamma gammaDG sigma v) \<and>
+     (\<forall>c dst fs args p k s.
+       (c, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g \<longrightarrow>
+       s \<in> dg_hook_gamma gammaDG sigma c \<longrightarrow>
+       call_enter gs (CallEdge dst fs args) s \<in>
+         dg_hook_gamma gammaDG sigma (FunctionEntry p)) \<and>
+     (\<forall>c dst fs args p k s t.
+       (c, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g \<longrightarrow>
+       s \<in> dg_hook_gamma gammaDG sigma c \<longrightarrow>
+       t \<in> dg_hook_gamma gammaDG sigma (FunctionResult p) \<longrightarrow>
+       combine_collect gs dst s t \<in> dg_hook_gamma gammaDG sigma k)"
+
+
+
+lemma hook_tree_local_le:
+  assumes pp:
+      "part_post_solution (hook_gen g bot0 s0d s0g) x sigma vars"
+    and cover: "(v, ()) \<in> vars"
+    and tree: "t \<in> set (hook_trees g v)"
+  shows "locals (traverse_rhs t sigma) \<le> dg_hook_D sigma v"
+proof -
+  have eq_le:
+      "eq (hook_gen g bot0 s0d s0g) (v, ()) sigma
+        \<le> sigma (Inl (v, ()))"
+    using se_constraint_holds_local
+      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+      cover
+    by blast
+  have "locals (traverse_rhs t sigma)
+      \<le> side_acc_dg (hook_acc g bot0 s0d v)
+        sigma (hook_trees g v)"
+    by (rule locals_traverse_le_side_acc_dg[OF tree])
+  also have "... = locals
+      (eq (hook_gen g bot0 s0d s0g) (v, ()) sigma)"
+    by (simp add: eq_hook_gen)
+  also have "... \<le> dg_hook_D sigma v"
+    using eq_le
+    by (simp add: dg_hook_D_def less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+lemma hook_tree_side_le:
+  assumes pp:
+      "part_post_solution (hook_gen g bot0 s0d s0g) x sigma vars"
+    and cover: "(v, ()) \<in> vars"
+    and tree: "t \<in> set (hook_trees g v)"
+  shows "globs (sides_of_rhs t sigma (Inr ())) \<le> dg_hook_G sigma"
+proof -
+  have sides_le:
+      "sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma
+        \<le> sigma"
+    using se_constraint_holds_sides
+      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+      cover
+    by blast
+  have "globs (sides_of_rhs t sigma (Inr ()))
+      \<le> globs (sides_of_rhs
+        (side_rhs_fold_dg (hook_acc g bot0 s0d v)
+          (hook_trees g v)) sigma (Inr ()))"
+    using sides_le_side_rhs_fold_dg[OF tree, where k = "Inr ()"]
+    by (simp add: less_eq_dg_state_def)
+  also have "... \<le> globs (sides_of_rhs
+      (hook_gen g bot0 s0d s0g (v, ())) sigma (Inr ()))"
+    using sides_fold_le_hook_gen[where k = "Inr ()"]
+    by (simp add: less_eq_dg_state_def)
+  also have "... \<le> dg_hook_G sigma"
+    using sides_le[THEN le_funD, of "Inr ()"]
+    by (simp add: dg_hook_G_def less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+
+
+lemma hook_edge_tree_mem:
+  assumes finI: "finite (intra g)"
+    and edge: "(u, a, v) \<in> intra g"
+  shows "edge_tree u a v \<in> set (hook_trees g v)"
+proof -
+  have "(u, a) \<in> set (intra_predecessor_list g v)"
+    using edge
+    by (simp add: set_intra_predecessor_list[OF finI] intra_predecessors_def)
+  then show ?thesis
+    by (auto simp: hook_trees_def)
+qed
+
+lemma hook_enter_tree_mem:
+  assumes finC: "finite (calls g)"
+    and call:
+      "(caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g"
+  shows "enter_tree caller (CallEdge dst fs args) (FunctionEntry p)
+      \<in> set (hook_trees g (FunctionEntry p))"
+proof -
+  have "(caller, CallEdge dst fs args) \<in>
+      set (entry_call_list g (FunctionEntry p))"
+    using call
+    by (auto simp: set_entry_call_list[OF finC] entry_calls_iff)
+  then show ?thesis
+    by (force simp: hook_trees_def image_iff)
+qed
+
+lemma hook_combine_tree_mem:
+  assumes finC: "finite (calls g)"
+    and call:
+      "(caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g"
+  shows "combine_tree caller (CallEdge dst fs args) (FunctionResult p) k
+      \<in> set (hook_trees g k)"
+proof -
+  have "(caller, CallEdge dst fs args, FunctionResult p) \<in>
+      set (return_call_action_list g k)"
+    using call
+    by (auto simp: set_return_call_action_list[OF finC]
+      return_call_actions_iff)
+  then show ?thesis
+    by (force simp: hook_trees_def)
+qed
+
+
+
+theorem hook_post_solution_postfix:
+  assumes pp:
+      "part_post_solution (hook_gen g bot0 s0d s0g)
+        x sigma vars"
+    and cover_entry: "(cfg_entry g, ()) \<in> vars"
+    and cover_edge:
+      "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
+    and cover_enter:
+      "\<And>caller dst fs args p k.
+        (caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>caller dst fs args p k.
+        (caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g
+        \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra g)"
+    and finC: "finite (calls g)"
+  shows "hook_postfix g s0d s0g sigma"
+proof -
+  have eq_le:
+    "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
+      eq (hook_gen g bot0 s0d s0g) (v, ()) sigma
+        \<le> sigma (Inl (v, ()))"
+    using se_constraint_holds_local
+      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    by blast
+  have sides_le:
+    "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
+      sides_of_rhs (hook_gen g bot0 s0d s0g (v, ()))
+        sigma \<le> sigma"
+    using se_constraint_holds_sides
+      [OF part_post_solution_imp_se_constraint_holds[OF pp]]
+    by blast
+
+  have entryD: "s0d \<le> dg_hook_D sigma (cfg_entry g)"
+  proof -
+    have "s0d \<le> hook_acc g bot0 s0d (cfg_entry g)"
+      by (simp add: hook_acc_def)
+    also have "... \<le> side_acc_dg
+        (hook_acc g bot0 s0d (cfg_entry g))
+        sigma (hook_trees g (cfg_entry g))"
+      by (rule side_acc_dg_ge_acc)
+    also have "... = locals
+        (eq (hook_gen g bot0 s0d s0g)
+          (cfg_entry g, ()) sigma)"
+      by (simp add: eq_hook_gen)
+    also have "... \<le> dg_hook_D sigma (cfg_entry g)"
+      using eq_le[OF cover_entry]
+      by (simp add: dg_hook_D_def less_eq_dg_state_def)
+    finally show ?thesis .
+  qed
+
+  have entryG: "s0g \<le> dg_hook_G sigma"
+  proof -
+    have "DG bot s0g \<le>
+       sides_of_rhs
+         (hook_gen g bot0 s0d s0g (cfg_entry g, ()))
+         sigma (Inr ())"
+      unfolding hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+      by (simp add: Let_def less_eq_dg_state_def sup_dg_state_def)
+    also have "... \<le> sigma (Inr ())"
+      using sides_le[OF cover_entry] by (rule le_funD)
+    finally show ?thesis
+      by (simp add: dg_hook_G_def less_eq_dg_state_def)
+  qed
+
+  have edge:
+    "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow>
+      edge_collect a (dg_hook_gamma gammaDG sigma u)
+        \<subseteq> dg_hook_gamma gammaDG sigma v"
+  proof -
+    fix u a v
+    assume intra: "(u, a, v) \<in> intra g"
+    have d_le:
+      "locals (traverse_rhs (edge_tree u a v) sigma)
+        \<le> dg_hook_D sigma v"
+      by (rule hook_tree_local_le
+        [OF pp cover_edge[OF intra] hook_edge_tree_mem[OF finI intra]])
+    have g_le:
+      "globs (sides_of_rhs (edge_tree u a v) sigma (Inr ()))
+        \<le> dg_hook_G sigma"
+      by (rule hook_tree_side_le
+        [OF pp cover_edge[OF intra] hook_edge_tree_mem[OF finI intra]])
+    have "gammaDG
+        (locals (traverse_rhs (edge_tree u a v) sigma))
+        (globs (sides_of_rhs (edge_tree u a v) sigma (Inr ())))
+      \<subseteq> dg_hook_gamma gammaDG sigma v"
+      unfolding dg_hook_gamma_def
+      by (rule gammaDG_mono[OF d_le g_le])
+    then show "edge_collect a (dg_hook_gamma gammaDG sigma u)
+        \<subseteq> dg_hook_gamma gammaDG sigma v"
+      using edge_hook_sound by blast
+  qed
+
+  have enter:
+    "\<And>caller dst fs args p k s.
+      (caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g
+      \<Longrightarrow> s \<in> dg_hook_gamma gammaDG sigma caller
+      \<Longrightarrow> call_enter gs (CallEdge dst fs args) s \<in>
+        dg_hook_gamma gammaDG sigma (FunctionEntry p)"
+  proof -
+    fix caller dst fs args p k s
+    assume call:
+      "(caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g"
+      and sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
+    have d_le:
+      "locals (traverse_rhs
+        (enter_tree caller (CallEdge dst fs args) (FunctionEntry p)) sigma)
+        \<le> dg_hook_D sigma (FunctionEntry p)"
+      by (rule hook_tree_local_le
+        [OF pp cover_enter[OF call] hook_enter_tree_mem[OF finC call]])
+    have g_le:
+      "globs (sides_of_rhs
+        (enter_tree caller (CallEdge dst fs args) (FunctionEntry p))
+        sigma (Inr ())) \<le> dg_hook_G sigma"
+      by (rule hook_tree_side_le
+        [OF pp cover_enter[OF call] hook_enter_tree_mem[OF finC call]])
+    have "gammaDG
+        (locals (traverse_rhs
+          (enter_tree caller (CallEdge dst fs args) (FunctionEntry p)) sigma))
+        (globs (sides_of_rhs
+          (enter_tree caller (CallEdge dst fs args) (FunctionEntry p))
+          sigma (Inr ())))
+      \<subseteq> dg_hook_gamma gammaDG sigma (FunctionEntry p)"
+      unfolding dg_hook_gamma_def
+      by (rule gammaDG_mono[OF d_le g_le])
+    then show "call_enter gs (CallEdge dst fs args) s \<in>
+        dg_hook_gamma gammaDG sigma (FunctionEntry p)"
+      using enter_hook_sound[OF sin] by blast
+  qed
+
+  have combine:
+    "\<And>caller dst fs args p k s t.
+      (caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g
+      \<Longrightarrow> s \<in> dg_hook_gamma gammaDG sigma caller
+      \<Longrightarrow> t \<in> dg_hook_gamma gammaDG sigma (FunctionResult p)
+      \<Longrightarrow> combine_collect gs dst s t \<in>
+        dg_hook_gamma gammaDG sigma k"
+  proof -
+    fix caller dst fs args p k s t
+    assume call:
+      "(caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g"
+      and sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
+      and tin: "t \<in> dg_hook_gamma gammaDG sigma (FunctionResult p)"
+    have d_le:
+      "locals (traverse_rhs
+        (combine_tree caller (CallEdge dst fs args) (FunctionResult p) k)
+        sigma) \<le> dg_hook_D sigma k"
+      by (rule hook_tree_local_le
+        [OF pp cover_combine[OF call] hook_combine_tree_mem[OF finC call]])
+    have g_le:
+      "globs (sides_of_rhs
+        (combine_tree caller (CallEdge dst fs args) (FunctionResult p) k)
+        sigma (Inr ())) \<le> dg_hook_G sigma"
+      by (rule hook_tree_side_le
+        [OF pp cover_combine[OF call] hook_combine_tree_mem[OF finC call]])
+    have "gammaDG
+        (locals (traverse_rhs
+          (combine_tree caller (CallEdge dst fs args) (FunctionResult p) k)
+          sigma))
+        (globs (sides_of_rhs
+          (combine_tree caller (CallEdge dst fs args) (FunctionResult p) k)
+          sigma (Inr ())))
+      \<subseteq> dg_hook_gamma gammaDG sigma k"
+      unfolding dg_hook_gamma_def
+      by (rule gammaDG_mono[OF d_le g_le])
+    then show "combine_collect gs dst s t \<in>
+        dg_hook_gamma gammaDG sigma k"
+      using combine_hook_sound[OF sin tin] by blast
+  qed
+
+  show ?thesis
+    unfolding hook_postfix_def
+    using entryD entryG edge enter combine by blast
+qed
+
+
+lemma hook_postfix_entryD:
+  assumes pf: "hook_postfix g s0d s0g sigma"
+  shows "s0d \<le> dg_hook_D sigma (cfg_entry g)"
+  using pf unfolding hook_postfix_def by blast
+
+lemma hook_postfix_entryG:
+  assumes pf: "hook_postfix g s0d s0g sigma"
+  shows "s0g \<le> dg_hook_G sigma"
+  using pf unfolding hook_postfix_def by blast
+
+lemma hook_postfix_edge:
+  assumes pf: "hook_postfix g s0d s0g sigma"
+    and edge: "(u, a, v) \<in> intra g"
+  shows "edge_collect a (dg_hook_gamma gammaDG sigma u)
+    \<subseteq> dg_hook_gamma gammaDG sigma v"
+  using pf edge unfolding hook_postfix_def by blast
+
+lemma hook_postfix_enter:
+  assumes pf: "hook_postfix g s0d s0g sigma"
+    and call:
+      "(caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g"
+    and sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
+  shows "call_enter gs (CallEdge dst fs args) s \<in>
+    dg_hook_gamma gammaDG sigma (FunctionEntry p)"
+  using pf call sin unfolding hook_postfix_def by blast
+
+lemma hook_postfix_combine:
+  assumes pf: "hook_postfix g s0d s0g sigma"
+    and call:
+      "(caller, CallEdge dst fs args, FunctionEntry p, k) \<in> calls g"
+    and sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
+    and tin: "t \<in> dg_hook_gamma gammaDG sigma (FunctionResult p)"
+  shows "combine_collect gs dst s t \<in>
+    dg_hook_gamma gammaDG sigma k"
+  using pf call sin tin unfolding hook_postfix_def by blast
+end
+
 subsection \<open>The canonical independent-transfer spec\<close>
 
 text \<open>

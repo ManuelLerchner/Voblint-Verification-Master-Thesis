@@ -291,6 +291,178 @@ lemma sides_unit_edge_tree_st_placed_Inr:
     project_resolved_on (owner_of u) (locations_of u) publish_side
       (f (sigma_st (Inl u) \<squnion> sigma_st (Inr ())))"
   unfolding unit_edge_tree_st_placed_def by (simp add: Let_def)
+lemma traverse_unit_combine_tree_st_placed:
+  "traverse_rhs
+    (unit_combine_tree_st_placed source_global owner_of locations_of
+      keep_local publish_side dst cc ex) sigma_st =
+    project_resolved_on (owner_of cc) (locations_of cc) keep_local
+      (combine_collect_resolved_for_q source_global dst
+        (sigma_st (Inl cc) \<squnion> sigma_st (Inr ()))
+        (sigma_st (Inl ex) \<squnion> sigma_st (Inr ())))"
+  unfolding unit_combine_tree_st_placed_def by (simp add: Let_def)
+
+lemma sides_unit_combine_tree_st_placed_Inr:
+  "sides_of_rhs
+    (unit_combine_tree_st_placed source_global owner_of locations_of
+      keep_local publish_side dst cc ex) sigma_st (Inr ()) =
+    project_resolved_on (owner_of cc) (locations_of cc) publish_side
+      (combine_collect_resolved_for_q source_global dst
+        (sigma_st (Inl cc) \<squnion> sigma_st (Inr ()))
+        (sigma_st (Inl ex) \<squnion> sigma_st (Inr ())))"
+  unfolding unit_combine_tree_st_placed_def by (simp add: Let_def)
+
+subsection \<open>Scoped placement bridge\<close>
+
+locale placed_exec_bridge =
+  fixes source_global :: "vname => bool"
+    and node_owner :: "pp => pname"
+    and locations_of :: "pp => location list"
+    and keep_local :: "scoped_location => bool"
+    and publish_side :: "scoped_location => bool"
+  assumes global_owner_invariant_local:
+      "placement_global_invariant keep_local"
+    and global_owner_invariant_side:
+      "placement_global_invariant publish_side"
+    and node_coverage:
+      "target \<in> set (locations_of node) \<Longrightarrow>
+       keep_local (node_owner node, target) \<or>
+       publish_side (node_owner node, target)"
+begin
+
+definition project_local ::
+  "pp => ('a::bot) resolved_st_q => 'a resolved_st_q" where
+  "project_local node state =
+    project_resolved_on (node_owner node) (locations_of node) keep_local state"
+
+definition project_side ::
+  "pp => ('a::bot) resolved_st_q => 'a resolved_st_q" where
+  "project_side node state =
+    project_resolved_on (node_owner node) (locations_of node) publish_side state"
+
+lemma project_recombine_lookup:
+  fixes state :: "('a::bounded_semilattice_sup_bot) resolved_st_q"
+  assumes relevant: "target \<in> set (locations_of node)"
+  shows
+    "lookup_resolved_st_q
+      (project_local node state \<squnion> project_side node state) target =
+      lookup_resolved_st_q state target"
+proof -
+  have covered:
+    "keep_local (node_owner node, target) \<or>
+     publish_side (node_owner node, target)"
+    by (rule node_coverage[OF relevant])
+  show ?thesis
+    unfolding project_local_def project_side_def
+    by (rule lookup_project_resolved_on_join)
+       (use relevant covered in auto)
+qed
+
+lemma project_recombine_abstract:
+  fixes state :: "('a::bounded_semilattice_sup_bot) resolved_st_q"
+  assumes relevant:
+    "location_of source_global x \<in> set (locations_of node)"
+  shows
+    "fun_of_resolved_st_q_for source_global
+      (project_local node state \<squnion> project_side node state) x =
+      fun_of_resolved_st_q_for source_global state x"
+  unfolding fun_of_resolved_st_q_for_def
+  by (rule project_recombine_lookup[OF relevant])
+
+lemma project_recombine_refines:
+  fixes state :: "('a::bounded_semilattice_sup_bot) resolved_st_q"
+  assumes refines:
+    "resolved_st_q_refines_for source_global state full"
+    and relevant:
+    "location_of source_global x \<in> set (locations_of node)"
+  shows
+    "fun_of_resolved_st_q_for source_global
+      (project_local node state \<squnion> project_side node state) x = full x"
+proof -
+  have projected:
+    "fun_of_resolved_st_q_for source_global
+      (project_local node state \<squnion> project_side node state) x =
+     fun_of_resolved_st_q_for source_global state x"
+    by (rule project_recombine_abstract[OF relevant])
+  have refined:
+    "fun_of_resolved_st_q_for source_global state x = full x"
+    using refines unfolding resolved_st_q_refines_for_def by simp
+  show ?thesis using projected refined by simp
+qed
+
+lemma edge_recombine_lookup:
+  fixes f :: "('a::bounded_semilattice_sup_bot) resolved_st_q =>
+    'a resolved_st_q"
+    and sigma :: "pp + unit => 'a resolved_st_q"
+  assumes relevant: "target \<in> set (locations_of node)"
+  shows
+    "lookup_resolved_st_q
+      (traverse_rhs
+        (unit_edge_tree_st_placed node_owner locations_of
+          keep_local publish_side f node) sigma \<squnion>
+       sides_of_rhs
+        (unit_edge_tree_st_placed node_owner locations_of
+          keep_local publish_side f node) sigma (Inr ())) target =
+      lookup_resolved_st_q
+        (f (sigma (Inl node) \<squnion> sigma (Inr ()))) target"
+proof -
+  have covered:
+    "keep_local (node_owner node, target) \<or>
+     publish_side (node_owner node, target)"
+    by (rule node_coverage[OF relevant])
+  show ?thesis
+    unfolding traverse_unit_edge_tree_st_placed
+      sides_unit_edge_tree_st_placed_Inr
+    by (rule lookup_project_resolved_on_join)
+       (use relevant covered in auto)
+qed
+
+lemma entry_recombine_lookup:
+  fixes enter :: "vname list => aexp list =>
+    ('a::bounded_semilattice_sup_bot) resolved_st_q => 'a resolved_st_q"
+    and sigma :: "pp + unit => 'a resolved_st_q"
+  assumes relevant: "target \<in> set (locations_of node)"
+  shows
+    "lookup_resolved_st_q
+      (traverse_rhs
+        (unit_edge_tree_st_placed node_owner locations_of
+          keep_local publish_side (enter parameters arguments) node) sigma \<squnion>
+       sides_of_rhs
+        (unit_edge_tree_st_placed node_owner locations_of
+          keep_local publish_side (enter parameters arguments) node) sigma (Inr ())) target =
+      lookup_resolved_st_q
+        (enter parameters arguments
+          (sigma (Inl node) \<squnion> sigma (Inr ()))) target"
+  by (rule edge_recombine_lookup[OF relevant])
+
+lemma combine_recombine_lookup:
+  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot) resolved_st_q"
+  assumes relevant: "target \<in> set (locations_of caller)"
+  shows
+    "lookup_resolved_st_q
+      (traverse_rhs
+        (unit_combine_tree_st_placed source_global node_owner locations_of
+          keep_local publish_side destination caller callee) sigma \<squnion>
+       sides_of_rhs
+        (unit_combine_tree_st_placed source_global node_owner locations_of
+          keep_local publish_side destination caller callee) sigma (Inr ())) target =
+      lookup_resolved_st_q
+        (combine_collect_resolved_for_q source_global destination
+          (sigma (Inl caller) \<squnion> sigma (Inr ()))
+          (sigma (Inl callee) \<squnion> sigma (Inr ()))) target"
+proof -
+  have covered:
+    "keep_local (node_owner caller, target) \<or>
+     publish_side (node_owner caller, target)"
+    by (rule node_coverage[OF relevant])
+  show ?thesis
+    unfolding traverse_unit_combine_tree_st_placed
+      sides_unit_combine_tree_st_placed_Inr
+    by (rule lookup_project_resolved_on_join)
+       (use relevant covered in auto)
+qed
+
+end
+
 
 subsection \<open>Unit-global executable transfer-record factory\<close>
 

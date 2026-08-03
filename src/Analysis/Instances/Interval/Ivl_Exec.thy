@@ -128,6 +128,17 @@ lemma fun_of_st_cinit_ivl_st:
    (\<lambda>x. if is_global x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)"
   by (rule ext) simp
 
+lemma lookup_cinit_ivl_st_for [simp]:
+  "fun_of_resolved_st_q_for gs cinit_ivl_st x =
+   (if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)"
+  unfolding fun_of_resolved_st_q_for_def
+  by transfer (auto simp: location_of_def split: if_splits)
+
+lemma fun_of_st_cinit_ivl_st_for:
+  "fun_of_resolved_st_q_for gs cinit_ivl_st =
+   (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)"
+  by (rule ext) simp
+
 lemma lookup_top_ivl_st [simp]:
   "fun_of_resolved_st_q_for is_global top_ivl_st x = Ivl MinInf PlusInf"
   unfolding fun_of_resolved_st_q_for_def

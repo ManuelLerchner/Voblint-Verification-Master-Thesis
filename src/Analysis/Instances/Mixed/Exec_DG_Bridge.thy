@@ -64,6 +64,320 @@ lemma fun_of_dg_st_bot [simp]:
                          'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
   by (simp add: fun_of_dg_st_def bot_dg_state_def fun_of_resolved_st_q_for_bot bot_fun_def)
 
+subsection \<open>Finite-scope D/G representation\<close>
+
+text \<open>The executable local and side components represent their abstract counterparts pointwise on a finite set of executable locations.  Scope resolution is an explicit premise of transfer lemmas: this relation itself does not infer storage from a missing declaration.\<close>
+
+definition dg_refines_on ::
+  "location set =>
+   (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state =>
+   ('a abs_state, 'b abs_state) dg_state => bool"
+where
+  "dg_refines_on universe executable abstract_state \<longleftrightarrow>
+    (\<forall>location \<in> universe.
+      lookup_resolved_st_q (locals executable) location =
+        locals abstract_state (location_vname location)) \<and>
+    (\<forall>location \<in> universe.
+      lookup_resolved_st_q (globs executable) location =
+        globs abstract_state (location_vname location))"
+
+lemma dg_refines_onD_local:
+  "\<lbrakk>dg_refines_on universe executable abstract_state; location \<in> universe\<rbrakk> \<Longrightarrow>
+   lookup_resolved_st_q (locals executable) location =
+     locals abstract_state (location_vname location)"
+  by (simp add: dg_refines_on_def)
+
+lemma dg_refines_onD_side:
+  "\<lbrakk>dg_refines_on universe executable abstract_state; location \<in> universe\<rbrakk> \<Longrightarrow>
+   lookup_resolved_st_q (globs executable) location =
+     globs abstract_state (location_vname location)"
+  by (simp add: dg_refines_on_def)
+
+lemma dg_refines_onI:
+  assumes "\<And>location. location \<in> universe \<Longrightarrow>
+    lookup_resolved_st_q (locals executable) location =
+      locals abstract_state (location_vname location)"
+    and "\<And>location. location \<in> universe \<Longrightarrow>
+    lookup_resolved_st_q (globs executable) location =
+      globs abstract_state (location_vname location)"
+  shows "dg_refines_on universe executable abstract_state"
+  using assms by (simp add: dg_refines_on_def)
+
+lemma dg_refines_on_recombine:
+  fixes executable :: "('a::bounded_semilattice_sup_bot exec_dg_st,
+    'a exec_dg_st) dg_state"
+  assumes refines: "dg_refines_on universe executable abstract_state"
+    and relevant: "location \<in> universe"
+  shows
+    "lookup_resolved_st_q (locals executable \<squnion> globs executable) location =
+      (locals abstract_state \<squnion> globs abstract_state) (location_vname location)"
+proof -
+  have local:
+    "lookup_resolved_st_q (locals executable) location =
+      locals abstract_state (location_vname location)"
+    by (rule dg_refines_onD_local[OF refines relevant])
+  have side:
+    "lookup_resolved_st_q (globs executable) location =
+      globs abstract_state (location_vname location)"
+    by (rule dg_refines_onD_side[OF refines relevant])
+  show ?thesis by (simp add: local side)
+qed
+
+lemma dg_refines_on_sup:
+  fixes exec1 exec2 :: "(('a::bounded_semilattice_sup_bot) exec_dg_st,
+    ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state"
+  assumes r1: "dg_refines_on universe exec1 abs1"
+    and r2: "dg_refines_on universe exec2 abs2"
+  shows "dg_refines_on universe (exec1 \<squnion> exec2) (abs1 \<squnion> abs2)"
+proof (rule dg_refines_onI)
+  fix location assume loc: "location \<in> universe"
+  show "lookup_resolved_st_q (locals (exec1 \<squnion> exec2)) location =
+      locals (abs1 \<squnion> abs2) (location_vname location)"
+    by (simp add: sup_dg_state_def sup_fun_def
+      dg_refines_onD_local[OF r1 loc] dg_refines_onD_local[OF r2 loc])
+next
+  fix location assume loc: "location \<in> universe"
+  show "lookup_resolved_st_q (globs (exec1 \<squnion> exec2)) location =
+      globs (abs1 \<squnion> abs2) (location_vname location)"
+    by (simp add: sup_dg_state_def sup_fun_def
+      dg_refines_onD_side[OF r1 loc] dg_refines_onD_side[OF r2 loc])
+qed
+
+lemma dg_refines_on_bot:
+  "dg_refines_on universe (bot :: (('a::bounded_semilattice_sup_bot) exec_dg_st,
+    ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state) bot"
+  by (rule dg_refines_onI) (simp_all add: bot_dg_state_def bot_fun_def)
+
+definition project_abs_on ::
+  "pname => (vname => bool) => (scoped_location => bool) =>
+   'a::bot abs_state => 'a abs_state"
+where
+  "project_abs_on owner source_global placed state =
+    project_component (\<lambda>x. placed (owner, location_of source_global x)) state"
+
+lemma project_abs_on_lookup:
+  assumes resolved: "location = location_of source_global (location_vname location)"
+  shows
+    "project_abs_on owner source_global placed state (location_vname location) =
+      (if placed (owner, location) then state (location_vname location) else bot)"
+  using resolved
+  unfolding project_abs_on_def project_component_def by simp
+
+subsection \<open>Owner-aware abstract D/G trees\<close>
+
+text \<open>The abstract tree mirrors the executable placed tree.  It projects function states pointwise, while the executable tree materializes the same policy over a finite scope.\<close>
+
+definition placed_abs_dg_edge_tree ::
+  "(vname => bool) => (pp => pname) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state) =>
+   pp => pp => (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
+where
+  "placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+      transfer read_node write_node =
+    QueryL read_node (\<lambda>local. QueryG () (\<lambda>side.
+      let result = transfer (locals local \<squnion> globs side)
+      in Side () (DG bot
+          (project_abs_on (owner_of write_node) source_global publish_side result))
+        (Answer (DG
+          (project_abs_on (owner_of write_node) source_global keep_local result)
+          bot))))"
+
+lemma traverse_placed_abs_dg_edge_tree:
+  "traverse_rhs
+    (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+      transfer read_node write_node) sigma =
+    DG (project_abs_on (owner_of write_node) source_global keep_local
+          (transfer (locals (sigma (Inl read_node)) \<squnion>
+            globs (sigma (Inr ()))))) bot"
+  unfolding placed_abs_dg_edge_tree_def by (simp add: Let_def)
+
+lemma sides_placed_abs_dg_edge_tree_Inr:
+  "sides_of_rhs
+    (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+      transfer read_node write_node) sigma (Inr ()) =
+    DG bot
+      (project_abs_on (owner_of write_node) source_global publish_side
+        (transfer (locals (sigma (Inl read_node)) \<squnion>
+          globs (sigma (Inr ())))))"
+  unfolding placed_abs_dg_edge_tree_def by (simp add: Let_def)
+
+definition placed_abs_dg_enter_tree ::
+  "(vname => bool) => (pp => pname) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname list => aexp list =>
+     ('a::bounded_semilattice_sup_bot) abs_state => 'a abs_state) =>
+   vname list => aexp list => pp => pp =>
+   (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
+where
+  "placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+      enter parameters arguments caller callee =
+    placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+      (enter parameters arguments) caller callee"
+
+definition placed_abs_dg_combine_tree ::
+  "(vname => bool) => (pp => pname) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname option => ('a::bounded_semilattice_sup_bot) abs_state =>
+     'a abs_state => 'a abs_state => 'a abs_state) =>
+   vname option => pp => pp => pp =>
+   (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
+where
+  "placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+      combine destination caller callee write_node =
+    QueryL caller (\<lambda>caller_state. QueryL callee (\<lambda>callee_state.
+      QueryG () (\<lambda>side.
+        let result = combine destination (locals caller_state)
+          (locals callee_state) (globs side)
+        in Side () (DG bot
+            (project_abs_on (owner_of write_node) source_global publish_side result))
+          (Answer (DG
+            (project_abs_on (owner_of write_node) source_global keep_local result)
+            bot)))))"
+
+lemma traverse_placed_abs_dg_combine_tree:
+  "traverse_rhs
+    (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+      combine destination caller callee write_node) sigma =
+    DG (project_abs_on (owner_of write_node) source_global keep_local
+      (combine destination (locals (sigma (Inl caller)))
+        (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))) bot"
+  unfolding placed_abs_dg_combine_tree_def by (simp add: Let_def)
+
+lemma sides_placed_abs_dg_combine_tree_Inr:
+  "sides_of_rhs
+    (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+      combine destination caller callee write_node) sigma (Inr ()) =
+    DG bot
+      (project_abs_on (owner_of write_node) source_global publish_side
+        (combine destination (locals (sigma (Inl caller)))
+          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))"
+  unfolding placed_abs_dg_combine_tree_def by (simp add: Let_def)
+
+lemma dg_refines_on_project:
+  fixes executable_result :: "'a::bounded_semilattice_sup_bot exec_dg_st"
+  assumes raw:
+    "\<And>location. location \<in> set universe \<Longrightarrow>
+      lookup_resolved_st_q executable_result location =
+        abstract_result (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set universe \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set universe)
+      (DG (project_resolved_on owner universe keep_local executable_result)
+        (project_resolved_on owner universe publish_side executable_result))
+      (DG (project_abs_on owner source_global keep_local abstract_result)
+        (project_abs_on owner source_global publish_side abstract_result))"
+proof (rule dg_refines_onI)
+  fix location
+  assume location: "location \<in> set universe"
+  have raw_location:
+    "lookup_resolved_st_q executable_result location =
+      abstract_result (location_vname location)"
+    by (rule raw[OF location])
+  have resolved_location:
+    "location = location_of source_global (location_vname location)"
+    by (rule resolved[OF location])
+  show
+    "lookup_resolved_st_q
+      (locals
+        (DG (project_resolved_on owner universe keep_local executable_result)
+          (project_resolved_on owner universe publish_side executable_result)))
+      location =
+      locals
+        (DG (project_abs_on owner source_global keep_local abstract_result)
+          (project_abs_on owner source_global publish_side abstract_result))
+        (location_vname location)"
+    by (simp add: lookup_project_resolved_on
+      project_abs_on_lookup[OF resolved_location] raw_location location)
+next
+  fix location
+  assume location: "location \<in> set universe"
+  have raw_location:
+    "lookup_resolved_st_q executable_result location =
+      abstract_result (location_vname location)"
+    by (rule raw[OF location])
+  have resolved_location:
+    "location = location_of source_global (location_vname location)"
+    by (rule resolved[OF location])
+  show
+    "lookup_resolved_st_q
+      (globs
+        (DG (project_resolved_on owner universe keep_local executable_result)
+          (project_resolved_on owner universe publish_side executable_result)))
+      location =
+      globs
+        (DG (project_abs_on owner source_global keep_local abstract_result)
+          (project_abs_on owner source_global publish_side abstract_result))
+        (location_vname location)"
+    by (simp add: lookup_project_resolved_on
+      project_abs_on_lookup[OF resolved_location] raw_location location)
+qed
+
+lemma dg_refines_on_project_strict:
+  fixes executable_result :: "'a::bounded_semilattice_sup_bot exec_dg_st"
+  assumes raw:
+    "\<And>location. location \<in> set universe \<Longrightarrow>
+      lookup_resolved_st_q executable_result location =
+        abstract_result (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set universe \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set universe)
+      (DG (project_resolved_on_strict owner universe keep_local executable_result)
+        (project_resolved_on_strict owner universe publish_side executable_result))
+      (DG (project_abs_on owner source_global keep_local abstract_result)
+        (project_abs_on owner source_global publish_side abstract_result))"
+proof (rule dg_refines_onI)
+  fix location
+  assume location: "location \<in> set universe"
+  have raw_location:
+    "lookup_resolved_st_q executable_result location =
+      abstract_result (location_vname location)"
+    by (rule raw[OF location])
+  have resolved_location:
+    "location = location_of source_global (location_vname location)"
+    by (rule resolved[OF location])
+  show
+    "lookup_resolved_st_q
+      (locals
+        (DG (project_resolved_on_strict owner universe keep_local executable_result)
+          (project_resolved_on_strict owner universe publish_side executable_result)))
+      location =
+      locals
+        (DG (project_abs_on owner source_global keep_local abstract_result)
+          (project_abs_on owner source_global publish_side abstract_result))
+        (location_vname location)"
+    by (simp add: lookup_project_resolved_on_strict
+      project_abs_on_lookup[OF resolved_location] raw_location location)
+next
+  fix location
+  assume location: "location \<in> set universe"
+  have raw_location:
+    "lookup_resolved_st_q executable_result location =
+      abstract_result (location_vname location)"
+    by (rule raw[OF location])
+  have resolved_location:
+    "location = location_of source_global (location_vname location)"
+    by (rule resolved[OF location])
+  show
+    "lookup_resolved_st_q
+      (globs
+        (DG (project_resolved_on_strict owner universe keep_local executable_result)
+          (project_resolved_on_strict owner universe publish_side executable_result)))
+      location =
+      globs
+        (DG (project_abs_on owner source_global keep_local abstract_result)
+          (project_abs_on owner source_global publish_side abstract_result))
+        (location_vname location)"
+    by (simp add: lookup_project_resolved_on_strict
+      project_abs_on_lookup[OF resolved_location] raw_location location)
+qed
+
+
+
 lemma fun_of_dg_st_sup:
   "fun_of_dg_st ((a::('c::bounded_semilattice_sup_bot exec_dg_st,
                       'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<squnion> b)
@@ -74,6 +388,152 @@ lemma fun_of_dg_st_mono:
   "(a::('c::bounded_semilattice_sup_bot exec_dg_st, 'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<le> b
      \<Longrightarrow> fun_of_dg_st a \<le> fun_of_dg_st b"
   by (auto simp: fun_of_dg_st_def less_eq_dg_state_def fun_of_resolved_st_q_for_mono)
+
+subsection \<open>Classifier-parametric readback\<close>
+
+text \<open>
+  \<^const>\<open>fun_of_exec_dg_st\<close>/\<^const>\<open>fun_of_dg_st\<close> fix the legacy \<^const>\<open>is_global\<close>
+  classifier.  A placed executable state is written with a declaration-driven
+  classifier instead, so reading it back needs the same classifier or the
+  readback consults the wrong slot.  \<open>fun_of_exec_dg_st_for\<close>/\<open>fun_of_dg_st_for\<close>
+  generalize the readback; the classifier-fixed versions are their \<open>is_global\<close>
+  instance.
+\<close>
+
+definition fun_of_exec_dg_st_for ::
+  "(vname => bool) => ('a::bot) exec_dg_st => 'a abs_state" where
+  "fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs"
+
+lemma fun_of_exec_dg_st_for_is_global:
+  "fun_of_exec_dg_st_for is_global = fun_of_exec_dg_st"
+  unfolding fun_of_exec_dg_st_for_def by (rule refl)
+
+lemma fun_of_exec_dg_st_for_bot [simp]:
+  "fun_of_exec_dg_st_for gs (bot :: ('a::order_bot) exec_dg_st) = bot"
+  unfolding fun_of_exec_dg_st_for_def by (rule fun_of_resolved_st_q_for_bot)
+
+lemma fun_of_exec_dg_st_for_sup [simp]:
+  "fun_of_exec_dg_st_for gs ((s :: ('a::bounded_semilattice_sup_bot) exec_dg_st) \<squnion> t)
+     = fun_of_exec_dg_st_for gs s \<squnion> fun_of_exec_dg_st_for gs t"
+  unfolding fun_of_exec_dg_st_for_def by (rule fun_of_resolved_st_q_for_sup)
+
+definition fun_of_dg_st_for ::
+  "(vname => bool) =>
+   (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
+where
+  "fun_of_dg_st_for gs d =
+    DG (fun_of_exec_dg_st_for gs (locals d)) (fun_of_exec_dg_st_for gs (globs d))"
+
+lemma fun_of_dg_st_for_is_global:
+  "fun_of_dg_st_for is_global = fun_of_dg_st"
+  unfolding fun_of_dg_st_for_def fun_of_dg_st_def fun_of_exec_dg_st_for_is_global by (rule refl)
+
+lemma fun_of_dg_st_for_simps [simp]:
+  "locals (fun_of_dg_st_for gs d) = fun_of_exec_dg_st_for gs (locals d)"
+  "globs (fun_of_dg_st_for gs d) = fun_of_exec_dg_st_for gs (globs d)"
+  "fun_of_dg_st_for gs (DG a b) = DG (fun_of_exec_dg_st_for gs a) (fun_of_exec_dg_st_for gs b)"
+  by (simp_all add: fun_of_dg_st_for_def)
+
+lemma fun_of_dg_st_for_bot [simp]:
+  "fun_of_dg_st_for gs (bot :: ('a::bounded_semilattice_sup_bot exec_dg_st,
+                         'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
+  by (simp add: fun_of_dg_st_for_def bot_dg_state_def fun_of_exec_dg_st_for_def
+    fun_of_resolved_st_q_for_bot bot_fun_def)
+
+lemma fun_of_dg_st_for_sup:
+  "fun_of_dg_st_for gs ((a::('c::bounded_semilattice_sup_bot exec_dg_st,
+                      'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<squnion> b)
+     = fun_of_dg_st_for gs a \<squnion> fun_of_dg_st_for gs b"
+  by (simp add: fun_of_dg_st_for_def sup_dg_state_def fun_of_exec_dg_st_for_def
+    fun_of_resolved_st_q_for_sup)
+
+lemma fun_of_dg_st_for_mono:
+  "(a::('c::bounded_semilattice_sup_bot exec_dg_st, 'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<le> b
+     \<Longrightarrow> fun_of_dg_st_for gs a \<le> fun_of_dg_st_for gs b"
+  by (auto simp: fun_of_dg_st_for_def less_eq_dg_state_def fun_of_exec_dg_st_for_def
+    fun_of_resolved_st_q_for_mono)
+
+lemma location_vname_location_of [simp]:
+  "location_vname (location_of gs x) = x"
+  by (simp add: location_of_def)
+
+text \<open>
+  The two state representations disagree on what an unrepresented location
+  means.  The executable carrier is sparse: a location a placement never
+  materializes reads back as \<open>bot\<close>, "no value is recorded here".  The abstract
+  carrier is total: \<^const>\<open>project_abs_on\<close> classifies every location as local
+  or side but never restricts \<^emph>\<open>which\<close> locations exist, so an abstract value
+  at a location outside a node's own scope is still whatever the transfer
+  function produced there, not \<open>bot\<close> -- collapsing it to \<open>bot\<close> would assert
+  "no concrete state reaches here", which is false for a location the node
+  simply never mentions.  \<open>complete_abs_on\<close> is the correct completion: read
+  through the scope, and complete with a caller-supplied \<open>outside\<close> value
+  everywhere else.  For a domain where every value is bounded by a single
+  greatest element, \<open>outside\<close> can be that top element, and the completed
+  bound is trivially large enough outside the scope; the lemma is stated
+  against an arbitrary \<open>outside\<close> so it does not depend on such an element
+  existing.
+\<close>
+
+definition complete_abs_on ::
+  "(vname => bool) => location set => (vname => 'a) =>
+    ('a::bot) exec_dg_st => 'a abs_state"
+where
+  "complete_abs_on gs universe outside s x =
+    (if location_of gs x \<in> universe then fun_of_exec_dg_st_for gs s x
+     else outside x)"
+
+lemma complete_abs_on_inside:
+  "location_of gs x \<in> universe \<Longrightarrow>
+    complete_abs_on gs universe outside s x = fun_of_exec_dg_st_for gs s x"
+  by (simp add: complete_abs_on_def)
+
+lemma complete_abs_on_outside:
+  "location_of gs x \<notin> universe \<Longrightarrow>
+    complete_abs_on gs universe outside s x = outside x"
+  by (simp add: complete_abs_on_def)
+
+text \<open>
+  The upgrade from scoped agreement to a full inequality against the
+  completed lift.  \<open>dg_refines_on\<close> only claims equality on a finite scope; a
+  \<^const>\<open>part_post_solution\<close> obligation is an inequality against the \<^emph>\<open>whole\<close>
+  abstract state.  Inside the scope, the executable side's own inequality
+  (from its part_post_solution) transports verbatim through the scoped
+  equality.  Outside the scope, the obligation is discharged against
+  whatever \<open>outside\<close> value the completed bound uses there, not against
+  \<open>bot\<close>; the caller supplies the bound \<open>abs_val x \<le> outside x\<close>, which for a
+  domain with a greatest element is free.
+\<close>
+
+lemma le_lift_if_dg_refines_on_and_le:
+  fixes exec_val exec_bound :: "('a::bounded_semilattice_sup_bot) exec_dg_st"
+    and outside :: "vname => 'a"
+  assumes refines: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q exec_val location = abs_val (location_vname location)"
+    and outside_le: "\<And>x. location_of gs x \<notin> universe \<Longrightarrow> abs_val x \<le> outside x"
+    and le: "exec_val \<le> exec_bound"
+  shows "abs_val \<le> complete_abs_on gs universe outside exec_bound"
+proof (rule le_funI)
+  fix x
+  show "abs_val x \<le> complete_abs_on gs universe outside exec_bound x"
+  proof (cases "location_of gs x \<in> universe")
+    case True
+    have "abs_val x = lookup_resolved_st_q exec_val (location_of gs x)"
+      using refines[OF True] by simp
+    also have "\<dots> \<le> lookup_resolved_st_q exec_bound (location_of gs x)"
+      using le by (simp add: le_resolved_st_q_iff)
+    also have "\<dots> = complete_abs_on gs universe outside exec_bound x"
+      unfolding complete_abs_on_def fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def
+      using True by simp
+    finally show ?thesis .
+  next
+    case False
+    have "abs_val x \<le> outside x" by (rule outside_le[OF False])
+    also have "\<dots> = complete_abs_on gs universe outside exec_bound x"
+      using False by (simp add: complete_abs_on_def)
+    finally show ?thesis .
+  qed
+qed
 
 subsection \<open>Executable unit (diagonal) step and combine\<close>
 
@@ -143,6 +603,1405 @@ lemma dg_spec_step_unit_st:
   shows "dg_spec_step (unit_dg_spec_st tf_st enter_st) a = unit_step_st (tf_st a)"
   unfolding unit_dg_spec_st_def
   by (cases a) (simp_all add: ret_none ret_some split: option.splits)
+
+subsection \<open>Owner-aware executable D/G trees\<close>
+
+text \<open>
+  \<open>placed_dg_edge_tree_with\<close> factors the query/answer/side skeleton out from
+  the projection it materializes results through.  \<open>placed_dg_edge_tree\<close>
+  keeps the original, defensive \<open>project_resolved_on\<close>; \<open>placed_dg_edge_tree_strict\<close>
+  uses \<open>project_resolved_on_strict\<close>, whose output support is bounded by the
+  write node's declared scope unconditionally (\<open>effective_support_rep_project_resolved_on_strict\<close>),
+  with no fact about the raw transfer's own support needed.
+\<close>
+
+definition placed_dg_edge_tree_with ::
+  "(pname => location list => (scoped_location => bool) =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   (pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   ('a exec_dg_st => 'a exec_dg_st) =>
+   pp => pp => (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state)
+     strategy_tree"
+where
+  "placed_dg_edge_tree_with proj owner_of locations_of keep_local publish_side
+      transfer read_node write_node =
+    QueryL read_node (\<lambda>local. QueryG () (\<lambda>side.
+      let result = transfer (locals local \<squnion> globs side)
+      in Side () (DG bot
+          (proj (owner_of write_node) (locations_of write_node)
+            publish_side result))
+        (Answer (DG
+          (proj (owner_of write_node) (locations_of write_node)
+            keep_local result) bot))))"
+
+text \<open>
+  Dependency tracking is purely structural (\<open>dep_aux\<close>'s equations only look
+  at the \<open>QueryL\<close>/\<open>QueryG\<close>/\<open>Side\<close>/\<open>Answer\<close> skeleton, never at what a leaf
+  computes), so it transports for free regardless of which projection or
+  transfer function a placed edge tree carries, and regardless of the
+  valuation it is evaluated against.
+\<close>
+
+lemma dep_aux_placed_dg_edge_tree_with:
+  "dep_aux sigma (placed_dg_edge_tree_with proj owner_of locations_of keep_local
+      publish_side transfer read_node write_node) = {Inl read_node, Inr ()}"
+  by (simp add: placed_dg_edge_tree_with_def dep_aux_def Let_def)
+
+lemma dep_aux_placed_abs_dg_edge_tree:
+  "dep_aux sigma (placed_abs_dg_edge_tree source_global owner_of keep_local
+      publish_side transfer read_node write_node) = {Inl read_node, Inr ()}"
+  by (simp add: placed_abs_dg_edge_tree_def dep_aux_def Let_def)
+
+definition placed_dg_edge_tree ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   pp => pp => (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state)
+     strategy_tree"
+where
+  "placed_dg_edge_tree = placed_dg_edge_tree_with project_resolved_on"
+
+definition placed_dg_edge_tree_strict ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   pp => pp => (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state)
+     strategy_tree"
+where
+  "placed_dg_edge_tree_strict = placed_dg_edge_tree_with project_resolved_on_strict"
+
+lemma traverse_placed_dg_edge_tree:
+  "traverse_rhs
+    (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+      transfer read_node write_node) sigma =
+    DG (project_resolved_on (owner_of write_node) (locations_of write_node)
+          keep_local
+          (transfer (locals (sigma (Inl read_node)) \<squnion>
+             globs (sigma (Inr ())))))
+      bot"
+  unfolding placed_dg_edge_tree_def placed_dg_edge_tree_with_def
+  by (simp add: Let_def)
+
+lemma sides_placed_dg_edge_tree_Inr:
+  "sides_of_rhs
+    (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+      transfer read_node write_node) sigma (Inr ()) =
+    DG bot
+      (project_resolved_on (owner_of write_node) (locations_of write_node)
+        publish_side
+        (transfer (locals (sigma (Inl read_node)) \<squnion>
+           globs (sigma (Inr ())))))"
+  unfolding placed_dg_edge_tree_def placed_dg_edge_tree_with_def
+  by (simp add: Let_def)
+
+lemma traverse_placed_dg_edge_tree_strict:
+  "traverse_rhs
+    (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+      transfer read_node write_node) sigma =
+    DG (project_resolved_on_strict (owner_of write_node) (locations_of write_node)
+          keep_local
+          (transfer (locals (sigma (Inl read_node)) \<squnion>
+             globs (sigma (Inr ())))))
+      bot"
+  unfolding placed_dg_edge_tree_strict_def placed_dg_edge_tree_with_def
+  by (simp add: Let_def)
+
+lemma sides_placed_dg_edge_tree_strict_Inr:
+  "sides_of_rhs
+    (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+      transfer read_node write_node) sigma (Inr ()) =
+    DG bot
+      (project_resolved_on_strict (owner_of write_node) (locations_of write_node)
+        publish_side
+        (transfer (locals (sigma (Inl read_node)) \<squnion>
+           globs (sigma (Inr ())))))"
+  unfolding placed_dg_edge_tree_strict_def placed_dg_edge_tree_with_def
+  by (simp add: Let_def)
+
+lemma placed_dg_edge_tree_strict_local_support_bounded:
+  "set (effective_support (rep_resolved_st
+    (locals (traverse_rhs
+      (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+        transfer read_node write_node) sigma)))) \<subseteq> set (locations_of write_node)"
+  by (simp add: traverse_placed_dg_edge_tree_strict
+    effective_support_rep_project_resolved_on_strict)
+
+lemma placed_dg_edge_tree_strict_side_support_bounded:
+  "set (effective_support (rep_resolved_st
+    (globs (sides_of_rhs
+      (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+        transfer read_node write_node) sigma (Inr ()))))) \<subseteq> set (locations_of write_node)"
+  by (simp add: sides_placed_dg_edge_tree_strict_Inr
+    effective_support_rep_project_resolved_on_strict)
+
+lemma placed_dg_edge_tree_strict_local_default_bot:
+  "resolved_default (rep_resolved_st
+    (locals (traverse_rhs
+      (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+        transfer read_node write_node) sigma))) = (\<lambda>_. bot)"
+  by (simp add: traverse_placed_dg_edge_tree_strict
+    resolved_default_rep_project_resolved_on_strict)
+
+lemma placed_dg_edge_tree_strict_side_default_bot:
+  "resolved_default (rep_resolved_st
+    (globs (sides_of_rhs
+      (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+        transfer read_node write_node) sigma (Inr ())))) = (\<lambda>_. bot)"
+  by (simp add: sides_placed_dg_edge_tree_strict_Inr
+    resolved_default_rep_project_resolved_on_strict)
+
+lemma dg_refines_on_placed_edge:
+  fixes executable_transfer ::
+    "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and abstract_transfer :: "'a abs_state => 'a abs_state"
+    and executable_sigma ::
+      "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+    and abstract_sigma ::
+      "pp + unit => ('a abs_state, 'a abs_state) dg_state"
+  assumes raw:
+    "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+      lookup_resolved_st_q
+        (executable_transfer
+          (locals (executable_sigma (Inl read_node)) \<squnion>
+           globs (executable_sigma (Inr ())))) location =
+      abstract_transfer
+        (locals (abstract_sigma (Inl read_node)) \<squnion>
+         globs (abstract_sigma (Inr ())))
+        (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of write_node))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+            executable_transfer read_node write_node) executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+            executable_transfer read_node write_node) executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            abstract_transfer read_node write_node) abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            abstract_transfer read_node write_node) abstract_sigma (Inr ()))))"
+  unfolding traverse_placed_dg_edge_tree sides_placed_dg_edge_tree_Inr
+    traverse_placed_abs_dg_edge_tree sides_placed_abs_dg_edge_tree_Inr
+  by (simp add: dg_refines_on_project[OF raw resolved])
+
+lemma dg_refines_on_placed_edge_strict:
+  fixes executable_transfer ::
+    "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and abstract_transfer :: "'a abs_state => 'a abs_state"
+    and executable_sigma ::
+      "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+    and abstract_sigma ::
+      "pp + unit => ('a abs_state, 'a abs_state) dg_state"
+  assumes raw:
+    "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+      lookup_resolved_st_q
+        (executable_transfer
+          (locals (executable_sigma (Inl read_node)) \<squnion>
+           globs (executable_sigma (Inr ())))) location =
+      abstract_transfer
+        (locals (abstract_sigma (Inl read_node)) \<squnion>
+         globs (abstract_sigma (Inr ())))
+        (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of write_node))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+            executable_transfer read_node write_node) executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+            executable_transfer read_node write_node) executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            abstract_transfer read_node write_node) abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            abstract_transfer read_node write_node) abstract_sigma (Inr ()))))"
+  unfolding traverse_placed_dg_edge_tree_strict sides_placed_dg_edge_tree_strict_Inr
+    traverse_placed_abs_dg_edge_tree sides_placed_abs_dg_edge_tree_Inr
+  by (simp add: dg_refines_on_project_strict[OF raw resolved])
+
+definition placed_dg_enter_tree ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname list => aexp list =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   vname list => aexp list => pp => pp =>
+   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_enter_tree owner_of locations_of keep_local publish_side
+      enter parameters arguments caller callee =
+    placed_dg_edge_tree owner_of locations_of keep_local publish_side
+      (enter parameters arguments) caller callee"
+
+lemma placed_dg_enter_tree_eq:
+  "placed_dg_enter_tree owner_of locations_of keep_local publish_side
+      enter parameters arguments caller callee =
+    placed_dg_edge_tree owner_of locations_of keep_local publish_side
+      (enter parameters arguments) caller callee"
+  unfolding placed_dg_enter_tree_def by rule
+
+definition placed_dg_enter_tree_strict ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname list => aexp list =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   vname list => aexp list => pp => pp =>
+   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+      enter parameters arguments caller callee =
+    placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+      (enter parameters arguments) caller callee"
+
+lemma placed_dg_enter_tree_strict_eq:
+  "placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+      enter parameters arguments caller callee =
+    placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+      (enter parameters arguments) caller callee"
+  unfolding placed_dg_enter_tree_strict_def by rule
+
+lemma placed_dg_enter_tree_strict_local_support_bounded:
+  "set (effective_support (rep_resolved_st
+    (locals (traverse_rhs
+      (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+        enter parameters arguments caller callee) sigma)))) \<subseteq>
+    set (locations_of callee)"
+  unfolding placed_dg_enter_tree_strict_eq
+  by (rule placed_dg_edge_tree_strict_local_support_bounded)
+
+lemma placed_dg_enter_tree_strict_side_support_bounded:
+  "set (effective_support (rep_resolved_st
+    (globs (sides_of_rhs
+      (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+        enter parameters arguments caller callee) sigma (Inr ()))))) \<subseteq>
+    set (locations_of callee)"
+  unfolding placed_dg_enter_tree_strict_eq
+  by (rule placed_dg_edge_tree_strict_side_support_bounded)
+
+lemma placed_dg_enter_tree_strict_local_default_bot:
+  "resolved_default (rep_resolved_st
+    (locals (traverse_rhs
+      (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+        enter parameters arguments caller callee) sigma))) = (\<lambda>_. bot)"
+  unfolding placed_dg_enter_tree_strict_eq
+  by (rule placed_dg_edge_tree_strict_local_default_bot)
+
+lemma placed_dg_enter_tree_strict_side_default_bot:
+  "resolved_default (rep_resolved_st
+    (globs (sides_of_rhs
+      (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+        enter parameters arguments caller callee) sigma (Inr ())))) = (\<lambda>_. bot)"
+  unfolding placed_dg_enter_tree_strict_eq
+  by (rule placed_dg_edge_tree_strict_side_default_bot)
+
+lemma dep_aux_placed_dg_enter_tree_strict:
+  "dep_aux sigma (placed_dg_enter_tree_strict owner_of locations_of keep_local
+      publish_side enter parameters arguments caller callee) =
+    {Inl caller, Inr ()}"
+  unfolding placed_dg_enter_tree_strict_eq placed_dg_edge_tree_strict_def
+  by (rule dep_aux_placed_dg_edge_tree_with)
+
+lemma dep_aux_placed_abs_dg_enter_tree:
+  "dep_aux sigma (placed_abs_dg_enter_tree source_global owner_of keep_local
+      publish_side enter parameters arguments caller callee) =
+    {Inl caller, Inr ()}"
+  unfolding placed_abs_dg_enter_tree_def
+  by (rule dep_aux_placed_abs_dg_edge_tree)
+
+lemma dg_refines_on_placed_entry:
+  fixes executable_enter ::
+    "vname list => aexp list =>
+      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and abstract_enter ::
+      "vname list => aexp list => 'a abs_state => 'a abs_state"
+  assumes raw:
+    "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
+      lookup_resolved_st_q
+        (executable_enter parameters arguments
+          (locals (executable_sigma (Inl caller)) \<squnion>
+           globs (executable_sigma (Inr ())))) location =
+      abstract_enter parameters arguments
+        (locals (abstract_sigma (Inl caller)) \<squnion>
+         globs (abstract_sigma (Inr ())))
+        (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of callee))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_enter_tree owner_of locations_of keep_local publish_side
+            executable_enter parameters arguments caller callee)
+          executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_enter_tree owner_of locations_of keep_local publish_side
+            executable_enter parameters arguments caller callee)
+          executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+            abstract_enter parameters arguments caller callee)
+          abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+            abstract_enter parameters arguments caller callee)
+          abstract_sigma (Inr ()))))"
+proof -
+  have bridge:
+    "dg_refines_on (set (locations_of callee))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+            (executable_enter parameters arguments) caller callee)
+          executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+            (executable_enter parameters arguments) caller callee)
+          executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            (abstract_enter parameters arguments) caller callee)
+          abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            (abstract_enter parameters arguments) caller callee)
+          abstract_sigma (Inr ()))))"
+    by (rule dg_refines_on_placed_edge[
+      where executable_transfer = "executable_enter parameters arguments"
+        and abstract_transfer = "abstract_enter parameters arguments"
+        and executable_sigma = executable_sigma and abstract_sigma = abstract_sigma
+        and read_node = caller and write_node = callee
+        and source_global = source_global and owner_of = owner_of
+        and locations_of = locations_of and keep_local = keep_local
+        and publish_side = publish_side, OF raw resolved])
+  show ?thesis
+    unfolding placed_dg_enter_tree_def placed_abs_dg_enter_tree_def
+    by (rule bridge)
+qed
+
+lemma dg_refines_on_placed_entry_strict:
+  fixes executable_enter ::
+    "vname list => aexp list =>
+      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and abstract_enter ::
+      "vname list => aexp list => 'a abs_state => 'a abs_state"
+  assumes raw:
+    "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
+      lookup_resolved_st_q
+        (executable_enter parameters arguments
+          (locals (executable_sigma (Inl caller)) \<squnion>
+           globs (executable_sigma (Inr ())))) location =
+      abstract_enter parameters arguments
+        (locals (abstract_sigma (Inl caller)) \<squnion>
+         globs (abstract_sigma (Inr ())))
+        (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of callee))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+            executable_enter parameters arguments caller callee)
+          executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+            executable_enter parameters arguments caller callee)
+          executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+            abstract_enter parameters arguments caller callee)
+          abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
+            abstract_enter parameters arguments caller callee)
+          abstract_sigma (Inr ()))))"
+proof -
+  have bridge:
+    "dg_refines_on (set (locations_of callee))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+            (executable_enter parameters arguments) caller callee)
+          executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+            (executable_enter parameters arguments) caller callee)
+          executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            (abstract_enter parameters arguments) caller callee)
+          abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+            (abstract_enter parameters arguments) caller callee)
+          abstract_sigma (Inr ()))))"
+    by (rule dg_refines_on_placed_edge_strict[
+      where executable_transfer = "executable_enter parameters arguments"
+        and abstract_transfer = "abstract_enter parameters arguments"
+        and executable_sigma = executable_sigma and abstract_sigma = abstract_sigma
+        and read_node = caller and write_node = callee
+        and source_global = source_global and owner_of = owner_of
+        and locations_of = locations_of and keep_local = keep_local
+        and publish_side = publish_side, OF raw resolved])
+  show ?thesis
+    unfolding placed_dg_enter_tree_strict_def placed_abs_dg_enter_tree_def
+    by (rule bridge)
+qed
+
+text \<open>Factored the same way as \<open>placed_dg_edge_tree_with\<close>: the skeleton is
+  shared, the projection it materializes results through is a parameter.\<close>
+
+definition placed_dg_combine_tree_with ::
+  "(pname => location list => (scoped_location => bool) =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   (pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname option => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
+   vname option => pp => pp => pp =>
+   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_combine_tree_with proj owner_of locations_of keep_local publish_side
+      combine destination caller callee write_node =
+    QueryL caller (\<lambda>caller_state. QueryL callee (\<lambda>callee_state.
+      QueryG () (\<lambda>side.
+        let result = combine destination (locals caller_state)
+          (locals callee_state) (globs side)
+        in Side () (DG bot
+            (proj (owner_of write_node)
+              (locations_of write_node) publish_side result))
+          (Answer (DG
+            (proj (owner_of write_node)
+              (locations_of write_node) keep_local result) bot)))))"
+
+lemma dep_aux_placed_dg_combine_tree_with:
+  "dep_aux sigma (placed_dg_combine_tree_with proj owner_of locations_of keep_local
+      publish_side combine destination caller callee write_node) =
+    {Inl caller, Inl callee, Inr ()}"
+  by (simp add: placed_dg_combine_tree_with_def dep_aux_def Let_def)
+
+lemma dep_aux_placed_abs_dg_combine_tree:
+  "dep_aux sigma (placed_abs_dg_combine_tree source_global owner_of keep_local
+      publish_side combine destination caller callee write_node) =
+    {Inl caller, Inl callee, Inr ()}"
+  by (simp add: placed_abs_dg_combine_tree_def dep_aux_def Let_def)
+
+definition placed_dg_combine_tree ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname option =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st =>
+     'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
+   vname option => pp => pp => pp =>
+   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_combine_tree = placed_dg_combine_tree_with project_resolved_on"
+
+definition placed_dg_combine_tree_strict ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname option =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st =>
+     'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
+   vname option => pp => pp => pp =>
+   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_combine_tree_strict = placed_dg_combine_tree_with project_resolved_on_strict"
+
+lemma traverse_placed_dg_combine_tree:
+  "traverse_rhs
+    (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+      combine destination caller callee write_node) sigma =
+    DG (project_resolved_on (owner_of write_node) (locations_of write_node)
+          keep_local
+          (combine destination (locals (sigma (Inl caller)))
+            (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))
+      bot"
+  unfolding placed_dg_combine_tree_def placed_dg_combine_tree_with_def
+  by (simp add: Let_def)
+
+lemma sides_placed_dg_combine_tree_Inr:
+  "sides_of_rhs
+    (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+      combine destination caller callee write_node) sigma (Inr ()) =
+    DG bot
+      (project_resolved_on (owner_of write_node) (locations_of write_node)
+        publish_side
+        (combine destination (locals (sigma (Inl caller)))
+          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))"
+  unfolding placed_dg_combine_tree_def placed_dg_combine_tree_with_def
+  by (simp add: Let_def)
+
+lemma traverse_placed_dg_combine_tree_strict:
+  "traverse_rhs
+    (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+      combine destination caller callee write_node) sigma =
+    DG (project_resolved_on_strict (owner_of write_node) (locations_of write_node)
+          keep_local
+          (combine destination (locals (sigma (Inl caller)))
+            (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))
+      bot"
+  unfolding placed_dg_combine_tree_strict_def placed_dg_combine_tree_with_def
+  by (simp add: Let_def)
+
+lemma sides_placed_dg_combine_tree_strict_Inr:
+  "sides_of_rhs
+    (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+      combine destination caller callee write_node) sigma (Inr ()) =
+    DG bot
+      (project_resolved_on_strict (owner_of write_node) (locations_of write_node)
+        publish_side
+        (combine destination (locals (sigma (Inl caller)))
+          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))"
+  unfolding placed_dg_combine_tree_strict_def placed_dg_combine_tree_with_def
+  by (simp add: Let_def)
+
+lemma placed_dg_combine_tree_strict_local_support_bounded:
+  "set (effective_support (rep_resolved_st
+    (locals (traverse_rhs
+      (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+        combine destination caller callee write_node) sigma)))) \<subseteq>
+    set (locations_of write_node)"
+  by (simp add: traverse_placed_dg_combine_tree_strict
+    effective_support_rep_project_resolved_on_strict)
+
+lemma placed_dg_combine_tree_strict_side_support_bounded:
+  "set (effective_support (rep_resolved_st
+    (globs (sides_of_rhs
+      (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+        combine destination caller callee write_node) sigma (Inr ()))))) \<subseteq>
+    set (locations_of write_node)"
+  by (simp add: sides_placed_dg_combine_tree_strict_Inr
+    effective_support_rep_project_resolved_on_strict)
+
+lemma placed_dg_combine_tree_strict_local_default_bot:
+  "resolved_default (rep_resolved_st
+    (locals (traverse_rhs
+      (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+        combine destination caller callee write_node) sigma))) = (\<lambda>_. bot)"
+  by (simp add: traverse_placed_dg_combine_tree_strict
+    resolved_default_rep_project_resolved_on_strict)
+
+lemma placed_dg_combine_tree_strict_side_default_bot:
+  "resolved_default (rep_resolved_st
+    (globs (sides_of_rhs
+      (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+        combine destination caller callee write_node) sigma (Inr ())))) = (\<lambda>_. bot)"
+  by (simp add: sides_placed_dg_combine_tree_strict_Inr
+    resolved_default_rep_project_resolved_on_strict)
+
+lemma dg_refines_on_placed_combine:
+  fixes executable_combine ::
+    "vname option => ('a::bounded_semilattice_sup_bot) exec_dg_st =>
+      'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st"
+    and abstract_combine ::
+      "vname option => 'a abs_state => 'a abs_state => 'a abs_state => 'a abs_state"
+    and executable_sigma ::
+      "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+    and abstract_sigma ::
+      "pp + unit => ('a abs_state, 'a abs_state) dg_state"
+  assumes raw:
+    "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+      lookup_resolved_st_q
+        (executable_combine destination
+          (locals (executable_sigma (Inl caller)))
+          (locals (executable_sigma (Inl callee)))
+          (globs (executable_sigma (Inr ())))) location =
+      abstract_combine destination
+        (locals (abstract_sigma (Inl caller)))
+        (locals (abstract_sigma (Inl callee)))
+        (globs (abstract_sigma (Inr ())))
+        (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of write_node))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+            executable_combine destination caller callee write_node)
+          executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+            executable_combine destination caller callee write_node)
+          executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+            abstract_combine destination caller callee write_node)
+          abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+            abstract_combine destination caller callee write_node)
+          abstract_sigma (Inr ()))))"
+  unfolding traverse_placed_dg_combine_tree sides_placed_dg_combine_tree_Inr
+    traverse_placed_abs_dg_combine_tree sides_placed_abs_dg_combine_tree_Inr
+  by (simp add: dg_refines_on_project[OF raw resolved])
+
+lemma dg_refines_on_placed_combine_strict:
+  fixes executable_combine ::
+    "vname option => ('a::bounded_semilattice_sup_bot) exec_dg_st =>
+      'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st"
+    and abstract_combine ::
+      "vname option => 'a abs_state => 'a abs_state => 'a abs_state => 'a abs_state"
+    and executable_sigma ::
+      "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+    and abstract_sigma ::
+      "pp + unit => ('a abs_state, 'a abs_state) dg_state"
+  assumes raw:
+    "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+      lookup_resolved_st_q
+        (executable_combine destination
+          (locals (executable_sigma (Inl caller)))
+          (locals (executable_sigma (Inl callee)))
+          (globs (executable_sigma (Inr ())))) location =
+      abstract_combine destination
+        (locals (abstract_sigma (Inl caller)))
+        (locals (abstract_sigma (Inl callee)))
+        (globs (abstract_sigma (Inr ())))
+        (location_vname location)"
+    and resolved:
+      "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
+        location = location_of source_global (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of write_node))
+      (DG
+        (locals (traverse_rhs
+          (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+            executable_combine destination caller callee write_node)
+          executable_sigma))
+        (globs (sides_of_rhs
+          (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+            executable_combine destination caller callee write_node)
+          executable_sigma (Inr ()))))
+      (DG
+        (locals (traverse_rhs
+          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+            abstract_combine destination caller callee write_node)
+          abstract_sigma))
+        (globs (sides_of_rhs
+          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
+            abstract_combine destination caller callee write_node)
+          abstract_sigma (Inr ()))))"
+  unfolding traverse_placed_dg_combine_tree_strict sides_placed_dg_combine_tree_strict_Inr
+    traverse_placed_abs_dg_combine_tree sides_placed_abs_dg_combine_tree_Inr
+  by (simp add: dg_refines_on_project_strict[OF raw resolved])
+
+subsection \<open>Support-bounded hook transport\<close>
+
+text \<open>
+  \<^const>\<open>project_resolved_on\<close> already bounds the projected output by the
+  declared scope together with whatever the raw transfer output carried
+  (\<open>effective_support_rep_project_resolved_on\<close>).  A hook's raw transfer only
+  grows that carried support by its own write footprint
+  (\<open>support_growth_bounded\<close>); once the footprint and the read node's own
+  scope both fall inside the write node's scope, the projected output stays
+  inside it too.  This is the piece the classifier-parametric readback needs
+  and the finite-scope escape hatch does not give for free: the write node's
+  own scope must actually cover what the edge reads and writes, not merely
+  agree with the abstract side on it.
+\<close>
+
+definition support_growth_bounded ::
+  "(('a::bot) exec_dg_st => 'a exec_dg_st) => location set => bool"
+where
+  "support_growth_bounded transfer footprint \<longleftrightarrow>
+    (\<forall>s. set (effective_support (rep_resolved_st (transfer s))) \<subseteq>
+      set (effective_support (rep_resolved_st s)) \<union> footprint)"
+
+lemma placed_dg_edge_tree_input_support_bounded:
+  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
+    'a exec_dg_st) dg_state"
+  assumes read_local_bounded:
+    "set (effective_support (rep_resolved_st (locals (sigma (Inl read_node)))))
+      \<subseteq> read_scope"
+    and read_side_bounded:
+    "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
+      \<subseteq> gscope"
+    and covers: "read_scope \<union> gscope \<subseteq> write_scope"
+  shows
+    "set (effective_support (rep_resolved_st
+      (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<subseteq> write_scope"
+proof -
+  have "set (effective_support (rep_resolved_st
+      (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<subseteq>
+    set (effective_support (rep_resolved_st (locals (sigma (Inl read_node))))) \<union>
+    set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))"
+    by (rule effective_support_rep_sup_resolved_st_q)
+  also have "\<dots> \<subseteq> read_scope \<union> gscope"
+    using read_local_bounded read_side_bounded by (rule Un_mono)
+  also have "\<dots> \<subseteq> write_scope" by (rule covers)
+  finally show ?thesis .
+qed
+
+lemma placed_dg_edge_tree_local_support_bounded:
+  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes growth: "support_growth_bounded transfer footprint"
+    and footprint_scope: "footprint \<subseteq> set (locations_of write_node)"
+    and input_bounded:
+      "set (effective_support (rep_resolved_st
+        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))
+        \<subseteq> set (locations_of write_node)"
+  shows
+    "set (effective_support (rep_resolved_st
+      (locals (traverse_rhs
+        (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+          transfer read_node write_node) sigma)))) \<subseteq> set (locations_of write_node)"
+proof -
+  have transfer_bounded:
+    "set (effective_support (rep_resolved_st
+      (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))
+      \<subseteq> set (locations_of write_node)"
+  proof -
+    have "set (effective_support (rep_resolved_st
+        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))) \<subseteq>
+      set (effective_support (rep_resolved_st
+        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<union> footprint"
+      using growth unfolding support_growth_bounded_def by blast
+    also have "\<dots> \<subseteq> set (locations_of write_node)"
+      using input_bounded footprint_scope by blast
+    finally show ?thesis .
+  qed
+  have "set (effective_support (rep_resolved_st
+      (project_resolved_on (owner_of write_node) (locations_of write_node) keep_local
+        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
+    set (locations_of write_node)"
+    using transfer_bounded effective_support_rep_project_resolved_on by blast
+  then show ?thesis
+    by (simp add: traverse_placed_dg_edge_tree)
+qed
+
+lemma placed_dg_edge_tree_side_support_bounded:
+  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes growth: "support_growth_bounded transfer footprint"
+    and footprint_scope: "footprint \<subseteq> set (locations_of write_node)"
+    and input_bounded:
+      "set (effective_support (rep_resolved_st
+        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))
+        \<subseteq> set (locations_of write_node)"
+  shows
+    "set (effective_support (rep_resolved_st
+      (globs (sides_of_rhs
+        (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+          transfer read_node write_node) sigma (Inr ()))))) \<subseteq>
+      set (locations_of write_node)"
+proof -
+  have transfer_bounded:
+    "set (effective_support (rep_resolved_st
+      (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))
+      \<subseteq> set (locations_of write_node)"
+  proof -
+    have "set (effective_support (rep_resolved_st
+        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))) \<subseteq>
+      set (effective_support (rep_resolved_st
+        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<union> footprint"
+      using growth unfolding support_growth_bounded_def by blast
+    also have "\<dots> \<subseteq> set (locations_of write_node)"
+      using input_bounded footprint_scope by blast
+    finally show ?thesis .
+  qed
+  have "set (effective_support (rep_resolved_st
+      (project_resolved_on (owner_of write_node) (locations_of write_node) publish_side
+        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
+    set (locations_of write_node)"
+    using transfer_bounded effective_support_rep_project_resolved_on by blast
+  then show ?thesis
+    by (simp add: sides_placed_dg_edge_tree_Inr)
+qed
+
+corollary placed_dg_enter_tree_local_support_bounded:
+  fixes enter :: "vname list => aexp list =>
+    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes growth: "support_growth_bounded (enter parameters arguments) footprint"
+    and footprint_scope: "footprint \<subseteq> set (locations_of callee)"
+    and input_bounded:
+      "set (effective_support (rep_resolved_st
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))))
+        \<subseteq> set (locations_of callee)"
+  shows
+    "set (effective_support (rep_resolved_st
+      (locals (traverse_rhs
+        (placed_dg_enter_tree owner_of locations_of keep_local publish_side
+          enter parameters arguments caller callee) sigma)))) \<subseteq>
+      set (locations_of callee)"
+  unfolding placed_dg_enter_tree_def
+  by (rule placed_dg_edge_tree_local_support_bounded
+    [where owner_of = owner_of and locations_of = locations_of
+       and keep_local = keep_local and publish_side = publish_side
+       and transfer = "enter parameters arguments" and read_node = caller
+       and write_node = callee and sigma = sigma,
+     OF growth footprint_scope input_bounded])
+
+corollary placed_dg_enter_tree_side_support_bounded:
+  fixes enter :: "vname list => aexp list =>
+    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes growth: "support_growth_bounded (enter parameters arguments) footprint"
+    and footprint_scope: "footprint \<subseteq> set (locations_of callee)"
+    and input_bounded:
+      "set (effective_support (rep_resolved_st
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))))
+        \<subseteq> set (locations_of callee)"
+  shows
+    "set (effective_support (rep_resolved_st
+      (globs (sides_of_rhs
+        (placed_dg_enter_tree owner_of locations_of keep_local publish_side
+          enter parameters arguments caller callee) sigma (Inr ()))))) \<subseteq>
+      set (locations_of callee)"
+  unfolding placed_dg_enter_tree_def
+  by (rule placed_dg_edge_tree_side_support_bounded
+    [where owner_of = owner_of and locations_of = locations_of
+       and keep_local = keep_local and publish_side = publish_side
+       and transfer = "enter parameters arguments" and read_node = caller
+       and write_node = callee and sigma = sigma,
+     OF growth footprint_scope input_bounded])
+
+text \<open>
+  \<^const>\<open>combine_collect_resolved_for_q\<close> keeps locals from its caller-side
+  argument and globals from its callee-side argument
+  (\<open>effective_support_rep_combine_collect_resolved_for_q\<close>), so the combine
+  hook's support bound is asymmetric: it needs the caller's own scope and the
+  side accumulator for its local half, and the callee's own scope and the
+  side accumulator for its global half.  A callee-only local never enters the
+  bound, matching what \<open>combine_collect_resolved_for_q\<close> itself discards.
+\<close>
+
+lemma placed_dg_combine_tree_transfer_support_bounded:
+  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
+    'a exec_dg_st) dg_state"
+  assumes caller_bounded:
+      "set (effective_support (rep_resolved_st (locals (sigma (Inl caller)))))
+        \<subseteq> caller_scope"
+    and callee_bounded:
+      "set (effective_support (rep_resolved_st (locals (sigma (Inl callee)))))
+        \<subseteq> callee_scope"
+    and side_bounded:
+      "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
+        \<subseteq> gscope"
+    and covers:
+      "{loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
+       {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
+       (case destination of None => {} | Some x => {location_of source_global x})
+        \<subseteq> write_scope"
+  shows
+    "set (effective_support (rep_resolved_st
+      (combine_collect_resolved_for_q source_global destination
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
+        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))
+      \<subseteq> write_scope"
+proof -
+  have sc_bounded: "set (effective_support (rep_resolved_st
+      (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ()))))) \<subseteq> caller_scope \<union> gscope"
+  proof -
+    have "set (effective_support (rep_resolved_st
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ()))))) \<subseteq>
+      set (effective_support (rep_resolved_st (locals (sigma (Inl caller))))) \<union>
+      set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))"
+      by (rule effective_support_rep_sup_resolved_st_q)
+    also have "\<dots> \<subseteq> caller_scope \<union> gscope"
+      using caller_bounded side_bounded by blast
+    finally show ?thesis .
+  qed
+  have se_bounded: "set (effective_support (rep_resolved_st
+      (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))) \<subseteq> callee_scope \<union> gscope"
+  proof -
+    have "set (effective_support (rep_resolved_st
+        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))) \<subseteq>
+      set (effective_support (rep_resolved_st (locals (sigma (Inl callee))))) \<union>
+      set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))"
+      by (rule effective_support_rep_sup_resolved_st_q)
+    also have "\<dots> \<subseteq> callee_scope \<union> gscope"
+      using callee_bounded side_bounded by blast
+    finally show ?thesis .
+  qed
+  have "set (effective_support (rep_resolved_st
+      (combine_collect_resolved_for_q source_global destination
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
+        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ())))))) \<subseteq>
+    {loc \<in> set (effective_support (rep_resolved_st
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ()))))). location_is_local loc} \<union>
+    {loc \<in> set (effective_support (rep_resolved_st
+        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))). location_is_global loc} \<union>
+    (case destination of None => {} | Some x => {location_of source_global x})"
+    by (rule effective_support_rep_combine_collect_resolved_for_q)
+  also have "\<dots> \<subseteq>
+    {loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
+    {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
+    (case destination of None => {} | Some x => {location_of source_global x})"
+    using sc_bounded se_bounded by blast
+  also have "\<dots> \<subseteq> write_scope" by (rule covers)
+  finally show ?thesis .
+qed
+
+lemma placed_dg_combine_tree_local_support_bounded:
+  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
+    'a exec_dg_st) dg_state"
+  assumes caller_bounded:
+      "set (effective_support (rep_resolved_st (locals (sigma (Inl caller)))))
+        \<subseteq> caller_scope"
+    and callee_bounded:
+      "set (effective_support (rep_resolved_st (locals (sigma (Inl callee)))))
+        \<subseteq> callee_scope"
+    and side_bounded:
+      "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
+        \<subseteq> gscope"
+    and covers:
+      "{loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
+       {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
+       (case destination of None => {} | Some x => {location_of source_global x})
+        \<subseteq> set (locations_of write_node)"
+  shows
+    "set (effective_support (rep_resolved_st
+      (locals (traverse_rhs
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          (\<lambda>dst cs ce sd. combine_collect_resolved_for_q source_global dst (cs \<squnion> sd) (ce \<squnion> sd))
+          destination caller callee write_node) sigma)))) \<subseteq>
+      set (locations_of write_node)"
+proof -
+  have transfer_bounded: "set (effective_support (rep_resolved_st
+      (combine_collect_resolved_for_q source_global destination
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
+        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))
+      \<subseteq> set (locations_of write_node)"
+    by (rule placed_dg_combine_tree_transfer_support_bounded
+      [OF caller_bounded callee_bounded side_bounded covers])
+  have "set (effective_support (rep_resolved_st
+      (project_resolved_on (owner_of write_node) (locations_of write_node) keep_local
+        (combine_collect_resolved_for_q source_global destination
+          (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
+          (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
+    set (locations_of write_node)"
+    using transfer_bounded effective_support_rep_project_resolved_on by blast
+  then show ?thesis
+    by (simp add: traverse_placed_dg_combine_tree)
+qed
+
+lemma placed_dg_combine_tree_side_support_bounded:
+  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
+    'a exec_dg_st) dg_state"
+  assumes caller_bounded:
+      "set (effective_support (rep_resolved_st (locals (sigma (Inl caller)))))
+        \<subseteq> caller_scope"
+    and callee_bounded:
+      "set (effective_support (rep_resolved_st (locals (sigma (Inl callee)))))
+        \<subseteq> callee_scope"
+    and side_bounded:
+      "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
+        \<subseteq> gscope"
+    and covers:
+      "{loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
+       {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
+       (case destination of None => {} | Some x => {location_of source_global x})
+        \<subseteq> set (locations_of write_node)"
+  shows
+    "set (effective_support (rep_resolved_st
+      (globs (sides_of_rhs
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          (\<lambda>dst cs ce sd. combine_collect_resolved_for_q source_global dst (cs \<squnion> sd) (ce \<squnion> sd))
+          destination caller callee write_node) sigma (Inr ()))))) \<subseteq>
+      set (locations_of write_node)"
+proof -
+  have transfer_bounded: "set (effective_support (rep_resolved_st
+      (combine_collect_resolved_for_q source_global destination
+        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
+        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))
+      \<subseteq> set (locations_of write_node)"
+    by (rule placed_dg_combine_tree_transfer_support_bounded
+      [OF caller_bounded callee_bounded side_bounded covers])
+  have "set (effective_support (rep_resolved_st
+      (project_resolved_on (owner_of write_node) (locations_of write_node) publish_side
+        (combine_collect_resolved_for_q source_global destination
+          (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
+          (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
+    set (locations_of write_node)"
+    using transfer_bounded effective_support_rep_project_resolved_on by blast
+  then show ?thesis
+    by (simp add: sides_placed_dg_combine_tree_Inr)
+qed
+
+
+lemma lookup_placed_dg_combine_tree_recombine:
+  fixes sigma :: "pp + unit =>
+    ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes relevant:
+    "target \<in> set (locations_of write_node @
+      effective_support
+        (rep_resolved_st
+          (combine destination (locals (sigma (Inl caller)))
+            (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))))"
+    and covered:
+      "keep_local (owner_of write_node, target) \<or>
+       publish_side (owner_of write_node, target)"
+  shows
+    "lookup_resolved_st_q
+      (locals (traverse_rhs
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          combine destination caller callee write_node) sigma) \<squnion>
+       globs (sides_of_rhs
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          combine destination caller callee write_node) sigma (Inr ()))) target =
+     lookup_resolved_st_q
+      (combine destination (locals (sigma (Inl caller)))
+        (locals (sigma (Inl callee))) (globs (sigma (Inr ())))) target"
+proof -
+  have result_eq:
+    "locals (traverse_rhs
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          combine destination caller callee write_node) sigma) \<squnion>
+       globs (sides_of_rhs
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          combine destination caller callee write_node) sigma (Inr ())) =
+     project_resolved_on (owner_of write_node) (locations_of write_node)
+       keep_local
+       (combine destination (locals (sigma (Inl caller)))
+         (locals (sigma (Inl callee))) (globs (sigma (Inr ())))) \<squnion>
+     project_resolved_on (owner_of write_node) (locations_of write_node)
+       publish_side
+       (combine destination (locals (sigma (Inl caller)))
+         (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))"
+    by (simp add: traverse_placed_dg_combine_tree
+      sides_placed_dg_combine_tree_Inr)
+  show ?thesis
+    unfolding result_eq
+    by (rule lookup_project_resolved_on_join[
+      where owner = "owner_of write_node" and universe = "locations_of write_node"
+        and keep_local = keep_local and publish_side = publish_side
+        and s = "combine destination (locals (sigma (Inl caller)))
+          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))"
+        and target = target, OF relevant covered])
+qed
+
+lemma lookup_placed_dg_edge_tree_classic_local:
+  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st =>
+    'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes relevant:
+    "target \<in> set (locations_of write_node @
+      effective_support
+        (rep_resolved_st
+          (transfer
+            (locals (sigma (Inl read_node)) \<squnion>
+             globs (sigma (Inr ()))))))"
+  shows
+    "lookup_resolved_st_q
+      (locals
+        (traverse_rhs
+          (placed_dg_edge_tree owner_of locations_of
+            Exec_Placement.classic_keep_local
+            Exec_Placement.classic_publish_side
+            transfer read_node write_node) sigma)) target =
+     lookup_resolved_st_q
+      (locals
+        (traverse_rhs
+          (dg_edge_tree (unit_step_st transfer) read_node) sigma)) target"
+  unfolding traverse_placed_dg_edge_tree traverse_dg_edge_tree unit_step_st_def
+  by (simp add: Let_def
+    lookup_project_resolved_on_classic_local[OF relevant])
+
+lemma lookup_placed_dg_edge_tree_classic_side:
+  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st =>
+    'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes relevant:
+    "target \<in> set (locations_of write_node @
+      effective_support
+        (rep_resolved_st
+          (transfer
+            (locals (sigma (Inl read_node)) \<squnion>
+             globs (sigma (Inr ()))))))"
+  shows
+    "lookup_resolved_st_q
+      (globs
+        (sides_of_rhs
+          (placed_dg_edge_tree owner_of locations_of
+            Exec_Placement.classic_keep_local
+            Exec_Placement.classic_publish_side
+            transfer read_node write_node) sigma (Inr ()))) target =
+     lookup_resolved_st_q
+      (globs
+        (sides_of_rhs
+          (dg_edge_tree (unit_step_st transfer) read_node) sigma (Inr ()))) target"
+  unfolding sides_placed_dg_edge_tree_Inr sides_dg_edge_tree_Inr
+    unit_step_st_def
+  by (simp add: Let_def
+    lookup_project_resolved_on_classic_side[OF relevant])
+
+definition placed_dg_edge_of ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   unit => pp => edge_action => pp =>
+   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_edge_of owner_of locations_of keep_local publish_side transfer ctx
+      read_node action write_node =
+    map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+      (placed_dg_edge_tree owner_of locations_of keep_local publish_side
+        (transfer action) read_node write_node))"
+
+definition placed_dg_combine_of ::
+  "(vname => bool) => (pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   unit => pp => call_action => pp => pp =>
+   (pp \<times> unit, unit, ('a::bounded_semilattice_sup_bot exec_dg_st,
+     'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_combine_of source_global owner_of locations_of keep_local publish_side
+      ctx caller action callee continuation =
+    (case action of CallEdge destination parameters arguments =>
+      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
+          (\<lambda>destination caller_state callee_state side_state.
+            combine_collect_resolved_for_q source_global destination
+              (caller_state \<squnion> side_state) (callee_state \<squnion> side_state))
+          destination caller callee continuation)))"
+
+definition placed_dg_enter_of ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname list => aexp list =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   unit => pp => call_action => pp =>
+   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_enter_of owner_of locations_of keep_local publish_side enter ctx
+      caller action callee =
+    (case action of CallEdge destination parameters arguments =>
+      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+        (placed_dg_enter_tree owner_of locations_of keep_local publish_side
+          enter parameters arguments caller callee)))"
+
+definition placed_dg_gen_of ::
+  "(vname => bool) => (pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   (vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st) =>
+   cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
+   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
+where
+  "placed_dg_gen_of source_global owner_of locations_of keep_local publish_side
+      transfer enter graph bot0 s0d s0g =
+    side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
+      (placed_dg_edge_of owner_of locations_of keep_local publish_side transfer)
+      (placed_dg_combine_of source_global owner_of locations_of keep_local publish_side)
+      (placed_dg_enter_of owner_of locations_of keep_local publish_side enter)
+      graph bot0 s0d s0g"
+
+text \<open>Strict counterparts, wired to \<open>placed_dg_*_tree_strict\<close> instead of the
+  defensive \<open>placed_dg_*_tree\<close>: the equation system a placement instance
+  actually solves should use these, so every generated value's support is
+  bounded by construction.\<close>
+
+definition placed_dg_edge_of_strict ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   unit => pp => edge_action => pp =>
+   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_edge_of_strict owner_of locations_of keep_local publish_side transfer ctx
+      read_node action write_node =
+    map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+      (placed_dg_edge_tree_strict owner_of locations_of keep_local publish_side
+        (transfer action) read_node write_node))"
+
+definition placed_dg_combine_of_strict ::
+  "(vname => bool) => (pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   unit => pp => call_action => pp => pp =>
+   (pp \<times> unit, unit, ('a::bounded_semilattice_sup_bot exec_dg_st,
+     'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
+      ctx caller action callee continuation =
+    (case action of CallEdge destination parameters arguments =>
+      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+        (placed_dg_combine_tree_strict owner_of locations_of keep_local publish_side
+          (\<lambda>destination caller_state callee_state side_state.
+            combine_collect_resolved_for_q source_global destination
+              (caller_state \<squnion> side_state) (callee_state \<squnion> side_state))
+          destination caller callee continuation)))"
+
+definition placed_dg_enter_of_strict ::
+  "(pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (vname list => aexp list =>
+     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   unit => pp => call_action => pp =>
+   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
+where
+  "placed_dg_enter_of_strict owner_of locations_of keep_local publish_side enter ctx
+      caller action callee =
+    (case action of CallEdge destination parameters arguments =>
+      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+        (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
+          enter parameters arguments caller callee)))"
+
+definition placed_dg_gen_of_strict ::
+  "(vname => bool) => (pp => pname) => (pp => location list) =>
+   (scoped_location => bool) => (scoped_location => bool) =>
+   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
+   (vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st) =>
+   cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
+   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
+where
+  "placed_dg_gen_of_strict source_global owner_of locations_of keep_local publish_side
+      transfer enter graph bot0 s0d s0g =
+    side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
+      (placed_dg_edge_of_strict owner_of locations_of keep_local publish_side transfer)
+      (placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side)
+      (placed_dg_enter_of_strict owner_of locations_of keep_local publish_side enter)
+      graph bot0 s0d s0g"
+
+
+definition placed_abs_dg_edge_of ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
+   (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
+   (edge_action \<Rightarrow>
+     ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   unit \<Rightarrow> pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow>
+   (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
+where
+  "placed_abs_dg_edge_of source_global owner_of keep_local publish_side
+      transfer ctx read_node action write_node =
+    map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+      (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
+        (transfer action) read_node write_node))"
+
+definition placed_abs_dg_combine_of ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
+   (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
+   unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow>
+   (pp \<times> unit, unit,
+     ('a::bounded_semilattice_sup_bot abs_state, 'a abs_state) dg_state)
+       strategy_tree"
+where
+  "placed_abs_dg_combine_of source_global owner_of keep_local publish_side
+      ctx caller action callee continuation =
+    (case action of CallEdge destination parameters arguments \<Rightarrow>
+      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+        (placed_abs_dg_combine_tree source_global owner_of
+          keep_local publish_side
+          (\<lambda>destination caller_state callee_state side_state.
+            combine_collect_abs source_global destination
+              (caller_state \<squnion> side_state)
+              (callee_state \<squnion> side_state))
+          destination caller callee continuation)))"
+
+definition placed_abs_dg_enter_of ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
+   (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
+   (vname list \<Rightarrow> aexp list \<Rightarrow>
+     ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow>
+   (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
+where
+  "placed_abs_dg_enter_of source_global owner_of keep_local publish_side
+      enter ctx caller action callee =
+    (case action of CallEdge destination parameters arguments \<Rightarrow>
+      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
+        (placed_abs_dg_enter_tree source_global owner_of
+          keep_local publish_side enter parameters arguments caller callee)))"
+
+definition placed_abs_dg_gen_of ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
+   (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
+   (edge_action \<Rightarrow>
+     ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   (vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   cfg \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow>
+   (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) eqsT"
+where
+  "placed_abs_dg_gen_of source_global owner_of keep_local publish_side
+      transfer enter graph bot0 s0d s0g =
+    side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
+      (placed_abs_dg_edge_of source_global owner_of
+        keep_local publish_side transfer)
+      (placed_abs_dg_combine_of source_global owner_of
+        keep_local publish_side)
+      (placed_abs_dg_enter_of source_global owner_of
+        keep_local publish_side enter)
+      graph bot0 s0d s0g"
+
+
+
+
+lemma lookup_placed_dg_enter_tree_classic_local:
+  fixes enter :: "vname list => aexp list =>
+    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes relevant:
+    "target \<in> set (locations_of callee @
+      effective_support
+        (rep_resolved_st
+          (enter parameters arguments
+            (locals (sigma (Inl caller)) \<squnion>
+             globs (sigma (Inr ()))))))"
+  shows
+    "lookup_resolved_st_q
+      (locals (traverse_rhs
+        (placed_dg_enter_tree owner_of locations_of
+          Exec_Placement.classic_keep_local
+          Exec_Placement.classic_publish_side
+          enter parameters arguments caller callee) sigma)) target =
+     lookup_resolved_st_q
+      (locals (traverse_rhs
+        (dg_edge_tree (unit_step_st (enter parameters arguments)) caller) sigma)) target"
+  unfolding placed_dg_enter_tree_def
+  by (rule lookup_placed_dg_edge_tree_classic_local[
+    where transfer = "enter parameters arguments" and read_node = caller
+      and write_node = callee and sigma = sigma and target = target
+      and owner_of = owner_of and locations_of = locations_of, OF relevant])
+
+lemma lookup_placed_dg_enter_tree_classic_side:
+  fixes enter :: "vname list => aexp list =>
+    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes relevant:
+    "target \<in> set (locations_of callee @
+      effective_support
+        (rep_resolved_st
+          (enter parameters arguments
+            (locals (sigma (Inl caller)) \<squnion>
+             globs (sigma (Inr ()))))))"
+  shows
+    "lookup_resolved_st_q
+      (globs (sides_of_rhs
+        (placed_dg_enter_tree owner_of locations_of
+          Exec_Placement.classic_keep_local
+          Exec_Placement.classic_publish_side
+          enter parameters arguments caller callee) sigma (Inr ()))) target =
+     lookup_resolved_st_q
+      (globs (sides_of_rhs
+        (dg_edge_tree (unit_step_st (enter parameters arguments)) caller) sigma
+          (Inr ()))) target"
+  unfolding placed_dg_enter_tree_def
+  by (rule lookup_placed_dg_edge_tree_classic_side[
+    where transfer = "enter parameters arguments" and read_node = caller
+      and write_node = callee and sigma = sigma and target = target
+      and owner_of = owner_of and locations_of = locations_of, OF relevant])
 
 subsection \<open>Per-tree traversal commutation\<close>
 
@@ -449,6 +2308,393 @@ next
   show ?case by (simp add: dep_aux_seqcomp hd ih)
 qed
 
+subsection \<open>Classifier-parametric fold transport\<close>
+
+text \<open>
+  Classifier-parametric counterparts of \<open>side_acc_dg_commute\<close> and
+  \<open>sides_side_rhs_fold_dg_commute\<close>: same fold-commute argument, reading through
+  \<open>fun_of_exec_dg_st_for gs\<close>/\<open>fun_of_dg_st_for gs\<close> instead of the \<open>is_global\<close>-fixed
+  readback.  \<open>dep_aux_side_rhs_fold_dg_commute\<close> already never mentions a
+  readback, so it transports unchanged.
+\<close>
+
+lemma side_acc_dg_commute_for:
+  assumes "list_all2 (\<lambda>t_st t_abs.
+             fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st))
+           ts_st ts_abs"
+  shows "fun_of_exec_dg_st_for gs (side_acc_dg acc_st \<sigma>_st ts_st)
+           = side_acc_dg (fun_of_exec_dg_st_for gs acc_st) (fun_of_dg_st_for gs \<circ> \<sigma>_st) ts_abs"
+  using assms
+proof (induction ts_st ts_abs arbitrary: acc_st rule: list_all2_induct)
+  case Nil
+  thus ?case by simp
+next
+  case (Cons t_st ts_st t_abs ts_abs)
+  have hl: "fun_of_exec_dg_st_for gs (locals (traverse_rhs t_st \<sigma>_st))
+              = locals (traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st))"
+    using Cons.hyps(1) by (metis fun_of_dg_st_for_simps(1))
+  have h: "fun_of_exec_dg_st_for gs (acc_st \<squnion> locals (traverse_rhs t_st \<sigma>_st))
+           = fun_of_exec_dg_st_for gs acc_st \<squnion> locals (traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st))"
+    unfolding fun_of_exec_dg_st_for_def
+    by (simp add: fun_of_resolved_st_q_for_sup hl[unfolded fun_of_exec_dg_st_for_def])
+  show ?case
+    by (metis (no_types, lifting) Cons.IH h side_acc_dg.simps(2))
+qed
+
+lemma sides_side_rhs_fold_dg_commute_for:
+  assumes "list_all2 (\<lambda>t_st t_abs.
+             fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+             \<and> (\<forall>k. fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k))
+           ts_st ts_abs"
+  shows "fun_of_dg_st_for gs (sides_of_rhs (side_rhs_fold_dg acc_st ts_st) \<sigma>_st k)
+           = sides_of_rhs (side_rhs_fold_dg acc_abs ts_abs) (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+  using assms
+proof (induction ts_st ts_abs arbitrary: acc_st acc_abs rule: list_all2_induct)
+  case Nil
+  thus ?case by (simp add: fun_of_dg_st_for_bot bot_fun_def)
+next
+  case (Cons t_st ts_st t_abs ts_abs)
+  have sd: "fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+    using Cons.hyps(1) by simp
+  have ih: "fun_of_dg_st_for gs (sides_of_rhs (side_rhs_fold_dg (acc_st \<squnion> locals (traverse_rhs t_st \<sigma>_st)) ts_st) \<sigma>_st k)
+          = sides_of_rhs (side_rhs_fold_dg (acc_abs \<squnion> locals (traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st))) ts_abs) (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+    by (rule Cons.IH)
+  show ?case
+    by (simp add: sides_of_rhs_seqcomp fun_of_dg_st_for_sup sd ih comp_def)
+qed
+
+subsection \<open>Scoped fold transport\<close>
+
+text \<open>
+  Scoped counterparts of \<open>side_acc_dg_commute_for\<close> and
+  \<open>sides_side_rhs_fold_dg_commute_for\<close>: instead of full \<open>fun_of_dg_st_for\<close>
+  equality per tree, each tree's output need only \<^const>\<open>dg_refines_on\<close> a finite
+  scope.  \<^const>\<open>dg_refines_on\<close> is closed under \<open>\<squnion>\<close> (\<open>dg_refines_on_sup\<close>) and holds
+  trivially at \<open>bot\<close> (\<open>dg_refines_on_bot\<close>), so the fold argument is the same
+  induction as the classifier-parametric version, just carried through
+  \<open>dg_refines_on\<close> instead of equality.  Locals and sides are wrapped as
+  \<open>DG _ bot\<close> / \<open>DG bot _\<close> so \<^const>\<open>dg_refines_on\<close>'s own locals/globs pairing
+  can be reused unchanged.
+\<close>
+
+lemma bot_abs_state_apply [simp]:
+  "(bot :: ('a::bot) abs_state) x = bot"
+  by (simp add: bot_fun_def)
+
+text \<open>
+  Proved pointwise: \<open>lookup_resolved_st_q ... loc :: 'a\<close> and \<open>abs_val x :: 'a\<close> are
+  both scalar, so the induction never touches a function-typed \<open>bot\<close> as a whole
+  value --- the earlier attempt through \<^const>\<open>dg_refines_on\<close>'s \<open>DG _ bot\<close>
+  wrapping kept producing syntactically different (though equal) eta-forms of
+  \<open>bot :: 'a abs_state\<close> that \<open>simp\<close> would not always bridge.  The DG-wrapped
+  \<^const>\<open>dg_refines_on\<close> statements below are recovered as thin corollaries of
+  the pointwise facts.
+\<close>
+
+lemma side_acc_dg_lookup_refines_on:
+  assumes list_refines: "list_all2 (\<lambda>t_st t_abs. \<forall>loc\<in>universe.
+             lookup_resolved_st_q (locals (traverse_rhs t_st \<sigma>_st)) loc =
+             locals (traverse_rhs t_abs \<sigma>_abs) (location_vname loc))
+           ts_st ts_abs"
+    and acc_refines: "\<forall>loc\<in>universe. lookup_resolved_st_q acc_st loc = acc_abs (location_vname loc)"
+  shows "\<forall>loc\<in>universe. lookup_resolved_st_q (side_acc_dg acc_st \<sigma>_st ts_st) loc =
+      side_acc_dg acc_abs \<sigma>_abs ts_abs (location_vname loc)"
+proof -
+  have general: "list_all2 (\<lambda>t_st t_abs. \<forall>loc\<in>universe.
+             lookup_resolved_st_q (locals (traverse_rhs t_st \<sigma>_st)) loc =
+             locals (traverse_rhs t_abs \<sigma>_abs) (location_vname loc))
+           ts_st ts_abs \<Longrightarrow>
+      (\<forall>loc\<in>universe. lookup_resolved_st_q p loc = q (location_vname loc)) \<Longrightarrow>
+      (\<forall>loc\<in>universe. lookup_resolved_st_q (side_acc_dg p \<sigma>_st ts_st) loc =
+        side_acc_dg q \<sigma>_abs ts_abs (location_vname loc))"
+    for p q ts_st ts_abs
+  proof (induction ts_st ts_abs arbitrary: p q rule: list_all2_induct)
+    case Nil
+    thus ?case by simp
+  next
+    case (Cons t_st ts_st t_abs ts_abs)
+    have hd: "\<forall>loc\<in>universe. lookup_resolved_st_q (locals (traverse_rhs t_st \<sigma>_st)) loc =
+        locals (traverse_rhs t_abs \<sigma>_abs) (location_vname loc)"
+      using Cons.hyps(1) by simp
+    have step: "\<forall>loc\<in>universe. lookup_resolved_st_q (p \<squnion> locals (traverse_rhs t_st \<sigma>_st)) loc =
+        (q \<squnion> locals (traverse_rhs t_abs \<sigma>_abs)) (location_vname loc)"
+      using Cons.prems hd by (simp add: sup_fun_def)
+    show ?case
+      using Cons.IH[where p = "p \<squnion> locals (traverse_rhs t_st \<sigma>_st)"
+        and q = "q \<squnion> locals (traverse_rhs t_abs \<sigma>_abs)", OF step]
+      by (metis side_acc_dg.simps(2))
+  qed
+  show ?thesis using list_refines acc_refines by (rule general)
+qed
+
+lemma side_acc_dg_refines_on:
+  assumes list_refines: "list_all2 (\<lambda>t_st t_abs. dg_refines_on universe
+             (DG (locals (traverse_rhs t_st \<sigma>_st)) bot)
+             (DG (locals (traverse_rhs t_abs \<sigma>_abs)) bot))
+           ts_st ts_abs"
+    and acc_refines: "dg_refines_on universe (DG acc_st bot) (DG acc_abs bot)"
+  shows "dg_refines_on universe
+    (DG (side_acc_dg acc_st \<sigma>_st ts_st) bot)
+    (DG (side_acc_dg acc_abs \<sigma>_abs ts_abs) bot)"
+proof (rule dg_refines_onI)
+  fix location assume loc: "location \<in> universe"
+  have lr: "list_all2 (\<lambda>t_st t_abs. \<forall>l\<in>universe.
+             lookup_resolved_st_q (locals (traverse_rhs t_st \<sigma>_st)) l =
+             locals (traverse_rhs t_abs \<sigma>_abs) (location_vname l)) ts_st ts_abs"
+    using list_refines by (rule list_all2_mono) (fastforce dest: dg_refines_onD_local)
+  have ar: "\<forall>l\<in>universe. lookup_resolved_st_q acc_st l = acc_abs (location_vname l)"
+    using acc_refines by (fastforce dest: dg_refines_onD_local)
+  have combined: "\<forall>l\<in>universe. lookup_resolved_st_q (side_acc_dg acc_st \<sigma>_st ts_st) l =
+      side_acc_dg acc_abs \<sigma>_abs ts_abs (location_vname l)"
+    using ar lr side_acc_dg_lookup_refines_on by blast
+  show "lookup_resolved_st_q (locals (DG (side_acc_dg acc_st \<sigma>_st ts_st) bot)) location =
+      locals (DG (side_acc_dg acc_abs \<sigma>_abs ts_abs) bot) (location_vname location)"
+    using combined loc by simp
+next
+  fix location assume "location \<in> universe"
+  show "lookup_resolved_st_q (globs (DG (side_acc_dg acc_st \<sigma>_st ts_st) bot)) location =
+      globs (DG (side_acc_dg acc_abs \<sigma>_abs ts_abs) bot) (location_vname location)"
+    by simp
+qed
+
+lemma sides_side_rhs_fold_dg_lookup_refines_on:
+  assumes sides_refines: "list_all2 (\<lambda>t_st t_abs. \<forall>loc\<in>universe.
+             lookup_resolved_st_q (globs (sides_of_rhs t_st \<sigma>_st (Inr ()))) loc =
+             globs (sides_of_rhs t_abs \<sigma>_abs (Inr ())) (location_vname loc))
+           ts_st ts_abs"
+  shows "\<forall>loc\<in>universe.
+      lookup_resolved_st_q (globs (sides_of_rhs (side_rhs_fold_dg acc_st ts_st) \<sigma>_st (Inr ()))) loc =
+      globs (sides_of_rhs (side_rhs_fold_dg acc_abs ts_abs) \<sigma>_abs (Inr ())) (location_vname loc)"
+proof -
+  have general: "list_all2 (\<lambda>t_st t_abs. \<forall>loc\<in>universe.
+             lookup_resolved_st_q (globs (sides_of_rhs t_st \<sigma>_st (Inr ()))) loc =
+             globs (sides_of_rhs t_abs \<sigma>_abs (Inr ())) (location_vname loc))
+           ts_st ts_abs \<Longrightarrow>
+      (\<forall>loc\<in>universe.
+        lookup_resolved_st_q (globs (sides_of_rhs (side_rhs_fold_dg p ts_st) \<sigma>_st (Inr ()))) loc =
+        globs (sides_of_rhs (side_rhs_fold_dg q ts_abs) \<sigma>_abs (Inr ())) (location_vname loc))"
+    for p q ts_st ts_abs
+  proof (induction ts_st ts_abs arbitrary: p q rule: list_all2_induct)
+    case Nil
+    thus ?case by (simp add: bot_dg_state_def) 
+  next
+    case (Cons t_st ts_st t_abs ts_abs)
+    have sd: "\<forall>loc\<in>universe.
+        lookup_resolved_st_q (globs (sides_of_rhs t_st \<sigma>_st (Inr ()))) loc =
+        globs (sides_of_rhs t_abs \<sigma>_abs (Inr ())) (location_vname loc)"
+      using Cons.hyps(1) by simp
+    have ih: "\<forall>loc\<in>universe.
+        lookup_resolved_st_q (globs (sides_of_rhs
+          (side_rhs_fold_dg (p \<squnion> locals (traverse_rhs t_st \<sigma>_st)) ts_st) \<sigma>_st (Inr ()))) loc =
+        globs (sides_of_rhs
+          (side_rhs_fold_dg (q \<squnion> locals (traverse_rhs t_abs \<sigma>_abs)) ts_abs) \<sigma>_abs (Inr ()))
+          (location_vname loc)"
+      by (rule Cons.IH)
+    show ?case
+      using sd ih
+      by (simp add: sides_of_rhs_seqcomp sup_dg_state_def sup_fun_def)
+  qed
+  show ?thesis using sides_refines by (rule general)
+qed
+
+lemma sides_side_rhs_fold_dg_refines_on:
+  assumes list_refines: "list_all2 (\<lambda>t_st t_abs. dg_refines_on universe
+             (DG (locals (traverse_rhs t_st \<sigma>_st)) bot)
+             (DG (locals (traverse_rhs t_abs \<sigma>_abs)) bot)
+           \<and> dg_refines_on universe
+             (DG bot (globs (sides_of_rhs t_st \<sigma>_st (Inr ()))))
+             (DG bot (globs (sides_of_rhs t_abs \<sigma>_abs (Inr ())))))
+           ts_st ts_abs"
+  shows "dg_refines_on universe
+    (DG bot (globs (sides_of_rhs (side_rhs_fold_dg acc_st ts_st) \<sigma>_st (Inr ()))))
+    (DG bot (globs (sides_of_rhs (side_rhs_fold_dg acc_abs ts_abs) \<sigma>_abs (Inr ()))))"
+proof (rule dg_refines_onI)
+  fix location assume "location \<in> universe"
+  show "lookup_resolved_st_q
+      (locals (DG bot (globs (sides_of_rhs (side_rhs_fold_dg acc_st ts_st) \<sigma>_st (Inr ()))))) location =
+      locals (DG bot (globs (sides_of_rhs (side_rhs_fold_dg acc_abs ts_abs) \<sigma>_abs (Inr ())))) (location_vname location)"
+    by simp
+next
+  fix location assume loc: "location \<in> universe"
+  have sr: "list_all2 (\<lambda>t_st t_abs. \<forall>l\<in>universe.
+             lookup_resolved_st_q (globs (sides_of_rhs t_st \<sigma>_st (Inr ()))) l =
+             globs (sides_of_rhs t_abs \<sigma>_abs (Inr ())) (location_vname l)) ts_st ts_abs"
+    using list_refines by (rule list_all2_mono) (fastforce dest: dg_refines_onD_side)
+  have combined: "\<forall>l\<in>universe.
+      lookup_resolved_st_q (globs (sides_of_rhs (side_rhs_fold_dg acc_st ts_st) \<sigma>_st (Inr ()))) l =
+      globs (sides_of_rhs (side_rhs_fold_dg acc_abs ts_abs) \<sigma>_abs (Inr ())) (location_vname l)"
+    by (rule sides_side_rhs_fold_dg_lookup_refines_on[OF sr])
+  show "lookup_resolved_st_q
+      (globs (DG bot (globs (sides_of_rhs (side_rhs_fold_dg acc_st ts_st) \<sigma>_st (Inr ()))))) location =
+      globs (DG bot (globs (sides_of_rhs (side_rhs_fold_dg acc_abs ts_abs) \<sigma>_abs (Inr ()))))
+        (location_vname location)"
+    using combined loc by simp
+qed
+
+text \<open>
+  Support and default transport through the same two folds, needed
+  alongside the \<open>_refines_on\<close> facts above to invoke the inequality-lifting
+  lemma at the generator level: the fold's own accumulator and each folded
+  tree's local output are both scope-bounded and bot-defaulted (by the
+  strict projection), so the whole fold is too.
+\<close>
+
+lemma side_acc_dg_support_bounded:
+  fixes acc :: "('a::bounded_semilattice_sup_bot) exec_dg_st"
+  assumes acc_bounded: "set (effective_support (rep_resolved_st acc)) \<subseteq> scope"
+    and trees_bounded: "\<forall>t \<in> set ts.
+      set (effective_support (rep_resolved_st (locals (traverse_rhs t sigma)))) \<subseteq> scope"
+  shows "set (effective_support (rep_resolved_st (side_acc_dg acc sigma ts))) \<subseteq> scope"
+proof -
+  have general: "set (effective_support (rep_resolved_st p)) \<subseteq> scope \<Longrightarrow>
+      (\<forall>t \<in> set ts. set (effective_support (rep_resolved_st (locals (traverse_rhs t sigma)))) \<subseteq> scope) \<Longrightarrow>
+      set (effective_support (rep_resolved_st (side_acc_dg p sigma ts))) \<subseteq> scope"
+    for p ts
+  proof (induction ts arbitrary: p)
+    case Nil
+    thus ?case by simp
+  next
+    case (Cons t ts)
+    have step: "set (effective_support (rep_resolved_st
+        (p \<squnion> locals (traverse_rhs t sigma)))) \<subseteq> scope"
+    proof -
+      have "set (effective_support (rep_resolved_st (p \<squnion> locals (traverse_rhs t sigma)))) \<subseteq>
+          set (effective_support (rep_resolved_st p)) \<union>
+          set (effective_support (rep_resolved_st (locals (traverse_rhs t sigma))))"
+        by (rule effective_support_rep_sup_resolved_st_q)
+      also have "\<dots> \<subseteq> scope"
+        using Cons.prems by auto
+      finally show ?thesis .
+    qed
+    show ?case
+      using Cons.IH[OF step] Cons.prems by simp
+  qed
+  show ?thesis using acc_bounded trees_bounded by (rule general)
+qed
+
+lemma side_acc_dg_default_bot:
+  fixes acc :: "('a::bounded_semilattice_sup_bot) exec_dg_st"
+  assumes acc_default: "resolved_default (rep_resolved_st acc) = (\<lambda>_. bot)"
+    and trees_default: "\<forall>t \<in> set ts.
+      resolved_default (rep_resolved_st (locals (traverse_rhs t sigma))) = (\<lambda>_. bot)"
+  shows "resolved_default (rep_resolved_st (side_acc_dg acc sigma ts)) = (\<lambda>_. bot)"
+proof -
+  have general: "resolved_default (rep_resolved_st p) = (\<lambda>_. bot) \<Longrightarrow>
+      (\<forall>t \<in> set ts. resolved_default (rep_resolved_st (locals (traverse_rhs t sigma))) = (\<lambda>_. bot)) \<Longrightarrow>
+      resolved_default (rep_resolved_st (side_acc_dg p sigma ts)) = (\<lambda>_. bot)"
+    for p ts
+  proof (induction ts arbitrary: p)
+    case Nil
+    thus ?case by simp
+  next
+    case (Cons t ts)
+    have step: "resolved_default (rep_resolved_st
+        (p \<squnion> locals (traverse_rhs t sigma))) = (\<lambda>_. bot)"
+    proof -
+      have "resolved_default (rep_resolved_st (p \<squnion> locals (traverse_rhs t sigma))) loc =
+          resolved_default (rep_resolved_st p) loc \<squnion>
+          resolved_default (rep_resolved_st (locals (traverse_rhs t sigma))) loc" for loc
+        by (rule resolved_default_rep_sup_resolved_st_q)
+      then show ?thesis
+        using Cons.prems by (simp add: fun_eq_iff)
+    qed
+    show ?case
+      using Cons.IH[OF step] Cons.prems by simp
+  qed
+  show ?thesis using acc_default trees_default by (rule general)
+qed
+
+lemma sides_side_rhs_fold_dg_support_bounded:
+  assumes trees_bounded: "\<forall>t \<in> set ts.
+    set (effective_support (rep_resolved_st (globs (sides_of_rhs t sigma (Inr ()))))) \<subseteq> scope"
+  shows "set (effective_support (rep_resolved_st
+    (globs (sides_of_rhs (side_rhs_fold_dg acc ts) sigma (Inr ()))))) \<subseteq> scope"
+proof -
+  have general: "(\<forall>t \<in> set ts.
+      set (effective_support (rep_resolved_st (globs (sides_of_rhs t sigma (Inr ()))))) \<subseteq> scope) \<Longrightarrow>
+      set (effective_support (rep_resolved_st
+        (globs (sides_of_rhs (side_rhs_fold_dg p ts) sigma (Inr ()))))) \<subseteq> scope"
+    for p ts
+  proof (induction ts arbitrary: p)
+    case Nil
+    thus ?case by (simp add: bot_dg_state_def)
+  next
+    case (Cons t ts)
+    have hd: "set (effective_support (rep_resolved_st
+        (globs (sides_of_rhs t sigma (Inr ()))))) \<subseteq> scope"
+      using Cons.prems by simp
+    have ih: "set (effective_support (rep_resolved_st
+        (globs (sides_of_rhs (side_rhs_fold_dg
+          (p \<squnion> locals (traverse_rhs t sigma)) ts) sigma (Inr ()))))) \<subseteq> scope"
+      by (rule Cons.IH) (use Cons.prems in simp)
+    show ?case
+    proof -
+      have "set (effective_support (rep_resolved_st
+          (globs (sides_of_rhs (side_rhs_fold_dg p (t # ts)) sigma (Inr ()))))) =
+        set (effective_support (rep_resolved_st
+          (globs (sides_of_rhs t sigma (Inr ())) \<squnion>
+           globs (sides_of_rhs
+             (side_rhs_fold_dg (p \<squnion> locals (traverse_rhs t sigma)) ts) sigma (Inr ())))))"
+        by (simp add: sides_of_rhs_seqcomp sup_dg_state_def)
+      also have "\<dots> \<subseteq>
+          set (effective_support (rep_resolved_st (globs (sides_of_rhs t sigma (Inr ()))))) \<union>
+          set (effective_support (rep_resolved_st
+            (globs (sides_of_rhs
+              (side_rhs_fold_dg (p \<squnion> locals (traverse_rhs t sigma)) ts) sigma (Inr ())))))"
+        by (rule effective_support_rep_sup_resolved_st_q)
+      also have "\<dots> \<subseteq> scope" using hd ih by auto
+      finally show ?thesis .
+    qed
+  qed
+  show ?thesis using trees_bounded by (rule general)
+qed
+
+lemma sides_side_rhs_fold_dg_default_bot:
+  assumes trees_default: "\<forall>t \<in> set ts.
+    resolved_default (rep_resolved_st (globs (sides_of_rhs t sigma (Inr ())))) = (\<lambda>_. bot)"
+  shows "resolved_default (rep_resolved_st
+    (globs (sides_of_rhs (side_rhs_fold_dg acc ts) sigma (Inr ())))) = (\<lambda>_. bot)"
+proof -
+  have general: "(\<forall>t \<in> set ts.
+      resolved_default (rep_resolved_st (globs (sides_of_rhs t sigma (Inr ())))) = (\<lambda>_. bot)) \<Longrightarrow>
+      resolved_default (rep_resolved_st
+        (globs (sides_of_rhs (side_rhs_fold_dg p ts) sigma (Inr ())))) = (\<lambda>_. bot)"
+    for p ts
+  proof (induction ts arbitrary: p)
+    case Nil
+    thus ?case by (simp add: bot_dg_state_def resolved_default_rep_bot_resolved_st_q)
+  next
+    case (Cons t ts)
+    have hd: "resolved_default (rep_resolved_st
+        (globs (sides_of_rhs t sigma (Inr ())))) = (\<lambda>_. bot)"
+      using Cons.prems by simp
+    have ih: "resolved_default (rep_resolved_st
+        (globs (sides_of_rhs (side_rhs_fold_dg
+          (p \<squnion> locals (traverse_rhs t sigma)) ts) sigma (Inr ())))) = (\<lambda>_. bot)"
+      by (rule Cons.IH) (use Cons.prems in simp)
+    show ?case
+    proof -
+      have "resolved_default (rep_resolved_st
+          (globs (sides_of_rhs (side_rhs_fold_dg p (t # ts)) sigma (Inr ())))) =
+        resolved_default (rep_resolved_st
+          (globs (sides_of_rhs t sigma (Inr ())) \<squnion>
+           globs (sides_of_rhs
+             (side_rhs_fold_dg (p \<squnion> locals (traverse_rhs t sigma)) ts) sigma (Inr ()))))"
+        by (simp add: sides_of_rhs_seqcomp sup_dg_state_def)
+      also have "\<dots> = (\<lambda>loc.
+          resolved_default (rep_resolved_st (globs (sides_of_rhs t sigma (Inr ())))) loc \<squnion>
+          resolved_default (rep_resolved_st
+            (globs (sides_of_rhs
+              (side_rhs_fold_dg (p \<squnion> locals (traverse_rhs t sigma)) ts) sigma (Inr ())))) loc)"
+        by (rule ext) (rule resolved_default_rep_sup_resolved_st_q)
+      also have "\<dots> = (\<lambda>_. bot)"
+        using hd ih by (simp add: fun_eq_iff)
+      finally show ?thesis .
+    qed
+  qed
+  show ?thesis using trees_default by (rule general)
+qed
+
 subsection \<open>Bundled per-tree transport relation\<close>
 
 text \<open>
@@ -494,6 +2740,54 @@ lemma dg_tree_st_commute_dep:
   "dg_tree_st_commute \<sigma>_st t_st t_abs
      \<Longrightarrow> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st \<circ> \<sigma>_st) t_abs"
   by (simp add: dg_tree_st_commute_def)
+
+definition dg_tree_st_commute_for ::
+  "(vname => bool)
+   \<Rightarrow> ('u + 'k \<Rightarrow> (('a::bounded_semilattice_sup_bot) exec_dg_st, ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state)
+   \<Rightarrow> ('u, 'k, ('a exec_dg_st, 'b exec_dg_st) dg_state) strategy_tree
+   \<Rightarrow> ('u, 'k, ('a abs_state, 'b abs_state) dg_state) strategy_tree \<Rightarrow> bool"
+where
+  "dg_tree_st_commute_for gs \<sigma>_st t_st t_abs \<longleftrightarrow>
+     fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+   \<and> (\<forall>k. fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k)
+   \<and> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st) t_abs"
+
+lemma dg_tree_st_commute_for_is_global:
+  "dg_tree_st_commute_for is_global = dg_tree_st_commute"
+  unfolding dg_tree_st_commute_for_def dg_tree_st_commute_def fun_of_dg_st_for_is_global
+  by (rule refl)
+
+lemma dg_tree_st_commute_for_trav:
+  "dg_tree_st_commute_for gs \<sigma>_st t_st t_abs
+     \<Longrightarrow> fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)"
+  by (simp add: dg_tree_st_commute_for_def)
+
+lemma dg_tree_st_commute_for_sides:
+  "dg_tree_st_commute_for gs \<sigma>_st t_st t_abs
+     \<Longrightarrow> fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+  by (simp add: dg_tree_st_commute_for_def)
+
+lemma dg_tree_st_commute_for_dep:
+  "dg_tree_st_commute_for gs \<sigma>_st t_st t_abs
+     \<Longrightarrow> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st) t_abs"
+  by (simp add: dg_tree_st_commute_for_def)
+
+lemma dg_list_commute_trav_for:
+  "list_all2 (dg_tree_st_commute_for gs \<sigma>_st) ts_st ts_abs
+     \<Longrightarrow> list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st)
+                    = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)) ts_st ts_abs"
+  by (erule list_all2_mono) (simp add: dg_tree_st_commute_for_def)
+
+lemma dg_list_commute_travsides_for:
+  "list_all2 (dg_tree_st_commute_for gs \<sigma>_st) ts_st ts_abs
+     \<Longrightarrow> list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+              \<and> (\<forall>k. fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k)) ts_st ts_abs"
+  by (erule list_all2_mono) (simp add: dg_tree_st_commute_for_def)
+
+lemma dg_list_commute_dep_for:
+  "list_all2 (dg_tree_st_commute_for gs \<sigma>_st) ts_st ts_abs
+     \<Longrightarrow> list_all2 (\<lambda>t_st t_abs. dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st) t_abs) ts_st ts_abs"
+  by (erule list_all2_mono) (simp add: dg_tree_st_commute_for_def)
 
 text \<open>The intra per-edge tree, relabelled by an arbitrary global key \<open>gk\<close> and
   local relabel \<open>lk\<close>, satisfies the bundled relation whenever the analysis step
@@ -812,6 +3106,473 @@ proof -
            OF Hstep hr hc he pp'])
 qed
 
+subsection \<open>Hook-tree transport for the representation-neutral generator\<close>
+
+text \<open>
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_trees\<close> (DG_Framework) is representation-neutral:
+  its dependency and side-effect bookkeeping never inspect the tree constructors
+  it is given, only which nodes each supplied tree queries.  An executable/abstract
+  pair of edge, combine, and enter hooks therefore transports a partial
+  post-solution whenever each hook pair commutes under \<open>fun_of_dg_st\<close>, exactly as
+  the classic \<open>dg_spec\<close>-shaped generator does for \<open>dg_spec_step\<close>/\<open>route\<close>/\<open>cmb\<close>/
+  \<open>extra\<close>.  Unlike that generator, the hook parametrisation never routes to a
+  dynamic global key, so no \<open>route\<close> hypothesis is needed.
+\<close>
+
+lemma dg_hook_list_commute:
+  assumes Hedge: "\<And>u a. dg_tree_st_commute \<sigma>_st
+        (edge_tree_st ctx u a v) (edge_tree_abs ctx u a v)"
+    and Hcombine: "\<And>cc ca ex. dg_tree_st_commute \<sigma>_st
+        (combine_tree_st ctx cc ca ex v) (combine_tree_abs ctx cc ca ex v)"
+    and Henter: "\<And>cc ca. dg_tree_st_commute \<sigma>_st
+        (enter_tree_st ctx cc ca v) (enter_tree_abs ctx cc ca v)"
+  shows "list_all2 (dg_tree_st_commute \<sigma>_st)
+    (map (\<lambda>(u, a). edge_tree_st ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca v) (entry_call_list g v))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca v) (entry_call_list g v))"
+  by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl
+                 Hedge Hcombine Henter split_beta)
+
+lemma eq_hook_gen_commute:
+  assumes Hedge: "\<And>u a w. dg_tree_st_commute \<sigma>_st
+        (edge_tree_st ctx u a w) (edge_tree_abs ctx u a w)"
+    and Hcombine: "\<And>cc ca ex w. dg_tree_st_commute \<sigma>_st
+        (combine_tree_st ctx cc ca ex w) (combine_tree_abs ctx cc ca ex w)"
+    and Henter: "\<And>cc ca w. dg_tree_st_commute \<sigma>_st
+        (enter_tree_st ctx cc ca w) (enter_tree_abs ctx cc ca w)"
+  shows
+    "fun_of_dg_st
+      (eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+            edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) (v, ctx) \<sigma>_st)
+     = eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+            edge_tree_abs combine_tree_abs enter_tree_abs g
+            (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g))
+          (v, ctx) (fun_of_dg_st \<circ> \<sigma>_st)"
+proof -
+  have la: "list_all2 (\<lambda>t_st t_abs. fun_of_dg_st (traverse_rhs t_st \<sigma>_st)
+                    = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st))
+    (map (\<lambda>(u, a). edge_tree_st ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca v) (entry_call_list g v))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca v) (entry_call_list g v))"
+    by (rule dg_list_commute_trav[OF dg_hook_list_commute
+      [where edge_tree_st=edge_tree_st and edge_tree_abs=edge_tree_abs
+         and combine_tree_st=combine_tree_st and combine_tree_abs=combine_tree_abs
+         and enter_tree_st=enter_tree_st and enter_tree_abs=enter_tree_abs
+         and pred_sel=pred_sel and g=g and ctx=ctx and v=v, OF Hedge Hcombine Henter]])
+  show ?thesis
+    unfolding eq_side_cfg_T_eff_keyed_seed_trees
+    by (simp add: fun_of_resolved_st_q_for_bot bot_fun_def side_acc_dg_commute[OF la]
+      fun_of_resolved_st_q_for_sup flip: bot_fun_def)
+qed
+
+lemma sides_hook_gen_commute:
+  assumes Hedge: "\<And>u a w. dg_tree_st_commute \<sigma>_st
+        (edge_tree_st ctx u a w) (edge_tree_abs ctx u a w)"
+    and Hcombine: "\<And>cc ca ex w. dg_tree_st_commute \<sigma>_st
+        (combine_tree_st ctx cc ca ex w) (combine_tree_abs ctx cc ca ex w)"
+    and Henter: "\<And>cc ca w. dg_tree_st_commute \<sigma>_st
+        (enter_tree_st ctx cc ca w) (enter_tree_abs ctx cc ca w)"
+  shows "fun_of_dg_st (sides_of_rhs
+             (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+               edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g (v, ctx)) \<sigma>_st k)
+       = sides_of_rhs
+             (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+               edge_tree_abs combine_tree_abs enter_tree_abs g
+                (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g) (v, ctx))
+             (fun_of_dg_st \<circ> \<sigma>_st) k"
+proof -
+  have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. fun_of_dg_st (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st)
+             \<and> (\<forall>k. fun_of_dg_st (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st) k))
+    (map (\<lambda>(u, a). edge_tree_st ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca w) (entry_call_list g w))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca w) (entry_call_list g w))"
+    by (rule dg_list_commute_travsides[OF dg_hook_list_commute
+      [where edge_tree_st=edge_tree_st and edge_tree_abs=edge_tree_abs
+         and combine_tree_st=combine_tree_st and combine_tree_abs=combine_tree_abs
+         and enter_tree_st=enter_tree_st and enter_tree_abs=enter_tree_abs
+         and pred_sel=pred_sel and g=g and ctx=ctx, OF Hedge Hcombine Henter]])
+  have fold: "\<And>w acc_st k. fun_of_dg_st (sides_of_rhs (side_rhs_fold_dg acc_st
+        (map (\<lambda>(u, a). edge_tree_st ctx u a w) (pred_sel g w)
+          @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex w) (return_call_action_list g w)
+          @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca w) (entry_call_list g w))) \<sigma>_st k)
+     = sides_of_rhs (side_rhs_fold_dg (fun_of_exec_dg_st acc_st)
+        (map (\<lambda>(u, a). edge_tree_abs ctx u a w) (pred_sel g w)
+          @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex w) (return_call_action_list g w)
+          @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca w) (entry_call_list g w)))
+          (fun_of_dg_st \<circ> \<sigma>_st) k"
+    by (rule sides_side_rhs_fold_dg_commute[OF la])
+  have seed: "fun_of_dg_st (DG bot s0g) =
+      DG (fun_of_exec_dg_st bot) (fun_of_exec_dg_st s0g)"
+    by (simp add: fun_of_dg_st_def)
+  show ?thesis
+    unfolding side_cfg_T_eff_keyed_seed_trees_def Let_def
+    by (simp add: Let_def fun_upd_apply fun_of_dg_st_sup seed fold fun_of_resolved_st_q_for_sup flip: bot_fun_def)
+qed
+
+lemma dep_hook_gen_commute:
+  assumes Hedge: "\<And>u a w. dg_tree_st_commute \<sigma>_st
+        (edge_tree_st ctx u a w) (edge_tree_abs ctx u a w)"
+    and Hcombine: "\<And>cc ca ex w. dg_tree_st_commute \<sigma>_st
+        (combine_tree_st ctx cc ca ex w) (combine_tree_abs ctx cc ca ex w)"
+    and Henter: "\<And>cc ca w. dg_tree_st_commute \<sigma>_st
+        (enter_tree_st ctx cc ca w) (enter_tree_abs ctx cc ca w)"
+  shows "dep_aux \<sigma>_st (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g (v, ctx))
+       = dep_aux (fun_of_dg_st \<circ> \<sigma>_st) (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g bot0' s0d' s0g' (v, ctx))"
+proof -
+  have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st \<circ> \<sigma>_st) t_abs)
+    (map (\<lambda>(u, a). edge_tree_st ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca w) (entry_call_list g w))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca w) (entry_call_list g w))"
+    by (rule dg_list_commute_dep[OF dg_hook_list_commute
+      [where edge_tree_st=edge_tree_st and edge_tree_abs=edge_tree_abs
+         and combine_tree_st=combine_tree_st and combine_tree_abs=combine_tree_abs
+         and enter_tree_st=enter_tree_st and enter_tree_abs=enter_tree_abs
+         and pred_sel=pred_sel and g=g and ctx=ctx, OF Hedge Hcombine Henter]])
+  show ?thesis
+    unfolding side_cfg_T_eff_keyed_seed_trees_def Let_def
+    by (simp add: dep_aux_Side dep_aux_side_rhs_fold_dg_commute[OF la])
+qed
+
+text \<open>
+  A partial post-solution of the executable placed equation system, mapped
+  value-wise through \<open>fun_of_dg_st\<close>, is a partial post-solution of the abstract
+  hook-parametric system built from the corresponding abstract hooks over the
+  same unknown set --- unknown identity, \<open>vars\<close>, and dependencies are unchanged;
+  only the equation values transport.  The hook constructors, the domain, and
+  the placement policy never appear here: they enter only through the \<open>Hedge\<close>/
+  \<open>Hcombine\<close>/\<open>Henter\<close> commutation hypotheses an instance supplies.
+\<close>
+
+theorem part_post_solution_hook_gen_st_to_abs:
+  assumes Hedge: "\<And>ctx u a v. dg_tree_st_commute \<sigma>_st
+        (edge_tree_st ctx u a v) (edge_tree_abs ctx u a v)"
+    and Hcombine: "\<And>ctx cc ca ex v. dg_tree_st_commute \<sigma>_st
+        (combine_tree_st ctx cc ca ex v) (combine_tree_abs ctx cc ca ex v)"
+    and Henter: "\<And>ctx cc ca v. dg_tree_st_commute \<sigma>_st
+        (enter_tree_st ctx cc ca v) (enter_tree_abs ctx cc ca v)"
+    and pp: "part_post_solution
+               (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                 edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) x \<sigma>_st vars"
+  shows "part_post_solution
+           (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g))
+           x (fun_of_dg_st \<circ> \<sigma>_st) vars"
+proof (intro conjI ballI)
+  show "x \<in> vars" using pp by simp
+next
+  fix u assume u: "u \<in> vars"
+  obtain v c where uv: "u = (v, c)" by (cases u) auto
+  have dl: "dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) \<sigma>_st u \<subseteq> vars"
+    using pp u by simp
+  have "dep_aux (fun_of_dg_st \<circ> \<sigma>_st)
+          (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g) (v, c))
+      = dep_aux \<sigma>_st (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g (v, c))"
+    by (rule dep_hook_gen_commute
+          [where pred_sel=pred_sel and gkey=gkey and g=g, OF Hedge Hcombine Henter, symmetric])
+  hence "dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)) (fun_of_dg_st \<circ> \<sigma>_st) u
+       = dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) \<sigma>_st u"
+    unfolding dep\<^sub>L_def dep_def uv by simp
+  thus "dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)) (fun_of_dg_st \<circ> \<sigma>_st) u \<subseteq> vars"
+    using dl by simp
+next
+  fix u assume u: "u \<in> vars"
+  obtain v c where uv: "u = (v, c)" by (cases u) auto
+  have le: "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) u \<sigma>_st
+              \<le> \<sigma>_st (Inl u)" using pp u by simp
+  have "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)) u (fun_of_dg_st \<circ> \<sigma>_st)
+      = fun_of_dg_st (eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) u \<sigma>_st)"
+      unfolding uv by (rule eq_hook_gen_commute
+            [where pred_sel=pred_sel and gkey=gkey and g=g and ctx=c and v=v and \<sigma>_st=\<sigma>_st,
+             OF Hedge Hcombine Henter, symmetric])
+  also have "\<dots> \<le> fun_of_dg_st (\<sigma>_st (Inl u))" using le by (rule fun_of_dg_st_mono)
+  finally show "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)) u (fun_of_dg_st \<circ> \<sigma>_st)
+              \<le> (fun_of_dg_st \<circ> \<sigma>_st) (Inl u)" by simp
+next
+  fix u assume u: "u \<in> vars"
+  obtain v c where uv: "u = (v, c)" by (cases u) auto
+  have le: "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g u) \<sigma>_st
+              \<le> \<sigma>_st" using pp u by simp
+  show "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g) u) (fun_of_dg_st \<circ> \<sigma>_st)
+           \<le> fun_of_dg_st \<circ> \<sigma>_st"
+  proof (rule le_funI)
+    fix k
+    have "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g) u) (fun_of_dg_st \<circ> \<sigma>_st) k
+        = fun_of_dg_st (sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g u) \<sigma>_st k)"
+      unfolding uv by (rule sides_hook_gen_commute
+            [where pred_sel=pred_sel and gkey=gkey and g=g and ctx=c and v=v and \<sigma>_st=\<sigma>_st,
+             OF Hedge Hcombine Henter, symmetric])
+    also have "\<dots> \<le> fun_of_dg_st (\<sigma>_st k)"
+      using le[THEN le_funD] by (rule fun_of_dg_st_mono)
+    finally show "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g) u) (fun_of_dg_st \<circ> \<sigma>_st) k
+                \<le> (fun_of_dg_st \<circ> \<sigma>_st) k" by simp
+  qed
+qed
+
+subsection \<open>Classifier-parametric hook-tree transport\<close>
+
+text \<open>
+  Classifier-parametric counterpart of the hook-tree transport theorem above,
+  reading the executable state through \<open>fun_of_exec_dg_st_for gs\<close> instead of the
+  \<open>is_global\<close>-fixed readback: a placed executable state written with a
+  declaration-driven classifier must be read back with that same classifier.
+  \<open>part_post_solution_hook_gen_st_to_abs\<close> is the \<open>is_global\<close> instance of
+  \<open>part_post_solution_hook_gen_st_to_abs_for\<close>.
+\<close>
+
+lemma dg_hook_list_commute_for:
+  assumes Hedge: "\<And>u a. dg_tree_st_commute_for gs \<sigma>_st
+        (edge_tree_st ctx u a v) (edge_tree_abs ctx u a v)"
+    and Hcombine: "\<And>cc ca ex. dg_tree_st_commute_for gs \<sigma>_st
+        (combine_tree_st ctx cc ca ex v) (combine_tree_abs ctx cc ca ex v)"
+    and Henter: "\<And>cc ca. dg_tree_st_commute_for gs \<sigma>_st
+        (enter_tree_st ctx cc ca v) (enter_tree_abs ctx cc ca v)"
+  shows "list_all2 (dg_tree_st_commute_for gs \<sigma>_st)
+    (map (\<lambda>(u, a). edge_tree_st ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca v) (entry_call_list g v))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca v) (entry_call_list g v))"
+  by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl
+                 Hedge Hcombine Henter split_beta)
+
+lemma eq_hook_gen_commute_for:
+  assumes Hedge: "\<And>u a w. dg_tree_st_commute_for gs \<sigma>_st
+        (edge_tree_st ctx u a w) (edge_tree_abs ctx u a w)"
+    and Hcombine: "\<And>cc ca ex w. dg_tree_st_commute_for gs \<sigma>_st
+        (combine_tree_st ctx cc ca ex w) (combine_tree_abs ctx cc ca ex w)"
+    and Henter: "\<And>cc ca w. dg_tree_st_commute_for gs \<sigma>_st
+        (enter_tree_st ctx cc ca w) (enter_tree_abs ctx cc ca w)"
+  shows
+    "fun_of_dg_st_for gs
+      (eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+            edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) (v, ctx) \<sigma>_st)
+     = eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+            edge_tree_abs combine_tree_abs enter_tree_abs g
+            (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+          (v, ctx) (fun_of_dg_st_for gs \<circ> \<sigma>_st)"
+proof -
+  have la: "list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st)
+                    = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st))
+    (map (\<lambda>(u, a). edge_tree_st ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca v) (entry_call_list g v))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a v) (pred_sel g v)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex v) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca v) (entry_call_list g v))"
+    by (rule dg_list_commute_trav_for[OF dg_hook_list_commute_for
+      [where edge_tree_st=edge_tree_st and edge_tree_abs=edge_tree_abs
+         and combine_tree_st=combine_tree_st and combine_tree_abs=combine_tree_abs
+         and enter_tree_st=enter_tree_st and enter_tree_abs=enter_tree_abs
+         and pred_sel=pred_sel and g=g and ctx=ctx and v=v, OF Hedge Hcombine Henter]])
+  show ?thesis
+    unfolding eq_side_cfg_T_eff_keyed_seed_trees
+    by (simp add: fun_of_resolved_st_q_for_bot bot_fun_def side_acc_dg_commute_for[OF la]
+      flip: bot_fun_def)
+qed
+
+lemma sides_hook_gen_commute_for:
+  assumes Hedge: "\<And>u a w. dg_tree_st_commute_for gs \<sigma>_st
+        (edge_tree_st ctx u a w) (edge_tree_abs ctx u a w)"
+    and Hcombine: "\<And>cc ca ex w. dg_tree_st_commute_for gs \<sigma>_st
+        (combine_tree_st ctx cc ca ex w) (combine_tree_abs ctx cc ca ex w)"
+    and Henter: "\<And>cc ca w. dg_tree_st_commute_for gs \<sigma>_st
+        (enter_tree_st ctx cc ca w) (enter_tree_abs ctx cc ca w)"
+  shows "fun_of_dg_st_for gs (sides_of_rhs
+             (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+               edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g (v, ctx)) \<sigma>_st k)
+       = sides_of_rhs
+             (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+               edge_tree_abs combine_tree_abs enter_tree_abs g
+                (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g) (v, ctx))
+             (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+proof -
+  have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+             \<and> (\<forall>k. fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k))
+    (map (\<lambda>(u, a). edge_tree_st ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca w) (entry_call_list g w))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca w) (entry_call_list g w))"
+    by (rule dg_list_commute_travsides_for[OF dg_hook_list_commute_for
+      [where edge_tree_st=edge_tree_st and edge_tree_abs=edge_tree_abs
+         and combine_tree_st=combine_tree_st and combine_tree_abs=combine_tree_abs
+         and enter_tree_st=enter_tree_st and enter_tree_abs=enter_tree_abs
+         and pred_sel=pred_sel and g=g and ctx=ctx, OF Hedge Hcombine Henter]])
+  have fold: "\<And>w acc_st k. fun_of_dg_st_for gs (sides_of_rhs (side_rhs_fold_dg acc_st
+        (map (\<lambda>(u, a). edge_tree_st ctx u a w) (pred_sel g w)
+          @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex w) (return_call_action_list g w)
+          @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca w) (entry_call_list g w))) \<sigma>_st k)
+     = sides_of_rhs (side_rhs_fold_dg (fun_of_exec_dg_st_for gs acc_st)
+        (map (\<lambda>(u, a). edge_tree_abs ctx u a w) (pred_sel g w)
+          @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex w) (return_call_action_list g w)
+          @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca w) (entry_call_list g w)))
+          (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+    by (rule sides_side_rhs_fold_dg_commute_for[OF la])
+  have seed: "fun_of_dg_st_for gs (DG bot s0g) =
+      DG (fun_of_exec_dg_st_for gs bot) (fun_of_exec_dg_st_for gs s0g)"
+    by (simp add: fun_of_dg_st_for_def)
+  show ?thesis
+    unfolding side_cfg_T_eff_keyed_seed_trees_def Let_def
+    by (simp add: Let_def fun_upd_apply fun_of_dg_st_for_sup seed fold flip: bot_fun_def)
+qed
+
+lemma dep_hook_gen_commute_for:
+  assumes Hedge: "\<And>u a w. dg_tree_st_commute_for gs \<sigma>_st
+        (edge_tree_st ctx u a w) (edge_tree_abs ctx u a w)"
+    and Hcombine: "\<And>cc ca ex w. dg_tree_st_commute_for gs \<sigma>_st
+        (combine_tree_st ctx cc ca ex w) (combine_tree_abs ctx cc ca ex w)"
+    and Henter: "\<And>cc ca w. dg_tree_st_commute_for gs \<sigma>_st
+        (enter_tree_st ctx cc ca w) (enter_tree_abs ctx cc ca w)"
+  shows "dep_aux \<sigma>_st (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g (v, ctx))
+       = dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st) (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g bot0' s0d' s0g' (v, ctx))"
+proof -
+  have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st) t_abs)
+    (map (\<lambda>(u, a). edge_tree_st ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_st ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_st ctx cc ca w) (entry_call_list g w))
+    (map (\<lambda>(u, a). edge_tree_abs ctx u a w) (pred_sel g w)
+      @ map (\<lambda>(cc, ca, ex). combine_tree_abs ctx cc ca ex w) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). enter_tree_abs ctx cc ca w) (entry_call_list g w))"
+    by (rule dg_list_commute_dep_for[OF dg_hook_list_commute_for
+      [where edge_tree_st=edge_tree_st and edge_tree_abs=edge_tree_abs
+         and combine_tree_st=combine_tree_st and combine_tree_abs=combine_tree_abs
+         and enter_tree_st=enter_tree_st and enter_tree_abs=enter_tree_abs
+         and pred_sel=pred_sel and g=g and ctx=ctx, OF Hedge Hcombine Henter]])
+  show ?thesis
+    unfolding side_cfg_T_eff_keyed_seed_trees_def Let_def
+    by (simp add: dep_aux_Side dep_aux_side_rhs_fold_dg_commute[OF la])
+qed
+
+theorem part_post_solution_hook_gen_st_to_abs_for:
+  assumes Hedge: "\<And>ctx u a v. dg_tree_st_commute_for gs \<sigma>_st
+        (edge_tree_st ctx u a v) (edge_tree_abs ctx u a v)"
+    and Hcombine: "\<And>ctx cc ca ex v. dg_tree_st_commute_for gs \<sigma>_st
+        (combine_tree_st ctx cc ca ex v) (combine_tree_abs ctx cc ca ex v)"
+    and Henter: "\<And>ctx cc ca v. dg_tree_st_commute_for gs \<sigma>_st
+        (enter_tree_st ctx cc ca v) (enter_tree_abs ctx cc ca v)"
+    and pp: "part_post_solution
+               (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                 edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) x \<sigma>_st vars"
+  shows "part_post_solution
+           (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+           x (fun_of_dg_st_for gs \<circ> \<sigma>_st) vars"
+proof (intro conjI ballI)
+  show "x \<in> vars" using pp by simp
+next
+  fix u assume u: "u \<in> vars"
+  obtain v c where uv: "u = (v, c)" by (cases u) auto
+  have dl: "dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) \<sigma>_st u \<subseteq> vars"
+    using pp u by simp
+  have "dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+          (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g) (v, c))
+      = dep_aux \<sigma>_st (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g (v, c))"
+    by (rule dep_hook_gen_commute_for
+          [where pred_sel=pred_sel and gkey=gkey and g=g, OF Hedge Hcombine Henter, symmetric])
+  hence "dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)) (fun_of_dg_st_for gs \<circ> \<sigma>_st) u
+       = dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) \<sigma>_st u"
+    unfolding dep\<^sub>L_def dep_def uv by simp
+  thus "dep\<^sub>L (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)) (fun_of_dg_st_for gs \<circ> \<sigma>_st) u \<subseteq> vars"
+    using dl by simp
+next
+  fix u assume u: "u \<in> vars"
+  obtain v c where uv: "u = (v, c)" by (cases u) auto
+  have le: "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) u \<sigma>_st
+              \<le> \<sigma>_st (Inl u)" using pp u by simp
+  have "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)) u (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+      = fun_of_dg_st_for gs (eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g) u \<sigma>_st)"
+      unfolding uv by (rule eq_hook_gen_commute_for
+            [where pred_sel=pred_sel and gkey=gkey and g=g and ctx=c and v=v and \<sigma>_st=\<sigma>_st,
+             OF Hedge Hcombine Henter, symmetric])
+  also have "\<dots> \<le> fun_of_dg_st_for gs (\<sigma>_st (Inl u))" using le by (rule fun_of_dg_st_for_mono)
+  finally show "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)) u (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+              \<le> (fun_of_dg_st_for gs \<circ> \<sigma>_st) (Inl u)" by simp
+next
+  fix u assume u: "u \<in> vars"
+  obtain v c where uv: "u = (v, c)" by (cases u) auto
+  have le: "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+                edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g u) \<sigma>_st
+              \<le> \<sigma>_st" using pp u by simp
+  show "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g) u) (fun_of_dg_st_for gs \<circ> \<sigma>_st)
+           \<le> fun_of_dg_st_for gs \<circ> \<sigma>_st"
+  proof (rule le_funI)
+    fix k
+    have "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g) u) (fun_of_dg_st_for gs \<circ> \<sigma>_st) k
+        = fun_of_dg_st_for gs (sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_st combine_tree_st enter_tree_st g bot0 s0d s0g u) \<sigma>_st k)"
+      unfolding uv by (rule sides_hook_gen_commute_for
+            [where pred_sel=pred_sel and gkey=gkey and g=g and ctx=c and v=v and \<sigma>_st=\<sigma>_st,
+             OF Hedge Hcombine Henter, symmetric])
+    also have "\<dots> \<le> fun_of_dg_st_for gs (\<sigma>_st k)"
+      using le[THEN le_funD] by (rule fun_of_dg_st_for_mono)
+    finally show "sides_of_rhs (side_cfg_T_eff_keyed_seed_trees pred_sel gkey
+             edge_tree_abs combine_tree_abs enter_tree_abs g
+             (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g) u) (fun_of_dg_st_for gs \<circ> \<sigma>_st) k
+                \<le> (fun_of_dg_st_for gs \<circ> \<sigma>_st) k" by simp
+  qed
+qed
 
 end
 
