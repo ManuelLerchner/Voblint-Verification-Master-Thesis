@@ -969,6 +969,92 @@ lemma eq_side_cfg_T_eff_keyed_seed_trees:
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def Let_def
     traverse_side_rhs_fold_dg)
 
+text \<open>
+  Every node of a CFG has at most one incoming hook tree per predecessor
+  kind, and a typical node has exactly one incoming tree overall (a single
+  intra predecessor, a single call return, or a single call entry, with the
+  other two kinds empty). These four lemmas reduce the generator to that one
+  tree directly, so an instance proves per-node soundness or refinement
+  against the named tree constructor instead of re-deriving the fold's
+  single-element degeneracy at every call site. They are stated for
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_trees\<close> itself, so they specialize to any
+  concrete generator built from it -- the hook-parametric \<open>hook_gen\<close> and the
+  executable/abstract \<open>placed_dg_gen_of_strict\<close>/\<open>placed_abs_dg_gen_of\<close> alike --
+  without re-unfolding \<open>side_cfg_T_eff_keyed_seed_trees_def\<close> at each one.
+\<close>
+
+lemma side_cfg_T_eff_keyed_seed_trees_single_edge:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and pred: "pred_sel g v = [(u, a)]"
+    and no_combine: "return_call_action_list g v = []"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (edge_tree ctx u a v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (edge_tree ctx u a v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry pred no_combine no_enter bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+
+lemma side_cfg_T_eff_keyed_seed_trees_single_enter:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and no_edge: "pred_sel g v = []"
+    and no_combine: "return_call_action_list g v = []"
+    and pred: "entry_call_list g v = [(caller, action)]"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (enter_tree ctx caller action v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (enter_tree ctx caller action v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry no_edge no_combine pred bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+
+lemma side_cfg_T_eff_keyed_seed_trees_single_combine:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and no_edge: "pred_sel g v = []"
+    and pred: "return_call_action_list g v = [(caller, action, callee_exit)]"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (combine_tree ctx caller action callee_exit v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (combine_tree ctx caller action callee_exit v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry no_edge pred no_enter bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+
+lemma side_cfg_T_eff_keyed_seed_trees_entry:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes no_edge: "pred_sel g (cfg_entry g) = []"
+    and no_combine: "return_call_action_list g (cfg_entry g) = []"
+    and no_enter: "entry_call_list g (cfg_entry g) = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (cfg_entry g, ctx) sigma = DG s0d bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (cfg_entry g, ctx)) sigma (Inr (gkey ctx)) = DG bot s0g"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: no_edge no_combine no_enter bot0 Let_def)
+
 subsection \<open>The heterogeneous seeded keyed generator\<close>
 
 text \<open>

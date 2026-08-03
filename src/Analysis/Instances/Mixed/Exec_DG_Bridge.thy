@@ -535,6 +535,98 @@ proof (rule le_funI)
   qed
 qed
 
+subsection \<open>The generic completed-readback constructor\<close>
+
+text \<open>
+  \<open>completed_sigma_abs\<close> builds the abstract witness fed to a hook-generated
+  equation system directly from the executable solution: the executable
+  readback at every node's own scope, completed to \<open>outside\<close> beyond it, and
+  the executable readback straight through elsewhere (the shared \<open>G\<close> side
+  channel, which needs no completion since \<^const>\<open>complete_abs_on\<close>'s scope
+  argument is per-node, not per-channel). An analysis instance's own
+  completed sigma (its \<open>_sigma_abs\<close>) is this constructor applied to its own
+  executable TD solution, classifier, node-scope function, and completion
+  value -- not a fresh case split over \<open>Inl\<close>/\<open>Inr\<close>.
+\<close>
+
+definition completed_sigma_abs ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> location list) \<Rightarrow> 'a \<Rightarrow>
+   (pp \<times> 'c + unit \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow>
+   pp \<times> 'c + unit \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
+where
+  "completed_sigma_abs gs locations_of outside exec_sigma key =
+    (case key of
+       Inl (v, ctx) \<Rightarrow> DG
+         (complete_abs_on gs (set (locations_of v)) (\<lambda>_. outside)
+           (locals (exec_sigma (Inl (v, ctx)))))
+         (fun_of_exec_dg_st_for gs (globs (exec_sigma (Inl (v, ctx)))))
+     | Inr () \<Rightarrow> fun_of_dg_st_for gs (exec_sigma (Inr ())))"
+
+lemma completed_sigma_abs_Inl:
+  "completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)) = DG
+     (complete_abs_on gs (set (locations_of v)) (\<lambda>_. outside)
+       (locals (exec_sigma (Inl (v, ctx)))))
+     (fun_of_exec_dg_st_for gs (globs (exec_sigma (Inl (v, ctx)))))"
+  by (simp add: completed_sigma_abs_def)
+
+lemma completed_sigma_abs_Inr:
+  "completed_sigma_abs gs locations_of outside exec_sigma (Inr ()) =
+     fun_of_dg_st_for gs (exec_sigma (Inr ()))"
+  by (simp add: completed_sigma_abs_def split: unit.split)
+
+text \<open>
+  The executable TD solution scoped-refines its own completed readback at
+  every node, by construction of \<^const>\<open>complete_abs_on\<close>: an instance needs
+  only the canonical-scope side condition (that every location its own
+  \<open>locations_of\<close> lists resolves back to itself under \<open>gs\<close> --
+  \<open>scope_locations_canonical\<close> discharges this whenever \<open>locations_of\<close>
+  is a \<^const>\<open>scope_locations\<close> instance), not a fresh per-node argument.
+\<close>
+
+lemma dg_refines_on_completed_sigma_abs:
+  fixes exec_sigma :: "pp \<times> 'c + unit \<Rightarrow>
+    ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes canonical: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
+      location = location_of gs (location_vname location)"
+  shows
+    "dg_refines_on (set (locations_of v))
+       (exec_sigma (Inl (v, ctx)))
+       (completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)))"
+proof (rule dg_refines_onI)
+  fix location assume loc: "location \<in> set (locations_of v)"
+  show "lookup_resolved_st_q (locals (exec_sigma (Inl (v, ctx)))) location =
+      locals (completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)))
+        (location_vname location)"
+    using canonical[OF loc] loc
+    by (simp add: completed_sigma_abs_Inl complete_abs_on_def
+      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+next
+  fix location assume loc: "location \<in> set (locations_of v)"
+  show "lookup_resolved_st_q (globs (exec_sigma (Inl (v, ctx)))) location =
+      globs (completed_sigma_abs gs locations_of outside exec_sigma (Inl (v, ctx)))
+        (location_vname location)"
+    using canonical[OF loc]
+    by (simp add: completed_sigma_abs_Inl
+      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+qed
+
+text \<open>The side/global channel needs no completion at all: it scoped-refines
+  over every canonical location, not just a node's own scope, since
+  \<open>completed_sigma_abs\<close> reads it back plainly.\<close>
+
+lemma dg_refines_on_completed_sigma_abs_side:
+  fixes exec_sigma :: "pp \<times> 'c + unit \<Rightarrow>
+    ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state"
+  assumes canonical: "location = location_of gs (location_vname location)"
+  shows
+    "lookup_resolved_st_q (locals (exec_sigma (Inr ()))) location =
+       locals (completed_sigma_abs gs locations_of outside exec_sigma (Inr ())) (location_vname location)"
+    "lookup_resolved_st_q (globs (exec_sigma (Inr ()))) location =
+       globs (completed_sigma_abs gs locations_of outside exec_sigma (Inr ())) (location_vname location)"
+  using canonical
+  by (simp_all add: completed_sigma_abs_Inr fun_of_dg_st_for_def
+    fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+
 subsection \<open>Executable unit (diagonal) step and combine\<close>
 
 text \<open>
@@ -1859,6 +1951,90 @@ where
         (placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
           enter parameters arguments caller callee)))"
 
+text \<open>
+  The executable hook-wrapper equations: \<open>placed_dg_edge_of_strict\<close>,
+  \<open>placed_dg_combine_of_strict\<close>, and \<open>placed_dg_enter_of_strict\<close> each wrap
+  their underlying tree constructor in \<open>map_gtree\<close>/\<open>map_ltree\<close> to fit the
+  keyed generator's query shape. These lemmas push \<open>traverse_rhs\<close>/
+  \<open>sides_of_rhs\<close> through that wrapping once, so an instance names the wrapped
+  hook directly instead of re-unfolding \<open>map_gtree\<close>/\<open>map_ltree\<close> and the
+  underlying tree definition at every call site.
+\<close>
+
+lemma traverse_rhs_placed_dg_edge_of_strict:
+  "traverse_rhs
+    (placed_dg_edge_of_strict owner_of locations_of keep_local publish_side
+      transfer ctx read_node action write_node) sigma =
+    DG (project_resolved_on_strict (owner_of write_node) (locations_of write_node)
+          keep_local
+          (transfer action (locals (sigma (Inl (read_node, ctx))) \<squnion>
+            globs (sigma (Inr ()))))) bot"
+  unfolding placed_dg_edge_of_strict_def
+  by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
+    traverse_placed_dg_edge_tree_strict sum.map_comp o_def)
+
+lemma sides_of_rhs_placed_dg_edge_of_strict:
+  "sides_of_rhs
+    (placed_dg_edge_of_strict owner_of locations_of keep_local publish_side
+      transfer ctx read_node action write_node) sigma (Inr ()) =
+    DG bot (project_resolved_on_strict (owner_of write_node) (locations_of write_node)
+          publish_side
+          (transfer action (locals (sigma (Inl (read_node, ctx))) \<squnion>
+            globs (sigma (Inr ())))))"
+  unfolding placed_dg_edge_of_strict_def
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
+    sides_placed_dg_edge_tree_strict_Inr sum.map_comp o_def)
+
+lemma traverse_rhs_placed_dg_enter_of_strict:
+  "traverse_rhs
+    (placed_dg_enter_of_strict owner_of locations_of keep_local publish_side
+      enter ctx caller (CallEdge destination parameters arguments) callee) sigma =
+    DG (project_resolved_on_strict (owner_of callee) (locations_of callee)
+          keep_local
+          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
+            globs (sigma (Inr ()))))) bot"
+  unfolding placed_dg_enter_of_strict_def placed_dg_enter_tree_strict_eq
+  by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
+    traverse_placed_dg_edge_tree_strict sum.map_comp o_def)
+
+lemma sides_of_rhs_placed_dg_enter_of_strict:
+  "sides_of_rhs
+    (placed_dg_enter_of_strict owner_of locations_of keep_local publish_side
+      enter ctx caller (CallEdge destination parameters arguments) callee) sigma (Inr ()) =
+    DG bot (project_resolved_on_strict (owner_of callee) (locations_of callee)
+          publish_side
+          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
+            globs (sigma (Inr ())))))"
+  unfolding placed_dg_enter_of_strict_def placed_dg_enter_tree_strict_eq
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
+    sides_placed_dg_edge_tree_strict_Inr sum.map_comp o_def)
+
+lemma traverse_rhs_placed_dg_combine_of_strict:
+  "traverse_rhs
+    (placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
+      ctx caller (CallEdge destination parameters arguments) callee continuation) sigma =
+    DG (project_resolved_on_strict (owner_of continuation) (locations_of continuation)
+          keep_local
+          (combine_collect_resolved_for_q source_global destination
+            (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
+            (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ()))))) bot"
+  unfolding placed_dg_combine_of_strict_def
+  by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
+    traverse_placed_dg_combine_tree_strict sum.map_comp o_def)
+
+lemma sides_of_rhs_placed_dg_combine_of_strict:
+  "sides_of_rhs
+    (placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
+      ctx caller (CallEdge destination parameters arguments) callee continuation) sigma (Inr ()) =
+    DG bot (project_resolved_on_strict (owner_of continuation) (locations_of continuation)
+          publish_side
+          (combine_collect_resolved_for_q source_global destination
+            (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
+            (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ())))))"
+  unfolding placed_dg_combine_of_strict_def
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
+    sides_placed_dg_combine_tree_strict_Inr sum.map_comp o_def)
+
 definition placed_dg_gen_of_strict ::
   "(vname => bool) => (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
@@ -1924,6 +2100,85 @@ where
       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
         (placed_abs_dg_enter_tree source_global owner_of
           keep_local publish_side enter parameters arguments caller callee)))"
+
+text \<open>
+  The abstract hook-wrapper equations, mirroring the executable ones above:
+  \<open>placed_abs_dg_edge_of\<close>, \<open>placed_abs_dg_enter_of\<close>, and
+  \<open>placed_abs_dg_combine_of\<close> each wrap \<^const>\<open>placed_abs_dg_edge_tree\<close>/
+  \<^const>\<open>placed_abs_dg_combine_tree\<close> in \<open>map_gtree\<close>/\<open>map_ltree\<close>. An analysis
+  instance's own hook-soundness proof (\<open>edge_hook_sound\<close>, \<open>enter_hook_sound\<close>,
+  \<open>combine_hook_sound\<close> in the \<^locale>\<open>sound_dg_hooks\<close> locale) cites these
+  named equations directly instead of unfolding \<open>map_gtree\<close>/\<open>map_ltree\<close> and
+  the tree definition afresh for every domain.
+\<close>
+
+lemma traverse_rhs_placed_abs_dg_edge_of:
+  "traverse_rhs
+    (placed_abs_dg_edge_of source_global owner_of keep_local publish_side
+      transfer ctx read_node action write_node) sigma =
+    DG (project_abs_on (owner_of write_node) source_global keep_local
+          (transfer action (locals (sigma (Inl (read_node, ctx))) \<squnion>
+            globs (sigma (Inr ()))))) bot"
+  unfolding placed_abs_dg_edge_of_def
+  by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
+    traverse_placed_abs_dg_edge_tree sum.map_comp o_def)
+
+lemma sides_of_rhs_placed_abs_dg_edge_of:
+  "sides_of_rhs
+    (placed_abs_dg_edge_of source_global owner_of keep_local publish_side
+      transfer ctx read_node action write_node) sigma (Inr ()) =
+    DG bot (project_abs_on (owner_of write_node) source_global publish_side
+          (transfer action (locals (sigma (Inl (read_node, ctx))) \<squnion>
+            globs (sigma (Inr ())))))"
+  unfolding placed_abs_dg_edge_of_def
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
+    sides_placed_abs_dg_edge_tree_Inr sum.map_comp o_def)
+
+lemma traverse_rhs_placed_abs_dg_enter_of:
+  "traverse_rhs
+    (placed_abs_dg_enter_of source_global owner_of keep_local publish_side
+      enter ctx caller (CallEdge destination parameters arguments) callee) sigma =
+    DG (project_abs_on (owner_of callee) source_global keep_local
+          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
+            globs (sigma (Inr ()))))) bot"
+  unfolding placed_abs_dg_enter_of_def placed_abs_dg_enter_tree_def
+  by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
+    traverse_placed_abs_dg_edge_tree sum.map_comp o_def)
+
+lemma sides_of_rhs_placed_abs_dg_enter_of:
+  "sides_of_rhs
+    (placed_abs_dg_enter_of source_global owner_of keep_local publish_side
+      enter ctx caller (CallEdge destination parameters arguments) callee) sigma (Inr ()) =
+    DG bot (project_abs_on (owner_of callee) source_global publish_side
+          (enter parameters arguments (locals (sigma (Inl (caller, ctx))) \<squnion>
+            globs (sigma (Inr ())))))"
+  unfolding placed_abs_dg_enter_of_def placed_abs_dg_enter_tree_def
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
+    sides_placed_abs_dg_edge_tree_Inr sum.map_comp o_def)
+
+lemma traverse_rhs_placed_abs_dg_combine_of:
+  "traverse_rhs
+    (placed_abs_dg_combine_of source_global owner_of keep_local publish_side
+      ctx caller (CallEdge destination parameters arguments) callee continuation) sigma =
+    DG (project_abs_on (owner_of continuation) source_global keep_local
+          (combine_collect_abs source_global destination
+            (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
+            (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ()))))) bot"
+  unfolding placed_abs_dg_combine_of_def
+  by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree
+    traverse_placed_abs_dg_combine_tree sum.map_comp o_def)
+
+lemma sides_of_rhs_placed_abs_dg_combine_of:
+  "sides_of_rhs
+    (placed_abs_dg_combine_of source_global owner_of keep_local publish_side
+      ctx caller (CallEdge destination parameters arguments) callee continuation) sigma (Inr ()) =
+    DG bot (project_abs_on (owner_of continuation) source_global publish_side
+          (combine_collect_abs source_global destination
+            (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
+            (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ())))))"
+  unfolding placed_abs_dg_combine_of_def
+  by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr
+    sides_placed_abs_dg_combine_tree_Inr sum.map_comp o_def)
 
 definition placed_abs_dg_gen_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
@@ -2146,6 +2401,385 @@ subsection \<open>Side-effect commutation for the generator\<close>
 
 lemma sides_of_rhs_Inl_bot: "sides_of_rhs t \<sigma> (Inl a) = bot"
   by (induction t arbitrary: \<sigma>) (auto simp: Let_def)
+
+subsection \<open>Generic \<open>se_constraint_holds\<close> builders\<close>
+
+text \<open>
+  The most important missing abstraction is assembling a node's
+  \<open>se_constraint_holds\<close> obligation for the abstract, hook-generated equation
+  system from a scoped \<^const>\<open>dg_refines_on\<close> fact -- itself already produced
+  by composing the item-1 hook-wrapper equations, the item-2
+  singleton-generator reductions, and a domain transfer-agreement lemma.
+  \<open>outside\<close> is deliberately an arbitrary bound (as in
+  \<open>le_lift_if_dg_refines_on_and_le\<close>) rather than a fixed top element, so no
+  domain has to supply one it does not have; an instance's own completed
+  sigma (\<^const>\<open>completed_sigma_abs\<close>) unfolds \<open>complete_abs_on\<close>/
+  \<open>fun_of_exec_dg_st_for\<close> back to whatever concrete bound it fixed.
+\<close>
+
+lemma complete_abs_on_bot_le_fun_of_exec_dg_st_for:
+  fixes exec_bound :: "'a::order_bot exec_dg_st" and universe :: "location set"
+  shows "complete_abs_on gs universe (\<lambda>_. bot) exec_bound \<le> fun_of_exec_dg_st_for gs exec_bound"
+  by (rule le_funI) (simp add: complete_abs_on_def fun_of_exec_dg_st_for_def)
+
+lemma local_bound_of_dg_refines:
+  fixes v :: pp
+    and exec_local :: "'a::bounded_semilattice_sup_bot exec_dg_st"
+    and abs_local :: "'a abs_state"
+  assumes exec_le: "exec_local \<le> exec_bound"
+    and dg_ref: "dg_refines_on (set (locations_of v))
+        (DG exec_local exec_side) (DG abs_local abs_side)"
+    and outside_le: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
+        abs_local x \<le> outside x"
+  shows "abs_local \<le> complete_abs_on gs (set (locations_of v)) outside exec_bound"
+proof -
+  have refines: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
+      lookup_resolved_st_q exec_local location = abs_local (location_vname location)"
+    using dg_refines_onD_local[OF dg_ref] by simp
+  show ?thesis
+    by (rule le_lift_if_dg_refines_on_and_le[OF refines outside_le exec_le])
+qed
+
+lemma side_bound_of_dg_refines:
+  fixes v :: pp
+    and exec_side :: "'a::bounded_semilattice_sup_bot exec_dg_st"
+    and abs_side :: "'a abs_state"
+  assumes dg_ref_side: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
+      lookup_resolved_st_q exec_side location = abs_side (location_vname location)"
+    and outside_le: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
+        abs_side x \<le> bot"
+    and le: "exec_side \<le> exec_bound"
+  shows "abs_side \<le> fun_of_exec_dg_st_for gs exec_bound"
+proof -
+  have lifted: "abs_side \<le> complete_abs_on gs (set (locations_of v)) (\<lambda>_. bot) exec_bound"
+    by (rule le_lift_if_dg_refines_on_and_le[OF dg_ref_side outside_le le])
+  show ?thesis
+    using order_trans[OF lifted complete_abs_on_bot_le_fun_of_exec_dg_st_for] .
+qed
+
+text \<open>Bundling the two halves of \<open>se_constraint_holds\<close> at a node: the local
+  bound and the side bound above, plus the structural fact just proved
+  (\<open>sides_of_rhs_Inl_bot\<close>) that side effects at a node never touch \<open>Inl\<close>
+  keys.\<close>
+
+lemma se_constraint_holds_of_dg_refines:
+  fixes v_key :: 'k
+    and abs_local_val :: "'a::bounded_semilattice_sup_bot abs_state"
+    and abs_side_val :: "'a abs_state"
+  assumes local_le: "abs_local_val \<le> locals (sigma (Inl v_key))"
+    and side_le: "abs_side_val \<le> globs (sigma (Inr ()))"
+    and traverse_locals: "locals traverse_val = abs_local_val"
+    and traverse_globs_bot: "globs traverse_val = bot"
+    and sides_val_Inl_bot: "\<And>x. sides_val (Inl x) = bot"
+    and sides_locals_bot: "locals (sides_val (Inr ())) = bot"
+    and sides_globs: "globs (sides_val (Inr ())) = abs_side_val"
+  shows "traverse_val \<le> sigma (Inl v_key) \<and> sides_val \<le> sigma"
+proof (intro conjI le_funI)
+  show "traverse_val \<le> sigma (Inl v_key)"
+    unfolding less_eq_dg_state_def
+    using local_le traverse_locals traverse_globs_bot by simp
+next
+  fix k show "sides_val k \<le> sigma k"
+  proof (cases k)
+    case (Inl x)    then show ?thesis
+      by (simp add: sides_val_Inl_bot less_eq_dg_state_def bot_dg_state_def)
+  next
+    case (Inr y)
+    then show ?thesis
+      using side_le sides_locals_bot sides_globs by (simp add: less_eq_dg_state_def)
+  qed
+qed
+
+subsection \<open>Generic per-node post-solution transport\<close>
+
+text \<open>
+  \<open>placed_hook_se_edge\<close> fuses what an instance previously proved in two
+  steps -- a \<^const>\<open>dg_refines_on\<close> bridge from a raw transfer-agreement
+  hypothesis, then \<open>se_constraint_holds_of_dg_refines\<close> -- into one
+  call, generic over the CFG, the placement policy, and the domain.
+  \<^const>\<open>placed_dg_gen_of_strict\<close> and \<^const>\<open>placed_abs_dg_gen_of\<close> are
+  unfolded internally at the single-incoming-edge/no-calls node shape, so no
+  instance needs its own single-edge reduction lemma.
+  \<^const>\<open>completed_sigma_abs\<close> is fixed as the abstract valuation, so the
+  outside-scope bound at every node comes from \<^const>\<open>complete_abs_on\<close>
+  instead of being re-derived per instance.
+\<close>
+
+lemma placed_hook_se_edge:
+  fixes gs :: "vname => bool"
+    and owner_of :: "pp => pname"
+    and locations_of :: "pp => location list"
+    and keep_local publish_side :: "scoped_location => bool"
+    and transfer_st :: "edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and transfer_abs :: "edge_action => 'a abs_state => 'a abs_state"
+    and enter_st :: "vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st"
+    and enter_abs :: "vname list => aexp list => 'a abs_state => 'a abs_state"
+    and g :: cfg and bot0 :: "'a exec_dg_st" and s0d s0g :: "'a exec_dg_st"
+    and bot0_abs :: "'a abs_state" and s0d_abs s0g_abs :: "'a abs_state" and top_val :: 'a
+    and sigma_exec :: "pp \<times> unit + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+    and v u :: pp and a :: edge_action
+  defines "sigma_abs \<equiv> completed_sigma_abs gs locations_of top_val sigma_exec"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and pred: "intra_predecessor_list g v = [(u, a)]"
+    and no_combine: "return_call_action_list g v = []"
+    and no_enter: "entry_call_list g v = []"
+    and bot0_eq: "bot0 = bot" and bot0_abs_eq: "bot0_abs = bot"
+    and top_ge: "\<And>y. y \<le> top_val"
+    and se: "se_constraint_holds
+      (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g (v, ())) sigma_exec (v, ())"
+    and canonical: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
+      location = location_of gs (location_vname location)"
+    and raw: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
+      lookup_resolved_st_q (transfer_st a (dg_hook_D sigma_exec u \<squnion> dg_hook_G sigma_exec)) location =
+      transfer_abs a (dg_hook_D sigma_abs u \<squnion> dg_hook_G sigma_abs) (location_vname location)"
+    and side_outside_raw: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
+      publish_side (owner_of v, location_of gs x) \<longrightarrow>
+      transfer_abs a (dg_hook_D sigma_abs u \<squnion> dg_hook_G sigma_abs) x \<le> bot"
+  shows "se_constraint_holds
+    (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+      bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (v, ())"
+proof -
+  have exec_eq: "eq (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g) (v, ()) sigma_exec =
+      DG (project_resolved_on_strict (owner_of v) (locations_of v) keep_local
+            (transfer_st a (dg_hook_D sigma_exec u \<squnion> dg_hook_G sigma_exec))) bot"
+    unfolding placed_dg_gen_of_strict_def
+    by (simp add: not_entry pred no_combine no_enter bot0_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp
+      traverse_rhs_placed_dg_edge_of_strict dg_hook_D_def dg_hook_G_def)
+  have exec_sides: "sides_of_rhs (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g (v, ())) sigma_exec (Inr ()) =
+      DG bot (project_resolved_on_strict (owner_of v) (locations_of v) publish_side
+            (transfer_st a (dg_hook_D sigma_exec u \<squnion> dg_hook_G sigma_exec)))"
+    unfolding placed_dg_gen_of_strict_def
+    by (simp add: not_entry pred no_combine no_enter bot0_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp
+      sides_of_rhs_placed_dg_edge_of_strict dg_hook_D_def dg_hook_G_def)
+  have abs_eq: "eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs =
+      DG (project_abs_on (owner_of v) gs keep_local
+            (transfer_abs a (dg_hook_D sigma_abs u \<squnion> dg_hook_G sigma_abs))) bot"
+    unfolding placed_abs_dg_gen_of_def
+    by (simp add: not_entry pred no_combine no_enter bot0_abs_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp
+      traverse_rhs_placed_abs_dg_edge_of dg_hook_D_def dg_hook_G_def)
+  have abs_sides: "sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ()) =
+      DG bot (project_abs_on (owner_of v) gs publish_side
+            (transfer_abs a (dg_hook_D sigma_abs u \<squnion> dg_hook_G sigma_abs)))"
+    unfolding placed_abs_dg_gen_of_def
+    by (simp add: not_entry pred no_combine no_enter bot0_abs_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp
+      sides_of_rhs_placed_abs_dg_edge_of dg_hook_D_def dg_hook_G_def)
+  have bridge: "dg_refines_on (set (locations_of v))
+      (DG (project_resolved_on_strict (owner_of v) (locations_of v) keep_local
+            (transfer_st a (dg_hook_D sigma_exec u \<squnion> dg_hook_G sigma_exec)))
+        (project_resolved_on_strict (owner_of v) (locations_of v) publish_side
+            (transfer_st a (dg_hook_D sigma_exec u \<squnion> dg_hook_G sigma_exec))))
+      (DG (project_abs_on (owner_of v) gs keep_local
+            (transfer_abs a (dg_hook_D sigma_abs u \<squnion> dg_hook_G sigma_abs)))
+        (project_abs_on (owner_of v) gs publish_side
+            (transfer_abs a (dg_hook_D sigma_abs u \<squnion> dg_hook_G sigma_abs))))"
+    by (rule dg_refines_on_project_strict[OF raw canonical])
+  have dg_ref: "dg_refines_on (set (locations_of v))
+      (DG (locals (eq (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+              transfer_st enter_st g bot0 s0d s0g) (v, ()) sigma_exec))
+        (globs (sides_of_rhs (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+              transfer_st enter_st g bot0 s0d s0g (v, ())) sigma_exec (Inr ()))))
+      (DG (locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+              bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs))
+        (globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+              bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ()))))"
+    using bridge by (simp add: exec_eq exec_sides abs_eq abs_sides)
+  have exec_le: "locals (eq (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g) (v, ()) sigma_exec) \<le>
+      locals (sigma_exec (Inl (v, ())))"
+    using se_constraint_holds_local[OF se] by (simp add: less_eq_dg_state_def)
+  have exec_side_le: "globs (sides_of_rhs (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g (v, ())) sigma_exec (Inr ())) \<le>
+      globs (sigma_exec (Inr ()))"
+    using se_constraint_holds_sides[OF se, THEN le_funD, where x = "Inr ()"]
+    by (simp add: less_eq_dg_state_def)
+  have outside_le: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
+      locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) x \<le> top_val"
+    by (simp add: abs_eq project_abs_on_def project_component_def top_ge)
+  have local_le: "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) \<le> locals (sigma_abs (Inl (v, ())))"
+    using local_bound_of_dg_refines[
+        where locations_of = locations_of and outside = "\<lambda>_. top_val",
+        OF exec_le dg_ref outside_le]
+    by (simp add: sigma_abs_def completed_sigma_abs_Inl)
+  have side_outside_le: "\<And>x. location_of gs x \<notin> set (locations_of v) \<Longrightarrow>
+      globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) x \<le> bot"
+    by (simp add: abs_sides project_abs_on_def project_component_def side_outside_raw)
+  have dg_ref_side: "\<And>location. location \<in> set (locations_of v) \<Longrightarrow>
+      lookup_resolved_st_q (globs (sides_of_rhs (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+          transfer_st enter_st g bot0 s0d s0g (v, ())) sigma_exec (Inr ()))) location =
+      globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+          bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) (location_vname location)"
+    using dg_refines_onD_side[OF dg_ref] by simp
+  have side_le: "globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) \<le> globs (sigma_abs (Inr ()))"
+    using side_bound_of_dg_refines[OF dg_ref_side side_outside_le exec_side_le]
+    by (simp add: sigma_abs_def completed_sigma_abs_Inr)
+  show ?thesis
+    unfolding se_constraint_holds_def
+  proof (rule se_constraint_holds_of_dg_refines)
+    show "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) \<le> locals (sigma_abs (Inl (v, ())))"
+      by (rule local_le)
+    show "globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) \<le> globs (sigma_abs (Inr ()))"
+      by (rule side_le)
+    show "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) =
+      locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs)"
+      by (rule refl)
+    show "globs (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (v, ()) sigma_abs) = bot"
+      by (simp add: abs_eq)
+    fix x show "sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inl x) = bot"
+      by (simp add: sides_of_rhs_Inl_bot)
+  next
+    show "locals (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) = bot"
+      by (simp add: abs_sides)
+    show "globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ())) =
+      globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (v, ())) sigma_abs (Inr ()))"
+      by (rule refl)
+  qed
+qed
+
+text \<open>
+  \<open>placed_hook_se_entry\<close> is the entry-node counterpart of \<open>placed_hook_se_edge\<close>:
+  the seed values \<open>s0d\<close>/\<open>s0g\<close> take the place of a predecessor's traversal
+  value, so the obligation is a direct agreement between the two seeds
+  instead of a per-edge transfer-agreement hypothesis.
+\<close>
+
+lemma placed_hook_se_entry:
+  fixes gs :: "vname => bool"
+    and owner_of :: "pp => pname"
+    and locations_of :: "pp => location list"
+    and keep_local publish_side :: "scoped_location => bool"
+    and transfer_st :: "edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
+    and transfer_abs :: "edge_action => 'a abs_state => 'a abs_state"
+    and enter_st :: "vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st"
+    and enter_abs :: "vname list => aexp list => 'a abs_state => 'a abs_state"
+    and g :: cfg and bot0 :: "'a exec_dg_st" and s0d s0g :: "'a exec_dg_st"
+    and bot0_abs :: "'a abs_state" and s0d_abs s0g_abs :: "'a abs_state" and top_val :: 'a
+    and sigma_exec :: "pp \<times> unit + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
+  defines "sigma_abs \<equiv> completed_sigma_abs gs locations_of top_val sigma_exec"
+  assumes entry_no_edge: "intra_predecessor_list g (cfg_entry g) = []"
+    and entry_no_combine: "return_call_action_list g (cfg_entry g) = []"
+    and entry_no_enter: "entry_call_list g (cfg_entry g) = []"
+    and bot0_eq: "bot0 = bot" and bot0_abs_eq: "bot0_abs = bot"
+    and top_ge: "\<And>y. y \<le> top_val"
+    and se: "se_constraint_holds
+      (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g (cfg_entry g, ())) sigma_exec (cfg_entry g, ())"
+    and local_raw: "\<And>location. location \<in> set (locations_of (cfg_entry g)) \<Longrightarrow>
+      lookup_resolved_st_q s0d location = s0d_abs (location_vname location)"
+    and side_raw: "\<And>location. location \<in> set (locations_of (cfg_entry g)) \<Longrightarrow>
+      lookup_resolved_st_q s0g location = s0g_abs (location_vname location)"
+    and side_outside_raw: "\<And>x. location_of gs x \<notin> set (locations_of (cfg_entry g)) \<Longrightarrow>
+      s0g_abs x \<le> bot"
+  shows "se_constraint_holds
+    (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+      bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (cfg_entry g, ())"
+proof -
+  have exec_eq: "eq (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g) (cfg_entry g, ()) sigma_exec = DG s0d bot"
+    unfolding placed_dg_gen_of_strict_def
+    by (simp add: entry_no_edge entry_no_combine entry_no_enter bot0_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def)
+  have exec_sides: "sides_of_rhs (placed_dg_gen_of_strict gs owner_of locations_of keep_local publish_side
+        transfer_st enter_st g bot0 s0d s0g (cfg_entry g, ())) sigma_exec (Inr ()) = DG bot s0g"
+    unfolding placed_dg_gen_of_strict_def
+    by (simp add: entry_no_edge entry_no_combine entry_no_enter bot0_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def)
+  have abs_eq: "eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (cfg_entry g, ()) sigma_abs = DG s0d_abs bot"
+    unfolding placed_abs_dg_gen_of_def
+    by (simp add: entry_no_edge entry_no_combine entry_no_enter bot0_abs_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def)
+  have abs_sides: "sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inr ()) = DG bot s0g_abs"
+    unfolding placed_abs_dg_gen_of_def
+    by (simp add: entry_no_edge entry_no_combine entry_no_enter bot0_abs_eq
+      side_cfg_T_eff_keyed_seed_trees_def Let_def)
+  have local_le: "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (cfg_entry g, ()) sigma_abs) \<le> locals (sigma_abs (Inl (cfg_entry g, ())))"
+  proof -
+    have exec_le: "s0d \<le> locals (sigma_exec (Inl (cfg_entry g, ())))"
+      using se_constraint_holds_local[OF se] by (simp add: exec_eq less_eq_dg_state_def)
+    have refines: "\<And>location. location \<in> set (locations_of (cfg_entry g)) \<Longrightarrow>
+        lookup_resolved_st_q s0d location = s0d_abs (location_vname location)"
+      by (rule local_raw)
+    have outside: "\<And>x. location_of gs x \<notin> set (locations_of (cfg_entry g)) \<Longrightarrow> s0d_abs x \<le> top_val"
+      by (simp add: top_ge)
+    have lifted: "s0d_abs \<le> complete_abs_on gs (set (locations_of (cfg_entry g))) (\<lambda>_. top_val)
+        (locals (sigma_exec (Inl (cfg_entry g, ()))))"
+      by (rule le_lift_if_dg_refines_on_and_le[
+          where gs = gs and universe = "set (locations_of (cfg_entry g))" and outside = "\<lambda>_. top_val",
+          OF refines outside exec_le])
+    show ?thesis
+      unfolding abs_eq
+      by (simp add: sigma_abs_def completed_sigma_abs_Inl lifted)
+  qed
+  have side_le: "globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inr ())) \<le> globs (sigma_abs (Inr ()))"
+  proof -
+    have exec_le: "s0g \<le> globs (sigma_exec (Inr ()))"
+      using se_constraint_holds_sides[OF se, THEN le_funD, where x = "Inr ()"]
+      by (simp add: exec_sides less_eq_dg_state_def)
+    have lifted: "s0g_abs \<le> fun_of_exec_dg_st_for gs (globs (sigma_exec (Inr ())))"
+      by (rule side_bound_of_dg_refines[
+          where locations_of = locations_of and v = "cfg_entry g" and gs = gs,
+          OF side_raw side_outside_raw exec_le])
+    show ?thesis
+      unfolding abs_sides
+      by (simp add: sigma_abs_def completed_sigma_abs_Inr lifted)
+  qed
+  show ?thesis
+    unfolding se_constraint_holds_def
+  proof (rule se_constraint_holds_of_dg_refines)
+    show "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (cfg_entry g, ()) sigma_abs) \<le> locals (sigma_abs (Inl (cfg_entry g, ())))"
+      by (rule local_le)
+    show "globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inr ())) \<le> globs (sigma_abs (Inr ()))"
+      by (rule side_le)
+    show "locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (cfg_entry g, ()) sigma_abs) =
+      locals (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (cfg_entry g, ()) sigma_abs)"
+      by (rule refl)
+    show "globs (eq (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs) (cfg_entry g, ()) sigma_abs) = bot"
+      by (simp add: abs_eq)
+    fix x show "sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inl x) = bot"
+      by (simp add: sides_of_rhs_Inl_bot)
+  next
+    show "locals (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inr ())) = bot"
+      by (simp add: abs_sides)
+    show "globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inr ())) =
+      globs (sides_of_rhs (placed_abs_dg_gen_of gs owner_of keep_local publish_side transfer_abs enter_abs g
+        bot0_abs s0d_abs s0g_abs (cfg_entry g, ())) sigma_abs (Inr ()))"
+      by (rule refl)
+  qed
+qed
+
 
 lemma sides_dg_edge_tree_commute:
   assumes H: "\<And>d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (step_st d g) = step_abs (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"

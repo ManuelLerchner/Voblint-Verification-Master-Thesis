@@ -493,6 +493,15 @@ lift_definition bind_formals_resolved_q ::
   is bind_formals_resolved
   by (rule eq_resolved_st_bind_formals)
 
+text \<open>A single-formal call binds exactly one location, so its reduction is a
+  plain \<^const>\<open>update_resolved_st_q\<close>. Every placement instance with a
+  one-argument procedure call cites this directly instead of unfolding
+  \<^const>\<open>bind_formals_resolved_q\<close>'s fold.\<close>
+
+lemma bind_formals_resolved_q_singleton:
+  "bind_formals_resolved_q gs [x] [a] s = update_resolved_st_q s (location_of gs x) a"
+  by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
+
 definition enter_resolved_for ::
   "(vname => bool) => 'a => (aexp => 'a abs_state => 'a)
    => vname list => aexp list => ('a::bot) resolved_st => 'a resolved_st"

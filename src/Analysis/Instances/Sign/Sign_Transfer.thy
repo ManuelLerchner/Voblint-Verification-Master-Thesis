@@ -151,4 +151,69 @@ lemma sign_tf_mono:
      (auto simp: sign_tf_def assign_sign_mono assume_sign_mono assume_not_sign_mono
                  enter_sign_mono split: option.splits)
 
+subsection \<open>Classifier-parametric transfer\<close>
+
+text \<open>
+  \<^const>\<open>sign_tf\<close> fixes the legacy \<^const>\<open>is_global\<close> classifier inside
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>. A placement analysis splits
+  store components by a declaration-driven classifier instead, so entry and
+  combine need a version parametric in that classifier; assignment and guard
+  transfer never consult a classifier, so only the entry and combine fields
+  change shape (mirroring \<open>ivl_tf_for\<close> for the interval domain).
+\<close>
+
+definition enter_frame_sign_for ::
+    "(vname => bool) => sign abs_state => sign abs_state" where
+  "enter_frame_sign_for gs = enter_frame_D gs STop"
+
+definition enter_sign_for ::
+    "(vname => bool) => vname list => aexp list =>
+      sign abs_state => sign abs_state" where
+  "enter_sign_for gs = enter_D gs STop aval_sign"
+
+lemma enter_frame_sign_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "enter_state cls s \<in> \<lbrakk>enter_frame_sign_for cls \<sigma>\<rbrakk>"
+  unfolding enter_frame_sign_for_def
+proof (rule enter_frame_D_sound[OF gs])
+  show "gamma STop = UNIV" by simp
+qed
+
+lemma enter_sign_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
+           \<in> \<lbrakk>enter_sign_for cls xs es \<sigma>\<rbrakk>"
+  unfolding enter_sign_for_def
+proof (rule enter_D_sound[OF gs])
+  show "gamma STop = UNIV" by simp
+next
+  have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_sign e \<sigma>) es)"
+    using V by (simp add: list_all2_conv_all_nth aval_sign_sound)
+qed
+
+definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
+  "sign_tf_for gs = (| tf_assign     = assign_sign,
+                       tf_assume     = assume_sign,
+                       tf_assume_not = assume_not_sign,
+                       tf_enter      = enter_sign_for gs,
+                       tf_combine    = combine_abs gs |)"
+
+lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
+  unfolding sign_tf_for_def
+  apply unfold_locales
+  subgoal by (simp add: assign_sign_sound)
+  subgoal by (simp add: assume_sign_sound)
+  subgoal by (simp add: assume_not_sign_sound)
+  subgoal by (simp add: enter_sign_for_sound)
+  subgoal by (simp add: combine_states_sound)
+  done
+
+lemma sign_tf_for_is_global: "sign_tf_for is_global = sign_tf"
+  unfolding sign_tf_for_def sign_tf_def enter_sign_for_def enter_sign_def
+    enter_frame_sign_for_def enter_frame_sign_def
+  by (rule refl)
+
 end

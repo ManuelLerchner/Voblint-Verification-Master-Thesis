@@ -64,6 +64,32 @@ lemma global_location_in_scope_locations:
   using assms
   by (auto simp: location_of_def)
 
+text \<open>\<open>storage_global p owner\<close> never actually depends on \<open>owner\<close>
+  (\<open>storage_global_iff\<close>): source-declared globals are program-global facts,
+  not owner-relative ones.\<close>
+
+lemma storage_global_eq_declared_global:
+  "storage_global p owner = declared_global p"
+  by (rule ext) (simp add: storage_global_iff)
+
+text \<open>Every location a scope lists already resolves back to itself under
+  \<^const>\<open>declared_global\<close>: \<^const>\<open>scope_locations\<close> is built as an image of
+  \<^const>\<open>location_of\<close>, so this holds for any program and owner, with no
+  further side condition. A placement instance cites this directly instead of
+  re-deriving the \<^const>\<open>storage_global\<close>/\<^const>\<open>declared_global\<close> bridge
+  itself.\<close>
+
+lemma scope_locations_canonical:
+  assumes "location \<in> set (scope_locations p owner)"
+  shows "location = location_of (declared_global p) (location_vname location)"
+proof -
+  obtain x where x: "location = location_of (declared_global p) x"
+    using assms
+    unfolding set_scope_locations storage_global_eq_declared_global
+    by auto
+  then show ?thesis by (simp add: location_of_def)
+qed
+
 lemma implicit_local_in_scope_locations:
   assumes "x \<in> scope_vnames p owner" and "\<not> declared_global p x"
   shows "Local_Location x \<in> set (scope_locations p owner)"

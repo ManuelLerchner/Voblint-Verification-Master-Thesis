@@ -886,6 +886,93 @@ lemma sides_fold_le_hook_gen:
     side_cfg_T_eff_keyed_seed_trees_def
   by (cases "v = cfg_entry g") (simp_all add: Let_def)
 
+text \<open>
+  \<open>hook_gen\<close> is one instantiation of the representation-neutral
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_trees\<close>, so its single-tree degeneracy at a
+  node with exactly one incoming edge, call return, or call entry is the
+  generic reduction proved once for that generator. An analysis instance
+  cites the named tree constructor (\<open>edge_tree\<close>, \<open>enter_tree\<close>, or
+  \<open>combine_tree\<close>) directly instead of re-unfolding \<open>hook_gen_def\<close> and the
+  fold's single-element case at every node.
+\<close>
+
+lemma hook_gen_single_edge:
+  fixes bot0 :: 'D
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and pred: "intra_predecessor_list g v = [(u, a)]"
+    and no_combine: "return_call_action_list g v = []"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (hook_gen g bot0 s0d s0g) (v, ()) sigma =
+       DG (locals (traverse_rhs (edge_tree u a v) sigma)) bot"
+    "sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma (Inr ()) =
+       sides_of_rhs (edge_tree u a v) sigma (Inr ())"
+  unfolding hook_gen_def
+  by (simp_all add: side_cfg_T_eff_keyed_seed_trees_single_edge[
+        where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          and edge_tree = "\<lambda>_ u a v. edge_tree u a v"
+          and combine_tree = "\<lambda>_ c ca ex v. combine_tree c ca ex v"
+          and enter_tree = "\<lambda>_ c ca v. enter_tree c ca v",
+        OF not_entry pred no_combine no_enter bot0])
+
+lemma hook_gen_single_enter:
+  fixes bot0 :: 'D
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and no_edge: "intra_predecessor_list g v = []"
+    and no_combine: "return_call_action_list g v = []"
+    and pred: "entry_call_list g v = [(caller, action)]"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (hook_gen g bot0 s0d s0g) (v, ()) sigma =
+       DG (locals (traverse_rhs (enter_tree caller action v) sigma)) bot"
+    "sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma (Inr ()) =
+       sides_of_rhs (enter_tree caller action v) sigma (Inr ())"
+  unfolding hook_gen_def
+  by (simp_all add: side_cfg_T_eff_keyed_seed_trees_single_enter[
+        where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          and edge_tree = "\<lambda>_ u a v. edge_tree u a v"
+          and combine_tree = "\<lambda>_ c ca ex v. combine_tree c ca ex v"
+          and enter_tree = "\<lambda>_ c ca v. enter_tree c ca v",
+        OF not_entry no_edge no_combine pred bot0])
+
+lemma hook_gen_single_combine:
+  fixes bot0 :: 'D
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and no_edge: "intra_predecessor_list g v = []"
+    and pred: "return_call_action_list g v = [(caller, action, callee_exit)]"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (hook_gen g bot0 s0d s0g) (v, ()) sigma =
+       DG (locals (traverse_rhs (combine_tree caller action callee_exit v) sigma)) bot"
+    "sides_of_rhs (hook_gen g bot0 s0d s0g (v, ())) sigma (Inr ()) =
+       sides_of_rhs (combine_tree caller action callee_exit v) sigma (Inr ())"
+  unfolding hook_gen_def
+  by (simp_all add: side_cfg_T_eff_keyed_seed_trees_single_combine[
+        where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          and edge_tree = "\<lambda>_ u a v. edge_tree u a v"
+          and combine_tree = "\<lambda>_ c ca ex v. combine_tree c ca ex v"
+          and enter_tree = "\<lambda>_ c ca v. enter_tree c ca v",
+        OF not_entry no_edge pred no_enter bot0])
+
+lemma hook_gen_entry:
+  fixes bot0 :: 'D
+  assumes no_edge: "intra_predecessor_list g (cfg_entry g) = []"
+    and no_combine: "return_call_action_list g (cfg_entry g) = []"
+    and no_enter: "entry_call_list g (cfg_entry g) = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (hook_gen g bot0 s0d s0g) (cfg_entry g, ()) sigma = DG s0d bot"
+    "sides_of_rhs (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma (Inr ()) = DG bot s0g"
+  unfolding hook_gen_def
+  by (simp_all add: side_cfg_T_eff_keyed_seed_trees_entry[
+        where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          and edge_tree = "\<lambda>_ u a v. edge_tree u a v"
+          and combine_tree = "\<lambda>_ c ca ex v. combine_tree c ca ex v"
+          and enter_tree = "\<lambda>_ c ca v. enter_tree c ca v",
+        OF no_edge no_combine no_enter bot0])
+
 definition hook_postfix ::
   "cfg \<Rightarrow> 'D \<Rightarrow> 'G
    \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> ('D, 'G) dg_state)

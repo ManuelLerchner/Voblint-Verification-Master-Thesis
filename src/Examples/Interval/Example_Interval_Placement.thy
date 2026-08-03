@@ -688,22 +688,18 @@ text \<open>
   node's own scope actually covers.
 \<close>
 
+text \<open>\<open>placement_sigma_abs\<close> is now a single call to the generic completed-
+  readback constructor (\<^const>\<open>completed_sigma_abs\<close>), not a fresh case split
+  over \<open>Inl\<close>/\<open>Inr\<close>: the executable TD solution, read back through
+  \<open>declared_global placement_prog\<close>'s classifier, completed to
+  \<^term>\<open>ivl_top\<close> beyond each node's own scope.\<close>
+
 definition placement_sigma_abs ::
   "pp \<times> unit + unit => (ivl abs_state, ivl abs_state) dg_state"
 where
-  "placement_sigma_abs key =
-    (case key of
-       Inl (v, ctx) => DG
-         (complete_abs_on (declared_global placement_prog)
-           (set (placement_locations_of v)) (\<lambda>_. ivl_top)
-           (locals (snd placement_dg_td_sol (Inl (v, ctx)))))
-         (fun_of_exec_dg_st_for (declared_global placement_prog)
-           (globs (snd placement_dg_td_sol (Inl (v, ctx)))))
-     | Inr () => DG
-         (fun_of_exec_dg_st_for (declared_global placement_prog)
-           (locals (snd placement_dg_td_sol (Inr ()))))
-         (fun_of_exec_dg_st_for (declared_global placement_prog)
-           (globs (snd placement_dg_td_sol (Inr ())))))"
+  "placement_sigma_abs =
+    completed_sigma_abs (declared_global placement_prog) placement_locations_of
+      ivl_top (snd placement_dg_td_sol)"
 
 lemma placement_sigma_abs_Inl:
   "placement_sigma_abs (Inl (v, ctx)) = DG
@@ -712,37 +708,30 @@ lemma placement_sigma_abs_Inl:
        (locals (snd placement_dg_td_sol (Inl (v, ctx)))))
      (fun_of_exec_dg_st_for (declared_global placement_prog)
        (globs (snd placement_dg_td_sol (Inl (v, ctx)))))"
-  by (simp add: placement_sigma_abs_def)
+  by (simp add: placement_sigma_abs_def completed_sigma_abs_Inl)
 
 lemma placement_sigma_abs_Inr:
   "placement_sigma_abs (Inr ()) = fun_of_dg_st_for
      (declared_global placement_prog) (snd placement_dg_td_sol (Inr ()))"
-  by (simp add: placement_sigma_abs_def fun_of_dg_st_for_def split: unit.split)
+  by (simp add: placement_sigma_abs_def completed_sigma_abs_Inr)
 
 text \<open>
   The executable TD solution scoped-refines its own completed readback at
-  every node, by construction of \<open>complete_abs_on\<close>: no per-node argument is
-  needed here, unlike the per-edge transfer agreement below.
+  every node: the generic \<open>dg_refines_on_completed_sigma_abs\<close> transport,
+  discharging its only side condition (that \<open>placement_locations_of\<close>'s own
+  locations resolve back to themselves) via \<open>scope_locations_canonical\<close>,
+  since \<open>placement_locations_of\<close> is a \<^const>\<open>scope_locations\<close> instance.
 \<close>
 
 lemma placement_dg_refines_at:
   "dg_refines_on (set (placement_locations_of v))
      (snd placement_dg_td_sol (Inl (v, ctx)))
      (placement_sigma_abs (Inl (v, ctx)))"
-proof (rule dg_refines_onI)
-  fix location assume loc: "location \<in> set (placement_locations_of v)"
-  show "lookup_resolved_st_q (locals (snd placement_dg_td_sol (Inl (v, ctx)))) location =
-      locals (placement_sigma_abs (Inl (v, ctx))) (location_vname location)"
-    using placement_locations_of_canonical[OF loc] loc
-    by (simp add: placement_sigma_abs_Inl complete_abs_on_def
-      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
-next
-  fix location assume loc: "location \<in> set (placement_locations_of v)"
-  show "lookup_resolved_st_q (globs (snd placement_dg_td_sol (Inl (v, ctx)))) location =
-      globs (placement_sigma_abs (Inl (v, ctx))) (location_vname location)"
-    using placement_locations_of_canonical[OF loc]
-    by (simp add: placement_sigma_abs_Inl
-      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+  unfolding placement_sigma_abs_def
+proof (rule dg_refines_on_completed_sigma_abs)
+  fix location assume "location \<in> set (placement_locations_of v)"
+  then show "location = location_of (declared_global placement_prog) (location_vname location)"
+    unfolding placement_locations_of_def by (rule scope_locations_canonical)
 qed
 
 text \<open>
@@ -766,9 +755,8 @@ lemma placement_hook_gen_single_edge:
     "sides_of_rhs
        (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g (v, ())) sigma (Inr ()) =
        sides_of_rhs (placement_abs_edge_tree u a v) sigma (Inr ())"
-  unfolding placement_sound_dg_hooks.hook_gen_def
-  by (simp_all add: not_entry pred no_combine no_enter bot0
-    side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+  using placement_sound_dg_hooks.hook_gen_single_edge[OF not_entry pred no_combine no_enter bot0]
+  by simp_all
 
 lemma placement_hook_gen_single_enter:
   fixes bot0 :: "ivl abs_state"
@@ -783,9 +771,8 @@ lemma placement_hook_gen_single_enter:
     "sides_of_rhs
        (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g (v, ())) sigma (Inr ()) =
        sides_of_rhs (placement_abs_enter_tree caller action v) sigma (Inr ())"
-  unfolding placement_sound_dg_hooks.hook_gen_def
-  by (simp_all add: not_entry no_edge no_combine pred bot0
-    side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+  using placement_sound_dg_hooks.hook_gen_single_enter[OF not_entry no_edge no_combine pred bot0]
+  by simp_all
 
 lemma placement_hook_gen_single_combine:
   fixes bot0 :: "ivl abs_state"
@@ -801,9 +788,8 @@ lemma placement_hook_gen_single_combine:
     "sides_of_rhs
        (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g (v, ())) sigma (Inr ()) =
        sides_of_rhs (placement_abs_combine_tree caller action callee_exit v) sigma (Inr ())"
-  unfolding placement_sound_dg_hooks.hook_gen_def
-  by (simp_all add: not_entry no_edge pred no_enter bot0
-    side_cfg_T_eff_keyed_seed_trees_def Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+  using placement_sound_dg_hooks.hook_gen_single_combine[OF not_entry no_edge pred no_enter bot0]
+  by simp_all
 
 text \<open>
   The CFG's own entry node has no incoming hook tree at all: the generator's
@@ -825,9 +811,8 @@ lemma placement_hook_gen_entry:
     "sides_of_rhs
        (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g
          (cfg_entry placement_cfg, ())) sigma (Inr ()) = DG bot s0g"
-  unfolding placement_sound_dg_hooks.hook_gen_def
-  by (simp_all add: no_edge no_combine no_enter bot0
-    side_cfg_T_eff_keyed_seed_trees_def Let_def)
+  using placement_sound_dg_hooks.hook_gen_entry[OF no_edge no_combine no_enter bot0]
+  by simp_all
 
 lemma placement_cfg_entry: "cfg_entry placement_cfg = FunctionEntry prog_main_name"
   unfolding placement_cfg_def by eval

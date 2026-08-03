@@ -205,5 +205,171 @@ value "fun_of_resolved_st_q_for is_global
     (update_resolved_st_q top_ivl_st (location_of is_global ''x'')
       (Ivl (Fin 0) (Fin 20)))) ''x''"
 
+subsection \<open>Classifier-parametric executable/abstract transfer correspondence\<close>
+
+text \<open>
+  A placement analysis reads its D/G unknowns back through
+  \<^const>\<open>fun_of_resolved_st_q_for\<close> and needs the executable
+  \<^const>\<open>ivl_tf_st_for\<close> step to agree with the abstract \<^const>\<open>ivl_tf_for\<close>
+  step at every location a node's own scope covers -- not everywhere, since
+  the executable state is sparse outside that scope. These lemmas state that
+  agreement once per edge-action shape, given only that the two input states
+  already agree on the relevant scope (and, for a write, that the written
+  expression's value already agrees). An instance cites the shape matching
+  its edge instead of re-deriving the agreement from \<^const>\<open>aval_ivl\<close>'s
+  definition at every node.
+
+  \<open>EA_Nop\<close> and \<open>EA_Ret None\<close> reduce to the same identity shape
+  (\<open>apply_tf_EA_Ret_None\<close>); \<open>EA_Assign\<close> and \<open>EA_Ret (Some _)\<close> reduce to
+  the same single-write shape (\<open>apply_tf_EA_Ret_Some\<close>), so one lemma
+  each covers both actions.
+\<close>
+
+lemma ivl_tf_st_for_nop_agree:
+  fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+  shows
+    "lookup_resolved_st_q (ivl_tf_st_for gs EA_Nop s_exec) location =
+      apply_tf (ivl_tf_for gs) EA_Nop s_abs (location_vname location)"
+  using agree[OF location_in] by simp
+
+lemma ivl_tf_st_for_assign_agree:
+  fixes y :: vname and a :: aexp
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and val_agree: "aval_ivl a (fun_of_resolved_st_q_for gs s_exec) = aval_ivl a s_abs"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+  shows
+    "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Assign y a) s_exec) location =
+      apply_tf (ivl_tf_for gs) (EA_Assign y a) s_abs (location_vname location)"
+proof (cases "location_vname location = y")
+  case True
+  then have "location = location_of gs y" using canonical by simp
+  then show ?thesis using val_agree True by (simp add: ivl_tf_for_def assign_ivl_def)
+next
+  case False
+  have neq: "location \<noteq> location_of gs y"
+  proof
+    assume eq: "location = location_of gs y"
+    have "location_vname location = y" using eq by (simp add: location_of_def)
+    with False show False by simp
+  qed
+  show ?thesis
+    using agree[OF location_in] neq False by (simp add: ivl_tf_for_def assign_ivl_def)
+qed
+
+lemma ivl_tf_st_for_ret_none_agree:
+  fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+  shows
+    "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret None p) s_exec) location =
+      apply_tf (ivl_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
+  using ivl_tf_st_for_nop_agree[OF agree location_in]
+  by (simp add: apply_tf_EA_Ret_None)
+
+lemma ivl_tf_st_for_ret_some_agree:
+  fixes a :: aexp and p :: pname
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and val_agree: "aval_ivl a (fun_of_resolved_st_q_for gs s_exec) = aval_ivl a s_abs"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+  shows
+    "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret (Some a) p) s_exec) location =
+      apply_tf (ivl_tf_for gs) (EA_Ret (Some a) p) s_abs (location_vname location)"
+  using ivl_tf_st_for_assign_agree[where y = ret_var, OF agree val_agree location_in canonical]
+  by (simp add: apply_tf_EA_Ret_Some)
+
+text \<open>Guard filters commute totally through the readback
+  (\<open>bfilter_ivl_st_commute\<close>), so full input agreement lifts directly --
+  no scope side condition is needed, unlike the write-shaped actions above.\<close>
+
+lemma ivl_tf_st_for_assume_agree:
+  assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
+  shows
+    "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_Assume b) s_exec) =
+      apply_tf (ivl_tf_for gs) (EA_Assume b) s_abs"
+  unfolding agree[symmetric]
+  by (simp add: assume_ivl_st_for_def bfilter_ivl_st_commute ivl_tf_for_def assume_ivl_def)
+
+lemma ivl_tf_st_for_assume_not_agree:
+  assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
+  shows
+    "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_AssumeNot b) s_exec) =
+      apply_tf (ivl_tf_for gs) (EA_AssumeNot b) s_abs"
+  unfolding agree[symmetric]
+  by (simp add: assume_not_ivl_st_for_def bfilter_ivl_st_commute ivl_tf_for_def assume_not_ivl_def)
+
+text \<open>
+  A one-argument call entry: the bound formal's location gets the evaluated
+  actual on both sides; a global location outside the formal carries over
+  from the pre-call join (given as an explicit agreement, since procedure
+  entry never resets globals); every other local resets to \<^term>\<open>ivl_top\<close>
+  unconditionally on both sides, needing no agreement at all. This mirrors a
+  single-parameter procedure call; a multi-formal call needs the same case
+  split repeated per formal via \<^const>\<open>bind_formals_resolved_q\<close>'s fold.
+\<close>
+
+lemma ivl_enter_st_for_singleton_agree:
+  fixes x :: vname and e :: aexp
+  assumes formal_not_global: "\<not> gs x"
+    and agree_global: "\<And>y. gs y \<Longrightarrow> location_of gs y \<in> universe \<Longrightarrow>
+      fun_of_resolved_st_q_for gs s_exec y = s_abs y"
+    and val_agree: "aval_ivl e (fun_of_resolved_st_q_for gs s_exec) = aval_ivl e s_abs"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+  shows
+    "lookup_resolved_st_q (ivl_enter_st_for gs [x] [e] s_exec) location =
+      enter_ivl_for gs [x] [e] s_abs (location_vname location)"
+proof (cases location)
+  case (Global_Location y)
+  have vg: "gs y"
+    using canonical Global_Location by (simp add: location_of_def split: if_splits)
+  have loy: "location_of gs y = Global_Location y"
+    using vg by (simp add: location_of_def)
+  have yneqx: "y \<noteq> x"
+    using vg formal_not_global by auto
+  have not_x: "location \<noteq> location_of gs x"
+    using Global_Location vg formal_not_global by (simp add: location_of_def)
+  have mem: "location_of gs y \<in> universe"
+    using location_in Global_Location loy by simp
+  have agree: "fun_of_resolved_st_q_for gs s_exec y = s_abs y"
+    by (rule agree_global[OF vg mem])
+  show ?thesis
+    unfolding ivl_enter_st_for_def enter_ivl_for_def enter_D_def bind_formals_abs_def
+      enter_frame_D_def
+    using not_x agree yneqx vg
+    by (simp add: bind_formals_resolved_q_singleton Global_Location
+      fun_of_resolved_st_q_for_def loy)
+next
+  case (Local_Location y)
+  have not_g: "\<not> gs y"
+    using canonical Local_Location by (simp add: location_of_def split: if_splits)
+  show ?thesis
+  proof (cases "y = x")
+    case True
+    have loc_x: "location = location_of gs x"
+      using Local_Location True formal_not_global by (simp add: location_of_def)
+    show ?thesis
+      unfolding ivl_enter_st_for_def enter_ivl_for_def enter_D_def bind_formals_abs_def
+      using Local_Location val_agree
+      by (simp add: bind_formals_resolved_q_singleton loc_x True)
+  next
+    case False
+    have not_x: "location \<noteq> location_of gs x"
+      using Local_Location False formal_not_global by (simp add: location_of_def)
+    show ?thesis
+      unfolding ivl_enter_st_for_def enter_ivl_for_def enter_D_def bind_formals_abs_def
+        enter_frame_D_def
+      using Local_Location not_x False not_g
+      by (simp add: bind_formals_resolved_q_singleton)
+  qed
+qed
+
 end
 
