@@ -165,7 +165,7 @@ lemma unit_dg_Henter:
   assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st s)"
   shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st tf_st enter_st) xs es d g)
            = dgs_enter (unit_dg_spec tf) xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-  by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_step_st_commute enter_commute)
+  by (simp add: unit_dg_spec_st_def dgs_enter_unit_dg_spec unit_step_st_commute enter_commute)
 
 lemma unit_dg_Hcomb:
   "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)

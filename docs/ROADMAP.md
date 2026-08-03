@@ -75,6 +75,20 @@ Extend the analysis-defined reader and publisher interfaces where examples need
 more precise shared-state communication. Keep routing generic over the `D` and
 `G` carriers.
 
+### Placement-aware D/G generation
+
+Hook-parametric D/G equation generation and its soundness proof are generic
+(`src/Core/Solver/Context/DG/DG_Framework.thy`,
+`src/Core/Solver/Context/DG/DG_Soundness.thy`), and interval transfer and D/G
+readback are classifier-parametric
+(`src/Analysis/Instances/Interval/Interval_Transfer.thy`,
+`src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy`). End-to-end soundness
+through this generic spine is instantiated and batch-verified for one worked
+example, `src/Examples/Interval/Example_Interval_Placement.thy`. Sign, Parity,
+Mixed, the CallString and Ctx examples, and the flagship example remain on the
+classic `is_global`-fixed specialization; migrating them to the generic spine
+is separate follow-up work, not implied by the placement example's existence.
+
 ### Domain composition
 
 The mixed Sign/Interval instance demonstrates heterogeneous carriers.

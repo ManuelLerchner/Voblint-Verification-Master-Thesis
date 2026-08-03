@@ -38,6 +38,14 @@ definition restrict_global ::
   "'a::bounded_semilattice_sup_bot abs_state => 'a abs_state" where
   "restrict_global \<sigma> = (%x. if is_global x then \<sigma> x else bot)"
 
+lemma restrict_local_for_is_global:
+  "restrict_local_for is_global = restrict_local"
+  by (rule ext) (simp add: restrict_local_for_def restrict_local_def)
+
+lemma restrict_global_for_is_global:
+  "restrict_global_for is_global = restrict_global"
+  by (rule ext) (simp add: restrict_global_for_def restrict_global_def)
+
 lemma restrict_local_for_global_join:
   "restrict_local_for gs \<sigma> \<squnion> restrict_global_for gs \<sigma> = \<sigma>"
   unfolding restrict_local_for_def restrict_global_for_def sup_fun_def

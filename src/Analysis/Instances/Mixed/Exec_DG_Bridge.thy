@@ -548,8 +548,8 @@ definition unit_step_st ::
 where
   "unit_step_st f d g = (let res = f (d \<squnion> g) in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
 
-text \<open>Executable mirror of the abstract-side \<^const>\<open>unit_combine_step_env\<close>/
-  \<^const>\<open>unit_combine_step_assign\<close> split.\<close>
+text \<open>Executable mirror of the abstract-side \<^const>\<open>unit_combine_step_env_for\<close>/
+  \<^const>\<open>unit_combine_step_assign_for\<close> split.\<close>
 definition unit_combine_step_st_env ::
   "('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
 where
@@ -590,12 +590,12 @@ where
 lemma unit_combine_step_st_commute:
   "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
      = dgs_combine (unit_dg_spec tf) dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
+  unfolding dgs_combine_unit_dg_spec
   unfolding dgs_combine_def
     unit_dg_spec_st_def unit_combine_step_st_env_def unit_combine_step_st_assign_def
-    unit_dg_spec_def unit_combine_step_env_def unit_combine_step_assign_def
-  by (simp add: Let_def fun_of_resolved_st_q_for_def fun_of_resolved_st_q_for_sup fun_of_resolved_st_q_for_restrict_local fun_of_resolved_st_q_for_restrict_global
+  by (simp add: Let_def combine_collect_abs_def fun_of_resolved_st_q_for_def fun_of_resolved_st_q_for_sup fun_of_resolved_st_q_for_restrict_local fun_of_resolved_st_q_for_restrict_global
                 fun_of_resolved_st_q_for_combine fun_of_resolved_st_q_for_combine_assign
-                combine_abs_eq_restrict)
+                combine_abs_eq_restrict ac_simps)
 
 lemma dg_spec_step_unit_st:
   assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"

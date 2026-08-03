@@ -15,6 +15,17 @@ Improve analysis-defined shared-state reads and publications where a concrete
 precision example requires it. Preserve the generic separation between local
 `D` facts and shared `G` facts.
 
+## Placement-aware D/G generation
+
+The generic (hook-parametric) D/G generation and soundness route, and the
+classifier-parametric interval transfer/readback it uses, are proved sound
+end-to-end for exactly one worked example
+(`Example_Interval_Placement.thy`). Sign, Parity, Mixed, CallString, Ctx, and
+the flagship examples still run on the classic `is_global` specialization.
+Porting additional instances onto the generic spine is deferred follow-up
+work; do not treat the placement example as evidence that the port already
+happened.
+
 ## Domain composition
 
 No generic reduced-product constructor is planned. `sound_dg_spec`'s carriers

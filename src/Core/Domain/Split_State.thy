@@ -31,112 +31,16 @@ text \<open>
   component, the side component, both components, or neither component.
 \<close>
 
-locale state_placement =
-  fixes keep_local :: "'loc => bool"
-    and publish_side :: "'loc => bool"
-begin
-
-definition placement_complete :: bool where
-  "placement_complete \<longleftrightarrow>
-    (\<forall>loc. keep_local loc \<or> publish_side loc)"
-
-definition placement_disjoint :: bool where
-  "placement_disjoint \<longleftrightarrow>
-    (\<forall>loc. \<not> (keep_local loc \<and> publish_side loc))"
-
-definition wf_components ::
-    "('loc => 'l::bot) => ('loc => 'g::bot) => bool" where
-  "wf_components local side \<longleftrightarrow>
-    (\<forall>loc. \<not> keep_local loc \<longrightarrow> local loc = bot) \<and>
-    (\<forall>loc. \<not> publish_side loc \<longrightarrow> side loc = bot)"
-
-definition gamma_components ::
-    "('loc => 'l::sound_domain) => ('loc => 'g::sound_domain)
-      => ('loc => int) set" where
-  "gamma_components local side =
-    {s. \<forall>loc.
-      (keep_local loc \<longrightarrow> s loc \<in> gamma (local loc)) \<and>
-      (publish_side loc \<longrightarrow> s loc \<in> gamma (side loc))}"
-
-lemma gamma_componentsD_local [dest]:
-  assumes "s \<in> gamma_components local side" and "keep_local loc"
-  shows "s loc \<in> gamma (local loc)"
-  using assms unfolding gamma_components_def by blast
-
-lemma gamma_componentsD_side [dest]:
-  assumes "s \<in> gamma_components local side" and "publish_side loc"
-  shows "s loc \<in> gamma (side loc)"
-  using assms unfolding gamma_components_def by blast
-
-
-lemma gamma_componentsD_covered:
-  assumes complete: placement_complete
-    and member: "s \<in> gamma_components local side"
-  shows "s loc \<in> gamma (local loc) \<or> s loc \<in> gamma (side loc)"
-  using complete member
-  unfolding placement_complete_def gamma_components_def by blast
-lemma gamma_components_update_unconstrained:
-  assumes "s \<in> gamma_components local side"
-    and "\<not> keep_local loc"
-    and "\<not> publish_side loc"
-  shows "s(loc := value) \<in> gamma_components local side"
-  using assms unfolding gamma_components_def by auto
-
-end
-
-
-context state_placement
-begin
-
-lemma wf_components_bot:
-  "wf_components (bot :: 'loc => 'l::bot) (bot :: 'loc => 'g::bot)"
-  unfolding wf_components_def bot_fun_def by simp
-
-lemma wf_components_sup:
-  fixes local1 local2 :: "'loc => 'l::bounded_semilattice_sup_bot"
-    and side1 side2 :: "'loc => 'g::bounded_semilattice_sup_bot"
-  assumes "wf_components local1 side1" and "wf_components local2 side2"
-  shows "wf_components (local1 \<squnion> local2) (side1 \<squnion> side2)"
-  using assms unfolding wf_components_def by (simp add: sup_fun_def)
-
-end
-
 definition project_component ::
   "('loc => bool) => ('loc => 'a::bot) => 'loc => 'a" where
   "project_component placed state =
      (\<lambda>loc. if placed loc then state loc else bot)"
 
-definition sequential_keep_local :: "'loc => bool" where
-  "sequential_keep_local loc = True"
+definition classic_split_keep_local :: "(vname => bool) => vname => bool" where
+  "classic_split_keep_local storage loc = (\<not> storage loc)"
 
-definition sequential_publish_side :: "'loc => bool" where
-  "sequential_publish_side loc = False"
-
-definition classic_keep_local :: "(vname => bool) => vname => bool" where
-  "classic_keep_local storage loc = (\<not> storage loc)"
-
-definition classic_publish_side :: "(vname => bool) => vname => bool" where
-  "classic_publish_side storage loc = storage loc"
-
-
-
-lemma sequential_placement_complete [simp]:
-  "state_placement.placement_complete
-    sequential_keep_local sequential_publish_side"
-  unfolding state_placement.placement_complete_def
-    sequential_keep_local_def sequential_publish_side_def by simp
-
-lemma classic_placement_complete [simp]:
-  "state_placement.placement_complete
-    (classic_keep_local storage) (classic_publish_side storage)"
-  unfolding state_placement.placement_complete_def
-    classic_keep_local_def classic_publish_side_def by simp
-
-lemma classic_placement_disjoint [simp]:
-  "state_placement.placement_disjoint
-    (classic_keep_local storage) (classic_publish_side storage)"
-  unfolding state_placement.placement_disjoint_def
-    classic_keep_local_def classic_publish_side_def by simp
+definition classic_split_publish_side :: "(vname => bool) => vname => bool" where
+  "classic_split_publish_side storage loc = storage loc"
 
 
 
@@ -171,41 +75,6 @@ definition split_state :: "('a::bot) abs_state \<Rightarrow> ('a, 'a) split_stat
   "split_state \<sigma> =
      ((\<lambda>x. if is_global x then bot else \<sigma> x),
       (\<lambda>x. if is_global x then \<sigma> x else bot))"
-
-definition wf_split_for ::
-  "(vname => bool) => ('l::bot, 'g::bot) split_state => bool" where
-  "wf_split_for gs lg \<longleftrightarrow>
-     (ALL x. gs x --> fst lg x = bot) &
-     (ALL x. ~ gs x --> snd lg x = bot)"
-
-definition merge_state_for ::
-  "(vname => bool) => ('a, 'a) split_state => 'a abs_state" where
-  "merge_state_for gs lg = (%x. if gs x then snd lg x else fst lg x)"
-
-definition split_state_for ::
-  "(vname => bool) => ('a::bot) abs_state => ('a, 'a) split_state" where
-  "split_state_for gs \<sigma> =
-     ((%x. if gs x then bot else \<sigma> x),
-      (%x. if gs x then \<sigma> x else bot))"
-
-lemma wf_components_classic_iff:
-  "state_placement.wf_components
-      (classic_keep_local storage) (classic_publish_side storage)
-      (fst split) (snd split)
-    \<longleftrightarrow> wf_split_for storage split"
-  unfolding state_placement.wf_components_def classic_keep_local_def
-    classic_publish_side_def wf_split_for_def by simp
-
-lemma merge_split_for [simp]:
-  "merge_state_for gs (split_state_for gs \<sigma>) = \<sigma>"
-  unfolding merge_state_for_def split_state_for_def
-  by (rule ext) simp
-
-lemma wf_split_split_state_for:
-  "wf_split_for gs (split_state_for gs \<sigma>)"
-  unfolding wf_split_for_def split_state_for_def
-  by simp
-
 
 lemma fst_split_state:
   "fst (split_state \<sigma>) x = (if is_global x then bot else \<sigma> x)"

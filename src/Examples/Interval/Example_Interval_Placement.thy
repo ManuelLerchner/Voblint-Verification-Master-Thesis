@@ -3022,6 +3022,33 @@ theorem placement_dg_td_collect_sound:
         placement_cover_enter placement_cover_combine placement_finI placement_finC
         placement_sound0])
 
+subsection \<open>Flat vs. D/G split: a controlled precision comparison\<close>
+
+text \<open>
+  \<open>placement_eqs\<close> below compiles the same source program under the
+  same placement policy (\<^const>\<open>placement_keep_local\<close>/
+  \<^const>\<open>placement_publish_side\<close>) as \<^const>\<open>placement_dg_eqs\<close> above, but
+  through the flat, single-tree route (\<open>side_cfg_T_eff_st\<close> over one
+  executable transfer function per edge) instead of the D/G split route
+  (\<open>placed_dg_gen_of_strict\<close>, separate local/side unknowns per node). Both
+  routes instantiate the identical policy; only the equation-system
+  architecture differs.
+
+  \<open>placement_td_values\<close> reads \<open>answer = Ivl (Fin 0) (Fin 3)\<close> from
+  the flat route, against \<open>placement_dg_td_values\<close>'s exact
+  \<open>answer = Ivl (Fin 3) (Fin 3)\<close> from the D/G route. The precision
+  difference is associated with the D/G split itself -- the separate,
+  per-node local unknown that the flat route's single shared unknown does
+  not have -- not with the placement policy, which is held fixed across
+  both computations. This comparison does not by itself attribute the gap
+  to any one lower-level mechanism inside the D/G route (for instance,
+  strict projection alone, or scoped combine alone); isolating a single
+  mechanism would need a further controlled experiment that varies that
+  mechanism independently of the others. \<open>balance = Ivl (Fin 3) (Fin 3)\<close>
+  and \<open>answer = Ivl (Fin 3) (Fin 3)\<close> are the observed end-to-end results
+  of the full D/G pipeline for this example.
+\<close>
+
 definition placement_eqs :: "(pp, unit, ivl resolved_st_q) eqsT" where
   "placement_eqs =
     side_cfg_T_eff_st placement_cfg placement_ivl_etf_st bot cinit_ivl_st ()"

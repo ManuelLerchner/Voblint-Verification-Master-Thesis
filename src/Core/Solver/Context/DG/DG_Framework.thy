@@ -41,11 +41,17 @@ where
 
 lemma unit_step_for_classic:
   "unit_step_for storage f d g =
-    unit_step_placed (classic_keep_local storage) (classic_publish_side storage) f d g"
+    unit_step_placed (classic_split_keep_local storage) (classic_split_publish_side storage) f d g"
   unfolding unit_step_for_def unit_step_placed_def project_component_def
-    classic_keep_local_def classic_publish_side_def restrict_global_for_def
+    classic_split_keep_local_def classic_split_publish_side_def restrict_global_for_def
     restrict_local_for_def Let_def
   by (simp add: fun_eq_iff)
+
+lemma unit_step_for_is_global:
+  "unit_step_for is_global = unit_step"
+  unfolding unit_step_for_def unit_step_def restrict_global_for_is_global
+    restrict_local_for_is_global
+  by (rule refl)
 
 definition unit_step_resolved_for ::
   "(vname => bool) =>
@@ -453,28 +459,14 @@ text \<open>
   publishes the global restriction and returns the local restriction.
 \<close>
 
-text \<open>The unit env-merge computes the structural local/global merge and
-  packages it the same way \<^const>\<open>unit_step\<close> packages every other edge, but
-  writes no return value yet.  The unit assign reconstitutes the full state
-  from that packaging, writes the callee-exit's return slot, and re-splits --
-  matching \<^const>\<open>combine_collect_abs\<close> exactly once composed.\<close>
-definition unit_combine_step_env ::
-  "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> 'a abs_state \<times> 'a abs_state"
-where
-  "unit_combine_step_env dc de g =
-     (let m = combine_abs is_global (dc \<squnion> g) (de \<squnion> g) in (restrict_global m, restrict_local m))"
-
-
-
-
-definition unit_combine_step_assign ::
-  "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> 'a abs_state \<times> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
-where
-  "unit_combine_step_assign dst de g merged =
-     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var) (fst merged \<squnion> snd merged)
-      in (restrict_global res, restrict_local res))"
+text \<open>The unit env-merge/assign split (defined below as \<open>unit_combine_step_env_for\<close>/
+  \<open>unit_combine_step_assign_for\<close>) computes the structural local/global
+  merge and packages it the same way \<^const>\<open>unit_step\<close> packages every other
+  edge, but writes no return value yet; the assign step reconstitutes the
+  full state from that packaging, writes the callee-exit's return slot, and
+  re-splits -- matching \<^const>\<open>combine_collect_abs\<close> exactly once composed.
+  The classic (\<^const>\<open>is_global\<close>-fixed) shape is the instantiation at
+  \<^const>\<open>is_global\<close>, not a separate hand-written pair.\<close>
 definition unit_combine_step_assign_for ::
   "(vname => bool) =>
    vname option => 'a::bounded_semilattice_sup_bot abs_state
@@ -486,19 +478,6 @@ where
          (fst merged \<squnion> snd merged)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 
-
-definition unit_dg_spec ::
-  "'a::sound_domain domain_transfer \<Rightarrow> ('a abs_state, 'a abs_state) dg_spec"
-where
-  "unit_dg_spec tf = \<lparr>
-    dgs_nop        = unit_step (apply_tf tf EA_Nop),
-    dgs_assign     = (\<lambda>x e. unit_step (apply_tf tf (EA_Assign x e))),
-    dgs_assume     = (\<lambda>b. unit_step (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (\<lambda>xs es. unit_step (tf_enter tf xs es)),
-    dgs_combine_env    = unit_combine_step_env,
-    dgs_combine_assign = unit_combine_step_assign
-  \<rparr>"
 
 definition unit_combine_step_env_for ::
   "(vname => bool) =>
@@ -519,10 +498,10 @@ where
 
 lemma unit_combine_step_env_for_classic:
   "unit_combine_step_env_for storage dc de g =
-    unit_combine_step_env_placed storage (classic_keep_local storage)
-      (classic_publish_side storage) dc de g"
+    unit_combine_step_env_placed storage (classic_split_keep_local storage)
+      (classic_split_publish_side storage) dc de g"
   unfolding unit_combine_step_env_for_def unit_combine_step_env_placed_def
-    project_component_def classic_keep_local_def classic_publish_side_def
+    project_component_def classic_split_keep_local_def classic_split_publish_side_def
     restrict_global_for_def restrict_local_for_def Let_def
   by (simp add: fun_eq_iff)
 
@@ -538,10 +517,10 @@ where
 
 lemma unit_combine_step_assign_for_classic:
   "unit_combine_step_assign_for storage dst de g merged =
-    unit_combine_step_assign_placed (classic_keep_local storage)
-      (classic_publish_side storage) dst de g merged"
+    unit_combine_step_assign_placed (classic_split_keep_local storage)
+      (classic_split_publish_side storage) dst de g merged"
   unfolding unit_combine_step_assign_for_def unit_combine_step_assign_placed_def
-    project_component_def classic_keep_local_def classic_publish_side_def
+    project_component_def classic_split_keep_local_def classic_split_publish_side_def
     restrict_global_for_def restrict_local_for_def Let_def
   by (simp add: fun_eq_iff)
 definition unit_dg_spec_placed ::
@@ -594,11 +573,23 @@ where
   \<rparr>"
 lemma unit_dg_spec_for_classic:
   "unit_dg_spec_for storage tf =
-    unit_dg_spec_placed storage (classic_keep_local storage)
-      (classic_publish_side storage) tf"
+    unit_dg_spec_placed storage (classic_split_keep_local storage)
+      (classic_split_publish_side storage) tf"
   unfolding unit_dg_spec_for_def unit_dg_spec_placed_def
   by (simp add: unit_step_for_classic unit_combine_step_env_for_classic
     unit_combine_step_assign_for_classic fun_eq_iff)
+
+text \<open>The classic (\<^const>\<open>is_global\<close>-fixed) unit analysis is the
+  \<open>_for\<close> spine instantiated at \<^const>\<open>is_global\<close>, not a second,
+  hand-duplicated construction.\<close>
+definition unit_dg_spec ::
+  "'a::sound_domain domain_transfer \<Rightarrow> ('a abs_state, 'a abs_state) dg_spec"
+where
+  "unit_dg_spec tf = unit_dg_spec_for is_global tf"
+
+lemma unit_dg_spec_for_is_global:
+  "unit_dg_spec_for is_global tf = unit_dg_spec tf"
+  unfolding unit_dg_spec_def by (rule refl)
 
 lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
@@ -640,25 +631,18 @@ lemma dgs_combine_unit_dg_spec:
   "dgs_combine (unit_dg_spec tf) dst dc de g =
      (let res = combine_collect_abs is_global dst (dc \<squnion> g) (de \<squnion> g)
       in (restrict_global res, restrict_local res))"
-proof -
-  have join_back: "restrict_global (combine_abs is_global (dc \<squnion> g) (de \<squnion> g)) \<squnion> restrict_local (combine_abs is_global (dc \<squnion> g) (de \<squnion> g))
-                    = combine_abs is_global (dc \<squnion> g) (de \<squnion> g)"
-    using restrict_local_global_join by (simp add: sup.commute)
-  show ?thesis
-    unfolding dgs_combine_def unit_dg_spec_def unit_combine_step_env_def
-      unit_combine_step_assign_def combine_collect_abs_def Let_def
-    by (simp add: join_back)
-qed
+  unfolding unit_dg_spec_def dgs_combine_unit_dg_spec_for
+  by (simp add: restrict_global_for_is_global restrict_local_for_is_global)
 
 lemma dg_spec_step_unit:
   "dg_spec_step (unit_dg_spec tf) a = unit_step (apply_tf tf a)"
-  unfolding unit_dg_spec_def
-  by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
+  unfolding unit_dg_spec_def dg_spec_step_unit_for unit_step_for_is_global
+  by (rule refl)
 
 lemma dgs_enter_unit_dg_spec:
   "dgs_enter (unit_dg_spec tf) fs as = unit_step (tf_enter tf fs as)"
-  unfolding unit_dg_spec_def by simp
+  unfolding unit_dg_spec_def dgs_enter_unit_dg_spec_for unit_step_for_is_global
+  by (rule refl)
 
 subsection \<open>Monotonicity of the unit analysis, given a monotone domain transfer\<close>
 

@@ -1386,7 +1386,7 @@ proof -
     using sound_transfer.tf_sound_enterD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
-    unfolding unit_dg_spec_def unit_step_def gamma_unit_def
+    unfolding dgs_enter_unit_dg_spec unit_step_def gamma_unit_def
     by (simp add: Let_def restrict_local_global_join)
 qed
 
