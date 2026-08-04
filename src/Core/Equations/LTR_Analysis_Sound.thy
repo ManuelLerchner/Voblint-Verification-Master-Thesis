@@ -37,7 +37,7 @@ proof (rule ltr_collect_semantic_postfix)
     using S_sound gamma_state_mono[OF entry_le] by blast
 next
   fix u a w s s'
-  assume "(u, a, w) \<in> intra g" and "s \<in> \<lbrakk>env u\<rbrakk>" and "edge_step a s = Some s'"
+  assume "(u, a, w) \<in> intra g" and "s \<in> \<lbrakk>env u\<rbrakk>" and "s' \<in> edge_step a s"
   then show "s' \<in> \<lbrakk>env w\<rbrakk>" by (rule edge_of_bound[OF step_le])
 next
   fix u dst pars args p cont s

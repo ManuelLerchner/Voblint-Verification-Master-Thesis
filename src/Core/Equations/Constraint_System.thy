@@ -37,6 +37,7 @@ text \<open>
 
 record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)"
+  tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
   tf_enter     :: "vname list => aexp list => ('a abs_state) => ('a abs_state)"
@@ -50,6 +51,7 @@ fun apply_tf :: "'a domain_transfer
                  => ('a abs_state)" where
     "apply_tf tf EA_Nop              \<sigma> = \<sigma>"
   | "apply_tf tf (EA_Assign x a)     \<sigma> = tf_assign tf x a \<sigma>"
+  | "apply_tf tf (EA_Random x)       \<sigma> = tf_random tf x \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
   | "apply_tf tf (EA_Ret e p)        \<sigma> =
@@ -84,6 +86,7 @@ lemma apply_tf_wrap_eqI:
     and ret_some: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
     and nop: "F EA_Nop = H (apply_tf tf EA_Nop)"
     and assign: "\<And>x e. F (EA_Assign x e) = H (apply_tf tf (EA_Assign x e))"
+    and random: "\<And>x. F (EA_Random x) = H (apply_tf tf (EA_Random x))"
     and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
     and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
   shows "F a = H (apply_tf tf a)"
@@ -760,6 +763,8 @@ locale sound_transfer =
   assumes tf_sound_assign:
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  assumes tf_sound_random:
+    "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
   assumes tf_sound_assume:
     "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
        \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
@@ -783,6 +788,10 @@ begin
 lemma tf_sound_assignD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign by blast
+
+lemma tf_sound_randomD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
+  using tf_sound_random by blast
 
 lemma tf_sound_assumeD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
@@ -817,6 +826,7 @@ text \<open>
 lemma sound_transferI:
   fixes tf :: "'a::sound_domain domain_transfer"
   assumes assign: "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    and random: "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
     and assm: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
     and assm_not: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
     and enter: "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
@@ -827,6 +837,8 @@ lemma sound_transferI:
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
     using assign by blast
+  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
+    using random by blast
   show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
     using assm by blast
   show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
@@ -844,6 +856,8 @@ locale sound_transfer_for =
   assumes tf_sound_assign_for:
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  assumes tf_sound_random_for:
+    "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
   assumes tf_sound_assume_for:
     "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
        \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
@@ -864,6 +878,10 @@ begin
 lemma tf_sound_assign_forD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign_for by blast
+
+lemma tf_sound_random_forD:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
+  using tf_sound_random_for by blast
 
 lemma tf_sound_assume_forD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
@@ -892,6 +910,9 @@ lemma sound_transferI_for:
   assumes assign:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    and random:
+    "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
     and assm:
     "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow>
        s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
@@ -909,6 +930,9 @@ proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
     using assign by blast
+  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v.
+      s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
+    using random by blast
   show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow>
       s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
     using assm by blast
@@ -935,6 +959,8 @@ sublocale sound_transfer \<subseteq> sound_transfer_for is_global tf
 proof
   show "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
     by (rule tf_sound_assign)
+  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
+    by (rule tf_sound_random)
   show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
     by (rule tf_sound_assume)
   show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
@@ -979,6 +1005,7 @@ type_synonym ('g, 'd) combine_tf_tree =
 record ('g, 'd) effectful_domain_transfer =
   etf_nop        :: "('g, 'd) edge_tf_tree"
   etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_random     :: "vname \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_assume     :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_assume_not :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'd) edge_tf_tree"
@@ -990,6 +1017,7 @@ fun apply_etf ::
 where
   "apply_etf etf EA_Nop           u = etf_nop etf u"
 | "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
+| "apply_etf etf (EA_Random x)    u = etf_random etf x u"
 | "apply_etf etf (EA_Assume b)    u = etf_assume etf b u"
 | "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
 | "apply_etf etf (EA_Ret e p) u =
@@ -999,6 +1027,7 @@ fun local_edge_action :: "edge_action \<Rightarrow> bool" where
   "local_edge_action EA_Nop = True"
 | "local_edge_action (EA_Assign x e) =
     ((~ is_global x) & (~ aexp_mentions_global e))"
+| "local_edge_action (EA_Random x) = (~ is_global x)"
 | "local_edge_action (EA_Assume b) = (~ bexp_mentions_global b)"
 | "local_edge_action (EA_AssumeNot b) = (~ bexp_mentions_global b)"
 | "local_edge_action (EA_Ret e p) =
@@ -1306,6 +1335,10 @@ locale sound_effectful_transfer =
     "\<forall>x e u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
          s(x := aval e s) \<in> \<lbrakk>etf_collecting_full (etf_assign etf x e u) \<sigma>\<rbrakk>)"
+  assumes etf_sound_random:
+    "\<forall>x u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<forall>v.
+         s(x := v) \<in> \<lbrakk>etf_collecting_full (etf_random etf x u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assume:
     "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s

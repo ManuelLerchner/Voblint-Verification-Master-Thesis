@@ -107,6 +107,8 @@ lemma route_family_etf_sound:
   assumes nop: "\<And>u \<sigma>. etf_full (etf_nop E u) \<sigma> = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     and assign: "\<And>x a u \<sigma>. etf_full (etf_assign E x a u) \<sigma>
                    = tf_assign sign_tf x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+    and random: "\<And>x u \<sigma>. etf_full (etf_random E x u) \<sigma>
+                   = tf_random sign_tf x (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and assm: "\<And>b u \<sigma>. etf_full (etf_assume E b u) \<sigma>
                    = tf_assume sign_tf b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and assm_not: "\<And>b u \<sigma>. etf_full (etf_assume_not E b u) \<sigma>
@@ -128,6 +130,13 @@ next
               \<in> \<lbrakk>etf_collecting_full (etf_assign E x a u) \<sigma>\<rbrakk>)"
     using sign_tf_sound_assign
     by (auto simp add: assign intro: in_gamma_etf_collecting_full)
+next
+  show "\<forall>x u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+          (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<forall>v.
+            s(x := v)
+              \<in> \<lbrakk>etf_collecting_full (etf_random E x u) \<sigma>\<rbrakk>)"
+    using sign_tf_sound_random
+    by (auto simp add: random intro: in_gamma_etf_collecting_full)
 next
   show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
           (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
@@ -243,6 +252,7 @@ definition named_etf :: "(gname, sign) effectful_domain_transfer" where
   "named_etf =
      \<lparr> etf_nop        = route_tree (\<lambda>_. Gpos) (apply_tf sign_tf EA_Nop),
        etf_assign     = \<lambda>x a. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assign x a)),
+       etf_random     = \<lambda>x. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Random x)),
        etf_assume     = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_Assume b)),
        etf_assume_not = \<lambda>b. route_tree (\<lambda>_. Gpos) (apply_tf sign_tf (EA_AssumeNot b)),
        etf_enter      = (\<lambda>xs es. route_tree (\<lambda>_. Gpos) (tf_enter sign_tf xs es)),
@@ -283,6 +293,11 @@ lemma named_etf_full_assign:
    = tf_assign sign_tf x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
+lemma named_etf_full_random:
+  "etf_full (etf_random named_etf x u) \<sigma>
+   = tf_random sign_tf x (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+  unfolding named_etf_def by (simp add: route_tree_etf_full)
+
 lemma named_etf_full_assume:
   "etf_full (etf_assume named_etf b u) \<sigma>
    = tf_assume sign_tf b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
@@ -306,7 +321,8 @@ lemma named_etf_full_combine:
 theorem named_etf_sound:
   "sound_effectful_transfer named_etf"
   by (rule route_family_etf_sound[OF named_etf_full_nop named_etf_full_assign
-        named_etf_full_assume named_etf_full_assume_not named_etf_full_enter named_etf_full_combine])
+        named_etf_full_random named_etf_full_assume named_etf_full_assume_not
+        named_etf_full_enter named_etf_full_combine])
 
 subsection \<open>TD_side preconditions for named_etf (constant routing is monotone)\<close>
 

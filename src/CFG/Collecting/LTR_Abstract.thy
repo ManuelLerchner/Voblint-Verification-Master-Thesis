@@ -38,7 +38,7 @@ locale ltr_gamma =
     and gs :: "vname \<Rightarrow> bool"
   assumes ROOT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) seedc"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> acc v c"
+        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> acc v c"
     and CALL: "\<And>u dst pars args p cont c s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
               \<in> acc (FunctionEntry p) (enterc u c (call_enter gs (CallEdge dst pars args) s))"
@@ -68,7 +68,7 @@ text \<open>\<open>intra_closed\<close>: an intra edge preserves the context (\<
   \<^const>\<open>extend\<close> on a non-empty path) and covers the concrete step through \<open>EDGE\<close>.\<close>
 lemma intra_closed:
   assumes e: "(sink_node t, a, v) \<in> intra g"
-    and st: "edge_step a (sink_store t) = Some s'" and pne: "path t \<noteq> []" and iht: "bnd t"
+    and st: "s' \<in> edge_step a (sink_store t)" and pne: "path t \<noteq> []" and iht: "bnd t"
   shows "bnd (extend t (v, s'))"
 proof -
   have "s' \<in> acc v (key enterc seedc t)"
@@ -132,7 +132,7 @@ proof (rule caller_chain_closure)
   then show "bnd (Root [(cfg_entry g, s)])" by (rule root_closed)
 next
   fix t a v s' assume ht: "t \<in> valid_ltr gs g S" and ch: "\<forall>u \<in> callers t. bnd u"
-    and e: "(sink_node t, a, v) \<in> intra g" and st: "edge_step a (sink_store t) = Some s'"
+    and e: "(sink_node t, a, v) \<in> intra g" and st: "s' \<in> edge_step a (sink_store t)"
   have pt: "path t \<noteq> []" using ht valid_ltr_path_nonempty by blast
   have iht: "bnd t" using ch callers_refl by blast
   show "bnd (extend t (v, s'))" by (rule intra_closed[OF e st pt iht])
@@ -271,7 +271,7 @@ lemma ltr_collect_semantic_postfix:
   fixes g :: cfg and B :: "cfg_node \<Rightarrow> store set" and S0 :: "store set" and v :: cfg_node
     and gs :: "vname \<Rightarrow> bool"
   assumes entry: "S0 \<subseteq> B (cfg_entry g)"
-    and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g \<Longrightarrow> s \<in> B u \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> s' \<in> B w"
+    and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g \<Longrightarrow> s \<in> B u \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> B w"
     and call: "\<And>u dst pars args p cont s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> B u \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
     and combine: "\<And>cl dst pars args p cont s t. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g

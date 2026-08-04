@@ -107,13 +107,13 @@ lemma cstep_preserves_ltr_repr:
   shows "\<exists>t'. ltr_repr source_global (compile_prog \<Pi> ps mnm main) S cf' t'"
   using step rep
 proof (cases rule: cstep.cases)
-  case (Intra u a v s s' stk')
+  case (Intra u a v s' s stk')
   let ?g = "compile_prog \<Pi> ps mnm main"
   from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = u" and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
     using Intra by (auto simp: ltr_repr_def)
   have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
-  have e2: "edge_step a (sink_store t) = Some s'" using Intra ss by simp
+  have e2: "s' \<in> edge_step a (sink_store t)" using Intra ss by simp
   have "extend t (v, s') \<in> valid_ltr source_global ?g S" using valid_ltr.intra[OF tv e1 e2] .
   moreover have "stack_repr ?g stk' (extend t (v, s'))"
     using stack_repr_cong[OF str] valid_ltr_path_nonempty[OF tv] by simp

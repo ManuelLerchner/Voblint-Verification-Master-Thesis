@@ -31,7 +31,7 @@ proof (rule ltr_collect_semantic_postfix)
 next
   fix u a w s s'
   assume e: "(u, a, w) \<in> intra g" and su: "s \<in> dg_gamma sigma u"
-    and st: "edge_step a s = Some s'"
+    and st: "s' \<in> edge_step a s"
   have "s' \<in> edge_collect a (dg_gamma sigma u)"
     using su st by (auto simp: edge_collect_def)
   then show "s' \<in> dg_gamma sigma w"
@@ -152,7 +152,7 @@ next
   fix u a w s s'
   assume edge: "(u, a, w) \<in> intra g"
     and sin: "s \<in> dg_hook_gamma gammaDG sigma u"
-    and step: "edge_step a s = Some s'"
+    and step: "s' \<in> edge_step a s"
   have "s' \<in> edge_collect a (dg_hook_gamma gammaDG sigma u)"
     using sin step by (auto simp: edge_collect_def)
   then show "s' \<in> dg_hook_gamma gammaDG sigma w"

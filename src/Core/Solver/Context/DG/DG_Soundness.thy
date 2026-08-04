@@ -1548,6 +1548,8 @@ where
     dgs_nop        = (\<lambda>d g. (apply_tf tfG EA_Nop g, apply_tf tfD EA_Nop d)),
     dgs_assign     = (\<lambda>x e d g. (apply_tf tfG (EA_Assign x e) g,
                                  apply_tf tfD (EA_Assign x e) d)),
+    dgs_random     = (\<lambda>x d g. (apply_tf tfG (EA_Random x) g,
+                               apply_tf tfD (EA_Random x) d)),
     dgs_assume     = (\<lambda>b d g. (apply_tf tfG (EA_Assume b) g,
                                apply_tf tfD (EA_Assume b) d)),
     dgs_assume_not = (\<lambda>b d g. (apply_tf tfG (EA_AssumeNot b) g,

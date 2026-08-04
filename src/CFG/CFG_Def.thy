@@ -52,6 +52,7 @@ text \<open>
 datatype edge_action =
     EA_Nop
   | EA_Assign   (ea_var: vname) (ea_rhs: aexp)
+  | EA_Random   (ea_var: vname)
   | EA_Assume   (ea_cond: bexp)
   | EA_AssumeNot (ea_cond: bexp)
   | EA_Ret      (ea_ret_val: "aexp option") (ea_ret_proc: pname)
@@ -84,13 +85,14 @@ subsection \<open>Intra edge execution\<close>
 text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
   every constructor and has no call case; guards are the only source of \<open>None\<close>.\<close>
 
-fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store option" where
-  "edge_step EA_Nop s = Some s"
-| "edge_step (EA_Assign x a) s = Some (s(x := aval a s))"
-| "edge_step (EA_Assume b) s = (if bval b s then Some s else None)"
-| "edge_step (EA_AssumeNot b) s = (if bval b s then None else Some s)"
+fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
+  "edge_step EA_Nop s = {s}"
+| "edge_step (EA_Assign x a) s = {s(x := aval a s)}"
+| "edge_step (EA_Random x) s = {s(x := v) |v. True}"
+| "edge_step (EA_Assume b) s = (if bval b s then {s} else {})"
+| "edge_step (EA_AssumeNot b) s = (if bval b s then {} else {s})"
 | "edge_step (EA_Ret e p) s =
-     Some (s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)))"
+     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))}"
 
 subsection \<open>Intra-only execution paths\<close>
 
@@ -108,22 +110,22 @@ text \<open>One intra transition on a \<open>(node, store)\<close> pair.  \<open
 
 definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
   "cfg_intra_step g p q \<longleftrightarrow>
-     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> edge_step a (snd p) = Some (snd q))"
+     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> snd q \<in> edge_step a (snd p))"
 
 abbreviation intra_path :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
   "intra_path g \<equiv> star (cfg_intra_step g)"
 
 lemma cfg_intra_stepI:
-  "(u, a, v) \<in> intra g \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> cfg_intra_step g (u, s) (v, s')"
+  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> cfg_intra_step g (u, s) (v, s')"
   by (auto simp: cfg_intra_step_def)
 
 lemma cfg_intra_stepE:
   assumes "cfg_intra_step g (u, s) (v, s')"
-  obtains a where "(u, a, v) \<in> intra g" "edge_step a s = Some s'"
+  obtains a where "(u, a, v) \<in> intra g" "s' \<in> edge_step a s"
   using assms by (auto simp: cfg_intra_step_def)
 
 lemma intra_path_single:
-  "(u, a, v) \<in> intra g \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow> intra_path g (u, s) (v, s')"
+  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> intra_path g (u, s) (v, s')"
   by (intro star_step1 cfg_intra_stepI)
 
 lemma intra_path_nop:
@@ -261,7 +263,7 @@ lemma wf_no_intra_call:
 
 text \<open>Every edge action has a transfer; only an unsatisfied guard returns \<open>None\<close>.\<close>
 lemma edge_step_fail_iff:
-  "edge_step a s = None \<longleftrightarrow>
+  "edge_step a s = {} \<longleftrightarrow>
      (\<exists>b. a = EA_Assume b \<and> \<not> bval b s) \<or> (\<exists>b. a = EA_AssumeNot b \<and> bval b s)"
   by (cases a) auto
 

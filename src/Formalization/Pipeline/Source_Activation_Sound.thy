@@ -65,7 +65,7 @@ theorem source_activation_sound:
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a x = Some x'
+        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and CALL: "\<And>u dst pars args p cont c x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
@@ -97,7 +97,7 @@ theorem source_activation_sound_toplevel:
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, [])"
     and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a x = Some x'
+        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and CALL: "\<And>u dst pars args p cont c x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)

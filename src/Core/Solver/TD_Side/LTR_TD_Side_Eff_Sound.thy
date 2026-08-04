@@ -22,7 +22,7 @@ lemma edge_step_sound_eff:
   assumes inr: "inr_slot_locals_bot is_global \<sigma>"
     and bound: "etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> v"
     and s: "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
-    and step: "edge_step a s = Some s'"
+    and step: "s' \<in> edge_step a s"
   shows "s' \<in> \<lbrakk>side_env \<sigma> v\<rbrakk>"
 proof -
   have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)

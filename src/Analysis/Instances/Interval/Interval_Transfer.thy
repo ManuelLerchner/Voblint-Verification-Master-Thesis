@@ -39,6 +39,23 @@ lemma assign_ivl_sound:
   unfolding gamma_state_def assign_ivl_def
   by (auto simp: aval_ivl_sound)
 
+subsection \<open>Abstract nondeterministic assignment\<close>
+
+definition random_ivl ::
+    "vname => (vname => ivl) => (vname => ivl)"
+where
+  "random_ivl x \<sigma> = \<sigma>(x := ivl_top)"
+
+lemma random_ivl_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk>
+   \<Longrightarrow> s(x := v) \<in> \<lbrakk>random_ivl x \<sigma>\<rbrakk>"
+  unfolding gamma_state_def random_ivl_def
+  by (auto simp: gamma_ivl_top)
+
+lemma random_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> random_ivl x sigma1 \<le> random_ivl x sigma2"
+  by (simp add: random_ivl_def le_funD le_funI)
+
 subsection \<open>Procedure entry and bundled transfer functions\<close>
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
@@ -77,6 +94,7 @@ qed
 
 definition ivl_tf :: "ivl domain_transfer" where
   "ivl_tf = (| tf_assign     = assign_ivl,
+               tf_random     = random_ivl,
                tf_assume     = assume_ivl,
                tf_assume_not = assume_not_ivl,
                tf_enter      = enter_ivl,
@@ -85,6 +103,10 @@ definition ivl_tf :: "ivl domain_transfer" where
 lemma ivl_tf_sound_assign:
   "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
   unfolding ivl_tf_def by (simp add: assign_ivl_sound)
+
+lemma ivl_tf_sound_random:
+  "\<forall>x \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. st(x := v) \<in> \<lbrakk>tf_random ivl_tf x \<sigma>\<rbrakk>"
+  unfolding ivl_tf_def by (simp add: random_ivl_sound)
 
 lemma ivl_tf_sound_assume:
   "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
@@ -104,6 +126,8 @@ interpretation ivl_sound_tf: sound_transfer ivl_tf
 proof (rule sound_transferI)
   show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
     using ivl_tf_sound_assign by blast
+  show "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random ivl_tf x \<sigma>\<rbrakk>"
+    using ivl_tf_sound_random by blast
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
     using ivl_tf_sound_assume by blast
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
@@ -164,6 +188,7 @@ qed
 
 definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
   "ivl_tf_for gs = (| tf_assign     = assign_ivl,
+                       tf_random     = random_ivl,
                        tf_assume     = assume_ivl,
                        tf_assume_not = assume_not_ivl,
                        tf_enter      = enter_ivl_for gs,
@@ -173,6 +198,7 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_ivl_sound)
+  subgoal by (simp add: random_ivl_sound)
   subgoal by (simp add: assume_ivl_sound)
   subgoal by (simp add: assume_not_ivl_sound)
   subgoal by (simp add: enter_ivl_for_sound)
@@ -227,8 +253,8 @@ lemma assign_ivl_mono:
 lemma ivl_tf_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf ivl_tf a s1 \<le> apply_tf ivl_tf a s2"
   by (cases a)
-     (auto simp: ivl_tf_def assign_ivl_mono assume_ivl_mono assume_not_ivl_mono
-                 enter_ivl_mono split: option.splits)
+     (auto simp: ivl_tf_def assign_ivl_mono random_ivl_mono assume_ivl_mono
+                 assume_not_ivl_mono enter_ivl_mono split: option.splits)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.

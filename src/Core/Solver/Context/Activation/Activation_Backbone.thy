@@ -24,7 +24,7 @@ theorem activation_collect_sound:
     and gs :: "vname \<Rightarrow> bool"
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and CALL: "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g

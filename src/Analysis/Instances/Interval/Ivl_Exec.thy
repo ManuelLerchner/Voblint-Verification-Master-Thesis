@@ -69,6 +69,8 @@ fun ivl_tf_st :: "edge_action \<Rightarrow> ivl resolved_st_q \<Rightarrow> ivl 
   | "ivl_tf_st (EA_Assign x a) s =
        update_resolved_st_q s (location_of is_global x)
          (aval_ivl a (fun_of_resolved_st_q_for is_global s))"
+  | "ivl_tf_st (EA_Random x) s =
+       update_resolved_st_q s (location_of is_global x) ivl_top"
   | "ivl_tf_st (EA_Assume b) s = assume_ivl_st b s"
   | "ivl_tf_st (EA_AssumeNot b) s = assume_not_ivl_st b s"
   | "ivl_tf_st (EA_Ret None p) s = s"
@@ -102,6 +104,8 @@ fun ivl_tf_st_for ::
   | "ivl_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
          (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
+  | "ivl_tf_st_for source_global (EA_Random x) s =
+       update_resolved_st_q s (location_of source_global x) ivl_top"
   | "ivl_tf_st_for source_global (EA_Assume b) s =
        assume_ivl_st_for source_global b s"
   | "ivl_tf_st_for source_global (EA_AssumeNot b) s =
@@ -167,6 +171,10 @@ proof (rule apply_tf_wrap_eqI[
       (ivl_tf_st (EA_Assign x e) s) =
     apply_tf ivl_tf (EA_Assign x e) (fun_of_resolved_st_q_for is_global s)"
     by (simp add: ivl_tf_def assign_ivl_def)
+  show "\<And>x. fun_of_resolved_st_q_for is_global
+      (ivl_tf_st (EA_Random x) s) =
+    apply_tf ivl_tf (EA_Random x) (fun_of_resolved_st_q_for is_global s)"
+    by (simp add: ivl_tf_def random_ivl_def)
   show "\<And>b. fun_of_resolved_st_q_for is_global
       (ivl_tf_st (EA_Assume b) s) =
     apply_tf ivl_tf (EA_Assume b) (fun_of_resolved_st_q_for is_global s)"

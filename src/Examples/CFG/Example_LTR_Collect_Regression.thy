@@ -90,7 +90,7 @@ proof -
   have g_sn: "sink_node g0 = FunctionEntry pg" by (simp add: g0_def)
   have eRg: "(sink_node g0, EA_Ret None pg, FunctionResult pg) \<in> intra nest_cfg"
     by (simp add: g_sn nest_defs)
-  have stRg: "edge_step (EA_Ret None pg) (sink_store g0) = Some (sink_store g0)"
+  have stRg: "sink_store g0 \<in> edge_step (EA_Ret None pg) (sink_store g0)"
     by simp
   define g1 where "g1 = extend g0 (FunctionResult pg, sink_store g0)"
   have g1_mem: "g1 \<in> valid_ltr is_global nest_cfg S"
@@ -107,7 +107,7 @@ proof -
   have f'_caller: "caller_of f' = Some main0" by (simp add: f'_def f0_def)
   have eRf: "(sink_node f', EA_Ret None pf, FunctionResult pf) \<in> intra nest_cfg"
     by (simp add: f'_sn nest_defs)
-  have stRf: "edge_step (EA_Ret None pf) (sink_store f') = Some (sink_store f')"
+  have stRf: "sink_store f' \<in> edge_step (EA_Ret None pf) (sink_store f')"
     by simp
   define f2 where "f2 = extend f' (FunctionResult pf, sink_store f')"
   have f2_mem: "f2 \<in> valid_ltr is_global nest_cfg S"
@@ -171,14 +171,14 @@ proof -
   have k0_ss: "sink_store k0 = enter_state is_global s0" by (simp add: k0_def r0_def)
   have eA0: "(sink_node k0, EA_Assume bpos, Statement 0) \<in> intra mret_cfg"
     by (simp add: k0_sn mret_defs)
-  have stA0: "edge_step (EA_Assume bpos) (sink_store k0) = Some (sink_store k0)"
+  have stA0: "sink_store k0 \<in> edge_step (EA_Assume bpos) (sink_store k0)"
     by (simp add: k0_ss s0_def mret_defs enter_state_def is_global_def)
   define c0 where "c0 = extend k0 (Statement 0, sink_store k0)"
   have C0: "c0 \<in> valid_ltr is_global mret_cfg UNIV" unfolding c0_def by (rule valid_ltr.intra[OF K0 eA0 stA0])
   have c0_sn: "sink_node c0 = Statement 0" by (simp add: c0_def)
   have eR0: "(sink_node c0, EA_Ret None pf, FunctionResult pf) \<in> intra mret_cfg"
     by (simp add: c0_sn mret_defs)
-  have stR0: "edge_step (EA_Ret None pf) (sink_store c0) = Some (sink_store c0)" by simp
+  have stR0: "sink_store c0 \<in> edge_step (EA_Ret None pf) (sink_store c0)" by simp
   define t1 where "t1 = extend c0 (FunctionResult pf, sink_store c0)"
   have T1: "t1 \<in> valid_ltr is_global mret_cfg UNIV" unfolding t1_def by (rule valid_ltr.intra[OF C0 eR0 stR0])
 
@@ -193,14 +193,14 @@ proof -
   have k1_ss: "sink_store k1 = enter_state is_global s1" by (simp add: k1_def r1_def)
   have eA1: "(sink_node k1, EA_AssumeNot bpos, Statement 1) \<in> intra mret_cfg"
     by (simp add: k1_sn mret_defs)
-  have stA1: "edge_step (EA_AssumeNot bpos) (sink_store k1) = Some (sink_store k1)"
+  have stA1: "sink_store k1 \<in> edge_step (EA_AssumeNot bpos) (sink_store k1)"
     by (simp add: k1_ss s1_def mret_defs enter_state_def is_global_def)
   define c1 where "c1 = extend k1 (Statement 1, sink_store k1)"
   have C1: "c1 \<in> valid_ltr is_global mret_cfg UNIV" unfolding c1_def by (rule valid_ltr.intra[OF K1 eA1 stA1])
   have c1_sn: "sink_node c1 = Statement 1" by (simp add: c1_def)
   have eR1: "(sink_node c1, EA_Ret None pf, FunctionResult pf) \<in> intra mret_cfg"
     by (simp add: c1_sn mret_defs)
-  have stR1: "edge_step (EA_Ret None pf) (sink_store c1) = Some (sink_store c1)" by simp
+  have stR1: "sink_store c1 \<in> edge_step (EA_Ret None pf) (sink_store c1)" by simp
   define t2 where "t2 = extend c1 (FunctionResult pf, sink_store c1)"
   have T2: "t2 \<in> valid_ltr is_global mret_cfg UNIV" unfolding t2_def by (rule valid_ltr.intra[OF C1 eR1 stR1])
 
@@ -260,7 +260,7 @@ proof -
   have rt_sn: "sink_node root = FunctionEntry pr" by (simp add: root_def rec_defs)
   have eA: "(sink_node root, EA_Assume bpos, Statement 1) \<in> intra rec_cfg"
     by (simp add: rt_sn rec_defs)
-  have stepA: "edge_step (EA_Assume bpos) (sink_store root) = Some (sink_store root)"
+  have stepA: "sink_store root \<in> edge_step (EA_Assume bpos) (sink_store root)"
     by (simp add: root_def rec_defs s0_def enter_state_def is_global_def)
   define outer where "outer = extend root (Statement 1, sink_store root)"
   have OUTER: "outer \<in> valid_ltr is_global rec_cfg UNIV"
@@ -325,7 +325,7 @@ proof -
   have rt_sn: "sink_node root = FunctionEntry pr" by (simp add: root_def rec_defs)
   have eA: "(sink_node root, EA_Assume bpos, Statement 1) \<in> intra rec_cfg"
     by (simp add: rt_sn rec_defs)
-  have stepA: "edge_step (EA_Assume bpos) (sink_store root) = Some (sink_store root)"
+  have stepA: "sink_store root \<in> edge_step (EA_Assume bpos) (sink_store root)"
     by (simp add: root_def rec_defs s0_def enter_state_def is_global_def)
   define outer where "outer = extend root (Statement 1, sink_store root)"
   have OUTER: "outer \<in> valid_ltr is_global rec_cfg UNIV"

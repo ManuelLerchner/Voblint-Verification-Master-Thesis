@@ -672,6 +672,7 @@ where
   "unit_dg_spec_st tf_st enter_st = \<lparr>
     dgs_nop        = unit_step_st (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st (tf_st (EA_Assign x e))),
+    dgs_random     = (\<lambda>x. unit_step_st (tf_st (EA_Random x))),
     dgs_assume     = (\<lambda>b. unit_step_st (tf_st (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step_st (tf_st (EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),

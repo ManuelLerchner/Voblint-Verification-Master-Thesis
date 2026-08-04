@@ -30,6 +30,35 @@ proof safe
   qed
 qed
 
+subsection \<open>Abstract nondeterministic assignment\<close>
+
+definition random_sign ::
+    "vname => (vname => sign) => (vname => sign)"
+where
+  "random_sign x \<sigma> = \<sigma>(x := STop)"
+
+lemma random_sign_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(x := v) \<in> \<lbrakk>random_sign x \<sigma>\<rbrakk>"
+  unfolding random_sign_def gamma_state_def
+proof safe
+  fix y
+  from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  show "(s(x := v)) y \<in> gamma ((\<sigma>(x := STop)) y)"
+  proof (cases "y = x")
+    case True
+    then show ?thesis by simp
+  next
+    case False
+    with V show ?thesis by simp
+  qed
+qed
+
+lemma random_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> random_sign x sigma1 \<le> random_sign x sigma2"
+  by (simp add: random_sign_def le_funD le_funI)
+
 subsection \<open>Bundled transfer functions\<close>
 
 (* Procedure entry: keep globals, reset locals to Top (unknown), then bind the
@@ -83,6 +112,7 @@ qed
 
 definition sign_tf :: "sign domain_transfer" where
   "sign_tf = (| tf_assign     = assign_sign,
+                tf_random     = random_sign,
                 tf_assume     = assume_sign,
                 tf_assume_not = assume_not_sign,
                 tf_enter      = enter_sign,
@@ -97,6 +127,10 @@ text \<open>
 lemma sign_tf_sound_assign:
   "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: assign_sign_sound)
+
+lemma sign_tf_sound_random:
+  "\<forall>x \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. st(x := v) \<in> \<lbrakk>tf_random sign_tf x \<sigma>\<rbrakk>"
+  unfolding sign_tf_def by (simp add: random_sign_sound)
 
 lemma sign_tf_sound_assume:
   "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume sign_tf b \<sigma>\<rbrakk>"
@@ -116,6 +150,8 @@ interpretation sign_sound_tf: sound_transfer sign_tf
 proof (rule sound_transferI)
   show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
     using sign_tf_sound_assign by blast
+  show "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random sign_tf x \<sigma>\<rbrakk>"
+    using sign_tf_sound_random by blast
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume sign_tf b \<sigma>\<rbrakk>"
     using sign_tf_sound_assume by blast
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
@@ -148,8 +184,8 @@ lemma assume_not_sign_mono:
 lemma sign_tf_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf sign_tf a s1 \<le> apply_tf sign_tf a s2"
   by (cases a)
-     (auto simp: sign_tf_def assign_sign_mono assume_sign_mono assume_not_sign_mono
-                 enter_sign_mono split: option.splits)
+     (auto simp: sign_tf_def assign_sign_mono random_sign_mono assume_sign_mono
+                 assume_not_sign_mono enter_sign_mono split: option.splits)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -196,6 +232,7 @@ qed
 
 definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
   "sign_tf_for gs = (| tf_assign     = assign_sign,
+                       tf_random     = random_sign,
                        tf_assume     = assume_sign,
                        tf_assume_not = assume_not_sign,
                        tf_enter      = enter_sign_for gs,
@@ -205,6 +242,7 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_sign_sound)
+  subgoal by (simp add: random_sign_sound)
   subgoal by (simp add: assume_sign_sound)
   subgoal by (simp add: assume_not_sign_sound)
   subgoal by (simp add: enter_sign_for_sound)

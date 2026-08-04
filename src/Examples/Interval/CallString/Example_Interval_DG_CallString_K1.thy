@@ -494,7 +494,7 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and enterc = "cs_en
 next
   \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation\<close>.\<close>
   show "\<And>u a v c s s'. (u, a, v) \<in> intra nest_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
+        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (v, c))\<rbrakk>"
     by (rule nest_1_dg.dg_ctx_act_edge)
 next

@@ -297,6 +297,9 @@ definition dgs_nop_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<times> r
 definition dgs_assign_rel :: "vname \<Rightarrow> aexp \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_assign_rel x e d g = (forget_relc x g, forget_relc x d)"
 
+definition dgs_random_rel :: "vname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_random_rel x d g = (forget_relc x g, forget_relc x d)"
+
 definition dgs_assume_rel :: "bexp \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_assume_rel b d g = (g, assume_step b d)"
 
@@ -318,6 +321,7 @@ definition rel_order_spec :: "(relc, relc) dg_spec" where
   "rel_order_spec = \<lparr>
      dgs_nop = dgs_nop_rel,
      dgs_assign = dgs_assign_rel,
+     dgs_random = dgs_random_rel,
      dgs_assume = dgs_assume_rel,
      dgs_assume_not = dgs_assume_not_rel,
      dgs_enter = dgs_enter_rel,
@@ -343,6 +347,19 @@ proof -
     using forget_relc_sound unfolding gammaDG_rel_def by blast
   finally show ?thesis
     unfolding dgs_assign_rel_def gammaDG_rel_def by simp
+qed
+
+lemma dgs_random_rel_sound:
+  "edge_collect (EA_Random x) (gammaDG_rel d g) \<subseteq>
+     (case dgs_random_rel x d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+proof -
+  have "edge_collect (EA_Random x) (gammaDG_rel d g)
+      = {s(x := v) | s v. s \<in> gammaDG_rel d g}"
+    by simp
+  also have "... \<subseteq> gamma_rel (forget_relc x d) \<inter> gamma_rel (forget_relc x g)"
+    using forget_relc_sound unfolding gammaDG_rel_def by blast
+  finally show ?thesis
+    unfolding dgs_random_rel_def gammaDG_rel_def by simp
 qed
 
 lemma dgs_assume_rel_sound:
@@ -401,6 +418,10 @@ next
   case (EA_Assign x e)
   then show ?thesis
     using dgs_assign_rel_sound[of x e d g] by (simp add: rel_order_spec_def)
+next
+  case (EA_Random x)
+  then show ?thesis
+    using dgs_random_rel_sound[of x d g] by (simp add: rel_order_spec_def)
 next
   case (EA_Assume b)
   then show ?thesis

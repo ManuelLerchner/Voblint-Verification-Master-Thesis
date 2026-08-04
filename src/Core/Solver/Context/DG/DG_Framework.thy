@@ -414,6 +414,7 @@ text \<open>
 record ('dl, 'dg) dg_spec =
   dgs_nop        :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_random     :: "vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assume     :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assume_not :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -434,6 +435,7 @@ fun dg_spec_step ::
 where
   "dg_spec_step S EA_Nop           = dgs_nop S"
 | "dg_spec_step S (EA_Assign x e)  = dgs_assign S x e"
+| "dg_spec_step S (EA_Random x)    = dgs_random S x"
 | "dg_spec_step S (EA_Assume b)    = dgs_assume S b"
 | "dg_spec_step S (EA_AssumeNot b) = dgs_assume_not S b"
 | "dg_spec_step S (EA_Ret e p) =
@@ -531,6 +533,8 @@ where
     dgs_nop        = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_placed keep_local publish_side
       (apply_tf tf (EA_Assign x e))),
+    dgs_random     = (\<lambda>x. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_Random x))),
     dgs_assume     = (\<lambda>b. unit_step_placed keep_local publish_side
       (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step_placed keep_local publish_side
@@ -565,6 +569,7 @@ where
   "unit_dg_spec_for gs tf = \<lparr>
     dgs_nop        = unit_step_for gs (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
+    dgs_random     = (\<lambda>x. unit_step_for gs (apply_tf tf (EA_Random x))),
     dgs_assume     = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step_for gs (tf_enter tf xs es)),
