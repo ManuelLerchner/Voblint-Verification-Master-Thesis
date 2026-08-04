@@ -15,10 +15,10 @@ text \<open>
 
 
 
-context sound_transfer
+context sound_transfer_for
 begin
 
-lemma ltr_post_fixpoint_sound_at:
+lemma ltr_post_fixpoint_sound_at_for:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
     and S :: "store set" and v0 :: pp
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
@@ -31,7 +31,7 @@ lemma ltr_post_fixpoint_sound_at:
     "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
        tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont"
   assumes entry_le: "s0 \<le> env (cfg_entry g)"
-  shows "ltr_collect is_global g S v0 \<subseteq> \<lbrakk>env v0\<rbrakk>"
+  shows "ltr_collect gs g S v0 \<subseteq> \<lbrakk>env v0\<rbrakk>"
 proof (rule ltr_collect_semantic_postfix)
   show "S \<subseteq> \<lbrakk>env (cfg_entry g)\<rbrakk>"
     using S_sound gamma_state_mono[OF entry_le] by blast
@@ -43,23 +43,23 @@ next
   fix u dst pars args p cont s
   assume e: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> \<lbrakk>env u\<rbrakk>"
-  show "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>env (FunctionEntry p)\<rbrakk>"
-    by (rule call_enter_of_bound[OF call_le[OF e] s])
+  show "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>env (FunctionEntry p)\<rbrakk>"
+    by (rule call_enter_of_bound_for[OF call_le[OF e] s])
 next
   fix cl dst pars args p cont s t
   assume e: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and s: "s \<in> \<lbrakk>env cl\<rbrakk>" and t: "t \<in> \<lbrakk>env (FunctionResult p)\<rbrakk>"
-  show "combine_collect is_global dst s t \<in> \<lbrakk>env cont\<rbrakk>"
-    by (rule combine_of_bound[OF combine_le[OF e] s t])
+  show "combine_collect gs dst s t \<in> \<lbrakk>env cont\<rbrakk>"
+    by (rule combine_of_bound_for[OF combine_le[OF e] s t])
 qed
 
-theorem unified_ltr_post_fixpoint_sound:
+theorem unified_ltr_post_fixpoint_sound_for:
   fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes finI: "finite (intra g)"
   assumes finC: "finite (calls g)"
   assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
-  shows "ltr_collect is_global g S v \<subseteq> \<lbrakk>env v\<rbrakk>"
+  shows "ltr_collect gs g S v \<subseteq> \<lbrakk>env v\<rbrakk>"
 proof -
   have step_le: "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
   proof -
@@ -92,8 +92,38 @@ proof -
           post_fp[unfolded is_post_fixpoint_def, rule_format, of "cfg_entry g"]
     by (rule order_trans)
   show ?thesis
-    by (rule ltr_post_fixpoint_sound_at[OF S_sound step_le call_le combine_le entry_le])
+    by (rule ltr_post_fixpoint_sound_at_for[OF S_sound step_le call_le combine_le entry_le])
 qed
+
+end
+
+context sound_transfer
+begin
+
+lemma ltr_post_fixpoint_sound_at:
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+    and S :: "store set" and v0 :: pp
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  assumes step_le:
+    "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
+  assumes call_le:
+    "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
+       tf_enter tf fs as (env c) \<le> env (FunctionEntry p)"
+  assumes combine_le:
+    "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
+       tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont"
+  assumes entry_le: "s0 \<le> env (cfg_entry g)"
+  shows "ltr_collect is_global g S v0 \<subseteq> \<lbrakk>env v0\<rbrakk>"
+  by (rule ltr_post_fixpoint_sound_at_for[OF S_sound step_le call_le combine_le entry_le])
+
+theorem unified_ltr_post_fixpoint_sound:
+  fixes g :: cfg and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
+  assumes finI: "finite (intra g)"
+  assumes finC: "finite (calls g)"
+  assumes post_fp: "is_post_fixpoint g tf (\<squnion>) bot s0 env"
+  assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
+  shows "ltr_collect is_global g S v \<subseteq> \<lbrakk>env v\<rbrakk>"
+  by (rule unified_ltr_post_fixpoint_sound_for[OF finI finC post_fp S_sound])
 
 end
 

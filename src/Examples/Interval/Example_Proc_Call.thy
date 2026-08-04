@@ -15,8 +15,9 @@ definition main_cfg_name :: pname where
 
 text \<open>
   Two parameterless procedures communicate through the global variable
-  @{term \<open>''Gx''\<close>}.  Variable names starting with \<open>G\<close> are global:
-  they survive call-frame restore while locals are reset to zero.
+  @{term \<open>''Gx''\<close>}.  \<open>proc_call_gs\<close> is this program's explicit storage
+  classifier: \<open>Gx\<close> is global by declaration, not by its leading letter, so it
+  survives call-frame restore while locals are reset to zero.
 
   \<^item> \<open>inc\<close>: adds 1 to \<open>Gx\<close>.
   \<^item> \<open>sqr\<close>: replaces \<open>Gx\<close> with its square.
@@ -24,6 +25,9 @@ text \<open>
   Main program: \<open>Gx := 4; call inc; call sqr\<close>
   terminates with \<open>Gx = 25\<close> since \<open>(4 + 1)^2 = 25\<close>.
 \<close>
+
+definition proc_call_gs :: "vname \<Rightarrow> bool" where
+  "proc_call_gs x \<longleftrightarrow> x = ''Gx''"
 
 definition inc_body :: "VIMP_Proc.com" where
   "inc_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
@@ -52,61 +56,61 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes is_global proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
 proof -
-  have run: "pcompletes is_global proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
-                (VIMP_Globals.combine_states is_global s
-                  ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1)))"
+  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
+                (VIMP_Globals.combine_states proc_call_gs s
+                  ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes is_global proc_pi inc_body (enter_state is_global s)
-             ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))"
+    show "pcompletes proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
+             ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' + 1))"
     proof -
-      have "pcompletes is_global proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
-               (enter_state is_global s)
-               ((enter_state is_global s)
-                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s)))"
+      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
+               (enter_state proc_call_gs s)
+               ((enter_state proc_call_gs s)
+                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state is_global s) = s ''Gx'' + 1"
-        by (simp add: enter_state_def is_global_def)
+      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state proc_call_gs s) = s ''Gx'' + 1"
+        by (simp add: enter_state_def proc_call_gs_def)
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
   moreover have
-    "VIMP_Globals.combine_states is_global s ((enter_state is_global s)(''Gx'' := s ''Gx'' + 1))
+    "VIMP_Globals.combine_states proc_call_gs s ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' + 1))
        = s(''Gx'' := s ''Gx'' + 1)"
-    by (rule ext) (simp add: enter_state_def is_global_def)
+    by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
 qed
 
 lemma call_sqr_result:
-  "pcompletes is_global proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
 proof -
-  have run: "pcompletes is_global proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
-                (VIMP_Globals.combine_states is_global s
-                  ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
+  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
+                (VIMP_Globals.combine_states proc_call_gs s
+                  ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes is_global proc_pi sqr_body (enter_state is_global s)
-             ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx''))"
+    show "pcompletes proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
+             ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' * s ''Gx''))"
     proof -
-      have "pcompletes is_global proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
-               (enter_state is_global s)
-               ((enter_state is_global s)
-                 (''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state is_global s)))"
+      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
+               (enter_state proc_call_gs s)
+               ((enter_state proc_call_gs s)
+                 (''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
       moreover have
-        "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state is_global s) = s ''Gx'' * s ''Gx''"
-        by (simp add: enter_state_def is_global_def)
+        "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state proc_call_gs s) = s ''Gx'' * s ''Gx''"
+        by (simp add: enter_state_def proc_call_gs_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
   moreover have
-    "VIMP_Globals.combine_states is_global s
-       ((enter_state is_global s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
-    by (rule ext) (simp add: enter_state_def is_global_def)
+    "VIMP_Globals.combine_states proc_call_gs s
+       ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+    by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
 qed
 
@@ -115,15 +119,15 @@ text \<open>
   initial store, regardless of @{term \<open>''Gx''\<close>}'s starting value.
 \<close>
 theorem main_prog_result:
-  "pcompletes is_global proc_pi main_prog s (s(''Gx'' := 25))"
+  "pcompletes proc_call_gs proc_pi main_prog s (s(''Gx'' := 25))"
 proof -
-  have step1: "pcompletes is_global proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s(''Gx'' := 4))"
-    using pcompletes_assign[where gs = is_global and \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
+  have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s(''Gx'' := 4))"
+    using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
     by (simp add: pcompletes_def)
-  have step2: "pcompletes is_global proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
+  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
     using call_inc_result[where s = "s(''Gx'' := 4)"]
     by simp
-  have step3: "pcompletes is_global proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
+  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
     using call_sqr_result[where s = "s(''Gx'' := 5)"]
     by simp
   show ?thesis
@@ -226,14 +230,14 @@ definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
       else Ivl MinInf PlusInf)"
 
 lemma main_prog_postfix:
-  "is_post_fixpoint main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env"
+  "is_post_fixpoint main_cfg (ivl_tf_for proc_call_gs) (\<squnion>) bot main_prog_s0 main_prog_env"
   unfolding is_post_fixpoint_def
 proof (rule allI)
   fix v
-  let ?I = "(\<lambda>(u, a). apply_tf ivl_tf a (main_prog_env u)) ` intra_predecessors main_cfg v"
-  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter ivl_tf fs as (main_prog_env c))
+  let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)) ` intra_predecessors main_cfg v"
+  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter (ivl_tf_for proc_call_gs) fs as (main_prog_env c))
               ` entry_calls main_cfg v"
-  let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs ivl_tf dst (main_prog_env c) (main_prog_env ex))
+  let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs (ivl_tf_for proc_call_gs) dst (main_prog_env c) (main_prog_env ex))
               ` return_calls main_cfg v"
   have fin: "finite (?I \<union> ?E \<union> ?R)"
     using finite_intra_predecessors[of main_cfg v] finite_entry_calls[of main_cfg v]
@@ -245,28 +249,28 @@ proof (rule allI)
   proof -
     fix t assume "t \<in> ?I"
     then obtain u a where e: "(u, a, v) \<in> intra main_cfg"
-      and t: "t = apply_tf ivl_tf a (main_prog_env u)"
+      and t: "t = apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)"
       by (auto simp: intra_predecessors_def)
     from e[unfolded main_cfg_intra] show "t \<le> main_prog_env v"
       unfolding t
       by (elim insertE emptyE)
-         (simp_all add: main_prog_env_def ivl_tf_def assign_ivl_def times_ivl_def
+         (simp_all add: main_prog_env_def ivl_tf_for_def assign_ivl_def times_ivl_def
                         normalize_ivl_def less_eq_ivl_def le_fun_def)
   qed
   have leE: "\<And>t. t \<in> ?E \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
-             simp: entry_calls_def main_cfg_calls main_prog_env_def ivl_tf_def
-                   enter_ivl_def enter_frame_ivl_def enter_D_def enter_frame_D_def
+             simp: entry_calls_def main_cfg_calls main_prog_env_def ivl_tf_for_def
+                   enter_ivl_for_def enter_frame_ivl_def enter_D_def enter_frame_D_def
                    ivl_top_def bind_formals_abs_def less_eq_ivl_def le_fun_def
-                   is_global_def)
+                   proc_call_gs_def)
   have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: return_calls_def main_cfg_calls main_prog_env_def
-                   tf_combine_collect_abs_def ivl_tf_def combine_abs_def normalize_ivl_def
-                   less_eq_ivl_def le_fun_def is_global_def)
+                   tf_combine_collect_abs_def ivl_tf_for_def combine_abs_def normalize_ivl_def
+                   less_eq_ivl_def le_fun_def proc_call_gs_def)
   have le: "\<And>t. t \<in> ?I \<union> ?E \<union> ?R \<Longrightarrow> t \<le> main_prog_env v"
     using leI leE leR by blast
-  show "rhs main_cfg ivl_tf (\<squnion>) bot main_prog_s0 main_prog_env v \<le> main_prog_env v"
+  show "rhs main_cfg (ivl_tf_for proc_call_gs) (\<squnion>) bot main_prog_s0 main_prog_env v \<le> main_prog_env v"
   proof (cases "v = cfg_entry main_cfg")
     case True
     have s0: "main_prog_s0 \<le> main_prog_env v"
@@ -305,15 +309,15 @@ text \<open>
 
 theorem main_prog_interval_analysis:
   assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
-  assumes s: "s \<in> ltr_collect is_global main_cfg S (cfg_exit main_cfg)"
+  assumes s: "s \<in> ltr_collect proc_call_gs main_cfg S (cfg_exit main_cfg)"
   shows "s ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (intra main_cfg)" using compile_prog_finite by simp
   have fin_c: "finite (calls main_cfg)" using compile_prog_finite by simp
-  have le: "ltr_collect is_global main_cfg S (cfg_exit main_cfg)
+  have le: "ltr_collect proc_call_gs main_cfg S (cfg_exit main_cfg)
               \<le> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>"
-    using sound_transfer.unified_ltr_post_fixpoint_sound
-          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c main_prog_postfix S_sound]
+    using sound_transfer_for.unified_ltr_post_fixpoint_sound_for
+          [OF ivl_is_sound_transfer_for fin_e fin_c main_prog_postfix S_sound]
     by blast
   from s le have "s \<in> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>" by blast
   then have "s ''Gx'' \<in> gamma (main_prog_env (cfg_exit main_cfg) ''Gx'')"

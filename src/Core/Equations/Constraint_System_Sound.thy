@@ -165,6 +165,65 @@ next
   qed
 qed
 
+text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer
+  over \<open>A\<close> is dominated by \<open>B\<close>, a concrete step from a store in \<open>[[A]]\<close> lands in \<open>[[B]]\<close>.
+  A domain-level consequence of \<open>edge_collect_apply_tf_sound_for\<close> and monotonicity, shared
+  by the R_read / DG local-slot spines. Generic in the classifier: neither premise nor
+  conclusion mentions \<open>gs\<close>.\<close>
+lemma edge_of_bound:
+  assumes bound: "apply_tf tf a A \<le> B"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>"
+    and step: "s' \<in> edge_step a s"
+  shows "s' \<in> \<lbrakk>B\<rbrakk>"
+proof -
+  have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)
+  have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>A\<rbrakk>" using s edge_collect_mono by blast
+  also have "... \<subseteq> \<lbrakk>apply_tf tf a A\<rbrakk>" by (rule edge_collect_apply_tf_sound_for)
+  also have "... \<subseteq> \<lbrakk>B\<rbrakk>" using gamma_state_mono[OF bound] by blast
+  finally show ?thesis using m by blast
+qed
+
+text \<open>Call-entry companion of \<open>edge_of_bound\<close>, generic in the classifier: if the
+  abstract enter transfer over \<open>A\<close> is dominated by \<open>B\<close>, the concrete callee-entry
+  store built from a caller store in \<open>[[A]]\<close> lies in \<open>[[B]]\<close>.\<close>
+lemma call_enter_of_bound_for:
+  assumes bound: "tf_enter tf pars args A \<le> B"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>"
+  shows "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
+proof -
+  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
+    using tf_sound_enter_forD[OF s] by (simp add: call_enter_CallEdge)
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
+text \<open>Return-combine companion of \<open>edge_of_bound\<close>/\<open>call_enter_of_bound_for\<close>, generic
+  in the classifier: if the per-analysis return combine over \<open>A\<close>, \<open>B\<close> is dominated by
+  \<open>C\<close>, the concrete return combine of stores sound for \<open>A\<close>, \<open>B\<close> lies in \<open>[[C]]\<close>.\<close>
+lemma combine_of_bound_for:
+  assumes bound: "tf_combine_collect_abs tf dst A B \<le> C"
+    and s: "s \<in> \<lbrakk>A\<rbrakk>" and t: "t \<in> \<lbrakk>B\<rbrakk>"
+  shows "combine_collect gs dst s t \<in> \<lbrakk>C\<rbrakk>"
+proof -
+  have step: "combine_collect gs dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst A B\<rbrakk>"
+  proof (cases dst)
+    case None
+    then show ?thesis
+      using tf_sound_combine_forD[OF s t]
+      by (simp add: combine_collect_def tf_combine_collect_abs_def)
+  next
+    case (Some x)
+    have base: "combine_states gs s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
+      using tf_sound_combine_forD[OF s t] .
+    have ret: "t ret_var \<in> gamma (B ret_var)"
+      using t unfolding gamma_state_def by auto
+    show ?thesis
+      using base ret Some
+      unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
+      by auto
+  qed
+  thus ?thesis using gamma_state_mono[OF bound] by blast
+qed
+
 end
 
 context sound_transfer
@@ -177,23 +236,6 @@ lemma edge_collect_apply_tf_sound:
   "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
   by (rule edge_collect_apply_tf_sound_for)
 
-text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer
-  over \<open>A\<close> is dominated by \<open>B\<close>, a concrete step from a store in \<open>[[A]]\<close> lands in \<open>[[B]]\<close>.
-  A domain-level consequence of \<open>edge_collect_apply_tf_sound\<close> and monotonicity, shared
-  by the R_read / DG local-slot spines.\<close>
-lemma edge_of_bound:
-  assumes bound: "apply_tf tf a A \<le> B"
-    and s: "s \<in> \<lbrakk>A\<rbrakk>"
-    and step: "s' \<in> edge_step a s"
-  shows "s' \<in> \<lbrakk>B\<rbrakk>"
-proof -
-  have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)
-  have "edge_collect a {s} \<subseteq> edge_collect a \<lbrakk>A\<rbrakk>" using s edge_collect_mono by blast
-  also have "... \<subseteq> \<lbrakk>apply_tf tf a A\<rbrakk>" by (rule edge_collect_apply_tf_sound)
-  also have "... \<subseteq> \<lbrakk>B\<rbrakk>" using gamma_state_mono[OF bound] by blast
-  finally show ?thesis using m by blast
-qed
-
 text \<open>Call-entry companion of \<open>edge_of_bound\<close>: if the abstract enter transfer over \<open>A\<close> is
   dominated by \<open>B\<close>, the concrete callee-entry store built from a caller store in \<open>[[A]]\<close> lies
   in \<open>[[B]]\<close>.  The enter analogue of the intra \<open>edge_of_bound\<close>, shared by the LTR and DG
@@ -202,11 +244,7 @@ lemma call_enter_of_bound:
   assumes bound: "tf_enter tf pars args A \<le> B"
     and s: "s \<in> \<lbrakk>A\<rbrakk>"
   shows "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
-proof -
-  have "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
-    using tf_sound_enterD[OF s] by (simp add: call_enter_CallEdge)
-  thus ?thesis using gamma_state_mono[OF bound] by blast
-qed
+  by (rule call_enter_of_bound_for[OF bound s])
 
 text \<open>Return-combine companion of \<open>edge_of_bound\<close>/\<open>call_enter_of_bound\<close>: if the
   per-analysis return combine over \<open>A\<close>, \<open>B\<close> is dominated by \<open>C\<close>, the concrete
@@ -218,26 +256,7 @@ lemma combine_of_bound:
   assumes bound: "tf_combine_collect_abs tf dst A B \<le> C"
     and s: "s \<in> \<lbrakk>A\<rbrakk>" and t: "t \<in> \<lbrakk>B\<rbrakk>"
   shows "combine_collect is_global dst s t \<in> \<lbrakk>C\<rbrakk>"
-proof -
-  have step: "combine_collect is_global dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst A B\<rbrakk>"
-  proof (cases dst)
-    case None
-    then show ?thesis
-      using tf_sound_combineD[OF s t]
-      by (simp add: combine_collect_def tf_combine_collect_abs_def)
-  next
-    case (Some x)
-    have base: "combine_states is_global s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
-      using tf_sound_combineD[OF s t] .
-    have ret: "t ret_var \<in> gamma (B ret_var)"
-      using t unfolding gamma_state_def by auto
-    show ?thesis
-      using base ret Some
-      unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
-      by auto
-  qed
-  thus ?thesis using gamma_state_mono[OF bound] by blast
-qed
+  by (rule combine_of_bound_for[OF bound s t])
 
 
 
