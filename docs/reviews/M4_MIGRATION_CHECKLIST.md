@@ -38,10 +38,21 @@ unnecessary migrations were reverted in commit `95ff7132`:
 `Exec_Sign_DG_Run.thy` is back to 155 lines (from 997) and
 `Example_Parity_DG_Flagship.thy` to 267 lines (from 1336), both on the
 classic `sound_dg_spec` route again, with zero loss of framework capability
-(all reusable lemmas the migration produced — `placed_hook_se_join_edge`,
+(the reusable lemmas the migration produced that examples actually still use —
 the issue #81 assembly theorem, the classifier-parametric transfer layers —
 remain in the framework files, untouched, still consumed by
 `Example_Interval_Placement.thy`/`Example_Sign_Placement.thy`).
+
+**Correction, pre-merge review pass.** The join-node transport lemma this
+section originally listed as reusable, `placed_hook_se_join_edge`
+(`Exec_DG_Bridge.thy`) and its supporting fold law
+`side_cfg_T_eff_keyed_seed_trees_two_edges` (`DG_Framework.thy`), had zero
+call sites once the Parity revert landed — neither placement example hits a
+CFG join node (`Example_Interval_Placement.thy` states this directly: "the
+hook generator's fold degenerates to that single tree: no join is ever
+[triggered]"). Both were dead code with a doc claim asserting otherwise; both
+have been deleted. If a future example needs a two-predecessor join-node
+transport lemma, rebuild it then, against that example's actual CFG shape.
 See `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md` for the full evidence trail.
 This file's own task list below is historical record of the cancelled
 migration attempt, kept for reference, not an active plan.
@@ -271,7 +282,7 @@ Interval) above; there is no separate cross-domain CallString/Ctx file.
 
 | File | Route | Notes | Status |
 | --- | --- | --- | --- |
-| `src/Examples/Voblint.thy` | classic-only today | Pure `imports` bundle (zero own lemmas/definitions). Imports every classic-route example listed above (directly or transitively via the Ctx chain) plus every route-2/route-3 example. **Imports neither `Example_Sign_Placement.thy` nor `Example_Interval_Placement.thy`** — the two new-route examples are currently outside the capstone's build graph entirely. | TODO (must be updated once its classic imports are migrated; low individual difficulty since it has no own proofs, but is the integration point — see "Unexpected findings") |
+| `src/Examples/Voblint.thy` | classic-only today | Pure `imports` bundle (zero own lemmas/definitions). Imports every classic-route example listed above (directly or transitively via the Ctx chain) plus every route-2/route-3 example. **Imports neither `Example_Sign_Placement.thy` nor `Example_Interval_Placement.thy`** — the two new-route examples are currently outside the capstone's build graph entirely. | MOOT — the migration this row was tracking is cancelled (see top of file), so there are no further classic imports to migrate. The capstone's import list not covering every example in `ROOT` (also missing `Example_Parity_DG_Flagship.thy`, `Example_Interval_DG_IP_Flagship.thy`, the Ctx flagship/sound/collect files, `Exec_Ivl_Run.thy`) predates and is independent of this PR; closing that gap, if ever done, is ordinary capstone-completeness maintenance, not a migration follow-up. |
 
 ### Non-DG examples and infra checked and excluded (confirmed, not skipped)
 
@@ -387,6 +398,13 @@ errors, zero `sorry`/`oops` across every file touched so far
 `DG_Framework.thy`, `Exec_DG_Bridge.thy`, `Example_Parity_DG_Flagship.thy`).
 
 ## Join-node transport lemma (generic library addition)
+
+**Superseded — deleted, see the correction note above.** This section
+describes the lemma as committed at the time; the Parity migration that
+motivated it was later reverted and no other example ever exercised a join
+node, so `placed_hook_se_join_edge`/`side_cfg_T_eff_keyed_seed_trees_two_edges`
+were removed as dead code in the pre-merge review pass. Kept below verbatim
+as the historical record of why it was built.
 
 **Done and committed.** Migrating `Example_Parity_DG_Flagship.thy` required a
 generic library addition first, since its loop compiles to a join node
