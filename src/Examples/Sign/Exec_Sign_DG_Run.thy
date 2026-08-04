@@ -816,103 +816,72 @@ lemma dgEx_dg_td_abs_post_solution:
   "part_post_solution (dgEx_sound_dg_hooks.hook_gen gEx bot
       dgEx_s0d_abs dgEx_s0g_abs) (cfg_exit gEx, ()) dgEx_sigma_abs
       dgEx_nodes"
-  unfolding part_post_solution_iff_se_constraint_holds
-proof (intro conjI)
+proof (rule dgEx_sound_dg_hooks.part_post_solution_of_ball)
   show "(cfg_exit gEx, ()) \<in> dgEx_nodes"
     unfolding dgEx_nodes_def by eval
 next
+  have node_entry: "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs (cfg_entry gEx, ()) \<subseteq> dgEx_nodes \<and>
+      se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs (cfg_entry gEx, ())) dgEx_sigma_abs (cfg_entry gEx, ())"
+    by (rule dgEx_sound_dg_hooks.hook_gen_dep_and_se_entry,
+        simp add: dgEx_hook_gen_entry_dep[OF _ _ _ refl]
+          dgEx_hook_lists[folded dgEx_cfg_entry],
+        rule dgEx_se_entry)
+  have node_s0: "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs (Statement 0, ()) \<subseteq> dgEx_nodes \<and>
+      se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs (Statement 0, ())) dgEx_sigma_abs (Statement 0, ())"
+    by (rule dgEx_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: dgEx_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 0" and u = "FunctionEntry prog_main_name"]
+          dgEx_hook_lists dgEx_no_combine_edge_nodes dgEx_cfg_entry,
+        simp add: dgEx_nodes_def,
+        rule dgEx_se_statement0)
+  have not_entry1: "Statement 1 \<noteq> cfg_entry gEx" by (simp add: dgEx_cfg_entry)
+  have pred1: "intra_predecessor_list gEx (Statement 1) =
+      [(Statement 0, EA_Assign ''x'' (N 1))]"
+    by (rule dgEx_hook_lists)
+  have no_combine1: "return_call_action_list gEx (Statement 1) = []"
+    by (rule dgEx_no_combine_edge_nodes)
+  have no_enter1: "entry_call_list gEx (Statement 1) = []"
+    by (rule dgEx_no_combine_edge_nodes)
+  have node_s1: "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs (Statement 1, ()) \<subseteq> dgEx_nodes \<and>
+      se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs (Statement 1, ())) dgEx_sigma_abs (Statement 1, ())"
+    by (rule dgEx_sound_dg_hooks.hook_gen_dep_and_se_single,
+        rule dgEx_hook_gen_single_edge_dep[OF not_entry1 pred1 no_combine1 no_enter1 refl],
+        simp add: dgEx_nodes_def,
+        rule dgEx_se_statement1)
+  have node_s2: "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs (Statement 2, ()) \<subseteq> dgEx_nodes \<and>
+      se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs (Statement 2, ())) dgEx_sigma_abs (Statement 2, ())"
+    by (rule dgEx_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: dgEx_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 2" and u = "Statement 1"]
+          dgEx_hook_lists dgEx_no_combine_edge_nodes dgEx_cfg_entry,
+        simp add: dgEx_nodes_def,
+        rule dgEx_se_statement2)
+  have node_result: "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs (FunctionResult prog_main_name, ()) \<subseteq>
+        dgEx_nodes \<and>
+      se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
+        dgEx_s0d_abs dgEx_s0g_abs (FunctionResult prog_main_name, ())) dgEx_sigma_abs
+        (FunctionResult prog_main_name, ())"
+    by (rule dgEx_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: dgEx_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "FunctionResult prog_main_name" and u = "Statement 2"]
+          dgEx_hook_lists dgEx_no_combine_edge_nodes dgEx_cfg_entry,
+        simp add: dgEx_nodes_def,
+        rule dgEx_se_function_result)
   show "\<forall>u \<in> dgEx_nodes. dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
       dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs u \<subseteq> dgEx_nodes \<and>
     se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
       dgEx_s0d_abs dgEx_s0g_abs u) dgEx_sigma_abs u"
-  proof
-    fix u assume u_mem: "u \<in> dgEx_nodes"
-    consider
-        (entry) "u = (FunctionEntry prog_main_name, ())"
-      | (s0) "u = (Statement 0, ())" | (s1) "u = (Statement 1, ())"
-      | (s2) "u = (Statement 2, ())"
-      | (result_main) "u = (FunctionResult prog_main_name, ())"
-      using u_mem unfolding dgEx_nodes_def by auto
-    then show "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
-          dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs u \<subseteq> dgEx_nodes \<and>
-        se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
-          dgEx_s0d_abs dgEx_s0g_abs u) dgEx_sigma_abs u"
-    proof cases
-      case entry
-      show ?thesis
-        unfolding entry
-      proof (intro conjI)
-        have entry_no_edge: "intra_predecessor_list gEx (cfg_entry gEx) = []"
-          unfolding dgEx_cfg_entry by (rule dgEx_hook_lists)
-        have entry_no_combine: "return_call_action_list gEx (cfg_entry gEx) = []"
-          unfolding dgEx_cfg_entry by (rule dgEx_hook_lists)
-        have entry_no_enter: "entry_call_list gEx (cfg_entry gEx) = []"
-          unfolding dgEx_cfg_entry by (rule dgEx_hook_lists)
-        show "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
-            dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs
-            (FunctionEntry prog_main_name, ()) \<subseteq> dgEx_nodes"
-          unfolding dgEx_cfg_entry[symmetric]
-          by (simp add: dgEx_hook_gen_entry_dep[OF entry_no_edge entry_no_combine
-                entry_no_enter refl])
-      next
-        show "se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
-            dgEx_s0d_abs dgEx_s0g_abs (FunctionEntry prog_main_name, ()))
-            dgEx_sigma_abs (FunctionEntry prog_main_name, ())"
-          by (rule dgEx_se_entry[unfolded dgEx_cfg_entry])
-      qed
-    next
-      case s0
-      show ?thesis
-        unfolding s0
-        by (intro conjI, simp add: dgEx_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 0" and u = "FunctionEntry prog_main_name"]
-              dgEx_hook_lists dgEx_no_combine_edge_nodes dgEx_cfg_entry
-              dgEx_nodes_def,
-            rule dgEx_se_statement0)
-    next
-      case s1
-      show ?thesis
-        unfolding s1
-      proof (intro conjI)
-        have not_entry: "Statement 1 \<noteq> cfg_entry gEx" by (simp add: dgEx_cfg_entry)
-        have pred: "intra_predecessor_list gEx (Statement 1) =
-            [(Statement 0, EA_Assign ''x'' (N 1))]"
-          by (rule dgEx_hook_lists)
-        have no_combine: "return_call_action_list gEx (Statement 1) = []"
-          by (rule dgEx_no_combine_edge_nodes)
-        have no_enter: "entry_call_list gEx (Statement 1) = []"
-          by (rule dgEx_no_combine_edge_nodes)
-        show "dep\<^sub>L (dgEx_sound_dg_hooks.hook_gen gEx bot
-            dgEx_s0d_abs dgEx_s0g_abs) dgEx_sigma_abs (Statement 1, ())
-            \<subseteq> dgEx_nodes"
-          by (subst dgEx_hook_gen_single_edge_dep[OF not_entry pred no_combine no_enter refl])
-             (simp add: dgEx_nodes_def)
-      next
-        show "se_constraint_holds (dgEx_sound_dg_hooks.hook_gen gEx bot
-            dgEx_s0d_abs dgEx_s0g_abs (Statement 1, ())) dgEx_sigma_abs
-            (Statement 1, ())"
-          by (rule dgEx_se_statement1)
-      qed
-    next
-      case s2
-      show ?thesis
-        unfolding s2
-        by (intro conjI, simp add: dgEx_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 2" and u = "Statement 1"]
-              dgEx_hook_lists dgEx_no_combine_edge_nodes dgEx_cfg_entry
-              dgEx_nodes_def,
-            rule dgEx_se_statement2)
-    next
-      case result_main
-      show ?thesis
-        unfolding result_main
-        by (intro conjI, simp add: dgEx_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "FunctionResult prog_main_name" and u = "Statement 2"]
-              dgEx_hook_lists dgEx_no_combine_edge_nodes dgEx_cfg_entry
-              dgEx_nodes_def,
-            rule dgEx_se_function_result)
-    qed
-  qed
+    using node_entry[unfolded dgEx_cfg_entry] node_s0 node_s1 node_s2 node_result
+    unfolding dgEx_nodes_def by auto
 qed
 
 subsection \<open>Trace-native collecting soundness\<close>

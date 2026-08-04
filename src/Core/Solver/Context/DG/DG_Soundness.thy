@@ -1313,6 +1313,62 @@ lemma hook_postfix_combine:
   shows "combine_collect gs dst s t \<in>
     dg_hook_gamma gammaDG sigma k"
   using pf call sin tin unfolding hook_postfix_def by blast
+
+subsection \<open>Generic post-solution assembly\<close>
+
+text \<open>
+  Turning a per-node dependency-closure fact (a @{const dep\<^sub>L} equation,
+  obtained by unfolding @{const hook_gen} against the node's own CFG shape)
+  and a per-node @{const se_constraint_holds} fact into the single conjunct
+  @{const part_post_solution} needs at that node -- and combining every
+  node's conjunct with exit membership into @{const part_post_solution}
+  itself -- is the same argument regardless of which CFG or domain
+  instantiates this locale: only the node's own predecessor count (zero at
+  entry, one at an ordinary edge, two at a join) and its concrete
+  dependency/effect facts vary per call site. These lemmas fix that argument
+  once, so an instance's own post-solution assembly reduces to a case split
+  whose branches each cite one dependency fact, one membership fact, and one
+  @{const se_constraint_holds} fact.
+\<close>
+
+lemma hook_gen_dep_and_se_entry:
+  assumes dep_eq: "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (cfg_entry g, ()) = {}"
+    and se: "se_constraint_holds (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma
+      (cfg_entry g, ())"
+  shows "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (cfg_entry g, ()) \<subseteq> vars \<and>
+    se_constraint_holds (hook_gen g bot0 s0d s0g (cfg_entry g, ())) sigma (cfg_entry g, ())"
+  using dep_eq se by auto
+
+lemma hook_gen_dep_and_se_single:
+  assumes dep_eq: "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) = {(u, ())}"
+    and mem: "(u, ()) \<in> vars"
+    and se: "se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+  shows "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) \<subseteq> vars \<and>
+    se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+  using dep_eq mem se by auto
+
+lemma hook_gen_dep_and_se_pair:
+  assumes dep_eq: "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) = {(u1, ()), (u2, ())}"
+    and mem1: "(u1, ()) \<in> vars"
+    and mem2: "(u2, ()) \<in> vars"
+    and se: "se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+  shows "dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma (v, ()) \<subseteq> vars \<and>
+    se_constraint_holds (hook_gen g bot0 s0d s0g (v, ())) sigma (v, ())"
+  using dep_eq mem1 mem2 se by auto
+
+text \<open>
+  Assembling the whole node-indexed ball into @{const part_post_solution}
+  itself needs only exit membership, via
+  @{thm part_post_solution_iff_se_constraint_holds}.
+\<close>
+
+lemma part_post_solution_of_ball:
+  assumes exit_mem: "x \<in> vars"
+    and ball: "\<forall>u \<in> vars. dep\<^sub>L (hook_gen g bot0 s0d s0g) sigma u \<subseteq> vars \<and>
+      se_constraint_holds (hook_gen g bot0 s0d s0g u) sigma u"
+  shows "part_post_solution (hook_gen g bot0 s0d s0g) x sigma vars"
+  unfolding part_post_solution_iff_se_constraint_holds using exit_mem ball by blast
+
 end
 
 subsection \<open>The canonical independent-transfer spec\<close>

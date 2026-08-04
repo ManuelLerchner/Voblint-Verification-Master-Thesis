@@ -1070,157 +1070,123 @@ lemma parity_dg_td_abs_post_solution:
   "part_post_solution (parity_sound_dg_hooks.hook_gen parity_cfg bot
       parity_s0d_abs parity_s0g_abs) (cfg_exit parity_cfg, ()) parity_sigma_abs
       parity_nodes"
-  unfolding part_post_solution_iff_se_constraint_holds
-proof (intro conjI)
+proof (rule parity_sound_dg_hooks.part_post_solution_of_ball)
   show "(cfg_exit parity_cfg, ()) \<in> parity_nodes"
     unfolding parity_nodes_def by eval
 next
+  have node_entry: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (cfg_entry parity_cfg, ()) \<subseteq>
+        parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (cfg_entry parity_cfg, ())) parity_sigma_abs
+        (cfg_entry parity_cfg, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_entry,
+        simp add: parity_hook_gen_entry_dep[OF _ _ _ refl]
+          parity_hook_lists[folded parity_cfg_entry],
+        rule parity_se_entry)
+  have node_s0: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 0, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 0, ())) parity_sigma_abs (Statement 0, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 0" and u = "FunctionEntry prog_main_name"]
+          parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry,
+        simp add: parity_nodes_def,
+        rule parity_se_statement0)
+  have not_entry1: "Statement 1 \<noteq> cfg_entry parity_cfg" by (simp add: parity_cfg_entry)
+  have pred1: "intra_predecessor_list parity_cfg (Statement 1) =
+      [(Statement 0, EA_Assign ''x'' (N 0))]"
+    by (rule parity_hook_lists)
+  have no_combine1: "return_call_action_list parity_cfg (Statement 1) = []"
+    by (rule parity_no_combine_edge_nodes)
+  have no_enter1: "entry_call_list parity_cfg (Statement 1) = []"
+    by (rule parity_no_combine_edge_nodes)
+  have node_s1: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 1, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 1, ())) parity_sigma_abs (Statement 1, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        rule parity_hook_gen_single_edge_dep[OF not_entry1 pred1 no_combine1 no_enter1 refl],
+        simp add: parity_nodes_def,
+        rule parity_se_statement1)
+  have not_entry2: "Statement 2 \<noteq> cfg_entry parity_cfg" by (simp add: parity_cfg_entry)
+  have pred2: "intra_predecessor_list parity_cfg (Statement 2) =
+      [(Statement 1, EA_Assign ''y'' (N 1)), (Statement 4, EA_Assign ''y'' (Plus (V ''y'') (N 1)))]"
+    by (rule parity_hook_lists)
+  have no_combine2: "return_call_action_list parity_cfg (Statement 2) = []"
+    by (rule parity_no_combine_edge_nodes)
+  have no_enter2: "entry_call_list parity_cfg (Statement 2) = []"
+    by (rule parity_no_combine_edge_nodes)
+  have node_s2: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 2, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 2, ())) parity_sigma_abs (Statement 2, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_pair,
+        rule parity_hook_gen_two_edge_dep[OF not_entry2 pred2 no_combine2 no_enter2 refl],
+        simp add: parity_nodes_def, simp add: parity_nodes_def,
+        rule parity_se_join_statement2)
+  have node_s3: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 3, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 3, ())) parity_sigma_abs (Statement 3, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 3" and u = "Statement 2"]
+          parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry,
+        simp add: parity_nodes_def,
+        rule parity_se_statement3)
+  have node_s4: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 4, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 4, ())) parity_sigma_abs (Statement 4, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 4" and u = "Statement 3"]
+          parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry,
+        simp add: parity_nodes_def,
+        rule parity_se_statement4)
+  have node_s5: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 5, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 5, ())) parity_sigma_abs (Statement 5, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 5" and u = "Statement 2"]
+          parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry,
+        simp add: parity_nodes_def,
+        rule parity_se_statement5)
+  have node_s6: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 6, ()) \<subseteq> parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (Statement 6, ())) parity_sigma_abs (Statement 6, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 6" and u = "Statement 5"]
+          parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry,
+        simp add: parity_nodes_def,
+        rule parity_se_statement6)
+  have node_result: "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs) parity_sigma_abs (FunctionResult prog_main_name, ()) \<subseteq>
+        parity_nodes \<and>
+      se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
+        parity_s0d_abs parity_s0g_abs (FunctionResult prog_main_name, ())) parity_sigma_abs
+        (FunctionResult prog_main_name, ())"
+    by (rule parity_sound_dg_hooks.hook_gen_dep_and_se_single,
+        simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "FunctionResult prog_main_name" and u = "Statement 6"]
+          parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry,
+        simp add: parity_nodes_def,
+        rule parity_se_function_result)
   show "\<forall>u \<in> parity_nodes. dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
       parity_s0d_abs parity_s0g_abs) parity_sigma_abs u \<subseteq> parity_nodes \<and>
     se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
       parity_s0d_abs parity_s0g_abs u) parity_sigma_abs u"
-  proof
-    fix u assume u_mem: "u \<in> parity_nodes"
-    consider
-        (entry) "u = (FunctionEntry prog_main_name, ())"
-      | (s0) "u = (Statement 0, ())" | (s1) "u = (Statement 1, ())"
-      | (s2) "u = (Statement 2, ())" | (s3) "u = (Statement 3, ())"
-      | (s4) "u = (Statement 4, ())" | (s5) "u = (Statement 5, ())"
-      | (s6) "u = (Statement 6, ())"
-      | (result_main) "u = (FunctionResult prog_main_name, ())"
-      using u_mem unfolding parity_nodes_def by auto
-    then show "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
-          parity_s0d_abs parity_s0g_abs) parity_sigma_abs u \<subseteq> parity_nodes \<and>
-        se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
-          parity_s0d_abs parity_s0g_abs u) parity_sigma_abs u"
-    proof cases
-      case entry
-      show ?thesis
-        unfolding entry
-      proof (intro conjI)
-        have entry_no_edge: "intra_predecessor_list parity_cfg (cfg_entry parity_cfg) = []"
-          unfolding parity_cfg_entry by (rule parity_hook_lists)
-        have entry_no_combine: "return_call_action_list parity_cfg (cfg_entry parity_cfg) = []"
-          unfolding parity_cfg_entry by (rule parity_hook_lists)
-        have entry_no_enter: "entry_call_list parity_cfg (cfg_entry parity_cfg) = []"
-          unfolding parity_cfg_entry by (rule parity_hook_lists)
-        show "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
-            parity_s0d_abs parity_s0g_abs) parity_sigma_abs
-            (FunctionEntry prog_main_name, ()) \<subseteq> parity_nodes"
-          unfolding parity_cfg_entry[symmetric]
-          by (simp add: parity_hook_gen_entry_dep[OF entry_no_edge entry_no_combine
-                entry_no_enter refl])
-      next
-        show "se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
-            parity_s0d_abs parity_s0g_abs (FunctionEntry prog_main_name, ()))
-            parity_sigma_abs (FunctionEntry prog_main_name, ())"
-          by (rule parity_se_entry[unfolded parity_cfg_entry])
-      qed
-    next
-      case s0
-      show ?thesis
-        unfolding s0
-        by (intro conjI, simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 0" and u = "FunctionEntry prog_main_name"]
-              parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry
-              parity_nodes_def,
-            rule parity_se_statement0)
-    next
-      case s1
-      show ?thesis
-        unfolding s1
-      proof (intro conjI)
-        have not_entry: "Statement 1 \<noteq> cfg_entry parity_cfg" by (simp add: parity_cfg_entry)
-        have pred: "intra_predecessor_list parity_cfg (Statement 1) =
-            [(Statement 0, EA_Assign ''x'' (N 0))]"
-          by (rule parity_hook_lists)
-        have no_combine: "return_call_action_list parity_cfg (Statement 1) = []"
-          by (rule parity_no_combine_edge_nodes)
-        have no_enter: "entry_call_list parity_cfg (Statement 1) = []"
-          by (rule parity_no_combine_edge_nodes)
-        show "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
-            parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 1, ())
-            \<subseteq> parity_nodes"
-          by (subst parity_hook_gen_single_edge_dep[OF not_entry pred no_combine no_enter refl])
-             (simp add: parity_nodes_def)
-      next
-        show "se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
-            parity_s0d_abs parity_s0g_abs (Statement 1, ())) parity_sigma_abs
-            (Statement 1, ())"
-          by (rule parity_se_statement1)
-      qed
-    next
-      case s2
-      show ?thesis
-        unfolding s2
-      proof (intro conjI)
-        have not_entry: "Statement 2 \<noteq> cfg_entry parity_cfg" by (simp add: parity_cfg_entry)
-        have pred: "intra_predecessor_list parity_cfg (Statement 2) =
-            [(Statement 1, EA_Assign ''y'' (N 1)), (Statement 4, EA_Assign ''y'' (Plus (V ''y'') (N 1)))]"
-          by (rule parity_hook_lists)
-        have no_combine: "return_call_action_list parity_cfg (Statement 2) = []"
-          by (rule parity_no_combine_edge_nodes)
-        have no_enter: "entry_call_list parity_cfg (Statement 2) = []"
-          by (rule parity_no_combine_edge_nodes)
-        show "dep\<^sub>L (parity_sound_dg_hooks.hook_gen parity_cfg bot
-            parity_s0d_abs parity_s0g_abs) parity_sigma_abs (Statement 2, ())
-            \<subseteq> parity_nodes"
-          by (subst parity_hook_gen_two_edge_dep[OF not_entry pred no_combine no_enter refl])
-             (simp add: parity_nodes_def)
-      next
-        show "se_constraint_holds (parity_sound_dg_hooks.hook_gen parity_cfg bot
-            parity_s0d_abs parity_s0g_abs (Statement 2, ())) parity_sigma_abs
-            (Statement 2, ())"
-          by (rule parity_se_join_statement2)
-      qed
-    next
-      case s3
-      show ?thesis
-        unfolding s3
-        by (intro conjI, simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 3" and u = "Statement 2"]
-              parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry
-              parity_nodes_def,
-            rule parity_se_statement3)
-    next
-      case s4
-      show ?thesis
-        unfolding s4
-        by (intro conjI, simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 4" and u = "Statement 3"]
-              parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry
-              parity_nodes_def,
-            rule parity_se_statement4)
-    next
-      case s5
-      show ?thesis
-        unfolding s5
-        by (intro conjI, simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 5" and u = "Statement 2"]
-              parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry
-              parity_nodes_def,
-            rule parity_se_statement5)
-    next
-      case s6
-      show ?thesis
-        unfolding s6
-        by (intro conjI, simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 6" and u = "Statement 5"]
-              parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry
-              parity_nodes_def,
-            rule parity_se_statement6)
-    next
-      case result_main
-      show ?thesis
-        unfolding result_main
-        by (intro conjI, simp add: parity_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "FunctionResult prog_main_name" and u = "Statement 6"]
-              parity_hook_lists parity_no_combine_edge_nodes parity_cfg_entry
-              parity_nodes_def,
-            rule parity_se_function_result)
-    qed
-  qed
+    using node_entry[unfolded parity_cfg_entry] node_s0 node_s1 node_s2 node_s3 node_s4
+      node_s5 node_s6 node_result
+    unfolding parity_nodes_def by auto
 qed
+
 
 subsection \<open>12. Trace-native collecting soundness\<close>
 
