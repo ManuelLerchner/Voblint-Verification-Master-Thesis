@@ -186,6 +186,12 @@ next
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
 next
+  case (Random x)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Random x, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
+  then show ?case ..
+next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -301,6 +307,11 @@ next
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
+  case (Random x)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Random x, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem show ?case unfolding en by (rule cfg_reaches_intra)
+next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -381,6 +392,8 @@ proof (induction c arbitrary: k n n' en E K)
   case SKIP then show ?case by simp
 next
   case (Assign x a) then show ?case by simp
+next
+  case (Random x) then show ?case by simp
 next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where

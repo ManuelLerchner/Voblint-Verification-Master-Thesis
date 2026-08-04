@@ -10,11 +10,12 @@ text \<open>\<^const>\<open>edge_step\<close> (from \<^theory>\<open>Voblint_CFG
   two cannot drift.  This is the per-\<^const>\<open>intra\<close>-edge transfer the constraint system folds over.\<close>
 
 definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> store set" where
-  "edge_collect a S = {t. \<exists>s\<in>S. edge_step a s = Some t}"
+  "edge_collect a S = {t. \<exists>s\<in>S. t \<in> edge_step a s}"
 
 lemma edge_collect_simps [simp]:
   "edge_collect EA_Nop S = S"
   "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s \<in> S}"
+  "edge_collect (EA_Random x) S = {s(x := v) | s v. s \<in> S}"
   "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> bval b s}"
   "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> bval b s}"
   "edge_collect (EA_Ret e p) S =
@@ -22,7 +23,7 @@ lemma edge_collect_simps [simp]:
   unfolding edge_collect_def by (auto split: if_splits)
 
 lemma edge_collect_single:
-  "edge_collect a {s} = set_option (edge_step a s)"
+  "edge_collect a {s} = edge_step a s"
   by (cases a) (auto split: if_splits)
 
 lemma edge_collect_empty_set [simp]: "edge_collect a {} = {}"

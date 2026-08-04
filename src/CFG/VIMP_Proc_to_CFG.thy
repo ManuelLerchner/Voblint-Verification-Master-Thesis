@@ -43,6 +43,7 @@ text \<open>\<open>csize c\<close> is the number of \<open>Statement\<close> ind
 fun csize :: "com \<Rightarrow> nat" where
   "csize SKIP = 1"
 | "csize (Assign x a) = 1"
+| "csize (Random x) = 1"
 | "csize (Seq c1 c2) = csize c1 + csize c2"
 | "csize (If b c1 c2) = 1 + csize c1 + csize c2"
 | "csize (While b c) = 1 + csize c"
@@ -66,6 +67,7 @@ text \<open>\<open>falls_through c\<close>: control can leave the fragment of \<
 fun falls_through :: "com \<Rightarrow> bool" where
   "falls_through SKIP = True"
 | "falls_through (Assign x a) = True"
+| "falls_through (Random x) = True"
 | "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
 | "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
 | "falls_through (While b c) = True"
@@ -111,6 +113,8 @@ where
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p (Assign x a) k n =
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
+| "compile \<Pi> p (Random x) k n =
+     (Suc n, Statement n, {(Statement n, EA_Random x, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
           (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
@@ -801,7 +805,7 @@ text \<open>The \<open>EA_Ret\<close> edge publishes the return value into \<^co
   source \<open>Return\<close> step: \<open>Some e\<close> writes \<open>aval e\<close>, \<open>None\<close> leaves the reserved local.\<close>
 lemma return_publishes_ret_var:
   assumes "pstep source_global \<Pi> (Return e, s, frs) (Unwind, s', frs)"
-  shows "edge_step (EA_Ret e p) s = Some s'"
+  shows "s' \<in> edge_step (EA_Ret e p) s"
   using assms by (cases e) auto
 
 text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> reproduces the store built by the source

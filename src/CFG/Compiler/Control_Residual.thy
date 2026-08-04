@@ -48,6 +48,10 @@ where
     "control_at \<Pi> p (Assign x a) k n (Assign x a) (Statement n)"
 | AssignDone:
     "control_at \<Pi> p (Assign x a) k n SKIP k"
+| Random:
+    "control_at \<Pi> p (Random x) k n (Random x) (Statement n)"
+| RandomDone:
+    "control_at \<Pi> p (Random x) k n SKIP k"
 | SeqLeft:
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
@@ -109,6 +113,8 @@ proof (induction c arbitrary: k n)
 next
   case (Assign x a) show ?case by (rule control_at.Assign)
 next
+  case (Random x) show ?case by (rule control_at.Random)
+next
   case (Seq c1 c2)
   have "control_at \<Pi> p c1 (Statement (n + csize c1)) n c1 (Statement n)"
     by (rule Seq.IH(1)) (use Seq.prems in simp)
@@ -161,6 +167,9 @@ proof (induction c0 k n "SKIP :: com" v arbitrary: n' en E K rule: control_at.in
   then show ?case by (rule intra_path_nop)
 next
   case (AssignDone x a k n)
+  then show ?case by (simp add: star.refl)
+next
+  case (RandomDone x k n)
   then show ?case by (simp add: star.refl)
 next
   case (CallDone dst q actuals k n)

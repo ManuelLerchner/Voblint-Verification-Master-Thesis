@@ -29,7 +29,7 @@ definition ltr_F :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> 
   "ltr_F gs g S T =
       {Root [(cfg_entry g, s)] | s. s \<in> S}
     \<union> {extend t (v, s') | t a v s'.
-          t \<in> T \<and> (sink_node t, a, v) \<in> intra g \<and> edge_step a (sink_store t) = Some s'}
+          t \<in> T \<and> (sink_node t, a, v) \<in> intra g \<and> s' \<in> edge_step a (sink_store t)}
     \<union> {Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
           | caller dst pars args p cont.
           caller \<in> T \<and> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g}
@@ -196,7 +196,7 @@ text \<open>
 lemma ltr_collect_intra_step:
   assumes s: "s \<in> ltr_collect gs g S u"
     and e: "(u, a, v) \<in> intra g"
-    and st: "edge_step a s = Some s'"
+    and st: "s' \<in> edge_step a s"
   shows "s' \<in> ltr_collect gs g S v"
 proof -
   from s obtain t where t: "t \<in> valid_ltr gs g S" and n: "sink_node t = u" and w: "sink_store t = s"
@@ -218,7 +218,7 @@ next
   obtain u s where x: "x = (u, s)" by (cases x)
   obtain w s1 where y: "y = (w, s1)" by (cases y)
   from step.hyps(1) x y obtain a where
-    e: "(u, a, w) \<in> intra g" and st: "edge_step a s = Some s1"
+    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
     by (auto elim: cfg_intra_stepE)
   have "s1 \<in> ltr_collect gs g S w"
     using step.prems x by (auto intro: ltr_collect_intra_step[OF _ e st])
@@ -249,7 +249,7 @@ next
   obtain u s where x: "x = (u, s)" by (cases x)
   obtain w s1 where y: "y = (w, s1)" by (cases y)
   from step.hyps(1) x y obtain a where
-    e: "(u, a, w) \<in> intra g" and st: "edge_step a s = Some s1"
+    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
     by (auto elim: cfg_intra_stepE)
   have ext: "extend t (w, s1) \<in> valid_ltr gs g S"
     by (rule valid_ltr.intra[OF step.prems(1)])
@@ -285,7 +285,7 @@ text \<open>(2) Intra propagation: a collected source state and a successful \<^
   produce a collected target state.\<close>
 lemma ltr_collect_intra:
   assumes "s \<in> ltr_collect gs g S u" and "(u, a, v) \<in> intra g"
-    and "edge_step a s = Some s'"
+    and "s' \<in> edge_step a s"
   shows "s' \<in> ltr_collect gs g S v"
 proof -
   from assms(1) obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = u" "sink_store t = s"
@@ -313,7 +313,7 @@ text \<open>(4) Procedure result: \<^const>\<open>EA_Ret\<close> propagation col
   \<^const>\<open>FunctionResult\<close> through the ordinary intra rule --- a specialisation of (2).\<close>
 lemma ltr_collect_result_via_ret:
   assumes "s \<in> ltr_collect gs g S u" and "(u, EA_Ret e p, FunctionResult p) \<in> intra g"
-    and "edge_step (EA_Ret e p) s = Some s'"
+    and "s' \<in> edge_step (EA_Ret e p) s"
   shows "s' \<in> ltr_collect gs g S (FunctionResult p)"
   by (rule ltr_collect_intra[OF assms])
 

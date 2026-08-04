@@ -118,6 +118,7 @@ type_synonym ('g, 'c) st_combine_tf_tree =
 record ('g, 'c) effectful_st_transfer =
   etf_st_nop        :: "('g, 'c) st_edge_tf_tree"
   etf_st_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'c) st_edge_tf_tree"
+  etf_st_random     :: "vname \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_assume     :: "bexp  \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_assume_not :: "bexp  \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'c) st_edge_tf_tree"
@@ -129,6 +130,7 @@ fun apply_etf_st ::
 where
   "apply_etf_st etf EA_Nop           u = etf_st_nop etf u"
 | "apply_etf_st etf (EA_Assign x a)  u = etf_st_assign etf x a u"
+| "apply_etf_st etf (EA_Random x)    u = etf_st_random etf x u"
 | "apply_etf_st etf (EA_Assume b)    u = etf_st_assume etf b u"
 | "apply_etf_st etf (EA_AssumeNot b) u = etf_st_assume_not etf b u"
 | "apply_etf_st etf (EA_Ret e p) u =
@@ -233,6 +235,9 @@ where
       etf_st_assign = (\<lambda>x e.
         unit_edge_tree_st_placed owner_of locations_of keep_local
           publish_side (tf_st (EA_Assign x e))),
+      etf_st_random = (\<lambda>x.
+        unit_edge_tree_st_placed owner_of locations_of keep_local
+          publish_side (tf_st (EA_Random x))),
       etf_st_assume = (\<lambda>b.
         unit_edge_tree_st_placed owner_of locations_of keep_local
           publish_side (tf_st (EA_Assume b))),
@@ -481,6 +486,7 @@ where
   "unit_etf_st_of_transfer tf_st enter_st = \<lparr>
     etf_st_nop        = unit_edge_tree_st (tf_st EA_Nop),
     etf_st_assign     = (\<lambda>x e. unit_edge_tree_st (tf_st (EA_Assign x e))),
+    etf_st_random     = (\<lambda>x. unit_edge_tree_st (tf_st (EA_Random x))),
     etf_st_assume     = (\<lambda>b. unit_edge_tree_st (tf_st (EA_Assume b))),
     etf_st_assume_not = (\<lambda>b. unit_edge_tree_st (tf_st (EA_AssumeNot b))),
     etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st (enter_st xs es)),

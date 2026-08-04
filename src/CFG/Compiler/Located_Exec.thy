@@ -31,7 +31,7 @@ type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
 inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for gs and g where
   Intra:
-    "(u, a, v) \<in> intra g \<Longrightarrow> edge_step a s = Some s' \<Longrightarrow>
+    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow>
      cstep gs g (u, s, stk) (v, s', stk)"
 | Call:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>

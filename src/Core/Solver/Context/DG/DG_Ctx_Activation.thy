@@ -168,7 +168,7 @@ qed
 
 theorem dg_ctx_act_edge:
   assumes e: "(u, a, v) \<in> intra g"
-    and sin: "s \<in> \<lbrakk>sg (Inl (u, ctx))\<rbrakk>" and st: "edge_step a s = Some s'"
+    and sin: "s \<in> \<lbrakk>sg (Inl (u, ctx))\<rbrakk>" and st: "s' \<in> edge_step a s"
   shows "s' \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (cases "(u, ctx) \<in> vars")
   case False

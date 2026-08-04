@@ -23,6 +23,7 @@ text \<open>
 datatype com =
     SKIP
   | Assign (assign_var: vname) (assign_rhs: aexp)
+  | Random (random_var: vname)
   | Seq    (seq_first: com) (seq_second: com)
   | If     (if_cond: bexp) (if_then: com) (if_else: com)
   | While  (while_cond: bexp) (while_body: com)
@@ -83,6 +84,7 @@ inductive
   for gs :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
 where
   Assign:  "pstep gs \<Pi> (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
+| Random:  "pstep gs \<Pi> (Random x, s, frs) (SKIP, s(x := v), frs)"
 | Seq1:    "pstep gs \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | Seq2:    "pstep gs \<Pi> (c1, s, frs) (c1', s', frs')
              \<Longrightarrow> pstep gs \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
@@ -126,6 +128,8 @@ inductive_cases SkipSE[elim!]:
   "pstep gs \<Pi> (SKIP, s, frs) cfg"
 inductive_cases AssignSE[elim!]:
   "pstep gs \<Pi> (Assign x a, s, frs) cfg"
+inductive_cases RandomSE[elim!]:
+  "pstep gs \<Pi> (Random x, s, frs) cfg"
 inductive_cases SeqSE[elim]:
   "pstep gs \<Pi> (Seq c1 c2, s, frs) cfg"
 inductive_cases IfSE[elim!]:
@@ -523,6 +527,7 @@ fun bexp_vnames :: "bexp => vname set" where
 fun com_vnames :: "com => vname set" where
   "com_vnames SKIP = {}"
 | "com_vnames (Assign x a) = insert x (aexp_vnames a)"
+| "com_vnames (Random x) = {x}"
 | "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
 | "com_vnames (If b c1 c2) =
     bexp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
@@ -547,6 +552,9 @@ proof (induction c)
   then show ?case by simp
 next
   case Assign
+  then show ?case by simp
+next
+  case Random
   then show ?case by simp
 next
   case Seq
@@ -581,6 +589,7 @@ qed
 fun source_com :: "com => bool" where
   "source_com SKIP = True"
 | "source_com (Assign x a) = True"
+| "source_com (Random x) = True"
 | "source_com (Seq c1 c2) = (source_com c1 \<and> source_com c2)"
 | "source_com (If b c1 c2) = (source_com c1 \<and> source_com c2)"
 | "source_com (While b c) = source_com c"
@@ -628,6 +637,7 @@ text \<open>
 fun may_fallthrough :: "com => bool" where
   "may_fallthrough SKIP = True"
 | "may_fallthrough (Assign _ _) = True"
+| "may_fallthrough (Random _) = True"
 | "may_fallthrough (Seq c1 c2) = (may_fallthrough c1 \<and> may_fallthrough c2)"
 | "may_fallthrough (If _ c1 c2) = (may_fallthrough c1 \<or> may_fallthrough c2)"
 | "may_fallthrough (While _ _) = True"
@@ -669,6 +679,7 @@ text \<open>
 fun wf_source_com :: "proc_table => com => bool" where
   "wf_source_com \<Pi> SKIP = True"
 | "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_aexp a)"
+| "wf_source_com \<Pi> (Random x) = (x \<noteq> ret_var)"
 | "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
 | "wf_source_com \<Pi> (If b c1 c2) =
      (source_bexp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"

@@ -605,6 +605,7 @@ where
   "unit_etf_of_transfer tf = \<lparr>
     etf_nop        = (\<lambda>u. unit_edge_tree (apply_tf tf EA_Nop) u),
     etf_assign     = (\<lambda>x e u. unit_edge_tree (apply_tf tf (EA_Assign x e)) u),
+    etf_random     = (\<lambda>x u. unit_edge_tree (apply_tf tf (EA_Random x)) u),
     etf_assume     = (\<lambda>b u. unit_edge_tree (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. unit_edge_tree (apply_tf tf (EA_AssumeNot b)) u),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree (tf_enter tf xs es) u),
@@ -624,6 +625,7 @@ where
   "mixed_etf_of_transfer tf = \<lparr>
     etf_nop        = mixed_etf_edge_tree tf EA_Nop,
     etf_assign     = (\<lambda>x e. mixed_etf_edge_tree tf (EA_Assign x e)),
+    etf_random     = (\<lambda>x. mixed_etf_edge_tree tf (EA_Random x)),
     etf_assume     = (\<lambda>b. mixed_etf_edge_tree tf (EA_Assume b)),
     etf_assume_not = (\<lambda>b. mixed_etf_edge_tree tf (EA_AssumeNot b)),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree (tf_enter tf xs es) u),
@@ -689,6 +691,15 @@ lemma in_gamma_unit_edge_tree_assign:
   using tf_sound_assignD[OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 
+lemma in_gamma_unit_edge_tree_random:
+  fixes x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
+  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
+  shows "s(x := v) \<in> \<lbrakk>etf_collecting_full
+           (unit_edge_tree (apply_tf tf (EA_Random x)) u) \<sigma>\<rbrakk>"
+  using tf_sound_randomD[OF s]
+  by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
+
 lemma in_gamma_unit_edge_tree_assume:
   fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
   assumes inr: "inr_slot_locals_bot is_global \<sigma>"
@@ -750,6 +761,28 @@ proof -
             etf_collecting_full (local_edge_tree (apply_tf tf (EA_Assign x e)) u) \<sigma>"
     using local_edge_invariant_side_env_eq[OF inv inr]
       local_edge_invariant_le_etf_collecting_full[of "apply_tf tf (EA_Assign x e)" \<sigma> u, OF inv lb]
+    unfolding apply_tf.simps etf_collecting_full_local_edge_tree by simp
+  show ?thesis using st le gamma_state_mono by blast
+qed
+
+lemma in_gamma_local_edge_tree_random:
+  fixes x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
+  assumes inv: "local_edge_invariant (apply_tf tf (EA_Random x))"
+  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
+  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
+  shows "s(x := v) \<in> \<lbrakk>etf_collecting_full
+           (local_edge_tree (apply_tf tf (EA_Random x)) u) \<sigma>\<rbrakk>"
+proof -
+  have lb: "local_bot_on_locals (\<sigma> (Inr ()))"
+    using inr_slot_locals_bot_imp[OF inr] .
+  have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
+    by (simp add: side_env_def glob_env_unit)
+  have st: "s(x := v) \<in> \<lbrakk>apply_tf tf (EA_Random x) (side_env \<sigma> u) \<rbrakk>"
+    using tf_sound_randomD[OF s] unfolding env apply_tf.simps by simp
+  have le: "apply_tf tf (EA_Random x) (side_env \<sigma> u) \<le>
+            etf_collecting_full (local_edge_tree (apply_tf tf (EA_Random x)) u) \<sigma>"
+    using local_edge_invariant_side_env_eq[OF inv inr]
+      local_edge_invariant_le_etf_collecting_full[of "apply_tf tf (EA_Random x)" \<sigma> u, OF inv lb]
     unfolding apply_tf.simps etf_collecting_full_local_edge_tree by simp
   show ?thesis using st le gamma_state_mono by blast
 qed
@@ -828,6 +861,13 @@ proof -
       by (auto simp add: unit_etf_of_transfer_def glob_env_unit
            intro: in_gamma_unit_edge_tree_assign)
   next
+    show "\<forall>x u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<forall>v.
+              s(x := v) \<in> \<lbrakk>etf_collecting_full
+                (etf_random (unit_etf_of_transfer tf) x u) \<sigma>\<rbrakk>)"
+      by (auto simp add: unit_etf_of_transfer_def glob_env_unit
+           intro: in_gamma_unit_edge_tree_random)
+  next
     show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
             (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
             \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
@@ -891,6 +931,20 @@ proof -
       show "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
               (etf_assign (mixed_etf_of_transfer tf) x e u) \<sigma>\<rbrakk>"
         by (simp add: glob_env_unit in_gamma_local_edge_tree_assign in_gamma_unit_edge_tree_assign inr
+            loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def s)
+    qed
+  next
+    show "\<forall>x u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<forall>v.
+              s(x := v) \<in> \<lbrakk>etf_collecting_full
+                (etf_random (mixed_etf_of_transfer tf) x u) \<sigma>\<rbrakk>)"
+    proof (intro allI impI ballI)
+      fix x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store and v
+      assume inr: "inr_slot_locals_bot is_global \<sigma>"
+        and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
+      show "s(x := v) \<in> \<lbrakk>etf_collecting_full
+              (etf_random (mixed_etf_of_transfer tf) x u) \<sigma>\<rbrakk>"
+        by (simp add: glob_env_unit in_gamma_local_edge_tree_random in_gamma_unit_edge_tree_random inr
             loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def s)
     qed
   next

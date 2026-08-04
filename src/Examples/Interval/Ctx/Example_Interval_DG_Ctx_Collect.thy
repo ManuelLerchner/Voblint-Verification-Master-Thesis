@@ -411,7 +411,7 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_ente
 next
   \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation\<close>.\<close>
   show "\<And>u a v c s s'. (u, a, v) \<in> intra twice_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
+        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
     by (rule twice_dg.dg_ctx_act_edge)
 next

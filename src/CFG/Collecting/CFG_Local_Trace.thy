@@ -106,7 +106,7 @@ inductive_set valid_ltr :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Right
 | intra:
     "t \<in> valid_ltr gs g S
      \<Longrightarrow> (sink_node t, a, v) \<in> intra g
-     \<Longrightarrow> edge_step a (sink_store t) = Some s'
+     \<Longrightarrow> s' \<in> edge_step a (sink_store t)
      \<Longrightarrow> extend t (v, s') \<in> valid_ltr gs g S"
 | call:
     "caller \<in> valid_ltr gs g S
@@ -360,7 +360,7 @@ lemma caller_chain_closure:
   fixes P :: "ltr \<Rightarrow> bool"
   assumes Root: "\<And>s. s \<in> S \<Longrightarrow> P (Root [(cfg_entry g, s)])"
     and Intra: "\<And>t a v s'. t \<in> valid_ltr gs g S \<Longrightarrow> (\<forall>u \<in> callers t. P u)
-        \<Longrightarrow> (sink_node t, a, v) \<in> intra g \<Longrightarrow> edge_step a (sink_store t) = Some s'
+        \<Longrightarrow> (sink_node t, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a (sink_store t)
         \<Longrightarrow> P (extend t (v, s'))"
     and Call: "\<And>caller dst pars args p cont. caller \<in> valid_ltr gs g S
         \<Longrightarrow> (\<forall>u \<in> callers caller. P u)

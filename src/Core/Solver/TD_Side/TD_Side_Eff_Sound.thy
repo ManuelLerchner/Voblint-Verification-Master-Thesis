@@ -43,6 +43,11 @@ next
     unfolding EA_Assign apply_etf.simps edge_collect_simps side_env_def
     using etf_sound_assign inr by auto
 next
+  case (EA_Random x)
+  show ?thesis
+    unfolding EA_Random apply_etf.simps edge_collect_simps side_env_def
+    using etf_sound_random inr by auto
+next
   case (EA_Assume b)
   show ?thesis
     unfolding EA_Assume apply_etf.simps edge_collect_simps side_env_def

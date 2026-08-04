@@ -137,6 +137,11 @@ next
     unfolding EA_Assign apply_tf.simps edge_collect_simps
     using tf_sound_assign_for by blast
 next
+  case (EA_Random x)
+  show ?thesis
+    unfolding EA_Random apply_tf.simps edge_collect_simps
+    using tf_sound_random_for by blast
+next
   case (EA_Assume b)
   show ?thesis
     unfolding EA_Assume apply_tf.simps edge_collect_simps
@@ -179,7 +184,7 @@ text \<open>Single-store edge soundness under a post-fixpoint bound: if the abst
 lemma edge_of_bound:
   assumes bound: "apply_tf tf a A \<le> B"
     and s: "s \<in> \<lbrakk>A\<rbrakk>"
-    and step: "edge_step a s = Some s'"
+    and step: "s' \<in> edge_step a s"
   shows "s' \<in> \<lbrakk>B\<rbrakk>"
 proof -
   have m: "s' \<in> edge_collect a {s}" using step by (simp add: edge_collect_single)

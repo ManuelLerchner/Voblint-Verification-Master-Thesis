@@ -366,7 +366,7 @@ proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and enterc = "cs_e
 next
   \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation\<close>.\<close>
   show "\<And>u a v c s s'. (u, a, v) \<in> intra sign_nest_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>sign_ctx_sg_2 (Inl (u, c))\<rbrakk> \<Longrightarrow> edge_step a s = Some s'
+        \<Longrightarrow> s \<in> \<lbrakk>sign_ctx_sg_2 (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>sign_ctx_sg_2 (Inl (v, c))\<rbrakk>"
     by (rule sign_nest_2_dg.dg_ctx_act_edge)
 next
