@@ -25,14 +25,26 @@ three locale obligations proved once and discharged generically over the
 whole CFG. Interval, Mixed, CallString, and Ctx examples stay on the classic
 route. `sound_dg_spec`, `dg_spec`, and `dg_gen_of` are not being deleted.
 
-The one remaining real finding is a framework-internal duplicate-proof-stack
-risk between `sound_dg_spec` and `sound_dg_hooks` themselves (two
-independently-proved locales over the same shape of per-step obligation) —
-see `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md` Section 2/4 for the scoped
-follow-up (making `sound_dg_spec` a `sublocale`/`interpretation` of
-`sound_dg_hooks`, zero example changes). That is tracked separately from this
-checklist; this file's own task list below is historical record of the
-cancelled migration attempt, kept for reference, not an active plan.
+**Resolution (both follow-up items closed).** The framework-internal
+duplicate-proof-stack risk between `sound_dg_spec` and `sound_dg_hooks` (two
+independently-proved locales over the same shape of per-step obligation) is
+closed: commit `fa1dd790` registers `sublocale sound_dg_spec <= hooks:
+sound_dg_hooks ...` (and `hooks_ltr:` for the LTR variant) in
+`DG_Soundness.thy`/`DG_LTR_Sound.thy`, discharging `sound_dg_hooks`'s three
+hook obligations from `sound_dg_spec`'s own `step_sound`/`combine_sound`/
+`enter_sound`, and additionally proves `dg_gen = hook_gen` outright for the
+adapter instance — zero example files touched. Separately, the two
+unnecessary migrations were reverted in commit `95ff7132`:
+`Exec_Sign_DG_Run.thy` is back to 155 lines (from 997) and
+`Example_Parity_DG_Flagship.thy` to 267 lines (from 1336), both on the
+classic `sound_dg_spec` route again, with zero loss of framework capability
+(all reusable lemmas the migration produced — `placed_hook_se_join_edge`,
+the issue #81 assembly theorem, the classifier-parametric transfer layers —
+remain in the framework files, untouched, still consumed by
+`Example_Interval_Placement.thy`/`Example_Sign_Placement.thy`).
+See `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md` for the full evidence trail.
+This file's own task list below is historical record of the cancelled
+migration attempt, kept for reference, not an active plan.
 
 Background and the two-spine situation: `docs/reviews/M4_ARCHITECTURE_PR_REVIEW.md`.
 This file originally tracked the "migrate every classic-route D/G example

@@ -75,37 +75,52 @@ Extend the analysis-defined reader and publisher interfaces where examples need
 more precise shared-state communication. Keep routing generic over the `D` and
 `G` carriers.
 
-### Placement-aware D/G generation
+### Placement-aware D/G generation (settled architecture)
 
-Hook-parametric D/G equation generation and its soundness proof are generic
-(`src/Core/Solver/Context/DG/DG_Framework.thy`,
-`src/Core/Solver/Context/DG/DG_Soundness.thy`, locale `sound_dg_hooks`), and
-interval transfer and D/G readback are classifier-parametric
-(`src/Analysis/Instances/Interval/Interval_Transfer.thy`,
-`src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy`). End-to-end soundness
-through this generic spine is instantiated and batch-verified for two worked
-examples, `src/Examples/Interval/Example_Interval_Placement.thy` and
-`src/Examples/Sign/Example_Sign_Placement.thy`, plus two migrated flagships
+The D/G spine has two abstraction levels over one implementation, not two
+competing implementations:
+
+```text
+sound_dg_spec / sound_dg_spec_ltr        <- concise adapter, ordinary analyses
+        |  sublocale (DG_Soundness.thy, DG_LTR_Sound.thy)
+        v
+sound_dg_hooks / sound_dg_hooks_ltr      <- framework-construction API
+```
+
+`sound_dg_hooks`/`sound_dg_hooks_ltr` (`src/Core/Solver/Context/DG/DG_Soundness.thy`,
+`DG_LTR_Sound.thy`) generate D/G equations from arbitrary hook trees and prove
+them sound generically. `sound_dg_spec` is `sound_dg_hooks` specialized to
+`dg_spec`-record trees: one locale interpretation per analysis instance
+(`step_sound`/`combine_sound`/`enter_sound`), no per-CFG-node proof
+obligations. Since `sound_dg_spec <= hooks: sound_dg_hooks` is now a proved
+sublocale, `sound_dg_spec`'s three obligations *derive* `sound_dg_hooks`'s
+three hook obligations rather than re-proving the same soundness shape
+independently — `dg_gen = hook_gen` is proved outright for this instance, not
+merely approximated. Sign, Interval, Parity, Mixed, CallString, and Ctx all
+stay on `sound_dg_spec`/`dg_ctx_activation`/`routed_context` permanently; none
+of them needs migration to `sound_dg_hooks` directly, and none is planned.
+
+`sound_dg_hooks` remains the right route only for analyses whose D/G equation
+structure genuinely cannot be expressed as a `dg_spec` record — e.g. custom
+owner-sensitive placement, where an edge's contribution depends on projecting
+a joined D/G read by ownership rather than applying one fixed transfer. Two
+worked examples exercise this directly:
+`src/Examples/Interval/Example_Interval_Placement.thy` and
+`src/Examples/Sign/Example_Sign_Placement.thy`. Treat them as framework
+validation, not as templates for an ordinary analysis.
+
+This settles an earlier, incorrect hypothesis: two example flagships
 (`src/Examples/Sign/Exec_Sign_DG_Run.thy`,
-`src/Examples/Parity/Example_Parity_DG_Flagship.thy`).
-
-`sound_dg_hooks` is deliberately not the general-purpose user-facing API.
-`docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md` established that every classic
-constant (`sound_dg_spec`, `unit_dg_spec`, `dg_spec`, `dg_gen_of`, ...) is
-already architecture-neutral or a thin specialization of the generic layer,
-not a duplicate implementation, and that `sound_dg_spec` is itself the
-concise adapter: one locale interpretation per instance, no per-CFG-node
-proof obligations. `sound_dg_hooks` requires exactly that per-node work
-(hook-tree instance, `dg_refines_on`, `se_constraint_holds`, transport per
-edge/enter/combine), which is why the two migrated flagships grew 5-6x for no
-closed soundness or drift risk. Migrating Interval, Mixed, CallString, or Ctx
-examples off the classic route is **not planned** — they stay on
-`sound_dg_spec`/`dg_ctx_activation`/`routed_context` permanently. The one
-remaining item is a framework-internal one: express `sound_dg_spec` as a
-`sublocale`/`interpretation` of `sound_dg_hooks` so the two locales stop being
-independently-proved duplicates of the same per-step obligation shape,
-without touching any example's public API. Scoping notes are in the audit
-document, Section 4.
+`src/Examples/Parity/Example_Parity_DG_Flagship.thy`) were migrated onto
+`sound_dg_hooks` directly, on the assumption that `sound_dg_spec` was a
+duplicate implementation worth retiring. Both grew 5-6x (158->997,
+269->1336 lines) for no closed soundness or drift risk — `sound_dg_spec` was
+already classifier-generic, and the per-CFG-node proof burden `sound_dg_hooks`
+requires is not needed by ordinary analyses. `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`
+documents the audit that found this; both flagships were reverted back to
+`sound_dg_spec`. Do not propose migrating any further classic-route example
+to `sound_dg_hooks` without new evidence that its D/G structure genuinely
+needs the hook-tree level.
 
 ### Domain composition
 

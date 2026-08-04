@@ -3,6 +3,18 @@
 Read-only audit. No `.thy` file was edited, no batch build was run, no proof
 was written. Every claim below cites the file and line actually read.
 
+**Resolution.** Both of this audit's recommendations were subsequently
+implemented and are done, not proposed. The sublocale unification (Section 4:
+"the one adapter-shaped gap that is real and is worth scoping") landed in
+commit `fa1dd790` — `sound_dg_spec <= hooks: sound_dg_hooks` and `<= hooks_ltr:
+sound_dg_hooks_ltr`, plus a proof that `dg_gen = hook_gen` for the adapter
+instance, closing the one genuine duplicate-proof-stack this audit found,
+with zero example changes. The two unnecessary migrations this audit judged
+"net-negative churn" (`Exec_Sign_DG_Run.thy`, `Example_Parity_DG_Flagship.thy`)
+were reverted in commit `95ff7132`, back to their classic `sound_dg_spec`
+form, with all reusable framework infrastructure the migration produced kept
+intact. `docs/reviews/M4_MIGRATION_CHECKLIST.md` records the closure.
+
 ## 0. Question this audit answers
 
 The migration checklist (`docs/reviews/M4_MIGRATION_CHECKLIST.md`) paused
