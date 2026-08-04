@@ -184,6 +184,31 @@ next
     using agree[OF location_in] neq False by (simp add: parity_tf_for_def assign_parity_def)
 qed
 
+text \<open>Parity's assume/assume-not transfer is the identity on both sides
+  (\<open>assume_parity_def\<close>/\<open>assume_not_parity_def\<close>, \<open>parity_tf_st_for\<close>'s own
+  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> cases), so these two agreement facts have the
+  same shape as \<open>parity_tf_st_for_nop_agree\<close>.\<close>
+
+lemma parity_tf_st_for_assume_agree:
+  fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+  shows
+    "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assume b) s_exec) location =
+      apply_tf (parity_tf_for gs) (EA_Assume b) s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: parity_tf_for_def assume_parity_def)
+
+lemma parity_tf_st_for_assume_not_agree:
+  fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+  shows
+    "lookup_resolved_st_q (parity_tf_st_for gs (EA_AssumeNot b) s_exec) location =
+      apply_tf (parity_tf_for gs) (EA_AssumeNot b) s_abs (location_vname location)"
+  using agree[OF location_in] by (simp add: parity_tf_for_def assume_not_parity_def)
+
 lemma parity_tf_st_for_ret_none_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
   assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
