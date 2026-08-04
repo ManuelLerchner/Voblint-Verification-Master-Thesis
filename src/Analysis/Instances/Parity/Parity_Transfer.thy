@@ -25,6 +25,31 @@ proof safe
   qed
 qed
 
+subsection \<open>Abstract nondeterministic assignment\<close>
+
+definition random_parity ::
+    "vname => (vname => parity) => (vname => parity)" where
+  "random_parity x \<sigma> = \<sigma>(x := PTop)"
+
+lemma random_parity_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(x := v) \<in> \<lbrakk>random_parity x \<sigma>\<rbrakk>"
+  unfolding random_parity_def gamma_state_def
+proof safe
+  fix y
+  from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)" unfolding gamma_state_def by simp
+  show "(s(x := v)) y \<in> gamma ((\<sigma>(x := PTop)) y)"
+  proof (cases "y = x")
+    case True then show ?thesis by simp
+  next
+    case False with V show ?thesis by simp
+  qed
+qed
+
+lemma random_parity_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> random_parity x sigma1 \<le> random_parity x sigma2"
+  by (simp add: random_parity_def le_funD le_funI)
+
 subsection \<open>Assume: parity does not refine guards, so the transfer is the identity\<close>
 
 text \<open>
@@ -97,6 +122,7 @@ qed
 
 definition parity_tf :: "parity domain_transfer" where
   "parity_tf = (| tf_assign     = assign_parity,
+                  tf_random     = random_parity,
                   tf_assume     = assume_parity,
                   tf_assume_not = assume_not_parity,
                   tf_enter      = enter_parity,
@@ -111,6 +137,10 @@ text \<open>
 lemma parity_tf_sound_assign:
   "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign parity_tf x a \<sigma>\<rbrakk>"
   unfolding parity_tf_def by (simp add: assign_parity_sound)
+
+lemma parity_tf_sound_random:
+  "\<forall>x \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. st(x := v) \<in> \<lbrakk>tf_random parity_tf x \<sigma>\<rbrakk>"
+  unfolding parity_tf_def by (simp add: random_parity_sound)
 
 lemma parity_tf_sound_assume:
   "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume parity_tf b \<sigma>\<rbrakk>"
@@ -130,6 +160,8 @@ interpretation parity_sound_tf: sound_transfer parity_tf
 proof (rule sound_transferI)
   show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign parity_tf x a \<sigma>\<rbrakk>"
     using parity_tf_sound_assign by blast
+  show "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random parity_tf x \<sigma>\<rbrakk>"
+    using parity_tf_sound_random by blast
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume parity_tf b \<sigma>\<rbrakk>"
     using parity_tf_sound_assume by blast
   show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not parity_tf b \<sigma>\<rbrakk>"
@@ -160,8 +192,8 @@ lemma assume_not_parity_mono:
 lemma parity_tf_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf parity_tf a s1 \<le> apply_tf parity_tf a s2"
   by (cases a)
-     (auto simp: parity_tf_def assign_parity_mono assume_parity_mono assume_not_parity_mono
-                 enter_parity_mono split: option.splits)
+     (auto simp: parity_tf_def assign_parity_mono random_parity_mono assume_parity_mono
+                 assume_not_parity_mono enter_parity_mono split: option.splits)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -208,6 +240,7 @@ qed
 
 definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
   "parity_tf_for gs = (| tf_assign     = assign_parity,
+                         tf_random     = random_parity,
                          tf_assume     = assume_parity,
                          tf_assume_not = assume_not_parity,
                          tf_enter      = enter_parity_for gs,
@@ -217,6 +250,7 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_parity_sound)
+  subgoal by (simp add: random_parity_sound)
   subgoal by (simp add: assume_parity_sound)
   subgoal by (simp add: assume_not_parity_sound)
   subgoal by (simp add: enter_parity_for_sound)
