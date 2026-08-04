@@ -1002,6 +1002,42 @@ lemma side_cfg_T_eff_keyed_seed_trees_single_edge:
   by (simp_all add: not_entry pred no_combine no_enter bot0
     Let_def sides_of_rhs_seqcomp traverse_seqcomp)
 
+text \<open>
+  A join node -- two intra predecessors, as at a loop head or an if/else
+  merge -- has no single-tree degeneracy, but the fold's own accumulator law
+  (\<^const>\<open>side_acc_dg\<close>: each cons cell joins the next tree's local answer into
+  the running accumulator, and \<^const>\<open>sides_of_rhs\<close> is accumulator-independent
+  per \<^term>\<open>sides_of_rhs_side_rhs_fold_dg_acc_indep\<close>) reduces two predecessors
+  to a plain join of their two individual trees' contributions, with no
+  cross term. This is the two-predecessor sibling of
+  \<^term>\<open>side_cfg_T_eff_keyed_seed_trees_single_edge\<close>, needed by any CFG with a
+  loop or a branch merge; both are ordinary instances of the same generic
+  fold, so nothing here is specific to any one node kind or predecessor count
+  beyond two.
+\<close>
+
+lemma side_cfg_T_eff_keyed_seed_trees_two_edges:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and pred: "pred_sel g v = [(u1, a1), (u2, a2)]"
+    and no_combine: "return_call_action_list g v = []"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (edge_tree ctx u1 a1 v) sigma)
+             \<squnion> locals (traverse_rhs (edge_tree ctx u2 a2 v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (edge_tree ctx u1 a1 v) sigma (Inr (gkey ctx))
+         \<squnion> sides_of_rhs (edge_tree ctx u2 a2 v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry pred no_combine no_enter bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp traverse_side_rhs_fold_dg
+    sides_of_rhs_side_rhs_fold_dg_acc_indep sup_assoc)
+
 lemma side_cfg_T_eff_keyed_seed_trees_single_enter:
   fixes bot0 :: "'d::bounded_semilattice_sup_bot"
   assumes not_entry: "v \<noteq> cfg_entry g"
