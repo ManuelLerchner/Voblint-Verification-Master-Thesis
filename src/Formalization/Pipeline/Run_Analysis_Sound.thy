@@ -172,6 +172,33 @@ lemma unit_dg_Hcomb:
      = dgs_combine (unit_dg_spec tf) dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
   by (rule unit_combine_step_st_commute)
 
+text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throughout: the migrated
+  entry point for any consumer that no longer relies on \<^const>\<open>is_global\<close>.\<close>
+
+lemma unit_dg_Hstep_for:
+  assumes commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
+    and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
+    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+             (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
+           = dg_spec_step (unit_dg_spec_for gs tf) a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (simp add: dg_spec_step_unit_st_for[OF ret_none ret_some] dg_spec_step_unit_for
+                unit_step_st_commute_for commute)
+
+lemma unit_dg_Henter_for:
+  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st_for gs s)"
+  shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+             (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
+           = dgs_enter (unit_dg_spec_for gs tf) xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (simp add: unit_dg_spec_st_for_def dgs_enter_unit_dg_spec_for unit_step_st_commute_for enter_commute)
+
+lemma unit_dg_Hcomb_for:
+  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+       (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) dst dc de g)
+     = dgs_combine (unit_dg_spec_for gs tf) dst
+         (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  by (rule unit_combine_step_st_commute_for)
+
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
 
 text \<open>

@@ -664,6 +664,17 @@ lemma unit_step_st_commute:
   by (simp add: unit_step_st_def unit_step_def assms fun_of_resolved_st_q_for_sup
                 fun_of_resolved_st_q_for_restrict_local fun_of_resolved_st_q_for_restrict_global Let_def)
 
+lemma unit_step_st_commute_for:
+  assumes "\<And>s. fun_of_exec_dg_st_for gs (f_st s) = f_abs (fun_of_exec_dg_st_for gs s)"
+  shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (unit_step_st f_st d g)
+           = unit_step_for gs f_abs (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  using assms
+  unfolding fun_of_exec_dg_st_for_def
+  by (simp add: unit_step_st_def unit_step_for_def restrict_local_for_def
+                restrict_global_for_def fun_of_resolved_st_q_for_sup
+                fun_of_resolved_st_q_for_restrict_local fun_of_resolved_st_q_for_restrict_global
+                Let_def fun_eq_iff)
+
 definition unit_dg_spec_st ::
   "(edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
@@ -690,11 +701,92 @@ lemma unit_combine_step_st_commute:
                 fun_of_resolved_st_q_for_combine fun_of_resolved_st_q_for_combine_assign
                 combine_abs_eq_restrict ac_simps)
 
+text \<open>Generic combine-assign, generalizing \<^const>\<open>unit_combine_step_st_assign\<close>: the
+  destination write goes through \<^const>\<open>combine_assign_resolved_q\<close> at whatever
+  classifier \<open>gs\<close> the caller's writes and reads already agree on, not
+  \<^const>\<open>is_global\<close> unconditionally.\<close>
+definition unit_combine_step_st_assign_for ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st
+   \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
+where
+  "unit_combine_step_st_assign_for gs dst de g merged =
+     (let res = combine_assign_resolved_q gs dst
+                  (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var))
+                  (fst merged \<squnion> snd merged)
+      in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
+
+lemma unit_combine_step_st_assign_for_is_global:
+  "unit_combine_step_st_assign_for is_global = unit_combine_step_st_assign"
+  unfolding unit_combine_step_st_assign_for_def unit_combine_step_st_assign_def
+  by (rule refl)
+
+text \<open>Generic diagonal executable D/G specification: the only classifier-dependent
+  field is \<open>dgs_combine_assign\<close> -- \<^const>\<open>unit_combine_step_st_env\<close> already reads
+  the local/global split off the incoming states' own location tags, needing no
+  classifier of its own (cf.\ \<open>restrict_local_resolved_q\<close>/\<open>restrict_global_resolved_q\<close>).\<close>
+definition unit_dg_spec_st_for ::
+  "(vname \<Rightarrow> bool)
+   \<Rightarrow> (edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_spec"
+where
+  "unit_dg_spec_st_for gs tf_st enter_st = \<lparr>
+    dgs_nop        = unit_step_st (tf_st EA_Nop),
+    dgs_assign     = (\<lambda>x e. unit_step_st (tf_st (EA_Assign x e))),
+    dgs_random     = (\<lambda>x. unit_step_st (tf_st (EA_Random x))),
+    dgs_assume     = (\<lambda>b. unit_step_st (tf_st (EA_Assume b))),
+    dgs_assume_not = (\<lambda>b. unit_step_st (tf_st (EA_AssumeNot b))),
+    dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
+    dgs_combine_env    = unit_combine_step_st_env,
+    dgs_combine_assign = unit_combine_step_st_assign_for gs
+  \<rparr>"
+
+lemma unit_dg_spec_st_for_is_global:
+  "unit_dg_spec_st_for is_global = unit_dg_spec_st"
+  unfolding unit_dg_spec_st_for_def unit_dg_spec_st_def
+    unit_combine_step_st_assign_for_is_global
+  by (rule refl)
+
+text \<open>Not \<open>[simp]\<close>: the whole-function shape competes with the pointwise
+  \<open>fun_of_resolved_st_q_for_restrict_local\<close>/\<open>fun_of_resolved_st_q_for_restrict_global\<close>
+  normal form other proofs already rely on. Cited explicitly where the
+  whole-function shape is what's needed.\<close>
+lemma fun_of_resolved_st_q_for_restrict_local_for:
+  "fun_of_resolved_st_q_for gs (restrict_local_resolved_q s) = restrict_local_for gs (fun_of_resolved_st_q_for gs s)"
+  unfolding restrict_local_for_def by (rule ext) simp
+
+lemma fun_of_resolved_st_q_for_restrict_global_for:
+  "fun_of_resolved_st_q_for gs (restrict_global_resolved_q s) = restrict_global_for gs (fun_of_resolved_st_q_for gs s)"
+  unfolding restrict_global_for_def by (rule ext) simp
+
+lemma unit_combine_step_st_commute_for:
+  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+       (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) dst dc de g)
+     = dgs_combine (unit_dg_spec_for gs tf) dst
+         (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  unfolding dgs_combine_unit_dg_spec_for
+  unfolding dgs_combine_def
+    unit_dg_spec_st_for_def unit_combine_step_st_env_def unit_combine_step_st_assign_for_def
+    fun_of_exec_dg_st_for_def
+  by (simp add: Let_def combine_collect_abs_def fun_of_resolved_st_q_for_def
+                fun_of_resolved_st_q_for_sup fun_of_resolved_st_q_for_restrict_local
+                fun_of_resolved_st_q_for_restrict_global fun_of_resolved_st_q_for_combine
+                fun_of_resolved_st_q_for_combine_assign combine_abs_for_eq_restrict
+                fun_of_resolved_st_q_for_restrict_local_for
+                fun_of_resolved_st_q_for_restrict_global_for ac_simps)
+
 lemma dg_spec_step_unit_st:
   assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
     and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
   shows "dg_spec_step (unit_dg_spec_st tf_st enter_st) a = unit_step_st (tf_st a)"
   unfolding unit_dg_spec_st_def
+  by (cases a) (simp_all add: ret_none ret_some split: option.splits)
+
+lemma dg_spec_step_unit_st_for:
+  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
+    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  shows "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
+  unfolding unit_dg_spec_st_for_def
   by (cases a) (simp_all add: ret_none ret_some split: option.splits)
 
 subsection \<open>Owner-aware executable D/G trees\<close>
