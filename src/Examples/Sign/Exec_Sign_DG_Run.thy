@@ -40,6 +40,13 @@ text \<open>
 definition sign_ex_prog :: imp_prog where
   "sign_ex_prog = program { void main() { x := 1; y := x } }"
 
+text \<open>The storage classifier: \<open>sign_ex_prog\<close> declares no globals, so \<open>sign_ex_gs\<close>
+  classifies every variable this chain touches as local. The migration validates
+  domain-independence of the generic transport, matching \<open>parity_gs\<close>'s role for the
+  parity flagship, rather than global/local separation.\<close>
+abbreviation sign_ex_gs :: "vname \<Rightarrow> bool" where
+  "sign_ex_gs \<equiv> declared_global sign_ex_prog"
+
 definition sign_ex_pi :: proc_table where
   "sign_ex_pi = prog_table sign_ex_prog"
 
@@ -52,7 +59,7 @@ lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
 definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st sign_enter_st) gEx bot cinit_sign_st cinit_sign_st"
+  "dgEx_eqs = dg_gen_of (unit_dg_spec_st_for sign_ex_gs (sign_tf_st_for sign_ex_gs) (sign_enter_st_for sign_ex_gs)) gEx bot cinit_sign_st cinit_sign_st"
 
 definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
@@ -82,11 +89,11 @@ lemma dgEx_pp_st:
 subsection \<open>Well-formedness of the compiled input\<close>
 
 lemma dgEx_wf:
-  "wf_compile_input is_global sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+  "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     sign_ex_pi_def sign_ex_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
-      reserved_ret_var_def is_global_def split: if_splits)
+      reserved_ret_var_def split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
@@ -105,30 +112,37 @@ lemma dgEx_cover_combine:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
      \<Longrightarrow> (k, ()) \<in> fst dgEx_sol"
   by (simp add: gEx_calls)
-lemma dgEx_sound0: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_sign_st \<squnion> fun_of_exec_dg_st cinit_sign_st\<rbrakk>"
-  by (simp add: fun_of_st_cinit_sign_st cinit_stores_def gamma_state_def sup.idem)
+lemma dgEx_sound0:
+  "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st \<squnion> fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st\<rbrakk>"
+  by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def sup.idem)
 
-subsection \<open>Source-level soundness through the registered analysis\<close>
+subsection \<open>Source-level soundness through the classifier-parametric bridge\<close>
 
-text \<open>
-  The registered endpoint \<open>sign_reg.run_source_sound\<close> turns the single \<^theory_text>\<open>by eval\<close>
-  solver success \<open>dgEx_terminates_c\<close> directly into a source-level guarantee: every
-  reachable VIMP store is bounded by the computed Sign answer at its matched program
-  point, read through the semantic accessor \<open>sign_reg.gamma\<close>.  No transport lemma,
-  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof,
-  matching the pattern in \<open>Example_Interval_DG_Flagship\<close>.
-\<close>
+text \<open>\<open>sign_ex_prog\<close> declares no globals, so \<^const>\<open>sign_ex_gs\<close> has no pre-registered
+  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal sign spec (\<open>DG_Domain_Registration\<close>
+  only registers \<^const>\<open>is_global\<close>): establish it once here from the classifier-parametric
+  bridge lemma, and cite the classifier-parametric end-to-end theorem
+  \<open>dg_exec_run_source_sound_for\<close> directly instead of the \<open>is_global\<close>-fixed \<open>sign_reg\<close>
+  registration, matching the pattern in \<open>Example_Parity_DG_Flagship\<close>.\<close>
+lemma dgEx_sds: "sound_dg_spec_ltr_for (unit_dg_spec_for sign_ex_gs (sign_tf_for sign_ex_gs)) gamma_unit sign_ex_gs"
+  unfolding sound_dg_spec_ltr_for_def
+  by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for])
 
 theorem dgEx_source_run_sound:
-  assumes run: "star (pstep is_global sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
-      and init: "s \<in> cinit_stores is_global"
+  assumes run: "star (pstep sign_ex_gs sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
+      and init: "s \<in> cinit_stores sign_ex_gs"
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sign_reg.gamma (snd dgEx_sol) v"
+                 \<and> t \<in> sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st_for sign_ex_gs \<circ> snd dgEx_sol) v"
 proof -
   show ?thesis
     unfolding dgEx_sol_def dgEx_eqs_def gEx_def
-    by (rule sign_reg.run_source_sound
-          [OF dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def]
+    by (rule dg_exec_run_source_sound_for
+          [OF dgEx_sds
+              unit_dg_Hstep_for[OF sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+                sign_tf_st_for_ret_none sign_tf_st_for_ret_some]
+              unit_dg_Henter_for[OF sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]] unit_dg_Hcomb_for
+              dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def,
+                THEN TD_side_always_join_Interp.part_post_solution_of_solve_c]
               dgEx_wf
               dgEx_cover_entry[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
               dgEx_cover_edge[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
