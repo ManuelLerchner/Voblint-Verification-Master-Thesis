@@ -105,6 +105,61 @@ theorem valid_ltr_eq_lfp:
   "valid_ltr gs g S = lfp (ltr_F gs g S)"
   by (rule antisym[OF valid_ltr_subset_lfp lfp_ltr_F_subset_valid_ltr])
 
+subsection \<open>Seed structure: monotonicity and union in the initial set\<close>
+
+text \<open>Enlarging the initial store set only adds traces.  \<open>ltr_F\<close>'s dependence on \<open>S\<close> is
+  confined to the root clause --- \<open>extend\<close>/\<open>Call\<close>/\<open>Resume\<close> read only their argument set, never
+  \<open>S\<close> --- so \<open>ltr_F gs g S\<close> is pointwise below \<open>ltr_F gs g S'\<close> and \<open>lfp_mono\<close> applies directly,
+  with no case split over \<^const>\<open>valid_ltr\<close>'s four constructors.\<close>
+lemma valid_ltr_mono_S:
+  assumes "S \<subseteq> S'"
+  shows "valid_ltr gs g S \<subseteq> valid_ltr gs g S'"
+proof -
+  have "ltr_F gs g S T \<subseteq> ltr_F gs g S' T" for T
+    unfolding ltr_F_def using assms by blast
+  then have "lfp (ltr_F gs g S) \<subseteq> lfp (ltr_F gs g S')"
+    by (rule lfp_mono)
+  then show ?thesis by (simp add: valid_ltr_eq_lfp)
+qed
+
+text \<open>Every trace is seeded by a single initial store: the valid set is the union of the
+  single-seed valid sets.  A return recovers its caller from the completed callee's own
+  ancestry, so caller and callee share the seed --- the \<open>ret\<close> case needs only the callee.\<close>
+lemma valid_ltr_eq_UN_singleton:
+  "valid_ltr gs g S = (\<Union>s\<in>S. valid_ltr gs g {s})"
+proof (rule equalityI)
+  show "valid_ltr gs g S \<subseteq> (\<Union>s\<in>S. valid_ltr gs g {s})"
+  proof (rule subsetI)
+    fix t assume "t \<in> valid_ltr gs g S"
+    then show "t \<in> (\<Union>s\<in>S. valid_ltr gs g {s})"
+    proof (induction rule: valid_ltr.induct)
+      case (init s) then show ?case using valid_ltr.init[of s "{s}" g gs] by auto
+    next
+      case (intra t a v s')
+      then obtain s where "s \<in> S" "t \<in> valid_ltr gs g {s}" by auto
+      then show ?case using valid_ltr.intra[OF _ intra.hyps(2,3)] by auto
+    next
+      case (call caller dst pars args p cont)
+      then obtain s where "s \<in> S" "caller \<in> valid_ltr gs g {s}" by auto
+      then show ?case using valid_ltr.call[OF _ call.hyps(2)] by auto
+    next
+      case (ret callee caller p dst pars args cont)
+      then obtain s where "s \<in> S" "callee \<in> valid_ltr gs g {s}" by auto
+      then show ?case using valid_ltr.ret[OF _ ret.hyps(2,3,4)] by auto
+    qed
+  qed
+next
+  show "(\<Union>s\<in>S. valid_ltr gs g {s}) \<subseteq> valid_ltr gs g S"
+    using valid_ltr_mono_S by blast
+qed
+
+text \<open>Collection distributes over a union of initial sets.\<close>
+lemma valid_ltr_Un_S:
+  "valid_ltr gs g (S \<union> S') = valid_ltr gs g S \<union> valid_ltr gs g S'"
+  using valid_ltr_eq_UN_singleton[of gs g "S \<union> S'"]
+        valid_ltr_eq_UN_singleton[of gs g S] valid_ltr_eq_UN_singleton[of gs g S']
+  by auto
+
 subsection \<open>Forgetful projections\<close>
 
 text \<open>\<open>ltr_collect\<close> is the concrete collecting view: the sink stores of valid traces

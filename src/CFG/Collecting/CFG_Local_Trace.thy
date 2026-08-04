@@ -622,63 +622,9 @@ proof -
   then show ?thesis by (simp add: sink_node_def)
 qed
 
-subsection \<open>Seed structure: monotonicity and union in the initial set\<close>
-
-text \<open>Enlarging the initial store set only adds traces.\<close>
-lemma valid_ltr_mono_S:
-  assumes "S \<subseteq> S'"
-  shows "valid_ltr gs g S \<subseteq> valid_ltr gs g S'"
-proof (rule subsetI)
-  fix t assume "t \<in> valid_ltr gs g S"
-  then show "t \<in> valid_ltr gs g S'"
-  proof (induction rule: valid_ltr.induct)
-    case (init s) then show ?case using assms valid_ltr.init by auto
-  next
-    case (intra t a v s') then show ?case using valid_ltr.intra by blast
-  next
-    case (call caller dst pars args p cont) then show ?case using valid_ltr.call by blast
-  next
-    case (ret callee caller p dst pars args cont) then show ?case using valid_ltr.ret by blast
-  qed
-qed
-
-text \<open>Every trace is seeded by a single initial store: the valid set is the union of the
-  single-seed valid sets.  A return recovers its caller from the completed callee's own
-  ancestry, so caller and callee share the seed --- the \<open>ret\<close> case needs only the callee.\<close>
-lemma valid_ltr_eq_UN_singleton:
-  "valid_ltr gs g S = (\<Union>s\<in>S. valid_ltr gs g {s})"
-proof (rule equalityI)
-  show "valid_ltr gs g S \<subseteq> (\<Union>s\<in>S. valid_ltr gs g {s})"
-  proof (rule subsetI)
-    fix t assume "t \<in> valid_ltr gs g S"
-    then show "t \<in> (\<Union>s\<in>S. valid_ltr gs g {s})"
-    proof (induction rule: valid_ltr.induct)
-      case (init s) then show ?case using valid_ltr.init[of s "{s}" g gs] by auto
-    next
-      case (intra t a v s')
-      then obtain s where "s \<in> S" "t \<in> valid_ltr gs g {s}" by auto
-      then show ?case using valid_ltr.intra[OF _ intra.hyps(2,3)] by auto
-    next
-      case (call caller dst pars args p cont)
-      then obtain s where "s \<in> S" "caller \<in> valid_ltr gs g {s}" by auto
-      then show ?case using valid_ltr.call[OF _ call.hyps(2)] by auto
-    next
-      case (ret callee caller p dst pars args cont)
-      then obtain s where "s \<in> S" "callee \<in> valid_ltr gs g {s}" by auto
-      then show ?case using valid_ltr.ret[OF _ ret.hyps(2,3,4)] by auto
-    qed
-  qed
-next
-  show "(\<Union>s\<in>S. valid_ltr gs g {s}) \<subseteq> valid_ltr gs g S"
-    using valid_ltr_mono_S by blast
-qed
-
-text \<open>Collection distributes over a union of initial sets.\<close>
-lemma valid_ltr_Un_S:
-  "valid_ltr gs g (S \<union> S') = valid_ltr gs g S \<union> valid_ltr gs g S'"
-  using valid_ltr_eq_UN_singleton[of gs g "S \<union> S'"]
-        valid_ltr_eq_UN_singleton[of gs g S] valid_ltr_eq_UN_singleton[of gs g S']
-  by auto
+text \<open>Monotonicity and union in the initial store set (\<open>valid_ltr_mono_S\<close>, \<open>valid_ltr_eq_UN_singleton\<close>,
+  \<open>valid_ltr_Un_S\<close>) live in the theory that also carries \<open>ltr_F\<close> and \<open>valid_ltr_eq_lfp\<close>, where
+  \<open>valid_ltr_mono_S\<close> is proved via \<open>lfp_mono\<close> instead of rule induction.\<close>
 
 subsection \<open>Stable context entry invariant\<close>
 
