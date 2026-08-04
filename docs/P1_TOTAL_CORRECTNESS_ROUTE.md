@@ -1,8 +1,10 @@
 # P1 `solve_dom` — total-correctness route analysis
 
-Status: **open** (GitHub #14). This is a route map, not a closed proof. It records
-why the last TD hypothesis resists a quick discharge and what each route costs, so
-the scope decision (`docs/THESIS_SCOPE_MEMO.md`) can be made with eyes open.
+Status: **closed as non-goal** (GitHub #14). Discharging `solve_dom` so
+soundness becomes unconditional is a declared non-goal (`docs/NON_GOALS.md`).
+This route map stays as a reference: it records why the last TD hypothesis
+resists a quick discharge and what each route would cost, in case a later
+phase revisits the scope decision (`docs/THESIS_SCOPE_MEMO.md`).
 
 ## What P1 is
 

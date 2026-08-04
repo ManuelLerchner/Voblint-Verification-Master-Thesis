@@ -51,7 +51,7 @@ subsection \<open>Semantic core: abstract post-solution to source bound\<close>
 
 theorem dg_run_source_sound_abs:
   fixes Pi :: proc_table and mnm :: pname and s0 t :: store
-  assumes wf: "wf_compile_input Pi ps mnm main"
+  assumes wf: "wf_compile_input is_global Pi ps mnm main"
     and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
@@ -92,19 +92,19 @@ text \<open>
 
 theorem dg_exec_run_source_sound:
   fixes Pi :: proc_table and mnm :: pname and s0 t :: store
-    and S_st :: "('d1::bounded_semilattice_sup_bot st, 'g1::bounded_semilattice_sup_bot st) dg_spec"
+    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st, 'g1::bounded_semilattice_sup_bot exec_dg_st) dg_spec"
     and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
     and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
-    and bot0 s0d :: "'d1 st" and s0g :: "'g1 st"
+    and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
   assumes sds: "sound_dg_spec_ltr S_abs gammaDG"
-    and Hstep: "\<And>a d g. map_prod fun_of_st fun_of_st (dg_spec_step S_st a d g)
-                        = dg_spec_step S_abs a (fun_of_st d) (fun_of_st g)"
-    and Henter: "\<And>xs es d g. map_prod fun_of_st fun_of_st (dgs_enter S_st xs es d g)
-                        = dgs_enter S_abs xs es (fun_of_st d) (fun_of_st g)"
-    and Hcomb: "\<And>dst dc de g. map_prod fun_of_st fun_of_st (dgs_combine S_st dst dc de g)
-                        = dgs_combine S_abs dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"    and pp_st: "part_post_solution
+    and Hstep: "\<And>a d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step S_st a d g)
+                        = dg_spec_step S_abs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+    and Henter: "\<And>xs es d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter S_st xs es d g)
+                        = dgs_enter S_abs xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+    and Hcomb: "\<And>dst dc de g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine S_st dst dc de g)
+                        = dgs_combine S_abs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"    and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input Pi ps mnm main"
+    and wf: "wf_compile_input is_global Pi ps mnm main"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
@@ -116,7 +116,7 @@ theorem dg_exec_run_source_sound:
          \<Longrightarrow> (k, ()) \<in> vars"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
-    and sound0: "S0 \<subseteq> gammaDG (fun_of_st s0d) (fun_of_st s0g)"
+    and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
@@ -125,12 +125,12 @@ proof -
   interpret sds: sound_dg_spec_ltr S_abs gammaDG by (rule sds)
   have pp_abs: "part_post_solution
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
-         (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g))
+         (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g))
       x (fun_of_dg_st \<circ> sigma_st) vars"
     by (rule part_post_solution_dg_st_to_abs[OF Hstep Henter Hcomb pp_st])
   have pp_gen: "part_post_solution
       (sds.dg_gen (compile_prog Pi ps mnm main)
-         (fun_of_st bot0) (fun_of_st s0d) (fun_of_st s0g))
+         (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g))
       x (fun_of_dg_st \<circ> sigma_st) vars"
     using pp_abs unfolding sds.dg_gen_of_eq .
   show ?thesis
@@ -153,23 +153,23 @@ text \<open>
 \<close>
 
 lemma unit_dg_Hstep:
-  assumes commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
+  assumes commute: "\<And>a s. fun_of_exec_dg_st (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st s)"
     and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
     and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
-  shows "map_prod fun_of_st fun_of_st (dg_spec_step (unit_dg_spec_st tf_st enter_st) a d g)
-           = dg_spec_step (unit_dg_spec tf) a (fun_of_st d) (fun_of_st g)"
+  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step (unit_dg_spec_st tf_st enter_st) a d g)
+           = dg_spec_step (unit_dg_spec tf) a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
   by (simp add: dg_spec_step_unit_st[OF ret_none ret_some] dg_spec_step_unit
                 unit_step_st_commute commute)
 
 lemma unit_dg_Henter:
-  assumes enter_commute: "\<And>xs es s. fun_of_st (enter_st xs es s) = tf_enter tf xs es (fun_of_st s)"
-  shows "map_prod fun_of_st fun_of_st (dgs_enter (unit_dg_spec_st tf_st enter_st) xs es d g)
-           = dgs_enter (unit_dg_spec tf) xs es (fun_of_st d) (fun_of_st g)"
-  by (simp add: unit_dg_spec_st_def unit_dg_spec_def unit_step_st_commute enter_commute)
+  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st s)"
+  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st tf_st enter_st) xs es d g)
+           = dgs_enter (unit_dg_spec tf) xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+  by (simp add: unit_dg_spec_st_def dgs_enter_unit_dg_spec unit_step_st_commute enter_commute)
 
 lemma unit_dg_Hcomb:
-  "map_prod fun_of_st fun_of_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec tf) dst (fun_of_st dc) (fun_of_st de) (fun_of_st g)"
+  "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
+     = dgs_combine (unit_dg_spec tf) dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
   by (rule unit_combine_step_st_commute)
 
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
@@ -186,17 +186,17 @@ text \<open>
 
 locale unit_dg_exec_analysis =
   fixes tf :: "'a::sound_domain domain_transfer"
-    and tf_st :: "edge_action \<Rightarrow> 'a st \<Rightarrow> 'a st"
-    and enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a st \<Rightarrow> 'a st"
-    and solve :: "(pp \<times> unit, unit, ('a st, 'a st) dg_state) eqsT
+    and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and solve :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
-                   \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a st, 'a st) dg_state)"
-    and solve_c :: "(pp \<times> unit, unit, ('a st, 'a st) dg_state) eqsT
+                   \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state)"
+    and solve_c :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
-                   \<Rightarrow> ((pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a st, 'a st) dg_state)) option"
+                   \<Rightarrow> ((pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state)) option"
   assumes tf_sound: "sound_transfer tf"
-    and tf_commute: "\<And>a s. fun_of_st (tf_st a s) = apply_tf tf a (fun_of_st s)"
-    and enter_commute: "\<And>xs es s. fun_of_st (enter_st xs es s) = tf_enter tf xs es (fun_of_st s)"
+    and tf_commute: "\<And>a s. fun_of_exec_dg_st (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st s)"
+    and enter_commute: "\<And>xs es s. fun_of_exec_dg_st (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st s)"
     and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
     and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
     and solver_pps: "\<And>eqs x. solve_c eqs x \<noteq> None
@@ -212,7 +212,7 @@ text \<open>
   no \<open>dg_spec_step\<close>/\<open>fun_of_dg_st\<close>/\<open>part_post_solution\<close> plumbing reaches the
   caller.
 \<close>
-definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a st, 'a st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
+definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
   where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st \<circ> sigma_st) v"
 
 lemma sds: "sound_dg_spec_ltr (unit_dg_spec tf) gamma_unit"
@@ -220,9 +220,9 @@ lemma sds: "sound_dg_spec_ltr (unit_dg_spec tf) gamma_unit"
   by (rule sound_dg_spec_unit[OF tf_sound])
 
 theorem run_source_sound:
-  fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a st"
+  fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a exec_dg_st"
   defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"  assumes SOLVE: "solve_c eqs x \<noteq> None"
-    and wf: "wf_compile_input Pi ps mnm main"
+    and wf: "wf_compile_input is_global Pi ps mnm main"
     and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
     and cover_edge:
       "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
@@ -234,7 +234,7 @@ theorem run_source_sound:
          \<Longrightarrow> (k, ()) \<in> fst (solve eqs x)"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
-    and sound0: "S0 \<subseteq> gamma_unit (fun_of_st s0d) (fun_of_st s0g)"
+    and sound0: "S0 \<subseteq> gamma_unit (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
@@ -256,5 +256,7 @@ qed
 end
 
 end
+
+
 
 

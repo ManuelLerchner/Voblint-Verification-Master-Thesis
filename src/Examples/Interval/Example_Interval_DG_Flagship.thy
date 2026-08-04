@@ -116,20 +116,20 @@ subsection \<open>Equation generation\<close>
 
 text \<open>
   The generic D/G generator \<open>dg_gen_of\<close> turns the CFG into an equation system over
-  unknowns \<open>(pp x unit) + unit\<close>, values in \<open>(ivl st, ivl st) dg_state\<close>.  Locals
+  unknowns \<open>(pp x unit) + unit\<close>, values in \<open>(ivl exec_dg_st, ivl exec_dg_st) dg_state\<close>.  Locals
   seed at \<open>cinit_ivl_st\<close> (globals \<open>[0,0]\<close>, locals \<open>top\<close>); the flow-insensitive
-  global slot seeds at \<open>restrict_global_st cinit_ivl_st\<close> (bottom on locals, so it
+  global slot seeds at \<open>restrict_global_resolved_q cinit_ivl_st\<close> (bottom on locals, so it
   never pollutes the local \<open>x\<close> through the diagonal read).
 \<close>
 
-definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) flagship_cfg bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "flagship_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) flagship_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
 
 text \<open>
   The vendored \<open>TD_side_warrowing_apinis_Interp_solve_c\<close> --- pointwise interval
-  widening on \<open>(ivl st, ivl st) dg_state\<close> for solver termination --- \<^emph>\<open>computes\<close> a
+  widening on \<open>(ivl exec_dg_st, ivl exec_dg_st) dg_state\<close> for solver termination --- \<^emph>\<open>computes\<close> a
   solution.  Termination is a code-generated \<^verbatim>\<open>by eval\<close> fact; the solution is not
   written by hand.
 \<close>
@@ -138,13 +138,13 @@ lemma flagship_terminates_c:
   "TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()) \<noteq> None"
   by eval
 
-definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state)" where
+definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "flagship_sol = TD_side_warrowing_apinis_Interp_solve flagship_eqs (cfg_exit flagship_cfg, ())"
 
 text \<open>The computed local interval for \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_st (locals (snd sol (Inl (p, ())))) ''x'')))
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''x'')))
             (map Statement [0,1,2,3]))
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
@@ -173,10 +173,10 @@ lemma flagship_cover_combine:
   by (simp add: flagship_calls)
 
 lemma flagship_sound0:
-  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st)\<rbrakk>"
+  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)\<rbrakk>"
 proof -
-  have "fun_of_st cinit_ivl_st \<squnion> fun_of_st (restrict_global_st cinit_ivl_st) = fun_of_st cinit_ivl_st"
-    by (simp add: fun_of_st_cinit_ivl_st fun_of_st_restrict_global_st restrict_global_def sup_fun_def fun_eq_iff)
+  have "fun_of_exec_dg_st cinit_ivl_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st) = fun_of_exec_dg_st cinit_ivl_st"
+    by (simp add: fun_of_st_cinit_ivl_st restrict_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 qed
@@ -190,15 +190,15 @@ text \<open>
 subsection \<open>Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (Statement 1, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  "lookup_exec_dg_st (locals (snd flagship_sol (Inl (Statement 1, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_body_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "lookup_exec_dg_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_exit_computed:
-  "lookup_st (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_exec_dg_st (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 subsection \<open>Source-level soundness through the registered analysis\<close>
@@ -212,10 +212,10 @@ text \<open>
 \<close>
 
 lemma flagship_wf:
-  "wf_compile_input flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
+  "wf_compile_input is_global flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     flagship_pi_def flagship_prog_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def is_global_def
       split: if_splits)
 
 theorem flagship_source_run_sound:
@@ -248,16 +248,19 @@ text \<open>
   something --- it is not the trivial \<open>gamma top = UNIV\<close>.
 \<close>
 
-lemma glob_x_at_head: "lookup_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+lemma glob_x_at_head: "lookup_exec_dg_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma head_x_bound:
   "(locals ((fun_of_dg_st \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ())))
     \<squnion> globs ((fun_of_dg_st \<circ> snd flagship_sol) (Inr ()))) ''x'' = Ivl (Fin 0) (Fin 20)"
 proof -
-  have L: "fun_of_st (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
-    using flagship_head_computed by simp
-  have G: "fun_of_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot" by (rule glob_x_at_head)
+  have L: "fun_of_exec_dg_st (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+    using flagship_head_computed
+    by (simp add: fun_of_resolved_st_q_for_def)
+  have G: "fun_of_exec_dg_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+    using glob_x_at_head
+    by (simp add: fun_of_resolved_st_q_for_def)
   show ?thesis by (simp add: fun_of_dg_st_simps sup_fun_def L G)
 qed
 
@@ -280,7 +283,7 @@ text \<open>
 \<close>
 
 definition flagship_graph_config ::
-  "(unit, unit, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "flagship_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. ()),
@@ -293,7 +296,7 @@ definition flagship_graph_config ::
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. [''(none)'']),
       show_global_key = (\<lambda>_. ''Global''),
@@ -320,5 +323,7 @@ ML_val \<open>writeln (@{code flagship_dot})\<close>
 
 
 end
+
+
 
 

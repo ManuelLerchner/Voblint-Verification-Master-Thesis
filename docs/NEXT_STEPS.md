@@ -15,11 +15,36 @@ Improve analysis-defined shared-state reads and publications where a concrete
 precision example requires it. Preserve the generic separation between local
 `D` facts and shared `G` facts.
 
+## Placement-aware D/G generation (settled, no further action planned)
+
+`sound_dg_spec` is a proved `sublocale` of `sound_dg_hooks`
+(`DG_Soundness.thy`, `DG_LTR_Sound.thy`): one implementation, two abstraction
+levels. `sound_dg_spec` is the concise adapter every ordinary analysis
+interprets (one locale interpretation, no per-CFG-node proof burden);
+`sound_dg_hooks` is the framework-construction API for analyses whose D/G
+structure needs arbitrary hook trees, such as owner-sensitive placement.
+Sign, Interval, Parity, Mixed, CallString, and Ctx all stay on
+`sound_dg_spec`/`dg_ctx_activation`/`routed_context`; two examples,
+`Example_Interval_Placement.thy` and `Example_Sign_Placement.thy`, exercise
+`sound_dg_hooks` directly as framework validation, not as templates.
+
+This closes a prior migration attempt: two flagships
+(`Exec_Sign_DG_Run.thy`, `Example_Parity_DG_Flagship.thy`) were migrated onto
+`sound_dg_hooks` directly on the mistaken premise that `sound_dg_spec` was a
+duplicate implementation. Both grew 5-6x for no closed soundness/drift risk
+(`docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`) and were reverted. No further
+example migration to `sound_dg_hooks` is planned; do not propose one without
+new evidence that a specific analysis's D/G structure genuinely needs the
+hook-tree level `sound_dg_spec` cannot express.
+
 ## Domain composition
 
-Factor reusable product construction from the mixed Sign/Interval instance.
-Treat reduced products as separate work with explicit reduction and
-concretization obligations.
+No generic reduced-product constructor is planned. `sound_dg_spec`'s carriers
+are already opaque, and `Rel_Order_Domain.thy` demonstrates a non-`abs_state`
+instance against the unmodified framework; see
+`docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) for the settled
+architecture. New heterogeneous or relational analyses are added directly
+against `sound_dg_spec`, not through a shared product/reduction layer.
 
 ## Numeric precision
 

@@ -80,6 +80,9 @@ approval_mode = "approve"
 [mcp_servers.isabelle-iq.tools.get_sorry_positions]
 approval_mode = "approve"
 
+[mcp_servers.isabelle-iq.tools.get_type_at_selection]
+approval_mode = "approve"
+
 [mcp_servers.isabelle-ir]
 url = "http://localhost:9148/mcp"
 

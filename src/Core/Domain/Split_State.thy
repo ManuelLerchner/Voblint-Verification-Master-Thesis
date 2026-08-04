@@ -22,6 +22,28 @@ text \<open>
 
 type_synonym ('l, 'g) split_state = "'l abs_state \<times> 'g abs_state"
 
+
+subsection \<open>Placement interface\<close>
+
+text \<open>
+  Placement controls which abstract component constrains a location.  It is
+  independent of source storage: a location can be constrained by the local
+  component, the side component, both components, or neither component.
+\<close>
+
+definition project_component ::
+  "('loc => bool) => ('loc => 'a::bot) => 'loc => 'a" where
+  "project_component placed state =
+     (\<lambda>loc. if placed loc then state loc else bot)"
+
+definition classic_split_keep_local :: "(vname => bool) => vname => bool" where
+  "classic_split_keep_local storage loc = (\<not> storage loc)"
+
+definition classic_split_publish_side :: "(vname => bool) => vname => bool" where
+  "classic_split_publish_side storage loc = storage loc"
+
+
+
 subsection \<open>Well-formedness\<close>
 
 definition wf_split :: "('l::bot, 'g::bot) split_state \<Rightarrow> bool" where

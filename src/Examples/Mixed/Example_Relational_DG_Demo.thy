@@ -63,13 +63,13 @@ text \<open>\<open>Statement 1\<close> is the true branch of the guard, right af
 subsection \<open>Interval, on the same CFG, same generator, same solver menu\<close>
 
 definition demo_ivl_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl st, ivl st) dg_state) strategy_tree" where
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "demo_ivl_eqs =
      dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) demo_cfg
-       bot top_ivl_st (restrict_global_st top_ivl_st)"
+       bot top_ivl_st (restrict_global_resolved_q top_ivl_st)"
 
 definition demo_ivl_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl st, ivl st) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "demo_ivl_sol = TD_side_always_join_Interp_solve demo_ivl_eqs (cfg_exit demo_cfg, ())"
 
 lemma demo_ivl_terminates:
@@ -102,11 +102,11 @@ text \<open>Interval's bound for \<open>x\<close> (and, symmetrically, \<open>y\
   neither operand had a finite bound for the other to narrow against.\<close>
 
 lemma demo_ivl_x_at_branch:
-  "lookup_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'' = Ivl MinInf PlusInf"
+  "lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'' = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 lemma demo_ivl_y_at_branch:
-  "lookup_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'' = Ivl MinInf PlusInf"
+  "lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'' = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 text \<open>\<open>relc\<close>, at the very same point, has recorded the pair directly.
@@ -126,8 +126,8 @@ lemma demo_rel_learns_yx:
 text \<open>Side by side, evaluated in one call: Interval's two bounds stay
   \<open>[-inf,+inf]\<close>; \<open>relc\<close> answers \<open>True\<close> for the pair \<open>(x,y)\<close>.\<close>
 
-value "(lookup_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'',
-        lookup_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'',
+value "(lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'',
+        lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'',
         relc_has ''x'' ''y'' (locals (snd demo_rel_sol (Inl (Statement 1, ())))))"
 
 subsection \<open>Rendering the CFG\<close>
@@ -188,3 +188,5 @@ definition demo_rel_dot :: String.literal where
 ML_val \<open>writeln (@{code demo_rel_dot})\<close>
 
 end
+
+

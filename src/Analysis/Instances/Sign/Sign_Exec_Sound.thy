@@ -11,10 +11,10 @@ text \<open>
   High-level vocabulary for the executable analyzer, so example statements read
   at the level of intent rather than solver plumbing:
 
-    \<^item> \<open>sign_exec_raw \<Pi> ps main\<close>  -- the raw solver solution (\<open>pp + unit => sign st\<close>),
+    \<^item> \<open>sign_exec_raw \<Pi> ps main\<close>  -- the raw solver solution (\<open>pp + unit => sign resolved_st_q\<close>),
       code-generating, the thing @{command value} / \<open>eval\<close> evaluates;
     \<^item> \<open>sign_exec \<Pi> ps main\<close>      -- the analyzer's computed abstract state at the
-      program exit (a \<open>sign abs_state\<close>), read back through \<open>fun_of_st\<close>;
+      program exit (a \<open>sign abs_state\<close>), read back through \<open>fun_of_resolved_st_q_for is_global\<close>;
     \<^item> \<open>sign_exec_terminates \<Pi> ps main\<close> -- the single assumption: the vendored
       solver terminates on this program.
 
@@ -23,12 +23,12 @@ text \<open>
 \<close>
 
 definition sign_exec_eqs ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp, unit, sign st) eqsT" where
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp, unit, sign resolved_st_q) eqsT" where
   "sign_exec_eqs \<Pi> ps mnm main =
      side_cfg_T_eff_st (compile_prog \<Pi> ps mnm main) sign_etf_st bot cinit_sign_st ()"
 
 definition sign_exec_raw ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> sign st)" where
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> sign resolved_st_q)" where
   "sign_exec_raw \<Pi> ps mnm main =
      snd (TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps mnm main)
             (cfg_exit (compile_prog \<Pi> ps mnm main)))"
@@ -36,12 +36,12 @@ definition sign_exec_raw ::
 definition sign_exec ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> sign abs_state" where
   "sign_exec \<Pi> ps mnm main =
-     side_env (fun_of_st \<circ> sign_exec_raw \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
+     side_env (fun_of_resolved_st_q_for is_global \<circ> sign_exec_raw \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 definition sign_exec_terminates ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
   "sign_exec_terminates \<Pi> ps mnm main =
-     TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(sign st)
+     TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(sign resolved_st_q)
         (sign_exec_eqs \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 text \<open>
@@ -85,13 +85,13 @@ theorem sign_exec_sound_collecting:
          \<le> \<lbrakk>sign_exec \<Pi> ps mnm main\<rbrakk>"
 proof -
   define g :: cfg where "g = compile_prog \<Pi> ps mnm main"
-  define sol :: "pp set \<times> (pp + unit \<Rightarrow> sign st)" where
+  define sol :: "pp set \<times> (pp + unit \<Rightarrow> sign resolved_st_q)" where
     "sol = TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps mnm main) (cfg_exit g)"
-  define \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" where "\<sigma> = fun_of_st \<circ> snd sol"
+  define \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" where "\<sigma> = fun_of_resolved_st_q_for is_global \<circ> snd sol"
   have fin: "finite (intra g)" unfolding g_def using compile_prog_finite by simp
   have finC: "finite (calls g)" unfolding g_def using compile_prog_finite by simp
   have wf: "wf_cfg g" unfolding g_def by (rule compile_prog_wf)
-  have dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(sign st)
+  have dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(sign resolved_st_q)
                (sign_exec_eqs \<Pi> ps mnm main) (cfg_exit g)"
     using solves unfolding sign_exec_terminates_def g_def by simp
   have pp0: "part_post_solution (sign_exec_eqs \<Pi> ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
@@ -117,11 +117,11 @@ proof -
   have solpair: "TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp
-  have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_st (snd sol (Inr gg))"
+  have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_resolved_q (snd sol (Inr gg))"
     by (rule TD_side_always_join_solve_Inr_rg[OF dom srz solpair])
   have inr: "inr_slot_locals_bot is_global \<sigma>"
     unfolding \<sigma>_def
-    using inr_slot_locals_bot_fun_of_st_restrict_global_st rg by blast
+    using inr_slot_locals_bot_fun_of_resolved_st_q_for_restrict_global_abs rg by blast
   have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"
     by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
@@ -218,10 +218,10 @@ definition sign_graph_config ::
     \<rparr>"
 
 definition sign_graph_solution ::
-  "(pp + unit \<Rightarrow> sign st) \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> sign abs_state)" where
+  "(pp + unit \<Rightarrow> sign resolved_st_q) \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> sign abs_state)" where
   "sign_graph_solution sol z =
-    (case z of Inl (p, ()) \<Rightarrow> fun_of_st (sol (Inl p))
-     | Inr () \<Rightarrow> fun_of_st (sol (Inr ())) )"
+    (case z of Inl (p, ()) \<Rightarrow> fun_of_resolved_st_q_for is_global (sol (Inl p))
+     | Inr () \<Rightarrow> fun_of_resolved_st_q_for is_global (sol (Inr ())) )"
 
 definition sign_annotated_dot_lit ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> String.literal" where
@@ -237,3 +237,5 @@ definition sign_annotated_dot_prog_lit :: "pname \<Rightarrow> imp_prog \<Righta
      sign_annotated_dot_lit (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 end
+
+

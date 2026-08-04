@@ -119,6 +119,81 @@ qed
 lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
   by (rule ivl_sound_tf.sound_transfer_axioms)
 
+subsection \<open>Classifier-parametric transfer\<close>
+
+text \<open>
+  \<^const>\<open>ivl_tf\<close> fixes the legacy \<^const>\<open>is_global\<close> classifier inside
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>.  Placement analyses split
+  store components by a declaration-driven classifier instead, so entry and
+  combine need a version parametric in that classifier.  Assignment and guard
+  transfer never consult a classifier, so only the entry and combine fields
+  change shape.
+\<close>
+
+definition enter_frame_ivl_for ::
+    "(vname => bool) => ivl abs_state => ivl abs_state" where
+  "enter_frame_ivl_for gs = enter_frame_D gs ivl_top"
+
+definition enter_ivl_for ::
+    "(vname => bool) => vname list => aexp list =>
+      ivl abs_state => ivl abs_state" where
+  "enter_ivl_for gs = enter_D gs ivl_top aval_ivl"
+
+lemma enter_frame_ivl_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "enter_state cls s \<in> \<lbrakk>enter_frame_ivl_for cls \<sigma>\<rbrakk>"
+  unfolding enter_frame_ivl_for_def
+proof (rule enter_frame_D_sound[OF gs])
+  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
+qed
+
+lemma enter_ivl_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
+           \<in> \<lbrakk>enter_ivl_for cls xs es \<sigma>\<rbrakk>"
+  unfolding enter_ivl_for_def
+proof (rule enter_D_sound[OF gs])
+  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
+next
+  have V: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)"
+    using gs unfolding gamma_state_def by simp
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_ivl e \<sigma>) es)"
+    using V by (simp add: list_all2_conv_all_nth aval_ivl_sound)
+qed
+
+definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
+  "ivl_tf_for gs = (| tf_assign     = assign_ivl,
+                       tf_assume     = assume_ivl,
+                       tf_assume_not = assume_not_ivl,
+                       tf_enter      = enter_ivl_for gs,
+                       tf_combine    = combine_abs gs |)"
+
+lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
+  unfolding ivl_tf_for_def
+  apply unfold_locales
+  subgoal by (simp add: assign_ivl_sound)
+  subgoal by (simp add: assume_ivl_sound)
+  subgoal by (simp add: assume_not_ivl_sound)
+  subgoal by (simp add: enter_ivl_for_sound)
+  subgoal by (simp add: combine_states_sound)
+  done
+
+text \<open>Conservative generalization: the classifier-fixed definitions are the
+  \<^const>\<open>is_global\<close> instance of the classifier-parametric ones.\<close>
+
+lemma enter_frame_ivl_for_is_global:
+  "enter_frame_ivl_for is_global = enter_frame_ivl"
+  unfolding enter_frame_ivl_for_def enter_frame_ivl_def by (rule refl)
+
+lemma enter_ivl_for_is_global:
+  "enter_ivl_for is_global = enter_ivl"
+  unfolding enter_ivl_for_def enter_ivl_def by (rule refl)
+
+lemma ivl_tf_for_is_global:
+  "ivl_tf_for is_global = ivl_tf"
+  unfolding ivl_tf_for_def ivl_tf_def enter_ivl_for_is_global by (rule refl)
+
 
 lemma assume_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_ivl b sigma1 \<le> assume_ivl b sigma2"

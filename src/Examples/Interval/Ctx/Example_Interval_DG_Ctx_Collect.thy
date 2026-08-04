@@ -60,7 +60,7 @@ abbreviation sigma_abs :: "pp \<times> ivl + gk \<Rightarrow> (ivl abs_state, iv
 abbreviation gen_abs :: "(pp \<times> ivl, gk, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
   "gen_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
        (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
-       (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st) (fun_of_st (restrict_global_st cinit_ivl_st))"
+       (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st))"
 
 lemma pp_eq_bound:
   "(v, ctx) \<in> fst twice_ctx_sol
@@ -94,9 +94,9 @@ qed simp
 text \<open>The entry local slot dominates the initial abstract store \<open>s0d\<close>.\<close>
 lemma entry_locals_ge_s0d:
   assumes cov: "(cfg_entry twice_cfg, bot) \<in> fst twice_ctx_sol"
-  shows "fun_of_st cinit_ivl_st \<le> locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))"
+  shows "fun_of_exec_dg_st cinit_ivl_st \<le> locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))"
 proof -
-  have "fun_of_st cinit_ivl_st \<le> locals (eq gen_abs (cfg_entry twice_cfg, bot) sigma_abs)"
+  have "fun_of_exec_dg_st cinit_ivl_st \<le> locals (eq gen_abs (cfg_entry twice_cfg, bot) sigma_abs)"
     by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge], simp add: le_supI2)
   also have "\<dots> \<le> locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))"
@@ -107,7 +107,7 @@ qed
 lemma entry_covered: "(cfg_entry twice_cfg, bot) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def Spoly_def by eval
 
-lemma cinit_le_cinit_ivl_st: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>"
+lemma cinit_le_cinit_ivl_st: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
 
 text \<open>
@@ -123,7 +123,7 @@ text \<open>
   keep that invariant honest.\<close>
 
 lemma callee_entry_bot_unpopulated:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', bot)))) ''p'' = \<bottom>"
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', bot)))) ''p'' = \<bottom>"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def Spoly_def by eval
 
 lemma main_first_stmt_is_call:
@@ -160,7 +160,7 @@ text \<open>The routed interval solution is a \<^locale>\<open>dg_ctx_activation
 
 interpretation twice_dg: dg_ctx_activation Sabs is_global twice_cfg Global route_abs_gen
     "routed_cmb Sabs Global" "routed_extra twice_cfg Sabs Seed Global"
-    "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
+    "fun_of_exec_dg_st (bot::ivl exec_dg_st)" "fun_of_exec_dg_st cinit_ivl_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg
 proof unfold_locales
   show "finite (intra twice_cfg)" by (rule twice_finE)
@@ -168,8 +168,8 @@ next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
              (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
-             (fun_of_st (bot::ivl st)) (fun_of_st cinit_ivl_st)
-             (fun_of_st (restrict_global_st cinit_ivl_st)))
+             (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st)
+             (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
           (cfg_exit twice_cfg, bot) sigma_abs (fst twice_ctx_sol)"
     by (rule twice_ctx_pp_abs)
 next
@@ -196,19 +196,20 @@ text \<open>The reader combines context-sensitive locals with one shared global 
   contexts, without copying global state into context-indexed unknowns.\<close>
 
 lemma global_init_present:
-  "lookup_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = Ivl (Fin 0) (Fin 0)"
+  "lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = Ivl (Fin 0) (Fin 0)"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
 
 lemma global_slot_shared:
   "ivl_ctx_sg (Inl (FunctionEntry ''twice'', ctx_call1)) ''Gx''
      = ivl_ctx_sg (Inl (FunctionEntry ''twice'', ctx_call2)) ''Gx''"
 proof -
-  have "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''Gx''
-      = lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''Gx''"
+  have "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''Gx''
+      = lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''Gx''"
     unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
   thus ?thesis
     unfolding ivl_ctx_sg_def
-    by (simp add: callee_covered_call1 callee_covered_call2)
+    by (simp add: callee_covered_call1 callee_covered_call2
+      fun_of_resolved_st_q_for_def)
 qed
 
 subsection \<open>SEED_G: the routed callee entry (enter edges)\<close>
@@ -292,7 +293,7 @@ text \<open>The routed interval solution also interprets \<^locale>\<open>routed
   fall out as the locale's \<open>routed_context_call\<close> / \<open>routed_context_comb\<close>.\<close>
 
 interpretation twice_routed: routed_context Sabs is_global twice_cfg Global route_abs_gen
-    "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
+    "fun_of_exec_dg_st (bot::ivl exec_dg_st)" "fun_of_exec_dg_st cinit_ivl_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, bot)" ivl_ctx_sg Seed ivl_enterc
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC
@@ -401,8 +402,8 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_ente
         and seedc = bot and S = "cinit_stores is_global" and g = twice_cfg and gs = is_global])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
   fix s assume "s \<in> cinit_stores is_global"
-  hence "s \<in> \<lbrakk>fun_of_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st by blast
-  also have "\<lbrakk>fun_of_st cinit_ivl_st\<rbrakk> \<subseteq> \<lbrakk>locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))\<rbrakk>"
+  hence "s \<in> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st by blast
+  also have "\<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk> \<subseteq> \<lbrakk>locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))\<rbrakk>"
     by (rule gamma_state_mono[OF entry_locals_ge_s0d[OF entry_covered]])
   also have "\<dots> \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (cfg_entry twice_cfg, bot))\<rbrakk>"
     unfolding ivl_ctx_sg_covered[OF entry_covered] by (rule gamma_state_sup_ub1)
@@ -436,3 +437,5 @@ next
 qed
 
 end
+
+

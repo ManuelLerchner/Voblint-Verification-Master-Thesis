@@ -139,10 +139,10 @@ next
 qed
 
 text \<open>
-  Executable @{typ "sign st"} mirror of \<open>afilter_sign\<close> / \<open>bfilter_sign\<close>, and
-  its commutation with the abstract filters through @{const fun_of_st}. Both
-  come from the generic @{locale backward_domain} executable mirror
-  (\<open>Exec_Backward\<close>); no per-domain induction is needed here.
+  Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /
+  \<open>bfilter_sign\<close>, and its commutation with the abstract filters through
+  @{const fun_of_resolved_st_q_for}. Both come from the generic
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>).
 \<close>
 
 lemmas afilter_sign_st_commute = sign_backward_domain.afilter_st_commute

@@ -33,7 +33,7 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ivl: "ivl")
 
 subsection \<open>The routed context hooks\<close>
 
-definition Spoly :: "(ivl st, ivl st) dg_spec" where
+definition Spoly :: "(ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
   "Spoly = unit_dg_spec_st ivl_tf_st ivl_enter_st"
 
 text \<open>Outgoing call edges of a node, as callee entry / call action / continuation.  The
@@ -50,32 +50,32 @@ fun is_function_entry :: "cfg_node \<Rightarrow> bool" where
 
 text \<open>The callee-entry local store produced by a \<^const>\<open>CallEdge\<close> from a caller-local
   state (globals defaulted to \<open>bot\<close>: \<open>twice\<close> has none).\<close>
-definition entered_ivl :: "ivl st \<Rightarrow> call_action \<Rightarrow> ivl st" where
+definition entered_ivl :: "ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl exec_dg_st" where
   "entered_ivl d ca =
      (case ca of CallEdge dst fs as \<Rightarrow> snd (dgs_enter Spoly fs as d bot))"
 
 text \<open>The routing function: the context a call selects is the entered value of the
   formal \<open>''p''\<close>.\<close>
-definition route_ivl :: "ivl st \<Rightarrow> call_action \<Rightarrow> ivl" where
-  "route_ivl d ca = lookup_st (entered_ivl d ca) ''p''"
+definition route_ivl :: "ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl" where
+  "route_ivl d ca = lookup_exec_dg_st (entered_ivl d ca) ''p''"
 
 text \<open>The generator's routing hook is generic over call site and caller context; this
   instance needs neither, using only the entered store.\<close>
-definition route_ivl_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl st \<Rightarrow> call_action \<Rightarrow> ivl" where
+definition route_ivl_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl" where
   "route_ivl_gen u ctx d ca = route_ivl d ca"
 
 subsection \<open>The routed equation system and its solution\<close>
 
 definition twice_ctx_eqs ::
-  "(pp \<times> ivl, gk, (ivl st, ivl st) dg_state) eqsT" where
+  "(pp \<times> ivl, gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) eqsT" where
   "twice_ctx_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
        (routed_cmb Spoly Global) (routed_extra twice_cfg Spoly Seed Global)
-       twice_cfg Spoly bot cinit_ivl_st (restrict_global_st cinit_ivl_st)"
+       twice_cfg Spoly bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 text \<open>The main context is \<open>bot\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>
 definition twice_ctx_sol ::
-  "(pp \<times> ivl) set \<times> (pp \<times> ivl + gk \<Rightarrow> (ivl st, ivl st) dg_state)" where
+  "(pp \<times> ivl) set \<times> (pp \<times> ivl + gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "twice_ctx_sol = TD_side_warrowing_apinis_Interp_solve twice_ctx_eqs (cfg_exit twice_cfg, bot)"
 
 lemma twice_ctx_terminates:
@@ -102,45 +102,45 @@ subsection \<open>Per-context exact results\<close>
 
 text \<open>Callee entry parameter, per context.\<close>
 lemma call1_p_at_entry:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''p''
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''p''
      = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma call2_p_at_entry:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''p''
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''p''
      = Ivl (Fin 10) (Fin 10)"
   by eval
 
 text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged.\<close>
 lemma call1_ret_at_exit:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call1)))) ''#ret''
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call1)))) ''#ret''
      = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma call2_ret_at_exit:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2)))) ''#ret''
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2)))) ''#ret''
      = Ivl (Fin 20) (Fin 20)"
   by eval
 
 text \<open>Caller destinations after each return.\<close>
 lemma x_computed:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (Statement 3, bot)))) ''x'' = Ivl (Fin 6) (Fin 6)"
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 3, bot)))) ''x'' = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma y_computed:
-  "lookup_st (locals (snd twice_ctx_sol (Inl (Statement 4, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
+  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 4, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
   by eval
 
 subsection \<open>Seed slots and coverage\<close>
 
 text \<open>Each call publishes the entered store into its own context's seed slot.\<close>
 lemma seed_call1:
-  "lookup_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call1)))) ''p''
+  "lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call1)))) ''p''
      = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma seed_call2:
-  "lookup_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call2)))) ''p''
+  "lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call2)))) ''p''
      = Ivl (Fin 10) (Fin 10)"
   by eval
 
@@ -155,7 +155,7 @@ subsection \<open>Context-expanded analysis graph\<close>
 
 
 definition twice_ctx_graph_config ::
-  "(ivl, gk, (ivl st, ivl st) dg_state, ivl st) analysis_graph_config" where
+  "(ivl, gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "twice_ctx_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ ctx action d. route_ivl d action),
@@ -169,10 +169,10 @@ definition twice_ctx_graph_config ::
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_st d x)) vars),
+        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if lookup_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (lookup_st d ret)]),
+        if lookup_exec_dg_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (lookup_exec_dg_st d ret)]),
       show_global = (\<lambda>k vars s. [''(none)'']),
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
@@ -262,3 +262,5 @@ lemma twice_ctx_dot_has_context_clusters:
 ML_val \<open>writeln (@{code twice_ctx_dot})\<close>
 
 end
+
+

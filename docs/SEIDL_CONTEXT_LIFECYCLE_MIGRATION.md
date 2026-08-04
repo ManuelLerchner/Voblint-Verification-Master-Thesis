@@ -9,23 +9,22 @@
 > (`Voblint_Examples`), tracked in issue #66; it now interprets
 > `routed_context` rather than hand-copying `cmb`/`extra`.
 >
-> **M4.1 progress:** `declared_global_vars` and `declared_global`
-> (`VIMP_Notation.thy`) landed as an unconsumed, declaration-driven
-> classifier alongside `is_global` — parser plumbing only, no semantics
-> switched yet. Separately, `combine_states` and `enter_state`
-> (`VIMP_Globals.thy`) were widened to take an explicit `(vname => bool)`
-> classifier instead of closing over `is_global`, with every call site across
-> the compiler, CFG, and analysis layers passing `is_global` explicitly
-> (behavior-preserving; the `<_|_>` mixfix notation was dropped in the same
-> pass since a three-argument operation is not a binary one). An attempt to
-> swap the classifier at a single concrete leaf example
-> (`Example_Inc_Proc.thy`) confirmed the real migration frontier is wider than
-> any one example: `enter_state`, `call_enter`, `combine_collect`, `pstep`,
-> `csim`, `sound_transfer`, and `sound_effectful_transfer` form one semantic
-> interface (cross-session, 7-30 citing files each) that has to move together.
-> `pcompletes_Call` / `pcompletes_Call_parameterless` are not part of that
-> interface — narrow, example-only, safe to leave for later. M4.1a and M4.1b
-> remain open; see M4.5 below for the rename-ordering constraint this implies.
+> **M4.1/M4.2 progress:** `declared_global_vars` and `declared_global`
+> (`VIMP_Notation.thy`) now feed classifier-based source well-formedness,
+> context-aware store operations, split-state helpers, and D/G routing
+> helpers. The generic unit D/G specification now carries the classifier
+> through edge transfer and return-combine splitting (`unit_step_for`,
+> `unit_combine_step_env_for`, and `unit_combine_step_assign_for`). The
+> sound-transfer contract now has the matching `sound_transfer_for` locale
+> and constructor for declaration-driven enter/combine semantics.
+> mechanical signature propagation is batch-green. `is_global`
+> remains as a compatibility classifier for consumers outside this
+> checkpoint; the remaining semantic consumers must still move before the
+> naming rule can be deleted. The program-level `source_location`,
+> `storage_of`, source-execution wrappers, and compiler-input wrappers now
+> classify declarations as `GlobalVar` or implicit `LocalVar owner`.
+> M4.1b and M4.3–M4.8 remain open. See M4.5
+> below for the rename-ordering constraint.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
 Engineering Modularity", FM 2026, LNCS 16557, pp. 446-470, section "Refining
@@ -403,25 +402,31 @@ Independent of M1-M3.
 
 #### M4.1 - represent storage explicitly
 
-Storage class becomes part of the program, not of `vname`. `proc_decl`
-(`VIMP_Proc.thy:36`) currently carries only `formals` and `body`; extend the
-declaration layer so that
+Source location becomes part of program interpretation, not of `vname`.
+The reduced M4 scope declares globals explicitly and treats every identifier
+outside that declaration as implicitly local to the active procedure:
 
 ```isabelle
-datatype storage_class = Local pname | Global
+datatype source_location = LocalVar pname | GlobalVar
 
-storage_of :: proc_table => pname => vname => storage_class option
+storage_of :: imp_prog => pname => vname => source_location
 ```
 
-is derivable, or equivalently so declarations carry explicit parameter, local,
-and global sets. Invariants to establish in `wf_source_program`
-(`VIMP_Proc.thy:620`):
+`storage_of P p x = GlobalVar` exactly when `x` occurs in P's global
+declaration. Otherwise it is `LocalVar p`. This makes undeclared identifiers
+implicitly local; it does not claim that every reference has an explicit
+declaration.
 
-- every referenced variable has a declared storage class;
-- parameters and locals belong to their procedure;
+The program-level source contract must use this classifier. It establishes:
+
 - globals are declared independently of procedures;
 - classification never inspects spelling;
-- missing or conflicting declarations are rejected.
+- formals cannot conflict with declared globals or the reserved return channel.
+
+Explicit ordinary local declarations and `main_locals` are deliberately outside
+M4. A follow-up evaluates a shared declaration representation for main and
+ordinary procedures, including whether `main` should use a distinguished
+non-callable procedure declaration.
 
 #### M4.1a - remove storage-class assumptions from source well-formedness
 
@@ -435,10 +440,10 @@ This puts the naming convention inside the **language definition**: IMP2
 currently says that an identifier beginning with `G` cannot be a parameter.
 `wf_proc_decl` (`:614`) and `wf_source_program` (`:620`) inherit it.
 
-`valid_formal`, the declaration checks, and every related predicate must be
-expressed over explicit declarations rather than identifier syntax.
-`ret_var_not_global` (`:51`) likewise becomes a fact about the reserved
-declaration, not about `''#ret''` failing to start with `G`.
+`valid_formal`, the declaration checks, and every program-level source
+contract must consume the declaration-driven classifier. The legacy generic
+predicate remains only while generic compatibility proofs have not yet been
+propagated.
 
 This is part of the semantic migration and should land with M4.1, before any
 analysis-side work.
@@ -477,6 +482,14 @@ locale state_placement =
   fixes keep_local   :: "'loc => bool"
     and publish_side :: "'loc => bool"
 ```
+
+The current interface's concretization is conjunctive: `keep_local l` adds the
+local constraint; `publish_side l` adds the side constraint. Both predicates
+therefore mean intersection, and neither leaves `l` unconstrained. No generic
+abstract recombination operation is introduced for overlapping placement.
+`placement_complete` is a named assumption for theorems that read arbitrary
+locations or reconstruct a whole state. `placement_disjoint` is reserved for
+partition-specific results.
 
 A single `place :: 'loc => Flow_Sensitive | Side_Effected` is the obvious first
 design and is too weak. Goblint-style privatization gives a source-level global

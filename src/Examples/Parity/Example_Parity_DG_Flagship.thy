@@ -90,9 +90,9 @@ text \<open>
 
 subsection \<open>4. Equation generation\<close>
 
-definition parity_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (parity st, parity st) dg_state) strategy_tree" where
+definition parity_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (parity exec_dg_st, parity exec_dg_st) dg_state) strategy_tree" where
   "parity_eqs = dg_gen_of (unit_dg_spec_st parity_tf_st parity_enter_st) parity_cfg
-     bot cinit_parity_st (restrict_global_st cinit_parity_st)"
+     bot cinit_parity_st (restrict_global_resolved_q cinit_parity_st)"
 
 subsection \<open>5. Executable solve (always-join; parity is finite-height)\<close>
 
@@ -100,13 +100,13 @@ lemma parity_terminates_c:
   "TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()) \<noteq> None"
   by eval
 
-definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (parity st, parity st) dg_state)" where
+definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (parity exec_dg_st, parity exec_dg_st) dg_state)" where
   "parity_sol = TD_side_always_join_Interp_solve parity_eqs (cfg_exit parity_cfg, ())"
 
 text \<open>The computed parity of \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, lookup_st (locals (snd sol (Inl (p, ())))) ''x''))
+   (\<lambda>sol. map (\<lambda>p. (p, lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''x''))
             (map Statement [0,1,2,3]))
    (TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()))"
 
@@ -138,10 +138,10 @@ lemma parity_cover_combine:
   by (simp add: parity_calls)
 
 lemma parity_sound0:
-  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_parity_st \<squnion> fun_of_st (restrict_global_st cinit_parity_st)\<rbrakk>"
+  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_parity_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_parity_st)\<rbrakk>"
 proof -
-  have "fun_of_st cinit_parity_st \<squnion> fun_of_st (restrict_global_st cinit_parity_st) = fun_of_st cinit_parity_st"
-    by (simp add: fun_of_st_cinit_parity_st fun_of_st_restrict_global_st restrict_global_def
+  have "fun_of_exec_dg_st cinit_parity_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_parity_st) = fun_of_exec_dg_st cinit_parity_st"
+    by (simp add: fun_of_st_cinit_parity_st restrict_global_def
                   sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_parity_st)
@@ -150,11 +150,11 @@ qed
 subsection \<open>7. Inspecting the certified result\<close>
 
 lemma parity_head_computed:
-  "lookup_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' = PEven"
+  "lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 lemma parity_exit_computed:
-  "lookup_st (locals (snd parity_sol (Inl (Statement 3, ())))) ''x'' = PEven"
+  "lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement 3, ())))) ''x'' = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 subsection \<open>8. Source-level soundness through the registered analysis\<close>
@@ -167,10 +167,10 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>
 
-lemma parity_wf: "wf_compile_input parity_pi [] ''main'' parity_prog"
+lemma parity_wf: "wf_compile_input is_global parity_pi [] ''main'' parity_prog"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     parity_pi_def parity_prog_def parity_program_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def is_global_def
       prog_main_name_def split: if_splits)
 
 theorem parity_source_run_sound:
@@ -203,11 +203,11 @@ text \<open>
 \<close>
 
 lemma parity_head_proper:
-  "lookup_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' \<noteq> PTop"
+  "lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' \<noteq> PTop"
   by (simp add: parity_head_computed)
 
 lemma parity_head_excludes_odd:
-  "n \<in> gamma_parity (lookup_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'')
+  "n \<in> gamma_parity (lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'')
      \<Longrightarrow> even n"
   by (simp add: parity_head_computed)
 
@@ -221,7 +221,7 @@ text \<open>
 \<close>
 
 definition parity_graph_config ::
-  "(unit, unit, (parity st, parity st) dg_state, parity st) analysis_graph_config" where
+  "(unit, unit, (parity exec_dg_st, parity exec_dg_st) dg_state, parity exec_dg_st) analysis_graph_config" where
   "parity_graph_config =
     \<lparr> local_of = locals,
       route = (\<lambda>_ _ _ _. ()),
@@ -235,11 +235,11 @@ definition parity_graph_config ::
       globals_to_show = [''G''],
       show_local = (\<lambda>_ _ vars d.
         map (\<lambda>x.
-          x @ ''='' @ string_of_parity (lookup_st d x)) vars),
+          x @ ''='' @ string_of_parity (lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ d.
         map (\<lambda>g.
-          g @ ''='' @ string_of_parity (lookup_st (globs d) g)) [''G'']),
+          g @ ''='' @ string_of_parity (lookup_exec_dg_st (globs d) g)) [''G'']),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = True,

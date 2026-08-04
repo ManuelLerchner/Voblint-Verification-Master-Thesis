@@ -15,13 +15,90 @@ text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> 
 
 
 
+definition unit_step_for ::
+  "(vname => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_step_for gs f d g =
+     (let res = f (d \<squnion> g) in
+      (restrict_global_for gs res, restrict_local_for gs res))"
+
 definition unit_step ::
-  "('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
+  "('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_step f d g = (let res = f (d \<squnion> g) in (restrict_global res, restrict_local res))"
 
+definition unit_step_placed ::
+  "(vname => bool) => (vname => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_step_placed keep_local publish_side f d g =
+     (let res = f (d \<squnion> g) in
+      (project_component publish_side res, project_component keep_local res))"
 
+lemma unit_step_for_classic:
+  "unit_step_for storage f d g =
+    unit_step_placed (classic_split_keep_local storage) (classic_split_publish_side storage) f d g"
+  unfolding unit_step_for_def unit_step_placed_def project_component_def
+    classic_split_keep_local_def classic_split_publish_side_def restrict_global_for_def
+    restrict_local_for_def Let_def
+  by (simp add: fun_eq_iff)
+
+lemma unit_step_for_is_global:
+  "unit_step_for is_global = unit_step"
+  unfolding unit_step_for_def unit_step_def restrict_global_for_is_global
+    restrict_local_for_is_global
+  by (rule refl)
+
+definition unit_step_resolved_for ::
+  "(vname => bool) =>
+   ('a::bounded_semilattice_sup_bot abs_state => 'a resolved_st) =>
+   'a resolved_st => 'a resolved_st =>
+   'a resolved_st \<times> 'a resolved_st"
+where
+  "unit_step_resolved_for gs f d g =
+     (let res = f (fun_of_resolved_st_for gs d \<squnion>
+                         fun_of_resolved_st_for gs g)
+      in (restrict_global_resolved res, restrict_local_resolved res))"
+
+lemma unit_step_resolved_for_commute:
+  fixes gs :: "vname => bool"
+    and f :: "'a::bounded_semilattice_sup_bot abs_state => 'a resolved_st"
+    and f_abs :: "'a abs_state => 'a abs_state"
+    and d g :: "'a resolved_st"
+  assumes commute:
+    "\<And>s. fun_of_resolved_st_for gs (f s) = f_abs s"
+  shows
+    "map_prod (fun_of_resolved_st_for gs) (fun_of_resolved_st_for gs)
+       (unit_step_resolved_for gs f d g) =
+     unit_step_for gs f_abs
+       (fun_of_resolved_st_for gs d) (fun_of_resolved_st_for gs g)"
+proof -
+  have global:
+    "fun_of_resolved_st_for gs
+        (restrict_global_resolved
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g))) =
+       restrict_global_for gs
+        (fun_of_resolved_st_for gs
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g)))"
+    unfolding restrict_global_for_def
+    by (rule ext) (simp add: fun_of_resolved_st_for_restrict_global)
+  have local:
+    "fun_of_resolved_st_for gs
+        (restrict_local_resolved
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g))) =
+       restrict_local_for gs
+        (fun_of_resolved_st_for gs
+          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g)))"
+    unfolding restrict_local_for_def
+    by (rule ext) (simp add: fun_of_resolved_st_for_restrict_local)
+  show ?thesis
+    unfolding unit_step_resolved_for_def unit_step_for_def
+    by (simp only: Let_def map_prod_simp global local commute)
+qed
 
 subsection \<open>A lattice copy type for D-times-G unknown values\<close>
 
@@ -100,8 +177,9 @@ where
 
 instance
   by standard
-    (auto simp: widen_dg_state_def narrow_dg_state_def less_eq_dg_state_def
-      intro: widen_ge1 widen_ge2 narrow_ge narrow_le)
+    (simp_all add: less_eq_dg_state_def widen_dg_state_def narrow_dg_state_def
+      narrowing_class.narrow_ge narrowing_class.narrow_le
+      widening_class.widen_ge1 widening_class.widen_ge2)
 
 end
 
@@ -381,38 +459,170 @@ text \<open>
   publishes the global restriction and returns the local restriction.
 \<close>
 
-text \<open>The unit env-merge computes the structural local/global merge and
-  packages it the same way \<^const>\<open>unit_step\<close> packages every other edge, but
-  writes no return value yet.  The unit assign reconstitutes the full state
-  from that packaging, writes the callee-exit's return slot, and re-splits --
-  matching \<^const>\<open>combine_collect_abs\<close> exactly once composed.\<close>
-definition unit_combine_step_env ::
-  "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> 'a abs_state \<times> 'a abs_state"
+text \<open>The unit env-merge/assign split (defined below as \<open>unit_combine_step_env_for\<close>/
+  \<open>unit_combine_step_assign_for\<close>) computes the structural local/global
+  merge and packages it the same way \<^const>\<open>unit_step\<close> packages every other
+  edge, but writes no return value yet; the assign step reconstitutes the
+  full state from that packaging, writes the callee-exit's return slot, and
+  re-splits -- matching \<^const>\<open>combine_collect_abs\<close> exactly once composed.
+  The classic (\<^const>\<open>is_global\<close>-fixed) shape is the instantiation at
+  \<^const>\<open>is_global\<close>, not a separate hand-written pair.\<close>
+definition unit_combine_step_assign_for ::
+  "(vname => bool) =>
+   vname option => 'a::bounded_semilattice_sup_bot abs_state
+   => 'a abs_state => 'a abs_state \<times> 'a abs_state
+   => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step_env dc de g =
-     (let m = combine_abs is_global (dc \<squnion> g) (de \<squnion> g) in (restrict_global m, restrict_local m))"
+  "unit_combine_step_assign_for gs dst de g merged =
+     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var)
+         (fst merged \<squnion> snd merged)
+      in (restrict_global_for gs res, restrict_local_for gs res))"
 
-definition unit_combine_step_assign ::
-  "vname option \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state
-   \<Rightarrow> 'a abs_state \<times> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state"
+
+definition unit_combine_step_env_for ::
+  "(vname => bool) =>
+   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state
+   => 'a abs_state => 'a abs_state \<times> 'a abs_state" where
+  "unit_combine_step_env_for gs dc de g =
+     (let m = combine_abs gs (dc \<squnion> g) (de \<squnion> g)
+      in (restrict_global_for gs m, restrict_local_for gs m))"
+
+definition unit_combine_step_env_placed ::
+  "(vname => bool) => (vname => bool) => (vname => bool) =>
+   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
+   'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step_assign dst de g merged =
-     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var) (fst merged \<squnion> snd merged)
-      in (restrict_global res, restrict_local res))"
+  "unit_combine_step_env_placed source_global keep_local publish_side dc de g =
+     (let res = combine_abs source_global (dc \<squnion> g) (de \<squnion> g) in
+      (project_component publish_side res, project_component keep_local res))"
 
+lemma unit_combine_step_env_for_classic:
+  "unit_combine_step_env_for storage dc de g =
+    unit_combine_step_env_placed storage (classic_split_keep_local storage)
+      (classic_split_publish_side storage) dc de g"
+  unfolding unit_combine_step_env_for_def unit_combine_step_env_placed_def
+    project_component_def classic_split_keep_local_def classic_split_publish_side_def
+    restrict_global_for_def restrict_local_for_def Let_def
+  by (simp add: fun_eq_iff)
+
+definition unit_combine_step_assign_placed ::
+  "(vname => bool) => (vname => bool) => vname option =>
+   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
+   'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
+where
+  "unit_combine_step_assign_placed keep_local publish_side dst de g merged =
+     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var)
+         (fst merged \<squnion> snd merged)
+      in (project_component publish_side res, project_component keep_local res))"
+
+lemma unit_combine_step_assign_for_classic:
+  "unit_combine_step_assign_for storage dst de g merged =
+    unit_combine_step_assign_placed (classic_split_keep_local storage)
+      (classic_split_publish_side storage) dst de g merged"
+  unfolding unit_combine_step_assign_for_def unit_combine_step_assign_placed_def
+    project_component_def classic_split_keep_local_def classic_split_publish_side_def
+    restrict_global_for_def restrict_local_for_def Let_def
+  by (simp add: fun_eq_iff)
+definition unit_dg_spec_placed ::
+  "(vname => bool) => (vname => bool) => (vname => bool) =>
+   'a::sound_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
+where
+  "unit_dg_spec_placed source_global keep_local publish_side tf = \<lparr>
+    dgs_nop        = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
+    dgs_assign     = (\<lambda>x e. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_Assign x e))),
+    dgs_assume     = (\<lambda>b. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_Assume b))),
+    dgs_assume_not = (\<lambda>b. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_AssumeNot b))),
+    dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
+      (tf_enter tf xs es)),
+    dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
+    dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
+  \<rparr>"
+lemma dg_spec_step_unit_placed:
+  "dg_spec_step (unit_dg_spec_placed source_global keep_local publish_side tf) a =
+    unit_step_placed keep_local publish_side (apply_tf tf a)"
+  unfolding unit_dg_spec_placed_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+       split: option.splits)
+
+lemma dgs_enter_unit_dg_spec_placed:
+  "dgs_enter (unit_dg_spec_placed source_global keep_local publish_side tf) fs as =
+    unit_step_placed keep_local publish_side (tf_enter tf fs as)"
+  unfolding unit_dg_spec_placed_def
+  by simp
+
+
+
+
+
+definition unit_dg_spec_for ::
+  "(vname => bool) => 'a::sound_domain domain_transfer
+   => ('a abs_state, 'a abs_state) dg_spec"
+where
+  "unit_dg_spec_for gs tf = \<lparr>
+    dgs_nop        = unit_step_for gs (apply_tf tf EA_Nop),
+    dgs_assign     = (\<lambda>x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
+    dgs_assume     = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_Assume b))),
+    dgs_assume_not = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
+    dgs_enter      = (\<lambda>xs es. unit_step_for gs (tf_enter tf xs es)),
+    dgs_combine_env    = unit_combine_step_env_for gs,
+    dgs_combine_assign = unit_combine_step_assign_for gs
+  \<rparr>"
+lemma unit_dg_spec_for_classic:
+  "unit_dg_spec_for storage tf =
+    unit_dg_spec_placed storage (classic_split_keep_local storage)
+      (classic_split_publish_side storage) tf"
+  unfolding unit_dg_spec_for_def unit_dg_spec_placed_def
+  by (simp add: unit_step_for_classic unit_combine_step_env_for_classic
+    unit_combine_step_assign_for_classic fun_eq_iff)
+
+text \<open>The classic (\<^const>\<open>is_global\<close>-fixed) unit analysis is the
+  \<open>_for\<close> spine instantiated at \<^const>\<open>is_global\<close>, not a second,
+  hand-duplicated construction.\<close>
 definition unit_dg_spec ::
   "'a::sound_domain domain_transfer \<Rightarrow> ('a abs_state, 'a abs_state) dg_spec"
 where
-  "unit_dg_spec tf = \<lparr>
-    dgs_nop        = unit_step (apply_tf tf EA_Nop),
-    dgs_assign     = (\<lambda>x e. unit_step (apply_tf tf (EA_Assign x e))),
-    dgs_assume     = (\<lambda>b. unit_step (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (\<lambda>xs es. unit_step (tf_enter tf xs es)),
-    dgs_combine_env    = unit_combine_step_env,
-    dgs_combine_assign = unit_combine_step_assign
-  \<rparr>"
+  "unit_dg_spec tf = unit_dg_spec_for is_global tf"
+
+lemma unit_dg_spec_for_is_global:
+  "unit_dg_spec_for is_global tf = unit_dg_spec tf"
+  unfolding unit_dg_spec_def by (rule refl)
+
+lemma dgs_combine_unit_dg_spec_for:
+  "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
+     (let res = combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)
+      in (restrict_global_for gs res, restrict_local_for gs res))"
+proof -
+  have env_join:
+    "fst (unit_combine_step_env_for gs dc de g) \<squnion>
+       snd (unit_combine_step_env_for gs dc de g) =
+     combine_abs gs (dc \<squnion> g) (de \<squnion> g)"
+    unfolding unit_combine_step_env_for_def
+    by (simp add: Let_def restrict_global_for_local_join)
+  show ?thesis
+    unfolding dgs_combine_def unit_dg_spec_for_def
+      unit_combine_step_assign_for_def combine_collect_abs_def Let_def
+    by (simp add: env_join)
+qed
+
+lemma dg_spec_step_unit_for:
+  "dg_spec_step (unit_dg_spec_for gs tf) a =
+     unit_step_for gs (apply_tf tf a)"
+  unfolding unit_dg_spec_for_def
+  by (cases a)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+       split: option.splits)
+
+lemma dgs_enter_unit_dg_spec_for:
+  "dgs_enter (unit_dg_spec_for gs tf) fs as =
+     unit_step_for gs (tf_enter tf fs as)"
+  unfolding unit_dg_spec_for_def
+  by simp
+
+
 
 text \<open>The pre-split combine value is recovered by composition, matching
   \<^const>\<open>combine_collect_abs\<close> exactly -- the split changes packaging, not
@@ -421,25 +631,18 @@ lemma dgs_combine_unit_dg_spec:
   "dgs_combine (unit_dg_spec tf) dst dc de g =
      (let res = combine_collect_abs is_global dst (dc \<squnion> g) (de \<squnion> g)
       in (restrict_global res, restrict_local res))"
-proof -
-  have join_back: "restrict_global (combine_abs is_global (dc \<squnion> g) (de \<squnion> g)) \<squnion> restrict_local (combine_abs is_global (dc \<squnion> g) (de \<squnion> g))
-                    = combine_abs is_global (dc \<squnion> g) (de \<squnion> g)"
-    using restrict_local_global_join by (simp add: sup.commute)
-  show ?thesis
-    unfolding dgs_combine_def unit_dg_spec_def unit_combine_step_env_def
-      unit_combine_step_assign_def combine_collect_abs_def Let_def
-    by (simp add: join_back)
-qed
+  unfolding unit_dg_spec_def dgs_combine_unit_dg_spec_for
+  by (simp add: restrict_global_for_is_global restrict_local_for_is_global)
 
 lemma dg_spec_step_unit:
   "dg_spec_step (unit_dg_spec tf) a = unit_step (apply_tf tf a)"
-  unfolding unit_dg_spec_def
-  by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
+  unfolding unit_dg_spec_def dg_spec_step_unit_for unit_step_for_is_global
+  by (rule refl)
 
 lemma dgs_enter_unit_dg_spec:
   "dgs_enter (unit_dg_spec tf) fs as = unit_step (tf_enter tf fs as)"
-  unfolding unit_dg_spec_def by simp
+  unfolding unit_dg_spec_def dgs_enter_unit_dg_spec_for unit_step_for_is_global
+  by (rule refl)
 
 subsection \<open>Monotonicity of the unit analysis, given a monotone domain transfer\<close>
 
@@ -724,6 +927,133 @@ next
 qed
 
 
+
+subsection \<open>The representation-neutral keyed generator\<close>
+
+text \<open>The keyed generator constructs the equation shape from supplied tree hooks.  Each hook receives the CFG nodes that determine its source and destination; routing and representation choices remain outside the generator.\<close>
+
+definition side_cfg_T_eff_keyed_seed_trees ::
+  "(cfg => pp => (pp \<times> edge_action) list)
+   => ('c => 'k)
+   => ('c => pp => edge_action => pp
+        => (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
+          'h::bounded_semilattice_sup_bot) dg_state) strategy_tree)
+   => ('c => pp => call_action => pp => pp
+        => (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
+   => ('c => pp => call_action => pp
+        => (pp \<times> 'c, 'k, ('d, 'h) dg_state) strategy_tree)
+   => cfg => 'd => 'd => 'h
+   => (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
+where
+  "side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+      g bot0 s0d s0g =
+    (\<lambda>(v, ctx).
+      let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
+          intra = map (\<lambda>(u, action). edge_tree ctx u action v) (pred_sel g v);
+          combine = map (\<lambda>(call, action, exit). combine_tree ctx call action exit v)
+            (return_call_action_list g v);
+          enter = map (\<lambda>(call, action). enter_tree ctx call action v)
+            (entry_call_list g v);
+          tree = side_rhs_fold_dg acc0 (intra @ combine @ enter)
+      in if v = cfg_entry g then Side (gkey ctx) (DG bot s0g) tree else tree)"
+
+lemma eq_side_cfg_T_eff_keyed_seed_trees:
+  "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+      g bot0 s0d s0g) (v, ctx) sigma =
+    DG (side_acc_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0) sigma
+      (map (\<lambda>(u, action). edge_tree ctx u action v) (pred_sel g v)
+       @ map (\<lambda>(call, action, exit). combine_tree ctx call action exit v)
+           (return_call_action_list g v)
+       @ map (\<lambda>(call, action). enter_tree ctx call action v)
+           (entry_call_list g v))) bot"
+  by (simp add: side_cfg_T_eff_keyed_seed_trees_def Let_def
+    traverse_side_rhs_fold_dg)
+
+text \<open>
+  Every node of a CFG has at most one incoming hook tree per predecessor
+  kind, and a typical node has exactly one incoming tree overall (a single
+  intra predecessor, a single call return, or a single call entry, with the
+  other two kinds empty). These four lemmas reduce the generator to that one
+  tree directly, so an instance proves per-node soundness or refinement
+  against the named tree constructor instead of re-deriving the fold's
+  single-element degeneracy at every call site. They are stated for
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_trees\<close> itself, so they specialize to any
+  concrete generator built from it -- the hook-parametric \<open>hook_gen\<close> and the
+  executable/abstract \<open>placed_dg_gen_of_strict\<close>/\<open>placed_abs_dg_gen_of\<close> alike --
+  without re-unfolding \<open>side_cfg_T_eff_keyed_seed_trees_def\<close> at each one.
+\<close>
+
+lemma side_cfg_T_eff_keyed_seed_trees_single_edge:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and pred: "pred_sel g v = [(u, a)]"
+    and no_combine: "return_call_action_list g v = []"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (edge_tree ctx u a v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (edge_tree ctx u a v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry pred no_combine no_enter bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+
+lemma side_cfg_T_eff_keyed_seed_trees_single_enter:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and no_edge: "pred_sel g v = []"
+    and no_combine: "return_call_action_list g v = []"
+    and pred: "entry_call_list g v = [(caller, action)]"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (enter_tree ctx caller action v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (enter_tree ctx caller action v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry no_edge no_combine pred bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+
+lemma side_cfg_T_eff_keyed_seed_trees_single_combine:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes not_entry: "v \<noteq> cfg_entry g"
+    and no_edge: "pred_sel g v = []"
+    and pred: "return_call_action_list g v = [(caller, action, callee_exit)]"
+    and no_enter: "entry_call_list g v = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (v, ctx) sigma =
+       DG (locals (traverse_rhs (combine_tree ctx caller action callee_exit v) sigma)) bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (v, ctx)) sigma (Inr (gkey ctx)) =
+       sides_of_rhs (combine_tree ctx caller action callee_exit v) sigma (Inr (gkey ctx))"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: not_entry no_edge pred no_enter bot0
+    Let_def sides_of_rhs_seqcomp traverse_seqcomp)
+
+lemma side_cfg_T_eff_keyed_seed_trees_entry:
+  fixes bot0 :: "'d::bounded_semilattice_sup_bot"
+  assumes no_edge: "pred_sel g (cfg_entry g) = []"
+    and no_combine: "return_call_action_list g (cfg_entry g) = []"
+    and no_enter: "entry_call_list g (cfg_entry g) = []"
+    and bot0: "bot0 = bot"
+  shows
+    "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+        g bot0 s0d s0g) (cfg_entry g, ctx) sigma = DG s0d bot"
+    "sides_of_rhs
+       (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
+         g bot0 s0d s0g (cfg_entry g, ctx)) sigma (Inr (gkey ctx)) = DG bot s0g"
+  unfolding side_cfg_T_eff_keyed_seed_trees_def
+  by (simp_all add: no_edge no_combine no_enter bot0 Let_def)
 
 subsection \<open>The heterogeneous seeded keyed generator\<close>
 

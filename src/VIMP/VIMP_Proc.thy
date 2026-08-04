@@ -53,6 +53,10 @@ definition ret_var :: vname where
 lemma ret_var_not_global [simp]: "\<not> is_global ret_var"
   by (simp add: ret_var_def is_global_def)
 
+datatype source_location =
+    LocalVar pname
+  | GlobalVar
+
 (* Procedure table: names to declarations. *)
 type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
 
@@ -499,6 +503,81 @@ text \<open>
   parameters cannot mention it.
 \<close>
 
+subsection \<open>Finite syntactic variable sets\<close>
+
+fun aexp_vnames :: "aexp => vname set" where
+  "aexp_vnames (N _) = {}"
+| "aexp_vnames (V x) = {x}"
+| "aexp_vnames (Plus a b) = aexp_vnames a \<union> aexp_vnames b"
+| "aexp_vnames (Minus a b) = aexp_vnames a \<union> aexp_vnames b"
+| "aexp_vnames (Times a b) = aexp_vnames a \<union> aexp_vnames b"
+
+fun bexp_vnames :: "bexp => vname set" where
+  "bexp_vnames (Bc _) = {}"
+| "bexp_vnames (Not b) = bexp_vnames b"
+| "bexp_vnames (And b1 b2) = bexp_vnames b1 \<union> bexp_vnames b2"
+| "bexp_vnames (Or b1 b2) = bexp_vnames b1 \<union> bexp_vnames b2"
+| "bexp_vnames (Less a b) = aexp_vnames a \<union> aexp_vnames b"
+| "bexp_vnames (Eq a b) = aexp_vnames a \<union> aexp_vnames b"
+
+fun com_vnames :: "com => vname set" where
+  "com_vnames SKIP = {}"
+| "com_vnames (Assign x a) = insert x (aexp_vnames a)"
+| "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
+| "com_vnames (If b c1 c2) =
+    bexp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
+| "com_vnames (While b c) = bexp_vnames b \<union> com_vnames c"
+| "com_vnames (Call dst _ actuals) =
+    (case dst of None => {} | Some x => {x}) \<union>
+    \<Union> (set (map aexp_vnames actuals))"
+| "com_vnames (Return None) = {}"
+| "com_vnames (Return (Some a)) = aexp_vnames a"
+| "com_vnames Restore = {}"
+| "com_vnames Unwind = {}"
+
+lemma finite_aexp_vnames [simp]: "finite (aexp_vnames a)"
+  by (induction a) auto
+
+lemma finite_bexp_vnames [simp]: "finite (bexp_vnames b)"
+  by (induction b) auto
+
+lemma finite_com_vnames [simp]: "finite (com_vnames c)"
+proof (induction c)
+  case SKIP
+  then show ?case by simp
+next
+  case Assign
+  then show ?case by simp
+next
+  case Seq
+  then show ?case by simp
+next
+  case If
+  then show ?case by simp
+next
+  case While
+  then show ?case by simp
+next
+  case Call
+  then show ?case by (auto split: option.splits)
+next
+  case (Return opt)
+  show ?case
+  proof (cases opt)
+    case None
+    then show ?thesis by simp
+  next
+    case (Some a)
+    then show ?thesis by simp
+  qed
+next
+  case Restore
+  then show ?case by simp
+next
+  case Unwind
+  then show ?case by simp
+qed
+
 fun source_com :: "com => bool" where
   "source_com SKIP = True"
 | "source_com (Assign x a) = True"
@@ -534,8 +613,8 @@ definition source_aexp :: "aexp => bool" where
 definition source_bexp :: "bexp => bool" where
   "source_bexp b \<longleftrightarrow> \<not> bexp_mentions ret_var b"
 
-definition valid_formal :: "vname => bool" where
-  "valid_formal x \<longleftrightarrow> \<not> is_global x \<and> x \<noteq> ret_var"
+definition valid_formal :: "(vname => bool) => vname => bool" where
+  "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x ~= ret_var"
 
 subsection \<open>Procedure result contract\<close>
 
@@ -614,46 +693,50 @@ fun no_return :: "com => bool" where
 | "no_return (Return _) = False"
 | "no_return _ = True"
 
-definition wf_proc_decl :: "proc_table => proc_decl => bool" where
-  "wf_proc_decl \<Pi> decl \<longleftrightarrow>
+definition wf_proc_decl :: "(vname => bool) => proc_table => proc_decl => bool" where
+  "wf_proc_decl gs \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
-     list_all valid_formal (formals decl) \<and>
+     list_all (valid_formal gs) (formals decl) \<and>
      wf_source_com \<Pi> (body decl)"
 
-definition wf_source_program :: "proc_table => pname => com => bool" where
-  "wf_source_program \<Pi> mnm main \<longleftrightarrow>
+definition reserved_ret_var :: "(vname => bool) => bool" where
+  "reserved_ret_var gs \<longleftrightarrow> \<not> gs ret_var"
+
+definition wf_source_program :: "(vname => bool) => proc_table => pname => com => bool" where
+  "wf_source_program gs \<Pi> mnm main \<longleftrightarrow>
+     reserved_ret_var gs \<and>
      \<Pi> mnm = Some (proc_decl_of [] main) \<and>
      wf_source_com \<Pi> main \<and> no_return main \<and>
-     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<Pi> decl)"
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl)"
 
 lemma wf_source_com_source_com:
   "wf_source_com \<Pi> c \<Longrightarrow> source_com c"
   by (induction c) (auto split: option.splits)
 
 lemma wf_source_program_main_exists:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> mnm = Some (proc_decl_of [] main)"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_main:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> wf_source_com \<Pi> main"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> wf_source_com \<Pi> main"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_no_return:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> no_return main"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> no_return main"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_decl:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl
-   \<Longrightarrow> wf_proc_decl \<Pi> decl"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl
+   \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
   by (simp add: wf_source_program_def)
 
 lemma wf_source_program_source_pi:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> source_pi \<Pi>"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_pi \<Pi>"
   unfolding wf_source_program_def source_pi_def wf_proc_decl_def
   using wf_source_com_source_com by blast
 
 lemma wf_source_program_source_com:
-  "wf_source_program \<Pi> mnm main \<Longrightarrow> source_com main"
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_com main"
   using wf_source_program_main wf_source_com_source_com by blast
 
 end

@@ -19,14 +19,14 @@ datatype gk_2 = Global2 | Seed2 (seed2_pp: pp) (seed2_cs: "cfg_node list")
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
-definition sign_nest_2_eqs :: "(pp \<times> cfg_node list, gk_2, (sign st, sign st) dg_state) eqsT" where
+definition sign_nest_2_eqs :: "(pp \<times> cfg_node list, gk_2, (sign exec_dg_st, sign exec_dg_st) dg_state) eqsT" where
   "sign_nest_2_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
        (routed_cmb Spoly Global2) (routed_extra sign_nest_cfg Spoly Seed2 Global2)
-       sign_nest_cfg Spoly bot cinit_sign_st (restrict_global_st cinit_sign_st)"
+       sign_nest_cfg Spoly bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition sign_nest_2_sol ::
-  "(pp \<times> cfg_node list) set \<times> (pp \<times> cfg_node list + gk_2 \<Rightarrow> (sign st, sign st) dg_state)" where
+  "(pp \<times> cfg_node list) set \<times> (pp \<times> cfg_node list + gk_2 \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "sign_nest_2_sol = TD_side_always_join_Interp_solve sign_nest_2_eqs (cfg_exit sign_nest_cfg, [])"
 
 lemma sign_nest_2_terminates:
@@ -98,7 +98,7 @@ lemma dg_tree_st_commute_frame_read_2:
   "dg_tree_st_commute env
      (QueryG (Seed2 v ctx) (\<lambda>s. Answer (DG (globs s) bot)))
      (QueryG (Seed2 v ctx) (\<lambda>s. Answer (DG (globs s) bot)))"
-  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
+  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
                 dep_aux_def bot_fun_def)
 
 lemma dg_tree_st_commute_routed_cmb_2:
@@ -106,7 +106,7 @@ lemma dg_tree_st_commute_routed_cmb_2:
                           (routed_cmb Sabs Global2 (cs_route 2) ctx ca cc ex)"
   unfolding routed_cmb_def Let_def
   by (cases ca)
-     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
+     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
                     cs_route_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
@@ -129,7 +129,7 @@ lemma dg_tree_st_commute_routed_enter_pub_2:
         answer_local bot
       }))"
   by (cases a)
-     (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_st_bot o_def
+     (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
                 cs_route_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
                 dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
@@ -143,7 +143,7 @@ lemma hextra_commute_routed_2:
            split: cfg_node.split)
 
 lemma sign_nest_2_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(gk_2) TYPE((sign st, sign st) dg_state)
+  "TD_side_always_join_Interp.solve_dom TYPE(gk_2) TYPE((sign exec_dg_st, sign exec_dg_st) dg_state)
      sign_nest_2_eqs (cfg_exit sign_nest_cfg, [])"
   using sign_nest_2_terminates
   unfolding TD_side_always_join_Interp.term_equivalence
@@ -161,18 +161,18 @@ theorem sign_nest_2_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
         (routed_cmb Sabs Global2) (routed_extra sign_nest_cfg Sabs Seed2 Global2) sign_nest_cfg Sabs
-        (fun_of_st (bot::sign st)) (fun_of_st cinit_sign_st) (fun_of_st (restrict_global_st cinit_sign_st)))
+        (fun_of_exec_dg_st (bot::sign exec_dg_st)) (fun_of_exec_dg_st cinit_sign_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_sign_st)))
      (cfg_exit sign_nest_cfg, []) (fun_of_dg_st \<circ> snd sign_nest_2_sol) (fst sign_nest_2_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
           (routed_cmb Spoly Global2) (routed_extra sign_nest_cfg Spoly Seed2 Global2) sign_nest_cfg Spoly
-          bot cinit_sign_st (restrict_global_st cinit_sign_st))
+          bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st))
        (cfg_exit sign_nest_cfg, []) (snd sign_nest_2_sol) (fst sign_nest_2_sol)"
     using sign_nest_2_pp_st unfolding sign_nest_2_eqs_def by simp
   have sign_Hstep_2:
-    "map_prod fun_of_st fun_of_st (dg_spec_step Spoly a d g') =
-       dg_spec_step Sabs a (fun_of_st d) (fun_of_st g')" for a d g'
+    "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step Spoly a d g') =
+       dg_spec_step Sabs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g')" for a d g'
     unfolding Spoly_def by (rule sign_Hstep)
   show ?thesis
     by (rule part_post_solution_seed_dg_st_to_abs
@@ -194,7 +194,7 @@ abbreviation sigma_2 :: "pp \<times> cfg_node list + gk_2 \<Rightarrow> (sign ab
 abbreviation gen_2_abs :: "(pp \<times> cfg_node list, gk_2, (sign abs_state, sign abs_state) dg_state) eqsT" where
   "gen_2_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
        (routed_cmb Sabs Global2) (routed_extra sign_nest_cfg Sabs Seed2 Global2) sign_nest_cfg Sabs
-       (fun_of_st (bot::sign st)) (fun_of_st cinit_sign_st) (fun_of_st (restrict_global_st cinit_sign_st))"
+       (fun_of_exec_dg_st (bot::sign exec_dg_st)) (fun_of_exec_dg_st cinit_sign_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_sign_st))"
 
 lemma pp_eq_bound_2:
   "(v, ctx) \<in> fst sign_nest_2_sol
@@ -221,9 +221,9 @@ lemma sign_ctx_sg_2_uncovered_empty:
 
 lemma entry_locals_ge_s0d_2:
   assumes cov: "(cfg_entry sign_nest_cfg, []) \<in> fst sign_nest_2_sol"
-  shows "fun_of_st cinit_sign_st \<le> locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, [])))"
+  shows "fun_of_exec_dg_st cinit_sign_st \<le> locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, [])))"
 proof -
-  have "fun_of_st cinit_sign_st
+  have "fun_of_exec_dg_st cinit_sign_st
           \<le> locals (eq gen_2_abs (cfg_entry sign_nest_cfg, []) sigma_2)"
     by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge_1], simp add: le_supI2)
@@ -234,7 +234,7 @@ qed
 
 interpretation sign_nest_2_dg: dg_ctx_activation Sabs is_global sign_nest_cfg Global2 "cs_route 2"
     "routed_cmb Sabs Global2" "routed_extra sign_nest_cfg Sabs Seed2 Global2"
-    "fun_of_st (bot::sign st)" "fun_of_st cinit_sign_st" "fun_of_st (restrict_global_st cinit_sign_st)"
+    "fun_of_exec_dg_st (bot::sign exec_dg_st)" "fun_of_exec_dg_st cinit_sign_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_sign_st)"
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
 proof unfold_locales
   show "finite (intra sign_nest_cfg)" by (rule sign_nest_finE)
@@ -242,8 +242,8 @@ next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
              (routed_cmb Sabs Global2) (routed_extra sign_nest_cfg Sabs Seed2 Global2) sign_nest_cfg Sabs
-             (fun_of_st (bot::sign st)) (fun_of_st cinit_sign_st)
-             (fun_of_st (restrict_global_st cinit_sign_st)))
+             (fun_of_exec_dg_st (bot::sign exec_dg_st)) (fun_of_exec_dg_st cinit_sign_st)
+             (fun_of_exec_dg_st (restrict_global_resolved_q cinit_sign_st)))
           (cfg_exit sign_nest_cfg, []) sigma_2 (fst sign_nest_2_sol)"
     by (rule sign_nest_2_pp_abs)
 next
@@ -267,7 +267,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>CallFwd\<close>'s \<open>Stateme
   routing, so each needs its own coverage witness.\<close>
 
 interpretation sign_nest_2_routed: routed_context Sabs is_global sign_nest_cfg Global2 "cs_route 2"
-    "fun_of_st (bot::sign st)" "fun_of_st cinit_sign_st" "fun_of_st (restrict_global_st cinit_sign_st)"
+    "fun_of_exec_dg_st (bot::sign exec_dg_st)" "fun_of_exec_dg_st cinit_sign_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_sign_st)"
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
     Seed2 "cs_enterc 2"
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
@@ -346,7 +346,7 @@ lemma sign_ctx_sg_2_comb:
 
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>
 
-lemma cinit_le_cinit_sign_st_2: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_sign_st\<rbrakk>"
+lemma cinit_le_cinit_sign_st_2: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_sign_st\<rbrakk>"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_sign_st)
 
 theorem sign_nest_2_activation_collect_sound:
@@ -356,8 +356,8 @@ proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and enterc = "cs_e
         and seedc = "[]" and S = "cinit_stores is_global" and g = sign_nest_cfg and gs = is_global])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores is_global"
-  hence "s \<in> \<lbrakk>fun_of_st cinit_sign_st\<rbrakk>" using cinit_le_cinit_sign_st_2 by blast
-  also have "\<lbrakk>fun_of_st cinit_sign_st\<rbrakk>
+  hence "s \<in> \<lbrakk>fun_of_exec_dg_st cinit_sign_st\<rbrakk>" using cinit_le_cinit_sign_st_2 by blast
+  also have "\<lbrakk>fun_of_exec_dg_st cinit_sign_st\<rbrakk>
         \<subseteq> \<lbrakk>locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, [])))\<rbrakk>"
     by (rule gamma_state_mono[OF entry_locals_ge_s0d_2[OF entry_covered_2]])
   also have "\<dots> \<subseteq> \<lbrakk>sign_ctx_sg_2 (Inl (cfg_entry sign_nest_cfg, []))\<rbrakk>"
@@ -402,23 +402,25 @@ text \<open>
 \<close>
 
 lemma sign_k1_g_entry_top:
-  "lookup_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p'' = STop"
+  "lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p'' = STop"
   by eval
 
 lemma sign_k2_g_entry_fpos:
-  "lookup_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) ''p'' = SPos"
+  "lookup_exec_dg_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) ''p'' = SPos"
   by eval
 
 lemma sign_k2_g_entry_fneg:
-  "lookup_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) ''p'' = SNeg"
+  "lookup_exec_dg_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) ''p'' = SNeg"
   by eval
 
 theorem sign_k2_strictly_more_precise_than_k1_at_g:
-  "lookup_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) ''p''
-     < lookup_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p''"
-  "lookup_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) ''p''
-     < lookup_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p''"
+  "lookup_exec_dg_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) ''p''
+     < lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p''"
+  "lookup_exec_dg_st (locals (snd sign_nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) ''p''
+     < lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p''"
   by (simp_all add: sign_k1_g_entry_top sign_k2_g_entry_fpos sign_k2_g_entry_fneg
                      less_sign_def sign_le_refl)
 
 end
+
+

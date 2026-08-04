@@ -124,10 +124,11 @@ fun gamma_rel :: "relc \<Rightarrow> store set" where
   "gamma_rel Bot = {}"
 | "gamma_rel (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
 
-text \<open>Executable membership reader, the \<open>relc\<close> analogue of \<^const>\<open>lookup_st\<close>
-  for downstream examples.  \<open>Bot\<close> answers \<open>True\<close> for every pair: its
-  concretization is empty, so every fact holds of it vacuously -- consistent
-  with \<^const>\<open>gamma_rel\<close>, and it never needs to materialize \<open>UNIV\<close>.\<close>
+text \<open>
+  Executable membership reader for downstream examples. \<open>Bot\<close> answers
+  \<open>True\<close> for every pair: its concretization is empty, so every fact holds
+  of it vacuously, and it never needs to materialize \<open>UNIV\<close>.
+\<close>
 fun relc_has :: "vname \<Rightarrow> vname \<Rightarrow> relc \<Rightarrow> bool" where
   "relc_has x y Bot = True"
 | "relc_has x y (RelC ps) = ((x, y) \<in> ps)"

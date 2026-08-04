@@ -6,7 +6,7 @@ text \<open>
   \<open>DG_Domain_Registration\<close> from just \<open>sign_is_sound_transfer\<close> and \<open>sign_tf_st_commute\<close>).
   A concrete call-free Sign program is compiled to a CFG; the executable D/G
   generator (\<open>dg_gen_of (unit_dg_spec_st sign_tf_st)\<close>, values in
-  \<open>(sign st, sign st) dg_state\<close>) is handed to the vendored always-join TD-side
+  \<open>(sign exec_dg_st, sign exec_dg_st) dg_state\<close>) is handed to the vendored always-join TD-side
   solver; the solver \<^emph>\<open>computes\<close> a partial post-solution.
 
   The final theorem \<open>dgEx_source_run_sound\<close> turns the single \<open>by eval\<close> solver success
@@ -51,10 +51,10 @@ lemma gEx_entry: "cfg_entry gEx = FunctionEntry ''main''" by eval
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
-definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign st, sign st) dg_state) strategy_tree" where
+definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "dgEx_eqs = dg_gen_of (unit_dg_spec_st sign_tf_st sign_enter_st) gEx bot cinit_sign_st cinit_sign_st"
 
-definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign st, sign st) dg_state)" where
+definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
 
 subsection \<open>The solver computes a partial post-solution\<close>
@@ -69,7 +69,7 @@ lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit 
   by eval
 
 lemma dgEx_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign st, sign st) dg_state) dgEx_eqs (cfg_exit gEx, ())"
+  "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign exec_dg_st, sign exec_dg_st) dg_state) dgEx_eqs (cfg_exit gEx, ())"
   using dgEx_terminates_c
   unfolding TD_side_always_join_Interp.term_equivalence TD_side_always_join_Interp.solve_c_dom_def
   by simp
@@ -82,11 +82,11 @@ lemma dgEx_pp_st:
 subsection \<open>Well-formedness of the compiled input\<close>
 
 lemma dgEx_wf:
-  "wf_compile_input sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+  "wf_compile_input is_global sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     sign_ex_pi_def sign_ex_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
-      split: if_splits)
+      reserved_ret_var_def is_global_def split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
@@ -105,7 +105,7 @@ lemma dgEx_cover_combine:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
      \<Longrightarrow> (k, ()) \<in> fst dgEx_sol"
   by (simp add: gEx_calls)
-lemma dgEx_sound0: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_st cinit_sign_st \<squnion> fun_of_st cinit_sign_st\<rbrakk>"
+lemma dgEx_sound0: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_sign_st \<squnion> fun_of_exec_dg_st cinit_sign_st\<rbrakk>"
   by (simp add: fun_of_st_cinit_sign_st cinit_stores_def gamma_state_def sup.idem)
 
 subsection \<open>Source-level soundness through the registered analysis\<close>
@@ -146,9 +146,10 @@ text \<open>The diagonal Sign instance joins local answers and global side effec
   each edge. The executable result is therefore sound but imprecise at the exit.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. (lookup_st (locals (snd sol (Inl (Statement 2, ())))) ''x'',
-                       lookup_st (globs (snd sol (Inr ()))) ''x''))
+  "map_option (\<lambda>sol. (lookup_exec_dg_st (locals (snd sol (Inl (Statement 2, ())))) ''x'',
+                       lookup_exec_dg_st (globs (snd sol (Inr ()))) ''x''))
      (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (STop, STop)"
   by eval
 
 end
+

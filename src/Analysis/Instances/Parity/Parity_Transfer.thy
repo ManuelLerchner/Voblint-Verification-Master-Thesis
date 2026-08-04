@@ -163,4 +163,69 @@ lemma parity_tf_mono:
      (auto simp: parity_tf_def assign_parity_mono assume_parity_mono assume_not_parity_mono
                  enter_parity_mono split: option.splits)
 
+subsection \<open>Classifier-parametric transfer\<close>
+
+text \<open>
+  \<^const>\<open>parity_tf\<close> fixes the legacy \<^const>\<open>is_global\<close> classifier inside
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>. A placement analysis splits
+  store components by a declaration-driven classifier instead, so entry and
+  combine need a version parametric in that classifier; assignment and guard
+  transfer never consult a classifier, so only the entry and combine fields
+  change shape (mirroring \<open>sign_tf_for\<close> for the sign domain).
+\<close>
+
+definition enter_frame_parity_for ::
+    "(vname => bool) => parity abs_state => parity abs_state" where
+  "enter_frame_parity_for gs = enter_frame_D gs PTop"
+
+definition enter_parity_for ::
+    "(vname => bool) => vname list => aexp list =>
+      parity abs_state => parity abs_state" where
+  "enter_parity_for gs = enter_D gs PTop aval_parity"
+
+lemma enter_frame_parity_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "enter_state cls s \<in> \<lbrakk>enter_frame_parity_for cls \<sigma>\<rbrakk>"
+  unfolding enter_frame_parity_for_def
+proof (rule enter_frame_D_sound[OF gs])
+  show "gamma PTop = UNIV" by simp
+qed
+
+lemma enter_parity_for_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
+           \<in> \<lbrakk>enter_parity_for cls xs es \<sigma>\<rbrakk>"
+  unfolding enter_parity_for_def
+proof (rule enter_D_sound[OF gs])
+  show "gamma PTop = UNIV" by simp
+next
+  have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_parity e \<sigma>) es)"
+    using V by (simp add: list_all2_conv_all_nth aval_parity_sound)
+qed
+
+definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
+  "parity_tf_for gs = (| tf_assign     = assign_parity,
+                         tf_assume     = assume_parity,
+                         tf_assume_not = assume_not_parity,
+                         tf_enter      = enter_parity_for gs,
+                         tf_combine    = combine_abs gs |)"
+
+lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
+  unfolding parity_tf_for_def
+  apply unfold_locales
+  subgoal by (simp add: assign_parity_sound)
+  subgoal by (simp add: assume_parity_sound)
+  subgoal by (simp add: assume_not_parity_sound)
+  subgoal by (simp add: enter_parity_for_sound)
+  subgoal by (simp add: combine_states_sound)
+  done
+
+lemma parity_tf_for_is_global: "parity_tf_for is_global = parity_tf"
+  unfolding parity_tf_for_def parity_tf_def enter_parity_for_def enter_parity_def
+    enter_frame_parity_for_def enter_frame_parity_def
+  by (rule refl)
+
 end
