@@ -119,8 +119,9 @@ On a fresh clone without parent heaps:
 rtk make bootstrap
 ```
 
-`make build` streams a verbose, parallel build of
-`Voblint_Formalization`.
+`make build` streams a verbose, parallel build of `Voblint_Examples`, which
+extends `Voblint_Formalization`, so both sessions are checked. Changes
+confined to `src/Examples/**` are covered by the same `rtk make build` run.
 
 ### Slow-build diagnosis
 

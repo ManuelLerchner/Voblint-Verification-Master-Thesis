@@ -1,10 +1,10 @@
 ISABELLE        ?= isabelle
 AFP             ?= $(HOME)/afp/thys
-SESSION         := Voblint_Formalization
+SESSION         := Voblint_Examples
 # All sessions, so a clean build forces every one to be (re)presented.
 # Isabelle only presents sessions it actually builds; on warm heaps the
 # up-to-date ancestors are skipped and their links render as [brackets].
-SESSIONS        := Voblint_VIMP Voblint_CFG Voblint_Core Voblint_Analysis Voblint_Formalization
+SESSIONS        := Voblint_VIMP Voblint_CFG Voblint_Core Voblint_Analysis Voblint_Formalization Voblint_Examples
 ISABELLE_HOME_USER ?= $(shell $(ISABELLE) getenv -b ISABELLE_HOME_USER 2>/dev/null)
 HTML_DIR        := docs/html
 
