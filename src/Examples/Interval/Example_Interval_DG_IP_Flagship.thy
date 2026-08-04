@@ -83,6 +83,18 @@ lemmas ivl_Henter = unit_dg_Henter[OF ivl_enter_st_commute]
 
 lemmas ivl_Hcomb = unit_dg_Hcomb
 
+text \<open>Classifier-parametric mirrors, generic in \<open>gs\<close>: the M4 entry point for any
+  consumer that no longer relies on \<^const>\<open>is_global\<close>.\<close>
+
+lemmas ivl_Hstep_for =
+  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+    ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some]
+
+lemmas ivl_Henter_for =
+  unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
+
+lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
+
 lemma dg_gen_of_eq_ivl_dg_gen:
   "dg_gen_of (unit_dg_spec ivl_tf) g bot0 s0d s0g = ivl_dg.dg_gen g bot0 s0d s0g"
 proof -

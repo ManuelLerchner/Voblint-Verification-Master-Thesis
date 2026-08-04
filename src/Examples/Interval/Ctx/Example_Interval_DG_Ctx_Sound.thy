@@ -15,7 +15,16 @@ text \<open>
 subsection \<open>The abstract routed hooks\<close>
 
 abbreviation Sabs :: "(ivl abs_state, ivl abs_state) dg_spec" where
-  "Sabs \<equiv> unit_dg_spec ivl_tf"
+  "Sabs \<equiv> unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)"
+
+text \<open>Unlike \<open>is_global\<close>, \<open>twice_gs\<close> has no pre-registered \<^locale>\<open>sound_dg_spec\<close>
+  interpretation for the diagonal interval spec (\<open>Interval_DG.thy\<close> only registers
+  \<^const>\<open>is_global\<close>): establish it once here, in the chain's shared ancestor, so
+  every downstream \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close>
+  discharges its inherited step/combine/enter obligations automatically.\<close>
+
+interpretation ivl_dg_for: sound_dg_spec Sabs gamma_unit twice_gs
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
 
 text \<open>The post-enter callee state and its context projection, abstractly.  These
   mirror \<^const>\<open>entered_ivl\<close> / \<^const>\<open>route_ivl\<close> on \<^typ>\<open>ivl abs_state\<close>.\<close>
@@ -39,22 +48,22 @@ text \<open>The post-enter callee state commutes with the refinement morphism: t
   global slot defaulted to \<open>bot\<close>.\<close>
 
 lemma entered_commute:
-  "fun_of_exec_dg_st (entered_ivl s ca) = entered_abs (fun_of_exec_dg_st s) ca"
+  "fun_of_exec_dg_st_for twice_gs (entered_ivl s ca) = entered_abs (fun_of_exec_dg_st_for twice_gs s) ca"
 proof (cases ca)
   case (CallEdge dst fs as)
-  have enter: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st
-                 (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as s bot)
-               = dgs_enter Sabs fs as (fun_of_exec_dg_st s) (fun_of_exec_dg_st bot)"
-    by (rule ivl_Henter)
-  have "fun_of_exec_dg_st (snd (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as s bot))
-      = snd (map_prod fun_of_exec_dg_st fun_of_exec_dg_st
-               (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as s bot))"
+  have enter: "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs)
+                 (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as s bot)
+               = dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs s) (fun_of_exec_dg_st_for twice_gs bot)"
+    by (rule ivl_Henter_for)
+  have "fun_of_exec_dg_st_for twice_gs (snd (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as s bot))
+      = snd (map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs)
+               (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as s bot))"
     by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st s) (fun_of_exec_dg_st bot))"
+  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs s) (fun_of_exec_dg_st_for twice_gs bot))"
     by (simp add: enter)
   finally show ?thesis
     using CallEdge
-    by (simp add: entered_ivl_def entered_abs_def Spoly_def fun_of_exec_dg_st_bot bot_fun_def)
+    by (simp add: entered_ivl_def entered_abs_def Spoly_def fun_of_exec_dg_st_for_bot bot_fun_def)
 qed
 
 text \<open>The route-consistency corollary: the abstract route on a pushed-forward state
@@ -64,12 +73,19 @@ text \<open>The route-consistency corollary: the abstract route on a pushed-forw
   callee state.\<close>
 
 lemma route_commute:
-  "route_abs (fun_of_exec_dg_st s) ca = route_ivl s ca"
-  by (simp add: route_abs_def route_ivl_def entered_commute[symmetric]
-      fun_of_resolved_st_q_for_def)
+  "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = route_ivl s ca"
+proof -
+  have "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = entered_abs (fun_of_exec_dg_st_for twice_gs s) ca ''p''"
+    by (simp add: route_abs_def)
+  also have "\<dots> = fun_of_exec_dg_st_for twice_gs (entered_ivl s ca) ''p''"
+    by (simp add: entered_commute)
+  also have "\<dots> = route_ivl s ca"
+    by (simp add: route_ivl_def fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+  finally show ?thesis .
+qed
 
 lemma route_commute_gen:
-  "route_ivl_gen u ctx s ca = route_abs_gen u ctx (fun_of_exec_dg_st s) ca"
+  "route_ivl_gen u ctx s ca = route_abs_gen u ctx (fun_of_exec_dg_st_for twice_gs s) ca"
   by (simp add: route_ivl_gen_def route_abs_gen_def route_commute)
 
 subsection \<open>Per-tree transport commutation\<close>
@@ -79,44 +95,44 @@ text \<open>The frame-entry seed \<^emph>\<open>read\<close> transports: it read
   carriers and commutes through \<^const>\<open>fun_of_dg_st\<close>.\<close>
 
 lemma dg_tree_st_commute_frame_read:
-  "dg_tree_st_commute env
+  "dg_tree_st_commute_for twice_gs env
      (QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot)))
      (QueryG (Seed v ctx) (\<lambda>s. Answer (DG (globs s) bot)))"
-  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
+  by (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                 dep_aux_def bot_fun_def)
 
 text \<open>The return combine commutes componentwise with an arbitrary incoming global
-  slot: the \<open>ivl_Hcomb\<close> homomorphism read on each output projection, for a routed
+  slot: the \<open>ivl_Hcomb_for\<close> homomorphism read on each output projection, for a routed
   combine that reads the shared global through a query instead of discarding it.\<close>
 
 lemma dgs_combine_snd_commute_gen:
-  "fun_of_exec_dg_st (snd (dgs_combine Spoly dst dc de g))
-     = snd (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for twice_gs (snd (dgs_combine Spoly dst dc de g))
+     = snd (dgs_combine Sabs dst (fun_of_exec_dg_st_for twice_gs dc) (fun_of_exec_dg_st_for twice_gs de) (fun_of_exec_dg_st_for twice_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st
-                (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g)
-              = dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
-    by (rule ivl_Hcomb)
-  have "fun_of_exec_dg_st (snd (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))
-      = snd (map_prod fun_of_exec_dg_st fun_of_exec_dg_st
-               (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))"
+  have step: "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs)
+                (dgs_combine (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) dst dc de g)
+              = dgs_combine Sabs dst (fun_of_exec_dg_st_for twice_gs dc) (fun_of_exec_dg_st_for twice_gs de) (fun_of_exec_dg_st_for twice_gs g)"
+    by (rule ivl_Hcomb_for)
+  have "fun_of_exec_dg_st_for twice_gs (snd (dgs_combine (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) dst dc de g))
+      = snd (map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs)
+               (dgs_combine (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) dst dc de g))"
     by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  also have "\<dots> = snd (dgs_combine Sabs dst (fun_of_exec_dg_st_for twice_gs dc) (fun_of_exec_dg_st_for twice_gs de) (fun_of_exec_dg_st_for twice_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
 
 lemma dgs_combine_fst_commute_gen:
-  "fun_of_exec_dg_st (fst (dgs_combine Spoly dst dc de g))
-     = fst (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for twice_gs (fst (dgs_combine Spoly dst dc de g))
+     = fst (dgs_combine Sabs dst (fun_of_exec_dg_st_for twice_gs dc) (fun_of_exec_dg_st_for twice_gs de) (fun_of_exec_dg_st_for twice_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g)
-              = dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
-    by (rule ivl_Hcomb)
-  have "fun_of_exec_dg_st (fst (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))
-      = fst (map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))"
+  have step: "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dgs_combine (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) dst dc de g)
+              = dgs_combine Sabs dst (fun_of_exec_dg_st_for twice_gs dc) (fun_of_exec_dg_st_for twice_gs de) (fun_of_exec_dg_st_for twice_gs g)"
+    by (rule ivl_Hcomb_for)
+  have "fun_of_exec_dg_st_for twice_gs (fst (dgs_combine (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) dst dc de g))
+      = fst (map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dgs_combine (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) dst dc de g))"
     by (metis fst_conv map_prod_simp surj_pair)
-  also have "\<dots> = fst (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  also have "\<dots> = fst (dgs_combine Sabs dst (fun_of_exec_dg_st_for twice_gs dc) (fun_of_exec_dg_st_for twice_gs de) (fun_of_exec_dg_st_for twice_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
@@ -126,31 +142,31 @@ text \<open>The enter transfer commutes componentwise with an arbitrary incoming
   fixed \<open>bot\<close> global) to both projections at any global.\<close>
 
 lemma dgs_enter_snd_commute_gen:
-  "fun_of_exec_dg_st (snd (dgs_enter Spoly fs as d g))
-     = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for twice_gs (snd (dgs_enter Spoly fs as d g))
+     = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g)
-              = dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-    by (rule ivl_Henter)
-  have "fun_of_exec_dg_st (snd (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))
-      = snd (map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))"
+  have step: "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as d g)
+              = dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g)"
+    by (rule ivl_Henter_for)
+  have "fun_of_exec_dg_st_for twice_gs (snd (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as d g))
+      = snd (map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as d g))"
     by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
 
 lemma dgs_enter_fst_commute_gen:
-  "fun_of_exec_dg_st (fst (dgs_enter Spoly fs as d g))
-     = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for twice_gs (fst (dgs_enter Spoly fs as d g))
+     = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g)
-              = dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-    by (rule ivl_Henter)
-  have "fun_of_exec_dg_st (fst (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))
-      = fst (map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))"
+  have step: "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as d g)
+              = dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g)"
+    by (rule ivl_Henter_for)
+  have "fun_of_exec_dg_st_for twice_gs (fst (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as d g))
+      = fst (map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dgs_enter (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)) fs as d g))"
     by (metis fst_conv map_prod_simp surj_pair)
-  also have "\<dots> = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  also have "\<dots> = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
@@ -162,11 +178,11 @@ text \<open>The routed combine tree, reading the shared global through a query i
   key.\<close>
 
 lemma dg_tree_st_commute_routed_cmb:
-  "dg_tree_st_commute env (routed_cmb Spoly gk0 route_ivl_gen ctx ca cc ex)
+  "dg_tree_st_commute_for twice_gs env (routed_cmb Spoly gk0 route_ivl_gen ctx ca cc ex)
                           (routed_cmb Sabs gk0 route_abs_gen ctx ca cc ex)"
   unfolding routed_cmb_def route_ivl_gen_def route_abs_gen_def Let_def
   by (cases ca)
-     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
+     (simp_all add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                     route_commute dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
@@ -176,7 +192,7 @@ text \<open>The routed enter publication --- reading the shared global through a
   projections of the enter transfer commute.\<close>
 
 lemma dg_tree_st_commute_routed_enter_pub:
-  "dg_tree_st_commute env
+  "dg_tree_st_commute_for twice_gs env
      (with_call a (\<lambda>dst fs as. do {
         entry_state \<leftarrow> read_local (v, ctx);
         globals_state \<leftarrow> read_global Global;
@@ -195,12 +211,12 @@ lemma dg_tree_st_commute_routed_enter_pub:
       }))"
   unfolding route_ivl_gen_def route_abs_gen_def
   by (cases a)
-     (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
+     (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                 route_commute dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
                 dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma hextra_commute_routed:
-  "list_all2 (dg_tree_st_commute env)
+  "list_all2 (dg_tree_st_commute_for twice_gs env)
      (routed_extra twice_cfg Spoly Seed Global route_ivl_gen ctx w)
      (routed_extra twice_cfg Sabs Seed Global route_abs_gen ctx w)"
   unfolding routed_extra_def Let_def
@@ -236,8 +252,9 @@ theorem twice_ctx_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
         (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
-        (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
-     (cfg_exit twice_cfg, bot) (fun_of_dg_st \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"
+        (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+        (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
+     (cfg_exit twice_cfg, bot) (fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
@@ -245,16 +262,16 @@ proof -
           bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st))
        (cfg_exit twice_cfg, bot) (snd twice_ctx_sol) (fst twice_ctx_sol)"
     using twice_ctx_pp_st unfolding twice_ctx_eqs_def by simp
-  text \<open>\<open>ivl_Hstep\<close> is stated for the generic \<open>unit_dg_spec_st ivl_tf_st ?enter_st\<close>
+  text \<open>\<open>ivl_Hstep_for\<close> is stated for the generic \<open>unit_dg_spec_st_for gs ivl_tf_st_for ?enter_st\<close>
     shape; \<open>Spoly\<close> hides that shape behind a \<open>definition\<close>, so plain rule resolution
     cannot unify the two without folding \<open>Spoly_def\<close> back in first.\<close>
   have ivl_Hstep_ctx:
-    "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step Spoly a d g') =
-       dg_spec_step Sabs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g')" for a d g'
-    unfolding Spoly_def by (rule ivl_Hstep)
+    "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs) (dg_spec_step Spoly a d g') =
+       dg_spec_step Sabs a (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g')" for a d g'
+    unfolding Spoly_def by (rule ivl_Hstep_for)
   show ?thesis
-    by (rule part_post_solution_seed_dg_st_to_abs
-          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
+    by (rule part_post_solution_seed_dg_st_to_abs_for
+          [where gs = twice_gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
              and route_st = route_ivl_gen and route_abs = route_abs_gen
              and cmb_st = "routed_cmb Spoly Global" and cmb_abs = "routed_cmb Sabs Global"
              and extra_st = "routed_extra twice_cfg Spoly Seed Global"
