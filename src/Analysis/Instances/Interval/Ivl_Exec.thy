@@ -306,6 +306,92 @@ lemma ivl_tf_st_for_assume_not_agree:
   by (simp add: assume_not_ivl_st_for_def bfilter_ivl_st_commute ivl_tf_for_def assume_not_ivl_def)
 
 text \<open>
+  A per-location specialization of the two lemmas above for the single-
+  variable guard shape \<open>Less (V x) (N n)\<close>: \<^const>\<open>bfilter_ivl_st\<close>/
+  \<^const>\<open>bfilter_ivl\<close> for this shape reduce (via \<open>afilter_st\<close>'s own
+  recursive equations, \<^theory>\<open>Voblint_Core.Exec_Backward\<close>) to a single
+  \<^const>\<open>update_resolved_st_q\<close> at \<open>location_of gs x\<close> computed purely from
+  \<open>x\<close>'s own value -- \<open>N n\<close> is a literal, so its own \<open>afilter_st\<close> case is the
+  identity, and every location other than \<open>x\<close> is left untouched. This lets a
+  placement example discharge \<open>placed_hook_se_edge\<close>'s per-location
+  \<open>raw\<close> premise for an \<open>x < n\<close>-shaped guard from ordinary in-scope value
+  agreement, without needing the full-store agreement
+  \<open>ivl_tf_st_for_assume_agree\<close> asks for -- the completed abstract state
+  disagrees with the executable one outside a node's own scope by
+  construction, so a whole-store premise is never available at a placement
+  call site the way it is for a flat, unscoped analysis.\<close>
+
+lemma ivl_bfilter_st_for_less_var_lit_agree:
+  fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
+    and x :: vname and n :: int and res :: bool
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+    and x_in: "location_of gs x \<in> universe"
+  shows
+    "lookup_resolved_st_q (bfilter_ivl_st gs (Less (V x) (N n)) res s_exec) location =
+      bfilter_ivl (Less (V x) (N n)) res s_abs (location_vname location)"
+proof -
+  have val_agree: "fun_of_resolved_st_q_for gs s_exec x = s_abs x"
+    using agree[OF x_in]
+    by (simp add: fun_of_resolved_st_q_for_def location_of_def)
+  have shape: "bfilter_ivl_st gs (Less (V x) (N n)) res s_exec =
+      update_resolved_st_q s_exec (location_of gs x)
+        (meet_ivl (fst (inv_less_ivl res (fun_of_resolved_st_q_for gs s_exec x) (Ivl (Fin n) (Fin n))))
+          (fun_of_resolved_st_q_for gs s_exec x))"
+    by (simp add: ivl_backward_domain.bfilter_st.simps(1) ivl_backward_domain.afilter_st.simps(1)
+      Let_def split: prod.splits)
+  have shape_abs: "bfilter_ivl (Less (V x) (N n)) res s_abs =
+      s_abs(x := meet_ivl (fst (inv_less_ivl res (s_abs x) (Ivl (Fin n) (Fin n)))) (s_abs x))"
+    by (simp add: ivl_backward_domain.bfilter.simps(1) ivl_backward_domain.afilter.simps(1)
+      Let_def split: prod.splits)
+  show ?thesis
+  proof (cases "location = location_of gs x")
+    case True
+    then show ?thesis
+      unfolding shape shape_abs True
+      by (simp add: val_agree location_of_def lookup_resolved_st_q_update_same)
+  next
+    case False
+    then have neq_x: "location_vname location \<noteq> x"
+      using canonical by (auto simp: location_of_def split: if_splits)
+    show ?thesis
+      unfolding shape shape_abs
+      using agree[OF location_in] False neq_x
+      by (simp add: lookup_resolved_st_q_update_diff)
+  qed
+qed
+
+lemma ivl_tf_st_for_assume_var_lit_agree:
+  fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
+    and x :: vname and n :: int
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+    and x_in: "location_of gs x \<in> universe"
+  shows
+    "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Assume (Less (V x) (N n))) s_exec) location =
+      apply_tf (ivl_tf_for gs) (EA_Assume (Less (V x) (N n))) s_abs (location_vname location)"
+  using ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = True]
+  by (simp add: assume_ivl_st_for_def ivl_tf_for_def assume_ivl_def)
+
+lemma ivl_tf_st_for_assume_not_var_lit_agree:
+  fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
+    and x :: vname and n :: int
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+    and x_in: "location_of gs x \<in> universe"
+  shows
+    "lookup_resolved_st_q (ivl_tf_st_for gs (EA_AssumeNot (Less (V x) (N n))) s_exec) location =
+      apply_tf (ivl_tf_for gs) (EA_AssumeNot (Less (V x) (N n))) s_abs (location_vname location)"
+  using ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = False]
+  by (simp add: assume_not_ivl_st_for_def ivl_tf_for_def assume_not_ivl_def)
+
+text \<open>
   A one-argument call entry: the bound formal's location gets the evaluated
   actual on both sides; a global location outside the formal carries over
   from the pre-call join (given as an explicit agreement, since procedure
