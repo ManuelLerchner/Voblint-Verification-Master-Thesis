@@ -127,71 +127,32 @@ text \<open>The bound holds along the whole caller chain, by \<^const>\<open>val
   chain.\<close>
 lemma gamma_chain:
   "t \<in> valid_ltr gs g S \<Longrightarrow> \<forall>u \<in> callers t. bnd u"
-proof (induction rule: valid_ltr.induct)
-  case (init s)
-  show ?case using root_closed[OF init] by (simp add: callers_Root)
+proof (rule caller_chain_closure)
+  fix s assume "s \<in> S"
+  then show "bnd (Root [(cfg_entry g, s)])" by (rule root_closed)
 next
-  case (intra t a v s')
-  show ?case
-  proof (rule ballI)
-    fix u assume "u \<in> callers (extend t (v, s'))"
-    then have "u = extend t (v, s') \<or> u \<in> callers t"
-      using callers_extend_subset by blast
-    then show "bnd u"
-    proof (rule disjE)
-      assume u: "u = extend t (v, s')"
-      have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
-      have iht: "bnd t" using intra.IH callers_refl by blast
-      show ?thesis unfolding u
-        by (rule intra_closed[OF intra.hyps(2) intra.hyps(3) pt iht])
-    next
-      assume "u \<in> callers t"
-      then show ?thesis using intra.IH by blast
-    qed
-  qed
+  fix t a v s' assume ht: "t \<in> valid_ltr gs g S" and ch: "\<forall>u \<in> callers t. bnd u"
+    and e: "(sink_node t, a, v) \<in> intra g" and st: "edge_step a (sink_store t) = Some s'"
+  have pt: "path t \<noteq> []" using ht valid_ltr_path_nonempty by blast
+  have iht: "bnd t" using ch callers_refl by blast
+  show "bnd (extend t (v, s'))" by (rule intra_closed[OF e st pt iht])
 next
-  case (call caller dst pars args p cont)
-  show ?case
-  proof (rule ballI)
-    fix u assume "u \<in> callers (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
-    then have "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
-                \<or> u \<in> callers caller"
-      by (simp add: callers_Call)
-    then show "bnd u"
-    proof (rule disjE)
-      assume u: "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]"
-      have ihc: "bnd caller" using call.IH callers_refl by blast
-      show ?thesis unfolding u
-        by (rule call_closed[OF call.hyps(2) ihc])
-    next
-      assume "u \<in> callers caller"
-      then show ?thesis using call.IH by blast
-    qed
-  qed
+  fix caller dst pars args p cont
+  assume ch: "\<forall>u \<in> callers caller. bnd u"
+    and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  have ihc: "bnd caller" using ch callers_refl by blast
+  show "bnd (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+    by (rule call_closed[OF e ihc])
 next
-  case (ret callee caller p dst pars args cont)
-  show ?case
-  proof (rule ballI)
-    fix u assume "u \<in> callers (Resume caller callee
-        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
-    then have "u = Resume caller callee
-        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
-                \<or> u \<in> callers callee"
-      using callers_Resume_subset[OF ret.hyps(2)] by blast
-    then show "bnd u"
-    proof (rule disjE)
-      assume u: "u = Resume caller callee
-          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])"
-      have ih_caller: "bnd caller"
-        using ret.IH ret.hyps(2) callers_caller_subset callers_refl by blast
-      have ih_callee: "bnd callee" using ret.IH callers_refl by blast
-      show ?thesis unfolding u
-        by (rule return_closed[OF ret.hyps(1,2,3,4) ih_caller ih_callee])
-    next
-      assume "u \<in> callers callee"
-      then show ?thesis using ret.IH by blast
-    qed
-  qed
+  fix callee caller p dst pars args cont
+  assume cv: "callee \<in> valid_ltr gs g S" and ch: "\<forall>u \<in> callers callee. bnd u"
+    and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
+    and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  have ih_caller: "bnd caller" using ch cof callers_caller_subset callers_refl by blast
+  have ih_callee: "bnd callee" using ch callers_refl by blast
+  show "bnd (Resume caller callee
+             (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+    by (rule return_closed[OF cv cof res e ih_caller ih_callee])
 qed
 
 text \<open>Every valid trace's sink lies in its own activation slot: \<^const>\<open>valid_ltr\<close> is

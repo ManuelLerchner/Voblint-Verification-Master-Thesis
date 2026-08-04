@@ -344,6 +344,96 @@ proof -
     using assms by (rule callers_caller_subset)
   finally show ?thesis by blast
 qed
+subsection \<open>Generic caller-chain closure\<close>
+
+text \<open>
+  A caller-chain-quantified predicate \<open>P\<close> holds along the whole \<^const>\<open>callers\<close> chain of
+  every valid trace once its four \<open>valid_ltr\<close> obligations are discharged.  Each obligation
+  reads its own generating trace's induction hypothesis as the whole-chain fact
+  \<open>ALL u : callers _. P u\<close>, not a single-node fact --- this is exactly what \<open>ret\<close> needs to
+  recover its caller's own chain fact from the callee's.  \<open>gamma_chain\<close> (\<open>LTR_Abstract\<close>),
+  \<open>valid_ltr_path_nodes\<close>, and \<open>valid_ltr_frag_callers\<close> (\<open>Compile_Locality\<close>) instantiate this
+  once instead of each repeating the \<^const>\<open>callers\<close> case dispatch below.
+\<close>
+
+lemma caller_chain_closure:
+  fixes P :: "ltr \<Rightarrow> bool"
+  assumes Root: "\<And>s. s \<in> S \<Longrightarrow> P (Root [(cfg_entry g, s)])"
+    and Intra: "\<And>t a v s'. t \<in> valid_ltr gs g S \<Longrightarrow> (\<forall>u \<in> callers t. P u)
+        \<Longrightarrow> (sink_node t, a, v) \<in> intra g \<Longrightarrow> edge_step a (sink_store t) = Some s'
+        \<Longrightarrow> P (extend t (v, s'))"
+    and Call: "\<And>caller dst pars args p cont. caller \<in> valid_ltr gs g S
+        \<Longrightarrow> (\<forall>u \<in> callers caller. P u)
+        \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> P (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+    and Ret: "\<And>callee caller p dst pars args cont. callee \<in> valid_ltr gs g S
+        \<Longrightarrow> (\<forall>u \<in> callers callee. P u)
+        \<Longrightarrow> caller_of callee = Some caller \<Longrightarrow> sink_node callee = FunctionResult p
+        \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> P (Resume caller callee
+                 (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+  shows "t \<in> valid_ltr gs g S \<Longrightarrow> \<forall>u \<in> callers t. P u"
+proof (induction rule: valid_ltr.induct)
+  case (init s)
+  then show ?case using Root[OF init] by (simp add: callers_Root)
+next
+  case (intra t a v s')
+  show ?case
+  proof (rule ballI)
+    fix u assume "u \<in> callers (extend t (v, s'))"
+    then have "u = extend t (v, s') \<or> u \<in> callers t"
+      using callers_extend_subset by blast
+    then show "P u"
+    proof (rule disjE)
+      assume u: "u = extend t (v, s')"
+      show ?thesis unfolding u
+        by (rule Intra[OF intra.hyps(1) intra.IH intra.hyps(2,3)])
+    next
+      assume "u \<in> callers t"
+      then show ?thesis using intra.IH by blast
+    qed
+  qed
+next
+  case (call caller dst pars args p cont)
+  show ?case
+  proof (rule ballI)
+    fix u assume "u \<in> callers (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+    then have "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
+                \<or> u \<in> callers caller"
+      by (simp add: callers_Call)
+    then show "P u"
+    proof (rule disjE)
+      assume u: "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]"
+      show ?thesis unfolding u
+        by (rule Call[OF call.hyps(1) call.IH call.hyps(2)])
+    next
+      assume "u \<in> callers caller"
+      then show ?thesis using call.IH by blast
+    qed
+  qed
+next
+  case (ret callee caller p dst pars args cont)
+  show ?case
+  proof (rule ballI)
+    fix u assume "u \<in> callers (Resume caller callee
+        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+    then have "u = Resume caller callee
+        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
+                \<or> u \<in> callers callee"
+      using callers_Resume_subset[OF ret.hyps(2)] by blast
+    then show "P u"
+    proof (rule disjE)
+      assume u: "u = Resume caller callee
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])"
+      show ?thesis unfolding u
+        by (rule Ret[OF ret.hyps(1) ret.IH ret.hyps(2,3,4)])
+    next
+      assume "u \<in> callers callee"
+      then show ?thesis using ret.IH by blast
+    qed
+  qed
+qed
+
 
 subsection \<open>Required trace obligations\<close>
 
@@ -482,73 +572,36 @@ text \<open>The nodes observed along a valid trace, and along its whole caller c
 lemma valid_ltr_path_nodes:
   "t \<in> valid_ltr gs g S \<Longrightarrow>
      \<forall>u \<in> callers t. \<forall>ns \<in> set (path u). fst ns \<in> cfg_nodes g"
-proof (induction rule: valid_ltr.induct)
-  case (init s)
-  then show ?case by (simp add: callers_Root cfg_entry_in_nodes)
+proof (rule caller_chain_closure)
+  fix s assume "s \<in> S"
+  then show "\<forall>ns \<in> set (path (Root [(cfg_entry g, s)])). fst ns \<in> cfg_nodes g"
+    by (simp add: cfg_entry_in_nodes)
 next
-  case (intra t a v s')
-  have vnode: "v \<in> cfg_nodes g" using intra.hyps(2) intra_endpoints_in_nodes by blast
-  show ?case
-  proof (intro ballI)
-    fix u ns assume uin: "u \<in> callers (extend t (v, s'))" and nsin: "ns \<in> set (path u)"
-    from uin have "u = extend t (v, s') \<or> u \<in> callers t"
-      using callers_extend_subset by blast
-    then show "fst ns \<in> cfg_nodes g"
-    proof (rule disjE)
-      assume u: "u = extend t (v, s')"
-      have "ns \<in> set (path t) \<or> ns = (v, s')" using nsin u by auto
-      then show ?thesis using intra.IH callers_refl vnode by auto
-    next
-      assume "u \<in> callers t"
-      then show ?thesis using intra.IH nsin by blast
-    qed
-  qed
+  fix t a v s' assume ch: "\<forall>u \<in> callers t. \<forall>ns \<in> set (path u). fst ns \<in> cfg_nodes g"
+    and e: "(sink_node t, a, v) \<in> intra g"
+  have vnode: "v \<in> cfg_nodes g" using e intra_endpoints_in_nodes by blast
+  have "\<forall>ns \<in> set (path t). fst ns \<in> cfg_nodes g" using ch callers_refl by blast
+  then show "\<forall>ns \<in> set (path (extend t (v, s'))). fst ns \<in> cfg_nodes g"
+    using vnode by auto
 next
-  case (call caller dst pars args p cont)
-  have ce: "FunctionEntry p \<in> cfg_nodes g"
-    using call.hyps(2) call_endpoints_in_nodes by blast
-  show ?case
-  proof (intro ballI)
-    fix u ns assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
-      and nsin: "ns \<in> set (path u)"
-    from uin have "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
-                    \<or> u \<in> callers caller"
-      by (simp add: callers_Call)
-    then show "fst ns \<in> cfg_nodes g"
-    proof (rule disjE)
-      assume "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]"
-      then show ?thesis using nsin ce by auto
-    next
-      assume "u \<in> callers caller"
-      then show ?thesis using call.IH nsin by blast
-    qed
-  qed
+  fix caller dst pars args p cont
+  assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  have ce: "FunctionEntry p \<in> cfg_nodes g" using e call_endpoints_in_nodes by blast
+  then show "\<forall>ns \<in> set (path (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])).
+               fst ns \<in> cfg_nodes g"
+    by auto
 next
-  case (ret callee caller p dst pars args cont)
-  have contn: "cont \<in> cfg_nodes g" using ret.hyps(4) call_endpoints_in_nodes by blast
-  have cin: "caller \<in> callers callee"
-    using ret.hyps(2) callers_caller_subset callers_refl by blast
-  show ?case
-  proof (intro ballI)
-    fix u ns
-    assume uin: "u \<in> callers (Resume caller callee
-                    (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
-      and nsin: "ns \<in> set (path u)"
-    from uin have "u = Resume caller callee
-                     (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
-                    \<or> u \<in> callers callee"
-      using callers_Resume_subset[OF ret.hyps(2)] by blast
-    then show "fst ns \<in> cfg_nodes g"
-    proof (rule disjE)
-      assume u: "u = Resume caller callee
-                   (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])"
-      have "ns \<in> set (path caller) \<or> fst ns = cont" using nsin u by auto
-      then show ?thesis using ret.IH cin contn by auto
-    next
-      assume "u \<in> callers callee"
-      then show ?thesis using ret.IH nsin by blast
-    qed
-  qed
+  fix callee caller p dst pars args cont
+  assume ch: "\<forall>u \<in> callers callee. \<forall>ns \<in> set (path u). fst ns \<in> cfg_nodes g"
+    and cof: "caller_of callee = Some caller"
+    and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  have contn: "cont \<in> cfg_nodes g" using e call_endpoints_in_nodes by blast
+  have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
+  have "\<forall>ns \<in> set (path caller). fst ns \<in> cfg_nodes g" using ch cin by blast
+  then show "\<forall>ns \<in> set (path (Resume caller callee
+               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))).
+             fst ns \<in> cfg_nodes g"
+    using contn by auto
 qed
 
 text \<open>(10) Node membership: every node observed in a valid trace belongs to

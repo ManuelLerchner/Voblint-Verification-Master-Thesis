@@ -1365,135 +1365,101 @@ lemma valid_ltr_frag_callers:
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
-  show ?thesis using t
-  proof (induction rule: valid_ltr.induct)
-    case (init s)
+  show ?thesis
+  proof (rule caller_chain_closure)
+    fix s assume "s \<in> S"
     have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
       by (rule wf_compile_input_main_exists[OF wf])
     obtain m m' Ep Kp where
       cb: "compile_proc \<Pi> mnm (proc_decl_of [] main) m = (m', Ep, Kp)"
       and ent: "(FunctionEntry mnm, EA_Nop, Statement m) \<in> intra ?g"
       by (rule compile_prog_proc_frag[OF wf mnmdecl])
-    have "frag_ok \<Pi> ps mnm main (Root [(cfg_entry ?g, s)])"
+    show "frag_ok \<Pi> ps mnm main (Root [(cfg_entry ?g, s)])"
       by (rule frag_okI_frag[OF mnmdecl cb ent])
          (simp_all add: inv16_entry_is_main pfn_def)
-
-    then show ?case by (simp add: callers_Root)
   next
-    case (intra t a v s')
-    show ?case
-    proof (rule ballI)
-      fix u assume uc: "u \<in> callers (extend t (v, s'))"
-      show "frag_ok \<Pi> ps mnm main u"
-      proof (cases "u = extend t (v, s')")
-        case False
-        then have "u \<in> callers t" using uc callers_extend_subset by blast
-        then show ?thesis using intra.IH by blast
-      next
-        case True
-        have ft: "frag_ok \<Pi> ps mnm main t" using intra.IH callers_refl by blast
-        from ft[unfolded frag_ok_def] show ?thesis
-        proof (elim disjE exE conjE)
-          fix r d mm mm' Ep Kp
-          assume decl: "\<Pi> r = Some d"
-            and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
-            and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
-            and hd_r: "fst (hd (path t)) = FunctionEntry r"
-            and nodes_t: "\<forall>nd \<in> fst ` set (path t). nd \<in> pfn r mm mm'"
-
-          have snk: "sink_node t \<in> pfn r mm mm'"
-            using sink_in_path_nodes[OF intra.hyps(1)] nodes_t by blast
-          have v_in: "v \<in> pfn r mm mm'"
-            using frag_edge_intra[OF wf decl cb ent snk intra.hyps(2)] .
-          have pne: "path t \<noteq> []" using valid_ltr_path_nonempty[OF intra.hyps(1)] .
-          show ?thesis unfolding True
-            by (rule frag_okI_frag[OF decl cb ent])
-               (use hd_r pne nodes_t v_in in \<open>auto simp: hd_append\<close>)
-        next
-          fix q s assume stub: "path t = [(FunctionEntry q, s)]" and qnone: "\<Pi> q = None"
-          have "sink_node t = FunctionEntry q" using stub by (simp add: sink_node_def)
-          then have edge: "(FunctionEntry q, a, v) \<in> intra ?g" using intra.hyps(2) by simp
-          have "\<exists>d. \<Pi> q = Some d" using compile_prog_entry_declared[OF wf edge] .
-          then show ?thesis using qnone by simp
-        qed
-      qed
+    fix t a v s' assume ht: "t \<in> valid_ltr gs ?g S" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
+      and e: "(sink_node t, a, v) \<in> intra ?g"
+    have ft: "frag_ok \<Pi> ps mnm main t" using ch callers_refl by blast
+    from ft[unfolded frag_ok_def] show "frag_ok \<Pi> ps mnm main (extend t (v, s'))"
+    proof (elim disjE exE conjE)
+      fix r d mm mm' Ep Kp
+      assume decl: "\<Pi> r = Some d"
+        and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
+        and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
+        and hd_r: "fst (hd (path t)) = FunctionEntry r"
+        and nodes_t: "\<forall>nd \<in> fst ` set (path t). nd \<in> pfn r mm mm'"
+      have snk: "sink_node t \<in> pfn r mm mm'"
+        using sink_in_path_nodes[OF ht] nodes_t by blast
+      have v_in: "v \<in> pfn r mm mm'"
+        using frag_edge_intra[OF wf decl cb ent snk e] .
+      have pne: "path t \<noteq> []" using valid_ltr_path_nonempty[OF ht] .
+      show "frag_ok \<Pi> ps mnm main (extend t (v, s'))"
+        by (rule frag_okI_frag[OF decl cb ent])
+           (use hd_r pne nodes_t v_in in \<open>auto simp: hd_append\<close>)
+    next
+      fix q s assume stub: "path t = [(FunctionEntry q, s)]" and qnone: "\<Pi> q = None"
+      have "sink_node t = FunctionEntry q" using stub by (simp add: sink_node_def)
+      then have edge: "(FunctionEntry q, a, v) \<in> intra ?g" using e by simp
+      have "\<exists>d. \<Pi> q = Some d" using compile_prog_entry_declared[OF wf edge] .
+      then show "frag_ok \<Pi> ps mnm main (extend t (v, s'))" using qnone by simp
     qed
   next
-    case (call caller dst pars args p cont)
-    show ?case
-    proof (rule ballI)
-      fix u assume uc: "u \<in> callers (Call caller
-              [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
-      show "frag_ok \<Pi> ps mnm main u"
-      proof (cases "u = Call caller
-                       [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]")
-        case False
-        then have "u \<in> callers caller" using uc by (auto simp: callers_Call)
-        then show ?thesis using call.IH by blast
-      next
-        case True
-        show ?thesis
-        proof (cases "\<Pi> p")
-          case None
-          show ?thesis unfolding True frag_ok_def using None by fastforce
-        next
-          case (Some d)
-          obtain m m' Ep Kp where
-            cb: "compile_proc \<Pi> p d m = (m', Ep, Kp)"
-            and ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g"
-            by (rule compile_prog_proc_frag[OF wf Some])
-
-          show ?thesis unfolding True
-            by (rule frag_okI_frag[OF Some cb ent]) (simp_all add: pfn_def)
-        qed
-      qed
+    fix caller dst pars args p cont
+    assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
+    show "frag_ok \<Pi> ps mnm main
+            (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+    proof (cases "\<Pi> p")
+      case None
+      then show ?thesis unfolding frag_ok_def by fastforce
+    next
+      case (Some d)
+      obtain m m' Ep Kp where
+        cb: "compile_proc \<Pi> p d m = (m', Ep, Kp)"
+        and ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g"
+        by (rule compile_prog_proc_frag[OF wf Some])
+      show ?thesis
+        by (rule frag_okI_frag[OF Some cb ent]) (simp_all add: pfn_def)
     qed
   next
-    case (ret callee caller p dst pars args cont)
-    have cin: "caller \<in> callers callee"
-      using ret.hyps(2) callers_caller_subset callers_refl by blast
-    show ?case
-    proof (rule ballI)
-      fix u assume uc: "u \<in> callers (Resume caller callee
+    fix callee caller p dst pars args cont
+    assume cvcallee: "callee \<in> valid_ltr gs ?g S" and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps mnm main u"
+      and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
+      and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
+    have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
+    have cv: "caller \<in> valid_ltr gs ?g S" using valid_ltr_caller_valid[OF cvcallee cof] .
+    have fc: "frag_ok \<Pi> ps mnm main caller" using ch cin by blast
+    from fc[unfolded frag_ok_def]
+    show "frag_ok \<Pi> ps mnm main (Resume caller callee
+            (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+    proof (elim disjE exE conjE)
+      fix r d mm mm' Ep Kp
+      assume decl: "\<Pi> r = Some d"
+        and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
+        and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
+        and hd_r: "fst (hd (path caller)) = FunctionEntry r"
+        and nodes_c: "\<forall>nd \<in> fst ` set (path caller). nd \<in> pfn r mm mm'"
+      have snk: "sink_node caller \<in> pfn r mm mm'"
+        by (meson cv nodes_c sink_in_path_nodes)
+      have cont_in: "cont \<in> pfn r mm mm'"
+        using frag_edge_calls[OF wf decl cb ent snk e] .
+      have pne: "path caller \<noteq> []" using valid_ltr_path_nonempty[OF cv] .
+      show "frag_ok \<Pi> ps mnm main (Resume caller callee
               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
-      show "frag_ok \<Pi> ps mnm main u" 
-      proof (cases "u = Resume caller callee
-                (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])")
-        case False
-        then have "u \<in> callers callee"
-          using uc callers_Resume_subset[OF ret.hyps(2)] by blast
-        then show ?thesis using ret.IH by blast
-      next
-        case True
-        have cv: "caller \<in> valid_ltr gs ?g S"
-          using valid_ltr_caller_valid[OF ret.hyps(1) ret.hyps(2)] .
-        have fc: "frag_ok \<Pi> ps mnm main caller" using ret.IH cin by blast
-        from fc[unfolded frag_ok_def] show ?thesis
-        proof (elim disjE exE conjE)
-          fix r d mm mm' Ep Kp
-          assume decl: "\<Pi> r = Some d"
-            and cb: "compile_proc \<Pi> r d mm = (mm', Ep, Kp)"
-            and ent: "(FunctionEntry r, EA_Nop, Statement mm) \<in> intra ?g"
-            and hd_r: "fst (hd (path caller)) = FunctionEntry r"
-            and nodes_c: "\<forall>nd \<in> fst ` set (path caller). nd \<in> pfn r mm mm'"
-
-          have snk: "sink_node caller \<in> pfn r mm mm'"
-            by (meson cv nodes_c sink_in_path_nodes)
-          have cont_in: "cont \<in> pfn r mm mm'"
-            using frag_edge_calls[OF wf decl cb ent snk ret.hyps(4)] .
-          have pne: "path caller \<noteq> []" using valid_ltr_path_nonempty[OF cv] .
-          show ?thesis unfolding True
-            by (rule frag_okI_frag[OF decl cb ent])
-               (use hd_r pne nodes_c cont_in in \<open>auto simp: hd_append\<close>)
-        next
-          fix q s assume stub: "path caller = [(FunctionEntry q, s)]" and qnone: "\<Pi> q = None"
-          have "sink_node caller = FunctionEntry q" using stub by (simp add: sink_node_def)
-          then have "(FunctionEntry q, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
-            using ret.hyps(4) by simp
-          with compile_prog_calls_source_stmt show ?thesis by blast
-        qed
-      qed
+        by (rule frag_okI_frag[OF decl cb ent])
+           (use hd_r pne nodes_c cont_in in \<open>auto simp: hd_append\<close>)
+    next
+      fix q s assume stub: "path caller = [(FunctionEntry q, s)]" and qnone: "\<Pi> q = None"
+      have "sink_node caller = FunctionEntry q" using stub by (simp add: sink_node_def)
+      then have "(FunctionEntry q, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
+        using e by simp
+      with compile_prog_calls_source_stmt
+      show "frag_ok \<Pi> ps mnm main (Resume caller callee
+              (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+        by blast
     qed
+  next
+    show "t \<in> valid_ltr gs ?g S" by (rule t)
   qed
 qed
 
