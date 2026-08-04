@@ -2990,6 +2990,25 @@ next
     by (simp add: dg_combine_tree_def fun_of_dg_st_bot)
 qed
 
+lemma sides_dg_combine_tree_commute_for:
+  assumes H: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (comb_st dst dc de g)
+                        = comb_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  shows "fun_of_dg_st_for gs (sides_of_rhs (dg_combine_tree comb_st dst cc ex) \<tau>_st k)
+       = sides_of_rhs (dg_combine_tree comb_abs dst cc ex) (fun_of_dg_st_for gs \<circ> \<tau>_st) k"
+proof (cases k)
+  case (Inr b)
+  have hg: "fst (comb_abs dst (fun_of_exec_dg_st_for gs (locals (\<tau>_st (Inl cc)))) (fun_of_exec_dg_st_for gs (locals (\<tau>_st (Inl ex)))) (fun_of_exec_dg_st_for gs (globs (\<tau>_st (Inr ())))))
+        = fun_of_exec_dg_st_for gs (fst (comb_st dst (locals (\<tau>_st (Inl cc))) (locals (\<tau>_st (Inl ex))) (globs (\<tau>_st (Inr ())))))"
+    using H[of dst "locals (\<tau>_st (Inl cc))" "locals (\<tau>_st (Inl ex))" "globs (\<tau>_st (Inr ()))"]
+    by (metis map_prod_simp fst_conv surj_pair)
+  show ?thesis using Inr
+    by (simp add: sides_dg_combine_tree_Inr fun_of_dg_st_for_def fun_of_resolved_st_q_for_bot hg o_def flip: bot_fun_def)
+next
+  case (Inl a)
+  show ?thesis using Inl
+    by (simp add: dg_combine_tree_def fun_of_dg_st_for_bot)
+qed
+
 lemma sides_wrap_reduce:
   "sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk t)) \<sigma> (Inr gk)
      = sides_of_rhs t (\<lambda>z. \<sigma> (map_sum lk (\<lambda>_. gk) z)) (Inr ())"
@@ -3065,6 +3084,30 @@ next
     case False
     hence nb: "b \<notin> range (\<lambda>_::unit. gk)" by simp
     show ?thesis by (simp add: Inr sides_map_gtree_off[OF nb] fun_of_dg_st_bot)
+  qed
+qed
+
+lemma sides_wrapped_combine_commute_for:
+  assumes H: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (comb_st dst dc de g)
+                        = comb_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  shows "fun_of_dg_st_for gs (sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex))) \<sigma>_st k)
+       = sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex))) (fun_of_dg_st_for gs \<circ> \<sigma>_st) k"
+proof (cases k)
+  case (Inl a)
+  show ?thesis by (simp add: Inl sides_of_rhs_Inl_bot fun_of_dg_st_for_bot)
+next
+  case (Inr b)
+  show ?thesis
+  proof (cases "b = gk")
+    case True
+    have "fun_of_dg_st_for gs (sides_of_rhs (dg_combine_tree comb_st dst cc ex) (\<lambda>z. \<sigma>_st (map_sum lk (\<lambda>_. gk) z)) (Inr ()))
+        = sides_of_rhs (dg_combine_tree comb_abs dst cc ex) (fun_of_dg_st_for gs \<circ> (\<lambda>z. \<sigma>_st (map_sum lk (\<lambda>_. gk) z))) (Inr ())"
+      using H by (rule sides_dg_combine_tree_commute_for)
+    thus ?thesis by (simp add: Inr True sides_wrap_reduce o_def)
+  next
+    case False
+    hence nb: "b \<notin> range (\<lambda>_::unit. gk)" by simp
+    show ?thesis by (simp add: Inr sides_map_gtree_off[OF nb] fun_of_dg_st_for_bot)
   qed
 qed
 
@@ -4091,6 +4134,70 @@ lemma dg_extra_of_commute:
   by (auto simp: list_all2_map1 list_all2_map2 Henter
       split: call_action.splits
       intro!: list_all2_refl dg_tree_st_commute_wrapped_edge)
+
+lemma dg_tree_st_commute_dg_cmb_of_for:
+  assumes Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
+                            = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  shows "dg_tree_st_commute_for gs \<sigma>_st (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)
+                                  (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)"
+  unfolding dg_tree_st_commute_for_def dg_cmb_of_def dg_spec_combine_tree_def
+  apply simp
+  apply (intro conjI allI
+        traverse_wrapped_combine_commute_for[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb]
+        sides_wrapped_combine_commute_for[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb]
+        dep_aux_wrapped_combine_eq)
+  done
+
+lemma dg_extra_of_commute_for:
+  assumes Henter:
+    "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
+      = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  shows "list_all2 (dg_tree_st_commute_for gs \<sigma>_st)
+      (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
+  unfolding dg_extra_of_def
+  by (auto simp: list_all2_map1 list_all2_map2 Henter
+      split: call_action.splits
+      intro!: list_all2_refl dg_tree_st_commute_wrapped_edge_for)
+
+theorem part_post_solution_dg_st_to_abs_for:
+  assumes Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
+                          = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+      and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
+                            = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+      and Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
+                            = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+      and pp: "part_post_solution (dg_gen_of S_st g bot0 s0d s0g) x \<sigma>_st vars"
+  shows "part_post_solution (dg_gen_of S_abs g (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+           x (fun_of_dg_st_for gs \<circ> \<sigma>_st) vars"
+proof -
+  have hr: "\<And>u c' d ca. (\<lambda>_ _ _ _. ()) u c' d ca = (\<lambda>_ _ _ _. ()) u c' (fun_of_exec_dg_st_for gs d) ca"
+    by simp
+  have hc: "\<And>c' ca cc ex. dg_tree_st_commute_for gs \<sigma>_st
+      (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
+  proof -
+    fix c' ca cc ex
+    obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
+    thus "dg_tree_st_commute_for gs \<sigma>_st
+        (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
+      by (simp add: dg_tree_st_commute_dg_cmb_of_for[OF Hcomb])
+  qed
+  have he: "\<And>c' w. list_all2 (dg_tree_st_commute_for gs \<sigma>_st)
+      (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
+    by (rule dg_extra_of_commute_for[OF Henter])
+  from pp have pp':
+    "part_post_solution
+      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+        (dg_cmb_of S_st) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
+    unfolding dg_gen_of_def .
+  show ?thesis
+    unfolding dg_gen_of_def
+    by (rule part_post_solution_seed_dg_st_to_abs_for
+          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+             and route_st = "\<lambda>_ _ _ _. ()" and route_abs = "\<lambda>_ _ _ _. ()"
+             and cmb_st = "dg_cmb_of S_st" and cmb_abs = "dg_cmb_of S_abs"
+             and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",
+           OF Hstep hr hc he pp'])
+qed
 
 theorem part_post_solution_dg_st_to_abs:
   assumes Hstep: "\<And>a d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step S_st a d g)

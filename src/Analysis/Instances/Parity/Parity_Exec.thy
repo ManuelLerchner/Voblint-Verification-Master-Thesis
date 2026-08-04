@@ -150,6 +150,58 @@ fun parity_tf_st_for ::
        update_resolved_st_q s (location_of source_global ret_var)
          (aval_parity a (fun_of_resolved_st_q_for source_global s))"
 
+lemma parity_tf_st_for_ret_none [simp]:
+  "parity_tf_st_for gs (EA_Ret None p) = parity_tf_st_for gs EA_Nop"
+  by (rule ext) simp
+
+lemma parity_tf_st_for_ret_some [simp]:
+  "parity_tf_st_for gs (EA_Ret (Some a) p) = parity_tf_st_for gs (EA_Assign ret_var a)"
+  by (rule ext) simp
+
+theorem parity_tf_st_for_commute:
+  "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
+   apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
+proof (rule apply_tf_wrap_eqI[
+    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
+  show "\<And>p. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Ret None p) s) =
+    fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s)" by simp
+  show "\<And>a p. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Ret (Some a) p) s) =
+    fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Assign ret_var a) s)" by simp
+  show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s) =
+      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+  show "\<And>x e. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Assign x e) s) =
+    apply_tf (parity_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def assign_parity_def)
+  show "\<And>x. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Random x) s) =
+    apply_tf (parity_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def random_parity_def)
+  show "\<And>b. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Assume b) s) =
+    apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def assume_parity_def)
+  show "\<And>b. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_AssumeNot b) s) =
+    apply_tf (parity_tf_for gs) (EA_AssumeNot b)
+      (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def assume_not_parity_def)
+qed
+
+lemma enter_frame_parity_st_for_commute:
+  "fun_of_resolved_st_q_for gs (enter_frame_D_resolved_q PTop s) =
+   enter_frame_parity_for gs (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_frame_parity_for_def)
+
+lemma parity_enter_st_for_commute:
+  "fun_of_resolved_st_q_for gs (parity_enter_st_for gs xs es s) =
+   tf_enter (parity_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
+  by (simp add: parity_enter_st_for_def parity_tf_for_def enter_parity_for_def enter_D_def
+                enter_frame_parity_for_def enter_frame_parity_st_for_commute)
+
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
   \<open>sign_tf_st_for_nop_agree\<close>/\<open>sign_tf_st_for_assign_agree\<close> for the sign
   domain: given only scoped input agreement (and, for a write, that the

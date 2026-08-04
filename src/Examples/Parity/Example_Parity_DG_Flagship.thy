@@ -58,6 +58,12 @@ definition parity_program :: imp_prog where
 definition parity_prog :: "VIMP_Proc.com" where
   "parity_prog = prog_main parity_program"
 
+text \<open>The storage classifier: \<open>G\<close> is declared, so \<open>parity_gs\<close> is the M4 entry point
+  for a family that actually exercises global/local separation through the program's own
+  declaration, not the \<open>is_global\<close> naming convention.\<close>
+abbreviation parity_gs :: "vname \<Rightarrow> bool" where
+  "parity_gs \<equiv> declared_global parity_program"
+
 definition parity_pi :: proc_table where
   "parity_pi = prog_table parity_program"
 
@@ -91,7 +97,7 @@ text \<open>
 subsection \<open>4. Equation generation\<close>
 
 definition parity_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (parity exec_dg_st, parity exec_dg_st) dg_state) strategy_tree" where
-  "parity_eqs = dg_gen_of (unit_dg_spec_st parity_tf_st parity_enter_st) parity_cfg
+  "parity_eqs = dg_gen_of (unit_dg_spec_st_for parity_gs (parity_tf_st_for parity_gs) (parity_enter_st_for parity_gs)) parity_cfg
      bot cinit_parity_st (restrict_global_resolved_q cinit_parity_st)"
 
 subsection \<open>5. Executable solve (always-join; parity is finite-height)\<close>
@@ -138,13 +144,14 @@ lemma parity_cover_combine:
   by (simp add: parity_calls)
 
 lemma parity_sound0:
-  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_parity_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_parity_st)\<rbrakk>"
+  "cinit_stores parity_gs \<subseteq> \<lbrakk>fun_of_exec_dg_st_for parity_gs cinit_parity_st \<squnion> fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st)\<rbrakk>"
 proof -
-  have "fun_of_exec_dg_st cinit_parity_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_parity_st) = fun_of_exec_dg_st cinit_parity_st"
-    by (simp add: fun_of_st_cinit_parity_st restrict_global_def
+  have "fun_of_exec_dg_st_for parity_gs cinit_parity_st \<squnion> fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st)
+          = fun_of_exec_dg_st_for parity_gs cinit_parity_st"
+    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for restrict_global_def
                   sup_fun_def fun_eq_iff)
   thus ?thesis
-    by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_parity_st)
+    by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for)
 qed
 
 subsection \<open>7. Inspecting the certified result\<close>
@@ -167,22 +174,37 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>
 
-lemma parity_wf: "wf_compile_input is_global parity_pi [] ''main'' parity_prog"
+lemma parity_wf: "wf_compile_input parity_gs parity_pi [] ''main'' parity_prog"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     parity_pi_def parity_prog_def parity_program_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def is_global_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       prog_main_name_def split: if_splits)
 
+text \<open>\<open>parity_program\<close> declares \<open>G\<close>, so \<^const>\<open>parity_gs\<close> has no pre-registered
+  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal parity spec (\<open>DG_Domain_Registration\<close>
+  only registers \<^const>\<open>is_global\<close>): establish it once here from the classifier-parametric
+  bridge lemma, and cite the classifier-parametric end-to-end theorem
+  \<open>dg_exec_run_source_sound_for\<close> directly instead of the \<open>is_global\<close>-fixed \<open>parity_reg\<close>
+  registration.\<close>
+lemma parity_sds: "sound_dg_spec_ltr_for (unit_dg_spec_for parity_gs (parity_tf_for parity_gs)) gamma_unit parity_gs"
+  unfolding sound_dg_spec_ltr_for_def
+  by (rule sound_dg_spec_unit_for[OF parity_is_sound_transfer_for])
+
 theorem parity_source_run_sound:
-  assumes run: "star (pstep is_global parity_pi) (parity_prog, s, []) (residual, t, frs)"
-      and init: "s \<in> cinit_stores is_global"
+  assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
+      and init: "s \<in> cinit_stores parity_gs"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> parity_reg.gamma (snd parity_sol) v"
+                 \<and> t \<in> sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st_for parity_gs \<circ> snd parity_sol) v"
 proof -
   show ?thesis
     unfolding parity_sol_def parity_eqs_def parity_cfg_def
-    by (rule parity_reg.run_source_sound
-          [OF parity_terminates_c[unfolded parity_eqs_def parity_cfg_def]
+    by (rule dg_exec_run_source_sound_for
+          [OF parity_sds
+              unit_dg_Hstep_for[OF parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+                parity_tf_st_for_ret_none parity_tf_st_for_ret_some]
+              unit_dg_Henter_for[OF parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]] unit_dg_Hcomb_for
+              parity_terminates_c[unfolded parity_eqs_def parity_cfg_def,
+                THEN TD_side_always_join_Interp.part_post_solution_of_solve_c]
               parity_wf
               parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
               parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]

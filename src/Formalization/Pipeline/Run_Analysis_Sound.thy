@@ -81,6 +81,56 @@ qed
 
 end
 
+text \<open>Classifier-parametric mirror of \<open>dg_run_source_sound_abs\<close>, generic in the storage
+  classifier this locale already fixes as \<open>gs\<close>: \<open>source_reaches_ltr_collect\<close> is already
+  classifier-parametric, and \<open>dg_post_solution_collect_sound_ltr_for\<close> is this locale's own
+  endpoint, so the proof replays unchanged.\<close>
+
+context sound_dg_spec_ltr_for
+begin
+
+lemma dg_cmb_of_eq_for: "dg_cmb_of S = dg_cmb"
+  by (rule ext)+ (simp add: dg_cmb_of_def dg_cmb_def)
+
+lemma dg_extra_of_eq_for: "dg_extra_of S g = dg_extra g"
+  by (rule ext)+ (simp add: dg_extra_of_def dg_extra_def dg_enter_def)
+
+lemma dg_gen_of_eq_for:
+  "dg_gen_of S g bot0 s0d s0g = dg_gen g bot0 s0d s0g"
+  by (simp add: dg_gen_of_def dg_gen_def dg_cmb_of_eq_for dg_extra_of_eq_for)
+
+theorem dg_run_source_sound_abs_for:
+  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
+  assumes wf: "wf_compile_input gs Pi ps mnm main"
+    and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
+    and cover_edge:
+      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
+    and s0mem: "s0 \<in> S0"
+    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+                 \<and> t \<in> dg_gamma sigma v"
+proof -
+  from source_reaches_ltr_collect[OF wf s0mem run]
+  obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)"
+    and coll: "t \<in> ltr_collect gs (compile_prog Pi ps mnm main) S0 v" by blast
+  have "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
+    by (rule dg_post_solution_collect_sound_ltr_for
+          [OF pp cover_entry cover_edge cover_enter cover_combine finI finC sound0])
+  then show ?thesis using m coll by blast
+qed
+
+end
+
 subsection \<open>Executable bundle: from a computed post-solution to source soundness\<close>
 
 text \<open>
@@ -135,6 +185,62 @@ proof -
     using pp_abs unfolding sds.dg_gen_of_eq .
   show ?thesis
     by (rule sds.dg_run_source_sound_abs
+          [OF wf pp_gen cover_entry cover_edge cover_enter cover_combine
+          finI finC sound0 s0mem run])
+qed
+
+text \<open>Classifier-parametric mirror of \<open>dg_exec_run_source_sound\<close>, generic in \<open>gs\<close>: the
+  executable-to-abstract transport uses \<open>part_post_solution_dg_st_to_abs_for\<close>, and the
+  semantic core uses \<open>sound_dg_spec_ltr_for\<close>'s own \<open>dg_run_source_sound_abs_for\<close> instead of
+  the \<open>is_global\<close>-fixed \<open>sound_dg_spec_ltr\<close> specialisation.\<close>
+
+theorem dg_exec_run_source_sound_for:
+  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
+    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st, 'g1::bounded_semilattice_sup_bot exec_dg_st) dg_spec"
+    and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
+    and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
+    and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
+    and gs :: "vname \<Rightarrow> bool"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+    and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
+                        = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
+                        = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
+                        = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and pp_st: "part_post_solution
+                  (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
+    and cover_edge:
+      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+    and s0mem: "s0 \<in> S0"
+    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+                 \<and> t \<in> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st_for gs \<circ> sigma_st) v"
+proof -
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  have pp_abs: "part_post_solution
+      (dg_gen_of S_abs (compile_prog Pi ps mnm main)
+         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
+    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb pp_st])
+  have pp_gen: "part_post_solution
+      (sds.dg_gen (compile_prog Pi ps mnm main)
+         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
+    using pp_abs unfolding sds.dg_gen_of_eq_for .
+  show ?thesis
+    by (rule sds.dg_run_source_sound_abs_for
           [OF wf pp_gen cover_entry cover_edge cover_enter cover_combine
           finI finC sound0 s0mem run])
 qed
