@@ -1,21 +1,47 @@
 # M4 placement-spine migration checklist
 
-Live, resumable tracker for migrating every D/G example off the classic
-`dg_spec`/`sound_dg_spec`/`unit_dg_spec`/`dg_gen_of` spine onto the M4
-placement spine (`hook_gen`/`sound_dg_hooks`/`sound_dg_hooks_ltr`/
-`placed_dg_gen_of_strict`, classifier-parametric `_for` storage, independent
-`keep_local`/`publish_side` placement, `dg_refines_on`/`complete_abs_on`/
-`le_lift_if_dg_refines_on_and_le` transport). Background and the two-spine
-situation: `docs/reviews/M4_ARCHITECTURE_PR_REVIEW.md`. Task driving this file:
-the "migrate every classic-route D/G example onto the placement spine, then
-retire the classic spine" instruction set.
+**Cancelled by architectural review.** This migration effort is not paused —
+it is cancelled. After the Sign and Parity flagship migrations (`57d2b377`,
+`31574413`) showed large size growth (158->997, 269->1336 lines) for a small
+proven-generic benefit (issue #81, ~2-3% recovered), a from-scratch boundary
+audit, `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md`, checked whether the classic
+route still contains genuine duplicate proof stacks that would justify
+continuing. **It does not.** Every classic constant this migration was meant
+to retire is already architecture-neutral, a thin one-line definitional
+specialization of the generic layer, or a bare compatibility name. No
+classic example family depends on an independent-implementation duplicate.
+The two completed migrations were correct and remain committed, but were, on
+this evidence, unnecessary churn: both examples were already sound through
+the same generic, classifier-parametric `sound_dg_spec` machinery every
+other classic example uses.
 
-**Hard ordering rule**: nothing gets deleted (task 5) until every in-scope
-example below is migrated and green. Do not jump ahead.
+**Decision: do not migrate any further example.** `sound_dg_hooks`/
+`sound_dg_hooks_ltr` is a low-level framework-construction API, not the
+everyday user-facing one — it requires a per-CFG-node hook-tree instance,
+`dg_refines_on`, `se_constraint_holds`, and transport proof, which is exactly
+why migrated examples ballooned 5-6x. `sound_dg_spec` is already the concise
+user-facing adapter: one `sublocale`/`interpretation` line per instance,
+three locale obligations proved once and discharged generically over the
+whole CFG. Interval, Mixed, CallString, and Ctx examples stay on the classic
+route. `sound_dg_spec`, `dg_spec`, and `dg_gen_of` are not being deleted.
 
-**Resume protocol**: re-read this file plus `git log --oneline -20` before
-continuing. Each row's Status is the source of truth, not any earlier prose in
-this file.
+The one remaining real finding is a framework-internal duplicate-proof-stack
+risk between `sound_dg_spec` and `sound_dg_hooks` themselves (two
+independently-proved locales over the same shape of per-step obligation) —
+see `docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md` Section 2/4 for the scoped
+follow-up (making `sound_dg_spec` a `sublocale`/`interpretation` of
+`sound_dg_hooks`, zero example changes). That is tracked separately from this
+checklist; this file's own task list below is historical record of the
+cancelled migration attempt, kept for reference, not an active plan.
+
+Background and the two-spine situation: `docs/reviews/M4_ARCHITECTURE_PR_REVIEW.md`.
+This file originally tracked the "migrate every classic-route D/G example
+onto the placement spine, then retire the classic spine" instruction set,
+which is the plan being cancelled here.
+
+**Hard ordering rule (historical, no longer live)**: nothing gets deleted
+(task 5) until every in-scope example below is migrated and green. Moot —
+task 3 will not resume, so task 5 will not be attempted under this plan.
 
 ## Progress snapshot
 
@@ -259,9 +285,28 @@ proof, does not make it a classic-DG example) ·
 
 ## Unexpected findings
 
-- **The CallString/Ctx family is architecturally blocked from migration, not
-  merely hard — confirmed by direct type inspection, recorded here before any
-  further attempt.** Investigated `Example_Sign_DG_CallString_K1.thy` as the
+- **Correction (superseded by `M4_SPINE_BOUNDARY_AUDIT.md`): the CallString/Ctx
+  family is not "architecturally blocked" in any sense that matters, because it
+  was never going to be migrated in the first place.** The paragraph below
+  (kept for historical accuracy) correctly found that `sound_dg_hooks`/
+  `sound_dg_hooks_ltr` hardcode the `pp \<times> unit`/`unit` key shape and have no
+  call-string/context-sensitive generalization. What it got wrong was the
+  framing that this is a *gap* blocking otherwise-desirable migration. The
+  boundary audit found `dg_ctx_activation`/`routed_context`
+  (`DG_Ctx_Activation.thy`, `Routed_Context.thy`) already provide exactly that
+  generalization — for `sound_dg_spec`, not `sound_dg_hooks` — already proven,
+  already used by every classic CallString/Ctx example in the repository
+  today. Since the migration itself is cancelled (see top of file), there is
+  nothing to unblock: these examples were never going to move, and they are
+  not missing any generalization they actually need. If `sound_dg_spec` is
+  ever unified with `sound_dg_hooks` (the one real follow-up the audit
+  recommends), `dg_ctx_activation`/`routed_context`'s existing key-polymorphic
+  machinery would plausibly transfer to the hooks route with much less new
+  proof engineering than building an equivalent from scratch — but that is
+  downstream of the unification, not something anyone needs to solve now.
+
+  Original (superseded) finding, kept verbatim below for record: investigated
+  `Example_Sign_DG_CallString_K1.thy` as the
   next migration target per the task order. It builds its equation system with
   `side_cfg_T_eff_keyed_seed_dg` directly over unknowns typed
   `(pp \<times> cfg_node list, gk_1, ...) eqsT` — call-string-keyed locals (`pp \<times>
@@ -274,25 +319,18 @@ proof, does not make it a classic-DG example) ·
   dg_state) strategy_tree` — `pp \<times> unit` and `unit` are hardcoded in the
   locale signature, not type variables. `hook_gen`
   (`DG_Soundness.thy:856-865`) and `hook_post_solution_collect_sound_ltr`
-  inherit that same fixed shape. There is no context-sensitive/call-string
-  generalization of this locale anywhere in the repo today — the classic route
-  supports call-string keying only because `side_cfg_T_eff_keyed_seed_dg` and
-  `sound_dg_spec` were never restricted to `pp \<times> unit` in the first place.
-  Making the hook route support call-string (or any non-trivial) keying would
-  mean generalizing `sound_dg_hooks`/`sound_dg_hooks_ltr` over the local- and
-  global-key types and re-deriving `hook_post_solution_collect_sound_ltr` for
-  the general case — a new piece of framework-level soundness infrastructure,
-  not a per-example proof port. This is explicitly out of scope per the task's
-  own constraints ("Do NOT introduce new framework abstractions unless a
-  migration is literally blocked without one" — this is exactly that case).
-  **Consequence**: `Example_Sign_DG_CallString_K1.thy`/`_K2.thy`,
+  inherit that same fixed shape. (The claim in the original text that "there is
+  no context-sensitive/call-string generalization of this locale anywhere in
+  the repo today" was checked against `sound_dg_hooks` only and is the part the
+  boundary audit corrected — the generalization exists for `sound_dg_spec`.)
+  **Consequence, now moot**: `Example_Sign_DG_CallString_K1.thy`/`_K2.thy`,
   `Example_Interval_DG_CallString*.thy` (`.thy`, `_K1`, `_K2`),
   `Call_String_Solver_Refinement.thy`, and all four `Interval/Ctx/*.thy`
   examples (Ctx_Sound, Ctx_Flagship, Ctx_Collect are context-/call-string-keyed
   by the same mechanism; Ctx_Multi_Call_Regression and Source_Ctx consume
-  Ctx_Collect's classic result) are blocked on this gap. They cannot be
-  migrated as ordinary proof-porting work the way `Exec_Sign_DG_Run.thy` was.
-  Recommendation: skip this family for now, proceed to Parity (task order item
+  Ctx_Collect's classic result) stay on the classic route permanently, not as a
+  blocked migration but as the correct architectural choice. Historical
+  recommendation at the time (skip this family for now, proceed to Parity, task order item
   2) and plain Interval (item 3) — both context-insensitive, same shape as the
   completed Sign migration — and revisit CallString/Ctx only once someone
   explicitly scopes and authorizes the locale generalization as its own task.
@@ -538,3 +576,93 @@ non-trivial control flow does). Do not attempt any `BLOCKED`-status row
 Same process throughout once resumed: I/Q only, incremental diagnostics
 checks, full batch build polled to a real exit code, commit per completed
 file, update this checklist, stop cleanly and report if runway runs out.
+
+## Issue #81 — generic solved-node post-solution assembly (done, validated on both migrated instances)
+
+**Migration paused for this task, per explicit instruction, before touching
+Interval flagship's assume-edge question above.** Both `Exec_Sign_DG_Run.thy`
+and `Example_Parity_DG_Flagship.thy` hand-rolled an equivalent ~100-150-line
+`consider`/`case` split to assemble their final `part_post_solution` fact from
+per-node `dep\<^sub>L`/`se_constraint_holds` facts. Issue #81 asked for a generic
+theorem covering that assembly step, validated by shrinking both files, not
+just one.
+
+**What was built**, inside the `sound_dg_hooks` locale in
+`src/Core/Solver/Context/DG/DG_Soundness.thy` (new subsection "Generic
+post-solution assembly", right before the locale's closing `end`) — fully
+generic over the locale's `edge_tree`/`combine_tree`/`enter_tree`/CFG, so
+every existing and future `interpretation ... sound_dg_hooks` (Sign, Parity,
+and any future instance) picks these up automatically with no restatement:
+
+- `hook_gen_dep_and_se_entry`, `hook_gen_dep_and_se_single`,
+  `hook_gen_dep_and_se_pair`: each turns an already-known `dep\<^sub>L` equation
+  (empty at entry, a singleton at an ordinary edge, a pair at a join) plus
+  membership fact(s) plus an `se_constraint_holds` fact into the single
+  `dep\<^sub>L ... \<subseteq> vars \<and> se_constraint_holds ...` conjunct
+  `part_post_solution_iff_se_constraint_holds`'s ball needs at that node.
+  Proved by `auto`/`blast` off the supplied facts — no CFG- or
+  domain-specific content.
+- `part_post_solution_of_ball`: turns exit membership plus the whole
+  ball-quantified conjunction into `part_post_solution` itself
+  (`unfolding part_post_solution_iff_se_constraint_holds using ... by blast`).
+
+**Per-example use**: each file's `X_dg_td_abs_post_solution` lemma now opens
+with `proof (rule X_sound_dg_hooks.part_post_solution_of_ball)`, proves one
+`have node_<name>: "... \<subseteq> nodes \<and> se_constraint_holds ..."` fact per CFG
+node (each a one-line `by (rule X_sound_dg_hooks.hook_gen_dep_and_se_*, ...)`
+citing that node's own pre-existing `_single_edge_dep`/`_two_edge_dep`/
+`_entry_dep` fact and `_se_*` fact — these two families are unchanged,
+CFG-specific content, not part of this issue's scope), then closes with a
+single combining step:
+`using node_a node_b ... unfolding X_nodes_def by auto`. This replaces the
+former `consider (a) ... | (b) ... proof cases case a ... qed` chain entirely
+— no more per-node named cases, no more nested `qed`/`next` cascade; per-node
+work is still domain-specific `have`s (unavoidable — CFG shape and transfer
+soundness genuinely differ per node) but the assembly into
+`part_post_solution` itself is one generic theorem application plus one
+`auto` call, not N repeated hand-derivations of the same conjunction shape.
+
+**Validated deduplication, not just one file's line count**: both files were
+rewired and both got shorter — `Exec_Sign_DG_Run.thy` 1028 -> 997 lines (5
+nodes), `Example_Parity_DG_Flagship.thy` 1370 -> 1336 lines (9 nodes,
+including the join node via `hook_gen_dep_and_se_pair`). The reduction is
+modest in raw lines (per-node CFG facts dominate the lemma's size and are
+untouched) but the assembly step itself shrank from ~100-155 lines of
+case-split scaffolding to ~10-15 lines of flat `have`s plus one `by auto`, and
+the same three node-shape lemmas now serve both files with zero restatement —
+the actual point of the issue.
+
+**Investigated and deferred, not attempted (recorded per coordinator
+instruction to investigate before committing to it)**: a deeper design was
+raised mid-task — redefine each example's solved-node set as (or provably
+equal to) `cfg_nodes g` (`src/CFG/CFG_Def.thy`) and discharge every node's
+`dep \<subseteq> nodes` obligation generically via the already-existing
+`intra_endpoints_in_nodes`/`call_endpoints_in_nodes`/`cfg_entry_in_nodes`
+lemmas, removing even the per-node `have`s. Checked directly: those three
+CFG-well-formedness lemmas exist and are exactly the right shape, and
+`cfg_nodes g` would coincide with both files' hand-enumerated node sets for
+these two small, fully-reachable CFGs. But turning that into a working
+dependency-closure argument needs a **new** generic bound on `dep_aux` of the
+whole `side_cfg_T_eff_keyed_seed_trees` fold for an *arbitrary-length*
+predecessor/combine/enter list (the existing `_single_edge`/`_two_edges`/
+`_entry`/`_single_enter`/`_single_combine` family in `DG_Framework.thy` is
+deliberately shape-specific per predecessor count, and the closest existing
+list-induction lemma, `dep_aux_side_rhs_fold_dg_commute`
+`src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy`, proves a *commutation*
+between two valuations, not a *subset* bound against `cfg_nodes`). That is
+new framework-level proof engineering, not a rewire of existing pieces, and
+risked not landing cleanly within this task's remaining scope. Deferred as a
+follow-up, not attempted; the two rewired files do not depend on it. If
+revisited: the target lemma is roughly `dep_aux sigma (side_cfg_T_eff_keyed_seed_trees
+pred_sel gkey edge_tree combine_tree enter_tree g bot0 s0d s0g (v, ctx)) \<subseteq>
+(Inl ` (fst ` set (pred_sel g v) \<union> ...)) \<union> {Inr (gkey ctx)}`, proved by
+induction over `hook_trees g v`'s list (mirroring
+`dep_aux_side_rhs_fold_dg_commute`'s induction shape) given per-leaf `dep_aux`
+bounds on `edge_tree`/`combine_tree`/`enter_tree` (already available
+generically for the placement spine's own tree shape via
+`dep_aux_placed_abs_dg_edge_tree`, `Exec_DG_Bridge.thy`).
+
+Batch build: `make build SESSION=Voblint_Examples`, see build-status line
+below for this task's result. Zero `sorry`/`oops` in both touched example
+files and in the `DG_Soundness.thy` addition, confirmed via
+`get_sorry_positions` on each file.

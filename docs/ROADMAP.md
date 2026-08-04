@@ -79,15 +79,33 @@ more precise shared-state communication. Keep routing generic over the `D` and
 
 Hook-parametric D/G equation generation and its soundness proof are generic
 (`src/Core/Solver/Context/DG/DG_Framework.thy`,
-`src/Core/Solver/Context/DG/DG_Soundness.thy`), and interval transfer and D/G
-readback are classifier-parametric
+`src/Core/Solver/Context/DG/DG_Soundness.thy`, locale `sound_dg_hooks`), and
+interval transfer and D/G readback are classifier-parametric
 (`src/Analysis/Instances/Interval/Interval_Transfer.thy`,
 `src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy`). End-to-end soundness
-through this generic spine is instantiated and batch-verified for one worked
-example, `src/Examples/Interval/Example_Interval_Placement.thy`. Sign, Parity,
-Mixed, the CallString and Ctx examples, and the flagship example remain on the
-classic `is_global`-fixed specialization; migrating them to the generic spine
-is separate follow-up work, not implied by the placement example's existence.
+through this generic spine is instantiated and batch-verified for two worked
+examples, `src/Examples/Interval/Example_Interval_Placement.thy` and
+`src/Examples/Sign/Example_Sign_Placement.thy`, plus two migrated flagships
+(`src/Examples/Sign/Exec_Sign_DG_Run.thy`,
+`src/Examples/Parity/Example_Parity_DG_Flagship.thy`).
+
+`sound_dg_hooks` is deliberately not the general-purpose user-facing API.
+`docs/reviews/M4_SPINE_BOUNDARY_AUDIT.md` established that every classic
+constant (`sound_dg_spec`, `unit_dg_spec`, `dg_spec`, `dg_gen_of`, ...) is
+already architecture-neutral or a thin specialization of the generic layer,
+not a duplicate implementation, and that `sound_dg_spec` is itself the
+concise adapter: one locale interpretation per instance, no per-CFG-node
+proof obligations. `sound_dg_hooks` requires exactly that per-node work
+(hook-tree instance, `dg_refines_on`, `se_constraint_holds`, transport per
+edge/enter/combine), which is why the two migrated flagships grew 5-6x for no
+closed soundness or drift risk. Migrating Interval, Mixed, CallString, or Ctx
+examples off the classic route is **not planned** — they stay on
+`sound_dg_spec`/`dg_ctx_activation`/`routed_context` permanently. The one
+remaining item is a framework-internal one: express `sound_dg_spec` as a
+`sublocale`/`interpretation` of `sound_dg_hooks` so the two locales stop being
+independently-proved duplicates of the same per-step obligation shape,
+without touching any example's public API. Scoping notes are in the audit
+document, Section 4.
 
 ### Domain composition
 
