@@ -218,6 +218,24 @@ qed
 
 end
 
+text \<open>\<open>sound_dg_hooks_ltr\<close> re-packages \<open>sound_dg_hooks\<close> with no further
+  obligations, so the base-locale reduction (\<open>DG_Soundness.thy\<close>,
+  \<open>sublocale sound_dg_spec \<subseteq> sound_dg_hooks ...\<close>) already discharges this one
+  too: every \<open>sound_dg_spec\<close> interpretation is a \<open>sound_dg_hooks_ltr\<close>
+  interpretation for free, so \<open>sound_dg_spec_ltr\<close>/\<open>sound_dg_spec_ltr_for\<close>
+  (which extend \<open>sound_dg_spec\<close> with no new obligations of their own) inherit
+  \<open>hook_post_solution_collect_sound_ltr\<close> without restating any per-step
+  soundness argument.\<close>
+
+text \<open>A distinct qualifier from the base \<open>hooks\<close> sublocale in
+  \<open>DG_Soundness.thy\<close>: \<open>sound_dg_hooks_ltr\<close> re-exports every \<open>sound_dg_hooks\<close>
+  fact (including \<open>gammaDG_mono\<close>) under its own interpretation, so reusing
+  \<open>hooks\<close> here would collide with itself at every concrete \<open>sound_dg_spec\<close>
+  instance the same way the unqualified sublocale did.\<close>
+
+sublocale sound_dg_spec \<subseteq> hooks_ltr: sound_dg_hooks_ltr gammaDG gs
+  dg_edge_tree_hook dg_combine_tree_hook dg_enter_tree_hook
+  by unfold_locales
 
 end
 

@@ -769,9 +769,68 @@ proof -
     using out dg_gammaI by blast
 qed
 
+subsection \<open>Reduction to the hook-parametric shape\<close>
 
+text \<open>
+  \<open>dg_trees\<close>'s three tree constructors, restated as functions of exactly the
+  shape the hook-parametric generator below fixes (\<open>edge_tree\<close>/\<open>combine_tree\<close>/
+  \<open>enter_tree\<close>, each ignoring the destination/continuation position the same
+  way \<open>dg_trees\<close> already does). \<open>dg_edge_tree_local\<close>/\<open>dg_combine_tree_local\<close>/
+  \<open>dg_enter_tree_local\<close> (and their \<open>_global\<close> siblings) above already compute
+  exactly what that generator's three soundness assumptions need, so this
+  spec-record route is an instance of the hook route rather than a second,
+  independent proof of the same per-step obligation.
+\<close>
+
+definition dg_edge_tree_hook ::
+  "pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+where
+  "dg_edge_tree_hook u a v =
+     map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))"
+
+definition dg_combine_tree_hook ::
+  "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+where
+  "dg_combine_tree_hook cc ca ex k = dg_cmb (\<lambda>_ _ _ _. ()) () ca cc ex"
+
+definition dg_enter_tree_hook ::
+  "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+where
+  "dg_enter_tree_hook cc ca p =
+     (case ca of CallEdge dst fs as \<Rightarrow> dg_enter () fs as cc)"
+
+lemma dg_edge_tree_hook_local:
+  "locals (traverse_rhs (dg_edge_tree_hook u a v) sigma)
+     = snd (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
+  unfolding dg_edge_tree_hook_def by (rule dg_edge_tree_local)
+
+lemma dg_edge_tree_hook_global:
+  "globs (sides_of_rhs (dg_edge_tree_hook u a v) sigma (Inr ()))
+     = fst (dg_spec_step S a (dg_D sigma u) (dg_G sigma))"
+  unfolding dg_edge_tree_hook_def by (rule dg_edge_tree_global)
+
+lemma dg_combine_tree_hook_local:
+  "locals (traverse_rhs (dg_combine_tree_hook cc (CallEdge dst fs as) ex k) sigma)
+     = snd (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex) (dg_G sigma))"
+  unfolding dg_combine_tree_hook_def by (rule dg_combine_tree_local)
+
+lemma dg_combine_tree_hook_global:
+  "globs (sides_of_rhs (dg_combine_tree_hook cc (CallEdge dst fs as) ex k) sigma (Inr ()))
+     = fst (dgs_combine S dst (dg_D sigma cc) (dg_D sigma ex) (dg_G sigma))"
+  unfolding dg_combine_tree_hook_def by (rule dg_combine_tree_global)
+
+lemma dg_enter_tree_hook_local:
+  "locals (traverse_rhs (dg_enter_tree_hook cc (CallEdge dst fs as) p) sigma)
+     = snd (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma))"
+  unfolding dg_enter_tree_hook_def by (simp add: dg_enter_tree_local)
+
+lemma dg_enter_tree_hook_global:
+  "globs (sides_of_rhs (dg_enter_tree_hook cc (CallEdge dst fs as) p) sigma (Inr ()))
+     = fst (dgs_enter S fs as (dg_D sigma cc) (dg_G sigma))"
+  unfolding dg_enter_tree_hook_def by (simp add: dg_enter_tree_global)
 
 end
+
 
 subsection \<open>Hook-parametric D/G soundness\<close>
 
@@ -1368,6 +1427,106 @@ lemma part_post_solution_of_ball:
       se_constraint_holds (hook_gen g bot0 s0d s0g u) sigma u"
   shows "part_post_solution (hook_gen g bot0 s0d s0g) x sigma vars"
   unfolding part_post_solution_iff_se_constraint_holds using exit_mem ball by blast
+
+end
+
+subsection \<open>The spec-record route as a hook instance\<close>
+
+text \<open>
+  \<open>sound_dg_spec\<close>'s per-step obligations (\<open>step_sound\<close>, \<open>combine_sound\<close>,
+  \<open>enter_sound\<close>) are exactly \<open>sound_dg_hooks\<close>'s three hook obligations
+  specialized at the tree instantiation \<open>dg_edge_tree_hook\<close>/
+  \<open>dg_combine_tree_hook\<close>/\<open>dg_enter_tree_hook\<close>: \<open>dg_D\<close>/\<open>dg_G\<close> and
+  \<open>dg_hook_D\<close>/\<open>dg_hook_G\<close> unfold to the same term, so \<open>dg_gamma\<close> and
+  \<open>dg_hook_gamma\<close> agree pointwise, and each hook tree's local/global answer is
+  the corresponding \<open>dg_spec_step\<close>/\<open>dgs_enter\<close>/\<open>dgs_combine\<close> component by
+  \<open>dg_edge_tree_hook_local\<close>/\<open>_global\<close> and its combine/enter siblings. This
+  makes every \<open>sound_dg_spec\<close> interpretation a \<open>sound_dg_hooks\<close> interpretation
+  for free, with no change to any existing \<open>sound_dg_spec\<close> interpretation.
+\<close>
+
+text \<open>The target is interpreted under the \<open>hooks\<close> qualifier: both locales
+  fix an assumption named \<open>gammaDG_mono\<close>, so an unqualified sublocale would
+  make every concrete \<open>sound_dg_spec\<close> interpretation (\<open>sign_dg\<close>, \<open>ivl_dg\<close>,
+  ...) export two facts under the same flattened name and fail to build.\<close>
+
+sublocale sound_dg_spec \<subseteq> hooks: sound_dg_hooks gammaDG gs
+  dg_edge_tree_hook dg_combine_tree_hook dg_enter_tree_hook
+proof unfold_locales
+  fix d d' g g' :: 'G and e e' :: 'D
+  show "\<lbrakk>e \<le> e'; g \<le> g'\<rbrakk> \<Longrightarrow> gammaDG e g \<subseteq> gammaDG e' g'"
+    by (rule gammaDG_mono)
+next
+  fix sigma source action destination
+  have dD: "dg_hook_D sigma source = dg_D sigma source"
+    unfolding dg_hook_D_def dg_D_def by (rule refl)
+  have dG: "dg_hook_G sigma = dg_G sigma"
+    unfolding dg_hook_G_def dg_G_def by (rule refl)
+  show "edge_collect action (dg_hook_gamma gammaDG sigma source) \<subseteq>
+      gammaDG
+        (locals (traverse_rhs (dg_edge_tree_hook source action destination) sigma))
+        (globs (sides_of_rhs (dg_edge_tree_hook source action destination) sigma (Inr ())))"
+    unfolding dg_hook_gamma_def dD dG
+      dg_edge_tree_hook_local dg_edge_tree_hook_global
+    by (rule step_sound_fs)
+next
+  fix sigma caller dst fs args callee s
+  assume sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
+  have dD: "dg_hook_D sigma caller = dg_D sigma caller"
+    unfolding dg_hook_D_def dg_D_def by (rule refl)
+  have dG: "dg_hook_G sigma = dg_G sigma"
+    unfolding dg_hook_G_def dg_G_def by (rule refl)
+  have sin': "s \<in> gammaDG (dg_D sigma caller) (dg_G sigma)"
+    using sin unfolding dg_hook_gamma_def dD dG .
+  show "call_enter gs (CallEdge dst fs args) s \<in>
+      gammaDG
+        (locals (traverse_rhs
+          (dg_enter_tree_hook caller (CallEdge dst fs args) (FunctionEntry callee)) sigma))
+        (globs (sides_of_rhs
+          (dg_enter_tree_hook caller (CallEdge dst fs args) (FunctionEntry callee)) sigma (Inr ())))"
+    unfolding dg_enter_tree_hook_local dg_enter_tree_hook_global
+    by (rule enter_sound_fs[OF sin'])
+next
+  fix sigma caller dst fs args callee continuation s t
+  assume sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
+    and tin: "t \<in> dg_hook_gamma gammaDG sigma (FunctionResult callee)"
+  have dDc: "dg_hook_D sigma caller = dg_D sigma caller"
+    unfolding dg_hook_D_def dg_D_def by (rule refl)
+  have dDe: "dg_hook_D sigma (FunctionResult callee) = dg_D sigma (FunctionResult callee)"
+    unfolding dg_hook_D_def dg_D_def by (rule refl)
+  have dG: "dg_hook_G sigma = dg_G sigma"
+    unfolding dg_hook_G_def dg_G_def by (rule refl)
+  have sin': "s \<in> gammaDG (dg_D sigma caller) (dg_G sigma)"
+    using sin unfolding dg_hook_gamma_def dDc dG .
+  have tin': "t \<in> gammaDG (dg_D sigma (FunctionResult callee)) (dg_G sigma)"
+    using tin unfolding dg_hook_gamma_def dDe dG .
+  show "combine_collect gs dst s t \<in>
+      gammaDG
+        (locals (traverse_rhs
+          (dg_combine_tree_hook caller (CallEdge dst fs args) (FunctionResult callee) continuation)
+          sigma))
+        (globs (sides_of_rhs
+          (dg_combine_tree_hook caller (CallEdge dst fs args) (FunctionResult callee) continuation)
+          sigma (Inr ())))"
+    unfolding dg_combine_tree_hook_local dg_combine_tree_hook_global
+    by (rule combine_sound_fs[OF sin' tin'])
+qed
+
+context sound_dg_spec
+begin
+
+text \<open>The two equation systems -- \<open>dg_gen\<close>, built directly off the
+  spec-record, and \<open>hook_gen\<close>, inherited from the hook-route sublocale
+  interpretation above at the instantiation just proved sound -- denote the
+  same function, not merely a sound approximation of each other. Both unfold
+  to the same \<open>side_rhs_fold_dg\<close> application over the same list of trees once
+  the hook route's \<open>edge_tree\<close>/\<open>combine_tree\<close>/\<open>enter_tree\<close> are read back as
+  \<open>dg_edge_tree_hook\<close>/\<open>dg_combine_tree_hook\<close>/\<open>dg_enter_tree_hook\<close>.\<close>
+lemma dg_gen_eq_hook_gen: "dg_gen g bot0 s0d s0g = hooks.hook_gen g bot0 s0d s0g"
+  unfolding dg_gen_def hooks.hook_gen_def
+    side_cfg_T_eff_keyed_seed_dg_def side_cfg_T_eff_keyed_seed_trees_def
+    dg_extra_def dg_edge_tree_hook_def dg_combine_tree_hook_def dg_enter_tree_hook_def
+  by (rule ext) auto
 
 end
 
