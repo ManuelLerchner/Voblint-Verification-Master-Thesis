@@ -41,6 +41,8 @@ fun sign_tf_st :: "edge_action \<Rightarrow> sign resolved_st_q \<Rightarrow> si
   | "sign_tf_st (EA_Assign x a) s =
        update_resolved_st_q s (location_of is_global x)
          (aval_sign a (fun_of_resolved_st_q_for is_global s))"
+  | "sign_tf_st (EA_Random x) s =
+       update_resolved_st_q s (location_of is_global x) STop"
   | "sign_tf_st (EA_Assume b) s = assume_sign_st b s"
   | "sign_tf_st (EA_AssumeNot b) s = assume_not_sign_st b s"
   | "sign_tf_st (EA_Ret e _) s =
@@ -109,6 +111,10 @@ proof (rule apply_tf_wrap_eqI[
       (sign_tf_st (EA_Assign x e) s) =
     apply_tf sign_tf (EA_Assign x e) (fun_of_resolved_st_q_for is_global s)"
     by (simp add: sign_tf_def assign_sign_def)
+  show "\<And>x. fun_of_resolved_st_q_for is_global
+      (sign_tf_st (EA_Random x) s) =
+    apply_tf sign_tf (EA_Random x) (fun_of_resolved_st_q_for is_global s)"
+    by (simp add: sign_tf_def random_sign_def)
   show "\<And>b. fun_of_resolved_st_q_for is_global
       (sign_tf_st (EA_Assume b) s) =
     apply_tf sign_tf (EA_Assume b) (fun_of_resolved_st_q_for is_global s)"
@@ -193,6 +199,8 @@ fun sign_tf_st_for ::
   | "sign_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
          (aval_sign a (fun_of_resolved_st_q_for source_global s))"
+  | "sign_tf_st_for source_global (EA_Random x) s =
+       update_resolved_st_q s (location_of source_global x) STop"
   | "sign_tf_st_for source_global (EA_Assume b) s =
        assume_sign_st_for source_global b s"
   | "sign_tf_st_for source_global (EA_AssumeNot b) s =

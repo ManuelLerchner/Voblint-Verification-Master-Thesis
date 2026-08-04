@@ -398,6 +398,33 @@ next
   qed
 qed
 
+lemma random_sign_local_edge_invariant:
+  assumes gl: "\<not> is_global x"
+  shows "local_edge_invariant (random_sign x)"
+  unfolding local_edge_invariant_def random_sign_def
+proof (intro allI impI)
+  fix su :: "sign abs_state"
+  fix g :: "sign abs_state"
+  assume lb: "local_bot_on_locals g"
+  show "(restrict_local su \<squnion> g)(x := STop) =
+        restrict_local ((restrict_local su)(x := STop)) \<squnion> g"
+  proof (rule ext)
+    fix y
+    show "((restrict_local su \<squnion> g)(x := STop)) y =
+          (restrict_local ((restrict_local su)(x := STop)) \<squnion> g) y"
+    proof (cases "y = x")
+      case True
+      then show ?thesis
+        using gl lb
+        unfolding restrict_local_def local_bot_on_locals_def sup_fun_def by simp
+    next
+      case False
+      then show ?thesis
+        using lb unfolding restrict_local_def local_bot_on_locals_def sup_fun_def by auto
+    qed
+  qed
+qed
+
 lemma assume_sign_local_edge_invariant:
   assumes ng: "\<not> bexp_mentions_global b"
   shows "local_edge_invariant (assume_sign b)"
@@ -426,6 +453,13 @@ next
   then show ?thesis
     using assign_sign_local_edge_invariant[OF gl ng]
     unfolding \<open>a = EA_Assign x e\<close> apply_tf.simps sign_tf_def by simp
+next
+  case (EA_Random x)
+  from loc \<open>a = EA_Random x\<close> have gl: "\<not> is_global x"
+    by (simp add: local_edge_action.simps)
+  then show ?thesis
+    using random_sign_local_edge_invariant[OF gl]
+    unfolding \<open>a = EA_Random x\<close> apply_tf.simps sign_tf_def by simp
 next
   case (EA_Assume b)
   from loc \<open>a = EA_Assume b\<close> have ng: "\<not> bexp_mentions_global b"

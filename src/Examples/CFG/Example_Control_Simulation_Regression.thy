@@ -52,7 +52,7 @@ proof -
   have src: "pstep is_global \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
     by (cases e) (auto simp: ret_store_def)
   have cfg: "cstep is_global g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
-    using cstep.Intra[OF edge edge_step_EA_Ret_ret_store] .
+    using cstep.Intra[OF edge edge_step_EA_Ret_ret_store_mem] .
   show ?thesis by (rule that[OF k(1) src cfg])
 qed
 
