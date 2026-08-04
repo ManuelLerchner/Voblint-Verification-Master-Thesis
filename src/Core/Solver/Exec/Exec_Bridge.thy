@@ -652,41 +652,6 @@ qed
 
 end
 
-lemma sides_apply_etf_st_unit_transfer:
-  fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot resolved_st_q) effectful_st_transfer"
-  fixes etf :: "(unit, 'a) effectful_domain_transfer"
-  fixes F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
-  fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
-  assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
-  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
-  assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  assumes commute: "\<And>a s. fun_of_resolved_st_q_for is_global (F_st a s) = F a (fun_of_resolved_st_q_for is_global s)"
-  shows "fun_of_resolved_st_q_for is_global (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st k)
-       = sides_of_rhs (apply_etf etf a u) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
-proof -
-  interpret sound_rhs_generator_exec etf F etf_st F_st
-    using edge comb edge_st comb_st commute by unfold_locales
-  show ?thesis by (rule sides_apply_etf_st)
-qed
-
-lemma sides_etf_combine_st_unit_transfer:
-  fixes etf_st :: "(unit, 'a::bounded_semilattice_sup_bot resolved_st_q) effectful_st_transfer"
-  fixes etf :: "(unit, 'a) effectful_domain_transfer"
-  fixes F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
-  fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  assumes comb_st: "\<And>cc ex dst. etf_combine_st etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
-  assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st (F_st a) u"
-  assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree (F a) u"
-  assumes commute: "\<And>a s. fun_of_resolved_st_q_for is_global (F_st a s) = F a (fun_of_resolved_st_q_for is_global s)"
-  shows "fun_of_resolved_st_q_for is_global (sides_of_rhs (etf_combine_st etf_st dst cc ex) \<sigma>_st k)
-       = sides_of_rhs (etf_combine etf dst cc ex) (fun_of_resolved_st_q_for is_global \<circ> \<sigma>_st) k"
-proof -
-  interpret sound_rhs_generator_exec etf F etf_st F_st
-    using edge comb edge_st comb_st commute by unfold_locales
-  show ?thesis by (rule sides_etf_combine_st)
-qed
 
 subsection \<open>Effectful executable fold\<close>
 

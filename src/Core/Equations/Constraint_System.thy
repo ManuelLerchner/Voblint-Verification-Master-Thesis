@@ -924,6 +924,30 @@ proof unfold_locales
     unfolding combine using combine_states_sound by blast
 qed
 
+text \<open>
+  @{locale sound_transfer} fixes @{text gs} at @{const is_global} directly; its
+  five assumptions are @{locale sound_transfer_for}'s five assumptions under
+  that same substitution, so the sublocale below is a pure restatement and
+  makes every @{locale sound_transfer_for} fact available inside a
+  @{locale sound_transfer} context for free.
+\<close>
+sublocale sound_transfer \<subseteq> sound_transfer_for is_global tf
+proof
+  show "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+    by (rule tf_sound_assign)
+  show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+    by (rule tf_sound_assume)
+  show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    by (rule tf_sound_assume_not)
+  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    by (rule tf_sound_enter)
+  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+      combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+    by (rule tf_sound_combine)
+qed
+
 
 
 subsection \<open>Effectful transfer function record\<close>
@@ -1365,7 +1389,8 @@ text \<open>
   the enter bound holds under the weaker premise @{const inl_glob_le_glob_env}, so
   an analysis whose local slots carry globals can still discharge it.  Since
   @{const inl_slot_globals_bot} implies @{const inl_glob_le_glob_env}, this contract
-  is stronger; @{term framed_le_imp_framed} recovers the publish contract.
+  is stronger; the sublocale below recovers the publish contract, making every
+  @{locale sound_effectful_transfer_framed} fact available here for free.
 \<close>
 locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
@@ -1375,8 +1400,7 @@ locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
        inr_slot_locals_bot is_global \<sigma> \<longrightarrow> inl_glob_le_glob_env is_global \<sigma> \<longrightarrow>
        etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
 
-lemma (in sound_effectful_transfer_framed_le) framed_le_imp_framed:
-  "sound_effectful_transfer_framed etf fresh_frame"
+sublocale sound_effectful_transfer_framed_le \<subseteq> sound_effectful_transfer_framed etf fresh_frame
   by (simp add: sound_effectful_transfer_framed_def sound_effectful_transfer_axioms
         sound_effectful_transfer_framed_axioms_def
         etf_enter_framed_glob_le inl_slot_globals_bot_le_glob_env)
