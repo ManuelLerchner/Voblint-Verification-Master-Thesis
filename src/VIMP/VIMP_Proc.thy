@@ -190,6 +190,9 @@ lemma pcompletes_skip: "pcompletes gs \<Pi> SKIP s s"
 lemma pcompletes_assign: "pcompletes gs \<Pi> (Assign x a) s (s(x := aval a s))"
   by (simp add: pcompletes_def)
 
+lemma pcompletes_random: "pcompletes gs \<Pi> (Random x) s (s(x := v))"
+  by (simp add: pcompletes_def)
+
 (* -- Sequencing lifts through the small-step --------------------------- *)
 
 lemma psteps_Seq2:

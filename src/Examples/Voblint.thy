@@ -57,6 +57,7 @@ theory Voblint
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
+    Example_Random_Sign_Showcase
     Example_Proc_GraphViz
     Example_Relational_DG_Demo
     Example_Strategy_Tree_Demo
@@ -269,6 +270,15 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
+    \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
+      \<open>x := random()\<close>, closed end to end: \<^const>\<open>random_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
+      guard on \<open>x\<close> narrows each branch, and the branches join to \<^term>\<open>SNonNeg\<close> rather than
+      \<^term>\<open>STop\<close>. Computed by \<^const>\<open>sign_exec_prog\<close> and the vendored TD solver, not asserted
+      by hand; \<open>random_guard_exit_sound\<close> over-approximates every reachable exit state and
+      \<open>random_guard_exit_y_nonneg\<close> closes the issue's \<open>y \<ge> 0\<close> claim there.
+      \<open>random_guard_run_42\<close> is a non-vacuity witness at the source semantics: fixing the
+      random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close> derives an actual terminating run
+      reaching \<open>y = 42\<close>.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the same \<open>nest\<close>
       program as \<open>Example_Interval_DG_CallString\<close>, computed and certified at a 1-call-string
       context (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>

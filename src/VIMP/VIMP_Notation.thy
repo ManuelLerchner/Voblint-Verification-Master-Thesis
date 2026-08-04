@@ -218,6 +218,7 @@ syntax
 
   "_imp2_skip"   :: imp2_stmt                                  ("skip")
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
+  "_imp2_random" :: "id \<Rightarrow> imp2_stmt"                         ("_ := random'(')"        [900] 61)
   "_imp2_return" :: "imp2_aexp \<Rightarrow> imp2_stmt"                  ("return _"               61)
   "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
@@ -277,6 +278,7 @@ parse_translation \<open>
     val c_While  = "VIMP_Proc.com.While"
     val c_Call   = "VIMP_Proc.com.Call"
     val c_Return = "VIMP_Proc.com.Return"
+    val c_Random = "VIMP_Proc.com.Random"
     val c_proc_decl_of = "VIMP_Proc.proc_decl_of"
 
     val c_None    = "Option.option.None"
@@ -395,6 +397,7 @@ parse_translation \<open>
     and stmt_tr (Const ("_imp2_skip",   _)) = K c_SKIP
       | stmt_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
           K c_Assign $ HOLogic.mk_string x $ aexp_tr a
+      | stmt_tr (Const ("_imp2_random", _) $ Free (x, _)) = K c_Random $ HOLogic.mk_string x
       | stmt_tr (Const ("_imp2_return", _) $ e) = K c_Return $ (K c_Some $ aexp_tr e)
       | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
@@ -450,6 +453,7 @@ parse_translation \<open>
        Procedure names under call syntax are not store variables, so skip them. *)
     and add_vars (Const ("_imp2_var", _) $ Free (x, _)) acc = x :: acc
       | add_vars (Const ("_imp2_assign", _) $ Free (x, _) $ a) acc = add_vars a (x :: acc)
+      | add_vars (Const ("_imp2_random", _) $ Free (x, _)) acc = x :: acc
       | add_vars (Const ("_imp2_call", _) $ _ $ actuals) acc = add_vars actuals acc
       | add_vars (Const ("_imp2_callret", _) $ Free (x, _) $ _ $ actuals) acc = add_vars actuals (x :: acc)
       | add_vars (t $ u) acc = add_vars u (add_vars t acc)
@@ -530,6 +534,7 @@ subsection \<open>Executable examples\<close>
 
 value "imp \<lbrakk> x := 0 \<rbrakk>"
 value "imp \<lbrakk> x := 0; y := 1 \<rbrakk>"
+value "imp \<lbrakk> x := random() \<rbrakk>"
 value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
 value "imp \<lbrakk> return 7 \<rbrakk>"
