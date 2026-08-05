@@ -218,6 +218,23 @@ lemma sg_value_edge_global:
      = restrict_global_for is_global (apply_tf sign_tf a (sg_value d \<squnion> sg_value g))"
   by (simp add: sign_ghost_edge_global_def sign_ghost_edge_step_def product_step_def sg_value_sup)
 
+text \<open>The writer-half counterparts of \<open>sg_value_edge_local\<close>/\<open>sg_value_edge_global\<close>: the
+  ghost component's own local/global split, in terms of \<^const>\<open>ghost_step\<close> directly. Not
+  needed by this file's own \<^locale>\<open>sound_dg_hooks\<close> obligations (which never read the ghost
+  projection), but a natural companion to the value-half lemmas above, and needed by any later
+  proof --- G-M3, or a computed example such as the witnessed call-and-join case --- that must
+  reason about what the ghost component actually becomes.\<close>
+
+lemma sg_writer_edge_local:
+  "sg_writer (sign_ghost_edge_local a v d g)
+     = restrict_local_for is_global (ghost_step a v (sg_writer d \<squnion> sg_writer g))"
+  by (simp add: sign_ghost_edge_local_def sign_ghost_edge_step_def product_step_def sg_writer_sup)
+
+lemma sg_writer_edge_global:
+  "sg_writer (sign_ghost_edge_global a v d g)
+     = restrict_global_for is_global (ghost_step a v (sg_writer d \<squnion> sg_writer g))"
+  by (simp add: sign_ghost_edge_global_def sign_ghost_edge_step_def product_step_def sg_writer_sup)
+
 lemma sign_ghost_edge_sound:
   "edge_collect a (sign_ghost_gamma d g)
      \<subseteq> sign_ghost_gamma (sign_ghost_edge_local a v d g) (sign_ghost_edge_global a v d g)"
@@ -325,6 +342,16 @@ lemma sg_value_combine_snd:
      = restrict_local_for is_global (combine_collect_abs is_global dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g))"
   by (simp add: sign_ghost_combine_def Let_def)
 
+lemma sg_writer_combine_fst:
+  "sg_writer (fst (sign_ghost_combine dst dc de g))
+     = restrict_global_for is_global (combine_collect_abs is_global dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g))"
+  by (simp add: sign_ghost_combine_def Let_def)
+
+lemma sg_writer_combine_snd:
+  "sg_writer (snd (sign_ghost_combine dst dc de g))
+     = restrict_local_for is_global (combine_collect_abs is_global dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g))"
+  by (simp add: sign_ghost_combine_def Let_def)
+
 lemma sign_ghost_combine_sound:
   assumes sc: "s \<in> sign_ghost_gamma dc g" and tc: "t \<in> sign_ghost_gamma de g"
   shows "combine_collect is_global dst s t \<in>
@@ -348,6 +375,16 @@ lemma sg_value_enter_fst:
 lemma sg_value_enter_snd:
   "sg_value (snd (sign_ghost_enter xs es dc g))
      = restrict_local_for is_global (tf_enter sign_tf xs es (sg_value dc \<squnion> sg_value g))"
+  by (simp add: sign_ghost_enter_def Let_def)
+
+lemma sg_writer_enter_fst:
+  "sg_writer (fst (sign_ghost_enter xs es dc g))
+     = restrict_global_for is_global (ghost_enter_step (sg_writer dc \<squnion> sg_writer g))"
+  by (simp add: sign_ghost_enter_def Let_def)
+
+lemma sg_writer_enter_snd:
+  "sg_writer (snd (sign_ghost_enter xs es dc g))
+     = restrict_local_for is_global (ghost_enter_step (sg_writer dc \<squnion> sg_writer g))"
   by (simp add: sign_ghost_enter_def Let_def)
 
 lemma sign_ghost_enter_sound:

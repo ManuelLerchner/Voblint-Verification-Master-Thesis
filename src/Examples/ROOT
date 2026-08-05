@@ -21,6 +21,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_VIMP_Proc_Regression
     (* Ghost last-writer domain: computed context-insensitive vertical slice. *)
     Example_Ghost_LastWriter
+    (* Sign x last-writer witnessed call-and-join example. *)
+    Example_Sign_Ghost_LastWrite_Witness
 
     (* Sign *)
     Exec_Sign_Run

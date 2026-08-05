@@ -1,13 +1,26 @@
 # Migration — ghost facts as product-domain content (Track C replacement)
 
-Status: **design only, replaces `GHOST_INSTRUMENTATION_MIGRATION.md` as issue
-#76's plan.** No theory changed by this document. Written after confirming the
-old plan's entire dependency chain and semantic vocabulary are gone from
-`src/` (section 1) and after reading the two pieces of infrastructure that
-have landed since the old plan was written, #66 (`Routed_Context.thy`,
-`DG_Ctx_Activation.thy`) and #83 (declared-globals storage classifier), to
-check whether either actually solves ghost seeding (sections 3-4) rather than
-assuming it does because it landed recently.
+Status: **G-M0/G-M1 landed** (`src/CFG/Collecting/LTR_Last_Write.thy`,
+`src/Core/Domain/Ghost_Last_Write_Domain.thy`,
+`src/Core/Domain/Ghost_Last_Write_Product.thy`,
+`src/Analysis/Instances/Sign/Sign_Ghost_LastWrite_DG.thy`, and a hand-built
+call/join witness, `src/Examples/CFG/Example_Sign_Ghost_LastWrite_Witness.thy`
+— see section 14). Everything else below is design only, replacing
+`GHOST_INSTRUMENTATION_MIGRATION.md` as issue #76's plan. Written after
+confirming the old plan's entire dependency chain and semantic vocabulary are
+gone from `src/` (section 1) and after reading the two pieces of
+infrastructure that have landed since the old plan was written, #66
+(`Routed_Context.thy`, `DG_Ctx_Activation.thy`) and #83 (declared-globals
+storage classifier), to check whether either actually solves ghost seeding
+(sections 3-4) rather than assuming it does because it landed recently.
+
+**Scope correction (post-G-M1, section 14):** ordinary `__goblint_assert`
+support does not need any of the ghost-tracking machinery below. It is split
+out as its own milestone (G-A1, section 8) with no dependency on G-M0-G-M3,
+so it is not gated on `last_writer` or on any ghost fact at all. The
+generalized, trace-projection-aware check condition type that sections 7 and
+9 originally required from G-M4's first version is deferred until a second
+concrete ghost fact actually needs it (section 7).
 
 Related docs:
 
@@ -258,61 +271,72 @@ only when the write and the read are in different activations.
 
 ---
 
-## 7. Design: one check layer for ordinary and ghost-backed checks
+## 7. Design: ordinary asserts now, a unified check layer only if needed
 
-This section exists because it is not automatic that a ghost-augmented
-analysis can prove ghost-referencing checks *and* ordinary checks through the
-same mechanism — the current building blocks do not obviously support it, and
-this needs stating explicitly rather than assumed.
+**Reversed from this section's original argument** (kept below, marked, for
+the record): the original text required the check condition type to be
+generalized over trace-derived projections *from G-M4's first version*, so
+that an ordinary check and a `last_writer`-referencing check would share one
+mechanism from day one. That is premature generalization against a single
+concrete ghost fact and is retracted. `__goblint_assert` support does not
+need `last_writer`, does not need any ghost carrier, and does not need the
+trace-indexed collecting semantics at all — most Goblint-style assertions
+(`__goblint_assert(x == 5)`, `__goblint_assert(x > 0)`) are a proposition over
+the *current* abstract state, nothing more. Splitting the question in two
+first, matching C-2PO's own decoupling of relational-domain precision from
+assertion generation:
 
-`checks_proven`/`check_condition`/`checks_at` do not exist in `src/` today
-(`rg -n "checks_proven|check_condition|checks_at" src/` -> 0 matches) — G-M4
-is genuinely unbuilt, so this is a decision to make correctly once, not a
-retrofit. The old, superseded plan's formula
-(`GHOST_INSTRUMENTATION_MIGRATION.md:183`, `checks_proven env <-> forall
-check_pp. forall s in gamma(env check_pp). bval (check_condition v) s`) is
-built on `bval :: bexp => store => bool` (`VIMP_Expr.thy:19-25`) and
-`gamma_state :: 'a abs_state => store set` (`Abstract_Domain.thy:58`). VIMP's
+- **Case A — the assertion depends only on the current abstract state.**
+  `__goblint_assert(cond)` at a program point evaluates `cond` against
+  whatever `sound_dg_spec` instance is in scope, exactly the way `bval` would
+  against a concrete store. No trace, no ghost projection, no product-domain
+  dependency. This is G-A1 (section 8) — an independent milestone, buildable
+  today against plain Sign or Interval, with no dependency on G-M0-G-M3.
+- **Case B — the assertion depends on trace-derived history**
+  (`__goblint_assert(last_writer(g) == W7)`). This needs a ghost fact in
+  scope, hence a real dependency on this document's G-M0-G-M3 track. Nothing
+  in `src/` needs this yet: G-A1 covers ordinary asserts without it, and no
+  second ghost-backed check consumer exists to justify designing the general
+  condition type against.
+
+**G-A1's shape (Case A only):** `checks_proven`/`check_condition`/`checks_at`
+do not exist in `src/` today (`rg -n "checks_proven|check_condition|
+checks_at" src/` -> 0 matches). Build them directly on the old, superseded
+plan's formula (`GHOST_INSTRUMENTATION_MIGRATION.md:183`, `checks_proven env
+<-> forall check_pp. forall s in gamma(env check_pp). bval (check_condition
+v) s`), which is already exactly Case A: `bval :: bexp => store => bool`
+(`VIMP_Expr.thy:19-25`) against `gamma_state :: 'a abs_state => store set`
+(`Abstract_Domain.thy:58`), anchored to whatever collecting semantics the
+underlying `sound_dg_spec`/`sound_dg_spec_ltr` instance already proves sound
+against (not `ltr_collect`/`activation_collect` — those anchor the
+trace-indexed layer this milestone does not need). `checks_at` is a side
+table keyed by existing `cfg_node`s, unchanged from the original framing
+below.
+
+**Why Case B is deferred, not merely postponed arbitrarily** (the analysis
+this section originally used to justify building it early — now the argument
+for *why it is hard*, hence not worth doing speculatively): VIMP's
 `bexp`/`aexp` grammar (`Bc | Not | And | Or | Less | Eq` over
 `N | V | Plus | Minus | Times`, `VIMP_Syntax.thy:18-33`) has no case that can
-name a fact like "the last writer of `g`," and `bval`/`gamma_state` only ever
-inspect a single concrete `store` — never a trace. A ghost-referencing check
-condition does not merely fall outside this shape's current *coverage*; it is
+name a fact like "the last writer of `g`" — a ghost-referencing condition is
 not an expression `bval` can be applied to at all, since the fact it names
-does not live in any one `store`.
-
-**Required generalization, so ordinary and ghost checks are one mechanism:**
-
-- A check condition is a proposition over whatever trace-derived projections
-  are in scope at a point — minimally the terminal `store` (this alone
-  recovers an ordinary `__goblint_check`-style condition, evaluated the same
-  way `bval` would), and, for a ghost-augmented instance, any additional
-  projection its `'g_dl` tracks (`last_writer`, from G-M0). One condition
-  type, one `checks_proven`/`checks_proven_sound` theorem; an ordinary check
-  is the case that happens not to inspect the ghost projection, not a
-  different kind of check.
-- `checks_proven`/`checks_proven_sound` must be anchored to the trace-indexed
-  collecting semantics (`ltr_collect`/`activation_collect` — the current
-  semantic foundation per this project's `CLAUDE.md`), not to `gamma_state`.
-  This matters beyond expressiveness: a check like "`last_writer(g) == W7`
-  implies `g == 1`" is a statement that *one trace's* two projections agree.
-  If the base component and the ghost component were each proven sound
-  against independently-defined concretizations, that would not license the
-  implication even when both marginal soundness facts hold — the standard
-  reduced-product pitfall (each conjunct sound in isolation, the conjunction
-  not). Section 6's pointwise/simultaneous transfer
-  (`dgs_assign x e (d, w) g = (dgs_assign_base x e d g, w(...))`, both
-  components updated from the *same* edge/trace step) is what makes the
-  needed *joint* soundness free — but only once the anchor is the
-  trace-indexed collecting semantics; it is not free against `gamma_state`,
-  which was never trace-indexed to begin with.
-- G-M4's "side table over `cfg_node`" framing (below) still holds for *where*
-  checks live in the CFG. What this section adds is that the check
-  *condition type* and *soundness anchor* must be shaped this way from G-M4's
-  first version, not bolted on after an ordinary-check-only version ships —
-  an ordinary-only version built directly on `bexp`/`bval`/`gamma_state`
-  would need its condition type replaced, not extended, to add ghost checks
-  later.
+does not live in any one `store`. A unified condition type would need to be a
+proposition over whatever trace-derived projections are in scope (minimally
+the terminal `store`, plus a ghost-augmented instance's `'g_dl` projection),
+anchored to the trace-indexed collecting semantics
+(`ltr_collect`/`activation_collect`) rather than `gamma_state` — a check like
+"`last_writer(g) == W7` implies `g == 1`" states that *one trace's* two
+projections agree, which two independently-anchored marginal soundness facts
+would not license (the standard reduced-product pitfall). Section 6's
+pointwise/simultaneous transfer makes the needed *joint* soundness free once
+the anchor is trace-indexed — but building that anchor, and the wider
+condition type, against zero consumers (`last_writer` would be the only
+projection, and G-A1 already covers the store-only case without it) is
+exactly the generalization this project's `CLAUDE.md` warns against: a
+"missing abstraction" that turns out to be a localized generalization once a
+second ghost fact actually exists, not upfront framework design. Revisit this
+section only when a second concrete ghost fact needs a check condition that
+names it.
 
 ---
 
@@ -320,50 +344,49 @@ does not live in any one `store`.
 
 | # | Deliverable | Depends on | File targets |
 | --- | --- | --- | --- |
-| G-M0 | `last_writer`/`last_write_collect` over `valid_ltr`/`ltr_collect`, plus the edge-determinism check (section 5) | none | `src/CFG/Collecting/CFG_Local_Trace.thy` or new `LTR_Last_Write.thy` |
-| G-M1 | Ghost-augmented `dg_spec` instance (`'dl = 'a abs_state × ghost carrier`), hand-written per section 6, one base domain (Sign first) | G-M0 | new `src/Core/Domain/Ghost_Last_Write_Domain.thy`, new `src/Analysis/Instances/.../Sign_LastWrite_Spec.thy` |
-| G-M2 | `routed_context` interpretation for the ghost-augmented instance, reusing an existing `route`/`enterc` (e.g. the Sign CallString instance's) unmodified | G-M1 | new `Example_Sign_Ghost_LastWriter_CallString.thy`, mirroring `Example_Interval_DG_CallString.thy`'s structure |
-| G-M3 | `ghost_tracks_last_writer` — the ghost component of a post-solution over-approximates `last_write_collect`, as a corollary of `sound_dg_spec` (G-M1) + `dg_ctx_act_edge`/`routed_context_call`/`routed_context_comb` (existing, reused via G-M2) + `last_write_collect_sound` (G-M0) | G-M0, G-M1, G-M2 | example theory alongside G-M2 |
-| G-M4 | Check-point machinery: `checks_at`/`checks_proven`/`checks_proven_sound`, as a side table over `cfg_node` (no `edge_action`/`dg_spec` change); condition type generalized over trace-derived projections (store + optional ghost projections) and anchored to `ltr_collect`/`activation_collect` from the start (section 7) — ordinary checks are the store-only case of the same mechanism, not a separate one | G-M0 (needs `last_writer` as the first non-store projection so the generalization is validated, not vacuous) | new `src/CFG/Collecting/Checks.thy` or similar |
-| G-M5 | Payoff examples: intraprocedural branch-writer guard (no context needed) and interprocedural two-caller guard (uses G-M2's `routed_context` interpretation), each exercising an ordinary check and a ghost-backed check through the same `checks_proven_sound` instance | G-M0-G-M4 | new `Example_Ghost_LastWriter_Payoff.thy` |
-| G-M6 (named, not designed) | `checks_proven_sound` discharge-automation target (`checks_proven_tac` or similar) — scope only, do not design the tactic | G-M4 | none yet; acceptance test only |
+| **G-A1 (next, independent)** | Ordinary `__goblint_assert` support: `checks_at`/`checks_proven`/`checks_proven_sound`, a store-only condition type (`bexp`/`bval`/`gamma_state`, section 7 Case A), a side table over `cfg_node`, anchored to whatever collecting semantics the underlying `sound_dg_spec`/`sound_dg_spec_ltr` instance already proves sound against | none — works against any existing analysis (plain Sign is enough); **not gated on G-M0-G-M3 or on any ghost fact** | new `src/CFG/Collecting/Checks.thy` or similar |
+| G-M0 (**done**) | `last_writer`/`last_write_collect` over `valid_ltr`/`ltr_collect`, plus the edge-determinism check (section 5) | none | `src/CFG/Collecting/LTR_Last_Write.thy` |
+| G-M1 (**done**, optional precision/provenance track — not a prerequisite for G-A1) | Ghost-augmented product domain, hand-written per section 6, Sign base. Landed as a direct `sound_dg_hooks`/`sound_dg_hooks_ltr` interpretation, not `dg_spec` as originally scoped: `ghost_step`'s value at an edge depends on the edge's *destination* node, which `dg_spec`'s fixed per-edge transfer signature cannot express but hook trees can (`Sign_Ghost_LastWrite_DG.thy`'s own comment on `sign_ghost_edge_tree`) | G-M0 | `src/Core/Domain/Ghost_Last_Write_Domain.thy`, `src/Core/Domain/Ghost_Last_Write_Product.thy`, `src/Analysis/Instances/Sign/Sign_Ghost_LastWrite_DG.thy` |
+| G-M1 witness (**done**) | Hand-built `part_post_solution` over a real `compile_prog` output (branch/join + one procedure call), sorry-free. Demonstrates the product domain propagates ghost facts through calls and joins under hand-built hook trees — see section 14 for exactly what it does and does not show | G-M1 | `src/Examples/CFG/Example_Sign_Ghost_LastWrite_Witness.thy` |
+| G-M2 (optional precision/provenance track) | `routed_context` interpretation for the ghost-augmented instance. **Open question, not yet checked:** G-M1 landed on `sound_dg_hooks` rather than `dg_spec`, so "reusing an existing `route`/`enterc` unmodified" needs rechecking against a hook-tree instance before this row can proceed as originally scoped — `routed_context`'s genericity argument (section 3) was made against `dg_spec`'s `S` parameter, not against a raw hook-tree interpretation | G-M1 | new `Example_Sign_Ghost_LastWriter_CallString.thy`, mirroring `Example_Interval_DG_CallString.thy`'s structure |
+| G-M3 (optional precision/provenance track) | `ghost_tracks_last_writer` — the ghost component of a post-solution over-approximates `last_write_collect`, as a corollary of `sound_dg_hooks` (G-M1) + the routing discipline G-M2 settles + `last_write_collect_sound` (G-M0) | G-M0, G-M1, G-M2 | example theory alongside G-M2 |
+| G-M4 (**deferred**, section 7) | Check condition type generalized over trace-derived projections (store + ghost projections), anchored to `ltr_collect`/`activation_collect`, unifying ordinary and ghost-backed checks under one `checks_proven_sound` | a second concrete ghost fact that needs a check condition naming it — not G-A1, not G-M0-G-M3 alone | extension of G-A1's `Checks.thy`, scope TBD when a second ghost fact exists |
+| G-M5 (optional precision/provenance track, needs G-M4) | Payoff examples: intraprocedural branch-writer guard and interprocedural two-caller guard, each exercising an ordinary check and a ghost-backed check through the unified `checks_proven_sound` from G-M4 | G-M0-G-M4 | new `Example_Ghost_LastWriter_Payoff.thy` |
+| G-M6 (named, not designed) | `checks_proven_sound` discharge-automation target (`checks_proven_tac` or similar) — scope only, do not design the tactic | G-A1 (store-only case first) | none yet; acceptance test only |
 
 ---
 
 ## 9. Design gate (resolve before G-M0 starts)
 
-1. **Can `last_writer` be defined purely from `valid_ltr`?** (section 5) —
-   the semantic question, kept separate from the proof obligation below.
-   Answered provisionally yes: consecutive `(u, s), (v, s')` pairs in
+1. **Resolved (G-M0 landed).** Can `last_writer` be defined purely from
+   `valid_ltr`? (section 5) — yes: consecutive `(u, s), (v, s')` pairs in
    `path t` correspond to a witnessing `(u, a, v) ∈ intra g`
-   (`CFG_Local_Trace.thy:106-110`), so write-site identity should be
-   readable directly off `path t` and `intra g` without enriching the trace
-   type. Confirm this reading before treating it as settled.
-2. **Prove edge-action determinism for `intra g`**, if (1) needs it — no two
-   `(u, a1, v)` and `(u, a2, v) ∈ intra g` with `a1 ≠ a2` for compiled CFGs.
-   This is the proof obligation (1) reduces to, not a separate question. If
-   it fails, `last_writer` falls back to the M3.5 action-labelled-trace
+   (`CFG_Local_Trace.thy:106-110`), so write-site identity is readable
+   directly off `path t` and `intra g` without enriching the trace type,
+   confirmed by `src/CFG/Collecting/LTR_Last_Write.thy`.
+2. **Resolved (G-M0 landed).** Edge-action determinism for `intra g` held for
+   compiled CFGs, so `last_writer` did not need the M3.5 action-labelled-trace
    enrichment the old plan assumed as a hard prerequisite.
-3. **Ghost component representation** — the section 6 interface (a
-   product-composed, free-standing `'g_dl` carrier with its own seed step)
-   vs. reserved-prefix `vname` reuse (section 4(a), rejected) vs. full
-   typed-identifier widening (out of scope, only needed for non-`vname`-
-   co-indexed ghosts). Confirm the product-interface choice before G-M1;
-   `last_writer`'s concrete `'g_dl = vname => cfg_node_opt` instantiates it
-   and should not be read back into the interface itself.
-4. **Check-point representation** (G-M4) — a side table keyed by existing
-   `cfg_node`s (recommended: no `edge_action`/`dg_spec` change, no new
-   equation-system content) vs. a new `edge_action` constructor (touches
-   every transfer function in the codebase). Confirm the side-table choice
-   before G-M4.
-5. **Check condition type and soundness anchor** (section 7) — a proposition
-   type generalized over trace-derived projections (store + optional ghost
-   projections), anchored to `ltr_collect`/`activation_collect`, vs. building
-   G-M4 directly on `bexp`/`bval`/`gamma_state` and widening later
-   (rejected: that shape cannot name a ghost fact at all, so "widening
-   later" means replacing the condition type, not extending it). Confirm
-   before G-M4; this is what keeps ordinary and ghost-backed checks one
-   mechanism instead of two.
+3. **Resolved (G-M1 landed), with one correction.** Ghost component
+   representation: the section 6 interface (a product-composed,
+   free-standing `'g_dl` carrier with its own seed step) is confirmed, via
+   `Ghost_Last_Write_Product.thy`. Correction: the *hosting* locale is
+   `sound_dg_hooks`/`sound_dg_hooks_ltr`, not `sound_dg_spec` as this section
+   originally assumed — see the G-M1 row in section 8 and section 14.
+4. **Check-point representation** (now G-A1, not G-M4 — see section 7) — a
+   side table keyed by existing `cfg_node`s (recommended: no
+   `edge_action`/`dg_spec` change, no new equation-system content) vs. a new
+   `edge_action` constructor (touches every transfer function in the
+   codebase). Confirm the side-table choice before G-A1 starts.
+5. **Retracted, see section 7.** This item originally required the check
+   condition type to be generalized over trace-derived projections from
+   G-M4's first version, rejecting a `bexp`/`bval`/`gamma_state`-only version
+   as needing its condition type replaced later. That is backwards for a
+   milestone (G-A1) with zero ghost-fact consumers today: build the
+   store-only version now: `checks_proven`/`checks_proven_sound` on
+   `bexp`/`bval`/`gamma_state`, no trace anchor. Only revisit the
+   generalized condition type (G-M4) once a second concrete ghost fact
+   actually needs a check condition that names it.
 
 ---
 
@@ -434,11 +457,11 @@ milestone or theorem statement.
   only when a second ghost kind needs the same lift (existing project
   convention: `mixed_si_spec` is hand-written too, no combinator exists yet
   for heterogeneous `'dl`/`'dg` either).
-- A check condition type generic over an arbitrary number of ghost
-  projections — section 7 requires the type to accommodate `last_writer` as
-  a second projection alongside `store`; generalize to N projections only
-  when a second ghost fact needs it, same instinct as the product-domain
-  combinator above.
+- Any trace-projection-aware or ghost-aware check condition type at all
+  (G-M4) — section 7 now defers this entirely, not merely to "N projections";
+  `__goblint_assert` (G-A1) ships on `bexp`/`bval`/`gamma_state` first, with
+  no ghost projection in its condition type. Revisit only when a second
+  concrete ghost fact needs a check condition that names it.
 - Source-text instrumentation, generated-string ghost identifiers, a
   recompiled "instrumented program" artifact, the digest-partitioned Track A
   (#75) approach — all explicitly retired; do not resurrect without a
@@ -451,9 +474,48 @@ milestone or theorem statement.
 
 ## 13. Verification gate
 
-Batch build green on `Voblint_CFG` (G-M0), the owning domain/analysis session
-(G-M1-G-M3), and `Voblint_Examples` (G-M2, G-M5), no `sorry`, after each
-milestone. G-M4 gates independently on whatever session `Checks.thy` lands
-in. Confirm the design-gate item 1 (edge-action determinism) resolution
-before G-M0 is marked done, one way or the other — it changes G-M0's proof
-shape, not just its difficulty.
+Batch build green on `Voblint_CFG` (G-M0, done), the owning domain/analysis
+session (G-M1-G-M3; G-M1 and its witness done), and `Voblint_Examples` (G-M2,
+G-M5), no `sorry`, after each milestone. G-A1 gates independently on whatever
+session `Checks.thy` lands in, and does not require the ghost-track sessions
+to be green first (it has no dependency on them). G-M4 gates independently
+too, once it exists.
+
+---
+
+## 14. What the G-M1 witness demonstrates (and does not)
+
+`Example_Sign_Ghost_LastWrite_Witness.thy` (sorry-free, batch-green) is a
+hand-built `part_post_solution` for a real `compile_prog` output covering a
+branch/join and one procedure call. What it establishes:
+
+- **Product-domain ghost facts propagate through calls and joins.** The
+  witnessed post-solution shows the ghost (last-writer) component threading
+  correctly through an intraprocedural join (`FVal (Some gn4)` /
+  `FVal (Some gn6)` on the two branches join to `FTop` at `gn7`) and across a
+  real call/return (`ghost_enter_step` resets the callee's fresh locals at
+  entry; `combine` preserves the caller's ghost facts across the return),
+  under the hand-built `sign_ghost_edge_tree`/`sign_ghost_enter_tree`/
+  `sign_ghost_combine_tree` hook trees. `hook_post_solution_collect_sound_ltr`
+  is instantiated on this witness, giving base-store (Sign) collecting
+  soundness at every covered program point.
+- **What it does not show about `routed_context`.** This witness interprets
+  `sound_dg_hooks`/`sound_dg_hooks_ltr` directly with hand-built trees — it
+  does not go through `sound_dg_spec` or exercise `Routed_Context.thy`'s
+  routing at all. Section 3's argument for why `routed_context` *would* carry
+  a ghost-augmented instance "for free" was made against `dg_spec`'s generic
+  `S` parameter; whether that argument transfers unchanged to a hook-tree
+  instance is G-M2's open question (section 8), not something this witness
+  settles either way.
+- **It does not implement or justify `__goblint_assert`.** No check
+  machinery, no condition type, no `checks_proven`-shaped statement appears
+  anywhere in this file or in `Sign_Ghost_LastWrite_DG.thy`. `__goblint_assert`
+  support is G-A1 (section 7, section 8), fully independent of this witness
+  and of the ghost track generally.
+- **It does not claim the ghost component tracks `trace_last_writer`
+  globally** — that is `ghost_tracks_last_writer` (G-M3, still open,
+  optional). This witness proves the product domain satisfies the solver's
+  equations for one hand-built assignment, not that a computed post-solution
+  would produce the same values (the standard `part_post_solution`-witness
+  vs. computed-solver distinction, same as every other `sound_dg_hooks`
+  example in this repository).
