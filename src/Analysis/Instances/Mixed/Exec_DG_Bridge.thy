@@ -747,6 +747,74 @@ lemma unit_dg_spec_st_for_is_global:
     unit_combine_step_st_assign_for_is_global
   by (rule refl)
 
+text \<open>
+  Field-projection shape lemmas for \<^const>\<open>unit_dg_spec_st_for\<close>, classifier-parametric
+  in \<open>gs\<close>: every field but \<open>dgs_combine_assign\<close> is a bare \<^const>\<open>unit_step_st\<close>
+  application, so its \<open>fst\<close>/\<open>snd\<close> unfold to the global/local restriction of the underlying
+  transfer with no further reasoning about \<open>gs\<close>. A caller reasoning about a concrete
+  \<open>unit_dg_spec_st_for gs tf_st enter_st\<close> instance cites these instead of re-deriving the
+  record/\<open>Let\<close> unfold at each site.\<close>
+
+lemma fst_unit_step_st [simp]:
+  "fst (unit_step_st f d g) = restrict_global_resolved_q (f (d \<squnion> g))"
+  unfolding unit_step_st_def Let_def by simp
+
+lemma snd_unit_step_st [simp]:
+  "snd (unit_step_st f d g) = restrict_local_resolved_q (f (d \<squnion> g))"
+  unfolding unit_step_st_def Let_def by simp
+
+lemma fst_dgs_nop_for:
+  "fst (dgs_nop (unit_dg_spec_st_for gs tf_st enter_st) d g)
+     = restrict_global_resolved_q (tf_st EA_Nop (d \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def by simp
+
+lemma snd_dgs_nop_for:
+  "snd (dgs_nop (unit_dg_spec_st_for gs tf_st enter_st) d g)
+     = restrict_local_resolved_q (tf_st EA_Nop (d \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def by simp
+
+lemma fst_dgs_assign_for:
+  "fst (dgs_assign (unit_dg_spec_st_for gs tf_st enter_st) x e d g)
+     = restrict_global_resolved_q (tf_st (EA_Assign x e) (d \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def by simp
+
+lemma snd_dgs_assign_for:
+  "snd (dgs_assign (unit_dg_spec_st_for gs tf_st enter_st) x e d g)
+     = restrict_local_resolved_q (tf_st (EA_Assign x e) (d \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def by simp
+
+lemma fst_dgs_enter_for:
+  "fst (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
+     = restrict_global_resolved_q (enter_st xs es (d \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def by simp
+
+lemma snd_dgs_enter_for:
+  "snd (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
+     = restrict_local_resolved_q (enter_st xs es (d \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def by simp
+
+lemma fst_dgs_combine_env_for:
+  "fst (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) dc de g)
+     = restrict_global_resolved_q (combine_resolved_st_q (dc \<squnion> g) (de \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def unit_combine_step_st_env_def Let_def by simp
+
+lemma snd_dgs_combine_env_for:
+  "snd (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) dc de g)
+     = restrict_local_resolved_q (combine_resolved_st_q (dc \<squnion> g) (de \<squnion> g))"
+  unfolding unit_dg_spec_st_for_def unit_combine_step_st_env_def Let_def by simp
+
+lemma fst_dgs_combine_assign_for:
+  "fst (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) dst de g merged)
+     = restrict_global_resolved_q (combine_assign_resolved_q gs dst
+         (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
+  unfolding unit_dg_spec_st_for_def unit_combine_step_st_assign_for_def Let_def by simp
+
+lemma snd_dgs_combine_assign_for:
+  "snd (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) dst de g merged)
+     = restrict_local_resolved_q (combine_assign_resolved_q gs dst
+         (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
+  unfolding unit_dg_spec_st_for_def unit_combine_step_st_assign_for_def Let_def by simp
+
 text \<open>Not \<open>[simp]\<close>: the whole-function shape competes with the pointwise
   \<open>fun_of_resolved_st_q_for_restrict_local\<close>/\<open>fun_of_resolved_st_q_for_restrict_global\<close>
   normal form other proofs already rely on. Cited explicitly where the
