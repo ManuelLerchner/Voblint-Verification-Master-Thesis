@@ -17,27 +17,36 @@ text \<open>
 \<close>
 
 interpretation ivl_reg:
-  unit_dg_exec_analysis ivl_tf ivl_tf_st ivl_enter_st
+  unit_dg_exec_analysis is_global ivl_tf ivl_tf_st ivl_enter_st
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
-  by unfold_locales
-     (rule ivl_is_sound_transfer ivl_tf_st_commute ivl_enter_st_commute
-           ivl_tf_st_ret_None ivl_tf_st_ret_Some
-           TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
+  apply unfold_locales
+  apply (simp_all add: fun_of_exec_dg_st_for_is_global)
+  apply (rule ivl_is_sound_transfer ivl_tf_st_commute ivl_enter_st_commute
+              ivl_tf_st_ret_None ivl_tf_st_ret_Some
+              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
+  apply auto
+  done
 
 interpretation sign_reg:
-  unit_dg_exec_analysis sign_tf sign_tf_st sign_enter_st
+  unit_dg_exec_analysis is_global sign_tf sign_tf_st sign_enter_st
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
-  by unfold_locales
-     (rule sign_is_sound_transfer sign_tf_st_commute sign_enter_st_commute
-           sign_tf_st_ret_none sign_tf_st_ret_some
-           TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+  apply unfold_locales
+  apply (simp_all add: fun_of_exec_dg_st_for_is_global)
+  apply (rule sign_is_sound_transfer sign_tf_st_commute sign_enter_st_commute
+              sign_tf_st_ret_none sign_tf_st_ret_some
+              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+  apply auto
+  done
 
 interpretation parity_reg:
-  unit_dg_exec_analysis parity_tf parity_tf_st parity_enter_st
+  unit_dg_exec_analysis is_global parity_tf parity_tf_st parity_enter_st
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
-  by unfold_locales
-     (rule parity_is_sound_transfer parity_tf_st_commute parity_enter_st_commute
-           parity_tf_st_ret_none parity_tf_st_ret_some
-           TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+  apply unfold_locales
+  apply (simp_all add: fun_of_exec_dg_st_for_is_global)
+  apply (rule parity_is_sound_transfer parity_tf_st_commute parity_enter_st_commute
+              parity_tf_st_ret_none parity_tf_st_ret_some
+              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+  apply auto
+  done
 
 end

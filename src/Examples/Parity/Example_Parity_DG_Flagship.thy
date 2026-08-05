@@ -180,31 +180,44 @@ lemma parity_wf: "wf_compile_input parity_gs parity_pi [] ''main'' parity_prog"
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       prog_main_name_def split: if_splits)
 
-text \<open>\<open>parity_program\<close> declares \<open>G\<close>, so \<^const>\<open>parity_gs\<close> has no pre-registered
-  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal parity spec (\<open>DG_Domain_Registration\<close>
-  only registers \<^const>\<open>is_global\<close>): establish it once here from the classifier-parametric
-  bridge lemma, and cite the classifier-parametric end-to-end theorem
-  \<open>dg_exec_run_source_sound_for\<close> directly instead of the \<open>is_global\<close>-fixed \<open>parity_reg\<close>
-  registration.\<close>
-lemma parity_sds: "sound_dg_spec_ltr_for (unit_dg_spec_for parity_gs (parity_tf_for parity_gs)) gamma_unit parity_gs"
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF parity_is_sound_transfer_for])
+text \<open>\<open>parity_program\<close> declares \<open>G\<close>, so \<^const>\<open>parity_gs\<close> is not the \<^const>\<open>is_global\<close>
+  classifier \<^theory>\<open>Voblint_Formalization.DG_Domain_Registration\<close> registers by default:
+  interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with the
+  classifier-parametric transfer/enter functions, matching the pattern in
+  \<open>Exec_Sign_DG_Run\<close>.  The interpretation absorbs the sound-transfer and
+  primitive-commutation obligations once, so \<open>parity_source_run_sound\<close> below only
+  supplies the compiled-input and solver facts.\<close>
+
+interpretation parity_ex_reg:
+  unit_dg_exec_analysis parity_gs
+    "parity_tf_for parity_gs" "parity_tf_st_for parity_gs" "parity_enter_st_for parity_gs"
+    "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
+proof -
+  interpret parity_ex_transfer: sound_transfer_for parity_gs "parity_tf_for parity_gs"
+    by (rule parity_is_sound_transfer_for)
+  show "unit_dg_exec_analysis parity_gs (parity_tf_for parity_gs) (parity_tf_st_for parity_gs)
+          (parity_enter_st_for parity_gs)
+          TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
+    by unfold_locales
+       (rule parity_ex_transfer.tf_sound_assign_for parity_ex_transfer.tf_sound_random_for
+             parity_ex_transfer.tf_sound_assume_for parity_ex_transfer.tf_sound_assume_not_for
+             parity_ex_transfer.tf_sound_enter_for parity_ex_transfer.tf_sound_combine_for
+             parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             parity_tf_st_for_ret_none parity_tf_st_for_ret_some
+             TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+qed
 
 theorem parity_source_run_sound:
   assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st_for parity_gs \<circ> snd parity_sol) v"
+                 \<and> t \<in> parity_ex_reg.gamma (snd parity_sol) v"
 proof -
   show ?thesis
     unfolding parity_sol_def parity_eqs_def parity_cfg_def
-    by (rule dg_exec_run_source_sound_for
-          [OF parity_sds
-              unit_dg_Hstep_for[OF parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-                parity_tf_st_for_ret_none parity_tf_st_for_ret_some]
-              unit_dg_Henter_for[OF parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]] unit_dg_Hcomb_for
-              parity_terminates_c[unfolded parity_eqs_def parity_cfg_def,
-                THEN TD_side_always_join_Interp.part_post_solution_of_solve_c]
+    by (rule parity_ex_reg.run_source_sound
+          [OF parity_terminates_c[unfolded parity_eqs_def parity_cfg_def]
               parity_wf
               parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
               parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]

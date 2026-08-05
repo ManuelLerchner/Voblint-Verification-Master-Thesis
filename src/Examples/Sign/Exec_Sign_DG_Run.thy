@@ -116,33 +116,47 @@ lemma dgEx_sound0:
   "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st \<squnion> fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st\<rbrakk>"
   by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def sup.idem)
 
-subsection \<open>Source-level soundness through the classifier-parametric bridge\<close>
+subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
-text \<open>\<open>sign_ex_prog\<close> declares no globals, so \<^const>\<open>sign_ex_gs\<close> has no pre-registered
-  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal sign spec (\<open>DG_Domain_Registration\<close>
-  only registers \<^const>\<open>is_global\<close>): establish it once here from the classifier-parametric
-  bridge lemma, and cite the classifier-parametric end-to-end theorem
-  \<open>dg_exec_run_source_sound_for\<close> directly instead of the \<open>is_global\<close>-fixed \<open>sign_reg\<close>
-  registration, matching the pattern in \<open>Example_Parity_DG_Flagship\<close>.\<close>
-lemma dgEx_sds: "sound_dg_spec_ltr_for (unit_dg_spec_for sign_ex_gs (sign_tf_for sign_ex_gs)) gamma_unit sign_ex_gs"
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for])
+text \<open>\<open>sign_ex_prog\<close> declares no globals, so \<^const>\<open>sign_ex_gs\<close> is not the
+  \<^const>\<open>is_global\<close> classifier \<^theory>\<open>Voblint_Formalization.DG_Domain_Registration\<close>
+  registers by default: interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at
+  \<^const>\<open>sign_ex_gs\<close> with the classifier-parametric transfer/enter functions,
+  matching the pattern in \<open>Example_Parity_DG_Flagship\<close>.  The interpretation
+  absorbs the sound-transfer and primitive-commutation obligations once, so
+  \<open>dgEx_source_run_sound\<close> below only supplies the compiled-input and solver
+  facts.\<close>
+
+interpretation sign_ex_reg:
+  unit_dg_exec_analysis sign_ex_gs
+    "sign_tf_for sign_ex_gs" "sign_tf_st_for sign_ex_gs" "sign_enter_st_for sign_ex_gs"
+    "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
+proof -
+  interpret sign_ex_transfer: sound_transfer_for sign_ex_gs "sign_tf_for sign_ex_gs"
+    by (rule sign_is_sound_transfer_for)
+  show "unit_dg_exec_analysis sign_ex_gs (sign_tf_for sign_ex_gs) (sign_tf_st_for sign_ex_gs)
+          (sign_enter_st_for sign_ex_gs)
+          TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
+    by unfold_locales
+       (rule sign_ex_transfer.tf_sound_assign_for sign_ex_transfer.tf_sound_random_for
+             sign_ex_transfer.tf_sound_assume_for sign_ex_transfer.tf_sound_assume_not_for
+             sign_ex_transfer.tf_sound_enter_for sign_ex_transfer.tf_sound_combine_for
+             sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             sign_tf_st_for_ret_none sign_tf_st_for_ret_some
+             TD_side_always_join_Interp.part_post_solution_of_solve_c)+
+qed
 
 theorem dgEx_source_run_sound:
   assumes run: "star (pstep sign_ex_gs sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores sign_ex_gs"
   shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st_for sign_ex_gs \<circ> snd dgEx_sol) v"
+                 \<and> t \<in> sign_ex_reg.gamma (snd dgEx_sol) v"
 proof -
   show ?thesis
     unfolding dgEx_sol_def dgEx_eqs_def gEx_def
-    by (rule dg_exec_run_source_sound_for
-          [OF dgEx_sds
-              unit_dg_Hstep_for[OF sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-                sign_tf_st_for_ret_none sign_tf_st_for_ret_some]
-              unit_dg_Henter_for[OF sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]] unit_dg_Hcomb_for
-              dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def,
-                THEN TD_side_always_join_Interp.part_post_solution_of_solve_c]
+    by (rule sign_ex_reg.run_source_sound
+          [OF dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def]
               dgEx_wf
               dgEx_cover_entry[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
               dgEx_cover_edge[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
