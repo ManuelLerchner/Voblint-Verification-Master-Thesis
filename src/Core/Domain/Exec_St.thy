@@ -1,6 +1,6 @@
 theory Exec_St
   imports Abstract_Domain "TD.Update_rules"
-    Constraint_System
+    Constraint_System "HOL-Library.AList"
 begin
 
 class bounded_widening = bounded_semilattice_sup_bot + widening
@@ -38,10 +38,15 @@ fun remove_resolved_key ::
      (if loc = loc' then remove_resolved_key loc ps
       else (loc', a) # remove_resolved_key loc ps)"
 
+lemma remove_resolved_key_eq_delete:
+  "remove_resolved_key loc ps = AList.delete loc ps"
+  by (induction ps) (auto split: if_splits)
+
 lemma map_of_remove_resolved_key:
   "map_of (remove_resolved_key loc ps) loc' =
      (if loc = loc' then None else map_of ps loc')"
-  by (induction ps arbitrary: loc') auto
+  unfolding remove_resolved_key_eq_delete
+  by (simp add: AList.delete_conv')
 
 fun lookup_resolved_st ::
   "('a::bot) resolved_st => location => 'a" where
@@ -527,35 +532,42 @@ where
 lemma map_of_filter_key:
   "map_of (filter (\<lambda>(k, _). P k) xs) k = (if P k then map_of xs k else None)"
   by (induction xs) auto
+
+lemma filter_fst_eq_restrict:
+  fixes P :: "location => bool"
+  shows "filter (%p. P (fst p)) xs = AList.restrict {k. P k} xs"
+  unfolding AList.restrict_eq
+  by (induction xs) auto
+
 lemma map_of_filter_fst:
   fixes P :: "location => bool"
     and xs :: "(location \<times> 'a) list"
     and k :: location
   shows "map_of (filter (%p. P (fst p)) xs) k =
      (if P k then map_of xs k else None)"
-  by (induction xs) auto
+  by (simp add: filter_fst_eq_restrict AList.restr_conv')
 
 lemma map_of_filter_global_local:
   "map_of (filter (%p. location_is_global (fst p)) ps)
       (Local_Location x) = None"
-  by (induction ps) (auto split: location.splits)
+  by (simp add: map_of_filter_fst)
 
 lemma map_of_filter_local_global:
   "map_of (filter (%p. location_is_local (fst p)) ps)
       (Global_Location x) = None"
-  by (induction ps) (auto split: location.splits)
+  by (simp add: map_of_filter_fst)
 
 lemma map_of_filter_local_local:
   "map_of (filter (%p. location_is_local (fst p)) ps)
       (Local_Location x) =
      map_of ps (Local_Location x)"
-  by (induction ps) (auto split: location.splits)
+  by (simp add: map_of_filter_fst)
 
 lemma map_of_filter_global_global:
   "map_of (filter (%p. location_is_global (fst p)) ps)
       (Global_Location x) =
      map_of ps (Global_Location x)"
-  by (induction ps) (auto split: location.splits)
+  by (simp add: map_of_filter_fst)
 
 lemma lookup_combine_resolved_st [simp]:
   "lookup_resolved_st (combine_resolved_st sc se) loc =
@@ -621,10 +633,11 @@ lemma lookup_combine_resolved_st_q [simp]:
       | Global_Location x => lookup_resolved_st_q se loc)"
   by transfer (rule lookup_combine_resolved_st)
 
-lemma map_of_merge_pair:
-  "map_of (ps1 @ ps2) x =
-   (case map_of ps1 x of Some a => Some a | None => map_of ps2 x)"
-  by (induction ps1) auto
+text \<open>
+  \<^const>\<open>map_of\<close> over an append is already characterized by
+  \<^theory>\<open>HOL.Map\<close>'s @{thm [source] map_of_append}, so no bespoke append lemma
+  is needed here.
+\<close>
 
 lemma map_of_eq_None_map_fst:
   "x \<notin> set (map fst ps) \<Longrightarrow> map_of ps x = None"
@@ -665,7 +678,7 @@ lemma lookup_merge_resolved_st [simp]:
      lookup_resolved_st s loc \<squnion> lookup_resolved_st t loc"
   by (cases s; cases t; cases loc)
      (auto simp add: map_add_def map_of_map_fst_lookup_append
-       map_of_map_fst_lookup map_of_merge_pair
+       map_of_map_fst_lookup
        split: option.splits if_splits)
 
 lemma eq_resolved_st_merge:
@@ -726,7 +739,7 @@ lemma lookup_widen_resolved_st [simp]:
      lookup_resolved_st s loc \<nabla> lookup_resolved_st t loc"
   by (cases s; cases t; cases loc)
      (auto simp add: map_add_def map_of_map_fst_lookup_append
-       map_of_map_fst_lookup map_of_merge_pair
+      map_of_map_fst_lookup
        split: option.splits if_splits)
 
 lemma eq_resolved_st_widen:
@@ -799,7 +812,7 @@ lemma lookup_narrow_resolved_st [simp]:
      lookup_resolved_st s loc \<Delta> lookup_resolved_st t loc"
   by (cases s; cases t; cases loc)
      (auto simp add: map_add_def map_of_map_fst_lookup_append
-       map_of_map_fst_lookup map_of_merge_pair
+      map_of_map_fst_lookup
        split: option.splits if_splits)
 
 lemma eq_resolved_st_narrow:
