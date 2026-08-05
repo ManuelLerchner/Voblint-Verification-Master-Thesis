@@ -795,111 +795,91 @@ lemma sign_placement_hook_gen_entry_dep:
   by (simp add: no_edge no_combine no_enter bot0
     side_cfg_T_eff_keyed_seed_trees_def Let_def dep_aux_def)
 
-text \<open>Assembling the abstract post-solution: membership of the exit node,
-  plus the dependency-closure and \<open>se_constraint_holds\<close> pair at each of the
-  four non-entry nodes and the entry node.\<close>
+text \<open>Assembling the abstract post-solution: exit membership plus a
+  per-node dependency/\<open>se_constraint_holds\<close> pair, closed by the generic
+  \<open>sound_dg_hooks\<close> combinator \<open>part_post_solution_of_ball\<close> instead of a
+  hand-written case split over the solved-node set.\<close>
 
 lemma sign_placement_dg_td_abs_post_solution:
   "part_post_solution (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
       sign_placement_s0d_abs sign_placement_s0g_abs) (cfg_exit sign_placement_cfg, ()) sign_placement_sigma_abs
       sign_placement_nodes"
-  unfolding part_post_solution_iff_se_constraint_holds
-proof (intro conjI)
+proof (rule sign_placement_sound_dg_hooks.part_post_solution_of_ball)
   show "(cfg_exit sign_placement_cfg, ()) \<in> sign_placement_nodes"
     unfolding sign_placement_nodes_def by eval
 next
+  have entry_no_edge: "intra_predecessor_list sign_placement_cfg (cfg_entry sign_placement_cfg) = []"
+    unfolding sign_placement_cfg_entry by (rule sign_placement_hook_lists)
+  have entry_no_combine: "return_call_action_list sign_placement_cfg (cfg_entry sign_placement_cfg) = []"
+    unfolding sign_placement_cfg_entry by (rule sign_placement_hook_lists)
+  have entry_no_enter: "entry_call_list sign_placement_cfg (cfg_entry sign_placement_cfg) = []"
+    unfolding sign_placement_cfg_entry by (rule sign_placement_hook_lists)
+  have entry: "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs
+        (cfg_entry sign_placement_cfg, ()) \<subseteq> sign_placement_nodes \<and>
+      se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs (cfg_entry sign_placement_cfg, ()))
+        sign_placement_sigma_abs (cfg_entry sign_placement_cfg, ())"
+    by (intro conjI, simp add: sign_placement_hook_gen_entry_dep[OF entry_no_edge entry_no_combine
+          entry_no_enter refl] sign_placement_nodes_def,
+        rule sign_placement_se_entry)
+  have s0: "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs
+        (Statement 0, ()) \<subseteq> sign_placement_nodes \<and>
+      se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs (Statement 0, ())) sign_placement_sigma_abs
+        (Statement 0, ())"
+    by (intro conjI, simp add: sign_placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 0" and u = "FunctionEntry prog_main_name"]
+          sign_placement_hook_lists sign_placement_no_combine_edge_nodes sign_placement_cfg_entry
+          sign_placement_nodes_def,
+        rule sign_placement_se_statement0)
+  have s1_not_entry: "Statement 1 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
+  have s1_pred: "intra_predecessor_list sign_placement_cfg (Statement 1) =
+      [(Statement 0, EA_Assign ''x'' (N 5))]"
+    by (rule sign_placement_hook_lists)
+  have s1_no_combine: "return_call_action_list sign_placement_cfg (Statement 1) = []"
+    by (rule sign_placement_no_combine_edge_nodes)
+  have s1_no_enter: "entry_call_list sign_placement_cfg (Statement 1) = []"
+    by (rule sign_placement_no_combine_edge_nodes)
+  have s1: "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs
+        (Statement 1, ()) \<subseteq> sign_placement_nodes \<and>
+      se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs (Statement 1, ())) sign_placement_sigma_abs
+        (Statement 1, ())"
+    by (intro conjI,
+        subst sign_placement_hook_gen_single_edge_dep[OF s1_not_entry s1_pred s1_no_combine
+              s1_no_enter refl],
+        simp add: sign_placement_nodes_def,
+        rule sign_placement_se_statement1)
+  have s2: "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs
+        (Statement 2, ()) \<subseteq> sign_placement_nodes \<and>
+      se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs (Statement 2, ())) sign_placement_sigma_abs
+        (Statement 2, ())"
+    by (intro conjI, simp add: sign_placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 2" and u = "Statement 1"]
+          sign_placement_hook_lists sign_placement_no_combine_edge_nodes sign_placement_cfg_entry
+          sign_placement_nodes_def,
+        rule sign_placement_se_statement2)
+  have result_main: "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs
+        (FunctionResult prog_main_name, ()) \<subseteq> sign_placement_nodes \<and>
+      se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
+        sign_placement_s0d_abs sign_placement_s0g_abs (FunctionResult prog_main_name, ()))
+        sign_placement_sigma_abs (FunctionResult prog_main_name, ())"
+    by (intro conjI, simp add: sign_placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "FunctionResult prog_main_name" and u = "Statement 2"]
+          sign_placement_hook_lists sign_placement_no_combine_edge_nodes sign_placement_cfg_entry
+          sign_placement_nodes_def,
+        rule sign_placement_se_function_result)
   show "\<forall>u \<in> sign_placement_nodes. dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
       sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs u \<subseteq> sign_placement_nodes \<and>
     se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-      sign_placement_s0d_abs sign_placement_s0g_abs u) sign_placement_sigma_abs u"
-  proof
-    fix u assume u_mem: "u \<in> sign_placement_nodes"
-    consider
-        (entry) "u = (FunctionEntry prog_main_name, ())"
-      | (s0) "u = (Statement 0, ())" | (s1) "u = (Statement 1, ())"
-      | (s2) "u = (Statement 2, ())"
-      | (result_main) "u = (FunctionResult prog_main_name, ())"
-      using u_mem unfolding sign_placement_nodes_def by auto
-    then show "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-          sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs u \<subseteq> sign_placement_nodes \<and>
-        se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-          sign_placement_s0d_abs sign_placement_s0g_abs u) sign_placement_sigma_abs u"
-    proof cases
-      case entry
-      show ?thesis
-        unfolding entry
-      proof (intro conjI)
-        have entry_no_edge: "intra_predecessor_list sign_placement_cfg (cfg_entry sign_placement_cfg) = []"
-          unfolding sign_placement_cfg_entry by (rule sign_placement_hook_lists)
-        have entry_no_combine: "return_call_action_list sign_placement_cfg (cfg_entry sign_placement_cfg) = []"
-          unfolding sign_placement_cfg_entry by (rule sign_placement_hook_lists)
-        have entry_no_enter: "entry_call_list sign_placement_cfg (cfg_entry sign_placement_cfg) = []"
-          unfolding sign_placement_cfg_entry by (rule sign_placement_hook_lists)
-        show "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-            sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs
-            (FunctionEntry prog_main_name, ()) \<subseteq> sign_placement_nodes"
-          unfolding sign_placement_cfg_entry[symmetric]
-          by (simp add: sign_placement_hook_gen_entry_dep[OF entry_no_edge entry_no_combine
-                entry_no_enter refl])
-      next
-        show "se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-            sign_placement_s0d_abs sign_placement_s0g_abs (FunctionEntry prog_main_name, ()))
-            sign_placement_sigma_abs (FunctionEntry prog_main_name, ())"
-          by (rule sign_placement_se_entry[unfolded sign_placement_cfg_entry])
-      qed
-    next
-      case s0
-      show ?thesis
-        unfolding s0
-        by (intro conjI, simp add: sign_placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 0" and u = "FunctionEntry prog_main_name"]
-              sign_placement_hook_lists sign_placement_no_combine_edge_nodes sign_placement_cfg_entry
-              sign_placement_nodes_def,
-            rule sign_placement_se_statement0)
-    next
-      case s1
-      show ?thesis
-        unfolding s1
-      proof (intro conjI)
-        have not_entry: "Statement 1 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
-        have pred: "intra_predecessor_list sign_placement_cfg (Statement 1) =
-            [(Statement 0, EA_Assign ''x'' (N 5))]"
-          by (rule sign_placement_hook_lists)
-        have no_combine: "return_call_action_list sign_placement_cfg (Statement 1) = []"
-          by (rule sign_placement_no_combine_edge_nodes)
-        have no_enter: "entry_call_list sign_placement_cfg (Statement 1) = []"
-          by (rule sign_placement_no_combine_edge_nodes)
-        show "dep\<^sub>L (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-            sign_placement_s0d_abs sign_placement_s0g_abs) sign_placement_sigma_abs (Statement 1, ())
-            \<subseteq> sign_placement_nodes"
-          by (subst sign_placement_hook_gen_single_edge_dep[OF not_entry pred no_combine no_enter refl])
-             (simp add: sign_placement_nodes_def)
-      next
-        show "se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
-            sign_placement_s0d_abs sign_placement_s0g_abs (Statement 1, ())) sign_placement_sigma_abs
-            (Statement 1, ())"
-          by (rule sign_placement_se_statement1)
-      qed
-    next
-      case s2
-      show ?thesis
-        unfolding s2
-        by (intro conjI, simp add: sign_placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "Statement 2" and u = "Statement 1"]
-              sign_placement_hook_lists sign_placement_no_combine_edge_nodes sign_placement_cfg_entry
-              sign_placement_nodes_def,
-            rule sign_placement_se_statement2)
-    next
-      case result_main
-      show ?thesis
-        unfolding result_main
-        by (intro conjI, simp add: sign_placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-              where v = "FunctionResult prog_main_name" and u = "Statement 2"]
-              sign_placement_hook_lists sign_placement_no_combine_edge_nodes sign_placement_cfg_entry
-              sign_placement_nodes_def,
-            rule sign_placement_se_function_result)
-    qed
-  qed
+      sign_placement_s0d_abs sign_placement_s0g_abs u) sign_placement_sigma_abs u"    using entry[unfolded sign_placement_cfg_entry] s0 s1 s2 result_main
+    by (auto simp: sign_placement_nodes_def)
 qed
 
 subsection \<open>Trace-native collecting soundness\<close>

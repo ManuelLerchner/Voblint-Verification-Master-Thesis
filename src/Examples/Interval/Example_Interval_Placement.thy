@@ -2789,149 +2789,136 @@ lemma placement_dg_td_abs_post_solution:
   "part_post_solution (placement_sound_dg_hooks.hook_gen placement_cfg bot
       placement_s0d_abs placement_s0g_abs) (cfg_exit placement_cfg, ()) placement_sigma_abs
       placement_nodes"
-  unfolding part_post_solution_iff_se_constraint_holds
-proof (intro conjI)
+proof (rule placement_sound_dg_hooks.part_post_solution_of_ball)
   show "(cfg_exit placement_cfg, ()) \<in> placement_nodes" by eval
 next
+  have entry_no_edge: "intra_predecessor_list placement_cfg (cfg_entry placement_cfg) = []"
+    unfolding placement_cfg_entry by (rule placement_hook_lists)
+  have entry_no_combine: "return_call_action_list placement_cfg (cfg_entry placement_cfg) = []"
+    unfolding placement_cfg_entry by (rule placement_hook_lists)
+  have entry_no_enter: "entry_call_list placement_cfg (cfg_entry placement_cfg) = []"
+    unfolding placement_cfg_entry by (rule placement_hook_lists)
+  have entry: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (cfg_entry placement_cfg, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (cfg_entry placement_cfg, ()))
+        placement_sigma_abs (cfg_entry placement_cfg, ())"
+    by (intro conjI, simp add: placement_hook_gen_entry_dep[OF entry_no_edge entry_no_combine
+          entry_no_enter refl] placement_nodes_def,
+        rule placement_se_entry)
+  have s0: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (Statement 0, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (Statement 0, ())) placement_sigma_abs
+        (Statement 0, ())"
+    by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 0" and u = "FunctionEntry ''add''"]
+          placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
+          placement_nodes_def,
+        rule placement_se_statement0)
+  have s1_not_entry: "Statement 1 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
+  have s1_pred: "intra_predecessor_list placement_cfg (Statement 1) =
+      [(Statement 0, EA_Assign ''tmp'' (Plus (V ''balance'') (V ''x'')))]"
+    by (rule placement_hook_lists)
+  have s1_no_combine: "return_call_action_list placement_cfg (Statement 1) = []"
+    by (rule placement_no_combine_edge_nodes)
+  have s1_no_enter: "entry_call_list placement_cfg (Statement 1) = []"
+    by (rule placement_no_combine_edge_nodes)
+  have s1: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (Statement 1, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (Statement 1, ())) placement_sigma_abs
+        (Statement 1, ())"
+    by (intro conjI,
+        subst placement_hook_gen_single_edge_dep[OF s1_not_entry s1_pred s1_no_combine
+              s1_no_enter refl],
+        simp add: placement_nodes_def,
+        rule placement_se_statement1)
+  have s2: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (Statement 2, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (Statement 2, ())) placement_sigma_abs
+        (Statement 2, ())"
+    by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 2" and u = "Statement 1"]
+          placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
+          placement_nodes_def,
+        rule placement_se_statement2)
+  have s3: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (Statement 3, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (Statement 3, ())) placement_sigma_abs
+        (Statement 3, ())"
+    by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 3" and u = "Statement 2"]
+          placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
+          placement_nodes_def,
+        rule placement_se_statement3)
+  have s5: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (Statement 5, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (Statement 5, ())) placement_sigma_abs
+        (Statement 5, ())"
+    by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "Statement 5" and u = "FunctionEntry prog_main_name"]
+          placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
+          placement_nodes_def,
+        rule placement_se_statement5)
+  have s6: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (Statement 6, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (Statement 6, ())) placement_sigma_abs
+        (Statement 6, ())"
+    by (intro conjI, simp add: placement_hook_gen_single_combine_dep[OF _ _ _ _ refl,
+          where v = "Statement 6"]
+          placement_hook_lists placement_cfg_entry placement_nodes_def,
+        rule placement_se_statement6)
+  have result_add: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (FunctionResult ''add'', ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (FunctionResult ''add'', ())) placement_sigma_abs
+        (FunctionResult ''add'', ())"
+    by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "FunctionResult ''add''" and u = "Statement 3"]
+          placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
+          placement_nodes_def,
+        rule placement_se_function_result_add)
+  have result_main: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (FunctionResult prog_main_name, ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (FunctionResult prog_main_name, ())) placement_sigma_abs
+        (FunctionResult prog_main_name, ())"
+    by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
+          where v = "FunctionResult prog_main_name" and u = "Statement 6"]
+          placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
+          placement_nodes_def,
+        rule placement_se_function_result_main)
+  have entry_add: "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs) placement_sigma_abs
+        (FunctionEntry ''add'', ()) \<subseteq> placement_nodes \<and>
+      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
+        placement_s0d_abs placement_s0g_abs (FunctionEntry ''add'', ())) placement_sigma_abs
+        (FunctionEntry ''add'', ())"
+    by (intro conjI, simp add: placement_hook_gen_single_enter_dep[OF _ _ _ _ refl,
+          where v = "FunctionEntry ''add''"]
+          placement_hook_lists placement_cfg_entry prog_main_name_def
+          placement_nodes_def,
+        rule placement_se_function_entry_add)
   show "\<forall>u \<in> placement_nodes. dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
       placement_s0d_abs placement_s0g_abs) placement_sigma_abs u \<subseteq> placement_nodes \<and>
     se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
       placement_s0d_abs placement_s0g_abs u) placement_sigma_abs u"
-proof
-  fix u assume u_mem: "u \<in> placement_nodes"
-  consider
-      (entry) "u = (FunctionEntry prog_main_name, ())"
-    | (s0) "u = (Statement 0, ())" | (s1) "u = (Statement 1, ())"
-    | (s2) "u = (Statement 2, ())" | (s3) "u = (Statement 3, ())"
-    | (s5) "u = (Statement 5, ())" | (s6) "u = (Statement 6, ())"
-    | (result_add) "u = (FunctionResult ''add'', ())"
-    | (result_main) "u = (FunctionResult prog_main_name, ())"
-    | (entry_add) "u = (FunctionEntry ''add'', ())"
-    using u_mem unfolding placement_nodes_def by auto
-  then show "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
-        placement_s0d_abs placement_s0g_abs) placement_sigma_abs u \<subseteq> placement_nodes \<and>
-      se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
-        placement_s0d_abs placement_s0g_abs u) placement_sigma_abs u"
-  proof cases
-    case entry
-    show ?thesis
-      unfolding entry
-    proof (intro conjI)
-      have entry_no_edge: "intra_predecessor_list placement_cfg (cfg_entry placement_cfg) = []"
-        unfolding placement_cfg_entry by (rule placement_hook_lists)
-      have entry_no_combine: "return_call_action_list placement_cfg (cfg_entry placement_cfg) = []"
-        unfolding placement_cfg_entry by (rule placement_hook_lists)
-      have entry_no_enter: "entry_call_list placement_cfg (cfg_entry placement_cfg) = []"
-        unfolding placement_cfg_entry by (rule placement_hook_lists)
-      show "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
-          placement_s0d_abs placement_s0g_abs) placement_sigma_abs
-          (FunctionEntry prog_main_name, ()) \<subseteq> placement_nodes"
-        unfolding placement_cfg_entry[symmetric]
-        by (simp add: placement_hook_gen_entry_dep[OF entry_no_edge entry_no_combine
-              entry_no_enter refl])
-    next
-      show "se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
-          placement_s0d_abs placement_s0g_abs (FunctionEntry prog_main_name, ()))
-          placement_sigma_abs (FunctionEntry prog_main_name, ())"
-        by (rule placement_se_entry[unfolded placement_cfg_entry])
-    qed
-  next
-    case s0
-    show ?thesis
-      unfolding s0
-      by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-            where v = "Statement 0" and u = "FunctionEntry ''add''"]
-            placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
-            placement_nodes_def,
-          rule placement_se_statement0)
-  next
-    case s1
-    show ?thesis
-      unfolding s1
-    proof (intro conjI)
-      have not_entry: "Statement 1 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
-      have pred: "intra_predecessor_list placement_cfg (Statement 1) =
-          [(Statement 0, EA_Assign ''tmp'' (Plus (V ''balance'') (V ''x'')))]"
-        by (rule placement_hook_lists)
-      have no_combine: "return_call_action_list placement_cfg (Statement 1) = []"
-        by (rule placement_no_combine_edge_nodes)
-      have no_enter: "entry_call_list placement_cfg (Statement 1) = []"
-        by (rule placement_no_combine_edge_nodes)
-      show "dep\<^sub>L (placement_sound_dg_hooks.hook_gen placement_cfg bot
-          placement_s0d_abs placement_s0g_abs) placement_sigma_abs (Statement 1, ())
-          \<subseteq> placement_nodes"
-        by (subst placement_hook_gen_single_edge_dep[OF not_entry pred no_combine no_enter refl])
-           (simp add: placement_nodes_def)
-    next
-      show "se_constraint_holds (placement_sound_dg_hooks.hook_gen placement_cfg bot
-          placement_s0d_abs placement_s0g_abs (Statement 1, ())) placement_sigma_abs
-          (Statement 1, ())"
-        by (rule placement_se_statement1)
-    qed
-  next
-    case s2
-    show ?thesis
-      unfolding s2
-      by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-            where v = "Statement 2" and u = "Statement 1"]
-            placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
-            placement_nodes_def,
-          rule placement_se_statement2)
-  next
-    case s3
-    show ?thesis
-      unfolding s3
-      by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-            where v = "Statement 3" and u = "Statement 2"]
-            placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
-            placement_nodes_def,
-          rule placement_se_statement3)
-  next
-    case s5
-    show ?thesis
-      unfolding s5
-      by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-            where v = "Statement 5" and u = "FunctionEntry prog_main_name"]
-            placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
-            placement_nodes_def,
-          rule placement_se_statement5)
-  next
-    case s6
-    show ?thesis
-      unfolding s6
-      by (intro conjI, simp add: placement_hook_gen_single_combine_dep[OF _ _ _ _ refl,
-            where v = "Statement 6"]
-            placement_hook_lists placement_cfg_entry placement_nodes_def,
-          rule placement_se_statement6)
-  next
-    case result_add
-    show ?thesis
-      unfolding result_add
-      by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-            where v = "FunctionResult ''add''" and u = "Statement 3"]
-            placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
-            placement_nodes_def,
-          rule placement_se_function_result_add)
-  next
-    case result_main
-    show ?thesis
-      unfolding result_main
-      by (intro conjI, simp add: placement_hook_gen_single_edge_dep[OF _ _ _ _ refl,
-            where v = "FunctionResult prog_main_name" and u = "Statement 6"]
-            placement_hook_lists placement_no_combine_edge_nodes placement_cfg_entry
-            placement_nodes_def,
-          rule placement_se_function_result_main)
-  next
-    case entry_add
-    show ?thesis
-      unfolding entry_add
-      by (intro conjI, simp add: placement_hook_gen_single_enter_dep[OF _ _ _ _ refl,
-            where v = "FunctionEntry ''add''"]
-            placement_hook_lists placement_cfg_entry prog_main_name_def
-            placement_nodes_def,
-          rule placement_se_function_entry_add)
-  qed
-qed
+    using entry[unfolded placement_cfg_entry] s0 s1 s2 s3 s5 s6 result_add result_main entry_add
+    by (auto simp: placement_nodes_def)
 qed
 
 subsection \<open>Trace-native collecting soundness\<close>
