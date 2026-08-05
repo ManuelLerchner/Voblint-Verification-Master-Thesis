@@ -256,7 +256,8 @@ proof -
        \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"
     unfolding twice_cfg_def twice_sol_def twice_eqs_def
     apply (rule ivl_reg.run_source_sound
-      [where Pi=twice_pi and ps=twice_procs and mnm="''main''" and main=twice_main])
+      [where Pi=twice_pi and ps=twice_procs and mnm="''main''" and main=twice_main,
+       unfolded unit_dg_spec_st_for_is_global fun_of_exec_dg_st_for_is_global])
     apply (rule twice_terminates_c[unfolded twice_eqs_def twice_cfg_def])
     apply (rule twice_wf)
     apply (rule twice_cover_entry[unfolded twice_sol_def twice_eqs_def twice_cfg_def])

@@ -32,59 +32,10 @@ text \<open>
   \<^const>\<open>part_post_solution\<close> obtained from a single \<^verbatim>\<open>by eval\<close> success via that adapter.
 \<close>
 
-subsection \<open>The executable generator is the locale generator\<close>
 
-context sound_dg_spec_ltr
-begin
-
-lemma dg_cmb_of_eq: "dg_cmb_of S = dg_cmb"
-  by (rule ext)+ (simp add: dg_cmb_of_def dg_cmb_def)
-
-lemma dg_extra_of_eq: "dg_extra_of S g = dg_extra g"
-  by (rule ext)+ (simp add: dg_extra_of_def dg_extra_def dg_enter_def)
-
-lemma dg_gen_of_eq:
-  "dg_gen_of S g bot0 s0d s0g = dg_gen g bot0 s0d s0g"
-  by (simp add: dg_gen_of_def dg_gen_def dg_cmb_of_eq dg_extra_of_eq)
-
-subsection \<open>Semantic core: abstract post-solution to source bound\<close>
-
-theorem dg_run_source_sound_abs:
-  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
-  assumes wf: "wf_compile_input is_global Pi ps mnm main"
-    and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> vars"
-    and finI: "finite (intra (compile_prog Pi ps mnm main))"
-    and finC: "finite (calls (compile_prog Pi ps mnm main))"
-    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-    and s0mem: "s0 \<in> S0"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> dg_gamma sigma v"
-proof -
-  from source_reaches_ltr_collect[OF wf s0mem run]
-  obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)"
-    and coll: "t \<in> ltr_collect is_global (compile_prog Pi ps mnm main) S0 v" by blast
-  have "ltr_collect is_global (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
-    by (rule dg_post_solution_collect_sound_ltr
-          [OF pp cover_entry cover_edge cover_enter cover_combine finI finC sound0])
-  then show ?thesis using m coll by blast
-qed
-
-end
-
-text \<open>Classifier-parametric mirror of \<open>dg_run_source_sound_abs\<close>, generic in the storage
-  classifier this locale already fixes as \<open>gs\<close>: \<open>source_reaches_ltr_collect\<close> is already
-  classifier-parametric, and \<open>dg_post_solution_collect_sound_ltr_for\<close> is this locale's own
-  endpoint, so the proof replays unchanged.\<close>
+text \<open>The semantic core, generic in the storage classifier this locale fixes as \<open>gs\<close>:
+  \<open>source_reaches_ltr_collect\<close> is already classifier-parametric, and
+  \<open>dg_post_solution_collect_sound_ltr_for\<close> is this locale's own endpoint.\<close>
 
 context sound_dg_spec_ltr_for
 begin
@@ -254,26 +205,6 @@ text \<open>
   registration interface rather than in individual analyses.
 \<close>
 
-lemma unit_dg_Hstep:
-  assumes commute: "\<And>a s. fun_of_exec_dg_st (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st s)"
-    and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
-  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step (unit_dg_spec_st tf_st enter_st) a d g)
-           = dg_spec_step (unit_dg_spec tf) a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-  by (simp add: dg_spec_step_unit_st[OF ret_none ret_some] dg_spec_step_unit
-                unit_step_st_commute commute)
-
-lemma unit_dg_Henter:
-  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st s)"
-  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st tf_st enter_st) xs es d g)
-           = dgs_enter (unit_dg_spec tf) xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-  by (simp add: unit_dg_spec_st_def dgs_enter_unit_dg_spec unit_step_st_commute enter_commute)
-
-lemma unit_dg_Hcomb:
-  "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec tf) dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
-  by (rule unit_combine_step_st_commute)
-
 text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throughout: the migrated
   entry point for any consumer that no longer relies on \<^const>\<open>is_global\<close>.\<close>
 
@@ -300,6 +231,32 @@ lemma unit_dg_Hcomb_for:
      = dgs_combine (unit_dg_spec_for gs tf) dst
          (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
   by (rule unit_combine_step_st_commute_for)
+
+text \<open>The \<open>is_global\<close> instances, used by the still-fixed reference flagships.\<close>
+
+lemma unit_dg_Hstep:
+  assumes commute: "\<And>a s. fun_of_exec_dg_st (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st s)"
+    and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
+    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step (unit_dg_spec_st tf_st enter_st) a d g)
+           = dg_spec_step (unit_dg_spec tf) a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+  by (rule unit_dg_Hstep_for[where gs=is_global,
+        unfolded fun_of_exec_dg_st_for_is_global unit_dg_spec_st_for_is_global unit_dg_spec_for_is_global,
+        OF commute ret_none ret_some])
+
+lemma unit_dg_Henter:
+  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st s)"
+  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st tf_st enter_st) xs es d g)
+           = dgs_enter (unit_dg_spec tf) xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+  by (rule unit_dg_Henter_for[where gs=is_global,
+        unfolded fun_of_exec_dg_st_for_is_global unit_dg_spec_st_for_is_global unit_dg_spec_for_is_global,
+        OF enter_commute])
+
+lemma unit_dg_Hcomb:
+  "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
+     = dgs_combine (unit_dg_spec tf) dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
+  by (rule unit_dg_Hcomb_for[where gs=is_global,
+        unfolded fun_of_exec_dg_st_for_is_global unit_dg_spec_st_for_is_global unit_dg_spec_for_is_global])
 
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
 
