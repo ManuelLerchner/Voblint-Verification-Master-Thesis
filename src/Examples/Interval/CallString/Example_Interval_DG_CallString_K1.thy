@@ -9,7 +9,7 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Core.Solver_Menu"
-    "Voblint_Formalization.DG_Domain_Registration"
+    "Voblint_Formalization.Run_Analysis_Sound"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -380,11 +380,10 @@ proof -
 qed
 
 text \<open>\<open>nest_program\<close> declares no globals, so \<^const>\<open>nest_gs\<close> has no pre-registered
-  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal interval spec
-  (\<open>DG_Domain_Registration\<close> only registers \<^const>\<open>is_global\<close>): establish it once here,
-  in this chain's shared ancestor, so every downstream \<open>dg_ctx_activation\<close>/\<open>routed_context\<close>
-  interpretation on \<open>Sabs\<close> discharges its inherited step/combine/enter obligations
-  automatically.\<close>
+  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal interval spec: establish it
+  once here, in this chain's shared ancestor, so every downstream
+  \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close> discharges its
+  inherited step/combine/enter obligations automatically.\<close>
 
 interpretation ivl_dg_for: sound_dg_spec Sabs gamma_unit nest_gs
   by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])

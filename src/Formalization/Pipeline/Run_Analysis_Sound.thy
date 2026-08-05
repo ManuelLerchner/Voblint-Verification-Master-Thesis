@@ -145,60 +145,13 @@ proof -
           finI finC sound0 s0mem run])
 qed
 
-text \<open>\<open>dg_exec_run_source_sound\<close> is the \<open>is_global\<close> specialisation of
-  \<open>dg_exec_run_source_sound_for\<close>: every hypothesis is stated at the plain
-  (non-\<open>_for\<close>) accessors, and the two \<open>fun_of_..._for_is_global\<close> fold lemmas
-  plus the definitional \<open>sound_dg_spec_ltr\<close>/\<open>sound_dg_spec_ltr_for\<close>
-  identification at \<open>is_global\<close> discharge the rest, so the specialisation
-  carries no independent proof content of its own.\<close>
-
-theorem dg_exec_run_source_sound:
-  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
-    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st, 'g1::bounded_semilattice_sup_bot exec_dg_st) dg_spec"
-    and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
-    and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
-    and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
-  assumes sds: "sound_dg_spec_ltr S_abs gammaDG"
-    and Hstep: "\<And>a d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step S_st a d g)
-                        = dg_spec_step S_abs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-    and Henter: "\<And>xs es d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter S_st xs es d g)
-                        = dgs_enter S_abs xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-    and Hcomb: "\<And>dst dc de g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine S_st dst dc de g)
-                        = dgs_combine S_abs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
-    and pp_st: "part_post_solution
-                  (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
-    and wf: "wf_compile_input is_global Pi ps mnm main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> vars"
-    and finI: "finite (intra (compile_prog Pi ps mnm main))"
-    and finC: "finite (calls (compile_prog Pi ps mnm main))"
-    and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g)"
-    and s0mem: "s0 \<in> S0"
-    and run: "star (pstep is_global Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st \<circ> sigma_st) v"
-  by (rule dg_exec_run_source_sound_for
-        [where gs = is_global,
-         unfolded fun_of_exec_dg_st_for_is_global fun_of_dg_st_for_is_global,
-         OF sds[unfolded sound_dg_spec_ltr_def, folded sound_dg_spec_ltr_for_def]
-            Hstep Henter Hcomb pp_st wf
-            cover_entry cover_edge cover_enter cover_combine
-            finI finC sound0 s0mem run])
-
 section \<open>Registered executable D/G analyses\<close>
 
 subsection \<open>Executable-to-abstract transport for diagonal unit specifications\<close>
 
 text \<open>
   For a diagonal (unit) D/G analysis the two transport-commutation hypotheses of
-  \<^theory_text>\<open>dg_exec_run_source_sound\<close> are \<^emph>\<open>derivable\<close>: the combine side holds
+  \<^theory_text>\<open>dg_exec_run_source_sound_for\<close> are \<^emph>\<open>derivable\<close>: the combine side holds
   unconditionally, and the step side reduces to the single primitive per-action
   commutation of the executable transfer \<^term>\<open>tf_st\<close> with its abstract image
   \<^term>\<open>apply_tf tf\<close>.  The generic lemmas keep this transport argument in the

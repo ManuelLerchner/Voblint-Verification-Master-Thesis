@@ -4,7 +4,7 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Side_Soundness"
     "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Formalization.DG_Domain_Registration"
+    "Voblint_Formalization.Run_Analysis_Sound"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
@@ -379,11 +379,10 @@ proof -
 qed
 
 text \<open>\<open>sign_nest_program\<close> declares no globals, so \<^const>\<open>sign_nest_gs\<close> has no
-  pre-registered \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal sign spec
-  (\<open>DG_Domain_Registration\<close> only registers \<^const>\<open>is_global\<close>): establish it once here,
-  in this chain's shared ancestor, so every downstream \<open>dg_ctx_activation\<close>/\<open>routed_context\<close>
-  interpretation on \<open>Sabs\<close> discharges its inherited step/combine/enter obligations
-  automatically.\<close>
+  pre-registered \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal sign spec:
+  establish it once here, in this chain's shared ancestor, so every downstream
+  \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close> discharges its
+  inherited step/combine/enter obligations automatically.\<close>
 
 interpretation sign_dg_for: sound_dg_spec Sabs gamma_unit sign_nest_gs
   by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for])

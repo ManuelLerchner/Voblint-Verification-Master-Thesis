@@ -3,12 +3,13 @@ section \<open>Flagship: parity analysis of an even-step loop, executed and cert
 text \<open>
   \<^bold>\<open>Second domain, same registration.\<close>  This theory is the E1 validation of the
   domain-registration API: parity registers through the \<open>unit_dg_exec_analysis\<close> locale
-  (as \<open>parity_reg\<close> in \<open>DG_Domain_Registration\<close>) with \<^emph>\<open>no\<close> copied \<open>Hstep\<close>, \<open>Hcomb\<close>,
-  \<open>strategy_tree\<close>, \<open>Inl\<close>/\<open>Inr\<close>, or manual post-solution transport lemmas.  An IMP2
-  program is compiled to a CFG; the generic D/G framework generates the equation
-  system; the \<^emph>\<open>verified\<close> always-join solver \<^emph>\<open>computes\<close> a parity solution inside
-  Isabelle (finite lattice, no widening needed); and the single registered endpoint
-  \<open>parity_reg.run_source_sound\<close> lifts the result to actual source runs.
+  (as \<open>parity_ex_reg\<close> below, at this file's own storage classifier \<open>parity_gs\<close>) with
+  \<^emph>\<open>no\<close> copied \<open>Hstep\<close>, \<open>Hcomb\<close>, \<open>strategy_tree\<close>, \<open>Inl\<close>/\<open>Inr\<close>, or manual post-solution
+  transport lemmas.  An IMP2 program is compiled to a CFG; the generic D/G framework
+  generates the equation system; the \<^emph>\<open>verified\<close> always-join solver \<^emph>\<open>computes\<close> a
+  parity solution inside Isabelle (finite lattice, no widening needed); and the single
+  registered endpoint \<open>parity_ex_reg.run_source_sound\<close> lifts the result to actual
+  source runs.
 
   The result is informative: the analysis \<^emph>\<open>discovers\<close> that \<open>x\<close> is even at every
   program point (\<open>x = 0\<close> initially, then \<open>x := x + 2\<close> preserves parity), so the loop
@@ -24,7 +25,7 @@ theory Example_Parity_DG_Flagship
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.DG_Domain_Registration"
+    "Voblint_Formalization.Run_Analysis_Sound"
 begin
 
 hide_const (open) Update_rules.N
@@ -87,11 +88,12 @@ subsection \<open>3. Executable parity D/G specification\<close>
 
 text \<open>
   Parity forms the diagonal D/G analysis \<open>D = G = parity abs_state\<close>, with executable
-  mirror \<open>unit_dg_spec_st parity_tf_st\<close>.  The registration \<^locale>\<open>unit_dg_exec_analysis\<close>
-  --- interpreted as \<open>parity_reg\<close> in \<open>DG_Domain_Registration\<close> from
-  \<open>parity_is_sound_transfer\<close> and \<open>parity_tf_st_commute\<close> alone --- discharges the
-  transport, soundness, and solver-crossing obligations generically.  This example
-  supplies only the program, the executable solve, and the coverage witnesses.
+  mirror \<open>unit_dg_spec_st_for parity_gs parity_tf_st\<close>.  The registration
+  \<^locale>\<open>unit_dg_exec_analysis\<close> --- interpreted as \<open>parity_ex_reg\<close> below, at this
+  file's own classifier \<open>parity_gs\<close>, from \<open>parity_is_sound_transfer_for\<close> and
+  \<open>parity_tf_st_for_commute\<close> alone --- discharges the transport, soundness, and
+  solver-crossing obligations generically.  This example supplies only the program,
+  the executable solve, and the coverage witnesses.
 \<close>
 
 subsection \<open>4. Equation generation\<close>
@@ -167,10 +169,10 @@ lemma parity_exit_computed:
 subsection \<open>8. Source-level soundness through the registered analysis\<close>
 
 text \<open>
-  The registered endpoint \<open>parity_reg.run_source_sound\<close> turns the single \<open>by eval\<close>
+  The registered endpoint \<open>parity_ex_reg.run_source_sound\<close> turns the single \<open>by eval\<close>
   solver success \<open>parity_terminates_c\<close> directly into a source-level guarantee: every
   reachable IMP2 store is bounded by the computed parity at its matched program point,
-  read through the semantic accessor \<open>parity_reg.gamma\<close>.  No transport lemma,
+  read through the semantic accessor \<open>parity_ex_reg.gamma\<close>.  No transport lemma,
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
 \<close>
 
@@ -180,10 +182,8 @@ lemma parity_wf: "wf_compile_input parity_gs parity_pi [] ''main'' parity_prog"
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       prog_main_name_def split: if_splits)
 
-text \<open>\<open>parity_program\<close> declares \<open>G\<close>, so \<^const>\<open>parity_gs\<close> is not the \<^const>\<open>is_global\<close>
-  classifier \<^theory>\<open>Voblint_Formalization.DG_Domain_Registration\<close> registers by default:
-  interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with the
-  classifier-parametric transfer/enter functions, matching the pattern in
+text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<^const>\<open>parity_gs\<close> with
+  the classifier-parametric transfer/enter functions, matching the pattern in
   \<open>Exec_Sign_DG_Run\<close>.  The interpretation absorbs the sound-transfer and
   primitive-commutation obligations once, so \<open>parity_source_run_sound\<close> below only
   supplies the compiled-input and solver facts.\<close>

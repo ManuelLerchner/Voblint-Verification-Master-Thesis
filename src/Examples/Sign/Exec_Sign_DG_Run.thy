@@ -2,8 +2,9 @@ section \<open>Running the verified solver on the native D/G spine (Sign)\<close
 
 text \<open>
   An end-to-end certified run on the carrier-opaque D/G equation system, registered
-  through the \<open>unit_dg_exec_analysis\<close> locale (interpreted as \<open>sign_reg\<close> in
-  \<open>DG_Domain_Registration\<close> from just \<open>sign_is_sound_transfer\<close> and \<open>sign_tf_st_commute\<close>).
+  through the \<open>unit_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
+  this file's own storage classifier \<open>sign_ex_gs\<close>, from just \<open>sign_is_sound_transfer_for\<close>
+  and \<open>sign_tf_st_for_commute\<close>).
   A concrete call-free Sign program is compiled to a CFG; the executable D/G
   generator (\<open>dg_gen_of (unit_dg_spec_st sign_tf_st)\<close>, values in
   \<open>(sign exec_dg_st, sign exec_dg_st) dg_state\<close>) is handed to the vendored always-join TD-side
@@ -22,7 +23,7 @@ theory Exec_Sign_DG_Run
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_DG"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.DG_Domain_Registration"
+    "Voblint_Formalization.Run_Analysis_Sound"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -118,14 +119,11 @@ lemma dgEx_sound0:
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
-text \<open>\<open>sign_ex_prog\<close> declares no globals, so \<^const>\<open>sign_ex_gs\<close> is not the
-  \<^const>\<open>is_global\<close> classifier \<^theory>\<open>Voblint_Formalization.DG_Domain_Registration\<close>
-  registers by default: interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at
-  \<^const>\<open>sign_ex_gs\<close> with the classifier-parametric transfer/enter functions,
-  matching the pattern in \<open>Example_Parity_DG_Flagship\<close>.  The interpretation
-  absorbs the sound-transfer and primitive-commutation obligations once, so
-  \<open>dgEx_source_run_sound\<close> below only supplies the compiled-input and solver
-  facts.\<close>
+text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
+  with the classifier-parametric transfer/enter functions, matching the pattern in
+  \<open>Example_Parity_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
+  primitive-commutation obligations once, so \<open>dgEx_source_run_sound\<close> below only
+  supplies the compiled-input and solver facts.\<close>
 
 interpretation sign_ex_reg:
   unit_dg_exec_analysis sign_ex_gs
