@@ -185,32 +185,6 @@ lemma unit_dg_Hcomb_for:
          (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
   by (rule unit_combine_step_st_commute_for)
 
-text \<open>The \<open>is_global\<close> instances, used by the still-fixed reference flagships.\<close>
-
-lemma unit_dg_Hstep:
-  assumes commute: "\<And>a s. fun_of_exec_dg_st (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st s)"
-    and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
-  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step (unit_dg_spec_st tf_st enter_st) a d g)
-           = dg_spec_step (unit_dg_spec tf) a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-  by (rule unit_dg_Hstep_for[where gs=is_global,
-        unfolded fun_of_exec_dg_st_for_is_global unit_dg_spec_st_for_is_global unit_dg_spec_for_is_global,
-        OF commute ret_none ret_some])
-
-lemma unit_dg_Henter:
-  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st s)"
-  shows "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st tf_st enter_st) xs es d g)
-           = dgs_enter (unit_dg_spec tf) xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-  by (rule unit_dg_Henter_for[where gs=is_global,
-        unfolded fun_of_exec_dg_st_for_is_global unit_dg_spec_st_for_is_global unit_dg_spec_for_is_global,
-        OF enter_commute])
-
-lemma unit_dg_Hcomb:
-  "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st tf_st enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec tf) dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
-  by (rule unit_dg_Hcomb_for[where gs=is_global,
-        unfolded fun_of_exec_dg_st_for_is_global unit_dg_spec_st_for_is_global unit_dg_spec_for_is_global])
-
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
 
 text \<open>
