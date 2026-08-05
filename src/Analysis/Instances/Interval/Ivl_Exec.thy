@@ -465,5 +465,55 @@ next
   qed
 qed
 
+subsection \<open>Unscoped executable/abstract correspondence, generic in the classifier\<close>
+
+lemma ivl_tf_st_for_commute:
+  "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
+   apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
+proof (rule apply_tf_wrap_eqI[
+    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
+  show "\<And>p. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Ret None p) s) =
+    fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s)" by simp
+  show "\<And>a p. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Ret (Some a) p) s) =
+    fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Assign ret_var a) s)" by simp
+  show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s) =
+      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+  show "\<And>x e. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Assign x e) s) =
+    apply_tf (ivl_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: ivl_tf_for_def assign_ivl_def)
+  show "\<And>x. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Random x) s) =
+    apply_tf (ivl_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: ivl_tf_for_def random_ivl_def)
+  show "\<And>b. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Assume b) s) =
+    apply_tf (ivl_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
+    by (rule ivl_tf_st_for_assume_agree[OF refl])
+  show "\<And>b. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_AssumeNot b) s) =
+    apply_tf (ivl_tf_for gs) (EA_AssumeNot b)
+      (fun_of_resolved_st_q_for gs s)"
+    by (rule ivl_tf_st_for_assume_not_agree[OF refl])
+qed
+
+lemma ivl_enter_st_for_commute:
+  "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs xs es s) =
+   tf_enter (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_D_def enter_ivl_for_def ivl_enter_st_for_def
+      ivl_tf_for_def)
+
+lemma ivl_tf_st_for_ret_None:
+  "ivl_tf_st_for gs (EA_Ret None p) = ivl_tf_st_for gs EA_Nop"
+  by (rule ext) simp
+
+lemma ivl_tf_st_for_ret_Some:
+  "ivl_tf_st_for gs (EA_Ret (Some a) p) = ivl_tf_st_for gs (EA_Assign ret_var a)"
+  by (rule ext) simp
+
+
 end
 

@@ -9,7 +9,7 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Core.Solver_Menu"
-    "Voblint_Formalization.DG_Domain_Registration"
+    "Voblint_Formalization.Run_Analysis_Sound"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -30,6 +30,17 @@ definition nest_program :: imp_prog where
      void f(p) { t := g(p); return t }
      void main() { x := f(3); y := f(10) }
    }"
+
+text \<open>The storage classifier: \<open>nest_program\<close> declares no globals, so \<open>nest_gs\<close>
+  classifies every variable this chain touches as local.\<close>
+abbreviation nest_gs :: "vname \<Rightarrow> bool" where
+  "nest_gs \<equiv> declared_global nest_program"
+
+abbreviation nest_lookup_exec_dg_st :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "nest_lookup_exec_dg_st s x \<equiv> lookup_resolved_st_q s (location_of nest_gs x)"
+
+abbreviation nest_update_exec_dg_st :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a \<Rightarrow> 'a exec_dg_st" where
+  "nest_update_exec_dg_st s x a \<equiv> update_resolved_st_q s (location_of nest_gs x) a"
 
 definition nest_pi :: proc_table where "nest_pi = prog_table nest_program"
 definition nest_procs :: "pname list" where "nest_procs = prog_procs nest_program"
@@ -68,15 +79,16 @@ lemma nest_calls_unique_site:
 subsection \<open>The interval domain, executable and abstract\<close>
 
 definition Spoly :: "(ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
-  "Spoly = unit_dg_spec_st ivl_tf_st ivl_enter_st"
+  "Spoly = unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
 abbreviation Sabs :: "(ivl abs_state, ivl abs_state) dg_spec" where
-  "Sabs \<equiv> unit_dg_spec ivl_tf"
+  "Sabs \<equiv> unit_dg_spec_for nest_gs (ivl_tf_for nest_gs)"
 
 lemmas ivl_Hstep =
-  unit_dg_Hstep[OF ivl_tf_st_commute ivl_tf_st_ret_None ivl_tf_st_ret_Some]
-lemmas ivl_Henter = unit_dg_Henter[OF ivl_enter_st_commute]
-lemmas ivl_Hcomb = unit_dg_Hcomb
+  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+    ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some]
+lemmas ivl_Henter = unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
+lemmas ivl_Hcomb = unit_dg_Hcomb_for
 
 subsection \<open>A call-string-keyed global-key type\<close>
 
@@ -158,63 +170,63 @@ text \<open>The return combine and the enter transfer each commute componentwise
   arbitrary incoming global slot.\<close>
 
 lemma dgs_combine_snd_commute_gen:
-  "fun_of_exec_dg_st (snd (dgs_combine Spoly dst dc de g))
-     = snd (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for nest_gs (snd (dgs_combine Spoly dst dc de g))
+     = snd (dgs_combine Sabs dst (fun_of_exec_dg_st_for nest_gs dc) (fun_of_exec_dg_st_for nest_gs de) (fun_of_exec_dg_st_for nest_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st
-                (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g)
-              = dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
+  have step: "map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs)
+                (dgs_combine (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) dst dc de g)
+              = dgs_combine Sabs dst (fun_of_exec_dg_st_for nest_gs dc) (fun_of_exec_dg_st_for nest_gs de) (fun_of_exec_dg_st_for nest_gs g)"
     by (rule ivl_Hcomb)
-  have "fun_of_exec_dg_st (snd (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))
-      = snd (map_prod fun_of_exec_dg_st fun_of_exec_dg_st
-               (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))"
+  have "fun_of_exec_dg_st_for nest_gs (snd (dgs_combine (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) dst dc de g))
+      = snd (map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs)
+               (dgs_combine (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) dst dc de g))"
     by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  also have "\<dots> = snd (dgs_combine Sabs dst (fun_of_exec_dg_st_for nest_gs dc) (fun_of_exec_dg_st_for nest_gs de) (fun_of_exec_dg_st_for nest_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
 
 lemma dgs_combine_fst_commute_gen:
-  "fun_of_exec_dg_st (fst (dgs_combine Spoly dst dc de g))
-     = fst (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for nest_gs (fst (dgs_combine Spoly dst dc de g))
+     = fst (dgs_combine Sabs dst (fun_of_exec_dg_st_for nest_gs dc) (fun_of_exec_dg_st_for nest_gs de) (fun_of_exec_dg_st_for nest_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g)
-              = dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
+  have step: "map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dgs_combine (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) dst dc de g)
+              = dgs_combine Sabs dst (fun_of_exec_dg_st_for nest_gs dc) (fun_of_exec_dg_st_for nest_gs de) (fun_of_exec_dg_st_for nest_gs g)"
     by (rule ivl_Hcomb)
-  have "fun_of_exec_dg_st (fst (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))
-      = fst (map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine (unit_dg_spec_st ivl_tf_st ivl_enter_st) dst dc de g))"
+  have "fun_of_exec_dg_st_for nest_gs (fst (dgs_combine (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) dst dc de g))
+      = fst (map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dgs_combine (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) dst dc de g))"
     by (metis fst_conv map_prod_simp surj_pair)
-  also have "\<dots> = fst (dgs_combine Sabs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g))"
+  also have "\<dots> = fst (dgs_combine Sabs dst (fun_of_exec_dg_st_for nest_gs dc) (fun_of_exec_dg_st_for nest_gs de) (fun_of_exec_dg_st_for nest_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
 
 lemma dgs_enter_snd_commute_gen:
-  "fun_of_exec_dg_st (snd (dgs_enter Spoly fs as d g))
-     = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for nest_gs (snd (dgs_enter Spoly fs as d g))
+     = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g)
-              = dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+  have step: "map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dgs_enter (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) fs as d g)
+              = dgs_enter Sabs fs as (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g)"
     by (rule ivl_Henter)
-  have "fun_of_exec_dg_st (snd (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))
-      = snd (map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))"
+  have "fun_of_exec_dg_st_for nest_gs (snd (dgs_enter (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) fs as d g))
+      = snd (map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dgs_enter (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) fs as d g))"
     by (metis snd_conv map_prod_simp surj_pair)
-  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  also have "\<dots> = snd (dgs_enter Sabs fs as (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
 
 lemma dgs_enter_fst_commute_gen:
-  "fun_of_exec_dg_st (fst (dgs_enter Spoly fs as d g))
-     = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  "fun_of_exec_dg_st_for nest_gs (fst (dgs_enter Spoly fs as d g))
+     = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g))"
 proof -
-  have step: "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g)
-              = dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
+  have step: "map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dgs_enter (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) fs as d g)
+              = dgs_enter Sabs fs as (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g)"
     by (rule ivl_Henter)
-  have "fun_of_exec_dg_st (fst (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))
-      = fst (map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter (unit_dg_spec_st ivl_tf_st ivl_enter_st) fs as d g))"
+  have "fun_of_exec_dg_st_for nest_gs (fst (dgs_enter (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) fs as d g))
+      = fst (map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dgs_enter (unit_dg_spec_st_for nest_gs (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)) fs as d g))"
     by (metis fst_conv map_prod_simp surj_pair)
-  also have "\<dots> = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st d) (fun_of_exec_dg_st g))"
+  also have "\<dots> = fst (dgs_enter Sabs fs as (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g))"
     by (simp add: step)
   finally show ?thesis by (simp add: Spoly_def)
 qed
@@ -223,23 +235,23 @@ text \<open>\<open>cs_route\<close> ignores its data argument, so every \<open>S
   literally the same term on the executable and the abstract carrier.\<close>
 
 lemma dg_tree_st_commute_frame_read_1:
-  "dg_tree_st_commute env
+  "dg_tree_st_commute_for nest_gs env
      (QueryG (Seed1 v ctx) (\<lambda>s. Answer (DG (globs s) bot)))
      (QueryG (Seed1 v ctx) (\<lambda>s. Answer (DG (globs s) bot)))"
-  by (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
+  by (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                 dep_aux_def bot_fun_def)
 
 lemma dg_tree_st_commute_routed_cmb_1:
-  "dg_tree_st_commute env (routed_cmb Spoly Global1 (cs_route 1) ctx ca cc ex)
+  "dg_tree_st_commute_for nest_gs env (routed_cmb Spoly Global1 (cs_route 1) ctx ca cc ex)
                           (routed_cmb Sabs Global1 (cs_route 1) ctx ca cc ex)"
   unfolding routed_cmb_def Let_def
   by (cases ca)
-     (simp_all add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
+     (simp_all add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                     cs_route_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma dg_tree_st_commute_routed_enter_pub_1:
-  "dg_tree_st_commute env
+  "dg_tree_st_commute_for nest_gs env
      (with_call a (\<lambda>dst fs as. do {
         entry_state \<leftarrow> read_local (v, ctx);
         globals_state \<leftarrow> read_global Global1;
@@ -257,12 +269,12 @@ lemma dg_tree_st_commute_routed_enter_pub_1:
         answer_local bot
       }))"
   by (cases a)
-     (simp add: dg_tree_st_commute_def fun_of_dg_st_simps fun_of_exec_dg_st_bot o_def
+     (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                 cs_route_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
                 dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma hextra_commute_routed_1:
-  "list_all2 (dg_tree_st_commute env)
+  "list_all2 (dg_tree_st_commute_for nest_gs env)
      (routed_extra nest_cfg Spoly Seed1 Global1 (cs_route 1) ctx w)
      (routed_extra nest_cfg Sabs Seed1 Global1 (cs_route 1) ctx w)"
   unfolding routed_extra_def Let_def
@@ -289,8 +301,8 @@ theorem nest_1_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global1) (cs_route 1)
         (routed_cmb Sabs Global1) (routed_extra nest_cfg Sabs Seed1 Global1) nest_cfg Sabs
-        (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
-     (cfg_exit nest_cfg, []) (fun_of_dg_st \<circ> snd nest_1_sol) (fst nest_1_sol)"
+        (fun_of_exec_dg_st_for nest_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for nest_gs cinit_ivl_st) (fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st)))
+     (cfg_exit nest_cfg, []) (fun_of_dg_st_for nest_gs \<circ> snd nest_1_sol) (fst nest_1_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global1) (cs_route 1)
@@ -299,12 +311,12 @@ proof -
        (cfg_exit nest_cfg, []) (snd nest_1_sol) (fst nest_1_sol)"
     using nest_1_pp_st unfolding nest_1_eqs_def by simp
   have ivl_Hstep_1:
-    "map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step Spoly a d g') =
-       dg_spec_step Sabs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g')" for a d g'
+    "map_prod (fun_of_exec_dg_st_for nest_gs) (fun_of_exec_dg_st_for nest_gs) (dg_spec_step Spoly a d g') =
+       dg_spec_step Sabs a (fun_of_exec_dg_st_for nest_gs d) (fun_of_exec_dg_st_for nest_gs g')" for a d g'
     unfolding Spoly_def by (rule ivl_Hstep)
   show ?thesis
-    by (rule part_post_solution_seed_dg_st_to_abs
-          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global1"
+    by (rule part_post_solution_seed_dg_st_to_abs_for
+          [where gs = nest_gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global1"
              and route_st = "cs_route 1" and route_abs = "cs_route 1"
              and cmb_st = "routed_cmb Spoly Global1" and cmb_abs = "routed_cmb Sabs Global1"
              and extra_st = "routed_extra nest_cfg Spoly Seed1 Global1"
@@ -316,12 +328,12 @@ qed
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
 
 abbreviation sigma_1 :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> (ivl abs_state, ivl abs_state) dg_state" where
-  "sigma_1 \<equiv> fun_of_dg_st \<circ> snd nest_1_sol"
+  "sigma_1 \<equiv> fun_of_dg_st_for nest_gs \<circ> snd nest_1_sol"
 
 abbreviation gen_1_abs :: "(pp \<times> cfg_node list, gk_1, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
   "gen_1_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global1) (cs_route 1)
        (routed_cmb Sabs Global1) (routed_extra nest_cfg Sabs Seed1 Global1) nest_cfg Sabs
-       (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st) (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st))"
+       (fun_of_exec_dg_st_for nest_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for nest_gs cinit_ivl_st) (fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st))"
 
 lemma pp_eq_bound_1:
   "(v, ctx) \<in> fst nest_1_sol
@@ -356,9 +368,9 @@ lemma ivl_ctx_sg_1_uncovered_empty:
 
 lemma entry_locals_ge_s0d_1:
   assumes cov: "(cfg_entry nest_cfg, []) \<in> fst nest_1_sol"
-  shows "fun_of_exec_dg_st cinit_ivl_st \<le> locals (sigma_1 (Inl (cfg_entry nest_cfg, [])))"
+  shows "fun_of_exec_dg_st_for nest_gs cinit_ivl_st \<le> locals (sigma_1 (Inl (cfg_entry nest_cfg, [])))"
 proof -
-  have "fun_of_exec_dg_st cinit_ivl_st
+  have "fun_of_exec_dg_st_for nest_gs cinit_ivl_st
           \<le> locals (eq gen_1_abs (cfg_entry nest_cfg, []) sigma_1)"
     by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge_1], simp add: le_supI2)
@@ -367,9 +379,18 @@ proof -
   finally show ?thesis .
 qed
 
-interpretation nest_1_dg: dg_ctx_activation Sabs is_global nest_cfg Global1 "cs_route 1"
+text \<open>\<open>nest_program\<close> declares no globals, so \<^const>\<open>nest_gs\<close> has no pre-registered
+  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal interval spec: establish it
+  once here, in this chain's shared ancestor, so every downstream
+  \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close> discharges its
+  inherited step/combine/enter obligations automatically.\<close>
+
+interpretation ivl_dg_for: sound_dg_spec Sabs gamma_unit nest_gs
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
+
+interpretation nest_1_dg: dg_ctx_activation Sabs nest_gs nest_cfg Global1 "cs_route 1"
     "routed_cmb Sabs Global1" "routed_extra nest_cfg Sabs Seed1 Global1"
-    "fun_of_exec_dg_st (bot::ivl exec_dg_st)" "fun_of_exec_dg_st cinit_ivl_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)"
+    "fun_of_exec_dg_st_for nest_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for nest_gs cinit_ivl_st" "fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st)"
     sigma_1 "fst nest_1_sol" "(cfg_exit nest_cfg, [])" ivl_ctx_sg_1
 proof unfold_locales
   show "finite (intra nest_cfg)" by (rule nest_finE)
@@ -377,8 +398,8 @@ next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global1) (cs_route 1)
              (routed_cmb Sabs Global1) (routed_extra nest_cfg Sabs Seed1 Global1) nest_cfg Sabs
-             (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st)
-             (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
+             (fun_of_exec_dg_st_for nest_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for nest_gs cinit_ivl_st)
+             (fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st)))
           (cfg_exit nest_cfg, []) sigma_1 (fst nest_1_sol)"
     by (rule nest_1_pp_abs)
 next
@@ -402,8 +423,8 @@ text \<open>\<open>cs_route 1\<close> and \<open>cs_enterc 1\<close> are the ide
   \<open>f\<close>'s two activation contexts (\<open>enter_callers_g_1\<close>), but \<open>take 1\<close> erases that distinction
   before it reaches the goal, so \<open>CallFwd\<close> does not need to case-split on which one.\<close>
 
-interpretation nest_1_routed: routed_context Sabs is_global nest_cfg Global1 "cs_route 1"
-    "fun_of_exec_dg_st (bot::ivl exec_dg_st)" "fun_of_exec_dg_st cinit_ivl_st" "fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)"
+interpretation nest_1_routed: routed_context Sabs nest_gs nest_cfg Global1 "cs_route 1"
+    "fun_of_exec_dg_st_for nest_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for nest_gs cinit_ivl_st" "fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st)"
     sigma_1 "fst nest_1_sol" "(cfg_exit nest_cfg, [])" ivl_ctx_sg_1
     Seed1 "cs_enterc 1"
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
@@ -459,33 +480,33 @@ qed
 lemma ivl_ctx_sg_1_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls nest_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, ctx))\<rbrakk>"
-  shows "call_enter is_global (CallEdge dst xs es) s
+  shows "call_enter nest_gs (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionEntry p,
-                 cs_enterc 1 u ctx (call_enter is_global (CallEdge dst xs es) s)))\<rbrakk>"
+                 cs_enterc 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule nest_1_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_1_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls nest_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cl, c1))\<rbrakk>"
     and "t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, cs_enterc 1 cl c1 es))\<rbrakk>"
-    and "call_enter_store is_global nest_cfg cl s es"
-  shows "combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (v, c1))\<rbrakk>"
+    and "call_enter_store nest_gs nest_cfg cl s es"
+  shows "combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (v, c1))\<rbrakk>"
   by (rule nest_1_routed.routed_context_comb[OF assms])
 
 section \<open>The headline theorem: 1-call-string activation collecting soundness\<close>
 
-lemma cinit_le_cinit_ivl_st_1: "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
+lemma cinit_le_cinit_ivl_st_1: "cinit_stores nest_gs \<subseteq> \<lbrakk>fun_of_exec_dg_st_for nest_gs cinit_ivl_st\<rbrakk>"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect is_global (cs_enterc 1) [] nest_cfg (cinit_stores is_global) v ctx
+  "activation_collect nest_gs (cs_enterc 1) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_1 (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and enterc = "cs_enterc 1"
-        and seedc = "[]" and S = "cinit_stores is_global" and g = nest_cfg and gs = is_global])
+        and seedc = "[]" and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores is_global"
-  hence "s \<in> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st_1 by blast
-  also have "\<lbrakk>fun_of_exec_dg_st cinit_ivl_st\<rbrakk>
+  fix s assume "s \<in> cinit_stores nest_gs"
+  hence "s \<in> \<lbrakk>fun_of_exec_dg_st_for nest_gs cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st_1 by blast
+  also have "\<lbrakk>fun_of_exec_dg_st_for nest_gs cinit_ivl_st\<rbrakk>
         \<subseteq> \<lbrakk>locals (sigma_1 (Inl (cfg_entry nest_cfg, [])))\<rbrakk>"
     by (rule gamma_state_mono[OF entry_locals_ge_s0d_1[OF entry_covered_1]])
   also have "\<dots> \<subseteq> \<lbrakk>ivl_ctx_sg_1 (Inl (cfg_entry nest_cfg, []))\<rbrakk>"
@@ -502,9 +523,9 @@ next
   show "\<And>u dst pars args p cont c s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter is_global (CallEdge dst pars args) s
+        \<Longrightarrow> call_enter nest_gs (CallEdge dst pars args) s
              \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionEntry p,
-                    cs_enterc 1 u c (call_enter is_global (CallEdge dst pars args) s)))\<rbrakk>"
+                    cs_enterc 1 u c (call_enter nest_gs (CallEdge dst pars args) s)))\<rbrakk>"
     by (rule ivl_ctx_sg_1_seed)
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
@@ -512,8 +533,8 @@ next
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg
         \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cl, c1))\<rbrakk>
         \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, cs_enterc 1 cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store is_global nest_cfg cl s es
-        \<Longrightarrow> combine_collect is_global dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"
+        \<Longrightarrow> call_enter_store nest_gs nest_cfg cl s es
+        \<Longrightarrow> combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_1_comb)
 qed
 
@@ -534,10 +555,10 @@ definition nest_1_graph_config ::
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
+        x @ ''='' @ string_of_ivl (nest_lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if lookup_exec_dg_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (lookup_exec_dg_st d ret)]),
+        if nest_lookup_exec_dg_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (nest_lookup_exec_dg_st d ret)]),
       show_global = (\<lambda>k vars s. [''(none)'']),
       show_global_key = (\<lambda>k. case k of Global1 \<Rightarrow> ''Global'' | Seed1 p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global1 \<Rightarrow> True | Seed1 _ _ \<Rightarrow> False),
@@ -591,5 +612,4 @@ lemma nest_1_dot_nonempty: "String.explode nest_1_dot \<noteq> []" by eval
 ML_val \<open>writeln (@{code nest_1_dot})\<close>
 
 end
-
 

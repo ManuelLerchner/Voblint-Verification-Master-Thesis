@@ -7,7 +7,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.DG_Domain_Registration"
+    "Voblint_Formalization.Run_Analysis_Sound"
 begin
 
 section \<open>The context-insensitive (monovariant) interval flagship\<close>
@@ -33,6 +33,13 @@ definition twice_program :: imp_prog where
 definition twice_pi :: proc_table where "twice_pi = prog_table twice_program"
 definition twice_procs :: "pname list" where "twice_procs = prog_procs twice_program"
 definition twice_main :: "VIMP_Proc.com" where "twice_main = prog_main twice_program"
+
+text \<open>The storage classifier: \<open>twice_program\<close> declares no globals, so \<open>twice_gs\<close>
+  classifies every variable this chain touches as local, matching the
+  \<open>declared_global\<close> migration pattern used by every other flagship rather than
+  the \<open>is_global\<close> naming convention.\<close>
+abbreviation twice_gs :: "vname \<Rightarrow> bool" where
+  "twice_gs \<equiv> declared_global twice_program"
 
 definition twice_cfg :: cfg where
   "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
@@ -76,28 +83,32 @@ lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_cfg_def using compi
 
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
-lemmas ivl_Hstep =
-  unit_dg_Hstep[OF ivl_tf_st_commute ivl_tf_st_ret_None ivl_tf_st_ret_Some]
+text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: the entry point for
+  this file, which no longer relies on \<^const>\<open>is_global\<close>.\<close>
 
-lemmas ivl_Henter = unit_dg_Henter[OF ivl_enter_st_commute]
+lemmas ivl_Hstep_for =
+  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+    ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some]
 
-lemmas ivl_Hcomb = unit_dg_Hcomb
+lemmas ivl_Henter_for =
+  unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 
-lemma dg_gen_of_eq_ivl_dg_gen:
-  "dg_gen_of (unit_dg_spec ivl_tf) g bot0 s0d s0g = ivl_dg.dg_gen g bot0 s0d s0g"
-proof -
-  have cmb: "dg_cmb_of (unit_dg_spec ivl_tf) = ivl_dg.dg_cmb"
-    by (rule ext)+ (simp add: dg_cmb_of_def ivl_dg.dg_cmb_def)
-  have extra: "dg_extra_of (unit_dg_spec ivl_tf) g = ivl_dg.dg_extra g"
-    by (rule ext)+ (simp add: dg_extra_of_def ivl_dg.dg_extra_def ivl_dg.dg_enter_def)
-  show ?thesis by (simp add: dg_gen_of_def ivl_dg.dg_gen_def cmb extra)
-qed
+lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
+
+text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>, generic in the
+  storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
+  accessors and the \<open>dg_post_solution_collect_sound_ltr_for\<close> endpoint below.\<close>
+interpretation twice_sds:
+  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)" gamma_unit twice_gs
+  unfolding sound_dg_spec_ltr_for_def
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
 
 subsection \<open>Equation generation\<close>
 
 definition twice_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "twice_eqs = dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) twice_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+  "twice_eqs = dg_gen_of (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs))
+     twice_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
 
@@ -143,16 +154,17 @@ subsection \<open>Transport to the abstract D/G semantics\<close>
 
 lemma twice_pp_abs:
   "part_post_solution
-     (ivl_dg.dg_gen twice_cfg (fun_of_exec_dg_st (bot::ivl exec_dg_st)) (fun_of_exec_dg_st cinit_ivl_st)
-        (fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)))
-     (cfg_exit twice_cfg, ()) (fun_of_dg_st \<circ> snd twice_sol) (fst twice_sol)"
-  using part_post_solution_dg_st_to_abs[OF ivl_Hstep ivl_Henter ivl_Hcomb twice_pp_st[unfolded twice_eqs_def]]
-  unfolding dg_gen_of_eq_ivl_dg_gen .
+     (twice_sds.dg_gen twice_cfg (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st))
+        (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+        (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
+     (cfg_exit twice_cfg, ()) (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) (fst twice_sol)"
+  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for twice_pp_st[unfolded twice_eqs_def]]
+  unfolding twice_sds.dg_gen_of_eq_for .
 
 subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>
 
 text \<open>
-  The premises of the \<^emph>\<open>generalized\<close> endpoint \<open>ivl_dg_post_solution_collect_sound\<close>:
+  The premises of the \<^emph>\<open>generic\<close> endpoint \<open>dg_post_solution_collect_sound_ltr_for\<close>:
   every point is solved (\<^verbatim>\<open>eval\<close>), the graph is finite --- and, crucially,
   \<^bold>\<open>no \<open>no_enter\<close> premise\<close>: the two \<^const>\<open>CallEdge\<close> entries are covered by the
   same collecting-soundness theorem as ordinary intra edges.
@@ -182,12 +194,15 @@ lemma twice_cover_combine:
   using twice_cover_calls_ball by fastforce
 
 lemma twice_sound0:
-  "cinit_stores is_global \<subseteq> \<lbrakk>fun_of_exec_dg_st cinit_ivl_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st)\<rbrakk>"
+  "cinit_stores twice_gs \<subseteq>
+     \<lbrakk>fun_of_exec_dg_st_for twice_gs cinit_ivl_st \<squnion> fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)\<rbrakk>"
 proof -
-  have "fun_of_exec_dg_st cinit_ivl_st \<squnion> fun_of_exec_dg_st (restrict_global_resolved_q cinit_ivl_st) = fun_of_exec_dg_st cinit_ivl_st"
-    by (simp add: fun_of_st_cinit_ivl_st restrict_global_def sup_fun_def fun_eq_iff)
+  have "fun_of_exec_dg_st_for twice_gs cinit_ivl_st \<squnion>
+          fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)
+        = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
+    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
-    by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st)
+    by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 qed
 
 text \<open>
@@ -196,12 +211,12 @@ text \<open>
 \<close>
 
 theorem twice_collect_sound:
-  "ltr_collect is_global twice_cfg (cinit_stores is_global) v
-     \<subseteq> ivl_dg_gamma (fun_of_dg_st \<circ> snd twice_sol) v"
-  by (rule ivl_dg_post_solution_collect_sound
-        [OF twice_pp_abs[folded ivl_dg_generator_def]
+  "ltr_collect twice_gs twice_cfg (cinit_stores twice_gs) v
+     \<subseteq> twice_sds.dg_gamma (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) v"
+  by (rule twice_sds.dg_post_solution_collect_sound_ltr_for
+        [OF twice_pp_abs
             twice_cover_entry twice_cover_edge twice_cover_enter twice_cover_combine
-            twice_finE twice_finC twice_sound0])
+            twice_finE twice_finC twice_sound0[folded gamma_unit_def]])
 
 subsection \<open>Inspecting the certified result\<close>
 
@@ -223,27 +238,55 @@ lemma twice_y_computed:
   "lookup_exec_dg_st (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
+subsection \<open>Registration through the classifier-parametric registration locale\<close>
+
+text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<open>twice_gs\<close>, matching the
+  pattern in \<open>Exec_Sign_DG_Run\<close>, \<open>Example_Parity_DG_Flagship\<close>, and
+  \<open>Example_Interval_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
+  primitive-commutation obligations once, so \<open>twice_source_run_sound\<close> below only
+  supplies the compiled-input and solver facts.\<close>
+
+interpretation twice_ex_reg:
+  unit_dg_exec_analysis twice_gs
+    "ivl_tf_for twice_gs" "ivl_tf_st_for twice_gs" "ivl_enter_st_for twice_gs"
+    "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
+proof -
+  interpret twice_transfer: sound_transfer_for twice_gs "ivl_tf_for twice_gs"
+    by (rule ivl_is_sound_transfer_for)
+  show "unit_dg_exec_analysis twice_gs (ivl_tf_for twice_gs) (ivl_tf_st_for twice_gs)
+          (ivl_enter_st_for twice_gs)
+          TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
+    by unfold_locales
+       (rule twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_random_for
+             twice_transfer.tf_sound_assume_for twice_transfer.tf_sound_assume_not_for
+             twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_for
+             ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
+             ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some
+             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
+qed
+
 subsection \<open>Source-level soundness\<close>
 
-lemma twice_wf: "wf_compile_input is_global twice_pi twice_procs ''main'' twice_main"
+lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs ''main'' twice_main"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_aexp_def ret_var_def is_global_def
+      value_providing_def source_aexp_def ret_var_def
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:
-  assumes run: "star (pstep is_global twice_pi) (twice_main, s, []) src'"
-      and init: "s \<in> cinit_stores is_global"
+  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s, []) src'"
+      and init: "s \<in> cinit_stores twice_gs"
   shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
-                   \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"
+                   \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have cert:
     "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
-       \<and> t \<in> ivl_reg.gamma (snd twice_sol) v"
+       \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
     unfolding twice_cfg_def twice_sol_def twice_eqs_def
-    apply (rule ivl_reg.run_source_sound
+    apply (rule twice_ex_reg.run_source_sound
       [where Pi=twice_pi and ps=twice_procs and mnm="''main''" and main=twice_main])
     apply (rule twice_terminates_c[unfolded twice_eqs_def twice_cfg_def])
     apply (rule twice_wf)

@@ -29,12 +29,24 @@ text \<open>The global-key type separates shared analysis globals from
 
 datatype gk = Global | Seed (seed_pp: pp) (seed_ivl: "ivl")
 
+subsection \<open>The storage classifier\<close>
 
+text \<open>The M4 classifier migration: storage is decided from \<open>twice_program\<close>'s own
+  declarations (\<^const>\<open>declared_global\<close>) rather than the \<open>is_global\<close> naming
+  convention. \<open>twice_program\<close> declares no globals, so \<^term>\<open>twice_gs\<close> classifies
+  every variable this chain touches as local --- unlike \<^const>\<open>is_global\<close>, which
+  would still treat any \<open>G\<close>-prefixed name as global by naming convention alone.\<close>
+
+abbreviation twice_gs :: "vname \<Rightarrow> bool" where
+  "twice_gs \<equiv> declared_global twice_program"
+
+abbreviation twice_lookup_exec_dg_st :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "twice_lookup_exec_dg_st s x \<equiv> lookup_resolved_st_q s (location_of twice_gs x)"
 
 subsection \<open>The routed context hooks\<close>
 
 definition Spoly :: "(ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
-  "Spoly = unit_dg_spec_st ivl_tf_st ivl_enter_st"
+  "Spoly = unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)"
 
 text \<open>Outgoing call edges of a node, as callee entry / call action / continuation.  The
   procedure-aware \<^const>\<open>calls\<close> relation records all three on the edge, so no separate
@@ -57,7 +69,7 @@ definition entered_ivl :: "ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow
 text \<open>The routing function: the context a call selects is the entered value of the
   formal \<open>''p''\<close>.\<close>
 definition route_ivl :: "ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl" where
-  "route_ivl d ca = lookup_exec_dg_st (entered_ivl d ca) ''p''"
+  "route_ivl d ca = twice_lookup_exec_dg_st (entered_ivl d ca) ''p''"
 
 text \<open>The generator's routing hook is generic over call site and caller context; this
   instance needs neither, using only the entered store.\<close>
@@ -102,45 +114,45 @@ subsection \<open>Per-context exact results\<close>
 
 text \<open>Callee entry parameter, per context.\<close>
 lemma call1_p_at_entry:
-  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''p''
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''p''
      = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma call2_p_at_entry:
-  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''p''
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''p''
      = Ivl (Fin 10) (Fin 10)"
   by eval
 
 text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged.\<close>
 lemma call1_ret_at_exit:
-  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call1)))) ''#ret''
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call1)))) ''#ret''
      = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma call2_ret_at_exit:
-  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2)))) ''#ret''
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult ''twice'', ctx_call2)))) ''#ret''
      = Ivl (Fin 20) (Fin 20)"
   by eval
 
 text \<open>Caller destinations after each return.\<close>
 lemma x_computed:
-  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 3, bot)))) ''x'' = Ivl (Fin 6) (Fin 6)"
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 3, bot)))) ''x'' = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma y_computed:
-  "lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 4, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 4, bot)))) ''y'' = Ivl (Fin 20) (Fin 20)"
   by eval
 
 subsection \<open>Seed slots and coverage\<close>
 
 text \<open>Each call publishes the entered store into its own context's seed slot.\<close>
 lemma seed_call1:
-  "lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call1)))) ''p''
+  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call1)))) ''p''
      = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma seed_call2:
-  "lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call2)))) ''p''
+  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry ''twice'') ctx_call2)))) ''p''
      = Ivl (Fin 10) (Fin 10)"
   by eval
 
@@ -169,10 +181,10 @@ definition twice_ctx_graph_config ::
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
+        x @ ''='' @ string_of_ivl (twice_lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if lookup_exec_dg_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (lookup_exec_dg_st d ret)]),
+        if twice_lookup_exec_dg_st d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (twice_lookup_exec_dg_st d ret)]),
       show_global = (\<lambda>k vars s. [''(none)'']),
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),

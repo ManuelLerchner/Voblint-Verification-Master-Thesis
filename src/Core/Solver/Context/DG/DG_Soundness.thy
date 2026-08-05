@@ -1660,39 +1660,6 @@ lemma gamma_unit_mono:
 lemma gamma_unitD [dest]: "s \<in> gamma_unit d g \<Longrightarrow> s \<in> \<lbrakk>d \<squnion> g\<rbrakk>"
   unfolding gamma_unit_def by simp
 
-text \<open>The combine obligation of @{locale sound_dg_spec} for the diagonal (unit)
-  interpretation, as a named corollary applied by @{method rule} at the
-  interpretation boundary.\<close>
-lemma gamma_unit_combine_sound:
-  assumes sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
-  shows "combine_collect is_global dst s t \<in>
-           (case dgs_combine (unit_dg_spec tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
-proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
-  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
-  have "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs is_global dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
-    by (rule combine_collect_sound[OF sc' tc'])
-  then show ?thesis
-    unfolding dgs_combine_unit_dg_spec gamma_unit_def
-    by (simp add: Let_def restrict_local_global_join combine_abs_eq_restrict)
-qed
-
-text \<open>The enter obligation of @{locale sound_dg_spec} for the diagonal (unit)
-  interpretation.\<close>
-lemma gamma_unit_enter_sound:
-  assumes sound: "sound_transfer tf"
-    and sc: "s \<in> gamma_unit dc g"
-  shows "call_enter is_global (CallEdge dst pars args) s \<in>
-           (case dgs_enter (unit_dg_spec tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit d' g')"
-proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
-  have "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
-    using sound_transfer.tf_sound_enterD[OF sound sc']
-    by (simp add: call_enter_CallEdge)
-  then show ?thesis
-    unfolding dgs_enter_unit_dg_spec unit_step_def gamma_unit_def
-    by (simp add: Let_def restrict_local_global_join)
-qed
 
 lemma gamma_unit_combine_sound_for:
   assumes sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
@@ -1743,17 +1710,12 @@ lemma sound_dg_spec_unit_for:
 lemma sound_dg_spec_unit:
   assumes sound: "sound_transfer tf"
   shows "sound_dg_spec (unit_dg_spec tf) gamma_unit is_global"
-  apply unfold_locales
-  subgoal for d d' g g'
-    by (rule gamma_unit_mono)
-  subgoal for a d g
-    unfolding gamma_unit_def dg_spec_step_unit unit_step_def
-    using sound_transfer.edge_collect_apply_tf_sound[OF sound,
-      where a = a]
-    by (simp add: Let_def restrict_local_global_join)
-  subgoal premises prems by (rule gamma_unit_combine_sound[OF prems])
-  subgoal premises prems by (rule gamma_unit_enter_sound[OF sound prems])
-  done
+proof -
+  interpret sound_transfer tf by (rule sound)
+  have "sound_transfer_for is_global tf" by unfold_locales
+  from sound_dg_spec_unit_for[OF this]
+  show ?thesis by (simp add: unit_dg_spec_for_is_global)
+qed
 
 context sound_transfer
 begin

@@ -146,27 +146,6 @@ lemma sign_tf_sound_enter:
        \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
   unfolding sign_tf_def by (simp add: enter_sign_sound)
 
-interpretation sign_sound_tf: sound_transfer sign_tf
-proof (rule sound_transferI)
-  show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
-    using sign_tf_sound_assign by blast
-  show "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random sign_tf x \<sigma>\<rbrakk>"
-    using sign_tf_sound_random by blast
-  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume sign_tf b \<sigma>\<rbrakk>"
-    using sign_tf_sound_assume by blast
-  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
-    using sign_tf_sound_assume_not by blast
-  show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-       \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
-    using sign_tf_sound_enter by blast
-  show "tf_combine sign_tf = combine_abs is_global"
-    unfolding sign_tf_def by simp
-qed
-
-lemma sign_is_sound_transfer: "sound_transfer sign_tf"
-  by (rule sign_sound_tf.sound_transfer_axioms)
-
 lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
   by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
@@ -253,5 +232,20 @@ lemma sign_tf_for_is_global: "sign_tf_for is_global = sign_tf"
   unfolding sign_tf_for_def sign_tf_def enter_sign_for_def enter_sign_def
     enter_frame_sign_for_def enter_frame_sign_def
   by (rule refl)
+
+text \<open>\<open>sign_is_sound_transfer\<close> is the \<^const>\<open>is_global\<close> specialization of
+  \<open>sign_is_sound_transfer_for\<close>, transported through
+  @{thm [source] sound_transfer_from_for} rather than reproved from scratch.\<close>
+
+interpretation sign_sound_tf: sound_transfer sign_tf
+proof -
+  have "sound_transfer_for is_global sign_tf"
+    using sign_is_sound_transfer_for[of is_global]
+    by (simp only: sign_tf_for_is_global)
+  then show "sound_transfer sign_tf" by (rule sound_transfer_from_for)
+qed
+
+lemma sign_is_sound_transfer: "sound_transfer sign_tf"
+  by (rule sign_sound_tf.sound_transfer_axioms)
 
 end

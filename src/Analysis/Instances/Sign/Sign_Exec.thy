@@ -263,5 +263,65 @@ lemma sign_tf_st_for_ret_none_agree:
   using sign_tf_st_for_nop_agree[OF agree location_in]
   by (simp add: apply_tf_EA_Ret_None)
 
+subsection \<open>Classifier-parametric commutation\<close>
+
+text \<open>The classifier-parametric counterparts of \<open>sign_tf_st_commute\<close>/\<open>sign_enter_st_commute\<close>,
+  mirroring \<open>parity_tf_st_for_commute\<close>/\<open>parity_enter_st_for_commute\<close> for the parity domain:
+  the registered D/G pipeline for a program with a real declared global needs the executable
+  transfer to commute with the abstract transfer at an arbitrary classifier \<open>gs\<close>, not just
+  \<^const>\<open>is_global\<close>.\<close>
+
+lemma sign_tf_st_for_ret_none [simp]:
+  "sign_tf_st_for gs (EA_Ret None p) = sign_tf_st_for gs EA_Nop"
+  by (rule ext) simp
+
+lemma sign_tf_st_for_ret_some [simp]:
+  "sign_tf_st_for gs (EA_Ret (Some a) p) = sign_tf_st_for gs (EA_Assign ret_var a)"
+  by (rule ext) simp
+
+theorem sign_tf_st_for_commute:
+  "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
+   apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
+proof (rule apply_tf_wrap_eqI[
+    where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
+  show "\<And>p. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Ret None p) s) =
+    fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s)" by simp
+  show "\<And>a p. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Ret (Some a) p) s) =
+    fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Assign ret_var a) s)" by simp
+  show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s) =
+      apply_tf (sign_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+  show "\<And>x e. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Assign x e) s) =
+    apply_tf (sign_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: sign_tf_for_def assign_sign_def)
+  show "\<And>x. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Random x) s) =
+    apply_tf (sign_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: sign_tf_for_def random_sign_def)
+  show "\<And>b. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Assume b) s) =
+    apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: sign_tf_for_def assume_sign_st_for_def assume_sign_def bfilter_sign_st_commute)
+  show "\<And>b. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_AssumeNot b) s) =
+    apply_tf (sign_tf_for gs) (EA_AssumeNot b)
+      (fun_of_resolved_st_q_for gs s)"
+    by (simp add: sign_tf_for_def assume_not_sign_st_for_def assume_not_sign_def bfilter_sign_st_commute)
+qed
+
+lemma enter_frame_sign_st_for_commute:
+  "fun_of_resolved_st_q_for gs (enter_frame_D_resolved_q STop s) =
+   enter_frame_sign_for gs (fun_of_resolved_st_q_for gs s)"
+  by (simp add: enter_frame_sign_for_def)
+
+lemma sign_enter_st_for_commute:
+  "fun_of_resolved_st_q_for gs (sign_enter_st_for gs xs es s) =
+   tf_enter (sign_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
+  by (simp add: sign_enter_st_for_def sign_tf_for_def enter_sign_for_def enter_D_def
+                enter_frame_sign_for_def enter_frame_sign_st_for_commute)
+
 end
 

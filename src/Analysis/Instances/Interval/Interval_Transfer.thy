@@ -100,49 +100,6 @@ definition ivl_tf :: "ivl domain_transfer" where
                tf_enter      = enter_ivl,
                tf_combine    = combine_abs is_global |)"
 
-lemma ivl_tf_sound_assign:
-  "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
-  unfolding ivl_tf_def by (simp add: assign_ivl_sound)
-
-lemma ivl_tf_sound_random:
-  "\<forall>x \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. st(x := v) \<in> \<lbrakk>tf_random ivl_tf x \<sigma>\<rbrakk>"
-  unfolding ivl_tf_def by (simp add: random_ivl_sound)
-
-lemma ivl_tf_sound_assume:
-  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
-  unfolding ivl_tf_def by (simp add: assume_ivl_sound)
-
-lemma ivl_tf_sound_assume_not:
-  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
-  unfolding ivl_tf_def by (simp add: assume_not_ivl_sound)
-
-lemma ivl_tf_sound_enter:
-  "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state is_global st)
-       \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
-  unfolding ivl_tf_def by (simp add: enter_ivl_sound)
-
-interpretation ivl_sound_tf: sound_transfer ivl_tf
-proof (rule sound_transferI)
-  show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign ivl_tf x a \<sigma>\<rbrakk>"
-    using ivl_tf_sound_assign by blast
-  show "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random ivl_tf x \<sigma>\<rbrakk>"
-    using ivl_tf_sound_random by blast
-  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume ivl_tf b \<sigma>\<rbrakk>"
-    using ivl_tf_sound_assume by blast
-  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not ivl_tf b \<sigma>\<rbrakk>"
-    using ivl_tf_sound_assume_not by blast
-  show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-       \<in> \<lbrakk>tf_enter ivl_tf xs es \<sigma>\<rbrakk>"
-    using ivl_tf_sound_enter by blast
-  show "tf_combine ivl_tf = combine_abs is_global"
-    unfolding ivl_tf_def by simp
-qed
-
-lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
-  by (rule ivl_sound_tf.sound_transfer_axioms)
-
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
@@ -219,6 +176,21 @@ lemma enter_ivl_for_is_global:
 lemma ivl_tf_for_is_global:
   "ivl_tf_for is_global = ivl_tf"
   unfolding ivl_tf_for_def ivl_tf_def enter_ivl_for_is_global by (rule refl)
+
+text \<open>\<open>ivl_is_sound_transfer\<close> is the \<^const>\<open>is_global\<close> specialization
+  of \<open>ivl_is_sound_transfer_for\<close>, transported through
+  @{thm [source] sound_transfer_from_for} rather than reproved from scratch.\<close>
+
+interpretation ivl_sound_tf: sound_transfer ivl_tf
+proof -
+  have "sound_transfer_for is_global ivl_tf"
+    using ivl_is_sound_transfer_for[of is_global]
+    by (simp only: ivl_tf_for_is_global)
+  then show "sound_transfer ivl_tf" by (rule sound_transfer_from_for)
+qed
+
+lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
+  by (rule ivl_sound_tf.sound_transfer_axioms)
 
 
 lemma assume_ivl_mono:

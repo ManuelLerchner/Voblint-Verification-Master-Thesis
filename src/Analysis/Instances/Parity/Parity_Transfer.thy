@@ -134,49 +134,6 @@ text \<open>
   These are the tf_sound_* premises of unified_post_fixpoint_sound / the
   per-solver soundness theorems.
 \<close>
-lemma parity_tf_sound_assign:
-  "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign parity_tf x a \<sigma>\<rbrakk>"
-  unfolding parity_tf_def by (simp add: assign_parity_sound)
-
-lemma parity_tf_sound_random:
-  "\<forall>x \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. st(x := v) \<in> \<lbrakk>tf_random parity_tf x \<sigma>\<rbrakk>"
-  unfolding parity_tf_def by (simp add: random_parity_sound)
-
-lemma parity_tf_sound_assume:
-  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume parity_tf b \<sigma>\<rbrakk>"
-  unfolding parity_tf_def by (simp add: assume_parity_sound)
-
-lemma parity_tf_sound_assume_not:
-  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume_not parity_tf b \<sigma>\<rbrakk>"
-  unfolding parity_tf_def by (simp add: assume_not_parity_sound)
-
-lemma parity_tf_sound_enter:
-  "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state is_global st)
-       \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
-  unfolding parity_tf_def by (simp add: enter_parity_sound)
-
-interpretation parity_sound_tf: sound_transfer parity_tf
-proof (rule sound_transferI)
-  show "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign parity_tf x a \<sigma>\<rbrakk>"
-    using parity_tf_sound_assign by blast
-  show "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random parity_tf x \<sigma>\<rbrakk>"
-    using parity_tf_sound_random by blast
-  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume parity_tf b \<sigma>\<rbrakk>"
-    using parity_tf_sound_assume by blast
-  show "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not parity_tf b \<sigma>\<rbrakk>"
-    using parity_tf_sound_assume_not by blast
-  show "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-       \<in> \<lbrakk>tf_enter parity_tf xs es \<sigma>\<rbrakk>"
-    using parity_tf_sound_enter by blast
-  show "tf_combine parity_tf = combine_abs is_global"
-    unfolding parity_tf_def by simp
-qed
-
-lemma parity_is_sound_transfer: "sound_transfer parity_tf"
-  by (rule parity_sound_tf.sound_transfer_axioms)
-
 lemma assign_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity x a sigma1 \<le> assign_parity x a sigma2"
   by (simp add: assign_parity_def aval_parity_mono le_funD le_funI)
@@ -261,5 +218,20 @@ lemma parity_tf_for_is_global: "parity_tf_for is_global = parity_tf"
   unfolding parity_tf_for_def parity_tf_def enter_parity_for_def enter_parity_def
     enter_frame_parity_for_def enter_frame_parity_def
   by (rule refl)
+
+text \<open>\<open>parity_is_sound_transfer\<close> is the \<^const>\<open>is_global\<close> specialization of
+  \<open>parity_is_sound_transfer_for\<close>, transported through
+  @{thm [source] sound_transfer_from_for} rather than reproved from scratch.\<close>
+
+interpretation parity_sound_tf: sound_transfer parity_tf
+proof -
+  have "sound_transfer_for is_global parity_tf"
+    using parity_is_sound_transfer_for[of is_global]
+    by (simp only: parity_tf_for_is_global)
+  then show "sound_transfer parity_tf" by (rule sound_transfer_from_for)
+qed
+
+lemma parity_is_sound_transfer: "sound_transfer parity_tf"
+  by (rule parity_sound_tf.sound_transfer_axioms)
 
 end

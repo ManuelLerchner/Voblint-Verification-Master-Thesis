@@ -331,9 +331,11 @@ text \<open>
     \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
     \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
-    \<^item> the solver's own correctness theorem certifies \<^verbatim>\<open>part_post_solution sigma\<close> --- no re-checking;
-    \<^item> the native endpoint \<open>ivl_dg_post_solution_collect_sound\<close> bounds
-      \<open>ltr_collect g S v\<close> at every program point.
+    \<^item> the registered endpoint \<open>flagship_ex_reg.run_source_sound\<close>
+      (@{theory Voblint_Formalization.Run_Analysis_Sound}'s \<^verbatim>\<open>unit_dg_exec_analysis\<close>
+      locale) bundles solver correctness, executable/pure commutation,
+      post-solution transport, and D/G collecting soundness into one
+      application, bounding \<open>ltr_collect g S v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
   interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, and

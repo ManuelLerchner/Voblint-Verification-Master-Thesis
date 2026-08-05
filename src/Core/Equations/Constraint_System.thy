@@ -974,6 +974,38 @@ proof
     by (rule tf_sound_combine)
 qed
 
+text \<open>
+  Reverse of the sublocale above: @{locale sound_transfer_for} instantiated at
+  @{text "gs = is_global"} has exactly @{locale sound_transfer}'s five
+  assumptions, so a domain that already discharged @{locale sound_transfer_for}
+  at @{const is_global} gets @{locale sound_transfer} for free instead of
+  reproving the same five obligations against @{const is_global} directly.
+\<close>
+lemma sound_transfer_from_for:
+  assumes "sound_transfer_for is_global tf"
+  shows "sound_transfer tf"
+proof -
+  interpret sound_transfer_for is_global tf by (rule assms)
+  show ?thesis
+  proof unfold_locales
+    show "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+      by (rule tf_sound_assign_for)
+    show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
+      by (rule tf_sound_random_for)
+    show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
+      by (rule tf_sound_assume_for)
+    show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+      by (rule tf_sound_assume_not_for)
+    show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+      by (rule tf_sound_enter_for)
+    show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+        combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+      by (rule tf_sound_combine_for)
+  qed
+qed
+
 
 
 subsection \<open>Effectful transfer function record\<close>
