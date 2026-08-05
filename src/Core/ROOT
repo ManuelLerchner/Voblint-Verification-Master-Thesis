@@ -13,6 +13,11 @@ session Voblint_Core in "." = "Voblint_CFG" +
     "Solver/Exec"
   theories
     Abstract_Domain
+    (* Flat-with-top ghost carrier for last_writer, seeded per edge. *)
+    Ghost_Last_Write_Domain
+    (* Generic base-value x ghost product transfer and its combined-transfer
+       soundness theorem. *)
+    Ghost_Last_Write_Product
     Exec_St
     Exec_Placement
     Exec_Backward
