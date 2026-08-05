@@ -31,7 +31,7 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ivl: "ivl")
 
 subsection \<open>The storage classifier\<close>
 
-text \<open>The M4 classifier migration: storage is decided from \<open>twice_program\<close>'s own
+text \<open>Storage here is decided from \<open>twice_program\<close>'s own
   declarations (\<^const>\<open>declared_global\<close>) rather than the \<open>is_global\<close> naming
   convention. \<open>twice_program\<close> declares no globals, so \<^term>\<open>twice_gs\<close> classifies
   every variable this chain touches as local --- unlike \<^const>\<open>is_global\<close>, which

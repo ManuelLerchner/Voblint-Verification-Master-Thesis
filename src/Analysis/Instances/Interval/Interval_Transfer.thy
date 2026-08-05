@@ -103,7 +103,7 @@ definition ivl_tf :: "ivl domain_transfer" where
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
-  \<^const>\<open>ivl_tf\<close> fixes the legacy \<^const>\<open>is_global\<close> classifier inside
+  \<^const>\<open>ivl_tf\<close> fixes the \<^const>\<open>is_global\<close> classifier inside
   \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>.  Placement analyses split
   store components by a declaration-driven classifier instead, so entry and
   combine need a version parametric in that classifier.  Assignment and guard

@@ -30,7 +30,7 @@ lemma inc_program_parts:
   by (simp_all add: inc_program_def)
 
 text \<open>\<open>declared_global_vars\<close> for the concrete program: the entry point where the
-  migration's declaration-driven classifier meets a real declared list.\<close>
+  declaration-driven classifier meets a real declared list.\<close>
 lemma inc_program_declared_global_vars [simp]:
   "declared_global_vars inc_program = [''Gx'']"
   by (simp add: inc_program_def)
@@ -114,9 +114,9 @@ proof -
 qed
 
 text \<open>
-  The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> now takes
-  \<^term>\<open>gs\<close> explicitly (the compiler-layer counterpart of the \<^const>\<open>pstep\<close> migration
-  above), so \<^const>\<open>inc_g\<close> --- unchanged since it is compiled once from \<^term>\<open>inc_program\<close>
+  The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> takes
+  \<^term>\<open>gs\<close> explicitly (the compiler-layer counterpart of \<^const>\<open>pstep\<close>'s classifier
+  parameter above), so \<^const>\<open>inc_g\<close> --- unchanged since it is compiled once from \<^term>\<open>inc_program\<close>
   and carries no classifier of its own --- executes identically under
   \<^term>\<open>declared_global inc_program\<close>.  The six \<^const>\<open>cstep\<close> transitions retrace
   \<open>inc_g_structure\<close>'s edges: \<open>main\<close>'s entry \<open>Nop\<close>, the call into \<open>p\<close>, \<open>p\<close>'s entry

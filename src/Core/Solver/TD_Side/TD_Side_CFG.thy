@@ -192,8 +192,8 @@ definition side_env ::
   "(pp + 'g::finite => 'a::bounded_semilattice_sup_bot abs_state) => pp => 'a abs_state" where
   "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> glob_env \<sigma>"
 
-(* The base unfold: 23 call sites across the solver core previously reached
-   past this definition via unfolding side_env_def. Left untagged: a locale
+(* The base unfold: 23 call sites across the solver core reach past this
+   definition via unfolding side_env_def. Left untagged: a locale
    abbreviation (ltr_gamma.gamma_ltr) is itself stated in terms of side_env,
    and eagerly expanding side_env elsewhere breaks the term-shape matching
    that abbreviation's own unfold relies on -- cite explicitly instead. *)

@@ -31,10 +31,9 @@ text \<open>
   \<open>gs\<close> decides the split. This is the store a procedure call reconstructs on
   return, so the caller's locals survive the call unless the callee wrote
   through a global. \<open>gs\<close> is an explicit classifier rather than a fixed
-  constant so a caller can supply \<^const>\<open>is_global\<close> today and a
-  declaration-driven classifier once the migration reaches this layer; no
-  mixfix notation, since a genuinely three-argument operation is not a binary
-  one.
+  constant so a caller can supply \<^const>\<open>is_global\<close> or a declaration-driven
+  classifier, whichever a given layer needs; no mixfix notation, since a
+  genuinely three-argument operation is not a binary one.
 \<close>
 definition combine_states :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
   "combine_states gs s t = (\<lambda>n. if gs n then t n else s n)"

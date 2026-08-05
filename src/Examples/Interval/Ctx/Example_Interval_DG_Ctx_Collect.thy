@@ -293,8 +293,8 @@ text \<open>The routed interval solution also interprets \<^locale>\<open>routed
   \<^locale>\<open>dg_ctx_activation\<close> axioms above, \<open>finC\<close> is finiteness of \<open>calls twice_cfg\<close>;
   \<open>seed_key_ne_gk0\<close> is the \<open>Seed\<close>/\<open>Global\<close> constructor split; \<open>route_enterc_agree\<close> is
   \<open>enter_route_exact\<close> read back at the two covered call sites via \<open>route_commute\<close>;
-  \<open>call_fwd\<close> and \<open>comb_fwd\<close> are the same coverage facts \<open>ivl_ctx_sg_seed\<close> /
-  \<open>ivl_ctx_sg_comb\<close> used to need by hand; and \<open>call_enter_store_agree\<close> is the unique-edge
+  \<open>call_fwd\<close> and \<open>comb_fwd\<close> are the same coverage facts that \<open>ivl_ctx_sg_seed\<close> /
+  \<open>ivl_ctx_sg_comb\<close> need by hand; and \<open>call_enter_store_agree\<close> is the unique-edge
   argument already used by \<open>comb_route_call1\<close> / \<open>comb_route_call2\<close>.  CALL and COMB then
   fall out as the locale's \<open>routed_context_call\<close> / \<open>routed_context_comb\<close>.\<close>
 

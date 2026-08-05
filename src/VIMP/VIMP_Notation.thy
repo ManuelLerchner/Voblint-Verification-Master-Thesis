@@ -567,7 +567,8 @@ lemma declared_global_vars_two_names [simp]:
 text \<open>
   \<open>declared_global\<close> checkpoint: a declared non-\<open>G\<close> name reads as global, an
   undeclared name -- \<open>G\<close>-spelled or not -- reads as local.  This is exactly
-  the discrimination \<^const>\<open>is_global\<close> cannot make until it is migrated.
+  the discrimination \<^const>\<open>is_global\<close> cannot make, since it classifies by
+  name spelling alone rather than by declaration.
 \<close>
 
 lemma declared_global_two_names_examples:

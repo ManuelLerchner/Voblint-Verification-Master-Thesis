@@ -392,7 +392,7 @@ lemma fun_of_dg_st_mono:
 subsection \<open>Classifier-parametric readback\<close>
 
 text \<open>
-  \<^const>\<open>fun_of_exec_dg_st\<close>/\<^const>\<open>fun_of_dg_st\<close> fix the legacy \<^const>\<open>is_global\<close>
+  \<^const>\<open>fun_of_exec_dg_st\<close>/\<^const>\<open>fun_of_dg_st\<close> fix the \<^const>\<open>is_global\<close>
   classifier.  A placed executable state is written with a declaration-driven
   classifier instead, so reading it back needs the same classifier or the
   readback consults the wrong slot.  \<open>fun_of_exec_dg_st_for\<close>/\<open>fun_of_dg_st_for\<close>
@@ -2611,7 +2611,7 @@ qed
 subsection \<open>Generic per-node post-solution transport\<close>
 
 text \<open>
-  \<open>placed_hook_se_edge\<close> fuses what an instance previously proved in two
+  \<open>placed_hook_se_edge\<close> fuses what an instance would otherwise prove in two
   steps -- a \<^const>\<open>dg_refines_on\<close> bridge from a raw transfer-agreement
   hypothesis, then \<open>se_constraint_holds_of_dg_refines\<close> -- into one
   call, generic over the CFG, the placement policy, and the domain.

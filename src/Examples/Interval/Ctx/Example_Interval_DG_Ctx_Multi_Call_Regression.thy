@@ -51,7 +51,7 @@ subsection \<open>\<open>call_successor_list\<close> cannot distinguish the two 
 
 text \<open>Both outgoing edges are visible from the shared call site, so a return-side
   reconstruction that only knows the call site --- \<^term>\<open>hd (call_successor_list g cc)\<close>,
-  the pattern \<^const>\<open>routed_cmb\<close> no longer uses --- returns the same call action
+  the pattern \<^const>\<open>routed_cmb\<close> avoids --- returns the same call action
   irrespective of which continuation triggered the return.\<close>
 
 lemma multi_call_successor_list_set:

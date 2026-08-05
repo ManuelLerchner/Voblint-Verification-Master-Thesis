@@ -36,7 +36,7 @@ definition twice_main :: "VIMP_Proc.com" where "twice_main = prog_main twice_pro
 
 text \<open>The storage classifier: \<open>twice_program\<close> declares no globals, so \<open>twice_gs\<close>
   classifies every variable this chain touches as local, matching the
-  \<open>declared_global\<close> migration pattern used by every other flagship rather than
+  \<open>declared_global\<close> pattern used by every other flagship rather than
   the \<open>is_global\<close> naming convention.\<close>
 abbreviation twice_gs :: "vname \<Rightarrow> bool" where
   "twice_gs \<equiv> declared_global twice_program"
@@ -84,7 +84,7 @@ lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_cfg_def using compi
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
 text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: the entry point for
-  this file, which no longer relies on \<^const>\<open>is_global\<close>.\<close>
+  this file, generic in the classifier rather than fixed to \<^const>\<open>is_global\<close>.\<close>
 
 lemmas ivl_Hstep_for =
   unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]

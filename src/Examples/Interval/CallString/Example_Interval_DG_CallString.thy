@@ -384,7 +384,7 @@ text \<open>Both \<open>route_cs\<close> and \<open>enterc_cs\<close> are the co
   route-agreement obligation \<open>route_enterc_agree\<close> is therefore a bare reflexivity, needing
   neither the coverage-restricted pinning nor the numeric per-call evaluation the
   partial-tabulation instance's routing needed. \<open>call_fwd\<close> and \<open>comb_fwd\<close> are the same
-  coverage facts \<open>ivl_ctx_sg_cs_seed\<close> / \<open>ivl_ctx_sg_cs_comb\<close> used to need by hand.\<close>
+  coverage facts that \<open>ivl_ctx_sg_cs_seed\<close> / \<open>ivl_ctx_sg_cs_comb\<close> need by hand.\<close>
 
 interpretation twice_cs_routed: routed_context Sabs twice_gs twice_cfg GlobalCS route_cs
     "fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for twice_gs cinit_ivl_st"

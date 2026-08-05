@@ -64,8 +64,8 @@ text \<open>
   (\<open>merged_result_g\<close> alone would otherwise appear once in \<open>project_sigma\<close>'s own
   \<open>FunctionResult ''g''\<close> case and again inside every downstream case that reads it).
   None of these may mention \<open>project_sigma\<close> itself -- a \<open>definition\<close> cannot recurse --
-  so each is built directly from \<open>nest_2_sol\<close> and the previously defined constants in the
-  chain, mirroring exactly what \<open>eq\<close> would compute at that node once its own inputs are
+  so each is built directly from \<open>nest_2_sol\<close> and the constants already defined earlier
+  in the chain, mirroring exactly what \<open>eq\<close> would compute at that node once its own inputs are
   fixed.
 \<close>
 

@@ -155,7 +155,7 @@ lemma parity_tf_mono:
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
-  \<^const>\<open>parity_tf\<close> fixes the legacy \<^const>\<open>is_global\<close> classifier inside
+  \<^const>\<open>parity_tf\<close> fixes the \<^const>\<open>is_global\<close> classifier inside
   \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>. A placement analysis splits
   store components by a declaration-driven classifier instead, so entry and
   combine need a version parametric in that classifier; assignment and guard

@@ -158,8 +158,9 @@ text \<open>
   registration interface rather than in individual analyses.
 \<close>
 
-text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throughout: the migrated
-  entry point for any consumer that no longer relies on \<^const>\<open>is_global\<close>.\<close>
+text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throughout: the entry
+  point for any consumer generic in the classifier, rather than fixed to
+  \<^const>\<open>is_global\<close>.\<close>
 
 lemma unit_dg_Hstep_for:
   assumes commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"

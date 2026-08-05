@@ -35,7 +35,6 @@ layer without embedding line numbers that drift.
 | `compile` | Compiles one source command into local edges and calls over a node interval. | `src/CFG/VIMP_Proc_to_CFG.thy` |
 | `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/CFG/VIMP_Proc_to_CFG.thy` |
 | `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `compile_cert` | Compiler certificate exposing generated layout and ownership facts. | `src/CFG/Compiler/Compile_Certificate.thy` |
 | `wf_compile_input` | Canonical static contract for accepted source programs. | `src/CFG/Compiler/Compile_Invariants.thy` |
 
 ## Activation-local semantics
@@ -68,8 +67,8 @@ layer without embedding line numbers that drift.
 | `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
-| `dg_gen_of` | Executable D/G equation generator. | `src/Core/Solver/Exec/Exec_DG_Bridge.thy` |
+| `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
+| `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy` |
 | `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
 
 ## Strategy-tree equation combinators
@@ -97,5 +96,5 @@ Named, zero-cost (`abbreviation`) readings of the verified solver's four
 | Term | Meaning | Source |
 | --- | --- | --- |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Formalization/Pipeline/Source_Activation_Sound.thy` |
-| `dg_exec_run_source_sound` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Formalization/Pipeline/Run_Analysis_Sound.thy` |
+| `dg_exec_run_source_sound_for` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Formalization/Pipeline/Run_Analysis_Sound.thy` |
 | `mixed_flow_analysis_sound` | Mixed local/global analysis soundness. | `src/Formalization/Pipeline/Mixed_Flow_Sound.thy` |

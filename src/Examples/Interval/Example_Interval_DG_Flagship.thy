@@ -66,7 +66,7 @@ definition flagship_prog :: imp_prog where
   "flagship_prog = program { void main() { x := 0; while (x < 20) { x := x + 1 } } }"
 
 text \<open>The storage classifier: \<open>flagship_prog\<close> declares no globals, so \<open>flagship_gs\<close>
-  classifies \<open>x\<close> as local, matching the \<open>declared_global\<close> migration pattern used by
+  classifies \<open>x\<close> as local, matching the \<open>declared_global\<close> pattern used by
   every other flagship rather than the \<open>is_global\<close> naming convention.\<close>
 abbreviation flagship_gs :: "vname \<Rightarrow> bool" where
   "flagship_gs \<equiv> declared_global flagship_prog"

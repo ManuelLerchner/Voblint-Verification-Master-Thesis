@@ -4,7 +4,6 @@ theory Example_Compile_Baseline
   imports
     "Voblint_CFG.CFG_Prune"
     "Voblint_CFG.Compile_Invariants"
-    "Voblint_CFG.Located_Exec"
     "Voblint_Core.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Notation"
 begin

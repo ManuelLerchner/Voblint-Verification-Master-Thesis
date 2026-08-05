@@ -330,9 +330,8 @@ subsection \<open>DOT output\<close>
 
 text \<open>
   @{const raw_cfg_dot_lit} emits the procedural CFG through the canonical
-  graph model and DOT backend.  Annotated interval DOT is not yet
-  wired; the exhibited post-fixpoint gives @{thm [source] main_prog_gx_exit_ivl}
-  at exit.
+  graph model and DOT backend, without interval annotations; the exhibited
+  post-fixpoint gives @{thm [source] main_prog_gx_exit_ivl} at exit instead.
 \<close>
 
 ML_val \<open>

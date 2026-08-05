@@ -9,8 +9,8 @@ text \<open>
   @{typ "'a resolved_st_q"} mirror of its @{text afilter} / @{text bfilter}
   for free, parameterized by an explicit location classifier \<open>gs\<close>:
   \<open>afilter_st\<close> / \<open>bfilter_st\<close> and their commutation with the abstract
-  filters through @{const fun_of_resolved_st_q_for}, proved once here by the
-  same induction every domain previously repeated by hand. A concrete domain
+  filters through @{const fun_of_resolved_st_q_for}, proved once here so no
+  domain needs to repeat the induction by hand. A concrete domain
   names its own specialization via the \<open>defines\<close> clause of its existing
   \<open>backward_domain\<close> interpretation (see \<open>Sign_Backward\<close>,
   \<open>Interval_Backward\<close>); no per-domain proof is needed.

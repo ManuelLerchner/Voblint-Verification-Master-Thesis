@@ -42,7 +42,7 @@ definition sign_ex_prog :: imp_prog where
   "sign_ex_prog = program { void main() { x := 1; y := x } }"
 
 text \<open>The storage classifier: \<open>sign_ex_prog\<close> declares no globals, so \<open>sign_ex_gs\<close>
-  classifies every variable this chain touches as local. The migration validates
+  classifies every variable this chain touches as local. This validates
   domain-independence of the generic transport, matching \<open>parity_gs\<close>'s role for the
   parity flagship, rather than global/local separation.\<close>
 abbreviation sign_ex_gs :: "vname \<Rightarrow> bool" where
