@@ -1077,6 +1077,19 @@ lift_definition restrict_global_resolved_q ::
   is restrict_global_resolved
   by (rule eq_resolved_st_restrict_global)
 
+text \<open>
+  \<^const>\<open>restrict_local_resolved_q\<close>/\<^const>\<open>restrict_global_resolved_q\<close>
+  preserve the caller's semantic default over the (potentially infinite)
+  location space: the kept side carries over its input's own per-location
+  default verbatim (\<^term>\<open>dl\<close>/\<^term>\<open>dg\<close>, which need not be \<^term>\<open>bot\<close>), and
+  only the dropped side is forced to \<^term>\<open>bot\<close>. The scope-parametric
+  \<open>project_resolved_on\<close> family is not a generalization of this pair: it
+  optimizes for a different invariant, a bounded materialized support, and
+  the two disagree outside that bound. See the comparison note at
+  \<open>project_resolved_on\<close>'s own definition for the argument and a
+  counterexample; both constructions stay, permanently.
+\<close>
+
 lemma lookup_restrict_local_resolved_q [simp]:
   "lookup_resolved_st_q (restrict_local_resolved_q s) loc =
      (case loc of

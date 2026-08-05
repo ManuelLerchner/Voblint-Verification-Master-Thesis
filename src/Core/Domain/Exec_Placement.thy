@@ -734,6 +734,25 @@ lift_definition project_resolved_on ::
   is project_resolved_on_raw
   by (rule eq_resolved_st_project_resolved_on_raw)
 
+text \<open>
+  \<^const>\<open>project_resolved_on\<close> is not a generalization of
+  \<^const>\<open>restrict_local_resolved_q\<close>/\<^const>\<open>restrict_global_resolved_q\<close>
+  (\<^theory>\<open>Voblint_Core.Exec_St\<close>). That pair preserves the source state's own
+  per-location default over an unbounded location space; this projection
+  optimizes for the opposite invariant, a bounded materialized support, and
+  always re-seeds from \<^term>\<open>(bot, bot, [])\<close> before folding over
+  \<^term>\<open>universe @ effective_support s\<close>. Anything not in that finite list is
+  \<^term>\<open>bot\<close> in the result, regardless of what the source's own default said
+  there. Concretely: for \<^term>\<open>s\<close> with \<^term>\<open>rep_resolved_st s = (top, bot, [])\<close>
+  and \<^term>\<open>universe = []\<close>, \<^const>\<open>restrict_local_resolved_q\<close> reports
+  \<^term>\<open>top\<close> at every local location, while \<^const>\<open>project_resolved_on\<close>
+  reports \<^term>\<open>bot\<close> at every local location -- no choice of \<^term>\<open>universe\<close>
+  closes this, since it is always finite and the disagreement is at every
+  location outside it. The two constructions serve different representational
+  contracts and both stay, permanently; see also the note at
+  \<^const>\<open>restrict_local_resolved_q\<close>'s own definition.
+\<close>
+
 lemma project_resolved_on_Abs:
   "project_resolved_on owner universe placed (Abs_resolved_st s) =
     Abs_resolved_st (project_resolved_on_raw owner universe placed s)"
