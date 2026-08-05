@@ -27,6 +27,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
+    Example_Checks_Store_Only
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls

@@ -25,6 +25,9 @@ session Voblint_Core in "." = "Voblint_CFG" +
     CFG_Enumeration
     Constraint_System
     Constraint_System_Sound
+    (* Ordinary __goblint_assert checks: store-only checks, with no
+       ghost-domain or additional trace-projection dependency. *)
+    Checks
     LTR_Analysis_Sound
     TD_Side_CFG
     Strategy_Tree_Monad
