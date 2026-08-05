@@ -1,51 +1,43 @@
 section \<open>Flagship: interval analysis of a counting loop, executed and certified on the D/G spine\<close>
 
 text \<open>
-  \<^bold>\<open>The complete story in one self-contained theory.\<close>  An VIMP program (given inline
+  \<^bold>\<open>The complete story in one self-contained theory.\<close>  A VIMP program (given inline
   below) is compiled to a CFG; the generic D/G framework generates an equation
   system; the \<^emph>\<open>verified\<close> top-down solver \<^emph>\<open>computes\<close> an interval solution inside
-  Isabelle (with interval widening for termination); the computed solution is
-  certified a partial post-solution by the solver's own correctness theorem; it is
-  transported value-wise to the abstract D/G semantics; and the generic
-  collecting-soundness theorem concludes that the computed abstraction
-  over-approximates the concrete collecting semantics at every program point.
+  Isabelle (with interval widening for termination); and the single registered
+  endpoint \<open>flagship_ex_reg.run_source_sound\<close> turns that computed solution directly
+  into a source-level guarantee.
 
   \<^verbatim>\<open>
        VIMP source
-            |  compile_prog                          (section 2)
+            |  compile_prog
             v
           CFG
-            |  dg_gen_of                              (section 4)
+            |  dg_gen_of, executable D/G specification
             v
     D/G equation system
-            |  verified solver, by eval               (section 5)
+            |  verified solver, by eval
             v
    computed interval solution  sigma
-            |  solver correctness theorem             (section 6)
+            |  flagship_ex_reg.run_source_sound
             v
-    part_post_solution sigma
-            |  part_post_solution_dg_st_to_abs        (section 7)
-            v
-   abstract post-solution
-            |  ivl_dg_post_solution_collect_sound     (section 8)
-            v
-    ltr_collect subset gamma(sigma)   --- x in [0,20]  (section 9)
-            |  compiler-correctness simulation        (section 10)
-            v
-   every VIMP source run is bounded by sigma
+   every VIMP source run is bounded by sigma, read through flagship_ex_reg.gamma
   \<close>
 
   \<^bold>\<open>Every step is machine-checked, and the result is informative:\<close> the analysis
   discovers the loop invariant \<open>x in [0,20]\<close>, the body bound \<open>x in [0,19]\<close>, and the
-  exact exit value \<open>x in [20,20]\<close> --- not \<open>top\<close>.  Section 10 lifts soundness from the
-  collecting semantics to \<^emph>\<open>actual VIMP source runs\<close> via the compiler-correctness
-  simulation; section 11 exhibits an explicit reachable state so the guarantee is
-  visibly \<^emph>\<open>not vacuous\<close>; section 12 emits an analysis-annotated GraphViz rendering.
+  exact exit value \<open>x in [20,20]\<close> --- not \<open>top\<close>.  \<open>flagship_ex_reg.run_source_sound\<close>
+  bundles executable/pure commutation, post-solution transport, D/G collecting
+  soundness, and the compiler-correctness simulation into one application, so none
+  of those intermediate obligations appear in this file's own proofs.  A later
+  subsection exhibits an explicit reachable state so the guarantee is visibly
+  \<^emph>\<open>not vacuous\<close>, reusing the native interval D/G locale from \<open>Interval_DG\<close>; the
+  final subsection emits an analysis-annotated GraphViz rendering.
 
-  It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st\<close>
-  (\<open>Ivl_Exec\<close>), the executable D/G bridge (\<open>Exec_DG_Bridge\<close>), the native interval
-  D/G soundness endpoint (\<open>Interval_DG\<close>), the compiler-correctness simulation
-  (\<open>Source_Activation_Sound\<close>), and the vendored warrowing solver.
+  It reuses, without duplicating: the executable interval transfer \<open>ivl_tf_st_for\<close>
+  (\<open>Ivl_Exec\<close>), the executable D/G bridge (\<open>Exec_DG_Bridge\<close>), the registration
+  locale \<open>unit_dg_exec_analysis\<close> (\<open>Run_Analysis_Sound\<close>), and the vendored
+  warrowing solver.
 \<close>
 
 theory Example_Interval_DG_Flagship
@@ -159,9 +151,9 @@ value "map_option
 subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
-  The premises of the generic native endpoint \<open>ivl_dg_post_solution_collect_sound\<close>:
-  every program point is covered by the solved variable set (\<^verbatim>\<open>by eval\<close>), the graph
-  is finite and enter-free, and the concrete initial stores are covered by the seed.
+  The premises \<open>flagship_ex_reg.run_source_sound\<close> consumes: every program point is
+  covered by the solved variable set (\<^verbatim>\<open>by eval\<close>), the graph is finite and
+  enter-free, and the concrete initial stores are covered by the seed.
 \<close>
 
 lemma flagship_cover_entry: "(cfg_entry flagship_cfg, ()) \<in> fst flagship_sol"
@@ -194,8 +186,8 @@ qed
 
 text \<open>
   The coverage facts, finiteness, and the seed-soundness \<open>flagship_sound0\<close> are the
-  instance premises the bundled endpoint (section 10) consumes; the collecting-soundness
-  and transport steps are discharged inside it.
+  instance premises the bundled endpoint \<open>flagship_ex_reg.run_source_sound\<close> consumes;
+  the collecting-soundness and transport steps are discharged inside it.
 \<close>
 
 subsection \<open>Inspecting the certified result\<close>
