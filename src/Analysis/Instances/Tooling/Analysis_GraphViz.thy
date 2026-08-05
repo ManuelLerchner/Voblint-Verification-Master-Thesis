@@ -80,10 +80,6 @@ definition proc_exit_pps_list :: "cfg \<Rightarrow> pp list" where
     map (\<lambda>(_, _, entry, _).
       case entry of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> entry)
       (cfg_calls_list g)"
-fun mem_pp :: "pp \<Rightarrow> pp list \<Rightarrow> bool" where
-  "mem_pp v [] = False"
-| "mem_pp v (x # xs) = (if v = x then True else mem_pp v xs)"
-
 fun region_label :: "string option \<Rightarrow> string" where
   "region_label None = ''main''"
 | "region_label (Some p) = p"
@@ -140,7 +136,7 @@ record ('ctx, 'g, 'a, 'd) analysis_graph_config =
 fun graphviz_owner_of :: "(string option \<times> pp list) list \<Rightarrow> pp \<Rightarrow> string" where
   "graphviz_owner_of [] p = ''unknown''"
 | "graphviz_owner_of ((owner, ps) # regions) p =
-    (if mem_pp p ps then region_label owner else graphviz_owner_of regions p)"
+    (if p \<in> set ps then region_label owner else graphviz_owner_of regions p)"
 
 fun compiled_proc_owner ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> pname option" where
@@ -234,17 +230,6 @@ definition covered_local_nodes ::
   "(pp \<times> 'ctx) list \<Rightarrow> ('ctx, 'g) analysis_node list" where
   "covered_local_nodes covered = map (\<lambda>pc. LocalNode (fst pc) (snd pc)) covered"
 
-fun local_node_member :: "(pp \<times> 'ctx) list \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> bool" where
-  "local_node_member [] p ctx = False"
-| "local_node_member ((p', ctx') # covered) p ctx =
-    (if p = p' \<and> ctx = ctx' then True else local_node_member covered p ctx)"
-
-fun graph_node_member :: "('ctx, 'g) analysis_node list
-  \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> bool" where
-  "graph_node_member [] node = False"
-| "graph_node_member (node' # rest) node =
-    (if node = node' then True else graph_node_member rest node)"
-
 definition analysis_context_clusters ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> (pp \<times> 'ctx) list
     \<Rightarrow> ('ctx, 'g) analysis_cluster list" where
@@ -289,7 +274,7 @@ definition analysis_intra_edges ::
   "analysis_intra_edges g covered =
     concat (map (\<lambda>src_ctx.
       concat (map (\<lambda>(u, a, v).
-        if fst src_ctx = u \<and> local_node_member covered v (snd src_ctx)
+        if fst src_ctx = u \<and> (v, snd src_ctx) \<in> set covered
         then [(LocalNode u (snd src_ctx), IntraEdge a, LocalNode v (snd src_ctx))]
         else []) (cfg_intra_list g))) covered)"
 
@@ -304,7 +289,7 @@ definition analysis_enter_edges ::
         if fst src_ctx = u then
           let callee_ctx = route cfg u (snd src_ctx) ca
               (local_of cfg (sol (Inl src_ctx)))
-          in if local_node_member covered entry callee_ctx
+          in if (entry, callee_ctx) \<in> set covered
              then [(LocalNode u (snd src_ctx), EnterEdge (owner_of cfg entry) ca,
                     LocalNode entry callee_ctx)]
              else []
@@ -323,8 +308,8 @@ definition analysis_combine_edges ::
             let callee_ctx = route cfg call (snd src_ctx) ca
                 (local_of cfg (sol (Inl src_ctx)));
                 result = FunctionResult p
-            in if local_node_member covered result callee_ctx \<and>
-                  local_node_member covered cont (snd src_ctx)
+            in if (result, callee_ctx) \<in> set covered \<and>
+                  (cont, snd src_ctx) \<in> set covered
                then [(LocalNode result callee_ctx,
                       CombineEdge call (case ca of CallEdge dst _ _ \<Rightarrow> dst)
                         (return_slot_for_pp cfg result),
@@ -335,8 +320,7 @@ definition analysis_combine_edges ::
 
 text \<open>
   Call sites and their continuations already share a context: @{term cont} is
-  the fourth component of every @{term calls} tuple (@{file
-  "../../../CFG/CFG_Def.thy"}). This edge is purely presentational -- it draws
+  the fourth component of every @{term calls} tuple. This edge is purely presentational -- it draws
   that pairing directly, alongside the real interprocedural path through
   @{term EnterEdge} and @{term CombineEdge}, so a call site and its
   return-site stay visually linked even when the callee cluster sits
@@ -351,7 +335,7 @@ definition analysis_call_to_return_edges ::
     concat (map (\<lambda>src_ctx.
       concat (map (\<lambda>c. case c of (call, _, entry, cont) \<Rightarrow>
         (case entry of FunctionEntry p \<Rightarrow>
-          if fst src_ctx = call \<and> local_node_member covered cont (snd src_ctx)
+          if fst src_ctx = call \<and> (cont, snd src_ctx) \<in> set covered
           then [(LocalNode call (snd src_ctx), CallToReturnEdge p,
                  LocalNode cont (snd src_ctx))]
           else []
@@ -410,7 +394,7 @@ definition analysis_graph_wf ::
       distinct clusters \<and>
       distinct ns \<and>
       distinct es \<and>
-      list_all (\<lambda>e. case e of (src, _, dst) \<Rightarrow> graph_node_member ns src \<and> graph_node_member ns dst) es)"
+      list_all (\<lambda>e. case e of (src, _, dst) \<Rightarrow> src \<in> set ns \<and> dst \<in> set ns) es)"
 fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
   "string_of_cfg_node (Statement n) = ''pp'' @ string_of_nat n"
 | "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ p"
@@ -508,8 +492,8 @@ definition analysis_node_attrs :: "cfg \<Rightarrow> ('ctx, 'g) analysis_node \<
       LocalNode p _ \<Rightarrow>
         if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
         else if p = graphviz_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
-        else if mem_pp p (proc_entry_pps_list g) then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
-        else if mem_pp p (proc_exit_pps_list g) then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+        else if p \<in> set (proc_entry_pps_list g) then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
+        else if p \<in> set (proc_exit_pps_list g) then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
         else ''shape=box,style=filled,fillcolor=lightgreen''
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
     | SourceNode _ \<Rightarrow> ''shape=plain'')" 
