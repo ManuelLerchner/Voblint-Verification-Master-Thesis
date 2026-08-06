@@ -440,6 +440,7 @@ where
 | "dg_spec_step S (EA_AssumeNot b) = dgs_assume_not S b"
 | "dg_spec_step S (EA_Ret e p) =
      (case e of None \<Rightarrow> dgs_nop S | Some a \<Rightarrow> dgs_assign S ret_var a)"
+| "dg_spec_step S (EA_Check cnd) = dgs_nop S"
 
 definition apply_dg_spec ::
   "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
@@ -549,7 +550,7 @@ lemma dg_spec_step_unit_placed:
     unit_step_placed keep_local publish_side (apply_tf tf a)"
   unfolding unit_dg_spec_placed_def
   by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
        split: option.splits)
 
 lemma dgs_enter_unit_dg_spec_placed:
@@ -618,7 +619,7 @@ lemma dg_spec_step_unit_for:
      unit_step_for gs (apply_tf tf a)"
   unfolding unit_dg_spec_for_def
   by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
        split: option.splits)
 
 lemma dgs_enter_unit_dg_spec_for:

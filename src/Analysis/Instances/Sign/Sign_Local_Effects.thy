@@ -59,7 +59,7 @@ next
   then show ?case by (simp add: sup_fun_def)
 qed
 
-lemma assign_sign_local_edge_invariant:
+lemma assign_sign_local_edge_invariant [intro]:
   assumes gl: "\<not> is_global x" and ng: "\<not> aexp_mentions_global e"
   shows "local_edge_invariant (assign_sign x e)"
   unfolding local_edge_invariant_def assign_sign_def
@@ -389,7 +389,7 @@ next
   qed
 qed
 
-lemma random_sign_local_edge_invariant:
+lemma random_sign_local_edge_invariant [intro]:
   assumes gl: "\<not> is_global x"
   shows "local_edge_invariant (random_sign x)"
   unfolding local_edge_invariant_def random_sign_def
@@ -416,12 +416,12 @@ proof (intro allI impI)
   qed
 qed
 
-lemma assume_sign_local_edge_invariant:
+lemma assume_sign_local_edge_invariant [intro]:
   assumes ng: "\<not> bexp_mentions_global b"
   shows "local_edge_invariant (assume_sign b)"
   unfolding assume_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
 
-lemma assume_not_sign_local_edge_invariant:
+lemma assume_not_sign_local_edge_invariant [intro]:
   assumes ng: "\<not> bexp_mentions_global b"
   shows "local_edge_invariant (assume_not_sign b)"
   unfolding assume_not_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
@@ -437,34 +437,24 @@ proof (cases a)
     by (auto intro: id_local_edge_invariant)
 next
   case (EA_Assign x e)
-  from loc \<open>a = EA_Assign x e\<close> have gl: "\<not> is_global x"
-    by (simp add: local_edge_action.simps)
-  from loc \<open>a = EA_Assign x e\<close> have ng: "\<not> aexp_mentions_global e"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    using assign_sign_local_edge_invariant[OF gl ng]
-    unfolding \<open>a = EA_Assign x e\<close> apply_tf.simps sign_tf_def by simp
+    using loc unfolding \<open>a = EA_Assign x e\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_Random x)
-  from loc \<open>a = EA_Random x\<close> have gl: "\<not> is_global x"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    using random_sign_local_edge_invariant[OF gl]
-    unfolding \<open>a = EA_Random x\<close> apply_tf.simps sign_tf_def by simp
+    using loc unfolding \<open>a = EA_Random x\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_Assume b)
-  from loc \<open>a = EA_Assume b\<close> have ng: "\<not> bexp_mentions_global b"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    unfolding \<open>a = EA_Assume b\<close> apply_tf.simps
-    by (simp add: sign_tf_def; rule assume_sign_local_edge_invariant)
+    using loc unfolding \<open>a = EA_Assume b\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_AssumeNot b)
-  from loc \<open>a = EA_AssumeNot b\<close> have ng: "\<not> bexp_mentions_global b"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    unfolding \<open>a = EA_AssumeNot b\<close> apply_tf.simps
-    by (simp add: sign_tf_def; rule assume_not_sign_local_edge_invariant)
+    using loc unfolding \<open>a = EA_AssumeNot b\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_Ret e p)
   show ?thesis
@@ -474,14 +464,15 @@ next
       unfolding EA_Ret apply_tf.simps by (auto intro: id_local_edge_invariant)
   next
     case (Some e)
-    have gl: "\<not> is_global ret_var"
-      using loc unfolding EA_Ret Some by simp
-    have ng: "\<not> aexp_mentions_global e"
-      using loc unfolding EA_Ret Some by simp
-    show ?thesis
-      unfolding EA_Ret Some apply_tf.simps sign_tf_def
-      by (simp add: sign_tf_def; rule assign_sign_local_edge_invariant[OF gl ng])
+    then show ?thesis
+      using loc unfolding EA_Ret Some apply_tf.simps sign_tf_def
+      by (auto simp: local_edge_action.simps)
   qed
+next
+  case (EA_Check c)
+  then show ?thesis
+    unfolding \<open>a = EA_Check c\<close> apply_tf_EA_Check apply_tf.simps
+    by (auto intro: id_local_edge_invariant)
 qed
 
 end

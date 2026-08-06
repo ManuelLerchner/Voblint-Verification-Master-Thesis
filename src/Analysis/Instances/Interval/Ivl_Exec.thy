@@ -78,6 +78,7 @@ fun ivl_tf_st :: "edge_action \<Rightarrow> ivl resolved_st_q \<Rightarrow> ivl 
   | "ivl_tf_st (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of is_global ret_var)
          (aval_ivl a (fun_of_resolved_st_q_for is_global s))"
+  | "ivl_tf_st (EA_Check cnd) s = s"
 
 definition assume_ivl_st_for ::
   "(vname => bool) => bexp => ivl resolved_st_q => ivl resolved_st_q" where
@@ -115,6 +116,7 @@ fun ivl_tf_st_for ::
   | "ivl_tf_st_for source_global (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of source_global ret_var)
          (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
+  | "ivl_tf_st_for source_global (EA_Check cnd) s = s"
 
 lift_definition top_ivl_st :: "ivl resolved_st_q"
   is "(Ivl MinInf PlusInf, Ivl MinInf PlusInf, [])" .
@@ -154,18 +156,16 @@ lemma fun_of_st_top_ivl_st:
    (\<lambda>_. Ivl MinInf PlusInf)"
   by (rule ext) simp
 
+lemma ivl_tf_st_reduces: "action_reduces ivl_tf_st"
+  by unfold_locales (rule ext, simp)+
+
 theorem ivl_tf_st_commute:
   "fun_of_resolved_st_q_for is_global (ivl_tf_st a s) =
    apply_tf ivl_tf a (fun_of_resolved_st_q_for is_global s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for is_global s)"])
-  show "\<And>p. fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_Ret None p) s) =
-    fun_of_resolved_st_q_for is_global (ivl_tf_st EA_Nop s)" by simp
-  show "\<And>a p. fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_Ret (Some a) p) s) =
-    fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_Assign ret_var a) s)" by simp
+  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for is_global (ivl_tf_st a s))"
+    by (rule action_reduces_comp[OF ivl_tf_st_reduces])
   show "fun_of_resolved_st_q_for is_global (ivl_tf_st EA_Nop s) =
       apply_tf ivl_tf EA_Nop (fun_of_resolved_st_q_for is_global s)" by simp
   show "\<And>x e. fun_of_resolved_st_q_for is_global
@@ -187,14 +187,6 @@ proof (rule apply_tf_wrap_eqI[
     by (simp add: ivl_tf_def assume_not_ivl_st_commute)
 qed
 
-lemma ivl_tf_st_ret_None:
-  "ivl_tf_st (EA_Ret None p) = ivl_tf_st EA_Nop"
-  by (rule ext) simp
-
-lemma ivl_tf_st_ret_Some:
-  "ivl_tf_st (EA_Ret (Some a) p) = ivl_tf_st (EA_Assign ret_var a)"
-  by (rule ext) simp
-
 subsection \<open>Executable effectful transfer record\<close>
 
 definition ivl_etf_st :: "(unit, ivl resolved_st_q) effectful_st_transfer" where
@@ -203,7 +195,7 @@ definition ivl_etf_st :: "(unit, ivl resolved_st_q) effectful_st_transfer" where
 lemma ivl_etf_st_edge_tree:
   "apply_etf_st ivl_etf_st a u = unit_edge_tree_st (ivl_tf_st a) u"
   unfolding ivl_etf_st_def
-  by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_ret_None ivl_tf_st_ret_Some])
+  by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_reduces])
 
 lemma ivl_etf_st_combine_tree:
   "etf_combine_st ivl_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
@@ -480,18 +472,16 @@ qed
 
 subsection \<open>Unscoped executable/abstract correspondence, generic in the classifier\<close>
 
+lemma ivl_tf_st_for_reduces: "action_reduces (ivl_tf_st_for gs)"
+  by unfold_locales (rule ext, simp)+
+
 lemma ivl_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
    apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "\<And>p. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Ret None p) s) =
-    fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s)" by simp
-  show "\<And>a p. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Ret (Some a) p) s) =
-    fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Assign ret_var a) s)" by simp
+  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s))"
+    by (rule action_reduces_comp[OF ivl_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s) =
       apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
   show "\<And>x e. fun_of_resolved_st_q_for gs
@@ -518,15 +508,6 @@ lemma ivl_enter_st_for_commute:
    tf_enter (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: enter_D_def enter_ivl_for_def ivl_enter_st_for_def
       ivl_tf_for_def)
-
-lemma ivl_tf_st_for_ret_None:
-  "ivl_tf_st_for gs (EA_Ret None p) = ivl_tf_st_for gs EA_Nop"
-  by (rule ext) simp
-
-lemma ivl_tf_st_for_ret_Some:
-  "ivl_tf_st_for gs (EA_Ret (Some a) p) = ivl_tf_st_for gs (EA_Assign ret_var a)"
-  by (rule ext) simp
-
 
 end
 

@@ -141,7 +141,9 @@ proof -
              sign_ex_transfer.tf_sound_enter_for sign_ex_transfer.tf_sound_combine_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             sign_tf_st_for_ret_none sign_tf_st_for_ret_some
+             action_reduces.ret_none[OF sign_tf_st_for_reduces]
+             action_reduces.ret_some[OF sign_tf_st_for_reduces]
+             action_reduces.check[OF sign_tf_st_for_reduces]
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 

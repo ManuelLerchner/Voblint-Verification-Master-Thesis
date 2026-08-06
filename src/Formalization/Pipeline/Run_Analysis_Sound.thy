@@ -164,12 +164,11 @@ text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throug
 
 lemma unit_dg_Hstep_for:
   assumes commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
-    and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+    and reduces: "action_reduces tf_st"
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
              (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
            = dg_spec_step (unit_dg_spec_for gs tf) a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (simp add: dg_spec_step_unit_st_for[OF ret_none ret_some] dg_spec_step_unit_for
+  by (simp add: dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for
                 unit_step_st_commute_for commute)
 
 lemma unit_dg_Henter_for:
@@ -212,8 +211,7 @@ locale unit_dg_exec_analysis =
   assumes tf_sound: "sound_transfer_for gs tf"
     and tf_commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
     and enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st_for gs s)"
-    and ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+    and reduces: "action_reduces tf_st"
     and solver_pps: "\<And>eqs x. solve_c eqs x \<noteq> None
                       \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
 begin
@@ -260,7 +258,7 @@ proof -
   show ?thesis
     unfolding gamma_def eqs_def
     by (rule dg_exec_run_source_sound_for
-          [OF sds unit_dg_Hstep_for[OF tf_commute ret_none ret_some]
+          [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
               unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for
               pp_st[unfolded eqs_def] wf
               cover_entry[unfolded eqs_def] cover_edge[unfolded eqs_def]

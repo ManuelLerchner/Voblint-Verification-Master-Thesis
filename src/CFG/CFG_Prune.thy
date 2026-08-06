@@ -193,7 +193,7 @@ next
   then show ?case ..
 next
   case (Check b)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Check b, k) \<in> intra g"
     by (auto split: prod.splits)
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
@@ -319,7 +319,7 @@ next
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
   case (Check b)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Check b, k) \<in> intra g"
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next

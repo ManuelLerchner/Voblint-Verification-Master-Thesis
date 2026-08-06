@@ -261,7 +261,7 @@ definition named_etf :: "(gname, sign) effectful_domain_transfer" where
 lemma apply_etf_named:
   "apply_etf named_etf a u = route_tree (\<lambda>_. Gpos) (apply_tf sign_tf a) u"
   by (cases a)
-     (simp_all add: named_etf_def apply_tf_EA_Ret_None apply_tf_EA_Ret_Some
+     (simp_all add: named_etf_def apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
         split: option.splits)
 
 lemma etf_combine_named:

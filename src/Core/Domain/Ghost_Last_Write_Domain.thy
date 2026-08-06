@@ -121,6 +121,7 @@ fun edge_write_var :: "edge_action \<Rightarrow> vname option" where
 | "edge_write_var EA_Nop = None"
 | "edge_write_var (EA_Assume _) = None"
 | "edge_write_var (EA_AssumeNot _) = None"
+| "edge_write_var (EA_Check _) = None"
 
 lemma edge_write_var_writes: "edge_writes a x \<longleftrightarrow> edge_write_var a = Some x"
   by (cases a) auto

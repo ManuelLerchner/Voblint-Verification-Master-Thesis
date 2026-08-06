@@ -49,14 +49,10 @@ fun sign_tf_st :: "edge_action \<Rightarrow> sign resolved_st_q \<Rightarrow> si
        (case e of None \<Rightarrow> s
         | Some a \<Rightarrow> update_resolved_st_q s (location_of is_global ret_var)
             (aval_sign a (fun_of_resolved_st_q_for is_global s)))"
+  | "sign_tf_st (EA_Check cnd) s = s"
 
-lemma sign_tf_st_ret_none [simp]:
-  "sign_tf_st (EA_Ret None p) = sign_tf_st EA_Nop"
-  by (rule ext) simp
-
-lemma sign_tf_st_ret_some [simp]:
-  "sign_tf_st (EA_Ret (Some a) p) = sign_tf_st (EA_Assign ret_var a)"
-  by (rule ext) simp
+lemma sign_tf_st_reduces: "action_reduces sign_tf_st"
+  by unfold_locales (rule ext, simp)+
 
 lift_definition top_sign_st :: "sign resolved_st_q" is "(STop, STop, [])" .
 
@@ -98,13 +94,8 @@ theorem sign_tf_st_commute:
    apply_tf sign_tf a (fun_of_resolved_st_q_for is_global s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for is_global s)"])
-  show "\<And>p. fun_of_resolved_st_q_for is_global
-      (sign_tf_st (EA_Ret None p) s) =
-    fun_of_resolved_st_q_for is_global (sign_tf_st EA_Nop s)" by simp
-  show "\<And>a p. fun_of_resolved_st_q_for is_global
-      (sign_tf_st (EA_Ret (Some a) p) s) =
-    fun_of_resolved_st_q_for is_global
-      (sign_tf_st (EA_Assign ret_var a) s)" by simp
+  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for is_global (sign_tf_st a s))"
+    by (rule action_reduces_comp[OF sign_tf_st_reduces])
   show "fun_of_resolved_st_q_for is_global (sign_tf_st EA_Nop s) =
       apply_tf sign_tf EA_Nop (fun_of_resolved_st_q_for is_global s)" by simp
   show "\<And>x e. fun_of_resolved_st_q_for is_global
@@ -145,7 +136,7 @@ definition sign_etf_st :: "(unit, sign resolved_st_q) effectful_st_transfer" whe
 lemma sign_etf_st_edge_tree:
   "apply_etf_st sign_etf_st a u = unit_edge_tree_st (sign_tf_st a) u"
   unfolding sign_etf_st_def
-  by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_ret_none sign_tf_st_ret_some])
+  by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_reduces])
 
 lemma sign_etf_st_combine_tree:
   "etf_combine_st sign_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
@@ -209,6 +200,7 @@ fun sign_tf_st_for ::
   | "sign_tf_st_for source_global (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of source_global ret_var)
          (aval_sign a (fun_of_resolved_st_q_for source_global s))"
+  | "sign_tf_st_for source_global (EA_Check cnd) s = s"
 
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
   \<open>ivl_tf_st_for_nop_agree\<close>/\<open>ivl_tf_st_for_assign_agree\<close> for the interval
@@ -271,26 +263,16 @@ text \<open>The classifier-parametric counterparts of \<open>sign_tf_st_commute\
   transfer to commute with the abstract transfer at an arbitrary classifier \<open>gs\<close>, not just
   \<^const>\<open>is_global\<close>.\<close>
 
-lemma sign_tf_st_for_ret_none [simp]:
-  "sign_tf_st_for gs (EA_Ret None p) = sign_tf_st_for gs EA_Nop"
-  by (rule ext) simp
-
-lemma sign_tf_st_for_ret_some [simp]:
-  "sign_tf_st_for gs (EA_Ret (Some a) p) = sign_tf_st_for gs (EA_Assign ret_var a)"
-  by (rule ext) simp
+lemma sign_tf_st_for_reduces: "action_reduces (sign_tf_st_for gs)"
+  by unfold_locales (rule ext, simp)+
 
 theorem sign_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
    apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "\<And>p. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Ret None p) s) =
-    fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s)" by simp
-  show "\<And>a p. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Ret (Some a) p) s) =
-    fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Assign ret_var a) s)" by simp
+  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s))"
+    by (rule action_reduces_comp[OF sign_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s) =
       apply_tf (sign_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
   show "\<And>x e. fun_of_resolved_st_q_for gs

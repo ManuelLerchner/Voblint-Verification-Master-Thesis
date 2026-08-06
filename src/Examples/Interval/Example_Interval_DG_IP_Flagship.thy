@@ -88,7 +88,7 @@ text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<clo
 
 lemmas ivl_Hstep_for =
   unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some]
+    ivl_tf_st_for_reduces]
 
 lemmas ivl_Henter_for =
   unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
@@ -262,7 +262,9 @@ proof -
              twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some
+             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
+             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
+             action_reduces.check[OF ivl_tf_st_for_reduces]
              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
 qed
 

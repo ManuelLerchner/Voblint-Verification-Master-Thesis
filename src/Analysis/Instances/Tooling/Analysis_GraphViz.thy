@@ -33,6 +33,7 @@ fun string_of_action :: "edge_action \<Rightarrow> string" where
 | "string_of_action (EA_Ret None p) = ''return''"
 | "string_of_action (EA_Ret (Some e) p) =
     ''return '' @ string_of_aexp e"
+| "string_of_action (EA_Check cnd) = ''check('' @ string_of_bexp cnd @ '')''"
 
 fun string_of_call_action :: "call_action \<Rightarrow> string" where
   "string_of_call_action (CallEdge None fs es) =

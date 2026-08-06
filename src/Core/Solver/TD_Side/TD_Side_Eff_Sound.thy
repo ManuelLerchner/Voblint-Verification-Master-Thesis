@@ -28,52 +28,53 @@ text \<open>
   contract obligations (mirrors edge_collect_apply_tf_sound).
 \<close>
 
+
+lemma etf_sound_assignD [intro]:
+  assumes "inr_slot_locals_bot is_global \<sigma>"
+      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+  shows
+    "s(x := aval e s)
+       \<in> \<lbrakk>etf_collecting_full (etf_assign etf x e u) \<sigma>\<rbrakk>"
+  using assms etf_sound_assign unfolding side_env_def
+  by blast
+
+lemma etf_sound_randomD [intro]:
+  assumes "inr_slot_locals_bot is_global \<sigma>"
+      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+  shows
+    "s(x := v)
+       \<in> \<lbrakk>etf_collecting_full (etf_random etf x u) \<sigma>\<rbrakk>"
+  using assms etf_sound_random unfolding side_env_def
+  by blast
+
+lemma etf_sound_assumeD [intro]:
+  assumes "inr_slot_locals_bot is_global \<sigma>"
+      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+      and "bval b s"
+  shows
+    "s \<in> \<lbrakk>etf_collecting_full (etf_assume etf b u) \<sigma>\<rbrakk>"
+  using assms etf_sound_assume unfolding side_env_def
+  by blast
+
+lemma etf_sound_assume_notD [intro]:
+  assumes "inr_slot_locals_bot is_global \<sigma>"
+      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+      and "\<not> bval b s"
+  shows
+    "s \<in> \<lbrakk>etf_collecting_full (etf_assume_not etf b u) \<sigma>\<rbrakk>"
+  using assms etf_sound_assume_not unfolding side_env_def
+  by blast
+
+
 lemma edge_collect_etf_sound:
   assumes inr: "inr_slot_locals_bot is_global \<sigma>"
-  shows "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
-   \<subseteq> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"
-proof (cases a)
-  case EA_Nop
-  show ?thesis
-    unfolding EA_Nop apply_etf.simps edge_collect_simps side_env_def
-    using etf_sound_nop inr by auto
-next
-  case (EA_Assign x ax)
-  show ?thesis
-    unfolding EA_Assign apply_etf.simps edge_collect_simps side_env_def
-    using etf_sound_assign inr by auto
-next
-  case (EA_Random x)
-  show ?thesis
-    unfolding EA_Random apply_etf.simps edge_collect_simps side_env_def
-    using etf_sound_random inr by auto
-next
-  case (EA_Assume b)
-  show ?thesis
-    unfolding EA_Assume apply_etf.simps edge_collect_simps side_env_def
-    using etf_sound_assume inr by auto
-next
-  case (EA_AssumeNot b)
-  show ?thesis
-    unfolding EA_AssumeNot apply_etf.simps edge_collect_simps side_env_def
-    using etf_sound_assume_not inr by auto
-next
-  case (EA_Ret e p)
-  show ?thesis
-  proof (cases e)
-    case None
-    show ?thesis
-      unfolding EA_Ret None apply_etf.simps edge_collect_simps side_env_def
-      using etf_sound_nop inr by (auto simp: fun_upd_triv)
-  next
-    case (Some a)
-    show ?thesis
-      unfolding EA_Ret Some apply_etf.simps edge_collect_simps side_env_def
-      using etf_sound_assign inr by auto
-  qed
-qed
-
-
+  shows
+    "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
+       \<subseteq> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"
+  using inr
+  by (cases a;
+      auto simp: etf_sound_nop side_env_apply
+           split: option.splits)
 
 end
 

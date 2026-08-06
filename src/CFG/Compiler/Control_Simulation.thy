@@ -120,13 +120,15 @@ next
   then show ?case using jw E by blast
 qed simp_all
 
-text \<open>A located \<^const>\<open>VIMP_Proc.com.Check\<close> sits on the compiled \<^term>\<open>EA_Nop\<close> edge, and its
-  source step re-locates the residual \<^const>\<open>SKIP\<close> at that edge's target, exactly as
-  \<open>control_at_assign_edge\<close> and \<open>control_at_random_edge\<close>.\<close>
+text \<open>A located \<^const>\<open>VIMP_Proc.com.Check\<close> sits on the compiled \<^term>\<open>EA_Check cnd\<close> edge, and
+  its source step re-locates the residual \<^const>\<open>SKIP\<close> at that edge's target, exactly as
+  \<open>control_at_assign_edge\<close> and \<open>control_at_random_edge\<close>. The check's own condition is named
+  \<open>cnd\<close>, not \<open>b\<close>: the \<open>IfLeft\<close>/\<open>IfRight\<close> induction cases below bind their own \<open>b\<close> for the
+  unrelated if-guard, and \<open>b\<close> here would be silently shadowed inside those cases.\<close>
 lemma control_at_check_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = VIMP_Proc.com.Check b \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = VIMP_Proc.com.Check cnd \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
-   \<exists>j w. v = Statement j \<and> (Statement j, EA_Nop, w) \<in> E
+   \<exists>j w. v = Statement j \<and> (Statement j, EA_Check cnd, w) \<in> E
        \<and> control_at \<Pi> p c0 k n SKIP w"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (Check b' k n0)
@@ -138,7 +140,7 @@ next
     and E: "E = E1 \<union> E2"
     by (rule compile_SeqE)
   from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Nop, w) \<in> E2"
+    jw: "v = Statement j" "(Statement j, EA_Check cnd, w) \<in> E2"
         "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
     using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
@@ -152,7 +154,7 @@ next
                  (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
   from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Nop, w) \<in> E1"
+    jw: "v = Statement j" "(Statement j, EA_Check cnd, w) \<in> E1"
         "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
   then show ?case using jw E by blast
@@ -165,7 +167,7 @@ next
                  (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Nop, w) \<in> E2"
+    jw: "v = Statement j" "(Statement j, EA_Check cnd, w) \<in> E2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
   then show ?case using jw E by blast
@@ -602,11 +604,11 @@ next
   have ca: "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 (VIMP_Proc.com.Check b) (Statement n0)"
     by (rule control_at.Check)
   from control_at_check_edge[OF ca refl Check.prems(2)] obtain j w where
-    jw: "Statement n0 = Statement j" "(Statement j, EA_Nop, w) \<in> E"
+    jw: "Statement n0 = Statement j" "(Statement j, EA_Check b, w) \<in> E"
         "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 SKIP w" by blast
-  have "(Statement j, EA_Nop, w) \<in> intra g"
+  have "(Statement j, EA_Check b, w) \<in> intra g"
     using jw(2) Check.prems(3) by blast
-  from cstep_nop[OF this]
+  from cstep_check[OF this]
   have "cstep source_global g (Statement j, s, stk) (w, s, stk)" .
   then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
     using jw(1) out(2) by (simp add: cstep_star_single)

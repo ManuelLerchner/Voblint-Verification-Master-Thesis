@@ -86,7 +86,7 @@ abbreviation Sabs :: "(ivl abs_state, ivl abs_state) dg_spec" where
 
 lemmas ivl_Hstep =
   unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some]
+    ivl_tf_st_for_reduces]
 lemmas ivl_Henter = unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 lemmas ivl_Hcomb = unit_dg_Hcomb_for
 

@@ -830,11 +830,14 @@ lemma unit_combine_step_st_commute_for:
 
 
 lemma dg_spec_step_unit_st_for:
-  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-    and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  assumes reduces: "action_reduces tf_st"
   shows "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
-  unfolding unit_dg_spec_st_for_def
-  by (cases a) (simp_all add: ret_none ret_some split: option.splits)
+proof -
+  interpret action_reduces tf_st by (rule reduces)
+  show ?thesis
+    unfolding unit_dg_spec_st_for_def
+    by (cases a) (simp_all add: ret_none ret_some check split: option.splits)
+qed
 
 subsection \<open>Owner-aware executable D/G trees\<close>
 

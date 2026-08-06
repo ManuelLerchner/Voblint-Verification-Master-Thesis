@@ -637,7 +637,8 @@ lemma apply_etf_unit_of_transfer:
   "apply_etf (unit_etf_of_transfer tf) a u = unit_edge_tree (apply_tf tf a) u"
   unfolding unit_etf_of_transfer_def
   by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
+       split: option.splits)
 
 lemma etf_combine_unit_of_transfer:
   "etf_combine (unit_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"
@@ -647,7 +648,8 @@ lemma apply_etf_mixed_of_transfer:
   "apply_etf (mixed_etf_of_transfer tf) a u = mixed_etf_edge_tree tf a u"
   unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def
   by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
+     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
+       split: option.splits)
 
 lemma etf_combine_mixed_of_transfer:
   "etf_combine (mixed_etf_of_transfer tf) dst cc ex = unit_combine_tree dst cc ex"

@@ -72,6 +72,11 @@ lemma cstep_ret:
      (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
+lemma cstep_check:
+  assumes "(u, EA_Check c, v) \<in> intra g"
+  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  by (rule cstep.Intra[OF assms]) simp
+
 lemma cstep_call:
   "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
    cstep gs g (u, s, stk)

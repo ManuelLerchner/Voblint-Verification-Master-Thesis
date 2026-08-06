@@ -63,9 +63,9 @@ lemma checks_ivl_ex_intra_eval:
       (Statement 0, EA_Random ''x'', Statement 1),
       (Statement 1, EA_Assume (And (Less (N 0) (V ''x'')) (Less (V ''x'') (N 10))), Statement 2),
       (Statement 1, EA_AssumeNot (And (Less (N 0) (V ''x'')) (Less (V ''x'') (N 10))), Statement 5),
-      (Statement 2, EA_Nop, Statement 3),
-      (Statement 3, EA_Nop, Statement 4),
-      (Statement 4, EA_Nop, Statement 6),
+      (Statement 2, EA_Check (Less (V ''x'') (N 11)), Statement 3),
+      (Statement 3, EA_Check (Less (V ''x'') (N 0)), Statement 4),
+      (Statement 4, EA_Check (Eq (V ''x'') (N 5)), Statement 6),
       (Statement 5, EA_Assign ''y'' (N 0), Statement 6),
       (Statement 6, EA_Ret None ''main'', FunctionResult ''main'')}"
   unfolding prog_cfg_def by eval

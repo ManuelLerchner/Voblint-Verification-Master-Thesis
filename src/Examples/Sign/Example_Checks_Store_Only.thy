@@ -68,11 +68,11 @@ lemma checks_ex_intra_eval:
   "intra (prog_cfg ''main'' checks_ex_program) =
      {(FunctionEntry ''main'', EA_Nop, Statement 0),
       (Statement 0, EA_Assign ''y'' (N 5), Statement 1),
-      (Statement 1, EA_Nop, Statement 2),
+      (Statement 1, EA_Check (Less (N 0) (V ''y'')), Statement 2),
       (Statement 2, EA_Assign ''y'' (N 0), Statement 3),
-      (Statement 3, EA_Nop, Statement 4),
+      (Statement 3, EA_Check (Less (N 0) (V ''y'')), Statement 4),
       (Statement 4, EA_Random ''z'', Statement 5),
-      (Statement 5, EA_Nop, Statement 6),
+      (Statement 5, EA_Check (Eq (V ''z'') (N 1)), Statement 6),
       (Statement 6, EA_Ret None ''main'', FunctionResult ''main'')}"
   unfolding prog_cfg_def by eval
 
@@ -277,11 +277,11 @@ proof -
         "cinit_stores is_global" "Statement 0" "EA_Assign ''y'' (N 5)" "Statement 1"
         "(\<lambda>_. 0)(''y'' := 5)"]
     using s1 e1 unfolding checks_ex_reach_def by simp
-  have e2: "(Statement 1, EA_Nop, Statement 2) \<in> intra (prog_cfg ''main'' checks_ex_program)"
+  have e2: "(Statement 1, EA_Check (Less (N 0) (V ''y'')), Statement 2) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s3: "(\<lambda>_. 0)(''y'' := 5) \<in> checks_ex_reach (Statement 2)"
     using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 5)" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 1" EA_Nop "Statement 2"]
+        "cinit_stores is_global" "Statement 1" "EA_Check (Less (N 0) (V ''y''))" "Statement 2"]
     using s2 e2 unfolding checks_ex_reach_def by simp
   have e3: "(Statement 2, EA_Assign ''y'' (N 0), Statement 3) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
@@ -290,11 +290,11 @@ proof -
         "cinit_stores is_global" "Statement 2" "EA_Assign ''y'' (N 0)" "Statement 3"
         "(\<lambda>_. 0)(''y'' := 0)"]
     using s3 e3 unfolding checks_ex_reach_def by simp
-  have e4: "(Statement 3, EA_Nop, Statement 4) \<in> intra (prog_cfg ''main'' checks_ex_program)"
+  have e4: "(Statement 3, EA_Check (Less (N 0) (V ''y'')), Statement 4) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s5: "(\<lambda>_. 0)(''y'' := 0) \<in> checks_ex_reach (Statement 4)"
     using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 0)" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 3" EA_Nop "Statement 4"]
+        "cinit_stores is_global" "Statement 3" "EA_Check (Less (N 0) (V ''y''))" "Statement 4"]
     using s4 e4 unfolding checks_ex_reach_def by simp
   have e5: "(Statement 4, EA_Random ''z'', Statement 5) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)

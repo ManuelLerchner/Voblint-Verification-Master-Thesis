@@ -118,7 +118,7 @@ where
 | "compile \<Pi> p (Random x) k n =
      (Suc n, Statement n, {(Statement n, EA_Random x, k)}, {})"
 | "compile \<Pi> p (Check c) k n =
-     (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
+     (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
           (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
@@ -395,12 +395,12 @@ qed
 subsection \<open>Check-obligation soundness\<close>
 
 text \<open>\<open>collect_checks\<close>'s node numbering agrees with \<^const>\<open>compile\<close>'s own: every check it
-  records at \<open>v\<close> corresponds to a real \<^const>\<open>EA_Nop\<close> edge sourced at \<open>v\<close> in \<^const>\<open>compile\<close>'s
-  own output --- the correspondence \<open>collect_checks\<close>'s header promised, proved here rather
-  than assumed.\<close>
+  records at \<open>v\<close> corresponds to a real \<^const>\<open>EA_Check\<close> edge sourced at \<open>v\<close> in \<^const>\<open>compile\<close>'s
+  own output, carrying the same condition --- the correspondence \<open>collect_checks\<close>'s header
+  promised, proved here rather than assumed.\<close>
 
 lemma collect_checks_sound:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (v, ch) \<in> collect_checks c n \<Longrightarrow> \<exists>k'. (v, EA_Nop, k') \<in> E"
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (v, ch) \<in> collect_checks c n \<Longrightarrow> \<exists>k'. (v, EA_Check ch, k') \<in> E"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Check ch')
   then show ?case by (auto simp: Let_def)
@@ -461,14 +461,14 @@ lemma compile_proc_next_id: "fst (compile_proc \<Pi> p decl n) = collect_checks_
 lemma collect_checks_proc_sound:
   assumes "compile_proc \<Pi> p decl n = (n'', E'', K)"
     and "(v, ch) \<in> collect_checks_proc p decl n"
-  shows "\<exists>k'. (v, EA_Nop, k') \<in> E''"
+  shows "\<exists>k'. (v, EA_Check ch, k') \<in> E''"
 proof -
   define r where "r = n + csize (body decl)"
   obtain m ben E K' where c: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, E, K')"
     by (metis prod_cases4)
   from assms(2) have mem: "(v, ch) \<in> collect_checks (body decl) n"
     unfolding collect_checks_proc_def .
-  from collect_checks_sound[OF c mem] obtain k' where kE: "(v, EA_Nop, k') \<in> E" by blast
+  from collect_checks_sound[OF c mem] obtain k' where kE: "(v, EA_Check ch, k') \<in> E" by blast
   from assms(1) c r_def have "E \<subseteq> E''"
     unfolding compile_proc_def
     by (cases "falls_through (body decl)") (auto simp: Let_def)
@@ -481,7 +481,7 @@ text \<open>Procedure offsets: \<open>collect_checks_procs\<close> threads the i
 
 lemma collect_checks_procs_sound:
   "compile_procs \<Pi> ps n = (n2, E, K) \<Longrightarrow> collect_checks_procs \<Pi> ps n = (C, n2')
-   \<Longrightarrow> (v, ch) \<in> C \<Longrightarrow> \<exists>k'. (v, EA_Nop, k') \<in> E"
+   \<Longrightarrow> (v, ch) \<in> C \<Longrightarrow> \<exists>k'. (v, EA_Check ch, k') \<in> E"
 proof (induction ps arbitrary: n n2 E K C n2')
   case Nil
   then show ?case by simp
@@ -550,12 +550,13 @@ next
 qed
 
 text \<open>The user-facing form: every check the whole-program compiler records is sourced at a
-  real \<^const>\<open>EA_Nop\<close> edge of the compiled program's own \<^const>\<open>intra\<close> set --- \<open>checks\<close> is
-  never out of sync with the CFG it was computed from, proved rather than assumed.\<close>
+  real \<^const>\<open>EA_Check\<close> edge of the compiled program's own \<^const>\<open>intra\<close> set, carrying the
+  same condition --- \<open>checks\<close> is never out of sync with the CFG it was computed from, proved
+  rather than assumed.\<close>
 
 corollary compile_prog_checks_sound:
   assumes "(v, ch) \<in> checks (compile_prog \<Pi> ps mnm main)"
-  shows "\<exists>k'. (v, EA_Nop, k') \<in> intra (compile_prog \<Pi> ps mnm main)"
+  shows "\<exists>k'. (v, EA_Check ch, k') \<in> intra (compile_prog \<Pi> ps mnm main)"
 proof -
   obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)

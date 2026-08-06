@@ -24,6 +24,7 @@ fun edge_writes :: "edge_action \<Rightarrow> vname \<Rightarrow> bool" where
 | "edge_writes EA_Nop x = False"
 | "edge_writes (EA_Assume _) x = False"
 | "edge_writes (EA_AssumeNot _) x = False"
+| "edge_writes (EA_Check _) x = False"
 
 subsection \<open>Edge-action functional CFGs\<close>
 

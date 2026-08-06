@@ -1,3 +1,4 @@
+
 section \<open>Flagship: parity analysis of an even-step loop, executed and certified on the D/G spine\<close>
 
 text \<open>
@@ -204,7 +205,9 @@ proof -
              parity_ex_transfer.tf_sound_enter_for parity_ex_transfer.tf_sound_combine_for
              parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             parity_tf_st_for_ret_none parity_tf_st_for_ret_some
+             action_reduces.ret_none[OF parity_tf_st_for_reduces]
+             action_reduces.ret_some[OF parity_tf_st_for_reduces]
+             action_reduces.check[OF parity_tf_st_for_reduces]
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 

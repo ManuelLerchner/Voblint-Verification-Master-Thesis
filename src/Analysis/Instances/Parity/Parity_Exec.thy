@@ -27,27 +27,18 @@ fun parity_tf_st :: "edge_action \<Rightarrow> parity resolved_st_q \<Rightarrow
        (case e of None \<Rightarrow> s
         | Some a \<Rightarrow> update_resolved_st_q s (location_of is_global ret_var)
             (aval_parity a (fun_of_resolved_st_q_for is_global s)))"
+  | "parity_tf_st (EA_Check cnd) s = s"
 
-lemma parity_tf_st_ret_none [simp]:
-  "parity_tf_st (EA_Ret None p) = parity_tf_st EA_Nop"
-  by (rule ext) simp
-
-lemma parity_tf_st_ret_some [simp]:
-  "parity_tf_st (EA_Ret (Some a) p) = parity_tf_st (EA_Assign ret_var a)"
-  by (rule ext) simp
+lemma parity_tf_st_reduces: "action_reduces parity_tf_st"
+  by unfold_locales (rule ext, simp)+
 
 theorem parity_tf_st_commute:
   "fun_of_resolved_st_q_for is_global (parity_tf_st a s) =
    apply_tf parity_tf a (fun_of_resolved_st_q_for is_global s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for is_global s)"])
-  show "\<And>p. fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_Ret None p) s) =
-    fun_of_resolved_st_q_for is_global (parity_tf_st EA_Nop s)" by simp
-  show "\<And>a p. fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_Ret (Some a) p) s) =
-    fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_Assign ret_var a) s)" by simp
+  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for is_global (parity_tf_st a s))"
+    by (rule action_reduces_comp[OF parity_tf_st_reduces])
   show "fun_of_resolved_st_q_for is_global (parity_tf_st EA_Nop s) =
       apply_tf parity_tf EA_Nop (fun_of_resolved_st_q_for is_global s)" by simp
   show "\<And>x e. fun_of_resolved_st_q_for is_global
@@ -149,27 +140,18 @@ fun parity_tf_st_for ::
   | "parity_tf_st_for source_global (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of source_global ret_var)
          (aval_parity a (fun_of_resolved_st_q_for source_global s))"
+  | "parity_tf_st_for source_global (EA_Check cnd) s = s"
 
-lemma parity_tf_st_for_ret_none [simp]:
-  "parity_tf_st_for gs (EA_Ret None p) = parity_tf_st_for gs EA_Nop"
-  by (rule ext) simp
-
-lemma parity_tf_st_for_ret_some [simp]:
-  "parity_tf_st_for gs (EA_Ret (Some a) p) = parity_tf_st_for gs (EA_Assign ret_var a)"
-  by (rule ext) simp
+lemma parity_tf_st_for_reduces: "action_reduces (parity_tf_st_for gs)"
+  by unfold_locales (rule ext, simp)+
 
 theorem parity_tf_st_for_commute:
   "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
    apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "\<And>p. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Ret None p) s) =
-    fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s)" by simp
-  show "\<And>a p. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Ret (Some a) p) s) =
-    fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Assign ret_var a) s)" by simp
+  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s))"
+    by (rule action_reduces_comp[OF parity_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s) =
       apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
   show "\<And>x e. fun_of_resolved_st_q_for gs
