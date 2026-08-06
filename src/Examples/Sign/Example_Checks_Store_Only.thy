@@ -323,19 +323,6 @@ text \<open>
   end-of-procedure node is not visually confused with a refuted check.
 \<close>
 
-definition check_result_annotation :: "check_result \<Rightarrow> bexp \<Rightarrow> graphviz_node_annotation" where
-  "check_result_annotation res cnd =
-     (case res of
-        Check_Proved \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd)
-            ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white''
-      | Check_Unknown \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [unknown]'')
-            ''shape=box,style=filled,fillcolor=gray70''
-      | Check_Refuted \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [REFUTED]'')
-            ''shape=box,style=filled,fillcolor=red,fontcolor=white'')"
-
 definition checks_ex_check_at :: "pp \<Rightarrow> bexp option" where
   "checks_ex_check_at v =
      (if v = Statement 1 then Some (Less (N 0) (V ''y''))

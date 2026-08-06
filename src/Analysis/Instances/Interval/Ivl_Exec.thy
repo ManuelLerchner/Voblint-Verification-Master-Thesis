@@ -10,8 +10,9 @@ instance ivl :: bounded_warrowing ..
 text \<open>
   Executable mirror of @{const ivl_tf} on @{typ "ivl resolved_st_q"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
-  into the generic @{theory Voblint_Core.Exec_Bridge} transport; no certified
-  end-to-end soundness theory yet (cf.\ \<open>Sign_Exec_Sound\<close>).
+  into the generic @{theory Voblint_Core.Exec_Bridge} transport; the certified
+  end-to-end soundness theory built on this mirror lives in
+  \<open>Interval_Exec_Sound\<close>, mirroring \<open>Sign_Exec_Sound\<close>.
 \<close>
 
 text \<open>
@@ -207,6 +208,18 @@ lemma ivl_etf_st_edge_tree:
 lemma ivl_etf_st_combine_tree:
   "etf_combine_st ivl_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
   unfolding ivl_etf_st_def by (rule etf_combine_st_unit_of_transfer)
+
+lemma ivl_etf_st_enter_tree:
+  "etf_st_enter ivl_etf_st xs es u = unit_edge_tree_st (ivl_enter_st xs es) u"
+  unfolding ivl_etf_st_def by (rule etf_st_enter_unit_of_transfer)
+
+lemma ivl_etf_st_enter_exists_unit:
+  "\<And>u xs es. \<exists>f. etf_st_enter ivl_etf_st xs es u = unit_edge_tree_st f u"
+  using ivl_etf_st_enter_tree by blast
+
+lemma ivl_etf_st_exists_unit:
+  "\<And>a u. \<exists>f. apply_etf_st ivl_etf_st a u = unit_edge_tree_st f u"
+  using ivl_etf_st_edge_tree by blast
 
 value "fun_of_resolved_st_q_for is_global
   (ivl_tf_st (EA_Assume (Less (VIMP_Syntax.V ''x'') (VIMP_Syntax.N 20)))

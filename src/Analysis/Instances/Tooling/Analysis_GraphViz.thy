@@ -5,6 +5,7 @@ theory Analysis_GraphViz
     Voblint_Core.TD_Side_CFG
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain
+    Voblint_Core.Abstract_Checks
 begin
 
 text \<open>
@@ -130,6 +131,28 @@ datatype graphviz_node_annotation =
 
 definition no_annotations :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "no_annotations _ = None"
+
+text \<open>
+  Shared status-to-style mapping for a compiled \<^verbatim>\<open>__voblint_check(...)\<close>
+  condition, given its executable \<^typ>\<open>check_result\<close> classification.
+  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>bexp\<close>), so every
+  domain's check-discharge example renders proof status through this one
+  mapping instead of restating it. \<^term>\<open>Check_Proved\<close> renders dark green,
+  \<^term>\<open>Check_Refuted\<close> red, \<^term>\<open>Check_Unknown\<close> grey.
+\<close>
+
+definition check_result_annotation :: "check_result \<Rightarrow> bexp \<Rightarrow> graphviz_node_annotation" where
+  "check_result_annotation res cnd =
+     (case res of
+        Check_Proved \<Rightarrow>
+          Node_Annotation (''check '' @ string_of_bexp cnd)
+            ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white''
+      | Check_Unknown \<Rightarrow>
+          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [unknown]'')
+            ''shape=box,style=filled,fillcolor=gray70''
+      | Check_Refuted \<Rightarrow>
+          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [REFUTED]'')
+            ''shape=box,style=filled,fillcolor=red,fontcolor=white'')"
 
 record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   local_of :: "'a \<Rightarrow> 'd"

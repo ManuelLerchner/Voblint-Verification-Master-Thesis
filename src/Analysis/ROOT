@@ -19,6 +19,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_Bounds
     Interval_Lattice
     Interval_Numeric_Queries
+    Interval_Checks
     Interval_Warrowing
     Interval_Arithmetic
     Interval_Backward
@@ -34,6 +35,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_Side_Soundness
     Interval_DG
     Interval_Point_Digest
+    Interval_Exec_Sound
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
