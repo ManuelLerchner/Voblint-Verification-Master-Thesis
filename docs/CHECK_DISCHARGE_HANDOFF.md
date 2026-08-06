@@ -1,8 +1,10 @@
 # Check-discharge handoff
 
-Status: implementation complete, I/Q-clean across all files, local checks
-(ASCII normalization, `sorry`/`oops` sweep) pass. Full batch build launched;
-confirm green before treating this as done.
+Status: Sign and Interval both have full check-discharge instances, batch-
+green. For the layer-by-layer architecture (pipeline diagram, per-file
+responsibilities, why no automatic sublocale), see `docs/CHECK_ARCHITECTURE.md`
+— this file stays a chronological build log of what landed and the pitfalls
+hit, not a restatement of the architecture.
 
 Date: 2026-08-06
 
@@ -11,8 +13,9 @@ Date: 2026-08-06
 Discharges CFG-native `__voblint_check(...)` conditions against the computed
 node-indexed abstract solver environment, without forwarding stores between
 check nodes or to the procedure exit. Generalized into a domain-generic
-locale hierarchy so Sign is one instance and Interval is validated as a
-second, independent instance.
+locale hierarchy: Sign and Interval are both full instances (source syntax,
+compiled CFG check positions, node-local solver frontend, `_Checks.thy`
+instance, worked example, GraphViz rendering).
 
 ## Completed
 
@@ -199,6 +202,55 @@ reverted bridge ran into from the other direction. No unconditional
 chooses the derived path explicitly, Interval still keeps its specialized
 tables.
 
+## Interval check-discharge instance: done
+
+Second, independent full instance, mirroring the Sign pipeline end to end,
+not just the numeric-query interpretation recorded above:
+
+- `Ivl_Exec.thy` — three new lemmas (`ivl_etf_st_enter_tree`,
+  `ivl_etf_st_enter_exists_unit`, `ivl_etf_st_exists_unit`), mirroring
+  `Sign_Exec.thy`'s existing unit-transfer lemmas, closing the gap the
+  Interval solver frontend needed.
+- `Interval_Exec_Sound.thy` (new) — node-parametric `ivl_exec_prog_at` and
+  `ivl_exec_prog_sound_collecting_at`, mirroring `Sign_Exec_Sound.thy`'s
+  generalization pattern exactly (both instantiate the same domain-generic
+  `side_collect_sound_in_eff_cone`, supplying Interval's own transfer facts).
+  GraphViz convenience (`ivl_graph_config`, `ivl_annotated_dot_lit`,
+  `ivl_annotated_dot_prog_lit`) included, matching Sign's.
+- `Interval_Checks.thy` (new) — `global_interpretation interval_check_domain:
+  abstract_check_domain ...`, `defines`-exporting `interval_check_true`/
+  `interval_classify_check`/`interval_checks_proven`. Imports
+  `Interval_Backward` directly (needed for `aval_ivl`/`aval_ivl_sound`,
+  not reachable through `Interval_Numeric_Queries.thy` alone).
+- `Example_Interval_Checks_Store_Only.thy` (new) — compiled program with an
+  `if/else` branch (`x := random(); if (0 < x && x < 10) { ...three checks... }
+  else { y := 0 }`), one proved, one refuted, one unknown check, a
+  `checks_proven` bridge, a non-vacuity witness, GraphViz rendering colored
+  by `classify_check`, and a precision-over-Sign comparison: Interval proves
+  `x < 11` outright after narrowing `x` to `[1,9]`, which Sign's `SPos`
+  alone cannot. Also renders the fully-annotated per-node CFG
+  (`ivl_annotated_dot_prog_lit`), independently confirming the narrowed
+  bound at each check's node.
+- `check_result_annotation` (the `Check_Proved`/`Check_Refuted`/
+  `Check_Unknown` -> GraphViz style mapping) was duplicated once in the Sign
+  example and once in the Interval example; moved to
+  `Analysis_GraphViz.thy` as the shared, domain-independent mapping once the
+  second occurrence made the duplication real rather than speculative.
+- The generic exit-node GraphViz styling (`analysis_node_attrs`, pre-existing
+  and shared by every domain's raw and annotated renderers) used
+  `color=red,fillcolor=mistyrose` for every procedure exit, which visually
+  collided with `Check_Refuted`'s red. Changed to
+  `color=gray40,fillcolor=lightgray` — a neutral default that does not
+  overload the same color two different pipeline stages use for different
+  meanings. Entry styling (`color=green,fillcolor=lightyellow`) was already
+  distinct from check coloring and left unchanged.
+- `Voblint.thy` capstone updated: new imports for
+  `Abstract_Numeric_Queries`, `Abstract_Checks`, `Sign_Checks`,
+  `Interval_Checks`, `Interval_Exec_Sound`, and both worked examples; new
+  "3b. Check discharge" documentation subsection.
+- `docs/CHECK_ARCHITECTURE.md` (new) — the architecture-level writeup this
+  file now defers to for layer responsibilities and the pipeline diagram.
+
 ## Next steps
 
 1. Vet `Interval_Numeric_Queries.thy`'s Sledgehammer-derived proofs
@@ -207,8 +259,16 @@ tables.
    project's own convention flags as "a leading source of build hangs."
    Replace with `blast`/`auto`/`fastforce`/reconstructed `metis` once batch
    timing is confirmed fast, or leave as-is if batch timing is already fine.
-2. No domain besides Sign has a `_Checks.thy` (full check-discharge
-   instance) yet. Interval only has the numeric-query interpretation.
+2. `checks : (pp * bexp) set` is compiled via `EA_Nop` edges plus a
+   parallel `collect_checks` numbering pass — the condition and its CFG
+   position are tracked separately and must stay synchronized. A
+   first-class `EA_Check bexp` CFG action (identity concrete/abstract
+   semantics, `checks` derived by projection from `intra` rather than a
+   separate compiler pass) would remove that synchronization burden and
+   render as `check(cnd)` instead of `nop` in GraphViz, closer to how
+   Goblint's `__goblint_check`/`__goblint_assert` are themselves CFG-visible
+   annotation points, not side metadata. Not started; a real CFG/compiler
+   change, in scope only when explicitly requested.
 3. Do not build ghost-backed checks, generalized trace projections, or an
    executable theorem-discovery/reporting layer on top of `classify_check` —
    explicitly out of scope for this milestone.
@@ -220,5 +280,5 @@ tables.
 - `rg -n '\bsorry\b|\boops\b'` on every touched file: no matches.
 - `scripts/normalize_isabelle_ascii.py`: no changes needed on any touched
   file (already ASCII-clean).
-- Full batch build (`rtk make build`): launched; confirm the log shows
-  `Finished Voblint_Examples` before treating this milestone as done.
+- Full batch build (`rtk make build`): green, exit 0, both for the Interval
+  instance and for the later exit-color GraphViz change.

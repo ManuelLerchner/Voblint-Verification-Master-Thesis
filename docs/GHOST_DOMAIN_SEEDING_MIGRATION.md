@@ -5,7 +5,11 @@ Status: **G-M0/G-M1 landed** (`src/CFG/Collecting/LTR_Last_Write.thy`,
 `src/Core/Domain/Ghost_Last_Write_Product.thy`,
 `src/Analysis/Instances/Sign/Sign_Ghost_LastWrite_DG.thy`, and a hand-built
 call/join witness, `src/Examples/CFG/Example_Sign_Ghost_LastWrite_Witness.thy`
-— see section 14). Everything else below is design only, replacing
+— see section 14). **G-A1 landed and grew well beyond its original side-table
+scope** — see the correction below and the updated section 7/8/9/10. The
+ghost track (G-M2 onward) is unaffected by that growth and remains open,
+optional design; it is not on G-A1's critical path and G-A1 is not on its
+critical path either. Everything else below is design only, replacing
 `GHOST_INSTRUMENTATION_MIGRATION.md` as issue #76's plan. Written after
 confirming the old plan's entire dependency chain and semantic vocabulary are
 gone from `src/` (section 1) and after reading the two pieces of
@@ -21,6 +25,25 @@ so it is not gated on `last_writer` or on any ghost fact at all. The
 generalized, trace-projection-aware check condition type that sections 7 and
 9 originally required from G-M4's first version is deferred until a second
 concrete ghost fact actually needs it (section 7).
+
+**Second scope correction (post-G-A1):** what shipped for G-A1 is a full
+CFG-native `__voblint_check(...)` pipeline, not the minimal side-table sketch
+this document originally scoped it as — source syntax, compiler-recorded
+check positions, a domain-generic `abstract_numeric_queries`/
+`abstract_check_domain` locale pair (`Abstract_Numeric_Queries.thy`,
+`Abstract_Checks.thy`), node-local solver frontends
+(`Sign_Exec_Sound.thy`/`Interval_Exec_Sound.thy`), executable
+`Check_Proved`/`Check_Refuted`/`Check_Unknown` classification, and shared
+GraphViz rendering — proved out on **two** independent domain instances
+(Sign, Interval), not one. Full architecture and pipeline diagram:
+`docs/CHECK_ARCHITECTURE.md`. Chronological build log, pitfalls hit, and the
+current open follow-on (a first-class `EA_Check` CFG action, replacing the
+`EA_Nop` + side-table compilation this document originally proposed):
+`docs/CHECK_DISCHARGE_HANDOFF.md`. This document's own section 7/9 framing of
+G-A1 as a `bexp`/`bval`/`gamma_state` side table is still an accurate
+description of the *condition type* (that part did not change) but is stale
+on *how a check's CFG position is recorded* — see the correction in section 9
+item 4.
 
 Related docs:
 
@@ -299,19 +322,28 @@ assertion generation:
   second ghost-backed check consumer exists to justify designing the general
   condition type against.
 
-**G-A1's shape (Case A only):** `checks_proven`/`check_condition`/`checks_at`
-do not exist in `src/` today (`rg -n "checks_proven|check_condition|
-checks_at" src/` -> 0 matches). Build them directly on the old, superseded
-plan's formula (`GHOST_INSTRUMENTATION_MIGRATION.md:183`, `checks_proven env
-<-> forall check_pp. forall s in gamma(env check_pp). bval (check_condition
-v) s`), which is already exactly Case A: `bval :: bexp => store => bool`
-(`VIMP_Expr.thy:19-25`) against `gamma_state :: 'a abs_state => store set`
-(`Abstract_Domain.thy:58`), anchored to whatever collecting semantics the
-underlying `sound_dg_spec`/`sound_dg_spec_ltr` instance already proves sound
-against (not `ltr_collect`/`activation_collect` — those anchor the
-trace-indexed layer this milestone does not need). `checks_at` is a side
-table keyed by existing `cfg_node`s, unchanged from the original framing
-below.
+**G-A1's shape (Case A only) — done, landed as described below.**
+`checks_proven` (`Voblint_Core.Checks`) is domain-independent:
+`bval :: bexp => store => bool` (`VIMP_Expr.thy:19-25`) against
+`gamma_state :: 'a abs_state => store set` (`Abstract_Domain.thy:58`), no
+trace anchor, exactly Case A as scoped. `abstract_check_domain`
+(`Abstract_Checks.thy`) builds the mutually-recursive `check_true`/
+`check_false` classification and the `Check_Proved`/`Check_Refuted`/
+`Check_Unknown` executable bridge on top of it, generically over any
+`abstract_numeric_queries` instance; Sign and Interval both interpret it
+(`Sign_Checks.thy`, `Interval_Checks.thy`). Full layer breakdown:
+`docs/CHECK_ARCHITECTURE.md`.
+
+One part of the original framing did not survive contact with
+implementation: `checks_at` is **not** a side table keyed by existing
+`cfg_node`s, decoupled from CFG compilation the way this section originally
+assumed. What actually landed compiles `__voblint_check(cnd)` to an ordinary
+`EA_Nop` edge plus a *parallel* `collect_checks` numbering pass that must
+stay synchronized with it — closer to "the compiler emits two things for one
+source construct" than "a side table over an unrelated CFG." See section 9
+item 4 for the corrected design question this raises (a first-class
+`EA_Check` CFG action) and `docs/CHECK_DISCHARGE_HANDOFF.md` for the
+Goblint-alignment argument for it.
 
 **Why Case B is deferred, not merely postponed arbitrarily** (the analysis
 this section originally used to justify building it early — now the argument
@@ -344,7 +376,8 @@ names it.
 
 | # | Deliverable | Depends on | File targets |
 | --- | --- | --- | --- |
-| **G-A1 (next, independent)** | Ordinary `__goblint_assert` support: `checks_at`/`checks_proven`/`checks_proven_sound`, a store-only condition type (`bexp`/`bval`/`gamma_state`, section 7 Case A), a side table over `cfg_node`, anchored to whatever collecting semantics the underlying `sound_dg_spec`/`sound_dg_spec_ltr` instance already proves sound against | none — works against any existing analysis (plain Sign is enough); **not gated on G-M0-G-M3 or on any ghost fact** | new `src/CFG/Collecting/Checks.thy` or similar |
+| **G-A1 (done, expanded significantly)** | CFG-native `__voblint_check(...)`: source syntax, compiler-recorded check positions, domain-generic `checks_proven`/`abstract_numeric_queries`/`abstract_check_domain` (section 7 Case A condition type, unchanged), node-local Sign **and** Interval solver frontends, executable `Check_Proved`/`Check_Refuted`/`Check_Unknown` classification, shared GraphViz rendering. Two independent domain instances, not one — see `docs/CHECK_ARCHITECTURE.md` | none — works against any existing analysis; **not gated on G-M0-G-M3 or on any ghost fact** (confirmed: shipped with zero ghost dependency) | `Voblint_Core.Checks`, `Abstract_Numeric_Queries.thy`, `Abstract_Checks.thy`, `Sign_Checks.thy`, `Interval_Checks.thy`, `Sign_Exec_Sound.thy`, `Interval_Exec_Sound.thy` |
+| G-A2 (open, follow-on to G-A1) | Replace the `EA_Nop` + parallel `collect_checks` numbering pass with a first-class `EA_Check bexp` CFG action (identity concrete/abstract transfer; `checks` relation derived by projection from `intra` instead of a separate compiler pass). Closer to Goblint's own CFG-visible `__goblint_check` annotation points. Not started; a real CFG/compiler change | G-A1 | `VIMP_Syntax.thy`, `VIMP_Proc_to_CFG.thy`, per-domain transfer functions, `docs/CHECK_DISCHARGE_HANDOFF.md` next-steps item 2 |
 | G-M0 (**done**) | `last_writer`/`last_write_collect` over `valid_ltr`/`ltr_collect`, plus the edge-determinism check (section 5) | none | `src/CFG/Collecting/LTR_Last_Write.thy` |
 | G-M1 (**done**, optional precision/provenance track — not a prerequisite for G-A1) | Ghost-augmented product domain, hand-written per section 6, Sign base. Landed as a direct `sound_dg_hooks`/`sound_dg_hooks_ltr` interpretation, not `dg_spec` as originally scoped: `ghost_step`'s value at an edge depends on the edge's *destination* node, which `dg_spec`'s fixed per-edge transfer signature cannot express but hook trees can (`Sign_Ghost_LastWrite_DG.thy`'s own comment on `sign_ghost_edge_tree`) | G-M0 | `src/Core/Domain/Ghost_Last_Write_Domain.thy`, `src/Core/Domain/Ghost_Last_Write_Product.thy`, `src/Analysis/Instances/Sign/Sign_Ghost_LastWrite_DG.thy` |
 | G-M1 witness (**done**) | Hand-built `part_post_solution` over a real `compile_prog` output (branch/join + one procedure call), sorry-free. Demonstrates the product domain propagates ghost facts through calls and joins under hand-built hook trees — see section 14 for exactly what it does and does not show | G-M1 | `src/Examples/CFG/Example_Sign_Ghost_LastWrite_Witness.thy` |
@@ -352,7 +385,7 @@ names it.
 | G-M3 (optional precision/provenance track) | `ghost_tracks_last_writer` — the ghost component of a post-solution over-approximates `last_write_collect`, as a corollary of `sound_dg_hooks` (G-M1) + the routing discipline G-M2 settles + `last_write_collect_sound` (G-M0) | G-M0, G-M1, G-M2 | example theory alongside G-M2 |
 | G-M4 (**deferred**, section 7) | Check condition type generalized over trace-derived projections (store + ghost projections), anchored to `ltr_collect`/`activation_collect`, unifying ordinary and ghost-backed checks under one `checks_proven_sound` | a second concrete ghost fact that needs a check condition naming it — not G-A1, not G-M0-G-M3 alone | extension of G-A1's `Checks.thy`, scope TBD when a second ghost fact exists |
 | G-M5 (optional precision/provenance track, needs G-M4) | Payoff examples: intraprocedural branch-writer guard and interprocedural two-caller guard, each exercising an ordinary check and a ghost-backed check through the unified `checks_proven_sound` from G-M4 | G-M0-G-M4 | new `Example_Ghost_LastWriter_Payoff.thy` |
-| G-M6 (named, not designed) | `checks_proven_sound` discharge-automation target (`checks_proven_tac` or similar) — scope only, do not design the tactic | G-A1 (store-only case first) | none yet; acceptance test only |
+| G-M6 (named, not designed; reframed post-G-A1) | G-A1 already ships executable per-check classification (`classify_check` -> `Check_Proved`/`Check_Refuted`/`Check_Unknown`), so a `checks_proven_sound` discharge tactic is no longer the open gap. Reframe the remaining automation target as **program-wide collection/reporting**: run `classify_check` over every compiled check in a program and produce one report, rather than one-check-at-a-time citation. Scope only, do not design it | G-A1 (done) | none yet; acceptance test only |
 
 ---
 
@@ -373,11 +406,20 @@ names it.
    `Ghost_Last_Write_Product.thy`. Correction: the *hosting* locale is
    `sound_dg_hooks`/`sound_dg_hooks_ltr`, not `sound_dg_spec` as this section
    originally assumed — see the G-M1 row in section 8 and section 14.
-4. **Check-point representation** (now G-A1, not G-M4 — see section 7) — a
-   side table keyed by existing `cfg_node`s (recommended: no
-   `edge_action`/`dg_spec` change, no new equation-system content) vs. a new
-   `edge_action` constructor (touches every transfer function in the
-   codebase). Confirm the side-table choice before G-A1 starts.
+4. **Resolved for G-A1 (with a follow-on now open as G-A2).** Check-point
+   representation (see section 7) was built as originally recommended here —
+   no new `edge_action` constructor, `checks` compiled via existing
+   `EA_Nop` edges. In practice this is a parallel `collect_checks` numbering
+   pass that must stay synchronized with `EA_Nop` placement, not a clean side
+   table decoupled from compilation. Comparing against real Goblint
+   (`__goblint_check`/`__goblint_assert` are themselves CFG-visible
+   annotation points, not compiler side metadata — `docs/CHECK_DISCHARGE_
+   HANDOFF.md`) now favors a first-class `EA_Check bexp` action with identity
+   transfer, `checks` derived by projection from `intra` instead of a
+   separate pass. This does touch every domain's transfer function, but only
+   by adding one more identity case (`is_identity_action`/`apply_action`
+   dispatch), not by threading new state through them. Tracked as G-A2, not
+   started, in scope only when explicitly requested.
 5. **Retracted, see section 7.** This item originally required the check
    condition type to be generalized over trace-derived projections from
    G-M4's first version, rejecting a `bexp`/`bval`/`gamma_state`-only version
@@ -414,12 +456,17 @@ names it.
    `checks_proven_sound` instance, so the example demonstrates both check
    kinds side by side rather than the ghost-only payoff in isolation. This
    is where #66 earns its keep.
-3. **Check machinery alone, store-only**: `checks_proven_sound` proved and
-   exercised on a ghost-free program — this is the store-only specialization
-   of the *same* general condition type from section 7 (an instance whose
+3. **Check machinery alone, store-only — done, twice.**
+   `abstract_checks_proven_sound` proved and exercised on a ghost-free
+   program: `Example_Checks_Store_Only.thy` (Sign) and
+   `Example_Interval_Checks_Store_Only.thy` (Interval), each with a proved, a
+   refuted, and an unknown check plus a `checks_proven` bridge on the
+   singleton that actually holds. This is the store-only specialization of
+   the *same* general condition type from section 7 (an instance whose
    `'g_dl` is trivial/unit), not a separately-typed simpler check mechanism.
-   Derisks G-M4 independently of G-M0-G-M3, same instinct as the old plan's
-   I1 stage, still good advice, now scoped precisely.
+   Derisked G-M4 independently of G-M0-G-M3, same instinct as the old plan's
+   I1 stage; G-M4 itself remains deferred (section 7) absent a second
+   concrete ghost fact.
 4. **Placement-by-fact-kind**: a declared global's last-writer ghost slot
    side-effected (G) while its base value stays flow-sensitive (D), or vice
    versa — makes concrete `SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`'s unbuilt
@@ -476,10 +523,14 @@ milestone or theorem statement.
 
 Batch build green on `Voblint_CFG` (G-M0, done), the owning domain/analysis
 session (G-M1-G-M3; G-M1 and its witness done), and `Voblint_Examples` (G-M2,
-G-M5), no `sorry`, after each milestone. G-A1 gates independently on whatever
-session `Checks.thy` lands in, and does not require the ghost-track sessions
-to be green first (it has no dependency on them). G-M4 gates independently
-too, once it exists.
+G-M5), no `sorry`, after each milestone. G-A1 (done) landed in
+`Voblint_Core` (`Checks.thy`, `Abstract_Numeric_Queries.thy`,
+`Abstract_Checks.thy`) and `Voblint_Analysis`/`Voblint_Examples` for the
+Sign/Interval instances and worked examples; batch-green, confirmed
+independently of the ghost-track sessions (it has no dependency on them).
+G-A2, when started, gates on the sessions its `EA_Check` change touches
+(`Voblint_VIMP`, `Voblint_CFG`, and every domain that supplies a transfer
+function). G-M4 gates independently too, once it exists.
 
 ---
 

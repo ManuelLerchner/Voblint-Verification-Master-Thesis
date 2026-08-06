@@ -538,9 +538,9 @@ definition analysis_node_attrs ::
           Some ann \<Rightarrow> annotation_style ann
         | None \<Rightarrow>
             if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
-            else if p = graphviz_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+            else if p = graphviz_exit g then ''shape=doublecircle,color=gray40,style=filled,fillcolor=lightgray''
             else if p \<in> set (proc_entry_pps_list g) then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
-            else if p \<in> set (proc_exit_pps_list g) then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+            else if p \<in> set (proc_exit_pps_list g) then ''shape=doublecircle,color=gray40,style=filled,fillcolor=lightgray''
             else ''shape=box,style=filled,fillcolor=lightgreen'')
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
     | SourceNode _ \<Rightarrow> ''shape=plain'')" 
