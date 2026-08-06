@@ -59,10 +59,11 @@ where
        bfilter_st gs b1 True s \<squnion> bfilter_st gs b2 True s"
   | "bfilter_st gs (Or b1 b2) False s =
        bfilter_st gs b1 False (bfilter_st gs b2 False s)"
-  | "bfilter_st gs (Eq e1 e2) True s =
-       (let a = meet (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-                     (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a (afilter_st gs e2 a s))"
+  | "bfilter_st gs (Eq e1 e2) res s =
+       (let (a1, a2) = inv_eq res
+              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
+              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
+        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
   | "bfilter_st gs _ _ s = s"
 
 lemma afilter_st_commute:
@@ -119,14 +120,7 @@ next
   then show ?case by (simp add: afilter_st_commute split: prod.splits)
 next
   case (Eq e1 e2)
-  show ?case
-  proof (cases res)
-    case True
-    then show ?thesis by (simp add: afilter_st_commute Let_def)
-  next
-    case False
-    then show ?thesis by simp
-  qed
+  then show ?case by (simp add: afilter_st_commute split: prod.splits)
 qed
 
 end

@@ -360,41 +360,32 @@ next
   then have ng1: "\<not> aexp_mentions_global e1" and ng2: "\<not> aexp_mentions_global e2"
     by auto
   show ?case
-  proof (cases res)
-    case False
-    then show ?thesis
-      by (simp add: id_local_edge_invariant)
-  next
-    case True
-    show ?thesis
-      using True
-      unfolding local_edge_invariant_def
-    proof (intro allI impI)
-      fix su :: "sign abs_state"
-      fix g :: "sign abs_state"
-      assume lb: "local_bot_on_locals g"
-      let ?suL = "restrict_local su"
-      have av1: "aval_sign e1 (?suL \<squnion> g) = aval_sign e1 ?suL"
-        using aval_sign_restrict_local_bot[OF ng1 lb, of su] .
-      have av2: "aval_sign e2 (?suL \<squnion> g) = aval_sign e2 ?suL"
-        using aval_sign_restrict_local_bot[OF ng2 lb, of su] .
-      define a where "a = meet_sign (aval_sign e1 ?suL) (aval_sign e2 ?suL)"
-      have inv2: "afilter_sign e2 a (?suL \<squnion> g) =
-          restrict_local (afilter_sign e2 a ?suL) \<squnion> g"
-        using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng2, of a] lb] .
-      have s2_local: "restrict_local (afilter_sign e2 a ?suL) = afilter_sign e2 a ?suL"
-        using local_edge_invariant_local_result[OF afilter_sign_local_edge_invariant[OF ng2, of a], of su] .
-      have inv1: "afilter_sign e1 a
-            (restrict_local (afilter_sign e2 a ?suL) \<squnion> g) =
-          restrict_local (afilter_sign e1 a
-            (restrict_local (afilter_sign e2 a ?suL))) \<squnion> g"
-        using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng1, of a] lb] .
-      show "bfilter_sign (Eq e1 e2) res (?suL \<squnion> g) =
-            restrict_local (bfilter_sign (Eq e1 e2) res ?suL) \<squnion> g"
-        using True av1 av2 inv2 inv1 s2_local
-        unfolding a_def
-        by (simp add: Let_def)
-    qed
+    unfolding local_edge_invariant_def
+  proof (intro allI impI)
+    fix su :: "sign abs_state"
+    fix g :: "sign abs_state"
+    assume lb: "local_bot_on_locals g"
+    let ?suL = "restrict_local su"
+    have av1: "aval_sign e1 (?suL \<squnion> g) = aval_sign e1 ?suL"
+      using aval_sign_restrict_local_bot[OF ng1 lb, of su] .
+    have av2: "aval_sign e2 (?suL \<squnion> g) = aval_sign e2 ?suL"
+      using aval_sign_restrict_local_bot[OF ng2 lb, of su] .
+    define p where "p = inv_eq_sign res (aval_sign e1 ?suL) (aval_sign e2 ?suL)"
+    have inv2: "afilter_sign e2 (snd p) (?suL \<squnion> g) =
+        restrict_local (afilter_sign e2 (snd p) ?suL) \<squnion> g"
+      using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng2, of "snd p"] lb] .
+    have s2_local: "restrict_local (afilter_sign e2 (snd p) ?suL) = afilter_sign e2 (snd p) ?suL"
+      using local_edge_invariant_local_result[OF afilter_sign_local_edge_invariant[OF ng2, of "snd p"], of su] .
+    have inv1: "afilter_sign e1 (fst p)
+          (restrict_local (afilter_sign e2 (snd p) ?suL) \<squnion> g) =
+        restrict_local (afilter_sign e1 (fst p)
+          (restrict_local (afilter_sign e2 (snd p) ?suL))) \<squnion> g"
+      using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng1, of "fst p"] lb] .
+    show "bfilter_sign (Eq e1 e2) res (?suL \<squnion> g) =
+          restrict_local (bfilter_sign (Eq e1 e2) res ?suL) \<squnion> g"
+      using av1 av2 inv2 inv1 s2_local
+      unfolding p_def
+      by (simp add: Let_def case_prod_beta)
   qed
 qed
 

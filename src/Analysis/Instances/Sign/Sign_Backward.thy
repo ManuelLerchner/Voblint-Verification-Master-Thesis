@@ -91,11 +91,115 @@ lemma inv_less_sign_sound:
   by (cases res; cases a1; cases a2;
       auto simp: less_eq_sign_def; linarith)
 
+text \<open>
+  @{text inv_eq_sign} narrows on a guard @{text \<open>e1 = e2\<close>} known true or
+  false. The true branch narrows both operands to their intersection, exactly
+  matching what \<open>bfilter\<close> already computes for @{text \<open>Eq _ _ True\<close>}
+  via @{const meet_sign} directly. The false branch only narrows a boundary
+  singleton away from a wider operand that has @{const SZero} as one of its
+  bounds: excluding @{text 0} from @{const SNonNeg} leaves @{const SPos},
+  from @{const SNonPos} leaves @{const SNeg}; both directions, symmetric in
+  which operand is at most @{const SZero}. Two jointly-at-most-@{const SZero}
+  operands are jointly unreachable. Every other pair --- including any pair
+  where the excluded value would not sit at a representable lattice boundary
+  --- passes through unchanged: the seven-element lattice cannot express
+  \"nonzero\" or an interior exclusion as a single value.
+
+  The guard tests @{term \<open>sign_le a SZero\<close>} (the set @{term \<open>{SBot, SZero}\<close>}),
+  not literal equality @{term \<open>a = SZero\<close>}: @{const SBot} is strictly below
+  @{const SZero}, so an equality guard would let a wider input at @{const
+  SZero} trigger narrowing that a strictly more precise input at @{const
+  SBot} would not --- a genuine monotonicity failure, not merely a missed
+  precision opportunity. The order-based guard closes that gap the same way
+  @{const inv_less_sign}'s own @{term \<open>sign_le a2 SNonPos\<close>}-style guards do;
+  it also makes the @{const SBot} case sound for free (vacuously, since
+  @{term \<open>gamma_sign SBot = {}\<close>}), without @{const inv_less_sign}'s separate
+  reliance on @{text \<open>meet_sign SBot _ = SBot\<close>}.
+\<close>
+
+fun inv_eq_sign :: "bool => sign => sign => sign * sign" where
+    "inv_eq_sign True  a1 a2 = (meet_sign a1 a2, meet_sign a1 a2)"
+  | "inv_eq_sign False a1 a2 =
+       (let a1' = if sign_le a1 SZero \<and> sign_le a2 SZero then SBot
+                  else if sign_le a2 SZero \<and> sign_le a1 SNonNeg then meet_sign a1 SPos
+                  else if sign_le a2 SZero \<and> sign_le a1 SNonPos then meet_sign a1 SNeg
+                  else a1 ;
+                a2' = if sign_le a1 SZero \<and> sign_le a2 SZero then SBot
+                  else if sign_le a1 SZero \<and> sign_le a2 SNonNeg then meet_sign a2 SPos
+                  else if sign_le a1 SZero \<and> sign_le a2 SNonPos then meet_sign a2 SNeg
+                  else a2
+        in (a1', a2'))"
+
+lemma inv_eq_sign_sound:
+  "n1 \<in> gamma_sign a1 \<Longrightarrow> n2 \<in> gamma_sign a2 \<Longrightarrow> (n1 = n2) = res
+   \<Longrightarrow> n1 \<in> gamma_sign (fst (inv_eq_sign res a1 a2))
+     \<and> n2 \<in> gamma_sign (snd (inv_eq_sign res a1 a2))"
+proof (cases res)
+  case True
+  assume h1: "n1 \<in> gamma_sign a1" and h2: "n2 \<in> gamma_sign a2"
+    and heq: "(n1 = n2) = res"
+  have "n1 = n2" using heq True by simp
+  then have "n1 \<in> gamma_sign a2" using h2 by simp
+  then have "n1 \<in> gamma_sign (meet_sign a1 a2)"
+    using meet_sign_sound[OF h1] by simp
+  then show ?thesis using True \<open>n1 = n2\<close> by simp
+next
+  case False
+  assume h1: "n1 \<in> gamma_sign a1" and h2: "n2 \<in> gamma_sign a2"
+    and heq: "(n1 = n2) = res"
+  have hne: "n1 \<noteq> n2" using heq False by simp
+  show ?thesis
+    using h1 h2 hne False
+    by (cases a1; cases a2;
+        auto simp: less_eq_sign_def Let_def)
+qed
+
+lemma meet_sign_mono:
+  assumes "x \<le> x'" and "y \<le> y'"
+  shows "meet_sign x y \<le> meet_sign x' y'"
+  using assms
+  by (metis inf_mono inf_sign_def)
+
+lemma inv_eq_sign_false_fst_mono:
+  assumes "a1 \<le> (a1' :: sign)" and "a2 \<le> a2'"
+  shows
+    "fst (inv_eq_sign False a1 a2)
+      \<le> fst (inv_eq_sign False a1' a2')"
+  using assms
+  by (auto simp only: inv_eq_sign.simps Let_def fst_conv snd_conv meet_sign_mono)
+     (smt (verit, ccfv_SIG)
+        gamma_sign.cases inf_sign_def inf_sup_ord(2)
+        join_sign.simps(4) join_sign_ub2 le_infI1 less_eq_sign_def
+        meet_sign.simps(19,21,31,33) order_eq_refl
+        sign_le.simps(18,24,36,40,42) sign_le_trans)
+
+lemma inv_eq_sign_false_snd_mono:
+  assumes "a1 \<le> (a1' :: sign)" and "a2 \<le> a2'"
+  shows
+    "snd (inv_eq_sign False a1 a2)
+      \<le> snd (inv_eq_sign False a1' a2')"
+  using assms
+  by (auto simp only: inv_eq_sign.simps Let_def fst_conv snd_conv meet_sign_mono)
+     (smt (verit, best)
+        bot.extremum bot_sign_def less_eq_sign_def
+        meet_sign.simps(19,21,31,33) order_eq_refl sign.exhaust
+        sign_le.simps(9,16,19,36,40,42) sign_le_trans)
+
+lemma inv_eq_sign_mono:
+  assumes "a1 \<le> (a1' :: sign)"
+      and "a2 \<le> a2'"
+  shows
+    "fst (inv_eq_sign r a1 a2) \<le> fst (inv_eq_sign r a1' a2') \<and>
+     snd (inv_eq_sign r a1 a2) \<le> snd (inv_eq_sign r a1' a2')"
+  apply (cases r)
+  using assms inv_eq_sign_false_fst_mono inv_eq_sign_false_snd_mono 
+  by (auto simp add: meet_sign_mono)
+
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation sign_backward_domain:
     backward_domain meet_sign aval_sign
-                    inv_less_sign inv_conservative inv_conservative inv_conservative
+                    inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
@@ -125,6 +229,13 @@ next
   have h2: "n2 \<in> gamma_sign a2" using H2 by simp
   show "n1 \<in> gamma (fst (inv_less_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_sign res a1 a2))"
     using inv_less_sign_sound[OF h1 h2 H3] by simp
+next
+  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 = n2) = res"
+  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
+  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
+  show "n1 \<in> gamma (fst (inv_eq_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_sign res a1 a2))"
+    using inv_eq_sign_sound[OF h1 h2 H3] by simp
 next
   fix n1 n2 :: int and a1 a2 r :: sign
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
@@ -292,7 +403,7 @@ text \<open>
 context begin
 interpretation sign_bdm:
   backward_domain_mono meet_sign aval_sign
-                       inv_less_sign inv_conservative inv_conservative inv_conservative
+                       inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
 proof unfold_locales
   fix a1 a2 b1 b2 :: sign
   assume "a1 \<le> a2" and "b1 \<le> b2"
@@ -308,6 +419,12 @@ next
   thus "fst (inv_less_sign res x1 y1) \<le> fst (inv_less_sign res x2 y2) \<and>
         snd (inv_less_sign res x1 y1) \<le> snd (inv_less_sign res x2 y2)"
     by (rule inv_less_sign_mono)
+next
+  fix x1 x2 y1 y2 :: sign and res :: bool
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_eq_sign res x1 y1) \<le> fst (inv_eq_sign res x2 y2) \<and>
+        snd (inv_eq_sign res x1 y1) \<le> snd (inv_eq_sign res x2 y2)"
+    by (rule inv_eq_sign_mono)
 next
   fix r1 r2 x1 x2 y1 y2 :: sign
   assume "x1 \<le> x2" and "y1 \<le> y2"
@@ -326,5 +443,64 @@ lemma bfilter_sign_mono:
   using sign_bdm.bfilter_mono by (simp add: bfilter_sign_def)
 
 end
+
+subsection \<open>Executable equality-narrowing tests\<close>
+
+text \<open>
+  Representative @{const inv_eq_sign} cases, directly matching the behavioral
+  examples from the design: the true branch always meets, and the false
+  branch narrows exactly when one operand is exactly @{term SZero} and the
+  other's sign bounds it away from zero on one side.
+\<close>
+
+lemma inv_eq_sign_true_meets: "inv_eq_sign True SNonNeg SNonPos = (SZero, SZero)"
+  by eval
+
+lemma inv_eq_sign_false_zero_zero_unreachable:
+  "inv_eq_sign False SZero SZero = (SBot, SBot)"
+  by eval
+
+lemma inv_eq_sign_false_nonneg_zero_narrows_pos:
+  "inv_eq_sign False SNonNeg SZero = (SPos, SZero)"
+  by eval
+
+lemma inv_eq_sign_false_zero_nonneg_narrows_pos:
+  "inv_eq_sign False SZero SNonNeg = (SZero, SPos)"
+  by eval
+
+lemma inv_eq_sign_false_nonpos_zero_narrows_neg:
+  "inv_eq_sign False SNonPos SZero = (SNeg, SZero)"
+  by eval
+
+lemma inv_eq_sign_false_zero_nonpos_narrows_neg:
+  "inv_eq_sign False SZero SNonPos = (SZero, SNeg)"
+  by eval
+
+text \<open>Neither operand is exactly @{term SZero}: the conservative identity fallback.\<close>
+lemma inv_eq_sign_false_unrepresentable_identity:
+  "inv_eq_sign False SPos SPos = (SPos, SPos)"
+  by eval
+
+text \<open>@{term SBot} on either side stays bottom-consistent.\<close>
+lemma inv_eq_sign_false_bot_consistent:
+  "inv_eq_sign False SBot SZero = (SBot, SBot)"
+  by eval
+
+subsection \<open>Executable end-to-end @{const bfilter_sign} tests\<close>
+
+definition test_env_nonneg_eq :: "sign abs_state" where
+  "test_env_nonneg_eq = (\<lambda>_. STop)(''x'' := SNonNeg)"
+
+text \<open>@{text \<open>x = 0\<close>} known true meets \<open>x\<close>'s bound with @{term SZero}.\<close>
+lemma bfilter_sign_eq_true_narrows:
+  "bfilter_sign (Eq (V ''x'') (N 0)) True test_env_nonneg_eq ''x'' = SZero"
+  unfolding test_env_nonneg_eq_def by eval
+
+text \<open>@{text \<open>x != 0\<close>} known true (i.e. the guard @{text \<open>x = 0\<close>} is false) on
+  @{term SNonNeg} narrows to @{term SPos}: the disequality-narrowing gain
+  \<open>bfilter\<close>'s old identity-only \<open>Eq\<close> \<open>False\<close> case could never produce.\<close>
+lemma bfilter_sign_eq_false_narrows_to_pos:
+  "bfilter_sign (Eq (V ''x'') (N 0)) False test_env_nonneg_eq ''x'' = SPos"
+  unfolding test_env_nonneg_eq_def by eval
 
 end
