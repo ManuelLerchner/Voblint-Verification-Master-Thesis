@@ -1,12 +1,12 @@
 theory Interval_Numeric_Queries
-  imports Interval_Lattice "Voblint_Core.Abstract_Checks"
+  imports Interval_Lattice "Voblint_Core.Abstract_Numeric_Queries"
 begin
 
 section \<open>Interval interpretation of the generic numeric-query interface\<close>
 
 text \<open>
   Second-domain validation for \<open>abstract_numeric_queries\<close>
-  (\<open>Voblint_Core.Abstract_Checks\<close>): a real, minimal Interval instance,
+  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>): a real, minimal Interval instance,
   interpreted without touching that generic theory. Entailment/refutation of
   \<open><\<close>/\<open>=\<close> reduces to comparing bounds: two intervals' \<open><\<close> relation is
   provable exactly when one interval's upper bound is strictly below the
@@ -223,7 +223,8 @@ text \<open>
   representative, the raw \<open>ivl\<close> type has infinitely many non-canonical empty
   representations (any \<open>Ivl l u\<close> with \<open>l > u\<close>, documented at
   \<open>normalize_ivl\<close>), and only \<open>Ivl PlusInf MinInf\<close> is literally \<open>bot\<close>. The
-  generic \<open>derived_eq_false_from_meet\<close> derivation (\<open>Voblint_Core.Abstract_Domain\<close>)
+  generic \<open>derived_eq_false_from_meet\<close> derivation
+  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>)
   tests \<open>meet a b = bot\<close> by that literal equality, so for Interval it
   under-approximates disjointness severely: two disjoint, non-empty, finite
   intervals meet to an empty-but-non-canonical result, not to \<open>Ivl PlusInf

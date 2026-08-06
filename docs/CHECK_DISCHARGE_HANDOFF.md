@@ -16,7 +16,9 @@ second, independent instance.
 
 ## Completed
 
-`src/Core/Equations/Abstract_Checks.thy` — three-locale hierarchy:
+`src/Core/Equations/Abstract_Checks.thy` — three-locale hierarchy at the time
+(`abstract_numeric_queries` later moved to its own theory; see "Numeric-query
+theory split" below):
 
 - `abstract_numeric_queries` (`gamma_num`, `less_true`, `less_false`,
   `eq_true`, `eq_false` + four soundness assumptions): pure atomic-value
@@ -43,10 +45,12 @@ term). A narrower, still-open reuse path exists at the atomic-value level via
 
 `src/Analysis/Instances/Sign/Sign_Numeric_Queries.thy` — `sign_less_true`/
 `sign_less_false`/`sign_eq_true`/`sign_eq_false`: hand-built truth tables over
-the seven-value sign lattice (both directions, not complements of each
-other — overlapping abstractions make both false, meaning unknown) with
+the seven-value sign lattice at the time (both directions, not complements of
+each other — overlapping abstractions make both false, meaning unknown) with
 soundness proofs, then `global_interpretation sign_numeric_queries:
-abstract_numeric_queries gamma_sign ...`.
+abstract_numeric_queries gamma_sign ...`. A later refactor (see "Backward-
+derivation refactor: done") replaced the hand-built tables with the generic
+derivation; the interpretation itself is unchanged.
 
 `src/Analysis/Instances/Sign/Sign_Checks.thy` — slimmed to pure composition:
 `global_interpretation sign_check_domain: abstract_check_domain gamma_sign
@@ -142,39 +146,70 @@ ROOT files updated: `Voblint_Core` (`Abstract_Checks` after `Checks`),
   `resolved_st_q` equality is decidable just because the atomic domain values
   it carries (`sign`, `ivl`) are.
 
-## Open architecture question, not started
+## Backward-derivation refactor: done
 
-Mid-session the user proposed splitting `abstract_numeric_queries` further
-into `abstract_less_queries`/`abstract_eq_queries`, and adding a
-`backward_less_domain` locale that derives `less_true`/`less_false` from a
-domain's existing backward `inv_less` operator via `sublocale`
-(`less_true a b \<longleftrightarrow> fst (inv_less False a b) = bot \<or> snd (inv_less False a
-b) = bot`, and symmetrically for `less_false`), so Sign's hand-written
-`sign_less_true`/`sign_less_false` tables could be replaced by a derivation
-from `inv_less_sign` (`Sign_Backward.thy`). Explicit caveat raised and not
-yet checked: this is only sound if `inv_less_sign_sound`'s exact statement
-guarantees every valid input pair remains represented after narrowing (not
-merely that the narrowed output is itself valid) — read the exact lemma
-shape before implementing. `eq_true`/`eq_false` have no comparable existing
-backward operator to derive from (`bfilter`'s `Eq` case only narrows the
-`True` branch), so equality stays bespoke per domain either way.
+The `abstract_less_queries`/`abstract_eq_queries`-style split proposed
+earlier landed under different names: `derived_less_queries` (reads
+`less_true`/`less_false` off a domain's `inv_less`), `derived_eq_true_from_less`
+(reads `eq_true` off `less_false` in both directions, integer trichotomy),
+and `derived_eq_false_from_meet` (reads `eq_false` off `meet` collapsing to
+`bot`) all sublocale under `backward_domain` automatically, no extra proof
+obligation; originally landed in `Abstract_Domain.thy`, later relocated to
+`Abstract_Numeric_Queries.thy` (see "Numeric-query theory split" below).
+Sign's `sign_less_true`/
+`sign_less_false`/`sign_eq_true`/`sign_eq_false` (`Sign_Numeric_Queries.thy`)
+are Sign's instance of this chain, not hand-built tables. The `inv_eq`
+operator equality narrowing needed (`bfilter`'s `Eq` case now narrows both
+branches) landed in a separate milestone (`inv_eq`/`inv_eq_sign`/`inv_eq_ivl`,
+commit `01d6c376`).
+
+A follow-on architectural review investigated whether `abstract_numeric_queries`
+itself (`Abstract_Checks.thy`) could become a `sublocale` of `backward_domain`,
+so any domain interpreting `backward_domain` would get `abstract_numeric_queries`
+for free. Landed in `Abstract_Checks.thy`, then reverted after empirical
+testing: Isabelle's sublocale-to-existing-interpretation composition did not
+surface as a citable fact against `sign_backward_domain` (`Sign_Backward.thy`) —
+`sign_backward_domain.backward_numeric_queries.abstract_numeric_queries_axioms`
+is an undefined fact, while the structurally identical direct-interpretation
+citation `sign_backward_domain.backward_domain_axioms` resolves fine, isolating
+the gap to cross-theory retroactive sublocale propagation specifically. The
+bridge would only help a domain that interprets `backward_domain` in a theory
+that already imports `Abstract_Checks.thy` (an unusual, backwards dependency
+for a concrete domain's own backward-narrowing theory) — not a retrofit for
+Sign or Interval's existing interpretations. Not pursued further absent a new
+domain positioned to interpret `backward_domain` from inside that import
+chain.
+
+## Numeric-query theory split: done
+
+A separate structural refactor (commit `d4687c9`) acted on that diagnosis
+without adding the rejected bridge: `abstract_numeric_queries`,
+`derived_less_queries`, `derived_eq_true_from_less`, and
+`derived_eq_false_from_meet` moved out of `Abstract_Domain.thy`/
+`Abstract_Checks.thy` into a new `Abstract_Numeric_Queries.thy`
+(`Abstract_Domain.thy` -> `Abstract_Numeric_Queries.thy` -> `Abstract_Checks.thy`).
+This confirmed the retroactive-composition diagnosis above was the real
+mechanism, not a naming mistake: `Sign_Backward.thy` needed a direct import of
+`Abstract_Numeric_Queries.thy` for its own `global_interpretation`'s `defines`
+clause (`sign_less_true_of_inv = sign_backward_domain.less_true`, etc.) to
+elaborate at all — the derived-query sublocale must already be in scope at
+the point that interpretation runs, exactly the ordering constraint the
+reverted bridge ran into from the other direction. No unconditional
+`sublocale backward_domain ⊆ abstract_numeric_queries` was added; Sign still
+chooses the derived path explicitly, Interval still keeps its specialized
+tables.
 
 ## Next steps
 
-1. If pursuing the backward-derivation refactor above: verify
-   `inv_less_sign_sound`'s exact direction first, then split
-   `abstract_numeric_queries` per the proposed
-   `abstract_less_queries`/`abstract_eq_queries`/`backward_less_domain`
-   hierarchy. Not required for the current milestone to stand on its own.
-2. Vet `Interval_Numeric_Queries.thy`'s Sledgehammer-derived proofs
+1. Vet `Interval_Numeric_Queries.thy`'s Sledgehammer-derived proofs
    (`interval_less_false_sound`, `interval_eq_true_sound`,
    `interval_eq_false_sound`) for batch stability: they use `smt`, which the
    project's own convention flags as "a leading source of build hangs."
    Replace with `blast`/`auto`/`fastforce`/reconstructed `metis` once batch
    timing is confirmed fast, or leave as-is if batch timing is already fine.
-3. No domain besides Sign has a `_Checks.thy` (full check-discharge
+2. No domain besides Sign has a `_Checks.thy` (full check-discharge
    instance) yet. Interval only has the numeric-query interpretation.
-4. Do not build ghost-backed checks, generalized trace projections, or an
+3. Do not build ghost-backed checks, generalized trace projections, or an
    executable theorem-discovery/reporting layer on top of `classify_check` —
    explicitly out of scope for this milestone.
 

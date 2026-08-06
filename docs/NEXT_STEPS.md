@@ -52,13 +52,16 @@ Improve interval guards, loop invariants, and widening policies through concrete
 examples. Keep precision engineering independent of the concrete semantic
 reference model.
 
-## Equality backward narrowing
+## Equality backward narrowing (done)
 
-Investigate equality backward narrowing. Current `bfilter` handles `Eq` only
-on the true branch; disequality guards do not refine the abstract state. A
-future `inv_eq` operator, analogous to `inv_less`, could support both
-equality and disequality narrowing. This is separate from the boolean
-`eq_true`/`eq_false` query interface used for check classification.
+`inv_eq`, analogous to `inv_less`, is a `backward_domain` operator alongside
+`inv_less`/`inv_plus`/`inv_minus`/`inv_times` (`Abstract_Domain.thy`).
+`bfilter`'s `Eq` case narrows through it on both branches, not only the true
+branch. Sign has a real, monotone instance (`inv_eq_sign`,
+`Sign_Backward.thy`); Interval keeps a sound identity fallback with the
+precision gap documented in-theory (`Interval_Backward.thy`). This is
+separate from the boolean `eq_true`/`eq_false` query interface used for check
+classification (`Abstract_Numeric_Queries.thy`).
 
 ## Source extensions
 

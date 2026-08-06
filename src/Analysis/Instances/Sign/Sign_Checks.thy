@@ -35,9 +35,17 @@ proof unfold_locales
   then show "aval e s \<in> gamma_sign (aval_sign e \<sigma>)" using aval_sign_sound by blast
 qed
 
-lemmas sign_check_true_sound = sign_check_domain.check_true_sound
-lemmas sign_check_false_sound = sign_check_domain.check_false_sound
-lemmas sign_check_true_false_vacuous = sign_check_domain.check_true_false_vacuous
+text \<open>
+  Only the consumer-facing aliases get a short Sign-prefixed name:
+  \<open>classify_check\<close>'s two directions and the \<open>checks_proven\<close> bridge, both
+  exercised below and by \<open>Example_Checks_Store_Only\<close>.
+  \<open>sign_check_domain.check_true_sound\<close>/\<open>check_false_sound\<close>/
+  \<open>check_true_false_vacuous\<close> are the lower-level facts \<open>classify_check\<close>'s
+  own soundness is built from; no caller needs them directly, so they stay
+  reachable under the qualified \<open>sign_check_domain.\<close> name instead of a
+  dedicated alias here.
+\<close>
+
 lemmas sign_classify_check_proved = sign_check_domain.classify_check_proved
 lemmas sign_classify_check_refuted = sign_check_domain.classify_check_refuted
 lemmas sign_checks_provenI = sign_check_domain.abstract_checks_provenI

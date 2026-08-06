@@ -1,5 +1,5 @@
 theory Sign_Backward
-  imports Sign_Arithmetic Voblint_Core.Exec_Backward
+  imports Sign_Arithmetic Voblint_Core.Exec_Backward Voblint_Core.Abstract_Numeric_Queries
 begin
 
 section \<open>Sign backward filtering\<close>
@@ -255,12 +255,14 @@ qed
 
 text \<open>
   Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /
-  \<open>bfilter_sign\<close>, and its commutation with the abstract filters through
-  @{const fun_of_resolved_st_q_for}. Both come from the generic
-  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>).
+  \<open>bfilter_sign\<close>, and \<open>bfilter_sign\<close>'s commutation with the abstract filter
+  through @{const fun_of_resolved_st_q_for}. Both come from the generic
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); no Sign-level
+  caller needs the \<open>afilter_st\<close> commutation on its own (only \<open>bfilter_st\<close>'s
+  is used, by \<open>assume_sign_st\<close>/\<open>assume_not_sign_st\<close>), so it stays reachable
+  as \<open>sign_backward_domain.afilter_st_commute\<close> without a short alias here.
 \<close>
 
-lemmas afilter_sign_st_commute = sign_backward_domain.afilter_st_commute
 lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
 
 text \<open>

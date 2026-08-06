@@ -1,34 +1,8 @@
 theory Abstract_Checks
-  imports Checks
+  imports Checks "Voblint_Core.Abstract_Numeric_Queries"
 begin
 
 datatype check_result = Check_Proved | Check_Refuted | Check_Unknown
-
-section \<open>Generic numeric relational queries\<close>
-
-text \<open>
-  Entailment/refutation of \<open><\<close>/\<open>=\<close> over an abstract numeric value is not
-  check-specific: it is the same question a backward/guard domain answers,
-  phrased as a query instead of a narrowing. Kept as its own locale, separate
-  from expression abstraction and separate from the Boolean layer, so a
-  domain that only has these four operations (no \<open>aexp\<close>/\<open>store\<close> concept at
-  all) could still interpret it.
-\<close>
-
-locale abstract_numeric_queries =
-  fixes gamma_num :: "'a \<Rightarrow> int set"
-    and less_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-    and less_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-    and eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-    and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-  assumes less_true_sound:
-      "less_true a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> i < j"
-    and less_false_sound:
-      "less_false a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> \<not> i < j"
-    and eq_true_sound:
-      "eq_true a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> i = j"
-    and eq_false_sound:
-      "eq_false a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> i \<noteq> j"
 
 section \<open>Expression abstraction over a state, given numeric queries\<close>
 

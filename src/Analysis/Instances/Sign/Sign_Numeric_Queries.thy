@@ -1,14 +1,14 @@
 theory Sign_Numeric_Queries
-  imports Sign_Arithmetic Sign_Backward "Voblint_Core.Abstract_Checks"
+  imports Sign_Arithmetic Sign_Backward "Voblint_Core.Abstract_Numeric_Queries"
 begin
 
 section \<open>Sign interpretation of the generic numeric-query interface\<close>
 
 text \<open>
-  \<open>abstract_numeric_queries\<close> (\<open>Voblint_Core.Abstract_Checks\<close>) is the reusable
-  interface; this theory supplies its Sign instance. None of the four query
-  functions is a hand-built table any more: all four are Sign's instance of
-  generic derivations in \<open>Voblint_Core.Abstract_Domain\<close> --- \<open>sign_less_true\<close>/
+  \<open>abstract_numeric_queries\<close> (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>) is
+  the reusable interface; this theory supplies its Sign instance. None of the
+  four query functions is a hand-built table any more: all four are Sign's
+  instance of generic derivations in the same theory --- \<open>sign_less_true\<close>/
   \<open>sign_less_false\<close> from \<open>derived_less_queries\<close> (read off \<open>inv_less_sign\<close>),
   \<open>sign_eq_true\<close> from \<open>derived_eq_true_from_less\<close> (read off \<open>sign_less_false\<close>
   in both directions), and \<open>sign_eq_false\<close> from \<open>derived_eq_false_from_meet\<close>
@@ -16,6 +16,17 @@ text \<open>
   chain every \<open>backward_domain\<close> instance carries, with no extra proof
   obligation. Exhaustive case analysis over the seven-element lattice confirms
   each derived pair classifies exactly the pairs a hand-written table would.
+\<close>
+
+text \<open>
+  \<open>sign_less_true_eq\<close>/\<open>sign_less_false_eq\<close>/\<open>sign_eq_true_eq\<close>/\<open>sign_eq_false_eq\<close>
+  below restate each derived predicate as an explicit truth table over
+  \<open>inv_less_sign\<close>/\<open>meet_sign\<close>. No downstream proof cites them: they exist as
+  regression and precision-equivalence guards, so a future change to
+  \<open>inv_less_sign\<close>/\<open>inv_eq_sign\<close>/\<open>meet_sign\<close> that silently narrows or widens
+  what these four predicates classify breaks one of these four proofs, at the
+  seven-element lattice, rather than surfacing only as a precision regression
+  in a downstream analysis.
 \<close>
 
 subsection \<open>Comparison judgments\<close>
@@ -71,7 +82,8 @@ subsection \<open>Equality judgments\<close>
 text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is provable exactly
   there; two abstractions are provably unequal exactly when their
   concretizations are disjoint. Neither table is hand-built: \<open>sign_eq_true\<close>
-  is Sign's instance of \<open>derived_eq_true_from_less\<close> (\<open>Voblint_Core.Abstract_Domain\<close>),
+  is Sign's instance of \<open>derived_eq_true_from_less\<close>
+  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>),
   read off \<open>sign_less_false\<close> in both directions (integer trichotomy);
   \<open>sign_eq_false\<close> is Sign's instance of \<open>derived_eq_false_from_meet\<close>, read off
   \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint concretizations). Both sublocale
@@ -122,21 +134,15 @@ subsection \<open>Interpreting the generic numeric-query interface\<close>
 global_interpretation sign_numeric_queries:
   abstract_numeric_queries gamma_sign sign_less_true sign_less_false sign_eq_true sign_eq_false
 proof unfold_locales
-  fix a b :: sign and i j :: int
-  assume "sign_less_true a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
-  then show "i < j" using sign_less_true_sound by blast
-next
-  fix a b :: sign and i j :: int
-  assume "sign_less_false a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
-  then show "\<not> i < j" using sign_less_false_sound by blast
-next
-  fix a b :: sign and i j :: int
-  assume "sign_eq_true a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
-  then show "i = j" using sign_eq_true_sound by blast
-next
-  fix a b :: sign and i j :: int
-  assume "sign_eq_false a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
-  then show "i \<noteq> j" using sign_eq_false_sound by blast
+  fix a b and i j :: int
+  show "sign_less_true a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> i < j"
+    using sign_less_true_sound by blast
+  show "sign_less_false a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> \<not> i < j"
+    using sign_less_false_sound by blast
+  show "sign_eq_true a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> i = j"
+    using sign_eq_true_sound by blast
+  show "sign_eq_false a b \<Longrightarrow> i \<in> gamma_sign a \<Longrightarrow> j \<in> gamma_sign b \<Longrightarrow> i \<noteq> j"
+    using sign_eq_false_sound by blast
 qed
 
 end
