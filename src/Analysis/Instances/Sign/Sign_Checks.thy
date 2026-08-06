@@ -45,8 +45,6 @@ lemmas sign_checks_proven_sound = sign_check_domain.abstract_checks_proven_sound
 
 subsection \<open>Executable classification tests\<close>
 
-subsection \<open>Executable classification tests\<close>
-
 text \<open>One state per test, built as an override of an otherwise-unconstrained
   (\<open>STop\<close>) environment, so each test exercises exactly the comparison it names.\<close>
 

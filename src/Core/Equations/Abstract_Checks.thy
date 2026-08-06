@@ -2,34 +2,6 @@ theory Abstract_Checks
   imports Checks
 begin
 
-section \<open>A domain-generic sound decision procedure for compiled checks\<close>
-
-text \<open>
-  Reusing the existing per-domain guard/assume machinery
-  (\<^theory>\<open>Voblint_Core.Abstract_Domain\<close>'s \<open>backward_domain\<close> locale, its \<open>bfilter\<close>/
-  \<open>afilter\<close>, and the Sign instances \<open>assume_sign\<close>/\<open>assume_not_sign\<close>) was
-  investigated first: \<open>check_true c \<sigma> \<longleftrightarrow> bfilter c False \<sigma> = bot\<close> is sound
-  whenever \<open>gamma bot = {}\<close>, and would give \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> for free from
-  \<open>bfilter\<close>'s own recursion. It is not usable as an executable decision
-  procedure in this codebase, though: an \<open>'a abs_state\<close> is a raw function
-  \<open>vname \<Rightarrow> 'a\<close> over the infinite type \<open>vname\<close>, so \<open>= bot\<close> at that level is not
-  code-generable; the finite executable mirror \<open>'a resolved_st_q\<close>
-  (\<open>Voblint_Core.Exec_St\<close>) is a \<open>quotient_type\<close> whose \<open>\<le>\<close>/\<open>=\<close> instance is a
-  \<open>lift_definition\<close> quantifying over \<open>location\<close>, with no \<open>[code]\<close> equation ---
-  confirmed empirically: \<open>value "cinit_sign_st = bot"\<close> does not reduce, echoing
-  the unevaluated term instead of \<open>True\<close>/\<open>False\<close>.
-
-  This layer instead decides entailment directly off \<open>aval_abs\<close> results, which
-  are finite-valued and already executable for every domain (e.g.
-  \<open>aval_sign\<close>) --- the same reuse point \<open>aval_abs_sound\<close> already gives
-  every domain that has one, and the same shape \<^theory>\<open>Voblint_Core.Abstract_Domain\<close>'s
-  \<open>backward_domain\<close> locale takes for its own \<open>aval_abs\<close> parameter. The judgments
-  below are sound but intentionally incomplete: two atomic values with
-  overlapping concretizations are neither provably related nor provably
-  unrelated, and are reported \<open>Check_Unknown\<close>, never misclassified as
-  refuted.
-\<close>
-
 datatype check_result = Check_Proved | Check_Refuted | Check_Unknown
 
 section \<open>Generic numeric relational queries\<close>

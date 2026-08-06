@@ -216,4 +216,31 @@ global_interpretation interval_numeric_queries:
        interval_eq_true_sound
        interval_eq_false_sound)
 
+subsection \<open>Precision comparison against the generic meet-based derivation\<close>
+
+text \<open>
+  Not a migration: unlike Sign, whose \<open>SBot\<close> is the lattice's unique empty
+  representative, the raw \<open>ivl\<close> type has infinitely many non-canonical empty
+  representations (any \<open>Ivl l u\<close> with \<open>l > u\<close>, documented at
+  \<open>normalize_ivl\<close>), and only \<open>Ivl PlusInf MinInf\<close> is literally \<open>bot\<close>. The
+  generic \<open>derived_eq_false_from_meet\<close> derivation (\<open>Voblint_Core.Abstract_Domain\<close>)
+  tests \<open>meet a b = bot\<close> by that literal equality, so for Interval it
+  under-approximates disjointness severely: two disjoint, non-empty, finite
+  intervals meet to an empty-but-non-canonical result, not to \<open>Ivl PlusInf
+  MinInf\<close> itself. The witness below is disjoint by \<open>interval_eq_false\<close>'s own
+  (already sound) table, yet its raw meet is provably not \<open>bot\<close> --- so the
+  generic derivation would classify strictly fewer pairs than the hand-tuned
+  table here. \<open>interval_eq_true\<close>'s situation is analogous, since it is
+  derived from \<open>interval_less_false\<close> in both directions and inherits the same
+  gap. This is reported, not fixed: Interval keeps its own hand-tuned tables.
+\<close>
+
+lemma interval_eq_false_witness_disjoint:
+  "interval_eq_false (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6))"
+  by (simp add: less_eint_def less_eq_eint_def)
+
+lemma interval_meet_of_witness_not_bot:
+  "meet_ivl (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) \<noteq> bot"
+  by (simp add: bot_ivl_def)
+
 end
