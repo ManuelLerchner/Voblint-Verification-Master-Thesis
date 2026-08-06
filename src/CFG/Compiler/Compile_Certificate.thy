@@ -79,10 +79,8 @@ proof (intro allI impI)
   obtain n2 Emain Kmain
     where mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
-  obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
-    by (cases "collect_checks_procs \<Pi> ps 0") auto
   have intra_g: "intra ?g = Eprocs \<union> Emain" and calls_g: "calls ?g = Kprocs \<union> Kmain"
-    unfolding compile_prog_def by (simp_all add: procs mainc cprocs Let_def)
+    unfolding compile_prog_def by (simp_all add: procs mainc Let_def)
   from wf have setps: "set ps = {p. \<Pi> p \<noteq> None} - {mnm}"
     unfolding wf_compile_input_def by auto
   have mnmdecl: "\<Pi> mnm = Some (proc_decl_of [] main)"
