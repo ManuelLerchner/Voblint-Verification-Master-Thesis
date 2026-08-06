@@ -52,6 +52,14 @@ Improve interval guards, loop invariants, and widening policies through concrete
 examples. Keep precision engineering independent of the concrete semantic
 reference model.
 
+## Equality backward narrowing
+
+Investigate equality backward narrowing. Current `bfilter` handles `Eq` only
+on the true branch; disequality guards do not refine the abstract state. A
+future `inv_eq` operator, analogous to `inv_less`, could support both
+equality and disequality narrowing. This is separate from the boolean
+`eq_true`/`eq_false` query interface used for check classification.
+
 ## Source extensions
 
 Arrays and richer types require syntax, operational semantics, compiler,
