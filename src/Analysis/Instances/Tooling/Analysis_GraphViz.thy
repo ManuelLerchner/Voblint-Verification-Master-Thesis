@@ -116,6 +116,21 @@ type_synonym ('ctx, 'g) analysis_graph =
     (('ctx, 'g) analysis_node \<times> analysis_edge_kind \<times>
       ('ctx, 'g) analysis_node) list)"
 
+text \<open>
+  A node annotation is presentation metadata a caller attaches to one \<^typ>\<open>pp\<close>: an optional
+  extra label line and a DOT style-attribute string that, when present, replaces this renderer's
+  own node styling for that point. The renderer stays agnostic to what the annotation
+  \<^emph>\<open>means\<close> --- proof status, a debugger breakpoint, anything a caller wants to overlay on the
+  CFG --- it only owns turning \<^const>\<open>Some\<close> into DOT attributes and \<^const>\<open>None\<close> into the
+  existing entry/exit/default styling.
+\<close>
+
+datatype graphviz_node_annotation =
+  Node_Annotation (annotation_label: string) (annotation_style: string)
+
+definition no_annotations :: "pp \<Rightarrow> graphviz_node_annotation option" where
+  "no_annotations _ = None"
+
 record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   local_of :: "'a \<Rightarrow> 'd"
   route :: "pp \<Rightarrow> 'ctx \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> 'ctx"
@@ -132,6 +147,7 @@ record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   owner_of :: "pp \<Rightarrow> string"
   cluster_label :: "string \<Rightarrow> 'ctx \<Rightarrow> string"
   source_text :: "string option"
+  node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option"
 
 fun graphviz_owner_of :: "(string option \<times> pp list) list \<Rightarrow> pp \<Rightarrow> string" where
   "graphviz_owner_of [] p = ''unknown''"
@@ -481,20 +497,28 @@ definition contextual_node_label ::
             (local_of cfg (sol (Inl (p, ctx))))
           @ (case return_slot_for_pp cfg p of None \<Rightarrow> []
              | Some ret \<Rightarrow> format_return cfg p ctx ret
-                 (local_of cfg (sol (Inl (p, ctx))))))
+                 (local_of cfg (sol (Inl (p, ctx)))))
+          @ (case node_annotation cfg p of
+              None \<Rightarrow> []
+            | Some ann \<Rightarrow>
+                if annotation_label ann = '''' then [] else [annotation_label ann]))
     | GlobalNode k \<Rightarrow> join_gv_nl
         (show_global_key cfg k # show_global cfg k (globals_to_show cfg) (sol (Inr k)))
     | SourceNode src \<Rightarrow> src)"
 
-definition analysis_node_attrs :: "cfg \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
-  "analysis_node_attrs g n =
+definition analysis_node_attrs ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
+  "analysis_node_attrs cfg g n =
     (case n of
       LocalNode p _ \<Rightarrow>
-        if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
-        else if p = graphviz_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
-        else if p \<in> set (proc_entry_pps_list g) then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
-        else if p \<in> set (proc_exit_pps_list g) then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
-        else ''shape=box,style=filled,fillcolor=lightgreen''
+        (case node_annotation cfg p of
+          Some ann \<Rightarrow> annotation_style ann
+        | None \<Rightarrow>
+            if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
+            else if p = graphviz_exit g then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+            else if p \<in> set (proc_entry_pps_list g) then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
+            else if p \<in> set (proc_exit_pps_list g) then ''shape=doublecircle,color=red,style=filled,fillcolor=mistyrose''
+            else ''shape=box,style=filled,fillcolor=lightgreen'')
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
     | SourceNode _ \<Rightarrow> ''shape=plain'')" 
 
@@ -554,7 +578,7 @@ definition analysis_cluster_dot ::
       @ ''    label='' @ dq @ analysis_cluster_label cfg cluster @ dq @ '';'' @ nl
       @ ''    style=rounded; color=gray70; penwidth=1;'' @ nl
       @ concat (map (\<lambda>n. ''    '' @ analysis_node_id cfg ns n @ '' [''
-          @ analysis_node_attrs g n
+          @ analysis_node_attrs cfg g n
           @ (case n of SourceNode _ \<Rightarrow> '',label='' @ source_html_label
               (contextual_node_label cfg g sol n)
              | _ \<Rightarrow> '',label='' @ dq @ graphviz_label_text
@@ -592,9 +616,9 @@ definition contextual_analysis_dot ::
     analysis_graph_to_dot cfg g sol (build_analysis_graph cfg g domain sol)"
 
 definition raw_cfg_graph_config ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
-  "raw_cfg_graph_config \<Pi> ps mnm main =
+  "raw_cfg_graph_config \<Pi> ps mnm main annotate =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''''),
@@ -609,21 +633,23 @@ definition raw_cfg_graph_config ::
       show_internal_globals = False,
       owner_of = compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main)
+      source_text = Some (pretty_string_of_program \<Pi> ps main),
+      node_annotation = annotate
     \<rparr>"
 
 definition raw_cfg_dot ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> string" where
-  "raw_cfg_dot \<Pi> ps mnm main =
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "raw_cfg_dot \<Pi> ps mnm main annotate =
     (let g = compile_prog \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Pi> ps mnm main;
+         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_dot cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_dot_lit ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> String.literal" where
-  "raw_cfg_dot_lit \<Pi> ps mnm main =
-    String.implode (raw_cfg_dot \<Pi> ps mnm main)"
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+    \<Rightarrow> String.literal" where
+  "raw_cfg_dot_lit \<Pi> ps mnm main annotate =
+    String.implode (raw_cfg_dot \<Pi> ps mnm main annotate)"
 
 end
 

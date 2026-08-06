@@ -138,7 +138,8 @@ text \<open>The plain compiled CFG, rendered through the same GraphViz backend t
   the two assignments, and the merge into \<open>main\<close>'s exit.\<close>
 
 definition demo_dot :: String.literal where
-  "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)"
+  "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
+    (\<lambda>_. None)"
 
 ML_val \<open>writeln (@{code demo_dot})\<close>
 
@@ -171,7 +172,8 @@ definition demo_rel_graph_config ::
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / relational''),
       source_text = Some (pretty_string_of_program demo_pi (prog_procs demo_program)
-        (prog_main demo_program))
+        (prog_main demo_program)),
+      node_annotation = (\<lambda>_. None)
     \<rparr>"
 
 definition demo_graph_domain :: "(pp \<times> unit + unit) list" where

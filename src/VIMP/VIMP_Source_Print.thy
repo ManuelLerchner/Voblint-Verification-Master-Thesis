@@ -48,6 +48,7 @@ fun string_of_com :: "com \<Rightarrow> string" where
   "string_of_com SKIP = ''skip''"
 | "string_of_com (Assign x e) = x @ '' := '' @ string_of_aexp e"
 | "string_of_com (Random x) = x @ '' := random()''"
+| "string_of_com (VIMP_Proc.com.Check c) = ''check('' @ string_of_bexp c @ '')''"
 | "string_of_com (Seq c1 c2) =
     string_of_com c1 @ '' ;'' @ source_nl @ string_of_com c2"
 | "string_of_com (If b c1 c2) =
@@ -77,6 +78,8 @@ fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list"
     [source_indent n @ x @ '' := '' @ string_of_aexp e]"
 | "pretty_source_lines_com n (Random x) =
     [source_indent n @ x @ '' := random()'']"
+| "pretty_source_lines_com n (VIMP_Proc.com.Check c) =
+    [source_indent n @ ''check('' @ string_of_bexp c @ '')'']"
 | "pretty_source_lines_com n (Seq c1 c2) =
     pretty_source_lines_com n c1 @ pretty_source_lines_com n c2"
 | "pretty_source_lines_com n (If b c1 c2) =

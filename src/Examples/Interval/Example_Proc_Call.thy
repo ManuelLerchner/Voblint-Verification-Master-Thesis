@@ -337,7 +337,8 @@ text \<open>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-              @{code proc_pi} @{code main_procs} @{code main_cfg_name} @{code main_prog})
+              @{code proc_pi} @{code main_procs} @{code main_cfg_name} @{code main_prog}
+              @{code no_annotations})
 \<close>
 
 end

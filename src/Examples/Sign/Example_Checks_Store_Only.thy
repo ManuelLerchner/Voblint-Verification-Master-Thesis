@@ -238,4 +238,87 @@ corollary checks_ex_second_check_holds:
   shows "bval (Less (N 0) (V ''z'')) t"
   using checks_proven_sound[OF checks_ex_checks_proven] assms checks_ex_checks_eval by blast
 
+subsection \<open>CFG rendering, checks colored by proof status\<close>
+
+datatype check_status =
+    Check_Proven string
+  | Check_Unknown
+  | Check_Refuted string
+
+text \<open>
+  The compiled CFG is rendered through the same generic
+  \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close> pipeline every other example uses
+  (\<^const>\<open>raw_cfg_dot_lit\<close>), not a bespoke renderer: this example supplies only a per-node
+  \<^type>\<open>graphviz_node_annotation\<close> function, the same optional hook the generic renderer
+  already threads through \<^const>\<open>analysis_node_attrs\<close> and \<^const>\<open>contextual_node_label\<close>.
+  Node enumeration, edge rendering, clustering, and DOT assembly stay owned by
+  \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>; nothing here duplicates them.
+
+  \<^type>\<open>check_status\<close> is the check-specific convention layered on top of that generic hook,
+  local to this example (the generic renderer stays agnostic to what an annotation means):
+  \<^const>\<open>Check_Proven\<close> renders dark green, \<^const>\<open>Check_Unknown\<close> grey, \<^const>\<open>Check_Refuted\<close>
+  red. \<open>checks_ex_check_status\<close> is a manually maintained annotation table, not a mechanised
+  link into the proof state; nothing here re-checks that the cited theorem actually exists or
+  actually proves that node's condition. Both entries in this example are \<^const>\<open>Check_Proven\<close>
+  because \<open>checks_ex_first_check_holds\<close> and \<open>checks_ex_second_check_holds\<close>, proved above,
+  cover both check nodes. The unrelated \<open>FunctionResult ''main''\<close> exit node gets its own
+  neutral-grey annotation through the same hook, so the ordinary end-of-procedure node is not
+  visually confused with a refuted check --- the generic renderer's own default exit color is
+  untouched, every other example that renders no annotation still gets it unchanged.
+\<close>
+
+definition check_status_annotation :: "check_status \<Rightarrow> graphviz_node_annotation" where
+  "check_status_annotation st =
+     (case st of
+        Check_Proven detail \<Rightarrow>
+          Node_Annotation (''check '' @ detail)
+            ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white''
+      | Check_Unknown \<Rightarrow>
+          Node_Annotation ''check [unknown]'' ''shape=box,style=filled,fillcolor=gray70''
+      | Check_Refuted detail \<Rightarrow>
+          Node_Annotation (''check '' @ detail @ '' [REFUTED]'')
+            ''shape=box,style=filled,fillcolor=red,fontcolor=white'')"
+
+definition checks_ex_check_status :: "pp \<Rightarrow> check_status option" where
+  "checks_ex_check_status v =
+     (if v = Statement 1 then
+        Some (Check_Proven ''0 < y  [proven: checks_ex_first_check_holds]'')
+      else if v = Statement 3 then
+        Some (Check_Proven ''0 < z  [proven: checks_ex_second_check_holds]'')
+      else None)"
+
+definition checks_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
+  "checks_ex_node_annotation v =
+     (case checks_ex_check_status v of
+        Some st \<Rightarrow> Some (check_status_annotation st)
+      | None \<Rightarrow>
+          if v = FunctionResult ''main'' then
+            Some (Node_Annotation ''''
+              ''shape=doublecircle,color=gray40,style=filled,fillcolor=lightgray'')
+          else None)"
+
+text \<open>Validation that the generic renderer's hook actually carries both proof annotations,
+  not merely that this file's local table intends them to.\<close>
+
+lemma checks_ex_annotation_first_check:
+  "checks_ex_node_annotation (Statement 1) =
+     Some (Node_Annotation ''check 0 < y  [proven: checks_ex_first_check_holds]''
+       ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white'')"
+  by eval
+
+lemma checks_ex_annotation_second_check:
+  "checks_ex_node_annotation (Statement 3) =
+     Some (Node_Annotation ''check 0 < z  [proven: checks_ex_second_check_holds]''
+       ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white'')"
+  by eval
+
+definition checks_ex_dot_lit :: String.literal where
+  "checks_ex_dot_lit =
+     raw_cfg_dot_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
+       ''main'' (prog_main checks_ex_program) checks_ex_node_annotation"
+
+ML_val \<open>
+  writeln (@{code checks_ex_dot_lit})
+\<close>
+
 end
