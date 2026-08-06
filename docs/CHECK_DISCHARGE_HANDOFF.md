@@ -251,6 +251,56 @@ not just the numeric-query interpretation recorded above:
 - `docs/CHECK_ARCHITECTURE.md` (new) — the architecture-level writeup this
   file now defers to for layer responsibilities and the pipeline diagram.
 
+## EA_Check CFG action: done in part
+
+Commit `fdce772` replaced the `EA_Nop`-for-checks compilation with a real
+`EA_Check bexp` constructor, and separately generalized the transfer-wrapper
+lemmas the new constructor had to thread through:
+
+- `src/CFG/CFG_Def.thy` — `EA_Check bexp` added to `edge_action`;
+  `edge_step (EA_Check c) s = {s}` (identity concrete semantics).
+- `src/Core/Equations/Constraint_System.thy` — `apply_tf tf (EA_Check c) =
+  \<sigma>` (identity abstract semantics) and `apply_tf_EA_Check`; a new
+  `action_reduces` locale (`fixes F assumes ret_none/ret_some/check`) plus
+  `action_reduces_comp` replace the positional `ret_none`/`ret_some`/`check`
+  assumptions every generic transfer wrapper previously took, so a future
+  reducible constructor only needs one new domain-level `action_reduces`
+  interpretation, not edits to every wrapper and call site.
+- `src/CFG/VIMP_Proc_to_CFG.thy` — `compile`'s `Check c` clause emits
+  `(Statement n, EA_Check c, k)`, not `EA_Nop`. `collect_checks_sound`,
+  `collect_checks_procs_sound`, and `compile_prog_checks_sound` now state
+  and prove agreement with the actual condition
+  (`\<exists>k'. (v, EA_Check ch, k') \<in> E`), not just "some `EA_Nop` edge" — see
+  "Still open" below for what this does not yet do.
+- `src/CFG/Compiler/Control_Simulation.thy` — `control_at_check_edge` and
+  the compiled-vs-source simulation's `Check` case now cite `EA_Check`/
+  `cstep_check` (new companion lemma in `Located_Exec.thy`, mirroring
+  `cstep_nop`), not `EA_Nop`/`cstep_nop`.
+- `src/Analysis/Instances/Tooling/Analysis_GraphViz.thy` — `string_of_action
+  (EA_Check cnd) = ''check('' @ string_of_bexp cnd @ '')''`. Missing
+  originally; surfaced only by the full batch build as a runtime ML `Match`
+  exception (a value-level gap I/Q's per-file diagnostics cannot see), not
+  a type error.
+- Every per-domain transfer function (`sign_tf_st`/`_for`, `ivl_tf_st`/
+  `_for`, `parity_tf_st`/`_for`) and every domain-generic dispatcher
+  (`apply_etf`, `apply_etf_st`, `dg_spec_step`, `local_edge_action`,
+  `edge_writes`, `edge_write_var`) got the matching identity clause.
+- The two check-discharge worked examples
+  (`Example_Checks_Store_Only.thy`, `Example_Interval_Checks_Store_Only.thy`)
+  had `by eval`-backed literal CFG-edge-set lemmas still asserting `EA_Nop`
+  at check nodes; updated to the actual `EA_Check <condition>` edges,
+  including explicit `ltr_collect_intra_step` witnesses that named the
+  action directly. `Example_Interval_Placement.thy` had one call site
+  (`apply_etf_st_unit_of_transfer_placed`) the original `EA_Check` pass
+  missed entirely — only the full `Voblint_Examples` rebuild caught it.
+
+**Still open** (the rest of G-A2, `docs/GHOST_DOMAIN_SEEDING_MIGRATION.md`
+section 9 item 4): `checks : (pp * bexp) set` remains populated by the
+separate `collect_checks`/`collect_checks_procs` compiler pass, proven to
+agree with the compiled `EA_Check` edges but not derived from them.
+`cfg_checks g = {(u, cnd). \<exists>v. (u, EA_Check cnd, v) \<in> intra g}` replacing
+`collect_checks` as the sole source of truth is not implemented.
+
 ## Next steps
 
 1. Vet `Interval_Numeric_Queries.thy`'s Sledgehammer-derived proofs
@@ -259,16 +309,16 @@ not just the numeric-query interpretation recorded above:
    project's own convention flags as "a leading source of build hangs."
    Replace with `blast`/`auto`/`fastforce`/reconstructed `metis` once batch
    timing is confirmed fast, or leave as-is if batch timing is already fine.
-2. `checks : (pp * bexp) set` is compiled via `EA_Nop` edges plus a
-   parallel `collect_checks` numbering pass — the condition and its CFG
-   position are tracked separately and must stay synchronized. A
-   first-class `EA_Check bexp` CFG action (identity concrete/abstract
-   semantics, `checks` derived by projection from `intra` rather than a
-   separate compiler pass) would remove that synchronization burden and
-   render as `check(cnd)` instead of `nop` in GraphViz, closer to how
-   Goblint's `__goblint_check`/`__goblint_assert` are themselves CFG-visible
-   annotation points, not side metadata. Not started; a real CFG/compiler
-   change, in scope only when explicitly requested.
+2. **Landed in part** (commit `fdce772`, see "EA_Check CFG action: done in
+   part" below): `EA_Check bexp` is now a real `edge_action` constructor
+   with identity concrete/abstract semantics, `compile` emits it for
+   `Check c`, and GraphViz renders `check(cnd)` instead of `nop`. Still
+   open: `checks : (pp * bexp) set` is still populated by the separate
+   `collect_checks` numbering pass (now proven, not merely assumed, to
+   agree with the compiled `EA_Check` edges) rather than derived from them
+   by projection from `intra`. Retiring `collect_checks` in favor of
+   `cfg_checks g = {(u, cnd). \<exists>v. (u, EA_Check cnd, v) \<in> intra g}` is the
+   remaining slice.
 3. Do not build ghost-backed checks, generalized trace projections, or an
    executable theorem-discovery/reporting layer on top of `classify_check` —
    explicitly out of scope for this milestone.
@@ -280,5 +330,9 @@ not just the numeric-query interpretation recorded above:
 - `rg -n '\bsorry\b|\boops\b'` on every touched file: no matches.
 - `scripts/normalize_isabelle_ascii.py`: no changes needed on any touched
   file (already ASCII-clean).
-- Full batch build (`rtk make build`): green, exit 0, both for the Interval
-  instance and for the later exit-color GraphViz change.
+- Full batch build (`rtk make build`): green, exit 0, for the Interval
+  instance, the exit-color GraphViz change, and the `EA_Check`/
+  `action_reduces` commit (`fdce772`) — the last of these caught the two
+  runtime-only gaps recorded above (stale `by eval` CFG-edge lemmas,
+  missing `string_of_action` case) that no earlier per-file check had
+  surfaced.

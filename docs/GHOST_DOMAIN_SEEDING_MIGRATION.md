@@ -36,14 +36,17 @@ check positions, a domain-generic `abstract_numeric_queries`/
 `Check_Proved`/`Check_Refuted`/`Check_Unknown` classification, and shared
 GraphViz rendering — proved out on **two** independent domain instances
 (Sign, Interval), not one. Full architecture and pipeline diagram:
-`docs/CHECK_ARCHITECTURE.md`. Chronological build log, pitfalls hit, and the
-current open follow-on (a first-class `EA_Check` CFG action, replacing the
-`EA_Nop` + side-table compilation this document originally proposed):
+`docs/CHECK_ARCHITECTURE.md`. Chronological build log and pitfalls hit:
 `docs/CHECK_DISCHARGE_HANDOFF.md`. This document's own section 7/9 framing of
 G-A1 as a `bexp`/`bval`/`gamma_state` side table is still an accurate
-description of the *condition type* (that part did not change) but is stale
-on *how a check's CFG position is recorded* — see the correction in section 9
-item 4.
+description of the *condition type* (that part did not change).
+
+**Third scope correction (G-A2, landed in part):** `EA_Check bexp` is now a
+real `edge_action` constructor with identity concrete/abstract semantics,
+and `compile` emits real `EA_Check` edges instead of `EA_Nop` for
+`Check c` — see section 9 item 4 for exactly what landed and what is
+still open (the `checks` field is proven to agree with the compiled
+`EA_Check` edges but is not yet derived from them).
 
 Related docs:
 
@@ -337,13 +340,14 @@ trace anchor, exactly Case A as scoped. `abstract_check_domain`
 One part of the original framing did not survive contact with
 implementation: `checks_at` is **not** a side table keyed by existing
 `cfg_node`s, decoupled from CFG compilation the way this section originally
-assumed. What actually landed compiles `__voblint_check(cnd)` to an ordinary
-`EA_Nop` edge plus a *parallel* `collect_checks` numbering pass that must
-stay synchronized with it — closer to "the compiler emits two things for one
-source construct" than "a side table over an unrelated CFG." See section 9
-item 4 for the corrected design question this raises (a first-class
-`EA_Check` CFG action) and `docs/CHECK_DISCHARGE_HANDOFF.md` for the
-Goblint-alignment argument for it.
+assumed. `__voblint_check(cnd)` now compiles to a real `EA_Check cnd` edge
+(see section 9 item 4, G-A2, landed in part), so the compiled edge and the
+checked condition are no longer two separately-tracked facts at that edge.
+The `checks` field itself, however, is still populated by a *parallel*
+`collect_checks` numbering pass proven to agree with the compiled edges
+(`collect_checks_sound`) rather than derived from them — that remaining gap
+is section 9 item 4's open half, tracked in
+`docs/CHECK_DISCHARGE_HANDOFF.md`.
 
 **Why Case B is deferred, not merely postponed arbitrarily** (the analysis
 this section originally used to justify building it early — now the argument
@@ -377,7 +381,7 @@ names it.
 | # | Deliverable | Depends on | File targets |
 | --- | --- | --- | --- |
 | **G-A1 (done, expanded significantly)** | CFG-native `__voblint_check(...)`: source syntax, compiler-recorded check positions, domain-generic `checks_proven`/`abstract_numeric_queries`/`abstract_check_domain` (section 7 Case A condition type, unchanged), node-local Sign **and** Interval solver frontends, executable `Check_Proved`/`Check_Refuted`/`Check_Unknown` classification, shared GraphViz rendering. Two independent domain instances, not one — see `docs/CHECK_ARCHITECTURE.md` | none — works against any existing analysis; **not gated on G-M0-G-M3 or on any ghost fact** (confirmed: shipped with zero ghost dependency) | `Voblint_Core.Checks`, `Abstract_Numeric_Queries.thy`, `Abstract_Checks.thy`, `Sign_Checks.thy`, `Interval_Checks.thy`, `Sign_Exec_Sound.thy`, `Interval_Exec_Sound.thy` |
-| G-A2 (open, follow-on to G-A1) | Replace the `EA_Nop` + parallel `collect_checks` numbering pass with a first-class `EA_Check bexp` CFG action (identity concrete/abstract transfer; `checks` relation derived by projection from `intra` instead of a separate compiler pass). Closer to Goblint's own CFG-visible `__goblint_check` annotation points. Not started; a real CFG/compiler change | G-A1 | `VIMP_Syntax.thy`, `VIMP_Proc_to_CFG.thy`, per-domain transfer functions, `docs/CHECK_DISCHARGE_HANDOFF.md` next-steps item 2 |
+| G-A2 (landed in part) | `EA_Check bexp` is a real `edge_action` constructor with identity concrete/abstract transfer (`edge_step`, `apply_tf_EA_Check`, generic via `action_reduces`); `compile` emits it for `Check c`; GraphViz renders `check(cnd)`. **Still open:** `checks` is proven to agree with the compiled `EA_Check` edges (`collect_checks_sound` etc.) but is still populated by the separate `collect_checks`/`collect_checks_procs` pass, not derived by projection from `intra` — that remains the rest of G-A2 | G-A1 | `CFG_Def.thy`, `VIMP_Proc_to_CFG.thy`, `Constraint_System.thy`, per-domain transfer functions, `Analysis_GraphViz.thy`, `docs/CHECK_DISCHARGE_HANDOFF.md` |
 | G-M0 (**done**) | `last_writer`/`last_write_collect` over `valid_ltr`/`ltr_collect`, plus the edge-determinism check (section 5) | none | `src/CFG/Collecting/LTR_Last_Write.thy` |
 | G-M1 (**done**, optional precision/provenance track — not a prerequisite for G-A1) | Ghost-augmented product domain, hand-written per section 6, Sign base. Landed as a direct `sound_dg_hooks`/`sound_dg_hooks_ltr` interpretation, not `dg_spec` as originally scoped: `ghost_step`'s value at an edge depends on the edge's *destination* node, which `dg_spec`'s fixed per-edge transfer signature cannot express but hook trees can (`Sign_Ghost_LastWrite_DG.thy`'s own comment on `sign_ghost_edge_tree`) | G-M0 | `src/Core/Domain/Ghost_Last_Write_Domain.thy`, `src/Core/Domain/Ghost_Last_Write_Product.thy`, `src/Analysis/Instances/Sign/Sign_Ghost_LastWrite_DG.thy` |
 | G-M1 witness (**done**) | Hand-built `part_post_solution` over a real `compile_prog` output (branch/join + one procedure call), sorry-free. Demonstrates the product domain propagates ghost facts through calls and joins under hand-built hook trees — see section 14 for exactly what it does and does not show | G-M1 | `src/Examples/CFG/Example_Sign_Ghost_LastWrite_Witness.thy` |
@@ -406,20 +410,25 @@ names it.
    `Ghost_Last_Write_Product.thy`. Correction: the *hosting* locale is
    `sound_dg_hooks`/`sound_dg_hooks_ltr`, not `sound_dg_spec` as this section
    originally assumed — see the G-M1 row in section 8 and section 14.
-4. **Resolved for G-A1 (with a follow-on now open as G-A2).** Check-point
-   representation (see section 7) was built as originally recommended here —
-   no new `edge_action` constructor, `checks` compiled via existing
-   `EA_Nop` edges. In practice this is a parallel `collect_checks` numbering
-   pass that must stay synchronized with `EA_Nop` placement, not a clean side
-   table decoupled from compilation. Comparing against real Goblint
-   (`__goblint_check`/`__goblint_assert` are themselves CFG-visible
-   annotation points, not compiler side metadata — `docs/CHECK_DISCHARGE_
-   HANDOFF.md`) now favors a first-class `EA_Check bexp` action with identity
-   transfer, `checks` derived by projection from `intra` instead of a
-   separate pass. This does touch every domain's transfer function, but only
-   by adding one more identity case (`is_identity_action`/`apply_action`
-   dispatch), not by threading new state through them. Tracked as G-A2, not
-   started, in scope only when explicitly requested.
+4. **G-A2 landed in part.** `EA_Check bexp` is now a real `edge_action`
+   constructor (`CFG_Def.thy`), with identity concrete semantics
+   (`edge_step (EA_Check c) s = {s}`) and identity abstract semantics
+   (`apply_tf_EA_Check`, generic across every domain via the
+   `action_reduces` locale, `Core/Equations/Constraint_System.thy`).
+   `compile`'s `Check c` clause emits a real `EA_Check c` edge, not
+   `EA_Nop`; GraphViz renders it as `check(cnd)`
+   (`Analysis_GraphViz.thy`'s `string_of_action`), not `nop`. **Not yet
+   done:** the `checks` field is still populated by a separate
+   `collect_checks`/`collect_checks_procs` pass, not derived by projection
+   from the compiled `EA_Check` edges — `collect_checks_sound`,
+   `collect_checks_procs_sound`, and `compile_prog_checks_sound`
+   (`VIMP_Proc_to_CFG.thy`) now state and prove that the two agree
+   (`\<exists>k'. (v, EA_Check ch, k') \<in> E`, citing the actual condition, not
+   just `EA_Nop`), but `checks`/`collect_checks` remain a second,
+   independently-computed representation rather than a derived one. Making
+   `cfg_checks g = {(u, cnd). \<exists>v. (u, EA_Check cnd, v) \<in> intra g}` the
+   sole source of truth, and retiring `collect_checks`, is the remaining
+   slice of G-A2.
 5. **Retracted, see section 7.** This item originally required the check
    condition type to be generalized over trace-derived projections from
    G-M4's first version, rejecting a `bexp`/`bval`/`gamma_state`-only version
@@ -528,9 +537,16 @@ G-M5), no `sorry`, after each milestone. G-A1 (done) landed in
 `Abstract_Checks.thy`) and `Voblint_Analysis`/`Voblint_Examples` for the
 Sign/Interval instances and worked examples; batch-green, confirmed
 independently of the ghost-track sessions (it has no dependency on them).
-G-A2, when started, gates on the sessions its `EA_Check` change touches
-(`Voblint_VIMP`, `Voblint_CFG`, and every domain that supplies a transfer
-function). G-M4 gates independently too, once it exists.
+G-A2's landed slice (the `EA_Check` constructor and its identity semantics)
+is batch-green across every session its `edge_action` change touches
+(`Voblint_CFG`, `Voblint_Core`, `Voblint_Analysis`, `Voblint_Formalization`,
+`Voblint_Examples`) — confirmed via a full `Voblint_Examples` rebuild, which
+also caught two runtime-only gaps (stale by-eval CFG-edge lemmas in the
+Sign/Interval check examples, and a missing `EA_Check` case in
+`Analysis_GraphViz`'s `string_of_action`) that file-scoped checking alone did
+not surface. G-A2's remaining slice (deriving `checks` from `intra` and
+retiring `collect_checks`) is unstarted and gates independently when it
+exists. G-M4 gates independently too, once it exists.
 
 ---
 
