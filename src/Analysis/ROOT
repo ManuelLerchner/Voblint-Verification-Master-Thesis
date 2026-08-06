@@ -12,10 +12,13 @@ session Voblint_Analysis in "." = "Voblint_Core" +
   theories
     Sign_Lattice
     Sign_Arithmetic
+    Sign_Numeric_Queries
+    Sign_Checks
     Sign_Backward
     Sign_Print
     Interval_Bounds
     Interval_Lattice
+    Interval_Numeric_Queries
     Interval_Warrowing
     Interval_Arithmetic
     Interval_Backward

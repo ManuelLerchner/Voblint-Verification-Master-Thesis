@@ -28,6 +28,9 @@ session Voblint_Core in "." = "Voblint_CFG" +
     (* Ordinary __goblint_assert checks: store-only checks, with no
        ghost-domain or additional trace-projection dependency. *)
     Checks
+    (* Domain-generic sound (incomplete) decision procedure discharging
+       compiled checks, parametric in an arbitrary abstract-state type. *)
+    Abstract_Checks
     LTR_Analysis_Sound
     TD_Side_CFG
     Strategy_Tree_Monad

@@ -220,7 +220,7 @@ syntax
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
   "_imp2_random" :: "id \<Rightarrow> imp2_stmt"                         ("_ := random'(')"        [900] 61)
   "_imp2_return" :: "imp2_aexp \<Rightarrow> imp2_stmt"                  ("return _"               61)
-  "_imp2_check"  :: "imp2_bexp \<Rightarrow> imp2_stmt"                  ("check '( _ ')"          [0] 61)
+  "_imp2_check"  :: "imp2_bexp \<Rightarrow> imp2_stmt"                  ("'_'_voblint'_check '( _ ')" [0] 61)
   "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
   "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)

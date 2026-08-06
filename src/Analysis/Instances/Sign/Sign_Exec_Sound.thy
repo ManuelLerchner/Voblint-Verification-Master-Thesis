@@ -33,10 +33,14 @@ definition sign_exec_raw ::
      snd (TD_side_always_join_Interp_solve (sign_exec_eqs \<Pi> ps mnm main)
             (cfg_exit (compile_prog \<Pi> ps mnm main)))"
 
+definition sign_exec_at ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> sign abs_state" where
+  "sign_exec_at \<Pi> ps mnm main v =
+     side_env (fun_of_resolved_st_q_for is_global \<circ> sign_exec_raw \<Pi> ps mnm main) v"
+
 definition sign_exec ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> sign abs_state" where
-  "sign_exec \<Pi> ps mnm main =
-     side_env (fun_of_resolved_st_q_for is_global \<circ> sign_exec_raw \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
+  "sign_exec \<Pi> ps mnm main = sign_exec_at \<Pi> ps mnm main (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 definition sign_exec_terminates ::
     "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
@@ -78,11 +82,20 @@ text \<open>
 
 
 
-theorem sign_exec_sound_collecting:
-  fixes mnm :: pname
+text \<open>
+  Node-local: the query cone theorem \<open>side_collect_sound_in_eff_cone\<close> already
+  bounds \<open>ltr_collect\<close> at any node \<open>v\<close> the solve call's query seed (here \<open>cfg_exit\<close>)
+  can reach --- not only at the seed itself. \<open>sign_exec_sound_collecting\<close> below is the
+  \<open>v = cfg_exit g\<close> specialization, via \<open>cfg_reaches_refl\<close>, matching how
+  \<open>side_collect_sound_exit_eff_ltr_cone\<close> specializes its own cone theorem.
+\<close>
+
+theorem sign_exec_sound_collecting_at:
+  fixes mnm :: pname and v :: pp
   assumes solves: "sign_exec_terminates \<Pi> ps mnm main"
-  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) (cinit_stores is_global) (cfg_exit (compile_prog \<Pi> ps mnm main))
-         \<le> \<lbrakk>sign_exec \<Pi> ps mnm main\<rbrakk>"
+    and reach_v: "cfg_reaches (compile_prog \<Pi> ps mnm main) v (cfg_exit (compile_prog \<Pi> ps mnm main))"
+  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) (cinit_stores is_global) v
+         \<le> \<lbrakk>sign_exec_at \<Pi> ps mnm main v\<rbrakk>"
 proof -
   define g :: cfg where "g = compile_prog \<Pi> ps mnm main"
   define sol :: "pp set \<times> (pp + unit \<Rightarrow> sign resolved_st_q)" where
@@ -133,13 +146,23 @@ proof -
     by auto
   have entry_cov: "cinit_stores is_global \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
-  have "ltr_collect is_global g (cinit_stores is_global) (cfg_exit g)
-        \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
-    by (rule side_collect_sound_exit_eff_ltr_cone
-          [OF sign_sound_etf_unit pp_eff fin finC wf entry_cov cone inr])
+  have reach_v': "cfg_reaches g v (cfg_exit g)"
+    using reach_v unfolding g_def by simp
+  have "ltr_collect is_global g (cinit_stores is_global) v
+        \<le> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+    by (rule side_collect_sound_in_eff_cone
+          [OF sign_sound_etf_unit pp_eff fin finC wf entry_cov cone inr reach_v'])
   then show ?thesis
-    by (simp add: g_def \<sigma>_def sol_def sign_exec_def sign_exec_raw_def)
+    by (simp add: g_def \<sigma>_def sol_def sign_exec_at_def sign_exec_raw_def)
 qed
+
+corollary sign_exec_sound_collecting:
+  fixes mnm :: pname
+  assumes solves: "sign_exec_terminates \<Pi> ps mnm main"
+  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) (cinit_stores is_global) (cfg_exit (compile_prog \<Pi> ps mnm main))
+         \<le> \<lbrakk>sign_exec \<Pi> ps mnm main\<rbrakk>"
+  unfolding sign_exec_def
+  by (rule sign_exec_sound_collecting_at[OF solves cfg_reaches_refl])
 
 section \<open>Whole-program convenience layer\<close>
 
@@ -153,8 +176,11 @@ text \<open>
 definition prog_cfg :: "pname \<Rightarrow> imp_prog \<Rightarrow> cfg" where
   "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
+definition sign_exec_prog_at :: "pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
+  "sign_exec_prog_at mnm p v = sign_exec_at (prog_table p) (prog_procs p) mnm (prog_main p) v"
+
 definition sign_exec_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> sign abs_state" where
-  "sign_exec_prog mnm p = sign_exec (prog_table p) (prog_procs p) mnm (prog_main p)"
+  "sign_exec_prog mnm p = sign_exec_prog_at mnm p (cfg_exit (prog_cfg mnm p))"
 
 definition sign_terminates_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
   "sign_terminates_prog mnm p = sign_exec_terminates (prog_table p) (prog_procs p) mnm (prog_main p)"
@@ -167,12 +193,20 @@ lemma sign_terminates_prog_via_solve_c:
   unfolding sign_terminates_prog_def
   using assms by (rule sign_exec_terminates_via_solve_c)
 
+corollary sign_exec_prog_sound_collecting_at:
+  assumes "sign_terminates_prog mnm p"
+    and "cfg_reaches (prog_cfg mnm p) v (cfg_exit (prog_cfg mnm p))"
+  shows "ltr_collect is_global (prog_cfg mnm p) (cinit_stores is_global) v
+           \<le> \<lbrakk>sign_exec_prog_at mnm p v\<rbrakk>"
+  using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_at_def
+  by (rule sign_exec_sound_collecting_at)
+
 corollary sign_exec_prog_sound_collecting:
   assumes "sign_terminates_prog mnm p"
   shows "ltr_collect is_global (prog_cfg mnm p) (cinit_stores is_global) (cfg_exit (prog_cfg mnm p))
            \<le> \<lbrakk>sign_exec_prog mnm p\<rbrakk>"
-  using assms unfolding sign_terminates_prog_def prog_cfg_def sign_exec_prog_def
-  by (rule sign_exec_sound_collecting)
+  unfolding sign_exec_prog_def
+  by (rule sign_exec_prog_sound_collecting_at[OF assms cfg_reaches_refl])
 
 section \<open>Visualisation convenience\<close>
 
