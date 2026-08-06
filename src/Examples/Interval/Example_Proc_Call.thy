@@ -164,7 +164,8 @@ lemma main_cfg_full:
        calls =
          {(Statement 5, CallEdge None [] [], FunctionEntry ''inc'', Statement 6),
           (Statement 6, CallEdge None [] [], FunctionEntry ''sqr'', Statement 7)},
-       cfg_entry = FunctionEntry ''main'' \<rparr>"
+       cfg_entry = FunctionEntry ''main'',
+       checks = {} \<rparr>"
   by (simp add: main_cfg_name_def) eval
 
 lemma main_cfg_entry: "cfg_entry main_cfg = FunctionEntry ''main''"

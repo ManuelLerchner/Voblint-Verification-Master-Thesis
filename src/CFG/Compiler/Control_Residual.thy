@@ -52,6 +52,10 @@ where
     "control_at \<Pi> p (Random x) k n (Random x) (Statement n)"
 | RandomDone:
     "control_at \<Pi> p (Random x) k n SKIP k"
+| Check:
+    "control_at \<Pi> p (VIMP_Proc.com.Check c) k n (VIMP_Proc.com.Check c) (Statement n)"
+| CheckDone:
+    "control_at \<Pi> p (VIMP_Proc.com.Check c) k n SKIP k"
 | SeqLeft:
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
@@ -115,6 +119,8 @@ next
 next
   case (Random x) show ?case by (rule control_at.Random)
 next
+  case (Check b) show ?case by (rule control_at.Check)
+next
   case (Seq c1 c2)
   have "control_at \<Pi> p c1 (Statement (n + csize c1)) n c1 (Statement n)"
     by (rule Seq.IH(1)) (use Seq.prems in simp)
@@ -170,6 +176,9 @@ next
   then show ?case by (simp add: star.refl)
 next
   case (RandomDone x k n)
+  then show ?case by (simp add: star.refl)
+next
+  case (CheckDone c k n)
   then show ?case by (simp add: star.refl)
 next
   case (CallDone dst q actuals k n)

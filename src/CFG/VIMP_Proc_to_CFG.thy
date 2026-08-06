@@ -44,6 +44,7 @@ fun csize :: "com \<Rightarrow> nat" where
   "csize SKIP = 1"
 | "csize (Assign x a) = 1"
 | "csize (Random x) = 1"
+| "csize (Check c) = 1"
 | "csize (Seq c1 c2) = csize c1 + csize c2"
 | "csize (If b c1 c2) = 1 + csize c1 + csize c2"
 | "csize (While b c) = 1 + csize c"
@@ -68,6 +69,7 @@ fun falls_through :: "com \<Rightarrow> bool" where
   "falls_through SKIP = True"
 | "falls_through (Assign x a) = True"
 | "falls_through (Random x) = True"
+| "falls_through (Check c) = True"
 | "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
 | "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
 | "falls_through (While b c) = True"
@@ -115,6 +117,8 @@ where
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
 | "compile \<Pi> p (Random x) k n =
      (Suc n, Statement n, {(Statement n, EA_Random x, k)}, {})"
+| "compile \<Pi> p (Check c) k n =
+     (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
           (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
@@ -142,6 +146,35 @@ where
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p Unwind k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
+
+subsection \<open>Check-obligation collection\<close>
+
+text \<open>
+  A separate, minimal pass that mirrors \<^const>\<open>compile\<close>'s own counter threading exactly
+  (same starting counter per sub-fragment, same \<^const>\<open>csize\<close>-based advance) but emits no
+  edges: it only pairs every \<open>Check c\<close> leaf with the \<^const>\<open>Statement\<close> node
+  \<^const>\<open>compile\<close> assigns that leaf. This keeps \<^const>\<open>compile\<close>'s own 4-tuple signature, and
+  every existing lemma about it, untouched --- \<open>collect_checks\<close> only duplicates the handful
+  of counter-arithmetic equations, never any edge-generation content (no
+  \<^const>\<open>EA_Assign\<close>/\<^const>\<open>EA_Assume\<close>/\<^const>\<open>CallEdge\<close> case ever appears here). Its
+  agreement with \<^const>\<open>compile\<close>'s actual node numbering is proved below, not left as an
+  informal convention.
+\<close>
+
+fun collect_checks :: "com \<Rightarrow> nat \<Rightarrow> (cfg_node \<times> bexp) set" where
+  "collect_checks SKIP n = {}"
+| "collect_checks (Assign x a) n = {}"
+| "collect_checks (Random x) n = {}"
+| "collect_checks (Check c) n = {(Statement n, c)}"
+| "collect_checks (Seq c1 c2) n =
+     collect_checks c1 n \<union> collect_checks c2 (n + csize c1)"
+| "collect_checks (If b c1 c2) n =
+     collect_checks c1 (Suc n) \<union> collect_checks c2 (Suc n + csize c1)"
+| "collect_checks (While b c) n = collect_checks c (Suc n)"
+| "collect_checks (Call dst q actuals) n = {}"
+| "collect_checks (Return e) n = {}"
+| "collect_checks Restore n = {}"
+| "collect_checks Unwind n = {}"
 
 subsection \<open>Procedure and program compilation\<close>
 
@@ -182,6 +215,14 @@ where
              else E),
           K))"
 
+text \<open>\<open>collect_checks_proc_next\<close> mirrors \<^const>\<open>compile_proc\<close>'s \<open>Suc r\<close> exactly, so
+  \<open>collect_checks_procs\<close> below can thread the next procedure at the identical starting
+  counter \<open>compile_procs\<close> uses.\<close>
+definition collect_checks_proc :: "pname \<Rightarrow> proc_decl \<Rightarrow> nat \<Rightarrow> (cfg_node \<times> bexp) set" where
+  "collect_checks_proc p decl n = collect_checks (body decl) n"
+
+definition collect_checks_proc_next :: "proc_decl \<Rightarrow> nat \<Rightarrow> nat" where
+  "collect_checks_proc_next decl n = Suc (n + csize (body decl))"
 
 fun compile_procs ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> nat
@@ -197,6 +238,16 @@ where
                (n2, E', K') = compile_procs \<Pi> ps n1
            in (n2, E \<union> E', K \<union> K')))"
 
+fun collect_checks_procs :: "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> (cfg_node \<times> bexp) set \<times> nat" where
+  "collect_checks_procs \<Pi> [] n = ({}, n)"
+| "collect_checks_procs \<Pi> (p # ps) n =
+     (case \<Pi> p of
+        None \<Rightarrow> collect_checks_procs \<Pi> ps n
+      | Some decl \<Rightarrow>
+          (let C1 = collect_checks_proc p decl n;
+               (C2, n2) = collect_checks_procs \<Pi> ps (collect_checks_proc_next decl n)
+           in (C1 \<union> C2, n2)))"
+
 text \<open>The whole program: every declared procedure, plus \<open>main\<close> compiled under the
   designated main name \<open>mnm\<close> (which the well-formedness predicate keeps disjoint from
   \<open>ps\<close>).  There is no global exit: whole-program completion is \<open>FunctionResult mnm\<close>, and the
@@ -207,8 +258,11 @@ definition compile_prog ::
 where
   "compile_prog \<Pi> ps mnm main =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main) n1
-      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>)"
+          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main) n1;
+          (Cprocs, n1') = collect_checks_procs \<Pi> ps 0;
+          Cmain = collect_checks_proc mnm (proc_decl_of [] main) n1'
+      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+           checks = Cprocs \<union> Cmain \<rparr>)"
 
 subsection \<open>Allocation arithmetic and statement ranges\<close>
 
@@ -336,6 +390,197 @@ proof -
     "K = K1"
     by (auto simp: Let_def)
   with c1 e1 show ?thesis by (auto intro: that)
+qed
+
+subsection \<open>Check-obligation soundness\<close>
+
+text \<open>\<open>collect_checks\<close>'s node numbering agrees with \<^const>\<open>compile\<close>'s own: every check it
+  records at \<open>v\<close> corresponds to a real \<^const>\<open>EA_Nop\<close> edge sourced at \<open>v\<close> in \<^const>\<open>compile\<close>'s
+  own output --- the correspondence \<open>collect_checks\<close>'s header promised, proved here rather
+  than assumed.\<close>
+
+lemma collect_checks_sound:
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (v, ch) \<in> collect_checks c n \<Longrightarrow> \<exists>k'. (v, EA_Nop, k') \<in> E"
+proof (induction c arbitrary: k n n' en E K rule: com.induct)
+  case (Check ch')
+  then show ?case by (auto simp: Let_def)
+next
+  case (Seq c1 c2)
+  from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    and E: "E = E1 \<union> E2"
+    by (rule compile_SeqE)
+  from Seq.prems(2) consider
+    "(v, ch) \<in> collect_checks c1 n" | "(v, ch) \<in> collect_checks c2 (n + csize c1)"
+    by auto
+  then show ?case
+  proof cases
+    case 1
+    with Seq.IH(1)[OF c1 1] E show ?thesis by auto
+  next
+    case 2
+    with Seq.IH(2)[OF c2 2] E show ?thesis by auto
+  qed
+next
+  case (If b c1 c2)
+  from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
+    c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
+    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+                  (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    by (rule compile_IfE)
+  from If.prems(2) consider
+    "(v, ch) \<in> collect_checks c1 (Suc n)" | "(v, ch) \<in> collect_checks c2 (Suc n + csize c1)"
+    by auto
+  then show ?case
+  proof cases
+    case 1
+    with If.IH(1)[OF c1 1] E show ?thesis by auto
+  next
+    case 2
+    with If.IH(2)[OF c2 2] E show ?thesis by auto
+  qed
+next
+  case (While b c)
+  from While.prems(1) obtain n1 E1 K1 where
+    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
+                  (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    by (rule compile_WhileE)
+  from While.prems(2) have mem: "(v, ch) \<in> collect_checks c (Suc n)" by simp
+  with While.IH[OF c1 mem] E show ?case by auto
+qed auto
+
+text \<open>The same agreement one level up: a procedure's epilogue/entry bracketing only ever
+  \<open>insert\<close>s more edges around the body's own, so \<open>collect_checks_sound\<close> transports directly.\<close>
+
+lemma compile_proc_next_id: "fst (compile_proc \<Pi> p decl n) = collect_checks_proc_next decl n"
+  unfolding compile_proc_def collect_checks_proc_next_def by (simp add: Let_def split: prod.splits)
+
+lemma collect_checks_proc_sound:
+  assumes "compile_proc \<Pi> p decl n = (n'', E'', K)"
+    and "(v, ch) \<in> collect_checks_proc p decl n"
+  shows "\<exists>k'. (v, EA_Nop, k') \<in> E''"
+proof -
+  define r where "r = n + csize (body decl)"
+  obtain m ben E K' where c: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, E, K')"
+    by (metis prod_cases4)
+  from assms(2) have mem: "(v, ch) \<in> collect_checks (body decl) n"
+    unfolding collect_checks_proc_def .
+  from collect_checks_sound[OF c mem] obtain k' where kE: "(v, EA_Nop, k') \<in> E" by blast
+  from assms(1) c r_def have "E \<subseteq> E''"
+    unfolding compile_proc_def
+    by (cases "falls_through (body decl)") (auto simp: Let_def)
+  with kE show ?thesis by blast
+qed
+
+text \<open>Procedure offsets: \<open>collect_checks_procs\<close> threads the identical starting counter per
+  procedure that \<open>compile_procs\<close> does, so the two-level agreement composes across the whole
+  procedure list, not merely for one hand-checked example.\<close>
+
+lemma collect_checks_procs_sound:
+  "compile_procs \<Pi> ps n = (n2, E, K) \<Longrightarrow> collect_checks_procs \<Pi> ps n = (C, n2')
+   \<Longrightarrow> (v, ch) \<in> C \<Longrightarrow> \<exists>k'. (v, EA_Nop, k') \<in> E"
+proof (induction ps arbitrary: n n2 E K C n2')
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None
+    with Cons.prems Cons.IH show ?thesis by simp
+  next
+    case (Some decl)
+    obtain n1 E1 K1 where cp: "compile_proc \<Pi> p decl n = (n1, E1, K1)"
+      by (metis prod_cases3)
+    obtain n2a E2 K2 where cps: "compile_procs \<Pi> ps n1 = (n2a, E2, K2)"
+      by (metis prod_cases3)
+    obtain C1 where ccp: "collect_checks_proc p decl n = C1" by blast
+    obtain C2 n2b where ccps: "collect_checks_procs \<Pi> ps (collect_checks_proc_next decl n) = (C2, n2b)"
+      by (metis prod.exhaust)
+    from Cons.prems(1) Some cp cps have E: "E = E1 \<union> E2"
+      by (simp add: Let_def)
+    from Cons.prems(2) Some ccp ccps have C: "C = C1 \<union> C2"
+      by (simp add: Let_def)
+    from Cons.prems(3) C have "(v, ch) \<in> C1 \<or> (v, ch) \<in> C2" by simp
+    then show ?thesis
+    proof
+      assume "(v, ch) \<in> C1"
+      with ccp collect_checks_proc_sound[OF cp] E show ?thesis by auto
+    next
+      assume mem2: "(v, ch) \<in> C2"
+      have n1_eq: "n1 = collect_checks_proc_next decl n"
+      using compile_proc_next_id[of \<Pi> p decl n] cp by simp
+      with cps ccps have cps': "compile_procs \<Pi> ps (collect_checks_proc_next decl n) = (n2a, E2, K2)"
+        by simp
+      from Cons.IH[OF cps' ccps] mem2 E show ?thesis by auto
+    qed
+  qed
+qed
+
+lemma compile_procs_next_id:
+  "compile_procs \<Pi> ps n = (n2, E, K) \<Longrightarrow> collect_checks_procs \<Pi> ps n = (C, n2') \<Longrightarrow> n2 = n2'"
+proof (induction ps arbitrary: n n2 E K C n2')
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None
+    with Cons.prems Cons.IH show ?thesis by simp
+  next
+    case (Some decl)
+    obtain n1 E1 K1 where cp: "compile_proc \<Pi> p decl n = (n1, E1, K1)" by (metis prod_cases3)
+    obtain n2a E2 K2 where cps: "compile_procs \<Pi> ps n1 = (n2a, E2, K2)" by (metis prod_cases3)
+    obtain C1 where ccp: "collect_checks_proc p decl n = C1" by blast
+    obtain C2 n2b where ccps:
+      "collect_checks_procs \<Pi> ps (collect_checks_proc_next decl n) = (C2, n2b)"
+      by (metis prod.exhaust)
+    have n1_eq: "n1 = collect_checks_proc_next decl n"
+      using compile_proc_next_id[of \<Pi> p decl n] cp by simp
+    from Cons.prems(1) Some cp cps have n2_eq: "n2 = n2a" by (simp add: Let_def)
+    from Cons.prems(2) Some ccp ccps have n2'_eq: "n2' = n2b" by (simp add: Let_def)
+    from n1_eq cps have cps': "compile_procs \<Pi> ps (collect_checks_proc_next decl n) = (n2a, E2, K2)"
+      by simp
+    from Cons.IH[OF cps' ccps] n2_eq n2'_eq show ?thesis by simp
+  qed
+qed
+
+text \<open>The user-facing form: every check the whole-program compiler records is sourced at a
+  real \<^const>\<open>EA_Nop\<close> edge of the compiled program's own \<^const>\<open>intra\<close> set --- \<open>checks\<close> is
+  never out of sync with the CFG it was computed from, proved rather than assumed.\<close>
+
+corollary compile_prog_checks_sound:
+  assumes "(v, ch) \<in> checks (compile_prog \<Pi> ps mnm main)"
+  shows "\<exists>k'. (v, EA_Nop, k') \<in> intra (compile_prog \<Pi> ps mnm main)"
+proof -
+  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    by (metis prod_cases3)
+  obtain n2 Emain Kmain where
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    by (metis prod_cases3)
+  obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
+    by (metis prod.exhaust)
+  define Cmain where "Cmain = collect_checks_proc mnm (proc_decl_of [] main) n1'"
+  have g: "compile_prog \<Pi> ps mnm main =
+             \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+               checks = Cprocs \<union> Cmain \<rparr>"
+    unfolding compile_prog_def Cmain_def by (simp add: procs mainc cprocs Let_def)
+  from assms g have "(v, ch) \<in> Cprocs \<or> (v, ch) \<in> Cmain" by simp
+  then show ?thesis
+  proof
+    assume "(v, ch) \<in> Cprocs"
+    with collect_checks_procs_sound[OF procs cprocs] g show ?thesis by auto
+  next
+    assume mem: "(v, ch) \<in> Cmain"
+    have n1'_eq: "n1' = n1" using compile_procs_next_id[OF procs cprocs] by simp
+    with mem Cmain_def have mem': "(v, ch) \<in> collect_checks_proc mnm (proc_decl_of [] main) n1"
+      by simp
+    with collect_checks_proc_sound[OF mainc mem'] g show ?thesis by auto
+  qed
 qed
 
 text \<open>The \<open>Statement\<close> indices a compiled fragment touches.  Sources are always freshly
@@ -735,27 +980,31 @@ proof -
   obtain n2 Emain Kmain where
     mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
+  obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
+    by (metis prod.exhaust)
+  define Cmain where "Cmain = collect_checks_proc mnm (proc_decl_of [] main) n1'"
   have g: "compile_prog \<Pi> ps mnm main =
-             \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>"
-    unfolding compile_prog_def by (simp add: procs mainc Let_def)
+             \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+               checks = Cprocs \<union> Cmain \<rparr>"
+    unfolding compile_prog_def Cmain_def by (simp add: procs mainc cprocs Let_def)
   show ?thesis
     unfolding wf_cfg_def g
   proof (intro conjI allI impI)
     fix u act ce af assume "(u, act, ce, af) \<in> calls \<lparr>intra = Eprocs \<union> Emain,
-        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm\<rparr>"
+        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm, checks = Cprocs \<union> Cmain\<rparr>"
     then have "(u, act, ce, af) \<in> Kprocs \<or> (u, act, ce, af) \<in> Kmain" by simp
     then show "\<exists>p. ce = FunctionEntry p"
       using compile_procs_call_ce_entry[OF procs] compile_proc_call_ce_entry[OF mainc] by blast
   next
     fix u a v p assume "(u, a, v) \<in> intra \<lparr>intra = Eprocs \<union> Emain,
-        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm\<rparr>"
+        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm, checks = Cprocs \<union> Cmain\<rparr>"
     then have "(u, a, v) \<in> Eprocs \<or> (u, a, v) \<in> Emain" by simp
     then show "v \<noteq> FunctionEntry p"
       using compile_procs_intra_tgt_not_entry[OF procs] compile_proc_intra_tgt_not_entry[OF mainc]
       by blast
   next
     fix u e p v assume "(u, EA_Ret e p, v) \<in> intra \<lparr>intra = Eprocs \<union> Emain,
-        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm\<rparr>"
+        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm, checks = Cprocs \<union> Cmain\<rparr>"
     then have "(u, EA_Ret e p, v) \<in> Eprocs \<or> (u, EA_Ret e p, v) \<in> Emain" by simp
     then show "v = FunctionResult p"
       using compile_procs_ret_wf[OF procs] compile_proc_ret_wf[OF mainc] by blast

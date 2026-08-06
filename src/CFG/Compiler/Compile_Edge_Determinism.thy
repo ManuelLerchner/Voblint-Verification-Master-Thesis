@@ -499,9 +499,13 @@ proof -
   obtain n2 Emain Kmain where
     mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
+  obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
+    by (metis prod.exhaust)
+  define Cmain where "Cmain = collect_checks_proc mnm (proc_decl_of [] main) n1'"
   have g: "compile_prog \<Pi> ps mnm main
-             = \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>"
-    unfolding compile_prog_def by (simp add: procs mainc Let_def)
+             = \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+                 checks = Cprocs \<union> Cmain \<rparr>"
+    unfolding compile_prog_def Cmain_def by (simp add: procs mainc cprocs Let_def)
   from e1 g have m1: "(u, a1, v) \<in> Eprocs \<or> (u, a1, v) \<in> Emain" by simp
   from e2 g have m2: "(u, a2, v) \<in> Eprocs \<or> (u, a2, v) \<in> Emain" by simp
   show ?thesis

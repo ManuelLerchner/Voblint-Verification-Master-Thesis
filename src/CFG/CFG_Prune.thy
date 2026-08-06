@@ -192,6 +192,12 @@ next
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
 next
+  case (Check b)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
+  then show ?case ..
+next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -312,6 +318,11 @@ next
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
+  case (Check b)
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Nop, k) \<in> intra g"
+    by (auto split: prod.splits)
+  from mem show ?case unfolding en by (rule cfg_reaches_intra)
+next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -394,6 +405,8 @@ next
   case (Assign x a) then show ?case by simp
 next
   case (Random x) then show ?case by simp
+next
+  case (Check b) then show ?case by simp
 next
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
@@ -493,10 +506,12 @@ proof -
   obtain n2 Emain Kmain where
     cmain: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (cases "compile_proc \<Pi> mnm (proc_decl_of [] main) n1") auto
+  obtain Cprocs n1' where cprocs: "collect_checks_procs \<Pi> ps 0 = (Cprocs, n1')"
+    by (cases "collect_checks_procs \<Pi> ps 0") auto
   let ?g = "compile_prog \<Pi> ps mnm main"
   have g_intra: "intra ?g = Eprocs \<union> Emain" and g_calls: "calls ?g = Kprocs \<union> Kmain"
     and g_entry: "cfg_entry ?g = FunctionEntry mnm"
-    using procs cmain by (simp_all add: compile_prog_def Let_def)
+    using procs cmain cprocs by (simp_all add: compile_prog_def Let_def)
   have Eg: "Emain \<subseteq> intra ?g" using g_intra by simp
   have Kg: "Kmain \<subseteq> calls ?g" using g_calls by simp
   have "cfg_reaches ?g (FunctionEntry mnm) (FunctionResult mnm)"
