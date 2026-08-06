@@ -266,6 +266,7 @@ syntax
   "_imp2_false"  :: imp2_bexp                                 ("false")
   "_imp2_less"   :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_bexp"   ("_ < _"                  [50, 51] 50)
   "_imp2_eq"     :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_bexp"   ("_ == _"                 [50, 51] 50)
+  "_imp2_bparen" :: "imp2_bexp \<Rightarrow> imp2_bexp"                ("'(_')"                  [0] 1000)             
   "_imp2_not"    :: "imp2_bexp \<Rightarrow> imp2_bexp"                ("! _"                    [90] 90)
   "_imp2_and"    :: "imp2_bexp \<Rightarrow> imp2_bexp \<Rightarrow> imp2_bexp"   ("_ && _"                 [35, 36] 35)
   "_imp2_or"     :: "imp2_bexp \<Rightarrow> imp2_bexp \<Rightarrow> imp2_bexp"   ("_ || _"                 [30, 31] 30)
@@ -376,6 +377,7 @@ parse_translation \<open>
        | (Const ("_imp2_false", _), []) => K c_Bc $ @{term False}
        | (Const ("_imp2_less", _), [a, b]) => K c_Less $ aexp_tr a $ aexp_tr b
        | (Const ("_imp2_eq", _), [a, b]) => K c_Eq   $ aexp_tr a $ aexp_tr b
+       | (Const ("_imp2_bparen", _), [b]) => bexp_tr b
        | (Const ("_imp2_not", _), [b]) => K c_Not $ bexp_tr b
        | (Const ("_imp2_and", _), [a, b]) => K c_And $ bexp_tr a $ bexp_tr b
        | (Const ("_imp2_or", _), [a, b]) => K c_Or $ bexp_tr a $ bexp_tr b
@@ -597,5 +599,7 @@ value "(program { void get() { return 42 } void main() { r := get() } } :: imp_p
 (* proc-table entry: formals + result wired through *)
 value "the (prog_table (program { void inc(x) { return x + 1 } void main() { r := inc(5) } }) ''inc'')"
 
+(* boolean negation*)
+value "imp \<lbrakk> __voblint_check(!(x == 0)) \<rbrakk>"
 
 end

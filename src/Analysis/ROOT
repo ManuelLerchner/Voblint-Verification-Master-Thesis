@@ -44,6 +44,10 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Parity_Print
     Parity_Transfer
     Parity_Exec
+    Parity_Checks
+    Parity_Exec_Sound
+    Parity_Numeric_Queries
+    Parity_Side_Soundness
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz

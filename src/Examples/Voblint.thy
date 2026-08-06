@@ -44,6 +44,7 @@ theory Voblint
     Exec_Sign_DG_Run
     Example_Checks_Store_Only
     Example_Interval_Checks_Store_Only
+    Example_Parity_Checks_Store_Only
     Example_Interval_DG_Flagship
     "Voblint_Formalization.Mixed_Flow_Sound"
     "Voblint_Formalization.Source_Activation_Sound"
@@ -302,6 +303,8 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Checks_Store_Only} --- \<open>__voblint_check(...)\<close>
       discharged against a computed Sign post-solution, node-locally: one check
       proved, one refuted (a genuine bug, not merely unproven), one unknown.
+    \<^item> @{theory Voblint_Examples.Example_Parity_Checks_Store_Only} --- the same
+      program, but with a parity domain instead of Sign.
     \<^item> @{theory Voblint_Examples.Example_Interval_Checks_Store_Only} --- the Interval
       counterpart, inside a two-sided bound guard (\<open>0 < x \<and> x < 10\<close>) so the
       checks exercise Interval's numeric bounds, not just its sign; includes a

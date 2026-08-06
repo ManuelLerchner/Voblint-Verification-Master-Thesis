@@ -262,5 +262,36 @@ lemma parity_tf_st_for_ret_none_agree:
   using parity_tf_st_for_nop_agree[OF agree location_in]
   by (simp add: apply_tf_EA_Ret_None)
 
+subsection \<open>Executable effectful transfer record\<close>
+
+text \<open>Mirrors \<open>ivl_etf_st\<close> \<open>Voblint_Analysis.Ivl_Exec\<close>: the executable
+  effectful transfer record consumed by \<open>side_cfg_T_eff_st\<close>, built once from
+  \<open>parity_tf_st\<close>/\<open>parity_enter_st\<close> above through the generic
+  \<^theory>\<open>Voblint_Core.Exec_Bridge\<close> wrapper.\<close>
+
+definition parity_etf_st :: "(unit, parity resolved_st_q) effectful_st_transfer" where
+  "parity_etf_st = unit_etf_st_of_transfer parity_tf_st parity_enter_st"
+
+lemma parity_etf_st_edge_tree:
+  "apply_etf_st parity_etf_st a u = unit_edge_tree_st (parity_tf_st a) u"
+  unfolding parity_etf_st_def
+  by (rule apply_etf_st_unit_of_transfer[OF parity_tf_st_reduces])
+
+lemma parity_etf_st_combine_tree:
+  "etf_combine_st parity_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
+  unfolding parity_etf_st_def by (rule etf_combine_st_unit_of_transfer)
+
+lemma parity_etf_st_enter_tree:
+  "etf_st_enter parity_etf_st xs es u = unit_edge_tree_st (parity_enter_st xs es) u"
+  unfolding parity_etf_st_def by (rule etf_st_enter_unit_of_transfer)
+
+lemma parity_etf_st_enter_exists_unit:
+  "\<And>u xs es. \<exists>f. etf_st_enter parity_etf_st xs es u = unit_edge_tree_st f u"
+  using parity_etf_st_enter_tree by blast
+
+lemma parity_etf_st_exists_unit:
+  "\<And>a u. \<exists>f. apply_etf_st parity_etf_st a u = unit_edge_tree_st f u"
+  using parity_etf_st_edge_tree by blast
+
 end
 

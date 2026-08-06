@@ -60,6 +60,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Parity *)
     Example_Parity_DG_Flagship
+    Example_Parity_Checks_Store_Only
 
     (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo
